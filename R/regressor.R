@@ -19,6 +19,41 @@ Regressor <- function(onsets, hrf, duration=0, amplitude=1, span=20) {
   new("Regressor", onsets=onsets,hrf=hrf, duration=duration,amplitude=amplitude,span=span)  
 }
 
+#' extract terms from formula
+extractTerms <- function(formula, data) {
+  if (!inherits(formula, "terms")) {
+    terms(formula, data = data)
+  } else {
+    formula
+  }	
+}
+
+dots <- function(...) {
+  eval(substitute(alist(...)))
+}
+
+RegressorTerm <- function(..., data, duration=0, span=0) {
+  varlist <- dots(...)
+  
+  vframe <- as.data.frame(lapply(varlist, function(v) eval(v, data, enclos=parent.frame())))
+  vnames <- sapply(varlist, deparse)
+  names(vframe) <- vnames
+  vframe
+  #varlist <- substitute(...)
+  #varlist
+  #varnames <- parse(text=match.call())
+  #varnames <- as.list(varnames)[2:length(varnames)]
+  #print(varnames)
+  #print(varlist)
+  
+  ## make it all factors and then require a "by" argument
+  ## by could by by=Poly(x,5))
+  
+  
+}
+
+
+
 #' @param repTime amount of time between each sample on the grid
 #' @export
 setMethod(f="evaluate", signature=signature(x = "Regressor", grid="numeric"),

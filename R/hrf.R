@@ -1,11 +1,11 @@
 #' @importFrom numDeriv grad
 #' @import gtools
 
-
+#' helper function
 #' @export
-createHRF <- function(HRF, name, ...) {
+createHRF <- function(HRF, ...) {
   .orig <- list(...)
-
+  
   f <- if (length(.orig) > 0) {
     ret <- function(t) {
       do.call(HRF, c(list(t), .orig))
@@ -13,23 +13,28 @@ createHRF <- function(HRF, name, ...) {
     attr(ret, "params") <- .orig
     ret
   } else {
-     function(t) {     
-      HRF(t)
-    }
+    #function(t) {     
+    #  HRF(t)
+    #}
+    HRF
   }
   
-  attr(f, "name") <- name
   f
 }
 
-createHRFSet <- function(name, ...) {
+#' HRF constructor function
+#' @rdname HRF-class
+#' @export
+HRF <- function(f, name, nbasis=1) {
+  new("HRF", hrf=f, name=name, nbasis=as.integer(nbasis))
+}
+
+
+createHRFSet <- function(...) {
 	hrflist <- list(...)
-  ret <- function(t) {
+  function(t) {
     do.call("cbind", lapply(hrflist, function(fun) fun(t)))
   }
-  
-  attr(ret, "name") <- name
-  ret
 }
 
 makeDeriv <- function(HRF, n=1) {
@@ -39,7 +44,6 @@ makeDeriv <- function(HRF, n=1) {
     Recall(function(t) numDeriv::grad(HRF,t), n-1)
   }
 }
-
 
 hrf.time <- function(t, maxt) {
   ifelse(t > 0 & t < maxt, t, 0)
@@ -85,14 +89,33 @@ hrf.spmg1 <- function(t, A1=.00833, A2=1.274527e-13, P1=5, P2=15) {
 	
 }
 
-HRF.GAMMA <- createHRF(hrf.gamma, "hrf.gamma", shape=6, rate=1)
-HRF.GAUSSIAN <- createHRF(hrf.gaussian, "hrf.gaussian", mean=6, sd=2)
-HRF.BSPLINE <- createHRF(hrf.bspline, "hrf.bspline")
+HRF.GAMMA <- HRF(hrf.gamma, "gamma")
+HRF.GAUSSIAN <- HRF(hrf.gaussian, "gaussian")
+HRF.BSPLINE <- HRF(createHRF(hrf.bspline), "bspline", 5)
 
 
-HRF.SPMG1 <- createHRF(hrf.spmg1, "hrf.spmg1")
-HRF.SPMG2 <- createHRFSet(hrf.spmg1, "hrf.spmg2", makeDeriv(hrf.spmg1))
-HRF.SPMG3 <- createHRFSet(hrf.spmg1, "hrf.spmg3", makeDeriv(hrf.spmg1), makeDeriv(makeDeriv(hrf.spmg1)))
+HRF.SPMG1 <- HRF(hrf.spmg1, "SPMG1")
+HRF.SPMG2 <- HRF(createHRFSet(hrf.spmg1, makeDeriv(hrf.spmg1)), "SPMG2")
+HRF.SPMG3 <- HRF(createHRFSet(hrf.spmg1, makeDeriv(hrf.spmg1), makeDeriv(makeDeriv(hrf.spmg1))), "SPMG3")
+
+
+
+#' @param amplitude the scaling value
+#' @param duration the duration of the event
+#' @param resolution the temporal resolution used for computing summed responses when duration > 0 
+#' @export
+setMethod(f="evaluate", signature=signature(x = "HRF", grid="numeric"),
+          function (x, grid, amplitude=1, duration=0, resolution=.2) {
+            ret <- if (duration < resolution) {
+              x@hrf(grid)*amplitude       
+            } else {
+              rowSums(sapply(seq(0, duration, by=resolution), function(offset) {
+                x@hrf(grid-offset)
+              }))*amplitude
+            }     
+          }
+)
+            
 
 
 getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), ...) {
