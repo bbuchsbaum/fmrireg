@@ -1,0 +1,29 @@
+
+Poly <- function(x, degree) {
+  mc <- match.call()
+  pres <- poly(x,degree)
+  n <- paste0("poly", "_", as.character(mc[["x"]]), "_", degree)
+  ret <- list(x=x,y=pres,fun="poly",argname=as.character(mc[["x"]]), name=n, degree=degree)
+  class(ret) <- c("Poly", "ParametricBasis")
+  ret
+}
+
+BSpline <- function(x, degree) {
+  mc <- match.call()
+  
+  pres <- poly(x,degree)
+  n <- paste0("bs", "_", as.character(mc[["x"]]), "_", degree)[1]
+  ret <- list(x=x,y=pres,fun="bs",argname=as.character(mc[["x"]])[1], name=n, degree=degree)
+  class(ret) <- c("BSpline", "ParametricBasis")
+  
+  #print(paste("mc:", as.character(mc["x"])))
+  ret
+}
+
+predict.Poly <- function(object,newdata) {
+  predict(object$y, newdata)
+}
+
+predict.BSpline <- function(object,newdata) {
+  predict(object$y, newdata)
+}

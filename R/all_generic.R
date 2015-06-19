@@ -10,7 +10,7 @@ isContinuous <- function(x) UseMethod("isContinuous")
 
 levels <- function(x) UseMethod("levels")
 
-colnames <- function(x) UseMethod("colnames")
+columns <- function(x) UseMethod("columns")
 
 designMatrix <- function(x, ...) UseMethod("designMatrix")
 
@@ -19,3 +19,11 @@ elements <- function(x, ...) UseMethod("elements")
 evaluate <-  function(x, samplingGrid, ...) UseMethod("evaluate")
 
 nbasis <-  function(x) UseMethod("nbasis")
+
+onsets <-  function(x) UseMethod("onsets")
+
+durations <-  function(x) UseMethod("durations")
+
+amplitudes <-  function(x) UseMethod("amplitudes")
+
+samples <-  function(x, ...) UseMethod("samples")
