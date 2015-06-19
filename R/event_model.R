@@ -142,11 +142,14 @@ hrf <- function(..., basis=HRF.GAMMA, onsets=NULL, durations=NULL, prefix=NULL, 
   ret
 }
 
+
+#' @export
 nuisancespec.construct <- function(x, model_spec) {
   mat <- base::eval(parse(text=x$varname), envir=model_spec$raw_table, enclos=parent.frame())
   matrix_term(x$varname, mat)
 }  
-  
+
+#' @export  
 baselinespec.construct <- function(x, model_spec) {
   ret <- lapply(model_spec$blocklens, function(bl) cbind(rep(1, bl), bfun(seq(1, bl), x$degree)))
   mat <- matrix(0, sum(model_spec$blocklens), (x$degree+1)*length(model_spec$blocklens))
@@ -163,6 +166,7 @@ baselinespec.construct <- function(x, model_spec) {
   matrix_term(x$varname, mat)	
 }
 
+#' @export
 hrfspec.construct <- function(x, model_spec) {
   onsets <- if (!is.null(x$onsets)) {
     x$onsets
