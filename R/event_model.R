@@ -95,7 +95,7 @@ nuisance <- function(x) {
 #' baseline
 #' 
 #' A matrix of polynomial regressors for modleing low-frequency drift in fmri time series.
-#' @importFrom splines bs, ns
+#' @importFrom splines bs ns
 #' @param number of polynomial terms for each image block
 #' @param basis the type of polynomial basis.
 #' @param name the name of the term

@@ -52,10 +52,14 @@ columns <- function(x) UseMethod("columns")
 designMatrix <- function(x, ...) UseMethod("designMatrix")
 
 #' elements
+#' 
+#' return the ordered elements of a term/variable
+#' 
 #' @export
 elements <- function(x, ...) UseMethod("elements")
 
 #' evaluate
+#' 
 #' @export
 evaluate <-  function(x, samplingGrid, ...) UseMethod("evaluate")
 

@@ -66,7 +66,7 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
 
 #' EV
 #' 
-#' factory function for creating 'event' types: event_factor, event_variable, event_basis, event_set.
+#' factory function for creating 'event' types: event_factor, event_variable, event_basis, event_matrix.
 #' 
 #' @param vals the event values
 #' @param name the name of the event variable
@@ -89,7 +89,7 @@ EV <- function(vals, name, onsets, blockids, durations = 1) {
   } else if (is.vector(vals)) {
     EventVariable(vals, name, onsets, blockids, durations)
   } else if (is.matrix(vals)) {
-    event_set(vals, name, onsets, blockids, durations)
+    event_matrix(vals, name, onsets, blockids, durations)
   } else if (is.factor(vals)) {
     EventFactor(vals, name, onsets, blockids, durations)
   } else {
@@ -123,6 +123,10 @@ event_factor <- function(fac, name, onsets, blockids=1, durations=NULL) {
 #' event_variable
 #' 
 #' Create a continuous valued event sequence from a \code{numeric} vector.
+#' @param name the name of the variable
+#' @param onsets the event onsets in seconds
+#' @param blockids the index of the block/scan in which the event occurs
+#' @param durations the durations of each event in seconds
 #' @export
 event_variable <- function(vec, name, onsets, blockids=1, durations=NULL) {
   stopifnot(is.vector(vec))
@@ -138,27 +142,36 @@ event_variable <- function(vec, name, onsets, blockids=1, durations=NULL) {
   
 }       
 
-#' event_set
+#' event_matrix
 #' 
 #' Create a continuous valued event set from a \code{matrix}
 #' 
-#' @param mat
-#' @param name
-#' @param onsets
-#' @param durations
-#' @param blockids
+#' @param mat a matrix of values, one row per event, indicating the amplitude/intensity of each event.
+#' @param name the name of the variable
+#' @param onsets the event onsets in seconds
+#' @param durations the durations of each event in seconds
+#' @param blockids the index of the block/scan in which the event occurs
+#' @examples 
+#' 
+#' mat <- matrix(rnorm(200), 100, 2)
+#' onsets <- seq(1, 1000, length.out=100)
+#' durations <- rep(1, 100)
+#' blockids <- rep(1, 100)
+#' 
+#' eset <- event_matrix(mat, "eset", onsets,durations,blockids)
+#' 
 #' @export
-event_set <- function(mat, name, onsets, durations=NULL, blockids=1 ) {
+event_matrix <- function(mat, name, onsets, durations=NULL, blockids=1 ) {
   stopifnot(is.matrix(mat))
   
-  ret <- .checkEVArgs(name, mat[,1], onsets, blockids, durations)
+  ret <- .checkEVArgs(name, as.vector(mat[,1]), onsets, blockids, durations)
   ret$continuous <- TRUE
   
   if (is.null(colnames(mat))) {
     colnames(mat) <- 1:NCOL(mat)
   }
   
-  class(ret) <- c("event_set", "event_seq")
+  class(ret) <- c("event_matrix", "event_seq")
   ret
 }
 
@@ -186,7 +199,7 @@ levels.event_factor <- function(x) levels(x$value)
 
 levels.event_variable <- function(x) x$varname 
 
-levels.event_set <- function(x) colnames(x$value) 
+levels.event_matrix <- function(x) colnames(x$value) 
 
 levels.event_basis <- function(x) seq(1, ncol(x$basis$y))
 
@@ -253,7 +266,7 @@ conditions.event_term <- function(x, drop.empty=TRUE) {
 
 columns.event_term <- function(x) as.vector(unlist(lapply(x$events, columns)))
 columns.event_seq <- function(x) x$varname
-columns.event_set <- function(x) paste0(.sanitizeName(x$varname), ".", levels(x))
+columns.event_matrix <- function(x) paste0(.sanitizeName(x$varname), ".", levels(x))
 columns.event_basis <- function(x) paste0(.sanitizeName(x$varname), ".", levels(x))
 
 parentTerms.event_term <- function(x) unlist(lapply(x$events, function(ev) ev$varname))
@@ -262,7 +275,7 @@ isContinuous.event_seq <- function(x) x$continuous
 
 
 
-elements.event_set <- function(x, values=TRUE) {
+elements.event_matrix <- function(x, values=TRUE) {
   if (values) {
     ret <- x$value
     colnames(ret) <- colnames(x)
