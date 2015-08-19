@@ -1,6 +1,14 @@
 
+<<<<<<< HEAD
 
 #' @export
+=======
+#' Poly
+#' 
+#' @param x a numeric vector at which to evaluate the polynomial. Missing values are not allowed in x
+#' @param degree the degree of the polynomial. Must be less than the number of unique points.
+#' @export polynomial basis wrapping \code{poly}
+>>>>>>> 852d8b5091ae7f8c6c09adf3bdf3731924c18e72
 Poly <- function(x, degree) {
   mc <- match.call()
   pres <- poly(x,degree)
@@ -10,8 +18,15 @@ Poly <- function(x, degree) {
   ret
 }
 
+<<<<<<< HEAD
 #' @export
 #' @importFrom splines bs
+=======
+#' BSpline
+#' 
+#' @param x a numeric vector at which to evaluate the spline. Missing values are not allowed in x
+#' @param degree the degree of the piecewise polynomial
+>>>>>>> 852d8b5091ae7f8c6c09adf3bdf3731924c18e72
 BSpline <- function(x, degree) {
   mc <- match.call()
   

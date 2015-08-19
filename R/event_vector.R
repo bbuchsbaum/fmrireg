@@ -1,3 +1,6 @@
+#' @import checkmate
+NULL
+
 .sanitizeName <- function(name) {
   name <- gsub(":", ".", name)
   name <- gsub(" ", "", name)
@@ -5,6 +8,10 @@
   name <- gsub(",", ".", name)
   name <- gsub("\\.$", "", name)
   name
+}
+
+is.increasing <- function(vec) {
+  all(diff(vec) > 0)
 }
 
 .checkEVArgs <- function(name, vals, onsets, blockids, durations=NULL) {
@@ -22,15 +29,24 @@
 
 #' event_term
 #' 
+<<<<<<< HEAD
 #' Create a event model term from a list of variables.
 #' @param evlist
 #' @param onsets
 #' @param blockids
 #' @param durations
 #' @param subset
+=======
+#' construct an \code{event_term} instance from a named list of variables
+#' @param onsets the onset times from the experimental events in seconds.
+#' @param blockids the block number associated whcih each onset, should be in strict increasing order.
+>>>>>>> 852d8b5091ae7f8c6c09adf3bdf3731924c18e72
 #' @export
 #' @rdname event_term-class
 event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
+  assert(is.increasing(onsets))
+  assert(is.increasing(blockids))
+  
   vnames <- names(evlist)
   evs <- lapply(1:length(evlist), function(i) EV(evlist[[i]], vnames[i], onsets=onsets, blockids=blockids, durations=durations))
   names(evs) <- sapply(evs, function(ev) ev$varname)
@@ -57,7 +73,16 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   ret
 }
 
+#' EV
+#' 
+#' factory function for creating 'event' types: event_factor, event_variable, event_basis, event_set.
+#' 
+#' @param vals the event values
+#' @param name the name of the event variable
+#' @param onsets the event onsets.
+#' @param blockids the block ids associated with each event (must be strictly iincreasing)
 #' @export
+#' 
 EV <- function(vals, name, onsets, blockids, durations = 1) {
   
   if (length(durations) == 1) {
@@ -82,7 +107,15 @@ EV <- function(vals, name, onsets, blockids, durations = 1) {
   
 }
 
-#' @description Create an categorical event sequence from a \code{factor} 
+#' event_factor
+#' 
+#' Create an categorical event sequence from a \code{factor} 
+#' 
+#' @param fac
+#' @param name
+#' @param onsets
+#' @param blockids
+#' @param durations
 #' @export
 event_factor <- function(fac, name, onsets, blockids=1, durations=NULL) {
   if (!is.factor(fac)) {
@@ -96,7 +129,9 @@ event_factor <- function(fac, name, onsets, blockids=1, durations=NULL) {
   ret
 }        
 
-#' @description Create a continuous valued event sequence from a \code{numeric} vector.
+#' event_variable
+#' 
+#' Create a continuous valued event sequence from a \code{numeric} vector.
 #' @export
 event_variable <- function(vec, name, onsets, blockids=1, durations=NULL) {
   stopifnot(is.vector(vec))
@@ -112,7 +147,15 @@ event_variable <- function(vec, name, onsets, blockids=1, durations=NULL) {
   
 }       
 
-#' @description Create a continuous valued event set from a \code{matrix}
+#' event_set
+#' 
+#' Create a continuous valued event set from a \code{matrix}
+#' 
+#' @param mat
+#' @param name
+#' @param onsets
+#' @param durations
+#' @param blockids
 #' @export
 event_set <- function(mat, name, onsets, durations=NULL, blockids=1 ) {
   stopifnot(is.matrix(mat))
@@ -128,7 +171,18 @@ event_set <- function(mat, name, onsets, durations=NULL, blockids=1 ) {
   ret
 }
 
+<<<<<<< HEAD
 #' Create a event set from a basis object of type \code{\linkS4class{ParametricBasis}}. 
+=======
+#' event_basis
+#' 
+#' Create a event set from a basis object of type \code{\linkS4class{ParametricBasis}}. 
+#' @param basis
+#' @param onsets
+#' @param blockids
+#' @param durations
+#' 
+>>>>>>> 852d8b5091ae7f8c6c09adf3bdf3731924c18e72
 #' @export
 event_basis <- function(basis, onsets, blockids=1, durations=NULL) {
   stopifnot(inherits(basis, "ParametricBasis"))

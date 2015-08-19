@@ -74,7 +74,13 @@ parse_term <- function(vars, ttype) {
   list(term=term, label=label)
 }
 
+#' nuisance
+#' 
+#' a 'nuisance' term that consists of an arbitrary numeric matrix with the same number of rows as image time points.
+#' 
 #' @export
+#' @param x a \code{matrix} 
+#' @return a class of type \code{nuisancespec}
 nuisance <- function(x) {
   varname <- substitute(x)
   
@@ -86,10 +92,20 @@ nuisance <- function(x) {
   ret
 }
 
+<<<<<<< HEAD
 
 #' @importFrom splines bs ns
+=======
+#' baseline
+#' 
+#' A matrix of polynomial regressors for modleing low-frequency drift in fmri time series.
+#' @importFrom splines bs, ns
+#' @param number of polynomial terms for each image block
+#' @param basis the type of polynomial basis.
+#' @param name the name of the term
+>>>>>>> 852d8b5091ae7f8c6c09adf3bdf3731924c18e72
 #' @export
-baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Baseline_", basis, "_", N)) {
+baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Baseline_", basis, "_", degree)) {
   bfun <- switch(basis,
                  bs=bs,
                  ns=ns,
@@ -101,12 +117,25 @@ baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Base
     varname=name
   )
   
-  class(ret) <- "baselinespec"
+  class(ret) <- c("baselinespec", "nuisancespec")
   ret
 }
 
+<<<<<<< HEAD
 
 #' @export
+=======
+#' hrf
+#' 
+#' hemodynamic response specification
+#' @param ... the variable names
+#' @param basis the impulse response function.
+#' @param onsets optional onsets override. If missing, onsets will be taken from overall model specification.
+#' @param durations optional durations override. If missing, onsets will be taken from overall model specification.
+#' @param prefix
+#' @param subset
+#' @param precision
+>>>>>>> 852d8b5091ae7f8c6c09adf3bdf3731924c18e72
 hrf <- function(..., basis=HRF.GAMMA, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
