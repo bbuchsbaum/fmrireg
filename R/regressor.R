@@ -13,6 +13,7 @@ sampling_frame <- function(blocklens, TR, startTime=TR/2, precision=.1) {
   ret
 }
 
+#' @export
 samples.sampling_frame <- function(x, blocknum=NULL, global=FALSE) {
   if (is.null(blocknum)) {
     blocknum <- seq(1, length(x$blocklens))
@@ -30,7 +31,7 @@ samples.sampling_frame <- function(x, blocknum=NULL, global=FALSE) {
   }
 }
 
-globalOnsets <-  function(x, onsets,...) UseMethod("globalOnsets")
+#' @export
 globalOnsets.sampling_frame <- function(x, onsets, blockids) {
   
   ids <- rep(1:length(unique(blockids)), table(blockids))
@@ -125,12 +126,18 @@ evaluate.regressor <- function(x, samplingGrid, precision=.1) {
   }
 }
 
+#' @export
 nbasis.regressor <- function(x) x$hrf$nbasis
+
+#' @export
 onsets.regressor <- function(x) x$onsets
+
+#' @export
 durations.regressor <- function(x) x$duration
+#' @export
 amplitudes.regressor <- function(x) x$amplitude
 
-
+#' @export
 print.regressor <- function(object) {
   N <- min(c(6, length(onsets(object))))
   cat(paste("hemodynamic response function:", object$hrf$name))

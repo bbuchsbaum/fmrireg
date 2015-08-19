@@ -30,6 +30,9 @@ elements <- function(x, ...) UseMethod("elements")
 evaluate <-  function(x, samplingGrid, ...) UseMethod("evaluate")
 
 #' @export
+globalOnsets <-  function(x, onsets,...) UseMethod("globalOnsets")
+
+#' @export
 nbasis <-  function(x) UseMethod("nbasis")
 
 #' @export

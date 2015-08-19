@@ -55,6 +55,7 @@ hrf.time <- function(t, maxt) {
 }
 
 #' @export
+#' @importFrom splines bs
 hrf.bspline <- function(t, width=20, N=5, degree=3) {
 	
 	ord <- 1 + degree

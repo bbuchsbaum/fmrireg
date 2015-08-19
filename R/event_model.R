@@ -87,7 +87,7 @@ nuisance <- function(x) {
 }
 
 
-#' @importFrom splines bs, ns
+#' @importFrom splines bs ns
 #' @export
 baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Baseline_", basis, "_", N)) {
   bfun <- switch(basis,
@@ -105,6 +105,8 @@ baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Base
   ret
 }
 
+
+#' @export
 hrf <- function(..., basis=HRF.GAMMA, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")

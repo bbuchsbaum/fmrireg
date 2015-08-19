@@ -1,4 +1,6 @@
 
+
+#' @export
 Poly <- function(x, degree) {
   mc <- match.call()
   pres <- poly(x,degree)
@@ -8,6 +10,8 @@ Poly <- function(x, degree) {
   ret
 }
 
+#' @export
+#' @importFrom splines bs
 BSpline <- function(x, degree) {
   mc <- match.call()
   
@@ -20,10 +24,12 @@ BSpline <- function(x, degree) {
   ret
 }
 
+#' @export
 predict.Poly <- function(object,newdata) {
   predict(object$y, newdata)
 }
 
+#' @export
 predict.BSpline <- function(object,newdata) {
   predict(object$y, newdata)
 }
