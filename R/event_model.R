@@ -9,6 +9,7 @@ extractTerms <- function(formula, data) {
 }
 
 
+
 extractCovariates <- function(.terms, variables, resp, etab) {
   vars <- attr(.terms, "variables") 
   varnames <- sapply(vars, deparse, width.cutoff = 500)[-1]
