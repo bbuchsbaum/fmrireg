@@ -29,7 +29,12 @@ is.increasing <- function(vec) {
 
 #' event_term
 #' 
-#' construct an \code{event_term} instance from a named list of variables
+#' Create a event model term from a named list of variables.
+#' @param evlist
+#' @param onsets
+#' @param blockids
+#' @param durations
+#' @param subset
 #' @param onsets the onset times from the experimental events in seconds.
 #' @param blockids the block number associated whcih each onset, should be in strict increasing order.
 #' @export
@@ -87,11 +92,11 @@ EV <- function(vals, name, onsets, blockids, durations = 1) {
   if (inherits(vals, "ParametricBasis")) {
     event_basis(vals, onsets, blockids, durations)	
   } else if (is.vector(vals)) {
-    EventVariable(vals, name, onsets, blockids, durations)
+    event_variable(vals, name, onsets, blockids, durations)
   } else if (is.matrix(vals)) {
     event_matrix(vals, name, onsets, blockids, durations)
   } else if (is.factor(vals)) {
-    EventFactor(vals, name, onsets, blockids, durations)
+    event_factor(vals, name, onsets, blockids, durations)
   } else {
     stop(paste("cannot create event_seq from type: ", typeof(vals)))
   }
@@ -175,6 +180,7 @@ event_matrix <- function(mat, name, onsets, durations=NULL, blockids=1 ) {
   ret
 }
 
+
 #' event_basis
 #' 
 #' Create a event set from a basis object of type \code{\linkS4class{ParametricBasis}}. 
@@ -194,13 +200,20 @@ event_basis <- function(basis, onsets, blockids=1, durations=NULL) {
 }
 
 
-
+#' @export
 levels.event_factor <- function(x) levels(x$value) 
 
+#' @export
 levels.event_variable <- function(x) x$varname 
+
 
 levels.event_matrix <- function(x) colnames(x$value) 
 
+
+#' @export
+levels.event_set <- function(x) colnames(x$value) 
+
+#' @export
 levels.event_basis <- function(x) seq(1, ncol(x$basis$y))
 
 formula.event_term <- function(x) as.formula(paste("~ ", "(", paste(parentTerms(x), collapse=":"), "-1", ")"))
@@ -264,17 +277,31 @@ conditions.event_term <- function(x, drop.empty=TRUE) {
   do.call(function(...) paste(..., sep=":"), ret)
 }
 
+#' @export
 columns.event_term <- function(x) as.vector(unlist(lapply(x$events, columns)))
+
+#' @export
 columns.event_seq <- function(x) x$varname
+
 columns.event_matrix <- function(x) paste0(.sanitizeName(x$varname), ".", levels(x))
+
+
+#' @export
+columns.event_set <- function(x) paste0(.sanitizeName(x$varname), ".", levels(x))
+
+#' @export
 columns.event_basis <- function(x) paste0(.sanitizeName(x$varname), ".", levels(x))
 
+
+#' @export
 parentTerms.event_term <- function(x) unlist(lapply(x$events, function(ev) ev$varname))
 
+#' @export
 isContinuous.event_seq <- function(x) x$continuous
 
 
 
+#' @export
 elements.event_matrix <- function(x, values=TRUE) {
   if (values) {
     ret <- x$value
@@ -294,6 +321,7 @@ elements.event_matrix <- function(x, values=TRUE) {
   }
 }
 
+#' @export
 elements.event_seq <- function(x, values = TRUE) {
   if (values) {
     ret <- list(x$value)
@@ -306,6 +334,7 @@ elements.event_seq <- function(x, values = TRUE) {
   }
 }
 
+#' @export
 elements.event_basis <- function(x, values=TRUE, transformed=TRUE) {
   if (values && !transformed) {
     x$value$x				
@@ -328,6 +357,8 @@ elements.event_basis <- function(x, values=TRUE, transformed=TRUE) {
   }
 }
 
+
+#' @export
 elements.event_term <- function(x, values=TRUE) {
   els <- lapply(x$events, elements, values=values)
   n <- sapply(names(els), function(nam) .sanitizeName(nam))
@@ -335,7 +366,9 @@ elements.event_term <- function(x, values=TRUE) {
   els
 }
 
-convolveDesign <- function(hrf, dmat, globons, durations) {
+
+#' @export
+convolve_design <- function(hrf, dmat, globons, durations) {
   cond.names <- names(dmat)
   keep <- if (any(is.na(dmat)) || any(is.na(globons))) {
     ret <- apply(dmat, 1, function(vals) all(!is.na(vals)))
@@ -346,11 +379,12 @@ convolveDesign <- function(hrf, dmat, globons, durations) {
   
   
   lapply(1:NCOL(dmat), function(i) {
-    Regressor(globons[keep], hrf, amplitude=dmat[keep,i], duration=durations[keep])
+    regressor(globons[keep], hrf, amplitude=dmat[keep,i], duration=durations[keep])
   })
   
 }
 
+#' @export
 convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
   globons <- globalOnsets(samplingFrame, x$onsets, x$blockids)
   
@@ -373,6 +407,7 @@ convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
   
 }
 
+#' @export
 designMatrix.event_term <- function(x, drop.empty=TRUE) {
   locenv <- new.env()
   pterms <- sapply(parentTerms(x), .sanitizeName)	
@@ -413,7 +448,7 @@ designMatrix.event_term <- function(x, drop.empty=TRUE) {
   
   rmat
 }
-
+#' @export
 matrix_term <- function(varname, mat) {
   stopifnot(is.matrix(mat))
   ret <- list(varname=varname, mat=mat)
@@ -421,6 +456,7 @@ matrix_term <- function(varname, mat) {
   ret
 }
 
+#' @export
 designMatrix.matrix_term <- function(x,...) {
   if (is.null(colnames(x$mat))) {
     cnames <- paste0(x$varname, "_", 1:ncol(x$mat))
@@ -431,7 +467,7 @@ designMatrix.matrix_term <- function(x,...) {
   dmat
 }
 
-
+#' @export
 print.event_term <- function(object) {
   cat("event_term", "\n")
   cat(" ", "Term Name: ", object$varname, "\n")

@@ -65,6 +65,9 @@ evaluate <-  function(x, samplingGrid, ...) UseMethod("evaluate")
 
 #' nbasis
 #' @export
+globalOnsets <-  function(x, onsets,...) UseMethod("globalOnsets")
+
+#' @export
 nbasis <-  function(x) UseMethod("nbasis")
 
 #' onsets

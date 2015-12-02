@@ -9,6 +9,7 @@ extractTerms <- function(formula, data) {
 }
 
 
+
 extractCovariates <- function(.terms, variables, resp, etab) {
   vars <- attr(.terms, "variables") 
   varnames <- sapply(vars, deparse, width.cutoff = 500)[-1]
@@ -92,6 +93,10 @@ nuisance <- function(x) {
   ret
 }
 
+<<<<<<< HEAD
+
+#' @importFrom splines bs ns
+=======
 #' baseline
 #' 
 #' A matrix of polynomial regressors for modleing low-frequency drift in fmri time series.
@@ -99,6 +104,7 @@ nuisance <- function(x) {
 #' @param number of polynomial terms for each image block
 #' @param basis the type of polynomial basis.
 #' @param name the name of the term
+>>>>>>> 852d8b5091ae7f8c6c09adf3bdf3731924c18e72
 #' @export
 baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Baseline_", basis, "_", degree)) {
   bfun <- switch(basis,
@@ -116,6 +122,10 @@ baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Base
   ret
 }
 
+<<<<<<< HEAD
+
+#' @export
+=======
 #' hrf
 #' 
 #' hemodynamic response specification
@@ -126,6 +136,7 @@ baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Base
 #' @param prefix
 #' @param subset
 #' @param precision
+>>>>>>> 852d8b5091ae7f8c6c09adf3bdf3731924c18e72
 hrf <- function(..., basis=HRF.GAMMA, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
