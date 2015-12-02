@@ -7,6 +7,6 @@
 elements(x, ...)
 }
 \description{
-elements
+return the ordered elements of a term/variable
 }
 

@@ -2,7 +2,6 @@
 % Please edit documentation in R/basis.R
 \name{Poly}
 \alias{Poly}
-\title{Poly}
 \usage{
 Poly(x, degree)
 }
@@ -10,8 +9,5 @@ Poly(x, degree)
 \item{x}{a numeric vector at which to evaluate the polynomial. Missing values are not allowed in x}
 
 \item{degree}{the degree of the polynomial. Must be less than the number of unique points.}
-}
-\description{
-Poly
 }
 
