@@ -31,6 +31,7 @@ samples.sampling_frame <- function(x, blocknum=NULL, global=FALSE) {
 }
 
 globalOnsets <-  function(x, onsets,...) UseMethod("globalOnsets")
+
 globalOnsets.sampling_frame <- function(x, onsets, blockids) {
   
   ids <- rep(1:length(unique(blockids)), table(blockids))
