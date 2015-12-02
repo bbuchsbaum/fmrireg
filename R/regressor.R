@@ -32,11 +32,11 @@ samples.sampling_frame <- function(x, blocknum=NULL, global=FALSE) {
 }
 
 
-globalOnsets <-  function(x, onsets,...) UseMethod("globalOnsets")
+global_onsets <-  function(x, onsets,...) UseMethod("global_onsets")
 
 
 #' @export
-globalOnsets.sampling_frame <- function(x, onsets, blockids) {
+global_onsets.sampling_frame <- function(x, onsets, blockids) {
   
   ids <- rep(1:length(unique(blockids)), table(blockids))
   

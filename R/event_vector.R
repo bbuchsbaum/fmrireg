@@ -14,15 +14,17 @@ is.increasing <- function(vec) {
   all(diff(vec) > 0)
 }
 
+
+#' @import assertthat
 .checkEVArgs <- function(name, vals, onsets, blockids, durations=NULL) {
-  stopifnot(length(onsets) == length(vals))
+  assertthat::assert_that(length(onsets) == length(vals))
   
   if (is.null(durations) || length(durations) == 1) {
     durations <- rep(durations, length(onsets))
   }
   
-  stopifnot(length(durations) == length(vals))
-  stopifnot(length(blockids) == length(vals))
+  assert_that(length(durations) == length(vals))
+  assert_that(length(blockids) == length(vals))
   
   list(varname=name, value=vals, onsets=onsets, durations=durations, blockids=blockids)
 }
@@ -107,11 +109,11 @@ EV <- function(vals, name, onsets, blockids, durations = 1) {
 #' 
 #' Create an categorical event sequence from a \code{factor} 
 #' 
-#' @param fac
-#' @param name
-#' @param onsets
-#' @param blockids
-#' @param durations
+#' @param fac a factor
+#' @param name the name for the factor
+#' @param onsets vector of event onsets in seconds
+#' @param blockids block index variable
+#' @param durations the durations in seconds of the onsets
 #' @export
 event_factor <- function(fac, name, onsets, blockids=1, durations=NULL) {
   if (!is.factor(fac)) {
@@ -188,10 +190,10 @@ event_matrix <- function(mat, name, onsets, durations=NULL, blockids=1 ) {
 #' @param onsets
 #' @param blockids
 #' @param durations
-#' 
+#' @import assertthat
 #' @export
 event_basis <- function(basis, onsets, blockids=1, durations=NULL) {
-  stopifnot(inherits(basis, "ParametricBasis"))
+  assertthat::assert_that(inherits(basis, "ParametricBasis"))
   ret <- .checkEVArgs(basis$name, basis$x, onsets, blockids, durations)
   ret$continuous <- TRUE
   ret$basis <- basis
@@ -216,6 +218,7 @@ levels.event_set <- function(x) colnames(x$value)
 #' @export
 levels.event_basis <- function(x) seq(1, ncol(x$basis$y))
 
+#' @export
 formula.event_term <- function(x) as.formula(paste("~ ", "(", paste(parentTerms(x), collapse=":"), "-1", ")"))
 
 levels.event_term <- function(x) {
@@ -386,7 +389,7 @@ convolve_design <- function(hrf, dmat, globons, durations) {
 
 #' @export
 convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
-  globons <- globalOnsets(samplingFrame, x$onsets, x$blockids)
+  globons <- global_onsets(samplingFrame, x$onsets, x$blockids)
   
   nimages <- sum(samplingFrame$blocklens)
   samples <- seq(samplingFrame$startTime, length.out=nimages, by=samplingFrame$TR)
