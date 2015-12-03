@@ -50,13 +50,13 @@ makeDeriv <- function(HRF, n=1) {
 }
 
 #' @export
-hrf.time <- function(t, maxt) {
+hrf_time <- function(t, maxt) {
   ifelse(t > 0 & t < maxt, t, 0)
 }
 
 #' @export
 #' @importFrom splines bs
-hrf.bspline <- function(t, width=20, N=5, degree=3) {
+hrf_bspline <- function(t, width=20, N=5, degree=3) {
 	
 	ord <- 1 + degree
 	nIknots <- N - ord + 1
@@ -84,38 +84,38 @@ hrf.bspline <- function(t, width=20, N=5, degree=3) {
 }
 
 #' @export
-hrf.gamma <- function(t, shape=6, rate=1) {
+hrf_gamma <- function(t, shape=6, rate=1) {
   dgamma(t, shape=shape, rate=rate)
 }
 
 #' @export
-hrf.gaussian <- function(t, mean=6, sd=2) {
+hrf_gaussian <- function(t, mean=6, sd=2) {
 	dnorm(t, mean=mean, sd=sd)
 }
 
 #' @export
-hrf.spmg1 <- function(t, A1=.00833, A2=1.274527e-13, P1=5, P2=15) {
+hrf_spmg1 <- function(t, A1=.00833, A2=1.274527e-13, P1=5, P2=15) {
 	ifelse(t < 0, 0, exp(-t)*(A1*t^P1 - A2*t^P2))
 	
 }
 
 #' @export
-HRF.GAMMA <- HRF(hrf.gamma, "gamma")
+HRF_GAMMA <- HRF(hrf_gamma, "gamma")
 
 #' @export
-HRF.GAUSSIAN <- HRF(hrf.gaussian, "gaussian")
+HRF_GAUSSIAN <- HRF(hrf_gaussian, "gaussian")
 
 #' @export
-HRF.BSPLINE <- HRF(createHRF(hrf.bspline), "bspline", 5)
+HRF_BSPLINE <- HRF(createHRF(hrf_bspline), "bspline", 5)
 
 #' @export
-HRF.SPMG1 <- HRF(hrf.spmg1, "SPMG1")
+HRF_SPMG1 <- HRF(hrf_spmg1, "SPMG1")
 
 #' @export
-HRF.SPMG2 <- HRF(createHRFSet(hrf.spmg1, makeDeriv(hrf.spmg1)), "SPMG2")
+HRF_SPMG2 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf.spmg1)), "SPMG2")
 
 #' @export
-HRF.SPMG3 <- HRF(createHRFSet(hrf.spmg1, makeDeriv(hrf.spmg1), makeDeriv(makeDeriv(hrf.spmg1))), "SPMG3")
+HRF_SPMG3 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf.spmg1), makeDeriv(makeDeriv(hrf.spmg1))), "SPMG3")
 
 #' evaluate an HRF for a single event along a set of points
 #' @param grid the sampling grid, e.g. the points in time at which the HRF will be evaluated.

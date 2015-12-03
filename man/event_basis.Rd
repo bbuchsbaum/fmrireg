@@ -6,9 +6,6 @@
 \usage{
 event_basis(basis, onsets, blockids = 1, durations = NULL)
 }
-\arguments{
-\item{durations}{}
-}
 \description{
 Create a event set from a basis object of type \code{\linkS4class{ParametricBasis}}.
 }

@@ -6,6 +6,17 @@
 \usage{
 event_factor(fac, name, onsets, blockids = 1, durations = NULL)
 }
+\arguments{
+\item{fac}{a factor}
+
+\item{name}{the name for the factor}
+
+\item{onsets}{vector of event onsets in seconds}
+
+\item{blockids}{block index variable}
+
+\item{durations}{the durations in seconds of the onsets}
+}
 \description{
 Create an categorical event sequence from a \code{factor}
 }

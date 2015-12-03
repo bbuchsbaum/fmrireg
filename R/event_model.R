@@ -96,9 +96,11 @@ nuisance <- function(x) {
 
 
 
+
+
 #' baseline
 #' 
-#' A matrix of polynomial regressors for modleing low-frequency drift in fmri time series.
+#' A matrix of polynomial regressors for modeling low-frequency drift in fmri time series.
 #' @importFrom splines bs ns
 #' @param number of polynomial terms for each image block
 #' @param basis the type of polynomial basis.
@@ -120,6 +122,17 @@ baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Base
   ret
 }
 
+block <- function(x){
+  varname <- substitute(x)
+  ret <- list(
+    varname=varname
+  )
+  
+  class(ret) <- "blockspec"
+  ret
+  
+}
+
 
 
 #' hrf
@@ -133,7 +146,7 @@ baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Base
 #' @param subset
 #' @param precision
 #' @export
-hrf <- function(..., basis=HRF.GAMMA, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2) {
+hrf <- function(..., basis=HRF_GAMMA, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
@@ -170,6 +183,14 @@ hrf <- function(..., basis=HRF.GAMMA, onsets=NULL, durations=NULL, prefix=NULL, 
   ret
 }
 
+#' @export
+blockspec.construct <- function(x, model_spec) {
+  blockids <- base::eval(parse(text=x$varname), envir=model_spec$raw_table, enlos=parent.frame())
+  blockids <- as.factor(blockids)
+  mat <- model.matrix(~ blockids - 1)
+  colnames(mat) <- paste0(x$varname, "_", levels(blockids))
+  matrix_term(x$varname, mat)
+}
 
 #' @export
 nuisancespec.construct <- function(x, model_spec) {
