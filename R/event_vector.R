@@ -11,6 +11,10 @@ NULL
 }
 
 is.increasing <- function(vec) {
+  all(diff(vec) >= 0)
+}
+
+is.strictly.increasing <- function(vec) {
   all(diff(vec) > 0)
 }
 
@@ -33,17 +37,15 @@ is.increasing <- function(vec) {
 #' 
 #' Create a event model term from a named list of variables.
 #' @param evlist
-#' @param onsets
-#' @param blockids
+#' @param onsets the onset times from the experimental events in seconds
+#' @param blockids the block number associated with each onset
 #' @param durations
 #' @param subset
-#' @param onsets the onset times from the experimental events in seconds.
-#' @param blockids the block number associated whcih each onset, should be in strict increasing order.
 #' @export
 #' @rdname event_term-class
 event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
-  assert(is.increasing(onsets))
-  assert(is.increasing(blockids))
+  assert_that(is.strictly.increasing(onsets))
+  assert_that(is.increasing(blockids))
   
   vnames <- names(evlist)
   evs <- lapply(1:length(evlist), function(i) EV(evlist[[i]], vnames[i], onsets=onsets, blockids=blockids, durations=durations))
@@ -78,9 +80,8 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
 #' @param vals the event values
 #' @param name the name of the event variable
 #' @param onsets the event onsets.
-#' @param blockids the block ids associated with each event (must be strictly iincreasing)
+#' @param blockids the block ids associated with each event (must be non-decreasing)
 #' @export
-#' 
 EV <- function(vals, name, onsets, blockids, durations = 1) {
   
   if (length(durations) == 1) {
@@ -403,8 +404,13 @@ convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
   split.samples <- split(samples, rep(1:length(samplingFrame$blocklens), samplingFrame$blocklens))
   
   reglist <- lapply(1:length(split.dmat), function(i) {
-    convolveDesign(hrf, split.dmat[[i]], split.ons[[i]], split.durations[[i]])
+    reg <- convolve_design(hrf, split.dmat[[i]], split.ons[[i]], split.durations[[i]])
+    do.call(cbind, lapply(reg, function(r) evaluate(r, split.samples[[i]])))
   })
+  
+  ret <- do.call(rbind, reglist)
+  colnames(ret) <- conditions(x)
+  ret
   
   #lapply(reglist, function(reg) evaluate(reg, )
   
@@ -478,3 +484,5 @@ print.event_term <- function(object) {
   cat(" ", "Num Events: ", nrow(object$eventTable), "\n")
   cat(" ", "Term Types: ", paste(sapply(object$events, function(ev) class(ev)[[1]])))
 }
+
+

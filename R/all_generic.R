@@ -9,7 +9,7 @@ cells <- function(x, ...) UseMethod("cells")
 #' 
 #' return the set of condition labels associated with a model term
 #' @param x the model term
-#'@param ...
+#' @param ...
 #' @export
 conditions <- function(x, ...) UseMethod("conditions")
 
@@ -85,3 +85,7 @@ amplitudes <-  function(x) UseMethod("amplitudes")
 #' samples
 #' @export
 samples <-  function(x, ...) UseMethod("samples")
+
+#' construct
+#' @export
+construct <- function(x, model_spec) UseMethod("construct")

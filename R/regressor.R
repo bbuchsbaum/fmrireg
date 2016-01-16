@@ -79,14 +79,6 @@ regressor <- function(onsets, hrf, duration=0, amplitude=1, span=20) {
   ret
 }
 
-#' extract terms from formula
-extractTerms <- function(formula, data) {
-  if (!inherits(formula, "terms")) {
-    terms(formula, data = data)
-  } else {
-    formula
-  }	
-}
 
 dots <- function(...) {
   eval(substitute(alist(...)))
@@ -99,7 +91,7 @@ evaluate.regressor <- function(x, samplingGrid, precision=.1) {
   dspan <- x$span/median(diff(samplingGrid)) 
   outmat <- matrix(0, length(samplingGrid), length(x$onsets) * nb)
   nidx <- apply(RANN::nn2(matrix(samplingGrid), matrix(x$onsets), k=2)$nn.idx, 1, min)
-  valid <- sapply(x$onsets, function(o) o >= samplingGrid[1] && o < samplingGrid[length(samplingGrid)])
+  valid <- x$onsets >= samplingGrid[1] & x$onsets < samplingGrid[length(samplingGrid)]
   valid.ons <- x$onsets[valid]
   valid.durs <- x$duration[valid]
   valid.amp <- x$amplitude[valid]

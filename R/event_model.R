@@ -1,6 +1,6 @@
 
 
-extractTerms <- function(formula, data) {
+extract_terms <- function(formula, data) {
   if (!inherits(formula, "terms")) {
     terms(formula, data = data)
   } else {
@@ -10,7 +10,7 @@ extractTerms <- function(formula, data) {
 
 
 
-extractCovariates <- function(.terms, variables, resp, etab) {
+extract_covariates <- function(.terms, variables, resp, etab) {
   vars <- attr(.terms, "variables") 
   varnames <- sapply(vars, deparse, width.cutoff = 500)[-1]
   ind.vars <- varnames[-resp] 
@@ -23,8 +23,7 @@ extractCovariates <- function(.terms, variables, resp, etab) {
 
 is.parametric.basis <- function(obj) { inherits(obj, "ParametricBasis") }
 
-extractVariables <- function(.terms, data) {
-  
+extract_variables <- function(.terms, data) {
   env <- environment(.terms)
   varnames <- sapply(attr(.terms, "variables") , deparse, width.cutoff = 500)[-1]
   variables <- eval(attr(.terms, "variables"), data, env)  
@@ -34,7 +33,7 @@ extractVariables <- function(.terms, data) {
 }
 
 createEventTerms <- function(.terms, variables, resp, etab, facnames, expmat) {
-  covar.names <- extractCovariates(.terms, variables, resp, etab)
+  covar.names <- extract_covariates(.terms, variables, resp, etab)
   facterm <- do.call(EventTerm, lapply(facnames, function(fac) etab[[fac]]))
   var.terms <- if(length(covar.names) > 0) .extractVarTerms(covar.names, facnames, expmat, etab) else NULL
   c(facterm,var.terms)
@@ -42,24 +41,42 @@ createEventTerms <- function(.terms, variables, resp, etab, facnames, expmat) {
 
 
 
-fmrilm <- function(formula, event_table, voxel_data, basis=HRF.SPMG1, drop.empty=TRUE) {
+fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations, blockids, blocklens, TR, drop_empty=TRUE) {
   stopifnot(inherits(formula, "formula"))
   
-  vterms <- extractTerms(formula, event_table)
+  vterms <- extract_terms(formula, event_table)
   resp <- attr(vterms, "response")
-  stopifnot(resp > 0)
+  assert_that(resp > 0)
+  
+  assert_that(all(blocklens>0))
+  assert_that(length(TR) == 1)
+  assert_that(TR > 0)
   
   if (is.null(resp)) {
     stop("need to provide onset vector on left side of formula, e.g. Onsets ~  a + b")
   }
   
-  variables <- extractVariables(vterms, event_table)
+  if (missing(durations)) {
+    durations <- rep(0, nrow(event_table))
+  }
+  
+  variables <- extract_variables(vterms, event_table)
   lhs <- variables[[resp]]
   
   rhs <- variables[(resp+1):length(variables)]
   vclass <- sapply(rhs, class)
   
+  
+  
+  model_spec <- list(formula=formula, event_table=event_table, onsets=lhs, varspec=rhs, 
+                     durations=durations, blocklens=blocklens, blockids=blockids, TR=TR, drop_empty=drop_empty)
+  
+  class(model_spec) <- c("model_spec", "list")
+  model_spec
 }
+
+
+
 
 parse_term <- function(vars, ttype) {
   dim <- length(vars) # number of variables
@@ -86,7 +103,7 @@ nuisance <- function(x) {
   varname <- substitute(x)
   
   ret <- list(
-    varname=varname
+    name=varname
   )
   
   class(ret) <- "nuisancespec"
@@ -115,17 +132,17 @@ baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Base
   ret <- list(
     degree=degree,
     fun=bfun,
-    varname=name
+    name=name
   )
   
   class(ret) <- c("baselinespec", "nuisancespec")
   ret
 }
 
-block <- function(x){
+block <- function(x) {
   varname <- substitute(x)
   ret <- list(
-    varname=varname
+    name=varname
   )
   
   class(ret) <- "blockspec"
@@ -135,18 +152,30 @@ block <- function(x){
 
 
 
+
+trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, subset=NULL, precision=.2) {
+  ret <- hrf(...,basis,onsets,durations,subset,precision)
+  class(ret) <- c("trialwisespec", "hrfspec", "list")
+  ret
+}
+
+
 #' hrf
 #' 
-#' hemodynamic response specification
+#' hemodynamic regressor specification function
+#' 
+#' This function is to be used in formulas for fitting fucntions, e.g. onsets ~ hrf(fac1,fac2) ...
+#' 
+#' 
 #' @param ... the variable names
 #' @param basis the impulse response function.
-#' @param onsets optional onsets override. If missing, onsets will be taken from overall model specification.
-#' @param durations optional durations override. If missing, onsets will be taken from overall model specification.
+#' @param onsets optional onsets override. If missing, onsets will be taken from global model specification duration evaluation.
+#' @param durations optional durations override. If missing, onsets will be taken from global model specification during evlauation.
 #' @param prefix
 #' @param subset
 #' @param precision
 #' @export
-hrf <- function(..., basis=HRF_GAMMA, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2) {
+hrf <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
@@ -169,7 +198,10 @@ hrf <- function(..., basis=HRF_GAMMA, onsets=NULL, durations=NULL, prefix=NULL, 
     term
   }
   
+  termname <- paste0(varnames, collapse="::")
+  
   ret <- list(
+    name=termname,
     varnames=varnames,
     vars=term,
     label=label,
@@ -177,14 +209,15 @@ hrf <- function(..., basis=HRF_GAMMA, onsets=NULL, durations=NULL, prefix=NULL, 
     onsets=onsets,
     durations=durations,
     prefix=prefix,
-    subset=substitute(subset))
+    subset=substitute(subset),
+    precision=precision)
   
-  class(ret) <- "hrfspec"
+  class(ret) <- c("hrfspec", "list")
   ret
 }
 
 #' @export
-blockspec.construct <- function(x, model_spec) {
+construct.blockspec <- function(x, model_spec) {
   blockids <- base::eval(parse(text=x$varname), envir=model_spec$raw_table, enlos=parent.frame())
   blockids <- as.factor(blockids)
   mat <- model.matrix(~ blockids - 1)
@@ -193,15 +226,16 @@ blockspec.construct <- function(x, model_spec) {
 }
 
 #' @export
-nuisancespec.construct <- function(x, model_spec) {
+construct.nuisancespec <- function(x, model_spec) {
   mat <- base::eval(parse(text=x$varname), envir=model_spec$raw_table, enclos=parent.frame())
   matrix_term(x$varname, mat)
 }  
 
 #' @export  
-baselinespec.construct <- function(x, model_spec) {
+construct.baselinespec <- function(x, model_spec) {
   ret <- lapply(model_spec$blocklens, function(bl) cbind(rep(1, bl), bfun(seq(1, bl), x$degree)))
   mat <- matrix(0, sum(model_spec$blocklens), (x$degree+1)*length(model_spec$blocklens))
+  
   for (i in seq_along(ret)) {
     rowstart <- sum(model_spec$blocklens[1:i]) - model_spec$blocklens[1] + 1
     rowend <- rowstart + model_spec$blocklens[i] -1
@@ -215,8 +249,20 @@ baselinespec.construct <- function(x, model_spec) {
   matrix_term(x$varname, mat)	
 }
 
+construct.trialwisespec <- function(x, model_spec) {
+  onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
+  durations <- if (!is.null(x$durations)) x$durations else model_spec$onsets
+  varlist <- lapply(seq_along(x$vars), function(i) {
+    base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
+  })
+  
+  names(varlist) <- x$varnames
+  subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclose=parent.frame())
+  
+}
+
 #' @export
-hrfspec.construct <- function(x, model_spec) {
+construct.hrfspec <- function(x, model_spec) {
   onsets <- if (!is.null(x$onsets)) {
     x$onsets
   }	else {
@@ -228,7 +274,6 @@ hrfspec.construct <- function(x, model_spec) {
   } else {
     model_spec$durations
   }
- 
  
   varlist <- lapply(seq_along(x$vars), function(i) {
     base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
@@ -243,15 +288,17 @@ hrfspec.construct <- function(x, model_spec) {
   }
   
   et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
-  #sframe <- sampling_frame(blocklens, TR, startTime, x$precision)
-  #cterm <- convolve(et, x$hrf, sframe)
+  sframe <- sampling_frame(model_spec$blocklens, model_spec$TR, model_spec$TR/2, x$precision)
+  cterm <- convolve(et, x$hrf, sframe)
   
   ret <- list(
     evterm=et,
+    convolved_term=cterm,
+    sampling_frame=sframe,
     hrfspec=x
   )
   
-  class(ret) <- c("convolvable_term", "fmri_term", "list") 
+  class(ret) <- c("convolved_term", "fmri_term", "list") 
   ret
 }
   
