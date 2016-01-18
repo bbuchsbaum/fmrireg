@@ -21,7 +21,12 @@ is.strictly.increasing <- function(vec) {
 
 #' @import assertthat
 .checkEVArgs <- function(name, vals, onsets, blockids, durations=NULL) {
-  assertthat::assert_that(length(onsets) == length(vals))
+  assert_that(length(onsets) == length(vals))
+  
+  sons <- split(onsets, blockids)
+  for (ons in sons) {
+    assert_that(is.strictly.increasing(ons))
+  }
   
   if (is.null(durations) || length(durations) == 1) {
     durations <- rep(durations, length(onsets))
@@ -32,6 +37,8 @@ is.strictly.increasing <- function(vec) {
   
   list(varname=name, value=vals, onsets=onsets, durations=durations, blockids=blockids)
 }
+
+
 
 #' event_term
 #' 
@@ -44,16 +51,13 @@ is.strictly.increasing <- function(vec) {
 #' @export
 #' @rdname event_term-class
 event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
-  assert_that(is.strictly.increasing(onsets))
   assert_that(is.increasing(blockids))
   
   vnames <- names(evlist)
   evs <- lapply(1:length(evlist), function(i) EV(evlist[[i]], vnames[i], onsets=onsets, blockids=blockids, durations=durations))
   names(evs) <- sapply(evs, function(ev) ev$varname)
   
-  if (is.null(subset)) {
-    subset=rep(TRUE, length(evs[[1]]$onsets))
-  }
+  if (is.null(subset)) { subset=rep(TRUE, length(evs[[1]]$onsets)) }
   
   pterms <- unlist(lapply(evs, function(ev) ev$varname))
   
@@ -244,6 +248,7 @@ cells.event_term <- function(x, drop.empty=TRUE) {
   evtab <- x$eventTable
   evset <- expand.grid(lapply(x$events, levels))
   which.cat <- which(!sapply(x$events, isContinuous))
+  
   counts <- apply(evset[,which.cat,drop=F], 1, function(row1) {
     sum(apply(evtab[x$subset,which.cat,drop=F], 1, function(row2) {										
       all(row1 == row2)
@@ -254,7 +259,7 @@ cells.event_term <- function(x, drop.empty=TRUE) {
     evset <- evset[counts > 0,,drop=F]
     attr(evset, "count") <- counts[counts > 0]
   } else {
-    attr(evset, "count") <- counts[counts > 0]
+    attr(evset, "count") <- counts
   }
   evset
 }
@@ -390,12 +395,13 @@ convolve_design <- function(hrf, dmat, globons, durations) {
 
 #' @export
 convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
+
   globons <- global_onsets(samplingFrame, x$onsets, x$blockids)
   
   nimages <- sum(samplingFrame$blocklens)
   samples <- seq(samplingFrame$startTime, length.out=nimages, by=samplingFrame$TR)
   
-  dmat <- as.data.frame(designMatrix(x, drop.empty))
+  dmat <- as.data.frame(design_matrix(x, drop.empty))
   
   blockids <- factor(x$blockids)
   split.dmat <- split(dmat, blockids)
@@ -417,7 +423,7 @@ convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
 }
 
 #' @export
-designMatrix.event_term <- function(x, drop.empty=TRUE) {
+design_matrix.event_term <- function(x, drop.empty=TRUE) {
   locenv <- new.env()
   pterms <- sapply(parentTerms(x), .sanitizeName)	
   for (ev in x$events) {
@@ -447,34 +453,21 @@ designMatrix.event_term <- function(x, drop.empty=TRUE) {
     rmat[nas,] <- NA				
   } 
   
+ 
+  
   # remove columns with no events (postpone this to later stage?) 
-  #if (any(counts == 0) && (length(conditions(x, drop=F)) == length(counts)) && drop.unused.levels) {
-  #  rmat <- rmat[, !(counts==0), drop=FALSE]
-  #  colnames(rmat) <- conditions(x, drop=T)
-  #} else {
-  #  colnames(rmat) <- conditions(x, drop=F)			
-  #}
+  if (any(counts == 0) && (length(conditions(x, drop=F)) == length(counts)) && drop.empty) {
+    rmat <- rmat[, !(counts==0), drop=FALSE]
+    colnames(rmat) <- conditions(x, drop=T)
+  } else {
+    colnames(rmat) <- conditions(x, drop=F)			
+  }
   
   rmat
 }
-#' @export
-matrix_term <- function(varname, mat) {
-  stopifnot(is.matrix(mat))
-  ret <- list(varname=varname, mat=mat)
-  class(ret) <- c("matrix_term", "fmri_term")
-  ret
-}
 
-#' @export
-designMatrix.matrix_term <- function(x,...) {
-  if (is.null(colnames(x$mat))) {
-    cnames <- paste0(x$varname, "_", 1:ncol(x$mat))
-  }
-  
-  dmat <- as.data.frame(x$mat)
-  names(dmat) <- cnames
-  dmat
-}
+
+
 
 #' @export
 print.event_term <- function(object) {

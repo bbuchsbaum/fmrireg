@@ -87,10 +87,15 @@ dots <- function(...) {
 
 #' @export
 evaluate.regressor <- function(x, samplingGrid, precision=.1) {
+ 
   nb <- nbasis(x)
   dspan <- x$span/median(diff(samplingGrid)) 
   outmat <- matrix(0, length(samplingGrid), length(x$onsets) * nb)
-  nidx <- apply(RANN::nn2(matrix(samplingGrid), matrix(x$onsets), k=2)$nn.idx, 1, min)
+  nidx <- try(apply(RANN::nn2(matrix(samplingGrid), matrix(x$onsets), k=1)$nn.idx, 1, min))
+  
+  if (inherits(nidx, "try-error")) {
+    browser()
+  }
   valid <- x$onsets >= samplingGrid[1] & x$onsets < samplingGrid[length(samplingGrid)]
   valid.ons <- x$onsets[valid]
   valid.durs <- x$duration[valid]

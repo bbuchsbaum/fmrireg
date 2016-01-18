@@ -44,12 +44,12 @@ levels <- function(x) UseMethod("levels")
 #' @export
 columns <- function(x) UseMethod("columns")
 
-#' designMatrix
+#' design_matrix
 #' 
 #' construct a design matrix from the term
 #' @param x the term
 #' @export
-designMatrix <- function(x, ...) UseMethod("designMatrix")
+design_matrix <- function(x, ...) UseMethod("design_matrix")
 
 #' elements
 #' 
