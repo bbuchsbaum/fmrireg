@@ -90,7 +90,10 @@ parse_term <- function(vars, ttype) {
 design_matrix.model_spec <- function(x) {
   termlist <- lapply(x$varspec, function(m) construct(m,x))
   ret <- lapply(termlist, "[[", "design_matrix")
-  as.data.frame(do.call(cbind, ret))
+  vnames <- unlist(lapply(ret, names))
+  dmat <- as.data.frame(do.call(cbind, ret))
+  names(dmat) <- vnames
+  dmat
 }
   
   
