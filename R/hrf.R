@@ -126,25 +126,33 @@ HRF_SPMG3 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf.spmg1), makeDeriv(makeDer
 evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.1) {
   if (duration < precision) {
     x$hrf(grid)*amplitude       
-  } else {
+  } else if (nbasis(x) == 1) {
     rowSums(sapply(seq(0, duration, by=precision), function(offset) {
                 x$hrf(grid-offset)*amplitude
     }))
+  } else {
+    Reduce("+", lapply(seq(0, duration, by=precision), function(offset) {
+      x$hrf(grid-offset)*amplitude
+    }))
   }
+}
+
+evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1) {
+  evaluate(x$hrf, grid,amplitude, duration, precision)
 }
 
 nbasis.HRF <- function(x) x$nbasis
 
 #' @export
-getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), ...) {
+getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis=5) {
 	
 	hrf <- switch(name,
-			gamma=create.HRF(hrf.gamma, ...),
-			gaussian=create.HRF(hrf.gaussian, ...),
+			gamma=createHRF(hrf_gamma, ...),
+			gaussian=create.HRF(hrf_gaussian, ...),
 			spmg1=HRF.SPMG1,
 			spmg2=HRF.SPMG2,
 			spmg3=HRF.SPMG3,
-			bspline=create.HRF(hrf.bspline, ...))		
+			bspline=HRF(createHRF(hrf_bspline, N=nbasis), "bspline", nbasis))
 	
 	if (is.null(hrf)) {
 		stop("could not find hrf named: ", name)

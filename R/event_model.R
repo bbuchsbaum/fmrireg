@@ -30,7 +30,7 @@ extract_variables <- function(.terms, data) {
   
 }
 
-createEventTerms <- function(.terms, variables, resp, etab, facnames, expmat) {
+create_event_terms <- function(.terms, variables, resp, etab, facnames, expmat) {
   covar.names <- extract_covariates(.terms, variables, resp, etab)
   facterm <- do.call(EventTerm, lapply(facnames, function(fac) etab[[fac]]))
   var.terms <- if(length(covar.names) > 0) .extractVarTerms(covar.names, facnames, expmat, etab) else NULL
@@ -64,7 +64,7 @@ fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations, blockid
   rhs <- variables[(resp+1):length(variables)]
   vclass <- sapply(rhs, class)
   
-  model_spec <- list(formula=formula, event_table=event_table, onsets=lhs, varspec=rhs, 
+  model_spec <- list(formula=formula, event_table=event_table, onsets=lhs, varspec=rhs, varclass=vclass,
                      durations=durations, blocklens=blocklens, blockids=blockids, TR=TR, drop_empty=drop_empty)
   
   class(model_spec) <- c("model_spec", "list")
@@ -157,22 +157,23 @@ block <- function(x) {
 }
 
 
-.hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1) {
+.hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
   label <- parsed$label
   
   basis <- if (is.character(basis)) {
-    getHRF(basis)
+    getHRF(basis, nbasis=nbasis)
   } else if (is.function(basis)) {
     test <- basis(1:10)
-    HRF(basis, name="custom_hrf", nbasis=ncol(test))
+    HRF(basis, name="custom_hrf", nbasis=ncol(test), ...)
   } else if (inherits(basis, "HRF")) {
     basis
   } else {
     stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
   }
+  
   
   varnames <- if (!is.null(prefix)) {
     paste0(prefix, "_", term)
@@ -187,9 +188,9 @@ block <- function(x) {
   
   
 
-trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2) {
+trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1) {
  
-  parsed <- .hrf_parse(..., prefix=prefix, basis=basis)
+  parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis)
   
   ret <- list(
     name=parsed$termname,
@@ -223,17 +224,17 @@ trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=
 #' @param subset
 #' @param precision
 #' @export
-hrf <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2) {
+hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
   label <- parsed$label
   
   basis <- if (is.character(basis)) {
-    getHRF(basis)
+    getHRF(basis, nbasis=nbasis)
   } else if (is.function(basis)) {
     test <- basis(1:10)
-    HRF(basis, name="custom_hrf", nbasis=ncol(test))
+    HRF(basis, name="custom_hrf", nbasis=ncol(test), ...)
   } else if (inherits(basis, "HRF")) {
     basis
   } else {

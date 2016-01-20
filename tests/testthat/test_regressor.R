@@ -107,10 +107,33 @@ test_that("can extract a design matrix from an fmri_model with one factor crosse
   durations <- 0
   
   etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)), z=1:10)
-  mspec <- fmri_model(onsets ~ hrf(fac,z) + hrf(z), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
+  mspec <- fmri_model(onsets ~ hrf(fac) + hrf(fac,z), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
   dmat <- design_matrix(mspec)
-  expect_equal(dim(dmat), c(N, length(levels(etab$fac))))
+  expect_equal(dim(dmat), c(N, length(levels(etab$fac)) * 2))
 })
+
+test_that("can extract a design matrix from an fmri_model with one factor and a 3rd degree bspline with 5 basis functions", {
+  N <- 100
+  onsets <- seq(1,N,by=10)
+  durations <- 0
+  
+  etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)))
+  mspec <- fmri_model(onsets ~ hrf(fac, basis="bspline", nbasis=10), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
+  dmat <- design_matrix(mspec)
+  expect_equal(dim(dmat), c(N, length(levels(etab$fac)) * 10))
+})
+
+test_that("can extract a design matrix from an fmri_model with one factor and a 3rd degree bspline with 5 basis functions", {
+  N <- 100
+  onsets <- seq(1,N,by=10)
+  durations <- 0
+  
+  etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)))
+  mspec <- fmri_model(onsets ~ trialwise(fac, basis="bspline", nbasis=10), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
+  dmat <- design_matrix(mspec)
+  expect_equal(dim(dmat), c(N, length(levels(etab$fac)) * 2))
+})
+
 
 
 

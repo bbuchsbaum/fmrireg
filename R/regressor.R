@@ -87,15 +87,11 @@ dots <- function(...) {
 
 #' @export
 evaluate.regressor <- function(x, samplingGrid, precision=.1) {
- 
   nb <- nbasis(x)
   dspan <- x$span/median(diff(samplingGrid)) 
   outmat <- matrix(0, length(samplingGrid), length(x$onsets) * nb)
   nidx <- try(apply(RANN::nn2(matrix(samplingGrid), matrix(x$onsets), k=1)$nn.idx, 1, min))
   
-  if (inherits(nidx, "try-error")) {
-    browser()
-  }
   valid <- x$onsets >= samplingGrid[1] & x$onsets < samplingGrid[length(samplingGrid)]
   valid.ons <- x$onsets[valid]
   valid.durs <- x$duration[valid]
@@ -118,17 +114,28 @@ evaluate.regressor <- function(x, samplingGrid, precision=.1) {
     }
   }
   
-  if (nb ==1) {
-    rowSums(outmat)
+  
+  if (length(valid.ons) > 1) {
+    if (nb == 1) {
+      rowSums(outmat)
+    } else {
+      do.call(cbind, lapply(1:nb, function(i) {
+        rowSums(outmat[,seq(i, by=nb, length.out=length(valid.ons))])
+      }))
+    }
   } else {
-    do.call(cbind, lapply(1:nb, function(i) {
-      rowSums(outmat[,seq(i, by=nb, length.out=length(valid.ons))])
-    }))
+    outmat
   }
 }
 
 #' @export
-nbasis.regressor <- function(x) x$hrf$nbasis
+nbasis.regressor <- function(x) nbasis(x$hrf)
+
+#' @export
+nbasis.HRF <- function(x) x$nbasis
+
+#' @export
+nbasis.hrfspec <- function(x) x$hrf$nbasis
 
 #' @export
 onsets.regressor <- function(x) x$onsets

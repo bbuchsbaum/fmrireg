@@ -415,8 +415,15 @@ convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
   })
   
   ret <- do.call(rbind, reglist)
-  colnames(ret) <- conditions(x)
-  ret
+  cnames <- conditions(x)
+ 
+  if (nbasis(hrf) > 1) {
+    blevs <- paste("[", 1:nbasis(hrf), "]", sep="")
+    cnames <- unlist(lapply(cnames, function(prefix) paste(prefix, ":basis", blevs, sep="")))
+  } 
+            
+  colnames(ret) <- cnames
+  as.data.frame(ret)
   
   #lapply(reglist, function(reg) evaluate(reg, )
   
@@ -426,6 +433,7 @@ convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
 design_matrix.event_term <- function(x, drop.empty=TRUE) {
   locenv <- new.env()
   pterms <- sapply(parentTerms(x), .sanitizeName)	
+  
   for (ev in x$events) {
     vname <- .sanitizeName(ev$varname)
     els <- elements(ev, values=TRUE)
