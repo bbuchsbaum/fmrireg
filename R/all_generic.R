@@ -1,7 +1,15 @@
 
+
+#' parentTerms
+#' 
+#' @param x the object
 #' @export
 parentTerms <- function(x) UseMethod("parentTerms")
 
+
+#' cells
+#' 
+#' return the experimental cells that are in a model term
 #' @export
 cells <- function(x, ...) UseMethod("cells")
 
@@ -47,6 +55,7 @@ columns <- function(x) UseMethod("columns")
 #' design_matrix
 #' 
 #' construct a design matrix from the term
+#' 
 #' @param x the term
 #' @export
 design_matrix <- function(x, ...) UseMethod("design_matrix")
@@ -59,33 +68,60 @@ design_matrix <- function(x, ...) UseMethod("design_matrix")
 elements <- function(x, ...) UseMethod("elements")
 
 #' evaluate
+#'
+#' evaluate a rregression or hemodynamic response function
+#' 
+#' @param samplingGrid
 #' 
 #' @export
 evaluate <-  function(x, samplingGrid, ...) UseMethod("evaluate")
 
-#' nbasis
 #' @export
+#' @param x the object
+#' @param onsets the relative onset times of the events
 global_onsets <-  function(x, onsets,...) UseMethod("global_onsets")
 
+#' nbasis
+#' 
+#' return number of basis functions associated with hrf.
+#' 
 #' @export
+#' @param x the object
 nbasis <-  function(x) UseMethod("nbasis")
 
 #' onsets
+#' 
+#' return the onset vector
+#' @param x the object
 #' @export
 onsets <-  function(x) UseMethod("onsets")
 
 #' durations
+#' 
+#' return the durations vector
+#' 
 #' @export
 durations <-  function(x) UseMethod("durations")
 
 #' amplitudes
+#' 
+#' return the amplitude vector
+#' 
 #' @export
 amplitudes <-  function(x) UseMethod("amplitudes")
 
 #' samples
+#' 
+#' extract samples
+#' 
 #' @export
 samples <-  function(x, ...) UseMethod("samples")
 
 #' construct
+#' 
+#' construct a regression term given a an hrf specificification andmodel specification
+#' 
+#' @param x the object
+#' @param model_spec the model specification
 #' @export
 construct <- function(x, model_spec) UseMethod("construct")

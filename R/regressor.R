@@ -32,8 +32,6 @@ samples.sampling_frame <- function(x, blocknum=NULL, global=FALSE) {
 }
 
 
-global_onsets <-  function(x, onsets,...) UseMethod("global_onsets")
-
 
 #' @export
 global_onsets.sampling_frame <- function(x, onsets, blockids) {
@@ -56,12 +54,16 @@ global_onsets.sampling_frame <- function(x, onsets, blockids) {
   })
 }  
 
-#' regressor constructor function
+#' regressor 
+#' 
+#' construct a regressor function that can be used to generate a regression fucntion 
+#' from a set of onset times and a hemodynamic response function
+#' 
 #' @param onset the event onsets in seconds
 #' @param hrf a hemodynamic response function
 #' @param duration duration of events (default is 0)
 #' @param amplitude scaling vector (default is 1)
-#' @param span the temporal window of the response function (default is 20)
+#' @param span the temporal winmixed.dow of the response function (default is 20)
 #' @export
 regressor <- function(onsets, hrf, duration=0, amplitude=1, span=20) {
   if (length(duration) == 1) {
@@ -84,15 +86,29 @@ dots <- function(...) {
   eval(substitute(alist(...)))
 }
 
-
+#' @param x \code{regressor} instance
+#' @param times the times at which to evaluate the hemodynamic response
+#' @param precision the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}
 #' @export
-evaluate.regressor <- function(x, samplingGrid, precision=.1) {
+evaluate.regressor <- function(x, times, precision=.1) {
   nb <- nbasis(x)
-  dspan <- x$span/median(diff(samplingGrid)) 
-  outmat <- matrix(0, length(samplingGrid), length(x$onsets) * nb)
-  nidx <- try(apply(RANN::nn2(matrix(samplingGrid), matrix(x$onsets), k=1)$nn.idx, 1, min))
+  dspan <- x$span/median(diff(times)) 
+  outmat <- matrix(0, length(times), length(x$onsets) * nb)
   
-  valid <- x$onsets >= samplingGrid[1] & x$onsets < samplingGrid[length(samplingGrid)]
+  nidx <- if (length(times) > 1) {
+    apply(RANN::nn2(matrix(times), matrix(x$onsets), k=2)$nn.idx, 1, min)
+  } else {
+    apply(RANN::nn2(matrix(times), matrix(x$onsets), k=1)$nn.idx, 1, min)
+  }
+  
+  valid <- x$onsets >= times[1] & x$onsets < times[length(times)]
+  
+  if (all(!valid)) {
+    message("none of the regressor onsets intersect with sampling 'times', evalauting to zero at all times.")
+    return(outmat)
+  }
+  
+  
   valid.ons <- x$onsets[valid]
   valid.durs <- x$duration[valid]
   valid.amp <- x$amplitude[valid]
@@ -101,8 +117,8 @@ evaluate.regressor <- function(x, samplingGrid, precision=.1) {
 
   
   for (i in seq_along(valid.ons)) { 
-    grid.idx <- seq(nidx[i], min(nidx[i] + dspan, length(samplingGrid)))             
-    relOns <- samplingGrid[grid.idx] - valid.ons[i]    
+    grid.idx <- seq(nidx[i], min(nidx[i] + dspan, length(times)))             
+    relOns <- times[grid.idx] - valid.ons[i]    
     resp <- evaluate(x$hrf, relOns, amplitude=valid.amp[i], duration=valid.durs[i], precision=precision)   
   
     if (nb > 1) {
