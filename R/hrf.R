@@ -112,10 +112,10 @@ HRF_BSPLINE <- HRF(createHRF(hrf_bspline), "bspline", 5)
 HRF_SPMG1 <- HRF(hrf_spmg1, "SPMG1")
 
 #' @export
-HRF_SPMG2 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf.spmg1)), "SPMG2")
+HRF_SPMG2 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf_spmg1)), "SPMG2", nbasis=2)
 
 #' @export
-HRF_SPMG3 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf.spmg1), makeDeriv(makeDeriv(hrf.spmg1))), "SPMG3")
+HRF_SPMG3 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeriv(hrf_spmg1))), "SPMG3", nbasis=3)
 
 #' evaluate an HRF for a single event along a set of points
 #' @param grid the sampling grid, e.g. the points in time at which the HRF will be evaluated.
@@ -147,11 +147,11 @@ nbasis.HRF <- function(x) x$nbasis
 getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis=5) {
 	
 	hrf <- switch(name,
-			gamma=createHRF(hrf_gamma, ...),
-			gaussian=create.HRF(hrf_gaussian, ...),
-			spmg1=HRF.SPMG1,
-			spmg2=HRF.SPMG2,
-			spmg3=HRF.SPMG3,
+			gamma=HRF_GAMMA,
+			gaussian=HRF_GAUSSIAN,
+			spmg1=HRF_SPMG1,
+			spmg2=HRF_SPMG2,
+			spmg3=HRF_SPMG3,
 			bspline=HRF(createHRF(hrf_bspline, N=nbasis), "bspline", nbasis))
 	
 	if (is.null(hrf)) {

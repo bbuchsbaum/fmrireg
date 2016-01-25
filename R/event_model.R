@@ -39,7 +39,7 @@ create_event_terms <- function(.terms, variables, resp, etab, facnames, expmat) 
 
 
 
-fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations, blockids, blocklens, TR, drop_empty=TRUE) {
+fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations, blockids, blocklens, TR, aux_table=NULL, drop_empty=TRUE) {
   stopifnot(inherits(formula, "formula"))
   
   vterms <- extract_terms(formula, event_table)
@@ -49,6 +49,12 @@ fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations, blockid
   assert_that(all(blocklens>0))
   assert_that(length(TR) == 1)
   assert_that(TR > 0)
+  
+  if (is.null(aux_table)) {
+    aux_table <- data.frame()
+  }
+  
+  assert_that(is.data.frame(aux_table))
   
   if (is.null(resp)) {
     stop("need to provide onset vector on left side of formula, e.g. Onsets ~  a + b")
@@ -65,7 +71,8 @@ fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations, blockid
   vclass <- sapply(rhs, class)
   
   model_spec <- list(formula=formula, event_table=event_table, onsets=lhs, varspec=rhs, varclass=vclass,
-                     durations=durations, blocklens=blocklens, blockids=blockids, TR=TR, drop_empty=drop_empty)
+                     durations=durations, blocklens=blocklens, blockids=blockids, TR=TR, drop_empty=drop_empty,
+                     aux_table=aux_table)
   
   class(model_spec) <- c("model_spec", "list")
   model_spec
@@ -89,7 +96,7 @@ parse_term <- function(vars, ttype) {
 
 design_matrix.model_spec <- function(x) {
   termlist <- lapply(x$varspec, function(m) construct(m,x))
-  ret <- lapply(termlist, "[[", "design_matrix")
+  ret <- lapply(termlist, design_matrix)
   vnames <- unlist(lapply(ret, names))
   dmat <- as.data.frame(do.call(cbind, ret))
   names(dmat) <- vnames
@@ -188,7 +195,7 @@ block <- function(x) {
   
   
 
-trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1) {
+trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list()) {
  
   parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis)
   
@@ -202,7 +209,8 @@ trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=
     durations=durations,
     prefix=prefix,
     subset=substitute(subset),
-    precision=precision)
+    precision=precision,
+    contrasts=contrasts)
   
   class(ret) <- c("trialwisespec", "hrfspec", "list")
   ret
@@ -224,7 +232,7 @@ trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=
 #' @param subset
 #' @param precision
 #' @export
-hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1) {
+hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1, contrasts=list()) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
@@ -260,7 +268,8 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
     durations=durations,
     prefix=prefix,
     subset=substitute(subset),
-    precision=precision)
+    precision=precision,
+    contrasts=contrasts)
   
   class(ret) <- c("hrfspec", "list")
   ret
@@ -268,22 +277,22 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
 
 #' @export
 construct.blockspec <- function(x, model_spec) {
-  blockids <- base::eval(parse(text=x$varname), envir=model_spec$raw_table, enclos=parent.frame())
+  blockids <- base::eval(parse(text=x$name), envir=model_spec$aux_table, enclos=parent.frame())
   blockids <- as.factor(blockids)
   mat <- model.matrix(~ blockids - 1)
-  colnames(mat) <- paste0(x$varname, "_", levels(blockids))
-  matrix_term(x$varname, mat)
+  colnames(mat) <- paste0(x$name, "_", levels(blockids))
+  matrix_term(x$name, mat)
 }
 
 #' @export
 construct.nuisancespec <- function(x, model_spec) {
-  mat <- base::eval(parse(text=x$varname), envir=model_spec$raw_table, enclos=parent.frame())
+  mat <- base::eval(parse(text=x$varname), envir=model_spec$aux_table, enclos=parent.frame())
   matrix_term(x$varname, mat)
 }  
 
 #' @export  
 construct.baselinespec <- function(x, model_spec) {
-  ret <- lapply(model_spec$blocklens, function(bl) cbind(rep(1, bl), bfun(seq(1, bl), x$degree)))
+  ret <- lapply(model_spec$blocklens, function(bl) cbind(rep(1, bl), x$fun(seq(1, bl), x$degree)))
   mat <- matrix(0, sum(model_spec$blocklens), (x$degree+1)*length(model_spec$blocklens))
   
   for (i in seq_along(ret)) {
@@ -294,9 +303,10 @@ construct.baselinespec <- function(x, model_spec) {
     mat[rowstart:rowend, colstart:colend] <- ret[[i]]
   }
   
-  cnames <- apply(expand.grid(paste("Baseline",1:length(blocklens),sep=""), paste("Run", 1:(x$degree+1), sep="")), 1, paste, collapse="_")
+
+  cnames <- apply(expand.grid(paste0("B",1:length(model_spec$blocklens)), paste0("Run", 1:(x$degree+1))), 1, paste, collapse="_")
   colnames(mat) <- cnames
-  matrix_term(x$varname, mat)	
+  matrix_term(x$name, mat)	
 }
 
 construct.trialwisespec <- function(x, model_spec) {
@@ -323,6 +333,7 @@ construct.trialwisespec <- function(x, model_spec) {
     evterm=et,
     design_matrix=cterm,
     sampling_frame=sframe,
+    contrasts=x$contrasts,
     hrfspec=x
   )
   
@@ -350,7 +361,8 @@ construct.hrfspec <- function(x, model_spec) {
     evterm=et,
     design_matrix=as.data.frame(cterm),
     sampling_frame=sframe,
-    hrfspec=x
+    hrfspec=x,
+    contrasts=x$contrasts
   )
   
   class(ret) <- c("convolved_term", "fmri_term", "list") 
@@ -373,14 +385,25 @@ matrix_term <- function(varname, mat) {
 
 #' @export
 design_matrix.matrix_term <- function(x,...) {
-  if (is.null(colnames(x$mat))) {
+  if (is.null(colnames(x$design_matrix))) {
     cnames <- paste0(x$varname, "_", 1:ncol(x$design_matrix))
+    colnames(x$design_matrix) <- cnames
   }
   
   dmat <- as.data.frame(x$design_matrix)
-  names(dmat) <- cnames
   dmat
 }
+
+contrast <- function(A, B, where) {
+  ret <- list(A=substitute(A),
+       B=substitute(B),
+       where=substitute(where)
+  )
+  
+  class(ret) <- c("contrast_spec", "list")
+  ret
+}
+  
   
 
   

@@ -123,6 +123,18 @@ test_that("can extract a design matrix from an fmri_model with one factor and a 
   expect_equal(dim(dmat), c(N, length(levels(etab$fac)) * 5))
 })
 
+test_that("can extract a design matrix from an fmri_model with one factor and SPMG3 basis", {
+  N <- 100
+  onsets <- seq(1,N,by=10)
+  durations <- 0
+  
+  etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)))
+  mspec <- fmri_model(onsets ~ hrf(fac, basis="spmg3"), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
+  dmat <- design_matrix(mspec)
+  expect_equal(dim(dmat), c(N, length(levels(etab$fac)) * 5))
+})
+
+
 test_that("can extract a design matrix from an fmri_model with one trialwise factor and a 3rd degree bspline with 5 basis functions", {
   N <- 100
   onsets <- seq(1,N,by=10)
@@ -133,6 +145,62 @@ test_that("can extract a design matrix from an fmri_model with one trialwise fac
   dmat <- design_matrix(mspec)
   expect_equal(dim(dmat), c(N, 5 * length(onsets)))
 })
+
+test_that("facedes model with rep_num", {
+  facedes$repnum <- factor(facedes$rep_num)
+  mspec <- fmri_model(onset ~ hrf(repnum), facedes, durations=0, blockids=facedes$run, blocklens=rep(436/2,max(facedes$run)), TR=2)
+  dmat <- design_matrix(mspec)
+  expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), length(levels(facedes$repnum))))
+})
+
+test_that("facedes model with rep_num, subsetting rep_num == -1 ", {
+  facedes$repnum <- factor(facedes$rep_num)
+  mspec <- fmri_model(onset ~ hrf(repnum, subset=repnum != "-1"), facedes, durations=0, blockids=facedes$run, blocklens=rep(436/2,max(facedes$run)), TR=2)
+  dmat <- design_matrix(mspec)
+  expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), length(levels(facedes$repnum))-1))
+})
+
+test_that("facedes model with rep_num, and rep_num by rt ", {
+  facedes$repnum <- factor(facedes$rep_num)
+  mspec <- fmri_model(onset ~ hrf(repnum, subset=repnum != "-1") + hrf(repnum,rt,subset=rep_num!= "-1"), facedes, durations=0, blockids=facedes$run, blocklens=rep(436/2,max(facedes$run)), TR=2)
+  dmat <- design_matrix(mspec)
+  expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), length(levels(facedes$repnum))-1))
+})
+
+test_that("facedes model block variable", {
+  facedes$repnum <- factor(facedes$rep_num)
+  
+  aux_table <- data.frame(run=rep(1:6, each=218))
+  mspec <- fmri_model(onset ~  hrf(repnum) + block(run), facedes, durations=0, blockids=facedes$run, 
+                      blocklens=rep(436/2,max(facedes$run)), TR=2, aux_table=aux_table)
+  dmat <- design_matrix(mspec)
+  expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), 11))
+})
+
+test_that("facedes model with polynomial parametric basis", {
+  facedes$repnum <- factor(facedes$rep_num)
+  
+  aux_table <- data.frame(run=rep(1:6, each=218))
+  mspec <- fmri_model(onset ~  hrf(Poly(rt,3)) + block(run), facedes, durations=0, blockids=facedes$run, 
+                      blocklens=rep(436/2,max(facedes$run)), TR=2, aux_table=aux_table)
+  dmat <- design_matrix(mspec)
+  expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), 9))
+})
+
+test_that("facedes model with bspline baseline term and repnum regressor", {
+  facedes$repnum <- factor(facedes$rep_num)
+  
+  aux_table <- data.frame(run=rep(1:6, each=218))
+  mspec <- fmri_model(onset ~  hrf(repnum) + baseline(degree=3, basis="bs"), facedes, durations=0, blockids=facedes$run, 
+                      blocklens=rep(436/2,max(facedes$run)), TR=2)
+  dmat <- design_matrix(mspec)
+  expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), 9))
+})
+
+
+
+
+
 
 
 
