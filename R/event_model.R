@@ -152,6 +152,8 @@ baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Base
   ret
 }
 
+
+#' @export
 block <- function(x) {
   varname <- substitute(x)
   ret <- list(
@@ -194,7 +196,7 @@ block <- function(x) {
 }
   
   
-
+#' @export
 trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list()) {
  
   parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis)
@@ -228,11 +230,14 @@ trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=
 #' @param basis the impulse response function.
 #' @param onsets optional onsets override. If missing, onsets will be taken from global model specification duration evaluation.
 #' @param durations optional durations override. If missing, onsets will be taken from global model specification during evlauation.
-#' @param prefix
+#' @param prefix a character string that is prepended to the variables names and used to identify the term.
 #' @param subset
-#' @param precision
+#' @param precision 
+#' @param nbasis number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.
+#' @param contrasts one or more \code{contrastspec} objects created with the \code{contrast} function. 
+#' If multiple contrasts are required, then these should be wrapped in a \code{list}.
 #' @export
-hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1, contrasts=list()) {
+hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1, contrasts=NULL) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
@@ -309,6 +314,7 @@ construct.baselinespec <- function(x, model_spec) {
   matrix_term(x$name, mat)	
 }
 
+#' @export
 construct.trialwisespec <- function(x, model_spec) {
   ## compied almost verbatim from construct.hrfspec
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
@@ -345,7 +351,7 @@ construct.trialwisespec <- function(x, model_spec) {
 construct.hrfspec <- function(x, model_spec) {
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
-  
+ 
   varlist <- lapply(seq_along(x$vars), function(i) {
     base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
   })
@@ -394,16 +400,23 @@ design_matrix.matrix_term <- function(x,...) {
   dmat
 }
 
-contrast <- function(A, B, where) {
-  ret <- list(A=substitute(A),
-       B=substitute(B),
-       where=substitute(where)
-  )
-  
-  class(ret) <- c("contrast_spec", "list")
-  ret
+#' @export
+event_table.convolved_term <- function(x) event_table(x$evterm)
+
+#' @export
+nbasis.convolved_term <- function(x) nbasis(x$hrf)
+
+#' @export
+longnames.convolved_term <- function(x) {
+  # ignores exclude.basis
+  term.cells <- cells(x)
+  # ignores exclude.basis
+  apply(sapply(1:ncol(term.cells), 
+    function(i) {
+      paste(names(term.cells)[i], "#", term.cells[,i], sep="")
+  }), 1, paste, collapse=":")
+
 }
-  
   
 
   

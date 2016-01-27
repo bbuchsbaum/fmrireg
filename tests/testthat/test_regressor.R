@@ -197,6 +197,50 @@ test_that("facedes model with bspline baseline term and repnum regressor", {
   expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), 9))
 })
 
+test_that("can build a simple contrast from a convolved term", {
+  facedes$repnum <- factor(facedes$rep_num)
+  aux_table <- data.frame(run=rep(1:6, each=218))
+  mspec <- fmri_model(onset ~  hrf(repnum) + baseline(degree=3, basis="bs"), facedes, durations=0, blockids=facedes$run, 
+                      blocklens=rep(436/2,max(facedes$run)), TR=2)
+  
+  term <- construct(mspec$varspec[[1]], mspec)
+  con <- contrast(A=repnum==-1, B=repnum==1)
+  expect_equal(as.vector(contrast_weights(con, term)), c(1,-1,0,0,0))
+})
+
+test_that("can build a contrast versus the intercept from a convolved term", {
+  facedes$repnum <- factor(facedes$rep_num)
+  aux_table <- data.frame(run=rep(1:6, each=218))
+  mspec <- fmri_model(onset ~  hrf(repnum) + baseline(degree=3, basis="bs"), facedes, durations=0, blockids=facedes$run, 
+                      blocklens=rep(436/2,max(facedes$run)), TR=2)
+  
+  term <- construct(mspec$varspec[[1]], mspec)
+  con <- contrast(A=repnum==-1)
+  expect_equal(as.vector(contrast_weights(con, term)), c(1,0,0,0,0))
+})
+
+test_that("can build a contrast versus the intercept and add to hrfspec", {
+  facedes$repnum <- factor(facedes$rep_num)
+  aux_table <- data.frame(run=rep(1:6, each=218))
+  con <- contrast(A=repnum==-1)
+  mspec <- fmri_model(onset ~  hrf(repnum, contrasts=con) + baseline(degree=3, basis="bs"), facedes, durations=0, blockids=facedes$run, 
+                      blocklens=rep(436/2,max(facedes$run)), TR=2)
+  
+  term <- construct(mspec$varspec[[1]], mspec)
+  expect_equal(as.vector(contrast_weights(con, term)), c(1,0,0,0,0))
+})
+
+test_that("can build a linear contrast from repnum", {
+  facedes$repnum <- factor(facedes$rep_num)
+  aux_table <- data.frame(run=rep(1:6, each=218))
+  con <- poly_contrast(A=repnum, value_map=list("-1"=0, "1"=1, "2"=2, "3"=3, "4"=4))
+  
+  mspec <- fmri_model(onset ~  hrf(repnum, contrasts=con) + baseline(degree=3, basis="bs"), facedes, durations=0, blockids=facedes$run, 
+                      blocklens=rep(436/2,max(facedes$run)), TR=2)
+  
+  term <- construct(mspec$varspec[[1]], mspec)
+  expect_equal(as.vector(contrast_weights(con, term)), as.vector(poly(c(0,1,2,3,4))))
+})
 
 
 

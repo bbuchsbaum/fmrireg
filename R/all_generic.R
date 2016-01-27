@@ -1,4 +1,24 @@
 
+#' longnames
+#' 
+#' @param x the object
+#' @param ... extra args
+#' @export
+longnames <- function(x, ...) UseMethod("longnames")
+
+#' shortnames
+#' @param x the object
+#' @param ... extra args
+#' @export
+shortnames <- function(x, ...) UseMethod("shortnames")
+
+
+#' contrast_weights
+#' 
+#' @param x the object
+#' @export
+contrast_weights <- function(x, term) UseMethod("contrast_weights")
+
 
 #' parentTerms
 #' 
@@ -51,6 +71,16 @@ levels <- function(x) UseMethod("levels")
 #' @param x the term
 #' @export
 columns <- function(x) UseMethod("columns")
+
+
+#' event_table
+#' 
+#' extract event_table as \code{data.frame}
+#' 
+#' @param x the term
+#' @export
+event_table <- function(x) UseMethod("event_table")
+
 
 #' design_matrix
 #' 

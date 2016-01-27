@@ -77,6 +77,9 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   ret
 }
 
+event_table.event_term <- function(x) x$eventTable
+
+
 #' EV
 #' 
 #' factory function for creating 'event' types: event_factor, event_variable, event_basis, event_matrix.
@@ -262,6 +265,34 @@ cells.event_term <- function(x, drop.empty=TRUE) {
     attr(evset, "count") <- counts
   }
   evset
+}
+
+
+cells.convolved_term <- function(x) {
+  evtab <- event_table(x)
+  
+  evset <- if (nbasis(x) > 1) {
+    evlist <- c(list(factor(paste("basis", 1:nbasis(x), sep = ""))), cells(x@eventTerm))
+    names(evlist) <- c("basis", parentTerms(x@eventTerm))
+    evlist <- lapply(evlist, levels)
+    ret <- expand.grid(evlist, stringsAsFactors = TRUE)
+    ret[c(2:length(ret), 1)]
+  } else {
+    cells(x$evterm)
+  }
+  
+  
+  
+  strels <- apply(apply(evtab, 2, str_trim), 1, paste, collapse = ":")
+  strlevs <- apply(apply(evset, 2, str_trim), 1, paste, collapse = ":")
+  row.names(evset) <- strlevs
+  counts <- rep(attr(cells(x$evterm), "count"), each = nbasis(x))
+  
+  ret <- evset[counts > 0, , drop = F]
+  attr(ret, "count") <- counts[counts > 0]
+  
+  ret
+  
 }
 
 #' @export
