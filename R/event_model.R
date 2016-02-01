@@ -30,16 +30,9 @@ extract_variables <- function(.terms, data) {
   
 }
 
-create_event_terms <- function(.terms, variables, resp, etab, facnames, expmat) {
-  covar.names <- extract_covariates(.terms, variables, resp, etab)
-  facterm <- do.call(EventTerm, lapply(facnames, function(fac) etab[[fac]]))
-  var.terms <- if(length(covar.names) > 0) .extractVarTerms(covar.names, facnames, expmat, etab) else NULL
-  c(facterm,var.terms)
-}
 
 
-
-fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations, blockids, blocklens, TR, aux_table=NULL, drop_empty=TRUE) {
+fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations=0, blockids, blocklens, TR, aux_data=data.frame(), drop_empty=TRUE) {
   stopifnot(inherits(formula, "formula"))
   
   vterms <- extract_terms(formula, event_table)
@@ -50,11 +43,7 @@ fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations, blockid
   assert_that(length(TR) == 1)
   assert_that(TR > 0)
   
-  if (is.null(aux_table)) {
-    aux_table <- data.frame()
-  }
-  
-  assert_that(is.data.frame(aux_table))
+  assert_that(is.data.frame(aux_data))
   
   if (is.null(resp)) {
     stop("need to provide onset vector on left side of formula, e.g. Onsets ~  a + b")
@@ -67,15 +56,19 @@ fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations, blockid
   variables <- extract_variables(vterms, event_table)
   lhs <- variables[[resp]]
   
+  #assert_that(lhs %in% names(event_table))
+  
   rhs <- variables[(resp+1):length(variables)]
   vclass <- sapply(rhs, class)
   
   model_spec <- list(formula=formula, event_table=event_table, onsets=lhs, varspec=rhs, varclass=vclass,
                      durations=durations, blocklens=blocklens, blockids=blockids, TR=TR, drop_empty=drop_empty,
-                     aux_table=aux_table)
+                     aux_data=aux_data)
   
   class(model_spec) <- c("model_spec", "list")
-  model_spec
+  
+  fmodel <- construct(model_spec)
+  fmodel
 }
 
 
@@ -102,7 +95,41 @@ design_matrix.model_spec <- function(x) {
   names(dmat) <- vnames
   dmat
 }
+
+design_matrix.fmri_model <- function(x) {
+  ret <- lapply(x$terms, design_matrix)
+  vnames <- unlist(lapply(ret, names))
+  dmat <- as.data.frame(do.call(cbind, ret))
+  names(dmat) <- vnames
+  dmat
+}
+
+construct.model_spec <- function(x) {
+  terms <- lapply(x$varspec, function(m) construct(m,x))
   
+  ret <- list(
+    terms=terms,
+    model_spec=x
+  )
+  
+  class(ret) <- c("fmri_model", "list")
+  ret
+}
+
+terms.fmri_model <- function(x) {
+  x$terms
+}
+
+
+#' @export
+print.fmri_model <- function(object) {
+  cat("fmri_model", "\n")
+  cat(" ", "Formula:  ", as.character(object$model_spec$forumula), "\n")
+  cat(" ", "Num Events: ", nrow(object$model_spec$event_table), "\n")
+  #cat(" ", "Term Types: ", paste(sapply(object$events, function(ev) class(ev)[[1]])))
+}
+
+
   
 
 #' nuisance
@@ -282,7 +309,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
 
 #' @export
 construct.blockspec <- function(x, model_spec) {
-  blockids <- base::eval(parse(text=x$name), envir=model_spec$aux_table, enclos=parent.frame())
+  blockids <- base::eval(parse(text=x$name), envir=model_spec$aux_data, enclos=parent.frame())
   blockids <- as.factor(blockids)
   mat <- model.matrix(~ blockids - 1)
   colnames(mat) <- paste0(x$name, "_", levels(blockids))
@@ -291,7 +318,7 @@ construct.blockspec <- function(x, model_spec) {
 
 #' @export
 construct.nuisancespec <- function(x, model_spec) {
-  mat <- base::eval(parse(text=x$varname), envir=model_spec$aux_table, enclos=parent.frame())
+  mat <- base::eval(parse(text=x$varname), envir=model_spec$aux_data, enclos=parent.frame())
   matrix_term(x$varname, mat)
 }  
 
@@ -309,7 +336,7 @@ construct.baselinespec <- function(x, model_spec) {
   }
   
 
-  cnames <- apply(expand.grid(paste0("B",1:length(model_spec$blocklens)), paste0("Run", 1:(x$degree+1))), 1, paste, collapse="_")
+  cnames <- apply(expand.grid(paste0("Baseline#",1:length(model_spec$blocklens)), paste0("Run#", 1:(x$degree+1))), 1, paste, collapse="_")
   colnames(mat) <- cnames
   matrix_term(x$name, mat)	
 }

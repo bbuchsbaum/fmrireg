@@ -230,7 +230,7 @@ test_that("can build a contrast versus the intercept and add to hrfspec", {
   expect_equal(as.vector(contrast_weights(con, term)), c(1,0,0,0,0))
 })
 
-test_that("can build a linear contrast from repnum", {
+test_that("can build a linear contrast from repnum and value_map", {
   facedes$repnum <- factor(facedes$rep_num)
   aux_table <- data.frame(run=rep(1:6, each=218))
   con <- poly_contrast(A=repnum, value_map=list("-1"=0, "1"=1, "2"=2, "3"=3, "4"=4))

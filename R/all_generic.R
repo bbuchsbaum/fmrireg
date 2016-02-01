@@ -13,6 +13,7 @@ longnames <- function(x, ...) UseMethod("longnames")
 shortnames <- function(x, ...) UseMethod("shortnames")
 
 
+
 #' contrast_weights
 #' 
 #' @param x the object
@@ -118,6 +119,17 @@ global_onsets <-  function(x, onsets,...) UseMethod("global_onsets")
 #' @export
 #' @param x the object
 nbasis <-  function(x) UseMethod("nbasis")
+
+
+#' data_chunks
+#' 
+#' return the onset vector
+#' @param x the dataset
+#' @param nchunks the numbe rof data chunks
+#' @return an \code{iterator} returning on data chunk per iteration
+#' @export
+data_chunks <- function(x, nchunks, ...) UseMethod("data_chunks")
+
 
 #' onsets
 #' 

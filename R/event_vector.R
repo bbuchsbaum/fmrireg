@@ -267,8 +267,7 @@ cells.event_term <- function(x, drop.empty=TRUE) {
   evset
 }
 
-
-cells.convolved_term <- function(x) {
+.event_set <- function(x) {
   evtab <- event_table(x)
   
   evset <- if (nbasis(x) > 1) {
@@ -281,7 +280,11 @@ cells.convolved_term <- function(x) {
     cells(x$evterm)
   }
   
-  
+}
+
+cells.convolved_term <- function(x) {
+  evtab <- event_table(x)
+  evset <- .event_set(x)
   
   strels <- apply(apply(evtab, 2, str_trim), 1, paste, collapse = ":")
   strlevs <- apply(apply(evset, 2, str_trim), 1, paste, collapse = ":")
@@ -290,10 +293,14 @@ cells.convolved_term <- function(x) {
   
   ret <- evset[counts > 0, , drop = F]
   attr(ret, "count") <- counts[counts > 0]
-  
   ret
   
 }
+
+conditions.fmri_term <- function(x) {
+  colnames(design_matrix(x))
+}
+
 
 #' @export
 conditions.event_term <- function(x, drop.empty=TRUE) {
@@ -446,6 +453,7 @@ convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
   })
   
   ret <- do.call(rbind, reglist)
+  
   cnames <- conditions(x)
  
   if (nbasis(hrf) > 1) {
