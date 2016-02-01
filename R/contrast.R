@@ -39,8 +39,6 @@ contrast_weights.poly_contrast_spec <- function(x, term) {
     unlist(x$value_map[as.character(reduced.term.cells[keepA,])])
   }
   
-
-  
   weights <- matrix(0, NROW(term.cells), x$degree)	
   pvals <- stats::poly(vals, degree=x$degree)
   row.names(weights) <- row.names(term.cells)

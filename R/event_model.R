@@ -120,14 +120,10 @@ terms.fmri_model <- function(x) {
   x$terms
 }
 
-
-#' @export
-print.fmri_model <- function(object) {
-  cat("fmri_model", "\n")
-  cat(" ", "Formula:  ", as.character(object$model_spec$forumula), "\n")
-  cat(" ", "Num Events: ", nrow(object$model_spec$event_table), "\n")
-  #cat(" ", "Term Types: ", paste(sapply(object$events, function(ev) class(ev)[[1]])))
+conditions.fmri_model <- function(x) {
+  unlist(lapply(terms(x), function(t) conditions(t)), use.names=FALSE)
 }
+
 
 
   
@@ -391,6 +387,7 @@ construct.hrfspec <- function(x, model_spec) {
   cterm <- convolve(et, x$hrf, sframe)
    
   ret <- list(
+    varname=evterm$varname,
     evterm=et,
     design_matrix=as.data.frame(cterm),
     sampling_frame=sframe,
@@ -444,6 +441,27 @@ longnames.convolved_term <- function(x) {
   }), 1, paste, collapse=":")
 
 }
+
+
+#' @export
+print.fmri_model <- function(object) {
+  cat("fmri_model", "\n")
+  cat(" ", "Formula:  ", Reduce(paste, deparse(object$model_spec$formula)), "\n")
+  cat(" ", "Num Terms", length(terms(object)), "\n")
+  cat(" ", "Num Events: ", nrow(object$model_spec$event_table), "\n")
+  cat(" ", "Num Columns: ", length(conditions(object)), "\n")
+  cat(" ", "Num Blocks: ", length(object$model_spec$blocklens), "\n")
+  cat(" ", "Length of Blocks: ", paste(object$model_spec$blocklens, collapse=", "), "\n")
+  for (i in 1:length(terms(object))) {
+    t <- terms(object)[[i]]
+    cat("Term:", i, " ")
+    print(t)
+    cat("\n")
+  }
+  
+  cat(" ", "Conditions", conditions(object), "\n")
+}
+
   
 
   

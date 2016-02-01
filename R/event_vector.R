@@ -525,4 +525,24 @@ print.event_term <- function(object) {
   cat(" ", "Term Types: ", paste(sapply(object$events, function(ev) class(ev)[[1]])))
 }
 
+#' @export
+print.fmri_term <- function(object) {
+  cat("fmri_term", "\n")
+  cat(" ", "Term Name: ", object$varname, "\n")
+  cat(" ", "Num Events: ", nrow(design_matrix(object)), "\n")
+  cat(" ", "Num Columns: ", ncol(design_matrix(object)), "\n")
+}
+
+#' @export
+print.convolved_term <- function(object) {
+  cat("fmri_term", "\n")
+  cat(" ", "Term Name: ", object$varname, "\n")
+  cat(" ", "Formula:  ", as.character(formula(object$evterm)), "\n")
+  cat(" ", "Num Events: ", nrow(design_matrix(object)), "\n")
+  cat(" ", "Num Columns: ", ncol(design_matrix(object)), "\n")
+  cat(" ", "Term Types: ", paste(sapply(object$evterm$events, function(ev) class(ev)[[1]])))
+}
+
+
+
 
