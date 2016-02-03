@@ -224,6 +224,8 @@ trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=
  
   parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis)
   
+  
+  
   ret <- list(
     name=parsed$termname,
     varnames=parsed$varnames,
@@ -285,7 +287,15 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
   
   termname <- paste0(varnames, collapse="::")
   
-  
+  cset <- if (inherits(contrasts, "contrast_spec")) {
+    contrast_set(contrasts)
+  } else if (inherits(contrasts, "contrast_set")) {
+    contrasts
+  } else if (!is.null(contrasts)) {
+    ## try creating a contrast
+    contrast_set(contrasts)
+  }
+    
   ret <- list(
     name=termname,
     varnames=varnames,
@@ -297,7 +307,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
     prefix=prefix,
     subset=substitute(subset),
     precision=precision,
-    contrasts=contrasts)
+    contrasts=cset)
   
   class(ret) <- c("hrfspec", "list")
   ret
@@ -387,7 +397,7 @@ construct.hrfspec <- function(x, model_spec) {
   cterm <- convolve(et, x$hrf, sframe)
    
   ret <- list(
-    varname=evterm$varname,
+    varname=et$varname,
     evterm=et,
     design_matrix=as.data.frame(cterm),
     sampling_frame=sframe,
@@ -397,6 +407,12 @@ construct.hrfspec <- function(x, model_spec) {
   
   class(ret) <- c("convolved_term", "fmri_term", "list") 
   ret
+}
+
+contrasts.convolved_term <- function(x) {
+  lapply(x$contrasts, function(cspec) {
+    contrast_weights(cspec,x)
+  })
 }
 
 #' @export

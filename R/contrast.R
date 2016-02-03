@@ -1,5 +1,18 @@
 
 #' @export
+#' @import assertthat
+contrast_set <- function(...) {
+  ret <- list(...)
+  assertthat::assert_that(all(sapply(ret, inherits, "contrast_spec")))
+  class(ret) <- c("contrast_set", "list")
+  ret
+}
+
+
+
+
+
+#' @export
 contrast <- function(A, B=NULL, where=TRUE, split_by=NULL) {
   ret <- list(A=substitute(A),
               B=substitute(B),
@@ -14,11 +27,12 @@ contrast <- function(A, B=NULL, where=TRUE, split_by=NULL) {
 poly_contrast <- function(A, where=TRUE, degree=1, value_map=NULL) {
   ret <- list(
     A=substitute(A),
+    B=NULL,
     where=substitute(where),
     degree=degree,
     value_map=value_map)
   
-  class(ret) <- c("poly_contrast_spec", "list")
+  class(ret) <- c("poly_contrast_spec", "contrast_spec", "list")
   ret
 }
 
@@ -45,7 +59,13 @@ contrast_weights.poly_contrast_spec <- function(x, term) {
   colnames(weights) <- paste("poly", 1:x$degree, sep="")
   
   weights[keep, ] <- pvals
-  weights
+  
+  ret <- list(
+    weights=weights,
+    contrast_spec=x)
+  
+  class(ret) <- c("poly_contrast", "contrast", "list")
+  ret
   
 }
 
@@ -107,8 +127,37 @@ contrast_weights.contrast_spec <- function(x, term) {
   }
     
   row.names(weights) <- row.names(term.cells)
-  weights
+  
+  ret <- list(
+    weights=weights,
+    contrast_spec=x)
+  
+  class(ret) <- c("contrast", "list")
+  ret  
 }
 
+print.contrast_set <- function(x) {
+  for (con in x) {
+    print(con)
+    cat("\n")
+  }
+}
+
+print.contrast_spec <- function(x) {
+  cat("contrast:", "\n")
+  cat(" A: ", as.character(x$A), "\n")
+  if (!is.null(x$B))
+    cat(" B: ", as.character(x$B), "\n")
+  if (x$where[1] != TRUE && length(x$where) > 1)
+    cat(" where: ", x$where, "\n")
+
+}
+
+print.poly_contrast_spec <- function(x) {
+  cat("poly contrast", "\n")
+  cat(" A: ", x$A, "\n")
+  cat(" degree: ", x$degree, "\n")
+  cat(" values: ", unlist(x$value_map), "\n")
+}
 
 

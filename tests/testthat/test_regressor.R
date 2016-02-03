@@ -235,6 +235,7 @@ test_that("can build a linear contrast from repnum and value_map", {
   aux_table <- data.frame(run=rep(1:6, each=218))
   con <- poly_contrast(A=repnum, value_map=list("-1"=0, "1"=1, "2"=2, "3"=3, "4"=4))
   
+  
   mspec <- fmri_model(onset ~  hrf(repnum, contrasts=con) + baseline(degree=3, basis="bs"), facedes, durations=0, blockids=facedes$run, 
                       blocklens=rep(436/2,max(facedes$run)), TR=2)
   
@@ -245,6 +246,24 @@ test_that("can build a linear contrast from repnum and value_map", {
 
 
 
+# cset = list(
+#   repnum == 1 ~ repnum == 2 | fac == 1,
+#   repnum == 3 ~ repnum == 2
+# )
+# 
+cset <- contrast_set (
+   c1=contrast(
+     repnum == 1,
+     repnum == 2
+   ),
+   c2=contrast(
+     repnum==1
+   ),
+   c3=poly_contrast(
+     repnum,
+     value_map=list("-1" =0)
+   )
+ )
 
 
 

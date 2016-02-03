@@ -540,6 +540,7 @@ print.convolved_term <- function(object) {
   cat(" ", "Formula:  ", as.character(formula(object$evterm)), "\n")
   cat(" ", "Num Events: ", nrow(design_matrix(object)), "\n")
   cat(" ", "Num Columns: ", ncol(design_matrix(object)), "\n")
+  cat(" ", "Conditions: ", conditions(object), "\n")
   cat(" ", "Term Types: ", paste(sapply(object$evterm$events, function(ev) class(ev)[[1]])))
 }
 
