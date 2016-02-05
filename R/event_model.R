@@ -105,9 +105,23 @@ design_matrix.fmri_model <- function(x) {
 }
 
 construct.model_spec <- function(x) {
+ 
   terms <- lapply(x$varspec, function(m) construct(m,x))
+  term_names <- sapply(x$varspec, "[[", "label")
+  term_names <- .sanitizeName(term_names)
+  names(terms) <- term_names
+  
+  term_lens <- sapply(lapply(terms, conditions), length)
+  spans <- c(0, cumsum(term_lens))
+  
+  term_indices <- lapply(1:(length(spans)-1), function(i) {
+    seq(spans[i]+1, spans[i+1])
+  })
+  
+  names(term_indices) <- term_names
   
   ret <- list(
+    term_indices=term_indices,
     terms=terms,
     model_spec=x
   )
@@ -115,6 +129,8 @@ construct.model_spec <- function(x) {
   class(ret) <- c("fmri_model", "list")
   ret
 }
+
+
 
 terms.fmri_model <- function(x) {
   x$terms
@@ -409,11 +425,20 @@ construct.hrfspec <- function(x, model_spec) {
   ret
 }
 
-contrasts.convolved_term <- function(x) {
+contrast_weights.convolved_term <- function(x) {
   lapply(x$contrasts, function(cspec) {
-    contrast_weights(cspec,x)
+    if (!is.null(cspec))
+      contrast_weights(cspec,x)
   })
 }
+
+contrast_weights.fmri_term <- function(x) { NULL }
+  
+contrast_weights.fmri_model <- function(x) {
+  cons <- lapply(terms(x), contrast_weights)
+}
+  
+  
 
 #' @export
 design_matrix.convolved_term <- function(x) {
@@ -475,7 +500,6 @@ print.fmri_model <- function(object) {
     cat("\n")
   }
   
-  cat(" ", "Conditions", conditions(object), "\n")
 }
 
   

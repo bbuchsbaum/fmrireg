@@ -108,8 +108,8 @@ contrast_weights.contrast_spec <- function(x, term) {
   keepB <- if (is.null(x$B)) NULL else eval(x$B, envir=term.cells, enclos=parent.frame())
   split_fac <- eval(x$split_by, envir=term.cells, enclos=parent.frame())
   
-  weights <- if (!is.null(split.fac)) {
-    split.levs <- levels(x$split.fac)
+  weights <- if (!is.null(split_fac)) {
+    split.levs <- levels(x$split_fac)
     do.call(cbind,lapply(split.levs, function(lev) {					
       keepC <- split.fac == lev 
       if (is.null(keepB)) {

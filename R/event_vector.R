@@ -21,9 +21,14 @@ is.strictly.increasing <- function(vec) {
 
 #' @import assertthat
 .checkEVArgs <- function(name, vals, onsets, blockids, durations=NULL) {
+  
   assert_that(length(onsets) == length(vals))
   
+  ## no NA onsets allowed
+  assert_that(all(!is.na(onsets)))
+  
   sons <- split(onsets, blockids)
+  
   for (ons in sons) {
     assert_that(is.strictly.increasing(ons))
   }
@@ -515,33 +520,32 @@ design_matrix.event_term <- function(x, drop.empty=TRUE) {
 
 
 
-
 #' @export
 print.event_term <- function(object) {
   cat("event_term", "\n")
-  cat(" ", "Term Name: ", object$varname, "\n")
-  cat(" ", "Formula:  ", as.character(formula(object)), "\n")
-  cat(" ", "Num Events: ", nrow(object$eventTable), "\n")
-  cat(" ", "Term Types: ", paste(sapply(object$events, function(ev) class(ev)[[1]])))
+  cat("  ", "Term Name: ", object$varname, "\n")
+  cat("  ", "Formula:  ", as.character(formula(object)), "\n")
+  cat("  ", "Num Events: ", nrow(object$eventTable), "\n")
+  cat("  ", "Term Types: ", paste(sapply(object$events, function(ev) class(ev)[[1]])))
 }
 
 #' @export
 print.fmri_term <- function(object) {
   cat("fmri_term", "\n")
-  cat(" ", "Term Name: ", object$varname, "\n")
-  cat(" ", "Num Events: ", nrow(design_matrix(object)), "\n")
-  cat(" ", "Num Columns: ", ncol(design_matrix(object)), "\n")
+  cat("  ", "Term Name: ", object$varname, "\n")
+  cat("  ", "Num Events: ", nrow(design_matrix(object)), "\n")
+  cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n")
 }
 
 #' @export
 print.convolved_term <- function(object) {
   cat("fmri_term", "\n")
-  cat(" ", "Term Name: ", object$varname, "\n")
-  cat(" ", "Formula:  ", as.character(formula(object$evterm)), "\n")
-  cat(" ", "Num Events: ", nrow(design_matrix(object)), "\n")
-  cat(" ", "Num Columns: ", ncol(design_matrix(object)), "\n")
-  cat(" ", "Conditions: ", conditions(object), "\n")
-  cat(" ", "Term Types: ", paste(sapply(object$evterm$events, function(ev) class(ev)[[1]])))
+  cat("  ", "Term Name: ", object$varname, "\n")
+  cat("  ", "Formula:  ", as.character(formula(object$evterm)), "\n")
+  cat("  ", "Num Events: ", nrow(design_matrix(object)), "\n")
+  cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n\n")
+  cat("  ", "Conditions: ", conditions(object), "\n\n")
+  cat("  ", "Term Types: ", paste(sapply(object$evterm$events, function(ev) class(ev)[[1]])))
 }
 
 

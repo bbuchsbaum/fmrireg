@@ -1,19 +1,26 @@
 
 #' @export
-fmri_glm <- function(formula, dataset, basis=HRF_SPMG1, durations, drop_empty=TRUE) {
+fmri_glm <- function(formula, dataset, basis=HRF_SPMG1, durations, drop_empty=TRUE, nchunks=1) {
   
   
   model <- fmri_model(formula, dataset$event_table, basis=basis, durations=durations, 
                       blockids=dataset$blockids, blocklens=dataset$blocklens, TR=dataset$TR, 
                       aux_data=dataset$aux_data, drop_empty=drop_empty)
   
-  ret <- list(
-    model_spec=model,
-    convolved_model=construct(model),
-    dataset=dataset
-  )
   
-  class(ret) <- c("fmri_glm_spec", "list")
-  ret
+ 
+ 
+  
+  term_names <- .sanitizeName(names(terms(model)))
+  term_matrices <- lapply(terms(model), design_matrix)
+  names(term_matrices) <- term_names
+  
+  form <- as.formula(paste("y ~ ", paste(term_names, collapse = " + ")))
+  
+  chunks <- data_chunks(dataset, nchunks)
+  
+  
+  
+  model
 }
 
