@@ -292,7 +292,11 @@ cells.convolved_term <- function(x) {
   evset <- .event_set(x)
   
   strels <- apply(apply(evtab, 2, str_trim), 1, paste, collapse = ":")
-  strlevs <- apply(apply(evset, 2, str_trim), 1, paste, collapse = ":")
+  strlevs <- if (nrow(evset) > 1) {
+    apply(apply(evset, 2, str_trim), 1, paste, collapse = ":")
+  } else {
+    as.character(evset[1,1])
+  }
   row.names(evset) <- strlevs
   counts <- rep(attr(cells(x$evterm), "count"), each = nbasis(x))
   

@@ -18,7 +18,7 @@ shortnames <- function(x, ...) UseMethod("shortnames")
 #' 
 #' @param x the object
 #' @export
-contrast_weights <- function(x, term) UseMethod("contrast_weights")
+contrast_weights <- function(x, term, ...) UseMethod("contrast_weights")
 
 
 #' parentTerms
@@ -159,9 +159,14 @@ amplitudes <-  function(x) UseMethod("amplitudes")
 #' @export
 samples <-  function(x, ...) UseMethod("samples")
 
+#' estcon
+#' 
+#' @export
+estcon <- function(x, fit, ...)
+
 #' construct
 #' 
-#' construct a regression term given a an hrf specificification andmodel specification
+#' construct a regression term given a an hrf spec and model specification
 #' 
 #' @param x the object
 #' @param model_spec the model specification

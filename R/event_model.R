@@ -90,7 +90,7 @@ parse_term <- function(vars, ttype) {
 design_matrix.model_spec <- function(x) {
   termlist <- lapply(x$varspec, function(m) construct(m,x))
   ret <- lapply(termlist, design_matrix)
-  vnames <- unlist(lapply(ret, names))
+  vnames <- unlist(lapply(ret, colnames))
   dmat <- as.data.frame(do.call(cbind, ret))
   names(dmat) <- vnames
   dmat
@@ -195,8 +195,11 @@ baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Base
 #' @export
 block <- function(x) {
   varname <- substitute(x)
+  pterm <- parse_term(as.list(substitute(x)), "block")
+ 
   ret <- list(
-    name=varname
+    name=varname,
+    label=pterm$label
   )
   
   class(ret) <- "blockspec"
@@ -304,13 +307,17 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
   termname <- paste0(varnames, collapse="::")
   
   cset <- if (inherits(contrasts, "contrast_spec")) {
-    contrast_set(contrasts)
+    #vname <- deparse(substitute(contrasts))
+    #eval(parse(text=paste0("contrast_set(", vname, "=contrasts)")))
+    contrast_set(con1=contrasts)
   } else if (inherits(contrasts, "contrast_set")) {
     contrasts
-  } else if (!is.null(contrasts)) {
+  } #else if (!is.null(contrasts)) {
     ## try creating a contrast
-    contrast_set(contrasts)
-  }
+    #vname <- deparse(substitute(contrasts))
+    #eval(parse(text=paste0("contrast_set(", vname, "=contrasts)")))
+    #contrast_set(con1)
+  #}
     
   ret <- list(
     name=termname,
@@ -331,17 +338,26 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
 
 #' @export
 construct.blockspec <- function(x, model_spec) {
-  blockids <- base::eval(parse(text=x$name), envir=model_spec$aux_data, enclos=parent.frame())
-  blockids <- as.factor(blockids)
-  mat <- model.matrix(~ blockids - 1)
-  colnames(mat) <- paste0(x$name, "_", levels(blockids))
+  blockids <- base::eval(parse(text=x$name), envir=model_spec$event_table, enclos=parent.frame())
+  assert_that(is.increasing(blockids))
+  blockord <- sort(unique(blockids))
+  expanded_blockids <- rep(blockord, model_spec$blocklens)
+    
+    
+  mat <- if (length(levels(blockids)) == 1) {
+    matrix(rep(1, length(expanded_blockids)), length(expanded_blockids), 1)
+  } else {
+    mat <- model.matrix(~ expanded_blockids - 1)
+  }
+  
+  colnames(mat) <- paste0(x$name, "_", blockord)
   matrix_term(x$name, mat)
 }
 
 #' @export
 construct.nuisancespec <- function(x, model_spec) {
   mat <- base::eval(parse(text=x$varname), envir=model_spec$aux_data, enclos=parent.frame())
-  matrix_term(x$varname, mat)
+  matrix_term(x$name, mat)
 }  
 
 #' @export  
@@ -385,6 +401,7 @@ construct.trialwisespec <- function(x, model_spec) {
   sframe <- sampling_frame(model_spec$blocklens, model_spec$TR, model_spec$TR/2, x$precision)
   cterm <- convolve(et, x$hrf, sframe)
   ret <- list(
+    varname=et$varname,
     evterm=et,
     design_matrix=cterm,
     sampling_frame=sframe,
@@ -435,7 +452,25 @@ contrast_weights.convolved_term <- function(x) {
 contrast_weights.fmri_term <- function(x) { NULL }
   
 contrast_weights.fmri_model <- function(x) {
-  cons <- lapply(terms(x), contrast_weights)
+  tind <- x$term_indices
+  len <- length(conditions(x))
+  tnames <- names(terms(x))
+  ret <- unlist(lapply(seq_along(terms(x)), function(i) {
+    cwlist <- contrast_weights(terms(x)[[i]])
+    if (!is.null(cwlist)) {
+      ret <- lapply(cwlist, function(cw) {
+        out <- numeric(len)
+        out[tind[[i]]] <- as.vector(cw$weights)
+        out
+      })
+    
+      prefix <- tnames[i]
+      names(ret) <- paste0(prefix, "#", names(ret))
+      ret
+    }
+  }), recursive=FALSE)
+
+  ret
 }
   
   
@@ -461,8 +496,8 @@ design_matrix.matrix_term <- function(x,...) {
     colnames(x$design_matrix) <- cnames
   }
   
-  dmat <- as.data.frame(x$design_matrix)
-  dmat
+  x$design_matrix
+
 }
 
 #' @export
@@ -476,11 +511,15 @@ longnames.convolved_term <- function(x) {
   # ignores exclude.basis
   term.cells <- cells(x)
   # ignores exclude.basis
-  apply(sapply(1:ncol(term.cells), 
+  apply(as.matrix(sapply(1:ncol(term.cells), 
     function(i) {
       paste(names(term.cells)[i], "#", term.cells[,i], sep="")
-  }), 1, paste, collapse=":")
+  })), 1, paste, collapse=":")
 
+}
+
+longnames.matrix_term <- function(x) {
+  paste0(x$name, "#", colnames(design_matrix(x)))
 }
 
 

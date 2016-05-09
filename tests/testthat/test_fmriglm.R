@@ -13,12 +13,21 @@ test_that("can construct a simple fmri glm", {
 test_that("can construct an fmri_dataset from test_data", {
   df1 <- subset(imagedes,run==1)
   df1 <- subset(df1, !is.na(onsetTime))
+  
+  df1$sdur <- scale(df1$duration)[,1]
+  
   scans <- "test_data/images_study/epi/rscan01.nii"
   mask <- "test_data/images_study/epi/global_mask.nii"
   dset <- fmri_dataset(scans=scans, mask=mask, TR=2, event_table=df1, blocklens=rep(348,1), blockids=rep(1,nrow(df1)))
   #iter <- data_chunks(dset, nchunks=5)
   con <- contrast(imageName=="Shark", imageName == "Tools")
-  mod <- fmri_glm(onsetTime ~ hrf(imageName, subset=!is.na(imageName), contrasts=con), dataset=dset, durations=0)
+  con2 <- contrast(imageName == "Candy", imageName == "Massage")
+  con3 <- contrast(sdur == "sdur")
+  
+  mod <- fmri_glm(onsetTime ~ hrf(imageName, subset=!is.na(imageName), 
+                                  contrasts=contrast_set(con=con, con2=con2)) + 
+                              hrf(sdur, contrasts=contrast(sdur== "sdur")) + block(run),
+                              dataset=dset, durations=0)
   
 })
 

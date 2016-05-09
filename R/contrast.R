@@ -1,4 +1,91 @@
 
+fit_Ftests <- function(object, model) {
+  w <- object$weights
+  ssr <- if (is.null(w)) {
+    apply(object$residuals, 2, function(vals) sum(vals^2))
+  } else {
+    apply(object$residuals, 2, function(vals) sum((vals^2 *w)))
+  }
+  
+  mss <- if (is.null(w)) {
+    apply(object$fitted.values, 2, function(vals) sum(vals^2))
+  } else {
+    apply(object$fitted.values, 2, function(vals) sum(vals^2 * w))
+  }
+  
+  #if (ssr < 1e-10 * mss) 
+  #  warning("ANOVA F-tests on an essentially perfect fit are unreliable")
+  
+  dfr <- df.residual(object)
+  p <- object$rank
+
+  p1 <- 1L:p
+  #comp <- object$effects[p1]
+  asgn <- object$assign[stats:::qr.lm(object)$pivot][p1]
+  
+  
+  #nmeffects <- c("(Intercept)", attr(object$terms, "term.labels"))
+  #tlabels <- nmeffects[1 + unique(asgn)]
+  
+  df <- c(lengths(split(asgn, asgn)), dfr)
+  
+  I.p <- diag(nrow(coefficients(object)))
+  nterms <- length(unique(asgn))
+  hmat <- lapply(1:nterms, function(i) {
+    subs <- which(asgn == i)
+    hyp.matrix <- I.p[subs, , drop=FALSE]
+    hyp.matrix[!apply(hyp.matrix, 1, function(x) all(x == 0)), , drop = FALSE]
+  })
+  
+  ret <- lapply(seq_along(ssr), function(i) {
+    comp <- object$effects[p1,i]
+    ss <- c(unlist(lapply(split(comp^2, asgn), sum)), ssr[i])
+    ms <- ss/df
+    f <- ms/(ssr[i]/dfr)
+    
+    P <- pf(f, df, dfr, lower.tail = FALSE)
+    list(F=f, P=p)
+  })
+  
+  FMat <- do.call(rbind, lapply(ret, "[[", "F"))
+  PMat <- do.call(rbind, lapply(ret, "[[", "P"))
+  
+  list(F=FMat, P=PMat)
+  
+  
+}
+
+fit_contrasts <- function(lmfit, conmat) {
+  if (is.vector(conmat)) {
+    conmat <- matrix(conmat, 1, length(conmat))
+  }
+  
+  Qr <- stats:::qr.lm(lmfit)
+  p1 <- 1:lmfit$rank
+  cov.unscaled <- chol2inv(Qr$qr[p1,p1,drop=FALSE])
+  betamat <- lmfit$coefficients
+  ct <- conmat %*% betamat
+  
+  rss <- colSums(lmfit$residuals^2)
+  rdf <- lmfit$df.residual
+  resvar <- rss/rdf
+  sigma <- sqrt(resvar)
+  
+  vc <- sapply(1:ncol(betamat), function(i) {
+    vcv <- cov.unscaled * sigma[i]^2
+    sqrt(diag(conmat %*% vcv %*% t(conmat)))
+  })
+  
+  prob <- 2 * (1 - pt(abs(ct/vc), lmfit$df.residual))
+  tstat <- ct/vc
+  ret <- as.data.frame(cbind(as.vector(ct), as.vector(vc), as.vector(tstat), as.vector(prob)))
+  names(ret) <- c("estimate", "se", "tstat", "prob")
+  ret
+
+  
+}
+
+
 #' @export
 #' @import assertthat
 contrast_set <- function(...) {
@@ -136,6 +223,13 @@ contrast_weights.contrast_spec <- function(x, term) {
   ret  
 }
 
+estcon.contrast <- function(x, fit, indices) {
+  wts <- numeric(length(fit$assign))
+  wts[indices] <- x$weights
+  
+  gmodels::estimable(fit, wts)
+}
+
 print.contrast_set <- function(x) {
   for (con in x) {
     print(con)
@@ -145,17 +239,22 @@ print.contrast_set <- function(x) {
 
 print.contrast_spec <- function(x) {
   cat("contrast:", "\n")
-  cat(" A: ", as.character(x$A), "\n")
+  cat(" A: ", Reduce(paste, deparse(x$A)), "\n")
   if (!is.null(x$B))
-    cat(" B: ", as.character(x$B), "\n")
+    cat(" B: ", Reduce(paste, deparse(x$B)), "\n")
   if (x$where[1] != TRUE && length(x$where) > 1)
     cat(" where: ", x$where, "\n")
 
 }
 
+print.contrast <- function(x) {
+  print(x$contrast_spec)
+  cat(" weights: ", x$weights)
+}
+
 print.poly_contrast_spec <- function(x) {
   cat("poly contrast", "\n")
-  cat(" A: ", x$A, "\n")
+  cat(" A: ", Reduce(paste, deparse(x$A)), "\n")
   cat(" degree: ", x$degree, "\n")
   cat(" values: ", unlist(x$value_map), "\n")
 }

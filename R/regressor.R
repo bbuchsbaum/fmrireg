@@ -161,6 +161,25 @@ durations.regressor <- function(x) x$duration
 #' @export
 amplitudes.regressor <- function(x) x$amplitude
 
+
+#' @export
+plot.regressor <- function(object, y, samples, add=FALSE, ...) {
+  y <- evaluate(object, samples)
+  if (add){
+    lines(samples, y)
+  } else {
+    plot(samples, y, type='l', xlab="Time", ylab="Amplitude", ...)
+  }
+  srange <- range(samples)
+  
+  for (on in onsets(object)) {
+    if (on >= srange[1] && on <= srange[2]) {
+      abline(v=on, col=2, lty=2)
+    }
+  }
+  
+}
+
 #' @export
 print.regressor <- function(object) {
   N <- min(c(6, length(onsets(object))))
