@@ -2,7 +2,7 @@
 % Please edit documentation in R/regressor.R
 \name{regressor}
 \alias{regressor}
-\title{regressor constructor function}
+\title{regressor}
 \usage{
 regressor(onsets, hrf, duration = 0, amplitude = 1, span = 20)
 }
@@ -13,11 +13,12 @@ regressor(onsets, hrf, duration = 0, amplitude = 1, span = 20)
 
 \item{amplitude}{scaling vector (default is 1)}
 
-\item{span}{the temporal window of the response function (default is 20)}
+\item{span}{the temporal winmixed.dow of the response function (default is 20)}
 
 \item{onset}{the event onsets in seconds}
 }
 \description{
-regressor constructor function
+construct a regressor function that can be used to generate a regression fucntion 
+from a set of onset times and a hemodynamic response function
 }
 

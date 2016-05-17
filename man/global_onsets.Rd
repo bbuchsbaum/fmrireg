@@ -2,11 +2,16 @@
 % Please edit documentation in R/all_generic.R
 \name{global_onsets}
 \alias{global_onsets}
-\title{nbasis}
+\title{global_onsets}
 \usage{
 global_onsets(x, onsets, ...)
 }
+\arguments{
+\item{x}{the object}
+
+\item{onsets}{the relative onset times of the events}
+}
 \description{
-nbasis
+global_onsets
 }
 

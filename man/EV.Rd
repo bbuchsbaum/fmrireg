@@ -13,7 +13,7 @@ EV(vals, name, onsets, blockids, durations = 1)
 
 \item{onsets}{the event onsets.}
 
-\item{blockids}{the block ids associated with each event (must be strictly iincreasing)}
+\item{blockids}{the block ids associated with each event (must be non-decreasing)}
 }
 \description{
 factory function for creating 'event' types: event_factor, event_variable, event_basis, event_matrix.

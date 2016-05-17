@@ -1,6 +1,7 @@
 
 
-
+#' fmri_dataset
+#' 
 #' @param scans a vector of file names of the images comprising the dataset
 #' @param mask name of the binary mask file indicating the voxels to include,
 #' @param TR the repetition time in seconds of the scan-to-scan interval.

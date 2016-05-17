@@ -63,9 +63,9 @@ global_onsets.sampling_frame <- function(x, onsets, blockids) {
 #' @param hrf a hemodynamic response function
 #' @param duration duration of events (default is 0)
 #' @param amplitude scaling vector (default is 1)
-#' @param span the temporal winmixed.dow of the response function (default is 20)
+#' @param span the temporal window of the impulse response function (default is 24)
 #' @export
-regressor <- function(onsets, hrf, duration=0, amplitude=1, span=20) {
+regressor <- function(onsets, hrf, duration=0, amplitude=1, span=24) {
   if (length(duration) == 1) {
     duration = rep(duration, length(onsets))
   }
@@ -86,25 +86,25 @@ dots <- function(...) {
   eval(substitute(alist(...)))
 }
 
-#' @param x \code{regressor} instance
-#' @param times the times at which to evaluate the hemodynamic response
+#' evaluate
+#' @rdname evaluate
 #' @param precision the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}
 #' @export
-evaluate.regressor <- function(x, times, precision=.1) {
+evaluate.regressor <- function(x, grid, precision=.1) {
   nb <- nbasis(x)
-  dspan <- x$span/median(diff(times)) 
-  outmat <- matrix(0, length(times), length(x$onsets) * nb)
+  dspan <- x$span/median(diff(grid)) 
+  outmat <- matrix(0, length(grid), length(x$onsets) * nb)
   
-  nidx <- if (length(times) > 1) {
-    apply(RANN::nn2(matrix(times), matrix(x$onsets), k=2)$nn.idx, 1, min)
+  nidx <- if (length(grid) > 1) {
+    apply(RANN::nn2(matrix(grid), matrix(x$onsets), k=2)$nn.idx, 1, min)
   } else {
-    apply(RANN::nn2(matrix(times), matrix(x$onsets), k=1)$nn.idx, 1, min)
+    apply(RANN::nn2(matrix(grid), matrix(x$onsets), k=1)$nn.idx, 1, min)
   }
   
-  valid <- x$onsets >= times[1] & x$onsets < times[length(times)]
+  valid <- x$onsets >= grid[1] & x$onsets < grid[length(grid)]
   
   if (all(!valid)) {
-    message("none of the regressor onsets intersect with sampling 'times', evalauting to zero at all times.")
+    message("none of the regressor onsets intersect with sampling 'grid', evalauting to zero at all times.")
     return(outmat)
   }
   
@@ -117,8 +117,8 @@ evaluate.regressor <- function(x, times, precision=.1) {
 
   
   for (i in seq_along(valid.ons)) { 
-    grid.idx <- seq(nidx[i], min(nidx[i] + dspan, length(times)))             
-    relOns <- times[grid.idx] - valid.ons[i]    
+    grid.idx <- seq(nidx[i], min(nidx[i] + dspan, length(grid)))             
+    relOns <- grid[grid.idx] - valid.ons[i]    
     resp <- evaluate(x$hrf, relOns, amplitude=valid.amp[i], duration=valid.durs[i], precision=precision)   
   
     if (nb > 1) {

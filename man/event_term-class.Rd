@@ -7,9 +7,9 @@
 event_term(evlist, onsets, blockids, durations = 1, subset = NULL)
 }
 \arguments{
-\item{onsets}{the onset times from the experimental events in seconds.}
+\item{onsets}{the onset times from the experimental events in seconds}
 
-\item{blockids}{the block number associated whcih each onset, should be in strict increasing order.}
+\item{blockids}{the block number associated with each onset}
 }
 \description{
 Create a event model term from a named list of variables.

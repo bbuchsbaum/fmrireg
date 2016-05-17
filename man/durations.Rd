@@ -7,6 +7,6 @@
 durations(x)
 }
 \description{
-durations
+return the durations vector
 }
 

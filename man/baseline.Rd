@@ -15,6 +15,6 @@ baseline(degree = 5, basis = c("bs", "poly", "ns")[1],
 \item{number}{of polynomial terms for each image block}
 }
 \description{
-A matrix of polynomial regressors for modleing low-frequency drift in fmri time series.
+A matrix of polynomial regressors for modeling low-frequency drift in fmri time series.
 }
 

@@ -98,15 +98,20 @@ design_matrix <- function(x, ...) UseMethod("design_matrix")
 #' @export
 elements <- function(x, ...) UseMethod("elements")
 
+
 #' evaluate
-#'
-#' evaluate a rregression or hemodynamic response function
 #' 
-#' @param samplingGrid
+#' evaluate a regression or hemodynamic response function
+#' 
+#' @param x
+#' @param grid
+#' @param ... extra args
 #' 
 #' @export
-evaluate <-  function(x, samplingGrid, ...) UseMethod("evaluate")
+evaluate <-  function(x, grid, ...) UseMethod("evaluate")
 
+#' global_onsets
+#' 
 #' @export
 #' @param x the object
 #' @param onsets the relative onset times of the events

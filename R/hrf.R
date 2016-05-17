@@ -117,11 +117,13 @@ HRF_SPMG2 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf_spmg1)), "SPMG2", nbasis=
 #' @export
 HRF_SPMG3 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeriv(hrf_spmg1))), "SPMG3", nbasis=3)
 
-#' evaluate an HRF for a single event along a set of points
-#' @param grid the sampling grid, e.g. the points in time at which the HRF will be evaluated.
+
+#' evaluate
+#' 
 #' @param amplitude the scaling value for the event
 #' @param duration the duration of the event
 #' @param precision the temporal resolution used for computing summed responses when duration > 0 
+#' @rdname evaluate
 #' @export
 evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.1) {
   if (duration < precision) {

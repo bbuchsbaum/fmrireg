@@ -7,6 +7,6 @@
 samples(x, ...)
 }
 \description{
-samples
+extract samples
 }
 

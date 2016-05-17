@@ -4,19 +4,32 @@
 \alias{hrf}
 \title{hrf}
 \usage{
-hrf(..., basis = HRF.GAMMA, onsets = NULL, durations = NULL,
-  prefix = NULL, subset = NULL, precision = 0.2)
+hrf(..., basis = "spmg1", onsets = NULL, durations = NULL,
+  prefix = NULL, subset = NULL, precision = 0.2, nbasis = 1,
+  contrasts = NULL)
 }
 \arguments{
 \item{...}{the variable names}
 
 \item{basis}{the impulse response function.}
 
-\item{onsets}{optional onsets override. If missing, onsets will be taken from overall model specification.}
+\item{onsets}{optional onsets override. If missing, onsets will be taken from global model specification duration evaluation.}
 
-\item{durations}{optional durations override. If missing, onsets will be taken from overall model specification.}
+\item{durations}{optional durations override. If missing, onsets will be taken from global model specification during evlauation.}
+
+\item{prefix}{a character string that is prepended to the variables names and used to identify the term.}
+
+\item{precision}{}
+
+\item{nbasis}{number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.}
+
+\item{contrasts}{one or more \code{contrastspec} objects created with the \code{contrast} function. 
+If multiple contrasts are required, then these should be wrapped in a \code{list}.}
 }
 \description{
-hemodynamic response specification
+hemodynamic regressor specification function
+}
+\details{
+This function is to be used in formulas for fitting fucntions, e.g. onsets ~ hrf(fac1,fac2) ...
 }
 
