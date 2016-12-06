@@ -5,6 +5,7 @@
 #' 
 #' @param x a numeric vector at which to evaluate the polynomial. Missing values are not allowed in x
 #' @param degree the degree of the polynomial. Must be less than the number of unique points.
+#' @value an instance of class \code{Poly} extending \code{ParametricBasic}
 #' @export 
 Poly <- function(x, degree) {
   mc <- match.call()

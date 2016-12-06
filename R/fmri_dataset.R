@@ -3,7 +3,7 @@
 #' fmri_dataset
 #' 
 #' @param scans a vector of file names of the images comprising the dataset
-#' @param mask name of the binary mask file indicating the voxels to include,
+#' @param mask name of the binary mask file indicating the voxels to include in analysis.
 #' @param TR the repetition time in seconds of the scan-to-scan interval.
 #' @param blocklens the number of scans in each block.
 #' @param blockids the id of each block, must be unique for each block and be non-decreasing.
@@ -11,7 +11,10 @@
 #' @param aux_data a \code{list} of auxilliary data such as nuisance variables that may enter a 
 #' regression model and are not convolved with hemodynamic response function.
 #' @export
-fmri_dataset <- function(scans, mask, TR, blocklens, blockids=rep(1:length(blocklens), blocklens), event_table=data.frame(), aux_data=data.frame()) {
+fmri_dataset <- function(scans, mask, TR, 
+                         blocklens, blockids=rep(1:length(blocklens), blocklens), 
+                         event_table=data.frame(), 
+                         aux_data=data.frame()) {
   assert_that(length(unique(blockids)) == length(blocklens))
   
   ret <- list(

@@ -19,7 +19,7 @@ extract_covariates <- function(.terms, variables, resp, etab) {
   covar.names
 }
 
-is.parametric.basis <- function(obj) { inherits(obj, "ParametricBasis") }
+is_parametric_basis <- function(obj) { inherits(obj, "ParametricBasis") }
 
 extract_variables <- function(.terms, data) {
   env <- environment(.terms)
@@ -32,13 +32,14 @@ extract_variables <- function(.terms, data) {
 
 
 
-fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations=0, blockids, blocklens, TR, aux_data=data.frame(), drop_empty=TRUE) {
+fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations=0, blockids, blocklens, TR, 
+                       aux_data=data.frame(), drop_empty=TRUE) {
   stopifnot(inherits(formula, "formula"))
   
   vterms <- extract_terms(formula, event_table)
   resp <- attr(vterms, "response")
-  assert_that(resp > 0)
   
+  assert_that(resp > 0)
   assert_that(all(blocklens>0))
   assert_that(length(TR) == 1)
   assert_that(TR > 0)
@@ -50,14 +51,13 @@ fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations=0, block
   }
   
   if (missing(durations)) {
+    ## assume zero-duration impulse for all events
     durations <- rep(0, nrow(event_table))
   }
   
   variables <- extract_variables(vterms, event_table)
   lhs <- variables[[resp]]
-  
-  #assert_that(lhs %in% names(event_table))
-  
+
   rhs <- variables[(resp+1):length(variables)]
   vclass <- sapply(rhs, class)
   
@@ -144,69 +144,6 @@ conditions.fmri_model <- function(x) {
 
   
 
-#' nuisance
-#' 
-#' a 'nuisance' term that consists of an arbitrary numeric matrix with the same number of rows as image time points.
-#' 
-#' @export
-#' @param x a \code{matrix} 
-#' @return a class of type \code{nuisancespec}
-nuisance <- function(x) {
-  varname <- substitute(x)
-  
-  ret <- list(
-    name=varname
-  )
-  
-  class(ret) <- "nuisancespec"
-  ret
-}
-
-
-
-
-
-
-#' baseline
-#' 
-#' A matrix of polynomial regressors for modeling low-frequency drift in fmri time series.
-#' @importFrom splines bs ns
-#' @param number of polynomial terms for each image block
-#' @param basis the type of polynomial basis.
-#' @param name the name of the term
-#' @export
-baseline <- function(degree=5, basis=c("bs", "poly", "ns")[1], name=paste0("Baseline_", basis, "_", degree)) {
-  bfun <- switch(basis,
-                 bs=bs,
-                 ns=ns,
-                 poly=poly)
-  
-  ret <- list(
-    degree=degree,
-    fun=bfun,
-    name=name
-  )
-  
-  class(ret) <- c("baselinespec", "nuisancespec")
-  ret
-}
-
-
-#' @export
-block <- function(x) {
-  varname <- substitute(x)
-  pterm <- parse_term(as.list(substitute(x)), "block")
- 
-  ret <- list(
-    name=varname,
-    label=pterm$label
-  )
-  
-  class(ret) <- "blockspec"
-  ret
-  
-}
-
 
 .hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1) {
   vars <- as.list(substitute(list(...)))[-1] 
@@ -238,29 +175,6 @@ block <- function(x) {
 }
   
   
-#' @export
-trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list()) {
- 
-  parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis)
-  
-  
-  
-  ret <- list(
-    name=parsed$termname,
-    varnames=parsed$varnames,
-    vars=parsed$term,
-    label=parsed$label,
-    hrf=parsed$basis,
-    onsets=onsets,
-    durations=durations,
-    prefix=prefix,
-    subset=substitute(subset),
-    precision=precision,
-    contrasts=contrasts)
-  
-  class(ret) <- c("trialwisespec", "hrfspec", "list")
-  ret
-}
 
 
 #' hrf
