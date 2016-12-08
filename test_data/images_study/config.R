@@ -19,7 +19,7 @@ nuisance_reg = paste0("epi/",
 
 design = "behavior/design.txt"
 
-model = onsetTime ~ hrf(imageName) | block
+model = onsetTime ~ hrf(imageName) 
 
 output_dir = "glm_out"
 
@@ -27,4 +27,7 @@ polort = 4
 
 mask = "epi/global_mask.nii"
 
+TR = 1.5
+
+run_length = 348
                       

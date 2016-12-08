@@ -1,4 +1,21 @@
-
+#' read_fmri_config
+#' 
+#' @param file_name name of configuration file
+#' @importFrom assertthat assert_that
+#' @export
+read_fmri_config <- function(file_name) {
+  env <- new.env()
+  source(file_name, env)
+  
+  if (is.null(env$base_path)) {
+    env$base_path = ""
+  }
+  
+  assert_that(!is.null(env$scans))
+  assert_that(!is.null(env$TR))
+  
+  
+}
 
 #' fmri_dataset
 #' 
