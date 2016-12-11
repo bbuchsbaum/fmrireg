@@ -19,7 +19,11 @@ nuisance_reg = paste0("epi/",
 
 design = "behavior/design.txt"
 
+block_column = "run"
+
 model = onsetTime ~ hrf(imageName) 
+
+
 
 output_dir = "glm_out"
 

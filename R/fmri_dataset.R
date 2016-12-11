@@ -2,6 +2,7 @@
 #' 
 #' @param file_name name of configuration file
 #' @importFrom assertthat assert_that
+#' @importFrom tibble as_data_frame
 #' @export
 read_fmri_config <- function(file_name) {
   env <- new.env()
@@ -11,37 +12,61 @@ read_fmri_config <- function(file_name) {
     env$base_path = ""
   }
   
+  if (is.null(env$output_dir)) {
+    env$output_dir = "stat_out"
+  }
+  
+  if (is.null(env$nuisance_reg)) {
+    env$nuisance_reg=NULL
+  }
+  
   assert_that(!is.null(env$scans))
   assert_that(!is.null(env$TR))
+  assert_that(!is.null(env$mask))
+  assert_that(!is.null(env$run_length))
+  assert_that(!is.null(env$model))
+  assert_that(!is.null(env$design))
+  assert_that(file.exists(file.path(env$base_path,env$design)))
   
+  #env$mask <- neuroim::loadVolume(file.path(env$base_path, env$mask))
+  env$design <- tibble::as_data_frame(read.table(file.path(env$base_path,env$design), header=TRUE))
   
+  out <- as.list(env)
+  class(out) <- c("fmri_config", "list")
+  out
 }
+
+
 
 #' fmri_dataset
 #' 
 #' @param scans a vector of file names of the images comprising the dataset
 #' @param mask name of the binary mask file indicating the voxels to include in analysis.
 #' @param TR the repetition time in seconds of the scan-to-scan interval.
-#' @param blocklens the number of scans in each block.
-#' @param blockids the id of each block, must be unique for each block and be non-decreasing.
+#' @param run_length the number of scans in each run.
+#' @param runids the id of each block, must be unique for each run and be non-decreasing.
 #' @param event_table a \code{data.frame} containing the event onsets and experimental variables.
 #' @param aux_data a \code{list} of auxilliary data such as nuisance variables that may enter a 
 #' regression model and are not convolved with hemodynamic response function.
 #' @export
 fmri_dataset <- function(scans, mask, TR, 
-                         blocklens, blockids=rep(1:length(blocklens), blocklens), 
+                         run_length, runids=rep(1:length(run_length), run_length), 
                          event_table=data.frame(), 
-                         aux_data=data.frame()) {
-  assert_that(length(unique(blockids)) == length(blocklens))
+                         aux_data=tibble::as_tibble(list()), base_path="") {
+  
+  assert_that(length(unique(runids)) == length(run_length))
   
   ret <- list(
     scans=scans,
-    mask=mask,
+    mask_file=mask,
+    mask=neuroim::loadVolume(file.path(base_path, mask)),
     TR=TR,
-    blocklens=blocklens,
-    blockids=blockids,
+    run_length=run_length,
+    runids=runids,
+    nruns=length(x$scans),
     event_table=event_table,
-    aux_data=aux_data
+    aux_data=aux_data,
+    base_path=base_path
   )
   
   class(ret) <- c("fmri_dataset", "list")
@@ -49,6 +74,13 @@ fmri_dataset <- function(scans, mask, TR,
 }
 
 
+data_chunk <- function(mat, voxel_ind, row_ind) {
+  ret <- list(data=mat,
+       voxel_ind=voxel_ind,
+       row_ind=row_ind)
+  class(ret) <- c("data_chunk", "list")
+  ret
+}
 
 gen_chunk_iter <- function(x, maskSeq) {
   nchunks <- length(maskSeq)
@@ -58,9 +90,10 @@ gen_chunk_iter <- function(x, maskSeq) {
     if (chunkNum > nchunks) {
       stop("StopIteration")
     } else {
-      bvecs <- lapply(x$scans, function(scan) neuroim::loadVector(scan, mask=maskSeq[[chunkNum]]))
+      bvecs <- lapply(x$scans, function(scan) neuroim::loadVector(file.path(x$base_path, scan), mask=maskSeq[[chunkNum]]))
+      ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) bv@data)), voxel_ind=maskSeq[[chunkNum]], row_ind=1:nrow(x$event_table))
       chunkNum <<- chunkNum + 1
-      do.call(rbind, lapply(bvecs, function(bv) bv@data))
+      ret
     }
   }
   
@@ -70,7 +103,7 @@ gen_chunk_iter <- function(x, maskSeq) {
 }
   
 arbitrary_chunks <- function(x, nchunks) {
-  mask <- neuroim::loadVolume(x$mask)
+  mask <- x$mask
   indices <- which(mask != 0)
   chsize <- as.integer(length(indices)/nchunks)
   chunkids <- rep(1:nchunks, each=chsize, length.out=length(indices))
@@ -86,8 +119,28 @@ arbitrary_chunks <- function(x, nchunks) {
   
 }
 
+runwise_chunks <- function(x) {
+  nchunks <- length(x$scans)
+  chunkNum <- 1
+  
+  nextEl <- function() {
+    if (chunkNum > nchunks) {
+      stop("StopIteration")
+    } else {
+      bvec <- neuroim::loadVector(file.path(x$base_path, x$scans[chunkNum]), mask=x$mask)
+      ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), row_ind=which(x$runids==chunkNum))
+      chunkNum <<- chunkNum + 1
+      ret
+    }
+  }
+  
+  iter <- list(nextElem=nextEl)
+  class(iter) <- c("chunkiter", "abstractiter", "iter")
+  iter
+}
+
 slicewise_chunks <- function(x) {
-  mask <- neuroim::loadVolume(x$mask)
+  mask <- x$mask
   template <- BrainVolume(array(0, dim(mask)), space(mask))
   nchunks <- dim(mask)[3]
   
@@ -102,16 +155,19 @@ slicewise_chunks <- function(x) {
 }
 
 one_chunk <- function(x) {
-  mask <- neuroim::loadVolume(x$mask)
+  mask <- x$mask
   gen_chunk_iter(x, list(mask))
 
 }
 
 #' @import neuroim
-data_chunks.fmri_dataset <- function(x, nchunks=1, lazy=TRUE) {
+data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
-  mask <- neuroim::loadVolume(x$mask)
-  if (nchunks == 1) {
+  mask <- x$mask
+  
+  if (runwise) {
+    runwise_chunks(x)
+  } else if (nchunks == 1) {
     one_chunk(x)
   } else if (nchunks == dim(mask)[3]) {
     slicewise_chunks(x)
@@ -119,5 +175,7 @@ data_chunks.fmri_dataset <- function(x, nchunks=1, lazy=TRUE) {
     arbitrary_chunks(x, nchunks)
   }
 }
+
+
 
 

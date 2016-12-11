@@ -21,13 +21,21 @@ extract_covariates <- function(.terms, variables, resp, etab) {
 
 is_parametric_basis <- function(obj) { inherits(obj, "ParametricBasis") }
 
-extract_variables <- function(.terms, data) {
+
+#' @importFrom formula.tools rhs lhs op op.type
+extract_variables <- function(form, data) {
   env <- environment(.terms)
   varnames <- sapply(attr(.terms, "variables") , deparse, width.cutoff = 500)[-1]
-  variables <- eval(attr(.terms, "variables"), data, env)  
+  varnames <- c(get.vars(lhs(form)), get.vars(rhs(form)))
+  variables <- as.data.frame(do.call(cbind, lapply(varnames, function(vn) eval(parse(text=vn), data,environment(terms(form))))))
+  #variables <- eval(attr(terms(form), "variables"), data, environment(terms(form)))  
   names(variables) <- varnames
   variables
-  
+}
+
+has_block_variable <- function(form) {
+  ret <- op(rhs(form)) == "|"
+  length(ret) > 0 && ret
 }
 
 

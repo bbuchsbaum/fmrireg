@@ -7,17 +7,18 @@ Author: Bradley R Buchsbaum
 License: GPL (>= 2)
 Maintainer: Bradley Buchsbaum <bbuchsbaum@gmail.com>
 Description: fmrireg is a package for the analysis of fmri image data
-Depends: 
+Depends:
     R (>= 3.0.0),
     stats,
     methods,
     stringr,
     yaImpute,
     abind
-Imports: 
+Imports:
     gtools,
     numDeriv,
     RANN,
-    assertthat
+    assertthat,
+    tibble
 RoxygenNote: 5.0.1
 Suggests: testthat
