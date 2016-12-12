@@ -1,3 +1,4 @@
+library(testthat)
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 
 test_that("regressor generates correct outputs", {
@@ -18,11 +19,9 @@ test_that("can construct a convolved term from an hrfspec with one factor and on
   durations <- 0
   
   etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)))
-  mspec <- fmri_model(onsets ~ fac, etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=100, TR=1)
-  hspec <- hrf(fac)
+  mspec <- fmri_model(onsets ~ hrf(fac), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=100, TR=1)
   
-  cterm <- construct(hspec, mspec)
-  expect_equal(dim(cterm$convolved_term), c(N,length(levels(etab$fac))))
+  expect_equal(dim(mspec$terms[[1]]$design_matrix), c(N,length(levels(etab$fac))))
 })
 
 test_that("can construct a convolved term from an hrfspec with two factors and one run", {
@@ -31,11 +30,9 @@ test_that("can construct a convolved term from an hrfspec with two factors and o
   durations <- 0
   
   etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), fac2=letters[1:2])
-  mspec <- fmri_model(onsets ~ fac + fac2, etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=100, TR=1)
-  hspec <- hrf(fac,fac2)
-  
-  cterm <- construct(hspec, mspec)
-  expect_equal(dim(cterm$convolved_term), c(N,length(levels(interaction(etab$fac, etab$fac2)))))
+  mspec <- fmri_model(onsets ~ hrf(fac) + hrf(fac2), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=100, TR=1)
+ 
+  expect_equal(dim(design_matrix(mspec)), c(N,length(levels(interaction(etab$fac, etab$fac2)))))
 })
 
 test_that("can construct a convolved term from an hrfspec with one factor and two runs", {
@@ -46,11 +43,10 @@ test_that("can construct a convolved term from an hrfspec with one factor and tw
   durations <- 0
   
   etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), block=rep(1:2, c(length(onsets1), length(onsets2))))
-  mspec <- fmri_model(onsets ~ fac, etab, durations=1, blockids=etab$block, blocklens=c(100,100), TR=1)
-  hspec <- hrf(fac)
+  mspec <- fmri_model(onsets ~ hrf(fac), etab, durations=1, blockids=etab$block, blocklens=c(100,100), TR=1)
+
   
-  cterm <- construct(hspec, mspec)
-  expect_equal(dim(cterm$convolved_term), c(N*2,length(levels(etab$fac))))
+  expect_equal(dim(design_matrix(mspec)), c(N*2,length(levels(etab$fac))))
 })
 
 
@@ -87,7 +83,7 @@ test_that("can extract a design matrix from an fmri_model with two terms", {
   etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), fac2=factor(letters[1:2]))
   mspec <- fmri_model(onsets ~ hrf(fac,fac2), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
   dmat <- design_matrix(mspec)
-  expect_equal(dim(dmat), c(N, length(levels(etab$fac))))
+  expect_equal(dim(dmat), c(N, length(levels(interaction(etab$fac, etab$fac2)))))
 })
 
 test_that("can extract a design matrix from an fmri_model with two terms and one continuous variable", {
@@ -131,7 +127,7 @@ test_that("can extract a design matrix from an fmri_model with one factor and SP
   etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)))
   mspec <- fmri_model(onsets ~ hrf(fac, basis="spmg3"), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
   dmat <- design_matrix(mspec)
-  expect_equal(dim(dmat), c(N, length(levels(etab$fac)) * 5))
+  expect_equal(dim(dmat), c(N, length(levels(etab$fac)) * 3))
 })
 
 
@@ -164,15 +160,15 @@ test_that("facedes model with rep_num, and rep_num by rt ", {
   facedes$repnum <- factor(facedes$rep_num)
   mspec <- fmri_model(onset ~ hrf(repnum, subset=repnum != "-1") + hrf(repnum,rt,subset=rep_num!= "-1"), facedes, durations=0, blockids=facedes$run, blocklens=rep(436/2,max(facedes$run)), TR=2)
   dmat <- design_matrix(mspec)
-  expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), length(levels(facedes$repnum))-1))
+  expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), (length(levels(facedes$repnum))-1)*2))
 })
 
 test_that("facedes model block variable", {
   facedes$repnum <- factor(facedes$rep_num)
   
-  aux_table <- data.frame(run=rep(1:6, each=218))
+  aux_data <- data.frame(run=rep(1:6, each=218))
   mspec <- fmri_model(onset ~  hrf(repnum) + block(run), facedes, durations=0, blockids=facedes$run, 
-                      blocklens=rep(436/2,max(facedes$run)), TR=2, aux_table=aux_table)
+                      blocklens=rep(436/2,max(facedes$run)), TR=2, aux_data=aux_data)
   dmat <- design_matrix(mspec)
   expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), 11))
 })

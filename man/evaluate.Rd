@@ -14,6 +14,8 @@ evaluate(x, grid, ...)
 \method{evaluate}{regressor}(x, grid, precision = 0.1)
 }
 \arguments{
+\item{grid}{the sampling grid}
+
 \item{...}{extra args}
 
 \item{amplitude}{the scaling value for the event}

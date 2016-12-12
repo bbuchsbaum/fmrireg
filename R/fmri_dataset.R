@@ -24,7 +24,7 @@ read_fmri_config <- function(file_name) {
   assert_that(!is.null(env$TR))
   assert_that(!is.null(env$mask))
   assert_that(!is.null(env$run_length))
-  assert_that(!is.null(env$model))
+  assert_that(!is.null(env$event_model))
   assert_that(!is.null(env$design))
   assert_that(file.exists(file.path(env$base_path,env$design)))
   
@@ -50,11 +50,16 @@ read_fmri_config <- function(file_name) {
 #' regression model and are not convolved with hemodynamic response function.
 #' @export
 fmri_dataset <- function(scans, mask, TR, 
-                         run_length, runids=rep(1:length(run_length), run_length), 
+                         run_length, 
                          event_table=data.frame(), 
                          aux_data=tibble::as_tibble(list()), base_path="") {
   
-  assert_that(length(unique(runids)) == length(run_length))
+  if (length(run_length) == 1) {
+    run_length <- rep(run_length, length(scans))
+  }
+  
+  assert_that(length(run_length) == length(scans))
+  runids <- rep(1:length(scans), run_length)
   
   ret <- list(
     scans=scans,
@@ -63,7 +68,7 @@ fmri_dataset <- function(scans, mask, TR,
     TR=TR,
     run_length=run_length,
     runids=runids,
-    nruns=length(x$scans),
+    nruns=length(scans),
     event_table=event_table,
     aux_data=aux_data,
     base_path=base_path

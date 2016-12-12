@@ -1,12 +1,14 @@
 #' @importFrom RANN nn2
 NULL
 
-
+#' @param blocklens
+#' @param TR
+#' @param start_time
 #' @export
-sampling_frame <- function(blocklens, TR, startTime=TR/2, precision=.1) {
+sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
   ret <- list(blocklens=blocklens,
               TR=TR,
-              startTime=startTime,
+              start_time=start_time,
               precision=precision)
   
   class(ret) <- c("sampling_frame", "list")
@@ -21,11 +23,11 @@ samples.sampling_frame <- function(x, blocknum=NULL, global=FALSE) {
   
   if (!global) {
     unlist(lapply(blocknum, function(b) {
-      seq(x$startTime, by=x$TR, length.out=x$blocklens[b])
+      seq(x$start_time, by=x$TR, length.out=x$blocklens[b])
     }))
   } else {
     unlist(lapply(blocknum, function(b) {
-      start <- if (b > 1) sum(x$blocklens[1:(b-1)])*x$TR + x$startTime else x$startTime
+      start <- if (b > 1) sum(x$blocklens[1:(b-1)])*x$TR + x$start_time else x$start_time
       seq(start, by=x$TR, length.out=x$blocklens[b])
     }))
   }
@@ -64,7 +66,13 @@ global_onsets.sampling_frame <- function(x, onsets, blockids) {
 #' @param duration duration of events (default is 0)
 #' @param amplitude scaling vector (default is 1)
 #' @param span the temporal window of the impulse response function (default is 24)
+#' @return an S3 list of type \code{regressor}
 #' @export
+#' @examples 
+#' 
+#' reg <- regressor(c(10,12,14,16,18, 40), HRF_SPMG1)
+#' pred <- evaluate(reg, seq(0,100,by=2))
+#' nbasis(reg) == 1
 regressor <- function(onsets, hrf, duration=0, amplitude=1, span=24) {
   if (length(duration) == 1) {
     duration = rep(duration, length(onsets))
@@ -88,6 +96,7 @@ dots <- function(...) {
 
 #' evaluate
 #' @rdname evaluate
+#' @param grid the sampling grid
 #' @param precision the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}
 #' @export
 evaluate.regressor <- function(x, grid, precision=.1) {
@@ -104,7 +113,7 @@ evaluate.regressor <- function(x, grid, precision=.1) {
   valid <- x$onsets >= grid[1] & x$onsets < grid[length(grid)]
   
   if (all(!valid)) {
-    message("none of the regressor onsets intersect with sampling 'grid', evalauting to zero at all times.")
+    warning("none of the regressor onsets intersect with sampling 'grid', evalauting to zero at all times.")
     return(outmat)
   }
   
@@ -158,6 +167,7 @@ onsets.regressor <- function(x) x$onsets
 
 #' @export
 durations.regressor <- function(x) x$duration
+
 #' @export
 amplitudes.regressor <- function(x) x$amplitude
 

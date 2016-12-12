@@ -9,25 +9,20 @@ scans = paste0("epi/",
                  "rscan05.nii",
                  "rscan06.nii"))
 
-nuisance_reg = paste0("epi/",
-                      c("nuisance_rscan01.txt",
-                        "nuisance_rscan02.txt",
-                        "nuisance_rscan03.txt",
-                        "nuisance_rscan04.txt",
-                        "nuisance_rscan05.txt",
-                        "nuisance_rscan06.txt"))
+
+
 
 design = "behavior/design.txt"
 
-block_column = "run"
+aux_data = "epi/aux_data.txt"
 
-model = onsetTime ~ hrf(imageName) 
+#block_column = "run"
 
+event_model = onsetTime ~ hrf(imageName) | run
 
+baseline_model = ~ bs(time,4) + PC1 + PC2 + PC3
 
 output_dir = "glm_out"
-
-polort = 4
 
 mask = "epi/global_mask.nii"
 

@@ -24,11 +24,14 @@ is_parametric_basis <- function(obj) { inherits(obj, "ParametricBasis") }
 
 #' @importFrom formula.tools rhs lhs op op.type
 extract_variables <- function(form, data) {
+ 
+  .terms <- extract_terms(form,data)
   env <- environment(.terms)
+  #env <- environment(.terms)
   varnames <- sapply(attr(.terms, "variables") , deparse, width.cutoff = 500)[-1]
-  varnames <- c(get.vars(lhs(form)), get.vars(rhs(form)))
-  variables <- as.data.frame(do.call(cbind, lapply(varnames, function(vn) eval(parse(text=vn), data,environment(terms(form))))))
-  #variables <- eval(attr(terms(form), "variables"), data, environment(terms(form)))  
+  #varnames <- c(formula.tools::get.vars(formula.tools::lhs(form)), formula.tools::get.vars(formula.tools::rhs(form)))
+  #variables <- as.data.frame(do.call(cbind, lapply(varnames, function(vn) eval(parse(text=vn), data,environment(terms(form))))))
+  variables <- eval(attr(.terms, "variables"), data, env) 
   names(variables) <- varnames
   variables
 }
@@ -63,7 +66,7 @@ fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations=0, block
     durations <- rep(0, nrow(event_table))
   }
   
-  variables <- extract_variables(vterms, event_table)
+  variables <- extract_variables(formula, event_table)
   lhs <- variables[[resp]]
 
   rhs <- variables[(resp+1):length(variables)]
@@ -113,7 +116,7 @@ design_matrix.fmri_model <- function(x) {
 }
 
 construct.model_spec <- function(x) {
- 
+
   terms <- lapply(x$varspec, function(m) construct(m,x))
   term_names <- sapply(x$varspec, "[[", "label")
   term_names <- .sanitizeName(term_names)
@@ -147,11 +150,6 @@ terms.fmri_model <- function(x) {
 conditions.fmri_model <- function(x) {
   unlist(lapply(terms(x), function(t) conditions(t)), use.names=FALSE)
 }
-
-
-
-  
-
 
 .hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1) {
   vars <- as.list(substitute(list(...)))[-1] 
@@ -195,7 +193,7 @@ conditions.fmri_model <- function(x) {
 #' @param ... the variable names
 #' @param basis the impulse response function.
 #' @param onsets optional onsets override. If missing, onsets will be taken from global model specification duration evaluation.
-#' @param durations optional durations override. If missing, onsets will be taken from global model specification during evlauation.
+#' @param durations optional durations override. If missing, onsets will be taken from global model specification during evaluation.
 #' @param prefix a character string that is prepended to the variables names and used to identify the term.
 #' @param subset
 #' @param precision 
@@ -335,6 +333,7 @@ construct.trialwisespec <- function(x, model_spec) {
   ret
 }
 
+
 #' @export
 construct.hrfspec <- function(x, model_spec) {
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
@@ -364,6 +363,8 @@ construct.hrfspec <- function(x, model_spec) {
   ret
 }
 
+
+#' @export
 contrast_weights.convolved_term <- function(x) {
   lapply(x$contrasts, function(cspec) {
     if (!is.null(cspec))
@@ -371,8 +372,10 @@ contrast_weights.convolved_term <- function(x) {
   })
 }
 
+#' @export
 contrast_weights.fmri_term <- function(x) { NULL }
-  
+
+#' @export
 contrast_weights.fmri_model <- function(x) {
   tind <- x$term_indices
   len <- length(conditions(x))

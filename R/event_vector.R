@@ -446,7 +446,7 @@ convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
   globons <- global_onsets(samplingFrame, x$onsets, x$blockids)
   
   nimages <- sum(samplingFrame$blocklens)
-  samples <- seq(samplingFrame$startTime, length.out=nimages, by=samplingFrame$TR)
+  samples <- seq(samplingFrame$start_time, length.out=nimages, by=samplingFrame$TR)
   
   dmat <- as.data.frame(design_matrix(x, drop.empty))
   

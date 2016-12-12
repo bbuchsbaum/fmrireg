@@ -4,7 +4,7 @@
 \alias{regressor}
 \title{regressor}
 \usage{
-regressor(onsets, hrf, duration = 0, amplitude = 1, span = 20)
+regressor(onsets, hrf, duration = 0, amplitude = 1, span = 24)
 }
 \arguments{
 \item{hrf}{a hemodynamic response function}
@@ -13,12 +13,21 @@ regressor(onsets, hrf, duration = 0, amplitude = 1, span = 20)
 
 \item{amplitude}{scaling vector (default is 1)}
 
-\item{span}{the temporal winmixed.dow of the response function (default is 20)}
+\item{span}{the temporal window of the impulse response function (default is 24)}
 
 \item{onset}{the event onsets in seconds}
+}
+\value{
+an S3 list of type \code{regressor}
 }
 \description{
 construct a regressor function that can be used to generate a regression fucntion 
 from a set of onset times and a hemodynamic response function
+}
+\examples{
+
+reg <- regressor(c(10,12,14,16,18, 40), HRF_SPMG1)
+pred <- evaluate(reg, seq(0,100,by=2))
+nbasis(reg) == 1
 }
 
