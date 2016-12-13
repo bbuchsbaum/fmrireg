@@ -94,9 +94,10 @@ dots <- function(...) {
   eval(substitute(alist(...)))
 }
 
+
 #' evaluate
 #' @rdname evaluate
-#' @param grid the sampling grid
+#' @param grid the sampling grid. A vector of real values in seconds.
 #' @param precision the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}
 #' @export
 evaluate.regressor <- function(x, grid, precision=.1) {

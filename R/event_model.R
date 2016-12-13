@@ -98,19 +98,22 @@ parse_term <- function(vars, ttype) {
   list(term=term, label=label)
 }
 
+
+#' @importFrom tibble as_tibble
 design_matrix.model_spec <- function(x) {
   termlist <- lapply(x$varspec, function(m) construct(m,x))
   ret <- lapply(termlist, design_matrix)
   vnames <- unlist(lapply(ret, colnames))
-  dmat <- as.data.frame(do.call(cbind, ret))
+  dmat <- tibble::as_tibble(do.call(cbind, ret))
   names(dmat) <- vnames
   dmat
 }
 
+#' @importFrom tibble as_tibble
 design_matrix.fmri_model <- function(x) {
   ret <- lapply(x$terms, design_matrix)
   vnames <- unlist(lapply(ret, names))
-  dmat <- as.data.frame(do.call(cbind, ret))
+  dmat <- tibble::as_tibble(do.call(cbind, ret))
   names(dmat) <- vnames
   dmat
 }
@@ -261,7 +264,7 @@ construct.blockspec <- function(x, model_spec) {
   blockids <- base::eval(parse(text=x$name), envir=model_spec$event_table, enclos=parent.frame())
   assert_that(is.increasing(blockids))
   blockord <- sort(unique(blockids))
-  expanded_blockids <- rep(blockord, model_spec$blocklens)
+  expanded_blockids <- ordered(rep(blockord, model_spec$blocklens))
     
     
   mat <- if (length(levels(blockids)) == 1) {
@@ -270,6 +273,7 @@ construct.blockspec <- function(x, model_spec) {
     mat <- model.matrix(~ expanded_blockids - 1)
   }
   
+  print(x$name)
   colnames(mat) <- paste0(x$name, "_", blockord)
   matrix_term(x$name, mat)
 }
@@ -405,20 +409,20 @@ design_matrix.convolved_term <- function(x) {
   x$design_matrix
 }
 
-
+#' @importFrom tibble as_tibble
 #' @export
 matrix_term <- function(varname, mat) {
   stopifnot(is.matrix(mat))
-  ret <- list(varname=varname, design_matrix=mat)
+  ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat))
   class(ret) <- c("matrix_term", "fmri_term", "list")
   ret
 }
 
 #' @export
 design_matrix.matrix_term <- function(x,...) {
-  if (is.null(colnames(x$design_matrix))) {
+  if (is.null(names(x$design_matrix))) {
     cnames <- paste0(x$varname, "_", 1:ncol(x$design_matrix))
-    colnames(x$design_matrix) <- cnames
+    names(x$design_matrix) <- cnames
   }
   
   x$design_matrix

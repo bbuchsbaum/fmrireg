@@ -77,12 +77,12 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   names(etab) <- sapply(pterms, .sanitizeName)
   varname <- paste(sapply(evs, function(x) x$varname), collapse=":")
   
-  ret <- list(varname=varname, events=evs, subset=subset, eventTable=etab, onsets=evs[[1]]$onsets, blockids=evs[[1]]$blockids, durations=evs[[1]]$durations)
+  ret <- list(varname=varname, events=evs, subset=subset, event_table=etab, onsets=evs[[1]]$onsets, blockids=evs[[1]]$blockids, durations=evs[[1]]$durations)
   class(ret) <- c("event_term", "event_seq")
   ret
 }
 
-event_table.event_term <- function(x) x$eventTable
+event_table.event_term <- function(x) x$event_table
 
 
 #' EV
@@ -253,7 +253,7 @@ cells.event_factor <- function(x, drop.empty=TRUE) {
 
 #' @export
 cells.event_term <- function(x, drop.empty=TRUE) {
-  evtab <- x$eventTable
+  evtab <- x$event_table
   evset <- expand.grid(lapply(x$events, levels))
   which.cat <- which(!sapply(x$events, isContinuous))
   
@@ -430,16 +430,17 @@ convolve_design <- function(hrf, dmat, globons, durations) {
     ret <- apply(dmat, 1, function(vals) all(!is.na(vals)))
     ret[is.na(globons)] <- FALSE
   } else {
-    TRUE
+    rep(TRUE, nrow(dmat))
   }
   
   
   lapply(1:NCOL(dmat), function(i) {
-    regressor(globons[keep], hrf, amplitude=dmat[keep,i], duration=durations[keep])
+    regressor(globons[keep], hrf, amplitude=unlist(dmat[keep,i]), duration=durations[keep])
   })
   
 }
 
+#' @importFrom tibble as_tibble
 #' @export
 convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
 
@@ -448,7 +449,7 @@ convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
   nimages <- sum(samplingFrame$blocklens)
   samples <- seq(samplingFrame$start_time, length.out=nimages, by=samplingFrame$TR)
   
-  dmat <- as.data.frame(design_matrix(x, drop.empty))
+  dmat <- design_matrix(x, drop.empty)
   
   blockids <- factor(x$blockids)
   split.dmat <- split(dmat, blockids)
@@ -471,12 +472,13 @@ convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
   } 
             
   colnames(ret) <- cnames
-  as.data.frame(ret)
+  tibble::as_tibble(ret)
   
   #lapply(reglist, function(reg) evaluate(reg, )
   
 }
 
+#' @importFrom tibble as_tibble
 #' @export
 design_matrix.event_term <- function(x, drop.empty=TRUE) {
   locenv <- new.env()
@@ -504,7 +506,7 @@ design_matrix.event_term <- function(x, drop.empty=TRUE) {
   
   #remove rows with NAS
   if (any(nas)) {
-    rmat <- matrix(0, nrow(x$eventTable), length(conditions(x, drop.empty)))
+    rmat <- matrix(0, nrow(x$event_table), length(conditions(x, drop.empty)))
     rmat[!nas,] <- mat
     rmat[nas,] <- NA				
   } 
@@ -519,7 +521,7 @@ design_matrix.event_term <- function(x, drop.empty=TRUE) {
     colnames(rmat) <- conditions(x, drop=F)			
   }
   
-  rmat
+  tibble::as_tibble(rmat)
 }
 
 
@@ -529,7 +531,7 @@ print.event_term <- function(object) {
   cat("event_term", "\n")
   cat("  ", "Term Name: ", object$varname, "\n")
   cat("  ", "Formula:  ", as.character(formula(object)), "\n")
-  cat("  ", "Num Events: ", nrow(object$eventTable), "\n")
+  cat("  ", "Num Events: ", nrow(object$event_table), "\n")
   cat("  ", "Term Types: ", paste(sapply(object$events, function(ev) class(ev)[[1]])))
 }
 
@@ -537,7 +539,7 @@ print.event_term <- function(object) {
 print.fmri_term <- function(object) {
   cat("fmri_term", "\n")
   cat("  ", "Term Name: ", object$varname, "\n")
-  cat("  ", "Num Events: ", nrow(design_matrix(object)), "\n")
+  cat("  ", "Num Rows: ", nrow(design_matrix(object)), "\n")
   cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n")
 }
 
@@ -546,7 +548,8 @@ print.convolved_term <- function(object) {
   cat("fmri_term", "\n")
   cat("  ", "Term Name: ", object$varname, "\n")
   cat("  ", "Formula:  ", as.character(formula(object$evterm)), "\n")
-  cat("  ", "Num Events: ", nrow(design_matrix(object)), "\n")
+  cat("  ", "Num Events: ", nrow(object$evterm$event_table), "\n")
+  cat("  ", "Num Rows: ", nrow(design_matrix(object)), "\n")
   cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n\n")
   cat("  ", "Conditions: ", conditions(object), "\n\n")
   cat("  ", "Term Types: ", paste(sapply(object$evterm$events, function(ev) class(ev)[[1]])))

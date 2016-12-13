@@ -178,7 +178,7 @@ test_that("facedes model with polynomial parametric basis", {
   
   aux_table <- data.frame(run=rep(1:6, each=218))
   mspec <- fmri_model(onset ~  hrf(Poly(rt,3)) + block(run), facedes, durations=0, blockids=facedes$run, 
-                      blocklens=rep(436/2,max(facedes$run)), TR=2, aux_table=aux_table)
+                      blocklens=rep(436/2,max(facedes$run)), TR=2, aux_data=aux_table)
   dmat <- design_matrix(mspec)
   expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), 9))
 })
