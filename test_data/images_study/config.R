@@ -18,9 +18,9 @@ aux_data = "epi/aux_data.txt"
 
 #block_column = "run"
 
-event_model = onsetTime ~ hrf(imageName) | run
+event_model = onsetTime ~ hrf(imageName, id="iname") 
 
-baseline_model = ~ bs(time,4) + PC1 + PC2 + PC3
+baseline_model = ~ block(run) + splines::bs(scan_time,4) + PC1 + PC2 + PC3
 
 output_dir = "glm_out"
 

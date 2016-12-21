@@ -44,7 +44,8 @@ has_block_variable <- function(form) {
 
 
 fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations=0, blockids, blocklens, TR, 
-                       aux_data=data.frame(), drop_empty=TRUE) {
+                       aux_data=data.frame(), baseline_formula=NULL, drop_empty=TRUE) {
+  
   stopifnot(inherits(formula, "formula"))
   
   vterms <- extract_terms(formula, event_table)
@@ -74,7 +75,7 @@ fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations=0, block
   
   model_spec <- list(formula=formula, event_table=event_table, onsets=lhs, varspec=rhs, varclass=vclass,
                      durations=durations, blocklens=blocklens, blockids=blockids, TR=TR, drop_empty=drop_empty,
-                     aux_data=aux_data)
+                     aux_data=aux_data, baseline_formula)
   
   class(model_spec) <- c("model_spec", "list")
   
@@ -204,7 +205,7 @@ conditions.fmri_model <- function(x) {
 #' @param contrasts one or more \code{contrastspec} objects created with the \code{contrast} function. 
 #' If multiple contrasts are required, then these should be wrapped in a \code{list}.
 #' @export
-hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1, contrasts=NULL) {
+hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1, contrasts=NULL, id=NULL) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
@@ -228,6 +229,10 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
   }
   
   termname <- paste0(varnames, collapse="::")
+
+  if (is.null(id)) {
+    id <- termname
+  }  
   
   cset <- if (inherits(contrasts, "contrast_spec")) {
     #vname <- deparse(substitute(contrasts))
@@ -244,6 +249,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
     
   ret <- list(
     name=termname,
+    id=id,
     varnames=varnames,
     vars=term,
     label=label,
@@ -455,7 +461,8 @@ longnames.matrix_term <- function(x) {
 #' @export
 print.fmri_model <- function(object) {
   cat("fmri_model", "\n")
-  cat(" ", "Formula:  ", Reduce(paste, deparse(object$model_spec$formula)), "\n")
+  cat(" ", "Event Model:  ", Reduce(paste, deparse(object$model_spec$formula)), "\n")
+  cat(" ", "Baseline Model:  ", Reduce(paste, deparse(object$model_spec$baseline_formula)), "\n")
   cat(" ", "Num Terms", length(terms(object)), "\n")
   cat(" ", "Num Events: ", nrow(object$model_spec$event_table), "\n")
   cat(" ", "Num Columns: ", length(conditions(object)), "\n")

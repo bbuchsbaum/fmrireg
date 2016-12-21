@@ -61,6 +61,7 @@ fit_contrasts <- function(lmfit, conmat) {
   }
   
   Qr <- stats:::qr.lm(lmfit)
+  
   p1 <- 1:lmfit$rank
   cov.unscaled <- chol2inv(Qr$qr[p1,p1,drop=FALSE])
   betamat <- lmfit$coefficients
@@ -78,7 +79,7 @@ fit_contrasts <- function(lmfit, conmat) {
   
   prob <- 2 * (1 - pt(abs(ct/vc), lmfit$df.residual))
   tstat <- ct/vc
-  ret <- as.data.frame(cbind(as.vector(ct), as.vector(vc), as.vector(tstat), as.vector(prob)))
+  ret <- as_tibble(cbind(as.vector(ct), as.vector(vc), as.vector(tstat), as.vector(prob)))
   names(ret) <- c("estimate", "se", "tstat", "prob")
   ret
 
@@ -97,8 +98,6 @@ contrast_set <- function(...) {
 
 
 
-
-
 #' @export
 contrast <- function(A, B=NULL, where=TRUE, split_by=NULL) {
   ret <- list(A=substitute(A),
@@ -111,6 +110,8 @@ contrast <- function(A, B=NULL, where=TRUE, split_by=NULL) {
   ret
 }
 
+
+#' @export
 poly_contrast <- function(A, where=TRUE, degree=1, value_map=NULL) {
   ret <- list(
     A=substitute(A),
@@ -123,7 +124,7 @@ poly_contrast <- function(A, where=TRUE, degree=1, value_map=NULL) {
   ret
 }
 
-
+#' @export
 contrast_weights.poly_contrast_spec <- function(x, term) {
  
   term.cells <- cells(term)
@@ -183,6 +184,7 @@ makeWeights <- function(keepA, keepB=NULL) {
   weights
 }
 
+#' @export
 contrast_weights.contrast_spec <- function(x, term) {
   term.cells <- cells(term)
   row.names(term.cells) <- longnames(term)
@@ -223,6 +225,7 @@ contrast_weights.contrast_spec <- function(x, term) {
   ret  
 }
 
+#' @export
 estcon.contrast <- function(x, fit, indices) {
   wts <- numeric(length(fit$assign))
   wts[indices] <- x$weights
@@ -230,6 +233,7 @@ estcon.contrast <- function(x, fit, indices) {
   gmodels::estimable(fit, wts)
 }
 
+#' @export
 print.contrast_set <- function(x) {
   for (con in x) {
     print(con)
@@ -237,6 +241,7 @@ print.contrast_set <- function(x) {
   }
 }
 
+#' @export
 print.contrast_spec <- function(x) {
   cat("contrast:", "\n")
   cat(" A: ", Reduce(paste, deparse(x$A)), "\n")
@@ -247,11 +252,13 @@ print.contrast_spec <- function(x) {
 
 }
 
+#' @export
 print.contrast <- function(x) {
   print(x$contrast_spec)
   cat(" weights: ", x$weights)
 }
 
+#' @export
 print.poly_contrast_spec <- function(x) {
   cat("poly contrast", "\n")
   cat(" A: ", Reduce(paste, deparse(x$A)), "\n")

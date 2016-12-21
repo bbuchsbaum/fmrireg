@@ -16,9 +16,7 @@ read_fmri_config <- function(file_name) {
     env$output_dir = "stat_out"
   }
   
-  if (is.null(env$nuisance_reg)) {
-    env$nuisance_reg=NULL
-  }
+  
   
   assert_that(!is.null(env$scans))
   assert_that(!is.null(env$TR))
@@ -28,8 +26,14 @@ read_fmri_config <- function(file_name) {
   assert_that(!is.null(env$design))
   assert_that(file.exists(file.path(env$base_path,env$design)))
   
+  
   #env$mask <- neuroim::loadVolume(file.path(env$base_path, env$mask))
   env$design <- tibble::as_data_frame(read.table(file.path(env$base_path,env$design), header=TRUE))
+  if (is.null(env$aux_data)) {
+    env$aux_data=tibble::as_data_frame()
+  } else {
+    env$aux_data <- tibble::as_data_frame(read.table(file.path(env$base_path,env$aux_data), header=TRUE))
+  }
   
   out <- as.list(env)
   class(out) <- c("fmri_config", "list")
