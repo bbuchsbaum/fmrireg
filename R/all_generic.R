@@ -167,13 +167,13 @@ samples <-  function(x, ...) UseMethod("samples")
 #' estcon
 #' 
 #' @export
-estcon <- function(x, fit, ...)
+estcon <- function(x, fit, ...) UseMethod("estcon")
 
 #' construct
 #' 
-#' construct a regression term given a an hrf spec and model specification
+#' construct a term given a an hrf spec and model specification
 #' 
 #' @param x the object
 #' @param model_spec the model specification
 #' @export
-construct <- function(x, model_spec) UseMethod("construct")
+construct <- function(x, model_spec,...) UseMethod("construct")

@@ -14,7 +14,7 @@ evaluate(x, grid, ...)
 \method{evaluate}{regressor}(x, grid, precision = 0.1)
 }
 \arguments{
-\item{grid}{the sampling grid}
+\item{grid}{the sampling grid. A vector of real values in seconds.}
 
 \item{...}{extra args}
 

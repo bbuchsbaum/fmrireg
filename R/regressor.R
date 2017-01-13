@@ -6,9 +6,13 @@ NULL
 #' @param start_time
 #' @export
 sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
+  blockids <- rep(1:length(blocklens), blocklens)
+  #scan_time <- unlist(lapply(1:length(blocklens), function(i) seq(TR/2, by=TR, length.out=blocklens[i])))
   ret <- list(blocklens=blocklens,
               TR=TR,
               start_time=start_time,
+              blockids=blockids,
+              #scan_time=scan_time,
               precision=precision)
   
   class(ret) <- c("sampling_frame", "list")

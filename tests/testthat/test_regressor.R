@@ -231,9 +231,9 @@ test_that("can build a linear contrast from repnum and value_map", {
   aux_table <- data.frame(run=rep(1:6, each=218))
   con <- poly_contrast(A=repnum, value_map=list("-1"=0, "1"=1, "2"=2, "3"=3, "4"=4))
   
-  
-  mspec <- fmri_model(onset ~  hrf(repnum, contrasts=con) + baseline(degree=3, basis="bs"), facedes, durations=0, blockids=facedes$run, 
-                      blocklens=rep(436/2,max(facedes$run)), TR=2)
+  sframe <- sampling_frame(rep(436/2,max(facedes$run)), TR=2)
+  mspec <- fmri_model(onset ~  hrf(repnum, contrasts=con), ~ baseline(degree=3, basis="bs"), 
+                      event_table=facedes, event_block_ids=facedes$run, sampling_frame=sframe)
   
   term <- construct(mspec$varspec[[1]], mspec)
   expect_equal(as.vector(contrast_weights(con, term)), as.vector(poly(c(0,1,2,3,4))))

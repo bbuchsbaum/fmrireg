@@ -43,45 +43,6 @@ has_block_variable <- function(form) {
 
 
 
-fmri_model <- function(formula, event_table, basis=HRF_SPMG1, durations=0, blockids, blocklens, TR, 
-                       aux_data=data.frame(), baseline_formula=NULL, drop_empty=TRUE) {
-  
-  stopifnot(inherits(formula, "formula"))
-  
-  vterms <- extract_terms(formula, event_table)
-  resp <- attr(vterms, "response")
-  
-  assert_that(resp > 0)
-  assert_that(all(blocklens>0))
-  assert_that(length(TR) == 1)
-  assert_that(TR > 0)
-  
-  assert_that(is.data.frame(aux_data))
-  
-  if (is.null(resp)) {
-    stop("need to provide onset vector on left side of formula, e.g. Onsets ~  a + b")
-  }
-  
-  if (missing(durations)) {
-    ## assume zero-duration impulse for all events
-    durations <- rep(0, nrow(event_table))
-  }
-  
-  variables <- extract_variables(formula, event_table)
-  lhs <- variables[[resp]]
-
-  rhs <- variables[(resp+1):length(variables)]
-  vclass <- sapply(rhs, class)
-  
-  model_spec <- list(formula=formula, event_table=event_table, onsets=lhs, varspec=rhs, varclass=vclass,
-                     durations=durations, blocklens=blocklens, blockids=blockids, TR=TR, drop_empty=drop_empty,
-                     aux_data=aux_data, baseline_formula)
-  
-  class(model_spec) <- c("model_spec", "list")
-  
-  fmodel <- construct(model_spec)
-  fmodel
-}
 
 
 
@@ -119,38 +80,15 @@ design_matrix.fmri_model <- function(x) {
   dmat
 }
 
-construct.model_spec <- function(x) {
-
-  terms <- lapply(x$varspec, function(m) construct(m,x))
-  term_names <- sapply(x$varspec, "[[", "label")
-  term_names <- .sanitizeName(term_names)
-  names(terms) <- term_names
-  
-  term_lens <- sapply(lapply(terms, conditions), length)
-  spans <- c(0, cumsum(term_lens))
-  
-  term_indices <- lapply(1:(length(spans)-1), function(i) {
-    seq(spans[i]+1, spans[i+1])
-  })
-  
-  names(term_indices) <- term_names
-  
-  ret <- list(
-    term_indices=term_indices,
-    terms=terms,
-    model_spec=x
-  )
-  
-  class(ret) <- c("fmri_model", "list")
-  ret
-}
 
 
-
+#' @export
 terms.fmri_model <- function(x) {
   x$terms
 }
 
+
+#' @export
 conditions.fmri_model <- function(x) {
   unlist(lapply(terms(x), function(t) conditions(t)), use.names=FALSE)
 }
@@ -270,9 +208,9 @@ construct.blockspec <- function(x, model_spec) {
   blockids <- base::eval(parse(text=x$name), envir=model_spec$event_table, enclos=parent.frame())
   assert_that(is.increasing(blockids))
   blockord <- sort(unique(blockids))
-  expanded_blockids <- ordered(rep(blockord, model_spec$blocklens))
-    
-    
+  
+  expanded_blockids <- ordered(rep(blockord, model_spec$sampling_frame$blocklens))
+
   mat <- if (length(levels(blockids)) == 1) {
     matrix(rep(1, length(expanded_blockids)), length(expanded_blockids), 1)
   } else {
@@ -281,7 +219,7 @@ construct.blockspec <- function(x, model_spec) {
   
   print(x$name)
   colnames(mat) <- paste0(x$name, "_", blockord)
-  matrix_term(x$name, mat)
+  block_term(x$name, blockids=blockids, expanded_blockids=expanded_blockids, mat)
 }
 
 #' @export
@@ -314,6 +252,7 @@ construct.trialwisespec <- function(x, model_spec) {
   ## compied almost verbatim from construct.hrfspec
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
+  
   varlist <- lapply(seq_along(x$vars), function(i) {
     base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
   })
@@ -327,14 +266,17 @@ construct.trialwisespec <- function(x, model_spec) {
   
   subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
   
-  et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
-  sframe <- sampling_frame(model_spec$blocklens, model_spec$TR, model_spec$TR/2, x$precision)
-  cterm <- convolve(et, x$hrf, sframe)
+  
+  et <- event_term(varlist, onsets, model_spec$event_block_ids, durations, subs)
+  #sframe <- sampling_frame(model_spec$blocklens, model_spec$TR, model_spec$TR/2, x$precision)
+  
+  cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
+  
   ret <- list(
     varname=et$varname,
     evterm=et,
     design_matrix=cterm,
-    sampling_frame=sframe,
+    sampling_frame=model_spec$sampling_frame,
     contrasts=x$contrasts,
     hrfspec=x
   )
@@ -356,15 +298,15 @@ construct.hrfspec <- function(x, model_spec) {
   names(varlist) <- x$varnames
   subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
   
-  et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
-  sframe <- sampling_frame(model_spec$blocklens, model_spec$TR, model_spec$TR/2, x$precision)
-  cterm <- convolve(et, x$hrf, sframe)
+  et <- event_term(varlist, onsets, model_spec$event_block_ids, durations, subs)
+  #sframe <- sampling_frame(model_spec$sampling_frame$blocklens, model_spec$TR, model_spec$sampling_frame$TR/2, x$precision)
+  cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
    
   ret <- list(
     varname=et$varname,
     evterm=et,
     design_matrix=as.data.frame(cterm),
-    sampling_frame=sframe,
+    sampling_frame=model_spec$sampling_frame,
     hrfspec=x,
     contrasts=x$contrasts
   )
@@ -423,6 +365,17 @@ matrix_term <- function(varname, mat) {
   class(ret) <- c("matrix_term", "fmri_term", "list")
   ret
 }
+
+#' @importFrom tibble as_tibble
+#' @export
+block_term <- function(varname, blockids, expanded_blockids, mat) {
+  assertthat::assert_that(is.matrix(mat))
+  assertthat::assert_that(nrow(mat) == length(blockids))
+  ret <- list(varname=varname, blockids=blockids, expanded_blockids, design_matrix=tibble::as_tibble(mat))
+  class(ret) <- c("block_term", "matrix_term", "fmri_term", "list")
+  ret
+}
+
 
 #' @export
 design_matrix.matrix_term <- function(x,...) {

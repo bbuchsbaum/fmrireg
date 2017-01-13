@@ -9,12 +9,12 @@
 #' @param 
 #' @export
 #' @importFrom foreach foreach
-fmri_glm <- function(formula, dataset, basis=HRF_SPMG1, durations, drop_empty=TRUE, analyze_by=c("run", "slice")) {
+fmri_glm <- function(formula, baseline_formula, dataset, basis=HRF_SPMG1, durations, drop_empty=TRUE, analyze_by=c("run", "slice")) {
   analyze_by <- match.arg(analyze_by)
   
-  model <- fmri_model(formula, dataset$event_table, basis=basis, durations=durations, 
+  model <- fmri_model(formula, baseline_formula, dataset$event_table, aux_table=dataset$aux_table, basis=basis, durations=durations, 
                       blockids=dataset$blockids, blocklens=dataset$blocklens, TR=dataset$TR, 
-                      aux_data=dataset$aux_data, drop_empty=drop_empty)
+                      drop_empty=drop_empty)
   
   
   term_names <- names(terms(model))

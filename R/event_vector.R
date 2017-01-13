@@ -21,7 +21,7 @@ is.strictly.increasing <- function(vec) {
 
 #' @import assertthat
 .checkEVArgs <- function(name, vals, onsets, blockids, durations=NULL) {
-  
+
   assert_that(length(onsets) == length(vals))
   
   ## no NA onsets allowed
@@ -58,11 +58,19 @@ is.strictly.increasing <- function(vec) {
 event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   assert_that(is.increasing(blockids))
   
+  if (is.null(subset)) { subset=rep(TRUE, length(evs[[1]]$onsets)) }
+  
+  if (length(durations) == 1) {
+    durations <- rep(durations, length(onsets))
+  }
+  
   vnames <- names(evlist)
-  evs <- lapply(1:length(evlist), function(i) EV(evlist[[i]], vnames[i], onsets=onsets, blockids=blockids, durations=durations))
+  evs <- lapply(1:length(evlist), function(i) EV(evlist[[i]][subset], vnames[i], 
+                                                 onsets=onsets[subset], 
+                                                 blockids=blockids[subset], 
+                                                 durations=durations[subset]))
   names(evs) <- sapply(evs, function(ev) ev$varname)
   
-  if (is.null(subset)) { subset=rep(TRUE, length(evs[[1]]$onsets)) }
   
   pterms <- unlist(lapply(evs, function(ev) ev$varname))
   
@@ -77,7 +85,7 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   names(etab) <- sapply(pterms, .sanitizeName)
   varname <- paste(sapply(evs, function(x) x$varname), collapse=":")
   
-  ret <- list(varname=varname, events=evs, subset=subset, event_table=etab, onsets=evs[[1]]$onsets, blockids=evs[[1]]$blockids, durations=evs[[1]]$durations)
+  ret <- list(varname=varname, events=evs, subset=subset, event_table=etab[subset,], onsets=evs[[1]]$onsets, blockids=evs[[1]]$blockids, durations=evs[[1]]$durations)
   class(ret) <- c("event_term", "event_seq")
   ret
 }
@@ -442,12 +450,12 @@ convolve_design <- function(hrf, dmat, globons, durations) {
 
 #' @importFrom tibble as_tibble
 #' @export
-convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
+convolve.event_term <- function(x, hrf, sframe, drop.empty=TRUE) {
 
-  globons <- global_onsets(samplingFrame, x$onsets, x$blockids)
+  globons <- global_onsets(sframe, x$onsets, x$blockids)
   
-  nimages <- sum(samplingFrame$blocklens)
-  samples <- seq(samplingFrame$start_time, length.out=nimages, by=samplingFrame$TR)
+  nimages <- sum(sframe$blocklens)
+  samples <- seq(sframe$start_time, length.out=nimages, by=samplingFrame$TR)
   
   dmat <- design_matrix(x, drop.empty)
   
@@ -455,7 +463,7 @@ convolve.event_term <- function(x, hrf, samplingFrame, drop.empty=TRUE) {
   split.dmat <- split(dmat, blockids)
   split.ons <- split(globons, blockids)
   split.durations <- split(x$durations, blockids)
-  split.samples <- split(samples, rep(1:length(samplingFrame$blocklens), samplingFrame$blocklens))
+  split.samples <- split(samples, rep(1:length(sframe$blocklens), sframe$blocklens))
   
   reglist <- lapply(1:length(split.dmat), function(i) {
     reg <- convolve_design(hrf, split.dmat[[i]], split.ons[[i]], split.durations[[i]])

@@ -5,7 +5,7 @@
 \title{fmri_dataset}
 \usage{
 fmri_dataset(scans, mask, TR, run_length, event_table = data.frame(),
-  aux_data = tibble::as_tibble(list()), base_path = "")
+  aux_table = tibble::as_tibble(list()), base_path = "")
 }
 \arguments{
 \item{scans}{a vector of file names of the images comprising the dataset}
@@ -18,10 +18,10 @@ fmri_dataset(scans, mask, TR, run_length, event_table = data.frame(),
 
 \item{event_table}{a \code{data.frame} containing the event onsets and experimental variables.}
 
+\item{runids}{the id of each block, must be unique for each run and be non-decreasing.}
+
 \item{aux_data}{a \code{list} of auxilliary data such as nuisance variables that may enter a 
 regression model and are not convolved with hemodynamic response function.}
-
-\item{runids}{the id of each block, must be unique for each run and be non-decreasing.}
 }
 \description{
 fmri_dataset

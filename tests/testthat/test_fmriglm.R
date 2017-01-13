@@ -31,3 +31,22 @@ test_that("can construct an fmri_dataset from test_data", {
   
 })
 
+test_that("can load and run a simple config file", {
+  config <- read_fmri_config("test_data/images_study/config.R")
+  dset <- fmri_dataset(config$scans, config$mask, config$TR, 
+                           config$run_length,
+                           config$event_table,
+                           config$aux_table, 
+                           base_path=config$base_path)
+  
+  frame <- sampling_frame(dset$run_length, config$TR)
+  mod <- fmri_model(config$event_model, config$baseline_model, config$design, dset$aux_table,
+                    basis=HRF_SPMG1, dset$runids, dset$run_length, config$TR, drop_empty=TRUE)
+                    
+  
+  mod <- fmri_glm(config$event_model, 
+                  dataset=dset, durations=0)
+})
+
+
+

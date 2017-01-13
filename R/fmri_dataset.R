@@ -16,23 +16,24 @@ read_fmri_config <- function(file_name) {
     env$output_dir = "stat_out"
   }
   
-  
-  
+
   assert_that(!is.null(env$scans))
   assert_that(!is.null(env$TR))
   assert_that(!is.null(env$mask))
   assert_that(!is.null(env$run_length))
   assert_that(!is.null(env$event_model))
-  assert_that(!is.null(env$design))
-  assert_that(file.exists(file.path(env$base_path,env$design)))
+  assert_that(!is.null(env$event_table))
+  assert_that(file.exists(file.path(env$base_path,env$event_table)))
   
   
   #env$mask <- neuroim::loadVolume(file.path(env$base_path, env$mask))
-  env$design <- tibble::as_data_frame(read.table(file.path(env$base_path,env$design), header=TRUE))
-  if (is.null(env$aux_data)) {
-    env$aux_data=tibble::as_data_frame()
+  env$design <- tibble::as_data_frame(read.table(file.path(env$base_path,env$event_table), header=TRUE))
+  
+  
+  if (is.null(env$aux_table)) {
+    env$aux_table=tibble::as_data_frame()
   } else {
-    env$aux_data <- tibble::as_data_frame(read.table(file.path(env$base_path,env$aux_data), header=TRUE))
+    env$aux_table <- tibble::as_data_frame(read.table(file.path(env$base_path,env$aux_table), header=TRUE))
   }
   
   out <- as.list(env)
@@ -56,14 +57,17 @@ read_fmri_config <- function(file_name) {
 fmri_dataset <- function(scans, mask, TR, 
                          run_length, 
                          event_table=data.frame(), 
-                         aux_data=tibble::as_tibble(list()), base_path="") {
+                         aux_table=tibble::as_tibble(list()), 
+                         base_path="") {
   
   if (length(run_length) == 1) {
     run_length <- rep(run_length, length(scans))
   }
   
+  frame <- sampling_frame(run_length, config$TR)
   assert_that(length(run_length) == length(scans))
-  runids <- rep(1:length(scans), run_length)
+  
+  aux_table$.scan_time <- scan_time
   
   ret <- list(
     scans=scans,
@@ -74,8 +78,10 @@ fmri_dataset <- function(scans, mask, TR,
     runids=runids,
     nruns=length(scans),
     event_table=event_table,
-    aux_data=aux_data,
-    base_path=base_path
+    aux_table=aux_table,
+    base_path=base_path,
+    scan_time=scan_time
+    
   )
   
   class(ret) <- c("fmri_dataset", "list")

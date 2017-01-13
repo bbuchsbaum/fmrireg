@@ -10,17 +10,15 @@ scans = paste0("epi/",
                  "rscan06.nii"))
 
 
+event_table = "behavior/design.txt"
 
-
-design = "behavior/design.txt"
-
-aux_data = "epi/aux_data.txt"
+aux_table = "epi/aux_data.txt"
 
 #block_column = "run"
 
-event_model = onsetTime ~ hrf(imageName, id="iname") 
+event_model = onsetTime ~ hrf(imageName, id="iname", subset=!is.na(imageName)) 
 
-baseline_model = ~ block(run) + splines::bs(scan_time,4) + PC1 + PC2 + PC3
+baseline_model = ~ splines::bs(.scan_time,4) 
 
 output_dir = "glm_out"
 

@@ -6,7 +6,7 @@
 \usage{
 hrf(..., basis = "spmg1", onsets = NULL, durations = NULL,
   prefix = NULL, subset = NULL, precision = 0.2, nbasis = 1,
-  contrasts = NULL)
+  contrasts = NULL, id = NULL)
 }
 \arguments{
 \item{...}{the variable names}
@@ -15,7 +15,7 @@ hrf(..., basis = "spmg1", onsets = NULL, durations = NULL,
 
 \item{onsets}{optional onsets override. If missing, onsets will be taken from global model specification duration evaluation.}
 
-\item{durations}{optional durations override. If missing, onsets will be taken from global model specification during evlauation.}
+\item{durations}{optional durations override. If missing, onsets will be taken from global model specification during evaluation.}
 
 \item{prefix}{a character string that is prepended to the variables names and used to identify the term.}
 
