@@ -48,6 +48,7 @@ is.strictly.increasing <- function(vec) {
 #' event_term
 #' 
 #' Create a event model term from a named list of variables.
+#' 
 #' @param evlist
 #' @param onsets the onset times from the experimental events in seconds
 #' @param blockids the block number associated with each onset
@@ -74,7 +75,7 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
   pterms <- unlist(lapply(evs, function(ev) ev$varname))
   
-  etab <- as.data.frame(lapply(pterms, function(termname) {
+  etab <- as_data_frame(lapply(pterms, function(termname) {
     if (isContinuous(evs[[termname]])) {
       rep(.sanitizeName(termname), length(onsets))
     } else {
@@ -84,8 +85,10 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
   names(etab) <- sapply(pterms, .sanitizeName)
   varname <- paste(sapply(evs, function(x) x$varname), collapse=":")
-  
-  ret <- list(varname=varname, events=evs, subset=subset, event_table=etab[subset,], onsets=evs[[1]]$onsets, blockids=evs[[1]]$blockids, durations=evs[[1]]$durations)
+  ret <- list(varname=varname, events=evs, subset=subset, event_table=etab[subset,,drop=FALSE], 
+              onsets=evs[[1]]$onsets, 
+              blockids=evs[[1]]$blockids, 
+              durations=evs[[1]]$durations)
   class(ret) <- c("event_term", "event_seq")
   ret
 }
@@ -455,7 +458,7 @@ convolve.event_term <- function(x, hrf, sframe, drop.empty=TRUE) {
   globons <- global_onsets(sframe, x$onsets, x$blockids)
   
   nimages <- sum(sframe$blocklens)
-  samples <- seq(sframe$start_time, length.out=nimages, by=samplingFrame$TR)
+  samples <- seq(sframe$start_time, length.out=nimages, by=sframe$TR)
   
   dmat <- design_matrix(x, drop.empty)
   
@@ -545,7 +548,7 @@ print.event_term <- function(object) {
 
 #' @export
 print.fmri_term <- function(object) {
-  cat("fmri_term", "\n")
+  cat("fmri_term: ", class(object)[[1]], "\n")
   cat("  ", "Term Name: ", object$varname, "\n")
   cat("  ", "Num Rows: ", nrow(design_matrix(object)), "\n")
   cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n")
@@ -553,7 +556,7 @@ print.fmri_term <- function(object) {
 
 #' @export
 print.convolved_term <- function(object) {
-  cat("fmri_term", "\n")
+  cat("fmri_term: ", class(object)[[1]], "\n")
   cat("  ", "Term Name: ", object$varname, "\n")
   cat("  ", "Formula:  ", as.character(formula(object$evterm)), "\n")
   cat("  ", "Num Events: ", nrow(object$evterm$event_table), "\n")

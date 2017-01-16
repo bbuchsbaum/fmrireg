@@ -292,12 +292,215 @@ makeEventHRF <- function(eventOnset, HRF, amp=1) {
 }
 
 
-    
-      
 
 
 
-    
+
+#' hrf
+#' 
+#' hemodynamic regressor specification function
+#' 
+#' This function is to be used in formulas for fitting fucntions, e.g. onsets ~ hrf(fac1,fac2) ...
+#' 
+#' 
+#' @param ... the variable names
+#' @param basis the impulse response function.
+#' @param onsets optional onsets override. If missing, onsets will be taken from global model specification duration evaluation.
+#' @param durations optional durations override. If missing, onsets will be taken from global model specification during evaluation.
+#' @param prefix a character string that is prepended to the variables names and used to identify the term.
+#' @param subset
+#' @param precision 
+#' @param nbasis number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.
+#' @param contrasts one or more \code{contrastspec} objects created with the \code{contrast} function. 
+#' If multiple contrasts are required, then these should be wrapped in a \code{list}.
+#' @export
+hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1, contrasts=NULL, id=NULL) {
+  vars <- as.list(substitute(list(...)))[-1] 
+  parsed <- parse_term(vars, "hrf")
+  term <- parsed$term
+  label <- parsed$label
+  
+  basis <- if (is.character(basis)) {
+    getHRF(basis, nbasis=nbasis)
+  } else if (is.function(basis)) {
+    test <- basis(1:10)
+    HRF(basis, name="custom_hrf", nbasis=ncol(test), ...)
+  } else if (inherits(basis, "HRF")) {
+    basis
+  } else {
+    stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
+  }
+  
+  varnames <- if (!is.null(prefix)) {
+    paste0(prefix, "_", term)
+  } else {
+    term
+  }
+  
+  termname <- paste0(varnames, collapse="::")
+  
+  if (is.null(id)) {
+    id <- termname
+  }  
+  
+  cset <- if (inherits(contrasts, "contrast_spec")) {
+    #vname <- deparse(substitute(contrasts))
+    #eval(parse(text=paste0("contrast_set(", vname, "=contrasts)")))
+    contrast_set(con1=contrasts)
+  } else if (inherits(contrasts, "contrast_set")) {
+    contrasts
+  } #else if (!is.null(contrasts)) {
+  ## try creating a contrast
+  #vname <- deparse(substitute(contrasts))
+  #eval(parse(text=paste0("contrast_set(", vname, "=contrasts)")))
+  #contrast_set(con1)
+  #}
+  
+  ret <- list(
+    name=termname,
+    id=id,
+    varnames=varnames,
+    vars=term,
+    label=label,
+    hrf=basis,
+    onsets=onsets,
+    durations=durations,
+    prefix=prefix,
+    subset=substitute(subset),
+    precision=precision,
+    contrasts=cset)
+  
+  class(ret) <- c("hrfspec", "list")
+  ret
+}
+
+#' @export
+construct.hrfspec <- function(x, model_spec) {
+  
+  onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
+  durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
+  
+  varlist <- lapply(seq_along(x$vars), function(i) {
+    base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
+  })
+  
+  names(varlist) <- x$varnames
+  subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
+  
+  et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
+  #sframe <- sampling_frame(model_spec$sampling_frame$blocklens, model_spec$TR, model_spec$sampling_frame$TR/2, x$precision)
+  cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
+  
+  ret <- list(
+    varname=et$varname,
+    evterm=et,
+    design_matrix=as.data.frame(cterm),
+    sampling_frame=model_spec$sampling_frame,
+    hrfspec=x,
+    contrasts=x$contrasts
+  )
+  
+  class(ret) <- c("convolved_term", "fmri_term", "list") 
+  ret
+}
+
+
+.hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1) {
+  vars <- as.list(substitute(list(...)))[-1] 
+  parsed <- parse_term(vars, "hrf")
+  term <- parsed$term
+  label <- parsed$label
+  
+  basis <- if (is.character(basis)) {
+    getHRF(basis, nbasis=nbasis)
+  } else if (is.function(basis)) {
+    test <- basis(1:10)
+    HRF(basis, name="custom_hrf", nbasis=ncol(test), ...)
+  } else if (inherits(basis, "HRF")) {
+    basis
+  } else {
+    stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
+  }
+  
+  
+  varnames <- if (!is.null(prefix)) {
+    paste0(prefix, "_", term)
+  } else {
+    term
+  }
+  
+  termname <- paste0(varnames, collapse="::")
+  
+  list(vars=vars, parsed=parsed, term=term, label=label, basis=basis, varnames=varnames, termname=termname)
+}
+
+
+
+
+
+#' @export
+trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
+                      prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list()) {
+  
+  parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis)
+  
+  
+  
+  ret <- list(
+    name=parsed$termname,
+    varnames=parsed$varnames,
+    vars=parsed$term,
+    label=parsed$label,
+    hrf=parsed$basis,
+    onsets=onsets,
+    durations=durations,
+    prefix=prefix,
+    subset=substitute(subset),
+    precision=precision,
+    contrasts=contrasts)
+  
+  class(ret) <- c("trialwisespec", "hrfspec", "list")
+  ret
+}
+
+#' @export
+construct.trialwisespec <- function(x, model_spec) {
+  ## compied almost verbatim from construct.hrfspec
+  onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
+  durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
+  
+  varlist <- lapply(seq_along(x$vars), function(i) {
+    base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
+  })
+  
+  
+  ## syntheticlly adds '+trial_index+' variable
+  trial_index <- factor(seq(1, length(onsets)))
+  varlist <- c(varlist, list(trial_index))
+  
+  names(varlist) <- c(x$varnames, "trial_index")
+  
+  subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
+  
+  
+  et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
+  #sframe <- sampling_frame(model_spec$blocklens, model_spec$TR, model_spec$TR/2, x$precision)
+  
+  cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
+  
+  ret <- list(
+    varname=et$varname,
+    evterm=et,
+    design_matrix=cterm,
+    sampling_frame=model_spec$sampling_frame,
+    contrasts=x$contrasts,
+    hrfspec=x
+  )
+  
+  class(ret) <- c("trialwise_convolved_term", "convolved_term", "fmri_term", "list") 
+  ret
+}
+
 
 
 

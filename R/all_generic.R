@@ -164,6 +164,14 @@ amplitudes <-  function(x) UseMethod("amplitudes")
 #' @export
 samples <-  function(x, ...) UseMethod("samples")
 
+#' split_by_block
+#' 
+#' split variables by block id
+#' 
+#' @export
+samples <-  function(x, ...) UseMethod("split_by_block")
+
+
 #' estcon
 #' 
 #' @export

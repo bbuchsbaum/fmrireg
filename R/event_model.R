@@ -1,5 +1,90 @@
 
 
+#' @importFrom lazyeval f_eval f_rhs f_lhs
+#' @export
+event_model <- function(formula, data, block, basis=HRF_SPMG1, sampling_frame, drop_empty=TRUE, durations=0) {
+  
+  stopifnot(inherits(formula, "formula"))
+
+  if (lazyeval::is_formula(block)) {
+    block_rhs <- lazyeval::f_rhs(block)
+    blockids <- lazyeval::f_eval_rhs(block, data)
+  } else {
+    blockids <- block
+  }
+  
+  assert_that(length(blockids) == nrow(data))
+  
+  if (missing(durations)) {
+    ## assume zero-duration impulse for all events
+    durations <- rep(0, nrow(data))
+  }
+  
+  formspec <- function(formula, table) {
+    vterms <- extract_terms(formula, table)
+    resp <- attr(vterms, "response")
+    variables <- extract_variables(formula, table)
+    
+    if (resp != 0) {
+      lhs <- variables[[resp]]
+    } else {
+      lhs <- NULL
+    }
+    
+    rhs <- variables[(resp+1):length(variables)]
+    vclass <- sapply(rhs, class)
+    
+    ret <- list(vterms=vterms, resp=resp, variables=variables, lhs=lhs, rhs=rhs,vclass=vclass)
+    
+    class(ret) <- "formula_extraction"
+    ret
+  }
+  
+  
+  event_spec <- formspec(formula, data)
+  
+ 
+  model_spec <- list(formula=formula, event_table=data, onsets=event_spec$lhs, event_spec=event_spec, 
+                     blockids=blockids, 
+                     durations=durations, 
+                     sampling_frame=sampling_frame,
+                     drop_empty=drop_empty)
+  
+  class(model_spec) <- c("event_model_spec", "list")
+  
+  fmodel <- construct_model(model_spec)
+  fmodel
+}
+
+
+construct_model <- function(x) {
+  
+  terms <- lapply(x$event_spec$rhs, function(m) construct(m,x))
+  term_names <- sapply(x$varspec, "[[", "label")
+  term_names <- .sanitizeName(term_names)
+  names(terms) <- term_names
+  
+  term_lens <- sapply(lapply(terms, conditions), length)
+  spans <- c(0, cumsum(term_lens))
+  
+  term_indices <- lapply(1:(length(spans)-1), function(i) {
+    seq(spans[i]+1, spans[i+1])
+  })
+  
+  names(term_indices) <- term_names
+  
+  ret <- list(
+    term_indices=term_indices,
+    terms=terms,
+    blockids=x$blockids,
+    sampling_frame=x$sampling_frame,
+    model_spec=x
+  )
+  
+  class(ret) <- c("event_model", "list")
+  ret
+}
+
 extract_terms <- function(formula, data) {
   if (!inherits(formula, "terms")) {
     terms(formula, data = data)
@@ -36,14 +121,10 @@ extract_variables <- function(form, data) {
   variables
 }
 
-has_block_variable <- function(form) {
-  ret <- op(rhs(form)) == "|"
-  length(ret) > 0 && ret
-}
-
-
-
-
+# has_block_variable <- function(form) {
+#   ret <- op(rhs(form)) == "|"
+#   length(ret) > 0 && ret
+# }
 
 
 parse_term <- function(vars, ttype) {
@@ -61,8 +142,9 @@ parse_term <- function(vars, ttype) {
 }
 
 
+
 #' @importFrom tibble as_tibble
-design_matrix.model_spec <- function(x) {
+design_matrix.event_model_spec <- function(x) {
   termlist <- lapply(x$varspec, function(m) construct(m,x))
   ret <- lapply(termlist, design_matrix)
   vnames <- unlist(lapply(ret, colnames))
@@ -72,7 +154,7 @@ design_matrix.model_spec <- function(x) {
 }
 
 #' @importFrom tibble as_tibble
-design_matrix.fmri_model <- function(x) {
+design_matrix.event_model <- function(x) {
   ret <- lapply(x$terms, design_matrix)
   vnames <- unlist(lapply(ret, names))
   dmat <- tibble::as_tibble(do.call(cbind, ret))
@@ -83,239 +165,17 @@ design_matrix.fmri_model <- function(x) {
 
 
 #' @export
-terms.fmri_model <- function(x) {
+terms.event_model <- function(x) {
   x$terms
 }
 
 
 #' @export
-conditions.fmri_model <- function(x) {
+conditions.event_model <- function(x) {
   unlist(lapply(terms(x), function(t) conditions(t)), use.names=FALSE)
 }
 
-.hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1) {
-  vars <- as.list(substitute(list(...)))[-1] 
-  parsed <- parse_term(vars, "hrf")
-  term <- parsed$term
-  label <- parsed$label
   
-  basis <- if (is.character(basis)) {
-    getHRF(basis, nbasis=nbasis)
-  } else if (is.function(basis)) {
-    test <- basis(1:10)
-    HRF(basis, name="custom_hrf", nbasis=ncol(test), ...)
-  } else if (inherits(basis, "HRF")) {
-    basis
-  } else {
-    stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
-  }
-  
-  
-  varnames <- if (!is.null(prefix)) {
-    paste0(prefix, "_", term)
-  } else {
-    term
-  }
-  
-  termname <- paste0(varnames, collapse="::")
-  
-  list(vars=vars, parsed=parsed, term=term, label=label, basis=basis, varnames=varnames, termname=termname)
-}
-  
-  
-
-
-#' hrf
-#' 
-#' hemodynamic regressor specification function
-#' 
-#' This function is to be used in formulas for fitting fucntions, e.g. onsets ~ hrf(fac1,fac2) ...
-#' 
-#' 
-#' @param ... the variable names
-#' @param basis the impulse response function.
-#' @param onsets optional onsets override. If missing, onsets will be taken from global model specification duration evaluation.
-#' @param durations optional durations override. If missing, onsets will be taken from global model specification during evaluation.
-#' @param prefix a character string that is prepended to the variables names and used to identify the term.
-#' @param subset
-#' @param precision 
-#' @param nbasis number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.
-#' @param contrasts one or more \code{contrastspec} objects created with the \code{contrast} function. 
-#' If multiple contrasts are required, then these should be wrapped in a \code{list}.
-#' @export
-hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1, contrasts=NULL, id=NULL) {
-  vars <- as.list(substitute(list(...)))[-1] 
-  parsed <- parse_term(vars, "hrf")
-  term <- parsed$term
-  label <- parsed$label
-  
-  basis <- if (is.character(basis)) {
-    getHRF(basis, nbasis=nbasis)
-  } else if (is.function(basis)) {
-    test <- basis(1:10)
-    HRF(basis, name="custom_hrf", nbasis=ncol(test), ...)
-  } else if (inherits(basis, "HRF")) {
-    basis
-  } else {
-    stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
-  }
-  
-  varnames <- if (!is.null(prefix)) {
-    paste0(prefix, "_", term)
-  } else {
-    term
-  }
-  
-  termname <- paste0(varnames, collapse="::")
-
-  if (is.null(id)) {
-    id <- termname
-  }  
-  
-  cset <- if (inherits(contrasts, "contrast_spec")) {
-    #vname <- deparse(substitute(contrasts))
-    #eval(parse(text=paste0("contrast_set(", vname, "=contrasts)")))
-    contrast_set(con1=contrasts)
-  } else if (inherits(contrasts, "contrast_set")) {
-    contrasts
-  } #else if (!is.null(contrasts)) {
-    ## try creating a contrast
-    #vname <- deparse(substitute(contrasts))
-    #eval(parse(text=paste0("contrast_set(", vname, "=contrasts)")))
-    #contrast_set(con1)
-  #}
-    
-  ret <- list(
-    name=termname,
-    id=id,
-    varnames=varnames,
-    vars=term,
-    label=label,
-    hrf=basis,
-    onsets=onsets,
-    durations=durations,
-    prefix=prefix,
-    subset=substitute(subset),
-    precision=precision,
-    contrasts=cset)
-  
-  class(ret) <- c("hrfspec", "list")
-  ret
-}
-
-#' @export
-construct.blockspec <- function(x, model_spec) {
-  blockids <- base::eval(parse(text=x$name), envir=model_spec$event_table, enclos=parent.frame())
-  assert_that(is.increasing(blockids))
-  blockord <- sort(unique(blockids))
-  
-  expanded_blockids <- ordered(rep(blockord, model_spec$sampling_frame$blocklens))
-
-  mat <- if (length(levels(blockids)) == 1) {
-    matrix(rep(1, length(expanded_blockids)), length(expanded_blockids), 1)
-  } else {
-    mat <- model.matrix(~ expanded_blockids - 1)
-  }
-  
-  print(x$name)
-  colnames(mat) <- paste0(x$name, "_", blockord)
-  block_term(x$name, blockids=blockids, expanded_blockids=expanded_blockids, mat)
-}
-
-#' @export
-construct.nuisancespec <- function(x, model_spec) {
-  mat <- base::eval(parse(text=x$varname), envir=model_spec$aux_data, enclos=parent.frame())
-  matrix_term(x$name, mat)
-}  
-
-#' @export  
-construct.baselinespec <- function(x, model_spec) {
-  ret <- lapply(model_spec$blocklens, function(bl) cbind(rep(1, bl), x$fun(seq(1, bl), x$degree)))
-  mat <- matrix(0, sum(model_spec$blocklens), (x$degree+1)*length(model_spec$blocklens))
-  
-  for (i in seq_along(ret)) {
-    rowstart <- sum(model_spec$blocklens[1:i]) - model_spec$blocklens[1] + 1
-    rowend <- rowstart + model_spec$blocklens[i] -1
-    colstart <- (x$degree+1)*(i-1) + 1
-    colend <- colstart + x$degree
-    mat[rowstart:rowend, colstart:colend] <- ret[[i]]
-  }
-  
-
-  cnames <- apply(expand.grid(paste0("Baseline#",1:length(model_spec$blocklens)), paste0("Run#", 1:(x$degree+1))), 1, paste, collapse="_")
-  colnames(mat) <- cnames
-  matrix_term(x$name, mat)	
-}
-
-#' @export
-construct.trialwisespec <- function(x, model_spec) {
-  ## compied almost verbatim from construct.hrfspec
-  onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
-  durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
-  
-  varlist <- lapply(seq_along(x$vars), function(i) {
-    base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
-  })
-  
-  
-  ## syntheticlly adds '+trial_index+' variable
-  trial_index <- factor(seq(1, length(onsets)))
-  varlist <- c(varlist, list(trial_index))
-
-  names(varlist) <- c(x$varnames, "trial_index")
-  
-  subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
-  
-  
-  et <- event_term(varlist, onsets, model_spec$event_block_ids, durations, subs)
-  #sframe <- sampling_frame(model_spec$blocklens, model_spec$TR, model_spec$TR/2, x$precision)
-  
-  cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
-  
-  ret <- list(
-    varname=et$varname,
-    evterm=et,
-    design_matrix=cterm,
-    sampling_frame=model_spec$sampling_frame,
-    contrasts=x$contrasts,
-    hrfspec=x
-  )
-  
-  class(ret) <- c("trialwise_convolved_term", "convolved_term", "fmri_term", "list") 
-  ret
-}
-
-
-#' @export
-construct.hrfspec <- function(x, model_spec) {
-  onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
-  durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
- 
-  varlist <- lapply(seq_along(x$vars), function(i) {
-    base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
-  })
-  
-  names(varlist) <- x$varnames
-  subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
-  
-  et <- event_term(varlist, onsets, model_spec$event_block_ids, durations, subs)
-  #sframe <- sampling_frame(model_spec$sampling_frame$blocklens, model_spec$TR, model_spec$sampling_frame$TR/2, x$precision)
-  cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
-   
-  ret <- list(
-    varname=et$varname,
-    evterm=et,
-    design_matrix=as.data.frame(cterm),
-    sampling_frame=model_spec$sampling_frame,
-    hrfspec=x,
-    contrasts=x$contrasts
-  )
-  
-  class(ret) <- c("convolved_term", "fmri_term", "list") 
-  ret
-}
-
-
 #' @export
 contrast_weights.convolved_term <- function(x) {
   lapply(x$contrasts, function(cspec) {
@@ -328,7 +188,7 @@ contrast_weights.convolved_term <- function(x) {
 contrast_weights.fmri_term <- function(x) { NULL }
 
 #' @export
-contrast_weights.fmri_model <- function(x) {
+contrast_weights.event_model <- function(x) {
   tind <- x$term_indices
   len <- length(conditions(x))
   tnames <- names(terms(x))
@@ -412,15 +272,14 @@ longnames.matrix_term <- function(x) {
 
 
 #' @export
-print.fmri_model <- function(object) {
-  cat("fmri_model", "\n")
-  cat(" ", "Event Model:  ", Reduce(paste, deparse(object$model_spec$formula)), "\n")
-  cat(" ", "Baseline Model:  ", Reduce(paste, deparse(object$model_spec$baseline_formula)), "\n")
+print.event_model <- function(object) {
+  cat("event_model", "\n")
+  cat(" ", Reduce(paste, deparse(object$model_spec$formula)), "\n")
   cat(" ", "Num Terms", length(terms(object)), "\n")
   cat(" ", "Num Events: ", nrow(object$model_spec$event_table), "\n")
   cat(" ", "Num Columns: ", length(conditions(object)), "\n")
-  cat(" ", "Num Blocks: ", length(object$model_spec$blocklens), "\n")
-  cat(" ", "Length of Blocks: ", paste(object$model_spec$blocklens, collapse=", "), "\n")
+  cat(" ", "Num Blocks: ", length(unique(object$blockids)), "\n")
+  #cat(" ", "Length of Blocks: ", paste(object$model_spec$blocklens, collapse=", "), "\n")
   for (i in 1:length(terms(object))) {
     t <- terms(object)[[i]]
     cat("Term:", i, " ")
@@ -429,7 +288,6 @@ print.fmri_model <- function(object) {
   }
   
 }
-
   
 
   

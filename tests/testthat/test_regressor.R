@@ -218,9 +218,16 @@ test_that("can build a contrast versus the intercept from a convolved term", {
 test_that("can build a contrast versus the intercept and add to hrfspec", {
   facedes$repnum <- factor(facedes$rep_num)
   aux_table <- data.frame(run=rep(1:6, each=218))
+  
+  
   con <- contrast(A=repnum==-1)
-  mspec <- fmri_model(onset ~  hrf(repnum, contrasts=con) + baseline(degree=3, basis="bs"), facedes, durations=0, blockids=facedes$run, 
-                      blocklens=rep(436/2,max(facedes$run)), TR=2)
+  sframe <- sampling_frame(rep(436/2,max(facedes$run)), TR=2)
+  
+  nuisance <- matrix(rnorm(2*length(sframe$blockids)), length(sframe$blockids), 2)
+  
+  bm <- baseline_model(basis="bs", degree=3, sampling_frame=sframe, nuisance_matrix=nuisance)
+  em <- event_model(onset ~ hrf(repnum, contrasts=con), block = ~ run, data=facedes, sampling_frame=sframe)
+  mod <- fmri_model(em, bm)
   
   term <- construct(mspec$varspec[[1]], mspec)
   expect_equal(as.vector(contrast_weights(con, term)), c(1,0,0,0,0))
