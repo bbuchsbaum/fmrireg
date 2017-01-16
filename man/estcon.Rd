@@ -6,11 +6,6 @@
 \usage{
 estcon(x, fit, ...)
 }
-\arguments{
-\item{x}{the object}
-
-\item{model_spec}{the model specification}
-}
 \description{
 estcon
 }

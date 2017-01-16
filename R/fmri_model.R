@@ -1,11 +1,8 @@
 
-
+#' fmri_model
+#' 
 #' @param event_model
 #' @param baseline_model
-#' @param event_table
-#' @param basis
-#' @param durations
-#' @param sampling_frame
 #' @export
 fmri_model <- function(event_model, baseline_model) {
   assert_that(inherits(event_model, "event_model"))
@@ -23,15 +20,9 @@ design_matrix.fmri_model <- function(x) {
 }
 
 
-
 #' @export
 terms.fmri_model <- function(x) {
   terms(x$event_model)
-}
-
-#' @export
-terms.event_model <- function(x) {
-  x$terms
 }
 
 

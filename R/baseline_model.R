@@ -1,5 +1,6 @@
 
-
+#' baseline_model
+#' 
 #' @param baseline_model 
 #' @param basis
 #' @param sampling_frame

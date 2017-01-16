@@ -5,8 +5,12 @@
 \title{samples}
 \usage{
 samples(x, ...)
+
+samples(x, ...)
 }
 \description{
 extract samples
+
+split variables by block id
 }
 

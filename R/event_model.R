@@ -266,6 +266,8 @@ longnames.convolved_term <- function(x) {
 
 }
 
+
+#' @export
 longnames.matrix_term <- function(x) {
   paste0(x$name, "#", colnames(design_matrix(x)))
 }
