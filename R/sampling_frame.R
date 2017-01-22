@@ -12,7 +12,7 @@ sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
               TR=TR,
               start_time=start_time,
               blockids=blockids,
-              time=time,
+              time=scan_time,
               precision=precision)
   
   class(ret) <- c("sampling_frame", "list")

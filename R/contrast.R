@@ -55,6 +55,7 @@ fit_Ftests <- function(object, model) {
   
 }
 
+
 fit_contrasts <- function(lmfit, conmat) {
   if (is.vector(conmat)) {
     conmat <- matrix(conmat, 1, length(conmat))
@@ -96,33 +97,78 @@ contrast_set <- function(...) {
   ret
 }
 
-
+contrast_formula <- function(form, where=TRUE, split_by=NULL, id=NULL) {
+  ret <- list(A=form,
+              where=substitute(where),
+              split_by=substitute(split_by),
+              id=id)
+  
+  class(ret) <- c("contrast_formula_spec", "list")
+  ret
+  
+}
 
 #' @export
-contrast <- function(A, B=NULL, where=TRUE, split_by=NULL) {
+contrast <- function(A, B=NULL, where=TRUE, split_by=NULL, id=NULL) {
   ret <- list(A=substitute(A),
               B=substitute(B),
               where=substitute(where),
-              split_by=substitute(split_by)
-  )
-  
+              split_by=substitute(split_by),
+              id=id)
+
   class(ret) <- c("contrast_spec", "list")
   ret
 }
 
 
 #' @export
-poly_contrast <- function(A, where=TRUE, degree=1, value_map=NULL) {
+poly_contrast <- function(A, where=TRUE, degree=1, value_map=NULL, id=NULL) {
   ret <- list(
     A=substitute(A),
     B=NULL,
     where=substitute(where),
     degree=degree,
-    value_map=value_map)
+    value_map=value_map,
+    id=id)
   
   class(ret) <- c("poly_contrast_spec", "contrast_spec", "list")
   ret
 }
+
+#' @export
+contrast_weights.contrast_formula_spec <- function(x, term) {
+  browser()
+  
+  term.cells <- cells(term)
+  row.names(term.cells) <- longnames(term)
+  
+  keep <- eval(x$where, envir=term.cells, enclos=parent.frame())	
+  reduced.term.cells <- subset(term.cells, keep)
+  
+  keepA <- eval(x$A, envir=term.cells, enclos=parent.frame())
+  
+  vals <- if (is.null(x$value_map)) {
+    as.numeric(as.character(reduced.term.cells[keepA,]))
+  } else {
+    unlist(x$value_map[as.character(reduced.term.cells[keepA,])])
+  }
+  
+  weights <- matrix(0, NROW(term.cells), x$degree)	
+  pvals <- stats::poly(vals, degree=x$degree)
+  row.names(weights) <- row.names(term.cells)
+  colnames(weights) <- paste("poly", 1:x$degree, sep="")
+  
+  weights[keep, ] <- pvals
+  
+  ret <- list(
+    weights=weights,
+    contrast_spec=x)
+  
+  class(ret) <- c("poly_contrast", "contrast", "list")
+  ret
+  
+}
+
 
 #' @export
 contrast_weights.poly_contrast_spec <- function(x, term) {
@@ -225,6 +271,7 @@ contrast_weights.contrast_spec <- function(x, term) {
   ret  
 }
 
+#' @importFrom gmodels estimable
 #' @export
 estcon.contrast <- function(x, fit, indices) {
   wts <- numeric(length(fit$assign))

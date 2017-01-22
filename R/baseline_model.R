@@ -35,7 +35,7 @@ baseline_model <- function(basis="bs", degree=5, sampling_frame, nuisance_matrix
 #' @param basis the type of polynomial basis.
 #' @param name the name of the term
 #' @export
-baseline <- function(degree=5, basis=c("bs", "poly", "ns"), name=paste0("Baseline_", basis, "_", degree), constant=FALSE) {
+baseline <- function(degree=5, basis=c("bs", "poly", "ns"), name=paste0("baseline_", basis, "_", degree), constant=FALSE) {
   basis <- match.arg(basis)
   bfun <- switch(basis,
                  bs=bs,
@@ -65,13 +65,17 @@ design_matrix.baseline_model <- function(x) {
 }
 
 
+
 #' @export
 terms.baseline_model <- function(x) {
-  if (is.null(x$nuisance_term)) {
+  ret <- if (is.null(x$nuisance_term)) {
     list(x$block_term, x$drift_term)
   } else {
     list(x$block_term, x$drift_term, x$nuisance_term)
   }
+  
+  names(ret) <- sapply(ret, "[[", "varname")
+  ret
 }
 
 
@@ -120,7 +124,7 @@ construct.baselinespec <- function(x, sampling_frame) {
   
   cnames <- apply(expand.grid(paste0("base_", x$basis, "#", 1:length(sampling_frame$blocklens)), paste0("block#", 1:nc_per_block)), 1, paste, collapse="_")
   colnames(mat) <- cnames
-  matrix_term(x$name, mat)	
+  baseline_term(x$name, mat)	
 }
 
 construct_block_term <- function(vname, sampling_frame) {

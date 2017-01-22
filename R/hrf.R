@@ -313,6 +313,7 @@ makeEventHRF <- function(eventOnset, HRF, amp=1) {
 #' @param nbasis number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.
 #' @param contrasts one or more \code{contrastspec} objects created with the \code{contrast} function. 
 #' If multiple contrasts are required, then these should be wrapped in a \code{list}.
+#' @param id a  unique \code{character} identifier used to refer to term.
 #' @export
 hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1, contrasts=NULL, id=NULL) {
   vars <- as.list(substitute(list(...)))[-1] 

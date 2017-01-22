@@ -58,9 +58,9 @@ event_model <- function(formula, data, block, basis=HRF_SPMG1, sampling_frame, d
 
 
 construct_model <- function(x) {
-  
+
   terms <- lapply(x$event_spec$rhs, function(m) construct(m,x))
-  term_names <- sapply(x$varspec, "[[", "label")
+  term_names <- sapply(x$event_spec$rhs, "[[", "label")
   term_names <- .sanitizeName(term_names)
   names(terms) <- term_names
   
@@ -225,6 +225,19 @@ matrix_term <- function(varname, mat) {
   class(ret) <- c("matrix_term", "fmri_term", "list")
   ret
 }
+
+#' baseline_term
+#' @importFrom tibble as_tibble
+#' @export
+baseline_term <- function(varname, mat) {
+  stopifnot(is.matrix(mat))
+  ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat))
+  class(ret) <- c("baseline_term", "matrix_term", "fmri_term", "list")
+  ret
+}
+
+
+
 
 #' @importFrom tibble as_tibble
 #' @export

@@ -44,12 +44,12 @@ conditions <- function(x, ...) UseMethod("conditions")
 
 #' convolve
 #' 
-#' convolve a term \code{x} with a hemodynamic response over a \code{samplingFrame}
+#' convolve a term \code{x} with a hemodynamic response over a \code{sampling_frame}
 #' 
 #' @export
 #' @param x a event sequence
 #' @param hrf a hemodynamic response function
-#' @param samplingFrame the time series grid over whcih to sample the fucntion.
+#' @param sampling_frame the time series grid over whcih to sample the fucntion.
 #' @param ...
 convolve <- function(x, hrf, samplingFrame,...) UseMethod("convolve")
 
@@ -169,7 +169,7 @@ samples <-  function(x, ...) UseMethod("samples")
 #' split variables by block id
 #' 
 #' @export
-samples <-  function(x, ...) UseMethod("split_by_block")
+split_by_block  <-  function(x, ...) UseMethod("split_by_block")
 
 
 #' estcon

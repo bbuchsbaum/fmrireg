@@ -5,7 +5,7 @@ NULL
   name <- gsub(":", ".", name)
   name <- gsub(" ", "", name)
   name <- gsub("[\\(\\)]", ".", name, perl=TRUE)
-  name <- gsub(",", ".", name)
+  name <- gsub(",", "_", name)
   name <- gsub("\\.$", "", name)
   name
 }

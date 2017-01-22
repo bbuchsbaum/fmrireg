@@ -20,11 +20,12 @@ design_matrix.fmri_model <- function(x) {
 }
 
 
+
+
 #' @export
 terms.fmri_model <- function(x) {
-  terms(x$event_model)
+  c(terms(x$event_model), terms(x$baseline_model))
 }
-
 
 
 #' @export
