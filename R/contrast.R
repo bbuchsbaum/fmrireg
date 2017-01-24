@@ -137,7 +137,7 @@ poly_contrast <- function(A, where=TRUE, degree=1, value_map=NULL, id=NULL) {
 
 #' @export
 contrast_weights.contrast_formula_spec <- function(x, term) {
-  browser()
+
   
   term.cells <- cells(term)
   row.names(term.cells) <- longnames(term)
@@ -145,26 +145,31 @@ contrast_weights.contrast_formula_spec <- function(x, term) {
   keep <- eval(x$where, envir=term.cells, enclos=parent.frame())	
   reduced.term.cells <- subset(term.cells, keep)
   
-  keepA <- eval(x$A, envir=term.cells, enclos=parent.frame())
+  mm <- model.matrix(~ reduced.term.cells[[1]] -1)
+  colnames(mm) <- levels(reduced.term.cells[[1]])
+ 
+  cvec <- f_eval_rhs(x$A, data=as.data.frame(mm))
+  cvec[cvec > 0] <- cvec[cvec > 0]/sum(cvec[cvec>0])
+  cvec[cvec < 0] <- cvec[cvec < 0]/sum(cvec[cvec<0])
   
-  vals <- if (is.null(x$value_map)) {
-    as.numeric(as.character(reduced.term.cells[keepA,]))
-  } else {
-    unlist(x$value_map[as.character(reduced.term.cells[keepA,])])
-  }
+  # vals <- if (is.null(x$value_map)) {
+  #   as.numeric(as.character(reduced.term.cells[keepA,]))
+  # } else {
+  #   unlist(x$value_map[as.character(reduced.term.cells[keepA,])])
+  # }
+  # 
   
-  weights <- matrix(0, NROW(term.cells), x$degree)	
-  pvals <- stats::poly(vals, degree=x$degree)
+  
+  weights <- matrix(0, NROW(term.cells), 1)	
   row.names(weights) <- row.names(term.cells)
-  colnames(weights) <- paste("poly", 1:x$degree, sep="")
   
-  weights[keep, ] <- pvals
+  weights[keep, ] <- cvec
   
   ret <- list(
     weights=weights,
     contrast_spec=x)
   
-  class(ret) <- c("poly_contrast", "contrast", "list")
+  class(ret) <- c("contrast", "contrast", "list")
   ret
   
 }
@@ -179,6 +184,7 @@ contrast_weights.poly_contrast_spec <- function(x, term) {
   keep <- eval(x$where, envir=term.cells, enclos=parent.frame())	
   reduced.term.cells <- subset(term.cells, keep)
   
+ 
   keepA <- eval(x$A, envir=term.cells, enclos=parent.frame())
   
   vals <- if (is.null(x$value_map)) {

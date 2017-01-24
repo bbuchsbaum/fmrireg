@@ -220,8 +220,8 @@ test_that("can build a contrast versus the intercept and add to hrfspec", {
   aux_table <- data.frame(run=rep(1:6, each=218))
   
   
-  con <- contrast(A=repnum==-1)
-  conf <- contrast_formula(~ 2 - 1, id="repnum")
+  
+  conf <- contrast_formula(~ `2` - !`1`, id="repnum")
   
   sframe <- sampling_frame(rep(436/2,max(facedes$run)), TR=2)
   
