@@ -25,8 +25,8 @@ createHRF <- function(HRF, ...) {
 #' @param name the name of the function
 #' @param nbasis the number of basis, e.g. the columnar dimension of the response.
 #' @export
-HRF <- function(fun, name, nbasis=1) {
-  ret <- list(hrf=fun, name=name, nbasis=as.integer(nbasis))
+HRF <- function(fun, name, nbasis=1, param_names=NULL) {
+  ret <- list(hrf=fun, name=name, nbasis=as.integer(nbasis), param_names=param_names)
   
   class(ret) <- "HRF"
   ret
@@ -100,22 +100,25 @@ hrf_spmg1 <- function(t, A1=.00833, A2=1.274527e-13, P1=5, P2=15) {
 }
 
 #' @export
-HRF_GAMMA <- HRF(hrf_gamma, "gamma")
+HRF_GAMMA <- HRF(hrf_gamma, "gamma", param_names=c("shape", "rate"))
 
 #' @export
-HRF_GAUSSIAN <- HRF(hrf_gaussian, "gaussian")
+HRF_GAUSSIAN <- HRF(hrf_gaussian, "gaussian", param_names=c("mean", "sd"))
 
 #' @export
 HRF_BSPLINE <- HRF(createHRF(hrf_bspline), "bspline", 5)
 
 #' @export
-HRF_SPMG1 <- HRF(hrf_spmg1, "SPMG1")
+HRF_SPMG1 <- HRF(hrf_spmg1, 
+                 "SPMG1", param_names=c("A1", "A2"))
 
 #' @export
-HRF_SPMG2 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf_spmg1)), "SPMG2", nbasis=2)
+HRF_SPMG2 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf_spmg1)), 
+                 "SPMG2", nbasis=2, param_names=c("A1", "A2"))
 
 #' @export
-HRF_SPMG3 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeriv(hrf_spmg1))), "SPMG3", nbasis=3)
+HRF_SPMG3 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeriv(hrf_spmg1))), 
+                 "SPMG3", nbasis=3, param_names=c("A1", "A2"))
 
 
 #' evaluate
