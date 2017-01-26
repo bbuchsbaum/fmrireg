@@ -21,6 +21,7 @@ baseline_model <- function(basis="bs", degree=5, sampling_frame, nuisance_list=N
     assertthat::assert_that(length(nuisance_list) == length(sampling_frame$blocklens))
     
     colind <- vector(mode="list")
+    ### HERE
     if (is.null(colnames(nuisance_mat))) {
       colnames(nuisance_mat) <- paste0("nuisance#", 1:ncol(nuisance_mat))
     }
