@@ -32,7 +32,6 @@ BSpline <- function(x, degree) {
   ret <- list(x=x,y=pres,fun="bs",argname=as.character(mc[["x"]])[1], name=n, degree=degree)
   class(ret) <- c("BSpline", "ParametricBasis")
   
-  #print(paste("mc:", as.character(mc["x"])))
   ret
 }
 

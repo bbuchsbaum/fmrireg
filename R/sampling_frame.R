@@ -1,6 +1,18 @@
-#' @param blocklens
-#' @param TR
-#' @param start_time
+
+
+
+#' Construct a \code{sampling_frame}
+#' 
+#' A \code{sampling_frame} describes the block structure and temporal sampling of an fMRI paradigm. 
+#' 
+#' 
+#' @param blocklens the number of scans in each block, a \code{vector}
+#' @param TR the repetion time in seconds; i.e. the spacing between consectuve image acquisitions.
+#' @param start_time the offset of first scan of each block (default is \code{TR/2})
+#' @param precision the discrete sampling interval used for convolution with hemodynamic response function.
+#' @examples 
+#' 
+#' frame <- sampling_frame(c(100,100, 100), TR=2)
 #' @export
 sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
   assert_that(TR > 0)

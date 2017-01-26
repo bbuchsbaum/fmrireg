@@ -11,9 +11,15 @@ HRF(fun, name, nbasis = 1, param_names = NULL)
 
 \item{name}{the name of the function}
 
-\item{nbasis}{the number of basis, e.g. the columnar dimension of the response.}
+\item{nbasis}{the number of basis functions, e.g. the columnar dimension of the hrf.}
 }
 \description{
-HRF constructor function
+a class used to represent a hemodynamic response function.
+}
+\examples{
+
+hrf <- HRF(hrf_gamma, "gamma", nbasis=1, param_names=c("shape", "rate"))
+resp <- evaluate(hrf, seq(0,24,by=1))
+
 }
 

@@ -5,9 +5,11 @@
 \title{baseline_model}
 \usage{
 baseline_model(basis = "bs", degree = 5, sampling_frame,
-  nuisance_matrix = NULL)
+  nuisance_list = NULL)
 }
 \arguments{
+\item{nuisance_list}{a list of nusiance matrices, one per block}
+
 \item{baseline_model}{}
 }
 \description{

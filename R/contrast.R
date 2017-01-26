@@ -56,6 +56,13 @@ fit_Ftests <- function(object) {
 }
 
 
+
+#' fit_contrasts
+#' 
+#' @param lmfit the \code{lm} object
+#' @param conmat the contrast \code{matrix} or contrast \code{vector}
+#' @param colind the subset column indices in the design associated with the contrast. 
+#' @export
 fit_contrasts <- function(lmfit, conmat, colind) {
   if (!is.matrix(conmat) && is.numeric(conmat)) {
     conmat <- matrix(conmat, 1, length(conmat))
@@ -84,10 +91,10 @@ fit_contrasts <- function(lmfit, conmat, colind) {
   names(ret) <- c("estimate", "se", "tstat", "prob")
   ret
 
-  
 }
 
-
+#' contrast_set
+#' 
 #' @export
 #' @import assertthat
 contrast_set <- function(...) {
@@ -97,6 +104,13 @@ contrast_set <- function(...) {
   ret
 }
 
+
+#' contrast_formula
+#' 
+#' @param form
+#' @param name
+#' @param where
+#' @param split_by
 contrast_formula <- function(form, name, where=TRUE, split_by=NULL) {
   ret <- list(A=form,
               where=lazyeval::expr_find(where),
@@ -108,6 +122,13 @@ contrast_formula <- function(form, name, where=TRUE, split_by=NULL) {
   
 }
 
+#' contrast
+#' 
+#' @param A
+#' @param B
+#' @param name
+#' @param where
+#' @param split_by
 #' @export
 contrast <- function(A, B=NULL, name, where=TRUE, split_by=NULL) {
   if (lazyeval::is_formula(A)) {

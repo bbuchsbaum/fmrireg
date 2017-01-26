@@ -1,8 +1,7 @@
 #' @import splines
 NULL
 
-#' helper function
-#' @export
+# helper function
 createHRF <- function(HRF, ...) {
   .orig <- list(...)
   
@@ -19,12 +18,29 @@ createHRF <- function(HRF, ...) {
   f
 }
 
+createHRFSet <- function(...) {
+  hrflist <- list(...)
+  function(t) {
+    do.call("cbind", lapply(hrflist, function(fun) fun(t)))
+  }
+}
+
+
 #' HRF constructor function
+#' 
+#' a class used to represent a hemodynamic response function.
+#' 
 #' @rdname HRF-class
 #' @param fun hemodynamic response function mapping from time --> BOLD response
 #' @param name the name of the function
-#' @param nbasis the number of basis, e.g. the columnar dimension of the response.
+#' @param nbasis the number of basis functions, e.g. the columnar dimension of the hrf.
+#' @examples 
+#' 
+#' hrf <- HRF(hrf_gamma, "gamma", nbasis=1, param_names=c("shape", "rate"))
+#' resp <- evaluate(hrf, seq(0,24,by=1))
+#' 
 #' @export
+#' @rdname HRF
 HRF <- function(fun, name, nbasis=1, param_names=NULL) {
   ret <- list(hrf=fun, name=name, nbasis=as.integer(nbasis), param_names=param_names)
   
@@ -33,12 +49,6 @@ HRF <- function(fun, name, nbasis=1, param_names=NULL) {
 }
 
 
-createHRFSet <- function(...) {
-	hrflist <- list(...)
-  function(t) {
-    do.call("cbind", lapply(hrflist, function(fun) fun(t)))
-  }
-}
 
 #' @importFrom numDeriv grad
 makeDeriv <- function(HRF, n=1) {
@@ -49,11 +59,16 @@ makeDeriv <- function(HRF, n=1) {
   }
 }
 
+
+#' hrf_time
+#' 
 #' @export
 hrf_time <- function(t, maxt) {
   ifelse(t > 0 & t < maxt, t, 0)
 }
 
+#' hrf_bspline
+#' 
 #' @export
 #' @importFrom splines bs
 hrf_bspline <- function(t, width=20, N=5, degree=3) {
@@ -83,16 +98,29 @@ hrf_bspline <- function(t, width=20, N=5, degree=3) {
 	bs(t, df=N, knots=knots, degree=degree, Boundary.knots=c(0,width))
 }
 
+
+#' hrf_gamma
+#' 
+#' A hemodynamic response function using the gamma density function
+#' 
 #' @export
 hrf_gamma <- function(t, shape=6, rate=1) {
   dgamma(t, shape=shape, rate=rate)
 }
 
+#' hrf_gaussian
+#' 
+#' A hemodynamic response function using the gamma density function
+#' 
 #' @export
 hrf_gaussian <- function(t, mean=6, sd=2) {
 	dnorm(t, mean=mean, sd=sd)
 }
 
+#' hrf_spmg1
+#' 
+#' A hemodynamic response function based on the SPM canonical double gamma parameterzation.
+#' 
 #' @export
 hrf_spmg1 <- function(t, A1=.00833, A2=1.274527e-13, P1=5, P2=15) {
 	ifelse(t < 0, 0, exp(-t)*(A1*t^P1 - A2*t^P2))
@@ -100,23 +128,29 @@ hrf_spmg1 <- function(t, A1=.00833, A2=1.274527e-13, P1=5, P2=15) {
 }
 
 #' @export
+#' @rdname HRF
 HRF_GAMMA <- HRF(hrf_gamma, "gamma", param_names=c("shape", "rate"))
 
 #' @export
+#' @rdname HRF
 HRF_GAUSSIAN <- HRF(hrf_gaussian, "gaussian", param_names=c("mean", "sd"))
 
 #' @export
+#' @rdname HRF
 HRF_BSPLINE <- HRF(createHRF(hrf_bspline), "bspline", 5)
 
 #' @export
+#' @rdname HRF
 HRF_SPMG1 <- HRF(hrf_spmg1, 
                  "SPMG1", param_names=c("A1", "A2"))
 
 #' @export
+#' @rdname HRF
 HRF_SPMG2 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf_spmg1)), 
                  "SPMG2", nbasis=2, param_names=c("A1", "A2"))
 
 #' @export
+#' @rdname HRF
 HRF_SPMG3 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeriv(hrf_spmg1))), 
                  "SPMG3", nbasis=3, param_names=c("A1", "A2"))
 
@@ -164,133 +198,6 @@ getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis
 	}
 	
 	hrf
-}
-
-hrf.logit <- function(t, a1=1, T1, T2, T3, D1, D2, D3) {
-  a2 <- a1 * (((inv.logit(-T3)/D3) - (inv.logit(-T1)/D1)) / ((inv.logit(-T3)/D3) + (inv.logit(-T2/D2))))
- 
-  a3 <- abs(a2) - abs(a1)
-  
-  a1*inv.logit((t-T1)/D1) + a2*inv.logit((t-T2)/D2) + a3*inv.logit((t-T3)/D3)
-}
-
-hrf.logit2 <- function(t, a1, a2, a3, T1, T2, T3, D1, D2, D3) {
-  a1*inv.logit((t-T1)/D1) + a2*inv.logit((t-T2)/D2) + a3*inv.logit((t-T3)/D3)
-}
-
-
-getfun <- function(time) {
-  TIME <- time
-  ret <- function(par) {
-    hrf.logit2(TIME, par[1], par[2], par[3], par[4], par[5], par[6], par[7], par[8], par[9])
-  }
-  return(ret)
-}
-
-minimize.fun <- function(yvals, fun, par) {
-  ypred <- fun(par)
-  return(sum((yvals-ypred)^2))
-}
-
-get.minimizer <- function(yfun, yvals) {
-  YFUN <- yfun
-  YVALS <- yvals
-  ret <- function(par) {
-    ypred <- YFUN(par)
-    return(sum((YVALS-ypred)^2))
-  }
-
-  return(ret)
-}
-
-
-shift.HRF <- function(HRF, shift) {
-  localShift <- shift
-  function(t) {
-    HRF(t+localShift)
-  }
-}
-
-
-
-makeBlock <- function(HRF, duration) {
-  d1 <- duration
-  if (duration < 2) {
-    stop("duration must be greater than 1")
-  }
-
-  funlist <- c(HRF, lapply(seq(-1, -(duration-1)), function(i) shift.HRF(HRF, i)))
-  function(t) {
-    ret <- numeric(length(t))
-    for (i in 1:length(t)) {
-      ret[i] <- sum(unlist(lapply(funlist, function(fun) fun(t[i]))))
-    }
-    ret
-    
-  }
-}
-
-
-makeBlockHRF <- function(eventOnset, duration, HRF) {
-  
-  localHRF <- HRF
-  localOnset <- eventOnset
-  onsets <- seq(eventOnset, eventOnset+duration, 1)
-  funlist <- lapply(onsets, function(onset) makeEventHRF(onset, localHRF))
-  
-  function(t) {
-    ret <- lapply(funlist, function(fun) fun(t)) 
-    Reduce("+", ret)
-  }
-}    
-  
-  
-makeEventHRF <- function(eventOnset, HRF, amp=1) {
-
-  localHRF <- HRF
-  localOnset <- eventOnset
-  localAmp <- amp
-  function(t) {
- 
-    localHRF(t-localOnset)*amp
-    #for (i in 1:length(t)) {
-    #  ret[i] <- localHRF(t[i]-localOnset)*amp
-    #}
- 
-  }
-}
-
-.makeEventHRF2 <- function(eventOnset, HRF, amp=1) {
-
-  localHRF <- HRF
-  localOnset <- eventOnset
-  localAmp <- amp
-  function(t) {
-    ret <- numeric(length(t))
-    for (i in 1:length(t)) {
-      if (t[i] < localOnset) {
-        ret[i] <- 0
-      } else {
-        ret[i] <- localHRF(t[i]-localOnset)*amp
-      }
-    }
-    ret
-  }
-}
-
-.makeEventHRF3 <- function(eventOnset, HRF, amp=1) {
-
-  localHRF <- HRF
-  localOnset <- eventOnset
-  localAmp <- amp
-  function(t) {
-    if (t < localOnset) {
-      0
-    } else {
-      localHRF(t-localOnset)*amp
-    }
-
-  }
 }
 
 
@@ -513,6 +420,133 @@ construct.trialwisespec <- function(x, model_spec) {
 
 
 
+
+# hrf.logit <- function(t, a1=1, T1, T2, T3, D1, D2, D3) {
+#   a2 <- a1 * (((inv.logit(-T3)/D3) - (inv.logit(-T1)/D1)) / ((inv.logit(-T3)/D3) + (inv.logit(-T2/D2))))
+#   
+#   a3 <- abs(a2) - abs(a1)
+#   
+#   a1*inv.logit((t-T1)/D1) + a2*inv.logit((t-T2)/D2) + a3*inv.logit((t-T3)/D3)
+# }
+# 
+# hrf.logit2 <- function(t, a1, a2, a3, T1, T2, T3, D1, D2, D3) {
+#   a1*inv.logit((t-T1)/D1) + a2*inv.logit((t-T2)/D2) + a3*inv.logit((t-T3)/D3)
+# }
+# 
+# 
+# getfun <- function(time) {
+#   TIME <- time
+#   ret <- function(par) {
+#     hrf.logit2(TIME, par[1], par[2], par[3], par[4], par[5], par[6], par[7], par[8], par[9])
+#   }
+#   return(ret)
+# }
+# 
+# minimize.fun <- function(yvals, fun, par) {
+#   ypred <- fun(par)
+#   return(sum((yvals-ypred)^2))
+# }
+# 
+# get.minimizer <- function(yfun, yvals) {
+#   YFUN <- yfun
+#   YVALS <- yvals
+#   ret <- function(par) {
+#     ypred <- YFUN(par)
+#     return(sum((YVALS-ypred)^2))
+#   }
+#   
+#   return(ret)
+# }
+# 
+# 
+# shift.HRF <- function(HRF, shift) {
+#   localShift <- shift
+#   function(t) {
+#     HRF(t+localShift)
+#   }
+# }
+# 
+# 
+# 
+# makeBlock <- function(HRF, duration) {
+#   d1 <- duration
+#   if (duration < 2) {
+#     stop("duration must be greater than 1")
+#   }
+#   
+#   funlist <- c(HRF, lapply(seq(-1, -(duration-1)), function(i) shift.HRF(HRF, i)))
+#   function(t) {
+#     ret <- numeric(length(t))
+#     for (i in 1:length(t)) {
+#       ret[i] <- sum(unlist(lapply(funlist, function(fun) fun(t[i]))))
+#     }
+#     ret
+#     
+#   }
+# }
+# 
+# 
+# makeBlockHRF <- function(eventOnset, duration, HRF) {
+#   
+#   localHRF <- HRF
+#   localOnset <- eventOnset
+#   onsets <- seq(eventOnset, eventOnset+duration, 1)
+#   funlist <- lapply(onsets, function(onset) makeEventHRF(onset, localHRF))
+#   
+#   function(t) {
+#     ret <- lapply(funlist, function(fun) fun(t)) 
+#     Reduce("+", ret)
+#   }
+# }    
+# 
+# 
+# makeEventHRF <- function(eventOnset, HRF, amp=1) {
+#   
+#   localHRF <- HRF
+#   localOnset <- eventOnset
+#   localAmp <- amp
+#   function(t) {
+#     
+#     localHRF(t-localOnset)*amp
+#     #for (i in 1:length(t)) {
+#     #  ret[i] <- localHRF(t[i]-localOnset)*amp
+#     #}
+#     
+#   }
+# }
+# 
+# .makeEventHRF2 <- function(eventOnset, HRF, amp=1) {
+#   
+#   localHRF <- HRF
+#   localOnset <- eventOnset
+#   localAmp <- amp
+#   function(t) {
+#     ret <- numeric(length(t))
+#     for (i in 1:length(t)) {
+#       if (t[i] < localOnset) {
+#         ret[i] <- 0
+#       } else {
+#         ret[i] <- localHRF(t[i]-localOnset)*amp
+#       }
+#     }
+#     ret
+#   }
+# }
+# 
+# .makeEventHRF3 <- function(eventOnset, HRF, amp=1) {
+#   
+#   localHRF <- HRF
+#   localOnset <- eventOnset
+#   localAmp <- amp
+#   function(t) {
+#     if (t < localOnset) {
+#       0
+#     } else {
+#       localHRF(t-localOnset)*amp
+#     }
+#     
+#   }
+# }
 
 
     

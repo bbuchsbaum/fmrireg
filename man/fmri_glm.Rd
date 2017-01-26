@@ -5,7 +5,8 @@
 \title{fmri_glm}
 \usage{
 fmri_glm(formula, block_formula, baseline_model = NULL, dataset, durations,
-  drop_empty = TRUE, chunk_by = c("run", "slice"), exec_strategy)
+  drop_empty = TRUE, contrasts = NULL, strategy = c("runwise",
+  "slicewise", "all"))
 }
 \description{
 fmri_glm

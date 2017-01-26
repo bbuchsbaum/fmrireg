@@ -8,11 +8,11 @@ baseline(degree = 5, basis = c("bs", "poly", "ns"),
   name = paste0("baseline_", basis, "_", degree), constant = FALSE)
 }
 \arguments{
+\item{degree}{number of polynomial terms for each image block}
+
 \item{basis}{the type of polynomial basis.}
 
 \item{name}{the name of the term}
-
-\item{number}{of polynomial terms for each image block}
 }
 \description{
 A matrix of polynomial regressors for modeling low-frequency drift in fmri time series.

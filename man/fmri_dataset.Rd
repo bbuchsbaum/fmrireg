@@ -18,7 +18,7 @@ fmri_dataset(scans, mask, TR, run_length, event_table = data.frame(),
 
 \item{event_table}{a \code{data.frame} containing the event onsets and experimental variables.}
 
-\item{runids}{the id of each block, must be unique for each run and be non-decreasing.}
+\item{run_length}{the number of images in each session}
 
 \item{aux_data}{a \code{list} of auxilliary data such as nuisance variables that may enter a 
 regression model and are not convolved with hemodynamic response function.}
