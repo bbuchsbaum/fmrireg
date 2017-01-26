@@ -3,18 +3,24 @@
 #' 
 #' @param baseline_model 
 #' @param basis
+#' @param degree
 #' @param sampling_frame
+#' @param nuisance_list a list of nusiance matrices, one per block
 #' @importFrom lazyeval f_eval f_rhs f_lhs
 #' @export
-baseline_model <- function(basis="bs", degree=5, sampling_frame, nuisance_mat=NULL) {
+baseline_model <- function(basis="bs", degree=5, sampling_frame, nuisance_list=NULL) {
   drift_spec <- baseline(degree=degree, basis=basis, constant=FALSE)
   drift_term <- construct(drift_spec, sampling_frame)
   
   ## automatically add constant term
   block_term <- construct_block_term("constant", sampling_frame)
   
-  nuisance_term <- if (!is.null(nuisance_mat)) {
-    assertthat::assert_that(nrow(nuisance_mat) == length(sampling_frame$blockids))
+  nuisance_term <- if (!is.null(nuisance_list)) {
+    total_len <- sum(sapply(nuisance_list, nrow))
+    assertthat::assert_that(total_len == length(sampling_frame$blockids))
+    assertthat::assert_that(length(nuisance_list) == length(sampling_frame$blocklens))
+    
+    colind <- vector(mode="list")
     if (is.null(colnames(nuisance_mat))) {
       colnames(nuisance_mat) <- paste0("nuisance#", 1:ncol(nuisance_mat))
     }
