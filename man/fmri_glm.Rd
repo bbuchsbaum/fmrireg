@@ -4,8 +4,8 @@
 \alias{fmri_glm}
 \title{fmri_glm}
 \usage{
-fmri_glm(formula, baseline_formula, dataset, basis = HRF_SPMG1, durations,
-  drop_empty = TRUE, analyze_by = c("run", "slice"))
+fmri_glm(formula, block_formula, baseline_model = NULL, dataset, durations,
+  drop_empty = TRUE, chunk_by = c("run", "slice"), exec_strategy)
 }
 \description{
 fmri_glm

@@ -2,7 +2,7 @@
 
 #' @importFrom lazyeval f_eval f_rhs f_lhs
 #' @export
-event_model <- function(formula, data, block, basis=HRF_SPMG1, sampling_frame, drop_empty=TRUE, durations=0) {
+event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, durations=0, contrasts=NULL) {
   
   stopifnot(inherits(formula, "formula"))
 
@@ -48,7 +48,8 @@ event_model <- function(formula, data, block, basis=HRF_SPMG1, sampling_frame, d
                      blockids=blockids, 
                      durations=durations, 
                      sampling_frame=sampling_frame,
-                     drop_empty=drop_empty)
+                     drop_empty=drop_empty,
+                     contrasts=contrasts)
   
   class(model_spec) <- c("event_model_spec", "list")
   
@@ -170,6 +171,8 @@ terms.event_model <- function(x) {
 }
 
 
+
+
 #' @export
 conditions.event_model <- function(x) {
   unlist(lapply(terms(x), function(t) conditions(t)), use.names=FALSE)
@@ -187,6 +190,8 @@ contrast_weights.convolved_term <- function(x) {
 #' @export
 contrast_weights.fmri_term <- function(x) { NULL }
 
+contrast_weights.fmri_model <- function(x) { contrast_weights(x$event_model) }
+
 #' @export
 contrast_weights.event_model <- function(x) {
   tind <- x$term_indices
@@ -198,15 +203,20 @@ contrast_weights.event_model <- function(x) {
       ret <- lapply(cwlist, function(cw) {
         out <- numeric(len)
         out[tind[[i]]] <- as.vector(cw$weights)
+        attr(out, "term_indices") <- as.vector(tind[[i]])
         out
       })
+      
+      cnames <- sapply(cwlist, function(cw) cw$name)
     
       prefix <- tnames[i]
-      names(ret) <- paste0(prefix, "#", names(ret))
+      names(ret) <- paste0(prefix, "#", cnames)
+      
       ret
     }
   }), recursive=FALSE)
 
+  
   ret
 }
   
@@ -226,32 +236,17 @@ matrix_term <- function(varname, mat) {
   ret
 }
 
-#' baseline_term
-#' @importFrom tibble as_tibble
-#' @export
-baseline_term <- function(varname, mat) {
-  stopifnot(is.matrix(mat))
-  ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat))
-  class(ret) <- c("baseline_term", "matrix_term", "fmri_term", "list")
-  ret
-}
 
 
 
 
-#' @importFrom tibble as_tibble
-#' @export
-block_term <- function(varname, blockids, expanded_blockids, mat) {
-  assertthat::assert_that(is.matrix(mat))
-  assertthat::assert_that(nrow(mat) == length(blockids))
-  ret <- list(varname=varname, blockids=blockids, expanded_blockids, design_matrix=tibble::as_tibble(mat))
-  class(ret) <- c("block_term", "matrix_term", "fmri_term", "list")
-  ret
-}
+
+
+
 
 
 #' @export
-design_matrix.matrix_term <- function(x,...) {
+design_matrix.matrix_term <- function(x) {
   if (is.null(names(x$design_matrix))) {
     cnames <- paste0(x$varname, "_", 1:ncol(x$design_matrix))
     names(x$design_matrix) <- cnames
@@ -274,7 +269,7 @@ longnames.convolved_term <- function(x) {
   # ignores exclude.basis
   apply(as.matrix(sapply(1:ncol(term.cells), 
     function(i) {
-      paste(names(term.cells)[i], "#", term.cells[,i], sep="")
+      paste0(names(term.cells)[i], "#", term.cells[[i]], sep="")
   })), 1, paste, collapse=":")
 
 }

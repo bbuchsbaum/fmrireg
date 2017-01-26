@@ -251,8 +251,7 @@ makeEventHRF <- function(eventOnset, HRF, amp=1) {
   localOnset <- eventOnset
   localAmp <- amp
   function(t) {
-    #browser()
-    
+ 
     localHRF(t-localOnset)*amp
     #for (i in 1:length(t)) {
     #  ret[i] <- localHRF(t[i]-localOnset)*amp
@@ -318,7 +317,8 @@ makeEventHRF <- function(eventOnset, HRF, amp=1) {
 #' If multiple contrasts are required, then these should be wrapped in a \code{list}.
 #' @param id a  unique \code{character} identifier used to refer to term.
 #' @export
-hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, nbasis=1, contrasts=NULL, id=NULL) {
+hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
+                nbasis=1, contrasts=NULL, id=NULL) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
@@ -401,7 +401,8 @@ construct.hrfspec <- function(x, model_spec) {
     design_matrix=as.data.frame(cterm),
     sampling_frame=model_spec$sampling_frame,
     hrfspec=x,
-    contrasts=x$contrasts
+    contrasts=x$contrasts,
+    id=x$id
   )
   
   class(ret) <- c("convolved_term", "fmri_term", "list") 
@@ -444,11 +445,13 @@ construct.hrfspec <- function(x, model_spec) {
 
 #' @export
 trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
-                      prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list()) {
+                      prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list(), id=NULL) {
   
   parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis)
   
-  
+  if (is.null(id)) {
+    id <- parsed$termname
+  }  
   
   ret <- list(
     name=parsed$termname,
@@ -498,7 +501,8 @@ construct.trialwisespec <- function(x, model_spec) {
     design_matrix=cterm,
     sampling_frame=model_spec$sampling_frame,
     contrasts=x$contrasts,
-    hrfspec=x
+    hrfspec=x,
+    id=x$id
   )
   
   class(ret) <- c("trialwise_convolved_term", "convolved_term", "fmri_term", "list") 

@@ -2,11 +2,15 @@
 % Please edit documentation in R/baseline_model.R
 \name{baseline_model}
 \alias{baseline_model}
+\title{baseline_model}
 \usage{
 baseline_model(basis = "bs", degree = 5, sampling_frame,
   nuisance_matrix = NULL)
 }
 \arguments{
 \item{baseline_model}{}
+}
+\description{
+baseline_model
 }
 

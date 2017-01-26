@@ -1,5 +1,5 @@
 
-fit_Ftests <- function(object, model) {
+fit_Ftests <- function(object) {
   w <- object$weights
   ssr <- if (is.null(w)) {
     apply(object$residuals, 2, function(vals) sum(vals^2))
@@ -38,7 +38,7 @@ fit_Ftests <- function(object, model) {
   })
   
   ret <- lapply(seq_along(ssr), function(i) {
-    comp <- object$effects[p1,i]
+    comp <- object$effects[,i]
     ss <- c(unlist(lapply(split(comp^2, asgn), sum)), ssr[i])
     ms <- ss/df
     f <- ms/(ssr[i]/dfr)
@@ -56,16 +56,16 @@ fit_Ftests <- function(object, model) {
 }
 
 
-fit_contrasts <- function(lmfit, conmat) {
-  if (is.vector(conmat)) {
+fit_contrasts <- function(lmfit, conmat, colind) {
+  if (!is.matrix(conmat) && is.numeric(conmat)) {
     conmat <- matrix(conmat, 1, length(conmat))
   }
   
   Qr <- stats:::qr.lm(lmfit)
   
   p1 <- 1:lmfit$rank
-  cov.unscaled <- chol2inv(Qr$qr[p1,p1,drop=FALSE])
-  betamat <- lmfit$coefficients
+  cov.unscaled <- chol2inv(Qr$qr[colind,colind,drop=FALSE])
+  betamat <- lmfit$coefficients[colind,]
   ct <- conmat %*% betamat
   
   rss <- colSums(lmfit$residuals^2)
@@ -80,7 +80,7 @@ fit_contrasts <- function(lmfit, conmat) {
   
   prob <- 2 * (1 - pt(abs(ct/vc), lmfit$df.residual))
   tstat <- ct/vc
-  ret <- as_tibble(cbind(as.vector(ct), as.vector(vc), as.vector(tstat), as.vector(prob)))
+  ret <- tibble::as_tibble(cbind(as.vector(ct), as.vector(vc), as.vector(tstat), as.vector(prob)))
   names(ret) <- c("estimate", "se", "tstat", "prob")
   ret
 
@@ -97,39 +97,43 @@ contrast_set <- function(...) {
   ret
 }
 
-contrast_formula <- function(form, where=TRUE, split_by=NULL, id=NULL) {
+contrast_formula <- function(form, name, where=TRUE, split_by=NULL) {
   ret <- list(A=form,
-              where=substitute(where),
-              split_by=substitute(split_by),
-              id=id)
+              where=lazyeval::expr_find(where),
+              split_by=lazyeval::expr_find(split_by),
+              name=name)
   
-  class(ret) <- c("contrast_formula_spec", "list")
+  class(ret) <- c("contrast_formula_spec", "contrast_spec", "list")
   ret
   
 }
 
 #' @export
-contrast <- function(A, B=NULL, where=TRUE, split_by=NULL, id=NULL) {
-  ret <- list(A=substitute(A),
+contrast <- function(A, B=NULL, name, where=TRUE, split_by=NULL) {
+  if (lazyeval::is_formula(A)) {
+    contrast_formula(A, where=where, split_by=split_by, name=name)
+  } else {
+    ret <- list(A=substitute(A),
               B=substitute(B),
               where=substitute(where),
               split_by=substitute(split_by),
-              id=id)
+              name=name)
 
-  class(ret) <- c("contrast_spec", "list")
-  ret
+    class(ret) <- c("contrast_spec", "list")
+    ret
+  }
 }
 
 
 #' @export
-poly_contrast <- function(A, where=TRUE, degree=1, value_map=NULL, id=NULL) {
+poly_contrast <- function(A, name, where=TRUE, degree=1, value_map=NULL) {
   ret <- list(
     A=substitute(A),
     B=NULL,
     where=substitute(where),
     degree=degree,
     value_map=value_map,
-    id=id)
+    name=name)
   
   class(ret) <- c("poly_contrast_spec", "contrast_spec", "list")
   ret
@@ -138,7 +142,6 @@ poly_contrast <- function(A, where=TRUE, degree=1, value_map=NULL, id=NULL) {
 #' @export
 contrast_weights.contrast_formula_spec <- function(x, term) {
 
-  
   term.cells <- cells(term)
   row.names(term.cells) <- longnames(term)
   
@@ -148,28 +151,25 @@ contrast_weights.contrast_formula_spec <- function(x, term) {
   mm <- model.matrix(~ reduced.term.cells[[1]] -1)
   colnames(mm) <- levels(reduced.term.cells[[1]])
  
-  cvec <- f_eval_rhs(x$A, data=as.data.frame(mm))
-  cvec[cvec > 0] <- cvec[cvec > 0]/sum(cvec[cvec>0])
-  cvec[cvec < 0] <- cvec[cvec < 0]/sum(cvec[cvec<0])
-  
-  # vals <- if (is.null(x$value_map)) {
-  #   as.numeric(as.character(reduced.term.cells[keepA,]))
-  # } else {
-  #   unlist(x$value_map[as.character(reduced.term.cells[keepA,])])
-  # }
-  # 
-  
-  
+  # split_fac <- eval(x$split_by, envir=term.cells, enclos=parent.frame())
+  # weights <- if (!is.null(split_fac)) {
+  #   split.levs <- levels(x$split_fac)
+  #   
+  cvec <- lazyeval::f_eval_rhs(x$A, data=as.data.frame(mm))
+  cvec[cvec > 0] <- cvec[cvec > 0]/abs(sum(cvec[cvec>0]))
+  cvec[cvec < 0] <- cvec[cvec < 0]/abs(sum(cvec[cvec<0]))
+
   weights <- matrix(0, NROW(term.cells), 1)	
   row.names(weights) <- row.names(term.cells)
   
   weights[keep, ] <- cvec
   
   ret <- list(
+    name=x$name,
     weights=weights,
     contrast_spec=x)
   
-  class(ret) <- c("contrast", "contrast", "list")
+  class(ret) <- c("contrast", "list")
   ret
   
 }
@@ -201,6 +201,7 @@ contrast_weights.poly_contrast_spec <- function(x, term) {
   weights[keep, ] <- pvals
   
   ret <- list(
+    name=x$name,
     weights=weights,
     contrast_spec=x)
   
@@ -270,6 +271,7 @@ contrast_weights.contrast_spec <- function(x, term) {
   row.names(weights) <- row.names(term.cells)
   
   ret <- list(
+    name=x$name,
     weights=weights,
     contrast_spec=x)
   
@@ -296,7 +298,7 @@ print.contrast_set <- function(x) {
 
 #' @export
 print.contrast_spec <- function(x) {
-  cat("contrast:", "\n")
+  cat("contrast:", x$name, "\n")
   cat(" A: ", Reduce(paste, deparse(x$A)), "\n")
   if (!is.null(x$B))
     cat(" B: ", Reduce(paste, deparse(x$B)), "\n")

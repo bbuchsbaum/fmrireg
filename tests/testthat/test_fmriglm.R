@@ -1,12 +1,21 @@
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 
 imagedes <- read.table("test_data/images_study/behavior/design.txt", header=TRUE)
+image_mask_file = "test_data/images_study/epi/global_mask.nii"
 
 test_that("can construct a simple fmri glm", {
  
-  dset <- fmri_dataset(scans=paste0(letters[1:6], ".nii"), mask=NULL, TR=2, blocklens=rep(226,6), blockids=facedes$run, event_table=facedes)
-  mod <- fmri_glm(onset ~ hrf(rep_num), dataset=dset, durations=0)
-  cmod <- construct(mod$model_spec)
+
+  scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
+  dset <- fmri_dataset(scans=scans, 
+                       mask=image_mask_file, 
+                       TR=1.5, 
+                       run_length=rep(348,6), 
+                       event_table=imagedes)
+  
+  con <- contrast_set(contrast( ~ Thorns - Massage, name="Thorns_Massage"))
+  mod <- fmri_glm(onsetTime ~ hrf(imageName, subset = !is.na(onsetTime), contrasts=con), ~ run, dataset=dset, durations=0)
+ 
   
 })
 

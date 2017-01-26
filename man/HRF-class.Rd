@@ -4,7 +4,7 @@
 \alias{HRF}
 \title{HRF constructor function}
 \usage{
-HRF(fun, name, nbasis = 1)
+HRF(fun, name, nbasis = 1, param_names = NULL)
 }
 \arguments{
 \item{fun}{hemodynamic response function mapping from time --> BOLD response}

@@ -5,7 +5,7 @@
 \title{fmri_dataset}
 \usage{
 fmri_dataset(scans, mask, TR, run_length, event_table = data.frame(),
-  aux_table = tibble::as_tibble(list()), base_path = "")
+  aux_table = tibble::as_tibble(list()), base_path = ".")
 }
 \arguments{
 \item{scans}{a vector of file names of the images comprising the dataset}

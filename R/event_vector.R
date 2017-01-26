@@ -75,9 +75,10 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
   pterms <- unlist(lapply(evs, function(ev) ev$varname))
   
-  etab <- as_data_frame(lapply(pterms, function(termname) {
+  len <- sum(subset)
+  etab <- tibble::as_data_frame(lapply(pterms, function(termname) {
     if (isContinuous(evs[[termname]])) {
-      rep(.sanitizeName(termname), length(onsets))
+      rep(.sanitizeName(termname), len)
     } else {
       evs[[termname]]$value
     }			
@@ -85,7 +86,7 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
   names(etab) <- sapply(pterms, .sanitizeName)
   varname <- paste(sapply(evs, function(x) x$varname), collapse=":")
-  ret <- list(varname=varname, events=evs, subset=subset, event_table=etab[subset,,drop=FALSE], 
+  ret <- list(varname=varname, events=evs, subset=subset, event_table=etab, 
               onsets=evs[[1]]$onsets, 
               blockids=evs[[1]]$blockids, 
               durations=evs[[1]]$durations)
@@ -265,12 +266,15 @@ cells.event_factor <- function(x, drop.empty=TRUE) {
 #' @export
 cells.event_term <- function(x, drop.empty=TRUE) {
   evtab <- x$event_table
-  evset <- expand.grid(lapply(x$events, levels))
+  evset <- tibble::as_tibble(expand.grid(lapply(x$events, levels)))
   which.cat <- which(!sapply(x$events, isContinuous))
   
-  counts <- apply(evset[,which.cat,drop=F], 1, function(row1) {
-    sum(apply(evtab[x$subset,which.cat,drop=F], 1, function(row2) {										
-      all(row1 == row2)
+  evs <- tibble::as_tibble(lapply(evset[,which.cat], as.character))
+  evt <- tibble::as_tibble(lapply(evtab[,which.cat], as.character))
+  
+  counts <- apply(evs, 1, function(row1) {
+    sum(apply(evt, 1, function(row2) {										
+      all(as.character(row1) == as.character(row2))
     }))
   })
   
@@ -308,7 +312,8 @@ cells.convolved_term <- function(x) {
   } else {
     as.character(evset[1,1])
   }
-  row.names(evset) <- strlevs
+  
+  attr(evset, "rownames") <- strlevs
   counts <- rep(attr(cells(x$evterm), "count"), each = nbasis(x))
   
   ret <- evset[counts > 0, , drop = F]
@@ -440,11 +445,12 @@ convolve_design <- function(hrf, dmat, globons, durations) {
   keep <- if (any(is.na(dmat)) || any(is.na(globons))) {
     ret <- apply(dmat, 1, function(vals) all(!is.na(vals)))
     ret[is.na(globons)] <- FALSE
+    ret
   } else {
     rep(TRUE, nrow(dmat))
   }
   
-  
+
   lapply(1:NCOL(dmat), function(i) {
     regressor(globons[keep], hrf, amplitude=unlist(dmat[keep,i]), duration=durations[keep])
   })
@@ -454,7 +460,6 @@ convolve_design <- function(hrf, dmat, globons, durations) {
 #' @importFrom tibble as_tibble
 #' @export
 convolve.event_term <- function(x, hrf, sframe, drop.empty=TRUE) {
-
   globons <- global_onsets(sframe, x$onsets, x$blockids)
   
   nimages <- sum(sframe$blocklens)
@@ -512,8 +517,9 @@ design_matrix.event_term <- function(x, drop.empty=TRUE) {
     model.matrix(formula(x), data=locenv) 
   }
   
+
   ### multiply design matrix by subset
-  rmat <- mat * x$subset
+  rmat <- mat #* x$subset
   
   #remove rows with NAS
   if (any(nas)) {

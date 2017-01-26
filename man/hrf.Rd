@@ -25,6 +25,8 @@ hrf(..., basis = "spmg1", onsets = NULL, durations = NULL,
 
 \item{contrasts}{one or more \code{contrastspec} objects created with the \code{contrast} function. 
 If multiple contrasts are required, then these should be wrapped in a \code{list}.}
+
+\item{id}{a  unique \code{character} identifier used to refer to term.}
 }
 \description{
 hemodynamic regressor specification function

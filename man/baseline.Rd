@@ -5,7 +5,7 @@
 \title{baseline}
 \usage{
 baseline(degree = 5, basis = c("bs", "poly", "ns"),
-  name = paste0("Baseline_", basis, "_", degree), constant = FALSE)
+  name = paste0("baseline_", basis, "_", degree), constant = FALSE)
 }
 \arguments{
 \item{basis}{the type of polynomial basis.}

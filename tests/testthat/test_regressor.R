@@ -220,11 +220,8 @@ test_that("can build a contrast versus the intercept and add to hrfspec", {
   aux_table <- data.frame(run=rep(1:6, each=218))
   
   
-  
   conf <- contrast_formula(~ `2` - !`1`, id="repnum")
-  
   sframe <- sampling_frame(rep(436/2,max(facedes$run)), TR=2)
-  
   nuisance <- matrix(rnorm(2*length(sframe$blockids)), length(sframe$blockids), 2)
   
   bm <- baseline_model(basis="bs", degree=3, sampling_frame=sframe, nuisance_matrix=nuisance)

@@ -51,6 +51,7 @@ evaluate.regressor <- function(x, grid, precision=.1) {
   dspan <- x$span/median(diff(grid)) 
   outmat <- matrix(0, length(grid), length(x$onsets) * nb)
   
+  
   nidx <- if (length(grid) > 1) {
     apply(RANN::nn2(matrix(grid), matrix(x$onsets), k=2)$nn.idx, 1, min)
   } else {

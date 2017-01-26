@@ -2,39 +2,78 @@
 
 #' fmri_glm
 #' @param formula
+#' @param block_formula
+#' @param baseline_model
 #' @param dataset
-#' @param basis
 #' @param durations
+#' @param nuisance_matrix
 #' @param drop_empty
+#' @param contrasts
+#' @param strategy
 #' @param 
 #' @export
 #' @importFrom foreach foreach
-fmri_glm <- function(formula, baseline_formula, dataset, basis=HRF_SPMG1, durations, drop_empty=TRUE, analyze_by=c("run", "slice")) {
-  analyze_by <- match.arg(analyze_by)
+fmri_glm <- function(formula, block_formula, baseline_model=NULL, dataset, 
+                     durations, drop_empty=TRUE, contrasts=NULL, 
+                     strategy=c("runwise", "slicewise", "all")) {
   
-  model <- fmri_model(formula, baseline_formula, dataset$event_table, aux_table=dataset$aux_table, basis=basis, durations=durations, 
-                      blockids=dataset$blockids, blocklens=dataset$blocklens, TR=dataset$TR, 
-                      drop_empty=drop_empty)
-  
-  
-  term_names <- names(terms(model))
-  term_matrices <- lapply(terms(model), design_matrix)
-  term_matrices <- lapply(term_matrices, as.matrix)
-  names(term_matrices) <- term_names
-  
-  form <- as.formula(paste("ym ~ ", paste(term_names, collapse = " + "), "-1"))
-  
-  conlist <- contrast_weights(model)
-  
-  chunks <- data_chunks(dataset, nchunks)
  
-  cres <- foreach( ym = chunks) %dopar% {
-    lm.1 <- lm(form, data=term_matrices)
-    conres <- lapply(conlist, function(con) fit_contrasts(lm.1, con))
-    fres <- anova(lm.1)
+  strategy <- match.arg(strategy)
+  
+  assert_that(inherits(dataset, "fmri_dataset"))
+  
+  if (is.null(baseline_model)) {
+    baseline_model <- baseline_model(basis="bs", degree=ceiling(median(dataset$sampling_frame$blocklens)/100), 
+                                     sampling_frame=dataset$sampling_frame)
   }
   
+
+  ev_model <- event_model(formula, block_formula, data=dataset$event_table, sampling_frame=dataset$sampling_frame, contrasts=contrasts)
+  
+  model <- fmri_model(ev_model, baseline_model)
+  
+  term_names <- names(terms(model))
+  term_matrices <- lapply(terms(model), function(x) as.matrix(design_matrix(x)))
+  names(term_matrices) <- term_names
+  
+  form <- as.formula(paste("y ~ ", paste(term_names, collapse = " + "), "-1"))
+  
+  conlist <- contrast_weights(ev_model)
+  
+ 
+  
+  
+  if (strategy == "runwise") {
+    runwise_lm(form, conlist, term_matrices, dset)
+  } else {
+    stop()
+  }
+ 
   
   model
 }
+  
+runwise_lm <- function(form, conlist, term_matrices, dset) {
+    chunks <- exec_strategy("runwise")(dset)
+    
+    browser()
+    cres <- foreach( ym = chunks) %do% {
+      data_env <- list2env(lapply(term_matrices, function(x) x[ym$row_ind,]))
+      y <- ym$data
+      lm.1 <- lm(form, data=data_env)
+      
+      colind <- attr(conlist, "term_indices")
+      conres <- lapply(conlist, function(con) fit_contrasts(lm.1, con, attr(con, "term_indices")))
+      
+      browser()
+      fres <- fit_Ftests(lm.1)
+     
+      list(fres=fres, conres=conres)
+    }
+}
+  
+    
+    
+
+
 

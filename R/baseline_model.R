@@ -6,22 +6,26 @@
 #' @param sampling_frame
 #' @importFrom lazyeval f_eval f_rhs f_lhs
 #' @export
-baseline_model <- function(basis="bs", degree=5, sampling_frame, nuisance_matrix=NULL) {
+baseline_model <- function(basis="bs", degree=5, sampling_frame, nuisance_mat=NULL) {
   drift_spec <- baseline(degree=degree, basis=basis, constant=FALSE)
   drift_term <- construct(drift_spec, sampling_frame)
   
   ## automatically add constant term
   block_term <- construct_block_term("constant", sampling_frame)
   
-  nuisance_term <- if (!is.null(nuisance_matrix)) {
-    assertthat::assert_that(nrow(nuisance_matrix) == length(sampling_frame$blockids))
-    if (is.null(colnames(nuisance_matrix))) {
-      colnames(nuisance_matrix) <- paste0("nuisance#", 1:ncol(nuisance_matrix))
+  nuisance_term <- if (!is.null(nuisance_mat)) {
+    assertthat::assert_that(nrow(nuisance_mat) == length(sampling_frame$blockids))
+    if (is.null(colnames(nuisance_mat))) {
+      colnames(nuisance_mat) <- paste0("nuisance#", 1:ncol(nuisance_mat))
     }
-    matrix_term("nuisance", nuisance_matrix)
+    
+    matrix_term("nuisance", nuisance_mat)
   } 
   
-  ret <- list(drift_term=drift_term, drift_spec=drift_spec, block_term=block_term, nuisance_term=nuisance_term)
+  ret <- list(drift_term=drift_term, drift_spec=drift_spec, 
+              block_term=block_term, nuisance_term=nuisance_term, 
+              sampling_frame=sampling_frame)
+  
   class(ret) <- c("baseline_model", "list")
   ret
 }
@@ -31,7 +35,7 @@ baseline_model <- function(basis="bs", degree=5, sampling_frame, nuisance_matrix
 #' A matrix of polynomial regressors for modeling low-frequency drift in fmri time series.
 #' 
 #' @importFrom splines bs ns
-#' @param number of polynomial terms for each image block
+#' @param degree number of polynomial terms for each image block
 #' @param basis the type of polynomial basis.
 #' @param name the name of the term
 #' @export
@@ -112,6 +116,8 @@ construct.baselinespec <- function(x, sampling_frame) {
   nc_per_block <- ncol(ret[[1]])
   mat <- matrix(0, sum(sampling_frame$blocklens), nc)
   
+  colind <- vector(length(ret), mode="list")
+  rowind <- vector(length(ret), mode="list")
   
   for (i in seq_along(ret)) {
     rowstart <- sum(sampling_frame$blocklens[1:i]) - sampling_frame$blocklens[1] + 1
@@ -119,13 +125,25 @@ construct.baselinespec <- function(x, sampling_frame) {
     colstart <- (nc_per_block)*(i-1) + 1
     colend <- colstart + nc_per_block - 1
     mat[rowstart:rowend, colstart:colend] <- ret[[i]]
+    colind[[i]] <- colstart:colend
+    rowind[[i]] <- rowstart:rowend
   }
-  
   
   cnames <- apply(expand.grid(paste0("base_", x$basis, "#", 1:length(sampling_frame$blocklens)), paste0("block#", 1:nc_per_block)), 1, paste, collapse="_")
   colnames(mat) <- cnames
-  baseline_term(x$name, mat)	
+  baseline_term(x$name, mat, colind, rowind)	
 }
+
+#' baseline_term
+#' @importFrom tibble as_tibble
+#' @export
+baseline_term <- function(varname, mat, colind, rowind) {
+  stopifnot(is.matrix(mat))
+  ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat), colind=colind, rowind=rowind)
+  class(ret) <- c("baseline_term", "matrix_term", "fmri_term", "list")
+  ret
+}
+
 
 construct_block_term <- function(vname, sampling_frame) {
   blockids <- sampling_frame$blockids
@@ -143,6 +161,29 @@ construct_block_term <- function(vname, sampling_frame) {
   block_term(vname, blockids=blockids, expanded_blockids=expanded_blockids, mat)
   
 }
+
+#' @importFrom tibble as_tibble
+#' @export
+block_term <- function(varname, blockids, expanded_blockids, mat) {
+  assertthat::assert_that(is.matrix(mat))
+  assertthat::assert_that(nrow(mat) == length(blockids))
+  assertthat::assert_that(ncol(mat) == length(unique(blockids)))
+  
+  ret <- list(varname=varname, blockids=blockids, expanded_blockids, design_matrix=tibble::as_tibble(mat), nblocks=ncol(mat))
+  class(ret) <- c("block_term", "matrix_term", "fmri_term", "list")
+  ret
+}
+
+
+design_matrix.block_term <- function(x, block=NULL) {
+  if (is.null(block)) {
+    x$design_matrix
+  } else {
+    x$design_matrix[, block]
+  }
+}
+
+
 
 #' nuisance
 #' 
@@ -165,7 +206,6 @@ nuisance <- function(x) {
 #' @export
 construct.nuisancespec <- function(x, model_spec) {
   mat <- base::eval(parse(text=x$varname), envir=model_spec$aux_data, enclos=parent.frame())
-  
   matrix_term(x$name, mat)
 }  
 
