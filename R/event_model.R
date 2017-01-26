@@ -1,6 +1,13 @@
 
 
 #' @importFrom lazyeval f_eval f_rhs f_lhs
+#' @param formula
+#' @param data
+#' @param block
+#' @param sampling_frame
+#' @param drop_empty
+#' @param durations
+#' @param contrasts
 #' @export
 event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, durations=0, contrasts=NULL) {
   
@@ -155,6 +162,7 @@ design_matrix.event_model_spec <- function(x) {
 }
 
 #' @importFrom tibble as_tibble
+#' @rdname design_matrix
 design_matrix.event_model <- function(x) {
   ret <- lapply(x$terms, design_matrix)
   vnames <- unlist(lapply(ret, names))
@@ -166,6 +174,7 @@ design_matrix.event_model <- function(x) {
 
 
 #' @export
+#' @rdname terms
 terms.event_model <- function(x) {
   x$terms
 }
@@ -174,12 +183,14 @@ terms.event_model <- function(x) {
 
 
 #' @export
+#' @rdname conditions
 conditions.event_model <- function(x) {
   unlist(lapply(terms(x), function(t) conditions(t)), use.names=FALSE)
 }
 
   
 #' @export
+#' @rdname contrast_weights
 contrast_weights.convolved_term <- function(x) {
   lapply(x$contrasts, function(cspec) {
     if (!is.null(cspec))
@@ -188,11 +199,13 @@ contrast_weights.convolved_term <- function(x) {
 }
 
 #' @export
-contrast_weights.fmri_term <- function(x) { NULL }
+#' @rdname contrast_weights
+contrast_weights.fmri_term <- function(x) { stop("unimplemented") }
 
 contrast_weights.fmri_model <- function(x) { contrast_weights(x$event_model) }
 
 #' @export
+#' @rdname contrast_weights
 contrast_weights.event_model <- function(x) {
   tind <- x$term_indices
   len <- length(conditions(x))
@@ -223,12 +236,14 @@ contrast_weights.event_model <- function(x) {
   
 
 #' @export
+#' @rdname contrast_weights
 design_matrix.convolved_term <- function(x) {
   x$design_matrix
 }
 
 #' @importFrom tibble as_tibble
 #' @export
+#' @rdname contrast_weights
 matrix_term <- function(varname, mat) {
   stopifnot(is.matrix(mat))
   ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat))
@@ -246,6 +261,7 @@ matrix_term <- function(varname, mat) {
 
 
 #' @export
+#' @rdname design_matrix
 design_matrix.matrix_term <- function(x) {
   if (is.null(names(x$design_matrix))) {
     cnames <- paste0(x$varname, "_", 1:ncol(x$design_matrix))
@@ -257,12 +273,15 @@ design_matrix.matrix_term <- function(x) {
 }
 
 #' @export
+#' @rdname event_table
 event_table.convolved_term <- function(x) event_table(x$evterm)
 
 #' @export
+#' @rdname nbasis
 nbasis.convolved_term <- function(x) nbasis(x$hrf)
 
 #' @export
+#' @rdname longnames
 longnames.convolved_term <- function(x) {
   # ignores exclude.basis
   term.cells <- cells(x)
@@ -276,6 +295,7 @@ longnames.convolved_term <- function(x) {
 
 
 #' @export
+#' @rdname longnames
 longnames.matrix_term <- function(x) {
   paste0(x$name, "#", colnames(design_matrix(x)))
 }
