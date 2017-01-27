@@ -83,3 +83,12 @@ blockids.sampling_frame <- function(x) {
 blocklens.sampling_frame <- function(x) {
   x$blocklens
 }
+
+#' @export
+print.sampling_frame <- function(x) {
+  cat("sampling_frame: \n")
+  cat("  number of blocks:", length(x$blocklens), "\n")
+  cat("  blocklens: ", paste(x$blocklens, collapse=", "), "\n")
+  cat("  TR: ", paste0(x$TR, "s"), "\n")
+  cat("  start_time: ", paste0(x$start_time, "s"), "\n")
+}

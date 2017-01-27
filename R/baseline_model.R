@@ -63,8 +63,8 @@ baseline_model <- function(basis="bs", degree=5, sframe, nuisance_list=NULL) {
 baseline <- function(degree=5, basis=c("bs", "poly", "ns"), name=paste0("baseline_", basis, "_", degree), constant=FALSE) {
   basis <- match.arg(basis)
   bfun <- switch(basis,
-                 bs=bs,
-                 ns=ns,
+                 bs=splines::bs,
+                 ns=splines::ns,
                  poly=poly)
   
   ret <- list(
@@ -81,11 +81,11 @@ baseline <- function(degree=5, basis=c("bs", "poly", "ns"), name=paste0("baselin
 
 
 #' @export
-design_matrix.baseline_model <- function(x) {
+design_matrix.baseline_model <- function(x, blockid=NULL) {
   if (is.null(x$nuisance_term)) {
-    tibble::as_tibble(cbind(design_matrix(x$block_term), design_matrix(x$drift_term)))
+    tibble::as_tibble(cbind(design_matrix(x$block_term, blockid), design_matrix(x$drift_term, blockid)))
   } else {
-    tibble::as_tibble(cbind(design_matrix(x$block_term), design_matrix(x$drift_term), design_matrix(x$nuisance_term)))
+    tibble::as_tibble(cbind(design_matrix(x$block_term, blockid), design_matrix(x$drift_term, blockid), design_matrix(x$nuisance_term, blockid)))
   }
 }
 
@@ -149,8 +149,8 @@ construct.baselinespec <- function(x, sampling_frame) {
     colind[[i]] <- colstart:colend
     rowind[[i]] <- rowstart:rowend
   }
-  
-  cnames <- apply(expand.grid(paste0("base_", x$basis, "#", 1:length(sampling_frame$blocklens)), paste0("block#", 1:nc_per_block)), 1, paste, collapse="_")
+
+  cnames <- apply(expand.grid(paste0("base_", x$basis, "", 1:nc_per_block), paste0("block_", 1:length(sampling_frame$blocklens))), 1, paste, collapse="_")
   colnames(mat) <- cnames
   baseline_term(x$name, mat, colind, rowind)	
 }
@@ -163,6 +163,16 @@ baseline_term <- function(varname, mat, colind, rowind) {
   ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat), colind=colind, rowind=rowind)
   class(ret) <- c("baseline_term", "matrix_term", "fmri_term", "list")
   ret
+}
+
+
+#' @export
+design_matrix.baseline_term <- function(x, blockid=NULL) {
+  if (is.null(blockid)) {
+    x$design_matrix
+  } else {
+    x$design_matrix[unlist(x$rowind[blockid]), unlist(x$colind[blockid])]
+  }
 }
 
 
@@ -191,17 +201,18 @@ block_term <- function(varname, blockids, expanded_blockids, mat) {
   assertthat::assert_that(nrow(mat) == length(blockids))
   assertthat::assert_that(ncol(mat) == length(unique(blockids)))
   
-  ret <- list(varname=varname, blockids=blockids, expanded_blockids, design_matrix=tibble::as_tibble(mat), nblocks=ncol(mat))
+  ret <- list(varname=varname, blockids=blockids, expanded_blockids=expanded_blockids, design_matrix=tibble::as_tibble(mat), nblocks=ncol(mat),
+              colind=as.list(1:ncol(mat)), rowind=split(1:length(blockids), blockids))
   class(ret) <- c("block_term", "matrix_term", "fmri_term", "list")
   ret
 }
 
 
-design_matrix.block_term <- function(x, block=NULL) {
-  if (is.null(block)) {
+design_matrix.block_term <- function(x, blockid=NULL) {
+  if (is.null(blockid)) {
     x$design_matrix
   } else {
-    x$design_matrix[, block]
+    x$design_matrix[unlist(x$rowind[blockid]), unlist(x$colind[blockid])]
   }
 }
 
@@ -245,7 +256,7 @@ print.baseline_model <- function(x) {
   cat("  ", "degree: ", x$drift_spec$degree, "\n")
   cat("  ", "drift columns: ", ncol(design_matrix(x$drift_term)), "\n")
   cat("  ", "constant columns: ", ncol(design_matrix(x$block_term)), "\n")
-  cat("  ", "nuisance columns: ", ncol(design_matrix(x$nuisance_term)), "\n")
+  cat("  ", "nuisance columns: ", ifelse(is.null(x$nuisance_term), 0, ncol(design_matrix(x$nuisance_term))), "\n")
   cat("  ", "total columns: ", ncol(design_matrix(x)), "\n")
   cat("  ", "design_matrix: ", "\n")
   print(design_matrix(x))

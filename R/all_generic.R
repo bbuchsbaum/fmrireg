@@ -177,7 +177,7 @@ split_by_block  <-  function(x, ...) UseMethod("split_by_block")
 #' 
 #' @param x the object
 #' @export
-blockids  <-  function(x, ...) UseMethod("blockids")
+blockids  <-  function(x) UseMethod("blockids")
 
 #' blocklens
 #' 
