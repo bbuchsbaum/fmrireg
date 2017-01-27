@@ -1,37 +1,51 @@
 
+get_col_inds <- function(Xlist) {
+  ncols <- sapply(Xlist, ncol)
+  csum <- cumsum(ncols)
+  csum1 <- c(0, csum[-length(csum)])
+  m <- as.matrix(cbind(csum1+1, csum))
+  apply(m, 1, function(x) seq(x[1], x[2]))
+}
+
+
+
+
 #' baseline_model
 #' 
 #' @param baseline_model 
 #' @param basis
 #' @param degree
-#' @param sampling_frame
+#' @param sframe sframe a \code{sampling_frame} object
 #' @param nuisance_list a list of nusiance matrices, one per block
 #' @importFrom lazyeval f_eval f_rhs f_lhs
 #' @export
-baseline_model <- function(basis="bs", degree=5, sampling_frame, nuisance_list=NULL) {
+baseline_model <- function(basis="bs", degree=5, sframe, nuisance_list=NULL) {
   drift_spec <- baseline(degree=degree, basis=basis, constant=FALSE)
-  drift_term <- construct(drift_spec, sampling_frame)
+  drift_term <- construct(drift_spec, sframe)
   
   ## automatically add constant term
-  block_term <- construct_block_term("constant", sampling_frame)
+  block_term <- construct_block_term("constant", sframe)
   
   nuisance_term <- if (!is.null(nuisance_list)) {
     total_len <- sum(sapply(nuisance_list, nrow))
-    assertthat::assert_that(total_len == length(sampling_frame$blockids))
-    assertthat::assert_that(length(nuisance_list) == length(sampling_frame$blocklens))
+    assertthat::assert_that(total_len == length(blockids(sframe)))
+    assertthat::assert_that(length(nuisance_list) == length(blocklens(sframe)))
     
-    colind <- vector(mode="list")
-    ### HERE
-    if (is.null(colnames(nuisance_mat))) {
-      colnames(nuisance_mat) <- paste0("nuisance#", 1:ncol(nuisance_mat))
+    colind <- get_col_inds(nuisance_list)
+    rowind <- split(1:length(blockids(sframe)), blockids(sframe))
+    
+    for (i in 1:length(nuisance_list)) {
+      nmat <- nuisance_list[[i]]
+      colnames(nmat) <- paste0("nuisance#", i, "#", 1:ncol(nmat))
+      nuisance_list[[i]] <- nmat
     }
     
-    matrix_term("nuisance", nuisance_mat)
+    baseline_term("nuisance", Matrix::bdiag(nuisance_list), colind,rowind)
   } 
   
   ret <- list(drift_term=drift_term, drift_spec=drift_spec, 
               block_term=block_term, nuisance_term=nuisance_term, 
-              sampling_frame=sampling_frame)
+              sampling_frame=sframe)
   
   class(ret) <- c("baseline_model", "list")
   ret
@@ -152,13 +166,14 @@ baseline_term <- function(varname, mat, colind, rowind) {
 }
 
 
-construct_block_term <- function(vname, sampling_frame) {
-  blockids <- sampling_frame$blockids
+
+construct_block_term <- function(vname, sframe) {
+  blockids <- blockids(sframe)
   blockord <- sort(unique(blockids))
   
-  expanded_blockids <- ordered(rep(blockord, sampling_frame$blocklens))
+  expanded_blockids <- ordered(rep(blockord, blocklens(sframe)))
   
-  mat <- if (length(levels(blockids)) == 1) {
+  mat <- if (length(blockord) == 1) {
     matrix(rep(1, length(expanded_blockids)), length(expanded_blockids), 1)
   } else {
     mat <- model.matrix(~ expanded_blockids - 1)

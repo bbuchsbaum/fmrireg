@@ -171,6 +171,23 @@ samples <-  function(x, ...) UseMethod("samples")
 #' @export
 split_by_block  <-  function(x, ...) UseMethod("split_by_block")
 
+#' blockids
+#' 
+#' extract block indices
+#' 
+#' @param x the object
+#' @export
+blockids  <-  function(x, ...) UseMethod("blockids")
+
+#' blocklens
+#' 
+#' extract block lengths
+#' 
+#' @param x the object
+#' @export
+blocklens  <-  function(x, ...) UseMethod("blocklens")
+
+
 
 #' estcon
 #' 

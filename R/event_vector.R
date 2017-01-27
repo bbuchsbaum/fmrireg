@@ -233,7 +233,7 @@ levels.event_factor <- function(x) levels(x$value)
 #' @export
 levels.event_variable <- function(x) x$varname 
 
-
+#' @export
 levels.event_matrix <- function(x) colnames(x$value) 
 
 
@@ -246,6 +246,7 @@ levels.event_basis <- function(x) seq(1, ncol(x$basis$y))
 #' @export
 formula.event_term <- function(x) as.formula(paste("~ ", "(", paste(parentTerms(x), collapse=":"), "-1", ")"))
 
+#' @export
 levels.event_term <- function(x) {
   facs <- x$events[!sapply(x$events, isContinuous)]
   if (length(facs) == 1) {
@@ -302,6 +303,7 @@ cells.event_term <- function(x, drop.empty=TRUE) {
   
 }
 
+#' @export
 cells.convolved_term <- function(x) {
   evtab <- event_table(x)
   evset <- .event_set(x)
@@ -460,6 +462,7 @@ convolve_design <- function(hrf, dmat, globons, durations) {
 #' @importFrom tibble as_tibble
 #' @export
 convolve.event_term <- function(x, hrf, sframe, drop.empty=TRUE) {
+  ## convert to dplyr
   globons <- global_onsets(sframe, x$onsets, x$blockids)
   
   nimages <- sum(sframe$blocklens)
@@ -467,7 +470,7 @@ convolve.event_term <- function(x, hrf, sframe, drop.empty=TRUE) {
   
   dmat <- design_matrix(x, drop.empty)
   
-  blockids <- factor(x$blockids)
+  blockids <- as.factor(x$blockids)
   split.dmat <- split(dmat, blockids)
   split.ons <- split(globons, blockids)
   split.durations <- split(x$durations, blockids)

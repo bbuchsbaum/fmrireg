@@ -69,6 +69,17 @@ global_onsets.sampling_frame <- function(x, onsets, blockids) {
   })
 }  
 
+#' @export
 split_by_block.sampling_frame <- function(x, vals) {
   split(vals, x$blockids)
+}
+
+#' @export
+blockids.sampling_frame <- function(x) {
+  x$blockids
+}
+
+#' @export
+blocklens.sampling_frame <- function(x) {
+  x$blocklens
 }
