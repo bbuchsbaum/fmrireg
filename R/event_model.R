@@ -163,8 +163,8 @@ design_matrix.event_model_spec <- function(x) {
 
 #' @importFrom tibble as_tibble
 #' @rdname design_matrix
-design_matrix.event_model <- function(x) {
-  ret <- lapply(x$terms, design_matrix)
+design_matrix.event_model <- function(x, blockid=NULL) {
+  ret <- lapply(x$terms, design_matrix, blockid)
   vnames <- unlist(lapply(ret, names))
   dmat <- tibble::as_tibble(do.call(cbind, ret))
   names(dmat) <- vnames
@@ -179,16 +179,12 @@ terms.event_model <- function(x) {
   x$terms
 }
 
-
-
-
 #' @export
 #' @rdname conditions
 conditions.event_model <- function(x) {
   unlist(lapply(terms(x), function(t) conditions(t)), use.names=FALSE)
 }
 
-  
 #' @export
 #' @rdname contrast_weights
 contrast_weights.convolved_term <- function(x) {
@@ -234,7 +230,6 @@ contrast_weights.event_model <- function(x) {
 }
   
   
-
 #' @export
 #' @rdname contrast_weights
 design_matrix.convolved_term <- function(x) {
@@ -250,14 +245,6 @@ matrix_term <- function(varname, mat) {
   class(ret) <- c("matrix_term", "fmri_term", "list")
   ret
 }
-
-
-
-
-
-
-
-
 
 
 #' @export
@@ -318,7 +305,4 @@ print.event_model <- function(object) {
   }
   
 }
-  
-
-  
   

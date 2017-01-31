@@ -462,36 +462,35 @@ convolve_design <- function(hrf, dmat, globons, durations) {
 #' @importFrom tibble as_tibble
 #' @export
 convolve.event_term <- function(x, hrf, sframe, drop.empty=TRUE) {
-  ## convert to dplyr
   globons <- global_onsets(sframe, x$onsets, x$blockids)
+  durations <- x$durations
+  blockids <- x$blockids
   
   nimages <- sum(sframe$blocklens)
-  samples <- seq(sframe$start_time, length.out=nimages, by=sframe$TR)
-  
-  dmat <- design_matrix(x, drop.empty)
-  
-  blockids <- as.factor(x$blockids)
-  split.dmat <- split(dmat, blockids)
-  split.ons <- split(globons, blockids)
-  split.durations <- split(x$durations, blockids)
-  split.samples <- split(samples, rep(1:length(sframe$blocklens), sframe$blocklens))
-  
-  reglist <- lapply(1:length(split.dmat), function(i) {
-    reg <- convolve_design(hrf, split.dmat[[i]], split.ons[[i]], split.durations[[i]])
-    do.call(cbind, lapply(reg, function(r) evaluate(r, split.samples[[i]])))
-  })
-  
-  ret <- do.call(rbind, reglist)
   
   cnames <- conditions(x)
+  
+  dmat <- design_matrix(x, drop.empty)
+  ncond <- ncol(dmat)
+
+  cmat <- dmat %>% dplyr::mutate(.blockids=blockids, .globons=globons, .durations=durations) %>% 
+    group_by(.blockids) %>%
+    do({
+      d <- select(., 1:ncond)
+      reg <- convolve_design(hrf, d, .$.globons, .$.durations)
+      sam <- samples(sframe, blockids=as.integer(as.character(.$.blockids[1])), global=TRUE)
+      ret <- do.call(cbind, lapply(reg, function(r) evaluate(r, sam)))
+      tibble::as_tibble(ret)
+  }) %>% ungroup() %>% select(-.blockids)
+  
  
   if (nbasis(hrf) > 1) {
     blevs <- paste("[", 1:nbasis(hrf), "]", sep="")
     cnames <- unlist(lapply(cnames, function(prefix) paste(prefix, ":basis", blevs, sep="")))
   } 
             
-  colnames(ret) <- cnames
-  tibble::as_tibble(ret)
+  colnames(cmat) <- cnames
+  tibble::as_tibble(cmat)
   
   #lapply(reglist, function(reg) evaluate(reg, )
   

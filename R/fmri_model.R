@@ -15,18 +15,14 @@ fmri_model <- function(event_model, baseline_model) {
 
 
 #' @importFrom tibble as_tibble
-design_matrix.fmri_model <- function(x) {
-  tibble::as_tibble(cbind(design_matrix(x$event_model), design_matrix(x$baseline_model)))
+design_matrix.fmri_model <- function(x, blocki=NULL) {
+  tibble::as_tibble(cbind(design_matrix(x$event_model, blockid), design_matrix(x$baseline_model, blockid)))
 }
-
-
-
 
 #' @export
 terms.fmri_model <- function(x) {
   c(terms(x$event_model), terms(x$baseline_model))
 }
-
 
 #' @export
 conditions.fmri_model <- function(x) {

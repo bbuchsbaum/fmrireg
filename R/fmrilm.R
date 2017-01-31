@@ -24,7 +24,7 @@ fmri_glm <- function(formula, block_formula, baseline_model=NULL, dataset,
   
   if (is.null(baseline_model)) {
     baseline_model <- baseline_model(basis="bs", degree=ceiling(median(dataset$sampling_frame$blocklens)/100), 
-                                     sampling_frame=dataset$sampling_frame)
+                                     sframe=dataset$sampling_frame)
   }
   
 
@@ -39,9 +39,6 @@ fmri_glm <- function(formula, block_formula, baseline_model=NULL, dataset,
   form <- as.formula(paste("y ~ ", paste(term_names, collapse = " + "), "-1"))
   
   conlist <- contrast_weights(ev_model)
-  
- 
-  
   
   if (strategy == "runwise") {
     runwise_lm(form, conlist, term_matrices, dset)
@@ -64,10 +61,9 @@ runwise_lm <- function(form, conlist, term_matrices, dset) {
       
       colind <- attr(conlist, "term_indices")
       conres <- lapply(conlist, function(con) fit_contrasts(lm.1, con, attr(con, "term_indices")))
-      
+      names(conres) <- nams(conlist)
       browser()
       fres <- fit_Ftests(lm.1)
-     
       list(fres=fres, conres=conres)
     }
 }
