@@ -14,7 +14,7 @@ test_that("can construct a simple fmri glm", {
                        event_table=imagedes)
   
   con <- contrast_set(contrast( ~ Thorns - Massage, name="Thorns_Massage"))
-  mod <- fmri_glm(onsetTime ~ hrf(imageName, subset = !is.na(onsetTime), contrasts=con), ~ run, dataset=dset, durations=0)
+  mod <- fmri_lm(onsetTime ~ hrf(imageName, subset = !is.na(onsetTime), contrasts=con), ~ run, dataset=dset, durations=0)
  
   
 })

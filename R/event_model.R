@@ -232,8 +232,13 @@ contrast_weights.event_model <- function(x) {
   
 #' @export
 #' @rdname contrast_weights
-design_matrix.convolved_term <- function(x) {
-  x$design_matrix
+design_matrix.convolved_term <- function(x, blockid=NULL) {
+  if (is.null(blockid)) {
+    x$design_matrix
+  } else {
+    keep <- blockids(x$sampling_frame) %in% blockid
+    x$design_matrix[keep,]
+  } 
 }
 
 #' @importFrom tibble as_tibble

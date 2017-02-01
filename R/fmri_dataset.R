@@ -86,10 +86,11 @@ fmri_dataset <- function(scans, mask, TR,
 }
 
 
-data_chunk <- function(mat, voxel_ind, row_ind) {
+data_chunk <- function(mat, voxel_ind, row_ind, chunk_num) {
   ret <- list(data=mat,
        voxel_ind=voxel_ind,
-       row_ind=row_ind)
+       row_ind=row_ind,
+       chunk_num=chunk_num)
   class(ret) <- c("data_chunk", "list")
   ret
 }
@@ -134,15 +135,15 @@ arbitrary_chunks <- function(x, nchunks) {
 
 runwise_chunks <- function(x) {
   nchunks <- length(x$scans)
-  chunkNum <- 1
+  chunk_num <- 1
   
   nextEl <- function() {
-    if (chunkNum > nchunks) {
+    if (chunk_num > nchunks) {
       stop("StopIteration")
     } else {
-      bvec <- neuroim::loadVector(file.path(x$base_path, x$scans[chunkNum]), mask=x$mask)
-      ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), row_ind=which(x$sampling_frame$blockids == chunkNum))
-      chunkNum <<- chunkNum + 1
+      bvec <- neuroim::loadVector(file.path(x$base_path, x$scans[chunk_num]), mask=x$mask)
+      ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), row_ind=which(x$sampling_frame$blockids == chunk_num), chunk_num=chunk_num)
+      chunk_num <<- chunk_num + 1
       ret
     }
   }

@@ -13,7 +13,7 @@
 #' @param 
 #' @export
 #' @importFrom foreach foreach
-fmri_glm <- function(formula, block_formula, baseline_model=NULL, dataset, 
+fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, contrasts=NULL, 
                      strategy=c("runwise", "slicewise", "all")) {
   
@@ -29,19 +29,11 @@ fmri_glm <- function(formula, block_formula, baseline_model=NULL, dataset,
   
 
   ev_model <- event_model(formula, block_formula, data=dataset$event_table, sampling_frame=dataset$sampling_frame, contrasts=contrasts)
-  
   model <- fmri_model(ev_model, baseline_model)
-  
-  term_names <- names(terms(model))
-  term_matrices <- lapply(terms(model), function(x) as.matrix(design_matrix(x)))
-  names(term_matrices) <- term_names
-  
-  form <- as.formula(paste("y ~ ", paste(term_names, collapse = " + "), "-1"))
-  
   conlist <- contrast_weights(ev_model)
   
   if (strategy == "runwise") {
-    runwise_lm(form, conlist, term_matrices, dset)
+    runwise_lm(dset, model, conlist)
   } else {
     stop()
   }
@@ -50,16 +42,25 @@ fmri_glm <- function(formula, block_formula, baseline_model=NULL, dataset,
   model
 }
   
-runwise_lm <- function(form, conlist, term_matrices, dset) {
+runwise_lm <- function(dset, model, conlist) {
     chunks <- exec_strategy("runwise")(dset)
     
     browser()
+    
+    term_names <- names(terms(model))
+    form <- as.formula(paste("y ~ ", paste(term_names, collapse = " + "), "-1"))
+    
+    browser()
     cres <- foreach( ym = chunks) %do% {
-      data_env <- list2env(lapply(term_matrices, function(x) x[ym$row_ind,]))
+      term_matrices <- lapply(terms(model), function(x) as.matrix(design_matrix(x, ym$chunk_num)))
+      names(term_matrices) <- term_names
+      
+      data_env <- list2env(term_matrices)
+      
       y <- ym$data
       lm.1 <- lm(form, data=data_env)
       
-      colind <- attr(conlist, "term_indices")
+      colind <- lapply(conlist, function(con) attr(con, "term_indices"))
       conres <- lapply(conlist, function(con) fit_contrasts(lm.1, con, attr(con, "term_indices")))
       names(conres) <- nams(conlist)
       browser()
