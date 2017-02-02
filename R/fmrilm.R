@@ -42,15 +42,14 @@ fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset,
   model
 }
   
+#' @importFrom foreach
 runwise_lm <- function(dset, model, conlist) {
     chunks <- exec_strategy("runwise")(dset)
     
-    browser()
     
     term_names <- names(terms(model))
     form <- as.formula(paste("y ~ ", paste(term_names, collapse = " + "), "-1"))
     
-    browser()
     cres <- foreach( ym = chunks) %do% {
       term_matrices <- lapply(terms(model), function(x) as.matrix(design_matrix(x, ym$chunk_num)))
       names(term_matrices) <- term_names
@@ -59,13 +58,11 @@ runwise_lm <- function(dset, model, conlist) {
       
       y <- ym$data
       lm.1 <- lm(form, data=data_env)
-      
-      colind <- lapply(conlist, function(con) attr(con, "term_indices"))
+    
       conres <- lapply(conlist, function(con) fit_contrasts(lm.1, con, attr(con, "term_indices")))
-      names(conres) <- nams(conlist)
+      names(conres) <- names(conlist)
       browser()
-      fres <- fit_Ftests(lm.1)
-      list(fres=fres, conres=conres)
+      list(conres=conres)
     }
 }
   
