@@ -56,7 +56,31 @@ fit_Ftests <- function(object) {
 }
 
 
+fit_stats <- function(lmfit) {
+  Qr <- stats:::qr.lm(lmfit)
+  cov.unscaled <- chol2inv(Qr$qr)
+  betamat <- lmfit$coefficients
+  
 
+  rss <- colSums(lmfit$residuals^2)
+  rdf <- lmfit$df.residual
+  resvar <- rss/rdf
+  sigma <- sqrt(resvar)
+  
+  vc <- sapply(1:ncol(betamat), function(i) {
+    vcv <- cov.unscaled * sigma[i]^2
+    sqrt(diag(vcv))
+  })
+  
+  prob <- 2 * (1 - pt(abs(betamat/vc), lmfit$df.residual))
+  tstat <- betamat/vc
+  ret <- tibble::as_tibble(cbind(as.vector(ct), as.vector(vc), as.vector(tstat), as.vector(prob)))
+  names(ret) <- c("estimate", "se", "tstat", "prob")
+  ret
+  
+}
+  
+}
 #' fit_contrasts
 #' 
 #' @param lmfit the \code{lm} object
