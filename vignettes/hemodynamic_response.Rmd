@@ -1,0 +1,98 @@
+---
+title: "Hemodynamic Response Functions"
+author: "Bradley R. Buchsbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## Hemodynamic response function
+
+A hemodynamic response function (HRF) is used to model the temporal evoluation of an fMRI response to an experimental "event". An HRF is a function of *time* and generally "peaks" 4-6s afer the event onset.
+
+There are a number of pre-defined HRFs in `fmrireg` that make it easy to work with HRFs. For example, we can use the SPM "canonical" HRF as follows:
+
+```{r, message=FALSE}
+library(fmrireg)
+
+## 'spm canonoical' hrf
+vals <- evaluate(HRF_SPMG1, seq(0,20,by=.1))
+
+## Gaussian hrf with default parameters (mean=6, sd=1.5)
+vals2 <- evaluate(HRF_GAUSSIAN, seq(0,20,by=.1)) 
+
+plot(seq(0,20,by=.1), vals, type="l", xlab="Time", ylab="BOLD response", ylim=range(c(vals, vals2)))
+lines(seq(0,20,by=.1), vals2, type="l", col=2)
+
+```
+
+## Changing Default Parameters
+
+```{r, message=FALSE}
+library(purrr)
+
+## the 'HRF' constructor take a function and returns instantiates and HRF object. Several 'hrf' functions are provided which have default parameters. To change these parameters, we use the 'partial' function from the 'purrr' library:
+
+hrf_7_3 <- partial(hrf_gaussian, mean=7, sd=3)
+hrf_5_2 <- partial(hrf_gaussian, mean=5, sd=2)
+hrf_4_1 <- partial(hrf_gaussian, mean=4, sd=1)
+
+hrf1 <- HRF(hrf_7_3, name="hrf_gaussian_7_3")
+hrf2 <- HRF(hrf_5_2, name="hrf_gaussian_5_2")
+hrf3 <- HRF(hrf_4_1, name="hrf_gaussian_4_1")
+
+vals1 <- evaluate(hrf1, seq(0,20,by=.1))
+vals2 <- evaluate(hrf2, seq(0,20,by=.1))
+vals3 <- evaluate(hrf3, seq(0,20,by=.1))
+
+## notice that that each function is scaled so that it's highest value = 1.
+plot(seq(0,20,by=.1), vals1, type="l", xlab="Time", ylab="BOLD response", ylim=range(c(vals1, vals2, vals3)))
+lines(seq(0,20,by=.1), vals2, type="l", col=2)
+lines(seq(0,20,by=.1), vals3, type="l", col=3)
+
+```
+
+## Multivariate HRF: B-splines and Derivatives
+
+Sometimes we want to model an event with multiple "basis functions". In this case the HRF is a function from time -> *d*-dimensional vector, where *d* is the dimnenson of the basis set.
+
+```{r, message=FALSE}
+
+## A third degree B-Spline with four bases.
+hrf_bs_4 <- HRF(partial(hrf_bspline, N=4), name="hrf_bspline_4")
+time <- seq(0,20, by=.1)
+bmat1 <- evaluate(hrf_bs_4, time)
+matplot(time, bmat1, xlab="Time", ylab="BOLD Response", type='l', main="Bspline HRF basis set (N=4)")
+
+## A first degree B-Spline with 12 bases.
+hrf_bs_12 <- HRF(partial(hrf_bspline, degree=1, N=12), name="hrf_bspline_12")
+time <- seq(0,20, by=.1)
+bmat1 <- evaluate(hrf_bs_12, time)
+matplot(time, bmat1, xlab="Time", ylab="BOLD Response", type='l', main="Bspline HRF basis set (N=12)")
+
+## the SPM + first derivative is a "builtin" HRF function.
+
+time <- seq(0,20, by=.1)
+bmat1 <- evaluate(HRF_SPMG2, time)
+matplot(time, bmat1, xlab="Time", ylab="BOLD Response", type='l', main="SPM + first derivative")
+
+## the SPM + first derivative + second derivative is a "builtin" HRF function.
+
+time <- seq(0,20, by=.1)
+bmat1 <- evaluate(HRF_SPMG3, time)
+matplot(bmat1, xlab="Time", ylab="BOLD Response", type='l', main="SPM + 1st and 2nd derivative")
+
+```
+
+
+
+
+
+
+
+
+

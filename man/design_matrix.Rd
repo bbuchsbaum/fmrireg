@@ -8,7 +8,7 @@
 \usage{
 design_matrix(x, ...)
 
-\method{design_matrix}{event_model}(x)
+\method{design_matrix}{event_model}(x, blockid = NULL)
 
 \method{design_matrix}{matrix_term}(x)
 }
