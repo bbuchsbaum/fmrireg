@@ -174,7 +174,6 @@ design_matrix.event_model <- function(x, blockid=NULL) {
 
 
 #' @export
-#' @rdname terms
 terms.event_model <- function(x) {
   x$terms
 }

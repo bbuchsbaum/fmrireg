@@ -1,0 +1,55 @@
+---
+title: "Hemodynamic Response Functions"
+author: "Bradley R. Buchsbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## Building fMRI regressors from event onsets
+
+Suppose we have a simple event-related fMRI design with 10 stimuli spaced every 12s. We want to model each event with the SPM canonical hemodynamic response function (HRF). The duration of each event is 0s, or "instantaneous". We have 140s worth of contiguous scanning data, collected ina  sngle run with a repetititon time (TR) of 2s.
+
+```{r, message=FALSE,fig.width = 6, fig.height = 4}
+library(fmrireg)
+
+TR <- 2
+onsets <- seq(0, 10*12, by=12)
+reg <- regressor(onsets, HRF_SPMG1, duration=0)
+vals <- evaluate(reg, seq(0,140,by=TR))
+plot(seq(0,140,by=TR), vals, type='l', xlab="Time", ylab="BOLD response")
+```
+
+## Building fMRI regressors from event onsets with varying duration
+
+```{r, message=FALSE,fig.width = 6, fig.height = 4}
+library(fmrireg)
+
+TR <- 2
+
+onsets <- seq(0, 10*12, length.out=10)
+durs <- seq(1,length(onsets))
+
+reg <- regressor(onsets, HRF_SPMG1, duration=durs)
+vals <- evaluate(reg, seq(0,140,by=TR))
+plot(seq(0,140,by=TR), vals, type='l', xlab="Time", ylab="BOLD response")
+```
+
+## Building fMRI regressors from event onsets with varying amplitude
+
+```{r, message=FALSE,fig.width = 6, fig.height = 4}
+library(fmrireg)
+
+TR <- 2
+
+onsets <- seq(0, 10*12, length.out=10)
+amp <- seq(1,length(onsets))
+
+reg <- regressor(onsets, HRF_SPMG1, amplitude=amp)
+vals <- evaluate(reg, seq(0,140,by=TR))
+plot(seq(0,140,by=TR), vals, type='l', xlab="Time", ylab="BOLD response")
+```

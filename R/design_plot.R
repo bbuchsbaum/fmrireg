@@ -1,4 +1,7 @@
 
+
+#' design_plot
+#' 
 #' @importFrom ggplot2 ggplot aes_string aes
 #' @import shiny
 design_plot <- function(fmrimod) {

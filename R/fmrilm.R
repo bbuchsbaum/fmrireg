@@ -42,7 +42,7 @@ fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset,
   model
 }
   
-#' @importFrom foreach
+#' @importFrom foreach foreach
 runwise_lm <- function(dset, model, conlist) {
     chunks <- exec_strategy("runwise")(dset)
     

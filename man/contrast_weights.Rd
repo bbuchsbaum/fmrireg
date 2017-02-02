@@ -17,7 +17,7 @@ contrast_weights(x, term, ...)
 
 \method{contrast_weights}{event_model}(x)
 
-\method{design_matrix}{convolved_term}(x)
+\method{design_matrix}{convolved_term}(x, blockid = NULL)
 
 matrix_term(varname, mat)
 }

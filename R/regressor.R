@@ -72,7 +72,6 @@ evaluate.regressor <- function(x, grid, precision=.1) {
   
   nidx <- nidx[valid]
 
-  
   for (i in seq_along(valid.ons)) { 
     grid.idx <- seq(nidx[i], min(nidx[i] + dspan, length(grid)))             
     relOns <- grid[grid.idx] - valid.ons[i]    

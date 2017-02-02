@@ -4,10 +4,11 @@
 \alias{baseline_model}
 \title{baseline_model}
 \usage{
-baseline_model(basis = "bs", degree = 5, sampling_frame,
-  nuisance_list = NULL)
+baseline_model(basis = "bs", degree = 5, sframe, nuisance_list = NULL)
 }
 \arguments{
+\item{sframe}{sframe a \code{sampling_frame} object}
+
 \item{nuisance_list}{a list of nusiance matrices, one per block}
 
 \item{baseline_model}{}
