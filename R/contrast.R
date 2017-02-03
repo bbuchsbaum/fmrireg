@@ -80,7 +80,6 @@ fit_stats <- function(lmfit) {
   
 }
   
-}
 #' fit_contrasts
 #' 
 #' @param lmfit the \code{lm} object

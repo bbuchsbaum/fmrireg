@@ -324,9 +324,16 @@ cells.convolved_term <- function(x) {
   
 }
 
+#' @export
 conditions.fmri_term <- function(x) {
   colnames(design_matrix(x))
 }
+
+#' @export
+conditions.convolved_term <- function(x) {
+  colnames(x$design_matrix)
+}
+
 
 
 #' @export
@@ -460,6 +467,7 @@ convolve_design <- function(hrf, dmat, globons, durations) {
 }
 
 #' @importFrom tibble as_tibble
+#' @importFrom dplyr group_by select do ungroup
 #' @export
 convolve.event_term <- function(x, hrf, sframe, drop.empty=TRUE) {
   globons <- global_onsets(sframe, x$onsets, x$blockids)
@@ -474,14 +482,14 @@ convolve.event_term <- function(x, hrf, sframe, drop.empty=TRUE) {
   ncond <- ncol(dmat)
 
   cmat <- dmat %>% dplyr::mutate(.blockids=blockids, .globons=globons, .durations=durations) %>% 
-    group_by(.blockids) %>%
-    do({
-      d <- select(., 1:ncond)
+    dplyr::group_by(.blockids) %>%
+    dplyr::do({
+      d <- dplyr::select(., 1:ncond)
       reg <- convolve_design(hrf, d, .$.globons, .$.durations)
       sam <- samples(sframe, blockids=as.integer(as.character(.$.blockids[1])), global=TRUE)
       ret <- do.call(cbind, lapply(reg, function(r) evaluate(r, sam)))
       tibble::as_tibble(ret)
-  }) %>% ungroup() %>% select(-.blockids)
+  }) %>% dplyr::ungroup() %>% dplyr::select(-.blockids)
   
  
   if (nbasis(hrf) > 1) {
@@ -569,8 +577,8 @@ print.convolved_term <- function(object) {
   cat("  ", "Formula:  ", as.character(formula(object$evterm)), "\n")
   cat("  ", "Num Events: ", nrow(object$evterm$event_table), "\n")
   cat("  ", "Num Rows: ", nrow(design_matrix(object)), "\n")
-  cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n\n")
-  cat("  ", "Conditions: ", conditions(object), "\n\n")
+  cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n")
+  cat("  ", "Conditions: ", conditions(object), "\n")
   cat("  ", "Term Types: ", paste(sapply(object$evterm$events, function(ev) class(ev)[[1]])))
 }
 

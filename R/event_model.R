@@ -302,11 +302,43 @@ print.event_model <- function(object) {
   cat(" ", "Num Blocks: ", length(unique(object$blockids)), "\n")
   #cat(" ", "Length of Blocks: ", paste(object$model_spec$blocklens, collapse=", "), "\n")
   for (i in 1:length(terms(object))) {
+    cat("\n")
     t <- terms(object)[[i]]
     cat("Term:", i, " ")
     print(t)
     cat("\n")
   }
+  
+}
+
+#' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap xlab theme_bw
+#' @importFrom tidyr gather
+#' @export
+plot.event_model <- function(x, term_name=NULL) {
+  all_terms <- terms(x)
+  term_names <- names(all_terms)
+  
+  sframe <- x$sampling_frame
+  
+  dflist <- lapply(all_terms, function(term) {
+    dm1 <- tibble::as_tibble(design_matrix(term))
+    dm1$.block <- sframe$blockids
+    dm1$.time <- sframe$time
+    cnames <- conditions(term)
+    tidyr::gather(dm1, condition, value, -.time, -.block)
+  })
+  
+  names(dflist) <- term_names
+  
+  if (is.null(term_name)) {
+    tn <- term_names[1]
+    dfx <-  dflist[[tn]]
+  } else {
+    dfx <-  dflist[[term_name]]
+  }
+  
+  ggplot2::ggplot(dfx, aes_string(x=".time", y="value", colour="condition")) + geom_line() + facet_wrap(~ .block, ncol=1) +
+    xlab("Time") + theme_bw(14)
   
 }
   

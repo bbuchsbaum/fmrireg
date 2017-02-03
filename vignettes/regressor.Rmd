@@ -1,5 +1,5 @@
 ---
-title: "Hemodynamic Response Functions"
+title: "Building Regressors"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -27,10 +27,8 @@ plot(seq(0,140,by=TR), vals, type='l', xlab="Time", ylab="BOLD response")
 ## Building fMRI regressors from event onsets with varying duration
 
 ```{r, message=FALSE,fig.width = 6, fig.height = 4}
-library(fmrireg)
 
 TR <- 2
-
 onsets <- seq(0, 10*12, length.out=10)
 durs <- seq(1,length(onsets))
 
@@ -42,10 +40,8 @@ plot(seq(0,140,by=TR), vals, type='l', xlab="Time", ylab="BOLD response")
 ## Building fMRI regressors from event onsets with varying amplitude
 
 ```{r, message=FALSE,fig.width = 6, fig.height = 4}
-library(fmrireg)
 
 TR <- 2
-
 onsets <- seq(0, 10*12, length.out=10)
 amp <- seq(1,length(onsets))
 
@@ -53,3 +49,16 @@ reg <- regressor(onsets, HRF_SPMG1, amplitude=amp)
 vals <- evaluate(reg, seq(0,140,by=TR))
 plot(seq(0,140,by=TR), vals, type='l', xlab="Time", ylab="BOLD response")
 ```
+
+## Building fMRI regressors from event onsets with Bspline basis functions
+
+```{r, message=FALSE,fig.width = 6, fig.height = 4}
+
+TR <- 2
+onsets <- seq(0, 10*12, length.out=10)
+reg <- regressor(onsets, HRF_BSPLINE)
+vals <- evaluate(reg, seq(0,140,by=TR))
+matplot(seq(0,140,by=TR), vals, type='l', xlab="Time", ylab="BOLD response")
+```
+
+

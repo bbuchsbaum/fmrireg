@@ -1,0 +1,72 @@
+---
+title: "Event Models"
+author: "Bradley R. Buchsbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## fMRI Event Models
+
+An "event model" is a description of an fMRI experiment, which consists of a collection of experimental "events" (stimuli/conditions/ rsponses) which are embedded in an experimental design. By convolving each event type with a hemodynamic response function we from a set of regressors that are used to model and make inferences about the BOLD response.
+
+## A simple fMRI design
+
+Consider a basic design, consisting of four stimulus types, each repeated 4 times over the course of a single scanning run. The stimuli are pictures of *faces*, *scenes*, *tools* and *object* presented for 2s a piece in a pseudorandom order. There is a uniformly distributed (4-7s) inter-stimulus interval (ISI) separating each stimulus presentation.
+
+```{r, message=FALSE,fig.width = 6, fig.height = 4}
+library(fmrireg)
+## the fourstimulus types
+cond <- c("face", "scene", "tool", "object")
+NSTIM <- length(cond)*4
+
+## construct a design table
+design <- data.frame(stim=factor(sample(rep(cond, 4))), 
+                     ISI=sample(4:7, 16, replace=TRUE), 
+                     run=rep(1, NSTIM))
+
+## calculate the event onsets
+design$onset <- cumsum(design$ISI+2) -2
+
+## create a 'sampling_frame' describing the temporal outline of the scan consisting of 70 images collected every once every 2 seconds.
+TR <- 2
+sframe <- sampling_frame(blocklens=70, TR)
+
+## create the event model d
+emodel <- event_model(onset ~ hrf(stim), data=design, block = ~ run, sampling_frame=sframe)
+print(emodel)
+plot(emodel)
+```
+
+## A simple fMRI design with multiple blocks
+
+```{r, message=FALSE,fig.width = 6, fig.height = 4}
+
+cond <- c("face", "scene", "tool", "object")
+NSTIM <- length(cond)*4
+
+## construct a design table with two blocks
+design1 <- data.frame(stim=factor(sample(rep(cond, 4))), 
+                     ISI=sample(4:7, 16, replace=TRUE), 
+                     run=rep(1, NSTIM))
+design2 <- data.frame(stim=factor(sample(rep(cond, 4))), 
+                     ISI=sample(4:7, 16, replace=TRUE), 
+                     run=rep(2, NSTIM))
+design1$onset <- cumsum(design1$ISI+2) -2
+design2$onset <- cumsum(design2$ISI+2) -2
+
+design <- rbind(design1, design2)
+
+## create a 'sampling_frame' describing the temporal outline of the scan consisting of 70 images collected every once every 2 seconds.
+TR <- 2
+sframe <- sampling_frame(blocklens=c(70,70), TR)
+
+## create the event model d
+emodel <- event_model(onset ~ hrf(stim), data=design, block = ~ run, sampling_frame=sframe)
+print(emodel)
+plot(emodel)
+```
