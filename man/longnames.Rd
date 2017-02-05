@@ -4,11 +4,14 @@
 \alias{longnames}
 \alias{longnames.convolved_term}
 \alias{longnames.matrix_term}
+\alias{shortnames.convolved_term}
 \title{longnames}
 \usage{
 longnames(x, ...)
 
 \method{longnames}{convolved_term}(x)
+
+\method{shortnames}{convolved_term}(x)
 
 \method{longnames}{matrix_term}(x)
 }

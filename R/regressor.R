@@ -28,9 +28,14 @@ regressor <- function(onsets, hrf, duration=0, amplitude=1, span=24) {
     amplitude = rep(as.vector(amplitude), length(onsets))
   }
   
-  keep <- which(amplitude !=0)
   
-  ret <- list(onsets=onsets[keep],hrf=hrf, eval=hrf$hrf, duration=duration[keep],amplitude=amplitude[keep],span=span)  
+  keep <- which(amplitude != 0)
+  empty <- length(keep) == 0
+  ret <- if (!empty) {
+    list(onsets=onsets[keep],hrf=hrf, eval=hrf$hrf, duration=duration[keep],amplitude=amplitude[keep],span=span)  
+  } else {
+    list(onsets=NA,hrf=hrf, eval=hrf$hrf, duration=0,amplitude=0,span=span)  
+  }
   class(ret) <- c("regressor", "list")
   ret
 }
@@ -49,6 +54,12 @@ dots <- function(...) {
 evaluate.regressor <- function(x, grid, precision=.1) {
   nb <- nbasis(x)
   dspan <- x$span/median(diff(grid)) 
+  
+  if (is.na(x$onsets) || length(x$onsets) == 0) {
+    outmat <- matrix(0, length(grid), nb)
+    return(outmat)
+  }
+    
   outmat <- matrix(0, length(grid), length(x$onsets) * nb)
   
   
@@ -156,7 +167,7 @@ print.regressor <- function(object) {
   
   cat("\n")
   
-  if (all(amps == amps[1])) {
+  if (!is.na(amps[1]) && all(amps == amps[1])) {
     cat(paste("amplitudes: ", amps[1], "for all events"))
   } else {     
     cat(paste("amplitudes: ", paste(amps[1:N], collapse=" "), "..."))

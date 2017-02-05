@@ -284,6 +284,19 @@ longnames.convolved_term <- function(x) {
 
 }
 
+#' @export
+#' @rdname longnames
+shortnames.convolved_term <- function(x) {
+  # ignores exclude.basis
+  term.cells <- cells(x)
+  # ignores exclude.basis
+  apply(as.matrix(sapply(1:ncol(term.cells), 
+                         function(i) {
+                           term.cells[[i]]
+                         })), 1, paste, collapse=":")
+  
+}
+
 
 #' @export
 #' @rdname longnames
@@ -314,7 +327,7 @@ print.event_model <- function(object) {
 #' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap xlab theme_bw
 #' @importFrom tidyr gather
 #' @export
-plot.event_model <- function(x, term_name=NULL) {
+plot.event_model <- function(x, term_name=NULL, longnames=TRUE) {
   all_terms <- terms(x)
   term_names <- names(all_terms)
   
@@ -322,9 +335,13 @@ plot.event_model <- function(x, term_name=NULL) {
   
   dflist <- lapply(all_terms, function(term) {
     dm1 <- tibble::as_tibble(design_matrix(term))
+    if (!longnames) {
+      names(dm1) <- shortnames(term)
+    }
     dm1$.block <- sframe$blockids
     dm1$.time <- sframe$time
-    cnames <- conditions(term)
+   
+    
     tidyr::gather(dm1, condition, value, -.time, -.block)
   })
   

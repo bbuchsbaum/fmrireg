@@ -16,7 +16,7 @@ A hemodynamic response function (HRF) is used to model the temporal evoluation o
 
 There are a number of pre-defined HRFs in `fmrireg` that make it easy to work with HRFs. For example, we can use the SPM "canonical" HRF as follows:
 
-```{r, message=FALSE}
+```{r, message=FALSE, fig.width = 7, fig.height = 5}
 library(fmrireg)
 
 ## 'spm canonoical' hrf
@@ -32,7 +32,7 @@ lines(seq(0,20,by=.1), vals2, type="l", col=2)
 
 ## Changing Default Parameters
 
-```{r, message=FALSE}
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
 library(purrr)
 
 ## the 'HRF' constructor take a function and returns instantiates and HRF object. Several 'hrf' functions are provided which have default parameters. To change these parameters, we use the 'partial' function from the 'purrr' library:
@@ -60,7 +60,7 @@ lines(seq(0,20,by=.1), vals3, type="l", col=3)
 
 Sometimes we want to model an event with multiple "basis functions". In this case the HRF is a function from time -> *d*-dimensional vector, where *d* is the dimnenson of the basis set.
 
-```{r, message=FALSE}
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
 
 ## A third degree B-Spline with four bases.
 hrf_bs_4 <- HRF(partial(hrf_bspline, N=4), name="hrf_bspline_4")
@@ -89,7 +89,36 @@ matplot(bmat1, xlab="Time", ylab="BOLD Response", type='l', main="SPM + 1st and 
 ```
 
 
+## Creating "lagged" and "blocked" HRFs
 
+In some cases, it might be useful to create an HRF function that has a temporal offset (a "lag" or "delay"). We might also want to create an HRF that has a fixed width or duration that is larger than zero. Below are examples of suched lagged and blocked HRFs.
+
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+
+## constructing a series of lagged HRFs
+hrf_lag_1 <- hrf_gaussian %>% gen_hrf_lagged(1) %>% HRF(name="hrf_lagged_1") 
+hrf_lag_3 <- hrf_gaussian %>% gen_hrf_lagged(3) %>% HRF(name="hrf_lagged_3") 
+hrf_lag_5 <- hrf_gaussian %>% gen_hrf_lagged(5) %>% HRF(name="hrf_lagged_5") 
+time <- seq(0,22,by=.2)
+plot(time, evaluate(hrf_lag_1,time), type='l', xlab="time", ylab="BOLD")
+lines(time, evaluate(hrf_lag_3,time), col=2)
+lines(time, evaluate(hrf_lag_5,time), col=3)
+
+## constructing blocked HRFs
+hrf_block_1 <- hrf_gaussian %>% gen_hrf_blocked(width=1) %>% HRF(name="hrf_blocked_1") 
+hrf_block_3 <- hrf_gaussian %>% gen_hrf_blocked(width=3) %>% HRF(name="hrf_blocked_3") 
+hrf_block_5 <- hrf_gaussian %>% gen_hrf_blocked(width=5) %>% HRF(name="hrf_blocked_5") 
+plot(time, evaluate(hrf_block_1,time), type='l', xlab="time", ylab="BOLD")
+lines(time, evaluate(hrf_block_3,time), col=2)
+lines(time, evaluate(hrf_block_5,time), col=3)
+
+
+```
+
+## Constructing a custom basis set using lagged and blocked HRFs
+
+Rather than using a b-spline basis set, we could construct our own set of functions using a combination of lagged and/or blocked HRFs.
 
 
 
