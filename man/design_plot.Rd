@@ -4,7 +4,7 @@
 \alias{design_plot}
 \title{design_plot}
 \usage{
-design_plot(fmrimod)
+design_plot(fmrimod, longnames = FALSE)
 }
 \description{
 design_plot

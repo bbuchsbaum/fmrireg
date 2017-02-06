@@ -6,6 +6,11 @@
 \usage{
 hrf_time(t, maxt)
 }
+\arguments{
+\item{t}{time in seconds}
+
+\item{maxt}{the maximum time point in domain}
+}
 \description{
 hrf_time
 }

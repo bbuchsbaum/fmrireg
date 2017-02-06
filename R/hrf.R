@@ -1,24 +1,45 @@
 #' @import splines
 NULL
 
-# helper function
-createHRF <- function(HRF, ...) {
+#' gen_hrf
+#' 
+#' @param hrf a function mapping from time --> signal
+#' @param lag optional lag in seconds
+#' @param width optional block width in seconds
+#' @param ... extra parameters for the \code{hrf} function
+#' @export
+gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, ...) {
   .orig <- list(...)
+  
+  if (!is.null(width)) {
+    assert_that(width > 0)
+    hrf <- gen_hrf_blocked(hrf, width=width, precision=precision)
+  }
+  
+  if (lag > 0) {
+    #force(hrf)
+    hrf <- gen_hrf_lagged(hrf, lag=lag)
+  }
   
   f <- if (length(.orig) > 0) {
     ret <- function(t) {
-      do.call(HRF, c(list(t), .orig))
+      do.call(hrf, c(list(t), .orig))
     }
     attr(ret, "params") <- .orig
     ret
   } else {
-    HRF
+    hrf
   }
   
   f
 }
 
-createHRFSet <- function(...) {
+
+#' gen_hrf_set
+#' 
+#' @param ... a list of hrf functions
+#' @export
+gen_hrf_set <- function(...) {
   hrflist <- list(...)
   function(t) {
     do.call("cbind", lapply(hrflist, function(fun) fun(t)))
@@ -52,13 +73,14 @@ HRF <- function(fun, name, nbasis=1, param_names=NULL) {
   
   scale_factor <- 1/peak
   
-  ret <- list(hrf=fun, name=name, nbasis=as.integer(nbasis), param_names=param_names, scale_factor=scale_factor)
   
-  class(ret) <- "HRF"
-  ret
+  structure(fun, name=name, 
+            nbasis=as.integer(nbasis), 
+            param_names=param_names, 
+            scale_factor=scale_factor, 
+            class=c("HRF", "function"))
+  
 }
-
-
 
 #' @importFrom numDeriv grad
 makeDeriv <- function(HRF, n=1) {
@@ -69,9 +91,47 @@ makeDeriv <- function(HRF, n=1) {
   }
 }
 
+#' gen_hrf_lagged
+#' 
+#' @param hrf the underlying hrf function to shift
+#' @param lag the lag/delay in seconds
+#' @export
+gen_hrf_lagged <- function(hrf, lag=2) {
+  force(hrf)
+  function(t) {
+    hrf(t-lag)
+  }
+}
 
+
+#' gen_hrf_blocked
+#' 
+#' @inheritParams hrf_blocked
+#' @importFrom purrr partial
+#' @export
+gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1) {
+  force(hrf)
+  purrr::partial(hrf_block, hrf=hrf, width=width, precision=precision)
+}
+
+#' hrf_block
+#' 
+#' @param t time in seconds
+#' @param hrf the underlying hemodynamic response function
+#' @param width the fixed width of the response in seconds.
+#' @param precision the sampling precision in seconds
+#' @export
+hrf_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1) {
+  Reduce("+", lapply(seq(0, width, by=precision), function(offset) {
+    hrf(t-offset)
+  }))
+}
+  
+  
 #' hrf_time
 #' 
+#' @param t time in seconds
+#' @param maxt the maximum time point in domain
 #' @export
 hrf_time <- function(t, maxt) {
   ifelse(t > 0 & t < maxt, t, 0)
@@ -147,7 +207,7 @@ HRF_GAUSSIAN <- HRF(hrf_gaussian, "gaussian", param_names=c("mean", "sd"))
 
 #' @export
 #' @rdname HRF
-HRF_BSPLINE <- HRF(createHRF(hrf_bspline), "bspline", 5)
+HRF_BSPLINE <- HRF(gen_hrf(hrf_bspline), "bspline", 5)
 
 #' @export
 #' @rdname HRF
@@ -156,12 +216,12 @@ HRF_SPMG1 <- HRF(hrf_spmg1,
 
 #' @export
 #' @rdname HRF
-HRF_SPMG2 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf_spmg1)), 
+HRF_SPMG2 <- HRF(gen_hrf_set(hrf_spmg1, makeDeriv(hrf_spmg1)), 
                  "SPMG2", nbasis=2, param_names=c("A1", "A2"))
 
 #' @export
 #' @rdname HRF
-HRF_SPMG3 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeriv(hrf_spmg1))), 
+HRF_SPMG3 <- HRF(gen_hrf_set(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeriv(hrf_spmg1))), 
                  "SPMG3", nbasis=3, param_names=c("A1", "A2"))
 
 
@@ -174,14 +234,14 @@ HRF_SPMG3 <- HRF(createHRFSet(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDer
 #' @export
 evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.1) {
   if (duration < precision) {
-    x$hrf(grid)*amplitude*x$scale_factor       
+    x(grid)*amplitude*attr(x, "scale_factor")       
   } else if (nbasis(x) == 1) {
     rowSums(sapply(seq(0, duration, by=precision), function(offset) {
-                x$hrf(grid-offset)*amplitude*x$scale_factor  
+                x(grid-offset)*amplitude*attr(x, "scale_factor") 
     }))
   } else {
     Reduce("+", lapply(seq(0, duration, by=precision), function(offset) {
-      x$hrf(grid-offset)*amplitude*x$scale_factor  
+      x(grid-offset)*amplitude*attr(x, "scale_factor")   
     }))
   }
 }
@@ -190,8 +250,11 @@ evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1) {
   evaluate(x$hrf, grid,amplitude, duration, precision)
 }
 
-nbasis.HRF <- function(x) x$nbasis
-
+nbasis.HRF <- function(x) attr(x, "nbasis")
+#' getHRF
+#' 
+#' @param name the name of the hrf function
+#' @param nbasis the numbe rof basis functions (if relevant)
 #' @export
 getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis=5) {
 	
@@ -201,7 +264,7 @@ getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis
 			spmg1=HRF_SPMG1,
 			spmg2=HRF_SPMG2,
 			spmg3=HRF_SPMG3,
-			bspline=HRF(createHRF(hrf_bspline, N=nbasis), "bspline", nbasis))
+			bspline=HRF(gen_hrf(hrf_bspline, N=nbasis), "bspline", nbasis))
 	
 	if (is.null(hrf)) {
 		stop("could not find hrf named: ", name)
