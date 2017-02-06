@@ -12,7 +12,7 @@
 #' @param strategy
 #' @param 
 #' @export
-#' @importFrom foreach foreach
+#' @importFrom foreach foreach %do% %dopar%
 fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, contrasts=NULL, 
                      strategy=c("runwise", "slicewise", "all")) {
@@ -61,9 +61,12 @@ runwise_lm <- function(dset, model, conlist) {
     
       conres <- lapply(conlist, function(con) fit_contrasts(lm.1, con, attr(con, "term_indices")))
       names(conres) <- names(conlist)
-      browser()
-      list(conres=conres)
+      
+      bstats <- betastats(lm.1)
+      list(conres=conres, bstats=bstats)
     }
+    
+    browser()
 }
   
     

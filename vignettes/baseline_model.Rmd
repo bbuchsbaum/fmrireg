@@ -1,0 +1,61 @@
+---
+title: "Baseline Model"
+author: "Bradley R. Buchsbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## fMRI Baseline Model
+
+An "baseline model" refers to the set of regressors used to capture variance associated with noise signals in the fMRI time-series data. These regressors are not formed by convolving a hemodynamic response with event onsets, but rather directly model sources of variance in the data. Low-frequency baseline trends are often modeled with a set of basis functions, such as b-splines, polynomial regressors, or a fourier basis. Nuisance trends can also be derived from the data itself, for example, the global signal mean, motion parameters, estimated noise components via PCA or ICA. 
+
+
+## Basic baseline model with b-splines and polynomials
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+devtools::load_all()
+TR <- 2
+sframe <- sampling_frame(blocklens=c(100,100), TR)
+bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe)
+print(bmodel)
+plot(bmodel)
+
+
+
+bmodel2 <- baseline_model(basis="poly", degree=5, sframe=sframe)
+plot(bmodel2)
+
+```
+
+## Adding arbitrary nuisance regressors
+
+In addiiton to structured basis sets, we can also add arbitrary signals to the baseline model. Such singals are also organized by block on the assumption that nuisance signals are often block-specific and thus do not span across scans. To add a set of nusiance variables to the baseline model, then, they should be split by block and placed in a `list`.
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+devtools::load_all()
+TR <- 2
+sframe <- sampling_frame(blocklens=c(100,100), TR)
+
+## generate two arbitrary nusiance signals.
+nuis1 <- rnorm(100*2)
+nuis2 <- rnorm(100*2)
+
+## construct a set of data.frames, each with two columns (nuis1 and nuis2)
+nuislist <- split(as.data.frame(cbind(nuis1, nuis2)), blockids(sframe))
+
+bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe, nuisance_list=nuislist)
+print(terms(bmodel))
+plot(bmodel, term_name="nuisance")
+
+```
+
+
+
+
+
+

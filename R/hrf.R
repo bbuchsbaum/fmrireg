@@ -73,13 +73,14 @@ HRF <- function(fun, name, nbasis=1, param_names=NULL) {
   
   scale_factor <- 1/peak
   
-  ret <- list(hrf=fun, name=name, nbasis=as.integer(nbasis), param_names=param_names, scale_factor=scale_factor)
   
-  class(ret) <- "HRF"
-  ret
+  structure(fun, name=name, 
+            nbasis=as.integer(nbasis), 
+            param_names=param_names, 
+            scale_factor=scale_factor, 
+            class=c("HRF", "function"))
+  
 }
-
-
 
 #' @importFrom numDeriv grad
 makeDeriv <- function(HRF, n=1) {
@@ -233,14 +234,14 @@ HRF_SPMG3 <- HRF(gen_hrf_set(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeri
 #' @export
 evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.1) {
   if (duration < precision) {
-    x$hrf(grid)*amplitude*x$scale_factor       
+    x(grid)*amplitude*attr(x, "scale_factor")       
   } else if (nbasis(x) == 1) {
     rowSums(sapply(seq(0, duration, by=precision), function(offset) {
-                x$hrf(grid-offset)*amplitude*x$scale_factor  
+                x(grid-offset)*amplitude*attr(x, "scale_factor") 
     }))
   } else {
     Reduce("+", lapply(seq(0, duration, by=precision), function(offset) {
-      x$hrf(grid-offset)*amplitude*x$scale_factor  
+      x(grid-offset)*amplitude*attr(x, "scale_factor")   
     }))
   }
 }
@@ -249,7 +250,7 @@ evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1) {
   evaluate(x$hrf, grid,amplitude, duration, precision)
 }
 
-nbasis.HRF <- function(x) x$nbasis
+nbasis.HRF <- function(x) attr(x, "nbasis")
 #' getHRF
 #' 
 #' @param name the name of the hrf function

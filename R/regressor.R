@@ -32,9 +32,9 @@ regressor <- function(onsets, hrf, duration=0, amplitude=1, span=24) {
   keep <- which(amplitude != 0)
   empty <- length(keep) == 0
   ret <- if (!empty) {
-    list(onsets=onsets[keep],hrf=hrf, eval=hrf$hrf, duration=duration[keep],amplitude=amplitude[keep],span=span)  
+    list(onsets=onsets[keep],hrf=hrf, eval=hrf, duration=duration[keep],amplitude=amplitude[keep],span=span)  
   } else {
-    list(onsets=NA,hrf=hrf, eval=hrf$hrf, duration=0,amplitude=0,span=span)  
+    list(onsets=NA,hrf=hrf, eval=hrf, duration=0,amplitude=0,span=span)  
   }
   class(ret) <- c("regressor", "list")
   ret
@@ -115,10 +115,10 @@ evaluate.regressor <- function(x, grid, precision=.1) {
 nbasis.regressor <- function(x) nbasis(x$hrf)
 
 #' @export
-nbasis.HRF <- function(x) x$nbasis
+nbasis.HRF <- function(x) attr(x, "nbasis")
 
 #' @export
-nbasis.hrfspec <- function(x) x$hrf$nbasis
+nbasis.hrfspec <- function(x) nbasis(x$hrf)
 
 #' @export
 onsets.regressor <- function(x) x$onsets
