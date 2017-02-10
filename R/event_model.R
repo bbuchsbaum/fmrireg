@@ -106,7 +106,7 @@ extract_covariates <- function(.terms, variables, resp, etab) {
   varnames <- sapply(vars, deparse, width.cutoff = 500)[-1]
   ind.vars <- varnames[-resp] 
   orig.covar.names <- ind.vars[which(sapply(variables[-resp], function(obj) is.numeric(obj) || .is.parametric.basis(obj)))]
-  new.covar.names <- names(events(etab))[sapply(events(etab), isContinuous)]
+  new.covar.names <- names(events(etab))[sapply(events(etab), is_continuous)]
   covar.names <- as.list(orig.covar.names)
   names(covar.names) <- new.covar.names
   covar.names
@@ -195,6 +195,13 @@ contrast_weights.convolved_term <- function(x) {
 
 #' @export
 #' @rdname contrast_weights
+FContrasts.convolved_term <- function(x) {
+  Fcontrasts(x$evterm)
+}
+
+
+#' @export
+#' @rdname contrast_weights
 contrast_weights.fmri_term <- function(x) { stop("unimplemented") }
 
 contrast_weights.fmri_model <- function(x) { contrast_weights(x$event_model) }
@@ -226,6 +233,31 @@ contrast_weights.event_model <- function(x) {
 
   
   ret
+}
+
+Fcontrasts.event_model <- function(x) {
+  browser()
+  tind <- x$term_indices
+  len <- length(conditions(x))
+  tnames <- names(terms(x))
+  ret <- unlist(lapply(seq_along(terms(x)), function(i) {
+    cwlist <- Fcontrasts(terms(x)[[i]]$evterm)
+    if (!is.null(cwlist)) {
+      ret <- lapply(cwlist, function(cw) {
+        out <- numeric(len)
+        out[tind[[i]]] <- as.vector(cw$weights)
+        attr(out, "term_indices") <- as.vector(tind[[i]])
+        out
+      })
+      
+      cnames <- sapply(cwlist, function(cw) cw$name)
+      
+      prefix <- tnames[i]
+      names(ret) <- paste0(prefix, "#", cnames)
+      
+      ret
+    }
+  }), recursive=FALSE)
 }
   
   

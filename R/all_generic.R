@@ -21,22 +21,24 @@ shortnames <- function(x, ...) UseMethod("shortnames")
 contrast_weights <- function(x, term, ...) UseMethod("contrast_weights")
 
 
-#' parentTerms
+#' parent_terms
 #' 
 #' @param x the object
 #' @export
-parentTerms <- function(x) UseMethod("parentTerms")
+parent_terms <- function(x) UseMethod("parent_terms")
 
 
 #' cells
 #' 
 #' return the experimental cells that are in a model term
+#' 
 #' @export
 cells <- function(x, ...) UseMethod("cells")
 
 #' conditions
 #' 
 #' return the set of condition labels associated with a model term
+#' 
 #' @param x the model term
 #' @param ...
 #' @export
@@ -53,11 +55,17 @@ conditions <- function(x, ...) UseMethod("conditions")
 #' @param ...
 convolve <- function(x, hrf, samplingFrame,...) UseMethod("convolve")
 
-#' isContinuous
+#' is_continuous
 #' 
 #' checks to see if a variable is continuous e.g. numeric/non-categorical
 #' @export
-isContinuous <- function(x) UseMethod("isContinuous")
+is_continuous <- function(x) UseMethod("is_continuous")
+
+#' is_categorical
+#' 
+#' checks to see if a variable is cateogircal e.g. factor-based
+#' @export
+is_categorical <- function(x) UseMethod("is_categorical")
 
 #' levels
 #' 
@@ -81,6 +89,23 @@ columns <- function(x) UseMethod("columns")
 #' @param x the term
 #' @export
 event_table <- function(x) UseMethod("event_table")
+
+
+#' event_terms
+#' 
+#' extract list of 'event_term's from model object
+#' 
+#' @param x the model object
+#' @export
+event_terms <- function(x) UseMethod("event_terms")
+
+#' baseline_terms
+#' 
+#' extract list of 'baseline_term's from model object
+#' 
+#' @param x the model object
+#' @export
+baseline_terms <- function(x) UseMethod("baseline_terms")
 
 
 #' design_matrix
@@ -187,7 +212,13 @@ blockids  <-  function(x) UseMethod("blockids")
 #' @export
 blocklens  <-  function(x, ...) UseMethod("blocklens")
 
-
+#' Fcontrasts
+#' 
+#' generate a set of Fcontrasts for a model term
+#' 
+#' @param x the term
+#' @export
+Fcontrasts <- function(x, ...) UseMethod("Fcontrasts")
 
 #' estcon
 #' 
@@ -202,3 +233,5 @@ estcon <- function(x, fit, ...) UseMethod("estcon")
 #' @param model_spec the model specification
 #' @export
 construct <- function(x, model_spec,...) UseMethod("construct")
+
+

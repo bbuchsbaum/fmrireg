@@ -55,7 +55,6 @@ fit_Ftests <- function(object) {
   
 }
 
-
 beta_stats <- function(lmfit) {
   Qr <- stats:::qr.lm(lmfit)
   cov.unscaled <- chol2inv(Qr$qr)

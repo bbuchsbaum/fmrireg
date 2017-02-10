@@ -49,7 +49,7 @@ is.strictly.increasing <- function(vec) {
 #' 
 #' Create a event model term from a named list of variables.
 #' 
-#' @param evlist
+#' @param evlist a list of named variables
 #' @param onsets the onset times from the experimental events in seconds
 #' @param blockids the block number associated with each onset
 #' @param durations
@@ -58,8 +58,8 @@ is.strictly.increasing <- function(vec) {
 #' @rdname event_term-class
 event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   assert_that(is.increasing(blockids))
-  
-  if (is.null(subset)) { subset=rep(TRUE, length(evs[[1]]$onsets)) }
+            
+  if (is.null(subset)) { subset=rep(TRUE, length(onsets)) }
   
   if (length(durations) == 1) {
     durations <- rep(durations, length(onsets))
@@ -70,14 +70,14 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
                                                  onsets=onsets[subset], 
                                                  blockids=blockids[subset], 
                                                  durations=durations[subset]))
-  names(evs) <- sapply(evs, function(ev) ev$varname)
   
+  names(evs) <- sapply(evs, function(ev) ev$varname)
   
   pterms <- unlist(lapply(evs, function(ev) ev$varname))
   
   len <- sum(subset)
   etab <- tibble::as_data_frame(lapply(pterms, function(termname) {
-    if (isContinuous(evs[[termname]])) {
+    if (is_continuous(evs[[termname]])) {
       rep(.sanitizeName(termname), len)
     } else {
       evs[[termname]]$value
@@ -211,6 +211,7 @@ event_matrix <- function(mat, name, onsets, durations=NULL, blockids=1 ) {
 #' event_basis
 #' 
 #' Create a event set from a basis object of type \code{\linkS4class{ParametricBasis}}. 
+#' 
 #' @param basis
 #' @param onsets
 #' @param blockids
@@ -244,11 +245,11 @@ levels.event_set <- function(x) colnames(x$value)
 levels.event_basis <- function(x) seq(1, ncol(x$basis$y))
 
 #' @export
-formula.event_term <- function(x) as.formula(paste("~ ", "(", paste(parentTerms(x), collapse=":"), "-1", ")"))
+formula.event_term <- function(x) as.formula(paste("~ ", "(", paste(parent_terms(x), collapse=":"), "-1", ")"))
 
 #' @export
 levels.event_term <- function(x) {
-  facs <- x$events[!sapply(x$events, isContinuous)]
+  facs <- x$events[!sapply(x$events, is_continuous)]
   if (length(facs) == 1) {
     levels(facs[[1]])
   } else {
@@ -268,7 +269,7 @@ cells.event_factor <- function(x, drop.empty=TRUE) {
 cells.event_term <- function(x, drop.empty=TRUE) {
   evtab <- x$event_table
   evset <- tibble::as_tibble(expand.grid(lapply(x$events, levels)))
-  which.cat <- which(!sapply(x$events, isContinuous))
+  which.cat <- which(!sapply(x$events, is_continuous))
   
   evs <- tibble::as_tibble(lapply(evset[,which.cat], as.character))
   evt <- tibble::as_tibble(lapply(evtab[,which.cat], as.character))
@@ -293,7 +294,7 @@ cells.event_term <- function(x, drop.empty=TRUE) {
   
   evset <- if (nbasis(x) > 1) {
     evlist <- c(list(factor(paste("basis", 1:nbasis(x), sep = ""))), cells(x@eventTerm))
-    names(evlist) <- c("basis", parentTerms(x@eventTerm))
+    names(evlist) <- c("basis", parent_terms(x@eventTerm))
     evlist <- lapply(evlist, levels)
     ret <- expand.grid(evlist, stringsAsFactors = TRUE)
     ret[c(2:length(ret), 1)]
@@ -335,12 +336,11 @@ conditions.convolved_term <- function(x) {
 }
 
 
-
 #' @export
 conditions.event_term <- function(x, drop.empty=TRUE) {
   
   .cells <- cells(x, drop.empty=drop.empty)
-  pterms <- parentTerms(x)
+  pterms <- parent_terms(x)
   levs <- apply(.cells, 1, paste, collapse=":")
   
   splitlevs <- strsplit(levs, ":")
@@ -375,11 +375,22 @@ columns.event_basis <- function(x) paste0(.sanitizeName(x$varname), ".", levels(
 
 
 #' @export
-parentTerms.event_term <- function(x) unlist(lapply(x$events, function(ev) ev$varname))
+parent_terms.event_term <- function(x) unlist(lapply(x$events, function(ev) ev$varname))
 
 #' @export
-isContinuous.event_seq <- function(x) x$continuous
+is_continuous.event_seq <- function(x) x$continuous
 
+#' @export
+is_categorical.event_seq <- function(x) !x$continuous
+
+#' @export
+is_continuous.event_term <- function(x) all(sapply(x$events, function(x) is_continuous(x)))
+
+#' @export
+is_categorical.event_term <- function(x) !is_continuous(x)
+
+#' @export
+is_categorical.event_seq <- function(x) !x$continuous
 
 
 #' @export
@@ -504,11 +515,69 @@ convolve.event_term <- function(x, hrf, sframe, drop.empty=TRUE) {
   
 }
 
+
+Fcontrasts.event_term <- function(x) {
+  which_cat <- which(sapply(x$events, function(obj) is_categorical(obj)))
+  assert_that(length(which_cat) > 0)
+  pterms <- parent_terms(x)[which_cat]
+  evs <- x$events[which_cat]
+  cond <- conditions(x)
+  facnames <- names(evs)
+  
+  Clist <- lapply(evs, function(ev) rep(1, length(levels(ev))))
+  Dlist <- lapply(evs, function(ev) t(-diff(diag(length(levels(ev))))))
+  
+  nfac <- length(Clist)
+
+  main_effects <- lapply(length(Clist):1, function(i) {
+    Dcon <- Dlist[[i]]
+    Cs <- Clist[-i]
+    mats <- vector(nfac, mode="list")
+    mats[[i]] <- Dcon
+    mats[seq(1, nfac)[-i]] <- Cs
+    ret <- Reduce(kronecker, mats)
+    row.names(ret) <- cond
+    ret
+  })
+  
+  names(main_effects) <- facnames
+  
+  if (length(facnames) > 1) {
+    interactions <- vector(length(Clist)-1, mode="list")
+    for (i in length(Clist):2) {
+      icomb <- combn(nfac, i)
+      ret <- lapply(1:ncol(icomb), function(j) {
+        ind <- icomb[,j]
+        mats <- vector(nfac, mode="list")
+        mats[ind] <- Dlist[ind]
+        if (length(ind) < nfac) {
+          mats[-ind] <- Clist[-ind]
+        }
+      
+        cmat <- Reduce(kronecker, mats)
+        row.names(cmat) <- cond
+        cmat
+      })
+      cnames <- apply(icomb, 2, function(i) paste0(facnames[i], collapse=":"))
+      names(ret) <- cnames
+      interactions[[i-1]] <- ret
+    }
+    
+  
+    
+    return(c(main_effects, unlist(interactions, recursive=FALSE)))
+  } else {
+    main_effects
+  }
+  
+}
+                 
+
 #' @importFrom tibble as_tibble
 #' @export
 design_matrix.event_term <- function(x, drop.empty=TRUE) {
   locenv <- new.env()
-  pterms <- sapply(parentTerms(x), .sanitizeName)	
+  pterms <- sapply(parent_terms(x), .sanitizeName)	
   
   for (ev in x$events) {
     vname <- .sanitizeName(ev$varname)
