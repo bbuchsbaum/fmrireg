@@ -237,7 +237,6 @@ levels.event_variable <- function(x) x$varname
 #' @export
 levels.event_matrix <- function(x) colnames(x$value) 
 
-
 #' @export
 levels.event_set <- function(x) colnames(x$value) 
 

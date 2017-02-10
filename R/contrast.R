@@ -77,6 +77,42 @@ beta_stats <- function(lmfit) {
   ret
   
 }
+
+
+fit_Fcontrasts <- function(lmfit, conmat, colind) {
+  Qr <- stats:::qr.lm(lmfit)
+  cov.unscaled <- chol2inv(Qr$qr[colind,colind,drop=FALSE])
+  betamat <- lmfit$coefficients[colind,]
+  
+  df <- lmfit$df.residual
+  
+  rss <- colSums(lmfit$residuals^2)
+  rdf <- lmfit$df.residual
+  resvar <- rss/rdf
+  sigma <- sqrt(resvar)
+  sigma2 <- sigma^2
+  
+  #msr <- summary.lm(reg)$sigma  # == SSE / (n-p)
+  r <- nrow(conmat)
+  
+  
+  #                        -1
+  #     (Cb - d)' ( C (X'X)   C' ) (Cb - d) / r
+  # F = ---------------------------------------
+  #                 SSE / (n-p)
+  #
+  
+  cm <- solve((conmat %*% cov.unscaled %*% t(conmat)))
+  Fstat <- sapply(1:ncol(betamat), function(i) {
+    b <- betamat[,i]
+    cb <- conmat %*% b
+    Fstat <- t(cb) %*% cm %*% (cb) / r / sigma2[i]
+  })
+  
+  p <- 1-pf(Fstat,r,rdf)
+  ret <- tibble::tibble(F=Fstat, p=p)
+
+}
   
 #' fit_contrasts
 #' 
@@ -108,9 +144,8 @@ fit_contrasts <- function(lmfit, conmat, colind) {
   
   prob <- 2 * (1 - pt(abs(ct/vc), lmfit$df.residual))
   tstat <- ct/vc
-  ret <- tibble::as_tibble(cbind(as.vector(ct), as.vector(vc), as.vector(tstat), as.vector(prob)))
-  names(ret) <- c("estimate", "se", "tstat", "prob")
-  ret
+  tibble::tibble(estimate=as.vector(ct), se=as.vector(vc), tstat=as.vector(tstat), prob=as.vector(prob))
+  
 
 }
 

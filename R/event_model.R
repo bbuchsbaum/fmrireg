@@ -236,7 +236,6 @@ contrast_weights.event_model <- function(x) {
 }
 
 Fcontrasts.event_model <- function(x) {
-  browser()
   tind <- x$term_indices
   len <- length(conditions(x))
   tnames <- names(terms(x))
@@ -244,17 +243,16 @@ Fcontrasts.event_model <- function(x) {
     cwlist <- Fcontrasts(terms(x)[[i]]$evterm)
     if (!is.null(cwlist)) {
       ret <- lapply(cwlist, function(cw) {
-        out <- numeric(len)
-        out[tind[[i]]] <- as.vector(cw$weights)
+        out <- matrix(0, len, ncol(cw))
+        out[tind[[i]],] <- cw
         attr(out, "term_indices") <- as.vector(tind[[i]])
+        row.names(out) <- row.names(cw)
         out
       })
       
-      cnames <- sapply(cwlist, function(cw) cw$name)
-      
+      cnames <- names(cwlist)
       prefix <- tnames[i]
       names(ret) <- paste0(prefix, "#", cnames)
-      
       ret
     }
   }), recursive=FALSE)
