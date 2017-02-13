@@ -1,4 +1,7 @@
 
+
+
+
 fit_Ftests <- function(object) {
   w <- object$weights
   ssr <- if (is.null(w)) {
@@ -73,8 +76,14 @@ beta_stats <- function(lmfit) {
   
   prob <- 2 * (1 - pt(abs(betamat/vc), lmfit$df.residual))
   tstat <- betamat/vc
-  ret <- list(beta=betamat, se=vc, tstat=tstat)
-  ret
+  return(
+    list(
+      estimate=function() betamat,
+      stat=function() betamat/vc,
+      se=function() vc,
+      prob=function() 2 * (1 - pt(abs(betamat/vc), lmfit$df.residual)),
+      stat_type="tstat")
+  )
   
 }
 
@@ -103,14 +112,22 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
   #
   
   cm <- solve((conmat %*% cov.unscaled %*% t(conmat)))
+  
   Fstat <- sapply(1:ncol(betamat), function(i) {
     b <- betamat[,i]
     cb <- conmat %*% b
     Fstat <- t(cb) %*% cm %*% (cb) / r / sigma2[i]
   })
   
-  p <- 1-pf(Fstat,r,rdf)
-  ret <- tibble::tibble(F=Fstat, p=p)
+
+  return(
+    list(
+      estimate=function() betamat,
+      se=function() sigma2,
+      stat=function() Fstat,
+      prob=function() 1-pf(Fstat,r,rdf),
+      stat_type="Fstat")
+  )
 
 }
   
@@ -142,11 +159,16 @@ fit_contrasts <- function(lmfit, conmat, colind) {
     sqrt(diag(conmat %*% vcv %*% t(conmat)))
   })
   
-  prob <- 2 * (1 - pt(abs(ct/vc), lmfit$df.residual))
-  tstat <- ct/vc
-  tibble::tibble(estimate=as.vector(ct), se=as.vector(vc), tstat=as.vector(tstat), prob=as.vector(prob))
+ 
+  return(
+    list(
+      estimate=function() ct,
+      se=function() vc,
+      stat=function() ct/vc,
+      prob=function() 2 * (1 - pt(abs(ct/vc), lmfit$df.residual)),
+      stat_type="tstat")
+  )
   
-
 }
 
 #' contrast_set
