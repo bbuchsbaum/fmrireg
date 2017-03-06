@@ -40,6 +40,13 @@ conditions.fmri_model <- function(x) {
 }
 
 #' @export
+conditions.baseline_model <- function(x) {
+  unlist(lapply(terms(x), function(t) conditions(t)), use.names=FALSE)
+}
+
+
+
+#' @export
 print.fmri_model <- function(object) {
   cat("fmri_model", "\n")
   cat(" ", "Event Model:  ", Reduce(paste, deparse(object$model_spec$formula)), "\n")

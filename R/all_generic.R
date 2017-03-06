@@ -108,6 +108,16 @@ event_terms <- function(x) UseMethod("event_terms")
 baseline_terms <- function(x) UseMethod("baseline_terms")
 
 
+#' term_indices
+#' 
+#' the term indices for the associated design matrix
+#' 
+#' @param x the model/term object
+#' @param ... additional arguments
+#' @export
+term_indices <- function(x,...) UseMethod("term_indices")
+
+
 #' design_matrix
 #' 
 #' construct a design matrix from the term
@@ -233,5 +243,31 @@ estcon <- function(x, fit, ...) UseMethod("estcon")
 #' @param model_spec the model specification
 #' @export
 construct <- function(x, model_spec,...) UseMethod("construct")
+
+#' stats
+#' 
+#' extract statistics from fitted model
+#' 
+#' @param x the object
+#' @param ... extra arguments
+stats <- function(x, ...) UseMethod("stats")
+
+#' standard_error
+#' 
+#' extract standard errors from fitted model
+#' 
+#' @param x the object
+#' @param ... extra arguments
+standard_error <- function(x, ...) UseMethod("standard_error")
+
+
+#' p_value
+#' 
+#' extract p-values from fitted model
+#' 
+#' @param x the object
+#' @param ... extra arguments
+standard_error <- function(x, ...) UseMethod("p_value")
+
 
 

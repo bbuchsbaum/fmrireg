@@ -40,12 +40,20 @@ fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset,
     stop()
   }
   
-  browser()
+  ret <- list(
+    result=result,
+    model=model,
+    contrasts=contrasts,
+    strategy=strategy)
   
+  class(ret) <- "fmri_lm"
   
- 
+  ret
+}
+
+
+coef.fmri_lm <- function(x, type=c("event", "baseline", "contrast")) {
   
-  model
 }
 
 
@@ -136,6 +144,15 @@ meta_betas <- function(bstats, colind) {
   )
 }
 
+combine_baseline_betas <- function(bstats, colind) {
+  list(
+    estimate=function() do.call(rbind, lapply(bstats, function(x) x$estimate()[colind,])),
+    se=function() do.call(rbind, lapply(bstats, function(x) x$se()[colind,])),
+    stat=function() do.call(rbind, lapply(bstats, function(x) x$stat()[colind,])),
+    prob=function() do.call(rbind, lapply(bstats, function(x) x$prob()[colind,])),
+    stat_type="tstat"
+  )
+}
 
 
 #' @importFrom foreach foreach %do% %dopar%
@@ -153,6 +170,7 @@ runwise_lm <- function(dset, model, conlist, fcon) {
       
       eterm_indices <- 1:sum(sapply(eterm_matrices, ncol))
       start <- length(eterm_indices) +1
+      
       bterm_indices <- start:(start+sum(sapply(bterm_matrices, ncol)))
      
       term_matrices <- c(eterm_matrices, bterm_matrices)
@@ -177,12 +195,13 @@ runwise_lm <- function(dset, model, conlist, fcon) {
     Fres <- lapply(cres, "[[", "Fres")
     
     if (length(cres) > 1) {
+      browser()
       meta_con <- meta_contrasts(conres)
       meta_beta <- meta_betas(bstats, cres[[1]]$event_indices)
       meta_F <- meta_Fcontrasts(Fres)
       list(contrasts=meta_con, betas=meta_beta, Fcontrasts=meta_F)
     } else {
-      list(contrasts=conres[[1]], betas=bstats[[1]], Fcontrasts=Fres[[1]])
+      list(contrasts=conres[[1]], event_betas=bstats[[1]], Fcontrasts=Fres[[1]])
     }
     
 }
