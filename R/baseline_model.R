@@ -189,7 +189,7 @@ construct_block_term <- function(vname, sframe) {
     mat <- model.matrix(~ expanded_blockids - 1)
   }
   
-  colnames(mat) <- paste0(vname, "#", blockord)
+  colnames(mat) <- paste0(vname, "_", blockord)
   block_term(vname, blockids=blockids, expanded_blockids=expanded_blockids, mat)
   
 }
