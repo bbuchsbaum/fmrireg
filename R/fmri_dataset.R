@@ -190,7 +190,7 @@ data_chunks.matrix_dataset <- function(x, runwise=TRUE) {
   
 }
 
-
+#' @export
 exec_strategy <- function(strategy=c("all", "slicewise", "runwise")) {
   strategy <- match.arg(strategy)
   function(dset) {

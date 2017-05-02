@@ -12,14 +12,14 @@ vignette: >
 
 ## Hemodynamic response function
 
-A hemodynamic response function (HRF) is used to model the temporal evoluation of an fMRI response to an experimental "event". An HRF is a function of *time* and generally "peaks" 4-6s afer the event onset.
+A hemodynamic response function (HRF) is used to model the temporal evoluation of an fMRI response to an experimental "event". An HRF is a function of *time* and peaks 4-6s afer the event onset.
 
-There are a number of pre-defined HRFs in `fmrireg` that make it easy to work with HRFs. For example, we can use the SPM "canonical" HRF as follows:
+There are a number of pre-defined HRFs in `fmrireg` that make it easy to work with them. For example, we can use the SPM "canonical" HRF as follows:
 
 ```{r, message=FALSE, fig.width = 7, fig.height = 5}
 library(fmrireg)
 
-## 'spm canonoical' hrf
+## SPM canonical hrf
 vals <- evaluate(HRF_SPMG1, seq(0,20,by=.1))
 
 ## Gaussian hrf with default parameters (mean=6, sd=1.5)
@@ -58,7 +58,7 @@ lines(seq(0,20,by=.1), vals3, type="l", col=3)
 
 ## Multivariate HRF: B-splines and Derivatives
 
-Sometimes we want to model an event with multiple "basis functions". In this case the HRF is a function from time -> *d*-dimensional vector, where *d* is the dimnenson of the basis set.
+Sometimes we want to model an event with multiple "basis functions". In this case the HRF is a function from time -> *d*-dimensional vector, where *d* is the dimension of the basis set.
 
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
 
@@ -74,14 +74,12 @@ time <- seq(0,20, by=.1)
 bmat1 <- evaluate(hrf_bs_12, time)
 matplot(time, bmat1, xlab="Time", ylab="BOLD Response", type='l', main="Bspline HRF basis set (N=12)")
 
-## the SPM + first derivative is a "builtin" HRF function.
-
+## the SPM + first derivative is a "built-in" HRF function.
 time <- seq(0,20, by=.1)
 bmat1 <- evaluate(HRF_SPMG2, time)
 matplot(time, bmat1, xlab="Time", ylab="BOLD Response", type='l', main="SPM + first derivative")
 
-## the SPM + first derivative + second derivative is a "builtin" HRF function.
-
+## the SPM + first derivative + second derivative is a "built-in" HRF function.
 time <- seq(0,20, by=.1)
 bmat1 <- evaluate(HRF_SPMG3, time)
 matplot(bmat1, xlab="Time", ylab="BOLD Response", type='l', main="SPM + 1st and 2nd derivative")

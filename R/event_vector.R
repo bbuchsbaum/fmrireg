@@ -1,5 +1,3 @@
-#' @import checkmate
-NULL
 
 .sanitizeName <- function(name) {
   name <- gsub(":", ".", name)
