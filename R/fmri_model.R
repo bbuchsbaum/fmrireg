@@ -24,11 +24,13 @@ terms.fmri_model <- function(x) {
   c(terms(x$event_model), terms(x$baseline_model))
 }
 
+
+#' @export
 event_terms.fmri_model <- function(x) {
   terms(x$event_model)
 }
 
-
+#' @export
 baseline_terms.fmri_model <- function(x) {
   terms(x$baseline_model)
 }

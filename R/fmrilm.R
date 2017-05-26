@@ -7,7 +7,6 @@
 #' @param baseline_model
 #' @param dataset
 #' @param durations
-#' @param nuisance_matrix
 #' @param drop_empty
 #' @param contrasts
 #' @param strategy

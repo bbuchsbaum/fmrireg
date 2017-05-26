@@ -6,6 +6,7 @@ NULL
 #' @param hrf a function mapping from time --> signal
 #' @param lag optional lag in seconds
 #' @param width optional block width in seconds
+#' @param precision
 #' @param ... extra parameters for the \code{hrf} function
 #' @export
 gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, ...) {
@@ -55,6 +56,7 @@ gen_hrf_set <- function(...) {
 #' @param fun hemodynamic response function mapping from time --> BOLD response
 #' @param name the name of the function
 #' @param nbasis the number of basis functions, e.g. the columnar dimension of the hrf.
+#' @param param_names the names of the parameters
 #' @examples 
 #' 
 #' hrf <- HRF(hrf_gamma, "gamma", nbasis=1, param_names=c("shape", "rate"))
@@ -139,6 +141,13 @@ hrf_time <- function(t, maxt) {
 
 #' hrf_bspline
 #' 
+#' @param t a vector of times
+#' @param width the temporal window over which the basis sets spans
+#' @param N the number of basis functions
+#' @param degree the degree of the spline
+#' @examples 
+#' 
+#' hrfb <- hrf_bspline(seq(0,20,by=.5), N=4, degree=2)
 #' @export
 #' @importFrom splines bs
 hrf_bspline <- function(t, width=20, N=5, degree=3) {
@@ -172,7 +181,9 @@ hrf_bspline <- function(t, width=20, N=5, degree=3) {
 #' hrf_gamma
 #' 
 #' A hemodynamic response function using the gamma density function
-#' 
+#' @param t
+#' @param shape
+#' @param rate
 #' @export
 hrf_gamma <- function(t, shape=6, rate=1) {
   dgamma(t, shape=shape, rate=rate)
@@ -182,6 +193,9 @@ hrf_gamma <- function(t, shape=6, rate=1) {
 #' 
 #' A hemodynamic response function using the gamma density function
 #' 
+#' @param t
+#' @param mean
+#' @param sd
 #' @export
 hrf_gaussian <- function(t, mean=6, sd=2) {
 	dnorm(t, mean=mean, sd=sd)
@@ -191,8 +205,14 @@ hrf_gaussian <- function(t, mean=6, sd=2) {
 #' 
 #' A hemodynamic response function based on the SPM canonical double gamma parameterzation.
 #' 
+#' @param t
 #' @export
-hrf_spmg1 <- function(t, A1=.00833, A2=1.274527e-13, P1=5, P2=15) {
+hrf_spmg1 <- function(t) {
+  A1=.00833
+  A2=1.274527e-13
+  P1=5
+  P2=15
+  
 	ifelse(t < 0, 0, exp(-t)*(A1*t^P1 - A2*t^P2))
 	
 }

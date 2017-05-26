@@ -456,6 +456,7 @@ elements.event_term <- function(x, values=TRUE) {
 }
 
 
+
 #' @export
 convolve_design <- function(hrf, dmat, globons, durations) {
   cond.names <- names(dmat)
