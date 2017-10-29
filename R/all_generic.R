@@ -17,6 +17,8 @@ shortnames <- function(x, ...) UseMethod("shortnames")
 #' contrast_weights
 #' 
 #' @param x the object
+#' @param term 
+#' @param ... extra args
 #' @export
 contrast_weights <- function(x, term, ...) UseMethod("contrast_weights")
 
