@@ -131,7 +131,12 @@ amplitudes.regressor <- function(x) x$amplitude
 
 
 #' @export
-plot.regressor <- function(object, y, samples, add=FALSE, ...) {
+plot.regressor <- function(object, samples, add=FALSE, ...) {
+  if (missing(samples)) {
+    ons <- object$onsets
+    samples <- seq(ons[1], ons[length(ons)], by=1)
+  }
+  
   y <- evaluate(object, samples)
   if (add){
     lines(samples, y)
@@ -151,7 +156,7 @@ plot.regressor <- function(object, y, samples, add=FALSE, ...) {
 #' @export
 print.regressor <- function(object) {
   N <- min(c(6, length(onsets(object))))
-  cat(paste("hemodynamic response function:", object$hrf$name))
+  cat(paste("hemodynamic response function:", attr(object$hrf, "name")))
   cat("\n")
   cat(paste("onsets: ", paste(onsets(object)[1:N], collapse=" "), "..."))
   cat("\n")

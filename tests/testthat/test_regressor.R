@@ -26,10 +26,11 @@ test_that("can construct a convolved term from an hrfspec with one factor and on
   onsets <- seq(1,N,by=5)
   durations <- 0
   
-  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)))
-  mspec <- fmri_model(onsets ~ hrf(fac), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=100, TR=1)
-  
-  expect_equal(dim(mspec$terms[[1]]$design_matrix), c(N,length(levels(etab$fac))))
+  sframe <- sampling_frame(blocklens=100, TR=1)
+  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), Run=rep(1,4))
+  ev <- event_model(onsets ~ hrf(fac), data=etab, block= ~ Run, sampling_frame=sframe)
+
+  expect_equal(ncol(design_matrix(ev)), length(levels(etab$fac)))
 })
 
 test_that("can construct a convolved term from an hrfspec with two factors and one run", {
@@ -37,10 +38,10 @@ test_that("can construct a convolved term from an hrfspec with two factors and o
   onsets <- seq(1,N,by=5)
   durations <- 0
   
-  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), fac2=letters[1:2])
-  mspec <- fmri_model(onsets ~ hrf(fac) + hrf(fac2), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=100, TR=1)
- 
-  expect_equal(dim(design_matrix(mspec)), c(N,length(levels(interaction(etab$fac, etab$fac2)))))
+  sframe <- sampling_frame(blocklens=100, TR=1)
+  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), fac2=letters[1:2], Run=1)
+  espec <- event_model(onsets ~ hrf(fac) + hrf(fac2), block= ~ Run, data=etab, sampling_frame=sframe)
+  expect_equal(dim(design_matrix(espec)), c(N,length(levels(interaction(etab$fac, etab$fac2)))))
 })
 
 test_that("can construct a convolved term from an hrfspec with one factor and two runs", {
@@ -50,11 +51,11 @@ test_that("can construct a convolved term from an hrfspec with one factor and tw
   onsets <- c(onsets1,onsets2)
   durations <- 0
   
+  sframe <- sampling_frame(blocklens=c(100,100), TR=1)
   etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), block=rep(1:2, c(length(onsets1), length(onsets2))))
-  mspec <- fmri_model(onsets ~ hrf(fac), etab, durations=1, blockids=etab$block, blocklens=c(100,100), TR=1)
+  espec <- event_model(onsets ~ hrf(fac), data=etab, block = ~ block, sampling_frame=sframe)
 
-  
-  expect_equal(dim(design_matrix(mspec)), c(N*2,length(levels(etab$fac))))
+  expect_equal(dim(design_matrix(espec)), c(N*2,length(levels(etab$fac))))
 })
 
 
@@ -64,7 +65,7 @@ test_that("can construct a convolved trialwise term from an hrfspec with one fac
   durations <- 0
   
   etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)))
-  mspec <- fmri_model(onsets ~ fac, etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
+  espec <- event_model(onsets ~ fac, etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
   hspec <- trialwise(fac)
   
   cterm <- construct(hspec, mspec)
