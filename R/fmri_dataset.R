@@ -42,6 +42,25 @@ read_fmri_config <- function(file_name) {
 }
 
 
+#' @export
+matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame(), aux_data=list()) {
+  assert_that(sum(run_length) == nrow(datamat))
+  
+  frame <- sampling_frame(run_length, TR)
+  
+  ret <- list(
+    datamat=datamat,
+    nruns=length(run_length),
+    event_table=event_table,
+    aux_data=aux_data,
+    sampling_frame=frame
+  )
+  
+  class(ret) <- c("matrix_dataset", "fmri_dataset", "list")
+  ret
+  
+}
+
 
 #' fmri_dataset
 #' 
@@ -57,7 +76,7 @@ read_fmri_config <- function(file_name) {
 fmri_dataset <- function(scans, mask, TR, 
                          run_length, 
                          event_table=data.frame(), 
-                         aux_table=tibble::as_tibble(list()), 
+                         aux_data=list(), 
                          base_path=".") {
   
   if (length(run_length) == 1) {
@@ -66,8 +85,6 @@ fmri_dataset <- function(scans, mask, TR,
   
   frame <- sampling_frame(run_length, TR)
   assert_that(length(run_length) == length(scans))
-  
-  #aux_table$.scan_time <- scan_time
   
   ret <- list(
     scans=scans,
@@ -81,7 +98,7 @@ fmri_dataset <- function(scans, mask, TR,
     
   )
   
-  class(ret) <- c("fmri_dataset", "list")
+  class(ret) <- c("volumetric_dataset", "fmri_dataset", "list")
   ret
 }
 
@@ -95,54 +112,15 @@ data_chunk <- function(mat, voxel_ind, row_ind, chunk_num) {
   ret
 }
 
-gen_chunk_iter <- function(x, maskSeq) {
-  nchunks <- length(maskSeq)
-  chunkNum <- 1
-  
-  nextEl <- function() {
-    if (chunkNum > nchunks) {
-      stop("StopIteration")
-    } else {
-      bvecs <- lapply(x$scans, function(scan) neuroim::loadVector(file.path(x$base_path, scan), mask=maskSeq[[chunkNum]]))
-      ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) bv@data)), voxel_ind=maskSeq[[chunkNum]], 
-                        row_ind=1:nrow(x$event_table))
-      chunkNum <<- chunkNum + 1
-      ret
-    }
-  }
-  
-  iter <- list(nextElem=nextEl)
-  class(iter) <- c("chunkiter", "abstractiter", "iter")
-  iter
-}
-  
-arbitrary_chunks <- function(x, nchunks) {
-  mask <- x$mask
-  indices <- which(mask != 0)
-  chsize <- as.integer(length(indices)/nchunks)
-  chunkids <- rep(1:nchunks, each=chsize, length.out=length(indices))
-  
-  maskSeq <- lapply(1:nchunks, function(i) {
-    m <- mask
-    m[] <- 0
-    m[indices[chunkids==i]] <- 1
-    m
-  })
-  
-  gen_chunk_iter(x, maskSeq)
-  
-}
 
-runwise_chunks <- function(x) {
-  nchunks <- length(x$scans)
+chunk_iter <- function(x, nchunks, get_chunk) {
   chunk_num <- 1
   
   nextEl <- function() {
     if (chunk_num > nchunks) {
       stop("StopIteration")
     } else {
-      bvec <- neuroim::loadVector(file.path(x$base_path, x$scans[chunk_num]), mask=x$mask)
-      ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), row_ind=which(x$sampling_frame$blockids == chunk_num), chunk_num=chunk_num)
+      ret <- get_chunk(chunk_num)
       chunk_num <<- chunk_num + 1
       ret
     }
@@ -153,43 +131,66 @@ runwise_chunks <- function(x) {
   iter
 }
 
-slicewise_chunks <- function(x) {
-  mask <- x$mask
-  template <- BrainVolume(array(0, dim(mask)), space(mask))
-  nchunks <- dim(mask)[3]
-  
-  maskSeq <- lapply(1:nchunks, function(i) {
-    m <- template
-    m[,,i] <- 1
-    m
-  })
-  
-  gen_chunk_iter(x, maskSeq)
-  
-}
 
-one_chunk <- function(x) {
+
+#' @import neuroim
+#' @export
+data_chunks.volumetric_dataset <- function(x, nchunks=1,runwise=FALSE) {
+  
   mask <- x$mask
-  gen_chunk_iter(x, list(mask))
+  
+  
+  get_run_chunk <- function(chunk_num) {
+    bvec <- neuroim::loadVector(file.path(x$base_path, x$scans[chunk_num]), mask=x$mask)
+    ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), row_ind=which(x$sampling_frame$blockids == chunk_num), chunk_num=chunk_num)
+  }
+  
+  get_seq_chunk <- function(chunk_num) {
+    bvecs <- lapply(x$scans, function(scan) neuroim::loadVector(file.path(x$base_path, scan), mask=maskSeq[[chunk_num]]))
+    ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) bv@data)), voxel_ind=maskSeq[[chunk_num]], 
+                      row_ind=1:nrow(x$event_table))
+    
+  }
+  
+  if (runwise) {
+    chunk_iter(x, length(x$scans), get_run_chunk)
+  } else if (nchunks == 1) {
+    maskSeq <- one_chunk()
+    chunk_iter(x, 1, get_seq_chunk)
+  } else if (nchunks == dim(mask)[3]) {
+    maskSeq <- slicewise_chunks(x)
+    chunk_iter(x, length(maskSeq), get_seq_chunk)
+  } else {
+    maskSeq <- arbitrary_chunks(x, nchunks)
+    chunk_iter(x, length(maskSeq), get_seq_chunk)
+  }
+  
 
 }
 
 #' @import neuroim
-data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
+#' @export
+data_chunks.matrix_dataset <- function(x, runwise=TRUE) {
+  get_run_chunk <- function(chunk_num) {
+    ind <- which(blockids(x$sampling_frame) == chunk_num)
+    mat <- x$datamat[ind,]
+    data_chunk(mat, voxel_ind=1:ncol(mat), row_ind=ind, chunk_num=chunk_num)
+  }
   
-  mask <- x$mask
+  get_one_chunk <- function(chunk_num) {
+    data_chunk(x$datamat, voxel_ind=1:ncol(x$datamat), row_ind=1:nrow(x$datamat), chunk_num=chunk_num)
+    
+  }
   
   if (runwise) {
-    runwise_chunks(x)
-  } else if (nchunks == 1) {
-    one_chunk(x)
-  } else if (nchunks == dim(mask)[3]) {
-    slicewise_chunks(x)
+    chunk_iter(x, length(x$sampling_frame$blocklens), get_run_chunk)
   } else {
-    arbitrary_chunks(x, nchunks)
-  }
+    chunk_iter(x, 1, get_one_chunk)
+  } 
+  
 }
 
+#' @export
 exec_strategy <- function(strategy=c("all", "slicewise", "runwise")) {
   strategy <- match.arg(strategy)
   function(dset) {
@@ -203,6 +204,44 @@ exec_strategy <- function(strategy=c("all", "slicewise", "runwise")) {
   }
   
 }
+
+arbitrary_chunks <- function(x, nchunks) {
+  mask <- x$mask
+  indices <- which(mask != 0)
+  chsize <- as.integer(length(indices)/nchunks)
+  chunkids <- rep(1:nchunks, each=chsize, length.out=length(indices))
+  
+  maskSeq <- lapply(1:nchunks, function(i) {
+    m <- mask
+    m[] <- 0
+    m[indices[chunkids==i]] <- 1
+    m
+  })
+  
+  maskSeq
+  
+}
+
+slicewise_chunks <- function(x) {
+  mask <- x$mask
+  template <- BrainVolume(array(0, dim(mask)), space(mask))
+  nchunks <- dim(mask)[3]
+  
+  maskSeq <- lapply(1:nchunks, function(i) {
+    m <- template
+    m[,,i] <- 1
+    m
+  })
+  
+  maskSeq
+  
+}
+
+one_chunk <- function(x) {
+  mask <- x$mask
+  list(mask)
+}
+
 
 
 

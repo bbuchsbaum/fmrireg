@@ -106,7 +106,7 @@ extract_covariates <- function(.terms, variables, resp, etab) {
   varnames <- sapply(vars, deparse, width.cutoff = 500)[-1]
   ind.vars <- varnames[-resp] 
   orig.covar.names <- ind.vars[which(sapply(variables[-resp], function(obj) is.numeric(obj) || .is.parametric.basis(obj)))]
-  new.covar.names <- names(events(etab))[sapply(events(etab), isContinuous)]
+  new.covar.names <- names(events(etab))[sapply(events(etab), is_continuous)]
   covar.names <- as.list(orig.covar.names)
   names(covar.names) <- new.covar.names
   covar.names
@@ -195,6 +195,13 @@ contrast_weights.convolved_term <- function(x) {
 
 #' @export
 #' @rdname contrast_weights
+FContrasts.convolved_term <- function(x) {
+  Fcontrasts(x$evterm)
+}
+
+
+#' @export
+#' @rdname contrast_weights
 contrast_weights.fmri_term <- function(x) { stop("unimplemented") }
 
 contrast_weights.fmri_model <- function(x) { contrast_weights(x$event_model) }
@@ -226,6 +233,29 @@ contrast_weights.event_model <- function(x) {
 
   
   ret
+}
+
+Fcontrasts.event_model <- function(x) {
+  tind <- x$term_indices
+  len <- length(conditions(x))
+  tnames <- names(terms(x))
+  ret <- unlist(lapply(seq_along(terms(x)), function(i) {
+    cwlist <- Fcontrasts(terms(x)[[i]]$evterm)
+    if (!is.null(cwlist)) {
+      ret <- lapply(cwlist, function(cw) {
+        out <- matrix(0, len, ncol(cw))
+        out[tind[[i]],] <- cw
+        attr(out, "term_indices") <- as.vector(tind[[i]])
+        row.names(out) <- row.names(cw)
+        out
+      })
+      
+      cnames <- names(cwlist)
+      prefix <- tnames[i]
+      names(ret) <- paste0(prefix, "#", cnames)
+      ret
+    }
+  }), recursive=FALSE)
 }
   
   
@@ -284,6 +314,19 @@ longnames.convolved_term <- function(x) {
 
 }
 
+#' @export
+#' @rdname longnames
+shortnames.convolved_term <- function(x) {
+  # ignores exclude.basis
+  term.cells <- cells(x)
+  # ignores exclude.basis
+  apply(as.matrix(sapply(1:ncol(term.cells), 
+                         function(i) {
+                           term.cells[[i]]
+                         })), 1, paste, collapse=":")
+  
+}
+
 
 #' @export
 #' @rdname longnames
@@ -314,7 +357,7 @@ print.event_model <- function(object) {
 #' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap xlab theme_bw
 #' @importFrom tidyr gather
 #' @export
-plot.event_model <- function(x, term_name=NULL) {
+plot.event_model <- function(x, term_name=NULL, longnames=TRUE) {
   all_terms <- terms(x)
   term_names <- names(all_terms)
   
@@ -322,9 +365,13 @@ plot.event_model <- function(x, term_name=NULL) {
   
   dflist <- lapply(all_terms, function(term) {
     dm1 <- tibble::as_tibble(design_matrix(term))
+    if (!longnames) {
+      names(dm1) <- shortnames(term)
+    }
     dm1$.block <- sframe$blockids
     dm1$.time <- sframe$time
-    cnames <- conditions(term)
+   
+    
     tidyr::gather(dm1, condition, value, -.time, -.block)
   })
   

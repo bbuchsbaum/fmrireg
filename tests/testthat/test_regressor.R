@@ -1,5 +1,8 @@
 library(testthat)
+
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
+lopdes <- read.table(system.file("extdata", "design_aug.txt", package = "fmrireg"), header=TRUE)
+
 
 test_that("regressor generates correct outputs", {
   onsets <- seq(1,100, by=5)
@@ -12,6 +15,11 @@ test_that("regressor generates correct outputs", {
   expect_equal(length(reg1$duration), length(onsets))
 })
 
+test_that("generate an event model with one observation per level", {
+  sframe <- sampling_frame(blocklens=rep(401,5), TR=1.5)
+  lopdes$onset <- lopdes$WordPresentationOnset/1000
+  ev <- event_model(onset ~ hrf(Target), data=lopdes, block= ~ Run, sampling_frame=sframe)
+})
 
 test_that("can construct a convolved term from an hrfspec with one factor and one run", {
   N <- 100

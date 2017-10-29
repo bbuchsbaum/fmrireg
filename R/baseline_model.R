@@ -40,7 +40,7 @@ baseline_model <- function(basis="bs", degree=5, sframe, nuisance_list=NULL) {
       nuisance_list[[i]] <- nmat
     }
     
-    baseline_term("nuisance", Matrix::bdiag(nuisance_list), colind,rowind)
+    baseline_term("nuisance", Matrix::bdiag(lapply(nuisance_list, as.matrix)), colind,rowind)
   } 
   
   ret <- list(drift_term=drift_term, drift_spec=drift_spec, 
@@ -159,8 +159,8 @@ construct.baselinespec <- function(x, sampling_frame) {
 #' @importFrom tibble as_tibble
 #' @export
 baseline_term <- function(varname, mat, colind, rowind) {
-  stopifnot(is.matrix(mat))
-  ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat), colind=colind, rowind=rowind)
+  stopifnot(is.matrix(mat) || is.data.frame(mat) || inherits(mat, "Matrix"))
+  ret <- list(varname=varname, design_matrix=tibble::as_tibble(as.matrix(mat)), colind=colind, rowind=rowind)
   class(ret) <- c("baseline_term", "matrix_term", "fmri_term", "list")
   ret
 }
@@ -189,7 +189,7 @@ construct_block_term <- function(vname, sframe) {
     mat <- model.matrix(~ expanded_blockids - 1)
   }
   
-  colnames(mat) <- paste0(vname, "#", blockord)
+  colnames(mat) <- paste0(vname, "_", blockord)
   block_term(vname, blockids=blockids, expanded_blockids=expanded_blockids, mat)
   
 }
@@ -251,7 +251,7 @@ construct.blockspec <- function(x, model_spec) {
 
 print.baseline_model <- function(x) {
   cat("baseline_model", "\n")
-  cat("  ", "name: ", x$drift$varname, "\n")
+  cat("  ", "name: ", x$drift_term$varname, "\n")
   cat("  ", "basis type: ", x$drift_spec$basis, "\n")
   cat("  ", "degree: ", x$drift_spec$degree, "\n")
   cat("  ", "drift columns: ", ncol(design_matrix(x$drift_term)), "\n")
@@ -261,6 +261,44 @@ print.baseline_model <- function(x) {
   cat("  ", "design_matrix: ", "\n")
   print(design_matrix(x))
    
+}
+
+#' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap xlab theme_bw
+#' @importFrom tidyr gather
+#' @export
+plot.baseline_model <- function(x, term_name=NULL) {
+  all_terms <- terms(x)
+  term_names <- names(all_terms)
+  
+  cidx <- grep("constant", term_names)
+  if (length(cidx) > 0) {
+    all_terms <- all_terms[-cidx]
+    term_names <- term_names[-cidx]
+  }
+  
+  sframe <- x$sampling_frame
+  
+  dflist <- lapply(all_terms, function(term) {
+    dm1 <- tibble::as_tibble(design_matrix(term))
+    dm1$.block <- sframe$blockids
+    dm1$.time <- sframe$time
+    
+    tidyr::gather(dm1, condition, value, -.time, -.block)
+  })
+  
+  names(dflist) <- term_names
+  
+  
+  dfx <- if (is.null(term_name)) {
+    tn <- term_names[1]
+    dflist[[tn]]
+  } else {
+    dflist[[term_name]]
+  }
+  
+  ggplot2::ggplot(dfx, aes_string(x=".time", y="value", colour="condition")) + geom_line() + facet_wrap(~ .block, ncol=1) +
+    xlab("Time") + theme_bw(14)
+  
 }
 
 

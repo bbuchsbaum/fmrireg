@@ -7,6 +7,8 @@
 event_term(evlist, onsets, blockids, durations = 1, subset = NULL)
 }
 \arguments{
+\item{evlist}{a list of named variables}
+
 \item{onsets}{the onset times from the experimental events in seconds}
 
 \item{blockids}{the block number associated with each onset}

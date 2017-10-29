@@ -126,7 +126,6 @@ sframe <- sampling_frame(blocklens=70, TR)
 
 simple_design$RT <- scale(rnorm(nrow(simple_design), mean=700, sd=100))
 
-
 ## create the event model d
 emodel <- event_model(onset ~ hrf(stim) + hrf(stim, RT), data=simple_design, block = ~ run, sampling_frame=sframe)
 print(emodel)

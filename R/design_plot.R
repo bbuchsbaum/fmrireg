@@ -4,7 +4,7 @@
 #' 
 #' @importFrom ggplot2 ggplot aes_string aes
 #' @import shiny
-design_plot <- function(fmrimod) {
+design_plot <- function(fmrimod, longnames=FALSE) {
   et <- terms(fmrimod$event_model)
   bt <- terms(fmrimod$baseline_model)
   
@@ -17,7 +17,12 @@ design_plot <- function(fmrimod) {
     dm1 <- tibble::as_tibble(design_matrix(term))
     dm1$.block <- sframe$blockids
     dm1$.time <- sframe$time
-    cnames <- conditions(term)
+    
+    if (longnames) {
+      cnames <- conditions(term)
+    } else {
+      cnames <- shortnames(term)
+    }
     gather(dm1, condition, value, -.time, -.block)
   })
   

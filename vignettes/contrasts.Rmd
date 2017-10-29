@@ -1,0 +1,41 @@
+---
+title: "Contrastsl"
+author: "Bradley R. Buchsbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## Contrasts
+
+Statistical contrasts are an important component of fMRI analyses. Contrasts allow for testing of hypotheses about the relative activation across some linear combination of conditions. Our aim is to provide a flexible interface for describing contrasts and generating contrast vectors that can be applied to linear models.
+
+
+## Main effect contrasts
+
+a "main effect" contrast tests whether activation, averaged over some set of conditions, is greater than zero. In this case "zero" is defined as the level of activation captured by the intercept term. Because all beta estimates are already expressed relative to the intercept term, main effect contrast vectors always sum to 1, rather than 0. We therefore refer to the sum-to-one contrasts as: "unit contrasts"
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+library(tibble)
+devtools::load_all()
+
+## first we set up a very simple `event_model` with two stimuli.
+## the four stimulus types
+
+## construct a design table
+simple_design <- data_frame(stim=factor(sample(rep(c("face", "scene"), 4))), 
+                     onset=cumsum(sample(4:7, 8, replace=TRUE)+2)-2, 
+                     run=1)
+simple_design
+
+sframe <- sampling_frame(70, TR=2)
+sframe
+
+emodel <- event_model(onset ~ hrf(stim), data=simple_design, block=~run, sampling_frame=sframe)
+
+
+```

@@ -1,4 +1,7 @@
 
+
+
+
 fit_Ftests <- function(object) {
   w <- object$weights
   ssr <- if (is.null(w)) {
@@ -55,8 +58,7 @@ fit_Ftests <- function(object) {
   
 }
 
-
-fit_stats <- function(lmfit) {
+beta_stats <- function(lmfit) {
   Qr <- stats:::qr.lm(lmfit)
   cov.unscaled <- chol2inv(Qr$qr)
   betamat <- lmfit$coefficients
@@ -74,10 +76,59 @@ fit_stats <- function(lmfit) {
   
   prob <- 2 * (1 - pt(abs(betamat/vc), lmfit$df.residual))
   tstat <- betamat/vc
-  ret <- tibble::as_tibble(cbind(as.vector(ct), as.vector(vc), as.vector(tstat), as.vector(prob)))
-  names(ret) <- c("estimate", "se", "tstat", "prob")
-  ret
+  return(
+    list(
+      estimate=function() betamat,
+      stat=function() betamat/vc,
+      se=function() vc,
+      prob=function() 2 * (1 - pt(abs(betamat/vc), lmfit$df.residual)),
+      stat_type="tstat")
+  )
   
+}
+
+
+fit_Fcontrasts <- function(lmfit, conmat, colind) {
+  Qr <- stats:::qr.lm(lmfit)
+  cov.unscaled <- chol2inv(Qr$qr[colind,colind,drop=FALSE])
+  betamat <- lmfit$coefficients[colind,]
+  
+  df <- lmfit$df.residual
+  
+  rss <- colSums(lmfit$residuals^2)
+  rdf <- lmfit$df.residual
+  resvar <- rss/rdf
+  sigma <- sqrt(resvar)
+  sigma2 <- sigma^2
+  
+  #msr <- summary.lm(reg)$sigma  # == SSE / (n-p)
+  r <- nrow(conmat)
+  
+  
+  #                        -1
+  #     (Cb - d)' ( C (X'X)   C' ) (Cb - d) / r
+  # F = ---------------------------------------
+  #                 SSE / (n-p)
+  #
+  
+  cm <- solve((conmat %*% cov.unscaled %*% t(conmat)))
+  
+  Fstat <- sapply(1:ncol(betamat), function(i) {
+    b <- betamat[,i]
+    cb <- conmat %*% b
+    Fstat <- t(cb) %*% cm %*% (cb) / r / sigma2[i]
+  })
+  
+
+  return(
+    list(
+      estimate=function() betamat,
+      se=function() sigma2,
+      stat=function() Fstat,
+      prob=function() 1-pf(Fstat,r,rdf),
+      stat_type="Fstat")
+  )
+
 }
   
 #' fit_contrasts
@@ -108,12 +159,16 @@ fit_contrasts <- function(lmfit, conmat, colind) {
     sqrt(diag(conmat %*% vcv %*% t(conmat)))
   })
   
-  prob <- 2 * (1 - pt(abs(ct/vc), lmfit$df.residual))
-  tstat <- ct/vc
-  ret <- tibble::as_tibble(cbind(as.vector(ct), as.vector(vc), as.vector(tstat), as.vector(prob)))
-  names(ret) <- c("estimate", "se", "tstat", "prob")
-  ret
-
+ 
+  return(
+    list(
+      estimate=function() ct,
+      se=function() vc,
+      stat=function() ct/vc,
+      prob=function() 2 * (1 - pt(abs(ct/vc), lmfit$df.residual)),
+      stat_type="tstat")
+  )
+  
 }
 
 #' contrast_set
@@ -145,6 +200,63 @@ contrast_formula <- function(form, name, where=TRUE, split_by=NULL) {
   
 }
 
+
+
+
+
+#' unit_contrast
+#' 
+#' @param A
+#' @param name
+#' @param where
+#' @export
+unit_contrast <- function(A, name=NULL, where=TRUE) {
+  if (lazyeval::is_formula(A)) {
+  
+    if (is.null(name)) {
+      name <- as.character(lazyeval::f_rhs(A))
+    }
+    
+    ret<-list(A=A,
+         where=lazyeval::expr_find(where),
+         name=name)
+    
+    class(ret) <- c("unit_contrast_formula_spec", "contrast_spec", "list")
+    ret
+  }
+}
+
+#' @export
+contrast_weights.unit_contrast_formula_spec <- function(x, term) {
+  term.cells <- cells(term)
+  #row.names(term.cells) <- longnames(term)
+  
+  keep <- eval(x$where, envir=term.cells, enclos=parent.frame())	
+  reduced.term.cells <- subset(term.cells, keep)
+  
+  mm <- model.matrix(~ reduced.term.cells[[1]] -1)
+  colnames(mm) <- levels(reduced.term.cells[[1]])
+  
+  cvec <- rep(1, nrow(reduced.term.cells))/nrow(reduced.term.cells)
+  #cvec <- lazyeval::f_eval_rhs(x$A, data=as.data.frame(mm))
+   
+  weights <- matrix(0, NROW(term.cells), 1)	
+  row.names(weights) <- longnames(term)
+  
+  weights[keep, ] <- cvec
+  
+  ret <- list(
+    name=x$name,
+    weights=weights,
+    contrast_spec=x)
+  
+  class(ret) <- c("unit_contrast", "contrast", "list")
+  ret
+}
+
+
+
+
 #' contrast
 #' 
 #' @param A
@@ -158,10 +270,10 @@ contrast <- function(A, B=NULL, name, where=TRUE, split_by=NULL) {
     contrast_formula(A, where=where, split_by=split_by, name=name)
   } else {
     ret <- list(A=substitute(A),
-              B=substitute(B),
-              where=substitute(where),
-              split_by=substitute(split_by),
-              name=name)
+               B=substitute(B),
+               where=substitute(where),
+               split_by=substitute(split_by),
+               name=name)
 
     class(ret) <- c("contrast_spec", "list")
     ret
@@ -187,8 +299,7 @@ poly_contrast <- function(A, name, where=TRUE, degree=1, value_map=NULL) {
 contrast_weights.contrast_formula_spec <- function(x, term) {
 
   term.cells <- cells(term)
-  row.names(term.cells) <- longnames(term)
-  
+   
   keep <- eval(x$where, envir=term.cells, enclos=parent.frame())	
   reduced.term.cells <- subset(term.cells, keep)
   
@@ -211,6 +322,7 @@ contrast_weights.contrast_formula_spec <- function(x, term) {
   ret <- list(
     name=x$name,
     weights=weights,
+    condnames=longnames(term),
     contrast_spec=x)
   
   class(ret) <- c("contrast", "list")
@@ -247,6 +359,7 @@ contrast_weights.poly_contrast_spec <- function(x, term) {
   ret <- list(
     name=x$name,
     weights=weights,
+    condnames=longnames(term),
     contrast_spec=x)
   
   class(ret) <- c("poly_contrast", "contrast", "list")
@@ -284,8 +397,7 @@ makeWeights <- function(keepA, keepB=NULL) {
 #' @export
 contrast_weights.contrast_spec <- function(x, term) {
   term.cells <- cells(term)
-  row.names(term.cells) <- longnames(term)
-  
+ 
   count <- attr(term.cells, "count")		
   term.cells <- subset(term.cells, count > 0)
   
@@ -312,11 +424,12 @@ contrast_weights.contrast_spec <- function(x, term) {
     }
   }
     
-  row.names(weights) <- row.names(term.cells)
+  row.names(weights) <- longnames(term)
   
   ret <- list(
     name=x$name,
     weights=weights,
+    condnames=longnames(term),
     contrast_spec=x)
   
   class(ret) <- c("contrast", "list")
@@ -348,13 +461,15 @@ print.contrast_spec <- function(x) {
     cat(" B: ", Reduce(paste, deparse(x$B)), "\n")
   if (x$where[1] != TRUE && length(x$where) > 1)
     cat(" where: ", x$where, "\n")
+  
 
 }
 
 #' @export
 print.contrast <- function(x) {
   print(x$contrast_spec)
-  cat(" weights: ", x$weights)
+  cat(" weights: ", x$weights, "\n")
+  cat(" conditions: ", row.names(x$weights))
 }
 
 #' @export
