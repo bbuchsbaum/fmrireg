@@ -210,18 +210,29 @@ contrast_formula <- function(form, name, where=TRUE, split_by=NULL) {
 #' @param name
 #' @param where
 #' @export
-unit_contrast <- function(A, name=NULL, where=TRUE) {
-  if (lazyeval::is_formula(A)) {
+unit_contrast <- function(A, name=NULL, where=TRUE, split_by=NULL) {
+  if (!pryr::is_promise(A) && lazyeval::is_formula(A)) {
   
     if (is.null(name)) {
       name <- as.character(lazyeval::f_rhs(A))
     }
     
     ret<-list(A=A,
-         where=lazyeval::expr_find(where),
-         name=name)
+              B=NULL,
+              where=lazyeval::expr_find(where),
+              split_by=substitute(split_by),
+              name=name)
     
     class(ret) <- c("unit_contrast_formula_spec", "contrast_spec", "list")
+    ret
+  } else {
+    ret <- list(A=substitute(A),
+                B=NULL,
+                where=substitute(where),
+                split_by=substitute(split_by),
+                name=name)
+    
+    class(ret) <- c("unit_contrast_spec", "contrast_spec", "list")
     ret
   }
 }
@@ -259,14 +270,14 @@ contrast_weights.unit_contrast_formula_spec <- function(x, term) {
 
 #' contrast
 #' 
-#' @param A
-#' @param B
-#' @param name
-#' @param where
+#' @param A the first expression in the contrast
+#' @param B the second expression in the contrast
+#' @param name the name of the contrast
+#' @param where the subset over which the contrast is computed
 #' @param split_by
 #' @export
 contrast <- function(A, B=NULL, name, where=TRUE, split_by=NULL) {
-  if (lazyeval::is_formula(A)) {
+  if (!pryr::is_promise(A) && lazyeval::is_formula(A)) {
     contrast_formula(A, where=where, split_by=split_by, name=name)
   } else {
     ret <- list(A=substitute(A),

@@ -1,5 +1,8 @@
 library(testthat)
 
+facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
+
+
 
 test_that("a 2-by-2 Fcontrast", {
   F_a <- factor(rep(letters[1:2], 8))
@@ -34,27 +37,27 @@ test_that("a 3-by-3 Fcontrast", {
 })
 
 
-# test_that("can build a simple contrast from a convolved term", {
-#   facedes$repnum <- factor(facedes$rep_num)
-#   aux_table <- data.frame(run=rep(1:6, each=218))
-#   mspec <- fmri_model(onset ~  hrf(repnum) + baseline(degree=3, basis="bs"), facedes, durations=0, blockids=facedes$run, 
-#                       blocklens=rep(436/2,max(facedes$run)), TR=2)
-#   
-#   term <- construct(mspec$varspec[[1]], mspec)
-#   con <- contrast(A=repnum==-1, B=repnum==1)
-#   expect_equal(as.vector(contrast_weights(con, term)), c(1,-1,0,0,0))
-# })
-# 
-# test_that("can build a contrast versus the intercept from a convolved term", {
-#   facedes$repnum <- factor(facedes$rep_num)
-#   aux_table <- data.frame(run=rep(1:6, each=218))
-#   mspec <- fmri_model(onset ~  hrf(repnum) + baseline(degree=3, basis="bs"), facedes, durations=0, blockids=facedes$run, 
-#                       blocklens=rep(436/2,max(facedes$run)), TR=2)
-#   
-#   term <- construct(mspec$varspec[[1]], mspec)
-#   con <- contrast(A=repnum==-1)
-#   expect_equal(as.vector(contrast_weights(con, term)), c(1,0,0,0,0))
-# })
+test_that("can build a simple contrast from a convolved term", {
+  facedes$repnum <- factor(facedes$rep_num)
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
+  con <- contrast(A=repnum==-1, B=repnum==1, name="A_B")
+  
+  expect_equal(as.vector(contrast_weights(con, terms(espec)[[1]])$weights), c(1,-1,0,0,0))
+})
+
+test_that("can build a contrast versus the intercept from a convolved term", {
+  facedes$repnum <- factor(facedes$rep_num)
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
+  
+  con <- unit_contrast(A=repnum==-1, name="A")
+  con2 <- unit_contrast(~ A)
+  term <- terms(espec)[[1]]
+  expect_equal(as.vector(contrast_weights(con, term)$weights), c(1,0,0,0,0))
+  expect_equal(as.vector(contrast_weights(con2, term)$weights), c(1,0,0,0,0))
+  
+})
 # 
 # test_that("can build a contrast versus the intercept and add to hrfspec", {
 #   facedes$repnum <- factor(facedes$rep_num)
