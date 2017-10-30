@@ -55,6 +55,7 @@ is.strictly.increasing <- function(vec) {
 #' @export
 #' @rdname event_term-class
 event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
+  
   assert_that(is.increasing(blockids))
             
   if (is.null(subset)) { subset=rep(TRUE, length(onsets)) }
@@ -64,13 +65,14 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   }
   
   vnames <- names(evlist)
-  evs <- lapply(1:length(evlist), function(i) EV(evlist[[i]][subset], vnames[i], 
-                                                 onsets=onsets[subset], 
-                                                 blockids=blockids[subset], 
-                                                 durations=durations[subset]))
+  evs <- lapply(1:length(evlist), function(i) EV(evlist[[i]], vnames[i], 
+                                                 onsets=onsets, 
+                                                 blockids=blockids, 
+                                                 durations=durations,
+                                                 subset=subset))
   
   names(evs) <- sapply(evs, function(ev) ev$varname)
-  
+
   pterms <- unlist(lapply(evs, function(ev) ev$varname))
   
   len <- sum(subset)
@@ -104,7 +106,7 @@ event_table.event_term <- function(x) x$event_table
 #' @param onsets the event onsets.
 #' @param blockids the block ids associated with each event (must be non-decreasing)
 #' @export
-EV <- function(vals, name, onsets, blockids, durations = 1) {
+EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,length(onsets))) {
   
   if (length(durations) == 1) {
     durations <- rep(durations, length(onsets))
@@ -115,13 +117,13 @@ EV <- function(vals, name, onsets, blockids, durations = 1) {
   }
   
   if (inherits(vals, "ParametricBasis")) {
-    event_basis(vals, onsets, blockids, durations)	
+    event_basis(vals, onsets, blockids, durations,subset)	
   } else if (is.vector(vals)) {
-    event_variable(vals, name, onsets, blockids, durations)
+    event_variable(vals[subset], name, onsets[subset], blockids[subset], durations[subset])
   } else if (is.matrix(vals)) {
-    event_matrix(vals, name, onsets, blockids, durations)
+    event_matrix(vals[subset,], name, onsets[subset], blockids[subset], durations[subset])
   } else if (is.factor(vals)) {
-    event_factor(vals, name, onsets, blockids, durations)
+    event_factor(vals[subset], name, onsets[subset], blockids[subset], durations[subset])
   } else {
     stop(paste("cannot create event_seq from type: ", typeof(vals)))
   }
@@ -216,9 +218,10 @@ event_matrix <- function(mat, name, onsets, durations=NULL, blockids=1 ) {
 #' @param durations
 #' @import assertthat
 #' @export
-event_basis <- function(basis, onsets, blockids=1, durations=NULL) {
+event_basis <- function(basis, onsets, blockids=1, durations=NULL, subset=rep(TRUE, length(onsets))) {
   assertthat::assert_that(inherits(basis, "ParametricBasis"))
-  ret <- .checkEVArgs(basis$name, basis$x, onsets, blockids, durations)
+  ret <- .checkEVArgs(basis$name, basis$x[subset], onsets[subset], blockids[subset], durations[subset])
+  basis$y <- basis$y[subset,]
   ret$continuous <- TRUE
   ret$basis <- basis
   class(ret) <- c("event_basis", "event_seq")
@@ -266,23 +269,27 @@ cells.event_factor <- function(x, drop.empty=TRUE) {
 cells.event_term <- function(x, drop.empty=TRUE) {
   evtab <- x$event_table
   evset <- tibble::as_tibble(expand.grid(lapply(x$events, levels)))
+  
   which.cat <- which(!sapply(x$events, is_continuous))
   
-  evs <- tibble::as_tibble(lapply(evset[,which.cat], as.character))
-  evt <- tibble::as_tibble(lapply(evtab[,which.cat], as.character))
+  if (length(which.cat) > 0) {
+    evs <- tibble::as_tibble(lapply(evset[,which.cat], as.character))
+    evt <- tibble::as_tibble(lapply(evtab[,which.cat], as.character))
   
-  counts <- apply(evs, 1, function(row1) {
-    sum(apply(evt, 1, function(row2) {										
-      all(as.character(row1) == as.character(row2))
-    }))
-  })
+    counts <- apply(evs, 1, function(row1) {
+      sum(apply(evt, 1, function(row2) {										
+        all(as.character(row1) == as.character(row2))
+      }))
+    })
   
-  if (drop.empty) {
-    evset <- evset[counts > 0,,drop=F]
-    attr(evset, "count") <- counts[counts > 0]
-  } else {
-    attr(evset, "count") <- counts
+    if (drop.empty) {
+      evset <- evset[counts > 0,,drop=F]
+      attr(evset, "count") <- counts[counts > 0]
+    } else {
+      attr(evset, "count") <- counts
+    }
   }
+  
   evset
 }
 
@@ -515,6 +522,8 @@ convolve.event_term <- function(x, hrf, sframe, drop.empty=TRUE) {
 
 
 Fcontrasts.event_term <- function(x) {
+  
+  ## TODO check for no empty cells, otherwise everything fails
   which_cat <- which(sapply(x$events, function(obj) is_categorical(obj)))
   assert_that(length(which_cat) > 0)
   pterms <- parent_terms(x)[which_cat]
@@ -528,6 +537,7 @@ Fcontrasts.event_term <- function(x) {
   nfac <- length(Clist)
 
   main_effects <- lapply(length(Clist):1, function(i) {
+    print(i)
     Dcon <- Dlist[[i]]
     Cs <- Clist[-i]
     mats <- vector(nfac, mode="list")

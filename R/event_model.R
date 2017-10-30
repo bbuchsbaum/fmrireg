@@ -384,8 +384,13 @@ plot.event_model <- function(x, term_name=NULL, longnames=TRUE) {
     dfx <-  dflist[[term_name]]
   }
   
-  ggplot2::ggplot(dfx, aes_string(x=".time", y="value", colour="condition")) + geom_line() + facet_wrap(~ .block, ncol=1) +
-    xlab("Time") + theme_bw(14)
+  p <- ggplot2::ggplot(dfx, aes_string(x=".time", y="value", colour="condition")) + geom_line() + facet_wrap(~ .block, ncol=1) +
+    xlab("Time") + theme_bw(14) 
   
+  if (length(unique(dfx$condition)) > 10) {
+    p <- p + guides(colour=FALSE)
+  }
+    
+  print(p)
 }
   

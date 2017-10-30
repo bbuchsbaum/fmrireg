@@ -142,7 +142,7 @@ hrf_time <- function(t, maxt) {
 #' hrf_bspline
 #' 
 #' @param t a vector of times
-#' @param width the temporal window over which the basis sets spans
+#' @param span the temporal window over which the basis sets spans
 #' @param N the number of basis functions
 #' @param degree the degree of the spline
 #' @examples 
@@ -150,7 +150,7 @@ hrf_time <- function(t, maxt) {
 #' hrfb <- hrf_bspline(seq(0,20,by=.5), N=4, degree=2)
 #' @export
 #' @importFrom splines bs
-hrf_bspline <- function(t, width=20, N=5, degree=3) {
+hrf_bspline <- function(t, span=20, N=5, degree=3) {
 	
 	ord <- 1 + degree
 	nIknots <- N - ord + 1
@@ -161,7 +161,7 @@ hrf_bspline <- function(t, width=20, N=5, degree=3) {
 	
 	knots <- if (nIknots > 0) {
 				knots <- seq.int(from = 0, to = 1, length.out = nIknots + 2)[-c(1, nIknots + 2)]
-				stats::quantile(0:width, knots)
+				stats::quantile(0:span, knots)
 			} else {
 				0
 			}
@@ -170,11 +170,11 @@ hrf_bspline <- function(t, width=20, N=5, degree=3) {
 		t[t < 0] <- 0
 	}
 	
-	if(any(t > width)) {
-		t[t > width] <- 0
+	if(any(t > span)) {
+		t[t > span] <- 0
 	}
 	
-	bs(t, df=N, knots=knots, degree=degree, Boundary.knots=c(0,width))
+	bs(t, df=N, knots=knots, degree=degree, Boundary.knots=c(0,span))
 }
 
 
@@ -227,7 +227,7 @@ HRF_GAUSSIAN <- HRF(hrf_gaussian, "gaussian", param_names=c("mean", "sd"))
 
 #' @export
 #' @rdname HRF
-HRF_BSPLINE <- HRF(gen_hrf(hrf_bspline), "bspline", 5)
+HRF_BSPLINE <- HRF(gen_hrf(hrf_bspline), "bspline", nbasis=5)
 
 #' @export
 #' @rdname HRF
@@ -271,12 +271,13 @@ evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1) {
 }
 
 nbasis.HRF <- function(x) attr(x, "nbasis")
+
 #' getHRF
 #' 
 #' @param name the name of the hrf function
 #' @param nbasis the numbe rof basis functions (if relevant)
 #' @export
-getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis=5) {
+getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis=5,...) {
 	
 	hrf <- switch(name,
 			gamma=HRF_GAMMA,
@@ -284,7 +285,9 @@ getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis
 			spmg1=HRF_SPMG1,
 			spmg2=HRF_SPMG2,
 			spmg3=HRF_SPMG3,
-			bspline=HRF(gen_hrf(hrf_bspline, N=nbasis), "bspline", nbasis))
+			tent=HRF(gen_hrf(hrf_bspline, N=nbasis,degree=1,...), "bspline", nbasis),
+			bs=HRF(gen_hrf(hrf_bspline, N=nbasis,...), "bspline", nbasis),
+			bspline=HRF(gen_hrf(hrf_bspline, N=nbasis,...), "bspline", nbasis))
 	
 	if (is.null(hrf)) {
 		stop("could not find hrf named: ", name)
@@ -418,11 +421,11 @@ construct.hrfspec <- function(x, model_spec) {
   
   basis <- if (is.character(basis)) {
     getHRF(basis, nbasis=nbasis)
+  } else if (inherits(basis, "HRF")) {
+    basis
   } else if (is.function(basis)) {
     test <- basis(1:10)
     HRF(basis, name="custom_hrf", nbasis=ncol(test), ...)
-  } else if (inherits(basis, "HRF")) {
-    basis
   } else {
     stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
   }

@@ -64,56 +64,39 @@ test_that("can construct a convolved trialwise term from an hrfspec with one fac
   onsets <- seq(1,N,by=5)
   durations <- 0
   
-  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)))
-  espec <- event_model(onsets ~ fac, etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
-  hspec <- trialwise(fac)
+  sframe <- sampling_frame(blocklens=500, TR=1)
   
-  cterm <- construct(hspec, mspec)
-  expect_equal(dim(cterm$design_matrix), c(N,length(onsets)))
+  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), block=1)
+  espec <- event_model(onsets ~ trialwise(fac), data=etab, block=~block, sampling_frame=sframe)
+ 
+  expect_equal(dim(design_matrix(espec)), c(N,length(onsets)))
 })
 
 
-test_that("can extract a design matrix from an fmri_model with one term", {
-  N <- 100
-  onsets <- seq(1,N,by=5)
-  durations <- 0
-  
-  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)))
-  mspec <- fmri_model(onsets ~ hrf(fac), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
-  dmat <- design_matrix(mspec)
-  expect_equal(dim(dmat), c(N, length(levels(etab$fac))))
-})
 
-test_that("can extract a design matrix from an fmri_model with two terms", {
-  N <- 100
-  onsets <- seq(1,N,by=5)
-  durations <- 0
-  
-  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), fac2=factor(letters[1:2]))
-  mspec <- fmri_model(onsets ~ hrf(fac,fac2), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
-  dmat <- design_matrix(mspec)
-  expect_equal(dim(dmat), c(N, length(levels(interaction(etab$fac, etab$fac2)))))
-})
 
 test_that("can extract a design matrix from an fmri_model with two terms and one continuous variable", {
   N <- 100
   onsets <- seq(1,N,by=5)
   durations <- 0
   
-  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), fac2=factor(letters[1:2]), z=rnorm(length(onsets)))
-  mspec <- fmri_model(onsets ~ hrf(fac,fac2) + hrf(z), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
-  dmat <- design_matrix(mspec)
+  sframe <- sampling_frame(blocklens=100, TR=1)
+  
+  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), fac2=factor(letters[1:2]), z=rnorm(length(onsets)), run=1)
+  
+  espec <- event_model(onsets ~ hrf(fac,fac2) + hrf(z), data=etab, block = ~ run, sampling_frame=sframe)
+  dmat <- design_matrix(espec)
   expect_equal(dim(dmat), c(N, 5))
 })
 
 test_that("can extract a design matrix from an fmri_model with one factor crossed with one continuous variable", {
   N <- 100
   onsets <- seq(1,N,by=10)
-  durations <- 0
+  sframe <- sampling_frame(blocklens=100, TR=1)
   
-  etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)), z=1:10)
-  mspec <- fmri_model(onsets ~ hrf(fac) + hrf(fac,z), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
-  dmat <- design_matrix(mspec)
+  etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)), z=1:10, run=1)
+  espec <- event_model(onsets ~ hrf(fac) + hrf(fac,z), etab, block=~run, sampling_frame=sframe)
+  dmat <- design_matrix(espec)
   expect_equal(dim(dmat), c(N, length(levels(etab$fac)) * 2))
 })
 
@@ -121,10 +104,11 @@ test_that("can extract a design matrix from an fmri_model with one factor and a 
   N <- 100
   onsets <- seq(1,N,by=10)
   durations <- 0
-  
-  etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)))
-  mspec <- fmri_model(onsets ~ hrf(fac, basis="bspline", nbasis=5), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
-  dmat <- design_matrix(mspec)
+  sframe <- sampling_frame(blocklens=100, TR=1)
+
+  etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)), run=1)
+  espec <- event_model(onsets ~ hrf(fac, basis="bs", nbasis=5), data=etab, block=~run, sampling_frame=sframe)
+  dmat <- design_matrix(espec)
   expect_equal(dim(dmat), c(N, length(levels(etab$fac)) * 5))
 })
 
@@ -132,10 +116,11 @@ test_that("can extract a design matrix from an fmri_model with one factor and SP
   N <- 100
   onsets <- seq(1,N,by=10)
   durations <- 0
+  sframe <- sampling_frame(blocklens=100, TR=1)
   
-  etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)))
-  mspec <- fmri_model(onsets ~ hrf(fac, basis="spmg3"), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
-  dmat <- design_matrix(mspec)
+  etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)), run=1)
+  espec <- event_model(onsets ~ hrf(fac, basis="spmg3"), data=etab, block=~run, sampling_frame=sframe)
+  dmat <- design_matrix(espec)
   expect_equal(dim(dmat), c(N, length(levels(etab$fac)) * 3))
 })
 
@@ -145,114 +130,53 @@ test_that("can extract a design matrix from an fmri_model with one trialwise fac
   onsets <- seq(1,N,by=10)
   durations <- 0
   
-  etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)))
-  mspec <- fmri_model(onsets ~ trialwise(fac, basis="bspline", nbasis=5), etab, durations=1, blockids=rep(1,nrow(etab)), blocklens=N, TR=1)
-  dmat <- design_matrix(mspec)
+  etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)), run=1)
+  sframe <- sampling_frame(blocklens=100, TR=1)
+  
+  espec <- event_model(onsets ~ trialwise(fac, basis="bspline", nbasis=5), 
+                       data=etab, block=~run, sampling_frame = sframe)
+  dmat <- design_matrix(espec)
   expect_equal(dim(dmat), c(N, 5 * length(onsets)))
 })
 
 test_that("facedes model with rep_num", {
   facedes$repnum <- factor(facedes$rep_num)
-  mspec <- fmri_model(onset ~ hrf(repnum), facedes, durations=0, blockids=facedes$run, blocklens=rep(436/2,max(facedes$run)), TR=2)
-  dmat <- design_matrix(mspec)
-  expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), length(levels(facedes$repnum))))
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  espec <- event_model(onset ~ hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
+  dmat <- design_matrix(espec)
+  expect_equal(dim(dmat), c(sum(sframe$blocklens), length(levels(facedes$repnum))))
 })
 
 test_that("facedes model with rep_num, subsetting rep_num == -1 ", {
   facedes$repnum <- factor(facedes$rep_num)
-  mspec <- fmri_model(onset ~ hrf(repnum, subset=repnum != "-1"), facedes, durations=0, blockids=facedes$run, blocklens=rep(436/2,max(facedes$run)), TR=2)
-  dmat <- design_matrix(mspec)
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  
+  espec <- event_model(onset ~ hrf(repnum, subset=repnum != "-1"), data=facedes, block=~run, sampling_frame=sframe)
+  dmat <- design_matrix(espec)
   expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), length(levels(facedes$repnum))-1))
 })
 
 test_that("facedes model with rep_num, and rep_num by rt ", {
   facedes$repnum <- factor(facedes$rep_num)
-  mspec <- fmri_model(onset ~ hrf(repnum, subset=repnum != "-1") + hrf(repnum,rt,subset=rep_num!= "-1"), facedes, durations=0, blockids=facedes$run, blocklens=rep(436/2,max(facedes$run)), TR=2)
-  dmat <- design_matrix(mspec)
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  
+  espec <- event_model(onset ~ hrf(repnum, subset=repnum != "-1") + hrf(repnum,rt,subset=rep_num!= "-1"), 
+                       data=facedes, block=~run,sampling_frame = sframe)
+  dmat <- design_matrix(espec)
   expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), (length(levels(facedes$repnum))-1)*2))
 })
 
-test_that("facedes model block variable", {
-  facedes$repnum <- factor(facedes$rep_num)
-  
-  aux_data <- data.frame(run=rep(1:6, each=218))
-  mspec <- fmri_model(onset ~  hrf(repnum) + block(run), facedes, durations=0, blockids=facedes$run, 
-                      blocklens=rep(436/2,max(facedes$run)), TR=2, aux_data=aux_data)
-  dmat <- design_matrix(mspec)
-  expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), 11))
-})
 
 test_that("facedes model with polynomial parametric basis", {
   facedes$repnum <- factor(facedes$rep_num)
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
   
-  aux_table <- data.frame(run=rep(1:6, each=218))
-  mspec <- fmri_model(onset ~  hrf(Poly(rt,3)) + block(run), facedes, durations=0, blockids=facedes$run, 
-                      blocklens=rep(436/2,max(facedes$run)), TR=2, aux_data=aux_table)
-  dmat <- design_matrix(mspec)
-  expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), 9))
+  espec <- event_model(onset ~  hrf(Poly(rt,3)), data=facedes, block=~run, sampling_frame=sframe)
+  
+  dmat <- design_matrix(espec)
+  expect_equal(dim(dmat), c(sum(sframe$blocklens), 3))
 })
 
-test_that("facedes model with bspline baseline term and repnum regressor", {
-  facedes$repnum <- factor(facedes$rep_num)
-  
-  aux_table <- data.frame(run=rep(1:6, each=218))
-  mspec <- fmri_model(onset ~  hrf(repnum) + baseline(degree=3, basis="bs"), facedes, durations=0, blockids=facedes$run, 
-                      blocklens=rep(436/2,max(facedes$run)), TR=2)
-  dmat <- design_matrix(mspec)
-  expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), 9))
-})
-
-test_that("can build a simple contrast from a convolved term", {
-  facedes$repnum <- factor(facedes$rep_num)
-  aux_table <- data.frame(run=rep(1:6, each=218))
-  mspec <- fmri_model(onset ~  hrf(repnum) + baseline(degree=3, basis="bs"), facedes, durations=0, blockids=facedes$run, 
-                      blocklens=rep(436/2,max(facedes$run)), TR=2)
-  
-  term <- construct(mspec$varspec[[1]], mspec)
-  con <- contrast(A=repnum==-1, B=repnum==1)
-  expect_equal(as.vector(contrast_weights(con, term)), c(1,-1,0,0,0))
-})
-
-test_that("can build a contrast versus the intercept from a convolved term", {
-  facedes$repnum <- factor(facedes$rep_num)
-  aux_table <- data.frame(run=rep(1:6, each=218))
-  mspec <- fmri_model(onset ~  hrf(repnum) + baseline(degree=3, basis="bs"), facedes, durations=0, blockids=facedes$run, 
-                      blocklens=rep(436/2,max(facedes$run)), TR=2)
-  
-  term <- construct(mspec$varspec[[1]], mspec)
-  con <- contrast(A=repnum==-1)
-  expect_equal(as.vector(contrast_weights(con, term)), c(1,0,0,0,0))
-})
-
-test_that("can build a contrast versus the intercept and add to hrfspec", {
-  facedes$repnum <- factor(facedes$rep_num)
-  aux_table <- data.frame(run=rep(1:6, each=218))
-  
-  
-  conf <- contrast_formula(~ `2` - !`1`, id="repnum")
-  sframe <- sampling_frame(rep(436/2,max(facedes$run)), TR=2)
-  nuisance <- matrix(rnorm(2*length(sframe$blockids)), length(sframe$blockids), 2)
-  
-  bm <- baseline_model(basis="bs", degree=3, sampling_frame=sframe, nuisance_matrix=nuisance)
-  em <- event_model(onset ~ hrf(repnum, contrasts=con), block = ~ run, data=facedes, sampling_frame=sframe)
-  mod <- fmri_model(em, bm)
-  
-  term <- construct(mspec$varspec[[1]], mspec)
-  expect_equal(as.vector(contrast_weights(con, term)), c(1,0,0,0,0))
-})
-
-test_that("can build a linear contrast from repnum and value_map", {
-  facedes$repnum <- factor(facedes$rep_num)
-  aux_table <- data.frame(run=rep(1:6, each=218))
-  con <- poly_contrast(A=repnum, value_map=list("-1"=0, "1"=1, "2"=2, "3"=3, "4"=4))
-  
-  sframe <- sampling_frame(rep(436/2,max(facedes$run)), TR=2)
-  mspec <- fmri_model(onset ~  hrf(repnum, contrasts=con), ~ baseline(degree=3, basis="bs"), 
-                      event_table=facedes, event_block_ids=facedes$run, sampling_frame=sframe)
-  
-  term <- construct(mspec$varspec[[1]], mspec)
-  expect_equal(as.vector(contrast_weights(con, term)), as.vector(poly(c(0,1,2,3,4))))
-})
 
 
 
