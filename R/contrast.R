@@ -211,8 +211,9 @@ contrast_formula <- function(form, name, where=TRUE, split_by=NULL) {
 #' @param where
 #' @export
 unit_contrast <- function(A, name=NULL, where=TRUE, split_by=NULL) {
-  if (!pryr::is_promise(A) && lazyeval::is_formula(A)) {
-  
+  browser()
+  if (lazyeval::is_formula(A)) {
+    
     if (is.null(name)) {
       name <- as.character(lazyeval::f_rhs(A))
     }
@@ -223,7 +224,7 @@ unit_contrast <- function(A, name=NULL, where=TRUE, split_by=NULL) {
               split_by=substitute(split_by),
               name=name)
     
-    class(ret) <- c("unit_contrast_formula_spec", "contrast_spec", "list")
+    class(ret) <- c("unit_contrast_formula_spec", "contrast_formula_spec", "contrast_spec", "list")
     ret
   } else {
     ret <- list(A=substitute(A),
@@ -411,7 +412,6 @@ contrast_weights.contrast_spec <- function(x, term) {
  
   count <- attr(term.cells, "count")		
   term.cells <- subset(term.cells, count > 0)
-  
   keep <- eval(x$where, envir=term.cells, enclos=parent.frame())	
   keepA <- eval(x$A, envir=term.cells, enclos=parent.frame())
   keepB <- if (is.null(x$B)) NULL else eval(x$B, envir=term.cells, enclos=parent.frame())
