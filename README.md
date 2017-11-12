@@ -6,4 +6,4 @@ The `fmrireg` package is currently in development. The goal of the project is to
 Vignettes
 ---------
 
-See examples of use of `neuroim2` in the [vignettes](https://bbuchsbaum.github.io/fmrireg/articles/index.html).
+See examples of use of `fmrireg` in the [vignettes](https://bbuchsbaum.github.io/fmrireg/articles/index.html).
