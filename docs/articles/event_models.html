@@ -62,7 +62,14 @@
   </ul>
 </li>
       </ul>
-<ul class="nav navbar-nav navbar-right"></ul>
+<ul class="nav navbar-nav navbar-right">
+<li>
+  <a href="https://github.com/bbuchsbaum/fmrireg">
+    <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
 </div>
 <!--/.nav-collapse -->
   </div>
@@ -92,28 +99,20 @@
 <h2 class="hasAnchor">
 <a href="#a-simple-fmri-design" class="anchor"></a>A simple fMRI design</h2>
 <p>Consider a basic design, consisting of four stimulus types, each repeated 4 times over the course of a single scanning run. The stimuli are pictures of <em>faces</em>, <em>scenes</em>, <em>tools</em> and <em>object</em> presented for 2s a piece in a pseudorandom order. There is a uniformly distributed (4-7s) inter-stimulus interval (ISI) separating each stimulus presentation.</p>
-<pre><code>## Loading fmrireg</code></pre>
-<pre><code>## It is recommended to use 'given' instead of 'middle'.</code></pre>
-<pre><code>## Loading required package: abind</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## the fourstimulus types
-cond &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">"face"</span>, <span class="st">"scene"</span>, <span class="st">"tool"</span>, <span class="st">"object"</span>)
-NSTIM &lt;-<span class="st"> </span><span class="kw">length</span>(cond)<span class="op">*</span><span class="dv">4</span>
-
-## construct a design table
-simple_design &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">stim=</span><span class="kw">factor</span>(<span class="kw">sample</span>(<span class="kw">rep</span>(cond, <span class="dv">4</span>))), 
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">cond &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">"face"</span>, <span class="st">"scene"</span>, <span class="st">"tool"</span>, <span class="st">"object"</span>)
+NSTIM &lt;-<span class="st"> </span><span class="kw">length</span>(cond)<span class="op">*</span><span class="dv">4</span></code></pre></div>
+<p>Now we contruct a “design table” by randomly sampling from the four conditions:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">simple_design &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">stim=</span><span class="kw">factor</span>(<span class="kw">sample</span>(<span class="kw">rep</span>(cond, <span class="dv">4</span>))), 
                      <span class="dt">ISI=</span><span class="kw">sample</span>(<span class="dv">4</span><span class="op">:</span><span class="dv">7</span>, NSTIM, <span class="dt">replace=</span><span class="ot">TRUE</span>), 
-                     <span class="dt">run=</span><span class="kw">rep</span>(<span class="dv">1</span>, NSTIM))
+                     <span class="dt">run=</span><span class="kw">rep</span>(<span class="dv">1</span>, NSTIM))</code></pre></div>
+<p>Event onsets are calculated as the cumulative sum of the ISI variables. Then we construct a <strong>sampling_frame</strong> which define the temporal sampling and block structure of the experiment. Here we have only 1 block and a repetition frequency (TR) of 2.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">simple_design<span class="op">$</span>onset &lt;-<span class="st"> </span><span class="kw">cumsum</span>(simple_design<span class="op">$</span>ISI<span class="op">+</span><span class="dv">2</span>) <span class="op">-</span><span class="dv">2</span>
 
-## calculate the event onsets
-simple_design<span class="op">$</span>onset &lt;-<span class="st"> </span><span class="kw">cumsum</span>(simple_design<span class="op">$</span>ISI<span class="op">+</span><span class="dv">2</span>) <span class="op">-</span><span class="dv">2</span>
-
-## create a 'sampling_frame' describing the temporal outline of the scan consisting of 70 images collected every once every 2 seconds.
 TR &lt;-<span class="st"> </span><span class="dv">2</span>
-sframe &lt;-<span class="st"> </span><span class="kw"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="dt">blocklens=</span><span class="dv">70</span>, TR)
-
-## create the event model d
-emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/event_model.html">event_model</a></span>(onset <span class="op">~</span><span class="st"> </span><span class="kw"><a href="../reference/hrf.html">hrf</a></span>(stim), <span class="dt">data=</span>simple_design, <span class="dt">block =</span> <span class="op">~</span><span class="st"> </span>run, <span class="dt">sampling_frame=</span>sframe)
-<span class="kw">print</span>(emodel)</code></pre></div>
+sframe &lt;-<span class="st"> </span><span class="kw"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="dt">blocklens=</span><span class="dv">70</span>, TR)</code></pre></div>
+<p>Now the fun part. We create an <strong>event_model</strong> that describes the experimental model in terms of the stimulus onsets, conditions, and hemodynamic response function (‘hrf’).</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/event_model.html">event_model</a></span>(onset <span class="op">~</span><span class="st"> </span><span class="kw"><a href="../reference/hrf.html">hrf</a></span>(stim), <span class="dt">data=</span>simple_design, <span class="dt">block =</span> <span class="op">~</span><span class="st"> </span>run, <span class="dt">sampling_frame=</span>sframe)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(emodel)</code></pre></div>
 <pre><code>## event_model 
 ##   onset ~ hrf(stim) 
 ##   Num Terms 1 
@@ -129,8 +128,9 @@ emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/even
 ##    Num Columns:  4 
 ##    Conditions:  stim[face] stim[object] stim[scene] stim[tool] 
 ##    Term Types:  event_factor</code></pre>
+<p>And we can plot the model:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(emodel)</code></pre></div>
-<p><img src="event_models_files/figure-html/unnamed-chunk-2-1.png" width="672"></p>
+<p><img src="event_models_files/figure-html/unnamed-chunk-7-1.png" width="672"></p>
 </div>
 <div id="a-simple-fmri-design-with-multiple-blocks" class="section level2">
 <h2 class="hasAnchor">
@@ -173,7 +173,7 @@ emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/even
 ##    Conditions:  stim[face] stim[object] stim[scene] stim[tool] 
 ##    Term Types:  event_factor</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(emodel)</code></pre></div>
-<p><img src="event_models_files/figure-html/unnamed-chunk-3-1.png" width="672"></p>
+<p><img src="event_models_files/figure-html/unnamed-chunk-8-1.png" width="672"></p>
 </div>
 <div id="a-two-factor-fmri-design-with-multiple-blocks" class="section level2">
 <h2 class="hasAnchor">
@@ -195,12 +195,12 @@ design &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <spa
 
 <span class="kw">head</span>(design)</code></pre></div>
 <pre><code>##     stim   task ISI run onset
-## 1 object attend   2   1     2
-## 2   face attend   2   1     6
-## 3   face attend   2   1    10
-## 4  scene attend   6   1    18
-## 5  scene ignore   5   1    25
-## 6  scene ignore   3   1    30</code></pre>
+## 1 object ignore   2   1     2
+## 2   tool ignore   3   1     7
+## 3  scene attend   5   1    14
+## 4   face attend   5   1    21
+## 5 object ignore   4   1    27
+## 6   tool ignore   2   1    31</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## create a 'sampling_frame' describing the temporal outline of the scan consisting of 70 images collected every once every 2 seconds.
 TR &lt;-<span class="st"> </span><span class="dv">2</span>
 sframe &lt;-<span class="st"> </span><span class="kw"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="dt">blocklens=</span><span class="kw">c</span>(<span class="dv">100</span>,<span class="dv">100</span>), TR)
@@ -224,7 +224,7 @@ emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/even
 ##    Conditions:  stim[face]:task[attend] stim[scene]:task[attend] stim[tool]:task[attend] stim[object]:task[attend] stim[face]:task[ignore] stim[scene]:task[ignore] stim[tool]:task[ignore] stim[object]:task[ignore] 
 ##    Term Types:  event_factor event_factor</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(emodel)</code></pre></div>
-<p><img src="event_models_files/figure-html/unnamed-chunk-4-1.png" width="672"></p>
+<p><img src="event_models_files/figure-html/unnamed-chunk-9-1.png" width="672"></p>
 </div>
 <div id="an-event-related-design-with-an-amplitude-modulated-variable" class="section level2">
 <h2 class="hasAnchor">
@@ -262,7 +262,7 @@ emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/even
 ##    Conditions:  RT 
 ##    Term Types:  event_variable</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(emodel, <span class="st">"hrf.RT"</span>)</code></pre></div>
-<p><img src="event_models_files/figure-html/unnamed-chunk-5-1.png" width="672"></p>
+<p><img src="event_models_files/figure-html/unnamed-chunk-10-1.png" width="672"></p>
 </div>
 <div id="an-event-related-design-with-an-amplitude-modulated-variable-crossed-with-factor" class="section level2">
 <h2 class="hasAnchor">
@@ -301,7 +301,7 @@ emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/even
 ##    Conditions:  stim[face]:RT stim[object]:RT stim[scene]:RT stim[tool]:RT 
 ##    Term Types:  event_factor event_variable</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(emodel, <span class="st">"hrf.stim_RT"</span>)</code></pre></div>
-<p><img src="event_models_files/figure-html/unnamed-chunk-6-1.png" width="672"></p>
+<p><img src="event_models_files/figure-html/unnamed-chunk-11-1.png" width="672"></p>
 </div>
 </div>
   </div>

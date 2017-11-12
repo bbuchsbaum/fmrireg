@@ -1,8 +1,6 @@
 ---
 title: "fmrireg"
-output:
-  md_document:
-    variant: markdown_github
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
