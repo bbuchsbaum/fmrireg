@@ -12,4 +12,3 @@ gen_hrf_set(...)
 \description{
 gen_hrf_set
 }
-

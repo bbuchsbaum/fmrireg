@@ -13,9 +13,10 @@ gen_hrf(hrf, lag = 0, width = NULL, precision = 0.1, ...)
 
 \item{width}{optional block width in seconds}
 
+\item{precision}{sampling precision in seconds}
+
 \item{...}{extra parameters for the \code{hrf} function}
 }
 \description{
 gen_hrf
 }
-

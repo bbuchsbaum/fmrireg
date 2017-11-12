@@ -6,7 +6,9 @@
 \usage{
 durations(x)
 }
+\arguments{
+\item{x}{the object}
+}
 \description{
 return the durations vector
 }
-

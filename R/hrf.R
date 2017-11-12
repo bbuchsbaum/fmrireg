@@ -6,7 +6,7 @@ NULL
 #' @param hrf a function mapping from time --> signal
 #' @param lag optional lag in seconds
 #' @param width optional block width in seconds
-#' @param precision
+#' @param precision sampling precision in seconds
 #' @param ... extra parameters for the \code{hrf} function
 #' @export
 gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, ...) {
@@ -52,7 +52,6 @@ gen_hrf_set <- function(...) {
 #' 
 #' a class used to represent a hemodynamic response function.
 #' 
-#' @rdname HRF-class
 #' @param fun hemodynamic response function mapping from time --> BOLD response
 #' @param name the name of the function
 #' @param nbasis the number of basis functions, e.g. the columnar dimension of the hrf.
@@ -108,7 +107,9 @@ gen_hrf_lagged <- function(hrf, lag=2) {
 
 #' gen_hrf_blocked
 #' 
-#' @inheritParams hrf_blocked
+#' @param hrf the hemodynmaic response function
+#' @param width the width of the block
+#' @param precision the sampling resolution
 #' @importFrom purrr partial
 #' @export
 gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1) {
@@ -181,9 +182,9 @@ hrf_bspline <- function(t, span=20, N=5, degree=3) {
 #' hrf_gamma
 #' 
 #' A hemodynamic response function using the gamma density function
-#' @param t
-#' @param shape
-#' @param rate
+#' @param t time
+#' @param shape the shape parameter for gamma pdf
+#' @param rate the rate parameter for gamma pdf
 #' @export
 hrf_gamma <- function(t, shape=6, rate=1) {
   dgamma(t, shape=shape, rate=rate)
@@ -193,9 +194,9 @@ hrf_gamma <- function(t, shape=6, rate=1) {
 #' 
 #' A hemodynamic response function using the gamma density function
 #' 
-#' @param t
-#' @param mean
-#' @param sd
+#' @param t time
+#' @param mean the mean of Gaussian pdf
+#' @param sd the standard deviation of Gaussian pdf
 #' @export
 hrf_gaussian <- function(t, mean=6, sd=2) {
 	dnorm(t, mean=mean, sd=sd)
@@ -205,7 +206,7 @@ hrf_gaussian <- function(t, mean=6, sd=2) {
 #' 
 #' A hemodynamic response function based on the SPM canonical double gamma parameterzation.
 #' 
-#' @param t
+#' @param t time
 #' @export
 hrf_spmg1 <- function(t) {
   A1=.00833
@@ -313,8 +314,8 @@ getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis
 #' @param onsets optional onsets override. If missing, onsets will be taken from global model specification duration evaluation.
 #' @param durations optional durations override. If missing, onsets will be taken from global model specification during evaluation.
 #' @param prefix a character string that is prepended to the variables names and used to identify the term.
-#' @param subset
-#' @param precision 
+#' @param subset the subset of 'onsets' to keep
+#' @param precision sampling precision in seconds
 #' @param nbasis number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.
 #' @param contrasts one or more \code{contrastspec} objects created with the \code{contrast} function. 
 #' If multiple contrasts are required, then these should be wrapped in a \code{list}.

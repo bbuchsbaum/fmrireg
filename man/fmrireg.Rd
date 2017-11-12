@@ -8,4 +8,3 @@
 \description{
 fmrireg provides functions for generating experimental design matrices appropriate for analyzing fMRI data with regression.
 }
-

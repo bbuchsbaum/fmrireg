@@ -15,4 +15,3 @@ event_table(x)
 \description{
 extract event_table as \code{data.frame}
 }
-

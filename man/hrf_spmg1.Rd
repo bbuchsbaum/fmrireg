@@ -4,9 +4,11 @@
 \alias{hrf_spmg1}
 \title{hrf_spmg1}
 \usage{
-hrf_spmg1(t, A1 = 0.00833, A2 = 1.274527e-13, P1 = 5, P2 = 15)
+hrf_spmg1(t)
+}
+\arguments{
+\item{t}{time}
 }
 \description{
 A hemodynamic response function based on the SPM canonical double gamma parameterzation.
 }
-

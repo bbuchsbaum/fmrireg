@@ -6,7 +6,9 @@
 \usage{
 is_categorical(x)
 }
+\arguments{
+\item{x}{the object}
+}
 \description{
 checks to see if a variable is cateogircal e.g. factor-based
 }
-

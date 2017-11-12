@@ -30,4 +30,3 @@ blockids <- rep(1, 100)
 eset <- event_matrix(mat, "eset", onsets,durations,blockids)
 
 }
-

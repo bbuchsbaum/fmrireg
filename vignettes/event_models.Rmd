@@ -18,8 +18,12 @@ An "event model" is a description of an fMRI experiment, which consists of a col
 
 Consider a basic design, consisting of four stimulus types, each repeated 4 times over the course of a single scanning run. The stimuli are pictures of *faces*, *scenes*, *tools* and *object* presented for 2s a piece in a pseudorandom order. There is a uniformly distributed (4-7s) inter-stimulus interval (ISI) separating each stimulus presentation.
 
+```{r, echo=FALSE}
+devtools::load_all()
+```
+
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
-library(fmrireg)
+
 ## the fourstimulus types
 cond <- c("face", "scene", "tool", "object")
 NSTIM <- length(cond)*4

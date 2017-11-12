@@ -16,8 +16,13 @@ A hemodynamic response function (HRF) is used to model the temporal evoluation o
 
 There are a number of pre-defined HRFs in `fmrireg` that make it easy to work with them. For example, we can use the SPM "canonical" HRF as follows:
 
+```{r, echo=FALSE}
+devtools::load_all()
+```
+
 ```{r, message=FALSE, fig.width = 7, fig.height = 5}
-library(fmrireg)
+
+library(magrittr)
 
 ## SPM canonical hrf
 vals <- evaluate(HRF_SPMG1, seq(0,20,by=.1))

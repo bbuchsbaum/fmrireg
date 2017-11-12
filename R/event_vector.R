@@ -50,8 +50,8 @@ is.strictly.increasing <- function(vec) {
 #' @param evlist a list of named variables
 #' @param onsets the onset times from the experimental events in seconds
 #' @param blockids the block number associated with each onset
-#' @param durations
-#' @param subset
+#' @param durations the event durations
+#' @param subset the subset of onsets to retain
 #' @export
 #' @rdname event_term-class
 event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
@@ -212,10 +212,10 @@ event_matrix <- function(mat, name, onsets, durations=NULL, blockids=1 ) {
 #' 
 #' Create a event set from a basis object of type \code{\linkS4class{ParametricBasis}}. 
 #' 
-#' @param basis
-#' @param onsets
-#' @param blockids
-#' @param durations
+#' @param basis the basis object
+#' @param onsets the onset vector
+#' @param blockids the block indices
+#' @param durations the event durations
 #' @import assertthat
 #' @export
 event_basis <- function(basis, onsets, blockids=1, durations=NULL, subset=rep(TRUE, length(onsets))) {
@@ -483,6 +483,7 @@ convolve_design <- function(hrf, dmat, globons, durations) {
 }
 
 #' @importFrom tibble as_tibble
+#' @importFrom magrittr %>%
 #' @importFrom dplyr group_by select do ungroup
 #' @export
 convolve.event_term <- function(x, hrf, sframe, drop.empty=TRUE) {

@@ -6,7 +6,17 @@
 \usage{
 contrast(A, B = NULL, name, where = TRUE, split_by = NULL)
 }
+\arguments{
+\item{A}{the first expression in the contrast}
+
+\item{B}{the second expression in the contrast}
+
+\item{name}{the name of the contrast}
+
+\item{where}{the subset over which the contrast is computed}
+
+\item{split_by}{split the contrast by a second factor variable}
+}
 \description{
 contrast
 }
-

@@ -12,4 +12,3 @@ parent_terms(x)
 \description{
 parent_terms
 }
-

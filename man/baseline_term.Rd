@@ -9,4 +9,3 @@ baseline_term(varname, mat, colind, rowind)
 \description{
 baseline_term
 }
-

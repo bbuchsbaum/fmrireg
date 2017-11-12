@@ -17,11 +17,15 @@ Statistical contrasts are an important component of fMRI analyses. Contrasts all
 
 ## Main effect contrasts
 
-a "main effect" contrast tests whether activation, averaged over some set of conditions, is greater than zero. In this case "zero" is defined as the level of activation captured by the intercept term. Because all beta estimates are already expressed relative to the intercept term, main effect contrast vectors always sum to 1, rather than 0. We therefore refer to the sum-to-one contrasts as: "unit contrasts"
+a "main effect" contrast tests whether activation, averaged over some set of conditions, is greater than zero. In this case "zero" is defined as the level of activation captured by the intercept term, or the "implicit baseline" in *f*MRI parlance. Because all beta estimates are already expressed relative to the intercept term, main effect contrast vectors always sum to 1, rather than 0. We therefore refer to the sum-to-one contrasts as: "unit contrasts"
+
+```{r, echo=FALSE}
+devtools::load_all()
+```
 
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
 library(tibble)
-devtools::load_all()
+
 
 ## first we set up a very simple `event_model` with two stimuli.
 ## the four stimulus types

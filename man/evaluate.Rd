@@ -14,7 +14,9 @@ evaluate(x, grid, ...)
 \method{evaluate}{regressor}(x, grid, precision = 0.1)
 }
 \arguments{
-\item{grid}{the sampling grid. A vector of real values in seconds.}
+\item{x}{the object to evaluate}
+
+\item{grid}{the sampling grid}
 
 \item{...}{extra args}
 
@@ -23,6 +25,8 @@ evaluate(x, grid, ...)
 \item{duration}{the duration of the event}
 
 \item{precision}{the temporal resolution used for computing summed responses when duration > 0}
+
+\item{grid}{the sampling grid. A vector of real values in seconds.}
 
 \item{precision}{the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}}
 }
@@ -33,4 +37,3 @@ evaluate
 
 evaluate
 }
-

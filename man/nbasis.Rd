@@ -15,4 +15,3 @@ nbasis(x)
 \description{
 return number of basis functions associated with hrf.
 }
-

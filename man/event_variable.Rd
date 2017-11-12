@@ -18,4 +18,3 @@ event_variable(vec, name, onsets, blockids = 1, durations = NULL)
 \description{
 Create a continuous valued event sequence from a \code{numeric} vector.
 }
-

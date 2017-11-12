@@ -4,9 +4,18 @@
 \alias{event_basis}
 \title{event_basis}
 \usage{
-event_basis(basis, onsets, blockids = 1, durations = NULL)
+event_basis(basis, onsets, blockids = 1, durations = NULL,
+  subset = rep(TRUE, length(onsets)))
+}
+\arguments{
+\item{basis}{the basis object}
+
+\item{onsets}{the onset vector}
+
+\item{blockids}{the block indices}
+
+\item{durations}{the event durations}
 }
 \description{
 Create a event set from a basis object of type \code{\linkS4class{ParametricBasis}}.
 }
-

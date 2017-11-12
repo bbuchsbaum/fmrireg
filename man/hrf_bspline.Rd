@@ -4,9 +4,21 @@
 \alias{hrf_bspline}
 \title{hrf_bspline}
 \usage{
-hrf_bspline(t, width = 20, N = 5, degree = 3)
+hrf_bspline(t, span = 20, N = 5, degree = 3)
+}
+\arguments{
+\item{t}{a vector of times}
+
+\item{span}{the temporal window over which the basis sets spans}
+
+\item{N}{the number of basis functions}
+
+\item{degree}{the degree of the spline}
 }
 \description{
 hrf_bspline
 }
+\examples{
 
+hrfb <- hrf_bspline(seq(0,20,by=.5), N=4, degree=2)
+}

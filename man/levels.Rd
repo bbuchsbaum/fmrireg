@@ -12,4 +12,3 @@ levels(x)
 \description{
 extract the levels of a term
 }
-

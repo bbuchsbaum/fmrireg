@@ -12,4 +12,3 @@ baseline_terms(x)
 \description{
 extract list of 'baseline_term's from model object
 }
-

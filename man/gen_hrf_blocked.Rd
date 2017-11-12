@@ -6,7 +6,13 @@
 \usage{
 gen_hrf_blocked(hrf = hrf_gaussian, width = 5, precision = 0.1)
 }
+\arguments{
+\item{hrf}{the hemodynmaic response function}
+
+\item{width}{the width of the block}
+
+\item{precision}{the sampling resolution}
+}
 \description{
 gen_hrf_blocked
 }
-

@@ -14,8 +14,9 @@ design_matrix(x, ...)
 }
 \arguments{
 \item{x}{the term}
+
+\item{...}{additional arguments}
 }
 \description{
 construct a design matrix from the term
 }
-

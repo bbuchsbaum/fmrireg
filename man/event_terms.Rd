@@ -12,4 +12,3 @@ event_terms(x)
 \description{
 extract list of 'event_term's from model object
 }
-

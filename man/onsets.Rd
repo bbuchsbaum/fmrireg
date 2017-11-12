@@ -12,4 +12,3 @@ onsets(x)
 \description{
 return the onset vector
 }
-

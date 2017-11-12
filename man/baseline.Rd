@@ -17,4 +17,3 @@ baseline(degree = 5, basis = c("bs", "poly", "ns"),
 \description{
 A matrix of polynomial regressors for modeling low-frequency drift in fmri time series.
 }
-

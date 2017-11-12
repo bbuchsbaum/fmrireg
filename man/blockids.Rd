@@ -12,4 +12,3 @@ blockids(x)
 \description{
 extract block indices
 }
-

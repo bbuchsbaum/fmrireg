@@ -12,4 +12,3 @@ read_fmri_config(file_name)
 \description{
 read_fmri_config
 }
-

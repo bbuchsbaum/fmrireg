@@ -18,4 +18,3 @@ hrf_block(t, hrf = hrf_gaussian, width = 5, precision = 0.1)
 \description{
 hrf_block
 }
-

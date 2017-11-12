@@ -14,4 +14,3 @@ hrf_time(t, maxt)
 \description{
 hrf_time
 }
-

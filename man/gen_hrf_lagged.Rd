@@ -14,4 +14,3 @@ gen_hrf_lagged(hrf, lag = 2)
 \description{
 gen_hrf_lagged
 }
-

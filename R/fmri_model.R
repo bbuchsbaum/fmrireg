@@ -1,8 +1,8 @@
 
 #' fmri_model
 #' 
-#' @param event_model
-#' @param baseline_model
+#' @param event_model the \code{event_model} object
+#' @param baseline_model the \code{baseline_model} object
 #' @export
 fmri_model <- function(event_model, baseline_model) {
   assert_that(inherits(event_model, "event_model"))

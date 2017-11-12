@@ -10,8 +10,9 @@ global_onsets(x, onsets, ...)
 \item{x}{the object}
 
 \item{onsets}{the relative onset times of the events}
+
+\item{...}{extra args}
 }
 \description{
 global_onsets
 }
-

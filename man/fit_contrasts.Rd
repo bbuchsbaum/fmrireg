@@ -16,4 +16,3 @@ fit_contrasts(lmfit, conmat, colind)
 \description{
 fit_contrasts
 }
-

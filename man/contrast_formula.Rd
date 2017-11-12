@@ -6,7 +6,15 @@
 \usage{
 contrast_formula(form, name, where = TRUE, split_by = NULL)
 }
+\arguments{
+\item{form}{the contrast formula}
+
+\item{name}{the name of the contrast}
+
+\item{where}{the subset of conditions to apply contrast to}
+
+\item{split_by}{split the contrast by a second factor variable}
+}
 \description{
 contrast_formula
 }
-

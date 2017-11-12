@@ -22,4 +22,3 @@ A \code{sampling_frame} describes the block structure and temporal sampling of a
 
 frame <- sampling_frame(c(100,100, 100), TR=2)
 }
-

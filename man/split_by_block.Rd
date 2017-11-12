@@ -6,7 +6,11 @@
 \usage{
 split_by_block(x, ...)
 }
+\arguments{
+\item{x}{the object}
+
+\item{...}{extra args}
+}
 \description{
 split variables by block id
 }
-

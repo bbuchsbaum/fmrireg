@@ -8,8 +8,9 @@ blocklens(x, ...)
 }
 \arguments{
 \item{x}{the object}
+
+\item{...}{extra args}
 }
 \description{
 extract block lengths
 }
-

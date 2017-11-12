@@ -45,7 +45,7 @@ cells <- function(x, ...) UseMethod("cells")
 #' return the set of condition labels associated with a model term
 #' 
 #' @param x the model term
-#' @param ...
+#' @param ... extra args
 #' @export
 conditions <- function(x, ...) UseMethod("conditions")
 
@@ -149,8 +149,8 @@ elements <- function(x, ...) UseMethod("elements")
 #' 
 #' evaluate a regression or hemodynamic response function
 #' 
-#' @param x
-#' @param grid
+#' @param x the object to evaluate
+#' @param grid the sampling grid
 #' @param ... extra args
 #' 
 #' @export

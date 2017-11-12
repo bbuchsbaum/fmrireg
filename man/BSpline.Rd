@@ -14,4 +14,3 @@ BSpline(x, degree)
 \description{
 BSpline
 }
-

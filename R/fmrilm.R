@@ -1,16 +1,15 @@
 
 
-#' fmri_glm
+#' fmri_lm
 #' 
-#' @param formula
-#' @param block_formula
-#' @param baseline_model
-#' @param dataset
-#' @param durations
-#' @param drop_empty
-#' @param contrasts
-#' @param strategy
-#' @param 
+#' @param formula the model furmula for experimental events
+#' @param block_formula the model formula for block structure
+#' @param baseline_model the 'baseline_model' object
+#' @param dataset the dataset
+#' @param durations a vector of event durations
+#' @param drop_empty whether to remove factor levels with size of zero
+#' @param contrasts a set of contrasts
+#' @param strategy the data splitting strategy
 #' @export
 fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, contrasts=NULL, 

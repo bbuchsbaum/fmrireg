@@ -15,4 +15,3 @@ a class of type \code{nuisancespec}
 \description{
 a 'nuisance' term that consists of an arbitrary numeric matrix with the same number of rows as image time points.
 }
-

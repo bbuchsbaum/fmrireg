@@ -6,7 +6,9 @@
 \usage{
 amplitudes(x)
 }
+\arguments{
+\item{x}{the object}
+}
 \description{
 return the amplitude vector
 }
-

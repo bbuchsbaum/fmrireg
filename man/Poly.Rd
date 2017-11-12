@@ -11,7 +11,9 @@ Poly(x, degree)
 
 \item{degree}{the degree of the polynomial. Must be less than the number of unique points.}
 }
+\value{
+an instance of class \code{Poly} extending \code{ParametricBasis}
+}
 \description{
 Poly
 }
-

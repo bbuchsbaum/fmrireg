@@ -12,9 +12,8 @@ get_col_inds <- function(Xlist) {
 
 #' baseline_model
 #' 
-#' @param baseline_model 
-#' @param basis
-#' @param degree
+#' @param basis the basis function type
+#' @param degree the number of basis functions
 #' @param sframe sframe a \code{sampling_frame} object
 #' @param nuisance_list a list of nusiance matrices, one per block
 #' @importFrom lazyeval f_eval f_rhs f_lhs
@@ -106,7 +105,8 @@ terms.baseline_model <- function(x) {
 
 #' a block variable, which is constant over the span of a scanning run
 #' 
-#' @value an instance of a class \code{blockspec}
+#' @param x the block variable
+#' @return an instance of a class \code{blockspec}
 #' @export
 block <- function(x) {
   varname <- substitute(x)

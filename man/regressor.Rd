@@ -30,4 +30,3 @@ reg <- regressor(c(10,12,14,16,18, 40), HRF_SPMG1)
 pred <- evaluate(reg, seq(0,100,by=2))
 nbasis(reg) == 1
 }
-

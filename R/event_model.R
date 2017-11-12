@@ -1,13 +1,13 @@
 
-
+#' event_model
+#' 
 #' @importFrom lazyeval f_eval f_rhs f_lhs
-#' @param formula
-#' @param data
-#' @param block
-#' @param sampling_frame
-#' @param drop_empty
-#' @param durations
-#' @param contrasts
+#' @param formula the model formula
+#' @param data the data containing experimental design
+#' @param sampling_frame the sampling frame defining the temporal and block structure
+#' @param drop_empty whether to drop empty factor levels
+#' @param durations the event durations
+#' @param contrasts the set of contrasts
 #' @export
 event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, durations=0, contrasts=NULL) {
   
@@ -115,7 +115,6 @@ extract_covariates <- function(.terms, variables, resp, etab) {
 is_parametric_basis <- function(obj) { inherits(obj, "ParametricBasis") }
 
 
-#' @importFrom formula.tools rhs lhs op op.type
 extract_variables <- function(form, data) {
  
   .terms <- extract_terms(form,data)

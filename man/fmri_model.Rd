@@ -6,7 +6,11 @@
 \usage{
 fmri_model(event_model, baseline_model)
 }
+\arguments{
+\item{event_model}{the \code{event_model} object}
+
+\item{baseline_model}{the \code{baseline_model} object}
+}
 \description{
 fmri_model
 }
-

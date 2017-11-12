@@ -2,13 +2,29 @@
 % Please edit documentation in R/fmrilm.R
 \name{fmri_lm}
 \alias{fmri_lm}
-\title{fmri_glm}
+\title{fmri_lm}
 \usage{
 fmri_lm(formula, block_formula, baseline_model = NULL, dataset, durations,
   drop_empty = TRUE, contrasts = NULL, strategy = c("runwise",
   "slicewise", "all"))
 }
-\description{
-fmri_glm
-}
+\arguments{
+\item{formula}{the model furmula for experimental events}
 
+\item{block_formula}{the model formula for block structure}
+
+\item{baseline_model}{the 'baseline_model' object}
+
+\item{dataset}{the dataset}
+
+\item{durations}{a vector of event durations}
+
+\item{drop_empty}{whether to remove factor levels with size of zero}
+
+\item{contrasts}{a set of contrasts}
+
+\item{strategy}{the data splitting strategy}
+}
+\description{
+fmri_lm
+}

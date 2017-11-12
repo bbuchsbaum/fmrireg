@@ -14,4 +14,3 @@ stats(x, ...)
 \description{
 extract statistics from fitted model
 }
-

@@ -9,4 +9,3 @@ contrast_set(...)
 \description{
 contrast_set
 }
-

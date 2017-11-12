@@ -7,13 +7,14 @@
 convolve(x, hrf, samplingFrame, ...)
 }
 \arguments{
-\item{x}{a event sequence}
+\item{x}{an event sequence}
 
 \item{hrf}{a hemodynamic response function}
+
+\item{...}{extra args}
 
 \item{sampling_frame}{the time series grid over whcih to sample the fucntion.}
 }
 \description{
 convolve a term \code{x} with a hemodynamic response over a \code{sampling_frame}
 }
-

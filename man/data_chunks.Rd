@@ -10,6 +10,8 @@ data_chunks(x, nchunks, ...)
 \item{x}{the dataset}
 
 \item{nchunks}{the numbe rof data chunks}
+
+\item{...}{extra args}
 }
 \value{
 an \code{iterator} returning on data chunk per iteration
@@ -17,4 +19,3 @@ an \code{iterator} returning on data chunk per iteration
 \description{
 return the onset vector
 }
-

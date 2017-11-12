@@ -20,4 +20,3 @@ event_factor(fac, name, onsets, blockids = 1, durations = NULL)
 \description{
 Create an categorical event sequence from a \code{factor}
 }
-

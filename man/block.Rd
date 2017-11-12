@@ -6,7 +6,12 @@
 \usage{
 block(x)
 }
+\arguments{
+\item{x}{the block variable}
+}
+\value{
+an instance of a class \code{blockspec}
+}
 \description{
 a block variable, which is constant over the span of a scanning run
 }
-

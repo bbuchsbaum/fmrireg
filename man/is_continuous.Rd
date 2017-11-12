@@ -9,4 +9,3 @@ is_continuous(x)
 \description{
 checks to see if a variable is continuous e.g. numeric/non-categorical
 }
-

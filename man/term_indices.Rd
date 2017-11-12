@@ -14,4 +14,3 @@ term_indices(x, ...)
 \description{
 the term indices for the associated design matrix
 }
-

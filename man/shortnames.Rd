@@ -14,4 +14,3 @@ shortnames(x, ...)
 \description{
 shortnames
 }
-

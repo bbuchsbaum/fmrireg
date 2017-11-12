@@ -9,4 +9,3 @@ design_plot(fmrimod, longnames = FALSE)
 \description{
 design_plot
 }
-

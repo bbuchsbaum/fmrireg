@@ -4,7 +4,8 @@
 \alias{EV}
 \title{EV}
 \usage{
-EV(vals, name, onsets, blockids, durations = 1)
+EV(vals, name, onsets, blockids, durations = 1, subset = rep(TRUE,
+  length(onsets)))
 }
 \arguments{
 \item{vals}{the event values}
@@ -18,4 +19,3 @@ EV(vals, name, onsets, blockids, durations = 1)
 \description{
 factory function for creating 'event' types: event_factor, event_variable, event_basis, event_matrix.
 }
-

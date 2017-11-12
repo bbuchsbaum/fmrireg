@@ -3,8 +3,8 @@
 \name{longnames}
 \alias{longnames}
 \alias{longnames.convolved_term}
-\alias{longnames.matrix_term}
 \alias{shortnames.convolved_term}
+\alias{longnames.matrix_term}
 \title{longnames}
 \usage{
 longnames(x, ...)
@@ -23,4 +23,3 @@ longnames(x, ...)
 \description{
 longnames
 }
-

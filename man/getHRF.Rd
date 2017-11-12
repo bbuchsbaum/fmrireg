@@ -4,7 +4,8 @@
 \alias{getHRF}
 \title{getHRF}
 \usage{
-getHRF(name = c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis = 5)
+getHRF(name = c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis = 5,
+  ...)
 }
 \arguments{
 \item{name}{the name of the hrf function}
@@ -14,4 +15,3 @@ getHRF(name = c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis = 5)
 \description{
 getHRF
 }
-

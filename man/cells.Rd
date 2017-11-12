@@ -6,7 +6,11 @@
 \usage{
 cells(x, ...)
 }
+\arguments{
+\item{x}{the object}
+
+\item{...}{extra args}
+}
 \description{
 return the experimental cells that are in a model term
 }
-

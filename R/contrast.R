@@ -185,10 +185,10 @@ contrast_set <- function(...) {
 
 #' contrast_formula
 #' 
-#' @param form
-#' @param name
-#' @param where
-#' @param split_by
+#' @param form the contrast formula
+#' @param name the name of the contrast
+#' @param where the subset of conditions to apply contrast to
+#' @param split_by split the contrast by a second factor variable
 contrast_formula <- function(form, name, where=TRUE, split_by=NULL) {
   ret <- list(A=form,
               where=lazyeval::expr_find(where),
@@ -206,9 +206,9 @@ contrast_formula <- function(form, name, where=TRUE, split_by=NULL) {
 
 #' unit_contrast
 #' 
-#' @param A
-#' @param name
-#' @param where
+#' @param A the contrast expression
+#' @param name the name of the contrast
+#' @param where the subset of conditions to apply contrast to
 #' @export
 unit_contrast <- function(A, name=NULL, where=TRUE, split_by=NULL) {
   browser()
@@ -275,7 +275,7 @@ contrast_weights.unit_contrast_formula_spec <- function(x, term) {
 #' @param B the second expression in the contrast
 #' @param name the name of the contrast
 #' @param where the subset over which the contrast is computed
-#' @param split_by
+#' @param split_by split the contrast by a second factor variable
 #' @export
 contrast <- function(A, B=NULL, name, where=TRUE, split_by=NULL) {
   if (!pryr::is_promise(A) && lazyeval::is_formula(A)) {

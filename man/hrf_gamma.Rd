@@ -6,7 +6,13 @@
 \usage{
 hrf_gamma(t, shape = 6, rate = 1)
 }
+\arguments{
+\item{t}{time}
+
+\item{shape}{the shape parameter for gamma pdf}
+
+\item{rate}{the rate parameter for gamma pdf}
+}
 \description{
 A hemodynamic response function using the gamma density function
 }
-

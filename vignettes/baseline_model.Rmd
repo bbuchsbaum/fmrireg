@@ -17,8 +17,11 @@ An "baseline model" refers to the set of regressors used to capture variance ass
 
 ## Basic baseline model with b-splines and polynomials
 
-```{r, message=FALSE,fig.width = 7, fig.height = 5}
+```{r, echo=FALSE}
 devtools::load_all()
+```
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
 TR <- 2
 sframe <- sampling_frame(blocklens=c(100,100), TR)
 bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe)
@@ -36,8 +39,13 @@ plot(bmodel2)
 
 In addiiton to structured basis sets, we can also add arbitrary signals to the baseline model. Such signals are also organized by block on the assumption that nuisance signals are often block-specific and "reset" across scans. To add a set of nusiance variables to the baseline model, then, they should be split by block and placed in a `list`.
 
-```{r, message=FALSE,fig.width = 7, fig.height = 5}
+
+```{r, echo=FALSE}
 devtools::load_all()
+```
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+
 TR <- 2
 sframe <- sampling_frame(blocklens=c(100,100), TR)
 

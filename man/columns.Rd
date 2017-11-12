@@ -12,4 +12,3 @@ columns(x)
 \description{
 return the column labels associated with the elements of a term.
 }
-

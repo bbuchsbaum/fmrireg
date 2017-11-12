@@ -7,13 +7,14 @@
 baseline_model(basis = "bs", degree = 5, sframe, nuisance_list = NULL)
 }
 \arguments{
+\item{basis}{the basis function type}
+
+\item{degree}{the number of basis functions}
+
 \item{sframe}{sframe a \code{sampling_frame} object}
 
 \item{nuisance_list}{a list of nusiance matrices, one per block}
-
-\item{baseline_model}{}
 }
 \description{
 baseline_model
 }
-

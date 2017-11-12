@@ -6,7 +6,11 @@
 \usage{
 elements(x, ...)
 }
+\arguments{
+\item{x}{the term}
+
+\item{...}{additional arguments}
+}
 \description{
 return the ordered elements of a term/variable
 }
-

@@ -8,8 +8,9 @@ Fcontrasts(x, ...)
 }
 \arguments{
 \item{x}{the term}
+
+\item{...}{extra args}
 }
 \description{
 generate a set of Fcontrasts for a model term
 }
-

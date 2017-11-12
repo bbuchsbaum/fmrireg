@@ -19,7 +19,9 @@ hrf(..., basis = "spmg1", onsets = NULL, durations = NULL,
 
 \item{prefix}{a character string that is prepended to the variables names and used to identify the term.}
 
-\item{precision}{}
+\item{subset}{the subset of 'onsets' to keep}
+
+\item{precision}{sampling precision in seconds}
 
 \item{nbasis}{number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.}
 
@@ -34,4 +36,3 @@ hemodynamic regressor specification function
 \details{
 This function is to be used in formulas for fitting fucntions, e.g. onsets ~ hrf(fac1,fac2) ...
 }
-

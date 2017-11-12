@@ -6,7 +6,13 @@
 \usage{
 hrf_gaussian(t, mean = 6, sd = 2)
 }
+\arguments{
+\item{t}{time}
+
+\item{mean}{the mean of Gaussian pdf}
+
+\item{sd}{the standard deviation of Gaussian pdf}
+}
 \description{
 A hemodynamic response function using the gamma density function
 }
-

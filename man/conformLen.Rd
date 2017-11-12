@@ -9,4 +9,3 @@ conformLen(val, len)
 \description{
 check vector is of length 1 or repeated for supplied length
 }
-

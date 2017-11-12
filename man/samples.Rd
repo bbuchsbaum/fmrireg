@@ -6,7 +6,11 @@
 \usage{
 samples(x, ...)
 }
+\arguments{
+\item{x}{the object}
+
+\item{...}{extra args}
+}
 \description{
 extract samples
 }
-

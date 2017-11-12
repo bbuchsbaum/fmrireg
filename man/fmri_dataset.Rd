@@ -26,4 +26,3 @@ regression model and are not convolved with hemodynamic response function.}
 \description{
 fmri_dataset
 }
-

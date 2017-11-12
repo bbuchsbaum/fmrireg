@@ -4,9 +4,15 @@
 \alias{unit_contrast}
 \title{unit_contrast}
 \usage{
-unit_contrast(A, name = NULL, where = TRUE)
+unit_contrast(A, name = NULL, where = TRUE, split_by = NULL)
+}
+\arguments{
+\item{A}{the contrast expression}
+
+\item{name}{the name of the contrast}
+
+\item{where}{the subset of conditions to apply contrast to}
 }
 \description{
 unit_contrast
 }
-

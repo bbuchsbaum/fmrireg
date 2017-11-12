@@ -12,8 +12,11 @@ event_term(evlist, onsets, blockids, durations = 1, subset = NULL)
 \item{onsets}{the onset times from the experimental events in seconds}
 
 \item{blockids}{the block number associated with each onset}
+
+\item{durations}{the event durations}
+
+\item{subset}{the subset of onsets to retain}
 }
 \description{
 Create a event model term from a named list of variables.
 }
-

@@ -10,8 +10,9 @@ construct(x, model_spec, ...)
 \item{x}{the object}
 
 \item{model_spec}{the model specification}
+
+\item{...}{extra args}
 }
 \description{
 construct a term given a an hrf spec and model specification
 }
-

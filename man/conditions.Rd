@@ -11,8 +11,9 @@ conditions(x, ...)
 }
 \arguments{
 \item{x}{the model term}
+
+\item{...}{extra args}
 }
 \description{
 return the set of condition labels associated with a model term
 }
-

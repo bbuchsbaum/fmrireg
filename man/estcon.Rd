@@ -6,7 +6,13 @@
 \usage{
 estcon(x, fit, ...)
 }
+\arguments{
+\item{x}{the object}
+
+\item{fit}{the model fit}
+
+\item{...}{extra args}
+}
 \description{
 estcon
 }
-
