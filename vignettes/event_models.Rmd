@@ -18,31 +18,53 @@ An "event model" is a description of an fMRI experiment, which consists of a col
 
 Consider a basic design, consisting of four stimulus types, each repeated 4 times over the course of a single scanning run. The stimuli are pictures of *faces*, *scenes*, *tools* and *object* presented for 2s a piece in a pseudorandom order. There is a uniformly distributed (4-7s) inter-stimulus interval (ISI) separating each stimulus presentation.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
 devtools::load_all()
 ```
 
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
 
-## the fourstimulus types
 cond <- c("face", "scene", "tool", "object")
 NSTIM <- length(cond)*4
 
-## construct a design table
+```
+
+
+Now we contruct a "design table" by randomly sampling from the four conditions:
+
+```{r}
+
 simple_design <- data.frame(stim=factor(sample(rep(cond, 4))), 
                      ISI=sample(4:7, NSTIM, replace=TRUE), 
                      run=rep(1, NSTIM))
 
-## calculate the event onsets
+```
+
+Event onsets are calculated as the cumulative sum of the ISI variables. Then we construct a **sampling_frame** which define the temporal sampling and block structure of the experiment. Here we have only 1 block and a repetition frequency (TR) of 2.
+
+```{r}
 simple_design$onset <- cumsum(simple_design$ISI+2) -2
 
-## create a 'sampling_frame' describing the temporal outline of the scan consisting of 70 images collected every once every 2 seconds.
 TR <- 2
 sframe <- sampling_frame(blocklens=70, TR)
 
-## create the event model d
+```
+
+Now the fun part. We create an **event_model** that describes the experimental model in terms of the stimulus onsets, conditions, and hemodynamic response function ('hrf').
+
+```{r}
+
 emodel <- event_model(onset ~ hrf(stim), data=simple_design, block = ~ run, sampling_frame=sframe)
+
+```
+
+```{r}
 print(emodel)
+```
+
+And we can plot the model:
+
+```{r}
 plot(emodel)
 ```
 

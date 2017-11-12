@@ -184,7 +184,8 @@ print.regressor <- function(object) {
 }
 
 #' check vector is of length 1 or repeated for supplied length
-conformLen <- function(val, len) {
+#' @keywords internal
+conform_len <- function(val, len) {
   name <- deparse(substitute(val))
   if (length(val) == 1) {
     rep(val, len)

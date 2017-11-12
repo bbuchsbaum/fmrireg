@@ -24,3 +24,5 @@ Suggests: testthat,
     knitr,
     rmarkdown
 VignetteBuilder: knitr
+URL: https://github.com/bbuchsbaum/fmrireg
+BugReports: https://github.com/bbuchsbaum/fmrireg/issues
