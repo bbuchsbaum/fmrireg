@@ -1,4 +1,8 @@
 
+get_methods <- function(obj) {
+  unique(sapply(class(obj), function(cname) methods(class=cname)))
+}
+
 #' longnames
 #' 
 #' @param x the object
@@ -58,7 +62,7 @@ conditions <- function(x, ...) UseMethod("conditions")
 #' @param hrf a hemodynamic response function
 #' @param sampling_frame the time series grid over whcih to sample the fucntion.
 #' @param ... extra args
-convolve <- function(x, hrf, samplingFrame,...) UseMethod("convolve")
+convolve <- function(x, hrf, sampling_frame,...) UseMethod("convolve")
 
 #' is_continuous
 #' 

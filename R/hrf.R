@@ -396,6 +396,7 @@ construct.hrfspec <- function(x, model_spec) {
   subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
   
   et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
+  #browser()
   #sframe <- sampling_frame(model_spec$sampling_frame$blocklens, model_spec$TR, model_spec$sampling_frame$TR/2, x$precision)
   cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
   

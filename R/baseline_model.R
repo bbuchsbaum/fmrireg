@@ -26,6 +26,7 @@ baseline_model <- function(basis="bs", degree=5, sframe, nuisance_list=NULL) {
   block_term <- construct_block_term("constant", sframe)
   
   nuisance_term <- if (!is.null(nuisance_list)) {
+   
     total_len <- sum(sapply(nuisance_list, nrow))
     assertthat::assert_that(total_len == length(blockids(sframe)))
     assertthat::assert_that(length(nuisance_list) == length(blocklens(sframe)))
@@ -39,7 +40,7 @@ baseline_model <- function(basis="bs", degree=5, sframe, nuisance_list=NULL) {
       nuisance_list[[i]] <- nmat
     }
     
-    baseline_term("nuisance", Matrix::bdiag(lapply(nuisance_list, as.matrix)), colind,rowind)
+    baseline_term("nuisance", Matrix::bdiag(lapply(nuisance_list, unclass)), colind,rowind)
   } 
   
   ret <- list(drift_term=drift_term, drift_spec=drift_spec, 

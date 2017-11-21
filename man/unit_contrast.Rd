@@ -7,7 +7,7 @@
 unit_contrast(A, name = NULL, where = TRUE, split_by = NULL)
 }
 \arguments{
-\item{A}{the contrast expression}
+\item{A}{the contrast expression as a formula}
 
 \item{name}{the name of the contrast}
 

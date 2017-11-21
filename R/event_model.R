@@ -4,6 +4,7 @@
 #' @importFrom lazyeval f_eval f_rhs f_lhs
 #' @param formula the model formula
 #' @param data the data containing experimental design
+#' @param block formula for the block structure
 #' @param sampling_frame the sampling frame defining the temporal and block structure
 #' @param drop_empty whether to drop empty factor levels
 #' @param durations the event durations
@@ -213,7 +214,7 @@ contrast_weights.event_model <- function(x) {
   tnames <- names(terms(x))
   ret <- unlist(lapply(seq_along(terms(x)), function(i) {
     cwlist <- contrast_weights(terms(x)[[i]])
-    if (!is.null(cwlist)) {
+    if (!is.null(cwlist) && length(cwlist) > 0) {
       ret <- lapply(cwlist, function(cw) {
         out <- numeric(len)
         out[tind[[i]]] <- as.vector(cw$weights)
@@ -230,7 +231,6 @@ contrast_weights.event_model <- function(x) {
     }
   }), recursive=FALSE)
 
-  
   ret
 }
 

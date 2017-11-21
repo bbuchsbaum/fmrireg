@@ -186,19 +186,19 @@ test_that("facedes model with polynomial parametric basis", {
 #   repnum == 3 ~ repnum == 2
 # )
 # 
-cset <- contrast_set (
-   c1=contrast(
-     repnum == 1,
-     repnum == 2
-   ),
-   c2=contrast(
-     repnum==1
-   ),
-   c3=poly_contrast(
-     repnum,
-     value_map=list("-1" =0)
-   )
- )
+# cset <- contrast_set (
+#    c1=contrast(
+#      repnum == 1,
+#      repnum == 2
+#    ),
+#    c2=contrast(
+#      repnum==1
+#    ),
+#    c3=poly_contrast(
+#      repnum,
+#      value_map=list("-1" =0)
+#    )
+#  )
 
 
 

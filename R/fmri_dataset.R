@@ -1,15 +1,21 @@
+
+
+
 #' read_fmri_config
 #' 
 #' @param file_name name of configuration file
 #' @importFrom assertthat assert_that
 #' @importFrom tibble as_data_frame
 #' @export
-read_fmri_config <- function(file_name) {
+read_fmri_config <- function(file_name, base_path=NULL) {
+  print(file_name)
   env <- new.env()
   source(file_name, env)
   
-  if (is.null(env$base_path)) {
-    env$base_path = ""
+  if (is.null(env$base_path) && is.null(base_path)) {
+    env$base_path = "."
+  } else {
+    env$base_path <- base_path
   }
   
   if (is.null(env$output_dir)) {
@@ -23,18 +29,23 @@ read_fmri_config <- function(file_name) {
   assert_that(!is.null(env$run_length))
   assert_that(!is.null(env$event_model))
   assert_that(!is.null(env$event_table))
-  assert_that(file.exists(file.path(env$base_path,env$event_table)))
+  assert_that(!is.null(env$block_column))
+  #assert_that(file.exists(file.path(env$base_path,env$event_table)))
   
   
   #env$mask <- neuroim::loadVolume(file.path(env$base_path, env$mask))
-  env$design <- tibble::as_data_frame(read.table(file.path(env$base_path,env$event_table), header=TRUE))
-  
-  
-  if (is.null(env$aux_table)) {
-    env$aux_table=tibble::as_data_frame()
-  } else {
-    env$aux_table <- tibble::as_data_frame(read.table(file.path(env$base_path,env$aux_table), header=TRUE))
-  }
+  print(env$base_path)
+ 
+  dname <- file.path(env$base_path, env$event_table)
+  print(dname)
+  assert_that(file.exists(dname))
+  env$design <- tibble::as_data_frame(read.table(dname, header=TRUE))
+
+  # if (is.null(env$aux_table)) {
+  #   env$aux_table=tibble::as_data_frame()
+  # } else {
+  #   env$aux_table <- tibble::as_data_frame(read.table(file.path(env$base_path,env$aux_table), header=TRUE))
+  # }
   
   out <- as.list(env)
   class(out) <- c("fmri_config", "list")
@@ -43,7 +54,7 @@ read_fmri_config <- function(file_name) {
 
 
 #' @export
-matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame(), aux_data=list()) {
+matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
   assert_that(sum(run_length) == nrow(datamat))
   
   frame <- sampling_frame(run_length, TR)
@@ -52,7 +63,6 @@ matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame(), au
     datamat=datamat,
     nruns=length(run_length),
     event_table=event_table,
-    aux_data=aux_data,
     sampling_frame=frame
   )
   
@@ -68,15 +78,11 @@ matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame(), au
 #' @param mask name of the binary mask file indicating the voxels to include in analysis.
 #' @param TR the repetition time in seconds of the scan-to-scan interval.
 #' @param run_length the number of scans in each run.
-#' @param run_length the number of images in each session
 #' @param event_table a \code{data.frame} containing the event onsets and experimental variables.
-#' @param aux_data a \code{list} of auxilliary data such as nuisance variables that may enter a 
-#' regression model and are not convolved with hemodynamic response function.
 #' @export
 fmri_dataset <- function(scans, mask, TR, 
                          run_length, 
                          event_table=data.frame(), 
-                         aux_data=list(), 
                          base_path=".") {
   
   if (length(run_length) == 1) {
@@ -89,13 +95,10 @@ fmri_dataset <- function(scans, mask, TR,
   ret <- list(
     scans=scans,
     mask_file=mask,
-    mask=neuroim::loadVolume(file.path(base_path, mask)),
     nruns=length(scans),
     event_table=event_table,
-    aux_table=aux_table,
     base_path=base_path,
     sampling_frame=frame
-    
   )
   
   class(ret) <- c("volumetric_dataset", "fmri_dataset", "list")

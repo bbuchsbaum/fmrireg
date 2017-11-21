@@ -1,23 +1,31 @@
-#facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
+facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 
-#imagedes <- read.table(system.file("extdata", "images_study/behavior/design.txt"), header=TRUE)
-#image_mask_file = "test_data/images_study/epi/global_mask.nii"
 
-# test_that("can construct and run a simple fmri glm", {
-#  
-# 
-#   scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
-#   dset <- fmri_dataset(scans=scans, 
-#                        mask=image_mask_file, 
-#                        TR=1.5, 
-#                        run_length=rep(348,6), 
-#                        event_table=imagedes)
-#   
-#   con <- contrast_set(contrast( ~ Thorns - Massage, name="Thorns_Massage"))
-#   mod <- fmri_lm(onsetTime ~ hrf(imageName, subset = !is.na(onsetTime), contrasts=con), ~ run, dataset=dset, durations=0)
-#  
-#   
-# })
+test_that("can construct and run an fmri_model", {
+
+  facedes$repnum <- factor(facedes$rep_num)
+  scans <- paste0("rscan0", 1:6, ".nii")
+  dset <- fmri_dataset(scans=scans,
+                       mask="mask.nii",
+                       TR=1.5,
+                       run_length=rep(436,6),
+                       event_table=facedes)
+
+ 
+  espec <- event_model(onset ~ hrf(repnum), data=facedes, block=~run, sampling_frame=dset$sampling_frame)
+  bspec <- baseline_model(basis="bs", degree=5, sframe=dset$sampling_frame)
+  fmod <- fmri_model(espec, bspec)
+  expect_true(!is.null(fmod))
+  expect_equal(length(terms(fmod)), 3)
+  expect_equal(ncol(design_matrix(fmod)), length(conditions(fmod)))
+  expect_equal(2, length(baseline_terms(fmod)))
+  expect_null(contrast_weights(fmod))
+  #p<-print(fmod)
+  expect_true(TRUE)
+  
+})
+
+
 
 # test_that("a one-run, one-contrast linear model analysis", {
 #   df1 <- subset(imagedes,run==1)

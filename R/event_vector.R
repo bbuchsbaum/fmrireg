@@ -309,13 +309,14 @@ cells.event_term <- function(x, drop.empty=TRUE) {
 }
 
 #' @export
+#' @importFrom stringr str_trim
 cells.convolved_term <- function(x) {
   evtab <- event_table(x)
   evset <- .event_set(x)
   
-  strels <- apply(apply(evtab, 2, str_trim), 1, paste, collapse = ":")
+  strels <- apply(apply(evtab, 2, stringr::str_trim), 1, paste, collapse = ":")
   strlevs <- if (nrow(evset) > 1) {
-    apply(apply(evset, 2, str_trim), 1, paste, collapse = ":")
+    apply(apply(evset, 2, stringr::str_trim), 1, paste, collapse = ":")
   } else {
     as.character(evset[1,1])
   }
@@ -486,12 +487,12 @@ convolve_design <- function(hrf, dmat, globons, durations) {
 #' @importFrom magrittr %>%
 #' @importFrom dplyr group_by select do ungroup
 #' @export
-convolve.event_term <- function(x, hrf, sframe, drop.empty=TRUE) {
-  globons <- global_onsets(sframe, x$onsets, x$blockids)
+convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE) {
+  globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
   durations <- x$durations
   blockids <- x$blockids
   
-  nimages <- sum(sframe$blocklens)
+  nimages <- sum(sampling_frame$blocklens)
   
   cnames <- conditions(x)
   
@@ -503,7 +504,7 @@ convolve.event_term <- function(x, hrf, sframe, drop.empty=TRUE) {
     dplyr::do({
       d <- dplyr::select(., 1:ncond)
       reg <- convolve_design(hrf, d, .$.globons, .$.durations)
-      sam <- samples(sframe, blockids=as.integer(as.character(.$.blockids[1])), global=TRUE)
+      sam <- samples(sampling_frame, blockids=as.integer(as.character(.$.blockids[1])), global=TRUE)
       ret <- do.call(cbind, lapply(reg, function(r) evaluate(r, sam)))
       tibble::as_tibble(ret)
   }) %>% dplyr::ungroup() %>% dplyr::select(-.blockids)
