@@ -111,6 +111,7 @@ build_decon_command <- function(x, opts) {
 #   gltfiles <- if (length(gltnames) > 0) paste("glt_", gltnames, ".txt", sep="") else NULL
 # 
    func_terms <- terms(x$event_model)
+}
 #           
 #   afni.stims <- unlist(lapply(funcTerms, function(term) { buildAFNIStims(term, opts$iresp, opts$TR_times ) }))
 # 
