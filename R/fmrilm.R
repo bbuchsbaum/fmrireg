@@ -104,11 +104,15 @@ meta_Fcontrasts <- function(fres) {
 
 meta_contrasts <- function(cres) {
   ncon <- length(cres[[1]])
-  res <- lapply(1:ncon, function(i) {
-    beta <- do.call(cbind, lapply(cres, function(x) as.vector(x[[i]]$estimate())))
-    se <- do.call(cbind, lapply(cres, function(x) x[[i]]$se()))
-    meta_fixef(beta,se)
-  })
+  if (ncon > 0) {
+    res <- lapply(1:ncon, function(i) {
+      beta <- do.call(cbind, lapply(cres, function(x) as.vector(x[[i]]$estimate())))
+      se <- do.call(cbind, lapply(cres, function(x) x[[i]]$se()))
+      meta_fixef(beta,se)
+    })
+  } else {
+    stop("there are no contrasts for this model.")
+  }
   
   return(
     list(
@@ -159,11 +163,12 @@ runwise_lm <- function(dset, model, conlist, fcon) {
     
     term_names <- names(terms(model))
     form <- as.formula(paste("y ~ ", paste(term_names, collapse = " + "), "-1"))
-    
+
     cres <- foreach( ym = chunks) %do% {
       
-      ## replace with function called "baseline_indices"
+      ## get event model for the nth run
       eterm_matrices <- lapply(event_terms(model), function(x) as.matrix(design_matrix(x, ym$chunk_num)))
+      ## get baseline model for the nth run
       bterm_matrices <- lapply(baseline_terms(model), function(x) as.matrix(design_matrix(x, ym$chunk_num)))
       
       eterm_indices <- 1:sum(sapply(eterm_matrices, ncol))
@@ -191,10 +196,9 @@ runwise_lm <- function(dset, model, conlist, fcon) {
     bstats <- lapply(cres, "[[", "bstats")
     conres <- lapply(cres, "[[", "conres")
     Fres <- lapply(cres, "[[", "Fres")
-    
+
     if (length(cres) > 1) {
-      browser()
-      meta_con <- meta_contrasts(conres)
+      meta_con <- if (length(conres[[1]]) > 0) meta_contrasts(conres) else list()
       meta_beta <- meta_betas(bstats, cres[[1]]$event_indices)
       meta_F <- meta_Fcontrasts(Fres)
       list(contrasts=meta_con, betas=meta_beta, Fcontrasts=meta_F)

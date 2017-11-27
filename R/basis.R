@@ -27,7 +27,7 @@ Poly <- function(x, degree) {
 BSpline <- function(x, degree) {
   mc <- match.call()
   
-  pres <- poly(x,degree)
+  pres <- bs(x,degree)
   n <- paste0("bs", "_", as.character(mc[["x"]]), "_", degree)[1]
   ret <- list(x=x,y=pres,fun="bs",argname=as.character(mc[["x"]])[1], name=n, degree=degree)
   class(ret) <- c("BSpline", "ParametricBasis")

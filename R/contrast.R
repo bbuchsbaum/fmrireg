@@ -11,6 +11,22 @@ contrast_set <- function(...) {
 }
 
 
+#' pairwise_contrasts
+#' @param levels
+#' @param where the subset over which the contrast is computed
+#' @export
+pairwise_contrasts <- function(levels, where=TRUE) {
+  cbns <- combn(length(levels),2)
+  ret <- lapply(1:ncol(cbns), function(i) {
+    lev1 <- levels[cbns[1,i]]
+    lev2 <- levels[cbns[2,i]]
+    pair_contrast(as.formula(paste("~", lev1)), as.formula(paste("~", lev2)), where=where, name=paste0("con_", lev1, "_", lev2))
+  })
+  
+  do.call(contrast_set, ret)
+}
+  
+
 
 #' pair_contrast
 #' 
@@ -25,8 +41,8 @@ pair_contrast <- function(A, B, name, where=TRUE, split_by=NULL) {
   assert_that(lazyeval::is_formula(B))
   ret <- list(A=A,
               B=B,
-              where=substitute(where),
-              split_by=substitute(split_by),
+              where=where,
+              split_by=split_by,
               name=name)
     
   class(ret) <- c("contrast_spec", "list")

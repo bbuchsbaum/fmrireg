@@ -1,23 +1,51 @@
-#facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
+facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
+facedes$repnum <- factor(facedes$rep_num)
 
-#imagedes <- read.table(system.file("extdata", "images_study/behavior/design.txt"), header=TRUE)
-#image_mask_file = "test_data/images_study/epi/global_mask.nii"
+test_that("can construct and run a simple fmri glm from in memory dataset", {
+  
+   scans <- lapply(1:length(unique(facedes$run)), function(i) {
+     arr <- array(rnorm(10*10*10*244), c(10,10,10, 244))
+     bspace <- neuroim::BrainSpace(Dim=c(10,10,10,244))
+     neuroim::BrainVector(arr, bspace)
+   })
+   
+   mask <- neuroim::LogicalBrainVolume(array(rnorm(10*10*10), c(10,10,10)) > 0, neuroim::BrainSpace(Dim=c(10,10,10)))
+   
+   #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
+   dset <- fmri_mem_dataset(scans=scans, 
+                        mask=mask, 
+                        TR=1.5, 
+                        event_table=facedes)
+   
+   
+   mod <- fmri_lm(onset ~ hrf(repnum), block_formula = ~ run, dataset=dset, durations=0)
+   expect_true(!is.null(mod))
+  
+})
 
-# test_that("can construct and run a simple fmri glm", {
-#  
-# 
-#   scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
-#   dset <- fmri_dataset(scans=scans, 
-#                        mask=image_mask_file, 
-#                        TR=1.5, 
-#                        run_length=rep(348,6), 
-#                        event_table=imagedes)
-#   
-#   con <- contrast_set(contrast( ~ Thorns - Massage, name="Thorns_Massage"))
-#   mod <- fmri_lm(onsetTime ~ hrf(imageName, subset = !is.na(onsetTime), contrasts=con), ~ run, dataset=dset, durations=0)
-#  
-#   
-# })
+test_that("can construct and run a simple fmri glm from in memory dataset and one contrast", {
+  
+  scans <- lapply(1:length(unique(facedes$run)), function(i) {
+    arr <- array(rnorm(10*10*10*244), c(10,10,10, 244))
+    bspace <- neuroim::BrainSpace(Dim=c(10,10,10,244))
+    neuroim::BrainVector(arr, bspace)
+  })
+  
+  mask <- neuroim::LogicalBrainVolume(array(rnorm(10*10*10), c(10,10,10)) > 0, neuroim::BrainSpace(Dim=c(10,10,10)))
+  
+  #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
+  dset <- fmri_mem_dataset(scans=scans, 
+                           mask=mask, 
+                           TR=1.5, 
+                           event_table=facedes)
+  
+  con <- contrast_set(pair_contrast( ~ repnum == 1, ~ repnum == 2, name="rep2_rep1"))
+  
+  mod <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block_formula = ~ run, dataset=dset, durations=0)
+  expect_true(!is.null(mod))
+  expect_equal(ncol(mod$result$estimate()), 1)
+  
+})
 
 # test_that("a one-run, one-contrast linear model analysis", {
 #   df1 <- subset(imagedes,run==1)

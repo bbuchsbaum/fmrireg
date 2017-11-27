@@ -1,6 +1,6 @@
-afni_lm <- function(fmri_mod, working_dir=".", options=list()) {
+afni_lm <- function(fmri_mod, dataset, working_dir=".", options=list()) {
   
-  default_opts <- list(noFDR=FALSE, 
+  defopts <- list(noFDR=FALSE, 
                        fout=TRUE, 
                        rout=TRUE, 
                        tout=TRUE, 
@@ -16,12 +16,17 @@ afni_lm <- function(fmri_mod, working_dir=".", options=list()) {
     defopts[[optname]] <- options[[optname]]
   }
   
+  cmd <- build_decon_command(model=fmri_mod, dataset,working_dir=working_dir,opts=defopts)
+  
   structure(
     list(
       model=fmri_mod,
+      dataset=dataset,
       working_dir=working_dir,
-      options=options),
-    class="afni_lm")
+      options=options,
+      cmd=cmd),
+    class="afni_lm_spec")
+
 }
 
 afni_stim_file <- function(label, file_name, values) {
@@ -38,19 +43,21 @@ afni_stim_times <- function(label, file_name, hrf, onsets, iresp=FALSE, tr_times
   )
 }
 
-afni_command_switch.afni_stim_times <- function(x, k, type) {
-  switch(type,
-    label = paste(k, x$label, collapse = " "),
-    times = paste(k, x$file_name, as.character(x@hrf), collapse = " "),
-    file = NULL,
-    iresp = if (x$iresp) 
-      paste(k, paste(paste(x$label, "_iresp", sep = ""), collapse = " "))
-    else
-      NULL
-  )
-}
+# afni_command_switch.afni_stim_times <- function(x, k, type) {
+#   switch(type,
+#     label = paste(k, x$label, collapse = " "),
+#     times = paste(k, x$file_name, as.character(x@hrf), collapse = " "),
+#     file = NULL,
+#     iresp = if (x$iresp) 
+#       paste(k, paste(paste(x$label, "_iresp", sep = ""), collapse = " "))
+#     else
+#       NULL
+#   )
+# }
 
-afni_command_switch.afni_stim_file <- function(x, k, type) {
+
+
+afni_command_switch <- function(x, k, type) {
   switch(
     type,
     label = paste(k, x$label, collapse = " "),
@@ -60,17 +67,41 @@ afni_command_switch.afni_stim_file <- function(x, k, type) {
   )
 }
 
+next_dir_name <- function(wd) {
+  nd <- paste(wd, "+", sep="")
+  if (!file.exists(nd)) {
+    nd
+  } else {
+    Recall(nd)
+  }
+}
+
+write_stim_files <- function(afni_stims) {
+  sapply(afni_stims, function(stim) {
+    write_afni_stim(stim, ".")
+  })
+}
+
+write_afni_stim <- function(stim, dir) {
+  .write_values <- function(outname, vals) {
+    hfile <- file(outname, "w")
+    write(vals, file=hfile, ncolumns=1)
+    close(hfile)
+  }
+  
+  .write_values(paste(dir, "/", x$file_name, sep=""), x$values)
+}
+
 
 
 build_afni_stims <- function(x) {
   stimlabels <- longnames(x)
   stimfiles <- paste(stimlabels, "_reg.1D", sep = "")
-  desmat <- convolve(x)
+  desmat <- design_matrix(x)
   
   lapply(1:length(stimlabels), function(i) {
     afni_stim_file(stimlabels[i], stimfiles[i], desmat[, i])
   })
-  
 }
 
 #' @keywords internal
@@ -100,75 +131,54 @@ build_afni_stims <- function(x) {
 }
 
 
-build_decon_command <- function(x, opts) {
-   stimlabels <- unlist(lapply(terms(x$event_model), longnames))
+build_decon_command <- function(model, dataset, working_dir, opts) {
+   stimlabels <- unlist(lapply(terms(model$event_model), longnames))
    
    assert_that(length(unique(stimlabels)) == length(stimlabels))
-   assert_that(length(stimlabels) == length(conditions(x$design)))
+   #assert_that(length(stimlabels) == length(conditions(x$design)))
 #   
 #   gltlist <- glts(x)
 #   gltnames <- if (length(gltlist) > 0) names(gltlist) else NULL
 #   gltfiles <- if (length(gltnames) > 0) paste("glt_", gltnames, ".txt", sep="") else NULL
 # 
-   func_terms <- terms(x$event_model)
-#           
-#   afni.stims <- unlist(lapply(funcTerms, function(term) { buildAFNIStims(term, opts$iresp, opts$TR_times ) }))
-# 
-#   purgeNulls <- function(A) {
-#     A[!sapply(A, is.null)]
-#   }
-# 
-# 
-#   opt_stim_labels <-  purgeNulls(lapply(seq_along(afni.stims), function(i) buildCommandSwitch(afni.stims[[i]], i, "label")))
-#   opt_stim_files  <-  purgeNulls(lapply(seq_along(afni.stims), function(i) buildCommandSwitch(afni.stims[[i]], i, "file")))
-#   opt_stim_times  <-  purgeNulls(lapply(seq_along(afni.stims), function(i) buildCommandSwitch(afni.stims[[i]], i, "times")))
-#   opt_stim_iresp  <-  purgeNulls(lapply(seq_along(afni.stims), function(i) buildCommandSwitch(afni.stims[[i]], i, "iresp")))
-# 
-# 
-#   cmdlines <- list(input=filelist(x@design, full.names=T),
-#                              mask=x@mask,
-#                              polort=opts[["polort"]],
-#                              num_stimts=length(afni.stims),
-#                              num_glt=length(gltlist),
-#                              stim_file=opt_stim_files,
-#                              stim_label=opt_stim_labels,
-#                              stim_times=opt_stim_times,
-#                              TR_times=opts[["TR_times"]],
-#                              iresp=opt_stim_iresp,
-#                              gltsym=lapply(seq_along(gltfiles), function(i) paste(gltfiles[i], collapse=" ")),
-#                              glt_label=lapply(seq_along(gltnames), function(i) paste(i, gltnames[i], collapse=" ")),
-#                              nofullf_atall=opts[["nofullf_atall"]],
-#                              fout=opts[["fout"]],
-#                              rout=opts[["rout"]],
-#                              tout=opts[["tout"]],
-#                              bout=opts[["bout"]],
-#                              noFDR=opts[["noFDR"]],
-#                              cbucket=opts[["cbucket"]],
-#                              bucket=opts[["bucket"]],
-#                              jobs=opts[["jobs"]],
-#                              float=TRUE)
-# 
-# 
-#             cmdstr <- .makeCommandStr(cmdlines)
-# 
-#             ret <- list()
-#             wd <- workingDir(x)
-# 
-#             nextDirName <- function(wd) {
-#               nd <- paste(wd, "+", sep="")
-#               if (!file.exists(nd)) {
-#                 nd
-#               } else {
-#                 Recall(nd)
-#               }
-#             }
-# 
-#             writeStimFiles <- function() {
-#               sapply(afni.stims, function(stim) {
-#                 writeAFNIStim(stim, ".")
-#               })
-#             }
-# 
+   func_terms <- terms(model$event_model)
+
+   afni_stims <- unlist(lapply(func_terms, function(term) { build_afni_stims(term) }), recursive=FALSE)
+
+   purgeNulls <- function(A) {
+     A[!sapply(A, is.null)]
+   }
+ 
+   opt_stim_labels <-  purgeNulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "label")))
+   opt_stim_files  <-  purgeNulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "file")))
+  
+   cmdlines <- list(input=dataset$scans,
+                              mask=dataset$mask_file,
+                              polort=opts[["polort"]],
+                              num_stimts=length(afni_stims),
+                              #num_glt=length(gltlist),
+                              stim_file=opt_stim_files,
+                              stim_label=opt_stim_labels,
+                              #stim_times=opt_stim_times,
+                              TR_times=opts[["TR_times"]],
+                              #iresp=opt_stim_iresp,
+                              #gltsym=lapply(seq_along(gltfiles), function(i) paste(gltfiles[i], collapse=" ")),
+                              #glt_label=lapply(seq_along(gltnames), function(i) paste(i, gltnames[i], collapse=" ")),
+                              nofullf_atall=opts[["nofullf_atall"]],
+                              fout=opts[["fout"]],
+                              rout=opts[["rout"]],
+                              tout=opts[["tout"]],
+                              bout=opts[["bout"]],
+                              noFDR=opts[["noFDR"]],
+                              cbucket=opts[["cbucket"]],
+                              bucket=opts[["bucket"]],
+                              jobs=opts[["jobs"]],
+                              float=TRUE)
+ 
+ 
+             .make_decon_command_str(cmdlines)
+}
+ 
 #             writeGLTs <- function() {
 #               lapply(seq_along(gltlist), function(i) {
 #                 fout <- file(gltfiles[i], "w")
@@ -219,93 +229,6 @@ build_decon_command <- function(x, opts) {
 # 
 #           })
 # 
-# setMethod("workingDir", signature(x="AFNICommand"),
-#           function(x) {
-#             x@workingDir
-#             
-#           })
-# 
-# setMethod("getOptions", signature(x="AFNICommand"),
-#           function(x) {
-#             x@options           
-#           })
-# 
-# setMethod("glts", signature(x="AFNICommand"),
-#           function(x) {
-#             x@glts
-#           })
 
-   # build_afni_stims_native <- function(x, iresp=FALSE, tr_times=1) {
-   #           function(x, iresp=FALSE, tr.times=1) {
-   #             
-   #             #stimlabels <- shortnames(x, exclude.basis=TRUE)
-   #             split.ons <- splitOnsets(x, global=TRUE)
-   #             stimlabels <- names(split.ons)
-   #             stimfiles <- paste(stimlabels, "_reg.1D", sep="")		
-   #             
-   #             
-   #             lapply(1:length(stimlabels), function(i) {
-   #               AFNIStimTimes(stimlabels[i], stimfiles[i], x@hrf, split.ons[[stimlabels[[i]]]], iresp, tr.times)
-   #             })
-   #           })
-   
-   
-   # 
-   # .buildBLOCK <- function(stimlabel, stimfile, stimnum, duration) {
-   #   paste(paste("-stim_times", stimnum, stimfile,
-   #               paste("\'BLOCK(", duration, ")\'"),
-   #               paste("-stim_label", stimnum, stimlabel)))
-   # }
-   # 
-   # .buildGAM <- function(stimlabel, stimfile, stimnum) {
-   #   paste(paste("-stim_times", stimnum, stimfile,
-   #               paste("\"GAM\""),
-   #               paste("-stim_label", stimnum, stimlabel)))
-   # }
-   # 
-   # .buildSPMG <- function(stimlabel, stimfile, stimnum) {
-   #   paste(paste("-stim_times", stimnum, stimfile,
-   #               paste("\"SPMG\""),
-   #               paste("-stim_label", stimnum, stimlabel)))
-   # }
-   # .buildSPMG3 <- function(stimlabel, stimfile, stimnum) {
-   #   paste(paste("-stim_times", stimnum, stimfile,
-   #               paste("\"SPMG3\""),
-   #               paste("-stim_label", stimnum, stimlabel)))
-   # }
-   # 
-   # .buildBasis <- function(basisname, stimlabel, stimfile, stimnum, start, end, nparams) {
-   #   paste("-stim_times", stimnum, stimfile,
-   #         paste("\'", basisname, "(", start, ",", end, ",", nparams, ")\'", sep=""),
-   #         paste("-stim_label", stimnum, stimlabel),
-   #         paste("-iresp", stimnum, paste(stimlabel, "_iresp", sep="")))
-   #   
-   # }
-   # 
-   # setMethod("writeAFNIStim", signature(x="AFNIStimFile", dir="character"),
-   #           function(x, dir) {
-   #             
-   #             .writeOnsets <- function(outname, vals) {
-   #               hfile = file(outname, "w")
-   #               write(x@values, file=hfile, ncolumns=1)
-   #               close(hfile)
-   #             }
-   #             
-   #             .writeOnsets(paste(dir, "/", x@fileName, sep=""), x@values)
-   #           })
-   # 
-   # 
-   # setMethod("writeAFNIStim", signature(x="AFNIStimTimes", dir="character"),
-   #           function(x, dir) {
-   #             
-   #             .writeOnsets <- function(outname, onsets) {
-   #               hfile = file(outname, "w")
-   #               write(onsets, file=hfile, ncolumns=1)
-   #               close(hfile)
-   #             }
-   #             
-   #             .writeOnsets(paste(dir, "/", x@fileName, sep=""), x@onsets)
-   #           })
-   # 
-   # 
+
    

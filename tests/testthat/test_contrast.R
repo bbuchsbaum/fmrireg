@@ -80,6 +80,16 @@ test_that("can build a linear contrast from repnum and value_map", {
    expect_equal(as.vector(contrast_weights(con, term1)$weights), as.vector(poly(c(0,1,2,3,4))))
 })
 
+test_that("can build a set of pairwise contrasts", {
+  facedes$repnum <- factor(facedes$rep_num)
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
+  levs <- levels(facedes$repnum)
+  cset <- pairwise_contrasts(levs)
+  expect_equal(length(cset), ncol(combn(length(levs),2)))
+
+})
+
 
 
 

@@ -278,7 +278,7 @@ nbasis.HRF <- function(x) attr(x, "nbasis")
 #' @param name the name of the hrf function
 #' @param nbasis the numbe rof basis functions (if relevant)
 #' @export
-getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis=5,...) {
+getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian"), nbasis=5,...) {
 	
 	hrf <- switch(name,
 			gamma=HRF_GAMMA,
@@ -304,22 +304,23 @@ getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline"), nbasis
 
 #' hrf
 #' 
-#' hemodynamic regressor specification function
+#' hemodynamic regressor specification function for model formulas.
 #' 
 #' This function is to be used in formulas for fitting fucntions, e.g. onsets ~ hrf(fac1,fac2) ...
 #' 
 #' 
-#' @param ... the variable names
-#' @param basis the impulse response function.
-#' @param onsets optional onsets override. If missing, onsets will be taken from global model specification duration evaluation.
-#' @param durations optional durations override. If missing, onsets will be taken from global model specification during evaluation.
-#' @param prefix a character string that is prepended to the variables names and used to identify the term.
-#' @param subset the subset of 'onsets' to keep
+#' @param ... the variable names, all of which must be present in the enclosing environment (e.g. an \code{event_model} object)
+#' @param basis the impulse response function or the name of a pre-supplied function, one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian".
+#' @param onsets optional onsets override. If missing, onsets will be taken from the \code{event_model}
+#' @param durations optional durations override. If missing, onsets will be taken from the \code{event_model}
+#' @param prefix a character string that is prepended to the variable names and used to identify the term. 
+#'               Can be used to disambiguate two \code{hrf} terms with the same variable(s) but different onsets or basis functions.
+#' @param subset an expression indicating the subset of 'onsets' to keep
 #' @param precision sampling precision in seconds
 #' @param nbasis number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.
-#' @param contrasts one or more \code{contrastspec} objects created with the \code{contrast} function. 
-#' If multiple contrasts are required, then these should be wrapped in a \code{list}.
-#' @param id a  unique \code{character} identifier used to refer to term.
+#' @param contrasts one or more \code{contrast_spec} objects created with the \code{contrast} function. 
+#' If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.
+#' @param id a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.
 #' @export
 hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
                 nbasis=1, contrasts=NULL, id=NULL) {

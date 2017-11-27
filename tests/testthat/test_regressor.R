@@ -13,6 +13,8 @@ test_that("regressor generates correct outputs", {
   expect_equal(class(reg1)[1],"regressor")
   expect_equal(length(reg1$onsets), length(onsets))
   expect_equal(length(reg1$duration), length(onsets))
+  expect_true(durations(reg1)[1] == 0)
+  expect_true(amplitudes(reg1)[1] == 1)
 })
 
 test_that("generate an event model with one observation per level", {
@@ -172,6 +174,16 @@ test_that("facedes model with polynomial parametric basis", {
   sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
   
   espec <- event_model(onset ~  hrf(Poly(rt,3)), data=facedes, block=~run, sampling_frame=sframe)
+  
+  dmat <- design_matrix(espec)
+  expect_equal(dim(dmat), c(sum(sframe$blocklens), 3))
+})
+
+test_that("facedes model with bspline parametric basis", {
+  facedes$repnum <- factor(facedes$rep_num)
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  
+  espec <- event_model(onset ~  hrf(BSpline(rt,3)), data=facedes, block=~run, sampling_frame=sframe)
   
   dmat <- design_matrix(espec)
   expect_equal(dim(dmat), c(sum(sframe$blocklens), 3))

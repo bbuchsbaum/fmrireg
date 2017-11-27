@@ -9,17 +9,18 @@ hrf(..., basis = "spmg1", onsets = NULL, durations = NULL,
   contrasts = NULL, id = NULL)
 }
 \arguments{
-\item{...}{the variable names}
+\item{...}{the variable names, all of which must be present in the enclosing environment (e.g. an \code{event_model} object)}
 
-\item{basis}{the impulse response function.}
+\item{basis}{the impulse response function or the name of a pre-supplied function, one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian".}
 
-\item{onsets}{optional onsets override. If missing, onsets will be taken from global model specification duration evaluation.}
+\item{onsets}{optional onsets override. If missing, onsets will be taken from the \code{event_model}}
 
-\item{durations}{optional durations override. If missing, onsets will be taken from global model specification during evaluation.}
+\item{durations}{optional durations override. If missing, onsets will be taken from the \code{event_model}}
 
-\item{prefix}{a character string that is prepended to the variables names and used to identify the term.}
+\item{prefix}{a character string that is prepended to the variable names and used to identify the term. 
+Can be used to disambiguate two \code{hrf} terms with the same variable(s) but different onsets or basis functions.}
 
-\item{subset}{the subset of 'onsets' to keep}
+\item{subset}{an expression indicating the subset of 'onsets' to keep}
 
 \item{precision}{sampling precision in seconds}
 
@@ -31,7 +32,7 @@ If multiple contrasts are required, then these should be wrapped in a \code{list
 \item{id}{a  unique \code{character} identifier used to refer to term.}
 }
 \description{
-hemodynamic regressor specification function
+hemodynamic regressor specification function for model formulas.
 }
 \details{
 This function is to be used in formulas for fitting fucntions, e.g. onsets ~ hrf(fac1,fac2) ...

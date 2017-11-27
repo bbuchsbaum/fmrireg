@@ -4,16 +4,16 @@
 \alias{convolve}
 \title{convolve}
 \usage{
-convolve(x, hrf, samplingFrame, ...)
+convolve(x, hrf, sampling_frame, ...)
 }
 \arguments{
 \item{x}{an event sequence}
 
 \item{hrf}{a hemodynamic response function}
 
-\item{...}{extra args}
-
 \item{sampling_frame}{the time series grid over whcih to sample the fucntion.}
+
+\item{...}{extra args}
 }
 \description{
 convolve a term \code{x} with a hemodynamic response over a \code{sampling_frame}

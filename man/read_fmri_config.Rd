@@ -4,7 +4,7 @@
 \alias{read_fmri_config}
 \title{read_fmri_config}
 \usage{
-read_fmri_config(file_name)
+read_fmri_config(file_name, base_path = NULL)
 }
 \arguments{
 \item{file_name}{name of configuration file}

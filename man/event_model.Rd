@@ -12,6 +12,8 @@ event_model(formula, data, block, sampling_frame, drop_empty = TRUE,
 
 \item{data}{the data containing experimental design}
 
+\item{block}{formula for the block structure}
+
 \item{sampling_frame}{the sampling frame defining the temporal and block structure}
 
 \item{drop_empty}{whether to drop empty factor levels}

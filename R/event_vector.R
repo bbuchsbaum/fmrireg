@@ -2,7 +2,7 @@
 .sanitizeName <- function(name) {
   name <- gsub(":", ".", name)
   name <- gsub(" ", "", name)
-  name <- gsub("[\\(\\)]", ".", name, perl=TRUE)
+  name <- gsub("[\\(\\)]", "_", name, perl=TRUE)
   name <- gsub(",", "_", name)
   name <- gsub("\\.$", "", name)
   name
@@ -527,7 +527,7 @@ Fcontrasts.event_term <- function(x) {
   
   ## TODO check for no empty cells, otherwise everything fails
   which_cat <- which(sapply(x$events, function(obj) is_categorical(obj)))
-  assert_that(length(which_cat) > 0)
+  assert_that(length(which_cat) > 0, msg="Fcontrasts cannot be computed for terms with no categorical variables")
   pterms <- parent_terms(x)[which_cat]
   evs <- x$events[which_cat]
   cond <- conditions(x)
