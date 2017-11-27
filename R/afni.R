@@ -141,6 +141,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
 #   gltnames <- if (length(gltlist) > 0) names(gltlist) else NULL
 #   gltfiles <- if (length(gltnames) > 0) paste("glt_", gltnames, ".txt", sep="") else NULL
 # 
+
    func_terms <- terms(model$event_model)
 
    afni_stims <- unlist(lapply(func_terms, function(term) { build_afni_stims(term) }), recursive=FALSE)
@@ -179,6 +180,66 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
              .make_decon_command_str(cmdlines)
 }
  
+
+#           
+#   afni.stims <- unlist(lapply(funcTerms, function(term) { buildAFNIStims(term, opts$iresp, opts$TR_times ) }))
+# 
+#   purgeNulls <- function(A) {
+#     A[!sapply(A, is.null)]
+#   }
+# 
+# 
+#   opt_stim_labels <-  purgeNulls(lapply(seq_along(afni.stims), function(i) buildCommandSwitch(afni.stims[[i]], i, "label")))
+#   opt_stim_files  <-  purgeNulls(lapply(seq_along(afni.stims), function(i) buildCommandSwitch(afni.stims[[i]], i, "file")))
+#   opt_stim_times  <-  purgeNulls(lapply(seq_along(afni.stims), function(i) buildCommandSwitch(afni.stims[[i]], i, "times")))
+#   opt_stim_iresp  <-  purgeNulls(lapply(seq_along(afni.stims), function(i) buildCommandSwitch(afni.stims[[i]], i, "iresp")))
+# 
+# 
+#   cmdlines <- list(input=filelist(x@design, full.names=T),
+#                              mask=x@mask,
+#                              polort=opts[["polort"]],
+#                              num_stimts=length(afni.stims),
+#                              num_glt=length(gltlist),
+#                              stim_file=opt_stim_files,
+#                              stim_label=opt_stim_labels,
+#                              stim_times=opt_stim_times,
+#                              TR_times=opts[["TR_times"]],
+#                              iresp=opt_stim_iresp,
+#                              gltsym=lapply(seq_along(gltfiles), function(i) paste(gltfiles[i], collapse=" ")),
+#                              glt_label=lapply(seq_along(gltnames), function(i) paste(i, gltnames[i], collapse=" ")),
+#                              nofullf_atall=opts[["nofullf_atall"]],
+#                              fout=opts[["fout"]],
+#                              rout=opts[["rout"]],
+#                              tout=opts[["tout"]],
+#                              bout=opts[["bout"]],
+#                              noFDR=opts[["noFDR"]],
+#                              cbucket=opts[["cbucket"]],
+#                              bucket=opts[["bucket"]],
+#                              jobs=opts[["jobs"]],
+#                              float=TRUE)
+# 
+# 
+#             cmdstr <- .makeCommandStr(cmdlines)
+# 
+#             ret <- list()
+#             wd <- workingDir(x)
+# 
+#             nextDirName <- function(wd) {
+#               nd <- paste(wd, "+", sep="")
+#               if (!file.exists(nd)) {
+#                 nd
+#               } else {
+#                 Recall(nd)
+#               }
+#             }
+# 
+#             writeStimFiles <- function() {
+#               sapply(afni.stims, function(stim) {
+#                 writeAFNIStim(stim, ".")
+#               })
+#             }
+# 
+#
 #             writeGLTs <- function() {
 #               lapply(seq_along(gltlist), function(i) {
 #                 fout <- file(gltfiles[i], "w")
