@@ -32,7 +32,7 @@ NSTIM <- length(cond)*4
 
 Now we contruct a "design table" by randomly sampling from the four conditions:
 
-```{r}
+```{r, message=FALSE}
 
 simple_design <- data.frame(stim=factor(sample(rep(cond, 4))), 
                      ISI=sample(4:7, NSTIM, replace=TRUE), 
@@ -42,9 +42,9 @@ simple_design <- data.frame(stim=factor(sample(rep(cond, 4))),
 
 Event onsets are calculated as the cumulative sum of the ISI variables. Then we construct a **sampling_frame** which define the temporal sampling and block structure of the experiment. Here we have only 1 block and a repetition frequency (TR) of 2.
 
-```{r}
-simple_design$onset <- cumsum(simple_design$ISI+2) -2
+```{r, message=FALSE}
 
+simple_design$onset <- cumsum(simple_design$ISI+2) -2
 TR <- 2
 sframe <- sampling_frame(blocklens=70, TR)
 
@@ -140,7 +140,7 @@ simple_design$RT <- scale(rnorm(nrow(simple_design), mean=700, sd=100))
 ## create the event model d
 emodel <- event_model(onset ~ hrf(stim) + hrf(RT), data=simple_design, block = ~ run, sampling_frame=sframe)
 print(emodel)
-plot(emodel, "hrf.RT")
+plot(emodel, "hrf_RT")
 ```
 
 ## An event-related design with an amplitude-modulated variable crossed with factor
@@ -155,6 +155,6 @@ simple_design$RT <- scale(rnorm(nrow(simple_design), mean=700, sd=100))
 ## create the event model d
 emodel <- event_model(onset ~ hrf(stim) + hrf(stim, RT), data=simple_design, block = ~ run, sampling_frame=sframe)
 print(emodel)
-plot(emodel, "hrf.stim_RT")
+plot(emodel, "hrf_stim_RT")
 ```
 

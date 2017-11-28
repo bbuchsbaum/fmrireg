@@ -84,7 +84,7 @@
       <h1>Event Models</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2017-11-12</h4>
+            <h4 class="date">2017-11-27</h4>
           </div>
 
     
@@ -107,7 +107,6 @@ NSTIM &lt;-<span class="st"> </span><span class="kw">length</span>(cond)<span cl
                      <span class="dt">run=</span><span class="kw">rep</span>(<span class="dv">1</span>, NSTIM))</code></pre></div>
 <p>Event onsets are calculated as the cumulative sum of the ISI variables. Then we construct a <strong>sampling_frame</strong> which define the temporal sampling and block structure of the experiment. Here we have only 1 block and a repetition frequency (TR) of 2.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">simple_design<span class="op">$</span>onset &lt;-<span class="st"> </span><span class="kw">cumsum</span>(simple_design<span class="op">$</span>ISI<span class="op">+</span><span class="dv">2</span>) <span class="op">-</span><span class="dv">2</span>
-
 TR &lt;-<span class="st"> </span><span class="dv">2</span>
 sframe &lt;-<span class="st"> </span><span class="kw"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="dt">blocklens=</span><span class="dv">70</span>, TR)</code></pre></div>
 <p>Now the fun part. We create an <strong>event_model</strong> that describes the experimental model in terms of the stimulus onsets, conditions, and hemodynamic response function (‘hrf’).</p>
@@ -195,12 +194,12 @@ design &lt;-<span class="st"> </span><span class="kw">do.call</span>(rbind, <spa
 
 <span class="kw">head</span>(design)</code></pre></div>
 <pre><code>##     stim   task ISI run onset
-## 1 object ignore   2   1     2
-## 2   tool ignore   3   1     7
-## 3  scene attend   5   1    14
-## 4   face attend   5   1    21
-## 5 object ignore   4   1    27
-## 6   tool ignore   2   1    31</code></pre>
+## 1   tool ignore   4   1     4
+## 2   tool ignore   3   1     9
+## 3   tool attend   3   1    14
+## 4   tool ignore   3   1    19
+## 5 object ignore   2   1    23
+## 6   tool attend   4   1    29</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## create a 'sampling_frame' describing the temporal outline of the scan consisting of 70 images collected every once every 2 seconds.
 TR &lt;-<span class="st"> </span><span class="dv">2</span>
 sframe &lt;-<span class="st"> </span><span class="kw"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="dt">blocklens=</span><span class="kw">c</span>(<span class="dv">100</span>,<span class="dv">100</span>), TR)
@@ -261,7 +260,7 @@ emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/even
 ##    Num Columns:  1 
 ##    Conditions:  RT 
 ##    Term Types:  event_variable</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(emodel, <span class="st">"hrf.RT"</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(emodel, <span class="st">"hrf_RT"</span>)</code></pre></div>
 <p><img src="event_models_files/figure-html/unnamed-chunk-10-1.png" width="672"></p>
 </div>
 <div id="an-event-related-design-with-an-amplitude-modulated-variable-crossed-with-factor" class="section level2">
@@ -300,7 +299,7 @@ emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/even
 ##    Num Columns:  4 
 ##    Conditions:  stim[face]:RT stim[object]:RT stim[scene]:RT stim[tool]:RT 
 ##    Term Types:  event_factor event_variable</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(emodel, <span class="st">"hrf.stim_RT"</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(emodel, <span class="st">"hrf_stim_RT"</span>)</code></pre></div>
 <p><img src="event_models_files/figure-html/unnamed-chunk-11-1.png" width="672"></p>
 </div>
 </div>
@@ -325,7 +324,7 @@ emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/even
 
 
       <footer><div class="copyright">
-  <p>Developed by Bradley Buchsbaum R..</p>
+  <p>Developed by Bradley R. Buchsbaum.</p>
 </div>
 
 <div class="pkgdown">

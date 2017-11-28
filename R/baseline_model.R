@@ -40,7 +40,7 @@ baseline_model <- function(basis="bs", degree=5, sframe, nuisance_list=NULL) {
       nuisance_list[[i]] <- nmat
     }
     
-    baseline_term("nuisance", Matrix::bdiag(lapply(nuisance_list, unclass)), colind,rowind)
+    baseline_term("nuisance", Matrix::bdiag(lapply(nuisance_list, as.matrix)), colind,rowind)
   } 
   
   ret <- list(drift_term=drift_term, drift_spec=drift_spec, 

@@ -84,7 +84,7 @@
       <h1>Building Regressors</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2017-11-12</h4>
+            <h4 class="date">2017-11-27</h4>
           </div>
 
     
@@ -94,39 +94,50 @@
 <h2 class="hasAnchor">
 <a href="#building-fmri-regressors-from-event-onsets" class="anchor"></a>Building fMRI regressors from event onsets</h2>
 <p>Suppose we have a simple event-related fMRI design with 10 stimuli spaced every 12s. We want to model each event with the SPM canonical hemodynamic response function (HRF). The duration of each event is 0s, or “instantaneous”. We have 140s worth of contiguous scanning data, collected in a single scanning run with a repetititon time (TR) of 2s.</p>
-<pre><code>## Loading fmrireg</code></pre>
-<pre><code>## It is recommended to use 'given' instead of 'middle'.</code></pre>
-<pre><code>## Loading required package: abind</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">TR &lt;-<span class="st"> </span><span class="dv">2</span>
 onsets &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">10</span><span class="op">*</span><span class="dv">12</span>, <span class="dt">by=</span><span class="dv">12</span>)
 reg &lt;-<span class="st"> </span><span class="kw"><a href="../reference/regressor.html">regressor</a></span>(onsets, HRF_SPMG1, <span class="dt">duration=</span><span class="dv">0</span>)
-vals &lt;-<span class="st"> </span><span class="kw"><a href="../reference/evaluate.html">evaluate</a></span>(reg, <span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">140</span>,<span class="dt">by=</span>TR))
-<span class="kw">plot</span>(<span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">140</span>,<span class="dt">by=</span>TR), vals, <span class="dt">type=</span><span class="st">'l'</span>, <span class="dt">xlab=</span><span class="st">"Time"</span>, <span class="dt">ylab=</span><span class="st">"BOLD response"</span>)</code></pre></div>
+<span class="kw">plot</span>(reg)</code></pre></div>
 <p><img src="regressor_files/figure-html/unnamed-chunk-2-1.png" width="576"></p>
 </div>
 <div id="building-fmri-regressors-from-event-onsets-with-varying-duration" class="section level2">
 <h2 class="hasAnchor">
 <a href="#building-fmri-regressors-from-event-onsets-with-varying-duration" class="anchor"></a>Building fMRI regressors from event onsets with varying duration</h2>
+<p>Sometimes different fMRI events have different durations and we want to model this variation.We can do this as follows:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">TR &lt;-<span class="st"> </span><span class="dv">2</span>
 onsets &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">10</span><span class="op">*</span><span class="dv">12</span>, <span class="dt">length.out=</span><span class="dv">10</span>)
-durs &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">1</span>,<span class="kw">length</span>(onsets))
-
-reg &lt;-<span class="st"> </span><span class="kw"><a href="../reference/regressor.html">regressor</a></span>(onsets, HRF_SPMG1, <span class="dt">duration=</span>durs)
-vals &lt;-<span class="st"> </span><span class="kw"><a href="../reference/evaluate.html">evaluate</a></span>(reg, <span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">140</span>,<span class="dt">by=</span>TR))
-<span class="kw">plot</span>(<span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">140</span>,<span class="dt">by=</span>TR), vals, <span class="dt">type=</span><span class="st">'l'</span>, <span class="dt">xlab=</span><span class="st">"Time"</span>, <span class="dt">ylab=</span><span class="st">"BOLD response"</span>)</code></pre></div>
-<p><img src="regressor_files/figure-html/unnamed-chunk-3-1.png" width="576"></p>
+durs &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">1</span>,<span class="kw">length</span>(onsets))</code></pre></div>
+<p>The <code>durs</code> vectors contains the durations, which increase over the course of the block. We now supply this vector the the <code>regressor</code> function:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg &lt;-<span class="st"> </span><span class="kw"><a href="../reference/regressor.html">regressor</a></span>(onsets, HRF_SPMG1, <span class="dt">duration=</span>durs)
+<span class="kw">plot</span>(reg)</code></pre></div>
+<p><img src="regressor_files/figure-html/unnamed-chunk-4-1.png" width="576"></p>
 </div>
 <div id="building-fmri-regressors-from-event-onsets-with-varying-amplitude" class="section level2">
 <h2 class="hasAnchor">
 <a href="#building-fmri-regressors-from-event-onsets-with-varying-amplitude" class="anchor"></a>Building fMRI regressors from event onsets with varying amplitude</h2>
+<p>Sometimes we assume that each the amplitude of each event is modulated by an arbitrary continuous variable, for example “learning rate” or “intensity”. We can create a so-called <em>parameteric regressor</em> by scaling the hemodynamic response by an external variable as follows:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">TR &lt;-<span class="st"> </span><span class="dv">2</span>
+onsets &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">10</span><span class="op">*</span><span class="dv">12</span>, <span class="dt">length.out=</span><span class="dv">10</span>)
+amp &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">1</span>,<span class="kw">length</span>(onsets))</code></pre></div>
+<p>It is customary center and scale the parametric modulator:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">scaled_amp &lt;-<span class="st"> </span><span class="kw">scale</span>(amp)
+reg &lt;-<span class="st"> </span><span class="kw"><a href="../reference/regressor.html">regressor</a></span>(onsets, HRF_SPMG1, <span class="dt">amplitude=</span>scaled_amp)
+<span class="kw">plot</span>(reg)</code></pre></div>
+<p><img src="regressor_files/figure-html/unnamed-chunk-6-1.png" width="576"></p>
+</div>
+<div id="combining-duration-and-amplitude-modulation" class="section level2">
+<h2 class="hasAnchor">
+<a href="#combining-duration-and-amplitude-modulation" class="anchor"></a>Combining duration and amplitude modulation</h2>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">TR &lt;-<span class="st"> </span><span class="dv">2</span>
 onsets &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">10</span><span class="op">*</span><span class="dv">12</span>, <span class="dt">length.out=</span><span class="dv">10</span>)
 amp &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">1</span>,<span class="kw">length</span>(onsets))
+dur &lt;-<span class="st"> </span><span class="kw">sample</span>(<span class="kw">seq</span>(<span class="dv">1</span>, <span class="kw">length</span>(onsets)))
 
-reg &lt;-<span class="st"> </span><span class="kw"><a href="../reference/regressor.html">regressor</a></span>(onsets, HRF_SPMG1, <span class="dt">amplitude=</span>amp)
-vals &lt;-<span class="st"> </span><span class="kw"><a href="../reference/evaluate.html">evaluate</a></span>(reg, <span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">140</span>,<span class="dt">by=</span>TR))
-<span class="kw">plot</span>(<span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">140</span>,<span class="dt">by=</span>TR), vals, <span class="dt">type=</span><span class="st">'l'</span>, <span class="dt">xlab=</span><span class="st">"Time"</span>, <span class="dt">ylab=</span><span class="st">"BOLD response"</span>)</code></pre></div>
-<p><img src="regressor_files/figure-html/unnamed-chunk-4-1.png" width="576"></p>
+scaled_amp &lt;-<span class="st"> </span><span class="kw">scale</span>(amp)
+
+reg &lt;-<span class="st"> </span><span class="kw"><a href="../reference/regressor.html">regressor</a></span>(onsets, HRF_SPMG1, <span class="dt">amplitude=</span>scaled_amp, <span class="dt">duration=</span>dur)
+<span class="kw">plot</span>(reg)</code></pre></div>
+<p><img src="regressor_files/figure-html/unnamed-chunk-7-1.png" width="576"></p>
 </div>
 <div id="building-fmri-regressors-from-event-onsets-with-bspline-basis-functions" class="section level2">
 <h2 class="hasAnchor">
@@ -136,7 +147,7 @@ onsets &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv
 reg &lt;-<span class="st"> </span><span class="kw"><a href="../reference/regressor.html">regressor</a></span>(onsets, HRF_BSPLINE)
 vals &lt;-<span class="st"> </span><span class="kw"><a href="../reference/evaluate.html">evaluate</a></span>(reg, <span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">140</span>,<span class="dt">by=</span>TR))
 <span class="kw">matplot</span>(<span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">140</span>,<span class="dt">by=</span>TR), vals, <span class="dt">type=</span><span class="st">'l'</span>, <span class="dt">xlab=</span><span class="st">"Time"</span>, <span class="dt">ylab=</span><span class="st">"BOLD response"</span>)</code></pre></div>
-<p><img src="regressor_files/figure-html/unnamed-chunk-5-1.png" width="576"></p>
+<p><img src="regressor_files/figure-html/unnamed-chunk-8-1.png" width="576"></p>
 </div>
 </div>
   </div>
@@ -149,6 +160,7 @@ vals &lt;-<span class="st"> </span><span class="kw"><a href="../reference/evalua
 <li><a href="#building-fmri-regressors-from-event-onsets">Building fMRI regressors from event onsets</a></li>
       <li><a href="#building-fmri-regressors-from-event-onsets-with-varying-duration">Building fMRI regressors from event onsets with varying duration</a></li>
       <li><a href="#building-fmri-regressors-from-event-onsets-with-varying-amplitude">Building fMRI regressors from event onsets with varying amplitude</a></li>
+      <li><a href="#combining-duration-and-amplitude-modulation">Combining duration and amplitude modulation</a></li>
       <li><a href="#building-fmri-regressors-from-event-onsets-with-bspline-basis-functions">Building fMRI regressors from event onsets with Bspline basis functions</a></li>
       </ul>
 </div>
@@ -158,7 +170,7 @@ vals &lt;-<span class="st"> </span><span class="kw"><a href="../reference/evalua
 
 
       <footer><div class="copyright">
-  <p>Developed by Bradley Buchsbaum R..</p>
+  <p>Developed by Bradley R. Buchsbaum.</p>
 </div>
 
 <div class="pkgdown">

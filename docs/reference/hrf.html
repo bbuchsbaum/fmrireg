@@ -108,7 +108,7 @@
     </div>
 
     
-    <p>hemodynamic regressor specification function</p>
+    <p>hemodynamic regressor specification function for model formulas.</p>
     
 
     <pre class="usage"><span class='fu'>hrf</span>(<span class='no'>...</span>, <span class='kw'>basis</span> <span class='kw'>=</span> <span class='st'>"spmg1"</span>, <span class='kw'>onsets</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='kw'>durations</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
@@ -120,27 +120,28 @@
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
       <th>...</th>
-      <td><p>the variable names</p></td>
+      <td><p>the variable names, all of which must be present in the enclosing environment (e.g. an <code>event_model</code> object)</p></td>
     </tr>
     <tr>
       <th>basis</th>
-      <td><p>the impulse response function.</p></td>
+      <td><p>the impulse response function or the name of a pre-supplied function, one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian".</p></td>
     </tr>
     <tr>
       <th>onsets</th>
-      <td><p>optional onsets override. If missing, onsets will be taken from global model specification duration evaluation.</p></td>
+      <td><p>optional onsets override. If missing, onsets will be taken from the <code>event_model</code></p></td>
     </tr>
     <tr>
       <th>durations</th>
-      <td><p>optional durations override. If missing, onsets will be taken from global model specification during evaluation.</p></td>
+      <td><p>optional durations override. If missing, onsets will be taken from the <code>event_model</code></p></td>
     </tr>
     <tr>
       <th>prefix</th>
-      <td><p>a character string that is prepended to the variables names and used to identify the term.</p></td>
+      <td><p>a character string that is prepended to the variable names and used to identify the term. 
+Can be used to disambiguate two <code>hrf</code> terms with the same variable(s) but different onsets or basis functions.</p></td>
     </tr>
     <tr>
       <th>subset</th>
-      <td><p>the subset of 'onsets' to keep</p></td>
+      <td><p>an expression indicating the subset of 'onsets' to keep</p></td>
     </tr>
     <tr>
       <th>precision</th>
@@ -180,7 +181,7 @@ If multiple contrasts are required, then these should be wrapped in a <code>list
 
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley Buchsbaum R..</p>
+  <p>Developed by Bradley R. Buchsbaum.</p>
 </div>
 
 <div class="pkgdown">

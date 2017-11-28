@@ -84,7 +84,7 @@
       <h1>Baseline Model</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2017-11-12</h4>
+            <h4 class="date">2017-11-27</h4>
           </div>
 
     
@@ -98,9 +98,6 @@
 <div id="basic-baseline-model-with-b-splines-and-polynomials" class="section level2">
 <h2 class="hasAnchor">
 <a href="#basic-baseline-model-with-b-splines-and-polynomials" class="anchor"></a>Basic baseline model with b-splines and polynomials</h2>
-<pre><code>## Loading fmrireg</code></pre>
-<pre><code>## It is recommended to use 'given' instead of 'middle'.</code></pre>
-<pre><code>## Loading required package: abind</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">TR &lt;-<span class="st"> </span><span class="dv">2</span>
 sframe &lt;-<span class="st"> </span><span class="kw"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="dt">blocklens=</span><span class="kw">c</span>(<span class="dv">100</span>,<span class="dv">100</span>), TR)
 bmodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/baseline_model.html">baseline_model</a></span>(<span class="dt">basis=</span><span class="st">"bs"</span>, <span class="dt">degree=</span><span class="dv">5</span>, <span class="dt">sframe=</span>sframe)
@@ -115,22 +112,19 @@ bmodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/base
 ##    total columns:  12 
 ##    design_matrix:  
 ## # A tibble: 200 x 12
-##    constant_1 constant_2 base_bs1_block_1 base_bs2_block_1
-##         &lt;dbl&gt;      &lt;dbl&gt;            &lt;dbl&gt;            &lt;dbl&gt;
-##  1          1          0       0.00000000      0.000000000
-##  2          1          0       0.08682556      0.001351903
-##  3          1          0       0.16567883      0.005305581
-##  4          1          0       0.23685199      0.011707989
-##  5          1          0       0.30063723      0.020406081
-##  6          1          0       0.35732671      0.031246812
-##  7          1          0       0.40721262      0.044077135
-##  8          1          0       0.45058714      0.058744006
-##  9          1          0       0.48774244      0.075094378
-## 10          1          0       0.51897070      0.092975207
-## # ... with 190 more rows, and 8 more variables: base_bs3_block_1 &lt;dbl&gt;,
-## #   base_bs4_block_1 &lt;dbl&gt;, base_bs5_block_1 &lt;dbl&gt;,
-## #   base_bs1_block_2 &lt;dbl&gt;, base_bs2_block_2 &lt;dbl&gt;,
-## #   base_bs3_block_2 &lt;dbl&gt;, base_bs4_block_2 &lt;dbl&gt;, base_bs5_block_2 &lt;dbl&gt;</code></pre>
+##    const… cons… base_… base_b… base_b… base… base… base… base… base… base…
+##     &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+##  1   1.00     0 0      0       0           0     0     0     0     0     0
+##  2   1.00     0 0.0868 0.00135 4.64e⁻⁶     0     0     0     0     0     0
+##  3   1.00     0 0.166  0.00531 3.71e⁻⁵     0     0     0     0     0     0
+##  4   1.00     0 0.237  0.0117  1.25e⁻⁴     0     0     0     0     0     0
+##  5   1.00     0 0.301  0.0204  2.97e⁻⁴     0     0     0     0     0     0
+##  6   1.00     0 0.357  0.0312  5.80e⁻⁴     0     0     0     0     0     0
+##  7   1.00     0 0.407  0.0441  1.00e⁻³     0     0     0     0     0     0
+##  8   1.00     0 0.451  0.0587  1.59e⁻³     0     0     0     0     0     0
+##  9   1.00     0 0.488  0.0751  2.37e⁻³     0     0     0     0     0     0
+## 10   1.00     0 0.519  0.0930  3.38e⁻³     0     0     0     0     0     0
+## # ... with 190 more rows, and 1 more variable: base_bs5_block_2 &lt;dbl&gt;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(bmodel)</code></pre></div>
 <p><img src="baseline_model_files/figure-html/unnamed-chunk-2-1.png" width="672"></p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">bmodel2 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/baseline_model.html">baseline_model</a></span>(<span class="dt">basis=</span><span class="st">"poly"</span>, <span class="dt">degree=</span><span class="dv">5</span>, <span class="dt">sframe=</span>sframe)
@@ -141,8 +135,6 @@ bmodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/base
 <h2 class="hasAnchor">
 <a href="#adding-arbitrary-nuisance-regressors" class="anchor"></a>Adding arbitrary nuisance regressors</h2>
 <p>In addiiton to structured basis sets, we can also add arbitrary signals to the baseline model. Such signals are also organized by block on the assumption that nuisance signals are often block-specific and “reset” across scans. To add a set of nusiance variables to the baseline model, then, they should be split by block and placed in a <code>list</code>.</p>
-<pre><code>## Loading fmrireg</code></pre>
-<pre><code>## It is recommended to use 'given' instead of 'middle'.</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">TR &lt;-<span class="st"> </span><span class="dv">2</span>
 sframe &lt;-<span class="st"> </span><span class="kw"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="dt">blocklens=</span><span class="kw">c</span>(<span class="dv">100</span>,<span class="dv">100</span>), TR)
 
@@ -173,9 +165,9 @@ bmodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/base
 ##    Num Rows:  200 
 ##    Num Columns:  4</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(bmodel, <span class="dt">term_name=</span><span class="st">"nuisance"</span>)</code></pre></div>
-<p><img src="baseline_model_files/figure-html/unnamed-chunk-4-1.png" width="672"></p>
+<p><img src="baseline_model_files/figure-html/unnamed-chunk-3-1.png" width="672"></p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(bmodel, <span class="dt">term_name=</span><span class="st">"baseline_bs_5"</span>)</code></pre></div>
-<p><img src="baseline_model_files/figure-html/unnamed-chunk-4-2.png" width="672"></p>
+<p><img src="baseline_model_files/figure-html/unnamed-chunk-3-2.png" width="672"></p>
 </div>
 </div>
   </div>
@@ -196,7 +188,7 @@ bmodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/base
 
 
       <footer><div class="copyright">
-  <p>Developed by Bradley Buchsbaum R..</p>
+  <p>Developed by Bradley R. Buchsbaum.</p>
 </div>
 
 <div class="pkgdown">

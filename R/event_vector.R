@@ -2,6 +2,7 @@
 .sanitizeName <- function(name) {
   name <- gsub(":", ".", name)
   name <- gsub(" ", "", name)
+  name <- gsub("\\)$", "", name)
   name <- gsub("[\\(\\)]", "_", name, perl=TRUE)
   name <- gsub(",", "_", name)
   name <- gsub("\\.$", "", name)

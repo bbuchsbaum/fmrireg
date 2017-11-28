@@ -3,7 +3,7 @@ Type: Package
 Title: R package for the anlysis of fmri data
 Version: 0.0.1
 Date: 2014-04-01
-Authors@R: person("Bradley", "R.", "Buchsbaum", role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
+Authors@R: person(given="Bradley", middle="R.", family="Buchsbaum", role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
 License: GPL (>= 2)
 Maintainer: Bradley Buchsbaum <bbuchsbaum@gmail.com>
 Description: fmrireg is a package for the analysis of fmri image data
