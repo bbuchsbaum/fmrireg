@@ -90,6 +90,30 @@ test_that("can build a set of pairwise contrasts", {
 
 })
 
+test_that("can subtract two pairwise contrasts to form an interaction contrast", {
+  simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"), replication=c(1,2))
+  simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
+  simple_des$run <- rep(1,nrow(simple_des))
+  sframe <- sampling_frame(blocklens=100, TR=2)
+  espec <- event_model(onset ~  hrf(category, attention), data=simple_des, block=~run, sampling_frame=sframe)
+  con1 <- pair_contrast(~ category=="face", ~ category == "scene", name="face_scene#attend", where=~ attention == "attend")
+  con2 <- pair_contrast(~ category=="face", ~ category == "scene", name="face_scene#ignored", where=~ attention == "ignored")
+  con3 <- con1 - con2
+  
+})
+
+test_that("can form a simple forumla contrast", {
+  simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"), replication=c(1,2))
+  simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
+  simple_des$run <- rep(1,nrow(simple_des))
+  sframe <- sampling_frame(blocklens=100, TR=2)
+  espec <- event_model(onset ~  hrf(category, attention), data=simple_des, block=~run, sampling_frame=sframe)
+  con1 <- contrast(~ (face:attend - face:ignored) - (scene:attend - scene:ignored), name="face_scene")
+  cwts <- contrast_weights(con1, terms(espec)[[1]])
+  expect_equal(as.vector(cwts$weights[,1]), c(1, -1, -1, 1))
+  
+})
+
 
 
 

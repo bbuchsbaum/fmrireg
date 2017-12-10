@@ -1,4 +1,25 @@
 
+#' contrast
+#' 
+#' @param form
+#' @param name
+#' @param where
+contrast <- function(form, name, where=NULL) {
+  assert_that(lazyeval::is_formula(form))
+  if (!is.null(where)) {
+    assert_that(lazyeval::is_formula(where))
+  }
+  ret <- list(A=form,
+              B=NULL,
+              where=where,
+              name=name)
+  
+  class(ret) <- c("contrast_formula_spec", "contrast_spec", "list")
+  ret
+  
+}
+
+
 #' contrast_set
 #' 
 #' @export
@@ -34,18 +55,21 @@ pairwise_contrasts <- function(levels, where=TRUE) {
 #' @param B the second \code{formula} expression in the contrast
 #' @param name the name of the contrast
 #' @param where the subset over which the contrast is computed
-#' @param split_by split the contrast by a second factor variable
 #' @export
-pair_contrast <- function(A, B, name, where=TRUE, split_by=NULL) {
+pair_contrast <- function(A, B, name, where=NULL) {
   assert_that(lazyeval::is_formula(A))
   assert_that(lazyeval::is_formula(B))
+  
+  if (!is.null(where)) {
+    assert_that(lazyeval::is_formula(where))
+  }
+  
   ret <- list(A=A,
               B=B,
               where=where,
-              split_by=split_by,
               name=name)
     
-  class(ret) <- c("contrast_spec", "list")
+  class(ret) <- c("pair_contrast_spec", "contrast_spec", "list")
   ret
 }
 
@@ -56,19 +80,18 @@ pair_contrast <- function(A, B, name, where=TRUE, split_by=NULL) {
 #' @param name the name of the contrast
 #' @param where the subset of conditions to apply contrast to
 #' @export
-unit_contrast <- function(A, name=NULL, where=TRUE, split_by=NULL) {
+unit_contrast <- function(A, name, where=NULL) {
   assert_that(lazyeval::is_formula(A)) 
   
-  if (is.null(name)) {
-    name <- as.character(lazyeval::f_rhs(A))
+  if (!is.null(where)) {
+    assert_that(lazyeval::is_formula(where))
   }
     
   structure(
           list(A=A,
-              B=NULL,
-              where=lazyeval::expr_find(where),
-              split_by=substitute(split_by),
-              name=name),
+               B=NULL,
+               where=where,
+               name=name),
           class=c("unit_contrast_spec", "contrast_spec", "list")
   )
   
@@ -77,10 +100,14 @@ unit_contrast <- function(A, name=NULL, where=TRUE, split_by=NULL) {
 #' @export
 contrast_weights.unit_contrast_spec <- function(x, term) {
   term.cells <- cells(term)
-  #row.names(term.cells) <- longnames(term)
   
-  keep <- eval(x$where, envir=term.cells, enclos=parent.frame())	
-  reduced.term.cells <- subset(term.cells, keep)
+  if (!is.null(x$where)) {
+    keep <- lazyeval::f_eval_rhs(x$where, data=term.cells)	
+    reduced.term.cells <- subset(term.cells, keep)
+  } else {
+    keep <- rep(TRUE, nrow(term.cells))
+    reduced.term.cells <- term.cells
+  }
   
   mm <- model.matrix(~ reduced.term.cells[[1]] -1)
   colnames(mm) <- levels(reduced.term.cells[[1]])
@@ -161,8 +188,8 @@ contrast_weights.poly_contrast_spec <- function(x, term) {
 makeWeights <- function(keepA, keepB=NULL) {
   weights <- matrix(0, length(keepA), 1)
   numA <- sum(keepA)
-  
   weights[keepA,1] <- rep(1/numA, numA)
+  
   if (!is.null(keepB)) {
     numB <- sum(keepB)
     weights[keepB,1] <- -rep(1/numB, numB)
@@ -171,40 +198,91 @@ makeWeights <- function(keepA, keepB=NULL) {
   weights
 }
 
-#' @export
-contrast_weights.contrast_spec <- function(x, term) {
+`-.contrast_spec` <- function(e1, e2, ...){
+  assert_that(inherits(e2, "contrast_spec"))
+  structure(list(
+    name=paste0(e1$name, ":", e2$name),
+    con1=e1,
+    con2=e2),
+    class="contrast_diff_spec"
+  )
+}
+
+contrast_weights.contrast_diff_spec <- function(x, term) {
+  wts1 <- contrast_weights(x$con1, term)
+  wts2 <- contrast_weights(x$con2, term)
+
+  ret <- structure(
+    list(
+      name=x$name,
+      weights=wts1$weights - wts2$weights,
+      condnames=longnames(term),
+      contrast_spec=x),
+    class="contrast")
   
+  class(ret) <- c("contrast", "list")
+  ret  
+}
+
+#' @export
+contrast_weights.pair_contrast_spec <- function(x, term) {
   term.cells <- cells(term)
- 
+  
   count <- attr(term.cells, "count")		
   term.cells <- subset(term.cells, count > 0)
-  keep <- eval(x$where, envir=term.cells, enclos=parent.frame())	
+  keep <- if (!is.null(x$where)) {
+    eval(x$where, envir=term.cells, enclos=parent.frame())	
+  } else {
+    rep(TRUE, nrow(term.cells))
+  }
+  
   keepA <- lazyeval::f_eval_rhs(x$A, data=term.cells)
   keepB <- if (is.null(x$B)) NULL else lazyeval::f_eval_rhs(x$B, data=term.cells)
-  
-  split_fac <- if (!is.null(x$split_fac)) {
-    eval(x$split_by, envir=term.cells, enclos=parent.frame())
+
+  weights <- if (is.null(keepB)) {
+    makeWeights(keep & keepA)
+  } else {
+    makeWeights(keep & keepA, keep & keepB) 
   }
+
   
-  weights <- if (!is.null(split_fac)) {
-    split.levs <- levels(x$split_fac)
-    do.call(cbind,lapply(split.levs, function(lev) {					
-      keepC <- split.fac == lev 
-      if (is.null(keepB)) {
-        makeWeights(keep & keepA & keepC)
-      } else {
-        makeWeights(keep & keepA & keepC, keep & keepB & keepC)
-      }
-    }))
-  } else { 
-    if (is.null(keepB)) {
-      makeWeights(keep & keepA)
-    } else {
-      makeWeights(keep & keepA, keep & keepB) 
-    }
-  }
-    
   row.names(weights) <- longnames(term)
+  
+  ret <- list(
+    name=x$name,
+    weights=weights,
+    condnames=longnames(term),
+    contrast_spec=x)
+  
+  class(ret) <- c("contrast", "list")
+  ret  
+}
+
+#' @export
+contrast_weights.contrast_formula_spec <- function(x, term) {
+ 
+  term.cells <- cells(term)
+  cform <- as.formula(paste("~", paste0(names(term.cells), collapse=":"), "-1"))
+  condnames <- shortnames(term)
+  count <- attr(term.cells, "count")		
+  term.cells <- subset(term.cells, count > 0)
+  
+  if (!is.null(x$where)) {
+    keep <- lazyeval::f_eval_rhs(x$where, data=term.cells)
+    assert_that(sum(keep) > 0)
+    term.cells <- term.cells[keep,]
+  } else {
+    keep <- rep(TRUE, nrow(term.cells))
+  }
+
+   
+  A <- as.formula(paste("~", gsub(":", ".", deparse(lazyeval::f_rhs(x$A)))))
+  modmat <- as_tibble(model.matrix(cform,data=term.cells))
+  names(modmat) <- gsub(":", ".", condnames)
+  
+  weights <- matrix(0, NROW(term.cells), 1)
+  weights[keep,1] <-  as.vector(lazyeval::f_eval_rhs(A, data=modmat))
+  row.names(weights) <- row.names(term.cells)
   
   ret <- list(
     name=x$name,
@@ -239,8 +317,8 @@ print.contrast_spec <- function(x) {
   cat(" A: ", Reduce(paste, deparse(x$A)), "\n")
   if (!is.null(x$B))
     cat(" B: ", Reduce(paste, deparse(x$B)), "\n")
-  if (x$where[1] != TRUE && length(x$where) > 1)
-    cat(" where: ", x$where, "\n")
+  if (!is.null(x$where))
+    cat(" where: ", Reduce(paste, deparse(x$where)), "\n")
   
 
 }
@@ -249,7 +327,7 @@ print.contrast_spec <- function(x) {
 print.contrast <- function(x) {
   print(x$contrast_spec)
   cat(" weights: ", x$weights, "\n")
-  cat(" conditions: ", row.names(x$weights))
+  cat(" conditions: ", x$condnames)
 }
 
 #' @export

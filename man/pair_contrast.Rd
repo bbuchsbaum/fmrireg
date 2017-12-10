@@ -4,7 +4,7 @@
 \alias{pair_contrast}
 \title{pair_contrast}
 \usage{
-pair_contrast(A, B, name, where = TRUE, split_by = NULL)
+pair_contrast(A, B, name, where = NULL, split_by = NULL)
 }
 \arguments{
 \item{A}{the first \code{formula} expression in the contrast}

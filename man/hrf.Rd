@@ -26,10 +26,10 @@ Can be used to disambiguate two \code{hrf} terms with the same variable(s) but d
 
 \item{nbasis}{number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.}
 
-\item{contrasts}{one or more \code{contrastspec} objects created with the \code{contrast} function. 
-If multiple contrasts are required, then these should be wrapped in a \code{list}.}
+\item{contrasts}{one or more \code{contrast_spec} objects created with the \code{contrast} function. 
+If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.}
 
-\item{id}{a  unique \code{character} identifier used to refer to term.}
+\item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
 }
 \description{
 hemodynamic regressor specification function for model formulas.

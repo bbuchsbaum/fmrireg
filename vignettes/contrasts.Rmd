@@ -1,5 +1,5 @@
 ---
-title: "Contrastsl"
+title: "Contrasts"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -9,37 +9,123 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-
-## Contrasts
-
-Statistical contrasts are an important component of fMRI analyses. Contrasts allow for testing of hypotheses about the relative activation across some linear combination of conditions. Our aim is to provide a flexible interface for describing contrasts and generating contrast vectors that can be applied to linear models.
-
-
-## Main effect contrasts
-
-a "main effect" contrast tests whether activation, averaged over some set of conditions, is greater than zero. In this case "zero" is defined as the level of activation captured by the intercept term, or the "implicit baseline" in *f*MRI parlance. Because all beta estimates are already expressed relative to the intercept term, main effect contrast vectors always sum to 1, rather than 0. We therefore refer to the sum-to-one contrasts as: "unit contrasts"
-
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE}
 devtools::load_all()
 ```
+## Contrasts
 
-```{r, message=FALSE,fig.width = 7, fig.height = 5}
-library(tibble)
+Statistical contrasts are an important component of *f*MRI analyses. Contrasts allow for testing of hypotheses about the relative brain activity between two or more conditions. Our aim is to provide a flexible interface for describing contrasts and generating contrast weight vectors that can be applied to linear models.
+
+### A simple 2 by 2 experiment
+
+The approach we take in specifying contrasts is to formulate them as regular R expressions using the `~` operator. To demonstrate, lets start with a simple two-by-two design with factors *category* with levels [face,scene] and *attention* with levels [attend,ignore]. For this simple design, we assume each condition is repeated twice in a single run.
+
+First we construct the fMRI design as follows:
+
+```{r}
+
+design <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignore"), replication=c(1,2))
+design$onsets <- seq(1, 100, length.out=nrow(design))
+design$block <- rep(1,nrow(design))
+```
+
+```{r, echo=FALSE}
+knitr::kable(design)
+```
+
+### Creating contrasts to test experimental effects
+
+In a two by two design, there are a number of experimental effects that we might be interested in testing, for example: (1) the effect of *category* (face > scene), (2) the effect of *attention* (attend > ignored), and (3) the interaction between *category* and *attention*. All of these effects can be formulated as contrasts of weighted averages of condition effects, yielding directional (i.e. signed) *t*-statistics. Below we show how each contrast can be expressed:
+
+1. `face_scene <- pair_contrast(~ category == "face", ~ category == "scene")`
+2. `attend_ignored <- pair_contrast(~ attention == "attend", ~ attention == "ignored")`
+3. `category_by_attention <- contrast(~ (face:attend + face:ignored) - (scene:attend + scene:ignored), name="category_by_attention"))`
+
+In the following sections we will explain the syntax used in the examples above.
+
+### Contrasting two sets of conditions
+
+We often want to compare two conditions, or two *sets of conditions*, for a difference in *f*MRI activity. Such contrasts can be described, generically, as involving an expression `A - B`, where `A` represents the weights for the first set of conditions and `B` represents the weights for the second set of conditions. 
+
+If sum of the `A` weights is 1 and the sum of the 'B' weights is also 1, then the difference in these weights (`A - B`) is 0. Thus, the difference in the weights *sum to zero*, which is what we want when the **null hypothesis** is that A == B.
 
 
-## first we set up a very simple `event_model` with two stimuli.
-## the four stimulus types
+### The `pair_contrast` function
 
-## construct a design table
-simple_design <- data_frame(stim=factor(sample(rep(c("face", "scene"), 4))), 
-                     onset=cumsum(sample(4:7, 8, replace=TRUE)+2)-2, 
-                     run=1)
-simple_design
+A simple way to contruct this sort of `A - B` contrast is to use the `pair_contrast` function, which takes as arguments two "matching expressions", `A` and `B`. In example 1 from the previous section, the first expression (`category == "face"`) matches all conditions where the category `factor` equals the level "face". The second expression (`category == "scene"`) matches all conditions where the category `factor` equals the level "scene". 
 
-sframe <- sampling_frame(70, TR=2)
-sframe
+To compute contrast weights, every matching level in the two expressions will be assigned a weight of 1 for a match and zero otherwise. The respective binary weight vectors are then normalized to sum to 1 and then subtracted (`A - B`) to form the contrast weights.
 
-emodel <- event_model(onset ~ hrf(stim), data=simple_design, block=~run, sampling_frame=sframe)
+Notice in the above examples, the contrasts are defined abstractly without supplying any corresponding design information. To compute the contrast weights, however, we need to supply the design information. Below, we show a complete example.
+
+```{r}
+sframe <- sampling_frame(100, 2)
+emodel <- event_model(onsets ~ hrf(category,attention), block=~block, data=design, sampling_frame=sframe)
+term1 <- terms(emodel)[[1]] 
+```
+
+And here is the relevant model term (the only term in this model):
+
+```{r, echo=FALSE}
+term1
+```
+
+Now, we create two `pair_contrast`s and compute the weights:
+
+```{r}
+con1 <- pair_contrast(~ category == "face", ~ category == "scene", name="face_scene")
+con2 <- pair_contrast(~ attention == "attend", ~ attention == "ignore", name="attend_ignore")
+
+wts1 <- contrast_weights(con1, term1)
+wts2 <- contrast_weights(con2, term1)
+
+```
+
+wts1:
+
+```{r, echo=FALSE}
+wts1
+
+knitr::kable(wts1$weights)
+```
+
+wts2:
+
+```{r, echo=FALSE}
+wts2
+knitr::kable(wts2$weights)
+```
 
 
+## Unit contrasts and the "implicit baseline"
+
+a "unit contrast"" tests whether activation, averaged over one or more conditions, is greater than zero. In this case "zero" is defined as the level of activation captured by the intercept term, or the *implicit baseline* in *f*MRI parlance. Because all beta estimates are already expressed relative to the intercept term, main effect contrast vectors always sum to 1, rather than 0. We therefore refer to the sum-to-one contrasts as: "unit contrasts". 
+
+Below we show two unit contrasts, one testing for the effect of `face > baseline` and for `scene - baseline`:
+
+```{r}
+con1 <- unit_contrast(~ category == "face", name="face_baseline")
+con2 <- unit_contrast(~ category == "scene",name="scene_baseline")
+
+wts1 <- contrast_weights(con1, term1)
+wts2 <- contrast_weights(con2, term1)
+
+
+
+```
+
+wts1:
+
+```{r, echo=FALSE}
+wts1
+
+knitr::kable(wts1$weights)
+```
+
+wts2:
+
+```{r, echo=FALSE}
+wts2
+
+knitr::kable(wts2$weights)
 ```

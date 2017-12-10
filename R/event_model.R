@@ -310,7 +310,6 @@ longnames.convolved_term <- function(x) {
     function(i) {
       paste0(names(term.cells)[i], "#", term.cells[[i]], sep="")
   })), 1, paste, collapse=":")
-
 }
 
 #' @export
