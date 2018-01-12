@@ -4,7 +4,7 @@
 \alias{unit_contrast}
 \title{unit_contrast}
 \usage{
-unit_contrast(A, name = NULL, where = TRUE, split_by = NULL)
+unit_contrast(A, name, where = NULL)
 }
 \arguments{
 \item{A}{the contrast expression as a formula}

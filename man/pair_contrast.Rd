@@ -4,7 +4,7 @@
 \alias{pair_contrast}
 \title{pair_contrast}
 \usage{
-pair_contrast(A, B, name, where = NULL, split_by = NULL)
+pair_contrast(A, B, name, where = NULL)
 }
 \arguments{
 \item{A}{the first \code{formula} expression in the contrast}
@@ -14,8 +14,6 @@ pair_contrast(A, B, name, where = NULL, split_by = NULL)
 \item{name}{the name of the contrast}
 
 \item{where}{the subset over which the contrast is computed}
-
-\item{split_by}{split the contrast by a second factor variable}
 }
 \description{
 pair_contrast
