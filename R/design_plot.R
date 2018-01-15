@@ -68,13 +68,14 @@ design_plot <- function(fmrimod, longnames=FALSE) {
   
 }
 
-lookup_hrf <- function(label) {
+
+lookup_hrf <- function(label, lag) {
   switch(label,
-         Gamma=HRF_GAMMA,
-         Gaussian=HRF_GAUSSIAN,
-         SPMG1=HRF_SPMG1,
-         SPMG2=HRF_SPMG2,
-         SPMG3=HRF_SPMG3)
+         Gamma=getHRF("gamma", lag=lag),
+         Gaussian=getHRF("gaussian", lag=lag),
+         SPMG1=getHRF("spmg1", lag=lag),
+         SPMG2=getHRF("spmg2", lag=lag),
+         SPMG3=getHRF("spmg3", lag=lag))
   
 }
 
@@ -84,6 +85,7 @@ hrf_plot <- function() {
       sidebarLayout(
         sidebarPanel(
           selectInput("hrf", "Hemodynamic Response Function", c("Gamma", "Gaussian", "SPMG1", "SPMG2", "SPMG3")),
+          sliderInput("offset", "Lag", min=0, max=10, value=0),
           sliderInput("duration", "Event Duration", min = 0, 
                       max = 10, 
                       value = 0)
@@ -97,7 +99,7 @@ hrf_plot <- function() {
   
   server <- function(input, output, session) {
     output$dplot <- renderPlot({
-      hrf <- lookup_hrf(input$hrf)
+      hrf <- lookup_hrf(input$hrf, as.numeric(input$offset))
       duration <- input$duration
       reg <- regressor(0, hrf, duration)
       sgrid <- seq(0,24,by=.1)
@@ -126,4 +128,48 @@ hrf_plot <- function() {
   
 }
 #design_plot(fmrimod)
-hrf_plot()
+#hrf_plot()
+
+design_editor <- function(design, formula="", sframe) {
+  ui <- function() {
+    fluidPage(
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("run_variable", "Run Variable", names(design)),
+          selectInput("show_run", "Show Run", 1),
+          textInput("formula", "Event Formula", value=formula),
+          textInput("tr", "Repetition Time", value=2),
+          
+          textInput("blocklens", "Run Lengths", value=426+25)
+        ),
+        mainPanel(
+          plotOutput("dplot")
+        )
+      )
+    )
+  }
+  
+  server <- function(input, output, session) {
+    
+    output$dplot <- renderPlot({
+      if (input$formula == "") {
+        plot()
+      } else {
+        srun <- as.integer(input$show_run)
+        keep <- which(design[[input$run_variable]] == srun)
+        des <- design[keep,]
+        print(nrow(des))
+        blocklens <- as.numeric(rep(input$blocklens, length.out=length(unique(design[[input$run_variable]]))))
+        bl <- blocklens[srun]
+        
+        sframe <- sampling_frame(bl, as.numeric(input$tr))
+        ev <- event_model(as.formula(input$formula), block=as.formula(paste("~ ", input$run_variable)), data=des, sampling_frame=sframe)
+        dmat <- design_matrix(ev)
+        matplot(dmat, type='l')
+      }
+    })
+  }
+  
+  
+  shinyApp(ui = ui, server = server)
+}
