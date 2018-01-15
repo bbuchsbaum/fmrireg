@@ -40,7 +40,7 @@ baseline_model <- function(basis="bs", degree=5, sframe, nuisance_list=NULL) {
       nuisance_list[[i]] <- nmat
     }
     
-    baseline_term("nuisance", Matrix::bdiag(lapply(nuisance_list, as.matrix)), colind,rowind)
+    baseline_term("nuisance", Matrix::bdiag(lapply(nuisance_list, unclass)), colind,rowind)
   } 
   
   ret <- list(drift_term=drift_term, drift_spec=drift_spec, 
@@ -160,7 +160,7 @@ construct.baselinespec <- function(x, sampling_frame) {
 #' @importFrom tibble as_tibble
 #' @export
 baseline_term <- function(varname, mat, colind, rowind) {
-  stopifnot(is.matrix(mat) || is.data.frame(mat) || inherits(mat, "Matrix"))
+  stopifnot(inherits(mat, "matrix") || is.data.frame(mat) || inherits(mat, "Matrix"))
   ret <- list(varname=varname, design_matrix=tibble::as_tibble(as.matrix(mat)), colind=colind, rowind=rowind)
   class(ret) <- c("baseline_term", "matrix_term", "fmri_term", "list")
   ret

@@ -43,7 +43,7 @@ test_that("can construct and run a simple fmri glm from in memory dataset and on
   
   mod <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block_formula = ~ run, dataset=dset, durations=0)
   expect_true(!is.null(mod))
-  expect_equal(ncol(mod$result$estimate()), 1)
+  expect_equal(ncol(mod$result$contrasts$estimate()), 1)
   
 })
 

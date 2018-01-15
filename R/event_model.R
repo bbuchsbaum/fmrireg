@@ -50,9 +50,11 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
   
   
   event_spec <- formspec(formula, data)
-  
- 
-  model_spec <- list(formula=formula, event_table=data, onsets=event_spec$lhs, event_spec=event_spec, 
+  #browser()
+  model_spec <- list(formula=formula, 
+                     event_table=data, 
+                     onsets=event_spec$lhs, 
+                     event_spec=event_spec, 
                      blockids=blockids, 
                      durations=durations, 
                      sampling_frame=sampling_frame,
@@ -67,10 +69,15 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
 
 
 construct_model <- function(x) {
-
-  terms <- lapply(x$event_spec$rhs, function(m) construct(m,x))
-  term_names <- sapply(x$event_spec$rhs, "[[", "label")
+  #browser()
+  ##term_names <- sapply(x$event_spec$rhs, "[[", "label")
+  term_names <- sapply(x$event_spec$rhs, "[[", "id")
   term_names <- .sanitizeName(term_names)
+  dups <- duplicated(term_names) > 0
+  dup_ids <- ave(term_names, term_names, FUN=seq_along)
+  term_names <- ifelse(!dups, term_names, paste0(term_names, "_", dup_ids))
+  
+  terms <- lapply(x$event_spec$rhs, function(m) construct(m,x))
   names(terms) <- term_names
   
   term_lens <- sapply(lapply(terms, conditions), length)

@@ -87,7 +87,10 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
   names(etab) <- sapply(pterms, .sanitizeName)
   varname <- paste(sapply(evs, function(x) x$varname), collapse=":")
-  ret <- list(varname=varname, events=evs, subset=subset, event_table=etab, 
+  ret <- list(varname=varname, 
+              events=evs, 
+              subset=subset, 
+              event_table=etab, 
               onsets=evs[[1]]$onsets, 
               blockids=evs[[1]]$blockids, 
               durations=evs[[1]]$durations)
@@ -165,7 +168,7 @@ event_variable <- function(vec, name, onsets, blockids=1, durations=NULL) {
   stopifnot(is.vector(vec))
   
   if (is.factor(vec)) {
-    stop("cannot create an event_variable from a factor, use EventFactor.")
+    stop("cannot create an event_variable from a factor, use 'event_factor'.")
   }
   
   ret <- .checkEVArgs(name, vec, onsets, blockids, durations)

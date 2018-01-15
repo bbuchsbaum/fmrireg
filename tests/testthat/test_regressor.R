@@ -141,6 +141,18 @@ test_that("can extract a design matrix from an fmri_model with one trialwise fac
   expect_equal(dim(dmat), c(N, 5 * length(onsets)))
 })
 
+test_that("event_model with duplicate terms at different lags", {
+  N <- 100
+  onsets <- seq(1,N,by=5)
+  durations <- 0
+  
+  sframe <- sampling_frame(blocklens=100, TR=1)
+  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), Run=rep(1,4))
+  ev <- event_model(onsets ~ hrf(fac) + hrf(fac,lag=5, prefix="phase2") , data=etab, block= ~ Run, sampling_frame=sframe)
+  
+  
+})
+
 test_that("facedes model with rep_num", {
   facedes$repnum <- factor(facedes$rep_num)
   sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)

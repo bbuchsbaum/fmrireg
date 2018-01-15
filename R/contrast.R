@@ -36,7 +36,7 @@ contrast_set <- function(...) {
 #' @param levels
 #' @param where the subset over which the contrast is computed
 #' @export
-pairwise_contrasts <- function(levels, where=TRUE) {
+pairwise_contrasts <- function(levels, where=NULL) {
   cbns <- combn(length(levels),2)
   ret <- lapply(1:ncol(cbns), function(i) {
     lev1 <- levels[cbns[1,i]]

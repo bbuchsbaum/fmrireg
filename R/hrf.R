@@ -97,10 +97,10 @@ makeDeriv <- function(HRF, n=1) {
 #' @param hrf the underlying hrf function to shift
 #' @param lag the lag/delay in seconds
 #' @export
-gen_hrf_lagged <- function(hrf, lag=2) {
+gen_hrf_lagged <- function(hrf, lag=2,...) {
   force(hrf)
   function(t) {
-    hrf(t-lag)
+    hrf(t-lag,...)
   }
 }
 
@@ -267,10 +267,14 @@ evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.1) {
   }
 }
 
+
+#' @export
 evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1) {
   evaluate(x$hrf, grid,amplitude, duration, precision)
 }
 
+
+#' @export
 nbasis.HRF <- function(x) attr(x, "nbasis")
 
 #' getHRF
@@ -278,20 +282,21 @@ nbasis.HRF <- function(x) attr(x, "nbasis")
 #' @param name the name of the hrf function
 #' @param nbasis the numbe rof basis functions (if relevant)
 #' @export
-getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian"), nbasis=5,...) {
+getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs"), nbasis=5, lag=0, ...) {
+  name <- match.arg(name)
 	
 	hrf <- switch(name,
-			gamma=HRF_GAMMA,
-			gaussian=HRF_GAUSSIAN,
-			spmg1=HRF_SPMG1,
-			spmg2=HRF_SPMG2,
-			spmg3=HRF_SPMG3,
-			tent=HRF(gen_hrf(hrf_bspline, N=nbasis,degree=1,...), "bspline", nbasis),
-			bs=HRF(gen_hrf(hrf_bspline, N=nbasis,...), "bspline", nbasis),
-			bspline=HRF(gen_hrf(hrf_bspline, N=nbasis,...), "bspline", nbasis))
+			gamma=HRF(gen_hrf_lagged(hrf_gamma,lag=lag),name="gamma"),
+			gaussian=HRF(gen_hrf_lagged(HRF_GAUSSIAN,lag=lag), name="gaussian"),
+			spmg1=HRF(gen_hrf_lagged(hrf_spmg1,lag=lag), name="spmg1", nbasis=1),
+			spmg2=HRF(gen_hrf_lagged(HRF_SPMG2,lag=lag), name="spmg2", nbasis=2),
+			spmg3=HRF(gen_hrf_lagged(HRF_SPMG3,lag=lag), name="spmg3", nbasis=3),
+			tent=HRF(gen_hrf_lagged(hrf_bspline, lag=lag, N=nbasis,degree=1,...), name="bspline", nbasis=nbasis),
+			bs=HRF(gen_hrf_lagged(hrf_bspline, lag=lag, N=nbasis,...), name="bspline", nbasis=nbasis),
+			bspline=HRF(gen_hrf_lagged(hrf_bspline, lag=lag, N=nbasis,...), name="bspline", nbasis=nbasis))
 	
 	if (is.null(hrf)) {
-		stop("could not find hrf named: ", name)
+		stop("could not find create hrf named: ", name)
 	}
 	
 	hrf
@@ -321,24 +326,35 @@ getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussi
 #' @param contrasts one or more \code{contrast_spec} objects created with the \code{contrast} function. 
 #' If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.
 #' @param id a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.
+#' @param lag a temporal offset in seconds which is added to onset before convolution
 #' @export
 hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
-                nbasis=1, contrasts=NULL, id=NULL) {
+                nbasis=1, contrasts=NULL, id=NULL, lag=0) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
   label <- parsed$label
   
+  if (!is.numeric(lag) || length(lag) > 1) {
+    stop("hrf: 'lag' must be a numeric scalar")
+  }
+  
   basis <- if (is.character(basis)) {
-    getHRF(basis, nbasis=nbasis)
+    getHRF(basis, nbasis=nbasis, lag=lag)
+  } else if (inherits(basis, "HRF")) {
+    if (lag > 0) {
+      HRF(gen_hrf_lagged(basis, lag=lag), name=basis$name, nbasis=basis$nbasis)
+    } else {
+      basis
+    }
+    
   } else if (is.function(basis)) {
     test <- basis(1:10)
-    HRF(basis, name="custom_hrf", nbasis=ncol(test), ...)
-  } else if (inherits(basis, "HRF")) {
-    basis
+    HRF(gen_hrf_lagged(basis,lag=lag,...), name="custom_hrf", nbasis=ncol(test))
   } else {
     stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
   }
+  
   
   varnames <- if (!is.null(prefix)) {
     paste0(prefix, "_", term)
@@ -377,6 +393,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
     prefix=prefix,
     subset=substitute(subset),
     precision=precision,
+    lag=lag,
     contrasts=cset)
   
   class(ret) <- c("hrfspec", "list")
@@ -416,19 +433,24 @@ construct.hrfspec <- function(x, model_spec) {
 }
 
 
-.hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1) {
+.hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1, lag=0) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
   label <- parsed$label
   
   basis <- if (is.character(basis)) {
-    getHRF(basis, nbasis=nbasis)
+    getHRF(basis, nbasis=nbasis, lag=lag)
   } else if (inherits(basis, "HRF")) {
-    basis
+    if (lag > 0) {
+      HRF(gen_hrf_lagged(basis, lag=lag), name=basis$name)
+    } else {
+      basis
+    }
+    
   } else if (is.function(basis)) {
     test <- basis(1:10)
-    HRF(basis, name="custom_hrf", nbasis=ncol(test), ...)
+    HRF(gen_hrf_lagged(basis,lag=lag,...), name="custom_hrf", nbasis=ncol(test))
   } else {
     stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
   }
