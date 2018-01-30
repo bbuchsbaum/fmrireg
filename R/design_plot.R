@@ -137,10 +137,7 @@ design_editor <- function(design, formula="", sframe) {
         sidebarPanel(
           selectInput("run_variable", "Run Variable", names(design)),
           selectInput("show_run", "Show Run", 1),
-          textInput("formula", "Event Formula", value=formula),
-          textInput("tr", "Repetition Time", value=2),
-          
-          textInput("blocklens", "Run Lengths", value=426+25)
+          textInput("formula", "Event Formula", value=formula)
         ),
         mainPanel(
           plotOutput("dplot")
@@ -159,11 +156,10 @@ design_editor <- function(design, formula="", sframe) {
         keep <- which(design[[input$run_variable]] == srun)
         des <- design[keep,]
         print(nrow(des))
-        blocklens <- as.numeric(rep(input$blocklens, length.out=length(unique(design[[input$run_variable]]))))
+        blocklens <- sframe$blocklens
         bl <- blocklens[srun]
-        
-        sframe <- sampling_frame(bl, as.numeric(input$tr))
-        ev <- event_model(as.formula(input$formula), block=as.formula(paste("~ ", input$run_variable)), data=des, sampling_frame=sframe)
+        sframe2 <- sampling_frame(bl, TR=sframe$TR)
+        ev <- event_model(as.formula(input$formula), block=as.formula(paste("~ ", input$run_variable)), data=des, sampling_frame=sframe2)
         dmat <- design_matrix(ev)
         matplot(dmat, type='l')
       }
