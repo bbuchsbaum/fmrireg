@@ -22,7 +22,8 @@ Imports:
 RoxygenNote: 6.0.1
 Suggests: testthat,
     knitr,
-    rmarkdown
+    rmarkdown,
+    roxygen2
 VignetteBuilder: knitr
 URL: https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues
