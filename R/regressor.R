@@ -62,7 +62,7 @@ evaluate.regressor <- function(x, grid, precision=.1) {
     return(outmat)
   }
     
-  outmat <- matrix(0, length(grid), length(x$onsets) * nb)
+  
   
   
   nidx <- if (length(grid) > 1) {
@@ -83,6 +83,8 @@ evaluate.regressor <- function(x, grid, precision=.1) {
   valid.ons <- x$onsets[valid]
   valid.durs <- x$duration[valid]
   valid.amp <- x$amplitude[valid]
+  
+  outmat <- matrix(0, length(grid), length(valid.ons) * nb)
   
   nidx <- nidx[valid]
 
@@ -110,7 +112,11 @@ evaluate.regressor <- function(x, grid, precision=.1) {
       }))
     }
   } else {
-    outmat
+    if (nb == 1) {
+      outmat[,1]
+    } else {
+      outmat
+    }
   }
 }
 
