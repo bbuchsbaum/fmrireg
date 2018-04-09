@@ -66,9 +66,9 @@ evaluate.regressor <- function(x, grid, precision=.1) {
   
   
   nidx <- if (length(grid) > 1) {
-    apply(rflann::Neighbour(matrix(x$onsets), matrix(grid), k=2)$indices, 1, min,build = "kdtree",cores=0, checks=1)
+    apply(rflann::Neighbour(matrix(x$onsets), matrix(grid), k=2,build = "kdtree",cores=0, checks=1)$indices, 1, min)
   } else {
-    apply(rflann::Neighbour(matrix(x$onsets), matrix(grid), k=1)$indices, 1, min,build = "kdtree",cores=0, checks=1)
+    apply(rflann::Neighbour(matrix(x$onsets), matrix(grid), k=1,build = "kdtree",cores=0, checks=1)$indices, 1, min)
     #apply(RANN::nn2(matrix(grid), matrix(x$onsets), k=1)$nn.idx, 1, min)
   }
   
