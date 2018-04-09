@@ -28,6 +28,8 @@ regressor <- function(onsets, hrf, duration=0, amplitude=1, span=24) {
     amplitude = rep(as.vector(amplitude), length(onsets))
   }
   
+  assertthat::assert_that(is.function(hrf))
+  
   
   keep <- which(amplitude != 0)
   empty <- length(keep) == 0
