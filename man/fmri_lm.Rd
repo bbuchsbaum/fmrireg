@@ -13,9 +13,9 @@ fmri_lm(formula, block_formula, baseline_model = NULL, dataset, durations,
 
 \item{block_formula}{the model formula for block structure}
 
-\item{baseline_model}{the 'baseline_model' object}
+\item{baseline_model}{the \code{baseline_model} object}
 
-\item{dataset}{the dataset}
+\item{dataset}{an object derived from \code{fmri_dataset} containing the time-series data}
 
 \item{durations}{a vector of event durations}
 
@@ -27,4 +27,13 @@ fmri_lm(formula, block_formula, baseline_model = NULL, dataset, durations,
 }
 \description{
 fmri_lm
+}
+\examples{
+etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))
+etab2 <- data.frame(onset=c(1,30,65,75), fac=factor(c("A", "B", "A", "B")), run=c(1,1,1,1))
+mat <- matrix(rnorm(100*100), 100,100)
+dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
+dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
+lm.1 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset)
+lm.2 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset2)
 }

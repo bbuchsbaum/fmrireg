@@ -27,7 +27,7 @@ is.strictly.increasing <- function(vec) {
   assert_that(all(!is.na(onsets)))
   
   sons <- split(onsets, blockids)
-  
+
   for (ons in sons) {
     assert_that(is.strictly.increasing(ons))
   }
@@ -526,7 +526,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE) {
   
 }
 
-
+#' @export
 Fcontrasts.event_term <- function(x) {
   
   ## TODO check for no empty cells, otherwise everything fails

@@ -9,6 +9,8 @@
 \usage{
 longnames(x, ...)
 
+longnames(x, ...)
+
 \method{longnames}{convolved_term}(x)
 
 \method{shortnames}{convolved_term}(x)
@@ -19,7 +21,13 @@ longnames(x, ...)
 \item{x}{the object}
 
 \item{...}{extra args}
+
+\item{x}{the object}
+
+\item{...}{extra args}
 }
 \description{
+longnames
+
 longnames
 }

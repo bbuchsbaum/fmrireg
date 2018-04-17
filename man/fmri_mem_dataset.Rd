@@ -10,7 +10,7 @@ fmri_mem_dataset(scans, mask, TR, event_table = data.frame(),
 \arguments{
 \item{scans}{a vector of objects of class \code{\linkS4class{BrainVector}}}
 
-\item{mask}{a object of type \code{\linkS4class{LogicalBrainVolume}} indicating the voxels to include in analyses.}
+\item{mask}{name of the binary mask file indicating the voxels to include in analysis.}
 
 \item{TR}{the repetition time in seconds of the scan-to-scan interval.}
 

@@ -11,10 +11,15 @@ pair_contrast(A, B, name, where = NULL)
 
 \item{B}{the second \code{formula} expression in the contrast}
 
-\item{name}{the name of the contrast}
+\item{name}{the name of the contrast (mandatory)}
 
 \item{where}{the subset over which the contrast is computed}
 }
 \description{
-pair_contrast
+sum-to-zero contrast between two logical expressions
+}
+\examples{
+
+# a hypothetical experiment with a factor 'category' that takes on values of 'face' and 'scene'
+pair_contrast(~ category == "face", ~ category == "scene", name="face_scene")
 }

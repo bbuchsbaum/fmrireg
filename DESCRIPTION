@@ -19,7 +19,7 @@ Imports:
     assertthat,
     stringr,
     tibble
-RoxygenNote: 6.0.1
+RoxygenNote: 6.0.1.9000
 Suggests: testthat,
     knitr,
     rmarkdown,

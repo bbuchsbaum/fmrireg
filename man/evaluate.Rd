@@ -32,8 +32,4 @@ evaluate(x, grid, ...)
 }
 \description{
 evaluate a regression or hemodynamic response function
-
-evaluate
-
-evaluate
 }

@@ -4,11 +4,11 @@
 \alias{pairwise_contrasts}
 \title{pairwise_contrasts}
 \usage{
-pairwise_contrasts(levels, where = TRUE)
+pairwise_contrasts(levels, where = NULL)
 }
 \arguments{
 \item{where}{the subset over which the contrast is computed}
 }
 \description{
-pairwise_contrasts
+contrast all pairwise combinations of the levels of a factor
 }

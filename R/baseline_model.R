@@ -250,6 +250,7 @@ construct.blockspec <- function(x, model_spec) {
   construct_block_term(x$name, model_spec$sampling_frame)
 }
 
+#' @export
 print.baseline_model <- function(x) {
   cat("baseline_model", "\n")
   cat("  ", "name: ", x$drift_term$varname, "\n")

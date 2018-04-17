@@ -3,12 +3,15 @@
 \name{design_matrix}
 \alias{design_matrix}
 \alias{design_matrix.event_model}
+\alias{design_matrix.convolved_term}
 \alias{design_matrix.matrix_term}
 \title{design_matrix}
 \usage{
 design_matrix(x, ...)
 
 \method{design_matrix}{event_model}(x, blockid = NULL)
+
+\method{design_matrix}{convolved_term}(x, blockid = NULL)
 
 \method{design_matrix}{matrix_term}(x)
 }

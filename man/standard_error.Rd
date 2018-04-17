@@ -2,24 +2,15 @@
 % Please edit documentation in R/all_generic.R
 \name{standard_error}
 \alias{standard_error}
-\alias{standard_error}
 \title{standard_error}
 \usage{
-standard_error(x, ...)
-
 standard_error(x, ...)
 }
 \arguments{
 \item{x}{the object}
 
 \item{...}{extra arguments}
-
-\item{x}{the object}
-
-\item{...}{extra arguments}
 }
 \description{
 extract standard errors from fitted model
-
-extract p-values from fitted model
 }

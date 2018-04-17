@@ -272,13 +272,7 @@ estcon <- function(x, fit, ...) UseMethod("estcon")
 #' @export
 construct <- function(x, model_spec,...) UseMethod("construct")
 
-#' stats
-#' 
-#' extract statistics from fitted model
-#' 
-#' @param x the object
-#' @param ... extra arguments
-stats <- function(x, ...) UseMethod("stats")
+
 
 #' standard_error
 #' 
@@ -295,7 +289,15 @@ standard_error <- function(x, ...) UseMethod("standard_error")
 #' 
 #' @param x the object
 #' @param ... extra arguments
-standard_error <- function(x, ...) UseMethod("p_value")
+p_value <- function(x, ...) UseMethod("p_value")
+
+
+#' longnames
+#' 
+#' @param x the object
+#' @param ... extra args
+#' @export
+longnames <- function(x, ...) UseMethod("longnames")
 
 
 

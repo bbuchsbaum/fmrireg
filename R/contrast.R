@@ -31,8 +31,10 @@ contrast_set <- function(...) {
   ret
 }
 
-
 #' pairwise_contrasts
+#' 
+#' contrast all pairwise combinations of the levels of a factor
+#' 
 #' @param levels
 #' @param where the subset over which the contrast is computed
 #' @export
@@ -51,10 +53,17 @@ pairwise_contrasts <- function(levels, where=NULL) {
 
 #' pair_contrast
 #' 
+#' sum-to-zero contrast between two logical expressions
+#' 
 #' @param A the first \code{formula} expression in the contrast
 #' @param B the second \code{formula} expression in the contrast
-#' @param name the name of the contrast
+#' @param name the name of the contrast (mandatory)
 #' @param where the subset over which the contrast is computed
+#' @examples 
+#' 
+#' # a hypothetical experiment with a factor 'category' that takes on values of 'face' and 'scene'
+#' 
+#' pair_contrast(~ category == "face", ~ category == "scene", name="face_scene")
 #' @export
 pair_contrast <- function(A, B, name, where=NULL) {
   assert_that(lazyeval::is_formula(A))
@@ -208,6 +217,7 @@ makeWeights <- function(keepA, keepB=NULL) {
   )
 }
 
+#' @export
 contrast_weights.contrast_diff_spec <- function(x, term) {
   wts1 <- contrast_weights(x$con1, term)
   wts2 <- contrast_weights(x$con2, term)

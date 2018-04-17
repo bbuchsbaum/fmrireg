@@ -48,6 +48,15 @@ conditions.baseline_model <- function(x) {
 }
 
 
+#' @importFrom cowplot plot_grid
+#' @export
+plot.fmri_model <- function(x,...) {
+  p1 <- plot(x$event_model) + ggplot2::ggtitle("Event Model")
+  p2 <- plot(x$baseline_model) + ggplot2::ggtitle("Baseline Model")
+  cowplot::plot_grid(p1,p2,nrow=2, align="h")
+}
+
+
 
 #' @export
 print.fmri_model <- function(object) {

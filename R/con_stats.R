@@ -54,7 +54,7 @@ fit_Ftests <- function(object) {
   
 }
 
-beta_stats <- function(lmfit) {
+beta_stats <- function(lmfit, varnames) {
   Qr <- stats:::qr.lm(lmfit)
   cov.unscaled <- chol2inv(Qr$qr)
   betamat <- lmfit$coefficients
@@ -72,6 +72,13 @@ beta_stats <- function(lmfit) {
   
   prob <- 2 * (1 - pt(abs(betamat/vc), lmfit$df.residual))
   tstat <- betamat/vc
+  
+  betamat <- t(betamat)
+  vc <- t(vc)
+  
+  colnames(betamat) <- varnames
+  colnames(vc) <- varnames
+  
   return(
     list(
       estimate=function() betamat,

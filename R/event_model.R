@@ -40,7 +40,7 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
     }
     
     rhs <- variables[(resp+1):length(variables)]
-    vclass <- sapply(rhs, class)
+    vclass <- unlist(lapply(rhs, class))
     
     ret <- list(vterms=vterms, resp=resp, variables=variables, lhs=lhs, rhs=rhs,vclass=vclass)
     
@@ -48,9 +48,10 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
     ret
   }
   
-  
   event_spec <- formspec(formula, data)
-  #browser()
+  assertthat::assert_that(all(sapply(event_spec$rhs, inherits, "hrfspec")),
+                          msg="all terms on right hand side must be 'hrf' terms")
+  
   model_spec <- list(formula=formula, 
                      event_table=data, 
                      onsets=event_spec$lhs, 
@@ -69,13 +70,16 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
 
 
 construct_model <- function(x) {
-  #browser()
-  ##term_names <- sapply(x$event_spec$rhs, "[[", "label")
+ 
   term_names <- sapply(x$event_spec$rhs, "[[", "id")
   term_names <- .sanitizeName(term_names)
+  
   dups <- duplicated(term_names) > 0
-  dup_ids <- ave(term_names, term_names, FUN=seq_along)
-  term_names <- ifelse(!dups, term_names, paste0(term_names, "_", dup_ids))
+  
+  if (dups) {
+    dup_ids <- ave(term_names, term_names, FUN=seq_along)
+    term_names <- paste0(term_names, "_", dup_ids)
+  } 
   
   terms <- lapply(x$event_spec$rhs, function(m) construct(m,x))
   names(terms) <- term_names
@@ -157,7 +161,7 @@ parse_term <- function(vars, ttype) {
 }
 
 
-
+#' @export
 #' @importFrom tibble as_tibble
 design_matrix.event_model_spec <- function(x) {
   termlist <- lapply(x$varspec, function(m) construct(m,x))
@@ -169,6 +173,7 @@ design_matrix.event_model_spec <- function(x) {
 }
 
 #' @importFrom tibble as_tibble
+#' @export
 #' @rdname design_matrix
 design_matrix.event_model <- function(x, blockid=NULL) {
   ret <- lapply(x$terms, design_matrix, blockid)
@@ -201,7 +206,7 @@ contrast_weights.convolved_term <- function(x) {
 }
 
 #' @export
-#' @rdname contrast_weights
+#' @rdname Fcontrasts
 FContrasts.convolved_term <- function(x) {
   Fcontrasts(x$evterm)
 }
@@ -211,6 +216,9 @@ FContrasts.convolved_term <- function(x) {
 #' @rdname contrast_weights
 contrast_weights.fmri_term <- function(x) { stop("unimplemented") }
 
+
+#' @export
+#' @rdname contrast_weights
 contrast_weights.fmri_model <- function(x) { contrast_weights(x$event_model) }
 
 #' @export
@@ -241,6 +249,8 @@ contrast_weights.event_model <- function(x) {
   ret
 }
 
+
+#' @export
 Fcontrasts.event_model <- function(x) {
   tind <- x$term_indices
   len <- length(conditions(x))
@@ -266,7 +276,7 @@ Fcontrasts.event_model <- function(x) {
   
   
 #' @export
-#' @rdname contrast_weights
+#' @rdname design_matrix
 design_matrix.convolved_term <- function(x, blockid=NULL) {
   if (is.null(blockid)) {
     x$design_matrix
@@ -278,7 +288,7 @@ design_matrix.convolved_term <- function(x, blockid=NULL) {
 
 #' @importFrom tibble as_tibble
 #' @export
-#' @rdname contrast_weights
+#' @rdname matrix_term
 matrix_term <- function(varname, mat) {
   stopifnot(is.matrix(mat))
   ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat))
@@ -396,6 +406,6 @@ plot.event_model <- function(x, term_name=NULL, longnames=TRUE) {
     p <- p + guides(colour=FALSE)
   }
     
-  print(p)
+  p
 }
   

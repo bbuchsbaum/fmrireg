@@ -52,7 +52,10 @@ read_fmri_config <- function(file_name, base_path=NULL) {
   out
 }
 
-
+#' matrix_dataset
+#' 
+#' @inheritParams fmri_dataset
+#' @param datamat a \code{matrix} each column is a voxel time-series
 #' @export
 matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
   assert_that(sum(run_length) == nrow(datamat))
@@ -73,17 +76,14 @@ matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
 
 #' fmri_mem_dataset
 #' 
+#' @inheritParams fmri_dataset
 #' @param scans a vector of objects of class \code{\linkS4class{BrainVector}}
-#' @param mask a object of type \code{\linkS4class{LogicalBrainVolume}} indicating the voxels to include in analyses.
-#' @param TR the repetition time in seconds of the scan-to-scan interval.
-#' @param event_table a \code{data.frame} containing the event onsets and experimental variables.
 #' @export
 fmri_mem_dataset <- function(scans, mask, TR, 
                          event_table=data.frame(), 
                          base_path=".") {
   
   assert_that(all(sapply(scans, function(x) inherits(x, "BrainVector"))))
-  
   
   run_length <- sapply(scans, function(x) dim(x)[4])
 

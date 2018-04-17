@@ -1,15 +1,43 @@
 
+.setup_model <- function(dataset, formula, block_formula, baseline_model=NULL, contrasts=NULL) {
+  assert_that(inherits(dataset, "fmri_dataset"))
+  
+  if (is.null(baseline_model)) {
+    baseline_model <- baseline_model(basis="bs", 
+                                     degree=ceiling(median(dataset$sampling_frame$blocklens)/100), 
+                                     sframe=dataset$sampling_frame)
+  }
+  
+  
+  ev_model <- event_model(formula, block_formula, data=dataset$event_table, 
+                          sampling_frame=dataset$sampling_frame, contrasts=contrasts)
+  model <- fmri_model(ev_model, baseline_model)
+  
+  conlist <- contrast_weights(ev_model)
+  fcon <- Fcontrasts(ev_model)
+  
+  list(baseline_model=baseline_model, ev_model=ev_model, conlist=conlist,fcon=fcon)
+}
 
 #' fmri_lm
 #' 
 #' @param formula the model furmula for experimental events
 #' @param block_formula the model formula for block structure
-#' @param baseline_model the 'baseline_model' object
-#' @param dataset the dataset
+#' @param baseline_model the \code{baseline_model} object
+#' @param dataset an object derived from \code{fmri_dataset} containing the time-series data
 #' @param durations a vector of event durations
 #' @param drop_empty whether to remove factor levels with size of zero
 #' @param contrasts a set of contrasts
 #' @param strategy the data splitting strategy
+#' 
+#' @examples 
+#' etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))
+#' etab2 <- data.frame(onset=c(1,30,65,75), fac=factor(c("A", "B", "A", "B")), run=c(1,1,1,1))
+#' mat <- matrix(rnorm(100*100), 100,100)
+#' dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
+#' dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
+#' lm.1 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset)
+#' lm.2 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset2)
 #' @export
 fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, contrasts=NULL, 
@@ -21,7 +49,8 @@ fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset,
   assert_that(inherits(dataset, "fmri_dataset"))
   
   if (is.null(baseline_model)) {
-    baseline_model <- baseline_model(basis="bs", degree=ceiling(median(dataset$sampling_frame$blocklens)/100), 
+    baseline_model <- baseline_model(basis="bs", 
+                                     degree=ceiling(median(dataset$sampling_frame$blocklens)/100), 
                                      sframe=dataset$sampling_frame)
   }
   
@@ -50,10 +79,15 @@ fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset,
 }
 
 
-coef.fmri_lm <- function(x, type=c("event", "baseline", "contrast")) {
-  
+#' @export
+coef.fmri_lm <- function(x) {
+ x$result$betas$estimate()
 }
 
+#' @export
+stats.fmri_lm <- function(x) {
+  x$result$betas$stat()
+}
 
 meta_stouffer <- function(pval, se) {
   inv_var <- 1/(se^2)
@@ -126,12 +160,13 @@ meta_contrasts <- function(cres) {
 }
 
 meta_betas <- function(bstats, colind) {
+
   len <- length(colind)
 
   res <- lapply(colind, function(i) {
     print(i)
-    beta <- do.call(cbind, lapply(bstats, function(x) x$estimate()[i,]))
-    se <- do.call(cbind, lapply(bstats, function(x) x$se()[i,]))
+    beta <- do.call(cbind, lapply(bstats, function(x) x$estimate()[,i]))
+    se <- do.call(cbind, lapply(bstats, function(x) x$se()[,i]))
     meta_fixef(beta,se)
   })
   
@@ -156,41 +191,53 @@ combine_baseline_betas <- function(bstats, colind) {
   )
 }
 
+multiresponse_lm <- function(form, data_env, conlist, vnames, fcon) {
+  lm.1 <- lm(as.formula(form), data=data_env)
+  
+  conres <- lapply(conlist, function(con) fit_contrasts(lm.1, con, attr(con, "term_indices")))
+  names(conres) <- names(conlist)
+  
+  Fres <- lapply(fcon, function(con) fit_Fcontrasts(lm.1, t(con), attr(con, "term_indices")))
+  
+  bstats <- beta_stats(lm.1, vnames)
+  #list(conres=conres, Fres=Fres, bstats=bstats, event_indices=eterm_indices, baseline_indices=bterm_indices)
+  list(conres=conres, Fres=Fres, bstats=bstats)
+}
 
 #' @importFrom foreach foreach %do% %dopar%
 runwise_lm <- function(dset, model, conlist, fcon) {
     chunks <- exec_strategy("runwise")(dset)
     
     term_names <- names(terms(model))
-    form <- as.formula(paste("y ~ ", paste(term_names, collapse = " + "), "-1"))
+    form <- paste(".y ~ ", paste(term_names, collapse = " + "), "-1")
 
     cres <- foreach( ym = chunks) %do% {
       
       ## get event model for the nth run
       eterm_matrices <- lapply(event_terms(model), function(x) as.matrix(design_matrix(x, ym$chunk_num)))
+      
       ## get baseline model for the nth run
       bterm_matrices <- lapply(baseline_terms(model), function(x) as.matrix(design_matrix(x, ym$chunk_num)))
       
+      ## column indices of event regressors
       eterm_indices <- 1:sum(sapply(eterm_matrices, ncol))
       start <- length(eterm_indices) +1
       
+      ## column indices of baseline regressors
       bterm_indices <- start:(start+sum(sapply(bterm_matrices, ncol)))
      
       term_matrices <- c(eterm_matrices, bterm_matrices)
       names(term_matrices) <- term_names
       
+      
       data_env <- list2env(term_matrices)
+      data_env[[".y"]] <- ym$data
       
-      y <- ym$data
-      lm.1 <- lm(form, data=data_env)
-    
-      conres <- lapply(conlist, function(con) fit_contrasts(lm.1, con, attr(con, "term_indices")))
-      names(conres) <- names(conlist)
+      vnames <- unlist(lapply(term_matrices, colnames))
       
-      Fres <- lapply(fcon, function(con) fit_Fcontrasts(lm.1, t(con), attr(con, "term_indices")))
+      ret <- multiresponse_lm(form, data_env, conlist, vnames, fcon)
+      list(conres=ret$conres, Fres=ret$Fres, bstats=ret$bstats, event_indices=eterm_indices, baseline_indices=bterm_indices)
       
-      bstats <- beta_stats(lm.1)
-      list(conres=conres, Fres=Fres, bstats=bstats, event_indices=eterm_indices, baseline_indices=bterm_indices)
     }
     
     bstats <- lapply(cres, "[[", "bstats")
@@ -203,7 +250,7 @@ runwise_lm <- function(dset, model, conlist, fcon) {
       meta_F <- meta_Fcontrasts(Fres)
       list(contrasts=meta_con, betas=meta_beta, Fcontrasts=meta_F)
     } else {
-      list(contrasts=conres[[1]], event_betas=bstats[[1]], Fcontrasts=Fres[[1]])
+      list(contrasts=conres[[1]], betas=bstats[[1]], Fcontrasts=Fres[[1]])
     }
     
 }

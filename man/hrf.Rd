@@ -6,7 +6,7 @@
 \usage{
 hrf(..., basis = "spmg1", onsets = NULL, durations = NULL,
   prefix = NULL, subset = NULL, precision = 0.2, nbasis = 1,
-  contrasts = NULL, id = NULL)
+  contrasts = NULL, id = NULL, lag = 0)
 }
 \arguments{
 \item{...}{the variable names, all of which must be present in the enclosing environment (e.g. an \code{event_model} object)}
@@ -30,6 +30,8 @@ Can be used to disambiguate two \code{hrf} terms with the same variable(s) but d
 If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.}
 
 \item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
+
+\item{lag}{a temporal offset in seconds which is added to onset before convolution}
 }
 \description{
 hemodynamic regressor specification function for model formulas.
