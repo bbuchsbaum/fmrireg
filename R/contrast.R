@@ -138,7 +138,13 @@ contrast_weights.unit_contrast_spec <- function(x, term) {
   ret
 }
 
-
+#' poly_contrast
+#' 
+#' A polynomial contrast evaluated over a set of (orderable) factor levels
+#' 
+#' @inheritParams unit_contrast
+#' @param degree the degree of the polynomial
+#' @param value_map optional list that maps between levels of a factor and a numeric value.
 #' @export
 poly_contrast <- function(A, name, where=TRUE, degree=1, value_map=NULL) {
   assert_that(lazyeval::is_formula(A))

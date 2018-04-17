@@ -33,3 +33,8 @@ evaluate(x, grid, ...)
 \description{
 evaluate a regression or hemodynamic response function
 }
+\examples{
+frame <- sampling_frame(blocklens=100, TR=2)
+reg <- regressor(onsets=c(10,20), hrf=HRF_SPMG1)
+evaluate(reg, samples(frame))
+}

@@ -1,6 +1,8 @@
 
 #' event_model
 #' 
+#' A data sructure representing an event-based fMRI regression model
+#' 
 #' @importFrom lazyeval f_eval f_rhs f_lhs
 #' @param formula the model formula
 #' @param data the data containing experimental design
@@ -9,6 +11,10 @@
 #' @param drop_empty whether to drop empty factor levels
 #' @param durations the event durations
 #' @param contrasts the set of contrasts
+#' @examples 
+#' event_data <- data.frame(fac=c("a", "B", "A", "B"), onsets=c(1,10,20,80), run=c(1,1,1,1))
+#' sframe <- sampling_frame(blocklens=50, TR=2)
+#' evmodel <- event_model(onsets ~ hrf(fac), data=event_data, block= ~ run, sampling_frame=sframe)
 #' @export
 event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, durations=0, contrasts=NULL) {
   
@@ -286,7 +292,15 @@ design_matrix.convolved_term <- function(x, blockid=NULL) {
   } 
 }
 
+
+#' matrix_term
+#' 
+#' A set of regression variables stored as a numeric matrix
+#' 
 #' @importFrom tibble as_tibble
+#' @examples 
+#' mat <- matrix(rnorm(100*10), 100 ,10)
+#' mterm <- matrix_term("mterm", mat)
 #' @export
 #' @rdname matrix_term
 matrix_term <- function(varname, mat) {

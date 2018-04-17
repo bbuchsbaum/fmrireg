@@ -4,11 +4,11 @@ NULL
 
 #' regressor 
 #' 
-#' construct a regressor function that can be used to generate a regression fucntion 
+#' construct a regressor object that can be used to generate regressor variables
 #' from a set of onset times and a hemodynamic response function
 #' 
 #' @param onset the event onsets in seconds
-#' @param hrf a hemodynamic response function
+#' @param hrf a hemodynamic response function, e.g. \code{HRF_SPMG1}
 #' @param duration duration of events (default is 0)
 #' @param amplitude scaling vector (default is 1)
 #' @param span the temporal window of the impulse response function (default is 24)
@@ -19,7 +19,7 @@ NULL
 #' reg <- regressor(c(10,12,14,16,18, 40), HRF_SPMG1)
 #' pred <- evaluate(reg, seq(0,100,by=2))
 #' nbasis(reg) == 1
-regressor <- function(onsets, hrf, duration=0, amplitude=1, span=24) {
+regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=24) {
   if (length(duration) == 1) {
     duration = rep(duration, length(onsets))
   }
@@ -33,11 +33,13 @@ regressor <- function(onsets, hrf, duration=0, amplitude=1, span=24) {
   
   keep <- which(amplitude != 0)
   empty <- length(keep) == 0
+  
   ret <- if (!empty) {
     list(onsets=onsets[keep],hrf=hrf, eval=hrf, duration=duration[keep],amplitude=amplitude[keep],span=span)  
   } else {
     list(onsets=NA,hrf=hrf, eval=hrf, duration=0,amplitude=0,span=span)  
   }
+  
   class(ret) <- c("regressor", "list")
   ret
 }
@@ -52,6 +54,10 @@ dots <- function(...) {
 #' @rdname evaluate
 #' @param grid the sampling grid. A vector of real values in seconds.
 #' @param precision the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}
+#' @examples 
+#' frame <- sampling_frame(blocklens=100, TR=2)
+#' reg <- regressor(onsets=c(10,20), hrf=HRF_SPMG1)
+#' evaluate(reg, samples(frame))
 #' @export
 evaluate.regressor <- function(x, grid, precision=.1) {
   nb <- nbasis(x)

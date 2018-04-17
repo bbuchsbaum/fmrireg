@@ -21,5 +21,6 @@ sum-to-zero contrast between two logical expressions
 \examples{
 
 # a hypothetical experiment with a factor 'category' that takes on values of 'face' and 'scene'
+
 pair_contrast(~ category == "face", ~ category == "scene", name="face_scene")
 }

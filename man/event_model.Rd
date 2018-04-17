@@ -23,5 +23,10 @@ event_model(formula, data, block, sampling_frame, drop_empty = TRUE,
 \item{contrasts}{the set of contrasts}
 }
 \description{
-event_model
+A data sructure representing an event-based fMRI regression model
+}
+\examples{
+event_data <- data.frame(fac=c("a", "B", "A", "B"), onsets=c(1,10,20,80), run=c(1,1,1,1))
+sframe <- sampling_frame(blocklens=50, TR=2)
+evmodel <- event_model(onsets ~ hrf(fac), data=event_data, block= ~ run, sampling_frame=sframe)
 }

@@ -139,7 +139,6 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
 #' @param lmfit the \code{lm} object
 #' @param conmat the contrast \code{matrix} or contrast \code{vector}
 #' @param colind the subset column indices in the design associated with the contrast. 
-#' @export
 fit_contrasts <- function(lmfit, conmat, colind) {
   if (!is.matrix(conmat) && is.numeric(conmat)) {
     conmat <- matrix(conmat, 1, length(conmat))

@@ -4,10 +4,11 @@
 \alias{regressor}
 \title{regressor}
 \usage{
-regressor(onsets, hrf, duration = 0, amplitude = 1, span = 24)
+regressor(onsets, hrf = HRF_SPMG1, duration = 0, amplitude = 1,
+  span = 24)
 }
 \arguments{
-\item{hrf}{a hemodynamic response function}
+\item{hrf}{a hemodynamic response function, e.g. \code{HRF_SPMG1}}
 
 \item{duration}{duration of events (default is 0)}
 
@@ -21,7 +22,7 @@ regressor(onsets, hrf, duration = 0, amplitude = 1, span = 24)
 an S3 list of type \code{regressor}
 }
 \description{
-construct a regressor function that can be used to generate a regression fucntion 
+construct a regressor object that can be used to generate regressor variables
 from a set of onset times and a hemodynamic response function
 }
 \examples{
