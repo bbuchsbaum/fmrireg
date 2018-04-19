@@ -119,12 +119,18 @@ lines(time, evaluate(hrf_block_5,time), col=3)
 
 ```
 
-## Constructing a custom basis set using lagged and blocked HRFs
+## Constructing a custom basis set using a set of lagged HRFs
 
-Rather than using a b-spline basis set, we could construct our own set of functions using a combination of lagged and/or blocked HRFs.
-
-
+Rather than using a b-spline basis set, we could construct our own set of functions using a combination of lagged and/or blocked HRFs. Suppose we want a series of shifted regressor functions that span over a 20s window. We can use a set of shifted `hrf`s to achieve this.
 
 
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+
+hrf_set <- do.call(gen_hrf_set,
+                   lapply(seq(0,20,by=2), function(i) {  hrf_gaussian %>% gen_hrf_lagged(i) %>% HRF(name=paste0("lag_", i)) }))
+
+matplot(hrf_set(0:36), type='l', xlab="Time", ylab="BOLD Activity")
+
+```
 
 

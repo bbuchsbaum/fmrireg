@@ -96,6 +96,10 @@ makeDeriv <- function(HRF, n=1) {
 #' 
 #' @param hrf the underlying hrf function to shift
 #' @param lag the lag/delay in seconds
+#' @param ... extra args supplied to \code{hrf} function
+#' @examples 
+#' hrf_lag5 <- gen_hrf_lagged(HRF_SPMG1, lag=5)
+#' hrf_lag5(0:20)
 #' @export
 gen_hrf_lagged <- function(hrf, lag=2,...) {
   force(hrf)

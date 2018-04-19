@@ -105,6 +105,8 @@ fmri_mem_dataset <- function(scans, mask, TR,
 }
 
 
+
+
 #' fmri_dataset
 #' 
 #' @param scans a vector of file names of the images comprising the dataset
