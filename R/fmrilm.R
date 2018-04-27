@@ -48,28 +48,17 @@ fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset,
   
   assert_that(inherits(dataset, "fmri_dataset"))
   
-  if (is.null(baseline_model)) {
-    baseline_model <- baseline_model(basis="bs", 
-                                     degree=ceiling(median(dataset$sampling_frame$blocklens)/100), 
-                                     sframe=dataset$sampling_frame)
-  }
-  
-
-  ev_model <- event_model(formula, block_formula, data=dataset$event_table, sampling_frame=dataset$sampling_frame, contrasts=contrasts)
-  model <- fmri_model(ev_model, baseline_model)
-  
-  conlist <- contrast_weights(ev_model)
-  fcon <- Fcontrasts(ev_model)
+  fobj <- .setup_model(dataset, formula, block_formula, baseline_model, contrasts)
   
   result <- if (strategy == "runwise") {
-    runwise_lm(dataset, model, conlist, fcon)
+    runwise_lm(dataset, fobj$model, fobj$conlist, fobj$fcon)
   } else {
     stop()
   }
   
   ret <- list(
     result=result,
-    model=model,
+    model=fobj$model,
     contrasts=contrasts,
     strategy=strategy)
   
@@ -206,18 +195,23 @@ multiresponse_lm <- function(form, data_env, conlist, vnames, fcon) {
 
 #' @importFrom foreach foreach %do% %dopar%
 runwise_lm <- function(dset, model, conlist, fcon) {
+  
+    ## get an iterator of data chunks
     chunks <- exec_strategy("runwise")(dset)
-    
+  
     term_names <- names(terms(model))
     form <- paste(".y ~ ", paste(term_names, collapse = " + "), "-1")
 
+    ## iterate over each data chunk
     cres <- foreach( ym = chunks) %do% {
       
       ## get event model for the nth run
-      eterm_matrices <- lapply(event_terms(model), function(x) as.matrix(design_matrix(x, ym$chunk_num)))
+      eterm_matrices <- lapply(event_terms(model), 
+                               function(x) as.matrix(design_matrix(x, ym$chunk_num)))
       
       ## get baseline model for the nth run
-      bterm_matrices <- lapply(baseline_terms(model), function(x) as.matrix(design_matrix(x, ym$chunk_num)))
+      bterm_matrices <- lapply(baseline_terms(model), 
+                               function(x) as.matrix(design_matrix(x, ym$chunk_num)))
       
       ## column indices of event regressors
       eterm_indices <- 1:sum(sapply(eterm_matrices, ncol))
