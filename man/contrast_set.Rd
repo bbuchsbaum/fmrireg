@@ -6,6 +6,15 @@
 \usage{
 contrast_set(...)
 }
+\arguments{
+\item{...}{a variable length list of \code{contrast_spec} objects.}
+}
 \description{
-contrast_set
+A \code{list} o \code{contrast_spec} objects
+}
+\examples{
+c1 <- contrast(~ A - B, name="A_B")
+c2 <- contrast(~ B - C, name="B_C")
+contrast_set(c1,c2)
+
 }

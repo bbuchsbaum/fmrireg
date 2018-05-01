@@ -20,3 +20,7 @@ poly_contrast(A, name, where = TRUE, degree = 1, value_map = NULL)
 \description{
 A polynomial contrast evaluated over a set of (orderable) factor levels
 }
+\examples{
+
+pcon <- poly_contrast(~ time, name="poly_time_3", degree=3)
+}

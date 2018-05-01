@@ -7,8 +7,13 @@
 pairwise_contrasts(levels, where = NULL)
 }
 \arguments{
+\item{levels}{the set of factor levels to compare.}
+
 \item{where}{the subset over which the contrast is computed}
 }
 \description{
 contrast all pairwise combinations of the levels of a factor
+}
+\examples{
+pairwise_contrasts(c("A", "B", "C"))
 }

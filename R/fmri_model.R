@@ -20,6 +20,14 @@ design_matrix.fmri_model <- function(x, blockid=NULL) {
   tibble::as_tibble(cbind(design_matrix(x$event_model, blockid), design_matrix(x$baseline_model, blockid)))
 }
 
+#' @importFrom tibble as_tibble
+design_env.fmri_model <- function(x, blockid=NULL) {
+  
+}
+
+
+
+
 #' @export
 terms.fmri_model <- function(x) {
   c(terms(x$event_model), terms(x$baseline_model))

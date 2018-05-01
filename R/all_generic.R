@@ -18,6 +18,16 @@ longnames <- function(x, ...) UseMethod("longnames")
 shortnames <- function(x, ...) UseMethod("shortnames")
 
 
+#' design_env
+#' 
+#' return regression design as a set of matrices strored in an environment
+#' 
+#' @param x the object
+#' @param ... extra args
+#' @export
+shortnames <- function(x, ...) UseMethod("design_env")
+
+
 
 #' contrast_weights
 #' 

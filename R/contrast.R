@@ -1,9 +1,15 @@
 
 #' contrast
 #' 
-#' @param form
-#' @param name
-#' @param where
+#' @param form a formula describing the contrast
+#' @param name a \code{character} label for the contrast
+#' @param where an expression the subset over whcih the contrast is defined
+#' @examples 
+#' 
+#' ## A minus B contrast
+#' contrast(~ A - B, name="A_B")
+#' 
+#' @export
 contrast <- function(form, name, where=NULL) {
   assert_that(lazyeval::is_formula(form))
   if (!is.null(where)) {
@@ -22,6 +28,15 @@ contrast <- function(form, name, where=NULL) {
 
 #' contrast_set
 #' 
+#' A \code{list} o \code{contrast_spec} objects
+#' 
+#' @param ... a variable length list of \code{contrast_spec} objects.
+#' 
+#' @examples 
+#' c1 <- contrast(~ A - B, name="A_B")
+#' c2 <- contrast(~ B - C, name="B_C")
+#' contrast_set(c1,c2)
+#' 
 #' @export
 #' @import assertthat
 contrast_set <- function(...) {
@@ -35,8 +50,10 @@ contrast_set <- function(...) {
 #' 
 #' contrast all pairwise combinations of the levels of a factor
 #' 
-#' @param levels
+#' @param levels the set of factor levels to compare.
 #' @param where the subset over which the contrast is computed
+#' @examples 
+#' pairwise_contrasts(c("A", "B", "C"))
 #' @export
 pairwise_contrasts <- function(levels, where=NULL) {
   cbns <- combn(length(levels),2)
@@ -85,9 +102,14 @@ pair_contrast <- function(A, B, name, where=NULL) {
 
 #' unit_contrast
 #' 
+#' A contrast that sums to 1 and is used to define contrasts against baseline.
+#' 
 #' @param A the contrast expression as a formula
 #' @param name the name of the contrast
 #' @param where the subset of conditions to apply contrast to
+#' @examples 
+#' con <- unit_contrast(~ Face, name="Main_face")
+#' 
 #' @export
 unit_contrast <- function(A, name, where=NULL) {
   assert_that(lazyeval::is_formula(A)) 
@@ -145,6 +167,10 @@ contrast_weights.unit_contrast_spec <- function(x, term) {
 #' @inheritParams unit_contrast
 #' @param degree the degree of the polynomial
 #' @param value_map optional list that maps between levels of a factor and a numeric value.
+#' 
+#' @examples 
+#' 
+#' pcon <- poly_contrast(~ time, name="poly_time_3", degree=3)
 #' @export
 poly_contrast <- function(A, name, where=TRUE, degree=1, value_map=NULL) {
   assert_that(lazyeval::is_formula(A))
@@ -213,6 +239,7 @@ makeWeights <- function(keepA, keepB=NULL) {
   weights
 }
 
+#' @export
 `-.contrast_spec` <- function(e1, e2, ...){
   assert_that(inherits(e2, "contrast_spec"))
   structure(list(

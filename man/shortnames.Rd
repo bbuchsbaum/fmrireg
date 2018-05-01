@@ -5,12 +5,18 @@
 \title{shortnames}
 \usage{
 shortnames(x, ...)
+
+shortnames(x, ...)
 }
 \arguments{
 \item{x}{the object}
 
 \item{...}{extra args}
+
+\item{x}{the object}
+
+\item{...}{extra args}
 }
 \description{
-shortnames
+return regression design as a set of matrices strored in an environment
 }

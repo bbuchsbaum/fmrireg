@@ -14,5 +14,9 @@ unit_contrast(A, name, where = NULL)
 \item{where}{the subset of conditions to apply contrast to}
 }
 \description{
-unit_contrast
+A contrast that sums to 1 and is used to define contrasts against baseline.
+}
+\examples{
+con <- unit_contrast(~ Face, name="Main_face")
+
 }

@@ -6,6 +6,19 @@
 \usage{
 contrast(form, name, where = NULL)
 }
+\arguments{
+\item{form}{a formula describing the contrast}
+
+\item{name}{a \code{character} label for the contrast}
+
+\item{where}{an expression the subset over whcih the contrast is defined}
+}
 \description{
 contrast
+}
+\examples{
+
+## A minus B contrast
+contrast(~ A - B, name="A_B")
+
 }

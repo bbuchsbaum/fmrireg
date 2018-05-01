@@ -10,7 +10,13 @@ gen_hrf_lagged(hrf, lag = 2, ...)
 \item{hrf}{the underlying hrf function to shift}
 
 \item{lag}{the lag/delay in seconds}
+
+\item{...}{extra args supplied to \code{hrf} function}
 }
 \description{
 gen_hrf_lagged
+}
+\examples{
+hrf_lag5 <- gen_hrf_lagged(HRF_SPMG1, lag=5)
+hrf_lag5(0:20)
 }

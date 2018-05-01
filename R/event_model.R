@@ -191,6 +191,8 @@ design_matrix.event_model <- function(x, blockid=NULL) {
 
 
 
+
+
 #' @export
 terms.event_model <- function(x) {
   x$terms
