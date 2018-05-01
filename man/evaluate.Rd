@@ -32,6 +32,8 @@ evaluate(x, grid, ...)
 }
 \description{
 evaluate a regression or hemodynamic response function
+
+evalute a regressor function over a vector of times
 }
 \examples{
 frame <- sampling_frame(blocklens=100, TR=2)

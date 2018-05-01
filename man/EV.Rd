@@ -19,3 +19,8 @@ EV(vals, name, onsets, blockids, durations = 1, subset = rep(TRUE,
 \description{
 factory function for creating 'event' types: event_factor, event_variable, event_basis, event_matrix.
 }
+\examples{
+
+ev_fac <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), blockids=rep(1,3))
+ev_numeric <- EV(c(1,2,3), "fac", onsets=c(1,10,20), blockids=rep(1,3))
+}

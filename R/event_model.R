@@ -74,7 +74,7 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
   fmodel
 }
 
-
+#' @keywords internal
 construct_model <- function(x) {
  
   term_names <- sapply(x$event_spec$rhs, "[[", "id")
@@ -111,6 +111,7 @@ construct_model <- function(x) {
   ret
 }
 
+#' @keywords internal
 extract_terms <- function(formula, data) {
   if (!inherits(formula, "terms")) {
     terms(formula, data = data)
@@ -119,6 +120,7 @@ extract_terms <- function(formula, data) {
   }	
 }
 
+#' @keywords internal
 extract_covariates <- function(.terms, variables, resp, etab) {
   vars <- attr(.terms, "variables") 
   varnames <- sapply(vars, deparse, width.cutoff = 500)[-1]
@@ -130,9 +132,10 @@ extract_covariates <- function(.terms, variables, resp, etab) {
   covar.names
 }
 
+#' @keywords internal
 is_parametric_basis <- function(obj) { inherits(obj, "ParametricBasis") }
 
-
+#' @keywords internal
 extract_variables <- function(form, data) {
  
   .terms <- extract_terms(form,data)
@@ -151,7 +154,7 @@ extract_variables <- function(form, data) {
 #   length(ret) > 0 && ret
 # }
 
-
+#' @keywords internal
 parse_term <- function(vars, ttype) {
   dim <- length(vars) # number of variables
   term <- deparse(vars[[1]],backtick=TRUE) # first covariate
@@ -194,6 +197,7 @@ design_matrix.event_model <- function(x, blockid=NULL) {
 
 
 #' @export
+#' @rdname terms
 terms.event_model <- function(x) {
   x$terms
 }

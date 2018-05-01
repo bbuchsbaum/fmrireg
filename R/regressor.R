@@ -1,6 +1,3 @@
-#' @importFrom RANN nn2
-NULL
-
 
 #' regressor 
 #' 
@@ -44,13 +41,16 @@ regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=24) {
   ret
 }
 
-
+#' @keywords internal
 dots <- function(...) {
   eval(substitute(alist(...)))
 }
 
 
 #' evaluate
+#' 
+#' evalute a regressor function over a vector of times
+#' 
 #' @rdname evaluate
 #' @param grid the sampling grid. A vector of real values in seconds.
 #' @param precision the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}
@@ -131,15 +131,19 @@ nbasis.regressor <- function(x) nbasis(x$hrf)
 nbasis.HRF <- function(x) attr(x, "nbasis")
 
 #' @export
+#' @rdname nbasis
 nbasis.hrfspec <- function(x) nbasis(x$hrf)
 
 #' @export
+#' @rdname onsets
 onsets.regressor <- function(x) x$onsets
 
 #' @export
+#' @rdname durations
 durations.regressor <- function(x) x$duration
 
 #' @export
+#' @rdname amplitudes
 amplitudes.regressor <- function(x) x$amplitude
 
 

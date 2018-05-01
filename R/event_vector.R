@@ -1,4 +1,5 @@
 
+#' @keywords internal
 .sanitizeName <- function(name) {
   name <- gsub(":", ".", name)
   name <- gsub(" ", "", name)
@@ -9,15 +10,17 @@
   name
 }
 
+#' @keywords internal
 is.increasing <- function(vec) {
   all(diff(vec) >= 0)
 }
 
+#' @keywords internal
 is.strictly.increasing <- function(vec) {
   all(diff(vec) > 0)
 }
 
-
+#' @keywords internal
 #' @import assertthat
 .checkEVArgs <- function(name, vals, onsets, blockids, durations=NULL) {
 
@@ -98,6 +101,8 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   ret
 }
 
+
+#' @export
 event_table.event_term <- function(x) x$event_table
 
 
@@ -109,6 +114,11 @@ event_table.event_term <- function(x) x$event_table
 #' @param name the name of the event variable
 #' @param onsets the event onsets.
 #' @param blockids the block ids associated with each event (must be non-decreasing)
+#' 
+#' @examples 
+#' 
+#' ev_fac <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), blockids=rep(1,3))
+#' ev_numeric <- EV(c(1,2,3), "fac", onsets=c(1,10,20), blockids=rep(1,3))
 #' @export
 EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,length(onsets))) {
   
@@ -234,24 +244,31 @@ event_basis <- function(basis, onsets, blockids=1, durations=NULL, subset=rep(TR
 
 
 #' @export
+#' @rdname levels
 levels.event_factor <- function(x) levels(x$value) 
 
 #' @export
+#' @rdname levels
 levels.event_variable <- function(x) x$varname 
 
 #' @export
+#' @rdname levels
 levels.event_matrix <- function(x) colnames(x$value) 
 
 #' @export
+#' @rdname levels
 levels.event_set <- function(x) colnames(x$value) 
 
 #' @export
+#' @rdname levels
 levels.event_basis <- function(x) seq(1, ncol(x$basis$y))
 
 #' @export
+#' @rdname formula
 formula.event_term <- function(x) as.formula(paste("~ ", "(", paste(parent_terms(x), collapse=":"), "-1", ")"))
 
 #' @export
+#' @rdname levels
 levels.event_term <- function(x) {
   facs <- x$events[!sapply(x$events, is_continuous)]
   if (length(facs) == 1) {
@@ -264,12 +281,14 @@ levels.event_term <- function(x) {
 }
 
 #' @export
+#' @rdname cells
 cells.event_factor <- function(x, drop.empty=TRUE) {
   etab <- data.frame(onsets=x$onsets, durations=x$durations, blockids=x$blockids)
   split(etab, x$value)
 }
 
 #' @export
+#' @rdname cells
 cells.event_term <- function(x, drop.empty=TRUE) {
   evtab <- x$event_table
   evset <- tibble::as_tibble(expand.grid(lapply(x$events, levels)))
@@ -319,6 +338,7 @@ cells.convolved_term <- function(x) {
   evset <- .event_set(x)
   
   strels <- apply(apply(evtab, 2, stringr::str_trim), 1, paste, collapse = ":")
+  
   strlevs <- if (nrow(evset) > 1) {
     apply(apply(evset, 2, stringr::str_trim), 1, paste, collapse = ":")
   } else {
@@ -373,6 +393,7 @@ columns.event_term <- function(x) as.vector(unlist(lapply(x$events, columns)))
 #' @export
 columns.event_seq <- function(x) x$varname
 
+#' @export
 columns.event_matrix <- function(x) paste0(.sanitizeName(x$varname), ".", levels(x))
 
 
