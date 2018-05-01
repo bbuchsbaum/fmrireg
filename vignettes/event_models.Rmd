@@ -36,7 +36,8 @@ Now we contruct a "design table" by randomly sampling from the four conditions:
 
 simple_design <- data.frame(stim=factor(sample(rep(cond, 4))), 
                      ISI=sample(4:7, NSTIM, replace=TRUE), 
-                     run=rep(1, NSTIM))
+                     run=rep(1, NSTIM),
+                     trial=factor(1:NSTIM))
 
 ```
 
@@ -158,3 +159,14 @@ print(emodel)
 plot(emodel, "hrf_stim_RT")
 ```
 
+## Trialwise event model to construct "beta-series" estimates
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+TR <- 2
+sframe <- sampling_frame(blocklens=70, TR)
+
+# create the event model d
+emodel <- event_model(onset ~ trialwise(trial), data=simple_design, block = ~ run, sampling_frame=sframe)
+print(emodel)
+plot(emodel, "hrf_trialwise")
+```
