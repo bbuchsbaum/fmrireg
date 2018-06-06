@@ -1,3 +1,5 @@
+
+#' @export
 afni_lm <- function(fmri_mod, dataset, working_dir=".", options=list()) {
   
   defopts <- list(noFDR=FALSE, 
@@ -29,6 +31,8 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", options=list()) {
 
 }
 
+
+#' @keywords internal
 afni_stim_file <- function(label, file_name, values) {
   structure(
     list(label=label, file_name=file_name, values=values),
@@ -36,6 +40,7 @@ afni_stim_file <- function(label, file_name, values) {
   )
 }
 
+#' @keywords internal
 afni_stim_times <- function(label, file_name, hrf, onsets, iresp=FALSE, tr_times=1) {
   structure(
     list(label=label, file_name=file_name, hrf=hrf, onsets=onsets, iresp=iresp, tr_times=tr_times),
@@ -56,7 +61,7 @@ afni_stim_times <- function(label, file_name, hrf, onsets, iresp=FALSE, tr_times
 # }
 
 
-
+#' @keywords internal
 afni_command_switch <- function(x, k, type) {
   switch(
     type,
@@ -67,6 +72,7 @@ afni_command_switch <- function(x, k, type) {
   )
 }
 
+#' @keywords internal
 next_dir_name <- function(wd) {
   nd <- paste(wd, "+", sep="")
   if (!file.exists(nd)) {
@@ -76,12 +82,14 @@ next_dir_name <- function(wd) {
   }
 }
 
+#' @keywords internal
 write_stim_files <- function(afni_stims) {
   sapply(afni_stims, function(stim) {
     write_afni_stim(stim, ".")
   })
 }
 
+#' @keywords internal
 write_afni_stim <- function(stim, dir) {
   .write_values <- function(outname, vals) {
     hfile <- file(outname, "w")
@@ -93,7 +101,7 @@ write_afni_stim <- function(stim, dir) {
 }
 
 
-
+#' @keywords internal
 build_afni_stims <- function(x) {
   stimlabels <- longnames(x)
   stimfiles <- paste(stimlabels, "_reg.1D", sep = "")
@@ -130,7 +138,7 @@ build_afni_stims <- function(x) {
   cmdstr
 }
 
-
+#' @keywords internal
 build_decon_command <- function(model, dataset, working_dir, opts) {
    stimlabels <- unlist(lapply(terms(model$event_model), longnames))
    

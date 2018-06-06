@@ -44,6 +44,10 @@ contrast_weights <- function(x, term, ...) UseMethod("contrast_weights")
 #' @export
 parent_terms <- function(x) UseMethod("parent_terms")
 
+#' term_names
+#' @param x the object to extra term names from
+#' @export
+term_names <- function(x) UseMethod("term_names")
 
 #' cells
 #' 

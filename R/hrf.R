@@ -373,16 +373,14 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
   }  
   
   cset <- if (inherits(contrasts, "contrast_spec")) {
-    #vname <- deparse(substitute(contrasts))
-    #eval(parse(text=paste0("contrast_set(", vname, "=contrasts)")))
     contrast_set(con1=contrasts)
   } else if (inherits(contrasts, "contrast_set")) {
     contrasts
   } #else if (!is.null(contrasts)) {
-  ## try creating a contrast
-  #vname <- deparse(substitute(contrasts))
-  #eval(parse(text=paste0("contrast_set(", vname, "=contrasts)")))
-  #contrast_set(con1)
+    ## try creating a contrast
+    #vname <- deparse(substitute(contrasts))
+    #eval(parse(text=paste0("contrast_set(", vname, "=contrasts)")))
+    #contrast_set(con1)
   #}
   
   ret <- list(

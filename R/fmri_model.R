@@ -26,8 +26,6 @@ design_env.fmri_model <- function(x, blockid=NULL) {
 }
 
 
-
-
 #' @export
 terms.fmri_model <- function(x) {
   c(terms(x$event_model), terms(x$baseline_model))
@@ -42,6 +40,11 @@ event_terms.fmri_model <- function(x) {
 #' @export
 baseline_terms.fmri_model <- function(x) {
   terms(x$baseline_model)
+}
+
+#' @export
+contrast_weights <- function(x, term=NULL) {
+  contrast_weights(x$event_model, term)
 }
 
 
@@ -69,18 +72,18 @@ plot.fmri_model <- function(x,...) {
 #' @export
 print.fmri_model <- function(object) {
   cat("fmri_model", "\n")
-  cat(" ", "Event Model:  ", Reduce(paste, deparse(object$model_spec$formula)), "\n")
-  cat(" ", "Baseline Model:  ", Reduce(paste, deparse(object$model_spec$baseline_formula)), "\n")
+  cat(" ", "Event Model:  ", Reduce(paste, deparse(object$event_model$model_spec$formula)), "\n")
+  cat(" ", "Baseline Model:  ", object$baseline_model$drift_term$varname, "\n")
   cat(" ", "Num Terms", length(terms(object)), "\n")
   cat(" ", "Num Events: ", nrow(object$model_spec$event_table), "\n")
   cat(" ", "Num Columns: ", length(conditions(object)), "\n")
-  cat(" ", "Num Blocks: ", length(object$model_spec$blocklens), "\n")
-  cat(" ", "Length of Blocks: ", paste(object$model_spec$blocklens, collapse=", "), "\n")
+  cat(" ", "Num Blocks: ", length(object$event_model$model_spec$sampling_frame$blocklens), "\n")
+  cat(" ", "Length of Blocks: ", paste(object$event_model$model_spec$sampling_frame$blocklens, collapse=", "), "\n")
   for (i in 1:length(terms(object))) {
+    cat("\n")
     t <- terms(object)[[i]]
     cat("Term:", i, " ")
     print(t)
-    cat("\n")
   }
   
 }

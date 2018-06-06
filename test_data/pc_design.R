@@ -9,16 +9,18 @@ sframe <- sampling_frame(rep(169,3), TR=1.77)
 
 ## Saliency as categorical factor
 
-sal_lin_main <- poly_contrast(~ Saliency, "lin_saliency")
-sal_lin_lure <- poly_contrast(~ Saliency, "lin_lure_saliency", where = Repetition == "lure")
-sal_lin_new <- poly_contrast(~ Saliency, "lin_new_saliency", where = Repetition == "newtest")
-sal_lin_old <- poly_contrast(~ Saliency, "lin_old_saliency", where = Repetition == "old")
+input_lin_main <- poly_contrast(~ Input, "lin_input")
+input_lin_lure <- poly_contrast(~ Input, "lin_lure_input", where = Repetition == "lure")
+input_lin_new <- poly_contrast(~ Input, "lin_new_input", where = Repetition == "newtest")
+input_lin_old <- poly_contrast(~ Input, "lin_old_input", where = Repetition == "old")
 
-sal_lin_old_min_new <- sal_lin_old - sal_lin_new
-conlist <- list(
-  sal_lin_main,
-  sal_lin_lure,
-  sal_lin_new,
-  sal_lin_old)
+input_lin_old_min_new <- input_lin_old - input_lin_new
+conlist <- contrast_set(
+  input_lin_main,
+  input_lin_lure,
+  input_lin_new,
+  input_lin_old)
   
-emodel <- event_model(Onset ~ hrf(Repetition, Input), block = ~ Run, sampling_frame=sframe, data=des, contrasts=conlist)
+emodel <- event_model(Onset ~ hrf(Repetition, Input, contrasts=conlist), block = ~ Run, sampling_frame=sframe, data=des)
+bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe)
+fmodel <- fmri_model(emodel, bmodel)

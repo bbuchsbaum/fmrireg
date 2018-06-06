@@ -105,6 +105,7 @@ construct_model <- function(x) {
     terms=terms,
     blockids=x$blockids,
     sampling_frame=x$sampling_frame,
+    contrasts=x$contrasts,
     model_spec=x
   )
   
@@ -232,15 +233,29 @@ contrast_weights.fmri_term <- function(x) { stop("unimplemented") }
 
 #' @export
 #' @rdname contrast_weights
-contrast_weights.fmri_model <- function(x) { contrast_weights(x$event_model) }
+contrast_weights.fmri_model <- function(x) { 
+  contrast_weights(x$event_model) 
+}
+
+#' @export
+term_names.event_model <- function(x) {
+  xt <- terms(x)
+  unlist(lapply(xt, function(term) term$varname))
+}
 
 #' @export
 #' @rdname contrast_weights
-contrast_weights.event_model <- function(x) {
+contrast_weights.event_model <- function(x, term=NULL) {
+  if (is.null(term)) {
+    len <- length(conditions(x))
+    tnames <- term_names(x)
+  } else {
+    tnames=term
+  }
+  
   tind <- x$term_indices
-  len <- length(conditions(x))
-  tnames <- names(terms(x))
-  ret <- unlist(lapply(seq_along(terms(x)), function(i) {
+
+  ret <- lapply(seq_along(tnames), function(i) {
     cwlist <- contrast_weights(terms(x)[[i]])
     if (!is.null(cwlist) && length(cwlist) > 0) {
       ret <- lapply(cwlist, function(cw) {
@@ -252,13 +267,15 @@ contrast_weights.event_model <- function(x) {
       
       cnames <- sapply(cwlist, function(cw) cw$name)
     
-      prefix <- tnames[i]
-      names(ret) <- paste0(prefix, "#", cnames)
+      #prefix <- tnames[i]
+      #names(ret) <- paste0(prefix, "#", cnames)
+      names(ret) <- cnames
       
       ret
     }
-  }), recursive=FALSE)
+  })
 
+  names(ret) <- tnames
   ret
 }
 
