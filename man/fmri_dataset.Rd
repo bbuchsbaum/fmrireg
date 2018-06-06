@@ -2,7 +2,7 @@
 % Please edit documentation in R/fmri_dataset.R
 \name{fmri_dataset}
 \alias{fmri_dataset}
-\title{fmri_dataset}
+\title{An fMRI dataset consisting of a set of scans as files, design information, and other data.}
 \usage{
 fmri_dataset(scans, mask, TR, run_length, event_table = data.frame(),
   base_path = ".")
@@ -17,7 +17,9 @@ fmri_dataset(scans, mask, TR, run_length, event_table = data.frame(),
 \item{run_length}{the number of scans in each run.}
 
 \item{event_table}{a \code{data.frame} containing the event onsets and experimental variables.}
+
+\item{base_path}{the file path to be prepended to relative file names}
 }
 \description{
-fmri_dataset
+An fMRI dataset consisting of a set of scans as files, design information, and other data.
 }

@@ -16,7 +16,7 @@
   conlist <- contrast_weights(ev_model)
   fcon <- Fcontrasts(ev_model)
   
-  list(baseline_model=baseline_model, ev_model=ev_model, conlist=conlist,fcon=fcon)
+  list(model=model, baseline_model=baseline_model, ev_model=ev_model, conlist=conlist,fcon=fcon)
 }
 
 #' fmri_lm
@@ -53,7 +53,7 @@ fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset,
   result <- if (strategy == "runwise") {
     runwise_lm(dataset, fobj$model, fobj$conlist, fobj$fcon)
   } else {
-    stop()
+    stop("only currently implemented strategy is 'runwise'")
   }
   
   ret <- list(
@@ -198,7 +198,7 @@ runwise_lm <- function(dset, model, conlist, fcon) {
   
     ## get an iterator of data chunks
     chunks <- exec_strategy("runwise")(dset)
-  
+
     term_names <- names(terms(model))
     form <- paste(".y ~ ", paste(term_names, collapse = " + "), "-1")
 

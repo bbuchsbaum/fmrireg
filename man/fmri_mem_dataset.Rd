@@ -15,6 +15,8 @@ fmri_mem_dataset(scans, mask, TR, event_table = data.frame(),
 \item{TR}{the repetition time in seconds of the scan-to-scan interval.}
 
 \item{event_table}{a \code{data.frame} containing the event onsets and experimental variables.}
+
+\item{base_path}{the file path to be prepended to relative file names}
 }
 \description{
 fmri_mem_dataset

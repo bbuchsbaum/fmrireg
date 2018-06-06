@@ -18,7 +18,7 @@ get_col_inds <- function(Xlist) {
 #' @param nuisance_list a list of nusiance matrices, one per block
 #' @importFrom lazyeval f_eval f_rhs f_lhs
 #' @export
-baseline_model <- function(basis="bs", degree=5, sframe, nuisance_list=NULL) {
+baseline_model <- function(basis="poly", degree=1, sframe, nuisance_list=NULL) {
   drift_spec <- baseline(degree=degree, basis=basis, constant=FALSE)
   drift_term <- construct(drift_spec, sframe)
   
@@ -60,7 +60,7 @@ baseline_model <- function(basis="bs", degree=5, sframe, nuisance_list=NULL) {
 #' @param basis the type of polynomial basis.
 #' @param name the name of the term
 #' @export
-baseline <- function(degree=5, basis=c("bs", "poly", "ns"), name=paste0("baseline_", basis, "_", degree), constant=FALSE) {
+baseline <- function(degree=1, basis=c("poly", "bs", "ns"), name=paste0("baseline_", basis, "_", degree), constant=FALSE) {
   basis <- match.arg(basis)
   bfun <- switch(basis,
                  bs=splines::bs,
@@ -128,9 +128,9 @@ block <- function(x) {
 #' @export  
 construct.baselinespec <- function(x, sampling_frame) {
   ret <- if (x$constant) {
-    lapply(sampling_frame$blocklens, function(bl) cbind(rep(1, bl), x$fun(seq(1, bl), x$degree)))
+    lapply(sampling_frame$blocklens, function(bl) cbind(rep(1, bl), x$fun(seq(1, bl), degree=x$degree)))
   } else {
-    lapply(sampling_frame$blocklens, function(bl) x$fun(seq(1, bl), x$degree))
+    lapply(sampling_frame$blocklens, function(bl) x$fun(seq(1, bl), degree=x$degree))
   }
   
   

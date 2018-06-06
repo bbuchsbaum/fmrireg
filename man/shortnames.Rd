@@ -2,6 +2,7 @@
 % Please edit documentation in R/all_generic.R
 \name{shortnames}
 \alias{shortnames}
+\alias{shortnames}
 \title{shortnames}
 \usage{
 shortnames(x, ...)
@@ -18,5 +19,7 @@ shortnames(x, ...)
 \item{...}{extra args}
 }
 \description{
+shortnames
+
 return regression design as a set of matrices strored in an environment
 }

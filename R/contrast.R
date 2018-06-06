@@ -174,6 +174,7 @@ contrast_weights.unit_contrast_spec <- function(x, term) {
 #' @export
 poly_contrast <- function(A, name, where=TRUE, degree=1, value_map=NULL) {
   assert_that(lazyeval::is_formula(A))
+
   ret <- list(
     A=A,
     B=NULL,
@@ -375,10 +376,23 @@ print.contrast <- function(x) {
 
 #' @export
 print.poly_contrast_spec <- function(x) {
-  cat("poly contrast", "\n")
+  cat("poly contrast:", "\n")
   cat(" A: ", Reduce(paste, deparse(x$A)), "\n")
   cat(" degree: ", x$degree, "\n")
-  cat(" values: ", unlist(x$value_map), "\n")
+  if (!is.null(x$where)) {
+    cat(" where: ", deparse(x$where), "\n")
+  }
+  
+  if (!is.null(x$value_map)) {
+    cat(" values: ", unlist(x$value_map), "\n")
+  }
 }
+
+#' @export
+print.contrast_diff_spec <- function(x) {
+  cat("contrast difference:", "\n")
+  cat("  ", x$con1$name, "-", x$con2$name, "\n")
+}
+
 
 

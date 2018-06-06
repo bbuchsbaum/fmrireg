@@ -80,7 +80,8 @@ construct_model <- function(x) {
   term_names <- sapply(x$event_spec$rhs, "[[", "id")
   term_names <- .sanitizeName(term_names)
   
-  dups <- duplicated(term_names) > 0
+ 
+  dups <- sum(duplicated(term_names)) > 0
   
   if (dups) {
     dup_ids <- ave(term_names, term_names, FUN=seq_along)
@@ -389,6 +390,7 @@ print.event_model <- function(object) {
   
 }
 
+
 #' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap xlab theme_bw
 #' @importFrom tidyr gather
 #' @export
@@ -422,7 +424,7 @@ plot.event_model <- function(x, term_name=NULL, longnames=TRUE) {
   p <- ggplot2::ggplot(dfx, aes_string(x=".time", y="value", colour="condition")) + geom_line() + facet_wrap(~ .block, ncol=1) +
     xlab("Time") + theme_bw(14) 
   
-  if (length(unique(dfx$condition)) > 10) {
+  if (length(unique(dfx$condition)) > 25) {
     p <- p + guides(colour=FALSE)
   }
     

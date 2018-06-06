@@ -2,13 +2,15 @@
 % Please edit documentation in R/fmri_dataset.R
 \name{read_fmri_config}
 \alias{read_fmri_config}
-\title{read_fmri_config}
+\title{read and fMRI configuration file}
 \usage{
 read_fmri_config(file_name, base_path = NULL)
 }
 \arguments{
 \item{file_name}{name of configuration file}
+
+\item{base_path}{the file path to be prepended to relative file names}
 }
 \description{
-read_fmri_config
+read and fMRI configuration file
 }
