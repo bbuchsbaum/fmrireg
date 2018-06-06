@@ -10,7 +10,7 @@ default_config <- function() {
 #' read and fMRI configuration file
 #' 
 #' @param file_name name of configuration file
-#' @param the file path to be prepended to relative file names
+#' @param base_path the file path to be prepended to relative file names
 #' @importFrom assertthat assert_that
 #' @importFrom tibble as_data_frame
 #' @export
@@ -65,6 +65,7 @@ matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
   
   ret <- list(
     datamat=datamat,
+    TR=TR,
     nruns=length(run_length),
     event_table=event_table,
     sampling_frame=frame
@@ -108,13 +109,14 @@ fmri_mem_dataset <- function(scans, mask, TR,
 
 
 
-#' An fMRI dataset consisting of a set of scans, design information, and related data.
+#' An fMRI dataset consisting of a set of scans as files, design information, and other data.
 #' 
 #' @param scans a vector of file names of the images comprising the dataset
 #' @param mask name of the binary mask file indicating the voxels to include in analysis.
 #' @param TR the repetition time in seconds of the scan-to-scan interval.
 #' @param run_length the number of scans in each run.
 #' @param event_table a \code{data.frame} containing the event onsets and experimental variables.
+#' @param base_path the file path to be prepended to relative file names
 #' @export
 fmri_dataset <- function(scans, mask, TR, 
                          run_length, 
@@ -321,6 +323,15 @@ slicewise_chunks <- function(x) {
 one_chunk <- function(x) {
   mask <- x$mask
   list(mask)
+}
+
+print.fmri_dataset <- function(object) {
+  cat("fmri_dataset", "\n")
+  cat("  number of runs: ", object$nruns, "\n")
+  cat("  TR: ", object$TR, "\n")
+  print(object$sampling_frame)
+  cat("  event_table: ", "\n")
+  print(object$event_table)
 }
 
 

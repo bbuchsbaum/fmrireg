@@ -1,4 +1,5 @@
 
+#' @keywords internal
 lazy_series <- function(bvec, i) {
   structure(list(
     bvec=bvec,
@@ -6,6 +7,7 @@ lazy_series <- function(bvec, i) {
     class="lazy_series")
 }
 
+#' @keywords internal
 as.vector.lazy_series <- function(x) {
   series(x$bvec, x$i)
 }
@@ -13,5 +15,5 @@ as.vector.lazy_series <- function(x) {
 
 
 to_tibble.fmri_mem_dataset <- function(x) {
-  
+  stop("not implemented")
 }
