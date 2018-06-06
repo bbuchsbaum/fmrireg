@@ -1,5 +1,5 @@
 
-base_path="/Users/brad/code/fmrireg/test_data/images_study"
+base_path="/Users/bbuchsbaum/code/fmrireg/test_data/images_study"
 
 scans = paste0("epi/",
                c("rscan01.nii",
@@ -14,7 +14,7 @@ event_table = "behavior/design.txt"
 
 aux_table = "epi/aux_data.txt"
 
-#block_column = "run"
+block_column = "run"
 
 event_model = onsetTime ~ hrf(imageName, id="iname", subset=!is.na(imageName)) 
 

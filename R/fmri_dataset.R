@@ -1,22 +1,26 @@
 
 
 
-#' read_fmri_config
+#' read and fMRI configuration file
 #' 
 #' @param file_name name of configuration file
+#' @param the file path to be prepended to relative file names
 #' @importFrom assertthat assert_that
 #' @importFrom tibble as_data_frame
 #' @export
 read_fmri_config <- function(file_name, base_path=NULL) {
   print(file_name)
   env <- new.env()
+  env$cmd_flags <- ""
+  env$jobs <- 1
+  
   source(file_name, env)
   
   if (is.null(env$base_path) && is.null(base_path)) {
     env$base_path = "."
-  } else {
+  } else if (!is.null(base_path) && is.null(env$base_path)) {
     env$base_path <- base_path
-  }
+  } 
   
   if (is.null(env$output_dir)) {
     env$output_dir = "stat_out"
@@ -30,23 +34,16 @@ read_fmri_config <- function(file_name, base_path=NULL) {
   assert_that(!is.null(env$event_model))
   assert_that(!is.null(env$event_table))
   assert_that(!is.null(env$block_column))
-  #assert_that(file.exists(file.path(env$base_path,env$event_table)))
   
   
-  #env$mask <- neuroim::loadVolume(file.path(env$base_path, env$mask))
-  print(env$base_path)
+  
+  print(paste("base path:", env$base_path))
  
   dname <- file.path(env$base_path, env$event_table)
   print(dname)
   assert_that(file.exists(dname))
   env$design <- tibble::as_data_frame(read.table(dname, header=TRUE))
 
-  # if (is.null(env$aux_table)) {
-  #   env$aux_table=tibble::as_data_frame()
-  # } else {
-  #   env$aux_table <- tibble::as_data_frame(read.table(file.path(env$base_path,env$aux_table), header=TRUE))
-  # }
-  
   out <- as.list(env)
   class(out) <- c("fmri_config", "list")
   out
