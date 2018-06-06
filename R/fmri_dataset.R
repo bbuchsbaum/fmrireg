@@ -1,6 +1,12 @@
 
 
-
+default_config <- function() {
+  env <- new.env()
+  env$cmd_flags <- ""
+  env$jobs <- 1
+  env
+  
+}
 #' read and fMRI configuration file
 #' 
 #' @param file_name name of configuration file
@@ -10,9 +16,7 @@
 #' @export
 read_fmri_config <- function(file_name, base_path=NULL) {
   print(file_name)
-  env <- new.env()
-  env$cmd_flags <- ""
-  env$jobs <- 1
+  env <- default_config()
   
   source(file_name, env)
   
@@ -104,7 +108,7 @@ fmri_mem_dataset <- function(scans, mask, TR,
 
 
 
-#' fmri_dataset
+#' An fMRI dataset consisting of a set of scans, design information, and related data.
 #' 
 #' @param scans a vector of file names of the images comprising the dataset
 #' @param mask name of the binary mask file indicating the voxels to include in analysis.
