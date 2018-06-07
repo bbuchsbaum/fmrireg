@@ -26,6 +26,7 @@ gen_hrf
 grf <- gen_hrf(hrf_spmg1, lag=3, width=2)
 grf(0:20)
 
-grf <- gen_hrf(hrf_gaussian, lag=3, width=2, mean=3, sd=1)
+hg <- purrr::partial(hrf_gaussian, mean=4, sd=1)
+grf <- gen_hrf(hg, lag=1, width=2)
 
 }

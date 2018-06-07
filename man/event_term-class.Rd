@@ -18,5 +18,16 @@ event_term(evlist, onsets, blockids, durations = 1, subset = NULL)
 \item{subset}{the subset of onsets to retain}
 }
 \description{
-Create a event model term from a named list of variables.
+Create an event model term from a named list of variables.
+}
+\examples{
+
+x1 <- factor(rep(letters[1:3], 10))
+x2 <- factor(rep(1:3, each=10))
+eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), blockids=rep(1,30))
+
+x1 <- rnorm(30)
+x2 <- factor(rep(1:3, each=10))
+eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), blockids=rep(1,30), subset=x1>0)
+
 }

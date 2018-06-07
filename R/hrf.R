@@ -342,7 +342,7 @@ getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussi
 #' 
 #' @examples 
 #' 
-#' ## 'hrf' is typically used in te modeling interfaces, typically in \code{formulas}.
+#' ## 'hrf' is typically used in the context of \code{formula}s.
 #' hspec <- hrf(x)
 #' hspec2 <- hrf(x, basis="gamma")
 #' hspec3 <- hrf(x, basis="bs", nbasis=4)

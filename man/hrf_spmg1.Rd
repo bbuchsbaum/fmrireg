@@ -4,7 +4,7 @@
 \alias{hrf_spmg1}
 \title{hrf_spmg1}
 \usage{
-hrf_spmg1(t)
+hrf_spmg1(t, P1 = 5, P2 = 15)
 }
 \arguments{
 \item{t}{time}
