@@ -2,9 +2,9 @@
 % Please edit documentation in R/baseline_model.R
 \name{baseline}
 \alias{baseline}
-\title{baseline}
+\title{Create a model specification for modeling low-frequency drift in fmri time series.}
 \usage{
-baseline(degree = 5, basis = c("bs", "poly", "ns"),
+baseline(degree = 1, basis = c("poly", "bs", "ns"),
   name = paste0("baseline_", basis, "_", degree), constant = FALSE)
 }
 \arguments{
@@ -13,7 +13,9 @@ baseline(degree = 5, basis = c("bs", "poly", "ns"),
 \item{basis}{the type of polynomial basis.}
 
 \item{name}{the name of the term}
+
+\item{constant}{whether to include an intercept term}
 }
 \description{
-A matrix of polynomial regressors for modeling low-frequency drift in fmri time series.
+Create a model specification for modeling low-frequency drift in fmri time series.
 }

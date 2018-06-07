@@ -3,25 +3,20 @@
 \name{contrast_weights}
 \alias{contrast_weights}
 \alias{contrast_weights.convolved_term}
-\alias{contrast_weights.fmri_term}
 \alias{contrast_weights.fmri_model}
 \alias{contrast_weights.event_model}
 \title{contrast_weights}
 \usage{
-contrast_weights(x, term, ...)
+contrast_weights(x, term = NULL)
 
-\method{contrast_weights}{convolved_term}(x)
+contrast_weights.convolved_term(x)
 
-\method{contrast_weights}{fmri_term}(x)
+contrast_weights.fmri_model(x)
 
-\method{contrast_weights}{fmri_model}(x)
-
-\method{contrast_weights}{event_model}(x)
+contrast_weights.event_model(x)
 }
 \arguments{
 \item{x}{the object}
-
-\item{term}{}
 
 \item{...}{extra args}
 }

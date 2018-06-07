@@ -2,19 +2,32 @@
 % Please edit documentation in R/baseline_model.R
 \name{baseline_model}
 \alias{baseline_model}
-\title{baseline_model}
+\title{construct a baseline model to model noise and other non-event-related sources of variance}
 \usage{
-baseline_model(basis = "bs", degree = 5, sframe, nuisance_list = NULL)
+baseline_model(basis = c("poly", "bs", "ns"), degree = 1, sframe,
+  nuisance_list = NULL)
 }
 \arguments{
 \item{basis}{the basis function type}
 
-\item{degree}{the number of basis functions}
+\item{degree}{the degree of the spline function.}
 
 \item{sframe}{sframe a \code{sampling_frame} object}
 
-\item{nuisance_list}{a list of nusiance matrices, one per block}
+\item{nuisance_list}{a list of nusiance matrices, one matrix per fMRI block}
 }
 \description{
-baseline_model
+construct a baseline model to model noise and other non-event-related sources of variance
+}
+\examples{
+
+## bspline basis with degree = 3. This will produce a design matrix with three splines regressiors and a constant intercept.
+sframe <- sampling_frame(blocklens=100, TR=2)
+bmod <- baseline_model(basis="bs", degree=3, sframe=sframe)
+stopifnot(ncol(design_matrix(bmod)) == 4)
+
+## add an arbitrary nuisance matrix with two columns
+nuismat <- matrix(rnorm(100*2), 100, 2)
+bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, nuisance_list=list(nuismat))
+stopifnot(ncol(design_matrix(bmod)) == 6)
 }

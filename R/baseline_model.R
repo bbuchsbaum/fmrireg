@@ -10,15 +10,27 @@ get_col_inds <- function(Xlist) {
 
 
 
-#' baseline_model
+#' construct a baseline model to model noise and other non-event-related sources of variance
 #' 
 #' @param basis the basis function type
-#' @param degree the number of basis functions
+#' @param degree the degree of the spline function.
 #' @param sframe sframe a \code{sampling_frame} object
-#' @param nuisance_list a list of nusiance matrices, one per block
+#' @param nuisance_list a list of nusiance matrices, one matrix per fMRI block
 #' @importFrom lazyeval f_eval f_rhs f_lhs
+#' 
+#' @examples 
+#' 
+#' ## bspline basis with degree = 3. This will produce a design matrix with three splines regressiors and a constant intercept.
+#' sframe <- sampling_frame(blocklens=100, TR=2)
+#' bmod <- baseline_model(basis="bs", degree=3, sframe=sframe)
+#' stopifnot(ncol(design_matrix(bmod)) == 4)
+#' 
+#' ## add an arbitrary nuisance matrix with two columns
+#' nuismat <- matrix(rnorm(100*2), 100, 2)
+#' bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, nuisance_list=list(nuismat))
+#' stopifnot(ncol(design_matrix(bmod)) == 6)
 #' @export
-baseline_model <- function(basis="poly", degree=1, sframe, nuisance_list=NULL) {
+baseline_model <- function(basis=c("poly", "bs", "ns"), degree=1, sframe, nuisance_list=NULL) {
   drift_spec <- baseline(degree=degree, basis=basis, constant=FALSE)
   drift_term <- construct(drift_spec, sframe)
   
@@ -51,14 +63,14 @@ baseline_model <- function(basis="poly", degree=1, sframe, nuisance_list=NULL) {
   ret
 }
 
-#' baseline
-#' 
-#' A matrix of polynomial regressors for modeling low-frequency drift in fmri time series.
+
+#' Create a model specification for modeling low-frequency drift in fmri time series.
 #' 
 #' @importFrom splines bs ns
 #' @param degree number of polynomial terms for each image block
 #' @param basis the type of polynomial basis.
 #' @param name the name of the term
+#' @param constant whether to include an intercept term
 #' @export
 baseline <- function(degree=1, basis=c("poly", "bs", "ns"), name=paste0("baseline_", basis, "_", degree), constant=FALSE) {
   basis <- match.arg(basis)
@@ -157,6 +169,7 @@ construct.baselinespec <- function(x, sampling_frame) {
 }
 
 #' baseline_term
+#' 
 #' @importFrom tibble as_tibble
 #' @export
 baseline_term <- function(varname, mat, colind, rowind) {
