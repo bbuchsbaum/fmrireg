@@ -338,8 +338,14 @@ contrast_weights.contrast_formula_spec <- function(x, term) {
   ret  
 }
 
+#' convert a contrast to an AFNI 'GLT' 
+#' @param x the contrast to convert
+#' @param ... extra args
+#' @export
 to_glt <- function(x, ...) UseMethod("to_glt")
 
+
+#' @export
 to_glt.contrast <- function(x) {
   glt <- paste0(signif(x$weights,4), "*", x$condnames, collapse=" ")
   ret <- list(glt_str=glt,
@@ -350,8 +356,11 @@ to_glt.contrast <- function(x) {
   ret
 }
 
+
+#' @export
 write_glt <- function(x, fname) UseMethod("write_glt")
 
+#' @export
 write_glt.glt_contrast <- function(x, fname=NULL) {
   con <- if (is.null(fname)) {
     file(fname, "w")
