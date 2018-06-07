@@ -32,10 +32,9 @@ shortnames <- function(x, ...) UseMethod("design_env")
 #' contrast_weights
 #' 
 #' @param x the object
-#' @param term 
 #' @param ... extra args
 #' @export
-contrast_weights <- function(x, term, ...) UseMethod("contrast_weights")
+contrast_weights <- function(x, ...) UseMethod("contrast_weights")
 
 
 #' parent_terms
@@ -142,6 +141,14 @@ baseline_terms <- function(x) UseMethod("baseline_terms")
 #' @param ... additional arguments
 #' @export
 term_indices <- function(x,...) UseMethod("term_indices")
+
+
+#' run a command
+#' 
+#' @param x the command to run
+#' @param ... extra args
+#' @export
+run <- function(x,...) UseMethod("run")
 
 
 #' design_matrix

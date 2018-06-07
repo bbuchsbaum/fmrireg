@@ -24,3 +24,15 @@ conlist <- contrast_set(
 emodel <- event_model(Onset ~ hrf(Repetition, Input, contrasts=conlist), block = ~ Run, sampling_frame=sframe, data=des)
 bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe)
 fmodel <- fmri_model(emodel, bmodel)
+
+dset <- fmri_dataset(
+  scans=c("../epi/rscan02.nii", "../epi/rscan04.nii","../epi/rscan06.nii"),
+  mask="../epi/global_mask.nii",
+  TR=1.77,
+  run_length=169,
+  event_table=des,
+  base_path="."
+)
+
+alm <- afni_lm(fmodel, dset)
+          

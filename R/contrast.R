@@ -338,6 +338,31 @@ contrast_weights.contrast_formula_spec <- function(x, term) {
   ret  
 }
 
+to_glt <- function(x, ...) UseMethod("to_glt")
+
+to_glt.contrast <- function(x) {
+  glt <- paste0(signif(x$weights,4), "*", x$condnames, collapse=" ")
+  ret <- list(glt_str=glt,
+       name=paste0("GLT_", x$name),
+       con=x)
+  
+  class(ret) <- "glt_contrast"
+  ret
+}
+
+write_glt <- function(x, fname) UseMethod("write_glt")
+
+write_glt.glt_contrast <- function(x, fname=NULL) {
+  con <- if (is.null(fname)) {
+    file(fname, "w")
+  } else {
+    file(paste0(x$name, ".txt"), "w")
+  }
+  
+  writeLines(x$glt_str, con=con)
+  close(con)
+}
+
 #' @importFrom gmodels estimable
 #' @export
 estcon.contrast <- function(x, fit, indices) {

@@ -228,7 +228,7 @@ FContrasts.convolved_term <- function(x) {
 
 #' @export
 #' @rdname contrast_weights
-contrast_weights.fmri_term <- function(x) { stop("unimplemented") }
+#contrast_weights.fmri_term <- function(x) { stop("unimplemented") }
 
 
 #' @export
@@ -243,30 +243,33 @@ term_names.event_model <- function(x) {
   unlist(lapply(xt, function(term) term$varname))
 }
 
+
+
+
+
+
 #' @export
 #' @rdname contrast_weights
-contrast_weights.event_model <- function(x, term=NULL) {
-  if (is.null(term)) {
-    len <- length(conditions(x))
-    tnames <- term_names(x)
-  } else {
-    tnames=term
-  }
-  
+contrast_weights.event_model <- function(x) {
+  tnames <- term_names(x)
   tind <- x$term_indices
+  len <- length(conditions(x))
 
   ret <- lapply(seq_along(tnames), function(i) {
     cwlist <- contrast_weights(terms(x)[[i]])
+    len <- length(conditions(terms(x)[[i]]))
+    
     if (!is.null(cwlist) && length(cwlist) > 0) {
       ret <- lapply(cwlist, function(cw) {
         out <- numeric(len)
         out[tind[[i]]] <- as.vector(cw$weights)
-        attr(out, "term_indices") <- as.vector(tind[[i]])
-        out
+        attr(cw, "term_indices") <- as.vector(tind[[i]])
+        attr(cw, "offset_weights") <- out
+        cw
       })
       
       cnames <- sapply(cwlist, function(cw) cw$name)
-    
+
       #prefix <- tnames[i]
       #names(ret) <- paste0(prefix, "#", cnames)
       names(ret) <- cnames

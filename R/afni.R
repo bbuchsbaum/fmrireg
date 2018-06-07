@@ -97,8 +97,19 @@ write_afni_stim <- function(stim, dir) {
     close(hfile)
   }
   
-  .write_values(paste(dir, "/", x$file_name, sep=""), x$values)
+  .write_values(paste0(dir, "/", stim$file_name, sep=""), x$values)
 }
+
+#' @keywords internal
+write_glts <- function(glts, gltfiles) {
+  lapply(seq_along(glts), function(i) {
+    fout <- file(gltfiles[i], "w")
+    .glt <- glts[[i]]
+    write(.glt$glt_str, file=fout, sep="\n")
+    close(fout)
+  })
+}
+
 
 
 #' @keywords internal
@@ -143,12 +154,17 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
    stimlabels <- unlist(lapply(terms(model$event_model), longnames))
    
    assert_that(length(unique(stimlabels)) == length(stimlabels))
-   #assert_that(length(stimlabels) == length(conditions(x$design)))
-#   
-#   gltlist <- glts(x)
-#   gltnames <- if (length(gltlist) > 0) names(gltlist) else NULL
-#   gltfiles <- if (length(gltnames) > 0) paste("glt_", gltnames, ".txt", sep="") else NULL
-# 
+   
+   assert_that(length(stimlabels) == length(conditions(model$event_model)))
+   
+   cons <- contrast_weights(model)
+   cons <- unlist(cons, recursive=FALSE)
+   glts <- lapply(cons, to_glt)
+   gltfiles <- sapply(glts, function(x) paste0(x$name, ".txt"))
+   gltnames <- sapply(glts, function(x) x$con$name)
+   
+   assert_that(sum(duplicated(gltnames))  == 0, msg="Cannot have two GLTs with the same name")
+   assert_that(sum(duplicated(gltfiles))  == 0, msg="Cannot have two GLTs with the same file name")
 
    func_terms <- terms(model$event_model)
 
@@ -165,14 +181,14 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
                               mask=dataset$mask_file,
                               polort=opts[["polort"]],
                               num_stimts=length(afni_stims),
-                              #num_glt=length(gltlist),
+                              num_glt=length(glts),
                               stim_file=opt_stim_files,
                               stim_label=opt_stim_labels,
                               #stim_times=opt_stim_times,
                               TR_times=opts[["TR_times"]],
                               #iresp=opt_stim_iresp,
-                              #gltsym=lapply(seq_along(gltfiles), function(i) paste(gltfiles[i], collapse=" ")),
-                              #glt_label=lapply(seq_along(gltnames), function(i) paste(i, gltnames[i], collapse=" ")),
+                              gltsym=lapply(seq_along(gltfiles), function(i) paste(gltfiles[i], collapse=" ")),
+                              glt_label=lapply(seq_along(gltnames), function(i) paste(i, gltnames[i], collapse=" ")),
                               nofullf_atall=opts[["nofullf_atall"]],
                               fout=opts[["fout"]],
                               rout=opts[["rout"]],
@@ -183,11 +199,43 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
                               bucket=opts[["bucket"]],
                               jobs=opts[["jobs"]],
                               float=TRUE)
- 
- 
-             .make_decon_command_str(cmdlines)
+   cmd <- .make_decon_command_str(cmdlines)
+   list(cmd=cmd, afni_stims=afni_stims, gltfiles=gltfiles, gltnames=gltnames, glts=glts)
 }
  
+
+
+#' @export
+#' @param outdir the output folder
+#' @param execute whether to execute the command or only output shell '3dDeconvolve.sh' script
+run.afni_lm_spec <- function(x, outdir, execute=TRUE) {
+  start_dir <- getwd()
+  res <- try({
+    if (!file.exists(outdir)) {
+      dir.create(outdir)
+    } else {
+      warning(paste("glm output directory: ", outdir, " already exists"))
+      outdir <- next_dir_name(outdir)
+      dir.create(outdir)
+      warning(paste("outputting to: ", outdir))
+    }
+    print(paste("setting directory:", outdir))
+    setwd(outdir)
+
+    write_stim_files(x$cmd$afni_stims)
+    write_glts(x$cmd$glts, x$cmd$gltfiles)
+    
+    write(x$cmd$cmd, "3ddeconvolve.sh")
+    
+    if (execute) {
+      system(x$cmd$cmd)
+    }
+  })
+  
+  setwd(start_dir)
+}
+
+
 
 #           
 #   afni.stims <- unlist(lapply(funcTerms, function(term) { buildAFNIStims(term, opts$iresp, opts$TR_times ) }))
@@ -260,44 +308,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
 #             }
 # 
 # 
-#             ret$run <- function() {
-#               startDir <- getwd()
-# 
-#               res <- try({
-# 
-#                 if (!file.exists(wd)) {
-#                   dir.create(wd)
-#                 } else {
-#                   warning(paste("glm output directory: ", wd, " already exists"))
-#                   wd <- nextDirName(wd)
-#                   dir.create(wd)
-#                   warning(paste("outputting to: ", wd))
-# 
-#                 }
-# 
-#                 print(paste("setting directory:", wd))
-#                 setwd(wd)
-# 
-#                 writeStimFiles()
-#                 writeGLTs()
-# 
-# 
-# 
-#                 write(cmdstr, "3ddeconvolve.sh")
-#                 system(cmdstr)
-#               })
-# 
-#               setwd(startDir)
-# 
-# 
-#             }
-# 
-#             ret$command <- cmdstr
-#             #ret$designMat <- desmat
-#             ret
-# 
-#           })
-# 
+
 
 
    
