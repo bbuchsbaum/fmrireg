@@ -177,7 +177,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
    opt_stim_labels <-  purgeNulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "label")))
    opt_stim_files  <-  purgeNulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "file")))
   
-   cmdlines <- list(input=dataset$scans,
+   cmdlines <- list(input=paste0(dataset$base_path, "/", dataset$scans),
                               mask=dataset$mask_file,
                               polort=opts[["polort"]],
                               num_stimts=length(afni_stims),
