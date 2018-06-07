@@ -17,12 +17,22 @@ input_lin_old <- poly_contrast(~ Input, "lin_old_input", where = Repetition == "
 
 input_lin_old_min_new <- input_lin_old - input_lin_new
 
+old_new <- contrast(~ old - new, name="old_min_new", where= ~ Repetition != "lure")
+new_lure <- contrast(~ new - lure, name="new_min_lure", where= ~ Repetition != "old")
+old_lure <- contrast(~ old - lure, name="old_min_lure", where= ~ Repetition != "new")
+
+input_lin_old_min_new <- input_lin_old - input_lin_new
+
 conlist <- contrast_set(
   input_lin_main,
   input_lin_lure,
   input_lin_new,
   input_lin_old,
-  input_lin_old_min_new)
+  input_lin_old_min_new,
+  old_new,
+  new_lure,
+  old_lure)
+
   
 emodel <- event_model(Onset ~ hrf(Repetition, Input, contrasts=conlist), block = ~ Run, sampling_frame=sframe, data=des)
 bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe)

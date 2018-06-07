@@ -304,7 +304,7 @@ contrast_weights.pair_contrast_spec <- function(x, term) {
 
 #' @export
 contrast_weights.contrast_formula_spec <- function(x, term) {
- 
+
   term.cells <- cells(term)
   cform <- as.formula(paste("~", paste0(names(term.cells), collapse=":"), "-1"))
   condnames <- shortnames(term)
@@ -319,7 +319,6 @@ contrast_weights.contrast_formula_spec <- function(x, term) {
     keep <- rep(TRUE, nrow(term.cells))
   }
 
-   
   A <- as.formula(paste("~", gsub(":", ".", deparse(lazyeval::f_rhs(x$A)))))
   modmat <- tibble::as_tibble(model.matrix(cform,data=term.cells))
   names(modmat) <- gsub(":", ".", condnames)
@@ -333,6 +332,7 @@ contrast_weights.contrast_formula_spec <- function(x, term) {
     weights=weights,
     condnames=longnames(term),
     contrast_spec=x)
+  
   
   class(ret) <- c("contrast", "list")
   ret  
