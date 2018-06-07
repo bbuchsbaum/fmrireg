@@ -8,6 +8,15 @@ NULL
 #' @param width optional block width in seconds
 #' @param precision sampling precision in seconds
 #' @param ... extra parameters for the \code{hrf} function
+#' 
+#' @examples 
+#' 
+#' ## generate and hrf using spmg canonical hrf, a lag of 3, and a width of 2.
+#' grf <- gen_hrf(hrf_spmg1, lag=3, width=2)
+#' grf(0:20)
+#' 
+#' grf <- gen_hrf(hrf_gaussian, lag=3, width=2, mean=3, sd=1)
+#' 
 #' @export
 gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, ...) {
   .orig <- list(...)
@@ -116,9 +125,9 @@ gen_hrf_lagged <- function(hrf, lag=2,...) {
 #' @param precision the sampling resolution
 #' @importFrom purrr partial
 #' @export
-gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1) {
+gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1,...) {
   force(hrf)
-  purrr::partial(hrf_block, hrf=hrf, width=width, precision=precision)
+  purrr::partial(hrf_block, hrf=hrf, width=width, precision=precision,...)
 }
 
 #' hrf_block
@@ -128,9 +137,9 @@ gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1) {
 #' @param width the fixed width of the response in seconds.
 #' @param precision the sampling precision in seconds
 #' @export
-hrf_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1) {
+hrf_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1,...) {
   Reduce("+", lapply(seq(0, width, by=precision), function(offset) {
-    hrf(t-offset)
+    hrf(t-offset,...)
   }))
 }
   
