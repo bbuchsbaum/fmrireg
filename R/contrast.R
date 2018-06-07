@@ -154,6 +154,7 @@ contrast_weights.unit_contrast_spec <- function(x, term) {
   ret <- list(
     name=x$name,
     weights=weights,
+    condnames=longnames(term),
     contrast_spec=x)
   
   class(ret) <- c("unit_contrast", "contrast", "list")
