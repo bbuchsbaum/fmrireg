@@ -1,6 +1,8 @@
 
 #' fmri_model
 #' 
+#' construct and fMRI regression model consisting of a \code{event_model} and \code{baseline_model}
+#' 
 #' @param event_model the \code{event_model} object
 #' @param baseline_model the \code{baseline_model} object
 #' 
@@ -43,8 +45,8 @@ baseline_terms.fmri_model <- function(x) {
 }
 
 #' @export
-contrast_weights <- function(x, term=NULL) {
-  contrast_weights(x$event_model, term)
+contrast_weights.fmri_model <- function(x, ...) {
+  contrast_weights.event_model(x$event_model,...)
 }
 
 

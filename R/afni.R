@@ -97,7 +97,7 @@ write_afni_stim <- function(stim, dir) {
     close(hfile)
   }
   
-  .write_values(paste0(dir, "/", stim$file_name, sep=""), x$values)
+  .write_values(paste0(dir, "/", stim$file_name, sep=""), stim$values)
 }
 
 #' @keywords internal

@@ -247,7 +247,7 @@ makeWeights <- function(keepA, keepB=NULL) {
     name=paste0(e1$name, ":", e2$name),
     con1=e1,
     con2=e2),
-    class="contrast_diff_spec"
+    class=c("contrast_diff_spec", "contrast_spec", "list")
   )
 }
 

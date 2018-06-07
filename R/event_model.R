@@ -244,10 +244,6 @@ term_names.event_model <- function(x) {
 }
 
 
-
-
-
-
 #' @export
 #' @rdname contrast_weights
 contrast_weights.event_model <- function(x) {
