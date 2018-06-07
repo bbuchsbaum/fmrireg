@@ -20,12 +20,12 @@ shortnames <- function(x, ...) UseMethod("shortnames")
 
 #' design_env
 #' 
-#' return regression design as a set of matrices strored in an environment
+#' return regression design as a set of matrices stored in an environment
 #' 
 #' @param x the object
 #' @param ... extra args
 #' @export
-shortnames <- function(x, ...) UseMethod("design_env")
+design_env <- function(x, ...) UseMethod("design_env")
 
 
 

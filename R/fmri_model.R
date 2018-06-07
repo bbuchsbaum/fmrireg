@@ -24,6 +24,7 @@ design_matrix.fmri_model <- function(x, blockid=NULL) {
 
 #' @importFrom tibble as_tibble
 design_env.fmri_model <- function(x, blockid=NULL) {
+  stop("not implemented")
   
 }
 
