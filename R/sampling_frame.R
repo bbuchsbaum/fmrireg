@@ -24,7 +24,7 @@ sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
   assert_that(all(blocklens > 0))
   
   blockids <- rep(1:length(blocklens), blocklens)
-  #scan_time <- unlist(lapply(1:length(blocklens), function(i) seq(start_time, by=TR, length.out=blocklens[i])))
+  scan_time <- unlist(lapply(1:length(blocklens), function(i) seq(start_time, by=TR, length.out=blocklens[i])))
   ret <- list(blocklens=blocklens,
               TR=TR,
               start_time=start_time,
