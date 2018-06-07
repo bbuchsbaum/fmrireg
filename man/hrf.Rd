@@ -39,3 +39,13 @@ hemodynamic regressor specification function for model formulas.
 \details{
 This function is to be used in formulas for fitting fucntions, e.g. onsets ~ hrf(fac1,fac2) ...
 }
+\examples{
+
+## 'hrf' is typically used in te modeling interfaces, typically in \\code{formulas}.
+hspec <- hrf(x)
+hspec2 <- hrf(x, basis="gamma")
+hspec3 <- hrf(x, basis="bs", nbasis=4)
+
+form <- onsets ~ hrf(x) + hrf(y) + hrf(x,y)
+
+}

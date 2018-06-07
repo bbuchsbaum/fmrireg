@@ -331,6 +331,16 @@ getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussi
 #' If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.
 #' @param id a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.
 #' @param lag a temporal offset in seconds which is added to onset before convolution
+#' 
+#' @examples 
+#' 
+#' ## 'hrf' is typically used in te modeling interfaces, typically in \code{formulas}.
+#' hspec <- hrf(x)
+#' hspec2 <- hrf(x, basis="gamma")
+#' hspec3 <- hrf(x, basis="bs", nbasis=4)
+#' 
+#' form <- onsets ~ hrf(x) + hrf(y) + hrf(x,y)
+#' 
 #' @export
 hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
                 nbasis=1, contrasts=NULL, id=NULL, lag=0) {
