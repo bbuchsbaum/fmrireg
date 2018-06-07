@@ -4,7 +4,7 @@
 \alias{gen_hrf_blocked}
 \title{gen_hrf_blocked}
 \usage{
-gen_hrf_blocked(hrf = hrf_gaussian, width = 5, precision = 0.1)
+gen_hrf_blocked(hrf = hrf_gaussian, width = 5, precision = 0.1, ...)
 }
 \arguments{
 \item{hrf}{the hemodynmaic response function}

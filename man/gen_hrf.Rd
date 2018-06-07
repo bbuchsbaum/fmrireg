@@ -20,3 +20,12 @@ gen_hrf(hrf, lag = 0, width = NULL, precision = 0.1, ...)
 \description{
 gen_hrf
 }
+\examples{
+
+## generate and hrf using spmg canonical hrf, a lag of 3, and a width of 2.
+grf <- gen_hrf(hrf_spmg1, lag=3, width=2)
+grf(0:20)
+
+grf <- gen_hrf(hrf_gaussian, lag=3, width=2, mean=3, sd=1)
+
+}

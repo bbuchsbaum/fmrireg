@@ -4,7 +4,7 @@
 \alias{hrf_block}
 \title{hrf_block}
 \usage{
-hrf_block(t, hrf = hrf_gaussian, width = 5, precision = 0.1)
+hrf_block(t, hrf = hrf_gaussian, width = 5, precision = 0.1, ...)
 }
 \arguments{
 \item{t}{time in seconds}

@@ -490,8 +490,11 @@ construct.hrfspec <- function(x, model_spec) {
 
 
 
-
-
+#' trialwise
+#' 
+#' This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise(fac1) ...
+#' 
+#' @inheritParams hrf
 #' @export
 trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
                       prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list(), id=NULL) {
