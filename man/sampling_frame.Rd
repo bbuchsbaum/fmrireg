@@ -9,7 +9,7 @@ sampling_frame(blocklens, TR, start_time = TR/2, precision = 0.1)
 \arguments{
 \item{blocklens}{the number of scans in each block, a \code{vector}}
 
-\item{TR}{the repetition time in seconds; i.e. the spacing between consectuve image acquisitions.}
+\item{TR}{the repetition time in seconds; i.e. the spacing between consecutive image acquisitions.}
 
 \item{start_time}{the offset of first scan of each block (default is \code{TR/2})}
 
@@ -21,5 +21,9 @@ A \code{sampling_frame} describes the block structure and temporal sampling of a
 \examples{
 
 frame <- sampling_frame(blocklens=c(100,100, 100), TR=2, precision=.5)
-samples(frame)
+
+## the relative time (with respect to the last block) in seconds of each sample/acquisition
+sam <- samples(frame)
+## the global time (with respect to first block) of each sample/acquisition
+gsam <- samples(frame, global=TRUE)
 }
