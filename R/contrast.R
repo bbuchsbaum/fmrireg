@@ -339,6 +339,7 @@ contrast_weights.contrast_formula_spec <- function(x, term) {
 }
 
 #' convert a contrast to an AFNI 'GLT' 
+#' 
 #' @param x the contrast to convert
 #' @param ... extra args
 #' @export
