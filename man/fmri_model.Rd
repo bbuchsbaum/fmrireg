@@ -12,5 +12,5 @@ fmri_model(event_model, baseline_model)
 \item{baseline_model}{the \code{baseline_model} object}
 }
 \description{
-fmri_model
+construct and fMRI regression model consisting of a \code{event_model} and \code{baseline_model}
 }

@@ -346,7 +346,7 @@ to_glt <- function(x, ...) UseMethod("to_glt")
 
 
 #' @export
-to_glt.contrast <- function(x) {
+to_glt.contrast <- function(x,...) {
   glt <- paste0(signif(x$weights,4), "*", x$condnames, collapse=" ")
   ret <- list(glt_str=glt,
        name=paste0("GLT_", x$name),

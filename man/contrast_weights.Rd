@@ -7,13 +7,13 @@
 \alias{contrast_weights.event_model}
 \title{contrast_weights}
 \usage{
-contrast_weights(x, term = NULL)
+contrast_weights(x, ...)
 
-contrast_weights.convolved_term(x)
+\method{contrast_weights}{convolved_term}(x)
 
-contrast_weights.fmri_model(x)
+\method{contrast_weights}{fmri_model}(x, ...)
 
-contrast_weights.event_model(x)
+\method{contrast_weights}{event_model}(x)
 }
 \arguments{
 \item{x}{the object}
