@@ -49,7 +49,7 @@ is.strictly.increasing <- function(vec) {
 
 #' event_term
 #' 
-#' Create a event model term from a named list of variables.
+#' Create an event model term from a named list of variables.
 #' 
 #' @param evlist a list of named variables
 #' @param onsets the onset times from the experimental events in seconds
@@ -57,6 +57,17 @@ is.strictly.increasing <- function(vec) {
 #' @param durations the event durations
 #' @param subset the subset of onsets to retain
 #' @export
+#' 
+#' @examples 
+#' 
+#' x1 <- factor(rep(letters[1:3], 10))
+#' x2 <- factor(rep(1:3, each=10))
+#' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), blockids=rep(1,30))
+#' 
+#' x1 <- rnorm(30)
+#' x2 <- factor(rep(1:3, each=10))
+#' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), blockids=rep(1,30), subset=x1>0)
+#'
 #' @rdname event_term-class
 event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
@@ -80,6 +91,7 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   pterms <- unlist(lapply(evs, function(ev) ev$varname))
   
   len <- sum(subset)
+  
   etab <- tibble::as_data_frame(lapply(pterms, function(termname) {
     if (is_continuous(evs[[termname]])) {
       rep(.sanitizeName(termname), len)
@@ -90,6 +102,7 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
   names(etab) <- sapply(pterms, .sanitizeName)
   varname <- paste(sapply(evs, function(x) x$varname), collapse=":")
+  
   ret <- list(varname=varname, 
               events=evs, 
               subset=subset, 
@@ -642,8 +655,7 @@ design_matrix.event_term <- function(x, drop.empty=TRUE) {
     rmat[nas,] <- NA				
   } 
   
- 
-  
+
   # remove columns with no events (postpone this to later stage?) 
   if (any(counts == 0) && (length(conditions(x, drop=F)) == length(counts)) && drop.empty) {
     rmat <- rmat[, !(counts==0), drop=FALSE]

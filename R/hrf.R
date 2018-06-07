@@ -15,7 +15,8 @@ NULL
 #' grf <- gen_hrf(hrf_spmg1, lag=3, width=2)
 #' grf(0:20)
 #' 
-#' grf <- gen_hrf(hrf_gaussian, lag=3, width=2, mean=3, sd=1)
+#' hg <- purrr::partial(hrf_gaussian, mean=4, sd=1)
+#' grf <- gen_hrf(hg, lag=1, width=2)
 #' 
 #' @export
 gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, ...) {
@@ -221,12 +222,10 @@ hrf_gaussian <- function(t, mean=6, sd=2) {
 #' 
 #' @param t time
 #' @export
-hrf_spmg1 <- function(t) {
+hrf_spmg1 <- function(t, P1=5, P2=15) {
   A1=.00833
   A2=1.274527e-13
-  P1=5
-  P2=15
-  
+
 	ifelse(t < 0, 0, exp(-t)*(A1*t^P1 - A2*t^P2))
 	
 }
@@ -395,12 +394,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
     contrast_set(con1=contrasts)
   } else if (inherits(contrasts, "contrast_set")) {
     contrasts
-  } #else if (!is.null(contrasts)) {
-    ## try creating a contrast
-    #vname <- deparse(substitute(contrasts))
-    #eval(parse(text=paste0("contrast_set(", vname, "=contrasts)")))
-    #contrast_set(con1)
-  #}
+  } 
   
   ret <- list(
     name=termname,
@@ -432,11 +426,15 @@ construct.hrfspec <- function(x, model_spec) {
   })
   
   names(varlist) <- x$varnames
-  subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
+  
+  subs <- if (!is.null(x$subset)) {
+    base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) 
+  } else {
+    rep(TRUE, length(onsets))
+  }
   
   et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
-  #browser()
-  #sframe <- sampling_frame(model_spec$sampling_frame$blocklens, model_spec$TR, model_spec$sampling_frame$TR/2, x$precision)
+  
   cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
   
   ret <- list(
@@ -495,6 +493,12 @@ construct.hrfspec <- function(x, model_spec) {
 #' This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise(fac1) ...
 #' 
 #' @inheritParams hrf
+#' @examples 
+#' 
+#' 
+#' ## trialwise can be used with a factor with a single level because it splits each element in to separate regressor
+#' fac <- factor(rep(1, 10))
+#' twise <- trialwise(fac)
 #' @export
 trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
                       prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list(), id=NULL) {
@@ -531,7 +535,6 @@ construct.trialwisespec <- function(x, model_spec) {
   varlist <- lapply(seq_along(x$vars), function(i) {
     base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
   })
-  
   
   ## syntheticlly adds '+trial_index+' variable
   trial_index <- factor(seq(1, length(onsets)))
