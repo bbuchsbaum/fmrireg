@@ -562,7 +562,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE) {
 
 #' @export
 Fcontrasts.event_term <- function(x) {
-  
+
   ## TODO check for no empty cells, otherwise everything fails
   which_cat <- which(sapply(x$events, function(obj) is_categorical(obj)))
   assert_that(length(which_cat) > 0, msg="Fcontrasts cannot be computed for terms with no categorical variables")

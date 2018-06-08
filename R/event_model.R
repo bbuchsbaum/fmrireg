@@ -22,12 +22,21 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
 
   if (lazyeval::is_formula(block)) {
     block_rhs <- lazyeval::f_rhs(block)
-    blockids <- lazyeval::f_eval_rhs(block, data)
+    blockvals <- lazyeval::f_eval_rhs(block, data)
   } else {
-    blockids <- block
+    blockvals <- block
   }
   
-  assert_that(length(blockids) == nrow(data))
+  #x_unique <- unique(x)
+  #x_ranks <- rank(x_unique)
+  #x_ranks[match(x,x_unique)]
+  
+  assert_that(is.increasing(blockvals))
+  assert_that(length(blockvals) == nrow(data))
+  
+  blocks <-unique(blockvals)
+  ranked_blocks <- rank(blocks)
+  blockids <- ranked_blocks[match(blockvals, blocks)]
   
   if (missing(durations)) {
     ## assume zero-duration impulse for all events
@@ -62,6 +71,7 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
                      event_table=data, 
                      onsets=event_spec$lhs, 
                      event_spec=event_spec, 
+                     blockvals=blockvals,
                      blockids=blockids, 
                      durations=durations, 
                      sampling_frame=sampling_frame,
