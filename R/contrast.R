@@ -152,6 +152,7 @@ contrast_weights.unit_contrast_spec <- function(x, term) {
   weights[keep, ] <- cvec
   
   ret <- list(
+    term=term,
     name=x$name,
     weights=weights,
     condnames=longnames(term),
@@ -216,6 +217,7 @@ contrast_weights.poly_contrast_spec <- function(x, term) {
   weights[keep, ] <- pvals
   
   ret <- list(
+    term=term,
     name=x$name,
     weights=weights,
     condnames=longnames(term),
@@ -259,13 +261,14 @@ contrast_weights.contrast_diff_spec <- function(x, term) {
 
   ret <- structure(
     list(
+      term=term,
       name=x$name,
       weights=wts1$weights - wts2$weights,
       condnames=longnames(term),
       contrast_spec=x),
-    class="contrast")
-  
-  class(ret) <- c("contrast", "list")
+    class=c("contrast_diff", "contrast")
+  )
+
   ret  
 }
 
@@ -294,6 +297,7 @@ contrast_weights.pair_contrast_spec <- function(x, term) {
   row.names(weights) <- longnames(term)
   
   ret <- list(
+    term=term,
     name=x$name,
     weights=weights,
     condnames=longnames(term),
@@ -329,6 +333,7 @@ contrast_weights.contrast_formula_spec <- function(x, term) {
   row.names(weights) <- row.names(term.cells)
   
   ret <- list(
+    term=term,
     name=x$name,
     weights=weights,
     condnames=longnames(term),
@@ -349,13 +354,26 @@ to_glt <- function(x, ...) UseMethod("to_glt")
 
 #' @export
 to_glt.contrast <- function(x,...) {
-  glt <- paste0(signif(x$weights,4), "*", x$condnames, collapse=" ")
-  ret <- list(glt_str=glt,
+  if (is.matrix(x$weights) && ncol(x$weights) > 1) {
+    glts <- lapply(1:ncol(x$weights), function(i) {
+      paste0(signif(x$weights[,i],4), "*", x$condnames, collapse=" ")
+    })
+    
+    ret <- list(glt_str=glts,
+                name=paste0("GLT_", x$name, "_", 1:ncol(x$weights)),
+                con=x)
+    
+    class(ret) <- "glt_contrast_list"
+    ret
+  } else {
+    glt <- paste0(signif(x$weights,4), "*", x$condnames, collapse=" ")
+    ret <- list(glt_str=glt,
        name=paste0("GLT_", x$name),
        con=x)
   
-  class(ret) <- "glt_contrast"
-  ret
+    class(ret) <- "glt_contrast"
+    ret
+  }
 }
 
 
@@ -406,8 +424,11 @@ print.contrast_spec <- function(x) {
 #' @export
 print.contrast <- function(x) {
   print(x$contrast_spec)
-  cat(" weights: ", x$weights, "\n")
+  cat(" term: ", x$term$varname, "\n")
+  cat(" weights: ", "\n")
+  print(x$weights)
   cat(" conditions: ", x$condnames)
+  
 }
 
 #' @export

@@ -37,6 +37,7 @@ sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
 }
 
 #' @export
+#' ## TODO screwy things happen when blockids don't start at 1.
 samples.sampling_frame <- function(x, blockids=NULL, global=FALSE) {
   if (is.null(blockids)) {
     blockids <- seq(1, length(x$blocklens))

@@ -267,8 +267,8 @@ contrast_weights.event_model <- function(x) {
     
     if (!is.null(cwlist) && length(cwlist) > 0) {
       ret <- lapply(cwlist, function(cw) {
-        out <- numeric(len)
-        out[tind[[i]]] <- as.vector(cw$weights)
+        out <- matrix(0, len, ncol(cw$weights))
+        out[tind[[i]],] <- cw$weights
         attr(cw, "term_indices") <- as.vector(tind[[i]])
         attr(cw, "offset_weights") <- out
         cw
