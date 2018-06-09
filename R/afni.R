@@ -32,6 +32,7 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, optio
 }
 
 
+
 #' @keywords internal
 afni_stim_file <- function(label, file_name, values) {
   structure(
@@ -83,11 +84,8 @@ next_dir_name <- function(wd) {
 }
 
 #' @export
-write_baseline_model <- function(bmod, dir, fname) {
-  mat <- design_matrix(bmod)
-  
-  oname <- paste0(dir, "/", fname)
-  write.table(mat, file=oname, col.names=FALSE)
+write_baseline_mat <- function(stim, dir) {
+  write.table(paste0(dir, "/", stim$file_name, sep=""), stim$mat)
 }
 
 #' @keywords internal
@@ -118,8 +116,26 @@ write_glts <- function(glts, gltfiles) {
   })
 }
 
+afni_baseline_matrix <- function(label, file_name, mat) {
+  structure(
+    list(label=label, file_name=file_name, mat=mat),
+    class="afni_stim_matrix"
+  )
+}
+
 build_baseline_stims <- function(x) {
-  bmat <- design_matrix(x)
+  blens <- blocklens(x)
+  nblocks <- length(blens)
+  
+  bterms <- terms(x$baseline_model)
+  ret <- lapply(bterms, function(bt) {
+    lapply(1:nblocks, function(i) {
+      mat <- design_matrix(bt, i, allrows=TRUE)
+      afni_baseline_matrix(paste0(bt$varname, "_", i), paste0(bt$varname, "_", i, ".1D"), mat)
+    })
+  })
+  
+  unlist(ret)
 }
 
 #' @keywords internal

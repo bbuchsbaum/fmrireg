@@ -22,7 +22,7 @@ get_col_inds <- function(Xlist) {
 #' @examples 
 #' 
 #' ## bspline basis with degree = 3. This will produce a design matrix with three splines regressiors and a constant intercept.
-#' sframe <- sampling_frame(blocklens=100, TR=2)
+#' sframe <- sampling_frame(blocklens=c(100,100), TR=2)
 #' bmod <- baseline_model(basis="bs", degree=3, sframe=sframe)
 #' stopifnot(ncol(design_matrix(bmod)) == 4)
 #' 
@@ -100,19 +100,23 @@ baseline <- function(degree=1, basis=c("poly", "bs", "ns"), name=paste0("baselin
 
 
 #' @export
-design_matrix.baseline_model <- function(x, blockid=NULL) {
+design_matrix.baseline_model <- function(x, blockid=NULL, allrows=FALSE) {
   if (is.null(x$nuisance_term) && is.null(x$block_term)) {
     ## just drift term
-    tibble::as_tibble(design_matrix(x$drift_term, blockid))
+    tibble::as_tibble(design_matrix(x$drift_term, blockid,allrows))
   } else if (is.null(x$nuisance_term) && !is.null(x$block_term)) {
     ## drift and block term but no nuisance term
-    tibble::as_tibble(cbind(design_matrix(x$block_term, blockid), design_matrix(x$drift_term, blockid)))
+    tibble::as_tibble(cbind(design_matrix(x$block_term, blockid, allrows), 
+                            design_matrix(x$drift_term, blockid, allrows)))
   } else if (!is.null(x$nuisance_term) && is.null(x$block_term)) {
     ## drift and  nuisance term
-    tibble::as_tibble(cbind(design_matrix(x$drift_term, blockid),design_matrix(x$nuisance_term, blockid))) 
+    tibble::as_tibble(cbind(design_matrix(x$drift_term, blockid, allrows),
+                            design_matrix(x$nuisance_term, blockid, allrows))) 
   } else {
     ## all three 
-    tibble::as_tibble(cbind(design_matrix(x$block_term, blockid), design_matrix(x$drift_term, blockid), design_matrix(x$nuisance_term, blockid)))
+    tibble::as_tibble(cbind(design_matrix(x$block_term, blockid, allrows), 
+                            design_matrix(x$drift_term, blockid, allrows), 
+                            design_matrix(x$nuisance_term, blockid, allrows)))
   }
 }
 
@@ -120,11 +124,8 @@ design_matrix.baseline_model <- function(x, blockid=NULL) {
 
 #' @export
 terms.baseline_model <- function(x) {
-  ret <- if (is.null(x$nuisance_term)) {
-    list(x$block_term, x$drift_term)
-  } else {
-    list(x$block_term, x$drift_term, x$nuisance_term)
-  }
+  ret <- list(x$block_term, x$drift_term, x$nuisance_term)
+  ret <- ret[!sapply(ret, is.null)]
   
   names(ret) <- sapply(ret, "[[", "varname")
   ret
@@ -196,11 +197,15 @@ baseline_term <- function(varname, mat, colind, rowind) {
 
 
 #' @export
-design_matrix.baseline_term <- function(x, blockid=NULL) {
+design_matrix.baseline_term <- function(x, blockid=NULL, allrows=FALSE) {
   if (is.null(blockid)) {
     x$design_matrix
   } else {
-    x$design_matrix[unlist(x$rowind[blockid]), unlist(x$colind[blockid])]
+    if (!allrows) {
+      x$design_matrix[unlist(x$rowind[blockid]), unlist(x$colind[blockid]), drop=FALSE]
+    } else {
+      x$design_matrix[, unlist(x$colind[blockid]), drop=FALSE]
+    }
   }
 }
 
@@ -246,11 +251,15 @@ block_term <- function(varname, blockids, expanded_blockids, mat) {
 
 
 #' @export
-design_matrix.block_term <- function(x, blockid=NULL) {
+design_matrix.block_term <- function(x, blockid=NULL, allrows=FALSE) {
   if (is.null(blockid)) {
     x$design_matrix
   } else {
-    x$design_matrix[unlist(x$rowind[blockid]), unlist(x$colind[blockid])]
+    if (!allrows) {
+      x$design_matrix[unlist(x$rowind[blockid]), unlist(x$colind[blockid]), drop=FALSE]
+    } else {
+      x$design_matrix[, unlist(x$colind[blockid]), drop=FALSE]
+    }
   }
 }
 
