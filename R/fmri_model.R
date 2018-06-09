@@ -5,7 +5,6 @@
 #' 
 #' @param event_model the \code{event_model} object
 #' @param baseline_model the \code{baseline_model} object
-#' 
 #' @export
 fmri_model <- function(event_model, baseline_model) {
   assert_that(inherits(event_model, "event_model"))
@@ -32,6 +31,11 @@ design_env.fmri_model <- function(x, blockid=NULL) {
 #' @export
 terms.fmri_model <- function(x) {
   c(terms(x$event_model), terms(x$baseline_model))
+}
+
+#' @export
+blocklens.fmri_model <- function(x) {
+  blocklens(x$event_model)
 }
 
 

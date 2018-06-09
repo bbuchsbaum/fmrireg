@@ -84,6 +84,11 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
   fmodel
 }
 
+#' @export
+blocklens.event_model <- function(x) {
+  blocklens(x$sampling_frame)
+}
+
 #' @keywords internal
 construct_model <- function(x) {
  

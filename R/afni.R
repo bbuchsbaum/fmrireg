@@ -1,4 +1,23 @@
 
+
+#' afni_lm
+#' 
+#' 
+#' @param fmri_mod
+#' @param dataset
+#' @param working_dir
+#' @param polort
+#' @param jobs
+#' @param options
+#' 
+#' @examples 
+#' etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))
+#' dset <- fmri_dataset(scans=c("s1.nii", "s2.nii"), mask="mask.nii", TR=1, run_length=c(50,50),event_table=etab)
+#' 
+#' emodel <- event_model(onset ~ hrf(fac), block = ~ run, data=etab, sampling_frame=dset$sampling_frame)
+#' bmodel <- baseline_model("bs", degree=4, sframe=dset$sampling_frame)
+#' fmod <- fmri_model(emodel, bmodel)
+#' alm <- afni_lm(fmod, dset)
 #' @export
 afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, options=list()) {
   
@@ -83,11 +102,18 @@ next_dir_name <- function(wd) {
   }
 }
 
-#' @export
+#' @keywords internal
 write_baseline_mat <- function(stim, dir) {
   write.table(paste0(dir, "/", stim$file_name, sep=""), stim$mat)
 }
 
+#' @keywords internal
+write_baseline_mats <- function(blist) {
+  sapply(blist, function(bm) {
+    write_baseline_mat(bm, ".")
+  })
+}
+  
 #' @keywords internal
 write_stim_files <- function(afni_stims) {
   sapply(afni_stims, function(stim) {
@@ -116,18 +142,21 @@ write_glts <- function(glts, gltfiles) {
   })
 }
 
+#' @keywords internal
 afni_baseline_matrix <- function(label, file_name, mat) {
   structure(
     list(label=label, file_name=file_name, mat=mat),
-    class="afni_stim_matrix"
+    class="afni_baseline_matrix"
   )
 }
 
+#' @keywords internal
 build_baseline_stims <- function(x) {
   blens <- blocklens(x)
   nblocks <- length(blens)
   
   bterms <- terms(x$baseline_model)
+  
   ret <- lapply(bterms, function(bt) {
     lapply(1:nblocks, function(i) {
       mat <- design_matrix(bt, i, allrows=TRUE)
@@ -135,14 +164,14 @@ build_baseline_stims <- function(x) {
     })
   })
   
-  unlist(ret)
+  unlist(ret, recursive=FALSE)
 }
 
 #' @keywords internal
 build_afni_stims <- function(x) {
-  stimlabels <- longnames(x$event_model)
+  stimlabels <- longnames(x)
   stimfiles <- paste(stimlabels, "_reg.1D", sep = "")
-  desmat <- design_matrix(x$event_model)
+  desmat <- design_matrix(x)
   
   lapply(1:length(stimlabels), function(i) {
     afni_stim_file(stimlabels[i], stimfiles[i], desmat[, i])
@@ -198,6 +227,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   func_terms <- terms(model$event_model)
   
   afni_stims <- unlist(lapply(func_terms, function(term) { build_afni_stims(term) }), recursive=FALSE)
+  afni_baseline_mats <- build_baseline_stims(model)
   
   purgeNulls <- function(A) {
     A[!sapply(A, is.null)]
@@ -230,7 +260,8 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
                    float=TRUE)
   
   cmd <- .make_decon_command_str(cmdlines)
-  list(cmd=cmd, afni_stims=afni_stims, gltfiles=gltfiles, gltnames=gltnames, glts=glts)
+  list(cmd=cmd, afni_stims=afni_stims, afni_baseline_mats=afni_baseline_mats,
+       gltfiles=gltfiles, gltnames=gltnames, glts=glts)
 }
 
 
