@@ -1,6 +1,6 @@
 
 #' @export
-afni_lm <- function(fmri_mod, dataset, working_dir=".", options=list()) {
+afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, options=list()) {
   
   defopts <- list(noFDR=FALSE, 
                        fout=TRUE, 
@@ -9,8 +9,8 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", options=list()) {
                        float=TRUE, 
                        cbucket="coefout", 
                        bucket="statout", 
-                       jobs=2, 
-                       polort=2, 
+                       jobs=jobs, 
+                       polort=polort, 
                        iresp=FALSE, 
                        TR_times=1)
   
@@ -82,6 +82,14 @@ next_dir_name <- function(wd) {
   }
 }
 
+#' @export
+write_baseline_model <- function(bmod, dir, fname) {
+  mat <- design_matrix(bmod)
+  
+  oname <- paste0(dir, "/", fname)
+  write.table(mat, file=oname, col.names=FALSE)
+}
+
 #' @keywords internal
 write_stim_files <- function(afni_stims) {
   sapply(afni_stims, function(stim) {
@@ -110,13 +118,15 @@ write_glts <- function(glts, gltfiles) {
   })
 }
 
-
+build_baseline_stims <- function(x) {
+  bmat <- design_matrix(x)
+}
 
 #' @keywords internal
 build_afni_stims <- function(x) {
-  stimlabels <- longnames(x)
+  stimlabels <- longnames(x$event_model)
   stimfiles <- paste(stimlabels, "_reg.1D", sep = "")
-  desmat <- design_matrix(x)
+  desmat <- design_matrix(x$event_model)
   
   lapply(1:length(stimlabels), function(i) {
     afni_stim_file(stimlabels[i], stimfiles[i], desmat[, i])
@@ -151,58 +161,62 @@ build_afni_stims <- function(x) {
 
 #' @keywords internal
 build_decon_command <- function(model, dataset, working_dir, opts) {
-   stimlabels <- unlist(lapply(terms(model$event_model), longnames))
-   
-   assert_that(length(unique(stimlabels)) == length(stimlabels))
-   
-   assert_that(length(stimlabels) == length(conditions(model$event_model)))
-   
-   cons <- contrast_weights(model)
-   cons <- unlist(cons, recursive=FALSE)
-   glts <- lapply(cons, to_glt)
-   gltfiles <- sapply(glts, function(x) paste0(x$name, ".txt"))
-   gltnames <- sapply(glts, function(x) x$con$name)
-   
-   assert_that(sum(duplicated(gltnames))  == 0, msg="Cannot have two GLTs with the same name")
-   assert_that(sum(duplicated(gltfiles))  == 0, msg="Cannot have two GLTs with the same file name")
-
-   func_terms <- terms(model$event_model)
-
-   afni_stims <- unlist(lapply(func_terms, function(term) { build_afni_stims(term) }), recursive=FALSE)
-
-   purgeNulls <- function(A) {
-     A[!sapply(A, is.null)]
-   }
- 
-   opt_stim_labels <-  purgeNulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "label")))
-   opt_stim_files  <-  purgeNulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "file")))
+  ## get the set of stimulus regressors
+  stimlabels <- unlist(lapply(terms(model$event_model), longnames))
   
-   cmdlines <- list(input=paste0(dataset$base_path, "/", dataset$scans),
-                              mask=paste0(dataset$base_path, "/", dataset$mask_file),
-                              polort=opts[["polort"]],
-                              num_stimts=length(afni_stims),
-                              num_glt=length(glts),
-                              stim_file=opt_stim_files,
-                              stim_label=opt_stim_labels,
-                              #stim_times=opt_stim_times,
-                              TR_times=opts[["TR_times"]],
-                              #iresp=opt_stim_iresp,
-                              gltsym=lapply(seq_along(gltfiles), function(i) paste(gltfiles[i], collapse=" ")),
-                              glt_label=lapply(seq_along(gltnames), function(i) paste(i, gltnames[i], collapse=" ")),
-                              nofullf_atall=opts[["nofullf_atall"]],
-                              fout=opts[["fout"]],
-                              rout=opts[["rout"]],
-                              tout=opts[["tout"]],
-                              bout=opts[["bout"]],
-                              noFDR=opts[["noFDR"]],
-                              cbucket=opts[["cbucket"]],
-                              bucket=opts[["bucket"]],
-                              jobs=opts[["jobs"]],
-                              float=TRUE)
-   cmd <- .make_decon_command_str(cmdlines)
-   list(cmd=cmd, afni_stims=afni_stims, gltfiles=gltfiles, gltnames=gltnames, glts=glts)
+  ## all stims must be unique
+  assert_that(length(unique(stimlabels)) == length(stimlabels))
+  
+  assert_that(length(stimlabels) == length(conditions(model$event_model)))
+  
+  cons <- contrast_weights(model)
+  cons <- unlist(cons, recursive=FALSE)
+  
+  glts <- lapply(cons, to_glt)
+  gltfiles <- sapply(glts, function(x) paste0(x$name, ".txt"))
+  gltnames <- sapply(glts, function(x) x$con$name)
+  
+  assert_that(sum(duplicated(gltnames))  == 0, msg="Cannot have two GLTs with the same name")
+  assert_that(sum(duplicated(gltfiles))  == 0, msg="Cannot have two GLTs with the same file name")
+  
+  func_terms <- terms(model$event_model)
+  
+  afni_stims <- unlist(lapply(func_terms, function(term) { build_afni_stims(term) }), recursive=FALSE)
+  
+  purgeNulls <- function(A) {
+    A[!sapply(A, is.null)]
+  }
+  
+  opt_stim_labels <-  purgeNulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "label")))
+  opt_stim_files  <-  purgeNulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "file")))
+  
+  cmdlines <- list(input=paste0(dataset$base_path, "/", dataset$scans),
+                   mask=paste0(dataset$base_path, "/", dataset$mask_file),
+                   polort=opts[["polort"]],
+                   num_stimts=length(afni_stims),
+                   num_glt=length(glts),
+                   stim_file=opt_stim_files,
+                   stim_label=opt_stim_labels,
+                   #stim_times=opt_stim_times,
+                   TR_times=opts[["TR_times"]],
+                   #iresp=opt_stim_iresp,
+                   gltsym=lapply(seq_along(gltfiles), function(i) paste(gltfiles[i], collapse=" ")),
+                   glt_label=lapply(seq_along(gltnames), function(i) paste(i, gltnames[i], collapse=" ")),
+                   nofullf_atall=opts[["nofullf_atall"]],
+                   fout=opts[["fout"]],
+                   rout=opts[["rout"]],
+                   tout=opts[["tout"]],
+                   bout=opts[["bout"]],
+                   noFDR=opts[["noFDR"]],
+                   cbucket=opts[["cbucket"]],
+                   bucket=opts[["bucket"]],
+                   jobs=opts[["jobs"]],
+                   float=TRUE)
+  
+  cmd <- .make_decon_command_str(cmdlines)
+  list(cmd=cmd, afni_stims=afni_stims, gltfiles=gltfiles, gltnames=gltnames, glts=glts)
 }
- 
+
 
 
 #' @export
@@ -222,7 +236,7 @@ run.afni_lm_spec <- function(x, outdir, execute=TRUE) {
     }
     print(paste("setting directory:", outdir))
     setwd(outdir)
-
+    
     write_stim_files(x$cmd$afni_stims)
     write_glts(x$cmd$glts, x$cmd$gltfiles)
     

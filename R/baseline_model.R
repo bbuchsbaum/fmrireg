@@ -15,6 +15,7 @@ get_col_inds <- function(Xlist) {
 #' @param basis the basis function type
 #' @param degree the degree of the spline function.
 #' @param sframe sframe a \code{sampling_frame} object
+#' @param intercept wehther to include an intercept for each block
 #' @param nuisance_list a list of nusiance matrices, one matrix per fMRI block
 #' @importFrom lazyeval f_eval f_rhs f_lhs
 #' 
@@ -25,17 +26,21 @@ get_col_inds <- function(Xlist) {
 #' bmod <- baseline_model(basis="bs", degree=3, sframe=sframe)
 #' stopifnot(ncol(design_matrix(bmod)) == 4)
 #' 
+#' ## no intercept term
+#' bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, intercept=FALSE)
+#' 
 #' ## add an arbitrary nuisance matrix with two columns
 #' nuismat <- matrix(rnorm(100*2), 100, 2)
 #' bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, nuisance_list=list(nuismat))
 #' stopifnot(ncol(design_matrix(bmod)) == 6)
 #' @export
-baseline_model <- function(basis=c("poly", "bs", "ns"), degree=1, sframe, nuisance_list=NULL) {
+baseline_model <- function(basis=c("poly", "bs", "ns"), degree=1, sframe, intercept=TRUE, nuisance_list=NULL) {
   drift_spec <- baseline(degree=degree, basis=basis, constant=FALSE)
   drift_term <- construct(drift_spec, sframe)
   
-  ## automatically add constant term
-  block_term <- construct_block_term("constant", sframe)
+  block_term <- if (intercept) {
+    block_term <- construct_block_term("constant", sframe)
+  }
   
   nuisance_term <- if (!is.null(nuisance_list)) {
    
@@ -55,8 +60,10 @@ baseline_model <- function(basis=c("poly", "bs", "ns"), degree=1, sframe, nuisan
     baseline_term("nuisance", Matrix::bdiag(lapply(nuisance_list, unclass)), colind,rowind)
   } 
   
-  ret <- list(drift_term=drift_term, drift_spec=drift_spec, 
-              block_term=block_term, nuisance_term=nuisance_term, 
+  ret <- list(drift_term=drift_term, 
+              drift_spec=drift_spec, 
+              block_term=block_term, 
+              nuisance_term=nuisance_term, 
               sampling_frame=sframe)
   
   class(ret) <- c("baseline_model", "list")
@@ -94,9 +101,17 @@ baseline <- function(degree=1, basis=c("poly", "bs", "ns"), name=paste0("baselin
 
 #' @export
 design_matrix.baseline_model <- function(x, blockid=NULL) {
-  if (is.null(x$nuisance_term)) {
+  if (is.null(x$nuisance_term) && is.null(x$block_term)) {
+    ## just drift term
+    tibble::as_tibble(design_matrix(x$drift_term, blockid))
+  } else if (is.null(x$nuisance_term) && !is.null(x$block_term)) {
+    ## drift and block term but no nuisance term
     tibble::as_tibble(cbind(design_matrix(x$block_term, blockid), design_matrix(x$drift_term, blockid)))
+  } else if (!is.null(x$nuisance_term) && is.null(x$block_term)) {
+    ## drift and  nuisance term
+    tibble::as_tibble(cbind(design_matrix(x$drift_term, blockid),design_matrix(x$nuisance_term, blockid))) 
   } else {
+    ## all three 
     tibble::as_tibble(cbind(design_matrix(x$block_term, blockid), design_matrix(x$drift_term, blockid), design_matrix(x$nuisance_term, blockid)))
   }
 }
@@ -190,7 +205,7 @@ design_matrix.baseline_term <- function(x, blockid=NULL) {
 }
 
 
-
+#' @keywords internal
 construct_block_term <- function(vname, sframe) {
   blockids <- blockids(sframe)
   blockord <- sort(unique(blockids))
@@ -208,6 +223,14 @@ construct_block_term <- function(vname, sframe) {
   
 }
 
+#' block_term
+#' 
+#' construct a constant term
+#' 
+#' @param varname the name of the term
+#' @param blockids
+#' @param expanded_blockids
+#' @param mat
 #' @importFrom tibble as_tibble
 #' @export
 block_term <- function(varname, blockids, expanded_blockids, mat) {
@@ -222,6 +245,7 @@ block_term <- function(varname, blockids, expanded_blockids, mat) {
 }
 
 
+#' @export
 design_matrix.block_term <- function(x, blockid=NULL) {
   if (is.null(blockid)) {
     x$design_matrix
@@ -270,7 +294,11 @@ print.baseline_model <- function(x) {
   cat("  ", "basis type: ", x$drift_spec$basis, "\n")
   cat("  ", "degree: ", x$drift_spec$degree, "\n")
   cat("  ", "drift columns: ", ncol(design_matrix(x$drift_term)), "\n")
-  cat("  ", "constant columns: ", ncol(design_matrix(x$block_term)), "\n")
+  if (!is.null(x$block_term)) {
+    cat("  ", "constant columns: ", ncol(design_matrix(x$block_term)), "\n")
+  } else {
+    cat("  ", "constant columns: 0 ", "\n")
+  }
   cat("  ", "nuisance columns: ", ifelse(is.null(x$nuisance_term), 0, ncol(design_matrix(x$nuisance_term))), "\n")
   cat("  ", "total columns: ", ncol(design_matrix(x)), "\n")
   cat("  ", "design_matrix: ", "\n")
