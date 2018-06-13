@@ -56,6 +56,10 @@ contrast_set <- function(...) {
 #' pairwise_contrasts(c("A", "B", "C"))
 #' @export
 pairwise_contrasts <- function(levels, where=NULL) {
+  if (!is.null(where)) {
+    assert_that(lazyeval::is_formula(where))
+  }
+  
   cbns <- combn(length(levels),2)
   ret <- lapply(1:ncol(cbns), function(i) {
     lev1 <- levels[cbns[1,i]]
@@ -174,8 +178,11 @@ contrast_weights.unit_contrast_spec <- function(x, term) {
 #' 
 #' pcon <- poly_contrast(~ time, name="poly_time_3", degree=3)
 #' @export
-poly_contrast <- function(A, name, where=TRUE, degree=1, value_map=NULL) {
+poly_contrast <- function(A, name, where=NULL, degree=1, value_map=NULL) {
   assert_that(lazyeval::is_formula(A))
+  if (!is.null(where)) {
+    assert_that(lazyeval::is_formula(where))
+  }
 
   ret <- list(
     A=A,
@@ -197,10 +204,18 @@ contrast_weights.poly_contrast_spec <- function(x, term) {
   term.cells <- cells(term)
   row.names(term.cells) <- longnames(term)
  
-  keep <- eval(x$where, envir=term.cells, enclos=parent.frame())	
+  #keep <- eval(x$where, envir=term.cells, enclos=parent.frame())	
+  if (!is.null(x$where)) {
+    keep <- lazyeval::f_eval_rhs(x$where, data=term.cells)
+    assert_that(sum(keep) > 0)
+    term.cells <- term.cells[keep,]
+  } else {
+    keep <- rep(TRUE, nrow(term.cells))
+  }
+  
+  
   reduced.term.cells <- subset(term.cells, keep)
   
- 
   vals <- lazyeval::f_eval_rhs(x$A, data=reduced.term.cells)
   
   vals <- if (is.null(x$value_map)) {
@@ -278,6 +293,7 @@ contrast_weights.pair_contrast_spec <- function(x, term) {
   
   count <- attr(term.cells, "count")		
   term.cells <- subset(term.cells, count > 0)
+  
   keep <- if (!is.null(x$where)) {
     eval(x$where, envir=term.cells, enclos=parent.frame())	
   } else {
