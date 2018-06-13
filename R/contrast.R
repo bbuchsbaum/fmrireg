@@ -209,7 +209,7 @@ contrast_weights.poly_contrast_spec <- function(x, term) {
   if (!is.null(x$where)) {
     keep <- lazyeval::f_eval_rhs(x$where, data=term.cells)
     assert_that(sum(keep) > 0)
-    term.cells <- term.cells[keep,]
+    #term.cells <- term.cells[keep,]
   } else {
     keep <- rep(TRUE, nrow(term.cells))
   }
