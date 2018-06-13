@@ -180,6 +180,7 @@ contrast_weights.unit_contrast_spec <- function(x, term) {
 #' @export
 poly_contrast <- function(A, name, where=NULL, degree=1, value_map=NULL) {
   assert_that(lazyeval::is_formula(A))
+  
   if (!is.null(where)) {
     assert_that(lazyeval::is_formula(where))
   }
@@ -187,7 +188,7 @@ poly_contrast <- function(A, name, where=NULL, degree=1, value_map=NULL) {
   ret <- list(
     A=A,
     B=NULL,
-    where=substitute(where),
+    where=where,
     degree=degree,
     value_map=value_map,
     name=name)
