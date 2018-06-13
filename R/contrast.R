@@ -296,7 +296,8 @@ contrast_weights.pair_contrast_spec <- function(x, term) {
   term.cells <- subset(term.cells, count > 0)
   
   keep <- if (!is.null(x$where)) {
-    eval(x$where, envir=term.cells, enclos=parent.frame())	
+    lazyeval::f_eval_rhs(x$where, data=term.cells)
+    #eval(x$where, envir=term.cells, enclos=parent.frame())	
   } else {
     rep(TRUE, nrow(term.cells))
   }
