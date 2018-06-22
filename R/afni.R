@@ -83,10 +83,10 @@ afni_stim_times <- function(label, file_name, hrf, onsets, iresp=FALSE, tr_times
 
 #' @keywords internal
 afni_command_switch <- function(x, k, type) {
-  switch(
-    type,
+  switch(type,
     label = paste(k, x$label, collapse = " "),
     file = paste(k, x$file_name, collapse = " "),
+    ortvec = paste(x$file_name, x$label),
     times = NULL,
     iresp = NULL
   )
@@ -104,7 +104,7 @@ next_dir_name <- function(wd) {
 
 #' @keywords internal
 write_baseline_mat <- function(stim, dir) {
-  write.table(paste0(dir, "/", stim$file_name, sep=""), stim$mat)
+  write.table(stim$mat, paste0(dir, "/", stim$file_name, sep=""), col.names=FALSE, row.names=FALSE)
 }
 
 #' @keywords internal
@@ -129,6 +129,7 @@ write_afni_stim <- function(stim, dir) {
 }
 
 #' @keywords internal
+<<<<<<< HEAD
 #' @importFrom purrr imap
 write_glts <- function(glts, gltfiles) {
   imap(glts, function(glt, i) {
@@ -210,12 +211,16 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   assert_that(length(stimlabels) == length(conditions(model$event_model)))
   
+  ## extract all contrast matrices
   cons <- contrast_weights(model)
   cons <- unlist(cons, recursive=FALSE)
   
+  ## convert to 'glt's
   glts <- lapply(cons, to_glt)
-  gltfiles <- sapply(glts, function(x) paste0(x$name, ".txt"))
-  gltnames <- sapply(glts, function(x) x$con$name)
+  
+  gltfiles <- unlist(lapply(glts, function(x) paste0(x$name, ".txt")))
+  gltnames <- unlist(lapply(glts, function(x) x$name))
+  gltstr <- unlist(lapply(glts, function(x) x$glt_str))
   
   assert_that(sum(duplicated(gltnames))  == 0, msg="Cannot have two GLTs with the same name")
   assert_that(sum(duplicated(gltfiles))  == 0, msg="Cannot have two GLTs with the same file name")
@@ -225,20 +230,24 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   afni_stims <- unlist(lapply(func_terms, function(term) { build_afni_stims(term) }), recursive=FALSE)
   afni_baseline_mats <- build_baseline_stims(model)
   
+  
   purgeNulls <- function(A) {
     A[!sapply(A, is.null)]
   }
   
   opt_stim_labels <-  purgeNulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "label")))
   opt_stim_files  <-  purgeNulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "file")))
+  opt_stim_ortvecs <- purgeNulls(lapply(seq_along(afni_baseline_mats), function(i) afni_command_switch(afni_baseline_mats[[i]], i, "ortvec")))
+
   
   cmdlines <- list(input=paste0(dataset$base_path, "/", dataset$scans),
                    mask=paste0(dataset$base_path, "/", dataset$mask_file),
                    polort=opts[["polort"]],
                    num_stimts=length(afni_stims),
-                   num_glt=length(glts),
+                   num_glt=length(gltfiles),
                    stim_file=opt_stim_files,
                    stim_label=opt_stim_labels,
+                   ortvec=opt_stim_ortvecs,
                    #stim_times=opt_stim_times,
                    TR_times=opts[["TR_times"]],
                    #iresp=opt_stim_iresp,
@@ -256,8 +265,9 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
                    float=TRUE)
   
   cmd <- .make_decon_command_str(cmdlines)
+  
   list(cmd=cmd, afni_stims=afni_stims, afni_baseline_mats=afni_baseline_mats,
-       gltfiles=gltfiles, gltnames=gltnames, glts=glts)
+       gltfiles=gltfiles, gltnames=gltnames, glts=glts, gltstr=gltstr)
 }
 
 
@@ -281,7 +291,14 @@ run.afni_lm_spec <- function(x, outdir, execute=TRUE) {
     setwd(outdir)
     
     write_stim_files(x$cmd$afni_stims)
-    write_glts(x$cmd$glts, x$cmd$gltfiles)
+    
+    if (!is.null(x$cmd$gltstr)) {
+      write_glts(x$cmd$gltstr, x$cmd$gltfiles)
+    }
+    
+    if (!is.null(x$cmd$afni_baseline_mats)) {
+      write_baseline_mats(x$cmd$afni_baseline_mats)
+    }
     
     write(x$cmd$cmd, "3ddeconvolve.sh")
     

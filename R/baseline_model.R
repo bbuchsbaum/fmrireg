@@ -4,7 +4,9 @@ get_col_inds <- function(Xlist) {
   csum <- cumsum(ncols)
   csum1 <- c(0, csum[-length(csum)])
   m <- as.matrix(cbind(csum1+1, csum))
-  apply(m, 1, function(x) seq(x[1], x[2]))
+  
+  lapply(1:nrow(m), function(i) seq(m[i,1], m[i,2]))
+  #apply(m, 1, function(x) seq(x[1], x[2]))
 }
 
 
