@@ -622,10 +622,11 @@ Fcontrasts.event_term <- function(x) {
                  
 
 #' @importFrom tibble as_tibble
+#' @importFrom purrr map_chr
 #' @export
 design_matrix.event_term <- function(x, drop.empty=TRUE) {
   locenv <- new.env()
-  pterms <- sapply(parent_terms(x), .sanitizeName)	
+  pterms <- map_chr(parent_terms(x), .sanitizeName)	
   
   for (ev in x$events) {
     vname <- .sanitizeName(ev$varname)
@@ -675,7 +676,7 @@ print.event_term <- function(object) {
   cat("  ", "Term Name: ", object$varname, "\n")
   cat("  ", "Formula:  ", as.character(formula(object)), "\n")
   cat("  ", "Num Events: ", nrow(object$event_table), "\n")
-  cat("  ", "Term Types: ", paste(sapply(object$events, function(ev) class(ev)[[1]])))
+  cat("  ", "Term Types: ", paste(map_chr(object$events, ~ class(.)[[1]])))
 }
 
 #' @export
@@ -695,7 +696,7 @@ print.convolved_term <- function(object) {
   cat("  ", "Num Rows: ", nrow(design_matrix(object)), "\n")
   cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n")
   cat("  ", "Conditions: ", conditions(object), "\n")
-  cat("  ", "Term Types: ", paste(sapply(object$evterm$events, function(ev) class(ev)[[1]])))
+  cat("  ", "Term Types: ", paste(map_chr(object$evterm$events, ~ class(.)[[1]])))
 }
 
 

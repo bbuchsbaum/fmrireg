@@ -39,9 +39,10 @@ contrast <- function(form, name, where=NULL) {
 #' 
 #' @export
 #' @import assertthat
+#' @importFrom purrr map_lgl
 contrast_set <- function(...) {
   ret <- list(...)
-  assertthat::assert_that(all(sapply(ret, inherits, "contrast_spec")))
+  assertthat::assert_that(all(map_lgl(ret, inherits, "contrast_spec")))
   class(ret) <- c("contrast_set", "list")
   ret
 }

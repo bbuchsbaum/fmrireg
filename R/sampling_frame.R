@@ -70,7 +70,7 @@ global_onsets.sampling_frame <- function(x, onsets, blockids) {
     stop("there are more block ids than block lengths, cannot compute global onsets")
   }
   
-  sapply(1:length(onsets),function(i) {
+  map_dbl(1:length(onsets),function(i) {
     blocknum <- ids[i]
     offset <- (sum(x$blocklens[1:blocknum]) - x$blocklens[blocknum])*x$TR
     if (onsets[i] > x$blocklens[blocknum]*x$TR) {

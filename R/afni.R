@@ -109,16 +109,12 @@ write_baseline_mat <- function(stim, dir) {
 
 #' @keywords internal
 write_baseline_mats <- function(blist) {
-  sapply(blist, function(bm) {
-    write_baseline_mat(bm, ".")
-  })
+  purrr::walk(blist, ~ write_baseline_mat(., "."))
 }
   
 #' @keywords internal
 write_stim_files <- function(afni_stims) {
-  sapply(afni_stims, function(stim) {
-    write_afni_stim(stim, ".")
-  })
+  purrr::walk(afni_stims, ~ write_afni_stim(., "."))
 }
 
 #' @keywords internal

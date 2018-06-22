@@ -65,7 +65,7 @@ beta_stats <- function(lmfit, varnames) {
   resvar <- rss/rdf
   sigma <- sqrt(resvar)
   
-  vc <- sapply(1:ncol(betamat), function(i) {
+  vc <- map_dbl(1:ncol(betamat), function(i) {
     vcv <- cov.unscaled * sigma[i]^2
     sqrt(diag(vcv))
   })
@@ -116,7 +116,7 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
   
   cm <- solve((conmat %*% cov.unscaled %*% t(conmat)))
   
-  Fstat <- sapply(1:ncol(betamat), function(i) {
+  Fstat <- map_dbl(1:ncol(betamat), function(i) {
     b <- betamat[,i]
     cb <- conmat %*% b
     Fstat <- t(cb) %*% cm %*% (cb) / r / sigma2[i]
@@ -139,6 +139,7 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
 #' @param lmfit the \code{lm} object
 #' @param conmat the contrast \code{matrix} or contrast \code{vector}
 #' @param colind the subset column indices in the design associated with the contrast. 
+#' @importFrom purrr map_dbl
 fit_contrasts <- function(lmfit, conmat, colind) {
   if (!is.matrix(conmat) && is.numeric(conmat)) {
     conmat <- matrix(conmat, 1, length(conmat))
@@ -156,7 +157,7 @@ fit_contrasts <- function(lmfit, conmat, colind) {
   resvar <- rss/rdf
   sigma <- sqrt(resvar)
   
-  vc <- sapply(1:ncol(betamat), function(i) {
+  vc <- map_dbl(1:ncol(betamat), function(i) {
     vcv <- cov.unscaled * sigma[i]^2
     sqrt(diag(conmat %*% vcv %*% t(conmat)))
   })
