@@ -133,11 +133,11 @@ write_afni_stim <- function(stim, dir) {
 }
 
 #' @keywords internal
+#' @importFrom purrr imap
 write_glts <- function(glts, gltfiles) {
-  lapply(seq_along(glts), function(i) {
+  imap(glts, function(glt, i) {
     fout <- file(gltfiles[i], "w")
-    .glt <- glts[[i]]
-    write(.glt$glt_str, file=fout, sep="\n")
+    write(glt$glt_str, file=fout, sep="\n")
     close(fout)
   })
 }
