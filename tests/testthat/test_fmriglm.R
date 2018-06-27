@@ -9,7 +9,7 @@ test_that("can construct and run a simple fmri glm from in memory dataset", {
      neuroim2::NeuroVec(arr, bspace)
    })
    
-   mask <- neuroim2::LogicalNeuroVol(array(rnorm(10*10*10), c(10,10,10)) > 0, neuroim::BrainSpace(Dim=c(10,10,10)))
+   mask <- neuroim2::LogicalNeuroVol(array(rnorm(10*10*10), c(10,10,10)) > 0, neuroim2::NeuroSpace(Dim=c(10,10,10)))
    
    #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
    dset <- fmri_mem_dataset(scans=scans, 
@@ -31,7 +31,7 @@ test_that("can construct and run a simple fmri glm from in memory dataset and on
     neuroim::NeuroVec(arr, bspace)
   })
   
-  mask <- neuroim2::LogicalNeuroVol(array(rnorm(10*10*10), c(10,10,10)) > 0, neuroim::BrainSpace(Dim=c(10,10,10)))
+  mask <- neuroim2::LogicalNeuroVol(array(rnorm(10*10*10), c(10,10,10)) > 0, neuroim2::NeuroSpace(Dim=c(10,10,10)))
   
   #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
   dset <- fmri_mem_dataset(scans=scans, 

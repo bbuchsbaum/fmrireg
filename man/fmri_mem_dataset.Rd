@@ -8,7 +8,7 @@ fmri_mem_dataset(scans, mask, TR, event_table = data.frame(),
   base_path = ".")
 }
 \arguments{
-\item{scans}{a vector of objects of class \code{\linkS4class{BrainVector}}}
+\item{scans}{a vector of objects of class \code{\linkS4class{NeuroVec}}}
 
 \item{mask}{name of the binary mask file indicating the voxels to include in analysis.}
 

@@ -79,7 +79,7 @@ matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
 #' fmri_mem_dataset
 #' 
 #' @inheritParams fmri_dataset
-#' @param scans a vector of objects of class \code{\linkS4class{BrainVector}}
+#' @param scans a vector of objects of class \code{\linkS4class{NeuroVec}}
 #' @export
 fmri_mem_dataset <- function(scans, mask, TR, 
                          event_table=data.frame(), 
@@ -181,7 +181,7 @@ chunk_iter <- function(x, nchunks, get_chunk) {
 }
 
 
-#' @importFrom neuroim series
+#' @importFrom neuroim2 series
 #' @export
 data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
@@ -191,7 +191,7 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
     bvec <- x$scans[[chunk_num]]
     voxel_ind <- which(x$mask>0)
     row_ind=which(x$sampling_frame$blockids == chunk_num)
-    ret <- data_chunk(neuroim::series(bvec,voxel_ind), 
+    ret <- data_chunk(neuroim2::series(bvec,voxel_ind), 
                       voxel_ind=voxel_ind, 
                       row_ind=row_ind, 
                       chunk_num=chunk_num)
@@ -200,7 +200,7 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
   get_seq_chunk <- function(chunk_num) {
     bvecs <- x$scans
     voxel_ind <- maskSeq[[chunk_num]]
-    ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) neuroim::series(bv, voxel_ind))), 
+    ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) neuroim2::series(bv, voxel_ind))), 
                       voxel_ind=voxel_ind, 
                       row_ind=1:nrow(x$event_table))
     
@@ -223,19 +223,19 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
 
 
 
-#' @import neuroim
+#' @import neuroim2
 #' @export
 data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
   mask <- x$mask
   
   get_run_chunk <- function(chunk_num) {
-    bvec <- neuroim::loadVector(file.path(x$base_path, x$scans[chunk_num]), mask=x$mask)
+    bvec <- neuroim2::read_vec(file.path(x$base_path, x$scans[chunk_num]), mask=x$mask)
     ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), row_ind=which(x$sampling_frame$blockids == chunk_num), chunk_num=chunk_num)
   }
   
   get_seq_chunk <- function(chunk_num) {
-    bvecs <- lapply(x$scans, function(scan) neuroim::loadVector(file.path(x$base_path, scan), mask=maskSeq[[chunk_num]]))
+    bvecs <- lapply(x$scans, function(scan) neuroim2::read_vec(file.path(x$base_path, scan), mask=maskSeq[[chunk_num]]))
     ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) bv@data)), voxel_ind=maskSeq[[chunk_num]], 
                       row_ind=1:nrow(x$event_table))
     
@@ -256,7 +256,7 @@ data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
 }
 
-#' @import neuroim
+#' @import neuroim2
 #' @export
 data_chunks.matrix_dataset <- function(x, runwise=TRUE) {
   get_run_chunk <- function(chunk_num) {
