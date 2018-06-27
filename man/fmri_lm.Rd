@@ -6,7 +6,7 @@
 \usage{
 fmri_lm(formula, block_formula, baseline_model = NULL, dataset, durations,
   drop_empty = TRUE, contrasts = NULL, strategy = c("runwise",
-  "slicewise", "all"))
+  "vectorwise", "chunkwise", "all"))
 }
 \arguments{
 \item{formula}{the model furmula for experimental events}

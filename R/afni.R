@@ -129,7 +129,6 @@ write_afni_stim <- function(stim, dir) {
 }
 
 #' @keywords internal
-<<<<<<< HEAD
 #' @importFrom purrr imap
 write_glts <- function(glts, gltfiles) {
   imap(glts, function(glt, i) {

@@ -85,7 +85,7 @@ fmri_mem_dataset <- function(scans, mask, TR,
                          event_table=data.frame(), 
                          base_path=".") {
   
-  assert_that(all(sapply(scans, function(x) inherits(x, "BrainVector"))))
+  assert_that(all(sapply(scans, function(x) inherits(x, "NeuroVec"))))
   
   run_length <- sapply(scans, function(x) dim(x)[4])
 
@@ -118,6 +118,12 @@ fmri_mem_dataset <- function(scans, mask, TR,
 #' @param event_table a \code{data.frame} containing the event onsets and experimental variables.
 #' @param base_path the file path to be prepended to relative file names
 #' @export
+#' @importFrom tibble as_tibble
+#' @examples 
+#' 
+#' dset <- fmri_dataset(c("scan1.nii", "scan2.nii", "scan3.nii"), mask="mask.nii", TR=2, run_length=rep(300,3), 
+#'         event_table=data.frame(onsets=c(3,20,99,3,20,99,3,20,99), run=c(1,1,1,2,2,2,3,3,3)))
+#' 
 fmri_dataset <- function(scans, mask, TR, 
                          run_length, 
                          event_table=data.frame(), 
@@ -134,7 +140,7 @@ fmri_dataset <- function(scans, mask, TR,
     scans=scans,
     mask_file=mask,
     nruns=length(scans),
-    event_table=event_table,
+    event_table=as_tibble(event_table),
     base_path=base_path,
     sampling_frame=frame
   )
@@ -145,10 +151,12 @@ fmri_dataset <- function(scans, mask, TR,
 
 #' @keywords internal
 data_chunk <- function(mat, voxel_ind, row_ind, chunk_num) {
-  ret <- list(data=mat,
+  ret <- list(
+       data=mat,
        voxel_ind=voxel_ind,
        row_ind=row_ind,
        chunk_num=chunk_num)
+  
   class(ret) <- c("data_chunk", "list")
   ret
 }
@@ -307,7 +315,7 @@ arbitrary_chunks <- function(x, nchunks) {
 #' @keywords internal
 slicewise_chunks <- function(x) {
   mask <- x$mask
-  template <- BrainVolume(array(0, dim(mask)), space(mask))
+  template <- NeuroVol(array(0, dim(mask)), space(mask))
   nchunks <- dim(mask)[3]
   
   maskSeq <- lapply(1:nchunks, function(i) {
@@ -320,11 +328,13 @@ slicewise_chunks <- function(x) {
   
 }
 
+
 one_chunk <- function(x) {
   mask <- x$mask
   list(mask)
 }
 
+#' @export
 print.fmri_dataset <- function(object) {
   cat("fmri_dataset", "\n")
   cat("  number of runs: ", object$nruns, "\n")

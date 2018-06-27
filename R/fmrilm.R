@@ -41,7 +41,7 @@
 #' @export
 fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, contrasts=NULL, 
-                     strategy=c("runwise", "slicewise", "all")) {
+                     strategy=c("runwise", "vectorwise", "chunkwise", "all")) {
   
  
   strategy <- match.arg(strategy)
