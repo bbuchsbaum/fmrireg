@@ -59,7 +59,6 @@ beta_stats <- function(lmfit, varnames) {
   cov.unscaled <- chol2inv(Qr$qr)
   betamat <- lmfit$coefficients
   
-  
   rss <- colSums(lmfit$residuals^2)
   rdf <- lmfit$df.residual
   resvar <- rss/rdf
