@@ -149,7 +149,7 @@ write_censor_file <- function(dir, censor) {
 write_glts <- function(glts, gltfiles) {
   imap(glts, function(glt, i) {
     fout <- file(gltfiles[i], "w")
-    write(glt$glt_str, file=fout, sep="\n")
+    write(glt, file=fout, sep="\n")
     close(fout)
   })
 }
