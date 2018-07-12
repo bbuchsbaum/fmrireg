@@ -19,7 +19,12 @@
 #' fmod <- fmri_model(emodel, bmodel)
 #' alm <- afni_lm(fmod, dset)
 #' @export
-afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, options=list()) {
+afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, censor=NULL, options=list()) {
+  
+  if (!is.null(censor)) {
+    censor <- unlist(censor)
+    assert_that(length(censor) == sum(dataset$sampling_frame$blocklens))
+  }
   
   defopts <- list(noFDR=FALSE, 
                        fout=TRUE, 
@@ -30,6 +35,7 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, optio
                        bucket="statout", 
                        jobs=jobs, 
                        polort=polort, 
+                       censor=censor,
                        iresp=FALSE, 
                        TR_times=1)
   
@@ -131,6 +137,15 @@ write_afni_stim <- function(stim, dir) {
   
   .write_values(paste0(dir, "/", stim$file_name, sep=""), stim$values)
 }
+
+#' @keywords internal
+write_censor_file <- function(dir, censor) {
+    outname <- paste0(dir, "/censor.1D")
+    hfile <- file(outname, "w")
+    write(censor, file=hfile, ncolumns=1)
+    close(hfile)
+}
+  
 
 #' @keywords internal
 write_glts <- function(gltstr, gltfiles) {
@@ -251,6 +266,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
                    stim_file=opt_stim_files,
                    stim_label=opt_stim_labels,
                    ortvec=opt_stim_ortvecs,
+                   censor=if (!is.null(opts[["censor"]])) "censor.1D" else NULL,
                    #stim_times=opt_stim_times,
                    TR_times=opts[["TR_times"]],
                    #iresp=opt_stim_iresp,
@@ -270,7 +286,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   cmd <- .make_decon_command_str(cmdlines)
   
   list(cmd=cmd, afni_stims=afni_stims, afni_baseline_mats=afni_baseline_mats,
-       gltfiles=gltfiles, gltnames=gltnames, glts=glts, gltstr=gltstr)
+       gltfiles=gltfiles, gltnames=gltnames, glts=glts, gltstr=gltstr, censor=opts$censor)
 }
 
 
@@ -301,6 +317,10 @@ run.afni_lm_spec <- function(x, outdir, execute=TRUE) {
     
     if (!is.null(x$cmd$afni_baseline_mats)) {
       write_baseline_mats(x$cmd$afni_baseline_mats)
+    }
+    
+    if (!is.null(x$cmd$censor)) {
+      write_censor_file(".", x$cmd$censor)
     }
     
     write(x$cmd$cmd, "3ddeconvolve.sh")

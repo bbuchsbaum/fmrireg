@@ -82,8 +82,8 @@ matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
 #' @param scans a vector of objects of class \code{\linkS4class{BrainVector}}
 #' @export
 fmri_mem_dataset <- function(scans, mask, TR, 
-                         event_table=data.frame(), 
-                         base_path=".") {
+                             event_table=data.frame(), 
+                             base_path=".") {
   
   assert_that(all(sapply(scans, function(x) inherits(x, "BrainVector"))))
   
