@@ -9,6 +9,7 @@
 #' @param polort
 #' @param jobs
 #' @param options
+#' @param censor
 #' 
 #' @examples 
 #' etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))

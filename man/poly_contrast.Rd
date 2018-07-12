@@ -4,7 +4,7 @@
 \alias{poly_contrast}
 \title{poly_contrast}
 \usage{
-poly_contrast(A, name, where = TRUE, degree = 1, value_map = NULL)
+poly_contrast(A, name, where = NULL, degree = 1, value_map = NULL)
 }
 \arguments{
 \item{A}{the contrast expression as a formula}

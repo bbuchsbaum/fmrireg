@@ -5,7 +5,7 @@
 \title{construct a baseline model to model noise and other non-event-related sources of variance}
 \usage{
 baseline_model(basis = c("poly", "bs", "ns"), degree = 1, sframe,
-  nuisance_list = NULL)
+  intercept = TRUE, nuisance_list = NULL)
 }
 \arguments{
 \item{basis}{the basis function type}
@@ -13,6 +13,8 @@ baseline_model(basis = c("poly", "bs", "ns"), degree = 1, sframe,
 \item{degree}{the degree of the spline function.}
 
 \item{sframe}{sframe a \code{sampling_frame} object}
+
+\item{intercept}{wehther to include an intercept for each block}
 
 \item{nuisance_list}{a list of nusiance matrices, one matrix per fMRI block}
 }
@@ -22,9 +24,12 @@ construct a baseline model to model noise and other non-event-related sources of
 \examples{
 
 ## bspline basis with degree = 3. This will produce a design matrix with three splines regressiors and a constant intercept.
-sframe <- sampling_frame(blocklens=100, TR=2)
+sframe <- sampling_frame(blocklens=c(100,100), TR=2)
 bmod <- baseline_model(basis="bs", degree=3, sframe=sframe)
 stopifnot(ncol(design_matrix(bmod)) == 4)
+
+## no intercept term
+bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, intercept=FALSE)
 
 ## add an arbitrary nuisance matrix with two columns
 nuismat <- matrix(rnorm(100*2), 100, 2)
