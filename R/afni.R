@@ -116,16 +116,12 @@ write_baseline_mat <- function(stim, dir) {
 
 #' @keywords internal
 write_baseline_mats <- function(blist) {
-  sapply(blist, function(bm) {
-    write_baseline_mat(bm, ".")
-  })
+  purrr::walk(blist, ~ write_baseline_mat(., "."))
 }
   
 #' @keywords internal
 write_stim_files <- function(afni_stims) {
-  sapply(afni_stims, function(stim) {
-    write_afni_stim(stim, ".")
-  })
+  purrr::walk(afni_stims, ~ write_afni_stim(., "."))
 }
 
 #' @keywords internal
@@ -140,6 +136,7 @@ write_afni_stim <- function(stim, dir) {
 }
 
 #' @keywords internal
+<<<<<<< HEAD
 write_censor_file <- function(dir, censor) {
     outname <- paste0(dir, "/censor.1D")
     hfile <- file(outname, "w")
@@ -149,11 +146,11 @@ write_censor_file <- function(dir, censor) {
   
 
 #' @keywords internal
-write_glts <- function(gltstr, gltfiles) {
-  lapply(seq_along(gltstr), function(i) {
+#' @importFrom purrr imap
+write_glts <- function(glts, gltfiles) {
+  imap(glts, function(glt, i) {
     fout <- file(gltfiles[i], "w")
-    .glt <- gltstr[[i]]
-    write(.glt, file=fout, sep="\n")
+    write(glt$glt_str, file=fout, sep="\n")
     close(fout)
   })
 }

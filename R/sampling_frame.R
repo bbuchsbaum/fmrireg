@@ -37,7 +37,7 @@ sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
 }
 
 #' @export
-#' ## TODO screwy things happen when blockids don't start at 1.
+## TODO screwy things happen when blockids don't start at 1.
 samples.sampling_frame <- function(x, blockids=NULL, global=FALSE) {
   if (is.null(blockids)) {
     blockids <- seq(1, length(x$blocklens))
@@ -70,7 +70,7 @@ global_onsets.sampling_frame <- function(x, onsets, blockids) {
     stop("there are more block ids than block lengths, cannot compute global onsets")
   }
   
-  sapply(1:length(onsets),function(i) {
+  map_dbl(1:length(onsets),function(i) {
     blocknum <- ids[i]
     offset <- (sum(x$blocklens[1:blocknum]) - x$blocklens[blocknum])*x$TR
     if (onsets[i] > x$blocklens[blocknum]*x$TR) {

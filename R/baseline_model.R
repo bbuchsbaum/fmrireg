@@ -1,6 +1,6 @@
 
 get_col_inds <- function(Xlist) {
-  ncols <- sapply(Xlist, ncol)
+  ncols <- purrr::map_int(Xlist, ncol)
   csum <- cumsum(ncols)
   csum1 <- c(0, csum[-length(csum)])
   m <- as.matrix(cbind(csum1+1, csum))
@@ -46,7 +46,7 @@ baseline_model <- function(basis=c("poly", "bs", "ns"), degree=1, sframe, interc
   
   nuisance_term <- if (!is.null(nuisance_list)) {
    
-    total_len <- sum(sapply(nuisance_list, nrow))
+    total_len <- sum(map_int(nuisance_list, nrow))
     assertthat::assert_that(total_len == length(blockids(sframe)))
     assertthat::assert_that(length(nuisance_list) == length(blocklens(sframe)))
     
@@ -127,9 +127,9 @@ design_matrix.baseline_model <- function(x, blockid=NULL, allrows=FALSE) {
 #' @export
 terms.baseline_model <- function(x) {
   ret <- list(x$block_term, x$drift_term, x$nuisance_term)
-  ret <- ret[!sapply(ret, is.null)]
+  ret <- ret[!map_lgl(ret, is.null)]
   
-  names(ret) <- sapply(ret, "[[", "varname")
+  names(ret) <- map_chr(ret, "[[", "varname")
   ret
 }
 
@@ -156,6 +156,7 @@ block <- function(x) {
 
 
 #' @export  
+#' @importFrom purrr map_chr
 construct.baselinespec <- function(x, sampling_frame) {
   ret <- if (x$constant) {
     lapply(sampling_frame$blocklens, function(bl) cbind(rep(1, bl), x$fun(seq(1, bl), degree=x$degree)))
@@ -164,7 +165,7 @@ construct.baselinespec <- function(x, sampling_frame) {
   }
   
   
-  nc <- sum(sapply(ret, ncol))
+  nc <- sum(map_int(ret, ncol))
   nc_per_block <- ncol(ret[[1]])
   mat <- matrix(0, sum(sampling_frame$blocklens), nc)
   

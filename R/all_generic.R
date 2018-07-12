@@ -1,6 +1,6 @@
 
 get_methods <- function(obj) {
-  unique(sapply(class(obj), function(cname) methods(class=cname)))
+  unique(purrr::map_chr(class(obj), ~ methods(class= . )))
 }
 
 #' longnames

@@ -79,13 +79,13 @@ matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
 #' fmri_mem_dataset
 #' 
 #' @inheritParams fmri_dataset
-#' @param scans a vector of objects of class \code{\linkS4class{BrainVector}}
+#' @param scans a vector of objects of class \code{\linkS4class{NeuroVec}}
 #' @export
 fmri_mem_dataset <- function(scans, mask, TR, 
                              event_table=data.frame(), 
                              base_path=".") {
   
-  assert_that(all(sapply(scans, function(x) inherits(x, "BrainVector"))))
+  assert_that(all(sapply(scans, function(x) inherits(x, "NeuroVec"))))
   
   run_length <- sapply(scans, function(x) dim(x)[4])
 
@@ -118,6 +118,12 @@ fmri_mem_dataset <- function(scans, mask, TR,
 #' @param event_table a \code{data.frame} containing the event onsets and experimental variables.
 #' @param base_path the file path to be prepended to relative file names
 #' @export
+#' @importFrom tibble as_tibble
+#' @examples 
+#' 
+#' dset <- fmri_dataset(c("scan1.nii", "scan2.nii", "scan3.nii"), mask="mask.nii", TR=2, run_length=rep(300,3), 
+#'         event_table=data.frame(onsets=c(3,20,99,3,20,99,3,20,99), run=c(1,1,1,2,2,2,3,3,3)))
+#' 
 fmri_dataset <- function(scans, mask, TR, 
                          run_length, 
                          event_table=data.frame(), 
@@ -134,7 +140,7 @@ fmri_dataset <- function(scans, mask, TR,
     scans=scans,
     mask_file=mask,
     nruns=length(scans),
-    event_table=event_table,
+    event_table=as_tibble(event_table),
     base_path=base_path,
     sampling_frame=frame
   )
@@ -145,10 +151,12 @@ fmri_dataset <- function(scans, mask, TR,
 
 #' @keywords internal
 data_chunk <- function(mat, voxel_ind, row_ind, chunk_num) {
-  ret <- list(data=mat,
+  ret <- list(
+       data=mat,
        voxel_ind=voxel_ind,
        row_ind=row_ind,
        chunk_num=chunk_num)
+  
   class(ret) <- c("data_chunk", "list")
   ret
 }
@@ -173,7 +181,7 @@ chunk_iter <- function(x, nchunks, get_chunk) {
 }
 
 
-#' @importFrom neuroim series
+#' @importFrom neuroim2 series
 #' @export
 data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
@@ -183,7 +191,7 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
     bvec <- x$scans[[chunk_num]]
     voxel_ind <- which(x$mask>0)
     row_ind=which(x$sampling_frame$blockids == chunk_num)
-    ret <- data_chunk(neuroim::series(bvec,voxel_ind), 
+    ret <- data_chunk(neuroim2::series(bvec,voxel_ind), 
                       voxel_ind=voxel_ind, 
                       row_ind=row_ind, 
                       chunk_num=chunk_num)
@@ -192,7 +200,7 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
   get_seq_chunk <- function(chunk_num) {
     bvecs <- x$scans
     voxel_ind <- maskSeq[[chunk_num]]
-    ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) neuroim::series(bv, voxel_ind))), 
+    ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) neuroim2::series(bv, voxel_ind))), 
                       voxel_ind=voxel_ind, 
                       row_ind=1:nrow(x$event_table))
     
@@ -215,19 +223,19 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
 
 
 
-#' @import neuroim
+#' @import neuroim2
 #' @export
 data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
   mask <- x$mask
   
   get_run_chunk <- function(chunk_num) {
-    bvec <- neuroim::loadVector(file.path(x$base_path, x$scans[chunk_num]), mask=x$mask)
+    bvec <- neuroim2::read_vec(file.path(x$base_path, x$scans[chunk_num]), mask=x$mask)
     ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), row_ind=which(x$sampling_frame$blockids == chunk_num), chunk_num=chunk_num)
   }
   
   get_seq_chunk <- function(chunk_num) {
-    bvecs <- lapply(x$scans, function(scan) neuroim::loadVector(file.path(x$base_path, scan), mask=maskSeq[[chunk_num]]))
+    bvecs <- lapply(x$scans, function(scan) neuroim2::read_vec(file.path(x$base_path, scan), mask=maskSeq[[chunk_num]]))
     ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) bv@data)), voxel_ind=maskSeq[[chunk_num]], 
                       row_ind=1:nrow(x$event_table))
     
@@ -248,7 +256,7 @@ data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
 }
 
-#' @import neuroim
+#' @import neuroim2
 #' @export
 data_chunks.matrix_dataset <- function(x, runwise=TRUE) {
   get_run_chunk <- function(chunk_num) {
@@ -307,7 +315,7 @@ arbitrary_chunks <- function(x, nchunks) {
 #' @keywords internal
 slicewise_chunks <- function(x) {
   mask <- x$mask
-  template <- BrainVolume(array(0, dim(mask)), space(mask))
+  template <- NeuroVol(array(0, dim(mask)), space(mask))
   nchunks <- dim(mask)[3]
   
   maskSeq <- lapply(1:nchunks, function(i) {
@@ -320,11 +328,13 @@ slicewise_chunks <- function(x) {
   
 }
 
+
 one_chunk <- function(x) {
   mask <- x$mask
   list(mask)
 }
 
+#' @export
 print.fmri_dataset <- function(object) {
   cat("fmri_dataset", "\n")
   cat("  number of runs: ", object$nruns, "\n")

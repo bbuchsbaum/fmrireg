@@ -63,11 +63,11 @@ runwise_rlm <- function(dset, model, conlist, fcon) {
                              function(x) as.matrix(design_matrix(x, ym$chunk_num)))
     
     ## column indices of event regressors
-    eterm_indices <- 1:sum(sapply(eterm_matrices, ncol))
+    eterm_indices <- 1:sum(map_int(eterm_matrices, ncol))
     start <- length(eterm_indices) +1
     
     ## column indices of baseline regressors
-    bterm_indices <- start:(start+sum(sapply(bterm_matrices, ncol)))
+    bterm_indices <- start:(start+sum(map_int(bterm_matrices, ncol)))
     
     term_matrices <- c(eterm_matrices, bterm_matrices)
     names(term_matrices) <- term_names

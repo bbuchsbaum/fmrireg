@@ -64,7 +64,7 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
   }
   
   event_spec <- formspec(formula, data)
-  assertthat::assert_that(all(sapply(event_spec$rhs, inherits, "hrfspec")),
+  assertthat::assert_that(all(map_lgl(event_spec$rhs, inherits, "hrfspec")),
                           msg="all terms on right hand side must be 'hrf' terms")
   
   model_spec <- list(formula=formula, 
