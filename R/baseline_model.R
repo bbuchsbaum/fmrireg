@@ -131,7 +131,7 @@ terms.baseline_model <- function(x) {
   ret <- list(x$block_term, x$drift_term, x$nuisance_term)
   ret <- ret[!map_lgl(ret, is.null)]
   
-  names(ret) <- map_chr(ret, "[[", "varname")
+  names(ret) <- unlist(lapply(ret, "[[", "varname"))
   ret
 }
 
