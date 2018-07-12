@@ -136,7 +136,6 @@ write_afni_stim <- function(stim, dir) {
 }
 
 #' @keywords internal
-<<<<<<< HEAD
 write_censor_file <- function(dir, censor) {
     outname <- paste0(dir, "/censor.1D")
     hfile <- file(outname, "w")
