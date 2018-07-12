@@ -1,4 +1,6 @@
 
+
+#' @import purrr map_int
 get_col_inds <- function(Xlist) {
   ncols <- purrr::map_int(Xlist, ncol)
   csum <- cumsum(ncols)
