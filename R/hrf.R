@@ -269,9 +269,14 @@ evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.1) {
   if (duration < precision) {
     x(grid)*amplitude*attr(x, "scale_factor")       
   } else if (nbasis(x) == 1) {
-    rowSums(map_dbl(seq(0, duration, by=precision), function(offset) {
-                x(grid-offset)*amplitude*attr(x, "scale_factor") 
+    rowSums(sapply(seq(0, duration, by=precision), function(offset) {
+      x(grid-offset)*amplitude*attr(x, "scale_factor") 
     }))
+    
+    # TODO FIX ME
+    #rowSums(map_dbl(seq(0, duration, by=precision), function(offset) {
+    #            x(grid-offset)*amplitude*attr(x, "scale_factor") 
+    #}))
   } else {
     Reduce("+", lapply(seq(0, duration, by=precision), function(offset) {
       x(grid-offset)*amplitude*attr(x, "scale_factor")   

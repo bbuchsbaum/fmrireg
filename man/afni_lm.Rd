@@ -5,10 +5,10 @@
 \title{afni_lm}
 \usage{
 afni_lm(fmri_mod, dataset, working_dir = ".", polort = -1, jobs = 1,
-  options = list())
+  censor = NULL, options = list())
 }
 \arguments{
-\item{options}{}
+\item{censor}{}
 }
 \description{
 afni_lm
