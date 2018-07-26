@@ -64,8 +64,7 @@ evaluate.regressor <- function(x, grid, precision=.1) {
   dspan <- x$span/median(diff(grid)) 
   
   if (is.na(onsets(x)) || length(onsets(x)) == 0) {
-    outmat <- matrix(0, length(grid), nb)
-    return(outmat)
+    stop("invalid regressor 'x', check onsets.")
   }
     
   
@@ -76,10 +75,10 @@ evaluate.regressor <- function(x, grid, precision=.1) {
     #apply(RANN::nn2(matrix(grid), matrix(x$onsets), k=1)$nn.idx, 1, min)
   }
   
-  valid <- x$onsets >= grid[1] & x$onsets < grid[length(grid)]
+  valid <- x$onsets >= (grid[1]-16) & x$onsets < grid[length(grid)]
   
   if (all(!valid)) {
-    warning("none of the regressor onsets intersect with sampling 'grid', evalauting to zero at all times.")
+    warning("none of the regressor onsets intersect with sampling 'grid', evaluating to zero at all times.")
     return(outmat)
   }
   

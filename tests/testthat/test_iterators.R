@@ -10,9 +10,21 @@ gen_dataset <- function(nruns, ntp, nvox=1000) {
   dset <- fmri_mem_dataset(scans, mask, TR=2)
 }
 
-test_that("can construct a runwise iterator", {
+test_that("can construct and iterate over a runwise iterator", {
   dset <- gen_dataset(5, 100, nvox=1000)
   rchunks <- data_chunks(dset, runwise=TRUE)
+  res <- foreach (chunk = rchunks) %do% {
+    list(ncol=ncol(chunk$data), nrow=nrow(chunk$data))
+  }
+  
+  expect_equal(length(res), 5)
+  expect_true(all(sapply(res, "[[", "ncol") == 1000))
+  expect_true(all(sapply(res, "[[", "nrow") == 100))
+})
+
+test_that("can construct and iterate over a runwise-chunked iterator", {
+  dset <- gen_dataset(5, 100, nvox=1000)
+  rchunks <- data_chunks(dset, nchunks=5, runwise=TRUE)
   res <- foreach (chunk = rchunks) %do% {
     list(ncol=ncol(chunk$data), nrow=nrow(chunk$data))
   }

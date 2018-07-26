@@ -3,6 +3,12 @@ get_methods <- function(obj) {
   unique(purrr::map_chr(class(obj), ~ methods(class= . )))
 }
 
+
+as_vectors <- function(x) { function(x, ...) UseMethod("as_vectors") }
+
+setGeneric("as_vectors") 
+
+
 #' longnames
 #' 
 #' @param x the object

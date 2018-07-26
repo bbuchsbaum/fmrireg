@@ -506,18 +506,18 @@ elements.event_term <- function(x, values=TRUE) {
 #' @export
 convolve_design <- function(hrf, dmat, globons, durations) {
   cond.names <- names(dmat)
-  keep <- if (any(is.na(dmat)) || any(is.na(globons))) {
-    ret <- apply(dmat, 1, function(vals) all(!is.na(vals)))
-    ret[is.na(globons)] <- FALSE
-    ret
-  } else {
-    rep(TRUE, nrow(dmat))
-  }
   
-
-  lapply(1:NCOL(dmat), function(i) {
-    regressor(globons[keep], hrf, amplitude=unlist(dmat[keep,i]), duration=durations[keep])
-  })
+  if (any(is.na(dmat)) || any(is.na(globons))) {
+    keep <- apply(dmat, 1, function(vals) all(!is.na(vals)))
+    keep[is.na(globons)] <- FALSE
+    dmat <- dmat[keep,]
+    durations <- durations[keep]
+    globons <- globons[keep]
+  } 
+  
+  parallel::mclapply(1:ncol(dmat), function(i) {
+    regressor(globons, hrf, amplitude=unlist(dmat[,i]), duration=durations)
+  }, mc.cores=parallel::detectCores())
   
 }
 

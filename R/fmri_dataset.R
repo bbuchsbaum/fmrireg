@@ -190,7 +190,7 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
   get_run_chunk <- function(chunk_num) {
     bvec <- x$scans[[chunk_num]]
     voxel_ind <- which(x$mask>0)
-    row_ind=which(x$sampling_frame$blockids == chunk_num)
+    row_ind <- which(x$sampling_frame$blockids == chunk_num)
     ret <- data_chunk(neuroim2::series(bvec,voxel_ind), 
                       voxel_ind=voxel_ind, 
                       row_ind=row_ind, 
