@@ -167,7 +167,11 @@ EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,leng
 #' @param blockids block index variable
 #' @param durations the durations in seconds of the onsets
 #' @export
-event_factor <- function(fac, name, onsets, blockids=1, durations=NULL) {
+#' 
+#' @examples 
+#' 
+#' efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), "abc", onsets=seq(1,100,length.out=6))
+event_factor <- function(fac, name, onsets, blockids=rep(1,length(fac)), durations=rep(0, length(fac))) {
   if (!is.factor(fac)) {
     warning("argument 'fac' is not a factor, converting to factor")
     fac <- as.factor(factor())
@@ -175,6 +179,7 @@ event_factor <- function(fac, name, onsets, blockids=1, durations=NULL) {
   
   ret <- .checkEVArgs(name, fac, onsets, blockids, durations)
   ret$continuous = FALSE
+  #ret$split_onsets <- split(efac$onsets, efac$value)
   class(ret) <- c("event_factor", "event_seq")
   ret
 }        
