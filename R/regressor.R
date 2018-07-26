@@ -1,4 +1,34 @@
 
+
+#' single_trial_regressor 
+#' 
+#' construct a regressor object that has a single onset
+#' 
+#' @param onsets the event onset in seconds, must be of length 1.
+#' @param hrf a hemodynamic response function, e.g. \code{HRF_SPMG1}
+#' @param duration duration of the event (default is 0)
+#' @param amplitude scaling vector (default is 1)
+#' @param span the temporal window of the impulse response function (default is 24)
+#' @return an S3 list of type \code{single_trial_regressor}
+#' @export
+#' @examples 
+#' 
+#' reg <- single_trial_regressor(c(10), HRF_SPMG1)
+#' pred <- evaluate(reg, seq(0,100,by=2))
+#' nbasis(reg) == 1
+single_trial_regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=24) {
+  assert_that(length(onsets) ==1, msg="length of 'onsets' must be 1 for single trial regressor")
+  assert_that(length(duration) ==1, msg="length of 'duration' must be 1 for single trial regressor")
+  assert_that(length(amplitude) ==1, msg="length of 'amplitude' must be 1 for single trial regressor")
+  
+  assertthat::assert_that(is.function(hrf))
+  
+  ret <- list(onsets=onsets,hrf=hrf, eval=hrf, duration=duration,amplitude=amplitude,span=span)  
+  class(ret) <- c("single_trial_regressor", "regressor", "list")
+  ret
+}
+
+
 #' regressor 
 #' 
 #' construct a regressor object that can be used to generate regressor variables
@@ -46,6 +76,30 @@ dots <- function(...) {
   eval(substitute(alist(...)))
 }
 
+
+
+#' @export
+evaluate.single_trial_regressor <- function(x, grid, precision=.25) {
+  nb <- nbasis(x)
+  dspan <- x$span/median(diff(grid)) 
+  
+  if (is.na(onsets(x)) || length(onsets(x)) == 0) {
+    stop("invalid regressor 'x', check onsets.")
+  }
+  
+  delta <- grid - x$onsets 
+  grid.idx <- which(delta >= 0 & delta <= x$span)
+  relons <- grid[grid.idx] - x$onsets    
+  resp <- evaluate(x$hrf, relons, amplitude=x$amplitude, duration=x$amplitude, precision=precision)   
+  
+  outmat <- matrix(0, length(grid), nb)
+  outmat[grid.idx,1:nb] <- resp
+  if (nb == 1) {
+    outmat[,1]
+  } else {
+    outmat
+  }
+}
 
 #' evaluate
 #' 

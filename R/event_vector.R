@@ -516,7 +516,13 @@ convolve_design <- function(hrf, dmat, globons, durations) {
   } 
   
   parallel::mclapply(1:ncol(dmat), function(i) {
-    regressor(globons, hrf, amplitude=unlist(dmat[,i]), duration=durations)
+    amp <- dmat[,i][[1]]
+    nonzero <- which(amp != 0)
+    if (length(nonzero) == 1) {
+      single_trial_regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero])
+    } else {
+      regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero])
+    }
   }, mc.cores=parallel::detectCores())
   
 }
