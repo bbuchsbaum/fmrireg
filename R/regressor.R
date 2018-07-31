@@ -56,14 +56,15 @@ regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=24) {
   }
   
   assertthat::assert_that(is.function(hrf))
+ 
   
-  
-  keep <- which(amplitude != 0)
+  keep <- which(amplitude != 0 & !is.na(amplitude))
   empty <- length(keep) == 0
   
   ret <- if (!empty) {
     list(onsets=onsets[keep],hrf=hrf, eval=hrf, duration=duration[keep],amplitude=amplitude[keep],span=span)  
   } else {
+    warning("regressor: onsets vector has no non-NA elements")
     list(onsets=NA,hrf=hrf, eval=hrf, duration=0,amplitude=0,span=span)  
   }
   
@@ -82,10 +83,6 @@ dots <- function(...) {
 evaluate.single_trial_regressor <- function(x, grid, precision=.25) {
   nb <- nbasis(x)
   dspan <- x$span/median(diff(grid)) 
-  
-  if (is.na(onsets(x)) || length(onsets(x)) == 0) {
-    stop("invalid regressor 'x', check onsets.")
-  }
   
   delta <- grid - x$onsets 
   grid.idx <- which(delta >= 0 & delta <= x$span)
@@ -113,15 +110,11 @@ evaluate.single_trial_regressor <- function(x, grid, precision=.25) {
 #' reg <- regressor(onsets=c(10,20), hrf=HRF_SPMG1)
 #' evaluate(reg, samples(frame))
 #' @export
-evaluate.regressor <- function(x, grid, precision=.1) {
+evaluate.regressor <- function(x, grid, precision=.2) {
+
   nb <- nbasis(x)
   dspan <- x$span/median(diff(grid)) 
-  
-  if (is.na(onsets(x)) || length(onsets(x)) == 0) {
-    stop("invalid regressor 'x', check onsets.")
-  }
-    
-  
+
   nidx <- if (length(grid) > 1) {
     apply(rflann::Neighbour(matrix(x$onsets), matrix(grid), k=2,build = "kdtree",cores=0, checks=1)$indices, 1, min)
   } else {
@@ -130,8 +123,9 @@ evaluate.regressor <- function(x, grid, precision=.1) {
   }
   
   valid <- x$onsets >= (grid[1]-16) & x$onsets < grid[length(grid)]
+  print(length(valid))
   
-  if (all(!valid)) {
+  if (length(valid) == 0 || all(is.na(valid)) || !all(valid)) {
     warning("none of the regressor onsets intersect with sampling 'grid', evaluating to zero at all times.")
     return(outmat)
   }

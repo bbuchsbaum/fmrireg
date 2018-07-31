@@ -533,6 +533,7 @@ trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL,
 
 #' @export
 construct.trialwisespec <- function(x, model_spec) {
+  
   ## compied almost verbatim from construct.hrfspec
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
@@ -541,6 +542,7 @@ construct.trialwisespec <- function(x, model_spec) {
     base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
   })
   
+ 
   ## syntheticlly adds '+trial_index+' variable
   trial_index <- factor(seq(1, length(onsets)))
   varlist <- c(varlist, list(trial_index))
