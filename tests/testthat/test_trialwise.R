@@ -71,6 +71,7 @@ gen_sim_set <- function(nruns=3, isi_range=c(0,4), noise_sd=.8, TR=2) {
 
 test_that("can generate a trialwise regression model with a summed term term", {
   sim <- gen_sim_set(3, isi_range=c(0,4), noise_sd=.8)
- 
+  desmat <- design_matrix(sim$ev)
+  
 })
 

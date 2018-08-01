@@ -501,9 +501,7 @@ construct.hrfspec <- function(x, model_spec) {
 #' @examples 
 #' 
 #' 
-#' ## trialwise can be used with a factor with a single level because it splits each element in to separate regressor
-#' fac <- factor(rep(1, 10))
-#' twise <- trialwise(fac)
+#' 
 #' @export
 trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
                       prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list(), id=NULL) {
