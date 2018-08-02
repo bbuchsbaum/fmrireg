@@ -22,7 +22,7 @@ gen_design <- function(nstim=50, isi_range=c(0,4), noise_sd=.8, rho=.12, TR=2, r
 gen_event_model <- function(desmat, nscans, TR=2) {
   sframe <- sampling_frame(nscans, TR)
   desmat$constant <- factor(rep(1, nrow(desmat)))
-  emod <- event_model(onsets ~ hrf(constant) + trialwise(fac), 
+  emod <- event_model(onsets ~ hrf(constant) + trialwise(trial), 
                       block= ~ rnum, 
                       sampling_frame=sframe,data=desmat)
   

@@ -1,5 +1,15 @@
 
 
+#' null_regressor 
+null_regressor <- function(hrf=HRF_SPMG1, span=24) {
+  ret <- list(onsets=NA,hrf=hrf, eval=hrf, duration=0,amplitude=0,span=span)
+  class(ret) <- c("null_regressor", "regressor", "list")
+  ret
+}
+
+
+
+
 #' single_trial_regressor 
 #' 
 #' construct a regressor object that has a single onset
@@ -91,12 +101,31 @@ evaluate.single_trial_regressor <- function(x, grid, precision=.25) {
   
   outmat <- matrix(0, length(grid), nb)
   outmat[grid.idx,1:nb] <- resp
+  
   if (nb == 1) {
     outmat[,1]
   } else {
     outmat
   }
 }
+
+
+#' @export
+evaluate.null_regressor <- function(x, grid, precision=.25) {
+  nb <- nbasis(x)
+  dspan <- x$span/median(diff(grid)) 
+  
+  
+  outmat <- matrix(0, length(grid), nb)
+  
+  if (nb == 1) {
+    outmat[,1]
+  } else {
+    outmat
+  }
+}
+
+
 
 #' evaluate
 #' 
