@@ -523,7 +523,10 @@ convolve_design <- function(hrf, dmat, globons, durations) {
   parallel::mclapply(1:ncol(dmat), function(i) {
     amp <- dmat[,i][[1]]
     nonzero <- which(amp != 0)
-    if (length(nonzero) == 1) {
+    
+    if (length(nonzero) == 0) {
+      null_regressor(hrf)
+    } else if (length(nonzero) == 1) {
       single_trial_regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero])
     } else {
       regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero])
@@ -537,6 +540,7 @@ convolve_design <- function(hrf, dmat, globons, durations) {
 #' @importFrom dplyr group_by select do ungroup
 #' @export
 convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE) {
+  
   globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
   durations <- x$durations
   blockids <- x$blockids
@@ -546,6 +550,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE) {
   cnames <- conditions(x)
   
   dmat <- design_matrix(x, drop.empty)
+  
   ncond <- ncol(dmat)
 
   cmat <- dmat %>% dplyr::mutate(.blockids=blockids, .globons=globons, .durations=durations) %>% 
@@ -649,6 +654,7 @@ design_matrix.event_term <- function(x, drop.empty=TRUE) {
   nas <- try(apply(els,1, function(vals) any(is.na(vals))))
   counts <- attr(cells(x, drop=FALSE), "count")
   
+  print(ncol(els))
   mat <- if (ncol(els) == 1 && is.factor(els[,1]) && length(levels(els[,1])) == 1) {
     ## a 1 level term
     cbind(rep(1, NROW(els))) 

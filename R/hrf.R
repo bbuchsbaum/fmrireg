@@ -459,9 +459,14 @@ construct.hrfspec <- function(x, model_spec) {
 
 .hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1, lag=0) {
   vars <- as.list(substitute(list(...)))[-1] 
-  parsed <- parse_term(vars, "hrf")
-  term <- parsed$term
-  label <- parsed$label
+  
+  if (length(vars) > 0) {
+    parsed <- parse_term(vars, "hrf")
+    term <- parsed$term
+    label <- parsed$label
+  } else {
+    stop("hrf: must have at least one variable")
+  }
   
   basis <- if (is.character(basis)) {
     getHRF(basis, nbasis=nbasis, lag=lag)
@@ -481,9 +486,9 @@ construct.hrfspec <- function(x, model_spec) {
   
   
   varnames <- if (!is.null(prefix)) {
-    paste0(prefix, "_", term)
+    paste0(prefix, "_", parsed$term)
   } else {
-    term
+    parsed$term
   }
   
   termname <- paste0(varnames, collapse="::")
@@ -495,20 +500,20 @@ construct.hrfspec <- function(x, model_spec) {
 
 #' trialwise
 #' 
-#' This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise(fac1) ...
+#' This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise(trial) ...
 #' 
 #' @inheritParams hrf
 #' @examples 
 #' 
 #' 
-#' ## trialwise can be used with a factor with a single level because it splits each element in to separate regressor
-#' fac <- factor(rep(1, 10))
-#' twise <- trialwise(fac)
+#' 
 #' @export
 trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
                       prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list(), id=NULL) {
   
   parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis)
+  
+  assert_that(length(parsed$varnames) == 1, msg="`trialwise() can only contain one variable name")
   
   if (is.null(id)) {
     id <- parsed$termname
@@ -533,22 +538,19 @@ trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL,
 
 #' @export
 construct.trialwisespec <- function(x, model_spec) {
+  #browser()
+  
   ## compied almost verbatim from construct.hrfspec
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
   
-  varlist <- lapply(seq_along(x$vars), function(i) {
-    base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
-  })
-  
   ## syntheticlly adds '+trial_index+' variable
   trial_index <- factor(seq(1, length(onsets)))
-  varlist <- c(varlist, list(trial_index))
   
-  names(varlist) <- c(x$varnames, "trial_index")
+  varlist <- list(trial_index)
+  names(varlist) <- x$varname
   
   subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
-  
   
   et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
   #sframe <- sampling_frame(model_spec$blocklens, model_spec$TR, model_spec$TR/2, x$precision)
