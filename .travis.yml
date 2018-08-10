@@ -4,7 +4,8 @@ language: R
 sudo: false
 cache: packages
 Imports: rflann
-Remotes: YeeJeremy/rflann
+Remotes: YeeJeremy/rflann,
+  bbuchsbaum/neuroim2
 r_github_packages:
   - r-lib/covr
 after_success:

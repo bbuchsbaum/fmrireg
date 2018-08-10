@@ -19,7 +19,7 @@ Imports:
     assertthat,
     stringr,
     tibble,
-    rflann
+    neuroim2
 RoxygenNote: 6.0.1.9000
 Suggests: testthat,
     knitr,
@@ -28,6 +28,7 @@ Suggests: testthat,
     covr
 Remotes: 
   YeeJeremy/rflann
+  bbuchsbaum/neuroim2
 VignetteBuilder: knitr
 URL: https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues
