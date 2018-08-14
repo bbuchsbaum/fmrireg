@@ -153,10 +153,12 @@ evaluate.regressor <- function(x, grid, precision=.2) {
   
   valid <- x$onsets >= (grid[1]-16) & x$onsets < grid[length(grid)]
  
-  outmat <- matrix(0, length(grid), length(valid.ons) * nb)
+ 
   valid.ons <- x$onsets[valid]
   valid.durs <- x$duration[valid]
   valid.amp <- x$amplitude[valid]
+  
+  outmat <- matrix(0, length(grid), length(valid.ons) * nb)
   
   if (length(valid) == 0 || all(is.na(valid)) || !all(valid)) {
     warning("none of the regressor onsets intersect with sampling 'grid', evaluating to zero at all times.")
