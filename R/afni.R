@@ -255,8 +255,8 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   opt_stim_ortvecs <- purgeNulls(lapply(seq_along(afni_baseline_mats), function(i) afni_command_switch(afni_baseline_mats[[i]], i, "ortvec")))
 
   
-  cmdlines <- list(input=paste0(dataset$base_path, "/", dataset$scans),
-                   mask=paste0(dataset$base_path, "/", dataset$mask_file),
+  cmdlines <- list(input=paste0(dataset$scans),
+                   mask=paste0(dataset$mask_file),
                    polort=opts[["polort"]],
                    num_stimts=length(afni_stims),
                    num_glt=length(gltfiles),
