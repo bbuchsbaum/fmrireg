@@ -132,7 +132,8 @@ write_afni_stim <- function(stim, dir) {
     close(hfile)
   }
   
-  .write_values(paste0(dir, "/", stim$file_name, sep=""), stim$values)
+  ## TODO stim$values is a data.frame sometimes (trialwise?), hence 'unlist' hack. Ensure uniformity.
+  .write_values(paste0(dir, "/", stim$file_name, sep=""), unlist(stim$values))
 }
 
 #' @keywords internal
@@ -238,7 +239,6 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   gltstr <- unlist(lapply(glts, function(x) x$glt_str))
   
   assert_that(sum(duplicated(gltnames))  == 0, msg="Cannot have two GLTs with the same name")
-  assert_that(sum(duplicated(gltfiles))  == 0, msg="Cannot have two GLTs with the same file name")
   
   func_terms <- terms(model$event_model)
   
