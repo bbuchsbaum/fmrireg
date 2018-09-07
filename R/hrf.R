@@ -449,7 +449,7 @@ construct.hrfspec <- function(x, model_spec) {
     sampling_frame=model_spec$sampling_frame,
     hrfspec=x,
     contrasts=x$contrasts,
-    id=x$id
+    id=if(!is.null(x$id)) x$id else et$varname
   )
   
   class(ret) <- c("convolved_term", "fmri_term", "list") 
