@@ -92,7 +92,8 @@ blocklens.event_model <- function(x) {
 #' @keywords internal
 construct_model <- function(x) {
  
-  term_names <- sapply(x$event_spec$rhs, "[[", "id")
+  #term_names <- sapply(x$event_spec$rhs, "[[", "id")
+  term_names <- sapply(x$event_spec$rhs, "[[", "name")
   term_names <- .sanitizeName(term_names)
   
  
@@ -394,6 +395,12 @@ shortnames.convolved_term <- function(x) {
   
 }
 
+#' @export
+#' @rdname shortnames
+shortnames.matrix_term <- function(x) {
+  colnames(x$design_matrix)
+}
+
 
 #' @export
 #' @rdname longnames
@@ -427,7 +434,7 @@ print.event_model <- function(object) {
 #' @export
 plot.event_model <- function(x, term_name=NULL, longnames=TRUE) {
   all_terms <- terms(x)
-  term_names <- names(all_terms)
+  term_names <- sapply(all_terms, "[[", "varname")
   
   sframe <- x$sampling_frame
   
@@ -452,11 +459,12 @@ plot.event_model <- function(x, term_name=NULL, longnames=TRUE) {
     dfx <-  dflist[[term_name]]
   }
   
-  p <- ggplot2::ggplot(dfx, aes_string(x=".time", y="value", colour="condition")) + geom_line() + facet_wrap(~ .block, ncol=1) +
-    xlab("Time") + theme_bw(14) 
+  p <- ggplot2::ggplot(dfx, ggplot2::aes_string(x=".time", y="value", colour="condition")) + 
+    ggplot2::geom_line() + ggplot2::facet_wrap(~ .block, ncol=1) +
+    ggplot2::xlab("Time") + ggplot2::theme_bw(14) 
   
   if (length(unique(dfx$condition)) > 25) {
-    p <- p + guides(colour=FALSE)
+    p <- p + ggplot2::guides(colour=FALSE)
   }
     
   p

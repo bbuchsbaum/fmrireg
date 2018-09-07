@@ -19,7 +19,8 @@ Imports:
     assertthat,
     stringr,
     tibble,
-    neuroim2
+    neuroim2,
+    purrr
 RoxygenNote: 6.0.1.9000
 Suggests: testthat,
     knitr,

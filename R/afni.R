@@ -1,5 +1,35 @@
 
 
+gen_afni_model.fmri_config <- function(x, ...) {
+  
+  dset <- fmri_dataset(scans=x$scans, 
+                       mask=x$mask, 
+                       TR=x$TR, 
+                       run_length=x$run_length, 
+                       event_table=x$design, 
+                       base_path=x$base_path,
+                       censor=if (is.null(x$censor_file)) NULL else scan(paste0(x$base_path, "/", x$censor_file)))
+  
+  
+  nuisance_list <- if (!is.null(x$baseline_model$nuisance_files)) {
+    lapply(x$baseline_model$nuisance_files, read.table, header=TRUE)
+  }
+  
+  emodel <- event_model(x$event_model, data=x$design, block=as.formula(paste("~", x$block_column)),
+                        sampling_frame=dset$sampling_frame)
+  
+  bmodel <- baseline_model(basis=x$baseline_model$basis, 
+                           degree=x$baseline_model$degree, 
+                           sframe=dset$sampling_frame, 
+                           nuisance_list=nuisance_list)
+  
+  fmodel <- fmri_model(emodel, bmodel)
+  alm <- afni_lm(fmodel, dset, censor=dset$censor)
+  
+}
+
+  
+
 #' afni_lm
 #' 
 #' 
