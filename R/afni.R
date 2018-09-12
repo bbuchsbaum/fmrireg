@@ -1,6 +1,10 @@
 
 
-gen_afni_model.fmri_config <- function(x, ...) {
+gen_afni_lm.fmri_config <- function(x, ...) {
+  
+  nuisance_list <- if (!is.null(x$baseline_model$nuisance_files)) {
+    lapply(x$baseline_model$nuisance_files, read.table, header=TRUE)
+  }
   
   dset <- fmri_dataset(scans=x$scans, 
                        mask=x$mask, 
@@ -11,9 +15,7 @@ gen_afni_model.fmri_config <- function(x, ...) {
                        censor=if (is.null(x$censor_file)) NULL else scan(paste0(x$base_path, "/", x$censor_file)))
   
   
-  nuisance_list <- if (!is.null(x$baseline_model$nuisance_files)) {
-    lapply(x$baseline_model$nuisance_files, read.table, header=TRUE)
-  }
+  
   
   emodel <- event_model(x$event_model, data=x$design, block=as.formula(paste("~", x$block_column)),
                         sampling_frame=dset$sampling_frame)
