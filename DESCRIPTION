@@ -28,7 +28,7 @@ Suggests: testthat,
     roxygen2,
     covr
 Remotes: 
-  YeeJeremy/rflann
+  YeeJeremy/rflann,
   bbuchsbaum/neuroim2
 VignetteBuilder: knitr
 URL: https://github.com/bbuchsbaum/fmrireg
