@@ -338,8 +338,8 @@ cells.event_term <- function(x, drop.empty=TRUE) {
   evtab <- event_table(x)
   
   evset <- if (nbasis(x) > 1) {
-    evlist <- c(list(factor(paste("basis", 1:nbasis(x), sep = ""))), cells(x@eventTerm))
-    names(evlist) <- c("basis", parent_terms(x@eventTerm))
+    evlist <- c(list(factor(paste("basis", 1:nbasis(x), sep = ""))), cells(x$evterm))
+    names(evlist) <- c("basis", parent_terms(x$evterm))
     evlist <- lapply(evlist, levels)
     ret <- expand.grid(evlist, stringsAsFactors = TRUE)
     ret[c(2:length(ret), 1)]
@@ -543,7 +543,6 @@ convolve_design <- function(hrf, dmat, globons, durations) {
 #' @importFrom dplyr group_by select do ungroup
 #' @export
 convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE) {
-  
   globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
   durations <- x$durations
   blockids <- x$blockids

@@ -96,7 +96,6 @@ construct_model <- function(x) {
   term_names <- sapply(x$event_spec$rhs, "[[", "name")
   term_names <- .sanitizeName(term_names)
   
- 
   dups <- sum(duplicated(term_names)) > 0
   
   if (dups) {

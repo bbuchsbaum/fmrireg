@@ -422,6 +422,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
 
 #' @export
 construct.hrfspec <- function(x, model_spec) {
+  
   ## TODO what is we are missing a block id?
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
