@@ -38,13 +38,17 @@ read_fmri_config <- function(file_name, base_path=NULL) {
   assert_that(!is.null(env$event_model))
   assert_that(!is.null(env$event_table))
   assert_that(!is.null(env$block_column))
+  assert_that(!is.null(env$baseline_model))
   
+  if (!is.null(env$censor_file)) {
+    env$censor_file = NULL
+  }
   
+  if (!is.null(env$contrasts)) {
+    env$contrasts = NULL
+  }
   
-  print(paste("base path:", env$base_path))
- 
   dname <- file.path(env$base_path, env$event_table)
-  print(dname)
   assert_that(file.exists(dname))
   env$design <- tibble::as_data_frame(read.table(dname, header=TRUE))
 
@@ -83,11 +87,16 @@ matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
 #' @export
 fmri_mem_dataset <- function(scans, mask, TR, 
                              event_table=data.frame(), 
-                             base_path=".") {
+                             base_path=".",
+                             censor=NULL) {
   
   assert_that(all(sapply(scans, function(x) inherits(x, "NeuroVec"))))
   
   run_length <- sapply(scans, function(x) dim(x)[4])
+  
+  if (is.null(censor)) {
+    censor <- rep(0, sum(run_length))
+  }
 
   frame <- sampling_frame(run_length, TR)
   
@@ -99,7 +108,8 @@ fmri_mem_dataset <- function(scans, mask, TR,
     nruns=length(scans),
     event_table=event_table,
     base_path=base_path,
-    sampling_frame=frame
+    sampling_frame=frame,
+    censor=censor
   )
   
   class(ret) <- c("fmri_mem_dataset", "volumetric_dataset", "fmri_dataset", "list")
@@ -116,7 +126,8 @@ fmri_mem_dataset <- function(scans, mask, TR,
 #' @param TR the repetition time in seconds of the scan-to-scan interval.
 #' @param run_length the number of scans in each run.
 #' @param event_table a \code{data.frame} containing the event onsets and experimental variables.
-#' @param base_path the file path to be prepended to relative file names
+#' @param base_path the file path to be prepended to relative file names.
+#' @param censor a binary vector indicating which scans to remove.
 #' @export
 #' @importFrom tibble as_tibble
 #' @examples 
@@ -127,10 +138,15 @@ fmri_mem_dataset <- function(scans, mask, TR,
 fmri_dataset <- function(scans, mask, TR, 
                          run_length, 
                          event_table=data.frame(), 
-                         base_path=".") {
+                         base_path=".",
+                         censor=NULL) {
   
   if (length(run_length) == 1) {
     run_length <- rep(run_length, length(scans))
+  }
+  
+  if (is.null(censor)) {
+    censor <- rep(0, sum(run_length))
   }
   
   frame <- sampling_frame(run_length, TR)
@@ -146,7 +162,8 @@ fmri_dataset <- function(scans, mask, TR,
     nruns=length(scans),
     event_table=as_tibble(event_table),
     base_path=base_path,
-    sampling_frame=frame
+    sampling_frame=frame,
+    censor=censor
   )
   
   class(ret) <- c("fmri_file_dataset", "volumetric_dataset", "fmri_dataset", "list")
@@ -342,7 +359,6 @@ one_chunk <- function(x) {
 print.fmri_dataset <- function(object) {
   cat("fmri_dataset", "\n")
   cat("  number of runs: ", object$nruns, "\n")
-  cat("  TR: ", object$TR, "\n")
   print(object$sampling_frame)
   cat("  event_table: ", "\n")
   print(object$event_table)

@@ -1,14 +1,19 @@
 fmrireg
 ================
 
-In Development
-==============
+# In Development
 
-[![codecov](https://codecov.io/gh/fmrireg/NA/branch/master/graph/badge.svg)](https://codecov.io/github/bbuchsbaum/fmrireg?branch=master) [![Build Status](https://travis-ci.org/fmrireg/NA.svg?branch=master)](https://travis-ci.org/bbuchsbaum/fmrireg)
+[![codecov](https://codecov.io/github/bbuchsbaum/fmrireg/branch/master/graphs/badge.svg)](https://codecov.io/github/bbuchsbaum/fmrireg)
 
-The `fmrireg` package is currently in development. The goal of the project is to provide functions for carrying out regression anaysis with *f*MRI data. It's Not Ready for Primetime, but still have a look at vignettes:
+[![Build
+Status](https://img.shields.io/travis/bbuchsbaum/fmrireg/master.svg)](https://travis-ci.org/bbuchsbaum/fmrireg)
 
-Vignettes
----------
+The `fmrireg` package is currently in development. The goal of the
+project is to provide functions for carrying out regression anaysis with
+*f*MRI data. It’s Not Ready for Primetime, but still have a look at
+vignettes:
 
-See examples of use of `fmrireg` in the [vignettes](https://bbuchsbaum.github.io/fmrireg/articles/index.html).
+## Vignettes
+
+See examples of use of `fmrireg` in the
+[vignettes](https://bbuchsbaum.github.io/fmrireg/articles/index.html).

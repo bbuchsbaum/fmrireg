@@ -152,19 +152,19 @@ evaluate.regressor <- function(x, grid, precision=.2) {
   }
   
   valid <- x$onsets >= (grid[1]-16) & x$onsets < grid[length(grid)]
-  print(length(valid))
-  
-  if (length(valid) == 0 || all(is.na(valid)) || !all(valid)) {
-    warning("none of the regressor onsets intersect with sampling 'grid', evaluating to zero at all times.")
-    return(outmat)
-  }
-  
-  
+ 
+ 
   valid.ons <- x$onsets[valid]
   valid.durs <- x$duration[valid]
   valid.amp <- x$amplitude[valid]
   
   outmat <- matrix(0, length(grid), length(valid.ons) * nb)
+  
+  if (length(valid) == 0 || all(is.na(valid)) || all(!valid)) {
+    warning("none of the regressor onsets intersect with sampling 'grid', evaluating to zero at all times.")
+    return(matrix(0, length(grid), nb))
+  }
+  
   
   nidx <- nidx[valid]
 
@@ -178,6 +178,7 @@ evaluate.regressor <- function(x, grid, precision=.2) {
       end <- i*nb 
       outmat[grid.idx,start:end] <- resp
     } else {
+     
       outmat[grid.idx, i] <- resp
     }
   }
@@ -227,7 +228,7 @@ amplitudes.regressor <- function(x) x$amplitude
 plot.regressor <- function(object, samples, add=FALSE, ...) {
   if (missing(samples)) {
     ons <- object$onsets
-    samples <- seq(ons[1], ons[length(ons)], by=1)
+    samples <- seq(ons[1]-5, ons[length(ons)] + 12, by=1)
   }
   
   y <- evaluate(object, samples)

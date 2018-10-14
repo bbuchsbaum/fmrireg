@@ -1,5 +1,37 @@
 
 
+gen_afni_lm.fmri_config <- function(x, ...) {
+  
+  nuisance_list <- if (!is.null(x$baseline_model$nuisance_files)) {
+    lapply(x$baseline_model$nuisance_files, read.table, header=TRUE)
+  }
+  
+  dset <- fmri_dataset(scans=x$scans, 
+                       mask=x$mask, 
+                       TR=x$TR, 
+                       run_length=x$run_length, 
+                       event_table=x$design, 
+                       base_path=x$base_path,
+                       censor=if (is.null(x$censor_file)) NULL else scan(paste0(x$base_path, "/", x$censor_file)))
+  
+  
+  
+  
+  emodel <- event_model(x$event_model, data=x$design, block=as.formula(paste("~", x$block_column)),
+                        sampling_frame=dset$sampling_frame)
+  
+  bmodel <- baseline_model(basis=x$baseline_model$basis, 
+                           degree=x$baseline_model$degree, 
+                           sframe=dset$sampling_frame, 
+                           nuisance_list=nuisance_list)
+  
+  fmodel <- fmri_model(emodel, bmodel)
+  alm <- afni_lm(fmodel, dset, censor=dset$censor)
+  
+}
+
+  
+
 #' afni_lm
 #' 
 #' 
@@ -132,7 +164,8 @@ write_afni_stim <- function(stim, dir) {
     close(hfile)
   }
   
-  .write_values(paste0(dir, "/", stim$file_name, sep=""), stim$values)
+  ## TODO stim$values is a data.frame sometimes (trialwise?), hence 'unlist' hack. Ensure uniformity.
+  .write_values(paste0(dir, "/", stim$file_name, sep=""), unlist(stim$values))
 }
 
 #' @keywords internal
@@ -238,7 +271,6 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   gltstr <- unlist(lapply(glts, function(x) x$glt_str))
   
   assert_that(sum(duplicated(gltnames))  == 0, msg="Cannot have two GLTs with the same name")
-  assert_that(sum(duplicated(gltfiles))  == 0, msg="Cannot have two GLTs with the same file name")
   
   func_terms <- terms(model$event_model)
   
@@ -255,8 +287,8 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   opt_stim_ortvecs <- purgeNulls(lapply(seq_along(afni_baseline_mats), function(i) afni_command_switch(afni_baseline_mats[[i]], i, "ortvec")))
 
   
-  cmdlines <- list(input=paste0(dataset$base_path, "/", dataset$scans),
-                   mask=paste0(dataset$base_path, "/", dataset$mask_file),
+  cmdlines <- list(input=paste0(dataset$scans),
+                   mask=paste0(dataset$mask_file),
                    polort=opts[["polort"]],
                    num_stimts=length(afni_stims),
                    num_glt=length(gltfiles),

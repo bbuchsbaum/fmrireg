@@ -338,8 +338,8 @@ cells.event_term <- function(x, drop.empty=TRUE) {
   evtab <- event_table(x)
   
   evset <- if (nbasis(x) > 1) {
-    evlist <- c(list(factor(paste("basis", 1:nbasis(x), sep = ""))), cells(x@eventTerm))
-    names(evlist) <- c("basis", parent_terms(x@eventTerm))
+    evlist <- c(list(factor(paste("basis", 1:nbasis(x), sep = ""))), cells(x$evterm))
+    names(evlist) <- c("basis", parent_terms(x$evterm))
     evlist <- lapply(evlist, levels)
     ret <- expand.grid(evlist, stringsAsFactors = TRUE)
     ret[c(2:length(ret), 1)]
@@ -511,7 +511,9 @@ elements.event_term <- function(x, values=TRUE) {
 #' @export
 convolve_design <- function(hrf, dmat, globons, durations) {
   cond.names <- names(dmat)
-  
+  #if (length(grep("pc1", cond.names)) > 0) {
+  #  browser()
+  #}
   if (any(is.na(dmat)) || any(is.na(globons))) {
     keep <- apply(dmat, 1, function(vals) all(!is.na(vals)))
     keep[is.na(globons)] <- FALSE
@@ -520,14 +522,15 @@ convolve_design <- function(hrf, dmat, globons, durations) {
     globons <- globons[keep]
   } 
   
-  parallel::mclapply(1:ncol(dmat), function(i) {
+  p <- parallel::mclapply(1:ncol(dmat), function(i) {
     amp <- dmat[,i][[1]]
     nonzero <- which(amp != 0)
-    
+    ## issue with single_trial_regressor
     if (length(nonzero) == 0) {
       null_regressor(hrf)
-    } else if (length(nonzero) == 1) {
-      single_trial_regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero])
+    ## scaling issue with single_trial_regressor
+    #} #else if (length(nonzero) == 1) {
+      #single_trial_regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero])
     } else {
       regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero])
     }
@@ -540,7 +543,6 @@ convolve_design <- function(hrf, dmat, globons, durations) {
 #' @importFrom dplyr group_by select do ungroup
 #' @export
 convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE) {
-  
   globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
   durations <- x$durations
   blockids <- x$blockids

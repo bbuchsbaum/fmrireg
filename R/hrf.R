@@ -423,6 +423,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
 #' @export
 construct.hrfspec <- function(x, model_spec) {
   
+  ## TODO what is we are missing a block id?
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
   
@@ -449,7 +450,7 @@ construct.hrfspec <- function(x, model_spec) {
     sampling_frame=model_spec$sampling_frame,
     hrfspec=x,
     contrasts=x$contrasts,
-    id=x$id
+    id=if(!is.null(x$id)) x$id else et$varname
   )
   
   class(ret) <- c("convolved_term", "fmri_term", "list") 
@@ -538,13 +539,11 @@ trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL,
 
 #' @export
 construct.trialwisespec <- function(x, model_spec) {
-  #browser()
-  
+ 
   ## compied almost verbatim from construct.hrfspec
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
   
-  ## syntheticlly adds '+trial_index+' variable
   trial_index <- factor(seq(1, length(onsets)))
   
   varlist <- list(trial_index)

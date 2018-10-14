@@ -327,4 +327,8 @@ p_value <- function(x, ...) UseMethod("p_value")
 longnames <- function(x, ...) UseMethod("longnames")
 
 
-
+#' gen_afni_lm
+#' @param x the config file
+#' @param ... extra args
+#' @export
+gen_afni_lm <- function(x, ...) UseMethod("gen_afni_lm")
