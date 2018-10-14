@@ -10,7 +10,7 @@ vignette: >
 ---
 
 
-## fMRI Event Models
+## fMRI event models
 
 An "event model" is a description of an fMRI experiment, which consists of a collection of experimental "events" (stimuli/conditions/ rsponses) which are embedded in an experimental design. By convolving each event type with a hemodynamic response function we from a set of regressors that are used to model and make inferences about the BOLD response.
 
