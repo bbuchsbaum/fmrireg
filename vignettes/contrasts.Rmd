@@ -39,7 +39,7 @@ In a two by two design, there are a number of experimental effects that we might
 
 1. `face_scene <- pair_contrast(~ category == "face", ~ category == "scene")`
 2. `attend_ignored <- pair_contrast(~ attention == "attend", ~ attention == "ignored")`
-3. `category_by_attention <- contrast(~ (face:attend + face:ignored) - (scene:attend + scene:ignored), name="category_by_attention"))`
+3. `category_by_attention <- contrast(~ (face:attend - face:ignored) - (scene:attend + scene:ignored), name="category_by_attention"))`
 
 In the following sections we will explain the syntax used in the examples above.
 

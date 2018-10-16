@@ -8,6 +8,13 @@ as_vectors <- function(x) { function(x, ...) UseMethod("as_vectors") }
 
 setGeneric("as_vectors") 
 
+#' get_formula
+#' 
+#' @param x the object
+longnames <- function(x, ...) UseMethod("get_formula")
+
+
+
 
 #' longnames
 #' 
