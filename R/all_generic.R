@@ -11,7 +11,7 @@ setGeneric("as_vectors")
 #' get_formula
 #' 
 #' @param x the object
-longnames <- function(x, ...) UseMethod("get_formula")
+get_formula <- function(x, ...) UseMethod("get_formula")
 
 
 

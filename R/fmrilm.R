@@ -88,10 +88,22 @@ fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset,
   
   assert_that(inherits(dataset, "fmri_dataset"))
   
-  fobj <- fmri_lm_model(dataset, formula, block_formula, baseline_model, contrasts)
-  
+ 
+  if (is.null(baseline_model)) {
+    baseline_model <- baseline_model(basis="bs", 
+                                    degree=ceiling(median(dataset$sampling_frame$blocklens)/100), 
+                                    sframe=dataset$sampling_frame)
+  }
+ 
+  ev_model <- event_model(formula, block_formula, data=dataset$event_table, 
+                         sampling_frame=dataset$sampling_frame, contrasts=contrasts)
+     
+  model <- fmri_model(ev_model, baseline_model)
+  conlist <- contrast_weights(ev_model)
+  fcons <- Fcontrasts(ev_model)
+
   result <- if (strategy == "runwise") {
-    runwise_lm(dataset, fobj$model, fobj$conlist, fobj$fcon)
+    runwise_lm(dataset, model, conlist,fcons)
   } else {
     stop("only currently implemented strategy is 'runwise'")
   }
@@ -156,7 +168,7 @@ runwise_lm <- function(dset, model, conlist, fcon) {
     ## get an iterator of data chunks
     chunks <- exec_strategy("runwise")(dset)
 
-    form <- get_forumula(model)
+    form <- get_formula(model)
    
     ## iterate over each data chunk
     cres <- foreach( ym = chunks, .verbose=TRUE) %do% {
@@ -164,27 +176,14 @@ runwise_lm <- function(dset, model, conlist, fcon) {
       ## get event model for the nth run
       tmats <- term_matrices(model, ym$chunk_num)
       
-      ## column indices of event regressors
-      eterm_indices <- 1:sum(map_int(eterm_matrices, ncol))
-      start <- length(eterm_indices) +1
-      
-      ## column indices of baseline regressors
-      bterm_indices <- start:(start+sum(map_int(bterm_matrices, ncol)))
-     
-      term_matrices <- c(eterm_matrices, bterm_matrices)
-      names(term_matrices) <- term_names
-      
-      
-      data_env <- list2env(term_matrices)
+      data_env <- list2env(tmats)
       data_env[[".y"]] <- ym$data
       
-      vnames <- unlist(lapply(term_matrices, colnames))
       
-
+      ret <- multiresponse_lm(form, data_env, conlist, attr(tmats,"varnames"), fcon)
       
-      ret <- multiresponse_lm(form, data_env, conlist, vnames, fcon)
       list(conres=ret$conres, Fres=ret$Fres, bstats=ret$bstats, 
-           event_indices=eterm_indices, baseline_indices=bterm_indices)
+           event_indices=attr(tmats, "eterm_indices"), baseline_indices=bterm_indices)
       
     }
     
