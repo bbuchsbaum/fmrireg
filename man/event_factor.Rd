@@ -4,7 +4,8 @@
 \alias{event_factor}
 \title{event_factor}
 \usage{
-event_factor(fac, name, onsets, blockids = 1, durations = NULL)
+event_factor(fac, name, onsets, blockids = rep(1, length(fac)),
+  durations = rep(0, length(fac)))
 }
 \arguments{
 \item{fac}{a factor}
@@ -19,4 +20,8 @@ event_factor(fac, name, onsets, blockids = 1, durations = NULL)
 }
 \description{
 Create an categorical event sequence from a \code{factor}
+}
+\examples{
+
+efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), "abc", onsets=seq(1,100,length.out=6))
 }

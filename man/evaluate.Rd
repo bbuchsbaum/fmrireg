@@ -11,7 +11,7 @@ evaluate(x, grid, ...)
 \method{evaluate}{HRF}(x, grid, amplitude = 1, duration = 0,
   precision = 0.1)
 
-\method{evaluate}{regressor}(x, grid, precision = 0.1)
+\method{evaluate}{regressor}(x, grid, precision = 0.2)
 }
 \arguments{
 \item{x}{the object to evaluate}

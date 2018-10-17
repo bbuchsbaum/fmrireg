@@ -32,12 +32,10 @@ If multiple contrasts are required, then these should be wrapped in a \code{list
 \item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
 }
 \description{
-This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise(fac1) ...
+This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise(trial) ...
 }
 \examples{
 
 
-## trialwise can be used with a factor with a single level because it splits each element in to separate regressor
-fac <- factor(rep(1, 10))
-twise <- trialwise(fac)
+
 }

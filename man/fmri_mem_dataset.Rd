@@ -5,7 +5,7 @@
 \title{fmri_mem_dataset}
 \usage{
 fmri_mem_dataset(scans, mask, TR, event_table = data.frame(),
-  base_path = ".")
+  base_path = ".", censor = NULL)
 }
 \arguments{
 \item{scans}{a vector of objects of class \code{\linkS4class{NeuroVec}}}
@@ -16,7 +16,9 @@ fmri_mem_dataset(scans, mask, TR, event_table = data.frame(),
 
 \item{event_table}{a \code{data.frame} containing the event onsets and experimental variables.}
 
-\item{base_path}{the file path to be prepended to relative file names}
+\item{base_path}{the file path to be prepended to relative file names.}
+
+\item{censor}{a binary vector indicating which scans to remove.}
 }
 \description{
 fmri_mem_dataset

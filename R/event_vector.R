@@ -670,7 +670,7 @@ design_matrix.event_term <- function(x, drop.empty=TRUE) {
   
   #remove rows with NAS
   if (any(nas)) {
-    rmat <- matrix(0, nrow(x$event_table), length(conditions(x, drop.empty)))
+    rmat <- matrix(0, nrow(x$event_table), length(conditions(x, drop.empty=FALSE)))
     rmat[!nas,] <- mat
     rmat[nas,] <- NA				
   } 

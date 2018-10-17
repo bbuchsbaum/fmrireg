@@ -5,7 +5,7 @@
 \title{An fMRI dataset consisting of a set of scans as files, design information, and other data.}
 \usage{
 fmri_dataset(scans, mask, TR, run_length, event_table = data.frame(),
-  base_path = ".")
+  base_path = ".", censor = NULL)
 }
 \arguments{
 \item{scans}{a vector of file names of the images comprising the dataset}
@@ -18,7 +18,9 @@ fmri_dataset(scans, mask, TR, run_length, event_table = data.frame(),
 
 \item{event_table}{a \code{data.frame} containing the event onsets and experimental variables.}
 
-\item{base_path}{the file path to be prepended to relative file names}
+\item{base_path}{the file path to be prepended to relative file names.}
+
+\item{censor}{a binary vector indicating which scans to remove.}
 }
 \description{
 An fMRI dataset consisting of a set of scans as files, design information, and other data.
