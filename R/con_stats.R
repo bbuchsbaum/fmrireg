@@ -64,7 +64,7 @@ beta_stats <- function(lmfit, varnames) {
   resvar <- rss/rdf
   sigma <- sqrt(resvar)
   
-  vc <- map_dbl(1:ncol(betamat), function(i) {
+  vc <- sapply(1:ncol(betamat), function(i) {
     vcv <- cov.unscaled * sigma[i]^2
     sqrt(diag(vcv))
   })
@@ -92,7 +92,8 @@ beta_stats <- function(lmfit, varnames) {
 
 fit_Fcontrasts <- function(lmfit, conmat, colind) {
   Qr <- stats:::qr.lm(lmfit)
-  cov.unscaled <- chol2inv(Qr$qr[colind,colind,drop=FALSE])
+  cov.unscaled <- try(chol2inv(Qr$qr[colind,colind,drop=FALSE]))
+  
   betamat <- lmfit$coefficients[colind,]
   
   df <- lmfit$df.residual
@@ -144,10 +145,15 @@ fit_contrasts <- function(lmfit, conmat, colind) {
     conmat <- matrix(conmat, 1, length(conmat))
   }
   
+  
   Qr <- stats:::qr.lm(lmfit)
   
   p1 <- 1:lmfit$rank
-  cov.unscaled <- chol2inv(Qr$qr[colind,colind,drop=FALSE])
+  cov.unscaled <- try(chol2inv(Qr$qr[colind,colind,drop=FALSE]))
+  if (inherits(cov.unscaled, "try-error")) {
+    browser()
+  }
+  
   betamat <- lmfit$coefficients[colind,]
   ct <- conmat %*% betamat
   
