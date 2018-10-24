@@ -509,7 +509,7 @@ elements.event_term <- function(x, values=TRUE) {
 
 
 #' @export
-convolve_design <- function(hrf, dmat, globons, durations) {
+convolve_design <- function(hrf, dmat, globons, durations, summate=TRUE) {
   cond.names <- names(dmat)
   #if (length(grep("pc1", cond.names)) > 0) {
   #  browser()
@@ -532,7 +532,7 @@ convolve_design <- function(hrf, dmat, globons, durations) {
     #} #else if (length(nonzero) == 1) {
       #single_trial_regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero])
     } else {
-      regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero])
+      regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero], summate=summate)
     }
   }, mc.cores=parallel::detectCores())
   
@@ -542,7 +542,7 @@ convolve_design <- function(hrf, dmat, globons, durations) {
 #' @importFrom magrittr %>%
 #' @importFrom dplyr group_by select do ungroup
 #' @export
-convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE) {
+convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate=TRUE) {
   globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
   durations <- x$durations
   blockids <- x$blockids
@@ -559,7 +559,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE) {
     dplyr::group_by(.blockids) %>%
     dplyr::do({
       d <- dplyr::select(., 1:ncond)
-      reg <- convolve_design(hrf, d, .$.globons, .$.durations)
+      reg <- convolve_design(hrf, d, .$.globons, .$.durations, summate=summate)
       sam <- samples(sampling_frame, blockids=as.integer(as.character(.$.blockids[1])), global=TRUE)
       ret <- do.call(cbind, lapply(reg, function(r) evaluate(r, sam)))
       tibble::as_tibble(ret)

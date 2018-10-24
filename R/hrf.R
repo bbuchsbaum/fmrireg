@@ -263,20 +263,47 @@ HRF_SPMG3 <- HRF(gen_hrf_set(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeri
 #' @param amplitude the scaling value for the event
 #' @param duration the duration of the event
 #' @param precision the temporal resolution used for computing summed responses when duration > 0 
+#' @param summate whether the HRF response increases its amplitude as a function of stimulus duration.
 #' @rdname evaluate
 #' @export
-evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.1) {
+#' @examples 
+#' 
+#' hrf1 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=1)
+#' 
+#' # the same, except now turn off temporal summation.
+#' hrf2 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=1,summate=FALSE)
+#' 
+evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate=TRUE) {
   if (duration < precision) {
     x(grid)*amplitude*attr(x, "scale_factor")       
   } else if (nbasis(x) == 1) {
-    rowSums(sapply(seq(0, duration, by=precision), function(offset) {
+    samples <- seq(0, duration, by=precision)
+    hmat <- sapply(samples, function(offset) {
       x(grid-offset)*amplitude*attr(x, "scale_factor") 
-    }))
+    })
     
-    # TODO FIX ME
-    #rowSums(map_dbl(seq(0, duration, by=precision), function(offset) {
-    #            x(grid-offset)*amplitude*attr(x, "scale_factor") 
-    #}))
+    if (summate) {
+      rowSums(hmat)
+    } else {
+      #rowMeans(hmat)
+      apply(hmat,1,function(vals) vals[which.max(abs(vals))])
+    }
+    
+    # sat = 1
+    # idx_pre <- which(samples < sat)
+    # presat <- rowSums(hmat[,idx_pre])
+    # 
+    # tot <- rowSums(hmat)
+    # ret <- (max(tot)/max(presat))
+    # idx_post <- which(samples > sat)
+    # postsat <- rowSums(hmat[,idx_post])
+    # cur <- numeric(length(presat))
+    # for (i in 1:length(presat)) {
+    #   x <- min(presat[i] + postsat[i], xr[2])
+    #   x <- max(x, xr[1])
+    #   cur[i] <- x
+    # }
+
   } else {
     Reduce("+", lapply(seq(0, duration, by=precision), function(offset) {
       x(grid-offset)*amplitude*attr(x, "scale_factor")   
@@ -576,11 +603,11 @@ construct.trialwisespec <- function(x, model_spec) {
 
 
 # hrf.logit <- function(t, a1=1, T1, T2, T3, D1, D2, D3) {
-#   a2 <- a1 * (((inv.logit(-T3)/D3) - (inv.logit(-T1)/D1)) / ((inv.logit(-T3)/D3) + (inv.logit(-T2/D2))))
-#   
-#   a3 <- abs(a2) - abs(a1)
-#   
-#   a1*inv.logit((t-T1)/D1) + a2*inv.logit((t-T2)/D2) + a3*inv.logit((t-T3)/D3)
+#    a2 <- a1 * (((inv.logit(-T3)/D3) - (inv.logit(-T1)/D1)) / ((inv.logit(-T3)/D3) + (inv.logit(-T2/D2))))
+#    
+#    a3 <- abs(a2) - abs(a1)
+#    
+#    a1*inv.logit((t-T1)/D1) + a2*inv.logit((t-T2)/D2) + a3*inv.logit((t-T3)/D3)
 # }
 # 
 # hrf.logit2 <- function(t, a1, a2, a3, T1, T2, T3, D1, D2, D3) {

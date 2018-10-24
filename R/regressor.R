@@ -49,6 +49,7 @@ single_trial_regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=
 #' @param duration duration of events (default is 0)
 #' @param amplitude scaling vector (default is 1)
 #' @param span the temporal window of the impulse response function (default is 24)
+#' @param summate whether to summate hrf response as a function of the duration of an event.
 #' @return an S3 list of type \code{regressor}
 #' @export
 #' @examples 
@@ -56,7 +57,7 @@ single_trial_regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=
 #' reg <- regressor(c(10,12,14,16,18, 40), HRF_SPMG1)
 #' pred <- evaluate(reg, seq(0,100,by=2))
 #' nbasis(reg) == 1
-regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=24) {
+regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=24, summate=TRUE) {
   if (length(duration) == 1) {
     duration = rep(duration, length(onsets))
   }
@@ -72,10 +73,11 @@ regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=24) {
   empty <- length(keep) == 0
   
   ret <- if (!empty) {
-    list(onsets=onsets[keep],hrf=hrf, eval=hrf, duration=duration[keep],amplitude=amplitude[keep],span=span)  
+    list(onsets=onsets[keep],hrf=hrf, eval=hrf, duration=duration[keep],
+         amplitude=amplitude[keep],span=span,summate=summate)  
   } else {
     warning("regressor: onsets vector has no non-NA elements")
-    list(onsets=NA,hrf=hrf, eval=hrf, duration=0,amplitude=0,span=span)  
+    list(onsets=NA,hrf=hrf, eval=hrf, duration=0,amplitude=0,span=span,summate=summate)  
   }
   
   class(ret) <- c("regressor", "list")
@@ -129,7 +131,7 @@ evaluate.null_regressor <- function(x, grid, precision=.25) {
 
 #' evaluate
 #' 
-#' evalute a regressor function over a vector of times
+#' evalute a regressor function over a sampling grid
 #' 
 #' @rdname evaluate
 #' @param grid the sampling grid. A vector of real values in seconds.
@@ -171,7 +173,10 @@ evaluate.regressor <- function(x, grid, precision=.2) {
   for (i in seq_along(valid.ons)) { 
     grid.idx <- seq(nidx[i], min(nidx[i] + dspan, length(grid)))             
     relOns <- grid[grid.idx] - valid.ons[i]    
-    resp <- evaluate(x$hrf, relOns, amplitude=valid.amp[i], duration=valid.durs[i], precision=precision)   
+    resp <- evaluate(x$hrf, relOns, amplitude=valid.amp[i], 
+                     duration=valid.durs[i], 
+                     precision=precision,
+                     summate=x$summate)   
   
     if (nb > 1) {
       start <- (i-1) * nb + 1

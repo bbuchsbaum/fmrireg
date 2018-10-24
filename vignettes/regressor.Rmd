@@ -33,7 +33,7 @@ Sometimes different fMRI events have different durations and we want to model th
 ```{r, message=FALSE,fig.width = 6, fig.height = 4}
 
 TR <- 2
-onsets <- seq(0, 10*12, length.out=10)
+onsets <- seq(0, 10*12, length.out=6)
 durs <- seq(1,length(onsets))
 ```
 
@@ -41,6 +41,13 @@ The `durs` vectors contains the durations, which increase over the course of the
 
 ```{r, message=FALSE,fig.width = 6, fig.height = 4}
 reg <- regressor(onsets, HRF_SPMG1, duration=durs)
+plot(reg)
+```
+
+We can disable additive summation of the hemodynamic response function by including `summate=FALSE` in the call to `regressor`. This will cause the *width* of the HRF to increase with duration but not the *peak*.
+
+```{r, message=FALSE,fig.width = 6, fig.height = 4}
+reg <- regressor(onsets, HRF_SPMG1, duration=durs,summate=FALSE)
 plot(reg)
 ```
 

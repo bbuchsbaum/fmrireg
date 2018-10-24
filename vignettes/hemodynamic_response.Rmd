@@ -61,9 +61,41 @@ lines(seq(0,20,by=.1), vals3, type="l", col=3)
 
 ```
 
+
+## Setting the duration of a response
+
+We can also set the duration of the input stimulus as follows:
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+
+vals1 <- evaluate(hrf2, seq(0,20,by=.1), duration=1)
+vals2 <- evaluate(hrf2, seq(0,20,by=.1), duration=2)
+vals3 <- evaluate(hrf2, seq(0,20,by=.1), duration=3)
+
+plot(seq(0,20,by=.1), vals1, type="l", xlab="Time", ylab="BOLD response", ylim=range(c(vals1, vals2, vals3)), main="HRFs with Different Durations")
+lines(seq(0,20,by=.1), vals2, type="l", col=2)
+lines(seq(0,20,by=.1), vals3, type="l", col=3)
+
+```
+
+By default an increase in the duration results in the summation of a series of shifted responses, which is consistent with the notion that the hemodyamic response "adds up" or accumulates over time. But we can disable this adding behavior by setting `summate=FALSE`. This is useful if one only wants to change the width of an HRF without changing its amplitude.
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+
+vals1 <- evaluate(hrf2, seq(0,20,by=.1), duration=1, summate=FALSE)
+vals2 <- evaluate(hrf2, seq(0,20,by=.1), duration=2, summate=FALSE)
+vals3 <- evaluate(hrf2, seq(0,20,by=.1), duration=3, summate=FALSE)
+
+plot(seq(0,20,by=.1), vals1, type="l", xlab="Time", ylab="BOLD response", ylim=range(c(vals1, vals2, vals3)), main="Non-Summating HRFs with Different Durations ")
+lines(seq(0,20,by=.1), vals2, type="l", col=2)
+lines(seq(0,20,by=.1), vals3, type="l", col=3)
+
+```
+
+
 ## Multivariate HRF: B-splines and Derivatives
 
-Sometimes we want to model an event with multiple "basis functions". In this case the HRF is a function from time -> *d*-dimensional vector, where *d* is the dimension of the basis set.
+Sometimes we want to model an event with multiple "basis functions". In this case the HRF is a function from time -> *d*-dimensional vector, where *d* is the dimension of the basis set. 
 
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
 
@@ -121,7 +153,7 @@ lines(time, evaluate(hrf_block_5,time), col=3)
 
 ## Constructing a custom basis set using a set of lagged HRFs
 
-Rather than using a b-spline basis set, we could construct our own set of functions using a combination of lagged and/or blocked HRFs. Suppose we want a series of shifted regressor functions that span over a 20s window. We can use a set of shifted `hrf`s to achieve this.
+Rather than using a b-spline basis set, we could construct our own set of functions using a combination of lagged and/or blocked HRFs. Suppose we want a series of shifted regressor functions that span a 20s window. We can use a set of shifted `hrf`s to achieve this.
 
 
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
