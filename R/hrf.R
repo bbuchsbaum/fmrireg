@@ -383,7 +383,7 @@ getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussi
 #' 
 #' @export
 hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
-                nbasis=1, contrasts=NULL, id=NULL, lag=0) {
+                nbasis=1, contrasts=NULL, id=NULL, lag=0, summate=TRUE) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
@@ -441,7 +441,8 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
     subset=substitute(subset),
     precision=precision,
     lag=lag,
-    contrasts=cset)
+    contrasts=cset,
+    summate=summate)
   
   class(ret) <- c("hrfspec", "list")
   ret
@@ -468,7 +469,7 @@ construct.hrfspec <- function(x, model_spec) {
   
   et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
   
-  cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
+  cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate)
   
   ret <- list(
     varname=et$varname,
