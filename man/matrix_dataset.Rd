@@ -11,10 +11,35 @@ matrix_dataset(datamat, TR, run_length, event_table = data.frame())
 
 \item{TR}{the repetition time in seconds of the scan-to-scan interval.}
 
-\item{run_length}{the number of scans in each run.}
+\item{run_length}{a \code{vector} of itnegers indicating the number of scans in each run.}
 
 \item{event_table}{a \code{data.frame} containing the event onsets and experimental variables.}
 }
 \description{
 matrix_dataset
+}
+\examples{
+
+## a matrix with 100 rows and 100 columns (voxels)
+X <- matrix(rnorm(100*100), 100, 100)
+dset <- matrix_dataset(X, TR=2, run_length=100)
+
+## an iterator with 5 chunks
+iter <- data_chunks(dset, nchunks=5)
+y <- foreach(chunk = iter) \%do\% { colMeans(chunk$data) }
+length(y) == 5
+
+## an iterator with 100 chunks
+iter <- data_chunks(dset, nchunks=100)
+y <- foreach(chunk = iter) \%do\% { colMeans(chunk$data) }
+length(y) == 100
+
+## a matrix_dataset with 200 rows, 100 columns and 2 runs
+X <- matrix(rnorm(200*100), 200, 100)
+dset <- matrix_dataset(X, TR=2, run_length=c(100,100))
+
+## get a "runwise" iterator. For every iteration an entire run's worth of data is returned.
+iter <- data_chunks(dset, runwise=TRUE)
+y <- foreach(chunk = iter) \%do\% { colMeans(chunk$data) }
+length(y) == 2
 }

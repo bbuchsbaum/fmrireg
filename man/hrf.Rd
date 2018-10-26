@@ -6,7 +6,7 @@
 \usage{
 hrf(..., basis = "spmg1", onsets = NULL, durations = NULL,
   prefix = NULL, subset = NULL, precision = 0.2, nbasis = 1,
-  contrasts = NULL, id = NULL, lag = 0)
+  contrasts = NULL, id = NULL, lag = 0, summate = TRUE)
 }
 \arguments{
 \item{...}{the variable names, all of which must be present in the enclosing environment (e.g. an \code{event_model} object)}

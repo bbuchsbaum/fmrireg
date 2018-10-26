@@ -5,7 +5,7 @@
 \title{regressor}
 \usage{
 regressor(onsets, hrf = HRF_SPMG1, duration = 0, amplitude = 1,
-  span = 24)
+  span = 24, summate = TRUE)
 }
 \arguments{
 \item{hrf}{a hemodynamic response function, e.g. \code{HRF_SPMG1}}
@@ -15,6 +15,8 @@ regressor(onsets, hrf = HRF_SPMG1, duration = 0, amplitude = 1,
 \item{amplitude}{scaling vector (default is 1)}
 
 \item{span}{the temporal window of the impulse response function (default is 24)}
+
+\item{summate}{whether to summate hrf response as a function of the duration of an event.}
 
 \item{onset}{the event onsets in seconds}
 }

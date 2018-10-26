@@ -9,7 +9,7 @@
 evaluate(x, grid, ...)
 
 \method{evaluate}{HRF}(x, grid, amplitude = 1, duration = 0,
-  precision = 0.1)
+  precision = 0.2, summate = TRUE)
 
 \method{evaluate}{regressor}(x, grid, precision = 0.2)
 }
@@ -26,6 +26,8 @@ evaluate(x, grid, ...)
 
 \item{precision}{the temporal resolution used for computing summed responses when duration > 0}
 
+\item{summate}{whether the HRF response increases its amplitude as a function of stimulus duration.}
+
 \item{grid}{the sampling grid. A vector of real values in seconds.}
 
 \item{precision}{the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}}
@@ -35,9 +37,15 @@ evaluate a regression or hemodynamic response function
 
 evaluate
 
-evalute a regressor function over a vector of times
+evalute a regressor function over a sampling grid
 }
 \examples{
+
+hrf1 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=1)
+
+# the same, except now turn off temporal summation.
+hrf2 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=1,summate=FALSE)
+
 frame <- sampling_frame(blocklens=100, TR=2)
 reg <- regressor(onsets=c(10,20), hrf=HRF_SPMG1)
 evaluate(reg, samples(frame))

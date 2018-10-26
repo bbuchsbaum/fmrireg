@@ -11,7 +11,14 @@ setGeneric("as_vectors")
 #' get_formula
 #' 
 #' @param x the object
+#' @param ... extra args
 get_formula <- function(x, ...) UseMethod("get_formula")
+
+#' term_matrices
+#' 
+#' @param x the object
+#' @param ... extra args
+term_matrices <- function(x, ...) UseMethod("term_matrices")
 
 
 

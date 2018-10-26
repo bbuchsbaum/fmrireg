@@ -1,9 +1,13 @@
 
-get_model_formula.fmri_model <- function(x) {
+
+#' @export
+get_formula.fmri_model <- function(x) {
   term_names <- names(terms(x))
   form <- paste(".y ~ ", paste(term_names, collapse = " + "), "-1")
 }
 
+
+#' @export
 term_matrices.fmri_model <- function(x, blocknum=NULL) {
   eterms <- lapply(event_terms(x), 
                    function(x) as.matrix(design_matrix(x, blocknum)))
@@ -19,8 +23,8 @@ term_matrices.fmri_model <- function(x, blocknum=NULL) {
   eterm_indices <- 1:sum(map_int(eterms, ncol))
   start <- length(eterm_indices) +1
   bterm_indices <- start:(start+sum(map_int(bterms, ncol)))
-  
-  term_matrices <- c(tmats$event_terms, tmats$baseline_terms)
+  #browser()
+  term_matrices <- c(eterms, bterms)
   names(term_matrices) <- names(terms(x))
   
   vnames <- unlist(lapply(term_matrices, colnames))
@@ -110,7 +114,7 @@ fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset,
   
   ret <- list(
     result=result,
-    model=fobj$model,
+    model=model,
     contrasts=contrasts,
     strategy=strategy)
   
@@ -162,6 +166,10 @@ multiresponse_lm <- function(form, data_env, conlist, vnames, fcon) {
   list(conres=conres, Fres=Fres, bstats=bstats)
 }
 
+
+vectorwise_lm <- function(dset, model, conlist, fcon) {
+}
+
 #' @importFrom foreach foreach %do% %dopar%
 runwise_lm <- function(dset, model, conlist, fcon) {
   
@@ -171,19 +179,19 @@ runwise_lm <- function(dset, model, conlist, fcon) {
     form <- get_formula(model)
    
     ## iterate over each data chunk
-    cres <- foreach( ym = chunks, .verbose=TRUE) %do% {
-
+    cres <- foreach( ym = chunks, .verbose=TRUE) %dopar% {
+      
       ## get event model for the nth run
       tmats <- term_matrices(model, ym$chunk_num)
       
       data_env <- list2env(tmats)
       data_env[[".y"]] <- ym$data
       
-      
       ret <- multiresponse_lm(form, data_env, conlist, attr(tmats,"varnames"), fcon)
       
       list(conres=ret$conres, Fres=ret$Fres, bstats=ret$bstats, 
-           event_indices=attr(tmats, "eterm_indices"), baseline_indices=bterm_indices)
+           event_indices=attr(tmats, "event_term_indices"), 
+           baseline_indices=attr(tmats, "baseline_term_indices") )
       
     }
     
