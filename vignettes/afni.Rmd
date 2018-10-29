@@ -1,0 +1,79 @@
+---
+title: "Translating to AFNI"
+author: "Bradley R. Buchsbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## Constructing an fMRI regression model and translating it for AFNI's 3dDeconvolve
+
+AFNI and other fMRI analysis packages have robust and efficient methods for estimating voxelwise regression models. Therefore, it may be beneficial to construct a regression model in R using **fmrireg** and translate it so that it can be executed using one of these packages. Here we provide a translation mechanism from an `fmri_model` object constructed with `fmrireg` to syntax and assocaited file required for execution using AFNI's **3dDeconvolve** program.
+
+
+## A Simple Model
+
+Lets begin again with a simple fMRI design.
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+
+cond <- c("face", "scene", "tool", "object")
+NSTIM <- length(cond)*4
+
+simple_design <- data.frame(stim=factor(sample(rep(cond, 4))), 
+                     ISI=sample(4:7, NSTIM, replace=TRUE), 
+                     run=rep(1, NSTIM),
+                     trial=factor(1:NSTIM))
+
+```
+
+Now we add onset information, construct a `sampling_frame`, and finally an `event_model`:
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+simple_design$onset <- cumsum(simple_design$ISI+2) -2
+sframe <- sampling_frame(blocklens=70, TR=2)
+emodel <- event_model(onset ~ hrf(stim), data=simple_design, block = ~ run, sampling_frame=sframe)
+plot(emodel)
+```
+
+
+We construct a `baseline_model` using a B-spline basis:
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe)
+print(bmodel)
+plot(bmodel)
+
+```
+
+We construct an `fmri_model`:
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+
+fmodel <- fmri_model(emodel, bmodel)
+
+```
+
+Now we need to specify the data that the model will be estimated on. Let us pretend that we have a single 4d NIfTI file called "scan01.nii" and a mask file called "mask.nii".
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+
+dset <- fmri_dataset(scans="scan01.nii",
+                     mask="mask.nii",
+                     TR=2,
+                     run_length=70,
+                     event_table=simple_design,
+                     base_path=".")
+
+```
+
+We are now ready to construct an AFNI model specification:
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+alm <- afni_lm(fmodel, dset)
+```
+

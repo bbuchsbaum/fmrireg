@@ -192,12 +192,12 @@ fmri_dataset <- function(scans, mask, TR,
   assert_that(length(run_length) == length(scans))
   
   maskfile <- paste0(base_path, "/", mask)
-  maskvol <- neuroim2::read_vol(maskfile)
+  #maskvol <- neuroim2::read_vol(maskfile)
   
   ret <- list(
     scans=paste0(base_path, "/", scans),
     mask_file=maskfile,
-    mask=maskvol,
+    #mask=maskvol,
     nruns=length(scans),
     event_table=as_tibble(event_table),
     base_path=base_path,

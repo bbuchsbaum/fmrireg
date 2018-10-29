@@ -37,12 +37,14 @@ meta_fixef <- function(beta,se) {
 
 meta_Fcontrasts <- function(fres) {
   ncon <- length(fres[[1]])
-  res <- lapply(1:ncon, function(i) {
+  res <- lapply(seq(1,ncon), function(i) {
     pval <- do.call(cbind, lapply(fres, function(x) as.vector(x[[i]]$prob())))
     se <- do.call(cbind, lapply(fres, function(x) x[[i]]$se()))
     
     meta_stouffer(pval,se)
   })
+  names(res) <- names(fres)
+  res
 }
 
 meta_contrasts <- function(cres) {

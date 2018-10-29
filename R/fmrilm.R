@@ -16,7 +16,7 @@ term_matrices.fmri_model <- function(x, blocknum=NULL) {
                    function(x) as.matrix(design_matrix(x, blocknum)))
   
   if (is.null(blocknum)) {
-    blocknum <- unique(fmodel$event_model$blockids)
+    blocknum <- sort(unique(x$event_model$blockids))
   }
   
   start <- 1
@@ -81,11 +81,11 @@ term_matrices.fmri_model <- function(x, blocknum=NULL) {
 #' dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
 #' dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
 #' lm.1 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset)
-#' lm.2 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset2)
+#' lm.2 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset2, strategy="chunkwise")
 #' @export
 fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, contrasts=NULL, 
-                     strategy=c("runwise", "vectorwise", "chunkwise", "all")) {
+                     strategy=c("runwise", "vectorwise", "chunkwise", "all"), nchunks=10) {
   
  
   strategy <- match.arg(strategy)
@@ -104,12 +104,13 @@ fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset,
      
   model <- fmri_model(ev_model, baseline_model)
   conlist <- contrast_weights(ev_model)
+
   fcons <- Fcontrasts(ev_model)
 
   result <- if (strategy == "runwise") {
     runwise_lm(dataset, model, conlist,fcons)
-  } else {
-    stop("only currently implemented strategy is 'runwise'")
+  } else if (strategy == "chunkwise") {
+    chunkwise_lm(dataset, model, conlist,fcons, nchunks)
   }
   
   ret <- list(
@@ -160,14 +161,49 @@ multiresponse_lm <- function(form, data_env, conlist, vnames, fcon) {
   names(conres) <- names(conlist)
 
   Fres <- lapply(fcon, function(con) fit_Fcontrasts(lm.1, t(con), attr(con, "term_indices")))
+  names(Fres) <- names(fcon)
   
   bstats <- beta_stats(lm.1, vnames)
   #list(conres=conres, Fres=Fres, bstats=bstats, event_indices=eterm_indices, baseline_indices=bterm_indices)
   list(conres=conres, Fres=Fres, bstats=bstats)
 }
 
+wrap_chunked_lm_results <- function(cres) {
+  extract <- function(l, el, item) {
+    do.call(cbind, lapply(l, function(x) x[[el]][[item]]()))
+  }
+    
+  bstats = list(
+    estimate=function() { extract(cres, "bstats", "estimate")},
+    stat=function() { extract(cres, "bstats", "stat")},
+    se=function() { extract(cres, "bstats", "se")},
+    prob=function() { extract(cres,"bstats", "prob")},
+    stat_type=cres$bstats[[1]]$stat_type
+  )
 
-vectorwise_lm <- function(dset, model, conlist, fcon) {
+  nf <- length(cres[[1]]$Fres)
+  Fres <- lapply(1:nf, function(i) {
+    list(
+      estimate=function() { do.call(cbind, lapply(cres, function(el) el$Fres[[i]]$estimate())) },
+      stat=function() { do.call(cbind, lapply(cres, function(el) el$Fres[[i]]$stat())) },
+      se=function() { do.call(cbind, lapply(cres, function(el) el$Fres[[i]]$se())) },
+      prob=function() { do.call(cbind, lapply(cres, function(el) el$Fres[[i]]$prob())) },
+      stat_type=cres[[1]]$Fres[[1]]$stat_type
+  )})
+  names(Fres) <- names(cres[[1]]$Fres)
+      
+}
+
+chunkwise_lm <- function(dset, model, conlist, fcon, nchunks) {
+  chunks <- exec_strategy("chunkwise", nchunks)(dset)
+  form <- get_formula(model)
+  cres <- foreach( ym = chunks, .verbose=TRUE) %do% {
+    tmats <- term_matrices(model)
+    data_env <- list2env(tmats)
+    data_env[[".y"]] <- ym$data
+    ret <- multiresponse_lm(form, data_env, conlist, attr(tmats,"varnames"), fcon)
+  }
+  
 }
 
 #' @importFrom foreach foreach %do% %dopar%
@@ -210,6 +246,7 @@ runwise_lm <- function(dset, model, conlist, fcon) {
       meta_F <- meta_Fcontrasts(Fres)
       list(contrasts=meta_con, betas=meta_beta, Fcontrasts=meta_F)
     } else {
+      browser()
       list(contrasts=conres[[1]], betas=bstats[[1]], Fcontrasts=Fres[[1]])
     }
     

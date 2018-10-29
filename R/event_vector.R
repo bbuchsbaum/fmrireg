@@ -629,8 +629,6 @@ Fcontrasts.event_term <- function(x) {
       interactions[[i-1]] <- ret
     }
     
-  
-    
     return(c(main_effects, unlist(interactions, recursive=FALSE)))
   } else {
     main_effects
