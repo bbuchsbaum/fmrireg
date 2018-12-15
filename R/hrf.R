@@ -102,6 +102,10 @@ makeDeriv <- function(HRF, n=1) {
   }
 }
 
+#' @export
+#' @inheritParams gen_hrf_lagged
+hrf_lagged <- gen_hrf_lagged
+
 #' gen_hrf_lagged
 #' 
 #' @param hrf the underlying hrf function to shift
@@ -113,8 +117,14 @@ makeDeriv <- function(HRF, n=1) {
 #' @export
 gen_hrf_lagged <- function(hrf, lag=2,...) {
   force(hrf)
-  function(t) {
-    hrf(t-lag,...)
+  
+  if (length(lag)>1) {
+   
+    do.call(gen_hrf_set, lapply(lag, function(l) gen_hrf_lagged(hrf, l)))
+  } else {
+    function(t) {
+      hrf(t-lag,...)
+    }
   }
 }
 

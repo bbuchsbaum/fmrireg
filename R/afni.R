@@ -89,6 +89,14 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, censo
 
 }
 
+print.afni_lm_spec <- function(x) {
+  cat("AFNI linear model via 3dDeconvolve \n")
+  cat("  working_dir: ", x$working_dir, "\n")
+  cat("  number of GLTs:", length(x$glts), "\n")
+  cat("  command line: \n", x$cmd$cmd, "\n")
+  
+}
+
 
 
 #' @keywords internal
@@ -289,7 +297,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   cmdlines <- list(input=paste0(dataset$scans),
                    mask=paste0(dataset$mask_file),
-                   polort=opts[["polort"]],
+                   polort=if (opts[["polort"]] > 0) opts[["polort"]] else NULL,
                    num_stimts=length(afni_stims),
                    num_glt=length(gltfiles),
                    stim_file=opt_stim_files,
@@ -314,7 +322,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   cmd <- .make_decon_command_str(cmdlines)
   
-  list(cmd=cmd, afni_stims=afni_stims, afni_baseline_mats=afni_baseline_mats,
+  list(cmd=cmd, cmdlines=cmdlines, afni_stims=afni_stims, afni_baseline_mats=afni_baseline_mats,
        gltfiles=gltfiles, gltnames=gltnames, glts=glts, gltstr=gltstr, censor=opts$censor)
 }
 
