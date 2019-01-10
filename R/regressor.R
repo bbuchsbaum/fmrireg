@@ -213,6 +213,10 @@ nbasis.regressor <- function(x) nbasis(x$hrf)
 nbasis.HRF <- function(x) attr(x, "nbasis")
 
 #' @export
+nbasis.AFNI_HRF <- function(x) attr(x, "nbasis")
+
+
+#' @export
 #' @rdname nbasis
 nbasis.hrfspec <- function(x) nbasis(x$hrf)
 

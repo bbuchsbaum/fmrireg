@@ -1,5 +1,5 @@
 
-
+#' @keywords internal
 gen_afni_lm.fmri_config <- function(x, ...) {
   
   nuisance_list <- if (!is.null(x$baseline_model$nuisance_files)) {
@@ -89,6 +89,8 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, censo
 
 }
 
+
+#' @export
 print.afni_lm_spec <- function(x) {
   cat("AFNI linear model via 3dDeconvolve \n")
   cat("  working_dir: ", x$working_dir, "\n")
@@ -108,9 +110,9 @@ afni_stim_file <- function(label, file_name, values) {
 }
 
 #' @keywords internal
-afni_stim_times <- function(label, file_name, hrf, onsets, iresp=FALSE, tr_times=1) {
+afni_stim_times <- function(label, file_name, hrf, onsets, iresp=FALSE, sresp=FALSE, tr_times=1) {
   structure(
-    list(label=label, file_name=file_name, hrf=hrf, onsets=onsets, iresp=iresp, tr_times=tr_times),
+    list(label=label, file_name=file_name, hrf=hrf, onsets=onsets, iresp=iresp, sresp=sresp, tr_times=tr_times),
     class="afni_stim_times"
   )
 }
@@ -128,14 +130,35 @@ afni_stim_times <- function(label, file_name, hrf, onsets, iresp=FALSE, tr_times
 # }
 
 
+
 #' @keywords internal
-afni_command_switch <- function(x, k, type) {
+afni_command_switch <- function(x, ...) UseMethod("afni_command_switch")
+
+#' @keywords internal
+write_afni_stim <- function(x, ...) UseMethod("write_afni_stim")
+
+
+#' @keywords internal
+afni_command_switch.afni_stim_file <- function(x, k, type) {
   switch(type,
     label = paste(k, x$label, collapse = " "),
     file = paste(k, x$file_name, collapse = " "),
     ortvec = paste(x$file_name, x$label),
     times = NULL,
-    iresp = NULL
+    iresp = NULL,
+    sresp=NULL
+  )
+}
+
+#' @keywords internal
+afni_command_switch.afni_stim_times <- function(x, k, type) {
+  switch(type,
+         label = paste(k, x$label, collapse = " "),
+         times=paste(k, x$file_name, as.character(x$hrf), collapse=" "),
+         file=NULL,
+         ortvec=NULL,
+         iresp = if (x$iresp) paste(k, paste(paste(x$label, "_iresp", sep=""), collapse=" ")) else NULL,
+         sresp = if (x$sresp) paste(k, paste(paste(x$label, "_sresp", sep=""), collapse=" ")) else NULL
   )
 }
 
@@ -165,7 +188,7 @@ write_stim_files <- function(afni_stims) {
 }
 
 #' @keywords internal
-write_afni_stim <- function(stim, dir) {
+write_afni_stim.afni_stim_file <- function(stim, dir) {
   .write_values <- function(outname, vals) {
     hfile <- file(outname, "w")
     write(vals, file=hfile, ncolumns=1)
@@ -174,6 +197,17 @@ write_afni_stim <- function(stim, dir) {
   
   ## TODO stim$values is a data.frame sometimes (trialwise?), hence 'unlist' hack. Ensure uniformity.
   .write_values(paste0(dir, "/", stim$file_name, sep=""), unlist(stim$values))
+}
+
+#' @keywords internal
+write_afni_stim.afni_stim_times <- function(stim, dir) {
+  .write_onsets <- function(outname, vals) {
+    hfile <- file(outname, "w")
+    write(vals, file=hfile, ncolumns=1)
+    close(hfile)
+  }
+  
+  .write_onsets(paste0(dir, "/", stim$file_name, sep=""), unlist(stim$onsets))
 }
 
 #' @keywords internal
@@ -221,7 +255,7 @@ build_baseline_stims <- function(x) {
 }
 
 #' @keywords internal
-build_afni_stims <- function(x) {
+build_afni_stims.convolved_term <- function(x) {
   stimlabels <- longnames(x)
   stimfiles <- paste(stimlabels, "_reg.1D", sep = "")
   desmat <- design_matrix(x)
@@ -229,6 +263,23 @@ build_afni_stims <- function(x) {
   lapply(1:length(stimlabels), function(i) {
     afni_stim_file(stimlabels[i], stimfiles[i], desmat[, i])
   })
+}
+
+#' @keywords internal
+build_afni_stims.afni_hrf_convolved_term <- function(x, iresp=FALSE, tr_times=1) {
+  stimlabels <- longnames(x)
+  stimfiles <- paste(stimlabels, "_times.1D", sep = "")
+  dmat <- design_matrix(x$evterm)
+  
+  hrf_name <- as.character(x$hrf$hrf)
+  
+  split_ons <- split_onsets(x$evterm, x$sampling_frame, global=TRUE)
+  names(split_ons) <- stimlabels
+  
+  lapply(1:length(stimlabels), function(i) {
+    afni_stim_times(stimlabels[i], stimfiles[i], hrf_name, split_ons[[stimlabels[[i]]]], iresp, tr_times)
+  })
+  
 }
 
 #' @keywords internal
@@ -282,18 +333,23 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   func_terms <- terms(model$event_model)
   
+  
+  ## construct list of afni stims
   afni_stims <- unlist(lapply(func_terms, function(term) { build_afni_stims(term) }), recursive=FALSE)
   afni_baseline_mats <- build_baseline_stims(model)
   
   
-  purgeNulls <- function(A) {
+  purge_nulls <- function(A) {
     A[!sapply(A, is.null)]
   }
   
-  opt_stim_labels <-  purgeNulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "label")))
-  opt_stim_files  <-  purgeNulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "file")))
-  opt_stim_ortvecs <- purgeNulls(lapply(seq_along(afni_baseline_mats), function(i) afni_command_switch(afni_baseline_mats[[i]], i, "ortvec")))
-
+  opt_stim_labels <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "label")))
+  opt_stim_files  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "file")))
+  opt_stim_times  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "times")))
+  opt_stim_ortvecs <- purge_nulls(lapply(seq_along(afni_baseline_mats), function(i) afni_command_switch.afni_stim_file(afni_baseline_mats[[i]], i, "ortvec")))
+  opt_stim_iresp  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "iresp")))
+  
+  #browser()
   
   cmdlines <- list(input=paste0(dataset$scans),
                    mask=paste0(dataset$mask_file),
@@ -304,9 +360,9 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
                    stim_label=opt_stim_labels,
                    ortvec=opt_stim_ortvecs,
                    censor=if (!is.null(opts[["censor"]])) "censor.1D" else NULL,
-                   #stim_times=opt_stim_times,
+                   stim_times=opt_stim_times,
                    TR_times=opts[["TR_times"]],
-                   #iresp=opt_stim_iresp,
+                   iresp=opt_stim_iresp,
                    gltsym=lapply(seq_along(gltfiles), function(i) paste(gltfiles[i], collapse=" ")),
                    glt_label=lapply(seq_along(gltnames), function(i) paste(i, gltnames[i], collapse=" ")),
                    nofullf_atall=opts[["nofullf_atall"]],

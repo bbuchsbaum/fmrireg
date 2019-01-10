@@ -341,8 +341,25 @@ p_value <- function(x, ...) UseMethod("p_value")
 longnames <- function(x, ...) UseMethod("longnames")
 
 
-#' gen_afni_lm
+#' generate an AFNI linear model command from a configuration file
+#' 
 #' @param x the config file
 #' @param ... extra args
 #' @export
 gen_afni_lm <- function(x, ...) UseMethod("gen_afni_lm")
+
+#' generate a set of AFNI stimuli for '3dDeconvolve'
+#' 
+#' @param x the term
+#' @param ... extra args
+#' @export
+build_afni_stims <- function(x, ...) UseMethod("build_afni_stims")
+
+#' split an onset vector into a list
+#' 
+#' @param x the object associated with the onset vector
+#' @param ... extra args
+#' @export
+split_onsets <- function(x, ...) UseMethod("split_onsets")
+  
+

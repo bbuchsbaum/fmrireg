@@ -143,6 +143,8 @@ EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,leng
     vals <- vals[, 1, drop=TRUE]
   }
   
+  ## subset is eagerly applied here.
+  
   if (inherits(vals, "ParametricBasis")) {
     event_basis(vals, onsets, blockids, durations,subset)	
   } else if (is.vector(vals)) {
@@ -379,7 +381,12 @@ conditions.fmri_term <- function(x) {
 
 #' @export
 conditions.convolved_term <- function(x) {
-  colnames(x$design_matrix)
+  colnames(design_matrix(x))
+}
+
+#' @export
+conditions.afni_hrf_convolved_term <- function(x) {
+  conditions(x$evterm)
 }
 
 
@@ -404,6 +411,8 @@ conditions.event_term <- function(x, drop.empty=TRUE) {
   
   do.call(function(...) paste(..., sep=":"), ret)
 }
+
+
 
 #' @export
 columns.event_term <- function(x) as.vector(unlist(lapply(x$events, columns)))
@@ -504,6 +513,50 @@ elements.event_term <- function(x, values=TRUE) {
   n <- sapply(names(els), function(nam) .sanitizeName(nam))
   names(els) <- as.vector(n)
   els
+}
+
+#' @export
+onsets.convolved_term <- function(x) {
+  onsets(x$evterm)
+}
+
+#' @export
+onsets.event_term <- function(x) {
+  x$onsets
+}
+
+#' @export
+blockids.event_term <- function(x) {
+  x$blockids
+}
+
+#' @export
+blockids.convolved_term <- function(x) {
+  blockids(x$evterm)
+}
+
+#' @export
+split_onsets.event_term <- function(x, sframe, global=FALSE) {
+  ### need to check for 0 factors
+  facs <- x$events[!sapply(x$events, is_continuous)]
+  
+  if (length(facs) == 0) {
+    stop("split_onsets requires term to have at least 1 'event_factor' variable")
+  }
+  
+  facs <- lapply(facs, function(fac) unlist(elements(fac)))
+  
+  f <- function(...) {
+    interaction(..., drop=TRUE, sep=":")
+  }
+            
+  cfac <- try(do.call(f, facs))
+            
+  if (global) {
+    split(global_onsets(sframe, onsets(x), blockids(x)), cfac)
+  } else {
+    split(onsets(x), cfac)
+  }
 }
 
 
@@ -712,6 +765,16 @@ print.convolved_term <- function(object) {
   cat("  ", "Num Events: ", nrow(object$evterm$event_table), "\n")
   cat("  ", "Num Rows: ", nrow(design_matrix(object)), "\n")
   cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n")
+  cat("  ", "Conditions: ", conditions(object), "\n")
+  cat("  ", "Term Types: ", paste(map_chr(object$evterm$events, ~ class(.)[[1]])))
+}
+
+#' @export
+print.afni_hrf_convolved_term <- function(object) {
+  cat("fmri_term: ", class(object)[[1]], "\n")
+  cat("  ", "Term Name: ", object$varname, "\n")
+  cat("  ", "Formula:  ", as.character(formula(object$evterm)), "\n")
+  cat("  ", "Num Events: ", nrow(object$evterm$event_table), "\n")
   cat("  ", "Conditions: ", conditions(object), "\n")
   cat("  ", "Term Types: ", paste(map_chr(object$evterm$events, ~ class(.)[[1]])))
 }

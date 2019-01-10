@@ -211,8 +211,6 @@ design_matrix.event_model <- function(x, blockid=NULL) {
 
 
 
-
-
 #' @export
 #' @rdname terms
 terms.event_model <- function(x) {
@@ -330,6 +328,10 @@ design_matrix.convolved_term <- function(x, blockid=NULL) {
   } 
 }
 
+design_matrix.afni_hrf_convolved_term <- function(x, blockid=NULL) {
+  stop("afni_hrf_convolved_term delegates design matrix construction to AFNI")
+}
+
 
 #' matrix_term
 #' 
@@ -380,6 +382,18 @@ longnames.convolved_term <- function(x) {
       paste0(names(term.cells)[i], "#", term.cells[[i]], sep="")
   })), 1, paste, collapse=":")
 }
+
+#' @export
+longnames.event_term <- function(x) {
+  # ignores exclude.basis
+  term.cells <- cells(x)
+  # ignores exclude.basis
+  apply(as.matrix(sapply(1:ncol(term.cells), 
+                         function(i) {
+                           paste0(names(term.cells)[i], "#", term.cells[[i]], sep="")
+                         })), 1, paste, collapse=":")
+}
+
 
 #' @export
 #' @rdname longnames

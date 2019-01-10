@@ -93,6 +93,24 @@ HRF <- function(fun, name, nbasis=1, param_names=NULL) {
   
 }
 
+#' @inheritParams HRF
+#' @export
+AFNI_HRF <- function(name, nbasis, params) {
+  structure(name, 
+            nbasis=as.integer(nbasis), 
+            params=params, 
+            class=c("AFNI_HRF"))
+  
+}
+
+
+#' @export
+as.character.AFNI_HRF <- function(x) {
+  paste(x, "\\(", paste(attr(x, "params"), collapse=","), "\\)", sep="")
+}
+
+
+
 #' @importFrom numDeriv grad
 makeDeriv <- function(HRF, n=1) {
   if (n == 1) {
@@ -102,9 +120,6 @@ makeDeriv <- function(HRF, n=1) {
   }
 }
 
-#' @export
-#' @inheritParams gen_hrf_lagged
-hrf_lagged <- gen_hrf_lagged
 
 #' gen_hrf_lagged
 #' 
@@ -128,6 +143,10 @@ gen_hrf_lagged <- function(hrf, lag=2,...) {
   }
 }
 
+#' @export
+#' @inheritParams gen_hrf_lagged
+hrf_lagged <- gen_hrf_lagged
+
 
 #' gen_hrf_blocked
 #' 
@@ -140,6 +159,11 @@ gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1,...) {
   force(hrf)
   purrr::partial(hrf_block, hrf=hrf, width=width, precision=precision,...)
 }
+
+#' @export
+#' @inheritParams gen_hrf_blocked
+hrf_blocked <- gen_hrf_blocked
+
 
 #' hrf_block
 #' 
@@ -315,8 +339,9 @@ evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate
     # }
 
   } else {
+    sfac <- attr(x, "scale_factor")
     Reduce("+", lapply(seq(0, duration, by=precision), function(offset) {
-      x(grid-offset)*amplitude*attr(x, "scale_factor")   
+      x(grid-offset)*amplitude*sfac   
     }))
   }
 }
@@ -394,6 +419,7 @@ getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussi
 #' @export
 hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
                 nbasis=1, contrasts=NULL, id=NULL, lag=0, summate=TRUE) {
+  
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
@@ -458,9 +484,8 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
   ret
 }
 
-#' @export
-construct.hrfspec <- function(x, model_spec) {
-  
+
+construct_event_term <- function(x, model_spec) {
   ## TODO what is we are missing a block id?
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
@@ -478,6 +503,12 @@ construct.hrfspec <- function(x, model_spec) {
   }
   
   et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
+}
+
+#' @export
+construct.hrfspec <- function(x, model_spec) {
+  
+  et <- construct_event_term(x,model_spec)
   
   cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate)
   
@@ -590,8 +621,6 @@ construct.trialwisespec <- function(x, model_spec) {
   subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
   
   et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
-  #sframe <- sampling_frame(model_spec$blocklens, model_spec$TR, model_spec$TR/2, x$precision)
-  
   cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
   
   ret <- list(
@@ -609,8 +638,122 @@ construct.trialwisespec <- function(x, model_spec) {
 }
 
 
+#' construct an native AFNI hrf specification for '3dDeconvolve' with the 'stim_times' argument.
+#' 
+#' @inheritParams hrf
+#' @examples 
+#' 
+#' @export
+afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",           
+                                  "tent",   "csplin", "poly",  "sin",        
+                                  "gam", "spmg2", "spmg3", "wav"), 
+                                  onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, 
+                                  nbasis=1, contrasts=NULL, id=NULL) {
+  
+  basis <- match.arg(basis)
+  
+  vars <- as.list(substitute(list(...)))[-1] 
+  parsed <- parse_term(vars, "afni_hrf")
+  term <- parsed$term
+  label <- parsed$label
+  
+ 
+  hrf <- get_AFNI_HRF(basis, nbasis=nbasis)
+  
+  varnames <- if (!is.null(prefix)) {
+    paste0(prefix, "_", term)
+  } else {
+    term
+  }
+  
+  termname <- paste0(varnames, collapse="::")
+  
+  if (is.null(id)) {
+    id <- termname
+  }  
+  
+  cset <- if (inherits(contrasts, "contrast_spec")) {
+    contrast_set(con1=contrasts)
+  } else if (inherits(contrasts, "contrast_set")) {
+    contrasts
+  } 
+  
+  ret <- list(
+    name=termname,
+    id=id,
+    varnames=varnames,
+    vars=term,
+    label=label,
+    hrf=hrf,
+    onsets=onsets,
+    durations=durations,
+    prefix=prefix,
+    subset=substitute(subset),
+    lag=lag,
+    contrasts=cset)
+  
+  class(ret) <- c("afni_hrfspec", "hrfspec", "list")
+  ret
+  
+}
+
+#' @export
+construct.afni_hrfspec <- function(x, model_spec) {
+  
+  et <- construct_event_term(x, model_spec)
+  
+  ## do not convolve an afni term
+  ##cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate)
+  
+  ret <- list(
+    varname=et$varname,
+    evterm=et,
+    sampling_frame=model_spec$sampling_frame,
+    hrfspec=x,
+    contrasts=x$contrasts,
+    id=if(!is.null(x$id)) x$id else et$varname
+  )
+  
+  class(ret) <- c("afni_hrf_convolved_term", "convolved_term", "fmri_term", "list") 
+  ret
+}
 
 
+
+AFNI_SPMG1 <- function(d=1) AFNI_HRF(name="SPMG1", nbasis=as.integer(1), params=list(d=d)) 
+AFNI_SPMG2 <- function(d=1) AFNI_HRF(name="SPMG2", nbasis=as.integer(2), params=list(d=d))
+AFNI_SPMG3 <- function(d=1) AFNI_HRF(name="SPMG3", nbasis=as.integer(3), params=list(d=d))
+AFNI_BLOCK <- function(d=1,p=1) AFNI_HRF(name="BLOCK", nbasis=as.integer(1), params=list(d=d,p=p))
+AFNI_dmBLOCK <- function(d=1,p=1) AFNI_HRF(name="dmBLOCK", nbasis=as.integer(1), params=list(d=d,p=p))
+
+AFNI_TENT <- function(b=0,c=18, n=10) AFNI_HRF(name="TENT", nbasis=as.integer(n), params=list(b=b,c=c,n=n))
+AFNI_CSPLIN <- function(b=0,c=18, n=6) AFNI_HRF(name="CSPLIN", nbasis=as.integer(n), params=list(b=b,c=c,n=n))
+AFNI_POLY <- function(b=0,c=18, n=10) AFNI_HRF(name="POLY", nbasis=as.integer(n), params=list(b=b,c=c,n=n))
+AFNI_SIN <- function(b=0,c=18, n=10) AFNI_HRF(name="SIN", nbasis=as.integer(n), params=list(b=b,c=c,n=n))
+AFNI_GAM <- function(p=8.6,q=.547) AFNI_HRF(name="GAM", nbasis=as.integer(1), params=list(p=p,q=q))
+AFNI_WAV <- function(d=1) AFNI_HRF(name="WAV", nbasis=as.integer(1), params=list(d=1))
+
+
+get_AFNI_HRF <- function(name, nbasis=1) {
+  hrf <- switch(name,
+                gamma=AFNI_GAM(),
+                spmg1=AFNI_SPMG1(),
+                spmg2=AFNI_SPMG2(),
+                spmg3=AFNI_SPMG3(),
+                csplin=AFNI_CSPLIN(n=nbasis),
+                poly=AFNI_POLY(n=nbasis),
+                sine=AFNI_SIN(n=nbasis),
+                wav=AFNI_WAV(),
+                block=AFNI_BLOCK(),
+                dmblock=AFNI_dmBLOCK())
+  
+  if (is.null(hrf)) {
+    stop("could not find afni hrf named: ", name)
+  }
+  
+  hrf
+  
+}
 
 
 # hrf.logit <- function(t, a1=1, T1, T2, T3, D1, D2, D3) {
