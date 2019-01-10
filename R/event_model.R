@@ -384,6 +384,18 @@ longnames.convolved_term <- function(x) {
 }
 
 #' @export
+#' @rdname longnames
+longnames.afni_hrf_convolved_term <- function(x) {
+  # do not include basis term
+  term.cells <- cells(x, exclude_basis=TRUE)
+  # ignores exclude.basis
+  apply(as.matrix(sapply(1:ncol(term.cells), 
+                         function(i) {
+                           paste0(names(term.cells)[i], "#", term.cells[[i]], sep="")
+                         })), 1, paste, collapse=":")
+}
+
+#' @export
 longnames.event_term <- function(x) {
   # ignores exclude.basis
   term.cells <- cells(x)

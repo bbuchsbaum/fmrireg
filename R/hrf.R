@@ -484,7 +484,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
   ret
 }
 
-
+#' @keywords internal
 construct_event_term <- function(x, model_spec) {
   ## TODO what is we are missing a block id?
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
@@ -648,8 +648,9 @@ afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",
                                   "tent",   "csplin", "poly",  "sin",        
                                   "gam", "spmg2", "spmg3", "wav"), 
                                   onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, 
-                                  nbasis=1, contrasts=NULL, id=NULL) {
+                                  nbasis=1, contrasts=NULL, id=NULL, start=NULL, stop=NULL) {
   
+  ## TODO cryptic error message when argument is mispelled and is then added to ...
   basis <- match.arg(basis)
   
   vars <- as.list(substitute(list(...)))[-1] 
@@ -657,8 +658,13 @@ afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",
   term <- parsed$term
   label <- parsed$label
   
- 
-  hrf <- get_AFNI_HRF(basis, nbasis=nbasis)
+  hrf <- if (!is.null(durations)) {
+    assert_that(length(durations) == 1, msg="afni_hrf does not currently accept variable durations")
+    get_AFNI_HRF(basis, nbasis=nbasis, duration=durations[1], b=start, c=stop)
+  } else {
+    get_AFNI_HRF(basis, nbasis=nbasis, b=start, c=stop)
+  }
+  
   
   varnames <- if (!is.null(prefix)) {
     paste0(prefix, "_", term)
@@ -734,17 +740,17 @@ AFNI_GAM <- function(p=8.6,q=.547) AFNI_HRF(name="GAM", nbasis=as.integer(1), pa
 AFNI_WAV <- function(d=1) AFNI_HRF(name="WAV", nbasis=as.integer(1), params=list(d=1))
 
 
-get_AFNI_HRF <- function(name, nbasis=1) {
+get_AFNI_HRF <- function(name, nbasis=1, duration=1, b=0, c=18) {
   hrf <- switch(name,
                 gamma=AFNI_GAM(),
-                spmg1=AFNI_SPMG1(),
-                spmg2=AFNI_SPMG2(),
-                spmg3=AFNI_SPMG3(),
-                csplin=AFNI_CSPLIN(n=nbasis),
-                poly=AFNI_POLY(n=nbasis),
-                sine=AFNI_SIN(n=nbasis),
+                spmg1=AFNI_SPMG1(d=duration),
+                spmg2=AFNI_SPMG2(d=duration),
+                spmg3=AFNI_SPMG3(d=duration),
+                csplin=AFNI_CSPLIN(b=b,c=c, n=nbasis),
+                poly=AFNI_POLY(b=b,c=c, n=nbasis),
+                sine=AFNI_SIN(b=b,c=c,n=nbasis),
                 wav=AFNI_WAV(),
-                block=AFNI_BLOCK(),
+                block=AFNI_BLOCK(d=duration),
                 dmblock=AFNI_dmBLOCK())
   
   if (is.null(hrf)) {

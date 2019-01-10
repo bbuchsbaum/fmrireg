@@ -267,6 +267,7 @@ build_afni_stims.convolved_term <- function(x) {
 
 #' @keywords internal
 build_afni_stims.afni_hrf_convolved_term <- function(x, iresp=FALSE, tr_times=1) {
+  #browser()
   stimlabels <- longnames(x)
   stimfiles <- paste(stimlabels, "_times.1D", sep = "")
   dmat <- design_matrix(x$evterm)
@@ -315,7 +316,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   ## all stims must be unique
   assert_that(length(unique(stimlabels)) == length(stimlabels))
-  
+  #browser()
   assert_that(length(stimlabels) == length(conditions(model$event_model)))
   
   ## extract all contrast matrices

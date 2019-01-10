@@ -12,7 +12,7 @@ test_that("can construct an simple afni native stimulus model", {
                        event_table=facedes)
   
   
-  espec <- event_model(onset ~ afni_hrf(repnum), data=facedes, block=~run, sampling_frame=dset$sampling_frame)
+  espec <- event_model(onset ~ afni_hrf(repnum, basis="csplin", nbasis=8, start=0, stop=18), data=facedes, block=~run, sampling_frame=dset$sampling_frame)
   bspec <- baseline_model(basis="bs", degree=5, sframe=dset$sampling_frame)
   fmod <- fmri_model(espec, bspec)
   alm <- afni_lm(fmod, dset)

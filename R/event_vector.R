@@ -336,10 +336,10 @@ cells.event_term <- function(x, drop.empty=TRUE) {
   evset
 }
 
-.event_set <- function(x) {
+.event_set <- function(x, exclude_basis=FALSE) {
   evtab <- event_table(x)
   
-  evset <- if (nbasis(x) > 1) {
+  evset <- if (nbasis(x) > 1 & !exclude_basis) {
     evlist <- c(list(factor(paste("basis", 1:nbasis(x), sep = ""))), cells(x$evterm))
     names(evlist) <- c("basis", parent_terms(x$evterm))
     evlist <- lapply(evlist, levels)
@@ -353,9 +353,9 @@ cells.event_term <- function(x, drop.empty=TRUE) {
 
 #' @export
 #' @importFrom stringr str_trim
-cells.convolved_term <- function(x) {
+cells.convolved_term <- function(x, exclude_basis=FALSE) {
   evtab <- event_table(x)
-  evset <- .event_set(x)
+  evset <- .event_set(x, exclude_basis=exclude_basis)
   
   strels <- apply(apply(evtab, 2, stringr::str_trim), 1, paste, collapse = ":")
   
@@ -366,7 +366,12 @@ cells.convolved_term <- function(x) {
   }
   
   attr(evset, "rownames") <- strlevs
-  counts <- rep(attr(cells(x$evterm), "count"), each = nbasis(x))
+  
+  counts <- if (exclude_basis) {
+    rep(attr(cells(x$evterm), "count"), each = 1)
+  } else {
+    rep(attr(cells(x$evterm), "count"), each = nbasis(x))
+  }
   
   ret <- evset[counts > 0, , drop = F]
   attr(ret, "count") <- counts[counts > 0]
