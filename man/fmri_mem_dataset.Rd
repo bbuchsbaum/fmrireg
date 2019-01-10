@@ -8,9 +8,9 @@ fmri_mem_dataset(scans, mask, TR, event_table = data.frame(),
   base_path = ".", censor = NULL)
 }
 \arguments{
-\item{scans}{a vector of objects of class \code{\linkS4class{NeuroVec}}}
+\item{scans}{a \code{list} of objects of class \code{\linkS4class{NeuroVec}}}
 
-\item{mask}{name of the binary mask file indicating the voxels to include in analysis.}
+\item{mask}{a binary mask of class  \code{\linkS4class{NeuroVol}} indicating the set of voxels to include in analyses}
 
 \item{TR}{the repetition time in seconds of the scan-to-scan interval.}
 
@@ -22,4 +22,14 @@ fmri_mem_dataset(scans, mask, TR, event_table = data.frame(),
 }
 \description{
 fmri_mem_dataset
+}
+\examples{
+
+d <- c(10,10,10,10)
+nvec <- neuroim2::NeuroVec(array(rnorm(prod(d)), d), space=neuroim2::NeuroSpace(d))
+mask <- neuroim2::NeuroVol(array(rnorm(10*10*10), d[1:3]), space=neuroim2::NeuroSpace(d[1:3]))
+mask[mask < .5] <- 0
+dset <- fmri_mem_dataset(list(nvec),mask, TR=2)
+
+iter <- data_chunks(dset, nchunks=100)
 }

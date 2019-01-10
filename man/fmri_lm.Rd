@@ -6,7 +6,7 @@
 \usage{
 fmri_lm(formula, block_formula, baseline_model = NULL, dataset, durations,
   drop_empty = TRUE, contrasts = NULL, strategy = c("runwise",
-  "vectorwise", "chunkwise", "all"))
+  "vectorwise", "chunkwise", "all"), nchunks = 10)
 }
 \arguments{
 \item{formula}{the model furmula for experimental events}
@@ -35,5 +35,5 @@ mat <- matrix(rnorm(100*100), 100,100)
 dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
 dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
 lm.1 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset)
-lm.2 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset2)
+lm.2 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset2, strategy="chunkwise")
 }

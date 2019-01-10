@@ -2,7 +2,7 @@
 % Please edit documentation in R/all_generic.R
 \name{gen_afni_lm}
 \alias{gen_afni_lm}
-\title{gen_afni_lm}
+\title{generate an AFNI linear model command from a configuration file}
 \usage{
 gen_afni_lm(x, ...)
 }
@@ -12,5 +12,5 @@ gen_afni_lm(x, ...)
 \item{...}{extra args}
 }
 \description{
-gen_afni_lm
+generate an AFNI linear model command from a configuration file
 }
