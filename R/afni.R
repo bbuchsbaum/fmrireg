@@ -355,7 +355,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   cmdlines <- list(input=paste0(dataset$scans),
                    mask=paste0(dataset$mask_file),
-                   polort=if (opts[["polort"]] > 0) opts[["polort"]] else NULL,
+                   polort=if (opts[["polort"]] > 0) opts[["polort"]] else -1,
                    global_times=if (global_times) TRUE else NULL,
                    num_stimts=length(afni_stims),
                    num_glt=length(gltfiles),
