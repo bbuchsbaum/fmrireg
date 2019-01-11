@@ -13,10 +13,7 @@ gen_afni_lm.fmri_config <- function(x, ...) {
                        event_table=x$design, 
                        base_path=x$base_path,
                        censor=if (is.null(x$censor_file)) NULL else scan(paste0(x$base_path, "/", x$censor_file)))
-  
-  
-  
-  
+
   emodel <- event_model(x$event_model, data=x$design, block=as.formula(paste("~", x$block_column)),
                         sampling_frame=dset$sampling_frame)
   
@@ -352,9 +349,14 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   #browser()
   
+  if (length(opt_stim_times) > 0) {
+    global_times=TRUE
+  }
+  
   cmdlines <- list(input=paste0(dataset$scans),
                    mask=paste0(dataset$mask_file),
                    polort=if (opts[["polort"]] > 0) opts[["polort"]] else NULL,
+                   global_times=if (global_times) TRUE else NULL,
                    num_stimts=length(afni_stims),
                    num_glt=length(gltfiles),
                    stim_file=opt_stim_files,
