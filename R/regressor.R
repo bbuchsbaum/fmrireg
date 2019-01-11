@@ -140,6 +140,7 @@ evaluate.null_regressor <- function(x, grid, precision=.25) {
 #' frame <- sampling_frame(blocklens=100, TR=2)
 #' reg <- regressor(onsets=c(10,20), hrf=HRF_SPMG1)
 #' evaluate(reg, samples(frame))
+#' @import RANN
 #' @export
 evaluate.regressor <- function(x, grid, precision=.2) {
 
@@ -147,10 +148,11 @@ evaluate.regressor <- function(x, grid, precision=.2) {
   dspan <- x$span/median(diff(grid)) 
 
   nidx <- if (length(grid) > 1) {
-    apply(rflann::Neighbour(matrix(x$onsets), matrix(grid), k=2,build = "kdtree",cores=0, checks=1)$indices, 1, min)
+    #apply(rflann::Neighbour(matrix(x$onsets), matrix(grid), k=2,build = "kdtree",cores=0, checks=1)$indices, 1, min)
+    apply(RANN::nn2(matrix(grid), matrix(x$onsets), k=2)$nn.idx, 1, min)
   } else {
-    apply(rflann::Neighbour(matrix(x$onsets), matrix(grid), k=1,build = "kdtree",cores=0, checks=1)$indices, 1, min)
-    #apply(RANN::nn2(matrix(grid), matrix(x$onsets), k=1)$nn.idx, 1, min)
+    #apply(rflann::Neighbour(matrix(x$onsets), matrix(grid), k=1,build = "kdtree",cores=0, checks=1)$indices, 1, min)
+    apply(RANN::nn2(matrix(grid), matrix(x$onsets), k=1)$nn.idx, 1, min)
   }
   
   valid <- x$onsets >= (grid[1]-16) & x$onsets < grid[length(grid)]

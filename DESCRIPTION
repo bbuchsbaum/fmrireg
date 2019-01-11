@@ -15,7 +15,7 @@ Depends:
 Imports:
     gtools,
     numDeriv,
-    rflann,
+    RANN,
     assertthat,
     stringr,
     tibble,
@@ -29,7 +29,6 @@ Suggests: testthat,
     roxygen2,
     covr
 Remotes: 
-  YeeJeremy/rflann,
   bbuchsbaum/neuroim2
 VignetteBuilder: knitr
 URL: https://github.com/bbuchsbaum/fmrireg
