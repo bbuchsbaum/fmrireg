@@ -61,6 +61,7 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, censo
                        rout=TRUE, 
                        tout=TRUE, 
                        float=TRUE, 
+                       nocond=FALSE,
                        cbucket="coefout", 
                        bucket="statout", 
                        jobs=jobs, 
@@ -376,6 +377,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
                    noFDR=opts[["noFDR"]],
                    cbucket=opts[["cbucket"]],
                    bucket=opts[["bucket"]],
+                   nocond=opts[["nocond"]],
                    jobs=opts[["jobs"]],
                    float=TRUE)
   

@@ -7,7 +7,10 @@ default_config <- function() {
   env
   
 }
-#' read and fMRI configuration file
+
+
+
+#' read a basic fMRI configuration file
 #' 
 #' @param file_name name of configuration file
 #' @param base_path the file path to be prepended to relative file names
