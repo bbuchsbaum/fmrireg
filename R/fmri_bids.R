@@ -1,8 +1,8 @@
 
-get_prepped_scans <- function(x, id, task, space,abspath) UseMethod("get_prepped_scans")
+read_confounds <- function(x) UseMethod("read_confounds")
 
 
-bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold_space, task=NULL, confound_vars=NULL) {
+bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold_space, task=NULL, confound_vars="FramewiseDisplacement") {
   scan_map <- paste0(bids_path, "/", "sub-", id, "/sub-", id, "_scans.tsv")
   
   
@@ -10,7 +10,7 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
     stop("cannot find scan_map named: ", paste0(bids_path, "/", "sub-", id, "/sub-", id, "_scans.tsv"))
   }
   
-  scan_map <- read.table(scan_map, header=TRUE, stringsAsFactors=FALSE)
+  scan_map <- read.table(scan_map, header=TRUE, stringsAsFactors=FALSE, colClasses=list(run="character", scan="character"))
   
   if (!is.null(task)) {
     qtask <- dplyr::quo(task)
@@ -18,68 +18,70 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
   } 
   
   snum <- as.character(scan_map$scan)
-  confounds <- paste0(bids_path, "/", deriv_folder, "/", paste0("sub-", id, "_task-", task, "_run-", snum, "_bold_confounds.tsv"))
+  
+  confounds <- paste0(bids_path, "/", deriv_folder, "/sub-", id, "/func/", paste0("sub-", id, "_task-", task, "_run-", snum, "_bold_confounds.tsv"))
 
   raw_scans <- scan_map$func
-  event_files <- paste0(bids_path, "/sub-", id, "/func/", gsub("bold.nii.gz", "events.tsv", raw_scans))
+  event_files <- paste0(bids_path, "/sub-", id, "/func/", gsub("bold.nii.gz", "events.tsv", basename(raw_scans)))
   
-  scans <- paste0("sub-", id, "_task-", task, "_run-", snum, "_bold_space-", bold_space, "_preproc.nii.gz")
+  scans <- paste0("sub-", id, "_task-", task, "_run-", snum, "_bold_space-", bold_space, ".nii.gz")
   
   structure(
     list(bids_path=bids_path,
          deriv_folder=deriv_folder,
-         func_path=paste0(bids_path, "/", deriv_folder, "/func"),
+         func_path=paste0(bids_path, "/", deriv_folder, "/sub-", id, "/func"),
          scan_map=scan_map,
-         scans=scans,
+         raw_scans=raw_scans,
+         preproc_scans=scans,
          event_files=event_files,
-         confounds=confounds),
+         confound_files=confounds,
+         confound_vars=confound_vars),
     class="bids_source")
 }
 
-get_scan_map <- function(x, id, task=NULL) {
-  #scan_map <- read.table(paste0(x$bids_path, "/", "sub-", id, "/sub-", id, "_scans.tsv"), header=TRUE)
+read_confounds.bids_source <- function(x, replace_na=c("median", "mean"), scale=TRUE, center=TRUE, cvars=NULL, npcs=0, perc_var=0) {
+  replace_na <- match.arg(replace_na)
   
-  #if (!file.exists(scan_map)) {
-  #  stop("cannot find scan_map named: ", paste0(x$bids_path, "/", "sub-", id, "/sub-", id, "_scans.tsv"))
-  #}
+  cfiles <-x$confound_files
+  cvars <- if (is.null(cvars)) x$confound_vars else cvars
   
-  if (!is.null(task)) {
-    qtask <- dplyr::quo(task)
-    x$scan_map %>% filter(task == !!qtask)
-  } else {
-    x$scan_map
-  }
+  lapply(cfiles, function(cf) {
+    m <- as.matrix(read.table(cf, header=TRUE, na.strings="n/a") %>% dplyr::select(cvars))
+    
+    
+    if (any(is.na(m))) {
+      f <- get(replace_na)
+      m <- apply(m, 2, function(v) {
+        mu <- f(v, na.rm=TRUE)
+        v[is.na(v)] <- mu
+        v
+      })
+    }
+    
+    sm <- scale(m, center=center,scale=scale)
+    
+    if (npcs > 0 || perc_var > 0 && (ncol(sm) > 1)) {
+      pres <- prcomp(sm, scale=TRUE)
+      varexp <- cumsum(pres$sdev^2)/sum(pres$sdev^2) * 100
+      if (npcs > 0 && perc_var <= 0) {
+        sm <- pres$x[,1:npcs,drop=FALSE]
+      } else if (npcs <= 0 && perc_var > 0) {
+        keep <- which( (varexp - perc_var) > 0)[1]
+        sm <- pres$x[, 1:keep,drop=FALSE]
+      } else {
+        keep <- which( (varexp - perc_var) > 0)[1]
+        npcs <- max(c(keep, npcs))
+        if (npcs < 1) {
+          npcs <- 1
+        }
+        sm <- pres$x[, 1:npcs, drop=FALSE]
+      }
+    }
+      
+    sm
+      
+  })
 }
 
-get_confound_files <- function(x, id, task, abspath=TRUE) {
-  scan_map <- get_scan_map(x,id, task)
-  snums <- scan_map$scan
-  
-  paste0(x$bids_path, "/", x$deriv_folder, "/", paste0("sub-", id, "_task-", task, "_run-", snums, "_bold_confounds.tsv"))
-  
-}
 
-load_confound_files <- function(x, id, task, abspath=TRUE) {
-  cfiles <- get_confound_files(x,id,task,abspath)
-  lapply(cfiles, read.table, header=TRUE, na.strings="n/a")
-}
-
-get_prepped_scans.bids_query <- function(x, id, task, space,abspath=TRUE) {
-  scan_map <- get_scan_map(x,id, task)
-  
-  snums <- scan_map$scan
-  scans <- paste0("sub-", id, "_task-", task, "_run-", snums, "_bold_space-", space, "_preproc.nii.gz")
-  
-  if (abspath) {
-    p <- paste0(x$bids_path, "/", x$deriv_folder, "/", "sub-", id, "/func/")
-    scans <- paste0(p, scans)
-  }
-  
-  scans
-}
-
-get_event_files <- function(x, id, task, space,abspath=TRUE) {
-  
-}
-  
-  
+ 
