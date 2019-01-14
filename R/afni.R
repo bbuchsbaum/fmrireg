@@ -353,6 +353,8 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   if (length(opt_stim_times) > 0) {
     global_times=TRUE
+  } else {
+    global_times <- FALSE
   }
   
   cmdlines <- list(input=paste0(dataset$scans),
