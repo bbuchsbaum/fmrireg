@@ -14,7 +14,7 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
   
   if (!is.null(task)) {
     qtask <- dplyr::quo(task)
-    scan_map <- scan_map %>% filter(task == !!qtask)
+    scan_map <- scan_map %>% dplyr::filter(task == !!qtask)
   } 
   
   snum <- as.character(scan_map$scan)
@@ -35,7 +35,8 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
          preproc_scans=scans,
          event_files=event_files,
          confound_files=confounds,
-         confound_vars=confound_vars),
+         confound_vars=confound_vars,
+         task=task),
     class="bids_source")
 }
 
