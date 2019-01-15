@@ -1,7 +1,8 @@
 
+#' @export
 read_confounds <- function(x,...) UseMethod("read_confounds")
 
-
+#' @export
 bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold_space, task=NULL, confound_vars="FramewiseDisplacement") {
   scan_map <- paste0(bids_path, "/", "sub-", id, "/sub-", id, "_scans.tsv")
   
@@ -40,6 +41,7 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
     class="bids_source")
 }
 
+#' @export
 read_confounds.bids_source <- function(x, replace_na=c("median", "mean"), scale=TRUE, center=TRUE, cvars=NULL, npcs=0, perc_var=0) {
   replace_na <- match.arg(replace_na)
   
