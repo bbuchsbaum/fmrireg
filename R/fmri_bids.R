@@ -1,5 +1,5 @@
 
-read_confounds <- function(x) UseMethod("read_confounds")
+read_confounds <- function(x,...) UseMethod("read_confounds")
 
 
 bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold_space, task=NULL, confound_vars="FramewiseDisplacement") {
