@@ -42,7 +42,7 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
 }
 
 #' @export
-read_confounds.bids_source <- function(x, replace_na=c("median", "mean"), scale=TRUE, center=TRUE, cvars=NULL, npcs=0, perc_var=0) {
+read_confounds.bids_source <- function(x, replace_na=c("median", "mean"), scale=TRUE, center=TRUE, cvars=NULL, npcs=-1, perc_var=-1) {
   replace_na <- match.arg(replace_na)
   
   cfiles <-x$confound_files
