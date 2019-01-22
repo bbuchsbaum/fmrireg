@@ -14,7 +14,7 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
   scan_map <- read.table(scan_map, header=TRUE, stringsAsFactors=FALSE, colClasses=list(run="character", scan="character"))
   
   if (!is.null(task)) {
-    qtask <- dplyr::quo(task)
+    qtask <- dplyr::enquo(task)
     scan_map <- scan_map %>% dplyr::filter(task == !!qtask)
   } 
   
