@@ -379,7 +379,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
                    rout=opts[["rout"]],
                    tout=opts[["tout"]],
                    bout=opts[["bout"]],
-                   nofullf_atall=[["nofullf_atall"]],
+                   nofullf_atall=opts[["nofullf_atall"]],
                    noFDR=opts[["noFDR"]],
                    cbucket=opts[["cbucket"]],
                    bucket=opts[["bucket"]],
