@@ -256,7 +256,7 @@ build_baseline_stims <- function(x) {
 }
 
 #' @keywords internal
-build_afni_stims.convolved_term <- function(x) {
+build_afni_stims.convolved_term <- function(x, iresp=FALSE, tr_times=1) {
   stimlabels <- longnames(x)
   stimfiles <- paste(stimlabels, "_reg.1D", sep = "")
   desmat <- design_matrix(x)
@@ -279,7 +279,7 @@ build_afni_stims.afni_hrf_convolved_term <- function(x, iresp=FALSE, tr_times=1)
   names(split_ons) <- stimlabels
   
   lapply(1:length(stimlabels), function(i) {
-    afni_stim_times(stimlabels[i], stimfiles[i], hrf_name, split_ons[[stimlabels[[i]]]], iresp, tr_times)
+    afni_stim_times(stimlabels[i], stimfiles[i], hrf_name, split_ons[[stimlabels[[i]]]], iresp=iresp, tr_times=tr_times)
   })
   
 }
@@ -337,7 +337,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   
   ## construct list of afni stims
-  afni_stims <- unlist(lapply(func_terms, function(term) { build_afni_stims(term) }), recursive=FALSE)
+  afni_stims <- unlist(lapply(func_terms, function(term) { build_afni_stims(term, iresp=opts[["iresp"]], tr_times=opts[["TR_times"]]) }), recursive=FALSE)
   afni_baseline_mats <- build_baseline_stims(model)
   
   
