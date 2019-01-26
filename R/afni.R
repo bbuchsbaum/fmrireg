@@ -57,8 +57,8 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, censo
   }
   
   defopts <- list(noFDR=FALSE, 
-                       fout=TRUE, 
-                       rout=TRUE, 
+                       fout=FALSE, 
+                       rout=FALSE, 
                        tout=TRUE, 
                        float=TRUE, 
                        nocond=FALSE,
@@ -69,6 +69,8 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, censo
                        polort=polort, 
                        censor=censor,
                        iresp=FALSE, 
+                       noFDR=TRUE,
+                       nofullf_atall=TRUE,
                        TR_times=1)
   
   for (optname in names(options)) {

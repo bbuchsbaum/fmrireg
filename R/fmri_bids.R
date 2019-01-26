@@ -1,7 +1,8 @@
 
-read_confounds <- function(x) UseMethod("read_confounds")
+#' @export
+read_confounds <- function(x,...) UseMethod("read_confounds")
 
-
+#' @export
 bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold_space, task=NULL, confound_vars="FramewiseDisplacement") {
   scan_map <- paste0(bids_path, "/", "sub-", id, "/sub-", id, "_scans.tsv")
   
@@ -13,8 +14,8 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
   scan_map <- read.table(scan_map, header=TRUE, stringsAsFactors=FALSE, colClasses=list(run="character", scan="character"))
   
   if (!is.null(task)) {
-    qtask <- dplyr::quo(task)
-    scan_map <- scan_map %>% filter(task == !!qtask)
+    qtask <- dplyr::enquo(task)
+    scan_map <- scan_map %>% dplyr::filter(task == !!qtask)
   } 
   
   snum <- as.character(scan_map$scan)
@@ -35,11 +36,13 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
          preproc_scans=scans,
          event_files=event_files,
          confound_files=confounds,
-         confound_vars=confound_vars),
+         confound_vars=confound_vars,
+         task=task),
     class="bids_source")
 }
 
-read_confounds.bids_source <- function(x, replace_na=c("median", "mean"), scale=TRUE, center=TRUE, cvars=NULL, npcs=0, perc_var=0) {
+#' @export
+read_confounds.bids_source <- function(x, replace_na=c("median", "mean"), scale=TRUE, center=TRUE, cvars=NULL, npcs=-1, perc_var=-1) {
   replace_na <- match.arg(replace_na)
   
   cfiles <-x$confound_files
