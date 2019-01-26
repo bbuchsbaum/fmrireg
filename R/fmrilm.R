@@ -66,7 +66,7 @@ term_matrices.fmri_model <- function(x, blocknum=NULL) {
 #' fmri_lm
 #' 
 #' @param formula the model furmula for experimental events
-#' @param block_formula the model formula for block structure
+#' @param block the model formula for block structure
 #' @param baseline_model the \code{baseline_model} object
 #' @param dataset an object derived from \code{fmri_dataset} containing the time-series data
 #' @param durations a vector of event durations
@@ -80,12 +80,12 @@ term_matrices.fmri_model <- function(x, blocknum=NULL) {
 #' mat <- matrix(rnorm(100*100), 100,100)
 #' dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
 #' dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
-#' lm.1 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset)
-#' lm.2 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset2, strategy="chunkwise")
+#' lm.1 <- fmri_lm(onset ~ hrf(fac), block= ~ run, dataset=dset)
+#' lm.2 <- fmri_lm(onset ~ hrf(fac), block= ~ run, dataset=dset2, strategy="chunkwise")
 #' @export
-fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset, 
+fmri_lm <- function(formula, block, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, contrasts=NULL, 
-                     strategy=c("runwise", "vectorwise", "chunkwise", "all"), nchunks=10) {
+                     strategy=c("runwise", "chunkwise"), nchunks=10) {
   
  
   strategy <- match.arg(strategy)
@@ -99,7 +99,7 @@ fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset,
                                     sframe=dataset$sampling_frame)
   }
  
-  ev_model <- event_model(formula, block_formula, data=dataset$event_table, 
+  ev_model <- event_model(formula, block, data=dataset$event_table, 
                          sampling_frame=dataset$sampling_frame, contrasts=contrasts)
      
   model <- fmri_model(ev_model, baseline_model)
@@ -108,7 +108,7 @@ fmri_lm <- function(formula, block_formula, baseline_model=NULL, dataset,
   fcons <- Fcontrasts(ev_model)
 
   result <- if (strategy == "runwise") {
-    runwise_lm(dataset, model, conlist,fcons)
+    runwise_lm(dataset, model, conlist, fcons)
   } else if (strategy == "chunkwise") {
     chunkwise_lm(dataset, model, conlist,fcons, nchunks)
   }
