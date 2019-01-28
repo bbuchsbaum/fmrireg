@@ -175,7 +175,7 @@ construct.baselinespec <- function(x, sampling_frame) {
   rowind <- vector(length(ret), mode="list")
   
   for (i in seq_along(ret)) {
-    rowstart <- sum(sampling_frame$blocklens[1:i]) - sampling_frame$blocklens[1] + 1
+    rowstart <- sum(sampling_frame$blocklens[1:i]) - sampling_frame$blocklens[i] + 1
     rowend <- rowstart + sampling_frame$blocklens[i] -1
     colstart <- (nc_per_block)*(i-1) + 1
     colend <- colstart + nc_per_block - 1
