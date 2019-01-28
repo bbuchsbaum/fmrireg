@@ -35,8 +35,6 @@ evaluate(x, grid, ...)
 \description{
 evaluate a regression or hemodynamic response function
 
-evaluate
-
 evalute a regressor function over a sampling grid
 }
 \examples{

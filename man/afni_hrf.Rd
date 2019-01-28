@@ -4,10 +4,10 @@
 \alias{afni_hrf}
 \title{construct an native AFNI hrf specification for '3dDeconvolve' with the 'stim_times' argument.}
 \usage{
-afni_hrf(..., basis = c("spmg1", "block", "dmblock", "tent", "csplin", "poly",
-  "sin", "gam", "spmg2", "spmg3", "wav"), onsets = NULL, durations = NULL,
-  prefix = NULL, subset = NULL, nbasis = 1, contrasts = NULL,
-  id = NULL, start = NULL, stop = NULL)
+afni_hrf(..., basis = c("spmg1", "block", "dmblock", "tent", "csplin",
+  "poly", "sin", "gam", "spmg2", "spmg3", "wav"), onsets = NULL,
+  durations = NULL, prefix = NULL, subset = NULL, nbasis = 1,
+  contrasts = NULL, id = NULL, start = NULL, stop = NULL)
 }
 \arguments{
 \item{...}{the variable names, all of which must be present in the enclosing environment (e.g. an \code{event_model} object)}

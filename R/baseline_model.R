@@ -238,9 +238,9 @@ construct_block_term <- function(vname, sframe) {
 #' construct a constant term
 #' 
 #' @param varname the name of the term
-#' @param blockids
-#' @param expanded_blockids
-#' @param mat
+#' @param blockids the ordered sequence of blockids
+#' @param expanded_blockids the vector of blockids expanded by run
+#' @param mat the \code{matrix} of covariates
 #' @importFrom tibble as_tibble
 #' @export
 block_term <- function(varname, blockids, expanded_blockids, mat) {

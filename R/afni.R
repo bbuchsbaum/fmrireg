@@ -32,13 +32,13 @@ gen_afni_lm.fmri_config <- function(x, ...) {
 #' afni_lm
 #' 
 #' 
-#' @param fmri_mod
-#' @param dataset
-#' @param working_dir
-#' @param polort
-#' @param jobs
-#' @param options
-#' @param censor
+#' @param fmri_mod an \code{fmri_model} object
+#' @param dataset an \code{fmri_dataset} object
+#' @param working_dir the working directory
+#' @param polort the number of polynomila baseline regressors (default is to suppress 'polort')
+#' @param jobs the number of jobs to use with '3dDeconvolve'
+#' @param censor a list of censoring vectors, one per run. Or a single vector equal to total number of scans.
+#' @param options a \code{list} of options to be sent to 3dDeconvolve
 #' 
 #' @examples 
 #' etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))
@@ -47,7 +47,7 @@ gen_afni_lm.fmri_config <- function(x, ...) {
 #' emodel <- event_model(onset ~ hrf(fac), block = ~ run, data=etab, sampling_frame=dset$sampling_frame)
 #' bmodel <- baseline_model("bs", degree=4, sframe=dset$sampling_frame)
 #' fmod <- fmri_model(emodel, bmodel)
-#' alm <- afni_lm(fmod, dset)
+#' alm <- afni_lm(fmod, dset, jobs=2, options=list(tout=TRUE))
 #' @export
 afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, censor=NULL, options=list()) {
   
@@ -256,7 +256,7 @@ build_baseline_stims <- function(x) {
 }
 
 #' @keywords internal
-build_afni_stims.convolved_term <- function(x) {
+build_afni_stims.convolved_term <- function(x, iresp=FALSE, tr_times=1) {
   stimlabels <- longnames(x)
   stimfiles <- paste(stimlabels, "_reg.1D", sep = "")
   desmat <- design_matrix(x)
@@ -279,7 +279,7 @@ build_afni_stims.afni_hrf_convolved_term <- function(x, iresp=FALSE, tr_times=1)
   names(split_ons) <- stimlabels
   
   lapply(1:length(stimlabels), function(i) {
-    afni_stim_times(stimlabels[i], stimfiles[i], hrf_name, split_ons[[stimlabels[[i]]]], iresp, tr_times)
+    afni_stim_times(stimlabels[i], stimfiles[i], hrf_name, split_ons[[stimlabels[[i]]]], iresp=iresp, tr_times=tr_times)
   })
   
 }
@@ -317,7 +317,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   ## all stims must be unique
   assert_that(length(unique(stimlabels)) == length(stimlabels))
-  #browser()
+
   assert_that(length(stimlabels) == length(conditions(model$event_model)))
   
   ## extract all contrast matrices
@@ -335,9 +335,8 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   func_terms <- terms(model$event_model)
   
-  
   ## construct list of afni stims
-  afni_stims <- unlist(lapply(func_terms, function(term) { build_afni_stims(term) }), recursive=FALSE)
+  afni_stims <- unlist(lapply(func_terms, function(term) { build_afni_stims(term, iresp=opts[["iresp"]], tr_times=opts[["TR_times"]]) }), recursive=FALSE)
   afni_baseline_mats <- build_baseline_stims(model)
   
   

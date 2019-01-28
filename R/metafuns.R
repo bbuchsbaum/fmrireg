@@ -1,3 +1,6 @@
+
+
+#' @keywords internal
 meta_stouffer <- function(pval, se) {
   inv_var <- 1/(se^2)
   wts <- inv_var/rowSums(inv_var)
@@ -16,6 +19,8 @@ meta_stouffer <- function(pval, se) {
   )
 }
 
+
+#' @keywords internal
 meta_fixef <- function(beta,se) {
   inv_var <- 1/(se^2)
   
@@ -35,6 +40,8 @@ meta_fixef <- function(beta,se) {
   
 }
 
+
+#' @keywords internal
 meta_Fcontrasts <- function(fres) {
   ncon <- length(fres[[1]])
   res <- lapply(seq(1,ncon), function(i) {
@@ -47,6 +54,8 @@ meta_Fcontrasts <- function(fres) {
   res
 }
 
+
+#' @keywords internal
 meta_contrasts <- function(cres) {
   ncon <- length(cres[[1]])
   if (ncon > 0) {
@@ -70,6 +79,8 @@ meta_contrasts <- function(cres) {
   )
 }
 
+
+#' @keywords internal
 meta_betas <- function(bstats, colind) {
   
   len <- length(colind)

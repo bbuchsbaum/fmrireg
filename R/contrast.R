@@ -303,6 +303,7 @@ contrast_weights.pair_contrast_spec <- function(x, term) {
     rep(TRUE, nrow(term.cells))
   }
   
+
   keepA <- lazyeval::f_eval_rhs(x$A, data=term.cells)
   keepB <- if (is.null(x$B)) NULL else lazyeval::f_eval_rhs(x$B, data=term.cells)
 
