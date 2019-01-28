@@ -34,11 +34,11 @@ gen_afni_lm.fmri_config <- function(x, ...) {
 #' 
 #' @param fmri_mod an \code{fmri_model} object
 #' @param dataset an \code{fmri_dataset} object
-#' @param working_dir 
-#' @param polort
-#' @param jobs
-#' @param options
-#' @param censor
+#' @param working_dir the working directory
+#' @param polort the number of polynomila baseline regressors (default is to suppress 'polort')
+#' @param jobs the number of jobs to use with '3dDeconvolve'
+#' @param censor a list of censoring vectors, one per run. Or a single vector equal to total number of scans.
+#' @param options a \code{list} of options to be sent to 3dDeconvolve
 #' 
 #' @examples 
 #' etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))
@@ -47,7 +47,7 @@ gen_afni_lm.fmri_config <- function(x, ...) {
 #' emodel <- event_model(onset ~ hrf(fac), block = ~ run, data=etab, sampling_frame=dset$sampling_frame)
 #' bmodel <- baseline_model("bs", degree=4, sframe=dset$sampling_frame)
 #' fmod <- fmri_model(emodel, bmodel)
-#' alm <- afni_lm(fmod, dset)
+#' alm <- afni_lm(fmod, dset, jobs=2, options=list(tout=TRUE))
 #' @export
 afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, censor=NULL, options=list()) {
   
