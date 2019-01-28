@@ -8,6 +8,12 @@ block_term(varname, blockids, expanded_blockids, mat)
 }
 \arguments{
 \item{varname}{the name of the term}
+
+\item{blockids}{the ordered sequence of blockids}
+
+\item{expanded_blockids}{the vector of blockids expanded by run}
+
+\item{mat}{the \code{matrix} of covariates}
 }
 \description{
 construct a constant term

@@ -4,14 +4,14 @@
 \alias{fmri_lm}
 \title{fmri_lm}
 \usage{
-fmri_lm(formula, block_formula, baseline_model = NULL, dataset, durations,
+fmri_lm(formula, block, baseline_model = NULL, dataset, durations,
   drop_empty = TRUE, contrasts = NULL, strategy = c("runwise",
-  "vectorwise", "chunkwise", "all"), nchunks = 10)
+  "chunkwise"), nchunks = 10)
 }
 \arguments{
 \item{formula}{the model furmula for experimental events}
 
-\item{block_formula}{the model formula for block structure}
+\item{block}{the model formula for block structure}
 
 \item{baseline_model}{the \code{baseline_model} object}
 
@@ -34,6 +34,8 @@ etab2 <- data.frame(onset=c(1,30,65,75), fac=factor(c("A", "B", "A", "B")), run=
 mat <- matrix(rnorm(100*100), 100,100)
 dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
 dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
-lm.1 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset)
-lm.2 <- fmri_lm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset2, strategy="chunkwise")
+con  <- pair_contrast(~ fac == "A", ~ fac == "B", name="A_min_B")
+lm.1 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, dataset=dset)
+lm.2 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, dataset=dset2)
+lm.3 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, dataset=dset2, strategy="chunkwise")
 }

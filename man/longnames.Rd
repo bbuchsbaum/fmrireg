@@ -2,7 +2,6 @@
 % Please edit documentation in R/all_generic.R, R/event_model.R
 \name{longnames}
 \alias{longnames}
-\alias{longnames}
 \alias{longnames.convolved_term}
 \alias{longnames.afni_hrf_convolved_term}
 \alias{shortnames.convolved_term}

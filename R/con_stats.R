@@ -142,7 +142,7 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
 #' @importFrom purrr map_dbl
 fit_contrasts <- function(lmfit, conmat, colind) {
   if (!is.matrix(conmat) && is.numeric(conmat)) {
-    conmat <- matrix(conmat, 1, length(conmat))
+    conmat <- t(matrix(conmat, 1, length(conmat)))
   }
   
   
@@ -150,21 +150,24 @@ fit_contrasts <- function(lmfit, conmat, colind) {
   
   p1 <- 1:lmfit$rank
   cov.unscaled <- try(chol2inv(Qr$qr[colind,colind,drop=FALSE]))
+  
   if (inherits(cov.unscaled, "try-error")) {
-    browser()
+    stop("fit_contrasts: error computing contrast covariance")
+    #browser()
   }
   
   betamat <- lmfit$coefficients[colind,]
-  ct <- conmat %*% betamat
+  ct <- t(conmat) %*% betamat
   
   rss <- colSums(lmfit$residuals^2)
   rdf <- lmfit$df.residual
   resvar <- rss/rdf
   sigma <- sqrt(resvar)
   
+
   vc <- map_dbl(1:ncol(betamat), function(i) {
     vcv <- cov.unscaled * sigma[i]^2
-    sqrt(diag(conmat %*% vcv %*% t(conmat)))
+    sqrt(diag(t(conmat) %*% vcv %*% conmat))
   })
   
   

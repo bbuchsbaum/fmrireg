@@ -32,9 +32,9 @@ gen_afni_lm.fmri_config <- function(x, ...) {
 #' afni_lm
 #' 
 #' 
-#' @param fmri_mod
-#' @param dataset
-#' @param working_dir
+#' @param fmri_mod an \code{fmri_model} object
+#' @param dataset an \code{fmri_dataset} object
+#' @param working_dir 
 #' @param polort
 #' @param jobs
 #' @param options
@@ -317,7 +317,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   ## all stims must be unique
   assert_that(length(unique(stimlabels)) == length(stimlabels))
-  #browser()
+
   assert_that(length(stimlabels) == length(conditions(model$event_model)))
   
   ## extract all contrast matrices
@@ -334,7 +334,6 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   assert_that(sum(duplicated(gltnames))  == 0, msg="Cannot have two GLTs with the same name")
   
   func_terms <- terms(model$event_model)
-  
   
   ## construct list of afni stims
   afni_stims <- unlist(lapply(func_terms, function(term) { build_afni_stims(term, iresp=opts[["iresp"]], tr_times=opts[["TR_times"]]) }), recursive=FALSE)

@@ -22,7 +22,7 @@ Imports:
     neuroim2,
     purrr,
     foreach
-RoxygenNote: 6.0.1.9000
+RoxygenNote: 6.1.1
 Suggests: testthat,
     knitr,
     rmarkdown,

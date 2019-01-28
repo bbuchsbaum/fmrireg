@@ -4,14 +4,12 @@
 \alias{fmri_rlm}
 \title{fmri_rlm}
 \usage{
-fmri_rlm(formula, block_formula, baseline_model = NULL, dataset, durations,
-  drop_empty = TRUE, contrasts = NULL, strategy = c("runwise",
-  "slicewise", "all"))
+fmri_rlm(formula, block_formula, baseline_model = NULL, dataset,
+  durations, drop_empty = TRUE, contrasts = NULL,
+  strategy = c("runwise", "slicewise", "all"))
 }
 \arguments{
 \item{formula}{the model furmula for experimental events}
-
-\item{block_formula}{the model formula for block structure}
 
 \item{baseline_model}{the \code{baseline_model} object}
 
