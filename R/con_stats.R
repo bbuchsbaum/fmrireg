@@ -57,9 +57,16 @@ fit_Ftests <- function(object) {
 beta_stats <- function(lmfit, varnames) {
   Qr <- stats:::qr.lm(lmfit)
   cov.unscaled <- chol2inv(Qr$qr)
-  betamat <- lmfit$coefficients
   
-  rss <- colSums(lmfit$residuals^2)
+  cfs <- coef(lmfit)
+  betamat <- if (is.vector(cfs)) {
+    as.matrix(coef(lmfit))
+  } else {
+    betamat <- cfs
+  }
+ 
+  
+  rss <- colSums(as.matrix(lmfit$residuals^2))
   rdf <- lmfit$df.residual
   resvar <- rss/rdf
   sigma <- sqrt(resvar)
@@ -94,11 +101,18 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
   Qr <- stats:::qr.lm(lmfit)
   cov.unscaled <- try(chol2inv(Qr$qr[colind,colind,drop=FALSE]))
   
-  betamat <- lmfit$coefficients[colind,]
+  cfs <- coef(lmfit)
+  betamat <- if (is.vector(cfs)) {
+    as.matrix(coef(lmfit)[colind])
+  } else {
+    betamat <- cfs[colind,,drop=FALSE]
+  }
+  
+  #betamat <- lmfit$coefficients[colind,]
   
   df <- lmfit$df.residual
   
-  rss <- colSums(lmfit$residuals^2)
+  rss <- colSums(as.matrix(lmfit$residuals^2))
   rdf <- lmfit$df.residual
   resvar <- rss/rdf
   sigma <- sqrt(resvar)
@@ -155,11 +169,24 @@ fit_contrasts <- function(lmfit, conmat, colind) {
     stop("fit_contrasts: error computing contrast covariance")
     #browser()
   }
+ 
+  print(length(colind))
   
-  betamat <- lmfit$coefficients[colind,]
+  cfs <- coef(lmfit)
+  betamat <- if (is.vector(cfs)) {
+    as.matrix(coef(lmfit)[colind])
+  } else {
+    betamat <- cfs[colind,,drop=FALSE]
+  }
+  
+  if (inherits(cov.unscaled, "try-error")) {
+    stop("fit_contrasts: error computing contrast covariance")
+    #browser()
+  }
+  
   ct <- t(conmat) %*% betamat
   
-  rss <- colSums(lmfit$residuals^2)
+  rss <- colSums(as.matrix(lmfit$residuals^2))
   rdf <- lmfit$df.residual
   resvar <- rss/rdf
   sigma <- sqrt(resvar)
