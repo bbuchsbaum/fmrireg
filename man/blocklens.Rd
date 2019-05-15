@@ -12,5 +12,5 @@ blocklens(x, ...)
 \item{...}{extra args}
 }
 \description{
-extract block lengths
+return block lengths
 }

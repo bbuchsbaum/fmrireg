@@ -2,13 +2,13 @@
 % Please edit documentation in R/regressor.R
 \name{regressor}
 \alias{regressor}
-\title{regressor}
+\title{contract a regressor object}
 \usage{
 regressor(onsets, hrf = HRF_SPMG1, duration = 0, amplitude = 1,
   span = 24, summate = TRUE)
 }
 \arguments{
-\item{hrf}{a hemodynamic response function, e.g. \code{HRF_SPMG1}}
+\item{hrf}{a hemodynamic response function, e.g. \code{HRF_SPMG1} or costum \code{HRF}}
 
 \item{duration}{duration of events (default is 0)}
 
@@ -16,7 +16,7 @@ regressor(onsets, hrf = HRF_SPMG1, duration = 0, amplitude = 1,
 
 \item{span}{the temporal window of the impulse response function (default is 24)}
 
-\item{summate}{whether to summate hrf response as a function of the duration of an event.}
+\item{summate}{whether to summate hrf amplitude as a function of the duration of an event.}
 
 \item{onset}{the event onsets in seconds}
 }
@@ -24,12 +24,17 @@ regressor(onsets, hrf = HRF_SPMG1, duration = 0, amplitude = 1,
 an S3 list of type \code{regressor}
 }
 \description{
-construct a regressor object that can be used to generate regressor variables
-from a set of onset times and a hemodynamic response function
+construct a \code{regressor} object that can be used to generate regression variables
+from a set of onset times and a hemodynamic response function. A \code{regressor} can be
+evaluated at a set of times to generate a time-course appropriate for modeling an fMRI response.
 }
 \examples{
 
-reg <- regressor(c(10,12,14,16,18, 40), HRF_SPMG1)
+reg <- regressor(c(10,12,14,16,18, 40), HRF_SPMG1, duration=3)
 pred <- evaluate(reg, seq(0,100,by=2))
 nbasis(reg) == 1
+
+reg2 <- regressor(c(10,12,14,16,18, 40), HRF_SPMG1, duration=3, summate=FALSE)
+pred2 <- evaluate(reg2, seq(0,100,by=2))
+stopifnot(max(pred) > max(pred2))
 }

@@ -39,24 +39,29 @@ single_trial_regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=
 }
 
 
-#' regressor 
+#' contract a regressor object
 #' 
-#' construct a regressor object that can be used to generate regressor variables
-#' from a set of onset times and a hemodynamic response function
+#' construct a \code{regressor} object that can be used to generate regression variables
+#' from a set of onset times and a hemodynamic response function. A \code{regressor} can be
+#' evaluated at a set of times to generate a time-course appropriate for modeling an fMRI response.
 #' 
 #' @param onset the event onsets in seconds
-#' @param hrf a hemodynamic response function, e.g. \code{HRF_SPMG1}
+#' @param hrf a hemodynamic response function, e.g. \code{HRF_SPMG1} or costum \code{HRF}
 #' @param duration duration of events (default is 0)
 #' @param amplitude scaling vector (default is 1)
 #' @param span the temporal window of the impulse response function (default is 24)
-#' @param summate whether to summate hrf response as a function of the duration of an event.
+#' @param summate whether to summate hrf amplitude as a function of the duration of an event.
 #' @return an S3 list of type \code{regressor}
 #' @export
 #' @examples 
 #' 
-#' reg <- regressor(c(10,12,14,16,18, 40), HRF_SPMG1)
+#' reg <- regressor(c(10,12,14,16,18, 40), HRF_SPMG1, duration=3)
 #' pred <- evaluate(reg, seq(0,100,by=2))
 #' nbasis(reg) == 1
+#' 
+#' reg2 <- regressor(c(10,12,14,16,18, 40), HRF_SPMG1, duration=3, summate=FALSE)
+#' pred2 <- evaluate(reg2, seq(0,100,by=2))
+#' stopifnot(max(pred) > max(pred2))
 regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=24, summate=TRUE) {
   if (length(duration) == 1) {
     duration = rep(duration, length(onsets))

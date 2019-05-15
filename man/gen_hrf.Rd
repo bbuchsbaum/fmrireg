@@ -2,9 +2,10 @@
 % Please edit documentation in R/hrf.R
 \name{gen_hrf}
 \alias{gen_hrf}
-\title{gen_hrf}
+\title{Construct an \code{HRF} instance}
 \usage{
-gen_hrf(hrf, lag = 0, width = NULL, precision = 0.1, ...)
+gen_hrf(hrf, lag = 0, width = NULL, precision = 0.1,
+  name = "gen_hrf", ...)
 }
 \arguments{
 \item{hrf}{a function mapping from time --> signal}
@@ -17,8 +18,11 @@ gen_hrf(hrf, lag = 0, width = NULL, precision = 0.1, ...)
 
 \item{...}{extra parameters for the \code{hrf} function}
 }
+\value{
+an instance of type \code{HRF} inheriting from \code{function}
+}
 \description{
-gen_hrf
+\code{HRF} takes a faw function f(t) and returns an \code{HRF} instance
 }
 \examples{
 
@@ -29,4 +33,5 @@ grf(0:20)
 hg <- purrr::partial(hrf_gaussian, mean=4, sd=1)
 grf <- gen_hrf(hg, lag=1, width=2)
 
+vals <- grf(0:20)
 }

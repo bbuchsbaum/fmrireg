@@ -10,5 +10,5 @@ blockids(x)
 \item{x}{the object}
 }
 \description{
-extract block indices
+the return the block indicator variable
 }

@@ -1,13 +1,17 @@
 #' @import splines
 NULL
 
-#' gen_hrf
+#' Construct an \code{HRF} instance 
+#' 
+#' \code{HRF} takes a faw function f(t) and returns an \code{HRF} instance
 #' 
 #' @param hrf a function mapping from time --> signal
 #' @param lag optional lag in seconds
 #' @param width optional block width in seconds
 #' @param precision sampling precision in seconds
 #' @param ... extra parameters for the \code{hrf} function
+#' 
+#' @return an instance of type \code{HRF} inheriting from \code{function}
 #' 
 #' @examples 
 #' 
@@ -18,8 +22,9 @@ NULL
 #' hg <- purrr::partial(hrf_gaussian, mean=4, sd=1)
 #' grf <- gen_hrf(hg, lag=1, width=2)
 #' 
+#' vals <- grf(0:20)
 #' @export
-gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, ...) {
+gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, name="gen_hrf", ...) {
   .orig <- list(...)
   
   if (!is.null(width)) {
@@ -42,19 +47,32 @@ gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, ...) {
     hrf
   }
   
-  f
+  HRF(f, name=name)
 }
 
 
-#' gen_hrf_set
+#' Generate an HRF basis set
 #' 
-#' @param ... a list of hrf functions
+#' \code{gen_hrf_set} construct an hrf basis set from a one or more component functions.
+#' This function is used to create arbitrary sets of basis functions for fMRI modeling.
+#' 
+#' @param ... a list of functions f(t) mapping from time to amplitude 
+#' @examples 
+#' 
+#' hrf1 <- hrf_spmg1 %>% gen_hrf(lag=0)
+#' hrf2 <- hrf_spmg1 %>% gen_hrf(lag=3)
+#' hrf3 <- hrf_spmg1 %>% gen_hrf(lag=6)
+#' 
+#' hset <- gen_hrf_set(hrf1,hrf2,hrf3)
 #' @export
-gen_hrf_set <- function(...) {
+gen_hrf_set <- function(..., name="hrf_set") {
   hrflist <- list(...)
-  function(t) {
+  assertthat::assert_that(all(sapply(hrflist, is.function)))
+  f <- function(t) {
     do.call("cbind", lapply(hrflist, function(fun) fun(t)))
   }
+  
+  HRF(f, name=name, nbasis=length(hrflist))
 }
 
 
@@ -157,7 +175,7 @@ hrf_lagged <- gen_hrf_lagged
 #' @export
 gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1,...) {
   force(hrf)
-  purrr::partial(hrf_block, hrf=hrf, width=width, precision=precision,...)
+  purrr::partial(convolve_block, hrf=hrf, width=width, precision=precision,...)
 }
 
 #' @export
@@ -165,17 +183,25 @@ gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1,...) {
 hrf_blocked <- gen_hrf_blocked
 
 
-#' hrf_block
+#' a convolve hemodynamic response with a block duration
+#' 
+#' apply a hemodynamic response function with times \code{t} and duration \code{width}
 #' 
 #' @param t time in seconds
 #' @param hrf the underlying hemodynamic response function
 #' @param width the fixed width of the response in seconds.
 #' @param precision the sampling precision in seconds
 #' @export
-hrf_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1,...) {
-  Reduce("+", lapply(seq(0, width, by=precision), function(offset) {
+convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1, summate=TRUE, ...) {
+  hmat <- sapply(seq(0, width, by=precision), function(offset) {
     hrf(t-offset,...)
-  }))
+  })
+  
+  if (summate) {
+    rowSums(hmat)
+  } else {
+    apply(hmat,1,function(vals) vals[which.max(abs(vals))])
+  }
 }
   
   
@@ -230,6 +256,7 @@ hrf_bspline <- function(t, span=20, N=5, degree=3) {
 #' hrf_gamma
 #' 
 #' A hemodynamic response function using the gamma density function
+#' 
 #' @param t time
 #' @param shape the shape parameter for gamma pdf
 #' @param rate the rate parameter for gamma pdf
@@ -312,8 +339,9 @@ evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate
     x(grid)*amplitude*attr(x, "scale_factor")       
   } else if (nbasis(x) == 1) {
     samples <- seq(0, duration, by=precision)
+    sfac <- attr(x, "scale_factor") 
     hmat <- sapply(samples, function(offset) {
-      x(grid-offset)*amplitude*attr(x, "scale_factor") 
+      x(grid-offset)*amplitude*sfac
     })
     
     if (summate) {
@@ -440,7 +468,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
     
   } else if (is.function(basis)) {
     test <- basis(1:10)
-    HRF(gen_hrf_lagged(basis,lag=lag,...), name="custom_hrf", nbasis=ncol(test))
+    HRF(gen_hrf_lagged(basis,lag=lag), name="custom_hrf", nbasis=ncol(test))
   } else {
     stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
   }
@@ -486,7 +514,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
 
 #' @keywords internal
 construct_event_term <- function(x, model_spec) {
-  ## TODO what is we are missing a block id?
+  ## TODO what if we are missing a block id?
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
   
@@ -527,7 +555,7 @@ construct.hrfspec <- function(x, model_spec) {
 }
 
 
-.hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1, lag=0) {
+.hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1, lag=0, termsep="::") {
   vars <- as.list(substitute(list(...)))[-1] 
   
   if (length(vars) > 0) {
@@ -561,11 +589,82 @@ construct.hrfspec <- function(x, model_spec) {
     parsed$term
   }
   
-  termname <- paste0(varnames, collapse="::")
+  termname <- paste0(varnames, collapse=termsep)
   
   list(vars=vars, parsed=parsed, term=term, label=label, basis=basis, varnames=varnames, termname=termname)
 }
 
+
+# construct_additive_event_term <- function(x, model_spec) {
+#   ## TODO what if we are missing a block id?
+#   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
+#   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
+#   
+#   varlist <- lapply(seq_along(x$vars), function(i) {
+#     base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
+#   })
+#   
+#   names(varlist) <- x$varnames
+#   
+#   subs <- if (!is.null(x$subset)) {
+#     base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) 
+#   } else {
+#     rep(TRUE, length(onsets))
+#   }
+#   
+#   mat <- do.call(cbind, varlist)
+#   vlist <- list(mat)
+#   names(vlist) <- x$name
+#   
+#   et <- event_term(vlist, onsets, model_spec$blockids, durations, subs)
+# }
+
+
+#' hrf_add <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
+#'                     prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list(), id=NULL) {
+#'   parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis, termsep="+")
+#'   
+#'   if (is.null(id)) {
+#'     id <- parsed$termname
+#'   }  
+#'   
+#'  
+#'   
+#'   ret <- list(
+#'     name=parsed$termname,
+#'     varnames=parsed$varnames,
+#'     vars=parsed$term,
+#'     label=parsed$label,
+#'     hrf=parsed$basis,
+#'     onsets=onsets,
+#'     durations=durations,
+#'     prefix=prefix,
+#'     subset=substitute(subset),
+#'     precision=precision,
+#'     contrasts=contrasts)
+#'   
+#'   class(ret) <- c("hrf_add_spec", "hrfspec", "list")
+#'   ret
+#' }
+#' 
+#' #' @export
+#' construct.hrf_add_spec <- function(x, model_spec) {
+#'   et <- construct_additive_event_term(x, model_spec)
+#'   cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate)
+#'   
+#'   ret <- list(
+#'     varname=et$varname,
+#'     evterm=et,
+#'     design_matrix=cterm,
+#'     sampling_frame=model_spec$sampling_frame,
+#'     contrasts=x$contrasts,
+#'     hrfspec=x,
+#'     id=x$id
+#'   )
+#'   
+#'   class(ret) <- c("convolved_term", "fmri_term", "list") 
+#'   ret
+#' }
 
 
 #' trialwise
@@ -579,7 +678,7 @@ construct.hrfspec <- function(x, model_spec) {
 #' 
 #' @export
 trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
-                      prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list(), id=NULL) {
+                      prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list(), id=NULL, add_sum=FALSE) {
   
   parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis)
   
@@ -600,7 +699,8 @@ trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL,
     prefix=prefix,
     subset=substitute(subset),
     precision=precision,
-    contrasts=contrasts)
+    contrasts=contrasts,
+    add_sum=add_sum)
   
   class(ret) <- c("trialwisespec", "hrfspec", "list")
   ret
@@ -608,7 +708,7 @@ trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL,
 
 #' @export
 construct.trialwisespec <- function(x, model_spec) {
- 
+  
   ## compied almost verbatim from construct.hrfspec
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations

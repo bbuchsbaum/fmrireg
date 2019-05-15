@@ -1,4 +1,34 @@
 
+#' sub_basis
+#' 
+#' subset a parametric basis regressor
+#' 
+#' 
+#' @param x the object
+#' @param subset the subset
+sub_basis <-  function(x, subset) UseMethod("sub_basis")
+
+
+#' Ident
+#' 
+#' A basis that applies identity transform to a set of raw variables.
+#' 
+#' @param ... a list of variable names
+#' @return an instance of class \code{Ident} extending \code{ParametricBasis}
+#' @export 
+Ident <- function(...) {
+  mc <- match.call()
+  vlist <- list(...)
+
+  varnames <- as.list(substitute(list(...)))[-1]
+  varnames <- unlist(lapply(varnames, as.character))
+  names(vlist) <- varnames
+  y <- do.call(cbind, vlist)
+  
+  ret <- list(x=vlist, y=y, varnames=varnames, name=paste(varnames, collapse="_"))
+  class(ret) <- c("Ident", "ParametricBasis")
+  ret
+}
 
 
 #' Poly
@@ -35,12 +65,75 @@ BSpline <- function(x, degree) {
   ret
 }
 
+
 #' @export
 predict.Poly <- function(object,newdata) {
   predict(object$y, newdata)
+}
+
+sub_basis.Poly <- function(x, subset) {
+  ret <- list(x=x$x[subset],
+       y=x$y[subset,],
+       fun=x$fun,
+       argname=x$argname,
+       name=x$name,
+       degree=x$degree)
+  class(ret) <- c("Poly", "ParametricBasis")
+  ret
+}
+
+sub_basis.BSpline <- function(x, subset) {
+  ret <- list(x=x$x[subset],
+              y=x$y[subset,],
+              fun=x$fun,
+              argname=x$argname,
+              name=x$name,
+              degree=x$degree)
+  class(ret) <- c("Poly", "ParametricBasis")
+  ret
+}
+
+sub_basis.Ident <- function(x, subset) {
+  vlist <- lapply(x$vlist, function(v) v[subset])
+  ret <- list(vlist=vlist, varnames=x$varnames, name="Ident")
+  class(ret) <- c("Ident", "ParametricBasis")
+  ret
 }
 
 #' @export
 predict.BSpline <- function(object,newdata) {
   predict(object$y, newdata)
 }
+
+#' @export
+predict.Ident <- function(object,newdata) {
+  ret <- as.data.frame(do.call(rbind, lapply(object$varnames, function(v) base::eval(v, newdata))))
+  names(ret) <- object$varnames
+  ret
+}
+
+levels.Ident <- function(x) {
+  x$varnames
+}
+
+levels.BSpline <- function(x) {
+  seq(1, x$degree)
+}
+
+levels.Poly <- function(x) {
+  seq(1,x$degree)
+}
+
+columns.Poly <- function(x) {
+  paste0(x$name, ".", seq(1, x$degree))
+}
+
+columns.BSpline <- function(x) {
+  paste0(x$name, ".", seq(1, x$degree))
+}
+
+columns.Ident <- function(x) {
+  x$varnames
+}
+
+

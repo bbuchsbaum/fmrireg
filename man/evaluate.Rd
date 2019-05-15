@@ -4,7 +4,7 @@
 \alias{evaluate}
 \alias{evaluate.HRF}
 \alias{evaluate.regressor}
-\title{evaluate}
+\title{evaluate a function over a sampling grid}
 \usage{
 evaluate(x, grid, ...)
 
@@ -33,7 +33,7 @@ evaluate(x, grid, ...)
 \item{precision}{the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}}
 }
 \description{
-evaluate a regression or hemodynamic response function
+given an object to be evaluated and a an input sample ("grid"), evaluate the object.
 
 evalute a regressor function over a sampling grid
 }

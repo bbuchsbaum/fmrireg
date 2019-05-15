@@ -2,13 +2,22 @@
 % Please edit documentation in R/hrf.R
 \name{gen_hrf_set}
 \alias{gen_hrf_set}
-\title{gen_hrf_set}
+\title{Generate an HRF basis set}
 \usage{
-gen_hrf_set(...)
+gen_hrf_set(..., name = "hrf_set")
 }
 \arguments{
-\item{...}{a list of hrf functions}
+\item{...}{a list of functions f(t) mapping from time to amplitude}
 }
 \description{
-gen_hrf_set
+\code{gen_hrf_set} construct an hrf basis set from a one or more component functions.
+This function is used to create arbitrary sets of basis functions for fMRI modeling.
+}
+\examples{
+
+hrf1 <- hrf_spmg1 \%>\% gen_hrf(lag=0)
+hrf2 <- hrf_spmg1 \%>\% gen_hrf(lag=3)
+hrf3 <- hrf_spmg1 \%>\% gen_hrf(lag=6)
+
+hset <- gen_hrf_set(hrf1,hrf2,hrf3)
 }

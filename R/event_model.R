@@ -397,6 +397,12 @@ longnames.afni_hrf_convolved_term <- function(x) {
 }
 
 #' @export
+longnames.event_model <- function(x) {
+  unlist(lapply(terms(x), longnames))
+ 
+}
+
+#' @export
 longnames.event_term <- function(x) {
   # ignores exclude.basis
   term.cells <- cells(x)
@@ -407,6 +413,12 @@ longnames.event_term <- function(x) {
                          })), 1, paste, collapse=":")
 }
 
+
+#' @export
+#' @rdname longnames
+shortnames.event_model <- function(x) {
+  unlist(lapply(terms(x), shortnames))
+}
 
 #' @export
 #' @rdname longnames

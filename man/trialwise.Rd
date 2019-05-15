@@ -2,11 +2,36 @@
 % Please edit documentation in R/hrf.R
 \name{trialwise}
 \alias{trialwise}
-\title{trialwise}
+\title{hrf_add <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
+                    prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list(), id=NULL) {
+  parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis, termsep="+")
+  
+  if (is.null(id)) {
+    id <- parsed$termname
+  }  
+  
+ 
+  
+  ret <- list(
+    name=parsed$termname,
+    varnames=parsed$varnames,
+    vars=parsed$term,
+    label=parsed$label,
+    hrf=parsed$basis,
+    onsets=onsets,
+    durations=durations,
+    prefix=prefix,
+    subset=substitute(subset),
+    precision=precision,
+    contrasts=contrasts)
+  
+  class(ret) <- c("hrf_add_spec", "hrfspec", "list")
+  ret
+}}
 \usage{
 trialwise(..., basis = HRF_SPMG1, onsets = NULL, durations = NULL,
   prefix = NULL, subset = NULL, precision = 0.2, nbasis = 1,
-  contrasts = list(), id = NULL)
+  contrasts = list(), id = NULL, add_sum = FALSE)
 }
 \arguments{
 \item{...}{the variable names, all of which must be present in the enclosing environment (e.g. an \code{event_model} object)}
@@ -32,6 +57,27 @@ If multiple contrasts are required, then these should be wrapped in a \code{list
 \item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
 }
 \description{
+#' @export
+construct.hrf_add_spec <- function(x, model_spec) {
+  et <- construct_additive_event_term(x, model_spec)
+  cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate)
+  
+  ret <- list(
+    varname=et$varname,
+    evterm=et,
+    design_matrix=cterm,
+    sampling_frame=model_spec$sampling_frame,
+    contrasts=x$contrasts,
+    hrfspec=x,
+    id=x$id
+  )
+  
+  class(ret) <- c("convolved_term", "fmri_term", "list") 
+  ret
+}
+trialwise
+}
+\details{
 This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise(trial) ...
 }
 \examples{

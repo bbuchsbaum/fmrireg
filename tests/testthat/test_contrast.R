@@ -102,6 +102,63 @@ test_that("can subtract two pairwise contrasts to form an interaction contrast",
   
 })
 
+
+test_that("can contrast two parametric regressors crossed with a factor", {
+  simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"), replication=c(1,2))
+  simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
+  simple_des$run <- rep(1,nrow(simple_des))
+  simple_des$RT <- rnorm(nrow(simple_des))
+  
+  sframe <- sampling_frame(blocklens=100, TR=2)
+  espec <- event_model(onset ~  hrf(category, RT), data=simple_des, block=~run, sampling_frame=sframe)
+  con <- pair_contrast(~ category == "face", ~ category == "scene", name="face_scene_RT")
+  cwts <- contrast_weights(con, terms(espec)[[1]])
+})
+
+test_that("can contrast two parametric regressors wrapped in Ident for additive regressors", {
+  simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"), replication=c(1,2))
+  simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
+  simple_des$run <- rep(1,nrow(simple_des))
+  simple_des$RT1 <- rnorm(nrow(simple_des))
+  simple_des$RT2 <- rnorm(nrow(simple_des))
+  
+  sframe <- sampling_frame(blocklens=100, TR=2)
+  espec <- event_model(onset ~  hrf(Ident(RT1,RT2)), data=simple_des, block=~run, sampling_frame=sframe)
+  con <- pair_contrast(~ RT1_RT2 == "RT1", ~ RT1_RT2 == "RT2", name="RT1_RT2")
+  cwts <- contrast_weights(con, terms(espec)[[1]])
+})
+
+test_that("can contrast two basis functions from a custom multi-phase hrf", {
+  simple_des <- expand.grid(trial_type=rep(c("encoding"),15))
+  
+  simple_des$onset <- seq(1,300, length.out=nrow(simple_des))
+  simple_des$run <- rep(1,nrow(simple_des))
+  
+  hrf_encode <- gen_hrf(hrf_spmg1)
+  hrf_delay <- gen_hrf(hrf_spmg1, lag=3, width=8)
+  hrf_probe <-gen_hrf(hrf_spmg1, lag=11, width=3)  
+  hrf_trial <- gen_hrf_set(hrf_encode, hrf_delay, hrf_probe)
+  
+  sframe <- sampling_frame(blocklens=250, TR=2)
+  espec <- event_model(onset ~  hrf(trial_type, basis=hrf_trial), data=simple_des, block=~run, sampling_frame=sframe)
+  con <- pair_contrast(~ basis == "basis1", ~ basis=="basis2", name="test")
+  cwts <- contrast_weights(con, terms(espec)[[1]])
+})
+
+test_that("can contrast two parametric regressors wrapped in Ident", {
+  simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"), replication=c(1,2))
+  simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
+  simple_des$run <- rep(1,nrow(simple_des))
+  simple_des$RT1 <- rnorm(nrow(simple_des))
+  simple_des$RT2 <- rnorm(nrow(simple_des))
+  
+  sframe <- sampling_frame(blocklens=100, TR=2)
+  espec <- event_model(onset ~  hrf(Ident(RT1,RT2)), data=simple_des, block=~run, sampling_frame=sframe)
+  con <- pair_contrast(~ RT1_RT2 == "RT1", ~ RT1_RT2 == "RT2", name="RT1_RT2")
+  cwts <- contrast_weights(con, terms(espec)[[1]])
+})
+
+
 test_that("can form a simple forumla contrast", {
   simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"), replication=c(1,2))
   simple_des$onset <- seq(1,100, length.out=nrow(simple_des))

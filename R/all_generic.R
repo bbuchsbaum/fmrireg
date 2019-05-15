@@ -190,9 +190,9 @@ design_matrix <- function(x, ...) UseMethod("design_matrix")
 elements <- function(x, ...) UseMethod("elements")
 
 
-#' evaluate
+#' evaluate a function over a sampling grid
 #' 
-#' evaluate a regression or hemodynamic response function
+#' given an object to be evaluated and a an input sample ("grid"), evaluate the object.
 #' 
 #' @param x the object to evaluate
 #' @param grid the sampling grid
@@ -361,5 +361,9 @@ build_afni_stims <- function(x, ...) UseMethod("build_afni_stims")
 #' @param ... extra args
 #' @export
 split_onsets <- function(x, ...) UseMethod("split_onsets")
+
+
+
+
   
 
