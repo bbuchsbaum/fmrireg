@@ -203,6 +203,8 @@ evaluate <-  function(x, grid, ...) UseMethod("evaluate")
 
 #' global_onsets
 #' 
+#' return the "global" onsets of an object
+#' 
 #' @export
 #' @param x the object
 #' @param onsets the relative onset times of the events
@@ -220,7 +222,8 @@ nbasis <-  function(x) UseMethod("nbasis")
 
 #' data_chunks
 #' 
-#' return the onset vector
+#' return a set of data chunks
+#' 
 #' @param x the dataset
 #' @param nchunks the numbe rof data chunks
 #' @param ... extra args
@@ -231,14 +234,15 @@ data_chunks <- function(x, nchunks, ...) UseMethod("data_chunks")
 
 #' onsets
 #' 
-#' return the onset vector
+#' return a an `onset` vector
+#' 
 #' @param x the object
 #' @export
 onsets <-  function(x) UseMethod("onsets")
 
 #' durations
 #' 
-#' return the durations vector
+#' return a `durations` vector
 #' 
 #' @param x the object
 #' @export
@@ -255,6 +259,7 @@ amplitudes <-  function(x) UseMethod("amplitudes")
 #' samples
 #' 
 #' extract samples
+#' 
 #' @param x the object
 #' @param ... extra args
 #' @export
@@ -271,7 +276,7 @@ split_by_block  <-  function(x, ...) UseMethod("split_by_block")
 
 #' blockids
 #' 
-#' extract block indices
+#' the return the block indicator variable
 #' 
 #' @param x the object
 #' @export
@@ -279,7 +284,7 @@ blockids  <-  function(x) UseMethod("blockids")
 
 #' blocklens
 #' 
-#' extract block lengths
+#' return block lengths
 #' 
 #' @param x the object
 #' @param ... extra args
