@@ -4,6 +4,7 @@ read_confounds <- function(x,...) UseMethod("read_confounds")
 
 #' @export
 bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold_space, task=NULL, session=NULL, confound_vars="FramewiseDisplacement") {
+
   scan_map <- paste0(bids_path, "/", "sub-", id, "/sub-", id, "_scans.tsv")
   
   

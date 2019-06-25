@@ -74,6 +74,19 @@ test_that("can construct a convolved trialwise term from an hrfspec with one fac
   expect_equal(dim(design_matrix(espec)), c(N,length(onsets)))
 })
 
+test_that("can construct a convolved trialwise term wiht bspline basis from an hrfspec with one factor, one run", {
+  N <- 500
+  onsets <- seq(1,N,by=5)
+  durations <- 0
+  
+  sframe <- sampling_frame(blocklens=500, TR=1)
+  
+  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), block=1)
+  espec <- event_model(onsets ~ trialwise(fac, basis="bs", nbasis=5), data=etab, block=~block, sampling_frame=sframe)
+  
+  expect_equal(dim(design_matrix(espec)), c(N,length(onsets)))
+})
+
 
 
 
@@ -176,9 +189,27 @@ test_that("facedes model with rep_num, and rep_num by rt ", {
   
   espec <- event_model(onset ~ hrf(repnum, subset=repnum != "-1") + hrf(repnum,rt,subset=rep_num!= "-1"), 
                        data=facedes, block=~run,sampling_frame = sframe)
+  
   dmat <- design_matrix(espec)
   expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), (length(levels(facedes$repnum))-1)*2))
 })
+
+test_that("facedes model with RT and RT^2 as separate regressors ", {
+  facedes$repnum <- factor(facedes$rep_num)
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  
+  facedes$rt_squared <- facedes$rt^2
+  facedes$rt_cubed <- facedes$rt^3
+  
+  #conset <- contrast_set(contrast(~ rt - rt_sqared, "rt_diff"))
+  espec <- event_model(onset ~ hrf(repnum) + hrf(Ident(rt, rt_squared)) + hrf(rt_cubed), 
+                       data=facedes, block=~run,sampling_frame = sframe)
+  
+  dmat <- design_matrix(espec)
+  expect_equal(dim(dmat), c(sum(rep(436/2,max(facedes$run))), (length(levels(facedes$repnum))-1)*2))
+})
+
+
 
 
 test_that("facedes model with polynomial parametric basis", {

@@ -14,5 +14,5 @@ global_onsets(x, onsets, ...)
 \item{...}{extra args}
 }
 \description{
-global_onsets
+return the "global" onsets of an object
 }

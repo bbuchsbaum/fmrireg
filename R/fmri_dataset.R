@@ -23,10 +23,10 @@ read_fmri_config <- function(file_name, base_path=NULL) {
   
   source(file_name, env)
   
-  if (is.null(env$base_path) && is.null(base_path)) {
-    env$base_path = "."
+  env$base_path <- if (is.null(env$base_path) && is.null(base_path)) {
+   "."
   } else if (!is.null(base_path) && is.null(env$base_path)) {
-    env$base_path <- base_path
+    base_path
   } 
   
   if (is.null(env$output_dir)) {
@@ -49,6 +49,10 @@ read_fmri_config <- function(file_name, base_path=NULL) {
   
   if (!is.null(env$contrasts)) {
     env$contrasts = NULL
+  }
+  
+  if (!is.null(env$nuisance)) {
+    env$nuisance = NULL
   }
   
   dname <- file.path(env$base_path, env$event_table)
@@ -145,6 +149,7 @@ fmri_mem_dataset <- function(scans, mask, TR,
   frame <- sampling_frame(run_length, TR)
   
   ret <- list(
+    
     scans=scans,
     mask=mask,
     nruns=length(scans),
@@ -157,6 +162,7 @@ fmri_mem_dataset <- function(scans, mask, TR,
   class(ret) <- c("fmri_mem_dataset", "volumetric_dataset", "fmri_dataset", "list")
   ret
 }
+
 
 
 
@@ -211,6 +217,31 @@ fmri_dataset <- function(scans, mask, TR,
   class(ret) <- c("fmri_file_dataset", "volumetric_dataset", "fmri_dataset", "list")
   ret
 }
+
+
+#' @export
+#' @importFrom neuroim2 NeuroVecSeq 
+get_data.fmri_mem_dataset <- function(x, ...) {
+  do.call(neuroim2::NeuroVecSeq, x$scans)
+}
+
+
+#' @export
+#' @importFrom neuroim2 NeuroVecSeq FileBackedNeuroVec
+get_data.fmri_file_dataset <- function(x, ...) {
+  do.call(neuroim2::NeuroVecSeq, lapply(x$scans, neuroim2::FileBackedNeuroVec))
+}
+
+#' @export
+get_mask.fmri_file_dataset <- function(x) {
+  neuroim2::read_vol(x$mask_file)
+}
+
+#' @export
+get_mask.fmri_mem_dataset <- function(x) {
+  x$mask
+}
+
 
 #' @keywords internal
 data_chunk <- function(mat, voxel_ind, row_ind, chunk_num) {

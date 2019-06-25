@@ -17,5 +17,5 @@ data_chunks(x, nchunks, ...)
 an \code{iterator} returning on data chunk per iteration
 }
 \description{
-return the onset vector
+return a set of data chunks
 }

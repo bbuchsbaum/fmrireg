@@ -227,7 +227,8 @@ event_variable <- function(vec, name, onsets, blockids=1, durations=NULL) {
 #' eset <- event_matrix(mat, "eset", onsets,durations,blockids)
 #' 
 #' @export
-event_matrix <- function(mat, name, onsets, durations=NULL, blockids=1 ) {
+event_matrix <- function(mat, name, onsets, blockids=rep(1, ncol(mat)), durations=NULL) {
+#  browser()
   stopifnot(is.matrix(mat))
   
   ret <- .checkEVArgs(name, as.vector(mat[,1]), onsets, blockids, durations)
@@ -236,6 +237,8 @@ event_matrix <- function(mat, name, onsets, durations=NULL, blockids=1 ) {
   if (is.null(colnames(mat))) {
     colnames(mat) <- 1:NCOL(mat)
   }
+  
+  ret$value <- mat
   
   class(ret) <- c("event_matrix", "event_seq")
   ret
@@ -254,8 +257,15 @@ event_matrix <- function(mat, name, onsets, durations=NULL, blockids=1 ) {
 #' @export
 event_basis <- function(basis, onsets, blockids=1, durations=NULL, subset=rep(TRUE, length(onsets))) {
   assertthat::assert_that(inherits(basis, "ParametricBasis"))
-  ret <- .checkEVArgs(basis$name, basis$x[subset], onsets[subset], blockids[subset], durations[subset])
-  basis$y <- basis$y[subset,]
+  
+  
+  if (any(!subset)) {
+    basis <- sub_basis(basis, subset)
+  }
+
+  ret <- .checkEVArgs(basis$name, basis$y[,1], onsets[subset], blockids[subset], durations[subset])
+  #basis$y <- basis$y[subset,]
+  ret$value <- basis$y
   ret$continuous <- TRUE
   ret$basis <- basis
   class(ret) <- c("event_basis", "event_seq")
@@ -281,7 +291,7 @@ levels.event_set <- function(x) colnames(x$value)
 
 #' @export
 #' @rdname levels
-levels.event_basis <- function(x) seq(1, ncol(x$basis$y))
+levels.event_basis <- function(x) levels(x$basis)
 
 #' @export
 #' @rdname formula
@@ -331,6 +341,8 @@ cells.event_term <- function(x, drop.empty=TRUE) {
     } else {
       attr(evset, "count") <- counts
     }
+  } else {
+    attr(evset, "count") <- nrow(evtab)
   }
   
   evset
@@ -418,6 +430,7 @@ conditions.event_term <- function(x, drop.empty=TRUE) {
 }
 
 
+## TODO is columns ever used? do we need this function
 
 #' @export
 columns.event_term <- function(x) as.vector(unlist(lapply(x$events, columns)))
@@ -433,7 +446,7 @@ columns.event_matrix <- function(x) paste0(.sanitizeName(x$varname), ".", levels
 columns.event_set <- function(x) paste0(.sanitizeName(x$varname), ".", levels(x))
 
 #' @export
-columns.event_basis <- function(x) paste0(.sanitizeName(x$varname), ".", levels(x))
+columns.event_basis <- function(x) columns(x$basis)
 
 
 #' @export
@@ -461,7 +474,7 @@ elements.event_matrix <- function(x, values=TRUE) {
     ret <- x$value
     colnames(ret) <- colnames(x)
     ret <- list(ret)
-    names(ret) <- .sanitizeName(varname(x))
+    names(ret) <- .sanitizeName(x$varname)
     ret
   } else {
     N <- length(x$onsets)
@@ -483,7 +496,7 @@ elements.event_seq <- function(x, values = TRUE) {
     ret
   } else {
     ret <- list(rep(varname(x), length(x)))
-    names(ret) <- varname(x)
+    names(ret) <- x$varname
     ret
   }
 }
@@ -493,15 +506,16 @@ elements.event_basis <- function(x, values=TRUE, transformed=TRUE) {
   if (values && !transformed) {
     x$value$x				
   } else if (values) {
+    #browser()
     ret <- x$basis$y
-    colnames(ret) <- colnames(x)
+    colnames(ret) <- columns(x)
     n <- .sanitizeName(x$varname)
     ret <- list(ret)
     names(ret) <- n
     ret
   } else {
     N <- length(x)
-    vnames <- colnames(x)
+    vnames <- columns(x)
     res <- lapply(vnames, function(el) rep(el, N))
     mat <- do.call(cbind, res)
     colnames(mat) <- vnames			
@@ -699,20 +713,31 @@ Fcontrasts.event_term <- function(x) {
 #' @importFrom purrr map_chr
 #' @export
 design_matrix.event_term <- function(x, drop.empty=TRUE) {
+
   locenv <- new.env()
   pterms <- map_chr(parent_terms(x), .sanitizeName)	
   
   for (ev in x$events) {
     vname <- .sanitizeName(ev$varname)
     els <- elements(ev, values=TRUE)
-    lapply(names(els), function(n) assign(n, els[[n]],envir=locenv))			
+    #if (length(els) == 1 && is.matrix(els[[1]])) {
+    ## TODO remove special casing for matrix elements 
+    #  mat <- els[[1]]
+    #  for (i in 1:ncol(mat)) {
+    #    assign(columns(ev)[i], mat[,i],envir=locenv)
+    #  }
+    #} else {
+      lapply(names(els), function(n) assign(n, els[[n]],envir=locenv))
+    #}
   }
+  
   
   els <- as.data.frame(elements(x))
   nas <- try(apply(els,1, function(vals) any(is.na(vals))))
   counts <- attr(cells(x, drop=FALSE), "count")
   
-  print(ncol(els))
+  #print(ncol(els))
+  #browser()
   mat <- if (ncol(els) == 1 && is.factor(els[,1]) && length(levels(els[,1])) == 1) {
     ## a 1 level term
     cbind(rep(1, NROW(els))) 

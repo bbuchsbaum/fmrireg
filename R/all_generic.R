@@ -4,9 +4,23 @@ get_methods <- function(obj) {
 }
 
 
+#setGeneric("as_vectors") 
 as_vectors <- function(x) { function(x, ...) UseMethod("as_vectors") }
-
 setGeneric("as_vectors") 
+
+#' get_data
+#' 
+#' @param x the dataset
+#' @param ... extra args
+get_data <- function(x, ...) UseMethod("get_data")
+
+
+#' get_mask
+#' 
+#' @param x the dataset
+#' @param ... extra args
+get_mask <- function(x, ...) UseMethod("get_mask")
+
 
 #' get_formula
 #' 
@@ -190,9 +204,9 @@ design_matrix <- function(x, ...) UseMethod("design_matrix")
 elements <- function(x, ...) UseMethod("elements")
 
 
-#' evaluate
+#' evaluate a function over a sampling grid
 #' 
-#' evaluate a regression or hemodynamic response function
+#' given an object to be evaluated and a an input sample ("grid"), evaluate the object.
 #' 
 #' @param x the object to evaluate
 #' @param grid the sampling grid
@@ -202,6 +216,8 @@ elements <- function(x, ...) UseMethod("elements")
 evaluate <-  function(x, grid, ...) UseMethod("evaluate")
 
 #' global_onsets
+#' 
+#' return the "global" onsets of an object
 #' 
 #' @export
 #' @param x the object
@@ -220,7 +236,8 @@ nbasis <-  function(x) UseMethod("nbasis")
 
 #' data_chunks
 #' 
-#' return the onset vector
+#' return a set of data chunks
+#' 
 #' @param x the dataset
 #' @param nchunks the numbe rof data chunks
 #' @param ... extra args
@@ -231,14 +248,15 @@ data_chunks <- function(x, nchunks, ...) UseMethod("data_chunks")
 
 #' onsets
 #' 
-#' return the onset vector
+#' return a an `onset` vector
+#' 
 #' @param x the object
 #' @export
 onsets <-  function(x) UseMethod("onsets")
 
 #' durations
 #' 
-#' return the durations vector
+#' return a `durations` vector
 #' 
 #' @param x the object
 #' @export
@@ -255,6 +273,7 @@ amplitudes <-  function(x) UseMethod("amplitudes")
 #' samples
 #' 
 #' extract samples
+#' 
 #' @param x the object
 #' @param ... extra args
 #' @export
@@ -271,7 +290,7 @@ split_by_block  <-  function(x, ...) UseMethod("split_by_block")
 
 #' blockids
 #' 
-#' extract block indices
+#' the return the block indicator variable
 #' 
 #' @param x the object
 #' @export
@@ -279,7 +298,7 @@ blockids  <-  function(x) UseMethod("blockids")
 
 #' blocklens
 #' 
-#' extract block lengths
+#' return block lengths
 #' 
 #' @param x the object
 #' @param ... extra args
@@ -361,5 +380,9 @@ build_afni_stims <- function(x, ...) UseMethod("build_afni_stims")
 #' @param ... extra args
 #' @export
 split_onsets <- function(x, ...) UseMethod("split_onsets")
+
+
+
+
   
 

@@ -4,7 +4,8 @@
 \alias{event_matrix}
 \title{event_matrix}
 \usage{
-event_matrix(mat, name, onsets, durations = NULL, blockids = 1)
+event_matrix(mat, name, onsets, blockids = rep(1, ncol(mat)),
+  durations = NULL)
 }
 \arguments{
 \item{mat}{a matrix of values, one row per event, indicating the amplitude/intensity of each event.}
@@ -13,9 +14,9 @@ event_matrix(mat, name, onsets, durations = NULL, blockids = 1)
 
 \item{onsets}{the event onsets in seconds}
 
-\item{durations}{the durations of each event in seconds}
-
 \item{blockids}{the index of the block/scan in which the event occurs}
+
+\item{durations}{the durations of each event in seconds}
 }
 \description{
 Create a continuous valued event set from a \code{matrix}

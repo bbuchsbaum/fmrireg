@@ -5,6 +5,8 @@
 #' @importFrom ggplot2 ggplot aes_string aes
 #' @import shiny
 design_plot <- function(fmrimod, longnames=FALSE) {
+  stopifnot(inherits(fmrimod, "fmri_model"))
+  
   et <- terms(fmrimod$event_model)
   bt <- terms(fmrimod$baseline_model)
   

@@ -262,7 +262,7 @@ term_names.event_model <- function(x) {
 contrast_weights.event_model <- function(x) {
   tnames <- term_names(x)
   tind <- x$term_indices
-  len <- length(conditions(x))
+  ncond <- length(conditions(x))
 
   ret <- lapply(seq_along(tnames), function(i) {
     cwlist <- contrast_weights(terms(x)[[i]])
@@ -270,7 +270,7 @@ contrast_weights.event_model <- function(x) {
     
     if (!is.null(cwlist) && length(cwlist) > 0) {
       ret <- lapply(cwlist, function(cw) {
-        out <- matrix(0, len, ncol(cw$weights))
+        out <- matrix(0, ncond, ncol(cw$weights))
         out[tind[[i]],] <- cw$weights
         attr(cw, "term_indices") <- as.vector(tind[[i]])
         attr(cw, "offset_weights") <- out
@@ -302,6 +302,7 @@ Fcontrasts.event_model <- function(x) {
     if (!is.null(cwlist)) {
       ret <- lapply(cwlist, function(cw) {
         out <- matrix(0, len, ncol(cw))
+  
         out[tind[[i]],] <- cw
         attr(out, "term_indices") <- as.vector(tind[[i]])
         row.names(out) <- row.names(cw)
@@ -396,6 +397,12 @@ longnames.afni_hrf_convolved_term <- function(x) {
 }
 
 #' @export
+longnames.event_model <- function(x) {
+  unlist(lapply(terms(x), longnames))
+ 
+}
+
+#' @export
 longnames.event_term <- function(x) {
   # ignores exclude.basis
   term.cells <- cells(x)
@@ -406,6 +413,12 @@ longnames.event_term <- function(x) {
                          })), 1, paste, collapse=":")
 }
 
+
+#' @export
+#' @rdname longnames
+shortnames.event_model <- function(x) {
+  unlist(lapply(terms(x), shortnames))
+}
 
 #' @export
 #' @rdname longnames

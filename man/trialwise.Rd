@@ -6,7 +6,7 @@
 \usage{
 trialwise(..., basis = HRF_SPMG1, onsets = NULL, durations = NULL,
   prefix = NULL, subset = NULL, precision = 0.2, nbasis = 1,
-  contrasts = list(), id = NULL)
+  contrasts = list(), id = NULL, add_sum = FALSE)
 }
 \arguments{
 \item{...}{the variable names, all of which must be present in the enclosing environment (e.g. an \code{event_model} object)}

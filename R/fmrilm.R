@@ -150,8 +150,12 @@ combine_baseline_betas <- function(bstats, colind) {
 }
 
 #' @keywords internal
-multiresponse_lm <- function(form, data_env, conlist, vnames, fcon) {
-  lm.1 <- lm(as.formula(form), data=data_env)
+multiresponse_lm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL) {
+  lm.1 <- if (is.null(modmat)) {
+    lm(as.formula(form), data=data_env)
+  } else {
+    lm.fit(modmat, data_env$.y)
+  }
   
   conres <- if (!is.null(conlist)) {
     ret <- lapply(conlist, function(con) {
@@ -189,7 +193,8 @@ wrap_chunked_lm_results <- function(cres) {
     res
   }
   
-  bstats <- c(do_extract(cres, "bstats", c("estimate", "stat", "se", "prob"), extract), list(stat_type=cres[[1]]$bstats$stat_type))
+  bstats <- c(do_extract(cres, "bstats", c("estimate", "stat", "se", "prob"), extract), 
+              list(stat_type=cres[[1]]$bstats$stat_type))
  
   ncon <- length(cres[[1]]$conres)
   
@@ -200,16 +205,19 @@ wrap_chunked_lm_results <- function(cres) {
     })
     
     names(ret) <- names(cres[[1]]$conres)
+    ret
   }
     
 
   nf <- length(cres[[1]]$Fres)
+  
   Fres <- if (nf >= 1) {
     ret <- lapply(1:nf, function(i)  {
       x <- do_extract(cres, "Fres", c("estimate", "stat", "se", "prob"),extract2, i)
       c(x, list(stat_type=cres[[1]]$Fres[[i]]$stat_type))
     })
     names(ret) <- names(cres[[1]]$Fres)
+    ret
   }
   
   list(betas=bstats, contrasts=conres, Fcontrasts=Fres)
@@ -222,11 +230,13 @@ wrap_chunked_lm_results <- function(cres) {
 chunkwise_lm <- function(dset, model, conlist, fcon, nchunks) {
   chunks <- exec_strategy("chunkwise", nchunks)(dset)
   form <- get_formula(model)
+  tmats <- term_matrices(model)
+  data_env <- list2env(tmats)
+  data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
+  modmat <- model.matrix(as.formula(form), data_env)
   cres <- foreach( ym = chunks, .verbose=TRUE) %dopar% {
-    tmats <- term_matrices(model)
-    data_env <- list2env(tmats)
     data_env[[".y"]] <- ym$data
-    ret <- multiresponse_lm(form, data_env, conlist, attr(tmats,"varnames"), fcon)
+    ret <- multiresponse_lm(form, data_env, conlist, attr(tmats,"varnames"), fcon, modmat=modmat)
   }
   
   wrap_chunked_lm_results(cres)

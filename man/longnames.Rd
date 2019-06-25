@@ -4,6 +4,7 @@
 \alias{longnames}
 \alias{longnames.convolved_term}
 \alias{longnames.afni_hrf_convolved_term}
+\alias{shortnames.event_model}
 \alias{shortnames.convolved_term}
 \alias{longnames.matrix_term}
 \title{longnames}
@@ -15,6 +16,8 @@ longnames(x, ...)
 \method{longnames}{convolved_term}(x)
 
 \method{longnames}{afni_hrf_convolved_term}(x)
+
+\method{shortnames}{event_model}(x)
 
 \method{shortnames}{convolved_term}(x)
 
