@@ -493,11 +493,11 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
   } 
   
   ret <- list(
-    name=termname,
-    id=id,
-    varnames=varnames,
-    vars=term,
-    label=label,
+    name=termname, ## hrf(x,y), where termname = "x::y"
+    id=id, ## hrf(x), id by default is "x::y"
+    varnames=varnames, ## list of all variables (e.g. list(x,y))
+    vars=term, ## list of unparsed vars
+    label=label, ## "hrf(x)" the full expression
     hrf=basis,
     onsets=onsets,
     durations=durations,
@@ -557,7 +557,7 @@ construct.hrfspec <- function(x, model_spec) {
 
 .hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1, lag=0, termsep="::") {
   vars <- as.list(substitute(list(...)))[-1] 
-  
+  browser()
   if (length(vars) > 0) {
     parsed <- parse_term(vars, "hrf")
     term <- parsed$term
@@ -587,6 +587,7 @@ construct.hrfspec <- function(x, model_spec) {
     paste0(prefix, "_", parsed$term)
   } else {
     parsed$term
+    
   }
   
   termname <- paste0(varnames, collapse=termsep)
@@ -620,51 +621,51 @@ construct.hrfspec <- function(x, model_spec) {
 # }
 
 
-#' hrf_add <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
-#'                     prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list(), id=NULL) {
-#'   parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis, termsep="+")
-#'   
-#'   if (is.null(id)) {
-#'     id <- parsed$termname
-#'   }  
-#'   
-#'  
-#'   
-#'   ret <- list(
-#'     name=parsed$termname,
-#'     varnames=parsed$varnames,
-#'     vars=parsed$term,
-#'     label=parsed$label,
-#'     hrf=parsed$basis,
-#'     onsets=onsets,
-#'     durations=durations,
-#'     prefix=prefix,
-#'     subset=substitute(subset),
-#'     precision=precision,
-#'     contrasts=contrasts)
-#'   
-#'   class(ret) <- c("hrf_add_spec", "hrfspec", "list")
-#'   ret
-#' }
-#' 
-#' #' @export
-#' construct.hrf_add_spec <- function(x, model_spec) {
-#'   et <- construct_additive_event_term(x, model_spec)
-#'   cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate)
-#'   
-#'   ret <- list(
-#'     varname=et$varname,
-#'     evterm=et,
-#'     design_matrix=cterm,
-#'     sampling_frame=model_spec$sampling_frame,
-#'     contrasts=x$contrasts,
-#'     hrfspec=x,
-#'     id=x$id
-#'   )
-#'   
-#'   class(ret) <- c("convolved_term", "fmri_term", "list") 
-#'   ret
-#' }
+# hrf_add <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL,
+#                     prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list(), id=NULL) {
+#   parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis, termsep="+")
+# 
+#   if (is.null(id)) {
+#     id <- parsed$termname
+#   }
+# 
+# 
+# 
+#   ret <- list(
+#     name=parsed$termname,
+#     varnames=parsed$varnames,
+#     vars=parsed$term,
+#     label=parsed$label,
+#     hrf=parsed$basis,
+#     onsets=onsets,
+#     durations=durations,
+#     prefix=prefix,
+#     subset=substitute(subset),
+#     precision=precision,
+#     contrasts=contrasts)
+# 
+#   class(ret) <- c("hrf_add_spec", "hrfspec", "list")
+#   ret
+# }
+# 
+# # @export
+# construct.hrf_add_spec <- function(x, model_spec) {
+#   et <- construct_additive_event_term(x, model_spec)
+#   cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate)
+# 
+#   ret <- list(
+#     varname=et$varname,
+#     evterm=et,
+#     design_matrix=cterm,
+#     sampling_frame=model_spec$sampling_frame,
+#     contrasts=x$contrasts,
+#     hrfspec=x,
+#     id=x$id
+#   )
+# 
+#   class(ret) <- c("convolved_term", "fmri_term", "list")
+#   ret
+# }
 
 
 #' trialwise
@@ -677,23 +678,21 @@ construct.hrfspec <- function(x, model_spec) {
 #' 
 #' 
 #' @export
-trialwise <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
-                      prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list(), id=NULL, add_sum=FALSE) {
+trialwise <- function(basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
+                      prefix=NULL, subset=NULL, precision=.2, nbasis=1,
+                      contrasts=list(), id=NULL, add_sum=FALSE) {
   
-  parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis)
-  
-  assert_that(length(parsed$varnames) == 1, msg="`trialwise() can only contain one variable name")
+  termname = "trialwise"
   
   if (is.null(id)) {
-    id <- parsed$termname
+    id <- termname
   }  
   
   ret <- list(
-    name=parsed$termname,
-    varnames=parsed$varnames,
-    vars=parsed$term,
-    label=parsed$label,
-    hrf=parsed$basis,
+    name=termname,
+    varnames=list("trialwise"),
+    label="trialwise",
+    hrf=basis,
     onsets=onsets,
     durations=durations,
     prefix=prefix,

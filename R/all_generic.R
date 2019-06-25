@@ -4,9 +4,23 @@ get_methods <- function(obj) {
 }
 
 
+#setGeneric("as_vectors") 
 as_vectors <- function(x) { function(x, ...) UseMethod("as_vectors") }
-
 setGeneric("as_vectors") 
+
+#' get_data
+#' 
+#' @param x the dataset
+#' @param ... extra args
+get_data <- function(x, ...) UseMethod("get_data")
+
+
+#' get_mask
+#' 
+#' @param x the dataset
+#' @param ... extra args
+get_mask <- function(x, ...) UseMethod("get_mask")
+
 
 #' get_formula
 #' 
