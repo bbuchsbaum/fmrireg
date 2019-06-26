@@ -24,11 +24,10 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
     scan_map <- scan_map %>% dplyr::filter(task == !!qtask)
   } 
   
-  zerostr <- function(vals) {
-    ndigits <- log(max(vals), 10) + 1
+  zerostr <- function(vals, ndigits=2) {
+    #ndigits <- log(max(vals), 10) + 1
     nzeros <- ndigits - as.integer(log(vals,10)) -1
-    prefix <- sapply(nzeros, function(nz) paste(rep("0", times=nz), collapse
-                                                =""))
+    prefix <- sapply(nzeros, function(nz) paste(rep("0", times=nz), collapse =""))
     paste(prefix, vals, sep="")  
   }
   
