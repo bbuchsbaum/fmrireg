@@ -39,7 +39,7 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
   raw_scans <- scan_map$func
   event_files <- paste0(bids_path, "/sub-", id, sess(), "/func/", gsub("bold.nii.gz", "events.tsv", basename(raw_scans)))
   
-  scans <- paste0("sub-", id, sess(), "_task-", task, "_run-", snum, "_bold_space-", bold_space, ".nii.gz")
+  scans <- paste0("sub-", id, sess(FALSE), "_task-", task, "_run-", snum, "_bold_space-", bold_space, ".nii.gz")
   
   structure(
     list(bids_path=bids_path,
