@@ -14,7 +14,7 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
   
   scan_map <- read.table(scan_map, header=TRUE, stringsAsFactors=FALSE, colClasses=list(run="character", scan="character"))
   
-  if (!is.null(session)) {
+  if (!is.null(session) && session != "") {
     qsession <- dplyr::enquo(session)
     scan_map <- dplyr::filter(scan_map, session == !!qsession)
   }
@@ -34,7 +34,7 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
   snum <- zerostr(as.numeric(as.character(scan_map$scan)))
   
   sess <- function(isdir=TRUE) {
-    if (is.null(session)) {
+    if (is.null(session) || session == "") {
       ""
     } else {
       if (isdir) paste0("/ses-", session, "/") else paste0("_ses-", session) 
