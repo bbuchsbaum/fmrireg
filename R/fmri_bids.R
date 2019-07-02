@@ -3,8 +3,8 @@
 read_confounds <- function(x,...) UseMethod("read_confounds")
 
 #' @export
-bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold_space, task=NULL, 
-                        confound_vars="FramewiseDisplacement") {
+bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold_space, task=NULL, session=NULL, confound_vars="FramewiseDisplacement") {
+
   scan_map <- paste0(bids_path, "/", "sub-", id, "/sub-", id, "_scans.tsv")
   
   
@@ -14,24 +14,44 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
   
   scan_map <- read.table(scan_map, header=TRUE, stringsAsFactors=FALSE, colClasses=list(run="character", scan="character"))
   
+  if (!is.null(session) && session != "") {
+    qsession <- dplyr::enquo(session)
+    scan_map <- dplyr::filter(scan_map, session == !!qsession)
+  }
+  
   if (!is.null(task)) {
     qtask <- dplyr::enquo(task)
     scan_map <- scan_map %>% dplyr::filter(task == !!qtask)
   } 
   
-  snum <- as.character(scan_map$scan)
+  zerostr <- function(vals, ndigits=2) {
+    #ndigits <- log(max(vals), 10) + 1
+    nzeros <- ndigits - as.integer(log(vals,10)) -1
+    prefix <- sapply(nzeros, function(nz) paste(rep("0", times=nz), collapse =""))
+    paste(prefix, vals, sep="")  
+  }
   
-  confounds <- paste0(bids_path, "/", deriv_folder, "/sub-", id, "/func/", paste0("sub-", id, "_task-", task, "_run-", snum, "_bold_confounds.tsv"))
+  snum <- zerostr(as.numeric(as.character(scan_map$scan)))
+  
+  sess <- function(isdir=TRUE) {
+    if (is.null(session) || session == "") {
+      ""
+    } else {
+      if (isdir) paste0("/ses-", session, "/") else paste0("_ses-", session) 
+    }
+  }
+  
+  confounds <- paste0(bids_path, "/", deriv_folder, "/sub-", id, sess(), "/func/", paste0("sub-", id, sess(FALSE), "_task-", task, "_run-", snum, "_bold_confounds.tsv"))
 
   raw_scans <- scan_map$func
-  event_files <- paste0(bids_path, "/sub-", id, "/func/", gsub("bold.nii.gz", "events.tsv", basename(raw_scans)))
+  event_files <- paste0(bids_path, "/sub-", id, sess(), "/func/", gsub("bold.nii.gz", "events.tsv", basename(raw_scans)))
   
-  scans <- paste0("sub-", id, "_task-", task, "_run-", snum, "_bold_space-", bold_space, ".nii.gz")
+  scans <- paste0("sub-", id, sess(FALSE), "_task-", task, "_run-", snum, "_bold_space-", bold_space, ".nii.gz")
   
   structure(
     list(bids_path=bids_path,
          deriv_folder=deriv_folder,
-         func_path=paste0(bids_path, "/", deriv_folder, "/sub-", id, "/func"),
+         func_path=paste0(bids_path, "/", deriv_folder, "/sub-", id, sess(), "/func"),
          scan_map=scan_map,
          raw_scans=raw_scans,
          preproc_scans=scans,
