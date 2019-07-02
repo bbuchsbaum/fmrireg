@@ -1,7 +1,14 @@
 
 ridge_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), lambda=.01) {
   fit <- glmnet(X, Y, penalty.factor=penalty_factor, alpha=0,lambda=lambda)
-  coef(fit)[,1]
+  coef(fit)[,1,drop=FALSE]
+}
+
+pls_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
+  dx <- data.frame(X=X, Y=Y)
+  fit <- plsr(Y ~ X, data=dx, ncomp=ncomp, method="simpls")
+  coef(res)[,,1,drop=FALSE]
+
 }
 
 
@@ -13,7 +20,7 @@ ridge_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), lambda=.01) {
 #' fixed = onset ~ hrf(run)
 #' ran = onset ~ trialwise()
 #' block = ~ run
-estimate_betas <- function(dset, fixed, ran, block, method=c("ridge", "pls"), basedeg=5, nuisance_list=NULL, radius=8, niter=20, ncomp=4, lambda=.01) {
+estimate_betas <- function(dset, fixed, ran, block, method=c("ridge", "pls", "pls_searchlight"), basedeg=5, nuisance_list=NULL, radius=8, niter=20, ncomp=4, lambda=.01) {
   bvec <- get_data(dset)
   mask <- get_mask(dset)
   
@@ -35,13 +42,20 @@ estimate_betas <- function(dset, fixed, ran, block, method=c("ridge", "pls"), ba
     X <- as.matrix(dmat_all)
     pfac <-  c(rep(1, ncol(dmat_ran)), rep(0, ncol(dmat_fixed)), rep(0, ncol(dmat_base)))
     res <- do.call(cbind, furrr::future_map(neuroim2::vectors(bvec, subset=which(mask>0)), function(v) {
-      fit <- ridge_betas(X, v, penalty_factor = pfac, lambda=lambda)
-      coef(fit)[,1]
+      ridge_betas(X, v, penalty_factor = pfac, lambda=lambda)
     }))
     
     neuroim2::NeuroVec(as.matrix(res), neuroim2::add_dim(neuroim2::space(mask),nrow(res)))
     
-  } else {
+  } else if (method == "pls") {
+    X <- as.matrix(dmat_all)
+    res <- do.call(cbind, furrr::future_map(neuroim2::vectors(bvec, subset=which(mask>0)), function(v) {
+      pls_betas(X, v, ncomp=ncomp)
+    }))
+    
+    neuroim2::NeuroVec(as.matrix(res), neuroim2::add_dim(neuroim2::space(mask),nrow(res)))
+    
+  }else {
   
     res <- Reduce("+", furrr::future_map(1:niter, function(iter) {
       slight <- neuroim2::random_searchlight(mask, radius=radius)
