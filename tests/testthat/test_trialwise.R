@@ -75,3 +75,5 @@ test_that("can generate a trialwise regression model with a summed term term", {
   
 })
 
+
+
