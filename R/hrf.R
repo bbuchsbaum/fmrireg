@@ -171,11 +171,14 @@ hrf_lagged <- gen_hrf_lagged
 #' @param hrf the hemodynmaic response function
 #' @param width the width of the block
 #' @param precision the sampling resolution
+#' @param half_life the half_life of the exponential decay function (used to model response attenuation)
+#' @param summate
+#' @param normalize
 #' @importFrom purrr partial
 #' @export
-gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1,...) {
+gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1, half_life=Inf, summate=TRUE, normalize=FALSE, ...) {
   force(hrf)
-  purrr::partial(convolve_block, hrf=hrf, width=width, precision=precision,...)
+  purrr::partial(convolve_block, hrf=hrf, width=width, precision=precision, half_life=half_life, ...)
 }
 
 #' @export
@@ -191,16 +194,26 @@ hrf_blocked <- gen_hrf_blocked
 #' @param hrf the underlying hemodynamic response function
 #' @param width the fixed width of the response in seconds.
 #' @param precision the sampling precision in seconds
+#' @param half_life the half_life of the exponential decay function (used to model attenutation)
+#' @param summate whether to allow each impulse response function to "add" up.
+#' @param normalize rescale so that the peak of the output is 1.
 #' @export
-convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1, summate=TRUE, ...) {
+convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1, half_life=Inf, summate=TRUE, normalize=FALSE, ...) {
   hmat <- sapply(seq(0, width, by=precision), function(offset) {
-    hrf(t-offset,...)
+    hrf(t-offset,...) * exp(-offset/half_life)
   })
   
-  if (summate) {
-    rowSums(hmat)
+  ret <- if (summate) {
+    rs <- rowSums(hmat)
+    #rs/max(abs(rs))
   } else {
+    #rs <- rowSums(hmat)
+    #rs <- rs/max(abs(rs))
     apply(hmat,1,function(vals) vals[which.max(abs(vals))])
+  }
+  
+  if (normalize) {
+    ret/max(abs(ret))
   }
 }
   
@@ -325,6 +338,7 @@ HRF_SPMG3 <- HRF(gen_hrf_set(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeri
 #' @param duration the duration of the event
 #' @param precision the temporal resolution used for computing summed responses when duration > 0 
 #' @param summate whether the HRF response increases its amplitude as a function of stimulus duration.
+#' @param normalize scale output so that peak is 1.
 #' @rdname evaluate
 #' @export
 #' @examples 
@@ -334,7 +348,7 @@ HRF_SPMG3 <- HRF(gen_hrf_set(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeri
 #' # the same, except now turn off temporal summation.
 #' hrf2 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=1,summate=FALSE)
 #' 
-evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate=TRUE) {
+evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate=TRUE, normalize=FALSE) {
   if (duration < precision) {
     x(grid)*amplitude*attr(x, "scale_factor")       
   } else if (nbasis(x) == 1) {
@@ -344,27 +358,19 @@ evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate
       x(grid-offset)*amplitude*sfac
     })
     
-    if (summate) {
+    ret <- if (summate) {
       rowSums(hmat)
     } else {
       #rowMeans(hmat)
       apply(hmat,1,function(vals) vals[which.max(abs(vals))])
     }
     
-    # sat = 1
-    # idx_pre <- which(samples < sat)
-    # presat <- rowSums(hmat[,idx_pre])
-    # 
-    # tot <- rowSums(hmat)
-    # ret <- (max(tot)/max(presat))
-    # idx_post <- which(samples > sat)
-    # postsat <- rowSums(hmat[,idx_post])
-    # cur <- numeric(length(presat))
-    # for (i in 1:length(presat)) {
-    #   x <- min(presat[i] + postsat[i], xr[2])
-    #   x <- max(x, xr[1])
-    #   cur[i] <- x
-    # }
+    if (normalize) {
+      ret <- ret/max(abs(ret))
+    }
+    
+    ret
+  
 
   } else {
     sfac <- attr(x, "scale_factor")
