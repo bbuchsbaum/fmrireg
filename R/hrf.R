@@ -172,13 +172,13 @@ hrf_lagged <- gen_hrf_lagged
 #' @param width the width of the block
 #' @param precision the sampling resolution
 #' @param half_life the half_life of the exponential decay function (used to model response attenuation)
-#' @param summate
-#' @param normalize
+#' @param summate whether to allow each impulse response function to "add" up.
+#' @param normalize rescale so that the peak of the output is 1.
 #' @importFrom purrr partial
 #' @export
 gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1, half_life=Inf, summate=TRUE, normalize=FALSE, ...) {
   force(hrf)
-  purrr::partial(convolve_block, hrf=hrf, width=width, precision=precision, half_life=half_life, ...)
+  purrr::partial(convolve_block, hrf=hrf, width=width, precision=precision, half_life=half_life, summate=summate, normalize=normalize, ...)
 }
 
 #' @export
@@ -199,22 +199,24 @@ hrf_blocked <- gen_hrf_blocked
 #' @param normalize rescale so that the peak of the output is 1.
 #' @export
 convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1, half_life=Inf, summate=TRUE, normalize=FALSE, ...) {
+ 
   hmat <- sapply(seq(0, width, by=precision), function(offset) {
     hrf(t-offset,...) * exp(-offset/half_life)
   })
   
   ret <- if (summate) {
-    rs <- rowSums(hmat)
-    #rs/max(abs(rs))
+    rowSums(hmat)
   } else {
-    #rs <- rowSums(hmat)
-    #rs <- rs/max(abs(rs))
-    apply(hmat,1,function(vals) vals[which.max(abs(vals))])
+    #r <- range(hmat[,1])
+    #apply(hmat,1,function(vals) vals[which.max(abs(vals))])
+    apply(hmat,1,function(vals) vals[which.max(vals)])
   }
   
   if (normalize) {
-    ret/max(abs(ret))
-  }
+    ret <- ret/max(abs(ret))
+  } 
+  
+  ret
 }
   
   
