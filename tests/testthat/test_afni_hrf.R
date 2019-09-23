@@ -1,5 +1,6 @@
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
-
+library(purrr)
+library(assertthat)
 
 test_that("can construct an simple afni native stimulus model", {
   

@@ -31,12 +31,12 @@ get_col_inds <- function(Xlist) {
 #' stopifnot(ncol(design_matrix(bmod)) == 4)
 #' 
 #' ## no intercept term
-#' bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, intercept=FALSE)
+#' bmod <- baseline_model(basis="poly", degree=3, sframe=sframe, intercept=FALSE)
 #' 
 #' ## add an arbitrary nuisance matrix with two columns
 #' nuismat <- matrix(rnorm(100*2), 100, 2)
-#' bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, nuisance_list=list(nuismat))
-#' stopifnot(ncol(design_matrix(bmod)) == 6)
+#' bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, nuisance_list=list(nuismat, nuismat))
+#' stopifnot(ncol(design_matrix(bmod)) == 12)
 #' @export
 baseline_model <- function(basis=c("poly", "bs", "ns"), degree=1, sframe, intercept=TRUE, nuisance_list=NULL) {
   drift_spec <- baseline(degree=degree, basis=basis, constant=FALSE)
@@ -48,7 +48,7 @@ baseline_model <- function(basis=c("poly", "bs", "ns"), degree=1, sframe, interc
   
   nuisance_term <- if (!is.null(nuisance_list)) {
    
-    total_len <- sum(map_int(nuisance_list, nrow))
+    total_len <- sum(purrr::map_int(nuisance_list, nrow))
     assertthat::assert_that(total_len == length(blockids(sframe)))
     assertthat::assert_that(length(nuisance_list) == length(blocklens(sframe)))
     
@@ -58,11 +58,11 @@ baseline_model <- function(basis=c("poly", "bs", "ns"), degree=1, sframe, interc
     for (i in 1:length(nuisance_list)) {
       nmat <- nuisance_list[[i]]
       colnames(nmat) <- paste0("nuisance#", i, "#", 1:ncol(nmat))
-      nuisance_list[[i]] <- as.matrix(nmat)
+      ## 'unclass' is used below because Matrix::bdiag fro some reason doesn't work with class of type c("poly", "matrix")
+      nuisance_list[[i]] <- as.matrix(unclass(nmat))
     }
     
-    #browser()
-    
+  
     #baseline_term("nuisance", Matrix::bdiag(lapply(nuisance_list, unclass)), colind,rowind)
     baseline_term("nuisance", Matrix::bdiag(nuisance_list), colind,rowind)
   } 
