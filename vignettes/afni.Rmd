@@ -38,12 +38,15 @@ simple_design <- data.frame(stim=factor(sample(rep(cond, 4))),
 
 ```
 
-Now we add onset information, construct a `sampling_frame`, and finally an `event_model`:
+Now we add onset information, construct a `sampling_frame`, create a contrast, and then an `event_model`:
 
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
 simple_design$onset <- cumsum(simple_design$ISI+2) -2
 sframe <- sampling_frame(blocklens=70, TR=2)
-emodel <- event_model(onset ~ hrf(stim), data=simple_design, block = ~ run, sampling_frame=sframe)
+
+con1 <- pair_contrast(~ stim == "face", ~stim == "scene", name="face_scene")
+
+emodel <- event_model(onset ~ hrf(stim, contrasts=con1), data=simple_design, block = ~ run, sampling_frame=sframe)
 plot(emodel)
 ```
 
@@ -78,9 +81,36 @@ dset <- fmri_dataset(scans="scan01.nii",
 
 ```
 
-We are now ready to construct an AFNI model specification:
+We are now ready to construct an AFNI model specification. Note that all contrasts in the model will automatically be converted to AFNI-style general linear tests (GLTs).
 
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
 alm <- afni_lm(fmodel, dset)
+print(alm)
 ```
+
+Also, note that since we include a set of b-spline nuisance parameters in our model, `polort` is set to have no baseline regressors (polort = -1).
+We change that if we like:
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+alm <- afni_lm(fmodel, dset, polort=2)
+print(alm)
+```
+
+But this would essentially add two sets of drift regressors, which would be bad.
+
+To send other options to the `3dDeconvolve` command we can add them to the `options` argument, e.g.
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+alm <- afni_lm(fmodel, dset, options=list(tout=FALSE, fout=FALSE))
+print(alm)
+```
+
+To execute the external `3dDeconvolve` command on the system, we do as follows:
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+
+#run(alm, outdir="glm_out")
+```
+
+
 

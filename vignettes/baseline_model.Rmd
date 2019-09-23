@@ -57,7 +57,7 @@ nuislist <- split(as.data.frame(cbind(nuis1, nuis2)), blockids(sframe))
 
 bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe, nuisance_list=nuislist)
 print(terms(bmodel))
-plot(bmodel, term_name="baseline_bs_5")
+plot(bmodel, term_name="nuisance")
 
 ```
 
