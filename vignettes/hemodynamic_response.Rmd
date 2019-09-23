@@ -2,7 +2,11 @@
 title: "Hemodynamic Response Functions"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  prettydoc::html_pretty:
+    theme: Leonids
+    highlight: github
+
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
   %\VignetteEngine{knitr::rmarkdown}
@@ -16,7 +20,7 @@ A hemodynamic response function (HRF) is used to model the temporal evoluation o
 
 There are a number of pre-defined HRFs in `fmrireg` that make it easy to work with them. For example, we can use the SPM "canonical" HRF as follows:
 
-```{r, echo=FALSE}
+```{r, echo=FALSE,results='hide', message=FALSE, warning=FALSE}
 devtools::load_all()
 ```
 
@@ -25,13 +29,13 @@ devtools::load_all()
 library(magrittr)
 
 ## SPM canonical hrf
-vals <- evaluate(HRF_SPMG1, seq(0,20,by=.1))
+f1 <- hrf_blocked(hrf_spmg1, width=1)
 
 ## Gaussian hrf with default parameters (mean=6, sd=1.5)
-vals2 <- evaluate(HRF_GAUSSIAN, seq(0,20,by=.1)) 
+f2 <- hrf_blocked(hrf_gaussian, width=1) 
 
-plot(seq(0,20,by=.1), vals, type="l", xlab="Time", ylab="BOLD response", ylim=range(c(vals, vals2)), main="Gaussian and SPM Canonical HRF")
-lines(seq(0,20,by=.1), vals2, type="l", col=2)
+plot(seq(0,20,by=.1), f1(seq(0,20,by=.1)), type="l", xlab="Time", ylab="BOLD response", main="Gaussian and SPM Canonical HRF", ylim=c(-.2, 2.2))
+lines(seq(0,20,by=.1), f2(seq(0,20,by=.1)), type="l", col=2)
 
 ```
 
@@ -39,20 +43,14 @@ lines(seq(0,20,by=.1), vals2, type="l", col=2)
 
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
 
-## the 'HRF' constructor take a function and returns instantiates and HRF object. Several 'hrf' functions are provided which have default parameters. 
-
-## the 'gen_hrf' function take an function and returns a new function substituting the supplied parameters as arguments.
+## the 'gen_hrf' function takes an hrf function and returns a new function substituting the supplied parameters as arguments.
 hrf_7_3 <- gen_hrf(hrf_gaussian, mean=7, sd=3)
 hrf_5_2 <- gen_hrf(hrf_gaussian, mean=5, sd=2)
 hrf_4_1 <- gen_hrf(hrf_gaussian, mean=4, sd=1)
 
-hrf1 <- HRF(hrf_7_3, name="hrf_gaussian_7_3")
-hrf2 <- HRF(hrf_5_2, name="hrf_gaussian_5_2")
-hrf3 <- HRF(hrf_4_1, name="hrf_gaussian_4_1")
-
-vals1 <- evaluate(hrf1, seq(0,20,by=.1))
-vals2 <- evaluate(hrf2, seq(0,20,by=.1))
-vals3 <- evaluate(hrf3, seq(0,20,by=.1))
+vals1 <- hrf_7_3(seq(0,20,by=.1))
+vals2 <- hrf_5_2(seq(0,20,by=.1))
+vals3 <- hrf_4_1(seq(0,20,by=.1))
 
 ## notice that that each function is scaled so that it's highest value = 1.
 plot(seq(0,20,by=.1), vals1, type="l", xlab="Time", ylab="BOLD response", ylim=range(c(vals1, vals2, vals3)), main="Three Gaussian HRFs")
@@ -68,13 +66,14 @@ We can also set the duration of the input stimulus as follows:
 
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
 
-vals1 <- evaluate(hrf2, seq(0,20,by=.1), duration=1)
-vals2 <- evaluate(hrf2, seq(0,20,by=.1), duration=2)
-vals3 <- evaluate(hrf2, seq(0,20,by=.1), duration=3)
+hrf_w1 <- hrf_blocked(hrf_spmg1, width=1)
+hrf_w2 <- hrf_blocked(hrf_spmg1, width=2)
+hrf_w3 <- hrf_blocked(hrf_spmg1, width=3)
 
-plot(seq(0,20,by=.1), vals1, type="l", xlab="Time", ylab="BOLD response", ylim=range(c(vals1, vals2, vals3)), main="HRFs with Different Durations")
-lines(seq(0,20,by=.1), vals2, type="l", col=2)
-lines(seq(0,20,by=.1), vals3, type="l", col=3)
+time <- seq(0,20,by=.1)
+plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=range(0, 6), main="HRFs with Different Durations")
+lines(time, hrf_w2(time), type="l", col=2)
+lines(time, hrf_w3(time), type="l", col=3)
 
 ```
 
@@ -82,13 +81,31 @@ By default an increase in the duration results in the summation of a series of s
 
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
 
-vals1 <- evaluate(hrf2, seq(0,20,by=.1), duration=1, summate=FALSE)
-vals2 <- evaluate(hrf2, seq(0,20,by=.1), duration=2, summate=FALSE)
-vals3 <- evaluate(hrf2, seq(0,20,by=.1), duration=3, summate=FALSE)
+hrf_w1 <- hrf_blocked(hrf_spmg1, width=2, summate=FALSE)
+hrf_w2 <- hrf_blocked(hrf_spmg1, width=4, summate=FALSE)
+hrf_w3 <- hrf_blocked(hrf_spmg1, width=6, summate=FALSE)
 
-plot(seq(0,20,by=.1), vals1, type="l", xlab="Time", ylab="BOLD response", ylim=range(c(vals1, vals2, vals3)), main="Non-Summating HRFs with Different Durations ")
-lines(seq(0,20,by=.1), vals2, type="l", col=2)
-lines(seq(0,20,by=.1), vals3, type="l", col=3)
+time <- seq(0,24,by=.1)
+
+plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=c(0,.25), main="Non-Summating HRFs with Different Durations ")
+lines(time, hrf_w2(time), type="l", col=2)
+lines(time, hrf_w3(time), type="l", col=3)
+
+```
+
+If we want the peak of the HRF to equal 1, we use the `normalize` argument as follows:
+
+```{r, message=FALSE,fig.width = 7, fig.height = 5}
+
+hrf_w1 <- hrf_blocked(hrf_spmg1, width=2, summate=FALSE, normalize=TRUE)
+hrf_w2 <- hrf_blocked(hrf_spmg1, width=4, summate=FALSE, normalize=TRUE)
+hrf_w3 <- hrf_blocked(hrf_spmg1, width=6, summate=FALSE, normalize=TRUE)
+
+time <- seq(0,24,by=.1)
+
+plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=c(0,1.1), main="Normalized and Non-Summating HRFs with Different Durations ")
+lines(time, hrf_w2(time), type="l", col=2)
+lines(time, hrf_w3(time), type="l", col=3)
 
 ```
 
@@ -100,25 +117,22 @@ Sometimes we want to model an event with multiple "basis functions". In this cas
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
 
 ## A third degree B-Spline with four bases.
-hrf_bs_4 <- HRF(gen_hrf(hrf_bspline, N=4), name="hrf_bspline_4")
+hrf_bs_4 <- gen_hrf(hrf_bspline, N=4)
 time <- seq(0,20, by=.1)
-bmat1 <- evaluate(hrf_bs_4, time)
+bmat1 <- hrf_bs_4(time)
 matplot(time, bmat1, xlab="Time", ylab="BOLD Response", type='l', main="Bspline HRF basis set (N=4)")
 
 ## A first degree B-Spline with 12 bases.
-hrf_bs_12 <- HRF(gen_hrf(hrf_bspline, degree=1, N=12), name="hrf_bspline_12")
-time <- seq(0,20, by=.1)
-bmat1 <- evaluate(hrf_bs_12, time)
+hrf_bs_12 <- gen_hrf(hrf_bspline, degree=1, N=12)
+bmat1 <- hrf_bs_12(time)
 matplot(time, bmat1, xlab="Time", ylab="BOLD Response", type='l', main="Bspline HRF basis set (N=12)")
 
 ## the SPM + first derivative is a "built-in" HRF function.
-time <- seq(0,20, by=.1)
-bmat1 <- evaluate(HRF_SPMG2, time)
+bmat1 <- HRF_SPMG2(time)
 matplot(time, bmat1, xlab="Time", ylab="BOLD Response", type='l', main="SPM + first derivative")
 
 ## the SPM + first derivative + second derivative is a "built-in" HRF function.
-time <- seq(0,20, by=.1)
-bmat1 <- evaluate(HRF_SPMG3, time)
+bmat1 <- HRF_SPMG3(time)
 matplot(bmat1, xlab="Time", ylab="BOLD Response", type='l', main="SPM + 1st and 2nd derivative")
 
 ```
@@ -132,21 +146,21 @@ In some cases, it might be useful to create an HRF function that has a temporal 
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
 
 ## constructing a series of lagged HRFs
-hrf_lag_1 <- hrf_gaussian %>% gen_hrf_lagged(1) %>% HRF(name="hrf_lagged_1") 
-hrf_lag_3 <- hrf_gaussian %>% gen_hrf_lagged(3) %>% HRF(name="hrf_lagged_3") 
-hrf_lag_5 <- hrf_gaussian %>% gen_hrf_lagged(5) %>% HRF(name="hrf_lagged_5") 
+hrf_lag_1 <- hrf_gaussian %>% gen_hrf_lagged(1) 
+hrf_lag_3 <- hrf_gaussian %>% gen_hrf_lagged(3)
+hrf_lag_5 <- hrf_gaussian %>% gen_hrf_lagged(5) 
 time <- seq(0,22,by=.2)
-plot(time, evaluate(hrf_lag_1,time), type='l', xlab="time", ylab="BOLD")
-lines(time, evaluate(hrf_lag_3,time), col=2)
-lines(time, evaluate(hrf_lag_5,time), col=3)
+plot(time,  hrf_lag_1(time), type='l', xlab="time", ylab="BOLD")
+lines(time, hrf_lag_3(time), col=2)
+lines(time, hrf_lag_5(time), col=3)
 
-## constructing blocked HRFs
-hrf_block_1 <- hrf_gaussian %>% gen_hrf_blocked(width=1) %>% HRF(name="hrf_blocked_1") 
-hrf_block_3 <- hrf_gaussian %>% gen_hrf_blocked(width=3) %>% HRF(name="hrf_blocked_3") 
-hrf_block_5 <- hrf_gaussian %>% gen_hrf_blocked(width=5) %>% HRF(name="hrf_blocked_5") 
-plot(time, evaluate(hrf_block_1,time), type='l', xlab="time", ylab="BOLD")
-lines(time, evaluate(hrf_block_3,time), col=2)
-lines(time, evaluate(hrf_block_5,time), col=3)
+## constructing lagged and blocked HRFs
+hrf_block_1 <- hrf_gaussian %>%  hrf_lagged(1) %>% hrf_blocked(width=1, normalize=TRUE)
+hrf_block_3 <- hrf_gaussian %>% hrf_lagged(3) %>% hrf_blocked(width=3, normalize=TRUE)
+hrf_block_5 <- hrf_gaussian %>% hrf_lagged(5) %>% hrf_blocked(width=5, normalize=TRUE) 
+plot(time, hrf_block_1(time), type='l', xlab="time", ylab="BOLD")
+lines(time, hrf_block_3(time), col=2)
+lines(time, hrf_block_5(time), col=3)
 
 
 ```
@@ -159,7 +173,7 @@ Rather than using a b-spline basis set, we could construct our own set of functi
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
 
 hrf_set <- do.call(gen_hrf_set,
-                   lapply(seq(0,20,by=2), function(i) {  hrf_gaussian %>% gen_hrf_lagged(i) %>% HRF(name=paste0("lag_", i)) }))
+                   lapply(seq(0,20,by=2), function(i) {  hrf_gaussian %>% hrf_lagged(i) %>% HRF(name=paste0("lag_", i)) }))
 
 matplot(hrf_set(0:36), type='l', xlab="Time", ylab="BOLD Activity")
 

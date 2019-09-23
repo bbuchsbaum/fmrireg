@@ -1,2 +1,5 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^docs$
+^\.travis\.yml$
+^codecov\.yml$

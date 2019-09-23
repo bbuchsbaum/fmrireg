@@ -64,6 +64,7 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
   }
   
   event_spec <- formspec(formula, data)
+  #browser()
   assertthat::assert_that(all(map_lgl(event_spec$rhs, inherits, "hrfspec")),
                           msg="all terms on right hand side must be 'hrf' terms")
   
@@ -93,6 +94,7 @@ blocklens.event_model <- function(x) {
 construct_model <- function(x) {
  
   #term_names <- sapply(x$event_spec$rhs, "[[", "id")
+  #browser()
   term_names <- sapply(x$event_spec$rhs, "[[", "name")
   term_names <- .sanitizeName(term_names)
   
@@ -161,7 +163,8 @@ extract_variables <- function(form, data) {
   varnames <- sapply(attr(.terms, "variables") , deparse, width.cutoff = 500)[-1]
   #varnames <- c(formula.tools::get.vars(formula.tools::lhs(form)), formula.tools::get.vars(formula.tools::rhs(form)))
   #variables <- as.data.frame(do.call(cbind, lapply(varnames, function(vn) eval(parse(text=vn), data,environment(terms(form))))))
-  variables <- eval(attr(.terms, "variables"), data, env) 
+  #variables <- eval(attr(.terms, "variables"), data, env) 
+  variables <- eval(attr(.terms, "variables"), data) 
   names(variables) <- varnames
   variables
 }

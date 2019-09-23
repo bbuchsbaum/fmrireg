@@ -1,8 +1,11 @@
 ---
-title: "Translating to AFNI"
+title: "Translating to AFNI 3dDeconvolve"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  prettydoc::html_pretty:
+    theme: Leonids
+    highlight: github
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
   %\VignetteEngine{knitr::rmarkdown}
@@ -14,6 +17,10 @@ vignette: >
 
 AFNI and other fMRI analysis packages have robust and efficient methods for estimating voxelwise regression models. Therefore, it may be beneficial to construct a regression model in R using **fmrireg** and translate it so that it can be executed using one of these packages. Here we provide a translation mechanism from an `fmri_model` object constructed with `fmrireg` to syntax and assocaited file required for execution using AFNI's **3dDeconvolve** program.
 
+```{r, message=FALSE,echo=FALSE}
+library(tibble)
+devtools::load_all()
+```
 
 ## A Simple Model
 

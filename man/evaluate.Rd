@@ -9,7 +9,7 @@
 evaluate(x, grid, ...)
 
 \method{evaluate}{HRF}(x, grid, amplitude = 1, duration = 0,
-  precision = 0.2, summate = TRUE)
+  precision = 0.2, summate = TRUE, normalize = FALSE)
 
 \method{evaluate}{regressor}(x, grid, precision = 0.2)
 }
@@ -27,6 +27,8 @@ evaluate(x, grid, ...)
 \item{precision}{the temporal resolution used for computing summed responses when duration > 0}
 
 \item{summate}{whether the HRF response increases its amplitude as a function of stimulus duration.}
+
+\item{normalize}{scale output so that peak is 1.}
 
 \item{grid}{the sampling grid. A vector of real values in seconds.}
 

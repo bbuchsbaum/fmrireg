@@ -356,6 +356,7 @@ evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate
   } else if (nbasis(x) == 1) {
     samples <- seq(0, duration, by=precision)
     sfac <- attr(x, "scale_factor") 
+    
     hmat <- sapply(samples, function(offset) {
       x(grid-offset)*amplitude*sfac
     })
@@ -364,7 +365,7 @@ evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate
       rowSums(hmat)
     } else {
       #rowMeans(hmat)
-      apply(hmat,1,function(vals) vals[which.max(abs(vals))])
+      apply(hmat,1,function(vals) vals[which.max(vals)])
     }
     
     if (normalize) {
@@ -372,8 +373,6 @@ evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate
     }
     
     ret
-  
-
   } else {
     sfac <- attr(x, "scale_factor")
     Reduce("+", lapply(seq(0, duration, by=precision), function(offset) {

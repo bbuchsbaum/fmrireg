@@ -4,13 +4,11 @@
 \alias{trialwise}
 \title{trialwise}
 \usage{
-trialwise(..., basis = HRF_SPMG1, onsets = NULL, durations = NULL,
+trialwise(basis = HRF_SPMG1, onsets = NULL, durations = NULL,
   prefix = NULL, subset = NULL, precision = 0.2, nbasis = 1,
   contrasts = list(), id = NULL, add_sum = FALSE)
 }
 \arguments{
-\item{...}{the variable names, all of which must be present in the enclosing environment (e.g. an \code{event_model} object)}
-
 \item{basis}{the impulse response function or the name of a pre-supplied function, one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian".}
 
 \item{onsets}{optional onsets override. If missing, onsets will be taken from the \code{event_model}}

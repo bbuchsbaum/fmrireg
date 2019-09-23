@@ -2,7 +2,10 @@
 title: "Building Regressors"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  prettydoc::html_pretty:
+    theme: Leonids
+    highlight: github
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
   %\VignetteEngine{knitr::rmarkdown}
@@ -86,7 +89,7 @@ reg <- regressor(onsets, HRF_SPMG1, amplitude=scaled_amp, duration=dur)
 plot(reg)
 ```
 
-## Building fMRI regressors from event onsets with Bspline basis functions
+## Building fMRI regressors from event onsets with b-spline basis functions
 
 ```{r, message=FALSE,fig.width = 6, fig.height = 4}
 

@@ -5,7 +5,7 @@
 \title{a convolve hemodynamic response with a block duration}
 \usage{
 convolve_block(t, hrf = hrf_gaussian, width = 5, precision = 0.1,
-  summate = TRUE, ...)
+  half_life = Inf, summate = TRUE, normalize = FALSE, ...)
 }
 \arguments{
 \item{t}{time in seconds}
@@ -15,6 +15,12 @@ convolve_block(t, hrf = hrf_gaussian, width = 5, precision = 0.1,
 \item{width}{the fixed width of the response in seconds.}
 
 \item{precision}{the sampling precision in seconds}
+
+\item{half_life}{the half_life of the exponential decay function (used to model attenutation)}
+
+\item{summate}{whether to allow each impulse response function to "add" up.}
+
+\item{normalize}{rescale so that the peak of the output is 1.}
 }
 \description{
 apply a hemodynamic response function with times \code{t} and duration \code{width}

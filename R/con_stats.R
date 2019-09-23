@@ -170,7 +170,7 @@ fit_contrasts <- function(lmfit, conmat, colind) {
     #browser()
   }
  
-  print(length(colind))
+  #print(length(colind))
   
   cfs <- coef(lmfit)
   betamat <- if (is.vector(cfs)) {

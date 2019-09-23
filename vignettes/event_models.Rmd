@@ -2,7 +2,10 @@
 title: "Event Models"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  prettydoc::html_pretty:
+    theme: Leonids
+    highlight: github
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
   %\VignetteEngine{knitr::rmarkdown}
@@ -135,13 +138,13 @@ plot(emodel)
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
 TR <- 2
 sframe <- sampling_frame(blocklens=70, TR)
-simple_design$RT <- scale(rnorm(nrow(simple_design), mean=700, sd=100))
+simple_design$RT <- scale(rnorm(nrow(simple_design), mean=700, sd=100))[,1]
 
 
 ## create the event model d
 emodel <- event_model(onset ~ hrf(stim) + hrf(RT), data=simple_design, block = ~ run, sampling_frame=sframe)
 print(emodel)
-plot(emodel, "hrf_RT")
+plot(emodel, "RT")
 ```
 
 ## An event-related design with an amplitude-modulated variable crossed with factor
@@ -156,7 +159,7 @@ simple_design$RT <- scale(rnorm(nrow(simple_design), mean=700, sd=100))
 ## create the event model d
 emodel <- event_model(onset ~ hrf(stim) + hrf(stim, RT), data=simple_design, block = ~ run, sampling_frame=sframe)
 print(emodel)
-plot(emodel, "hrf_stim_RT")
+plot(emodel, "stim:RT")
 ```
 
 ## Trialwise event model to construct "beta-series" estimates
@@ -166,7 +169,7 @@ TR <- 2
 sframe <- sampling_frame(blocklens=70, TR)
 
 # create the event model d
-emodel <- event_model(onset ~ trialwise(trial), data=simple_design, block = ~ run, sampling_frame=sframe)
+emodel <- event_model(onset ~ trialwise(), data=simple_design, block = ~ run, sampling_frame=sframe)
 print(emodel)
-plot(emodel, "hrf_trialwise")
+plot(emodel, "trialwise")
 ```

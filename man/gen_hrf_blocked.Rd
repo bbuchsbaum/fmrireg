@@ -4,7 +4,8 @@
 \alias{gen_hrf_blocked}
 \title{gen_hrf_blocked}
 \usage{
-gen_hrf_blocked(hrf = hrf_gaussian, width = 5, precision = 0.1, ...)
+gen_hrf_blocked(hrf = hrf_gaussian, width = 5, precision = 0.1,
+  half_life = Inf, summate = TRUE, normalize = FALSE, ...)
 }
 \arguments{
 \item{hrf}{the hemodynmaic response function}
@@ -12,6 +13,12 @@ gen_hrf_blocked(hrf = hrf_gaussian, width = 5, precision = 0.1, ...)
 \item{width}{the width of the block}
 
 \item{precision}{the sampling resolution}
+
+\item{half_life}{the half_life of the exponential decay function (used to model response attenuation)}
+
+\item{summate}{whether to allow each impulse response function to "add" up.}
+
+\item{normalize}{rescale so that the peak of the output is 1.}
 }
 \description{
 gen_hrf_blocked

@@ -58,10 +58,13 @@ baseline_model <- function(basis=c("poly", "bs", "ns"), degree=1, sframe, interc
     for (i in 1:length(nuisance_list)) {
       nmat <- nuisance_list[[i]]
       colnames(nmat) <- paste0("nuisance#", i, "#", 1:ncol(nmat))
-      nuisance_list[[i]] <- nmat
+      nuisance_list[[i]] <- as.matrix(nmat)
     }
     
-    baseline_term("nuisance", Matrix::bdiag(lapply(nuisance_list, unclass)), colind,rowind)
+    #browser()
+    
+    #baseline_term("nuisance", Matrix::bdiag(lapply(nuisance_list, unclass)), colind,rowind)
+    baseline_term("nuisance", Matrix::bdiag(nuisance_list), colind,rowind)
   } 
   
   ret <- list(drift_term=drift_term, 
@@ -192,8 +195,10 @@ construct.baselinespec <- function(x, sampling_frame) {
 #' baseline_term
 #' 
 #' @importFrom tibble as_tibble
+#' @import Matrix
 #' @export
 baseline_term <- function(varname, mat, colind, rowind) {
+  #print(class(mat))
   stopifnot(inherits(mat, "matrix") || is.data.frame(mat) || inherits(mat, "Matrix"))
   ret <- list(varname=varname, design_matrix=tibble::as_tibble(as.matrix(mat)), colind=colind, rowind=rowind)
   class(ret) <- c("baseline_term", "matrix_term", "fmri_term", "list")
@@ -324,6 +329,7 @@ print.baseline_model <- function(x) {
 #' @importFrom tidyr gather
 #' @export
 plot.baseline_model <- function(x, term_name=NULL) {
+
   all_terms <- terms(x)
   term_names <- names(all_terms)
   
@@ -352,6 +358,7 @@ plot.baseline_model <- function(x, term_name=NULL) {
   } else {
     dflist[[term_name]]
   }
+  
   
   ggplot2::ggplot(dfx, aes_string(x=".time", y="value", colour="condition")) + geom_line() + facet_wrap(~ .block, ncol=1) +
     xlab("Time") + theme_bw(14)

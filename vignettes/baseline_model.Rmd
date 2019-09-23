@@ -2,7 +2,10 @@
 title: "Baseline Model"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  prettydoc::html_pretty:
+    theme: Leonids
+    highlight: github
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
   %\VignetteEngine{knitr::rmarkdown}
@@ -18,6 +21,7 @@ An "baseline model" refers to the set of regressors used to capture variance ass
 ## Basic baseline model with b-splines and polynomials
 
 ```{r, echo=FALSE, message=FALSE}
+library(Matrix)
 devtools::load_all()
 ```
 
@@ -28,8 +32,6 @@ bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe)
 print(bmodel)
 plot(bmodel)
 
-
-
 bmodel2 <- baseline_model(basis="poly", degree=5, sframe=sframe)
 plot(bmodel2)
 
@@ -37,7 +39,7 @@ plot(bmodel2)
 
 ## Adding arbitrary nuisance regressors
 
-In addiiton to structured basis sets, we can also add arbitrary signals to the baseline model. Such signals are also organized by block on the assumption that nuisance signals are often block-specific and "reset" across scans. To add a set of nusiance variables to the baseline model, then, they should be split by block and placed in a `list`.
+In addition to structured basis sets, we can also add arbitrary signals to the baseline model. Such signals are also organized by block on the assumption that nuisance signals are often block-specific and "reset" across scans. To add a set of nusiance variables to the baseline model, then, they should be split by block and placed in a `list`.
 
 
 
@@ -55,8 +57,6 @@ nuislist <- split(as.data.frame(cbind(nuis1, nuis2)), blockids(sframe))
 
 bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe, nuisance_list=nuislist)
 print(terms(bmodel))
-plot(bmodel, term_name="nuisance")
-
 plot(bmodel, term_name="baseline_bs_5")
 
 ```
