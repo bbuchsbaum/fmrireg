@@ -97,6 +97,7 @@ lines(time, hrf_w3(time), type="l", col=3)
 
 ```
 
+## Modeling HRF saturation with the `summation` argument
 
 By default an increase in the duration results in the summation of a series of shifted responses, which is consistent with the notion that the hemodyamic response "adds up" or accumulates over time. But we can disable this additive behavior by setting `summate=FALSE`. This is useful if one assumes the HRF "saturates" (i..e does not increase in amplitude) with extended stimulation.
 
@@ -109,7 +110,7 @@ hrf_w3 <- hrf_blocked(hrf_spmg1, width=6, summate=FALSE)
 
 time <- seq(0,24,by=.1)
 
-plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=c(0,.25), main="Non-Summating HRFs with Different Durations ")
+plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=c(-.1,.25), main="Non-Summating HRFs with Different Durations ")
 lines(time, hrf_w2(time), type="l", col=2)
 lines(time, hrf_w3(time), type="l", col=3)
 
@@ -125,7 +126,7 @@ hrf_w3 <- hrf_blocked(hrf_spmg1, width=6, summate=FALSE, normalize=TRUE)
 
 time <- seq(0,24,by=.1)
 
-plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=c(0,1.1), main="Normalized and Non-Summating HRFs with Different Durations ")
+plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=c(-.1,1.1), main="Normalized and Non-Summating HRFs with Different Durations ")
 lines(time, hrf_w2(time), type="l", col=2)
 lines(time, hrf_w3(time), type="l", col=3)
 
