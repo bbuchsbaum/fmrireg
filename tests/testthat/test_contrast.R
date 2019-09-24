@@ -11,7 +11,7 @@ test_that("a 2-by-2 Fcontrast", {
   blockids <- rep(1, length(onsets))
   
   et <- event_term(list(Fa=F_a, Fb=F_b), onsets, blockids)
-  Fcontrasts(et)
+  expect_true(!is.null(Fcontrasts(et)))
 })
 
 test_that("a 3-by-2 Fcontrast", {
@@ -22,7 +22,7 @@ test_that("a 3-by-2 Fcontrast", {
   blockids <- rep(1, length(onsets))
   
   et <- event_term(list(Fa=F_a, Fb=F_b, Fc=F_c), onsets, blockids)
-  Fcontrasts(et)
+  expect_true(!is.null(Fcontrasts(et)))
 })
 
 test_that("a 3-by-3 Fcontrast", {
@@ -33,7 +33,7 @@ test_that("a 3-by-3 Fcontrast", {
   blockids <- rep(1, length(onsets))
   
   et <- event_term(list(Fa=F_a, Fb=F_b, Fc=F_c), onsets, blockids)
-  Fcontrasts(et)
+  expect_true(!is.null(Fcontrasts(et)))
 })
 
 
@@ -99,7 +99,7 @@ test_that("can subtract two pairwise contrasts to form an interaction contrast",
   con1 <- pair_contrast(~ category=="face", ~ category == "scene", name="face_scene#attend", where=~ attention == "attend")
   con2 <- pair_contrast(~ category=="face", ~ category == "scene", name="face_scene#ignored", where=~ attention == "ignored")
   con3 <- con1 - con2
-  
+  expect_true(!is.null(con3))
 })
 
 
@@ -113,6 +113,7 @@ test_that("can contrast two parametric regressors crossed with a factor", {
   espec <- event_model(onset ~  hrf(category, RT), data=simple_des, block=~run, sampling_frame=sframe)
   con <- pair_contrast(~ category == "face", ~ category == "scene", name="face_scene_RT")
   cwts <- contrast_weights(con, terms(espec)[[1]])
+  expect_true(!is.null(cwts))
 })
 
 test_that("can contrast two parametric regressors wrapped in Ident for additive regressors", {
@@ -126,6 +127,7 @@ test_that("can contrast two parametric regressors wrapped in Ident for additive 
   espec <- event_model(onset ~  hrf(Ident(RT1,RT2)), data=simple_des, block=~run, sampling_frame=sframe)
   con <- pair_contrast(~ RT1_RT2 == "RT1", ~ RT1_RT2 == "RT2", name="RT1_RT2")
   cwts <- contrast_weights(con, terms(espec)[[1]])
+  expect_true(!is.null(cwts))
 })
 
 test_that("can contrast two basis functions from a custom multi-phase hrf", {
@@ -143,6 +145,7 @@ test_that("can contrast two basis functions from a custom multi-phase hrf", {
   espec <- event_model(onset ~  hrf(trial_type, basis=hrf_trial), data=simple_des, block=~run, sampling_frame=sframe)
   con <- pair_contrast(~ basis == "basis1", ~ basis=="basis2", name="test")
   cwts <- contrast_weights(con, terms(espec)[[1]])
+  expect_true(!is.null(cwts))
 })
 
 test_that("can contrast two parametric regressors wrapped in Ident", {
@@ -156,6 +159,7 @@ test_that("can contrast two parametric regressors wrapped in Ident", {
   espec <- event_model(onset ~  hrf(Ident(RT1,RT2)), data=simple_des, block=~run, sampling_frame=sframe)
   con <- pair_contrast(~ RT1_RT2 == "RT1", ~ RT1_RT2 == "RT2", name="RT1_RT2")
   cwts <- contrast_weights(con, terms(espec)[[1]])
+  expect_true(!is.null(cwts))
 })
 
 

@@ -22,7 +22,7 @@ gen_design <- function(nstim=50, isi_range=c(0,4), noise_sd=.8, rho=.12, TR=2, r
 gen_event_model <- function(desmat, nscans, TR=2) {
   sframe <- sampling_frame(nscans, TR)
   desmat$constant <- factor(rep(1, nrow(desmat)))
-  emod <- event_model(onsets ~ hrf(constant) + trialwise(trial), 
+  emod <- event_model(onsets ~ hrf(constant) + trialwise(), 
                       block= ~ rnum, 
                       sampling_frame=sframe,data=desmat)
   
@@ -72,6 +72,7 @@ gen_sim_set <- function(nruns=3, isi_range=c(0,4), noise_sd=.8, TR=2) {
 test_that("can generate a trialwise regression model with a summed term term", {
   sim <- gen_sim_set(3, isi_range=c(0,4), noise_sd=.8)
   desmat <- design_matrix(sim$ev)
+  expect_true(!is.null(desmat))
   
 })
 

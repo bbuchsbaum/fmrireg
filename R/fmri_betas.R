@@ -12,6 +12,8 @@ pls_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
 }
 
 
+#' estimate trialwise betas for an fMRI dataset.
+
 #' @examples 
 #' facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 #' facesdes$frun <- factor(facedes$run)
@@ -20,7 +22,8 @@ pls_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
 #' fixed = onset ~ hrf(run)
 #' ran = onset ~ trialwise()
 #' block = ~ run
-estimate_betas <- function(dset, fixed, ran, block, method=c("ridge", "pls", "pls_searchlight"), basedeg=5, nuisance_list=NULL, radius=8, niter=20, ncomp=4, lambda=.01) {
+estimate_betas <- function(dset, fixed, ran, block, method=c("ridge", "pls", "pls_searchlight"), basedeg=5, nuisance_list=NULL, 
+                           radius=8, niter=20, ncomp=4, lambda=.01) {
   bvec <- get_data(dset)
   mask <- get_mask(dset)
   

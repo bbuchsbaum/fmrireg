@@ -29,10 +29,10 @@ bmod <- baseline_model(basis="bs", degree=3, sframe=sframe)
 stopifnot(ncol(design_matrix(bmod)) == 4)
 
 ## no intercept term
-bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, intercept=FALSE)
+bmod <- baseline_model(basis="poly", degree=3, sframe=sframe, intercept=FALSE)
 
 ## add an arbitrary nuisance matrix with two columns
 nuismat <- matrix(rnorm(100*2), 100, 2)
-bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, nuisance_list=list(nuismat))
-stopifnot(ncol(design_matrix(bmod)) == 6)
+bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, nuisance_list=list(nuismat, nuismat))
+stopifnot(ncol(design_matrix(bmod)) == 12)
 }

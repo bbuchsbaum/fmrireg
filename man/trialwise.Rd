@@ -5,7 +5,7 @@
 \title{trialwise}
 \usage{
 trialwise(basis = HRF_SPMG1, onsets = NULL, durations = NULL,
-  prefix = NULL, subset = NULL, precision = 0.2, nbasis = 1,
+  prefix = NULL, subset = NULL, precision = 0.2,
   contrasts = list(), id = NULL, add_sum = FALSE)
 }
 \arguments{
@@ -22,15 +22,13 @@ Can be used to disambiguate two \code{hrf} terms with the same variable(s) but d
 
 \item{precision}{sampling precision in seconds}
 
-\item{nbasis}{number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.}
-
 \item{contrasts}{one or more \code{contrast_spec} objects created with the \code{contrast} function. 
 If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.}
 
 \item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
 }
 \description{
-This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise(trial) ...
+This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise() ...
 }
 \examples{
 

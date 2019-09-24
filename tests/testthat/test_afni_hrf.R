@@ -2,6 +2,8 @@ facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrir
 library(purrr)
 library(assertthat)
 
+context("afni")
+
 test_that("can construct an simple afni native stimulus model", {
   
   facedes$repnum <- factor(facedes$rep_num)

@@ -24,12 +24,12 @@ NULL
 #' 
 #' vals <- grf(0:20)
 #' @export
-gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, name="gen_hrf", ...) {
+gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, half_life=Inf, summate=TRUE, normalize=FALSE, name="gen_hrf", ...) {
   .orig <- list(...)
   
   if (!is.null(width)) {
     assert_that(width > 0)
-    hrf <- gen_hrf_blocked(hrf, width=width, precision=precision)
+    hrf <- gen_hrf_blocked(hrf, width=width, precision=precision, summate=summate, normalize=normalize, summate=summate)
   }
   
   if (lag > 0) {
@@ -47,7 +47,16 @@ gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, name="gen_hrf", ...) {
     hrf
   }
   
-  HRF(f, name=name)
+  vals <- f(0:2)
+  
+  nb <- if (is.vector(vals)) {
+    1
+  } else if (is.matrix(vals)) {
+    ncol(vals)
+  } else {
+    stop("gen_hrf: constructed hrf is invalid")
+  }
+  HRF(f, name=name, nbasis=nb)
 }
 
 
@@ -677,7 +686,7 @@ construct.hrfspec <- function(x, model_spec) {
 
 #' trialwise
 #' 
-#' This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise(trial) ...
+#' This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise() ...
 #' 
 #' @inheritParams hrf
 #' @examples 
@@ -686,7 +695,7 @@ construct.hrfspec <- function(x, model_spec) {
 #' 
 #' @export
 trialwise <- function(basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
-                      prefix=NULL, subset=NULL, precision=.2, nbasis=1,
+                      prefix=NULL, subset=NULL, precision=.2,
                       contrasts=list(), id=NULL, add_sum=FALSE) {
   
   termname = "trialwise"
@@ -694,6 +703,14 @@ trialwise <- function(basis=HRF_SPMG1, onsets=NULL, durations=NULL,
   if (is.null(id)) {
     id <- termname
   }  
+  
+  if (is.function(basis) && !inherits(basis, "HRF")) {
+    basis <- gen_hrf(basis)
+  } else if (is.character(basis)) {
+    basis <- getHRF(basis)
+  } 
+  
+  assert_that(inherits(basis, "HRF"))
   
   ret <- list(
     name=termname,

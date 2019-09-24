@@ -69,12 +69,12 @@ test_that("can construct a convolved trialwise term from an hrfspec with one fac
   sframe <- sampling_frame(blocklens=500, TR=1)
   
   etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), block=1)
-  espec <- event_model(onsets ~ trialwise(fac), data=etab, block=~block, sampling_frame=sframe)
+  espec <- event_model(onsets ~ trialwise(), data=etab, block=~block, sampling_frame=sframe)
  
   expect_equal(dim(design_matrix(espec)), c(N,length(onsets)))
 })
 
-test_that("can construct a convolved trialwise term wiht bspline basis from an hrfspec with one factor, one run", {
+test_that("can construct a convolved trialwise term with bspline basis from an hrfspec with one factor, one run", {
   N <- 500
   onsets <- seq(1,N,by=5)
   durations <- 0
@@ -82,9 +82,11 @@ test_that("can construct a convolved trialwise term wiht bspline basis from an h
   sframe <- sampling_frame(blocklens=500, TR=1)
   
   etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), block=1)
-  espec <- event_model(onsets ~ trialwise(fac, basis="bs", nbasis=5), data=etab, block=~block, sampling_frame=sframe)
   
-  expect_equal(dim(design_matrix(espec)), c(N,length(onsets)))
+  hrfb <- gen_hrf(hrf_bspline, N=5)
+  espec <- event_model(onsets ~ trialwise(basis=hrfb), data=etab, block=~block, sampling_frame=sframe)
+  
+  expect_equal(dim(design_matrix(espec)), c(N,length(onsets)*5))
 })
 
 
@@ -148,7 +150,7 @@ test_that("can extract a design matrix from an fmri_model with one trialwise fac
   etab <- data.frame(onsets=onsets, fac=factor(rep(c(1,2),5)), run=1)
   sframe <- sampling_frame(blocklens=100, TR=1)
   
-  espec <- event_model(onsets ~ trialwise(fac, basis="bspline", nbasis=5), 
+  espec <- event_model(onsets ~ trialwise(basis="bspline"), 
                        data=etab, block=~run, sampling_frame = sframe)
   dmat <- design_matrix(espec)
   expect_equal(dim(dmat), c(N, 5 * length(onsets)))

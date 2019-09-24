@@ -5,6 +5,7 @@
 \title{Construct an \code{HRF} instance}
 \usage{
 gen_hrf(hrf, lag = 0, width = NULL, precision = 0.1,
+  half_life = Inf, summate = TRUE, normalize = FALSE,
   name = "gen_hrf", ...)
 }
 \arguments{
