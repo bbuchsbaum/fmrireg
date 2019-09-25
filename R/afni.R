@@ -302,6 +302,7 @@ build_afni_stims.afni_hrf_convolved_term <- function(x, iresp=FALSE, tr_times=1)
   
 }
 
+#' @keywords internal
 build_afni_stims.afni_trialwise_convolved_term <- function(x, iresp=FALSE, tr_times=1) {
   #stimlabels <- longnames(x)
   stimfile <- paste(x$varname, "_times.1D", sep = "")
@@ -385,7 +386,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   opt_stim_labels <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "label")))
   opt_stim_files  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "file")))
   opt_stim_times  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "times")))
-  opt_stim_times_IM  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "times_IM")))
+  opt_stim_times_IM  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch.afni_stim_im_times(afni_stims[[i]], i, "times_IM")))
   opt_stim_ortvecs <- purge_nulls(lapply(seq_along(afni_baseline_mats), function(i) afni_command_switch.afni_stim_file(afni_baseline_mats[[i]], i, "ortvec")))
   opt_stim_iresp  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "iresp")))
   

@@ -5,7 +5,7 @@
 \alias{run}
 \title{run a command}
 \usage{
-\method{run}{afni_lm_spec}(x, outdir, execute = TRUE)
+\method{run}{afni_lm_spec}(x, outdir, reml = FALSE, execute = TRUE)
 
 run(x, ...)
 }
@@ -13,6 +13,8 @@ run(x, ...)
 \item{x}{the command to run}
 
 \item{outdir}{the output folder}
+
+\item{reml}{whether to run 3dREMLFit}
 
 \item{execute}{whether to execute the command or only output shell '3dDeconvolve.sh' script}
 
