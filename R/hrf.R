@@ -826,6 +826,44 @@ afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",
   
 }
 
+#' construct an native AFNI hrf specification for '3dDeconvolve' and indifdually modulated events using the 'stim_times_IM' argument.
+#' 
+#' @inheritParams hrf
+#' @examples 
+#' 
+#' @export
+afni_trialwise <- function(label, basis=c("spmg1", "block", "dmblock", "gam", "wav"), 
+                     onsets=NULL, durations=NULL, subset=NULL, 
+                      id=NULL, start=NULL, stop=NULL) {
+  
+  ## TODO cryptic error message when argument is mispelled and is then added to ...
+  basis <- match.arg(basis)
+  
+  hrf <- if (!is.null(durations)) {
+    assert_that(length(durations) == 1, msg="afni_trialwise does not currently accept variable durations")
+    get_AFNI_HRF(basis, nbasis=1, duration=durations[1], b=start, c=stop)
+  } else {
+    get_AFNI_HRF(basis, nbasis=1, b=start, c=stop)
+  }
+  
+  
+  if (is.null(id)) {
+    id <- label
+  }  
+  
+  ret <- list(
+    name=label,
+    id=id,
+    hrf=hrf,
+    onsets=onsets,
+    durations=durations,
+    subset=substitute(subset))
+  
+  class(ret) <- c("afni_trialwise_hrfspec", "hrfspec", "list")
+  ret
+  
+}
+
 #' @export
 construct.afni_hrfspec <- function(x, model_spec) {
   

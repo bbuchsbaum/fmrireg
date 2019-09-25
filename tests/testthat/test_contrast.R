@@ -1,5 +1,5 @@
 library(testthat)
-
+library(assertthat)
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 
 
@@ -136,9 +136,9 @@ test_that("can contrast two basis functions from a custom multi-phase hrf", {
   simple_des$onset <- seq(1,300, length.out=nrow(simple_des))
   simple_des$run <- rep(1,nrow(simple_des))
   
-  hrf_encode <- gen_hrf(hrf_spmg1)
-  hrf_delay <- gen_hrf(hrf_spmg1, lag=3, width=8)
-  hrf_probe <-gen_hrf(hrf_spmg1, lag=11, width=3)  
+  hrf_encode <- gen_hrf(hrf_spmg1, normalize=TRUE)
+  hrf_delay <- gen_hrf(hrf_spmg1, lag=3, width=8, normalize=TRUE)
+  hrf_probe <-gen_hrf(hrf_spmg1, lag=11, width=3, normalize=TRUE)  
   hrf_trial <- gen_hrf_set(hrf_encode, hrf_delay, hrf_probe)
   
   sframe <- sampling_frame(blocklens=250, TR=2)
