@@ -27,3 +27,27 @@ test_that("can construct an simple afni native stimulus model", {
   expect_null(contrast_weights(fmod)$repnum)
  
 })
+
+test_that("can construct an an afni model with trialwise regressor", {
+  
+  facedes$repnum <- factor(facedes$rep_num)
+  scans <- paste0("rscan0", 1:6, ".nii")
+  dset <- fmri_dataset(scans=scans,
+                       mask="mask.nii",
+                       TR=1.5,
+                       run_length=rep(436,6),
+                       event_table=facedes)
+  
+  
+  espec <- event_model(onset ~ afni_trialwise("trial"), data=facedes, block=~run, sampling_frame=dset$sampling_frame)
+  bspec <- baseline_model(basis="bs", degree=5, sframe=dset$sampling_frame)
+  fmod <- fmri_model(espec, bspec)
+  alm <- afni_lm(fmod, dset)
+  
+  expect_true(!is.null(fmod))
+  expect_equal(length(terms(fmod)), 3)
+  expect_error(design_matrix(fmod))
+  expect_equal(2, length(baseline_terms(fmod)))
+  expect_null(contrast_weights(fmod)$repnum)
+  
+})

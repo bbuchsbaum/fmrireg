@@ -9,7 +9,6 @@ default_config <- function() {
 }
 
 
-
 #' read a basic fMRI configuration file
 #' 
 #' @param file_name name of configuration file

@@ -84,7 +84,7 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, censo
       model=fmri_mod,
       dataset=dataset,
       working_dir=working_dir,
-      options=options,
+      options=defopts,
       cmd=cmd),
     class="afni_lm_spec")
 
@@ -118,6 +118,14 @@ afni_stim_times <- function(label, file_name, hrf, onsets, iresp=FALSE, sresp=FA
   )
 }
 
+afni_stim_im_times <- function(label, file_name, hrf, onsets) {
+  structure(
+    list(label=label, file_name=file_name, hrf=hrf, onsets=onsets),
+    class=c("afni_stim_im_times", "afni_stim_times")
+  )
+}
+
+
 # afni_command_switch.afni_stim_times <- function(x, k, type) {
 #   switch(type,
 #     label = paste(k, x$label, collapse = " "),
@@ -148,6 +156,14 @@ afni_command_switch.afni_stim_file <- function(x, k, type) {
     times = NULL,
     iresp = NULL,
     sresp=NULL
+  )
+}
+#' @keywords internal
+afni_command_switch.afni_stim_im_times <- function(x, k, type) {
+  switch(type,
+         label = paste(k, x$label, collapse = " "),
+         times_IM = paste(k, x$file_name, as.character(x$hrf), collapse = " "),
+         NULL
   )
 }
 
@@ -210,6 +226,8 @@ write_afni_stim.afni_stim_times <- function(stim, dir) {
   
   .write_onsets(paste0(dir, "/", stim$file_name, sep=""), unlist(stim$onsets))
 }
+
+
 
 #' @keywords internal
 write_censor_file <- function(dir, censor) {
@@ -284,6 +302,19 @@ build_afni_stims.afni_hrf_convolved_term <- function(x, iresp=FALSE, tr_times=1)
   
 }
 
+build_afni_stims.afni_trialwise_convolved_term <- function(x, iresp=FALSE, tr_times=1) {
+  #stimlabels <- longnames(x)
+  stimfile <- paste(x$varname, "_times.1D", sep = "")
+  dmat <- design_matrix(x$evterm)
+  
+  hrf_name <- as.character(x$hrf$hrf)
+  
+  ons <- unlist(split_onsets(x$evterm, x$sampling_frame, global=TRUE))
+  #names(split_ons) <- stimlabels
+  
+  afni_stim_im_times(x$varname, stimfile, hrf_name, ons)
+}
+
 #' @keywords internal
 .make_decon_command_str <- function(cmdlines) {
   cmdstr <- lapply(names(cmdlines), function(optname) {
@@ -335,9 +366,16 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   func_terms <- terms(model$event_model)
   
+ 
   ## construct list of afni stims
-  afni_stims <- unlist(lapply(func_terms, function(term) { build_afni_stims(term, iresp=opts[["iresp"]], tr_times=opts[["TR_times"]]) }), recursive=FALSE)
+  
+  afni_stims <- lapply(func_terms, function(term) { build_afni_stims(term, iresp=opts[["iresp"]], tr_times=opts[["TR_times"]]) })
+  if (length(func_terms) > 1) {
+    afni_stims <- unlist(afin_stims, recusrive=FALSE)
+  }
   afni_baseline_mats <- build_baseline_stims(model)
+  
+  #browser()
   
   
   purge_nulls <- function(A) {
@@ -347,13 +385,14 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   opt_stim_labels <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "label")))
   opt_stim_files  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "file")))
   opt_stim_times  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "times")))
+  opt_stim_times_IM  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "times_IM")))
   opt_stim_ortvecs <- purge_nulls(lapply(seq_along(afni_baseline_mats), function(i) afni_command_switch.afni_stim_file(afni_baseline_mats[[i]], i, "ortvec")))
   opt_stim_iresp  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "iresp")))
   
   #browser()
   
   if (length(opt_stim_times) > 0) {
-    global_times=TRUE
+    global_times <- TRUE
   } else {
     global_times <- FALSE
   }
@@ -369,6 +408,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
                    ortvec=opt_stim_ortvecs,
                    censor=if (!is.null(opts[["censor"]])) "censor.1D" else NULL,
                    stim_times=opt_stim_times,
+                   stim_times_IM=opt_stim_times_IM,
                    TR_times=opts[["TR_times"]],
                    iresp=opt_stim_iresp,
                    gltsym=lapply(seq_along(gltfiles), function(i) paste(gltfiles[i], collapse=" ")),
@@ -396,9 +436,10 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
 
 #' @export
 #' @param outdir the output folder
+#' @param reml whether to run 3dREMLFit
 #' @param execute whether to execute the command or only output shell '3dDeconvolve.sh' script
 #' @rdname run
-run.afni_lm_spec <- function(x, outdir, execute=TRUE) {
+run.afni_lm_spec <- function(x, outdir, reml=FALSE, execute=TRUE) {
   start_dir <- getwd()
   res <- try({
     if (!file.exists(outdir)) {
@@ -425,11 +466,17 @@ run.afni_lm_spec <- function(x, outdir, execute=TRUE) {
     if (!is.null(x$cmd$censor)) {
       write_censor_file(".", x$cmd$censor)
     }
+    if (reml) {
+      x$cmd$cmd <- paste(x$cmd$cmd, "-x1D_stop")
+    }
     
     write(x$cmd$cmd, "3ddeconvolve.sh")
     
     if (execute) {
       system(x$cmd$cmd)
+      if (reml) {
+        system(paste0(x$options$bucket, ".REML_cmd"))
+      }
     }
   })
   

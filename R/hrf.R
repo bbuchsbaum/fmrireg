@@ -909,7 +909,6 @@ construct.afni_trialwise_hrfspec <- function(x, model_spec) {
   ret <- list(
     varname=et$varname,
     evterm=et,
-    design_matrix=cterm,
     sampling_frame=model_spec$sampling_frame,
     hrfspec=x,
     id=x$id

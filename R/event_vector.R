@@ -406,6 +406,11 @@ conditions.afni_hrf_convolved_term <- function(x) {
   conditions(x$evterm)
 }
 
+#' @export
+conditions.afni_trialwise_convolved_term <- function(x) {
+  conditions(x$evterm)
+}
+
 
 #' @export
 conditions.event_term <- function(x, drop.empty=TRUE) {

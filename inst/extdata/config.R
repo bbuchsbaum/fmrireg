@@ -1,5 +1,5 @@
 
-#base_path="."
+base_path="."
 
 scans = paste0("epi/",
                c("rscan01.nii",
