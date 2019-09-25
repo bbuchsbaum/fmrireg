@@ -831,9 +831,11 @@ afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",
 #' @inheritParams hrf
 #' @examples 
 #' 
+#' tw <- afni_trialwise("trialwise", basis="gamma", onsets=seq(1,100,by=5))
+#' 
 #' @export
-afni_trialwise <- function(label, basis=c("spmg1", "block", "dmblock", "gam", "wav"), 
-                     onsets=NULL, durations=NULL, subset=NULL, 
+afni_trialwise <- function(label, basis=c("spmg1", "block", "dmblock", "gamma", "wav"), 
+                     onsets=NULL, durations=0, subset=NULL, 
                       id=NULL, start=NULL, stop=NULL) {
   
   ## TODO cryptic error message when argument is mispelled and is then added to ...
@@ -853,6 +855,7 @@ afni_trialwise <- function(label, basis=c("spmg1", "block", "dmblock", "gam", "w
   
   ret <- list(
     name=label,
+    varname=label,
     id=id,
     hrf=hrf,
     onsets=onsets,
@@ -882,6 +885,37 @@ construct.afni_hrfspec <- function(x, model_spec) {
   )
   
   class(ret) <- c("afni_hrf_convolved_term", "convolved_term", "fmri_term", "list") 
+  ret
+}
+
+
+#' @export
+construct.afni_trialwise_hrfspec <- function(x, model_spec) {
+  
+  ## compied almost verbatim from construct.hrfspec
+  onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
+  durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
+  
+  trial_index <- factor(seq(1, length(onsets)))
+  
+  varlist <- list(trial_index)
+  names(varlist) <- x$varname
+  
+  subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
+  
+  et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
+  #cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
+  
+  ret <- list(
+    varname=et$varname,
+    evterm=et,
+    design_matrix=cterm,
+    sampling_frame=model_spec$sampling_frame,
+    hrfspec=x,
+    id=x$id
+  )
+  
+  class(ret) <- c("afni_trialwise_convolved_term", "convolved_term", "fmri_term", "list") 
   ret
 }
 
