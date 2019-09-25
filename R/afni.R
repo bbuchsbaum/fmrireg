@@ -371,7 +371,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   afni_stims <- lapply(func_terms, function(term) { build_afni_stims(term, iresp=opts[["iresp"]], tr_times=opts[["TR_times"]]) })
   if (length(func_terms) > 1) {
-    afni_stims <- unlist(afin_stims, recursive=FALSE)
+    afni_stims <- unlist(afni_stims, recursive=FALSE)
   }
   afni_baseline_mats <- build_baseline_stims(model)
   
