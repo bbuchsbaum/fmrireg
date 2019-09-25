@@ -782,6 +782,7 @@ print.event_term <- function(object) {
   cat("  ", "Formula:  ", as.character(formula(object)), "\n")
   cat("  ", "Num Events: ", nrow(object$event_table), "\n")
   cat("  ", "Term Types: ", paste(map_chr(object$events, ~ class(.)[[1]])))
+  cat("\n")
 }
 
 #' @export
@@ -802,6 +803,7 @@ print.convolved_term <- function(object) {
   cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n")
   cat("  ", "Conditions: ", conditions(object), "\n")
   cat("  ", "Term Types: ", paste(map_chr(object$evterm$events, ~ class(.)[[1]])))
+  cat("\n")
 }
 
 #' @export
@@ -812,6 +814,7 @@ print.afni_hrf_convolved_term <- function(object) {
   cat("  ", "Num Events: ", nrow(object$evterm$event_table), "\n")
   cat("  ", "Conditions: ", conditions(object), "\n")
   cat("  ", "Term Types: ", paste(map_chr(object$evterm$events, ~ class(.)[[1]])))
+  cat("\n")
 }
 
 

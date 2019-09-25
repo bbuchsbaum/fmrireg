@@ -106,7 +106,7 @@ print.afni_lm_spec <- function(x) {
 afni_stim_file <- function(label, file_name, values) {
   structure(
     list(label=label, file_name=file_name, values=values),
-    class="afni_stim_file"
+    class=c("afni_stim_file", "afni_stim")
   )
 }
 
@@ -114,14 +114,14 @@ afni_stim_file <- function(label, file_name, values) {
 afni_stim_times <- function(label, file_name, hrf, onsets, iresp=FALSE, sresp=FALSE, tr_times=1) {
   structure(
     list(label=label, file_name=file_name, hrf=hrf, onsets=onsets, iresp=iresp, sresp=sresp, tr_times=tr_times),
-    class="afni_stim_times"
+    class=c("afni_stim_times","afni_stim")
   )
 }
 
 afni_stim_im_times <- function(label, file_name, hrf, onsets) {
   structure(
     list(label=label, file_name=file_name, hrf=hrf, onsets=onsets),
-    class=c("afni_stim_im_times", "afni_stim_times")
+    class=c("afni_stim_im_times", "afni_stim_times","afni_stim")
   )
 }
 
@@ -370,23 +370,39 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
  
   ## construct list of afni stims
   
+
+  
   afni_stims <- lapply(func_terms, function(term) { build_afni_stims(term, iresp=opts[["iresp"]], tr_times=opts[["TR_times"]]) })
-  if (length(func_terms) > 1) {
-    afni_stims <- unlist(afni_stims, recursive=FALSE)
+  
+  
+  ## this hack is here to unravel terms that produce have mutiple sub-terms as occurs with 'Poly' and friends.
+  out <- list()
+  counter <- 1
+  for (x in afni_stims) {
+    if (inherits(x, "afni_stim")) {
+      out[[counter]] <- x
+      counter <- counter + 1
+    } else {
+      for (s in x) {
+        out[[counter]] <- s
+        counter <- counter + 1
+      }
+    }
   }
+  
+  afni_stims <- out
+
   afni_baseline_mats <- build_baseline_stims(model)
-  
-  #browser()
-  
   
   purge_nulls <- function(A) {
     A[!sapply(A, is.null)]
   }
   
+  
   opt_stim_labels <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "label")))
   opt_stim_files  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "file")))
   opt_stim_times  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "times")))
-  opt_stim_times_IM  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch.afni_stim_im_times(afni_stims[[i]], i, "times_IM")))
+  opt_stim_times_IM  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "times_IM")))
   opt_stim_ortvecs <- purge_nulls(lapply(seq_along(afni_baseline_mats), function(i) afni_command_switch.afni_stim_file(afni_baseline_mats[[i]], i, "ortvec")))
   opt_stim_iresp  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "iresp")))
   
