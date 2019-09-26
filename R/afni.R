@@ -470,7 +470,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
 #' @param reml whether to run 3dREMLFit
 #' @param execute whether to execute the command or only output shell '3dDeconvolve.sh' script
 #' @rdname run
-run.afni_lm_spec <- function(x, outdir, reml=FALSE, execute=TRUE, execfun=system) {
+run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system) {
   start_dir <- getwd()
   res <- try({
     if (!file.exists(outdir)) {
@@ -507,9 +507,9 @@ run.afni_lm_spec <- function(x, outdir, reml=FALSE, execute=TRUE, execfun=system
     if (execute) {
       execfun(x$cmd$cmd)
       
-      if (reml) {
-        execfun(paste0("./", x$options$bucket, ".REML_cmd"))
-      }
+      #if (reml) {
+      #  execfun(paste0("./", x$options$bucket, ".REML_cmd"))
+      #}
     }
   })
   
