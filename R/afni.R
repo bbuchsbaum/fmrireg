@@ -497,6 +497,7 @@ run.afni_lm_spec <- function(x, outdir, reml=FALSE, execute=TRUE, execfun=system
     if (!is.null(x$cmd$censor)) {
       write_censor_file(".", x$cmd$censor)
     }
+    
     if (reml) {
       x$cmd$cmd <- paste(x$cmd$cmd, "-x1D_stop")
     }
