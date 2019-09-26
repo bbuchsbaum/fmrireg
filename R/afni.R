@@ -467,7 +467,6 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
 
 #' @export
 #' @param outdir the output folder
-#' @param reml whether to run 3dREMLFit
 #' @param execute whether to execute the command or only output shell '3dDeconvolve.sh' script
 #' @rdname run
 run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system) {
@@ -498,9 +497,9 @@ run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system) {
       write_censor_file(".", x$cmd$censor)
     }
     
-    if (reml) {
-      x$cmd$cmd <- paste(x$cmd$cmd, "-x1D_stop")
-    }
+    #if (reml) {
+    #  x$cmd$cmd <- paste(x$cmd$cmd, "-x1D_stop")
+    #}
     
     write(x$cmd$cmd, "3ddeconvolve.sh")
     
