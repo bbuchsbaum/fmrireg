@@ -39,7 +39,7 @@ test_that("can construct an an afni model with trialwise regressor", {
                        event_table=facedes)
   
   
-  espec <- event_model(onset ~ afni_trialwise("trial"), data=facedes, block=~run, sampling_frame=dset$sampling_frame)
+  espec <- event_model(onset ~ afni_hrf(repnum) + afni_trialwise("trial"), data=facedes, block=~run, sampling_frame=dset$sampling_frame)
   bspec <- baseline_model(basis="bs", degree=5, sframe=dset$sampling_frame)
   fmod <- fmri_model(espec, bspec)
   alm <- afni_lm(fmod, dset)

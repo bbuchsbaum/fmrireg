@@ -111,16 +111,16 @@ afni_stim_file <- function(label, file_name, values) {
 }
 
 #' @keywords internal
-afni_stim_times <- function(label, file_name, hrf, onsets, iresp=FALSE, sresp=FALSE, tr_times=1) {
+afni_stim_times <- function(label, file_name, hrf, onsets, blockids, iresp=FALSE, sresp=FALSE, tr_times=1) {
   structure(
-    list(label=label, file_name=file_name, hrf=hrf, onsets=onsets, iresp=iresp, sresp=sresp, tr_times=tr_times),
+    list(label=label, file_name=file_name, hrf=hrf, onsets=onsets, blockids, iresp=iresp, sresp=sresp, tr_times=tr_times),
     class=c("afni_stim_times","afni_stim")
   )
 }
 
-afni_stim_im_times <- function(label, file_name, hrf, onsets) {
+afni_stim_im_times <- function(label, file_name, hrf, onsets, blockids) {
   structure(
-    list(label=label, file_name=file_name, hrf=hrf, onsets=onsets),
+    list(label=label, file_name=file_name, hrf=hrf, onsets=onsets, blockids=blockids),
     class=c("afni_stim_im_times", "afni_stim_times","afni_stim")
   )
 }
@@ -218,13 +218,18 @@ write_afni_stim.afni_stim_file <- function(stim, dir) {
 
 #' @keywords internal
 write_afni_stim.afni_stim_times <- function(stim, dir) {
+  ## TODO handle runs with no stimuli
   .write_onsets <- function(outname, vals) {
     hfile <- file(outname, "w")
-    write(vals, file=hfile, ncolumns=1)
+    for (i in 1:length(vals)) {
+      ons <- paste(stim$onsets[[i]], collapse=" ")
+      writeLines(ons, con=hfile)
+    }
+    
     close(hfile)
   }
   
-  .write_onsets(paste0(dir, "/", stim$file_name, sep=""), unlist(stim$onsets))
+  .write_onsets(paste0(dir, "/", stim$file_name, sep=""), stim$onsets)
 }
 
 
@@ -286,34 +291,43 @@ build_afni_stims.convolved_term <- function(x, iresp=FALSE, tr_times=1) {
 
 #' @keywords internal
 build_afni_stims.afni_hrf_convolved_term <- function(x, iresp=FALSE, tr_times=1) {
-  #browser()
   stimlabels <- longnames(x)
   stimfiles <- paste(stimlabels, "_times.1D", sep = "")
   dmat <- design_matrix(x$evterm)
   
   hrf_name <- as.character(x$hrf$hrf)
-  
-  split_ons <- split_onsets(x$evterm, x$sampling_frame, global=TRUE)
+  blids <- unique(blockids(x$evterm))
+  split_ons <- split_onsets(x$evterm, x$sampling_frame, global=FALSE, blocksplit = TRUE)
   names(split_ons) <- stimlabels
   
-  lapply(1:length(stimlabels), function(i) {
-    afni_stim_times(stimlabels[i], stimfiles[i], hrf_name, split_ons[[stimlabels[[i]]]], iresp=iresp, tr_times=tr_times)
+  ret <- lapply(1:length(stimlabels), function(i) {
+    afni_stim_times(stimlabels[i], stimfiles[i], hrf_name, 
+                    split_ons[[stimlabels[[i]]]], blockids=blids, 
+                    iresp=iresp, tr_times=tr_times)
   })
   
 }
 
 #' @keywords internal
 build_afni_stims.afni_trialwise_convolved_term <- function(x, iresp=FALSE, tr_times=1) {
+  
+  purge_nulls <- function(A) {
+    A[!sapply(A, is.null)]
+  }
+  
   #stimlabels <- longnames(x)
   stimfile <- paste(x$varname, "_times.1D", sep = "")
   dmat <- design_matrix(x$evterm)
   
   hrf_name <- as.character(x$hrf$hrf)
-  
-  ons <- unlist(split_onsets(x$evterm, x$sampling_frame, global=TRUE))
-  #names(split_ons) <- stimlabels
-  
-  afni_stim_im_times(x$varname, stimfile, hrf_name, ons)
+  blids <- sort(unique(blockids(x$evterm)))
+  ons <- split_onsets(x$evterm, x$sampling_frame, global=FALSE, blocksplit=TRUE)
+  ons <- lapply(blids, function(bid) {
+    O <- sapply(ons, "[[", as.character(bid))
+    unlist(O[!sapply(O, is.null)])
+  })
+  names(ons) <- blids
+  afni_stim_im_times(x$varname, stimfile, hrf_name, ons, blids)
 }
 
 #' @keywords internal
@@ -456,7 +470,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
 #' @param reml whether to run 3dREMLFit
 #' @param execute whether to execute the command or only output shell '3dDeconvolve.sh' script
 #' @rdname run
-run.afni_lm_spec <- function(x, outdir, reml=FALSE, execute=TRUE) {
+run.afni_lm_spec <- function(x, outdir, reml=FALSE, execute=TRUE, execfun=system) {
   start_dir <- getwd()
   res <- try({
     if (!file.exists(outdir)) {
@@ -490,9 +504,9 @@ run.afni_lm_spec <- function(x, outdir, reml=FALSE, execute=TRUE) {
     write(x$cmd$cmd, "3ddeconvolve.sh")
     
     if (execute) {
-      system(x$cmd$cmd)
+      execfun(x$cmd$cmd)
       if (reml) {
-        system(paste0(x$options$bucket, ".REML_cmd"))
+        execfun(paste0("./", x$options$bucket, ".REML_cmd"))
       }
     }
   })

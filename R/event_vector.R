@@ -560,7 +560,7 @@ blockids.convolved_term <- function(x) {
 }
 
 #' @export
-split_onsets.event_term <- function(x, sframe, global=FALSE) {
+split_onsets.event_term <- function(x, sframe, global=FALSE,blocksplit=FALSE) {
   ### need to check for 0 factors
   facs <- x$events[!sapply(x$events, is_continuous)]
   
@@ -575,12 +575,25 @@ split_onsets.event_term <- function(x, sframe, global=FALSE) {
   }
             
   cfac <- try(do.call(f, facs))
+  #if (inherits(cfac, "try-error")) {
+  #  stop("could not construct crossed factor for event_term `x`")
+  #}
             
-  if (global) {
+  ret <- if (global) {
     split(global_onsets(sframe, onsets(x), blockids(x)), cfac)
   } else {
     split(onsets(x), cfac)
   }
+  
+  if (blocksplit) {
+    bsplit <- split(blockids(x), cfac)
+    ret <- lapply(1:length(ret), function(i) {
+      split(ret[[i]], bsplit[[i]])
+    })
+  }
+  
+  names(ret) <- longnames(x)
+  ret
 }
 
 
