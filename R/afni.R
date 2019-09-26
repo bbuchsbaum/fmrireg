@@ -506,6 +506,7 @@ run.afni_lm_spec <- function(x, outdir, reml=FALSE, execute=TRUE, execfun=system
     
     if (execute) {
       execfun(x$cmd$cmd)
+      
       if (reml) {
         execfun(paste0("./", x$options$bucket, ".REML_cmd"))
       }
