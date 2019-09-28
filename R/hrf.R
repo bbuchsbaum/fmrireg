@@ -24,12 +24,14 @@ NULL
 #' 
 #' vals <- grf(0:20)
 #' @export
-gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, half_life=Inf, summate=TRUE, normalize=FALSE, name="gen_hrf", ...) {
+gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, half_life=Inf, 
+                    summate=TRUE, normalize=FALSE, name="gen_hrf", ...) {
   .orig <- list(...)
   
   if (!is.null(width)) {
     assert_that(width > 0)
-    hrf <- gen_hrf_blocked(hrf, width=width, precision=precision, summate=summate, normalize=normalize, summate=summate)
+    hrf <- gen_hrf_blocked(hrf, width=width, precision=precision, 
+                           summate=summate, normalize=normalize)
   }
   
   if (lag > 0) {
@@ -57,6 +59,11 @@ gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, half_life=Inf, summate
     stop("gen_hrf: constructed hrf is invalid")
   }
   HRF(f, name=name, nbasis=nb)
+}
+
+gen_empirical_hrf <- function(t, y, name="empirical_hrf") {
+  f <- approxfun(t, y)
+  HRF(f, name=name, nbasis=1)
 }
 
 
@@ -102,11 +109,11 @@ gen_hrf_set <- function(..., name="hrf_set") {
 #' @rdname HRF
 HRF <- function(fun, name, nbasis=1, param_names=NULL) {
   vals <- fun(0:30)
-  
+
   if (nbasis == 1) {
-    peak <- max(vals)
+    peak <- max(vals, na.rm=TRUE)
   } else {
-    peak <- max(apply(vals, 2, max))
+    peak <- max(apply(vals, 2, max, na.rm=TRUE))
   }
   
   scale_factor <- 1/peak
@@ -234,7 +241,7 @@ convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1, half_life
 #' @param t time in seconds
 #' @param maxt the maximum time point in domain
 #' @export
-hrf_time <- function(t, maxt) {
+hrf_time <- function(t, maxt=22) {
   ifelse(t > 0 & t < maxt, t, 0)
 }
 
@@ -403,13 +410,14 @@ nbasis.HRF <- function(x) attr(x, "nbasis")
 #' getHRF
 #' 
 #' @param name the name of the hrf function
-#' @param nbasis the numbe rof basis functions (if relevant)
+#' @param nbasis the number of basis functions (if relevant)
 #' @export
-getHRF <- function(name=c("gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs"), nbasis=5, lag=0, ...) {
+getHRF <- function(name=c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs"), nbasis=5, lag=0, ...) {
   name <- match.arg(name)
 	
 	hrf <- switch(name,
 			gamma=HRF(gen_hrf_lagged(hrf_gamma,lag=lag),name="gamma"),
+			gam=HRF(gen_hrf_lagged(hrf_gamma,lag=lag),name="gamma"),
 			gaussian=HRF(gen_hrf_lagged(HRF_GAUSSIAN,lag=lag), name="gaussian"),
 			spmg1=HRF(gen_hrf_lagged(hrf_spmg1,lag=lag), name="spmg1", nbasis=1),
 			spmg2=HRF(gen_hrf_lagged(HRF_SPMG2,lag=lag), name="spmg2", nbasis=2),
@@ -694,11 +702,11 @@ construct.hrfspec <- function(x, model_spec) {
 #' 
 #' 
 #' @export
-trialwise <- function(basis=HRF_SPMG1, onsets=NULL, durations=NULL, 
+trialwise <- function(label="trialwise", basis="spmg1", onsets=NULL, durations=NULL, 
                       prefix=NULL, subset=NULL, precision=.2,
                       contrasts=list(), id=NULL, add_sum=FALSE) {
   
-  termname = "trialwise"
+  termname = label
   
   if (is.null(id)) {
     id <- termname

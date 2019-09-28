@@ -565,7 +565,13 @@ split_onsets.event_term <- function(x, sframe, global=FALSE,blocksplit=FALSE) {
   facs <- x$events[!sapply(x$events, is_continuous)]
   
   if (length(facs) == 0) {
-    stop("split_onsets requires term to have at least 1 'event_factor' variable")
+    ons <- if (global) {
+      global_onsets(sframe, onsets(x), blockids(x))
+    } else {
+      onsets(x)
+    }
+    return(list(split(ons, blockids(x))))
+    
   }
   
   facs <- lapply(facs, function(fac) unlist(elements(fac)))
