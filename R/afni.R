@@ -292,6 +292,7 @@ build_afni_stims.convolved_term <- function(x, iresp=FALSE, tr_times=1) {
 
 #' @keywords internal
 build_afni_stims.afni_hrf_convolved_term <- function(x, iresp=FALSE, tr_times=1) {
+
   stimlabels <- longnames(x)
   stimfiles <- paste(stimlabels, "_times.1D", sep = "")
   dmat <- design_matrix(x$evterm)
