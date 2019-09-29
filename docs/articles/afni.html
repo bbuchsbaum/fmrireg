@@ -9,7 +9,7 @@
 <!-- jquery --><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script><!-- Bootstrap --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha256-916EbMg70RQy9LHiGkXzG8hSg9EdNy97GazNG/aiY1w=" crossorigin="anonymous">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha256-U5ZEeKfGNOja007MMD3YBI0A3OSZOQbeG6z2f2Y0hu8=" crossorigin="anonymous"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.7.1/css/all.min.css" integrity="sha256-nAmazAk6vS34Xqo0BSrTb+abbtFlgsFK7NKSi6o7Y78=" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.7.1/css/v4-shims.min.css" integrity="sha256-6qHlizsOWFskGlwVOKuns+D1nB6ssZrHQrNj1wGplHc=" crossorigin="anonymous">
-<!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script><!-- sticky kit --><script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-kit/1.1.3/sticky-kit.min.js" integrity="sha256-c4Rlo1ZozqTPE2RLuvbusY3+SU1pQaJC0TjuhygMipw=" crossorigin="anonymous"></script><!-- pkgdown --><link href="../pkgdown.css" rel="stylesheet">
+<!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/headroom.min.js" integrity="sha256-DJFC1kqIhelURkuza0AvYal5RxMtpzLjFhsnVIeuk+U=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- pkgdown --><link href="../pkgdown.css" rel="stylesheet">
 <script src="../pkgdown.js"></script><meta property="og:title" content="Translating to AFNI 3dDeconvolve">
 <meta property="og:description" content="">
 <meta name="twitter:card" content="summary">
@@ -90,13 +90,14 @@
 <!--/.navbar -->
 
       
+
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1>Translating to AFNI 3dDeconvolve</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2019-09-23</h4>
+            <h4 class="date">2019-09-29</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/afni.Rmd"><code>vignettes/afni.Rmd</code></a></small>
       <div class="hidden name"><code>afni.Rmd</code></div>
@@ -109,31 +110,30 @@
 <h2 class="hasAnchor">
 <a href="#constructing-an-fmri-regression-model-and-translating-it-for-afnis-3ddeconvolve" class="anchor"></a>Constructing an fMRI regression model and translating it for AFNI’s 3dDeconvolve</h2>
 <p>AFNI and other fMRI analysis packages have robust and efficient methods for estimating voxelwise regression models. Therefore, it may be beneficial to construct a regression model in R using <strong>fmrireg</strong> and translate it so that it can be executed using one of these packages. Here we provide a translation mechanism from an <code>fmri_model</code> object constructed with <code>fmrireg</code> to syntax and assocaited file required for execution using AFNI’s <strong>3dDeconvolve</strong> program.</p>
-<pre><code>## Warning: package 'tibble' was built under R version 3.5.2</code></pre>
 </div>
 <div id="a-simple-model" class="section level2">
 <h2 class="hasAnchor">
 <a href="#a-simple-model" class="anchor"></a>A Simple Model</h2>
 <p>Lets begin again with a simple fMRI design.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">cond &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/c">c</a></span>(<span class="st">"face"</span>, <span class="st">"scene"</span>, <span class="st">"tool"</span>, <span class="st">"object"</span>)
-NSTIM &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/length">length</a></span>(cond)<span class="op">*</span><span class="dv">4</span>
-
-simple_design &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/data.frame">data.frame</a></span>(<span class="dt">stim=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/factor">factor</a></span>(<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/sample">sample</a></span>(<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/rep">rep</a></span>(cond, <span class="dv">4</span>))), 
-                     <span class="dt">ISI=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/sample">sample</a></span>(<span class="dv">4</span><span class="op">:</span><span class="dv">7</span>, NSTIM, <span class="dt">replace=</span><span class="ot">TRUE</span>), 
-                     <span class="dt">run=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/rep">rep</a></span>(<span class="dv">1</span>, NSTIM),
-                     <span class="dt">trial=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/factor">factor</a></span>(<span class="dv">1</span><span class="op">:</span>NSTIM))</code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1">cond &lt;-<span class="st"> </span><span class="kw"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"face"</span>, <span class="st">"scene"</span>, <span class="st">"tool"</span>, <span class="st">"object"</span>)</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2">NSTIM &lt;-<span class="st"> </span><span class="kw"><a href="https://rdrr.io/r/base/length.html">length</a></span>(cond)<span class="op">*</span><span class="dv">4</span></a>
+<a class="sourceLine" id="cb1-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb1-4" data-line-number="4">simple_design &lt;-<span class="st"> </span><span class="kw"><a href="https://rdrr.io/r/base/data.frame.html">data.frame</a></span>(<span class="dt">stim=</span><span class="kw"><a href="https://rdrr.io/r/base/factor.html">factor</a></span>(<span class="kw"><a href="https://rdrr.io/r/base/sample.html">sample</a></span>(<span class="kw"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(cond, <span class="dv">4</span>))), </a>
+<a class="sourceLine" id="cb1-5" data-line-number="5">                     <span class="dt">ISI=</span><span class="kw"><a href="https://rdrr.io/r/base/sample.html">sample</a></span>(<span class="dv">4</span><span class="op">:</span><span class="dv">7</span>, NSTIM, <span class="dt">replace=</span><span class="ot">TRUE</span>), </a>
+<a class="sourceLine" id="cb1-6" data-line-number="6">                     <span class="dt">run=</span><span class="kw"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="dv">1</span>, NSTIM),</a>
+<a class="sourceLine" id="cb1-7" data-line-number="7">                     <span class="dt">trial=</span><span class="kw"><a href="https://rdrr.io/r/base/factor.html">factor</a></span>(<span class="dv">1</span><span class="op">:</span>NSTIM))</a></code></pre></div>
 <p>Now we add onset information, construct a <code>sampling_frame</code>, create a contrast, and then an <code>event_model</code>:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">simple_design<span class="op">$</span>onset &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/cumsum">cumsum</a></span>(simple_design<span class="op">$</span>ISI<span class="op">+</span><span class="dv">2</span>) <span class="op">-</span><span class="dv">2</span>
-sframe &lt;-<span class="st"> </span><span class="kw"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="dt">blocklens=</span><span class="dv">70</span>, <span class="dt">TR=</span><span class="dv">2</span>)
-
-con1 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/pair_contrast.html">pair_contrast</a></span>(<span class="op">~</span><span class="st"> </span>stim <span class="op">==</span><span class="st"> "face"</span>, <span class="op">~</span>stim <span class="op">==</span><span class="st"> "scene"</span>, <span class="dt">name=</span><span class="st">"face_scene"</span>)
-
-emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/event_model.html">event_model</a></span>(onset <span class="op">~</span><span class="st"> </span><span class="kw"><a href="../reference/hrf.html">hrf</a></span>(stim, <span class="dt">contrasts=</span>con1), <span class="dt">data=</span>simple_design, <span class="dt">block =</span> <span class="op">~</span><span class="st"> </span>run, <span class="dt">sampling_frame=</span>sframe)
-<span class="kw"><a href="https://www.rdocumentation.org/packages/graphics/topics/plot">plot</a></span>(emodel)</code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">simple_design<span class="op">$</span>onset &lt;-<span class="st"> </span><span class="kw"><a href="https://rdrr.io/r/base/cumsum.html">cumsum</a></span>(simple_design<span class="op">$</span>ISI<span class="op">+</span><span class="dv">2</span>) <span class="dv">-2</span></a>
+<a class="sourceLine" id="cb2-2" data-line-number="2">sframe &lt;-<span class="st"> </span><span class="kw">sampling_frame</span>(<span class="dt">blocklens=</span><span class="dv">70</span>, <span class="dt">TR=</span><span class="dv">2</span>)</a>
+<a class="sourceLine" id="cb2-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb2-4" data-line-number="4">con1 &lt;-<span class="st"> </span><span class="kw">pair_contrast</span>(<span class="op">~</span><span class="st"> </span>stim <span class="op">==</span><span class="st"> "face"</span>, <span class="op">~</span>stim <span class="op">==</span><span class="st"> "scene"</span>, <span class="dt">name=</span><span class="st">"face_scene"</span>)</a>
+<a class="sourceLine" id="cb2-5" data-line-number="5"></a>
+<a class="sourceLine" id="cb2-6" data-line-number="6">emodel &lt;-<span class="st"> </span><span class="kw">event_model</span>(onset <span class="op">~</span><span class="st"> </span><span class="kw">hrf</span>(stim, <span class="dt">contrasts=</span>con1), <span class="dt">data=</span>simple_design, <span class="dt">block =</span> <span class="op">~</span><span class="st"> </span>run, <span class="dt">sampling_frame=</span>sframe)</a>
+<a class="sourceLine" id="cb2-7" data-line-number="7"><span class="kw"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(emodel)</a></code></pre></div>
 <p><img src="afni_files/figure-html/unnamed-chunk-3-1.png" width="672"></p>
 <p>We construct a <code>baseline_model</code> using a B-spline basis:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">bmodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/baseline_model.html">baseline_model</a></span>(<span class="dt">basis=</span><span class="st">"bs"</span>, <span class="dt">degree=</span><span class="dv">5</span>, <span class="dt">sframe=</span>sframe)
-<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/print">print</a></span>(bmodel)</code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1">bmodel &lt;-<span class="st"> </span><span class="kw">baseline_model</span>(<span class="dt">basis=</span><span class="st">"bs"</span>, <span class="dt">degree=</span><span class="dv">5</span>, <span class="dt">sframe=</span>sframe)</a>
+<a class="sourceLine" id="cb3-2" data-line-number="2"><span class="kw"><a href="https://rdrr.io/r/base/print.html">print</a></span>(bmodel)</a></code></pre></div>
 <pre><code>## baseline_model 
 ##    name:  baseline_bs_5 
 ##    basis type:  bs 
@@ -158,48 +158,49 @@ emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/even
 ## 10          1           0.373           0.112          0.0168   
 ## # … with 60 more rows, and 2 more variables: base_bs4_block_1 &lt;dbl&gt;,
 ## #   base_bs5_block_1 &lt;dbl&gt;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw"><a href="https://www.rdocumentation.org/packages/graphics/topics/plot">plot</a></span>(bmodel)</code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="kw"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(bmodel)</a></code></pre></div>
 <p><img src="afni_files/figure-html/unnamed-chunk-4-1.png" width="672"></p>
 <p>We construct an <code>fmri_model</code>:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">fmodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/fmri_model.html">fmri_model</a></span>(emodel, bmodel)</code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1">fmodel &lt;-<span class="st"> </span><span class="kw">fmri_model</span>(emodel, bmodel)</a></code></pre></div>
 <p>Now we need to specify the data that the model will be estimated on. Let us pretend that we have a single 4d NIfTI file called “scan01.nii” and a mask file called “mask.nii”.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">dset &lt;-<span class="st"> </span><span class="kw"><a href="../reference/fmri_dataset.html">fmri_dataset</a></span>(<span class="dt">scans=</span><span class="st">"scan01.nii"</span>,
-                     <span class="dt">mask=</span><span class="st">"mask.nii"</span>,
-                     <span class="dt">TR=</span><span class="dv">2</span>,
-                     <span class="dt">run_length=</span><span class="dv">70</span>,
-                     <span class="dt">event_table=</span>simple_design,
-                     <span class="dt">base_path=</span><span class="st">"."</span>)</code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" data-line-number="1">dset &lt;-<span class="st"> </span><span class="kw">fmri_dataset</span>(<span class="dt">scans=</span><span class="st">"scan01.nii"</span>,</a>
+<a class="sourceLine" id="cb7-2" data-line-number="2">                     <span class="dt">mask=</span><span class="st">"mask.nii"</span>,</a>
+<a class="sourceLine" id="cb7-3" data-line-number="3">                     <span class="dt">TR=</span><span class="dv">2</span>,</a>
+<a class="sourceLine" id="cb7-4" data-line-number="4">                     <span class="dt">run_length=</span><span class="dv">70</span>,</a>
+<a class="sourceLine" id="cb7-5" data-line-number="5">                     <span class="dt">event_table=</span>simple_design,</a>
+<a class="sourceLine" id="cb7-6" data-line-number="6">                     <span class="dt">base_path=</span><span class="st">"."</span>)</a></code></pre></div>
 <p>We are now ready to construct an AFNI model specification. Note that all contrasts in the model will automatically be converted to AFNI-style general linear tests (GLTs).</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">alm &lt;-<span class="st"> </span><span class="kw"><a href="../reference/afni_lm.html">afni_lm</a></span>(fmodel, dset)
-<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/print">print</a></span>(alm)</code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1">alm &lt;-<span class="st"> </span><span class="kw">afni_lm</span>(fmodel, dset)</a>
+<a class="sourceLine" id="cb8-2" data-line-number="2"><span class="kw"><a href="https://rdrr.io/r/base/print.html">print</a></span>(alm)</a></code></pre></div>
 <pre><code>## AFNI linear model via 3dDeconvolve 
 ##   working_dir:  . 
 ##   number of GLTs: 0 
 ##   command line: 
-##  3dDeconvolve -input ./scan01.nii -mask ./mask.nii -polort -1 -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -tout -cbucket coefout -bucket statout -jobs 1 -float</code></pre>
+##  3dDeconvolve -input ./scan01.nii -mask ./mask.nii -polort -1 -global_times -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -tout -cbucket coefout -bucket statout -jobs 1 -float</code></pre>
 <p>Also, note that since we include a set of b-spline nuisance parameters in our model, <code>polort</code> is set to have no baseline regressors (polort = -1). We change that if we like:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">alm &lt;-<span class="st"> </span><span class="kw"><a href="../reference/afni_lm.html">afni_lm</a></span>(fmodel, dset, <span class="dt">polort=</span><span class="dv">2</span>)
-<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/print">print</a></span>(alm)</code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" data-line-number="1">alm &lt;-<span class="st"> </span><span class="kw">afni_lm</span>(fmodel, dset, <span class="dt">polort=</span><span class="dv">2</span>)</a>
+<a class="sourceLine" id="cb10-2" data-line-number="2"><span class="kw"><a href="https://rdrr.io/r/base/print.html">print</a></span>(alm)</a></code></pre></div>
 <pre><code>## AFNI linear model via 3dDeconvolve 
 ##   working_dir:  . 
 ##   number of GLTs: 0 
 ##   command line: 
-##  3dDeconvolve -input ./scan01.nii -mask ./mask.nii -polort 2 -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -tout -cbucket coefout -bucket statout -jobs 1 -float</code></pre>
+##  3dDeconvolve -input ./scan01.nii -mask ./mask.nii -polort 2 -global_times -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -tout -cbucket coefout -bucket statout -jobs 1 -float</code></pre>
 <p>But this would essentially add two sets of drift regressors, which would be bad.</p>
 <p>To send other options to the <code>3dDeconvolve</code> command we can add them to the <code>options</code> argument, e.g.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">alm &lt;-<span class="st"> </span><span class="kw"><a href="../reference/afni_lm.html">afni_lm</a></span>(fmodel, dset, <span class="dt">options=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/list">list</a></span>(<span class="dt">tout=</span><span class="ot">FALSE</span>, <span class="dt">fout=</span><span class="ot">FALSE</span>))
-<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/print">print</a></span>(alm)</code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb12-1" data-line-number="1">alm &lt;-<span class="st"> </span><span class="kw">afni_lm</span>(fmodel, dset, <span class="dt">options=</span><span class="kw"><a href="https://rdrr.io/r/base/list.html">list</a></span>(<span class="dt">tout=</span><span class="ot">FALSE</span>, <span class="dt">fout=</span><span class="ot">FALSE</span>))</a>
+<a class="sourceLine" id="cb12-2" data-line-number="2"><span class="kw"><a href="https://rdrr.io/r/base/print.html">print</a></span>(alm)</a></code></pre></div>
 <pre><code>## AFNI linear model via 3dDeconvolve 
 ##   working_dir:  . 
 ##   number of GLTs: 0 
 ##   command line: 
-##  3dDeconvolve -input ./scan01.nii -mask ./mask.nii -polort -1 -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -cbucket coefout -bucket statout -jobs 1 -float</code></pre>
+##  3dDeconvolve -input ./scan01.nii -mask ./mask.nii -polort -1 -global_times -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -cbucket coefout -bucket statout -jobs 1 -float</code></pre>
 <p>To execute the external <code>3dDeconvolve</code> command on the system, we do as follows:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#run(alm, outdir="glm_out")</span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" data-line-number="1"><span class="co">#run(alm, outdir="glm_out")</span></a></code></pre></div>
 </div>
   </div>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
+
         <div id="tocnav">
       <h2 class="hasAnchor">
 <a href="#tocnav" class="anchor"></a>Contents</h2>
@@ -213,17 +214,20 @@ emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/even
 </div>
 
 
+
       <footer><div class="copyright">
-  <p>Developed by Bradley R. Buchsbaum.</p>
+  <p>Developed by Bradley Buchsbaum.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.3.0.9000.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.4.1.</p>
 </div>
+
       </footer>
 </div>
 
   
+
 
   </body>
 </html>

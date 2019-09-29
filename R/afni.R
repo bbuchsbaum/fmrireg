@@ -425,9 +425,11 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   #browser()
   
   if ( (length(opt_stim_times) + length(opt_stim_times_IM)) > 0) {
+    ## if we use `afni_hrf` that use -stim_times, then we use local times
     global_times <- FALSE
   } else {
-    #global_times <- FALSE
+    ## otherwise global_times is irrelevant, since values rather than times are provided.
+    global_times <- TRUE
   }
   
   cmdlines <- list(input=paste0(dataset$scans),
