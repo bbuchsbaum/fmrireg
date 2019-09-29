@@ -36,7 +36,7 @@ gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, half_life=Inf,
   
   if (lag > 0) {
     #force(hrf)
-    hrf <- gen_hrf_lagged(hrf, lag=lag)
+    hrf <- gen_hrf_lagged(hrf, lag=lag,...)
   }
   
   f <- if (length(.orig) > 0) {
@@ -169,7 +169,7 @@ gen_hrf_lagged <- function(hrf, lag=2,...) {
   
   if (length(lag)>1) {
    
-    do.call(gen_hrf_set, lapply(lag, function(l) gen_hrf_lagged(hrf, l)))
+    do.call(gen_hrf_set, lapply(lag, function(l) gen_hrf_lagged(hrf, l,...)))
   } else {
     function(t) {
       hrf(t-lag,...)
@@ -368,13 +368,17 @@ HRF_SPMG3 <- HRF(gen_hrf_set(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeri
 #' 
 evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate=TRUE, normalize=FALSE) {
   if (duration < precision) {
-    x(grid)*amplitude*attr(x, "scale_factor")       
+    if (normalize) {
+      x(grid)*amplitude*attr(x, "scale_factor")   
+    } else {
+      x(grid)*amplitude
+    }
   } else if (nbasis(x) == 1) {
     samples <- seq(0, duration, by=precision)
-    sfac <- attr(x, "scale_factor") 
+    #sfac <- attr(x, "scale_factor") 
     
     hmat <- sapply(samples, function(offset) {
-      x(grid-offset)*amplitude*sfac
+      x(grid-offset)*amplitude
     })
     
     ret <- if (summate) {
@@ -390,10 +394,15 @@ evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate
     
     ret
   } else {
-    sfac <- attr(x, "scale_factor")
-    Reduce("+", lapply(seq(0, duration, by=precision), function(offset) {
-      x(grid-offset)*amplitude*sfac   
+    mat <- Reduce("+", lapply(seq(0, duration, by=precision), function(offset) {
+      x(grid-offset)*amplitude   
     }))
+    
+    if (normalize) {
+      mat <- apply(mat, 2, function(vals) vals/max(abs(vals)))
+    }
+    
+    mat
   }
 }
 
@@ -963,6 +972,36 @@ get_AFNI_HRF <- function(name, nbasis=1, duration=1, b=0, c=18) {
   
 }
 
+# inv.logit <- plogis
+# 
+# hrf_logit <- function(t, a1=1, T1=3, T2=6, T3=9, D1=1, D2=-1, D3=1) {
+#   a2 <- a1 * (((inv.logit(-T3)/D3) - (inv.logit(-T1)/D1)) / ((inv.logit(-T3)/D3) + (inv.logit(-T2/D2))))
+#   print(a2)
+#   a3 <- abs(a2) - abs(a1)
+#   print(a3)
+#   a1*inv.logit((t-T1)/D1) + a2*inv.logit((t-T2)/D2) + a3*inv.logit((t-T3)/D3)
+# }
+# 
+# hrfg <- function(time, amp, mean, sd, c) {
+#   amp*dnorm(time, mean=mean, sd=sd) + c
+# }
+# 
+# getPred <- function(parS, xx) hrfg(xx, parS$amp, parS$mean, parS$sd, parS$c)
+# residFun <- function(p, observed, xx) observed - getPred(p,xx)
+# parStart <- list(amp=1, mean=6, sd=2,c=0)
+# df1 <- data.frame(time=0:24, y=hrf_spmg1(0:24))
+# nls.out <- nls.lm(par=parStart, fn = residFun, observed = df1$y,
+#                   xx = df1$time, 
+#                   lower=c(0, 3, .5, -200),
+#                   upper=c(100, 12, 4, 200),
+#                   control = nls.lm.control(nprint=1))
+# 
+# 
+# 
+# ret <- nls(y ~ hrfg(time,amp, lag, mean, sd), control=nls.control(maxiter=5000), data=df1,
+#     start=list(amp=1, lag=0, mean=6, sd=2), 
+#     lower=c(0,-2, 3, 0), upper=c(2,4,9,3), 
+#     algorithm="port", trace=TRUE)
 
 # hrf.logit <- function(t, a1=1, T1, T2, T3, D1, D2, D3) {
 #    a2 <- a1 * (((inv.logit(-T3)/D3) - (inv.logit(-T1)/D1)) / ((inv.logit(-T3)/D3) + (inv.logit(-T2/D2))))
