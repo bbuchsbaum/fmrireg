@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>elements — elements • fmrireg</title>
+<title>estimate trialwise betas for an fMRI dataset. — estimate_betas • fmrireg</title>
 
 
 <!-- jquery -->
@@ -35,8 +35,8 @@
 
 
 
-<meta property="og:title" content="elements — elements" />
-<meta property="og:description" content="return the ordered elements of a term/variable" />
+<meta property="og:title" content="estimate trialwise betas for an fMRI dataset. — estimate_betas" />
+<meta property="og:description" content="estimate trialwise betas for an fMRI dataset." />
 <meta name="twitter:card" content="summary" />
 
 
@@ -132,36 +132,33 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>elements</h1>
-    <small class="dont-index">Source: <a href='https://github.com/bbuchsbaum/fmrireg/blob/master/R/all_generic.R'><code>R/all_generic.R</code></a></small>
-    <div class="hidden name"><code>elements.Rd</code></div>
+    <h1>estimate trialwise betas for an fMRI dataset.</h1>
+    <small class="dont-index">Source: <a href='https://github.com/bbuchsbaum/fmrireg/blob/master/R/fmri_betas.R'><code>R/fmri_betas.R</code></a></small>
+    <div class="hidden name"><code>estimate_betas.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>return the ordered elements of a term/variable</p>
+    <p>estimate trialwise betas for an fMRI dataset.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>elements</span>(<span class='no'>x</span>, <span class='no'>...</span>)</pre>
-
-    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
-    <table class="ref-arguments">
-    <colgroup><col class="name" /><col class="desc" /></colgroup>
-    <tr>
-      <th>x</th>
-      <td><p>the term</p></td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td><p>additional arguments</p></td>
-    </tr>
-    </table>
+    <pre class="usage"><span class='fu'>estimate_betas</span>(<span class='no'>dset</span>, <span class='no'>fixed</span>, <span class='no'>ran</span>, <span class='no'>block</span>, <span class='kw'>method</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"ridge"</span>, <span class='st'>"pls"</span>,
+  <span class='st'>"pls_searchlight"</span>), <span class='kw'>basedeg</span> <span class='kw'>=</span> <span class='fl'>5</span>, <span class='kw'>nuisance_list</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='kw'>radius</span> <span class='kw'>=</span> <span class='fl'>8</span>,
+  <span class='kw'>niter</span> <span class='kw'>=</span> <span class='fl'>20</span>, <span class='kw'>ncomp</span> <span class='kw'>=</span> <span class='fl'>4</span>, <span class='kw'>lambda</span> <span class='kw'>=</span> <span class='fl'>0.01</span>)</pre>
 
 
+
+    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
+    <pre class="examples"><div class='input'><span class='no'>facedes</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/utils/read.table.html'>read.table</a></span>(<span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span>(<span class='st'>"extdata"</span>, <span class='st'>"face_design.txt"</span>, <span class='kw'>package</span> <span class='kw'>=</span> <span class='st'>"fmrireg"</span>), <span class='kw'>header</span><span class='kw'>=</span><span class='fl'>TRUE</span>)
+<span class='no'>facesdes</span>$<span class='no'>frun</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/factor.html'>factor</a></span>(<span class='no'>facedes</span>$<span class='no'>run</span>)</div><div class='output co'>#&gt; <span class='error'>Error in facesdes$frun &lt;- factor(facedes$run): object 'facesdes' not found</span></div><div class='input'><span class='no'>scans</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/paste.html'>paste0</a></span>(<span class='st'>"rscan0"</span>, <span class='fl'>1</span>:<span class='fl'>6</span>, <span class='st'>".nii"</span>)
+<span class='no'>dset</span> <span class='kw'>&lt;-</span> <span class='fu'>fmri_dataset</span>(<span class='kw'>scans</span><span class='kw'>=</span><span class='no'>scans</span>,<span class='kw'>mask</span><span class='kw'>=</span><span class='st'>"mask.nii"</span>,<span class='kw'>TR</span><span class='kw'>=</span><span class='fl'>1.5</span>,<span class='kw'>run_length</span><span class='kw'>=</span><span class='fu'><a href='https://rdrr.io/r/base/rep.html'>rep</a></span>(<span class='fl'>436</span>,<span class='fl'>6</span>),<span class='kw'>event_table</span><span class='kw'>=</span><span class='no'>facedes</span>)
+<span class='no'>fixed</span> <span class='kw'>=</span> <span class='no'>onset</span> ~ <span class='fu'>hrf</span>(<span class='no'>run</span>)
+<span class='no'>ran</span> <span class='kw'>=</span> <span class='no'>onset</span> ~ <span class='fu'>trialwise</span>()
+<span class='no'>block</span> <span class='kw'>=</span> ~ <span class='no'>run</span></div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
     <h2>Contents</h2>
     <ul class="nav nav-pills nav-stacked">
-      <li><a href="#arguments">Arguments</a></li>
+      <li><a href="#examples">Examples</a></li>
     </ul>
 
   </div>

@@ -8,11 +8,13 @@
 
 <title>Function reference • fmrireg</title>
 
+
 <!-- jquery -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
 <!-- Bootstrap -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/flatly/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha256-916EbMg70RQy9LHiGkXzG8hSg9EdNy97GazNG/aiY1w=" crossorigin="anonymous" />
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha256-U5ZEeKfGNOja007MMD3YBI0A3OSZOQbeG6z2f2Y0hu8=" crossorigin="anonymous"></script>
 
 <!-- Font Awesome icons -->
@@ -22,8 +24,9 @@
 <!-- clipboard.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script>
 
-<!-- sticky kit -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-kit/1.1.3/sticky-kit.min.js" integrity="sha256-c4Rlo1ZozqTPE2RLuvbusY3+SU1pQaJC0TjuhygMipw=" crossorigin="anonymous"></script>
+<!-- headroom.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/headroom.min.js" integrity="sha256-DJFC1kqIhelURkuza0AvYal5RxMtpzLjFhsnVIeuk+U=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script>
 
 <!-- pkgdown -->
 <link href="../pkgdown.css" rel="stylesheet">
@@ -31,7 +34,9 @@
 
 
 
+
 <meta property="og:title" content="Function reference" />
+
 
 
 
@@ -43,6 +48,7 @@
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]-->
+
 
 
   </head>
@@ -84,27 +90,26 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
-      <a href="../articles/afni.html">Translating to AFNI 3dDeconvolve</a>
+      <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
-      <a href="../articles/baseline_model.html">Baseline Model</a>
+      <a href="../articles/a_02_regressor.html">Building Regressors</a>
     </li>
     <li>
-      <a href="../articles/contrasts.html">Contrasts</a>
+      <a href="../articles/a_03_baseline_model.html">Baseline Model</a>
     </li>
     <li>
-      <a href="../articles/event_models.html">Event Models</a>
+      <a href="../articles/a_04_event_models.html">Event Models</a>
     </li>
     <li>
-      <a href="../articles/hemodynamic_response.html">Hemodynamic Response Functions</a>
+      <a href="../articles/a_05_contrasts.html">Contrasts</a>
     </li>
     <li>
-      <a href="../articles/regressor.html">Building Regressors</a>
+      <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
     </li>
   </ul>
 </li>
       </ul>
-      
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://github.com/bbuchsbaum/fmrireg">
@@ -119,6 +124,7 @@
 </div><!--/.navbar -->
 
       
+
       </header>
 
 <div class="row">
@@ -138,311 +144,11 @@
     <tbody>
       <tr>
         <th colspan="2">
-          <h2 id="section-all-functions" class="hasAnchor"><a href="#section-all-functions" class="anchor"></a>All functions</h2>
-          <p class="section-desc"></p>
+          <h2 id="section-hemodynamic-response-functions" class="hasAnchor"><a href="#section-hemodynamic-response-functions" class="anchor"></a>hemodynamic response functions</h2>
+          <p class="section-desc"><p>functions for working with hemodynamic response functions</p></p>
         </th>
       </tr>
       <tr>
-        
-        <td>
-          <p><code><a href="BSpline.html">BSpline()</a></code> </p>
-        </td>
-        <td><p>BSpline</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="EV.html">EV()</a></code> </p>
-        </td>
-        <td><p>EV</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="Fcontrasts.html">Fcontrasts()</a></code> <code><a href="Fcontrasts.html">FContrasts.convolved_term()</a></code> </p>
-        </td>
-        <td><p>Fcontrasts</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="Ident.html">Ident()</a></code> </p>
-        </td>
-        <td><p>Ident</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="Poly.html">Poly()</a></code> </p>
-        </td>
-        <td><p>Poly</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="afni_hrf.html">afni_hrf()</a></code> </p>
-        </td>
-        <td><p>construct an native AFNI hrf specification for '3dDeconvolve' with the 'stim_times' argument.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="afni_lm.html">afni_lm()</a></code> </p>
-        </td>
-        <td><p>afni_lm</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="amplitudes.html">amplitudes()</a></code> </p>
-        </td>
-        <td><p>amplitudes</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="baseline.html">baseline()</a></code> </p>
-        </td>
-        <td><p>Create a model specification for modeling low-frequency drift in fmri time series.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="baseline_model.html">baseline_model()</a></code> </p>
-        </td>
-        <td><p>construct a baseline model to model noise and other non-event-related sources of variance</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="baseline_term.html">baseline_term()</a></code> </p>
-        </td>
-        <td><p>baseline_term</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="baseline_terms.html">baseline_terms()</a></code> </p>
-        </td>
-        <td><p>baseline_terms</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="block.html">block()</a></code> </p>
-        </td>
-        <td><p>a block variable, which is constant over the span of a scanning run</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="block_term.html">block_term()</a></code> </p>
-        </td>
-        <td><p>block_term</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="blockids.html">blockids()</a></code> </p>
-        </td>
-        <td><p>blockids</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="blocklens.html">blocklens()</a></code> </p>
-        </td>
-        <td><p>blocklens</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="build_afni_stims.html">build_afni_stims()</a></code> </p>
-        </td>
-        <td><p>generate a set of AFNI stimuli for '3dDeconvolve'</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="cells.html">cells()</a></code> </p>
-        </td>
-        <td><p>cells</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="columns.html">columns()</a></code> </p>
-        </td>
-        <td><p>columns</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="conditions.html">conditions()</a></code> </p>
-        </td>
-        <td><p>conditions</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="construct.html">construct()</a></code> </p>
-        </td>
-        <td><p>construct</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="contrast.html">contrast()</a></code> </p>
-        </td>
-        <td><p>contrast</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="contrast_set.html">contrast_set()</a></code> </p>
-        </td>
-        <td><p>contrast_set</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="contrast_weights.html">contrast_weights()</a></code> </p>
-        </td>
-        <td><p>contrast_weights</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="convolve.html">convolve()</a></code> </p>
-        </td>
-        <td><p>convolve</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="convolve_block.html">convolve_block()</a></code> </p>
-        </td>
-        <td><p>a convolve hemodynamic response with a block duration</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="data_chunks.html">data_chunks()</a></code> </p>
-        </td>
-        <td><p>data_chunks</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="design_env.html">design_env()</a></code> </p>
-        </td>
-        <td><p>design_env</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="design_matrix.html">design_matrix()</a></code> </p>
-        </td>
-        <td><p>design_matrix</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="design_plot.html">design_plot()</a></code> </p>
-        </td>
-        <td><p>design_plot</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="durations.html">durations()</a></code> </p>
-        </td>
-        <td><p>durations</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="elements.html">elements()</a></code> </p>
-        </td>
-        <td><p>elements</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="estcon.html">estcon()</a></code> </p>
-        </td>
-        <td><p>estcon</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="evaluate.html">evaluate()</a></code> </p>
-        </td>
-        <td><p>evaluate a function over a sampling grid</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="event_basis.html">event_basis()</a></code> </p>
-        </td>
-        <td><p>event_basis</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="event_factor.html">event_factor()</a></code> </p>
-        </td>
-        <td><p>event_factor</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="event_matrix.html">event_matrix()</a></code> </p>
-        </td>
-        <td><p>event_matrix</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="event_model.html">event_model()</a></code> </p>
-        </td>
-        <td><p>event_model</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="event_table.html">event_table()</a></code> </p>
-        </td>
-        <td><p>event_table</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="event_term-class.html">event_term()</a></code> </p>
-        </td>
-        <td><p>event_term</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="event_terms.html">event_terms()</a></code> </p>
-        </td>
-        <td><p>event_terms</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="event_variable.html">event_variable()</a></code> </p>
-        </td>
-        <td><p>event_variable</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="fit_contrasts.html">fit_contrasts()</a></code> </p>
-        </td>
-        <td><p>fit_contrasts</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="fmri_dataset.html">fmri_dataset()</a></code> </p>
-        </td>
-        <td><p>An fMRI dataset consisting of a set of scans as files, design information, and other data.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="fmri_lm.html">fmri_lm()</a></code> </p>
-        </td>
-        <td><p>fmri_lm</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="fmri_mem_dataset.html">fmri_mem_dataset()</a></code> </p>
-        </td>
-        <td><p>fmri_mem_dataset</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="fmri_model.html">fmri_model()</a></code> </p>
-        </td>
-        <td><p>fmri_model</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="fmri_rlm.html">fmri_rlm()</a></code> </p>
-        </td>
-        <td><p>fmri_rlm</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="fmrireg.html">fmrireg</a></code> </p>
-        </td>
-        <td><p>fmrireg: regresssion tools for fMRI data</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="gen_afni_lm.html">gen_afni_lm()</a></code> </p>
-        </td>
-        <td><p>generate an AFNI linear model command from a configuration file</p></td>
-      </tr><tr>
         
         <td>
           <p><code><a href="gen_hrf.html">gen_hrf()</a></code> </p>
@@ -451,279 +157,9 @@
       </tr><tr>
         
         <td>
-          <p><code><a href="gen_hrf_blocked.html">gen_hrf_blocked()</a></code> </p>
-        </td>
-        <td><p>gen_hrf_blocked</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="gen_hrf_lagged.html">gen_hrf_lagged()</a></code> </p>
-        </td>
-        <td><p>gen_hrf_lagged</p></td>
-      </tr><tr>
-        
-        <td>
           <p><code><a href="gen_hrf_set.html">gen_hrf_set()</a></code> </p>
         </td>
         <td><p>Generate an HRF basis set</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="getHRF.html">getHRF()</a></code> </p>
-        </td>
-        <td><p>getHRF</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="get_data.html">get_data()</a></code> </p>
-        </td>
-        <td><p>get_data</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="get_formula.html">get_formula()</a></code> </p>
-        </td>
-        <td><p>get_formula</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="get_mask.html">get_mask()</a></code> </p>
-        </td>
-        <td><p>get_mask</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="global_onsets.html">global_onsets()</a></code> </p>
-        </td>
-        <td><p>global_onsets</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="hrf.html">hrf()</a></code> </p>
-        </td>
-        <td><p>hrf</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="hrf_bspline.html">hrf_bspline()</a></code> </p>
-        </td>
-        <td><p>hrf_bspline</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="hrf_gamma.html">hrf_gamma()</a></code> </p>
-        </td>
-        <td><p>hrf_gamma</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="hrf_gaussian.html">hrf_gaussian()</a></code> </p>
-        </td>
-        <td><p>hrf_gaussian</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="hrf_spmg1.html">hrf_spmg1()</a></code> </p>
-        </td>
-        <td><p>hrf_spmg1</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="hrf_time.html">hrf_time()</a></code> </p>
-        </td>
-        <td><p>hrf_time</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="is_categorical.html">is_categorical()</a></code> </p>
-        </td>
-        <td><p>is_categorical</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="is_continuous.html">is_continuous()</a></code> </p>
-        </td>
-        <td><p>is_continuous</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="levels.html">levels()</a></code> </p>
-        </td>
-        <td><p>levels</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="longnames.html">longnames()</a></code> <code><a href="longnames.html">longnames()</a></code> <code><a href="longnames.html">shortnames(<i>&lt;event_model&gt;</i>)</a></code> <code><a href="longnames.html">shortnames(<i>&lt;convolved_term&gt;</i>)</a></code> </p>
-        </td>
-        <td><p>longnames</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="matrix_dataset.html">matrix_dataset()</a></code> </p>
-        </td>
-        <td><p>matrix_dataset</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="matrix_term.html">matrix_term()</a></code> </p>
-        </td>
-        <td><p>matrix_term</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="nbasis.html">nbasis()</a></code> </p>
-        </td>
-        <td><p>nbasis</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="nuisance.html">nuisance()</a></code> </p>
-        </td>
-        <td><p>nuisance</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="null_regressor.html">null_regressor()</a></code> </p>
-        </td>
-        <td><p>null_regressor</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="onsets.html">onsets()</a></code> </p>
-        </td>
-        <td><p>onsets</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="p_value.html">p_value()</a></code> </p>
-        </td>
-        <td><p>p_value</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="pair_contrast.html">pair_contrast()</a></code> </p>
-        </td>
-        <td><p>pair_contrast</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="pairwise_contrasts.html">pairwise_contrasts()</a></code> </p>
-        </td>
-        <td><p>pairwise_contrasts</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="parent_terms.html">parent_terms()</a></code> </p>
-        </td>
-        <td><p>parent_terms</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="poly_contrast.html">poly_contrast()</a></code> </p>
-        </td>
-        <td><p>poly_contrast</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="read_fmri_config.html">read_fmri_config()</a></code> </p>
-        </td>
-        <td><p>read a basic fMRI configuration file</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="regressor.html">regressor()</a></code> </p>
-        </td>
-        <td><p>contract a regressor object</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="run.html">run()</a></code> </p>
-        </td>
-        <td><p>run a command</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="samples.html">samples()</a></code> </p>
-        </td>
-        <td><p>samples</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="sampling_frame.html">sampling_frame()</a></code> </p>
-        </td>
-        <td><p>Construct a <code>sampling_frame</code></p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="shortnames.html">shortnames()</a></code> </p>
-        </td>
-        <td><p>shortnames</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="single_trial_regressor.html">single_trial_regressor()</a></code> </p>
-        </td>
-        <td><p>single_trial_regressor</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="split_by_block.html">split_by_block()</a></code> </p>
-        </td>
-        <td><p>split_by_block</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="split_onsets.html">split_onsets()</a></code> </p>
-        </td>
-        <td><p>split an onset vector into a list</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="standard_error.html">standard_error()</a></code> </p>
-        </td>
-        <td><p>standard_error</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="sub_basis.html">sub_basis()</a></code> </p>
-        </td>
-        <td><p>sub_basis</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="term_indices.html">term_indices()</a></code> </p>
-        </td>
-        <td><p>term_indices</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="term_matrices.html">term_matrices()</a></code> </p>
-        </td>
-        <td><p>term_matrices</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="term_names.html">term_names()</a></code> </p>
-        </td>
-        <td><p>term_names</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="to_glt.html">to_glt()</a></code> </p>
-        </td>
-        <td><p>convert a contrast to an AFNI 'GLT'</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="trialwise.html">trialwise()</a></code> </p>
-        </td>
-        <td><p>trialwise</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="unit_contrast.html">unit_contrast()</a></code> </p>
-        </td>
-        <td><p>unit_contrast</p></td>
       </tr>
     </tbody>
     </table>
@@ -732,24 +168,28 @@
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
     <h2>Contents</h2>
     <ul class="nav nav-pills nav-stacked">
-      <li><a href="#section-all-functions">All functions</a></li>
+      <li><a href="#section-hemodynamic-response-functions">hemodynamic response functions</a></li>
     </ul>
   </div>
 </div>
 
+
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley R. Buchsbaum.</p>
+  <p>Developed by Bradley Buchsbaum.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.3.0.9000.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.4.1.</p>
 </div>
+
       </footer>
    </div>
 
   
 
+
   </body>
 </html>
+
 

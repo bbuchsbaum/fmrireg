@@ -1,0 +1,13 @@
+template:
+  params:
+    bootswatch: flatly
+
+reference:
+  - title: hemodynamic response functions
+    desc: >
+      functions for working with hemodynamic response functions 
+    contents:
+    - gen_hrf
+    - hrf_blocked
+    - hrf_lagged
+    - gen_hrf_set
