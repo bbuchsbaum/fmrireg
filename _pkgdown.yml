@@ -1,11 +1,11 @@
 template:
   params:
-    bootswatch: flatly
+    bootswatch: slate
 
 reference:
   - title: hemodynamic response functions
     desc: >
-      functions for working with hemodynamic response functions 
+      functions for working with standard and custom hemodynamic response functions 
     contents:
     - gen_hrf
     - hrf_blocked
