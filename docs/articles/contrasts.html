@@ -9,7 +9,7 @@
 <!-- jquery --><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script><!-- Bootstrap --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha256-916EbMg70RQy9LHiGkXzG8hSg9EdNy97GazNG/aiY1w=" crossorigin="anonymous">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha256-U5ZEeKfGNOja007MMD3YBI0A3OSZOQbeG6z2f2Y0hu8=" crossorigin="anonymous"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.7.1/css/all.min.css" integrity="sha256-nAmazAk6vS34Xqo0BSrTb+abbtFlgsFK7NKSi6o7Y78=" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.7.1/css/v4-shims.min.css" integrity="sha256-6qHlizsOWFskGlwVOKuns+D1nB6ssZrHQrNj1wGplHc=" crossorigin="anonymous">
-<!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script><!-- sticky kit --><script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-kit/1.1.3/sticky-kit.min.js" integrity="sha256-c4Rlo1ZozqTPE2RLuvbusY3+SU1pQaJC0TjuhygMipw=" crossorigin="anonymous"></script><!-- pkgdown --><link href="../pkgdown.css" rel="stylesheet">
+<!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/headroom.min.js" integrity="sha256-DJFC1kqIhelURkuza0AvYal5RxMtpzLjFhsnVIeuk+U=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- pkgdown --><link href="../pkgdown.css" rel="stylesheet">
 <script src="../pkgdown.js"></script><meta property="og:title" content="Contrasts">
 <meta property="og:description" content="">
 <meta name="twitter:card" content="summary">
@@ -90,13 +90,14 @@
 <!--/.navbar -->
 
       
+
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1>Contrasts</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2019-09-23</h4>
+            <h4 class="date">2019-09-29</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/contrasts.Rmd"><code>vignettes/contrasts.Rmd</code></a></small>
       <div class="hidden name"><code>contrasts.Rmd</code></div>
@@ -114,9 +115,9 @@
 <a href="#a-simple-2-by-2-experiment" class="anchor"></a>A simple 2 by 2 experiment</h3>
 <p>The approach we take in specifying contrasts is to formulate them as regular R expressions using the <code>~</code> operator. To demonstrate, lets start with a simple two-by-two design with factors <em>category</em> with levels [face,scene] and <em>attention</em> with levels [attend,ignore]. For this simple design, we assume each condition is repeated twice in a single run.</p>
 <p>First we construct the fMRI design as follows:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">design &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/expand.grid">expand.grid</a></span>(<span class="dt">category=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/c">c</a></span>(<span class="st">"face"</span>, <span class="st">"scene"</span>), <span class="dt">attention=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/c">c</a></span>(<span class="st">"attend"</span>, <span class="st">"ignore"</span>), <span class="dt">replication=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/c">c</a></span>(<span class="dv">1</span>,<span class="dv">2</span>))
-design<span class="op">$</span>onsets &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/seq">seq</a></span>(<span class="dv">1</span>, <span class="dv">100</span>, <span class="dt">length.out=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/nrow">nrow</a></span>(design))
-design<span class="op">$</span>block &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/rep">rep</a></span>(<span class="dv">1</span>,<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/nrow">nrow</a></span>(design))</code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1">design &lt;-<span class="st"> </span><span class="kw"><a href="https://rdrr.io/r/base/expand.grid.html">expand.grid</a></span>(<span class="dt">category=</span><span class="kw"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"face"</span>, <span class="st">"scene"</span>), <span class="dt">attention=</span><span class="kw"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"attend"</span>, <span class="st">"ignore"</span>), <span class="dt">replication=</span><span class="kw"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="dv">1</span>,<span class="dv">2</span>))</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2">design<span class="op">$</span>onsets &lt;-<span class="st"> </span><span class="kw"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="dv">1</span>, <span class="dv">100</span>, <span class="dt">length.out=</span><span class="kw"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span>(design))</a>
+<a class="sourceLine" id="cb1-3" data-line-number="3">design<span class="op">$</span>block &lt;-<span class="st"> </span><span class="kw"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="dv">1</span>,<span class="kw"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span>(design))</a></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left">category</th>
@@ -208,9 +209,9 @@ design<span class="op">$</span>block &lt;-<span class="st"> </span><span class="
 <p>A simple way to contruct this sort of <code>A - B</code> contrast is to use the <code>pair_contrast</code> function, which takes as arguments two “matching expressions”, <code>A</code> and <code>B</code>. In example 1 from the previous section, the first expression (<code>category == "face"</code>) matches all conditions where the category <code>factor</code> equals the level “face”. The second expression (<code>category == "scene"</code>) matches all conditions where the category <code>factor</code> equals the level “scene”.</p>
 <p>To compute contrast weights, every matching level in the two expressions will be assigned a weight of 1 for a match and zero otherwise. The respective binary weight vectors are then normalized to sum to 1 and then subtracted (<code>A - B</code>) to form the contrast weights.</p>
 <p>Notice in the above examples, the contrasts are defined abstractly without supplying any corresponding design information. To compute the contrast weights, however, we need to supply the design information. Below, we show a complete example.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sframe &lt;-<span class="st"> </span><span class="kw"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="dv">100</span>, <span class="dv">2</span>)
-emodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/event_model.html">event_model</a></span>(onsets <span class="op">~</span><span class="st"> </span><span class="kw"><a href="../reference/hrf.html">hrf</a></span>(category,attention), <span class="dt">block=</span><span class="op">~</span>block, <span class="dt">data=</span>design, <span class="dt">sampling_frame=</span>sframe)
-term1 &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/stats/topics/terms">terms</a></span>(emodel)[[<span class="dv">1</span>]] </code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">sframe &lt;-<span class="st"> </span><span class="kw">sampling_frame</span>(<span class="dv">100</span>, <span class="dv">2</span>)</a>
+<a class="sourceLine" id="cb2-2" data-line-number="2">emodel &lt;-<span class="st"> </span><span class="kw">event_model</span>(onsets <span class="op">~</span><span class="st"> </span><span class="kw">hrf</span>(category,attention), <span class="dt">block=</span><span class="op">~</span>block, <span class="dt">data=</span>design, <span class="dt">sampling_frame=</span>sframe)</a>
+<a class="sourceLine" id="cb2-3" data-line-number="3">term1 &lt;-<span class="st"> </span><span class="kw"><a href="https://rdrr.io/r/stats/terms.html">terms</a></span>(emodel)[[<span class="dv">1</span>]] </a></code></pre></div>
 <p>And here is the relevant model term (the only term in this model):</p>
 <pre><code>## fmri_term:  convolved_term 
 ##    Term Name:  category:attention 
@@ -221,11 +222,11 @@ term1 &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocum
 ##    Conditions:  category[face]:attention[attend] category[scene]:attention[attend] category[face]:attention[ignore] category[scene]:attention[ignore] 
 ##    Term Types:  event_factor event_factor</code></pre>
 <p>Now, we create two <code>pair_contrast</code>s and compute the weights:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">con1 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/pair_contrast.html">pair_contrast</a></span>(<span class="op">~</span><span class="st"> </span>category <span class="op">==</span><span class="st"> "face"</span>, <span class="op">~</span><span class="st"> </span>category <span class="op">==</span><span class="st"> "scene"</span>, <span class="dt">name=</span><span class="st">"face_scene"</span>)
-con2 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/pair_contrast.html">pair_contrast</a></span>(<span class="op">~</span><span class="st"> </span>attention <span class="op">==</span><span class="st"> "attend"</span>, <span class="op">~</span><span class="st"> </span>attention <span class="op">==</span><span class="st"> "ignore"</span>, <span class="dt">name=</span><span class="st">"attend_ignore"</span>)
-
-wts1 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/contrast_weights.html">contrast_weights</a></span>(con1, term1)
-wts2 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/contrast_weights.html">contrast_weights</a></span>(con2, term1)</code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1">con1 &lt;-<span class="st"> </span><span class="kw">pair_contrast</span>(<span class="op">~</span><span class="st"> </span>category <span class="op">==</span><span class="st"> "face"</span>, <span class="op">~</span><span class="st"> </span>category <span class="op">==</span><span class="st"> "scene"</span>, <span class="dt">name=</span><span class="st">"face_scene"</span>)</a>
+<a class="sourceLine" id="cb4-2" data-line-number="2">con2 &lt;-<span class="st"> </span><span class="kw">pair_contrast</span>(<span class="op">~</span><span class="st"> </span>attention <span class="op">==</span><span class="st"> "attend"</span>, <span class="op">~</span><span class="st"> </span>attention <span class="op">==</span><span class="st"> "ignore"</span>, <span class="dt">name=</span><span class="st">"attend_ignore"</span>)</a>
+<a class="sourceLine" id="cb4-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb4-4" data-line-number="4">wts1 &lt;-<span class="st"> </span><span class="kw">contrast_weights</span>(con1, term1)</a>
+<a class="sourceLine" id="cb4-5" data-line-number="5">wts2 &lt;-<span class="st"> </span><span class="kw">contrast_weights</span>(con2, term1)</a></code></pre></div>
 <p>wts1:</p>
 <pre><code>## contrast: face_scene 
 ##  A:  ~category == "face" 
@@ -293,11 +294,11 @@ wts2 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/contra
 <a href="#unit-contrasts-and-the-implicit-baseline" class="anchor"></a>Unit contrasts and the “implicit baseline”</h2>
 <p>a “unit contrast” tests whether activation, averaged over one or more conditions, is greater than the baseline activity. In this case “baseline” is defined as the level of activation captured by the intercept term, or the <em>implicit baseline</em> in <em>f</em>MRI parlance. Because all beta estimates are already expressed relative to the intercept term, main effect contrast vectors always sum to 1, rather than 0. We therefore refer to the sum-to-one contrasts as: “unit contrasts”.</p>
 <p>Below we show how to construct two unit contrasts, one testing for the effect of <code>face &gt; baseline</code> and for <code>scene - baseline</code>:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">con1 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/unit_contrast.html">unit_contrast</a></span>(<span class="op">~</span><span class="st"> </span>category <span class="op">==</span><span class="st"> "face"</span>, <span class="dt">name=</span><span class="st">"face_baseline"</span>)
-con2 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/unit_contrast.html">unit_contrast</a></span>(<span class="op">~</span><span class="st"> </span>category <span class="op">==</span><span class="st"> "scene"</span>,<span class="dt">name=</span><span class="st">"scene_baseline"</span>)
-
-wts1 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/contrast_weights.html">contrast_weights</a></span>(con1, term1)
-wts2 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/contrast_weights.html">contrast_weights</a></span>(con2, term1)</code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" data-line-number="1">con1 &lt;-<span class="st"> </span><span class="kw">unit_contrast</span>(<span class="op">~</span><span class="st"> </span>category <span class="op">==</span><span class="st"> "face"</span>, <span class="dt">name=</span><span class="st">"face_baseline"</span>)</a>
+<a class="sourceLine" id="cb7-2" data-line-number="2">con2 &lt;-<span class="st"> </span><span class="kw">unit_contrast</span>(<span class="op">~</span><span class="st"> </span>category <span class="op">==</span><span class="st"> "scene"</span>,<span class="dt">name=</span><span class="st">"scene_baseline"</span>)</a>
+<a class="sourceLine" id="cb7-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb7-4" data-line-number="4">wts1 &lt;-<span class="st"> </span><span class="kw">contrast_weights</span>(con1, term1)</a>
+<a class="sourceLine" id="cb7-5" data-line-number="5">wts2 &lt;-<span class="st"> </span><span class="kw">contrast_weights</span>(con2, term1)</a></code></pre></div>
 <p>wts1:</p>
 <pre><code>## contrast: face_baseline 
 ##  A:  ~category == "face" 
@@ -360,6 +361,7 @@ wts2 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/contra
   </div>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
+
         <div id="tocnav">
       <h2 class="hasAnchor">
 <a href="#tocnav" class="anchor"></a>Contents</h2>
@@ -373,17 +375,20 @@ wts2 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/contra
 </div>
 
 
+
       <footer><div class="copyright">
-  <p>Developed by Bradley R. Buchsbaum.</p>
+  <p>Developed by Bradley Buchsbaum.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.3.0.9000.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.4.1.</p>
 </div>
+
       </footer>
 </div>
 
   
+
 
   </body>
 </html>

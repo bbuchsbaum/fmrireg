@@ -9,7 +9,7 @@
 <!-- jquery --><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script><!-- Bootstrap --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha256-916EbMg70RQy9LHiGkXzG8hSg9EdNy97GazNG/aiY1w=" crossorigin="anonymous">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha256-U5ZEeKfGNOja007MMD3YBI0A3OSZOQbeG6z2f2Y0hu8=" crossorigin="anonymous"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.7.1/css/all.min.css" integrity="sha256-nAmazAk6vS34Xqo0BSrTb+abbtFlgsFK7NKSi6o7Y78=" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.7.1/css/v4-shims.min.css" integrity="sha256-6qHlizsOWFskGlwVOKuns+D1nB6ssZrHQrNj1wGplHc=" crossorigin="anonymous">
-<!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script><!-- sticky kit --><script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-kit/1.1.3/sticky-kit.min.js" integrity="sha256-c4Rlo1ZozqTPE2RLuvbusY3+SU1pQaJC0TjuhygMipw=" crossorigin="anonymous"></script><!-- pkgdown --><link href="../pkgdown.css" rel="stylesheet">
+<!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/headroom.min.js" integrity="sha256-DJFC1kqIhelURkuza0AvYal5RxMtpzLjFhsnVIeuk+U=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- pkgdown --><link href="../pkgdown.css" rel="stylesheet">
 <script src="../pkgdown.js"></script><meta property="og:title" content="Baseline Model">
 <meta property="og:description" content="">
 <meta name="twitter:card" content="summary">
@@ -90,13 +90,14 @@
 <!--/.navbar -->
 
       
+
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1>Baseline Model</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2019-09-23</h4>
+            <h4 class="date">2019-09-29</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/baseline_model.Rmd"><code>vignettes/baseline_model.Rmd</code></a></small>
       <div class="hidden name"><code>baseline_model.Rmd</code></div>
@@ -113,10 +114,11 @@
 <div id="basic-baseline-model-with-b-splines-and-polynomials" class="section level2">
 <h2 class="hasAnchor">
 <a href="#basic-baseline-model-with-b-splines-and-polynomials" class="anchor"></a>Basic baseline model with b-splines and polynomials</h2>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">TR &lt;-<span class="st"> </span><span class="dv">2</span>
-sframe &lt;-<span class="st"> </span><span class="kw"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="dt">blocklens=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/c">c</a></span>(<span class="dv">100</span>,<span class="dv">100</span>), TR)
-bmodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/baseline_model.html">baseline_model</a></span>(<span class="dt">basis=</span><span class="st">"bs"</span>, <span class="dt">degree=</span><span class="dv">5</span>, <span class="dt">sframe=</span>sframe)
-<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/print">print</a></span>(bmodel)</code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1">TR &lt;-<span class="st"> </span><span class="dv">2</span></a>
+<a class="sourceLine" id="cb1-2" data-line-number="2">sframe &lt;-<span class="st"> </span><span class="kw">sampling_frame</span>(<span class="dt">blocklens=</span><span class="kw"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="dv">100</span>,<span class="dv">100</span>), TR)</a>
+<a class="sourceLine" id="cb1-3" data-line-number="3">bmodel &lt;-<span class="st"> </span><span class="kw">baseline_model</span>(<span class="dt">basis=</span><span class="st">"bs"</span>, <span class="dt">degree=</span><span class="dv">5</span>, <span class="dt">sframe=</span>sframe)</a></code></pre></div>
+<pre><code>## [1] "baseline_bs_5 : matrix"</code></pre>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="kw"><a href="https://rdrr.io/r/base/print.html">print</a></span>(bmodel)</a></code></pre></div>
 <pre><code>## baseline_model 
 ##    name:  baseline_bs_5 
 ##    basis type:  bs 
@@ -143,28 +145,31 @@ bmodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/base
 ## #   base_bs5_block_1 &lt;dbl&gt;, base_bs1_block_2 &lt;dbl&gt;,
 ## #   base_bs2_block_2 &lt;dbl&gt;, base_bs3_block_2 &lt;dbl&gt;,
 ## #   base_bs4_block_2 &lt;dbl&gt;, base_bs5_block_2 &lt;dbl&gt;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw"><a href="https://www.rdocumentation.org/packages/graphics/topics/plot">plot</a></span>(bmodel)</code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="kw"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(bmodel)</a></code></pre></div>
 <p><img src="baseline_model_files/figure-html/unnamed-chunk-2-1.png" width="672"></p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">bmodel2 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/baseline_model.html">baseline_model</a></span>(<span class="dt">basis=</span><span class="st">"poly"</span>, <span class="dt">degree=</span><span class="dv">5</span>, <span class="dt">sframe=</span>sframe)
-<span class="kw"><a href="https://www.rdocumentation.org/packages/graphics/topics/plot">plot</a></span>(bmodel2)</code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1">bmodel2 &lt;-<span class="st"> </span><span class="kw">baseline_model</span>(<span class="dt">basis=</span><span class="st">"poly"</span>, <span class="dt">degree=</span><span class="dv">5</span>, <span class="dt">sframe=</span>sframe)</a></code></pre></div>
+<pre><code>## [1] "baseline_poly_5 : matrix"</code></pre>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="kw"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(bmodel2)</a></code></pre></div>
 <p><img src="baseline_model_files/figure-html/unnamed-chunk-2-2.png" width="672"></p>
 </div>
 <div id="adding-arbitrary-nuisance-regressors" class="section level2">
 <h2 class="hasAnchor">
 <a href="#adding-arbitrary-nuisance-regressors" class="anchor"></a>Adding arbitrary nuisance regressors</h2>
 <p>In addition to structured basis sets, we can also add arbitrary signals to the baseline model. Such signals are also organized by block on the assumption that nuisance signals are often block-specific and “reset” across scans. To add a set of nusiance variables to the baseline model, then, they should be split by block and placed in a <code>list</code>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">TR &lt;-<span class="st"> </span><span class="dv">2</span>
-sframe &lt;-<span class="st"> </span><span class="kw"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="dt">blocklens=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/c">c</a></span>(<span class="dv">100</span>,<span class="dv">100</span>), TR)
-
-## generate two arbitrary nusiance signals.
-nuis1 &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/stats/topics/Normal">rnorm</a></span>(<span class="dv">100</span><span class="op">*</span><span class="dv">2</span>)
-nuis2 &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/stats/topics/Normal">rnorm</a></span>(<span class="dv">100</span><span class="op">*</span><span class="dv">2</span>)
-
-## construct a set of data.frames, each with two columns (nuis1 and nuis2)
-nuislist &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/split">split</a></span>(<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/as.data.frame">as.data.frame</a></span>(<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/cbind">cbind</a></span>(nuis1, nuis2)), <span class="kw"><a href="../reference/blockids.html">blockids</a></span>(sframe))
-
-bmodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/baseline_model.html">baseline_model</a></span>(<span class="dt">basis=</span><span class="st">"bs"</span>, <span class="dt">degree=</span><span class="dv">5</span>, <span class="dt">sframe=</span>sframe, <span class="dt">nuisance_list=</span>nuislist)
-<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/print">print</a></span>(<span class="kw"><a href="https://www.rdocumentation.org/packages/stats/topics/terms">terms</a></span>(bmodel))</code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" data-line-number="1">TR &lt;-<span class="st"> </span><span class="dv">2</span></a>
+<a class="sourceLine" id="cb9-2" data-line-number="2">sframe &lt;-<span class="st"> </span><span class="kw">sampling_frame</span>(<span class="dt">blocklens=</span><span class="kw"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="dv">100</span>,<span class="dv">100</span>), TR)</a>
+<a class="sourceLine" id="cb9-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb9-4" data-line-number="4"><span class="co">## generate two arbitrary nusiance signals.</span></a>
+<a class="sourceLine" id="cb9-5" data-line-number="5">nuis1 &lt;-<span class="st"> </span><span class="kw"><a href="https://rdrr.io/r/stats/Normal.html">rnorm</a></span>(<span class="dv">100</span><span class="op">*</span><span class="dv">2</span>)</a>
+<a class="sourceLine" id="cb9-6" data-line-number="6">nuis2 &lt;-<span class="st"> </span><span class="kw"><a href="https://rdrr.io/r/stats/Normal.html">rnorm</a></span>(<span class="dv">100</span><span class="op">*</span><span class="dv">2</span>)</a>
+<a class="sourceLine" id="cb9-7" data-line-number="7"></a>
+<a class="sourceLine" id="cb9-8" data-line-number="8"><span class="co">## construct a set of data.frames, each with two columns (nuis1 and nuis2)</span></a>
+<a class="sourceLine" id="cb9-9" data-line-number="9">nuislist &lt;-<span class="st"> </span><span class="kw"><a href="https://rdrr.io/r/base/split.html">split</a></span>(<span class="kw"><a href="https://rdrr.io/r/base/as.data.frame.html">as.data.frame</a></span>(<span class="kw"><a href="https://rdrr.io/r/base/cbind.html">cbind</a></span>(nuis1, nuis2)), <span class="kw">blockids</span>(sframe))</a>
+<a class="sourceLine" id="cb9-10" data-line-number="10"></a>
+<a class="sourceLine" id="cb9-11" data-line-number="11">bmodel &lt;-<span class="st"> </span><span class="kw">baseline_model</span>(<span class="dt">basis=</span><span class="st">"bs"</span>, <span class="dt">degree=</span><span class="dv">5</span>, <span class="dt">sframe=</span>sframe, <span class="dt">nuisance_list=</span>nuislist)</a></code></pre></div>
+<pre><code>## [1] "baseline_bs_5 : matrix"
+## [1] "nuisance : dgCMatrix"</code></pre>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" data-line-number="1"><span class="kw"><a href="https://rdrr.io/r/base/print.html">print</a></span>(<span class="kw"><a href="https://rdrr.io/r/stats/terms.html">terms</a></span>(bmodel))</a></code></pre></div>
 <pre><code>## $constant
 ## fmri_term:  block_term 
 ##    Term Name:  constant 
@@ -182,12 +187,13 @@ bmodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/base
 ##    Term Name:  nuisance 
 ##    Num Rows:  200 
 ##    Num Columns:  4</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw"><a href="https://www.rdocumentation.org/packages/graphics/topics/plot">plot</a></span>(bmodel, <span class="dt">term_name=</span><span class="st">"nuisance"</span>)</code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb13-1" data-line-number="1"><span class="kw"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(bmodel, <span class="dt">term_name=</span><span class="st">"nuisance"</span>)</a></code></pre></div>
 <p><img src="baseline_model_files/figure-html/unnamed-chunk-3-1.png" width="672"></p>
 </div>
   </div>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
+
         <div id="tocnav">
       <h2 class="hasAnchor">
 <a href="#tocnav" class="anchor"></a>Contents</h2>
@@ -202,17 +208,20 @@ bmodel &lt;-<span class="st"> </span><span class="kw"><a href="../reference/base
 </div>
 
 
+
       <footer><div class="copyright">
-  <p>Developed by Bradley R. Buchsbaum.</p>
+  <p>Developed by Bradley Buchsbaum.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.3.0.9000.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.4.1.</p>
 </div>
+
       </footer>
 </div>
 
   
+
 
   </body>
 </html>
