@@ -202,4 +202,45 @@ matplot(hrf_set(0:36), type='l', xlab="Time", ylab="BOLD Activity")
 
 ```
 
+## Creating an "empirical" HRF from a measured hemodynamic respose
+
+Suppose you have measured a hemodynamic response and what like to use that as a response model for further analyses? In this case you can use the function `gen_empirical_hrf` to create a hemodynamic response function. Below we extract our model by averaging over several simulated response profiles.
+
+
+```{r, message=FALSE}
+
+mat <- replicate(20, {
+  h <- hrf_spmg1 %>% hrf_lagged(lag=runif(n=1, min=-2, max=2)) %>% hrf_blocked(width=runif(n=1, min=0, max=4))
+  h(0:24)
+})
+
+profile <- rowMeans(mat)
+emp_hrf <- gen_empirical_hrf(0:24, profile)
+plot(seq(0, 24, by=.1), emp_hrf(seq(0, 24, by=.1)), type='l', xlab="time", ylab="response", main="Empircal HRF")
+
+```
+
+We can also create a set of empirical basis functions using, for example, principal components analysis of a set of HRFs with plausible parameters for lag and width. Here we will simulate 50 HRFs and take the first 3 principal components as our basis set.
+
+```{r, message=FALSE}
+
+mat <- replicate(50, {
+  h <- hrf_spmg1 %>% hrf_lagged(lag=runif(n=1, min=-2, max=2)) %>% hrf_blocked(width=runif(n=1, min=0, max=2))
+  h(0:24)
+})
+matplot(mat, type='l', ylab="response", xlab="Time")
+
+```
+
+Now we perform PCA pn the matrix of simulated responses and use the components as a basis set. The resulting function `emp_hrf_basis` can subsequently be used in regression modelling like any of the built-in hemodynamic response functions.
+
+```{r}
+
+pcs <- prcomp(mat)$x[,1:3]
+pcs <- apply(pcs, 2, function(x) x - x[1])
+pcs_hrfs <- apply(pcs, 2, function(x) gen_empirical_hrf(0:24, x/max(abs(x))))
+emp_hrf_basis <- gen_hrf_set(pcs_hrfs$PC1,pcs_hrfs$PC2,pcs_hrfs$PC3 )
+matplot(0:24, emp_hrf_basis(0:24), type='l', ylab="Response", xlab="Time", main="PCA basis functions")
+```
+
 
