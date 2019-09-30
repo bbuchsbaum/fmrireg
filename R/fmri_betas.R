@@ -78,18 +78,19 @@ estimate_betas <- function(fixed, ran, block, dataset, method=c("ridge", "pls", 
     res <- Reduce("+", furrr::future_map(1:niter, function(iter) {
       slight <- neuroim2::random_searchlight(mask, radius=radius)
       mset <- Reduce("+", purrr::map(slight, function(s) {
-        Y <- neuroim2::series(bvec, neuroim2::coords(s))
+        cds <- neuroim2::coords(s)
+        Y <- neuroim2::series(bvec, cds)
         Y0 <- resid(lsfit(Base, Y, intercept=FALSE))
         
         dx <- list(Y=Y0, X=X)
         res <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, validation="none", method="simpls")
-        idx <- neuroim2::grid_to_index(mask, s@coords)
+        idx <- neuroim2::grid_to_index(mask, cds)
         B <- coef(res)[,,1,drop=FALSE]
         m <- Matrix::sparseMatrix(i=rep(1:nrow(B), length(idx)), 
                            j=rep(idx, each=nrow(B)), x=as.numeric(B), 
                            dims=c(nrow(B), prod(dim(mask))))
-        com <- colMeans(s@coords)
-        D <- sqrt(rowSums(sweep(s@coords, 2, com, "-")^2))
+        #com <- colMeans(cds)
+        #D <- sqrt(rowSums(sweep(cds, 2, com, "-")^2))
         m
               
       }))
@@ -100,9 +101,11 @@ estimate_betas <- function(fixed, ran, block, dataset, method=c("ridge", "pls", 
   
  
   nbetas <- nrow(betas)
-  ospace <- neuroim2::add_dim(neuroim2::space(mask), nbetas)
-  ran <- neuroim2::NeuroVec(as.matrix(betas[ran_ind,,drop=FALSE]), ospace, mask=mask)
-  fixed <- neuroim2::NeuroVec(as.matrix(betas[fixed_ind,,drop=FALSE]), ospace, mask=mask)
+  ospace_ran <- neuroim2::add_dim(neuroim2::space(mask), length(ran_ind))
+  ospace_fixed <- neuroim2::add_dim(neuroim2::space(mask), length(fixed_ind))
+  
+  ran <- neuroim2::NeuroVec(as.matrix(betas[ran_ind,,drop=FALSE]), ospace_ran, mask=mask)
+  fixed <- neuroim2::NeuroVec(as.matrix(betas[fixed_ind,,drop=FALSE]), ospace_fixed, mask=mask)
   #baseline <- neuroim2::NeuroVec(as.matrix(betas[base_ind,,drop=FALSE]), ospace, mask=mask)
   
   ret <- list(betas_fixed=fixed,
