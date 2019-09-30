@@ -228,7 +228,8 @@ get_data.fmri_mem_dataset <- function(x, ...) {
 #' @export
 #' @importFrom neuroim2 NeuroVecSeq FileBackedNeuroVec
 get_data.fmri_file_dataset <- function(x, ...) {
-  do.call(neuroim2::NeuroVecSeq, lapply(x$scans, neuroim2::read_vec, mask=x$mask))
+  m <- get_mask(x)
+  do.call(neuroim2::NeuroVecSeq, lapply(x$scans, neuroim2::read_vec, mask=m))
 }
 
 #' @export

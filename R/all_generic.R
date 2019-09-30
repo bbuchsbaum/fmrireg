@@ -12,6 +12,7 @@ setGeneric("as_vectors")
 #' 
 #' @param x the dataset
 #' @param ... extra args
+#' @export
 get_data <- function(x, ...) UseMethod("get_data")
 
 
