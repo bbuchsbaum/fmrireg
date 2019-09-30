@@ -14,7 +14,7 @@ afni_lm(fmri_mod, dataset, working_dir = ".", polort = -1, jobs = 1,
 
 \item{working_dir}{the working directory}
 
-\item{polort}{the number of polynomila baseline regressors (default is to suppress 'polort')}
+\item{polort}{the number of polynomial baseline regressors (default is to suppress 'polort')}
 
 \item{jobs}{the number of jobs to use with '3dDeconvolve'}
 

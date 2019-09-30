@@ -2,12 +2,12 @@
 % Please edit documentation in R/basis.R
 \name{Poly}
 \alias{Poly}
-\title{Poly}
+\title{Polynomila basis}
 \usage{
 Poly(x, degree)
 }
 \arguments{
-\item{x}{a numeric vector at which to evaluate the polynomial. Missing values are not allowed in x}
+\item{x}{a numeric vector at which to evaluate the polynomial. Missing values are not allowed in x.}
 
 \item{degree}{the degree of the polynomial. Must be less than the number of unique points.}
 }
@@ -15,5 +15,8 @@ Poly(x, degree)
 an instance of class \code{Poly} extending \code{ParametricBasis}
 }
 \description{
-Poly
+Orthogonal polynomial expansion of a linear term based on \code{\link[stats]{poly}}
+}
+\seealso{
+\link[stats]{poly}
 }

@@ -41,7 +41,8 @@ test_that("can construct and run a simple fmri glm from in memory dataset and on
   
   con <- contrast_set(pair_contrast( ~ repnum == 1, ~ repnum == 2, name="rep2_rep1"))
   
-  mod <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0)
+  mod1 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0)
+  mod2 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, strategy="chunkwise", nchunks=10)
   expect_true(!is.null(mod))
   expect_equal(ncol(mod$result$contrasts$estimate()), 1)
   

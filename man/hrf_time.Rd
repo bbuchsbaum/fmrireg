@@ -4,7 +4,7 @@
 \alias{hrf_time}
 \title{hrf_time}
 \usage{
-hrf_time(t, maxt)
+hrf_time(t, maxt = 22)
 }
 \arguments{
 \item{t}{time in seconds}

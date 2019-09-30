@@ -2,7 +2,7 @@
 % Please edit documentation in R/contrast.R
 \name{pairwise_contrasts}
 \alias{pairwise_contrasts}
-\title{pairwise_contrasts}
+\title{pairwise contrasts}
 \usage{
 pairwise_contrasts(levels, where = NULL)
 }

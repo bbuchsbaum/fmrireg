@@ -1,11 +1,16 @@
+
+
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 facedes$repnum <- factor(facedes$rep_num)
 
 test_that("can run a beta estimation", {
   
+  facedes$frun <- factor(facedes$run)
+  facedes$constant <- factor(rep(1, nrow(facedes)))
+  
   scans <- lapply(1:length(unique(facedes$run)), function(i) {
-    arr <- array(rnorm(10*10*10*244), c(10,10,10, 244))
-    bspace <- neuroim2::NeuroSpace(dim=c(10,10,10,244))
+    arr <- array(rnorm(10*10*10*300), c(10,10,10, 300))
+    bspace <- neuroim2::NeuroSpace(dim=c(10,10,10,300))
     neuroim2::NeuroVec(arr, bspace)
   })
   
@@ -18,7 +23,18 @@ test_that("can run a beta estimation", {
                            event_table=facedes)
   
   
-  mod <- fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset=dset, durations=0)
-  expect_true(!is.null(mod))
+ ret1 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
+                       method="pls", ncomp=1)
+ ret2 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
+                         method="pls", ncomp=3)
+ ret3 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
+                        method="ridge")
+ ret4 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
+                        method="pls_searchlight", niter=3)
+ 
+ expect_true(!is.null(ret1))
+ expect_true(!is.null(ret2))
+ expect_true(!is.null(ret3))
+ expect_true(!is.null(ret4))
   
 })

@@ -1,5 +1,7 @@
 
-#' contrast
+#' contrast specification
+#' 
+#' Define a linear contrast using a formula expression.
 #' 
 #' @param form a formula describing the contrast
 #' @param name a \code{character} label for the contrast
@@ -26,9 +28,9 @@ contrast <- function(form, name, where=NULL) {
 }
 
 
-#' contrast_set
+#' Create a set of contrasts
 #' 
-#' A \code{list} o \code{contrast_spec} objects
+#' Construct a \code{list} of \code{contrast_spec} objects
 #' 
 #' @param ... a variable length list of \code{contrast_spec} objects.
 #' 
@@ -47,7 +49,7 @@ contrast_set <- function(...) {
   ret
 }
 
-#' pairwise_contrasts
+#' pairwise contrasts
 #' 
 #' contrast all pairwise combinations of the levels of a factor
 #' 

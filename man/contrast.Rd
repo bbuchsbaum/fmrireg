@@ -2,7 +2,7 @@
 % Please edit documentation in R/contrast.R
 \name{contrast}
 \alias{contrast}
-\title{contrast}
+\title{contrast specification}
 \usage{
 contrast(form, name, where = NULL)
 }
@@ -14,7 +14,7 @@ contrast(form, name, where = NULL)
 \item{where}{an expression the subset over whcih the contrast is defined}
 }
 \description{
-contrast
+Define a linear contrast using a formula expression.
 }
 \examples{
 

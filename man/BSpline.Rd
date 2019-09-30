@@ -2,7 +2,7 @@
 % Please edit documentation in R/basis.R
 \name{BSpline}
 \alias{BSpline}
-\title{BSpline}
+\title{B-spline basis}
 \usage{
 BSpline(x, degree)
 }
@@ -12,5 +12,8 @@ BSpline(x, degree)
 \item{degree}{the degree of the piecewise polynomial}
 }
 \description{
-BSpline
+Generate the B-spline basis matrix for a polynomial spline.
+}
+\seealso{
+\link[splines]{bs}
 }

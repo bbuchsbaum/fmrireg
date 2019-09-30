@@ -4,8 +4,8 @@
 \alias{trialwise}
 \title{trialwise}
 \usage{
-trialwise(basis = HRF_SPMG1, onsets = NULL, durations = NULL,
-  prefix = NULL, subset = NULL, precision = 0.2,
+trialwise(label = "trialwise", basis = "spmg1", onsets = NULL,
+  durations = NULL, prefix = NULL, subset = NULL, precision = 0.2,
   contrasts = list(), id = NULL, add_sum = FALSE)
 }
 \arguments{

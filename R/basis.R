@@ -31,11 +31,15 @@ Ident <- function(...) {
 }
 
 
-#' Poly
+#' Polynomila basis
 #' 
-#' @param x a numeric vector at which to evaluate the polynomial. Missing values are not allowed in x
+#' Orthogonal polynomial expansion of a linear term based on \code{\link[stats]{poly}}
+#' 
+#' @param x a numeric vector at which to evaluate the polynomial. Missing values are not allowed in x.
 #' @param degree the degree of the polynomial. Must be less than the number of unique points.
 #' @return an instance of class \code{Poly} extending \code{ParametricBasis}
+#' 
+#' @seealso \link[stats]{poly}
 #' @export 
 Poly <- function(x, degree) {
   mc <- match.call()
@@ -48,11 +52,14 @@ Poly <- function(x, degree) {
 
 
 
-#' BSpline
+#' B-spline basis
+#' 
+#' Generate the B-spline basis matrix for a polynomial spline.
 #' 
 #' @param x a numeric vector at which to evaluate the spline. Missing values are not allowed in x
 #' @param degree the degree of the piecewise polynomial
 #' @importFrom splines bs
+#' @seealso \link[splines]{bs}
 #' @export
 BSpline <- function(x, degree) {
   mc <- match.call()

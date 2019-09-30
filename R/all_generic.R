@@ -343,13 +343,22 @@ construct <- function(x, model_spec,...) UseMethod("construct")
 standard_error <- function(x, ...) UseMethod("standard_error")
 
 
-#' p_value
+#' stats
+#' 
+#' extract statistics from fitted model
+#' 
+#' @param x the object
+#' @param ... extra arguments
+stats <- function(x, ...) UseMethod("stats")
+
+
+#' p_values
 #' 
 #' extract p-values from fitted model
 #' 
 #' @param x the object
 #' @param ... extra arguments
-p_value <- function(x, ...) UseMethod("p_value")
+p_values <- function(x, ...) UseMethod("p_value")
 
 
 #' longnames

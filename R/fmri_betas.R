@@ -6,14 +6,15 @@ ridge_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), lambda=.01) {
 
 pls_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
   dx <- data.frame(X=X, Y=Y)
-  fit <- plsr(Y ~ X, data=dx, ncomp=ncomp, method="simpls")
-  coef(res)[,,1,drop=FALSE]
-
+  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="simpls", scale=TRUE)
+  coef(fit, ncomp=ncomp)[,,1]
 }
 
 
 #' estimate trialwise betas for an fMRI dataset.
-
+#' 
+#' 
+#' @import pls
 #' @examples 
 #' facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 #' facesdes$frun <- factor(facedes$run)
@@ -22,8 +23,11 @@ pls_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
 #' fixed = onset ~ hrf(run)
 #' ran = onset ~ trialwise()
 #' block = ~ run
-estimate_betas <- function(dset, fixed, ran, block, method=c("ridge", "pls", "pls_searchlight"), basedeg=5, nuisance_list=NULL, 
-                           radius=8, niter=20, ncomp=4, lambda=.01) {
+estimate_betas <- function(fixed, ran, block, dataset, method=c("ridge", "pls", "pls_searchlight"), 
+                           basedeg=5, nuisance_list=NULL, 
+                           radius=8, niter=8, ncomp=4, lambda=.01) {
+  
+  dset <- dataset
   bvec <- get_data(dset)
   mask <- get_mask(dset)
   
@@ -37,9 +41,16 @@ estimate_betas <- function(dset, fixed, ran, block, method=c("ridge", "pls", "pl
   dmat_ran <- design_matrix(emod_ran)
   
   dmat_base <- design_matrix(bmod)
+  dmat_all <- cbind(scale(dmat_ran), scale(dmat_fixed), scale(dmat_base))
   
-  dmat_all <- cbind(dmat_ran, dmat_fixed, dmat_base)
+  
+  start_ran <- 1
+  start_fixed <- ncol(dmat_ran)+1
+  start_base <- start_fixed + ncol(dmat_fixed)
   ran_ind <- 1:ncol(dmat_ran)
+  
+  fixed_ind <- start_fixed:(start_base-1)
+  base_ind <- start_base:(ncol(dmat_all))
   
   betas <- if (method == "ridge") {
     X <- as.matrix(dmat_all)
@@ -47,29 +58,34 @@ estimate_betas <- function(dset, fixed, ran, block, method=c("ridge", "pls", "pl
     res <- do.call(cbind, furrr::future_map(neuroim2::vectors(bvec, subset=which(mask>0)), function(v) {
       ridge_betas(X, v, penalty_factor = pfac, lambda=lambda)
     }))
-    
-    neuroim2::NeuroVec(as.matrix(res), neuroim2::add_dim(neuroim2::space(mask),nrow(res)))
+    as.matrix(res)
+    ##neuroim2::NeuroVec(as.matrix(res), neuroim2::add_dim(neuroim2::space(mask),nrow(res)))
     
   } else if (method == "pls") {
-    X <- as.matrix(dmat_all)
+    X <- cbind(scale(dmat_ran), scale(dmat_fixed))
+    Base <- as.matrix(dmat_base)
+    
     res <- do.call(cbind, furrr::future_map(neuroim2::vectors(bvec, subset=which(mask>0)), function(v) {
-      pls_betas(X, v, ncomp=ncomp)
+      v0 <- resid(lsfit(Base, v, intercept=FALSE))
+      pls_betas(X, v0, ncomp=ncomp)
     }))
     
-    neuroim2::NeuroVec(as.matrix(res), neuroim2::add_dim(neuroim2::space(mask),nrow(res)))
+    as.matrix(res)
+  } else {
+    X <- cbind(scale(dmat_ran), scale(dmat_fixed))
+    Base <- as.matrix(dmat_base)
     
-  }else {
-  
     res <- Reduce("+", furrr::future_map(1:niter, function(iter) {
       slight <- neuroim2::random_searchlight(mask, radius=radius)
       mset <- Reduce("+", purrr::map(slight, function(s) {
         Y <- neuroim2::series(bvec, neuroim2::coords(s))
-        dx <- list(Y=Y, X=as.matrix(dmat_all))
+        Y0 <- resid(lsfit(Base, Y, intercept=FALSE))
+        
+        dx <- list(Y=Y0, X=X)
         res <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, validation="none", method="simpls")
-      #browser()
-        idx = neuroim2::grid_to_index(mask, s@coords)
+        idx <- neuroim2::grid_to_index(mask, s@coords)
         B <- coef(res)[,,1,drop=FALSE]
-        m=Matrix::sparseMatrix(i=rep(1:nrow(B), length(idx)), 
+        m <- Matrix::sparseMatrix(i=rep(1:nrow(B), length(idx)), 
                            j=rep(idx, each=nrow(B)), x=as.numeric(B), 
                            dims=c(nrow(B), prod(dim(mask))))
         com <- colMeans(s@coords)
@@ -78,14 +94,24 @@ estimate_betas <- function(dset, fixed, ran, block, method=c("ridge", "pls", "pl
               
       }))
     }))/niter
-  
-    neuroim2::NeuroVec(as.matrix(res), neuroim2::add_dim(neuroim2::space(mask),nrow(res)))
+    
+    as.matrix(res)[,mask != 0]
   }
   
-  list(betas=betas,
+ 
+  nbetas <- nrow(betas)
+  ospace <- neuroim2::add_dim(neuroim2::space(mask), nbetas)
+  ran <- neuroim2::NeuroVec(as.matrix(betas[ran_ind,,drop=FALSE]), ospace, mask=mask)
+  fixed <- neuroim2::NeuroVec(as.matrix(betas[fixed_ind,,drop=FALSE]), ospace, mask=mask)
+  #baseline <- neuroim2::NeuroVec(as.matrix(betas[base_ind,,drop=FALSE]), ospace, mask=mask)
+  
+  ret <- list(betas_fixed=fixed,
+       betas_ran=ran,
        design=dmat_all,
        design_ran=dmat_ran,
        design_fixed=dmat_fixed,
        design_base=dmat_base)
+  class(ret) <- "fmri_betas"
+  ret
   
 }

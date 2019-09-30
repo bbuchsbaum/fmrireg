@@ -4,13 +4,13 @@
 \alias{getHRF}
 \title{getHRF}
 \usage{
-getHRF(name = c("gamma", "spmg1", "spmg2", "spmg3", "bspline",
+getHRF(name = c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline",
   "gaussian", "tent", "bs"), nbasis = 5, lag = 0, ...)
 }
 \arguments{
 \item{name}{the name of the hrf function}
 
-\item{nbasis}{the numbe rof basis functions (if relevant)}
+\item{nbasis}{the number of basis functions (if relevant)}
 }
 \description{
 getHRF

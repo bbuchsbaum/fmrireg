@@ -132,9 +132,21 @@ coef.fmri_lm <- function(x) {
  x$result$betas$estimate()
 }
 
-#' @export
-stats.fmri_lm <- function(x) {
-  x$result$betas$stat()
+summary.fmri_lm <- function(x, type=c("coef", "contrasts", "Fcontrasts")) {
+  type <- match.arg(type)
+  if (type == "coef") {
+    list(
+      estimate=x$betas$estimate(),
+      se=x$betas$se(),
+      stat=x$betas$stat(),
+      prob=x$betas$prob())
+  } else if (type == "contrasts") {
+    x$contrasts
+  } else if (type == "") {
+    NULL
+  } else {
+    stop()
+  }
 }
 
 
@@ -267,6 +279,8 @@ runwise_lm <- function(dset, model, conlist, fcon) {
            baseline_indices=attr(tmats, "baseline_term_indices") )
       
     }
+    
+    #browser()
     
     bstats <- lapply(cres, "[[", "bstats")
     conres <- lapply(cres, "[[", "conres")
