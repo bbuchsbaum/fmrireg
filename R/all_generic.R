@@ -19,6 +19,7 @@ get_data <- function(x, ...) UseMethod("get_data")
 #' 
 #' @param x the dataset
 #' @param ... extra args
+#' @export
 get_mask <- function(x, ...) UseMethod("get_mask")
 
 

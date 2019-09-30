@@ -4,9 +4,9 @@
 \alias{estimate_betas}
 \title{estimate trialwise betas for an fMRI dataset.}
 \usage{
-estimate_betas(dset, fixed, ran, block, method = c("ridge", "pls",
+estimate_betas(fixed, ran, block, dataset, method = c("ridge", "pls",
   "pls_searchlight"), basedeg = 5, nuisance_list = NULL, radius = 8,
-  niter = 20, ncomp = 4, lambda = 0.01)
+  niter = 8, ncomp = 4, lambda = 0.01)
 }
 \description{
 estimate trialwise betas for an fMRI dataset.
