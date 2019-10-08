@@ -10,6 +10,20 @@ pls_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
   coef(fit, ncomp=ncomp)[,,1]
 }
 
+slm_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
+  slm.1 <- slm(X, Y, verbose=FALSE)
+  b2 <- coef(slm.1)[,-(1:2)]
+  b1 <- coef(slm.1)[,1]
+  b1 + b2
+}
+
+mixed_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
+  fit <- mixed.solve(Y, Z=X[,-1], X=X[,1])
+  as.vector(fit$b) + as.vector(fit$u)
+  
+}
+
+
 
 #' estimate trialwise betas for an fMRI dataset.
 #' 
@@ -23,7 +37,7 @@ pls_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
 #' fixed = onset ~ hrf(run)
 #' ran = onset ~ trialwise()
 #' block = ~ run
-estimate_betas <- function(fixed, ran, block, dataset, method=c("ridge", "pls", "pls_searchlight"), 
+estimate_betas <- function(fixed, ran, block, dataset, method=c("mixed", "slm", "pls", "pls_searchlight"), 
                            basedeg=5, nuisance_list=NULL, 
                            radius=8, niter=8, ncomp=4, lambda=.01) {
   
@@ -52,15 +66,20 @@ estimate_betas <- function(fixed, ran, block, dataset, method=c("ridge", "pls", 
   fixed_ind <- start_fixed:(start_base-1)
   base_ind <- start_base:(ncol(dmat_all))
   
-  betas <- if (method == "ridge") {
+  betas <- if (method == "slm") {
     X <- as.matrix(dmat_all)
-    pfac <-  c(rep(1, ncol(dmat_ran)), rep(0, ncol(dmat_fixed)), rep(0, ncol(dmat_base)))
-    res <- do.call(cbind, furrr::future_map(neuroim2::vectors(bvec, subset=which(mask>0)), function(v) {
-      ridge_betas(X, v, penalty_factor = pfac, lambda=lambda)
+     res <- do.call(cbind, furrr::future_map(neuroim2::vectors(bvec, subset=which(mask>0)), function(v) {
+      slm_betas(X, v)
     }))
     as.matrix(res)
     ##neuroim2::NeuroVec(as.matrix(res), neuroim2::add_dim(neuroim2::space(mask),nrow(res)))
     
+  } else if (method == "mixed") {
+    X <- as.matrix(dmat_all)
+    res <- do.call(cbind, furrr::future_map(neuroim2::vectors(bvec, subset=which(mask>0)), function(v) {
+      mixed_betas(X, v)
+    }))
+    as.matrix(res)
   } else if (method == "pls") {
     X <- cbind(scale(dmat_ran), scale(dmat_fixed))
     Base <- as.matrix(dmat_base)
