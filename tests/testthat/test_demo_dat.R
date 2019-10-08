@@ -59,7 +59,7 @@ test_that("demo1", {
     
     hrf1 <- gen_hrf(hrf_gaussian, lag=0)
     hrf2 <- gen_hrf(hrf_gaussian, lag=3)
-    emod <- event_model(ons1 ~ hrf(constant, basis=hset, prefix="h1"),
+    emod <- event_model(ons1 ~ hrf(constant, basis=h, prefix="h1"),
                           #hrf(constant, basis=hrf2, prefix="h4") + 
                           #hrf(Poly(isi,3),basis=hrf1, prefix="h1"), 
                           #hrf(Poly(isi,3),basis=hrf2, prefix="h4"),
@@ -67,12 +67,12 @@ test_that("demo1", {
                       sampling_frame=sframe)
     
     
-    emod2 <- event_model(ons1 ~ trialwise("tw", basis=hrf_time),
+    emod2 <- event_model(ons1 ~ trialwise("tw", basis=h),
                         block = ~ block, data=des, 
                         sampling_frame=sframe)
   
     y <- apply(dat$mat, 1, function(x) median(x, na.rm=TRUE))
-    dmat_ev <- design_matrix(emod)
+    dmat_ev <- design_matrix(emod2)
     dmat_bv <- design_matrix(bmod)
     evmat <- as.matrix(dmat_ev)
     bvmat <- as.matrix(dmat_bv)
@@ -81,7 +81,8 @@ test_that("demo1", {
   
     lm.0 <- lm(y ~ bvmat -1)
     lm.00 <- lm(y ~ bvmat[,1:6] + ccres$scores)
-    lm.1 <- lm(y ~ evmat + bvmat -1)
+    lm.1 <- lm(y ~ evmat + bvmat -1, x=TRUE, y=TRUE)
+    slm.1 <- slm(y ~ evmat + bvmat - 1)
     y0 <- resid(lm.0)
     y00 <- resid(lm.00)
     ares <- auto.arima(y0)

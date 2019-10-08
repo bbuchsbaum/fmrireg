@@ -77,7 +77,7 @@ estimate_betas <- function(fixed, ran, block, dataset, method=c("ridge", "pls", 
     
     res <- Reduce("+", furrr::future_map(1:niter, function(iter) {
       slight <- neuroim2::random_searchlight(mask, radius=radius)
-      mset <- Reduce("+", purrr::map(slight, function(s) {
+      mset <- Reduce("+", furrr::future_map(slight, function(s) {
         cds <- neuroim2::coords(s)
         Y <- neuroim2::series(bvec, cds)
         Y0 <- resid(lsfit(Base, Y, intercept=FALSE))
