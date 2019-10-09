@@ -28,8 +28,10 @@ test_that("can run a beta estimation", {
  ret2 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
                          method="pls", ncomp=3)
  ret3 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
-                        method="ridge")
+                        method="slm")
  ret4 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
+                        method="mixed")
+ ret5 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
                         method="pls_searchlight", niter=3)
  
  expect_true(!is.null(ret1))
