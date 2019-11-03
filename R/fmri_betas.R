@@ -4,23 +4,23 @@ ridge_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), lambda=.01) {
   coef(fit)[,1,drop=FALSE]
 }
 
-pls_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
+pls_betas <- function(X, Y, ncomp=3) {
   dx <- data.frame(X=X, Y=Y)
   fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="simpls", scale=TRUE)
   coef(fit, ncomp=ncomp)[,,1]
 }
 
-slm_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
+slm_betas <- function(X, Y) {
   slm.1 <- slm(X, Y, verbose=FALSE)
   b2 <- coef(slm.1)[,-(1:2)]
   b1 <- coef(slm.1)[,1]
   b1 + b2
 }
 
-mixed_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
-  fit <- mixed.solve(Y, Z=X[,-1], X=X[,1])
-  as.vector(fit$b) + as.vector(fit$u)
-  
+#' @importFrom rrBLUP mixed.solve
+mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
+  fit <- mixed.solve(Y, Z=X[,ran_ind], X=X[,c(fixed_ind)])
+  c(fit$u, fit$b)
 }
 
 
@@ -37,7 +37,8 @@ mixed_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
 #' fixed = onset ~ hrf(run)
 #' ran = onset ~ trialwise()
 #' block = ~ run
-estimate_betas <- function(fixed, ran, block, dataset, method=c("mixed", "slm", "pls", "pls_searchlight"), 
+estimate_betas <- function(fixed, ran, block, dataset, 
+                           method=c("mixed", "pls", "pls_searchlight"), 
                            basedeg=5, nuisance_list=NULL, 
                            radius=8, niter=8, ncomp=4, lambda=.01) {
   
@@ -75,9 +76,11 @@ estimate_betas <- function(fixed, ran, block, dataset, method=c("mixed", "slm", 
     ##neuroim2::NeuroVec(as.matrix(res), neuroim2::add_dim(neuroim2::space(mask),nrow(res)))
     
   } else if (method == "mixed") {
-    X <- as.matrix(dmat_all)
+    X  <- cbind(dmat_ran, dmat_fixed)
+    Base <- as.matrix(dmat_base)
     res <- do.call(cbind, furrr::future_map(neuroim2::vectors(bvec, subset=which(mask>0)), function(v) {
-      mixed_betas(X, v)
+      v0 <- resid(lsfit(Base, v, intercept=FALSE))
+      mixed_betas(X, v0, ran_ind=ran_ind, fixed_ind=fixed_ind)
     }))
     as.matrix(res)
   } else if (method == "pls") {
