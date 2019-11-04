@@ -59,6 +59,14 @@ test_that("demo1", {
     
     hrf1 <- gen_hrf(hrf_gaussian, lag=0)
     hrf2 <- gen_hrf(hrf_gaussian, lag=3)
+    
+    emod <- event_model(ons1 ~ hrf(syllable, prefix="h1"),
+                        #hrf(constant, basis=hrf2, prefix="h4") + 
+                        #hrf(Poly(isi,3),basis=hrf1, prefix="h1"), 
+                        #hrf(Poly(isi,3),basis=hrf2, prefix="h4"),
+                        block = ~ block, data=des, 
+                        sampling_frame=sframe)
+    
     emod <- event_model(ons1 ~ hrf(constant, basis=hset, prefix="h1"),
                           #hrf(constant, basis=hrf2, prefix="h4") + 
                           #hrf(Poly(isi,3),basis=hrf1, prefix="h1"), 

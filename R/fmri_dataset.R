@@ -56,7 +56,7 @@ read_fmri_config <- function(file_name, base_path=NULL) {
   
   dname <- file.path(env$base_path, env$event_table)
   assert_that(file.exists(dname))
-  env$design <- tibble::as_data_frame(read.table(dname, header=TRUE))
+  env$design <- tibble::as_tibble(read.table(dname, header=TRUE))
 
   out <- as.list(env)
   class(out) <- c("fmri_config", "list")

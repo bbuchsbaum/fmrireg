@@ -10,17 +10,17 @@ pls_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
   coef(fit, ncomp=ncomp)[,,1]
 }
 
-slm_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
-  slm.1 <- slm(X, Y, verbose=FALSE)
+slm_betas <- function(X, Y) {
+  slm.1 <- care::slm(X, Y, verbose=FALSE)
   b2 <- coef(slm.1)[,-(1:2)]
   b1 <- coef(slm.1)[,1]
   b1 + b2
 }
 
-mixed_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), ncomp=3) {
-  fit <- mixed.solve(Y, Z=X[,-1], X=X[,1])
+mixed_betas <- function(Xran, Xfixed, Y) {
+  browser()
+  fit <- rrBLUP::mixed.solve(Y, Z=Xran, X=Xfixed)
   as.vector(fit$b) + as.vector(fit$u)
-  
 }
 
 
@@ -75,9 +75,15 @@ estimate_betas <- function(fixed, ran, block, dataset, method=c("mixed", "slm", 
     ##neuroim2::NeuroVec(as.matrix(res), neuroim2::add_dim(neuroim2::space(mask),nrow(res)))
     
   } else if (method == "mixed") {
-    X <- as.matrix(dmat_all)
+    Xran <- dmat_ran
+    Xfixed <- dmat_fixed
+    
+    Base <- as.matrix(dmat_base)
+    
     res <- do.call(cbind, furrr::future_map(neuroim2::vectors(bvec, subset=which(mask>0)), function(v) {
-      mixed_betas(X, v)
+      print("mixed betas")
+      v0 <- resid(lsfit(Base, v, intercept=FALSE))
+      mixed_betas(Xran, Xfixed, v)
     }))
     as.matrix(res)
   } else if (method == "pls") {

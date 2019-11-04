@@ -92,7 +92,7 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
   len <- sum(subset)
   
-  etab <- tibble::as_data_frame(lapply(pterms, function(termname) {
+  etab <- tibble::as_tibble(lapply(pterms, function(termname) {
     if (is_continuous(evs[[termname]])) {
       rep(.sanitizeName(termname), len)
     } else {
