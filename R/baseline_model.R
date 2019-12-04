@@ -130,6 +130,7 @@ design_matrix.baseline_model <- function(x, blockid=NULL, allrows=FALSE) {
 
 
 #' @export
+#' @rdname terms
 terms.baseline_model <- function(x) {
   ret <- list(x$block_term, x$drift_term, x$nuisance_term)
   ret <- ret[!map_lgl(ret, is.null)]

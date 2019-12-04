@@ -781,14 +781,15 @@ construct.trialwisespec <- function(x, model_spec) {
 #' construct an native AFNI hrf specification for '3dDeconvolve' with the 'stim_times' argument.
 #' 
 #' @inheritParams hrf
-#' @examples 
-#' 
+#' @param start the start of the window for sin/poly/csplin models
+#' @param stop the stop time for sin/poly/csplin models
 #' @export
 afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",           
                                   "tent",   "csplin", "poly",  "sin",        
                                   "gam", "spmg2", "spmg3", "wav"), 
                                   onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, 
-                                  nbasis=1, contrasts=NULL, id=NULL, start=NULL, stop=NULL) {
+                                  nbasis=1, contrasts=NULL, id=NULL, 
+                                  start=NULL, stop=NULL) {
   
   ## TODO cryptic error message when argument is mispelled and is then added to ...
   basis <- match.arg(basis)

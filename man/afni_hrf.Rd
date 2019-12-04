@@ -29,10 +29,11 @@ Can be used to disambiguate two \code{hrf} terms with the same variable(s) but d
 If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.}
 
 \item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
+
+\item{start}{the start of the window for sin/poly/csplin models}
+
+\item{stop}{the stop time for sin/poly/csplin models}
 }
 \description{
 construct an native AFNI hrf specification for '3dDeconvolve' with the 'stim_times' argument.
-}
-\examples{
-
 }
