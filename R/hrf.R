@@ -245,6 +245,14 @@ hrf_time <- function(t, maxt=22) {
   ifelse(t > 0 & t < maxt, t, 0)
 }
 
+# hrf_ident
+# 
+# @param t time in seconds
+# @export
+#hrf_ident <- function(t) {
+#  ifelse( t == 0, 1, 0)
+#}
+
 #' hrf_bspline
 #' 
 #' @param t a vector of times
@@ -308,6 +316,7 @@ hrf_gaussian <- function(t, mean=6, sd=2) {
 	dnorm(t, mean=mean, sd=sd)
 }
 
+
 #' hrf_spmg1
 #' 
 #' A hemodynamic response function based on the SPM canonical double gamma parameterzation.
@@ -333,6 +342,11 @@ HRF_GAUSSIAN <- HRF(hrf_gaussian, "gaussian", param_names=c("mean", "sd"))
 #' @export
 #' @rdname HRF
 HRF_BSPLINE <- HRF(gen_hrf(hrf_bspline), "bspline", nbasis=5)
+
+# @export
+# @rdname HRF
+# HRF_IDENT <- HRF(gen_hrf(hrf_ident), "ident", nbasis=1)
+
 
 #' @export
 #' @rdname HRF
@@ -972,6 +986,63 @@ get_AFNI_HRF <- function(name, nbasis=1, duration=1, b=0, c=18) {
   hrf
   
 }
+
+
+#' construct an hrf that does not convolve it's argument with an response function
+#' 
+#' @inheritParams hrf
+#' @export
+hrf_identity <- function(x, subset=NULL, id=NULL, prefix=NULL) {
+ 
+  vars <- substitute(x)
+  
+  term <- as.character(vars)
+  label <- term
+  
+  varnames <- if (!is.null(prefix)) {
+    paste0(prefix, "_", term)
+  } else {
+    term
+  }
+  
+  termname <- paste0(varnames, collapse="::")
+  
+  if (is.null(id)) {
+    id <- termname
+  }  
+
+  ihrf <- HRF(identity, "ident", nbasis=1)
+  
+  ret <- list(
+    name=termname,
+    id=id,
+    varnames=varnames,
+    vars=term,
+    label=label,
+    hrf=ihrf,
+    prefix=prefix,
+    subset=substitute(subset)
+  )
+  
+  class(ret) <- c("identity_hrfspec", "hrfspec", "list")
+  ret
+  
+}
+
+#' @export
+construct.identity_hrfspec <- function(x, model_spec) {
+  
+  subs <- if (!is.null(x$subset)) {
+    base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) 
+  } else {
+    rep(TRUE, length(onsets))
+  }
+  
+  vals <- eval(x$name, envir=model_spec$event_table,enclos=parent.frame() )
+  matrix_term(x$name, vals)
+  
+}
+
 
 # inv.logit <- plogis
 # 
