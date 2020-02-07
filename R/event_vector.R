@@ -127,6 +127,8 @@ event_table.event_term <- function(x) x$event_table
 #' @param name the name of the event variable
 #' @param onsets the event onsets.
 #' @param blockids the block ids associated with each event (must be non-decreasing)
+#' @param durations the duration of each event.
+#' @param subset a \code{logical} vector indicating the subset of events to keep
 #' 
 #' @examples 
 #' 

@@ -160,7 +160,7 @@ evaluate.regressor <- function(x, grid, precision=.2) {
     apply(RANN::nn2(matrix(grid), matrix(x$onsets), k=1)$nn.idx, 1, min)
   }
   
-  valid <- x$onsets >= (grid[1]-16) & x$onsets < grid[length(grid)]
+  valid <- x$onsets >= (grid[1]-16) & x$onsets <= grid[length(grid)]
  
  
   valid.ons <- x$onsets[valid]

@@ -234,6 +234,19 @@ test_that("facedes model with bspline parametric basis", {
   expect_equal(dim(dmat), c(sum(sframe$blocklens), 3))
 })
 
+test_that("rcan create an identity regressor", {
+  onsets <- seq(0,9,by=1)
+  durations=1
+  
+  reg1 <- regressor(onsets, HRF_IDENT, duration=0, amplitude=1:10)
+  
+  expect_equal(class(reg1)[1],"regressor")
+  expect_equal(length(reg1$onsets), length(onsets))
+  expect_equal(length(reg1$duration), length(onsets))
+  expect_true(durations(reg1)[1] == 0)
+  expect_true(amplitudes(reg1)[1] == 1)
+})
+
 
 
 
