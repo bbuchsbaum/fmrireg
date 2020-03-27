@@ -62,7 +62,7 @@ single_trial_regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=
 #' reg2 <- regressor(c(10,12,14,16,18, 40), HRF_SPMG1, duration=3, summate=FALSE)
 #' pred2 <- evaluate(reg2, seq(0,100,by=2))
 #' stopifnot(max(pred) > max(pred2))
-regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=24, summate=TRUE) {
+regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=40, summate=TRUE) {
   if (length(duration) == 1) {
     duration = rep(duration, length(onsets))
   }
