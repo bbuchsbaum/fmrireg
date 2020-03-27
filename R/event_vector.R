@@ -133,6 +133,7 @@ event_table.event_term <- function(x) x$event_table
 #' @examples 
 #' 
 #' ev_fac <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), blockids=rep(1,3))
+#' ev_fac2 <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), blockids=rep(1,3), subset=c(TRUE, TRUE, FALSE))
 #' ev_numeric <- EV(c(1,2,3), "fac", onsets=c(1,10,20), blockids=rep(1,3))
 #' @export
 EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,length(onsets))) {
@@ -154,7 +155,7 @@ EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,leng
   } else if (is.matrix(vals)) {
     event_matrix(vals[subset,], name, onsets[subset], blockids[subset], durations[subset])
   } else if (is.factor(vals)) {
-    event_factor(vals[subset], name, onsets[subset], blockids[subset], durations[subset])
+    event_factor(droplevels(vals[subset]), name, onsets[subset], blockids[subset], durations[subset])
   } else {
     stop(paste("cannot create event_seq from type: ", typeof(vals)))
   }
