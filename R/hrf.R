@@ -24,11 +24,11 @@ NULL
 #' 
 #' vals <- grf(0:20)
 #' @export
-gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, half_life=Inf, 
+gen_hrf <- function(hrf, lag=0, width=0, precision=.1, half_life=Inf, 
                     summate=TRUE, normalize=FALSE, name="gen_hrf", ...) {
   .orig <- list(...)
   
-  if (!is.null(width)) {
+  if (width != 0) {
     assert_that(width > 0)
     hrf <- gen_hrf_blocked(hrf, width=width, precision=precision, 
                            summate=summate, normalize=normalize)
@@ -113,7 +113,7 @@ gen_hrf_set <- function(..., span=32, name="hrf_set") {
 #' @export
 #' @rdname HRF
 HRF <- function(fun, name, nbasis=1, span=24, param_names=NULL) {
-  vals <- fun(0:span)
+  vals <- fun(seq(0,span))
 
   if (nbasis == 1) {
     peak <- max(vals, na.rm=TRUE)
@@ -281,7 +281,7 @@ hrf_bspline <- function(t, span=20, N=5, degree=3) {
 	
 	knots <- if (nIknots > 0) {
 				knots <- seq.int(from = 0, to = 1, length.out = nIknots + 2)[-c(1, nIknots + 2)]
-				stats::quantile(0:span, knots)
+				stats::quantile(seq(0,span), knots)
 			} else {
 				0
 			}
@@ -343,11 +343,11 @@ HRF_GAMMA <- HRF(hrf_gamma, "gamma", param_names=c("shape", "rate"))
 
 #' @export
 #' @rdname HRF
-HRF_GAUSSIAN <- HRF(hrf_gaussian, "gaussian", param_names=c("mean", "sd"))
+HRF_GAUSSIAN <- HRF(hrf_gaussian, name="gaussian", param_names=c("mean", "sd"))
 
 #' @export
 #' @rdname HRF
-HRF_BSPLINE <- HRF(gen_hrf(hrf_bspline), "bspline", nbasis=5)
+HRF_BSPLINE <- HRF(gen_hrf(hrf_bspline), name="bspline", nbasis=5)
 
 # @export
 # @rdname HRF
