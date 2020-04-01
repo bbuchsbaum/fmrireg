@@ -58,7 +58,9 @@ gen_hrf <- function(hrf, lag=0, width=NULL, precision=.1, half_life=Inf,
   } else {
     stop("gen_hrf: constructed hrf is invalid")
   }
-  HRF(f, name=name, nbasis=nb)
+  
+  span <- 16 + lag + (width*2)
+  HRF(f, name=name, nbasis=nb, span=span)
 }
 
 gen_empirical_hrf <- function(t, y, name="empirical_hrf") {
@@ -73,6 +75,8 @@ gen_empirical_hrf <- function(t, y, name="empirical_hrf") {
 #' This function is used to create arbitrary sets of basis functions for fMRI modeling.
 #' 
 #' @param ... a list of functions f(t) mapping from time to amplitude 
+#' @param span the span in seconds of the HRF
+#' @param name the name of the HRF
 #' @examples 
 #' 
 #' hrf1 <- hrf_spmg1 %>% gen_hrf(lag=0)
@@ -81,14 +85,14 @@ gen_empirical_hrf <- function(t, y, name="empirical_hrf") {
 #' 
 #' hset <- gen_hrf_set(hrf1,hrf2,hrf3)
 #' @export
-gen_hrf_set <- function(..., name="hrf_set") {
+gen_hrf_set <- function(..., span=32, name="hrf_set") {
   hrflist <- list(...)
   assertthat::assert_that(all(sapply(hrflist, is.function)))
   f <- function(t) {
     do.call("cbind", lapply(hrflist, function(fun) fun(t)))
   }
   
-  HRF(f, name=name, nbasis=length(hrflist))
+  HRF(f, name=name, span=32, nbasis=length(hrflist))
 }
 
 
@@ -99,6 +103,7 @@ gen_hrf_set <- function(..., name="hrf_set") {
 #' @param fun hemodynamic response function mapping from time --> BOLD response
 #' @param name the name of the function
 #' @param nbasis the number of basis functions, e.g. the columnar dimension of the hrf.
+#' @param span the span in seconds of the HRF
 #' @param param_names the names of the parameters
 #' @examples 
 #' 
@@ -107,8 +112,8 @@ gen_hrf_set <- function(..., name="hrf_set") {
 #' 
 #' @export
 #' @rdname HRF
-HRF <- function(fun, name, nbasis=1, param_names=NULL) {
-  vals <- fun(0:30)
+HRF <- function(fun, name, nbasis=1, span=24, param_names=NULL) {
+  vals <- fun(0:span)
 
   if (nbasis == 1) {
     peak <- max(vals, na.rm=TRUE)
@@ -121,6 +126,7 @@ HRF <- function(fun, name, nbasis=1, param_names=NULL) {
   
   structure(fun, name=name, 
             nbasis=as.integer(nbasis), 
+            span=span,
             param_names=param_names, 
             scale_factor=scale_factor, 
             class=c("HRF", "function"))
@@ -459,6 +465,8 @@ getHRF <- function(name=c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline", 
 
 
 
+
+#### TODO character variables need an "as.factor"
 
 
 #' hrf

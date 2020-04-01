@@ -150,12 +150,13 @@ EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,leng
   
   if (inherits(vals, "ParametricBasis")) {
     event_basis(vals, onsets, blockids, durations,subset)	
-  } else if (is.vector(vals)) {
+  } else if (is.factor(vals) || is.character(vals)) {
+    vals <- factor(as.character(vals)[subset])
+    event_factor(vals, name, onsets[subset], blockids[subset], durations[subset])
+  }else if (is.numeric(vals)) {
     event_variable(vals[subset], name, onsets[subset], blockids[subset], durations[subset])
   } else if (is.matrix(vals)) {
     event_matrix(vals[subset,], name, onsets[subset], blockids[subset], durations[subset])
-  } else if (is.factor(vals)) {
-    event_factor(droplevels(vals[subset]), name, onsets[subset], blockids[subset], durations[subset])
   } else {
     stop(paste("cannot create event_seq from type: ", typeof(vals)))
   }
@@ -179,7 +180,7 @@ EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,leng
 event_factor <- function(fac, name, onsets, blockids=rep(1,length(fac)), durations=rep(0, length(fac))) {
   if (!is.factor(fac)) {
     warning("argument 'fac' is not a factor, converting to factor")
-    fac <- as.factor(factor())
+    fac <- factor(as.character(fac))
   }
   
   ret <- .checkEVArgs(name, fac, onsets, blockids, durations)

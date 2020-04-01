@@ -71,7 +71,7 @@ regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=40, s
     amplitude = rep(as.vector(amplitude), length(onsets))
   }
   
-  if (any(duration) > span/2) {
+  if (any(duration > span/2)) {
     span <- max(duration) * 2
   }
   
