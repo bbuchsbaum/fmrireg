@@ -171,7 +171,7 @@ makeDeriv <- function(HRF, n=1) {
 #' hrf_lag5(0:20)
 #' @export
 #' 
-#' TODO deal with nbasis arg in ...
+# TODO deal with nbasis arg in ...
 gen_hrf_lagged <- function(hrf, lag=2,...) {
   force(hrf)
   
