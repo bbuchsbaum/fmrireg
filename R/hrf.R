@@ -579,36 +579,6 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
 }
 
 
-#' #' @inheritParams hrf
-#' hrf_implicit <- function(basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
-#'                               nbasis=1, id=NULL, lag=0, summate=TRUE) {
-#'   
-#' 
-#'   if (is.null(id)) {
-#'     id <- "implicit"
-#'   }  
-#'   
-#'   basis <- make_hrf(basis, lag)
-#'   
-#'   ret <- list(
-#'     name="implicit", ## hrf(x,y), where termname = "x::y"
-#'     id=id, ## hrf(x), id by default is "x::y"
-#'     varnames=list(), ## list of all variables (e.g. list(x,y))
-#'     vars=list(), ## list of unparsed vars
-#'     label="hrf_implicit()", ## "hrf(x)" the full expression
-#'     hrf=basis,
-#'     onsets=onsets,
-#'     durations=durations,
-#'     prefix=prefix,
-#'     subset=substitute(subset),
-#'     precision=precision,
-#'     lag=lag,
-#'     summate=summate)
-#'   
-#'   class(ret) <- c("hrfspec_implicit", "hrfspec", "list")
-#'   ret
-#' }
-
 #' @keywords internal
 construct_event_term <- function(x, model_spec, onsets) {
   ## TODO what if we are missing a block id?
