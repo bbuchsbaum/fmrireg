@@ -4,8 +4,14 @@
 \alias{fmri_mem_dataset}
 \title{fmri_mem_dataset}
 \usage{
-fmri_mem_dataset(scans, mask, TR, event_table = data.frame(),
-  base_path = ".", censor = NULL)
+fmri_mem_dataset(
+  scans,
+  mask,
+  TR,
+  event_table = data.frame(),
+  base_path = ".",
+  censor = NULL
+)
 }
 \arguments{
 \item{scans}{a \code{list} of objects of class \code{\linkS4class{NeuroVec}}}

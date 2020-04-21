@@ -4,8 +4,14 @@
 \alias{regressor}
 \title{contract a regressor object}
 \usage{
-regressor(onsets, hrf = HRF_SPMG1, duration = 0, amplitude = 1,
-  span = 24, summate = TRUE)
+regressor(
+  onsets,
+  hrf = HRF_SPMG1,
+  duration = 0,
+  amplitude = 1,
+  span = 40,
+  summate = TRUE
+)
 }
 \arguments{
 \item{hrf}{a hemodynamic response function, e.g. \code{HRF_SPMG1} or costum \code{HRF}}

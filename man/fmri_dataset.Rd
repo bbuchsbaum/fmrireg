@@ -4,8 +4,15 @@
 \alias{fmri_dataset}
 \title{An fMRI dataset consisting of a set of scans as files, design information, and other data.}
 \usage{
-fmri_dataset(scans, mask, TR, run_length, event_table = data.frame(),
-  base_path = ".", censor = NULL)
+fmri_dataset(
+  scans,
+  mask,
+  TR,
+  run_length,
+  event_table = data.frame(),
+  base_path = ".",
+  censor = NULL
+)
 }
 \arguments{
 \item{scans}{a vector of file names of the images comprising the dataset}

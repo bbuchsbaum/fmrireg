@@ -27,10 +27,6 @@ longnames(x, ...)
 \item{x}{the object}
 
 \item{...}{extra args}
-
-\item{x}{the object}
-
-\item{...}{extra args}
 }
 \description{
 longnames

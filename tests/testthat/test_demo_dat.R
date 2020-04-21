@@ -93,3 +93,46 @@ test_that("demo1", {
   }
   
 })
+
+test_that("demo2", {
+  dat$design$onset1 <- dat$design$onset1/1000
+  dset <- matrix_dataset(dat$mat, TR=1.5, run_length=rep(197,6), event_table=dat$design)
+  nuis <- pick_confounds(dat$confounds, npcs=5)
+  sframe <- sampling_frame(rep(197,6), TR=1.5)
+  cond <- onset1 ~ trialwise(basis=hrf_time)
+  
+  
+ 
+  ev <- event_model(onset1 ~ trialwise(basis=hrf_time), data=dset$event_table, 
+                    sampling_frame=sframe, block = ~ block)
+  
+  basedeg=5
+  bmod <- baseline_model("bs", degree=basedeg, sframe=dset$sampling_frame, 
+                         nuisance_list=nuis)
+  
+  X_base <- as.matrix(design_matrix(bmod))
+  X_cond <- as.matrix(design_matrix(ev))
+  
+  
+  ### send in a set of factors
+  ### will estimate each level of the crossed factor separately, with the rest of the factor modelled
+  ### separately. Can be done in parallel.
+  
+  res <- estimate_hrf(cond, fixed=NULL, block= ~ block, dataset=dset)
+  
+  X <- dat$mat
+  Xr <- resid(lsfit(X_base, X, intercept = FALSE))
+  
+  pres <- neuroca::pca(Xr, ncomp=100, preproc=standardize())
+  
+  
+  ps <- lapply(1:12, function(i) {
+    v <- scores(pres)[,i]
+    gam.1 <- gam(v ~ s(X_cond) - 1)
+  
+    time <- seq(0,20,by=1)
+    p <- predict(gam.1, data.frame(X_cond=time))
+  })
+  
+})
+

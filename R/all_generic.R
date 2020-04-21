@@ -24,6 +24,8 @@ get_data <- function(x, ...) UseMethod("get_data")
 get_mask <- function(x, ...) UseMethod("get_mask")
 
 
+
+
 #' get_formula
 #' 
 #' @param x the object

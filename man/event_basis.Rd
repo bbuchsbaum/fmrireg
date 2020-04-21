@@ -4,8 +4,13 @@
 \alias{event_basis}
 \title{event_basis}
 \usage{
-event_basis(basis, onsets, blockids = 1, durations = NULL,
-  subset = rep(TRUE, length(onsets)))
+event_basis(
+  basis,
+  onsets,
+  blockids = 1,
+  durations = NULL,
+  subset = rep(TRUE, length(onsets))
+)
 }
 \arguments{
 \item{basis}{the basis object}

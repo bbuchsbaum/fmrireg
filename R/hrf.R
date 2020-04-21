@@ -170,6 +170,8 @@ makeDeriv <- function(HRF, n=1) {
 #' hrf_lag5 <- gen_hrf_lagged(HRF_SPMG1, lag=5)
 #' hrf_lag5(0:20)
 #' @export
+#' 
+#' TODO deal with nbasis arg in ...
 gen_hrf_lagged <- function(hrf, lag=2,...) {
   force(hrf)
   
@@ -443,7 +445,7 @@ nbasis.HRF <- function(x) attr(x, "nbasis")
 #' @export
 getHRF <- function(name=c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs"), nbasis=5, lag=0, ...) {
   name <- match.arg(name)
-	
+	nb <- nbasis
 	hrf <- switch(name,
 			gamma=HRF(gen_hrf_lagged(hrf_gamma,lag=lag),name="gamma"),
 			gam=HRF(gen_hrf_lagged(hrf_gamma,lag=lag),name="gamma"),
@@ -451,9 +453,9 @@ getHRF <- function(name=c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline", 
 			spmg1=HRF(gen_hrf_lagged(hrf_spmg1,lag=lag), name="spmg1", nbasis=1),
 			spmg2=HRF(gen_hrf_lagged(HRF_SPMG2,lag=lag), name="spmg2", nbasis=2),
 			spmg3=HRF(gen_hrf_lagged(HRF_SPMG3,lag=lag), name="spmg3", nbasis=3),
-			tent=HRF(gen_hrf_lagged(hrf_bspline, lag=lag, N=nbasis,degree=1,...), name="bspline", nbasis=nbasis),
-			bs=HRF(gen_hrf_lagged(hrf_bspline, lag=lag, N=nbasis,...), name="bspline", nbasis=nbasis),
-			bspline=HRF(gen_hrf_lagged(hrf_bspline, lag=lag, N=nbasis,...), name="bspline", nbasis=nbasis))
+			tent=HRF(gen_hrf_lagged(hrf_bspline, lag=lag,degree=1,...), name="bspline", nbasis=nbasis),
+			bs=HRF(gen_hrf_lagged(hrf_bspline, lag=lag, ...), name="bspline", nbasis=nbasis),
+			bspline=HRF(gen_hrf_lagged(hrf_bspline, lag=lag,...), name="bspline", nbasis=nbasis))
 	
 	if (is.null(hrf)) {
 		stop("could not find create hrf named: ", name)
@@ -463,8 +465,35 @@ getHRF <- function(name=c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline", 
 }
 
 
-
-
+#' @keywords internal
+make_hrf <- function(basis, lag) {
+  if (!is.numeric(lag) || length(lag) > 1) {
+    stop("hrf: 'lag' must be a numeric scalar")
+  }
+  
+  if (is.character(basis)) {
+    getHRF(basis, nbasis=nbasis, lag=lag)
+  } else if (inherits(basis, "HRF")) {
+    if (lag > 0) {
+      HRF(gen_hrf_lagged(basis, lag=lag), name=basis$name, nbasis=basis$nbasis)
+    } else {
+      basis
+    }
+    
+  } else if (is.function(basis)) {
+    test <- basis(1:10)
+    nb <- if (is.vector(test)) {
+      1
+    } else {
+      assert_that(is.matrix(test), "basis function must return vector or matrix")
+      ncol(test) 
+    }
+    HRF(gen_hrf_lagged(basis,lag=lag), name="custom_hrf", nbasis=nb)
+  } else {
+    stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
+  }
+  
+}
 
 #### TODO character variables need an "as.factor"
 
@@ -508,26 +537,8 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
   term <- parsed$term
   label <- parsed$label
   
-  if (!is.numeric(lag) || length(lag) > 1) {
-    stop("hrf: 'lag' must be a numeric scalar")
-  }
-  
-  basis <- if (is.character(basis)) {
-    getHRF(basis, nbasis=nbasis, lag=lag)
-  } else if (inherits(basis, "HRF")) {
-    if (lag > 0) {
-      HRF(gen_hrf_lagged(basis, lag=lag), name=basis$name, nbasis=basis$nbasis)
-    } else {
-      basis
-    }
-    
-  } else if (is.function(basis)) {
-    test <- basis(1:10)
-    HRF(gen_hrf_lagged(basis,lag=lag), name="custom_hrf", nbasis=ncol(test))
-  } else {
-    stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
-  }
-  
+ 
+  basis <- make_hrf(basis, lag)
   
   varnames <- if (!is.null(prefix)) {
     paste0(prefix, "_", term)
@@ -567,8 +578,39 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
   ret
 }
 
+
+#' #' @inheritParams hrf
+#' hrf_implicit <- function(basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
+#'                               nbasis=1, id=NULL, lag=0, summate=TRUE) {
+#'   
+#' 
+#'   if (is.null(id)) {
+#'     id <- "implicit"
+#'   }  
+#'   
+#'   basis <- make_hrf(basis, lag)
+#'   
+#'   ret <- list(
+#'     name="implicit", ## hrf(x,y), where termname = "x::y"
+#'     id=id, ## hrf(x), id by default is "x::y"
+#'     varnames=list(), ## list of all variables (e.g. list(x,y))
+#'     vars=list(), ## list of unparsed vars
+#'     label="hrf_implicit()", ## "hrf(x)" the full expression
+#'     hrf=basis,
+#'     onsets=onsets,
+#'     durations=durations,
+#'     prefix=prefix,
+#'     subset=substitute(subset),
+#'     precision=precision,
+#'     lag=lag,
+#'     summate=summate)
+#'   
+#'   class(ret) <- c("hrfspec_implicit", "hrfspec", "list")
+#'   ret
+#' }
+
 #' @keywords internal
-construct_event_term <- function(x, model_spec) {
+construct_event_term <- function(x, model_spec, onsets) {
   ## TODO what if we are missing a block id?
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
@@ -590,8 +632,8 @@ construct_event_term <- function(x, model_spec) {
 
 #' @export
 construct.hrfspec <- function(x, model_spec) {
-  
-  et <- construct_event_term(x,model_spec)
+  ons <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
+  et <- construct_event_term(x,model_spec, ons)
   
   cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate)
   
@@ -612,7 +654,7 @@ construct.hrfspec <- function(x, model_spec) {
 
 .hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1, lag=0, termsep="::") {
   vars <- as.list(substitute(list(...)))[-1] 
-  browser()
+  #browser()
   if (length(vars) > 0) {
     parsed <- parse_term(vars, "hrf")
     term <- parsed$term
@@ -775,8 +817,11 @@ construct.trialwisespec <- function(x, model_spec) {
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
   
-  trial_index <- factor(seq(1, length(onsets)))
-  
+
+  tind <- seq(1, length(onsets))
+  trial_index <- formatC(seq(1, length(onsets)), width = nchar(as.character(max(tind))), format = "d", flag = "0")
+  #trial_index <- factor(seq(1, length(onsets)))
+  trial_index <- factor(trial_index)
   varlist <- list(trial_index)
   names(varlist) <- x$varname
   

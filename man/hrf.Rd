@@ -4,9 +4,20 @@
 \alias{hrf}
 \title{hrf}
 \usage{
-hrf(..., basis = "spmg1", onsets = NULL, durations = NULL,
-  prefix = NULL, subset = NULL, precision = 0.2, nbasis = 1,
-  contrasts = NULL, id = NULL, lag = 0, summate = TRUE)
+hrf(
+  ...,
+  basis = "spmg1",
+  onsets = NULL,
+  durations = NULL,
+  prefix = NULL,
+  subset = NULL,
+  precision = 0.2,
+  nbasis = 1,
+  contrasts = NULL,
+  id = NULL,
+  lag = 0,
+  summate = TRUE
+)
 }
 \arguments{
 \item{...}{the variable names, all of which must be present in the enclosing environment (e.g. an \code{event_model} object)}
@@ -41,7 +52,7 @@ This function is to be used in formulas for fitting fucntions, e.g. onsets ~ hrf
 }
 \examples{
 
-## 'hrf' is typically used in the context of \\code{formula}s.
+## 'hrf' is typically used in the context of \code{formula}s.
 hspec <- hrf(x)
 hspec2 <- hrf(x, basis="gamma")
 hspec3 <- hrf(x, basis="bs", nbasis=4)

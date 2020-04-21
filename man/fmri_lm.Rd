@@ -4,9 +4,17 @@
 \alias{fmri_lm}
 \title{fmri_lm}
 \usage{
-fmri_lm(formula, block, baseline_model = NULL, dataset, durations,
-  drop_empty = TRUE, contrasts = NULL, strategy = c("runwise",
-  "chunkwise"), nchunks = 10)
+fmri_lm(
+  formula,
+  block,
+  baseline_model = NULL,
+  dataset,
+  durations,
+  drop_empty = TRUE,
+  contrasts = NULL,
+  strategy = c("runwise", "chunkwise"),
+  nchunks = 10
+)
 }
 \arguments{
 \item{formula}{the model furmula for experimental events}

@@ -4,8 +4,13 @@
 \alias{event_factor}
 \title{event_factor}
 \usage{
-event_factor(fac, name, onsets, blockids = rep(1, length(fac)),
-  durations = rep(0, length(fac)))
+event_factor(
+  fac,
+  name,
+  onsets,
+  blockids = rep(1, length(fac)),
+  durations = rep(0, length(fac))
+)
 }
 \arguments{
 \item{fac}{a factor}

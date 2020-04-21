@@ -140,3 +140,57 @@ estimate_betas <- function(fixed, ran, block, dataset,
   ret
   
 }
+
+
+estimate_hrf <- function(form, fixed, block, dataset, 
+                           bs=c("tp", "ts", "cr", "ps"), 
+                           rsam=seq(0,20,by=1),
+                           basedeg=5, nuisance_list=NULL) {
+  dset <- dataset
+  bvec <- get_data(dset)
+  mask <- get_mask(dset)
+  
+  onset_var <- lazyeval::f_lhs(form)
+  dvars <- lazyeval::f_rhs(form)
+  
+  
+  bmod <- baseline_model("bs", degree=basedeg, sframe=dset$sampling_frame, nuisance_list=nuisance_list)
+  
+  if (!is.null(fixed)) {
+    emod_fixed <- event_model(fixed, data=dset$event_table, block=block, sampling_frame=dset$sampling_frame)
+    X_fixed <- as.matrix(design_matrix(emat_fixed))
+    has_fixed=TRUE
+  } else {
+    has_fixed=FALSE
+  }
+  
+  emat_cond <- event_model(cond, data=dset$event_table, block=block, 
+                           sampling_frame=dset$sampling_frame)
+  
+
+  X_base <- as.matrix(design_matrix(bmod))
+  X_cond <- as.matrix(design_matrix(emat_cond))
+  #browser()
+  res <- do.call(cbind, furrr::future_map(neuroim2::vectors(bvec, subset=which(mask>0)), function(v) {
+    gam.1 <- if (has_fixed) {
+      gam(v ~ s(X_cond, bs=bs) + X_fixed + X_base)
+    } else {
+      gam(v ~ s(X_cond, bs=bs) + X_base)
+    }
+    
+    time <- seq(0,20,by=1)
+    xb <- matrix(colMeans(X_base), length(time),ncol(X_base), byrow=TRUE)
+    predict(gam.1, list(X_cond=time, X_base=xb))
+  }))
+  
+  do.call(cbind, res)
+  
+}
+  
+  
+
+  
+  
+  
+                             
+

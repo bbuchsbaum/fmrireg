@@ -33,7 +33,7 @@ Imports:
     rrBLUP,
     shiny,
     tidyr
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0
 Suggests: testthat,
     knitr,
     rmarkdown,

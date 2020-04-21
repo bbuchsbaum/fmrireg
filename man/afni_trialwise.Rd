@@ -4,9 +4,16 @@
 \alias{afni_trialwise}
 \title{construct an native AFNI hrf specification for '3dDeconvolve' and indifdually modulated events using the 'stim_times_IM' argument.}
 \usage{
-afni_trialwise(label, basis = c("spmg1", "block", "dmblock", "gamma",
-  "wav"), onsets = NULL, durations = 0, subset = NULL, id = NULL,
-  start = NULL, stop = NULL)
+afni_trialwise(
+  label,
+  basis = c("spmg1", "block", "dmblock", "gamma", "wav"),
+  onsets = NULL,
+  durations = 0,
+  subset = NULL,
+  id = NULL,
+  start = NULL,
+  stop = NULL
+)
 }
 \arguments{
 \item{basis}{the impulse response function or the name of a pre-supplied function, one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian".}

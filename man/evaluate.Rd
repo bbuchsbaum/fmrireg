@@ -8,15 +8,22 @@
 \usage{
 evaluate(x, grid, ...)
 
-\method{evaluate}{HRF}(x, grid, amplitude = 1, duration = 0,
-  precision = 0.2, summate = TRUE, normalize = FALSE)
+\method{evaluate}{HRF}(
+  x,
+  grid,
+  amplitude = 1,
+  duration = 0,
+  precision = 0.2,
+  summate = TRUE,
+  normalize = FALSE
+)
 
 \method{evaluate}{regressor}(x, grid, precision = 0.2)
 }
 \arguments{
 \item{x}{the object to evaluate}
 
-\item{grid}{the sampling grid}
+\item{grid}{the sampling grid. A vector of real values in seconds.}
 
 \item{...}{extra args}
 
@@ -24,15 +31,11 @@ evaluate(x, grid, ...)
 
 \item{duration}{the duration of the event}
 
-\item{precision}{the temporal resolution used for computing summed responses when duration > 0}
+\item{precision}{the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}}
 
 \item{summate}{whether the HRF response increases its amplitude as a function of stimulus duration.}
 
 \item{normalize}{scale output so that peak is 1.}
-
-\item{grid}{the sampling grid. A vector of real values in seconds.}
-
-\item{precision}{the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}}
 }
 \description{
 given an object to be evaluated and a an input sample ("grid"), evaluate the object.

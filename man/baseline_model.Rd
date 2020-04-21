@@ -4,8 +4,13 @@
 \alias{baseline_model}
 \title{construct a baseline model to model noise and other non-event-related sources of variance}
 \usage{
-baseline_model(basis = c("poly", "bs", "ns"), degree = 1, sframe,
-  intercept = TRUE, nuisance_list = NULL)
+baseline_model(
+  basis = c("poly", "bs", "ns"),
+  degree = 1,
+  sframe,
+  intercept = TRUE,
+  nuisance_list = NULL
+)
 }
 \arguments{
 \item{basis}{the basis function type}

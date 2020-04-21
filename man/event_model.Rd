@@ -4,8 +4,15 @@
 \alias{event_model}
 \title{event_model}
 \usage{
-event_model(formula, data, block, sampling_frame, drop_empty = TRUE,
-  durations = 0, contrasts = NULL)
+event_model(
+  formula,
+  data,
+  block,
+  sampling_frame,
+  drop_empty = TRUE,
+  durations = 0,
+  contrasts = NULL
+)
 }
 \arguments{
 \item{formula}{the model formula}

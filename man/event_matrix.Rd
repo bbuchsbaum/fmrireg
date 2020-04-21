@@ -4,8 +4,7 @@
 \alias{event_matrix}
 \title{event_matrix}
 \usage{
-event_matrix(mat, name, onsets, blockids = rep(1, ncol(mat)),
-  durations = NULL)
+event_matrix(mat, name, onsets, blockids = rep(1, ncol(mat)), durations = NULL)
 }
 \arguments{
 \item{mat}{a matrix of values, one row per event, indicating the amplitude/intensity of each event.}

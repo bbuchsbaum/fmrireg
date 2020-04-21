@@ -109,7 +109,7 @@ evaluate.single_trial_regressor <- function(x, grid, precision=.25) {
   grid.idx <- which(delta >= 0 & delta <= x$span)
   relons <- grid[grid.idx] - x$onsets    
   resp <- evaluate(x$hrf, relons, amplitude=x$amplitude, duration=x$amplitude, precision=precision)   
-  
+
   outmat <- matrix(0, length(grid), nb)
   outmat[grid.idx,1:nb] <- resp
   
@@ -177,8 +177,7 @@ evaluate.regressor <- function(x, grid, precision=.2) {
     warning("none of the regressor onsets intersect with sampling 'grid', evaluating to zero at all times.")
     return(matrix(0, length(grid), nb))
   }
-  
-  
+
   nidx <- nidx[valid]
 
   for (i in seq_along(valid.ons)) { 

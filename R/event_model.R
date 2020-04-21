@@ -92,7 +92,8 @@ blocklens.event_model <- function(x) {
 
 #' @keywords internal
 construct_model <- function(x) {
- 
+  #browser()
+  assert_that(is.numeric(x$onsets))
   #term_names <- sapply(x$event_spec$rhs, "[[", "id")
   #browser()
   term_names <- sapply(x$event_spec$rhs, "[[", "name")
@@ -105,6 +106,7 @@ construct_model <- function(x) {
     term_names <- paste0(term_names, "_", dup_ids)
   } 
   
+
   terms <- lapply(x$event_spec$rhs, function(m) construct(m,x))
   names(terms) <- term_names
   

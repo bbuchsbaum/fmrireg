@@ -4,8 +4,13 @@
 \alias{getHRF}
 \title{getHRF}
 \usage{
-getHRF(name = c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline",
-  "gaussian", "tent", "bs"), nbasis = 5, lag = 0, ...)
+getHRF(
+  name = c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent",
+    "bs"),
+  nbasis = 5,
+  lag = 0,
+  ...
+)
 }
 \arguments{
 \item{name}{the name of the hrf function}

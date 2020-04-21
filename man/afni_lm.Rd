@@ -4,8 +4,15 @@
 \alias{afni_lm}
 \title{afni_lm}
 \usage{
-afni_lm(fmri_mod, dataset, working_dir = ".", polort = -1, jobs = 1,
-  censor = NULL, options = list())
+afni_lm(
+  fmri_mod,
+  dataset,
+  working_dir = ".",
+  polort = -1,
+  jobs = 1,
+  censor = NULL,
+  options = list()
+)
 }
 \arguments{
 \item{fmri_mod}{an \code{fmri_model} object}
