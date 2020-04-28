@@ -14,6 +14,18 @@ test_that("a 2-by-2 Fcontrast", {
   expect_true(!is.null(Fcontrasts(et)))
 })
 
+test_that("a 2-by-3 Fcontrast", {
+  F_a <- factor(rep(letters[1:2], 9))
+  F_b <- factor(rep(c("V1", "V2", "V3"), each=6))
+ 
+  onsets <- seq(1, length(F_a))
+  blockids <- rep(1, length(onsets))
+  
+  et <- event_term(list(Fa=F_a, Fb=F_b), onsets, blockids)
+  expect_true(!is.null(Fcontrasts(et)))
+})
+
+
 test_that("a 3-by-2 Fcontrast", {
   F_a <- factor(rep(letters[1:2], 8))
   F_b <- factor(rep(c("V1", "V2"), each=8))

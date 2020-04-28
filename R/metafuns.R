@@ -2,6 +2,9 @@
 
 #' @keywords internal
 meta_stouffer <- function(pval, se) {
+  if (any(pval == 0)) {
+    pval[pval == 0] <- .Machine$double.eps
+  }
   inv_var <- 1/(se^2)
   wts <- inv_var/rowSums(inv_var)
   zscore <- qnorm(1-pval)
@@ -43,6 +46,7 @@ meta_fixef <- function(beta,se) {
 
 #' @keywords internal
 meta_Fcontrasts <- function(fres) {
+  
   ncon <- length(fres[[1]])
   res <- lapply(seq(1,ncon), function(i) {
     pval <- do.call(cbind, lapply(fres, function(x) as.vector(x[[i]]$prob())))

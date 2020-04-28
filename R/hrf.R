@@ -622,7 +622,7 @@ construct.hrfspec <- function(x, model_spec) {
 }
 
 
-.hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1, lag=0, termsep="::") {
+.hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1, lag=0, termsep=":") {
   vars <- as.list(substitute(list(...)))[-1] 
   #browser()
   if (length(vars) > 0) {

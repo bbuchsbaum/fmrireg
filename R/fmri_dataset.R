@@ -14,7 +14,7 @@ default_config <- function() {
 #' @param file_name name of configuration file
 #' @param base_path the file path to be prepended to relative file names
 #' @importFrom assertthat assert_that
-#' @importFrom tibble as_data_frame
+#' @importFrom tibble as_tibble
 #' @export
 read_fmri_config <- function(file_name, base_path=NULL) {
   print(file_name)
@@ -56,7 +56,7 @@ read_fmri_config <- function(file_name, base_path=NULL) {
   
   dname <- file.path(env$base_path, env$event_table)
   assert_that(file.exists(dname))
-  env$design <- tibble::as_data_frame(read.table(dname, header=TRUE))
+  env$design <- tibble::as_tibble(read.table(dname, header=TRUE))
 
   out <- as.list(env)
   class(out) <- c("fmri_config", "list")
@@ -162,7 +162,38 @@ fmri_mem_dataset <- function(scans, mask, TR,
   ret
 }
 
-
+#' @inheritParams fmri_dataset
+#' @param lvec an instance of class \code{LatentNeuroVec}
+#' @examples 
+#' 
+#' a matrix with 100 rows and 1000 columns (voxels)
+#' X <- matrix(rnorm(100*1000), 100, 1000)
+#' pres <- prcomp(X)
+#' basis <- pres$x[,1:25]
+#' loadings <- pres$rotation[,1:25]
+#' offset <- colMeans(X)
+#' lvec <- LatentNeuroVec(basis, loadings, NeuroSpace(c(10,10,10,100)), mask=rep(TRUE,1000), offset=offset)
+#' dset <- latent_dataset(lvec, TR=2, run_length=100)
+#' 
+latent_dataset <- function(lvec, TR, run_length, event_table=data.frame()) {
+  assert_that(sum(run_length) == dim(lvec)[4])
+  
+  frame <- sampling_frame(run_length, TR)
+  
+  ret <- list(
+    lvec=lvec,
+    datamat=lvec@basis,
+    TR=TR,
+    nruns=length(run_length),
+    event_table=event_table,
+    sampling_frame=frame,
+    mask=rep(1,ncol(lvec@basis))
+  )
+  
+  class(ret) <- c("latent_dataset", "matrix_dataset", "fmri_dataset", "list")
+  ret
+  
+}
 
 
 
@@ -218,6 +249,13 @@ fmri_dataset <- function(scans, mask, TR,
 }
 
 
+
+#' @export
+#' @importFrom neuroim2 NeuroVecSeq 
+get_data.latent_dataset <- function(x, ...) {
+  x$lvec@basis
+}
+
 #' @export
 #' @importFrom neuroim2 NeuroVecSeq 
 get_data.fmri_mem_dataset <- function(x, ...) {
@@ -243,7 +281,6 @@ get_mask.fmri_file_dataset <- function(x) {
 }
 
 
-
 #' @export
 get_mask.fmri_mem_dataset <- function(x) {
   x$mask
@@ -252,6 +289,11 @@ get_mask.fmri_mem_dataset <- function(x) {
 #' @export
 get_mask.matrix_dataset <- function(x) {
   x$mask
+}
+
+#' @export
+get_mask.latent_dataset <- function(x) {
+  x$lvec@mask
 }
 
 
@@ -281,7 +323,7 @@ chunk_iter <- function(x, nchunks, get_chunk) {
     }
   }
   
-  iter <- list(nextElem=nextEl)
+  iter <- list(nchunks=nchunks, nextElem=nextEl)
   class(iter) <- c("chunkiter", "abstractiter", "iter")
   iter
 }
@@ -474,6 +516,21 @@ print.matrix_dataset <- function(object) {
   print(object$sampling_frame)
   cat("  event_table: ", "\n")
   print(object$event_table)
+}
+
+#' @export
+print.latent_dataset <- function(object) {
+  cat("latent_dataset", "\n")
+  cat("  number of runs: ", object$nruns, "\n")
+  cat("  number of rows: ", nrow(object$datamat), "\n")
+  cat("  number of latent variables: ", ncol(object$datamat), "\n")
+  print(object$sampling_frame)
+  cat("  event_table: ", "\n")
+  print(object$event_table)
+}
+
+print.chunkiter <- function(object) {
+  cat(paste("chunk iterator with", object$nchunks, " chunks"))
 }
 
 

@@ -21,6 +21,7 @@ fmri_rlm <- function(formula, block_formula, baseline_model=NULL, dataset,
  
   strategy <- match.arg(strategy)
   
+  
   assert_that(inherits(dataset, "fmri_dataset"))
   fobj <- .setup_model(dataset, formula, block_formula, baseline_model, contrasts)
 
@@ -72,7 +73,6 @@ runwise_rlm <- function(dset, model, conlist, fcon) {
     term_matrices <- c(eterm_matrices, bterm_matrices)
     names(term_matrices) <- term_names
     
-    
     data_env <- list2env(term_matrices)
     vnames <- unlist(lapply(term_matrices, colnames))
     
@@ -82,7 +82,7 @@ runwise_rlm <- function(dset, model, conlist, fcon) {
     
       conres <- lapply(conlist, function(con) fit_contrasts(rlm.1, con, attr(con, "term_indices")))
       names(conres) <- names(conlist)
-    
+      browser()
       Fres <- lapply(fcon, function(con) fit_Fcontrasts(rlm.1, t(con), attr(con, "term_indices")))
     
       bstats <- beta_stats(rlm.1, vnames)
@@ -91,4 +91,22 @@ runwise_rlm <- function(dset, model, conlist, fcon) {
     
   }
   
+}
+
+
+## could use heavyLm ...
+#' @importFrom robustbase lmrob lmrob.control
+multiresponse_rlm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL) {
+  Y <- data_env$.y
+  rcontrol <- lmrob.control(k.max=500, maxit.scale=500)
+  ret <- lapply(1:ncol(Y), function(i) {
+    data_env[[".y"]] <- Y[,i]
+    rlm.1 <- lmrob(as.formula(form), data=data_env,
+                   control=rcontrol)
+    fit_lm_contrasts(rlm.1, conlist, fcon, vnames)
+  })
+  ret <- wrap_chunked_lm_results(ret)
+  #conres=ret$conres, Fres=ret$Fres, bstats=ret$bstats
+  ## needless name-changes translation...fixme
+  list(conres=ret$contrasts, bstats=ret$betas, Fres=ret$Fcontrasts)
 }

@@ -155,6 +155,7 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
 #' @param colind the subset column indices in the design associated with the contrast. 
 #' @importFrom purrr map_dbl
 fit_contrasts <- function(lmfit, conmat, colind) {
+  
   if (!is.matrix(conmat) && is.numeric(conmat)) {
     conmat <- t(matrix(conmat, 1, length(conmat)))
   }

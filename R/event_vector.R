@@ -92,7 +92,7 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
   len <- sum(subset)
   
-  etab <- tibble::as_data_frame(lapply(pterms, function(termname) {
+  etab <- tibble::as_tibble(lapply(pterms, function(termname) {
     if (is_continuous(evs[[termname]])) {
       rep(.sanitizeName(termname), len)
     } else {
@@ -682,10 +682,15 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate
 
 #' @export
 Fcontrasts.event_term <- function(x) {
-
+  cellcount <- attr(cells(x, drop.empty=FALSE), "count")
+  if (any(cellcount) == 0) {
+    stop("currently cannot compute Fcontrasts for non-orthogonal design.")
+  }
+  ##browser()
   ## TODO check for no empty cells, otherwise everything fails
   which_cat <- which(sapply(x$events, function(obj) is_categorical(obj)))
   assert_that(length(which_cat) > 0, msg="Fcontrasts cannot be computed for terms with no categorical variables")
+  ## factors comprising this term
   pterms <- parent_terms(x)[which_cat]
   evs <- x$events[which_cat]
   cond <- conditions(x)
@@ -695,22 +700,32 @@ Fcontrasts.event_term <- function(x) {
   Dlist <- lapply(evs, function(ev) t(-diff(diag(length(levels(ev))))))
   
   nfac <- length(Clist)
+  
+  valid_cells <- cellcount > 0
 
   main_effects <- lapply(length(Clist):1, function(i) {
-    print(i)
+    #print(i)
     Dcon <- Dlist[[i]]
     Cs <- Clist[-i]
     mats <- vector(nfac, mode="list")
     mats[[i]] <- Dcon
     mats[seq(1, nfac)[-i]] <- Cs
-    ret <- Reduce(kronecker, mats)
+    ret <- Reduce(kronecker, rev(mats))
+    if (!(all(valid_cells))) {
+      ret <- ret[valid_cells,,drop=FALSE]
+      if (ncol(ret) > 1) {
+        ret <- svd(ret)$u
+      } else {
+        ret <- scale(ret, center=TRUE, scale=FALSE)
+      }
+    }
     row.names(ret) <- cond
     ret
   })
   
-  names(main_effects) <- facnames
+  names(main_effects) <- rev(facnames)
   
-  if (length(facnames) > 1) {
+  if (length(facnames) > 1 && all(valid_cells)) {
     interactions <- vector(length(Clist)-1, mode="list")
     for (i in length(Clist):2) {
       icomb <- combn(nfac, i)

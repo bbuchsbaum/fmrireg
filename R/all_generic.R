@@ -219,9 +219,12 @@ elements <- function(x, ...) UseMethod("elements")
 #' @export
 evaluate <-  function(x, grid, ...) UseMethod("evaluate")
 
-#' global_onsets
+
+
+
+#' return the "global" onsets of an object.
 #' 
-#' return the "global" onsets of an object
+#' global onsets are defined as cumlative time over runs, i.e. it does not reset to zero for each run.
 #' 
 #' @export
 #' @param x the object
@@ -229,8 +232,10 @@ evaluate <-  function(x, grid, ...) UseMethod("evaluate")
 #' @param ... extra args
 global_onsets <-  function(x, onsets,...) UseMethod("global_onsets")
 
-#' nbasis
-#' 
+
+
+
+
 #' return number of basis functions associated with hrf.
 #' 
 #' @export
@@ -238,12 +243,11 @@ global_onsets <-  function(x, onsets,...) UseMethod("global_onsets")
 nbasis <-  function(x) UseMethod("nbasis")
 
 
-#' data_chunks
-#' 
+ 
 #' return a set of data chunks
 #' 
 #' @param x the dataset
-#' @param nchunks the numbe rof data chunks
+#' @param nchunks the number of data chunks
 #' @param ... extra args
 #' @return an \code{iterator} returning on data chunk per iteration
 #' @export
