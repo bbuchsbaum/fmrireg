@@ -277,7 +277,7 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
     if (is.null(event_indices)) {
       ret
     } else {
-      ret[,event_indices]
+      ret[,event_indices,drop=FALSE]
     }
   }
   
@@ -289,24 +289,57 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
     res <- lapply(items, function(item) {
       function() { efun(l, el, item,...) }
     })
+  
+    #if (is.vector(res)) {
+    #  res <- matrix(res, ncol=length(res))
+    #}
     names(res) <- items
     res
   }
   
   bstats <- c(do_extract(cres, "bstats", standard_cols, extract), 
               list(stat_type=cres[[1]]$bstats$stat_type))
+  
+  #cstats <- c(do_extract(cres, "conres", standard_cols, extract2), 
+  #            list(stat_type=cres[[1]]$bstats$stat_type))
  
+
   ncon <- length(cres[[1]]$conres)
   
   conres <- if (ncon >= 1) {
-    ret <- lapply(1:ncon, function(i)  {
+    cdat <- lapply(1:ncon, function(i)  {
       x <- do_extract(cres, "conres", standard_cols, extract2, i)
       c(x, list(stat_type=cres[[1]]$conres[[i]]$stat_type))
     })
     
-    names(ret) <- names(cres[[1]]$conres)
-    ret
+    names(cdat) <- names(cres[[1]]$conres)
+    force(cdat)
+    list(
+      estimate=function() {
+        x <- do.call(cbind, lapply(cdat, function(x) x$estimate()))
+        colnames(x) <- names(cres[[1]]$conres)
+        x
+      },
+      prob=function() {
+     
+        x <- do.call(cbind, lapply(cdat, function(x) x$prob()))
+        colnames(x) <- names(cres[[1]]$conres)
+        x
+      },
+      se=function() {
+        x <- do.call(cbind, lapply(cdat, function(x) x$se()))
+        colnames(x) <- names(cres[[1]]$conres)
+        x
+      },
+      stat=function() {
+        x <- do.call(cbind, lapply(cdat, function(x) x$stat()))
+        colnames(x) <- names(cres[[1]]$conres)
+        x
+      },
+      stat_type=cdat[[1]]$stat_type
+    )
   }
+  
   
   #browser()
     
