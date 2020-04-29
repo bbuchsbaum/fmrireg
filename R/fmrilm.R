@@ -307,6 +307,8 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
     names(ret) <- names(cres[[1]]$conres)
     ret
   }
+  
+  #browser()
     
 
   nf <- length(cres[[1]]$Fres)

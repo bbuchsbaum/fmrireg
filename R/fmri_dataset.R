@@ -415,6 +415,7 @@ data_chunks.matrix_dataset <- function(x, nchunks=1, runwise=FALSE) {
   get_run_chunk <- function(chunk_num) {
     ind <- which(blockids(x$sampling_frame) == chunk_num)
     mat <- x$datamat[ind,,drop=FALSE]
+    #browser()
     data_chunk(mat, voxel_ind=1:ncol(mat), row_ind=ind, chunk_num=chunk_num)
   }
   
