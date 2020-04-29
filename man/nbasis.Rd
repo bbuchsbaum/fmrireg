@@ -4,7 +4,7 @@
 \alias{nbasis}
 \alias{nbasis.convolved_term}
 \alias{nbasis.hrfspec}
-\title{nbasis}
+\title{return number of basis functions associated with hrf.}
 \usage{
 nbasis(x)
 

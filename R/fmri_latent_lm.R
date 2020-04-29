@@ -1,3 +1,5 @@
+
+#' @export
 fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset, 
                     durations, drop_empty=TRUE, contrasts=NULL, robust=FALSE) {
   
@@ -10,11 +12,13 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
   result
 }
 
+#' @export
 coef.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
-  bvals <- coef(x, type=type)
-  lds <- x$dataset$lvec@loadings
+  bvals <- coef.fmri_lm(x, type=type)
+  
   
   if (recon) {
+    lds <- x$dataset$lvec@loadings
     out <- t(as.matrix(bvals)) %*% t(lds)
     sp <- space(x$dataset$lvec@mask)
     SparseNeuroVec(as.matrix(out), neuroim2::add_dim(sp, nrow(out)), mask=x$dataset$lvec@mask)
