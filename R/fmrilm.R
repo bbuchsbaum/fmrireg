@@ -330,6 +330,7 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
 #' Run glm for each data chunk (responses split horizontally) and then concatenate chunks
 #' @keywords internal
 chunkwise_lm <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verbose=FALSE) {
+  
   chunks <- exec_strategy("chunkwise", nchunks)(dset)
   form <- get_formula(model)
   tmats <- term_matrices(model)
@@ -338,6 +339,7 @@ chunkwise_lm <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verb
   modmat <- model.matrix(as.formula(form), data_env)
   
   lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
+
   cres <- foreach( ym = chunks, .verbose=verbose) %dopar% {
     data_env[[".y"]] <- ym$data
     ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon, modmat=modmat)
@@ -367,7 +369,6 @@ runwise_lm <- function(dset, model, conlist, fcon, robust=FALSE, verbose=FALSE) 
     chunks <- exec_strategy("runwise")(dset)
 
     form <- get_formula(model)
-   
     ## iterate over each data chunk
     cres <- foreach( ym = chunks, .verbose=verbose) %dopar% {
       

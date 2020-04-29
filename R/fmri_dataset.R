@@ -93,6 +93,9 @@ read_fmri_config <- function(file_name, base_path=NULL) {
 #' y <- foreach(chunk = iter) %do% { colMeans(chunk$data) }
 #' length(y) == 2
 matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
+  if (is.vector(datamat)) {
+    datamat <- as.matrix(datamat)
+  }
   assert_that(sum(run_length) == nrow(datamat))
   
   frame <- sampling_frame(run_length, TR)
@@ -411,7 +414,7 @@ data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
 data_chunks.matrix_dataset <- function(x, nchunks=1, runwise=FALSE) {
   get_run_chunk <- function(chunk_num) {
     ind <- which(blockids(x$sampling_frame) == chunk_num)
-    mat <- x$datamat[ind,]
+    mat <- x$datamat[ind,,drop=FALSE]
     data_chunk(mat, voxel_ind=1:ncol(mat), row_ind=ind, chunk_num=chunk_num)
   }
   
@@ -444,6 +447,10 @@ exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchun
       data_chunks(dset, nchunks = sum(dset$mask), runwise=FALSE)
     } else if (strategy == "chunkwise") {
       assert_that(!is.null(nchunks) && is.numeric(nchunks))
+      if (nchunks > sum(dset$mask)) {
+        warning("requested number of chunks is greater than number of voxels in mask")
+        nchunks <- sum(dset$mask)
+      }
       data_chunks(dset, nchunks = nchunks, runwise=FALSE)
     }
   }
