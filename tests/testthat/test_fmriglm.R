@@ -69,6 +69,25 @@ test_that("can construct and run a simple fmri glm from a matrix_dataset with 1 
   
 })
 
+test_that("can construct and run a simple fmri glm from a matrix_dataset with 2 columns", {
+  
+  vals <- cbind(rep(rnorm(244),6), rep(rnorm(244),6))
+  dset <- matrix_dataset(as.matrix(vals),TR=1.5, run_length=rep(244,6), event_table=facedes)
+  
+  c1 <- pair_contrast( ~ repnum == 1, ~ repnum == 2, name="rep2_rep1")
+  c2 <- pair_contrast( ~ repnum == 2, ~ repnum == 3, name="rep3_rep2")
+  con <- contrast_set(c1,c2)
+  
+  mod1 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0)
+  mod2 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, 
+                  strategy="chunkwise", nchunks=1)
+  
+  expect_true(!is.null(mod1))
+  expect_equal(ncol(mod1$result$contrasts$estimate()), 2)
+  expect_equal(ncol(mod2$result$contrasts$estimate()), 2)
+  
+})
+
 # test_that("a one-run, one-contrast linear model analysis", {
 #   df1 <- subset(imagedes,run==1)
 #   df1 <- subset(df1, !is.na(onsetTime))

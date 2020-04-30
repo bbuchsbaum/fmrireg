@@ -314,27 +314,31 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
     
     names(cdat) <- names(cres[[1]]$conres)
     force(cdat)
+    
+    format_mat <- function(x, nam) {
+      ret <- if (nrow(x[[1]]) == 1) {
+        do.call(cbind, x)
+      } else {
+        do.call(cbind, x)
+      }
+      colnames(ret) <- nam
+      ret
+    }
+    
     list(
       estimate=function() {
-        x <- do.call(cbind, lapply(cdat, function(x) x$estimate()))
-        colnames(x) <- names(cres[[1]]$conres)
-        x
+        #x <- do.call(rbind, lapply(cdat, function(x) t(x$estimate())))
+        format_mat(lapply(cdat, function(x) t(x$estimate())), names(cres[[1]]$conres))
       },
       prob=function() {
-     
-        x <- do.call(cbind, lapply(cdat, function(x) x$prob()))
-        colnames(x) <- names(cres[[1]]$conres)
-        x
+        #x <- do.call(rbind, lapply(cdat, function(x) t(x$prob())))
+        format_mat(lapply(cdat, function(x) t(x$prob())), names(cres[[1]]$conres))
       },
       se=function() {
-        x <- do.call(cbind, lapply(cdat, function(x) x$se()))
-        colnames(x) <- names(cres[[1]]$conres)
-        x
+        format_mat(lapply(cdat, function(x) t(x$se())), names(cres[[1]]$conres))
       },
       stat=function() {
-        x <- do.call(cbind, lapply(cdat, function(x) x$stat()))
-        colnames(x) <- names(cres[[1]]$conres)
-        x
+        format_mat(lapply(cdat, function(x) t(x$stat())), names(cres[[1]]$conres))
       },
       stat_type=cdat[[1]]$stat_type
     )
