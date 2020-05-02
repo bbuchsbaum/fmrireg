@@ -24,13 +24,19 @@ meta_stouffer <- function(pval, se) {
 
 
 #' @keywords internal
-meta_fixef <- function(beta,se) {
-  inv_var <- 1/(se^2)
+meta_fixef <- function(beta,se, weighting=c("inv_var", "equal")) {
+  weighting <- match.arg(weighting)
   
-  wts <- inv_var/rowSums(inv_var)
-  wbeta <- beta * wts
-  wbeta <- rowSums(wbeta)
-  pooledse <- sqrt(rowSums(wts*wts*(se^2)))
+  wbeta <- if (weighting == "inv_var") {
+    inv_var <- 1/(se^2)
+    wts <- inv_var/rowSums(inv_var)
+    wbeta <- beta * wts
+    wbeta <- rowSums(wbeta)
+    pooledse <- sqrt(rowSums(wts*wts*(se^2)))
+  } else {
+    wbeta <- rowSums(wbeta)
+    pooledse <- sqrt(rowSums((se^2)))
+  }
   
   return(
     list(

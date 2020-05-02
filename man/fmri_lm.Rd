@@ -14,7 +14,8 @@ fmri_lm(
   contrasts = NULL,
   robust = FALSE,
   strategy = c("runwise", "chunkwise"),
-  nchunks = 10
+  nchunks = 10,
+  full_dof = TRUE
 )
 }
 \arguments{

@@ -90,7 +90,7 @@ term_matrices.fmri_model <- function(x, blocknum=NULL) {
 #' @export
 fmri_lm <- function(formula, block, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, contrasts=NULL, robust=FALSE,
-                     strategy=c("runwise", "chunkwise"), nchunks=10) {
+                     strategy=c("runwise", "chunkwise"), nchunks=10, full_dof=TRUE) {
   
  
   strategy <- match.arg(strategy)
@@ -116,7 +116,7 @@ fmri_lm <- function(formula, block, baseline_model=NULL, dataset,
   result <- if (strategy == "runwise") {
     runwise_lm(dataset, model, conlist, fcons, robust=robust)
   } else if (strategy == "chunkwise") {
-    chunkwise_lm(dataset, model, conlist,fcons, nchunks, robust=robust)
+    chunkwise_lm(dataset, model, conlist,fcons, nchunks, robust=robust, full_dof=full_dof)
   }
   
   ret <- list(
@@ -233,7 +233,7 @@ combine_baseline_betas <- function(bstats, colind) {
   )
 }
 
-fit_lm_contrasts <- function(fit, conlist, fcon, vnames) {
+fit_lm_contrasts <- function(fit, conlist, fcon, vnames, full_dof=FALSE) {
   conres <- if (!is.null(conlist)) {
     ret <- lapply(conlist, function(con) {
       fit_contrasts(fit, con$weights, attr(con, "term_indices"))
@@ -246,20 +246,20 @@ fit_lm_contrasts <- function(fit, conlist, fcon, vnames) {
   Fres <- lapply(fcon, function(con) fit_Fcontrasts(fit, t(con), attr(con, "term_indices")))
   names(Fres) <- names(fcon)
   
-  bstats <- beta_stats(fit, vnames)
+  bstats <- beta_stats(fit, vnames, full_dof=full_dof)
   #list(conres=conres, Fres=Fres, bstats=bstats, event_indices=eterm_indices, baseline_indices=bterm_indices)
   list(conres=conres, Fres=Fres, bstats=bstats)
 }
 
 #' @keywords internal
-multiresponse_lm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL) {
+multiresponse_lm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL, full_dof=FALSE) {
   lm.1 <- if (is.null(modmat)) {
     lm(as.formula(form), data=data_env)
   } else {
     lm.fit(modmat, data_env$.y)
   }
   
-  fit_lm_contrasts(lm.1, conlist, fcon, vnames)
+  fit_lm_contrasts(lm.1, conlist, fcon, vnames, full_dof=full_dof)
 }
 
 
@@ -368,7 +368,7 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
 
 #' Run glm for each data chunk (responses split horizontally) and then concatenate chunks
 #' @keywords internal
-chunkwise_lm <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verbose=FALSE) {
+chunkwise_lm <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verbose=FALSE, full_dof=FALSE) {
   
   
   chunks <- exec_strategy("chunkwise", nchunks)(dset)
@@ -382,7 +382,7 @@ chunkwise_lm <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verb
   #browser()
   cres <- foreach( ym = chunks, .verbose=verbose) %dopar% {
     data_env[[".y"]] <- as.matrix(ym$data)
-    ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon, modmat=modmat)
+    ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon, modmat=modmat, full_dof=full_dof)
   }
   
   event_indices=attr(tmats, "event_term_indices")

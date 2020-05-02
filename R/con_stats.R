@@ -54,11 +54,12 @@ fit_Ftests <- function(object) {
   
 }
 
-beta_stats <- function(lmfit, varnames) {
+beta_stats <- function(lmfit, varnames, full_dof=FALSE) {
   Qr <- stats:::qr.lm(lmfit)
   cov.unscaled <- chol2inv(Qr$qr)
   
   cfs <- coef(lmfit)
+  
   betamat <- if (is.vector(cfs)) {
     as.matrix(coef(lmfit))
   } else {
@@ -67,7 +68,14 @@ beta_stats <- function(lmfit, varnames) {
  
   
   rss <- colSums(as.matrix(lmfit$residuals^2))
-  rdf <- lmfit$df.residual
+  
+  rdf <- if (!full_dof) {
+    lmfit$df.residual
+  } else {
+    ## use dof based on number of rows of response variable
+    nrow(lmfit$residuals)  
+  }
+  
   resvar <- rss/rdf
   sigma <- sqrt(resvar)
   
@@ -75,6 +83,8 @@ beta_stats <- function(lmfit, varnames) {
     vcv <- cov.unscaled * sigma[i]^2
     sqrt(diag(vcv))
   })
+  
+  #sqrt(diag(vcov(lmfit))
   
   prob <- 2 * (1 - pt(abs(betamat/vc), lmfit$df.residual))
   tstat <- betamat/vc
