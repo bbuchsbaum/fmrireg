@@ -2,13 +2,13 @@
 #' @export
 fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset, 
                     durations, drop_empty=TRUE, contrasts=NULL, robust=FALSE,
-                    strategy="chunkwise", nchunks=1) {
+                    strategy="chunkwise", nchunks=1, ...) {
   
   
   assert_that(inherits(dataset, "latent_dataset"))
   result <- fmri_lm(formula, block, baseline_model=baseline_model, dataset, 
           durations, drop_empty=drop_empty, contrasts=contrasts, robust=robust, 
-          strategy=strategy, nchunks=nchunks)
+          strategy=strategy, nchunks=nchunks,...)
   result$dataset <- dataset
   class(result) <- c("fmri_latent_lm", class(result))
   result
