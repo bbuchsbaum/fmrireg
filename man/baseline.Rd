@@ -6,13 +6,13 @@
 \usage{
 baseline(
   degree = 1,
-  basis = c("poly", "bs", "ns"),
-  name = paste0("baseline_", basis, "_", degree),
+  basis = c("constant", "poly", "bs", "ns"),
+  name = NULL,
   constant = FALSE
 )
 }
 \arguments{
-\item{degree}{number of polynomial terms for each image block}
+\item{degree}{number of basis terms for each image block (ignored for 'constant' basis)}
 
 \item{basis}{the type of polynomial basis.}
 

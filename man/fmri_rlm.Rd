@@ -16,7 +16,7 @@ fmri_rlm(
 )
 }
 \arguments{
-\item{formula}{the model furmula for experimental events}
+\item{formula}{the model formula for experimental events}
 
 \item{baseline_model}{the \code{baseline_model} object}
 

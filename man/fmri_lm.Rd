@@ -14,11 +14,12 @@ fmri_lm(
   contrasts = NULL,
   robust = FALSE,
   strategy = c("runwise", "chunkwise"),
-  nchunks = 10
+  nchunks = 10,
+  dofpen = 0
 )
 }
 \arguments{
-\item{formula}{the model furmula for experimental events}
+\item{formula}{the model formula for experimental events}
 
 \item{block}{the model formula for block structure}
 

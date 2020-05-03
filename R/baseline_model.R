@@ -19,13 +19,13 @@ get_col_inds <- function(Xlist) {
 #' @param basis the basis function type
 #' @param degree the degree of the spline function.
 #' @param sframe sframe a \code{sampling_frame} object
-#' @param intercept wehther to include an intercept for each block
-#' @param nuisance_list a list of nusiance matrices, one matrix per fMRI block
+#' @param intercept wehther to include an intercept for each block. Automatically set to \cdoe{FALSE} when basis == "constant". 
+#' @param nuisance_list a list of nuisance matrices, one matrix per fMRI block
 #' @importFrom lazyeval f_eval f_rhs f_lhs
 #' 
 #' @examples 
 #' 
-#' ## bspline basis with degree = 3. This will produce a design matrix with three splines regressiors and a constant intercept.
+#' ## bspline basis with degree = 3. This will produce a design matrix with three splines regressors and a constant intercept.
 #' sframe <- sampling_frame(blocklens=c(100,100), TR=2)
 #' bmod <- baseline_model(basis="bs", degree=3, sframe=sframe)
 #' stopifnot(ncol(design_matrix(bmod)) == 4)
@@ -33,17 +33,20 @@ get_col_inds <- function(Xlist) {
 #' ## no intercept term
 #' bmod <- baseline_model(basis="poly", degree=3, sframe=sframe, intercept=FALSE)
 #' 
-#' ## add an arbitrary nuisance matrix with two columns
+#' ## a baselie model that only has dummy-coded intercept terms, one per block, i.e. to model runwise mean shifts only.
+#' bmod <- baseline_model(basis="constant", degree=1, sframe=sframe)
+#' 
+#' ## add an arbitrary nuisance matrix with two columns, i.e. motion regressors, physiological noise, etc.
 #' nuismat <- matrix(rnorm(100*2), 100, 2)
 #' bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, nuisance_list=list(nuismat, nuismat))
 #' stopifnot(ncol(design_matrix(bmod)) == 12)
 #' @export
-baseline_model <- function(basis=c("poly", "bs", "ns"), degree=1, sframe, intercept=TRUE, nuisance_list=NULL) {
+baseline_model <- function(basis=c("constant", "poly", "bs", "ns"), degree=1, sframe, intercept=TRUE, nuisance_list=NULL) {
   drift_spec <- baseline(degree=degree, basis=basis, constant=FALSE)
   drift_term <- construct(drift_spec, sframe)
   
-  block_term <- if (intercept) {
-    block_term <- construct_block_term("constant", sframe)
+  block_term <- if (intercept && basis != "constant") {
+    construct_block_term("constant", sframe)
   }
   
   nuisance_term <- if (!is.null(nuisance_list)) {
@@ -81,17 +84,27 @@ baseline_model <- function(basis=c("poly", "bs", "ns"), degree=1, sframe, interc
 #' Create a model specification for modeling low-frequency drift in fmri time series.
 #' 
 #' @importFrom splines bs ns
-#' @param degree number of polynomial terms for each image block
+#' @param degree number of basis terms for each image block (ignored for 'constant' basis)
 #' @param basis the type of polynomial basis.
 #' @param name the name of the term
 #' @param constant whether to include an intercept term
 #' @export
-baseline <- function(degree=1, basis=c("poly", "bs", "ns"), name=paste0("baseline_", basis, "_", degree), constant=FALSE) {
+baseline <- function(degree=1, basis=c("constant", "poly", "bs", "ns"), name=NULL, constant=FALSE) {
   basis <- match.arg(basis)
+  
+  if (basis == "constant") {
+    degree <- 1
+  }
+  
   bfun <- switch(basis,
                  bs=splines::bs,
                  ns=splines::ns,
-                 poly=poly)
+                 poly=poly,
+                 constant=function(x, degree) { matrix(rep(1, length(x))) })
+  
+  if (is.null(name)) {
+    name <- paste0("baseline_", basis, "_", degree)
+  }
   
   ret <- list(
     degree=degree,

@@ -37,35 +37,9 @@ term_matrices.fmri_model <- function(x, blocknum=NULL) {
 }
 
 
-# fmri_lm_model <- function(dataset, formula, block_formula, baseline_model=NULL, contrasts=NULL) {
-#   assert_that(inherits(dataset, "fmri_dataset"))
-#   
-#   if (is.null(baseline_model)) {
-#     baseline_model <- baseline_model(basis="bs", 
-#                                      degree=ceiling(median(dataset$sampling_frame$blocklens)/100), 
-#                                      sframe=dataset$sampling_frame)
-#   }
-#   
-#   
-#   ev_model <- event_model(formula, block_formula, data=dataset$event_table, 
-#                           sampling_frame=dataset$sampling_frame, contrasts=contrasts)
-#   
-#   model <- fmri_model(ev_model, baseline_model)
-#   
-#   conlist <- contrast_weights(ev_model)
-#   fcon <- Fcontrasts(ev_model)
-#   
-#   ret <- list(model=model, 
-#               conlist=conlist,
-#               fcon=fcon)
-#   
-#   class(ret) <- "fmri_lm_model"
-#   ret
-# }
-
 #' fmri_lm
 #' 
-#' @param formula the model furmula for experimental events
+#' @param formula the model formula for experimental events
 #' @param block the model formula for block structure
 #' @param baseline_model the \code{baseline_model} object
 #' @param dataset an object derived from \code{fmri_dataset} containing the time-series data
@@ -109,19 +83,29 @@ fmri_lm <- function(formula, block, baseline_model=NULL, dataset,
      
   model <- fmri_model(ev_model, baseline_model)
   
-  conlist <- unlist(contrast_weights(ev_model), recursive=FALSE)
-  fcons <- Fcontrasts(ev_model)
+  fmri_lm_fit(model, dataset, strategy, robust, contrasts, nchunks)
+}
+
+
+#' @export
+#' @inheritParams fmri_lm
+#' @param fmrimod an object of type \code{fmri_model}
+fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"), robust=FALSE, contrasts=NULL, nchunks=10) {
+  strategy <- match.arg(strategy)
   
- 
+  conlist <- unlist(contrast_weights(fmrimod$event_model), recursive=FALSE)
+  fcons <- Fcontrasts(fmrimod$event_model)
+  
+  
   result <- if (strategy == "runwise") {
     runwise_lm(dataset, model, conlist, fcons, robust=robust)
   } else if (strategy == "chunkwise") {
-    chunkwise_lm(dataset, model, conlist,fcons, nchunks, robust=robust, dofpen=dofpen)
+    chunkwise_lm(dataset, model, conlist,fcons, nchunks, robust=robust)
   }
   
   ret <- list(
     result=result,
-    model=model,
+    model=fmrimod,
     contrasts=contrasts,
     strategy=strategy,
     fcons=fcons,
@@ -130,6 +114,8 @@ fmri_lm <- function(formula, block, baseline_model=NULL, dataset,
   class(ret) <- "fmri_lm"
   
   ret
+  
+  
 }
 
 

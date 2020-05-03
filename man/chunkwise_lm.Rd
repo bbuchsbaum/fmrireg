@@ -11,7 +11,8 @@ chunkwise_lm(
   fcon,
   nchunks,
   robust = FALSE,
-  verbose = FALSE
+  verbose = FALSE,
+  dofpen = 0
 )
 }
 \description{
