@@ -1,5 +1,6 @@
 
 #' @export
+#' @inheritParams fmri_lm
 fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset, 
                     durations, drop_empty=TRUE, contrasts=NULL, robust=FALSE,
                     strategy="chunkwise", nchunks=1, ...) {

@@ -96,14 +96,14 @@ runwise_rlm <- function(dset, model, conlist, fcon) {
 
 ## could use heavyLm ...
 #' @importFrom robustbase lmrob lmrob.control
-multiresponse_rlm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL, full_dof=FALSE) {
+multiresponse_rlm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL) {
   Y <- data_env$.y
   rcontrol <- lmrob.control(k.max=500, maxit.scale=500)
   ret <- lapply(1:ncol(Y), function(i) {
     data_env[[".y"]] <- Y[,i]
     rlm.1 <- lmrob(as.formula(form), data=data_env,
                    control=rcontrol)
-    fit_lm_contrasts(rlm.1, conlist, fcon, vnames, full_dof=full_dof)
+    fit_lm_contrasts(rlm.1, conlist, fcon, vnames)
   })
   ret <- wrap_chunked_lm_results(ret)
   #conres=ret$conres, Fres=ret$Fres, bstats=ret$bstats
