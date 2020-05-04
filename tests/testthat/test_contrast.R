@@ -102,6 +102,21 @@ test_that("can build a set of pairwise contrasts", {
 
 })
 
+test_that("can build a one_against_all contrast set", {
+  facedes$repnum <- factor(facedes$rep_num)
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
+  levs <- levels(facedes$repnum)
+  cset <- one_against_all_contrast(levs, "repnum")
+  expect_equal(length(cset), ncol(combn(length(levs),2)))
+  
+  wtls <- lapply(cset, function(con) {
+    contrast_weights(con, terms(espec)[[1]])
+  })
+  expect_true(!is.null(wtls))
+  
+})
+
 test_that("can subtract two pairwise contrasts to form an interaction contrast", {
   simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"), replication=c(1,2))
   simple_des$onset <- seq(1,100, length.out=nrow(simple_des))

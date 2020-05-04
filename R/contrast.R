@@ -73,7 +73,31 @@ pairwise_contrasts <- function(levels, where=NULL) {
   do.call(contrast_set, ret)
 }
   
-
+#' A contrast that compares each level vs the average of the other levels.
+#' 
+#' @inheritParams pairwise_contrast
+#' @param facname the name of the factor containing the supplied levels.
+#' @export
+#' 
+#' @examples 
+#' 
+#' fac <- factor(rep(c("A", "B", "C"), 2))
+#' con <- one_against_all_contrast(levels(fac), "fac")
+one_against_all_contrast <- function(levels, facname, where=NULL) {
+  if (!is.null(where)) {
+    assert_that(lazyeval::is_formula(where))
+  }
+  
+  ret <- lapply(1:length(levels), function(i) {
+    lev1 <- levels[i]
+    levother <- levels[-i]
+    pair_contrast(as.formula(paste("~", facname, " == ", lev1)), as.formula(paste("~", facname, "!= ", lev1)), 
+                  where=where, name=paste0("con_", lev1, "_vs_", "other"))
+  })
+  
+  do.call(contrast_set, ret)
+  
+}
 
 #' pair_contrast
 #' 
