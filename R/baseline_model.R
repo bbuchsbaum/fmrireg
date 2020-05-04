@@ -19,7 +19,7 @@ get_col_inds <- function(Xlist) {
 #' @param basis the basis function type
 #' @param degree the degree of the spline function.
 #' @param sframe sframe a \code{sampling_frame} object
-#' @param intercept wehther to include an intercept for each block. Automatically set to \code{FALSE} when basis == "constant". 
+#' @param intercept whether to include an intercept for each block. Automatically set to \code{FALSE} when basis == "constant". 
 #' @param nuisance_list a list of nuisance matrices, one matrix per fMRI block
 #' @importFrom lazyeval f_eval f_rhs f_lhs
 #' 
