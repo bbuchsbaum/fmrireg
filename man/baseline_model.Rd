@@ -19,7 +19,7 @@ baseline_model(
 
 \item{sframe}{sframe a \code{sampling_frame} object}
 
-\item{intercept}{wehther to include an intercept for each block. Automatically set to \code{FALSE} when basis == "constant".}
+\item{intercept}{whether to include an intercept for each block. Automatically set to \code{FALSE} when basis == "constant".}
 
 \item{nuisance_list}{a list of nuisance matrices, one matrix per fMRI block}
 }
