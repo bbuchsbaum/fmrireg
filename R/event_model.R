@@ -311,7 +311,7 @@ Fcontrasts.event_model <- function(x) {
       ret <- lapply(cwlist, function(cw) {
         
         out <- matrix(0, len, ncol(cw))
-        rownames(out) <- rep("C", 1:nrow(out))
+        rownames(out) <- rep("C", nrow(out))
         ti <- tind[[i]]
         out[ti,] <- cw
         attr(out, "term_indices") <- as.vector(ti)
