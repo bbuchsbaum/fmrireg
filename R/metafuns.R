@@ -26,8 +26,8 @@ meta_stouffer <- function(pval, se) {
 #' @keywords internal
 meta_fixef <- function(beta,se, weighting=c("inv_var", "equal")) {
   weighting <- match.arg(weighting)
-  
-  wbeta <- if (weighting == "inv_var") {
+  #browser()
+  if (weighting == "inv_var") {
     inv_var <- 1/(se^2)
     wts <- inv_var/rowSums(inv_var)
     wbeta <- beta * wts

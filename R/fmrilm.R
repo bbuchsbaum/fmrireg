@@ -125,7 +125,8 @@ coef.fmri_lm <- function(x, type=c("estimates", "contrasts")) {
   type <- match.arg(type)
   if (type == "estimates") {
     ret <- x$result$betas$estimate()
-    colnames(ret) <- shortnames(x$model$event_model)#conditions(x$model$event_model)
+    colnames(ret) <- conditions(x$model$event_model)
+    #shortnames(x$model$event_model)#conditions(x$model$event_model)
     as_tibble(ret)
   } else if (type == "contrasts") {
     ret <- x$result$contrasts$estimate()
@@ -141,7 +142,8 @@ stats.fmri_lm <- function(x, type=c("estimates", "contrasts", "F")) {
   type <- match.arg(type)
   if (type == "estimates") {
     ret <- x$result$betas$stat()
-    colnames(ret) <- shortnames(x$model$event_model)
+    #colnames(ret) <- shortnames(x$model$event_model)
+    colnames(ret) <- conditions(x$model$event_model)
     as_tibble(ret)
   } else if (type == "contrasts") {
     if (length(x$result$contrasts) == 0) {
@@ -163,7 +165,8 @@ standard_error.fmri_lm <- function(x, type=c("estimates", "contrasts")) {
   type <- match.arg(type)
   if (type == "estimates") {
     ret <- x$result$betas$se()
-    colnames(ret) <- shortnames(x$model$event_model)
+    #colnames(ret) <- shortnames(x$model$event_model)
+    colnames(ret) <- conditions(x$model$event_model)
     as_tibble(ret)
   } else if (type == "contrasts") {
     if (length(x$result$contrasts) == 0) {
@@ -301,7 +304,6 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
     
     names(cdat) <- names(cres[[1]]$conres)
     force(cdat)
-    
     format_mat <- function(x, nam) {
       ret <- if (nrow(x[[1]]) == 1) {
         do.call(cbind, x)
@@ -418,8 +420,10 @@ runwise_lm <- function(dset, model, conlist, fcon, robust=FALSE, verbose=FALSE) 
 
     if (length(cres) > 1) {
       hascon <- !sapply(conres[[1]], is.null)
+      
       meta_con <- if (any(hascon)) {
-        meta_contrasts(conres[hascon]) 
+        ##meta_contrasts(conres[hascon]) 
+        meta_contrasts(conres) 
       } else {
         list()
       }

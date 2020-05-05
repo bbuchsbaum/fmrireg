@@ -31,7 +31,7 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
   #x_ranks <- rank(x_unique)
   #x_ranks[match(x,x_unique)]
   
-  assert_that(is.increasing(blockvals))
+  assert_that(is.increasing(blockvals), msg="'blockvals' must consist of strictly increasing integers")
   assert_that(length(blockvals) == nrow(data))
   
   blocks <-unique(blockvals)

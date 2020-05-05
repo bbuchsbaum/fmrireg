@@ -71,7 +71,7 @@ is.strictly.increasing <- function(vec) {
 #' @rdname event_term-class
 event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
-  assert_that(is.increasing(blockids))
+  assert_that(is.increasing(blockids), msg="'blockids' must consist of strictly increasing integers")
             
   if (is.null(subset)) { subset=rep(TRUE, length(onsets)) }
   
