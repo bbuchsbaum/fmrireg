@@ -1,3 +1,7 @@
+## TODO
+
+## when contrasts are misspecified, errors need to be infromative.
+
 
 #' contrast specification
 #' 
