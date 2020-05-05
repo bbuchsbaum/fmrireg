@@ -300,21 +300,22 @@ contrast_weights.event_model <- function(x) {
 #' @export
 Fcontrasts.event_model <- function(x) {
   tind <- x$term_indices
-  ##len <- length(conditions(x))
+  len <- length(conditions(x))
   tnames <- names(terms(x))
   ret <- unlist(lapply(seq_along(terms(x)), function(i) {
     eterm <- terms(x)[[i]]$evterm
-    len <- length(conditions(eterm))
+    #len <- length(conditions(eterm))
     cwlist <- Fcontrasts(eterm)
     if (!is.null(cwlist)) {
       
       ret <- lapply(cwlist, function(cw) {
         
         out <- matrix(0, len, ncol(cw))
-  
-        out[tind[[i]],] <- cw
-        attr(out, "term_indices") <- as.vector(tind[[i]])
-        row.names(out) <- row.names(cw)
+        rownames(out) <- rep("C", 1:nrow(mat))
+        ti <- tind[[i]]
+        out[ti,] <- cw
+        attr(out, "term_indices") <- as.vector(ti)
+        row.names(out)[ti] <- row.names(cw)
         out
       })
       
