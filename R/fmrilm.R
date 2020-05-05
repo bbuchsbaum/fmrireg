@@ -98,9 +98,9 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"), ro
   
   
   result <- if (strategy == "runwise") {
-    runwise_lm(dataset, model, conlist, fcons, robust=robust)
+    runwise_lm(dataset, fmrimodel, conlist, fcons, robust=robust)
   } else if (strategy == "chunkwise") {
-    chunkwise_lm(dataset, model, conlist,fcons, nchunks, robust=robust)
+    chunkwise_lm(dataset, fmrimodel, conlist,fcons, nchunks, robust=robust)
   }
   
   ret <- list(
