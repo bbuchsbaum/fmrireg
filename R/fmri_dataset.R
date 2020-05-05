@@ -222,6 +222,8 @@ fmri_dataset <- function(scans, mask, TR,
                          base_path=".",
                          censor=NULL) {
   
+  assert_that(is.character(mask), msg="'mask' should be the file name of the binary mask file")
+  
   if (length(run_length) == 1) {
     run_length <- rep(run_length, length(scans))
   }
@@ -445,12 +447,14 @@ exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchun
     if (strategy == "runwise") {
       data_chunks(dset, runwise=TRUE)
     } else if (strategy == "voxelwise") {
-      data_chunks(dset, nchunks = sum(dset$mask), runwise=FALSE)
+      m <- get_mask(dset)
+      data_chunks(dset, nchunks = sum(m), runwise=FALSE)
     } else if (strategy == "chunkwise") {
+      m <- get_mask(dset)
       assert_that(!is.null(nchunks) && is.numeric(nchunks))
-      if (nchunks > sum(dset$mask)) {
+      if (nchunks > sum(m)) {
         warning("requested number of chunks is greater than number of voxels in mask")
-        nchunks <- sum(dset$mask)
+        nchunks <- sum(m)
       }
       data_chunks(dset, nchunks = nchunks, runwise=FALSE)
     }
