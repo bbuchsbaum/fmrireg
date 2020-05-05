@@ -103,7 +103,10 @@ beta_stats <- function(lmfit, varnames, dofpen=0) {
 
 
 fit_Fcontrasts <- function(lmfit, conmat, colind) {
+
   Qr <- stats:::qr.lm(lmfit)
+  
+  ## subset covariance matrix by column indices of the contrast matrix associated with term in questions
   cov.unscaled <- try(chol2inv(Qr$qr[colind,colind,drop=FALSE]))
   
   cfs <- coef(lmfit)
@@ -133,6 +136,7 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
   #                 SSE / (n-p)
   #
   
+  ## conmat is same dimensions as the number of levels contained in the term
   cm <- solve((conmat %*% cov.unscaled %*% t(conmat)))
   
   Fstat <- map_dbl(1:ncol(betamat), function(i) {

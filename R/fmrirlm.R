@@ -82,7 +82,7 @@ runwise_rlm <- function(dset, model, conlist, fcon) {
     
       conres <- lapply(conlist, function(con) fit_contrasts(rlm.1, con, attr(con, "term_indices")))
       names(conres) <- names(conlist)
-      browser()
+      
       Fres <- lapply(fcon, function(con) fit_Fcontrasts(rlm.1, t(con), attr(con, "term_indices")))
     
       bstats <- beta_stats(rlm.1, vnames)

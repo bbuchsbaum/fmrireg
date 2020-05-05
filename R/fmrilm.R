@@ -71,11 +71,12 @@ fmri_lm <- function(formula, block, baseline_model=NULL, dataset,
   
   assert_that(inherits(dataset, "fmri_dataset"))
   
- 
   if (is.null(baseline_model)) {
     baseline_model <- baseline_model(basis="bs", 
                                     degree=ceiling(median(dataset$sampling_frame$blocklens)/100), 
                                     sframe=dataset$sampling_frame)
+  } else {
+    assert_that(inherits(baseline_model, "baseline_model"), msg="'baseline_model' arg must have the class 'baseline_model'")
   }
  
   ev_model <- event_model(formula, block, data=dataset$event_table, 
