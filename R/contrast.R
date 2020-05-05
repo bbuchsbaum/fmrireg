@@ -1,6 +1,6 @@
 ## TODO
 
-## when contrasts are misspecified, errors need to be infromative.
+## when contrasts are misspecified or have spelling errors, errors need to be infromative.
 
 
 #' contrast specification
