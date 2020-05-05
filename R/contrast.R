@@ -91,7 +91,8 @@ one_against_all_contrast <- function(levels, facname, where=NULL) {
   ret <- lapply(1:length(levels), function(i) {
     lev1 <- levels[i]
     levother <- levels[-i]
-    pair_contrast(as.formula(paste("~", facname, " == ", lev1)), as.formula(paste("~", facname, "!= ", lev1)), 
+    pair_contrast(as.formula(paste("~", facname, " == ", paste0('"', lev1, '"'))), 
+                             as.formula(paste0("~", facname, "!= ", paste0('"', lev1, '"'))), 
                   where=where, name=paste0("con_", lev1, "_vs_", "other"))
   })
   
