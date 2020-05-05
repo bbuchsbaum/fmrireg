@@ -338,11 +338,11 @@ chunk_iter <- function(x, nchunks, get_chunk) {
 #' @export
 data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
-  mask <- x$mask
+  mask <- get_mask(x)
   
   get_run_chunk <- function(chunk_num) {
     bvec <- x$scans[[chunk_num]]
-    voxel_ind <- which(x$mask>0)
+    voxel_ind <- which(mask>0)
     row_ind <- which(x$sampling_frame$blockids == chunk_num)
     ret <- data_chunk(neuroim2::series(bvec,voxel_ind), 
                       voxel_ind=voxel_ind, 
@@ -382,10 +382,10 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
 #' @export
 data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
-  mask <- x$mask
+  mask <- get_mask(x)
   
   get_run_chunk <- function(chunk_num) {
-    bvec <- neuroim2::read_vec(file.path(x$scans[chunk_num]), mask=x$mask)
+    bvec <- neuroim2::read_vec(file.path(x$scans[chunk_num]), mask=mask)
     ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), row_ind=which(x$sampling_frame$blockids == chunk_num), chunk_num=chunk_num)
   }
   
