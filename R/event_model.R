@@ -239,7 +239,7 @@ contrast_weights.convolved_term <- function(x) {
 
 #' @export
 #' @rdname Fcontrasts
-FContrasts.convolved_term <- function(x) {
+Fcontrasts.convolved_term <- function(x) {
   Fcontrasts(x$evterm)
 }
 
