@@ -466,7 +466,7 @@ exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchun
 #' @keywords internal
 arbitrary_chunks <- function(x, nchunks) {
 
-  mask <- x$mask
+  mask <- get_mask(x)
   indices <- which(mask != 0)
   chsize <- round(length(indices)/nchunks)
   assert_that(chsize > 0)
