@@ -413,7 +413,7 @@ data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
     
   }
   
-  message("nchunks is ", nchunks)
+  ##message("nchunks is ", nchunks)
   if (runwise) {
     chunk_iter(x, length(x$scans), get_run_chunk)
   } else if (nchunks == 1) {
@@ -472,7 +472,7 @@ exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchun
       data_chunks(dset, nchunks = sum(m), runwise=FALSE)
     } else if (strategy == "chunkwise") {
       m <- get_mask(dset)
-      message("nchunks is", nchunks)
+      ##message("nchunks is", nchunks)
       assert_that(!is.null(nchunks) && is.numeric(nchunks))
       if (nchunks > sum(m)) {
         warning("requested number of chunks is greater than number of voxels in mask")
