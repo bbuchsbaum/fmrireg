@@ -165,6 +165,9 @@ fmri_mem_dataset <- function(scans, mask, TR,
   ret
 }
 
+#' A dataset that encapsulates a dimension-reduced subspace of "latent variables". 
+#' 
+#' 
 #' @inheritParams fmri_dataset
 #' @param lvec an instance of class \code{LatentNeuroVec}
 #' @examples 
@@ -392,6 +395,8 @@ data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
   mask <- get_mask(x)
   
+  
+  
   get_run_chunk <- function(chunk_num) {
     bvec <- neuroim2::read_vec(file.path(x$scans[chunk_num]), mask=mask)
     ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), 
@@ -402,7 +407,7 @@ data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
   get_seq_chunk <- function(chunk_num) {
     v <- x$vec
     #bvecs <- lapply(x$scans, function(scan) neuroim2::read_vec(scan, mask=maskSeq[[chunk_num]]))
-    vind=maskSeq[[chunk_num]]
+    vind=as.logical(maskSeq[[chunk_num]])
     m <- series(v, vind)
     ret <- data_chunk(m, voxel_ind=vind, 
                       row_ind=1:nrow(x$event_table), chunk_num=chunk_num)
@@ -421,6 +426,8 @@ data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
     maskSeq <- arbitrary_chunks(x, nchunks)
     chunk_iter(x, length(maskSeq), get_seq_chunk)
   }
+  
+  
   
 }
 
@@ -485,18 +492,8 @@ arbitrary_chunks <- function(x, nchunks) {
   assert_that(chsize > 0)
   chunkids <- sort(rep(1:nchunks, each=chsize, length.out=length(indices)))
   
-  maskSeq <- lapply(seq(1, nchunks), function(i) {
-    function(i) {
-      #m <- mask
-      #m[] <- 0
-      #m[indices[chunkids==i]] <- 1
-      #m
-      indices[chunkids==i]
-    }
-  })
-  
-  neuroim2::deferred_list(maskSeq)
-  
+  mfun <- function(i) indices[chunkids==i]
+  neuroim2::deferred_list2(mfun)
   
 }
 
