@@ -391,7 +391,7 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
 
 #' @import neuroim2
 #' @export
-data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
+data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
   mask <- get_mask(x)
   
@@ -493,7 +493,7 @@ exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchun
 #' @keywords internal
 arbitrary_chunks <- function(x, nchunks) {
   mask <- get_mask(x)
-  indices <- which(mask != 0)
+  indices <- as.integer(which(mask != 0))
   chsize <- round(length(indices)/nchunks)
   assert_that(chsize > 0)
   chunkids <- sort(rep(1:nchunks, each=chsize, length.out=length(indices)))
