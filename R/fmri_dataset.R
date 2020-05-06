@@ -242,6 +242,8 @@ fmri_dataset <- function(scans, mask, TR,
   maskvol <- neuroim2::read_vol(maskfile)
   
   scans=paste0(base_path, "/", scans)
+  
+  message(paste("preloading scans in ", mode, "mode."))
   vec <- read_vec(scans, mode=mode,mask=maskvol)
   
   ret <- list(

@@ -23,7 +23,7 @@ coef.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE
   if (recon) {
     lds <- x$dataset$lvec@loadings
     out <- t(as.matrix(bvals)) %*% t(lds)
-    sp <- space(x$dataset$lvec@mask)
+    sp <- space(get_mask(x$dataset))
     SparseNeuroVec(as.matrix(out), neuroim2::add_dim(sp, nrow(out)), mask=x$dataset$lvec@mask)
   } else {
     bvals

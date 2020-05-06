@@ -84,7 +84,8 @@ fmri_lm <- function(formula, block, baseline_model=NULL, dataset,
      
   model <- fmri_model(ev_model, baseline_model)
   
-  fmri_lm_fit(model, dataset, strategy, robust, contrasts, nchunks)
+  ret <- fmri_lm_fit(model, dataset, strategy, robust, contrasts, nchunks)
+  ret
 }
 
 
@@ -110,7 +111,8 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"), ro
     contrasts=contrasts,
     strategy=strategy,
     fcons=fcons,
-    bcons=conlist)
+    bcons=conlist,
+    dataset=dataset)
   
   class(ret) <- "fmri_lm"
   
@@ -121,9 +123,9 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"), ro
 
 
 #' @export
-coef.fmri_lm <- function(x, type=c("estimates", "contrasts")) {
+coef.fmri_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
   type <- match.arg(type)
-  if (type == "estimates") {
+  res <- if (type == "estimates") {
     ret <- x$result$betas$estimate()
     colnames(ret) <- conditions(x$model$event_model)
     #shortnames(x$model$event_model)#conditions(x$model$event_model)
@@ -135,6 +137,16 @@ coef.fmri_lm <- function(x, type=c("estimates", "contrasts")) {
   } #else if (type == "baseline") {
     #ret <- x$result$contrasts$estimate()
   #}
+  
+  res
+  
+  # if (recon && inherits(x$dataset, "fmri_dataset")) {
+  #   m <- get_mask(x$dataset)
+  #   sp <- space(m)
+  #   SparseNeuroVec(as.matrix(res), neuroim2::add_dim(sp, ncol(res)), mask=m)
+  # } else {
+  #   res
+  # }
 }
 
 #' @export
@@ -249,7 +261,7 @@ multiresponse_lm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL,
     lm.fit(modmat, data_env$.y)
   }
   
-  fit_lm_contrasts(lm.1, conlist, fcon, vnames,dofpen)
+  fit_lm_contrasts(lm.1, conlist, fcon, vnames)
 }
 
 
@@ -272,7 +284,8 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
   }
   
   extract2 <- function(l, el, item, i) {
-    do.call(rbind, lapply(l, function(x) x[[el]][[i]][[item]]()))
+    #do.call(rbind, lapply(l, function(x) x[[el]][[i]][[item]]()))
+    lapply(l, function(x) x[[el]][[i]][[item]]())
   }
   
   do_extract <- function(l, el, items, efun,...) {
@@ -304,8 +317,11 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
     
     names(cdat) <- names(cres[[1]]$conres)
     force(cdat)
+    
     format_mat <- function(x, nam) {
-      ret <- if (nrow(x[[1]]) == 1) {
+      ret <- if (is.list(x)) {
+        do.call(cbind, x)
+      } else if (nrow(x[[1]]) == 1) {
         do.call(cbind, x)
       } else {
         do.call(cbind, x)
@@ -314,20 +330,22 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
       ret
     }
     
+    ## want format with columns as contrasts, rows as voxels
+    ## needs to work when nchunks > 1, when there is 1 series per chunk, when there is 1 series and 1 chunk
     list(
       estimate=function() {
         #x <- do.call(rbind, lapply(cdat, function(x) t(x$estimate())))
-        format_mat(lapply(cdat, function(x) t(x$estimate())), names(cres[[1]]$conres))
+        format_mat(lapply(cdat, function(x) unlist(x$estimate())), names(cres[[1]]$conres))
       },
       prob=function() {
         #x <- do.call(rbind, lapply(cdat, function(x) t(x$prob())))
-        format_mat(lapply(cdat, function(x) t(x$prob())), names(cres[[1]]$conres))
+        format_mat(lapply(cdat, function(x) unlist(x$prob())), names(cres[[1]]$conres))
       },
       se=function() {
-        format_mat(lapply(cdat, function(x) t(x$se())), names(cres[[1]]$conres))
+        format_mat(lapply(cdat, function(x) unlist(x$se())), names(cres[[1]]$conres))
       },
       stat=function() {
-        format_mat(lapply(cdat, function(x) t(x$stat())), names(cres[[1]]$conres))
+        format_mat(lapply(cdat, function(x) unlist(x$stat())), names(cres[[1]]$conres))
       },
       stat_type=cdat[[1]]$stat_type
     )

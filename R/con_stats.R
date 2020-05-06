@@ -231,12 +231,13 @@ fit_contrasts <- function(lmfit, conmat, colind) {
     betamat <- cfs[colind,,drop=FALSE]
   }
   
+  
   if (inherits(cov.unscaled, "try-error")) {
     stop("fit_contrasts: error computing contrast covariance")
     #browser()
   }
   
-  ct <- t(conmat) %*% betamat
+  ct <- as.vector(t(conmat) %*% betamat)
   
   rss <- colSums(as.matrix(lmfit$residuals^2))
   rdf <- lmfit$df.residual
