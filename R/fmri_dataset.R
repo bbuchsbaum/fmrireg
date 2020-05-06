@@ -395,6 +395,19 @@ data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
   mask <- get_mask(x)
   
+  iter <- if (runwise) {
+    chunk_iter(x, length(x$scans), get_run_chunk)
+  } else if (nchunks == 1) {
+    maskSeq <<- one_chunk()
+    chunk_iter(x, 1, get_seq_chunk)
+  } else if (nchunks == dim(mask)[3]) {
+    maskSeq <<- slicewise_chunks(x)
+    chunk_iter(x, length(maskSeq), get_seq_chunk)
+  } else {
+    maskSeq <<- arbitrary_chunks(x, nchunks)
+    chunk_iter(x, length(maskSeq), get_seq_chunk)
+  }
+  
   get_run_chunk <- function(chunk_num) {
     bvec <- neuroim2::read_vec(file.path(x$scans[chunk_num]), mask=mask)
     ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), 
@@ -409,23 +422,15 @@ data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
     vind=maskSeq[[chunk_num]]
     m <- series(v, vind)
     ret <- data_chunk(m, voxel_ind=vind, 
-                      row_ind=1:nrow(x$event_table), chunk_num=chunk_num)
+                      row_ind=1:nrow(x$event_table), 
+                      chunk_num=chunk_num)
     
   }
   
+  iter
+  
   ##message("nchunks is ", nchunks)
-  if (runwise) {
-    chunk_iter(x, length(x$scans), get_run_chunk)
-  } else if (nchunks == 1) {
-    maskSeq <- one_chunk()
-    chunk_iter(x, 1, get_seq_chunk)
-  } else if (nchunks == dim(mask)[3]) {
-    maskSeq <- slicewise_chunks(x)
-    chunk_iter(x, length(maskSeq), get_seq_chunk)
-  } else {
-    maskSeq <- arbitrary_chunks(x, nchunks)
-    chunk_iter(x, length(maskSeq), get_seq_chunk)
-  }
+  
   
   
   
