@@ -220,9 +220,11 @@ fmri_dataset <- function(scans, mask, TR,
                          run_length, 
                          event_table=data.frame(), 
                          base_path=".",
-                         censor=NULL) {
+                         censor=NULL,
+                         mode=c("bigvec", "mmap", "filebacked")) {
   
   assert_that(is.character(mask), msg="'mask' should be the file name of the binary mask file")
+  mode <- match.arg(mode)
   
   if (length(run_length) == 1) {
     run_length <- rep(run_length, length(scans))
@@ -236,12 +238,17 @@ fmri_dataset <- function(scans, mask, TR,
   assert_that(length(run_length) == length(scans))
   
   maskfile <- paste0(base_path, "/", mask)
-  #maskvol <- neuroim2::read_vol(maskfile)
+  assert_that(file.exists(maskfile))
+  maskvol <- neuroim2::read_vol(maskfile)
+  
+  scans=paste0(base_path, "/", scans)
+  vec <- read_vec(scans, mode=mode,mask=maskvol)
   
   ret <- list(
     scans=paste0(base_path, "/", scans),
+    vec=vec,
     mask_file=maskfile,
-    #mask=maskvol,
+    mask=maskvol,
     nruns=length(scans),
     event_table=as_tibble(event_table),
     base_path=base_path,
@@ -276,13 +283,12 @@ get_data.matrix_dataset <- function(x, ...) {
 #' @export
 #' @importFrom neuroim2 NeuroVecSeq FileBackedNeuroVec
 get_data.fmri_file_dataset <- function(x, ...) {
-  m <- get_mask(x)
-  do.call(neuroim2::NeuroVecSeq, lapply(x$scans, neuroim2::read_vec, mask=m))
+  x$vec
 }
 
 #' @export
 get_mask.fmri_file_dataset <- function(x) {
-  neuroim2::read_vol(x$mask_file)
+  x$mask
 }
 
 
@@ -386,12 +392,17 @@ data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
   get_run_chunk <- function(chunk_num) {
     bvec <- neuroim2::read_vec(file.path(x$scans[chunk_num]), mask=mask)
-    ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), row_ind=which(x$sampling_frame$blockids == chunk_num), chunk_num=chunk_num)
+    ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), 
+                      row_ind=which(x$sampling_frame$blockids == chunk_num), 
+                      chunk_num=chunk_num)
   }
   
   get_seq_chunk <- function(chunk_num) {
-    bvecs <- lapply(x$scans, function(scan) neuroim2::read_vec(scan, mask=maskSeq[[chunk_num]]))
-    ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) bv@data)), voxel_ind=maskSeq[[chunk_num]], 
+    v <- x$vec
+    #bvecs <- lapply(x$scans, function(scan) neuroim2::read_vec(scan, mask=maskSeq[[chunk_num]]))
+    vind=maskSeq[[chunk_num]]
+    m <- series(v, vind)
+    ret <- data_chunk(m, voxel_ind=vind, 
                       row_ind=1:nrow(x$event_table), chunk_num=chunk_num)
     
   }
