@@ -400,9 +400,6 @@ data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE) {
   } else if (nchunks == 1) {
     maskSeq <<- one_chunk()
     chunk_iter(x, 1, get_seq_chunk)
-  } else if (nchunks == dim(mask)[3]) {
-    maskSeq <<- slicewise_chunks(x)
-    chunk_iter(x, length(maskSeq), get_seq_chunk)
   } else {
     maskSeq <<- arbitrary_chunks(x, nchunks)
     chunk_iter(x, length(maskSeq), get_seq_chunk)
