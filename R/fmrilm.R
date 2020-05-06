@@ -102,6 +102,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"), ro
   result <- if (strategy == "runwise") {
     runwise_lm(dataset, fmrimod, conlist, fcons, robust=robust)
   } else if (strategy == "chunkwise") {
+    message("chunkwise_lm with ", nchunks)
     chunkwise_lm(dataset, fmrimod, conlist,fcons, nchunks, robust=robust)
   }
   
@@ -379,7 +380,7 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
 chunkwise_lm <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verbose=FALSE, dofpen=0) {
   
   
-  chunks <- exec_strategy("chunkwise", nchunks)(dset)
+  chunks <- exec_strategy("chunkwise", nchunks=nchunks)(dset)
   form <- get_formula(model)
   tmats <- term_matrices(model)
   data_env <- list2env(tmats)
@@ -387,7 +388,7 @@ chunkwise_lm <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verb
   modmat <- model.matrix(as.formula(form), data_env)
   
   lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
-  #browser()
+  
   cres <- foreach( ym = chunks, i = icount(), .verbose=verbose) %dopar% {
     message("processing chunk ", i)
     data_env[[".y"]] <- as.matrix(ym$data)

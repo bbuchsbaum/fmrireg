@@ -395,8 +395,6 @@ data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
   mask <- get_mask(x)
   
-  
-  
   get_run_chunk <- function(chunk_num) {
     bvec <- neuroim2::read_vec(file.path(x$scans[chunk_num]), mask=mask)
     ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), 
@@ -405,15 +403,17 @@ data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
   }
   
   get_seq_chunk <- function(chunk_num) {
+  
     v <- x$vec
     #bvecs <- lapply(x$scans, function(scan) neuroim2::read_vec(scan, mask=maskSeq[[chunk_num]]))
-    vind=as.logical(maskSeq[[chunk_num]])
+    vind=maskSeq[[chunk_num]]
     m <- series(v, vind)
     ret <- data_chunk(m, voxel_ind=vind, 
                       row_ind=1:nrow(x$event_table), chunk_num=chunk_num)
     
   }
   
+  message("nchunks is ", nchunks)
   if (runwise) {
     chunk_iter(x, length(x$scans), get_run_chunk)
   } else if (nchunks == 1) {
@@ -463,6 +463,7 @@ data_chunks.matrix_dataset <- function(x, nchunks=1, runwise=FALSE) {
 #' @export
 exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchunks=NULL) {
   strategy <- match.arg(strategy)
+  
   function(dset) {
     if (strategy == "runwise") {
       data_chunks(dset, runwise=TRUE)
@@ -471,6 +472,7 @@ exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchun
       data_chunks(dset, nchunks = sum(m), runwise=FALSE)
     } else if (strategy == "chunkwise") {
       m <- get_mask(dset)
+      message("nchunks is", nchunks)
       assert_that(!is.null(nchunks) && is.numeric(nchunks))
       if (nchunks > sum(m)) {
         warning("requested number of chunks is greater than number of voxels in mask")
@@ -485,7 +487,6 @@ exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchun
 
 #' @keywords internal
 arbitrary_chunks <- function(x, nchunks) {
-
   mask <- get_mask(x)
   indices <- which(mask != 0)
   chsize <- round(length(indices)/nchunks)
@@ -493,7 +494,7 @@ arbitrary_chunks <- function(x, nchunks) {
   chunkids <- sort(rep(1:nchunks, each=chsize, length.out=length(indices)))
   
   mfun <- function(i) indices[chunkids==i]
-  neuroim2::deferred_list2(mfun)
+  neuroim2::deferred_list2(mfun, nchunks)
   
 }
 
