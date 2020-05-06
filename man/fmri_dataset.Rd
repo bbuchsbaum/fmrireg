@@ -11,7 +11,8 @@ fmri_dataset(
   run_length,
   event_table = data.frame(),
   base_path = ".",
-  censor = NULL
+  censor = NULL,
+  mode = c("bigvec", "mmap", "filebacked")
 )
 }
 \arguments{

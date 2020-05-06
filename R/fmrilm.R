@@ -375,6 +375,7 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
 
 #' Run glm for each data chunk (responses split horizontally) and then concatenate chunks
 #' @keywords internal
+#' @importFrom iterators icount
 chunkwise_lm <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verbose=FALSE, dofpen=0) {
   
   
@@ -387,7 +388,8 @@ chunkwise_lm <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verb
   
   lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
   #browser()
-  cres <- foreach( ym = chunks, .verbose=verbose) %dopar% {
+  cres <- foreach( ym = chunks, i = icount(), .verbose=verbose) %dopar% {
+    message("processing chunk ", i)
     data_env[[".y"]] <- as.matrix(ym$data)
     ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon, modmat=modmat,dofpen=dofpen)
   }
