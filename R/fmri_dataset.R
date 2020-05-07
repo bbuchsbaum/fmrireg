@@ -224,6 +224,7 @@ fmri_dataset <- function(scans, mask, TR,
                          event_table=data.frame(), 
                          base_path=".",
                          censor=NULL,
+                         preload=FALSE,
                          mode=c("bigvec", "mmap", "filebacked")) {
   
   assert_that(is.character(mask), msg="'mask' should be the file name of the binary mask file")
@@ -247,7 +248,10 @@ fmri_dataset <- function(scans, mask, TR,
   scans=paste0(base_path, "/", scans)
   
   message(paste("preloading scans in ", mode, "mode."))
-  vec <- read_vec(scans, mode=mode,mask=maskvol)
+  
+  if (preload) {
+    vec <- read_vec(scans, mode=mode,mask=maskvol)
+  }
   
   ret <- list(
     scans=paste0(base_path, "/", scans),
@@ -258,7 +262,9 @@ fmri_dataset <- function(scans, mask, TR,
     event_table=as_tibble(event_table),
     base_path=base_path,
     sampling_frame=frame,
-    censor=censor
+    censor=censor,
+    mode=mode,
+    preload=preload
   )
   
   class(ret) <- c("fmri_file_dataset", "volumetric_dataset", "fmri_dataset", "list")
@@ -288,7 +294,12 @@ get_data.matrix_dataset <- function(x, ...) {
 #' @export
 #' @importFrom neuroim2 NeuroVecSeq FileBackedNeuroVec
 get_data.fmri_file_dataset <- function(x, ...) {
-  x$vec
+  ## memoise?
+  if (x$preload) {
+    x$vec
+  } else {
+    read_vec(scans, mode=mode,mask=maskvol)
+  }
 }
 
 #' @export
