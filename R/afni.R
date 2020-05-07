@@ -473,7 +473,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
 #' @param outdir the output folder
 #' @param execute whether to execute the command or only output shell '3dDeconvolve.sh' script
 #' @rdname run
-run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system, preprend="") {
+run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system, prepend="") {
   start_dir <- getwd()
   res <- try({
     if (!file.exists(outdir)) {
