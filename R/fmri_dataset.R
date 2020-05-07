@@ -247,10 +247,11 @@ fmri_dataset <- function(scans, mask, TR,
   
   scans=paste0(base_path, "/", scans)
   
-  message(paste("preloading scans in ", mode, "mode."))
   
-  if (preload) {
-    vec <- read_vec(scans, mode=mode,mask=maskvol)
+  
+  vec <- if (preload) {
+    message(paste("preloading scans in ", mode, "mode."))
+    read_vec(scans, mode=mode,mask=maskvol)
   }
   
   ret <- list(
