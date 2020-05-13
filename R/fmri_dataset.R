@@ -229,7 +229,7 @@ fmri_dataset <- function(scans, mask, TR,
                          base_path=".",
                          censor=NULL,
                          preload=FALSE,
-                         mode=c("bigvec", "mmap", "filebacked")) {
+                         mode=c("normal", "bigvec", "mmap", "filebacked")) {
   
   assert_that(is.character(mask), msg="'mask' should be the file name of the binary mask file")
   mode <- match.arg(mode)
@@ -288,7 +288,11 @@ get_data.latent_dataset <- function(x, ...) {
 #' @export
 #' @importFrom neuroim2 NeuroVecSeq 
 get_data.fmri_mem_dataset <- function(x, ...) {
-  do.call(neuroim2::NeuroVecSeq, x$scans)
+  if (length(x$scans) > 1) {
+    do.call(neuroim2::NeuroVecSeq, x$scans)
+  } else {
+    x$scans
+  }
 }
 
 #' @export
