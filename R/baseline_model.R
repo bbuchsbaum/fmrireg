@@ -28,25 +28,42 @@ get_col_inds <- function(Xlist) {
 #' ## bspline basis with degree = 3. This will produce a design matrix with three splines regressors and a constant intercept.
 #' sframe <- sampling_frame(blocklens=c(100,100), TR=2)
 #' bmod <- baseline_model(basis="bs", degree=3, sframe=sframe)
-#' stopifnot(ncol(design_matrix(bmod)) == 4)
+#' bmod_global <- baseline_model(basis="bs", degree=3, sframe=sframe, intercept="global")
+#' bmod_nointercept <- baseline_model(basis="bs", degree=3, sframe=sframe, intercept="none")
+#' stopifnot(ncol(design_matrix(bmod)) == 8)
+#' stopifnot(ncol(design_matrix(bmod_global)) == 7)
+#' stopifnot(ncol(design_matrix(bmod_nointercept)) == 6)
 #' 
-#' ## no intercept term
-#' bmod <- baseline_model(basis="poly", degree=3, sframe=sframe, intercept=FALSE)
+#' ## polynomial with no intercept term
+#' bmod <- baseline_model(basis="poly", degree=3, sframe=sframe, intercept="none")
 #' 
-#' ## a baselie model that only has dummy-coded intercept terms, one per block, i.e. to model runwise mean shifts only.
+#' ## a baseline model that only has dummy-coded intercept terms, one per block, i.e. to model runwise mean shifts only.
 #' bmod <- baseline_model(basis="constant", degree=1, sframe=sframe)
+#' 
+#' ## global intercept only
+#' bmod <- baseline_model(basis="constant", degree=1, sframe=sframe, intercept="global")
+#' 
 #' 
 #' ## add an arbitrary nuisance matrix with two columns, i.e. motion regressors, physiological noise, etc.
 #' nuismat <- matrix(rnorm(100*2), 100, 2)
 #' bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, nuisance_list=list(nuismat, nuismat))
 #' stopifnot(ncol(design_matrix(bmod)) == 12)
 #' @export
-baseline_model <- function(basis=c("constant", "poly", "bs", "ns"), degree=1, sframe, intercept=TRUE, nuisance_list=NULL) {
-  drift_spec <- baseline(degree=degree, basis=basis, constant=FALSE)
+baseline_model <- function(basis=c("constant", "poly", "bs", "ns"), degree=1, sframe, 
+                           intercept=c("runwise", "global", "none"), nuisance_list=NULL) {
+  
+  basis <- match.arg(basis)
+  intercept <- match.arg(intercept)
+  
+  if (basis %in% c("bs", "ns")) {
+    assert_that(degree > 2, msg ="'bs' and 'ns' bases must have degree >= 3")
+  }
+  
+  drift_spec <- baseline(degree=degree, basis=basis, intercept=intercept)
   drift_term <- construct(drift_spec, sframe)
   
-  block_term <- if (intercept && basis != "constant") {
-    construct_block_term("constant", sframe)
+  block_term <- if (intercept != "none" && basis != "constant") {
+    construct_block_term("constant", sframe, intercept)
   }
   
   nuisance_term <- if (!is.null(nuisance_list)) {
@@ -88,9 +105,13 @@ baseline_model <- function(basis=c("constant", "poly", "bs", "ns"), degree=1, sf
 #' @param basis the type of polynomial basis.
 #' @param name the name of the term
 #' @param constant whether to include an intercept term
+#' @param blockwise_intercept whether to include one intercept term per block or just one global intercept
 #' @export
-baseline <- function(degree=1, basis=c("constant", "poly", "bs", "ns"), name=NULL, constant=FALSE) {
+baseline <- function(degree=1, basis=c("constant", "poly", "bs", "ns"), name=NULL, 
+                     intercept=c("runwise", "global", "none")) {
+  
   basis <- match.arg(basis)
+  intercept <- match.arg(intercept)
   
   if (basis == "constant") {
     degree <- 1
@@ -110,7 +131,7 @@ baseline <- function(degree=1, basis=c("constant", "poly", "bs", "ns"), name=NUL
     degree=degree,
     basis=basis,
     fun=bfun,
-    constant=constant,
+    intercept=intercept,
     name=name
   )
   
@@ -177,33 +198,48 @@ block <- function(x) {
 #' @export  
 #' @importFrom purrr map_chr
 construct.baselinespec <- function(x, sampling_frame) {
-  ret <- if (x$constant) {
-    lapply(sampling_frame$blocklens, function(bl) cbind(rep(1, bl), x$fun(seq(1, bl), degree=x$degree)))
+  ## ret <- if (x$constant && x$basis != "constant") {
+  ## add intercept term per run
+  ##lapply(sampling_frame$blocklens, function(bl) cbind(rep(1, bl), x$fun(seq(1, bl), degree=x$degree)))
+  ## } else {
+  ## lapply(sampling_frame$blocklens, function(bl) x$fun(seq(1, bl), degree=x$degree))
+  ##}
+  
+  ret <- lapply(sampling_frame$blocklens, function(bl) x$fun(seq(1, bl), degree=x$degree))
+  
+  if (x$basis == "constant" && x$intercept == "global") {
+    colind <- lapply(ret, function(x) 1:1)
+    rowind <- lapply(1:length(ret), function(i) {
+      rowstart <- sum(sampling_frame$blocklens[1:i]) - sampling_frame$blocklens[i] + 1
+      rowend <- rowstart + sampling_frame$blocklens[i] -1
+      rowstart:rowend
+    })
+    ret <- do.call(rbind, ret)
+    cnames <- paste0("base_", x$basis)
+    colnames(ret) <- cnames
+    baseline_term(x$name, ret,colind, rowind)
   } else {
-    lapply(sampling_frame$blocklens, function(bl) x$fun(seq(1, bl), degree=x$degree))
-  }
+    nc <- sum(map_int(ret, ncol))
+    nc_per_block <- ncol(ret[[1]])
+    mat <- matrix(0, sum(sampling_frame$blocklens), nc)
   
+    colind <- vector(length(ret), mode="list")
+    rowind <- vector(length(ret), mode="list")
   
-  nc <- sum(map_int(ret, ncol))
-  nc_per_block <- ncol(ret[[1]])
-  mat <- matrix(0, sum(sampling_frame$blocklens), nc)
-  
-  colind <- vector(length(ret), mode="list")
-  rowind <- vector(length(ret), mode="list")
-  
-  for (i in seq_along(ret)) {
-    rowstart <- sum(sampling_frame$blocklens[1:i]) - sampling_frame$blocklens[i] + 1
-    rowend <- rowstart + sampling_frame$blocklens[i] -1
-    colstart <- (nc_per_block)*(i-1) + 1
-    colend <- colstart + nc_per_block - 1
-    mat[rowstart:rowend, colstart:colend] <- ret[[i]]
-    colind[[i]] <- colstart:colend
-    rowind[[i]] <- rowstart:rowend
-  }
+    for (i in seq_along(ret)) {
+      rowstart <- sum(sampling_frame$blocklens[1:i]) - sampling_frame$blocklens[i] + 1
+      rowend <- rowstart + sampling_frame$blocklens[i] -1
+      colstart <- (nc_per_block)*(i-1) + 1
+      colend <- colstart + nc_per_block - 1
+      mat[rowstart:rowend, colstart:colend] <- ret[[i]]
+      colind[[i]] <- colstart:colend
+      rowind[[i]] <- rowstart:rowend
+    }
 
-  cnames <- apply(expand.grid(paste0("base_", x$basis, "", 1:nc_per_block), paste0("block_", 1:length(sampling_frame$blocklens))), 1, paste, collapse="_")
-  colnames(mat) <- cnames
-  baseline_term(x$name, mat, colind, rowind)	
+    cnames <- apply(expand.grid(paste0("base_", x$basis, "", 1:nc_per_block), paste0("block_", 1:length(sampling_frame$blocklens))), 1, paste, collapse="_")
+    colnames(mat) <- cnames
+    baseline_term(x$name, mat, colind, rowind)	
+  }
 }
 
 #' baseline_term
@@ -236,20 +272,23 @@ design_matrix.baseline_term <- function(x, blockid=NULL, allrows=FALSE) {
 
 
 #' @keywords internal
-construct_block_term <- function(vname, sframe) {
+construct_block_term <- function(vname, sframe, intercept=c("global", "runwise")) {
+  intercept <- match.arg(intercept)
   blockids <- blockids(sframe)
   blockord <- sort(unique(blockids))
   
   expanded_blockids <- ordered(rep(blockord, blocklens(sframe)))
   
-  mat <- if (length(blockord) == 1) {
-    matrix(rep(1, length(expanded_blockids)), length(expanded_blockids), 1)
+  if (length(blockord) == 1 || intercept == "global") {
+    mat <- matrix(rep(1, length(expanded_blockids)), length(expanded_blockids), 1)
+    colnames(mat) <- paste0(vname, "_", "global")
   } else {
     mat <- model.matrix(~ expanded_blockids - 1)
+    colnames(mat) <- paste0(vname, "_", blockord)
   }
   
-  colnames(mat) <- paste0(vname, "_", blockord)
-  block_term(vname, blockids=blockids, expanded_blockids=expanded_blockids, mat)
+  
+  block_term(vname, blockids=blockids, expanded_blockids=expanded_blockids, mat, type=intercept)
   
 }
 
@@ -263,10 +302,16 @@ construct_block_term <- function(vname, sframe) {
 #' @param mat the \code{matrix} of covariates
 #' @importFrom tibble as_tibble
 #' @export
-block_term <- function(varname, blockids, expanded_blockids, mat) {
+block_term <- function(varname, blockids, expanded_blockids, mat, type=c("runwise", "global")) {
+  type <- match.arg(type)
   assertthat::assert_that(is.matrix(mat))
   assertthat::assert_that(nrow(mat) == length(blockids))
-  assertthat::assert_that(ncol(mat) == length(unique(blockids)))
+  
+  if (type == "runwise") {
+    assertthat::assert_that(ncol(mat) == length(unique(blockids)))
+  } else {
+    assertthat::assert_that(ncol(mat) == 1)
+  }
   
   ret <- list(varname=varname, blockids=blockids, expanded_blockids=expanded_blockids, design_matrix=tibble::as_tibble(mat), nblocks=ncol(mat),
               colind=as.list(1:ncol(mat)), rowind=split(1:length(blockids), blockids))

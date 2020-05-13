@@ -205,10 +205,10 @@ latent_dataset <- function(lvec, TR, run_length, event_table=data.frame()) {
 
 #' An fMRI dataset consisting of a set of scans as files, design information, and other data.
 #' 
-#' @param scans a vector of file names of the images comprising the dataset
+#' @param scans a vector of one or more file names of the images comprising the dataset
 #' @param mask name of the binary mask file indicating the voxels to include in analysis.
 #' @param TR the repetition time in seconds of the scan-to-scan interval.
-#' @param run_length a \code{vector} of itnegers indicating the number of scans in each run.
+#' @param run_length a \code{vector} of one or more integers indicating the number of scans in each run.
 #' @param event_table a \code{data.frame} containing the event onsets and experimental variables.
 #' @param base_path the file path to be prepended to relative file names.
 #' @param censor a binary vector indicating which scans to remove.
@@ -218,6 +218,10 @@ latent_dataset <- function(lvec, TR, run_length, event_table=data.frame()) {
 #' 
 #' dset <- fmri_dataset(c("scan1.nii", "scan2.nii", "scan3.nii"), mask="mask.nii", TR=2, run_length=rep(300,3), 
 #'         event_table=data.frame(onsets=c(3,20,99,3,20,99,3,20,99), run=c(1,1,1,2,2,2,3,3,3)))
+#'         
+#' dset <- fmri_dataset("scan1.nii", mask="mask.nii", TR=2, run_length=300, 
+#'         event_table=data.frame(onsets=c(3,20,99), run=rep(1,3)))
+#' 
 #' 
 fmri_dataset <- function(scans, mask, TR, 
                          run_length, 
@@ -230,27 +234,28 @@ fmri_dataset <- function(scans, mask, TR,
   assert_that(is.character(mask), msg="'mask' should be the file name of the binary mask file")
   mode <- match.arg(mode)
   
-  if (length(run_length) == 1) {
-    run_length <- rep(run_length, length(scans))
-  }
+  #if (length(run_length) == 1) {
+  #  run_length <- rep(run_length, length(scans))
+  #}
+  
+  ## run_length should equal total length of images in scans -- but we can 't confirm that here.
   
   if (is.null(censor)) {
     censor <- rep(0, sum(run_length))
   }
   
   frame <- sampling_frame(run_length, TR)
-  assert_that(length(run_length) == length(scans))
+  
+  #assert_that(length(run_length) == length(scans))
   
   maskfile <- paste0(base_path, "/", mask)
   assert_that(file.exists(maskfile))
   maskvol <- neuroim2::read_vol(maskfile)
   
   scans=paste0(base_path, "/", scans)
-  
-  
-  
+
   vec <- if (preload) {
-    message(paste("preloading scans in ", mode, "mode."))
+    message(paste("preloading scans", paste(scans, collapse = " ")))
     read_vec(scans, mode=mode,mask=maskvol)
   }
   
@@ -299,7 +304,7 @@ get_data.fmri_file_dataset <- function(x, ...) {
   if (x$preload) {
     x$vec
   } else {
-    read_vec(scans, mode=mode,mask=maskvol)
+    read_vec(scans, mode=mode,mask=x$maskvol)
   }
 }
 

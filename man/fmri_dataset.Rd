@@ -12,6 +12,7 @@ fmri_dataset(
   event_table = data.frame(),
   base_path = ".",
   censor = NULL,
+  preload = FALSE,
   mode = c("bigvec", "mmap", "filebacked")
 )
 }

@@ -400,6 +400,12 @@ split_onsets <- function(x, ...) UseMethod("split_onsets")
 
 
 
+#' estimate trialwise beta coefficients for a dataset
+#' 
+#' @param x the dataset 
+#' @param ... extra args
+#' @export
+estimate_betas <- function(x, ...) UseMethod("estimate_betas")
 
   
 
