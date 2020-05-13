@@ -159,7 +159,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3) {
 #' @param fixed the fixed factors
 #' @param ran the random (trialwise) factors
 #' @param block the block factor
-#' @param basemode \code{baseline_model} instance to regress out of data before bet estimation
+#' @param basemod \code{baseline_model} instance to regress out of data before bet estimation
 #' @param niter number of searchlight iterations for method "pls_searchlight"
 #' @param ncomp number of pls components for method "pls" and "pls_searchlight" and "pls_global"
 #' @param lambda lambda parameter (not currently used)
@@ -184,8 +184,10 @@ estimate_betas.fmri_dataset <- function(dataset,fixed, ran, block,
   bvec <- get_data(dset)
   mask <- get_mask(dset)
   
-  bmod <- if (is.null(basemodel)) {
+  bmod <- if (is.null(basemod)) {
     baseline_model("constant", sframe=dset$sampling_frame)
+  } else {
+    basemod
   }
   
   
@@ -221,8 +223,10 @@ estimate_betas.matrix_dataset <- function(dataset,fixed, ran, block,
   dset <- dataset
   mask <- get_mask(dset)
   
-  bmod <- if (is.null(basemodel)) {
+  bmod <- if (is.null(basemod)) {
     baseline_model("constant", sframe=dset$sampling_frame)
+  } else {
+    basemod
   }
 
   bdes <- gen_beta_design(fixed, ran, block, bmod, dset)
