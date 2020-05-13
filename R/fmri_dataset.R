@@ -304,7 +304,7 @@ get_data.fmri_file_dataset <- function(x, ...) {
   if (x$preload) {
     x$vec
   } else {
-    read_vec(scans, mode=mode,mask=x$maskvol)
+    read_vec(scans, mask=x$maskvol, mode=x$mode, ...)
   }
 }
 
