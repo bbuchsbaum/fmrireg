@@ -9,9 +9,8 @@
   fixed,
   ran,
   block,
-  method = c("mixed", "pls", "pls_searchlight", "slm"),
-  basedeg = 5,
-  nuisance_list = NULL,
+  method = c("mixed", "pls", "pls_searchlight", "pls_global"),
+  basemod = NULL,
   radius = 8,
   niter = 8,
   ncomp = 4,
@@ -27,13 +26,11 @@
 
 \item{block}{the block factor}
 
-\item{basedeg}{number of baseline dmodels degrees of freedom}
-
-\item{nuisance_list}{a list of matrices containing nuisance regressors, one matrix per block.}
+\item{basemod}{\code{baseline_model} instance to regress out of data before bet estimation}
 
 \item{niter}{number of searchlight iterations for method "pls_searchlight"}
 
-\item{ncomp}{number of pls components for method "pls" and "pls_searchlight"}
+\item{ncomp}{number of pls components for method "pls" and "pls_searchlight" and "pls_global"}
 
 \item{lambda}{lambda parameter (not currently used)}
 }

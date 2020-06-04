@@ -4,7 +4,13 @@
 \alias{block_term}
 \title{block_term}
 \usage{
-block_term(varname, blockids, expanded_blockids, mat)
+block_term(
+  varname,
+  blockids,
+  expanded_blockids,
+  mat,
+  type = c("runwise", "global")
+)
 }
 \arguments{
 \item{varname}{the name of the term}

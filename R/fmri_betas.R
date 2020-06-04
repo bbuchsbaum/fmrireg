@@ -256,7 +256,8 @@ estimate_betas.fmri_latent_dataset <- function(dataset,fixed, ran, block,
 }
 
 
-estimate_hrf <- function(form, fixed, block, dataset, 
+#' @importFrom mgcv gam s
+estimate_hrf <- function(form, fixed=NULL, block, dataset, 
                            bs=c("tp", "ts", "cr", "ps"), 
                            rsam=seq(0,20,by=1),
                            basedeg=5, nuisance_list=NULL) {
@@ -266,7 +267,6 @@ estimate_hrf <- function(form, fixed, block, dataset,
   
   onset_var <- lazyeval::f_lhs(form)
   dvars <- lazyeval::f_rhs(form)
-  
   
   bmod <- baseline_model("bs", degree=basedeg, sframe=dset$sampling_frame, nuisance_list=nuisance_list)
   
@@ -278,7 +278,7 @@ estimate_hrf <- function(form, fixed, block, dataset,
     has_fixed=FALSE
   }
   
-  emat_cond <- event_model(cond, data=dset$event_table, block=block, 
+  emat_cond <- event_model(form, data=dset$event_table, block=block, 
                            sampling_frame=dset$sampling_frame)
   
 
@@ -292,12 +292,12 @@ estimate_hrf <- function(form, fixed, block, dataset,
       gam(v ~ s(X_cond, bs=bs) + X_base)
     }
     
-    time <- seq(0,20,by=1)
+    time <- rsam
     xb <- matrix(colMeans(X_base), length(time),ncol(X_base), byrow=TRUE)
     predict(gam.1, list(X_cond=time, X_base=xb))
   }))
   
-  do.call(cbind, res)
+  res
   
 }
   

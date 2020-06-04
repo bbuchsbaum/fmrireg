@@ -8,7 +8,7 @@ baseline(
   degree = 1,
   basis = c("constant", "poly", "bs", "ns"),
   name = NULL,
-  constant = FALSE
+  intercept = c("runwise", "global", "none")
 )
 }
 \arguments{
@@ -19,6 +19,8 @@ baseline(
 \item{name}{the name of the term}
 
 \item{constant}{whether to include an intercept term}
+
+\item{blockwise_intercept}{whether to include one intercept term per block or just one global intercept}
 }
 \description{
 Create a model specification for modeling low-frequency drift in fmri time series.

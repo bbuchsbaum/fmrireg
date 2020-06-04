@@ -11,7 +11,7 @@ matrix_dataset(datamat, TR, run_length, event_table = data.frame())
 
 \item{TR}{the repetition time in seconds of the scan-to-scan interval.}
 
-\item{run_length}{a \code{vector} of itnegers indicating the number of scans in each run.}
+\item{run_length}{a \code{vector} of one or more integers indicating the number of scans in each run.}
 
 \item{event_table}{a \code{data.frame} containing the event onsets and experimental variables.}
 }

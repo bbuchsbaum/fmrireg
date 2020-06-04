@@ -13,17 +13,17 @@ fmri_dataset(
   base_path = ".",
   censor = NULL,
   preload = FALSE,
-  mode = c("bigvec", "mmap", "filebacked")
+  mode = c("normal", "bigvec", "mmap", "filebacked")
 )
 }
 \arguments{
-\item{scans}{a vector of file names of the images comprising the dataset}
+\item{scans}{a vector of one or more file names of the images comprising the dataset}
 
 \item{mask}{name of the binary mask file indicating the voxels to include in analysis.}
 
 \item{TR}{the repetition time in seconds of the scan-to-scan interval.}
 
-\item{run_length}{a \code{vector} of itnegers indicating the number of scans in each run.}
+\item{run_length}{a \code{vector} of one or more integers indicating the number of scans in each run.}
 
 \item{event_table}{a \code{data.frame} containing the event onsets and experimental variables.}
 
@@ -38,5 +38,9 @@ An fMRI dataset consisting of a set of scans as files, design information, and o
 
 dset <- fmri_dataset(c("scan1.nii", "scan2.nii", "scan3.nii"), mask="mask.nii", TR=2, run_length=rep(300,3), 
         event_table=data.frame(onsets=c(3,20,99,3,20,99,3,20,99), run=c(1,1,1,2,2,2,3,3,3)))
+        
+dset <- fmri_dataset("scan1.nii", mask="mask.nii", TR=2, run_length=300, 
+        event_table=data.frame(onsets=c(3,20,99), run=rep(1,3)))
+
 
 }
