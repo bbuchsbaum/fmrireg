@@ -76,7 +76,7 @@ gen_hrf <- function(hrf, lag=0, width=0, precision=.1, half_life=Inf,
 #' emphrf <- gen_empirical_hrf(0:24, y) 
 #' ## plot(emphrf(seq(0,24,by=.5)), type='l')
 gen_empirical_hrf <- function(t, y, name="empirical_hrf") {
-  f <- approxfun(t, y)
+  f <- approxfun(t,y, yright=0, yleft=0)
   HRF(f, name=name, nbasis=1)
 }
 
