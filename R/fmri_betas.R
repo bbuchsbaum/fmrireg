@@ -268,6 +268,7 @@ estimate_hrf <- function(form, fixed=NULL, block, dataset,
   onset_var <- lazyeval::f_lhs(form)
   dvars <- lazyeval::f_rhs(form)
   
+  
   bmod <- baseline_model("bs", degree=basedeg, sframe=dset$sampling_frame, nuisance_list=nuisance_list)
   
   if (!is.null(fixed)) {
