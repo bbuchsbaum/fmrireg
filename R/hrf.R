@@ -63,6 +63,18 @@ gen_hrf <- function(hrf, lag=0, width=0, precision=.1, half_life=Inf,
   HRF(f, name=name, nbasis=nb, span=span)
 }
 
+
+#' generate an empirical hemodynamic response function
+#' 
+#' @export
+#' @param t time
+#' @param y values of hrf at time \code{t[i]}
+#' 
+#' @examples 
+#' 
+#' y <- -poly(0:24, 2)[,2]
+#' emphrf <- gen_empirical_hrf(0:24, y) 
+#' ## plot(emphrf(seq(0,24,by=.5)), type='l')
 gen_empirical_hrf <- function(t, y, name="empirical_hrf") {
   f <- approxfun(t, y)
   HRF(f, name=name, nbasis=1)
@@ -498,11 +510,10 @@ make_hrf <- function(basis, lag) {
 #### TODO character variables need an "as.factor"
 
 
-#' hrf
-#' 
+
 #' hemodynamic regressor specification function for model formulas.
 #' 
-#' This function is to be used in formulas for fitting fucntions, e.g. onsets ~ hrf(fac1,fac2) ...
+#' This function is to be used in formulas for fitting functions, e.g. onsets ~ hrf(fac1,fac2) ...
 #' 
 #' 
 #' @param ... the variable names, all of which must be present in the enclosing environment (e.g. an \code{event_model} object)

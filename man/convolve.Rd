@@ -11,7 +11,7 @@ convolve(x, hrf, sampling_frame, ...)
 
 \item{hrf}{a hemodynamic response function}
 
-\item{sampling_frame}{the time series grid over whcih to sample the fucntion.}
+\item{sampling_frame}{the time series grid over which to sample the function.}
 
 \item{...}{extra args}
 }

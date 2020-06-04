@@ -2,7 +2,7 @@
 % Please edit documentation in R/hrf.R
 \name{hrf}
 \alias{hrf}
-\title{hrf}
+\title{hemodynamic regressor specification function for model formulas.}
 \usage{
 hrf(
   ...,
@@ -45,10 +45,7 @@ If multiple contrasts are required, then these should be wrapped in a \code{list
 \item{lag}{a temporal offset in seconds which is added to onset before convolution}
 }
 \description{
-hemodynamic regressor specification function for model formulas.
-}
-\details{
-This function is to be used in formulas for fitting fucntions, e.g. onsets ~ hrf(fac1,fac2) ...
+This function is to be used in formulas for fitting functions, e.g. onsets ~ hrf(fac1,fac2) ...
 }
 \examples{
 

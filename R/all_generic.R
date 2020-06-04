@@ -111,7 +111,7 @@ conditions <- function(x, ...) UseMethod("conditions")
 #' @export
 #' @param x an event sequence
 #' @param hrf a hemodynamic response function
-#' @param sampling_frame the time series grid over whcih to sample the fucntion.
+#' @param sampling_frame the time series grid over which to sample the function.
 #' @param ... extra args
 convolve <- function(x, hrf, sampling_frame,...) UseMethod("convolve")
 
