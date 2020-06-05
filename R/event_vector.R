@@ -367,6 +367,11 @@ cells.event_term <- function(x, drop.empty=TRUE) {
   
 }
 
+
+cells.covariate_convolved_term <- function(x) {
+  unique(event_table(x))
+}
+
 #' @export
 #' @importFrom stringr str_trim
 cells.convolved_term <- function(x, exclude_basis=FALSE) {

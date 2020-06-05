@@ -268,8 +268,7 @@ contrast_weights.event_model <- function(x) {
   tnames <- term_names(x)
   tind <- x$term_indices
   ncond <- length(conditions(x))
-
-  ret <- lapply(seq_along(tnames), function(i) {
+  ret <- lapply(seq_along(terms(x)), function(i) {
     cwlist <- contrast_weights(terms(x)[[i]])
     len <- length(conditions(terms(x)[[i]]))
     

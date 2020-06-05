@@ -64,14 +64,30 @@ construct.covariatespec <- function(x, model_spec, sampling_frame=NULL) {
   }
   
   ret <- list(
-    varname=x$varname,
+    varname=x$name,
     spec=x,
+    evterm=cterm,
     design_matrix=cterm$design_matrix,
     sampling_frame=sframe,
     id=if(!is.null(x$id)) x$id else x$varname
   )
   
-  class(ret) <- c("convolved_term", "fmri_term", "list") 
+  class(ret) <- c("covariate_convolved_term", "convolved_term", "fmri_term", "list") 
   ret
 }
 
+
+event_table.covariate_convolved_term <- function(x) {
+  cnames <- colnames(x$design_matrix)
+  ret <- do.call(cbind, lapply(cnames, function(tname) {
+    rep(.sanitizeName(tname), nrow(x$design_matrix))
+  }))
+  
+  colnames(ret) <- cnames
+  as_tibble(ret)
+  
+}
+
+nbasis.covariate_convolved_term <- function(x) {
+  ncol(x$design_matrix)
+}
