@@ -81,6 +81,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3) {
       
     } else if (method == "mixed") {
       X  <- cbind(dmat_ran, dmat_fixed)
+      X[is.na(X)] <- 0
       Base <- as.matrix(dmat_base)
       res <-
         do.call(cbind, furrr::future_map(vecs, function(v) {
@@ -90,6 +91,8 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3) {
       as.matrix(res)
     } else if (method == "pls") {
       X <- cbind(scale(dmat_ran), scale(dmat_fixed))
+      X[is.na(X)] <- 0
+      
       Base <- as.matrix(dmat_base)
       
       res <-
@@ -101,6 +104,8 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3) {
     } else if (method == "pls_global") {
   
       X <- cbind(scale(dmat_ran), scale(dmat_fixed))
+      X[is.na(X)] <- 0
+      
       Base <- as.matrix(dmat_base)
       Y <- do.call(cbind, lapply(vecs, function(v) v))
       
@@ -175,6 +180,9 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3) {
 #' fixed = onset ~ hrf(run)
 #' ran = onset ~ trialwise()
 #' block = ~ run
+#' 
+#' 
+## TODO trialwise(durations=4) failed
 estimate_betas.fmri_dataset <- function(dataset,fixed, ran, block,  
                            method=c("mixed", "pls", "pls_searchlight", "pls_global"), 
                            basemod=NULL, 
