@@ -47,4 +47,6 @@ dset <- fmri_dataset(scans=scans,mask="mask.nii",TR=1.5,run_length=rep(436,6),ev
 fixed = onset ~ hrf(run)
 ran = onset ~ trialwise()
 block = ~ run
+
+
 }

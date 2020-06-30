@@ -224,7 +224,7 @@ estimate_betas.fmri_dataset <- function(dataset,fixed, ran, block,
 
 #' @export 
 estimate_betas.matrix_dataset <- function(dataset,fixed, ran, block,  
-                                        method=c("mixed", "pls", "pls_searchlight"), 
+                                        method=c("mixed", "pls", "pls_searchlight", "pls_global"), 
                                         basemod=NULL,
                                         radius=8, niter=8, ncomp=4, lambda=.01) {
   
