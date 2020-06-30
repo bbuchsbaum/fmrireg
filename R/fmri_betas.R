@@ -81,7 +81,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3) {
       
     } else if (method == "mixed") {
       X  <- cbind(dmat_ran, dmat_fixed)
-      ## TODSO emit warning when NAs found in design matrix?
+      ## TODO emit warning when NAs found in design matrix?
       X[is.na(X)] <- 0
       Base <- as.matrix(dmat_base)
       res <-
