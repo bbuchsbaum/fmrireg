@@ -377,9 +377,15 @@ contrast_weights.contrast_formula_spec <- function(x, term) {
 
   frm <- paste0(gsub(":", ".", deparse(lazyeval::f_rhs(x$A))), collapse="")
   A <- as.formula(paste("~", frm))
+  
+  if (is_continuous.event_term(term)) {
+    ## hack to handle contrasts with continuous terms
+    facs <- !sapply(term$evterm$events, is_continuous)
+    term.cells[,!facs] <- 1
+  } 
+  
   modmat <- tibble::as_tibble(model.matrix(cform,data=term.cells))
   names(modmat) <- gsub(":", ".", condnames)
-  
   weights <- matrix(0, NROW(term.cells), 1)
   weights[keep,1] <-  as.vector(lazyeval::f_eval_rhs(A, data=modmat))
   row.names(weights) <- row.names(term.cells)
