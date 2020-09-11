@@ -96,7 +96,7 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1,
 print.afni_lm_spec <- function(x) {
   cat("AFNI linear model via 3dDeconvolve \n")
   cat("  working_dir: ", x$working_dir, "\n")
-  cat("  number of GLTs:", length(x$glts), "\n")
+  cat("  number of GLTs:", length(x$cmd$glts), "\n")
   cat("  command line: \n", x$cmd$cmd, "\n")
   
 }

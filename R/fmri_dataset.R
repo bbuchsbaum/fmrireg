@@ -249,15 +249,22 @@ fmri_dataset <- function(scans, mask, TR,
   #assert_that(length(run_length) == length(scans))
   
   maskfile <- paste0(base_path, "/", mask)
-  assert_that(file.exists(maskfile))
-  maskvol <- neuroim2::read_vol(maskfile)
+  
   
   scans=paste0(base_path, "/", scans)
 
+  maskvol <- if (preload) {
+    assert_that(file.exists(maskfile))
+    message(paste("preloading masks", maskfile))
+    neuroim2::read_vol(maskfile)
+    
+  }
+  
   vec <- if (preload) {
     message(paste("preloading scans", paste(scans, collapse = " ")))
     read_vec(scans, mode=mode,mask=maskvol)
   }
+  
   
   ret <- list(
     scans=paste0(base_path, "/", scans),
