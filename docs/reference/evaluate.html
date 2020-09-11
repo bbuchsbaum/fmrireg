@@ -10,23 +10,27 @@
 
 
 <!-- jquery -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <!-- Bootstrap -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/flatly/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.4.0/cerulean/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
 
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha256-U5ZEeKfGNOja007MMD3YBI0A3OSZOQbeG6z2f2Y0hu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script>
+
+<!-- bootstrap-toc -->
+<link rel="stylesheet" href="../bootstrap-toc.css">
+<script src="../bootstrap-toc.js"></script>
 
 <!-- Font Awesome icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.7.1/css/all.min.css" integrity="sha256-nAmazAk6vS34Xqo0BSrTb+abbtFlgsFK7NKSi6o7Y78=" crossorigin="anonymous" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.7.1/css/v4-shims.min.css" integrity="sha256-6qHlizsOWFskGlwVOKuns+D1nB6ssZrHQrNj1wGplHc=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous" />
 
 <!-- clipboard.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script>
 
 <!-- headroom.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/headroom.min.js" integrity="sha256-DJFC1kqIhelURkuza0AvYal5RxMtpzLjFhsnVIeuk+U=" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script>
 
 <!-- pkgdown -->
 <link href="../pkgdown.css" rel="stylesheet">
@@ -38,7 +42,6 @@
 <meta property="og:title" content="evaluate a function over a sampling grid — evaluate" />
 <meta property="og:description" content="given an object to be evaluated and a an input sample (&quot;grid&quot;), evaluate the object.
 evalute a regressor function over a sampling grid" />
-<meta name="twitter:card" content="summary" />
 
 
 
@@ -56,7 +59,7 @@ evalute a regressor function over a sampling grid" />
 
   </head>
 
-  <body>
+  <body data-spy="scroll" data-target="#toc">
     <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -115,7 +118,7 @@ evalute a regressor function over a sampling grid" />
       </ul>
       <ul class="nav navbar-nav navbar-right">
         <li>
-  <a href="https://github.com/bbuchsbaum/fmrireg">
+  <a href="https://github.com/bbuchsbaum/fmrireg/">
     <span class="fab fa fab fa-github fa-lg"></span>
      
   </a>
@@ -143,14 +146,21 @@ evalute a regressor function over a sampling grid" />
 <p>evalute a regressor function over a sampling grid</p>
     </div>
 
-    <pre class="usage"><span class='fu'>evaluate</span>(<span class='no'>x</span>, <span class='no'>grid</span>, <span class='no'>...</span>)
+    <pre class="usage"><span class='fu'>evaluate</span>(<span class='kw'>x</span>, <span class='kw'>grid</span>, <span class='kw'>...</span>)
 
 <span class='co'># S3 method for HRF</span>
-<span class='fu'>evaluate</span>(<span class='no'>x</span>, <span class='no'>grid</span>, <span class='kw'>amplitude</span> <span class='kw'>=</span> <span class='fl'>1</span>, <span class='kw'>duration</span> <span class='kw'>=</span> <span class='fl'>0</span>,
-  <span class='kw'>precision</span> <span class='kw'>=</span> <span class='fl'>0.2</span>, <span class='kw'>summate</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>normalize</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>)
+<span class='fu'>evaluate</span>(
+  <span class='kw'>x</span>,
+  <span class='kw'>grid</span>,
+  amplitude = <span class='fl'>1</span>,
+  duration = <span class='fl'>0</span>,
+  precision = <span class='fl'>0.2</span>,
+  summate = <span class='fl'>TRUE</span>,
+  normalize = <span class='fl'>FALSE</span>
+)
 
 <span class='co'># S3 method for regressor</span>
-<span class='fu'>evaluate</span>(<span class='no'>x</span>, <span class='no'>grid</span>, <span class='kw'>precision</span> <span class='kw'>=</span> <span class='fl'>0.2</span>)</pre>
+<span class='fu'>evaluate</span>(<span class='kw'>x</span>, <span class='kw'>grid</span>, precision = <span class='fl'>0.2</span>)</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -161,7 +171,7 @@ evalute a regressor function over a sampling grid" />
     </tr>
     <tr>
       <th>grid</th>
-      <td><p>the sampling grid</p></td>
+      <td><p>the sampling grid. A vector of real values in seconds.</p></td>
     </tr>
     <tr>
       <th>...</th>
@@ -177,7 +187,7 @@ evalute a regressor function over a sampling grid" />
     </tr>
     <tr>
       <th>precision</th>
-      <td><p>the temporal resolution used for computing summed responses when duration &gt; 0</p></td>
+      <td><p>the sampling precision for the hrf. This parameter is passed to <code>evaluate.HRF</code></p></td>
     </tr>
     <tr>
       <th>summate</th>
@@ -187,54 +197,44 @@ evalute a regressor function over a sampling grid" />
       <th>normalize</th>
       <td><p>scale output so that peak is 1.</p></td>
     </tr>
-    <tr>
-      <th>grid</th>
-      <td><p>the sampling grid. A vector of real values in seconds.</p></td>
-    </tr>
-    <tr>
-      <th>precision</th>
-      <td><p>the sampling precision for the hrf. This parameter is passed to <code>evaluate.HRF</code></p></td>
-    </tr>
     </table>
 
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <pre class="examples"><div class='input'>
-<span class='no'>hrf1</span> <span class='kw'>&lt;-</span> <span class='fu'>evaluate</span>(<span class='no'>HRF_SPMG1</span>, <span class='kw'>grid</span><span class='kw'>=</span><span class='fu'><a href='https://rdrr.io/r/base/seq.html'>seq</a></span>(<span class='fl'>0</span>,<span class='fl'>20</span>,<span class='kw'>by</span><span class='kw'>=</span><span class='fl'>1.5</span>), <span class='kw'>duration</span><span class='kw'>=</span><span class='fl'>2</span>, <span class='kw'>precision</span><span class='kw'>=</span><span class='fl'>1</span>)
+<span class='kw'>hrf1</span> <span class='op'>&lt;-</span> <span class='fu'>evaluate</span>(<span class='kw'>HRF_SPMG1</span>, grid=<span class='fu'><a href='https://rdrr.io/r/base/seq.html'>seq</a></span>(<span class='fl'>0</span>,<span class='fl'>20</span>,by=<span class='fl'>1.5</span>), duration=<span class='fl'>2</span>, precision=<span class='fl'>1</span>)
 
 <span class='co'># the same, except now turn off temporal summation.</span>
-<span class='no'>hrf2</span> <span class='kw'>&lt;-</span> <span class='fu'>evaluate</span>(<span class='no'>HRF_SPMG1</span>, <span class='kw'>grid</span><span class='kw'>=</span><span class='fu'><a href='https://rdrr.io/r/base/seq.html'>seq</a></span>(<span class='fl'>0</span>,<span class='fl'>20</span>,<span class='kw'>by</span><span class='kw'>=</span><span class='fl'>1.5</span>), <span class='kw'>duration</span><span class='kw'>=</span><span class='fl'>2</span>, <span class='kw'>precision</span><span class='kw'>=</span><span class='fl'>1</span>,<span class='kw'>summate</span><span class='kw'>=</span><span class='fl'>FALSE</span>)
+<span class='kw'>hrf2</span> <span class='op'>&lt;-</span> <span class='fu'>evaluate</span>(<span class='kw'>HRF_SPMG1</span>, grid=<span class='fu'><a href='https://rdrr.io/r/base/seq.html'>seq</a></span>(<span class='fl'>0</span>,<span class='fl'>20</span>,by=<span class='fl'>1.5</span>), duration=<span class='fl'>2</span>, precision=<span class='fl'>1</span>,summate=<span class='fl'>FALSE</span>)
 
-<span class='no'>frame</span> <span class='kw'>&lt;-</span> <span class='fu'>sampling_frame</span>(<span class='kw'>blocklens</span><span class='kw'>=</span><span class='fl'>100</span>, <span class='kw'>TR</span><span class='kw'>=</span><span class='fl'>2</span>)
-<span class='no'>reg</span> <span class='kw'>&lt;-</span> <span class='fu'>regressor</span>(<span class='kw'>onsets</span><span class='kw'>=</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>10</span>,<span class='fl'>20</span>), <span class='kw'>hrf</span><span class='kw'>=</span><span class='no'>HRF_SPMG1</span>)
-<span class='fu'>evaluate</span>(<span class='no'>reg</span>, <span class='fu'>samples</span>(<span class='no'>frame</span>))</div><div class='output co'>#&gt;   [1]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;   [6]  0.003064436  0.100778395  0.175370975  0.127113811  0.057464145
-#&gt;  [11]  0.016578672  0.093023409  0.160233348  0.112499991  0.046738993
-#&gt;  [16]  0.006956570 -0.011236818 -0.015137627 -0.014613820 -0.010725152
-#&gt;  [21] -0.006557666 -0.003481832  0.000000000  0.000000000  0.000000000
-#&gt;  [26]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [31]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [36]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [41]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [46]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [51]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [56]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [61]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [66]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [71]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [76]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [81]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [86]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [91]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000
-#&gt;  [96]  0.000000000  0.000000000  0.000000000  0.000000000  0.000000000</div></pre>
+<span class='kw'>frame</span> <span class='op'>&lt;-</span> <span class='fu'><a href='sampling_frame.html'>sampling_frame</a></span>(blocklens=<span class='fl'>100</span>, TR=<span class='fl'>2</span>)
+<span class='kw'>reg</span> <span class='op'>&lt;-</span> <span class='fu'><a href='regressor.html'>regressor</a></span>(onsets=<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>10</span>,<span class='fl'>20</span>), hrf=<span class='kw'>HRF_SPMG1</span>)
+<span class='fu'>evaluate</span>(<span class='kw'>reg</span>, <span class='fu'><a href='samples.html'>samples</a></span>(<span class='kw'>frame</span>))
+</div><div class='output co'>#&gt;   [1]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;   [6]  3.064436e-03  1.007784e-01  1.753710e-01  1.271138e-01  5.746414e-02
+#&gt;  [11]  1.657867e-02  9.302341e-02  1.602333e-01  1.125000e-01  4.673899e-02
+#&gt;  [16]  6.956570e-03 -1.123682e-02 -1.678499e-02 -1.532130e-02 -1.100486e-02
+#&gt;  [21] -6.660612e-03 -3.517421e-03 -1.659006e-03 -7.111104e-04 -2.807933e-04
+#&gt;  [26] -1.029463e-04 -3.558948e-05 -1.164267e-05 -3.626379e-06 -1.081010e-06
+#&gt;  [31]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;  [36]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;  [41]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;  [46]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;  [51]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;  [56]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;  [61]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;  [66]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;  [71]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;  [76]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;  [81]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;  [86]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;  [91]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+#&gt;  [96]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00</div></pre>
   </div>
-  <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
-    <h2>Contents</h2>
-    <ul class="nav nav-pills nav-stacked">
-      <li><a href="#arguments">Arguments</a></li>
-      <li><a href="#examples">Examples</a></li>
-    </ul>
-
+  <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
+    <nav id="toc" data-toggle="toc" class="sticky-top">
+      <h2 data-toc-skip>Contents</h2>
+    </nav>
   </div>
 </div>
 
@@ -245,7 +245,7 @@ evalute a regressor function over a sampling grid" />
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.4.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.0.</p>
 </div>
 
       </footer>

@@ -1,13 +1,12 @@
 template:
   params:
-    bootswatch: slate
-
+    bootswatch: cerulean
 reference:
-  - title: hemodynamic response functions
-    desc: >
+- title: hemodynamic response functions
+  desc: >
       functions for working with standard and custom hemodynamic response functions 
-    contents:
-    - gen_hrf
-    - hrf_blocked
-    - hrf_lagged
-    - gen_hrf_set
+- contents:
+  - gen_hrf
+  - hrf_blocked
+  - hrf_lagged
+  - gen_hrf_set

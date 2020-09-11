@@ -1,6 +1,30 @@
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 facedes$repnum <- factor(facedes$rep_num)
 
+
+gen_mask_file <- function(d, perc) {
+  arr = array(0,d)
+  vals <- ifelse(runif(prod(d)) > .5, 1, 0)
+  vol <- NeuroVol(vals, NeuroSpace(d))
+  fname <- paste0(tempfile(), ".nii")
+  write_vol(vol, fname)
+  fname
+}
+
+gen_fake_dataset <- function(d, nscans) {
+  
+  onames <- vector(length=nscans, mode="list")
+  for (i in 1:nscans) {
+    arr <- array(rnorm(prod(d)), d)
+    bspace <- neuroim2::NeuroSpace(dim=d)
+    vec <- neuroim2::NeuroVec(arr, bspace)
+    fname <- paste0(tempfile(), ".nii")
+    write_vec(vec, fname)
+    onames[i] <- fname
+  }
+  onames
+}
+
 test_that("can construct and run a simple fmri glm from in memory dataset", {
   
    scans <- lapply(1:length(unique(facedes$run)), function(i) {
@@ -90,19 +114,16 @@ test_that("can construct and run a simple fmri glm from a matrix_dataset with 2 
 })
 
 
-test_that("can construct and run a simple fmri glm with altered degrees of freedom", {
+test_that("can construct and run a simple fmri glm two terms and prefix args", {
   
   vals <- cbind(rep(rnorm(244),6), rep(rnorm(244),6))
   dset <- matrix_dataset(as.matrix(vals),TR=1.5, run_length=rep(244,6), event_table=facedes)
   
-  c1 <- pair_contrast( ~ repnum == 1, ~ repnum == 2, name="rep2_rep1")
-  c2 <- pair_contrast( ~ repnum == 2, ~ repnum == 3, name="rep3_rep2")
-  con <- contrast_set(c1,c2)
-  
-  mod1 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0,
-                  strategy="chunkwise", nchunks=1)
-  mod2 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, 
-                  strategy="chunkwise", nchunks=1, dofpen = -10)
+
+  mod1 <- fmri_lm(onset ~ hrf(repnum, subset=repnum %in% c(1,2), prefix="r12")+ 
+                          hrf(repnum, subset=repnum %in% c(3,4), prefix="r34"),
+                  block = ~ run, dataset=dset, durations=0)
+ 
   
   expect_true(!is.null(mod1))
   expect_true(!is.null(mod2))
@@ -110,6 +131,87 @@ test_that("can construct and run a simple fmri glm with altered degrees of freed
   expect_equal(ncol(mod2$result$contrasts$estimate()), 2)
   
 })
+
+
+test_that("can run video fmri design with matrix_dataset", {
+  des <- read.table(system.file("extdata", "video_design.txt", package = "fmrireg"), header=TRUE)
+  events <- rep(320,7)
+  sframe <- sampling_frame(rep(320, length(events)), TR=1.5)
+  
+  evmod <- event_model(Onset ~ hrf(Video, Condition, basis="spmg1"), 
+                       block = ~ run, sampling_frame=sframe, data=des)
+  bmod <- baseline_model(basis="bs", degree=4, sframe=sframe)
+  fmod <- fmri_model(evmod, bmod)
+  
+  dset <- matrix_dataset(matrix(rnorm(320*7*100), 320*7, 100),TR=1.5, run_length=rep(320,7), event_table=des)
+
+  conset <- fmrireg::one_against_all_contrast(levels(des$Video), "Video")
+  
+  conset <- do.call("contrast_set", lapply(levels(factor(des$Video)), function(v) {
+    f1 <- as.formula(paste("~ Video == ", paste0('"', v, '"')))
+    f2 <- as.formula(paste("~ Video != ", paste0('"', v, '"')))
+    pair_contrast(f1, f2, name=paste0(v, "_vsall"))
+  }))
+  
+  res1 <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+                                   hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, dataset=dset, 
+                                  strategy="runwise")
+  res2 <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+                                    hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, dataset=dset, 
+                            strategy="chunkwise", nchunks=12)
+  
+  res3 <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+                              hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, dataset=dset, 
+                            strategy="chunkwise", nchunks=1)
+  
+  expect_true(!is.null(coef(res1)))
+  expect_true(!is.null(coef(res2)))
+  
+  expect_true(!is.null(coef(res1, "contrasts")))
+  expect_true(!is.null(coef(res2, "contrasts")))
+  
+
+})
+
+test_that("can run video fmri design with fmri_file_dataset", {
+  des <- read.table(system.file("extdata", "video_design.txt", package = "fmrireg"), header=TRUE)
+  events <- rep(320,7)
+  sframe <- sampling_frame(rep(320, length(events)), TR=1.5)
+  
+  scans <- gen_fake_dataset(c(10,10,10,320), 7)
+  maskfile <- gen_mask_file(c(10,10,10))
+  
+  dset <- fmri_dataset(scans, maskfile,TR=1.5, rep(320,7), base_path="/", mode="bigvec", event_table=des)
+  evmod <- event_model(Onset ~ hrf(Video, Condition, basis="spmg1"), 
+                       block = ~ run, sampling_frame=sframe, data=des)
+  bmod <- baseline_model(basis="bs", degree=4, sframe=sframe)
+  fmod <- fmri_model(evmod, bmod)
+
+  conset <- do.call("contrast_set", lapply(levels(factor(des$Video)), function(v) {
+    f1 <- as.formula(paste("~ Video == ", paste0('"', v, '"')))
+    f2 <- as.formula(paste("~ Video != ", paste0('"', v, '"')))
+    pair_contrast(f1, f2, name=paste0(v, "_vsall"))
+  }))
+  
+  
+  res2 <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+                              hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, 
+                            dataset=dset, 
+                            strategy="chunkwise", nchunks=50)
+  
+  res3 <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+                              hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, dataset=dset, 
+                            strategy="chunkwise", nchunks=2)
+  
+  expect_true(!is.null(coef(res1)))
+  expect_true(!is.null(coef(res2)))
+  
+  expect_true(!is.null(coef(res1, "contrasts")))
+  expect_true(!is.null(coef(res2, "contrasts")))
+  
+  
+})
+          
 
 # test_that("a one-run, one-contrast linear model analysis", {
 #   df1 <- subset(imagedes,run==1)

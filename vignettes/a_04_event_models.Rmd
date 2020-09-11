@@ -2,10 +2,7 @@
 title: "Event Models"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
-output:
-  prettydoc::html_pretty:
-    theme: Architect
-    highlight: github
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
   %\VignetteEngine{knitr::rmarkdown}

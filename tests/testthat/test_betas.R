@@ -2,13 +2,14 @@
 
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 facedes$repnum <- factor(facedes$rep_num)
+library(dplyr)
 
 test_that("can run a beta estimation", {
   
   facedes$frun <- factor(facedes$run)
   facedes$constant <- factor(rep(1, nrow(facedes)))
   
-  facedes <- facedes %>% filter(run==1)
+  facedes <- facedes %>% dplyr::filter(run==1)
   
   D <- 5
   scans <- lapply(1:length(unique(facedes$run)), function(i) {

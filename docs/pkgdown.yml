@@ -1,11 +1,6 @@
-pandoc: 2.3.1
-pkgdown: 1.4.1
+pandoc: 2.7.3
+pkgdown: 1.6.0
 pkgdown_sha: ~
-articles:
-  a_01_hemodynamic_response: a_01_hemodynamic_response.html
-  a_02_regressor: a_02_regressor.html
-  a_03_baseline_model: a_03_baseline_model.html
-  a_04_event_models: a_04_event_models.html
-  a_05_contrasts: a_05_contrasts.html
-  a_06_afni: a_06_afni.html
+articles: []
+last_built: 2020-09-11T11:58Z
 

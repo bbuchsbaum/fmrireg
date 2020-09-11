@@ -217,6 +217,20 @@ test_that("can form forumla contrast with 3 terms", {
   
 })
 
+test_that("can form forumla contrast with two factor terms and one continuous covariate", {
+  simple_des <- expand.grid(match=c("match", "nonmatch"), condition=c("NOVEL", "REPEAT"), correct=c(1,2))
+  simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
+  simple_des$run <- rep(1,nrow(simple_des))
+  sframe <- sampling_frame(blocklens=100, TR=2)
+  espec <- event_model(onset ~  hrf(match, condition, correct), data=simple_des, block=~run, sampling_frame=sframe)
+  #con1 <- contrast(~ (face:ATT:r1 + face:IG:r2) - (scene:ATT:r1 - scene:ignored:r2), name="face_scene")
+  con1 <- contrast(
+    ~  match:NOVEL:correct - nonmatch:NOVEL:correct, name="cond_by_match")
+  cwts <- contrast_weights(con1, terms(espec)[[1]])
+  expect_equal(as.vector(cwts$weights[,1]), c(1, -1, 0,0))
+  
+})
+
 
 
 
