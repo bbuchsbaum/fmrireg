@@ -323,7 +323,7 @@ hrf_bspline <- function(t, span=20, N=5, degree=3) {
 #' @param rate the rate parameter for gamma pdf
 #' @export
 hrf_gamma <- function(t, shape=6, rate=1) {
-  dgamma(t, shape=shape, rate=rate)
+  stats::dgamma(t, shape=shape, rate=rate)
 }
 
 #' hrf_gaussian

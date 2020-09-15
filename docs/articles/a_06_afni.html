@@ -97,7 +97,7 @@
       <h1 data-toc-skip>Translating to AFNI 3dDeconvolve</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2020-09-11</h4>
+            <h4 class="date">2020-09-15</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_06_afni.Rmd"><code>vignettes/a_06_afni.Rmd</code></a></small>
       <div class="hidden name"><code>a_06_afni.Rmd</code></div>
@@ -132,21 +132,15 @@
 <span class="kw">con1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span>(<span class="op">~</span> <span class="kw">stim</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span><span class="kw">stim</span> <span class="op">==</span> <span class="st">"scene"</span>, name=<span class="st">"face_scene"</span>)
 
 <span class="kw">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span>(<span class="kw">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span>(<span class="kw">stim</span>, contrasts=<span class="kw">con1</span>), data=<span class="kw">simple_design</span>, block = <span class="op">~</span> <span class="kw">run</span>, sampling_frame=<span class="kw">sframe</span>)
-</pre></div>
-<pre><code>## Warning: The `x` argument of `as_tibble.matrix()` must have unique column names if `.name_repair` is omitted as of tibble 2.0.0.
-## Using compatibility `.name_repair`.
-## This warning is displayed once every 8 hours.
-## Call `lifecycle::last_warnings()` to see where this warning was generated.</code></pre>
-<div class="sourceCode" id="cb4"><pre class="downlit">
 <span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">emodel</span>)
 </pre></div>
 <p><img src="a_06_afni_files/figure-html/unnamed-chunk-3-1.png" width="672"></p>
 <p>We construct a <code>baseline_model</code> using a B-spline basis:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit">
+<div class="sourceCode" id="cb3"><pre class="downlit">
 <span class="kw">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span>(basis=<span class="st">"bs"</span>, degree=<span class="fl">5</span>, sframe=<span class="kw">sframe</span>)
 </pre></div>
 <pre><code>## [1] "baseline_bs_5 : matrix"</code></pre>
-<div class="sourceCode" id="cb7"><pre class="downlit">
+<div class="sourceCode" id="cb5"><pre class="downlit">
 <span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span>(<span class="kw">bmodel</span>)
 </pre></div>
 <pre><code>## baseline_model 
@@ -173,16 +167,16 @@
 ## 10               1           0.373           0.112          0.0168   
 ## # … with 60 more rows, and 2 more variables: base_bs4_block_1 &lt;dbl&gt;,
 ## #   base_bs5_block_1 &lt;dbl&gt;</code></pre>
-<div class="sourceCode" id="cb9"><pre class="downlit">
+<div class="sourceCode" id="cb7"><pre class="downlit">
 <span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">bmodel</span>)
 </pre></div>
 <p><img src="a_06_afni_files/figure-html/unnamed-chunk-4-1.png" width="672"></p>
 <p>We construct an <code>fmri_model</code>:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit">
+<div class="sourceCode" id="cb8"><pre class="downlit">
 <span class="kw">fmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_model.html">fmri_model</a></span>(<span class="kw">emodel</span>, <span class="kw">bmodel</span>)
 </pre></div>
 <p>Now we need to specify the data that the model will be estimated on. Let us pretend that we have a single 4d NIfTI file called “scan01.nii” and a mask file called “mask.nii”.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit">
+<div class="sourceCode" id="cb9"><pre class="downlit">
 <span class="kw">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_dataset.html">fmri_dataset</a></span>(scans=<span class="st">"scan01.nii"</span>,
                      mask=<span class="st">"mask.nii"</span>,
                      TR=<span class="fl">2</span>,
@@ -191,7 +185,7 @@
                      base_path=<span class="st">"."</span>)
 </pre></div>
 <p>We are now ready to construct an AFNI model specification. Note that all contrasts in the model will automatically be converted to AFNI-style general linear tests (GLTs).</p>
-<div class="sourceCode" id="cb12"><pre class="downlit">
+<div class="sourceCode" id="cb10"><pre class="downlit">
 <span class="kw">alm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/afni_lm.html">afni_lm</a></span>(<span class="kw">fmodel</span>, <span class="kw">dset</span>)
 <span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span>(<span class="kw">alm</span>)
 </pre></div>
@@ -201,7 +195,7 @@
 ##   command line: 
 ##  3dDeconvolve -input ././scan01.nii -mask ./mask.nii -polort -1 -global_times -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -tout -cbucket coefout -bucket statout -jobs 1 -float</code></pre>
 <p>Also, note that since we include a set of b-spline nuisance parameters in our model, <code>polort</code> is set to have no baseline regressors (polort = -1). We change that if we like:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit">
+<div class="sourceCode" id="cb12"><pre class="downlit">
 <span class="kw">alm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/afni_lm.html">afni_lm</a></span>(<span class="kw">fmodel</span>, <span class="kw">dset</span>, polort=<span class="fl">2</span>)
 <span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span>(<span class="kw">alm</span>)
 </pre></div>
@@ -212,7 +206,7 @@
 ##  3dDeconvolve -input ././scan01.nii -mask ./mask.nii -polort 2 -global_times -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -tout -cbucket coefout -bucket statout -jobs 1 -float</code></pre>
 <p>But this would essentially add two sets of drift regressors, which would be bad.</p>
 <p>To send other options to the <code>3dDeconvolve</code> command we can add them to the <code>options</code> argument, e.g.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit">
+<div class="sourceCode" id="cb14"><pre class="downlit">
 <span class="kw">alm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/afni_lm.html">afni_lm</a></span>(<span class="kw">fmodel</span>, <span class="kw">dset</span>, options=<span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span>(tout=<span class="fl">FALSE</span>, fout=<span class="fl">FALSE</span>))
 <span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span>(<span class="kw">alm</span>)
 </pre></div>
@@ -222,7 +216,7 @@
 ##   command line: 
 ##  3dDeconvolve -input ././scan01.nii -mask ./mask.nii -polort -1 -global_times -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -cbucket coefout -bucket statout -jobs 1 -float</code></pre>
 <p>To execute the external <code>3dDeconvolve</code> command on the system, we do as follows:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit">
+<div class="sourceCode" id="cb16"><pre class="downlit">
 <span class="co">#run(alm, outdir="glm_out")</span>
 </pre></div>
 </div>
@@ -239,7 +233,7 @@
 
 
       <footer><div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href="https://linguamemoria.org">Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">

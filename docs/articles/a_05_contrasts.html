@@ -97,7 +97,7 @@
       <h1 data-toc-skip>Contrasts</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2020-09-11</h4>
+            <h4 class="date">2020-09-15</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_05_contrasts.Rmd"><code>vignettes/a_05_contrasts.Rmd</code></a></small>
       <div class="hidden name"><code>a_05_contrasts.Rmd</code></div>
@@ -215,11 +215,17 @@
 <span class="kw">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="fl">100</span>, <span class="fl">2</span>)
 <span class="kw">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span>(<span class="kw">onsets</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span>(<span class="kw">category</span>,<span class="kw">attention</span>), block=<span class="op">~</span><span class="kw">block</span>, data=<span class="kw">design</span>, sampling_frame=<span class="kw">sframe</span>)
 </pre></div>
-<pre><code>## Warning: The `x` argument of `as_tibble.matrix()` must have unique column names if `.name_repair` is omitted as of tibble 2.0.0.
-## Using compatibility `.name_repair`.
-## This warning is displayed once every 8 hours.
-## Call `lifecycle::last_warnings()` to see where this warning was generated.</code></pre>
-<div class="sourceCode" id="cb4"><pre class="downlit">
+<pre><code>## New names:
+## * `` -&gt; ...1
+## * `` -&gt; ...2
+## * `` -&gt; ...3
+## * `` -&gt; ...4</code></pre>
+<pre><code>## New names:
+## * ...1 -&gt; ...2
+## * ...2 -&gt; ...3
+## * ...3 -&gt; ...4
+## * ...4 -&gt; ...5</code></pre>
+<div class="sourceCode" id="cb5"><pre class="downlit">
 <span class="kw">term1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/terms.html">terms</a></span>(<span class="kw">emodel</span>)[[<span class="fl">1</span>]] 
 </pre></div>
 <p>And here is the relevant model term (the only term in this model):</p>
@@ -232,7 +238,7 @@
 ##    Conditions:  category[face]:attention[attend] category[scene]:attention[attend] category[face]:attention[ignore] category[scene]:attention[ignore] 
 ##    Term Types:  event_factor event_factor</code></pre>
 <p>Now, we create two <code>pair_contrast</code>s and compute the weights:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit">
+<div class="sourceCode" id="cb7"><pre class="downlit">
 <span class="kw">con1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span>(<span class="op">~</span> <span class="kw">category</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span> <span class="kw">category</span> <span class="op">==</span> <span class="st">"scene"</span>, name=<span class="st">"face_scene"</span>)
 <span class="kw">con2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span>(<span class="op">~</span> <span class="kw">attention</span> <span class="op">==</span> <span class="st">"attend"</span>, <span class="op">~</span> <span class="kw">attention</span> <span class="op">==</span> <span class="st">"ignore"</span>, name=<span class="st">"attend_ignore"</span>)
 
@@ -310,7 +316,7 @@
 <a href="#unit-contrasts-and-the-implicit-baseline" class="anchor"></a>Unit contrasts and the “implicit baseline”</h2>
 <p>a “unit contrast” tests whether activation, averaged over one or more conditions, is greater than the baseline activity. In this case “baseline” is defined as the level of activation captured by the intercept term, or the <em>implicit baseline</em> in <em>f</em>MRI parlance. Because all beta estimates are already expressed relative to the intercept term, main effect contrast vectors always sum to 1, rather than 0. We therefore refer to the sum-to-one contrasts as: “unit contrasts”.</p>
 <p>Below we show how to construct two unit contrasts, one testing for the effect of <code>face &gt; baseline</code> and for <code>scene - baseline</code>:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit">
+<div class="sourceCode" id="cb12"><pre class="downlit">
 <span class="kw">con1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/unit_contrast.html">unit_contrast</a></span>(<span class="op">~</span> <span class="kw">category</span> <span class="op">==</span> <span class="st">"face"</span>, name=<span class="st">"face_baseline"</span>)
 <span class="kw">con2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/unit_contrast.html">unit_contrast</a></span>(<span class="op">~</span> <span class="kw">category</span> <span class="op">==</span> <span class="st">"scene"</span>,name=<span class="st">"scene_baseline"</span>)
 
@@ -393,7 +399,7 @@
 
 
       <footer><div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href="https://linguamemoria.org">Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">
