@@ -1,0 +1,89 @@
+---
+title: "Overview"
+author: "Bradley R. Buchsbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Overview}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## Overview of the `fmrireg` package
+
+The analysis of Functional Magnetic Resonance Imaging (fMRI) has a lot of complexities due to the large amount of data, the fact that the data is in the form of multi-dimensional images (usually, 4-dimensional -- x,y,z, and time), the fact that the hemodynamic response is sluggish and delayed (4-6s) with respect to stimulus presentation or task events, the existence of physiological noise and other "nuisance" signals, issues related to multiple comparisons, and the existence of spatially and temporally auto-correlated errors in the signal.
+
+However, if we push all that complexity to the side for a moment, standard "univariate" fMRI analysis involves simple multiple regression analysis applied to every 3d location ("voxel") in the brain. The goal of the `fmrireg` package is to provide a convenient interface, in the spirit of other R regression modeling tools, for analyzing fMRI data. We therefore use a R's formula interface to specify regression models in a way that makes for convenient and readable code.
+
+## The building blocks of an fMRI regression model
+
+The basic, or lowest level, unit of an fMRI regression model is the **hemodynamic reesponse function** (HRF). The HRF is a model of the mapping, or transfer function, between an external stimulus (or neural event) and a BOLD signal. A commonly used HRF is the so-called SPM canonical HRF:
+
+
+```{r, echo=FALSE,results='hide', message=FALSE, warning=FALSE}
+library(fmrireg)
+```
+
+```{r}
+
+time <- seq(0,24, by=.2)
+plot(time, hrf_spmg1(time), type='l', xlab="time", ylab="BOLD activity")
+
+```
+
+Currently, `fmrireg` provides several builtin HRFs that can be used to model BOLD activity. See the vignette "Hemodynamic Response Functions" for a detailed overview. Choosing the correct HRF depends on the use case and aims of the analysis, but the SPM canaonical function is usually a good default choice.
+
+## Regressors
+
+A "regressor" is simply an independent variable in a multiple regression model. In fMRI analysis, however, regressors are constructed by "convolving" a set of onset times--the vector of times at which certain task events occur--with a chosen HRF. Imagine we have a stimulus that is presented every 16 seconds with 8 repetitions. We can construct a "regressor" by convolving the chosen HRF with a vector onset times (in seconds), whereby each element of the vector corresponds to time at which a stimulus occurs.
+
+Below we use the function `gen_hrf` to create a special function that has the class "HRF". An alternative is to use the pre-made HRF objects, for example, `HRF_SPMG1` if we want to use th SPM canonical function. Once we create a regressor with the `regressor` constructor function, we can evaluate it at any arbitrary time points. In other words, just as the HRFs are functions of time, so too are `regressor`s. The difference is that `regressor`, when evaluated at time *t* sum over all the constituent HRFs, the domain of which are determined by the onset vector.
+
+In the code below, we evaluate the regressor at every time point between 1 and 140.
+
+```{r}
+
+onsets <- seq(0, 16*8, by=16)
+hrf <- gen_hrf(hrf_spmg1)
+reg <- regressor(onsets, hrf=hrf)
+
+grid <- seq(0,140, by=1)
+plot(grid, evaluate(reg, grid), type='l', ylab="BOLD activity", xlab="time", main="ISI = 16")
+## same as
+## reg <- regressor(onsets, hrf=HRF_SPMG1)
+
+```
+
+To better illustrate how a regressor sums over it's constiturent HRFs, we can place the onsets closer together, so that the HRFs overlap in time:
+
+```{r}
+
+onsets <- seq(0, 16*8, by=6)
+hrf <- gen_hrf(hrf_spmg1)
+reg <- regressor(onsets, hrf=hrf)
+
+grid <- seq(0,140, by=1)
+plot(grid, evaluate(reg, grid), type='l', ylab="BOLD activity", xlab="time", main="ISI = 6")
+
+
+```
+
+In `fmrireg` it is not necessary to manually create regressors. Rather, regressors are created "behind the scenes" by the higher level modeling functions, such as `event_model`. However, the facility to create individual regressors, for the purposes of learning fMRI analysis or in conducting special analyses, may still be useful.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

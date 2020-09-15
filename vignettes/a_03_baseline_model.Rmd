@@ -4,7 +4,7 @@ author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{Baseline Model}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -19,7 +19,7 @@ An "baseline model" refers to the set of regressors used to capture variance ass
 
 ```{r, echo=FALSE, message=FALSE}
 library(Matrix)
-devtools::load_all()
+library(fmrireg)
 ```
 
 ```{r, message=FALSE,fig.width = 7, fig.height = 5}
