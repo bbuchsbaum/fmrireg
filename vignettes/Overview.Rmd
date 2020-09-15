@@ -69,8 +69,11 @@ plot(grid, evaluate(reg, grid), type='l', ylab="BOLD activity", xlab="time", mai
 
 ```
 
-In `fmrireg` it is not necessary to manually create regressors. Rather, regressors are created "behind the scenes" by the higher level modeling functions, such as `event_model`. However, the facility to create individual regressors, for the purposes of learning fMRI analysis or in conducting special analyses, may still be useful.
+In `fmrireg` it is generally not necessary to manually create regressors as we have done above. Rather, regressors are created "behind the scenes" by the higher level modeling functions, such as `event_model`. However, the facility to create individual regressors, for the purposes of learning fMRI analysis or in conducting special analyses, may still be useful.
 
+## Event Models
+
+An HRF is a function from time to BOLD activity. A regressor is a function of time that sums up BOLD activity over a list of HRFs (one per "onset"). In conventional fMRI analysis, a regressor refers to a single column of a design matrix. For example, if we have two task conditions, "face" and "scene", we would generate one face regressor and one scene regressor. However, in statistical modeling of experiments, we generally think not in terms of single columns of a design matrix, but rather in terms of the "factors" 
 
 
 
