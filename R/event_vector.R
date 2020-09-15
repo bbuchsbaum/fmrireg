@@ -98,7 +98,7 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
     } else {
       evs[[termname]]$value
     }			
-  }))
+  }), .name_repair="check_unique")
   
   names(etab) <- sapply(pterms, .sanitizeName)
   varname <- paste(sapply(evs, function(x) x$varname), collapse=":")
@@ -330,13 +330,13 @@ cells.event_factor <- function(x, drop.empty=TRUE) {
 #' cells(eterm)
 cells.event_term <- function(x, drop.empty=TRUE) {
   evtab <- x$event_table
-  evset <- tibble::as_tibble(expand.grid(lapply(x$events, levels)))
+  evset <- tibble::as_tibble(expand.grid(lapply(x$events, levels)), .name_repair="check_unique")
   
   which.cat <- which(!sapply(x$events, is_continuous))
   
   if (length(which.cat) > 0) {
-    evs <- tibble::as_tibble(lapply(evset[,which.cat], as.character))
-    evt <- tibble::as_tibble(lapply(evtab[,which.cat], as.character))
+    evs <- tibble::as_tibble(lapply(evset[,which.cat], as.character), .name_repair="check_unique")
+    evt <- tibble::as_tibble(lapply(evtab[,which.cat], as.character), .name_repair="check_unique")
   
     counts <- apply(evs, 1, function(row1) {
       sum(apply(evt, 1, function(row2) {										
@@ -674,7 +674,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate
       reg <- convolve_design(hrf, d, .$.globons, .$.durations, summate=summate)
       sam <- samples(sampling_frame, blockids=as.integer(as.character(.$.blockids[1])), global=TRUE)
       ret <- do.call(cbind, lapply(reg, function(r) evaluate(r, sam)))
-      tibble::as_tibble(ret)
+      tibble::as_tibble(ret, .name_repair="check_unique")
   }) %>% dplyr::ungroup() %>% dplyr::select(-.blockids)
   
  
@@ -684,7 +684,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate
   } 
             
   colnames(cmat) <- cnames
-  tibble::as_tibble(cmat)
+  tibble::as_tibble(cmat, .name_repair="check_unique")
   
   #lapply(reglist, function(reg) evaluate(reg, )
   
@@ -820,7 +820,7 @@ design_matrix.event_term <- function(x, drop.empty=TRUE) {
     colnames(rmat) <- conditions(x, drop=F)			
   }
   
-  tibble::as_tibble(rmat)
+  tibble::as_tibble(rmat, .name_repair="check_unique")
 }
 
 

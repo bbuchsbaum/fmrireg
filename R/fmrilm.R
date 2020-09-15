@@ -132,11 +132,11 @@ coef.fmri_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
     ret <- x$result$betas$estimate()
     colnames(ret) <- conditions(x$model$event_model)
     #shortnames(x$model$event_model)#conditions(x$model$event_model)
-    as_tibble(ret)
+    as_tibble(ret, .name_repair="check_unique")
   } else if (type == "contrasts") {
     ret <- x$result$contrasts$estimate()
     colnames(ret) <- names(x$bcons)
-    as_tibble(ret)
+    as_tibble(ret, .name_repair="check_unique")
   } #else if (type == "baseline") {
     #ret <- x$result$contrasts$estimate()
   #}
@@ -159,19 +159,19 @@ stats.fmri_lm <- function(x, type=c("estimates", "contrasts", "F")) {
     ret <- x$result$betas$stat()
     #colnames(ret) <- shortnames(x$model$event_model)
     colnames(ret) <- conditions(x$model$event_model)
-    as_tibble(ret)
+    as_tibble(ret,.name_repair="check_unique")
   } else if (type == "contrasts") {
     if (length(x$result$contrasts) == 0) {
       stop("no computed contrasts for this model.")
     }
     ret <- x$result$contrasts$stat()
     colnames(ret) <- names(x$bcons)
-    as_tibble(ret)
+    as_tibble(ret, .name_repair="check_unique")
   } else if (type == "F") {
     ret <- x$result$Fcontrasts
     ret <- do.call(cbind, lapply(ret, function(f) f$stat()))
     colnames(ret) <- names(x$fcons)
-    as_tibble(ret)
+    as_tibble(ret, .name_repair="check_unique")
   }
 }
 
@@ -182,19 +182,19 @@ standard_error.fmri_lm <- function(x, type=c("estimates", "contrasts")) {
     ret <- x$result$betas$se()
     #colnames(ret) <- shortnames(x$model$event_model)
     colnames(ret) <- conditions(x$model$event_model)
-    as_tibble(ret)
+    as_tibble(ret, .name_repair="check_unique")
   } else if (type == "contrasts") {
     if (length(x$result$contrasts) == 0) {
       stop("no computed contrasts for this model.")
     }
     ret <- x$result$contrasts$se()
     colnames(ret) <- names(x$bcons)
-    as_tibble(ret)
+    as_tibble(ret,.name_repair="check_unique")
   } else if (type == "F") {
     ret <- x$result$Fcontrasts
     ret <- do.call(cbind, lapply(ret, function(f) f$se()))
     colnames(ret) <- names(x$fcons)
-    as_tibble(ret)
+    as_tibble(ret,.name_repair="check_unique")
   }
 }
   

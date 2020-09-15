@@ -84,7 +84,7 @@ event_table.covariate_convolved_term <- function(x) {
   }))
   
   colnames(ret) <- cnames
-  as_tibble(ret)
+  as_tibble(ret,.name_repair="check_unique")
   
 }
 

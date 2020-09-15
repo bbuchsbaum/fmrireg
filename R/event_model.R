@@ -198,7 +198,7 @@ design_matrix.event_model_spec <- function(x) {
   termlist <- lapply(x$varspec, function(m) construct(m,x))
   ret <- lapply(termlist, design_matrix)
   vnames <- unlist(lapply(ret, colnames))
-  dmat <- tibble::as_tibble(do.call(cbind, ret))
+  dmat <- tibble::as_tibble(do.call(cbind, ret),.name_repair="check_unique")
   names(dmat) <- vnames
   dmat
 }
@@ -209,7 +209,7 @@ design_matrix.event_model_spec <- function(x) {
 design_matrix.event_model <- function(x, blockid=NULL) {
   ret <- lapply(x$terms, design_matrix, blockid)
   vnames <- unlist(lapply(ret, names))
-  dmat <- tibble::as_tibble(do.call(cbind, ret))
+  dmat <- tibble::as_tibble(do.call(cbind, ret),.name_repair="check_unique")
   names(dmat) <- vnames
   dmat
 }
@@ -356,7 +356,7 @@ design_matrix.afni_hrf_convolved_term <- function(x, blockid=NULL) {
 #' @rdname matrix_term
 matrix_term <- function(varname, mat) {
   stopifnot(is.matrix(mat))
-  ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat))
+  ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat,.name_repair="check_unique"))
   class(ret) <- c("matrix_term", "fmri_term", "list")
   ret
 }
@@ -489,7 +489,7 @@ plot.event_model <- function(x, term_name=NULL, longnames=TRUE) {
   sframe <- x$sampling_frame
   
   dflist <- lapply(all_terms, function(term) {
-    dm1 <- tibble::as_tibble(design_matrix(term))
+    dm1 <- tibble::as_tibble(design_matrix(term),.name_repair="check_unique")
     if (!longnames) {
       names(dm1) <- shortnames(term)
     }

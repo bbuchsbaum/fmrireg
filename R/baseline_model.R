@@ -144,20 +144,20 @@ baseline <- function(degree=1, basis=c("constant", "poly", "bs", "ns"), name=NUL
 design_matrix.baseline_model <- function(x, blockid=NULL, allrows=FALSE) {
   if (is.null(x$nuisance_term) && is.null(x$block_term)) {
     ## just drift term
-    tibble::as_tibble(design_matrix(x$drift_term, blockid,allrows))
+    tibble::as_tibble(design_matrix(x$drift_term, blockid,allrows),.name_repair="check_unique")
   } else if (is.null(x$nuisance_term) && !is.null(x$block_term)) {
     ## drift and block term but no nuisance term
     tibble::as_tibble(cbind(design_matrix(x$block_term, blockid, allrows), 
-                            design_matrix(x$drift_term, blockid, allrows)))
+                            design_matrix(x$drift_term, blockid, allrows)), .name_repair="check_unique")
   } else if (!is.null(x$nuisance_term) && is.null(x$block_term)) {
     ## drift and  nuisance term
     tibble::as_tibble(cbind(design_matrix(x$drift_term, blockid, allrows),
-                            design_matrix(x$nuisance_term, blockid, allrows))) 
+                            design_matrix(x$nuisance_term, blockid, allrows)), .name_repair="check_unique") 
   } else {
     ## all three 
     tibble::as_tibble(cbind(design_matrix(x$block_term, blockid, allrows), 
                             design_matrix(x$drift_term, blockid, allrows), 
-                            design_matrix(x$nuisance_term, blockid, allrows)))
+                            design_matrix(x$nuisance_term, blockid, allrows)),.name_repair="check_unique")
   }
 }
 
@@ -250,7 +250,7 @@ baseline_term <- function(varname, mat, colind, rowind) {
   print(paste(varname, ":", class(mat)))
   
   stopifnot(inherits(mat, "matrix") || is.data.frame(mat) || inherits(mat, "Matrix"))
-  ret <- list(varname=varname, design_matrix=tibble::as_tibble(as.matrix(mat)), colind=colind, rowind=rowind)
+  ret <- list(varname=varname, design_matrix=tibble::as_tibble(as.matrix(mat),.name_repair="check_unique"), colind=colind, rowind=rowind)
   class(ret) <- c("baseline_term", "matrix_term", "fmri_term", "list")
   ret
 }
@@ -312,7 +312,7 @@ block_term <- function(varname, blockids, expanded_blockids, mat, type=c("runwis
     assertthat::assert_that(ncol(mat) == 1)
   }
   
-  ret <- list(varname=varname, blockids=blockids, expanded_blockids=expanded_blockids, design_matrix=tibble::as_tibble(mat), nblocks=ncol(mat),
+  ret <- list(varname=varname, blockids=blockids, expanded_blockids=expanded_blockids, design_matrix=tibble::as_tibble(mat,.name_repair="check_unique"), nblocks=ncol(mat),
               colind=as.list(1:ncol(mat)), rowind=split(1:length(blockids), blockids))
   class(ret) <- c("block_term", "matrix_term", "fmri_term", "list")
   ret
@@ -401,7 +401,7 @@ plot.baseline_model <- function(x, term_name=NULL) {
   sframe <- x$sampling_frame
   
   dflist <- lapply(all_terms, function(term) {
-    dm1 <- tibble::as_tibble(design_matrix(term))
+    dm1 <- tibble::as_tibble(design_matrix(term),.name_repair="check_unique")
     dm1$.block <- sframe$blockids
     dm1$.time <- sframe$time
     

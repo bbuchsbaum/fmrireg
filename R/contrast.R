@@ -384,7 +384,7 @@ contrast_weights.contrast_formula_spec <- function(x, term) {
     term.cells[,!facs] <- 1
   } 
   
-  modmat <- tibble::as_tibble(model.matrix(cform,data=term.cells))
+  modmat <- tibble::as_tibble(model.matrix(cform,data=term.cells), .name_repair="check_unique")
   names(modmat) <- gsub(":", ".", condnames)
   weights <- matrix(0, NROW(term.cells), 1)
   weights[keep,1] <-  as.vector(lazyeval::f_eval_rhs(A, data=modmat))
