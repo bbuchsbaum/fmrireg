@@ -2,7 +2,7 @@
 % Please edit documentation in R/regressor.R
 \name{regressor}
 \alias{regressor}
-\title{contract a regressor object}
+\title{construct a regressor object}
 \usage{
 regressor(
   onsets,

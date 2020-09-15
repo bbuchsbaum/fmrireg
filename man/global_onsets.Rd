@@ -14,5 +14,5 @@ global_onsets(x, onsets, ...)
 \item{...}{extra args}
 }
 \description{
-global onsets are defined as cumlative time over runs, i.e. it does not reset to zero for each run.
+global onsets are defined as cumulative time over runs, i.e. it does not reset to zero for each run.
 }

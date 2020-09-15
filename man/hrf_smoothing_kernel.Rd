@@ -14,5 +14,5 @@ hrf_smoothing_kernel(len, TR = 2, basis = "spmg1")
 \item{basis}{the hemodynamic response function}
 }
 \description{
-compute an hrf smoothing kernel
+A function to compute a temporal similarity matrix from a series of hemodynamic response functions
 }

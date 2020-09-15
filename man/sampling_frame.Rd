@@ -2,7 +2,7 @@
 % Please edit documentation in R/sampling_frame.R
 \name{sampling_frame}
 \alias{sampling_frame}
-\title{Construct a \code{sampling_frame}}
+\title{construct a \code{sampling_frame}}
 \usage{
 sampling_frame(blocklens, TR, start_time = TR/2, precision = 0.1)
 }

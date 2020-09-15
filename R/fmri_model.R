@@ -29,7 +29,6 @@ design_env.fmri_model <- function(x, blockid=NULL) {
 
 
 #' @export
-#' @rdname terms
 terms.fmri_model <- function(x) {
   c(terms(x$event_model), terms(x$baseline_model))
 }

@@ -160,15 +160,191 @@
       <tr>
         
         <td>
+          <p><code><a href="hrf_gamma.html">hrf_gamma()</a></code> </p>
+        </td>
+        <td><p>hrf_gamma</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="hrf_gaussian.html">hrf_gaussian()</a></code> </p>
+        </td>
+        <td><p>hrf_gaussian</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="hrf_spmg1.html">hrf_spmg1()</a></code> </p>
+        </td>
+        <td><p>hrf_spmg1</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="hrf_time.html">hrf_time()</a></code> </p>
+        </td>
+        <td><p>hrf_time</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="hrf_bspline.html">hrf_bspline()</a></code> </p>
+        </td>
+        <td><p>hrf_bspline</p></td>
+      </tr><tr>
+        
+        <td>
           <p><code><a href="gen_hrf.html">gen_hrf()</a></code> </p>
         </td>
-        <td><p>Construct an <code>HRF</code> instance</p></td>
+        <td><p>construct an <code>HRF</code> instance</p></td>
       </tr><tr>
         
         <td>
           <p><code><a href="gen_hrf_set.html">gen_hrf_set()</a></code> </p>
         </td>
         <td><p>Generate an HRF basis set</p></td>
+      </tr>
+    </tbody><tbody>
+      <tr>
+        <th colspan="2">
+          <h2 id="section-regressor-related-functions" class="hasAnchor"><a href="#section-regressor-related-functions" class="anchor"></a>regressor-related functions</h2>
+          <p class="section-desc"><p>functions related to creating, evaluating, and querying regression-related building blocks</p></p>
+        </th>
+      </tr>
+      
+      
+    </tbody><tbody>
+      
+      
+      <tr>
+        
+        <td>
+          <p><code><a href="regressor.html">regressor()</a></code> </p>
+        </td>
+        <td><p>construct a regressor object</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="evaluate.html">evaluate()</a></code> </p>
+        </td>
+        <td><p>evaluate a function over a sampling grid</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="onsets.html">onsets()</a></code> </p>
+        </td>
+        <td><p>get event onsets of a variable</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="nbasis.html">nbasis()</a></code> </p>
+        </td>
+        <td><p>return number of basis functions associated with hrf.</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="durations.html">durations()</a></code> </p>
+        </td>
+        <td><p>get event durations of a variable</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="global_onsets.html">global_onsets()</a></code> </p>
+        </td>
+        <td><p>return the "global" onsets of an object.</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="amplitudes.html">amplitudes()</a></code> </p>
+        </td>
+        <td><p>get amplitude vector</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="samples.html">samples()</a></code> </p>
+        </td>
+        <td><p>extract samples</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="blockids.html">blockids()</a></code> </p>
+        </td>
+        <td><p>get the block indices</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="blocklens.html">blocklens()</a></code> </p>
+        </td>
+        <td><p>get block lengths</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="sampling_frame.html">sampling_frame()</a></code> </p>
+        </td>
+        <td><p>construct a <code>sampling_frame</code></p></td>
+      </tr>
+    </tbody><tbody>
+      <tr>
+        <th colspan="2">
+          <h2 id="section-event-models" class="hasAnchor"><a href="#section-event-models" class="anchor"></a>event models</h2>
+          <p class="section-desc"><p>functions for building and querying event models for regression analysis</p></p>
+        </th>
+      </tr>
+      
+      
+    </tbody><tbody>
+      
+      
+      <tr>
+        
+        <td>
+          <p><code><a href="event_model.html">event_model()</a></code> </p>
+        </td>
+        <td><p>construct an event model</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="event_factor.html">event_factor()</a></code> </p>
+        </td>
+        <td><p>event_factor</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="event_term-class.html">event_term()</a></code> </p>
+        </td>
+        <td><p>event_term</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="design_matrix.html">design_matrix()</a></code> </p>
+        </td>
+        <td><p>design_matrix</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="conditions.html">conditions()</a></code> </p>
+        </td>
+        <td><p>conditions</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="cells.html">cells()</a></code> </p>
+        </td>
+        <td><p>the experimental cells of a design</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="term_names.html">term_names()</a></code> </p>
+        </td>
+        <td><p>term_names</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="shortnames.html">shortnames()</a></code> </p>
+        </td>
+        <td><p>extract short shortnames of variable</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="longnames.html">longnames()</a></code> <code><a href="longnames.html">longnames()</a></code> </p>
+        </td>
+        <td><p>extract long names of variable</p></td>
       </tr>
     </tbody>
     </table>

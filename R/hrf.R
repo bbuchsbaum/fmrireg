@@ -1,7 +1,7 @@
 #' @import splines
 NULL
 
-#' Construct an \code{HRF} instance 
+#' construct an \code{HRF} instance 
 #' 
 #' \code{HRF} takes a faw function f(t) and returns an \code{HRF} instance
 #' 
@@ -258,6 +258,8 @@ convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1, half_life
   
 #' hrf_time
 #' 
+#' hemodyanmic response function that is a simple linear function of time t, when t > 0.
+#' 
 #' @param t time in seconds
 #' @param maxt the maximum time point in domain
 #' @export
@@ -314,7 +316,7 @@ hrf_bspline <- function(t, span=20, N=5, degree=3) {
 
 #' hrf_gamma
 #' 
-#' A hemodynamic response function using the gamma density function
+#' A hemodynamic response function using the Gamma density function
 #' 
 #' @param t time
 #' @param shape the shape parameter for gamma pdf
@@ -326,7 +328,7 @@ hrf_gamma <- function(t, shape=6, rate=1) {
 
 #' hrf_gaussian
 #' 
-#' A hemodynamic response function using the gamma density function
+#' A hemodynamic response function using the Gaussian density function
 #' 
 #' @param t time
 #' @param mean the mean of Gaussian pdf
@@ -339,7 +341,7 @@ hrf_gaussian <- function(t, mean=6, sd=2) {
 
 #' hrf_spmg1
 #' 
-#' A hemodynamic response function based on the SPM canonical double gamma parameterzation.
+#' A hemodynamic response function based on the SPM canonical double gamma parameterization.
 #' 
 #' @param t time
 #' @export

@@ -38,7 +38,7 @@ evaluate(x, grid, ...)
 \item{normalize}{scale output so that peak is 1.}
 }
 \description{
-given an object to be evaluated and a an input sample ("grid"), evaluate the object.
+given an object to be evaluated and an input sample "grid", evaluate the object.
 
 evalute a regressor function over a sampling grid
 }

@@ -7,7 +7,11 @@
 one_against_all_contrast(levels, facname, where = NULL)
 }
 \arguments{
+\item{levels}{the set of factor levels to compare.}
+
 \item{facname}{the name of the factor containing the supplied levels.}
+
+\item{where}{the subset over which the contrast is computed}
 }
 \description{
 A contrast that compares each level vs the average of the other levels.

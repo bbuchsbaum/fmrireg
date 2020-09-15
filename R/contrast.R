@@ -32,9 +32,9 @@ contrast <- function(form, name, where=NULL) {
 }
 
 
-#' Create a set of contrasts
+#' create a set of contrasts
 #' 
-#' Construct a \code{list} of \code{contrast_spec} objects
+#' construct a \code{list} of \code{contrast_spec} objects
 #' 
 #' @param ... a variable length list of \code{contrast_spec} objects.
 #' 
@@ -79,7 +79,7 @@ pairwise_contrasts <- function(levels, where=NULL) {
   
 #' A contrast that compares each level vs the average of the other levels.
 #' 
-#' @inheritParams pairwise_contrast
+#' @inheritParams pairwise_contrasts
 #' @param facname the name of the factor containing the supplied levels.
 #' @export
 #' 

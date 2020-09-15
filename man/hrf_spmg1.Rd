@@ -10,5 +10,5 @@ hrf_spmg1(t, P1 = 5, P2 = 15)
 \item{t}{time}
 }
 \description{
-A hemodynamic response function based on the SPM canonical double gamma parameterzation.
+A hemodynamic response function based on the SPM canonical double gamma parameterization.
 }

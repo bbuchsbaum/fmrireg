@@ -6,7 +6,54 @@ reference:
   desc: >
       functions for working with standard and custom hemodynamic response functions 
 - contents:
+  - hrf_gamma
+  - hrf_gaussian
+  - hrf_spmg1
+  - hrf_time
+  - hrf_bspline
   - gen_hrf
   - hrf_blocked
   - hrf_lagged
   - gen_hrf_set
+  
+- title: regressor-related functions
+  desc: >
+    functions related to creating, evaluating, and querying regression-related building blocks
+- contents:
+  - regressor
+  - evaluate
+  - onsets
+  - nbasis
+  - durations
+  - onsets
+  - global_onsets
+  - amplitudes
+  - samples
+  - blockids
+  - blocklens
+  - sampling_frame
+  
+- title: event models
+  desc: >
+    functions for building and querying event models for regression analysis
+- contents:
+  - event_model
+  - event_factor
+  - event_term
+  - design_matrix
+  - conditions
+  - cells
+  - terms
+  - term_names
+  - shortnames
+  - longnames
+  
+  
+
+  
+
+  
+  
+  
+    
+    

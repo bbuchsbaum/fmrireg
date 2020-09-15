@@ -298,7 +298,6 @@ levels.event_set <- function(x) colnames(x$value)
 levels.event_basis <- function(x) levels(x$basis)
 
 #' @export
-#' @rdname formula
 formula.event_term <- function(x) as.formula(paste("~ ", "(", paste(parent_terms(x), collapse=":"), "-1", ")"))
 
 #' @export
@@ -323,6 +322,12 @@ cells.event_factor <- function(x, drop.empty=TRUE) {
 
 #' @export
 #' @rdname cells
+#' @examples 
+#' 
+#' evlist <- list(fac1=factor(c("A", "B", "A", "B")), 
+#'                fac2=factor(c("1", "1", "2", "2")))
+#' eterm <- event_term(evlist,onsets=1:4, blockids=rep(1,4))
+#' cells(eterm)
 cells.event_term <- function(x, drop.empty=TRUE) {
   evtab <- x$event_table
   evset <- tibble::as_tibble(expand.grid(lapply(x$events, levels)))

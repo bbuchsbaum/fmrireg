@@ -3,7 +3,7 @@
 \name{durations}
 \alias{durations}
 \alias{durations.regressor}
-\title{durations}
+\title{get event durations of a variable}
 \usage{
 durations(x)
 

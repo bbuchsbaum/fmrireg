@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>cells — cells • fmrireg</title>
+<title>the experimental cells of a design — cells • fmrireg</title>
 
 
 <!-- jquery -->
@@ -39,8 +39,8 @@
 
 
 
-<meta property="og:title" content="cells — cells" />
-<meta property="og:description" content="return the experimental cells that are in a model term" />
+<meta property="og:title" content="the experimental cells of a design — cells" />
+<meta property="og:description" content="return the experimental cells that are in a model term as a table" />
 
 
 
@@ -135,13 +135,13 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>cells</h1>
+    <h1>the experimental cells of a design</h1>
     <small class="dont-index">Source: <a href='https://github.com/bbuchsbaum/fmrireg/blob/master/R/all_generic.R'><code>R/all_generic.R</code></a>, <a href='https://github.com/bbuchsbaum/fmrireg/blob/master/R/event_vector.R'><code>R/event_vector.R</code></a></small>
     <div class="hidden name"><code>cells.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>return the experimental cells that are in a model term</p>
+    <p>return the experimental cells that are in a model term as a table</p>
     </div>
 
     <pre class="usage"><span class='fu'>cells</span>(<span class='kw'>x</span>, <span class='kw'>...</span>)
@@ -166,6 +166,19 @@
     </table>
 
 
+    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
+    <pre class="examples"><div class='input'>
+<span class='kw'>evlist</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(fac1=<span class='fu'><a href='https://rdrr.io/r/base/factor.html'>factor</a></span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"A"</span>, <span class='st'>"B"</span>, <span class='st'>"A"</span>, <span class='st'>"B"</span>)), 
+               fac2=<span class='fu'><a href='https://rdrr.io/r/base/factor.html'>factor</a></span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"1"</span>, <span class='st'>"1"</span>, <span class='st'>"2"</span>, <span class='st'>"2"</span>)))
+<span class='kw'>eterm</span> <span class='op'>&lt;-</span> <span class='fu'><a href='event_term.html'>event_term</a></span>(<span class='kw'>evlist</span>,onsets=<span class='fl'>1</span><span class='op'>:</span><span class='fl'>4</span>, blockids=<span class='fu'><a href='https://rdrr.io/r/base/rep.html'>rep</a></span>(<span class='fl'>1</span>,<span class='fl'>4</span>))
+<span class='fu'>cells</span>(<span class='kw'>eterm</span>)
+</div><div class='output co'>#&gt; <span style='color: #949494;'># A tibble: 4 x 2</span><span>
+#&gt;   fac1  fac2 
+#&gt;   </span><span style='color: #949494;font-style: italic;'>&lt;fct&gt;</span><span> </span><span style='color: #949494;font-style: italic;'>&lt;fct&gt;</span><span>
+#&gt; </span><span style='color: #BCBCBC;'>1</span><span> A     1    
+#&gt; </span><span style='color: #BCBCBC;'>2</span><span> B     1    
+#&gt; </span><span style='color: #BCBCBC;'>3</span><span> A     2    
+#&gt; </span><span style='color: #BCBCBC;'>4</span><span> B     2    </div></span></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">

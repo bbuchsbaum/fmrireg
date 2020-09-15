@@ -4,7 +4,7 @@
 \alias{cells}
 \alias{cells.event_factor}
 \alias{cells.event_term}
-\title{cells}
+\title{the experimental cells of a design}
 \usage{
 cells(x, ...)
 
@@ -18,5 +18,12 @@ cells(x, ...)
 \item{...}{extra args}
 }
 \description{
-return the experimental cells that are in a model term
+return the experimental cells that are in a model term as a table
+}
+\examples{
+
+evlist <- list(fac1=factor(c("A", "B", "A", "B")), 
+               fac2=factor(c("1", "1", "2", "2")))
+eterm <- event_term(evlist,onsets=1:4, blockids=rep(1,4))
+cells(eterm)
 }

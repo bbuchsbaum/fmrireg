@@ -2,7 +2,7 @@
 % Please edit documentation in R/hrf.R
 \name{gen_hrf}
 \alias{gen_hrf}
-\title{Construct an \code{HRF} instance}
+\title{construct an \code{HRF} instance}
 \usage{
 gen_hrf(
   hrf,

@@ -89,7 +89,9 @@ fmri_lm <- function(formula, block, baseline_model=NULL, dataset,
 }
 
 
-#' @export
+# @export  ## do weed to export?
+#' fmri_lm_fit
+#' 
 #' @inheritParams fmri_lm
 #' @param fmrimod an object of type \code{fmri_model}
 fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"), robust=FALSE, contrasts=NULL, nchunks=10) {

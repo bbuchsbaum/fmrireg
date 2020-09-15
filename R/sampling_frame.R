@@ -1,7 +1,7 @@
 
 
 
-#' Construct a \code{sampling_frame}
+#' construct a \code{sampling_frame}
 #' 
 #' A \code{sampling_frame} describes the block structure and temporal sampling of an fMRI paradigm. 
 #' 

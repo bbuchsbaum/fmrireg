@@ -1,5 +1,5 @@
 
-#' event_model
+#' construct an event model
 #' 
 #' A data sructure representing an event-based fMRI regression model
 #' 
@@ -217,7 +217,6 @@ design_matrix.event_model <- function(x, blockid=NULL) {
 
 
 #' @export
-#' @rdname terms
 terms.event_model <- function(x) {
   x$terms
 }
@@ -244,8 +243,8 @@ Fcontrasts.convolved_term <- function(x) {
 }
 
 
-#' @export
-#' @rdname contrast_weights
+# @export
+# @rdname contrast_weights
 #contrast_weights.fmri_term <- function(x) { stop("unimplemented") }
 
 
@@ -408,12 +407,14 @@ longnames.afni_hrf_convolved_term <- function(x) {
 }
 
 #' @export
+#' @rdname longnames
 longnames.event_model <- function(x) {
   unlist(lapply(terms(x), longnames))
  
 }
 
 #' @export
+#' @rdname longnames
 longnames.event_term <- function(x) {
   # ignores exclude.basis
   term.cells <- cells(x)
@@ -426,13 +427,13 @@ longnames.event_term <- function(x) {
 
 
 #' @export
-#' @rdname longnames
+#' @rdname shortnames
 shortnames.event_model <- function(x) {
   unlist(lapply(terms(x), shortnames))
 }
 
 #' @export
-#' @rdname longnames
+#' @rdname shortnames
 shortnames.convolved_term <- function(x) {
   # ignores exclude.basis
   term.cells <- cells(x)

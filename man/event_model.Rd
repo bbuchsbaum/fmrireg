@@ -2,7 +2,7 @@
 % Please edit documentation in R/event_model.R
 \name{event_model}
 \alias{event_model}
-\title{event_model}
+\title{construct an event model}
 \usage{
 event_model(
   formula,

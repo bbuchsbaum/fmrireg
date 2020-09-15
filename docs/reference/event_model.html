@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>event_model — event_model • fmrireg</title>
+<title>construct an event model — event_model • fmrireg</title>
 
 
 <!-- jquery -->
@@ -39,7 +39,7 @@
 
 
 
-<meta property="og:title" content="event_model — event_model" />
+<meta property="og:title" content="construct an event model — event_model" />
 <meta property="og:description" content="A data sructure representing an event-based fMRI regression model" />
 
 
@@ -135,7 +135,7 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>event_model</h1>
+    <h1>construct an event model</h1>
     <small class="dont-index">Source: <a href='https://github.com/bbuchsbaum/fmrireg/blob/master/R/event_model.R'><code>R/event_model.R</code></a></small>
     <div class="hidden name"><code>event_model.Rd</code></div>
     </div>
@@ -192,7 +192,10 @@
     <pre class="examples"><div class='input'><span class='kw'>event_data</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/data.frame.html'>data.frame</a></span>(fac=<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"a"</span>, <span class='st'>"B"</span>, <span class='st'>"A"</span>, <span class='st'>"B"</span>), onsets=<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>1</span>,<span class='fl'>10</span>,<span class='fl'>20</span>,<span class='fl'>80</span>), run=<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>1</span>,<span class='fl'>1</span>,<span class='fl'>1</span>,<span class='fl'>1</span>))
 <span class='kw'>sframe</span> <span class='op'>&lt;-</span> <span class='fu'><a href='sampling_frame.html'>sampling_frame</a></span>(blocklens=<span class='fl'>50</span>, TR=<span class='fl'>2</span>)
 <span class='kw'>evmodel</span> <span class='op'>&lt;-</span> <span class='fu'>event_model</span>(<span class='kw'>onsets</span> <span class='op'>~</span> <span class='fu'><a href='hrf.html'>hrf</a></span>(<span class='kw'>fac</span>), data=<span class='kw'>event_data</span>, block= <span class='op'>~</span> <span class='kw'>run</span>, sampling_frame=<span class='kw'>sframe</span>)
-</div></pre>
+</div><div class='output co'>#&gt; <span class='warning'>Warning: The `x` argument of `as_tibble.matrix()` must have unique column names if `.name_repair` is omitted as of tibble 2.0.0.</span>
+#&gt; <span class='warning'>Using compatibility `.name_repair`.</span>
+#&gt; <span class='warning'><span style='color: #555555;'>This warning is displayed once every 8 hours.</span><span></span>
+#&gt; <span class='warning'></span><span style='color: #555555;'>Call `lifecycle::last_warnings()` to see where this warning was generated.</span><span></span></div></span></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">

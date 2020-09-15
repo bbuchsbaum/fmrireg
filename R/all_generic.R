@@ -41,14 +41,18 @@ term_matrices <- function(x, ...) UseMethod("term_matrices")
 
 
 
-#' longnames
+#' extract long names of variable
+#' 
+#' get the extended names of a set of variable levels
 #' 
 #' @param x the object
 #' @param ... extra args
 #' @export
 longnames <- function(x, ...) UseMethod("longnames")
 
-#' shortnames
+#' extract short shortnames of variable
+#' 
+#' get the short names of a set of variable levels
 #' 
 #' @param x the object
 #' @param ... extra args
@@ -62,7 +66,6 @@ shortnames <- function(x, ...) UseMethod("shortnames")
 #' 
 #' @param x the object
 #' @param ... extra args
-#' @export
 design_env <- function(x, ...) UseMethod("design_env")
 
 
@@ -86,9 +89,9 @@ parent_terms <- function(x) UseMethod("parent_terms")
 #' @export
 term_names <- function(x) UseMethod("term_names")
 
-#' cells
+#' the experimental cells of a design
 #' 
-#' return the experimental cells that are in a model term
+#' return the experimental cells that are in a model term as a table
 #' 
 #' @param x the object
 #' @param ... extra args
@@ -210,7 +213,7 @@ elements <- function(x, ...) UseMethod("elements")
 
 #' evaluate a function over a sampling grid
 #' 
-#' given an object to be evaluated and a an input sample ("grid"), evaluate the object.
+#' given an object to be evaluated and an input sample "grid", evaluate the object.
 #' 
 #' @param x the object to evaluate
 #' @param grid the sampling grid
@@ -224,7 +227,7 @@ evaluate <-  function(x, grid, ...) UseMethod("evaluate")
 
 #' return the "global" onsets of an object.
 #' 
-#' global onsets are defined as cumlative time over runs, i.e. it does not reset to zero for each run.
+#' global onsets are defined as cumulative time over runs, i.e. it does not reset to zero for each run.
 #' 
 #' @export
 #' @param x the object
@@ -254,15 +257,15 @@ nbasis <-  function(x) UseMethod("nbasis")
 data_chunks <- function(x, nchunks, ...) UseMethod("data_chunks")
 
 
-#' onsets
+#' get event onsets of a variable
 #' 
-#' return a an `onset` vector
+#' return an `onset` vector
 #' 
 #' @param x the object
 #' @export
 onsets <-  function(x) UseMethod("onsets")
 
-#' durations
+#' get event durations of a variable
 #' 
 #' return a `durations` vector
 #' 
@@ -270,17 +273,17 @@ onsets <-  function(x) UseMethod("onsets")
 #' @export
 durations <-  function(x) UseMethod("durations")
 
-#' amplitudes
+#' get amplitude vector
 #' 
-#' return the amplitude vector
+#' get the intensity or amplitudes associated with each event
 #' 
 #' @param x the object
 #' @export
 amplitudes <-  function(x) UseMethod("amplitudes")
 
-#' samples
-#' 
 #' extract samples
+#' 
+#' get the sampling times for a regressor or sampling frame
 #' 
 #' @param x the object
 #' @param ... extra args
@@ -296,17 +299,17 @@ samples <-  function(x, ...) UseMethod("samples")
 #' @export
 split_by_block  <-  function(x, ...) UseMethod("split_by_block")
 
-#' blockids
+#' get the block indices
 #' 
-#' the return the block indicator variable
+#' get the block number associated with each image/scan
 #' 
 #' @param x the object
 #' @export
 blockids  <-  function(x) UseMethod("blockids")
 
-#' blocklens
+#' get block lengths
 #' 
-#' return block lengths
+#' get the number of scans/images in each block
 #' 
 #' @param x the object
 #' @param ... extra args

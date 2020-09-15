@@ -1,6 +1,8 @@
 
 #' compute an hrf smoothing kernel
 #' 
+#' A function to compute a temporal similarity matrix from a series of hemodynamic response functions
+#' 
 #' @param len the number of scans
 #' @param TR the repetition time
 #' @param basis the hemodynamic response function
@@ -22,7 +24,7 @@ hrf_smoothing_kernel <- function(len, TR=2, basis="spmg1") {
 }
 
 
-#' @examples 
+#'  
 #' 
 #' onsets <- sort(runif(25, 0, 200))
 #' fac <- factor(sample(letters[1:4], length(onsets), replace=TRUE))
@@ -30,6 +32,7 @@ hrf_smoothing_kernel <- function(len, TR=2, basis="spmg1") {
 #' des <- data.frame(onsets=onsets, fac=fac, constant = factor(rep(1, length(fac))), block=rep(1, length(fac)))
 #' emod <- event_model(onsets ~ hrf(constant) + hrf(fac), data=des, sampling_frame=sframe, block = ~ block)
 #' dmat <- design_matrix(emod)
+#' 
 design_kernel <- function(dmat, deriv=FALSE) {
   dd <- rbind(rep(0, ncol(dmat)), apply(dmat, 2, diff))
 }

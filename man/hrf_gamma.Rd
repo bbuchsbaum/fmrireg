@@ -14,5 +14,5 @@ hrf_gamma(t, shape = 6, rate = 1)
 \item{rate}{the rate parameter for gamma pdf}
 }
 \description{
-A hemodynamic response function using the gamma density function
+A hemodynamic response function using the Gamma density function
 }

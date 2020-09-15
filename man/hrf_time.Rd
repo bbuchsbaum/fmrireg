@@ -12,5 +12,5 @@ hrf_time(t, maxt = 22)
 \item{maxt}{the maximum time point in domain}
 }
 \description{
-hrf_time
+hemodyanmic response function that is a simple linear function of time t, when t > 0.
 }

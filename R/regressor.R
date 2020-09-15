@@ -39,7 +39,7 @@ single_trial_regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=
 }
 
 
-#' contract a regressor object
+#' construct a regressor object
 #' 
 #' construct a \code{regressor} object that can be used to generate regression variables
 #' from a set of onset times and a hemodynamic response function. A \code{regressor} can be
