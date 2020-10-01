@@ -8,6 +8,10 @@ hrf_spmg1(t, P1 = 5, P2 = 15)
 }
 \arguments{
 \item{t}{time}
+
+\item{P1}{the first exponent parameter}
+
+\item{P2}{the second exponent parameter}
 }
 \description{
 A hemodynamic response function based on the SPM canonical double gamma parameterization.

@@ -29,6 +29,8 @@ convolve_block(
 \item{summate}{whether to allow each impulse response function to "add" up.}
 
 \item{normalize}{rescale so that the peak of the output is 1.}
+
+\item{...}{extra args to pass through to hrf function}
 }
 \description{
 apply a hemodynamic response function with times \code{t} and duration \code{width}

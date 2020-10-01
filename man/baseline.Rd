@@ -18,9 +18,9 @@ baseline(
 
 \item{name}{the name of the term}
 
-\item{constant}{whether to include an intercept term}
+\item{intercept}{the type of intercept to include}
 
-\item{blockwise_intercept}{whether to include one intercept term per block or just one global intercept}
+\item{constant}{whether to include an intercept term}
 }
 \description{
 Create a model specification for modeling low-frequency drift in fmri time series.

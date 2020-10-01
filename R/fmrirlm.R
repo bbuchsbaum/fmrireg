@@ -11,10 +11,10 @@
 #' mat <- matrix(rnorm(100*100), 100,100)
 #' dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
 #' dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
-#' lm.1 <- fmri_rlm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset)
-#' lm.2 <- fmri_rlm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset2)
+#' lm.1 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset)
+#' lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset2)
 #' @export
-fmri_rlm <- function(formula, block_formula, baseline_model=NULL, dataset, 
+fmri_rlm <- function(formula, block, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, contrasts=NULL, 
                      strategy=c("runwise", "slicewise", "all")) {
   
@@ -23,7 +23,7 @@ fmri_rlm <- function(formula, block_formula, baseline_model=NULL, dataset,
   
   
   assert_that(inherits(dataset, "fmri_dataset"))
-  fobj <- .setup_model(dataset, formula, block_formula, baseline_model, contrasts)
+  fobj <- .setup_model(dataset, formula, block, baseline_model, contrasts)
 
   result <- if (strategy == "runwise") {
     runwise_rlm(dataset, fobj$model, fobj$conlist, fobj$fcon)

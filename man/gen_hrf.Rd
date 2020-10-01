@@ -9,7 +9,6 @@ gen_hrf(
   lag = 0,
   width = 0,
   precision = 0.1,
-  half_life = Inf,
   summate = TRUE,
   normalize = FALSE,
   name = "gen_hrf",
@@ -24,6 +23,10 @@ gen_hrf(
 \item{width}{optional block width in seconds}
 
 \item{precision}{sampling precision in seconds}
+
+\item{summate}{whether to allow each impulse response function to "add" up.}
+
+\item{normalize}{rescale so that the peak of the output is 1.}
 
 \item{...}{extra parameters for the \code{hrf} function}
 }

@@ -2,10 +2,10 @@ Package: fmrireg
 Type: Package
 Title: R package for the anlysis of fmri data
 Version: 0.0.1
-Date: 2019-12-01
+Date: 2020-09-15
 Authors@R: person("Bradley", "Buchsbaum",, role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
 License: GPL (>= 2)
-Maintainer: Bradley Buchsbaum <bbuchsbaum@gmail.com>
+Maintainer: Bradley Buchsbaum <brad.buchsbaum@gmail.com>
 Description: fmrireg is a package for the analysis of fmri image data
 Depends:
     R (>= 3.5.0),
@@ -32,15 +32,18 @@ Imports:
     pls,
     rrBLUP,
     shiny,
-    tidyr
+    tidyr,
+    mgcv,
+    iterators,
+    robustbase,
+    glmnet
 RoxygenNote: 7.1.0
 Suggests: testthat,
     knitr,
     rmarkdown,
     roxygen2,
     covr
-Remotes: 
-  bbuchsbaum/neuroim2
+Remotes: bbuchsbaum/neuroim2
 VignetteBuilder: knitr
 URL: https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues

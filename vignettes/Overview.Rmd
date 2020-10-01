@@ -73,7 +73,20 @@ In `fmrireg` it is generally not necessary to manually create regressors as we h
 
 ## Event Models
 
-An HRF is a function from time to BOLD activity. A regressor is a function of time that sums up BOLD activity over a list of HRFs (one per "onset"). In conventional fMRI analysis, a regressor refers to a single column of a design matrix. For example, if we have two task conditions, "face" and "scene", we would generate one face regressor and one scene regressor. However, in statistical modeling of experiments, we generally think not in terms of single columns of a design matrix, but rather in terms of the "factors" 
+An HRF is a function from time to BOLD activity. A regressor is a function of time that sums up BOLD activity over a list of HRFs (one per "onset"). In conventional fMRI analysis, a regressor refers to a single column of a design matrix. For example, if we have two task conditions, "face" and "scene", we would generate one face regressor and one scene regressor. However, in statistical modeling of experiments, we generally think not in terms of single columns of a design matrix, but rather in terms of the "factors", which in this case might call "stim_type", with levels "scene" and "face". A complex regression model often involves a factorial combination of different factors, which can be then be examined for main effects, interactions, and contrasts.
+
+Before we discuss event models, we need to briefly introduce the `fmrireg`'s class for describing how scans are sampled over time and organized in blocks (sometimes also referred to as runs or scans). A "block" simply refers to a consecutive set of images (usually a few hundred), collected back to back over the course of one fMRI scan. An fMRI "session" consists of a number of these scanning blocks. Each individual image in a block is usually separated by a fixed interval, called the "TR" (repetition time). We encode this information (the number of blocks, the number of images in each block, and the TR) in a `sampling_frame` object. Below, we create a `sampling_frame` for an experiment with 5 blocks, each containing 200 images, and with a TR of 2s.
+
+```{r}
+
+nblocks <- 5
+sframe <- sampling_frame(rep(200, 5), TR=2)
+sframe
+
+```
+
+
+
 
 
 

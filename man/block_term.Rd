@@ -20,6 +20,8 @@ block_term(
 \item{expanded_blockids}{the vector of blockids expanded by run}
 
 \item{mat}{the \code{matrix} of covariates}
+
+\item{type}{the block variable type: 'runwise' or 'global'}
 }
 \description{
 construct a constant term

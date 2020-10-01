@@ -62,6 +62,7 @@ contrast_set <- function(...) {
 #' @examples 
 #' pairwise_contrasts(c("A", "B", "C"))
 #' @export
+#' @importFrom utils combn
 pairwise_contrasts <- function(levels, where=NULL) {
   if (!is.null(where)) {
     assert_that(lazyeval::is_formula(where))

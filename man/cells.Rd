@@ -16,6 +16,8 @@ cells(x, ...)
 \item{x}{the object}
 
 \item{...}{extra args}
+
+\item{drop.empty}{remove empty cells}
 }
 \description{
 return the experimental cells that are in a model term as a table

@@ -9,6 +9,8 @@ NULL
 #' @param lag optional lag in seconds
 #' @param width optional block width in seconds
 #' @param precision sampling precision in seconds
+#' @param summate whether to allow each impulse response function to "add" up.
+#' @param normalize rescale so that the peak of the output is 1.
 #' @param ... extra parameters for the \code{hrf} function
 #' 
 #' @return an instance of type \code{HRF} inheriting from \code{function}
@@ -24,7 +26,7 @@ NULL
 #' 
 #' vals <- grf(0:20)
 #' @export
-gen_hrf <- function(hrf, lag=0, width=0, precision=.1, half_life=Inf, 
+gen_hrf <- function(hrf, lag=0, width=0, precision=.1, 
                     summate=TRUE, normalize=FALSE, name="gen_hrf", ...) {
   .orig <- list(...)
   
@@ -204,7 +206,7 @@ hrf_lagged <- gen_hrf_lagged
 
 #' gen_hrf_blocked
 #' 
-#' @param hrf the hemodynmaic response function
+#' @param hrf the hemodynamic response function
 #' @param width the width of the block
 #' @param precision the sampling resolution
 #' @param half_life the half_life of the exponential decay function (used to model response attenuation)
@@ -233,6 +235,7 @@ hrf_blocked <- gen_hrf_blocked
 #' @param half_life the half_life of the exponential decay function (used to model attenutation)
 #' @param summate whether to allow each impulse response function to "add" up.
 #' @param normalize rescale so that the peak of the output is 1.
+#' @param ... extra args to pass through to hrf function
 #' @export
 convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1, half_life=Inf, summate=TRUE, normalize=FALSE, ...) {
  
@@ -344,6 +347,8 @@ hrf_gaussian <- function(t, mean=6, sd=2) {
 #' A hemodynamic response function based on the SPM canonical double gamma parameterization.
 #' 
 #' @param t time
+#' @param P1 the first exponent parameter
+#' @param P2 the second exponent parameter
 #' @export
 hrf_spmg1 <- function(t, P1=5, P2=15) {
   A1=.00833
@@ -468,8 +473,8 @@ getHRF <- function(name=c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline", 
 			spmg2=HRF(gen_hrf_lagged(HRF_SPMG2,lag=lag), name="spmg2", nbasis=2),
 			spmg3=HRF(gen_hrf_lagged(HRF_SPMG3,lag=lag), name="spmg3", nbasis=3),
 			tent=HRF(gen_hrf_lagged(hrf_bspline, lag=lag,degree=1,...), name="bspline", nbasis=nbasis),
-			bs=HRF(gen_hrf_lagged(hrf_bspline, lag=lag, ...), name="bspline", nbasis=nbasis),
-			bspline=HRF(gen_hrf_lagged(hrf_bspline, lag=lag,...), name="bspline", nbasis=nbasis))
+			bs=HRF(gen_hrf_lagged(hrf_bspline, lag=lag,...), name="bspline", nbasis=nbasis),
+			bspline=HRF(gen_hrf_lagged(hrf_bspline, lag=lag, ...), name="bspline", nbasis=nbasis))
 	
 	if (is.null(hrf)) {
 		stop("could not find create hrf named: ", name)
@@ -480,7 +485,7 @@ getHRF <- function(name=c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline", 
 
 
 #' @keywords internal
-make_hrf <- function(basis, lag) {
+make_hrf <- function(basis, lag, nbasis=1) {
   if (!is.numeric(lag) || length(lag) > 1) {
     stop("hrf: 'lag' must be a numeric scalar")
   }
@@ -551,7 +556,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
   label <- parsed$label
   
  
-  basis <- make_hrf(basis, lag)
+  basis <- make_hrf(basis, lag, nbasis=nbasis)
   
   varnames <- if (!is.null(prefix)) {
     paste0(prefix, "_", term)
@@ -894,17 +899,23 @@ afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",
   
 }
 
-#' construct an native AFNI hrf specification for '3dDeconvolve' and indifdually modulated events using the 'stim_times_IM' argument.
+#' construct an native AFNI hrf specification for '3dDeconvolve' and individually modulated events using the 'stim_times_IM' argument.
+#' 
+#' 
+#' @param label name of regressor
+#' @param start start of hrf (for multiple basis hrfs)
+#' @param stop end of hrf (for multiple basis hrfs)
 #' 
 #' @inheritParams hrf
 #' @examples 
+#' 
 #' 
 #' tw <- afni_trialwise("trialwise", basis="gamma", onsets=seq(1,100,by=5))
 #' 
 #' @export
 afni_trialwise <- function(label, basis=c("spmg1", "block", "dmblock", "gamma", "wav"), 
                      onsets=NULL, durations=0, subset=NULL, 
-                      id=NULL, start=NULL, stop=NULL) {
+                      id=NULL, start=0, stop=22) {
   
   ## TODO cryptic error message when argument is mispelled and is then added to ...
   basis <- match.arg(basis)

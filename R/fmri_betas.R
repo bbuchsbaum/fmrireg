@@ -1,9 +1,12 @@
 
+
+#' @importFrom glmnet glmnet
 ridge_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), lambda=.01) {
-  fit <- glmnet(X, Y, penalty.factor=penalty_factor, alpha=0,lambda=lambda)
+  fit <- glmnet::glmnet(X, Y, penalty.factor=penalty_factor, alpha=0,lambda=lambda)
   coef(fit)[,1,drop=FALSE]
 }
 
+#' @importFrom pls plsr 
 pls_betas <- function(X, Y, ncomp=3) {
   dx <- data.frame(X=X, Y=Y)
   fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="simpls", scale=TRUE)
@@ -170,7 +173,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3) {
 #' @param ncomp number of pls components for method "pls" and "pls_searchlight" and "pls_global"
 #' @param lambda lambda parameter (not currently used)
 #' @import pls
-#' @importFrom care slm
+#  @importFrom care slm
 #' @examples 
 #' 
 #' facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)

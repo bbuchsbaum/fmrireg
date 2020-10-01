@@ -15,6 +15,7 @@ design_plot <- function(fmrimod, longnames=FALSE) {
   
   sframe <- fmrimod$event_model$sampling_frame
   
+  condition = value = .time = .block = NULL
   dflist <- lapply(all_terms, function(term) {
     dm1 <- tibble::as_tibble(design_matrix(term))
     dm1$.block <- sframe$blockids

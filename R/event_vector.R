@@ -313,6 +313,8 @@ levels.event_term <- function(x) {
   }
 }
 
+
+#' @param drop.empty remove empty cells (not implemented)
 #' @export
 #' @rdname cells
 cells.event_factor <- function(x, drop.empty=TRUE) {
@@ -320,6 +322,8 @@ cells.event_factor <- function(x, drop.empty=TRUE) {
   split(etab, x$value)
 }
 
+
+#' @param drop.empty remove empty cells
 #' @export
 #' @rdname cells
 #' @examples 

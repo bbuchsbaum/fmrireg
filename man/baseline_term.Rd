@@ -6,6 +6,15 @@
 \usage{
 baseline_term(varname, mat, colind, rowind)
 }
+\arguments{
+\item{varname}{the name of the term}
+
+\item{mat}{the matrix of covariates}
+
+\item{colind}{the column indices}
+
+\item{rowind}{the row indices}
+}
 \description{
 baseline_term
 }

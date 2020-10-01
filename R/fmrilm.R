@@ -47,6 +47,7 @@ term_matrices.fmri_model <- function(x, blocknum=NULL) {
 #' @param drop_empty whether to remove factor levels with size of zero
 #' @param contrasts a set of contrasts
 #' @param strategy the data splitting strategy
+#' @param robust whether to use robust fitting (TRUE or FALSE)
 #' 
 #' @examples 
 #' etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))
@@ -64,7 +65,7 @@ term_matrices.fmri_model <- function(x, blocknum=NULL) {
 #' @export
 fmri_lm <- function(formula, block, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, contrasts=NULL, robust=FALSE,
-                     strategy=c("runwise", "chunkwise"), nchunks=10, dofpen=0) {
+                     strategy=c("runwise", "chunkwise"), nchunks=10) {
   
  
   strategy <- match.arg(strategy)

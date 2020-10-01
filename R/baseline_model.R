@@ -101,11 +101,12 @@ baseline_model <- function(basis=c("constant", "poly", "bs", "ns"), degree=1, sf
 #' Create a model specification for modeling low-frequency drift in fmri time series.
 #' 
 #' @importFrom splines bs ns
+#' 
 #' @param degree number of basis terms for each image block (ignored for 'constant' basis)
 #' @param basis the type of polynomial basis.
 #' @param name the name of the term
 #' @param constant whether to include an intercept term
-#' @param blockwise_intercept whether to include one intercept term per block or just one global intercept
+#' @param intercept the type of intercept to include
 #' @export
 baseline <- function(degree=1, basis=c("constant", "poly", "bs", "ns"), name=NULL, 
                      intercept=c("runwise", "global", "none")) {
@@ -243,6 +244,10 @@ construct.baselinespec <- function(x, sampling_frame) {
 
 #' baseline_term
 #' 
+#' @param varname the name of the term
+#' @param mat the matrix of covariates
+#' @param colind the column indices
+#' @param rowind the row indices
 #' @importFrom tibble as_tibble
 #' @import Matrix
 #' @export
@@ -251,7 +256,10 @@ baseline_term <- function(varname, mat, colind, rowind) {
   
   stopifnot(inherits(mat, "matrix") || is.data.frame(mat) || inherits(mat, "Matrix"))
 
-  ret <- list(varname=varname, design_matrix=tibble::as_tibble(as.matrix(mat),.name_repair="universal"), colind=colind, rowind=rowind)
+  ret <- list(varname=varname, 
+              design_matrix=tibble::as_tibble(as.matrix(mat),.name_repair="universal"), 
+              colind=colind, 
+              rowind=rowind)
   class(ret) <- c("baseline_term", "matrix_term", "fmri_term", "list")
   ret
 }
@@ -300,6 +308,7 @@ construct_block_term <- function(vname, sframe, intercept=c("global", "runwise")
 #' @param blockids the ordered sequence of blockids
 #' @param expanded_blockids the vector of blockids expanded by run
 #' @param mat the \code{matrix} of covariates
+#' @param type the block variable type: 'runwise' or 'global'
 #' @importFrom tibble as_tibble
 #' @export
 block_term <- function(varname, blockids, expanded_blockids, mat, type=c("runwise", "global")) {
@@ -401,6 +410,7 @@ plot.baseline_model <- function(x, term_name=NULL) {
   
   sframe <- x$sampling_frame
   
+  condition = NULL; value = NULL; .time = NULL; .block=NULL
   dflist <- lapply(all_terms, function(term) {
     dm1 <- tibble::as_tibble(design_matrix(term),.name_repair="check_unique")
     dm1$.block <- sframe$blockids

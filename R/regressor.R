@@ -1,6 +1,8 @@
 
 
 #' null_regressor 
+#' @param hrf an hrf function
+#' @param span the hrf span
 null_regressor <- function(hrf=HRF_SPMG1, span=24) {
   ret <- list(onsets=NA,hrf=hrf, eval=hrf, duration=0,amplitude=0,span=span)
   class(ret) <- c("null_regressor", "regressor", "list")
@@ -179,6 +181,8 @@ evaluate.regressor <- function(x, grid, precision=.2) {
   }
 
   nidx <- nidx[valid]
+  
+  #browser()
 
   for (i in seq_along(valid.ons)) { 
     grid.idx <- seq(nidx[i], min(nidx[i] + dspan, length(grid)))             

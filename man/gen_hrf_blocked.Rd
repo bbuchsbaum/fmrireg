@@ -15,7 +15,7 @@ gen_hrf_blocked(
 )
 }
 \arguments{
-\item{hrf}{the hemodynmaic response function}
+\item{hrf}{the hemodynamic response function}
 
 \item{width}{the width of the block}
 

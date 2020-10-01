@@ -20,6 +20,8 @@ fmri_lm_fit(
 
 \item{strategy}{the data splitting strategy}
 
+\item{robust}{whether to use robust fitting (TRUE or FALSE)}
+
 \item{contrasts}{a set of contrasts}
 }
 \description{

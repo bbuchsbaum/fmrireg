@@ -16,6 +16,10 @@ run(x, ...)
 
 \item{execute}{whether to execute the command or only output shell '3dDeconvolve.sh' script}
 
+\item{execfun}{function used to execute external system command}
+
+\item{prepend}{prepend string to command}
+
 \item{...}{extra args}
 }
 \description{

@@ -20,7 +20,7 @@ A dataset that encapsulates a dimension-reduced subspace of "latent variables".
 }
 \examples{
 
-a matrix with 100 rows and 1000 columns (voxels)
+## a matrix with 100 rows and 1000 columns (voxels)
 X <- matrix(rnorm(100*1000), 100, 1000)
 pres <- prcomp(X)
 basis <- pres$x[,1:25]

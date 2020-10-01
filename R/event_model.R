@@ -488,6 +488,8 @@ plot.event_model <- function(x, term_name=NULL, longnames=TRUE) {
   
   sframe <- x$sampling_frame
   
+  condition = NULL; value = NULL; .time = NULL; .block=NULL
+  
   dflist <- lapply(all_terms, function(term) {
     dm1 <- tibble::as_tibble(design_matrix(term),.name_repair="check_unique")
     if (!longnames) {

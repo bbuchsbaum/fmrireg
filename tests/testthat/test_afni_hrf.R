@@ -46,7 +46,7 @@ test_that("can construct an an afni model with trialwise regressor", {
   alm <- afni_lm(fmod, dset)
   
   expect_true(!is.null(fmod))
-  expect_equal(length(terms(fmod)), 3)
+  expect_equal(length(terms(fmod)), 4)
   expect_error(design_matrix(fmod))
   expect_equal(2, length(baseline_terms(fmod)))
   expect_null(contrast_weights(fmod)$repnum)
@@ -93,7 +93,7 @@ test_that("can construct an an afni model with trialwise regressor and a Polynom
   alm <- afni_lm(fmod, dset)
   
   expect_true(!is.null(fmod))
-  expect_equal(length(terms(fmod)), 3)
+  expect_equal(length(terms(fmod)), 4)
   expect_error(design_matrix(fmod))
   expect_equal(2, length(baseline_terms(fmod)))
   expect_null(contrast_weights(fmod)$repnum)

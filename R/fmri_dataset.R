@@ -55,6 +55,7 @@ read_fmri_config <- function(file_name, base_path=NULL) {
   }
   
   dname <- file.path(env$base_path, env$event_table)
+  
   assert_that(file.exists(dname))
   env$design <- tibble::as_tibble(read.table(dname, header=TRUE),.name_repair="check_unique")
 
@@ -172,7 +173,7 @@ fmri_mem_dataset <- function(scans, mask, TR,
 #' @param lvec an instance of class \code{LatentNeuroVec}
 #' @examples 
 #' 
-#' a matrix with 100 rows and 1000 columns (voxels)
+#' ## a matrix with 100 rows and 1000 columns (voxels)
 #' X <- matrix(rnorm(100*1000), 100, 1000)
 #' pres <- prcomp(X)
 #' basis <- pres$x[,1:25]
@@ -298,7 +299,7 @@ get_data.fmri_mem_dataset <- function(x, ...) {
   if (length(x$scans) > 1) {
     do.call(neuroim2::NeuroVecSeq, x$scans)
   } else {
-    x$scans
+    x$scans[[1]]
   }
 }
 
@@ -382,6 +383,7 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
   get_run_chunk <- function(chunk_num) {
     bvec <- x$scans[[chunk_num]]
     voxel_ind <- which(mask>0)
+    print(voxel_ind)
     row_ind <- which(x$sampling_frame$blockids == chunk_num)
     ret <- data_chunk(neuroim2::series(bvec,voxel_ind), 
                       voxel_ind=voxel_ind, 
@@ -392,6 +394,8 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
   get_seq_chunk <- function(chunk_num) {
     bvecs <- x$scans
     voxel_ind <- maskSeq[[chunk_num]]
+    print(voxel_ind)
+
     m <- do.call(rbind, lapply(bvecs, function(bv) neuroim2::series(bv, voxel_ind)))
     ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) neuroim2::series(bv, voxel_ind))), 
                       voxel_ind=voxel_ind, 
