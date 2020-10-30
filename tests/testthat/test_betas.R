@@ -31,8 +31,8 @@ test_that("can run a beta estimation", {
                        method="pls", ncomp=1)
  ret2 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
                          method="pls", ncomp=3)
- ret3 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
-                        method="slm")
+ #ret3 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
+#                        method="slm")
  ret4 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
                         method="mixed")
  ret5 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
@@ -98,14 +98,14 @@ test_that("can run a beta estimation with custom basis", {
                            TR=1.5, 
                            event_table=facedes)
   
-  hrfbasis = gen_hrf(hrf_spmg1, width=3, lag=1, normalize=TRUE)
+  b1 <<- gen_hrf(hrf_spmg1, lag=1, width=3, normalize=TRUE)
   
   
-  est <- estimate_betas(dset, fixed = onset ~ hrf(constant, basis=hrfbasis),
-                        ran = onset ~ trialwise(basis=hrfbasis, durations=0), block = ~ run, 
+  est <- estimate_betas(dset, fixed = onset ~ hrf(constant),
+                        ran = onset ~ trialwise(basis=b1, durations=0), block = ~ run, 
                         method="pls_global",ncomp=30)
   
-  
+  expect_true(!is.null(est))
   
   
 })

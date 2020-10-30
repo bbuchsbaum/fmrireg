@@ -96,7 +96,7 @@ meta_betas <- function(bstats, colind) {
   len <- length(colind)
   
   res <- lapply(colind, function(i) {
-    print(i)
+    #print(i)
     beta <- do.call(cbind, lapply(bstats, function(x) x$estimate()[,i]))
     se <- do.call(cbind, lapply(bstats, function(x) x$se()[,i]))
     meta_fixef(beta,se)

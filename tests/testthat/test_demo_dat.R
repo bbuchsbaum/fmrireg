@@ -39,7 +39,7 @@ test_that("demo1", {
   
   g = expand.grid(lag=seq(.01,5, by=.2), width=seq(0.1,5, by=.2))
   gres <- do.call(cbind, lapply(1:nrow(g), function(i) {
-    h <- gen_hrf(hrf_spmg1, lag=g[i,1], width=g[i,2])
+    h <<- gen_hrf(hrf_spmg1, lag=g[i,1], width=g[i,2])
     h(0:24)
   }))
   
@@ -89,7 +89,7 @@ test_that("demo1", {
     ares00 <- auto.arima(y00)
     ares2 <- arima(y, order=c(2,0,2), xreg=cbind(evmat, bvmat))
     
-    print(cor(evmat[,1],resid(lm.0)))
+    #print(cor(evmat[,1],resid(lm.0)))
   }
   
 })
@@ -133,6 +133,8 @@ test_that("demo2", {
     time <- seq(0,20,by=1)
     p <- predict(gam.1, data.frame(X_cond=time))
   })
+  
+  expect_true(!is.null(ps))
   
 })
 

@@ -252,7 +252,7 @@ construct.baselinespec <- function(x, sampling_frame) {
 #' @import Matrix
 #' @export
 baseline_term <- function(varname, mat, colind, rowind) {
-  print(paste(varname, ":", class(mat)))
+  #print(paste(varname, ":", class(mat)))
   
   stopifnot(inherits(mat, "matrix") || is.data.frame(mat) || inherits(mat, "Matrix"))
 

@@ -83,7 +83,8 @@ test_that("can construct a convolved trialwise term with bspline basis from an h
   
   etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), block=1)
   
-  hrfb <- gen_hrf(hrf_bspline, N=5)
+ 
+  hrfb <<- gen_hrf(hrf_bspline, N=5)
   espec <- event_model(onsets ~ trialwise(basis=hrfb), data=etab, block=~block, sampling_frame=sframe)
   
   expect_equal(dim(design_matrix(espec)), c(N,length(onsets)*5))
@@ -168,19 +169,20 @@ test_that("event_model with duplicate terms at different lags", {
   
 })
 
-test_that("can construct a model with a covariate term", {
+test_that("can construct a model with a raw covariate term", {
   facedes$repnum <- factor(facedes$rep_num)
   sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
-  cdat <- data.frame(x = rnorm(218*6), y = rnorm(218*6))
+  cdat <<- data.frame(x = rnorm(sum(sframe$blocklens)), y = rnorm(sum(sframe$blocklens)))
   
   espec <- event_model(onset ~ hrf(rt) + covariate(x, y, data=cdat) , data=facedes, block=~run, sampling_frame=sframe)
   dmat <- design_matrix(espec)
 
-  expect_equal(dim(dmat), c(sum(sframe$blocklens), 2 + length(levels(facedes$repnum))))
+  expect_equal(dim(dmat), c(sum(sframe$blocklens), 3))
   
   bmod <- baseline_model(basis="constant", sframe=sframe)
   fmod <- fmri_model(espec,bmod)
   alm <- afni_lm(fmod)
+  expect_true(!is.null(alm))
 })
 
 test_that("facedes model with rep_num", {
@@ -249,18 +251,18 @@ test_that("facedes model with bspline parametric basis", {
   expect_equal(dim(dmat), c(sum(sframe$blocklens), 3))
 })
 
-test_that("rcan create an identity regressor", {
-  onsets <- seq(0,9,by=1)
-  durations=1
-  
-  reg1 <- regressor(onsets, HRF_IDENT, duration=0, amplitude=1:10)
-  
-  expect_equal(class(reg1)[1],"regressor")
-  expect_equal(length(reg1$onsets), length(onsets))
-  expect_equal(length(reg1$duration), length(onsets))
-  expect_true(durations(reg1)[1] == 0)
-  expect_true(amplitudes(reg1)[1] == 1)
-})
+# test_that("rcan create an identity regressor", {
+#   onsets <- seq(0,9,by=1)
+#   durations=1
+#   
+#   reg1 <- regressor(onsets, HRF_IDENT, duration=0, amplitude=1:10)
+#   
+#   expect_equal(class(reg1)[1],"regressor")
+#   expect_equal(length(reg1$onsets), length(onsets))
+#   expect_equal(length(reg1$duration), length(onsets))
+#   expect_true(durations(reg1)[1] == 0)
+#   expect_true(amplitudes(reg1)[1] == 1)
+# })
 
 
 

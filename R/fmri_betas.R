@@ -9,13 +9,13 @@ ridge_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), lambda=.01) {
 #' @importFrom pls plsr 
 pls_betas <- function(X, Y, ncomp=3) {
   dx <- data.frame(X=X, Y=Y)
-  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="simpls", scale=TRUE)
+  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="simpls", scale=TRUE, maxit=200)
   coef(fit, ncomp=ncomp)[,,1]
 }
 
 pls_global_betas <- function(X, Y, ncomp=3) {
   dx <- data.frame(X=X, Y=Y)
-  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="widekernelpls", scale=TRUE)
+  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="widekernelpls", scale=TRUE, maxit=200)
   coef(fit, ncomp=ncomp)[,,1]
 }
 
@@ -66,7 +66,7 @@ gen_beta_design <- function(fixed, ran, block, bmod, dset) {
 }
   
 
-run_estimate_betas <- function(bdes, dset, method, ncomp=3) {
+run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 
   betas <- with(bdes, {
     vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
@@ -137,7 +137,8 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3) {
               data = dx,
               ncomp = ncomp,
               validation = "none",
-              method = "simpls"
+              method = "simpls",
+              maxit=200
             )
           idx <- neuroim2::grid_to_index(mask, cds)
           B <- coef(res)[, , 1, drop = FALSE]
@@ -204,7 +205,7 @@ estimate_betas.fmri_dataset <- function(dataset,fixed, ran, block,
   
   
   bdes <- gen_beta_design(fixed, ran, block, bmod, dset)
-  betas <- run_estimate_betas(bdes, dset, method, ncomp=ncomp)
+  betas <- run_estimate_betas(bdes, dset, method, ncomp=ncomp, niter=niter, radius=radius)
   
   nbetas <- nrow(betas)
   ospace_ran <- neuroim2::add_dim(neuroim2::space(mask), length(bdes$ran_ind))

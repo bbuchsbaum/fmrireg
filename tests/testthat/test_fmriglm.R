@@ -188,27 +188,28 @@ test_that("can run video fmri design with fmri_file_dataset", {
   bmod <- baseline_model(basis="bs", degree=4, sframe=sframe)
   fmod <- fmri_model(evmod, bmod)
 
-  conset <- do.call("contrast_set", lapply(levels(factor(des$Video)), function(v) {
+  conset <<- NULL
+  conset <<- do.call("contrast_set", lapply(levels(factor(des$Video)), function(v) {
     f1 <- as.formula(paste("~ Video == ", paste0('"', v, '"')))
     f2 <- as.formula(paste("~ Video != ", paste0('"', v, '"')))
     pair_contrast(f1, f2, name=paste0(v, "_vsall"))
   }))
   
-  
+ 
   res2 <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
                               hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, 
                             dataset=dset, 
-                            strategy="chunkwise", nchunks=50)
+                            strategy="chunkwise", nchunks=22)
   
   res3 <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
                               hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, dataset=dset, 
                             strategy="chunkwise", nchunks=2)
   
-  expect_true(!is.null(coef(res1)))
   expect_true(!is.null(coef(res2)))
+  expect_true(!is.null(coef(res3)))
   
-  expect_true(!is.null(coef(res1, "contrasts")))
   expect_true(!is.null(coef(res2, "contrasts")))
+  expect_true(!is.null(coef(res3, "contrasts")))
   
   
 })

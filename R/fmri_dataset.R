@@ -322,7 +322,11 @@ get_data.fmri_file_dataset <- function(x, ...) {
 
 #' @export
 get_mask.fmri_file_dataset <- function(x) {
-  x$mask
+  if (is.null(x$mask)) {
+    neuroim2::read_vol(x$mask_file)
+  } else {
+    x$mask
+  }
 }
 
 
@@ -487,7 +491,10 @@ data_chunks.matrix_dataset <- function(x, nchunks=1, runwise=FALSE) {
   } else {
     sidx <- split(1:ncol(x$datamat), sort(rep(1:nchunks, length.out=ncol(x$datamat))))
     get_chunk <- function(chunk_num) {
-      data_chunk(x$datamat[,sidx[[chunk_num]], drop=FALSE], voxel_ind=sidx[[chunk_num]], row_ind=1:nrow(x$datamat), chunk_num=chunk_num)
+      data_chunk(x$datamat[,sidx[[chunk_num]], drop=FALSE], 
+                 voxel_ind=sidx[[chunk_num]], 
+                 row_ind=1:nrow(x$datamat), 
+                 chunk_num=chunk_num)
     }
     chunk_iter(x, nchunks, get_chunk)
   }
@@ -524,6 +531,8 @@ arbitrary_chunks <- function(x, nchunks) {
   mask <- get_mask(x)
   indices <- as.integer(which(mask != 0))
   chsize <- round(length(indices)/nchunks)
+  print(indices)
+  
   assert_that(chsize > 0)
   chunkids <- sort(rep(1:nchunks, each=chsize, length.out=length(indices)))
   

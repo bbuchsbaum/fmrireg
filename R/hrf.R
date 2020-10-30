@@ -773,11 +773,15 @@ trialwise <- function(label="trialwise", basis="spmg1", onsets=NULL, durations=N
     id <- termname
   }  
   
-  if (is.function(basis) && !inherits(basis, "HRF")) {
-    basis <- gen_hrf(basis)
+  basis <- if (!inherits(basis, "HRF") && is.function(basis)) {
+    gen_hrf(basis)
   } else if (is.character(basis)) {
-    basis <- getHRF(basis)
-  } 
+    getHRF(basis)
+  } else if (inherits(basis, "HRF")) {
+    basis
+  } else {
+    stop(paste("illegal type for basis arg: ", class(basis)))
+  }
   
   assert_that(inherits(basis, "HRF"))
   
