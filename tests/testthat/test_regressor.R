@@ -241,6 +241,18 @@ test_that("facedes model with polynomial parametric basis", {
   expect_equal(dim(dmat), c(sum(sframe$blocklens), 3))
 })
 
+test_that("facedes model with polynomial parametric basis and overriding onsets", {
+  facedes$repnum <- factor(facedes$rep_num)
+  facedes$onset2 <- facedes$onset+4
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  
+  espec <- event_model(onset ~  hrf(Poly(rt,2), onsets=onset2), 
+                       data=facedes, block=~run, sampling_frame=sframe)
+  
+  dmat <- design_matrix(espec)
+  expect_equal(dim(dmat), c(sum(sframe$blocklens), 3))
+})
+
 test_that("facedes model with bspline parametric basis", {
   facedes$repnum <- factor(facedes$rep_num)
   sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)

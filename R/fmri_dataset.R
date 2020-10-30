@@ -268,7 +268,7 @@ fmri_dataset <- function(scans, mask, TR,
   
   
   ret <- list(
-    scans=paste0(base_path, "/", scans),
+    scans=scans,
     vec=vec,
     mask_file=maskfile,
     mask=maskvol,
