@@ -12,7 +12,7 @@ bids_source <- function(bids_path, deriv_folder="derivatives/fmriprep", id, bold
     stop("cannot find scan_map named: ", paste0(bids_path, "/", "sub-", id, "/sub-", id, "_scans.tsv"))
   }
   
-  scan_map <- read.table(scan_map, header=TRUE, stringsAsFactors=FALSE, colClasses=list(run="character", scan="character"))
+  scan_map <- read.table(scan_map, header=TRUE, stringsAsFactors=FALSE, colClasses=list(run="character", scan="character", session="character"))
   
   if (!is.null(session) && session != "") {
     qsession <- dplyr::enquo(session)

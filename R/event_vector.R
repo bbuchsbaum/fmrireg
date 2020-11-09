@@ -678,7 +678,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate
       reg <- convolve_design(hrf, d, .$.globons, .$.durations, summate=summate)
       sam <- samples(sampling_frame, blockids=as.integer(as.character(.$.blockids[1])), global=TRUE)
       ret <- do.call(cbind, lapply(reg, function(r) evaluate(r, sam)))
-      tibble::as_tibble(ret, .name_repair="universal")
+      tibble::as_tibble(ret, .name_repair="minimal")
   }) %>% dplyr::ungroup() %>% dplyr::select(-.blockids)
   
  

@@ -69,8 +69,9 @@ gen_beta_design <- function(fixed, ran, block, bmod, dset) {
 run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 
   betas <- with(bdes, {
-    vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
+    
     if (method == "slm") {
+      vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
       ## TODO FIXME
       X  <- cbind(dmat_ran, dmat_fixed)
       Base <- as.matrix(dmat_base)
@@ -83,6 +84,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
       ##neuroim2::NeuroVec(as.matrix(res), neuroim2::add_dim(neuroim2::space(mask),nrow(res)))
       
     } else if (method == "mixed") {
+      vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
       X  <- cbind(dmat_ran, dmat_fixed)
       ## TODO emit warning when NAs found in design matrix?
       X[is.na(X)] <- 0
@@ -94,6 +96,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
         }))
       as.matrix(res)
     } else if (method == "pls") {
+      vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
       X <- cbind(scale(dmat_ran), scale(dmat_fixed))
       X[is.na(X)] <- 0
       
@@ -106,7 +109,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
         }))
       as.matrix(res)
     } else if (method == "pls_global") {
-  
+      vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
       X <- cbind(scale(dmat_ran), scale(dmat_fixed))
       X[is.na(X)] <- 0
       
@@ -123,6 +126,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
       X <- cbind(scale(dmat_ran), scale(dmat_fixed))
       Base <- as.matrix(dmat_base)
       
+      bvec <- get_data(dset)
       res <- Reduce("+", furrr::future_map(1:niter, function(iter) {
         slight <- neuroim2::random_searchlight(mask, radius = radius)
         mset <- Reduce("+", furrr::future_map(slight, function(s) {
@@ -163,20 +167,28 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 }
 
 
-#' estimate trialwise betas for an fMRI dataset.
-#' 
-#' @param dataset the fmri_dataset instance
-#' @param fixed the fixed factors
-#' @param ran the random (trialwise) factors
+#' @param fixed the fixed regressors that model constant effects (i.e. non-varying over trials)
+#' @param ran the random (trialwise) regressors that model trialwise effects
 #' @param block the block factor
+#' @param method the regression method for estimating trialwise betas
 #' @param basemod \code{baseline_model} instance to regress out of data before bet estimation
 #' @param niter number of searchlight iterations for method "pls_searchlight"
 #' @param ncomp number of pls components for method "pls" and "pls_searchlight" and "pls_global"
 #' @param lambda lambda parameter (not currently used)
 #' @import pls
-#  @importFrom care slm
+#' @importFrom care slm
 #' @examples 
 #' 
+#' @rdname estimate_betas
+#' @details The `method` arguments allows for several beta estimation approaches
+#' * `mixed` uses a linear mixed effects modeling of trialwise random effects as implemented in the `rrBLUP` package.
+#' * `pls` uses separate partial least squares for each voxel to estimate trialwise betas
+#' * `pls_searchlight` estimates pls solutions over searchlight windows and averages the beta estimates
+#' * `pls_global` estimates a single multiresponse pls solution, where the `Y` matrix is the full data matrix.
+#' @md
+#' 
+#' 
+#'
 #' facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 #' facesdes$frun <- factor(facedes$run)
 #' scans <- paste0("rscan0", 1:6, ".nii")
@@ -188,7 +200,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 #' 
 #' 
 ## TODO trialwise(durations=4) failed
-estimate_betas.fmri_dataset <- function(dataset,fixed, ran, block,  
+estimate_betas.fmri_dataset <- function(x,fixed, ran, block,  
                            method=c("mixed", "pls", "pls_searchlight", "pls_global"), 
                            basemod=NULL, 
                            radius=8, niter=8, ncomp=4, lambda=.01) {
@@ -217,17 +229,23 @@ estimate_betas.fmri_dataset <- function(dataset,fixed, ran, block,
   
   ret <- list(betas_fixed=fixed,
        betas_ran=ran,
-       #design=bdes$dmat_all,
        design_ran=bdes$dmat_ran,
        design_fixed=bdes$dmat_fixed,
-       design_base=bdes$dmat_base)
+       design_base=bdes$dmat_base,
+       basemod=basemod,
+       fixed_model=bdes$emod_fixed,
+       ran_model=bdes$emod_ran)
+  
   class(ret) <- "fmri_betas"
   ret
   
 }
 
+
+#' @inheritParams estimate_betas.fmri_dataset
 #' @export 
-estimate_betas.matrix_dataset <- function(dataset,fixed, ran, block,  
+#' @rdname estimate_betas
+estimate_betas.matrix_dataset <- function(x,fixed, ran, block,  
                                         method=c("mixed", "pls", "pls_searchlight", "pls_global"), 
                                         basemod=NULL,
                                         radius=8, niter=8, ncomp=4, lambda=.01) {
@@ -261,12 +279,16 @@ estimate_betas.matrix_dataset <- function(dataset,fixed, ran, block,
 }
 
 
-estimate_betas.fmri_latent_dataset <- function(dataset,fixed, ran, block,  
-                                        method=c("mixed", "pls"), 
-                                        ncomp=4, lambda=.01) {
-  
-
-}
+# estimate_betas.fmri_latent_dataset <-
+#   function(dataset,
+#            fixed,
+#            ran,
+#            block,
+#            method = c("mixed", "pls"),
+#            ncomp = 4,
+#            lambda = .01) {
+#     
+#   }
 
 
 #' @importFrom mgcv gam s

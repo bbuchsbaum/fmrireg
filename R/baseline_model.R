@@ -257,7 +257,7 @@ baseline_term <- function(varname, mat, colind, rowind) {
   stopifnot(inherits(mat, "matrix") || is.data.frame(mat) || inherits(mat, "Matrix"))
 
   ret <- list(varname=varname, 
-              design_matrix=tibble::as_tibble(as.matrix(mat),.name_repair="universal"), 
+              design_matrix=tibble::as_tibble(as.matrix(mat),.name_repair="minimal"), 
               colind=colind, 
               rowind=rowind)
   class(ret) <- c("baseline_term", "matrix_term", "fmri_term", "list")
