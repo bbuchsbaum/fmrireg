@@ -177,6 +177,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 #' @param lambda lambda parameter (not currently used)
 #' @import pls
 #' @importFrom care slm
+#' @export
 #' @examples 
 #' 
 #' @rdname estimate_betas
