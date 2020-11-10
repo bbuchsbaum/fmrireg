@@ -1,5 +1,5 @@
 ---
-title: "Single Trial Beta Estimation (Draft)"
+title: "Single Trial Beta Estimation"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
