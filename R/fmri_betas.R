@@ -206,7 +206,7 @@ estimate_betas.fmri_dataset <- function(x,fixed, ran, block,
                            basemod=NULL, 
                            radius=8, niter=8, ncomp=4, lambda=.01) {
   
-  dset <- dataset
+  dset <- x
   bvec <- get_data(dset)
   mask <- get_mask(dset)
   
