@@ -74,6 +74,9 @@
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
     </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation (Draft)</a>
+    </li>
   </ul>
 </li>
       </ul>
@@ -100,7 +103,7 @@
       <h1 data-toc-skip>Overview</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2020-09-15</h4>
+            <h4 class="date">2020-11-09</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/Overview.Rmd"><code>vignettes/Overview.Rmd</code></a></small>
       <div class="hidden name"><code>Overview.Rmd</code></div>
@@ -160,7 +163,18 @@
 <div id="event-models" class="section level2">
 <h2 class="hasAnchor">
 <a href="#event-models" class="anchor"></a>Event Models</h2>
-<p>An HRF is a function from time to BOLD activity. A regressor is a function of time that sums up BOLD activity over a list of HRFs (one per “onset”). In conventional fMRI analysis, a regressor refers to a single column of a design matrix. For example, if we have two task conditions, “face” and “scene”, we would generate one face regressor and one scene regressor. However, in statistical modeling of experiments, we generally think not in terms of single columns of a design matrix, but rather in terms of the “factors”</p>
+<p>An HRF is a function from time to BOLD activity. A regressor is a function of time that sums up BOLD activity over a list of HRFs (one per “onset”). In conventional fMRI analysis, a regressor refers to a single column of a design matrix. For example, if we have two task conditions, “face” and “scene”, we would generate one face regressor and one scene regressor. However, in statistical modeling of experiments, we generally think not in terms of single columns of a design matrix, but rather in terms of the “factors”, which in this case might call “stim_type”, with levels “scene” and “face”. A complex regression model often involves a factorial combination of different factors, which can be then be examined for main effects, interactions, and contrasts.</p>
+<p>Before we discuss event models, we need to briefly introduce the <code>fmrireg</code>’s class for describing how scans are sampled over time and organized in blocks (sometimes also referred to as runs or scans). A “block” simply refers to a consecutive set of images (usually a few hundred), collected back to back over the course of one fMRI scan. An fMRI “session” consists of a number of these scanning blocks. Each individual image in a block is usually separated by a fixed interval, called the “TR” (repetition time). We encode this information (the number of blocks, the number of images in each block, and the TR) in a <code>sampling_frame</code> object. Below, we create a <code>sampling_frame</code> for an experiment with 5 blocks, each containing 200 images, and with a TR of 2s.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit">
+<span class="kw">nblocks</span> <span class="op">&lt;-</span> <span class="fl">5</span>
+<span class="kw">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">200</span>, <span class="fl">5</span>), TR=<span class="fl">2</span>)
+<span class="kw">sframe</span>
+</pre></div>
+<pre><code>## sampling_frame: 
+##   number of blocks: 5 
+##   blocklens:  200, 200, 200, 200, 200 
+##   TR:  2s 
+##   start_time:  1s</code></pre>
 </div>
   </div>
 
