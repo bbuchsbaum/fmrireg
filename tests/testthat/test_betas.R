@@ -41,11 +41,15 @@ test_that("can run a beta estimation", {
                         method="mixed")
   ret4 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
                         method="pls_searchlight", niter=3)
+  
+  ret5 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
+                         method="ols")
  
   expect_true(!is.null(ret1))
   expect_true(!is.null(ret2))
   expect_true(!is.null(ret3))
   expect_true(!is.null(ret4))
+  expect_true(!is.null(ret5))
 
   
 })

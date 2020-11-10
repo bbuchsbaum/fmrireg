@@ -19,6 +19,11 @@ pls_global_betas <- function(X, Y, ncomp=3) {
   coef(fit, ncomp=ncomp)[,,1]
 }
 
+ols_betas <- function(X, Y) {
+  fit <- lm.fit(as.matrix(X),Y)
+  coef(fit)
+}
+
 slm_betas <- function(X, Y) {
   slm.1 <- care::slm(X, Y, verbose=FALSE)
   b2 <- coef(slm.1)[,-(1:2)]
@@ -32,25 +37,43 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
   c(fit$u, fit$b)
 }
 
-gen_beta_design <- function(fixed, ran, block, bmod, dset) {
+gen_beta_design <- function(fixed=NULL, ran, block, bmod, dset) {
   
-  emod_fixed <- event_model(fixed, data=dset$event_table, block=block, sampling_frame=dset$sampling_frame)
+  if (!is.null(fixed)) {
+    emod_fixed <- event_model(fixed, data=dset$event_table, block=block, sampling_frame=dset$sampling_frame)
+    dmat_fixed <- design_matrix(emod_fixed)
+  } else {
+    emod_fixed=NULL
+    dmat_fixed=NULL
+  }
+  
   emod_ran <- event_model(ran, data=dset$event_table, block=block, sampling_frame=dset$sampling_frame)
-  
-  dmat_fixed <- design_matrix(emod_fixed)
   dmat_ran <- design_matrix(emod_ran)
   
   dmat_base <- design_matrix(bmod)
   #dmat_all <- cbind(scale(dmat_ran), scale(dmat_fixed), scale(dmat_base))
-  dmat_all <- cbind(dmat_ran, dmat_fixed, dmat_base)
+  
+  
+  dmat_all <- if (is.null(fixed)) {
+    cbind(dmat_ran, dmat_base)
+  } else {
+    cbind(dmat_ran, dmat_fixed, dmat_base)
+  }
   
   
   start_ran <- 1
   start_fixed <- ncol(dmat_ran)+1
-  start_base <- start_fixed + ncol(dmat_fixed)
-  ran_ind <- 1:ncol(dmat_ran)
   
-  fixed_ind <- start_fixed:(start_base-1)
+  if (is.null(fixed)) {
+    start_base <- start_fixed 
+    fixed_ind <- NULL
+  } else {
+ 
+    start_base <- start_fixed + ncol(dmat_fixed)
+    fixed_ind <- start_fixed:(start_base-1)
+  }
+  
+  ran_ind <- 1:ncol(dmat_ran)
   base_ind <- start_base:(ncol(dmat_all))
   
   
@@ -67,74 +90,89 @@ gen_beta_design <- function(fixed, ran, block, bmod, dset) {
   
 
 run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
+  
+  get_X <- function(scale=FALSE) {
+    X <- if (is.null(bdes$fixed)) bdes$dmat_ran else cbind(bdes$dmat_ran, bdes$dmat_fixed)
+    #X  <- cbind(bdes$dmat_ran, bdes$dmat_fixed)
+    if (scale) {
+      X <- scale(X)
+    }
+    
+    Base <- as.matrix(bdes$dmat_base)
+    X[is.na(X)] <- 0
+    list(Base=Base, X=X)
+  }
 
   betas <- with(bdes, {
+    
+    
     
     if (method == "slm") {
       vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
       ## TODO FIXME
-      X  <- cbind(dmat_ran, dmat_fixed)
-      Base <- as.matrix(dmat_base)
+      xdat <- get_X()
       
       res <- do.call(cbind, furrr::future_map(vecs, function(v) { 
-        v0 <- resid(lsfit(Base, v, intercept = FALSE))
-        slm_betas(X, v0) 
+        v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
+        slm_betas(xdat$X, v0) 
       }))
       as.matrix(res)
-      ##neuroim2::NeuroVec(as.matrix(res), neuroim2::add_dim(neuroim2::space(mask),nrow(res)))
+      
       
     } else if (method == "mixed") {
-      vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
-      X  <- cbind(dmat_ran, dmat_fixed)
-      ## TODO emit warning when NAs found in design matrix?
-      X[is.na(X)] <- 0
-      Base <- as.matrix(dmat_base)
+      vecs <- vectors(get_data(dset), subset = which(get_mask(dset) > 0))
+      xdat <- get_X()
       res <-
         do.call(cbind, furrr::future_map(vecs, function(v) {
-          v0 <- resid(lsfit(Base, v, intercept = FALSE))
-          mixed_betas(X, v0, ran_ind = ran_ind, fixed_ind = fixed_ind)
+          v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
+          mixed_betas(xdat$X, v0, ran_ind = ran_ind, fixed_ind = fixed_ind)
         }))
       as.matrix(res)
     } else if (method == "pls") {
       vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
-      X <- cbind(scale(dmat_ran), scale(dmat_fixed))
-      X[is.na(X)] <- 0
-      
-      Base <- as.matrix(dmat_base)
+      xdat <- get_X(scale=TRUE)
       
       res <-
         do.call(cbind, furrr::future_map(vecs, function(v) {
-          v0 <- resid(lsfit(Base, v, intercept = FALSE))
-          pls_betas(X, v0, ncomp = ncomp)
+          v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
+          pls_betas(xdat$X, v0, ncomp = ncomp)
         }))
       as.matrix(res)
     } else if (method == "pls_global") {
       vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
-      X <- cbind(scale(dmat_ran), scale(dmat_fixed))
-      X[is.na(X)] <- 0
-      
-      Base <- as.matrix(dmat_base)
+      xdat <- get_X(scale=TRUE)
       Y <- do.call(cbind, lapply(vecs, function(v) v))
       
       if (ncomp < log(ncol(Y))) {
         warning("'ncomp' for pls_global method is less than log(nvoxels), consider increasing.")
       }
       
-      Y0 <- resid(lsfit(Base, Y, intercept = FALSE))
-      pls_global_betas(X, Y0, ncomp=ncomp)
+      Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
+      pls_global_betas(xdat$X, Y0, ncomp=ncomp)
+    } else if (method == "ols") {
+     
+      vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
+      xdat <- get_X()
+      Y <- do.call(cbind, lapply(vecs, function(v) v))
+      
+      Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
+      
+      ols_betas(xdat$X, Y0)
+      
     } else {
-      X <- cbind(scale(dmat_ran), scale(dmat_fixed))
-      Base <- as.matrix(dmat_base)
+     
+      xdat <- get_X(scale=TRUE)
       
       bvec <- get_data(dset)
+      mask <- get_mask(dset)
       res <- Reduce("+", furrr::future_map(1:niter, function(iter) {
         slight <- neuroim2::random_searchlight(mask, radius = radius)
         mset <- Reduce("+", furrr::future_map(slight, function(s) {
           cds <- neuroim2::coords(s)
           Y <- neuroim2::series(bvec, cds)
-          Y0 <- resid(lsfit(Base, Y, intercept = FALSE))
+          Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
           
-          dx <- list(Y = Y0, X = X)
+          dx <- list(Y = Y0, X = xdat$X)
           res <-
             pls::plsr(
               Y ~ X,
@@ -186,6 +224,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 #' * `pls` uses separate partial least squares for each voxel to estimate trialwise betas
 #' * `pls_searchlight` estimates pls solutions over searchlight windows and averages the beta estimates
 #' * `pls_global` estimates a single multiresponse pls solution, where the `Y` matrix is the full data matrix.
+#' * `ols` ordinary least squares estimate of betas -- no regularization
 #' @md
 #' 
 #' 
@@ -200,15 +239,19 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 #' block = ~ run
 #' 
 #' 
-## TODO trialwise(durations=4) failed
-estimate_betas.fmri_dataset <- function(x,fixed, ran, block,  
-                           method=c("mixed", "pls", "pls_searchlight", "pls_global"), 
+estimate_betas.fmri_dataset <- function(x,fixed=NULL, ran, block,  
+                           method=c("mixed", "pls", "pls_searchlight", "pls_global", "ols"), 
                            basemod=NULL, 
                            radius=8, niter=8, ncomp=4, lambda=.01) {
   
+  method <- match.arg(method)
   dset <- x
   bvec <- get_data(dset)
   mask <- get_mask(dset)
+  
+  if (method == "mixed" && is.null(fixed)) {
+    stop("method 'mixed' requires a fixed effects term.")
+  }
   
   bmod <- if (is.null(basemod)) {
     baseline_model("constant", sframe=dset$sampling_frame)
