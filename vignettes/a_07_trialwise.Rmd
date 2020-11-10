@@ -1,0 +1,67 @@
+---
+title: "Single Trial Beta Estimation (Draft)"
+author: "Bradley R. Buchsbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Single Trial Beta Estimation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## Estimating single-trial event amplitudes for use in "beta series" analyses and MVPA analyses.
+
+It is common in fMRI analysis want to obtain estimates of BOLD amplitude for each *trial* (rather than condition) in an experiment. Estimation of single-trial beta coefficients can be done in `fmrireg` with the `estimate_betas` function.
+
+First we load in an experimental design.
+
+```{r, message=FALSE, warning=FALSE}
+
+library(dplyr)
+library(fmrireg)
+facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
+## we had a constant value to the design used later to model the mean stimulus response over all trials.
+facedes$constant <- factor(rep(1, nrow(facedes)))
+
+```
+
+Now we generate an fMRI data using random values.
+
+```{r, message=FALSE, warning=FALSE}
+
+D <- 5
+scans <- lapply(1:length(unique(facedes$run)), function(i) {
+    arr <- array(rnorm(D*D*D*300), c(D,D,D, 300))
+    bspace <- neuroim2::NeuroSpace(dim=c(D,D,D,300))
+    neuroim2::NeuroVec(arr, bspace)
+})
+  
+mask <- neuroim2::LogicalNeuroVol(array(rnorm(D*D*D), c(D,D,D)) > 0, neuroim2::NeuroSpace(dim=c(D,D,D)))
+  
+```
+
+Now we create a instance of type `fmri_mem_dataset` which encapsulates infromation about the data, temporal layout, and experimental design of an "in memory" fmri dataset.
+
+```{r, message=FALSE,warning=FALSE}
+
+dset <- fmri_mem_dataset(scans=scans, 
+                 mask=mask, 
+                 TR=1.5, 
+                 event_table=facedes)
+
+```
+
+Now we're ready to run the beta estimation analysis. There are two components to the model: a fixed effects formula and a random effects formula. The fixed effects part models the condition-specific responses, and the random effects part models the trial-specific responses. For the random effect part, we want to model every onset separately, so we use the `trialwise` hrf modeling function. For the fixed part, we use a standard `hrf` modeling function.
+
+The method we use is "pls" for **partial least squares**, which effectively acts as a regularized least squares estimation procedure.
+
+```{r, message=FALSE, warning=FALSE}
+  
+
+res <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
+                       method="pls", ncomp=3)
+
+names(res)
+  
+```
