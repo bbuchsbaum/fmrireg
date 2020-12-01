@@ -95,6 +95,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -111,6 +114,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -154,8 +160,7 @@
   contrasts = <span class='kw'>NULL</span>,
   robust = <span class='fl'>FALSE</span>,
   strategy = <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"runwise"</span>, <span class='st'>"chunkwise"</span>),
-  nchunks = <span class='fl'>10</span>,
-  dofpen = <span class='fl'>0</span>
+  nchunks = <span class='fl'>10</span>
 )</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
@@ -190,6 +195,10 @@
       <td><p>a set of contrasts</p></td>
     </tr>
     <tr>
+      <th>robust</th>
+      <td><p>whether to use robust fitting (TRUE or FALSE)</p></td>
+    </tr>
+    <tr>
       <th>strategy</th>
       <td><p>the data splitting strategy</p></td>
     </tr>
@@ -221,7 +230,7 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href='https://linguamemoria.org'>Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">

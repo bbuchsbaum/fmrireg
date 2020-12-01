@@ -95,6 +95,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -111,6 +114,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -151,7 +157,7 @@
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <pre class="examples"><div class='input'><span class='kw'>mat</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/matrix.html'>matrix</a></span>(<span class='fu'><a href='https://rdrr.io/r/stats/Normal.html'>rnorm</a></span>(<span class='fl'>100</span><span class='op'>*</span><span class='fl'>10</span>), <span class='fl'>100</span> ,<span class='fl'>10</span>)
 <span class='kw'>mterm</span> <span class='op'>&lt;-</span> <span class='fu'>matrix_term</span>(<span class='st'>"mterm"</span>, <span class='kw'>mat</span>)
-</div></pre>
+</div><div class='output co'>#&gt; <span class='error'>Error: Columns 1, 2, 3, 4, 5, and 5 more must be named.</span></div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -163,7 +169,7 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href='https://linguamemoria.org'>Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">

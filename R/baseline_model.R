@@ -69,8 +69,8 @@ baseline_model <- function(basis=c("constant", "poly", "bs", "ns"), degree=1, sf
   nuisance_term <- if (!is.null(nuisance_list)) {
    
     total_len <- sum(purrr::map_int(nuisance_list, nrow))
-    assertthat::assert_that(total_len == length(blockids(sframe)))
-    assertthat::assert_that(length(nuisance_list) == length(blocklens(sframe)))
+    assertthat::assert_that(total_len == length(blockids(sframe)), msg="number of rows of `nuisance_list' must match number of scans in sampling_frame")
+    assertthat::assert_that(length(nuisance_list) == length(blocklens(sframe)), msg="number of `nuisance_list` elements must match number of blocks in sampling_frame")
     
     colind <- get_col_inds(nuisance_list)
     rowind <- split(1:length(blockids(sframe)), blockids(sframe))
@@ -78,13 +78,16 @@ baseline_model <- function(basis=c("constant", "poly", "bs", "ns"), degree=1, sf
     for (i in 1:length(nuisance_list)) {
       nmat <- nuisance_list[[i]]
       colnames(nmat) <- paste0("nuisance#", i, "#", 1:ncol(nmat))
-      ## 'unclass' is used below because Matrix::bdiag fro some reason doesn't work with class of type c("poly", "matrix")
+      ## 'unclass' is used below because Matrix::bdiag for some reason doesn't work with class of type c("poly", "matrix")
       nuisance_list[[i]] <- unclass(as.matrix(nmat))
     }
     
     
     #baseline_term("nuisance", Matrix::bdiag(lapply(nuisance_list, unclass)), colind,rowind)
-    baseline_term("nuisance", as.matrix(Matrix::bdiag(nuisance_list)), colind,rowind)
+    cnames <- unlist(lapply(nuisance_list, colnames))
+    nmat <- as.matrix(Matrix::bdiag(nuisance_list))
+    colnames(nmat) <- cnames
+    baseline_term("nuisance", nmat, colind,rowind)
   } 
   
   ret <- list(drift_term=drift_term, 

@@ -95,6 +95,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -111,6 +114,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -192,7 +198,23 @@
 <span class='kw'>dset</span> <span class='op'>&lt;-</span> <span class='fu'>fmri_mem_dataset</span>(<span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(<span class='kw'>nvec</span>),<span class='kw'>mask</span>, TR=<span class='fl'>2</span>)
 
 <span class='kw'>iter</span> <span class='op'>&lt;-</span> <span class='fu'><a href='data_chunks.html'>data_chunks</a></span>(<span class='kw'>dset</span>, nchunks=<span class='fl'>100</span>)
-</div></pre>
+</div><div class='output co'>#&gt;   [1]   2   5   6  15  16  21  25  26  35  37  39  42  45  47  62  64  68  69
+#&gt;  [19]  78  82  85  86  98 100 102 106 107 112 113 118 129 134 135 136 138 139
+#&gt;  [37] 141 143 146 147 153 161 165 167 172 183 189 193 194 196 202 205 210 212
+#&gt;  [55] 214 223 225 226 227 235 240 244 245 247 248 249 250 252 255 259 261 265
+#&gt;  [73] 270 276 282 285 291 292 295 297 301 303 307 308 310 311 313 314 320 327
+#&gt;  [91] 329 331 336 339 345 349 352 361 367 368 369 370 378 383 385 390 393 396
+#&gt; [109] 398 405 409 418 419 422 423 424 429 430 432 433 434 441 442 453 455 458
+#&gt; [127] 464 465 472 476 478 484 489 491 497 506 512 516 518 519 522 524 528 530
+#&gt; [145] 533 535 538 540 548 549 554 555 560 561 563 564 576 579 580 581 584 586
+#&gt; [163] 587 590 591 594 596 599 602 604 606 607 614 623 626 627 633 634 638 640
+#&gt; [181] 641 645 646 647 652 655 656 657 659 660 661 667 668 670 677 679 693 697
+#&gt; [199] 699 705 725 726 728 732 734 736 737 740 742 747 750 753 755 756 759 765
+#&gt; [217] 767 777 780 787 788 790 794 799 800 801 806 814 816 817 819 824 827 828
+#&gt; [235] 832 834 837 838 839 840 844 846 850 853 854 856 864 869 870 871 872 876
+#&gt; [253] 886 888 889 892 896 901 906 909 911 912 913 918 920 924 931 936 938 940
+#&gt; [271] 951 957 959 963 967 971 972 974 975 979 980 981 984 988 990 991 992 994
+#&gt; [289] 995</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -204,7 +226,7 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href='https://linguamemoria.org'>Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">

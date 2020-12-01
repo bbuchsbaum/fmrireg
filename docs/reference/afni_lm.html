@@ -95,6 +95,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -111,6 +114,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -193,13 +199,16 @@
 <span class='kw'>dset</span> <span class='op'>&lt;-</span> <span class='fu'><a href='fmri_dataset.html'>fmri_dataset</a></span>(scans=<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"s1.nii"</span>, <span class='st'>"s2.nii"</span>), mask=<span class='st'>"mask.nii"</span>, TR=<span class='fl'>1</span>, run_length=<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>50</span>,<span class='fl'>50</span>),event_table=<span class='kw'>etab</span>)
 
 <span class='kw'>emodel</span> <span class='op'>&lt;-</span> <span class='fu'><a href='event_model.html'>event_model</a></span>(<span class='kw'>onset</span> <span class='op'>~</span> <span class='fu'><a href='hrf.html'>hrf</a></span>(<span class='kw'>fac</span>), block = <span class='op'>~</span> <span class='kw'>run</span>, data=<span class='kw'>etab</span>, sampling_frame=<span class='kw'>dset</span><span class='op'>$</span><span class='kw'>sampling_frame</span>)
-</div><div class='output co'>#&gt; <span class='warning'>Warning: The `x` argument of `as_tibble.matrix()` must have unique column names if `.name_repair` is omitted as of tibble 2.0.0.</span>
-#&gt; <span class='warning'>Using compatibility `.name_repair`.</span>
-#&gt; <span class='warning'><span style='color: #555555;'>This warning is displayed once every 8 hours.</span><span></span>
-#&gt; <span class='warning'></span><span style='color: #555555;'>Call `lifecycle::last_warnings()` to see where this warning was generated.</span><span></span></div><div class='input'><span class='kw'>bmodel</span> <span class='op'>&lt;-</span> <span class='fu'><a href='baseline_model.html'>baseline_model</a></span>(<span class='st'>"bs"</span>, degree=<span class='fl'>4</span>, sframe=<span class='kw'>dset</span><span class='op'>$</span><span class='kw'>sampling_frame</span>)
-</div><div class='output co'>#&gt; [1] "baseline_bs_4 : matrix"</div><div class='input'><span class='kw'>fmod</span> <span class='op'>&lt;-</span> <span class='fu'><a href='fmri_model.html'>fmri_model</a></span>(<span class='kw'>emodel</span>, <span class='kw'>bmodel</span>)
+</div><div class='output co'>#&gt; <span class='message'>New names:</span>
+#&gt; <span class='message'>* `` -&gt; ...1</span>
+#&gt; <span class='message'>* `` -&gt; ...2</span></div><div class='output co'>#&gt; <span class='message'>New names:</span>
+#&gt; <span class='message'>* `` -&gt; ...1</span>
+#&gt; <span class='message'>* `` -&gt; ...2</span></div><div class='output co'>#&gt; <span class='message'>New names:</span>
+#&gt; <span class='message'>* ...1 -&gt; ...2</span>
+#&gt; <span class='message'>* ...2 -&gt; ...3</span></div><div class='input'><span class='kw'>bmodel</span> <span class='op'>&lt;-</span> <span class='fu'><a href='baseline_model.html'>baseline_model</a></span>(<span class='st'>"bs"</span>, degree=<span class='fl'>4</span>, sframe=<span class='kw'>dset</span><span class='op'>$</span><span class='kw'>sampling_frame</span>)
+<span class='kw'>fmod</span> <span class='op'>&lt;-</span> <span class='fu'><a href='fmri_model.html'>fmri_model</a></span>(<span class='kw'>emodel</span>, <span class='kw'>bmodel</span>)
 <span class='kw'>alm</span> <span class='op'>&lt;-</span> <span class='fu'>afni_lm</span>(<span class='kw'>fmod</span>, <span class='kw'>dset</span>, jobs=<span class='fl'>2</span>, options=<span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(tout=<span class='fl'>TRUE</span>))
-</div></span></pre>
+</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -211,7 +220,7 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href='https://linguamemoria.org'>Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">

@@ -94,6 +94,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -110,6 +113,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -199,6 +205,24 @@
           <p><code><a href="gen_hrf_set.html">gen_hrf_set()</a></code> </p>
         </td>
         <td><p>Generate an HRF basis set</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="gen_empirical_hrf.html">gen_empirical_hrf()</a></code> </p>
+        </td>
+        <td><p>generate an empirical hemodynamic response function</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="gen_hrf_lagged.html">gen_hrf_lagged()</a></code> </p>
+        </td>
+        <td><p>gen_hrf_lagged</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="gen_hrf_blocked.html">gen_hrf_blocked()</a></code> </p>
+        </td>
+        <td><p>gen_hrf_blocked</p></td>
       </tr>
     </tbody><tbody>
       <tr>
@@ -346,6 +370,67 @@
         </td>
         <td><p>extract long names of variable</p></td>
       </tr>
+    </tbody><tbody>
+      <tr>
+        <th colspan="2">
+          <h2 id="section-event-models" class="hasAnchor"><a href="#section-event-models" class="anchor"></a>event models</h2>
+          <p class="section-desc"><p>functions for creating statistical contrasts</p></p>
+        </th>
+      </tr>
+      
+      
+    </tbody><tbody>
+      
+      
+      <tr>
+        
+        <td>
+          <p><code><a href="contrast.html">contrast()</a></code> </p>
+        </td>
+        <td><p>contrast specification</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="contrast_set.html">contrast_set()</a></code> </p>
+        </td>
+        <td><p>create a set of contrasts</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="contrast_weights.html">contrast_weights()</a></code> </p>
+        </td>
+        <td><p>contrast_weights</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="pair_contrast.html">pair_contrast()</a></code> </p>
+        </td>
+        <td><p>pair_contrast</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="pairwise_contrasts.html">pairwise_contrasts()</a></code> </p>
+        </td>
+        <td><p>pairwise contrasts</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="unit_contrast.html">unit_contrast()</a></code> </p>
+        </td>
+        <td><p>unit_contrast</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="poly_contrast.html">poly_contrast()</a></code> </p>
+        </td>
+        <td><p>poly_contrast</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="one_against_all_contrast.html">one_against_all_contrast()</a></code> </p>
+        </td>
+        <td><p>A contrast that compares each level vs the average of the other levels.</p></td>
+      </tr>
     </tbody>
     </table>
   </div>
@@ -360,7 +445,7 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href='https://linguamemoria.org'>Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">

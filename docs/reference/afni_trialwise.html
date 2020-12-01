@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>construct an native AFNI hrf specification for '3dDeconvolve' and indifdually modulated events using the 'stim_times_IM' argument. — afni_trialwise • fmrireg</title>
+<title>construct an native AFNI hrf specification for '3dDeconvolve' and individually modulated events using the 'stim_times_IM' argument. — afni_trialwise • fmrireg</title>
 
 
 <!-- jquery -->
@@ -39,8 +39,8 @@
 
 
 
-<meta property="og:title" content="construct an native AFNI hrf specification for '3dDeconvolve' and indifdually modulated events using the 'stim_times_IM' argument. — afni_trialwise" />
-<meta property="og:description" content="construct an native AFNI hrf specification for '3dDeconvolve' and indifdually modulated events using the 'stim_times_IM' argument." />
+<meta property="og:title" content="construct an native AFNI hrf specification for '3dDeconvolve' and individually modulated events using the 'stim_times_IM' argument. — afni_trialwise" />
+<meta property="og:description" content="construct an native AFNI hrf specification for '3dDeconvolve' and individually modulated events using the 'stim_times_IM' argument." />
 
 
 
@@ -95,6 +95,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -111,6 +114,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -135,13 +141,13 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>construct an native AFNI hrf specification for '3dDeconvolve' and indifdually modulated events using the 'stim_times_IM' argument.</h1>
+    <h1>construct an native AFNI hrf specification for '3dDeconvolve' and individually modulated events using the 'stim_times_IM' argument.</h1>
     <small class="dont-index">Source: <a href='https://github.com/bbuchsbaum/fmrireg/blob/master/R/hrf.R'><code>R/hrf.R</code></a></small>
     <div class="hidden name"><code>afni_trialwise.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>construct an native AFNI hrf specification for '3dDeconvolve' and indifdually modulated events using the 'stim_times_IM' argument.</p>
+    <p>construct an native AFNI hrf specification for '3dDeconvolve' and individually modulated events using the 'stim_times_IM' argument.</p>
     </div>
 
     <pre class="usage"><span class='fu'>afni_trialwise</span>(
@@ -151,13 +157,17 @@
   durations = <span class='fl'>0</span>,
   subset = <span class='kw'>NULL</span>,
   id = <span class='kw'>NULL</span>,
-  start = <span class='kw'>NULL</span>,
-  stop = <span class='kw'>NULL</span>
+  start = <span class='fl'>0</span>,
+  stop = <span class='fl'>22</span>
 )</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
+    <tr>
+      <th>label</th>
+      <td><p>name of regressor</p></td>
+    </tr>
     <tr>
       <th>basis</th>
       <td><p>the impulse response function or the name of a pre-supplied function, one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian".</p></td>
@@ -178,11 +188,20 @@
       <th>id</th>
       <td><p>a  unique <code>character</code> identifier used to refer to term, otherwise will be determined from variable names.</p></td>
     </tr>
+    <tr>
+      <th>start</th>
+      <td><p>start of hrf (for multiple basis hrfs)</p></td>
+    </tr>
+    <tr>
+      <th>stop</th>
+      <td><p>end of hrf (for multiple basis hrfs)</p></td>
+    </tr>
     </table>
 
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <pre class="examples"><div class='input'>
+
 <span class='kw'>tw</span> <span class='op'>&lt;-</span> <span class='fu'>afni_trialwise</span>(<span class='st'>"trialwise"</span>, basis=<span class='st'>"gamma"</span>, onsets=<span class='fu'><a href='https://rdrr.io/r/base/seq.html'>seq</a></span>(<span class='fl'>1</span>,<span class='fl'>100</span>,by=<span class='fl'>5</span>))
 
 </div></pre>
@@ -197,7 +216,7 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href='https://linguamemoria.org'>Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">

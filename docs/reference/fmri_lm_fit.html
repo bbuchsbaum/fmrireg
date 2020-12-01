@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>convolve — convolve • fmrireg</title>
+<title>fmri_lm_fit — fmri_lm_fit • fmrireg</title>
 
 
 <!-- jquery -->
@@ -39,8 +39,8 @@
 
 
 
-<meta property="og:title" content="convolve — convolve" />
-<meta property="og:description" content="convolve a term x with a hemodynamic response over a sampling_frame" />
+<meta property="og:title" content="fmri_lm_fit — fmri_lm_fit" />
+<meta property="og:description" content="fmri_lm_fit" />
 
 
 
@@ -141,35 +141,46 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>convolve</h1>
-    <small class="dont-index">Source: <a href='https://github.com/bbuchsbaum/fmrireg/blob/master/R/all_generic.R'><code>R/all_generic.R</code></a></small>
-    <div class="hidden name"><code>convolve.Rd</code></div>
+    <h1>fmri_lm_fit</h1>
+    <small class="dont-index">Source: <a href='https://github.com/bbuchsbaum/fmrireg/blob/master/R/fmrilm.R'><code>R/fmrilm.R</code></a></small>
+    <div class="hidden name"><code>fmri_lm_fit.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>convolve a term <code>x</code> with a hemodynamic response over a <code>sampling_frame</code></p>
+    <p>fmri_lm_fit</p>
     </div>
 
-    <pre class="usage"><span class='fu'>convolve</span>(<span class='kw'>x</span>, <span class='kw'>hrf</span>, <span class='kw'>sampling_frame</span>, <span class='kw'>...</span>)</pre>
+    <pre class="usage"><span class='fu'>fmri_lm_fit</span>(
+  <span class='kw'>fmrimod</span>,
+  <span class='kw'>dataset</span>,
+  strategy = <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"chunkwise"</span>, <span class='st'>"runwise"</span>),
+  robust = <span class='fl'>FALSE</span>,
+  contrasts = <span class='kw'>NULL</span>,
+  nchunks = <span class='fl'>10</span>
+)</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>x</th>
-      <td><p>an event sequence</p></td>
+      <th>fmrimod</th>
+      <td><p>an object of type <code>fmri_model</code></p></td>
     </tr>
     <tr>
-      <th>hrf</th>
-      <td><p>a hemodynamic response function</p></td>
+      <th>dataset</th>
+      <td><p>an object derived from <code>fmri_dataset</code> containing the time-series data</p></td>
     </tr>
     <tr>
-      <th>sampling_frame</th>
-      <td><p>the time series grid over which to sample the function.</p></td>
+      <th>strategy</th>
+      <td><p>the data splitting strategy</p></td>
     </tr>
     <tr>
-      <th>...</th>
-      <td><p>extra args</p></td>
+      <th>robust</th>
+      <td><p>whether to use robust fitting (TRUE or FALSE)</p></td>
+    </tr>
+    <tr>
+      <th>contrasts</th>
+      <td><p>a set of contrasts</p></td>
     </tr>
     </table>
 

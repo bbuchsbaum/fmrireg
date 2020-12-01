@@ -95,6 +95,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -111,6 +114,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -183,27 +189,26 @@
 <span class='co'>## bspline basis with degree = 3. This will produce a design matrix with three splines regressors and a constant intercept.</span>
 <span class='kw'>sframe</span> <span class='op'>&lt;-</span> <span class='fu'><a href='sampling_frame.html'>sampling_frame</a></span>(blocklens=<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>100</span>,<span class='fl'>100</span>), TR=<span class='fl'>2</span>)
 <span class='kw'>bmod</span> <span class='op'>&lt;-</span> <span class='fu'>baseline_model</span>(basis=<span class='st'>"bs"</span>, degree=<span class='fl'>3</span>, sframe=<span class='kw'>sframe</span>)
-</div><div class='output co'>#&gt; [1] "baseline_bs_3 : matrix"</div><div class='input'><span class='kw'>bmod_global</span> <span class='op'>&lt;-</span> <span class='fu'>baseline_model</span>(basis=<span class='st'>"bs"</span>, degree=<span class='fl'>3</span>, sframe=<span class='kw'>sframe</span>, intercept=<span class='st'>"global"</span>)
-</div><div class='output co'>#&gt; [1] "baseline_bs_3 : matrix"</div><div class='input'><span class='kw'>bmod_nointercept</span> <span class='op'>&lt;-</span> <span class='fu'>baseline_model</span>(basis=<span class='st'>"bs"</span>, degree=<span class='fl'>3</span>, sframe=<span class='kw'>sframe</span>, intercept=<span class='st'>"none"</span>)
-</div><div class='output co'>#&gt; [1] "baseline_bs_3 : matrix"</div><div class='input'><span class='fu'><a href='https://rdrr.io/r/base/stopifnot.html'>stopifnot</a></span>(<span class='fu'><a href='https://rdrr.io/r/base/nrow.html'>ncol</a></span>(<span class='fu'><a href='design_matrix.html'>design_matrix</a></span>(<span class='kw'>bmod</span>)) <span class='op'>==</span> <span class='fl'>8</span>)
+<span class='kw'>bmod_global</span> <span class='op'>&lt;-</span> <span class='fu'>baseline_model</span>(basis=<span class='st'>"bs"</span>, degree=<span class='fl'>3</span>, sframe=<span class='kw'>sframe</span>, intercept=<span class='st'>"global"</span>)
+<span class='kw'>bmod_nointercept</span> <span class='op'>&lt;-</span> <span class='fu'>baseline_model</span>(basis=<span class='st'>"bs"</span>, degree=<span class='fl'>3</span>, sframe=<span class='kw'>sframe</span>, intercept=<span class='st'>"none"</span>)
+<span class='fu'><a href='https://rdrr.io/r/base/stopifnot.html'>stopifnot</a></span>(<span class='fu'><a href='https://rdrr.io/r/base/nrow.html'>ncol</a></span>(<span class='fu'><a href='design_matrix.html'>design_matrix</a></span>(<span class='kw'>bmod</span>)) <span class='op'>==</span> <span class='fl'>8</span>)
 <span class='fu'><a href='https://rdrr.io/r/base/stopifnot.html'>stopifnot</a></span>(<span class='fu'><a href='https://rdrr.io/r/base/nrow.html'>ncol</a></span>(<span class='fu'><a href='design_matrix.html'>design_matrix</a></span>(<span class='kw'>bmod_global</span>)) <span class='op'>==</span> <span class='fl'>7</span>)
 <span class='fu'><a href='https://rdrr.io/r/base/stopifnot.html'>stopifnot</a></span>(<span class='fu'><a href='https://rdrr.io/r/base/nrow.html'>ncol</a></span>(<span class='fu'><a href='design_matrix.html'>design_matrix</a></span>(<span class='kw'>bmod_nointercept</span>)) <span class='op'>==</span> <span class='fl'>6</span>)
 
 <span class='co'>## polynomial with no intercept term</span>
 <span class='kw'>bmod</span> <span class='op'>&lt;-</span> <span class='fu'>baseline_model</span>(basis=<span class='st'>"poly"</span>, degree=<span class='fl'>3</span>, sframe=<span class='kw'>sframe</span>, intercept=<span class='st'>"none"</span>)
-</div><div class='output co'>#&gt; [1] "baseline_poly_3 : matrix"</div><div class='input'>
+
 <span class='co'>## a baseline model that only has dummy-coded intercept terms, one per block, i.e. to model runwise mean shifts only.</span>
 <span class='kw'>bmod</span> <span class='op'>&lt;-</span> <span class='fu'>baseline_model</span>(basis=<span class='st'>"constant"</span>, degree=<span class='fl'>1</span>, sframe=<span class='kw'>sframe</span>)
-</div><div class='output co'>#&gt; [1] "baseline_constant_1 : matrix"</div><div class='input'>
+
 <span class='co'>## global intercept only</span>
 <span class='kw'>bmod</span> <span class='op'>&lt;-</span> <span class='fu'>baseline_model</span>(basis=<span class='st'>"constant"</span>, degree=<span class='fl'>1</span>, sframe=<span class='kw'>sframe</span>, intercept=<span class='st'>"global"</span>)
-</div><div class='output co'>#&gt; [1] "baseline_constant_1 : matrix"</div><div class='input'>
+
 
 <span class='co'>## add an arbitrary nuisance matrix with two columns, i.e. motion regressors, physiological noise, etc.</span>
 <span class='kw'>nuismat</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/matrix.html'>matrix</a></span>(<span class='fu'><a href='https://rdrr.io/r/stats/Normal.html'>rnorm</a></span>(<span class='fl'>100</span><span class='op'>*</span><span class='fl'>2</span>), <span class='fl'>100</span>, <span class='fl'>2</span>)
 <span class='kw'>bmod</span> <span class='op'>&lt;-</span> <span class='fu'>baseline_model</span>(basis=<span class='st'>"bs"</span>, degree=<span class='fl'>3</span>, sframe=<span class='kw'>sframe</span>, nuisance_list=<span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(<span class='kw'>nuismat</span>, <span class='kw'>nuismat</span>))
-</div><div class='output co'>#&gt; [1] "baseline_bs_3 : matrix"
-#&gt; [1] "nuisance : matrix"</div><div class='input'><span class='fu'><a href='https://rdrr.io/r/base/stopifnot.html'>stopifnot</a></span>(<span class='fu'><a href='https://rdrr.io/r/base/nrow.html'>ncol</a></span>(<span class='fu'><a href='design_matrix.html'>design_matrix</a></span>(<span class='kw'>bmod</span>)) <span class='op'>==</span> <span class='fl'>12</span>)
+<span class='fu'><a href='https://rdrr.io/r/base/stopifnot.html'>stopifnot</a></span>(<span class='fu'><a href='https://rdrr.io/r/base/nrow.html'>ncol</a></span>(<span class='fu'><a href='design_matrix.html'>design_matrix</a></span>(<span class='kw'>bmod</span>)) <span class='op'>==</span> <span class='fl'>12</span>)
 </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -216,7 +221,7 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href='https://linguamemoria.org'>Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">

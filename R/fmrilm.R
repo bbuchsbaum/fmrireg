@@ -408,6 +408,7 @@ chunkwise_lm <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verb
 #' Run glm for each data run (responses split vertically) and then combine over runs via meta-analysis
 #' 
 #' @importFrom foreach foreach %do% %dopar%
+#' @keywords internal
 runwise_lm <- function(dset, model, conlist, fcon, robust=FALSE, verbose=FALSE) {
     #method <- match.arg(method)
     

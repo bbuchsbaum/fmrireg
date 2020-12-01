@@ -18,6 +18,8 @@ get_data <- function(x, ...) UseMethod("get_data")
 
 #' get_mask
 #' 
+#' get the binary inclusion mask associated with a dataset
+#' 
 #' @param x the dataset
 #' @param ... extra args
 #' @export
@@ -180,7 +182,6 @@ baseline_terms <- function(x) UseMethod("baseline_terms")
 #' 
 #' @param x the model/term object
 #' @param ... additional arguments
-#' @export
 term_indices <- function(x,...) UseMethod("term_indices")
 
 
@@ -234,8 +235,6 @@ evaluate <-  function(x, grid, ...) UseMethod("evaluate")
 #' @param onsets the relative onset times of the events
 #' @param ... extra args
 global_onsets <-  function(x, onsets,...) UseMethod("global_onsets")
-
-
 
 
 
@@ -391,7 +390,6 @@ gen_afni_lm <- function(x, ...) UseMethod("gen_afni_lm")
 #' 
 #' @param x the term
 #' @param ... extra args
-#' @export
 build_afni_stims <- function(x, ...) UseMethod("build_afni_stims")
 
 #' split an onset vector into a list

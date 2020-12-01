@@ -95,6 +95,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -111,6 +114,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -169,7 +175,17 @@
 
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"></pre>
+    <pre class="examples"><div class='input'>
+<span class='co'>## a matrix with 100 rows and 1000 columns (voxels)</span>
+<span class='kw'>X</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/matrix.html'>matrix</a></span>(<span class='fu'><a href='https://rdrr.io/r/stats/Normal.html'>rnorm</a></span>(<span class='fl'>100</span><span class='op'>*</span><span class='fl'>1000</span>), <span class='fl'>100</span>, <span class='fl'>1000</span>)
+<span class='kw'>pres</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/stats/prcomp.html'>prcomp</a></span>(<span class='kw'>X</span>)
+<span class='kw'>basis</span> <span class='op'>&lt;-</span> <span class='kw'>pres</span><span class='op'>$</span><span class='kw'>x</span>[,<span class='fl'>1</span><span class='op'>:</span><span class='fl'>25</span>]
+<span class='kw'>loadings</span> <span class='op'>&lt;-</span> <span class='kw'>pres</span><span class='op'>$</span><span class='kw'>rotation</span>[,<span class='fl'>1</span><span class='op'>:</span><span class='fl'>25</span>]
+<span class='kw'>offset</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/colSums.html'>colMeans</a></span>(<span class='kw'>X</span>)
+<span class='kw'>lvec</span> <span class='op'>&lt;-</span> <span class='fu'>LatentNeuroVec</span>(<span class='kw'>basis</span>, <span class='kw'>loadings</span>, <span class='fu'>NeuroSpace</span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>10</span>,<span class='fl'>10</span>,<span class='fl'>10</span>,<span class='fl'>100</span>)), mask=<span class='fu'><a href='https://rdrr.io/r/base/rep.html'>rep</a></span>(<span class='fl'>TRUE</span>,<span class='fl'>1000</span>), offset=<span class='kw'>offset</span>)
+</div><div class='output co'>#&gt; <span class='error'>Error in LatentNeuroVec(basis, loadings, NeuroSpace(c(10, 10, 10, 100)),     mask = rep(TRUE, 1000), offset = offset): could not find function "LatentNeuroVec"</span></div><div class='input'><span class='kw'>dset</span> <span class='op'>&lt;-</span> <span class='fu'>latent_dataset</span>(<span class='kw'>lvec</span>, TR=<span class='fl'>2</span>, run_length=<span class='fl'>100</span>)
+</div><div class='output co'>#&gt; <span class='error'>Error in latent_dataset(lvec, TR = 2, run_length = 100): could not find function "latent_dataset"</span></div><div class='input'>
+</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -181,7 +197,7 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href='https://linguamemoria.org'>Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">

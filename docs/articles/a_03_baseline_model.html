@@ -54,6 +54,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -70,6 +73,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -97,7 +103,7 @@
       <h1 data-toc-skip>Baseline Model</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2020-09-15</h4>
+            <h4 class="date">2020-12-01</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_03_baseline_model.Rmd"><code>vignettes/a_03_baseline_model.Rmd</code></a></small>
       <div class="hidden name"><code>a_03_baseline_model.Rmd</code></div>
@@ -114,13 +120,18 @@
 <div id="basic-baseline-model-with-b-splines-and-polynomials" class="section level2">
 <h2 class="hasAnchor">
 <a href="#basic-baseline-model-with-b-splines-and-polynomials" class="anchor"></a>Basic baseline model with b-splines and polynomials</h2>
-<div class="sourceCode" id="cb1"><pre class="downlit">
+<pre><code>## Warning: replacing previous import 'Matrix::cov2cor' by 'stats::cov2cor' when
+## loading 'fmrireg'</code></pre>
+<pre><code>## Warning: replacing previous import 'pls::loadings' by 'stats::loadings' when
+## loading 'fmrireg'</code></pre>
+<pre><code>## Warning: replacing previous import 'Matrix::toeplitz' by 'stats::toeplitz' when
+## loading 'fmrireg'</code></pre>
+<pre><code>## Warning: replacing previous import 'Matrix::update' by 'stats::update' when
+## loading 'fmrireg'</code></pre>
+<div class="sourceCode" id="cb5"><pre class="downlit">
 <span class="kw">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span>
 <span class="kw">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(blocklens=<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="fl">100</span>,<span class="fl">100</span>), <span class="kw">TR</span>)
 <span class="kw">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span>(basis=<span class="st">"bs"</span>, degree=<span class="fl">5</span>, sframe=<span class="kw">sframe</span>)
-</pre></div>
-<pre><code>## [1] "baseline_bs_5 : matrix"</code></pre>
-<div class="sourceCode" id="cb3"><pre class="downlit">
 <span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span>(<span class="kw">bmodel</span>)
 </pre></div>
 <pre><code>## baseline_model 
@@ -148,15 +159,12 @@
 ## # … with 190 more rows, and 7 more variables: base_bs4_block_1 &lt;dbl&gt;,
 ## #   base_bs5_block_1 &lt;dbl&gt;, base_bs1_block_2 &lt;dbl&gt;, base_bs2_block_2 &lt;dbl&gt;,
 ## #   base_bs3_block_2 &lt;dbl&gt;, base_bs4_block_2 &lt;dbl&gt;, base_bs5_block_2 &lt;dbl&gt;</code></pre>
-<div class="sourceCode" id="cb5"><pre class="downlit">
+<div class="sourceCode" id="cb7"><pre class="downlit">
 <span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">bmodel</span>)
 </pre></div>
 <p><img src="a_03_baseline_model_files/figure-html/unnamed-chunk-2-1.png" width="672"></p>
-<div class="sourceCode" id="cb6"><pre class="downlit">
-<span class="kw">bmodel2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span>(basis=<span class="st">"poly"</span>, degree=<span class="fl">5</span>, sframe=<span class="kw">sframe</span>)
-</pre></div>
-<pre><code>## [1] "baseline_poly_5 : matrix"</code></pre>
 <div class="sourceCode" id="cb8"><pre class="downlit">
+<span class="kw">bmodel2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span>(basis=<span class="st">"poly"</span>, degree=<span class="fl">5</span>, sframe=<span class="kw">sframe</span>)
 <span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">bmodel2</span>)
 </pre></div>
 <p><img src="a_03_baseline_model_files/figure-html/unnamed-chunk-2-2.png" width="672"></p>
@@ -177,10 +185,6 @@
 <span class="kw">nuislist</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/split.html">split</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html">as.data.frame</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/cbind.html">cbind</a></span>(<span class="kw">nuis1</span>, <span class="kw">nuis2</span>)), <span class="fu"><a href="../reference/blockids.html">blockids</a></span>(<span class="kw">sframe</span>))
 
 <span class="kw">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span>(basis=<span class="st">"bs"</span>, degree=<span class="fl">5</span>, sframe=<span class="kw">sframe</span>, nuisance_list=<span class="kw">nuislist</span>)
-</pre></div>
-<pre><code>## [1] "baseline_bs_5 : matrix"
-## [1] "nuisance : matrix"</code></pre>
-<div class="sourceCode" id="cb11"><pre class="downlit">
 <span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span>(<span class="fu"><a href="https://rdrr.io/r/stats/terms.html">terms</a></span>(<span class="kw">bmodel</span>))
 </pre></div>
 <pre><code>## $constant
@@ -200,7 +204,7 @@
 ##    Term Name:  nuisance 
 ##    Num Rows:  200 
 ##    Num Columns:  4</code></pre>
-<div class="sourceCode" id="cb13"><pre class="downlit">
+<div class="sourceCode" id="cb11"><pre class="downlit">
 <span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">bmodel</span>, term_name=<span class="st">"nuisance"</span>)
 </pre></div>
 <p><img src="a_03_baseline_model_files/figure-html/unnamed-chunk-3-1.png" width="672"></p>

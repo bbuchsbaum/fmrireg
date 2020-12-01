@@ -54,6 +54,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -70,6 +73,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -97,7 +103,7 @@
       <h1 data-toc-skip>Event Models</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2020-09-15</h4>
+            <h4 class="date">2020-12-01</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_04_event_models.Rmd"><code>vignettes/a_04_event_models.Rmd</code></a></small>
       <div class="hidden name"><code>a_04_event_models.Rmd</code></div>
@@ -239,12 +245,12 @@
 <span class="fu"><a href="https://rdrr.io/r/utils/head.html">head</a></span>(<span class="kw">design</span>)
 </pre></div>
 <pre><code>##     stim   task ISI run onset
-## 1  scene ignore   2   1     2
-## 2   face ignore   2   1     6
-## 3   tool ignore   5   1    13
-## 4 object attend   5   1    20
-## 5  scene ignore   3   1    25
-## 6   face ignore   4   1    31</code></pre>
+## 1   face ignore   5   1     5
+## 2 object ignore   4   1    11
+## 3 object ignore   2   1    15
+## 4   face ignore   5   1    22
+## 5   tool ignore   4   1    28
+## 6  scene ignore   5   1    35</code></pre>
 <div class="sourceCode" id="cb15"><pre class="downlit">
 <span class="co">## create a 'sampling_frame' describing the temporal outline of the scan consisting of 70 images collected every once every 2 seconds.</span>
 <span class="kw">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span>

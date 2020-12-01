@@ -54,6 +54,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -70,6 +73,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -97,7 +103,7 @@
       <h1 data-toc-skip>Contrasts</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2020-09-15</h4>
+            <h4 class="date">2020-12-01</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_05_contrasts.Rmd"><code>vignettes/a_05_contrasts.Rmd</code></a></small>
       <div class="hidden name"><code>a_05_contrasts.Rmd</code></div>
@@ -106,6 +112,14 @@
 
     
     
+<pre><code>## Warning: replacing previous import 'Matrix::cov2cor' by 'stats::cov2cor' when
+## loading 'fmrireg'</code></pre>
+<pre><code>## Warning: replacing previous import 'pls::loadings' by 'stats::loadings' when
+## loading 'fmrireg'</code></pre>
+<pre><code>## Warning: replacing previous import 'Matrix::toeplitz' by 'stats::toeplitz' when
+## loading 'fmrireg'</code></pre>
+<pre><code>## Warning: replacing previous import 'Matrix::update' by 'stats::update' when
+## loading 'fmrireg'</code></pre>
 <div id="contrasts" class="section level2">
 <h2 class="hasAnchor">
 <a href="#contrasts" class="anchor"></a>Contrasts</h2>
@@ -115,7 +129,7 @@
 <a href="#a-simple-2-by-2-experiment" class="anchor"></a>A simple 2 by 2 experiment</h3>
 <p>The approach we take in specifying contrasts is to formulate them as regular R expressions using the <code><a href="https://rdrr.io/r/base/tilde.html">~</a></code> operator. To demonstrate, lets start with a simple two-by-two design with factors <em>category</em> with levels [face,scene] and <em>attention</em> with levels [attend,ignore]. For this simple design, we assume each condition is repeated twice in a single run.</p>
 <p>First we construct the fMRI design as follows:</p>
-<div class="sourceCode" id="cb1"><pre class="downlit">
+<div class="sourceCode" id="cb5"><pre class="downlit">
 <span class="kw">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html">expand.grid</a></span>(category=<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"face"</span>, <span class="st">"scene"</span>), attention=<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"attend"</span>, <span class="st">"ignore"</span>), replication=<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="fl">1</span>,<span class="fl">2</span>))
 <span class="kw">design</span><span class="op">$</span><span class="kw">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">1</span>, <span class="fl">100</span>, length.out=<span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span>(<span class="kw">design</span>))
 <span class="kw">design</span><span class="op">$</span><span class="kw">block</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">1</span>,<span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span>(<span class="kw">design</span>))
@@ -211,7 +225,7 @@
 <p>A simple way to contruct this sort of <code>A - B</code> contrast is to use the <code>pair_contrast</code> function, which takes as arguments two “matching expressions”, <code>A</code> and <code>B</code>. In example 1 from the previous section, the first expression (<code>category == "face"</code>) matches all conditions where the category <code>factor</code> equals the level “face”. The second expression (<code>category == "scene"</code>) matches all conditions where the category <code>factor</code> equals the level “scene”.</p>
 <p>To compute contrast weights, every matching level in the two expressions will be assigned a weight of 1 for a match and zero otherwise. The respective binary weight vectors are then normalized to sum to 1 and then subtracted (<code>A - B</code>) to form the contrast weights.</p>
 <p>Notice in the above examples, the contrasts are defined abstractly without supplying any corresponding design information. To compute the contrast weights, however, we need to supply the design information. Below, we show a complete example.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit">
+<div class="sourceCode" id="cb6"><pre class="downlit">
 <span class="kw">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="fl">100</span>, <span class="fl">2</span>)
 <span class="kw">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span>(<span class="kw">onsets</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span>(<span class="kw">category</span>,<span class="kw">attention</span>), block=<span class="op">~</span><span class="kw">block</span>, data=<span class="kw">design</span>, sampling_frame=<span class="kw">sframe</span>)
 </pre></div>
@@ -225,7 +239,7 @@
 ## * ...2 -&gt; ...3
 ## * ...3 -&gt; ...4
 ## * ...4 -&gt; ...5</code></pre>
-<div class="sourceCode" id="cb5"><pre class="downlit">
+<div class="sourceCode" id="cb9"><pre class="downlit">
 <span class="kw">term1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/terms.html">terms</a></span>(<span class="kw">emodel</span>)[[<span class="fl">1</span>]] 
 </pre></div>
 <p>And here is the relevant model term (the only term in this model):</p>
@@ -238,7 +252,7 @@
 ##    Conditions:  category[face]:attention[attend] category[scene]:attention[attend] category[face]:attention[ignore] category[scene]:attention[ignore] 
 ##    Term Types:  event_factor event_factor</code></pre>
 <p>Now, we create two <code>pair_contrast</code>s and compute the weights:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit">
+<div class="sourceCode" id="cb11"><pre class="downlit">
 <span class="kw">con1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span>(<span class="op">~</span> <span class="kw">category</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span> <span class="kw">category</span> <span class="op">==</span> <span class="st">"scene"</span>, name=<span class="st">"face_scene"</span>)
 <span class="kw">con2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span>(<span class="op">~</span> <span class="kw">attention</span> <span class="op">==</span> <span class="st">"attend"</span>, <span class="op">~</span> <span class="kw">attention</span> <span class="op">==</span> <span class="st">"ignore"</span>, name=<span class="st">"attend_ignore"</span>)
 
@@ -316,7 +330,7 @@
 <a href="#unit-contrasts-and-the-implicit-baseline" class="anchor"></a>Unit contrasts and the “implicit baseline”</h2>
 <p>a “unit contrast” tests whether activation, averaged over one or more conditions, is greater than the baseline activity. In this case “baseline” is defined as the level of activation captured by the intercept term, or the <em>implicit baseline</em> in <em>f</em>MRI parlance. Because all beta estimates are already expressed relative to the intercept term, main effect contrast vectors always sum to 1, rather than 0. We therefore refer to the sum-to-one contrasts as: “unit contrasts”.</p>
 <p>Below we show how to construct two unit contrasts, one testing for the effect of <code>face &gt; baseline</code> and for <code>scene - baseline</code>:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit">
+<div class="sourceCode" id="cb16"><pre class="downlit">
 <span class="kw">con1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/unit_contrast.html">unit_contrast</a></span>(<span class="op">~</span> <span class="kw">category</span> <span class="op">==</span> <span class="st">"face"</span>, name=<span class="st">"face_baseline"</span>)
 <span class="kw">con2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/unit_contrast.html">unit_contrast</a></span>(<span class="op">~</span> <span class="kw">category</span> <span class="op">==</span> <span class="st">"scene"</span>,name=<span class="st">"scene_baseline"</span>)
 

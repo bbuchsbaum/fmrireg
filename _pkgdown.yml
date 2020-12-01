@@ -42,6 +42,9 @@ reference:
   - hrf_blocked
   - hrf_lagged
   - gen_hrf_set
+  - gen_empirical_hrf
+  - gen_hrf_lagged
+  - gen_hrf_blocked
   
 - title: regressor-related functions
   desc: >
@@ -74,7 +77,19 @@ reference:
   - term_names
   - shortnames
   - longnames
-  
+
+- title: event models
+  desc: >
+    functions for creating statistical contrasts 
+- contents:
+  - contrast
+  - contrast_set
+  - contrast_weights
+  - pair_contrast
+  - pairwise_contrasts
+  - unit_contrast
+  - poly_contrast
+  - one_against_all_contrast
   
 
   

@@ -95,6 +95,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -111,6 +114,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -217,7 +223,7 @@ If multiple contrasts are required, then these should be wrapped in a <code>list
 <span class='kw'>hspec</span> <span class='op'>&lt;-</span> <span class='fu'>hrf</span>(<span class='kw'>x</span>)
 <span class='kw'>hspec2</span> <span class='op'>&lt;-</span> <span class='fu'>hrf</span>(<span class='kw'>x</span>, basis=<span class='st'>"gamma"</span>)
 <span class='kw'>hspec3</span> <span class='op'>&lt;-</span> <span class='fu'>hrf</span>(<span class='kw'>x</span>, basis=<span class='st'>"bs"</span>, nbasis=<span class='fl'>4</span>)
-</div><div class='output co'>#&gt; <span class='error'>Error in nbasis == 1: comparison (1) is possible only for atomic and list types</span></div><div class='input'>
+
 <span class='kw'>form</span> <span class='op'>&lt;-</span> <span class='kw'>onsets</span> <span class='op'>~</span> <span class='fu'>hrf</span>(<span class='kw'>x</span>) <span class='op'>+</span> <span class='fu'>hrf</span>(<span class='kw'>y</span>) <span class='op'>+</span> <span class='fu'>hrf</span>(<span class='kw'>x</span>,<span class='kw'>y</span>)
 
 </div></pre>
@@ -232,7 +238,7 @@ If multiple contrasts are required, then these should be wrapped in a <code>list
 
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href='https://linguamemoria.org'>Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">

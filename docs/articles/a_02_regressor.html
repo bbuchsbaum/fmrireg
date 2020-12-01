@@ -54,6 +54,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -70,6 +73,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -97,7 +103,7 @@
       <h1 data-toc-skip>Building Regressors</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2020-09-11</h4>
+            <h4 class="date">2020-12-01</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_02_regressor.Rmd"><code>vignettes/a_02_regressor.Rmd</code></a></small>
       <div class="hidden name"><code>a_02_regressor.Rmd</code></div>
@@ -110,7 +116,15 @@
 <h2 class="hasAnchor">
 <a href="#building-fmri-regressors-from-event-onsets" class="anchor"></a>Building fMRI regressors from event onsets</h2>
 <p>Suppose we have a simple event-related fMRI design with 10 stimuli spaced every 12s. We want to model each event with the SPM canonical hemodynamic response function (HRF). The duration of each event is 0s, or “instantaneous”. We have 140s worth of contiguous scanning data, collected in a single scanning run with a repetititon time (TR) of 2s.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit">
+<pre><code>## Warning: replacing previous import 'Matrix::cov2cor' by 'stats::cov2cor' when
+## loading 'fmrireg'</code></pre>
+<pre><code>## Warning: replacing previous import 'pls::loadings' by 'stats::loadings' when
+## loading 'fmrireg'</code></pre>
+<pre><code>## Warning: replacing previous import 'Matrix::toeplitz' by 'stats::toeplitz' when
+## loading 'fmrireg'</code></pre>
+<pre><code>## Warning: replacing previous import 'Matrix::update' by 'stats::update' when
+## loading 'fmrireg'</code></pre>
+<div class="sourceCode" id="cb5"><pre class="downlit">
 <span class="kw">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span>
 <span class="kw">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">0</span>, <span class="fl">10</span><span class="op">*</span><span class="fl">12</span>, by=<span class="fl">12</span>)
 <span class="kw">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span>(<span class="kw">onsets</span>, <span class="kw">HRF_SPMG1</span>, duration=<span class="fl">0</span>)
@@ -122,19 +136,19 @@
 <h2 class="hasAnchor">
 <a href="#building-fmri-regressors-from-event-onsets-with-varying-duration" class="anchor"></a>Building fMRI regressors from event onsets with varying duration</h2>
 <p>Sometimes different fMRI events have different durations and we want to model this variation.We can do this as follows:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit">
+<div class="sourceCode" id="cb6"><pre class="downlit">
 <span class="kw">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span>
 <span class="kw">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">0</span>, <span class="fl">10</span><span class="op">*</span><span class="fl">12</span>, length.out=<span class="fl">6</span>)
 <span class="kw">durs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">1</span>,<span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="kw">onsets</span>))
 </pre></div>
 <p>The <code>durs</code> vectors contains the durations, which increase over the course of the block. We now supply this vector the the <code>regressor</code> function:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit">
+<div class="sourceCode" id="cb7"><pre class="downlit">
 <span class="kw">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span>(<span class="kw">onsets</span>, <span class="kw">HRF_SPMG1</span>, duration=<span class="kw">durs</span>)
 <span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">reg</span>)
 </pre></div>
 <p><img src="a_02_regressor_files/figure-html/unnamed-chunk-4-1.png" width="576"></p>
 <p>We can disable additive summation of the hemodynamic response function by including <code>summate=FALSE</code> in the call to <code>regressor</code>. This will cause the <em>width</em> of the HRF to increase with duration but not the <em>peak</em>.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit">
+<div class="sourceCode" id="cb8"><pre class="downlit">
 <span class="kw">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span>(<span class="kw">onsets</span>, <span class="kw">HRF_SPMG1</span>, duration=<span class="kw">durs</span>,summate=<span class="fl">FALSE</span>)
 <span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">reg</span>)
 </pre></div>
@@ -144,13 +158,13 @@
 <h2 class="hasAnchor">
 <a href="#building-fmri-regressors-from-event-onsets-with-varying-amplitude" class="anchor"></a>Building fMRI regressors from event onsets with varying amplitude</h2>
 <p>Sometimes we assume that each the amplitude of each event is modulated by an arbitrary continuous variable, for example “learning rate” or “intensity”. We can create a so-called <em>parameteric regressor</em> by scaling the hemodynamic response by an external variable as follows:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit">
+<div class="sourceCode" id="cb9"><pre class="downlit">
 <span class="kw">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span>
 <span class="kw">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">0</span>, <span class="fl">10</span><span class="op">*</span><span class="fl">12</span>, length.out=<span class="fl">10</span>)
 <span class="kw">amp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">1</span>,<span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="kw">onsets</span>))
 </pre></div>
 <p>It is customary center and scale the parametric modulator:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit">
+<div class="sourceCode" id="cb10"><pre class="downlit">
 <span class="kw">scaled_amp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html">scale</a></span>(<span class="kw">amp</span>)
 <span class="kw">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span>(<span class="kw">onsets</span>, <span class="kw">HRF_SPMG1</span>, amplitude=<span class="kw">scaled_amp</span>)
 <span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">reg</span>)
@@ -160,7 +174,7 @@
 <div id="combining-duration-and-amplitude-modulation" class="section level2">
 <h2 class="hasAnchor">
 <a href="#combining-duration-and-amplitude-modulation" class="anchor"></a>Combining duration and amplitude modulation</h2>
-<div class="sourceCode" id="cb7"><pre class="downlit">
+<div class="sourceCode" id="cb11"><pre class="downlit">
 <span class="kw">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span>
 <span class="kw">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">0</span>, <span class="fl">10</span><span class="op">*</span><span class="fl">12</span>, length.out=<span class="fl">10</span>)
 <span class="kw">amp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">1</span>,<span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="kw">onsets</span>))
@@ -176,7 +190,7 @@
 <div id="building-fmri-regressors-from-event-onsets-with-b-spline-basis-functions" class="section level2">
 <h2 class="hasAnchor">
 <a href="#building-fmri-regressors-from-event-onsets-with-b-spline-basis-functions" class="anchor"></a>Building fMRI regressors from event onsets with b-spline basis functions</h2>
-<div class="sourceCode" id="cb8"><pre class="downlit">
+<div class="sourceCode" id="cb12"><pre class="downlit">
 <span class="kw">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span>
 <span class="kw">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">0</span>, <span class="fl">10</span><span class="op">*</span><span class="fl">12</span>, length.out=<span class="fl">10</span>)
 <span class="kw">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span>(<span class="kw">onsets</span>, <span class="kw">HRF_BSPLINE</span>)
@@ -198,7 +212,7 @@
 
 
       <footer><div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href="https://linguamemoria.org">Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">

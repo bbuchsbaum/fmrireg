@@ -95,6 +95,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -111,6 +114,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -149,7 +155,6 @@
   lag = <span class='fl'>0</span>,
   width = <span class='fl'>0</span>,
   precision = <span class='fl'>0.1</span>,
-  half_life = <span class='fl'>Inf</span>,
   summate = <span class='fl'>TRUE</span>,
   normalize = <span class='fl'>FALSE</span>,
   name = <span class='st'>"gen_hrf"</span>,
@@ -174,6 +179,14 @@
     <tr>
       <th>precision</th>
       <td><p>sampling precision in seconds</p></td>
+    </tr>
+    <tr>
+      <th>summate</th>
+      <td><p>whether to allow each impulse response function to "add" up.</p></td>
+    </tr>
+    <tr>
+      <th>normalize</th>
+      <td><p>rescale so that the peak of the output is 1.</p></td>
     </tr>
     <tr>
       <th>...</th>
@@ -211,7 +224,7 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href='https://linguamemoria.org'>Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">

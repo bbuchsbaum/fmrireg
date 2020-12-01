@@ -95,6 +95,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -111,6 +114,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -146,7 +152,7 @@
 
     <pre class="usage"><span class='fu'>fmri_rlm</span>(
   <span class='kw'>formula</span>,
-  <span class='kw'>block_formula</span>,
+  <span class='kw'>block</span>,
   baseline_model = <span class='kw'>NULL</span>,
   <span class='kw'>dataset</span>,
   <span class='kw'>durations</span>,
@@ -161,6 +167,10 @@
     <tr>
       <th>formula</th>
       <td><p>the model formula for experimental events</p></td>
+    </tr>
+    <tr>
+      <th>block</th>
+      <td><p>the model formula for block structure</p></td>
     </tr>
     <tr>
       <th>baseline_model</th>
@@ -195,9 +205,9 @@
 <span class='kw'>mat</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/matrix.html'>matrix</a></span>(<span class='fu'><a href='https://rdrr.io/r/stats/Normal.html'>rnorm</a></span>(<span class='fl'>100</span><span class='op'>*</span><span class='fl'>100</span>), <span class='fl'>100</span>,<span class='fl'>100</span>)
 <span class='kw'>dset</span> <span class='op'>&lt;-</span> <span class='fu'><a href='matrix_dataset.html'>matrix_dataset</a></span>(<span class='kw'>mat</span>, TR=<span class='fl'>1</span>, run_length=<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>50</span>,<span class='fl'>50</span>),event_table=<span class='kw'>etab</span>)
 <span class='kw'>dset2</span> <span class='op'>&lt;-</span> <span class='fu'><a href='matrix_dataset.html'>matrix_dataset</a></span>(<span class='kw'>mat</span>, TR=<span class='fl'>1</span>, run_length=<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>100</span>),event_table=<span class='kw'>etab2</span>)
-<span class='kw'>lm.1</span> <span class='op'>&lt;-</span> <span class='fu'>fmri_rlm</span>(<span class='kw'>onset</span> <span class='op'>~</span> <span class='fu'><a href='hrf.html'>hrf</a></span>(<span class='kw'>fac</span>), block_formula= <span class='op'>~</span> <span class='kw'>run</span>,dataset=<span class='kw'>dset</span>)
-</div><div class='output co'>#&gt; <span class='error'>Error in .setup_model(dataset, formula, block_formula, baseline_model,     contrasts): could not find function ".setup_model"</span></div><div class='input'><span class='kw'>lm.2</span> <span class='op'>&lt;-</span> <span class='fu'>fmri_rlm</span>(<span class='kw'>onset</span> <span class='op'>~</span> <span class='fu'><a href='hrf.html'>hrf</a></span>(<span class='kw'>fac</span>), block_formula= <span class='op'>~</span> <span class='kw'>run</span>,dataset=<span class='kw'>dset2</span>)
-</div><div class='output co'>#&gt; <span class='error'>Error in .setup_model(dataset, formula, block_formula, baseline_model,     contrasts): could not find function ".setup_model"</span></div></pre>
+<span class='kw'>lm.1</span> <span class='op'>&lt;-</span> <span class='fu'>fmri_rlm</span>(<span class='kw'>onset</span> <span class='op'>~</span> <span class='fu'><a href='hrf.html'>hrf</a></span>(<span class='kw'>fac</span>), block= <span class='op'>~</span> <span class='kw'>run</span>,dataset=<span class='kw'>dset</span>)
+</div><div class='output co'>#&gt; <span class='error'>Error in .setup_model(dataset, formula, block, baseline_model, contrasts): could not find function ".setup_model"</span></div><div class='input'><span class='kw'>lm.2</span> <span class='op'>&lt;-</span> <span class='fu'>fmri_rlm</span>(<span class='kw'>onset</span> <span class='op'>~</span> <span class='fu'><a href='hrf.html'>hrf</a></span>(<span class='kw'>fac</span>), block= <span class='op'>~</span> <span class='kw'>run</span>,dataset=<span class='kw'>dset2</span>)
+</div><div class='output co'>#&gt; <span class='error'>Error in .setup_model(dataset, formula, block, baseline_model, contrasts): could not find function ".setup_model"</span></div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -209,7 +219,7 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by <a href='https://linguamemoria.org'>Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">

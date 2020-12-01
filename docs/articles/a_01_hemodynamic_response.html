@@ -54,6 +54,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
+      <a href="../articles/Overview.html">Overview</a>
+    </li>
+    <li>
       <a href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
     </li>
     <li>
@@ -70,6 +73,9 @@
     </li>
     <li>
       <a href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
+    </li>
+    <li>
+      <a href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
     </li>
   </ul>
 </li>
@@ -97,7 +103,7 @@
       <h1 data-toc-skip>Hemodynamic Response Functions</h1>
                         <h4 class="author">Bradley R. Buchsbaum</h4>
             
-            <h4 class="date">2020-09-15</h4>
+            <h4 class="date">2020-12-01</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_01_hemodynamic_response.Rmd"><code>vignettes/a_01_hemodynamic_response.Rmd</code></a></small>
       <div class="hidden name"><code>a_01_hemodynamic_response.Rmd</code></div>
@@ -112,7 +118,7 @@
 <p>A hemodynamic response function (HRF) is used to model the temporal evoluation of an fMRI response to an experimental “event”. An HRF is a function of <em>time</em> and usually peaks 4-6s afer the event onset.</p>
 <p>There are a number of pre-defined HRFs in <code>fmrireg</code> that make it easy to work with them. For example, we can use the SPM “canonical” HRF. We use the function <code>hrf_blocked</code> which can generate flexible hemodynamic responses.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit">
-<span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="kw">magrittr</span>)
+<span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="kw"><a href="https://magrittr.tidyverse.org">magrittr</a></span>)
 
 <span class="co">## SPM canonical hrf</span>
 <span class="kw">f1</span> <span class="op">&lt;-</span> <span class="fu">hrf_blocked</span>(<span class="kw">hrf_spmg1</span>, width=<span class="fl">0</span>)
