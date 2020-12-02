@@ -5,9 +5,9 @@ facedes$repnum <- factor(facedes$rep_num)
 library(dplyr)
 
 
-gen_dset <- function(D=5) {
+gen_dset <- function(D=5, des=facedes) {
   D <- 5
-  scans <- lapply(1:length(unique(facedes$run)), function(i) {
+  scans <- lapply(1:length(unique(des$run)), function(i) {
     arr <- array(rnorm(D*D*D*300), c(D,D,D, 300))
     bspace <- neuroim2::NeuroSpace(dim=c(D,D,D,300))
     neuroim2::NeuroVec(arr, bspace)
@@ -19,7 +19,7 @@ gen_dset <- function(D=5) {
   fmri_mem_dataset(scans=scans, 
                            mask=mask, 
                            TR=1.5, 
-                           event_table=facedes)
+                           event_table=des)
   
   
 }
@@ -30,7 +30,7 @@ test_that("can run a beta estimation", {
   facedes$constant <- factor(rep(1, nrow(facedes)))
   
   facedes <- facedes %>% dplyr::filter(run==1)
-  dset <- gen_dset(5)
+  dset <- gen_dset(5, facedes)
   
   
   ret1 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
@@ -59,10 +59,10 @@ test_that("can run a beta estimation with multiple basis functions", {
   facedes$frun <- factor(facedes$run)
   facedes$constant <- factor(rep(1, nrow(facedes)))
   
-  dset <- gen_dset(5)
+  dset <- gen_dset(5, facedes)
   
   hrfbasis = NULL
-  hrfbasis <- do.call(gen_hrf_set, lapply(0:12, function(i) {
+  hrfbasis <<- do.call(gen_hrf_set, lapply(0:12, function(i) {
     gen_hrf(hrf_gaussian, lag=i,width=.01)
   }))
   
@@ -80,7 +80,7 @@ test_that("can run a beta estimation with custom basis", {
   
   facedes$frun <- factor(facedes$run)
   facedes$constant <- factor(rep(1, nrow(facedes)))
-  dset <- gen_dset(5)
+  dset <- gen_dset(5, facedes)
   
   b1 <<- gen_hrf(hrf_spmg1, lag=1, width=3, normalize=TRUE)
   
@@ -100,10 +100,11 @@ test_that("can run a beta estimation with fixed duration", {
   facedes$frun <- factor(facedes$run)
   facedes$constant <- factor(rep(1, nrow(facedes)))
   
-  dset <- gen_dset(5)
+  dset <- gen_dset(5,facedes)
   #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
-  dset <- fmri_mem_dataset(scans=scans, 
-                           mask=mask, 
+  
+  dset <- fmri_mem_dataset(scans=dset$scans, 
+                           mask=dset$mask, 
                            TR=1.5, 
                            event_table=facedes)
   
@@ -112,7 +113,7 @@ test_that("can run a beta estimation with fixed duration", {
   
   est <- estimate_betas(dset, fixed = onset ~ hrf(constant),
                         ran = onset ~ trialwise(durations=4), block = ~ run, 
-                        method="pls_global",ncomp=30)
+                        method="pls_global",ncomp=3)
   
   expect_true(!is.null(est))
   
