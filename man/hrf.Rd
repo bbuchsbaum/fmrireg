@@ -28,7 +28,7 @@ hrf(
 
 \item{durations}{optional durations override. If missing, onsets will be taken from the \code{event_model}}
 
-\item{prefix}{a character string that is prepended to the variable names and used to identify the term. 
+\item{prefix}{a character string that is prepended to the variable names and used to identify the term.
 Can be used to disambiguate two \code{hrf} terms with the same variable(s) but different onsets or basis functions.}
 
 \item{subset}{an expression indicating the subset of 'onsets' to keep}
@@ -37,7 +37,7 @@ Can be used to disambiguate two \code{hrf} terms with the same variable(s) but d
 
 \item{nbasis}{number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.}
 
-\item{contrasts}{one or more \code{contrast_spec} objects created with the \code{contrast} function. 
+\item{contrasts}{one or more \code{contrast_spec} objects created with the \code{contrast} function.
 If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.}
 
 \item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}

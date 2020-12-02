@@ -36,8 +36,11 @@ Imports:
     mgcv,
     iterators,
     robustbase,
-    glmnet
+    glmnet,
+    care,
+    memoise
 RoxygenNote: 7.1.0
+Roxygen: list(markdown = TRUE)
 Suggests: testthat,
     knitr,
     rmarkdown,

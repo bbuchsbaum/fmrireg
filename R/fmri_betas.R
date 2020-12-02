@@ -9,13 +9,13 @@ ridge_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), lambda=.01) {
 #' @importFrom pls plsr 
 pls_betas <- function(X, Y, ncomp=3) {
   dx <- data.frame(X=X, Y=Y)
-  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="simpls", scale=TRUE, maxit=200)
+  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="simpls", scale=TRUE, maxit=500)
   coef(fit, ncomp=ncomp)[,,1]
 }
 
 pls_global_betas <- function(X, Y, ncomp=3) {
   dx <- data.frame(X=X, Y=Y)
-  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="widekernelpls", scale=TRUE, maxit=200)
+  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="widekernelpls", scale=TRUE, maxit=500)
   coef(fit, ncomp=ncomp)[,,1]
 }
 
@@ -180,7 +180,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
               ncomp = ncomp,
               validation = "none",
               method = "simpls",
-              maxit=200
+              maxit=500
             )
           idx <- neuroim2::grid_to_index(mask, cds)
           B <- coef(res)[, , 1, drop = FALSE]
@@ -225,7 +225,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 #' * `pls_searchlight` estimates pls solutions over searchlight windows and averages the beta estimates
 #' * `pls_global` estimates a single multiresponse pls solution, where the `Y` matrix is the full data matrix.
 #' * `ols` ordinary least squares estimate of betas -- no regularization
-#' @md
+## @md 
 #' 
 #' 
 #'

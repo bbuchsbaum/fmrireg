@@ -13,7 +13,7 @@ covariate(..., data, id = NULL, prefix = NULL)
 
 \item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
 
-\item{prefix}{a character string that is prepended to the variable names and used to identify the term. 
+\item{prefix}{a character string that is prepended to the variable names and used to identify the term.
 Can be used to disambiguate two \code{hrf} terms with the same variable(s) but different onsets or basis functions.}
 }
 \description{

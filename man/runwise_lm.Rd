@@ -9,3 +9,4 @@ runwise_lm(dset, model, conlist, fcon, robust = FALSE, verbose = FALSE)
 \description{
 Run glm for each data run (responses split vertically) and then combine over runs via meta-analysis
 }
+\keyword{internal}

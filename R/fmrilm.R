@@ -391,6 +391,8 @@ chunkwise_lm <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verb
   modmat <- model.matrix(as.formula(form), data_env)
   
   lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
+  
+  #browser()
   cres <- foreach( ym = chunks, i = icount(), .verbose=verbose) %dopar% {
     message("processing chunk ", i)
     data_env[[".y"]] <- as.matrix(ym$data)

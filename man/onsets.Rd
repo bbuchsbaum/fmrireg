@@ -13,5 +13,5 @@ onsets(x)
 \item{x}{the object}
 }
 \description{
-return an `onset` vector
+return an \code{onset} vector
 }

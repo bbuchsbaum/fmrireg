@@ -17,7 +17,7 @@ default_config <- function() {
 #' @importFrom tibble as_tibble
 #' @export
 read_fmri_config <- function(file_name, base_path=NULL) {
-  print(file_name)
+  #print(file_name)
   env <- default_config()
   
   source(file_name, env)
@@ -258,7 +258,6 @@ fmri_dataset <- function(scans, mask, TR,
     assert_that(file.exists(maskfile))
     message(paste("preloading masks", maskfile))
     neuroim2::read_vol(maskfile)
-    
   }
   
   vec <- if (preload) {
@@ -309,14 +308,19 @@ get_data.matrix_dataset <- function(x, ...) {
   x$datamat
 }
 
+#' @import memoise
+get_data_from_file <- memoise::memoise(function(x, ...) {
+  m <- get_mask(x)
+  read_vec(x$scans, mask=m, mode=x$mode, ...)
+})
+
 #' @export
 #' @importFrom neuroim2 NeuroVecSeq FileBackedNeuroVec
 get_data.fmri_file_dataset <- function(x, ...) {
-  ## memoise?
-  if (x$preload) {
-    x$vec
+  if (is.null(x$vec)) {
+    get_data_from_file(x,...)
   } else {
-    read_vec(x$scans, mask=x$maskvol, mode=x$mode, ...)
+    x$vec
   }
 }
 
@@ -387,7 +391,7 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
   get_run_chunk <- function(chunk_num) {
     bvec <- x$scans[[chunk_num]]
     voxel_ind <- which(mask>0)
-    print(voxel_ind)
+    #print(voxel_ind)
     row_ind <- which(x$sampling_frame$blockids == chunk_num)
     ret <- data_chunk(neuroim2::series(bvec,voxel_ind), 
                       voxel_ind=voxel_ind, 
@@ -398,7 +402,7 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
   get_seq_chunk <- function(chunk_num) {
     bvecs <- x$scans
     voxel_ind <- maskSeq[[chunk_num]]
-    print(voxel_ind)
+    #print(voxel_ind)
 
     m <- do.call(rbind, lapply(bvecs, function(bv) neuroim2::series(bv, voxel_ind)))
     ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) neuroim2::series(bv, voxel_ind))), 
@@ -450,7 +454,8 @@ data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE) {
   
   get_seq_chunk <- function(chunk_num) {
   
-    v <- x$vec
+    #v <- x$vec
+    v <- get_data(x)
     #bvecs <- lapply(x$scans, function(scan) neuroim2::read_vec(scan, mask=maskSeq[[chunk_num]]))
     vind=maskSeq[[chunk_num]]
     m <- series(v, vind)
@@ -531,7 +536,7 @@ arbitrary_chunks <- function(x, nchunks) {
   mask <- get_mask(x)
   indices <- as.integer(which(mask != 0))
   chsize <- round(length(indices)/nchunks)
-  print(indices)
+  #print(indices)
   
   assert_that(chsize > 0)
   chunkids <- sort(rep(1:nchunks, each=chsize, length.out=length(indices)))

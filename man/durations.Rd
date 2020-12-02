@@ -13,5 +13,5 @@ durations(x)
 \item{x}{the object}
 }
 \description{
-return a `durations` vector
+return a \code{durations} vector
 }

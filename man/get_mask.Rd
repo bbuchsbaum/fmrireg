@@ -12,5 +12,5 @@ get_mask(x, ...)
 \item{...}{extra args}
 }
 \description{
-get_mask
+get the binary inclusion mask associated with a dataset
 }
