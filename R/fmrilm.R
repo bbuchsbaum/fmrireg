@@ -74,7 +74,7 @@ fmri_lm <- function(formula, block, baseline_model=NULL, dataset,
   
   if (is.null(baseline_model)) {
     baseline_model <- baseline_model(basis="bs", 
-                                    degree=ceiling(median(dataset$sampling_frame$blocklens)/100), 
+                                    degree=max(ceiling(median(dataset$sampling_frame$blocklens)/100),3), 
                                     sframe=dataset$sampling_frame)
   } else {
     assert_that(inherits(baseline_model, "baseline_model"), msg="'baseline_model' arg must have the class 'baseline_model'")
