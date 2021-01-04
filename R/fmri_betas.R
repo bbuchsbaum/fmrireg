@@ -295,7 +295,7 @@ estimate_betas.matrix_dataset <- function(x,fixed, ran, block,
                                         radius=8, niter=8, ncomp=4, lambda=.01) {
   
   
-  dset <- dataset
+  dset <- x
   mask <- get_mask(dset)
   
   bmod <- if (is.null(basemod)) {

@@ -41,8 +41,6 @@ get_formula <- function(x, ...) UseMethod("get_formula")
 term_matrices <- function(x, ...) UseMethod("term_matrices")
 
 
-
-
 #' extract long names of variable
 #' 
 #' get the extended names of a set of variable levels
@@ -359,6 +357,7 @@ standard_error <- function(x, ...) UseMethod("standard_error")
 #' 
 #' @param x the object
 #' @param ... extra arguments
+#' @export
 stats <- function(x, ...) UseMethod("stats")
 
 

@@ -19,8 +19,11 @@
 event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, durations=0, contrasts=NULL) {
   
   stopifnot(inherits(formula, "formula"))
+  assert_that(inherits(data, "data.frame"), msg="`data` must be a `data.frame`")
 
   if (lazyeval::is_formula(block)) {
+    ## TODO check for existence of block in data
+    ## TODO warn when onset are way wrong
     block_rhs <- lazyeval::f_rhs(block)
     blockvals <- lazyeval::f_eval_rhs(block, data)
   } else {
