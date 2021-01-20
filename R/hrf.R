@@ -27,7 +27,7 @@ NULL
 #' vals <- grf(0:20)
 #' @export
 gen_hrf <- function(hrf, lag=0, width=0, precision=.1, 
-                    summate=TRUE, normalize=FALSE, name="gen_hrf", ...) {
+                    summate=TRUE, normalize=FALSE, name="gen_hrf", span=NULL, ...) {
   .orig <- list(...)
   
   if (width != 0) {
@@ -61,7 +61,9 @@ gen_hrf <- function(hrf, lag=0, width=0, precision=.1,
     stop("gen_hrf: constructed hrf is invalid")
   }
   
-  span <- 16 + lag + (width*2)
+  if (is.null(span)) {
+    span <- 16 + lag + (width*2)
+  }
   HRF(f, name=name, nbasis=nb, span=span)
 }
 
@@ -186,15 +188,19 @@ makeDeriv <- function(HRF, n=1) {
 #' @export
 #' 
 # TODO deal with nbasis arg in ...
-gen_hrf_lagged <- function(hrf, lag=2,...) {
+gen_hrf_lagged <- function(hrf, lag=2, normalize=FALSE, ...) {
   force(hrf)
   
   if (length(lag)>1) {
-   
     do.call(gen_hrf_set, lapply(lag, function(l) gen_hrf_lagged(hrf, l,...)))
   } else {
     function(t) {
-      hrf(t-lag,...)
+      ret <- hrf(t-lag,...)
+      if (normalize) {
+        ret <- ret/max(abs(ret))
+      } 
+      
+      ret
     }
   }
 }
@@ -256,6 +262,19 @@ convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1, half_life
   } 
   
   ret
+}
+
+#' @inheritParams convolve_block
+#' @describeIn convolve_block
+convolve_impulse <- function(t, hrf=hrf_gaussian, precision=.1, normalize=FALSE, ...) {
+  hmat <- hrf(t,...)
+
+  if (normalize) {
+    ret <- ret/max(abs(ret))
+  } 
+  
+  ret
+  
 }
   
   
@@ -462,19 +481,21 @@ nbasis.HRF <- function(x) attr(x, "nbasis")
 #' @param name the name of the hrf function
 #' @param nbasis the number of basis functions (if relevant)
 #' @export
-getHRF <- function(name=c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs"), nbasis=5, lag=0, ...) {
+getHRF <- function(name=c("gam", "gamma", "spmg1", "spmg2", 
+                          "spmg3", "bspline", "gaussian", "tent", "bs"), nbasis=5, span=24,lag=0,width=0, summate=TRUE, normalize=FALSE, ...) {
   name <- match.arg(name)
 	nb <- nbasis
 	hrf <- switch(name,
-			gamma=HRF(gen_hrf_lagged(hrf_gamma,lag=lag),name="gamma"),
-			gam=HRF(gen_hrf_lagged(hrf_gamma,lag=lag),name="gamma"),
-			gaussian=HRF(gen_hrf_lagged(HRF_GAUSSIAN,lag=lag), name="gaussian"),
-			spmg1=HRF(gen_hrf_lagged(hrf_spmg1,lag=lag), name="spmg1", nbasis=1),
-			spmg2=HRF(gen_hrf_lagged(HRF_SPMG2,lag=lag), name="spmg2", nbasis=2),
-			spmg3=HRF(gen_hrf_lagged(HRF_SPMG3,lag=lag), name="spmg3", nbasis=3),
-			tent=HRF(gen_hrf_lagged(hrf_bspline, lag=lag,degree=1,...), name="bspline", nbasis=nbasis),
-			bs=HRF(gen_hrf_lagged(hrf_bspline, lag=lag,...), name="bspline", nbasis=nbasis),
-			bspline=HRF(gen_hrf_lagged(hrf_bspline, lag=lag, ...), name="bspline", nbasis=nbasis))
+			gamma=gen_hrf(hrf_gamma,lag=lag, span=span,width=width, summate=summate, normalize=normalize, name="gamma"),
+			gam=gen_hrf(hrf_gamma,lag=lag,span=span,width=width, summate=summate, normalize=normalize, name="gamma"),
+			gaussian=gen_hrf(HRF_GAUSSIAN,lag=lag,span=span, width=width, summate=summate, normalize=normalize, name="gaussian"),
+			spmg1=gen_hrf(HRF_SPMG1,lag=lag,span=span, width=width, summate=summate, normalize=normalize, name="spmg1"),
+			spmg2=gen_hrf(HRF_SPMG2,lag=lag,span=span, width=width, summate=summate, normalize=normalize, name="spmg2"),
+			spmg3=gen_hrf(HRF_SPMG3,lag=lag,span=span, width=width, summate=summate, normalize=normalize, name="spmg3"),
+			tent=gen_hrf(purrr::partial(hrf_bspline, degree=1, span=span, N=nb), lag=lag, width=width, summate=summate, normalize=normalize, name="tent", ...),
+			bs=gen_hrf(purrr::partial(hrf_bspline,N=nb,degree=3,span=span), lag=lag, width=width, summate=summate, normalize=normalize, name="bspline", ...),
+			bspline=gen_hrf(purrr::partial(hrf_bspline, N=nb, degree=3, span=span), lag=lag,width=width, summate=summate, normalize=normalize, name="bspline", ...)
+	)
 	
 	if (is.null(hrf)) {
 		stop("could not find create hrf named: ", name)
@@ -550,6 +571,12 @@ make_hrf <- function(basis, lag, nbasis=1) {
 hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
                 nbasis=1, contrasts=NULL, id=NULL, lag=0, summate=TRUE) {
   
+  dots <- list(...)
+  
+  if (length(dots) == 1) {
+    stop("hrf: must supply at least one variable name")
+  }
+  
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
@@ -580,7 +607,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
     name=termname, ## hrf(x,y), where termname = "x::y"
     id=id, ## hrf(x), id by default is "x::y"
     varnames=varnames, ## list of all variables (e.g. list(x,y))
-    vars=term, ## list of unparsed vars
+    vars=term, ## list of unparsed vars -- is this necessary?
     label=label, ## "hrf(x)" the full expression
     hrf=basis,
     onsets=onsets,
@@ -594,6 +621,36 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
   
   class(ret) <- c("hrfspec", "list")
   ret
+}
+
+
+#' @export
+hrfspec <- function(varnames, basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
+                    contrasts=NULL, id=NULL, summate=TRUE) {
+  
+  termname <- paste0(varnames, collapse="::")
+  
+  if (is.null(id)) {
+    id <- termname
+  }
+  
+  ret <- list(
+    name=termname, ## hrf(x,y), where termname = "x::y"
+    id=id, ## hrf(x), id by default is "x::y"
+    varnames=varnames, ## list of all variables (e.g. list(x,y))
+    hrf=basis,
+    onsets=onsets,
+    durations=durations,
+    prefix=prefix,
+    subset=substitute(subset),
+    precision=precision,
+    lag=lag,
+    contrasts=cset,
+    summate=summate)
+  
+  class(ret) <- c("hrfspec", "list")
+  ret
+  
 }
 
 

@@ -4,7 +4,7 @@
 \alias{gen_hrf_lagged}
 \title{gen_hrf_lagged}
 \usage{
-gen_hrf_lagged(hrf, lag = 2, ...)
+gen_hrf_lagged(hrf, lag = 2, normalize = FALSE, ...)
 }
 \arguments{
 \item{hrf}{the underlying hrf function to shift}

@@ -12,6 +12,7 @@ gen_hrf(
   summate = TRUE,
   normalize = FALSE,
   name = "gen_hrf",
+  span = NULL,
   ...
 )
 }

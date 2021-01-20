@@ -149,7 +149,7 @@ evaluate.null_regressor <- function(x, grid, precision=.25) {
 #' @param precision the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}
 #' @examples 
 #' frame <- sampling_frame(blocklens=100, TR=2)
-#' reg <- regressor(onsets=c(10,20), hrf=HRF_SPMG1)
+#' reg <- regressor(onsets=c(10,20,35, 47,52, 68, 79,86), hrf=HRF_SPMG1)
 #' evaluate(reg, samples(frame))
 #' @import RANN
 #' @export
@@ -167,7 +167,6 @@ evaluate.regressor <- function(x, grid, precision=.2) {
   }
   
   valid <- x$onsets >= (grid[1]-16) & x$onsets <= grid[length(grid)]
- 
  
   valid.ons <- x$onsets[valid]
   valid.durs <- x$duration[valid]

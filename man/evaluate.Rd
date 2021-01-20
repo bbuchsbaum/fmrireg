@@ -50,6 +50,6 @@ hrf1 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=1)
 hrf2 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=1,summate=FALSE)
 
 frame <- sampling_frame(blocklens=100, TR=2)
-reg <- regressor(onsets=c(10,20), hrf=HRF_SPMG1)
+reg <- regressor(onsets=c(10,20,35, 47,52, 68, 79,86), hrf=HRF_SPMG1)
 evaluate(reg, samples(frame))
 }

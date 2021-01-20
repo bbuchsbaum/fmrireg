@@ -8,7 +8,11 @@ getHRF(
   name = c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent",
     "bs"),
   nbasis = 5,
+  span = 24,
   lag = 0,
+  width = 0,
+  summate = TRUE,
+  normalize = FALSE,
   ...
 )
 }

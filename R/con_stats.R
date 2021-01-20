@@ -145,17 +145,22 @@ beta_stats <- function(lmfit, varnames, dofpen=0) {
 
 
 fit_Fcontrasts <- function(lmfit, conmat, colind) {
-
+  #browser()
   Qr <- stats:::qr.lm(lmfit)
   
   ## subset covariance matrix by column indices of the contrast matrix associated with term in questions
-  cov.unscaled <- try(chol2inv(Qr$qr[colind,colind,drop=FALSE]))
+  #cov.unscaled <- try(chol2inv(Qr$qr[colind,colind,drop=FALSE]))
+  cov.unscaled <- try(chol2inv(Qr$qr))
+  
+  cmat <- matrix(0, nrow(conmat), ncol(cov.unscaled))
+  cmat[,colind] <- conmat
   
   cfs <- coef(lmfit)
+  
   betamat <- if (is.vector(cfs)) {
-    as.matrix(coef(lmfit)[colind])
+    as.matrix(coef(lmfit))
   } else {
-    betamat <- cfs[colind,,drop=FALSE]
+    cfs
   }
   
   #betamat <- lmfit$coefficients[colind,]
@@ -179,11 +184,11 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
   #
   
   ## conmat is same dimensions as the number of levels contained in the term
-  cm <- solve((conmat %*% cov.unscaled %*% t(conmat)))
+  cm <- solve((cmat %*% cov.unscaled %*% t(cmat)))
   
   Fstat <- map_dbl(1:ncol(betamat), function(i) {
     b <- betamat[,i]
-    cb <- conmat %*% b
+    cb <- cmat %*% b
     Fstat <- t(cb) %*% cm %*% (cb) / r / sigma2[i]
   })
   
@@ -210,12 +215,16 @@ fit_contrasts <- function(lmfit, conmat, colind) {
   if (!is.matrix(conmat) && is.numeric(conmat)) {
     conmat <- t(matrix(conmat, 1, length(conmat)))
   }
-  
+ 
   
   Qr <- stats:::qr.lm(lmfit)
   
   p1 <- 1:lmfit$rank
-  cov.unscaled <- try(chol2inv(Qr$qr[colind,colind,drop=FALSE]))
+  #cov.unscaled <- try(chol2inv(Qr$qr[colind,colind,drop=FALSE]))
+  cov.unscaled <- try(chol2inv(Qr$qr))
+  cmat <- matrix(0, nrow(cov.unscaled), 1)
+  cmat[colind,] <- conmat
+  
   
   if (inherits(cov.unscaled, "try-error")) {
     stop("fit_contrasts: error computing contrast covariance")
@@ -225,19 +234,21 @@ fit_contrasts <- function(lmfit, conmat, colind) {
   #print(length(colind))
   
   cfs <- coef(lmfit)
-  betamat <- if (is.vector(cfs)) {
-    as.matrix(coef(lmfit)[colind])
+  if (is.vector(cfs)) {
+    #as.matrix(coef(lmfit)[colind])
+    betamat <- as.matrix(coef(lmfit))
   } else {
-    betamat <- cfs[colind,,drop=FALSE]
+    #betamat <- cfs[colind,,drop=FALSE]
+    #}
+    betamat <- cfs
   }
-  
   
   if (inherits(cov.unscaled, "try-error")) {
     stop("fit_contrasts: error computing contrast covariance")
     #browser()
   }
   
-  ct <- as.vector(t(conmat) %*% betamat)
+  ct <- as.vector(t(cmat) %*% betamat)
   
   rss <- colSums(as.matrix(lmfit$residuals^2))
   rdf <- lmfit$df.residual
@@ -247,7 +258,7 @@ fit_contrasts <- function(lmfit, conmat, colind) {
 
   vc <- map_dbl(1:ncol(betamat), function(i) {
     vcv <- cov.unscaled * sigma[i]^2
-    sqrt(diag(t(conmat) %*% vcv %*% conmat))
+    sqrt(diag(t(cmat) %*% vcv %*% cmat))
   })
   
   
