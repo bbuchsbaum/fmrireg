@@ -568,38 +568,14 @@ make_hrf <- function(basis, lag, nbasis=1) {
 hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
                 nbasis=1, contrasts=NULL, id=NULL, lag=0, summate=TRUE) {
   
-  #dots <- list(...)
-  
-  #if (length(dots) < 1) {
-  #  stop("hrf: must supply at least one variable name")
-  #}
-  
-  #browser()
   vars <- rlang::enquos(...)
   #vars <- as.list(substitute(...))[-1] 
+  
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
   label <- parsed$label
   
   basis <- make_hrf(basis, lag, nbasis=nbasis)
-  
-  #varnames <- if (!is.null(prefix)) {
-  #  paste0(prefix, "_", term)
-  #} else {
-  #  term
-  #}
-  
-  #termname <- paste0(varnames, collapse="::")
-  
-  #if (is.null(id)) {
-  #  id <- termname
-  #}  
-  
-  # cset <- if (inherits(contrasts, "contrast_spec")) {
-  #   contrast_set(con1=contrasts)
-  # } else if (inherits(contrasts, "contrast_set")) {
-  #   contrasts
-  # } 
   
   ret <- hrfspec(
     term,
@@ -613,7 +589,6 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
     precision=precision,
     contrasts=contrasts,
     summate=summate)
-  
   
   class(ret) <- c("hrfspec", "list")
   ret
@@ -648,7 +623,8 @@ hrfspec <- function(vars, label=NULL, basis=HRF_SPMG1, onsets=NULL, durations=NU
   } else if (inherits(contrasts, "contrast_set")) {
     contrasts
   } 
-  #browser()
+  
+  
   ret <- list(
     name=termname, 
     label=label,
@@ -677,6 +653,7 @@ construct_event_term <- function(x, model_spec, onsets) {
   ## TODO what if we are missing a block id?
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
+  
   varlist <- lapply(seq_along(x$vars), function(i) {
     base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
   })
@@ -697,6 +674,7 @@ construct.hrfspec <- function(x, model_spec) {
   ons <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   et <- construct_event_term(x,model_spec, ons)
   
+  ## could be lazy
   cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate)
   
   ret <- list(

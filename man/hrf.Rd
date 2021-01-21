@@ -50,9 +50,6 @@ This function is to be used in formulas for fitting functions, e.g. onsets ~ hrf
 \examples{
 
 ## 'hrf' is typically used in the context of \code{formula}s.
-hspec <- hrf(x)
-hspec2 <- hrf(x, basis="gamma")
-hspec3 <- hrf(x, basis="bs", nbasis=4)
 
 form <- onsets ~ hrf(x) + hrf(y) + hrf(x,y)
 
