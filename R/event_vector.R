@@ -669,14 +669,15 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate
   
   ncond <- ncol(dmat)
   
-
-
   cmat <- dmat %>% dplyr::mutate(.blockids=blockids, .globons=globons, .durations=durations) %>% 
     dplyr::group_by(.blockids) %>%
     dplyr::do({
       d <- dplyr::select(., 1:ncond)
       reg <- convolve_design(hrf, d, .$.globons, .$.durations, summate=summate)
       sam <- samples(sampling_frame, blockids=as.integer(as.character(.$.blockids[1])), global=TRUE)
+      
+      ## TODO could bee parallelized
+      ## ret <- do.call(rbind, furrr::future_map(reg, function(r) evaluate(r, sam))) 
       ret <- do.call(cbind, lapply(reg, function(r) evaluate(r, sam)))
       tibble::as_tibble(ret, .name_repair="minimal")
   }) %>% dplyr::ungroup() %>% dplyr::select(-.blockids)
@@ -690,7 +691,6 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate
   colnames(cmat) <- cnames
   tibble::as_tibble(cmat, .name_repair="check_unique")
   
-  #lapply(reglist, function(reg) evaluate(reg, )
   
 }
 

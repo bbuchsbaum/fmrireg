@@ -1,23 +1,50 @@
 
-#' construct an event model
-#' 
-#' A data sructure representing an event-based fMRI regression model
-#' 
-#' @importFrom lazyeval f_eval f_rhs f_lhs
-#' @param formula the model formula
-#' @param data the data containing experimental design
-#' @param block formula for the block structure
-#' @param sampling_frame the sampling frame defining the temporal and block structure
-#' @param drop_empty whether to drop empty factor levels
-#' @param durations the event durations
-#' @param contrasts the set of contrasts
-#' @examples 
-#' event_data <- data.frame(fac=c("a", "B", "A", "B"), onsets=c(1,10,20,80), run=c(1,1,1,1))
-#' sframe <- sampling_frame(blocklens=50, TR=2)
-#' evmodel <- event_model(onsets ~ hrf(fac), data=event_data, block= ~ run, sampling_frame=sframe)
 #' @export
-event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, durations=0, contrasts=NULL) {
+event_model.list <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0) {
+  assert_that(all(sapply(x, function(a) inherits(a, "hrfspec"))), msg="event_model.list: all `x` elements must be of type `hrfspec")
   
+  if (lazyeval::is_formula(block)) {
+    ## TODO check for existence of block in data
+    ## TODO warn when onset are way wrong
+    block_rhs <- lazyeval::f_rhs(block)
+    blockvals <- lazyeval::f_eval_rhs(block, data)
+  } else {
+    blockvals <- block
+  }
+  
+  assert_that(is.increasing(blockvals), msg="'blockvals' must consist of strictly increasing integers")
+  assert_that(length(blockvals) == nrow(data))
+  
+  blocks <-unique(blockvals)
+  ranked_blocks <- rank(blocks)
+  blockids <- ranked_blocks[match(blockvals, blocks)]
+  
+  if (missing(durations)) {
+    ## assume zero-duration impulse for all events
+    durations <- rep(0, nrow(data))
+  }
+  
+  model_spec <- list(formula=NULL, 
+                     event_table=data, 
+                     onsets=NULL, 
+                     event_spec=event_spec, 
+                     blockvals=blockvals,
+                     blockids=blockids, 
+                     durations=durations, 
+                     sampling_frame=sampling_frame,
+                     drop_empty=drop_empty)
+  
+  class(model_spec) <- c("event_model_spec", "list")
+  
+  fmodel <- construct_model(model_spec)
+  
+  
+}
+
+
+#' @export
+event_model.formula <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0) {
+  formula <- x
   stopifnot(inherits(formula, "formula"))
   assert_that(inherits(data, "data.frame"), msg="`data` must be a `data.frame`")
 
@@ -49,7 +76,7 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
   formspec <- function(formula, table) {
     vterms <- extract_terms(formula, table)
     resp <- attr(vterms, "response")
-    variables <- extract_variables(formula, table)
+    variables <- extract_variables(formula, table, vterms)
     
     if (resp != 0) {
       lhs <- variables[[resp]]
@@ -58,23 +85,24 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
     }
     
     rhs <- variables[(resp+1):length(variables)]
-    vclass <- unlist(lapply(rhs, class))
     
-    ret <- list(vterms=vterms, resp=resp, variables=variables, lhs=lhs, rhs=rhs,vclass=vclass)
+    ## vclass <- unlist(lapply(rhs, function(x) class(x)[1]))
+    
+    #ret <- list(vterms=vterms, resp=resp, variables=variables, lhs=lhs, rhs=rhs,vclass=vclass)
+    ret <- list(lhs=lhs, rhs=rhs)
     
     class(ret) <- "formula_extraction"
     ret
   }
   
   event_spec <- formspec(formula, data)
-  #browser()
   assertthat::assert_that(all(map_lgl(event_spec$rhs, inherits, "hrfspec")),
                           msg="all terms on right hand side must be 'hrf' terms")
   
   model_spec <- list(formula=formula, 
                      event_table=data, 
                      onsets=event_spec$lhs, 
-                     event_spec=event_spec, 
+                     event_spec=event_spec$rhs, 
                      blockvals=blockvals,
                      blockids=blockids, 
                      durations=durations, 
@@ -83,7 +111,6 @@ event_model <- function(formula, data, block, sampling_frame, drop_empty=TRUE, d
                      contrasts=contrasts)
   
   class(model_spec) <- c("event_model_spec", "list")
-  
   fmodel <- construct_model(model_spec)
   fmodel
 }
@@ -95,11 +122,14 @@ blocklens.event_model <- function(x) {
 
 #' @keywords internal
 construct_model <- function(x) {
-  #browser()
+  ## what does this function actually need?
+  ## it neds a list of `hrfspec` objects as `rhd`
   assert_that(is.numeric(x$onsets))
   #term_names <- sapply(x$event_spec$rhs, "[[", "id")
   #browser()
-  term_names <- sapply(x$event_spec$rhs, "[[", "name")
+  
+  ## term_names <- sapply(x$event_spec$rhs, "[[", "name")
+  term_names <- sapply(x$event_spec, "[[", "name")
   term_names <- .sanitizeName(term_names)
   
   dups <- sum(duplicated(term_names)) > 0
@@ -110,7 +140,8 @@ construct_model <- function(x) {
   } 
   
 
-  terms <- lapply(x$event_spec$rhs, function(m) construct(m,x))
+  #terms <- lapply(x$event_spec$rhs, function(m) construct(m,x))
+  terms <- lapply(x$event_spec, function(m) construct(m,x))
   names(terms) <- term_names
   
   term_lens <- sapply(lapply(terms, conditions), length)
@@ -160,9 +191,12 @@ extract_covariates <- function(.terms, variables, resp, etab) {
 is_parametric_basis <- function(obj) { inherits(obj, "ParametricBasis") }
 
 #' @keywords internal
-extract_variables <- function(form, data) {
+extract_variables <- function(form, data, .terms=NULL) {
+  if (is.null(.terms)) {
+    .terms <- extract_terms(form,data)
+  }
+  
  
-  .terms <- extract_terms(form,data)
   env <- environment(.terms)
   #env <- environment(.terms)
   varnames <- sapply(attr(.terms, "variables") , deparse, width.cutoff = 500)[-1]

@@ -561,9 +561,6 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #' @examples 
 #' 
 #' ## 'hrf' is typically used in the context of \code{formula}s.
-#' hspec <- hrf(x)
-#' hspec2 <- hrf(x, basis="gamma")
-#' hspec3 <- hrf(x, basis="bs", nbasis=4)
 #' 
 #' form <- onsets ~ hrf(x) + hrf(y) + hrf(x,y)
 #' 
@@ -571,53 +568,52 @@ make_hrf <- function(basis, lag, nbasis=1) {
 hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
                 nbasis=1, contrasts=NULL, id=NULL, lag=0, summate=TRUE) {
   
-  dots <- list(...)
+  #dots <- list(...)
   
-  if (length(dots) == 1) {
-    stop("hrf: must supply at least one variable name")
-  }
+  #if (length(dots) < 1) {
+  #  stop("hrf: must supply at least one variable name")
+  #}
   
-  vars <- as.list(substitute(list(...)))[-1] 
+  #browser()
+  vars <- rlang::enquos(...)
+  #vars <- as.list(substitute(...))[-1] 
   parsed <- parse_term(vars, "hrf")
   term <- parsed$term
   label <- parsed$label
   
- 
   basis <- make_hrf(basis, lag, nbasis=nbasis)
   
-  varnames <- if (!is.null(prefix)) {
-    paste0(prefix, "_", term)
-  } else {
-    term
-  }
+  #varnames <- if (!is.null(prefix)) {
+  #  paste0(prefix, "_", term)
+  #} else {
+  #  term
+  #}
   
-  termname <- paste0(varnames, collapse="::")
+  #termname <- paste0(varnames, collapse="::")
   
-  if (is.null(id)) {
-    id <- termname
-  }  
+  #if (is.null(id)) {
+  #  id <- termname
+  #}  
   
-  cset <- if (inherits(contrasts, "contrast_spec")) {
-    contrast_set(con1=contrasts)
-  } else if (inherits(contrasts, "contrast_set")) {
-    contrasts
-  } 
+  # cset <- if (inherits(contrasts, "contrast_spec")) {
+  #   contrast_set(con1=contrasts)
+  # } else if (inherits(contrasts, "contrast_set")) {
+  #   contrasts
+  # } 
   
-  ret <- list(
-    name=termname, ## hrf(x,y), where termname = "x::y"
-    id=id, ## hrf(x), id by default is "x::y"
-    varnames=varnames, ## list of all variables (e.g. list(x,y))
-    vars=term, ## list of unparsed vars -- is this necessary?
-    label=label, ## "hrf(x)" the full expression
-    hrf=basis,
-    onsets=onsets,
-    durations=durations,
-    prefix=prefix,
-    subset=substitute(subset),
+  ret <- hrfspec(
+    term,
+    label=label,
+    basis,
+    basis=basis,         ## basis function of type "HRF"
+    onsets=onsets,     ## optional onsets vector
+    durations=durations, ## optional durations vector
+    prefix=prefix,       ## prefix
+    subset=rlang::enexpr(subset), ## quoted subset expression
     precision=precision,
-    lag=lag,
-    contrasts=cset,
+    contrasts=contrasts,
     summate=summate)
+  
   
   class(ret) <- c("hrfspec", "list")
   ret
@@ -625,24 +621,45 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
 
 
 #' @export
-hrfspec <- function(varnames, basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
+hrfspec <- function(vars, label=NULL, basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
                     contrasts=NULL, id=NULL, summate=TRUE) {
   
+  
+  
+  assert_that(inherits(basis, "HRF"))
   termname <- paste0(varnames, collapse="::")
+  
+  varnames <- if (!is.null(prefix)) {
+    paste0(prefix, "_", vars)
+  } else {
+    vars
+  }
   
   if (is.null(id)) {
     id <- termname
   }
   
+  if (is.null(label)) {
+    label <- paste0("hrf(", paste0(varnames, collapse=","), ")")
+  }
+  
+  cset <- if (inherits(contrasts, "contrast_spec")) {
+    contrast_set(con1=contrasts)
+  } else if (inherits(contrasts, "contrast_set")) {
+    contrasts
+  } 
+  #browser()
   ret <- list(
-    name=termname, ## hrf(x,y), where termname = "x::y"
-    id=id, ## hrf(x), id by default is "x::y"
-    varnames=varnames, ## list of all variables (e.g. list(x,y))
+    name=termname, 
+    label=label,
+    id=id, 
+    vars=vars,
+    varnames=varnames, 
     hrf=basis,
     onsets=onsets,
     durations=durations,
     prefix=prefix,
-    subset=substitute(subset),
+    subset=subset,
     precision=precision,
     lag=lag,
     contrasts=cset,
@@ -656,10 +673,10 @@ hrfspec <- function(varnames, basis=HRF_SPMG1, onsets=NULL, durations=NULL, pref
 
 #' @keywords internal
 construct_event_term <- function(x, model_spec, onsets) {
+  
   ## TODO what if we are missing a block id?
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
-  
   varlist <- lapply(seq_along(x$vars), function(i) {
     base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
   })

@@ -8,6 +8,27 @@ get_methods <- function(obj) {
 as_vectors <- function(x) { function(x, ...) UseMethod("as_vectors") }
 setGeneric("as_vectors") 
 
+
+
+#' construct an event model
+#' 
+#' A data sructure representing an event-based fMRI regression model
+#' 
+#' @importFrom lazyeval f_eval f_rhs f_lhs
+#' @param x the model specification, typically a `formula` (see examples)
+#' @param data the data containing experimental design
+#' @param block formula for the block structure
+#' @param sampling_frame the sampling frame defining the temporal and block structure
+#' @param drop_empty whether to drop empty factor levels
+#' @param durations the event durations
+#' @param ... extra args
+#' @examples 
+#' event_data <- data.frame(fac=c("a", "B", "A", "B"), onsets=c(1,10,20,80), run=c(1,1,1,1))
+#' sframe <- sampling_frame(blocklens=50, TR=2)
+#' evmodel <- event_model(onsets ~ hrf(fac), data=event_data, block= ~ run, sampling_frame=sframe)
+#' @export
+event_model <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0, ...) { UseMethod("event_model") }
+
 #' get_data
 #' 
 #' @param x the dataset
