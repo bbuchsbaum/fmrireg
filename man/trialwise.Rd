@@ -11,7 +11,7 @@ trialwise(
   durations = NULL,
   prefix = NULL,
   subset = NULL,
-  precision = 0.2,
+  precision = 0.3,
   contrasts = list(),
   id = NULL,
   add_sum = FALSE

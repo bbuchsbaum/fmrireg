@@ -18,7 +18,7 @@ evaluate(x, grid, ...)
   normalize = FALSE
 )
 
-\method{evaluate}{regressor}(x, grid, precision = 0.2)
+\method{evaluate}{regressor}(x, grid, precision = 0.33, use_conv = TRUE)
 }
 \arguments{
 \item{x}{the object to evaluate}
@@ -36,6 +36,8 @@ evaluate(x, grid, ...)
 \item{summate}{whether the HRF response increases its amplitude as a function of stimulus duration.}
 
 \item{normalize}{scale output so that peak is 1.}
+
+\item{use_conv}{use fast convolution approach}
 }
 \description{
 given an object to be evaluated and an input sample "grid", evaluate the object.
@@ -44,10 +46,10 @@ evalute a regressor function over a sampling grid
 }
 \examples{
 
-hrf1 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=1)
+hrf1 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=.1)
 
 # the same, except now turn off temporal summation.
-hrf2 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=1,summate=FALSE)
+hrf2 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=.1,summate=FALSE)
 
 frame <- sampling_frame(blocklens=100, TR=2)
 reg <- regressor(onsets=c(10,20,35, 47,52, 68, 79,86), hrf=HRF_SPMG1)

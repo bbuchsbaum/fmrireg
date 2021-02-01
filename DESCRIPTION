@@ -39,7 +39,7 @@ Imports:
     glmnet,
     care,
     memoise
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 Roxygen: list(markdown = TRUE)
 Suggests: testthat,
     knitr,

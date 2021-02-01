@@ -81,7 +81,7 @@ test_that("can construct and run a simple fmri glm from a matrix_dataset with 1 
   dset <- matrix_dataset(as.matrix(vals),TR=1.5, run_length=rep(244,6), event_table=facedes)
   
   c1 <- pair_contrast( ~ repnum == 1, ~ repnum == 2, name="rep2_rep1")
-  c2 <- pair_contrast( ~ repnum == 2, ~ repnum == 3, name="rep3_rep2")
+  c2 <- pair_contrast( ~ repnum == 3, ~ repnum == 4, name="rep3_rep4")
   con <<- contrast_set(c1,c2)
   
   mod1 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0)
@@ -91,6 +91,35 @@ test_that("can construct and run a simple fmri glm from a matrix_dataset with 1 
   expect_true(!is.null(mod1))
   expect_equal(ncol(mod1$result$contrasts$estimate()), 2)
   expect_equal(ncol(mod2$result$contrasts$estimate()), 2)
+  
+})
+
+test_that("fmri glm for multivariate matrix and complex contrast ", {
+  
+  vals <- do.call(cbind, lapply(1:100, function(i) rnorm(244*6)))
+  fd <- subset(facedes, null == 0 & rt < 2)
+  fd$letter <- sample(factor(rep(letters[1:4], length.out=nrow(fd))))
+  dset <- matrix_dataset(vals,TR=1.5, run_length=rep(244,6), event_table=fd)
+  
+  c1 <- pair_contrast( ~ letter %in% c("a", "b"), 
+                       ~ letter %in% c("c", "d"),
+                       name="abcd_efgh")
+  
+  c2 <- pair_contrast( ~ letter %in% c("a", "c"), 
+                       ~ letter %in% c("b", "d"),
+                       name="ijkl_mnop")
+  
+  c3 <- unit_contrast(~ letter, "letter")
+
+ 
+ # bmod <- baseline_model(basis="constant", degree=1, intercept="none", sframe=dset$sampling_frame)
+  mod1 <- fmri_lm(onset ~ hrf(letter,  contrasts=contrast_set(c3, c1,c2)), 
+                  #baseline_model=bmod,
+                  block = ~ run, dataset=dset, durations=0, nchunks=1,strategy="chunkwise")
+  
+  zz <- stats(mod1, "contrasts")
+  betas <- mod1$result$betas$estimate()
+  expect_true(!is.null(mod1))
   
 })
 

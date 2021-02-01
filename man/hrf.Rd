@@ -11,7 +11,7 @@ hrf(
   durations = NULL,
   prefix = NULL,
   subset = NULL,
-  precision = 0.2,
+  precision = 0.3,
   nbasis = 1,
   contrasts = NULL,
   id = NULL,

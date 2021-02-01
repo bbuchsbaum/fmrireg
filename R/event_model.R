@@ -1,6 +1,6 @@
 
 #' @export
-event_model.list <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0) {
+event_model.list <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0, precision=.3) {
   assert_that(all(sapply(x, function(a) inherits(a, "hrfspec"))), msg="event_model.list: all `x` elements must be of type `hrfspec")
   
   if (lazyeval::is_formula(block)) {
@@ -24,26 +24,27 @@ event_model.list <- function(x, data, block, sampling_frame, drop_empty=TRUE, du
     durations <- rep(0, nrow(data))
   }
   
-  model_spec <- list(formula=NULL, 
+  form <- paste("~", paste(sapply(x, function(z) z$label), collapse="+"))
+  
+  model_spec <- list(formula=form,
                      event_table=data, 
-                     onsets=NULL, 
-                     event_spec=event_spec, 
+                     onsets=x[[1]]$onsets, 
+                     event_spec=x, 
                      blockvals=blockvals,
                      blockids=blockids, 
                      durations=durations, 
                      sampling_frame=sampling_frame,
-                     drop_empty=drop_empty)
+                     drop_empty=drop_empty,
+                     precision=.3)
   
   class(model_spec) <- c("event_model_spec", "list")
-  
   fmodel <- construct_model(model_spec)
-  
   
 }
 
 
 #' @export
-event_model.formula <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0) {
+event_model.formula <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0, precision=.3) {
   formula <- x
   stopifnot(inherits(formula, "formula"))
   assert_that(inherits(data, "data.frame"), msg="`data` must be a `data.frame`")
@@ -56,10 +57,6 @@ event_model.formula <- function(x, data, block, sampling_frame, drop_empty=TRUE,
   } else {
     blockvals <- block
   }
-  
-  #x_unique <- unique(x)
-  #x_ranks <- rank(x_unique)
-  #x_ranks[match(x,x_unique)]
   
   assert_that(is.increasing(blockvals), msg="'blockvals' must consist of strictly increasing integers")
   assert_that(length(blockvals) == nrow(data))
@@ -87,10 +84,8 @@ event_model.formula <- function(x, data, block, sampling_frame, drop_empty=TRUE,
     rhs <- variables[(resp+1):length(variables)]
     
     ## vclass <- unlist(lapply(rhs, function(x) class(x)[1]))
-    
     #ret <- list(vterms=vterms, resp=resp, variables=variables, lhs=lhs, rhs=rhs,vclass=vclass)
     ret <- list(lhs=lhs, rhs=rhs)
-    
     class(ret) <- "formula_extraction"
     ret
   }
@@ -108,7 +103,8 @@ event_model.formula <- function(x, data, block, sampling_frame, drop_empty=TRUE,
                      durations=durations, 
                      sampling_frame=sampling_frame,
                      drop_empty=drop_empty,
-                     contrasts=contrasts)
+                     contrasts=contrasts,
+                     precision=precision)
   
   class(model_spec) <- c("event_model_spec", "list")
   fmodel <- construct_model(model_spec)

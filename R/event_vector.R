@@ -656,7 +656,7 @@ convolve_design <- function(hrf, dmat, globons, durations, summate=TRUE) {
 #' @importFrom magrittr %>%
 #' @importFrom dplyr group_by select do ungroup
 #' @export
-convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate=TRUE) {
+convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate=TRUE, precision=.3) {
   globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
   durations <- x$durations
   blockids <- x$blockids
@@ -678,7 +678,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate
       
       ## TODO could bee parallelized
       ## ret <- do.call(rbind, furrr::future_map(reg, function(r) evaluate(r, sam))) 
-      ret <- do.call(cbind, lapply(reg, function(r) evaluate(r, sam)))
+      ret <- do.call(cbind, lapply(reg, function(r) evaluate(r, sam, precision=precision)))
       tibble::as_tibble(ret, .name_repair="minimal")
   }) %>% dplyr::ungroup() %>% dplyr::select(-.blockids)
   

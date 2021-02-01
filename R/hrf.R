@@ -85,6 +85,7 @@ gen_empirical_hrf <- function(t, y, name="empirical_hrf") {
 }
 
 
+
 #' Generate an HRF basis set
 #' 
 #' \code{gen_hrf_set} construct an hrf basis set from a one or more component functions.
@@ -243,7 +244,7 @@ hrf_blocked <- gen_hrf_blocked
 #' @param normalize rescale so that the peak of the output is 1.
 #' @param ... extra args to pass through to hrf function
 #' @export
-convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1, half_life=Inf, summate=TRUE, normalize=FALSE, ...) {
+convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.2, half_life=Inf, summate=TRUE, normalize=FALSE, ...) {
  
   hmat <- sapply(seq(0, width, by=precision), function(offset) {
     hrf(t-offset,...) * exp(-offset/half_life)
@@ -266,7 +267,7 @@ convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.1, half_life
 
 #' @inheritParams convolve_block
 #' @describeIn convolve_block
-convolve_impulse <- function(t, hrf=hrf_gaussian, precision=.1, normalize=FALSE, ...) {
+convolve_impulse <- function(t, hrf=hrf_gaussian, precision=.2, normalize=FALSE, ...) {
   hmat <- hrf(t,...)
 
   if (normalize) {
@@ -421,10 +422,10 @@ HRF_SPMG3 <- HRF(gen_hrf_set(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeri
 #' @export
 #' @examples 
 #' 
-#' hrf1 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=1)
+#' hrf1 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=.1)
 #' 
 #' # the same, except now turn off temporal summation.
-#' hrf2 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=1,summate=FALSE)
+#' hrf2 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=.1,summate=FALSE)
 #' 
 evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate=TRUE, normalize=FALSE) {
   if (duration < precision) {
@@ -565,7 +566,7 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #' form <- onsets ~ hrf(x) + hrf(y) + hrf(x,y)
 #' 
 #' @export
-hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
+hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.3, 
                 nbasis=1, contrasts=NULL, id=NULL, lag=0, summate=TRUE) {
   
   vars <- rlang::enquos(...)
@@ -582,7 +583,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
     label=label,
     basis,
     basis=basis,         ## basis function of type "HRF"
-    onsets=onsets,     ## optional onsets vector
+    onsets=onsets,       ## optional onsets vector -- should this be lazy? onsets = ~ onsets
     durations=durations, ## optional durations vector
     prefix=prefix,       ## prefix
     subset=rlang::enexpr(subset), ## quoted subset expression
@@ -596,13 +597,14 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
 
 
 #' @export
-hrfspec <- function(vars, label=NULL, basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.2, 
+hrfspec <- function(vars, label=NULL, basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, 
+                    subset=NULL, precision=.3, 
                     contrasts=NULL, id=NULL, summate=TRUE) {
   
   
   
   assert_that(inherits(basis, "HRF"))
-  termname <- paste0(varnames, collapse="::")
+  termname <- paste0(vars, collapse="::")
   
   varnames <- if (!is.null(prefix)) {
     paste0(prefix, "_", vars)
@@ -637,7 +639,6 @@ hrfspec <- function(vars, label=NULL, basis=HRF_SPMG1, onsets=NULL, durations=NU
     prefix=prefix,
     subset=subset,
     precision=precision,
-    lag=lag,
     contrasts=cset,
     summate=summate)
   
@@ -675,7 +676,7 @@ construct.hrfspec <- function(x, model_spec) {
   et <- construct_event_term(x,model_spec, ons)
   
   ## could be lazy
-  cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate)
+  cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate, precision=model_spec$precision)
   
   ret <- list(
     varname=et$varname,
@@ -816,7 +817,7 @@ construct.hrfspec <- function(x, model_spec) {
 #' 
 #' @export
 trialwise <- function(label="trialwise", basis="spmg1", onsets=NULL, durations=NULL, 
-                      prefix=NULL, subset=NULL, precision=.2,
+                      prefix=NULL, subset=NULL, precision=.3,
                       contrasts=list(), id=NULL, add_sum=FALSE) {
   
   termname = label

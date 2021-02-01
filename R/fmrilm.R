@@ -64,7 +64,7 @@ term_matrices.fmri_model <- function(x, blocknum=NULL) {
 #' lm.3a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, robust=TRUE, dataset=dset2, strategy="runwise")
 #' @export
 fmri_lm <- function(formula, block, baseline_model=NULL, dataset, 
-                     durations, drop_empty=TRUE, contrasts=NULL, robust=FALSE,
+                     durations, drop_empty=TRUE, robust=FALSE,
                      strategy=c("runwise", "chunkwise"), nchunks=10) {
   
  
@@ -81,7 +81,7 @@ fmri_lm <- function(formula, block, baseline_model=NULL, dataset,
   }
  
   ev_model <- event_model(formula, block, data=dataset$event_table, 
-                         sampling_frame=dataset$sampling_frame, contrasts=contrasts)
+                         sampling_frame=dataset$sampling_frame)
      
   model <- fmri_model(ev_model, baseline_model)
   

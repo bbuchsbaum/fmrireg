@@ -8,7 +8,7 @@ convolve_block(
   t,
   hrf = hrf_gaussian,
   width = 5,
-  precision = 0.1,
+  precision = 0.2,
   half_life = Inf,
   summate = TRUE,
   normalize = FALSE,

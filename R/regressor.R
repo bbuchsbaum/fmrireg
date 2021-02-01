@@ -103,7 +103,7 @@ dots <- function(...) {
 
 
 #' @export
-evaluate.single_trial_regressor <- function(x, grid, precision=.25) {
+evaluate.single_trial_regressor <- function(x, grid, precision=.3) {
   nb <- nbasis(x)
   dspan <- x$span/median(diff(grid)) 
   
@@ -124,7 +124,7 @@ evaluate.single_trial_regressor <- function(x, grid, precision=.25) {
 
 
 #' @export
-evaluate.null_regressor <- function(x, grid, precision=.25) {
+evaluate.null_regressor <- function(x, grid, precision=.3) {
   nb <- nbasis(x)
   dspan <- x$span/median(diff(grid)) 
   
@@ -139,6 +139,38 @@ evaluate.null_regressor <- function(x, grid, precision=.25) {
 }
 
 
+#' @importFrom pracma conv
+fastevalreg <- function(x, start, end, TR, precision=.3) {
+  nb <- nbasis(x)
+  grid <- seq(start, end, by=TR)
+  finegrid <- seq(start, end, by=precision)
+  valid <- x$onsets >= (grid[1]-16) & x$onsets <= grid[length(grid)]
+  
+  valid.ons <- x$onsets[valid]
+  valid.amp <- x$amplitude[valid]
+  
+  time <- seq(0,attr(x$hrf, "span"), by=precision)
+  samhrf <- evaluate(x$hrf, time)
+  
+  bins <- (valid.ons - finegrid[1])/precision + 1
+  delta <- numeric(length(finegrid))
+  delta[bins] <- 1
+  #highres <- stats::convolve(samhrf, delta, type="open")
+  
+  if (nb > 1) {
+    lowres <- matrix(0, length(grid), nb)
+    for (i in 1:nb) {
+      highres <- pracma::conv(samhrf[,i],delta)
+      lowres[,i] <- approx(finegrid, highres[1:length(finegrid)], xout=grid)$y
+    }
+    lowres
+  } else {
+    highres <- pracma::conv(samhrf,delta)
+    lowres <- approx(finegrid, highres[1:length(finegrid)], xout=grid)$y
+    lowres
+  }
+}
+
 
 #' evaluate
 #' 
@@ -147,16 +179,29 @@ evaluate.null_regressor <- function(x, grid, precision=.25) {
 #' @rdname evaluate
 #' @param grid the sampling grid. A vector of real values in seconds.
 #' @param precision the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}
+#' @param use_conv use fast convolution approach
 #' @examples 
 #' frame <- sampling_frame(blocklens=100, TR=2)
 #' reg <- regressor(onsets=c(10,20,35, 47,52, 68, 79,86), hrf=HRF_SPMG1)
 #' evaluate(reg, samples(frame))
 #' @import RANN
 #' @export
-evaluate.regressor <- function(x, grid, precision=.2) {
-
+evaluate.regressor <- function(x, grid, precision=.33, use_conv=TRUE) {
+ 
   nb <- nbasis(x)
   dspan <- x$span/median(diff(grid)) 
+  
+  valid <- x$onsets >= (grid[1]-16) & x$onsets <= grid[length(grid)]
+  valid.ons <- x$onsets[valid]
+  valid.durs <- x$duration[valid]
+  valid.amp <- x$amplitude[valid]
+  
+  if (use_conv && all(valid.durs[1] == valid.durs) && all(diff(grid) == grid[2] - grid[1]) && length(grid) > 1) {
+    start <- grid[1]
+    end <- grid[length(grid)]
+    TR <- grid[2] - grid[1]
+    return(fastevalreg(x, start, end, TR, precision))
+  } 
 
   nidx <- if (length(grid) > 1) {
     #apply(rflann::Neighbour(matrix(x$onsets), matrix(grid), k=2,build = "kdtree",cores=0, checks=1)$indices, 1, min)
@@ -166,12 +211,7 @@ evaluate.regressor <- function(x, grid, precision=.2) {
     apply(RANN::nn2(matrix(grid), matrix(x$onsets), k=1)$nn.idx, 1, min)
   }
   
-  valid <- x$onsets >= (grid[1]-16) & x$onsets <= grid[length(grid)]
- 
-  valid.ons <- x$onsets[valid]
-  valid.durs <- x$duration[valid]
-  valid.amp <- x$amplitude[valid]
-  
+
   outmat <- matrix(0, length(grid), length(valid.ons) * nb)
   
   if (length(valid) == 0 || all(is.na(valid)) || all(!valid)) {

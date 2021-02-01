@@ -11,7 +11,6 @@ fmri_lm(
   dataset,
   durations,
   drop_empty = TRUE,
-  contrasts = NULL,
   robust = FALSE,
   strategy = c("runwise", "chunkwise"),
   nchunks = 10
@@ -30,11 +29,11 @@ fmri_lm(
 
 \item{drop_empty}{whether to remove factor levels with size of zero}
 
-\item{contrasts}{a set of contrasts}
-
 \item{robust}{whether to use robust fitting (TRUE or FALSE)}
 
 \item{strategy}{the data splitting strategy}
+
+\item{contrasts}{a set of contrasts}
 }
 \description{
 fmri_lm
