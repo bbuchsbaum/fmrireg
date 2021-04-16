@@ -131,6 +131,7 @@ matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
 #' 
 #' iter <- data_chunks(dset, nchunks=100)
 fmri_mem_dataset <- function(scans, mask, TR, 
+                             run_length=sapply(scans, function(x) dim(x)[4]),
                              event_table=data.frame(), 
                              base_path=".",
                              censor=NULL) {
@@ -141,9 +142,9 @@ fmri_mem_dataset <- function(scans, mask, TR,
   assert_that(inherits(mask, "NeuroVol"))
   assert_that(all(dim(mask) == dim(scans[[1]][1:3])))
   
- 
-  run_length <- map_dbl(scans, ~ dim(.)[4])
-  assert_that(sum(run_length) > length(scans))
+  ntotscans <- sapply(scans, function(x) dim(x)[4])
+  #run_length <- map_dbl(scans, ~ dim(.)[4])
+  assert_that(sum(run_length) == ntotscans)
   
   if (is.null(censor)) {
     censor <- rep(0, sum(run_length))
@@ -152,10 +153,9 @@ fmri_mem_dataset <- function(scans, mask, TR,
   frame <- sampling_frame(run_length, TR)
   
   ret <- list(
-    
     scans=scans,
     mask=mask,
-    nruns=length(scans),
+    nruns=length(run_length),
     event_table=event_table,
     base_path=base_path,
     sampling_frame=frame,
@@ -250,8 +250,6 @@ fmri_dataset <- function(scans, mask, TR,
   #assert_that(length(run_length) == length(scans))
   
   maskfile <- paste0(base_path, "/", mask)
-  
-  
   scans=paste0(base_path, "/", scans)
 
   maskvol <- if (preload) {
@@ -271,7 +269,7 @@ fmri_dataset <- function(scans, mask, TR,
     vec=vec,
     mask_file=maskfile,
     mask=maskvol,
-    nruns=length(scans),
+    nruns=length(run_length),
     event_table=as_tibble(event_table,.name_repair="check_unique"),
     base_path=base_path,
     sampling_frame=frame,
