@@ -862,7 +862,7 @@ construct.trialwisespec <- function(x, model_spec) {
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
   
-
+ 
   tind <- seq(1, length(onsets))
   trial_index <- formatC(seq(1, length(onsets)), width = nchar(as.character(max(tind))), format = "d", flag = "0")
   #trial_index <- factor(seq(1, length(onsets)))
@@ -871,7 +871,6 @@ construct.trialwisespec <- function(x, model_spec) {
   names(varlist) <- x$varname
   
   subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
-  
   et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
   cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
   

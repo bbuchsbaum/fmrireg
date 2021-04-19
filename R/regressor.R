@@ -186,7 +186,7 @@ fastevalreg <- function(x, start, end, TR, precision=.3) {
 #' evaluate(reg, samples(frame))
 #' @import RANN
 #' @export
-evaluate.regressor <- function(x, grid, precision=.33, use_conv=TRUE) {
+evaluate.regressor <- function(x, grid, precision=.33, use_conv=FALSE) {
  
   nb <- nbasis(x)
   dspan <- x$span/median(diff(grid)) 

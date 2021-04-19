@@ -658,6 +658,7 @@ convolve_design <- function(hrf, dmat, globons, durations, summate=TRUE) {
 #' @export
 convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate=TRUE, precision=.3) {
   globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
+  
   durations <- x$durations
   blockids <- x$blockids
   
@@ -668,7 +669,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate
   dmat <- design_matrix(x, drop.empty)
   
   ncond <- ncol(dmat)
-  
+
   cmat <- dmat %>% dplyr::mutate(.blockids=blockids, .globons=globons, .durations=durations) %>% 
     dplyr::group_by(.blockids) %>%
     dplyr::do({
