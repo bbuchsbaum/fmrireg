@@ -110,6 +110,8 @@ parent_terms <- function(x) UseMethod("parent_terms")
 #' @export
 term_names <- function(x) UseMethod("term_names")
 
+
+
 #' the experimental cells of a design
 #' 
 #' return the experimental cells that are in a model term as a table
@@ -283,6 +285,7 @@ data_chunks <- function(x, nchunks, ...) UseMethod("data_chunks")
 #' @export
 onsets <-  function(x) UseMethod("onsets")
 
+
 #' get event durations of a variable
 #' 
 #' return a `durations` vector
@@ -427,6 +430,14 @@ split_onsets <- function(x, ...) UseMethod("split_onsets")
 #' @param ... extra args
 #' @export
 estimate_betas <- function(x, ...) UseMethod("estimate_betas")
+
+
+#' estimate a linear model sequentially for each "chunk" (a matrix of time-series) of data
+#' 
+#' @param x the dataset 
+#' @param ... extra args
+chunkwise_lm <- function(x, ...) UseMethod("chunkwise_lm")
+
 
   
 

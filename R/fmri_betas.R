@@ -205,18 +205,18 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 }
 
 
-#' @param fixed the fixed regressors that model constant effects (i.e. non-varying over trials)
-#' @param ran the random (trialwise) regressors that model trialwise effects
-#' @param block the block factor
+#' @param fixed a formula for the fixed regressors that model constant effects (i.e. non-varying over trials)
+#' @param ran a formula for the random (trialwise) regressors that model single trial effects
+#' @param block a formula for the block factor
 #' @param method the regression method for estimating trialwise betas
-#' @param basemod \code{baseline_model} instance to regress out of data before bet estimation
+#' @param basemod \code{baseline_model} instance to regress out of data before beta estimation
 #' @param niter number of searchlight iterations for method "pls_searchlight"
 #' @param ncomp number of pls components for method "pls" and "pls_searchlight" and "pls_global"
 #' @param lambda lambda parameter (not currently used)
 #' @import pls
 #' @importFrom care slm
 #' @export
-#' @examples 
+
 #' 
 #' @rdname estimate_betas
 #' @details The `method` arguments allows for several beta estimation approaches
@@ -226,7 +226,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 #' * `pls_global` estimates a single multiresponse pls solution, where the `Y` matrix is the full data matrix.
 #' * `ols` ordinary least squares estimate of betas -- no regularization
 ## @md 
-#' 
+#' #' @examples 
 #' 
 #'
 #' facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
@@ -289,15 +289,15 @@ estimate_betas.fmri_dataset <- function(x,fixed=NULL, ran, block,
 #' @inheritParams estimate_betas.fmri_dataset
 #' @export 
 #' @rdname estimate_betas
-estimate_betas.matrix_dataset <- function(x,fixed, ran, block,  
-                                        method=c("mixed", "pls", "pls_searchlight", "pls_global"), 
+estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,  
+                                        method=c("mixed", "pls", "pls_global"), 
                                         basemod=NULL,
-                                        radius=8, niter=8, ncomp=4, lambda=.01) {
+                                        ncomp=4, lambda=.01) {
   
-  
+  method <- match.arg(method)
   dset <- x
   mask <- get_mask(dset)
-  
+ 
   bmod <- if (is.null(basemod)) {
     baseline_model("constant", sframe=dset$sampling_frame)
   } else {
@@ -347,7 +347,6 @@ estimate_hrf <- function(form, fixed=NULL, block, dataset,
   onset_var <- lazyeval::f_lhs(form)
   dvars <- lazyeval::f_rhs(form)
   
-  
   bmod <- baseline_model("bs", degree=basedeg, sframe=dset$sampling_frame, nuisance_list=nuisance_list)
   
   if (!is.null(fixed)) {
@@ -365,6 +364,8 @@ estimate_hrf <- function(form, fixed=NULL, block, dataset,
   X_base <- as.matrix(design_matrix(bmod))
   X_cond <- as.matrix(design_matrix(emat_cond))
   #browser()
+  
+  ## TODO 'bvec' is not an argument
   res <- do.call(cbind, furrr::future_map(neuroim2::vectors(bvec, subset=which(mask>0)), function(v) {
     gam.1 <- if (has_fixed) {
       gam(v ~ s(X_cond, bs=bs) + X_fixed + X_base)

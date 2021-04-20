@@ -2,23 +2,54 @@
 #' @export
 #' @inheritParams fmri_lm
 fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset, 
-                    durations, drop_empty=TRUE, contrasts=NULL, robust=FALSE,
-                    strategy="chunkwise", nchunks=1, ...) {
+                    durations, drop_empty=TRUE, robust=FALSE, autocor=c("arma", "none"), ...) {
   
-  
+  autocor <- match.arg(autocor)
+  ### might be easier here to rewrite specifically for latent_lm, handling bootstrap and potential prewhitening.
   assert_that(inherits(dataset, "latent_dataset"))
+  
+  model <- create_fmri_model(formula, block, baseline_model,dataset, durations, drop_empty)
+  ret <- fmri_lm_fit(model, dataset, strategy="chunkwise", robust=robust, contrasts=contrasts, nchunks=1, autocor=autocor)
+  
   result <- fmri_lm(formula, block, baseline_model=baseline_model, dataset, 
-          durations, drop_empty=drop_empty, contrasts=contrasts, robust=robust, 
-          strategy=strategy, nchunks=nchunks,...)
+          durations, drop_empty=drop_empty, robust=robust, 
+          strategy="chunkwise", nchunks=1, autocor=autocor, ...)
   result$dataset <- dataset
   class(result) <- c("fmri_latent_lm", class(result))
   result
 }
 
+#' @keywords internal
+chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FALSE, verbose=FALSE, 
+                                        autocor=c("none", "arma")) {
+  autocor <- match.arg(autocor)
+  form <- get_formula(model)
+  tmats <- term_matrices(model)
+  data_env <- list2env(tmats)
+  data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
+  modmat <- model.matrix(as.formula(form), data_env)
+  
+  basismat <- get_data(dset)
+  
+  if (autocor == "arma") {
+    message("whitening components")
+    wmat <- auto_whiten(basismat, modmat)
+  } else {
+    wmat <- basismat
+  }
+  
+  lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
+  data_env[[".y"]] <- as.matrix(wmat)
+  
+  ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon=NULL, modmat=modmat)
+  event_indices=attr(tmats, "event_term_indices")
+  baseline_indices=attr(tmats, "baseline_term_indices")
+  wrap_chunked_lm_results(list(ret), event_indices)
+}
+
 #' @export
 coef.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
   bvals <- coef.fmri_lm(x, type=type)
-  
   
   if (recon) {
     lds <- x$dataset$lvec@loadings

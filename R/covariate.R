@@ -40,6 +40,7 @@ covariate <- function(..., data, id=NULL, prefix=NULL) {
   ret
 }
 
+#' @keywords internal
 covariate_term <- function(varname, mat) {
   stopifnot(is.matrix(mat))
   ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat))
@@ -76,7 +77,7 @@ construct.covariatespec <- function(x, model_spec, sampling_frame=NULL) {
   ret
 }
 
-
+#' @export
 event_table.covariate_convolved_term <- function(x) {
   cnames <- colnames(x$design_matrix)
   ret <- do.call(cbind, lapply(cnames, function(tname) {
@@ -88,6 +89,7 @@ event_table.covariate_convolved_term <- function(x) {
   
 }
 
+#' @export
 nbasis.covariate_convolved_term <- function(x) {
   ncol(x$design_matrix)
 }

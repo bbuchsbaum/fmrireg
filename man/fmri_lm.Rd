@@ -13,7 +13,8 @@ fmri_lm(
   drop_empty = TRUE,
   robust = FALSE,
   strategy = c("runwise", "chunkwise"),
-  nchunks = 10
+  nchunks = 10,
+  ...
 )
 }
 \arguments{

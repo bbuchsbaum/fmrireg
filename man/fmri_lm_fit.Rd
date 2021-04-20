@@ -10,7 +10,8 @@ fmri_lm_fit(
   strategy = c("chunkwise", "runwise"),
   robust = FALSE,
   contrasts = NULL,
-  nchunks = 10
+  nchunks = 10,
+  ...
 )
 }
 \arguments{

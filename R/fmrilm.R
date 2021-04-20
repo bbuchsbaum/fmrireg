@@ -36,6 +36,25 @@ term_matrices.fmri_model <- function(x, blocknum=NULL) {
   term_matrices
 }
 
+#' @keywords internal
+create_fmri_model <- function(formula, block, baseline_model=NULL, dataset, 
+                  durations, drop_empty=TRUE) {
+  if (is.null(baseline_model)) {
+    baseline_model <- baseline_model(basis="bs", 
+                                     degree=max(ceiling(median(dataset$sampling_frame$blocklens)/100),3), 
+                                     sframe=dataset$sampling_frame)
+  } else {
+    assert_that(inherits(baseline_model, "baseline_model"), msg="'baseline_model' arg must have the class 'baseline_model'")
+  }
+  
+  ev_model <- event_model(formula, block, data=dataset$event_table, 
+                          sampling_frame=dataset$sampling_frame)
+  
+  fmri_model(ev_model, baseline_model)
+  
+}
+
+
 
 #' fmri_lm
 #' 
@@ -65,26 +84,13 @@ term_matrices.fmri_model <- function(x, blocknum=NULL) {
 #' @export
 fmri_lm <- function(formula, block, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, robust=FALSE,
-                     strategy=c("runwise", "chunkwise"), nchunks=10) {
+                     strategy=c("runwise", "chunkwise"), nchunks=10, ...) {
   
  
   strategy <- match.arg(strategy)
-  
   assert_that(inherits(dataset, "fmri_dataset"))
-  
-  if (is.null(baseline_model)) {
-    baseline_model <- baseline_model(basis="bs", 
-                                    degree=max(ceiling(median(dataset$sampling_frame$blocklens)/100),3), 
-                                    sframe=dataset$sampling_frame)
-  } else {
-    assert_that(inherits(baseline_model, "baseline_model"), msg="'baseline_model' arg must have the class 'baseline_model'")
-  }
- 
-  ev_model <- event_model(formula, block, data=dataset$event_table, 
-                         sampling_frame=dataset$sampling_frame)
-     
-  model <- fmri_model(ev_model, baseline_model)
-  
+
+  model <- create_fmri_model(formula, block, baseline_model,dataset, durations, drop_empty)
   ret <- fmri_lm_fit(model, dataset, strategy, robust, contrasts, nchunks)
   ret
 }
@@ -95,18 +101,16 @@ fmri_lm <- function(formula, block, baseline_model=NULL, dataset,
 #' 
 #' @inheritParams fmri_lm
 #' @param fmrimod an object of type \code{fmri_model}
-fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"), robust=FALSE, contrasts=NULL, nchunks=10) {
+fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"), robust=FALSE, contrasts=NULL, nchunks=10,...) {
   strategy <- match.arg(strategy)
   
   conlist <- unlist(contrast_weights(fmrimod$event_model), recursive=FALSE)
   fcons <- Fcontrasts(fmrimod$event_model)
   
-  
   result <- if (strategy == "runwise") {
-    runwise_lm(dataset, fmrimod, conlist, fcons, robust=robust)
+    runwise_lm(dataset, fmrimod, conlist, fcons, robust=robust,...)
   } else if (strategy == "chunkwise") {
-    #message("chunkwise_lm with ", nchunks)
-    chunkwise_lm(dataset, fmrimod, conlist,fcons, nchunks, robust=robust)
+    chunkwise_lm(dataset, fmrimod, conlist,fcons, nchunks, robust=robust,...)
   }
   
   ret <- list(
@@ -169,6 +173,9 @@ stats.fmri_lm <- function(x, type=c("estimates", "contrasts", "F")) {
     colnames(ret) <- names(x$bcons)
     as_tibble(ret, .name_repair="check_unique")
   } else if (type == "F") {
+    if (is.null(x$result$Fcontrasts)) {
+      stop("no computed F contrasts for this model.")
+    }
     ret <- x$result$Fcontrasts
     ret <- do.call(cbind, lapply(ret, function(f) f$stat()))
     colnames(ret) <- names(x$fcons)
@@ -239,7 +246,9 @@ combine_baseline_betas <- function(bstats, colind) {
   )
 }
 
-fit_lm_contrasts <- function(fit, conlist, fcon, vnames,dofpen=0) {
+
+#' @keywords internal
+fit_lm_contrasts <- function(fit, conlist, fcon, vnames) {
   conres <- if (!is.null(conlist)) {
     ret <- lapply(conlist, function(con) {
       fit_contrasts(fit, con$weights, attr(con, "term_indices"))
@@ -252,13 +261,13 @@ fit_lm_contrasts <- function(fit, conlist, fcon, vnames,dofpen=0) {
   Fres <- lapply(fcon, function(con) fit_Fcontrasts(fit, t(con), attr(con, "term_indices")))
   names(Fres) <- names(fcon)
   
-  bstats <- beta_stats(fit, vnames, dofpen)
+  bstats <- beta_stats(fit, vnames)
   #list(conres=conres, Fres=Fres, bstats=bstats, event_indices=eterm_indices, baseline_indices=bterm_indices)
   list(conres=conres, Fres=Fres, bstats=bstats)
 }
 
 #' @keywords internal
-multiresponse_lm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL, dofpen=0) {
+multiresponse_lm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL) {
   lm.1 <- if (is.null(modmat)) {
     lm(as.formula(form), data=data_env)
   } else {
@@ -356,9 +365,6 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
   }
   
   
-  #browser()
-    
-
   nf <- length(cres[[1]]$Fres)
   
   Fres <- if (nf >= 1) {
@@ -377,12 +383,10 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
 
 
 
-#' Run glm for each data chunk (responses split horizontally) and then concatenate chunks
+
 #' @keywords internal
 #' @importFrom iterators icount
-chunkwise_lm <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verbose=FALSE, dofpen=0) {
-  
-  
+chunkwise_lm.fmri_dataset <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verbose=FALSE) {
   chunks <- exec_strategy("chunkwise", nchunks=nchunks)(dset)
   form <- get_formula(model)
   tmats <- term_matrices(model)
@@ -391,12 +395,11 @@ chunkwise_lm <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verb
   modmat <- model.matrix(as.formula(form), data_env)
   
   lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
-  
-  #browser()
+
   cres <- foreach( ym = chunks, i = icount(), .verbose=verbose) %dopar% {
     message("processing chunk ", i)
     data_env[[".y"]] <- as.matrix(ym$data)
-    ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon, modmat=modmat,dofpen=dofpen)
+    ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon, modmat=modmat)
   }
   
   event_indices=attr(tmats, "event_term_indices")

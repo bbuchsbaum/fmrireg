@@ -54,6 +54,27 @@ test_that("can run a beta estimation", {
   
 })
 
+test_that("can run a beta estimation with different durations", {
+  
+  facedes$frun <- factor(facedes$run)
+  facedes$constant <- factor(rep(1, nrow(facedes)))
+  
+  facedes <- facedes %>% dplyr::filter(run==1)
+  dset <- gen_dset(5, facedes)
+  
+  hf <- gen_hrf(hrf_spmg1, width=10)
+  ret1 <- estimate_betas(dset, fixed = onset ~ hrf(constant, durations=3), ran = onset ~ trialwise(durations=5), 
+                         block = ~ run, 
+                         method="pls", ncomp=1)
+  
+  
+  expect_true(!is.null(ret1))
+ 
+  
+  
+})
+
+
 test_that("can run a beta estimation with multiple basis functions", {
   
   facedes$frun <- factor(facedes$run)

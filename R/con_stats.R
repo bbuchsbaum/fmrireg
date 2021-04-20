@@ -96,7 +96,7 @@ fit_Ftests <- function(object) {
 #   } else return(numeric(0))
 # }
 
-beta_stats <- function(lmfit, varnames, dofpen=0) {
+beta_stats <- function(lmfit, varnames) {
   Qr <- stats:::qr.lm(lmfit)
   cov.unscaled <- chol2inv(Qr$qr)
   
@@ -111,7 +111,7 @@ beta_stats <- function(lmfit, varnames, dofpen=0) {
   
   rss <- colSums(as.matrix(lmfit$residuals^2))
   
-  rdf <- lmfit$df.residual + dofpen
+  rdf <- lmfit$df.residual
  
   resvar <- rss/rdf
   sigma <- sqrt(resvar)

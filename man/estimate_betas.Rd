@@ -23,13 +23,11 @@ estimate_betas(x, ...)
 
 \method{estimate_betas}{matrix_dataset}(
   x,
-  fixed,
+  fixed = NULL,
   ran,
   block,
-  method = c("mixed", "pls", "pls_searchlight", "pls_global"),
+  method = c("mixed", "pls", "pls_global"),
   basemod = NULL,
-  radius = 8,
-  niter = 8,
   ncomp = 4,
   lambda = 0.01
 )
@@ -39,15 +37,15 @@ estimate_betas(x, ...)
 
 \item{...}{extra args}
 
-\item{fixed}{the fixed regressors that model constant effects (i.e. non-varying over trials)}
+\item{fixed}{a formula for the fixed regressors that model constant effects (i.e. non-varying over trials)}
 
-\item{ran}{the random (trialwise) regressors that model trialwise effects}
+\item{ran}{a formula for the random (trialwise) regressors that model single trial effects}
 
-\item{block}{the block factor}
+\item{block}{a formula for the block factor}
 
 \item{method}{the regression method for estimating trialwise betas}
 
-\item{basemod}{\code{baseline_model} instance to regress out of data before bet estimation}
+\item{basemod}{\code{baseline_model} instance to regress out of data before beta estimation}
 
 \item{niter}{number of searchlight iterations for method "pls_searchlight"}
 
@@ -66,6 +64,7 @@ The \code{method} arguments allows for several beta estimation approaches
 \item \code{pls_searchlight} estimates pls solutions over searchlight windows and averages the beta estimates
 \item \code{pls_global} estimates a single multiresponse pls solution, where the \code{Y} matrix is the full data matrix.
 \item \code{ols} ordinary least squares estimate of betas -- no regularization
+#' @examples
 }
 
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
@@ -76,7 +75,4 @@ dset <- fmri_dataset(scans=scans,mask="mask.nii",TR=1.5,run_length=rep(436,6),ev
 fixed = onset ~ hrf(run)
 ran = onset ~ trialwise()
 block = ~ run
-}
-\examples{
-
 }

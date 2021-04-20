@@ -25,6 +25,9 @@ gen_fake_dataset <- function(d, nscans) {
   onames
 }
 
+
+## test that latent and fmri_mem_dataset of same underlying latent dataset produce the same betas
+
 test_that("can construct and run a simple fmri glm from in memory dataset", {
   
    scans <- lapply(1:length(unique(facedes$run)), function(i) {

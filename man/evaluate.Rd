@@ -18,7 +18,7 @@ evaluate(x, grid, ...)
   normalize = FALSE
 )
 
-\method{evaluate}{regressor}(x, grid, precision = 0.33, use_conv = TRUE)
+\method{evaluate}{regressor}(x, grid, precision = 0.33, use_conv = FALSE)
 }
 \arguments{
 \item{x}{the object to evaluate}
