@@ -2,7 +2,9 @@
 #' @export
 #' @inheritParams fmri_lm
 fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset, 
-                    durations, drop_empty=TRUE, robust=FALSE, autocor=c("arma", "none"), ...) {
+                    durations, drop_empty=TRUE, robust=FALSE, 
+                    autocor=c("auto", "ar1", "ar2", "arma", "none"), 
+                    ...) {
   
   autocor <- match.arg(autocor)
   ### might be easier here to rewrite specifically for latent_lm, handling bootstrap and potential prewhitening.
@@ -23,7 +25,7 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
 
 #' @keywords internal
 chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FALSE, verbose=FALSE, 
-                                        autocor=c("none", "arma")) {
+                                        autocor=c("auto", "ar1", "ar2", "arma", "none")) {
   autocor <- match.arg(autocor)
   form <- get_formula(model)
   tmats <- term_matrices(model)
@@ -33,10 +35,9 @@ chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FA
   
   basismat <- get_data(dset)
   
- 
-  wmat <- if (autocor == "arma") {
+  wmat <- if (autocor != "none") {
     message("whitening components")
-    auto_whiten(basismat, modmat)
+    auto_whiten(basismat, modmat, autocor)
   } else {
     basismat
   }

@@ -4,6 +4,7 @@
 \alias{estimate_betas}
 \alias{estimate_betas.fmri_dataset}
 \alias{estimate_betas.matrix_dataset}
+\alias{estimate_betas.latent_dataset}
 \title{estimate trialwise beta coefficients for a dataset}
 \usage{
 estimate_betas(x, ...)
@@ -26,10 +27,22 @@ estimate_betas(x, ...)
   fixed = NULL,
   ran,
   block,
-  method = c("mixed", "pls", "pls_global"),
+  method = c("mixed", "pls", "pls_global", "ols"),
   basemod = NULL,
   ncomp = 4,
   lambda = 0.01
+)
+
+\method{estimate_betas}{latent_dataset}(
+  x,
+  fixed = NULL,
+  ran,
+  block,
+  method = c("mixed", "pls", "pls_global", "ols"),
+  basemod = NULL,
+  ncomp = 4,
+  lambda = 0.01,
+  prewhiten = TRUE
 )
 }
 \arguments{
@@ -52,6 +65,8 @@ estimate_betas(x, ...)
 \item{ncomp}{number of pls components for method "pls" and "pls_searchlight" and "pls_global"}
 
 \item{lambda}{lambda parameter (not currently used)}
+
+\item{prewhiten}{whether to prewhiten basis set using \code{auto.arima}}
 }
 \description{
 estimate trialwise beta coefficients for a dataset
