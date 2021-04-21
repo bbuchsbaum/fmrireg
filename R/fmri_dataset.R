@@ -142,7 +142,7 @@ fmri_mem_dataset <- function(scans, mask, TR,
   assert_that(inherits(mask, "NeuroVol"))
   assert_that(all(dim(mask) == dim(scans[[1]][1:3])))
   
-  ntotscans <- sapply(scans, function(x) dim(x)[4])
+  ntotscans <- sum(sapply(scans, function(x) dim(x)[4]))
   #run_length <- map_dbl(scans, ~ dim(.)[4])
   assert_that(sum(run_length) == ntotscans)
   
@@ -413,7 +413,7 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
   if (runwise) {
     chunk_iter(x, length(x$scans), get_run_chunk)
   } else if (nchunks == 1) {
-    maskSeq <- one_chunk()
+    maskSeq <<- one_chunk()
     chunk_iter(x, 1, get_seq_chunk)
   } else if (nchunks == dim(mask)[3]) {
     maskSeq <- slicewise_chunks(x)
@@ -436,7 +436,7 @@ data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE) {
   iter <- if (runwise) {
     chunk_iter(x, length(x$scans), get_run_chunk)
   } else if (nchunks == 1) {
-    maskSeq <<- one_chunk()
+    maskSeq <<- one_chunk(x)
     chunk_iter(x, 1, get_seq_chunk)
   } else {
     maskSeq <<- arbitrary_chunks(x, nchunks)
@@ -562,7 +562,7 @@ slicewise_chunks <- function(x) {
 
 #' @keywords internal
 one_chunk <- function(x) {
-  mask <- x$mask
+  mask <- get_mask(x)
   list(mask)
 }
 

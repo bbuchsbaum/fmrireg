@@ -104,9 +104,6 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
   }
 
   betas <- with(bdes, {
-    
-    
-    
     if (method == "slm") {
       vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
       ## TODO FIXME
@@ -216,7 +213,6 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 #' @import pls
 #' @importFrom care slm
 #' @export
-
 #' 
 #' @rdname estimate_betas
 #' @details The `method` arguments allows for several beta estimation approaches
@@ -259,7 +255,6 @@ estimate_betas.fmri_dataset <- function(x,fixed=NULL, ran, block,
     basemod
   }
   
-  
   bdes <- gen_beta_design(fixed, ran, block, bmod, dset)
   betas <- run_estimate_betas(bdes, dset, method, ncomp=ncomp, niter=niter, radius=radius)
   
@@ -290,7 +285,7 @@ estimate_betas.fmri_dataset <- function(x,fixed=NULL, ran, block,
 #' @export 
 #' @rdname estimate_betas
 estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,  
-                                        method=c("mixed", "pls", "pls_global"), 
+                                        method=c("mixed", "pls", "pls_global", "ols"), 
                                         basemod=NULL,
                                         ncomp=4, lambda=.01) {
   
@@ -322,17 +317,50 @@ estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,
   
 }
 
-
-# estimate_betas.fmri_latent_dataset <-
-#   function(dataset,
-#            fixed,
-#            ran,
-#            block,
-#            method = c("mixed", "pls"),
-#            ncomp = 4,
-#            lambda = .01) {
-#     
-#   }
+#' @inheritParams estimate_betas.fmri_dataset
+#' @param prewhiten whether to prewhiten basis set using `auto.arima`
+#' @export 
+#' @rdname estimate_betas
+estimate_betas.latent_dataset <- function(x, fixed=NULL, ran, block, 
+                                          method=c("mixed", "pls", "pls_global", "ols"), 
+                                          basemod=NULL, ncomp=4, lambda=.01, prewhiten=TRUE) {
+  
+  method <- match.arg(method)
+  dset <- x
+  mask <- get_mask(dset)
+  
+  bmod <- if (is.null(basemod)) {
+    baseline_model("constant", sframe=dset$sampling_frame)
+  } else {
+    basemod
+  }
+  
+  bdes <- gen_beta_design(fixed, ran, block, bmod, dset)
+  
+  if (prewhiten) {
+    wmat <- auto_whiten(dset@basis, fixed)
+    ## hack
+    ## swap in whitened matrix
+    dset@basis <- wmat
+    ###
+  }
+  
+  betas <- run_estimate_betas(bdes, dset, method, ncomp=ncomp)
+  
+  ran <- as.matrix(betas[bdes$ran_ind,,drop=FALSE])
+  fixed <- as.matrix(betas[bdes$fixed_ind,,drop=FALSE])
+  
+  ret <- list(betas_fixed=fixed,
+              betas_ran=ran,
+              #design=bdes$dmat_all,
+              design_ran=bdes$dmat_ran,
+              design_fixed=bdes$dmat_fixed,
+              design_base=bdes$dmat_base,
+              prewhiten=prewhiten)
+  
+  class(ret) <-  c("fmri_latent_betas", "fmri_betas")
+  ret
+}
 
 
 #' @importFrom mgcv gam s
