@@ -47,7 +47,7 @@ gen_afni_lm.fmri_config <- function(x, ...) {
 #' emodel <- event_model(onset ~ hrf(fac), block = ~ run, data=etab, sampling_frame=dset$sampling_frame)
 #' bmodel <- baseline_model("bs", degree=4, sframe=dset$sampling_frame)
 #' fmod <- fmri_model(emodel, bmodel)
-#' alm <- afni_lm(fmod, dset, jobs=2, options=list(tout=TRUE))
+#' alm <- afni_lm(fmod, dset, jobs=2, options=list(tout=TRUE, errts="residuals.nii.gz"))
 #' @export
 afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, 
                     censor=NULL, options=list()) {
@@ -459,6 +459,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
                    nocond=opts[["nocond"]],
                    x1D_stop=opts[["x1D_stop"]],
                    jobs=opts[["jobs"]],
+                   errts=if (!is.null(opts[["errts"]])) opts[["errts"]] else NULL,
                    float=TRUE)
   
   cmd <- .make_decon_command_str(cmdlines)
