@@ -263,7 +263,7 @@ fit_lm_contrasts <- function(fit, conlist, fcon, vnames) {
   
   bstats <- beta_stats(fit, vnames)
   #list(conres=conres, Fres=Fres, bstats=bstats, event_indices=eterm_indices, baseline_indices=bterm_indices)
-  list(conres=conres, Fres=Fres, bstats=bstats)
+  list(conres=conres, Fres=Fres, bstats=bstats, fit=fit)
 }
 
 #' @keywords internal
@@ -274,7 +274,7 @@ multiresponse_lm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL)
     lm.fit(modmat, data_env$.y)
   }
   
-  fit_lm_contrasts(lm.1, conlist, fcon, vnames)
+  fit_lm_contrasts(lm.1, conlist, fcon, vnames) 
 }
 
 
@@ -376,7 +376,8 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
     ret
   }
   
-  list(betas=bstats, contrasts=conres, Fcontrasts=Fres)
+  conmats <- lapply(cres[[1]]$conres, function(x) x$conmat)
+  list(betas=bstats, contrasts=conres, Fcontrasts=Fres, conmats=conmats)
     
       
 }

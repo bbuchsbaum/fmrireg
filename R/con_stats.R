@@ -211,7 +211,6 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
 #' @param colind the subset column indices in the design associated with the contrast. 
 #' @importFrom purrr map_dbl
 fit_contrasts <- function(lmfit, conmat, colind) {
-  
   if (!is.matrix(conmat) && is.numeric(conmat)) {
     conmat <- t(matrix(conmat, 1, length(conmat)))
   }
@@ -228,7 +227,6 @@ fit_contrasts <- function(lmfit, conmat, colind) {
   
   if (inherits(cov.unscaled, "try-error")) {
     stop("fit_contrasts: error computing contrast covariance")
-    #browser()
   }
  
   #print(length(colind))
@@ -243,11 +241,7 @@ fit_contrasts <- function(lmfit, conmat, colind) {
     betamat <- cfs
   }
   
-  if (inherits(cov.unscaled, "try-error")) {
-    stop("fit_contrasts: error computing contrast covariance")
-    #browser()
-  }
-  
+
   ct <- as.vector(t(cmat) %*% betamat)
   
   rss <- colSums(as.matrix(lmfit$residuals^2))
@@ -264,6 +258,8 @@ fit_contrasts <- function(lmfit, conmat, colind) {
   
   return(
     list(
+      conmat=cmat,
+      sigma=sigma,
       estimate=function() ct,
       se=function() vc,
       stat=function() ct/vc,

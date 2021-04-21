@@ -39,5 +39,5 @@ dset <- fmri_dataset(scans=c("s1.nii", "s2.nii"), mask="mask.nii", TR=1, run_len
 emodel <- event_model(onset ~ hrf(fac), block = ~ run, data=etab, sampling_frame=dset$sampling_frame)
 bmodel <- baseline_model("bs", degree=4, sframe=dset$sampling_frame)
 fmod <- fmri_model(emodel, bmodel)
-alm <- afni_lm(fmod, dset, jobs=2, options=list(tout=TRUE))
+alm <- afni_lm(fmod, dset, jobs=2, options=list(tout=TRUE, errts="residuals.nii.gz"))
 }
