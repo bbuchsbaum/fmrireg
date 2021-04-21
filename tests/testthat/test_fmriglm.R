@@ -279,7 +279,7 @@ test_that("can run video fmri design with latent_dataset", {
   
   res2 <- fmrireg:::fmri_latent_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
                               hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, 
-                            autocor="arma", dataset=ldset)
+                            autocor="ar2", dataset=ldset)
   res2a <- fmrireg:::fmri_latent_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
                                      hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, 
                                    autocor="none", dataset=ldset)
