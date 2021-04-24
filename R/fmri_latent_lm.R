@@ -4,6 +4,7 @@
 fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset, 
                     durations, drop_empty=TRUE, robust=FALSE, 
                     autocor=c("auto", "ar1", "ar2", "arma", "none"), 
+                    bootstrap=FALSE, nboot=1000,
                     ...) {
   
   autocor <- match.arg(autocor)
@@ -11,7 +12,8 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
   
   model <- create_fmri_model(formula, block, baseline_model,dataset, durations, drop_empty)
   ret <- fmri_lm_fit(model, dataset, strategy="chunkwise", robust=robust, 
-                     contrasts=contrasts, nchunks=1, autocor=autocor)
+                     contrasts=contrasts, nchunks=1, autocor=autocor, 
+                     bootstrap=bootstrap, nboot=nboot)
 
   ret$dataset <- dataset
   class(ret) <- c("fmri_latent_lm", class(ret))
@@ -20,7 +22,8 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
 
 #' @keywords internal
 chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FALSE, verbose=FALSE, 
-                                        autocor=c("auto", "ar1", "ar2", "arma", "none")) {
+                                        autocor=c("auto", "ar1", "ar2", "arma", "none"), 
+                                        bootstrap=FALSE, nboot=1000, boot_rows=FALSE) {
   autocor <- match.arg(autocor)
   form <- get_formula(model)
   tmats <- term_matrices(model)
@@ -37,38 +40,53 @@ chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FA
     basismat
   }
   
-  lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
   data_env[[".y"]] <- as.matrix(wmat)
-  
-  ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon=NULL, modmat=modmat)
   
   event_indices=attr(tmats, "event_term_indices")
   baseline_indices=attr(tmats, "baseline_term_indices")
   
-  rss <- colSums(as.matrix(ret$fit$residuals^2))
-  rdf <- ret$fit$df.residual
-  resvar <- rss/rdf
-  sigma <- sqrt(resvar)
+  if (bootstrap) {
+    lmfun <- multiresponse_bootstrap_lm
+    ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon=NULL, 
+                 modmat=modmat, 
+                 nboot=nboot, 
+                 boot_rows=boot_rows,
+                 event_indices=event_indices)
+  } else {
+    lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
+    ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon=NULL, 
+                 modmat=modmat)
+    
+    rss <- colSums(as.matrix(ret$fit$residuals^2))
+    rdf <- ret$fit$df.residual
+    resvar <- rss/rdf
+    sigma <- sqrt(resvar)
+    
+    unpack_chunkwise(list(ret), event_indices, baseline_indices) %>% purrr::list_modify(event_indices=event_indices,
+                                                                             baseline_indices=baseline_indices,
+                                                                             sigma=sigma,
+                                                                             residuals=resid(ret$fit),
+                                                                             df.residual=ret$fit$df.residual,
+                                                                             qr=stats:::qr.lm(ret$fit))
+  }
+
   
-  wrap_chunked_lm_results(list(ret), event_indices) %>% purrr::list_modify(event_indices=event_indices,
-                                                                           baseline_indices=baseline_indices,
-                                                                           sigma=sigma,
-                                                                           residuals=resid(ret$fit),
-                                                                           df.residual=ret$fit$df.residual,
-                                                                           qr=stats:::qr.lm(ret$fit))
+  
+}
+
+tibble_to_neurovec <- function(dset, tab, mask) {
+  sp <- space(get_mask(dset))
+  SparseNeuroVec(as.matrix(tab), neuroim2::add_dim(sp, nrow(tab)), mask=mask)
 }
 
 #' @export
 coef.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
   bvals <- coef.fmri_lm(x, type=type)
-  
   if (recon) {
     lds <- x$dataset$lvec@loadings
     out <- t(as.matrix(bvals)) %*% t(lds)
     out <- as.matrix(t(out))
     as_tibble(out)
-    #sp <- space(get_mask(x$dataset))
-    #SparseNeuroVec(as.matrix(out), neuroim2::add_dim(sp, nrow(out)), mask=x$dataset$lvec@mask)
   } else {
     bvals
   }
@@ -77,6 +95,7 @@ coef.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE
 #' @export
 standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
   type <- match.arg(type)
+ 
   if (!recon) {
     standard_error.fmri_lm(x,type)
   } else {
@@ -92,7 +111,8 @@ standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), r
         sqrt(rowSums((lds %*% (CR * cov.unscaled[i,i])) * lds))
       }))
       colnames(ret) <- conditions(x$model$event_model)
-      as_tibble(ret,.name_repair="check_unique")
+      out <- as_tibble(ret,.name_repair="check_unique")
+      as_tibble(out)
     } else {
       ret <- do.call(cbind, lapply(x$result$conmats, function(cmat) {
         csc <- t(cmat) %*% cov.unscaled %*% cmat
@@ -108,7 +128,7 @@ standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), r
 }
 
 #' @export
-stats.fmri_latent_lm <- function(x,type = c("estimates", "contrasts"),recon = FALSE) {
+stats.fmri_latent_lm <- function(x,type = c("estimates", "contrasts"), recon = FALSE) {
     if (!recon) {
       stats.fmri_lm(x,type)
     } else {

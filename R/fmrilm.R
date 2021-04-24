@@ -101,7 +101,8 @@ fmri_lm <- function(formula, block, baseline_model=NULL, dataset,
 #' 
 #' @inheritParams fmri_lm
 #' @param fmrimod an object of type \code{fmri_model}
-fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"), robust=FALSE, contrasts=NULL, nchunks=10,...) {
+fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"), 
+                        robust=FALSE, contrasts=NULL, nchunks=10,...) {
   strategy <- match.arg(strategy)
   
   conlist <- unlist(contrast_weights(fmrimod$event_model), recursive=FALSE)
@@ -134,14 +135,18 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"), ro
 coef.fmri_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
   type <- match.arg(type)
   res <- if (type == "estimates") {
-    ret <- x$result$betas$estimate()
+    ret <- x$result$betas$estimate[,x$result$event_indices,drop=FALSE]
     colnames(ret) <- conditions(x$model$event_model)
     #shortnames(x$model$event_model)#conditions(x$model$event_model)
     as_tibble(ret, .name_repair="check_unique")
   } else if (type == "contrasts") {
-    ret <- x$result$contrasts$estimate()
-    colnames(ret) <- names(x$bcons)
-    as_tibble(ret, .name_repair="check_unique")
+    if (!is.null(x$result$contrasts$estimate)) {
+      ret <- x$result$contrasts$estimate
+      colnames(ret) <- names(x$bcons)
+      as_tibble(ret, .name_repair="check_unique")
+    } else {
+      stop("no contrasts for this model.")
+    }
   } #else if (type == "baseline") {
     #ret <- x$result$contrasts$estimate()
   #}
@@ -161,7 +166,7 @@ coef.fmri_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
 stats.fmri_lm <- function(x, type=c("estimates", "contrasts", "F")) {
   type <- match.arg(type)
   if (type == "estimates") {
-    ret <- x$result$betas$stat()
+    ret <- x$result$betas$estimate[,x$result$event_indices,drop=FALSE]/x$result$betas$se[,x$result$event_indices,drop=FALSE]
     #colnames(ret) <- shortnames(x$model$event_model)
     colnames(ret) <- conditions(x$model$event_model)
     as_tibble(ret,.name_repair="check_unique")
@@ -169,15 +174,15 @@ stats.fmri_lm <- function(x, type=c("estimates", "contrasts", "F")) {
     if (length(x$result$contrasts) == 0) {
       stop("no computed contrasts for this model.")
     }
-    ret <- x$result$contrasts$stat()
+    ret <- x$result$contrasts$estimate/x$result$contrasts$se
     colnames(ret) <- names(x$bcons)
     as_tibble(ret, .name_repair="check_unique")
   } else if (type == "F") {
     if (is.null(x$result$Fcontrasts)) {
       stop("no computed F contrasts for this model.")
     }
-    ret <- x$result$Fcontrasts
-    ret <- do.call(cbind, lapply(ret, function(f) f$stat()))
+    ret <- x$result$Fcontrasts$stat
+    #ret <- do.call(cbind, lapply(ret, function(f) f$stat()))
     colnames(ret) <- names(x$fcons)
     as_tibble(ret, .name_repair="check_unique")
   }
@@ -187,7 +192,7 @@ stats.fmri_lm <- function(x, type=c("estimates", "contrasts", "F")) {
 standard_error.fmri_lm <- function(x, type=c("estimates", "contrasts")) {
   type <- match.arg(type)
   if (type == "estimates") {
-    ret <- x$result$betas$se()
+    ret <- x$result$betas$se
     #colnames(ret) <- shortnames(x$model$event_model)
     colnames(ret) <- conditions(x$model$event_model)
     as_tibble(ret, .name_repair="check_unique")
@@ -195,12 +200,12 @@ standard_error.fmri_lm <- function(x, type=c("estimates", "contrasts")) {
     if (length(x$result$contrasts) == 0) {
       stop("no computed contrasts for this model.")
     }
-    ret <- x$result$contrasts$se()
+    ret <- x$result$contrasts$se
     colnames(ret) <- names(x$bcons)
     as_tibble(ret,.name_repair="check_unique")
   } else if (type == "F") {
-    ret <- x$result$Fcontrasts
-    ret <- do.call(cbind, lapply(ret, function(f) f$se()))
+    ret <- x$result$Fcontrasts$se
+    #ret <- do.call(cbind, lapply(ret, function(f) f$se()))
     colnames(ret) <- names(x$fcons)
     as_tibble(ret,.name_repair="check_unique")
   }
@@ -248,10 +253,10 @@ combine_baseline_betas <- function(bstats, colind) {
 
 
 #' @keywords internal
-fit_lm_contrasts <- function(fit, conlist, fcon, vnames) {
+fit_lm_contrasts <- function(fit, conlist, fcon, vnames, se=TRUE) {
   conres <- if (!is.null(conlist)) {
     ret <- lapply(conlist, function(con) {
-      fit_contrasts(fit, con$weights, attr(con, "term_indices"))
+      fit_contrasts(fit, con$weights, attr(con, "term_indices"), se=se)
     })
     
     names(ret) <- names(conlist)
@@ -261,10 +266,13 @@ fit_lm_contrasts <- function(fit, conlist, fcon, vnames) {
   Fres <- lapply(fcon, function(con) fit_Fcontrasts(fit, t(con), attr(con, "term_indices")))
   names(Fres) <- names(fcon)
   
-  bstats <- beta_stats(fit, vnames)
+  bstats <- beta_stats(fit, vnames,se=se)
   #list(conres=conres, Fres=Fres, bstats=bstats, event_indices=eterm_indices, baseline_indices=bterm_indices)
   list(conres=conres, Fres=Fres, bstats=bstats, fit=fit)
 }
+
+
+
 
 #' @keywords internal
 multiresponse_lm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL) {
@@ -382,7 +390,45 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
       
 }
 
-
+unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
+  effects <- do.call(rbind, lapply(cres, function(x) x$bstats$estimate))
+  effects_se <- do.call(rbind, lapply(cres, function(x) x$bstats$se))
+  
+  ncon <- length(cres[[1]]$conres)
+  nf <- length(cres[[1]]$Fres)
+  
+  ## helper for Fres
+  extract_values <- function(Fnames, name) {
+    ret <- do.call(rbind, lapply(Fnames, function(fn) {
+      do.call(rbind, lapply(cres, function(x) as.matrix(x$Fres[[fn]][[name]])))
+    }))
+    colnames(ret) <- Fnames
+    ret
+  }
+  
+  betas <- list(
+    estimate=effects,
+    se=effects_se
+  )
+  
+  contrasts <- if (ncon > 0) {
+    con_effects <- do.call(rbind, lapply(cres, function(x) x$conres$estimate))
+    con_se <- do.call(rbind, lapply(cres, function(x) x$conres$se))
+    list(estimate=con_effects,
+         se=con_se)
+  }
+  
+  Fres <- if (nf >= 1) {
+    Fnames <- names(cres[[1]]$Fres)
+    list(estimate=extract_values(Fnames, "estimate"),
+         se=extract_values(Fnames, "se"),
+         stat=extract_values(Fnames, "stat"),
+         prob=extract_values(Fnames, "prob"))
+  }
+  
+  conmats <- lapply(cres[[1]]$conres, function(x) x$conmat)
+  list(betas=betas, contrasts=contrasts, Fcontrasts=Fres, conmats=conmats)
+}
 
 
 #' @keywords internal
@@ -405,9 +451,9 @@ chunkwise_lm.fmri_dataset <- function(dset, model, conlist, fcon, nchunks, robus
   
   event_indices=attr(tmats, "event_term_indices")
   baseline_indices=attr(tmats, "baseline_term_indices")
-  
-  wrap_chunked_lm_results(cres, event_indices)
 
+  unpack_chunkwise(cres,event_indices,baseline_indices)
+  
 }
 
 
