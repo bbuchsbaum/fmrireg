@@ -269,6 +269,7 @@ fit_lm_contrasts <- function(fit, conlist, fcon, vnames, se=TRUE) {
   bstats <- beta_stats(fit, vnames,se=se)
   #list(conres=conres, Fres=Fres, bstats=bstats, event_indices=eterm_indices, baseline_indices=bterm_indices)
   list(conres=conres, Fres=Fres, bstats=bstats, fit=fit)
+  #list(conres=conres, Fres=Fres, bstats=bstats)
 }
 
 

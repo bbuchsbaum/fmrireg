@@ -811,14 +811,17 @@ construct.hrfspec <- function(x, model_spec) {
 #' This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise() ...
 #' 
 #' @inheritParams hrf
+
+#' 
+#' @param add_sum add the sum of all trialwise regressors to the set. 
+#' This can be sued to model the average effect. 
+#' 
 #' @examples 
-#' 
-#' 
+#' x <- trialwise(basis="gaussian", onsets=c(1,17,25), durations=c(1,2,3))
 #' 
 #' @export
 trialwise <- function(label="trialwise", basis="spmg1", onsets=NULL, durations=NULL, 
-                      prefix=NULL, subset=NULL, precision=.3,
-                      contrasts=list(), id=NULL, add_sum=FALSE) {
+                      prefix=NULL, subset=NULL, precision=.3, id=NULL, add_sum=FALSE) {
   
   termname = label
   
@@ -848,7 +851,7 @@ trialwise <- function(label="trialwise", basis="spmg1", onsets=NULL, durations=N
     prefix=prefix,
     subset=substitute(subset),
     precision=precision,
-    contrasts=contrasts,
+    contrasts=list(),
     add_sum=add_sum)
   
   class(ret) <- c("trialwisespec", "hrfspec", "list")

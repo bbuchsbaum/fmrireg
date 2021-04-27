@@ -9,7 +9,7 @@ auto_whiten <- function(Y, modelmat, method=c("auto", "ar1", "ar2", "arma")) {
     yresid <- resid(lm.1)
     
     afit <- if (method == "auto") {
-      auto.arima(yresid, seasonal=FALSE)
+      auto.arima(yresid, max.d=0, max.D=0, seasonal=FALSE)
     } else if (method == "ar1") {
       Arima(yresid, order=c(1,0,0), seasonal=FALSE)
     } else if (method == "ar2") {
