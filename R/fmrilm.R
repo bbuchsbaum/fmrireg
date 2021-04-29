@@ -210,6 +210,8 @@ standard_error.fmri_lm <- function(x, type=c("estimates", "contrasts")) {
     as_tibble(ret,.name_repair="check_unique")
   }
 }
+
+
   
 
 
@@ -268,7 +270,7 @@ fit_lm_contrasts <- function(fit, conlist, fcon, vnames, se=TRUE) {
   
   bstats <- beta_stats(fit, vnames,se=se)
   #list(conres=conres, Fres=Fres, bstats=bstats, event_indices=eterm_indices, baseline_indices=bterm_indices)
-  list(conres=conres, Fres=Fres, bstats=bstats, fit=fit)
+  list(contrasts=conres, Fres=Fres, bstats=bstats, fit=fit)
   #list(conres=conres, Fres=Fres, bstats=bstats)
 }
 
@@ -395,7 +397,12 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
   effects <- do.call(rbind, lapply(cres, function(x) x$bstats$estimate))
   effects_se <- do.call(rbind, lapply(cres, function(x) x$bstats$se))
   
-  ncon <- length(cres[[1]]$conres)
+  betas <- list(
+    estimate=effects[,event_indices,drop=FALSE],
+    se=effects_se[,event_indices,drop=FALSE]
+  )
+  
+  ncon <- length(cres[[1]]$contrasts)
   nf <- length(cres[[1]]$Fres)
   
   ## helper for Fres
@@ -407,17 +414,30 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
     ret
   }
   
-  betas <- list(
-    estimate=effects,
-    se=effects_se
-  )
   
+  
+
   contrasts <- if (ncon > 0) {
-    con_effects <- do.call(rbind, lapply(cres, function(x) x$conres$estimate))
-    con_se <- do.call(rbind, lapply(cres, function(x) x$conres$se))
+    counter= 1
+    con_effects <- do.call(rbind, lapply(cres, function(x) {
+      #print(x)
+      do.call(cbind, lapply(x$contrasts, function(z) {
+        z$estimate
+      }))
+    }))
+    
+    print("made it")
+  
+    con_se <- do.call(rbind, lapply(cres, function(x) {
+      do.call(cbind, lapply(x$contrasts, function(z) z$se))
+    }))
+    
+    print("made it se")
+    
     list(estimate=con_effects,
          se=con_se)
   }
+  
   
   Fres <- if (nf >= 1) {
     Fnames <- names(cres[[1]]$Fres)
@@ -427,7 +447,9 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
          prob=extract_values(Fnames, "prob"))
   }
   
-  conmats <- lapply(cres[[1]]$conres, function(x) x$conmat)
+  
+  conmats <- lapply(cres[[1]]$contrasts, function(x) x$conmat)
+  print("made past conmats")
   list(betas=betas, contrasts=contrasts, Fcontrasts=Fres, conmats=conmats)
 }
 

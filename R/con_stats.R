@@ -143,6 +143,7 @@ beta_stats <- function(lmfit, varnames, se=TRUE) {
       estimate=betamat,
       stat=betamat/vc,
       se=vc,
+      prob=2 * (1 - pt(abs(betamat/vc), lmfit$df.residual)),
       stat_type="tstat"
     )
   } else {
@@ -287,10 +288,6 @@ fit_contrasts <- function(lmfit, conmat, colind, se=TRUE) {
     conmat <- t(matrix(conmat, 1, length(conmat)))
   }
   
-  ncoef <- nrow(coef(lmfit))
-  cmat <- matrix(0, ncoef, 1)
-  cmat[colind,] <- conmat
-  
   cfs <- coef(lmfit)
   
   if (is.vector(cfs)) {
@@ -298,6 +295,10 @@ fit_contrasts <- function(lmfit, conmat, colind, se=TRUE) {
   } else {
     betamat <- cfs
   }
+  
+  ncoef <- nrow(betamat)
+  cmat <- matrix(0, ncoef, 1)
+  cmat[colind,] <- conmat
   
   ct <- as.vector(t(cmat) %*% betamat)
   rss <- colSums(as.matrix(lmfit$residuals^2))
@@ -329,7 +330,7 @@ fit_contrasts <- function(lmfit, conmat, colind, se=TRUE) {
         estimate=ct,
         se=vc,
         stat=ct/vc,
-        #prob=function() 2 * (1 - pt(abs(ct/vc), lmfit$df.residual)),
+        prob=2 * (1 - pt(abs(ct/vc), lmfit$df.residual)),
         stat_type="tstat")
     )
   } else {

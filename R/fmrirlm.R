@@ -86,11 +86,64 @@ runwise_rlm <- function(dset, model, conlist, fcon) {
       Fres <- lapply(fcon, function(con) fit_Fcontrasts(rlm.1, t(con), attr(con, "term_indices")))
     
       bstats <- beta_stats(rlm.1, vnames)
-      list(conres=conres, Fres=Fres, bstats=bstats)
+      list(contrasts=conres, Fres=Fres, bstats=bstats)
     })
     
   }
   
+}
+
+
+#' @importFrom forecast auto.arima
+multiresponse_arma <- function(form, data_env, conlist, vnames, fcon, modmat=NULL, 
+                              autocor=c("ar1", "ar2","arma", "auto")) {
+  autocor <- match.arg(autocor)
+  Y <- data_env$.y
+  
+  whitened_lm <- function(y, modmat, sq_inv) {
+    modmat_wh <- t(sq_inv) %*% modmat
+    y_wh <- (y %*% sq_inv)[1,]
+    lm.fit(as.matrix(modmat_wh), y_wh)
+  }
+  
+
+  ret <- foreach(i = 1:ncol(Y)) %dopar% {
+    print(i)
+    yi <- Y[,i]
+    lm.1 <- lm(yi ~ modmat-1)
+    yresid <- resid(lm.1)
+    
+    fit <- if (autocor == "ar1") {
+      afit <- Arima(yresid, order=c(1,0,0), seasonal=FALSE)
+      sq_inv <- sq_inv_ar1(afit$coef[1], length(yresid))
+      whitened_lm(yi, modmat, sq_inv)
+    } else if (autocor == "ar2") {
+      afit <- Arima(yresid, order=c(2,0,0), seasonal=FALSE)
+      #aresid <- resid(afit)
+      sq_inv <- sq_inv_arma(afit$coef[1:2], 0, length(yresid))
+      whitened_lm(yi, modmat, sq_inv)
+    } else if (autocor == "arma") {
+      afit <- Arima(yresid, order=c(1,0,1), seasonal=FALSE)
+      #aresid <- resid(afit)
+      sq_inv <- sq_inv_arma(afit$coef[1], afit$coef[2], length(yresid))
+      whitened_lm(yi, modmat, sq_inv)
+    } else if ("auto") {
+      afit <- auto.arima(yresid, max.d=0, max.D=0, seasonal=FALSE)
+      nar <- afit$arma[1]
+      nma <- afit$arma[2]
+      sq_inv <- sq_inv_arma(afit$coef[1:nar], afit$coef[(nar+1):(nar+nma)], length(yresid))
+      whitened_lm(yi, modmat, sq_inv)
+    }
+  
+    fit_lm_contrasts(fit, conlist, fcon, vnames)
+  }
+  
+
+  #ret <- unpack_chunkwise(ret)
+  ret
+  #conres=ret$conres, Fres=ret$Fres, bstats=ret$bstats
+  ## needless name-changes translation...fixme
+  #list(contrasts=ret$contrasts, bstats=ret$betas, Fres=ret$Fcontrasts)
 }
 
 
@@ -108,5 +161,5 @@ multiresponse_rlm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL
   ret <- wrap_chunked_lm_results(ret)
   #conres=ret$conres, Fres=ret$Fres, bstats=ret$bstats
   ## needless name-changes translation...fixme
-  list(conres=ret$contrasts, bstats=ret$betas, Fres=ret$Fcontrasts)
+  list(contrasts=ret$contrasts, bstats=ret$betas, Fres=ret$Fcontrasts)
 }

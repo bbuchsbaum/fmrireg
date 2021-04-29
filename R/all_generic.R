@@ -391,7 +391,7 @@ stats <- function(x, ...) UseMethod("stats")
 #' 
 #' @param x the object
 #' @param ... extra arguments
-p_values <- function(x, ...) UseMethod("p_value")
+p_values <- function(x, ...) UseMethod("p_values")
 
 
 #' longnames

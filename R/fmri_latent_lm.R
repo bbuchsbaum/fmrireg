@@ -33,14 +33,15 @@ chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FA
   
   basismat <- get_data(dset)
   
-  wmat <- if (autocor != "none") {
-    message("whitening components")
-    auto_whiten(basismat, modmat, autocor)
-  } else {
-    basismat
-  }
+  #wmat <- if (autocor != "none") {
+  #  message("whitening components")
+  #  auto_whiten(basismat, modmat, autocor)
+  #} else {
+  #  basismat
+  #}
   
-  data_env[[".y"]] <- as.matrix(wmat)
+  #data_env[[".y"]] <- as.matrix(wmat)
+  data_env[[".y"]] <- as.matrix(basismat)
   
   event_indices=attr(tmats, "event_term_indices")
   baseline_indices=attr(tmats, "baseline_term_indices")
@@ -52,6 +53,15 @@ chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FA
                  nboot=nboot, 
                  boot_rows=boot_rows,
                  event_indices=event_indices)
+  } else if (autocor != "none") {
+    lmfun <- multiresponse_arma
+    
+
+    ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon=NULL, 
+                 modmat=modmat, autocor=autocor)
+    unpack_chunkwise(ret, event_indices, baseline_indices) %>% purrr::list_modify(event_indices=event_indices,
+                                                                                  baseline_indices=baseline_indices)
+    
   } else {
     lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
     ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon=NULL, 
@@ -63,16 +73,20 @@ chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FA
     sigma <- sqrt(resvar)
     
     unpack_chunkwise(list(ret), event_indices, baseline_indices) %>% purrr::list_modify(event_indices=event_indices,
-                                                                             baseline_indices=baseline_indices,
-                                                                             sigma=sigma,
-                                                                             residuals=resid(ret$fit),
-                                                                             df.residual=ret$fit$df.residual,
-                                                                             qr=stats:::qr.lm(ret$fit))
+                                                                                        baseline_indices=baseline_indices,
+                                                                                        sigma=sigma,
+                                                                                        residuals=resid(ret$fit),
+                                                                                        df.residual=ret$fit$df.residual,
+                                                                                        qr=stats:::qr.lm(ret$fit))
+    
   }
+  
+  
+
+}
 
   
-  
-}
+
 
 tibble_to_neurovec <- function(dset, tab, mask) {
   sp <- space(get_mask(dset))
