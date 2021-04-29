@@ -95,10 +95,19 @@ tibble_to_neurovec <- function(dset, tab, mask) {
 }
 
 #' @export
-coef.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
+coef.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE, comp=0) {
   bvals <- coef.fmri_lm(x, type=type)
   if (recon) {
     lds <- x$dataset$lvec@loadings
+    comp <- if (comp == 0) {
+      seq(1, ncol(lds)) 
+    } else {
+      assertthat::assert_that(all(comp > 0) && all(comp <= ncol(lds)))
+      comp
+    }
+    
+    lds<- lds[,comp,drop=FALSE]
+    
     out <- t(as.matrix(bvals)) %*% t(lds)
     out <- as.matrix(t(out))
     as_tibble(out)
