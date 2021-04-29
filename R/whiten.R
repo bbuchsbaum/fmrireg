@@ -29,25 +29,40 @@ auto_whiten <- function(Y, modelmat, method=c("auto", "ar1", "ar2", "arma")) {
   out
 }
 
-sq_inv_ar1 <- function(phi,n) {
-  phi_hat_vect <- rep( - phi, (n - 1))
-  A <- bandSparse(n, k = c(1, 0),
-             diagonals = list(phi_hat_vect,
-                              c(sqrt(1 - phi^2),
-                                rep(1, (n - 1)))
-             ))
-  
+sq_inv_ar1_by_run <- function(phi, n) {
+  fun <- memoise::memoise(sq_inv_ar1)
+  out <- lapply(n, function(len) fun(phi, len))
+  Matrix::bdiag(out)
 }
 
 
+sq_inv_ar1 <- function(phi, n) {
+  phi_hat_vect <- rep(-phi, (n - 1))
+  A <- bandSparse(n,
+                  k = c(1, 0),
+                  diagonals = list(phi_hat_vect,
+                                   c(sqrt(1 - phi ^ 2),
+                                     rep(1, (
+                                       n - 1
+                                     )))))
+  
+  
+}
 
+sq_inv_arma_by_run <- function(phi, theta, n) {
+  fun <- memoise::memoise(sq_inv_arma)
+  out <- lapply(n, function(len) fun(phi, theta, len))
+  Matrix::bdiag(out)
+}
+
+## not so slow if n is smaller
 sq_inv_arma <- function(phi, theta, n) {
-  #acf_theo_hat <- zapsmall(ARMAacf(ar = phi, ma = theta,lag.max = (n - 1)))
+  #acf_theo_hat <- zapsmall(ARMAacf(ar = phi, ma = theta,lag.max = (n - 1)), digits=8)
   acf_theo_hat <- ARMAacf(ar = phi, ma = theta,lag.max = (n - 1))
   #ind <- which(acf_theo_hat != 0)
   #acf_theo_hat <- sparseVector(acf_theo_hat[ind], i=ind, length=length(acf_theo_hat))
   
-  psi_hat <- ARMAtoMA(ar = phi,ma = theta, 100)
+  psi_hat <- ARMAtoMA(ar = phi,ma = theta, 10)
   variance_hat <- 1 + sum(psi_hat ^ 2)
   Sigma_hat <- Matrix::toeplitz(acf_theo_hat) * variance_hat
   S <- Matrix(Sigma_hat, sparse=TRUE)
@@ -55,4 +70,18 @@ sq_inv_arma <- function(phi, theta, n) {
   A
 }
 
+# gen_signal <- function(n) {
+#   y <- rnorm(n)
+#   fitted(locfit(y ~ lp(seq(1,length(y)), nn=.03)))
+#  
+# }
+# 
+# n=800
+# y=gen_signal(n)
+# afit = auto.arima(y, seasonal=FALSE, max.q=1)
+# phi <- afit$coef[1:afit$arma[1]]
+# 
+# nar <- afit$arma[1]
+# nam <- afit$arma[2]
+# theta <- afit$coef[(nar+1):(nar+1):nam]
 

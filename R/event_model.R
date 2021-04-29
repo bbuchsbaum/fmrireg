@@ -116,6 +116,12 @@ blocklens.event_model <- function(x) {
   blocklens(x$sampling_frame)
 }
 
+#' @export
+blockids.event_model <- function(x) {
+  x$blockids
+}
+
+
 #' @keywords internal
 construct_model <- function(x) {
   ## what does this function actually need?

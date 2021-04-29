@@ -426,13 +426,11 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
       }))
     }))
     
-    print("made it")
   
     con_se <- do.call(rbind, lapply(cres, function(x) {
       do.call(cbind, lapply(x$contrasts, function(z) z$se))
     }))
     
-    print("made it se")
     
     list(estimate=con_effects,
          se=con_se)

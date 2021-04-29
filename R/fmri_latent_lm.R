@@ -32,7 +32,7 @@ chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FA
   modmat <- model.matrix(as.formula(form), data_env)
   
   basismat <- get_data(dset)
-  
+
   #wmat <- if (autocor != "none") {
   #  message("whitening components")
   #  auto_whiten(basismat, modmat, autocor)
@@ -54,11 +54,12 @@ chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FA
                  boot_rows=boot_rows,
                  event_indices=event_indices)
   } else if (autocor != "none") {
-    lmfun <- multiresponse_arma
     
-
+    ## need to split by run
+    lmfun <- multiresponse_arma
+   
     ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon=NULL, 
-                 modmat=modmat, autocor=autocor)
+                 modmat=modmat, blockids=model$event_model$sampling_frame$blockids, autocor=autocor)
     unpack_chunkwise(ret, event_indices, baseline_indices) %>% purrr::list_modify(event_indices=event_indices,
                                                                                   baseline_indices=baseline_indices)
     

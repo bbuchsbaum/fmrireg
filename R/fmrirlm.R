@@ -95,7 +95,8 @@ runwise_rlm <- function(dset, model, conlist, fcon) {
 
 
 #' @importFrom forecast auto.arima
-multiresponse_arma <- function(form, data_env, conlist, vnames, fcon, modmat=NULL, 
+multiresponse_arma <- function(form, data_env, conlist, vnames, fcon, modmat, 
+                              blockids,
                               autocor=c("ar1", "ar2","arma", "auto")) {
   autocor <- match.arg(autocor)
   Y <- data_env$.y
@@ -107,31 +108,43 @@ multiresponse_arma <- function(form, data_env, conlist, vnames, fcon, modmat=NUL
   }
   
 
+  rlens <- table(blockids)
   ret <- foreach(i = 1:ncol(Y)) %dopar% {
     print(i)
     yi <- Y[,i]
     lm.1 <- lm(yi ~ modmat-1)
     yresid <- resid(lm.1)
+    yrsplit <- split(yresid, blockids)
+    yresid_padded <- unlist(lapply(yrsplit, function(z) c(z, rep(NA,5))))
     
     fit <- if (autocor == "ar1") {
-      afit <- Arima(yresid, order=c(1,0,0), seasonal=FALSE)
-      sq_inv <- sq_inv_ar1(afit$coef[1], length(yresid))
+      afit <- Arima(yresid_padded, order=c(1,0,0), seasonal=FALSE)
+      sq_inv <- sq_inv_ar1_by_run(afit$coef[1], rlens)
       whitened_lm(yi, modmat, sq_inv)
     } else if (autocor == "ar2") {
-      afit <- Arima(yresid, order=c(2,0,0), seasonal=FALSE)
+      afit <- Arima(yresid_padded, order=c(2,0,0), seasonal=FALSE)
       #aresid <- resid(afit)
-      sq_inv <- sq_inv_arma(afit$coef[1:2], 0, length(yresid))
+      sq_inv <- sq_inv_arma_by_run(afit$coef[1:2], 0, rlens)
       whitened_lm(yi, modmat, sq_inv)
     } else if (autocor == "arma") {
-      afit <- Arima(yresid, order=c(1,0,1), seasonal=FALSE)
+      afit <- Arima(yresid_padded, order=c(1,0,1), seasonal=FALSE)
       #aresid <- resid(afit)
-      sq_inv <- sq_inv_arma(afit$coef[1], afit$coef[2], length(yresid))
+      sq_inv <- sq_inv_arma_by_run(afit$coef[1], afit$coef[2], rlens)
       whitened_lm(yi, modmat, sq_inv)
-    } else if ("auto") {
-      afit <- auto.arima(yresid, max.d=0, max.D=0, seasonal=FALSE)
+    } else if (autocor == "auto") {
+      afit <- auto.arima(yresid_padded, max.d=0, max.D=0, seasonal=FALSE)
       nar <- afit$arma[1]
       nma <- afit$arma[2]
-      sq_inv <- sq_inv_arma(afit$coef[1:nar], afit$coef[(nar+1):(nar+nma)], length(yresid))
+      sq_inv <- if (nar == 1 && nma == 0) {
+        sq_inv_ar1_by_run(afit$coef[1], rlens)
+      } else if (nar == 0 && nma == 1) {
+        sq_inv_arma_by_run(0, afit$coef[1], rlens)
+      } else if (nar == 0 && nma == 0) {
+        Matrix::Diagonal(n=length(yresid))
+      } else {
+        sq_inv_arma(afit$coef[1:nar], afit$coef[(nar+1):(nar+nma)], rlens)
+      }
+      
       whitened_lm(yi, modmat, sq_inv)
     }
   
