@@ -106,9 +106,9 @@ coef.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE
       comp
     }
     
-    lds<- lds[,comp,drop=FALSE]
+    lds <- lds[,comp,drop=FALSE]
     
-    out <- t(as.matrix(bvals)) %*% t(lds)
+    out <- t(as.matrix(bvals)[comp,]) %*% t(lds)
     out <- as.matrix(t(out))
     as_tibble(out)
   } else {
