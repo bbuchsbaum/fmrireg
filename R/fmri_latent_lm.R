@@ -99,7 +99,7 @@ coef.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE
   bvals <- coef.fmri_lm(x, type=type)
   if (recon) {
     lds <- x$dataset$lvec@loadings
-    comp <- if (comp == 0) {
+    comp <- if (length(comp) == 1 && comp == 0) {
       seq(1, ncol(lds)) 
     } else {
       assertthat::assert_that(all(comp > 0) && all(comp <= ncol(lds)))
