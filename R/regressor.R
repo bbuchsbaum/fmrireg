@@ -313,7 +313,7 @@ plot.regressor <- function(x, samples, add=FALSE, ...) {
 }
 
 #' @export
-print.regressor <- function(x) {
+print.regressor <- function(x,...) {
   N <- min(c(6, length(onsets(x))))
   cat(paste("hemodynamic response function:", attr(x$hrf, "name")))
   cat("\n")
