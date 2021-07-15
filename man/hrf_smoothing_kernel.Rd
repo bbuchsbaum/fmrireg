@@ -16,3 +16,7 @@ hrf_smoothing_kernel(len, TR = 2, basis = "spmg1")
 \description{
 A function to compute a temporal similarity matrix from a series of hemodynamic response functions
 }
+\examples{
+
+sk <- hrf_smoothing_kernel(100, TR=1.5, basis="gaussian")
+}

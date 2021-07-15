@@ -12,7 +12,6 @@ trialwise(
   prefix = NULL,
   subset = NULL,
   precision = 0.3,
-  contrasts = list(),
   id = NULL,
   add_sum = FALSE
 )
@@ -31,16 +30,15 @@ Can be used to disambiguate two \code{hrf} terms with the same variable(s) but d
 
 \item{precision}{sampling precision in seconds}
 
-\item{contrasts}{one or more \code{contrast_spec} objects created with the \code{contrast} function.
-If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.}
-
 \item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
+
+\item{add_sum}{add the sum of all trialwise regressors to the set.
+This can be sued to model the average effect.}
 }
 \description{
 This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise() ...
 }
 \examples{
-
-
+x <- trialwise(basis="gaussian", onsets=c(1,17,25), durations=c(1,2,3))
 
 }

@@ -252,7 +252,6 @@ construct.baselinespec <- function(x, sampling_frame) {
 #' @param colind the column indices
 #' @param rowind the row indices
 #' @importFrom tibble as_tibble
-#' @import Matrix
 #' @export
 baseline_term <- function(varname, mat, colind, rowind) {
   #print(paste(varname, ":", class(mat)))

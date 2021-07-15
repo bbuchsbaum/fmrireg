@@ -45,7 +45,7 @@ test_that("can construct and run a simple fmri glm from in memory dataset", {
                         event_table=facedes)
    
    
-   mod <- fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset=dset, durations=0)
+   mod <- fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset=dset, durations=0, strategy="chunkwise", nchunks=4)
    expect_true(!is.null(mod))
   
 })
@@ -276,22 +276,41 @@ test_that("can run video fmri design with latent_dataset", {
     pair_contrast(f1, f2, name=paste0(v, "_vsall"))
   }))
   
+  conset2 <<- do.call("contrast_set", lapply(levels(factor(des$Video)), function(v) {
+    f1 <- as.formula(paste("~ rec_Video == ", paste0('"', v, '"')))
+    f2 <- as.formula(paste("~ rec_Video != ", paste0('"', v, '"')))
+    pair_contrast(f1, f2, name=paste0("rec_", v, "_vsall"))
+  }))
+  
   
   res2 <- fmrireg:::fmri_latent_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
-                              hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, 
-                            autocor="ar2", dataset=ldset)
-  res2a <- fmrireg:::fmri_latent_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
-                                     hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, 
-                                   autocor="none", dataset=ldset)
+                              hrf(Video, subset=Condition=="Recall", prefix="rec", contrasts=conset2), 
+                              block= ~ run, 
+                              autocor="none", dataset=ldset)
   
+  se1 <- standard_error.fmri_latent_lm(res2, "contrasts", recon=TRUE)
+  con1 <- stats.fmri_latent_lm(res2, "contrasts", recon=TRUE)
   dset <- fmri_dataset(scans, maskfile,TR=1.5, rep(320,7), base_path="/", event_table=des)
+  
+  
+  res2 <- fmrireg:::fmri_latent_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+                                     hrf(Video, subset=Condition=="Recall", prefix="rec", contrasts=conset2), 
+                                   block= ~ run, 
+                                   autocor="none", bootstrap=TRUE, dataset=ldset)
+  
+  res2a <- fmrireg:::fmri_latent_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+                                     hrf(Video, subset=Condition=="Recall", prefix="rec", contrasts=conset2), 
+                                   block= ~ run, 
+                                   autocor="ar1", dataset=ldset)
+  
+  
   
   res3 <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
                                      hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, 
                                    strategy="chunkwise", nchunks=1, dataset=dset)
   
-  stats(res3)
-  
+  se2 <- standard_error(res3, "contrasts")
+  con2 <- stats(res3, "contrasts")
 })
           
 

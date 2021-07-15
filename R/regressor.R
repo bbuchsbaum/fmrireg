@@ -285,15 +285,18 @@ durations.regressor <- function(x) x$duration
 #' @rdname amplitudes
 amplitudes.regressor <- function(x) x$amplitude
 
-
+#' plot a regressor object
+#' 
 #' @export
-plot.regressor <- function(object, samples, add=FALSE, ...) {
+#' @param samples the times in seconds along which to plot regressor function
+#' @param add whether to add to existing plot
+plot.regressor <- function(x, samples, add=FALSE, ...) {
   if (missing(samples)) {
-    ons <- object$onsets
+    ons <- x$onsets
     samples <- seq(ons[1]-5, ons[length(ons)] + 12, by=1)
   }
   
-  y <- evaluate(object, samples)
+  y <- evaluate(x, samples)
   if (add){
     lines(samples, y)
   } else {
@@ -301,7 +304,7 @@ plot.regressor <- function(object, samples, add=FALSE, ...) {
   }
   srange <- range(samples)
   
-  for (on in onsets(object)) {
+  for (on in onsets(x)) {
     if (on >= srange[1] && on <= srange[2]) {
       abline(v=on, col=2, lty=2)
     }
@@ -310,15 +313,15 @@ plot.regressor <- function(object, samples, add=FALSE, ...) {
 }
 
 #' @export
-print.regressor <- function(object) {
-  N <- min(c(6, length(onsets(object))))
-  cat(paste("hemodynamic response function:", attr(object$hrf, "name")))
+print.regressor <- function(x) {
+  N <- min(c(6, length(onsets(x))))
+  cat(paste("hemodynamic response function:", attr(x$hrf, "name")))
   cat("\n")
-  cat(paste("onsets: ", paste(onsets(object)[1:N], collapse=" "), "..."))
+  cat(paste("onsets: ", paste(onsets(x)[1:N], collapse=" "), "..."))
   cat("\n")
   
-  durs <- durations(object)
-  amps <- amplitudes(object)
+  durs <- durations(x)
+  amps <- amplitudes(x)
   
   if (all(durs == durs[1])) {
     cat(paste("durations: ", durs[1], "for all events"))

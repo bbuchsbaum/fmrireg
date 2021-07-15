@@ -822,12 +822,13 @@ construct.hrfspec <- function(x, model_spec) {
 #' @export
 trialwise <- function(label="trialwise", basis="spmg1", onsets=NULL, durations=NULL, 
                       prefix=NULL, subset=NULL, precision=.3, id=NULL, add_sum=FALSE) {
-  
+ 
   termname = label
   
   if (is.null(id)) {
     id <- termname
   }  
+
   
   basis <- if (!inherits(basis, "HRF") && is.function(basis)) {
     gen_hrf(basis)

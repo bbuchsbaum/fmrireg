@@ -65,8 +65,8 @@ sq_inv_arma <- function(phi, theta, n) {
   psi_hat <- ARMAtoMA(ar = phi,ma = theta, 10)
   variance_hat <- 1 + sum(psi_hat ^ 2)
   Sigma_hat <- Matrix::toeplitz(acf_theo_hat) * variance_hat
-  S <- Matrix(Sigma_hat, sparse=TRUE)
-  A <- Matrix(round(solve(chol(Sigma_hat)),digits = 4))
+  S <- Matrix::Matrix(Sigma_hat, sparse=TRUE)
+  A <- Matrix::Matrix(round(solve(chol(Sigma_hat)),digits = 4))
   A
 }
 

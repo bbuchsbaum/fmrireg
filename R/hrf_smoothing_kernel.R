@@ -8,18 +8,25 @@
 #' @param basis the hemodynamic response function
 #  @importFrom proxy simil
 #' @export
+#' 
+#' @examples 
+#' 
+#' sk <- hrf_smoothing_kernel(100, TR=1.5, basis="gaussian")
 hrf_smoothing_kernel <- function(len, TR=2, basis="spmg1") {
   buffer <- 6
   sframe <- sampling_frame(len+buffer,TR)
   onsets <- samples(sframe)
+  force(basis)
   dfx <- data.frame(onsets=samples(sframe), block=rep(1,len+buffer))
-  em <- event_model(onsets ~ trialwise(basis="spmg1"), block=~ block, 
+  
+  ##b = rlang::enquo(basis)
+  em <- event_model(onsets ~ trialwise(basis={{basis}}), block=~ block, 
                     data=dfx, sampling_frame=sframe)
   
   dmat <- as.matrix(design_matrix(em))
   #m <- as.matrix(proxy::simil(t(dmat), "cosine"))
   m <- dmat %*% t(dmat)
-  ret <- m[(buffer/2):(len+buffer/2),(buffer/2):(len+buffer/2)]
+  ret <- m[(buffer/2):((len-1)+buffer/2),(buffer/2):((len-1)+buffer/2)]
   ret
 }
 

@@ -1,4 +1,23 @@
 
+
+dctbasis <- function(n, p=n, const=FALSE) {
+  m <- 1:n
+  ret <- do.call(cbind, lapply(2:p, function(k) {
+    (2/n)^(1/2) * cos(((2*m-1)*k*pi)/(2*n))
+  }))
+  
+  if (const) {
+    ret <- cbind((1/n)^.5, ret)
+  }
+  
+  ret
+}
+
+osplinebasis <- function() {
+  
+}
+
+
 #' sub_basis
 #' 
 #' subset a parametric basis regressor
