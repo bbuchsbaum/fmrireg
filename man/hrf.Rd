@@ -43,6 +43,8 @@ If multiple contrasts are required, then these should be wrapped in a \code{list
 \item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
 
 \item{lag}{a temporal offset in seconds which is added to onset before convolution}
+
+\item{summate}{whether impulse amplitudes sum up when duration is greater than 0.}
 }
 \description{
 This function is to be used in formulas for fitting functions, e.g. onsets ~ hrf(fac1,fac2) ...

@@ -11,8 +11,8 @@
 #' mat <- matrix(rnorm(100*100), 100,100)
 #' dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
 #' dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
-#' lm.1 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset)
-#' lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset2)
+#' #lm.1 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset)
+#' #lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset2)
 #' @export
 fmri_rlm <- function(formula, block, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, contrasts=NULL, 
@@ -23,25 +23,16 @@ fmri_rlm <- function(formula, block, baseline_model=NULL, dataset,
   
   
   assert_that(inherits(dataset, "fmri_dataset"))
-  fobj <- .setup_model(dataset, formula, block, baseline_model, contrasts)
-
-  result <- if (strategy == "runwise") {
-    runwise_rlm(dataset, fobj$model, fobj$conlist, fobj$fcon)
-  } else {
-    stop()
-  }
-  
-  ret <- list(
-    result=result,
-    model=fobj$model,
-    contrasts=contrasts,
-    strategy=strategy)
-  
-  class(ret) <- c("fmri_rlm", "fmri_lm")
-  
+  ##fobj <- .setup_model(dataset, formula, block, baseline_model, contrasts)
+ 
+  model <- create_fmri_model(formula, block, baseline_model, dataset, durations, drop_empty)
+  ret <- fmri_lm_fit(model, dataset, strategy, robust=TRUE, contrasts, nchunks)
   ret
+  
+  
 
 }
+
 
 #' @importFrom foreach foreach %do% %dopar%
 runwise_rlm <- function(dset, model, conlist, fcon) {

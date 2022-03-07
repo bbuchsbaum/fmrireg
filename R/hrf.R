@@ -11,6 +11,8 @@ NULL
 #' @param precision sampling precision in seconds
 #' @param summate whether to allow each impulse response function to "add" up.
 #' @param normalize rescale so that the peak of the output is 1.
+#' @param name the assigned name of generated HRF
+#' @param span the span of the HRF (maximum width in seconds after which function reverts to zero)
 #' @param ... extra parameters for the \code{hrf} function
 #' 
 #' @return an instance of type \code{HRF} inheriting from \code{function}
@@ -18,6 +20,7 @@ NULL
 #' @examples 
 #' 
 #' ## generate and hrf using spmg canonical hrf, a lag of 3, and a width of 2.
+#' 
 #' grf <- gen_hrf(hrf_spmg1, lag=3, width=2)
 #' grf(0:20)
 #' 
@@ -32,13 +35,13 @@ gen_hrf <- function(hrf, lag=0, width=0, precision=.1,
   
   if (width != 0) {
     assert_that(width > 0)
-    hrf <- gen_hrf_blocked(hrf, width=width, precision=precision, 
-                           summate=summate, normalize=normalize)
+    #hrf <- gen_hrf_blocked(hrf, width=width, precision=precision, 
+    #                       summate=summate, normalize=normalize, ...)
+    hrf <- gen_hrf_blocked(hrf, width=width, precision=precision, summate=summate, normalize=normalize)
   }
   
-  if (lag > 0) {
-    #force(hrf)
-    hrf <- gen_hrf_lagged(hrf, lag=lag,...)
+  if (lag !=0) {
+    hrf <- gen_hrf_lagged(hrf, lag=lag)
   }
   
   f <- if (length(.orig) > 0) {
@@ -73,7 +76,7 @@ gen_hrf <- function(hrf, lag=0, width=0, precision=.1,
 #' @export
 #' @param t time
 #' @param y values of hrf at time \code{t[i]}
-#' 
+#' @param name name of the genrated HRF
 #' @examples 
 #' 
 #' y <- -poly(0:24, 2)[,2]
@@ -109,7 +112,18 @@ gen_hrf_set <- function(..., span=32, name="hrf_set") {
     do.call("cbind", lapply(hrflist, function(fun) fun(t)))
   }
   
-  HRF(f, name=name, span=32, nbasis=length(hrflist))
+  HRF(f, name=name, span=span, nbasis=length(hrflist))
+}
+
+gen_hrf_library <- function(fun, pgrid,...) {
+  pnames <- names(pgrid)
+  
+  hrflist <- lapply(1:nrow(pgrid), function(i) {
+    do.call(gen_hrf, c(fun, pgrid[i,],...))
+  })
+  
+  do.call(gen_hrf_set, hrflist)
+
 }
 
 
@@ -182,6 +196,7 @@ makeDeriv <- function(HRF, n=1) {
 #' 
 #' @param hrf the underlying hrf function to shift
 #' @param lag the lag/delay in seconds
+#' @param normalize rescale so that maximum absolute value is 1
 #' @param ... extra args supplied to \code{hrf} function
 #' @examples 
 #' hrf_lag5 <- gen_hrf_lagged(HRF_SPMG1, lag=5)
@@ -219,11 +234,15 @@ hrf_lagged <- gen_hrf_lagged
 #' @param half_life the half_life of the exponential decay function (used to model response attenuation)
 #' @param summate whether to allow each impulse response function to "add" up.
 #' @param normalize rescale so that the peak of the output is 1.
+#' @param ... extra args
 #' @importFrom purrr partial
 #' @export
-gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1, half_life=Inf, summate=TRUE, normalize=FALSE, ...) {
+gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1, 
+                            half_life=Inf, summate=TRUE, normalize=FALSE, ...) {
   force(hrf)
-  purrr::partial(convolve_block, hrf=hrf, width=width, precision=precision, half_life=half_life, summate=summate, normalize=normalize, ...)
+  purrr::partial(convolve_block, hrf=hrf, width=width, 
+                 precision=precision, half_life=half_life, 
+                 summate=summate, normalize=normalize, ...)
 }
 
 #' @export
@@ -333,7 +352,7 @@ hrf_bspline <- function(t, span=20, N=5, degree=3) {
 		t[t > span] <- 0
 	}
 	
-	bs(t, df=N, knots=knots, degree=degree, Boundary.knots=c(0,span))
+	splines::bs(t, df=N, knots=knots, degree=degree, Boundary.knots=c(0,span))
 }
 
 
@@ -481,9 +500,11 @@ nbasis.HRF <- function(x) attr(x, "nbasis")
 #' 
 #' @param name the name of the hrf function
 #' @param nbasis the number of basis functions (if relevant)
+#' @inheritParams gen_hrf
 #' @export
 getHRF <- function(name=c("gam", "gamma", "spmg1", "spmg2", 
-                          "spmg3", "bspline", "gaussian", "tent", "bs"), nbasis=5, span=24,lag=0,width=0, summate=TRUE, normalize=FALSE, ...) {
+                          "spmg3", "bspline", "gaussian", "tent", "bs"), 
+                   nbasis=5, span=24,lag=0,width=0, summate=TRUE, normalize=FALSE, ...) {
   name <- match.arg(name)
 	nb <- nbasis
 	hrf <- switch(name,
@@ -558,7 +579,7 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #' If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.
 #' @param id a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.
 #' @param lag a temporal offset in seconds which is added to onset before convolution
-#' 
+#' @param summate whether impulse amplitudes sum up when duration is greater than 0. 
 #' @examples 
 #' 
 #' ## 'hrf' is typically used in the context of \code{formula}s.
@@ -813,6 +834,7 @@ construct.hrfspec <- function(x, model_spec) {
 #' @inheritParams hrf
 
 #' 
+#' @param label the label for the generated variable.
 #' @param add_sum add the sum of all trialwise regressors to the set. 
 #' This can be sued to model the average effect. 
 #' 

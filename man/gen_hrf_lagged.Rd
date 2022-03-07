@@ -11,6 +11,8 @@ gen_hrf_lagged(hrf, lag = 2, normalize = FALSE, ...)
 
 \item{lag}{the lag/delay in seconds}
 
+\item{normalize}{rescale so that maximum absolute value is 1}
+
 \item{...}{extra args supplied to \code{hrf} function}
 }
 \description{

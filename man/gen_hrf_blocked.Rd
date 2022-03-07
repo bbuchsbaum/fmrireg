@@ -26,6 +26,8 @@ gen_hrf_blocked(
 \item{summate}{whether to allow each impulse response function to "add" up.}
 
 \item{normalize}{rescale so that the peak of the output is 1.}
+
+\item{...}{extra args}
 }
 \description{
 gen_hrf_blocked

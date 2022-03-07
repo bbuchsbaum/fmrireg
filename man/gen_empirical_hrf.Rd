@@ -10,6 +10,8 @@ gen_empirical_hrf(t, y, name = "empirical_hrf")
 \item{t}{time}
 
 \item{y}{values of hrf at time \code{t[i]}}
+
+\item{name}{name of the genrated HRF}
 }
 \description{
 generate an empirical hemodynamic response function

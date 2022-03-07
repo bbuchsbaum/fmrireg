@@ -167,11 +167,8 @@ EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,leng
 #' 
 #' Create an categorical event sequence from a \code{factor} 
 #' 
+#' @inheritParams EV
 #' @param fac a factor
-#' @param name the name for the factor
-#' @param onsets vector of event onsets in seconds
-#' @param blockids block index variable
-#' @param durations the durations in seconds of the onsets
 #' @export
 #' 
 #' @examples 
@@ -193,10 +190,10 @@ event_factor <- function(fac, name, onsets, blockids=rep(1,length(fac)), duratio
 #' event_variable
 #' 
 #' Create a continuous valued event sequence from a \code{numeric} vector.
-#' @param name the name of the variable
-#' @param onsets the event onsets in seconds
-#' @param blockids the index of the block/scan in which the event occurs
-#' @param durations the durations of each event in seconds
+#' 
+#' @inheritParams EV
+#' @param vec the vector event variable values
+#' 
 #' @export
 event_variable <- function(vec, name, onsets, blockids=1, durations=NULL) {
   stopifnot(is.vector(vec))
@@ -216,11 +213,8 @@ event_variable <- function(vec, name, onsets, blockids=1, durations=NULL) {
 #' 
 #' Create a continuous valued event set from a \code{matrix}
 #' 
+#' @inheritParams EV
 #' @param mat a matrix of values, one row per event, indicating the amplitude/intensity of each event.
-#' @param name the name of the variable
-#' @param onsets the event onsets in seconds
-#' @param durations the durations of each event in seconds
-#' @param blockids the index of the block/scan in which the event occurs
 #' @examples 
 #' 
 #' mat <- matrix(rnorm(200), 100, 2)
@@ -252,11 +246,8 @@ event_matrix <- function(mat, name, onsets, blockids=rep(1, ncol(mat)), duration
 #' event_basis
 #' 
 #' Create a event set from a basis object of type \code{\linkS4class{ParametricBasis}}. 
-#' 
+#' @inheritParams EV
 #' @param basis the basis object
-#' @param onsets the onset vector
-#' @param blockids the block indices
-#' @param durations the event durations
 #' @import assertthat
 #' @export
 event_basis <- function(basis, onsets, blockids=1, durations=NULL, subset=rep(TRUE, length(onsets))) {
@@ -831,44 +822,44 @@ design_matrix.event_term <- function(x, drop.empty=TRUE) {
 
 
 #' @export
-print.event_term <- function(object) {
+print.event_term <- function(x) {
   cat("event_term", "\n")
-  cat("  ", "Term Name: ", object$varname, "\n")
-  cat("  ", "Formula:  ", as.character(formula(object)), "\n")
-  cat("  ", "Num Events: ", nrow(object$event_table), "\n")
-  cat("  ", "Term Types: ", paste(map_chr(object$events, ~ class(.)[[1]])))
+  cat("  ", "Term Name: ", x$varname, "\n")
+  cat("  ", "Formula:  ", as.character(formula(x)), "\n")
+  cat("  ", "Num Events: ", nrow(x$event_table), "\n")
+  cat("  ", "Term Types: ", paste(map_chr(x$events, ~ class(.)[[1]])))
   cat("\n")
 }
 
 #' @export
-print.fmri_term <- function(object) {
-  cat("fmri_term: ", class(object)[[1]], "\n")
-  cat("  ", "Term Name: ", object$varname, "\n")
-  cat("  ", "Num Rows: ", nrow(design_matrix(object)), "\n")
-  cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n")
+print.fmri_term <- function(x) {
+  cat("fmri_term: ", class(x)[[1]], "\n")
+  cat("  ", "Term Name: ", x$varname, "\n")
+  cat("  ", "Num Rows: ", nrow(design_matrix(x)), "\n")
+  cat("  ", "Num Columns: ", ncol(design_matrix(x)), "\n")
 }
 
 #' @export
-print.convolved_term <- function(object) {
-  cat("fmri_term: ", class(object)[[1]], "\n")
-  cat("  ", "Term Name: ", object$varname, "\n")
-  cat("  ", "Formula:  ", as.character(formula(object$evterm)), "\n")
-  cat("  ", "Num Events: ", nrow(object$evterm$event_table), "\n")
-  cat("  ", "Num Rows: ", nrow(design_matrix(object)), "\n")
-  cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n")
-  cat("  ", "Conditions: ", conditions(object), "\n")
-  cat("  ", "Term Types: ", paste(map_chr(object$evterm$events, ~ class(.)[[1]])))
+print.convolved_term <- function(x) {
+  cat("fmri_term: ", class(x)[[1]], "\n")
+  cat("  ", "Term Name: ", x$varname, "\n")
+  cat("  ", "Formula:  ", as.character(formula(x$evterm)), "\n")
+  cat("  ", "Num Events: ", nrow(x$evterm$event_table), "\n")
+  cat("  ", "Num Rows: ", nrow(design_matrix(x)), "\n")
+  cat("  ", "Num Columns: ", ncol(design_matrix(x)), "\n")
+  cat("  ", "Conditions: ", conditions(x), "\n")
+  cat("  ", "Term Types: ", paste(map_chr(x$evterm$events, ~ class(.)[[1]])))
   cat("\n")
 }
 
 #' @export
-print.afni_hrf_convolved_term <- function(object) {
-  cat("fmri_term: ", class(object)[[1]], "\n")
-  cat("  ", "Term Name: ", object$varname, "\n")
-  cat("  ", "Formula:  ", as.character(formula(object$evterm)), "\n")
-  cat("  ", "Num Events: ", nrow(object$evterm$event_table), "\n")
-  cat("  ", "Conditions: ", conditions(object), "\n")
-  cat("  ", "Term Types: ", paste(map_chr(object$evterm$events, ~ class(.)[[1]])))
+print.afni_hrf_convolved_term <- function(x,...) {
+  cat("fmri_term: ", class(x)[[1]], "\n")
+  cat("  ", "Term Name: ", x$varname, "\n")
+  cat("  ", "Formula:  ", as.character(formula(x$evterm)), "\n")
+  cat("  ", "Num Events: ", nrow(x$evterm$event_table), "\n")
+  cat("  ", "Conditions: ", conditions(x), "\n")
+  cat("  ", "Term Types: ", paste(map_chr(x$evterm$events, ~ class(.)[[1]])))
   cat("\n")
 }
 

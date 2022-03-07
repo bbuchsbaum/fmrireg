@@ -213,6 +213,9 @@ latent_dataset <- function(lvec, TR, run_length, event_table=data.frame()) {
 #' @param event_table a \code{data.frame} containing the event onsets and experimental variables.
 #' @param base_path the file path to be prepended to relative file names.
 #' @param censor a binary vector indicating which scans to remove.
+#' @param preload read image scans eagerly rather than on first access
+#' @param mode the type of storage mode ('normal', 'bigvec', 'mmap', filebacked')
+#' 
 #' @export
 #' @importFrom tibble as_tibble
 #' @examples 
@@ -567,7 +570,7 @@ one_chunk <- function(x) {
 }
 
 #' @export
-print.fmri_dataset <- function(object) {
+print.fmri_dataset <- function(x) {
   cat("fmri_dataset", "\n")
   cat("  number of runs: ", object$nruns, "\n")
   print(object$sampling_frame)
@@ -577,7 +580,7 @@ print.fmri_dataset <- function(object) {
 
 
 #' @export
-print.matrix_dataset <- function(object) {
+print.matrix_dataset <- function(x) {
   cat("matrix_dataset", "\n")
   cat("  number of runs: ", object$nruns, "\n")
   cat("  number of rows: ", nrow(object$datamat), "\n")
@@ -588,7 +591,7 @@ print.matrix_dataset <- function(object) {
 }
 
 #' @export
-print.latent_dataset <- function(object) {
+print.latent_dataset <- function(x) {
   cat("latent_dataset", "\n")
   cat("  number of runs: ", object$nruns, "\n")
   cat("  number of rows: ", nrow(object$datamat), "\n")
@@ -598,7 +601,7 @@ print.latent_dataset <- function(object) {
   print(object$event_table)
 }
 
-print.chunkiter <- function(object) {
+print.chunkiter <- function(x) {
   cat(paste("chunk iterator with", object$nchunks, " chunks"))
 }
 

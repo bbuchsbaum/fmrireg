@@ -29,6 +29,10 @@ gen_hrf(
 
 \item{normalize}{rescale so that the peak of the output is 1.}
 
+\item{name}{the assigned name of generated HRF}
+
+\item{span}{the span of the HRF (maximum width in seconds after which function reverts to zero)}
+
 \item{...}{extra parameters for the \code{hrf} function}
 }
 \value{

@@ -6,6 +6,11 @@
 \usage{
 design_plot(fmrimod, longnames = FALSE)
 }
+\arguments{
+\item{fmrimod}{the \code{fmri_model} object}
+
+\item{longnames}{use longnames in legend}
+}
 \description{
 design_plot
 }

@@ -387,6 +387,8 @@ design_matrix.afni_hrf_convolved_term <- function(x, blockid=NULL) {
 #' 
 #' A set of regression variables stored as a numeric matrix
 #' 
+#' @param varname the name of the variable
+#' @param mat the `matrix` of values
 #' @importFrom tibble as_tibble
 #' @examples 
 #' mat <- matrix(rnorm(100*10), 100 ,10)
@@ -499,17 +501,17 @@ longnames.matrix_term <- function(x) {
 
 
 #' @export
-print.event_model <- function(object) {
+print.event_model <- function(x) {
   cat("event_model", "\n")
-  cat(" ", Reduce(paste, deparse(object$model_spec$formula)), "\n")
-  cat(" ", "Num Terms", length(terms(object)), "\n")
-  cat(" ", "Num Events: ", nrow(object$model_spec$event_table), "\n")
-  cat(" ", "Num Columns: ", length(conditions(object)), "\n")
-  cat(" ", "Num Blocks: ", length(unique(object$blockids)), "\n")
+  cat(" ", Reduce(paste, deparse(x$model_spec$formula)), "\n")
+  cat(" ", "Num Terms", length(terms(x)), "\n")
+  cat(" ", "Num Events: ", nrow(x$model_spec$event_table), "\n")
+  cat(" ", "Num Columns: ", length(conditions(x)), "\n")
+  cat(" ", "Num Blocks: ", length(unique(x$blockids)), "\n")
   #cat(" ", "Length of Blocks: ", paste(object$model_spec$blocklens, collapse=", "), "\n")
-  for (i in 1:length(terms(object))) {
+  for (i in 1:length(terms(x))) {
     cat("\n")
-    t <- terms(object)[[i]]
+    t <- terms(x)[[i]]
     cat("Term:", i, " ")
     print(t)
     cat("\n")

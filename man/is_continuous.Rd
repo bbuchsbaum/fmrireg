@@ -6,6 +6,9 @@
 \usage{
 is_continuous(x)
 }
+\arguments{
+\item{x}{the object}
+}
 \description{
 checks to see if a variable is continuous e.g. numeric/non-categorical
 }

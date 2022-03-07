@@ -60,6 +60,8 @@ estimate_betas(x, ...)
 
 \item{basemod}{\code{baseline_model} instance to regress out of data before beta estimation}
 
+\item{radius}{the radius in mm for \code{pls_searchlight} approach}
+
 \item{niter}{number of searchlight iterations for method "pls_searchlight"}
 
 \item{ncomp}{number of pls components for method "pls" and "pls_searchlight" and "pls_global"}

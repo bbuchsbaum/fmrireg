@@ -30,6 +30,10 @@ fmri_dataset(
 \item{base_path}{the file path to be prepended to relative file names.}
 
 \item{censor}{a binary vector indicating which scans to remove.}
+
+\item{preload}{read image scans eagerly rather than on first access}
+
+\item{mode}{the type of storage mode ('normal', 'bigvec', 'mmap', filebacked')}
 }
 \description{
 An fMRI dataset consisting of a set of scans as files, design information, and other data.

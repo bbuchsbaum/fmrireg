@@ -145,6 +145,7 @@ convolve <- function(x, hrf, sampling_frame,...) UseMethod("convolve")
 #' 
 #' checks to see if a variable is continuous e.g. numeric/non-categorical
 #' 
+#' @param x the object 
 #' @export
 is_continuous <- function(x) UseMethod("is_continuous")
 

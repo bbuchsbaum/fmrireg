@@ -15,13 +15,13 @@ event_factor(
 \arguments{
 \item{fac}{a factor}
 
-\item{name}{the name for the factor}
+\item{name}{the name of the event variable}
 
-\item{onsets}{vector of event onsets in seconds}
+\item{onsets}{the event onsets.}
 
-\item{blockids}{block index variable}
+\item{blockids}{the block ids associated with each event (must be non-decreasing)}
 
-\item{durations}{the durations in seconds of the onsets}
+\item{durations}{the duration of each event.}
 }
 \description{
 Create an categorical event sequence from a \code{factor}

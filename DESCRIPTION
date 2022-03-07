@@ -38,7 +38,9 @@ Imports:
     robustbase,
     glmnet,
     care,
-    memoise
+    memoise,
+    pracma,
+    forecast
 RoxygenNote: 7.1.1
 Roxygen: list(markdown = TRUE)
 Suggests: testthat,

@@ -34,6 +34,10 @@ fmri_lm(
 
 \item{strategy}{the data splitting strategy}
 
+\item{nchunks}{number of daa chunks when strategy is \code{chunkwise}}
+
+\item{...}{extra args}
+
 \item{contrasts}{a set of contrasts}
 }
 \description{

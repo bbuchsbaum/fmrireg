@@ -207,6 +207,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 #' @param block a formula for the block factor
 #' @param method the regression method for estimating trialwise betas
 #' @param basemod \code{baseline_model} instance to regress out of data before beta estimation
+#' @param radius the radius in mm for `pls_searchlight` approach
 #' @param niter number of searchlight iterations for method "pls_searchlight"
 #' @param ncomp number of pls components for method "pls" and "pls_searchlight" and "pls_global"
 #' @param lambda lambda parameter (not currently used)
@@ -367,7 +368,7 @@ estimate_betas.latent_dataset <- function(x, fixed=NULL, ran, block,
 estimate_hrf <- function(form, fixed=NULL, block, dataset, 
                            bs=c("tp", "ts", "cr", "ps"), 
                            rsam=seq(0,20,by=1),
-                           basedeg=5, nuisance_list=NULL) {
+                           basemod=NULL) {
   dset <- dataset
   bvec <- get_data(dset)
   mask <- get_mask(dset)
@@ -375,7 +376,11 @@ estimate_hrf <- function(form, fixed=NULL, block, dataset,
   onset_var <- lazyeval::f_lhs(form)
   dvars <- lazyeval::f_rhs(form)
   
-  bmod <- baseline_model("bs", degree=basedeg, sframe=dset$sampling_frame, nuisance_list=nuisance_list)
+  bmod <- if (is.null(basemod)) {
+    baseline_model("constant", sframe=dset$sampling_frame)
+  } else {
+    basemod
+  }
   
   if (!is.null(fixed)) {
     emod_fixed <- event_model(fixed, data=dset$event_table, block=block, sampling_frame=dset$sampling_frame)
@@ -393,7 +398,6 @@ estimate_hrf <- function(form, fixed=NULL, block, dataset,
   X_cond <- as.matrix(design_matrix(emat_cond))
   #browser()
   
-  ## TODO 'bvec' is not an argument
   res <- do.call(cbind, furrr::future_map(neuroim2::vectors(bvec, subset=which(mask>0)), function(v) {
     gam.1 <- if (has_fixed) {
       gam(v ~ s(X_cond, bs=bs) + X_fixed + X_base)

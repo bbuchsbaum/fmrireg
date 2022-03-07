@@ -17,6 +17,8 @@ trialwise(
 )
 }
 \arguments{
+\item{label}{the label for the generated variable.}
+
 \item{basis}{the impulse response function or the name of a pre-supplied function, one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian".}
 
 \item{onsets}{optional onsets override. If missing, onsets will be taken from the \code{event_model}}

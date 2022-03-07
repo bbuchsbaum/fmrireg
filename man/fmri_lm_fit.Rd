@@ -24,6 +24,10 @@ fmri_lm_fit(
 \item{robust}{whether to use robust fitting (TRUE or FALSE)}
 
 \item{contrasts}{a set of contrasts}
+
+\item{nchunks}{number of daa chunks when strategy is \code{chunkwise}}
+
+\item{...}{extra args}
 }
 \description{
 fmri_lm_fit

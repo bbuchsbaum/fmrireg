@@ -2,6 +2,8 @@
 
 #' design_plot
 #' 
+#' @param fmrimod the `fmri_model` object
+#' @param longnames use longnames in legend
 #' @importFrom ggplot2 ggplot aes_string aes
 #' @import shiny
 design_plot <- function(fmrimod, longnames=FALSE) {

@@ -80,7 +80,7 @@ plot.fmri_model <- function(x,...) {
 
 
 #' @export
-print.fmri_model <- function(object) {
+print.fmri_model <- function(x) {
   cat("fmri_model", "\n")
   cat(" ", "Event Model:  ", Reduce(paste, deparse(object$event_model$model_spec$formula)), "\n")
   cat(" ", "Baseline Model:  ", object$baseline_model$drift_term$varname, "\n")

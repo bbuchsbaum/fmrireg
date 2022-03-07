@@ -47,7 +47,7 @@ single_trial_regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=
 #' from a set of onset times and a hemodynamic response function. A \code{regressor} can be
 #' evaluated at a set of times to generate a time-course appropriate for modeling an fMRI response.
 #' 
-#' @param onset the event onsets in seconds
+#' @param onsets the event onsets in seconds
 #' @param hrf a hemodynamic response function, e.g. \code{HRF_SPMG1} or costum \code{HRF}
 #' @param duration duration of events (default is 0)
 #' @param amplitude scaling vector (default is 1)
@@ -288,8 +288,10 @@ amplitudes.regressor <- function(x) x$amplitude
 #' plot a regressor object
 #' 
 #' @export
+#' @param x the object
 #' @param samples the times in seconds along which to plot regressor function
 #' @param add whether to add to existing plot
+#' @param ... extra args to send to `plot` 
 plot.regressor <- function(x, samples, add=FALSE, ...) {
   if (missing(samples)) {
     ons <- x$onsets

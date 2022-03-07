@@ -14,6 +14,8 @@ regressor(
 )
 }
 \arguments{
+\item{onsets}{the event onsets in seconds}
+
 \item{hrf}{a hemodynamic response function, e.g. \code{HRF_SPMG1} or costum \code{HRF}}
 
 \item{duration}{duration of events (default is 0)}
@@ -23,8 +25,6 @@ regressor(
 \item{span}{the temporal window of the impulse response function (default is 24)}
 
 \item{summate}{whether to summate hrf amplitude as a function of the duration of an event.}
-
-\item{onset}{the event onsets in seconds}
 }
 \value{
 an S3 list of type \code{regressor}

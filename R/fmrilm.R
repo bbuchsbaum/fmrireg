@@ -66,8 +66,9 @@ create_fmri_model <- function(formula, block, baseline_model=NULL, dataset,
 #' @param drop_empty whether to remove factor levels with size of zero
 #' @param contrasts a set of contrasts
 #' @param strategy the data splitting strategy
+#' @param nchunks number of daa chunks when strategy is `chunkwise`
 #' @param robust whether to use robust fitting (TRUE or FALSE)
-#' 
+#' @param ... extra args
 #' @examples 
 #' etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))
 #' etab2 <- data.frame(onset=c(1,30,65,75), fac=factor(c("A", "B", "A", "B")), run=c(1,1,1,1))
