@@ -572,37 +572,37 @@ one_chunk <- function(x) {
 #' @export
 print.fmri_dataset <- function(x) {
   cat("fmri_dataset", "\n")
-  cat("  number of runs: ", object$nruns, "\n")
-  print(object$sampling_frame)
+  cat("  number of runs: ", x$nruns, "\n")
+  print(x$sampling_frame)
   cat("  event_table: ", "\n")
-  print(object$event_table)
+  print(x$event_table)
 }
 
 
 #' @export
 print.matrix_dataset <- function(x) {
   cat("matrix_dataset", "\n")
-  cat("  number of runs: ", object$nruns, "\n")
-  cat("  number of rows: ", nrow(object$datamat), "\n")
-  cat("  number of columns: ", ncol(object$datamat), "\n")
-  print(object$sampling_frame)
+  cat("  number of runs: ", x$nruns, "\n")
+  cat("  number of rows: ", nrow(x$datamat), "\n")
+  cat("  number of columns: ", ncol(x$datamat), "\n")
+  print(x$sampling_frame)
   cat("  event_table: ", "\n")
-  print(object$event_table)
+  print(x$event_table)
 }
 
 #' @export
 print.latent_dataset <- function(x) {
   cat("latent_dataset", "\n")
-  cat("  number of runs: ", object$nruns, "\n")
-  cat("  number of rows: ", nrow(object$datamat), "\n")
-  cat("  number of latent variables: ", ncol(object$datamat), "\n")
-  print(object$sampling_frame)
+  cat("  number of runs: ", x$nruns, "\n")
+  cat("  number of rows: ", nrow(x$datamat), "\n")
+  cat("  number of latent variables: ", ncol(x$datamat), "\n")
+  print(x$sampling_frame)
   cat("  event_table: ", "\n")
-  print(object$event_table)
+  print(x$event_table)
 }
 
 print.chunkiter <- function(x) {
-  cat(paste("chunk iterator with", object$nchunks, " chunks"))
+  cat(paste("chunk iterator with", x$nchunks, " chunks"))
 }
 
 
