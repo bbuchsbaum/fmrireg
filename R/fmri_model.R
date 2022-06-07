@@ -82,16 +82,16 @@ plot.fmri_model <- function(x,...) {
 #' @export
 print.fmri_model <- function(x) {
   cat("fmri_model", "\n")
-  cat(" ", "Event Model:  ", Reduce(paste, deparse(object$event_model$model_spec$formula)), "\n")
-  cat(" ", "Baseline Model:  ", object$baseline_model$drift_term$varname, "\n")
-  cat(" ", "Num Terms", length(terms(object)), "\n")
-  cat(" ", "Num Events: ", nrow(object$model_spec$event_table), "\n")
-  cat(" ", "Num Columns: ", length(conditions(object)), "\n")
-  cat(" ", "Num Blocks: ", length(object$event_model$model_spec$sampling_frame$blocklens), "\n")
-  cat(" ", "Length of Blocks: ", paste(object$event_model$model_spec$sampling_frame$blocklens, collapse=", "), "\n")
-  for (i in 1:length(terms(object))) {
+  cat(" ", "Event Model:  ", Reduce(paste, deparse(x$event_model$model_spec$formula)), "\n")
+  cat(" ", "Baseline Model:  ", x$baseline_model$drift_term$varname, "\n")
+  cat(" ", "Num Terms", length(terms(x)), "\n")
+  cat(" ", "Num Events: ", nrow(x$model_spec$event_table), "\n")
+  cat(" ", "Num Columns: ", length(conditions(x)), "\n")
+  cat(" ", "Num Blocks: ", length(x$event_model$model_spec$sampling_frame$blocklens), "\n")
+  cat(" ", "Length of Blocks: ", paste(x$event_model$model_spec$sampling_frame$blocklens, collapse=", "), "\n")
+  for (i in 1:length(terms(x))) {
     cat("\n")
-    t <- terms(object)[[i]]
+    t <- terms(x)[[i]]
     cat("Term:", i, " ")
     print(t)
   }
