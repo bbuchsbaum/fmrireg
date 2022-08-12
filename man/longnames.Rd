@@ -13,15 +13,15 @@ longnames(x, ...)
 
 longnames(x, ...)
 
-\method{longnames}{convolved_term}(x)
+\method{longnames}{convolved_term}(x, ...)
 
-\method{longnames}{afni_hrf_convolved_term}(x)
+\method{longnames}{afni_hrf_convolved_term}(x, ...)
 
-\method{longnames}{event_model}(x)
+\method{longnames}{event_model}(x, ...)
 
-\method{longnames}{event_term}(x)
+\method{longnames}{event_term}(x, ...)
 
-\method{longnames}{matrix_term}(x)
+\method{longnames}{matrix_term}(x, ...)
 }
 \arguments{
 \item{x}{the object}

@@ -1,6 +1,6 @@
 
 #' @export
-event_model.list <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0, precision=.3) {
+event_model.list <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0, precision=.3, ...) {
   assert_that(all(sapply(x, function(a) inherits(a, "hrfspec"))), msg="event_model.list: all `x` elements must be of type `hrfspec")
   
   if (lazyeval::is_formula(block)) {
@@ -44,7 +44,7 @@ event_model.list <- function(x, data, block, sampling_frame, drop_empty=TRUE, du
 
 
 #' @export
-event_model.formula <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0, precision=.3) {
+event_model.formula <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0, precision=.3, ...) {
   formula <- x
   stopifnot(inherits(formula, "formula"))
   assert_that(inherits(data, "data.frame"), msg="`data` must be a `data.frame`")
@@ -112,7 +112,7 @@ event_model.formula <- function(x, data, block, sampling_frame, drop_empty=TRUE,
 }
 
 #' @export
-blocklens.event_model <- function(x) {
+blocklens.event_model <- function(x,...) {
   blocklens(x$sampling_frame)
 }
 
@@ -177,17 +177,19 @@ extract_terms <- function(formula, data) {
   }	
 }
 
-#' @keywords internal
-extract_covariates <- function(.terms, variables, resp, etab) {
-  vars <- attr(.terms, "variables") 
-  varnames <- sapply(vars, deparse, width.cutoff = 500)[-1]
-  ind.vars <- varnames[-resp] 
-  orig.covar.names <- ind.vars[which(sapply(variables[-resp], function(obj) is.numeric(obj) || .is.parametric.basis(obj)))]
-  new.covar.names <- names(events(etab))[sapply(events(etab), is_continuous)]
-  covar.names <- as.list(orig.covar.names)
-  names(covar.names) <- new.covar.names
-  covar.names
-}
+# @keywords internal
+# extract_covariates <- function(.terms, variables, resp, etab) {
+#   vars <- attr(.terms, "variables") 
+#   varnames <- sapply(vars, deparse, width.cutoff = 500)[-1]
+#   ind.vars <- varnames[-resp] 
+#   
+#   
+#   orig.covar.names <- ind.vars[which(sapply(variables[-resp], function(obj) is.numeric(obj) || is_parametric_basis(obj)))]
+#   new.covar.names <- names(events(etab))[sapply(events(etab), is_continuous)]
+#   covar.names <- as.list(orig.covar.names)
+#   names(covar.names) <- new.covar.names
+#   covar.names
+# }
 
 #' @keywords internal
 is_parametric_basis <- function(obj) { inherits(obj, "ParametricBasis") }
@@ -233,7 +235,7 @@ parse_term <- function(vars, ttype) {
 
 #' @export
 #' @importFrom tibble as_tibble
-design_matrix.event_model_spec <- function(x) {
+design_matrix.event_model_spec <- function(x, ...) {
   termlist <- lapply(x$varspec, function(m) construct(m,x))
   ret <- lapply(termlist, design_matrix)
   vnames <- unlist(lapply(ret, colnames))
@@ -245,7 +247,7 @@ design_matrix.event_model_spec <- function(x) {
 #' @importFrom tibble as_tibble
 #' @export
 #' @rdname design_matrix
-design_matrix.event_model <- function(x, blockid=NULL) {
+design_matrix.event_model <- function(x, blockid=NULL, ...) {
   ret <- lapply(x$terms, design_matrix, blockid)
   vnames <- unlist(lapply(ret, names))
   dmat <- tibble::as_tibble(do.call(cbind, ret),.name_repair="check_unique")
@@ -256,19 +258,19 @@ design_matrix.event_model <- function(x, blockid=NULL) {
 
 
 #' @export
-terms.event_model <- function(x) {
+terms.event_model <- function(x,...) {
   x$terms
 }
 
 #' @export
 #' @rdname conditions
-conditions.event_model <- function(x) {
+conditions.event_model <- function(x,...) {
   unlist(lapply(terms(x), function(t) conditions(t)), use.names=FALSE)
 }
 
 #' @export
 #' @rdname contrast_weights
-contrast_weights.convolved_term <- function(x) {
+contrast_weights.convolved_term <- function(x,...) {
   lapply(x$contrasts, function(cspec) {
     if (!is.null(cspec))
       contrast_weights(cspec,x)
@@ -277,7 +279,7 @@ contrast_weights.convolved_term <- function(x) {
 
 #' @export
 #' @rdname Fcontrasts
-Fcontrasts.convolved_term <- function(x) {
+Fcontrasts.convolved_term <- function(x,...) {
   Fcontrasts(x$evterm)
 }
 
@@ -289,7 +291,7 @@ Fcontrasts.convolved_term <- function(x) {
 
 #' @export
 #' @rdname contrast_weights
-contrast_weights.fmri_model <- function(x) { 
+contrast_weights.fmri_model <- function(x,...) { 
   contrast_weights(x$event_model) 
 }
 
@@ -302,7 +304,7 @@ term_names.event_model <- function(x) {
 
 #' @export
 #' @rdname contrast_weights
-contrast_weights.event_model <- function(x) {
+contrast_weights.event_model <- function(x,...) {
   tnames <- term_names(x)
   tind <- x$term_indices
   ncond <- length(conditions(x))
@@ -335,7 +337,7 @@ contrast_weights.event_model <- function(x) {
 
 
 #' @export
-Fcontrasts.event_model <- function(x) {
+Fcontrasts.event_model <- function(x,...) {
   tind <- x$term_indices
   #len <- length(conditions(x))
   tnames <- names(terms(x))
@@ -369,7 +371,7 @@ Fcontrasts.event_model <- function(x) {
   
 #' @export
 #' @rdname design_matrix
-design_matrix.convolved_term <- function(x, blockid=NULL) {
+design_matrix.convolved_term <- function(x, blockid=NULL, ...) {
   if (is.null(blockid)) {
     x$design_matrix
   } else {
@@ -378,7 +380,7 @@ design_matrix.convolved_term <- function(x, blockid=NULL) {
   } 
 }
 
-design_matrix.afni_hrf_convolved_term <- function(x, blockid=NULL) {
+design_matrix.afni_hrf_convolved_term <- function(x, blockid=NULL, ...) {
   stop("afni_hrf_convolved_term delegates design matrix construction to AFNI")
 }
 
@@ -405,7 +407,7 @@ matrix_term <- function(varname, mat) {
 
 #' @export
 #' @rdname design_matrix
-design_matrix.matrix_term <- function(x) {
+design_matrix.matrix_term <- function(x, ...) {
   if (is.null(names(x$design_matrix))) {
     cnames <- paste0(x$varname, "_", 1:ncol(x$design_matrix))
     names(x$design_matrix) <- cnames
@@ -425,7 +427,7 @@ nbasis.convolved_term <- function(x) nbasis(x$hrf)
 
 #' @export
 #' @rdname longnames
-longnames.convolved_term <- function(x) {
+longnames.convolved_term <- function(x, ...) {
   # ignores exclude.basis
   term.cells <- cells(x)
   # ignores exclude.basis
@@ -437,7 +439,7 @@ longnames.convolved_term <- function(x) {
 
 #' @export
 #' @rdname longnames
-longnames.afni_hrf_convolved_term <- function(x) {
+longnames.afni_hrf_convolved_term <- function(x, ...) {
   # do not include basis term
   term.cells <- cells(x, exclude_basis=TRUE)
   # ignores exclude.basis
@@ -449,14 +451,14 @@ longnames.afni_hrf_convolved_term <- function(x) {
 
 #' @export
 #' @rdname longnames
-longnames.event_model <- function(x) {
+longnames.event_model <- function(x, ...) {
   unlist(lapply(terms(x), longnames))
  
 }
 
 #' @export
 #' @rdname longnames
-longnames.event_term <- function(x) {
+longnames.event_term <- function(x, ...) {
   # ignores exclude.basis
   term.cells <- cells(x)
   # ignores exclude.basis
@@ -469,13 +471,13 @@ longnames.event_term <- function(x) {
 
 #' @export
 #' @rdname shortnames
-shortnames.event_model <- function(x) {
+shortnames.event_model <- function(x, ...) {
   unlist(lapply(terms(x), shortnames))
 }
 
 #' @export
 #' @rdname shortnames
-shortnames.convolved_term <- function(x) {
+shortnames.convolved_term <- function(x, ...) {
   # ignores exclude.basis
   term.cells <- cells(x)
   # ignores exclude.basis
@@ -488,20 +490,20 @@ shortnames.convolved_term <- function(x) {
 
 #' @export
 #' @rdname shortnames
-shortnames.matrix_term <- function(x) {
+shortnames.matrix_term <- function(x, ...) {
   colnames(x$design_matrix)
 }
 
 
 #' @export
 #' @rdname longnames
-longnames.matrix_term <- function(x) {
+longnames.matrix_term <- function(x, ...) {
   paste0(x$name, "#", colnames(design_matrix(x)))
 }
 
 
 #' @export
-print.event_model <- function(x) {
+print.event_model <- function(x,...) {
   cat("event_model", "\n")
   cat(" ", Reduce(paste, deparse(x$model_spec$formula)), "\n")
   cat(" ", "Num Terms", length(terms(x)), "\n")
@@ -523,7 +525,7 @@ print.event_model <- function(x) {
 #' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap xlab theme_bw
 #' @importFrom tidyr gather
 #' @export
-plot.event_model <- function(x, term_name=NULL, longnames=TRUE) {
+plot.event_model <- function(x, y, term_name=NULL, longnames=TRUE, ...) {
   all_terms <- terms(x)
   term_names <- sapply(all_terms, "[[", "varname")
   

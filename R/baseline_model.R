@@ -145,7 +145,7 @@ baseline <- function(degree=1, basis=c("constant", "poly", "bs", "ns"), name=NUL
 
 
 #' @export
-design_matrix.baseline_model <- function(x, blockid=NULL, allrows=FALSE) {
+design_matrix.baseline_model <- function(x, blockid=NULL, allrows=FALSE, ...) {
   if (is.null(x$nuisance_term) && is.null(x$block_term)) {
     ## just drift term
     tibble::as_tibble(design_matrix(x$drift_term, blockid,allrows),.name_repair="check_unique")
@@ -168,7 +168,7 @@ design_matrix.baseline_model <- function(x, blockid=NULL, allrows=FALSE) {
 
 
 #' @export
-terms.baseline_model <- function(x) {
+terms.baseline_model <- function(x,...) {
   ret <- list(x$block_term, x$drift_term, x$nuisance_term)
   ret <- ret[!map_lgl(ret, is.null)]
   
@@ -200,7 +200,8 @@ block <- function(x) {
 
 #' @export  
 #' @importFrom purrr map_chr
-construct.baselinespec <- function(x, sampling_frame) {
+construct.baselinespec <- function(x, model_spec, ...) {
+  sampling_frame <- model_spec$sampling_frame
   ## ret <- if (x$constant && x$basis != "constant") {
   ## add intercept term per run
   ##lapply(sampling_frame$blocklens, function(bl) cbind(rep(1, bl), x$fun(seq(1, bl), degree=x$degree)))
@@ -268,7 +269,7 @@ baseline_term <- function(varname, mat, colind, rowind) {
 
 
 #' @export
-design_matrix.baseline_term <- function(x, blockid=NULL, allrows=FALSE) {
+design_matrix.baseline_term <- function(x, blockid=NULL, allrows=FALSE, ...) {
   if (is.null(blockid)) {
     x$design_matrix
   } else {
@@ -332,7 +333,7 @@ block_term <- function(varname, blockids, expanded_blockids, mat, type=c("runwis
 
 
 #' @export
-design_matrix.block_term <- function(x, blockid=NULL, allrows=FALSE) {
+design_matrix.block_term <- function(x, blockid=NULL, allrows=FALSE, ...) {
   if (is.null(blockid)) {
     x$design_matrix
   } else {
@@ -365,7 +366,7 @@ nuisance <- function(x) {
 }
 
 #' @export
-construct.nuisancespec <- function(x, model_spec) {
+construct.nuisancespec <- function(x, model_spec, ...) {
   mat <- base::eval(parse(text=x$varname), envir=model_spec$aux_data, enclos=parent.frame())
   matrix_term(x$name, mat)
 }  
@@ -373,12 +374,12 @@ construct.nuisancespec <- function(x, model_spec) {
 
 
 #' @export
-construct.blockspec <- function(x, model_spec) {
+construct.blockspec <- function(x, model_spec, ...) {
   construct_block_term(x$name, model_spec$sampling_frame)
 }
 
 #' @export
-print.baseline_model <- function(x) {
+print.baseline_model <- function(x,...) {
   cat("baseline_model", "\n")
   cat("  ", "name: ", x$drift_term$varname, "\n")
   cat("  ", "basis type: ", x$drift_spec$basis, "\n")
@@ -396,10 +397,11 @@ print.baseline_model <- function(x) {
    
 }
 
+
 #' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap xlab theme_bw
 #' @importFrom tidyr gather
 #' @export
-plot.baseline_model <- function(x, term_name=NULL) {
+plot.baseline_model <- function(x, y, term_name=NULL, ...) {
 
   all_terms <- terms(x)
   term_names <- names(all_terms)

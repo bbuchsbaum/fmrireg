@@ -19,7 +19,8 @@ estimate_betas(x, ...)
   radius = 8,
   niter = 8,
   ncomp = 4,
-  lambda = 0.01
+  lambda = 0.01,
+  ...
 )
 
 \method{estimate_betas}{matrix_dataset}(
@@ -30,7 +31,8 @@ estimate_betas(x, ...)
   method = c("mixed", "pls", "pls_global", "ols"),
   basemod = NULL,
   ncomp = 4,
-  lambda = 0.01
+  lambda = 0.01,
+  ...
 )
 
 \method{estimate_betas}{latent_dataset}(
@@ -42,7 +44,8 @@ estimate_betas(x, ...)
   basemod = NULL,
   ncomp = 4,
   lambda = 0.01,
-  prewhiten = TRUE
+  prewhiten = TRUE,
+  ...
 )
 }
 \arguments{

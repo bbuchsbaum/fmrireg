@@ -326,7 +326,7 @@ get_data.fmri_file_dataset <- function(x, ...) {
 }
 
 #' @export
-get_mask.fmri_file_dataset <- function(x) {
+get_mask.fmri_file_dataset <- function(x, ...) {
   if (is.null(x$mask)) {
     neuroim2::read_vol(x$mask_file)
   } else {
@@ -336,17 +336,17 @@ get_mask.fmri_file_dataset <- function(x) {
 
 
 #' @export
-get_mask.fmri_mem_dataset <- function(x) {
+get_mask.fmri_mem_dataset <- function(x, ...) {
   x$mask
 }
 
 #' @export
-get_mask.matrix_dataset <- function(x) {
+get_mask.matrix_dataset <- function(x, ...) {
   x$mask
 }
 
 #' @export
-get_mask.latent_dataset <- function(x) {
+get_mask.latent_dataset <- function(x, ...) {
   x$lvec@mask
 }
 
@@ -385,7 +385,7 @@ chunk_iter <- function(x, nchunks, get_chunk) {
 
 #' @importFrom neuroim2 series
 #' @export
-data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
+data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
   
   mask <- get_mask(x)
   
@@ -432,10 +432,10 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
 
 #' @import neuroim2
 #' @export
-data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE) {
+data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
   
   mask <- get_mask(x)
-  
+  maskSeq <- NULL
   iter <- if (runwise) {
     chunk_iter(x, length(x$scans), get_run_chunk)
   } else if (nchunks == 1) {
@@ -477,7 +477,7 @@ data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE) {
 
 #' @import neuroim2
 #' @export
-data_chunks.matrix_dataset <- function(x, nchunks=1, runwise=FALSE) {
+data_chunks.matrix_dataset <- function(x, nchunks=1, runwise=FALSE,...) {
   get_run_chunk <- function(chunk_num) {
     ind <- which(blockids(x$sampling_frame) == chunk_num)
     mat <- x$datamat[ind,,drop=FALSE]
@@ -570,7 +570,7 @@ one_chunk <- function(x) {
 }
 
 #' @export
-print.fmri_dataset <- function(x) {
+print.fmri_dataset <- function(x, ...) {
   cat("fmri_dataset", "\n")
   cat("  number of runs: ", x$nruns, "\n")
   print(x$sampling_frame)
@@ -580,7 +580,7 @@ print.fmri_dataset <- function(x) {
 
 
 #' @export
-print.matrix_dataset <- function(x) {
+print.matrix_dataset <- function(x,...) {
   cat("matrix_dataset", "\n")
   cat("  number of runs: ", x$nruns, "\n")
   cat("  number of rows: ", nrow(x$datamat), "\n")
@@ -591,7 +591,7 @@ print.matrix_dataset <- function(x) {
 }
 
 #' @export
-print.latent_dataset <- function(x) {
+print.latent_dataset <- function(x,...) {
   cat("latent_dataset", "\n")
   cat("  number of runs: ", x$nruns, "\n")
   cat("  number of rows: ", nrow(x$datamat), "\n")
@@ -601,7 +601,8 @@ print.latent_dataset <- function(x) {
   print(x$event_table)
 }
 
-print.chunkiter <- function(x) {
+#' @export
+print.chunkiter <- function(x, ...) {
   cat(paste("chunk iterator with", x$nchunks, " chunks"))
 }
 

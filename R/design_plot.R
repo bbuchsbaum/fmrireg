@@ -119,6 +119,7 @@ hrf_plot <- function() {
         df1 <- data.frame(Y=evaluate(reg, sgrid), time=sgrid)
         ggplot2::ggplot(df1, ggplot2::aes(time, Y)) + geom_line() + xlab("Time") + theme_bw(14)
       } else {
+        Y.1 <- NULL
         Y <- evaluate(reg, sgrid)
         df1 <- data.frame(Y =Y, time=sgrid)
         p <- ggplot2::ggplot(df1, ggplot2::aes(time, Y.1)) + geom_line() + xlab("Time") + theme_bw(14)
@@ -157,7 +158,7 @@ term_form <- function() {
 }
 
 design_editor <- function(design, sframe) {
-  library(shiny.semantic)
+  requireNamespace("shiny.semantic")
   term_component <- function() {
     fluidRow(
       column(4, selectInput("onset_var", "Onsets", names(design))),

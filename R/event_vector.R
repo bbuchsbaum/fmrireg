@@ -289,7 +289,8 @@ levels.event_set <- function(x) colnames(x$value)
 levels.event_basis <- function(x) levels(x$basis)
 
 #' @export
-formula.event_term <- function(x) as.formula(paste("~ ", "(", paste(parent_terms(x), collapse=":"), "-1", ")"))
+formula.event_term <- function(x, ...) as.formula(paste("~ ", "(", paste(parent_terms(x), collapse=":"), 
+                                                   "-1", ")"))
 
 #' @export
 #' @rdname levels
@@ -308,7 +309,7 @@ levels.event_term <- function(x) {
 #' @param drop.empty remove empty cells (not implemented)
 #' @export
 #' @rdname cells
-cells.event_factor <- function(x, drop.empty=TRUE) {
+cells.event_factor <- function(x, drop.empty=TRUE,...) {
   etab <- data.frame(onsets=x$onsets, durations=x$durations, blockids=x$blockids)
   split(etab, x$value)
 }
@@ -323,7 +324,7 @@ cells.event_factor <- function(x, drop.empty=TRUE) {
 #'                fac2=factor(c("1", "1", "2", "2")))
 #' eterm <- event_term(evlist,onsets=1:4, blockids=rep(1,4))
 #' cells(eterm)
-cells.event_term <- function(x, drop.empty=TRUE) {
+cells.event_term <- function(x, drop.empty=TRUE,...) {
   evtab <- x$event_table
   evset <- tibble::as_tibble(expand.grid(lapply(x$events, levels)), .name_repair="check_unique")
   
@@ -367,14 +368,15 @@ cells.event_term <- function(x, drop.empty=TRUE) {
   
 }
 
-
-cells.covariate_convolved_term <- function(x) {
+#' @export
+#' @rdname cells
+cells.covariate_convolved_term <- function(x,...) {
   unique(event_table(x))
 }
 
 #' @export
 #' @importFrom stringr str_trim
-cells.convolved_term <- function(x, exclude_basis=FALSE) {
+cells.convolved_term <- function(x, exclude_basis=FALSE,...) {
   evtab <- event_table(x)
   evset <- .event_set(x, exclude_basis=exclude_basis)
   
@@ -401,28 +403,28 @@ cells.convolved_term <- function(x, exclude_basis=FALSE) {
 }
 
 #' @export
-conditions.fmri_term <- function(x) {
+conditions.fmri_term <- function(x, ...) {
   colnames(design_matrix(x))
 }
 
 #' @export
-conditions.convolved_term <- function(x) {
+conditions.convolved_term <- function(x,...) {
   colnames(design_matrix(x))
 }
 
 #' @export
-conditions.afni_hrf_convolved_term <- function(x) {
+conditions.afni_hrf_convolved_term <- function(x,...) {
   conditions(x$evterm)
 }
 
 #' @export
-conditions.afni_trialwise_convolved_term <- function(x) {
+conditions.afni_trialwise_convolved_term <- function(x,...) {
   conditions(x$evterm)
 }
 
 
 #' @export
-conditions.event_term <- function(x, drop.empty=TRUE) {
+conditions.event_term <- function(x, drop.empty=TRUE, ...) {
   
   .cells <- cells(x, drop.empty=drop.empty)
   pterms <- parent_terms(x)
@@ -483,7 +485,7 @@ is_categorical.event_seq <- function(x) !x$continuous
 
 
 #' @export
-elements.event_matrix <- function(x, values=TRUE) {
+elements.event_matrix <- function(x, values=TRUE, ...) {
   if (values) {
     ret <- x$value
     colnames(ret) <- colnames(x)
@@ -503,20 +505,21 @@ elements.event_matrix <- function(x, values=TRUE) {
 }
 
 #' @export
-elements.event_seq <- function(x, values = TRUE) {
+elements.event_seq <- function(x, values = TRUE, ...) {
   if (values) {
     ret <- list(x$value)
     names(ret) <- x$varname
     ret
   } else {
-    ret <- list(rep(varname(x), length(x)))
+    #ret <- list(rep(varname(x), length(x)))
+    ret <- list(rep(x$varname, length(x)))
     names(ret) <- x$varname
     ret
   }
 }
 
 #' @export
-elements.event_basis <- function(x, values=TRUE, transformed=TRUE) {
+elements.event_basis <- function(x, values=TRUE, transformed=TRUE, ...) {
   if (values && !transformed) {
     x$value$x				
   } else if (values) {
@@ -541,7 +544,7 @@ elements.event_basis <- function(x, values=TRUE, transformed=TRUE) {
 
 
 #' @export
-elements.event_term <- function(x, values=TRUE) {
+elements.event_term <- function(x, values=TRUE, ...) {
   els <- lapply(x$events, elements, values=values)
   n <- sapply(names(els), function(nam) .sanitizeName(nam))
   names(els) <- as.vector(n)
@@ -569,7 +572,7 @@ blockids.convolved_term <- function(x) {
 }
 
 #' @export
-split_onsets.event_term <- function(x, sframe, global=FALSE,blocksplit=FALSE) {
+split_onsets.event_term <- function(x, sframe, global=FALSE,blocksplit=FALSE, ...) {
   ### need to check for 0 factors
   facs <- x$events[!sapply(x$events, is_continuous)]
   
@@ -647,7 +650,8 @@ convolve_design <- function(hrf, dmat, globons, durations, summate=TRUE) {
 #' @importFrom magrittr %>%
 #' @importFrom dplyr group_by select do ungroup
 #' @export
-convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate=TRUE, precision=.3) {
+convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, 
+                                summate=TRUE, precision=.3,...) {
   globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
   
   durations <- x$durations
@@ -687,7 +691,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate
 }
 
 #' @export
-Fcontrasts.event_term <- function(x) {
+Fcontrasts.event_term <- function(x,...) {
   cellcount <- attr(cells(x, drop.empty=FALSE), "count")
   if (any(cellcount) == 0) {
     stop("currently cannot compute Fcontrasts for non-orthogonal design.")
@@ -763,7 +767,7 @@ Fcontrasts.event_term <- function(x) {
 #' @importFrom tibble as_tibble
 #' @importFrom purrr map_chr
 #' @export
-design_matrix.event_term <- function(x, drop.empty=TRUE) {
+design_matrix.event_term <- function(x, drop.empty=TRUE,...) {
 
   locenv <- new.env()
   pterms <- map_chr(parent_terms(x), .sanitizeName)	
@@ -822,7 +826,7 @@ design_matrix.event_term <- function(x, drop.empty=TRUE) {
 
 
 #' @export
-print.event_term <- function(x) {
+print.event_term <- function(x, ...) {
   cat("event_term", "\n")
   cat("  ", "Term Name: ", x$varname, "\n")
   cat("  ", "Formula:  ", as.character(formula(x)), "\n")
@@ -832,7 +836,7 @@ print.event_term <- function(x) {
 }
 
 #' @export
-print.fmri_term <- function(x) {
+print.fmri_term <- function(x,...) {
   cat("fmri_term: ", class(x)[[1]], "\n")
   cat("  ", "Term Name: ", x$varname, "\n")
   cat("  ", "Num Rows: ", nrow(design_matrix(x)), "\n")
@@ -840,7 +844,7 @@ print.fmri_term <- function(x) {
 }
 
 #' @export
-print.convolved_term <- function(x) {
+print.convolved_term <- function(x,...) {
   cat("fmri_term: ", class(x)[[1]], "\n")
   cat("  ", "Term Name: ", x$varname, "\n")
   cat("  ", "Formula:  ", as.character(formula(x$evterm)), "\n")

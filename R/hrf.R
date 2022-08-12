@@ -176,7 +176,7 @@ AFNI_HRF <- function(name, nbasis, params) {
 
 
 #' @export
-as.character.AFNI_HRF <- function(x) {
+as.character.AFNI_HRF <- function(x,...) {
   paste(x, "\\(", paste(attr(x, "params"), collapse=","), "\\)", sep="")
 }
 
@@ -446,7 +446,7 @@ HRF_SPMG3 <- HRF(gen_hrf_set(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeri
 #' # the same, except now turn off temporal summation.
 #' hrf2 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=.1,summate=FALSE)
 #' 
-evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate=TRUE, normalize=FALSE) {
+evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate=TRUE, normalize=FALSE, ...) {
   if (duration < precision) {
     if (normalize) {
       x(grid)*amplitude*attr(x, "scale_factor")   
@@ -488,7 +488,7 @@ evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate
 
 
 #' @export
-evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1) {
+evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1, ...) {
   evaluate(x$hrf, grid,amplitude, duration, precision)
 }
 
@@ -587,6 +587,7 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #' form <- onsets ~ hrf(x) + hrf(y) + hrf(x,y)
 #' 
 #' @export
+#' @importFrom rlang enquos enexpr
 hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.3, 
                 nbasis=1, contrasts=NULL, id=NULL, lag=0, summate=TRUE) {
   
@@ -692,7 +693,7 @@ construct_event_term <- function(x, model_spec, onsets) {
 }
 
 #' @export
-construct.hrfspec <- function(x, model_spec) {
+construct.hrfspec <- function(x, model_spec, ...) {
   ons <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   et <- construct_event_term(x,model_spec, ons)
   
@@ -882,7 +883,7 @@ trialwise <- function(label="trialwise", basis="spmg1", onsets=NULL, durations=N
 }
 
 #' @export
-construct.trialwisespec <- function(x, model_spec) {
+construct.trialwisespec <- function(x, model_spec, ...) {
   
   ## compied almost verbatim from construct.hrfspec
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
@@ -1029,7 +1030,7 @@ afni_trialwise <- function(label, basis=c("spmg1", "block", "dmblock", "gamma", 
 }
 
 #' @export
-construct.afni_hrfspec <- function(x, model_spec) {
+construct.afni_hrfspec <- function(x, model_spec, ...) {
   
   et <- construct_event_term(x, model_spec)
   
@@ -1051,7 +1052,7 @@ construct.afni_hrfspec <- function(x, model_spec) {
 
 
 #' @export
-construct.afni_trialwise_hrfspec <- function(x, model_spec) {
+construct.afni_trialwise_hrfspec <- function(x, model_spec, ...) {
   
   ## compied almost verbatim from construct.hrfspec
   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets

@@ -5,7 +5,7 @@
 \alias{run}
 \title{run a command}
 \usage{
-\method{run}{afni_lm_spec}(x, outdir, execute = TRUE, execfun = system, prepend = "")
+\method{run}{afni_lm_spec}(x, outdir, execute = TRUE, execfun = system, prepend = "", ...)
 
 run(x, ...)
 }

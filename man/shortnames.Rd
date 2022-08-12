@@ -9,11 +9,11 @@
 \usage{
 shortnames(x, ...)
 
-\method{shortnames}{event_model}(x)
+\method{shortnames}{event_model}(x, ...)
 
-\method{shortnames}{convolved_term}(x)
+\method{shortnames}{convolved_term}(x, ...)
 
-\method{shortnames}{matrix_term}(x)
+\method{shortnames}{matrix_term}(x, ...)
 }
 \arguments{
 \item{x}{the object}

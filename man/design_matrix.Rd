@@ -10,13 +10,13 @@
 \usage{
 design_matrix(x, ...)
 
-\method{design_matrix}{event_model}(x, blockid = NULL)
+\method{design_matrix}{event_model}(x, blockid = NULL, ...)
 
-\method{design_matrix}{convolved_term}(x, blockid = NULL)
+\method{design_matrix}{convolved_term}(x, blockid = NULL, ...)
 
-\method{design_matrix}{matrix_term}(x)
+\method{design_matrix}{matrix_term}(x, ...)
 
-\method{design_matrix}{fmri_model}(x, blockid = NULL)
+\method{design_matrix}{fmri_model}(x, blockid = NULL, ...)
 }
 \arguments{
 \item{x}{the term}

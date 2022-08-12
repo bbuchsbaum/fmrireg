@@ -4,13 +4,16 @@
 \alias{cells}
 \alias{cells.event_factor}
 \alias{cells.event_term}
+\alias{cells.covariate_convolved_term}
 \title{the experimental cells of a design}
 \usage{
 cells(x, ...)
 
-\method{cells}{event_factor}(x, drop.empty = TRUE)
+\method{cells}{event_factor}(x, drop.empty = TRUE, ...)
 
-\method{cells}{event_term}(x, drop.empty = TRUE)
+\method{cells}{event_term}(x, drop.empty = TRUE, ...)
+
+\method{cells}{covariate_convolved_term}(x, ...)
 }
 \arguments{
 \item{x}{the object}

@@ -44,6 +44,7 @@ an instance of type \code{HRF} inheriting from \code{function}
 \examples{
 
 ## generate and hrf using spmg canonical hrf, a lag of 3, and a width of 2.
+
 grf <- gen_hrf(hrf_spmg1, lag=3, width=2)
 grf(0:20)
 

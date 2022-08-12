@@ -47,7 +47,7 @@ sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
 
 #' @export
 ## TODO screwy things happen when blockids don't start at 1.
-samples.sampling_frame <- function(x, blockids=NULL, global=FALSE) {
+samples.sampling_frame <- function(x, blockids=NULL, global=FALSE, ...) {
   if (is.null(blockids)) {
     blockids <- seq(1, length(x$blocklens))
   }
@@ -71,7 +71,7 @@ samples.sampling_frame <- function(x, blockids=NULL, global=FALSE) {
 
 
 #' @export
-global_onsets.sampling_frame <- function(x, onsets, blockids) {
+global_onsets.sampling_frame <- function(x, onsets, blockids,...) {
   
   ids <- rep(1:length(unique(blockids)), table(blockids))
   
@@ -92,7 +92,7 @@ global_onsets.sampling_frame <- function(x, onsets, blockids) {
 }  
 
 #' @export
-split_by_block.sampling_frame <- function(x, vals) {
+split_by_block.sampling_frame <- function(x, vals, ...) {
   split(vals, x$blockids)
 }
 
@@ -102,12 +102,12 @@ blockids.sampling_frame <- function(x) {
 }
 
 #' @export
-blocklens.sampling_frame <- function(x) {
+blocklens.sampling_frame <- function(x,...) {
   x$blocklens
 }
 
 #' @export
-print.sampling_frame <- function(x) {
+print.sampling_frame <- function(x,...) {
   cat("sampling_frame: \n")
   cat("  number of blocks:", length(x$blocklens), "\n")
   cat("  blocklens: ", paste(x$blocklens, collapse=", "), "\n")

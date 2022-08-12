@@ -20,7 +20,7 @@ fmri_model <- function(event_model, baseline_model) {
 #' @param blockid the block id to extract
 #' @export
 #' @rdname design_matrix
-design_matrix.fmri_model <- function(x, blockid=NULL) {
+design_matrix.fmri_model <- function(x, blockid=NULL, ...) {
   tibble::as_tibble(cbind(design_matrix(x$event_model, blockid), design_matrix(x$baseline_model, blockid)),.name_repair="check_unique")
 }
 
@@ -32,12 +32,12 @@ design_env.fmri_model <- function(x, blockid=NULL) {
 
 
 #' @export
-terms.fmri_model <- function(x) {
+terms.fmri_model <- function(x,...) {
   c(terms(x$event_model), terms(x$baseline_model))
 }
 
 #' @export
-blocklens.fmri_model <- function(x) {
+blocklens.fmri_model <- function(x,...) {
   blocklens(x$event_model)
 }
 
@@ -59,12 +59,12 @@ contrast_weights.fmri_model <- function(x, ...) {
 
 
 #' @export
-conditions.fmri_model <- function(x) {
+conditions.fmri_model <- function(x, ...) {
   unlist(lapply(terms(x), function(t) conditions(t)), use.names=FALSE)
 }
 
 #' @export
-conditions.baseline_model <- function(x) {
+conditions.baseline_model <- function(x, ...) {
   unlist(lapply(terms(x), function(t) conditions(t)), use.names=FALSE)
 }
 
@@ -80,7 +80,7 @@ plot.fmri_model <- function(x,...) {
 
 
 #' @export
-print.fmri_model <- function(x) {
+print.fmri_model <- function(x,...) {
   cat("fmri_model", "\n")
   cat(" ", "Event Model:  ", Reduce(paste, deparse(x$event_model$model_spec$formula)), "\n")
   cat(" ", "Baseline Model:  ", x$baseline_model$drift_term$varname, "\n")

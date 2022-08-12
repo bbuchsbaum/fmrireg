@@ -6,9 +6,9 @@ Date: 2020-09-15
 Authors@R: person("Bradley", "Buchsbaum",, role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
 License: GPL (>= 2)
 Maintainer: Bradley Buchsbaum <brad.buchsbaum@gmail.com>
-Description: fmrireg is a package for the analysis of fmri image data
+Description: fmrireg is a package for the analysis of functional magnetic resonance imaging (fMRI) data. Facilities are provided to construct flexible hemodynamic response functions, experimental regressors, and conduct univariate fMRI analyses.
 Depends:
-    R (>= 3.5.0),
+    R (>= 4.0.0),
     stats,
     methods,
     abind
@@ -40,8 +40,10 @@ Imports:
     care,
     memoise,
     pracma,
-    forecast
-RoxygenNote: 7.1.1
+    forecast,
+    furrr,
+    rlang
+RoxygenNote: 7.1.2
 Roxygen: list(markdown = TRUE)
 Suggests: testthat,
     knitr,

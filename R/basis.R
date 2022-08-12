@@ -13,9 +13,9 @@ dctbasis <- function(n, p=n, const=FALSE) {
   ret
 }
 
-osplinebasis <- function() {
-  
-}
+#osplinebasis <- function() {
+#  
+#}
 
 
 #' sub_basis
@@ -93,7 +93,7 @@ BSpline <- function(x, degree) {
 
 
 #' @export
-predict.Poly <- function(object,newdata) {
+predict.Poly <- function(object,newdata,...) {
   predict(object$y, newdata)
 }
 
@@ -127,37 +127,43 @@ sub_basis.Ident <- function(x, subset) {
 }
 
 #' @export
-predict.BSpline <- function(object,newdata) {
+predict.BSpline <- function(object,newdata,...) {
   predict(object$y, newdata)
 }
 
 #' @export
-predict.Ident <- function(object,newdata) {
+predict.Ident <- function(object,newdata,...) {
   ret <- as.data.frame(do.call(rbind, lapply(object$varnames, function(v) base::eval(v, newdata))))
   names(ret) <- object$varnames
   ret
 }
 
+#' @export
 levels.Ident <- function(x) {
   x$varnames
 }
 
+#' @export
 levels.BSpline <- function(x) {
   seq(1, x$degree)
 }
 
+#' @export
 levels.Poly <- function(x) {
   seq(1,x$degree)
 }
 
+#' @export
 columns.Poly <- function(x) {
   paste0(x$name, ".", seq(1, x$degree))
 }
 
+#' @export
 columns.BSpline <- function(x) {
   paste0(x$name, ".", seq(1, x$degree))
 }
 
+#' @export
 columns.Ident <- function(x) {
   x$varnames
 }

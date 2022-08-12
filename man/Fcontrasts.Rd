@@ -7,7 +7,7 @@
 \usage{
 Fcontrasts(x, ...)
 
-\method{Fcontrasts}{convolved_term}(x)
+\method{Fcontrasts}{convolved_term}(x, ...)
 }
 \arguments{
 \item{x}{the term}

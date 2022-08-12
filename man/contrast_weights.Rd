@@ -9,11 +9,11 @@
 \usage{
 contrast_weights(x, ...)
 
-\method{contrast_weights}{convolved_term}(x)
+\method{contrast_weights}{convolved_term}(x, ...)
 
 \method{contrast_weights}{fmri_model}(x, ...)
 
-\method{contrast_weights}{event_model}(x)
+\method{contrast_weights}{event_model}(x, ...)
 }
 \arguments{
 \item{x}{the object}

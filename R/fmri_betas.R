@@ -88,7 +88,7 @@ gen_beta_design <- function(fixed=NULL, ran, block, bmod, dset) {
        base_ind=base_ind)
 }
   
-
+#' @importFrom furrr future_map
 run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
   
   get_X <- function(scale=FALSE) {
@@ -211,7 +211,6 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 #' @param niter number of searchlight iterations for method "pls_searchlight"
 #' @param ncomp number of pls components for method "pls" and "pls_searchlight" and "pls_global"
 #' @param lambda lambda parameter (not currently used)
-#' @import pls
 #' @importFrom care slm
 #' @export
 #' 
@@ -239,7 +238,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 estimate_betas.fmri_dataset <- function(x,fixed=NULL, ran, block,  
                            method=c("mixed", "pls", "pls_searchlight", "pls_global", "ols"), 
                            basemod=NULL, 
-                           radius=8, niter=8, ncomp=4, lambda=.01) {
+                           radius=8, niter=8, ncomp=4, lambda=.01,...) {
   
   method <- match.arg(method)
   dset <- x
@@ -288,7 +287,7 @@ estimate_betas.fmri_dataset <- function(x,fixed=NULL, ran, block,
 estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,  
                                         method=c("mixed", "pls", "pls_global", "ols"), 
                                         basemod=NULL,
-                                        ncomp=4, lambda=.01) {
+                                        ncomp=4, lambda=.01,...) {
   
   method <- match.arg(method)
   dset <- x
@@ -324,7 +323,7 @@ estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,
 #' @rdname estimate_betas
 estimate_betas.latent_dataset <- function(x, fixed=NULL, ran, block, 
                                           method=c("mixed", "pls", "pls_global", "ols"), 
-                                          basemod=NULL, ncomp=4, lambda=.01, prewhiten=TRUE) {
+                                          basemod=NULL, ncomp=4, lambda=.01, prewhiten=TRUE,...) {
   
   method <- match.arg(method)
   dset <- x
@@ -384,7 +383,7 @@ estimate_hrf <- function(form, fixed=NULL, block, dataset,
   
   if (!is.null(fixed)) {
     emod_fixed <- event_model(fixed, data=dset$event_table, block=block, sampling_frame=dset$sampling_frame)
-    X_fixed <- as.matrix(design_matrix(emat_fixed))
+    X_fixed <- as.matrix(design_matrix(emod_fixed))
     has_fixed=TRUE
   } else {
     has_fixed=FALSE

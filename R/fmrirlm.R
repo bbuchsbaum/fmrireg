@@ -16,6 +16,7 @@
 #' @export
 fmri_rlm <- function(formula, block, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, contrasts=NULL, 
+                     nchunks=10,
                      strategy=c("runwise", "slicewise", "all")) {
   
  
@@ -43,7 +44,9 @@ runwise_rlm <- function(dset, model, conlist, fcon) {
   term_names <- names(terms(model))
   form <- paste(".y ~ ", paste(term_names, collapse = " + "), "-1")
   
+  ctrl <- lmrob.control(k.max=1000, maxit.scale=1000, max.it=1000)
   ## iterate over each data chunk
+  ym <- NULL
   cres <- foreach( ym = chunks) %do% {
     
     ## get event model for the nth run
@@ -69,7 +72,7 @@ runwise_rlm <- function(dset, model, conlist, fcon) {
     
     lapply(1:ncol(ym$data), function(i) {
       data_env[[".y"]] <- ym$data[,i]
-      rlm.1 <- lmrob(as.formula(form), data=data_env)
+      rlm.1 <- lmrob(as.formula(form), data=data_env, control=ctrl)
     
       conres <- lapply(conlist, function(con) fit_contrasts(rlm.1, con, attr(con, "term_indices")))
       names(conres) <- names(conlist)
@@ -100,6 +103,7 @@ multiresponse_arma <- function(form, data_env, conlist, vnames, fcon, modmat,
   
 
   rlens <- table(blockids)
+  i <- NULL
   ret <- foreach(i = 1:ncol(Y)) %dopar% {
     print(i)
     yi <- Y[,i]

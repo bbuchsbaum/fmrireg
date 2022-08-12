@@ -166,7 +166,7 @@ unit_contrast <- function(A, name, where=NULL) {
 }
 
 #' @export
-contrast_weights.unit_contrast_spec <- function(x, term) {
+contrast_weights.unit_contrast_spec <- function(x, term,...) {
   term.cells <- cells(term)
   
   if (!is.null(x$where)) {
@@ -233,7 +233,7 @@ poly_contrast <- function(A, name, where=NULL, degree=1, value_map=NULL) {
 
 
 #' @export
-contrast_weights.poly_contrast_spec <- function(x, term) {
+contrast_weights.poly_contrast_spec <- function(x, term,...) {
  
   term.cells <- cells(term)
   row.names(term.cells) <- longnames(term)
@@ -304,7 +304,7 @@ makeWeights <- function(keepA, keepB=NULL) {
 }
 
 #' @export
-contrast_weights.contrast_diff_spec <- function(x, term) {
+contrast_weights.contrast_diff_spec <- function(x, term,...) {
   wts1 <- contrast_weights(x$con1, term)
   wts2 <- contrast_weights(x$con2, term)
 
@@ -322,7 +322,7 @@ contrast_weights.contrast_diff_spec <- function(x, term) {
 }
 
 #' @export
-contrast_weights.pair_contrast_spec <- function(x, term) {
+contrast_weights.pair_contrast_spec <- function(x, term,...) {
   term.cells <- cells(term)
   
   count <- attr(term.cells, "count")		
@@ -360,7 +360,7 @@ contrast_weights.pair_contrast_spec <- function(x, term) {
 }
 
 #' @export
-contrast_weights.contrast_formula_spec <- function(x, term) {
+contrast_weights.contrast_formula_spec <- function(x, term,...) {
 
   term.cells <- cells(term)
   cform <- as.formula(paste("~", paste0(names(term.cells), collapse=":"), "-1"))
@@ -453,7 +453,7 @@ write_glt.glt_contrast <- function(x, fname=NULL) {
 
 #' @importFrom gmodels estimable
 #' @export
-estcon.contrast <- function(x, fit, indices) {
+estcon.contrast <- function(x, fit, indices, ...) {
   wts <- numeric(length(fit$assign))
   wts[indices] <- x$weights
   
@@ -461,7 +461,7 @@ estcon.contrast <- function(x, fit, indices) {
 }
 
 #' @export
-print.contrast_set <- function(x) {
+print.contrast_set <- function(x,...) {
   for (con in x) {
     print(con)
     cat("\n")
@@ -469,7 +469,7 @@ print.contrast_set <- function(x) {
 }
 
 #' @export
-print.contrast_spec <- function(x) {
+print.contrast_spec <- function(x,...) {
   cat("contrast:", x$name, "\n")
   cat(" A: ", Reduce(paste, deparse(x$A)), "\n")
   if (!is.null(x$B))
@@ -481,7 +481,7 @@ print.contrast_spec <- function(x) {
 }
 
 #' @export
-print.contrast <- function(x) {
+print.contrast <- function(x,...) {
   print(x$contrast_spec)
   cat(" term: ", x$term$varname, "\n")
   cat(" weights: ", "\n")
@@ -491,7 +491,7 @@ print.contrast <- function(x) {
 }
 
 #' @export
-print.poly_contrast_spec <- function(x) {
+print.poly_contrast_spec <- function(x,...) {
   cat("poly contrast:", "\n")
   cat(" A: ", Reduce(paste, deparse(x$A)), "\n")
   cat(" degree: ", x$degree, "\n")
@@ -505,7 +505,7 @@ print.poly_contrast_spec <- function(x) {
 }
 
 #' @export
-print.contrast_diff_spec <- function(x) {
+print.contrast_diff_spec <- function(x,...) {
   cat("contrast difference:", "\n")
   cat("  ", x$con1$name, "-", x$con2$name, "\n")
 }

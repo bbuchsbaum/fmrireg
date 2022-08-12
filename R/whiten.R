@@ -38,7 +38,7 @@ sq_inv_ar1_by_run <- function(phi, n) {
 
 sq_inv_ar1 <- function(phi, n) {
   phi_hat_vect <- rep(-phi, (n - 1))
-  A <- bandSparse(n,
+  A <- Matrix::bandSparse(n,
                   k = c(1, 0),
                   diagonals = list(phi_hat_vect,
                                    c(sqrt(1 - phi ^ 2),

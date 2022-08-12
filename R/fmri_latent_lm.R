@@ -95,10 +95,10 @@ tibble_to_neurovec <- function(dset, tab, mask) {
 }
 
 #' @export
-coef.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE, comp=0) {
-  bvals <- coef.fmri_lm(x, type=type)
+coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts"), recon=FALSE, comp=0, ...) {
+  bvals <- coef.fmri_lm(object, type=type)
   if (recon) {
-    lds <- x$dataset$lvec@loadings
+    lds <- object$dataset$lvec@loadings
     comp <- if (length(comp) == 1 && comp == 0) {
       seq(1, ncol(lds)) 
     } else {
@@ -152,7 +152,7 @@ standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), r
 }
 
 #' @export
-stats.fmri_latent_lm <- function(x,type = c("estimates", "contrasts"), recon = FALSE) {
+stats.fmri_latent_lm <- function(x,type = c("estimates", "contrasts"), recon = FALSE, ...) {
     if (!recon) {
       stats.fmri_lm(x,type)
     } else {

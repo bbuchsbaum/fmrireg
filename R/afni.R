@@ -1,5 +1,6 @@
 
 #' @keywords internal
+#' @importFrom utils read.table
 gen_afni_lm.fmri_config <- function(x, ...) {
   
   nuisance_list <- if (!is.null(x$baseline_model$nuisance_files)) {
@@ -93,7 +94,7 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1,
 
 
 #' @export
-print.afni_lm_spec <- function(x) {
+print.afni_lm_spec <- function(x,...) {
   cat("AFNI linear model via 3dDeconvolve \n")
   cat("  working_dir: ", x$working_dir, "\n")
   cat("  number of GLTs:", length(x$cmd$glts), "\n")
@@ -191,6 +192,7 @@ next_dir_name <- function(wd) {
 }
 
 #' @keywords internal
+#' @importFrom utils write.table
 write_baseline_mat <- function(stim, dir) {
   write.table(stim$mat, paste0(dir, "/", stim$file_name, sep=""), col.names=FALSE, row.names=FALSE)
 }
@@ -476,7 +478,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
 #' @param execfun function used to execute external system command
 #' @param prepend prepend string to command
 #' @rdname run
-run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system, prepend="") {
+run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system, prepend="",...) {
   start_dir <- getwd()
   res <- try({
     if (!file.exists(outdir)) {

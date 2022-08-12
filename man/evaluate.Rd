@@ -15,10 +15,11 @@ evaluate(x, grid, ...)
   duration = 0,
   precision = 0.2,
   summate = TRUE,
-  normalize = FALSE
+  normalize = FALSE,
+  ...
 )
 
-\method{evaluate}{regressor}(x, grid, precision = 0.33, use_conv = FALSE)
+\method{evaluate}{regressor}(x, grid, precision = 0.33, use_conv = FALSE, ...)
 }
 \arguments{
 \item{x}{the object to evaluate}

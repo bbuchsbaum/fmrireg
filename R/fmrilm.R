@@ -133,17 +133,17 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"),
 
 
 #' @export
-coef.fmri_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
+coef.fmri_lm <- function(object, type=c("estimates", "contrasts"), recon=FALSE, ...) {
   type <- match.arg(type)
   res <- if (type == "estimates") {
-    ret <- x$result$betas$estimate[,x$result$event_indices,drop=FALSE]
-    colnames(ret) <- conditions(x$model$event_model)
+    ret <- object$result$betas$estimate[,object$result$event_indices,drop=FALSE]
+    colnames(ret) <- conditions(object$model$event_model)
     #shortnames(x$model$event_model)#conditions(x$model$event_model)
     as_tibble(ret, .name_repair="check_unique")
   } else if (type == "contrasts") {
-    if (!is.null(x$result$contrasts$estimate)) {
-      ret <- x$result$contrasts$estimate
-      colnames(ret) <- names(x$bcons)
+    if (!is.null(object$result$contrasts$estimate)) {
+      ret <- object$result$contrasts$estimate
+      colnames(ret) <- names(object$bcons)
       as_tibble(ret, .name_repair="check_unique")
     } else {
       stop("no contrasts for this model.")
@@ -164,7 +164,7 @@ coef.fmri_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
 }
 
 #' @export
-stats.fmri_lm <- function(x, type=c("estimates", "contrasts", "F")) {
+stats.fmri_lm <- function(x, type=c("estimates", "contrasts", "F"), ...) {
   type <- match.arg(type)
   if (type == "estimates") {
     ret <- x$result$betas$estimate[,x$result$event_indices,drop=FALSE]/x$result$betas$se[,x$result$event_indices,drop=FALSE]
@@ -215,8 +215,8 @@ standard_error.fmri_lm <- function(x, type=c("estimates", "contrasts")) {
 
   
 
-
-print.fmri_lm <- function(x) {
+#' @export
+print.fmri_lm <- function(x,...) {
   cat("fmri_lm model: \n", as.character(x$model$event_model$model_spec$formula), "\n")
   cat("  baseline parameters: ", ncol(design_matrix(x$model$baseline_model)), "\n")
   cat("  design parameters: ", ncol(design_matrix(x$model$event_model)), "\n")
@@ -465,6 +465,7 @@ chunkwise_lm.fmri_dataset <- function(dset, model, conlist, fcon, nchunks, robus
   
   lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
 
+  ym <- NULL
   cres <- foreach( ym = chunks, i = icount(), .verbose=verbose) %dopar% {
     message("processing chunk ", i)
     data_env[[".y"]] <- as.matrix(ym$data)

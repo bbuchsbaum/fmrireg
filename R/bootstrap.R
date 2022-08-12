@@ -63,7 +63,7 @@ multiresponse_bootstrap_lm <- function(form, data_env,
   })
   
   orig <- fit_lm_contrasts(lm.orig, conlist, fcon, vnames) %>% 
-    list_modify(con_cov=con_cov, beta_cov=beta_cov, nboot=nboot, bootstrap=TRUE) 
+    purrr::list_modify(con_cov=con_cov, beta_cov=beta_cov, nboot=nboot, bootstrap=TRUE) 
   orig
 }
 
