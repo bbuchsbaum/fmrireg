@@ -201,7 +201,15 @@ block <- function(x) {
 #' @export  
 #' @importFrom purrr map_chr
 construct.baselinespec <- function(x, model_spec, ...) {
-  sampling_frame <- model_spec$sampling_frame
+  if (!is.null(model_spec$sampling_frame)) {
+    ## temporary hack
+    sampling_frame <- model_spec$sampling_frame
+  } else {
+    sampling_frame <- model_spec
+  }
+  #sampling_frame <- model_spec$sampling_frame
+  
+  
   ## ret <- if (x$constant && x$basis != "constant") {
   ## add intercept term per run
   ##lapply(sampling_frame$blocklens, function(bl) cbind(rep(1, bl), x$fun(seq(1, bl), degree=x$degree)))
