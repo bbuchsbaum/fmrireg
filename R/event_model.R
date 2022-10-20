@@ -399,7 +399,7 @@ design_matrix.afni_hrf_convolved_term <- function(x, blockid=NULL, ...) {
 #' @rdname matrix_term
 matrix_term <- function(varname, mat) {
   stopifnot(is.matrix(mat))
-  ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat,.name_repair="check_unique"))
+  ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat,.name_repair="minimal"))
   class(ret) <- c("matrix_term", "fmri_term", "list")
   ret
 }

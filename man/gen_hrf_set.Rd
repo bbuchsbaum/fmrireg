@@ -19,9 +19,9 @@ This function is used to create arbitrary sets of basis functions for fMRI model
 }
 \examples{
 
-hrf1 <- hrf_spmg1 \%>\% gen_hrf(lag=0)
-hrf2 <- hrf_spmg1 \%>\% gen_hrf(lag=3)
-hrf3 <- hrf_spmg1 \%>\% gen_hrf(lag=6)
+hrf1 <- hrf_spmg1 |> gen_hrf(lag=0)
+hrf2 <- hrf_spmg1 |> gen_hrf(lag=3)
+hrf3 <- hrf_spmg1 |> gen_hrf(lag=6)
 
 hset <- gen_hrf_set(hrf1,hrf2,hrf3)
 }

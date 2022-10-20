@@ -15,7 +15,7 @@
 #' #lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset2)
 #' @export
 fmri_rlm <- function(formula, block, baseline_model=NULL, dataset, 
-                     durations, drop_empty=TRUE, contrasts=NULL, 
+                     durations, drop_empty=TRUE, 
                      nchunks=10,
                      strategy=c("runwise", "slicewise", "all")) {
   
@@ -27,7 +27,7 @@ fmri_rlm <- function(formula, block, baseline_model=NULL, dataset,
   ##fobj <- .setup_model(dataset, formula, block, baseline_model, contrasts)
  
   model <- create_fmri_model(formula, block, baseline_model, dataset, durations, drop_empty)
-  ret <- fmri_lm_fit(model, dataset, strategy, robust=TRUE, contrasts, nchunks)
+  ret <- fmri_lm_fit(model, dataset, strategy, robust=TRUE, nchunks)
   ret
   
   
@@ -36,6 +36,7 @@ fmri_rlm <- function(formula, block, baseline_model=NULL, dataset,
 
 
 #' @importFrom foreach foreach %do% %dopar%
+#' @autoglobal
 runwise_rlm <- function(dset, model, conlist, fcon) {
   
   ## get an iterator of data chunks
@@ -46,7 +47,6 @@ runwise_rlm <- function(dset, model, conlist, fcon) {
   
   ctrl <- lmrob.control(k.max=1000, maxit.scale=1000, max.it=1000)
   ## iterate over each data chunk
-  ym <- NULL
   cres <- foreach( ym = chunks) %do% {
     
     ## get event model for the nth run

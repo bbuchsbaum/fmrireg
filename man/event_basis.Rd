@@ -24,5 +24,5 @@ event_basis(
 \item{subset}{a \code{logical} vector indicating the subset of events to keep}
 }
 \description{
-Create a event set from a basis object of type \code{\linkS4class{ParametricBasis}}.
+Create a event set from a basis object of type \code{ParametricBasis}.
 }

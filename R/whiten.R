@@ -1,6 +1,7 @@
 #' @keywords internal
 #' @importFrom forecast auto.arima
 #' @importFrom forecast Arima
+#' @autoglobal
 auto_whiten <- function(Y, modelmat, method=c("auto", "ar1", "ar2", "arma")) {
   method <- match.arg(method)
   out <- foreach( i = seq(1,ncol(Y)), .combine=cbind) %dopar% {

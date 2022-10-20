@@ -7,11 +7,11 @@ Authors@R: person("Bradley", "Buchsbaum",, role = c("aut", "cre"), email = "brad
 License: GPL (>= 2)
 Maintainer: Bradley Buchsbaum <brad.buchsbaum@gmail.com>
 Description: fmrireg is a package for the analysis of functional magnetic resonance imaging (fMRI) data. Facilities are provided to construct flexible hemodynamic response functions, experimental regressors, and conduct univariate fMRI analyses.
+Encoding: UTF-8
+LazyData: yes
 Depends:
     R (>= 4.0.0),
-    stats,
-    methods,
-    abind
+    stats
 Imports:
     gtools,
     numDeriv,
@@ -19,7 +19,6 @@ Imports:
     assertthat,
     stringr,
     tibble,
-    neuroim2,
     purrr,
     foreach,
     Matrix,
@@ -42,15 +41,22 @@ Imports:
     pracma,
     forecast,
     furrr,
-    rlang
-RoxygenNote: 7.1.2
-Roxygen: list(markdown = TRUE)
-Suggests: testthat,
+    rlang,
+    neuroim2
+RoxygenNote: 7.2.1
+Roxygen: list(
+    markdown = TRUE,
+    roclets = c("collate", "namespace", "rd", "roxyglobals::global_roclet"))
+Suggests: 
+    testthat,
     knitr,
     rmarkdown,
     roxygen2,
-    covr
-Remotes: bbuchsbaum/neuroim2
+    covr,
+    roxyglobals (>= 0.2.1)
+Remotes: 
+    bbuchsbaum/neuroim2,
+    anthonynorth/roxyglobals
 VignetteBuilder: knitr
 URL: https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues

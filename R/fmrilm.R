@@ -64,7 +64,7 @@ create_fmri_model <- function(formula, block, baseline_model=NULL, dataset,
 #' @param dataset an object derived from \code{fmri_dataset} containing the time-series data
 #' @param durations a vector of event durations
 #' @param drop_empty whether to remove factor levels with size of zero
-#' @param contrasts a set of contrasts
+# @param contrasts a set of contrasts
 #' @param strategy the data splitting strategy
 #' @param nchunks number of daa chunks when strategy is `chunkwise`
 #' @param robust whether to use robust fitting (TRUE or FALSE)
@@ -77,11 +77,19 @@ create_fmri_model <- function(formula, block, baseline_model=NULL, dataset,
 #' dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
 #' con  <- pair_contrast(~ fac == "A", ~ fac == "B", name="A_min_B")
 #' con2  <- unit_contrast(~ fac, name="A_min_baseline")
-#' lm.1 <- fmri_lm(onset ~ hrf(fac, contrasts=contrast_set(con,con2)), block= ~ run, dataset=dset)
+#' lm.1 <- fmri_lm(onset ~ hrf(fac, contrasts=contrast_set(con,con2)), 
+#' block= ~ run, dataset=dset)
+#' 
 #' lm.2 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, dataset=dset2)
-#' lm.2a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, robust=TRUE, dataset=dset2)
-#' lm.3 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, dataset=dset2, strategy="runwise")
-#' lm.3a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, robust=TRUE, dataset=dset2, strategy="runwise")
+#' 
+#' lm.2a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
+#' robust=TRUE, dataset=dset2)
+#' 
+#' lm.3 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
+#' dataset=dset2, strategy="runwise")
+#' 
+#' lm.3a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
+#' robust=TRUE, dataset=dset2, strategy="runwise")
 #' @export
 fmri_lm <- function(formula, block, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, robust=FALSE,
@@ -92,7 +100,7 @@ fmri_lm <- function(formula, block, baseline_model=NULL, dataset,
   assert_that(inherits(dataset, "fmri_dataset"))
 
   model <- create_fmri_model(formula, block, baseline_model,dataset, durations, drop_empty)
-  ret <- fmri_lm_fit(model, dataset, strategy, robust, contrasts, nchunks)
+  ret <- fmri_lm_fit(model, dataset, strategy, robust, nchunks)
   ret
 }
 
@@ -103,7 +111,7 @@ fmri_lm <- function(formula, block, baseline_model=NULL, dataset,
 #' @inheritParams fmri_lm
 #' @param fmrimod an object of type \code{fmri_model}
 fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"), 
-                        robust=FALSE, contrasts=NULL, nchunks=10,...) {
+                        robust=FALSE, nchunks=10,...) {
   strategy <- match.arg(strategy)
   
   conlist <- unlist(contrast_weights(fmrimod$event_model), recursive=FALSE)
@@ -118,7 +126,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"),
   ret <- list(
     result=result,
     model=fmrimod,
-    contrasts=contrasts,
+    #contrasts=contrasts,
     strategy=strategy,
     fcons=fcons,
     bcons=conlist,
@@ -455,6 +463,7 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 
 #' @keywords internal
 #' @importFrom iterators icount
+#' @autoglobal 
 chunkwise_lm.fmri_dataset <- function(dset, model, conlist, fcon, nchunks, robust=FALSE, verbose=FALSE) {
   chunks <- exec_strategy("chunkwise", nchunks=nchunks)(dset)
   form <- get_formula(model)
@@ -484,6 +493,7 @@ chunkwise_lm.fmri_dataset <- function(dset, model, conlist, fcon, nchunks, robus
 #' 
 #' @importFrom foreach foreach %do% %dopar%
 #' @keywords internal
+#' @autoglobal
 runwise_lm <- function(dset, model, conlist, fcon, robust=FALSE, verbose=FALSE) {
     #method <- match.arg(method)
     

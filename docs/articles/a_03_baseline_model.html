@@ -19,6 +19,8 @@
 <![endif]-->
 </head>
 <body data-spy="scroll" data-target="#toc">
+    
+
     <div class="container template-article">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -37,12 +39,6 @@
 
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
-<li>
-  <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
-     
-  </a>
-</li>
 <li>
   <a href="../reference/index.html">Reference</a>
 </li>
@@ -82,8 +78,8 @@
       </ul>
 <ul class="nav navbar-nav navbar-right">
 <li>
-  <a href="https://github.com/bbuchsbaum/fmrireg/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+  <a href="https://github.com/bbuchsbaum/fmrireg/" class="external-link">
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -97,116 +93,118 @@
 
       
 
-      </header><script src="a_03_baseline_model_files/accessible-code-block-0.0.1/empty-anchor.js"></script><div class="row">
+      </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Baseline Model</h1>
-                        <h4 class="author">Bradley R. Buchsbaum</h4>
+                        <h4 data-toc-skip class="author">Bradley R.
+Buchsbaum</h4>
             
-            <h4 class="date">2020-12-01</h4>
+            <h4 data-toc-skip class="date">2022-10-20</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_03_baseline_model.Rmd"><code>vignettes/a_03_baseline_model.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/HEAD/vignettes/a_03_baseline_model.Rmd" class="external-link"><code>vignettes/a_03_baseline_model.Rmd</code></a></small>
       <div class="hidden name"><code>a_03_baseline_model.Rmd</code></div>
 
     </div>
 
     
     
-<div id="fmri-baseline-model" class="section level2">
-<h2 class="hasAnchor">
-<a href="#fmri-baseline-model" class="anchor"></a>fMRI Baseline Model</h2>
-<p>An “baseline model” refers to the set of regressors used to capture variance associated with noise signals in the fMRI time-series data. These regressors are not formed by convolving a hemodynamic response with event onsets, but rather directly model sources of variance in the data. Low-frequency baseline trends are often modeled with a set of basis functions, such as b-splines, polynomial regressors, or a Fourier basis. Nuisance trends can also be derived from the data itself, for example, the global signal mean, motion parameters, or estimated noise components via PCA or ICA.</p>
+<div class="section level2">
+<h2 id="fmri-baseline-model">fMRI Baseline Model<a class="anchor" aria-label="anchor" href="#fmri-baseline-model"></a>
+</h2>
+<p>An “baseline model” refers to the set of regressors used to capture
+variance associated with noise signals in the fMRI time-series data.
+These regressors are not formed by convolving a hemodynamic response
+with event onsets, but rather directly model sources of variance in the
+data. Low-frequency baseline trends are often modeled with a set of
+basis functions, such as b-splines, polynomial regressors, or a Fourier
+basis. Nuisance trends can also be derived from the data itself, for
+example, the global signal mean, motion parameters, or estimated noise
+components via PCA or ICA.</p>
 </div>
-<div id="basic-baseline-model-with-b-splines-and-polynomials" class="section level2">
-<h2 class="hasAnchor">
-<a href="#basic-baseline-model-with-b-splines-and-polynomials" class="anchor"></a>Basic baseline model with b-splines and polynomials</h2>
-<pre><code>## Warning: replacing previous import 'Matrix::cov2cor' by 'stats::cov2cor' when
-## loading 'fmrireg'</code></pre>
-<pre><code>## Warning: replacing previous import 'pls::loadings' by 'stats::loadings' when
-## loading 'fmrireg'</code></pre>
-<pre><code>## Warning: replacing previous import 'Matrix::toeplitz' by 'stats::toeplitz' when
-## loading 'fmrireg'</code></pre>
-<pre><code>## Warning: replacing previous import 'Matrix::update' by 'stats::update' when
-## loading 'fmrireg'</code></pre>
-<div class="sourceCode" id="cb5"><pre class="downlit">
-<span class="kw">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span>
-<span class="kw">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(blocklens=<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="fl">100</span>,<span class="fl">100</span>), <span class="kw">TR</span>)
-<span class="kw">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span>(basis=<span class="st">"bs"</span>, degree=<span class="fl">5</span>, sframe=<span class="kw">sframe</span>)
-<span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span>(<span class="kw">bmodel</span>)
-</pre></div>
-<pre><code>## baseline_model 
-##    name:  baseline_bs_5 
-##    basis type:  bs 
-##    degree:  5 
-##    drift columns:  10 
-##    constant columns:  2 
-##    nuisance columns:  0 
-##    total columns:  12 
-##    design_matrix:  
-## # A tibble: 200 x 12
-##    constant_1 constant_2 base_bs1_block_1 base_bs2_block_1 base_bs3_block_1
-##         &lt;dbl&gt;      &lt;dbl&gt;            &lt;dbl&gt;            &lt;dbl&gt;            &lt;dbl&gt;
-##  1          1          0           0              0               0        
-##  2          1          0           0.0485         0.000990        0.0000101
-##  3          1          0           0.0931         0.00384         0.0000792
-##  4          1          0           0.134          0.00837         0.000262 
-##  5          1          0           0.171          0.0144          0.000607 
-##  6          1          0           0.205          0.0218          0.00116  
-##  7          1          0           0.236          0.0304          0.00196  
-##  8          1          0           0.264          0.0401          0.00305  
-##  9          1          0           0.288          0.0507          0.00446  
-## 10          1          0           0.310          0.0621          0.00621  
-## # … with 190 more rows, and 7 more variables: base_bs4_block_1 &lt;dbl&gt;,
-## #   base_bs5_block_1 &lt;dbl&gt;, base_bs1_block_2 &lt;dbl&gt;, base_bs2_block_2 &lt;dbl&gt;,
-## #   base_bs3_block_2 &lt;dbl&gt;, base_bs4_block_2 &lt;dbl&gt;, base_bs5_block_2 &lt;dbl&gt;</code></pre>
-<div class="sourceCode" id="cb7"><pre class="downlit">
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">bmodel</span>)
-</pre></div>
+<div class="section level2">
+<h2 id="basic-baseline-model-with-b-splines-and-polynomials">Basic baseline model with b-splines and polynomials<a class="anchor" aria-label="anchor" href="#basic-baseline-model-with-b-splines-and-polynomials"></a>
+</h2>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span>
+<span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span>blocklens<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>,<span class="fl">100</span><span class="op">)</span>, <span class="va">TR</span><span class="op">)</span>
+<span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span><span class="op">(</span>basis<span class="op">=</span><span class="st">"bs"</span>, degree<span class="op">=</span><span class="fl">5</span>, sframe<span class="op">=</span><span class="va">sframe</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">bmodel</span><span class="op">)</span></code></pre></div>
+<pre><code><span class="co">## baseline_model </span>
+<span class="co">##    name:  baseline_bs_5 </span>
+<span class="co">##    basis type:  bs </span>
+<span class="co">##    degree:  5 </span>
+<span class="co">##    drift columns:  10 </span>
+<span class="co">##    constant columns:  2 </span>
+<span class="co">##    nuisance columns:  0 </span>
+<span class="co">##    total columns:  12 </span>
+<span class="co">##    design_matrix:  </span>
+<span class="co">## <span style="color: #949494;"># A tibble: 200 × 12</span></span>
+<span class="co">##    constant_1 constan…¹ base_…² base_…³ base_…⁴ base_…⁵ base_b…⁶ base_…⁷ base_…⁸</span>
+<span class="co">##         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="co">## <span style="color: #BCBCBC;"> 1</span>          1         0  0      0   <span style="color: #949494;"> </span>   0   <span style="color: #949494;"> </span>   0   <span style="color: #949494;"> </span>   0   <span style="color: #949494;"> </span>          0       0</span>
+<span class="co">## <span style="color: #BCBCBC;"> 2</span>          1         0  0.048<span style="text-decoration: underline;">5</span> 9.90<span style="color: #949494;">e</span><span style="color: #BB0000;">-4</span> 1.01<span style="color: #949494;">e</span><span style="color: #BB0000;">-5</span> 5.15<span style="color: #949494;">e</span><span style="color: #BB0000;">-8</span> 1.05<span style="color: #949494;">e</span><span style="color: #BB0000;">-10</span>       0       0</span>
+<span class="co">## <span style="color: #BCBCBC;"> 3</span>          1         0  0.093<span style="text-decoration: underline;">1</span> 3.84<span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span> 7.92<span style="color: #949494;">e</span><span style="color: #BB0000;">-5</span> 8.16<span style="color: #949494;">e</span><span style="color: #BB0000;">-7</span> 3.36<span style="color: #949494;">e</span><span style="color: #BB0000;">- 9</span>       0       0</span>
+<span class="co">## <span style="color: #BCBCBC;"> 4</span>          1         0  0.134  8.37<span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span> 2.62<span style="color: #949494;">e</span><span style="color: #BB0000;">-4</span> 4.09<span style="color: #949494;">e</span><span style="color: #BB0000;">-6</span> 2.56<span style="color: #949494;">e</span><span style="color: #BB0000;">- 8</span>       0       0</span>
+<span class="co">## <span style="color: #BCBCBC;"> 5</span>          1         0  0.171  1.44<span style="color: #949494;">e</span><span style="color: #BB0000;">-2</span> 6.07<span style="color: #949494;">e</span><span style="color: #BB0000;">-4</span> 1.28<span style="color: #949494;">e</span><span style="color: #BB0000;">-5</span> 1.08<span style="color: #949494;">e</span><span style="color: #BB0000;">- 7</span>       0       0</span>
+<span class="co">## <span style="color: #BCBCBC;"> 6</span>          1         0  0.205  2.18<span style="color: #949494;">e</span><span style="color: #BB0000;">-2</span> 1.16<span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span> 3.09<span style="color: #949494;">e</span><span style="color: #BB0000;">-5</span> 3.29<span style="color: #949494;">e</span><span style="color: #BB0000;">- 7</span>       0       0</span>
+<span class="co">## <span style="color: #BCBCBC;"> 7</span>          1         0  0.236  3.04<span style="color: #949494;">e</span><span style="color: #BB0000;">-2</span> 1.96<span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span> 6.34<span style="color: #949494;">e</span><span style="color: #BB0000;">-5</span> 8.18<span style="color: #949494;">e</span><span style="color: #BB0000;">- 7</span>       0       0</span>
+<span class="co">## <span style="color: #BCBCBC;"> 8</span>          1         0  0.264  4.01<span style="color: #949494;">e</span><span style="color: #BB0000;">-2</span> 3.05<span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span> 1.16<span style="color: #949494;">e</span><span style="color: #BB0000;">-4</span> 1.77<span style="color: #949494;">e</span><span style="color: #BB0000;">- 6</span>       0       0</span>
+<span class="co">## <span style="color: #BCBCBC;"> 9</span>          1         0  0.288  5.07<span style="color: #949494;">e</span><span style="color: #BB0000;">-2</span> 4.46<span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span> 1.96<span style="color: #949494;">e</span><span style="color: #BB0000;">-4</span> 3.45<span style="color: #949494;">e</span><span style="color: #BB0000;">- 6</span>       0       0</span>
+<span class="co">## <span style="color: #BCBCBC;">10</span>          1         0  0.310  6.21<span style="color: #949494;">e</span><span style="color: #BB0000;">-2</span> 6.21<span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span> 3.10<span style="color: #949494;">e</span><span style="color: #BB0000;">-4</span> 6.21<span style="color: #949494;">e</span><span style="color: #BB0000;">- 6</span>       0       0</span>
+<span class="co">## <span style="color: #949494;"># … with 190 more rows, 3 more variables: base_bs3_block_2 &lt;dbl&gt;,</span></span>
+<span class="co">## <span style="color: #949494;">#   base_bs4_block_2 &lt;dbl&gt;, base_bs5_block_2 &lt;dbl&gt;, and abbreviated variable</span></span>
+<span class="co">## <span style="color: #949494;">#   names ¹​constant_2, ²​base_bs1_block_1, ³​base_bs2_block_1, ⁴​base_bs3_block_1,</span></span>
+<span class="co">## <span style="color: #949494;">#   ⁵​base_bs4_block_1, ⁶​base_bs5_block_1, ⁷​base_bs1_block_2, ⁸​base_bs2_block_2</span></span></code></pre>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmodel</span><span class="op">)</span></code></pre></div>
 <p><img src="a_03_baseline_model_files/figure-html/unnamed-chunk-2-1.png" width="672"></p>
-<div class="sourceCode" id="cb8"><pre class="downlit">
-<span class="kw">bmodel2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span>(basis=<span class="st">"poly"</span>, degree=<span class="fl">5</span>, sframe=<span class="kw">sframe</span>)
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">bmodel2</span>)
-</pre></div>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">bmodel2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span><span class="op">(</span>basis<span class="op">=</span><span class="st">"poly"</span>, degree<span class="op">=</span><span class="fl">5</span>, sframe<span class="op">=</span><span class="va">sframe</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmodel2</span><span class="op">)</span></code></pre></div>
 <p><img src="a_03_baseline_model_files/figure-html/unnamed-chunk-2-2.png" width="672"></p>
 </div>
-<div id="adding-arbitrary-nuisance-regressors" class="section level2">
-<h2 class="hasAnchor">
-<a href="#adding-arbitrary-nuisance-regressors" class="anchor"></a>Adding arbitrary nuisance regressors</h2>
-<p>In addition to structured basis sets, we can also add arbitrary signals to the baseline model. Such signals are also organized by block on the assumption that nuisance signals are often block-specific and “reset” across scans. To add a set of nusiance variables to the baseline model, then, they should be split by block and placed in a <code>list</code>.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit">
-<span class="kw">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span>
-<span class="kw">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(blocklens=<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="fl">100</span>,<span class="fl">100</span>), <span class="kw">TR</span>)
+<div class="section level2">
+<h2 id="adding-arbitrary-nuisance-regressors">Adding arbitrary nuisance regressors<a class="anchor" aria-label="anchor" href="#adding-arbitrary-nuisance-regressors"></a>
+</h2>
+<p>In addition to structured basis sets, we can also add arbitrary
+signals to the baseline model. Such signals are also organized by block
+on the assumption that nuisance signals are often block-specific and
+“reset” across scans. To add a set of nusiance variables to the baseline
+model, then, they should be split by block and placed in a
+<code>list</code>.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span>
+<span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span>blocklens<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>,<span class="fl">100</span><span class="op">)</span>, <span class="va">TR</span><span class="op">)</span>
 
 <span class="co">## generate two arbitrary nusiance signals.</span>
-<span class="kw">nuis1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">rnorm</a></span>(<span class="fl">100</span><span class="op">*</span><span class="fl">2</span>)
-<span class="kw">nuis2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">rnorm</a></span>(<span class="fl">100</span><span class="op">*</span><span class="fl">2</span>)
+<span class="va">nuis1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">*</span><span class="fl">2</span><span class="op">)</span>
+<span class="va">nuis2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">*</span><span class="fl">2</span><span class="op">)</span>
 
 <span class="co">## construct a set of data.frames, each with two columns (nuis1 and nuis2)</span>
-<span class="kw">nuislist</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/split.html">split</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html">as.data.frame</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/cbind.html">cbind</a></span>(<span class="kw">nuis1</span>, <span class="kw">nuis2</span>)), <span class="fu"><a href="../reference/blockids.html">blockids</a></span>(<span class="kw">sframe</span>))
+<span class="va">nuislist</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">nuis1</span>, <span class="va">nuis2</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="../reference/blockids.html">blockids</a></span><span class="op">(</span><span class="va">sframe</span><span class="op">)</span><span class="op">)</span>
 
-<span class="kw">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span>(basis=<span class="st">"bs"</span>, degree=<span class="fl">5</span>, sframe=<span class="kw">sframe</span>, nuisance_list=<span class="kw">nuislist</span>)
-<span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span>(<span class="fu"><a href="https://rdrr.io/r/stats/terms.html">terms</a></span>(<span class="kw">bmodel</span>))
-</pre></div>
-<pre><code>## $constant
-## fmri_term:  block_term 
-##    Term Name:  constant 
-##    Num Rows:  200 
-##    Num Columns:  2 
-## 
-## $baseline_bs_5
-## fmri_term:  baseline_term 
-##    Term Name:  baseline_bs_5 
-##    Num Rows:  200 
-##    Num Columns:  10 
-## 
-## $nuisance
-## fmri_term:  baseline_term 
-##    Term Name:  nuisance 
-##    Num Rows:  200 
-##    Num Columns:  4</code></pre>
-<div class="sourceCode" id="cb11"><pre class="downlit">
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">bmodel</span>, term_name=<span class="st">"nuisance"</span>)
-</pre></div>
+<span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span><span class="op">(</span>basis<span class="op">=</span><span class="st">"bs"</span>, degree<span class="op">=</span><span class="fl">5</span>, sframe<span class="op">=</span><span class="va">sframe</span>, nuisance_list<span class="op">=</span><span class="va">nuislist</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">bmodel</span><span class="op">)</span><span class="op">)</span></code></pre></div>
+<pre><code><span class="co">## $constant</span>
+<span class="co">## fmri_term:  block_term </span>
+<span class="co">##    Term Name:  constant </span>
+<span class="co">##    Num Rows:  200 </span>
+<span class="co">##    Num Columns:  2 </span>
+<span class="co">## </span>
+<span class="co">## $baseline_bs_5</span>
+<span class="co">## fmri_term:  baseline_term </span>
+<span class="co">##    Term Name:  baseline_bs_5 </span>
+<span class="co">##    Num Rows:  200 </span>
+<span class="co">##    Num Columns:  10 </span>
+<span class="co">## </span>
+<span class="co">## $nuisance</span>
+<span class="co">## fmri_term:  baseline_term </span>
+<span class="co">##    Term Name:  nuisance </span>
+<span class="co">##    Num Rows:  200 </span>
+<span class="co">##    Num Columns:  4</span></code></pre>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmodel</span>, term_name<span class="op">=</span><span class="st">"nuisance"</span><span class="op">)</span></code></pre></div>
 <p><img src="a_03_baseline_model_files/figure-html/unnamed-chunk-3-1.png" width="672"></p>
 </div>
   </div>
@@ -222,11 +220,15 @@
 
 
       <footer><div class="copyright">
-  <p>Developed by <a href="https://linguamemoria.org">Bradley Buchsbaum</a>.</p>
+  <p></p>
+<p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley
+Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.0.</p>
+  <p></p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a>
+2.0.2.</p>
 </div>
 
       </footer>
@@ -234,6 +236,8 @@
 
   
 
+
+  
 
   </body>
 </html>

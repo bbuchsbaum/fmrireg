@@ -13,17 +13,23 @@ pls_betas <- function(X, Y, ncomp=3) {
   coef(fit, ncomp=ncomp)[,,1]
 }
 
+
+#' @keywords internal
 pls_global_betas <- function(X, Y, ncomp=3) {
   dx <- data.frame(X=X, Y=Y)
   fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="widekernelpls", scale=TRUE, maxit=500)
   coef(fit, ncomp=ncomp)[,,1]
 }
 
+
+#' @keywords internal
 ols_betas <- function(X, Y) {
   fit <- lm.fit(as.matrix(X),Y)
   coef(fit)
 }
 
+
+#' @keywords internal
 slm_betas <- function(X, Y) {
   slm.1 <- care::slm(X, Y, verbose=FALSE)
   b2 <- coef(slm.1)[,-(1:2)]
@@ -37,6 +43,8 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
   c(fit$u, fit$b)
 }
 
+
+#' @keywords internal
 gen_beta_design <- function(fixed=NULL, ran, block, bmod, dset) {
   
   if (!is.null(fixed)) {
@@ -105,7 +113,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 
   betas <- with(bdes, {
     if (method == "slm") {
-      vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
+      vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) >0))
       ## TODO FIXME
       xdat <- get_X()
       
@@ -117,7 +125,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
       
       
     } else if (method == "mixed") {
-      vecs <- vectors(get_data(dset), subset = which(get_mask(dset) > 0))
+      vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) > 0))
       xdat <- get_X()
       res <-
         do.call(cbind, furrr::future_map(vecs, function(v) {
@@ -126,7 +134,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
         }))
       as.matrix(res)
     } else if (method == "pls") {
-      vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
+      vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) >0))
       xdat <- get_X(scale=TRUE)
       
       res <-
@@ -136,7 +144,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
         }))
       as.matrix(res)
     } else if (method == "pls_global") {
-      vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
+      vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) >0))
       xdat <- get_X(scale=TRUE)
       Y <- do.call(cbind, lapply(vecs, function(v) v))
       
@@ -148,7 +156,7 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
       pls_global_betas(xdat$X, Y0, ncomp=ncomp)
     } else if (method == "ols") {
      
-      vecs <- vectors(get_data(dset), subset = which(get_mask(dset) >0))
+      vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) >0))
       xdat <- get_X()
       Y <- do.call(cbind, lapply(vecs, function(v) v))
       
@@ -222,11 +230,11 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
 #' * `pls_global` estimates a single multiresponse pls solution, where the `Y` matrix is the full data matrix.
 #' * `ols` ordinary least squares estimate of betas -- no regularization
 ## @md 
-#' #' @examples 
+#' @examples 
 #' 
 #'
 #' facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
-#' facesdes$frun <- factor(facedes$run)
+#' facedes$frun <- factor(facedes$run)
 #' scans <- paste0("rscan0", 1:6, ".nii")
 #' 
 #' dset <- fmri_dataset(scans=scans,mask="mask.nii",TR=1.5,run_length=rep(436,6),event_table=facedes)
@@ -281,7 +289,7 @@ estimate_betas.fmri_dataset <- function(x,fixed=NULL, ran, block,
 }
 
 
-#' @inheritParams estimate_betas.fmri_dataset
+## @inheritParams estimate_betas.fmri_dataset
 #' @export 
 #' @rdname estimate_betas
 estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,  
@@ -317,7 +325,7 @@ estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,
   
 }
 
-#' @inheritParams estimate_betas.fmri_dataset
+## @inheritParams estimate_betas.fmri_dataset
 #' @param prewhiten whether to prewhiten basis set using `auto.arima`
 #' @export 
 #' @rdname estimate_betas

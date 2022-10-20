@@ -84,15 +84,19 @@ The \code{method} arguments allows for several beta estimation approaches
 \item \code{pls_searchlight} estimates pls solutions over searchlight windows and averages the beta estimates
 \item \code{pls_global} estimates a single multiresponse pls solution, where the \code{Y} matrix is the full data matrix.
 \item \code{ols} ordinary least squares estimate of betas -- no regularization
-#' @examples
 }
+}
+\examples{
+
 
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
-facesdes$frun <- factor(facedes$run)
+facedes$frun <- factor(facedes$run)
 scans <- paste0("rscan0", 1:6, ".nii")
 
 dset <- fmri_dataset(scans=scans,mask="mask.nii",TR=1.5,run_length=rep(436,6),event_table=facedes)
 fixed = onset ~ hrf(run)
 ran = onset ~ trialwise()
 block = ~ run
+
+
 }

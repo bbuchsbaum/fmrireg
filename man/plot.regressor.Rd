@@ -4,7 +4,7 @@
 \alias{plot.regressor}
 \title{plot a regressor object}
 \usage{
-plot.regressor(x, samples, add = FALSE, ...)
+\method{plot}{regressor}(x, samples, add = FALSE, ...)
 }
 \arguments{
 \item{x}{the object}

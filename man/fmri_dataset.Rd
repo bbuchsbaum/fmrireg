@@ -40,11 +40,14 @@ An fMRI dataset consisting of a set of scans as files, design information, and o
 }
 \examples{
 
-dset <- fmri_dataset(c("scan1.nii", "scan2.nii", "scan3.nii"), mask="mask.nii", TR=2, run_length=rep(300,3), 
-        event_table=data.frame(onsets=c(3,20,99,3,20,99,3,20,99), run=c(1,1,1,2,2,2,3,3,3)))
+dset <- fmri_dataset(c("scan1.nii", "scan2.nii", "scan3.nii"), 
+mask="mask.nii", TR=2, run_length=rep(300,3), 
+event_table=data.frame(onsets=c(3,20,99,3,20,99,3,20,99), 
+run=c(1,1,1,2,2,2,3,3,3)))
         
-dset <- fmri_dataset("scan1.nii", mask="mask.nii", TR=2, run_length=300, 
-        event_table=data.frame(onsets=c(3,20,99), run=rep(1,3)))
+dset <- fmri_dataset("scan1.nii", mask="mask.nii", TR=2, 
+run_length=300, 
+event_table=data.frame(onsets=c(3,20,99), run=rep(1,3)))
 
 
 }

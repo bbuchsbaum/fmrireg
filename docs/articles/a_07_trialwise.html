@@ -19,6 +19,8 @@
 <![endif]-->
 </head>
 <body data-spy="scroll" data-target="#toc">
+    
+
     <div class="container template-article">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -37,12 +39,6 @@
 
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
-<li>
-  <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
-     
-  </a>
-</li>
 <li>
   <a href="../reference/index.html">Reference</a>
 </li>
@@ -82,8 +78,8 @@
       </ul>
 <ul class="nav navbar-nav navbar-right">
 <li>
-  <a href="https://github.com/bbuchsbaum/fmrireg/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+  <a href="https://github.com/bbuchsbaum/fmrireg/" class="external-link">
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -97,76 +93,99 @@
 
       
 
-      </header><script src="a_07_trialwise_files/accessible-code-block-0.0.1/empty-anchor.js"></script><div class="row">
+      </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Single Trial Beta Estimation</h1>
-                        <h4 class="author">Bradley R. Buchsbaum</h4>
+                        <h4 data-toc-skip class="author">Bradley R.
+Buchsbaum</h4>
             
-            <h4 class="date">2020-12-01</h4>
+            <h4 data-toc-skip class="date">2022-10-20</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_07_trialwise.Rmd"><code>vignettes/a_07_trialwise.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/HEAD/vignettes/a_07_trialwise.Rmd" class="external-link"><code>vignettes/a_07_trialwise.Rmd</code></a></small>
       <div class="hidden name"><code>a_07_trialwise.Rmd</code></div>
 
     </div>
 
     
     
-<div id="estimating-single-trial-event-amplitudes-for-use-in-beta-series-analyses-and-mvpa-analyses-" class="section level2">
-<h2 class="hasAnchor">
-<a href="#estimating-single-trial-event-amplitudes-for-use-in-beta-series-analyses-and-mvpa-analyses-" class="anchor"></a>Estimating single-trial event amplitudes for use in “beta series” analyses and MVPA analyses.</h2>
-<p>It is common in fMRI analysis want to obtain estimates of BOLD amplitude for each <em>trial</em> (rather than condition) in an experiment. Estimation of single-trial beta coefficients can be done in <code>fmrireg</code> with the <code>estimate_betas</code> function.</p>
+<div class="section level2">
+<h2 id="estimating-single-trial-event-amplitudes-for-use-in-beta-series-analyses-and-mvpa-analyses-">Estimating single-trial event amplitudes for use in “beta series”
+analyses and MVPA analyses.<a class="anchor" aria-label="anchor" href="#estimating-single-trial-event-amplitudes-for-use-in-beta-series-analyses-and-mvpa-analyses-"></a>
+</h2>
+<p>It is common in fMRI analysis want to obtain estimates of BOLD
+amplitude for each <em>trial</em> (rather than condition) in an
+experiment. Estimation of single-trial beta coefficients can be done in
+<code>fmrireg</code> with the <code>estimate_betas</code> function.</p>
 <p>First we load in an experimental design.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit">
-<span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="kw"><a href="https://dplyr.tidyverse.org">dplyr</a></span>)
-<span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="kw"><a href="https://github.com/bbuchsbaum/fmrireg">fmrireg</a></span>)
-<span class="kw">facedes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html">read.table</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/system.file.html">system.file</a></span>(<span class="st">"extdata"</span>, <span class="st">"face_design.txt"</span>, package = <span class="st">"fmrireg"</span>), header=<span class="fl">TRUE</span>) <span class="op">%&gt;%</span>
-  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html">filter</a></span>(<span class="kw">run</span> <span class="op">==</span> <span class="fl">1</span>)
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span>
+<span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/fmrireg" class="external-link">fmrireg</a></span><span class="op">)</span>
+<span class="va">facedes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.table</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"face_design.txt"</span>, package <span class="op">=</span> <span class="st">"fmrireg"</span><span class="op">)</span>, header<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span>
+  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">run</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span>
 <span class="co">## we had a constant value to the design used later to model the mean stimulus response over all trials.</span>
-<span class="kw">facedes</span><span class="op">$</span><span class="kw">constant</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span>(<span class="kw">facedes</span>)))
-</pre></div>
+<span class="va">facedes</span><span class="op">$</span><span class="va">constant</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">facedes</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></code></pre></div>
 <p>Now we generate an fMRI data using random values.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit">
-<span class="kw">D</span> <span class="op">&lt;-</span> <span class="fl">5</span>
-<span class="kw">scans</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html">lapply</a></span>(<span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/unique.html">unique</a></span>(<span class="kw">facedes</span><span class="op">$</span><span class="kw">run</span>)), <span class="fu">function</span>(<span class="kw">i</span>) {
-    <span class="kw">arr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/array.html">array</a></span>(<span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">rnorm</a></span>(<span class="kw">D</span><span class="op">*</span><span class="kw">D</span><span class="op">*</span><span class="kw">D</span><span class="op">*</span><span class="fl">300</span>), <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="kw">D</span>,<span class="kw">D</span>,<span class="kw">D</span>, <span class="fl">300</span>))
-    <span class="kw">bspace</span> <span class="op">&lt;-</span> <span class="kw">neuroim2</span>::<span class="fu"><a href="https://rdrr.io/pkg/neuroim2/man/neuro_space.html">NeuroSpace</a></span>(dim=<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="kw">D</span>,<span class="kw">D</span>,<span class="kw">D</span>,<span class="fl">300</span>))
-    <span class="kw">neuroim2</span>::<span class="fu"><a href="https://rdrr.io/pkg/neuroim2/man/NeuroVec-class.html">NeuroVec</a></span>(<span class="kw">arr</span>, <span class="kw">bspace</span>)
-})
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">D</span> <span class="op">&lt;-</span> <span class="fl">5</span>
+<span class="va">scans</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">facedes</span><span class="op">$</span><span class="va">run</span><span class="op">)</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="op">{</span>
+    <span class="va">arr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">D</span><span class="op">*</span><span class="va">D</span><span class="op">*</span><span class="va">D</span><span class="op">*</span><span class="fl">300</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">D</span>,<span class="va">D</span>,<span class="va">D</span>, <span class="fl">300</span><span class="op">)</span><span class="op">)</span>
+    <span class="va">bspace</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/neuroim2/man/neuro_space.html" class="external-link">NeuroSpace</a></span><span class="op">(</span>dim<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">D</span>,<span class="va">D</span>,<span class="va">D</span>,<span class="fl">300</span><span class="op">)</span><span class="op">)</span>
+    <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/neuroim2/man/NeuroVec-class.html" class="external-link">NeuroVec</a></span><span class="op">(</span><span class="va">arr</span>, <span class="va">bspace</span><span class="op">)</span>
+<span class="op">}</span><span class="op">)</span>
   
-<span class="kw">mask</span> <span class="op">&lt;-</span> <span class="kw">neuroim2</span>::<span class="fu"><a href="https://rdrr.io/pkg/neuroim2/man/LogicalNeuroVol-class.html">LogicalNeuroVol</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/array.html">array</a></span>(<span class="fu"><a href="https://rdrr.io/r/stats/Normal.html">rnorm</a></span>(<span class="kw">D</span><span class="op">*</span><span class="kw">D</span><span class="op">*</span><span class="kw">D</span>), <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="kw">D</span>,<span class="kw">D</span>,<span class="kw">D</span>)) <span class="op">&gt;</span> <span class="fl">0</span>, <span class="kw">neuroim2</span>::<span class="fu"><a href="https://rdrr.io/pkg/neuroim2/man/neuro_space.html">NeuroSpace</a></span>(dim=<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="kw">D</span>,<span class="kw">D</span>,<span class="kw">D</span>)))
-</pre></div>
-<p>Now we create a instance of type <code>fmri_mem_dataset</code> which encapsulates infromation about the data, temporal layout, and experimental design of an “in memory” fmri dataset.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit">
-<span class="kw">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_mem_dataset.html">fmri_mem_dataset</a></span>(scans=<span class="kw">scans</span>, 
-                 mask=<span class="kw">mask</span>, 
-                 TR=<span class="fl">1.5</span>, 
-                 event_table=<span class="kw">facedes</span>)
-</pre></div>
-<p>Now we’re ready to run the beta estimation analysis. There are two components to the model: a fixed effects formula and a random effects formula. The fixed effects part models the condition-specific responses, and the random effects part models the trial-specific responses. For the random effect part, we want to model every onset separately, so we use the <code>trialwise</code> hrf modeling function. For the fixed part, we use a standard <code>hrf</code> modeling function.</p>
-<p>The method we use is “pls” for <strong>partial least squares</strong> (via the <code>pls</code> package), which effectively acts as a regularized least squares estimation procedure. Simulations show that <code>pls</code> produces trialwise beta estimates for closely space onsets (e.g. overlapping hrfs) that are similar to the “least squares sum” approach (citation needed). By modeling the mean effect with <code>fixed = onset ~ hrf(constant)</code> the “random effects” <code>onset ~ trialwise()</code> capture the deviations from that mean, with regularization achieved by using partial least squares estimation with a small number of components (here, n=3). Other fixed effects can also be modeled, and could include events of no interest that should be covaried out when estimating the beta coefficients of interest.</p>
-<p>When the onsets are <em>not</em> closely space together, ordinary least squares using the “ols” method is appropriate. For method “ols”, however, a constant fixed effect should not be used, since it is a linear combination of the random effects, so we omit the “fixed” term.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit">
-<span class="kw">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate_betas.html">estimate_betas</a></span>(<span class="kw">dset</span>, fixed = <span class="kw">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span>(<span class="kw">constant</span>), ran = <span class="kw">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/trialwise.html">trialwise</a></span>(), block = <span class="op">~</span> <span class="kw">run</span>, 
-                       method=<span class="st">"pls"</span>, ncomp=<span class="fl">3</span>)
+<span class="va">mask</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/neuroim2/man/LogicalNeuroVol-class.html" class="external-link">LogicalNeuroVol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">D</span><span class="op">*</span><span class="va">D</span><span class="op">*</span><span class="va">D</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">D</span>,<span class="va">D</span>,<span class="va">D</span><span class="op">)</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span>, <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/neuroim2/man/neuro_space.html" class="external-link">NeuroSpace</a></span><span class="op">(</span>dim<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">D</span>,<span class="va">D</span>,<span class="va">D</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></code></pre></div>
+<p>Now we create a instance of type <code>fmri_mem_dataset</code> which
+encapsulates infromation about the data, temporal layout, and
+experimental design of an “in memory” fmri dataset.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_mem_dataset.html">fmri_mem_dataset</a></span><span class="op">(</span>scans<span class="op">=</span><span class="va">scans</span>, 
+                 mask<span class="op">=</span><span class="va">mask</span>, 
+                 TR<span class="op">=</span><span class="fl">1.5</span>, 
+                 event_table<span class="op">=</span><span class="va">facedes</span><span class="op">)</span></code></pre></div>
+<p>Now we’re ready to run the beta estimation analysis. There are two
+components to the model: a fixed effects formula and a random effects
+formula. The fixed effects part models the condition-specific responses,
+and the random effects part models the trial-specific responses. For the
+random effect part, we want to model every onset separately, so we use
+the <code>trialwise</code> hrf modeling function. For the fixed part, we
+use a standard <code>hrf</code> modeling function.</p>
+<p>The method we use is “pls” for <strong>partial least squares</strong>
+(via the <code>pls</code> package), which effectively acts as a
+regularized least squares estimation procedure. Simulations show that
+<code>pls</code> produces trialwise beta estimates for closely space
+onsets (e.g. overlapping hrfs) that are similar to the “least squares
+sum” approach (citation needed). By modeling the mean effect with
+<code>fixed = onset ~ hrf(constant)</code> the “random effects”
+<code>onset ~ trialwise()</code> capture the deviations from that mean,
+with regularization achieved by using partial least squares estimation
+with a small number of components (here, n=3). Other fixed effects can
+also be modeled, and could include events of no interest that should be
+covaried out when estimating the beta coefficients of interest.</p>
+<p>When the onsets are <em>not</em> closely space together, ordinary
+least squares using the “ols” method is appropriate. For method “ols”,
+however, a constant fixed effect should not be used, since it is a
+linear combination of the random effects, so we omit the “fixed”
+term.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate_betas.html">estimate_betas</a></span><span class="op">(</span><span class="va">dset</span>, fixed <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">constant</span><span class="op">)</span>, ran <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/trialwise.html">trialwise</a></span><span class="op">(</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, 
+                       method<span class="op">=</span><span class="st">"pls"</span>, ncomp<span class="op">=</span><span class="fl">3</span><span class="op">)</span>
 
-<span class="fu"><a href="https://rdrr.io/r/base/names.html">names</a></span>(<span class="kw">res</span>)
-</pre></div>
-<pre><code>## [1] "betas_fixed"  "betas_ran"    "design_ran"   "design_fixed" "design_base" 
-## [6] "basemod"      "fixed_model"  "ran_model"</code></pre>
-<div class="sourceCode" id="cb6"><pre class="downlit">
-<span class="kw">res_ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate_betas.html">estimate_betas</a></span>(<span class="kw">dset</span>, ran = <span class="kw">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/trialwise.html">trialwise</a></span>(), block = <span class="op">~</span> <span class="kw">run</span>, 
-                       method=<span class="st">"ols"</span>, ncomp=<span class="fl">3</span>)
-</pre></div>
-<p>We can plot the fixed effects model, which here is a single regressor.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit">
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">res</span><span class="op">$</span><span class="kw">fixed_model</span>)
-</pre></div>
+<span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></code></pre></div>
+<pre><code><span class="co">## [1] "betas_fixed"  "betas_ran"    "design_ran"   "design_fixed" "design_base" </span>
+<span class="co">## [6] "basemod"      "fixed_model"  "ran_model"</span></code></pre>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">res_ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate_betas.html">estimate_betas</a></span><span class="op">(</span><span class="va">dset</span>, ran <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/trialwise.html">trialwise</a></span><span class="op">(</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, 
+                       method<span class="op">=</span><span class="st">"ols"</span>, ncomp<span class="op">=</span><span class="fl">3</span><span class="op">)</span></code></pre></div>
+<p>We can plot the fixed effects model, which here is a single
+regressor.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">fixed_model</span><span class="op">)</span></code></pre></div>
 <p><img src="a_07_trialwise_files/figure-html/unnamed-chunk-5-1.png" width="768"></p>
-<p>We can also plot the random effects model, where there is one regressor per trial.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit">
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">res</span><span class="op">$</span><span class="kw">ran_model</span>)
-</pre></div>
+<p>We can also plot the random effects model, where there is one
+regressor per trial.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">ran_model</span><span class="op">)</span></code></pre></div>
 <p><img src="a_07_trialwise_files/figure-html/unnamed-chunk-6-1.png" width="768"></p>
 </div>
   </div>
@@ -182,11 +201,15 @@
 
 
       <footer><div class="copyright">
-  <p>Developed by <a href="https://linguamemoria.org">Bradley Buchsbaum</a>.</p>
+  <p></p>
+<p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley
+Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.0.</p>
+  <p></p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a>
+2.0.2.</p>
 </div>
 
       </footer>
@@ -194,6 +217,8 @@
 
   
 
+
+  
 
   </body>
 </html>

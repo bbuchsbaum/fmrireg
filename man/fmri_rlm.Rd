@@ -11,7 +11,6 @@ fmri_rlm(
   dataset,
   durations,
   drop_empty = TRUE,
-  contrasts = NULL,
   nchunks = 10,
   strategy = c("runwise", "slicewise", "all")
 )
@@ -28,8 +27,6 @@ fmri_rlm(
 \item{durations}{a vector of event durations}
 
 \item{drop_empty}{whether to remove factor levels with size of zero}
-
-\item{contrasts}{a set of contrasts}
 
 \item{nchunks}{number of daa chunks when strategy is \code{chunkwise}}
 

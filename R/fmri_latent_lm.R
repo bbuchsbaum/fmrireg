@@ -1,9 +1,17 @@
 
+
+#' Fast fmri regression model estimation from a latent component dataset
+#'
+#' @details dataset must be of type `latent_dataset`, which itself require a `LatentNeuroVec` input
+#' @note This method is currently experimental.
 #' @export
 #' @inheritParams fmri_lm
+#' @param autocor experimental auto-correlation correction on components
+#' @param bootstrap whether to compute bootstrapped parameter estimates
+#' @param nboot number of bootstrap iterations
 fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset, 
                     durations, drop_empty=TRUE, robust=FALSE, 
-                    autocor=c("auto", "ar1", "ar2", "arma", "none"), 
+                    autocor=c("none", "auto", "ar1", "ar2", "arma"), 
                     bootstrap=FALSE, nboot=1000,
                     ...) {
   
@@ -78,7 +86,7 @@ chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FA
                                                                                         sigma=sigma,
                                                                                         residuals=resid(ret$fit),
                                                                                         df.residual=ret$fit$df.residual,
-                                                                                        qr=stats:::qr.lm(ret$fit))
+                                                                                        qr=qr.lm(ret$fit))
     
   }
   
@@ -88,10 +96,10 @@ chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FA
 
   
 
-
+#' @keywords internal
 tibble_to_neurovec <- function(dset, tab, mask) {
-  sp <- space(get_mask(dset))
-  SparseNeuroVec(as.matrix(tab), neuroim2::add_dim(sp, nrow(tab)), mask=mask)
+  sp <- neuroim2::space(get_mask(dset))
+  neuroim2::SparseNeuroVec(as.matrix(tab), neuroim2::add_dim(sp, nrow(tab)), mask=mask)
 }
 
 #' @export

@@ -436,7 +436,11 @@ to_glt.contrast <- function(x,...) {
 }
 
 
+#' write a GLT file to disk
+#' 
 #' @export
+#' @param x the object
+#' @param fname the file name to write to
 write_glt <- function(x, fname) UseMethod("write_glt")
 
 #' @export

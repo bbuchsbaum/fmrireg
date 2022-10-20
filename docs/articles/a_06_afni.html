@@ -19,6 +19,8 @@
 <![endif]-->
 </head>
 <body data-spy="scroll" data-target="#toc">
+    
+
     <div class="container template-article">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -37,12 +39,6 @@
 
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
-<li>
-  <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
-     
-  </a>
-</li>
 <li>
   <a href="../reference/index.html">Reference</a>
 </li>
@@ -82,8 +78,8 @@
       </ul>
 <ul class="nav navbar-nav navbar-right">
 <li>
-  <a href="https://github.com/bbuchsbaum/fmrireg/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+  <a href="https://github.com/bbuchsbaum/fmrireg/" class="external-link">
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -97,139 +93,143 @@
 
       
 
-      </header><script src="a_06_afni_files/accessible-code-block-0.0.1/empty-anchor.js"></script><div class="row">
+      </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Translating to AFNI 3dDeconvolve</h1>
-                        <h4 class="author">Bradley R. Buchsbaum</h4>
+                        <h4 data-toc-skip class="author">Bradley R.
+Buchsbaum</h4>
             
-            <h4 class="date">2020-12-01</h4>
+            <h4 data-toc-skip class="date">2022-10-20</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_06_afni.Rmd"><code>vignettes/a_06_afni.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/HEAD/vignettes/a_06_afni.Rmd" class="external-link"><code>vignettes/a_06_afni.Rmd</code></a></small>
       <div class="hidden name"><code>a_06_afni.Rmd</code></div>
 
     </div>
 
     
     
-<div id="constructing-an-fmri-regression-model-and-translating-it-for-afnis-3ddeconvolve" class="section level2">
-<h2 class="hasAnchor">
-<a href="#constructing-an-fmri-regression-model-and-translating-it-for-afnis-3ddeconvolve" class="anchor"></a>Constructing an fMRI regression model and translating it for AFNI’s 3dDeconvolve</h2>
-<p>AFNI and other fMRI analysis packages have robust and efficient methods for estimating voxelwise regression models. Therefore, it may be beneficial to construct a regression model in R using <strong>fmrireg</strong> and translate it so that it can be executed using one of these packages. Here we provide a translation mechanism from an <code>fmri_model</code> object constructed with <code>fmrireg</code> to syntax and assocaited file required for execution using AFNI’s <strong>3dDeconvolve</strong> program.</p>
-<pre><code>## Warning: replacing previous import 'Matrix::cov2cor' by 'stats::cov2cor' when
-## loading 'fmrireg'</code></pre>
-<pre><code>## Warning: replacing previous import 'pls::loadings' by 'stats::loadings' when
-## loading 'fmrireg'</code></pre>
-<pre><code>## Warning: replacing previous import 'Matrix::toeplitz' by 'stats::toeplitz' when
-## loading 'fmrireg'</code></pre>
-<pre><code>## Warning: replacing previous import 'Matrix::update' by 'stats::update' when
-## loading 'fmrireg'</code></pre>
+<div class="section level2">
+<h2 id="constructing-an-fmri-regression-model-and-translating-it-for-afnis-3ddeconvolve">Constructing an fMRI regression model and translating it for AFNI’s
+3dDeconvolve<a class="anchor" aria-label="anchor" href="#constructing-an-fmri-regression-model-and-translating-it-for-afnis-3ddeconvolve"></a>
+</h2>
+<p>AFNI and other fMRI analysis packages have robust and efficient
+methods for estimating voxelwise regression models. Therefore, it may be
+beneficial to construct a regression model in R using
+<strong>fmrireg</strong> and translate it so that it can be executed
+using one of these packages. Here we provide a translation mechanism
+from an <code>fmri_model</code> object constructed with
+<code>fmrireg</code> to syntax and assocaited file required for
+execution using AFNI’s <strong>3dDeconvolve</strong> program.</p>
+<pre><code><span class="co">## Warning: package 'tibble' was built under R version 4.1.2</span></code></pre>
 </div>
-<div id="a-simple-model" class="section level2">
-<h2 class="hasAnchor">
-<a href="#a-simple-model" class="anchor"></a>A Simple Model</h2>
+<div class="section level2">
+<h2 id="a-simple-model">A Simple Model<a class="anchor" aria-label="anchor" href="#a-simple-model"></a>
+</h2>
 <p>Lets begin again with a simple fMRI design.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit">
-<span class="kw">cond</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"face"</span>, <span class="st">"scene"</span>, <span class="st">"tool"</span>, <span class="st">"object"</span>)
-<span class="kw">NSTIM</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="kw">cond</span>)<span class="op">*</span><span class="fl">4</span>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">cond</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"face"</span>, <span class="st">"scene"</span>, <span class="st">"tool"</span>, <span class="st">"object"</span><span class="op">)</span>
+<span class="va">NSTIM</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">cond</span><span class="op">)</span><span class="op">*</span><span class="fl">4</span>
 
-<span class="kw">simple_design</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html">data.frame</a></span>(stim=<span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/sample.html">sample</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="kw">cond</span>, <span class="fl">4</span>))), 
-                     ISI=<span class="fu"><a href="https://rdrr.io/r/base/sample.html">sample</a></span>(<span class="fl">4</span><span class="op">:</span><span class="fl">7</span>, <span class="kw">NSTIM</span>, replace=<span class="fl">TRUE</span>), 
-                     run=<span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">1</span>, <span class="kw">NSTIM</span>),
-                     trial=<span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span>(<span class="fl">1</span><span class="op">:</span><span class="kw">NSTIM</span>))
-</pre></div>
-<p>Now we add onset information, construct a <code>sampling_frame</code>, create a contrast, and then an <code>event_model</code>:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit">
-<span class="kw">simple_design</span><span class="op">$</span><span class="kw">onset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html">cumsum</a></span>(<span class="kw">simple_design</span><span class="op">$</span><span class="kw">ISI</span><span class="op">+</span><span class="fl">2</span>) <span class="op">-</span><span class="fl">2</span>
-<span class="kw">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(blocklens=<span class="fl">70</span>, TR=<span class="fl">2</span>)
+<span class="va">simple_design</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>stim<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">cond</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, 
+                     ISI<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">4</span><span class="op">:</span><span class="fl">7</span>, <span class="va">NSTIM</span>, replace<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span>, 
+                     run<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">NSTIM</span><span class="op">)</span>,
+                     trial<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="va">NSTIM</span><span class="op">)</span><span class="op">)</span></code></pre></div>
+<p>Now we add onset information, construct a
+<code>sampling_frame</code>, create a contrast, and then an
+<code>event_model</code>:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">simple_design</span><span class="op">$</span><span class="va">onset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="va">simple_design</span><span class="op">$</span><span class="va">ISI</span><span class="op">+</span><span class="fl">2</span><span class="op">)</span> <span class="op">-</span><span class="fl">2</span>
+<span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span>blocklens<span class="op">=</span><span class="fl">70</span>, TR<span class="op">=</span><span class="fl">2</span><span class="op">)</span>
 
-<span class="kw">con1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span>(<span class="op">~</span> <span class="kw">stim</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span><span class="kw">stim</span> <span class="op">==</span> <span class="st">"scene"</span>, name=<span class="st">"face_scene"</span>)
+<span class="va">con1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">stim</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span><span class="va">stim</span> <span class="op">==</span> <span class="st">"scene"</span>, name<span class="op">=</span><span class="st">"face_scene"</span><span class="op">)</span>
 
-<span class="kw">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span>(<span class="kw">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span>(<span class="kw">stim</span>, contrasts=<span class="kw">con1</span>), data=<span class="kw">simple_design</span>, block = <span class="op">~</span> <span class="kw">run</span>, sampling_frame=<span class="kw">sframe</span>)
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">emodel</span>)
-</pre></div>
+<span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span>, contrasts<span class="op">=</span><span class="va">con1</span><span class="op">)</span>, data<span class="op">=</span><span class="va">simple_design</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></code></pre></div>
 <p><img src="a_06_afni_files/figure-html/unnamed-chunk-3-1.png" width="672"></p>
-<p>We construct a <code>baseline_model</code> using a B-spline basis:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit">
-<span class="kw">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span>(basis=<span class="st">"bs"</span>, degree=<span class="fl">5</span>, sframe=<span class="kw">sframe</span>)
-<span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span>(<span class="kw">bmodel</span>)
-</pre></div>
-<pre><code>## baseline_model 
-##    name:  baseline_bs_5 
-##    basis type:  bs 
-##    degree:  5 
-##    drift columns:  5 
-##    constant columns:  1 
-##    nuisance columns:  0 
-##    total columns:  6 
-##    design_matrix:  
-## # A tibble: 70 x 6
-##    constant_global base_bs1_block_1 base_bs2_block_1 base_bs3_block_1
-##              &lt;dbl&gt;            &lt;dbl&gt;            &lt;dbl&gt;            &lt;dbl&gt;
-##  1               1           0               0              0        
-##  2               1           0.0684          0.00201        0.0000296
-##  3               1           0.129           0.00769        0.000230 
-##  4               1           0.182           0.0165         0.000752 
-##  5               1           0.228           0.0281         0.00173  
-##  6               1           0.268           0.0419         0.00327  
-##  7               1           0.302           0.0576         0.00548  
-##  8               1           0.331           0.0747         0.00843  
-##  9               1           0.354           0.0929         0.0122   
-## 10               1           0.373           0.112          0.0168   
-## # … with 60 more rows, and 2 more variables: base_bs4_block_1 &lt;dbl&gt;,
-## #   base_bs5_block_1 &lt;dbl&gt;</code></pre>
-<div class="sourceCode" id="cb9"><pre class="downlit">
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">bmodel</span>)
-</pre></div>
+<p>We construct a <code>baseline_model</code> using a B-spline
+basis:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span><span class="op">(</span>basis<span class="op">=</span><span class="st">"bs"</span>, degree<span class="op">=</span><span class="fl">5</span>, sframe<span class="op">=</span><span class="va">sframe</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">bmodel</span><span class="op">)</span></code></pre></div>
+<pre><code><span class="co">## baseline_model </span>
+<span class="co">##    name:  baseline_bs_5 </span>
+<span class="co">##    basis type:  bs </span>
+<span class="co">##    degree:  5 </span>
+<span class="co">##    drift columns:  5 </span>
+<span class="co">##    constant columns:  1 </span>
+<span class="co">##    nuisance columns:  0 </span>
+<span class="co">##    total columns:  6 </span>
+<span class="co">##    design_matrix:  </span>
+<span class="co">## <span style="color: #949494;"># A tibble: 70 × 6</span></span>
+<span class="co">##    constant_global base_bs1_block_1 base_bs2_block_1 base_bs3…¹ base_…² base_b…³</span>
+<span class="co">##              <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="co">## <span style="color: #BCBCBC;"> 1</span>               1           0               0        0         0   <span style="color: #949494;"> </span>   0   <span style="color: #949494;"> </span>   </span>
+<span class="co">## <span style="color: #BCBCBC;"> 2</span>               1           0.068<span style="text-decoration: underline;">4</span>          0.002<span style="text-decoration: underline;">01</span>  0.000<span style="text-decoration: underline;">029</span>6 2.17<span style="color: #949494;">e</span><span style="color: #BB0000;">-7</span> 6.39<span style="color: #949494;">e</span><span style="color: #BB0000;">-10</span></span>
+<span class="co">## <span style="color: #BCBCBC;"> 3</span>               1           0.129           0.007<span style="text-decoration: underline;">69</span>  0.000<span style="text-decoration: underline;">230</span>  3.43<span style="color: #949494;">e</span><span style="color: #BB0000;">-6</span> 2.05<span style="color: #949494;">e</span><span style="color: #BB0000;">- 8</span></span>
+<span class="co">## <span style="color: #BCBCBC;"> 4</span>               1           0.182           0.016<span style="text-decoration: underline;">5</span>   0.000<span style="text-decoration: underline;">752</span>  1.71<span style="color: #949494;">e</span><span style="color: #BB0000;">-5</span> 1.55<span style="color: #949494;">e</span><span style="color: #BB0000;">- 7</span></span>
+<span class="co">## <span style="color: #BCBCBC;"> 5</span>               1           0.228           0.028<span style="text-decoration: underline;">1</span>   0.001<span style="text-decoration: underline;">73</span>   5.32<span style="color: #949494;">e</span><span style="color: #BB0000;">-5</span> 6.55<span style="color: #949494;">e</span><span style="color: #BB0000;">- 7</span></span>
+<span class="co">## <span style="color: #BCBCBC;"> 6</span>               1           0.268           0.041<span style="text-decoration: underline;">9</span>   0.003<span style="text-decoration: underline;">27</span>   1.28<span style="color: #949494;">e</span><span style="color: #BB0000;">-4</span> 2.00<span style="color: #949494;">e</span><span style="color: #BB0000;">- 6</span></span>
+<span class="co">## <span style="color: #BCBCBC;"> 7</span>               1           0.302           0.057<span style="text-decoration: underline;">6</span>   0.005<span style="text-decoration: underline;">48</span>   2.61<span style="color: #949494;">e</span><span style="color: #BB0000;">-4</span> 4.97<span style="color: #949494;">e</span><span style="color: #BB0000;">- 6</span></span>
+<span class="co">## <span style="color: #BCBCBC;"> 8</span>               1           0.331           0.074<span style="text-decoration: underline;">7</span>   0.008<span style="text-decoration: underline;">43</span>   4.76<span style="color: #949494;">e</span><span style="color: #BB0000;">-4</span> 1.07<span style="color: #949494;">e</span><span style="color: #BB0000;">- 5</span></span>
+<span class="co">## <span style="color: #BCBCBC;"> 9</span>               1           0.354           0.092<span style="text-decoration: underline;">9</span>   0.012<span style="text-decoration: underline;">2</span>    7.99<span style="color: #949494;">e</span><span style="color: #BB0000;">-4</span> 2.10<span style="color: #949494;">e</span><span style="color: #BB0000;">- 5</span></span>
+<span class="co">## <span style="color: #BCBCBC;">10</span>               1           0.373           0.112    0.016<span style="text-decoration: underline;">8</span>    1.26<span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span> 3.78<span style="color: #949494;">e</span><span style="color: #BB0000;">- 5</span></span>
+<span class="co">## <span style="color: #949494;"># … with 60 more rows, and abbreviated variable names ¹​base_bs3_block_1,</span></span>
+<span class="co">## <span style="color: #949494;">#   ²​base_bs4_block_1, ³​base_bs5_block_1</span></span></code></pre>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmodel</span><span class="op">)</span></code></pre></div>
 <p><img src="a_06_afni_files/figure-html/unnamed-chunk-4-1.png" width="672"></p>
 <p>We construct an <code>fmri_model</code>:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit">
-<span class="kw">fmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_model.html">fmri_model</a></span>(<span class="kw">emodel</span>, <span class="kw">bmodel</span>)
-</pre></div>
-<p>Now we need to specify the data that the model will be estimated on. Let us pretend that we have a single 4d NIfTI file called “scan01.nii” and a mask file called “mask.nii”.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit">
-<span class="kw">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_dataset.html">fmri_dataset</a></span>(scans=<span class="st">"scan01.nii"</span>,
-                     mask=<span class="st">"mask.nii"</span>,
-                     TR=<span class="fl">2</span>,
-                     run_length=<span class="fl">70</span>,
-                     event_table=<span class="kw">simple_design</span>,
-                     base_path=<span class="st">"."</span>)
-</pre></div>
-<p>We are now ready to construct an AFNI model specification. Note that all contrasts in the model will automatically be converted to AFNI-style general linear tests (GLTs).</p>
-<div class="sourceCode" id="cb12"><pre class="downlit">
-<span class="kw">alm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/afni_lm.html">afni_lm</a></span>(<span class="kw">fmodel</span>, <span class="kw">dset</span>)
-<span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span>(<span class="kw">alm</span>)
-</pre></div>
-<pre><code>## AFNI linear model via 3dDeconvolve 
-##   working_dir:  . 
-##   number of GLTs: 1 
-##   command line: 
-##  3dDeconvolve -input ./scan01.nii -mask ./mask.nii -polort -1 -global_times -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -tout -cbucket coefout -bucket statout -jobs 1 -float</code></pre>
-<p>Also, note that since we include a set of b-spline nuisance parameters in our model, <code>polort</code> is set to have no baseline regressors (polort = -1). We change that if we like:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit">
-<span class="kw">alm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/afni_lm.html">afni_lm</a></span>(<span class="kw">fmodel</span>, <span class="kw">dset</span>, polort=<span class="fl">2</span>)
-<span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span>(<span class="kw">alm</span>)
-</pre></div>
-<pre><code>## AFNI linear model via 3dDeconvolve 
-##   working_dir:  . 
-##   number of GLTs: 1 
-##   command line: 
-##  3dDeconvolve -input ./scan01.nii -mask ./mask.nii -polort 2 -global_times -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -tout -cbucket coefout -bucket statout -jobs 1 -float</code></pre>
-<p>But this would essentially add two sets of drift regressors, which would be bad.</p>
-<p>To send other options to the <code>3dDeconvolve</code> command we can add them to the <code>options</code> argument, e.g.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit">
-<span class="kw">alm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/afni_lm.html">afni_lm</a></span>(<span class="kw">fmodel</span>, <span class="kw">dset</span>, options=<span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span>(tout=<span class="fl">FALSE</span>, fout=<span class="fl">FALSE</span>))
-<span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span>(<span class="kw">alm</span>)
-</pre></div>
-<pre><code>## AFNI linear model via 3dDeconvolve 
-##   working_dir:  . 
-##   number of GLTs: 1 
-##   command line: 
-##  3dDeconvolve -input ./scan01.nii -mask ./mask.nii -polort -1 -global_times -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -cbucket coefout -bucket statout -jobs 1 -float</code></pre>
-<p>To execute the external <code>3dDeconvolve</code> command on the system, we do as follows:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit">
-<span class="co">#run(alm, outdir="glm_out")</span>
-</pre></div>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">fmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_model.html">fmri_model</a></span><span class="op">(</span><span class="va">emodel</span>, <span class="va">bmodel</span><span class="op">)</span></code></pre></div>
+<p>Now we need to specify the data that the model will be estimated on.
+Let us pretend that we have a single 4d NIfTI file called “scan01.nii”
+and a mask file called “mask.nii”.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_dataset.html">fmri_dataset</a></span><span class="op">(</span>scans<span class="op">=</span><span class="st">"scan01.nii"</span>,
+                     mask<span class="op">=</span><span class="st">"mask.nii"</span>,
+                     TR<span class="op">=</span><span class="fl">2</span>,
+                     run_length<span class="op">=</span><span class="fl">70</span>,
+                     event_table<span class="op">=</span><span class="va">simple_design</span>,
+                     base_path<span class="op">=</span><span class="st">"."</span><span class="op">)</span></code></pre></div>
+<p>We are now ready to construct an AFNI model specification. Note that
+all contrasts in the model will automatically be converted to AFNI-style
+general linear tests (GLTs).</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">alm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/afni_lm.html">afni_lm</a></span><span class="op">(</span><span class="va">fmodel</span>, <span class="va">dset</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">alm</span><span class="op">)</span></code></pre></div>
+<pre><code><span class="co">## AFNI linear model via 3dDeconvolve </span>
+<span class="co">##   working_dir:  . </span>
+<span class="co">##   number of GLTs: 1 </span>
+<span class="co">##   command line: </span>
+<span class="co">##  3dDeconvolve -input ./scan01.nii -mask ./mask.nii -polort -1 -global_times -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -tout -cbucket coefout -bucket statout -jobs 1 -float</span></code></pre>
+<p>Also, note that since we include a set of b-spline nuisance
+parameters in our model, <code>polort</code> is set to have no baseline
+regressors (polort = -1). We change that if we like:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">alm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/afni_lm.html">afni_lm</a></span><span class="op">(</span><span class="va">fmodel</span>, <span class="va">dset</span>, polort<span class="op">=</span><span class="fl">2</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">alm</span><span class="op">)</span></code></pre></div>
+<pre><code><span class="co">## AFNI linear model via 3dDeconvolve </span>
+<span class="co">##   working_dir:  . </span>
+<span class="co">##   number of GLTs: 1 </span>
+<span class="co">##   command line: </span>
+<span class="co">##  3dDeconvolve -input ./scan01.nii -mask ./mask.nii -polort 2 -global_times -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -tout -cbucket coefout -bucket statout -jobs 1 -float</span></code></pre>
+<p>But this would essentially add two sets of drift regressors, which
+would be bad.</p>
+<p>To send other options to the <code>3dDeconvolve</code> command we can
+add them to the <code>options</code> argument, e.g.</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">alm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/afni_lm.html">afni_lm</a></span><span class="op">(</span><span class="va">fmodel</span>, <span class="va">dset</span>, options<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>tout<span class="op">=</span><span class="cn">FALSE</span>, fout<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">alm</span><span class="op">)</span></code></pre></div>
+<pre><code><span class="co">## AFNI linear model via 3dDeconvolve </span>
+<span class="co">##   working_dir:  . </span>
+<span class="co">##   number of GLTs: 1 </span>
+<span class="co">##   command line: </span>
+<span class="co">##  3dDeconvolve -input ./scan01.nii -mask ./mask.nii -polort -1 -global_times -num_stimts 4 -num_glt 1 -stim_file 1 stim#face_reg.1D -stim_file 2 stim#object_reg.1D -stim_file 3 stim#scene_reg.1D -stim_file 4 stim#tool_reg.1D -stim_label 1 stim#face -stim_label 2 stim#object -stim_label 3 stim#scene -stim_label 4 stim#tool -ortvec constant_1.1D constant_1 -ortvec baseline_bs_5_1.1D baseline_bs_5_1 -TR_times 1 -gltsym GLT_face_scene.txt -glt_label 1 GLT_face_scene -nofullf_atall -cbucket coefout -bucket statout -jobs 1 -float</span></code></pre>
+<p>To execute the external <code>3dDeconvolve</code> command on the
+system, we do as follows:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="co">#run(alm, outdir="glm_out")</span></code></pre></div>
 </div>
   </div>
 
@@ -244,11 +244,15 @@
 
 
       <footer><div class="copyright">
-  <p>Developed by <a href="https://linguamemoria.org">Bradley Buchsbaum</a>.</p>
+  <p></p>
+<p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley
+Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.0.</p>
+  <p></p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a>
+2.0.2.</p>
 </div>
 
       </footer>
@@ -256,6 +260,8 @@
 
   
 
+
+  
 
   </body>
 </html>

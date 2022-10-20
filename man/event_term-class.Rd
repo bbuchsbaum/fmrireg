@@ -24,10 +24,12 @@ Create an event model term from a named list of variables.
 
 x1 <- factor(rep(letters[1:3], 10))
 x2 <- factor(rep(1:3, each=10))
-eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), blockids=rep(1,30))
+eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), 
+blockids=rep(1,30))
 
 x1 <- rnorm(30)
 x2 <- factor(rep(1:3, each=10))
-eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), blockids=rep(1,30), subset=x1>0)
+eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), 
+blockids=rep(1,30), subset=x1>0)
 
 }

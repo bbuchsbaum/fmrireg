@@ -2,9 +2,20 @@
 % Please edit documentation in R/hrf.R
 \name{gen_hrf_blocked}
 \alias{gen_hrf_blocked}
+\alias{hrf_blocked}
 \title{gen_hrf_blocked}
 \usage{
 gen_hrf_blocked(
+  hrf = hrf_gaussian,
+  width = 5,
+  precision = 0.1,
+  half_life = Inf,
+  summate = TRUE,
+  normalize = FALSE,
+  ...
+)
+
+hrf_blocked(
   hrf = hrf_gaussian,
   width = 5,
   precision = 0.1,
@@ -32,3 +43,8 @@ gen_hrf_blocked(
 \description{
 gen_hrf_blocked
 }
+\section{Functions}{
+\itemize{
+\item \code{hrf_blocked()}: alias for gen_hrf_blocked
+
+}}

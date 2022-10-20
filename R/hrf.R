@@ -3,7 +3,7 @@ NULL
 
 #' construct an \code{HRF} instance 
 #' 
-#' \code{HRF} takes a faw function f(t) and returns an \code{HRF} instance
+#' \code{gen_hrf} takes a raw function f(t) and returns an \code{HRF} instance
 #' 
 #' @param hrf a function mapping from time --> signal
 #' @param lag optional lag in seconds
@@ -99,9 +99,9 @@ gen_empirical_hrf <- function(t, y, name="empirical_hrf") {
 #' @param name the name of the HRF
 #' @examples 
 #' 
-#' hrf1 <- hrf_spmg1 %>% gen_hrf(lag=0)
-#' hrf2 <- hrf_spmg1 %>% gen_hrf(lag=3)
-#' hrf3 <- hrf_spmg1 %>% gen_hrf(lag=6)
+#' hrf1 <- hrf_spmg1 |> gen_hrf(lag=0)
+#' hrf2 <- hrf_spmg1 |> gen_hrf(lag=3)
+#' hrf3 <- hrf_spmg1 |> gen_hrf(lag=6)
 #' 
 #' hset <- gen_hrf_set(hrf1,hrf2,hrf3)
 #' @export
@@ -115,6 +115,7 @@ gen_hrf_set <- function(..., span=32, name="hrf_set") {
   HRF(f, name=name, span=span, nbasis=length(hrflist))
 }
 
+#' @keywords internal
 gen_hrf_library <- function(fun, pgrid,...) {
   pnames <- names(pgrid)
   
@@ -142,7 +143,7 @@ gen_hrf_library <- function(fun, pgrid,...) {
 #' resp <- evaluate(hrf, seq(0,24,by=1))
 #' 
 #' @export
-#' @rdname HRF
+#' @rdname HRF-class
 HRF <- function(fun, name, nbasis=1, span=24, param_names=NULL) {
   vals <- fun(seq(0,span))
 
@@ -165,7 +166,7 @@ HRF <- function(fun, name, nbasis=1, span=24, param_names=NULL) {
 }
 
 #' @inheritParams HRF
-#' @export
+#' @describeIn HRF-class AFNI hrf
 AFNI_HRF <- function(name, nbasis, params) {
   structure(name, 
             nbasis=as.integer(nbasis), 
@@ -222,7 +223,7 @@ gen_hrf_lagged <- function(hrf, lag=2, normalize=FALSE, ...) {
 }
 
 #' @export
-#' @inheritParams gen_hrf_lagged
+#' @describeIn gen_hrf_lagged alias for gen_hrf_lagged
 hrf_lagged <- gen_hrf_lagged
 
 
@@ -246,7 +247,8 @@ gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1,
 }
 
 #' @export
-#' @inheritParams gen_hrf_blocked
+#' @aliases gen_hrf_blocked
+#' @describeIn gen_hrf_blocked alias for gen_hrf_blocked
 hrf_blocked <- gen_hrf_blocked
 
 
@@ -285,7 +287,7 @@ convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.2, half_life
 }
 
 #' @inheritParams convolve_block
-#' @describeIn convolve_block
+# @describeIn convolve_block
 convolve_impulse <- function(t, hrf=hrf_gaussian, precision=.2, normalize=FALSE, ...) {
   hmat <- hrf(t,...)
 
@@ -397,16 +399,15 @@ hrf_spmg1 <- function(t, P1=5, P2=15) {
 	
 }
 
-#' @export
-#' @rdname HRF
+#' @keywords internal
 HRF_GAMMA <- HRF(hrf_gamma, "gamma", param_names=c("shape", "rate"))
 
 #' @export
-#' @rdname HRF
+#' @describeIn HRF-class Gaussian hrf
 HRF_GAUSSIAN <- HRF(hrf_gaussian, name="gaussian", param_names=c("mean", "sd"))
 
 #' @export
-#' @rdname HRF
+#' @describeIn HRF-class B-spline hrf
 HRF_BSPLINE <- HRF(gen_hrf(hrf_bspline), name="bspline", nbasis=5)
 
 # @export
@@ -414,18 +415,20 @@ HRF_BSPLINE <- HRF(gen_hrf(hrf_bspline), name="bspline", nbasis=5)
 # HRF_IDENT <- HRF(gen_hrf(hrf_ident), "ident", nbasis=1)
 
 
-#' @export
-#' @rdname HRF
+#' @keywords internal
+#' @describeIn HRF-class SPMG1 hrf
+#' @export 
 HRF_SPMG1 <- HRF(hrf_spmg1, 
                  "SPMG1", param_names=c("A1", "A2"))
 
+
+#' @describeIn HRF-class SPMG2 hrf
 #' @export
-#' @rdname HRF
 HRF_SPMG2 <- HRF(gen_hrf_set(hrf_spmg1, makeDeriv(hrf_spmg1)), 
                  "SPMG2", nbasis=2, param_names=c("A1", "A2"))
 
+#' @describeIn HRF-class SPMG3 hrf
 #' @export
-#' @rdname HRF
 HRF_SPMG3 <- HRF(gen_hrf_set(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeriv(hrf_spmg1))), 
                  "SPMG3", nbasis=3, param_names=c("A1", "A2"))
 
@@ -618,7 +621,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
 }
 
 
-#' @export
+#' @keywords internal
 hrfspec <- function(vars, label=NULL, basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, 
                     subset=NULL, precision=.3, 
                     contrasts=NULL, id=NULL, summate=TRUE) {
@@ -1081,21 +1084,41 @@ construct.afni_trialwise_hrfspec <- function(x, model_spec, ...) {
 }
 
 
-
+#' @keywords internal
 AFNI_SPMG1 <- function(d=1) AFNI_HRF(name="SPMG1", nbasis=as.integer(1), params=list(d=d)) 
+
+#' @keywords internal
 AFNI_SPMG2 <- function(d=1) AFNI_HRF(name="SPMG2", nbasis=as.integer(2), params=list(d=d))
+
+#' @keywords internal
 AFNI_SPMG3 <- function(d=1) AFNI_HRF(name="SPMG3", nbasis=as.integer(3), params=list(d=d))
+
+#' @keywords internal
 AFNI_BLOCK <- function(d=1,p=1) AFNI_HRF(name="BLOCK", nbasis=as.integer(1), params=list(d=d,p=p))
+
+#' @keywords internal
 AFNI_dmBLOCK <- function(d=1,p=1) AFNI_HRF(name="dmBLOCK", nbasis=as.integer(1), params=list(d=d,p=p))
 
+#' @keywords internal
 AFNI_TENT <- function(b=0,c=18, n=10) AFNI_HRF(name="TENT", nbasis=as.integer(n), params=list(b=b,c=c,n=n))
+
+#' @keywords internal
 AFNI_CSPLIN <- function(b=0,c=18, n=6) AFNI_HRF(name="CSPLIN", nbasis=as.integer(n), params=list(b=b,c=c,n=n))
+
+#' @keywords internal
 AFNI_POLY <- function(b=0,c=18, n=10) AFNI_HRF(name="POLY", nbasis=as.integer(n), params=list(b=b,c=c,n=n))
+
+#' @keywords internal
 AFNI_SIN <- function(b=0,c=18, n=10) AFNI_HRF(name="SIN", nbasis=as.integer(n), params=list(b=b,c=c,n=n))
+
+#' @keywords internal
 AFNI_GAM <- function(p=8.6,q=.547) AFNI_HRF(name="GAM", nbasis=as.integer(1), params=list(p=p,q=q))
+
+#' @keywords internal
 AFNI_WAV <- function(d=1) AFNI_HRF(name="WAV", nbasis=as.integer(1), params=list(d=1))
 
 
+#' @keywords internal
 get_AFNI_HRF <- function(name, nbasis=1, duration=1, b=0, c=18) {
   hrf <- switch(name,
                 gamma=AFNI_GAM(),

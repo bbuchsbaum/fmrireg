@@ -9,7 +9,6 @@ fmri_lm_fit(
   dataset,
   strategy = c("chunkwise", "runwise"),
   robust = FALSE,
-  contrasts = NULL,
   nchunks = 10,
   ...
 )
@@ -22,8 +21,6 @@ fmri_lm_fit(
 \item{strategy}{the data splitting strategy}
 
 \item{robust}{whether to use robust fitting (TRUE or FALSE)}
-
-\item{contrasts}{a set of contrasts}
 
 \item{nchunks}{number of daa chunks when strategy is \code{chunkwise}}
 

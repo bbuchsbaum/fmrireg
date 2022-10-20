@@ -26,7 +26,7 @@ pres <- prcomp(X)
 basis <- pres$x[,1:25]
 loadings <- pres$rotation[,1:25]
 offset <- colMeans(X)
-lvec <- LatentNeuroVec(basis, loadings, NeuroSpace(c(10,10,10,100)), mask=rep(TRUE,1000), offset=offset)
+lvec <- neuroim2::LatentNeuroVec(basis, loadings, neuroim2::NeuroSpace(c(10,10,10,100)), 
+mask=rep(TRUE,1000), offset=offset)
 dset <- latent_dataset(lvec, TR=2, run_length=100)
-
 }

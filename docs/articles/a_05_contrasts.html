@@ -19,6 +19,8 @@
 <![endif]-->
 </head>
 <body data-spy="scroll" data-target="#toc">
+    
+
     <div class="container template-article">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -37,12 +39,6 @@
 
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
-<li>
-  <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
-     
-  </a>
-</li>
 <li>
   <a href="../reference/index.html">Reference</a>
 </li>
@@ -82,8 +78,8 @@
       </ul>
 <ul class="nav navbar-nav navbar-right">
 <li>
-  <a href="https://github.com/bbuchsbaum/fmrireg/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+  <a href="https://github.com/bbuchsbaum/fmrireg/" class="external-link">
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -97,43 +93,44 @@
 
       
 
-      </header><script src="a_05_contrasts_files/accessible-code-block-0.0.1/empty-anchor.js"></script><div class="row">
+      </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Contrasts</h1>
-                        <h4 class="author">Bradley R. Buchsbaum</h4>
+                        <h4 data-toc-skip class="author">Bradley R.
+Buchsbaum</h4>
             
-            <h4 class="date">2020-12-01</h4>
+            <h4 data-toc-skip class="date">2022-10-20</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_05_contrasts.Rmd"><code>vignettes/a_05_contrasts.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/HEAD/vignettes/a_05_contrasts.Rmd" class="external-link"><code>vignettes/a_05_contrasts.Rmd</code></a></small>
       <div class="hidden name"><code>a_05_contrasts.Rmd</code></div>
 
     </div>
 
     
     
-<pre><code>## Warning: replacing previous import 'Matrix::cov2cor' by 'stats::cov2cor' when
-## loading 'fmrireg'</code></pre>
-<pre><code>## Warning: replacing previous import 'pls::loadings' by 'stats::loadings' when
-## loading 'fmrireg'</code></pre>
-<pre><code>## Warning: replacing previous import 'Matrix::toeplitz' by 'stats::toeplitz' when
-## loading 'fmrireg'</code></pre>
-<pre><code>## Warning: replacing previous import 'Matrix::update' by 'stats::update' when
-## loading 'fmrireg'</code></pre>
-<div id="contrasts" class="section level2">
-<h2 class="hasAnchor">
-<a href="#contrasts" class="anchor"></a>Contrasts</h2>
-<p>Statistical contrasts are an important component of <em>f</em>MRI analyses. Contrasts allow for testing of hypotheses about the relative brain activity between two or more conditions. Our aim is to provide a flexible interface for describing contrasts and generating contrast weight vectors that can be applied to linear models.</p>
-<div id="a-simple-2-by-2-experiment" class="section level3">
-<h3 class="hasAnchor">
-<a href="#a-simple-2-by-2-experiment" class="anchor"></a>A simple 2 by 2 experiment</h3>
-<p>The approach we take in specifying contrasts is to formulate them as regular R expressions using the <code><a href="https://rdrr.io/r/base/tilde.html">~</a></code> operator. To demonstrate, lets start with a simple two-by-two design with factors <em>category</em> with levels [face,scene] and <em>attention</em> with levels [attend,ignore]. For this simple design, we assume each condition is repeated twice in a single run.</p>
+<div class="section level2">
+<h2 id="contrasts">Contrasts<a class="anchor" aria-label="anchor" href="#contrasts"></a>
+</h2>
+<p>Statistical contrasts are an important component of <em>f</em>MRI
+analyses. Contrasts allow for testing of hypotheses about the relative
+brain activity between two or more conditions. Our aim is to provide a
+flexible interface for describing contrasts and generating contrast
+weight vectors that can be applied to linear models.</p>
+<div class="section level3">
+<h3 id="a-simple-2-by-2-experiment">A simple 2 by 2 experiment<a class="anchor" aria-label="anchor" href="#a-simple-2-by-2-experiment"></a>
+</h3>
+<p>The approach we take in specifying contrasts is to formulate them as
+regular R expressions using the <code>~</code> operator. To demonstrate,
+lets start with a simple two-by-two design with factors
+<em>category</em> with levels [face,scene] and <em>attention</em> with
+levels [attend,ignore]. For this simple design, we assume each condition
+is repeated twice in a single run.</p>
 <p>First we construct the fMRI design as follows:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit">
-<span class="kw">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html">expand.grid</a></span>(category=<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"face"</span>, <span class="st">"scene"</span>), attention=<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"attend"</span>, <span class="st">"ignore"</span>), replication=<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="fl">1</span>,<span class="fl">2</span>))
-<span class="kw">design</span><span class="op">$</span><span class="kw">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">1</span>, <span class="fl">100</span>, length.out=<span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span>(<span class="kw">design</span>))
-<span class="kw">design</span><span class="op">$</span><span class="kw">block</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">1</span>,<span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span>(<span class="kw">design</span>))
-</pre></div>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span>category<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"face"</span>, <span class="st">"scene"</span><span class="op">)</span>, attention<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"attend"</span>, <span class="st">"ignore"</span><span class="op">)</span>, replication<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">2</span><span class="op">)</span><span class="op">)</span>
+<span class="va">design</span><span class="op">$</span><span class="va">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">100</span>, length.out<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span><span class="op">)</span>
+<span class="va">design</span><span class="op">$</span><span class="va">block</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span><span class="op">)</span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left">category</th>
@@ -202,77 +199,101 @@
 </tbody>
 </table>
 </div>
-<div id="creating-contrasts-to-test-experimental-effects" class="section level3">
-<h3 class="hasAnchor">
-<a href="#creating-contrasts-to-test-experimental-effects" class="anchor"></a>Creating contrasts to test experimental effects</h3>
-<p>In a two by two design, there are a number of experimental effects that we might be interested in testing, for example: (1) the effect of <em>category</em> (face &gt; scene), (2) the effect of <em>attention</em> (attend &gt; ignored), and (3) the interaction between <em>category</em> and <em>attention</em>. All of these effects can be formulated as contrasts of weighted averages of condition effects, yielding directional (i.e. signed) <em>t</em>-statistics. Below we show how each contrast can be expressed:</p>
+<div class="section level3">
+<h3 id="creating-contrasts-to-test-experimental-effects">Creating contrasts to test experimental effects<a class="anchor" aria-label="anchor" href="#creating-contrasts-to-test-experimental-effects"></a>
+</h3>
+<p>In a two by two design, there are a number of experimental effects
+that we might be interested in testing, for example: (1) the effect of
+<em>category</em> (face &gt; scene), (2) the effect of
+<em>attention</em> (attend &gt; ignored), and (3) the interaction
+between <em>category</em> and <em>attention</em>. All of these effects
+can be formulated as contrasts of weighted averages of condition
+effects, yielding directional (i.e. signed) <em>t</em>-statistics. Below
+we show how each contrast can be expressed:</p>
 <ol style="list-style-type: decimal">
 <li><code>face_scene &lt;- pair_contrast(~ category == "face", ~ category == "scene")</code></li>
 <li><code>attend_ignored &lt;- pair_contrast(~ attention == "attend", ~ attention == "ignored")</code></li>
 <li><code>category_by_attention &lt;- contrast(~ (face:attend - face:ignored) - (scene:attend + scene:ignored), name="category_by_attention"))</code></li>
 </ol>
-<p>In the following sections we will explain the syntax used in the examples above.</p>
+<p>In the following sections we will explain the syntax used in the
+examples above.</p>
 </div>
-<div id="contrasting-two-sets-of-conditions" class="section level3">
-<h3 class="hasAnchor">
-<a href="#contrasting-two-sets-of-conditions" class="anchor"></a>Contrasting two sets of conditions</h3>
-<p>We often want to compare two conditions, or two <em>sets of conditions</em>, for a difference in <em>f</em>MRI activity. Such contrasts can be described, generically, as involving an expression <code>A - B</code>, where <code>A</code> represents the weights for the first set of conditions and <code>B</code> represents the weights for the second set of conditions.</p>
-<p>If sum of the <code>A</code> weights is 1 and the sum of the ‘B’ weights is also 1, then the difference in these weights (<code>A - B</code>) is 0. Thus, the difference in the weights <em>sum to zero</em>, which is what we want when the <strong>null hypothesis</strong> is that A == B.</p>
+<div class="section level3">
+<h3 id="contrasting-two-sets-of-conditions">Contrasting two sets of conditions<a class="anchor" aria-label="anchor" href="#contrasting-two-sets-of-conditions"></a>
+</h3>
+<p>We often want to compare two conditions, or two <em>sets of
+conditions</em>, for a difference in <em>f</em>MRI activity. Such
+contrasts can be described, generically, as involving an expression
+<code>A - B</code>, where <code>A</code> represents the weights for the
+first set of conditions and <code>B</code> represents the weights for
+the second set of conditions.</p>
+<p>If sum of the <code>A</code> weights is 1 and the sum of the ‘B’
+weights is also 1, then the difference in these weights
+(<code>A - B</code>) is 0. Thus, the difference in the weights <em>sum
+to zero</em>, which is what we want when the <strong>null
+hypothesis</strong> is that A == B.</p>
 </div>
-<div id="the-pair_contrast-function" class="section level3">
-<h3 class="hasAnchor">
-<a href="#the-pair_contrast-function" class="anchor"></a>The <code>pair_contrast</code> function</h3>
-<p>A simple way to contruct this sort of <code>A - B</code> contrast is to use the <code>pair_contrast</code> function, which takes as arguments two “matching expressions”, <code>A</code> and <code>B</code>. In example 1 from the previous section, the first expression (<code>category == "face"</code>) matches all conditions where the category <code>factor</code> equals the level “face”. The second expression (<code>category == "scene"</code>) matches all conditions where the category <code>factor</code> equals the level “scene”.</p>
-<p>To compute contrast weights, every matching level in the two expressions will be assigned a weight of 1 for a match and zero otherwise. The respective binary weight vectors are then normalized to sum to 1 and then subtracted (<code>A - B</code>) to form the contrast weights.</p>
-<p>Notice in the above examples, the contrasts are defined abstractly without supplying any corresponding design information. To compute the contrast weights, however, we need to supply the design information. Below, we show a complete example.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit">
-<span class="kw">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="fl">100</span>, <span class="fl">2</span>)
-<span class="kw">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span>(<span class="kw">onsets</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span>(<span class="kw">category</span>,<span class="kw">attention</span>), block=<span class="op">~</span><span class="kw">block</span>, data=<span class="kw">design</span>, sampling_frame=<span class="kw">sframe</span>)
-</pre></div>
-<pre><code>## New names:
-## * `` -&gt; ...1
-## * `` -&gt; ...2
-## * `` -&gt; ...3
-## * `` -&gt; ...4</code></pre>
-<pre><code>## New names:
-## * ...1 -&gt; ...2
-## * ...2 -&gt; ...3
-## * ...3 -&gt; ...4
-## * ...4 -&gt; ...5</code></pre>
-<div class="sourceCode" id="cb9"><pre class="downlit">
-<span class="kw">term1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/terms.html">terms</a></span>(<span class="kw">emodel</span>)[[<span class="fl">1</span>]] 
-</pre></div>
-<p>And here is the relevant model term (the only term in this model):</p>
-<pre><code>## fmri_term:  convolved_term 
-##    Term Name:  category:attention 
-##    Formula:   ~ (category:attention - 1) 
-##    Num Events:  8 
-##    Num Rows:  100 
-##    Num Columns:  4 
-##    Conditions:  category[face]:attention[attend] category[scene]:attention[attend] category[face]:attention[ignore] category[scene]:attention[ignore] 
-##    Term Types:  event_factor event_factor</code></pre>
-<p>Now, we create two <code>pair_contrast</code>s and compute the weights:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit">
-<span class="kw">con1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span>(<span class="op">~</span> <span class="kw">category</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span> <span class="kw">category</span> <span class="op">==</span> <span class="st">"scene"</span>, name=<span class="st">"face_scene"</span>)
-<span class="kw">con2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span>(<span class="op">~</span> <span class="kw">attention</span> <span class="op">==</span> <span class="st">"attend"</span>, <span class="op">~</span> <span class="kw">attention</span> <span class="op">==</span> <span class="st">"ignore"</span>, name=<span class="st">"attend_ignore"</span>)
+<div class="section level3">
+<h3 id="the-pair_contrast-function">The <code>pair_contrast</code> function<a class="anchor" aria-label="anchor" href="#the-pair_contrast-function"></a>
+</h3>
+<p>A simple way to contruct this sort of <code>A - B</code> contrast is
+to use the <code>pair_contrast</code> function, which takes as arguments
+two “matching expressions”, <code>A</code> and <code>B</code>. In
+example 1 from the previous section, the first expression
+(<code>category == "face"</code>) matches all conditions where the
+category <code>factor</code> equals the level “face”. The second
+expression (<code>category == "scene"</code>) matches all conditions
+where the category <code>factor</code> equals the level “scene”.</p>
+<p>To compute contrast weights, every matching level in the two
+expressions will be assigned a weight of 1 for a match and zero
+otherwise. The respective binary weight vectors are then normalized to
+sum to 1 and then subtracted (<code>A - B</code>) to form the contrast
+weights.</p>
+<p>Notice in the above examples, the contrasts are defined abstractly
+without supplying any corresponding design information. To compute the
+contrast weights, however, we need to supply the design information.
+Below, we show a complete example.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">2</span><span class="op">)</span>
+<span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onsets</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">category</span>,<span class="va">attention</span><span class="op">)</span>, block<span class="op">=</span><span class="op">~</span><span class="va">block</span>, data<span class="op">=</span><span class="va">design</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></code></pre></div>
+<pre><code><span class="co">## New names:</span>
+<span class="co">## New names:</span>
+<span class="co">## <span style="color: #00BBBB;">•</span> `` -&gt; `...1`</span>
+<span class="co">## <span style="color: #00BBBB;">•</span> `` -&gt; `...2`</span>
+<span class="co">## <span style="color: #00BBBB;">•</span> `` -&gt; `...3`</span>
+<span class="co">## <span style="color: #00BBBB;">•</span> `` -&gt; `...4`</span></code></pre>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">term1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span> </code></pre></div>
+<p>And here is the relevant model term (the only term in this
+model):</p>
+<pre><code><span class="co">## fmri_term:  convolved_term </span>
+<span class="co">##    Term Name:  category:attention </span>
+<span class="co">##    Formula:   ~ (category:attention - 1) </span>
+<span class="co">##    Num Events:  8 </span>
+<span class="co">##    Num Rows:  100 </span>
+<span class="co">##    Num Columns:  4 </span>
+<span class="co">##    Conditions:  category[face]:attention[attend] category[scene]:attention[attend] category[face]:attention[ignore] category[scene]:attention[ignore] </span>
+<span class="co">##    Term Types:  event_factor event_factor</span></code></pre>
+<p>Now, we create two <code>pair_contrast</code>s and compute the
+weights:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">con1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">category</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span> <span class="va">category</span> <span class="op">==</span> <span class="st">"scene"</span>, name<span class="op">=</span><span class="st">"face_scene"</span><span class="op">)</span>
+<span class="va">con2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">attention</span> <span class="op">==</span> <span class="st">"attend"</span>, <span class="op">~</span> <span class="va">attention</span> <span class="op">==</span> <span class="st">"ignore"</span>, name<span class="op">=</span><span class="st">"attend_ignore"</span><span class="op">)</span>
 
-<span class="kw">wts1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span>(<span class="kw">con1</span>, <span class="kw">term1</span>)
-<span class="kw">wts2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span>(<span class="kw">con2</span>, <span class="kw">term1</span>)
-</pre></div>
+<span class="va">wts1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">con1</span>, <span class="va">term1</span><span class="op">)</span>
+<span class="va">wts2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">con2</span>, <span class="va">term1</span><span class="op">)</span></code></pre></div>
 <p>wts1:</p>
-<pre><code>## contrast: face_scene 
-##  A:  ~category == "face" 
-##  B:  ~category == "scene" 
-##  term:  category:attention 
-##  weights:  
-##                                 [,1]
-## category#face:attention#attend   0.5
-## category#scene:attention#attend -0.5
-## category#face:attention#ignore   0.5
-## category#scene:attention#ignore -0.5
-##  conditions:  category#face:attention#attend category#scene:attention#attend category#face:attention#ignore category#scene:attention#ignore</code></pre>
-<pre><code>## Warning in kable_pipe(x = structure(c("category#face:attention#attend", : The
-## table should have a header (column names)</code></pre>
+<pre><code><span class="co">## contrast: face_scene </span>
+<span class="co">##  A:  ~category == "face" </span>
+<span class="co">##  B:  ~category == "scene" </span>
+<span class="co">##  term:  category:attention </span>
+<span class="co">##  weights:  </span>
+<span class="co">##                                 [,1]</span>
+<span class="co">## category#face:attention#attend   0.5</span>
+<span class="co">## category#scene:attention#attend -0.5</span>
+<span class="co">## category#face:attention#ignore   0.5</span>
+<span class="co">## category#scene:attention#ignore -0.5</span>
+<span class="co">##  conditions:  category#face:attention#attend category#scene:attention#attend category#face:attention#ignore category#scene:attention#ignore</span></code></pre>
 <table class="table"><tbody>
 <tr class="odd">
 <td align="left">category#face:attention#attend</td>
@@ -292,19 +313,17 @@
 </tr>
 </tbody></table>
 <p>wts2:</p>
-<pre><code>## contrast: attend_ignore 
-##  A:  ~attention == "attend" 
-##  B:  ~attention == "ignore" 
-##  term:  category:attention 
-##  weights:  
-##                                 [,1]
-## category#face:attention#attend   0.5
-## category#scene:attention#attend  0.5
-## category#face:attention#ignore  -0.5
-## category#scene:attention#ignore -0.5
-##  conditions:  category#face:attention#attend category#scene:attention#attend category#face:attention#ignore category#scene:attention#ignore</code></pre>
-<pre><code>## Warning in kable_pipe(x = structure(c("category#face:attention#attend", : The
-## table should have a header (column names)</code></pre>
+<pre><code><span class="co">## contrast: attend_ignore </span>
+<span class="co">##  A:  ~attention == "attend" </span>
+<span class="co">##  B:  ~attention == "ignore" </span>
+<span class="co">##  term:  category:attention </span>
+<span class="co">##  weights:  </span>
+<span class="co">##                                 [,1]</span>
+<span class="co">## category#face:attention#attend   0.5</span>
+<span class="co">## category#scene:attention#attend  0.5</span>
+<span class="co">## category#face:attention#ignore  -0.5</span>
+<span class="co">## category#scene:attention#ignore -0.5</span>
+<span class="co">##  conditions:  category#face:attention#attend category#scene:attention#attend category#face:attention#ignore category#scene:attention#ignore</span></code></pre>
 <table class="table"><tbody>
 <tr class="odd">
 <td align="left">category#face:attention#attend</td>
@@ -325,31 +344,37 @@
 </tbody></table>
 </div>
 </div>
-<div id="unit-contrasts-and-the-implicit-baseline" class="section level2">
-<h2 class="hasAnchor">
-<a href="#unit-contrasts-and-the-implicit-baseline" class="anchor"></a>Unit contrasts and the “implicit baseline”</h2>
-<p>a “unit contrast” tests whether activation, averaged over one or more conditions, is greater than the baseline activity. In this case “baseline” is defined as the level of activation captured by the intercept term, or the <em>implicit baseline</em> in <em>f</em>MRI parlance. Because all beta estimates are already expressed relative to the intercept term, main effect contrast vectors always sum to 1, rather than 0. We therefore refer to the sum-to-one contrasts as: “unit contrasts”.</p>
-<p>Below we show how to construct two unit contrasts, one testing for the effect of <code>face &gt; baseline</code> and for <code>scene - baseline</code>:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit">
-<span class="kw">con1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/unit_contrast.html">unit_contrast</a></span>(<span class="op">~</span> <span class="kw">category</span> <span class="op">==</span> <span class="st">"face"</span>, name=<span class="st">"face_baseline"</span>)
-<span class="kw">con2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/unit_contrast.html">unit_contrast</a></span>(<span class="op">~</span> <span class="kw">category</span> <span class="op">==</span> <span class="st">"scene"</span>,name=<span class="st">"scene_baseline"</span>)
+<div class="section level2">
+<h2 id="unit-contrasts-and-the-implicit-baseline">Unit contrasts and the “implicit baseline”<a class="anchor" aria-label="anchor" href="#unit-contrasts-and-the-implicit-baseline"></a>
+</h2>
+<p>a “unit contrast” tests whether activation, averaged over one or more
+conditions, is greater than the baseline activity. In this case
+“baseline” is defined as the level of activation captured by the
+intercept term, or the <em>implicit baseline</em> in <em>f</em>MRI
+parlance. Because all beta estimates are already expressed relative to
+the intercept term, main effect contrast vectors always sum to 1, rather
+than 0. We therefore refer to the sum-to-one contrasts as: “unit
+contrasts”.</p>
+<p>Below we show how to construct two unit contrasts, one testing for
+the effect of <code>face &gt; baseline</code> and for
+<code>scene - baseline</code>:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">con1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/unit_contrast.html">unit_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">category</span> <span class="op">==</span> <span class="st">"face"</span>, name<span class="op">=</span><span class="st">"face_baseline"</span><span class="op">)</span>
+<span class="va">con2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/unit_contrast.html">unit_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">category</span> <span class="op">==</span> <span class="st">"scene"</span>,name<span class="op">=</span><span class="st">"scene_baseline"</span><span class="op">)</span>
 
-<span class="kw">wts1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span>(<span class="kw">con1</span>, <span class="kw">term1</span>)
-<span class="kw">wts2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span>(<span class="kw">con2</span>, <span class="kw">term1</span>)
-</pre></div>
+<span class="va">wts1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">con1</span>, <span class="va">term1</span><span class="op">)</span>
+<span class="va">wts2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">con2</span>, <span class="va">term1</span><span class="op">)</span></code></pre></div>
 <p>wts1:</p>
-<pre><code>## contrast: face_baseline 
-##  A:  ~category == "face" 
-##  term:  category:attention 
-##  weights:  
-##                                 [,1]
-## category#face:attention#attend  0.25
-## category#scene:attention#attend 0.25
-## category#face:attention#ignore  0.25
-## category#scene:attention#ignore 0.25
-##  conditions:  category#face:attention#attend category#scene:attention#attend category#face:attention#ignore category#scene:attention#ignore</code></pre>
-<pre><code>## Warning in kable_pipe(x = structure(c("category#face:attention#attend", : The
-## table should have a header (column names)</code></pre>
+<pre><code><span class="co">## contrast: face_baseline </span>
+<span class="co">##  A:  ~category == "face" </span>
+<span class="co">##  term:  category:attention </span>
+<span class="co">##  weights:  </span>
+<span class="co">##                                 [,1]</span>
+<span class="co">## category#face:attention#attend  0.25</span>
+<span class="co">## category#scene:attention#attend 0.25</span>
+<span class="co">## category#face:attention#ignore  0.25</span>
+<span class="co">## category#scene:attention#ignore 0.25</span>
+<span class="co">##  conditions:  category#face:attention#attend category#scene:attention#attend category#face:attention#ignore category#scene:attention#ignore</span></code></pre>
 <table class="table"><tbody>
 <tr class="odd">
 <td align="left">category#face:attention#attend</td>
@@ -369,18 +394,16 @@
 </tr>
 </tbody></table>
 <p>wts2:</p>
-<pre><code>## contrast: scene_baseline 
-##  A:  ~category == "scene" 
-##  term:  category:attention 
-##  weights:  
-##                                 [,1]
-## category#face:attention#attend  0.25
-## category#scene:attention#attend 0.25
-## category#face:attention#ignore  0.25
-## category#scene:attention#ignore 0.25
-##  conditions:  category#face:attention#attend category#scene:attention#attend category#face:attention#ignore category#scene:attention#ignore</code></pre>
-<pre><code>## Warning in kable_pipe(x = structure(c("category#face:attention#attend", : The
-## table should have a header (column names)</code></pre>
+<pre><code><span class="co">## contrast: scene_baseline </span>
+<span class="co">##  A:  ~category == "scene" </span>
+<span class="co">##  term:  category:attention </span>
+<span class="co">##  weights:  </span>
+<span class="co">##                                 [,1]</span>
+<span class="co">## category#face:attention#attend  0.25</span>
+<span class="co">## category#scene:attention#attend 0.25</span>
+<span class="co">## category#face:attention#ignore  0.25</span>
+<span class="co">## category#scene:attention#ignore 0.25</span>
+<span class="co">##  conditions:  category#face:attention#attend category#scene:attention#attend category#face:attention#ignore category#scene:attention#ignore</span></code></pre>
 <table class="table"><tbody>
 <tr class="odd">
 <td align="left">category#face:attention#attend</td>
@@ -413,11 +436,15 @@
 
 
       <footer><div class="copyright">
-  <p>Developed by <a href="https://linguamemoria.org">Bradley Buchsbaum</a>.</p>
+  <p></p>
+<p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley
+Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.0.</p>
+  <p></p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a>
+2.0.2.</p>
 </div>
 
       </footer>
@@ -425,6 +452,8 @@
 
   
 
+
+  
 
   </body>
 </html>

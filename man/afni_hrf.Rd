@@ -6,8 +6,8 @@
 \usage{
 afni_hrf(
   ...,
-  basis = c("spmg1", "block", "dmblock", "tent", "csplin", "poly", "sin", "gam",
-    "spmg2", "spmg3", "wav"),
+  basis = c("spmg1", "block", "dmblock", "tent", "csplin", "poly", "sin", "gam", "spmg2",
+    "spmg3", "wav"),
   onsets = NULL,
   durations = NULL,
   prefix = NULL,

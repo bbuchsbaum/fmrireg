@@ -1,4 +1,5 @@
 
+#' @keywords internal
 as_vectors.matrix <- function(x, mask=NULL) {
   if (!is.null(mask)) {
     assert_that(length(mask) == ncol(x))
@@ -12,6 +13,7 @@ as_vectors.matrix <- function(x, mask=NULL) {
   neuroim2::deferred_list(replicate(ncol(x), f))
 }
 
+#' @keywords internal
 as_vectors.NeuroVec <- function(x, mask=NULL) {
   if (!is.null(mask)) {
     assert_that(length(mask) == dim(x)[4])
@@ -42,7 +44,7 @@ as.vector.lazy_series <- function(x) {
 }
 
 
-
+#' @keywords internal
 to_tibble.fmri_mem_dataset <- function(x) {
   stop("not implemented")
 }

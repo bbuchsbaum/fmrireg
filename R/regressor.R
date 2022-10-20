@@ -300,7 +300,7 @@ plot.regressor <- function(x, samples, add=FALSE, ...) {
   
   y <- evaluate(x, samples)
   if (add){
-    lines(samples, y)
+    graphics::lines(samples, y)
   } else {
     plot(samples, y, type='l', xlab="Time", ylab="Amplitude", ...)
   }
@@ -308,7 +308,7 @@ plot.regressor <- function(x, samples, add=FALSE, ...) {
   
   for (on in onsets(x)) {
     if (on >= srange[1] && on <= srange[2]) {
-      abline(v=on, col=2, lty=2)
+      graphics::abline(v=on, col=2, lty=2)
     }
   }
   

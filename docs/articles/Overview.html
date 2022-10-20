@@ -19,6 +19,8 @@
 <![endif]-->
 </head>
 <body data-spy="scroll" data-target="#toc">
+    
+
     <div class="container template-article">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -37,12 +39,6 @@
 
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
-<li>
-  <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
-     
-  </a>
-</li>
 <li>
   <a href="../reference/index.html">Reference</a>
 </li>
@@ -82,8 +78,8 @@
       </ul>
 <ul class="nav navbar-nav navbar-right">
 <li>
-  <a href="https://github.com/bbuchsbaum/fmrireg/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+  <a href="https://github.com/bbuchsbaum/fmrireg/" class="external-link">
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -97,80 +93,146 @@
 
       
 
-      </header><script src="Overview_files/accessible-code-block-0.0.1/empty-anchor.js"></script><div class="row">
+      </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Overview</h1>
-                        <h4 class="author">Bradley R. Buchsbaum</h4>
+                        <h4 data-toc-skip class="author">Bradley R.
+Buchsbaum</h4>
             
-            <h4 class="date">2020-12-01</h4>
+            <h4 data-toc-skip class="date">2022-10-20</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/Overview.Rmd"><code>vignettes/Overview.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/HEAD/vignettes/Overview.Rmd" class="external-link"><code>vignettes/Overview.Rmd</code></a></small>
       <div class="hidden name"><code>Overview.Rmd</code></div>
 
     </div>
 
     
     
-<div id="overview-of-the-fmrireg-package" class="section level2">
-<h2 class="hasAnchor">
-<a href="#overview-of-the-fmrireg-package" class="anchor"></a>Overview of the <code>fmrireg</code> package</h2>
-<p>The analysis of Functional Magnetic Resonance Imaging (fMRI) has a lot of complexities due to the large amount of data, the fact that the data is in the form of multi-dimensional images (usually, 4-dimensional – x,y,z, and time), the fact that the hemodynamic response is sluggish and delayed (4-6s) with respect to stimulus presentation or task events, the existence of physiological noise and other “nuisance” signals, issues related to multiple comparisons, and the existence of spatially and temporally auto-correlated errors in the signal.</p>
-<p>However, if we push all that complexity to the side for a moment, standard “univariate” fMRI analysis involves simple multiple regression analysis applied to every 3d location (“voxel”) in the brain. The goal of the <code>fmrireg</code> package is to provide a convenient interface, in the spirit of other R regression modeling tools, for analyzing fMRI data. We therefore use a R’s formula interface to specify regression models in a way that makes for convenient and readable code.</p>
+<div class="section level2">
+<h2 id="overview-of-the-fmrireg-package">Overview of the <code>fmrireg</code> package<a class="anchor" aria-label="anchor" href="#overview-of-the-fmrireg-package"></a>
+</h2>
+<p>The analysis of Functional Magnetic Resonance Imaging (fMRI) has a
+lot of complexities due to the large amount of data, the fact that the
+data is in the form of multi-dimensional images (usually, 4-dimensional
+– x,y,z, and time), the fact that the hemodynamic response is sluggish
+and delayed (4-6s) with respect to stimulus presentation or task events,
+the existence of physiological noise and other “nuisance” signals,
+issues related to multiple comparisons, and the existence of spatially
+and temporally auto-correlated errors in the signal.</p>
+<p>However, if we push all that complexity to the side for a moment,
+standard “univariate” fMRI analysis involves simple multiple regression
+analysis applied to every 3d location (“voxel”) in the brain. The goal
+of the <code>fmrireg</code> package is to provide a convenient
+interface, in the spirit of other R regression modeling tools, for
+analyzing fMRI data. We therefore use a R’s formula interface to specify
+regression models in a way that makes for convenient and readable
+code.</p>
 </div>
-<div id="the-building-blocks-of-an-fmri-regression-model" class="section level2">
-<h2 class="hasAnchor">
-<a href="#the-building-blocks-of-an-fmri-regression-model" class="anchor"></a>The building blocks of an fMRI regression model</h2>
-<p>The basic, or lowest level, unit of an fMRI regression model is the <strong>hemodynamic reesponse function</strong> (HRF). The HRF is a model of the mapping, or transfer function, between an external stimulus (or neural event) and a BOLD signal. A commonly used HRF is the so-called SPM canonical HRF:</p>
-<div class="sourceCode" id="cb1"><pre class="downlit">
-<span class="kw">time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">0</span>,<span class="fl">24</span>, by=<span class="fl">.2</span>)
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">time</span>, <span class="fu"><a href="../reference/hrf_spmg1.html">hrf_spmg1</a></span>(<span class="kw">time</span>), type=<span class="st">'l'</span>, xlab=<span class="st">"time"</span>, ylab=<span class="st">"BOLD activity"</span>)
-</pre></div>
+<div class="section level2">
+<h2 id="the-building-blocks-of-an-fmri-regression-model">The building blocks of an fMRI regression model<a class="anchor" aria-label="anchor" href="#the-building-blocks-of-an-fmri-regression-model"></a>
+</h2>
+<p>The basic, or lowest level, unit of an fMRI regression model is the
+<strong>hemodynamic reesponse function</strong> (HRF). The HRF is a
+model of the mapping, or transfer function, between an external stimulus
+(or neural event) and a BOLD signal. A commonly used HRF is the
+so-called SPM canonical HRF:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">24</span>, by<span class="op">=</span><span class="fl">.2</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">time</span>, <span class="fu"><a href="../reference/hrf_spmg1.html">hrf_spmg1</a></span><span class="op">(</span><span class="va">time</span><span class="op">)</span>, type<span class="op">=</span><span class="st">'l'</span>, xlab<span class="op">=</span><span class="st">"time"</span>, ylab<span class="op">=</span><span class="st">"BOLD activity"</span><span class="op">)</span></code></pre></div>
 <p><img src="Overview_files/figure-html/unnamed-chunk-2-1.png" width="576"></p>
-<p>Currently, <code>fmrireg</code> provides several builtin HRFs that can be used to model BOLD activity. See the vignette “Hemodynamic Response Functions” for a detailed overview. Choosing the correct HRF depends on the use case and aims of the analysis, but the SPM canaonical function is usually a good default choice.</p>
+<p>Currently, <code>fmrireg</code> provides several builtin HRFs that
+can be used to model BOLD activity. See the vignette “Hemodynamic
+Response Functions” for a detailed overview. Choosing the correct HRF
+depends on the use case and aims of the analysis, but the SPM canaonical
+function is usually a good default choice.</p>
 </div>
-<div id="regressors" class="section level2">
-<h2 class="hasAnchor">
-<a href="#regressors" class="anchor"></a>Regressors</h2>
-<p>A “regressor” is simply an independent variable in a multiple regression model. In fMRI analysis, however, regressors are constructed by “convolving” a set of onset times–the vector of times at which certain task events occur–with a chosen HRF. Imagine we have a stimulus that is presented every 16 seconds with 8 repetitions. We can construct a “regressor” by convolving the chosen HRF with a vector onset times (in seconds), whereby each element of the vector corresponds to time at which a stimulus occurs.</p>
-<p>Below we use the function <code>gen_hrf</code> to create a special function that has the class “HRF”. An alternative is to use the pre-made HRF objects, for example, <code>HRF_SPMG1</code> if we want to use th SPM canonical function. Once we create a regressor with the <code>regressor</code> constructor function, we can evaluate it at any arbitrary time points. In other words, just as the HRFs are functions of time, so too are <code>regressor</code>s. The difference is that <code>regressor</code>, when evaluated at time <em>t</em> sum over all the constituent HRFs, the domain of which are determined by the onset vector.</p>
-<p>In the code below, we evaluate the regressor at every time point between 1 and 140.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit">
-<span class="kw">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">0</span>, <span class="fl">16</span><span class="op">*</span><span class="fl">8</span>, by=<span class="fl">16</span>)
-<span class="kw">hrf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_hrf.html">gen_hrf</a></span>(<span class="kw">hrf_spmg1</span>)
-<span class="kw">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span>(<span class="kw">onsets</span>, hrf=<span class="kw">hrf</span>)
+<div class="section level2">
+<h2 id="regressors">Regressors<a class="anchor" aria-label="anchor" href="#regressors"></a>
+</h2>
+<p>A “regressor” is simply an independent variable in a multiple
+regression model. In fMRI analysis, however, regressors are constructed
+by “convolving” a set of onset times–the vector of times at which
+certain task events occur–with a chosen HRF. Imagine we have a stimulus
+that is presented every 16 seconds with 8 repetitions. We can construct
+a “regressor” by convolving the chosen HRF with a vector onset times (in
+seconds), whereby each element of the vector corresponds to time at
+which a stimulus occurs.</p>
+<p>Below we use the function <code>gen_hrf</code> to create a special
+function that has the class “HRF”. An alternative is to use the pre-made
+HRF objects, for example, <code>HRF_SPMG1</code> if we want to use th
+SPM canonical function. Once we create a regressor with the
+<code>regressor</code> constructor function, we can evaluate it at any
+arbitrary time points. In other words, just as the HRFs are functions of
+time, so too are <code>regressor</code>s. The difference is that
+<code>regressor</code>, when evaluated at time <em>t</em> sum over all
+the constituent HRFs, the domain of which are determined by the onset
+vector.</p>
+<p>In the code below, we evaluate the regressor at every time point
+between 1 and 140.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">16</span><span class="op">*</span><span class="fl">8</span>, by<span class="op">=</span><span class="fl">16</span><span class="op">)</span>
+<span class="va">hrf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_hrf.html">gen_hrf</a></span><span class="op">(</span><span class="va">hrf_spmg1</span><span class="op">)</span>
+<span class="va">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span><span class="op">(</span><span class="va">onsets</span>, hrf<span class="op">=</span><span class="va">hrf</span><span class="op">)</span>
 
-<span class="kw">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">0</span>,<span class="fl">140</span>, by=<span class="fl">1</span>)
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">grid</span>, <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span>(<span class="kw">reg</span>, <span class="kw">grid</span>), type=<span class="st">'l'</span>, ylab=<span class="st">"BOLD activity"</span>, xlab=<span class="st">"time"</span>, main=<span class="st">"ISI = 16"</span>)
-</pre></div>
+<span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">140</span>, by<span class="op">=</span><span class="fl">1</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">grid</span>, <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">reg</span>, <span class="va">grid</span><span class="op">)</span>, type<span class="op">=</span><span class="st">'l'</span>, ylab<span class="op">=</span><span class="st">"BOLD activity"</span>, xlab<span class="op">=</span><span class="st">"time"</span>, main<span class="op">=</span><span class="st">"ISI = 16"</span><span class="op">)</span></code></pre></div>
 <p><img src="Overview_files/figure-html/unnamed-chunk-3-1.png" width="576"></p>
-<p>To better illustrate how a regressor sums over its constituent HRFs, we can place the onsets closer together, so that the HRFs overlap in time:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit">
-<span class="kw">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">0</span>, <span class="fl">16</span><span class="op">*</span><span class="fl">8</span>, by=<span class="fl">6</span>)
-<span class="kw">hrf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_hrf.html">gen_hrf</a></span>(<span class="kw">hrf_spmg1</span>)
-<span class="kw">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span>(<span class="kw">onsets</span>, hrf=<span class="kw">hrf</span>)
+<p>To better illustrate how a regressor sums over its constituent HRFs,
+we can place the onsets closer together, so that the HRFs overlap in
+time:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">16</span><span class="op">*</span><span class="fl">8</span>, by<span class="op">=</span><span class="fl">6</span><span class="op">)</span>
+<span class="va">hrf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_hrf.html">gen_hrf</a></span><span class="op">(</span><span class="va">hrf_spmg1</span><span class="op">)</span>
+<span class="va">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span><span class="op">(</span><span class="va">onsets</span>, hrf<span class="op">=</span><span class="va">hrf</span><span class="op">)</span>
 
-<span class="kw">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">0</span>,<span class="fl">140</span>, by=<span class="fl">1</span>)
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.html">plot</a></span>(<span class="kw">grid</span>, <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span>(<span class="kw">reg</span>, <span class="kw">grid</span>), type=<span class="st">'l'</span>, ylab=<span class="st">"BOLD activity"</span>, xlab=<span class="st">"time"</span>, main=<span class="st">"ISI = 6"</span>)
-</pre></div>
+<span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">140</span>, by<span class="op">=</span><span class="fl">1</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">grid</span>, <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">reg</span>, <span class="va">grid</span><span class="op">)</span>, type<span class="op">=</span><span class="st">'l'</span>, ylab<span class="op">=</span><span class="st">"BOLD activity"</span>, xlab<span class="op">=</span><span class="st">"time"</span>, main<span class="op">=</span><span class="st">"ISI = 6"</span><span class="op">)</span></code></pre></div>
 <p><img src="Overview_files/figure-html/unnamed-chunk-4-1.png" width="576"></p>
-<p>In <code>fmrireg</code> it is generally not necessary to manually create regressors as we have done above. Rather, regressors are created “behind the scenes” by the higher-level modeling functions, such as <code>event_model</code>. However, the facility to create individual regressors, for the purposes of learning fMRI analysis or in conducting special analyses, may still be useful.</p>
+<p>In <code>fmrireg</code> it is generally not necessary to manually
+create regressors as we have done above. Rather, regressors are created
+“behind the scenes” by the higher-level modeling functions, such as
+<code>event_model</code>. However, the facility to create individual
+regressors, for the purposes of learning fMRI analysis or in conducting
+special analyses, may still be useful.</p>
 </div>
-<div id="event-models" class="section level2">
-<h2 class="hasAnchor">
-<a href="#event-models" class="anchor"></a>Event Models</h2>
-<p>An HRF is a function from time to BOLD activity: <em>f(t) -&gt; y</em>. A regressor is a function of time that sums up BOLD activity over a sequence of spaced events. In conventional fMRI analysis, a regressor refers to a single column of a design matrix. For example, if we have two task conditions, <strong>face</strong> and <strong>scene</strong>, we would generate one face regressor and one scene regressor. However, in statistical modeling of experiments, we generally think not in terms of single columns of a design matrix, but rather in terms of the “factors”, which in this case might call “stim_type”, with levels “scene” and “face”. A complex regression model often involves a factorial combination of different categorical variables, which can be then be examined for main effects, interactions, and other contrasts.</p>
-<p>Before we discuss event models, we need to briefly introduce the <code>fmrireg</code>’s class for describing how scans are sampled over time and organized in <strong>blocks</strong> (sometimes also referred to as runs or scans). A “block” simply refers to a consecutive set of images (usually a few hundred), collected back to back over the course of one fMRI scan. An fMRI “session” consists of a number of these scanning blocks. Each individual image in a block is separated by a fixed interval, called the “TR” (repetition time). We encode this information (the number of blocks, the number of images in each block, and the TR) in a <code>sampling_frame</code> object. Below, we create a <code>sampling_frame</code> for an experiment with 5 blocks, each containing 200 images, and with a TR of 2s.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit">
-<span class="kw">nblocks</span> <span class="op">&lt;-</span> <span class="fl">5</span>
-<span class="kw">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">200</span>, <span class="fl">5</span>), TR=<span class="fl">2</span>)
-<span class="kw">sframe</span>
-</pre></div>
-<pre><code>## sampling_frame: 
-##   number of blocks: 5 
-##   blocklens:  200, 200, 200, 200, 200 
-##   TR:  2s 
-##   start_time:  1s</code></pre>
+<div class="section level2">
+<h2 id="event-models">Event Models<a class="anchor" aria-label="anchor" href="#event-models"></a>
+</h2>
+<p>An HRF is a function from time to BOLD activity: <em>f(t) -&gt;
+y</em>. A regressor is a function of time that sums up BOLD activity
+over a sequence of spaced events. In conventional fMRI analysis, a
+regressor refers to a single column of a design matrix. For example, if
+we have two task conditions, <strong>face</strong> and
+<strong>scene</strong>, we would generate one face regressor and one
+scene regressor. However, in statistical modeling of experiments, we
+generally think not in terms of single columns of a design matrix, but
+rather in terms of the “factors”, which in this case might call
+“stim_type”, with levels “scene” and “face”. A complex regression model
+often involves a factorial combination of different categorical
+variables, which can be then be examined for main effects, interactions,
+and other contrasts.</p>
+<p>Before we discuss event models, we need to briefly introduce the
+<code>fmrireg</code>’s class for describing how scans are sampled over
+time and organized in <strong>blocks</strong> (sometimes also referred
+to as runs or scans). A “block” simply refers to a consecutive set of
+images (usually a few hundred), collected back to back over the course
+of one fMRI scan. An fMRI “session” consists of a number of these
+scanning blocks. Each individual image in a block is separated by a
+fixed interval, called the “TR” (repetition time). We encode this
+information (the number of blocks, the number of images in each block,
+and the TR) in a <code>sampling_frame</code> object. Below, we create a
+<code>sampling_frame</code> for an experiment with 5 blocks, each
+containing 200 images, and with a TR of 2s.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">nblocks</span> <span class="op">&lt;-</span> <span class="fl">5</span>
+<span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">200</span>, <span class="fl">5</span><span class="op">)</span>, TR<span class="op">=</span><span class="fl">2</span><span class="op">)</span>
+<span class="va">sframe</span></code></pre></div>
+<pre><code><span class="co">## sampling_frame: </span>
+<span class="co">##   number of blocks: 5 </span>
+<span class="co">##   blocklens:  200, 200, 200, 200, 200 </span>
+<span class="co">##   TR:  2s 2s 2s 2s 2s </span>
+<span class="co">##   start_time:  1s 1s 1s 1s 1s</span></code></pre>
 </div>
   </div>
 
@@ -185,11 +247,15 @@
 
 
       <footer><div class="copyright">
-  <p>Developed by <a href="https://linguamemoria.org">Bradley Buchsbaum</a>.</p>
+  <p></p>
+<p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley
+Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.0.</p>
+  <p></p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a>
+2.0.2.</p>
 </div>
 
       </footer>
@@ -197,6 +263,8 @@
 
   
 
+
+  
 
   </body>
 </html>

@@ -37,8 +37,6 @@ fmri_lm(
 \item{nchunks}{number of daa chunks when strategy is \code{chunkwise}}
 
 \item{...}{extra args}
-
-\item{contrasts}{a set of contrasts}
 }
 \description{
 fmri_lm
@@ -51,9 +49,17 @@ dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
 dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
 con  <- pair_contrast(~ fac == "A", ~ fac == "B", name="A_min_B")
 con2  <- unit_contrast(~ fac, name="A_min_baseline")
-lm.1 <- fmri_lm(onset ~ hrf(fac, contrasts=contrast_set(con,con2)), block= ~ run, dataset=dset)
+lm.1 <- fmri_lm(onset ~ hrf(fac, contrasts=contrast_set(con,con2)), 
+block= ~ run, dataset=dset)
+
 lm.2 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, dataset=dset2)
-lm.2a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, robust=TRUE, dataset=dset2)
-lm.3 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, dataset=dset2, strategy="runwise")
-lm.3a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, robust=TRUE, dataset=dset2, strategy="runwise")
+
+lm.2a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
+robust=TRUE, dataset=dset2)
+
+lm.3 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
+dataset=dset2, strategy="runwise")
+
+lm.3a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
+robust=TRUE, dataset=dset2, strategy="runwise")
 }

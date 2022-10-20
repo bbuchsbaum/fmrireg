@@ -39,7 +39,7 @@ gen_hrf(
 an instance of type \code{HRF} inheriting from \code{function}
 }
 \description{
-\code{HRF} takes a faw function f(t) and returns an \code{HRF} instance
+\code{gen_hrf} takes a raw function f(t) and returns an \code{HRF} instance
 }
 \examples{
 

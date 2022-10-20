@@ -79,7 +79,7 @@ design_plot <- function(fmrimod, longnames=FALSE) {
   
 }
 
-
+#' @keywords internal
 lookup_hrf <- function(label, lag) {
   switch(label,
          Gamma=getHRF("gamma", lag=lag),
@@ -90,6 +90,8 @@ lookup_hrf <- function(label, lag) {
   
 }
 
+
+#' @importFrom shiny fluidPage sidebarLayout sliderInput mainPanel plotOutput
 hrf_plot <- function() {
   ui <- function() {
     fluidPage(
@@ -143,63 +145,64 @@ hrf_plot <- function() {
 #hrf_plot()
 
 
-
-term_form <- function() {
-  div(class="ui sidebar inverted vertical visible menu",
-      div(class="item",
-          div(class="active header", "Regression Term"),
-          div(class="menu",
-              uidropdown(),
-              a(class="item", href="#divider", "HRF"),
-              a(class="item", href="#input", "nbasis"),
-          )
-      )
-  )
-}
-
-design_editor <- function(design, sframe) {
-  requireNamespace("shiny.semantic")
-  term_component <- function() {
-    fluidRow(
-      column(4, selectInput("onset_var", "Onsets", names(design))),
-      column(4, selectInput("factors", "Variable(s)", names(design), multiple=TRUE)),
-      column(4, selectInput("hrf", "HRF", choices=c("Gamma", "Gaussian",
-                                                "SPMG1", "SPMG2", "SPMG3"),
-                                                selected="SPMG1"))
-    )
-  }
-
-  ui <- function() {
-    shinyUI(
-      semanticPage(
-        suppressDependencies("bootstrap"),
-        sidebar()
-      )
-    )
-  }
-
-  server <- function(input, output, session) {
-
-    output$dplot <- renderPlot({
-      if (TRUE) {
-        plot(1:100)
-      } else {
-        plot(1:100)
-        # srun <- as.integer(input$show_run)
-        # keep <- which(design[[input$run_variable]] == srun)
-        # des <- design[keep,]
-        # print(nrow(des))
-        # blocklens <- sframe$blocklens
-        # bl <- blocklens[srun]
-        # sframe2 <- sampling_frame(bl, TR=sframe$TR)
-        # print(input$formula)
-        # ev <- event_model(as.formula(input$formula), block=as.formula(paste("~ ", input$run_variable)), data=des, sampling_frame=sframe2)
-        # dmat <- design_matrix(ev)
-        # matplot(dmat, type='l')
-      }
-    })
-  }
+# @keywords internal
+# term_form <- function() {
+#   div(class="ui sidebar inverted vertical visible menu",
+#       div(class="item",
+#           div(class="active header", "Regression Term"),
+#           div(class="menu",
+#               shiny::uidropdown(),
+#               a(class="item", href="#divider", "HRF"),
+#               a(class="item", href="#input", "nbasis"),
+#           )
+#       )
+#   )
+# }
 
 
-  shinyApp(ui = ui, server = server)
-}
+# design_editor <- function(design, sframe) {
+#   requireNamespace("shiny.semantic")
+#   term_component <- function() {
+#     fluidRow(
+#       column(4, selectInput("onset_var", "Onsets", names(design))),
+#       column(4, selectInput("factors", "Variable(s)", names(design), multiple=TRUE)),
+#       column(4, selectInput("hrf", "HRF", choices=c("Gamma", "Gaussian",
+#                                                 "SPMG1", "SPMG2", "SPMG3"),
+#                                                 selected="SPMG1"))
+#     )
+#   }
+# 
+#   ui <- function() {
+#     shinyUI(
+#       semanticPage(
+#         suppressDependencies("bootstrap"),
+#         sidebar()
+#       )
+#     )
+#   }
+# 
+#   server <- function(input, output, session) {
+# 
+#     output$dplot <- renderPlot({
+#       if (TRUE) {
+#         plot(1:100)
+#       } else {
+#         plot(1:100)
+#         # srun <- as.integer(input$show_run)
+#         # keep <- which(design[[input$run_variable]] == srun)
+#         # des <- design[keep,]
+#         # print(nrow(des))
+#         # blocklens <- sframe$blocklens
+#         # bl <- blocklens[srun]
+#         # sframe2 <- sampling_frame(bl, TR=sframe$TR)
+#         # print(input$formula)
+#         # ev <- event_model(as.formula(input$formula), block=as.formula(paste("~ ", input$run_variable)), data=des, sampling_frame=sframe2)
+#         # dmat <- design_matrix(ev)
+#         # matplot(dmat, type='l')
+#       }
+#     })
+#   }
+# 
+# 
+#   shinyApp(ui = ui, server = server)
+# }

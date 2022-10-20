@@ -3,3 +3,9 @@
 ^docs$
 ^\.travis\.yml$
 ^codecov\.yml$
+^README.Rmd
+^_pkgdown.yml
+^oouttakess
+^test_data
+^doc$
+^Meta$

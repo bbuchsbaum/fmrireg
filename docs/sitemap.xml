@@ -1,6 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://pkgdown.r-lib.org/404.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/Overview.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/a_01_hemodynamic_response.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/a_02_regressor.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/a_03_baseline_model.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/a_04_event_models.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/a_05_contrasts.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/a_06_afni.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/a_07_trialwise.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/afni.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/baseline_model.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/contrasts.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/event_models.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/hemodynamic_response.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/index.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/articles/regressor.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/authors.html</loc>
+  </url>
+  <url>
     <loc>https://pkgdown.r-lib.org/index.html</loc>
   </url>
   <url>
@@ -11,6 +62,9 @@
   </url>
   <url>
     <loc>https://pkgdown.r-lib.org/reference/Fcontrasts.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/reference/HRF-class.html</loc>
   </url>
   <url>
     <loc>https://pkgdown.r-lib.org/reference/Ident.html</loc>
@@ -115,6 +169,9 @@
     <loc>https://pkgdown.r-lib.org/reference/estcon.html</loc>
   </url>
   <url>
+    <loc>https://pkgdown.r-lib.org/reference/estimate_betas.fmri_dataset.html</loc>
+  </url>
+  <url>
     <loc>https://pkgdown.r-lib.org/reference/estimate_betas.html</loc>
   </url>
   <url>
@@ -149,6 +206,9 @@
   </url>
   <url>
     <loc>https://pkgdown.r-lib.org/reference/fmri_dataset.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/reference/fmri_latent_lm.html</loc>
   </url>
   <url>
     <loc>https://pkgdown.r-lib.org/reference/fmri_lm.html</loc>
@@ -223,6 +283,9 @@
     <loc>https://pkgdown.r-lib.org/reference/hrf_time.html</loc>
   </url>
   <url>
+    <loc>https://pkgdown.r-lib.org/reference/index.html</loc>
+  </url>
+  <url>
     <loc>https://pkgdown.r-lib.org/reference/is_categorical.html</loc>
   </url>
   <url>
@@ -259,6 +322,9 @@
     <loc>https://pkgdown.r-lib.org/reference/onsets.html</loc>
   </url>
   <url>
+    <loc>https://pkgdown.r-lib.org/reference/p_value.html</loc>
+  </url>
+  <url>
     <loc>https://pkgdown.r-lib.org/reference/p_values.html</loc>
   </url>
   <url>
@@ -269,6 +335,9 @@
   </url>
   <url>
     <loc>https://pkgdown.r-lib.org/reference/parent_terms.html</loc>
+  </url>
+  <url>
+    <loc>https://pkgdown.r-lib.org/reference/plot.regressor.html</loc>
   </url>
   <url>
     <loc>https://pkgdown.r-lib.org/reference/poly_contrast.html</loc>
@@ -334,27 +403,6 @@
     <loc>https://pkgdown.r-lib.org/reference/wrap_chunked_lm_results.html</loc>
   </url>
   <url>
-    <loc>https://pkgdown.r-lib.org/articles/Overview.html</loc>
-  </url>
-  <url>
-    <loc>https://pkgdown.r-lib.org/articles/a_01_hemodynamic_response.html</loc>
-  </url>
-  <url>
-    <loc>https://pkgdown.r-lib.org/articles/a_02_regressor.html</loc>
-  </url>
-  <url>
-    <loc>https://pkgdown.r-lib.org/articles/a_03_baseline_model.html</loc>
-  </url>
-  <url>
-    <loc>https://pkgdown.r-lib.org/articles/a_04_event_models.html</loc>
-  </url>
-  <url>
-    <loc>https://pkgdown.r-lib.org/articles/a_05_contrasts.html</loc>
-  </url>
-  <url>
-    <loc>https://pkgdown.r-lib.org/articles/a_06_afni.html</loc>
-  </url>
-  <url>
-    <loc>https://pkgdown.r-lib.org/articles/a_07_trialwise.html</loc>
+    <loc>https://pkgdown.r-lib.org/reference/write_glt.html</loc>
   </url>
 </urlset>

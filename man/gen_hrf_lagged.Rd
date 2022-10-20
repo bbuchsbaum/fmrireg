@@ -2,9 +2,12 @@
 % Please edit documentation in R/hrf.R
 \name{gen_hrf_lagged}
 \alias{gen_hrf_lagged}
+\alias{hrf_lagged}
 \title{gen_hrf_lagged}
 \usage{
 gen_hrf_lagged(hrf, lag = 2, normalize = FALSE, ...)
+
+hrf_lagged(hrf, lag = 2, normalize = FALSE, ...)
 }
 \arguments{
 \item{hrf}{the underlying hrf function to shift}
@@ -18,6 +21,11 @@ gen_hrf_lagged(hrf, lag = 2, normalize = FALSE, ...)
 \description{
 gen_hrf_lagged
 }
+\section{Functions}{
+\itemize{
+\item \code{hrf_lagged()}: alias for gen_hrf_lagged
+
+}}
 \examples{
 hrf_lag5 <- gen_hrf_lagged(HRF_SPMG1, lag=5)
 hrf_lag5(0:20)

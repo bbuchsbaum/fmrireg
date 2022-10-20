@@ -1,3 +1,5 @@
+`%dopar%` <- foreach::`%dopar%`
+`%do%` <- foreach::`%do%`
 
 #' @keywords internal
 default_config <- function() {
@@ -77,12 +79,13 @@ read_fmri_config <- function(file_name, base_path=NULL) {
 #' 
 #' ## an iterator with 5 chunks
 #' iter <- data_chunks(dset, nchunks=5)
-#' y <- foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' `%do%` <- foreach::`%do%`
+#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
 #' length(y) == 5
 #' 
 #' ## an iterator with 100 chunks
 #' iter <- data_chunks(dset, nchunks=100)
-#' y <- foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
 #' length(y) == 100
 #' 
 #' ## a matrix_dataset with 200 rows, 100 columns and 2 runs
@@ -91,7 +94,7 @@ read_fmri_config <- function(file_name, base_path=NULL) {
 #' 
 #' ## get a "runwise" iterator. For every iteration an entire run's worth of data is returned.
 #' iter <- data_chunks(dset, runwise=TRUE)
-#' y <- foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' y <- foreach::foreach(chunk = iter)  %do% { colMeans(chunk$data) }
 #' length(y) == 2
 matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
   if (is.vector(datamat)) {
@@ -179,9 +182,10 @@ fmri_mem_dataset <- function(scans, mask, TR,
 #' basis <- pres$x[,1:25]
 #' loadings <- pres$rotation[,1:25]
 #' offset <- colMeans(X)
-#' lvec <- LatentNeuroVec(basis, loadings, NeuroSpace(c(10,10,10,100)), mask=rep(TRUE,1000), offset=offset)
+#' lvec <- neuroim2::LatentNeuroVec(basis, loadings, neuroim2::NeuroSpace(c(10,10,10,100)), 
+#' mask=rep(TRUE,1000), offset=offset)
 #' dset <- latent_dataset(lvec, TR=2, run_length=100)
-#' 
+#' @export 
 latent_dataset <- function(lvec, TR, run_length, event_table=data.frame()) {
   assert_that(sum(run_length) == dim(lvec)[4])
   
@@ -220,11 +224,14 @@ latent_dataset <- function(lvec, TR, run_length, event_table=data.frame()) {
 #' @importFrom tibble as_tibble
 #' @examples 
 #' 
-#' dset <- fmri_dataset(c("scan1.nii", "scan2.nii", "scan3.nii"), mask="mask.nii", TR=2, run_length=rep(300,3), 
-#'         event_table=data.frame(onsets=c(3,20,99,3,20,99,3,20,99), run=c(1,1,1,2,2,2,3,3,3)))
+#' dset <- fmri_dataset(c("scan1.nii", "scan2.nii", "scan3.nii"), 
+#' mask="mask.nii", TR=2, run_length=rep(300,3), 
+#' event_table=data.frame(onsets=c(3,20,99,3,20,99,3,20,99), 
+#' run=c(1,1,1,2,2,2,3,3,3)))
 #'         
-#' dset <- fmri_dataset("scan1.nii", mask="mask.nii", TR=2, run_length=300, 
-#'         event_table=data.frame(onsets=c(3,20,99), run=rep(1,3)))
+#' dset <- fmri_dataset("scan1.nii", mask="mask.nii", TR=2, 
+#' run_length=300, 
+#' event_table=data.frame(onsets=c(3,20,99), run=rep(1,3)))
 #' 
 #' 
 fmri_dataset <- function(scans, mask, TR, 
@@ -263,7 +270,7 @@ fmri_dataset <- function(scans, mask, TR,
   
   vec <- if (preload) {
     message(paste("preloading scans", paste(scans, collapse = " ")))
-    read_vec(scans, mode=mode,mask=maskvol)
+    neuroim2::read_vec(scans, mode=mode,mask=maskvol)
   }
   
   
@@ -312,7 +319,7 @@ get_data.matrix_dataset <- function(x, ...) {
 #' @import memoise
 get_data_from_file <- memoise::memoise(function(x, ...) {
   m <- get_mask(x)
-  read_vec(x$scans, mask=m, mode=x$mode, ...)
+  neuroim2::read_vec(x$scans, mask=m, mode=x$mode, ...)
 })
 
 #' @export
@@ -430,7 +437,6 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
 
 
 
-#' @import neuroim2
 #' @export
 data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
   
@@ -475,7 +481,7 @@ data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
   
 }
 
-#' @import neuroim2
+
 #' @export
 data_chunks.matrix_dataset <- function(x, nchunks=1, runwise=FALSE,...) {
   get_run_chunk <- function(chunk_num) {
@@ -507,7 +513,7 @@ data_chunks.matrix_dataset <- function(x, nchunks=1, runwise=FALSE,...) {
   
 }
 
-#' @export
+#' @keywords internal
 exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchunks=NULL) {
   strategy <- match.arg(strategy)
   
@@ -550,7 +556,7 @@ arbitrary_chunks <- function(x, nchunks) {
 #' @keywords internal
 slicewise_chunks <- function(x) {
   mask <- x$mask
-  template <- NeuroVol(array(0, dim(mask)), space(mask))
+  template <- neuroim2::NeuroVol(array(0, dim(mask)), neuroim2::space(mask))
   nchunks <- dim(mask)[3]
   
   maskSeq <- lapply(1:nchunks, function(i) {

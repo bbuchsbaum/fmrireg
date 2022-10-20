@@ -1,8 +1,16 @@
-pandoc: 2.7.3
-pkgdown: 1.6.0
+pandoc: 2.17.1.1
+pkgdown: 2.0.2
 pkgdown_sha: ~
-articles: []
-last_built: 2020-12-01T13:23Z
+articles:
+  Overview: Overview.html
+  a_01_hemodynamic_response: a_01_hemodynamic_response.html
+  a_02_regressor: a_02_regressor.html
+  a_03_baseline_model: a_03_baseline_model.html
+  a_04_event_models: a_04_event_models.html
+  a_05_contrasts: a_05_contrasts.html
+  a_06_afni: a_06_afni.html
+  a_07_trialwise: a_07_trialwise.html
+last_built: 2022-10-20T13:00Z
 urls:
   reference: https://pkgdown.r-lib.org/reference
   article: https://pkgdown.r-lib.org/articles

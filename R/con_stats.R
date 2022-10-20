@@ -1,4 +1,7 @@
+#' @keywords internal
+qr.lm <- getFromNamespace("qr.lm", "stats")
 
+#' @keywords internal
 fit_Ftests <- function(object) {
   w <- object$weights
   ssr <- if (is.null(w)) {
@@ -21,7 +24,7 @@ fit_Ftests <- function(object) {
   
   p1 <- 1L:p
   #comp <- object$effects[p1]
-  asgn <- object$assign[stats:::qr.lm(object)$pivot][p1]
+  asgn <- object$assign[qr.lm(object)$pivot][p1]
   
   
   #nmeffects <- c("(Intercept)", attr(object$terms, "term.labels"))
@@ -64,7 +67,7 @@ old_beta_stats <- function(lmfit, varnames, se=TRUE) {
   }
 
   if (se) {
-    Qr <- stats:::qr.lm(lmfit)
+    Qr <- qr.lm(lmfit)
     cov.unscaled <- chol2inv(Qr$qr)
     rss <- colSums(as.matrix(lmfit$residuals^2))
   
@@ -115,7 +118,7 @@ beta_stats <- function(lmfit, varnames, se=TRUE) {
   }
   
   if (se) {
-    Qr <- stats:::qr.lm(lmfit)
+    Qr <- qr.lm(lmfit)
     cov.unscaled <- chol2inv(Qr$qr)
     rss <- colSums(as.matrix(lmfit$residuals^2))
     
@@ -159,7 +162,7 @@ beta_stats <- function(lmfit, varnames, se=TRUE) {
 
 fit_Fcontrasts <- function(lmfit, conmat, colind) {
   #browser()
-  Qr <- stats:::qr.lm(lmfit)
+  Qr <- qr.lm(lmfit)
 
   cov.unscaled <- try(chol2inv(Qr$qr))
   
@@ -223,7 +226,7 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
 
 old_fit_Fcontrasts <- function(lmfit, conmat, colind) {
   #browser()
-  Qr <- stats:::qr.lm(lmfit)
+  Qr <- qr.lm(lmfit)
   
   cov.unscaled <- try(chol2inv(Qr$qr))
   
@@ -309,7 +312,7 @@ fit_contrasts <- function(lmfit, conmat, colind, se=TRUE) {
   p1 <- 1:lmfit$rank
   
   if (se) {
-    Qr <- stats:::qr.lm(lmfit)
+    Qr <- qr.lm(lmfit)
     cov.unscaled <- try(chol2inv(Qr$qr))
   
     if (inherits(cov.unscaled, "try-error")) {
@@ -372,7 +375,7 @@ old_fit_contrasts <- function(lmfit, conmat, colind, se=TRUE) {
   p1 <- 1:lmfit$rank
   
   if (se) {
-    Qr <- stats:::qr.lm(lmfit)
+    Qr <- qr.lm(lmfit)
     cov.unscaled <- try(chol2inv(Qr$qr))
     
     if (inherits(cov.unscaled, "try-error")) {

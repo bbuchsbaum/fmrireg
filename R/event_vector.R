@@ -62,11 +62,13 @@ is.strictly.increasing <- function(vec) {
 #' 
 #' x1 <- factor(rep(letters[1:3], 10))
 #' x2 <- factor(rep(1:3, each=10))
-#' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), blockids=rep(1,30))
+#' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), 
+#' blockids=rep(1,30))
 #' 
 #' x1 <- rnorm(30)
 #' x2 <- factor(rep(1:3, each=10))
-#' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), blockids=rep(1,30), subset=x1>0)
+#' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), 
+#' blockids=rep(1,30), subset=x1>0)
 #'
 #' @rdname event_term-class
 event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
@@ -132,9 +134,14 @@ event_table.event_term <- function(x) x$event_table
 #' 
 #' @examples 
 #' 
-#' ev_fac <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), blockids=rep(1,3))
-#' ev_fac2 <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), blockids=rep(1,3), subset=c(TRUE, TRUE, FALSE))
-#' ev_numeric <- EV(c(1,2,3), "fac", onsets=c(1,10,20), blockids=rep(1,3))
+#' ev_fac <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), 
+#' blockids=rep(1,3))
+#' 
+#' ev_fac2 <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), 
+#' blockids=rep(1,3), subset=c(TRUE, TRUE, FALSE))
+#' 
+#' ev_numeric <- EV(c(1,2,3), "fac", onsets=c(1,10,20), 
+#' blockids=rep(1,3))
 #' @export
 EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,length(onsets))) {
   
@@ -245,14 +252,13 @@ event_matrix <- function(mat, name, onsets, blockids=rep(1, ncol(mat)), duration
 
 #' event_basis
 #' 
-#' Create a event set from a basis object of type \code{\linkS4class{ParametricBasis}}. 
+#' Create a event set from a basis object of type \code{ParametricBasis}. 
 #' @inheritParams EV
 #' @param basis the basis object
 #' @import assertthat
 #' @export
 event_basis <- function(basis, onsets, blockids=1, durations=NULL, subset=rep(TRUE, length(onsets))) {
   assertthat::assert_that(inherits(basis, "ParametricBasis"))
-  
   
   if (any(!subset)) {
     basis <- sub_basis(basis, subset)
@@ -537,7 +543,7 @@ elements.event_basis <- function(x, values=TRUE, transformed=TRUE, ...) {
     mat <- do.call(cbind, res)
     colnames(mat) <- vnames			
     ret <- list(mat)
-    names(ret) <- .sanitizeName(varname(x))
+    names(ret) <- .sanitizeName(x$varname)
     ret		
   }
 }
@@ -616,7 +622,8 @@ split_onsets.event_term <- function(x, sframe, global=FALSE,blocksplit=FALSE, ..
 
 
 
-#' @export
+
+#' @keywords internal
 convolve_design <- function(hrf, dmat, globons, durations, summate=TRUE) {
   cond.names <- names(dmat)
   #if (length(grep("pc1", cond.names)) > 0) {
@@ -642,16 +649,19 @@ convolve_design <- function(hrf, dmat, globons, durations, summate=TRUE) {
     } else {
       regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero], summate=summate)
     }
-  }, mc.cores=parallel::detectCores())
+  })
   
 }
 
 #' @importFrom tibble as_tibble
 #' @importFrom magrittr %>%
 #' @importFrom dplyr group_by select do ungroup
+#' @autoglobal
 #' @export
 convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, 
                                 summate=TRUE, precision=.3,...) {
+  
+  
   globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
   
   durations <- x$durations
@@ -665,7 +675,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE,
   
   ncond <- ncol(dmat)
 
-  cmat <- dmat %>% dplyr::mutate(.blockids=blockids, .globons=globons, .durations=durations) %>% 
+  cmat <- dmat |> dplyr::mutate(.blockids=blockids, .globons=globons, .durations=durations) %>% 
     dplyr::group_by(.blockids) %>%
     dplyr::do({
       d <- dplyr::select(., 1:ncond)
