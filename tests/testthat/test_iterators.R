@@ -1,4 +1,4 @@
-
+options(mc.cores=2)
 
 library(foreach)
 

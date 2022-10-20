@@ -1,4 +1,4 @@
-
+options(mc.cores=2)
 test_that("can construct a baseline_model with 1 block and 5th order bspline basis", {
   sframe <- sampling_frame(blocklens=100, TR=2)
   bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe)

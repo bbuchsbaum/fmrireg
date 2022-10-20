@@ -1,6 +1,7 @@
+
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
-library(purrr)
 library(assertthat)
+options(mc.cores=2)
 
 context("afni")
 

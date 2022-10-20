@@ -1,3 +1,4 @@
+options(mc.cores=2)
 library(testthat)
 
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)

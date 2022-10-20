@@ -1,3 +1,4 @@
+options(mc.cores=2)
 library(purrr)
 library(assertthat)
 library(dplyr)
@@ -101,8 +102,7 @@ test_that("demo2", {
   sframe <- sampling_frame(rep(197,6), TR=1.5)
   cond <- onset1 ~ trialwise(basis=hrf_time)
   
-  
- 
+
   ev <- event_model(onset1 ~ trialwise(basis=hrf_time), data=dset$event_table, 
                     sampling_frame=sframe, block = ~ block)
   
@@ -113,7 +113,6 @@ test_that("demo2", {
   X_base <- as.matrix(design_matrix(bmod))
   X_cond <- as.matrix(design_matrix(ev))
   
-  
   ### send in a set of factors
   ### will estimate each level of the crossed factor separately, with the rest of the factor modelled
   ### separately. Can be done in parallel.
@@ -123,11 +122,11 @@ test_that("demo2", {
   X <- dat$mat
   Xr <- resid(lsfit(X_base, X, intercept = FALSE))
   
-  pres <- neuroca::pca(Xr, ncomp=100, preproc=standardize())
+  pres <- multivarious::pca(Xr, ncomp=100, preproc=multivarious::standardize())
   
   
   ps <- lapply(1:12, function(i) {
-    v <- scores(pres)[,i]
+    v <- pres$s[,i]
     gam.1 <- gam(v ~ s(X_cond) - 1)
   
     time <- seq(0,20,by=1)
