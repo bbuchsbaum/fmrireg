@@ -5,7 +5,6 @@ library(assertthat)
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 
 
-
 test_that("a 2-by-2 Fcontrast", {
   F_a <- factor(rep(letters[1:2], 8))
   F_b <- factor(rep(c("V1", "V2"), each=8))
@@ -51,6 +50,8 @@ test_that("a 3-by-3 Fcontrast", {
 })
 
 
+
+
 test_that("can build a simple contrast from a convolved term", {
   facedes$repnum <- factor(facedes$rep_num)
   sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
@@ -58,6 +59,17 @@ test_that("can build a simple contrast from a convolved term", {
   con <- pair_contrast(~ repnum==-1, ~ repnum==1, name="A_B")
   
   expect_equal(as.vector(contrast_weights(con, terms(espec)[[1]])$weights), c(1,-1,0,0,0))
+})
+
+test_that("can build a simple contrast from a convolved term and convert to glt", {
+  facedes$repnum <- factor(facedes$rep_num)
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
+  con <- pair_contrast(~ repnum==-1, ~ repnum==1, name="A_B")
+  
+  conw <- contrast_weights(con, terms(espec)[[1]])
+  glt <- to_glt(conw)
+  expect_true(!is.null(glt))
 })
 
 test_that("can build a contrast versus the intercept from a convolved term", {

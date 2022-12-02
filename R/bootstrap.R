@@ -49,7 +49,8 @@ multiresponse_bootstrap_lm <- function(form, data_env,
   con_cov <- if (length(conlist) > 0) {
     lapply(names(boot_res[[1]]$conres), function(bname) {
       bm <- do.call(rbind, lapply(boot_res, function(br) {
-        br$conres[[bname]]$estimate()
+        #br$conres[[bname]]$estimate()
+        br$conres[[bname]]$estimate
       }))
       cov(bm)
     })
@@ -57,7 +58,7 @@ multiresponse_bootstrap_lm <- function(form, data_env,
   
   beta_cov <- lapply(event_indices, function(i) {
     bm <- do.call(rbind, lapply(boot_res, function(br) {
-      br$bstats$estimate()
+      br$bstats$estimate
     }))
     cov(bm)
   })

@@ -59,7 +59,7 @@ read_fmri_config <- function(file_name, base_path=NULL) {
   dname <- file.path(env$base_path, env$event_table)
   
   assert_that(file.exists(dname))
-  env$design <- tibble::as_tibble(read.table(dname, header=TRUE),.name_repair="check_unique")
+  env$design <- suppressMessages(tibble::as_tibble(read.table(dname, header=TRUE),.name_repair="check_unique"))
 
   out <- as.list(env)
   class(out) <- c("fmri_config", "list")
@@ -280,7 +280,7 @@ fmri_dataset <- function(scans, mask, TR,
     mask_file=maskfile,
     mask=maskvol,
     nruns=length(run_length),
-    event_table=as_tibble(event_table,.name_repair="check_unique"),
+    event_table=suppressMessages(as_tibble(event_table,.name_repair="check_unique")),
     base_path=base_path,
     sampling_frame=frame,
     censor=censor,
@@ -391,11 +391,12 @@ chunk_iter <- function(x, nchunks, get_chunk) {
 
 
 #' @importFrom neuroim2 series
+#' @autoglobal
 #' @export
 data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
-  
   mask <- get_mask(x)
-  
+  #print("data chunks")
+  #print(nchunks)
   get_run_chunk <- function(chunk_num) {
     bvec <- x$scans[[chunk_num]]
     voxel_ind <- which(mask>0)
@@ -425,11 +426,11 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
   } else if (nchunks == 1) {
     maskSeq <<- one_chunk()
     chunk_iter(x, 1, get_seq_chunk)
-  } else if (nchunks == dim(mask)[3]) {
-    maskSeq <- slicewise_chunks(x)
-    chunk_iter(x, length(maskSeq), get_seq_chunk)
+  #} #else if (nchunks == dim(mask)[3]) {
+    #maskSeq <<- slicewise_chunks(x)
+    #chunk_iter(x, length(maskSeq), get_seq_chunk)
   } else {
-    maskSeq <- arbitrary_chunks(x, nchunks)
+    maskSeq <<- arbitrary_chunks(x, nchunks)
     chunk_iter(x, length(maskSeq), get_seq_chunk)
   }
   
@@ -439,9 +440,8 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
 
 #' @export
 data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
-  
   mask <- get_mask(x)
-  maskSeq <- NULL
+  #maskSeq <- NULL
   iter <- if (runwise) {
     chunk_iter(x, length(x$scans), get_run_chunk)
   } else if (nchunks == 1) {
@@ -449,6 +449,7 @@ data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
     chunk_iter(x, 1, get_seq_chunk)
   } else {
     maskSeq <<- arbitrary_chunks(x, nchunks)
+    #print(maskSeq)
     chunk_iter(x, length(maskSeq), get_seq_chunk)
   }
   
@@ -540,16 +541,23 @@ exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchun
 
 #' @keywords internal
 arbitrary_chunks <- function(x, nchunks) {
+  #print("arbitrary chunks")
+  #browser()
   mask <- get_mask(x)
+  #print(mask)
   indices <- as.integer(which(mask != 0))
   chsize <- round(length(indices)/nchunks)
   #print(indices)
   
   assert_that(chsize > 0)
   chunkids <- sort(rep(1:nchunks, each=chsize, length.out=length(indices)))
+  #print(chunkids)
   
   mfun <- function(i) indices[chunkids==i]
-  neuroim2::deferred_list2(mfun, nchunks)
+  #print(mfun)
+  ret <- neuroim2::deferred_list2(mfun, nchunks)
+  #print(ret[[1]])
+  return(ret)
   
 }
 

@@ -94,13 +94,13 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
   len <- sum(subset)
   
-  etab <- tibble::as_tibble(lapply(pterms, function(termname) {
+  etab <- suppressMessages(tibble::as_tibble(lapply(pterms, function(termname) {
     if (is_continuous(evs[[termname]])) {
       rep(.sanitizeName(termname), len)
     } else {
       evs[[termname]]$value
     }			
-  }), .name_repair="check_unique")
+  }), .name_repair="check_unique"))
   
   names(etab) <- sapply(pterms, .sanitizeName)
   varname <- paste(sapply(evs, function(x) x$varname), collapse=":")
@@ -332,13 +332,13 @@ cells.event_factor <- function(x, drop.empty=TRUE,...) {
 #' cells(eterm)
 cells.event_term <- function(x, drop.empty=TRUE,...) {
   evtab <- x$event_table
-  evset <- tibble::as_tibble(expand.grid(lapply(x$events, levels)), .name_repair="check_unique")
+  evset <- suppressMessages(tibble::as_tibble(expand.grid(lapply(x$events, levels)), .name_repair="check_unique"))
   
   which.cat <- which(!sapply(x$events, is_continuous))
   
   if (length(which.cat) > 0) {
-    evs <- tibble::as_tibble(lapply(evset[,which.cat], as.character), .name_repair="check_unique")
-    evt <- tibble::as_tibble(lapply(evtab[,which.cat], as.character), .name_repair="check_unique")
+    evs <- suppressMessages(tibble::as_tibble(lapply(evset[,which.cat], as.character), .name_repair="check_unique"))
+    evt <- suppressMessages(tibble::as_tibble(lapply(evtab[,which.cat], as.character), .name_repair="check_unique"))
   
     counts <- apply(evs, 1, function(row1) {
       sum(apply(evt, 1, function(row2) {										
@@ -675,7 +675,9 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE,
   
   ncond <- ncol(dmat)
 
-  cmat <- dmat |> dplyr::mutate(.blockids=blockids, .globons=globons, .durations=durations) %>% 
+  #print("convolving")
+ 
+  cmat <- dmat |> dplyr::mutate(.blockids=blockids, .globons=globons, .durations=durations) |> 
     dplyr::group_by(.blockids) %>%
     dplyr::do({
       d <- dplyr::select(., 1:ncond)
@@ -684,9 +686,24 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE,
       
       ## TODO could bee parallelized
       ## ret <- do.call(rbind, furrr::future_map(reg, function(r) evaluate(r, sam))) 
-      ret <- do.call(cbind, lapply(reg, function(r) evaluate(r, sam, precision=precision)))
-      tibble::as_tibble(ret, .name_repair="minimal")
-  }) %>% dplyr::ungroup() %>% dplyr::select(-.blockids)
+     
+      ret <- do.call(cbind, lapply(seq_along(reg), function(ri) {
+        vname <- paste0("v", ri)
+        evaluate(reg[[ri]], sam, precision=precision) #%>% select({{vname}} := value)
+        #names(tmp) <- paste0("v", ri)
+        #suppressMessages(as_tibble(tmp))
+      })) 
+      
+      ret <- suppressMessages(tibble::as_tibble(ret, .name_repair="minimal"))
+      names(ret) <- paste0("v", 1:length(reg))
+      #names(ret) <- seq(as.integer(runif(1)*10000)
+      ret
+  }) 
+  
+  #browser()
+  cmat <- cmat %>% dplyr::ungroup() %>% dplyr::select(-.blockids)
+  
+  #print("done convolving")
   
  
   if (nbasis(hrf) > 1) {
@@ -695,7 +712,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE,
   } 
             
   colnames(cmat) <- cnames
-  tibble::as_tibble(cmat, .name_repair="check_unique")
+  suppressMessages(tibble::as_tibble(cmat, .name_repair="check_unique"))
   
   
 }
@@ -830,7 +847,7 @@ design_matrix.event_term <- function(x, drop.empty=TRUE,...) {
     colnames(rmat) <- conditions(x, drop=F)			
   }
   
-  tibble::as_tibble(rmat, .name_repair="check_unique")
+  suppressMessages(tibble::as_tibble(rmat, .name_repair="check_unique"))
 }
 
 

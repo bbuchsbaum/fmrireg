@@ -53,9 +53,11 @@ Suggests:
     rmarkdown,
     roxygen2,
     covr,
+    multivarious,
     roxyglobals (>= 0.2.1)
 Remotes: 
     bbuchsbaum/neuroim2,
+    bbuchsbaum/multivarious,
     anthonynorth/roxyglobals
 VignetteBuilder: knitr
 URL: https://github.com/bbuchsbaum/fmrireg

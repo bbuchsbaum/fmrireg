@@ -105,7 +105,7 @@ multiresponse_arma <- function(form, data_env, conlist, vnames, fcon, modmat,
   rlens <- table(blockids)
   i <- NULL
   ret <- foreach(i = 1:ncol(Y)) %dopar% {
-    print(i)
+    #print(i)
     yi <- Y[,i]
     lm.1 <- lm(yi ~ modmat-1)
     yresid <- resid(lm.1)

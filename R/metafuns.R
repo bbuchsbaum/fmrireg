@@ -26,7 +26,7 @@ meta_stouffer <- function(pval, se) {
 #' @keywords internal
 meta_fixef <- function(beta,se, weighting=c("inv_var", "equal")) {
   weighting <- match.arg(weighting)
-  #browser()
+  
   if (weighting == "inv_var") {
     inv_var <- 1/(se^2)
     wts <- inv_var/rowSums(inv_var)
@@ -34,14 +34,14 @@ meta_fixef <- function(beta,se, weighting=c("inv_var", "equal")) {
     wbeta <- rowSums(wbeta)
     pooledse <- sqrt(rowSums(wts*wts*(se^2)))
   } else {
-    wbeta <- rowSums(wbeta)
+    wbeta <- rowSums(beta)
     pooledse <- sqrt(rowSums((se^2)))
   }
   
   return(
     list(
       estimate=wbeta,
-      se==pooledse,
+      se=pooledse,
       stat=wbeta/pooledse,
       prob=1-pchisq((wbeta/pooledse)^2,1),
       stat_type="zstat")
@@ -66,13 +66,14 @@ meta_Fcontrasts <- function(fres) {
 
 
 #' @keywords internal
-meta_contrasts <- function(cres) {
+meta_contrasts <- function(cres, weighting=c("inv_var", "equal")) {
+  weighting <- match.arg(weighting)
   ncon <- length(cres[[1]])
   if (ncon > 0) {
     res <- lapply(1:ncon, function(i) {
       beta <- do.call(cbind, lapply(cres, function(x) as.vector(x[[i]]$estimate)))
       se <- do.call(cbind, lapply(cres, function(x) x[[i]]$se))
-      meta_fixef(beta,se)
+      meta_fixef(beta,se, weighting)
     })
   } else {
     stop("there are no contrasts for this model.")
@@ -91,7 +92,8 @@ meta_contrasts <- function(cres) {
 
 
 #' @keywords internal
-meta_betas <- function(bstats, colind) {
+meta_betas <- function(bstats, colind, weighting=c("inv_var", "equal")) {
+  weighting <- match.arg(weighting)
   
   len <- length(colind)
   
@@ -99,8 +101,10 @@ meta_betas <- function(bstats, colind) {
     #print(i)
     beta <- do.call(cbind, lapply(bstats, function(x) x$estimate[,i]))
     se <- do.call(cbind, lapply(bstats, function(x) x$se[,i]))
-    meta_fixef(beta,se)
+    meta_fixef(beta,se,weighting)
   })
+  
+  #browser()
   
   return(
     list(

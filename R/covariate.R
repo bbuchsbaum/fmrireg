@@ -43,7 +43,7 @@ covariate <- function(..., data, id=NULL, prefix=NULL) {
 #' @keywords internal
 covariate_term <- function(varname, mat) {
   stopifnot(is.matrix(mat))
-  ret <- list(varname=varname, design_matrix=tibble::as_tibble(mat))
+  ret <- list(varname=varname, design_matrix=suppressMessages(tibble::as_tibble(mat)))
   class(ret) <- c("covariate_term", "matrix_term", "fmri_term", "list")
   ret
 }
@@ -85,7 +85,7 @@ event_table.covariate_convolved_term <- function(x) {
   }))
   
   colnames(ret) <- cnames
-  as_tibble(ret,.name_repair="check_unique")
+  suppressMessages(as_tibble(ret,.name_repair="check_unique"))
   
 }
 

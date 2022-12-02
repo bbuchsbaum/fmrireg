@@ -4,7 +4,15 @@
 \alias{runwise_lm}
 \title{Run glm for each data run (responses split vertically) and then combine over runs via meta-analysis}
 \usage{
-runwise_lm(dset, model, conlist, fcon, robust = FALSE, verbose = FALSE)
+runwise_lm(
+  dset,
+  model,
+  conlist,
+  fcon,
+  robust = FALSE,
+  meta_weighting = c("inv_var", "equal"),
+  verbose = FALSE
+)
 }
 \description{
 Run glm for each data run (responses split vertically) and then combine over runs via meta-analysis

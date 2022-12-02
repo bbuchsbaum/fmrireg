@@ -10,6 +10,7 @@ fmri_lm_fit(
   strategy = c("chunkwise", "runwise"),
   robust = FALSE,
   nchunks = 10,
+  meta_weighting = c("inv_var", "equal"),
   ...
 )
 }
@@ -23,6 +24,9 @@ fmri_lm_fit(
 \item{robust}{whether to use robust fitting (TRUE or FALSE)}
 
 \item{nchunks}{number of daa chunks when strategy is \code{chunkwise}}
+
+\item{meta_weighting}{for runwise analyses, wheter to use
+inverse variance ("inv_var") or equal ("equal") weighting}
 
 \item{...}{extra args}
 }

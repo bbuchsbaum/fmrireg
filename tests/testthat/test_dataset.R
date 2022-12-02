@@ -38,6 +38,8 @@ test_that("can construct an fmri_mem_dataset", {
                            TR=1.5, 
                            event_table=tibble::as_tibble(facedes))
   
+  expect_true(!is.null(dset))
+  
   
 })
 

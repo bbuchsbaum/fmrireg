@@ -234,9 +234,9 @@ poly_contrast <- function(A, name, where=NULL, degree=1, value_map=NULL) {
 
 #' @export
 contrast_weights.poly_contrast_spec <- function(x, term,...) {
- 
   term.cells <- cells(term)
-  row.names(term.cells) <- longnames(term)
+  term.cells <- term.cells %>% mutate(rowname=longnames(term))
+  #row.names(term.cells) <- longnames(term)
  
   #keep <- eval(x$where, envir=term.cells, enclos=parent.frame())	
   if (!is.null(x$where)) {
@@ -260,7 +260,8 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
  
   weights <- matrix(0, NROW(term.cells), x$degree)	
   pvals <- stats::poly(vals, degree=x$degree)
-  row.names(weights) <- row.names(term.cells)
+  #row.names(weights) <- row.names(term.cells)
+  row.names(weights) <- term.cells$rowname
   colnames(weights) <- paste("poly", 1:x$degree, sep="")
   
   weights[keep, ] <- pvals
@@ -385,7 +386,8 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
     term.cells[,!facs] <- 1
   } 
   
-  modmat <- tibble::as_tibble(model.matrix(cform,data=term.cells), .name_repair="check_unique")
+  modmat <- suppressMessages(tibble::as_tibble(model.matrix(cform,data=term.cells), 
+                                               .name_repair="check_unique"))
   names(modmat) <- gsub(":", ".", condnames)
   weights <- matrix(0, NROW(term.cells), 1)
   weights[keep,1] <-  as.vector(lazyeval::f_eval_rhs(A, data=modmat))

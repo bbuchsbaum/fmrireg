@@ -14,6 +14,7 @@ fmri_lm(
   robust = FALSE,
   strategy = c("runwise", "chunkwise"),
   nchunks = 10,
+  meta_weighting = c("inv_var", "equal"),
   ...
 )
 }
@@ -35,6 +36,9 @@ fmri_lm(
 \item{strategy}{the data splitting strategy}
 
 \item{nchunks}{number of daa chunks when strategy is \code{chunkwise}}
+
+\item{meta_weighting}{for runwise analyses, wheter to use
+inverse variance ("inv_var") or equal ("equal") weighting}
 
 \item{...}{extra args}
 }

@@ -20,7 +20,7 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
   
   model <- create_fmri_model(formula, block, baseline_model,dataset, durations, drop_empty)
   ret <- fmri_lm_fit(model, dataset, strategy="chunkwise", robust=robust, 
-                     contrasts=contrasts, nchunks=1, autocor=autocor, 
+                     nchunks=1, autocor=autocor, 
                      bootstrap=bootstrap, nboot=nboot)
 
   ret$dataset <- dataset
@@ -125,6 +125,7 @@ coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts"), recon=
 }
 
 #' @export
+#' @import Matrix
 standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
   type <- match.arg(type)
  
