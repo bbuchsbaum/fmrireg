@@ -26,7 +26,7 @@
   <a href="../reference/index.html">Reference</a>
 </li>
 <li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Articles
      
     <span class="caret"></span>
@@ -81,65 +81,74 @@
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">baseline_model</span><span class="op">(</span>
-  basis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"constant"</span>, <span class="st">"poly"</span>, <span class="st">"bs"</span>, <span class="st">"ns"</span><span class="op">)</span>,
-  degree <span class="op">=</span> <span class="fl">1</span>,
-  <span class="va">sframe</span>,
-  intercept <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"runwise"</span>, <span class="st">"global"</span>, <span class="st">"none"</span><span class="op">)</span>,
-  nuisance_list <span class="op">=</span> <span class="cn">NULL</span>
-<span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">baseline_model</span><span class="op">(</span></span>
+<span>  basis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"constant"</span>, <span class="st">"poly"</span>, <span class="st">"bs"</span>, <span class="st">"ns"</span><span class="op">)</span>,</span>
+<span>  degree <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  <span class="va">sframe</span>,</span>
+<span>  intercept <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"runwise"</span>, <span class="st">"global"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
+<span>  nuisance_list <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
     <dl><dt>basis</dt>
 <dd><p>the basis function type</p></dd>
+
+
 <dt>degree</dt>
 <dd><p>the degree of the spline function.</p></dd>
+
+
 <dt>sframe</dt>
 <dd><p>sframe a <code>sampling_frame</code> object</p></dd>
+
+
 <dt>intercept</dt>
 <dd><p>whether to include an intercept for each block. Automatically set to <code>FALSE</code> when basis == "constant".</p></dd>
+
+
 <dt>nuisance_list</dt>
 <dd><p>a list of nuisance matrices, one matrix per fMRI block</p></dd>
+
 </dl></div>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"></span>
-<span class="r-in"><span class="co">## bspline basis with degree = 3. This will produce a design matrix with three </span></span>
-<span class="r-in"><span class="co">## splines regressor and a constant intercept.</span></span>
-<span class="r-in"><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="sampling_frame.html">sampling_frame</a></span><span class="op">(</span>blocklens<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>,<span class="fl">100</span><span class="op">)</span>, TR<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span>
-<span class="r-in"><span class="va">bmod</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"bs"</span>, degree<span class="op">=</span><span class="fl">3</span>, sframe<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span>
-<span class="r-in"><span class="va">bmod_global</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"bs"</span>, degree<span class="op">=</span><span class="fl">3</span>, </span>
-<span class="r-in">sframe<span class="op">=</span><span class="va">sframe</span>, intercept<span class="op">=</span><span class="st">"global"</span><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="va">bmod_nointercept</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"bs"</span>, degree<span class="op">=</span><span class="fl">3</span>, </span>
-<span class="r-in">sframe<span class="op">=</span><span class="va">sframe</span>, intercept<span class="op">=</span><span class="st">"none"</span><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="fu"><a href="design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">bmod</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">8</span><span class="op">)</span></span>
-<span class="r-in"><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="fu"><a href="design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">bmod_global</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">7</span><span class="op">)</span></span>
-<span class="r-in"><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="fu"><a href="design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">bmod_nointercept</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">6</span><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co">## polynomial with no intercept term</span></span>
-<span class="r-in"><span class="va">bmod</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"poly"</span>, degree<span class="op">=</span><span class="fl">3</span>, sframe<span class="op">=</span><span class="va">sframe</span>, intercept<span class="op">=</span><span class="st">"none"</span><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co">## a baseline model that only has dummy-coded intercept terms, one per block, </span></span>
-<span class="r-in"><span class="co">## i.e. to model runwise mean shifts only.</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="va">bmod</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"constant"</span>, degree<span class="op">=</span><span class="fl">1</span>, sframe<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co">## global intercept only</span></span>
-<span class="r-in"><span class="va">bmod</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"constant"</span>, degree<span class="op">=</span><span class="fl">1</span>, sframe<span class="op">=</span><span class="va">sframe</span>, intercept<span class="op">=</span><span class="st">"global"</span><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co">## add an arbitrary nuisance matrix with two columns, i.e. motion regressors, </span></span>
-<span class="r-in"><span class="co">## physiological noise, etc.</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="va">nuismat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">*</span><span class="fl">2</span><span class="op">)</span>, <span class="fl">100</span>, <span class="fl">2</span><span class="op">)</span></span>
-<span class="r-in"><span class="va">bmod</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"bs"</span>, degree<span class="op">=</span><span class="fl">3</span>, sframe<span class="op">=</span><span class="va">sframe</span>, </span>
-<span class="r-in">nuisance_list<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">nuismat</span>, <span class="va">nuismat</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-in"><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="fu"><a href="design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">bmod</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">12</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## bspline basis with degree = 3. This will produce a design matrix with three </span></span></span>
+<span class="r-in"><span><span class="co">## splines regressor and a constant intercept.</span></span></span>
+<span class="r-in"><span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="sampling_frame.html">sampling_frame</a></span><span class="op">(</span>blocklens<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>,<span class="fl">100</span><span class="op">)</span>, TR<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">bmod</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"bs"</span>, degree<span class="op">=</span><span class="fl">3</span>, sframe<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">bmod_global</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"bs"</span>, degree<span class="op">=</span><span class="fl">3</span>, </span></span>
+<span class="r-in"><span>sframe<span class="op">=</span><span class="va">sframe</span>, intercept<span class="op">=</span><span class="st">"global"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">bmod_nointercept</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"bs"</span>, degree<span class="op">=</span><span class="fl">3</span>, </span></span>
+<span class="r-in"><span>sframe<span class="op">=</span><span class="va">sframe</span>, intercept<span class="op">=</span><span class="st">"none"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="fu"><a href="design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">bmod</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">8</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="fu"><a href="design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">bmod_global</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">7</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="fu"><a href="design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">bmod_nointercept</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">6</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## polynomial with no intercept term</span></span></span>
+<span class="r-in"><span><span class="va">bmod</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"poly"</span>, degree<span class="op">=</span><span class="fl">3</span>, sframe<span class="op">=</span><span class="va">sframe</span>, intercept<span class="op">=</span><span class="st">"none"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## a baseline model that only has dummy-coded intercept terms, one per block, </span></span></span>
+<span class="r-in"><span><span class="co">## i.e. to model runwise mean shifts only.</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">bmod</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"constant"</span>, degree<span class="op">=</span><span class="fl">1</span>, sframe<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## global intercept only</span></span></span>
+<span class="r-in"><span><span class="va">bmod</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"constant"</span>, degree<span class="op">=</span><span class="fl">1</span>, sframe<span class="op">=</span><span class="va">sframe</span>, intercept<span class="op">=</span><span class="st">"global"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## add an arbitrary nuisance matrix with two columns, i.e. motion regressors, </span></span></span>
+<span class="r-in"><span><span class="co">## physiological noise, etc.</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">nuismat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">*</span><span class="fl">2</span><span class="op">)</span>, <span class="fl">100</span>, <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">bmod</span> <span class="op">&lt;-</span> <span class="fu">baseline_model</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"bs"</span>, degree<span class="op">=</span><span class="fl">3</span>, sframe<span class="op">=</span><span class="va">sframe</span>, </span></span>
+<span class="r-in"><span>nuisance_list<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">nuismat</span>, <span class="va">nuismat</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="fu"><a href="design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">bmod</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">12</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
   </div>
@@ -150,13 +159,11 @@
 
 
       <footer><div class="copyright">
-  <p></p><p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley
-Buchsbaum</a>.</p>
+  <p></p><p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a>
-2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>

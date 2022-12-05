@@ -14,3 +14,4 @@ get_formula(x, ...)
 \description{
 get_formula
 }
+\keyword{internal}

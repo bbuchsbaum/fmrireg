@@ -14,3 +14,4 @@ write_glt(x, fname)
 \description{
 write a GLT file to disk
 }
+\keyword{internal}

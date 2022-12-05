@@ -31,8 +31,9 @@ articles:
 reference:
 - title: hemodynamic response functions
   desc: >
-      functions for working with standard and custom hemodynamic response functions 
+      functions related to hemodynamic response functions 
 - contents:
+  - hrf
   - hrf_gamma
   - hrf_gaussian
   - hrf_spmg1
@@ -45,6 +46,11 @@ reference:
   - gen_empirical_hrf
   - gen_hrf_lagged
   - gen_hrf_blocked
+  - afni_hrf
+  - hrf_smoothing_kernel
+  - BSpline
+  - Ident
+  - Poly
   
 - title: regressor-related functions
   desc: >
@@ -62,23 +68,53 @@ reference:
   - blockids
   - blocklens
   - sampling_frame
+  - trialwise
+  - afni_trialwise
+  - null_regressor
+  - single_trial_regressor
+  - convolve
+  - convolve_block
   
 - title: event models
   desc: >
     functions for building and querying event models for regression analysis
 - contents:
   - event_model
+  - event_table
+  - baseline_model
+  - baseline
+  - baseline_terms
+  - baseline_term
+  - block
+  - construct
   - event_factor
   - event_term
+  - event_basis
+  - event_variable
+  - event_matrix
+  - event_terms
+  - matrix_term
   - design_matrix
   - conditions
   - cells
-  - terms
+  - columns
+  - levels
+  - elements
+  # - terms
   - term_names
+  - parent_terms
   - shortnames
   - longnames
-
-- title: event models
+  - is_continuous
+  - is_categorical
+  - term_indices
+  - term_matrices
+  - block_term
+  - nuisance
+  - EV
+  - covariate
+  
+- title: contrasts
   desc: >
     functions for creating statistical contrasts 
 - contents:
@@ -90,10 +126,59 @@ reference:
   - unit_contrast
   - poly_contrast
   - one_against_all_contrast
+  - Fcontrasts
+  - fit_contrasts
+  - estcon
   
+- title: datasets
+  desc: >
+    functions related to fMRI dataset representations
+- contents:
+  - fmri_dataset
+  - latent_dataset
+  - fmri_mem_dataset
+  - matrix_dataset
+  - get_data
+  - get_mask
+  - data_chunks
   
+- title: model execution and stats
+  desc: >
+   functions related to running model functions
+- contents:
+  - fmri_model
+  - fmri_lm
+  - fmri_latent_lm
+  - fmri_rlm
+  - afni_lm
+  - fmri_lm_fit
+  - estimate_betas
+  - gen_afni_lm
+  - p_values
+  - standard_error
+  - run.afni_lm_spec
+  - chunkwise_lm
+  - stats
 
+# - title: display and plotting
+#   desc: >
+#     plotting and display related functions
+# - contents
+#   - design_plot
+# 
   
+- title: miscellaneous 
+  desc: >
+    miscellaneous and utlity functions
+- contents:
+  - split_by_block
+  - split_onsets
+  - plot.regressor
+  - design_plot
+  - read_fmri_config
+  - fmrireg
+  
+    
 
   
   

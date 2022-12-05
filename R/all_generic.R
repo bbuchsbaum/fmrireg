@@ -44,6 +44,7 @@ get_data <- function(x, ...) UseMethod("get_data")
 #' @param x the dataset
 #' @param ... extra args
 #' @export
+#' @keywords internal
 get_mask <- function(x, ...) UseMethod("get_mask")
 
 
@@ -53,6 +54,7 @@ get_mask <- function(x, ...) UseMethod("get_mask")
 #' 
 #' @param x the object
 #' @param ... extra args
+#' @keywords internal
 get_formula <- function(x, ...) UseMethod("get_formula")
 
 #' term_matrices
@@ -87,6 +89,7 @@ shortnames <- function(x, ...) UseMethod("shortnames")
 #' 
 #' @param x the object
 #' @param ... extra args
+#' @keywords internal
 design_env <- function(x, ...) UseMethod("design_env")
 
 
@@ -414,6 +417,7 @@ gen_afni_lm <- function(x, ...) UseMethod("gen_afni_lm")
 #' 
 #' @param x the term
 #' @param ... extra args
+#' @keywords internal
 build_afni_stims <- function(x, ...) UseMethod("build_afni_stims")
 
 #' split an onset vector into a list

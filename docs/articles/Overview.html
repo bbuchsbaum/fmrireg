@@ -43,7 +43,7 @@
   <a href="../reference/index.html">Reference</a>
 </li>
 <li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Articles
      
     <span class="caret"></span>
@@ -100,7 +100,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2022-10-20</h4>
+            <h4 data-toc-skip class="date">2022-12-05</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/HEAD/vignettes/Overview.Rmd" class="external-link"><code>vignettes/Overview.Rmd</code></a></small>
       <div class="hidden name"><code>Overview.Rmd</code></div>
@@ -138,8 +138,8 @@ model of the mapping, or transfer function, between an external stimulus
 (or neural event) and a BOLD signal. A commonly used HRF is the
 so-called SPM canonical HRF:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">24</span>, by<span class="op">=</span><span class="fl">.2</span><span class="op">)</span>
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">time</span>, <span class="fu"><a href="../reference/hrf_spmg1.html">hrf_spmg1</a></span><span class="op">(</span><span class="va">time</span><span class="op">)</span>, type<span class="op">=</span><span class="st">'l'</span>, xlab<span class="op">=</span><span class="st">"time"</span>, ylab<span class="op">=</span><span class="st">"BOLD activity"</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">24</span>, by<span class="op">=</span><span class="fl">.2</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">time</span>, <span class="fu"><a href="../reference/hrf_spmg1.html">hrf_spmg1</a></span><span class="op">(</span><span class="va">time</span><span class="op">)</span>, type<span class="op">=</span><span class="st">'l'</span>, xlab<span class="op">=</span><span class="st">"time"</span>, ylab<span class="op">=</span><span class="st">"BOLD activity"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="Overview_files/figure-html/unnamed-chunk-2-1.png" width="576"></p>
 <p>Currently, <code>fmrireg</code> provides several builtin HRFs that
 can be used to model BOLD activity. See the vignette “Hemodynamic
@@ -171,23 +171,23 @@ vector.</p>
 <p>In the code below, we evaluate the regressor at every time point
 between 1 and 140.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">16</span><span class="op">*</span><span class="fl">8</span>, by<span class="op">=</span><span class="fl">16</span><span class="op">)</span>
-<span class="va">hrf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_hrf.html">gen_hrf</a></span><span class="op">(</span><span class="va">hrf_spmg1</span><span class="op">)</span>
-<span class="va">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span><span class="op">(</span><span class="va">onsets</span>, hrf<span class="op">=</span><span class="va">hrf</span><span class="op">)</span>
-
-<span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">140</span>, by<span class="op">=</span><span class="fl">1</span><span class="op">)</span>
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">grid</span>, <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">reg</span>, <span class="va">grid</span><span class="op">)</span>, type<span class="op">=</span><span class="st">'l'</span>, ylab<span class="op">=</span><span class="st">"BOLD activity"</span>, xlab<span class="op">=</span><span class="st">"time"</span>, main<span class="op">=</span><span class="st">"ISI = 16"</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">16</span><span class="op">*</span><span class="fl">8</span>, by<span class="op">=</span><span class="fl">16</span><span class="op">)</span></span>
+<span><span class="va">hrf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_hrf.html">gen_hrf</a></span><span class="op">(</span><span class="va">hrf_spmg1</span><span class="op">)</span></span>
+<span><span class="va">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span><span class="op">(</span><span class="va">onsets</span>, hrf<span class="op">=</span><span class="va">hrf</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">140</span>, by<span class="op">=</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">grid</span>, <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">reg</span>, <span class="va">grid</span><span class="op">)</span>, type<span class="op">=</span><span class="st">'l'</span>, ylab<span class="op">=</span><span class="st">"BOLD activity"</span>, xlab<span class="op">=</span><span class="st">"time"</span>, main<span class="op">=</span><span class="st">"ISI = 16"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="Overview_files/figure-html/unnamed-chunk-3-1.png" width="576"></p>
 <p>To better illustrate how a regressor sums over its constituent HRFs,
 we can place the onsets closer together, so that the HRFs overlap in
 time:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">16</span><span class="op">*</span><span class="fl">8</span>, by<span class="op">=</span><span class="fl">6</span><span class="op">)</span>
-<span class="va">hrf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_hrf.html">gen_hrf</a></span><span class="op">(</span><span class="va">hrf_spmg1</span><span class="op">)</span>
-<span class="va">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span><span class="op">(</span><span class="va">onsets</span>, hrf<span class="op">=</span><span class="va">hrf</span><span class="op">)</span>
-
-<span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">140</span>, by<span class="op">=</span><span class="fl">1</span><span class="op">)</span>
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">grid</span>, <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">reg</span>, <span class="va">grid</span><span class="op">)</span>, type<span class="op">=</span><span class="st">'l'</span>, ylab<span class="op">=</span><span class="st">"BOLD activity"</span>, xlab<span class="op">=</span><span class="st">"time"</span>, main<span class="op">=</span><span class="st">"ISI = 6"</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">16</span><span class="op">*</span><span class="fl">8</span>, by<span class="op">=</span><span class="fl">6</span><span class="op">)</span></span>
+<span><span class="va">hrf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_hrf.html">gen_hrf</a></span><span class="op">(</span><span class="va">hrf_spmg1</span><span class="op">)</span></span>
+<span><span class="va">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span><span class="op">(</span><span class="va">onsets</span>, hrf<span class="op">=</span><span class="va">hrf</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">140</span>, by<span class="op">=</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">grid</span>, <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">reg</span>, <span class="va">grid</span><span class="op">)</span>, type<span class="op">=</span><span class="st">'l'</span>, ylab<span class="op">=</span><span class="st">"BOLD activity"</span>, xlab<span class="op">=</span><span class="st">"time"</span>, main<span class="op">=</span><span class="st">"ISI = 6"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="Overview_files/figure-html/unnamed-chunk-4-1.png" width="576"></p>
 <p>In <code>fmrireg</code> it is generally not necessary to manually
 create regressors as we have done above. Rather, regressors are created
@@ -225,14 +225,111 @@ and the TR) in a <code>sampling_frame</code> object. Below, we create a
 <code>sampling_frame</code> for an experiment with 5 blocks, each
 containing 200 images, and with a TR of 2s.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">nblocks</span> <span class="op">&lt;-</span> <span class="fl">5</span>
-<span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">200</span>, <span class="fl">5</span><span class="op">)</span>, TR<span class="op">=</span><span class="fl">2</span><span class="op">)</span>
-<span class="va">sframe</span></code></pre></div>
-<pre><code><span class="co">## sampling_frame: </span>
-<span class="co">##   number of blocks: 5 </span>
-<span class="co">##   blocklens:  200, 200, 200, 200, 200 </span>
-<span class="co">##   TR:  2s 2s 2s 2s 2s </span>
-<span class="co">##   start_time:  1s 1s 1s 1s 1s</span></code></pre>
+<code class="sourceCode R"><span><span class="va">nblocks</span> <span class="op">&lt;-</span> <span class="fl">5</span></span>
+<span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">200</span>, <span class="fl">5</span><span class="op">)</span>, TR<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">sframe</span></span></code></pre></div>
+<pre><code><span><span class="co">## $blocklens</span></span>
+<span><span class="co">## [1] 200 200 200 200 200</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $TR</span></span>
+<span><span class="co">## [1] 2 2 2 2 2</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $start_time</span></span>
+<span><span class="co">## [1] 1 1 1 1 1</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $blockids</span></span>
+<span><span class="co">##    [1] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1</span></span>
+<span><span class="co">##   [38] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1</span></span>
+<span><span class="co">##   [75] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1</span></span>
+<span><span class="co">##  [112] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1</span></span>
+<span><span class="co">##  [149] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1</span></span>
+<span><span class="co">##  [186] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2</span></span>
+<span><span class="co">##  [223] 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2</span></span>
+<span><span class="co">##  [260] 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2</span></span>
+<span><span class="co">##  [297] 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2</span></span>
+<span><span class="co">##  [334] 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2</span></span>
+<span><span class="co">##  [371] 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3</span></span>
+<span><span class="co">##  [408] 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3</span></span>
+<span><span class="co">##  [445] 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3</span></span>
+<span><span class="co">##  [482] 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3</span></span>
+<span><span class="co">##  [519] 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3</span></span>
+<span><span class="co">##  [556] 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3</span></span>
+<span><span class="co">##  [593] 3 3 3 3 3 3 3 3 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4</span></span>
+<span><span class="co">##  [630] 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4</span></span>
+<span><span class="co">##  [667] 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4</span></span>
+<span><span class="co">##  [704] 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4</span></span>
+<span><span class="co">##  [741] 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4</span></span>
+<span><span class="co">##  [778] 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 5 5 5 5 5 5 5 5 5 5 5 5 5</span></span>
+<span><span class="co">##  [815] 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5</span></span>
+<span><span class="co">##  [852] 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5</span></span>
+<span><span class="co">##  [889] 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5</span></span>
+<span><span class="co">##  [926] 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5</span></span>
+<span><span class="co">##  [963] 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5</span></span>
+<span><span class="co">## [1000] 5</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $time</span></span>
+<span><span class="co">##    [1]   1   3   5   7   9  11  13  15  17  19  21  23  25  27  29  31  33  35</span></span>
+<span><span class="co">##   [19]  37  39  41  43  45  47  49  51  53  55  57  59  61  63  65  67  69  71</span></span>
+<span><span class="co">##   [37]  73  75  77  79  81  83  85  87  89  91  93  95  97  99 101 103 105 107</span></span>
+<span><span class="co">##   [55] 109 111 113 115 117 119 121 123 125 127 129 131 133 135 137 139 141 143</span></span>
+<span><span class="co">##   [73] 145 147 149 151 153 155 157 159 161 163 165 167 169 171 173 175 177 179</span></span>
+<span><span class="co">##   [91] 181 183 185 187 189 191 193 195 197 199 201 203 205 207 209 211 213 215</span></span>
+<span><span class="co">##  [109] 217 219 221 223 225 227 229 231 233 235 237 239 241 243 245 247 249 251</span></span>
+<span><span class="co">##  [127] 253 255 257 259 261 263 265 267 269 271 273 275 277 279 281 283 285 287</span></span>
+<span><span class="co">##  [145] 289 291 293 295 297 299 301 303 305 307 309 311 313 315 317 319 321 323</span></span>
+<span><span class="co">##  [163] 325 327 329 331 333 335 337 339 341 343 345 347 349 351 353 355 357 359</span></span>
+<span><span class="co">##  [181] 361 363 365 367 369 371 373 375 377 379 381 383 385 387 389 391 393 395</span></span>
+<span><span class="co">##  [199] 397 399   1   3   5   7   9  11  13  15  17  19  21  23  25  27  29  31</span></span>
+<span><span class="co">##  [217]  33  35  37  39  41  43  45  47  49  51  53  55  57  59  61  63  65  67</span></span>
+<span><span class="co">##  [235]  69  71  73  75  77  79  81  83  85  87  89  91  93  95  97  99 101 103</span></span>
+<span><span class="co">##  [253] 105 107 109 111 113 115 117 119 121 123 125 127 129 131 133 135 137 139</span></span>
+<span><span class="co">##  [271] 141 143 145 147 149 151 153 155 157 159 161 163 165 167 169 171 173 175</span></span>
+<span><span class="co">##  [289] 177 179 181 183 185 187 189 191 193 195 197 199 201 203 205 207 209 211</span></span>
+<span><span class="co">##  [307] 213 215 217 219 221 223 225 227 229 231 233 235 237 239 241 243 245 247</span></span>
+<span><span class="co">##  [325] 249 251 253 255 257 259 261 263 265 267 269 271 273 275 277 279 281 283</span></span>
+<span><span class="co">##  [343] 285 287 289 291 293 295 297 299 301 303 305 307 309 311 313 315 317 319</span></span>
+<span><span class="co">##  [361] 321 323 325 327 329 331 333 335 337 339 341 343 345 347 349 351 353 355</span></span>
+<span><span class="co">##  [379] 357 359 361 363 365 367 369 371 373 375 377 379 381 383 385 387 389 391</span></span>
+<span><span class="co">##  [397] 393 395 397 399   1   3   5   7   9  11  13  15  17  19  21  23  25  27</span></span>
+<span><span class="co">##  [415]  29  31  33  35  37  39  41  43  45  47  49  51  53  55  57  59  61  63</span></span>
+<span><span class="co">##  [433]  65  67  69  71  73  75  77  79  81  83  85  87  89  91  93  95  97  99</span></span>
+<span><span class="co">##  [451] 101 103 105 107 109 111 113 115 117 119 121 123 125 127 129 131 133 135</span></span>
+<span><span class="co">##  [469] 137 139 141 143 145 147 149 151 153 155 157 159 161 163 165 167 169 171</span></span>
+<span><span class="co">##  [487] 173 175 177 179 181 183 185 187 189 191 193 195 197 199 201 203 205 207</span></span>
+<span><span class="co">##  [505] 209 211 213 215 217 219 221 223 225 227 229 231 233 235 237 239 241 243</span></span>
+<span><span class="co">##  [523] 245 247 249 251 253 255 257 259 261 263 265 267 269 271 273 275 277 279</span></span>
+<span><span class="co">##  [541] 281 283 285 287 289 291 293 295 297 299 301 303 305 307 309 311 313 315</span></span>
+<span><span class="co">##  [559] 317 319 321 323 325 327 329 331 333 335 337 339 341 343 345 347 349 351</span></span>
+<span><span class="co">##  [577] 353 355 357 359 361 363 365 367 369 371 373 375 377 379 381 383 385 387</span></span>
+<span><span class="co">##  [595] 389 391 393 395 397 399   1   3   5   7   9  11  13  15  17  19  21  23</span></span>
+<span><span class="co">##  [613]  25  27  29  31  33  35  37  39  41  43  45  47  49  51  53  55  57  59</span></span>
+<span><span class="co">##  [631]  61  63  65  67  69  71  73  75  77  79  81  83  85  87  89  91  93  95</span></span>
+<span><span class="co">##  [649]  97  99 101 103 105 107 109 111 113 115 117 119 121 123 125 127 129 131</span></span>
+<span><span class="co">##  [667] 133 135 137 139 141 143 145 147 149 151 153 155 157 159 161 163 165 167</span></span>
+<span><span class="co">##  [685] 169 171 173 175 177 179 181 183 185 187 189 191 193 195 197 199 201 203</span></span>
+<span><span class="co">##  [703] 205 207 209 211 213 215 217 219 221 223 225 227 229 231 233 235 237 239</span></span>
+<span><span class="co">##  [721] 241 243 245 247 249 251 253 255 257 259 261 263 265 267 269 271 273 275</span></span>
+<span><span class="co">##  [739] 277 279 281 283 285 287 289 291 293 295 297 299 301 303 305 307 309 311</span></span>
+<span><span class="co">##  [757] 313 315 317 319 321 323 325 327 329 331 333 335 337 339 341 343 345 347</span></span>
+<span><span class="co">##  [775] 349 351 353 355 357 359 361 363 365 367 369 371 373 375 377 379 381 383</span></span>
+<span><span class="co">##  [793] 385 387 389 391 393 395 397 399   1   3   5   7   9  11  13  15  17  19</span></span>
+<span><span class="co">##  [811]  21  23  25  27  29  31  33  35  37  39  41  43  45  47  49  51  53  55</span></span>
+<span><span class="co">##  [829]  57  59  61  63  65  67  69  71  73  75  77  79  81  83  85  87  89  91</span></span>
+<span><span class="co">##  [847]  93  95  97  99 101 103 105 107 109 111 113 115 117 119 121 123 125 127</span></span>
+<span><span class="co">##  [865] 129 131 133 135 137 139 141 143 145 147 149 151 153 155 157 159 161 163</span></span>
+<span><span class="co">##  [883] 165 167 169 171 173 175 177 179 181 183 185 187 189 191 193 195 197 199</span></span>
+<span><span class="co">##  [901] 201 203 205 207 209 211 213 215 217 219 221 223 225 227 229 231 233 235</span></span>
+<span><span class="co">##  [919] 237 239 241 243 245 247 249 251 253 255 257 259 261 263 265 267 269 271</span></span>
+<span><span class="co">##  [937] 273 275 277 279 281 283 285 287 289 291 293 295 297 299 301 303 305 307</span></span>
+<span><span class="co">##  [955] 309 311 313 315 317 319 321 323 325 327 329 331 333 335 337 339 341 343</span></span>
+<span><span class="co">##  [973] 345 347 349 351 353 355 357 359 361 363 365 367 369 371 373 375 377 379</span></span>
+<span><span class="co">##  [991] 381 383 385 387 389 391 393 395 397 399</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $precision</span></span>
+<span><span class="co">## [1] 0.1</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## attr(,"class")</span></span>
+<span><span class="co">## [1] "sampling_frame" "list"</span></span></code></pre>
 </div>
   </div>
 
@@ -248,14 +345,12 @@ containing 200 images, and with a TR of 2s.</p>
 
       <footer><div class="copyright">
   <p></p>
-<p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley
-Buchsbaum</a>.</p>
+<p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">
   <p></p>
-<p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a>
-2.0.2.</p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer>

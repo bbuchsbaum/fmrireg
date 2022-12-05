@@ -26,7 +26,7 @@
   <a href="../reference/index.html">Reference</a>
 </li>
 <li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Articles
      
     <span class="caret"></span>
@@ -81,48 +81,69 @@
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">afni_hrf</span><span class="op">(</span>
-  <span class="va">...</span>,
-  basis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"spmg1"</span>, <span class="st">"block"</span>, <span class="st">"dmblock"</span>, <span class="st">"tent"</span>, <span class="st">"csplin"</span>, <span class="st">"poly"</span>, <span class="st">"sin"</span>, <span class="st">"gam"</span>, <span class="st">"spmg2"</span>,
-    <span class="st">"spmg3"</span>, <span class="st">"wav"</span><span class="op">)</span>,
-  onsets <span class="op">=</span> <span class="cn">NULL</span>,
-  durations <span class="op">=</span> <span class="cn">NULL</span>,
-  prefix <span class="op">=</span> <span class="cn">NULL</span>,
-  subset <span class="op">=</span> <span class="cn">NULL</span>,
-  nbasis <span class="op">=</span> <span class="fl">1</span>,
-  contrasts <span class="op">=</span> <span class="cn">NULL</span>,
-  id <span class="op">=</span> <span class="cn">NULL</span>,
-  start <span class="op">=</span> <span class="cn">NULL</span>,
-  stop <span class="op">=</span> <span class="cn">NULL</span>
-<span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">afni_hrf</span><span class="op">(</span></span>
+<span>  <span class="va">...</span>,</span>
+<span>  basis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"spmg1"</span>, <span class="st">"block"</span>, <span class="st">"dmblock"</span>, <span class="st">"tent"</span>, <span class="st">"csplin"</span>, <span class="st">"poly"</span>, <span class="st">"sin"</span>, <span class="st">"gam"</span>, <span class="st">"spmg2"</span>,</span>
+<span>    <span class="st">"spmg3"</span>, <span class="st">"wav"</span><span class="op">)</span>,</span>
+<span>  onsets <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  durations <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  prefix <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  subset <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  nbasis <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  contrasts <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  id <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  start <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  stop <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
     <dl><dt>...</dt>
 <dd><p>the variable names, all of which must be present in the enclosing environment (e.g. an <code>event_model</code> object)</p></dd>
+
+
 <dt>basis</dt>
 <dd><p>the impulse response function or the name of a pre-supplied function, one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian".</p></dd>
+
+
 <dt>onsets</dt>
 <dd><p>optional onsets override. If missing, onsets will be taken from the <code>event_model</code></p></dd>
+
+
 <dt>durations</dt>
 <dd><p>optional durations override. If missing, onsets will be taken from the <code>event_model</code></p></dd>
+
+
 <dt>prefix</dt>
 <dd><p>a character string that is prepended to the variable names and used to identify the term.
 Can be used to disambiguate two <code>hrf</code> terms with the same variable(s) but different onsets or basis functions.</p></dd>
+
+
 <dt>subset</dt>
 <dd><p>an expression indicating the subset of 'onsets' to keep</p></dd>
+
+
 <dt>nbasis</dt>
 <dd><p>number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.</p></dd>
+
+
 <dt>contrasts</dt>
 <dd><p>one or more <code>contrast_spec</code> objects created with the <code>contrast</code> function.
 If multiple contrasts are required, then these should be wrapped in a <code>list</code> or <code>contrast_set</code>.</p></dd>
+
+
 <dt>id</dt>
 <dd><p>a  unique <code>character</code> identifier used to refer to term, otherwise will be determined from variable names.</p></dd>
+
+
 <dt>start</dt>
 <dd><p>the start of the window for sin/poly/csplin models</p></dd>
+
+
 <dt>stop</dt>
 <dd><p>the stop time for sin/poly/csplin models</p></dd>
+
 </dl></div>
 
   </div>
@@ -133,13 +154,11 @@ If multiple contrasts are required, then these should be wrapped in a <code>list
 
 
       <footer><div class="copyright">
-  <p></p><p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley
-Buchsbaum</a>.</p>
+  <p></p><p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a>
-2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>

@@ -25,6 +25,7 @@ dctbasis <- function(n, p=n, const=FALSE) {
 #' 
 #' @param x the object
 #' @param subset the subset
+#' @keywords internal
 sub_basis <-  function(x, subset) UseMethod("sub_basis")
 
 

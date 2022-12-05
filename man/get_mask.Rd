@@ -14,3 +14,4 @@ get_mask(x, ...)
 \description{
 get the binary inclusion mask associated with a dataset
 }
+\keyword{internal}

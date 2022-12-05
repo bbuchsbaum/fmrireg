@@ -26,7 +26,7 @@
   <a href="../reference/index.html">Reference</a>
 </li>
 <li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Articles
      
     <span class="caret"></span>
@@ -81,49 +81,56 @@
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">matrix_dataset</span><span class="op">(</span><span class="va">datamat</span>, <span class="va">TR</span>, <span class="va">run_length</span>, event_table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">matrix_dataset</span><span class="op">(</span><span class="va">datamat</span>, <span class="va">TR</span>, <span class="va">run_length</span>, event_table <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
     <dl><dt>datamat</dt>
 <dd><p>a <code>matrix</code> each column is a voxel time-series</p></dd>
+
+
 <dt>TR</dt>
 <dd><p>the repetition time in seconds of the scan-to-scan interval.</p></dd>
+
+
 <dt>run_length</dt>
 <dd><p>a <code>vector</code> of one or more integers indicating the number of scans in each run.</p></dd>
+
+
 <dt>event_table</dt>
 <dd><p>a <code>data.frame</code> containing the event onsets and experimental variables.</p></dd>
+
 </dl></div>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"></span>
-<span class="r-in"><span class="co">## a matrix with 100 rows and 100 columns (voxels)</span></span>
-<span class="r-in"><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">*</span><span class="fl">100</span><span class="op">)</span>, <span class="fl">100</span>, <span class="fl">100</span><span class="op">)</span></span>
-<span class="r-in"><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu">matrix_dataset</span><span class="op">(</span><span class="va">X</span>, TR<span class="op">=</span><span class="fl">2</span>, run_length<span class="op">=</span><span class="fl">100</span><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co">## an iterator with 5 chunks</span></span>
-<span class="r-in"><span class="va">iter</span> <span class="op">&lt;-</span> <span class="fu"><a href="data_chunks.html">data_chunks</a></span><span class="op">(</span><span class="va">dset</span>, nchunks<span class="op">=</span><span class="fl">5</span><span class="op">)</span></span>
-<span class="r-in"><span class="va">`%do%`</span> <span class="op">&lt;-</span> <span class="fu">foreach</span><span class="fu">::</span><span class="va">`%do%`</span></span>
-<span class="r-in"><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu">foreach</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/foreach/man/foreach.html" class="external-link">foreach</a></span><span class="op">(</span>chunk <span class="op">=</span> <span class="va">iter</span><span class="op">)</span> <span class="op">%do%</span> <span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans</a></span><span class="op">(</span><span class="va">chunk</span><span class="op">$</span><span class="va">data</span><span class="op">)</span> <span class="op">}</span></span>
-<span class="r-in"><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">y</span><span class="op">)</span> <span class="op">==</span> <span class="fl">5</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## a matrix with 100 rows and 100 columns (voxels)</span></span></span>
+<span class="r-in"><span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">*</span><span class="fl">100</span><span class="op">)</span>, <span class="fl">100</span>, <span class="fl">100</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu">matrix_dataset</span><span class="op">(</span><span class="va">X</span>, TR<span class="op">=</span><span class="fl">2</span>, run_length<span class="op">=</span><span class="fl">100</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## an iterator with 5 chunks</span></span></span>
+<span class="r-in"><span><span class="va">iter</span> <span class="op">&lt;-</span> <span class="fu"><a href="data_chunks.html">data_chunks</a></span><span class="op">(</span><span class="va">dset</span>, nchunks<span class="op">=</span><span class="fl">5</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">`%do%`</span> <span class="op">&lt;-</span> <span class="fu">foreach</span><span class="fu">::</span><span class="va">`%do%`</span></span></span>
+<span class="r-in"><span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu">foreach</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/foreach/man/foreach.html" class="external-link">foreach</a></span><span class="op">(</span>chunk <span class="op">=</span> <span class="va">iter</span><span class="op">)</span> <span class="op">%do%</span> <span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans</a></span><span class="op">(</span><span class="va">chunk</span><span class="op">$</span><span class="va">data</span><span class="op">)</span> <span class="op">}</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">y</span><span class="op">)</span> <span class="op">==</span> <span class="fl">5</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] TRUE</span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co">## an iterator with 100 chunks</span></span>
-<span class="r-in"><span class="va">iter</span> <span class="op">&lt;-</span> <span class="fu"><a href="data_chunks.html">data_chunks</a></span><span class="op">(</span><span class="va">dset</span>, nchunks<span class="op">=</span><span class="fl">100</span><span class="op">)</span></span>
-<span class="r-in"><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu">foreach</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/foreach/man/foreach.html" class="external-link">foreach</a></span><span class="op">(</span>chunk <span class="op">=</span> <span class="va">iter</span><span class="op">)</span> <span class="op">%do%</span> <span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans</a></span><span class="op">(</span><span class="va">chunk</span><span class="op">$</span><span class="va">data</span><span class="op">)</span> <span class="op">}</span></span>
-<span class="r-in"><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">y</span><span class="op">)</span> <span class="op">==</span> <span class="fl">100</span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## an iterator with 100 chunks</span></span></span>
+<span class="r-in"><span><span class="va">iter</span> <span class="op">&lt;-</span> <span class="fu"><a href="data_chunks.html">data_chunks</a></span><span class="op">(</span><span class="va">dset</span>, nchunks<span class="op">=</span><span class="fl">100</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu">foreach</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/foreach/man/foreach.html" class="external-link">foreach</a></span><span class="op">(</span>chunk <span class="op">=</span> <span class="va">iter</span><span class="op">)</span> <span class="op">%do%</span> <span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans</a></span><span class="op">(</span><span class="va">chunk</span><span class="op">$</span><span class="va">data</span><span class="op">)</span> <span class="op">}</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">y</span><span class="op">)</span> <span class="op">==</span> <span class="fl">100</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] TRUE</span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co">## a matrix_dataset with 200 rows, 100 columns and 2 runs</span></span>
-<span class="r-in"><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">200</span><span class="op">*</span><span class="fl">100</span><span class="op">)</span>, <span class="fl">200</span>, <span class="fl">100</span><span class="op">)</span></span>
-<span class="r-in"><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu">matrix_dataset</span><span class="op">(</span><span class="va">X</span>, TR<span class="op">=</span><span class="fl">2</span>, run_length<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>,<span class="fl">100</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co">## get a "runwise" iterator. For every iteration an entire run's worth of data is returned.</span></span>
-<span class="r-in"><span class="va">iter</span> <span class="op">&lt;-</span> <span class="fu"><a href="data_chunks.html">data_chunks</a></span><span class="op">(</span><span class="va">dset</span>, runwise<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span>
-<span class="r-in"><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu">foreach</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/foreach/man/foreach.html" class="external-link">foreach</a></span><span class="op">(</span>chunk <span class="op">=</span> <span class="va">iter</span><span class="op">)</span>  <span class="op">%do%</span> <span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans</a></span><span class="op">(</span><span class="va">chunk</span><span class="op">$</span><span class="va">data</span><span class="op">)</span> <span class="op">}</span></span>
-<span class="r-in"><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">y</span><span class="op">)</span> <span class="op">==</span> <span class="fl">2</span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## a matrix_dataset with 200 rows, 100 columns and 2 runs</span></span></span>
+<span class="r-in"><span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">200</span><span class="op">*</span><span class="fl">100</span><span class="op">)</span>, <span class="fl">200</span>, <span class="fl">100</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu">matrix_dataset</span><span class="op">(</span><span class="va">X</span>, TR<span class="op">=</span><span class="fl">2</span>, run_length<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>,<span class="fl">100</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## get a "runwise" iterator. For every iteration an entire run's worth of data is returned.</span></span></span>
+<span class="r-in"><span><span class="va">iter</span> <span class="op">&lt;-</span> <span class="fu"><a href="data_chunks.html">data_chunks</a></span><span class="op">(</span><span class="va">dset</span>, runwise<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu">foreach</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/foreach/man/foreach.html" class="external-link">foreach</a></span><span class="op">(</span>chunk <span class="op">=</span> <span class="va">iter</span><span class="op">)</span>  <span class="op">%do%</span> <span class="op">{</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans</a></span><span class="op">(</span><span class="va">chunk</span><span class="op">$</span><span class="va">data</span><span class="op">)</span> <span class="op">}</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">y</span><span class="op">)</span> <span class="op">==</span> <span class="fl">2</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] TRUE</span>
 </code></pre></div>
     </div>
@@ -135,13 +142,11 @@
 
 
       <footer><div class="copyright">
-  <p></p><p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley
-Buchsbaum</a>.</p>
+  <p></p><p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a>
-2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>

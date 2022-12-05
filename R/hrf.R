@@ -504,7 +504,7 @@ nbasis.HRF <- function(x) attr(x, "nbasis")
 #' @param name the name of the hrf function
 #' @param nbasis the number of basis functions (if relevant)
 #' @inheritParams gen_hrf
-#' @export
+#' @keywords internal
 getHRF <- function(name=c("gam", "gamma", "spmg1", "spmg2", 
                           "spmg3", "bspline", "gaussian", "tent", "bs"), 
                    nbasis=5, span=24,lag=0,width=0, summate=TRUE, normalize=FALSE, ...) {

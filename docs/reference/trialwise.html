@@ -26,7 +26,7 @@
   <a href="../reference/index.html">Reference</a>
 </li>
 <li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Articles
      
     <span class="caret"></span>
@@ -81,47 +81,64 @@
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">trialwise</span><span class="op">(</span>
-  label <span class="op">=</span> <span class="st">"trialwise"</span>,
-  basis <span class="op">=</span> <span class="st">"spmg1"</span>,
-  onsets <span class="op">=</span> <span class="cn">NULL</span>,
-  durations <span class="op">=</span> <span class="cn">NULL</span>,
-  prefix <span class="op">=</span> <span class="cn">NULL</span>,
-  subset <span class="op">=</span> <span class="cn">NULL</span>,
-  precision <span class="op">=</span> <span class="fl">0.3</span>,
-  id <span class="op">=</span> <span class="cn">NULL</span>,
-  add_sum <span class="op">=</span> <span class="cn">FALSE</span>
-<span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">trialwise</span><span class="op">(</span></span>
+<span>  label <span class="op">=</span> <span class="st">"trialwise"</span>,</span>
+<span>  basis <span class="op">=</span> <span class="st">"spmg1"</span>,</span>
+<span>  onsets <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  durations <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  prefix <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  subset <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  precision <span class="op">=</span> <span class="fl">0.3</span>,</span>
+<span>  id <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  add_sum <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
     <dl><dt>label</dt>
 <dd><p>the label for the generated variable.</p></dd>
+
+
 <dt>basis</dt>
 <dd><p>the impulse response function or the name of a pre-supplied function, one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian".</p></dd>
+
+
 <dt>onsets</dt>
 <dd><p>optional onsets override. If missing, onsets will be taken from the <code>event_model</code></p></dd>
+
+
 <dt>durations</dt>
 <dd><p>optional durations override. If missing, onsets will be taken from the <code>event_model</code></p></dd>
+
+
 <dt>prefix</dt>
 <dd><p>a character string that is prepended to the variable names and used to identify the term.
 Can be used to disambiguate two <code>hrf</code> terms with the same variable(s) but different onsets or basis functions.</p></dd>
+
+
 <dt>subset</dt>
 <dd><p>an expression indicating the subset of 'onsets' to keep</p></dd>
+
+
 <dt>precision</dt>
 <dd><p>sampling precision in seconds</p></dd>
+
+
 <dt>id</dt>
 <dd><p>a  unique <code>character</code> identifier used to refer to term, otherwise will be determined from variable names.</p></dd>
+
+
 <dt>add_sum</dt>
 <dd><p>add the sum of all trialwise regressors to the set.
 This can be sued to model the average effect.</p></dd>
+
 </dl></div>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu">trialwise</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"gaussian"</span>, onsets<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">17</span>,<span class="fl">25</span><span class="op">)</span>, durations<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">2</span>,<span class="fl">3</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-in"></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu">trialwise</span><span class="op">(</span>basis<span class="op">=</span><span class="st">"gaussian"</span>, onsets<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">17</span>,<span class="fl">25</span><span class="op">)</span>, durations<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">2</span>,<span class="fl">3</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
   </div>
@@ -132,13 +149,11 @@ This can be sued to model the average effect.</p></dd>
 
 
       <footer><div class="copyright">
-  <p></p><p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley
-Buchsbaum</a>.</p>
+  <p></p><p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a>
-2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>

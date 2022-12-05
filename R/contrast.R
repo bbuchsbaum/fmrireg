@@ -409,7 +409,7 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
 #' 
 #' @param x the contrast to convert
 #' @param ... extra args
-#' @export
+#' @keywords internal
 to_glt <- function(x, ...) UseMethod("to_glt")
 
 
@@ -440,9 +440,9 @@ to_glt.contrast <- function(x,...) {
 
 #' write a GLT file to disk
 #' 
-#' @export
 #' @param x the object
 #' @param fname the file name to write to
+#' @keywords internal
 write_glt <- function(x, fname) UseMethod("write_glt")
 
 #' @export

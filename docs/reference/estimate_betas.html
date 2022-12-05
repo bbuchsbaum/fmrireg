@@ -26,7 +26,7 @@
   <a href="../reference/index.html">Reference</a>
 </li>
 <li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Articles
      
     <span class="caret"></span>
@@ -81,77 +81,100 @@
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">estimate_betas</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span>
-
-<span class="co"># S3 method for fmri_dataset</span>
-<span class="fu">estimate_betas</span><span class="op">(</span>
-  <span class="va">x</span>,
-  fixed <span class="op">=</span> <span class="cn">NULL</span>,
-  <span class="va">ran</span>,
-  <span class="va">block</span>,
-  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mixed"</span>, <span class="st">"pls"</span>, <span class="st">"pls_searchlight"</span>, <span class="st">"pls_global"</span>, <span class="st">"ols"</span><span class="op">)</span>,
-  basemod <span class="op">=</span> <span class="cn">NULL</span>,
-  radius <span class="op">=</span> <span class="fl">8</span>,
-  niter <span class="op">=</span> <span class="fl">8</span>,
-  ncomp <span class="op">=</span> <span class="fl">4</span>,
-  lambda <span class="op">=</span> <span class="fl">0.01</span>,
-  <span class="va">...</span>
-<span class="op">)</span>
-
-<span class="co"># S3 method for matrix_dataset</span>
-<span class="fu">estimate_betas</span><span class="op">(</span>
-  <span class="va">x</span>,
-  fixed <span class="op">=</span> <span class="cn">NULL</span>,
-  <span class="va">ran</span>,
-  <span class="va">block</span>,
-  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mixed"</span>, <span class="st">"pls"</span>, <span class="st">"pls_global"</span>, <span class="st">"ols"</span><span class="op">)</span>,
-  basemod <span class="op">=</span> <span class="cn">NULL</span>,
-  ncomp <span class="op">=</span> <span class="fl">4</span>,
-  lambda <span class="op">=</span> <span class="fl">0.01</span>,
-  <span class="va">...</span>
-<span class="op">)</span>
-
-<span class="co"># S3 method for latent_dataset</span>
-<span class="fu">estimate_betas</span><span class="op">(</span>
-  <span class="va">x</span>,
-  fixed <span class="op">=</span> <span class="cn">NULL</span>,
-  <span class="va">ran</span>,
-  <span class="va">block</span>,
-  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mixed"</span>, <span class="st">"pls"</span>, <span class="st">"pls_global"</span>, <span class="st">"ols"</span><span class="op">)</span>,
-  basemod <span class="op">=</span> <span class="cn">NULL</span>,
-  ncomp <span class="op">=</span> <span class="fl">4</span>,
-  lambda <span class="op">=</span> <span class="fl">0.01</span>,
-  prewhiten <span class="op">=</span> <span class="cn">TRUE</span>,
-  <span class="va">...</span>
-<span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">estimate_betas</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for fmri_dataset</span></span>
+<span><span class="fu">estimate_betas</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  fixed <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  <span class="va">ran</span>,</span>
+<span>  <span class="va">block</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mixed"</span>, <span class="st">"pls"</span>, <span class="st">"pls_searchlight"</span>, <span class="st">"pls_global"</span>, <span class="st">"ols"</span><span class="op">)</span>,</span>
+<span>  basemod <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  radius <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  niter <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  ncomp <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>  lambda <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for matrix_dataset</span></span>
+<span><span class="fu">estimate_betas</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  fixed <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  <span class="va">ran</span>,</span>
+<span>  <span class="va">block</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mixed"</span>, <span class="st">"pls"</span>, <span class="st">"pls_global"</span>, <span class="st">"ols"</span><span class="op">)</span>,</span>
+<span>  basemod <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  ncomp <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>  lambda <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for latent_dataset</span></span>
+<span><span class="fu">estimate_betas</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  fixed <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  <span class="va">ran</span>,</span>
+<span>  <span class="va">block</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mixed"</span>, <span class="st">"pls"</span>, <span class="st">"pls_global"</span>, <span class="st">"ols"</span><span class="op">)</span>,</span>
+<span>  basemod <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  ncomp <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>  lambda <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  prewhiten <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
     <dl><dt>x</dt>
 <dd><p>the dataset</p></dd>
+
+
 <dt>...</dt>
 <dd><p>extra args</p></dd>
+
+
 <dt>fixed</dt>
 <dd><p>a formula for the fixed regressors that model constant effects (i.e. non-varying over trials)</p></dd>
+
+
 <dt>ran</dt>
 <dd><p>a formula for the random (trialwise) regressors that model single trial effects</p></dd>
+
+
 <dt>block</dt>
 <dd><p>a formula for the block factor</p></dd>
+
+
 <dt>method</dt>
 <dd><p>the regression method for estimating trialwise betas</p></dd>
+
+
 <dt>basemod</dt>
 <dd><p><code>baseline_model</code> instance to regress out of data before beta estimation</p></dd>
+
+
 <dt>radius</dt>
 <dd><p>the radius in mm for <code>pls_searchlight</code> approach</p></dd>
+
+
 <dt>niter</dt>
 <dd><p>number of searchlight iterations for method "pls_searchlight"</p></dd>
+
+
 <dt>ncomp</dt>
 <dd><p>number of pls components for method "pls" and "pls_searchlight" and "pls_global"</p></dd>
+
+
 <dt>lambda</dt>
 <dd><p>lambda parameter (not currently used)</p></dd>
+
+
 <dt>prewhiten</dt>
 <dd><p>whether to prewhiten basis set using <code>auto.arima</code></p></dd>
+
 </dl></div>
     <div id="details">
     <h2>Details</h2>
@@ -164,18 +187,18 @@
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="va">facedes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.table</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"face_design.txt"</span>, package <span class="op">=</span> <span class="st">"fmrireg"</span><span class="op">)</span>, header<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span>
-<span class="r-in"><span class="va">facedes</span><span class="op">$</span><span class="va">frun</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">facedes</span><span class="op">$</span><span class="va">run</span><span class="op">)</span></span>
-<span class="r-in"><span class="va">scans</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"rscan0"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">6</span>, <span class="st">".nii"</span><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="fmri_dataset.html">fmri_dataset</a></span><span class="op">(</span>scans<span class="op">=</span><span class="va">scans</span>,mask<span class="op">=</span><span class="st">"mask.nii"</span>,TR<span class="op">=</span><span class="fl">1.5</span>,run_length<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">436</span>,<span class="fl">6</span><span class="op">)</span>,event_table<span class="op">=</span><span class="va">facedes</span><span class="op">)</span></span>
-<span class="r-in"><span class="va">fixed</span> <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="hrf.html">hrf</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span></span>
-<span class="r-in"><span class="va">ran</span> <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="trialwise.html">trialwise</a></span><span class="op">(</span><span class="op">)</span></span>
-<span class="r-in"><span class="va">block</span> <span class="op">=</span> <span class="op">~</span> <span class="va">run</span></span>
-<span class="r-in"></span>
-<span class="r-in"></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">facedes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.table</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"face_design.txt"</span>, package <span class="op">=</span> <span class="st">"fmrireg"</span><span class="op">)</span>, header<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">facedes</span><span class="op">$</span><span class="va">frun</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">facedes</span><span class="op">$</span><span class="va">run</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">scans</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"rscan0"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">6</span>, <span class="st">".nii"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="fmri_dataset.html">fmri_dataset</a></span><span class="op">(</span>scans<span class="op">=</span><span class="va">scans</span>,mask<span class="op">=</span><span class="st">"mask.nii"</span>,TR<span class="op">=</span><span class="fl">1.5</span>,run_length<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">436</span>,<span class="fl">6</span><span class="op">)</span>,event_table<span class="op">=</span><span class="va">facedes</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">fixed</span> <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="hrf.html">hrf</a></span><span class="op">(</span><span class="va">run</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">ran</span> <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="trialwise.html">trialwise</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">block</span> <span class="op">=</span> <span class="op">~</span> <span class="va">run</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
   </div>
@@ -186,13 +209,11 @@
 
 
       <footer><div class="copyright">
-  <p></p><p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley
-Buchsbaum</a>.</p>
+  <p></p><p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a>
-2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>
