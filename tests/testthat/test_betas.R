@@ -8,16 +8,7 @@ test_that("can run a beta estimation", {
   facedes$frun <- factor(facedes$run)
   facedes$constant <- factor(rep(1, nrow(facedes)))
   
-<<<<<<< HEAD
-  
-  scans <- lapply(1:length(unique(facedes$run)), function(i) {
-    arr <- array(rnorm(5*5*5*200), c(5,5,5, 200))
-    bspace <- neuroim2::NeuroSpace(dim=c(5,5,5,200))
-    neuroim2::NeuroVec(arr, bspace)
-  })
-  
-  mask <- neuroim2::LogicalNeuroVol(array(rnorm(5*5*5), c(5,5,5)) > 0, neuroim2::NeuroSpace(dim=c(5,5,5)))
-=======
+
   facedes <- facedes %>% filter(run==1)
   
   D <- 5
@@ -28,7 +19,7 @@ test_that("can run a beta estimation", {
   })
   
   mask <- neuroim2::LogicalNeuroVol(array(rnorm(D*D*D), c(D,D,D)) > 0, neuroim2::NeuroSpace(dim=c(D,D,D)))
->>>>>>> e179694f91d576e999b0ddf906cf7a8e25f83f82
+
   
   #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
   dset <- fmri_mem_dataset(scans=scans, 
