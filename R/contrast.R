@@ -1,3 +1,7 @@
+## TODO
+
+## when contrasts are misspecified or have spelling errors, errors need to be infromative.
+
 
 #' contrast specification
 #' 
@@ -28,9 +32,9 @@ contrast <- function(form, name, where=NULL) {
 }
 
 
-#' Create a set of contrasts
+#' create a set of contrasts
 #' 
-#' Construct a \code{list} of \code{contrast_spec} objects
+#' construct a \code{list} of \code{contrast_spec} objects
 #' 
 #' @param ... a variable length list of \code{contrast_spec} objects.
 #' 
@@ -58,6 +62,7 @@ contrast_set <- function(...) {
 #' @examples 
 #' pairwise_contrasts(c("A", "B", "C"))
 #' @export
+#' @importFrom utils combn
 pairwise_contrasts <- function(levels, where=NULL) {
   if (!is.null(where)) {
     assert_that(lazyeval::is_formula(where))
@@ -73,7 +78,32 @@ pairwise_contrasts <- function(levels, where=NULL) {
   do.call(contrast_set, ret)
 }
   
-
+#' A contrast that compares each level vs the average of the other levels.
+#' 
+#' @inheritParams pairwise_contrasts
+#' @param facname the name of the factor containing the supplied levels.
+#' @export
+#' 
+#' @examples 
+#' 
+#' fac <- factor(rep(c("A", "B", "C"), 2))
+#' con <- one_against_all_contrast(levels(fac), "fac")
+one_against_all_contrast <- function(levels, facname, where=NULL) {
+  if (!is.null(where)) {
+    assert_that(lazyeval::is_formula(where))
+  }
+  
+  ret <- lapply(1:length(levels), function(i) {
+    lev1 <- levels[i]
+    levother <- levels[-i]
+    pair_contrast(as.formula(paste("~", facname, " == ", paste0('"', lev1, '"'))), 
+                             as.formula(paste0("~", facname, "!= ", paste0('"', lev1, '"'))), 
+                  where=where, name=paste0("con_", lev1, "_vs_", "other"))
+  })
+  
+  do.call(contrast_set, ret)
+  
+}
 
 #' pair_contrast
 #' 
@@ -136,7 +166,7 @@ unit_contrast <- function(A, name, where=NULL) {
 }
 
 #' @export
-contrast_weights.unit_contrast_spec <- function(x, term) {
+contrast_weights.unit_contrast_spec <- function(x, term,...) {
   term.cells <- cells(term)
   
   if (!is.null(x$where)) {
@@ -203,10 +233,10 @@ poly_contrast <- function(A, name, where=NULL, degree=1, value_map=NULL) {
 
 
 #' @export
-contrast_weights.poly_contrast_spec <- function(x, term) {
- 
+contrast_weights.poly_contrast_spec <- function(x, term,...) {
   term.cells <- cells(term)
-  row.names(term.cells) <- longnames(term)
+  term.cells <- term.cells %>% mutate(rowname=longnames(term))
+  #row.names(term.cells) <- longnames(term)
  
   #keep <- eval(x$where, envir=term.cells, enclos=parent.frame())	
   if (!is.null(x$where)) {
@@ -230,7 +260,8 @@ contrast_weights.poly_contrast_spec <- function(x, term) {
  
   weights <- matrix(0, NROW(term.cells), x$degree)	
   pvals <- stats::poly(vals, degree=x$degree)
-  row.names(weights) <- row.names(term.cells)
+  #row.names(weights) <- row.names(term.cells)
+  row.names(weights) <- term.cells$rowname
   colnames(weights) <- paste("poly", 1:x$degree, sep="")
   
   weights[keep, ] <- pvals
@@ -274,7 +305,7 @@ makeWeights <- function(keepA, keepB=NULL) {
 }
 
 #' @export
-contrast_weights.contrast_diff_spec <- function(x, term) {
+contrast_weights.contrast_diff_spec <- function(x, term,...) {
   wts1 <- contrast_weights(x$con1, term)
   wts2 <- contrast_weights(x$con2, term)
 
@@ -292,7 +323,7 @@ contrast_weights.contrast_diff_spec <- function(x, term) {
 }
 
 #' @export
-contrast_weights.pair_contrast_spec <- function(x, term) {
+contrast_weights.pair_contrast_spec <- function(x, term,...) {
   term.cells <- cells(term)
   
   count <- attr(term.cells, "count")		
@@ -330,7 +361,7 @@ contrast_weights.pair_contrast_spec <- function(x, term) {
 }
 
 #' @export
-contrast_weights.contrast_formula_spec <- function(x, term) {
+contrast_weights.contrast_formula_spec <- function(x, term,...) {
 
   term.cells <- cells(term)
   cform <- as.formula(paste("~", paste0(names(term.cells), collapse=":"), "-1"))
@@ -346,10 +377,18 @@ contrast_weights.contrast_formula_spec <- function(x, term) {
     keep <- rep(TRUE, nrow(term.cells))
   }
 
-  A <- as.formula(paste("~", gsub(":", ".", deparse(lazyeval::f_rhs(x$A)))))
-  modmat <- tibble::as_tibble(model.matrix(cform,data=term.cells))
-  names(modmat) <- gsub(":", ".", condnames)
+  frm <- paste0(gsub(":", ".", deparse(lazyeval::f_rhs(x$A))), collapse="")
+  A <- as.formula(paste("~", frm))
   
+  if (is_continuous.event_term(term)) {
+    ## hack to handle contrasts with continuous terms
+    facs <- !sapply(term$evterm$events, is_continuous)
+    term.cells[,!facs] <- 1
+  } 
+  
+  modmat <- suppressMessages(tibble::as_tibble(model.matrix(cform,data=term.cells), 
+                                               .name_repair="check_unique"))
+  names(modmat) <- gsub(":", ".", condnames)
   weights <- matrix(0, NROW(term.cells), 1)
   weights[keep,1] <-  as.vector(lazyeval::f_eval_rhs(A, data=modmat))
   row.names(weights) <- row.names(term.cells)
@@ -370,7 +409,7 @@ contrast_weights.contrast_formula_spec <- function(x, term) {
 #' 
 #' @param x the contrast to convert
 #' @param ... extra args
-#' @export
+#' @keywords internal
 to_glt <- function(x, ...) UseMethod("to_glt")
 
 
@@ -399,7 +438,11 @@ to_glt.contrast <- function(x,...) {
 }
 
 
-#' @export
+#' write a GLT file to disk
+#' 
+#' @param x the object
+#' @param fname the file name to write to
+#' @keywords internal
 write_glt <- function(x, fname) UseMethod("write_glt")
 
 #' @export
@@ -416,7 +459,7 @@ write_glt.glt_contrast <- function(x, fname=NULL) {
 
 #' @importFrom gmodels estimable
 #' @export
-estcon.contrast <- function(x, fit, indices) {
+estcon.contrast <- function(x, fit, indices, ...) {
   wts <- numeric(length(fit$assign))
   wts[indices] <- x$weights
   
@@ -424,7 +467,7 @@ estcon.contrast <- function(x, fit, indices) {
 }
 
 #' @export
-print.contrast_set <- function(x) {
+print.contrast_set <- function(x,...) {
   for (con in x) {
     print(con)
     cat("\n")
@@ -432,7 +475,7 @@ print.contrast_set <- function(x) {
 }
 
 #' @export
-print.contrast_spec <- function(x) {
+print.contrast_spec <- function(x,...) {
   cat("contrast:", x$name, "\n")
   cat(" A: ", Reduce(paste, deparse(x$A)), "\n")
   if (!is.null(x$B))
@@ -444,7 +487,7 @@ print.contrast_spec <- function(x) {
 }
 
 #' @export
-print.contrast <- function(x) {
+print.contrast <- function(x,...) {
   print(x$contrast_spec)
   cat(" term: ", x$term$varname, "\n")
   cat(" weights: ", "\n")
@@ -454,7 +497,7 @@ print.contrast <- function(x) {
 }
 
 #' @export
-print.poly_contrast_spec <- function(x) {
+print.poly_contrast_spec <- function(x,...) {
   cat("poly contrast:", "\n")
   cat(" A: ", Reduce(paste, deparse(x$A)), "\n")
   cat(" degree: ", x$degree, "\n")
@@ -468,7 +511,7 @@ print.poly_contrast_spec <- function(x) {
 }
 
 #' @export
-print.contrast_diff_spec <- function(x) {
+print.contrast_diff_spec <- function(x,...) {
   cat("contrast difference:", "\n")
   cat("  ", x$con1$name, "-", x$con2$name, "\n")
 }

@@ -4,15 +4,21 @@
 \alias{baseline}
 \title{Create a model specification for modeling low-frequency drift in fmri time series.}
 \usage{
-baseline(degree = 1, basis = c("poly", "bs", "ns"),
-  name = paste0("baseline_", basis, "_", degree), constant = FALSE)
+baseline(
+  degree = 1,
+  basis = c("constant", "poly", "bs", "ns"),
+  name = NULL,
+  intercept = c("runwise", "global", "none")
+)
 }
 \arguments{
-\item{degree}{number of polynomial terms for each image block}
+\item{degree}{number of basis terms for each image block (ignored for 'constant' basis)}
 
 \item{basis}{the type of polynomial basis.}
 
 \item{name}{the name of the term}
+
+\item{intercept}{the type of intercept to include}
 
 \item{constant}{whether to include an intercept term}
 }

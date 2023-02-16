@@ -2,13 +2,31 @@
 % Please edit documentation in R/hrf.R
 \name{gen_hrf_blocked}
 \alias{gen_hrf_blocked}
+\alias{hrf_blocked}
 \title{gen_hrf_blocked}
 \usage{
-gen_hrf_blocked(hrf = hrf_gaussian, width = 5, precision = 0.1,
-  half_life = Inf, summate = TRUE, normalize = FALSE, ...)
+gen_hrf_blocked(
+  hrf = hrf_gaussian,
+  width = 5,
+  precision = 0.1,
+  half_life = Inf,
+  summate = TRUE,
+  normalize = FALSE,
+  ...
+)
+
+hrf_blocked(
+  hrf = hrf_gaussian,
+  width = 5,
+  precision = 0.1,
+  half_life = Inf,
+  summate = TRUE,
+  normalize = FALSE,
+  ...
+)
 }
 \arguments{
-\item{hrf}{the hemodynmaic response function}
+\item{hrf}{the hemodynamic response function}
 
 \item{width}{the width of the block}
 
@@ -19,7 +37,14 @@ gen_hrf_blocked(hrf = hrf_gaussian, width = 5, precision = 0.1,
 \item{summate}{whether to allow each impulse response function to "add" up.}
 
 \item{normalize}{rescale so that the peak of the output is 1.}
+
+\item{...}{extra args}
 }
 \description{
 gen_hrf_blocked
 }
+\section{Functions}{
+\itemize{
+\item \code{hrf_blocked()}: alias for gen_hrf_blocked
+
+}}

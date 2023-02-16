@@ -4,8 +4,14 @@
 \alias{EV}
 \title{EV}
 \usage{
-EV(vals, name, onsets, blockids, durations = 1, subset = rep(TRUE,
-  length(onsets)))
+EV(
+  vals,
+  name,
+  onsets,
+  blockids,
+  durations = 1,
+  subset = rep(TRUE, length(onsets))
+)
 }
 \arguments{
 \item{vals}{the event values}
@@ -25,6 +31,12 @@ factory function for creating 'event' types: event_factor, event_variable, event
 }
 \examples{
 
-ev_fac <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), blockids=rep(1,3))
-ev_numeric <- EV(c(1,2,3), "fac", onsets=c(1,10,20), blockids=rep(1,3))
+ev_fac <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), 
+blockids=rep(1,3))
+
+ev_fac2 <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), 
+blockids=rep(1,3), subset=c(TRUE, TRUE, FALSE))
+
+ev_numeric <- EV(c(1,2,3), "fac", onsets=c(1,10,20), 
+blockids=rep(1,3))
 }

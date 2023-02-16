@@ -2,12 +2,18 @@
 % Please edit documentation in R/all_generic.R, R/event_model.R
 \name{shortnames}
 \alias{shortnames}
+\alias{shortnames.event_model}
+\alias{shortnames.convolved_term}
 \alias{shortnames.matrix_term}
-\title{shortnames}
+\title{extract short shortnames of variable}
 \usage{
 shortnames(x, ...)
 
-\method{shortnames}{matrix_term}(x)
+\method{shortnames}{event_model}(x, ...)
+
+\method{shortnames}{convolved_term}(x, ...)
+
+\method{shortnames}{matrix_term}(x, ...)
 }
 \arguments{
 \item{x}{the object}
@@ -15,5 +21,5 @@ shortnames(x, ...)
 \item{...}{extra args}
 }
 \description{
-shortnames
+get the short names of a set of variable levels
 }

@@ -6,6 +6,11 @@
 \usage{
 null_regressor(hrf = HRF_SPMG1, span = 24)
 }
+\arguments{
+\item{hrf}{an hrf function}
+
+\item{span}{the hrf span}
+}
 \description{
 null_regressor
 }

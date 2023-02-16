@@ -14,3 +14,4 @@ build_afni_stims(x, ...)
 \description{
 generate a set of AFNI stimuli for '3dDeconvolve'
 }
+\keyword{internal}

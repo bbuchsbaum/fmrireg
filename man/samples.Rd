@@ -2,7 +2,7 @@
 % Please edit documentation in R/all_generic.R
 \name{samples}
 \alias{samples}
-\title{samples}
+\title{extract samples}
 \usage{
 samples(x, ...)
 }
@@ -12,5 +12,5 @@ samples(x, ...)
 \item{...}{extra args}
 }
 \description{
-extract samples
+get the sampling times for a regressor or sampling frame
 }

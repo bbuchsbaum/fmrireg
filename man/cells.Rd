@@ -4,19 +4,31 @@
 \alias{cells}
 \alias{cells.event_factor}
 \alias{cells.event_term}
-\title{cells}
+\alias{cells.covariate_convolved_term}
+\title{the experimental cells of a design}
 \usage{
 cells(x, ...)
 
-\method{cells}{event_factor}(x, drop.empty = TRUE)
+\method{cells}{event_factor}(x, drop.empty = TRUE, ...)
 
-\method{cells}{event_term}(x, drop.empty = TRUE)
+\method{cells}{event_term}(x, drop.empty = TRUE, ...)
+
+\method{cells}{covariate_convolved_term}(x, ...)
 }
 \arguments{
 \item{x}{the object}
 
 \item{...}{extra args}
+
+\item{drop.empty}{remove empty cells}
 }
 \description{
-return the experimental cells that are in a model term
+return the experimental cells that are in a model term as a table
+}
+\examples{
+
+evlist <- list(fac1=factor(c("A", "B", "A", "B")), 
+               fac2=factor(c("1", "1", "2", "2")))
+eterm <- event_term(evlist,onsets=1:4, blockids=rep(1,4))
+cells(eterm)
 }

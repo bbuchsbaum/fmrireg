@@ -4,8 +4,15 @@
 \alias{fmri_mem_dataset}
 \title{fmri_mem_dataset}
 \usage{
-fmri_mem_dataset(scans, mask, TR, event_table = data.frame(),
-  base_path = ".", censor = NULL)
+fmri_mem_dataset(
+  scans,
+  mask,
+  TR,
+  run_length = sapply(scans, function(x) dim(x)[4]),
+  event_table = data.frame(),
+  base_path = ".",
+  censor = NULL
+)
 }
 \arguments{
 \item{scans}{a \code{list} of objects of class \code{\linkS4class{NeuroVec}}}
@@ -13,6 +20,8 @@ fmri_mem_dataset(scans, mask, TR, event_table = data.frame(),
 \item{mask}{a binary mask of class  \code{\linkS4class{NeuroVol}} indicating the set of voxels to include in analyses}
 
 \item{TR}{the repetition time in seconds of the scan-to-scan interval.}
+
+\item{run_length}{a \code{vector} of one or more integers indicating the number of scans in each run.}
 
 \item{event_table}{a \code{data.frame} containing the event onsets and experimental variables.}
 

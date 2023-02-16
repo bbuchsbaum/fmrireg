@@ -4,34 +4,43 @@
 \alias{trialwise}
 \title{trialwise}
 \usage{
-trialwise(label = "trialwise", basis = "spmg1", onsets = NULL,
-  durations = NULL, prefix = NULL, subset = NULL, precision = 0.2,
-  contrasts = list(), id = NULL, add_sum = FALSE)
+trialwise(
+  label = "trialwise",
+  basis = "spmg1",
+  onsets = NULL,
+  durations = NULL,
+  prefix = NULL,
+  subset = NULL,
+  precision = 0.3,
+  id = NULL,
+  add_sum = FALSE
+)
 }
 \arguments{
+\item{label}{the label for the generated variable.}
+
 \item{basis}{the impulse response function or the name of a pre-supplied function, one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian".}
 
 \item{onsets}{optional onsets override. If missing, onsets will be taken from the \code{event_model}}
 
 \item{durations}{optional durations override. If missing, onsets will be taken from the \code{event_model}}
 
-\item{prefix}{a character string that is prepended to the variable names and used to identify the term. 
+\item{prefix}{a character string that is prepended to the variable names and used to identify the term.
 Can be used to disambiguate two \code{hrf} terms with the same variable(s) but different onsets or basis functions.}
 
 \item{subset}{an expression indicating the subset of 'onsets' to keep}
 
 \item{precision}{sampling precision in seconds}
 
-\item{contrasts}{one or more \code{contrast_spec} objects created with the \code{contrast} function. 
-If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.}
-
 \item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
+
+\item{add_sum}{add the sum of all trialwise regressors to the set.
+This can be sued to model the average effect.}
 }
 \description{
 This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise() ...
 }
 \examples{
-
-
+x <- trialwise(basis="gaussian", onsets=c(1,17,25), durations=c(1,2,3))
 
 }

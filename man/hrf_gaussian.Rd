@@ -14,5 +14,5 @@ hrf_gaussian(t, mean = 6, sd = 2)
 \item{sd}{the standard deviation of Gaussian pdf}
 }
 \description{
-A hemodynamic response function using the gamma density function
+A hemodynamic response function using the Gaussian density function
 }

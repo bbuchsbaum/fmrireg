@@ -4,7 +4,13 @@
 \alias{block_term}
 \title{block_term}
 \usage{
-block_term(varname, blockids, expanded_blockids, mat)
+block_term(
+  varname,
+  blockids,
+  expanded_blockids,
+  mat,
+  type = c("runwise", "global")
+)
 }
 \arguments{
 \item{varname}{the name of the term}
@@ -14,6 +20,8 @@ block_term(varname, blockids, expanded_blockids, mat)
 \item{expanded_blockids}{the vector of blockids expanded by run}
 
 \item{mat}{the \code{matrix} of covariates}
+
+\item{type}{the block variable type: 'runwise' or 'global'}
 }
 \description{
 construct a constant term

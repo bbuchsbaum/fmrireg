@@ -2,11 +2,22 @@
 % Please edit documentation in R/hrf.R
 \name{hrf}
 \alias{hrf}
-\title{hrf}
+\title{hemodynamic regressor specification function for model formulas.}
 \usage{
-hrf(..., basis = "spmg1", onsets = NULL, durations = NULL,
-  prefix = NULL, subset = NULL, precision = 0.2, nbasis = 1,
-  contrasts = NULL, id = NULL, lag = 0, summate = TRUE)
+hrf(
+  ...,
+  basis = "spmg1",
+  onsets = NULL,
+  durations = NULL,
+  prefix = NULL,
+  subset = NULL,
+  precision = 0.3,
+  nbasis = 1,
+  contrasts = NULL,
+  id = NULL,
+  lag = 0,
+  summate = TRUE
+)
 }
 \arguments{
 \item{...}{the variable names, all of which must be present in the enclosing environment (e.g. an \code{event_model} object)}
@@ -17,7 +28,7 @@ hrf(..., basis = "spmg1", onsets = NULL, durations = NULL,
 
 \item{durations}{optional durations override. If missing, onsets will be taken from the \code{event_model}}
 
-\item{prefix}{a character string that is prepended to the variable names and used to identify the term. 
+\item{prefix}{a character string that is prepended to the variable names and used to identify the term.
 Can be used to disambiguate two \code{hrf} terms with the same variable(s) but different onsets or basis functions.}
 
 \item{subset}{an expression indicating the subset of 'onsets' to keep}
@@ -26,25 +37,21 @@ Can be used to disambiguate two \code{hrf} terms with the same variable(s) but d
 
 \item{nbasis}{number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.}
 
-\item{contrasts}{one or more \code{contrast_spec} objects created with the \code{contrast} function. 
+\item{contrasts}{one or more \code{contrast_spec} objects created with the \code{contrast} function.
 If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.}
 
 \item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
 
 \item{lag}{a temporal offset in seconds which is added to onset before convolution}
+
+\item{summate}{whether impulse amplitudes sum up when duration is greater than 0.}
 }
 \description{
-hemodynamic regressor specification function for model formulas.
-}
-\details{
-This function is to be used in formulas for fitting fucntions, e.g. onsets ~ hrf(fac1,fac2) ...
+This function is to be used in formulas for fitting functions, e.g. onsets ~ hrf(fac1,fac2) ...
 }
 \examples{
 
-## 'hrf' is typically used in the context of \\code{formula}s.
-hspec <- hrf(x)
-hspec2 <- hrf(x, basis="gamma")
-hspec3 <- hrf(x, basis="bs", nbasis=4)
+## 'hrf' is typically used in the context of \code{formula}s.
 
 form <- onsets ~ hrf(x) + hrf(y) + hrf(x,y)
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/all_generic.R
 \name{blocklens}
 \alias{blocklens}
-\title{blocklens}
+\title{get block lengths}
 \usage{
 blocklens(x, ...)
 }
@@ -12,5 +12,5 @@ blocklens(x, ...)
 \item{...}{extra args}
 }
 \description{
-return block lengths
+get the number of scans/images in each block
 }

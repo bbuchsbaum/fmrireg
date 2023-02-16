@@ -4,36 +4,30 @@
 \alias{longnames}
 \alias{longnames.convolved_term}
 \alias{longnames.afni_hrf_convolved_term}
-\alias{shortnames.event_model}
-\alias{shortnames.convolved_term}
+\alias{longnames.event_model}
+\alias{longnames.event_term}
 \alias{longnames.matrix_term}
-\title{longnames}
+\title{extract long names of variable}
 \usage{
 longnames(x, ...)
 
 longnames(x, ...)
 
-\method{longnames}{convolved_term}(x)
+\method{longnames}{convolved_term}(x, ...)
 
-\method{longnames}{afni_hrf_convolved_term}(x)
+\method{longnames}{afni_hrf_convolved_term}(x, ...)
 
-\method{shortnames}{event_model}(x)
+\method{longnames}{event_model}(x, ...)
 
-\method{shortnames}{convolved_term}(x)
+\method{longnames}{event_term}(x, ...)
 
-\method{longnames}{matrix_term}(x)
+\method{longnames}{matrix_term}(x, ...)
 }
 \arguments{
 \item{x}{the object}
 
 \item{...}{extra args}
-
-\item{x}{the object}
-
-\item{...}{extra args}
 }
 \description{
-longnames
-
-longnames
+get the extended names of a set of variable levels
 }

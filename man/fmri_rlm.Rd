@@ -4,12 +4,21 @@
 \alias{fmri_rlm}
 \title{fmri_rlm}
 \usage{
-fmri_rlm(formula, block_formula, baseline_model = NULL, dataset,
-  durations, drop_empty = TRUE, contrasts = NULL,
-  strategy = c("runwise", "slicewise", "all"))
+fmri_rlm(
+  formula,
+  block,
+  baseline_model = NULL,
+  dataset,
+  durations,
+  drop_empty = TRUE,
+  nchunks = 10,
+  strategy = c("runwise", "slicewise", "all")
+)
 }
 \arguments{
-\item{formula}{the model furmula for experimental events}
+\item{formula}{the model formula for experimental events}
+
+\item{block}{the model formula for block structure}
 
 \item{baseline_model}{the \code{baseline_model} object}
 
@@ -19,7 +28,7 @@ fmri_rlm(formula, block_formula, baseline_model = NULL, dataset,
 
 \item{drop_empty}{whether to remove factor levels with size of zero}
 
-\item{contrasts}{a set of contrasts}
+\item{nchunks}{number of daa chunks when strategy is \code{chunkwise}}
 
 \item{strategy}{the data splitting strategy}
 }
@@ -32,6 +41,6 @@ etab2 <- data.frame(onset=c(1,30,65,75), fac=factor(c("A", "B", "A", "B")), run=
 mat <- matrix(rnorm(100*100), 100,100)
 dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
 dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
-lm.1 <- fmri_rlm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset)
-lm.2 <- fmri_rlm(onset ~ hrf(fac), block_formula= ~ run,dataset=dset2)
+#lm.1 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset)
+#lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset2)
 }

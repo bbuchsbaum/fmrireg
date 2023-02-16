@@ -2,6 +2,8 @@
 
 #' design_plot
 #' 
+#' @param fmrimod the `fmri_model` object
+#' @param longnames use longnames in legend
 #' @importFrom ggplot2 ggplot aes_string aes
 #' @import shiny
 design_plot <- function(fmrimod, longnames=FALSE) {
@@ -15,6 +17,7 @@ design_plot <- function(fmrimod, longnames=FALSE) {
   
   sframe <- fmrimod$event_model$sampling_frame
   
+  condition = value = .time = .block = NULL
   dflist <- lapply(all_terms, function(term) {
     dm1 <- tibble::as_tibble(design_matrix(term))
     dm1$.block <- sframe$blockids
@@ -76,7 +79,7 @@ design_plot <- function(fmrimod, longnames=FALSE) {
   
 }
 
-
+#' @keywords internal
 lookup_hrf <- function(label, lag) {
   switch(label,
          Gamma=getHRF("gamma", lag=lag),
@@ -87,6 +90,8 @@ lookup_hrf <- function(label, lag) {
   
 }
 
+
+#' @importFrom shiny fluidPage sidebarLayout sliderInput mainPanel plotOutput
 hrf_plot <- function() {
   ui <- function() {
     fluidPage(
@@ -116,6 +121,7 @@ hrf_plot <- function() {
         df1 <- data.frame(Y=evaluate(reg, sgrid), time=sgrid)
         ggplot2::ggplot(df1, ggplot2::aes(time, Y)) + geom_line() + xlab("Time") + theme_bw(14)
       } else {
+        Y.1 <- NULL
         Y <- evaluate(reg, sgrid)
         df1 <- data.frame(Y =Y, time=sgrid)
         p <- ggplot2::ggplot(df1, ggplot2::aes(time, Y.1)) + geom_line() + xlab("Time") + theme_bw(14)
@@ -138,42 +144,65 @@ hrf_plot <- function() {
 #design_plot(fmrimod)
 #hrf_plot()
 
-design_editor <- function(design, formula="", sframe) {
-  ui <- function() {
-    fluidPage(
-      sidebarLayout(
-        sidebarPanel(
-          selectInput("run_variable", "Run Variable", names(design)),
-          selectInput("show_run", "Show Run", 1),
-          textInput("formula", "Event Formula", value=formula)
-        ),
-        mainPanel(
-          plotOutput("dplot")
-        )
-      )
-    )
-  }
-  
-  server <- function(input, output, session) {
-    
-    output$dplot <- renderPlot({
-      if (input$formula == "") {
-        plot()
-      } else {
-        srun <- as.integer(input$show_run)
-        keep <- which(design[[input$run_variable]] == srun)
-        des <- design[keep,]
-        print(nrow(des))
-        blocklens <- sframe$blocklens
-        bl <- blocklens[srun]
-        sframe2 <- sampling_frame(bl, TR=sframe$TR)
-        ev <- event_model(as.formula(input$formula), block=as.formula(paste("~ ", input$run_variable)), data=des, sampling_frame=sframe2)
-        dmat <- design_matrix(ev)
-        matplot(dmat, type='l')
-      }
-    })
-  }
-  
-  
-  shinyApp(ui = ui, server = server)
-}
+
+# @keywords internal
+# term_form <- function() {
+#   div(class="ui sidebar inverted vertical visible menu",
+#       div(class="item",
+#           div(class="active header", "Regression Term"),
+#           div(class="menu",
+#               shiny::uidropdown(),
+#               a(class="item", href="#divider", "HRF"),
+#               a(class="item", href="#input", "nbasis"),
+#           )
+#       )
+#   )
+# }
+
+
+# design_editor <- function(design, sframe) {
+#   requireNamespace("shiny.semantic")
+#   term_component <- function() {
+#     fluidRow(
+#       column(4, selectInput("onset_var", "Onsets", names(design))),
+#       column(4, selectInput("factors", "Variable(s)", names(design), multiple=TRUE)),
+#       column(4, selectInput("hrf", "HRF", choices=c("Gamma", "Gaussian",
+#                                                 "SPMG1", "SPMG2", "SPMG3"),
+#                                                 selected="SPMG1"))
+#     )
+#   }
+# 
+#   ui <- function() {
+#     shinyUI(
+#       semanticPage(
+#         suppressDependencies("bootstrap"),
+#         sidebar()
+#       )
+#     )
+#   }
+# 
+#   server <- function(input, output, session) {
+# 
+#     output$dplot <- renderPlot({
+#       if (TRUE) {
+#         plot(1:100)
+#       } else {
+#         plot(1:100)
+#         # srun <- as.integer(input$show_run)
+#         # keep <- which(design[[input$run_variable]] == srun)
+#         # des <- design[keep,]
+#         # print(nrow(des))
+#         # blocklens <- sframe$blocklens
+#         # bl <- blocklens[srun]
+#         # sframe2 <- sampling_frame(bl, TR=sframe$TR)
+#         # print(input$formula)
+#         # ev <- event_model(as.formula(input$formula), block=as.formula(paste("~ ", input$run_variable)), data=des, sampling_frame=sframe2)
+#         # dmat <- design_matrix(ev)
+#         # matplot(dmat, type='l')
+#       }
+#     })
+#   }
+# 
+# 
+#   shinyApp(ui = ui, server = server)
+# }

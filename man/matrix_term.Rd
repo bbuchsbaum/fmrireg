@@ -6,6 +6,11 @@
 \usage{
 matrix_term(varname, mat)
 }
+\arguments{
+\item{varname}{the name of the variable}
+
+\item{mat}{the \code{matrix} of values}
+}
 \description{
 A set of regression variables stored as a numeric matrix
 }

@@ -14,3 +14,4 @@ sub_basis(x, subset)
 \description{
 subset a parametric basis regressor
 }
+\keyword{internal}

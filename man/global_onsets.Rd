@@ -2,7 +2,7 @@
 % Please edit documentation in R/all_generic.R
 \name{global_onsets}
 \alias{global_onsets}
-\title{global_onsets}
+\title{return the "global" onsets of an object.}
 \usage{
 global_onsets(x, onsets, ...)
 }
@@ -14,5 +14,5 @@ global_onsets(x, onsets, ...)
 \item{...}{extra args}
 }
 \description{
-return the "global" onsets of an object
+global onsets are defined as cumulative time over runs, i.e. it does not reset to zero for each run.
 }

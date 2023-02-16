@@ -6,4 +6,5 @@
 #' @docType package
 #' @name fmrireg
 #' @import assertthat
+#' @import stats
 NULL

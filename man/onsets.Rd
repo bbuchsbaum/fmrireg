@@ -3,7 +3,7 @@
 \name{onsets}
 \alias{onsets}
 \alias{onsets.regressor}
-\title{onsets}
+\title{get event onsets of a variable}
 \usage{
 onsets(x)
 
@@ -13,5 +13,5 @@ onsets(x)
 \item{x}{the object}
 }
 \description{
-return a an `onset` vector
+return an \code{onset} vector
 }

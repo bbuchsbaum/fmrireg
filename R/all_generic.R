@@ -8,6 +8,27 @@ get_methods <- function(obj) {
 as_vectors <- function(x) { function(x, ...) UseMethod("as_vectors") }
 setGeneric("as_vectors") 
 
+
+
+#' construct an event model
+#' 
+#' A data sructure representing an event-based fMRI regression model
+#' 
+#' @importFrom lazyeval f_eval f_rhs f_lhs
+#' @param x the model specification, typically a `formula` (see examples)
+#' @param data the data containing experimental design
+#' @param block formula for the block structure
+#' @param sampling_frame the sampling frame defining the temporal and block structure
+#' @param drop_empty whether to drop empty factor levels
+#' @param durations the event durations
+#' @param ... extra args
+#' @examples 
+#' event_data <- data.frame(fac=c("a", "B", "A", "B"), onsets=c(1,10,20,80), run=c(1,1,1,1))
+#' sframe <- sampling_frame(blocklens=50, TR=2)
+#' evmodel <- event_model(onsets ~ hrf(fac), data=event_data, block= ~ run, sampling_frame=sframe)
+#' @export
+event_model <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0, ...) { UseMethod("event_model") }
+
 #' get_data
 #' 
 #' @param x the dataset
@@ -18,16 +39,22 @@ get_data <- function(x, ...) UseMethod("get_data")
 
 #' get_mask
 #' 
+#' get the binary inclusion mask associated with a dataset
+#' 
 #' @param x the dataset
 #' @param ... extra args
 #' @export
+#' @keywords internal
 get_mask <- function(x, ...) UseMethod("get_mask")
+
+
 
 
 #' get_formula
 #' 
 #' @param x the object
 #' @param ... extra args
+#' @keywords internal
 get_formula <- function(x, ...) UseMethod("get_formula")
 
 #' term_matrices
@@ -37,16 +64,18 @@ get_formula <- function(x, ...) UseMethod("get_formula")
 term_matrices <- function(x, ...) UseMethod("term_matrices")
 
 
-
-
-#' longnames
+#' extract long names of variable
+#' 
+#' get the extended names of a set of variable levels
 #' 
 #' @param x the object
 #' @param ... extra args
 #' @export
 longnames <- function(x, ...) UseMethod("longnames")
 
-#' shortnames
+#' extract short shortnames of variable
+#' 
+#' get the short names of a set of variable levels
 #' 
 #' @param x the object
 #' @param ... extra args
@@ -60,7 +89,7 @@ shortnames <- function(x, ...) UseMethod("shortnames")
 #' 
 #' @param x the object
 #' @param ... extra args
-#' @export
+#' @keywords internal
 design_env <- function(x, ...) UseMethod("design_env")
 
 
@@ -84,9 +113,11 @@ parent_terms <- function(x) UseMethod("parent_terms")
 #' @export
 term_names <- function(x) UseMethod("term_names")
 
-#' cells
+
+
+#' the experimental cells of a design
 #' 
-#' return the experimental cells that are in a model term
+#' return the experimental cells that are in a model term as a table
 #' 
 #' @param x the object
 #' @param ... extra args
@@ -109,7 +140,7 @@ conditions <- function(x, ...) UseMethod("conditions")
 #' @export
 #' @param x an event sequence
 #' @param hrf a hemodynamic response function
-#' @param sampling_frame the time series grid over whcih to sample the fucntion.
+#' @param sampling_frame the time series grid over which to sample the function.
 #' @param ... extra args
 convolve <- function(x, hrf, sampling_frame,...) UseMethod("convolve")
 
@@ -117,6 +148,7 @@ convolve <- function(x, hrf, sampling_frame,...) UseMethod("convolve")
 #' 
 #' checks to see if a variable is continuous e.g. numeric/non-categorical
 #' 
+#' @param x the object 
 #' @export
 is_continuous <- function(x) UseMethod("is_continuous")
 
@@ -175,7 +207,6 @@ baseline_terms <- function(x) UseMethod("baseline_terms")
 #' 
 #' @param x the model/term object
 #' @param ... additional arguments
-#' @export
 term_indices <- function(x,...) UseMethod("term_indices")
 
 
@@ -208,7 +239,7 @@ elements <- function(x, ...) UseMethod("elements")
 
 #' evaluate a function over a sampling grid
 #' 
-#' given an object to be evaluated and a an input sample ("grid"), evaluate the object.
+#' given an object to be evaluated and an input sample "grid", evaluate the object.
 #' 
 #' @param x the object to evaluate
 #' @param grid the sampling grid
@@ -217,9 +248,12 @@ elements <- function(x, ...) UseMethod("elements")
 #' @export
 evaluate <-  function(x, grid, ...) UseMethod("evaluate")
 
-#' global_onsets
+
+
+
+#' return the "global" onsets of an object.
 #' 
-#' return the "global" onsets of an object
+#' global onsets are defined as cumulative time over runs, i.e. it does not reset to zero for each run.
 #' 
 #' @export
 #' @param x the object
@@ -227,8 +261,8 @@ evaluate <-  function(x, grid, ...) UseMethod("evaluate")
 #' @param ... extra args
 global_onsets <-  function(x, onsets,...) UseMethod("global_onsets")
 
-#' nbasis
-#' 
+
+
 #' return number of basis functions associated with hrf.
 #' 
 #' @export
@@ -236,27 +270,27 @@ global_onsets <-  function(x, onsets,...) UseMethod("global_onsets")
 nbasis <-  function(x) UseMethod("nbasis")
 
 
-#' data_chunks
-#' 
+ 
 #' return a set of data chunks
 #' 
 #' @param x the dataset
-#' @param nchunks the numbe rof data chunks
+#' @param nchunks the number of data chunks
 #' @param ... extra args
 #' @return an \code{iterator} returning on data chunk per iteration
 #' @export
 data_chunks <- function(x, nchunks, ...) UseMethod("data_chunks")
 
 
-#' onsets
+#' get event onsets of a variable
 #' 
-#' return a an `onset` vector
+#' return an `onset` vector
 #' 
 #' @param x the object
 #' @export
 onsets <-  function(x) UseMethod("onsets")
 
-#' durations
+
+#' get event durations of a variable
 #' 
 #' return a `durations` vector
 #' 
@@ -264,17 +298,17 @@ onsets <-  function(x) UseMethod("onsets")
 #' @export
 durations <-  function(x) UseMethod("durations")
 
-#' amplitudes
+#' get amplitude vector
 #' 
-#' return the amplitude vector
+#' get the intensity or amplitudes associated with each event
 #' 
 #' @param x the object
 #' @export
 amplitudes <-  function(x) UseMethod("amplitudes")
 
-#' samples
-#' 
 #' extract samples
+#' 
+#' get the sampling times for a regressor or sampling frame
 #' 
 #' @param x the object
 #' @param ... extra args
@@ -290,17 +324,17 @@ samples <-  function(x, ...) UseMethod("samples")
 #' @export
 split_by_block  <-  function(x, ...) UseMethod("split_by_block")
 
-#' blockids
+#' get the block indices
 #' 
-#' the return the block indicator variable
+#' get the block number associated with each image/scan
 #' 
 #' @param x the object
 #' @export
 blockids  <-  function(x) UseMethod("blockids")
 
-#' blocklens
+#' get block lengths
 #' 
-#' return block lengths
+#' get the number of scans/images in each block
 #' 
 #' @param x the object
 #' @param ... extra args
@@ -351,6 +385,7 @@ standard_error <- function(x, ...) UseMethod("standard_error")
 #' 
 #' @param x the object
 #' @param ... extra arguments
+#' @export
 stats <- function(x, ...) UseMethod("stats")
 
 
@@ -360,7 +395,7 @@ stats <- function(x, ...) UseMethod("stats")
 #' 
 #' @param x the object
 #' @param ... extra arguments
-p_values <- function(x, ...) UseMethod("p_value")
+p_values <- function(x, ...) UseMethod("p_values")
 
 
 #' longnames
@@ -382,7 +417,7 @@ gen_afni_lm <- function(x, ...) UseMethod("gen_afni_lm")
 #' 
 #' @param x the term
 #' @param ... extra args
-#' @export
+#' @keywords internal
 build_afni_stims <- function(x, ...) UseMethod("build_afni_stims")
 
 #' split an onset vector into a list
@@ -393,6 +428,20 @@ build_afni_stims <- function(x, ...) UseMethod("build_afni_stims")
 split_onsets <- function(x, ...) UseMethod("split_onsets")
 
 
+
+#' estimate trialwise beta coefficients for a dataset
+#' 
+#' @param x the dataset 
+#' @param ... extra args
+#' @export
+estimate_betas <- function(x, ...) UseMethod("estimate_betas")
+
+
+#' estimate a linear model sequentially for each "chunk" (a matrix of time-series) of data
+#' 
+#' @param x the dataset 
+#' @param ... extra args
+chunkwise_lm <- function(x, ...) UseMethod("chunkwise_lm")
 
 
   

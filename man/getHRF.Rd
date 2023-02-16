@@ -4,13 +4,34 @@
 \alias{getHRF}
 \title{getHRF}
 \usage{
-getHRF(name = c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline",
-  "gaussian", "tent", "bs"), nbasis = 5, lag = 0, ...)
+getHRF(
+  name = c("gam", "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent",
+    "bs"),
+  nbasis = 5,
+  span = 24,
+  lag = 0,
+  width = 0,
+  summate = TRUE,
+  normalize = FALSE,
+  ...
+)
 }
 \arguments{
 \item{name}{the name of the hrf function}
 
 \item{nbasis}{the number of basis functions (if relevant)}
+
+\item{span}{the span of the HRF (maximum width in seconds after which function reverts to zero)}
+
+\item{lag}{optional lag in seconds}
+
+\item{width}{optional block width in seconds}
+
+\item{summate}{whether to allow each impulse response function to "add" up.}
+
+\item{normalize}{rescale so that the peak of the output is 1.}
+
+\item{...}{extra parameters for the \code{hrf} function}
 }
 \description{
 getHRF

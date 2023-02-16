@@ -4,8 +4,13 @@
 \alias{single_trial_regressor}
 \title{single_trial_regressor}
 \usage{
-single_trial_regressor(onsets, hrf = HRF_SPMG1, duration = 0,
-  amplitude = 1, span = 24)
+single_trial_regressor(
+  onsets,
+  hrf = HRF_SPMG1,
+  duration = 0,
+  amplitude = 1,
+  span = 24
+)
 }
 \arguments{
 \item{onsets}{the event onset in seconds, must be of length 1.}

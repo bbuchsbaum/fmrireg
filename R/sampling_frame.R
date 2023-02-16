@@ -1,7 +1,7 @@
 
 
 
-#' Construct a \code{sampling_frame}
+#' construct a \code{sampling_frame}
 #' 
 #' A \code{sampling_frame} describes the block structure and temporal sampling of an fMRI paradigm. 
 #' 
@@ -20,11 +20,20 @@
 #' gsam <- samples(frame, global=TRUE)
 #' @export
 sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
-  assert_that(TR > 0)
+  assert_that(all(TR > 0))
   assert_that(all(blocklens > 0))
   
+  if (length(TR) == 1) {
+    TR <- rep(TR, length(blocklens))
+  }
+  
+  if (length(start_time) == 1) {
+    start_time <- rep(start_time, length(blocklens))
+  }
+  
   blockids <- rep(1:length(blocklens), blocklens)
-  scan_time <- unlist(lapply(1:length(blocklens), function(i) seq(start_time, by=TR, length.out=blocklens[i])))
+  scan_time <- unlist(lapply(1:length(blocklens), function(i) seq(start_time[i], by=TR[i], length.out=blocklens[i])))
+  
   ret <- list(blocklens=blocklens,
               TR=TR,
               start_time=start_time,
@@ -38,31 +47,31 @@ sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
 
 #' @export
 ## TODO screwy things happen when blockids don't start at 1.
-samples.sampling_frame <- function(x, blockids=NULL, global=FALSE) {
+samples.sampling_frame <- function(x, blockids=NULL, global=FALSE, ...) {
   if (is.null(blockids)) {
     blockids <- seq(1, length(x$blocklens))
   }
   
   if (!global) {
     unlist(lapply(blockids, function(b) {
-      seq(x$start_time, by=x$TR, length.out=x$blocklens[b])
+      seq(x$start_time[b], by=x$TR[b], length.out=x$blocklens[b])
     }))
   } else {
     unlist(lapply(blockids, function(b) {
       start <- if (b > 1) {
-        sum(x$blocklens[1:(b-1)])*x$TR + x$start_time 
+        sum(x$blocklens[1:(b-1)])*x$TR[b] + x$start_time[b] 
       } else {
-        x$start_time
+        x$start_time[b]
       }
       
-      seq(start, by=x$TR, length.out=x$blocklens[b])
+      seq(start, by=x$TR[b], length.out=x$blocklens[b])
     }))
   }
 }
 
 
 #' @export
-global_onsets.sampling_frame <- function(x, onsets, blockids) {
+global_onsets.sampling_frame <- function(x, onsets, blockids,...) {
   
   ids <- rep(1:length(unique(blockids)), table(blockids))
   
@@ -72,8 +81,8 @@ global_onsets.sampling_frame <- function(x, onsets, blockids) {
   
   map_dbl(1:length(onsets),function(i) {
     blocknum <- ids[i]
-    offset <- (sum(x$blocklens[1:blocknum]) - x$blocklens[blocknum])*x$TR
-    if (onsets[i] > x$blocklens[blocknum]*x$TR) {
+    offset <- (sum(x$blocklens[1:blocknum]) - x$blocklens[blocknum])*x$TR[blocknum]
+    if (onsets[i] > x$blocklens[blocknum]*x$TR[blocknum]) {
       NA
     } else {
       onsets[i] + offset
@@ -83,7 +92,7 @@ global_onsets.sampling_frame <- function(x, onsets, blockids) {
 }  
 
 #' @export
-split_by_block.sampling_frame <- function(x, vals) {
+split_by_block.sampling_frame <- function(x, vals, ...) {
   split(vals, x$blockids)
 }
 
@@ -93,12 +102,12 @@ blockids.sampling_frame <- function(x) {
 }
 
 #' @export
-blocklens.sampling_frame <- function(x) {
+blocklens.sampling_frame <- function(x,...) {
   x$blocklens
 }
 
 #' @export
-print.sampling_frame <- function(x) {
+print.sampling_frame <- function(x,...) {
   cat("sampling_frame: \n")
   cat("  number of blocks:", length(x$blocklens), "\n")
   cat("  blocklens: ", paste(x$blocklens, collapse=", "), "\n")

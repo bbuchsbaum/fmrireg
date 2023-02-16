@@ -4,8 +4,16 @@
 \alias{convolve_block}
 \title{a convolve hemodynamic response with a block duration}
 \usage{
-convolve_block(t, hrf = hrf_gaussian, width = 5, precision = 0.1,
-  half_life = Inf, summate = TRUE, normalize = FALSE, ...)
+convolve_block(
+  t,
+  hrf = hrf_gaussian,
+  width = 5,
+  precision = 0.2,
+  half_life = Inf,
+  summate = TRUE,
+  normalize = FALSE,
+  ...
+)
 }
 \arguments{
 \item{t}{time in seconds}
@@ -21,6 +29,8 @@ convolve_block(t, hrf = hrf_gaussian, width = 5, precision = 0.1,
 \item{summate}{whether to allow each impulse response function to "add" up.}
 
 \item{normalize}{rescale so that the peak of the output is 1.}
+
+\item{...}{extra args to pass through to hrf function}
 }
 \description{
 apply a hemodynamic response function with times \code{t} and duration \code{width}

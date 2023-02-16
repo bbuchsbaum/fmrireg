@@ -2,11 +2,19 @@
 % Please edit documentation in R/hrf.R
 \name{gen_hrf}
 \alias{gen_hrf}
-\title{Construct an \code{HRF} instance}
+\title{construct an \code{HRF} instance}
 \usage{
-gen_hrf(hrf, lag = 0, width = NULL, precision = 0.1,
-  half_life = Inf, summate = TRUE, normalize = FALSE,
-  name = "gen_hrf", ...)
+gen_hrf(
+  hrf,
+  lag = 0,
+  width = 0,
+  precision = 0.1,
+  summate = TRUE,
+  normalize = FALSE,
+  name = "gen_hrf",
+  span = NULL,
+  ...
+)
 }
 \arguments{
 \item{hrf}{a function mapping from time --> signal}
@@ -17,17 +25,26 @@ gen_hrf(hrf, lag = 0, width = NULL, precision = 0.1,
 
 \item{precision}{sampling precision in seconds}
 
+\item{summate}{whether to allow each impulse response function to "add" up.}
+
+\item{normalize}{rescale so that the peak of the output is 1.}
+
+\item{name}{the assigned name of generated HRF}
+
+\item{span}{the span of the HRF (maximum width in seconds after which function reverts to zero)}
+
 \item{...}{extra parameters for the \code{hrf} function}
 }
 \value{
 an instance of type \code{HRF} inheriting from \code{function}
 }
 \description{
-\code{HRF} takes a faw function f(t) and returns an \code{HRF} instance
+\code{gen_hrf} takes a raw function f(t) and returns an \code{HRF} instance
 }
 \examples{
 
 ## generate and hrf using spmg canonical hrf, a lag of 3, and a width of 2.
+
 grf <- gen_hrf(hrf_spmg1, lag=3, width=2)
 grf(0:20)
 

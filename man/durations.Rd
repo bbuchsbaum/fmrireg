@@ -3,7 +3,7 @@
 \name{durations}
 \alias{durations}
 \alias{durations.regressor}
-\title{durations}
+\title{get event durations of a variable}
 \usage{
 durations(x)
 
@@ -13,5 +13,5 @@ durations(x)
 \item{x}{the object}
 }
 \description{
-return a `durations` vector
+return a \code{durations} vector
 }

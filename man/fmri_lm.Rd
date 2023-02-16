@@ -4,12 +4,22 @@
 \alias{fmri_lm}
 \title{fmri_lm}
 \usage{
-fmri_lm(formula, block, baseline_model = NULL, dataset, durations,
-  drop_empty = TRUE, contrasts = NULL, strategy = c("runwise",
-  "chunkwise"), nchunks = 10)
+fmri_lm(
+  formula,
+  block,
+  baseline_model = NULL,
+  dataset,
+  durations,
+  drop_empty = TRUE,
+  robust = FALSE,
+  strategy = c("runwise", "chunkwise"),
+  nchunks = 10,
+  meta_weighting = c("inv_var", "equal"),
+  ...
+)
 }
 \arguments{
-\item{formula}{the model furmula for experimental events}
+\item{formula}{the model formula for experimental events}
 
 \item{block}{the model formula for block structure}
 
@@ -21,9 +31,16 @@ fmri_lm(formula, block, baseline_model = NULL, dataset, durations,
 
 \item{drop_empty}{whether to remove factor levels with size of zero}
 
-\item{contrasts}{a set of contrasts}
+\item{robust}{whether to use robust fitting (TRUE or FALSE)}
 
 \item{strategy}{the data splitting strategy}
+
+\item{nchunks}{number of daa chunks when strategy is \code{chunkwise}}
+
+\item{meta_weighting}{for runwise analyses, wheter to use
+inverse variance ("inv_var") or equal ("equal") weighting}
+
+\item{...}{extra args}
 }
 \description{
 fmri_lm
@@ -35,7 +52,18 @@ mat <- matrix(rnorm(100*100), 100,100)
 dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
 dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
 con  <- pair_contrast(~ fac == "A", ~ fac == "B", name="A_min_B")
-lm.1 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, dataset=dset)
+con2  <- unit_contrast(~ fac, name="A_min_baseline")
+lm.1 <- fmri_lm(onset ~ hrf(fac, contrasts=contrast_set(con,con2)), 
+block= ~ run, dataset=dset)
+
 lm.2 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, dataset=dset2)
-lm.3 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, dataset=dset2, strategy="chunkwise")
+
+lm.2a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
+robust=TRUE, dataset=dset2)
+
+lm.3 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
+dataset=dset2, strategy="runwise")
+
+lm.3a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
+robust=TRUE, dataset=dset2, strategy="runwise")
 }

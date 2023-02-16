@@ -5,7 +5,7 @@
 \alias{run}
 \title{run a command}
 \usage{
-\method{run}{afni_lm_spec}(x, outdir, execute = TRUE, execfun = system)
+\method{run}{afni_lm_spec}(x, outdir, execute = TRUE, execfun = system, prepend = "", ...)
 
 run(x, ...)
 }
@@ -15,6 +15,10 @@ run(x, ...)
 \item{outdir}{the output folder}
 
 \item{execute}{whether to execute the command or only output shell '3dDeconvolve.sh' script}
+
+\item{execfun}{function used to execute external system command}
+
+\item{prepend}{prepend string to command}
 
 \item{...}{extra args}
 }

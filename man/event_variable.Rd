@@ -7,13 +7,15 @@
 event_variable(vec, name, onsets, blockids = 1, durations = NULL)
 }
 \arguments{
-\item{name}{the name of the variable}
+\item{vec}{the vector event variable values}
 
-\item{onsets}{the event onsets in seconds}
+\item{name}{the name of the event variable}
 
-\item{blockids}{the index of the block/scan in which the event occurs}
+\item{onsets}{the event onsets.}
 
-\item{durations}{the durations of each event in seconds}
+\item{blockids}{the block ids associated with each event (must be non-decreasing)}
+
+\item{durations}{the duration of each event.}
 }
 \description{
 Create a continuous valued event sequence from a \code{numeric} vector.

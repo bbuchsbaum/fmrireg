@@ -14,3 +14,4 @@ design_env(x, ...)
 \description{
 return regression design as a set of matrices stored in an environment
 }
+\keyword{internal}

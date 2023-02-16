@@ -1,7 +1,8 @@
+options(mc.cores=2)
+
 library(testthat)
 library(assertthat)
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
-
 
 
 test_that("a 2-by-2 Fcontrast", {
@@ -13,6 +14,18 @@ test_that("a 2-by-2 Fcontrast", {
   et <- event_term(list(Fa=F_a, Fb=F_b), onsets, blockids)
   expect_true(!is.null(Fcontrasts(et)))
 })
+
+test_that("a 2-by-3 Fcontrast", {
+  F_a <- factor(rep(letters[1:2], 9))
+  F_b <- factor(rep(c("V1", "V2", "V3"), each=6))
+ 
+  onsets <- seq(1, length(F_a))
+  blockids <- rep(1, length(onsets))
+  
+  et <- event_term(list(Fa=F_a, Fb=F_b), onsets, blockids)
+  expect_true(!is.null(Fcontrasts(et)))
+})
+
 
 test_that("a 3-by-2 Fcontrast", {
   F_a <- factor(rep(letters[1:2], 8))
@@ -37,6 +50,8 @@ test_that("a 3-by-3 Fcontrast", {
 })
 
 
+
+
 test_that("can build a simple contrast from a convolved term", {
   facedes$repnum <- factor(facedes$rep_num)
   sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
@@ -44,6 +59,17 @@ test_that("can build a simple contrast from a convolved term", {
   con <- pair_contrast(~ repnum==-1, ~ repnum==1, name="A_B")
   
   expect_equal(as.vector(contrast_weights(con, terms(espec)[[1]])$weights), c(1,-1,0,0,0))
+})
+
+test_that("can build a simple contrast from a convolved term and convert to glt", {
+  facedes$repnum <- factor(facedes$rep_num)
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
+  con <- pair_contrast(~ repnum==-1, ~ repnum==1, name="A_B")
+  
+  conw <- contrast_weights(con, terms(espec)[[1]])
+  glt <- to_glt(conw)
+  expect_true(!is.null(glt))
 })
 
 test_that("can build a contrast versus the intercept from a convolved term", {
@@ -88,6 +114,23 @@ test_that("can build a set of pairwise contrasts", {
   cset <- pairwise_contrasts(levs)
   expect_equal(length(cset), ncol(combn(length(levs),2)))
 
+})
+
+test_that("can build a one_against_all contrast set", {
+  facedes$repnum <- factor(facedes$rep_num)
+  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
+  levs <- levels(facedes$repnum)
+  cset <- one_against_all_contrast(levs, "repnum")
+  
+  
+  expect_equal(length(cset),length(levels(facedes$repnum)))
+  
+  wtls <- lapply(cset, function(con) {
+    contrast_weights(con, terms(espec)[[1]])
+  })
+  expect_true(!is.null(wtls))
+  
 })
 
 test_that("can subtract two pairwise contrasts to form an interaction contrast", {
@@ -139,7 +182,7 @@ test_that("can contrast two basis functions from a custom multi-phase hrf", {
   hrf_encode <- gen_hrf(hrf_spmg1, normalize=TRUE)
   hrf_delay <- gen_hrf(hrf_spmg1, lag=3, width=8, normalize=TRUE)
   hrf_probe <-gen_hrf(hrf_spmg1, lag=11, width=3, normalize=TRUE)  
-  hrf_trial <- gen_hrf_set(hrf_encode, hrf_delay, hrf_probe)
+  hrf_trial <<- gen_hrf_set(hrf_encode, hrf_delay, hrf_probe)
   
   sframe <- sampling_frame(blocklens=250, TR=2)
   espec <- event_model(onset ~  hrf(trial_type, basis=hrf_trial), data=simple_des, block=~run, sampling_frame=sframe)
@@ -163,7 +206,7 @@ test_that("can contrast two parametric regressors wrapped in Ident", {
 })
 
 
-test_that("can form a simple forumla contrast", {
+test_that("can form a simple formula contrast", {
   simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"), replication=c(1,2))
   simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
   simple_des$run <- rep(1,nrow(simple_des))
@@ -174,6 +217,36 @@ test_that("can form a simple forumla contrast", {
   expect_equal(as.vector(cwts$weights[,1]), c(1, -1, -1, 1))
   
 })
+
+test_that("can form formula contrast with 3 terms", {
+  simple_des <- expand.grid(match=c("match", "nonmatch"), condition=c("NOVEL", "REPEAT"), correct=c("correct","incorrect"))
+  simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
+  simple_des$run <- rep(1,nrow(simple_des))
+  sframe <- sampling_frame(blocklens=100, TR=2)
+  espec <- event_model(onset ~  hrf(match, condition, correct), data=simple_des, block=~run, sampling_frame=sframe)
+  #con1 <- contrast(~ (face:ATT:r1 + face:IG:r2) - (scene:ATT:r1 - scene:ignored:r2), name="face_scene")
+  con1 <- contrast(
+    ~  ((match:NOVEL:correct + match:NOVEL:incorrect) - (nonmatch:NOVEL:correct + nonmatch:NOVEL:incorrect)) -
+      ((match:REPEAT:correct + match:REPEAT:incorrect) - (nonmatch:REPEAT:correct + nonmatch:REPEAT:incorrect)), name="cond_by_match")
+  cwts <- contrast_weights(con1, terms(espec)[[1]])
+  expect_equal(length(as.vector(cwts$weights[,1])), 8)
+  
+})
+
+test_that("can form forumla contrast with two factor terms and one continuous covariate", {
+  simple_des <- expand.grid(match=c("match", "nonmatch"), condition=c("NOVEL", "REPEAT"), correct=c(1,2))
+  simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
+  simple_des$run <- rep(1,nrow(simple_des))
+  sframe <- sampling_frame(blocklens=100, TR=2)
+  espec <- event_model(onset ~  hrf(match, condition, correct), data=simple_des, block=~run, sampling_frame=sframe)
+  #con1 <- contrast(~ (face:ATT:r1 + face:IG:r2) - (scene:ATT:r1 - scene:ignored:r2), name="face_scene")
+  con1 <- contrast(
+    ~  match:NOVEL:correct - nonmatch:NOVEL:correct, name="cond_by_match")
+  cwts <- contrast_weights(con1, terms(espec)[[1]])
+  expect_equal(as.vector(cwts$weights[,1]), c(1, -1, 0,0))
+  
+})
+
 
 
 

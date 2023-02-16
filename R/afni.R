@@ -1,5 +1,6 @@
 
 #' @keywords internal
+#' @importFrom utils read.table
 gen_afni_lm.fmri_config <- function(x, ...) {
   
   nuisance_list <- if (!is.null(x$baseline_model$nuisance_files)) {
@@ -41,13 +42,16 @@ gen_afni_lm.fmri_config <- function(x, ...) {
 #' @param options a \code{list} of options to be sent to 3dDeconvolve
 #' 
 #' @examples 
-#' etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))
-#' dset <- fmri_dataset(scans=c("s1.nii", "s2.nii"), mask="mask.nii", TR=1, run_length=c(50,50),event_table=etab)
+#' etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), 
+#' run=c(1,1,2,2))
+#' dset <- fmri_dataset(scans=c("s1.nii", "s2.nii"), mask="mask.nii", TR=1, 
+#' run_length=c(50,50),event_table=etab)
 #' 
-#' emodel <- event_model(onset ~ hrf(fac), block = ~ run, data=etab, sampling_frame=dset$sampling_frame)
+#' emodel <- event_model(onset ~ hrf(fac), block = ~ run, data=etab, 
+#' sampling_frame=dset$sampling_frame)
 #' bmodel <- baseline_model("bs", degree=4, sframe=dset$sampling_frame)
 #' fmod <- fmri_model(emodel, bmodel)
-#' alm <- afni_lm(fmod, dset, jobs=2, options=list(tout=TRUE))
+#' alm <- afni_lm(fmod, dset, jobs=2, options=list(tout=TRUE, errts="residuals.nii.gz"))
 #' @export
 afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, 
                     censor=NULL, options=list()) {
@@ -93,10 +97,10 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1,
 
 
 #' @export
-print.afni_lm_spec <- function(x) {
+print.afni_lm_spec <- function(x,...) {
   cat("AFNI linear model via 3dDeconvolve \n")
   cat("  working_dir: ", x$working_dir, "\n")
-  cat("  number of GLTs:", length(x$glts), "\n")
+  cat("  number of GLTs:", length(x$cmd$glts), "\n")
   cat("  command line: \n", x$cmd$cmd, "\n")
   
 }
@@ -191,6 +195,7 @@ next_dir_name <- function(wd) {
 }
 
 #' @keywords internal
+#' @importFrom utils write.table
 write_baseline_mat <- function(stim, dir) {
   write.table(stim$mat, paste0(dir, "/", stim$file_name, sep=""), col.names=FALSE, row.names=FALSE)
 }
@@ -459,6 +464,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
                    nocond=opts[["nocond"]],
                    x1D_stop=opts[["x1D_stop"]],
                    jobs=opts[["jobs"]],
+                   errts=if (!is.null(opts[["errts"]])) opts[["errts"]] else NULL,
                    float=TRUE)
   
   cmd <- .make_decon_command_str(cmdlines)
@@ -472,8 +478,10 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
 #' @export
 #' @param outdir the output folder
 #' @param execute whether to execute the command or only output shell '3dDeconvolve.sh' script
+#' @param execfun function used to execute external system command
+#' @param prepend prepend string to command
 #' @rdname run
-run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system) {
+run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system, prepend="",...) {
   start_dir <- getwd()
   res <- try({
     if (!file.exists(outdir)) {
@@ -508,7 +516,7 @@ run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system) {
     write(x$cmd$cmd, "3ddeconvolve.sh")
     
     if (execute) {
-      execfun(x$cmd$cmd)
+      execfun(paste(prepend, x$cmd$cmd))
       
       #if (reml) {
       #  execfun(paste0("./", x$options$bucket, ".REML_cmd"))

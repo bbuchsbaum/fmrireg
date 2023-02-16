@@ -2,13 +2,9 @@
 title: "Hemodynamic Response Functions"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
-output:
-  prettydoc::html_pretty:
-    theme: Leonids
-    highlight: github
-
+output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{Hemodynamic Response Functions}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -21,7 +17,7 @@ A hemodynamic response function (HRF) is used to model the temporal evoluation o
 There are a number of pre-defined HRFs in `fmrireg` that make it easy to work with them. For example, we can use the SPM "canonical" HRF. We use the function `hrf_blocked` which can generate flexible hemodynamic responses. 
 
 ```{r, echo=FALSE,results='hide', message=FALSE, warning=FALSE}
-devtools::load_all()
+library(fmrireg)
 ```
 
 ```{r, message=FALSE, fig.width = 7, fig.height = 5}
@@ -58,7 +54,7 @@ vals1 <- hrf_7_3(time)
 vals2 <- hrf_5_2(time)
 vals3 <- hrf_4_1(time)
 
-## notice that that each function is scaled so that it's highest value = 1.
+
 plot(seq(0,20,by=.1), vals1, type="l", xlab="Time", ylab="BOLD response", ylim=range(c(vals1, vals2, vals3)), main="Three Gaussian HRFs with different parameters")
 lines(seq(0,20,by=.1), vals2, type="l", col=2)
 lines(seq(0,20,by=.1), vals3, type="l", col=3)

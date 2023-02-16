@@ -2,12 +2,12 @@
 % Please edit documentation in R/all_generic.R, R/event_model.R
 \name{Fcontrasts}
 \alias{Fcontrasts}
-\alias{FContrasts.convolved_term}
+\alias{Fcontrasts.convolved_term}
 \title{Fcontrasts}
 \usage{
 Fcontrasts(x, ...)
 
-FContrasts.convolved_term(x)
+\method{Fcontrasts}{convolved_term}(x, ...)
 }
 \arguments{
 \item{x}{the term}

@@ -2,14 +2,14 @@
 % Please edit documentation in R/all_generic.R
 \name{data_chunks}
 \alias{data_chunks}
-\title{data_chunks}
+\title{return a set of data chunks}
 \usage{
 data_chunks(x, nchunks, ...)
 }
 \arguments{
 \item{x}{the dataset}
 
-\item{nchunks}{the numbe rof data chunks}
+\item{nchunks}{the number of data chunks}
 
 \item{...}{extra args}
 }

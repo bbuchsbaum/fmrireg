@@ -4,7 +4,7 @@
 \alias{fit_contrasts}
 \title{fit_contrasts}
 \usage{
-fit_contrasts(lmfit, conmat, colind)
+fit_contrasts(lmfit, conmat, colind, se = TRUE)
 }
 \arguments{
 \item{lmfit}{the \code{lm} object}
@@ -12,6 +12,8 @@ fit_contrasts(lmfit, conmat, colind)
 \item{conmat}{the contrast \code{matrix} or contrast \code{vector}}
 
 \item{colind}{the subset column indices in the design associated with the contrast.}
+
+\item{se}{whetheer to compute standard errors, t-statistics, and p-values}
 }
 \description{
 fit_contrasts

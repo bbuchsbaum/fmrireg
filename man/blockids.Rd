@@ -2,7 +2,7 @@
 % Please edit documentation in R/all_generic.R
 \name{blockids}
 \alias{blockids}
-\title{blockids}
+\title{get the block indices}
 \usage{
 blockids(x)
 }
@@ -10,5 +10,5 @@ blockids(x)
 \item{x}{the object}
 }
 \description{
-the return the block indicator variable
+get the block number associated with each image/scan
 }

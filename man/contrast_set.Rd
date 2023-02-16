@@ -2,7 +2,7 @@
 % Please edit documentation in R/contrast.R
 \name{contrast_set}
 \alias{contrast_set}
-\title{Create a set of contrasts}
+\title{create a set of contrasts}
 \usage{
 contrast_set(...)
 }
@@ -10,7 +10,7 @@ contrast_set(...)
 \item{...}{a variable length list of \code{contrast_spec} objects.}
 }
 \description{
-Construct a \code{list} of \code{contrast_spec} objects
+construct a \code{list} of \code{contrast_spec} objects
 }
 \examples{
 c1 <- contrast(~ A - B, name="A_B")

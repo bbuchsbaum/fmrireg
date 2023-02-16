@@ -62,16 +62,18 @@ is.strictly.increasing <- function(vec) {
 #' 
 #' x1 <- factor(rep(letters[1:3], 10))
 #' x2 <- factor(rep(1:3, each=10))
-#' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), blockids=rep(1,30))
+#' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), 
+#' blockids=rep(1,30))
 #' 
 #' x1 <- rnorm(30)
 #' x2 <- factor(rep(1:3, each=10))
-#' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), blockids=rep(1,30), subset=x1>0)
+#' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), 
+#' blockids=rep(1,30), subset=x1>0)
 #'
 #' @rdname event_term-class
 event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
-  assert_that(is.increasing(blockids))
+  assert_that(is.increasing(blockids), msg="'blockids' must consist of strictly increasing integers")
             
   if (is.null(subset)) { subset=rep(TRUE, length(onsets)) }
   
@@ -92,13 +94,14 @@ event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
   len <- sum(subset)
   
-  etab <- tibble::as_tibble(lapply(pterms, function(termname) {
+
+  etab <- suppressMessages(tibble::as_tibble(lapply(pterms, function(termname) {
     if (is_continuous(evs[[termname]])) {
       rep(.sanitizeName(termname), len)
     } else {
       evs[[termname]]$value
     }			
-  }))
+  }), .name_repair="check_unique"))
   
   names(etab) <- sapply(pterms, .sanitizeName)
   varname <- paste(sapply(evs, function(x) x$varname), collapse=":")
@@ -132,8 +135,14 @@ event_table.event_term <- function(x) x$event_table
 #' 
 #' @examples 
 #' 
-#' ev_fac <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), blockids=rep(1,3))
-#' ev_numeric <- EV(c(1,2,3), "fac", onsets=c(1,10,20), blockids=rep(1,3))
+#' ev_fac <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), 
+#' blockids=rep(1,3))
+#' 
+#' ev_fac2 <- EV(factor(c("A", "B", "C")), "fac", onsets=c(1,10,20), 
+#' blockids=rep(1,3), subset=c(TRUE, TRUE, FALSE))
+#' 
+#' ev_numeric <- EV(c(1,2,3), "fac", onsets=c(1,10,20), 
+#' blockids=rep(1,3))
 #' @export
 EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,length(onsets))) {
   
@@ -149,12 +158,13 @@ EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,leng
   
   if (inherits(vals, "ParametricBasis")) {
     event_basis(vals, onsets, blockids, durations,subset)	
-  } else if (is.vector(vals)) {
+  } else if (is.factor(vals) || is.character(vals)) {
+    vals <- factor(as.character(vals)[subset])
+    event_factor(vals, name, onsets[subset], blockids[subset], durations[subset])
+  }else if (is.numeric(vals)) {
     event_variable(vals[subset], name, onsets[subset], blockids[subset], durations[subset])
   } else if (is.matrix(vals)) {
     event_matrix(vals[subset,], name, onsets[subset], blockids[subset], durations[subset])
-  } else if (is.factor(vals)) {
-    event_factor(vals[subset], name, onsets[subset], blockids[subset], durations[subset])
   } else {
     stop(paste("cannot create event_seq from type: ", typeof(vals)))
   }
@@ -165,11 +175,8 @@ EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,leng
 #' 
 #' Create an categorical event sequence from a \code{factor} 
 #' 
+#' @inheritParams EV
 #' @param fac a factor
-#' @param name the name for the factor
-#' @param onsets vector of event onsets in seconds
-#' @param blockids block index variable
-#' @param durations the durations in seconds of the onsets
 #' @export
 #' 
 #' @examples 
@@ -178,7 +185,7 @@ EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,leng
 event_factor <- function(fac, name, onsets, blockids=rep(1,length(fac)), durations=rep(0, length(fac))) {
   if (!is.factor(fac)) {
     warning("argument 'fac' is not a factor, converting to factor")
-    fac <- as.factor(factor())
+    fac <- factor(as.character(fac))
   }
   
   ret <- .checkEVArgs(name, fac, onsets, blockids, durations)
@@ -191,10 +198,10 @@ event_factor <- function(fac, name, onsets, blockids=rep(1,length(fac)), duratio
 #' event_variable
 #' 
 #' Create a continuous valued event sequence from a \code{numeric} vector.
-#' @param name the name of the variable
-#' @param onsets the event onsets in seconds
-#' @param blockids the index of the block/scan in which the event occurs
-#' @param durations the durations of each event in seconds
+#' 
+#' @inheritParams EV
+#' @param vec the vector event variable values
+#' 
 #' @export
 event_variable <- function(vec, name, onsets, blockids=1, durations=NULL) {
   stopifnot(is.vector(vec))
@@ -214,11 +221,8 @@ event_variable <- function(vec, name, onsets, blockids=1, durations=NULL) {
 #' 
 #' Create a continuous valued event set from a \code{matrix}
 #' 
+#' @inheritParams EV
 #' @param mat a matrix of values, one row per event, indicating the amplitude/intensity of each event.
-#' @param name the name of the variable
-#' @param onsets the event onsets in seconds
-#' @param durations the durations of each event in seconds
-#' @param blockids the index of the block/scan in which the event occurs
 #' @examples 
 #' 
 #' mat <- matrix(rnorm(200), 100, 2)
@@ -249,17 +253,13 @@ event_matrix <- function(mat, name, onsets, blockids=rep(1, ncol(mat)), duration
 
 #' event_basis
 #' 
-#' Create a event set from a basis object of type \code{\linkS4class{ParametricBasis}}. 
-#' 
+#' Create a event set from a basis object of type \code{ParametricBasis}. 
+#' @inheritParams EV
 #' @param basis the basis object
-#' @param onsets the onset vector
-#' @param blockids the block indices
-#' @param durations the event durations
 #' @import assertthat
 #' @export
 event_basis <- function(basis, onsets, blockids=1, durations=NULL, subset=rep(TRUE, length(onsets))) {
   assertthat::assert_that(inherits(basis, "ParametricBasis"))
-  
   
   if (any(!subset)) {
     basis <- sub_basis(basis, subset)
@@ -296,8 +296,8 @@ levels.event_set <- function(x) colnames(x$value)
 levels.event_basis <- function(x) levels(x$basis)
 
 #' @export
-#' @rdname formula
-formula.event_term <- function(x) as.formula(paste("~ ", "(", paste(parent_terms(x), collapse=":"), "-1", ")"))
+formula.event_term <- function(x, ...) as.formula(paste("~ ", "(", paste(parent_terms(x), collapse=":"), 
+                                                   "-1", ")"))
 
 #' @export
 #' @rdname levels
@@ -312,24 +312,34 @@ levels.event_term <- function(x) {
   }
 }
 
+
+#' @param drop.empty remove empty cells (not implemented)
 #' @export
 #' @rdname cells
-cells.event_factor <- function(x, drop.empty=TRUE) {
+cells.event_factor <- function(x, drop.empty=TRUE,...) {
   etab <- data.frame(onsets=x$onsets, durations=x$durations, blockids=x$blockids)
   split(etab, x$value)
 }
 
+
+#' @param drop.empty remove empty cells
 #' @export
 #' @rdname cells
-cells.event_term <- function(x, drop.empty=TRUE) {
+#' @examples 
+#' 
+#' evlist <- list(fac1=factor(c("A", "B", "A", "B")), 
+#'                fac2=factor(c("1", "1", "2", "2")))
+#' eterm <- event_term(evlist,onsets=1:4, blockids=rep(1,4))
+#' cells(eterm)
+cells.event_term <- function(x, drop.empty=TRUE,...) {
   evtab <- x$event_table
-  evset <- tibble::as_tibble(expand.grid(lapply(x$events, levels)))
+  evset <- suppressMessages(tibble::as_tibble(expand.grid(lapply(x$events, levels)), .name_repair="check_unique"))
   
   which.cat <- which(!sapply(x$events, is_continuous))
   
   if (length(which.cat) > 0) {
-    evs <- tibble::as_tibble(lapply(evset[,which.cat], as.character))
-    evt <- tibble::as_tibble(lapply(evtab[,which.cat], as.character))
+    evs <- suppressMessages(tibble::as_tibble(lapply(evset[,which.cat], as.character), .name_repair="check_unique"))
+    evt <- suppressMessages(tibble::as_tibble(lapply(evtab[,which.cat], as.character), .name_repair="check_unique"))
   
     counts <- apply(evs, 1, function(row1) {
       sum(apply(evt, 1, function(row2) {										
@@ -366,8 +376,14 @@ cells.event_term <- function(x, drop.empty=TRUE) {
 }
 
 #' @export
+#' @rdname cells
+cells.covariate_convolved_term <- function(x,...) {
+  unique(event_table(x))
+}
+
+#' @export
 #' @importFrom stringr str_trim
-cells.convolved_term <- function(x, exclude_basis=FALSE) {
+cells.convolved_term <- function(x, exclude_basis=FALSE,...) {
   evtab <- event_table(x)
   evset <- .event_set(x, exclude_basis=exclude_basis)
   
@@ -394,28 +410,28 @@ cells.convolved_term <- function(x, exclude_basis=FALSE) {
 }
 
 #' @export
-conditions.fmri_term <- function(x) {
+conditions.fmri_term <- function(x, ...) {
   colnames(design_matrix(x))
 }
 
 #' @export
-conditions.convolved_term <- function(x) {
+conditions.convolved_term <- function(x,...) {
   colnames(design_matrix(x))
 }
 
 #' @export
-conditions.afni_hrf_convolved_term <- function(x) {
+conditions.afni_hrf_convolved_term <- function(x,...) {
   conditions(x$evterm)
 }
 
 #' @export
-conditions.afni_trialwise_convolved_term <- function(x) {
+conditions.afni_trialwise_convolved_term <- function(x,...) {
   conditions(x$evterm)
 }
 
 
 #' @export
-conditions.event_term <- function(x, drop.empty=TRUE) {
+conditions.event_term <- function(x, drop.empty=TRUE, ...) {
   
   .cells <- cells(x, drop.empty=drop.empty)
   pterms <- parent_terms(x)
@@ -476,7 +492,7 @@ is_categorical.event_seq <- function(x) !x$continuous
 
 
 #' @export
-elements.event_matrix <- function(x, values=TRUE) {
+elements.event_matrix <- function(x, values=TRUE, ...) {
   if (values) {
     ret <- x$value
     colnames(ret) <- colnames(x)
@@ -496,20 +512,21 @@ elements.event_matrix <- function(x, values=TRUE) {
 }
 
 #' @export
-elements.event_seq <- function(x, values = TRUE) {
+elements.event_seq <- function(x, values = TRUE, ...) {
   if (values) {
     ret <- list(x$value)
     names(ret) <- x$varname
     ret
   } else {
-    ret <- list(rep(varname(x), length(x)))
+    #ret <- list(rep(varname(x), length(x)))
+    ret <- list(rep(x$varname, length(x)))
     names(ret) <- x$varname
     ret
   }
 }
 
 #' @export
-elements.event_basis <- function(x, values=TRUE, transformed=TRUE) {
+elements.event_basis <- function(x, values=TRUE, transformed=TRUE, ...) {
   if (values && !transformed) {
     x$value$x				
   } else if (values) {
@@ -527,14 +544,14 @@ elements.event_basis <- function(x, values=TRUE, transformed=TRUE) {
     mat <- do.call(cbind, res)
     colnames(mat) <- vnames			
     ret <- list(mat)
-    names(ret) <- .sanitizeName(varname(x))
+    names(ret) <- .sanitizeName(x$varname)
     ret		
   }
 }
 
 
 #' @export
-elements.event_term <- function(x, values=TRUE) {
+elements.event_term <- function(x, values=TRUE, ...) {
   els <- lapply(x$events, elements, values=values)
   n <- sapply(names(els), function(nam) .sanitizeName(nam))
   names(els) <- as.vector(n)
@@ -562,7 +579,7 @@ blockids.convolved_term <- function(x) {
 }
 
 #' @export
-split_onsets.event_term <- function(x, sframe, global=FALSE,blocksplit=FALSE) {
+split_onsets.event_term <- function(x, sframe, global=FALSE,blocksplit=FALSE, ...) {
   ### need to check for 0 factors
   facs <- x$events[!sapply(x$events, is_continuous)]
   
@@ -606,7 +623,8 @@ split_onsets.event_term <- function(x, sframe, global=FALSE,blocksplit=FALSE) {
 
 
 
-#' @export
+
+#' @keywords internal
 convolve_design <- function(hrf, dmat, globons, durations, summate=TRUE) {
   cond.names <- names(dmat)
   #if (length(grep("pc1", cond.names)) > 0) {
@@ -632,16 +650,21 @@ convolve_design <- function(hrf, dmat, globons, durations, summate=TRUE) {
     } else {
       regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero], summate=summate)
     }
-  }, mc.cores=parallel::detectCores())
+  })
   
 }
 
 #' @importFrom tibble as_tibble
 #' @importFrom magrittr %>%
 #' @importFrom dplyr group_by select do ungroup
+#' @autoglobal
 #' @export
-convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate=TRUE) {
+convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, 
+                                summate=TRUE, precision=.3,...) {
+  
+  
   globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
+  
   durations <- x$durations
   blockids <- x$blockids
   
@@ -653,15 +676,35 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate
   
   ncond <- ncol(dmat)
 
-  cmat <- dmat %>% dplyr::mutate(.blockids=blockids, .globons=globons, .durations=durations) %>% 
+  #print("convolving")
+ 
+  cmat <- dmat |> dplyr::mutate(.blockids=blockids, .globons=globons, .durations=durations) |> 
     dplyr::group_by(.blockids) %>%
     dplyr::do({
       d <- dplyr::select(., 1:ncond)
       reg <- convolve_design(hrf, d, .$.globons, .$.durations, summate=summate)
       sam <- samples(sampling_frame, blockids=as.integer(as.character(.$.blockids[1])), global=TRUE)
-      ret <- do.call(cbind, lapply(reg, function(r) evaluate(r, sam)))
-      tibble::as_tibble(ret)
-  }) %>% dplyr::ungroup() %>% dplyr::select(-.blockids)
+      
+      ## TODO could bee parallelized
+      ## ret <- do.call(rbind, furrr::future_map(reg, function(r) evaluate(r, sam))) 
+     
+      ret <- do.call(cbind, lapply(seq_along(reg), function(ri) {
+        vname <- paste0("v", ri)
+        evaluate(reg[[ri]], sam, precision=precision) #%>% select({{vname}} := value)
+        #names(tmp) <- paste0("v", ri)
+        #suppressMessages(as_tibble(tmp))
+      })) 
+      
+      ret <- suppressMessages(tibble::as_tibble(ret, .name_repair="minimal"))
+      names(ret) <- paste0("v", 1:length(reg))
+      #names(ret) <- seq(as.integer(runif(1)*10000)
+      ret
+  }) 
+  
+  #browser()
+  cmat <- cmat %>% dplyr::ungroup() %>% dplyr::select(-.blockids)
+  
+  #print("done convolving")
   
  
   if (nbasis(hrf) > 1) {
@@ -670,18 +713,22 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, summate
   } 
             
   colnames(cmat) <- cnames
-  tibble::as_tibble(cmat)
+  suppressMessages(tibble::as_tibble(cmat, .name_repair="check_unique"))
   
-  #lapply(reglist, function(reg) evaluate(reg, )
   
 }
 
 #' @export
-Fcontrasts.event_term <- function(x) {
-
+Fcontrasts.event_term <- function(x,...) {
+  cellcount <- attr(cells(x, drop.empty=FALSE), "count")
+  if (any(cellcount) == 0) {
+    stop("currently cannot compute Fcontrasts for non-orthogonal design.")
+  }
+  ##browser()
   ## TODO check for no empty cells, otherwise everything fails
   which_cat <- which(sapply(x$events, function(obj) is_categorical(obj)))
   assert_that(length(which_cat) > 0, msg="Fcontrasts cannot be computed for terms with no categorical variables")
+  ## factors comprising this term
   pterms <- parent_terms(x)[which_cat]
   evs <- x$events[which_cat]
   cond <- conditions(x)
@@ -691,22 +738,32 @@ Fcontrasts.event_term <- function(x) {
   Dlist <- lapply(evs, function(ev) t(-diff(diag(length(levels(ev))))))
   
   nfac <- length(Clist)
+  
+  valid_cells <- cellcount > 0
 
   main_effects <- lapply(length(Clist):1, function(i) {
-    print(i)
+    #print(i)
     Dcon <- Dlist[[i]]
     Cs <- Clist[-i]
     mats <- vector(nfac, mode="list")
     mats[[i]] <- Dcon
     mats[seq(1, nfac)[-i]] <- Cs
-    ret <- Reduce(kronecker, mats)
+    ret <- Reduce(kronecker, rev(mats))
+    if (!(all(valid_cells))) {
+      ret <- ret[valid_cells,,drop=FALSE]
+      if (ncol(ret) > 1) {
+        ret <- svd(ret)$u
+      } else {
+        ret <- scale(ret, center=TRUE, scale=FALSE)
+      }
+    }
     row.names(ret) <- cond
     ret
   })
   
-  names(main_effects) <- facnames
+  names(main_effects) <- rev(facnames)
   
-  if (length(facnames) > 1) {
+  if (length(facnames) > 1 && all(valid_cells)) {
     interactions <- vector(length(Clist)-1, mode="list")
     for (i in length(Clist):2) {
       icomb <- combn(nfac, i)
@@ -738,7 +795,7 @@ Fcontrasts.event_term <- function(x) {
 #' @importFrom tibble as_tibble
 #' @importFrom purrr map_chr
 #' @export
-design_matrix.event_term <- function(x, drop.empty=TRUE) {
+design_matrix.event_term <- function(x, drop.empty=TRUE,...) {
 
   locenv <- new.env()
   pterms <- map_chr(parent_terms(x), .sanitizeName)	
@@ -791,50 +848,50 @@ design_matrix.event_term <- function(x, drop.empty=TRUE) {
     colnames(rmat) <- conditions(x, drop=F)			
   }
   
-  tibble::as_tibble(rmat)
+  suppressMessages(tibble::as_tibble(rmat, .name_repair="check_unique"))
 }
 
 
 
 #' @export
-print.event_term <- function(object) {
+print.event_term <- function(x, ...) {
   cat("event_term", "\n")
-  cat("  ", "Term Name: ", object$varname, "\n")
-  cat("  ", "Formula:  ", as.character(formula(object)), "\n")
-  cat("  ", "Num Events: ", nrow(object$event_table), "\n")
-  cat("  ", "Term Types: ", paste(map_chr(object$events, ~ class(.)[[1]])))
+  cat("  ", "Term Name: ", x$varname, "\n")
+  cat("  ", "Formula:  ", as.character(formula(x)), "\n")
+  cat("  ", "Num Events: ", nrow(x$event_table), "\n")
+  cat("  ", "Term Types: ", paste(map_chr(x$events, ~ class(.)[[1]])))
   cat("\n")
 }
 
 #' @export
-print.fmri_term <- function(object) {
-  cat("fmri_term: ", class(object)[[1]], "\n")
-  cat("  ", "Term Name: ", object$varname, "\n")
-  cat("  ", "Num Rows: ", nrow(design_matrix(object)), "\n")
-  cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n")
+print.fmri_term <- function(x,...) {
+  cat("fmri_term: ", class(x)[[1]], "\n")
+  cat("  ", "Term Name: ", x$varname, "\n")
+  cat("  ", "Num Rows: ", nrow(design_matrix(x)), "\n")
+  cat("  ", "Num Columns: ", ncol(design_matrix(x)), "\n")
 }
 
 #' @export
-print.convolved_term <- function(object) {
-  cat("fmri_term: ", class(object)[[1]], "\n")
-  cat("  ", "Term Name: ", object$varname, "\n")
-  cat("  ", "Formula:  ", as.character(formula(object$evterm)), "\n")
-  cat("  ", "Num Events: ", nrow(object$evterm$event_table), "\n")
-  cat("  ", "Num Rows: ", nrow(design_matrix(object)), "\n")
-  cat("  ", "Num Columns: ", ncol(design_matrix(object)), "\n")
-  cat("  ", "Conditions: ", conditions(object), "\n")
-  cat("  ", "Term Types: ", paste(map_chr(object$evterm$events, ~ class(.)[[1]])))
+print.convolved_term <- function(x,...) {
+  cat("fmri_term: ", class(x)[[1]], "\n")
+  cat("  ", "Term Name: ", x$varname, "\n")
+  cat("  ", "Formula:  ", as.character(formula(x$evterm)), "\n")
+  cat("  ", "Num Events: ", nrow(x$evterm$event_table), "\n")
+  cat("  ", "Num Rows: ", nrow(design_matrix(x)), "\n")
+  cat("  ", "Num Columns: ", ncol(design_matrix(x)), "\n")
+  cat("  ", "Conditions: ", conditions(x), "\n")
+  cat("  ", "Term Types: ", paste(map_chr(x$evterm$events, ~ class(.)[[1]])))
   cat("\n")
 }
 
 #' @export
-print.afni_hrf_convolved_term <- function(object) {
-  cat("fmri_term: ", class(object)[[1]], "\n")
-  cat("  ", "Term Name: ", object$varname, "\n")
-  cat("  ", "Formula:  ", as.character(formula(object$evterm)), "\n")
-  cat("  ", "Num Events: ", nrow(object$evterm$event_table), "\n")
-  cat("  ", "Conditions: ", conditions(object), "\n")
-  cat("  ", "Term Types: ", paste(map_chr(object$evterm$events, ~ class(.)[[1]])))
+print.afni_hrf_convolved_term <- function(x,...) {
+  cat("fmri_term: ", class(x)[[1]], "\n")
+  cat("  ", "Term Name: ", x$varname, "\n")
+  cat("  ", "Formula:  ", as.character(formula(x$evterm)), "\n")
+  cat("  ", "Num Events: ", nrow(x$evterm$event_table), "\n")
+  cat("  ", "Conditions: ", conditions(x), "\n")
+  cat("  ", "Term Types: ", paste(map_chr(x$evterm$events, ~ class(.)[[1]])))
   cat("\n")
 }
 

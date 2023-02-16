@@ -3,7 +3,6 @@
 \docType{package}
 \name{fmrireg}
 \alias{fmrireg}
-\alias{fmrireg-package}
 \title{fmrireg: regresssion tools for fMRI data}
 \description{
 fmrireg provides functions for generating experimental design matrices appropriate for analyzing fMRI data with regression.

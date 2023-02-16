@@ -2,12 +2,9 @@
 title: "Building Regressors"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
-output:
-  prettydoc::html_pretty:
-    theme: Leonids
-    highlight: github
+output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{Building Regressors}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -18,7 +15,7 @@ vignette: >
 Suppose we have a simple event-related fMRI design with 10 stimuli spaced every 12s. We want to model each event with the SPM canonical hemodynamic response function (HRF). The duration of each event is 0s, or "instantaneous". We have 140s worth of contiguous scanning data, collected in a single scanning run with a repetititon time (TR) of 2s.
 
 ```{r, echo=FALSE, message=FALSE}
-devtools::load_all()
+library(fmrireg)
 ```
 
 ```{r, message=FALSE,fig.width = 6, fig.height = 4}

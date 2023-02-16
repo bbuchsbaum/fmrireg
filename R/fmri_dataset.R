@@ -1,3 +1,5 @@
+`%dopar%` <- foreach::`%dopar%`
+`%do%` <- foreach::`%do%`
 
 #' @keywords internal
 default_config <- function() {
@@ -14,10 +16,10 @@ default_config <- function() {
 #' @param file_name name of configuration file
 #' @param base_path the file path to be prepended to relative file names
 #' @importFrom assertthat assert_that
-#' @importFrom tibble as_data_frame
+#' @importFrom tibble as_tibble
 #' @export
 read_fmri_config <- function(file_name, base_path=NULL) {
-  print(file_name)
+  #print(file_name)
   env <- default_config()
   
   source(file_name, env)
@@ -55,8 +57,9 @@ read_fmri_config <- function(file_name, base_path=NULL) {
   }
   
   dname <- file.path(env$base_path, env$event_table)
+  
   assert_that(file.exists(dname))
-  env$design <- tibble::as_tibble(read.table(dname, header=TRUE))
+  env$design <- suppressMessages(tibble::as_tibble(read.table(dname, header=TRUE),.name_repair="check_unique"))
 
   out <- as.list(env)
   class(out) <- c("fmri_config", "list")
@@ -76,12 +79,13 @@ read_fmri_config <- function(file_name, base_path=NULL) {
 #' 
 #' ## an iterator with 5 chunks
 #' iter <- data_chunks(dset, nchunks=5)
-#' y <- foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' `%do%` <- foreach::`%do%`
+#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
 #' length(y) == 5
 #' 
 #' ## an iterator with 100 chunks
 #' iter <- data_chunks(dset, nchunks=100)
-#' y <- foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
 #' length(y) == 100
 #' 
 #' ## a matrix_dataset with 200 rows, 100 columns and 2 runs
@@ -90,9 +94,12 @@ read_fmri_config <- function(file_name, base_path=NULL) {
 #' 
 #' ## get a "runwise" iterator. For every iteration an entire run's worth of data is returned.
 #' iter <- data_chunks(dset, runwise=TRUE)
-#' y <- foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' y <- foreach::foreach(chunk = iter)  %do% { colMeans(chunk$data) }
 #' length(y) == 2
 matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
+  if (is.vector(datamat)) {
+    datamat <- as.matrix(datamat)
+  }
   assert_that(sum(run_length) == nrow(datamat))
   
   frame <- sampling_frame(run_length, TR)
@@ -127,6 +134,7 @@ matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
 #' 
 #' iter <- data_chunks(dset, nchunks=100)
 fmri_mem_dataset <- function(scans, mask, TR, 
+                             run_length=sapply(scans, function(x) dim(x)[4]),
                              event_table=data.frame(), 
                              base_path=".",
                              censor=NULL) {
@@ -137,9 +145,9 @@ fmri_mem_dataset <- function(scans, mask, TR,
   assert_that(inherits(mask, "NeuroVol"))
   assert_that(all(dim(mask) == dim(scans[[1]][1:3])))
   
- 
-  run_length <- map_dbl(scans, ~ dim(.)[4])
-  assert_that(sum(run_length) > length(scans))
+  ntotscans <- sum(sapply(scans, function(x) dim(x)[4]))
+  #run_length <- map_dbl(scans, ~ dim(.)[4])
+  assert_that(sum(run_length) == ntotscans)
   
   if (is.null(censor)) {
     censor <- rep(0, sum(run_length))
@@ -148,10 +156,9 @@ fmri_mem_dataset <- function(scans, mask, TR,
   frame <- sampling_frame(run_length, TR)
   
   ret <- list(
-    
     scans=scans,
     mask=mask,
-    nruns=length(scans),
+    nruns=length(run_length),
     event_table=event_table,
     base_path=base_path,
     sampling_frame=frame,
@@ -162,55 +169,123 @@ fmri_mem_dataset <- function(scans, mask, TR,
   ret
 }
 
-
+#' A dataset that encapsulates a dimension-reduced subspace of "latent variables". 
+#' 
+#' 
+#' @inheritParams fmri_dataset
+#' @param lvec an instance of class \code{LatentNeuroVec}
+#' @examples 
+#' 
+#' ## a matrix with 100 rows and 1000 columns (voxels)
+#' X <- matrix(rnorm(100*1000), 100, 1000)
+#' pres <- prcomp(X)
+#' basis <- pres$x[,1:25]
+#' loadings <- pres$rotation[,1:25]
+#' offset <- colMeans(X)
+#' lvec <- neuroim2::LatentNeuroVec(basis, loadings, neuroim2::NeuroSpace(c(10,10,10,100)), 
+#' mask=rep(TRUE,1000), offset=offset)
+#' dset <- latent_dataset(lvec, TR=2, run_length=100)
+#' @export 
+latent_dataset <- function(lvec, TR, run_length, event_table=data.frame()) {
+  assert_that(sum(run_length) == dim(lvec)[4])
+  
+  frame <- sampling_frame(run_length, TR)
+  
+  ret <- list(
+    lvec=lvec,
+    datamat=lvec@basis,
+    TR=TR,
+    nruns=length(run_length),
+    event_table=event_table,
+    sampling_frame=frame,
+    mask=rep(1,ncol(lvec@basis))
+  )
+  
+  class(ret) <- c("latent_dataset", "matrix_dataset", "fmri_dataset", "list")
+  ret
+  
+}
 
 
 
 #' An fMRI dataset consisting of a set of scans as files, design information, and other data.
 #' 
-#' @param scans a vector of file names of the images comprising the dataset
+#' @param scans a vector of one or more file names of the images comprising the dataset
 #' @param mask name of the binary mask file indicating the voxels to include in analysis.
 #' @param TR the repetition time in seconds of the scan-to-scan interval.
-#' @param run_length a \code{vector} of itnegers indicating the number of scans in each run.
+#' @param run_length a \code{vector} of one or more integers indicating the number of scans in each run.
 #' @param event_table a \code{data.frame} containing the event onsets and experimental variables.
 #' @param base_path the file path to be prepended to relative file names.
 #' @param censor a binary vector indicating which scans to remove.
+#' @param preload read image scans eagerly rather than on first access
+#' @param mode the type of storage mode ('normal', 'bigvec', 'mmap', filebacked')
+#' 
 #' @export
 #' @importFrom tibble as_tibble
 #' @examples 
 #' 
-#' dset <- fmri_dataset(c("scan1.nii", "scan2.nii", "scan3.nii"), mask="mask.nii", TR=2, run_length=rep(300,3), 
-#'         event_table=data.frame(onsets=c(3,20,99,3,20,99,3,20,99), run=c(1,1,1,2,2,2,3,3,3)))
+#' dset <- fmri_dataset(c("scan1.nii", "scan2.nii", "scan3.nii"), 
+#' mask="mask.nii", TR=2, run_length=rep(300,3), 
+#' event_table=data.frame(onsets=c(3,20,99,3,20,99,3,20,99), 
+#' run=c(1,1,1,2,2,2,3,3,3)))
+#'         
+#' dset <- fmri_dataset("scan1.nii", mask="mask.nii", TR=2, 
+#' run_length=300, 
+#' event_table=data.frame(onsets=c(3,20,99), run=rep(1,3)))
+#' 
 #' 
 fmri_dataset <- function(scans, mask, TR, 
                          run_length, 
                          event_table=data.frame(), 
                          base_path=".",
-                         censor=NULL) {
+                         censor=NULL,
+                         preload=FALSE,
+                         mode=c("normal", "bigvec", "mmap", "filebacked")) {
   
-  if (length(run_length) == 1) {
-    run_length <- rep(run_length, length(scans))
-  }
+  assert_that(is.character(mask), msg="'mask' should be the file name of the binary mask file")
+  mode <- match.arg(mode)
+  
+  #if (length(run_length) == 1) {
+  #  run_length <- rep(run_length, length(scans))
+  #}
+  
+  ## run_length should equal total length of images in scans -- but we can 't confirm that here.
   
   if (is.null(censor)) {
     censor <- rep(0, sum(run_length))
   }
   
   frame <- sampling_frame(run_length, TR)
-  assert_that(length(run_length) == length(scans))
+  
+  #assert_that(length(run_length) == length(scans))
   
   maskfile <- paste0(base_path, "/", mask)
-  #maskvol <- neuroim2::read_vol(maskfile)
+  scans=paste0(base_path, "/", scans)
+
+  maskvol <- if (preload) {
+    assert_that(file.exists(maskfile))
+    message(paste("preloading masks", maskfile))
+    neuroim2::read_vol(maskfile)
+  }
+  
+  vec <- if (preload) {
+    message(paste("preloading scans", paste(scans, collapse = " ")))
+    neuroim2::read_vec(scans, mode=mode,mask=maskvol)
+  }
+  
   
   ret <- list(
-    scans=paste0(base_path, "/", scans),
+    scans=scans,
+    vec=vec,
     mask_file=maskfile,
-    #mask=maskvol,
-    nruns=length(scans),
-    event_table=as_tibble(event_table),
+    mask=maskvol,
+    nruns=length(run_length),
+    event_table=suppressMessages(as_tibble(event_table,.name_repair="check_unique")),
     base_path=base_path,
     sampling_frame=frame,
-    censor=censor
+    censor=censor,
+    mode=mode,
+    preload=preload
   )
   
   class(ret) <- c("fmri_file_dataset", "volumetric_dataset", "fmri_dataset", "list")
@@ -218,28 +293,68 @@ fmri_dataset <- function(scans, mask, TR,
 }
 
 
+
+#' @export
+#' @importFrom neuroim2 NeuroVecSeq 
+get_data.latent_dataset <- function(x, ...) {
+  x$lvec@basis
+}
+
 #' @export
 #' @importFrom neuroim2 NeuroVecSeq 
 get_data.fmri_mem_dataset <- function(x, ...) {
-  do.call(neuroim2::NeuroVecSeq, x$scans)
+  if (length(x$scans) > 1) {
+    do.call(neuroim2::NeuroVecSeq, x$scans)
+  } else {
+    x$scans[[1]]
+  }
 }
 
+#' @export
+#' @importFrom neuroim2 NeuroVecSeq 
+get_data.matrix_dataset <- function(x, ...) {
+  x$datamat
+}
+
+#' @import memoise
+get_data_from_file <- memoise::memoise(function(x, ...) {
+  m <- get_mask(x)
+  neuroim2::read_vec(x$scans, mask=m, mode=x$mode, ...)
+})
 
 #' @export
 #' @importFrom neuroim2 NeuroVecSeq FileBackedNeuroVec
 get_data.fmri_file_dataset <- function(x, ...) {
-  m <- get_mask(x)
-  do.call(neuroim2::NeuroVecSeq, lapply(x$scans, neuroim2::read_vec, mask=m))
+  if (is.null(x$vec)) {
+    get_data_from_file(x,...)
+  } else {
+    x$vec
+  }
 }
 
 #' @export
-get_mask.fmri_file_dataset <- function(x) {
-  neuroim2::read_vol(x$mask_file)
+get_mask.fmri_file_dataset <- function(x, ...) {
+  if (is.null(x$mask)) {
+    neuroim2::read_vol(x$mask_file)
+  } else {
+    x$mask
+  }
 }
 
+
 #' @export
-get_mask.fmri_mem_dataset <- function(x) {
+get_mask.fmri_mem_dataset <- function(x, ...) {
   x$mask
+}
+
+#' @export
+get_mask.matrix_dataset <- function(x, ...) {
+  x$mask
+}
+
+#' @export
+get_mask.latent_dataset <- function(x, ...) {
+  x$lvec@mask
 }
 
 
@@ -269,21 +384,23 @@ chunk_iter <- function(x, nchunks, get_chunk) {
     }
   }
   
-  iter <- list(nextElem=nextEl)
+  iter <- list(nchunks=nchunks, nextElem=nextEl)
   class(iter) <- c("chunkiter", "abstractiter", "iter")
   iter
 }
 
 
 #' @importFrom neuroim2 series
+#' @autoglobal
 #' @export
-data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
-  
-  mask <- x$mask
-  
+data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
+  mask <- get_mask(x)
+  #print("data chunks")
+  #print(nchunks)
   get_run_chunk <- function(chunk_num) {
     bvec <- x$scans[[chunk_num]]
-    voxel_ind <- which(x$mask>0)
+    voxel_ind <- which(mask>0)
+    #print(voxel_ind)
     row_ind <- which(x$sampling_frame$blockids == chunk_num)
     ret <- data_chunk(neuroim2::series(bvec,voxel_ind), 
                       voxel_ind=voxel_ind, 
@@ -294,6 +411,8 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
   get_seq_chunk <- function(chunk_num) {
     bvecs <- x$scans
     voxel_ind <- maskSeq[[chunk_num]]
+    #print(voxel_ind)
+
     m <- do.call(rbind, lapply(bvecs, function(bv) neuroim2::series(bv, voxel_ind)))
     ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) neuroim2::series(bv, voxel_ind))), 
                       voxel_ind=voxel_ind, 
@@ -305,13 +424,13 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
   if (runwise) {
     chunk_iter(x, length(x$scans), get_run_chunk)
   } else if (nchunks == 1) {
-    maskSeq <- one_chunk()
+    maskSeq <<- one_chunk()
     chunk_iter(x, 1, get_seq_chunk)
-  } else if (nchunks == dim(mask)[3]) {
-    maskSeq <- slicewise_chunks(x)
-    chunk_iter(x, length(maskSeq), get_seq_chunk)
+  #} #else if (nchunks == dim(mask)[3]) {
+    #maskSeq <<- slicewise_chunks(x)
+    #chunk_iter(x, length(maskSeq), get_seq_chunk)
   } else {
-    maskSeq <- arbitrary_chunks(x, nchunks)
+    maskSeq <<- arbitrary_chunks(x, nchunks)
     chunk_iter(x, length(maskSeq), get_seq_chunk)
   }
   
@@ -319,45 +438,57 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE) {
 
 
 
-#' @import neuroim2
 #' @export
-data_chunks.fmri_dataset <- function(x, nchunks=1,runwise=FALSE) {
-  
-  mask <- x$mask
+data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
+  mask <- get_mask(x)
+  #maskSeq <- NULL
+  iter <- if (runwise) {
+    chunk_iter(x, length(x$scans), get_run_chunk)
+  } else if (nchunks == 1) {
+    maskSeq <<- one_chunk(x)
+    chunk_iter(x, 1, get_seq_chunk)
+  } else {
+    maskSeq <<- arbitrary_chunks(x, nchunks)
+    #print(maskSeq)
+    chunk_iter(x, length(maskSeq), get_seq_chunk)
+  }
   
   get_run_chunk <- function(chunk_num) {
-    bvec <- neuroim2::read_vec(file.path(x$scans[chunk_num]), mask=x$mask)
-    ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), row_ind=which(x$sampling_frame$blockids == chunk_num), chunk_num=chunk_num)
+    bvec <- neuroim2::read_vec(file.path(x$scans[chunk_num]), mask=mask)
+    ret <- data_chunk(bvec@data, voxel_ind=which(x$mask>0), 
+                      row_ind=which(x$sampling_frame$blockids == chunk_num), 
+                      chunk_num=chunk_num)
   }
   
   get_seq_chunk <- function(chunk_num) {
-    bvecs <- lapply(x$scans, function(scan) neuroim2::read_vec(scan, mask=maskSeq[[chunk_num]]))
-    ret <- data_chunk(do.call(rbind, lapply(bvecs, function(bv) bv@data)), voxel_ind=maskSeq[[chunk_num]], 
-                      row_ind=1:nrow(x$event_table), chunk_num=chunk_num)
+  
+    #v <- x$vec
+    v <- get_data(x)
+    #bvecs <- lapply(x$scans, function(scan) neuroim2::read_vec(scan, mask=maskSeq[[chunk_num]]))
+    vind=maskSeq[[chunk_num]]
+    m <- series(v, vind)
+    ret <- data_chunk(m, voxel_ind=vind, 
+                      row_ind=1:nrow(x$event_table), 
+                      chunk_num=chunk_num)
     
   }
   
-  if (runwise) {
-    chunk_iter(x, length(x$scans), get_run_chunk)
-  } else if (nchunks == 1) {
-    maskSeq <- one_chunk()
-    chunk_iter(x, 1, get_seq_chunk)
-  } else if (nchunks == dim(mask)[3]) {
-    maskSeq <- slicewise_chunks(x)
-    chunk_iter(x, length(maskSeq), get_seq_chunk)
-  } else {
-    maskSeq <- arbitrary_chunks(x, nchunks)
-    chunk_iter(x, length(maskSeq), get_seq_chunk)
-  }
+  iter
+  
+  ##message("nchunks is ", nchunks)
+  
+  
+  
   
 }
 
-#' @import neuroim2
+
 #' @export
-data_chunks.matrix_dataset <- function(x, nchunks=1, runwise=FALSE) {
+data_chunks.matrix_dataset <- function(x, nchunks=1, runwise=FALSE,...) {
   get_run_chunk <- function(chunk_num) {
     ind <- which(blockids(x$sampling_frame) == chunk_num)
-    mat <- x$datamat[ind,]
+    mat <- x$datamat[ind,,drop=FALSE]
+    #browser()
     data_chunk(mat, voxel_ind=1:ncol(mat), row_ind=ind, chunk_num=chunk_num)
   }
   
@@ -373,23 +504,34 @@ data_chunks.matrix_dataset <- function(x, nchunks=1, runwise=FALSE) {
   } else {
     sidx <- split(1:ncol(x$datamat), sort(rep(1:nchunks, length.out=ncol(x$datamat))))
     get_chunk <- function(chunk_num) {
-      data_chunk(x$datamat[,sidx[[chunk_num]], drop=FALSE], voxel_ind=sidx[[chunk_num]], row_ind=1:nrow(x$datamat), chunk_num=chunk_num)
+      data_chunk(x$datamat[,sidx[[chunk_num]], drop=FALSE], 
+                 voxel_ind=sidx[[chunk_num]], 
+                 row_ind=1:nrow(x$datamat), 
+                 chunk_num=chunk_num)
     }
     chunk_iter(x, nchunks, get_chunk)
   }
   
 }
 
-#' @export
+#' @keywords internal
 exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchunks=NULL) {
   strategy <- match.arg(strategy)
+  
   function(dset) {
     if (strategy == "runwise") {
       data_chunks(dset, runwise=TRUE)
     } else if (strategy == "voxelwise") {
-      data_chunks(dset, nchunks = sum(dset$mask), runwise=FALSE)
+      m <- get_mask(dset)
+      data_chunks(dset, nchunks = sum(m), runwise=FALSE)
     } else if (strategy == "chunkwise") {
+      m <- get_mask(dset)
+      ##message("nchunks is", nchunks)
       assert_that(!is.null(nchunks) && is.numeric(nchunks))
+      if (nchunks > sum(m)) {
+        warning("requested number of chunks is greater than number of voxels in mask")
+        nchunks <- sum(m)
+      }
       data_chunks(dset, nchunks = nchunks, runwise=FALSE)
     }
   }
@@ -399,32 +541,30 @@ exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchun
 
 #' @keywords internal
 arbitrary_chunks <- function(x, nchunks) {
-
-  mask <- x$mask
-  indices <- which(mask != 0)
+  #print("arbitrary chunks")
+  #browser()
+  mask <- get_mask(x)
+  #print(mask)
+  indices <- as.integer(which(mask != 0))
   chsize <- round(length(indices)/nchunks)
+  #print(indices)
+  
   assert_that(chsize > 0)
   chunkids <- sort(rep(1:nchunks, each=chsize, length.out=length(indices)))
+  #print(chunkids)
   
-  maskSeq <- lapply(seq(1, nchunks), function(i) {
-    function(i) {
-      #m <- mask
-      #m[] <- 0
-      #m[indices[chunkids==i]] <- 1
-      #m
-      indices[chunkids==i]
-    }
-  })
-  
-  neuroim2::deferred_list(maskSeq)
-  
+  mfun <- function(i) indices[chunkids==i]
+  #print(mfun)
+  ret <- neuroim2::deferred_list2(mfun, nchunks)
+  #print(ret[[1]])
+  return(ret)
   
 }
 
 #' @keywords internal
 slicewise_chunks <- function(x) {
   mask <- x$mask
-  template <- NeuroVol(array(0, dim(mask)), space(mask))
+  template <- neuroim2::NeuroVol(array(0, dim(mask)), neuroim2::space(mask))
   nchunks <- dim(mask)[3]
   
   maskSeq <- lapply(1:nchunks, function(i) {
@@ -439,29 +579,45 @@ slicewise_chunks <- function(x) {
 
 #' @keywords internal
 one_chunk <- function(x) {
-  mask <- x$mask
+  mask <- get_mask(x)
   list(mask)
 }
 
 #' @export
-print.fmri_dataset <- function(object) {
+print.fmri_dataset <- function(x, ...) {
   cat("fmri_dataset", "\n")
-  cat("  number of runs: ", object$nruns, "\n")
-  print(object$sampling_frame)
+  cat("  number of runs: ", x$nruns, "\n")
+  print(x$sampling_frame)
   cat("  event_table: ", "\n")
-  print(object$event_table)
+  print(x$event_table)
 }
 
 
 #' @export
-print.matrix_dataset <- function(object) {
+print.matrix_dataset <- function(x,...) {
   cat("matrix_dataset", "\n")
-  cat("  number of runs: ", object$nruns, "\n")
-  cat("  number of rows: ", nrow(object$datamat), "\n")
-  cat("  number of columns: ", ncol(object$datamat), "\n")
-  print(object$sampling_frame)
+  cat("  number of runs: ", x$nruns, "\n")
+  cat("  number of rows: ", nrow(x$datamat), "\n")
+  cat("  number of columns: ", ncol(x$datamat), "\n")
+  print(x$sampling_frame)
   cat("  event_table: ", "\n")
-  print(object$event_table)
+  print(x$event_table)
+}
+
+#' @export
+print.latent_dataset <- function(x,...) {
+  cat("latent_dataset", "\n")
+  cat("  number of runs: ", x$nruns, "\n")
+  cat("  number of rows: ", nrow(x$datamat), "\n")
+  cat("  number of latent variables: ", ncol(x$datamat), "\n")
+  print(x$sampling_frame)
+  cat("  event_table: ", "\n")
+  print(x$event_table)
+}
+
+#' @export
+print.chunkiter <- function(x, ...) {
+  cat(paste("chunk iterator with", x$nchunks, " chunks"))
 }
 
 

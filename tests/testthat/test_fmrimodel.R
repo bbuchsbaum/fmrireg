@@ -1,3 +1,4 @@
+options(mc.cores=2)
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 
 
@@ -19,7 +20,7 @@ test_that("can construct and run an fmri_model", {
   expect_equal(length(terms(fmod)), 3)
   expect_equal(ncol(design_matrix(fmod)), length(conditions(fmod)))
   expect_equal(2, length(baseline_terms(fmod)))
-  expect_null(contrast_weights(fmod))
+  expect_null(contrast_weights(fmod)$repnum)
   #p<-print(fmod)
   expect_true(TRUE)
   

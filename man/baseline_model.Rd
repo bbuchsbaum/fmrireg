@@ -4,8 +4,13 @@
 \alias{baseline_model}
 \title{construct a baseline model to model noise and other non-event-related sources of variance}
 \usage{
-baseline_model(basis = c("poly", "bs", "ns"), degree = 1, sframe,
-  intercept = TRUE, nuisance_list = NULL)
+baseline_model(
+  basis = c("constant", "poly", "bs", "ns"),
+  degree = 1,
+  sframe,
+  intercept = c("runwise", "global", "none"),
+  nuisance_list = NULL
+)
 }
 \arguments{
 \item{basis}{the basis function type}
@@ -14,25 +19,46 @@ baseline_model(basis = c("poly", "bs", "ns"), degree = 1, sframe,
 
 \item{sframe}{sframe a \code{sampling_frame} object}
 
-\item{intercept}{wehther to include an intercept for each block}
+\item{intercept}{whether to include an intercept for each block. Automatically set to \code{FALSE} when basis == "constant".}
 
-\item{nuisance_list}{a list of nusiance matrices, one matrix per fMRI block}
+\item{nuisance_list}{a list of nuisance matrices, one matrix per fMRI block}
 }
 \description{
 construct a baseline model to model noise and other non-event-related sources of variance
 }
 \examples{
 
-## bspline basis with degree = 3. This will produce a design matrix with three splines regressiors and a constant intercept.
+## bspline basis with degree = 3. This will produce a design matrix with three 
+## splines regressor and a constant intercept.
 sframe <- sampling_frame(blocklens=c(100,100), TR=2)
 bmod <- baseline_model(basis="bs", degree=3, sframe=sframe)
-stopifnot(ncol(design_matrix(bmod)) == 4)
+bmod_global <- baseline_model(basis="bs", degree=3, 
+sframe=sframe, intercept="global")
 
-## no intercept term
-bmod <- baseline_model(basis="poly", degree=3, sframe=sframe, intercept=FALSE)
+bmod_nointercept <- baseline_model(basis="bs", degree=3, 
+sframe=sframe, intercept="none")
 
-## add an arbitrary nuisance matrix with two columns
+stopifnot(ncol(design_matrix(bmod)) == 8)
+stopifnot(ncol(design_matrix(bmod_global)) == 7)
+stopifnot(ncol(design_matrix(bmod_nointercept)) == 6)
+
+## polynomial with no intercept term
+bmod <- baseline_model(basis="poly", degree=3, sframe=sframe, intercept="none")
+
+## a baseline model that only has dummy-coded intercept terms, one per block, 
+## i.e. to model runwise mean shifts only.
+
+bmod <- baseline_model(basis="constant", degree=1, sframe=sframe)
+
+## global intercept only
+bmod <- baseline_model(basis="constant", degree=1, sframe=sframe, intercept="global")
+
+
+## add an arbitrary nuisance matrix with two columns, i.e. motion regressors, 
+## physiological noise, etc.
+
 nuismat <- matrix(rnorm(100*2), 100, 2)
-bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, nuisance_list=list(nuismat, nuismat))
+bmod <- baseline_model(basis="bs", degree=3, sframe=sframe, 
+nuisance_list=list(nuismat, nuismat))
 stopifnot(ncol(design_matrix(bmod)) == 12)
 }

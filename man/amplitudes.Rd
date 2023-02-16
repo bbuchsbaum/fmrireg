@@ -3,7 +3,7 @@
 \name{amplitudes}
 \alias{amplitudes}
 \alias{amplitudes.regressor}
-\title{amplitudes}
+\title{get amplitude vector}
 \usage{
 amplitudes(x)
 
@@ -13,5 +13,5 @@ amplitudes(x)
 \item{x}{the object}
 }
 \description{
-return the amplitude vector
+get the intensity or amplitudes associated with each event
 }

@@ -2,12 +2,9 @@
 title: "Translating to AFNI 3dDeconvolve"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
-output:
-  prettydoc::html_pretty:
-    theme: Leonids
-    highlight: github
+output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{Translating to AFNI 3dDeconvolve}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -19,7 +16,7 @@ AFNI and other fMRI analysis packages have robust and efficient methods for esti
 
 ```{r, message=FALSE,echo=FALSE}
 library(tibble)
-devtools::load_all()
+library(fmrireg)
 ```
 
 ## A Simple Model

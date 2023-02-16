@@ -2,16 +2,16 @@ Package: fmrireg
 Type: Package
 Title: R package for the anlysis of fmri data
 Version: 0.0.1
-Date: 2019-12-01
+Date: 2020-09-15
 Authors@R: person("Bradley", "Buchsbaum",, role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
 License: GPL (>= 2)
-Maintainer: Bradley Buchsbaum <bbuchsbaum@gmail.com>
-Description: fmrireg is a package for the analysis of fmri image data
+Maintainer: Bradley Buchsbaum <brad.buchsbaum@gmail.com>
+Description: fmrireg is a package for the analysis of functional magnetic resonance imaging (fMRI) data. Facilities are provided to construct flexible hemodynamic response functions, experimental regressors, and conduct univariate fMRI analyses.
+Encoding: UTF-8
+LazyData: yes
 Depends:
-    R (>= 3.5.0),
-    stats,
-    methods,
-    abind
+    R (>= 4.0.0),
+    stats
 Imports:
     gtools,
     numDeriv,
@@ -19,7 +19,6 @@ Imports:
     assertthat,
     stringr,
     tibble,
-    neuroim2,
     purrr,
     foreach,
     Matrix,
@@ -32,15 +31,34 @@ Imports:
     pls,
     rrBLUP,
     shiny,
-    tidyr
-RoxygenNote: 6.1.1
-Suggests: testthat,
+    tidyr,
+    mgcv,
+    iterators,
+    robustbase,
+    glmnet,
+    care,
+    memoise,
+    pracma,
+    forecast,
+    furrr,
+    rlang,
+    neuroim2
+RoxygenNote: 7.2.1
+Roxygen: list(
+    markdown = TRUE,
+    roclets = c("collate", "namespace", "rd", "roxyglobals::global_roclet"))
+Suggests: 
+    testthat,
     knitr,
     rmarkdown,
     roxygen2,
-    covr
+    covr,
+    multivarious,
+    roxyglobals (>= 0.2.1)
 Remotes: 
-  bbuchsbaum/neuroim2
+    bbuchsbaum/neuroim2,
+    bbuchsbaum/multivarious,
+    anthonynorth/roxyglobals
 VignetteBuilder: knitr
 URL: https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues

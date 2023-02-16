@@ -1,3 +1,4 @@
+options(mc.cores=2)
 library(purrr)
 
 ## generate an experimental design

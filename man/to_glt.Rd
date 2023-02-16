@@ -14,3 +14,4 @@ to_glt(x, ...)
 \description{
 convert a contrast to an AFNI 'GLT'
 }
+\keyword{internal}

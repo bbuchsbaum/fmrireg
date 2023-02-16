@@ -7,7 +7,7 @@
 \usage{
 conditions(x, ...)
 
-\method{conditions}{event_model}(x)
+\method{conditions}{event_model}(x, ...)
 }
 \arguments{
 \item{x}{the model term}
