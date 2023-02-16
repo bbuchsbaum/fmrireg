@@ -235,7 +235,7 @@ poly_contrast <- function(A, name, where=NULL, degree=1, value_map=NULL) {
 #' @export
 contrast_weights.poly_contrast_spec <- function(x, term,...) {
   term.cells <- cells(term)
-  term.cells <- term.cells %>% mutate(rowname=longnames(term))
+  term.cells <- term.cells %>% dplyr::mutate(rowname=longnames(term))
   #row.names(term.cells) <- longnames(term)
  
   #keep <- eval(x$where, envir=term.cells, enclos=parent.frame())	

@@ -358,7 +358,7 @@ hrf_bspline <- function(t, span=20, N=5, degree=3) {
 }
 
 
-#' hrf_gamma
+#' gamma hemodynamic response function
 #' 
 #' A hemodynamic response function using the Gamma density function
 #' 

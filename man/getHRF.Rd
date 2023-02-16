@@ -36,3 +36,4 @@ getHRF(
 \description{
 getHRF
 }
+\keyword{internal}

@@ -7,7 +7,6 @@ utils::globalVariables(c(
   ".block", # <plot.baseline_model>
   ".blockids", # <convolve.event_term>
   ".", # <convolve.event_term>
-  "maskSeq", # <data_chunks.fmri_mem_dataset>
   "i", # <chunkwise_lm.fmri_dataset>
   "ym", # <runwise_lm>
   "ym", # <runwise_rlm>

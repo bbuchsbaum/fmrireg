@@ -2,7 +2,7 @@
 % Please edit documentation in R/hrf.R
 \name{hrf_gamma}
 \alias{hrf_gamma}
-\title{hrf_gamma}
+\title{gamma hemodynamic response function}
 \usage{
 hrf_gamma(t, shape = 6, rate = 1)
 }

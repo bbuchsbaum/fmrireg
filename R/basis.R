@@ -98,6 +98,7 @@ predict.Poly <- function(object,newdata,...) {
   predict(object$y, newdata)
 }
 
+
 sub_basis.Poly <- function(x, subset) {
   ret <- list(x=x$x[subset],
        y=x$y[subset,],
