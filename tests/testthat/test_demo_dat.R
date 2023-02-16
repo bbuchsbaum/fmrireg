@@ -25,6 +25,7 @@ pick_confounds <- function(conf, cvars=cvars0, npcs=6) {
   })
 }
 
+
 # test_that("demo1", {
 #   
 #   des <- dat$design
@@ -137,3 +138,4 @@ pick_confounds <- function(conf, cvars=cvars0, npcs=6) {
 #   
 # })
 # 
+

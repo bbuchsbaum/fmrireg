@@ -16,21 +16,25 @@ gen_dset <- function(D=5, des=facedes) {
   
   mask <- neuroim2::LogicalNeuroVol(array(rnorm(D*D*D), c(D,D,D)) > 0, neuroim2::NeuroSpace(dim=c(D,D,D)))
   
+  
   #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
   fmri_mem_dataset(scans=scans, 
-                           mask=mask, 
-                           TR=1.5, 
-                           event_table=des)
+                   mask=mask, 
+                   TR=1.5, 
+                   event_table=des)
   
   
 }
+
 
 test_that("can run a beta estimation", {
   
   facedes$frun <- factor(facedes$run)
   facedes$constant <- factor(rep(1, nrow(facedes)))
   
-  facedes <- facedes %>% dplyr::filter(run==1)
+
+  facedes <- facedes %>% filter(run==1)
+  
   dset <- gen_dset(5, facedes)
   
   

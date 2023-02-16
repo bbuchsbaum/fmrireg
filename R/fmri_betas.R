@@ -37,7 +37,7 @@ slm_betas <- function(X, Y) {
   b1 + b2
 }
 
-#' @importFrom rrBLUP mixed.solve
+
 mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
   fit <- rrBLUP::mixed.solve(Y, Z=X[,ran_ind], X=X[,c(fixed_ind)], bounds=c(c(1e-05, .2)))
   c(fit$u, fit$b)

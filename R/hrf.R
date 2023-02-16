@@ -382,6 +382,12 @@ hrf_gaussian <- function(t, mean=6, sd=2) {
 	dnorm(t, mean=mean, sd=sd)
 }
 
+#hrf_mexhat <- function(t, mean=6, sd=2) {
+#  cf <- sqrt(2/(3 * sd * pi^(1/4)))
+#  t0 <- t - mean
+#  cf * ( 1 - (t0/sd)^2) * exp(-t0^2/(2*sd^2))
+#}
+
 
 #' hrf_spmg1
 #' 
