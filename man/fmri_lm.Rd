@@ -2,7 +2,7 @@
 % Please edit documentation in R/fmrilm.R
 \name{fmri_lm}
 \alias{fmri_lm}
-\title{fmri_lm}
+\title{Fit a linear regression model for fMRI data analysis}
 \usage{
 fmri_lm(
   formula,
@@ -14,56 +14,42 @@ fmri_lm(
   robust = FALSE,
   strategy = c("runwise", "chunkwise"),
   nchunks = 10,
-  meta_weighting = c("inv_var", "equal"),
   ...
 )
 }
 \arguments{
-\item{formula}{the model formula for experimental events}
+\item{formula}{The model formula for experimental events.}
 
-\item{block}{the model formula for block structure}
+\item{block}{The model formula for block structure.}
 
-\item{baseline_model}{the \code{baseline_model} object}
+\item{baseline_model}{(Optional) The \code{baseline_model} object. Default is NULL.}
 
-\item{dataset}{an object derived from \code{fmri_dataset} containing the time-series data}
+\item{dataset}{An object derived from \code{fmri_dataset} containing the time-series data.}
 
-\item{durations}{a vector of event durations}
+\item{durations}{A vector of event durations.}
 
-\item{drop_empty}{whether to remove factor levels with size of zero}
+\item{drop_empty}{Whether to remove factor levels with a size of zero. Default is TRUE.}
 
-\item{robust}{whether to use robust fitting (TRUE or FALSE)}
+\item{robust}{Whether to use robust fitting. Default is FALSE.}
 
-\item{strategy}{the data splitting strategy}
+\item{strategy}{The data splitting strategy, either "runwise" or "chunkwise". Default is "runwise".}
 
-\item{nchunks}{number of daa chunks when strategy is \code{chunkwise}}
+\item{nchunks}{Number of data chunks when strategy is \code{chunkwise}. Default is 10.}
 
-\item{meta_weighting}{for runwise analyses, wheter to use
-inverse variance ("inv_var") or equal ("equal") weighting}
-
-\item{...}{extra args}
+\item{...}{Extra arguments.}
+}
+\value{
+A fitted linear regression model for fMRI data analysis.
 }
 \description{
-fmri_lm
+This function fits a linear regression model for fMRI data analysis using the specified model formula,
+block structure, and dataset. The model can be fit using either a runwise or chunkwise data splitting strategy,
+and robust fitting can be enabled if desired.
 }
 \examples{
-etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))
-etab2 <- data.frame(onset=c(1,30,65,75), fac=factor(c("A", "B", "A", "B")), run=c(1,1,1,1))
-mat <- matrix(rnorm(100*100), 100,100)
-dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
-dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
-con  <- pair_contrast(~ fac == "A", ~ fac == "B", name="A_min_B")
-con2  <- unit_contrast(~ fac, name="A_min_baseline")
-lm.1 <- fmri_lm(onset ~ hrf(fac, contrasts=contrast_set(con,con2)), 
-block= ~ run, dataset=dset)
-
-lm.2 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, dataset=dset2)
-
-lm.2a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
-robust=TRUE, dataset=dset2)
-
-lm.3 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
-dataset=dset2, strategy="runwise")
-
-lm.3a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
-robust=TRUE, dataset=dset2, strategy="runwise")
+# Example usage of fmri_lm function
+# ...
+}
+\seealso{
+fmri_dataset, fmri_lm_fit
 }

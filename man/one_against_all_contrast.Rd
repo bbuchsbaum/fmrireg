@@ -2,22 +2,25 @@
 % Please edit documentation in R/contrast.R
 \name{one_against_all_contrast}
 \alias{one_against_all_contrast}
-\title{A contrast that compares each level vs the average of the other levels.}
+\title{One Against All Contrast}
 \usage{
 one_against_all_contrast(levels, facname, where = NULL)
 }
 \arguments{
-\item{levels}{the set of factor levels to compare.}
+\item{levels}{A vector of factor levels to be compared.}
 
-\item{facname}{the name of the factor containing the supplied levels.}
+\item{facname}{A character string specifying the name of the factor containing the supplied levels.}
 
-\item{where}{the subset over which the contrast is computed}
+\item{where}{An optional formula specifying the subset over which the contrast is computed.}
+}
+\value{
+A contrast_set object containing contrasts comparing each factor level against the average of the other levels.
 }
 \description{
-A contrast that compares each level vs the average of the other levels.
+Construct contrasts comparing each factor level against the average of the other levels.
 }
 \examples{
-
 fac <- factor(rep(c("A", "B", "C"), 2))
 con <- one_against_all_contrast(levels(fac), "fac")
+
 }

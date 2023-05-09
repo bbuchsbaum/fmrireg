@@ -21,5 +21,10 @@ contrast_weights(x, ...)
 \item{...}{extra args}
 }
 \description{
-contrast_weights
+This function calculates the contrast weights based on the contrast specification
+provided by the user. It is a generic function that dispatches to the appropriate
+method depending on the class of the contrast
+}
+\details{
+Calculate contrast weights for a given contrast specification and term.
 }

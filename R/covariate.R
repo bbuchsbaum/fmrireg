@@ -1,14 +1,20 @@
 
-#' construct a covariate term that is not convolved with a hemodynamic response function
-#' 
-#' @param ... a variable argument set of covariate names
-#' @param data a data.frame containing the variables
-#' @export
-#' @inheritParams hrf
-#' 
+#' Construct a Covariate Term
+#'
+#' @description
+#' Create a covariate term that is not convolved with a hemodynamic response function (HRF).
+#'
+#' @param ... A variable argument set of covariate names.
+#' @param data A data.frame containing the variables.
+#' @param id An optional identifier for the covariate term.
+#' @param prefix An optional prefix to add to the covariate names.
+#'
+#' @return A list containing information about the covariate term.
+#'
 #' @examples
 #' df1 <- data.frame(x=rnorm(100), y=rnorm(100))
-#' cv <- covariate(x,y,data=df1)
+#' cv <- covariate(x, y, data=df1)
+#' @export
 covariate <- function(..., data, id=NULL, prefix=NULL) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "covariate")

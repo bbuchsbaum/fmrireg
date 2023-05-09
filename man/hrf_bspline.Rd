@@ -2,23 +2,37 @@
 % Please edit documentation in R/hrf.R
 \name{hrf_bspline}
 \alias{hrf_bspline}
-\title{hrf_bspline}
+\title{B-spline HRF (hemodynamic response function)}
 \usage{
 hrf_bspline(t, span = 20, N = 5, degree = 3)
 }
 \arguments{
-\item{t}{a vector of times}
+\item{t}{A vector of time points.}
 
-\item{span}{the temporal window over which the basis sets spans}
+\item{span}{A numeric value representing the temporal window over which the basis set spans. Default value is 20.}
 
-\item{N}{the number of basis functions}
+\item{N}{An integer representing the number of basis functions. Default value is 5.}
 
-\item{degree}{the degree of the spline}
+\item{degree}{An integer representing the degree of the spline. Default value is 3.}
+}
+\value{
+A matrix representing the B-spline basis for the HRF at the given time points \code{t}.
 }
 \description{
-hrf_bspline
+The \code{hrf_bspline} function computes the B-spline representation of an HRF (hemodynamic response function) at given time points \code{t}.
 }
 \examples{
-
-hrfb <- hrf_bspline(seq(0,20,by=.5), N=4, degree=2)
+# Compute the B-spline HRF representation for time points from 0 to 20 with 0.5 increments
+hrfb <- hrf_bspline(seq(0, 20, by = .5), N = 4, degree = 2)
 }
+\seealso{
+Other hrf_functions: 
+\code{\link{hrf_gamma}()},
+\code{\link{hrf_gaussian}()},
+\code{\link{hrf_inv_logit}()},
+\code{\link{hrf_mexhat}()},
+\code{\link{hrf_sine}()},
+\code{\link{hrf_spmg1}()},
+\code{\link{hrf_time}()}
+}
+\concept{hrf_functions}

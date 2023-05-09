@@ -2,7 +2,7 @@
 % Please edit documentation in R/fmri_dataset.R
 \name{fmri_mem_dataset}
 \alias{fmri_mem_dataset}
-\title{fmri_mem_dataset}
+\title{Create an fMRI Memory Dataset Object}
 \usage{
 fmri_mem_dataset(
   scans,
@@ -15,30 +15,38 @@ fmri_mem_dataset(
 )
 }
 \arguments{
-\item{scans}{a \code{list} of objects of class \code{\linkS4class{NeuroVec}}}
+\item{scans}{A list of objects of class \code{\linkS4class{NeuroVec}}.}
 
-\item{mask}{a binary mask of class  \code{\linkS4class{NeuroVol}} indicating the set of voxels to include in analyses}
+\item{mask}{A binary mask of class \code{\linkS4class{NeuroVol}} indicating the set of voxels to include in analyses.}
 
-\item{TR}{the repetition time in seconds of the scan-to-scan interval.}
+\item{TR}{Repetition time (TR) of the fMRI acquisition.}
 
-\item{run_length}{a \code{vector} of one or more integers indicating the number of scans in each run.}
+\item{run_length}{A numeric vector specifying the length of each run in the dataset. Default is the length of the scans.}
 
-\item{event_table}{a \code{data.frame} containing the event onsets and experimental variables.}
+\item{event_table}{An optional data frame containing event information. Default is an empty data frame.}
 
-\item{base_path}{the file path to be prepended to relative file names.}
+\item{base_path}{An optional base path for the dataset. Default is "." (current directory).}
 
-\item{censor}{a binary vector indicating which scans to remove.}
+\item{censor}{An optional numeric vector specifying which time points to censor. Default is NULL.}
+}
+\value{
+An fMRI memory dataset object of class c("fmri_mem_dataset", "volumetric_dataset", "fmri_dataset", "list").
 }
 \description{
-fmri_mem_dataset
+This function creates an fMRI memory dataset object, which is a list containing information about the scans, mask, TR, number of runs, event table, base path, sampling frame, and censor.
 }
 \examples{
-
-d <- c(10,10,10,10)
+# Create a NeuroVec object
+d <- c(10, 10, 10, 10)
 nvec <- neuroim2::NeuroVec(array(rnorm(prod(d)), d), space=neuroim2::NeuroSpace(d))
+
+# Create a NeuroVol mask
 mask <- neuroim2::NeuroVol(array(rnorm(10*10*10), d[1:3]), space=neuroim2::NeuroSpace(d[1:3]))
 mask[mask < .5] <- 0
-dset <- fmri_mem_dataset(list(nvec),mask, TR=2)
 
+# Create an fmri_mem_dataset
+dset <- fmri_mem_dataset(list(nvec), mask, TR=2)
+
+# Create an iterator with 100 chunks
 iter <- data_chunks(dset, nchunks=100)
 }

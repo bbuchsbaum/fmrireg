@@ -9,6 +9,12 @@ baseline_terms(x)
 \arguments{
 \item{x}{the model object}
 }
+\value{
+A list containing the 'baseline_term's.
+}
 \description{
-extract list of 'baseline_term's from model object
+This function extracts a list of 'baseline_term's from the provided model object \code{x}.
+}
+\details{
+Extract a list of 'baseline_term's from the model object.
 }

@@ -7,14 +7,21 @@
 matrix_term(varname, mat)
 }
 \arguments{
-\item{varname}{the name of the variable}
+\item{varname}{The name of the variable.}
 
-\item{mat}{the \code{matrix} of values}
+\item{mat}{The matrix of values.}
+}
+\value{
+A matrix_term object.
 }
 \description{
-A set of regression variables stored as a numeric matrix
+This function creates a matrix_term object, which is a set of regression
+variables stored as a numeric matrix.
+}
+\details{
+Create a matrix_term object.
 }
 \examples{
-mat <- matrix(rnorm(100*10), 100 ,10)
+mat <- matrix(rnorm(100 * 10), 100, 10)
 mterm <- matrix_term("mterm", mat)
 }

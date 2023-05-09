@@ -1,32 +1,66 @@
 
+#' @noRd
+#' @keywords internal
 get_methods <- function(obj) {
   unique(purrr::map_chr(class(obj), ~ methods(class= . )))
 }
 
 
-#setGeneric("as_vectors") 
+#' @noRd
+#' @keywords internal
 as_vectors <- function(x) { function(x, ...) UseMethod("as_vectors") }
 setGeneric("as_vectors") 
 
 
 
-#' construct an event model
+#' Construct an event model
 #' 
-#' A data sructure representing an event-based fMRI regression model
+#' This function creates an event-based fMRI regression model, represented as a data structure.
 #' 
 #' @importFrom lazyeval f_eval f_rhs f_lhs
-#' @param x the model specification, typically a `formula` (see examples)
-#' @param data the data containing experimental design
-#' @param block formula for the block structure
-#' @param sampling_frame the sampling frame defining the temporal and block structure
-#' @param drop_empty whether to drop empty factor levels
-#' @param durations the event durations
-#' @param ... extra args
-#' @examples 
-#' event_data <- data.frame(fac=c("a", "B", "A", "B"), onsets=c(1,10,20,80), run=c(1,1,1,1))
-#' sframe <- sampling_frame(blocklens=50, TR=2)
-#' evmodel <- event_model(onsets ~ hrf(fac), data=event_data, block= ~ run, sampling_frame=sframe)
+#' @param x The model specification, typically a `formula`. The formula should have the following format:
+#'    response ~ predictor1 + predictor2 + ... + predictorN
+#' where `response` is a numeric vector of fMRI signal values, and `predictor1` to `predictorN` are
+#' predictor variables. Each predictor variable should be specified as a function of categorical
+#' variables (factors) and/or continuous variables. The functions should have the prefix "hrf", and can
+#' be defined using the `hrf()` function (see `hrf` documentation for details).
+#' @param data A data frame containing the experimental design, with one row per time point and
+#' one column per variable used in the model formula. If a categorical variable is used in the formula,
+#' it should be a factor in the data frame. The data frame should also contain a column with the fMRI
+#' signal values (the response variable).
+#' @param block A formula specifying the block structure of the design. This formula should have
+#' the format `block_var1 + block_var2 + ...`, where each `block_var` is a categorical variable (factor)
+#' used to define blocks of time points. The block structure is used to estimate the baseline fMRI
+#' signal level separately for each block.
+#' @param sampling_frame A sampling frame defining the temporal and block structure of the design.
+#' This should be an object of class `sampling_frame` (see `sampling_frame` documentation for details).
+#' @param drop_empty Logical value indicating whether to drop empty factor levels in the model.
+#' If `TRUE` (default), any factor levels with no observations will be dropped from the model. If `FALSE`,
+#' empty levels will be retained and will receive a coefficient of zero in the model.
+#' @param durations A numeric vector specifying the duration (in seconds) of each event in the model.
+#' If the model contains block variables, the duration of each block should be specified as well.
+#' The length of this vector should be equal to the number of events/blocks in the design.
+#' Default value is 0 (no duration).
+#' @param ... Additional arguments to be passed to methods. Currently not used.
+#' 
 #' @export
+#' 
+#' @return A list containing the following elements:
+#' \item{formula}{The formula used to create the model.}
+#' \item{design}{The design matrix for the model, with one row per time point and one column per predictor variable.}
+#' \item{block_indices}{A list of indices defining the start and end time points of each block.}
+#' \item{baseline}{A vector containing the estimated baseline fMRI signal level for each block.}
+#' \item{dur}{A vector containing the duration (in seconds) of each event or block in the design.}
+#' 
+#' @examples 
+#' # Create a data frame with experimental design
+#' event_data <- data.frame(fac=c("a", "B", "A", "B"), onsets=c(1,10,20,80), run=c(1,1,1,1))
+#' 
+#' # Create a sampling frame with 50-second blocks and a TR of 2 seconds
+#' sframe <- sampling_frame(blocklens=50, TR=2)
+#' 
+#' # Create an event model using the `onsets` variable as a predictor, with a separate baseline for each run
+#' evmodel <- fmri_event_model(response ~ hrf(onsets), data=event_data, block=~run, sampling_frame=sframe)
 event_model <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0, ...) { UseMethod("event_model") }
 
 #' get_data
@@ -34,6 +68,7 @@ event_model <- function(x, data, block, sampling_frame, drop_empty=TRUE, duratio
 #' @param x the dataset
 #' @param ... extra args
 #' @export
+#' @keywords internal
 get_data <- function(x, ...) UseMethod("get_data")
 
 
@@ -43,7 +78,6 @@ get_data <- function(x, ...) UseMethod("get_data")
 #' 
 #' @param x the dataset
 #' @param ... extra args
-#' @export
 #' @keywords internal
 get_mask <- function(x, ...) UseMethod("get_mask")
 
@@ -61,6 +95,7 @@ get_formula <- function(x, ...) UseMethod("get_formula")
 #' 
 #' @param x the object
 #' @param ... extra args
+#' @keywords internal
 term_matrices <- function(x, ...) UseMethod("term_matrices")
 
 
@@ -72,6 +107,7 @@ term_matrices <- function(x, ...) UseMethod("term_matrices")
 #' @param ... extra args
 #' @export
 longnames <- function(x, ...) UseMethod("longnames")
+
 
 #' extract short shortnames of variable
 #' 
@@ -93,9 +129,15 @@ shortnames <- function(x, ...) UseMethod("shortnames")
 design_env <- function(x, ...) UseMethod("design_env")
 
 
-
 #' contrast_weights
-#' 
+#'
+#' Calculate contrast weights for a given contrast specification and term.
+#'
+#' @description
+#' This function calculates the contrast weights based on the contrast specification
+#' provided by the user. It is a generic function that dispatches to the appropriate
+#' method depending on the class of the contrast
+#'
 #' @param x the object
 #' @param ... extra args
 #' @export
@@ -105,17 +147,18 @@ contrast_weights <- function(x, ...) UseMethod("contrast_weights")
 #' parent_terms
 #' 
 #' @param x the object
-#' @export
+#' @keywords internal
 parent_terms <- function(x) UseMethod("parent_terms")
+
 
 #' term_names
 #' @param x the object to extra term names from
-#' @export
+#' @keywords internal
 term_names <- function(x) UseMethod("term_names")
 
 
 
-#' the experimental cells of a design
+#' The experimental cells of a design
 #' 
 #' return the experimental cells that are in a model term as a table
 #' 
@@ -124,7 +167,7 @@ term_names <- function(x) UseMethod("term_names")
 #' @export
 cells <- function(x, ...) UseMethod("cells")
 
-#' conditions
+#' Conditions
 #' 
 #' return the set of condition labels associated with a model term
 #' 
@@ -133,16 +176,24 @@ cells <- function(x, ...) UseMethod("cells")
 #' @export
 conditions <- function(x, ...) UseMethod("conditions")
 
+
+
 #' convolve
-#' 
-#' convolve a term \code{x} with a hemodynamic response over a \code{sampling_frame}
-#' 
-#' @export
+#'
+#' Convolve a term `x` with a hemodynamic response function (HRF) over a `sampling_frame`.
+#'
+#' @description
+#' This function convolves an event sequence `x` with a hemodynamic response function `hrf`
+#' over a specified time series grid `sampling_frame`. It is a generic function that dispatches
+#' to the appropriate method
+#'
 #' @param x an event sequence
 #' @param hrf a hemodynamic response function
 #' @param sampling_frame the time series grid over which to sample the function.
 #' @param ... extra args
+#' @export
 convolve <- function(x, hrf, sampling_frame,...) UseMethod("convolve")
+
 
 #' is_continuous
 #' 
@@ -151,6 +202,8 @@ convolve <- function(x, hrf, sampling_frame,...) UseMethod("convolve")
 #' @param x the object 
 #' @export
 is_continuous <- function(x) UseMethod("is_continuous")
+
+
 
 #' is_categorical
 #' 
@@ -167,51 +220,83 @@ is_categorical <- function(x) UseMethod("is_categorical")
 #' @export
 levels <- function(x) UseMethod("levels")
 
+
+
 #' columns
 #' 
 #' return the column labels associated with the elements of a term.
 #' @param x the term
-#' @export
+#' @keywords internal
 columns <- function(x) UseMethod("columns")
 
 
+
 #' event_table
-#' 
-#' extract event_table as \code{data.frame}
-#' 
+#'
+#' Extract event_table as a `data.frame`.
+#'
+#' @description
+#' This function extracts the event table from the provided term `x` and returns it
+#' as a `data.frame`.
+#'
 #' @param x the term
+#' @return A `data.frame` containing the event table.
 #' @export
 event_table <- function(x) UseMethod("event_table")
 
 
+
 #' event_terms
-#' 
-#' extract list of 'event_term's from model object
-#' 
+#'
+#' Extract a list of 'event_term's from the model object.
+#'
+#' @description
+#' This function extracts a list of 'event_term's from the provided model object `x`.
+#'
 #' @param x the model object
+#' @return A list containing the 'event_term's.
 #' @export
 event_terms <- function(x) UseMethod("event_terms")
 
+
+
 #' baseline_terms
-#' 
-#' extract list of 'baseline_term's from model object
-#' 
+#'
+#' Extract a list of 'baseline_term's from the model object.
+#'
+#' @description
+#' This function extracts a list of 'baseline_term's from the provided model object `x`.
+#'
 #' @param x the model object
+#' @return A list containing the 'baseline_term's.
 #' @export
 baseline_terms <- function(x) UseMethod("baseline_terms")
 
 
 #' term_indices
-#' 
-#' the term indices for the associated design matrix
-#' 
+#'
+#' Get the term indices for the associated design matrix.
+#'
+#' @description
+#' This function retrieves the term indices for the associated design matrix
+#' from the provided model or term object `x`.
+#'
 #' @param x the model/term object
 #' @param ... additional arguments
+#' @return A vector of term indices.
+#' @export
 term_indices <- function(x,...) UseMethod("term_indices")
 
 
-#' run a command
-#' 
+
+
+#' run
+#'
+#' Run a command.
+#'
+#' @description
+#' This function runs a command `x` with the provided extra arguments.
+#'
 #' @param x the command to run
 #' @param ... extra args
 #' @export
@@ -434,6 +519,7 @@ split_onsets <- function(x, ...) UseMethod("split_onsets")
 #' @param x the dataset 
 #' @param ... extra args
 #' @export
+#' @family estimate_betas
 estimate_betas <- function(x, ...) UseMethod("estimate_betas")
 
 
@@ -442,6 +528,35 @@ estimate_betas <- function(x, ...) UseMethod("estimate_betas")
 #' @param x the dataset 
 #' @param ... extra args
 chunkwise_lm <- function(x, ...) UseMethod("chunkwise_lm")
+
+
+
+#' Shift a time series object
+#'
+#' This is a generic function to shift time series objects. The goal is to
+#' provide a simple way to apply time shifts to various time series objects,
+#' such as regressors and time series data.
+#'
+#' @param x An object representing a time series or a time-based data structure.
+#' @param shift_amount A numeric value indicating the amount of time to shift the object by.
+#'   Positive values will shift the object to the right, while negative values will shift it to the left.
+#'
+#' @return An object of the same class as the input, shifted by the specified amount.
+#'
+#' @examples
+#' \dontrun{
+#' # Shift a regressor object
+#' shifted_regressor <- shift(my_regressor, 5)
+#'
+#' # Shift a time series object
+#' shifted_time_series <- shift(my_time_series, -2)
+#' }
+#'
+#' @export
+shift <- function(x, ...) {
+  UseMethod("shift")
+}
+
 
 
   

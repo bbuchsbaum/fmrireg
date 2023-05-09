@@ -17,23 +17,29 @@ getHRF(
 )
 }
 \arguments{
-\item{name}{the name of the hrf function}
+\item{name}{The name of the HRF function. Available options: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs".}
 
-\item{nbasis}{the number of basis functions (if relevant)}
+\item{nbasis}{The number of basis functions (if relevant, default: 5).}
 
-\item{span}{the span of the HRF (maximum width in seconds after which function reverts to zero)}
+\item{span}{The temporal window over which the basis sets span (default: 24).}
 
-\item{lag}{optional lag in seconds}
+\item{lag}{The time lag parameter (default: 0).}
 
-\item{width}{optional block width in seconds}
+\item{width}{The width parameter (default: 0).}
 
-\item{summate}{whether to allow each impulse response function to "add" up.}
+\item{summate}{Whether the HRF response increases its amplitude as a function of stimulus duration (default: TRUE).}
 
-\item{normalize}{rescale so that the peak of the output is 1.}
+\item{normalize}{Whether to scale output so that the peak is 1 (default: FALSE).}
 
-\item{...}{extra parameters for the \code{hrf} function}
+\item{...}{Additional arguments passed to the gen_hrf function.}
+}
+\value{
+An HRF object with the specified properties.
 }
 \description{
-getHRF
+This function retrieves a specified hemodynamic response function (HRF) by name and creates an HRF object with specified properties.
+}
+\examples{
+hrf_obj <- getHRF(name = "gamma", nbasis = 5, span = 24)
 }
 \keyword{internal}

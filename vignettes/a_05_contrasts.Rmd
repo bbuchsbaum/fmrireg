@@ -9,8 +9,8 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, echo=FALSE, message=FALSE}
-devtools::load_all()
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(fmrireg)
 ```
 ## Contrasts
 

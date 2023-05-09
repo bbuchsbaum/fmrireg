@@ -2,17 +2,35 @@
 % Please edit documentation in R/hrf.R
 \name{hrf_gaussian}
 \alias{hrf_gaussian}
-\title{hrf_gaussian}
+\title{Gaussian HRF (hemodynamic response function)}
 \usage{
 hrf_gaussian(t, mean = 6, sd = 2)
 }
 \arguments{
-\item{t}{time}
+\item{t}{A vector of time points.}
 
-\item{mean}{the mean of Gaussian pdf}
+\item{mean}{A numeric value representing the mean of the Gaussian probability density function. Default value is 6.}
 
-\item{sd}{the standard deviation of Gaussian pdf}
+\item{sd}{A numeric value representing the standard deviation of the Gaussian probability density function. Default value is 2.}
+}
+\value{
+A numeric vector representing the Gaussian HRF at the given time points \code{t}.
 }
 \description{
-A hemodynamic response function using the Gaussian density function
+The \code{hrf_gaussian} function computes the Gaussian density-based HRF (hemodynamic response function) at given time points \code{t}.
 }
+\examples{
+# Compute the Gaussian HRF representation for time points from 0 to 20 with 0.5 increments
+hrf_gaussian <- hrf_gaussian(seq(0, 20, by = .5), mean = 6, sd = 2)
+}
+\seealso{
+Other hrf_functions: 
+\code{\link{hrf_bspline}()},
+\code{\link{hrf_gamma}()},
+\code{\link{hrf_inv_logit}()},
+\code{\link{hrf_mexhat}()},
+\code{\link{hrf_sine}()},
+\code{\link{hrf_spmg1}()},
+\code{\link{hrf_time}()}
+}
+\concept{hrf_functions}

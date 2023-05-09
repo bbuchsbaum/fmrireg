@@ -2,25 +2,27 @@
 % Please edit documentation in R/contrast.R
 \name{pair_contrast}
 \alias{pair_contrast}
-\title{pair_contrast}
+\title{Pair Contrast}
 \usage{
 pair_contrast(A, B, name, where = NULL)
 }
 \arguments{
-\item{A}{the first \code{formula} expression in the contrast}
+\item{A}{A formula representing the first logical expression in the contrast.}
 
-\item{B}{the second \code{formula} expression in the contrast}
+\item{B}{A formula representing the second logical expression in the contrast.}
 
-\item{name}{the name of the contrast (mandatory)}
+\item{name}{A character string specifying the name of the contrast (mandatory).}
 
-\item{where}{the subset over which the contrast is computed}
+\item{where}{An optional formula specifying the subset over which the contrast is computed.}
+}
+\value{
+A pair_contrast_spec object containing the sum-to-zero contrast between the two logical expressions.
 }
 \description{
-sum-to-zero contrast between two logical expressions
+Construct a sum-to-zero contrast between two logical expressions.
 }
 \examples{
-
-# a hypothetical experiment with a factor 'category' that takes on values of 'face' and 'scene'
-
+# A hypothetical experiment with a factor 'category' that takes on values of 'face' and 'scene'
 pair_contrast(~ category == "face", ~ category == "scene", name="face_scene")
+
 }

@@ -11,6 +11,13 @@ term_indices(x, ...)
 
 \item{...}{additional arguments}
 }
+\value{
+A vector of term indices.
+}
 \description{
-the term indices for the associated design matrix
+This function retrieves the term indices for the associated design matrix
+from the provided model or term object \code{x}.
+}
+\details{
+Get the term indices for the associated design matrix.
 }

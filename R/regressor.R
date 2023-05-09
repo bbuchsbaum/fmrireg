@@ -78,6 +78,8 @@ regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=40, s
   }
   
   assertthat::assert_that(is.function(hrf))
+  assertthat::assert_that(length(amplitude) == length(onsets))
+  assertthat::assert_that(length(duration) == length(onsets))
  
   
   keep <- which(amplitude != 0 & !is.na(amplitude))
@@ -152,9 +154,9 @@ fastevalreg <- function(x, start, end, TR, precision=.3) {
   time <- seq(0,attr(x$hrf, "span"), by=precision)
   samhrf <- evaluate(x$hrf, time)
   
-  bins <- (valid.ons - finegrid[1])/precision + 1
+  bins <- as.integer((valid.ons - finegrid[1])/precision + 1)
   delta <- numeric(length(finegrid))
-  delta[bins] <- 1
+  delta[bins] <- x$amplitude
   #highres <- stats::convolve(samhrf, delta, type="open")
   
   if (nb > 1) {
@@ -166,7 +168,7 @@ fastevalreg <- function(x, start, end, TR, precision=.3) {
     lowres
   } else {
     highres <- pracma::conv(samhrf,delta)
-    lowres <- approx(finegrid, highres[1:length(finegrid)], xout=grid)$y
+    lowres <- approx(finegrid, highres[1:length(finegrid)], xout=grid, rule=2)$y
     lowres
   }
 }
@@ -182,8 +184,9 @@ fastevalreg <- function(x, start, end, TR, precision=.3) {
 #' @param use_conv use fast convolution approach
 #' @examples 
 #' frame <- sampling_frame(blocklens=100, TR=2)
-#' reg <- regressor(onsets=c(10,20,35, 47,52, 68, 79,86), hrf=HRF_SPMG1)
-#' evaluate(reg, samples(frame))
+#' reg <- regressor(onsets=c(10,20,35, 47,52, 68, 79,86), amp=runif(8), duration=runif(8)*3, hrf=HRF_SPMG1)
+#' e1 = evaluate(reg, samples(frame))
+#' e2 = evaluate(reg, samples(frame), use_conv=TRUE)
 #' @import RANN
 #' @export
 evaluate.regressor <- function(x, grid, precision=.33, use_conv=FALSE, ...) {
@@ -285,6 +288,72 @@ durations.regressor <- function(x) x$duration
 #' @rdname amplitudes
 amplitudes.regressor <- function(x) x$amplitude
 
+neural_input <- function(x, from, to, resolution) {
+  time <- seq(from + (resolution/2), to - (resolution/2), by=resolution)
+  out <- numeric( (to - from)/resolution)
+  ons <- x$onsets
+  dur <- x$duration
+  amp <- x$amplitude
+  
+  for (i in seq_along(ons)) {
+    on <- ons[i]
+    d <- dur[i]
+    startbin <- as.integer((on - from)/resolution) + 1
+
+    if (d > 0) {
+      endbin <- as.integer((on - from)/resolution + d/resolution) + 1
+    } else {
+      endbin <- startbin
+    }
+    
+    for (j in startbin:endbin) {
+      out[j] <- out[j] + amp[i]
+    }
+  }
+  
+  ts(out, start=time[1], frequency=1/resolution)
+}
+
+# #include <Rcpp.h>
+# using namespace Rcpp;
+# 
+# // [[Rcpp::export]]
+# List neural_input_rcpp(List x, double from, double to, double resolution) {
+#   int n = (to - from) / resolution;
+#   NumericVector time(n);
+#   NumericVector out(n);
+#   NumericVector ons = x["onsets"];
+#   NumericVector dur = x["duration"];
+#   NumericVector amp = x["amplitude"];
+#   
+#   for (int i = 0; i < ons.length(); i++) {
+#     double on = ons[i];
+#     double d = dur[i];
+#     int startbin = (int) ((on - from) / resolution) + 1;
+#     if (d > 0) {
+#       int endbin = (int) ((on - from) / resolution + d / resolution) + 1;
+#       for (int j = startbin; j <= endbin; j++) {
+#         out[j-1] += amp[i];
+#       }
+#     } else {
+#       out[startbin-1] += amp[i];
+#     }
+#   }
+#   
+#   for (int i = 0; i < n; i++) {
+#     time[i] = from + (i + 0.5) * resolution;
+#   }
+#   
+#   List result;
+#   result["time"] = time;
+#   result["neural_input"] = out;
+#   return result;
+# }
+
+
+  
+
+
 #' plot a regressor object
 #' 
 #' @export
@@ -354,6 +423,23 @@ conform_len <- function(val, len) {
   } else {
     stop(paste(name, "must be of length 1 or same length as onsets"))
   }
+}
+
+
+# Shift method for the regressor class
+shift.regressor <- function(x, shift_amount) {
+  if (!inherits(x, "regressor")) {
+    stop("x must be an object of class 'regressor'")
+  }
+  
+  if (!is.numeric(shift_amount)) {
+    stop("shift_amount must be a numeric value")
+  }
+  
+  shifted_onsets <- x$onsets + shift_amount
+  shifted_regressor <- regressor(onsets = shifted_onsets, hrf = x$hrf, duration = x$duration, amplitude = x$amplitude, span = x$span, summate = x$summate)
+  
+  return(shifted_regressor)
 }
 
 

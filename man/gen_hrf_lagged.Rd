@@ -3,23 +3,26 @@
 \name{gen_hrf_lagged}
 \alias{gen_hrf_lagged}
 \alias{hrf_lagged}
-\title{gen_hrf_lagged}
+\title{Generate a Lagged HRF Function}
 \usage{
 gen_hrf_lagged(hrf, lag = 2, normalize = FALSE, ...)
 
 hrf_lagged(hrf, lag = 2, normalize = FALSE, ...)
 }
 \arguments{
-\item{hrf}{the underlying hrf function to shift}
+\item{hrf}{A function representing the underlying HRF to be shifted.}
 
-\item{lag}{the lag/delay in seconds}
+\item{lag}{A numeric value specifying the lag or delay in seconds to apply to the HRF. This can also be a vector of lags, in which case the function returns an HRF set.}
 
-\item{normalize}{rescale so that maximum absolute value is 1}
+\item{normalize}{A logical value indicating whether to rescale the output so that the maximum absolute value is 1. Defaults to \code{FALSE}.}
 
-\item{...}{extra args supplied to \code{hrf} function}
+\item{...}{Extra arguments supplied to the \code{hrf} function.}
+}
+\value{
+A function representing the lagged HRF. If \code{lag} is a vector of lags, the function returns an HRF set.
 }
 \description{
-gen_hrf_lagged
+The \code{gen_hrf_lagged} function takes an HRF function and applies a specified lag to it. This can be useful for modeling time-delayed hemodynamic responses.
 }
 \section{Functions}{
 \itemize{
@@ -29,4 +32,17 @@ gen_hrf_lagged
 \examples{
 hrf_lag5 <- gen_hrf_lagged(HRF_SPMG1, lag=5)
 hrf_lag5(0:20)
+
 }
+\seealso{
+Other gen_hrf: 
+\code{\link{gen_hrf_blocked}()},
+\code{\link{gen_hrf_library}()},
+\code{\link{gen_hrf_set}()}
+
+Other gen_hrf: 
+\code{\link{gen_hrf_blocked}()},
+\code{\link{gen_hrf_library}()},
+\code{\link{gen_hrf_set}()}
+}
+\concept{gen_hrf}

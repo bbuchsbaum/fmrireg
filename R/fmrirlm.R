@@ -13,7 +13,7 @@
 #' dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
 #' #lm.1 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset)
 #' #lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset2)
-#' @export
+#' @keywords experimental
 fmri_rlm <- function(formula, block, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, 
                      nchunks=10,
@@ -88,7 +88,24 @@ runwise_rlm <- function(dset, model, conlist, fcon) {
 }
 
 
+#' Fit a multiresponse ARMA model
+#'
+#' This function fits a multiresponse ARMA model for fMRI data with specified autocorrelation
+#' structure using the provided formula, dataset environment, contrast list, variable names,
+#' F-contrast, design matrix, and block ids.
+#'
+#' @param form The model formula.
+#' @param data_env The dataset environment containing the time-series data.
+#' @param conlist The contrast list.
+#' @param vnames The variable names.
+#' @param fcon The F-contrast.
+#' @param modmat The design matrix.
+#' @param blockids The block ids.
+#' @param autocor The autocorrelation structure, either "ar1", "ar2", "arma", or "auto".
+#' @return A list containing the contrasts, F-contrasts, and beta statistics for the fitted ARMA model.
 #' @importFrom forecast auto.arima
+#' @keywords internal
+#' @seealso lm.fit, Arima, auto.arima
 multiresponse_arma <- function(form, data_env, conlist, vnames, fcon, modmat, 
                               blockids,
                               autocor=c("ar1", "ar2","arma", "auto")) {
@@ -157,6 +174,7 @@ multiresponse_arma <- function(form, data_env, conlist, vnames, fcon, modmat,
 
 ## could use heavyLm ...
 #' @importFrom robustbase lmrob lmrob.control
+#' @keywords internal
 multiresponse_rlm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL) {
   Y <- data_env$.y
   rcontrol <- lmrob.control(k.max=500, maxit.scale=500)

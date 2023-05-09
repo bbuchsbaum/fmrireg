@@ -7,7 +7,19 @@ get_formula.fmri_model <- function(x) {
 }
 
 
+#' Construct term matrices for an fMRI model
+#'
+#' This function constructs the term matrices for an fMRI model, which consists of event-related terms
+#' and baseline-related terms. The term matrices are used for building the design matrix in fMRI data analysis.
+#'
+#' @param x An object of class "fmri_model" containing the event and baseline models.
+#' @param blocknum (Optional) A numeric vector specifying the block numbers to be included in the term matrices.
+#'                 By default, all unique block numbers in the event model are included.
+#' @return A named list of term matrices, with event terms followed by baseline terms.
+#'         Attributes "event_term_indices" and "baseline_term_indices" store the indices of event and baseline terms,
+#'         "blocknum" stores the block numbers, and "varnames" stores the variable names.
 #' @export
+#' @seealso fmri_model
 term_matrices.fmri_model <- function(x, blocknum=NULL) {
   eterms <- lapply(event_terms(x), 
                    function(x) as.matrix(design_matrix(x, blocknum)))
@@ -56,74 +68,66 @@ create_fmri_model <- function(formula, block, baseline_model=NULL, dataset,
 
 
 
-#' fmri_lm
-#' 
-#' @param formula the model formula for experimental events
-#' @param block the model formula for block structure
-#' @param baseline_model the \code{baseline_model} object
-#' @param dataset an object derived from \code{fmri_dataset} containing the time-series data
-#' @param durations a vector of event durations
-#' @param drop_empty whether to remove factor levels with size of zero
-# @param contrasts a set of contrasts
-#' @param strategy the data splitting strategy
-#' @param nchunks number of daa chunks when strategy is `chunkwise`
-#' @param meta_weighting for runwise analyses, wheter to use 
-#' inverse variance ("inv_var") or equal ("equal") weighting 
-#' @param robust whether to use robust fitting (TRUE or FALSE)
-#' @param ... extra args
-#' @examples 
-#' etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))
-#' etab2 <- data.frame(onset=c(1,30,65,75), fac=factor(c("A", "B", "A", "B")), run=c(1,1,1,1))
-#' mat <- matrix(rnorm(100*100), 100,100)
-#' dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
-#' dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
-#' con  <- pair_contrast(~ fac == "A", ~ fac == "B", name="A_min_B")
-#' con2  <- unit_contrast(~ fac, name="A_min_baseline")
-#' lm.1 <- fmri_lm(onset ~ hrf(fac, contrasts=contrast_set(con,con2)), 
-#' block= ~ run, dataset=dset)
-#' 
-#' lm.2 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, dataset=dset2)
-#' 
-#' lm.2a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
-#' robust=TRUE, dataset=dset2)
-#' 
-#' lm.3 <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
-#' dataset=dset2, strategy="runwise")
-#' 
-#' lm.3a <- fmri_lm(onset ~ hrf(fac, contrasts=con), block= ~ run, 
-#' robust=TRUE, dataset=dset2, strategy="runwise")
+#' Fit a linear regression model for fMRI data analysis
+#'
+#' This function fits a linear regression model for fMRI data analysis using the specified model formula,
+#' block structure, and dataset. The model can be fit using either a runwise or chunkwise data splitting strategy,
+#' and robust fitting can be enabled if desired.
+#'
+#' @param formula The model formula for experimental events.
+#' @param block The model formula for block structure.
+#' @param baseline_model (Optional) The \code{baseline_model} object. Default is NULL.
+#' @param dataset An object derived from \code{fmri_dataset} containing the time-series data.
+#' @param durations A vector of event durations.
+#' @param drop_empty Whether to remove factor levels with a size of zero. Default is TRUE.
+#' @param robust Whether to use robust fitting. Default is FALSE.
+#' @param strategy The data splitting strategy, either "runwise" or "chunkwise". Default is "runwise".
+#' @param nchunks Number of data chunks when strategy is `chunkwise`. Default is 10.
+#' @param ... Extra arguments.
+#' @return A fitted linear regression model for fMRI data analysis.
+#' @examples
+#' # Example usage of fmri_lm function
+#' # ...
 #' @export
+#' @seealso fmri_dataset, fmri_lm_fit
 fmri_lm <- function(formula, block, baseline_model=NULL, dataset, 
                      durations, drop_empty=TRUE, robust=FALSE,
-                     strategy=c("runwise", "chunkwise"), nchunks=10, 
-                     meta_weighting=c("inv_var", "equal"), ...) {
+                     strategy=c("runwise", "chunkwise"), nchunks=10, ...) {
   
  
   strategy <- match.arg(strategy)
-  meta_weighting <- match.arg(meta_weighting)
   assert_that(inherits(dataset, "fmri_dataset"))
 
   model <- create_fmri_model(formula, block, baseline_model,dataset, durations, drop_empty)
-  ret <- fmri_lm_fit(model, dataset, strategy, robust, nchunks, meta_weighting = meta_weighting)
+  ret <- fmri_lm_fit(model, dataset, strategy, robust, nchunks)
   ret
 }
 
 
-# @export  ## do weed to export?
-#' fmri_lm_fit
-#' 
-#' @inheritParams fmri_lm
-#' @param fmrimod an object of type \code{fmri_model}
+#' Fit an fMRI linear regression model with a specified fitting strategy
+#'
+#' This function fits an fMRI linear regression model using the specified fmri_model object, dataset,
+#' and data splitting strategy (either "runwise" or "chunkwise"). It is primarily an internal function
+#' used by the fmri_lm function.
+#'
+#' @param fmrimod An object of type \code{fmri_model}.
+#' @param dataset An object derived from \code{fmri_dataset} containing the time-series data.
+#' @param strategy The data splitting strategy, either "chunkwise" or "runwise". Default is "chunkwise".
+#' @param robust Whether to use robust fitting. Default is FALSE.
+#' @param nchunks Number of data chunks when strategy is `chunkwise`. Default is 10.
+#' @param ... Extra arguments.
+#' @return A fitted fMRI linear regression model with the specified fitting strategy.
+#' @keywords internal
+#' @seealso fmri_lm, fmri_model, fmri_dataset
 fmri_lm_fit <- function(fmrimod, dataset, strategy=c("chunkwise", "runwise"), 
-                        robust=FALSE, nchunks=10, meta_weighting=c("inv_var", "equal"), ...) {
+                        robust=FALSE, nchunks=10,...) {
   strategy <- match.arg(strategy)
-  meta_weighting <- match.arg(meta_weighting)
   
   conlist <- unlist(contrast_weights(fmrimod$event_model), recursive=FALSE)
   fcons <- Fcontrasts(fmrimod$event_model)
   
   result <- if (strategy == "runwise") {
-    runwise_lm(dataset, fmrimod, conlist, fcons, robust=robust, meta_weighting=meta_weighting, ...)
+    runwise_lm(dataset, fmrimod, conlist, fcons, robust=robust,...)
   } else if (strategy == "chunkwise") {
     chunkwise_lm(dataset, fmrimod, conlist,fcons, nchunks, robust=robust,...)
   }
@@ -293,6 +297,17 @@ fit_lm_contrasts <- function(fit, conlist, fcon, vnames, se=TRUE) {
 
 
 
+#' Multiresponse Linear Model
+#'
+#' This function fits a linear model to multiple responses in an fMRI dataset.
+#'
+#' @param form The formula used to define the linear model.
+#' @param data_env The environment containing the data to be used in the linear model.
+#' @param conlist The list of contrasts used in the analysis.
+#' @param vnames The names of the variables used in the linear model.
+#' @param fcon The F-contrasts used in the analysis.
+#' @param modmat The model matrix (default is NULL, which will calculate the model matrix using the formula).
+#' @return A list containing the results from the multiresponse linear model analysis.
 #' @keywords internal
 multiresponse_lm <- function(form, data_env, conlist, vnames, fcon, modmat=NULL) {
   lm.1 <- if (is.null(modmat)) {
@@ -409,7 +424,19 @@ wrap_chunked_lm_results <- function(cres, event_indices=NULL) {
       
 }
 
+#' Unpack Chunkwise Results
+#'
+#' This function processes and unpacks the results of chunkwise analysis in fMRI
+#' data. It extracts and reorganizes the effects, standard errors, contrasts, 
+#' F-contrasts, and contrast matrices from the chunkwise analysis results.
+#'
+#' @param cres The results of the chunkwise analysis.
+#' @param event_indices The indices of the event-related effects.
+#' @param baseline_indices The indices of the baseline-related effects.
+#' @return A list containing the betas, contrasts, F-contrasts, and contrast matrices
+#'         for the unpacked chunkwise results.
 #' @keywords internal
+#' @noRd
 unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
  
   effects <- do.call(rbind, lapply(cres, function(x) x$bstats$estimate))
@@ -470,6 +497,19 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 }
 
 
+#' Chunkwise Linear Model for fMRI Dataset
+#'
+#' This function performs a chunkwise linear model analysis on fMRI dataset, 
+#' splitting the dataset into chunks and running the linear model on each chunk.
+#'
+#' @param dset An object of class \code{fmri_dataset}.
+#' @param model The fMRI model used for the analysis.
+#' @param conlist The list of contrasts used in the analysis.
+#' @param fcon The F-contrasts used in the analysis.
+#' @param nchunks The number of chunks to divide the dataset into.
+#' @param robust Whether to use robust linear modeling (default is FALSE).
+#' @param verbose Whether to display progress messages (default is FALSE).
+#' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
 #' @importFrom iterators icount
 #' @autoglobal 
@@ -500,14 +540,24 @@ chunkwise_lm.fmri_dataset <- function(dset, model, conlist, fcon, nchunks, robus
 }
 
 
-#' Run glm for each data run (responses split vertically) and then combine over runs via meta-analysis
-#' 
+#' Runwise Linear Model for fMRI Dataset
+#'
+#' This function performs a runwise linear model analysis on an fMRI dataset by 
+#' running the linear model for each data run (responses split vertically) and 
+#' then combines the results over runs via meta-analysis.
+#'
+#' @param dset An object of class \code{fmri_dataset}.
+#' @param model The fMRI model used for the analysis.
+#' @param conlist The list of contrasts used in the analysis.
+#' @param fcon The F-contrasts used in the analysis.
+#' @param robust Whether to use robust linear modeling (default is FALSE).
+#' @param verbose Whether to display progress messages (default is FALSE).
+#' @return A list containing the combined results from runwise linear model analysis.
 #' @importFrom foreach foreach %do% %dopar%
 #' @keywords internal
 #' @autoglobal
-runwise_lm <- function(dset, model, conlist, fcon, robust=FALSE, meta_weighting=c("inv_var", "equal"),verbose=FALSE) {
+runwise_lm <- function(dset, model, conlist, fcon, robust=FALSE, verbose=FALSE) {
     #method <- match.arg(method)
-    meta_weighting <- match.arg(meta_weighting)
     
     lmfun <- if (robust) {
       multiresponse_rlm
@@ -546,12 +596,14 @@ runwise_lm <- function(dset, model, conlist, fcon, robust=FALSE, meta_weighting=
       
       meta_con <- if (any(hascon)) {
         ##meta_contrasts(conres[hascon]) 
-        meta_contrasts(conres, meta_weighting) 
+        meta_contrasts(conres) 
       } else {
         list()
       }
       
-      meta_beta <- meta_betas(bstats, cres[[1]]$event_indices, meta_weighting)
+  
+      
+      meta_beta <- meta_betas(bstats, cres[[1]]$event_indices)
       meta_F <- meta_Fcontrasts(Fres)
       list(contrasts=meta_con, betas=meta_beta, Fcontrasts=meta_F,
            event_indices=cres[[1]]$event_indices, baseline_indices=cres[[1]]$baseline_indices)

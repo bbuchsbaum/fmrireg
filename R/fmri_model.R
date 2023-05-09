@@ -1,11 +1,14 @@
 
-#' fmri_model
-#' 
-#' construct and fMRI regression model consisting of a \code{event_model} and \code{baseline_model}
-#' 
-#' @param event_model the \code{event_model} object
-#' @param baseline_model the \code{baseline_model} object
+#' Construct an fMRI regression model
+#'
+#' This function constructs an fMRI regression model consisting of an event model
+#' and a baseline model. The resulting model can be used for the analysis of fMRI data.
+#'
+#' @param event_model An object of class "event_model" representing the event-related part of the fMRI regression model.
+#' @param baseline_model An object of class "baseline_model" representing the baseline-related part of the fMRI regression model.
+#' @return An object of class "fmri_model" containing the event and baseline models.
 #' @export
+#' @seealso event_model, baseline_model
 fmri_model <- function(event_model, baseline_model) {
   assert_that(inherits(event_model, "event_model"))
   assert_that(inherits(baseline_model, "baseline_model"))
@@ -26,6 +29,7 @@ design_matrix.fmri_model <- function(x, blockid=NULL, ...) {
 }
 
 #' @importFrom tibble as_tibble
+#' @keywords internal
 design_env.fmri_model <- function(x, blockid=NULL) {
   stop("not implemented")
   

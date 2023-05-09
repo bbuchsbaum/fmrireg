@@ -12,6 +12,13 @@ event_table(x)
 \arguments{
 \item{x}{the term}
 }
+\value{
+A \code{data.frame} containing the event table.
+}
 \description{
-extract event_table as \code{data.frame}
+This function extracts the event table from the provided term \code{x} and returns it
+as a \code{data.frame}.
+}
+\details{
+Extract event_table as a \code{data.frame}.
 }

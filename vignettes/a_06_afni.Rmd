@@ -14,7 +14,7 @@ vignette: >
 
 AFNI and other fMRI analysis packages have robust and efficient methods for estimating voxelwise regression models. Therefore, it may be beneficial to construct a regression model in R using **fmrireg** and translate it so that it can be executed using one of these packages. Here we provide a translation mechanism from an `fmri_model` object constructed with `fmrireg` to syntax and assocaited file required for execution using AFNI's **3dDeconvolve** program.
 
-```{r, message=FALSE,echo=FALSE}
+```{r, message=FALSE,echo=FALSE, warning=FALSE}
 library(tibble)
 library(fmrireg)
 ```

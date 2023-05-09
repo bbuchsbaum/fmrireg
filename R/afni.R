@@ -1,6 +1,15 @@
 
-#' @keywords internal
+#' Generate an AFNI Linear Model from an fmri_config object
+#'
+#' This function takes an fmri_config object and generates an AFNI linear model
+#' by reading the necessary files, creating an fmri_dataset, event_model,
+#' baseline_model, and fmri_model, and fitting the model using afni_lm.
+#'
+#' @param x An fmri_config object containing the necessary configuration for the analysis
+#' @param ... Additional arguments passed to the function
+#' @return An afni_lm object representing the fitted linear model
 #' @importFrom utils read.table
+#' @keywords internal
 gen_afni_lm.fmri_config <- function(x, ...) {
   
   nuisance_list <- if (!is.null(x$baseline_model$nuisance_files)) {
@@ -30,23 +39,28 @@ gen_afni_lm.fmri_config <- function(x, ...) {
 
   
 
-#' afni_lm
-#' 
-#' 
-#' @param fmri_mod an \code{fmri_model} object
-#' @param dataset an \code{fmri_dataset} object
-#' @param working_dir the working directory
-#' @param polort the number of polynomial baseline regressors (default is to suppress 'polort')
-#' @param jobs the number of jobs to use with '3dDeconvolve'
-#' @param censor a list of censoring vectors, one per run. Or a single vector equal to total number of scans.
-#' @param options a \code{list} of options to be sent to 3dDeconvolve
-#' 
+#' Set up an fMRI linear model for AFNI's 3dDeconvolve
+#'
+#' This function prepares an fMRI linear model for AFNI's 3dDeconvolve tool.
+#' It takes an fmri_model object, an fmri_dataset object, and various options
+#' to control the fitting process.
+#'
+#' @param fmri_mod An fmri_model object containing the event and baseline models
+#' @param dataset An fmri_dataset object containing the scan data and other necessary information
+#' @param working_dir The working directory (default is the current directory)
+#' @param polort The number of polynomial baseline regressors (default is to suppress 'polort')
+#' @param jobs The number of jobs to use with '3dDeconvolve' (default is 1)
+#' @param censor A list of censoring vectors, one per run, or a single vector equal to the total number of scans (default is NULL)
+#' @param options A list of options to be sent to 3dDeconvolve (default is an empty list)
+#'
+#' @return An afni_lm_spec object containing the fitted model, dataset, working directory, options, and command
+#'
 #' @examples 
 #' etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), 
 #' run=c(1,1,2,2))
 #' dset <- fmri_dataset(scans=c("s1.nii", "s2.nii"), mask="mask.nii", TR=1, 
-#' run_length=c(50,50),event_table=etab)
-#' 
+#' run_length=c(50,50), event_table=etab)
+#'
 #' emodel <- event_model(onset ~ hrf(fac), block = ~ run, data=etab, 
 #' sampling_frame=dset$sampling_frame)
 #' bmodel <- baseline_model("bs", degree=4, sframe=dset$sampling_frame)
@@ -106,8 +120,8 @@ print.afni_lm_spec <- function(x,...) {
 }
 
 
-
 #' @keywords internal
+#' @noRd
 afni_stim_file <- function(label, file_name, values) {
   structure(
     list(label=label, file_name=file_name, values=values),
@@ -116,6 +130,7 @@ afni_stim_file <- function(label, file_name, values) {
 }
 
 #' @keywords internal
+#' @noRd
 afni_stim_times <- function(label, file_name, hrf, onsets, blockids, iresp=FALSE, sresp=FALSE, tr_times=1) {
   structure(
     list(label=label, file_name=file_name, hrf=hrf, onsets=onsets, blockids, iresp=iresp, sresp=sresp, tr_times=tr_times),
@@ -123,6 +138,9 @@ afni_stim_times <- function(label, file_name, hrf, onsets, blockids, iresp=FALSE
   )
 }
 
+
+#' @keywords internal
+#' @noRd
 afni_stim_im_times <- function(label, file_name, hrf, onsets, blockids) {
   structure(
     list(label=label, file_name=file_name, hrf=hrf, onsets=onsets, blockids=blockids),
@@ -146,13 +164,16 @@ afni_stim_im_times <- function(label, file_name, hrf, onsets, blockids) {
 
 
 #' @keywords internal
+#' @noRd
 afni_command_switch <- function(x, ...) UseMethod("afni_command_switch")
 
 #' @keywords internal
+#' @noRd
 write_afni_stim <- function(x, ...) UseMethod("write_afni_stim")
 
 
 #' @keywords internal
+#' @noRd
 afni_command_switch.afni_stim_file <- function(x, k, type) {
   switch(type,
     label = paste(k, x$label, collapse = " "),
@@ -163,7 +184,10 @@ afni_command_switch.afni_stim_file <- function(x, k, type) {
     sresp=NULL
   )
 }
+
+
 #' @keywords internal
+#' @noRd
 afni_command_switch.afni_stim_im_times <- function(x, k, type) {
   switch(type,
          label = paste(k, x$label, collapse = " "),
@@ -173,6 +197,7 @@ afni_command_switch.afni_stim_im_times <- function(x, k, type) {
 }
 
 #' @keywords internal
+#' @noRd
 afni_command_switch.afni_stim_times <- function(x, k, type) {
   switch(type,
          label = paste(k, x$label, collapse = " "),
@@ -185,6 +210,7 @@ afni_command_switch.afni_stim_times <- function(x, k, type) {
 }
 
 #' @keywords internal
+#' @noRd
 next_dir_name <- function(wd) {
   nd <- paste(wd, "+", sep="")
   if (!file.exists(nd)) {
@@ -194,6 +220,8 @@ next_dir_name <- function(wd) {
   }
 }
 
+
+#' @noRd
 #' @keywords internal
 #' @importFrom utils write.table
 write_baseline_mat <- function(stim, dir) {
@@ -201,16 +229,19 @@ write_baseline_mat <- function(stim, dir) {
 }
 
 #' @keywords internal
+#' @noRd
 write_baseline_mats <- function(blist) {
   purrr::walk(blist, ~ write_baseline_mat(., "."))
 }
   
 #' @keywords internal
+#' @noRd
 write_stim_files <- function(afni_stims) {
   purrr::walk(afni_stims, ~ write_afni_stim(., "."))
 }
 
 #' @keywords internal
+#' @noRd
 write_afni_stim.afni_stim_file <- function(stim, dir) {
   .write_values <- function(outname, vals) {
     hfile <- file(outname, "w")
@@ -241,6 +272,7 @@ write_afni_stim.afni_stim_times <- function(stim, dir) {
 
 
 #' @keywords internal
+#' @noRd
 write_censor_file <- function(dir, censor) {
     outname <- paste0(dir, "/censor.1D")
     hfile <- file(outname, "w")
@@ -250,6 +282,7 @@ write_censor_file <- function(dir, censor) {
   
 
 #' @keywords internal
+#' @noRd
 #' @importFrom purrr imap
 write_glts <- function(glts, gltfiles) {
   imap(glts, function(glt, i) {
@@ -260,6 +293,7 @@ write_glts <- function(glts, gltfiles) {
 }
 
 #' @keywords internal
+#' @noRd
 afni_baseline_matrix <- function(label, file_name, mat) {
   structure(
     list(label=label, file_name=file_name, mat=mat),
@@ -268,6 +302,7 @@ afni_baseline_matrix <- function(label, file_name, mat) {
 }
 
 #' @keywords internal
+#' @noRd
 build_baseline_stims <- function(x) {
   blens <- blocklens(x)
   nblocks <- length(blens)
@@ -363,6 +398,31 @@ build_afni_stims.afni_trialwise_convolved_term <- function(x, iresp=FALSE, tr_ti
   cmdstr
 }
 
+
+
+#' Build 3dDeconvolve command for an fMRI model
+#'
+#' This function constructs the command string and associated options required
+#' to run 3dDeconvolve using the specified fMRI model, dataset, working directory,
+#' and other options. This command string can then be used to perform the actual
+#' fMRI analysis using the AFNI software.
+#'
+#' @param model The fMRI model, usually created using the fmri_model function
+#' @param dataset The fMRI dataset, usually created using the fmri_dataset function
+#' @param working_dir The working directory
+#' @param opts A list of options for the 3dDeconvolve command
+#'
+#' @return A list containing:
+#'         - cmd: The 3dDeconvolve command string
+#'         - cmdlines: The command lines for the 3dDeconvolve command
+#'         - afni_stims: A list of AFNI stimulus objects
+#'         - afni_baseline_mats: A list of AFNI baseline matrices
+#'         - gltfiles: A list of GLT (general linear test) filenames
+#'         - gltnames: A list of GLT names
+#'         - glts: A list of GLT objects
+#'         - gltstr: A list of GLT strings
+#'         - censor: The censoring vector
+#'
 #' @keywords internal
 build_decon_command <- function(model, dataset, working_dir, opts) {
   ## get the set of stimulus regressors
@@ -475,12 +535,25 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
 
 
 
+#' Run an afni_lm_spec object
+#'
+#' This function runs the 3dDeconvolve command for the specified afni_lm_spec object.
+#' It outputs the results to a specified directory and can either execute the command
+#' or only output the shell '3dDeconvolve.sh' script.
+#'
+#' @param x An afni_lm_spec object containing the model, dataset, and options
+#' @param outdir The output folder
+#' @param execute Whether to execute the command or only output the shell '3dDeconvolve.sh' script (default is TRUE)
+#' @param execfun Function used to execute external system command (default is system)
+#' @param prepend Prepend string to command (default is an empty string)
+#' @param ... Additional arguments passed to execfun
+#'
+#' @return NULL. The function is used for its side effects, such as writing output files.
+#'
+#' @examples
+#' # Assuming you have created an afni_lm_spec object called alm
+#' run.afni_lm_spec(alm, outdir="results")
 #' @export
-#' @param outdir the output folder
-#' @param execute whether to execute the command or only output shell '3dDeconvolve.sh' script
-#' @param execfun function used to execute external system command
-#' @param prepend prepend string to command
-#' @rdname run
 run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system, prepend="",...) {
   start_dir <- getwd()
   res <- try({

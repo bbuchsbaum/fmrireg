@@ -1,14 +1,39 @@
 
 
-#' Fast fmri regression model estimation from a latent component dataset
+#' Fast fMRI Regression Model Estimation from a Latent Component Dataset
 #'
-#' @details dataset must be of type `latent_dataset`, which itself require a `LatentNeuroVec` input
+#' This function estimates a regression model for fMRI data using a latent component dataset.
+#' The dataset must be of type `latent_dataset`, which itself requires a `LatentNeuroVec` input.
+#'
+#' @param formula A formula specifying the regression model.
+#' @param block A factor indicating the block structure of the data.
+#' @param baseline_model An optional baseline model.
+#' @param dataset A dataset of class 'latent_dataset'.
+#' @param durations The duration of events in the dataset.
+#' @param drop_empty Whether to drop empty events from the model. Default is TRUE.
+#' @param robust Whether to use robust regression methods. Default is FALSE.
+#' @param autocor The autocorrelation correction method to use on components.
+#'   One of 'none', 'auto', 'ar1', 'ar2', or 'arma'. Default is 'none'.
+#' @param bootstrap Whether to compute bootstrapped parameter estimates. Default is FALSE.
+#' @param nboot The number of bootstrap iterations. Default is 1000.
+#' @param ... Additional arguments.
+#'
+#' @return An object of class 'fmri_latent_lm' containing the regression model and dataset.
+#'
 #' @note This method is currently experimental.
+#'
 #' @export
-#' @inheritParams fmri_lm
-#' @param autocor experimental auto-correlation correction on components
-#' @param bootstrap whether to compute bootstrapped parameter estimates
-#' @param nboot number of bootstrap iterations
+#'
+#' @examples
+#' # Create a LatentNeuroVec, and then create a latent_dataset
+#' # ... (see example for latent_dataset)
+#'
+#' # Estimate the fMRI regression model using the latent dataset
+#' result <- fmri_latent_lm(formula = formula, block = block, dataset = dset,
+#'                          durations = NULL, drop_empty = TRUE, robust = FALSE)
+#'
+#' # Print the result
+#' print(result)
 fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset, 
                     durations, drop_empty=TRUE, robust=FALSE, 
                     autocor=c("none", "auto", "ar1", "ar2", "arma"), 
@@ -28,7 +53,26 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
   ret
 }
 
+
+#' Internal function for performing chunkwise linear regression on latent datasets
+#'
 #' @keywords internal
+#' @details This function is an internal helper function for fmri_latent_lm, which performs
+#'          chunkwise linear regression on latent datasets. The function handles different
+#'          autocorrelation options, as well as robust regression and bootstrapping.
+#'
+#' @param dset A latent dataset object.
+#' @param model The fmri model object.
+#' @param conlist A list of contrasts.
+#' @param nchunks The number of chunks to use for the regression.
+#' @param robust Logical, if TRUE, robust regression will be performed.
+#' @param verbose Logical, if TRUE, additional output will be printed.
+#' @param autocor A character string specifying the autocorrelation method to use.
+#' @param bootstrap Logical, if TRUE, bootstrapping will be performed.
+#' @param nboot The number of bootstrap iterations.
+#' @param boot_rows Logical, if TRUE, bootstrap row-wise.
+#' @return A list containing the results of the chunkwise linear regression.
+#' @seealso fmri_latent_lm
 chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FALSE, verbose=FALSE, 
                                         autocor=c("auto", "ar1", "ar2", "arma", "none"), 
                                         bootstrap=FALSE, nboot=1000, boot_rows=FALSE) {
@@ -124,8 +168,15 @@ coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts"), recon=
   }
 }
 
+#' Calculate the standard error for an fmri_latent_lm object
+#'
 #' @export
+#' @param x An fmri_latent_lm object.
+#' @param type A character string specifying whether to return the standard error for "estimates" or "contrasts".
+#' @param recon Logical, if TRUE, the function calculates the standard error for reconstructed data.
+#' @return A tibble containing the standard error values.
 #' @import Matrix
+#' @seealso fmri_latent_lm
 standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
   type <- match.arg(type)
  

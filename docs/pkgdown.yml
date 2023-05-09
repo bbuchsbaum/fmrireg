@@ -1,5 +1,5 @@
 pandoc: 2.19.2
-pkgdown: 2.0.6
+pkgdown: 2.0.7
 pkgdown_sha: ~
 articles:
   Overview: Overview.html
@@ -10,8 +10,8 @@ articles:
   a_05_contrasts: a_05_contrasts.html
   a_06_afni: a_06_afni.html
   a_07_trialwise: a_07_trialwise.html
-last_built: 2022-12-05T17:53Z
+last_built: 2023-05-09T14:36Z
 urls:
-  reference: https://pkgdown.r-lib.org/reference
-  article: https://pkgdown.r-lib.org/articles
+  reference: https://bbuchsbaum.github.io/fmrireg/reference
+  article: https://bbuchsbaum.github.io/fmrireg/articles
 

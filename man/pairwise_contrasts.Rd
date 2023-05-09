@@ -2,18 +2,22 @@
 % Please edit documentation in R/contrast.R
 \name{pairwise_contrasts}
 \alias{pairwise_contrasts}
-\title{pairwise contrasts}
+\title{Pairwise Contrasts}
 \usage{
 pairwise_contrasts(levels, where = NULL)
 }
 \arguments{
-\item{levels}{the set of factor levels to compare.}
+\item{levels}{A vector of factor levels to be compared.}
 
-\item{where}{the subset over which the contrast is computed}
+\item{where}{An optional formula specifying the subset over which the contrast is computed.}
+}
+\value{
+A contrast_set object containing pairwise contrasts for all combinations of factor levels.
 }
 \description{
-contrast all pairwise combinations of the levels of a factor
+Construct pairwise contrasts for all combinations of factor levels.
 }
 \examples{
 pairwise_contrasts(c("A", "B", "C"))
+
 }

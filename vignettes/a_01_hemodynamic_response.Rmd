@@ -30,8 +30,13 @@ f1 <- hrf_blocked(hrf_spmg1, width=0)
 ## Gaussian hrf with default parameters (mean=6, sd=1.5)
 f2 <- hrf_blocked(hrf_gaussian, width=0) 
 
-plot(seq(0,20,by=.1), f1(seq(0,20,by=.1)), type="l", xlab="Time", ylab="BOLD response", main="Gaussian and SPM Canonical HRF", ylim=c(-.1, .3))
-lines(seq(0,20,by=.1), f2(seq(0,20,by=.1)), type="l", col=2)
+y_f1 <- f1(seq(0,20,by=.1))
+y_f2 <- f2(seq(0,20,by=.1))
+
+plot(seq(0,20,by=.1), y_f1, type="l", xlab="Time", ylab="BOLD response", main="Gaussian and SPM Canonical HRF", 
+     ylim=range(c(y_f1, y_f2)))
+
+lines(seq(0,20,by=.1), y_f2, type="l", col=2)
 
 ```
 
@@ -73,7 +78,7 @@ hrf_w2 <- hrf_blocked(hrf_spmg1, width=2)
 hrf_w3 <- hrf_blocked(hrf_spmg1, width=3)
 
 time <- seq(0,20,by=.1)
-plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=range(0, 6), main="HRFs with Different Durations")
+plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=range(hrf_w3(time)), main="HRFs with Different Durations")
 lines(time, hrf_w2(time), type="l", col=2)
 lines(time, hrf_w3(time), type="l", col=3)
 
@@ -87,7 +92,7 @@ hrf_w1 <- hrf_blocked(hrf_spmg1, width=1, normalize=TRUE)
 hrf_w2 <- hrf_blocked(hrf_spmg1, width=2, normalize=TRUE)
 hrf_w3 <- hrf_blocked(hrf_spmg1, width=3, normalize=TRUE)
 
-plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=range(-.2, 1.2), main="HRFs with Different Durations, but normalized")
+plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=range(hrf_w3(time)), main="HRFs with Different Durations, but normalized")
 lines(time, hrf_w2(time), type="l", col=2)
 lines(time, hrf_w3(time), type="l", col=3)
 
@@ -106,7 +111,7 @@ hrf_w3 <- hrf_blocked(hrf_spmg1, width=6, summate=FALSE)
 
 time <- seq(0,24,by=.1)
 
-plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=c(-.1,.25), main="Non-Summating HRFs with Different Durations ")
+plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=range(hrf_w3(time)), main="Non-Summating HRFs with Different Durations ")
 lines(time, hrf_w2(time), type="l", col=2)
 lines(time, hrf_w3(time), type="l", col=3)
 
@@ -122,7 +127,7 @@ hrf_w3 <- hrf_blocked(hrf_spmg1, width=6, summate=FALSE, normalize=TRUE)
 
 time <- seq(0,24,by=.1)
 
-plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=c(-.1,1.1), main="Normalized and Non-Summating HRFs with Different Durations ")
+plot(time, hrf_w1(time), type="l", xlab="Time", ylab="BOLD response", ylim=range(hrf_w3(time)), main="Normalized and Non-Summating HRFs with Different Durations ")
 lines(time, hrf_w2(time), type="l", col=2)
 lines(time, hrf_w3(time), type="l", col=3)
 

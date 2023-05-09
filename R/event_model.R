@@ -1,4 +1,22 @@
 
+#' event_model.list
+#'
+#' Construct an event model from a list of HRF specifications.
+#'
+#' @description
+#' This function constructs an event model from a list of hemodynamic response function
+#' (HRF) specifications `x`, along with other parameters like data, block, sampling frame,
+#' and durations. It is specifically designed to handle lists of HRF specifications.
+#'
+#' @param x A list of HRF specifications. All elements in `x` must be of type `hrfspec`.
+#' @param data The dataset containing the event information.
+#' @param block The block variable, either a formula or a vector of block values.
+#' @param sampling_frame The time series grid over which to sample the function.
+#' @param drop_empty Logical indicating whether to drop empty events. Default is `TRUE`.
+#' @param durations A numeric vector of event durations. Default is 0 for all events.
+#' @param precision Numeric value indicating the precision of the model. Default is 0.3.
+#' @param ... Additional arguments.
+#' @return An event model object.
 #' @export
 event_model.list <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0, precision=.3, ...) {
   assert_that(all(sapply(x, function(a) inherits(a, "hrfspec"))), msg="event_model.list: all `x` elements must be of type `hrfspec")
@@ -43,6 +61,24 @@ event_model.list <- function(x, data, block, sampling_frame, drop_empty=TRUE, du
 }
 
 
+#' event_model.formula
+#'
+#' Construct an event model from a formula and data.
+#'
+#' @description
+#' This function constructs an event model using a formula `x`, a dataset `data`,
+#' a block variable, and other parameters like sampling frame, drop_empty, durations,
+#' and precision. It is specifically designed to handle models specified as formulas.
+#'
+#' @param x A formula specifying the event model.
+#' @param data The dataset containing the event information.
+#' @param block The block variable, either a formula or a vector of block values.
+#' @param sampling_frame The time series grid over which to sample the function.
+#' @param drop_empty Logical indicating whether to drop empty events. Default is `TRUE`.
+#' @param durations A numeric vector of event durations. Default is 0 for all events.
+#' @param precision Numeric value indicating the precision of the model. Default is 0.3.
+#' @param ... Additional arguments.
+#' @return An event model object.
 #' @export
 event_model.formula <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0, precision=.3, ...) {
   formula <- x
@@ -204,6 +240,7 @@ extract_variables <- function(form, data, .terms=NULL) {
   env <- environment(.terms)
   #env <- environment(.terms)
   varnames <- sapply(attr(.terms, "variables") , deparse, width.cutoff = 500)[-1]
+  print(varnames)
   #varnames <- c(formula.tools::get.vars(formula.tools::lhs(form)), formula.tools::get.vars(formula.tools::rhs(form)))
   #variables <- as.data.frame(do.call(cbind, lapply(varnames, function(vn) eval(parse(text=vn), data,environment(terms(form))))))
   #variables <- eval(attr(.terms, "variables"), data, env) 
@@ -380,23 +417,28 @@ design_matrix.convolved_term <- function(x, blockid=NULL, ...) {
   } 
 }
 
+#' @export
 design_matrix.afni_hrf_convolved_term <- function(x, blockid=NULL, ...) {
   stop("afni_hrf_convolved_term delegates design matrix construction to AFNI")
 }
 
 
 #' matrix_term
-#' 
-#' A set of regression variables stored as a numeric matrix
-#' 
-#' @param varname the name of the variable
-#' @param mat the `matrix` of values
+#'
+#' Create a matrix_term object.
+#'
+#' @description
+#' This function creates a matrix_term object, which is a set of regression
+#' variables stored as a numeric matrix.
+#'
+#' @param varname The name of the variable.
+#' @param mat The matrix of values.
+#' @return A matrix_term object.
 #' @importFrom tibble as_tibble
 #' @examples 
-#' mat <- matrix(rnorm(100*10), 100 ,10)
+#' mat <- matrix(rnorm(100 * 10), 100, 10)
 #' mterm <- matrix_term("mterm", mat)
 #' @export
-#' @rdname matrix_term
 matrix_term <- function(varname, mat) {
   stopifnot(is.matrix(mat))
   ret <- list(varname=varname, design_matrix=suppressMessages(tibble::as_tibble(mat,.name_repair="minimal")))
@@ -522,8 +564,19 @@ print.event_model <- function(x,...) {
 }
 
 
+#' Plot an event_model object
+#'
+#' @description
+#' This function creates a plot of an event_model object, visualizing the design matrix.
+#'
+#' @param x An event_model object.
+#' @param y Unused.
+#' @param term_name Name of the term to plot (optional).
+#' @param longnames Logical flag; if TRUE, use long names for the plot (default: TRUE).
+#' @param ... Additional arguments to be passed to the ggplot2 function.
 #' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap xlab theme_bw
 #' @importFrom tidyr gather
+#' @return A ggplot2 plot object.
 #' @export
 plot.event_model <- function(x, y, term_name=NULL, longnames=TRUE, ...) {
   all_terms <- terms(x)

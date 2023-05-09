@@ -2,19 +2,22 @@
 % Please edit documentation in R/contrast.R
 \name{unit_contrast}
 \alias{unit_contrast}
-\title{unit_contrast}
+\title{Unit Contrast}
 \usage{
 unit_contrast(A, name, where = NULL)
 }
 \arguments{
-\item{A}{the contrast expression as a formula}
+\item{A}{A formula representing the contrast expression.}
 
-\item{name}{the name of the contrast}
+\item{name}{A character string specifying the name of the contrast.}
 
-\item{where}{the subset of conditions to apply contrast to}
+\item{where}{An optional formula specifying the subset of conditions to apply the contrast to.}
+}
+\value{
+A unit_contrast_spec object containing the contrast that sums to 1.
 }
 \description{
-A contrast that sums to 1 and is used to define contrasts against baseline.
+Construct a contrast that sums to 1 and is used to define contrasts against the baseline.
 }
 \examples{
 con <- unit_contrast(~ Face, name="Main_face")

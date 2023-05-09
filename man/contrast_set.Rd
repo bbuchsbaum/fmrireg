@@ -2,15 +2,18 @@
 % Please edit documentation in R/contrast.R
 \name{contrast_set}
 \alias{contrast_set}
-\title{create a set of contrasts}
+\title{Create a Set of Contrasts}
 \usage{
 contrast_set(...)
 }
 \arguments{
-\item{...}{a variable length list of \code{contrast_spec} objects.}
+\item{...}{A variable-length list of contrast_spec objects.}
+}
+\value{
+A list of contrast_spec objects with class "contrast_set".
 }
 \description{
-construct a \code{list} of \code{contrast_spec} objects
+Construct a list of contrast_spec objects.
 }
 \examples{
 c1 <- contrast(~ A - B, name="A_B")

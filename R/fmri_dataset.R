@@ -66,33 +66,39 @@ read_fmri_config <- function(file_name, base_path=NULL) {
   out
 }
 
-#' matrix_dataset
-#' 
-#' @inheritParams fmri_dataset
-#' @param datamat a \code{matrix} each column is a voxel time-series
+#' Create a Matrix Dataset Object
+#'
+#' This function creates a matrix dataset object, which is a list containing information about the data matrix, TR, number of runs, event table, sampling frame, and mask.
+#'
+#' @param datamat A matrix where each column is a voxel time-series.
+#' @param TR Repetition time (TR) of the fMRI acquisition.
+#' @param run_length A numeric vector specifying the length of each run in the dataset.
+#' @param event_table An optional data frame containing event information. Default is an empty data frame.
+#'
+#' @return A matrix dataset object of class c("matrix_dataset", "fmri_dataset", "list").
 #' @export
-#' @examples 
-#' 
-#' ## a matrix with 100 rows and 100 columns (voxels)
+#'
+#' @examples
+#' # A matrix with 100 rows and 100 columns (voxels)
 #' X <- matrix(rnorm(100*100), 100, 100)
 #' dset <- matrix_dataset(X, TR=2, run_length=100)
-#' 
-#' ## an iterator with 5 chunks
+#'
+#' # An iterator with 5 chunks
 #' iter <- data_chunks(dset, nchunks=5)
 #' `%do%` <- foreach::`%do%`
 #' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
 #' length(y) == 5
-#' 
-#' ## an iterator with 100 chunks
+#'
+#' # An iterator with 100 chunks
 #' iter <- data_chunks(dset, nchunks=100)
 #' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
 #' length(y) == 100
-#' 
-#' ## a matrix_dataset with 200 rows, 100 columns and 2 runs
+#'
+#' # A matrix_dataset with 200 rows, 100 columns and 2 runs
 #' X <- matrix(rnorm(200*100), 200, 100)
 #' dset <- matrix_dataset(X, TR=2, run_length=c(100,100))
-#' 
-#' ## get a "runwise" iterator. For every iteration an entire run's worth of data is returned.
+#'
+#' # Get a "runwise" iterator. For every iteration, an entire run's worth of data is returned.
 #' iter <- data_chunks(dset, runwise=TRUE)
 #' y <- foreach::foreach(chunk = iter)  %do% { colMeans(chunk$data) }
 #' length(y) == 2
@@ -118,20 +124,34 @@ matrix_dataset <- function(datamat, TR, run_length, event_table=data.frame()) {
   
 }
 
-#' fmri_mem_dataset
-#' 
-#' @inheritParams fmri_dataset
-#' @param scans a \code{list} of objects of class \code{\linkS4class{NeuroVec}}
-#' @param mask a binary mask of class  \code{\linkS4class{NeuroVol}} indicating the set of voxels to include in analyses
+#' Create an fMRI Memory Dataset Object
+#'
+#' This function creates an fMRI memory dataset object, which is a list containing information about the scans, mask, TR, number of runs, event table, base path, sampling frame, and censor.
+#'
+#' @param scans A list of objects of class \code{\linkS4class{NeuroVec}}.
+#' @param mask A binary mask of class \code{\linkS4class{NeuroVol}} indicating the set of voxels to include in analyses.
+#' @param TR Repetition time (TR) of the fMRI acquisition.
+#' @param run_length A numeric vector specifying the length of each run in the dataset. Default is the length of the scans.
+#' @param event_table An optional data frame containing event information. Default is an empty data frame.
+#' @param base_path An optional base path for the dataset. Default is "." (current directory).
+#' @param censor An optional numeric vector specifying which time points to censor. Default is NULL.
+#'
+#' @return An fMRI memory dataset object of class c("fmri_mem_dataset", "volumetric_dataset", "fmri_dataset", "list").
 #' @export
-#' @examples 
-#' 
-#' d <- c(10,10,10,10)
+#'
+#' @examples
+#' # Create a NeuroVec object
+#' d <- c(10, 10, 10, 10)
 #' nvec <- neuroim2::NeuroVec(array(rnorm(prod(d)), d), space=neuroim2::NeuroSpace(d))
+#'
+#' # Create a NeuroVol mask
 #' mask <- neuroim2::NeuroVol(array(rnorm(10*10*10), d[1:3]), space=neuroim2::NeuroSpace(d[1:3]))
 #' mask[mask < .5] <- 0
-#' dset <- fmri_mem_dataset(list(nvec),mask, TR=2)
-#' 
+#'
+#' # Create an fmri_mem_dataset
+#' dset <- fmri_mem_dataset(list(nvec), mask, TR=2)
+#'
+#' # Create an iterator with 100 chunks
 #' iter <- data_chunks(dset, nchunks=100)
 fmri_mem_dataset <- function(scans, mask, TR, 
                              run_length=sapply(scans, function(x) dim(x)[4]),
@@ -169,23 +189,36 @@ fmri_mem_dataset <- function(scans, mask, TR,
   ret
 }
 
-#' A dataset that encapsulates a dimension-reduced subspace of "latent variables". 
-#' 
-#' 
-#' @inheritParams fmri_dataset
-#' @param lvec an instance of class \code{LatentNeuroVec}
-#' @examples 
-#' 
-#' ## a matrix with 100 rows and 1000 columns (voxels)
+#' Create a Latent Dataset Object
+#'
+#' This function creates a latent dataset object, which encapsulates a dimension-reduced subspace of "latent variables".
+#' The dataset is a list containing information about the latent neuroimaging vector, TR, number of runs, event table, base path, sampling frame, and censor.
+#'
+#' @param lvec An instance of class \code{LatentNeuroVec}.
+#' @param TR Repetition time (TR) of the fMRI acquisition.
+#' @param run_length A numeric vector specifying the length of each run in the dataset.
+#' @param event_table An optional data frame containing event information. Default is an empty data frame.
+#' @param base_path An optional base path for the dataset. Default is "." (current directory).
+#' @param censor An optional numeric vector specifying which time points to censor. Default is NULL.
+#'
+#' @return A latent dataset object of class c("latent_dataset", "fmri_dataset", "list").
+#' @export
+#'
+#' @examples
+#' # Create a matrix with 100 rows and 1000 columns (voxels)
 #' X <- matrix(rnorm(100*1000), 100, 1000)
 #' pres <- prcomp(X)
 #' basis <- pres$x[,1:25]
 #' loadings <- pres$rotation[,1:25]
 #' offset <- colMeans(X)
+#'
+#' # Create a LatentNeuroVec object
 #' lvec <- neuroim2::LatentNeuroVec(basis, loadings, neuroim2::NeuroSpace(c(10,10,10,100)), 
 #' mask=rep(TRUE,1000), offset=offset)
+#'
+#' # Create a latent_dataset
 #' dset <- latent_dataset(lvec, TR=2, run_length=100)
-#' @export 
+#' @export
 latent_dataset <- function(lvec, TR, run_length, event_table=data.frame()) {
   assert_that(sum(run_length) == dim(lvec)[4])
   
@@ -208,32 +241,36 @@ latent_dataset <- function(lvec, TR, run_length, event_table=data.frame()) {
 
 
 
-#' An fMRI dataset consisting of a set of scans as files, design information, and other data.
-#' 
-#' @param scans a vector of one or more file names of the images comprising the dataset
-#' @param mask name of the binary mask file indicating the voxels to include in analysis.
-#' @param TR the repetition time in seconds of the scan-to-scan interval.
-#' @param run_length a \code{vector} of one or more integers indicating the number of scans in each run.
-#' @param event_table a \code{data.frame} containing the event onsets and experimental variables.
-#' @param base_path the file path to be prepended to relative file names.
-#' @param censor a binary vector indicating which scans to remove.
-#' @param preload read image scans eagerly rather than on first access
-#' @param mode the type of storage mode ('normal', 'bigvec', 'mmap', filebacked')
-#' 
+#' Create an fMRI Dataset Object from a Set of Scans
+#'
+#' This function creates an fMRI dataset object from a set of scans, design information, and other data. The dataset is a list containing information about the scans, mask, TR, number of runs, event table, base path, sampling frame, censor, mode, and preload.
+#'
+#' @param scans A vector of one or more file names of the images comprising the dataset.
+#' @param mask Name of the binary mask file indicating the voxels to include in the analysis.
+#' @param TR The repetition time in seconds of the scan-to-scan interval.
+#' @param run_length A vector of one or more integers indicating the number of scans in each run.
+#' @param event_table A data.frame containing the event onsets and experimental variables. Default is an empty data.frame.
+#' @param base_path The file path to be prepended to relative file names. Default is "." (current directory).
+#' @param censor A binary vector indicating which scans to remove. Default is NULL.
+#' @param preload Read image scans eagerly rather than on first access. Default is FALSE.
+#' @param mode The type of storage mode ('normal', 'bigvec', 'mmap', filebacked'). Default is 'normal'.
+#'
+#' @return An fMRI dataset object of class c("fmri_file_dataset", "volumetric_dataset", "fmri_dataset", "list").
 #' @export
-#' @importFrom tibble as_tibble
-#' @examples 
-#' 
+#'
+#' @examples
+#' # Create an fMRI dataset with 3 scans and a mask
 #' dset <- fmri_dataset(c("scan1.nii", "scan2.nii", "scan3.nii"), 
-#' mask="mask.nii", TR=2, run_length=rep(300,3), 
-#' event_table=data.frame(onsets=c(3,20,99,3,20,99,3,20,99), 
-#' run=c(1,1,1,2,2,2,3,3,3)))
-#'         
+#'   mask="mask.nii", TR=2, run_length=rep(300, 3), 
+#'   event_table=data.frame(onsets=c(3, 20, 99, 3, 20, 99, 3, 20, 99), 
+#'   run=c(1, 1, 1, 2, 2, 2, 3, 3, 3))
+#' )
+#'
+#' # Create an fMRI dataset with 1 scan and a mask
 #' dset <- fmri_dataset("scan1.nii", mask="mask.nii", TR=2, 
-#' run_length=300, 
-#' event_table=data.frame(onsets=c(3,20,99), run=rep(1,3)))
-#' 
-#' 
+#'   run_length=300, 
+#'   event_table=data.frame(onsets=c(3, 20, 99), run=rep(1, 3))
+#' ) 
 fmri_dataset <- function(scans, mask, TR, 
                          run_length, 
                          event_table=data.frame(), 
@@ -316,12 +353,6 @@ get_data.matrix_dataset <- function(x, ...) {
   x$datamat
 }
 
-#' @import memoise
-get_data_from_file <- memoise::memoise(function(x, ...) {
-  m <- get_mask(x)
-  neuroim2::read_vec(x$scans, mask=m, mode=x$mode, ...)
-})
-
 #' @export
 #' @importFrom neuroim2 NeuroVecSeq FileBackedNeuroVec
 get_data.fmri_file_dataset <- function(x, ...) {
@@ -331,6 +362,15 @@ get_data.fmri_file_dataset <- function(x, ...) {
     x$vec
   }
 }
+
+#' @import memoise
+#' @keywords internal
+get_data_from_file <- memoise::memoise(function(x, ...) {
+  m <- get_mask(x)
+  neuroim2::read_vec(x$scans, mask=m, mode=x$mode, ...)
+})
+
+
 
 #' @export
 get_mask.fmri_file_dataset <- function(x, ...) {
@@ -390,9 +430,39 @@ chunk_iter <- function(x, nchunks, get_chunk) {
 }
 
 
+#' Create Data Chunks for fmri_mem_dataset Objects
+#'
+#' This function creates data chunks for fmri_mem_dataset objects. It allows for the retrieval of run-wise or sequence-wise data chunks, as well as arbitrary chunks.
+#'
+#' @param x An object of class 'fmri_mem_dataset'.
+#' @param nchunks The number of data chunks to create. Default is 1.
+#' @param runwise If TRUE, the data chunks are created run-wise. Default is FALSE.
+#' @param ... Additional arguments.
+#'
+#' @return A list of data chunks, with each chunk containing the data, voxel indices, row indices, and chunk number.
 #' @importFrom neuroim2 series
 #' @autoglobal
 #' @export
+#'
+#' @examples
+#' # Create an fmri_mem_dataset
+#' # ... (see example for fmri_mem_dataset)
+#'
+#' # Create an iterator with 5 chunks
+#' iter <- data_chunks(dset, nchunks=5)
+#' `%do%` <- foreach::`%do%`
+#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' length(y) == 5
+#'
+#' # Create an iterator with 100 chunks
+#' iter <- data_chunks(dset, nchunks=100)
+#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' length(y) == 100
+#'
+#' # Create a "runwise" iterator
+#' iter <- data_chunks(dset, runwise=TRUE)
+#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' length(y) == 2
 data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
   mask <- get_mask(x)
   #print("data chunks")
@@ -438,8 +508,37 @@ data_chunks.fmri_mem_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
 }
 
 
-
+#' Create Data Chunks for fmri_file_dataset Objects
+#'
+#' This function creates data chunks for fmri_file_dataset objects. It allows for the retrieval of run-wise or sequence-wise data chunks, as well as arbitrary chunks.
+#'
+#' @param x An object of class 'fmri_file_dataset'.
+#' @param nchunks The number of data chunks to create. Default is 1.
+#' @param runwise If TRUE, the data chunks are created run-wise. Default is FALSE.
+#' @param ... Additional arguments.
+#'
+#' @return A list of data chunks, with each chunk containing the data, voxel indices, row indices, and chunk number.
 #' @export
+#'
+#' @examples
+#' # Create an fmri_file_dataset
+#' # ... (see example for fmri_dataset)
+#'
+#' # Create an iterator with 5 chunks
+#' iter <- data_chunks(dset, nchunks=5)
+#' `%do%` <- foreach::`%do%`
+#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' length(y) == 5
+#'
+#' # Create an iterator with 100 chunks
+#' iter <- data_chunks(dset, nchunks=100)
+#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' length(y) == 100
+#'
+#' # Create a "runwise" iterator
+#' iter <- data_chunks(dset, runwise=TRUE)
+#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' length(y) == 2
 data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
   mask <- get_mask(x)
   #maskSeq <- NULL
@@ -478,13 +577,42 @@ data_chunks.fmri_file_dataset <- function(x, nchunks=1,runwise=FALSE,...) {
   
   ##message("nchunks is ", nchunks)
   
-  
-  
+
   
 }
 
 
+#' Create Data Chunks for matrix_dataset Objects
+#'
+#' This function creates data chunks for matrix_dataset objects. It allows for the retrieval of run-wise or sequence-wise data chunks, as well as arbitrary chunks.
+#'
+#' @param x An object of class 'matrix_dataset'.
+#' @param nchunks The number of data chunks to create. Default is 1.
+#' @param runwise If TRUE, the data chunks are created run-wise. Default is FALSE.
+#' @param ... Additional arguments.
+#'
+#' @return A list of data chunks, with each chunk containing the data, voxel indices, row indices, and chunk number.
 #' @export
+#'
+#' @examples
+#' # Create a matrix_dataset
+#' # ... (see example for matrix_dataset)
+#'
+#' # Create an iterator with 5 chunks
+#' iter <- data_chunks(dset, nchunks=5)
+#' `%do%` <- foreach::`%do%`
+#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' length(y) == 5
+#'
+#' # Create an iterator with 100 chunks
+#' iter <- data_chunks(dset, nchunks=100)
+#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' length(y) == 100
+#'
+#' # Create a "runwise" iterator
+#' iter <- data_chunks(dset, runwise=TRUE)
+#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
+#' length(y) == 2
 data_chunks.matrix_dataset <- function(x, nchunks=1, runwise=FALSE,...) {
   get_run_chunk <- function(chunk_num) {
     ind <- which(blockids(x$sampling_frame) == chunk_num)

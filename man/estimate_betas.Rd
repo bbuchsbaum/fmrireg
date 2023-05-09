@@ -2,38 +2,10 @@
 % Please edit documentation in R/all_generic.R, R/fmri_betas.R
 \name{estimate_betas}
 \alias{estimate_betas}
-\alias{estimate_betas.fmri_dataset}
-\alias{estimate_betas.matrix_dataset}
 \alias{estimate_betas.latent_dataset}
 \title{estimate trialwise beta coefficients for a dataset}
 \usage{
 estimate_betas(x, ...)
-
-\method{estimate_betas}{fmri_dataset}(
-  x,
-  fixed = NULL,
-  ran,
-  block,
-  method = c("mixed", "pls", "pls_searchlight", "pls_global", "ols"),
-  basemod = NULL,
-  radius = 8,
-  niter = 8,
-  ncomp = 4,
-  lambda = 0.01,
-  ...
-)
-
-\method{estimate_betas}{matrix_dataset}(
-  x,
-  fixed = NULL,
-  ran,
-  block,
-  method = c("mixed", "pls", "pls_global", "ols"),
-  basemod = NULL,
-  ncomp = 4,
-  lambda = 0.01,
-  ...
-)
 
 \method{estimate_betas}{latent_dataset}(
   x,
@@ -49,54 +21,45 @@ estimate_betas(x, ...)
 )
 }
 \arguments{
-\item{x}{the dataset}
+\item{x}{An object of class \code{matrix_dataset} representing the matrix dataset}
 
-\item{...}{extra args}
+\item{...}{Additional arguments passed to the estimation method}
 
-\item{fixed}{a formula for the fixed regressors that model constant effects (i.e. non-varying over trials)}
+\item{fixed}{A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials)}
 
-\item{ran}{a formula for the random (trialwise) regressors that model single trial effects}
+\item{ran}{A formula specifying the random (trialwise) regressors that model single trial effects}
 
-\item{block}{a formula for the block factor}
+\item{block}{A formula specifying the block factor}
 
-\item{method}{the regression method for estimating trialwise betas}
+\item{method}{The regression method for estimating trialwise betas; one of "mixed", "pls", "pls_global", or "ols" (default: "mixed")}
 
-\item{basemod}{\code{baseline_model} instance to regress out of data before beta estimation}
+\item{basemod}{A \code{baseline_model} instance to regress out of data before beta estimation (default: NULL)}
 
-\item{radius}{the radius in mm for \code{pls_searchlight} approach}
+\item{ncomp}{Number of PLS components for the "pls" and "pls_global" methods (default: 4)}
 
-\item{niter}{number of searchlight iterations for method "pls_searchlight"}
-
-\item{ncomp}{number of pls components for method "pls" and "pls_searchlight" and "pls_global"}
-
-\item{lambda}{lambda parameter (not currently used)}
-
-\item{prewhiten}{whether to prewhiten basis set using \code{auto.arima}}
+\item{lambda}{Lambda parameter (not currently used; default: 0.01)}
+}
+\value{
+A list of class "fmri_betas" containing the following components:
+\itemize{
+\item betas_fixed: Matrix representing the fixed effect betas
+\item betas_ran: Matrix representing the random effect betas
+\item design_ran: Design matrix for random effects
+\item design_fixed: Design matrix for fixed effects
+\item design_base: Design matrix for baseline model
+}
 }
 \description{
-estimate trialwise beta coefficients for a dataset
+This function estimates betas (regression coefficients) for fixed and random effects
+in a matrix dataset using various methods.
 }
-\details{
-The \code{method} arguments allows for several beta estimation approaches
-\itemize{
-\item \code{mixed} uses a linear mixed effects modeling of trialwise random effects as implemented in the \code{rrBLUP} package.
-\item \code{pls} uses separate partial least squares for each voxel to estimate trialwise betas
-\item \code{pls_searchlight} estimates pls solutions over searchlight windows and averages the beta estimates
-\item \code{pls_global} estimates a single multiresponse pls solution, where the \code{Y} matrix is the full data matrix.
-\item \code{ols} ordinary least squares estimate of betas -- no regularization
+\seealso{
+\code{\link{matrix_dataset}}, \code{\link{baseline_model}}
+
+Other estimate_betas: 
+\code{\link{estimate_betas.matrix_dataset}()}
+
+Other estimate_betas: 
+\code{\link{estimate_betas.matrix_dataset}()}
 }
-}
-\examples{
-
-
-facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
-facedes$frun <- factor(facedes$run)
-scans <- paste0("rscan0", 1:6, ".nii")
-
-dset <- fmri_dataset(scans=scans,mask="mask.nii",TR=1.5,run_length=rep(436,6),event_table=facedes)
-fixed = onset ~ hrf(run)
-ran = onset ~ trialwise()
-block = ~ run
-
-
-}
+\concept{estimate_betas}

@@ -2,17 +2,21 @@
 % Please edit documentation in R/hrf_smoothing_kernel.R
 \name{hrf_smoothing_kernel}
 \alias{hrf_smoothing_kernel}
-\title{compute an hrf smoothing kernel}
+\title{Compute an HRF smoothing kernel}
 \usage{
-hrf_smoothing_kernel(len, TR = 2, basis = "spmg1")
+hrf_smoothing_kernel(len, TR = 2, form)
 }
 \arguments{
-\item{len}{the number of scans}
+\item{len}{The number of scans.}
 
-\item{TR}{the repetition time}
+\item{TR}{The repetition time (default is 2 seconds).}
 
-\item{basis}{the hemodynamic response function}
+\item{form}{the \code{trialwise} formula expression, see examples.}
 }
 \description{
-A function to compute a temporal similarity matrix from a series of hemodynamic response functions
+This function computes a temporal similarity matrix from a series of hemodynamic response functions.
+}
+\examples{
+form <- onsets ~ trialwise(basis="gaussian")
+sk <- hrf_smoothing_kernel(100, TR=1.5, form)
 }

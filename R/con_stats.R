@@ -1,7 +1,9 @@
 #' @keywords internal
+#' @noRd
 qr.lm <- getFromNamespace("qr.lm", "stats")
 
 #' @keywords internal
+#' @noRd
 fit_Ftests <- function(object) {
   w <- object$weights
   ssr <- if (is.null(w)) {
@@ -58,56 +60,78 @@ fit_Ftests <- function(object) {
 }
 
 
-old_beta_stats <- function(lmfit, varnames, se=TRUE) {
-  cfs <- coef(lmfit)
-  betamat <- if (is.vector(cfs)) {
-    as.matrix(coef(lmfit))
-  } else {
-    betamat <- cfs
-  }
+# old_beta_stats <- function(lmfit, varnames, se=TRUE) {
+#   cfs <- coef(lmfit)
+#   betamat <- if (is.vector(cfs)) {
+#     as.matrix(coef(lmfit))
+#   } else {
+#     betamat <- cfs
+#   }
+# 
+#   if (se) {
+#     Qr <- qr.lm(lmfit)
+#     cov.unscaled <- chol2inv(Qr$qr)
+#     rss <- colSums(as.matrix(lmfit$residuals^2))
+#   
+#     rdf <- lmfit$df.residual
+#     resvar <- rss/rdf
+#     sigma <- sqrt(resvar)
+# 
+#     vc <- sapply(1:ncol(betamat), function(i) {
+#       vcv <- cov.unscaled * sigma[i]^2
+#       sqrt(diag(vcv))
+#     })
+#   
+#   
+#     prob <- 2 * (1 - pt(abs(betamat/vc), lmfit$df.residual))
+#     tstat <- betamat/vc
+#   
+#     vc <- t(vc)
+#     colnames(vc) <- varnames
+#     
+#     betamat <- t(betamat)
+#     vc <- t(vc)
+#   
+#   
+#     list(
+#         estimate=function() betamat,
+#         stat=function() betamat/vc,
+#         se=function() vc,
+#         prob=function() 2 * (1 - pt(abs(betamat/vc), lmfit$df.residual)),
+#         stat_type="tstat"
+#     )
+#   } else {
+#     betamat <- t(betamat)
+#     colnames(betamat) <- varnames
+#     list(
+#       estimate=function() betamat,
+#       stat_type="effects"
+#     )
+#   }
+# }
 
-  if (se) {
-    Qr <- qr.lm(lmfit)
-    cov.unscaled <- chol2inv(Qr$qr)
-    rss <- colSums(as.matrix(lmfit$residuals^2))
-  
-    rdf <- lmfit$df.residual
-    resvar <- rss/rdf
-    sigma <- sqrt(resvar)
 
-    vc <- sapply(1:ncol(betamat), function(i) {
-      vcv <- cov.unscaled * sigma[i]^2
-      sqrt(diag(vcv))
-    })
-  
-  
-    prob <- 2 * (1 - pt(abs(betamat/vc), lmfit$df.residual))
-    tstat <- betamat/vc
-  
-    vc <- t(vc)
-    colnames(vc) <- varnames
-    
-    betamat <- t(betamat)
-    vc <- t(vc)
-  
-  
-    list(
-        estimate=function() betamat,
-        stat=function() betamat/vc,
-        se=function() vc,
-        prob=function() 2 * (1 - pt(abs(betamat/vc), lmfit$df.residual)),
-        stat_type="tstat"
-    )
-  } else {
-    betamat <- t(betamat)
-    colnames(betamat) <- varnames
-    list(
-      estimate=function() betamat,
-      stat_type="effects"
-    )
-  }
-}
-
+#' Beta Statistics for Linear Model
+#'
+#' @description
+#' This function calculates beta statistics for a linear model fit.
+#'
+#' @param lmfit Fitted linear model object.
+#' @param varnames Vector of variable names.
+#' @param se Logical flag indicating whether to calculate standard errors (default: TRUE).
+#'
+#' @return A list containing the following elements:
+#' \itemize{
+#'   \item{\code{estimate}: Estimated beta coefficients.}
+#'   \item{\code{stat}: t-statistics of the beta coefficients (if \code{se = TRUE}).}
+#'   \item{\code{se}: Standard errors of the beta coefficients (if \code{se = TRUE}).}
+#'   \item{\code{prob}: Probabilities associated with the t-statistics (if \code{se = TRUE}).}
+#'   \item{\code{stat_type}: Type of the statistics calculated.}
+#' }
+#' @examples
+#' data(mtcars)
+#' lm_fit <- lm(mpg ~ wt + qsec + am, data = mtcars)
+#' beta_stats(lm_fit, c("Intercept", "wt", "qsec", "am"))
 beta_stats <- function(lmfit, varnames, se=TRUE) {
   cfs <- coef(lmfit)
   
@@ -159,7 +183,29 @@ beta_stats <- function(lmfit, varnames, se=TRUE) {
   }
 }
 
-
+#' Fit F-contrasts for Linear Model
+#'
+#' @description
+#' This function calculates F-contrasts for a fitted linear model.
+#'
+#' @param lmfit Fitted linear model object.
+#' @param conmat Contrast matrix.
+#' @param colind Column indices corresponding to the variables in the contrast matrix.
+#'
+#' @return A list containing the following elements:
+#' \itemize{
+#'   \item{\code{estimate}: Estimated contrasts.}
+#'   \item{\code{se}: Residual variance.}
+#'   \item{\code{stat}: F-statistics for the contrasts.}
+#'   \item{\code{prob}: Probabilities associated with the F-statistics.}
+#'   \item{\code{stat_type}: Type of the statistics calculated.}
+#' }
+#' @examples
+#' data(mtcars)
+#' lm_fit <- lm(mpg ~ wt + qsec + am, data = mtcars)
+#' contrast_matrix <- matrix(c(0, -1, 1), nrow = 1, byrow = TRUE)
+#' fit_Fcontrasts(lm_fit, contrast_matrix, c(2, 3))
+#' @keywords internal
 fit_Fcontrasts <- function(lmfit, conmat, colind) {
   #browser()
   Qr <- qr.lm(lmfit)
@@ -203,7 +249,7 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
   #  Fstat <- t(cb) %*% cm %*% (cb) / r / sigma2[i]
   #})
   
-  estimate <- map_dbl(1:ncol(betamat), function(i) {
+  estimate <- purrr::map_dbl(1:ncol(betamat), function(i) {
     b <- betamat[,i]
     cb <- cmat %*% b
     t(cb) %*% cm %*% (cb) / r 
@@ -224,68 +270,87 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
 }
 
 
-old_fit_Fcontrasts <- function(lmfit, conmat, colind) {
-  #browser()
-  Qr <- qr.lm(lmfit)
-  
-  cov.unscaled <- try(chol2inv(Qr$qr))
-  
-  cmat <- matrix(0, nrow(conmat), ncol(cov.unscaled))
-  cmat[,colind] <- conmat
-  
-  cfs <- coef(lmfit)
-  
-  betamat <- if (is.vector(cfs)) {
-    as.matrix(coef(lmfit))
-  } else {
-    cfs
-  }
-  
-  df <- lmfit$df.residual
-  
-  rss <- colSums(as.matrix(lmfit$residuals^2))
-  rdf <- lmfit$df.residual
-  resvar <- rss/rdf
-  sigma <- sqrt(resvar)
-  sigma2 <- sigma^2
-  
-  #msr <- summary.lm(reg)$sigma  # == SSE / (n-p)
-  r <- nrow(conmat)
-  
-  
-  #                        -1
-  #     (Cb - d)' ( C (X'X)   C' ) (Cb - d) / r
-  # F = ---------------------------------------
-  #                 SSE / (n-p)
-  #
-  
-  cm <- solve((cmat %*% cov.unscaled %*% t(cmat)))
-  
-  Fstat <- map_dbl(1:ncol(betamat), function(i) {
-    b <- betamat[,i]
-    cb <- cmat %*% b
-    Fstat <- t(cb) %*% cm %*% (cb) / r / sigma2[i]
-  })
-  
-  
-  return(
-    list(
-      estimate=function() betamat,
-      se=function() sigma2,
-      stat=function() Fstat,
-      prob=function() 1-pf(Fstat,r,rdf),
-      stat_type="Fstat")
-  )
-  
-}
+# old_fit_Fcontrasts <- function(lmfit, conmat, colind) {
+#   #browser()
+#   Qr <- qr.lm(lmfit)
+#   
+#   cov.unscaled <- try(chol2inv(Qr$qr))
+#   
+#   cmat <- matrix(0, nrow(conmat), ncol(cov.unscaled))
+#   cmat[,colind] <- conmat
+#   
+#   cfs <- coef(lmfit)
+#   
+#   betamat <- if (is.vector(cfs)) {
+#     as.matrix(coef(lmfit))
+#   } else {
+#     cfs
+#   }
+#   
+#   df <- lmfit$df.residual
+#   
+#   rss <- colSums(as.matrix(lmfit$residuals^2))
+#   rdf <- lmfit$df.residual
+#   resvar <- rss/rdf
+#   sigma <- sqrt(resvar)
+#   sigma2 <- sigma^2
+#   
+#   #msr <- summary.lm(reg)$sigma  # == SSE / (n-p)
+#   r <- nrow(conmat)
+#   
+#   
+#   #                        -1
+#   #     (Cb - d)' ( C (X'X)   C' ) (Cb - d) / r
+#   # F = ---------------------------------------
+#   #                 SSE / (n-p)
+#   #
+#   
+#   cm <- solve((cmat %*% cov.unscaled %*% t(cmat)))
+#   
+#   Fstat <- map_dbl(1:ncol(betamat), function(i) {
+#     b <- betamat[,i]
+#     cb <- cmat %*% b
+#     Fstat <- t(cb) %*% cm %*% (cb) / r / sigma2[i]
+#   })
+#   
+#   
+#   return(
+#     list(
+#       estimate=function() betamat,
+#       se=function() sigma2,
+#       stat=function() Fstat,
+#       prob=function() 1-pf(Fstat,r,rdf),
+#       stat_type="Fstat")
+#   )
+#   
+# }
 
-#' fit_contrasts
-#' 
-#' @param lmfit the \code{lm} object
-#' @param conmat the contrast \code{matrix} or contrast \code{vector}
-#' @param colind the subset column indices in the design associated with the contrast. 
-#' @param se whetheer to compute standard errors, t-statistics, and p-values
-#' @importFrom purrr map_dbl
+#' Fit Contrasts for Linear Model
+#'
+#' @description
+#' This function calculates contrasts for a fitted linear model.
+#'
+#' @param lmfit The fitted linear model object.
+#' @param conmat The contrast matrix or contrast vector.
+#' @param colind The subset column indices in the design associated with the contrast.
+#' @param se Whether to compute standard errors, t-statistics, and p-values (default: TRUE).
+#'
+#' @return A list containing the following elements:
+#' \itemize{
+#'   \item{\code{conmat}: Contrast matrix.}
+#'   \item{\code{sigma}: Residual standard error.}
+#'   \item{\code{df.residual}: Degrees of freedom for residuals.}
+#'   \item{\code{estimate}: Estimated contrasts.}
+#'   \item{\code{se}: Standard errors of the contrasts (if \code{se = TRUE}).}
+#'   \item{\code{stat}: t-statistics for the contrasts (if \code{se = TRUE}).}
+#'   \item{\code{prob}: Probabilities associated with the t-statistics (if \code{se = TRUE}).}
+#'   \item{\code{stat_type}: Type of the statistics calculated.}
+#' }
+#' @examples
+#' data(mtcars)
+#' lm_fit <- lm(mpg ~ wt + qsec + am, data = mtcars)
+#' contrast_matrix <- matrix(c(0, -1, 1), nrow = 1, byrow = TRUE)
+#' fit_contrasts(lm_fit, contrast_matrix, c(2, 3))
 fit_contrasts <- function(lmfit, conmat, colind, se=TRUE) {
   if (!is.matrix(conmat) && is.numeric(conmat)) {
     conmat <- t(matrix(conmat, 1, length(conmat)))
@@ -319,7 +384,7 @@ fit_contrasts <- function(lmfit, conmat, colind, se=TRUE) {
       stop("fit_contrasts: error computing contrast covariance")
     }
   
-    vc <- map_dbl(1:ncol(betamat), function(i) {
+    vc <- purrr::map_dbl(1:ncol(betamat), function(i) {
       vcv <- cov.unscaled * sigma[i]^2
       sqrt(diag(t(cmat) %*% vcv %*% cmat))
     })
@@ -349,64 +414,64 @@ fit_contrasts <- function(lmfit, conmat, colind, se=TRUE) {
 }
 
 
-old_fit_contrasts <- function(lmfit, conmat, colind, se=TRUE) {
-  if (!is.matrix(conmat) && is.numeric(conmat)) {
-    conmat <- t(matrix(conmat, 1, length(conmat)))
-  }
-  
-  ncoef <- nrow(coef(lmfit))
-  cmat <- matrix(0, ncoef, 1)
-  cmat[colind,] <- conmat
-  
-  cfs <- coef(lmfit)
-  
-  if (is.vector(cfs)) {
-    betamat <- as.matrix(coef(lmfit))
-  } else {
-    betamat <- cfs
-  }
-  
-  ct <- as.vector(t(cmat) %*% betamat)
-  rss <- colSums(as.matrix(lmfit$residuals^2))
-  rdf <- lmfit$df.residual
-  resvar <- rss/rdf
-  sigma <- sqrt(resvar)
-  
-  p1 <- 1:lmfit$rank
-  
-  if (se) {
-    Qr <- qr.lm(lmfit)
-    cov.unscaled <- try(chol2inv(Qr$qr))
-    
-    if (inherits(cov.unscaled, "try-error")) {
-      stop("fit_contrasts: error computing contrast covariance")
-    }
-    
-    vc <- map_dbl(1:ncol(betamat), function(i) {
-      vcv <- cov.unscaled * sigma[i]^2
-      sqrt(diag(t(cmat) %*% vcv %*% cmat))
-    })
-    
-    
-    return(
-      list(
-        conmat=cmat,
-        sigma=sigma,
-        df.residual=lmfit$df.residual,
-        estimate=function() ct,
-        se=function() vc,
-        stat=function() ct/vc,
-        prob=function() 2 * (1 - pt(abs(ct/vc), lmfit$df.residual)),
-        stat_type="tstat")
-    )
-  } else {
-    return(
-      list(
-        conmat=cmat,
-        sigma=sigma,
-        df.residual=lmfit$df.residual,
-        estimate=function() ct,
-        stat_type="effects")
-    )
-  }
-}
+# old_fit_contrasts <- function(lmfit, conmat, colind, se=TRUE) {
+#   if (!is.matrix(conmat) && is.numeric(conmat)) {
+#     conmat <- t(matrix(conmat, 1, length(conmat)))
+#   }
+#   
+#   ncoef <- nrow(coef(lmfit))
+#   cmat <- matrix(0, ncoef, 1)
+#   cmat[colind,] <- conmat
+#   
+#   cfs <- coef(lmfit)
+#   
+#   if (is.vector(cfs)) {
+#     betamat <- as.matrix(coef(lmfit))
+#   } else {
+#     betamat <- cfs
+#   }
+#   
+#   ct <- as.vector(t(cmat) %*% betamat)
+#   rss <- colSums(as.matrix(lmfit$residuals^2))
+#   rdf <- lmfit$df.residual
+#   resvar <- rss/rdf
+#   sigma <- sqrt(resvar)
+#   
+#   p1 <- 1:lmfit$rank
+#   
+#   if (se) {
+#     Qr <- qr.lm(lmfit)
+#     cov.unscaled <- try(chol2inv(Qr$qr))
+#     
+#     if (inherits(cov.unscaled, "try-error")) {
+#       stop("fit_contrasts: error computing contrast covariance")
+#     }
+#     
+#     vc <- map_dbl(1:ncol(betamat), function(i) {
+#       vcv <- cov.unscaled * sigma[i]^2
+#       sqrt(diag(t(cmat) %*% vcv %*% cmat))
+#     })
+#     
+#     
+#     return(
+#       list(
+#         conmat=cmat,
+#         sigma=sigma,
+#         df.residual=lmfit$df.residual,
+#         estimate=function() ct,
+#         se=function() vc,
+#         stat=function() ct/vc,
+#         prob=function() 2 * (1 - pt(abs(ct/vc), lmfit$df.residual)),
+#         stat_type="tstat")
+#     )
+#   } else {
+#     return(
+#       list(
+#         conmat=cmat,
+#         sigma=sigma,
+#         df.residual=lmfit$df.residual,
+#         estimate=function() ct,
+#         stat_type="effects")
+#     )
+#   }
+# }

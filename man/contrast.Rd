@@ -2,23 +2,25 @@
 % Please edit documentation in R/contrast.R
 \name{contrast}
 \alias{contrast}
-\title{contrast specification}
+\title{Contrast Specification}
 \usage{
 contrast(form, name, where = NULL)
 }
 \arguments{
-\item{form}{a formula describing the contrast}
+\item{form}{A formula describing the contrast.}
 
-\item{name}{a \code{character} label for the contrast}
+\item{name}{A character label for the contrast.}
 
-\item{where}{an expression the subset over whcih the contrast is defined}
+\item{where}{An expression defining the subset over which the contrast is applied (default: NULL).}
+}
+\value{
+A list containing the contrast specification.
 }
 \description{
 Define a linear contrast using a formula expression.
 }
 \examples{
-
-## A minus B contrast
+# A minus B contrast
 contrast(~ A - B, name="A_B")
 
 }

@@ -2,23 +2,26 @@
 % Please edit documentation in R/hrf.R
 \name{gen_empirical_hrf}
 \alias{gen_empirical_hrf}
-\title{generate an empirical hemodynamic response function}
+\title{Generate an Empirical Hemodynamic Response Function}
 \usage{
 gen_empirical_hrf(t, y, name = "empirical_hrf")
 }
 \arguments{
-\item{t}{time}
+\item{t}{Time points.}
 
-\item{y}{values of hrf at time \code{t[i]}}
+\item{y}{Values of HRF at time \code{t[i]}.}
 
-\item{name}{name of the genrated HRF}
+\item{name}{Name of the generated HRF.}
+}
+\value{
+An instance of type \code{HRF} inheriting from \code{function}.
 }
 \description{
-generate an empirical hemodynamic response function
+\code{gen_empirical_hrf} generates an empirical hemodynamic response function (HRF) using provided time points and HRF values.
 }
 \examples{
 
 y <- -poly(0:24, 2)[,2]
-emphrf <- gen_empirical_hrf(0:24, y) 
+emphrf <- gen_empirical_hrf(0:24, y)
 ## plot(emphrf(seq(0,24,by=.5)), type='l')
 }

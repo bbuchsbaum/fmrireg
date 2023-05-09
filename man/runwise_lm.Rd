@@ -2,19 +2,29 @@
 % Please edit documentation in R/fmrilm.R
 \name{runwise_lm}
 \alias{runwise_lm}
-\title{Run glm for each data run (responses split vertically) and then combine over runs via meta-analysis}
+\title{Runwise Linear Model for fMRI Dataset}
 \usage{
-runwise_lm(
-  dset,
-  model,
-  conlist,
-  fcon,
-  robust = FALSE,
-  meta_weighting = c("inv_var", "equal"),
-  verbose = FALSE
-)
+runwise_lm(dset, model, conlist, fcon, robust = FALSE, verbose = FALSE)
+}
+\arguments{
+\item{dset}{An object of class \code{fmri_dataset}.}
+
+\item{model}{The fMRI model used for the analysis.}
+
+\item{conlist}{The list of contrasts used in the analysis.}
+
+\item{fcon}{The F-contrasts used in the analysis.}
+
+\item{robust}{Whether to use robust linear modeling (default is FALSE).}
+
+\item{verbose}{Whether to display progress messages (default is FALSE).}
+}
+\value{
+A list containing the combined results from runwise linear model analysis.
 }
 \description{
-Run glm for each data run (responses split vertically) and then combine over runs via meta-analysis
+This function performs a runwise linear model analysis on an fMRI dataset by
+running the linear model for each data run (responses split vertically) and
+then combines the results over runs via meta-analysis.
 }
 \keyword{internal}

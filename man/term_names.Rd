@@ -12,3 +12,4 @@ term_names(x)
 \description{
 term_names
 }
+\keyword{internal}

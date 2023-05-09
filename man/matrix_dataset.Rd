@@ -2,44 +2,46 @@
 % Please edit documentation in R/fmri_dataset.R
 \name{matrix_dataset}
 \alias{matrix_dataset}
-\title{matrix_dataset}
+\title{Create a Matrix Dataset Object}
 \usage{
 matrix_dataset(datamat, TR, run_length, event_table = data.frame())
 }
 \arguments{
-\item{datamat}{a \code{matrix} each column is a voxel time-series}
+\item{datamat}{A matrix where each column is a voxel time-series.}
 
-\item{TR}{the repetition time in seconds of the scan-to-scan interval.}
+\item{TR}{Repetition time (TR) of the fMRI acquisition.}
 
-\item{run_length}{a \code{vector} of one or more integers indicating the number of scans in each run.}
+\item{run_length}{A numeric vector specifying the length of each run in the dataset.}
 
-\item{event_table}{a \code{data.frame} containing the event onsets and experimental variables.}
+\item{event_table}{An optional data frame containing event information. Default is an empty data frame.}
+}
+\value{
+A matrix dataset object of class c("matrix_dataset", "fmri_dataset", "list").
 }
 \description{
-matrix_dataset
+This function creates a matrix dataset object, which is a list containing information about the data matrix, TR, number of runs, event table, sampling frame, and mask.
 }
 \examples{
-
-## a matrix with 100 rows and 100 columns (voxels)
+# A matrix with 100 rows and 100 columns (voxels)
 X <- matrix(rnorm(100*100), 100, 100)
 dset <- matrix_dataset(X, TR=2, run_length=100)
 
-## an iterator with 5 chunks
+# An iterator with 5 chunks
 iter <- data_chunks(dset, nchunks=5)
 `\%do\%` <- foreach::`\%do\%`
 y <- foreach::foreach(chunk = iter) \%do\% { colMeans(chunk$data) }
 length(y) == 5
 
-## an iterator with 100 chunks
+# An iterator with 100 chunks
 iter <- data_chunks(dset, nchunks=100)
 y <- foreach::foreach(chunk = iter) \%do\% { colMeans(chunk$data) }
 length(y) == 100
 
-## a matrix_dataset with 200 rows, 100 columns and 2 runs
+# A matrix_dataset with 200 rows, 100 columns and 2 runs
 X <- matrix(rnorm(200*100), 200, 100)
 dset <- matrix_dataset(X, TR=2, run_length=c(100,100))
 
-## get a "runwise" iterator. For every iteration an entire run's worth of data is returned.
+# Get a "runwise" iterator. For every iteration, an entire run's worth of data is returned.
 iter <- data_chunks(dset, runwise=TRUE)
 y <- foreach::foreach(chunk = iter)  \%do\% { colMeans(chunk$data) }
 length(y) == 2

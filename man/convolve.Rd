@@ -16,5 +16,10 @@ convolve(x, hrf, sampling_frame, ...)
 \item{...}{extra args}
 }
 \description{
-convolve a term \code{x} with a hemodynamic response over a \code{sampling_frame}
+This function convolves an event sequence \code{x} with a hemodynamic response function \code{hrf}
+over a specified time series grid \code{sampling_frame}. It is a generic function that dispatches
+to the appropriate method
+}
+\details{
+Convolve a term \code{x} with a hemodynamic response function (HRF) over a \code{sampling_frame}.
 }

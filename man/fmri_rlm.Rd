@@ -16,21 +16,21 @@ fmri_rlm(
 )
 }
 \arguments{
-\item{formula}{the model formula for experimental events}
+\item{formula}{The model formula for experimental events.}
 
-\item{block}{the model formula for block structure}
+\item{block}{The model formula for block structure.}
 
-\item{baseline_model}{the \code{baseline_model} object}
+\item{baseline_model}{(Optional) The \code{baseline_model} object. Default is NULL.}
 
-\item{dataset}{an object derived from \code{fmri_dataset} containing the time-series data}
+\item{dataset}{An object derived from \code{fmri_dataset} containing the time-series data.}
 
-\item{durations}{a vector of event durations}
+\item{durations}{A vector of event durations.}
 
-\item{drop_empty}{whether to remove factor levels with size of zero}
+\item{drop_empty}{Whether to remove factor levels with a size of zero. Default is TRUE.}
 
-\item{nchunks}{number of daa chunks when strategy is \code{chunkwise}}
+\item{nchunks}{Number of data chunks when strategy is \code{chunkwise}. Default is 10.}
 
-\item{strategy}{the data splitting strategy}
+\item{strategy}{The data splitting strategy, either "runwise" or "chunkwise". Default is "runwise".}
 }
 \description{
 robust linear modeling of fmri data
@@ -44,3 +44,4 @@ dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
 #lm.1 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset)
 #lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset2)
 }
+\keyword{experimental}

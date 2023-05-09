@@ -14,3 +14,4 @@ term_matrices(x, ...)
 \description{
 term_matrices
 }
+\keyword{internal}

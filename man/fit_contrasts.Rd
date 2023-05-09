@@ -2,19 +2,38 @@
 % Please edit documentation in R/con_stats.R
 \name{fit_contrasts}
 \alias{fit_contrasts}
-\title{fit_contrasts}
+\title{Fit Contrasts for Linear Model}
 \usage{
 fit_contrasts(lmfit, conmat, colind, se = TRUE)
 }
 \arguments{
-\item{lmfit}{the \code{lm} object}
+\item{lmfit}{The fitted linear model object.}
 
-\item{conmat}{the contrast \code{matrix} or contrast \code{vector}}
+\item{conmat}{The contrast matrix or contrast vector.}
 
-\item{colind}{the subset column indices in the design associated with the contrast.}
+\item{colind}{The subset column indices in the design associated with the contrast.}
 
-\item{se}{whetheer to compute standard errors, t-statistics, and p-values}
+\item{se}{Whether to compute standard errors, t-statistics, and p-values (default: TRUE).}
+}
+\value{
+A list containing the following elements:
+\itemize{
+\item{\code{conmat}: Contrast matrix.}
+\item{\code{sigma}: Residual standard error.}
+\item{\code{df.residual}: Degrees of freedom for residuals.}
+\item{\code{estimate}: Estimated contrasts.}
+\item{\code{se}: Standard errors of the contrasts (if \code{se = TRUE}).}
+\item{\code{stat}: t-statistics for the contrasts (if \code{se = TRUE}).}
+\item{\code{prob}: Probabilities associated with the t-statistics (if \code{se = TRUE}).}
+\item{\code{stat_type}: Type of the statistics calculated.}
+}
 }
 \description{
-fit_contrasts
+This function calculates contrasts for a fitted linear model.
+}
+\examples{
+data(mtcars)
+lm_fit <- lm(mpg ~ wt + qsec + am, data = mtcars)
+contrast_matrix <- matrix(c(0, -1, 1), nrow = 1, byrow = TRUE)
+fit_contrasts(lm_fit, contrast_matrix, c(2, 3))
 }

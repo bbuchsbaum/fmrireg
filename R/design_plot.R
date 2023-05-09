@@ -1,11 +1,17 @@
 
 
-#' design_plot
+#' Design Plot for fMRI Model
 #' 
-#' @param fmrimod the `fmri_model` object
-#' @param longnames use longnames in legend
+#' @description
+#' Generate an interactive plot of the design matrix for a given fMRI model.
+#'
+#' @param fmrimod The `fmri_model` object.
+#' @param longnames Use long names in the legend (default: FALSE).
+#'
 #' @importFrom ggplot2 ggplot aes_string aes
 #' @import shiny
+#' 
+#' @return An interactive plot using Shiny.
 design_plot <- function(fmrimod, longnames=FALSE) {
   stopifnot(inherits(fmrimod, "fmri_model"))
   

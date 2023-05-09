@@ -1,5 +1,6 @@
 
 
+
 dctbasis <- function(n, p=n, const=FALSE) {
   m <- 1:n
   ret <- do.call(cbind, lapply(2:p, function(k) {

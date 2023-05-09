@@ -2,17 +2,35 @@
 % Please edit documentation in R/hrf.R
 \name{hrf_gamma}
 \alias{hrf_gamma}
-\title{gamma hemodynamic response function}
+\title{Gamma HRF (hemodynamic response function)}
 \usage{
 hrf_gamma(t, shape = 6, rate = 1)
 }
 \arguments{
-\item{t}{time}
+\item{t}{A vector of time points.}
 
-\item{shape}{the shape parameter for gamma pdf}
+\item{shape}{A numeric value representing the shape parameter for the gamma probability density function. Default value is 6.}
 
-\item{rate}{the rate parameter for gamma pdf}
+\item{rate}{A numeric value representing the rate parameter for the gamma probability density function. Default value is 1.}
+}
+\value{
+A numeric vector representing the gamma HRF at the given time points \code{t}.
 }
 \description{
-A hemodynamic response function using the Gamma density function
+The \code{hrf_gamma} function computes the gamma density-based HRF (hemodynamic response function) at given time points \code{t}.
 }
+\examples{
+# Compute the gamma HRF representation for time points from 0 to 20 with 0.5 increments
+hrf_gamma <- hrf_gamma(seq(0, 20, by = .5), shape = 6, rate = 1)
+}
+\seealso{
+Other hrf_functions: 
+\code{\link{hrf_bspline}()},
+\code{\link{hrf_gaussian}()},
+\code{\link{hrf_inv_logit}()},
+\code{\link{hrf_mexhat}()},
+\code{\link{hrf_sine}()},
+\code{\link{hrf_spmg1}()},
+\code{\link{hrf_time}()}
+}
+\concept{hrf_functions}

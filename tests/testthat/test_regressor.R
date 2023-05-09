@@ -279,6 +279,50 @@ test_that("facedes model with bspline parametric basis", {
 # })
 
 
+library(testthat)
+library(assertthat)
+
+# Test null_regressor
+test_that("null_regressor creates a valid object", {
+  nr <- null_regressor()
+  expect_is(nr, "null_regressor")
+  expect_is(nr, "regressor")
+  expect_is(nr, "list")
+})
+
+# Test single_trial_regressor
+test_that("single_trial_regressor creates a valid object", {
+  str <- single_trial_regressor(onsets = 10)
+  expect_is(str, "single_trial_regressor")
+  expect_is(str, "regressor")
+  expect_is(str, "list")
+})
+
+# Test regressor
+test_that("regressor creates a valid object", {
+  reg <- regressor(onsets = c(10, 12, 14, 16, 18, 40))
+  expect_is(reg, "regressor")
+  expect_is(reg, "list")
+})
+
+# Test evaluate.single_trial_regressor
+test_that("evaluate.single_trial_regressor produces correct output", {
+  str <- single_trial_regressor(onsets = 10)
+  grid <- seq(0, 100, by = 2)
+  eval_str <- evaluate.single_trial_regressor(str, grid)
+  expect_is(eval_str, "numeric")
+})
+
+# Test evaluate.null_regressor
+test_that("evaluate.null_regressor produces correct output", {
+  nr <- null_regressor()
+  grid <- seq(0, 100, by = 2)
+  eval_nr <- evaluate.null_regressor(nr, grid)
+  expect_is(eval_nr, "numeric")
+})
+
+
+
 
 
 

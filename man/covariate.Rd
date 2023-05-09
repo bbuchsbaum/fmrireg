@@ -2,24 +2,26 @@
 % Please edit documentation in R/covariate.R
 \name{covariate}
 \alias{covariate}
-\title{construct a covariate term that is not convolved with a hemodynamic response function}
+\title{Construct a Covariate Term}
 \usage{
 covariate(..., data, id = NULL, prefix = NULL)
 }
 \arguments{
-\item{...}{a variable argument set of covariate names}
+\item{...}{A variable argument set of covariate names.}
 
-\item{data}{a data.frame containing the variables}
+\item{data}{A data.frame containing the variables.}
 
-\item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
+\item{id}{An optional identifier for the covariate term.}
 
-\item{prefix}{a character string that is prepended to the variable names and used to identify the term.
-Can be used to disambiguate two \code{hrf} terms with the same variable(s) but different onsets or basis functions.}
+\item{prefix}{An optional prefix to add to the covariate names.}
+}
+\value{
+A list containing information about the covariate term.
 }
 \description{
-construct a covariate term that is not convolved with a hemodynamic response function
+Create a covariate term that is not convolved with a hemodynamic response function (HRF).
 }
 \examples{
 df1 <- data.frame(x=rnorm(100), y=rnorm(100))
-cv <- covariate(x,y,data=df1)
+cv <- covariate(x, y, data=df1)
 }

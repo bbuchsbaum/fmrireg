@@ -9,6 +9,12 @@ event_terms(x)
 \arguments{
 \item{x}{the model object}
 }
+\value{
+A list containing the 'event_term's.
+}
 \description{
-extract list of 'event_term's from model object
+This function extracts a list of 'event_term's from the provided model object \code{x}.
+}
+\details{
+Extract a list of 'event_term's from the model object.
 }

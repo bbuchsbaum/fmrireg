@@ -2,15 +2,36 @@
 % Please edit documentation in R/hrf.R
 \name{hrf_time}
 \alias{hrf_time}
-\title{hrf_time}
+\title{HRF (hemodynamic response function) as a linear function of time}
 \usage{
 hrf_time(t, maxt = 22)
 }
 \arguments{
-\item{t}{time in seconds}
+\item{t}{A numeric value representing time in seconds.}
 
-\item{maxt}{the maximum time point in domain}
+\item{maxt}{A numeric value representing the maximum time point in the domain. Default value is 22.}
+}
+\value{
+A numeric value representing the value of the HRF at the given time \code{t}.
 }
 \description{
-hemodyanmic response function that is a simple linear function of time t, when t > 0.
+The \code{hrf_time} function computes the value of an HRF, which is a simple linear function of time \code{t}, when \code{t} is greater than 0 and less than \code{maxt}.
 }
+\examples{
+# Compute the HRF value for t = 5 seconds with the default maximum time
+hrf_val <- hrf_time(5)
+
+# Compute the HRF value for t = 5 seconds with a custom maximum time of 30 seconds
+hrf_val_custom_maxt <- hrf_time(5, maxt = 30)
+}
+\seealso{
+Other hrf_functions: 
+\code{\link{hrf_bspline}()},
+\code{\link{hrf_gamma}()},
+\code{\link{hrf_gaussian}()},
+\code{\link{hrf_inv_logit}()},
+\code{\link{hrf_mexhat}()},
+\code{\link{hrf_sine}()},
+\code{\link{hrf_spmg1}()}
+}
+\concept{hrf_functions}

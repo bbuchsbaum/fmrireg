@@ -2,7 +2,7 @@
 % Please edit documentation in R/hrf.R
 \name{convolve_block}
 \alias{convolve_block}
-\title{a convolve hemodynamic response with a block duration}
+\title{Convolve hemodynamic response with a block duration}
 \usage{
 convolve_block(
   t,
@@ -16,22 +16,33 @@ convolve_block(
 )
 }
 \arguments{
-\item{t}{time in seconds}
+\item{t}{A vector of time points in seconds at which the convolved response will be evaluated}
 
-\item{hrf}{the underlying hemodynamic response function}
+\item{hrf}{The hemodynamic response function to be convolved, provided as a function (default: hrf_gaussian)}
 
-\item{width}{the fixed width of the response in seconds.}
+\item{width}{The fixed width of the response block in seconds (default: 5)}
 
-\item{precision}{the sampling precision in seconds}
+\item{precision}{The sampling precision of the response in seconds (default: 0.2)}
 
-\item{half_life}{the half_life of the exponential decay function (used to model attenutation)}
+\item{half_life}{The half-life of the exponential decay function in seconds, used to model attenuation (default: Inf)}
 
-\item{summate}{whether to allow each impulse response function to "add" up.}
+\item{summate}{A logical value indicating whether to sum the impulse response functions (default: TRUE)
+If FALSE, the function returns the maximum value at each time point.}
 
-\item{normalize}{rescale so that the peak of the output is 1.}
+\item{normalize}{A logical value indicating whether to normalize the output so that its peak value is 1 (default: FALSE)}
 
-\item{...}{extra args to pass through to hrf function}
+\item{...}{Additional arguments passed to the HRF function}
+}
+\value{
+A vector of convolved responses at the specified time points
 }
 \description{
-apply a hemodynamic response function with times \code{t} and duration \code{width}
+This function convolves a hemodynamic response function (HRF) with a block duration, producing a time-varying response
+for the specified duration. The function supports various HRFs, block widths, precision levels, half-lives, and normalization.
+}
+\examples{
+time_points <- seq(0, 20, by = 0.5)
+block_response <- convolve_block(time_points, hrf=hrf_spmg1, width=5, precision=0.2)
+plot(time_points, block_response, type='l', main='Convolved Hemodynamic Response with Block Duration')
+
 }

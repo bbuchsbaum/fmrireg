@@ -2,7 +2,7 @@
 % Please edit documentation in R/fmri_dataset.R
 \name{fmri_dataset}
 \alias{fmri_dataset}
-\title{An fMRI dataset consisting of a set of scans as files, design information, and other data.}
+\title{Create an fMRI Dataset Object from a Set of Scans}
 \usage{
 fmri_dataset(
   scans,
@@ -17,37 +17,41 @@ fmri_dataset(
 )
 }
 \arguments{
-\item{scans}{a vector of one or more file names of the images comprising the dataset}
+\item{scans}{A vector of one or more file names of the images comprising the dataset.}
 
-\item{mask}{name of the binary mask file indicating the voxels to include in analysis.}
+\item{mask}{Name of the binary mask file indicating the voxels to include in the analysis.}
 
-\item{TR}{the repetition time in seconds of the scan-to-scan interval.}
+\item{TR}{The repetition time in seconds of the scan-to-scan interval.}
 
-\item{run_length}{a \code{vector} of one or more integers indicating the number of scans in each run.}
+\item{run_length}{A vector of one or more integers indicating the number of scans in each run.}
 
-\item{event_table}{a \code{data.frame} containing the event onsets and experimental variables.}
+\item{event_table}{A data.frame containing the event onsets and experimental variables. Default is an empty data.frame.}
 
-\item{base_path}{the file path to be prepended to relative file names.}
+\item{base_path}{The file path to be prepended to relative file names. Default is "." (current directory).}
 
-\item{censor}{a binary vector indicating which scans to remove.}
+\item{censor}{A binary vector indicating which scans to remove. Default is NULL.}
 
-\item{preload}{read image scans eagerly rather than on first access}
+\item{preload}{Read image scans eagerly rather than on first access. Default is FALSE.}
 
-\item{mode}{the type of storage mode ('normal', 'bigvec', 'mmap', filebacked')}
+\item{mode}{The type of storage mode ('normal', 'bigvec', 'mmap', filebacked'). Default is 'normal'.}
+}
+\value{
+An fMRI dataset object of class c("fmri_file_dataset", "volumetric_dataset", "fmri_dataset", "list").
 }
 \description{
-An fMRI dataset consisting of a set of scans as files, design information, and other data.
+This function creates an fMRI dataset object from a set of scans, design information, and other data. The dataset is a list containing information about the scans, mask, TR, number of runs, event table, base path, sampling frame, censor, mode, and preload.
 }
 \examples{
-
+# Create an fMRI dataset with 3 scans and a mask
 dset <- fmri_dataset(c("scan1.nii", "scan2.nii", "scan3.nii"), 
-mask="mask.nii", TR=2, run_length=rep(300,3), 
-event_table=data.frame(onsets=c(3,20,99,3,20,99,3,20,99), 
-run=c(1,1,1,2,2,2,3,3,3)))
-        
+  mask="mask.nii", TR=2, run_length=rep(300, 3), 
+  event_table=data.frame(onsets=c(3, 20, 99, 3, 20, 99, 3, 20, 99), 
+  run=c(1, 1, 1, 2, 2, 2, 3, 3, 3))
+)
+
+# Create an fMRI dataset with 1 scan and a mask
 dset <- fmri_dataset("scan1.nii", mask="mask.nii", TR=2, 
-run_length=300, 
-event_table=data.frame(onsets=c(3,20,99), run=rep(1,3)))
-
-
+  run_length=300, 
+  event_table=data.frame(onsets=c(3, 20, 99), run=rep(1, 3))
+) 
 }

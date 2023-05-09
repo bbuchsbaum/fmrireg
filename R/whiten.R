@@ -21,8 +21,6 @@ auto_whiten <- function(Y, modelmat, method=c("auto", "ar1", "ar2", "arma")) {
     
     
     
-    #browser()
-    
     fitted(lm.1) + resid(afit)
     #list(phi=afit$model$phi, theta=afit$model$theta)
   }
@@ -30,6 +28,8 @@ auto_whiten <- function(Y, modelmat, method=c("auto", "ar1", "ar2", "arma")) {
   out
 }
 
+#' @keywords internal
+#' @noRd
 sq_inv_ar1_by_run <- function(phi, n) {
   fun <- memoise::memoise(sq_inv_ar1)
   out <- lapply(n, function(len) fun(phi, len))
@@ -37,6 +37,8 @@ sq_inv_ar1_by_run <- function(phi, n) {
 }
 
 
+#' @keywords internal
+#' @noRd
 sq_inv_ar1 <- function(phi, n) {
   phi_hat_vect <- rep(-phi, (n - 1))
   A <- Matrix::bandSparse(n,
@@ -50,6 +52,8 @@ sq_inv_ar1 <- function(phi, n) {
   
 }
 
+#' @keywords internal
+#' @noRd
 sq_inv_arma_by_run <- function(phi, theta, n) {
   fun <- memoise::memoise(sq_inv_arma)
   out <- lapply(n, function(len) fun(phi, theta, len))
@@ -57,6 +61,8 @@ sq_inv_arma_by_run <- function(phi, theta, n) {
 }
 
 ## not so slow if n is smaller
+#' @keywords internal
+#' @noRd
 sq_inv_arma <- function(phi, theta, n) {
   #acf_theo_hat <- zapsmall(ARMAacf(ar = phi, ma = theta,lag.max = (n - 1)), digits=8)
   acf_theo_hat <- ARMAacf(ar = phi, ma = theta,lag.max = (n - 1))

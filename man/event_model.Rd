@@ -2,7 +2,7 @@
 % Please edit documentation in R/all_generic.R
 \name{event_model}
 \alias{event_model}
-\title{construct an event model}
+\title{Construct an event model}
 \usage{
 event_model(
   x,
@@ -15,25 +15,55 @@ event_model(
 )
 }
 \arguments{
-\item{x}{the model specification, typically a \code{formula} (see examples)}
+\item{x}{The model specification, typically a \code{formula}. The formula should have the following format:
+response ~ predictor1 + predictor2 + ... + predictorN
+where \code{response} is a numeric vector of fMRI signal values, and \code{predictor1} to \code{predictorN} are
+predictor variables. Each predictor variable should be specified as a function of categorical
+variables (factors) and/or continuous variables. The functions should have the prefix "hrf", and can
+be defined using the \code{hrf()} function (see \code{hrf} documentation for details).}
 
-\item{data}{the data containing experimental design}
+\item{data}{A data frame containing the experimental design, with one row per time point and
+one column per variable used in the model formula. If a categorical variable is used in the formula,
+it should be a factor in the data frame. The data frame should also contain a column with the fMRI
+signal values (the response variable).}
 
-\item{block}{formula for the block structure}
+\item{block}{A formula specifying the block structure of the design. This formula should have
+the format \code{block_var1 + block_var2 + ...}, where each \code{block_var} is a categorical variable (factor)
+used to define blocks of time points. The block structure is used to estimate the baseline fMRI
+signal level separately for each block.}
 
-\item{sampling_frame}{the sampling frame defining the temporal and block structure}
+\item{sampling_frame}{A sampling frame defining the temporal and block structure of the design.
+This should be an object of class \code{sampling_frame} (see \code{sampling_frame} documentation for details).}
 
-\item{drop_empty}{whether to drop empty factor levels}
+\item{drop_empty}{Logical value indicating whether to drop empty factor levels in the model.
+If \code{TRUE} (default), any factor levels with no observations will be dropped from the model. If \code{FALSE},
+empty levels will be retained and will receive a coefficient of zero in the model.}
 
-\item{durations}{the event durations}
+\item{durations}{A numeric vector specifying the duration (in seconds) of each event in the model.
+If the model contains block variables, the duration of each block should be specified as well.
+The length of this vector should be equal to the number of events/blocks in the design.
+Default value is 0 (no duration).}
 
-\item{...}{extra args}
+\item{...}{Additional arguments to be passed to methods. Currently not used.}
+}
+\value{
+A list containing the following elements:
+\item{formula}{The formula used to create the model.}
+\item{design}{The design matrix for the model, with one row per time point and one column per predictor variable.}
+\item{block_indices}{A list of indices defining the start and end time points of each block.}
+\item{baseline}{A vector containing the estimated baseline fMRI signal level for each block.}
+\item{dur}{A vector containing the duration (in seconds) of each event or block in the design.}
 }
 \description{
-A data sructure representing an event-based fMRI regression model
+This function creates an event-based fMRI regression model, represented as a data structure.
 }
 \examples{
+# Create a data frame with experimental design
 event_data <- data.frame(fac=c("a", "B", "A", "B"), onsets=c(1,10,20,80), run=c(1,1,1,1))
+
+# Create a sampling frame with 50-second blocks and a TR of 2 seconds
 sframe <- sampling_frame(blocklens=50, TR=2)
-evmodel <- event_model(onsets ~ hrf(fac), data=event_data, block= ~ run, sampling_frame=sframe)
+
+# Create an event model using the `onsets` variable as a predictor, with a separate baseline for each run
+evmodel <- fmri_event_model(response ~ hrf(onsets), data=event_data, block=~run, sampling_frame=sframe)
 }

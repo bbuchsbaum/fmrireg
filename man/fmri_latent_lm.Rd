@@ -2,7 +2,7 @@
 % Please edit documentation in R/fmri_latent_lm.R
 \name{fmri_latent_lm}
 \alias{fmri_latent_lm}
-\title{Fast fmri regression model estimation from a latent component dataset}
+\title{Fast fMRI Regression Model Estimation from a Latent Component Dataset}
 \usage{
 fmri_latent_lm(
   formula,
@@ -19,34 +19,47 @@ fmri_latent_lm(
 )
 }
 \arguments{
-\item{formula}{the model formula for experimental events}
+\item{formula}{A formula specifying the regression model.}
 
-\item{block}{the model formula for block structure}
+\item{block}{A factor indicating the block structure of the data.}
 
-\item{baseline_model}{the \code{baseline_model} object}
+\item{baseline_model}{An optional baseline model.}
 
-\item{dataset}{an object derived from \code{fmri_dataset} containing the time-series data}
+\item{dataset}{A dataset of class 'latent_dataset'.}
 
-\item{durations}{a vector of event durations}
+\item{durations}{The duration of events in the dataset.}
 
-\item{drop_empty}{whether to remove factor levels with size of zero}
+\item{drop_empty}{Whether to drop empty events from the model. Default is TRUE.}
 
-\item{robust}{whether to use robust fitting (TRUE or FALSE)}
+\item{robust}{Whether to use robust regression methods. Default is FALSE.}
 
-\item{autocor}{experimental auto-correlation correction on components}
+\item{autocor}{The autocorrelation correction method to use on components.
+One of 'none', 'auto', 'ar1', 'ar2', or 'arma'. Default is 'none'.}
 
-\item{bootstrap}{whether to compute bootstrapped parameter estimates}
+\item{bootstrap}{Whether to compute bootstrapped parameter estimates. Default is FALSE.}
 
-\item{nboot}{number of bootstrap iterations}
+\item{nboot}{The number of bootstrap iterations. Default is 1000.}
 
-\item{...}{extra args}
+\item{...}{Additional arguments.}
+}
+\value{
+An object of class 'fmri_latent_lm' containing the regression model and dataset.
 }
 \description{
-Fast fmri regression model estimation from a latent component dataset
-}
-\details{
-dataset must be of type \code{latent_dataset}, which itself require a \code{LatentNeuroVec} input
+This function estimates a regression model for fMRI data using a latent component dataset.
+The dataset must be of type \code{latent_dataset}, which itself requires a \code{LatentNeuroVec} input.
 }
 \note{
 This method is currently experimental.
+}
+\examples{
+# Create a LatentNeuroVec, and then create a latent_dataset
+# ... (see example for latent_dataset)
+
+# Estimate the fMRI regression model using the latent dataset
+result <- fmri_latent_lm(formula = formula, block = block, dataset = dset,
+                         durations = NULL, drop_empty = TRUE, robust = FALSE)
+
+# Print the result
+print(result)
 }

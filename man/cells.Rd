@@ -5,7 +5,7 @@
 \alias{cells.event_factor}
 \alias{cells.event_term}
 \alias{cells.covariate_convolved_term}
-\title{the experimental cells of a design}
+\title{The experimental cells of a design}
 \usage{
 cells(x, ...)
 
@@ -16,14 +16,26 @@ cells(x, ...)
 \method{cells}{covariate_convolved_term}(x, ...)
 }
 \arguments{
-\item{x}{the object}
+\item{x}{An event_term object.}
 
-\item{...}{extra args}
+\item{...}{Additional arguments to be passed to the function.}
 
-\item{drop.empty}{remove empty cells}
+\item{drop.empty}{Logical. If TRUE, empty cells will be removed.}
+}
+\value{
+A list of data frames containing the cells of the event_factor object.
+
+A tibble containing the cells of the event_term object, with an
+additional "count" attribute.
 }
 \description{
 return the experimental cells that are in a model term as a table
+
+This function extracts cells from an event_factor object, optionally removing
+empty cells. Note that the removal of empty cells is not implemented.
+
+This function extracts cells from an event_term object, optionally removing
+empty cells.
 }
 \examples{
 

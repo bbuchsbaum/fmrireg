@@ -2,15 +2,18 @@
 % Please edit documentation in R/design_plot.R
 \name{design_plot}
 \alias{design_plot}
-\title{design_plot}
+\title{Design Plot for fMRI Model}
 \usage{
 design_plot(fmrimod, longnames = FALSE)
 }
 \arguments{
-\item{fmrimod}{the \code{fmri_model} object}
+\item{fmrimod}{The \code{fmri_model} object.}
 
-\item{longnames}{use longnames in legend}
+\item{longnames}{Use long names in the legend (default: FALSE).}
+}
+\value{
+An interactive plot using Shiny.
 }
 \description{
-design_plot
+Generate an interactive plot of the design matrix for a given fMRI model.
 }

@@ -14,3 +14,4 @@ get_data(x, ...)
 \description{
 get_data
 }
+\keyword{internal}

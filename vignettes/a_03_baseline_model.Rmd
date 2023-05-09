@@ -17,7 +17,7 @@ An "baseline model" refers to the set of regressors used to capture variance ass
 
 ## Basic baseline model with b-splines and polynomials
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(Matrix)
 library(fmrireg)
 ```
@@ -26,7 +26,7 @@ library(fmrireg)
 TR <- 2
 sframe <- sampling_frame(blocklens=c(100,100), TR)
 bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe)
-print(bmodel)
+bmodel
 plot(bmodel)
 
 bmodel2 <- baseline_model(basis="poly", degree=5, sframe=sframe)

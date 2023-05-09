@@ -6,7 +6,6 @@
 \alias{levels.event_variable}
 \alias{levels.event_matrix}
 \alias{levels.event_set}
-\alias{levels.event_basis}
 \alias{levels.event_term}
 \title{levels}
 \usage{
@@ -19,8 +18,6 @@ levels(x)
 \method{levels}{event_matrix}(x)
 
 \method{levels}{event_set}(x)
-
-\method{levels}{event_basis}(x)
 
 \method{levels}{event_term}(x)
 }

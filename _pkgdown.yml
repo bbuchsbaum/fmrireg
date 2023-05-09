@@ -1,10 +1,7 @@
+url: https://bbuchsbaum.github.io/fmrireg/
 template:
-  params:
-    bootswatch: cerulean
+  bootstrap: 5
     
-    
-url: https://pkgdown.r-lib.org
-
 home:
   title: Regression analaysis for Functional Magnetic Resonance imaging (fMRI) data
 authors:
@@ -38,10 +35,15 @@ reference:
   - hrf_gaussian
   - hrf_spmg1
   - hrf_time
+  - hrf_inv_logit
+  - hrf_mexhat
+  - hrf_sine
+  - hrf_half_cosine
   - hrf_bspline
   - gen_hrf
   - hrf_blocked
   - hrf_lagged
+  - hrf_toeplitz
   - gen_hrf_set
   - gen_empirical_hrf
   - gen_hrf_lagged
@@ -63,8 +65,10 @@ reference:
   - durations
   - onsets
   - global_onsets
+  - global_onsets.sampling_frame
   - amplitudes
   - samples
+  - samples.sampling_frame
   - blockids
   - blocklens
   - sampling_frame
@@ -73,13 +77,18 @@ reference:
   - null_regressor
   - single_trial_regressor
   - convolve
+  - convolve.event_term
+  - convolve_design
   - convolve_block
+  - shift
   
 - title: event models
   desc: >
     functions for building and querying event models for regression analysis
 - contents:
   - event_model
+  - event_model.list
+  - event_model.formula
   - event_table
   - baseline_model
   - baseline
@@ -100,6 +109,7 @@ reference:
   - columns
   - levels
   - elements
+  - term_matrices.fmri_model
   # - terms
   - term_names
   - parent_terms
@@ -111,7 +121,6 @@ reference:
   - term_matrices
   - block_term
   - nuisance
-  - EV
   - covariate
   
 - title: contrasts
@@ -121,12 +130,17 @@ reference:
   - contrast
   - contrast_set
   - contrast_weights
+  - contrast_weights.unit_contrast_spec
+  - contrast_weights.unit_contrast_spec
+  - contrast_weights.poly_contrast_spec
   - pair_contrast
   - pairwise_contrasts
   - unit_contrast
   - poly_contrast
   - one_against_all_contrast
   - Fcontrasts
+  - Fcontrasts.event_term
+  - beta_stats
   - fit_contrasts
   - estcon
   
@@ -141,6 +155,9 @@ reference:
   - get_data
   - get_mask
   - data_chunks
+  - data_chunks.fmri_file_dataset
+  - data_chunks.fmri_mem_dataset
+  - data_chunks.matrix_dataset
   
 - title: model execution and stats
   desc: >
@@ -153,9 +170,13 @@ reference:
   - afni_lm
   - fmri_lm_fit
   - estimate_betas
+  - estimate_betas.fmri_dataset
+  - estimate_betas.matrix_dataset
+  - estimate_hrf
   - gen_afni_lm
   - p_values
   - standard_error
+  - standard_error.fmri_latent_lm
   - run.afni_lm_spec
   - chunkwise_lm
   - stats
@@ -173,10 +194,21 @@ reference:
 - contents:
   - split_by_block
   - split_onsets
+  - split_onsets.event_term
   - plot.regressor
   - design_plot
   - read_fmri_config
   - fmrireg
+  - despike
+  - soft_threshold
+  - starts_with("print")
+  - starts_with("plot")
+  - evaluate.hrfspec
+  - evaluate.HRF
+  - multiresponse_bootstrap_lm
+  - run
+  
+  
   
     
 

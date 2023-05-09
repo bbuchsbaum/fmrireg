@@ -2,7 +2,7 @@
 % Please edit documentation in R/hrf.R
 \name{gen_hrf}
 \alias{gen_hrf}
-\title{construct an \code{HRF} instance}
+\title{Construct an HRF Instance}
 \usage{
 gen_hrf(
   hrf,
@@ -17,34 +17,33 @@ gen_hrf(
 )
 }
 \arguments{
-\item{hrf}{a function mapping from time --> signal}
+\item{hrf}{A function mapping from time to signal.}
 
-\item{lag}{optional lag in seconds}
+\item{lag}{Optional lag in seconds.}
 
-\item{width}{optional block width in seconds}
+\item{width}{Optional block width in seconds.}
 
-\item{precision}{sampling precision in seconds}
+\item{precision}{Sampling precision in seconds.}
 
-\item{summate}{whether to allow each impulse response function to "add" up.}
+\item{summate}{Whether to allow each impulse response function to "add" up (default: TRUE).}
 
-\item{normalize}{rescale so that the peak of the output is 1.}
+\item{normalize}{Rescale so that the peak of the output is 1 (default: FALSE).}
 
-\item{name}{the assigned name of generated HRF}
+\item{name}{The assigned name of the generated HRF.}
 
-\item{span}{the span of the HRF (maximum width in seconds after which function reverts to zero)}
+\item{span}{The span of the HRF (maximum width in seconds after which function reverts to zero).}
 
-\item{...}{extra parameters for the \code{hrf} function}
+\item{...}{Extra parameters for the \code{hrf} function.}
 }
 \value{
-an instance of type \code{HRF} inheriting from \code{function}
+An instance of type \code{HRF} inheriting from \code{function}.
 }
 \description{
-\code{gen_hrf} takes a raw function f(t) and returns an \code{HRF} instance
+\code{gen_hrf} takes a raw function \code{f(t)} and returns an HRF (Hemodynamic Response Function) instance.
 }
 \examples{
 
-## generate and hrf using spmg canonical hrf, a lag of 3, and a width of 2.
-
+## Generate an HRF using SPMG1 canonical HRF, a lag of 3, and a width of 2.
 grf <- gen_hrf(hrf_spmg1, lag=3, width=2)
 grf(0:20)
 

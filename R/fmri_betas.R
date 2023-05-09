@@ -1,12 +1,15 @@
 
 
 #' @importFrom glmnet glmnet
+#' @noRd
+#' @keywords internal
 ridge_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), lambda=.01) {
   fit <- glmnet::glmnet(X, Y, penalty.factor=penalty_factor, alpha=0,lambda=lambda)
   coef(fit)[,1,drop=FALSE]
 }
 
 #' @importFrom pls plsr 
+#' @noRd
 pls_betas <- function(X, Y, ncomp=3) {
   dx <- data.frame(X=X, Y=Y)
   fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="simpls", scale=TRUE, maxit=500)
@@ -15,6 +18,7 @@ pls_betas <- function(X, Y, ncomp=3) {
 
 
 #' @keywords internal
+#' @noRd
 pls_global_betas <- function(X, Y, ncomp=3) {
   dx <- data.frame(X=X, Y=Y)
   fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="widekernelpls", scale=TRUE, maxit=500)
@@ -23,6 +27,7 @@ pls_global_betas <- function(X, Y, ncomp=3) {
 
 
 #' @keywords internal
+#' @noRd
 ols_betas <- function(X, Y) {
   fit <- lm.fit(as.matrix(X),Y)
   coef(fit)
@@ -30,6 +35,7 @@ ols_betas <- function(X, Y) {
 
 
 #' @keywords internal
+#' @noRd
 slm_betas <- function(X, Y) {
   slm.1 <- care::slm(X, Y, verbose=FALSE)
   b2 <- coef(slm.1)[,-(1:2)]
@@ -38,6 +44,8 @@ slm_betas <- function(X, Y) {
 }
 
 
+#' @noRd
+#' @keywords internal
 mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
   fit <- rrBLUP::mixed.solve(Y, Z=X[,ran_ind], X=X[,c(fixed_ind)], bounds=c(c(1e-05, .2)))
   c(fit$u, fit$b)
@@ -161,7 +169,6 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
       Y <- do.call(cbind, lapply(vecs, function(v) v))
       
       Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
-      
       ols_betas(xdat$X, Y0)
       
     } else {
@@ -209,40 +216,66 @@ run_estimate_betas <- function(bdes, dset, method, ncomp=3, niter=8, radius=8) {
   
 }
 
+#' 
+#' #' @export
+#' estimate_betas.fmri_mem_dataset <- function(x,fixed=NULL, ran, block,  
+#'                                          method=c("mixed", "pls", "pls_searchlight", "pls_global", "ols"), 
+#'                                          basemod=NULL, 
+#'                                          radius=8, niter=8, ncomp=4, lambda=.01,...) {
+#'   
+#'   estimate_betas.fmri_dataset(x,fixed,ran,block, method, basemod, radius, niter,ncomp, lambda,...)
+#' }
 
-#' @param fixed a formula for the fixed regressors that model constant effects (i.e. non-varying over trials)
-#' @param ran a formula for the random (trialwise) regressors that model single trial effects
-#' @param block a formula for the block factor
-#' @param method the regression method for estimating trialwise betas
-#' @param basemod \code{baseline_model} instance to regress out of data before beta estimation
-#' @param radius the radius in mm for `pls_searchlight` approach
-#' @param niter number of searchlight iterations for method "pls_searchlight"
-#' @param ncomp number of pls components for method "pls" and "pls_searchlight" and "pls_global"
-#' @param lambda lambda parameter (not currently used)
+#' Estimate betas for an fMRI dataset
+#'
+#' This function estimates betas (regression coefficients) for fixed and random effects
+#' in an fMRI dataset using various methods.
+#'
+#' @param x An object of class `fmri_dataset` representing the fMRI dataset
+#' @param fixed A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials)
+#' @param ran A formula specifying the random (trialwise) regressors that model single trial effects
+#' @param block A formula specifying the block factor
+#' @param method The regression method for estimating trialwise betas; one of "mixed", "pls", "pls_searchlight", "pls_global", or "ols" (default: "mixed")
+#' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
+#' @param radius The radius in mm for the `pls_searchlight` approach (default: 8)
+#' @param niter Number of searchlight iterations for the "pls_searchlight" method (default: 8)
+#' @param ncomp Number of PLS components for the "pls", "pls_searchlight", and "pls_global" methods (default: 4)
+#' @param lambda Lambda parameter (not currently used; default: 0.01)
+#' @param ... Additional arguments passed to the estimation method
+#'
+#' @return A list of class "fmri_betas" containing the following components:
+#'   * betas_fixed: NeuroVec object representing the fixed effect betas
+#'   * betas_ran: NeuroVec object representing the random effect betas
+#'   * design_ran: Design matrix for random effects
+#'   * design_fixed: Design matrix for fixed effects
+#'   * design_base: Design matrix for baseline model
+#'   * basemod: Baseline model object
+#'   * fixed_model: Fixed effect model object
+#'   * ran_model: Random effect model object
+#'
+#' @seealso \code{\link{fmri_dataset}}, \code{\link{baseline_model}}
+#'
 #' @importFrom care slm
 #' @export
-#' 
-#' @rdname estimate_betas
-#' @details The `method` arguments allows for several beta estimation approaches
-#' * `mixed` uses a linear mixed effects modeling of trialwise random effects as implemented in the `rrBLUP` package.
-#' * `pls` uses separate partial least squares for each voxel to estimate trialwise betas
-#' * `pls_searchlight` estimates pls solutions over searchlight windows and averages the beta estimates
-#' * `pls_global` estimates a single multiresponse pls solution, where the `Y` matrix is the full data matrix.
-#' * `ols` ordinary least squares estimate of betas -- no regularization
-## @md 
-#' @examples 
-#' 
 #'
+#' @details The `method` argument allows for several beta estimation approaches:
+#'   * "mixed": Uses a linear mixed-effects modeling of trialwise random effects as implemented in the `rrBLUP` package.
+#'   * "pls": Uses separate partial least squares for each voxel to estimate trialwise betas.
+#'   * "pls_searchlight": Estimates PLS solutions over searchlight windows and averages the beta estimates.
+#'   * "pls_global": Estimates a single multiresponse PLS solution, where the `Y` matrix is the full data matrix.
+#'   * "ols": Ordinary least squares estimate of betas – no regularization.
+#'
+#' @examples 
 #' facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 #' facedes$frun <- factor(facedes$run)
 #' scans <- paste0("rscan0", 1:6, ".nii")
-#' 
+#'
 #' dset <- fmri_dataset(scans=scans,mask="mask.nii",TR=1.5,run_length=rep(436,6),event_table=facedes)
 #' fixed = onset ~ hrf(run)
 #' ran = onset ~ trialwise()
 #' block = ~ run
-#' 
-#' 
+#'
+#' betas <- estimate_betas(dset, fixed=fixed, ran=ran, block=block 
 estimate_betas.fmri_dataset <- function(x,fixed=NULL, ran, block,  
                            method=c("mixed", "pls", "pls_searchlight", "pls_global", "ols"), 
                            basemod=NULL, 
@@ -265,13 +298,17 @@ estimate_betas.fmri_dataset <- function(x,fixed=NULL, ran, block,
   
   bdes <- gen_beta_design(fixed, ran, block, bmod, dset)
   betas <- run_estimate_betas(bdes, dset, method, ncomp=ncomp, niter=niter, radius=radius)
-  
   nbetas <- nrow(betas)
   ospace_ran <- neuroim2::add_dim(neuroim2::space(mask), length(bdes$ran_ind))
-  ospace_fixed <- neuroim2::add_dim(neuroim2::space(mask), length(bdes$fixed_ind))
+  if (!is.null(bdes$fixed_ind)) {
+    ospace_fixed <- neuroim2::add_dim(neuroim2::space(mask), length(bdes$fixed_ind))
+    fixed <- neuroim2::NeuroVec(as.matrix(betas[bdes$fixed_ind,,drop=FALSE]), ospace_fixed, mask=mask)
+  } else {
+    fixed <- NULL
+  }
   
   ran <- neuroim2::NeuroVec(as.matrix(betas[bdes$ran_ind,,drop=FALSE]), ospace_ran, mask=mask)
-  fixed <- neuroim2::NeuroVec(as.matrix(betas[bdes$fixed_ind,,drop=FALSE]), ospace_fixed, mask=mask)
+  
   #baseline <- neuroim2::NeuroVec(as.matrix(betas[base_ind,,drop=FALSE]), ospace, mask=mask)
   
   ret <- list(betas_fixed=fixed,
@@ -289,9 +326,34 @@ estimate_betas.fmri_dataset <- function(x,fixed=NULL, ran, block,
 }
 
 
-## @inheritParams estimate_betas.fmri_dataset
-#' @export 
-#' @rdname estimate_betas
+
+#' Estimate betas for a matrix dataset
+#'
+#' This function estimates betas (regression coefficients) for fixed and random effects
+#' in a matrix dataset using various methods.
+#'
+#' @param x An object of class `matrix_dataset` representing the matrix dataset
+#' @param fixed A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials)
+#' @param ran A formula specifying the random (trialwise) regressors that model single trial effects
+#' @param block A formula specifying the block factor
+#' @param method The regression method for estimating trialwise betas; one of "mixed", "pls", "pls_global", or "ols" (default: "mixed")
+#' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
+#' @param ncomp Number of PLS components for the "pls" and "pls_global" methods (default: 4)
+#' @param lambda Lambda parameter (not currently used; default: 0.01)
+#' @param ... Additional arguments passed to the estimation method
+#' 
+#' @family estimate_betas
+#'
+#' @return A list of class "fmri_betas" containing the following components:
+#'   * betas_fixed: Matrix representing the fixed effect betas
+#'   * betas_ran: Matrix representing the random effect betas
+#'   * design_ran: Design matrix for random effects
+#'   * design_fixed: Design matrix for fixed effects
+#'   * design_base: Design matrix for baseline model
+#'
+#' @seealso \code{\link{matrix_dataset}}, \code{\link{baseline_model}}
+#'
+#' @export
 estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,  
                                         method=c("mixed", "pls", "pls_global", "ols"), 
                                         basemod=NULL,
@@ -325,9 +387,33 @@ estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,
   
 }
 
-## @inheritParams estimate_betas.fmri_dataset
-#' @param prewhiten whether to prewhiten basis set using `auto.arima`
-#' @export 
+#' Estimate betas for a matrix dataset
+#'
+#' This function estimates betas (regression coefficients) for fixed and random effects
+#' in a matrix dataset using various methods.
+#'
+#' @param x An object of class `matrix_dataset` representing the matrix dataset
+#' @param fixed A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials)
+#' @param ran A formula specifying the random (trialwise) regressors that model single trial effects
+#' @param block A formula specifying the block factor
+#' @param method The regression method for estimating trialwise betas; one of "mixed", "pls", "pls_global", or "ols" (default: "mixed")
+#' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
+#' @param ncomp Number of PLS components for the "pls" and "pls_global" methods (default: 4)
+#' @param lambda Lambda parameter (not currently used; default: 0.01)
+#' @param ... Additional arguments passed to the estimation method
+#'
+#' @return A list of class "fmri_betas" containing the following components:
+#'   * betas_fixed: Matrix representing the fixed effect betas
+#'   * betas_ran: Matrix representing the random effect betas
+#'   * design_ran: Design matrix for random effects
+#'   * design_fixed: Design matrix for fixed effects
+#'   * design_base: Design matrix for baseline model
+#'
+#' @seealso \code{\link{matrix_dataset}}, \code{\link{baseline_model}}
+#'
+#' @family estimate_betas
+#'
+#' @export
 #' @rdname estimate_betas
 estimate_betas.latent_dataset <- function(x, fixed=NULL, ran, block, 
                                           method=c("mixed", "pls", "pls_global", "ols"), 
@@ -371,7 +457,30 @@ estimate_betas.latent_dataset <- function(x, fixed=NULL, ran, block,
 }
 
 
+#' Estimate hemodynamic response function (HRF) using Generalized Additive Models (GAMs)
+#'
+#' This function estimates the HRF using GAMs from the `mgcv` package.
+#' The HRF can be estimated with or without fixed effects.
+#'
+#' @param form A formula specifying the event model for the conditions of interest
+#' @param fixed A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials); default is NULL
+#' @param block A formula specifying the block factor
+#' @param dataset An object representing the fMRI dataset
+#' @param bs Basis function for the smooth term in the GAM; one of "tp" (default), "ts", "cr", or "ps"
+#' @param rsam A sequence of time points at which the HRF is estimated (default: seq(0, 20, by = 1))
+#' @param basemod A `baseline_model` instance to regress out of data before HRF estimation (default: NULL)
+#'
+#' @return A matrix with the estimated HRF values for each voxel
+#'
 #' @importFrom mgcv gam s
+#' @importFrom neuroim2 vectors
+#' @importFrom furrr future_map
+#' @seealso \code{\link{baseline_model}}, \code{\link{event_model}}, \code{\link{design_matrix}}
+#' @examples 
+#' 
+#' # To be added
+#'
+#' @export 
 estimate_hrf <- function(form, fixed=NULL, block, dataset, 
                            bs=c("tp", "ts", "cr", "ps"), 
                            rsam=seq(0,20,by=1),
@@ -420,6 +529,35 @@ estimate_hrf <- function(form, fixed=NULL, block, dataset,
   res
   
 }
+
+#' Pretty print method for fmri_betas objects
+#'
+#' @param x An object of class "fmri_betas"
+#' @param ... Additional arguments passed to the print function
+#'
+#' @export
+print.fmri_betas <- function(x, ...) {
+  cat("fmri_betas object:\n\n")
+  cat("Fixed effect betas:\n")
+  print(x$betas_fixed, ...)
+  cat("\nRandom effect betas:\n")
+  print(x$betas_ran, ...)
+  
+  cat("\nRandom effects design matrix:\n")
+  print(x$design_ran, ...)
+  cat("\nFixed effects design matrix:\n")
+  print(x$design_fixed, ...)
+  cat("\nBaseline design matrix:\n")
+  print(x$design_base, ...)
+  
+  cat("\nBaseline model:\n")
+  print(x$basemod, ...)
+  cat("\nFixed effect model:\n")
+  print(x$fixed_model, ...)
+  cat("\nRandom effect model:\n")
+  print(x$ran_model, ...)
+}
+
   
   
 

@@ -3,7 +3,7 @@
 \name{gen_hrf_blocked}
 \alias{gen_hrf_blocked}
 \alias{hrf_blocked}
-\title{gen_hrf_blocked}
+\title{Generate a Blocked HRF Function}
 \usage{
 gen_hrf_blocked(
   hrf = hrf_gaussian,
@@ -26,25 +26,35 @@ hrf_blocked(
 )
 }
 \arguments{
-\item{hrf}{the hemodynamic response function}
+\item{hrf}{A function representing the hemodynamic response function. Default is \code{hrf_gaussian}.}
 
-\item{width}{the width of the block}
+\item{width}{A numeric value specifying the width of the block in seconds. Default is 5.}
 
-\item{precision}{the sampling resolution}
+\item{precision}{A numeric value specifying the sampling resolution in seconds. Default is 0.1.}
 
-\item{half_life}{the half_life of the exponential decay function (used to model response attenuation)}
+\item{half_life}{A numeric value specifying the half-life of the exponential decay function, used to model response attenuation. Default is \code{Inf}, which means no decay.}
 
-\item{summate}{whether to allow each impulse response function to "add" up.}
+\item{summate}{A logical value indicating whether to allow each impulse response function to "add" up. Default is \code{TRUE}.}
 
-\item{normalize}{rescale so that the peak of the output is 1.}
+\item{normalize}{A logical value indicating whether to rescale the output so that the peak of the output is 1. Default is \code{FALSE}.}
 
-\item{...}{extra args}
+\item{...}{Extra arguments passed to the HRF function.}
+}
+\value{
+A function representing the blocked HRF.
 }
 \description{
-gen_hrf_blocked
+The \code{gen_hrf_blocked} function creates a blocked HRF by convolving the input HRF with a boxcar function. This can be used to model block designs in fMRI analysis.
 }
 \section{Functions}{
 \itemize{
 \item \code{hrf_blocked()}: alias for gen_hrf_blocked
 
 }}
+\seealso{
+Other gen_hrf: 
+\code{\link{gen_hrf_lagged}()},
+\code{\link{gen_hrf_library}()},
+\code{\link{gen_hrf_set}()}
+}
+\concept{gen_hrf}

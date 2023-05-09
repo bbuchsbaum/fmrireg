@@ -2,19 +2,22 @@
 % Please edit documentation in R/hrf.R
 \name{gen_hrf_set}
 \alias{gen_hrf_set}
-\title{Generate an HRF basis set}
+\title{Generate an HRF Basis Set}
 \usage{
 gen_hrf_set(..., span = 32, name = "hrf_set")
 }
 \arguments{
-\item{...}{a list of functions f(t) mapping from time to amplitude}
+\item{...}{A list of functions f(t) mapping from time to amplitude.}
 
-\item{span}{the span in seconds of the HRF}
+\item{span}{The span in seconds of the HRF.}
 
-\item{name}{the name of the HRF}
+\item{name}{The name of the HRF.}
+}
+\value{
+An instance of type \code{HRF} inheriting from \code{function}.
 }
 \description{
-\code{gen_hrf_set} construct an hrf basis set from a one or more component functions.
+\code{gen_hrf_set} constructs an HRF basis set from one or more component functions.
 This function is used to create arbitrary sets of basis functions for fMRI modeling.
 }
 \examples{
@@ -23,5 +26,12 @@ hrf1 <- hrf_spmg1 |> gen_hrf(lag=0)
 hrf2 <- hrf_spmg1 |> gen_hrf(lag=3)
 hrf3 <- hrf_spmg1 |> gen_hrf(lag=6)
 
-hset <- gen_hrf_set(hrf1,hrf2,hrf3)
+hset <- gen_hrf_set(hrf1, hrf2, hrf3)
 }
+\seealso{
+Other gen_hrf: 
+\code{\link{gen_hrf_blocked}()},
+\code{\link{gen_hrf_lagged}()},
+\code{\link{gen_hrf_library}()}
+}
+\concept{gen_hrf}

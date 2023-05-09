@@ -20,8 +20,7 @@ First we load in an experimental design.
 
 library(dplyr)
 library(fmrireg)
-facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE) %>%
-  filter(run == 1)
+facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE) %>% filter(run == 1)
 ## we had a constant value to the design used later to model the mean stimulus response over all trials.
 facedes$constant <- factor(rep(1, nrow(facedes)))
 
@@ -62,12 +61,12 @@ When the onsets are *not* closely space together, ordinary least squares using t
 ```{r, message=FALSE, warning=FALSE}
   
 
-res <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
+res <- fmrireg:::estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
                        method="pls", ncomp=3)
 
 names(res)
 
-res_ols <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
+res_ols <- fmrireg:::estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
                        method="ols", ncomp=3)
 
   

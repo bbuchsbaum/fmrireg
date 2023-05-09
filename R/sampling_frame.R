@@ -1,23 +1,24 @@
 
 
 
-#' construct a \code{sampling_frame}
-#' 
-#' A \code{sampling_frame} describes the block structure and temporal sampling of an fMRI paradigm. 
-#' 
-#' 
-#' @param blocklens the number of scans in each block, a \code{vector}
-#' @param TR the repetition time in seconds; i.e. the spacing between consecutive image acquisitions.
-#' @param start_time the offset of first scan of each block (default is \code{TR/2})
-#' @param precision the discrete sampling interval used for convolution with hemodynamic response function.
-#' @examples 
-#' 
-#' frame <- sampling_frame(blocklens=c(100,100, 100), TR=2, precision=.5)
-#' 
-#' ## the relative time (with respect to the last block) in seconds of each sample/acquisition
+#' Construct a sampling_frame
+#'
+#' A \code{sampling_frame} describes the block structure and temporal sampling of an fMRI paradigm.
+#'
+#' @param blocklens A numeric vector representing the number of scans in each block.
+#' @param TR A numeric value or vector representing the repetition time in seconds (i.e., the spacing between consecutive image acquisitions).
+#' @param start_time A numeric value or vector representing the offset of the first scan of each block (default is \code{TR/2}).
+#' @param precision A numeric value representing the discrete sampling interval used for convolution with the hemodynamic response function (default is 0.1).
+#'
+#' @examples
+#' frame <- sampling_frame(blocklens = c(100, 100, 100), TR = 2, precision = 0.5)
+#'
+#' # The relative time (with respect to the last block) in seconds of each sample/acquisition
 #' sam <- samples(frame)
-#' ## the global time (with respect to first block) of each sample/acquisition
-#' gsam <- samples(frame, global=TRUE)
+#' # The global time (with respect to the first block) of each sample/acquisition
+#' gsam <- samples(frame, global = TRUE)
+#'
+#' @return A list with class "sampling_frame" describing the block structure and temporal sampling of an fMRI paradigm.
 #' @export
 sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
   assert_that(all(TR > 0))
@@ -45,8 +46,24 @@ sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
   ret
 }
 
+#' Extract samples from a sampling_frame
+#'
+#' This function extracts the relative or global time of each sample/acquisition from a \code{sampling_frame}.
+#'
+#' @param x A sampling_frame object.
+#' @param blockids A numeric vector of block IDs to extract the samples from. If NULL (default), all block IDs are used.
+#' @param global A logical value. If TRUE, the global time (with respect to the first block) of each sample/acquisition is returned. If FALSE (default), the relative time (with respect to the last block) of each sample/acquisition is returned.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @examples
+#' frame <- sampling_frame(blocklens = c(100, 100, 100), TR = 2, precision = 0.5)
+#' # The relative time (with respect to the last block) in seconds of each sample/acquisition
+#' sam <- samples(frame)
+#' # The global time (with respect to the first block) of each sample/acquisition
+#' gsam <- samples(frame, global = TRUE)
+#'
+#' @return A numeric vector of sample times extracted from the specified \code{sampling_frame}.
 #' @export
-## TODO screwy things happen when blockids don't start at 1.
 samples.sampling_frame <- function(x, blockids=NULL, global=FALSE, ...) {
   if (is.null(blockids)) {
     blockids <- seq(1, length(x$blocklens))
@@ -70,6 +87,22 @@ samples.sampling_frame <- function(x, blockids=NULL, global=FALSE, ...) {
 }
 
 
+#' Compute global onsets from a sampling_frame
+#'
+#' This function computes the global onsets (with respect to the first block) for a given \code{sampling_frame}.
+#'
+#' @param x A sampling_frame object.
+#' @param onsets A numeric vector of onsets within the specified blocks.
+#' @param blockids A numeric vector of block IDs corresponding to the onsets.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @examples
+#' frame <- sampling_frame(blocklens = c(100, 100, 100), TR = 2, precision = 0.5)
+#' onsets <- c(10, 20, 30)
+#' blockids <- c(1, 2, 3)
+#' global_onsets(frame, onsets, blockids)
+#'
+#' @return A numeric vector of global onsets computed from the specified \code{sampling_frame}.
 #' @export
 global_onsets.sampling_frame <- function(x, onsets, blockids,...) {
   
@@ -79,7 +112,7 @@ global_onsets.sampling_frame <- function(x, onsets, blockids,...) {
     stop("there are more block ids than block lengths, cannot compute global onsets")
   }
   
-  map_dbl(1:length(onsets),function(i) {
+  purrr::map_dbl(1:length(onsets),function(i) {
     blocknum <- ids[i]
     offset <- (sum(x$blocklens[1:blocknum]) - x$blocklens[blocknum])*x$TR[blocknum]
     if (onsets[i] > x$blocklens[blocknum]*x$TR[blocknum]) {

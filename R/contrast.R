@@ -3,18 +3,21 @@
 ## when contrasts are misspecified or have spelling errors, errors need to be infromative.
 
 
-#' contrast specification
-#' 
+#' Contrast Specification
+#'
+#' @description
 #' Define a linear contrast using a formula expression.
-#' 
-#' @param form a formula describing the contrast
-#' @param name a \code{character} label for the contrast
-#' @param where an expression the subset over whcih the contrast is defined
-#' @examples 
-#' 
-#' ## A minus B contrast
+#'
+#' @param form A formula describing the contrast.
+#' @param name A character label for the contrast.
+#' @param where An expression defining the subset over which the contrast is applied (default: NULL).
+#'
+#' @return A list containing the contrast specification.
+#'
+#' @examples
+#' # A minus B contrast
 #' contrast(~ A - B, name="A_B")
-#' 
+#'
 #' @export
 contrast <- function(form, name, where=NULL) {
   assert_that(lazyeval::is_formula(form))
@@ -31,18 +34,20 @@ contrast <- function(form, name, where=NULL) {
   
 }
 
-
-#' create a set of contrasts
-#' 
-#' construct a \code{list} of \code{contrast_spec} objects
-#' 
-#' @param ... a variable length list of \code{contrast_spec} objects.
-#' 
-#' @examples 
+#' Create a Set of Contrasts
+#'
+#' @description
+#' Construct a list of contrast_spec objects.
+#'
+#' @param ... A variable-length list of contrast_spec objects.
+#'
+#' @return A list of contrast_spec objects with class "contrast_set".
+#'
+#' @examples
 #' c1 <- contrast(~ A - B, name="A_B")
 #' c2 <- contrast(~ B - C, name="B_C")
 #' contrast_set(c1,c2)
-#' 
+#'
 #' @export
 #' @import assertthat
 #' @importFrom purrr map_lgl
@@ -53,14 +58,19 @@ contrast_set <- function(...) {
   ret
 }
 
-#' pairwise contrasts
-#' 
-#' contrast all pairwise combinations of the levels of a factor
-#' 
-#' @param levels the set of factor levels to compare.
-#' @param where the subset over which the contrast is computed
-#' @examples 
+#' Pairwise Contrasts
+#'
+#' @description
+#' Construct pairwise contrasts for all combinations of factor levels.
+#'
+#' @param levels A vector of factor levels to be compared.
+#' @param where An optional formula specifying the subset over which the contrast is computed.
+#'
+#' @return A contrast_set object containing pairwise contrasts for all combinations of factor levels.
+#'
+#' @examples
 #' pairwise_contrasts(c("A", "B", "C"))
+#'
 #' @export
 #' @importFrom utils combn
 pairwise_contrasts <- function(levels, where=NULL) {
@@ -78,16 +88,22 @@ pairwise_contrasts <- function(levels, where=NULL) {
   do.call(contrast_set, ret)
 }
   
-#' A contrast that compares each level vs the average of the other levels.
-#' 
-#' @inheritParams pairwise_contrasts
-#' @param facname the name of the factor containing the supplied levels.
-#' @export
-#' 
-#' @examples 
-#' 
+#' One Against All Contrast
+#'
+#' @description
+#' Construct contrasts comparing each factor level against the average of the other levels.
+#'
+#' @param levels A vector of factor levels to be compared.
+#' @param facname A character string specifying the name of the factor containing the supplied levels.
+#' @param where An optional formula specifying the subset over which the contrast is computed.
+#'
+#' @return A contrast_set object containing contrasts comparing each factor level against the average of the other levels.
+#'
+#' @examples
 #' fac <- factor(rep(c("A", "B", "C"), 2))
 #' con <- one_against_all_contrast(levels(fac), "fac")
+#'
+#' @export
 one_against_all_contrast <- function(levels, facname, where=NULL) {
   if (!is.null(where)) {
     assert_that(lazyeval::is_formula(where))
@@ -105,19 +121,22 @@ one_against_all_contrast <- function(levels, facname, where=NULL) {
   
 }
 
-#' pair_contrast
-#' 
-#' sum-to-zero contrast between two logical expressions
-#' 
-#' @param A the first \code{formula} expression in the contrast
-#' @param B the second \code{formula} expression in the contrast
-#' @param name the name of the contrast (mandatory)
-#' @param where the subset over which the contrast is computed
-#' @examples 
-#' 
-#' # a hypothetical experiment with a factor 'category' that takes on values of 'face' and 'scene'
-#' 
+#' Pair Contrast
+#'
+#' @description
+#' Construct a sum-to-zero contrast between two logical expressions.
+#'
+#' @param A A formula representing the first logical expression in the contrast.
+#' @param B A formula representing the second logical expression in the contrast.
+#' @param name A character string specifying the name of the contrast (mandatory).
+#' @param where An optional formula specifying the subset over which the contrast is computed.
+#'
+#' @return A pair_contrast_spec object containing the sum-to-zero contrast between the two logical expressions.
+#'
+#' @examples
+#' # A hypothetical experiment with a factor 'category' that takes on values of 'face' and 'scene'
 #' pair_contrast(~ category == "face", ~ category == "scene", name="face_scene")
+#'
 #' @export
 pair_contrast <- function(A, B, name, where=NULL) {
   assert_that(lazyeval::is_formula(A))
@@ -137,16 +156,20 @@ pair_contrast <- function(A, B, name, where=NULL) {
 }
 
 
-#' unit_contrast
-#' 
-#' A contrast that sums to 1 and is used to define contrasts against baseline.
-#' 
-#' @param A the contrast expression as a formula
-#' @param name the name of the contrast
-#' @param where the subset of conditions to apply contrast to
-#' @examples 
+#' Unit Contrast
+#'
+#' @description
+#' Construct a contrast that sums to 1 and is used to define contrasts against the baseline.
+#'
+#' @param A A formula representing the contrast expression.
+#' @param name A character string specifying the name of the contrast.
+#' @param where An optional formula specifying the subset of conditions to apply the contrast to.
+#'
+#' @return A unit_contrast_spec object containing the contrast that sums to 1.
+#'
+#' @examples
 #' con <- unit_contrast(~ Face, name="Main_face")
-#' 
+#'
 #' @export
 unit_contrast <- function(A, name, where=NULL) {
   assert_that(lazyeval::is_formula(A)) 
@@ -165,6 +188,17 @@ unit_contrast <- function(A, name, where=NULL) {
   
 }
 
+#' Unit Contrast Weights
+#'
+#' @description
+#' Compute the contrast weights for a unit_contrast_spec object.
+#'
+#' @param x A unit_contrast_spec object.
+#' @param term A term object.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A list containing the term, name, weights, condition names, and contrast specification.
+#'
 #' @export
 contrast_weights.unit_contrast_spec <- function(x, term,...) {
   term.cells <- cells(term)
@@ -199,17 +233,22 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
   ret
 }
 
-#' poly_contrast
-#' 
-#' A polynomial contrast evaluated over a set of (orderable) factor levels
-#' 
-#' @inheritParams unit_contrast
-#' @param degree the degree of the polynomial
-#' @param value_map optional list that maps between levels of a factor and a numeric value.
-#' 
-#' @examples 
-#' 
+#' Polynomial Contrast
+#'
+#' @description
+#' Create a polynomial contrast evaluated over a set of (orderable) factor levels.
+#'
+#' @param A A formula describing the contrast.
+#' @param name A character string representing the name of the contrast.
+#' @param where An optional formula defining the subset over which the contrast is computed.
+#' @param degree An integer representing the degree of the polynomial (default: 1).
+#' @param value_map An optional list that maps between levels of a factor and a numeric value.
+#'
+#' @return A list containing the polynomial contrast specification.
+#'
+#' @examples
 #' pcon <- poly_contrast(~ time, name="poly_time_3", degree=3)
+#'
 #' @export
 poly_contrast <- function(A, name, where=NULL, degree=1, value_map=NULL) {
   assert_that(lazyeval::is_formula(A))
@@ -232,6 +271,17 @@ poly_contrast <- function(A, name, where=NULL, degree=1, value_map=NULL) {
 
 
 
+#' Polynomial Contrast Weights
+#'
+#' @description
+#' Compute the contrast weights for a polynomial contrast specification.
+#'
+#' @param x A poly_contrast_spec object.
+#' @param term A term object.
+#' @param ... Additional arguments (currently not used).
+#'
+#' @return A list containing the polynomial contrast weights and related information.
+#'
 #' @export
 contrast_weights.poly_contrast_spec <- function(x, term,...) {
   term.cells <- cells(term)

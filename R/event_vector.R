@@ -1,5 +1,6 @@
 
 #' @keywords internal
+#' @noRd
 .sanitizeName <- function(name) {
   name <- gsub(":", ".", name)
   name <- gsub(" ", "", name)
@@ -11,17 +12,20 @@
 }
 
 #' @keywords internal
+#' @noRd
 is.increasing <- function(vec) {
   all(diff(vec) >= 0)
 }
 
 #' @keywords internal
+#' @noRd
 is.strictly.increasing <- function(vec) {
   all(diff(vec) > 0)
 }
 
 #' @keywords internal
 #' @import assertthat
+#' @noRd
 .checkEVArgs <- function(name, vals, onsets, blockids, durations=NULL) {
 
   assert_that(length(onsets) == length(vals))
@@ -47,30 +51,39 @@ is.strictly.increasing <- function(vec) {
 
 
 
-#' event_term
-#' 
 #' Create an event model term from a named list of variables.
+#'
+#' This function generates an event model term from a list of named variables,
+#' along with their onsets, block IDs, and durations. Optionally, a subset of
+#' onsets can be retained.
+#'
+#' @param evlist A list of named variables.
+#' @param onsets A vector of onset times for the experimental events in seconds.
+#' @param blockids A vector of block numbers associated with each onset.
+#' @param durations A vector of event durations (default is 1).
+#' @param subset A logical vector indicating the subset of onsets to retain (default is NULL).
 #' 
-#' @param evlist a list of named variables
-#' @param onsets the onset times from the experimental events in seconds
-#' @param blockids the block number associated with each onset
-#' @param durations the event durations
-#' @param subset the subset of onsets to retain
-#' @export
+#' @return A list containing the following components:
+#'   - varname: A character string representing the variable names, concatenated with colons.
+#'   - events: A list of event variables.
+#'   - subset: A logical vector indicating the retained onsets.
+#'   - event_table: A tibble containing event information.
+#'   - onsets: A vector of onset times.
+#'   - blockids: A vector of block numbers.
+#'   - durations: A vector of event durations.
 #' 
 #' @examples 
-#' 
 #' x1 <- factor(rep(letters[1:3], 10))
 #' x2 <- factor(rep(1:3, each=10))
 #' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), 
-#' blockids=rep(1,30))
+#'                     blockids=rep(1,30))
 #' 
 #' x1 <- rnorm(30)
 #' x2 <- factor(rep(1:3, each=10))
 #' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), 
-#' blockids=rep(1,30), subset=x1>0)
+#'                     blockids=rep(1,30), subset=x1>0)
 #'
-#' @rdname event_term-class
+#' @export
 event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
   
   assert_that(is.increasing(blockids), msg="'blockids' must consist of strictly increasing integers")
@@ -143,7 +156,8 @@ event_table.event_term <- function(x) x$event_table
 #' 
 #' ev_numeric <- EV(c(1,2,3), "fac", onsets=c(1,10,20), 
 #' blockids=rep(1,3))
-#' @export
+#' @keywords internal
+#' @noRd
 EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,length(onsets))) {
   
   if (length(durations) == 1) {
@@ -171,17 +185,24 @@ EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,leng
   
 }
 
-#' event_factor
-#' 
-#' Create an categorical event sequence from a \code{factor} 
-#' 
-#' @inheritParams EV
-#' @param fac a factor
-#' @export
-#' 
+#' Create a categorical event sequence from a factor
+#'
+#' This function generates a categorical event sequence object from a given factor.
+#' It can be used to create event sequences for categorical predictors in fMRI data analyses.
+#'
+#' @param fac A factor representing the categorical event sequence
+#' @param name A character string providing a name for the event sequence
+#' @param onsets A numeric vector of onsets for each event in the sequence
+#' @param blockids A numeric vector of block identifiers for each event in the sequence (default: rep(1, length(fac)))
+#' @param durations A numeric vector of durations for each event in the sequence (default: rep(0, length(fac)))
+#'
+#' @return An object representing the categorical event sequence, with class "event_factor" and "event_seq"
+#'
 #' @examples 
-#' 
-#' efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), "abc", onsets=seq(1,100,length.out=6))
+#' efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), "abc", onsets=seq(1, 100, length.out=6))
+#'
+#' @seealso \code{\link{EV}}, \code{\link{event_model}}
+#' @export 
 event_factor <- function(fac, name, onsets, blockids=rep(1,length(fac)), durations=rep(0, length(fac))) {
   if (!is.factor(fac)) {
     warning("argument 'fac' is not a factor, converting to factor")
@@ -195,13 +216,23 @@ event_factor <- function(fac, name, onsets, blockids=rep(1,length(fac)), duratio
   ret
 }        
 
-#' event_variable
-#' 
-#' Create a continuous valued event sequence from a \code{numeric} vector.
-#' 
-#' @inheritParams EV
-#' @param vec the vector event variable values
-#' 
+#' Create a continuous valued event sequence from a numeric vector
+#'
+#' This function generates a continuous valued event sequence object from a given numeric vector.
+#' It can be used to create event sequences for continuous predictors in fMRI data analyses.
+#'
+#' @param vec A numeric vector representing the continuous event sequence values
+#' @param name A character string providing a name for the event sequence
+#' @param onsets A numeric vector of onsets for each event in the sequence
+#' @param blockids A numeric vector of block identifiers for each event in the sequence (default: 1)
+#' @param durations A numeric vector of durations for each event in the sequence (default: NULL)
+#'
+#' @return An object representing the continuous valued event sequence, with class "event_variable" and "event_seq"
+#'
+#' @examples 
+#' evar <- event_variable(c(1, 2, 3, 4, 5, 6), "example_var", onsets=seq(1, 100, length.out=6))
+#'
+#' @seealso \code{\link{EV}}, \code{\link{event_model}}
 #' @export
 event_variable <- function(vec, name, onsets, blockids=1, durations=NULL) {
   stopifnot(is.vector(vec))
@@ -217,21 +248,27 @@ event_variable <- function(vec, name, onsets, blockids=1, durations=NULL) {
   
 }       
 
-#' event_matrix
-#' 
-#' Create a continuous valued event set from a \code{matrix}
-#' 
-#' @inheritParams EV
-#' @param mat a matrix of values, one row per event, indicating the amplitude/intensity of each event.
+#' Create a continuous valued event set from a matrix
+#'
+#' This function generates a continuous valued event set object from a given matrix.
+#' It is useful for creating event sequences with multiple continuous predictors for fMRI data analyses.
+#'
+#' @param mat A matrix of continuous event sequence values, with one row per event
+#' @param name A character string providing a name for the event set
+#' @param onsets A numeric vector of onsets for each event in the sequence
+#' @param blockids A numeric vector of block identifiers for each event in the sequence (default: 1)
+#' @param durations A numeric vector of durations for each event in the sequence (default: NULL)
+#'
+#' @return An object representing the continuous valued event set, with class "event_matrix" and "event_seq"
+#'
 #' @examples 
-#' 
 #' mat <- matrix(rnorm(200), 100, 2)
 #' onsets <- seq(1, 1000, length.out=100)
 #' durations <- rep(1, 100)
 #' blockids <- rep(1, 100)
-#' 
-#' eset <- event_matrix(mat, "eset", onsets,durations,blockids)
-#' 
+#'
+#' eset <- event_matrix(mat, "eset", onsets, durations, blockids)
+#'
 #' @export
 event_matrix <- function(mat, name, onsets, blockids=rep(1, ncol(mat)), durations=NULL) {
 #  browser()
@@ -251,12 +288,29 @@ event_matrix <- function(mat, name, onsets, blockids=rep(1, ncol(mat)), duration
 }
 
 
-#' event_basis
-#' 
-#' Create a event set from a basis object of type \code{ParametricBasis}. 
-#' @inheritParams EV
-#' @param basis the basis object
+#' Create an event set from a ParametricBasis object
+#'
+#' This function generates an event set object from a given basis object of type `ParametricBasis`.
+#' It is useful for creating event sequences based on basis functions for fMRI data analyses.
+#'
+#' @param basis A ParametricBasis object containing the basis functions
+#' @param onsets A numeric vector of onsets for each event in the sequence
+#' @param blockids A numeric vector of block identifiers for each event in the sequence (default: 1)
+#' @param durations A numeric vector of durations for each event in the sequence (default: NULL)
+#' @param subset A logical vector indicating a subset of the basis object to use (default: TRUE for all elements)
+#'
+#' @return An object representing the event set based on the basis functions, with class "event_basis" and "event_seq"
+#'
 #' @import assertthat
+#' @examples 
+#' # Create a ParametricBasis object
+#' basis <- ParametricBasis("Gamma", shape = 6, rate = 0.9)
+#' onsets <- seq(0, 20, length.out = 21)
+#' blockids <- rep(1, length(onsets))
+#'
+#' # Generate an event_basis object
+#' ebasis <- event_basis(basis, onsets, blockids)
+#'
 #' @export
 event_basis <- function(basis, onsets, blockids=1, durations=NULL, subset=rep(TRUE, length(onsets))) {
   assertthat::assert_that(inherits(basis, "ParametricBasis"))
@@ -292,7 +346,6 @@ levels.event_matrix <- function(x) colnames(x$value)
 levels.event_set <- function(x) colnames(x$value) 
 
 #' @export
-#' @rdname levels
 levels.event_basis <- function(x) levels(x$basis)
 
 #' @export
@@ -313,7 +366,17 @@ levels.event_term <- function(x) {
 }
 
 
-#' @param drop.empty remove empty cells (not implemented)
+#' Retrieve cells of an event_factor object.
+#'
+#' This function extracts cells from an event_factor object, optionally removing
+#' empty cells. Note that the removal of empty cells is not implemented.
+#'
+#' @param x An event_factor object.
+#' @param drop.empty Logical. If TRUE, empty cells will be removed (not implemented).
+#' @param ... Additional arguments to be passed to the function.
+#'
+#' @return A list of data frames containing the cells of the event_factor object.
+#'
 #' @export
 #' @rdname cells
 cells.event_factor <- function(x, drop.empty=TRUE,...) {
@@ -322,10 +385,21 @@ cells.event_factor <- function(x, drop.empty=TRUE,...) {
 }
 
 
-#' @param drop.empty remove empty cells
+#' Retrieve cells of an event_term object.
+#'
+#' This function extracts cells from an event_term object, optionally removing
+#' empty cells.
+#'
+#' @param x An event_term object.
+#' @param drop.empty Logical. If TRUE, empty cells will be removed.
+#' @param ... Additional arguments to be passed to the function.
+#'
+#' @return A tibble containing the cells of the event_term object, with an
+#'   additional "count" attribute.
+#'
 #' @export
 #' @rdname cells
-#' @examples 
+#' @examples
 #' 
 #' evlist <- list(fac1=factor(c("A", "B", "A", "B")), 
 #'                fac2=factor(c("1", "1", "2", "2")))
@@ -360,6 +434,9 @@ cells.event_term <- function(x, drop.empty=TRUE,...) {
   evset
 }
 
+
+#' @noRd
+#' @keywords internal
 .event_set <- function(x, exclude_basis=FALSE) {
   evtab <- event_table(x)
   
@@ -410,27 +487,32 @@ cells.convolved_term <- function(x, exclude_basis=FALSE,...) {
 }
 
 #' @export
+#' @rdname conditions
 conditions.fmri_term <- function(x, ...) {
   colnames(design_matrix(x))
 }
 
 #' @export
+#' @rdname conditions
 conditions.convolved_term <- function(x,...) {
   colnames(design_matrix(x))
 }
 
 #' @export
+#' @rdname conditions
 conditions.afni_hrf_convolved_term <- function(x,...) {
   conditions(x$evterm)
 }
 
 #' @export
+#' @rdname conditions
 conditions.afni_trialwise_convolved_term <- function(x,...) {
   conditions(x$evterm)
 }
 
 
 #' @export
+#' @rdname conditions
 conditions.event_term <- function(x, drop.empty=TRUE, ...) {
   
   .cells <- cells(x, drop.empty=drop.empty)
@@ -456,27 +538,36 @@ conditions.event_term <- function(x, drop.empty=TRUE, ...) {
 ## TODO is columns ever used? do we need this function
 
 #' @export
+#' @rdname columns
 columns.event_term <- function(x) as.vector(unlist(lapply(x$events, columns)))
 
 #' @export
+#' @rdname columns
 columns.event_seq <- function(x) x$varname
 
 #' @export
+#' @rdname columns
 columns.event_matrix <- function(x) paste0(.sanitizeName(x$varname), ".", levels(x))
 
-
 #' @export
+#' @rdname columns
 columns.event_set <- function(x) paste0(.sanitizeName(x$varname), ".", levels(x))
 
 #' @export
+#' @rdname columns
 columns.event_basis <- function(x) columns(x$basis)
 
 
 #' @export
+#' @rdname parent_terms
 parent_terms.event_term <- function(x) unlist(lapply(x$events, function(ev) ev$varname))
+
 
 #' @export
 is_continuous.event_seq <- function(x) x$continuous
+
+#' @export
+is_continuous.event_factor <- function(x) x$continuous
 
 #' @export
 is_categorical.event_seq <- function(x) !x$continuous
@@ -486,6 +577,7 @@ is_continuous.event_term <- function(x) all(sapply(x$events, function(x) is_cont
 
 #' @export
 is_categorical.event_term <- function(x) !is_continuous(x)
+
 
 #' @export
 is_categorical.event_seq <- function(x) !x$continuous
@@ -510,6 +602,7 @@ elements.event_matrix <- function(x, values=TRUE, ...) {
     ret			
   }
 }
+
 
 #' @export
 elements.event_seq <- function(x, values = TRUE, ...) {
@@ -578,6 +671,19 @@ blockids.convolved_term <- function(x) {
   blockids(x$evterm)
 }
 
+#' Split onsets of an event_term object
+#'
+#' This function splits the onsets of an event_term object based on its factor levels or block identifiers.
+#' It is useful for processing fMRI data when analyzing event-related designs with multiple conditions or blocks.
+#'
+#' @param x An event_term object
+#' @param sframe A data frame representing the sampling frame
+#' @param global A logical value indicating whether to use global onsets (default: FALSE)
+#' @param blocksplit A logical value indicating whether to split onsets by block identifiers (default: FALSE)
+#' @param ... Additional arguments passed to other methods
+#'
+#' @return A list of numeric vectors representing the split onsets for each factor level or block identifier
+#'
 #' @export
 split_onsets.event_term <- function(x, sframe, global=FALSE,blocksplit=FALSE, ...) {
   ### need to check for 0 factors
@@ -624,12 +730,22 @@ split_onsets.event_term <- function(x, sframe, global=FALSE,blocksplit=FALSE, ..
 
 
 
-#' @keywords internal
+#' Convolve HRF with Design Matrix
+#'
+#' This function convolves a given hemodynamic response function (HRF) with the design matrix of an fMRI study.
+#' It is useful for modeling the expected BOLD signal in response to experimental conditions.
+#'
+#' @param hrf A numeric vector representing the hemodynamic response function
+#' @param dmat A design matrix with columns representing different experimental conditions
+#' @param globons A numeric vector of global onsets for each event
+#' @param durations A numeric vector of event durations
+#' @param summate A logical value indicating whether to summate the convolved HRF (default: TRUE)
+#'
+#' @return A list of regressors, one for each column in the design matrix.
+#' @export
 convolve_design <- function(hrf, dmat, globons, durations, summate=TRUE) {
   cond.names <- names(dmat)
-  #if (length(grep("pc1", cond.names)) > 0) {
-  #  browser()
-  #}
+  
   if (any(is.na(dmat)) || any(is.na(globons))) {
     keep <- apply(dmat, 1, function(vals) all(!is.na(vals)))
     keep[is.na(globons)] <- FALSE
@@ -638,27 +754,46 @@ convolve_design <- function(hrf, dmat, globons, durations, summate=TRUE) {
     globons <- globons[keep]
   } 
   
-  p <- parallel::mclapply(1:ncol(dmat), function(i) {
+  reglist <- purrr::map(1:ncol(dmat), function(i) {
     amp <- dmat[,i][[1]]
     nonzero <- which(amp != 0)
     ## issue with single_trial_regressor
     if (length(nonzero) == 0) {
       null_regressor(hrf)
-    ## scaling issue with single_trial_regressor
-    #} #else if (length(nonzero) == 1) {
+      ## scaling issue with single_trial_regressor
+      #} #else if (length(nonzero) == 1) {
       #single_trial_regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero])
     } else {
       regressor(globons[nonzero], hrf, amplitude=amp[nonzero], duration=durations[nonzero], summate=summate)
     }
   })
   
+  reglist
+  
 }
 
+#' Convolve an event-related design matrix with an HRF.
+#'
+#' This function takes an event-related design matrix and convolves it with
+#' a specified Hemodynamic Response Function (HRF) to create a new design matrix
+#' suitable for fMRI analysis. It also supports additional arguments for
+#' flexibility and customization.
+#'
 #' @importFrom tibble as_tibble
 #' @importFrom magrittr %>%
 #' @importFrom dplyr group_by select do ungroup
 #' @autoglobal
 #' @export
+#'
+#' @param x A data frame containing the input design matrix.
+#' @param hrf A Hemodynamic Response Function to convolve the design matrix with.
+#' @param sampling_frame A data frame specifying the sampling frame for the analysis.
+#' @param drop.empty Logical. If TRUE, empty rows in the design matrix will be removed.
+#' @param summate Logical. If TRUE, the convolved design matrix will be summed.
+#' @param precision Numeric. The desired precision for the calculations.
+#' @param ... Additional arguments to be passed to the function.
+#'
+#' @return A convolved design matrix, in tibble format.
 convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE, 
                                 summate=TRUE, precision=.3,...) {
   
@@ -671,9 +806,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE,
   nimages <- sum(sampling_frame$blocklens)
   
   cnames <- conditions(x)
-  
   dmat <- design_matrix(x, drop.empty)
-  
   ncond <- ncol(dmat)
 
   #print("convolving")
@@ -687,37 +820,42 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE,
       
       ## TODO could bee parallelized
       ## ret <- do.call(rbind, furrr::future_map(reg, function(r) evaluate(r, sam))) 
-     
       ret <- do.call(cbind, lapply(seq_along(reg), function(ri) {
         vname <- paste0("v", ri)
-        evaluate(reg[[ri]], sam, precision=precision) #%>% select({{vname}} := value)
+        evaluate(reg[[ri]], sam, precision=precision) 
+        
+        #%>% select({{vname}} := value)
         #names(tmp) <- paste0("v", ri)
         #suppressMessages(as_tibble(tmp))
       })) 
       
       ret <- suppressMessages(tibble::as_tibble(ret, .name_repair="minimal"))
       names(ret) <- paste0("v", 1:length(reg))
-      #names(ret) <- seq(as.integer(runif(1)*10000)
       ret
   }) 
   
-  #browser()
   cmat <- cmat %>% dplyr::ungroup() %>% dplyr::select(-.blockids)
   
-  #print("done convolving")
-  
- 
   if (nbasis(hrf) > 1) {
     blevs <- paste("[", 1:nbasis(hrf), "]", sep="")
     cnames <- unlist(lapply(cnames, function(prefix) paste(prefix, ":basis", blevs, sep="")))
   } 
             
+  
   colnames(cmat) <- cnames
   suppressMessages(tibble::as_tibble(cmat, .name_repair="check_unique"))
   
   
 }
 
+#' Compute F-contrasts for Event Term
+#'
+#' This function computes F-contrasts for an event term object, considering main effects and interactions.
+#'
+#' @param x An event term object
+#' @param ... Additional arguments passed to the function
+#'
+#' @return A list of contrast matrices for main effects and interactions
 #' @export
 Fcontrasts.event_term <- function(x,...) {
   cellcount <- attr(cells(x, drop.empty=FALSE), "count")

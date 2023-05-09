@@ -2,21 +2,32 @@
 % Please edit documentation in R/event_vector.R
 \name{event_variable}
 \alias{event_variable}
-\title{event_variable}
+\title{Create a continuous valued event sequence from a numeric vector}
 \usage{
 event_variable(vec, name, onsets, blockids = 1, durations = NULL)
 }
 \arguments{
-\item{vec}{the vector event variable values}
+\item{vec}{A numeric vector representing the continuous event sequence values}
 
-\item{name}{the name of the event variable}
+\item{name}{A character string providing a name for the event sequence}
 
-\item{onsets}{the event onsets.}
+\item{onsets}{A numeric vector of onsets for each event in the sequence}
 
-\item{blockids}{the block ids associated with each event (must be non-decreasing)}
+\item{blockids}{A numeric vector of block identifiers for each event in the sequence (default: 1)}
 
-\item{durations}{the duration of each event.}
+\item{durations}{A numeric vector of durations for each event in the sequence (default: NULL)}
+}
+\value{
+An object representing the continuous valued event sequence, with class "event_variable" and "event_seq"
 }
 \description{
-Create a continuous valued event sequence from a \code{numeric} vector.
+This function generates a continuous valued event sequence object from a given numeric vector.
+It can be used to create event sequences for continuous predictors in fMRI data analyses.
+}
+\examples{
+evar <- event_variable(c(1, 2, 3, 4, 5, 6), "example_var", onsets=seq(1, 100, length.out=6))
+
+}
+\seealso{
+\code{\link{EV}}, \code{\link{event_model}}
 }

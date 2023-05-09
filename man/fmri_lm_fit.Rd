@@ -2,7 +2,7 @@
 % Please edit documentation in R/fmrilm.R
 \name{fmri_lm_fit}
 \alias{fmri_lm_fit}
-\title{fmri_lm_fit}
+\title{Fit an fMRI linear regression model with a specified fitting strategy}
 \usage{
 fmri_lm_fit(
   fmrimod,
@@ -10,26 +10,31 @@ fmri_lm_fit(
   strategy = c("chunkwise", "runwise"),
   robust = FALSE,
   nchunks = 10,
-  meta_weighting = c("inv_var", "equal"),
   ...
 )
 }
 \arguments{
-\item{fmrimod}{an object of type \code{fmri_model}}
+\item{fmrimod}{An object of type \code{fmri_model}.}
 
-\item{dataset}{an object derived from \code{fmri_dataset} containing the time-series data}
+\item{dataset}{An object derived from \code{fmri_dataset} containing the time-series data.}
 
-\item{strategy}{the data splitting strategy}
+\item{strategy}{The data splitting strategy, either "chunkwise" or "runwise". Default is "chunkwise".}
 
-\item{robust}{whether to use robust fitting (TRUE or FALSE)}
+\item{robust}{Whether to use robust fitting. Default is FALSE.}
 
-\item{nchunks}{number of daa chunks when strategy is \code{chunkwise}}
+\item{nchunks}{Number of data chunks when strategy is \code{chunkwise}. Default is 10.}
 
-\item{meta_weighting}{for runwise analyses, wheter to use
-inverse variance ("inv_var") or equal ("equal") weighting}
-
-\item{...}{extra args}
+\item{...}{Extra arguments.}
+}
+\value{
+A fitted fMRI linear regression model with the specified fitting strategy.
 }
 \description{
-fmri_lm_fit
+This function fits an fMRI linear regression model using the specified fmri_model object, dataset,
+and data splitting strategy (either "runwise" or "chunkwise"). It is primarily an internal function
+used by the fmri_lm function.
 }
+\seealso{
+fmri_lm, fmri_model, fmri_dataset
+}
+\keyword{internal}

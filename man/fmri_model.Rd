@@ -2,15 +2,22 @@
 % Please edit documentation in R/fmri_model.R
 \name{fmri_model}
 \alias{fmri_model}
-\title{fmri_model}
+\title{Construct an fMRI regression model}
 \usage{
 fmri_model(event_model, baseline_model)
 }
 \arguments{
-\item{event_model}{the \code{event_model} object}
+\item{event_model}{An object of class "event_model" representing the event-related part of the fMRI regression model.}
 
-\item{baseline_model}{the \code{baseline_model} object}
+\item{baseline_model}{An object of class "baseline_model" representing the baseline-related part of the fMRI regression model.}
+}
+\value{
+An object of class "fmri_model" containing the event and baseline models.
 }
 \description{
-construct and fMRI regression model consisting of a \code{event_model} and \code{baseline_model}
+This function constructs an fMRI regression model consisting of an event model
+and a baseline model. The resulting model can be used for the analysis of fMRI data.
+}
+\seealso{
+event_model, baseline_model
 }

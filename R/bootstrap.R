@@ -1,6 +1,22 @@
 
 
-
+#' Multiresponse Bootstrap Linear Model
+#'
+#' @description
+#' This function performs multiresponse bootstrap for a linear model.
+#'
+#' @param form Formula for the linear model.
+#' @param data_env Environment containing the data for the linear model.
+#' @param conlist List of contrasts.
+#' @param vnames Vector of variable names.
+#' @param fcon Contrasts for fixed effects.
+#' @param modmat Model matrix.
+#' @param block_size Size of the blocks for the bootstrap (default: 30).
+#' @param boot_rows Logical flag indicating whether to bootstrap rows (default: FALSE).
+#' @param nboot Number of bootstrap iterations (default: 100).
+#' @param event_indices Indices of events.
+#' @return A list containing the original fitted model and bootstrap results.
+#' @export
 multiresponse_bootstrap_lm <- function(form, data_env, 
                                        conlist, 
                                        vnames, 

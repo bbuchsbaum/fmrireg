@@ -2,25 +2,28 @@
 % Please edit documentation in R/contrast.R
 \name{poly_contrast}
 \alias{poly_contrast}
-\title{poly_contrast}
+\title{Polynomial Contrast}
 \usage{
 poly_contrast(A, name, where = NULL, degree = 1, value_map = NULL)
 }
 \arguments{
-\item{A}{the contrast expression as a formula}
+\item{A}{A formula describing the contrast.}
 
-\item{name}{the name of the contrast}
+\item{name}{A character string representing the name of the contrast.}
 
-\item{where}{the subset of conditions to apply contrast to}
+\item{where}{An optional formula defining the subset over which the contrast is computed.}
 
-\item{degree}{the degree of the polynomial}
+\item{degree}{An integer representing the degree of the polynomial (default: 1).}
 
-\item{value_map}{optional list that maps between levels of a factor and a numeric value.}
+\item{value_map}{An optional list that maps between levels of a factor and a numeric value.}
+}
+\value{
+A list containing the polynomial contrast specification.
 }
 \description{
-A polynomial contrast evaluated over a set of (orderable) factor levels
+Create a polynomial contrast evaluated over a set of (orderable) factor levels.
 }
 \examples{
-
 pcon <- poly_contrast(~ time, name="poly_time_3", degree=3)
+
 }

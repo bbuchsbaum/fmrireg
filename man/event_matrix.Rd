@@ -2,31 +2,34 @@
 % Please edit documentation in R/event_vector.R
 \name{event_matrix}
 \alias{event_matrix}
-\title{event_matrix}
+\title{Create a continuous valued event set from a matrix}
 \usage{
 event_matrix(mat, name, onsets, blockids = rep(1, ncol(mat)), durations = NULL)
 }
 \arguments{
-\item{mat}{a matrix of values, one row per event, indicating the amplitude/intensity of each event.}
+\item{mat}{A matrix of continuous event sequence values, with one row per event}
 
-\item{name}{the name of the event variable}
+\item{name}{A character string providing a name for the event set}
 
-\item{onsets}{the event onsets.}
+\item{onsets}{A numeric vector of onsets for each event in the sequence}
 
-\item{blockids}{the block ids associated with each event (must be non-decreasing)}
+\item{blockids}{A numeric vector of block identifiers for each event in the sequence (default: 1)}
 
-\item{durations}{the duration of each event.}
+\item{durations}{A numeric vector of durations for each event in the sequence (default: NULL)}
+}
+\value{
+An object representing the continuous valued event set, with class "event_matrix" and "event_seq"
 }
 \description{
-Create a continuous valued event set from a \code{matrix}
+This function generates a continuous valued event set object from a given matrix.
+It is useful for creating event sequences with multiple continuous predictors for fMRI data analyses.
 }
 \examples{
-
 mat <- matrix(rnorm(200), 100, 2)
 onsets <- seq(1, 1000, length.out=100)
 durations <- rep(1, 100)
 blockids <- rep(1, 100)
 
-eset <- event_matrix(mat, "eset", onsets,durations,blockids)
+eset <- event_matrix(mat, "eset", onsets, durations, blockids)
 
 }
