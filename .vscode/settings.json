@@ -1,0 +1,10 @@
+{
+    "r.lsp.diagnostics": false,
+    "r.lint.enabled": false,
+    "r.editor.diagnostics": false,
+    "r.editor.snippets.enabled": false,
+    "r.editor.formatOnSave": false,
+    "r.editor.formatOnType": false,
+    "editor.formatOnSave": false,
+    "editor.formatOnType": false
+}

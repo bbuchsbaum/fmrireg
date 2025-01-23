@@ -1,0 +1,643 @@
+# Abstract specification for fMRI analysis DSL
+# This document defines the schema and validation rules for the DSL
+
+dataset:
+  description: "Configuration for loading BIDS dataset"
+  required: true
+  properties:
+    path:
+      type: string
+      description: "Path to BIDS project directory"
+      required: true
+      validation: "Directory must exist and contain valid BIDS structure"
+    
+    subjects:
+      type: object
+      description: "Subject selection criteria"
+      required: false
+      properties:
+        include:
+          type: array[string]
+          description: "List of subject IDs to include in analysis"
+          pattern: "^sub-[0-9A-Za-z]+"
+          required: false
+          note: "If omitted, all subjects are included"
+        exclude:
+          type: array[string] 
+          description: "List of subject IDs to exclude from analysis"
+          pattern: "^sub-[0-9A-Za-z]+"
+          required: false
+    
+    tasks:
+      type: array[string]
+      description: "List of task names to include in analysis"
+      required: false
+      validation: "All tasks must exist in BIDS dataset"
+      note: "If omitted, all tasks are included"
+    
+    runs:
+      type: array[string]
+      description: "List of run IDs to include"
+      pattern: "^run-[0-9]+"
+      required: false
+      note: "If omitted, all runs are included"
+    
+    relpath:
+      type: string
+      description: "Relative path from project root to functional data"
+      default: "func"
+      required: false
+    
+    scan_params:
+      description: "Default and override parameters for scans"
+      required: false
+      properties:
+        TR:
+          type: object
+          description: "TR specifications"
+          properties:
+            default:
+              type: number
+              description: "Default TR for all scans"
+              required: true
+            overrides:
+              type: array[object]
+              description: "TR overrides for specific scans"
+              required: false
+              items:
+                type: object
+                properties:
+                  value:
+                    type: number
+                    description: "TR value for matching scans"
+                  pattern:
+                    type: string
+                    description: "Regex pattern to match subject/task/run"
+                    examples: ["sub-\\d+_task-memory_run-01", "task-rest"]
+      
+        run_length:
+          type: object
+          description: "Run length specifications"
+          properties:
+            default:
+              type: object
+              description: "Default lengths by task"
+              required: true
+              properties:
+                "*":  # Wildcard for task names
+                  type: number
+                  description: "Number of volumes for this task"
+            overrides:
+              type: array[object]
+              description: "Length overrides for specific scans"
+              required: false
+              items:
+                type: object
+                properties:
+                  value:
+                    type: number
+                    description: "Length value for matching scans"
+                  pattern:
+                    type: string
+                    description: "Regex pattern to match subject/task/run"
+
+confounds:
+  description: "Configuration for confound variable selection"
+  required: false
+  properties:
+    include:
+      type: array[string]
+      description: "List of confound variables to include"
+      required: false
+      note: "Supports wildcards (e.g., motion.* includes all confounds starting with motion)"
+      validation: "Must match available confound variables in BIDS confounds files"
+      examples: ["CSF", "WhiteMatter", "motion.*", "GlobalSignal"]
+    
+    exclude:
+      type: array[string]
+      description: "List of confound variables to exclude"
+      required: false
+      note: "Takes precedence over include patterns"
+      examples: ["motion_outlier", "std_dvars"]
+
+baseline:
+  description: "Configuration for baseline/drift model"
+  required: false
+  properties:
+    basis:
+      type: string
+      description: "Type of basis function for drift modeling"
+      required: true
+      enum: ["constant", "poly", "bspline", "ns"]
+      default: "bspline"
+    
+    degree:
+      type: integer
+      description: "Degree of basis functions"
+      required: false
+      validation: "Must be positive integer"
+      default: 3
+    
+    intercept:
+      type: string
+      description: "Type of intercept term"
+      required: false
+      enum: ["runwise", "global", "none"]
+      default: "runwise"
+    
+    confounds:
+      type: object
+      description: "Confound variables to include in baseline model"
+      required: false
+      properties:
+        include:
+          type: array[string]
+          description: "List of confound variables to include"
+          required: false
+          note: "Supports wildcards (e.g., motion.* includes all confounds starting with motion)"
+        exclude:
+          type: array[string]
+          description: "List of confound variables to exclude"
+          required: false
+
+hrfs:
+  description: "Hemodynamic Response Function definitions"
+  required: false
+  properties:
+    "*":  # Wildcard for HRF names
+      type: object
+      description: "Individual HRF definition"
+      properties:
+        type:
+          type: string
+          description: "Type of HRF"
+          required: true
+          enum: [
+            "HRF_SPMG1", "HRF_SPMG2", "HRF_SPMG3", 
+            "HRF_GAUSSIAN", "HRF_GAMMA", "HRF_BSPLINE",
+            "HRF_DAGUERRE", "HRF_DAGUERRE_BASIS",  # Add new types
+            "custom"
+          ]
+          note: "Built-in HRFs are in uppercase (e.g., HRF_SPMG1)"
+        
+        parameters:
+          type: object
+          description: "Parameters for the HRF"
+          required: false
+          properties:
+            "*":  # Wildcard for parameter names
+              type: number
+              description: "Parameter value"
+              note: "Parameters vary by HRF type (e.g., shape/rate for HRF_GAMMA)"
+        
+        definition:
+          type: string
+          description: "Function name for custom HRF"
+          required: false
+          note: "Only required for custom HRF types"
+          validation: "Must refer to an existing R function"
+        
+        lag:
+          type: number
+          description: "Temporal lag in seconds"
+          required: false
+          default: 0
+        
+        width:
+          type: number
+          description: "Width of block function for convolution"
+          required: false
+          default: 1
+        
+        summate:
+          type: boolean
+          description: "Whether to summate impulse responses"
+          required: false
+          default: false
+        
+        normalize:
+          type: boolean
+          description: "Whether to normalize HRF peak to 1"
+          required: false
+          default: true
+
+parametric:
+  description: "Configuration for parametric modulator transformations"
+  required: false
+  properties:
+    "*":  # Wildcard for variable names
+      type: object
+      description: "Transformation specification for a parametric variable"
+      properties:
+        transform:
+          type: array[string]
+          description: "List of transformations to apply"
+          required: false
+          enum: ["center", "scale", "within_subject", "log", "exp", "zscore"]
+          examples: ["center_scale", "within_subject"]
+          
+        basis:
+          type: object
+          description: "Basis function specification"
+          required: false
+          properties:
+            type:
+              type: string
+              description: "Type of basis function"
+              required: true
+              enum: ["polynomial", "bspline", "ns"]
+            
+            parameters:
+              type: object
+              description: "Parameters for basis function"
+              required: false
+              properties:
+                degree:
+                  type: integer
+                  description: "Degree of polynomial or number of basis functions"
+                  default: 1
+                knots:
+                  type: array[number]
+                  description: "Knot locations for spline bases"
+                  required: false
+
+events:
+  description: "Event variable mapping specification"
+  required: true
+  properties:
+    onset:
+      type: string
+      description: "Default onset column name"
+      required: true
+    
+    duration:
+      type: string
+      description: "Default duration column name"
+      required: true
+    
+    block:
+      type: string
+      description: "Column name for block/run identifier"
+      required: true
+    
+    "*":
+      type: object
+      description: "Variable mapping with optional onset/duration"
+      properties:
+        column:
+          type: string
+          description: "Column name for variable values"
+          required: true
+        
+        onset:
+          type: string
+          description: "Variable-specific onset column"
+          required: false
+        
+        duration:
+          type: string
+          description: "Variable-specific duration column"
+          required: false
+
+regressors:
+  description: "Specification of model regressors"
+  required: true
+  properties:
+    "*":  # Wildcard for regressor definitions
+      type: object
+      description: "Individual regressor definition"
+      properties:
+        type:
+          type: string
+          description: "Type of regressor"
+          required: true
+          enum: ["hrf", "hrf_parametric", "trialwise"]
+        
+        variables:
+          type: array[string]
+          description: "Variables to be convolved with HRF"
+          required: true
+          validation: "Must refer to variables defined in events section"
+        
+        hrf:
+          type: string
+          description: "Name of HRF to use"
+          required: false
+          validation: "Must refer to HRF defined in hrfs section or be a built-in HRF"
+          note: "If omitted, uses default HRF (spm_canonical)"
+          examples: ["spm_canonical", "gamma_hrf", "custom_hrf"]
+        
+        lag:
+          type: number
+          description: "Temporal lag to apply to HRF in seconds"
+          required: false
+          default: 0
+          validation: "Must be a real number"
+        
+        subset:
+          type: string
+          description: "Logical expression defining subset of data"
+          required: false
+          examples: ["stim != 'D'", "delay == 'long'"]
+        
+        basis:
+          type: object
+          description: "Basis function specification for parametric modulators"
+          required: false   # Required for 'hrf_parametric' type
+          properties:
+            type:
+              type: string
+              description: "Type of basis function"
+              required: true
+              enum: ["Poly", "BSpline", "Standardized", "Ident"]
+              examples: ["Poly", "BSpline"]
+            
+            parameters:
+              type: object
+              description: "Parameters for basis function"
+              required: false
+              properties:
+                degree:
+                  type: integer
+                  description: "Degree of polynomial or number of basis functions"
+                  default: 1
+                knots:
+                  type: array[number]
+                  description: "Knot locations for spline bases"
+                  required: false
+                intercept:
+                  type: boolean
+                  description: "Whether to include an intercept term"
+                  default: TRUE
+                  required: false
+    
+        transform:
+          type: array[string]
+          description: "List of transformations to apply to the modulator variable"
+          required: false
+          enum: ["center", "scale", "zscore", "log", "exp"]
+          examples: ["center", "zscore"]
+
+contrasts:
+  description: "Statistical contrast definitions"
+  required: false
+  properties:
+    "*":  # Wildcard for contrast names
+      type: object
+      description: "Individual contrast definition"
+      properties:
+        type:
+          type: string
+          description: "Type of contrast"
+          required: true
+          enum: ["formula", "pair", "one_against_all", "unit", 
+                 "oneway", "interaction", "polynomial"]
+          note: "Determines how contrast weights are computed"
+        
+        expression:
+          type: string
+          description: "R formula expression defining the contrast"
+          required: false
+          note: "Used for simple contrasts, e.g., 'stim[A] - stim[B]'"
+          validation: "Must be valid R formula syntax"
+        
+        factors:
+          type: array[string]
+          description: "Factor variables involved in contrast"
+          required: false
+          validation: "Must refer to variables defined in events section"
+        
+        degree:
+          type: integer
+          description: "Degree for polynomial contrasts"
+          required: false
+          validation: "Must be positive integer"
+          
+        levels:
+          type: array[string]
+          description: "Factor levels to include in contrast"
+          required: false
+          validation: "Must be valid levels of the factor"
+        
+        where:
+          type: string
+          description: "Logical expression filtering conditions"
+          required: false
+          validation: "Must be valid R logical expression"
+          examples: ["task == 'A'", "condition %in% c('face', 'house')"]
+        
+        include:
+          type: string
+          description: "Logical expression for conditions to include"
+          required: false
+          
+        exclude:
+          type: string
+          description: "Logical expression for conditions to exclude"
+          required: false
+
+model:
+  description: "Complete model specification"
+  required: true
+  properties:
+    name:
+      type: string
+      description: "Unique identifier for the model"
+      required: true
+    
+    factors:
+      type: array[string]
+      description: "List of categorical variables used in the model"
+      required: true
+      validation: "Must refer to variables defined in events section"
+    
+    parametric:
+      type: array[string]
+      description: "List of continuous variables (parametric modulators)"
+      required: false
+      validation: "Must refer to variables defined in events section"
+    
+    events:
+      type: object
+      description: "Event variable mappings"
+      required: true
+      properties:
+        onset:
+          type: string
+          description: "Column name for onset times"
+          required: true
+        duration:
+          type: string
+          description: "Column name for durations"
+          required: true
+        block:
+          type: string
+          description: "Column name for block/run identifier"
+          required: true
+        "*":
+          type: string
+          description: "Additional variable mappings"
+          required: false
+    
+    regressors:
+      type: object
+      description: "Regressor specifications"
+      required: true
+      $ref: "#/regressors"  # References the top-level regressors schema
+    
+    contrasts:
+      type: object
+      description: "Contrast specifications"
+      required: false
+      $ref: "#/contrasts"  # References the top-level contrasts schema
+
+example:
+  dataset:
+    path: "/data/myproject"
+    subjects:
+      include: ["sub-001", "sub-002"]
+      exclude: ["sub-005"]
+    tasks: ["nback", "rest"]
+    runs: ["run-01", "run-02"]
+    relpath: "func"
+    scan_params:
+      TR:
+        default: 2.0
+        overrides:
+          - value: 1.5
+            pattern: "task-rest"  # All rest scans have TR=1.5
+          - value: 2.2
+            pattern: "sub-001_task-memory_run-02"  # Specific scan override
+      
+      run_length:
+        default:
+          memory: 203  # All memory task runs are 203 volumes
+          rest: 180    # All rest task runs are 180 volumes
+        overrides:
+          - value: 205
+            pattern: "sub-002_task-memory_run-01"  # This specific run is longer
+  confounds:
+    include: ["CSF", "WhiteMatter", "motion.*"]
+    exclude: ["motion_outlier"]
+  baseline:
+    basis: "bspline"
+    degree: 3
+    intercept: "runwise"
+    confounds:
+      include: ["CSF", "WhiteMatter", "motion.*"]
+      exclude: ["motion_outlier"]
+  hrfs:
+    canonical:
+      type: "HRF_SPMG1"  # Standard SPM canonical HRF
+    
+    gamma_hrf:
+      type: "HRF_GAMMA"
+      parameters:
+        shape: 6
+        rate: 1
+    
+    gaussian_hrf:
+      type: "HRF_GAUSSIAN"
+      parameters:
+        mean: 5
+        sd: 1
+    
+    custom_hrf:
+      type: "custom"
+      definition: "hrf_half_cosine"
+      parameters:
+        h1: 1
+        h2: 5
+        h3: 7
+        h4: 7
+  parametric:
+    RT:
+      transform: ["center_scale", "within_subject"]
+      basis:
+        type: "polynomial"
+        parameters:
+          degree: 2
+    
+    accuracy:
+      transform: ["zscore"]
+      basis:
+        type: "bspline"
+        parameters:
+          degree: 3
+          knots: [0.2, 0.4, 0.6, 0.8]
+  events:
+    onset: "onset_time"
+    duration: "event_duration"
+    block: "run"  # Column name for block/run identifier
+    stim: "stimulus_type"      # Maps BIDS column 'stimulus_type' to model variable 'stim'
+    task: "task_condition"     # Maps BIDS column 'task_condition' to model variable 'task'
+    accuracy: "response_acc"   # Maps BIDS column 'response_acc' to model variable 'accuracy'
+  regressors:
+    main_effect:
+      type: "hrf"
+      variables: ["stim"]
+      hrf: "HRF_SPMG1"
+      lag: 0
+    
+    parametric_rt:
+      type: "hrf_parametric"
+      variables: ["RT"]
+      hrf: "gamma_hrf"
+      basis:
+        type: "Poly"
+        parameters:
+          degree: 3
+          intercept: FALSE
+      transform:
+        - "center"
+    
+    trial_betas:
+      type: "trialwise"
+      variables: ["trial_id"]
+      hrf: "custom_hrf"
+  contrasts:
+    face_vs_house:
+      type: "simple"
+      expression: "stim[face] - stim[house]"
+      where: "task == 'visual'"
+    
+    linear_time:
+      type: "polynomial"
+      factors: ["time"]
+      degree: 1
+    
+    face_vs_others:
+      type: "one_against_all"
+      factors: ["condition"]
+      levels: ["face"]
+    
+    task_by_stim:
+      type: "interaction"
+      factors: ["task", "stim"]
+  model:
+    name: "ComplexDesign"
+    factors: ["stim", "task"]
+    parametric: ["RT"]
+    events:
+      onset: "onset_time"
+      duration: "event_duration"
+      block: "run_number"  # Maps to run_number column in events.tsv
+      stim: "stimulus_type"
+      task: "task_condition"
+      RT: "response_time"
+    regressors:
+      main_effects:
+        type: "hrf"
+        variables: ["stim", "task"]
+        hrf: "HRF_SPMG1"
+      rt_effect:
+        type: "hrf_parametric"
+        variables: ["RT"]
+        hrf: "HRF_GAMMA"
+    contrasts:
+      face_vs_house:
+        type: "formula"
+        expression: "stim[face] - stim[house]"
+      task_interaction:
+        type: "interaction"
+        factors: ["stim", "task"]
