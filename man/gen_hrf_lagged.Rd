@@ -20,6 +20,8 @@ hrf_lagged(hrf, lag = 2, normalize = FALSE, ...)
 }
 \value{
 A function representing the lagged HRF. If \code{lag} is a vector of lags, the function returns an HRF set.
+
+an lagged hrf function
 }
 \description{
 The \code{gen_hrf_lagged} function takes an HRF function and applies a specified lag to it. This can be useful for modeling time-delayed hemodynamic responses.
@@ -37,12 +39,10 @@ hrf_lag5(0:20)
 \seealso{
 Other gen_hrf: 
 \code{\link{gen_hrf_blocked}()},
-\code{\link{gen_hrf_library}()},
 \code{\link{gen_hrf_set}()}
 
 Other gen_hrf: 
 \code{\link{gen_hrf_blocked}()},
-\code{\link{gen_hrf_library}()},
 \code{\link{gen_hrf_set}()}
 }
 \concept{gen_hrf}

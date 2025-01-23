@@ -31,9 +31,10 @@ This function generates a categorical event sequence object from a given factor.
 It can be used to create event sequences for categorical predictors in fMRI data analyses.
 }
 \examples{
-efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), "abc", onsets=seq(1, 100, length.out=6))
+efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), 
+"abc", onsets=seq(1, 100, length.out=6))
 
 }
 \seealso{
-\code{\link{EV}}, \code{\link{event_model}}
+\code{\link{event_model}}
 }

@@ -7,9 +7,12 @@ utils::globalVariables(c(
   ".block", # <plot.baseline_model>
   ".blockids", # <convolve.event_term>
   ".", # <convolve.event_term>
-  "i", # <chunkwise_lm.fmri_dataset>
-  "ym", # <runwise_lm>
-  "ym", # <runwise_rlm>
+  "xf", # <estimate_hrf>
+  "index", # <cells.fmri_model>
+  "type", # <cells.fmri_model>
+  ".", # <reshape_coef>
+  "row_id", # <reshape_coef>
+  "name", # <meta_contrasts>
   "i", # <auto_whiten>
   NULL
 ))

@@ -10,7 +10,7 @@ multiresponse_bootstrap_lm(
   conlist,
   vnames,
   fcon,
-  modmat,
+  modmat = NULL,
   block_size = 30,
   boot_rows = FALSE,
   nboot = 100,
@@ -18,29 +18,63 @@ multiresponse_bootstrap_lm(
 )
 }
 \arguments{
-\item{form}{Formula for the linear model.}
+\item{form}{Formula for the linear model. Required if modmat is NULL.}
 
 \item{data_env}{Environment containing the data for the linear model.}
 
-\item{conlist}{List of contrasts.}
+\item{conlist}{List of contrasts to be computed for each bootstrap sample.}
 
 \item{vnames}{Vector of variable names.}
 
 \item{fcon}{Contrasts for fixed effects.}
 
-\item{modmat}{Model matrix.}
+\item{modmat}{Optional pre-computed model matrix. If provided, form is ignored.}
 
-\item{block_size}{Size of the blocks for the bootstrap (default: 30).}
+\item{block_size}{Size of the blocks for the bootstrap (default: 30).
+Should be large enough to capture temporal dependencies but small enough
+to allow sufficient randomization.}
 
 \item{boot_rows}{Logical flag indicating whether to bootstrap rows (default: FALSE).}
 
 \item{nboot}{Number of bootstrap iterations (default: 100).}
 
-\item{event_indices}{Indices of events.}
+\item{event_indices}{Indices of events for computing beta covariances.}
 }
 \value{
-A list containing the original fitted model and bootstrap results.
+A list containing:
+\itemize{
+\item original: The fitted original model with contrasts
+\item con_cov: Covariance matrices for contrasts (if contrasts provided)
+\item beta_cov: Covariance matrices for beta estimates
+\item nboot: Number of bootstrap iterations performed
+\item bootstrap: Logical indicating this is a bootstrap result
+}
 }
 \description{
-This function performs multiresponse bootstrap for a linear model.
+Performs block bootstrap resampling for multiresponse linear models, particularly
+useful for fMRI time series data where temporal dependencies exist. The function
+implements a block bootstrap approach to maintain the temporal correlation structure
+within the data.
+}
+\details{
+The function performs the following steps:
+\enumerate{
+\item Fits the original linear model
+\item Implements block bootstrap resampling of residuals
+\item Reconstructs response variables using fitted values and resampled residuals
+\item Computes contrasts for each bootstrap sample
+}
+
+The block bootstrap approach helps preserve temporal dependencies in the data by
+resampling blocks of consecutive observations rather than individual observations.
+}
+\examples{
+\dontrun{
+# Simple example with synthetic data
+X <- model.matrix(~ x1 + x2, data = data.frame(x1 = rnorm(100), x2 = rnorm(100)))
+y <- matrix(rnorm(100 * 3), 100, 3)  # 3 response variables
+result <- multiresponse_bootstrap_lm(modmat = X, data_env = list(.y = y),
+                                    nboot = 100, block_size = 20)
+}
+
 }

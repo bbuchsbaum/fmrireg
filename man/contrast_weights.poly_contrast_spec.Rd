@@ -11,11 +11,11 @@
 
 \item{term}{A term object.}
 
-\item{...}{Additional arguments (currently not used).}
+\item{...}{Additional arguments (currently unused).}
 }
 \value{
-A list containing the polynomial contrast weights and related information.
+A list containing the term, name, weights, condition names, and contrast specification.
 }
 \description{
-Compute the contrast weights for a polynomial contrast specification.
+Compute the contrast weights for a poly_contrast_spec object.
 }

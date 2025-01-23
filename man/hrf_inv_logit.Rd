@@ -26,7 +26,7 @@ A vector of the difference of two Inverse Logit HRF values.
 A hemodynamic response function using the difference of two Inverse Logit functions.
 }
 \examples{
-hrf_inv_logit_basis <- hrf_diff_inv_logit(seq(0, 20, by = 0.5), mu1 = 6, s1 = 1, mu2 = 16, s2 = 1)
+hrf_inv_logit_basis <- hrf_inv_logit(seq(0, 20, by = 0.5), mu1 = 6, s1 = 1, mu2 = 16, s2 = 1)
 }
 \seealso{
 Other hrf_functions: 

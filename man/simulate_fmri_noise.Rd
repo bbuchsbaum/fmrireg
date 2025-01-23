@@ -2,25 +2,54 @@
 % Please edit documentation in R/simulate.R
 \name{simulate_fmri_noise}
 \alias{simulate_fmri_noise}
-\title{Simulate fMRI Noise using ARMA Model}
+\title{Simulate fMRI Noise}
 \usage{
-simulate_fmri_noise(n, ar = c(0.3), ma = c(0.5), sd = 1, seed = NULL)
+simulate_fmri_noise(
+  n,
+  TR = 1.5,
+  ar = c(0.3),
+  ma = c(0.5),
+  sd = 1,
+  drift_freq = 1/128,
+  drift_amplitude = 2,
+  physio = TRUE,
+  seed = NULL
+)
 }
 \arguments{
-\item{n}{The number of time points in the fMRI time series.}
+\item{n}{The number of time points in the fMRI time series}
 
-\item{ar}{A numeric vector containing autoregressive (AR) coefficients (default is c(0.3)).}
+\item{TR}{The repetition time in seconds (default is 1.5)}
 
-\item{ma}{A numeric vector containing moving average (MA) coefficients (default is c(0.5)).}
+\item{ar}{A numeric vector containing autoregressive (AR) coefficients (default is c(0.3))}
 
-\item{sd}{The standard deviation of the white noise component (default is 1).}
+\item{ma}{A numeric vector containing moving average (MA) coefficients (default is c(0.5))}
 
-\item{seed}{An optional seed for reproducibility (default is NULL).}
+\item{sd}{The standard deviation of the white noise component (default is 1)}
+
+\item{drift_freq}{Frequency of the low-frequency drift in Hz (default is 1/128)}
+
+\item{drift_amplitude}{Amplitude of the low-frequency drift (default is 2)}
+
+\item{physio}{Logical; whether to add simulated physiological noise (default is TRUE)}
+
+\item{seed}{An optional seed for reproducibility (default is NULL)}
 }
 \value{
-A numeric vector containing the simulated fMRI noise.
+A numeric vector containing the simulated fMRI noise
 }
 \description{
-This function simulates fMRI noise using an autoregressive moving average (ARMA) model.
+This function simulates realistic fMRI noise by combining:
+\itemize{
+\item Temporal autocorrelation using an ARMA model
+\item Low-frequency drift
+\item Physiological noise (cardiac and respiratory)
 }
-\keyword{internal}
+}
+\examples{
+# Simulate noise for a 5-minute scan with TR=2s
+n_timepoints <- 150  # 5 minutes * 60 seconds / 2s TR
+noise <- simulate_fmri_noise(n_timepoints, TR = 2)
+plot(noise, type = "l", xlab = "Time Point", ylab = "Signal")
+
+}

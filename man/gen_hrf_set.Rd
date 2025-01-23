@@ -31,7 +31,6 @@ hset <- gen_hrf_set(hrf1, hrf2, hrf3)
 \seealso{
 Other gen_hrf: 
 \code{\link{gen_hrf_blocked}()},
-\code{\link{gen_hrf_lagged}()},
-\code{\link{gen_hrf_library}()}
+\code{\link{gen_hrf_lagged}()}
 }
 \concept{gen_hrf}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/basis.R
 \name{Poly}
 \alias{Poly}
-\title{Polynomila basis}
+\title{Polynomial basis}
 \usage{
 Poly(x, degree)
 }

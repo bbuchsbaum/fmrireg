@@ -7,7 +7,7 @@
 convolve_design(hrf, dmat, globons, durations, summate = TRUE)
 }
 \arguments{
-\item{hrf}{A numeric vector representing the hemodynamic response function}
+\item{hrf}{A function representing the hemodynamic response function}
 
 \item{dmat}{A design matrix with columns representing different experimental conditions}
 

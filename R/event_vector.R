@@ -1,4 +1,3 @@
-
 #' @keywords internal
 #' @noRd
 .sanitizeName <- function(name) {
@@ -62,7 +61,7 @@ is.strictly.increasing <- function(vec) {
 #' @param blockids A vector of block numbers associated with each onset.
 #' @param durations A vector of event durations (default is 1).
 #' @param subset A logical vector indicating the subset of onsets to retain (default is NULL).
-#' 
+#'
 #' @return A list containing the following components:
 #'   - varname: A character string representing the variable names, concatenated with colons.
 #'   - events: A list of event variables.
@@ -71,13 +70,13 @@ is.strictly.increasing <- function(vec) {
 #'   - onsets: A vector of onset times.
 #'   - blockids: A vector of block numbers.
 #'   - durations: A vector of event durations.
-#' 
+#'
 #' @examples 
 #' x1 <- factor(rep(letters[1:3], 10))
 #' x2 <- factor(rep(1:3, each=10))
 #' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), 
 #'                     blockids=rep(1,30))
-#' 
+#'
 #' x1 <- rnorm(30)
 #' x2 <- factor(rep(1:3, each=10))
 #' eterm <- event_term(list(x1=x1,x2=x2), onsets=seq(1,100,length.out=30), 
@@ -85,6 +84,9 @@ is.strictly.increasing <- function(vec) {
 #'
 #' @export
 event_term <- function(evlist, onsets, blockids, durations = 1, subset=NULL) {
+  if (is.factor(blockids)) {
+    blockids <- as.numeric(as.character(blockids))
+  }
   
   assert_that(is.increasing(blockids), msg="'blockids' must consist of strictly increasing integers")
             
@@ -199,9 +201,10 @@ EV <- function(vals, name, onsets, blockids, durations = 1, subset=rep(TRUE,leng
 #' @return An object representing the categorical event sequence, with class "event_factor" and "event_seq"
 #'
 #' @examples 
-#' efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), "abc", onsets=seq(1, 100, length.out=6))
+#' efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), 
+#' "abc", onsets=seq(1, 100, length.out=6))
 #'
-#' @seealso \code{\link{EV}}, \code{\link{event_model}}
+#' @seealso \code{\link{event_model}}
 #' @export 
 event_factor <- function(fac, name, onsets, blockids=rep(1,length(fac)), durations=rep(0, length(fac))) {
   if (!is.factor(fac)) {
@@ -232,13 +235,20 @@ event_factor <- function(fac, name, onsets, blockids=rep(1,length(fac)), duratio
 #' @examples 
 #' evar <- event_variable(c(1, 2, 3, 4, 5, 6), "example_var", onsets=seq(1, 100, length.out=6))
 #'
-#' @seealso \code{\link{EV}}, \code{\link{event_model}}
+#' @seealso \code{\link{event_factor}}
 #' @export
-event_variable <- function(vec, name, onsets, blockids=1, durations=NULL) {
+event_variable <- function(vec, name, onsets, blockids=1, durations=0) {
   stopifnot(is.vector(vec))
   
   if (is.factor(vec)) {
     stop("cannot create an event_variable from a factor, use 'event_factor'.")
+  }
+  
+  if (length(durations) == 1) {
+    durations <- rep(durations, length(onsets))
+  }
+  if (length(blockids) == 1) {
+    blockids <- rep(blockids, length(onsets))
   }
   
   ret <- .checkEVArgs(name, vec, onsets, blockids, durations)
@@ -304,7 +314,7 @@ event_matrix <- function(mat, name, onsets, blockids=rep(1, ncol(mat)), duration
 #' @import assertthat
 #' @examples 
 #' # Create a ParametricBasis object
-#' basis <- ParametricBasis("Gamma", shape = 6, rate = 0.9)
+#' basis <- BSpline(1:21, 3)
 #' onsets <- seq(0, 20, length.out = 21)
 #' blockids <- rep(1, length(onsets))
 #'
@@ -312,11 +322,15 @@ event_matrix <- function(mat, name, onsets, blockids=rep(1, ncol(mat)), duration
 #' ebasis <- event_basis(basis, onsets, blockids)
 #'
 #' @export
-event_basis <- function(basis, onsets, blockids=1, durations=NULL, subset=rep(TRUE, length(onsets))) {
+event_basis <- function(basis, onsets, blockids=1, durations=0, subset=rep(TRUE, length(onsets))) {
   assertthat::assert_that(inherits(basis, "ParametricBasis"))
   
   if (any(!subset)) {
     basis <- sub_basis(basis, subset)
+  }
+  
+  if (length(durations) == 1) {
+    durations <- rep(durations, length(onsets))
   }
 
   ret <- .checkEVArgs(basis$name, basis$y[,1], onsets[subset], blockids[subset], durations[subset])
@@ -392,7 +406,7 @@ cells.event_factor <- function(x, drop.empty=TRUE,...) {
 #'
 #' @param x An event_term object.
 #' @param drop.empty Logical. If TRUE, empty cells will be removed.
-#' @param ... Additional arguments to be passed to the function.
+#' @param ... Additional arguments passed to the function.
 #'
 #' @return A tibble containing the cells of the event_term object, with an
 #'   additional "count" attribute.
@@ -441,7 +455,10 @@ cells.event_term <- function(x, drop.empty=TRUE,...) {
   evtab <- event_table(x)
   
   evset <- if (nbasis(x) > 1 & !exclude_basis) {
-    evlist <- c(list(factor(paste("basis", 1:nbasis(x), sep = ""))), cells(x$evterm))
+    ncond <- nbasis(x)
+    zstr <- paste0(rep("0", ceiling(log10(ncond+1e-6))), collapse="")
+    
+    evlist <- c(list(factor(paste("basis", zstr, 1:nbasis(x), sep = ""))), cells(x$evterm))
     names(evlist) <- c("basis", parent_terms(x$evterm))
     evlist <- lapply(evlist, levels)
     ret <- expand.grid(evlist, stringsAsFactors = TRUE)
@@ -487,32 +504,35 @@ cells.convolved_term <- function(x, exclude_basis=FALSE,...) {
 }
 
 #' @export
-#' @rdname conditions
 conditions.fmri_term <- function(x, ...) {
   colnames(design_matrix(x))
 }
 
 #' @export
-#' @rdname conditions
+#' @family conditions
 conditions.convolved_term <- function(x,...) {
   colnames(design_matrix(x))
 }
 
 #' @export
-#' @rdname conditions
+#' @family conditions
 conditions.afni_hrf_convolved_term <- function(x,...) {
   conditions(x$evterm)
 }
 
 #' @export
-#' @rdname conditions
+#' @family conditions
 conditions.afni_trialwise_convolved_term <- function(x,...) {
   conditions(x$evterm)
 }
 
-
+#' extract conditions of an \code{event_term}
+#'
 #' @export
-#' @rdname conditions
+#' @inheritParams conditions
+#' @param drop.empty whether to remove conditions with no cells (default is TRUE)
+#' @param ... extra args
+#' @family conditions
 conditions.event_term <- function(x, drop.empty=TRUE, ...) {
   
   .cells <- cells(x, drop.empty=drop.empty)
@@ -537,29 +557,24 @@ conditions.event_term <- function(x, drop.empty=TRUE, ...) {
 
 ## TODO is columns ever used? do we need this function
 
-#' @export
-#' @rdname columns
+
+#' @noRd
 columns.event_term <- function(x) as.vector(unlist(lapply(x$events, columns)))
 
-#' @export
-#' @rdname columns
+#' @noRd
 columns.event_seq <- function(x) x$varname
 
-#' @export
-#' @rdname columns
+#' @noRd
 columns.event_matrix <- function(x) paste0(.sanitizeName(x$varname), ".", levels(x))
 
-#' @export
-#' @rdname columns
+#' @noRd
 columns.event_set <- function(x) paste0(.sanitizeName(x$varname), ".", levels(x))
 
-#' @export
-#' @rdname columns
+#' @noRd
 columns.event_basis <- function(x) columns(x$basis)
 
 
-#' @export
-#' @rdname parent_terms
+#' @noRd
 parent_terms.event_term <- function(x) unlist(lapply(x$events, function(ev) ev$varname))
 
 
@@ -735,7 +750,7 @@ split_onsets.event_term <- function(x, sframe, global=FALSE,blocksplit=FALSE, ..
 #' This function convolves a given hemodynamic response function (HRF) with the design matrix of an fMRI study.
 #' It is useful for modeling the expected BOLD signal in response to experimental conditions.
 #'
-#' @param hrf A numeric vector representing the hemodynamic response function
+#' @param hrf A function representing the hemodynamic response function
 #' @param dmat A design matrix with columns representing different experimental conditions
 #' @param globons A numeric vector of global onsets for each event
 #' @param durations A numeric vector of event durations
@@ -772,6 +787,25 @@ convolve_design <- function(hrf, dmat, globons, durations, summate=TRUE) {
   
 }
 
+
+#' @export
+regressors.event_term <- function(x, hrf, sampling_frame, summate=FALSE, drop.empty=TRUE) {
+  globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
+  
+  durations <- x$durations
+  blockids <- x$blockids
+  
+  nimages <- sum(sampling_frame$blocklens)
+  
+  cnames <- conditions(x)
+  dmat <- design_matrix(x, drop.empty)
+  ncond <- ncol(dmat)
+  
+  reg <- convolve_design(hrf, dmat, globons, durations, summate=summate)
+  names(reg) <- colnames(dmat)
+  reg
+}
+
 #' Convolve an event-related design matrix with an HRF.
 #'
 #' This function takes an event-related design matrix and convolves it with
@@ -780,7 +814,7 @@ convolve_design <- function(hrf, dmat, globons, durations, summate=TRUE) {
 #' flexibility and customization.
 #'
 #' @importFrom tibble as_tibble
-#' @importFrom magrittr %>%
+#' @importFrom dplyr %>%
 #' @importFrom dplyr group_by select do ungroup
 #' @autoglobal
 #' @export
@@ -818,15 +852,11 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty=TRUE,
       reg <- convolve_design(hrf, d, .$.globons, .$.durations, summate=summate)
       sam <- samples(sampling_frame, blockids=as.integer(as.character(.$.blockids[1])), global=TRUE)
       
-      ## TODO could bee parallelized
+      ## TODO could be parallelized
       ## ret <- do.call(rbind, furrr::future_map(reg, function(r) evaluate(r, sam))) 
       ret <- do.call(cbind, lapply(seq_along(reg), function(ri) {
         vname <- paste0("v", ri)
         evaluate(reg[[ri]], sam, precision=precision) 
-        
-        #%>% select({{vname}} := value)
-        #names(tmp) <- paste0("v", ri)
-        #suppressMessages(as_tibble(tmp))
       })) 
       
       ret <- suppressMessages(tibble::as_tibble(ret, .name_repair="minimal"))
@@ -862,8 +892,7 @@ Fcontrasts.event_term <- function(x,...) {
   if (any(cellcount) == 0) {
     stop("currently cannot compute Fcontrasts for non-orthogonal design.")
   }
-  ##browser()
-  ## TODO check for no empty cells, otherwise everything fails
+  
   which_cat <- which(sapply(x$events, function(obj) is_categorical(obj)))
   assert_that(length(which_cat) > 0, msg="Fcontrasts cannot be computed for terms with no categorical variables")
   ## factors comprising this term
@@ -958,7 +987,7 @@ design_matrix.event_term <- function(x, drop.empty=TRUE,...) {
   counts <- attr(cells(x, drop=FALSE), "count")
   
   #print(ncol(els))
-  #browser()
+
   mat <- if (ncol(els) == 1 && is.factor(els[,1]) && length(levels(els[,1])) == 1) {
     ## a 1 level term
     cbind(rep(1, NROW(els))) 
@@ -1034,5 +1063,134 @@ print.afni_hrf_convolved_term <- function(x,...) {
 }
 
 
+#' @export
+print.event_factor <- function(x, ...) {
+  # Header
+  cat("\n═══ Event Factor ═══\n")
+  
+  # Basic information
+  cat("\n📋 Basic Info:\n")
+  cat(crayon::blue("  • Name:"), x$varname, "\n")
+  cat(crayon::blue("  • Events:"), length(x$value), "\n")
+  cat(crayon::blue("  • Levels:"), paste(levels(x$value), collapse=", "), "\n")
+  
+  # Timing information
+  cat("\n⏱️  Timing:\n")
+  cat(crayon::blue("  • Duration range:"), 
+      sprintf("%.2f - %.2f seconds", min(x$durations), max(x$durations)), "\n")
+  cat(crayon::blue("  • Onset range:"), 
+      sprintf("%.2f - %.2f seconds", min(x$onsets), max(x$onsets)), "\n")
+  
+  # Block information
+  cat("\n🔳 Blocks:\n")
+  blocks <- table(x$blockids)
+  cat(crayon::blue("  • Number of blocks:"), length(blocks), "\n")
+  cat(crayon::blue("  • Events per block:"), 
+      paste(blocks, collapse=", "), "\n")
+  
+  cat("\n")
+}
 
+#' @export
+print.event_variable <- function(x, ...) {
+  # Header
+  cat("\n═══ Event Variable ═══\n")
+  
+  # Basic information
+  cat("\n📊 Variable Info:\n")
+  cat(crayon::blue("  • Name:"), x$varname, "\n")
+  cat(crayon::blue("  • Events:"), length(x$value), "\n")
+  cat(crayon::blue("  • Range:"), 
+      sprintf("%.2f - %.2f", min(x$value), max(x$value)), "\n")
+  
+  # Timing information
+  cat("\n⏱️  Timing:\n")
+  cat(crayon::blue("  • Duration range:"), 
+      sprintf("%.2f - %.2f seconds", min(x$durations), max(x$durations)), "\n")
+  cat(crayon::blue("  • Onset range:"), 
+      sprintf("%.2f - %.2f seconds", min(x$onsets), max(x$onsets)), "\n")
+  
+  # Block information
+  cat("\n🔳 Blocks:\n")
+  blocks <- table(x$blockids)
+  cat(crayon::blue("  • Number of blocks:"), length(blocks), "\n")
+  cat(crayon::blue("  • Events per block:"), 
+      paste(blocks, collapse=", "), "\n")
+  
+  cat("\n")
+}
 
+#' @export
+print.event_matrix <- function(x, ...) {
+  # Header
+  cat("\n═══ Event Matrix ═══\n")
+  
+  # Basic information
+  cat("\n📊 Matrix Info:\n")
+  cat(crayon::blue("  • Name:"), x$varname, "\n")
+  cat(crayon::blue("  • Dimensions:"), 
+      paste(dim(x$value), collapse=" × "), "\n")
+  cat(crayon::blue("  • Column names:"), 
+      paste(colnames(x$value), collapse=", "), "\n")
+  
+  # Timing information
+  cat("\n⏱️  Timing:\n")
+  cat(crayon::blue("  • Duration range:"), 
+      sprintf("%.2f - %.2f seconds", min(x$durations), max(x$durations)), "\n")
+  cat(crayon::blue("  • Onset range:"), 
+      sprintf("%.2f - %.2f seconds", min(x$onsets), max(x$onsets)), "\n")
+  
+  # Block information
+  cat("\n🔳 Blocks:\n")
+  blocks <- table(x$blockids)
+  cat(crayon::blue("  • Number of blocks:"), length(blocks), "\n")
+  cat(crayon::blue("  • Events per block:"), 
+      paste(blocks, collapse=", "), "\n")
+  
+  # Value ranges
+  cat("\n📈 Values:\n")
+  ranges <- apply(x$value, 2, range)
+  cat(crayon::blue("  • Ranges per column:\n"))
+  for(i in 1:ncol(ranges)) {
+    cat(sprintf("    %s: %.2f - %.2f\n", 
+                colnames(x$value)[i], ranges[1,i], ranges[2,i]))
+  }
+  
+  cat("\n")
+}
+
+#' @export
+print.event_term <- function(x, ...) {
+  # Header
+  cat("\n═══ Event Term ═══\n")
+  
+  # Basic information
+  cat("\n📋 Term Info:\n")
+  cat(crayon::blue("  • Name:"), x$varname, "\n")
+  cat(crayon::blue("  • Number of events:"), nrow(x$event_table), "\n")
+  cat(crayon::blue("  • Variables:"), 
+      paste(names(x$events), collapse=", "), "\n")
+  
+  # Event types
+  cat("\n📊 Variable Types:\n")
+  for(name in names(x$events)) {
+    type <- class(x$events[[name]])[1]
+    cat(sprintf("  • %s: %s\n", name, type))
+  }
+  
+  # Timing information
+  cat("\n⏱️  Timing:\n")
+  cat(crayon::blue("  • Duration range:"), 
+      sprintf("%.2f - %.2f seconds", min(x$durations), max(x$durations)), "\n")
+  cat(crayon::blue("  • Onset range:"), 
+      sprintf("%.2f - %.2f seconds", min(x$onsets), max(x$onsets)), "\n")
+  
+  # Block information
+  cat("\n🔳 Blocks:\n")
+  blocks <- table(x$blockids)
+  cat(crayon::blue("  • Number of blocks:"), length(blocks), "\n")
+  cat(crayon::blue("  • Events per block:"), 
+      paste(blocks, collapse=", "), "\n")
+  
+  cat("\n")
+}

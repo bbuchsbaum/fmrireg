@@ -33,10 +33,11 @@ test_that("can run a beta estimation", {
   facedes$constant <- factor(rep(1, nrow(facedes)))
   
 
-  facedes <- facedes %>% filter(run==1)
+  facedes <- facedes %>% dplyr::filter(run==1)
   
   dset <- gen_dset(5, facedes)
   
+  basis <- gen_hrf(HRF_SPMG3)
   
   ret1 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
                        method="pls", ncomp=1)
@@ -44,18 +45,46 @@ test_that("can run a beta estimation", {
                          method="pls", ncomp=3)
   ret3 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
                         method="mixed")
-  #ret4 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
-  #                      method="pls_searchlight", niter=3)
   
-  ret5 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
+  ret4 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
                          method="ols")
+  ret5 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
+                         method="lss")
+  ret6 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
+                         method="lss_cpp")
+  
+  ret7 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
+                         method="lss_naive")
+  
+  hrf_basis <- basis(0:25)
+  hrf_reference <- HRF_SPMG1(0:25)
+  ret8 <- estimate_betas(dset, ran = onset ~ trialwise(basis=basis), block = ~ run, 
+                         method="r1", hrf_basis=hrf_basis, hrf_ref=hrf_reference)
+  
+  ret8 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
+                         method="lowrank_hrf")
+  
+
+  
  
   expect_true(!is.null(ret1))
   expect_true(!is.null(ret2))
   expect_true(!is.null(ret3))
-  #expect_true(!is.null(ret4))
+  expect_true(!is.null(ret4))
   expect_true(!is.null(ret5))
+  expect_true(!is.null(ret6))
+  expect_true(!is.null(ret7))
+  expect_true(!is.null(ret8))
+  
+})
 
+test_that("can accurate estimate an hrf shape with appropriate methods", {
+  amps <- runif(20)*2
+  hrf <- gen_hrf(hrf_half_cosine,h1=2, h2=7, h4=11 )
+  ret <- sim_ts(ncond=1, hrf,nreps=20, amps=amps,isi=16)
+  
+  etab <- data.frame(onset=ret$onset, fac=rep("a", length(ret$onset)), run=factor(rep(1, length(ret$onset))))
+  matrix_dataset(as.matrix(ret$mat[,2]), TR=1.5, run_length=143, event_table=etab)
   
 })
 

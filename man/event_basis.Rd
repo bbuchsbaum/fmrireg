@@ -8,7 +8,7 @@ event_basis(
   basis,
   onsets,
   blockids = 1,
-  durations = NULL,
+  durations = 0,
   subset = rep(TRUE, length(onsets))
 )
 }
@@ -32,7 +32,7 @@ It is useful for creating event sequences based on basis functions for fMRI data
 }
 \examples{
 # Create a ParametricBasis object
-basis <- ParametricBasis("Gamma", shape = 6, rate = 0.9)
+basis <- BSpline(1:21, 3)
 onsets <- seq(0, 20, length.out = 21)
 blockids <- rep(1, length(onsets))
 

@@ -14,10 +14,6 @@ latent_dataset(lvec, TR, run_length, event_table = data.frame())
 \item{run_length}{A numeric vector specifying the length of each run in the dataset.}
 
 \item{event_table}{An optional data frame containing event information. Default is an empty data frame.}
-
-\item{base_path}{An optional base path for the dataset. Default is "." (current directory).}
-
-\item{censor}{An optional numeric vector specifying which time points to censor. Default is NULL.}
 }
 \value{
 A latent dataset object of class c("latent_dataset", "fmri_dataset", "list").

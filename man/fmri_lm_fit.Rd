@@ -2,39 +2,39 @@
 % Please edit documentation in R/fmrilm.R
 \name{fmri_lm_fit}
 \alias{fmri_lm_fit}
-\title{Fit an fMRI linear regression model with a specified fitting strategy}
+\title{Fit an fMRI Linear Regression Model with a Specified Fitting Strategy}
 \usage{
 fmri_lm_fit(
   fmrimod,
   dataset,
-  strategy = c("chunkwise", "runwise"),
+  strategy = c("runwise", "chunkwise"),
   robust = FALSE,
   nchunks = 10,
   ...
 )
 }
 \arguments{
-\item{fmrimod}{An object of type \code{fmri_model}.}
+\item{fmrimod}{An \code{fmri_model} object.}
 
-\item{dataset}{An object derived from \code{fmri_dataset} containing the time-series data.}
+\item{dataset}{An \code{fmri_dataset} object containing the time-series data.}
 
-\item{strategy}{The data splitting strategy, either "chunkwise" or "runwise". Default is "chunkwise".}
+\item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
 
-\item{robust}{Whether to use robust fitting. Default is FALSE.}
+\item{robust}{Logical. Whether to use robust fitting. Default is \code{FALSE}.}
 
-\item{nchunks}{Number of data chunks when strategy is \code{chunkwise}. Default is 10.}
+\item{nchunks}{Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.}
 
-\item{...}{Extra arguments.}
+\item{...}{Additional arguments.}
 }
 \value{
 A fitted fMRI linear regression model with the specified fitting strategy.
 }
 \description{
-This function fits an fMRI linear regression model using the specified fmri_model object, dataset,
-and data splitting strategy (either "runwise" or "chunkwise"). It is primarily an internal function
-used by the fmri_lm function.
+This function fits an fMRI linear regression model using the specified \code{fmri_model} object, dataset,
+and data splitting strategy (either \code{"runwise"} or \code{"chunkwise"}). It is primarily an internal function
+used by the \code{fmri_lm} function.
 }
 \seealso{
-fmri_lm, fmri_model, fmri_dataset
+\code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{fmri_dataset}}
 }
 \keyword{internal}

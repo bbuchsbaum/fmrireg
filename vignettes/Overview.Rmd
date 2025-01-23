@@ -18,7 +18,7 @@ However, if we push all that complexity to the side for a moment, standard "univ
 
 ## The building blocks of an fMRI regression model
 
-The basic, or lowest level, unit of an fMRI regression model is the **hemodynamic reesponse function** (HRF). The HRF is a model of the mapping, or transfer function, between an external stimulus (or neural event) and a BOLD signal. A commonly used HRF is the so-called SPM canonical HRF:
+The basic, or lowest level, unit of an fMRI regression model is the **hemodynamic response function** (HRF). The HRF is a model of the mapping, or transfer function, between an external stimulus (or neural event) and a BOLD signal. A commonly used HRF is the so-called SPM canonical HRF:
 
 
 ```{r, echo=FALSE,results='hide', message=FALSE, warning=FALSE}

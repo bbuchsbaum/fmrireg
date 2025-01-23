@@ -9,3 +9,5 @@
 ^test_data
 ^doc$
 ^Meta$
+^\.github$
+^data-raw$

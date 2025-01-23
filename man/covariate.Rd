@@ -16,12 +16,58 @@ covariate(..., data, id = NULL, prefix = NULL)
 \item{prefix}{An optional prefix to add to the covariate names.}
 }
 \value{
-A list containing information about the covariate term.
+A list containing information about the covariate term with class
+'covariatespec' that can be used within an event_model.
 }
 \description{
-Create a covariate term that is not convolved with a hemodynamic response function (HRF).
+Creates a covariate term that is added directly to the fMRI model without being convolved
+with a hemodynamic response function (HRF). This is useful for including nuisance variables,
+continuous covariates, or any other regressors that should not undergo HRF convolution.
+}
+\details{
+In fMRI analysis, some predictors should not be convolved with the HRF because they
+represent:
+\itemize{
+\item Continuous physiological measurements (e.g., heart rate, respiration)
+\item Motion parameters from head movement correction
+\item Scanner drift or other technical artifacts
+\item Behavioral measures that directly correlate with BOLD signal
+\item Global signal or other nuisance variables
+}
+
+The covariate term can be combined with standard HRF-convolved event terms in the
+same model. For example:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{model <- event_model(signal ~ hrf(stimulus) + covariate(motion_x, motion_y), 
+                    data = data)
+}\if{html}{\out{</div>}}
 }
 \examples{
-df1 <- data.frame(x=rnorm(100), y=rnorm(100))
-cv <- covariate(x, y, data=df1)
+# Add motion parameters as covariates
+motion_data <- data.frame(
+  x = rnorm(100),  # x translation
+  y = rnorm(100)   # y translation
+)
+cv <- covariate(x, y, data = motion_data, prefix = "motion")
+
+# Combine with event model
+sframe <- sampling_frame(blocklens = c(100), TR = 2)
+event_data <- data.frame(
+  stimulus = factor(rep(c("A", "B"), 50)),
+  onset = seq(0, 198, by = 4)
+)
+
+# Full model with both HRF-convolved events and non-convolved covariates
+model <- event_model(
+  signal ~ hrf(stimulus) + covariate(x, y),
+  data = event_data,
+  sampling_frame = sframe
+)
+
+}
+\seealso{
+\itemize{
+\item \code{\link[=event_model]{event_model()}} for creating complete fMRI models
+\item \code{\link[=hrf]{hrf()}} for creating HRF-convolved event terms
+}
 }

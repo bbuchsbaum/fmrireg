@@ -18,7 +18,7 @@ cells(x, ...)
 \arguments{
 \item{x}{An event_term object.}
 
-\item{...}{Additional arguments to be passed to the function.}
+\item{...}{Additional arguments passed to the function.}
 
 \item{drop.empty}{Logical. If TRUE, empty cells will be removed.}
 }

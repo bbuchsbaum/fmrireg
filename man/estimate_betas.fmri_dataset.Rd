@@ -2,92 +2,92 @@
 % Please edit documentation in R/fmri_betas.R
 \name{estimate_betas.fmri_dataset}
 \alias{estimate_betas.fmri_dataset}
-\title{#' @export
-estimate_betas.fmri_mem_dataset <- function(x,fixed=NULL, ran, block,
-method=c("mixed", "pls", "pls_searchlight", "pls_global", "ols"),
-basemod=NULL,
-radius=8, niter=8, ncomp=4, lambda=.01,...) {
-
-estimate_betas.fmri_dataset(x,fixed,ran,block, method, basemod, radius, niter,ncomp, lambda,...)
-}
-Estimate betas for an fMRI dataset}
+\title{Estimate betas using the Rank-1 GLM methods (R1 and R1-GLMS with optimizations)}
 \usage{
 \method{estimate_betas}{fmri_dataset}(
   x,
   fixed = NULL,
   ran,
   block,
-  method = c("mixed", "pls", "pls_searchlight", "pls_global", "ols"),
+  method = c("mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "r1", "pls",
+    "pls_searchlight", "pls_global", "ols", "lowrank_hrf"),
   basemod = NULL,
-  radius = 8,
-  niter = 8,
-  ncomp = 4,
-  lambda = 0.01,
+  hrf_basis = NULL,
+  hrf_ref = NULL,
+  maxit = 100,
   ...
 )
 }
 \arguments{
-\item{x}{An object of class \code{fmri_dataset} representing the fMRI dataset}
+\item{x}{An object of class \code{fmri_dataset} representing the fMRI dataset.}
 
-\item{fixed}{A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials)}
+\item{fixed}{A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials).}
 
-\item{ran}{A formula specifying the random (trialwise) regressors that model single trial effects}
+\item{ran}{A formula specifying the random (trialwise) regressors that model single trial effects.}
 
-\item{block}{A formula specifying the block factor}
+\item{block}{A formula specifying the block factor.}
 
-\item{method}{The regression method for estimating trialwise betas; one of "mixed", "pls", "pls_searchlight", "pls_global", or "ols" (default: "mixed")}
+\item{method}{The regression method for estimating trialwise betas; use \code{"r1"} for the Rank-1 GLM method or \code{"r1_glms"} for the Rank-1 GLM with Mumford's approach.}
 
-\item{basemod}{A \code{baseline_model} instance to regress out of data before beta estimation (default: NULL)}
+\item{basemod}{A \code{baseline_model} instance to regress out of data before beta estimation (default: NULL).}
 
-\item{radius}{The radius in mm for the \code{pls_searchlight} approach (default: 8)}
+\item{hrf_basis}{A matrix of basis functions for the HRF (default: NULL).}
 
-\item{niter}{Number of searchlight iterations for the "pls_searchlight" method (default: 8)}
+\item{hrf_ref}{A reference HRF vector for initializing and constraining the HRF estimation (default: NULL).}
 
-\item{ncomp}{Number of PLS components for the "pls", "pls_searchlight", and "pls_global" methods (default: 4)}
+\item{maxit}{Maximum number of iterations for the optimization (default: 100).}
 
-\item{lambda}{Lambda parameter (not currently used; default: 0.01)}
-
-\item{...}{Additional arguments passed to the estimation method}
+\item{...}{Additional arguments passed to the estimation method.}
 }
 \value{
 A list of class "fmri_betas" containing the following components:
 \itemize{
-\item betas_fixed: NeuroVec object representing the fixed effect betas
-\item betas_ran: NeuroVec object representing the random effect betas
-\item design_ran: Design matrix for random effects
-\item design_fixed: Design matrix for fixed effects
-\item design_base: Design matrix for baseline model
-\item basemod: Baseline model object
-\item fixed_model: Fixed effect model object
-\item ran_model: Random effect model object
+\item betas_fixed: NeuroVec object representing the fixed effect betas.
+\item betas_ran: NeuroVec object representing the random effect betas.
+\item design_ran: Design matrix for random effects.
+\item design_fixed: Design matrix for fixed effects.
+\item design_base: Design matrix for baseline model.
+\item basemod: Baseline model object.
+\item fixed_model: Fixed effect model object.
+\item ran_model: Random effect model object.
+\item estimated_hrf: The estimated HRF vector.
 }
 }
 \description{
-This function estimates betas (regression coefficients) for fixed and random effects
-in an fMRI dataset using various methods.
+This function estimates betas (regression coefficients) and the hemodynamic response function (HRF)
+simultaneously using the Rank-1 GLM (\code{r1}) and Rank-1 GLM with Mumford's separate beta estimation (\code{r1_glms}) methods.
+It includes optimizations to improve computational efficiency.
 }
 \details{
-The \code{method} argument allows for several beta estimation approaches:
+The \code{r1} method uses the Rank-1 GLM approach to jointly estimate the HRF and activation coefficients.
+The \code{r1_glms} method implements the Mumford approach by estimating each beta individually to reduce correlations,
+treating all events as coming from one condition.
+This implementation includes optimizations to improve computational efficiency:
 \itemize{
-\item "mixed": Uses a linear mixed-effects modeling of trialwise random effects as implemented in the \code{rrBLUP} package.
-\item "pls": Uses separate partial least squares for each voxel to estimate trialwise betas.
-\item "pls_searchlight": Estimates PLS solutions over searchlight windows and averages the beta estimates.
-\item "pls_global": Estimates a single multiresponse PLS solution, where the \code{Y} matrix is the full data matrix.
-\item "ols": Ordinary least squares estimate of betas – no regularization.
+\item Precomputing the total sum of all trial regressors to avoid redundant computations.
+\item Precomputing the QR decomposition of design matrices to speed up linear algebra operations.
 }
 }
 \examples{
+\dontrun{
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 facedes$frun <- factor(facedes$run)
 scans <- paste0("rscan0", 1:6, ".nii")
 
-dset <- fmri_dataset(scans=scans,mask="mask.nii",TR=1.5,run_length=rep(436,6),event_table=facedes)
+dset <- fmri_dataset(scans=scans, mask="mask.nii", TR=1.5, run_length=rep(436,6), event_table=facedes)
 fixed = onset ~ hrf(run)
 ran = onset ~ trialwise()
 block = ~ run
 
-betas <- estimate_betas(dset, fixed=fixed, ran=ran, block=block 
+betas <- estimate_betas(dset, fixed=fixed, ran=ran, block=block, method="r1_glms")
+}
+}
+\references{
+Pedregosa, F., et al. (2015). GLM with Rank-1 constraint (R1-GLM): a fast, spatially adaptive model for single trial fMRI data.
+\emph{NeuroImage}, 104, 271–285.
+
+Mumford, J. A., Turner, B. O., Ashby, F. G., & Poldrack, R. A. (2012). Deconvolving BOLD activation in event-related designs for multivoxel pattern classification analyses. \emph{NeuroImage}, 59(3), 2636–2643.
 }
 \seealso{
-\code{\link{fmri_dataset}}, \code{\link{baseline_model}}
+\code{\link{fmri_dataset}}, \code{\link{baseline_model}}, \code{\link{event_model}}
 }

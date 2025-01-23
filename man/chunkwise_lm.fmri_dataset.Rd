@@ -2,7 +2,7 @@
 % Please edit documentation in R/fmrilm.R
 \name{chunkwise_lm.fmri_dataset}
 \alias{chunkwise_lm.fmri_dataset}
-\title{Chunkwise Linear Model for fMRI Dataset}
+\title{Perform Chunkwise Linear Modeling on fMRI Dataset}
 \usage{
 \method{chunkwise_lm}{fmri_dataset}(
   dset,
@@ -15,9 +15,9 @@
 )
 }
 \arguments{
-\item{dset}{An object of class \code{fmri_dataset}.}
+\item{dset}{An \code{fmri_dataset} object.}
 
-\item{model}{The fMRI model used for the analysis.}
+\item{model}{The \code{fmri_model} used for the analysis.}
 
 \item{conlist}{The list of contrasts used in the analysis.}
 
@@ -25,15 +25,15 @@
 
 \item{nchunks}{The number of chunks to divide the dataset into.}
 
-\item{robust}{Whether to use robust linear modeling (default is FALSE).}
+\item{robust}{Logical. Whether to use robust linear modeling (default is \code{FALSE}).}
 
-\item{verbose}{Whether to display progress messages (default is FALSE).}
+\item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
 }
 \value{
 A list containing the unpacked chunkwise results.
 }
 \description{
-This function performs a chunkwise linear model analysis on fMRI dataset,
+This function performs a chunkwise linear model analysis on an fMRI dataset,
 splitting the dataset into chunks and running the linear model on each chunk.
 }
 \keyword{internal}

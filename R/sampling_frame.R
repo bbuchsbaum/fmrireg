@@ -1,6 +1,3 @@
-
-
-
 #' Construct a sampling_frame
 #'
 #' A \code{sampling_frame} describes the block structure and temporal sampling of an fMRI paradigm.
@@ -21,8 +18,23 @@
 #' @return A list with class "sampling_frame" describing the block structure and temporal sampling of an fMRI paradigm.
 #' @export
 sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
-  assert_that(all(TR > 0))
-  assert_that(all(blocklens > 0))
+  # Add comprehensive input validation
+  assert_that(all(TR > 0), msg="TR (repetition time) must be positive")
+  assert_that(all(blocklens > 0), msg="Block lengths must be positive integers")
+  assert_that(precision > 0 && precision < min(TR), 
+              msg="Precision must be positive and less than the minimum TR")
+  assert_that(all(start_time >= 0), 
+              msg="Start time must be non-negative")
+  
+  # Add warnings for potential issues
+  if (length(blocklens) > 50) {
+    warning("There are more than 50 blocks in sampling_frame")
+  }
+  
+  total_samples <- sum(blocklens)
+  if (total_samples > 1e6) {
+    warning("Large number of samples (>1M) may impact performance")
+  }
   
   if (length(TR) == 1) {
     TR <- rep(TR, length(blocklens))
@@ -64,7 +76,7 @@ sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
 #'
 #' @return A numeric vector of sample times extracted from the specified \code{sampling_frame}.
 #' @export
-samples.sampling_frame <- function(x, blockids=NULL, global=FALSE, ...) {
+samples.sampling_frame <- memoise::memoise(function(x, blockids=NULL, global=FALSE, ...) {
   if (is.null(blockids)) {
     blockids <- seq(1, length(x$blocklens))
   }
@@ -84,8 +96,7 @@ samples.sampling_frame <- function(x, blockids=NULL, global=FALSE, ...) {
       seq(start, by=x$TR[b], length.out=x$blocklens[b])
     }))
   }
-}
-
+})
 
 #' Compute global onsets from a sampling_frame
 #'
@@ -104,7 +115,8 @@ samples.sampling_frame <- function(x, blockids=NULL, global=FALSE, ...) {
 #'
 #' @return A numeric vector of global onsets computed from the specified \code{sampling_frame}.
 #' @export
-global_onsets.sampling_frame <- function(x, onsets, blockids,...) {
+#' @family global_onsets
+global_onsets.sampling_frame <- memoise::memoise(function(x, onsets, blockids,...) {
   
   ids <- rep(1:length(unique(blockids)), table(blockids))
   
@@ -122,7 +134,7 @@ global_onsets.sampling_frame <- function(x, onsets, blockids,...) {
     }
     
   })
-}  
+})  
 
 #' @export
 split_by_block.sampling_frame <- function(x, vals, ...) {
@@ -140,10 +152,25 @@ blocklens.sampling_frame <- function(x,...) {
 }
 
 #' @export
-print.sampling_frame <- function(x,...) {
-  cat("sampling_frame: \n")
-  cat("  number of blocks:", length(x$blocklens), "\n")
-  cat("  blocklens: ", paste(x$blocklens, collapse=", "), "\n")
-  cat("  TR: ", paste0(x$TR, "s"), "\n")
-  cat("  start_time: ", paste0(x$start_time, "s"), "\n")
+print.sampling_frame <- function(x, ...) {
+  # Header
+  cat("\n═══ Sampling Frame ═══\n")
+  
+  # Structure information
+  cat("\n📊 Structure:\n")
+  cat(crayon::blue("  • Blocks:"), length(x$blocklens), "\n")
+  cat(crayon::blue("  • Total timepoints:"), sum(x$blocklens), "\n")
+  cat(crayon::blue("  • Block lengths:"), paste(x$blocklens, collapse=", "), "\n")
+  
+  # Timing information
+  cat("\n⏱️  Timing:\n")
+  cat(crayon::blue("  • TR:"), paste(unique(x$TR), collapse=", "), "seconds\n")
+  cat(crayon::blue("  • Start times:"), paste(unique(x$start_time), collapse=", "), "seconds\n")
+  cat(crayon::blue("  • Precision:"), x$precision, "seconds\n")
+  
+  # Duration information
+  cat("\n📈 Duration:\n")
+  cat(crayon::blue("  • Total duration:"), sum(x$blocklens * x$TR), "seconds\n")
+  
+  cat("\n")
 }

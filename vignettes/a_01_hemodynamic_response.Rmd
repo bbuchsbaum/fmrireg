@@ -22,7 +22,7 @@ library(fmrireg)
 
 ```{r, message=FALSE, fig.width = 7, fig.height = 5}
 
-library(magrittr)
+library(dplyr)
 
 ## SPM canonical hrf
 f1 <- hrf_blocked(hrf_spmg1, width=0)

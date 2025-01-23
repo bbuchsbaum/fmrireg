@@ -1,4 +1,3 @@
-
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 library(assertthat)
 options(mc.cores=2)
@@ -79,7 +78,7 @@ test_that("can construct an an afni model with a constant", {
 
 test_that("can construct an an afni model with trialwise regressor and a Polynomial modulator", {
   
-  facedes$repnum <- factor(facedes$rep_num)
+  facedes$repnum <- as.numeric(as.character(facedes$rep_num))
   scans <- paste0("rscan0", 1:6, ".nii")
   dset <- fmri_dataset(scans=scans,
                        mask="mask.nii",
@@ -87,8 +86,10 @@ test_that("can construct an an afni model with trialwise regressor and a Polynom
                        run_length=rep(436,6),
                        event_table=facedes)
   
-  
-  espec <- event_model(onset ~ afni_trialwise("trial") + hrf(Poly(rep_num, 2)), data=facedes, block=~run, sampling_frame=dset$sampling_frame)
+  espec <- event_model(onset ~ afni_trialwise("trial") + hrf(fmrireg::Poly(repnum,2)), 
+                      data=facedes, 
+                      block=~run, 
+                      sampling_frame=dset$sampling_frame)
   bspec <- baseline_model(basis="bs", degree=5, sframe=dset$sampling_frame)
   fmod <- fmri_model(espec, bspec)
   alm <- afni_lm(fmod, dset)
@@ -98,5 +99,4 @@ test_that("can construct an an afni model with trialwise regressor and a Polynom
   expect_error(design_matrix(fmod))
   expect_equal(2, length(baseline_terms(fmod)))
   expect_null(contrast_weights(fmod)$repnum)
-  
 })

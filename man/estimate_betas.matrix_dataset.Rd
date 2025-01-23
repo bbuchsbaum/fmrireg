@@ -9,8 +9,10 @@
   fixed = NULL,
   ran,
   block,
-  method = c("mixed", "pls", "pls_global", "ols"),
+  method = c("r1_glms", "r1", "lss", "lss_naive", "mixed", "pls", "pls_global", "ols"),
   basemod = NULL,
+  hrf_basis = NULL,
+  hrf_ref = NULL,
   ncomp = 4,
   lambda = 0.01,
   ...

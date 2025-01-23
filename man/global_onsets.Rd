@@ -16,3 +16,8 @@ global_onsets(x, onsets, ...)
 \description{
 global onsets are defined as cumulative time over runs, i.e. it does not reset to zero for each run.
 }
+\seealso{
+Other global_onsets: 
+\code{\link{global_onsets.sampling_frame}()}
+}
+\concept{global_onsets}

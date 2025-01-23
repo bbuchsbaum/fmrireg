@@ -29,5 +29,5 @@ or only output the shell '3dDeconvolve.sh' script.
 }
 \examples{
 # Assuming you have created an afni_lm_spec object called alm
-run.afni_lm_spec(alm, outdir="results")
+#run.afni_lm_spec(alm, outdir="results")
 }

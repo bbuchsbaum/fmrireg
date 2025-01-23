@@ -16,7 +16,7 @@ estimate_betas(x, ...)
   basemod = NULL,
   ncomp = 4,
   lambda = 0.01,
-  prewhiten = TRUE,
+  prewhiten = FALSE,
   ...
 )
 }
@@ -38,6 +38,8 @@ estimate_betas(x, ...)
 \item{ncomp}{Number of PLS components for the "pls" and "pls_global" methods (default: 4)}
 
 \item{lambda}{Lambda parameter (not currently used; default: 0.01)}
+
+\item{prewhiten}{currently experimental, default to \code{FALSE}.}
 }
 \value{
 A list of class "fmri_betas" containing the following components:

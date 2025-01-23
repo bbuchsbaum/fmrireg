@@ -4,7 +4,7 @@
 \alias{event_variable}
 \title{Create a continuous valued event sequence from a numeric vector}
 \usage{
-event_variable(vec, name, onsets, blockids = 1, durations = NULL)
+event_variable(vec, name, onsets, blockids = 1, durations = 0)
 }
 \arguments{
 \item{vec}{A numeric vector representing the continuous event sequence values}
@@ -29,5 +29,5 @@ evar <- event_variable(c(1, 2, 3, 4, 5, 6), "example_var", onsets=seq(1, 100, le
 
 }
 \seealso{
-\code{\link{EV}}, \code{\link{event_model}}
+\code{\link{event_factor}}
 }

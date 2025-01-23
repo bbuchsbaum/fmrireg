@@ -22,6 +22,9 @@ baseline(
 
 \item{constant}{whether to include an intercept term}
 }
+\value{
+a \code{baselinespec} list instance.
+}
 \description{
 Create a model specification for modeling low-frequency drift in fmri time series.
 }

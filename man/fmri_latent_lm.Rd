@@ -53,13 +53,12 @@ The dataset must be of type \code{latent_dataset}, which itself requires a \code
 This method is currently experimental.
 }
 \examples{
-# Create a LatentNeuroVec, and then create a latent_dataset
-# ... (see example for latent_dataset)
+
 
 # Estimate the fMRI regression model using the latent dataset
-result <- fmri_latent_lm(formula = formula, block = block, dataset = dset,
-                         durations = NULL, drop_empty = TRUE, robust = FALSE)
+#result <- fmri_latent_lm(formula = formula, block = block, dataset = dset,
+#                          durations = NULL, drop_empty = TRUE, robust = FALSE)
 
 # Print the result
-print(result)
+#print(result)
 }

@@ -6,12 +6,13 @@
 #' @param len The number of scans.
 #' @param TR The repetition time (default is 2 seconds).
 #' @param form the `trialwise` formula expression, see examples.
-#' @importFrom proxy simil
 #' @export
 #' @examples
 #' form <- onsets ~ trialwise(basis="gaussian")
 #' sk <- hrf_smoothing_kernel(100, TR=1.5, form)
+#' @return a smoothing matrix
 hrf_smoothing_kernel <- function(len, TR=2, form) {
+  with_package("proxy")
   buffer <- 6
   sframe <- sampling_frame(len+buffer,TR)
   onsets <- samples(sframe)

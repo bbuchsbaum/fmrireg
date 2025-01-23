@@ -3,31 +3,39 @@
 \name{evaluate}
 \alias{evaluate}
 \alias{evaluate.regressor}
-\title{evaluate a function over a sampling grid}
+\title{Evaluate a regressor object over a time grid}
 \usage{
 evaluate(x, grid, ...)
 
 \method{evaluate}{regressor}(x, grid, precision = 0.33, use_conv = FALSE, ...)
 }
 \arguments{
-\item{x}{the object to evaluate}
+\item{x}{The regressor object to evaluate}
 
 \item{grid}{the sampling grid. A vector of real values in seconds.}
 
-\item{...}{extra args}
+\item{...}{Additional arguments passed to specific methods}
 
 \item{precision}{the sampling precision for the hrf. This parameter is passed to \code{evaluate.HRF}}
 
 \item{use_conv}{use fast convolution approach}
 }
+\value{
+A numeric vector or matrix containing the evaluated regressor values
+}
 \description{
-given an object to be evaluated and an input sample "grid", evaluate the object.
+Generic function to evaluate a regressor object over a specified time grid.
+Different types of regressors may have different evaluation methods.
 
 evalute a regressor function over a sampling grid
 }
 \examples{
 frame <- sampling_frame(blocklens=100, TR=2)
-reg <- regressor(onsets=c(10,20,35, 47,52, 68, 79,86), amp=runif(8), duration=runif(8)*3, hrf=HRF_SPMG1)
+reg <- regressor(onsets=c(10,12, 14, 16, 18,20,35, 47,52, 68, 79,86), amp=runif(12), 
+duration=runif(12)*3, hrf=HRF_SPMG1)
 e1 = evaluate(reg, samples(frame))
 e2 = evaluate(reg, samples(frame), use_conv=TRUE)
+}
+\seealso{
+\code{\link[=single_trial_regressor]{single_trial_regressor()}}, \code{\link[=regressor]{regressor()}}
 }

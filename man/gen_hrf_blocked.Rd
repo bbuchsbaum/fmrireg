@@ -41,7 +41,9 @@ hrf_blocked(
 \item{...}{Extra arguments passed to the HRF function.}
 }
 \value{
-A function representing the blocked HRF.
+A \code{function} representing the blocked HRF.
+
+A \code{function} representing the blocked HRF.
 }
 \description{
 The \code{gen_hrf_blocked} function creates a blocked HRF by convolving the input HRF with a boxcar function. This can be used to model block designs in fMRI analysis.
@@ -54,7 +56,6 @@ The \code{gen_hrf_blocked} function creates a blocked HRF by convolving the inpu
 \seealso{
 Other gen_hrf: 
 \code{\link{gen_hrf_lagged}()},
-\code{\link{gen_hrf_library}()},
 \code{\link{gen_hrf_set}()}
 }
 \concept{gen_hrf}

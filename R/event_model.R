@@ -14,7 +14,7 @@
 #' @param sampling_frame The time series grid over which to sample the function.
 #' @param drop_empty Logical indicating whether to drop empty events. Default is `TRUE`.
 #' @param durations A numeric vector of event durations. Default is 0 for all events.
-#' @param precision Numeric value indicating the precision of the model. Default is 0.3.
+#' @param precision Numeric value indicating the precision hrf sampling. Default is 0.3.
 #' @param ... Additional arguments.
 #' @return An event model object.
 #' @export
@@ -28,6 +28,9 @@ event_model.list <- function(x, data, block, sampling_frame, drop_empty=TRUE, du
     blockvals <- lazyeval::f_eval_rhs(block, data)
   } else {
     blockvals <- block
+  }
+  if (is.factor(blockids)) {
+    blockvals <- as.integer(as.character(blockvals))
   }
   
   assert_that(is.increasing(blockvals), msg="'blockvals' must consist of strictly increasing integers")
@@ -87,11 +90,15 @@ event_model.formula <- function(x, data, block, sampling_frame, drop_empty=TRUE,
 
   if (lazyeval::is_formula(block)) {
     ## TODO check for existence of block in data
-    ## TODO warn when onset are way wrong
+    ## TODO warn when onset are way off
     block_rhs <- lazyeval::f_rhs(block)
     blockvals <- lazyeval::f_eval_rhs(block, data)
   } else {
     blockvals <- block
+  }
+  
+  if (is.factor(blockids)) {
+    blockvals <- as.integer(as.character(blockvals))
   }
   
   assert_that(is.increasing(blockvals), msg="'blockvals' must consist of strictly increasing integers")
@@ -159,13 +166,12 @@ blockids.event_model <- function(x) {
 
 
 #' @keywords internal
+#' @noRd
 construct_model <- function(x) {
   ## what does this function actually need?
   ## it neds a list of `hrfspec` objects as `rhd`
   assert_that(is.numeric(x$onsets))
-  #term_names <- sapply(x$event_spec$rhs, "[[", "id")
-  #browser()
-  
+  ##term_names <- sapply(x$event_spec$rhs, "[[", "id")
   ## term_names <- sapply(x$event_spec$rhs, "[[", "name")
   term_names <- sapply(x$event_spec, "[[", "name")
   term_names <- .sanitizeName(term_names)
@@ -205,6 +211,7 @@ construct_model <- function(x) {
 }
 
 #' @keywords internal
+#' @noRd
 extract_terms <- function(formula, data) {
   if (!inherits(formula, "terms")) {
     terms(formula, data = data)
@@ -228,9 +235,11 @@ extract_terms <- function(formula, data) {
 # }
 
 #' @keywords internal
+#' @noRd
 is_parametric_basis <- function(obj) { inherits(obj, "ParametricBasis") }
 
 #' @keywords internal
+#' @noRd
 extract_variables <- function(form, data, .terms=NULL) {
   if (is.null(.terms)) {
     .terms <- extract_terms(form,data)
@@ -255,6 +264,7 @@ extract_variables <- function(form, data, .terms=NULL) {
 # }
 
 #' @keywords internal
+#' @noRd
 parse_term <- function(vars, ttype) {
   dim <- length(vars) # number of variables
   term <- deparse(vars[[1]],backtick=TRUE) # first covariate
@@ -300,7 +310,6 @@ terms.event_model <- function(x,...) {
 }
 
 #' @export
-#' @rdname conditions
 conditions.event_model <- function(x,...) {
   unlist(lapply(terms(x), function(t) conditions(t)), use.names=FALSE)
 }
@@ -317,6 +326,8 @@ contrast_weights.convolved_term <- function(x,...) {
 #' @export
 #' @rdname Fcontrasts
 Fcontrasts.convolved_term <- function(x,...) {
+  #browser()
+  #cellcount <- attr(cells(x, drop.empty=FALSE), "count")
   Fcontrasts(x$evterm)
 }
 
@@ -359,7 +370,6 @@ contrast_weights.event_model <- function(x,...) {
       })
       
       cnames <- sapply(cwlist, function(cw) cw$name)
-
       #prefix <- tnames[i]
       #names(ret) <- paste0(prefix, "#", cnames)
       names(ret) <- cnames
@@ -381,11 +391,9 @@ Fcontrasts.event_model <- function(x,...) {
   ret <- unlist(lapply(seq_along(terms(x)), function(i) {
     eterm <- terms(x)[[i]]$evterm
     len <- length(conditions(eterm))
-    cwlist <- Fcontrasts(eterm)
+    cwlist <- Fcontrasts(terms(x)[[i]])
     if (!is.null(cwlist)) {
-      
       ret <- lapply(cwlist, function(cw) {
-        
         out <- matrix(0, len, ncol(cw))
         #rownames(out) <- rep("C", nrow(out))
         ti <- tind[[i]]
@@ -403,6 +411,7 @@ Fcontrasts.event_model <- function(x,...) {
       ret
     }
   }), recursive=FALSE)
+  
 }
   
   
@@ -468,6 +477,15 @@ event_table.convolved_term <- function(x) event_table(x$evterm)
 nbasis.convolved_term <- function(x) nbasis(x$hrf)
 
 #' @export
+cells.event_model <- function(x, ...) {
+  ret <- lapply(x$terms, function(z) cells(z, ...))
+  tnames = names(ret)
+  out <- do.call(rbind, lapply(1:length(tnames), function(i) {
+    dplyr::tibble(term=tnames[i], level=ret[[i]][,1], basis=ret[[i]][,2])
+  })) %>% dplyr::mutate(index=1:dplyr::n())
+}
+
+#' @export
 #' @rdname longnames
 longnames.convolved_term <- function(x, ...) {
   # ignores exclude.basis
@@ -490,6 +508,8 @@ longnames.afni_hrf_convolved_term <- function(x, ...) {
                            paste0(names(term.cells)[i], "#", term.cells[[i]], sep="")
                          })), 1, paste, collapse=":")
 }
+
+
 
 #' @export
 #' @rdname longnames
@@ -545,22 +565,62 @@ longnames.matrix_term <- function(x, ...) {
 
 
 #' @export
-print.event_model <- function(x,...) {
-  cat("event_model", "\n")
-  cat(" ", Reduce(paste, deparse(x$model_spec$formula)), "\n")
-  cat(" ", "Num Terms", length(terms(x)), "\n")
-  cat(" ", "Num Events: ", nrow(x$model_spec$event_table), "\n")
-  cat(" ", "Num Columns: ", length(conditions(x)), "\n")
-  cat(" ", "Num Blocks: ", length(unique(x$blockids)), "\n")
-  #cat(" ", "Length of Blocks: ", paste(object$model_spec$blocklens, collapse=", "), "\n")
-  for (i in 1:length(terms(x))) {
-    cat("\n")
-    t <- terms(x)[[i]]
-    cat("Term:", i, " ")
-    print(t)
-    cat("\n")
+print.event_model <- function(x, ...) {
+  # Header with fancy border
+  cat("\n╔══════════════════════════════════════════╗")
+  cat("\n║           fMRI Event Model               ║")
+  cat("\n╚══════════════════════════════════════════╝\n")
+  
+  # Model Formula Section
+  cat("\n Model Formula:\n")
+  cat("  ", crayon::cyan(Reduce(paste, deparse(x$model_spec$formula))), "\n")
+  
+  # Summary Statistics
+  cat("\n📈 Model Summary:\n")
+  cat("  • Number of Terms:", crayon::yellow(length(terms(x))), "\n")
+  cat("  • Total Events:", crayon::yellow(nrow(x$model_spec$event_table)), "\n")
+  cat("  • Design Matrix Columns:", crayon::yellow(length(conditions(x))), "\n")
+  cat("  • Number of Blocks:", crayon::yellow(length(unique(x$blockids))), "\n")
+  
+  # Event Table Preview
+  if (nrow(x$model_spec$event_table) > 0) {
+    cat("\n📋 Event Table Preview:\n")
+    cat("  • Variables:", crayon::green(paste(names(x$model_spec$event_table), collapse=", ")), "\n")
+    if (nrow(x$model_spec$event_table) > 3) {
+      print(head(x$model_spec$event_table, 3))
+      cat("  ... (", nrow(x$model_spec$event_table) - 3, " more rows )\n")
+    } else {
+      print(x$model_spec$event_table)
+    }
   }
   
+  # Individual Terms Section
+  cat("\n🔍 Model Terms:\n")
+  for (i in seq_along(terms(x))) {
+    term <- terms(x)[[i]]
+    cat("\n  Term", crayon::blue(i), ":", crayon::magenta(names(terms(x))[i]), "\n")
+    
+    # Get conditions for this term
+    term_conditions <- conditions(term)
+    if (length(term_conditions) > 0) {
+      cat("    • Conditions:", crayon::green(paste(term_conditions, collapse=", ")), "\n")
+    }
+    
+    # Get HRF information if available
+    if (!is.null(term$hrfspec)) {
+      cat("    • HRF Type:", crayon::yellow(attr(term$hrfspec$hrf, "name")), "\n")
+      if (!is.null(attr(term$hrfspec$hrf, "nbasis"))) {
+        cat("    • Basis Functions:", crayon::yellow(attr(term$hrfspec$hrf, "nbasis")), "\n")
+      }
+    }
+    
+    # Get contrast information if available
+    if (!is.null(term$contrasts) && length(term$contrasts) > 0) {
+      cat("    • Contrasts:", crayon::cyan(paste(names(term$contrasts), collapse=", ")), "\n")
+    }
+  }
+  
+  cat("\n") # End with newline for cleaner output
 }
 
 
@@ -617,4 +677,167 @@ plot.event_model <- function(x, y, term_name=NULL, longnames=TRUE, ...) {
     
   p
 }
+  
+
+#' Create an event model directly from components, accepting variables as strings or expressions
+#'
+#' @description
+#' This function constructs an event model directly from its components, allowing variables
+#' to be specified as character strings or expressions, similar to the formula interface.
+#'
+#' @param event_terms A list of event term specifications. Each term is a list with components:
+#'        - `variables`: Character vector of variable names or expressions (captured using `rlang::exprs`)
+#'        - `hrf`: HRF specification for the term
+#' @param events A data frame of event variables. Variables involved in terms must be present here.
+#' @param onsets A numeric vector of event onset times in seconds
+#' @param block A vector of block IDs (must be strictly increasing integers)
+#' @param sampling_frame The time series grid over which to sample the function
+#' @param durations A numeric vector of event durations. Default is 0 for all events.
+#' @param drop_empty Logical indicating whether to drop empty events. Default is TRUE.
+#' @param precision Numeric value indicating the precision of HRF sampling. Default is 0.3.
+#'
+#' @return An event_model object
+#'
+#' @examples
+#' library(fmrireg)
+#' library(rlang)
+#'
+#' # Example with variables specified as character strings
+#' event_terms <- list(
+#'   list(
+#'     variables = c("x", "y"),
+#'     hrf = "spmg1"
+#'   )
+#' )
+#'
+#' # Example with variables specified as expressions
+#' event_terms <- list(
+#'   list(
+#'     variables = exprs(x, Poly(y, 2)),
+#'     hrf = "spmg1"
+#'   )
+#' )
+#'
+#' @export
+create_event_model <- function(event_terms, events, onsets, block, sampling_frame,
+                               durations=0, drop_empty=TRUE, precision=0.3) {
+  
+  # Input validation
+  assert_that(is.list(event_terms), msg="event_terms must be a list of term specifications")
+  assert_that(length(onsets) == nrow(events), msg="onsets length must match number of events")
+  
+  # Process block IDs
+  if (is.factor(block)) {
+    block <- as.integer(as.character(block))
+  }
+  assert_that(is.increasing(block), msg="'block' must consist of strictly increasing integers")
+  assert_that(length(block) == nrow(events))
+  
+  blocks <- unique(block)
+  ranked_blocks <- rank(blocks)
+  blockids <- ranked_blocks[match(block, blocks)]
+  
+  # Process durations
+  if (length(durations) == 1) {
+    durations <- rep(durations, length(onsets))
+  }
+  
+  # Capture event data in a data environment
+  data_env <- list2env(as.list(events), parent = as.environment("package:fmrireg"))
+  
+  # Create hrfspecs
+  hrfspecs <- lapply(event_terms, function(term) {
+    variables <- term$variables
+    hrf_spec <- term$hrf
+    
+    # Prepare variables, accepting both strings and expressions
+    if (is.character(variables)) {
+      # Convert character strings to symbols
+      variables <- lapply(variables, rlang::sym)
+    } else if(is.expression(variables) || is_quosure(variables)) {
+      # Single expression, wrap in list
+      variables <- list(variables)
+    } else if (!is.list(variables)) {
+      stop("variables in event_terms must be character vector or expressions captured by rlang::exprs")
+    }
+    
+    # Prepare HRF basis
+    if (is.character(hrf_spec)) {
+      # Built-in HRF
+      hrf <- getHRF(hrf_spec)
+    } else if (inherits(hrf_spec, "HRF")) {
+      # Direct HRF object
+      hrf <- hrf_spec
+    } else if (is.list(hrf_spec)) {
+      # HRF with parameters
+      hrf <- do.call(getHRF, c(list(hrf_spec$hrf), hrf_spec$parameters))
+    } else {
+      stop("Invalid HRF specification")
+    }
+    
+    # Create hrfspec object
+    hrfspec(
+      vars = variables,
+      basis = hrf,
+      onsets = onsets,
+      durations = durations,
+      precision = precision,
+      data_env = data_env  # Pass the data environment
+    )
+  })
+  
+  # Create model specification
+  # Construct formula from components
+  formula_terms <- lapply(event_terms, function(term) {
+    variables <- term$variables
+    hrf_spec <- term$hrf
+    
+    # Prepare variables for formula term string
+    var_strings <- sapply(variables, function(var) {
+      if (is.symbol(var) || is.language(var)) {
+        deparse(var)
+      } else if (is.character(var)) {
+        var
+      } else {
+        stop("variables must be symbols, expressions, or character strings")
+      }
+    })
+    
+    # Get HRF type for the term
+    hrf_type <- if (is.character(hrf_spec)) {
+      hrf_spec
+    } else if (inherits(hrf_spec, "HRF")) {
+      attr(hrf_spec, "name")
+    } else if (is.list(hrf_spec)) {
+      hrf_spec$hrf
+    }
+    
+    # Construct term string
+    var_string <- paste(var_strings, collapse=", ")
+    paste0("hrf(", var_string, ", basis='", hrf_type, "')")
+  })
+  
+  # Combine terms with + and create formula
+  formula_str <- paste("onsets ~", paste(formula_terms, collapse=" + "))
+  model_formula <- as.formula(formula_str)
+  
+  model_spec <- list(
+    formula = model_formula,
+    event_table = events,
+    onsets = onsets,
+    event_spec = hrfspecs,
+    blockvals = block,
+    blockids = blockids,
+    durations = durations,
+    sampling_frame = sampling_frame,
+    drop_empty = drop_empty,
+    precision = precision
+  )
+  
+  class(model_spec) <- c("event_model_spec", "list")
+  
+  # Construct the model
+  construct_model(model_spec)
+}
+  
   

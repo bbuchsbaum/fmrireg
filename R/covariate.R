@@ -1,19 +1,60 @@
-
 #' Construct a Covariate Term
 #'
 #' @description
-#' Create a covariate term that is not convolved with a hemodynamic response function (HRF).
+#' Creates a covariate term that is added directly to the fMRI model without being convolved 
+#' with a hemodynamic response function (HRF). This is useful for including nuisance variables, 
+#' continuous covariates, or any other regressors that should not undergo HRF convolution.
+#'
+#' @details
+#' In fMRI analysis, some predictors should not be convolved with the HRF because they 
+#' represent:
+#' * Continuous physiological measurements (e.g., heart rate, respiration)
+#' * Motion parameters from head movement correction
+#' * Scanner drift or other technical artifacts
+#' * Behavioral measures that directly correlate with BOLD signal
+#' * Global signal or other nuisance variables
+#'
+#' The covariate term can be combined with standard HRF-convolved event terms in the 
+#' same model. For example:
+#' ```r
+#' model <- event_model(signal ~ hrf(stimulus) + covariate(motion_x, motion_y), 
+#'                     data = data)
+#' ```
 #'
 #' @param ... A variable argument set of covariate names.
 #' @param data A data.frame containing the variables.
 #' @param id An optional identifier for the covariate term.
 #' @param prefix An optional prefix to add to the covariate names.
 #'
-#' @return A list containing information about the covariate term.
+#' @return A list containing information about the covariate term with class 
+#' 'covariatespec' that can be used within an event_model.
 #'
 #' @examples
-#' df1 <- data.frame(x=rnorm(100), y=rnorm(100))
-#' cv <- covariate(x, y, data=df1)
+#' # Add motion parameters as covariates
+#' motion_data <- data.frame(
+#'   x = rnorm(100),  # x translation
+#'   y = rnorm(100)   # y translation
+#' )
+#' cv <- covariate(x, y, data = motion_data, prefix = "motion")
+#'
+#' # Combine with event model
+#' sframe <- sampling_frame(blocklens = c(100), TR = 2)
+#' event_data <- data.frame(
+#'   stimulus = factor(rep(c("A", "B"), 50)),
+#'   onset = seq(0, 198, by = 4)
+#' )
+#' 
+#' # Full model with both HRF-convolved events and non-convolved covariates
+#' model <- event_model(
+#'   signal ~ hrf(stimulus) + covariate(x, y),
+#'   data = event_data,
+#'   sampling_frame = sframe
+#' )
+#' 
+#' @seealso 
+#' * [event_model()] for creating complete fMRI models
+#' * [hrf()] for creating HRF-convolved event terms
+#'
 #' @export
 covariate <- function(..., data, id=NULL, prefix=NULL) {
   vars <- as.list(substitute(list(...)))[-1] 
@@ -47,6 +88,7 @@ covariate <- function(..., data, id=NULL, prefix=NULL) {
 }
 
 #' @keywords internal
+#' @noRd
 covariate_term <- function(varname, mat) {
   stopifnot(is.matrix(mat))
   ret <- list(varname=varname, design_matrix=suppressMessages(tibble::as_tibble(mat)))

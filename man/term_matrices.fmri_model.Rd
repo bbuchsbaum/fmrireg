@@ -2,25 +2,21 @@
 % Please edit documentation in R/fmrilm.R
 \name{term_matrices.fmri_model}
 \alias{term_matrices.fmri_model}
-\title{Construct term matrices for an fMRI model}
+\title{Extract Term Matrices from an fMRI Model}
 \usage{
 \method{term_matrices}{fmri_model}(x, blocknum = NULL)
 }
 \arguments{
-\item{x}{An object of class "fmri_model" containing the event and baseline models.}
+\item{x}{An \code{fmri_model} object containing the event and baseline models.}
 
-\item{blocknum}{(Optional) A numeric vector specifying the block numbers to be included in the term matrices.
-By default, all unique block numbers in the event model are included.}
+\item{blocknum}{(Optional) A numeric vector specifying the block numbers to include. Defaults to all blocks.}
 }
 \value{
 A named list of term matrices, with event terms followed by baseline terms.
-Attributes "event_term_indices" and "baseline_term_indices" store the indices of event and baseline terms,
-"blocknum" stores the block numbers, and "varnames" stores the variable names.
+Attributes \code{"event_term_indices"} and \code{"baseline_term_indices"} store the indices of event and baseline terms,
+\code{"blocknum"} stores the block numbers, and \code{"varnames"} stores the variable names.
 }
 \description{
-This function constructs the term matrices for an fMRI model, which consists of event-related terms
-and baseline-related terms. The term matrices are used for building the design matrix in fMRI data analysis.
-}
-\seealso{
-fmri_model
+This function extracts the term matrices from an \code{fmri_model}, which consists of event-related terms
+and baseline-related terms. These matrices are used to build the design matrix in fMRI data analysis.
 }

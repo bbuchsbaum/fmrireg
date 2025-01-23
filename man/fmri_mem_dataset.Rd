@@ -46,7 +46,4 @@ mask[mask < .5] <- 0
 
 # Create an fmri_mem_dataset
 dset <- fmri_mem_dataset(list(nvec), mask, TR=2)
-
-# Create an iterator with 100 chunks
-iter <- data_chunks(dset, nchunks=100)
 }

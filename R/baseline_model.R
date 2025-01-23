@@ -1,6 +1,8 @@
 
 
 #' @importFrom purrr map_int
+#' @noRd
+#' @keywords internal
 get_col_inds <- function(Xlist) {
   ncols <- purrr::map_int(Xlist, ncol)
   csum <- cumsum(ncols)
@@ -21,6 +23,7 @@ get_col_inds <- function(Xlist) {
 #' @param sframe sframe a \code{sampling_frame} object
 #' @param intercept whether to include an intercept for each block. Automatically set to \code{FALSE} when basis == "constant". 
 #' @param nuisance_list a list of nuisance matrices, one matrix per fMRI block
+#' @return an \code{baseline_model} instance.
 #' @importFrom lazyeval f_eval f_rhs f_lhs
 #' 
 #' @examples 
@@ -121,6 +124,7 @@ baseline_model <- function(basis=c("constant", "poly", "bs", "ns"), degree=1, sf
 #' @param constant whether to include an intercept term
 #' @param intercept the type of intercept to include
 #' @export
+#' @return a \code{baselinespec} list instance.
 baseline <- function(degree=1, basis=c("constant", "poly", "bs", "ns"), name=NULL, 
                      intercept=c("runwise", "global", "none")) {
   
@@ -187,6 +191,18 @@ terms.baseline_model <- function(x,...) {
 }
 
 
+#' @export
+cells.baseline_model <- function(x, ...) {
+  .terms <- terms(x)
+  do.call(rbind, lapply(.terms, function(t) {
+    ncond <- length(conditions(t))
+    zstr <- paste0(rep("0", ceiling(log10(ncond+1e-6))), collapse="")
+    dplyr::tibble(term=t$varname, level=conditions(t), basis=paste0("basis", zstr, 1:length(conditions(t))))
+  })) %>% dplyr::mutate(index=1:dplyr::n())
+  
+}
+
+
 #' a block variable, which is constant over the span of a scanning run
 #' 
 #' @param x the block variable
@@ -208,7 +224,8 @@ block <- function(x) {
 
 
 
-#' @export  
+#' @noRd
+#' @keywords internal
 #' @importFrom purrr map_chr
 construct.baselinespec <- function(x, model_spec, ...) {
   if (!is.null(model_spec$sampling_frame)) {
@@ -271,7 +288,8 @@ construct.baselinespec <- function(x, model_spec, ...) {
 #' @param colind the column indices
 #' @param rowind the row indices
 #' @importFrom tibble as_tibble
-#' @export
+#' @noRd
+#' @keywords internal
 baseline_term <- function(varname, mat, colind, rowind) {
   #print(paste(varname, ":", class(mat)))
   
@@ -301,6 +319,7 @@ design_matrix.baseline_term <- function(x, blockid=NULL, allrows=FALSE, ...) {
 
 
 #' @keywords internal
+#' @noRd
 construct_block_term <- function(vname, sframe, intercept=c("global", "runwise")) {
   intercept <- match.arg(intercept)
   blockids <- blockids(sframe)
@@ -321,6 +340,7 @@ construct_block_term <- function(vname, sframe, intercept=c("global", "runwise")
   
 }
 
+
 #' block_term
 #' 
 #' construct a constant term
@@ -331,7 +351,8 @@ construct_block_term <- function(vname, sframe, intercept=c("global", "runwise")
 #' @param mat the \code{matrix} of covariates
 #' @param type the block variable type: 'runwise' or 'global'
 #' @importFrom tibble as_tibble
-#' @export
+#' @noRd
+#' @keywords internal
 block_term <- function(varname, blockids, expanded_blockids, mat, type=c("runwise", "global")) {
   type <- match.arg(type)
   assertthat::assert_that(is.matrix(mat))
@@ -363,6 +384,12 @@ design_matrix.block_term <- function(x, blockid=NULL, allrows=FALSE, ...) {
       x$design_matrix[, unlist(x$colind[blockid]), drop=FALSE]
     }
   }
+}
+
+#' @export
+term_names.baseline_model <- function(x) {
+  xt <- terms(x)
+  unlist(lapply(xt, function(term) term$varname))
 }
 
 
@@ -399,22 +426,51 @@ construct.blockspec <- function(x, model_spec, ...) {
 }
 
 #' @export
-print.baseline_model <- function(x,...) {
-  cat("baseline_model", "\n")
-  cat("  ", "name: ", x$drift_term$varname, "\n")
-  cat("  ", "basis type: ", x$drift_spec$basis, "\n")
-  cat("  ", "degree: ", x$drift_spec$degree, "\n")
-  cat("  ", "drift columns: ", ncol(design_matrix(x$drift_term)), "\n")
-  if (!is.null(x$block_term)) {
-    cat("  ", "constant columns: ", ncol(design_matrix(x$block_term)), "\n")
-  } else {
-    cat("  ", "constant columns: 0 ", "\n")
+print.baseline_model <- function(x, ...) {
+  # Get key components
+  drift_name <- x$drift_term$varname
+  basis_type <- x$drift_spec$basis
+  degree <- x$drift_spec$degree
+  drift_cols <- ncol(design_matrix(x$drift_term))
+  const_cols <- if (!is.null(x$block_term)) ncol(design_matrix(x$block_term)) else 0
+  nuis_cols <- if (!is.null(x$nuisance_term)) ncol(design_matrix(x$nuisance_term)) else 0
+  total_cols <- ncol(design_matrix(x))
+  
+  # Header with box drawing characters
+  cat("╔══════════════════════════════════════════╗\n")
+  cat("║           Baseline Model                 ║\n")
+  cat("╠══════════════════════════════════════════╣\n")
+  
+  # Drift term information
+  cat("║ Drift Components                         ║\n")
+  cat(sprintf("║   • %-34s ║\n", paste("Name:", drift_name)))
+  cat(sprintf("║   • %-34s ║\n", paste("Basis type:", basis_type)))
+  cat(sprintf("║   • %-34s ║\n", paste("Degree:", degree)))
+  cat(sprintf("║   • %-34s ║\n", paste("Columns:", drift_cols)))
+  
+  # Constant term information if present
+  cat("║                                          ║\n")
+  cat("║ Additional Components                    ║\n")
+  cat(sprintf("║   • %-34s ║\n", paste("Constant columns:", const_cols)))
+  cat(sprintf("║   • %-34s ║\n", paste("Nuisance columns:", nuis_cols)))
+  
+  # Summary
+  cat("║                                          ║\n")
+  cat("║ Model Summary                            ║\n")
+  cat(sprintf("║   • %-34s ║\n", paste("Total columns:", total_cols)))
+  
+  # Design matrix preview
+  cat("║                                          ║\n")
+  cat("║ Design Matrix Preview                    ║\n")
+  dm <- head(design_matrix(x), 3)
+  for(i in 1:min(3, nrow(dm))) {
+    row_preview <- paste(sprintf("%6.3f", as.numeric(dm[i,1:min(4, ncol(dm))])), collapse=" ")
+    if(ncol(dm) > 4) row_preview <- paste0(row_preview, " ...")
+    cat(sprintf("║   %-36s ║\n", row_preview))
   }
-  cat("  ", "nuisance columns: ", ifelse(is.null(x$nuisance_term), 0, ncol(design_matrix(x$nuisance_term))), "\n")
-  cat("  ", "total columns: ", ncol(design_matrix(x)), "\n")
-  cat("  ", "design_matrix: ", "\n")
-  print(design_matrix(x))
-   
+  if(nrow(dm) > 3) cat("║   ...                                   ║\n")
+  
+  cat("╚══════════════════════════════════════════╝\n")
 }
 
 

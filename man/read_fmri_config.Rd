@@ -11,6 +11,9 @@ read_fmri_config(file_name, base_path = NULL)
 
 \item{base_path}{the file path to be prepended to relative file names}
 }
+\value{
+a \code{fmri_config} instance
+}
 \description{
 read a basic fMRI configuration file
 }

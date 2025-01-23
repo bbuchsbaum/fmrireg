@@ -13,6 +13,9 @@ hrf_smoothing_kernel(len, TR = 2, form)
 
 \item{form}{the \code{trialwise} formula expression, see examples.}
 }
+\value{
+a smoothing matrix
+}
 \description{
 This function computes a temporal similarity matrix from a series of hemodynamic response functions.
 }

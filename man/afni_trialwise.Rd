@@ -2,7 +2,7 @@
 % Please edit documentation in R/hrf.R
 \name{afni_trialwise}
 \alias{afni_trialwise}
-\title{construct an native AFNI hrf specification for '3dDeconvolve' and individually modulated events using the 'stim_times_IM' argument.}
+\title{construct a native AFNI hrf specification for '3dDeconvolve' and individually modulated events using the 'stim_times_IM' argument.}
 \usage{
 afni_trialwise(
   label,
@@ -32,8 +32,11 @@ afni_trialwise(
 
 \item{stop}{end of hrf (for multiple basis hrfs)}
 }
+\value{
+an \code{afni_trialwise_hrfspec} instance
+}
 \description{
-construct an native AFNI hrf specification for '3dDeconvolve' and individually modulated events using the 'stim_times_IM' argument.
+construct a native AFNI hrf specification for '3dDeconvolve' and individually modulated events using the 'stim_times_IM' argument.
 }
 \examples{
 

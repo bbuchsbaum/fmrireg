@@ -82,12 +82,42 @@
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">c1</span> <span class="op">&lt;-</span> <span class="fu"><a href="contrast.html">contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">A</span> <span class="op">-</span> <span class="va">B</span>, name<span class="op">=</span><span class="st">"A_B"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">c2</span> <span class="op">&lt;-</span> <span class="fu"><a href="contrast.html">contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">B</span> <span class="op">-</span> <span class="va">C</span>, name<span class="op">=</span><span class="st">"B_C"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">contrast_set</span><span class="op">(</span><span class="va">c1</span>,<span class="va">c2</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> contrast: A_B </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  A:  ~A - B </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $A</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ~A - B</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x7f8f660675b8&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> contrast: B_C </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  A:  ~B - C </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $B</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $where</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $name</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "A_B"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "contrast_formula_spec" "contrast_spec"         "list"                 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[2]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $A</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ~B - C</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x7f8f660675b8&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $B</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $where</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $name</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "B_C"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "contrast_formula_spec" "contrast_spec"         "list"                 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "contrast_set" "list"        </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

@@ -42,7 +42,9 @@ for the specified duration. The function supports various HRFs, block widths, pr
 }
 \examples{
 time_points <- seq(0, 20, by = 0.5)
-block_response <- convolve_block(time_points, hrf=hrf_spmg1, width=5, precision=0.2)
-plot(time_points, block_response, type='l', main='Convolved Hemodynamic Response with Block Duration')
+block_response <- convolve_block(time_points, hrf=hrf_spmg1, 
+width=5, precision=0.2)
+plot(time_points, block_response, type='l', 
+main='Convolved Hemodynamic Response with Block Duration')
 
 }

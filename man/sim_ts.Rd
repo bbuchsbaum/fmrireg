@@ -4,27 +4,50 @@
 \alias{sim_ts}
 \title{Simulate fMRI Time Series}
 \usage{
-sim_ts(ncond, nreps = 12, amps = rep(1, ncond), isi = c(3, 6), TR = 1.5)
+sim_ts(
+  ncond,
+  hrf = HRF_SPMG1,
+  nreps = 12,
+  amps = rep(1, ncond),
+  isi = c(3, 6),
+  TR = 1.5
+)
 }
 \arguments{
 \item{ncond}{The number of conditions to simulate.}
+
+\item{hrf}{The hemodynamic response function to use (default is HRF_SPMG1).}
 
 \item{nreps}{The number of repetitions per condition (default is 12).}
 
 \item{amps}{A vector of amplitudes for each condition (default is a vector of 1s with length ncond).}
 
-\item{isi}{A vector specifying the range of inter-stimulus intervals to sample from (default is c(3, 6)).}
+\item{isi}{A vector of length 2 specifying the range of inter-stimulus intervals to sample from (default is c(3, 6) seconds).}
 
 \item{TR}{The repetition time of the fMRI acquisition (default is 1.5 seconds).}
 }
 \value{
-A list with two elements:
+A list with the following components:
 \itemize{
-\item onset: A vector of the onset times for each trial.
-\item mat: A matrix containing the simulated fMRI time series, with time in the first column and the simulated responses for each condition in the subsequent columns.
+\item onset: A vector of the onset times for each trial
+\item condition: A vector of condition labels for each trial
+\item mat: A matrix containing the simulated fMRI time series:
+\itemize{
+\item Column 1: Time points (in seconds)
+\item Columns 2:(ncond+1): Simulated BOLD responses for each condition
+}
 }
 }
 \description{
-This function simulates an fMRI time series for multiple conditions with specified parameters.
+This function simulates an fMRI time series for multiple experimental conditions with specified parameters.
+It generates a realistic event-related design with randomized inter-stimulus intervals and condition orders.
 }
-\keyword{internal}
+\examples{
+# Simulate 3 conditions with different amplitudes
+sim <- sim_ts(ncond = 3, amps = c(1, 1.5, 2), TR = 2)
+
+# Plot the simulated time series
+matplot(sim$mat[,1], sim$mat[,-1], type = "l", 
+        xlab = "Time (s)", ylab = "BOLD Response")
+
+}

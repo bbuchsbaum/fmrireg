@@ -44,6 +44,9 @@ If multiple contrasts are required, then these should be wrapped in a \code{list
 
 \item{stop}{the stop time for sin/poly/csplin models}
 }
+\value{
+an \code{afni_hrfspec} instance
+}
 \description{
 construct an native AFNI hrf specification for '3dDeconvolve' with the 'stim_times' argument.
 }

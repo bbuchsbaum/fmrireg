@@ -2,7 +2,7 @@
 % Please edit documentation in R/regressor.R
 \name{single_trial_regressor}
 \alias{single_trial_regressor}
-\title{single_trial_regressor}
+\title{Create a single trial regressor}
 \usage{
 single_trial_regressor(
   onsets,
@@ -24,14 +24,34 @@ single_trial_regressor(
 \item{span}{the temporal window of the impulse response function (default is 24)}
 }
 \value{
-an S3 list of type \code{single_trial_regressor}
+A single_trial_regressor object which inherits from regressor with the following components:
+\itemize{
+\item onsets: The onset time of the trial
+\item duration: The duration of the trial
+\item amplitude: The amplitude of the trial response
+\item hrf: The HRF object used for convolution
+}
 }
 \description{
-construct a regressor object that has a single onset
+Creates a regressor object for modeling a single trial event in an fMRI experiment.
+This is particularly useful for trial-wise analyses where each trial needs to be
+modeled separately. The regressor represents the predicted BOLD response for a single
+event using a specified hemodynamic response function (HRF).
 }
 \examples{
-
+# Create a single trial regressor with default HRF
 reg <- single_trial_regressor(c(10), HRF_SPMG1)
-pred <- evaluate(reg, seq(0,100,by=2))
-nbasis(reg) == 1
+
+# Create a single trial regressor with custom HRF and amplitude
+reg <- single_trial_regressor(c(10), HRF_GAMMA, amplitude = 2)
+
+# Evaluate the regressor over a time grid
+grid <- seq(0, 30, by = 0.5)
+values <- evaluate(reg, grid)
+
+}
+\seealso{
+\code{\link{regressor}} for creating multiple trial regressors,
+\code{\link{evaluate.single_trial_regressor}} for evaluating the regressor,
+\code{\link{HRF_SPMG1}} for the default HRF
 }

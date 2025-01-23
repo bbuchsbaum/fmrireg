@@ -23,6 +23,9 @@ baseline_model(
 
 \item{nuisance_list}{a list of nuisance matrices, one matrix per fMRI block}
 }
+\value{
+an \code{baseline_model} instance.
+}
 \description{
 construct a baseline model to model noise and other non-event-related sources of variance
 }

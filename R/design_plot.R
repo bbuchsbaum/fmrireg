@@ -9,10 +9,11 @@
 #' @param longnames Use long names in the legend (default: FALSE).
 #'
 #' @importFrom ggplot2 ggplot aes_string aes
-#' @import shiny
 #' 
 #' @return An interactive plot using Shiny.
+#' @export
 design_plot <- function(fmrimod, longnames=FALSE) {
+  with_package("shiny")
   stopifnot(inherits(fmrimod, "fmri_model"))
   
   et <- terms(fmrimod$event_model)
@@ -42,24 +43,24 @@ design_plot <- function(fmrimod, longnames=FALSE) {
   
   
   ui <- function() {
-    fluidPage(
-      sidebarLayout(
-        sidebarPanel(
-          selectInput("term", "Term", term_names),
-          selectInput("block", "Blocks", c("All", sort(unique(dfx$.block)))),
-          sliderInput("range", "Time Range:", min = min(dfx$.time), 
+    shiny::fluidPage(
+      shiny::sidebarLayout(
+        shiny::sidebarPanel(
+          shiny::selectInput("term", "Term", term_names),
+          shiny::selectInput("block", "Blocks", c("All", sort(unique(dfx$.block)))),
+          shiny::sliderInput("range", "Time Range:", min = min(dfx$.time), 
                                               max = max(dfx$.time), 
                                               value = c(0, 100))
         ),
-        mainPanel(
-          plotOutput("dplot")
+        shiny::mainPanel(
+          shiny::plotOutput("dplot")
         )
       )
     )
   }
   
   server <- function(input, output, session) {
-      output$dplot <- renderPlot({
+      output$dplot <- shiny::renderPlot({
         dfx <- dflist[[input$term]]
         p <- if (input$block == "All") {
           df3 <- dfx %>% dplyr::filter(.time > input$range[1] & .time < input$range[2])
@@ -81,11 +82,12 @@ design_plot <- function(fmrimod, longnames=FALSE) {
       })
   }
   
-  shinyApp(ui = ui, server = server)
+  shiny::shinyApp(ui = ui, server = server)
   
 }
 
 #' @keywords internal
+#' @noRd
 lookup_hrf <- function(label, lag) {
   switch(label,
          Gamma=getHRF("gamma", lag=lag),
@@ -97,27 +99,28 @@ lookup_hrf <- function(label, lag) {
 }
 
 
-#' @importFrom shiny fluidPage sidebarLayout sliderInput mainPanel plotOutput
+#' @noRd
 hrf_plot <- function() {
+  with_package("shiny")
   ui <- function() {
-    fluidPage(
-      sidebarLayout(
-        sidebarPanel(
-          selectInput("hrf", "Hemodynamic Response Function", c("Gamma", "Gaussian", "SPMG1", "SPMG2", "SPMG3")),
-          sliderInput("offset", "Lag", min=0, max=10, value=0),
-          sliderInput("duration", "Event Duration", min = 0, 
+    shiny::fluidPage(
+      shiny::sidebarLayout(
+        shiny::sidebarPanel(
+          shiny::selectInput("hrf", "Hemodynamic Response Function", c("Gamma", "Gaussian", "SPMG1", "SPMG2", "SPMG3")),
+          shiny::sliderInput("offset", "Lag", min=0, max=10, value=0),
+          shiny::sliderInput("duration", "Event Duration", min = 0, 
                       max = 10, 
                       value = 0)
         ),
-        mainPanel(
-          plotOutput("dplot")
+        shiny::mainPanel(
+          shiny::plotOutput("dplot")
         )
       )
     )
   }
   
   server <- function(input, output, session) {
-    output$dplot <- renderPlot({
+    output$dplot <- shiny::renderPlot({
       hrf <- lookup_hrf(input$hrf, as.numeric(input$offset))
       duration <- input$duration
       reg <- regressor(0, hrf, duration)
@@ -144,71 +147,6 @@ hrf_plot <- function() {
       }
     })
   }
-  shinyApp(ui = ui, server = server)
+  shiny::shinyApp(ui = ui, server = server)
   
 }
-#design_plot(fmrimod)
-#hrf_plot()
-
-
-# @keywords internal
-# term_form <- function() {
-#   div(class="ui sidebar inverted vertical visible menu",
-#       div(class="item",
-#           div(class="active header", "Regression Term"),
-#           div(class="menu",
-#               shiny::uidropdown(),
-#               a(class="item", href="#divider", "HRF"),
-#               a(class="item", href="#input", "nbasis"),
-#           )
-#       )
-#   )
-# }
-
-
-# design_editor <- function(design, sframe) {
-#   requireNamespace("shiny.semantic")
-#   term_component <- function() {
-#     fluidRow(
-#       column(4, selectInput("onset_var", "Onsets", names(design))),
-#       column(4, selectInput("factors", "Variable(s)", names(design), multiple=TRUE)),
-#       column(4, selectInput("hrf", "HRF", choices=c("Gamma", "Gaussian",
-#                                                 "SPMG1", "SPMG2", "SPMG3"),
-#                                                 selected="SPMG1"))
-#     )
-#   }
-# 
-#   ui <- function() {
-#     shinyUI(
-#       semanticPage(
-#         suppressDependencies("bootstrap"),
-#         sidebar()
-#       )
-#     )
-#   }
-# 
-#   server <- function(input, output, session) {
-# 
-#     output$dplot <- renderPlot({
-#       if (TRUE) {
-#         plot(1:100)
-#       } else {
-#         plot(1:100)
-#         # srun <- as.integer(input$show_run)
-#         # keep <- which(design[[input$run_variable]] == srun)
-#         # des <- design[keep,]
-#         # print(nrow(des))
-#         # blocklens <- sframe$blocklens
-#         # bl <- blocklens[srun]
-#         # sframe2 <- sampling_frame(bl, TR=sframe$TR)
-#         # print(input$formula)
-#         # ev <- event_model(as.formula(input$formula), block=as.formula(paste("~ ", input$run_variable)), data=des, sampling_frame=sframe2)
-#         # dmat <- design_matrix(ev)
-#         # matplot(dmat, type='l')
-#       }
-#     })
-#   }
-# 
-# 
-#   shinyApp(ui = ui, server = server)
-# }

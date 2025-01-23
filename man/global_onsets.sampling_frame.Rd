@@ -28,3 +28,8 @@ blockids <- c(1, 2, 3)
 global_onsets(frame, onsets, blockids)
 
 }
+\seealso{
+Other global_onsets: 
+\code{\link{global_onsets}()}
+}
+\concept{global_onsets}

@@ -16,13 +16,31 @@ pair_contrast(A, B, name, where = NULL)
 \item{where}{An optional formula specifying the subset over which the contrast is computed.}
 }
 \value{
-A pair_contrast_spec object containing the sum-to-zero contrast between the two logical expressions.
+A pair_contrast_spec object containing:
+\item{A}{First logical expression}
+\item{B}{Second logical expression}
+\item{where}{Subsetting formula (if provided)}
+\item{name}{Contrast name}
 }
 \description{
-Construct a sum-to-zero contrast between two logical expressions.
+Construct a sum-to-zero contrast between two logical expressions. This function is
+particularly useful for comparing specific conditions or combinations of conditions.
+}
+\details{
+The contrast is constructed as (A - B), where A and B are logical expressions that
+evaluate to TRUE/FALSE for each observation. The resulting contrast weights sum to zero.
 }
 \examples{
-# A hypothetical experiment with a factor 'category' that takes on values of 'face' and 'scene'
-pair_contrast(~ category == "face", ~ category == "scene", name="face_scene")
+# Compare faces vs scenes
+pair_contrast(~ category == "face", ~ category == "scene", name = "face_vs_scene")
 
+# Compare with subsetting
+pair_contrast(~ category == "face", ~ category == "scene",
+             name = "face_vs_scene_block1",
+             where = ~ block == 1)
+
+}
+\seealso{
+\code{\link{pairwise_contrasts}} for all pairwise comparisons,
+\code{\link{contrast_set}} for creating sets of contrasts
 }

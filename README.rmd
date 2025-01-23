@@ -9,9 +9,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # In Development
 
-[![codecov](https://codecov.io/github/bbuchsbaum/fmrireg/branch/master/graphs/badge.svg)](https://codecov.io/github/bbuchsbaum/fmrireg) 
-
-[![Build Status](https://img.shields.io/travis/bbuchsbaum/fmrireg/master.svg)](https://travis-ci.org/bbuchsbaum/fmrireg)
+ <!-- badges: start -->
+  [![R-CMD-check](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml)
+  <!-- badges: end -->
 
 ```{r, echo = FALSE}                                                                                                        
 version <- as.vector(read.dcf('DESCRIPTION')[, 'Version'])                                                                 

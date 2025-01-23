@@ -64,6 +64,8 @@ event_data <- data.frame(fac=c("a", "B", "A", "B"), onsets=c(1,10,20,80), run=c(
 # Create a sampling frame with 50-second blocks and a TR of 2 seconds
 sframe <- sampling_frame(blocklens=50, TR=2)
 
-# Create an event model using the `onsets` variable as a predictor, with a separate baseline for each run
-evmodel <- fmri_event_model(response ~ hrf(onsets), data=event_data, block=~run, sampling_frame=sframe)
+# Create an event model using the `onsets` variable as a predictor, 
+#  with a separate baseline for each run
+evmodel <- event_model(onsets ~ hrf(onsets), data=event_data, block=~run, sampling_frame=sframe)
+dmat <- design_matrix(evmodel)
 }

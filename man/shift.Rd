@@ -9,8 +9,7 @@ shift(x, ...)
 \arguments{
 \item{x}{An object representing a time series or a time-based data structure.}
 
-\item{shift_amount}{A numeric value indicating the amount of time to shift the object by.
-Positive values will shift the object to the right, while negative values will shift it to the left.}
+\item{...}{extra args}
 }
 \value{
 An object of the same class as the input, shifted by the specified amount.
@@ -30,3 +29,8 @@ shifted_time_series <- shift(my_time_series, -2)
 }
 
 }
+\seealso{
+Other shift: 
+\code{\link{shift.regressor}()}
+}
+\concept{shift}

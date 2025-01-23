@@ -1,4 +1,3 @@
-
 #' @noRd
 #' @keywords internal
 get_methods <- function(obj) {
@@ -8,7 +7,19 @@ get_methods <- function(obj) {
 
 #' @noRd
 #' @keywords internal
+with_package <- function(name) {
+  if (!requireNamespace(name, quietly=TRUE)) {
+    stop(paste("Please install the", name, "package to use this functionality"))
+  }
+}
+  
+
+
+#' @noRd
+#' @keywords internal
 as_vectors <- function(x) { function(x, ...) UseMethod("as_vectors") }
+
+#' @importFrom methods setGeneric 
 setGeneric("as_vectors") 
 
 
@@ -59,17 +70,28 @@ setGeneric("as_vectors")
 #' # Create a sampling frame with 50-second blocks and a TR of 2 seconds
 #' sframe <- sampling_frame(blocklens=50, TR=2)
 #' 
-#' # Create an event model using the `onsets` variable as a predictor, with a separate baseline for each run
-#' evmodel <- fmri_event_model(response ~ hrf(onsets), data=event_data, block=~run, sampling_frame=sframe)
+#' # Create an event model using the `onsets` variable as a predictor, 
+#' #  with a separate baseline for each run
+#' evmodel <- event_model(onsets ~ hrf(onsets), data=event_data, block=~run, sampling_frame=sframe)
+#' dmat <- design_matrix(evmodel)
 event_model <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0, ...) { UseMethod("event_model") }
 
 #' get_data
 #' 
 #' @param x the dataset
 #' @param ... extra args
-#' @export
 #' @keywords internal
+#' @noRd
 get_data <- function(x, ...) UseMethod("get_data")
+
+
+#' get_data_matrix
+#' 
+#' @param x the dataset
+#' @param ... extra args
+#' @keywords internal
+#' @noRd
+get_data_matrix <- function(x, ...) UseMethod("get_data_matrix")
 
 
 #' get_mask
@@ -79,6 +101,7 @@ get_data <- function(x, ...) UseMethod("get_data")
 #' @param x the dataset
 #' @param ... extra args
 #' @keywords internal
+#' @noRd
 get_mask <- function(x, ...) UseMethod("get_mask")
 
 
@@ -89,13 +112,17 @@ get_mask <- function(x, ...) UseMethod("get_mask")
 #' @param x the object
 #' @param ... extra args
 #' @keywords internal
+#' @noRd
 get_formula <- function(x, ...) UseMethod("get_formula")
+
+
 
 #' term_matrices
 #' 
 #' @param x the object
 #' @param ... extra args
 #' @keywords internal
+#' @noRd
 term_matrices <- function(x, ...) UseMethod("term_matrices")
 
 
@@ -109,7 +136,7 @@ term_matrices <- function(x, ...) UseMethod("term_matrices")
 longnames <- function(x, ...) UseMethod("longnames")
 
 
-#' extract short shortnames of variable
+#' extract short short names of variable
 #' 
 #' get the short names of a set of variable levels
 #' 
@@ -126,6 +153,7 @@ shortnames <- function(x, ...) UseMethod("shortnames")
 #' @param x the object
 #' @param ... extra args
 #' @keywords internal
+#' @noRd
 design_env <- function(x, ...) UseMethod("design_env")
 
 
@@ -148,11 +176,13 @@ contrast_weights <- function(x, ...) UseMethod("contrast_weights")
 #' 
 #' @param x the object
 #' @keywords internal
+#' @noRd
 parent_terms <- function(x) UseMethod("parent_terms")
 
 
 #' term_names
 #' @param x the object to extra term names from
+#' @noRd
 #' @keywords internal
 term_names <- function(x) UseMethod("term_names")
 
@@ -167,6 +197,8 @@ term_names <- function(x) UseMethod("term_names")
 #' @export
 cells <- function(x, ...) UseMethod("cells")
 
+
+
 #' Conditions
 #' 
 #' return the set of condition labels associated with a model term
@@ -174,6 +206,7 @@ cells <- function(x, ...) UseMethod("cells")
 #' @param x the model term
 #' @param ... extra args
 #' @export
+#' @family conditions
 conditions <- function(x, ...) UseMethod("conditions")
 
 
@@ -225,8 +258,10 @@ levels <- function(x) UseMethod("levels")
 #' columns
 #' 
 #' return the column labels associated with the elements of a term.
+#' 
 #' @param x the term
 #' @keywords internal
+#' @noRd
 columns <- function(x) UseMethod("columns")
 
 
@@ -322,16 +357,67 @@ design_matrix <- function(x, ...) UseMethod("design_matrix")
 elements <- function(x, ...) UseMethod("elements")
 
 
-#' evaluate a function over a sampling grid
+#' Evaluate a regressor object over a time grid
 #' 
-#' given an object to be evaluated and an input sample "grid", evaluate the object.
-#' 
-#' @param x the object to evaluate
-#' @param grid the sampling grid
-#' @param ... extra args
-#' 
+#' Generic function to evaluate a regressor object over a specified time grid.
+#' Different types of regressors may have different evaluation methods.
+#'
+#' @param x The regressor object to evaluate
+#' @param grid A numeric vector specifying the time points at which to evaluate the regressor
+#' @param ... Additional arguments passed to specific methods
+#' @return A numeric vector or matrix containing the evaluated regressor values
+#' @seealso [single_trial_regressor()], [regressor()]
 #' @export
-evaluate <-  function(x, grid, ...) UseMethod("evaluate")
+evaluate <- function(x, grid, ...) {
+  UseMethod("evaluate")
+}
+
+
+#' fitted_hrf
+#'
+#' This generic function computes the fitted hemodynamic response function (HRF) for an object.
+#' The method needs to be implemented for specific object types.
+#'
+#' @param x An object for which the fitted HRF should be computed.
+#' @param sample_at A vector of time points at which the HRF should be sampled.
+#' @param ... Additional arguments to be passed to specific methods.
+#' @return A fitted HRF for the object.
+#' @export
+fitted_hrf <- function(x, sample_at, ...) UseMethod("fitted_hrf")
+
+
+#' extract regressor set
+#' 
+#' @param x a model object that contains regressors (or can generate them)
+#' @param ... extra args
+#' @family regressors
+regressors <- function(x, ...) UseMethod("regressors")
+
+#' Shift a time series object
+#'
+#' This is a generic function to shift time series objects. The goal is to
+#' provide a simple way to apply time shifts to various time series objects,
+#' such as regressors and time series data.
+#'
+#' @param x An object representing a time series or a time-based data structure.
+#' @param ... extra args
+#'
+#' @return An object of the same class as the input, shifted by the specified amount.
+#'
+#' @examples
+#' \dontrun{
+#' # Shift a regressor object
+#' shifted_regressor <- shift(my_regressor, 5)
+#'
+#' # Shift a time series object
+#' shifted_time_series <- shift(my_time_series, -2)
+#' }
+#'
+#' @export
+#' @family shift
+shift <- function(x, ...) {
+  UseMethod("shift")
+}
 
 
 
@@ -344,6 +430,7 @@ evaluate <-  function(x, grid, ...) UseMethod("evaluate")
 #' @param x the object
 #' @param onsets the relative onset times of the events
 #' @param ... extra args
+#' @family global_onsets
 global_onsets <-  function(x, onsets,...) UseMethod("global_onsets")
 
 
@@ -503,6 +590,7 @@ gen_afni_lm <- function(x, ...) UseMethod("gen_afni_lm")
 #' @param x the term
 #' @param ... extra args
 #' @keywords internal
+#' @noRd
 build_afni_stims <- function(x, ...) UseMethod("build_afni_stims")
 
 #' split an onset vector into a list
@@ -523,41 +611,26 @@ split_onsets <- function(x, ...) UseMethod("split_onsets")
 estimate_betas <- function(x, ...) UseMethod("estimate_betas")
 
 
+#' estimate contrast
+#' 
+#' @param x the contrast
+#' @param fit the model fit
+#' @param colind the subset of column indices in the design matrix
+#' @param ... extra args
+#' @export
+#' @family estimate_contrast
+estimate_contrast <- function(x, fit, colind, ...) UseMethod("estimate_contrast")
+
+
 #' estimate a linear model sequentially for each "chunk" (a matrix of time-series) of data
 #' 
 #' @param x the dataset 
 #' @param ... extra args
 chunkwise_lm <- function(x, ...) UseMethod("chunkwise_lm")
 
-
-
-#' Shift a time series object
-#'
-#' This is a generic function to shift time series objects. The goal is to
-#' provide a simple way to apply time shifts to various time series objects,
-#' such as regressors and time series data.
-#'
-#' @param x An object representing a time series or a time-based data structure.
-#' @param shift_amount A numeric value indicating the amount of time to shift the object by.
-#'   Positive values will shift the object to the right, while negative values will shift it to the left.
-#'
-#' @return An object of the same class as the input, shifted by the specified amount.
-#'
-#' @examples
-#' \dontrun{
-#' # Shift a regressor object
-#' shifted_regressor <- shift(my_regressor, 5)
-#'
-#' # Shift a time series object
-#' shifted_time_series <- shift(my_time_series, -2)
-#' }
-#'
-#' @export
-shift <- function(x, ...) {
-  UseMethod("shift")
-}
-
-
-
-  
-
+#' neural input
+#' 
+#' @param x a regressor
+#' @param ... extra args
+#' @family neural_input
+neural_input <- function(x, ...) UseMethod("neural_input")

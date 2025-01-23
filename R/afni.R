@@ -1,15 +1,16 @@
-
 #' Generate an AFNI Linear Model from an fmri_config object
 #'
 #' This function takes an fmri_config object and generates an AFNI linear model
 #' by reading the necessary files, creating an fmri_dataset, event_model,
 #' baseline_model, and fmri_model, and fitting the model using afni_lm.
 #'
-#' @param x An fmri_config object containing the necessary configuration for the analysis
-#' @param ... Additional arguments passed to the function
-#' @return An afni_lm object representing the fitted linear model
+#' @param x An fmri_config object containing the necessary configuration for the analysis.
+#'          It should include fields like `scans`, `mask`, `TR`, `run_length`, `design`, etc.
+#' @param ... Additional arguments passed to the function.
+#' @return An afni_lm object representing the fitted linear model.
 #' @importFrom utils read.table
 #' @keywords internal
+#' @noRd
 gen_afni_lm.fmri_config <- function(x, ...) {
   
   nuisance_list <- if (!is.null(x$baseline_model$nuisance_files)) {
@@ -42,30 +43,16 @@ gen_afni_lm.fmri_config <- function(x, ...) {
 #' Set up an fMRI linear model for AFNI's 3dDeconvolve
 #'
 #' This function prepares an fMRI linear model for AFNI's 3dDeconvolve tool.
-#' It takes an fmri_model object, an fmri_dataset object, and various options
-#' to control the fitting process.
 #'
-#' @param fmri_mod An fmri_model object containing the event and baseline models
-#' @param dataset An fmri_dataset object containing the scan data and other necessary information
-#' @param working_dir The working directory (default is the current directory)
-#' @param polort The number of polynomial baseline regressors (default is to suppress 'polort')
-#' @param jobs The number of jobs to use with '3dDeconvolve' (default is 1)
-#' @param censor A list of censoring vectors, one per run, or a single vector equal to the total number of scans (default is NULL)
-#' @param options A list of options to be sent to 3dDeconvolve (default is an empty list)
+#' @param fmri_mod An fmri_model object containing the event and baseline models.
+#' @param dataset An fmri_dataset object containing the scan data and other necessary information.
+#' @param working_dir The working directory (default is the current directory).
+#' @param polort The number of polynomial baseline regressors (default is to suppress 'polort').
+#' @param jobs The number of jobs to use with '3dDeconvolve' (default is 1).
+#' @param censor A list of censoring vectors, one per run, or a single vector equal to the total number of scans (default is NULL).
+#' @param options A list of options to be sent to 3dDeconvolve (default is an empty list).
 #'
-#' @return An afni_lm_spec object containing the fitted model, dataset, working directory, options, and command
-#'
-#' @examples 
-#' etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), 
-#' run=c(1,1,2,2))
-#' dset <- fmri_dataset(scans=c("s1.nii", "s2.nii"), mask="mask.nii", TR=1, 
-#' run_length=c(50,50), event_table=etab)
-#'
-#' emodel <- event_model(onset ~ hrf(fac), block = ~ run, data=etab, 
-#' sampling_frame=dset$sampling_frame)
-#' bmodel <- baseline_model("bs", degree=4, sframe=dset$sampling_frame)
-#' fmod <- fmri_model(emodel, bmodel)
-#' alm <- afni_lm(fmod, dset, jobs=2, options=list(tout=TRUE, errts="residuals.nii.gz"))
+#' @return An afni_lm_spec object containing the fitted model, dataset, working directory, options, and command.
 #' @export
 afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1, 
                     censor=NULL, options=list()) {
@@ -120,6 +107,15 @@ print.afni_lm_spec <- function(x,...) {
 }
 
 
+' Create an AFNI stimulus file object
+#'
+#' This function creates an AFNI stimulus file object, which includes the label, file name, and values.
+#'
+#' @param label The label for the stimulus.
+#' @param file_name The name of the file associated with the stimulus.
+#' @param values A vector of values associated with the stimulus.
+#'
+#' @return An afni_stim_file object.
 #' @keywords internal
 #' @noRd
 afni_stim_file <- function(label, file_name, values) {
@@ -129,6 +125,21 @@ afni_stim_file <- function(label, file_name, values) {
   )
 }
 
+#' Create an AFNI stimulus times object
+#'
+#' This function creates an AFNI stimulus times object, which includes the label, file name, 
+#' hemodynamic response function (HRF), onsets, block IDs, and response options.
+#'
+#' @param label The label for the stimulus.
+#' @param file_name The name of the file associated with the stimulus.
+#' @param hrf The hemodynamic response function to be used.
+#' @param onsets A vector of onset times for the stimulus.
+#' @param blockids A vector of block identifiers.
+#' @param iresp A logical indicating if the response is an impulse response (default is FALSE).
+#' @param sresp A logical indicating if the response is a sustained response (default is FALSE).
+#' @param tr_times A numeric value indicating the TR times (default is 1).
+#'
+#' @return An afni_stim_times object.
 #' @keywords internal
 #' @noRd
 afni_stim_times <- function(label, file_name, hrf, onsets, blockids, iresp=FALSE, sresp=FALSE, tr_times=1) {
@@ -149,24 +160,17 @@ afni_stim_im_times <- function(label, file_name, hrf, onsets, blockids) {
 }
 
 
-# afni_command_switch.afni_stim_times <- function(x, k, type) {
-#   switch(type,
-#     label = paste(k, x$label, collapse = " "),
-#     times = paste(k, x$file_name, as.character(x@hrf), collapse = " "),
-#     file = NULL,
-#     iresp = if (x$iresp) 
-#       paste(k, paste(paste(x$label, "_iresp", sep = ""), collapse = " "))
-#     else
-#       NULL
-#   )
-# }
-
-
-
 #' @keywords internal
 #' @noRd
 afni_command_switch <- function(x, ...) UseMethod("afni_command_switch")
 
+#' Write an AFNI stimulus file to disk
+#'
+#' This function writes the values of an AFNI stimulus file to a specified directory.
+#'
+#' @param stim An afni_stim_file object containing the stimulus information.
+#' @param dir The directory where the stimulus file will be written.
+#'
 #' @keywords internal
 #' @noRd
 write_afni_stim <- function(x, ...) UseMethod("write_afni_stim")
@@ -254,6 +258,7 @@ write_afni_stim.afni_stim_file <- function(stim, dir) {
 }
 
 #' @keywords internal
+#' @noRd
 write_afni_stim.afni_stim_times <- function(stim, dir) {
   ## TODO handle runs with no stimuli
   .write_onsets <- function(outname, vals) {
@@ -320,6 +325,7 @@ build_baseline_stims <- function(x) {
 }
 
 #' @keywords internal
+#' @noRd
 build_afni_stims.convolved_term <- function(x, iresp=FALSE, tr_times=1) {
   stimlabels <- longnames(x)
   stimfiles <- paste(stimlabels, "_reg.1D", sep = "")
@@ -331,6 +337,7 @@ build_afni_stims.convolved_term <- function(x, iresp=FALSE, tr_times=1) {
 }
 
 #' @keywords internal
+#' @noRd
 build_afni_stims.afni_hrf_convolved_term <- function(x, iresp=FALSE, tr_times=1) {
 
   stimlabels <- longnames(x)
@@ -351,6 +358,7 @@ build_afni_stims.afni_hrf_convolved_term <- function(x, iresp=FALSE, tr_times=1)
 }
 
 #' @keywords internal
+#' @noRd
 build_afni_stims.afni_trialwise_convolved_term <- function(x, iresp=FALSE, tr_times=1) {
   
   purge_nulls <- function(A) {
@@ -373,6 +381,7 @@ build_afni_stims.afni_trialwise_convolved_term <- function(x, iresp=FALSE, tr_ti
 }
 
 #' @keywords internal
+#' @noRd
 .make_decon_command_str <- function(cmdlines) {
   cmdstr <- lapply(names(cmdlines), function(optname) {
     entry <- cmdlines[[optname]]
@@ -407,23 +416,24 @@ build_afni_stims.afni_trialwise_convolved_term <- function(x, iresp=FALSE, tr_ti
 #' and other options. This command string can then be used to perform the actual
 #' fMRI analysis using the AFNI software.
 #'
-#' @param model The fMRI model, usually created using the fmri_model function
-#' @param dataset The fMRI dataset, usually created using the fmri_dataset function
-#' @param working_dir The working directory
-#' @param opts A list of options for the 3dDeconvolve command
+#' @param model The fMRI model, usually created using the fmri_model function.
+#' @param dataset The fMRI dataset, usually created using the fmri_dataset function.
+#' @param working_dir The working directory.
+#' @param opts A list of options for the 3dDeconvolve command.
 #'
 #' @return A list containing:
-#'         - cmd: The 3dDeconvolve command string
-#'         - cmdlines: The command lines for the 3dDeconvolve command
-#'         - afni_stims: A list of AFNI stimulus objects
-#'         - afni_baseline_mats: A list of AFNI baseline matrices
-#'         - gltfiles: A list of GLT (general linear test) filenames
-#'         - gltnames: A list of GLT names
-#'         - glts: A list of GLT objects
-#'         - gltstr: A list of GLT strings
-#'         - censor: The censoring vector
+#'         - cmd: The 3dDeconvolve command string.
+#'         - cmdlines: The command lines for the 3dDeconvolve command.
+#'         - afni_stims: A list of AFNI stimulus objects.
+#'         - afni_baseline_mats: A list of AFNI baseline matrices.
+#'         - gltfiles: A list of GLT (general linear test) filenames.
+#'         - gltnames: A list of GLT names.
+#'         - glts: A list of GLT objects.
+#'         - gltstr: A list of GLT strings.
+#'         - censor: The censoring vector.
 #'
 #' @keywords internal
+#' @noRd
 build_decon_command <- function(model, dataset, working_dir, opts) {
   ## get the set of stimulus regressors
   stimlabels <- unlist(lapply(terms(model$event_model), longnames))
@@ -447,11 +457,6 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   assert_that(sum(duplicated(gltnames))  == 0, msg="Cannot have two GLTs with the same name")
   
   func_terms <- terms(model$event_model)
-  
- 
-  ## construct list of afni stims
-  
-
   
   afni_stims <- lapply(func_terms, function(term) { build_afni_stims(term, iresp=opts[["iresp"]], tr_times=opts[["TR_times"]]) })
   
@@ -552,7 +557,7 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
 #'
 #' @examples
 #' # Assuming you have created an afni_lm_spec object called alm
-#' run.afni_lm_spec(alm, outdir="results")
+#' #run.afni_lm_spec(alm, outdir="results")
 #' @export
 run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system, prepend="",...) {
   start_dir <- getwd()
@@ -599,81 +604,6 @@ run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system, prepend=""
   
   setwd(start_dir)
 }
-
-
-
-#           
-#   afni.stims <- unlist(lapply(funcTerms, function(term) { buildAFNIStims(term, opts$iresp, opts$TR_times ) }))
-# 
-#   purgeNulls <- function(A) {
-#     A[!sapply(A, is.null)]
-#   }
-# 
-# 
-#   opt_stim_labels <-  purgeNulls(lapply(seq_along(afni.stims), function(i) buildCommandSwitch(afni.stims[[i]], i, "label")))
-#   opt_stim_files  <-  purgeNulls(lapply(seq_along(afni.stims), function(i) buildCommandSwitch(afni.stims[[i]], i, "file")))
-#   opt_stim_times  <-  purgeNulls(lapply(seq_along(afni.stims), function(i) buildCommandSwitch(afni.stims[[i]], i, "times")))
-#   opt_stim_iresp  <-  purgeNulls(lapply(seq_along(afni.stims), function(i) buildCommandSwitch(afni.stims[[i]], i, "iresp")))
-# 
-# 
-#   cmdlines <- list(input=filelist(x@design, full.names=T),
-#                              mask=x@mask,
-#                              polort=opts[["polort"]],
-#                              num_stimts=length(afni.stims),
-#                              num_glt=length(gltlist),
-#                              stim_file=opt_stim_files,
-#                              stim_label=opt_stim_labels,
-#                              stim_times=opt_stim_times,
-#                              TR_times=opts[["TR_times"]],
-#                              iresp=opt_stim_iresp,
-#                              gltsym=lapply(seq_along(gltfiles), function(i) paste(gltfiles[i], collapse=" ")),
-#                              glt_label=lapply(seq_along(gltnames), function(i) paste(i, gltnames[i], collapse=" ")),
-#                              nofullf_atall=opts[["nofullf_atall"]],
-#                              fout=opts[["fout"]],
-#                              rout=opts[["rout"]],
-#                              tout=opts[["tout"]],
-#                              bout=opts[["bout"]],
-#                              noFDR=opts[["noFDR"]],
-#                              cbucket=opts[["cbucket"]],
-#                              bucket=opts[["bucket"]],
-#                              jobs=opts[["jobs"]],
-#                              float=TRUE)
-# 
-# 
-#             cmdstr <- .makeCommandStr(cmdlines)
-# 
-#             ret <- list()
-#             wd <- workingDir(x)
-# 
-#             nextDirName <- function(wd) {
-#               nd <- paste(wd, "+", sep="")
-#               if (!file.exists(nd)) {
-#                 nd
-#               } else {
-#                 Recall(nd)
-#               }
-#             }
-# 
-#             writeStimFiles <- function() {
-#               sapply(afni.stims, function(stim) {
-#                 writeAFNIStim(stim, ".")
-#               })
-#             }
-# 
-#
-#             writeGLTs <- function() {
-#               lapply(seq_along(gltlist), function(i) {
-#                 fout <- file(gltfiles[i], "w")
-#                 .glt <- gltlist[[i]]
-# 
-#                 write(unlist(.glt), file=fout, sep="\n")
-# 
-#                 close(fout)
-#               })
-#             }
-# 
-# 
-
 
 
    

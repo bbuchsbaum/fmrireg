@@ -1,8 +1,7 @@
-
-
 #' null_regressor 
 #' @param hrf an hrf function
 #' @param span the hrf span
+#' @noRd
 null_regressor <- function(hrf=HRF_SPMG1, span=24) {
   ret <- list(onsets=NA,hrf=hrf, eval=hrf, duration=0,amplitude=0,span=span)
   class(ret) <- c("null_regressor", "regressor", "list")
@@ -10,24 +9,43 @@ null_regressor <- function(hrf=HRF_SPMG1, span=24) {
 }
 
 
-
-
-#' single_trial_regressor 
-#' 
-#' construct a regressor object that has a single onset
-#' 
+#' Create a single trial regressor
+#'
+#' Creates a regressor object for modeling a single trial event in an fMRI experiment.
+#' This is particularly useful for trial-wise analyses where each trial needs to be
+#' modeled separately. The regressor represents the predicted BOLD response for a single
+#' event using a specified hemodynamic response function (HRF).
+#'
 #' @param onsets the event onset in seconds, must be of length 1.
 #' @param hrf a hemodynamic response function, e.g. \code{HRF_SPMG1}
 #' @param duration duration of the event (default is 0)
 #' @param amplitude scaling vector (default is 1)
 #' @param span the temporal window of the impulse response function (default is 24)
-#' @return an S3 list of type \code{single_trial_regressor}
-#' @export
-#' @examples 
-#' 
+#'
+#' @return A single_trial_regressor object which inherits from regressor with the following components:
+#'   \itemize{
+#'     \item onsets: The onset time of the trial
+#'     \item duration: The duration of the trial
+#'     \item amplitude: The amplitude of the trial response
+#'     \item hrf: The HRF object used for convolution
+#'   }
+#' @seealso 
+#'   \code{\link{regressor}} for creating multiple trial regressors,
+#'   \code{\link{evaluate.single_trial_regressor}} for evaluating the regressor,
+#'   \code{\link{HRF_SPMG1}} for the default HRF
+#'
+#' @examples
+#' # Create a single trial regressor with default HRF
 #' reg <- single_trial_regressor(c(10), HRF_SPMG1)
-#' pred <- evaluate(reg, seq(0,100,by=2))
-#' nbasis(reg) == 1
+#'
+#' # Create a single trial regressor with custom HRF and amplitude
+#' reg <- single_trial_regressor(c(10), HRF_GAMMA, amplitude = 2)
+#'
+#' # Evaluate the regressor over a time grid
+#' grid <- seq(0, 30, by = 0.5)
+#' values <- evaluate(reg, grid)
+#'
+#' @export
 single_trial_regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=24) {
   assert_that(length(onsets) ==1, msg="length of 'onsets' must be 1 for single trial regressor")
   assert_that(length(duration) ==1, msg="length of 'duration' must be 1 for single trial regressor")
@@ -98,12 +116,40 @@ regressor <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=40, s
 }
 
 #' @keywords internal
+#' @noRd
 dots <- function(...) {
   eval(substitute(alist(...)))
 }
 
 
 
+#' Evaluate a single trial regressor
+#'
+#' Method to evaluate a single trial regressor over a specified time grid.
+#' This computes the predicted BOLD response for the trial at each time point
+#' by convolving the trial event with its hemodynamic response function.
+#'
+#' @param x A single_trial_regressor object
+#' @param grid Numeric vector specifying the time points at which to evaluate the regressor
+#' @param precision Optional numeric value specifying the precision of the evaluation (default: 0.3)
+#' @param ... Additional arguments passed to the HRF evaluation function
+#'
+#' @return A numeric vector containing the predicted BOLD response at each time point in the grid
+#' @seealso 
+#'   \code{\link{single_trial_regressor}} for creating single trial regressors,
+#'   \code{\link{evaluate.HRF}} for HRF evaluation details
+#'
+#' @examples
+#' # Create and evaluate a single trial regressor
+#' reg <- single_trial_regressor(c(10), HRF_SPMG1)
+#' grid <- seq(0, 30, by = 0.5)
+#' response <- evaluate(reg, grid)
+#'
+#' # Plot the response
+#' plot(grid, response, type = "l", 
+#'      xlab = "Time (s)", ylab = "BOLD Response")
+#'
+#' @method evaluate single_trial_regressor
 #' @export
 evaluate.single_trial_regressor <- function(x, grid, precision=.3, ...) {
   nb <- nbasis(x)
@@ -140,8 +186,41 @@ evaluate.null_regressor <- function(x, grid, precision=.3, ...) {
   }
 }
 
+#' @keywords internal 
+#' @noRd
+fastevalreg2 <- function(x, start, end, TR, precision=.3) {
+  nb <- nbasis(x)
+  #grid <- seq(start, end, by=TR)
+  #finegrid <- seq(start, end, by=precision)
+  #valid <- x$onsets >= (grid[1]-16) & x$onsets <= grid[length(grid)]
+  
+  #valid.ons <- x$onsets[valid]
+  #valid.amp <- x$amplitude[valid]
+  #valid.durs <- x$duration[valid]
+  
+  time <- seq(0,attr(x$hrf, "span"), by=precision)
+  samhrf <- evaluate(x$hrf, time)
+  
+  ninput <- neural_input(x, start, end, resolution=precision)
+  
+  if (nb > 1) {
+    lowres <- matrix(0, length(grid), nb)
+    for (i in 1:nb) {
+      highres <- pracma::conv(samhrf[,i],ninput$neural_input)
+      lowres[,i] <- approx(ninput$time, highres[1:length(ninput$time)], xout=grid, rule=2)$y
+    }
+    lowres
+  } else {
+    highres <- pracma::conv(samhrf,ninput$neural_input)
+    lowres <- approx(ninput$time, highres[1:length(ninput$time)], xout=grid, rule=2)$y
+    lowres
+  }
+  
+}
 
 #' @importFrom pracma conv
+#' @importFrom memoise memoise
+#' @noRd
 fastevalreg <- function(x, start, end, TR, precision=.3) {
   nb <- nbasis(x)
   grid <- seq(start, end, by=TR)
@@ -150,6 +229,7 @@ fastevalreg <- function(x, start, end, TR, precision=.3) {
   
   valid.ons <- x$onsets[valid]
   valid.amp <- x$amplitude[valid]
+  valid.durs <- x$duration[valid]
   
   time <- seq(0,attr(x$hrf, "span"), by=precision)
   samhrf <- evaluate(x$hrf, time)
@@ -157,6 +237,8 @@ fastevalreg <- function(x, start, end, TR, precision=.3) {
   bins <- as.integer((valid.ons - finegrid[1])/precision + 1)
   delta <- numeric(length(finegrid))
   delta[bins] <- x$amplitude
+  
+  
   #highres <- stats::convolve(samhrf, delta, type="open")
   
   if (nb > 1) {
@@ -167,6 +249,7 @@ fastevalreg <- function(x, start, end, TR, precision=.3) {
     }
     lowres
   } else {
+
     highres <- pracma::conv(samhrf,delta)
     lowres <- approx(finegrid, highres[1:length(finegrid)], xout=grid, rule=2)$y
     lowres
@@ -184,7 +267,8 @@ fastevalreg <- function(x, start, end, TR, precision=.3) {
 #' @param use_conv use fast convolution approach
 #' @examples 
 #' frame <- sampling_frame(blocklens=100, TR=2)
-#' reg <- regressor(onsets=c(10,20,35, 47,52, 68, 79,86), amp=runif(8), duration=runif(8)*3, hrf=HRF_SPMG1)
+#' reg <- regressor(onsets=c(10,12, 14, 16, 18,20,35, 47,52, 68, 79,86), amp=runif(12), 
+#' duration=runif(12)*3, hrf=HRF_SPMG1)
 #' e1 = evaluate(reg, samples(frame))
 #' e2 = evaluate(reg, samples(frame), use_conv=TRUE)
 #' @import RANN
@@ -194,10 +278,16 @@ evaluate.regressor <- function(x, grid, precision=.33, use_conv=FALSE, ...) {
   nb <- nbasis(x)
   dspan <- x$span/median(diff(grid)) 
   
+
   valid <- x$onsets >= (grid[1]-16) & x$onsets <= grid[length(grid)]
   valid.ons <- x$onsets[valid]
   valid.durs <- x$duration[valid]
   valid.amp <- x$amplitude[valid]
+  
+  time <- seq(0,attr(x$hrf, "span"), by=precision)
+  #maxamp <- max(valid.amp)
+  #samhrf <- evaluate(x$hrf, time, amplitude=maxamp)
+  #maxheight <- max(samhrf)
   
   if (use_conv && all(valid.durs[1] == valid.durs) && all(diff(grid) == grid[2] - grid[1]) && length(grid) > 1) {
     start <- grid[1]
@@ -262,6 +352,49 @@ evaluate.regressor <- function(x, grid, precision=.33, use_conv=FALSE, ...) {
   }
 }
 
+#' @keywords internal
+#' @noRd
+evaluate_regressor <- function(x, grid, precision = 0.3, ...) {
+  # Extract HRF span
+  hrf_span <- attr(x$hrf, "span")
+  
+  # Generate HRF values over fine grid
+  hrf_times <- seq(0, hrf_span, by = precision)
+  samhrf <- evaluate(x$hrf, hrf_times)
+  
+  # Ensure samhrf is a matrix
+  if (is.vector(samhrf)) {
+    samhrf <- matrix(samhrf, ncol = 1)
+  }
+  
+  # Determine start and end times
+  start <- min(grid[1], x$onsets[1]) - hrf_span
+  end <- max(grid[length(grid)], x$onsets[length(x$onsets)]) + hrf_span
+  
+  # Call the Rcpp function
+  result <- evaluate_regressor_convolution(
+    grid = grid,
+    onsets = x$onsets,
+    durations = x$duration,
+    amplitudes = x$amplitude,
+    hrf_values = samhrf,
+    hrf_span = hrf_span,
+    start = start,
+    end = end,
+    precision = precision
+  )
+  
+  # Return result in the expected format
+  nb <- nbasis(x)
+  if (nb == 1) {
+    return(as.vector(result))
+  } else {
+    return(result)
+  }
+}
+
+
+
 #' @export
 nbasis.regressor <- function(x) nbasis(x$hrf)
 
@@ -288,7 +421,15 @@ durations.regressor <- function(x) x$duration
 #' @rdname amplitudes
 amplitudes.regressor <- function(x) x$amplitude
 
-neural_input <- function(x, from, to, resolution) {
+
+#' @export
+neural_input.regressor <- function(x, start, end, resolution=.33, ...) {
+  neural_input_rcpp(x, start, end, resolution)
+}
+
+#' @keywords internal
+#' @noRd
+neural_inputR <- function(x, from, to, resolution) {
   time <- seq(from + (resolution/2), to - (resolution/2), by=resolution)
   out <- numeric( (to - from)/resolution)
   ons <- x$onsets
@@ -384,36 +525,41 @@ plot.regressor <- function(x, samples, add=FALSE, ...) {
 }
 
 #' @export
-print.regressor <- function(x,...) {
-  N <- min(c(6, length(onsets(x))))
-  cat(paste("hemodynamic response function:", attr(x$hrf, "name")))
-  cat("\n")
-  cat(paste("onsets: ", paste(onsets(x)[1:N], collapse=" "), "..."))
-  cat("\n")
+print.regressor <- function(x, ...) {
+  # Header with fancy box drawing
+  cat("\n═══ fMRI Regressor ═══\n")
   
-  durs <- durations(x)
-  amps <- amplitudes(x)
+  # Basic information about the regressor
+  cat("\n📊 Structure:\n")
+  cat("  • Type:", class(x)[1], "\n")
+  cat("  • Number of basis functions:", nbasis(x), "\n")
+  cat("  • Number of onsets:", length(onsets(x)), "\n")
   
-  if (all(durs == durs[1])) {
-    cat(paste("durations: ", durs[1], "for all events"))
-  } else {
-    cat(paste("durations: ", paste(durs[1:N], collapse=" "), "..."))
+  # Temporal information
+  cat("\n⏱️  Temporal Properties:\n")
+  cat("  • Onsets:", paste(head(round(onsets(x), 2), 3), 
+                          if(length(onsets(x)) > 3) "..." else "", collapse=", "), "\n")
+  if (!is.null(x$duration) && any(x$duration != 0)) {
+    cat("  • Durations:", paste(head(round(x$duration, 2), 3), 
+                               if(length(x$duration) > 3) "..." else "", collapse=", "), "\n")
+  }
+  if (!is.null(x$amplitude) && !all(x$amplitude == 1)) {
+    cat("  • Amplitudes:", paste(head(round(x$amplitude, 2), 3), 
+                                if(length(x$amplitude) > 3) "..." else "", collapse=", "), "\n")
   }
   
-  cat("\n")
+  # HRF information
+  cat("\n🧠 HRF Properties:\n")
+  cat("  • Type:", class(x$hrf)[1], "\n")
+  cat("  • Span:", attr(x$hrf, "span"), "seconds\n")
   
-  if (!is.na(amps[1]) && all(amps == amps[1])) {
-    cat(paste("amplitudes: ", amps[1], "for all events"))
-  } else {     
-    cat(paste("amplitudes: ", paste(amps[1:N], collapse=" "), "..."))
-    
-  }
-  
+  # Add a nice footer
   cat("\n")
 }
 
 #' check vector is of length 1 or repeated for supplied length
 #' @keywords internal
+#' @noRd
 conform_len <- function(val, len) {
   name <- deparse(substitute(val))
   if (length(val) == 1) {
@@ -426,8 +572,15 @@ conform_len <- function(val, len) {
 }
 
 
-# Shift method for the regressor class
-shift.regressor <- function(x, shift_amount) {
+#' Shift method for the regressor class
+#' 
+#' @param x the regressor object
+#' @param shift_amount A numeric value indicating the amount of time to shift the object by.
+#'   Positive values will shift the object to the right, while negative values will shift it to the left.
+#' @param ... extra args
+#' @export
+#' @family shift
+shift.regressor <- function(x, shift_amount, ...) {
   if (!inherits(x, "regressor")) {
     stop("x must be an object of class 'regressor'")
   }

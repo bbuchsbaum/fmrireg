@@ -28,7 +28,7 @@
 
 \item{durations}{A numeric vector of event durations. Default is 0 for all events.}
 
-\item{precision}{Numeric value indicating the precision of the model. Default is 0.3.}
+\item{precision}{Numeric value indicating the precision hrf sampling. Default is 0.3.}
 
 \item{...}{Additional arguments.}
 }

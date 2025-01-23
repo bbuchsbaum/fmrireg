@@ -2,7 +2,7 @@ Package: fmrireg
 Type: Package
 Title: R package for the anlysis of fmri data
 Version: 0.0.1
-LinkingTo: Rcpp
+LinkingTo: Rcpp,RcppArmadillo, roptim
 Date: 2023-03-07
 Authors@R: person("Bradley", "Buchsbaum",, role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
 License: GPL (>= 2)
@@ -11,49 +11,55 @@ Description: fmrireg is a package for the analysis of functional magnetic resona
 Encoding: UTF-8
 LazyData: yes
 Depends:
-    R (>= 4.0.0),
-    stats
+    R (>= 4.0.0)
 Imports:
-    numDeriv,
+    stats,
+    Matrix,
     RANN,
     assertthat,
     stringr,
     tibble,
     purrr,
     foreach,
-    Matrix,
-    cowplot,
     dplyr,
     ggplot2,
     gmodels,
     lazyeval,
-    magrittr,
-    pls,
-    rrBLUP,
-    shiny,
     tidyr,
-    mgcv,
     iterators,
     robustbase,
-    glmnet,
-    care,
     memoise,
     pracma,
-    forecast,
     furrr,
     rlang,
-    neuroim2
-RoxygenNote: 7.2.3
+    neuroim2,
+    Rcpp,
+    methods,
+    numDeriv,
+    RcppArmadillo (>= 0.10.1.0),
+    R6,
+    splines,
+    crayon
+RoxygenNote: 7.3.2.9000
 Roxygen: list(
     markdown = TRUE,
     roclets = c("collate", "namespace", "rd", "roxyglobals::global_roclet"))
 Suggests: 
     testthat,
+    pls,
     knitr,
     rmarkdown,
     roxygen2,
     covr,
     multivarious,
+    rrBLUP,
+    care,
+    glmnet,
+    proxy,
+    cowplot,
+    forecast,
+    shiny,
+    mgcv,
     roxyglobals (>= 0.2.1)
 Remotes: 
     bbuchsbaum/neuroim2,

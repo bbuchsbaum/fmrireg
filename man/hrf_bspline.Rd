@@ -4,7 +4,7 @@
 \alias{hrf_bspline}
 \title{B-spline HRF (hemodynamic response function)}
 \usage{
-hrf_bspline(t, span = 20, N = 5, degree = 3)
+hrf_bspline(t, span = 24, N = 5, degree = 3)
 }
 \arguments{
 \item{t}{A vector of time points.}

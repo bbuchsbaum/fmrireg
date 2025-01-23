@@ -1,147 +1,43 @@
-## TODO
-
-## when contrasts are misspecified or have spelling errors, errors need to be infromative.
-
-
-#' Contrast Specification
-#'
-#' @description
-#' Define a linear contrast using a formula expression.
-#'
-#' @param form A formula describing the contrast.
-#' @param name A character label for the contrast.
-#' @param where An expression defining the subset over which the contrast is applied (default: NULL).
-#'
-#' @return A list containing the contrast specification.
-#'
-#' @examples
-#' # A minus B contrast
-#' contrast(~ A - B, name="A_B")
-#'
-#' @export
-contrast <- function(form, name, where=NULL) {
-  assert_that(lazyeval::is_formula(form))
-  if (!is.null(where)) {
-    assert_that(lazyeval::is_formula(where))
-  }
-  ret <- list(A=form,
-              B=NULL,
-              where=where,
-              name=name)
-  
-  class(ret) <- c("contrast_formula_spec", "contrast_spec", "list")
-  ret
-  
-}
-
-#' Create a Set of Contrasts
-#'
-#' @description
-#' Construct a list of contrast_spec objects.
-#'
-#' @param ... A variable-length list of contrast_spec objects.
-#'
-#' @return A list of contrast_spec objects with class "contrast_set".
-#'
-#' @examples
-#' c1 <- contrast(~ A - B, name="A_B")
-#' c2 <- contrast(~ B - C, name="B_C")
-#' contrast_set(c1,c2)
-#'
-#' @export
-#' @import assertthat
-#' @importFrom purrr map_lgl
-contrast_set <- function(...) {
-  ret <- list(...)
-  assertthat::assert_that(all(map_lgl(ret, inherits, "contrast_spec")))
-  class(ret) <- c("contrast_set", "list")
-  ret
-}
-
-#' Pairwise Contrasts
-#'
-#' @description
-#' Construct pairwise contrasts for all combinations of factor levels.
-#'
-#' @param levels A vector of factor levels to be compared.
-#' @param where An optional formula specifying the subset over which the contrast is computed.
-#'
-#' @return A contrast_set object containing pairwise contrasts for all combinations of factor levels.
-#'
-#' @examples
-#' pairwise_contrasts(c("A", "B", "C"))
-#'
-#' @export
-#' @importFrom utils combn
-pairwise_contrasts <- function(levels, where=NULL) {
-  if (!is.null(where)) {
-    assert_that(lazyeval::is_formula(where))
-  }
-  
-  cbns <- combn(length(levels),2)
-  ret <- lapply(1:ncol(cbns), function(i) {
-    lev1 <- levels[cbns[1,i]]
-    lev2 <- levels[cbns[2,i]]
-    pair_contrast(as.formula(paste("~", lev1)), as.formula(paste("~", lev2)), where=where, name=paste0("con_", lev1, "_", lev2))
-  })
-  
-  do.call(contrast_set, ret)
-}
-  
-#' One Against All Contrast
-#'
-#' @description
-#' Construct contrasts comparing each factor level against the average of the other levels.
-#'
-#' @param levels A vector of factor levels to be compared.
-#' @param facname A character string specifying the name of the factor containing the supplied levels.
-#' @param where An optional formula specifying the subset over which the contrast is computed.
-#'
-#' @return A contrast_set object containing contrasts comparing each factor level against the average of the other levels.
-#'
-#' @examples
-#' fac <- factor(rep(c("A", "B", "C"), 2))
-#' con <- one_against_all_contrast(levels(fac), "fac")
-#'
-#' @export
-one_against_all_contrast <- function(levels, facname, where=NULL) {
-  if (!is.null(where)) {
-    assert_that(lazyeval::is_formula(where))
-  }
-  
-  ret <- lapply(1:length(levels), function(i) {
-    lev1 <- levels[i]
-    levother <- levels[-i]
-    pair_contrast(as.formula(paste("~", facname, " == ", paste0('"', lev1, '"'))), 
-                             as.formula(paste0("~", facname, "!= ", paste0('"', lev1, '"'))), 
-                  where=where, name=paste0("con_", lev1, "_vs_", "other"))
-  })
-  
-  do.call(contrast_set, ret)
-  
-}
-
 #' Pair Contrast
 #'
 #' @description
-#' Construct a sum-to-zero contrast between two logical expressions.
+#' Construct a sum-to-zero contrast between two logical expressions. This function is
+#' particularly useful for comparing specific conditions or combinations of conditions.
 #'
 #' @param A A formula representing the first logical expression in the contrast.
 #' @param B A formula representing the second logical expression in the contrast.
 #' @param name A character string specifying the name of the contrast (mandatory).
 #' @param where An optional formula specifying the subset over which the contrast is computed.
 #'
-#' @return A pair_contrast_spec object containing the sum-to-zero contrast between the two logical expressions.
+#' @return A pair_contrast_spec object containing:
+#'   \item{A}{First logical expression}
+#'   \item{B}{Second logical expression}
+#'   \item{where}{Subsetting formula (if provided)}
+#'   \item{name}{Contrast name}
+#'
+#' @details
+#' The contrast is constructed as (A - B), where A and B are logical expressions that
+#' evaluate to TRUE/FALSE for each observation. The resulting contrast weights sum to zero.
 #'
 #' @examples
-#' # A hypothetical experiment with a factor 'category' that takes on values of 'face' and 'scene'
-#' pair_contrast(~ category == "face", ~ category == "scene", name="face_scene")
+#' # Compare faces vs scenes
+#' pair_contrast(~ category == "face", ~ category == "scene", name = "face_vs_scene")
+#'
+#' # Compare with subsetting
+#' pair_contrast(~ category == "face", ~ category == "scene",
+#'              name = "face_vs_scene_block1",
+#'              where = ~ block == 1)
+#'
+#' @seealso
+#' \code{\link{pairwise_contrasts}} for all pairwise comparisons,
+#' \code{\link{contrast_set}} for creating sets of contrasts
 #'
 #' @export
-pair_contrast <- function(A, B, name, where=NULL) {
+pair_contrast <- function(A, B, name, where = NULL) {
   assert_that(lazyeval::is_formula(A))
   assert_that(lazyeval::is_formula(B))
   
+
   if (!is.null(where)) {
     assert_that(lazyeval::is_formula(where))
   }
@@ -156,36 +52,133 @@ pair_contrast <- function(A, B, name, where=NULL) {
 }
 
 
-#' Unit Contrast
+#' One-way Contrast
 #'
 #' @description
-#' Construct a contrast that sums to 1 and is used to define contrasts against the baseline.
+#' Create a one-way contrast specification
 #'
-#' @param A A formula representing the contrast expression.
-#' @param name A character string specifying the name of the contrast.
-#' @param where An optional formula specifying the subset of conditions to apply the contrast to.
-#'
-#' @return A unit_contrast_spec object containing the contrast that sums to 1.
-#'
+#' @param A A formula specifying the contrast
+#' @param name The name of the contrast
+#' @param where Optional environment for evaluating the formula
+#' @return A oneway_contrast_spec object that can be used to generate contrast weights
 #' @examples
-#' con <- unit_contrast(~ Face, name="Main_face")
+#' # Create a one-way contrast for a factor 'basis'
+#' con <- oneway_contrast(~ basis, name = "Main_basis")
 #'
+#' # Create a one-way contrast with a specific environment
+#' con <- oneway_contrast(~ basis, name = "Main_basis",
+#'                       where = new.env())
+#'
+#' @seealso \code{\link{interaction_contrast}} for testing interactions,
+#'          \code{\link{pair_contrast}} for pairwise comparisons
 #' @export
-unit_contrast <- function(A, name, where=NULL) {
+oneway_contrast <- function(A, name, where = NULL) {
   assert_that(lazyeval::is_formula(A)) 
   
   if (!is.null(where)) {
     assert_that(lazyeval::is_formula(where))
   }
-    
-  structure(
-          list(A=A,
-               B=NULL,
-               where=where,
-               name=name),
-          class=c("unit_contrast_spec", "contrast_spec", "list")
-  )
   
+  structure(
+    list(A=A,
+         B=NULL,
+         where=where,
+         name=name),
+    class=c("oneway_contrast_spec", "contrast_spec", "list")
+  )
+}
+
+#' Interaction Contrast
+#'
+#' @description
+#' Create an interaction contrast specification
+#'
+#' @param A A formula specifying the interaction contrast
+#' @param name The name of the contrast
+#' @param where Optional environment for evaluating the formula
+#' @return An interaction_contrast_spec object containing the specification for
+#'         generating interaction contrast weights
+#' @examples
+#' # Create an interaction contrast for factors A and B
+#' con <- interaction_contrast(~ A * B, name = "A_by_B")
+#'
+#' # Create an interaction contrast with a specific environment
+#' con <- interaction_contrast(~ A * B, name = "A_by_B",
+#'                           where = new.env())
+#'
+#' @seealso \code{\link{oneway_contrast}} for main effects,
+#'          \code{\link{pair_contrast}} for pairwise comparisons
+#' @export
+interaction_contrast <- function(A, name, where = NULL) {
+  assert_that(lazyeval::is_formula(A)) 
+  
+  if (!is.null(where)) {
+    assert_that(lazyeval::is_formula(where))
+  }
+  
+  
+  
+  structure(
+    list(A=A,
+         B=NULL,
+         where=where,
+         name=name),
+    class=c("interaction_contrast_spec", "contrast_spec", "list")
+  )
+}
+
+
+#' Polynomial Contrast
+#'
+#' @description
+#' Create polynomial contrasts for testing trends across ordered factor levels. This is
+#' particularly useful for analyzing factors with a natural ordering (e.g., time, dose).
+#'
+#' @param A A formula specifying the ordered factor.
+#' @param name A character string identifying the contrast.
+#' @param where An optional formula for subsetting the data.
+#' @param degree An integer specifying the degree of the polynomial (default: 1).
+#' @param value_map An optional list mapping factor levels to numeric values.
+#'
+#' @return A poly_contrast_spec object containing the specification for generating
+#'   polynomial contrast weights.
+#'
+#' @details
+#' The function creates orthogonal polynomial contrasts up to the specified degree.
+#' These contrasts can test for linear, quadratic, cubic, and higher-order trends
+#' in the data. The value_map parameter allows for non-uniform spacing between levels.
+#'
+#' @examples
+#' # Linear trend across time points
+#' pcon <- poly_contrast(~ time, name = "linear_time", degree = 1)
+#'
+#' # Cubic trend with custom spacing
+#' pcon <- poly_contrast(~ dose, name = "dose_cubic",
+#'                      degree = 3,
+#'                      value_map = list("low" = 0, "med" = 2, "high" = 5))
+#'
+#' @seealso
+#' \code{\link{oneway_contrast}} for categorical contrasts,
+#' \code{\link{interaction_contrast}} for interaction effects
+#'
+#' @export
+poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL) {
+  assert_that(lazyeval::is_formula(A))
+  
+  if (!is.null(where)) {
+    assert_that(lazyeval::is_formula(where))
+  }
+
+  ret <- list(
+    A=A,
+    B=NULL,
+    where=where,
+    degree=degree,
+    value_map=value_map,
+    name=name)
+  
+  class(ret) <- c("poly_contrast_spec", "contrast_spec", "list")
+  ret
 }
 
 #' Unit Contrast Weights
@@ -233,54 +226,112 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
   ret
 }
 
-#' Polynomial Contrast
+#' One-way Contrast Weights
 #'
 #' @description
-#' Create a polynomial contrast evaluated over a set of (orderable) factor levels.
+#' Compute the contrast weights for an oneway_contrast_spec object.
 #'
-#' @param A A formula describing the contrast.
-#' @param name A character string representing the name of the contrast.
-#' @param where An optional formula defining the subset over which the contrast is computed.
-#' @param degree An integer representing the degree of the polynomial (default: 1).
-#' @param value_map An optional list that maps between levels of a factor and a numeric value.
+#' @param x An oneway_contrast_spec object.
+#' @param term A term object.
+#' @param ... Additional arguments (currently unused).
 #'
-#' @return A list containing the polynomial contrast specification.
-#'
-#' @examples
-#' pcon <- poly_contrast(~ time, name="poly_time_3", degree=3)
+#' @return A list containing the term, name, weights, condition names, and contrast specification.
 #'
 #' @export
-poly_contrast <- function(A, name, where=NULL, degree=1, value_map=NULL) {
-  assert_that(lazyeval::is_formula(A))
+contrast_weights.oneway_contrast_spec <- function(x, term,...) {
+  term.cells <- cells(term)
+  count <- attr(cells(term, drop.empty=FALSE), "count")
   
-  if (!is.null(where)) {
-    assert_that(lazyeval::is_formula(where))
+  if (!is.null(x$where)) {
+    keep <- lazyeval::f_eval_rhs(x$where, data=term.cells)	
+    reduced.term.cells <- subset(term.cells, keep)
+  } else {
+    keep <- rep(TRUE, nrow(term.cells))
+    reduced.term.cells <- term.cells
   }
-
-  ret <- list(
-    A=A,
-    B=NULL,
-    where=where,
-    degree=degree,
-    value_map=value_map,
-    name=name)
   
-  class(ret) <- c("poly_contrast_spec", "contrast_spec", "list")
+
+  
+  fac <- all.vars(rlang::f_rhs(x$A))
+  if (length(fac) > 1) {
+    warning("one-way contrast has more than one factor specified, taking first one only.")
+  }
+  
+  cmat <- generate_main_effect_contrast(reduced.term.cells, fac[1], count)
+  #fac <- as.factor(lazyeval::f_eval_rhs(x$A, reduced.term.cells))
+  #contrasts(fac) <- contr.sum(levels(fac))
+  #excon <- model.matrix(~ fac - 1)
+  #excon <- contrasts(fac)[as.numeric(fac), ]
+  
+  weights <- matrix(0, NROW(term.cells), ncol(cmat))	
+  row.names(weights) <- longnames(term)
+  
+  weights[keep, ] <- cmat
+  
+  ret <- list(
+    term=term,
+    name=x$name,
+    weights=weights,
+    condnames=longnames(term),
+    contrast_spec=x)
+  
+  class(ret) <- c("oneway_contrast", "Fcontrast", "contrast", "list")
   ret
 }
 
-
+#' Interaction Contrast Weights
+#'
+#' @description
+#' Compute the contrast weights for an interaction_contrast_spec object.
+#'
+#' @param x An interaction_contrast_spec object.
+#' @param term A term object.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A list containing the term, name, weights, condition names, and contrast specification.
+#'
+#' @export
+contrast_weights.interaction_contrast_spec <- function(x, term,...) {
+  term.cells <- cells(term)
+  if (!is.null(x$where)) {
+    keep <- lazyeval::f_eval_rhs(x$where, data=term.cells)	
+    reduced.term.cells <- subset(term.cells, keep)
+  } else {
+    keep <- rep(TRUE, nrow(term.cells))
+    reduced.term.cells <- term.cells
+  }
+  
+  factors <- all.vars(rlang::f_rhs(x$A))
+  cmat <- generate_interaction_contrast(reduced.term.cells, factors)
+  
+  weights <- matrix(0, NROW(term.cells), ncol(cmat))	
+  row.names(weights) <- longnames(term)
+  
+  weights[keep, ] <- cmat
+  
+  ret <- list(
+    term=term,
+    name=x$name,
+    weights=weights,
+    condnames=longnames(term),
+    contrast_spec=x)
+  
+  class(ret) <- c("interaction_contrast", "Fcontrast",  "contrast", "list")
+  ret
+  
+  
+}
 
 #' Polynomial Contrast Weights
 #'
 #' @description
-#' Compute the contrast weights for a polynomial contrast specification.
+#' Compute the contrast weights for a poly_contrast_spec object.
 #'
 #' @param x A poly_contrast_spec object.
 #' @param term A term object.
-#' @param ... Additional arguments (currently not used).
+#' @param ... Additional arguments (currently unused).
 #'
-#' @return A list containing the polynomial contrast weights and related information.
+#' @return A list containing the term, name, weights, condition names, and contrast specification.
 #'
 #' @export
 contrast_weights.poly_contrast_spec <- function(x, term,...) {
@@ -297,9 +348,7 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
     keep <- rep(TRUE, nrow(term.cells))
   }
   
-  
   reduced.term.cells <- subset(term.cells, keep)
-  
   vals <- lazyeval::f_eval_rhs(x$A, data=reduced.term.cells)
   
   vals <- if (is.null(x$value_map)) {
@@ -328,50 +377,17 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
   
 }
 
-
-#' @keywords internal
-makeWeights <- function(keepA, keepB=NULL) {
-  weights <- matrix(0, length(keepA), 1)
-  numA <- sum(keepA)
-  weights[keepA,1] <- rep(1/numA, numA)
-  
-  if (!is.null(keepB)) {
-    numB <- sum(keepB)
-    weights[keepB,1] <- -rep(1/numB, numB)
-  }
-  
-  weights
-}
-
-#' @export
-`-.contrast_spec` <- function(e1, e2, ...){
-  assert_that(inherits(e2, "contrast_spec"))
-  structure(list(
-    name=paste0(e1$name, ":", e2$name),
-    con1=e1,
-    con2=e2),
-    class=c("contrast_diff_spec", "contrast_spec", "list")
-  )
-}
-
-#' @export
-contrast_weights.contrast_diff_spec <- function(x, term,...) {
-  wts1 <- contrast_weights(x$con1, term)
-  wts2 <- contrast_weights(x$con2, term)
-
-  ret <- structure(
-    list(
-      term=term,
-      name=x$name,
-      weights=wts1$weights - wts2$weights,
-      condnames=longnames(term),
-      contrast_spec=x),
-    class=c("contrast_diff", "contrast")
-  )
-
-  ret  
-}
-
+#' Pair Contrast Weights
+#'
+#' @description
+#' Compute the contrast weights for a pair_contrast_spec object.
+#'
+#' @param x A pair_contrast_spec object.
+#' @param term A term object.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A list containing the term, name, weights, condition names, and contrast specification.
+#'
 #' @export
 contrast_weights.pair_contrast_spec <- function(x, term,...) {
   term.cells <- cells(term)
@@ -379,6 +395,7 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
   count <- attr(term.cells, "count")		
   term.cells <- subset(term.cells, count > 0)
   
+ 
   keep <- if (!is.null(x$where)) {
     lazyeval::f_eval_rhs(x$where, data=term.cells)
     #eval(x$where, envir=term.cells, enclos=parent.frame())	
@@ -398,7 +415,7 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
 
   
   row.names(weights) <- longnames(term)
-  
+ 
   ret <- list(
     term=term,
     name=x$name,
@@ -410,6 +427,17 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
   ret  
 }
 
+#' Contrast Formula Weights
+#'
+#' @description
+#' Compute the contrast weights for a contrast_formula_spec object.
+#'
+#' @param x A contrast_formula_spec object.
+#' @param term A term object.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A list containing the term, name, weights, condition names, and contrast specification.
+#'
 #' @export
 contrast_weights.contrast_formula_spec <- function(x, term,...) {
 
@@ -455,14 +483,45 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
   ret  
 }
 
-#' convert a contrast to an AFNI 'GLT' 
-#' 
-#' @param x the contrast to convert
-#' @param ... extra args
-#' @keywords internal
-to_glt <- function(x, ...) UseMethod("to_glt")
+#' Contrast Difference Weights
+#'
+#' @description
+#' Compute the contrast weights for a contrast_diff_spec object.
+#'
+#' @param x A contrast_diff_spec object.
+#' @param term A term object.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A list containing the term, name, weights, condition names, and contrast specification.
+#'
+#' @export
+contrast_weights.contrast_diff_spec <- function(x, term,...) {
+  wts1 <- contrast_weights(x$con1, term)
+  wts2 <- contrast_weights(x$con2, term)
 
+  ret <- structure(
+    list(
+      term=term,
+      name=x$name,
+      weights=wts1$weights - wts2$weights,
+      condnames=longnames(term),
+      contrast_spec=x),
+    class=c("contrast_diff", "contrast")
+  )
 
+  ret  
+}
+
+#' Convert Contrast to GLT
+#'
+#' @description
+#' Convert a contrast to an AFNI 'GLT' format.
+#'
+#' @param x The contrast to convert.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A list containing the GLT string, name, and contrast specification.
+#'
 #' @export
 to_glt.contrast <- function(x,...) {
   if (is.matrix(x$weights) && ncol(x$weights) > 1) {
@@ -487,14 +546,14 @@ to_glt.contrast <- function(x,...) {
   }
 }
 
-
-#' write a GLT file to disk
-#' 
-#' @param x the object
-#' @param fname the file name to write to
-#' @keywords internal
-write_glt <- function(x, fname) UseMethod("write_glt")
-
+#' Write GLT to File
+#'
+#' @description
+#' Write a GLT contrast to a file.
+#'
+#' @param x The GLT contrast to write.
+#' @param fname The file name to write to.
+#'
 #' @export
 write_glt.glt_contrast <- function(x, fname=NULL) {
   con <- if (is.null(fname)) {
@@ -507,7 +566,18 @@ write_glt.glt_contrast <- function(x, fname=NULL) {
   close(con)
 }
 
-#' @importFrom gmodels estimable
+#' Estimated Contrast
+#'
+#' @description
+#' Compute the estimated contrast for a given fit and indices.
+#'
+#' @param x The contrast to estimate.
+#' @param fit The fit object.
+#' @param indices The indices to use.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return The estimated contrast.
+#'
 #' @export
 estcon.contrast <- function(x, fit, indices, ...) {
   wts <- numeric(length(fit$assign))
@@ -516,14 +586,60 @@ estcon.contrast <- function(x, fit, indices, ...) {
   gmodels::estimable(fit, wts)
 }
 
+#' Print Contrast Set
+#'
+#' @description
+#' Print a contrast set.
+#'
+#' @param x The contrast set to print.
+#' @param ... Additional arguments (currently unused).
+#'
 #' @export
-print.contrast_set <- function(x,...) {
-  for (con in x) {
-    print(con)
-    cat("\n")
+print.contrast_set <- function(x, ...) {
+  n_contrasts <- length(x)
+  
+  # Header
+  cat("\n═══ Contrast Set ═══\n")
+  
+  # Summary
+  cat("\n Overview:\n")
+  cat("  • Number of contrasts:", n_contrasts, "\n")
+  
+  # Group contrasts by type
+  types <- sapply(x, function(con) class(con)[1])
+  type_table <- table(types)
+  if (length(type_table) > 0) {
+    cat("  • Types of contrasts:\n")
+    for (type in names(type_table)) {
+      cat("    -", type, ":", type_table[type], "\n")
+    }
   }
+  
+  # List all contrasts
+  cat("\n🔍 Individual Contrasts:\n")
+  for (i in seq_along(x)) {
+    cat("\n[", i, "] ", x[[i]]$name, " (", class(x[[i]])[1], ")\n", sep="")
+    cat("    Formula: ")
+    if (!is.null(x[[i]]$A)) cat(deparse(x[[i]]$A))
+    if (!is.null(x[[i]]$B)) cat(" vs ", deparse(x[[i]]$B))
+    cat("\n")
+    if (!is.null(x[[i]]$where)) {
+      cat("    Subset: ", deparse(x[[i]]$where), "\n")
+    }
+  }
+  
+  cat("\n")
+  invisible(x)
 }
 
+#' Print Contrast Specification
+#'
+#' @description
+#' Print a contrast specification.
+#'
+#' @param x The contrast specification to print.
+#' @param ... Additional arguments (currently unused).
+#'
 #' @export
 print.contrast_spec <- function(x,...) {
   cat("contrast:", x$name, "\n")
@@ -536,6 +652,14 @@ print.contrast_spec <- function(x,...) {
 
 }
 
+#' Print Contrast
+#'
+#' @description
+#' Print a contrast.
+#'
+#' @param x The contrast to print.
+#' @param ... Additional arguments (currently unused).
+#'
 #' @export
 print.contrast <- function(x,...) {
   print(x$contrast_spec)
@@ -546,6 +670,14 @@ print.contrast <- function(x,...) {
   
 }
 
+#' Print Polynomial Contrast Specification
+#'
+#' @description
+#' Print a polynomial contrast specification.
+#'
+#' @param x The polynomial contrast specification to print.
+#' @param ... Additional arguments (currently unused).
+#'
 #' @export
 print.poly_contrast_spec <- function(x,...) {
   cat("poly contrast:", "\n")
@@ -560,11 +692,16 @@ print.poly_contrast_spec <- function(x,...) {
   }
 }
 
+#' Print Contrast Difference Specification
+#'
+#' @description
+#' Print a contrast difference specification.
+#'
+#' @param x The contrast difference specification to print.
+#' @param ... Additional arguments (currently unused).
+#'
 #' @export
 print.contrast_diff_spec <- function(x,...) {
   cat("contrast difference:", "\n")
   cat("  ", x$con1$name, "-", x$con2$name, "\n")
 }
-
-
-

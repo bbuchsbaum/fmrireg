@@ -1,5 +1,4 @@
 
-
 #' Meta-analysis using Stouffer's method
 #'
 #' This function performs a meta-analysis on input p-values and standard errors using Stouffer's method.
@@ -18,11 +17,7 @@
 #' }
 #' 
 #' @keywords internal
-#' @examples
-#' pval <- c(0.05, 0.01, 0.03)
-#' se <- c(0.2, 0.15, 0.25)
-#' result <- meta_stouffer(pval, se)
-#' print(result)
+#' @noRd
 meta_stouffer <- function(pval, se) {
   if (any(pval == 0)) {
     pval[pval == 0] <- .Machine$double.eps
@@ -70,9 +65,27 @@ meta_stouffer <- function(pval, se) {
 #' se <- matrix(c(0.2, 0.15, 0.25), nrow=1)
 #' result <- meta_fixef(beta, se, weighting = "inv_var")
 #' print(result)
-meta_fixef <- function(beta,se, weighting=c("inv_var", "equal")) {
+#' @autoglobal
+#' @noRd
+meta_fixef <- function(ctab, weighting=c("inv_var", "equal")) {
   weighting <- match.arg(weighting)
   
+  se <- do.call(cbind, ctab$data %>% purrr::map(~ .$se))
+  beta <- do.call(cbind, ctab$data %>% purrr::map(~ .$estimate))
+  
+  ret <- do_fixef(se,beta,weighting)
+  
+  dplyr::tibble(type=ctab$type[1], name=ctab$name[1], stat_type="meta_zstat", 
+                conmat=list(ctab$conmat[[1]]),
+         colind=list(ctab$colind[[1]]), data=list(ret))
+  
+}
+
+
+#' @keywords internal
+#' @noRd
+#' @autoglobal
+do_fixef <- function(se, beta, weighting) {
   if (weighting == "inv_var") {
     inv_var <- 1/(se^2)
     wts <- inv_var/rowSums(inv_var)
@@ -84,16 +97,15 @@ meta_fixef <- function(beta,se, weighting=c("inv_var", "equal")) {
     pooledse <- sqrt(rowSums((se^2)))
   }
   
-  return(
-    list(
-      estimate=wbeta,
-      se=pooledse,
-      stat=wbeta/pooledse,
-      prob=1-pchisq((wbeta/pooledse)^2,1),
-      stat_type="zstat")
-  )
-  
+  tibble(estimate=wbeta,
+         se=pooledse,
+         stat=wbeta/pooledse,
+         prob=1-pchisq((wbeta/pooledse)^2,1),
+         stat_type="zstat")
 }
+  
+  
+
 
 
 #' Meta-analysis of F-contrasts
@@ -112,21 +124,15 @@ meta_fixef <- function(beta,se, weighting=c("inv_var", "equal")) {
 #' }
 #' 
 #' @keywords internal
-#' @examples
-#' # Assuming `fres` is a list of F-contrast results obtained from different studies or tests
-#' # meta_results <- meta_Fcontrasts(fres)
-#' # print(meta_results)
-meta_Fcontrasts <- function(fres) {
+#' @noRd
+meta_Fcontrasts <- function(ftab) {
+  pval <- do.call(cbind, ftab$data %>% purrr::map(~ .$prob))
+  se <- do.call(cbind, ftab$data %>% purrr::map(~ .$se))
   
-  ncon <- length(fres[[1]])
-  res <- lapply(seq(1,ncon), function(i) {
-    pval <- do.call(cbind, lapply(fres, function(x) as.vector(x[[i]]$prob)))
-    se <- do.call(cbind, lapply(fres, function(x) x[[i]]$se))
-    
-    meta_stouffer(pval,se)
-  })
-  names(res) <- names(fres)
-  res
+  ret <- meta_stouffer(pval,se)
+  dplyr::tibble(type=ftab$type[1], name=ftab$name[1], stat_type="meta_zfstat", 
+         conmat=list(ftab$conmat[[1]]),
+         colind=list(ftab$colind[[1]]), data=list(as_tibble(ret)))
 }
 
 
@@ -147,57 +153,56 @@ meta_Fcontrasts <- function(fres) {
 #' }
 #' 
 #' @keywords internal
-#' @examples
-#' # Assuming `cres` is a list of contrast results obtained from different studies or tests
-#' # meta_results <- meta_contrasts(cres)
-#' # print(meta_results)
+#' @noRd
+#' @global name
 meta_contrasts <- function(cres, weighting=c("inv_var", "equal")) {
+ 
   weighting <- match.arg(weighting)
-  ncon <- length(cres[[1]])
-  if (ncon > 0) {
-    res <- lapply(1:ncon, function(i) {
-      beta <- do.call(cbind, lapply(cres, function(x) as.vector(x[[i]]$estimate)))
-      se <- do.call(cbind, lapply(cres, function(x) x[[i]]$se))
-      meta_fixef(beta,se, weighting)
-    })
-  } else {
-    stop("there are no contrasts for this model.")
+  ctab <- unlist(cres, recursive=FALSE) %>% dplyr::bind_rows()
+  if (nrow(ctab) == 0) {
+    return(dplyr::tibble(type="contrast", name="meta_contrast", stat_type="meta_zstat", conmat=list(NULL),
+         colind=list(NULL), data=list(tibble(estimate=list(NULL), se=list(NULL), stat=list(NULL), prob=list(NULL)))))
   }
+
+  gsplit <- ctab %>% group_by(name,type) %>% dplyr::group_split()
   
-  return(
-    list(
-      estimate=do.call(cbind, lapply(res, function(x) x$estimate)),
-      se=do.call(cbind, lapply(res, function(x) x$se)),
-      stat=do.call(cbind, lapply(res, function(x) x$stat)),
-      prob=do.call(cbind, lapply(res, function(x) x$prob)),
-      stat_type="zstat"
-    )
-  )
+  lapply(gsplit, function(tab) {
+    type <- tab$type[1]
+    if (type == "Fcontrast") {
+      meta_Fcontrasts(tab)
+    } else if (type == "contrast") {
+      meta_fixef(tab)
+    }
+  }) %>% dplyr::bind_rows()
+  
 }
 
 
 #' @keywords internal
+#' @noRd
+#' @importFrom dplyr tibble
 meta_betas <- function(bstats, colind, weighting=c("inv_var", "equal")) {
   weighting <- match.arg(weighting)
-  
+
   len <- length(colind)
   
   res <- lapply(colind, function(i) {
-    #print(i)
-    beta <- do.call(cbind, lapply(bstats, function(x) x$estimate[,i]))
-    se <- do.call(cbind, lapply(bstats, function(x) x$se[,i]))
-    meta_fixef(beta,se,weighting)
+    beta <- do.call(cbind, lapply(bstats, function(x) x$data[[1]]$estimate[[1]][,i]))
+    se <- do.call(cbind, lapply(bstats, function(x) x$data[[1]]$se[[1]][,i]))
+    do_fixef(se,beta, weighting)
   })
   
-  #browser()
+  estimate = do.call(cbind, lapply(res, function(x) x$estimate))
+  se=do.call(cbind, lapply(res, function(x) x$se))
+  stat=do.call(cbind, lapply(res, function(x) x$stat))
+  prob=do.call(cbind, lapply(res, function(x) x$prob))
+  stat_type="zstat"
   
-  return(
-    list(
-      estimate=do.call(cbind, lapply(res, function(x) x$estimate)),
-      se=do.call(cbind, lapply(res, function(x) x$se)),
-      stat=do.call(cbind, lapply(res, function(x) x$stat)),
-      prob=do.call(cbind, lapply(res, function(x) x$prob)),
-      stat_type="zstat"
-    )
-  )
+  ret <- dplyr::tibble(type="beta", name="parameter_estimates", stat_type="meta_zstat", conmat=list(NULL),
+         colind=list(colind), data=list(tibble(
+           estimate=list(estimate),
+           se=list(se),
+           stat=list(stat),
+           prob=list(prob))))
+  
 }

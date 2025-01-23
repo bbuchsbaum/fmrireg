@@ -2,17 +2,19 @@
 % Please edit documentation in R/fmrirlm.R
 \name{fmri_rlm}
 \alias{fmri_rlm}
-\title{fmri_rlm}
+\title{Fit a Robust Linear Model for fMRI Data Analysis}
 \usage{
 fmri_rlm(
   formula,
   block,
   baseline_model = NULL,
   dataset,
-  durations,
+  durations = 0,
   drop_empty = TRUE,
+  strategy = c("runwise", "chunkwise"),
   nchunks = 10,
-  strategy = c("runwise", "slicewise", "all")
+  meta_weighting = c("inv_var", "equal"),
+  ...
 )
 }
 \arguments{
@@ -20,20 +22,26 @@ fmri_rlm(
 
 \item{block}{The model formula for block structure.}
 
-\item{baseline_model}{(Optional) The \code{baseline_model} object. Default is NULL.}
+\item{baseline_model}{(Optional) A \code{baseline_model} object. Default is \code{NULL}.}
 
-\item{dataset}{An object derived from \code{fmri_dataset} containing the time-series data.}
+\item{dataset}{An \code{fmri_dataset} object containing the time-series data.}
 
-\item{durations}{A vector of event durations.}
+\item{durations}{A vector of event durations. Default is \code{0}.}
 
-\item{drop_empty}{Whether to remove factor levels with a size of zero. Default is TRUE.}
+\item{drop_empty}{Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.}
 
-\item{nchunks}{Number of data chunks when strategy is \code{chunkwise}. Default is 10.}
+\item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
 
-\item{strategy}{The data splitting strategy, either "runwise" or "chunkwise". Default is "runwise".}
+\item{nchunks}{Number of data chunks when strategy is "chunkwise". Default is 10.}
+
+\item{...}{Additional arguments.}
+}
+\value{
+A fitted robust linear regression model for fMRI data analysis.
 }
 \description{
-robust linear modeling of fmri data
+This function fits a robust linear regression model for fMRI data analysis using the specified model formula,
+block structure, and dataset. The model can be fit using either a runwise or chunkwise data splitting strategy.
 }
 \examples{
 etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))
@@ -41,7 +49,6 @@ etab2 <- data.frame(onset=c(1,30,65,75), fac=factor(c("A", "B", "A", "B")), run=
 mat <- matrix(rnorm(100*100), 100,100)
 dset <- matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
 dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
-#lm.1 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset)
-#lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run,dataset=dset2)
+lm.1 <- fmri_rlm(onset ~ hrf(fac), block= ~ run, dataset=dset)
+lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run, dataset=dset2)
 }
-\keyword{experimental}

@@ -46,6 +46,9 @@ If multiple contrasts are required, then these should be wrapped in a \code{list
 
 \item{summate}{whether impulse amplitudes sum up when duration is greater than 0.}
 }
+\value{
+an \code{hrfspec} instance
+}
 \description{
 This function is to be used in formulas for fitting functions, e.g. onsets ~ hrf(fac1,fac2) ...
 }

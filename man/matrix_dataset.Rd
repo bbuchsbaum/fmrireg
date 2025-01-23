@@ -25,24 +25,4 @@ This function creates a matrix dataset object, which is a list containing inform
 # A matrix with 100 rows and 100 columns (voxels)
 X <- matrix(rnorm(100*100), 100, 100)
 dset <- matrix_dataset(X, TR=2, run_length=100)
-
-# An iterator with 5 chunks
-iter <- data_chunks(dset, nchunks=5)
-`\%do\%` <- foreach::`\%do\%`
-y <- foreach::foreach(chunk = iter) \%do\% { colMeans(chunk$data) }
-length(y) == 5
-
-# An iterator with 100 chunks
-iter <- data_chunks(dset, nchunks=100)
-y <- foreach::foreach(chunk = iter) \%do\% { colMeans(chunk$data) }
-length(y) == 100
-
-# A matrix_dataset with 200 rows, 100 columns and 2 runs
-X <- matrix(rnorm(200*100), 200, 100)
-dset <- matrix_dataset(X, TR=2, run_length=c(100,100))
-
-# Get a "runwise" iterator. For every iteration, an entire run's worth of data is returned.
-iter <- data_chunks(dset, runwise=TRUE)
-y <- foreach::foreach(chunk = iter)  \%do\% { colMeans(chunk$data) }
-length(y) == 2
 }

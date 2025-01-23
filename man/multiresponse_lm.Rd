@@ -2,7 +2,7 @@
 % Please edit documentation in R/fmrilm.R
 \name{multiresponse_lm}
 \alias{multiresponse_lm}
-\title{Multiresponse Linear Model}
+\title{Fit Multiresponse Linear Model}
 \usage{
 multiresponse_lm(form, data_env, conlist, vnames, fcon, modmat = NULL)
 }
@@ -17,7 +17,7 @@ multiresponse_lm(form, data_env, conlist, vnames, fcon, modmat = NULL)
 
 \item{fcon}{The F-contrasts used in the analysis.}
 
-\item{modmat}{The model matrix (default is NULL, which will calculate the model matrix using the formula).}
+\item{modmat}{The model matrix (default is \code{NULL}, which will calculate the model matrix using the formula).}
 }
 \value{
 A list containing the results from the multiresponse linear model analysis.

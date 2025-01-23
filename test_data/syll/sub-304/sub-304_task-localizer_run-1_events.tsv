@@ -1,0 +1,16 @@
+onset	duration	trial_type
+0	10	listen+rest
+10	10	continuous listen
+20	10	listen+rest
+30	10	listen+rehearse
+40	10	listen+rest
+50	10	continuous listen
+60	10	listen+rest
+70	10	continuous listen
+90	10	continuous listen
+100	10	listen+rehearse
+110	10	listen+rehearse
+150	10	listen+rehearse
+160	10	listen+rehearse
+170	10	continuous listen
+190	10	listen+rest

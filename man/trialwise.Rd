@@ -37,6 +37,9 @@ Can be used to disambiguate two \code{hrf} terms with the same variable(s) but d
 \item{add_sum}{add the sum of all trialwise regressors to the set.
 This can be sued to model the average effect.}
 }
+\value{
+a \code{trialwisespec} instance.
+}
 \description{
 This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise() ...
 }

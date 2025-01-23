@@ -29,6 +29,8 @@
 \item{summate}{Whether the HRF response increases its amplitude as a function of stimulus duration (default: TRUE).}
 
 \item{normalize}{Scale output so that peak is 1 (default: FALSE).}
+
+\item{...}{extra args}
 }
 \value{
 A vector of HRF values at the specified time points.

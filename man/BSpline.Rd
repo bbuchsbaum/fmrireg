@@ -11,6 +11,9 @@ BSpline(x, degree)
 
 \item{degree}{the degree of the piecewise polynomial}
 }
+\value{
+an \code{BSpline} list instance
+}
 \description{
 Generate the B-spline basis matrix for a polynomial spline.
 }

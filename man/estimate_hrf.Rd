@@ -11,7 +11,9 @@ estimate_hrf(
   dataset,
   bs = c("tp", "ts", "cr", "ps"),
   rsam = seq(0, 20, by = 1),
-  basemod = NULL
+  basemod = NULL,
+  k = 8,
+  fx = TRUE
 )
 }
 \arguments{
@@ -28,6 +30,10 @@ estimate_hrf(
 \item{rsam}{A sequence of time points at which the HRF is estimated (default: seq(0, 20, by = 1))}
 
 \item{basemod}{A \code{baseline_model} instance to regress out of data before HRF estimation (default: NULL)}
+
+\item{k}{the dimension of the basis, default is 8}
+
+\item{fx}{indicates whether the term is a fixed d.f. regression spline (TRUE) or a penalized regression spline (FALSE); default is TRUE.}
 }
 \value{
 A matrix with the estimated HRF values for each voxel
