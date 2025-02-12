@@ -1,8 +1,23 @@
 #' @keywords internal
 #' @noRd
-lss_fast <- function(dset, bdes, use_cpp = TRUE) {
+lss_fast <- function(dset, bdes, Y=NULL, use_cpp = TRUE) {
   # Data preparation
-  data_matrix <- get_data_matrix(dset)
+
+  if (is.null(Y)) {
+    data_matrix <- get_data_matrix(dset)
+  } else {
+    data_matrix <- Y
+  }
+
+  # Check and validate Y dimensions
+  if (!is.null(Y)) {
+    expected_rows <- nrow(bdes$dmat_ran) # Use design matrix rows as reference
+    if (nrow(Y) != expected_rows) {
+      stop(sprintf("Y must have %d rows to match design matrix dimensions, but has %d rows", 
+                  expected_rows, nrow(Y)))
+    }
+  }
+
   n_timepoints <- nrow(data_matrix)
   n_voxels <- ncol(data_matrix)
   
@@ -32,7 +47,7 @@ lss_fast <- function(dset, bdes, use_cpp = TRUE) {
     beta_matrix <- lss_compute_r(Q_dmat_ran, residual_data)
   }
   
-  return(list(beta_matrix = beta_matrix, estimated_hrf = NULL))
+  return(beta_matrix)
 }
 
 #' @keywords internal

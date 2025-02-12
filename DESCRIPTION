@@ -61,6 +61,7 @@ Suggests:
     forecast,
     shiny,
     mgcv,
+    ggforce,
     roxyglobals (>= 0.2.1)
 Remotes: 
     bbuchsbaum/neuroim2,

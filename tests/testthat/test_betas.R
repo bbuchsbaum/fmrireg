@@ -96,15 +96,19 @@ test_that("can run a beta estimation with different durations", {
   facedes <- facedes %>% dplyr::filter(run==1)
   dset <- gen_dset(5, facedes)
 
-  hf <- gen_hrf(hrf_spmg1, width=10)
-  ret1 <- estimate_betas(dset, fixed = onset ~ hrf(constant, durations=3), ran = onset ~ trialwise(durations=5),
+  hf <- gen_hrf(hrf_spmg1, width=2, lag=5)
+  ret1 <- estimate_betas(dset, fixed = onset ~ hrf(constant, durations=1), ran = onset ~ trialwise(durations=5),
+                         block = ~ run,
+                         method="pls", ncomp=1)
+
+  ret2 <- estimate_betas(dset, fixed = onset ~ hrf(constant, basis=hf), ran = onset ~ trialwise(basis=hf),
                          block = ~ run,
                          method="pls", ncomp=1)
 
 
   expect_true(!is.null(ret1))
-
-
+  expect_true(!is.null(ret2))
+  expect_lt(cor(as.vector(ret1$betas_ran[,]), as.vector(ret2$betas_ran[,])), 0.8)
 
 })
 
@@ -157,28 +161,27 @@ test_that("can run a beta estimation with custom basis", {
 
 })
 
-# 
-# test_that("can run a beta estimation with fixed duration", {
-#   
-#   facedes$frun <- factor(facedes$run)
-#   facedes$constant <- factor(rep(1, nrow(facedes)))
-#   
-#   dset <- gen_dset(5,facedes)
-#   #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
-#   
-#   dset <- fmri_mem_dataset(scans=dset$scans, 
-#                            mask=dset$mask, 
-#                            TR=1.5, 
-#                            event_table=facedes)
-#   
-#   b1 <<- gen_hrf(hrf_spmg1, lag=1, width=3, normalize=TRUE)
-#   
-#   
-#   est <- estimate_betas(dset, fixed = onset ~ hrf(constant),
-#                         ran = onset ~ trialwise(durations=4), block = ~ run, 
-#                         method="pls_global",ncomp=20)
-#   
-#   expect_true(!is.null(est))
-#   
-#   
-# })
+test_that("can run a beta estimation with fixed duration", {
+  
+  facedes$frun <- factor(facedes$run)
+  facedes$constant <- factor(rep(1, nrow(facedes)))
+  
+  dset <- gen_dset(5,facedes)
+  #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
+  
+  dset <- fmri_mem_dataset(scans=dset$scans, 
+                           mask=dset$mask, 
+                           TR=1.5, 
+                           event_table=facedes)
+  
+  b1 <- gen_hrf(hrf_spmg1, lag=1, width=3, normalize=TRUE)
+  
+  
+  est <- estimate_betas(dset, fixed = onset ~ hrf(constant),
+                        ran = onset ~ trialwise(durations=4), block = ~ run, 
+                        method="pls_global",ncomp=20)
+  
+  expect_true(!is.null(est))
+  
+  
+})

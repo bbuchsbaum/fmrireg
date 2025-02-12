@@ -111,8 +111,6 @@ compute_best_hrfs <- function(X_proj, L_proj, L,
                               cluster_quantile = .5,
                               dist_method = "euclidean") 
 {
-  
-
   # Distances between each library PC and each data PC
   basis_euc <- proxy::dist(L_proj, X_proj, method = dist_method)
   basis_euc_mat <- as.matrix(basis_euc)
@@ -121,11 +119,16 @@ compute_best_hrfs <- function(X_proj, L_proj, L,
   best_match_indices <- apply(basis_euc_mat, 2, which.min)
   
   if (!cluster_series) {
+    unique_indices <- unique(best_match_indices)
     return(list(
       best_hrf_indices = best_match_indices,
-      L_best_hrfs      = L[, best_match_indices, drop = FALSE],
-      L_proj           = L_proj,
-      X_proj           = X_proj
+      clusters = NULL,
+      cluster_representatives = unique_indices,
+      reassigned_hrfs = best_match_indices,
+      L_best_hrfs = L[, best_match_indices, drop = FALSE],
+      L_unique = L[, unique_indices, drop = FALSE],
+      L_proj = L_proj,
+      X_proj = X_proj
     ))
   }
   
@@ -145,30 +148,31 @@ compute_best_hrfs <- function(X_proj, L_proj, L,
     sub_dist <- as.matrix(hrf_dist)[cluster_indices, cluster_indices, drop=FALSE]
     # pick the row with minimal sum-of-distances
     medoid_rel_idx <- which.min(rowSums(sub_dist))
-    medoid_index <- cluster_indices[medoid_rel_idx]
-    unique_best_hrfs[medoid_index]
+    cluster_indices[medoid_rel_idx]
   }
   
   unique_clusters <- unique(clusters)
   cluster_representatives <- sapply(unique_clusters, function(cl) {
     cluster_indices <- which(clusters == cl)
-    cluster_medoid(cluster_indices)
+    unique_best_hrfs[cluster_medoid(cluster_indices)]
   })
   
-  # reassign each voxel (col of X_proj) to the cluster rep
-  reassigned_hrfs <- sapply(best_match_indices, function(idx) {
-    cl <- clusters[which(unique_best_hrfs == idx)]
-    cluster_representatives[as.character(cl)]
-  })
+  # Create a mapping from original indices to cluster representatives
+  index_to_cluster <- clusters[match(best_match_indices, unique_best_hrfs)]
+  reassigned_hrfs <- cluster_representatives[index_to_cluster]
+  
+  # Get the actual HRF shapes for the unique representatives
+  L_unique <- L[, cluster_representatives, drop=FALSE]
   
   list(
-    best_hrf_indices      = unique_best_hrfs,
-    clusters              = clusters,
+    best_hrf_indices = unique_best_hrfs,
+    clusters = clusters,
     cluster_representatives = cluster_representatives,
-    reassigned_hrfs       = reassigned_hrfs,
-    L_best_hrfs           = L_best_hrfs,
-    L_proj                = L_proj,
-    X_proj                = X_proj
+    reassigned_hrfs = reassigned_hrfs,
+    L_best_hrfs = L_best_hrfs,
+    L_unique = L_unique,
+    L_proj = L_proj,
+    X_proj = X_proj
   )
 }
 
@@ -299,6 +303,7 @@ find_best_hrf.matrix_dataset <- function(dataset, onset_var, hrflib = NULL, rsam
       block = block,
       sampling_frame = ds$sampling_frame
     )
+
     
     # Step 5: data & residual
     X <- get_data_matrix(ds)
@@ -331,6 +336,7 @@ find_best_hrf.matrix_dataset <- function(dataset, onset_var, hrflib = NULL, rsam
     
     list(res = res, L_best_hrfs  = res$L_best_hrfs, dataset = ds)
   }
+
   
   # No bootstrap => 1 pass
   if (nboot == 1) {
@@ -344,7 +350,7 @@ find_best_hrf.matrix_dataset <- function(dataset, onset_var, hrflib = NULL, rsam
     if (spatial_smoothing && !is.null(dataset$voxel_coords)) {
       final_assignments <- smooth_hrf_assignments(
         final_assignments,
-        out$L_best_hrfs,
+        out$res$L_best_hrfs,
         dataset$voxel_coords,
         lambda = lambda,
         n_iterations = n_iterations,
@@ -360,6 +366,7 @@ find_best_hrf.matrix_dataset <- function(dataset, onset_var, hrflib = NULL, rsam
         cluster_representatives = out$res$cluster_representatives,
         reassigned_hrfs = out$res$reassigned_hrfs,
         L_best_hrfs = out$res$L_best_hrfs,
+        L_unique = out$res$L_unique,
         L_proj = out$res$L_proj,
         X_proj = out$res$X_proj,
         reassigned_hrfs_smoothed = out$res$reassigned_hrfs_smoothed
@@ -396,7 +403,7 @@ find_best_hrf.matrix_dataset <- function(dataset, onset_var, hrflib = NULL, rsam
   if (spatial_smoothing && !is.null(dataset$voxel_coords)) {
     final_assignments <- smooth_hrf_assignments(
       final_assignments,
-      last_run$L_best_hrfs,
+      last_run$res$L_best_hrfs,
       dataset$voxel_coords,
       lambda=lambda,
       n_iterations=n_iterations,
@@ -417,6 +424,7 @@ find_best_hrf.matrix_dataset <- function(dataset, onset_var, hrflib = NULL, rsam
     cluster_representatives = final_res$cluster_representatives,
     reassigned_hrfs = final_res$reassigned_hrfs,
     L_best_hrfs = final_res$L_best_hrfs,
+    L_unique = final_res$L_unique,
     L_proj = final_res$L_proj,
     X_proj = final_res$X_proj,
     reassigned_hrfs_smoothed = final_res$reassigned_hrfs_smoothed
@@ -471,7 +479,8 @@ find_best_hrf.fmri_mem_dataset <- function(dataset, onset_var, hrflib = NULL, rs
 #' @param clusters integer vector of clusters assigned to each unique HRF
 #' @param cluster_representatives integer vector of cluster medoids
 #' @param reassigned_hrfs integer vector of HRF IDs assigned to each voxel
-#' @param L_best_hrfs matrix of the best HRFs
+#' @param L_best_hrfs matrix of all best HRFs found
+#' @param L_unique matrix of unique HRFs (one per cluster/representative)
 #' @param L_proj matrix of the library projected into data space
 #' @param X_proj matrix of the data projection
 #' @param reassigned_hrfs_smoothed optionally the smoothed HRF assignments
@@ -484,6 +493,7 @@ new_best_hrf_result <- function(
     cluster_representatives = NULL,
     reassigned_hrfs = NULL,
     L_best_hrfs = NULL,
+    L_unique = NULL,
     L_proj = NULL,
     X_proj = NULL,
     reassigned_hrfs_smoothed = NULL
@@ -495,6 +505,7 @@ new_best_hrf_result <- function(
       cluster_representatives = cluster_representatives,
       reassigned_hrfs = reassigned_hrfs,
       L_best_hrfs = L_best_hrfs,
+      L_unique = L_unique,
       L_proj = L_proj,
       X_proj = X_proj,
       reassigned_hrfs_smoothed = reassigned_hrfs_smoothed
@@ -527,10 +538,14 @@ print.best_hrf_result <- function(x, ...) {
     cat(crayon::green(" Number of unique best HRFs:"), length(x$best_hrf_indices), "\n")
   }
   
+  if (!is.null(x$L_unique)) {
+    cat(crayon::green(" Number of representative HRFs:"), ncol(x$L_unique), "\n")
+  }
+  
   # If there's a smoothed assignment
   if (!is.null(x$reassigned_hrfs_smoothed)) {
     cat(crayon::yellow(" Smoothing was applied. See `$reassigned_hrfs_smoothed`.\n"))
   }
   
-  cat(crayon::silver("\n(Use `$` to inspect fields: best_hrf_indices, L_best_hrfs, etc.)\n"))
+  cat(crayon::silver("\n(Use `$` to inspect fields: best_hrf_indices, L_best_hrfs, L_unique, etc.)\n"))
 }

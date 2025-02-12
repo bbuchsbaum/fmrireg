@@ -275,7 +275,7 @@ test_that("can run video fmri design with latent_dataset", {
   mats <- lapply(vecs, function(v) series(v, mask!=0))
   mat <- do.call(rbind, mats)
   pres <- multivarious::pca(mat, ncomp=488, preproc=multivarious::pass())
-  lvec <- neuroim2::LatentNeuroVec(pres$s, pres$v, add_dim(space(mask), nrow(mat)), 
+  lvec <- fmristore::LatentNeuroVec(pres$s, pres$v, add_dim(space(mask), nrow(mat)), 
                                    mask=mask)
   ldset <- latent_dataset(lvec, 1.5, run_length=rep(320,7), des)
   

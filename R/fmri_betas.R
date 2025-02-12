@@ -258,27 +258,39 @@ run_estimate_betas <- function(bdes, dset, method, hrf_basis = NULL, hrf_ref = N
     Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
     list(beta_matrix=ols_betas(xdat$X, Y0), estimated_hrf=NULL)
   } else if (method == "lowrank_hrf") {
+    rsam <- seq(0, 24, by=.25)
     # 1. Find best HRFs with clustering
     hrf_results <- find_best_hrf(dset, onset_var = rlang::f_lhs(bdes$emod_ran$model_spec$formula), 
                                  block=block,
+                                 rsam=rsam,
                                 cluster_series = TRUE)
+
     
     # 2. For each unique HRF cluster:
     unique_hrfs <- hrf_results$cluster_representatives
-    voxel_clusters <- split(seq_len(ncol(get_data(dset))), hrf_results$reassigned_hrfs)
+    names(unique_hrfs) <- as.character(seq_along(unique_hrfs))
+    voxel_clusters <- split(seq_along(hrf_results$reassigned_hrfs), hrf_results$reassigned_hrfs)
+    names(voxel_clusters) <- as.character(seq_along(voxel_clusters))
+    L <- hrf_results$L_unique
+
+    Xdat <- get_data_matrix(dset)
     
+    #voxel_clusters <- hrf_results$clusters
     # 3. Create design matrices and estimate betas for each cluster
     beta_list <- lapply(names(unique_hrfs), function(hrf_id) {
       # Get voxels for this cluster
-      voxel_indices <- voxel_clusters[[hrf_id]]
+      voxel_indices <- voxel_clusters[[as.character(hrf_id)]]
+
       
+      emphrf <- gen_empirical_hrf(rsam, L[, as.integer(hrf_id)])
+      new_form <- inject_basis(bdes$emod_ran$model_spec$formula, emphrf)
       # Create event model with this HRF
       emod_ran_hrf <- event_model(
-        bdes$emod_ran$model_spec$formula,
+        new_form,
         data = dset$event_table,
-        block = bdes$emod_ran$model_spec$block,
+        block = bdes$emod_ran$block,
         sampling_frame = dset$sampling_frame,
-        hrf = gen_empirical_hrf(rsam, L[, unique_hrfs[hrf_id]])
+    
       )
       
       # Get design matrix for this HRF
@@ -288,20 +300,20 @@ run_estimate_betas <- function(bdes, dset, method, hrf_basis = NULL, hrf_ref = N
       } else {
         cbind(X_ran, bdes$dmat_fixed, bdes$dmat_base)
       }
-      
+     
       # Use LSS for this cluster's voxels
-      lss_fast(dset, bdes, X = X, voxel_indices = voxel_indices)
+      lss_fast(dset, bdes, Y = Xdat[,voxel_indices])
     })
-    
+
+
     # 4. Combine results
-    beta_matrix <- matrix(0, nrow = nrow(beta_list[[1]]), ncol = ncol(get_data(dset)))
+    beta_matrix <- matrix(0, nrow = nrow(beta_list[[1]]), ncol = length(unlist(voxel_clusters)))
     for (i in seq_along(beta_list)) {
       voxel_indices <- voxel_clusters[[i]]
       beta_matrix[, voxel_indices] <- beta_list[[i]]
     }
     
-    list(beta_matrix = beta_matrix, 
-         estimated_hrf = hrf_results$L_best_hrfs)
+    list(beta_matrix = beta_matrix, estimated_hrf = NULL)
   } else {
     stop("Invalid method. Supported methods are 'r1_glms', 'r1', 'mixed', 'pls', 'pls_global', and 'ols'")
   }
@@ -582,6 +594,55 @@ estimate_hrf <- function(form, fixed=NULL, block, dataset,
   
   res
   
+}
+
+
+
+#' @noRd 
+#' @keywords internal
+inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise")) {
+  stopifnot(is.formula(oldform))
+  
+  # A recursive helper that descends through an expression
+  # and injects `basis=new_basis` into calls named in fun_names.
+  recfun <- function(expr) {
+    if (!is_call(expr)) {
+      return(expr)  # If it’s not a call, return as is
+    }
+    thisfun <- call_name(expr)
+    
+    # If this call is one of the functions we want to modify:
+    if (thisfun %in% fun_names) {
+      # 1) Recursively transform sub-expressions
+      expr_args <- as.list(expr)
+      for (i in seq_along(expr_args)[-1]) {
+        expr_args[[i]] <- recfun(expr_args[[i]])
+      }
+      # 2) Rebuild the call, then override/add `basis = new_basis`
+      call_rebuilt <- as.call(expr_args)
+      call_modified <- call_modify(call_rebuilt, basis = new_basis)
+      return(call_modified)
+    } else {
+      # Not hrf() or trialwise(), so keep walking
+      expr_args <- as.list(expr)
+      for (i in seq_along(expr_args)[-1]) {
+        expr_args[[i]] <- recfun(expr_args[[i]])
+      }
+      return(as.call(expr_args))
+    }
+  }
+  
+  # Extract old LHS, RHS, and environment
+  lhs     <- f_lhs(oldform)
+  rhs_old <- f_rhs(oldform)
+  f_env   <- f_env(oldform)
+  
+  # Recursively transform the RHS
+  rhs_new <- recfun(rhs_old)
+  
+  # Build the new formula with the same environment
+  newform <- new_formula(lhs = lhs, rhs = rhs_new, env = f_env)
+  newform
 }
 
 
