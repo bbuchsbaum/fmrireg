@@ -7,6 +7,7 @@
 #' @param hrf The hemodynamic response function to use (default is HRF_SPMG1).
 #' @param nreps The number of repetitions per condition (default is 12).
 #' @param amps A vector of amplitudes for each condition (default is a vector of 1s with length ncond).
+#' @param apmsd the standard deviation of the amplitudes (default is 0).
 #' @param isi A vector of length 2 specifying the range of inter-stimulus intervals to sample from (default is c(3, 6) seconds).
 #' @param TR The repetition time of the fMRI acquisition (default is 1.5 seconds).
 #'
@@ -30,9 +31,9 @@
 #'         xlab = "Time (s)", ylab = "BOLD Response")
 #' 
 #' @export
-sim_ts <- function(ncond, hrf=HRF_SPMG1, nreps=12, amps=rep(1,ncond), isi=c(3,6), TR=1.5) {
+sim_ts <- function(ncond, hrf=HRF_SPMG1, nreps=12, amps=rep(1,ncond), isi=c(3,6), ampsd=0, TR=1.5) {
   assert_that(length(amps) == ncond, 
-              msg = "Length of amplitudes vector must match number of conditions")
+              msg = "Length of amplitudes vector must match number of total trials (ncond")
   assert_that(length(isi) == 2 && isi[2] > isi[1], 
               msg = "ISI must be a vector of length 2 with isi[2] > isi[1]")
   assert_that(TR > 0, msg = "TR must be positive")
@@ -45,7 +46,7 @@ sim_ts <- function(ncond, hrf=HRF_SPMG1, nreps=12, amps=rep(1,ncond), isi=c(3,6)
   time <- seq(0, max(onset+12), by=TR)
   ymat <- do.call(cbind, lapply(1:length(cond), function(i) {
     idx <- which(trials == cond[i])
-    reg <- regressor(onset[idx], hrf, amplitude=amps[i])
+    reg <- regressor(onset[idx], hrf, amplitude=rnorm(1, mean=amps[i], sd=ampsd))
     evaluate(reg, time)
   }))
   

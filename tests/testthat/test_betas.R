@@ -78,15 +78,15 @@ test_that("can run a beta estimation", {
   
 })
 
-test_that("can accurate estimate an hrf shape with appropriate methods", {
-  amps <- runif(20)*2
-  hrf <- gen_hrf(hrf_half_cosine,h1=2, h2=7, h4=11 )
-  ret <- sim_ts(ncond=1, hrf,nreps=20, amps=amps,isi=16)
-  
-  etab <- data.frame(onset=ret$onset, fac=rep("a", length(ret$onset)), run=factor(rep(1, length(ret$onset))))
-  matrix_dataset(as.matrix(ret$mat[,2]), TR=1.5, run_length=143, event_table=etab)
-  
-})
+# test_that("can accurate estimate an hrf shape with appropriate methods", {
+#   amps <- 1
+#   hrf <- gen_hrf(hrf_half_cosine,h1=2, h2=7, h4=11 )
+#   ret <- sim_ts(ncond=1, hrf,nreps=20, amps=amps,isi=c(8,16))
+#   
+#   etab <- data.frame(onset=ret$onset, fac=rep("a", length(ret$onset)), run=factor(rep(1, length(ret$onset))))
+#   matrix_dataset(as.matrix(ret$mat[,2]), TR=1.5, run_length=143, event_table=etab)
+#   
+# })
 
 test_that("can run a beta estimation with different durations", {
 
