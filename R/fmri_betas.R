@@ -121,11 +121,12 @@ mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
 #' @export
 estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
                                         method = c("mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp",
-                                                   "r1", "pls",  "pls_global", "ols", "lowrank_hrf"),
+                                                   "r1", "pls",  "pls_global", "ols", "fracridge","lowrank_hrf"),
                                         basemod = NULL,
                                         hrf_basis = NULL,
                                         hrf_ref = NULL,
                                         maxit = 100,
+                                        fracs=.5,
                                         ...) {
   method <- match.arg(method)
   dset <- x
@@ -257,6 +258,50 @@ run_estimate_betas <- function(bdes, dset, method, hrf_basis = NULL, hrf_ref = N
     Y <- do.call(cbind, lapply(vecs, function(v) v))
     Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
     list(beta_matrix=ols_betas(xdat$X, Y0), estimated_hrf=NULL)
+  } else if (method == "fracridge") {
+    # ---------------------------------
+    # 1) gather arguments
+    message("Using fractional ridge regression with fraction: ", fracs)
+    if (is.null(fracs)) {
+      fracs <- 1.0  # default to unregularized or minimal ridge
+    }
+    # We will only accept a single fraction for now
+    if (length(fracs) != 1L) {
+      stop("For 'fracridge' method, please supply a single 'fracs' value (e.g. fracs=0.5).")
+    }
+    tol <- dotargs$tol %||% 1e-10
+
+    # 2) build design
+    xdat <- get_X()
+    X <- xdat$X
+    # Y is all voxels
+    Y <- as.matrix(get_data(dset))  # nTime x nVox
+    # 3) partial out baseline
+    Base <- xdat$Base
+    # Residual from baseline
+    Y0 <- resid(lsfit(Base, Y, intercept=FALSE))
+
+    # 4) call fracridge, which can handle multiple columns of Y
+    #    NOTE: fracridge() expects X as nObs x p, Y as nObs x b
+    #    Here, nObs = nrow(X) = nTime, b = nVox. 
+    #    We supply fracs=fracs, tol=tol
+    frfit <- fracridge(X, Y0, fracs=fracs, tol=tol)
+    # frfit$coef is p x 1 x b if we used a single fraction
+    # => dimension is (p, 1, nVox).
+    # so we can drop the middle dimension => p x nVox.
+
+    coefs_3d <- frfit$coef  # array dim: p x 1 x nVox
+    if (length(dim(coefs_3d)) == 3) {
+      beta_matrix <- coefs_3d[, 1, ]  # p x nVox
+    } else {
+      # if single-target or single fraction might also be p x nVox directly
+      beta_matrix <- coefs_3d
+    }
+    # Done, return betas
+    list(
+      beta_matrix  = beta_matrix, 
+      estimated_hrf= NULL  # or frfit if you want
+    )
   } else if (method == "lowrank_hrf") {
     rsam <- seq(0, 24, by=.25)
     # 1. Find best HRFs with clustering
