@@ -158,7 +158,7 @@ evaluate.single_trial_regressor <- function(x, grid, precision=.3, ...) {
   delta <- grid - x$onsets 
   grid.idx <- which(delta >= 0 & delta <= x$span)
   relons <- grid[grid.idx] - x$onsets    
-  resp <- evaluate(x$hrf, relons, amplitude=x$amplitude, duration=x$amplitude, precision=precision)   
+  resp <- evaluate(x$hrf, relons, amplitude=x$amplitude, duration=x$duration, precision=precision)   
 
   outmat <- matrix(0, length(grid), nb)
   outmat[grid.idx,1:nb] <- resp

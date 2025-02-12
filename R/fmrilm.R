@@ -61,47 +61,12 @@ term_matrices.fmri_model <- function(x, blocknum = NULL) {
 }
 
 
-#' #' Extract term matrices for an fMRI model
-#' #'
-#' #' This function extracts the term matrices for an fMRI model, which consists of event-related terms
-#' #' and baseline-related terms. The term matrices are used for building the design matrix in fMRI data analysis.
-#' #'
-#' #' @param x An object of class "fmri_model" containing the event and baseline models.
-#' #' @param blocknum (Optional) A numeric vector specifying the block numbers to be included in the term matrices.
-#' #'                 By default, all unique block numbers in the event model are included.
-#' #' @return A named list of term matrices, with event terms followed by baseline terms.
-#' #'         Attributes "event_term_indices" and "baseline_term_indices" store the indices of event and baseline terms,
-#' #'         "blocknum" stores the block numbers, and "varnames" stores the variable names.
-#' #' @export
-#' #' @seealso fmri_model
-#' term_matrices.fmri_model <- function(x, blocknum=NULL) {
-#'   eterms <- lapply(event_terms(x), 
-#'                    function(x) as.matrix(design_matrix(x, blocknum)))
-#'   
-#'   bterms <- lapply(baseline_terms(x), 
-#'                    function(x) as.matrix(design_matrix(x, blocknum)))
-#'   
-#'   if (is.null(blocknum)) {
-#'     blocknum <- sort(unique(x$event_model$blockids))
-#'   }
-#'   
-#'   start <- 1
-#'   eterm_indices <- 1:sum(map_int(eterms, ncol))
-#'   start <- length(eterm_indices) +1
-#'   bterm_indices <- start:(start+sum(map_int(bterms, ncol)))
-#'   #browser()
-#'   term_matrices <- c(eterms, bterms)
-#'   names(term_matrices) <- names(terms(x))
-#'   
-#'   vnames <- unlist(lapply(term_matrices, colnames))
-#'   
-#'   attr(term_matrices, "event_term_indices") <- eterm_indices
-#'   attr(term_matrices, "baseline_term_indices") <- bterm_indices
-#'   attr(term_matrices, "blocknum") <- blocknum 
-#'   attr(term_matrices, "varnames") <- vnames
-#'   term_matrices
-#' }
 
+#' @keywords internal
+#' @noRd
+is.formula <- function(x) {
+  inherits(x, "formula")
+}
 
 #' Create an fMRI Model
 #'
@@ -134,7 +99,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
   }
   
   ev_model <- event_model(
-    formula = formula,
+    x=formula,
     block = block,
     data = dataset$event_table,
     sampling_frame = dataset$sampling_frame,
@@ -308,15 +273,6 @@ fitted_hrf.fmri_lm <- function(x, sample_at = seq(0, 24, by = 1), ...) {
   return(pred)
 }
 
-# fitted_errors <- function(SE, B, nb) {
-#   se_list <- lapply(seq_len(ncol(SE)), function(j) {
-#     cov_matrix <- B[, j, drop = FALSE] %*% t(B[, j, drop = FALSE]) * SE[, j]^2
-#     se <- sqrt(pmax(diag(G %*% cov_matrix %*% t(G)), 0)) # Dim: n_timepoints
-#     se
-#   })
-# 
-# }
-  
 
 
 #' Reshape Coefficient Data
@@ -451,39 +407,6 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts")) {
     pull_stat(x, "contrasts", "se")
   }
 }
-
-
-#' Print an fmri_lm Object
-#'
-#' This function prints a summary of an \code{fmri_lm} object.
-#'
-#' @param x An \code{fmri_lm} object.
-#' @param ... Additional arguments (currently unused).
-#' @export
-print.fmri_lm <- function(x, ...) {
-  cat("fmri_lm model:\n", as.character(x$model$event_model$model_spec$formula), "\n")
-  cat("  Baseline parameters:", ncol(design_matrix(x$model$baseline_model)), "\n")
-  cat("  Design parameters:", ncol(design_matrix(x$model$event_model)), "\n")
-  cat("  Contrasts:", paste(names(x$bcons), collapse = ", "), "\n")
-}
-
-# summary.fmri_lm <- function(x, type=c("coef", "contrasts", "Fcontrasts")) {
-#   type <- match.arg(type)
-#   if (type == "coef") {
-#     betas=x$result$betas
-#     list(
-#       estimate=betas$estimate(),
-#       se=betas$se(),
-#       stat=betas$stat(),
-#       prob=betas$prob())
-#   } else if (type == "contrasts") {
-#     x$result$contrasts
-#   } else if (type == "Fcontrasts") {
-#     x$result$Fcontrasts
-#   } else {
-#     stop()
-#   }
-# }
 
 
 
@@ -623,8 +546,9 @@ chunkwise_lm.fmri_dataset <- function(dset, model, conlist, fcon, nchunks, robus
   
   lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
   
+  
   ym <- NULL
-  cres <- foreach(ym = chunks, .combine = 'c', .verbose = verbose) %dopar% {
+  cres <- foreach(ym = chunks, .verbose = verbose) %dopar% {
     if (verbose) message("Processing chunk ", ym$chunk_num)
     data_env[[".y"]] <- as.matrix(ym$data)
     ret <- lmfun(form, data_env, conlist, attr(tmats, "varnames"), fcon, modmat = modmat)
@@ -634,6 +558,8 @@ chunkwise_lm.fmri_dataset <- function(dset, model, conlist, fcon, nchunks, robus
     ret$sigma <- sqrt(ret$resvar)
     ret
   }
+  
+ 
   
   event_indices = attr(tmats, "event_term_indices")
   baseline_indices = attr(tmats, "baseline_term_indices")
@@ -670,7 +596,7 @@ runwise_lm <- function(dset, model, conlist, fcon, robust = FALSE, verbose = FAL
   Vu <- chol2inv(Qr$qr)
   
   # Iterate over each data chunk
-  cres <- foreach(ym = chunks, .combine = 'c', .verbose = verbose) %dopar% {
+  cres <- foreach(ym = chunks, .verbose = verbose) %dopar% {
     if (verbose) message("Processing run ", ym$chunk_num)
     tmats <- term_matrices(model, ym$chunk_num)
     
@@ -732,6 +658,65 @@ runwise_lm <- function(dset, model, conlist, fcon, robust = FALSE, verbose = FAL
       resvar = sigma^2
     )
   }
+}
+
+
+#' Print an fmri_lm_result object
+#'
+#' Provides a colorful and informative printout.
+#'
+#' @param x An fmri_lm_result object.
+#' @param ... Additional arguments (unused).
+#' @export
+print.fmri_lm <- function(x, ...) {
+  # optional: check if crayon is installed
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    # fallback to standard cat if crayon is missing
+    cat("fmri_lm_result object (install 'crayon' for color)\n\n")
+    
+    cat("Model formula:\n",
+        as.character(x$model$event_model$model_spec$formula), "\n")
+    cat("Strategy: ", x$strategy, "\n")
+    cat("Baseline parameters: ",
+        ncol(design_matrix(x$model$baseline_model)), "\n")
+    cat("Design parameters: ",
+        ncol(design_matrix(x$model$event_model)), "\n")
+    cat("Contrasts: ",
+        paste(names(x$bcons), collapse = ", "), "\n\n")
+    return(invisible(x))
+  }
+  
+  # If we do have crayon, let's color it up:
+  cat(crayon::blue$bold("\n╔════════════════════════════════╗\n"))
+  cat(crayon::blue$bold("║        fmri_lm_result          ║\n"))
+  cat(crayon::blue$bold("╚════════════════════════════════╝\n\n"))
+  
+  # Print the model formula
+  cat(crayon::green("Model formula:\n  "))
+  cat(crayon::silver(as.character(x$model$event_model$model_spec$formula)), "\n\n")
+  
+  # Print strategy
+  cat(crayon::green("Fitting strategy:  "))
+  cat(crayon::silver(x$strategy), "\n\n")
+  
+  # Some stats about baseline, design, and contrasts
+  bdim <- ncol(design_matrix(x$model$baseline_model))
+  ddim <- ncol(design_matrix(x$model$event_model))
+  
+  cat(crayon::green("Baseline parameters: "), crayon::silver(bdim), "\n")
+  cat(crayon::green("Design parameters:   "), crayon::silver(ddim), "\n")
+  
+  # If you have some # of simple contrasts
+  c_names <- names(x$bcons)
+  if (length(c_names) > 0) {
+    cat(crayon::green("Contrasts:          "), crayon::silver(paste(c_names, collapse = ", ")), "\n\n")
+  } else {
+    cat(crayon::green("Contrasts:          "), crayon::silver("None\n\n"))
+  }
+  
+  cat(crayon::yellow("Use coef(...), stats(...), etc. to extract results.\n\n"))
+  
+  invisible(x)
 }
   
     

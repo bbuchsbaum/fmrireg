@@ -2,7 +2,7 @@
 % Please edit documentation in R/event_vector.R
 \name{event_basis}
 \alias{event_basis}
-\title{Create an event set from a ParametricBasis object}
+\title{Create an event set from a ParametricBasis object.}
 \usage{
 event_basis(
   basis,
@@ -13,30 +13,26 @@ event_basis(
 )
 }
 \arguments{
-\item{basis}{A ParametricBasis object containing the basis functions}
+\item{basis}{A ParametricBasis object.}
 
-\item{onsets}{A numeric vector of onsets for each event in the sequence}
+\item{onsets}{Numeric vector of onsets.}
 
-\item{blockids}{A numeric vector of block identifiers for each event in the sequence (default: 1)}
+\item{blockids}{Numeric vector of block IDs (default: 1).}
 
-\item{durations}{A numeric vector of durations for each event in the sequence (default: NULL)}
+\item{durations}{Numeric vector of durations (default: 0).}
 
-\item{subset}{A logical vector indicating a subset of the basis object to use (default: TRUE for all elements)}
+\item{subset}{Logical vector for subsetting (default: rep(TRUE, length(onsets))).}
 }
 \value{
-An object representing the event set based on the basis functions, with class "event_basis" and "event_seq"
+An object of class "event_basis" and "event_seq".
 }
 \description{
-This function generates an event set object from a given basis object of type \code{ParametricBasis}.
-It is useful for creating event sequences based on basis functions for fMRI data analyses.
+Create an event set from a ParametricBasis object.
 }
 \examples{
-# Create a ParametricBasis object
 basis <- BSpline(1:21, 3)
 onsets <- seq(0, 20, length.out = 21)
 blockids <- rep(1, length(onsets))
-
-# Generate an event_basis object
 ebasis <- event_basis(basis, onsets, blockids)
 
 }

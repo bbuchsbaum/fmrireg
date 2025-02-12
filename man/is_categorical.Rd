@@ -10,5 +10,5 @@ is_categorical(x)
 \item{x}{the object}
 }
 \description{
-checks to see if a variable is cateogircal e.g. factor-based
+checks to see if a variable is categorical e.g. factor-based
 }

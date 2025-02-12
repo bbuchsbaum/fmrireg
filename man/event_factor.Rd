@@ -2,7 +2,7 @@
 % Please edit documentation in R/event_vector.R
 \name{event_factor}
 \alias{event_factor}
-\title{Create a categorical event sequence from a factor}
+\title{Create a categorical event sequence from a factor.}
 \usage{
 event_factor(
   fac,
@@ -13,26 +13,24 @@ event_factor(
 )
 }
 \arguments{
-\item{fac}{A factor representing the categorical event sequence}
+\item{fac}{A factor representing the categorical event sequence.}
 
-\item{name}{A character string providing a name for the event sequence}
+\item{name}{Name of the event sequence.}
 
-\item{onsets}{A numeric vector of onsets for each event in the sequence}
+\item{onsets}{Numeric vector of onsets.}
 
-\item{blockids}{A numeric vector of block identifiers for each event in the sequence (default: rep(1, length(fac)))}
+\item{blockids}{Numeric vector of block IDs (default: rep(1, length(fac))).}
 
-\item{durations}{A numeric vector of durations for each event in the sequence (default: rep(0, length(fac)))}
+\item{durations}{Numeric vector of durations (default: rep(0, length(fac))).}
 }
 \value{
-An object representing the categorical event sequence, with class "event_factor" and "event_seq"
+An object of class "event_factor" and "event_seq".
 }
 \description{
-This function generates a categorical event sequence object from a given factor.
-It can be used to create event sequences for categorical predictors in fMRI data analyses.
+Create a categorical event sequence from a factor.
 }
 \examples{
-efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), 
-"abc", onsets=seq(1, 100, length.out=6))
+efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), "abc", onsets = seq(1, 100, length.out = 6))
 
 }
 \seealso{

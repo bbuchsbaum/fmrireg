@@ -13,20 +13,6 @@ create_hrfspec(
   data = NULL
 )
 }
-\arguments{
-\item{variable}{Name of variable or parametric basis object}
-
-\item{hrf}{HRF object to use}
-
-\item{onsets}{Vector of onset times}
-
-\item{durations}{Vector of durations (optional)}
-
-\item{data}{Data frame containing variables (for parametric bases)}
-}
-\value{
-An hrfspec object
-}
 \description{
 Create an HRF specification programmatically
 }

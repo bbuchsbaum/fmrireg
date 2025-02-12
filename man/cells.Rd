@@ -18,29 +18,21 @@ cells(x, ...)
 \arguments{
 \item{x}{An event_term object.}
 
-\item{...}{Additional arguments passed to the function.}
+\item{...}{Additional arguments.}
 
-\item{drop.empty}{Logical. If TRUE, empty cells will be removed.}
+\item{drop.empty}{Logical; if TRUE, remove cells with no events.}
 }
 \value{
-A list of data frames containing the cells of the event_factor object.
+A list of data frames containing the cells.
 
-A tibble containing the cells of the event_term object, with an
-additional "count" attribute.
+A tibble containing the cells with a "count" attribute.
 }
 \description{
 return the experimental cells that are in a model term as a table
-
-This function extracts cells from an event_factor object, optionally removing
-empty cells. Note that the removal of empty cells is not implemented.
-
-This function extracts cells from an event_term object, optionally removing
-empty cells.
 }
 \examples{
-
-evlist <- list(fac1=factor(c("A", "B", "A", "B")), 
-               fac2=factor(c("1", "1", "2", "2")))
-eterm <- event_term(evlist,onsets=1:4, blockids=rep(1,4))
+evlist <- list(fac1 = factor(c("A", "B", "A", "B")), 
+               fac2 = factor(c("1", "1", "2", "2")))
+eterm <- event_term(evlist, onsets = 1:4, blockids = rep(1, 4))
 cells(eterm)
 }

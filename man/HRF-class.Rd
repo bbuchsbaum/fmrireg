@@ -6,6 +6,8 @@
 \alias{HRF_GAUSSIAN}
 \alias{HRF_BSPLINE}
 \alias{HRF_SPMG1}
+\alias{HRF_SPMG2}
+\alias{HRF_SPMG3}
 \title{HRF Constructor Function}
 \usage{
 HRF(fun, name, nbasis = 1, span = 24, param_names = NULL)
@@ -17,6 +19,10 @@ HRF_GAUSSIAN(t, mean = 6, sd = 2)
 HRF_BSPLINE(t, span = 24, N = 5, degree = 3)
 
 HRF_SPMG1(t, P1 = 5, P2 = 15, A1 = 0.0833)
+
+HRF_SPMG2(t)
+
+HRF_SPMG3(t)
 }
 \arguments{
 \item{fun}{A function representing the hemodynamic response, mapping from time to BOLD response.}
@@ -44,6 +50,10 @@ The \code{HRF} function creates an object representing a hemodynamic response fu
 \item \code{HRF_BSPLINE()}: BSpline HRF function object
 
 \item \code{HRF_SPMG1()}: SPMG1 HRF function object
+
+\item \code{HRF_SPMG2()}: SPMG1 HRF function object
+
+\item \code{HRF_SPMG3()}: SPMG1 HRF function object
 
 }}
 \examples{

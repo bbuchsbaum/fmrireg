@@ -2,24 +2,44 @@
 % Please edit documentation in R/event_model.R
 \name{plot.event_model}
 \alias{plot.event_model}
-\title{Plot an event_model object}
+\title{Plot an event_model using ggforce pagination}
 \usage{
-\method{plot}{event_model}(x, y, term_name = NULL, longnames = TRUE, ...)
+\method{plot}{event_model}(
+  x,
+  y,
+  term_name = NULL,
+  page = 1,
+  facet_ncol = 1,
+  theme_custom = ggplot2::theme_bw(base_size = 14),
+  line_size = 1,
+  color_palette = "Set1",
+  hide_legend_threshold = 25,
+  xlab = "Time",
+  ylab = "Value",
+  title = NULL,
+  longnames = TRUE,
+  ...
+)
 }
 \arguments{
 \item{x}{An event_model object.}
 
-\item{y}{Unused.}
+\item{y}{Unused (for S3 signature).}
 
-\item{term_name}{Name of the term to plot (optional).}
+\item{term_name}{A single term to plot. If NULL, we combine all terms into one big data set.}
 
-\item{longnames}{Logical flag; if TRUE, use long names for the plot (default: TRUE).}
+\item{page}{Which \code{ggforce} page to display (default=1).}
 
-\item{...}{Additional arguments to be passed to the ggplot2 function.}
+\item{facet_ncol}{Number of facet columns (default=1).}
+
+\item{...}{Other arguments (e.g. line size, color palette, etc.) for the plot.}
 }
 \value{
-A ggplot2 plot object.
+A ggplot object. If \code{term_name=NULL}, the plot uses pagination
+so you can call multiple times with different \code{page} values.
 }
 \description{
-This function creates a plot of an event_model object, visualizing the design matrix.
+Uses \code{ggforce::facet_wrap_paginate} so that if \code{term_name=NULL},
+all terms are combined into one big data frame, and you can pass \code{page}
+to see different pages.
 }

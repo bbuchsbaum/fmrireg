@@ -1,6 +1,6 @@
 #' @noRd
 #' @keywords internal
-ridge_betas <- function(X, Y, penalty_factor=rep(1:ncol(X)), lambda=.01) {
+ridge_betas <- function(X, Y, penalty_factor=rep(1,ncol(X)), lambda=.01) {
   with_package("glmnet")
   fit <- glmnet::glmnet(X, Y, penalty.factor=penalty_factor, alpha=0,lambda=lambda)
   coef(fit)[,1,drop=FALSE]
@@ -121,8 +121,7 @@ mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
 #' @export
 estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
                                         method = c("mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp",
-                                                   "r1", "pls", "pls_searchlight", 
-                                                   "pls_global", "ols", "lowrank_hrf"),
+                                                   "r1", "pls",  "pls_global", "ols", "lowrank_hrf"),
                                         basemod = NULL,
                                         hrf_basis = NULL,
                                         hrf_ref = NULL,
@@ -133,7 +132,7 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
   bvec <- get_data(dset)
   mask <- get_mask(dset)
   
-  if (method == "r1_glms" || method == "r1") {
+  if (method == "r1") {
     if (is.null(hrf_basis)) {
       stop("Please provide 'hrf_basis', a matrix of HRF basis functions.")
     }
@@ -149,7 +148,7 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
   }
   
   bdes <- gen_beta_design(fixed, ran, block, bmod, dset, method = method)
-  betas <- run_estimate_betas(bdes, dset, method, hrf_basis = hrf_basis, hrf_ref = hrf_ref, maxit = maxit, ...)
+  betas <- run_estimate_betas(bdes, dset, method, hrf_basis = hrf_basis, hrf_ref = hrf_ref, block=block, maxit = maxit, ...)
   
   # Check dimensions before indexing
   message(sprintf("beta_matrix dimensions: %d x %d", 
@@ -185,7 +184,7 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
 
 
 #' @keywords internal
-run_estimate_betas <- function(bdes, dset, method, hrf_basis = NULL, hrf_ref = NULL, maxit = 100, ncomp=4, ...) {
+run_estimate_betas <- function(bdes, dset, method, hrf_basis = NULL, hrf_ref = NULL, block, maxit = 100, ncomp=4, ...) {
   get_X <- function() {
     X <- if (is.null(bdes$fixed)) bdes$dmat_ran else cbind(bdes$dmat_ran, bdes$dmat_fixed)
     Base <- as.matrix(bdes$dmat_base)
@@ -224,9 +223,6 @@ run_estimate_betas <- function(bdes, dset, method, hrf_basis = NULL, hrf_ref = N
   
   }  else if (method == "lss_naive") {
     lss_naive(dset, bdes)
-  } else if (method == "r1_glms") {
-    xdat <- get_X()
-    estimate_r1_glms(dset, xdat, hrf_basis, hrf_ref, maxit)
   } else if (method == "r1") {
     xdat <- get_X()
     estimate_r1(dset, xdat, hrf_basis, hrf_ref, maxit)
@@ -263,7 +259,8 @@ run_estimate_betas <- function(bdes, dset, method, hrf_basis = NULL, hrf_ref = N
     list(beta_matrix=ols_betas(xdat$X, Y0), estimated_hrf=NULL)
   } else if (method == "lowrank_hrf") {
     # 1. Find best HRFs with clustering
-    hrf_results <- find_best_hrf(dset, onset_var = bdes$emod_ran$model_spec$onset_var, 
+    hrf_results <- find_best_hrf(dset, onset_var = rlang::f_lhs(bdes$emod_ran$model_spec$formula), 
+                                 block=block,
                                 cluster_series = TRUE)
     
     # 2. For each unique HRF cluster:
@@ -586,384 +583,7 @@ estimate_hrf <- function(form, fixed=NULL, block, dataset,
   res
   
 }
-#' 
-#' #' @keywords internal
-#' #' @noRd
-#' setup_hrf_library <- function(hrflib = NULL, rsam = seq(0, 24, by = 1), ncomp = 5) {
-#'   if (is.null(hrflib)) {
-#'     params <- expand.grid(
-#'       h1 = seq(1, 3, by = 0.33),
-#'       h2 = seq(3, 7, by = 0.33),
-#'       h3 = seq(6, 8, by = 1),
-#'       h4 = seq(5, 9, by = 1),
-#'       f1 = seq(0, 0.2, by = 0.1),
-#'       f2 = seq(0, 0.2, by = 0.1)
-#'     )
-#'     hrflib <- gen_hrf_library(hrf_half_cosine, params)
-#'   }
-#'   
-#'   L <- hrflib(rsam)
-#'   pca_L <- multivarious::pca(L, preproc = multivarious::pass())
-#'   Lk <- pca_L$u[, 1:ncomp, drop = FALSE]
-#'   
-#'   basis_set <- lapply(1:ncol(Lk), function(i) {
-#'     gen_empirical_hrf(rsam, Lk[, i])
-#'   })
-#'   
-#'   list(L = L, Lk = Lk, basis_set = basis_set)
-#' }
-#' 
-#' #' @keywords internal
-#' #' @noRd
-#' compute_best_hrfs <- function(X_proj, L_proj, L, cluster_series = TRUE, cluster_quantile = .5) {
-#'   basis_euc <- proxy::dist(L_proj, X_proj, method = "euclidean")
-#'   best_match_indices <- apply(as.matrix(basis_euc), 2, which.min)
-#'   
-#'   if (!cluster_series) {
-#'     return(list(
-#'       best_hrf_indices = best_match_indices,
-#'       L_best_hrfs = L[, best_match_indices, drop = FALSE],
-#'       L_proj = L_proj,
-#'       X_proj = X_proj
-#'     ))
-#'   }
-#'   
-#'   unique_best_hrfs <- unique(best_match_indices)
-#'   L_best_hrfs <- L[, unique_best_hrfs, drop = FALSE]
-#'   hrf_dist <- dist(t(L_best_hrfs))
-#'   hclust_result <- hclust(hrf_dist, method = "average")
-#'   clusters <- cutree(hclust_result, h = quantile(hrf_dist, cluster_quantile))
-#'   
-#'   cluster_medoid <- function(cluster_indices) {
-#'     sub_dist <- as.matrix(hrf_dist)[cluster_indices, cluster_indices]
-#'     medoid_index <- cluster_indices[which.min(rowSums(sub_dist))]
-#'     return(unique_best_hrfs[medoid_index])
-#'   }
-#'   
-#'   unique_clusters <- unique(clusters)
-#'   cluster_representatives <- sapply(unique_clusters, function(cluster) {
-#'     cluster_indices <- which(clusters == cluster)
-#'     cluster_medoid(cluster_indices)
-#'   })
-#'   
-#'   reassigned_hrfs <- sapply(best_match_indices, function(idx) {
-#'     cluster <- clusters[which(unique_best_hrfs == idx)]
-#'     cluster_representatives[as.character(cluster)]
-#'   })
-#'   
-#'   list(
-#'     best_hrf_indices = unique_best_hrfs,
-#'     clusters = clusters,
-#'     cluster_representatives = cluster_representatives,
-#'     reassigned_hrfs = reassigned_hrfs,
-#'     L_best_hrfs = L_best_hrfs,
-#'     L_proj = L_proj,
-#'     X_proj = X_proj
-#'   )
-#' }
-#' 
-#' 
-#' 
-#' #' @export
-#' find_best_hrf <- function(dataset, onset_var, hrflib = NULL, rsam = seq(0, 24, by = 1),
-#'                          ncomp = 5, nsplits = 3, block = NULL, basemod = NULL, 
-#'                          cluster_series = TRUE, 
-#'                          cluster_quantile = .5) {
-#'   UseMethod("find_best_hrf")
-#' }
-#' 
-#' #' @export
-#' find_best_hrf.matrix_dataset <- function(dataset, onset_var, hrflib = NULL, rsam = seq(0, 24, by = 1),
-#'                                        ncomp = 5, nsplits = 3, block = NULL, basemod = NULL, 
-#'                                        cluster_series = TRUE, 
-#'                                        cluster_quantile = .5) {
-#'   
-#'   # Setup HRF library and basis functions
-#'   hrf_setup <- setup_hrf_library(hrflib, rsam, ncomp)
-#'   hrf_list <- do.call(gen_hrf_set, hrf_setup$basis_set)
-#'   
-#'   # Setup models
-#'   if (is.null(basemod)) {
-#'     bmod <- baseline_model("constant", sframe = dataset$sampling_frame)
-#'   } else {
-#'     bmod <- basemod
-#'   }
-#'   
-#'   # Create split variable - FIXED THIS LINE
-#'   split_ids <- rep(1:nsplits, length.out = nrow(dataset$event_table))
-#'   fac_var <- factor(paste0("split_", split_ids))
-#'   dataset$event_table <- dataset$event_table %>% mutate(.splitvar = fac_var)
-#'   
-#'   # Setup event model
-#'   form <- as.formula(paste0(onset_var, " ~ ", "hrf(.splitvar, basis = hrf_list)"))
-#'   emod <- event_model(
-#'     x = form,
-#'     formula = form,
-#'     data = dataset$event_table,
-#'     block = block,
-#'     sampling_frame = dataset$sampling_frame
-#'   )
-#'   
-#'   # Get data and compute residuals
-#'   X <- get_data_matrix(dataset)
-#'   X_base <- as.matrix(design_matrix(bmod))
-#'   X_resid <- resid(lsfit(X_base, X, intercept = FALSE))
-#'   
-#'   # Dimensionality reduction
-#'   pca_X <- multivarious::pca(X_resid, preproc = multivarious::center())
-#'   ncomp_X <- min(ncomp, ncol(pca_X$u))
-#'   Mk <- pca_X$u[, 1:ncomp_X, drop = FALSE]
-#'   
-#'   # Compute projections
-#'   Rk <- design_matrix(emod)
-#'   C <- t(Rk) %*% Mk
-#'   svd_C <- svd(C)
-#'   
-#'   X_proj <- t(X_resid) %*% Mk %*% svd_C$v
-#'   L_proj <- t(hrf_setup$L) %*% hrf_setup$Lk %*% svd_C$u
-#'   
-#'   # Compute best HRFs and return results
-#'   compute_best_hrfs(X_proj, L_proj, hrf_setup$L, cluster_series, cluster_quantile)
-#' }
-#' 
-#' #' @export
-#' find_best_hrf.fmri_mem_dataset <- function(dataset, onset_var, hrflib = NULL, rsam = seq(0, 24, by = 1),
-#'                                          ncomp = 5, nsplits = 3, block = NULL, basemod = NULL, 
-#'                                          cluster_series = TRUE, 
-#'                                          cluster_quantile = .5) {
-#'   # Use the same implementation as matrix_dataset but with get_data_matrix
-#'   find_best_hrf.matrix_dataset(
-#'     dataset = dataset,
-#'     onset_var = onset_var,
-#'     hrflib = hrflib,
-#'     rsam = rsam,
-#'     ncomp = ncomp,
-#'     nsplits = nsplits,
-#'     block = block,
-#'     basemod = basemod,
-#'     cluster_series = cluster_series,
-#'     cluster_quantile = cluster_quantile
-#'   )
-#' }
-#' 
-#' 
-#' #' @keywords internal
-#' #' @noRd
-#' smooth_hrf_assignments <- function(reassigned_hrfs, L_best_hrfs, voxel_coords, 
-#'                                    lambda = 0.1, n_iterations = 5, k = 6) {
-#'   # This function will take the initial HRF assignments and encourage spatial smoothness.
-#'   # Steps:
-#'   # 1. Build a neighbor structure using voxel_coords.
-#'   # 2. Iteratively reassign HRFs to minimize:
-#'   #    Cost = distance(voxel's HRF, voxel's data) + lambda * sum(differences to neighbors)
-#'   #
-#'   # For simplicity, we'll consider "differences to neighbors" as the average difference
-#'   # in HRF shape compared to neighbors. HRF shape difference can be approximated by 
-#'   # Euclidean distance in the original HRF space (L_best_hrfs) for the assigned HRFs.
-#'   
-#'   n_voxels <- length(reassigned_hrfs)
-#'   if (n_voxels == 0) return(reassigned_hrfs)
-#'   
-#'   # Build a neighbor index for each voxel
-#'   # We'll use a quick k-nearest neighbors approach:
-#'   # Note: For large datasets, consider a more efficient approach. Here we do a simple R-based solution.
-#'   dists <- as.matrix(dist(voxel_coords))
-#'   # For each voxel, find the k nearest neighbors (excluding itself)
-#'   neighbor_indices <- apply(dists, 1, function(row) {
-#'     # order by distance and take the first k+1 (including self)
-#'     # then drop self and take k neighbors
-#'     neigh <- order(row)
-#'     neigh <- neigh[neigh != which.min(row)] # remove self
-#'     head(neigh, k)
-#'   })
-#'   # neighbor_indices is now a matrix with k columns, each column is for one voxel
-#'   
-#'   # Precompute HRF shapes for assigned indices
-#'   # Reassigned_hrfs are indices into L_best_hrfs
-#'   # L_best_hrfs is a matrix [time, hrf_index], reassigned_hrfs indicates which column each voxel gets
-#'   # Actually, L_best_hrfs contains only the unique best HRFs. We need to handle differences:
-#'   # We'll assume reassigned_hrfs indexes directly into columns of L_best_hrfs.
-#'   # If not, ensure that these align. The code from the original snippet does align them.
-#'   
-#'   # Function to get HRF shape given an index in L_best_hrfs
-#'   get_hrf_shape <- function(idx) L_best_hrfs[, idx]
-#'   
-#'   # On each iteration, update assignments
-#'   for (iter in seq_len(n_iterations)) {
-#'     # We'll compute a simple smoothness cost:
-#'     # For voxel v with HRF h:
-#'     # Cost = 0 (data-fitting already done)
-#'     #       + lambda * average distance to neighbors' HRFs
-#'     # We'll reassign h to the closest HRF among the currently chosen set of HRFs (if we have multiple HRFs?).
-#'     # In this simplified scenario, we only have one chosen HRF per voxel from the cluster representatives.
-#'     # To truly allow refinement, we might consider allowing a small set of candidate HRFs.
-#'     #
-#'     # For now, let's just encourage consistency. We won't re-choose from the entire library (that would be costly).
-#'     # Instead, we'll nudge voxels to switch to an HRF that reduces the smoothness cost if there's an alternative HRF
-#'     # among neighbors that might be better.
-#'     #
-#'     # A simple heuristic:
-#'     # For each voxel, look at neighbors' HRFs, pick the HRF that is most frequent among neighbors
-#'     # and if that HRF is different and reduces average distance cost, switch to it.
-#'     
-#'     new_assignments <- reassigned_hrfs
-#'     for (v in seq_len(n_voxels)) {
-#'       v_hrf_idx <- reassigned_hrfs[v]
-#'       neigh_idx <- neighbor_indices[, v]
-#'       neigh_hrfs <- reassigned_hrfs[neigh_idx]
-#'       # Find the most common neighbor HRF
-#'       hrf_freq <- sort(table(neigh_hrfs), decreasing = TRUE)
-#'       # Consider top candidate from neighbors
-#'       candidate_hrf <- as.numeric(names(hrf_freq)[1])
-#'       
-#'       if (candidate_hrf != v_hrf_idx) {
-#'         # Check if switching reduces cost
-#'         # Current cost: distance of v_hrf to neighbors
-#'         v_shape <- get_hrf_shape(v_hrf_idx)
-#'         neigh_shapes <- L_best_hrfs[, neigh_hrfs, drop = FALSE]
-#'         current_cost <- mean(apply(neigh_shapes, 2, function(x) sqrt(sum((v_shape - x)^2))))
-#'         
-#'         # Candidate cost
-#'         cand_shape <- get_hrf_shape(candidate_hrf)
-#'         candidate_cost <- mean(apply(neigh_shapes, 2, function(x) sqrt(sum((cand_shape - x)^2))))
-#'         
-#'         # If candidate improves by at least lambda (some threshold),
-#'         # or simply if candidate_cost < current_cost (since lambda is already controlling how strongly we weigh this)
-#'         if (candidate_cost < current_cost) {
-#'           new_assignments[v] <- candidate_hrf
-#'         }
-#'       }
-#'     }
-#'     reassigned_hrfs <- new_assignments
-#'   }
-#'   
-#'   reassigned_hrfs
-#' }
-#' 
-#' 
-#' #' #' @export
-#' #' find_best_hrf <- function(dataset, onset_var, hrflib = NULL, rsam = seq(0, 24, by = 1),
-#' #'                           ncomp = 5, nsplits = 3, block = NULL, basemod = NULL, 
-#' #'                           cluster_series = TRUE, 
-#' #'                           cluster_quantile = .5,
-#' #'                           dist_method = "euclidean",
-#' #'                           spatial_smoothing = FALSE,
-#' #'                           lambda = 0.1,
-#' #'                           n_iterations = 5,
-#' #'                           k_neighbors = 6) {
-#' #'   UseMethod("find_best_hrf")
-#' #' }
-#' 
-#' #' @export
-#' find_best_hrf.matrix_dataset <- function(dataset, onset_var, hrflib = NULL, rsam = seq(0, 24, by = 1),
-#'                                          ncomp = 5, nsplits = 3, block = NULL, basemod = NULL, 
-#'                                          cluster_series = TRUE, 
-#'                                          cluster_quantile = .5,
-#'                                          dist_method = "euclidean",
-#'                                          spatial_smoothing = FALSE,
-#'                                          lambda = 0.1,
-#'                                          n_iterations = 5,
-#'                                          k_neighbors = 6) {
-#'   
-#'   # Setup HRF library and basis functions
-#'   hrf_setup <- setup_hrf_library(hrflib, rsam, ncomp)
-#'   hrf_list <- do.call(gen_hrf_set, hrf_setup$basis_set)
-#'   
-#'   # Setup models
-#'   if (is.null(basemod)) {
-#'     bmod <- baseline_model("constant", sframe = dataset$sampling_frame)
-#'   } else {
-#'     bmod <- basemod
-#'   }
-#'   
-#'   # Create split variable
-#'   split_ids <- rep(1:nsplits, length.out = nrow(dataset$event_table))
-#'   fac_var <- factor(paste0("split_", split_ids))
-#'   dataset$event_table <- dataset$event_table %>% mutate(.splitvar = fac_var)
-#'   
-#'   # Setup event model
-#'   form <- as.formula(paste0(onset_var, " ~ ", "hrf(.splitvar, basis = hrf_list)"))
-#'   emod <- event_model(
-#'     x = form,
-#'     formula = form,
-#'     data = dataset$event_table,
-#'     block = block,
-#'     sampling_frame = dataset$sampling_frame
-#'   )
-#'   
-#'   # Get data and compute residuals
-#'   X <- get_data_matrix(dataset)
-#'   X_base <- as.matrix(design_matrix(bmod))
-#'   X_resid <- resid(lsfit(X_base, X, intercept = FALSE))
-#'   
-#'   # Dimensionality reduction
-#'   pca_X <- multivarious::pca(X_resid, preproc = multivarious::center())
-#'   ncomp_X <- min(ncomp, ncol(pca_X$u))
-#'   Mk <- pca_X$u[, 1:ncomp_X, drop = FALSE]
-#'   
-#'   # Compute projections
-#'   Rk <- design_matrix(emod)
-#'   C <- t(Rk) %*% Mk
-#'   svd_C <- svd(C)
-#'   
-#'   X_proj <- t(X_resid) %*% Mk %*% svd_C$v
-#'   L_proj <- t(hrf_setup$L) %*% hrf_setup$Lk %*% svd_C$u
-#'   
-#'   # Compute best HRFs using chosen distance measure
-#'   res <- compute_best_hrfs(X_proj, L_proj, hrf_setup$L, cluster_series, cluster_quantile, dist_method = dist_method)
-#'   
-#'   # If spatial smoothing is requested and voxel coordinates are available
-#'   if (spatial_smoothing && !is.null(dataset$voxel_coords)) {
-#'     # We have res$reassigned_hrfs or res$best_hrf_indices
-#'     # Use res$reassigned_hrfs if available; if not, default to best_hrf_indices.
-#'     # We'll also need L_best_hrfs from res. The "res" list has L_best_hrfs and final assignments.
-#'     # We'll smooth over the reassigned_hrfs.
-#'     final_assignments <- if (!is.null(res$reassigned_hrfs)) res$reassigned_hrfs else res$best_hrf_indices
-#'     
-#'     final_assignments_smoothed <- smooth_hrf_assignments(
-#'       reassigned_hrfs = final_assignments,
-#'       L_best_hrfs = res$L_best_hrfs,
-#'       voxel_coords = dataset$voxel_coords,
-#'       lambda = lambda,
-#'       n_iterations = n_iterations,
-#'       k = k_neighbors
-#'     )
-#'     
-#'     # Update results with smoothed assignments
-#'     res$reassigned_hrfs_smoothed <- final_assignments_smoothed
-#'   }
-#'   
-#'   res
-#' }
-#' 
-#' #' @export
-#' find_best_hrf.fmri_mem_dataset <- function(dataset, onset_var, hrflib = NULL, rsam = seq(0, 24, by = 1),
-#'                                            ncomp = 5, nsplits = 3, block = NULL, basemod = NULL, 
-#'                                            cluster_series = TRUE, 
-#'                                            cluster_quantile = .5,
-#'                                            dist_method = "euclidean",
-#'                                            spatial_smoothing = FALSE,
-#'                                            lambda = 0.1,
-#'                                            n_iterations = 5,
-#'                                            k_neighbors = 6) {
-#'   find_best_hrf.matrix_dataset(
-#'     dataset = dataset,
-#'     onset_var = onset_var,
-#'     hrflib = hrflib,
-#'     rsam = rsam,
-#'     ncomp = ncomp,
-#'     nsplits = nsplits,
-#'     block = block,
-#'     basemod = basemod,
-#'     cluster_series = cluster_series,
-#'     cluster_quantile = cluster_quantile,
-#'     dist_method = dist_method,
-#'     spatial_smoothing = spatial_smoothing,
-#'     lambda = lambda,
-#'     n_iterations = n_iterations,
-#'     k_neighbors = k_neighbors
-#'   )
-#' }
+
 
 
 

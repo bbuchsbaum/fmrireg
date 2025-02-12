@@ -21,6 +21,7 @@ test_that("regressor generates correct outputs", {
 test_that("generate an event model with one observation per level", {
   sframe <- sampling_frame(blocklens=rep(401,5), TR=1.5)
   lopdes$onset <- lopdes$WordPresentationOnset/1000
+  lopdes$Target <- factor(lopdes$Target)
   ev <- event_model(onset ~ hrf(Target), data=lopdes, block= ~ Run, sampling_frame=sframe)
   expect_true(!is.null(ev))
 })

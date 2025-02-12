@@ -12,20 +12,6 @@ build_event_model(
   sampling_frame
 )
 }
-\arguments{
-\item{events_data}{Event data from bidser::read_events}
-
-\item{events_spec}{Event specification from YAML}
-
-\item{regressors_spec}{Regressor specification from YAML}
-
-\item{hrfs}{List of HRF objects}
-
-\item{sampling_frame}{Time series sampling frame}
-}
-\value{
-An event_model object
-}
 \description{
 Build event model from configuration components
 }

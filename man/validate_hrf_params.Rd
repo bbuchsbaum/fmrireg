@@ -6,15 +6,7 @@
 \usage{
 validate_hrf_params(type, params)
 }
-\arguments{
-\item{type}{HRF type}
-
-\item{params}{List of parameters}
-}
-\value{
-TRUE if valid, throws error otherwise
-}
 \description{
-Validate HRF parameters
+(Optional function, if you want to extend param checking)
 }
 \keyword{internal}

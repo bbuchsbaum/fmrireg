@@ -1,5 +1,24 @@
+###############################################################################
+#                   Load and Validate fMRI Analysis Configuration
+###############################################################################
+
+#' The `%||%` operator
+#'
+#' This small helper replicates the `rlang::%||%` pattern, returning the left-hand
+#' side if not \code{NULL}, otherwise the right-hand side.
+#'
+#' @keywords internal
+`%||%` <- function(x, y) {
+  if (!is.null(x)) x else y
+}
+
 #' Load and validate fMRI analysis configuration
-#' 
+#'
+#' This function reads a YAML specification of an fMRI analysis configuration,
+#' loads a BIDS project via `bidser`, then validates the subjects, tasks, events,
+#' and confounds as specified in the YAML. Finally, it returns an `fmri_config`
+#' object that includes the validated structure.
+#'
 #' @param yaml_file Path to YAML configuration file
 #' @return An fmri_config object containing validated configuration and components
 #' @export
@@ -42,7 +61,10 @@ load_fmri_config <- function(yaml_file) {
   config
 }
 
-# Validation functions
+
+###############################################################################
+#                           Validation Functions
+###############################################################################
 
 #' @keywords internal
 validate_subjects <- function(proj, subjects_spec) {
@@ -82,12 +104,15 @@ validate_tasks <- function(proj, tasks_spec) {
 
 #' @keywords internal
 validate_events <- function(proj, events_spec, subjects, tasks) {
-  # Get example events file for each subject to validate
+  # If user didn't specify events section
+  if (is.null(events_spec)) {
+    stop("No 'events' specification found in YAML (model$events).")
+  }
+  
+  # For each subject & task, read events
   events_list <- lapply(subjects, function(subj) {
     task_events <- lapply(tasks, function(task) {
-      events <- bidser::read_events(proj, 
-                                  subid = subj,
-                                  task = task)
+      events <- bidser::read_events(proj, subid = subj, task = task)
       if (length(events) == 0) {
         stop(sprintf("No event files found for subject %s, task %s", subj, task))
       }
@@ -99,22 +124,35 @@ validate_events <- function(proj, events_spec, subjects, tasks) {
   names(events_list) <- subjects
   
   # Validate required columns exist in all event files
+  required_cols <- c(events_spec$onset, events_spec$duration, events_spec$block)
+  
+  # We'll store the final list of columns from the first valid file
+  # (assuming all are consistent). If they differ, an error is raised below.
+  final_columns <- NULL
+  
   for (subj in subjects) {
     for (task in tasks) {
       events_data <- events_list[[subj]][[task]]
       available_cols <- names(events_data)
       
-      required_cols <- c(events_spec$onset, 
-                        events_spec$duration,
-                        events_spec$block)
-      missing_cols <- setdiff(required_cols, available_cols)
-      if (length(missing_cols) > 0) {
-        stop(sprintf("Required columns not found in events file for subject %s, task %s: %s", 
-                    subj, task, paste(missing_cols, collapse=", ")))
+      if (is.null(final_columns)) {
+        final_columns <- available_cols
+      } else {
+        # optionally check that columns are consistent across subjects/tasks
+        # but we only enforce required columns for now
+        # final_columns <- intersect(final_columns, available_cols)
       }
       
-      # Validate block values are numeric and increasing within each run
-      block_vals <- events_data[[events_spec$block]]
+      missing_cols <- setdiff(required_cols, available_cols)
+      if (length(missing_cols) > 0) {
+        stop(sprintf(
+          "Required columns not found in events file for subject %s, task %s: %s", 
+          subj, task, paste(missing_cols, collapse=", ")))
+      }
+      
+      # Validate block values are numeric and non-decreasing
+      block_col <- events_spec$block
+      block_vals <- events_data[[block_col]]
       if (!is.numeric(block_vals) && !is.integer(block_vals)) {
         if (is.factor(block_vals)) {
           block_vals <- as.numeric(as.character(block_vals))
@@ -123,26 +161,23 @@ validate_events <- function(proj, events_spec, subjects, tasks) {
         }
       }
       
-      # Check blocks are non-decreasing
-      if (is.unsorted(block_vals)) {
-        browser()
-        stop(sprintf("Block values must be non-decreasing for subject %s, task %s", subj, task))
+      # Check blocks are non-decreasing (no more browser())
+      if (is.unsorted(block_vals, strictly = FALSE)) {
+        stop(sprintf(
+          "Block values must be non-decreasing for subject %s, task %s (found out-of-order blocks).", 
+          subj, task))
       }
     }
   }
   
-  # Check other variables (needed for regressors)
-  other_vars <- setdiff(names(events_spec), 
-                       c("onset", "duration", "block"))
-  for (var in other_vars) {
-    if (!events_spec[[var]] %in% available_cols) {
-      stop("Column '", events_spec[[var]], "' not found in events file")
-    }
-  }
+  # check if events_spec has more variables that we might want
+  other_vars <- setdiff(names(events_spec), c("onset", "duration", "block"))
+  # We only check existence if user specifically wants them as column names
+  # in the future if needed
   
   # Return validated events info and the loaded event data
   list(
-    columns = available_cols,
+    columns = final_columns,
     mapping = events_spec,
     events = events_list  # Store validated event data for later use
   )
@@ -150,44 +185,67 @@ validate_events <- function(proj, events_spec, subjects, tasks) {
 
 #' @keywords internal
 validate_confounds <- function(proj, confounds_spec, subjects) {
-  # Get example confounds file to validate patterns
-  example_confounds <- bidser::read_confounds(proj, subjects[1])
-  if (length(example_confounds) == 0) {
-    stop("No confound files found for subject ", subjects[1])
-  }
+  # We'll ensure that all subjects have the same confound columns or at least
+  # that the include/exclude patterns are valid for each.
   
-  available_cols <- names(example_confounds$data[[1]])
+  # For final columns, we store the intersection across all subjects if desired
+  # or keep a union. Typically you might want each subject's confounds to match.
   
-  # Process include patterns
-  included_cols <- character()
-  if (!is.null(confounds_spec$include)) {
-    for (pattern in confounds_spec$include) {
-      matches <- grep(pattern, available_cols, value = TRUE)
-      if (length(matches) == 0) {
-        stop("Confound patterns match no variables: ", pattern)
+  # We'll do a union approach, but fail if a pattern matches nothing for any subject
+  union_cols <- character(0)
+  unavailable_cols <- character(0)
+  
+  for (subj in subjects) {
+    confounds <- bidser::read_confounds(proj, subj)
+    if (length(confounds) == 0) {
+      stop("No confound files found for subject ", subj)
+    }
+    # Typically read_confounds might return multiple? We'll assume data[[1]]
+    confound_data <- confounds$data[[1]]
+    available_cols <- names(confound_data)
+    
+    # Evaluate patterns
+    included_cols <- character()
+    
+    if (!is.null(confounds_spec$include)) {
+      for (pattern in confounds_spec$include) {
+        matches <- grep(pattern, available_cols, value = TRUE)
+        if (length(matches) == 0) {
+          stop(sprintf(
+            "Confound pattern '%s' matches no variables in subject %s's confound file", 
+            pattern, subj))
+        }
+        included_cols <- c(included_cols, matches)
       }
-      included_cols <- c(included_cols, matches)
+    } else {
+      included_cols <- available_cols
     }
-  } else {
-    included_cols <- available_cols
-  }
-  
-  # Process exclude patterns
-  if (!is.null(confounds_spec$exclude)) {
-    for (pattern in confounds_spec$exclude) {
-      matches <- grep(pattern, included_cols, value = TRUE)
-      included_cols <- setdiff(included_cols, matches)
+    
+    # Exclude patterns
+    if (!is.null(confounds_spec$exclude)) {
+      for (pattern in confounds_spec$exclude) {
+        exclude_matches <- grep(pattern, included_cols, value = TRUE)
+        included_cols <- setdiff(included_cols, exclude_matches)
+      }
     }
+    
+    # For union approach, keep track
+    union_cols <- unique(c(union_cols, included_cols))
   }
   
   # Return validated info
   list(
     spec = confounds_spec,
-    columns = included_cols
+    columns = union_cols
   )
 }
 
+###############################################################################
+#                   Get TR and run length for scans
+###############################################################################
+
 #' Get TR for a specific scan
+#'
 #' @param scan_name Full name of scan (e.g., "sub-001_task-memory_run-01")
 #' @param scan_params Scan parameters from config
 #' @return TR value for this scan
@@ -210,6 +268,7 @@ get_scan_tr <- function(scan_name, scan_params) {
 }
 
 #' Get run length for a specific scan
+#'
 #' @param scan_name Full name of scan
 #' @param task_name Task name
 #' @param scan_params Scan parameters from config
@@ -218,6 +277,9 @@ get_scan_tr <- function(scan_name, scan_params) {
 get_scan_length <- function(scan_name, task_name, scan_params) {
   # Start with default for this task
   length <- scan_params$run_length$default[[task_name]]
+  if (is.null(length)) {
+    stop("No default run_length found for task '", task_name, "' in scan_params.")
+  }
   
   # Check overrides
   if (!is.null(scan_params$run_length$overrides)) {
@@ -231,6 +293,10 @@ get_scan_length <- function(scan_name, task_name, scan_params) {
   
   length
 }
+
+###############################################################################
+#                   S3 Print Method for fmri_config
+###############################################################################
 
 #' @export
 print.fmri_config <- function(x, ...) {
@@ -260,7 +326,7 @@ print.fmri_config <- function(x, ...) {
   
   # Tasks
   cat(section_header("Tasks"))
-  if (length(x$tasks) > 0) {
+  if (!is.null(x$tasks) && length(x$tasks) > 0) {
     cat("\n", format_list(x$tasks))
   } else {
     cat("\nNo tasks specified (using all available)")
@@ -268,9 +334,13 @@ print.fmri_config <- function(x, ...) {
   
   # Events Information
   cat(section_header("Events"))
-  cat("\n", subsection_header("Mappings"))
-  for (mapping in names(x$events_info$mapping)) {
-    cat(sprintf("\n  %s -> %s", mapping, x$events_info$mapping[[mapping]]))
+  if (!is.null(x$events_info)) {
+    cat("\n", subsection_header("Mappings"))
+    for (mapping in names(x$events_info$mapping)) {
+      cat(sprintf("\n  %s -> %s", mapping, x$events_info$mapping[[mapping]]))
+    }
+  } else {
+    cat("\nNo event specification found.")
   }
   
   # Confounds (if present)
@@ -330,6 +400,7 @@ print.fmri_config <- function(x, ...) {
   
   # Validation Status
   cat(section_header("Validation"))
-  cat("\nStatus:", if(x$validated) crayon::green("✓ Validated") else crayon::red("✗ Not Validated"))
+  cat("\nStatus:", if (x$validated) crayon::green("✓ Validated") else crayon::red("✗ Not Validated"))
   cat("\n")
 }
+

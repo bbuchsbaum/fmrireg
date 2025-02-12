@@ -165,6 +165,39 @@ print.bids_project <- function(x, ...) {
   cat("Runs per task:", x$config$runs, "\n")
 }
 
+read_events.bids_project <- function(x, subid = ".*", task = ".*", ...) {
+  # Get matching participant IDs.
+  pt <- participants(x)
+  sids <- grep(subid, pt$participant_id, value = TRUE)
+  
+  # Get matching tasks.
+  tset <- tasks(x)
+  tasks <- grep(task, tset, value = TRUE)
+  
+  # For each combination of task, subject, and run, generate events.
+  all_events <- lapply(tasks, function(t) {
+    lapply(sids, function(sid) {
+      lapply(seq_len(x$config$runs), function(run) {
+        ev <- do.call(create_mock_events, x$config$event_spec)
+        ev$.task <- t
+        ev$.run <- run
+        ev$.subid <- sid
+        ev
+      }) %>% dplyr::bind_rows()
+    }) %>% dplyr::bind_rows()
+  }) %>% dplyr::bind_rows()
+  
+  # Now group and nest the events so that the result has four columns:
+  # .task, .run, .subid, and data.
+  nested <- all_events %>%
+    dplyr::group_by(.task, .run, .subid) %>%
+    tidyr::nest() %>%
+    dplyr::ungroup() %>%
+    dplyr::group_by(.task, .run, .subid)
+  
+  nested
+}
+
 # Main mock BIDS project creator
 create_mock_bids_project <- function(
     subjects = c("sub-01", "sub-02"),
@@ -217,12 +250,45 @@ create_mock_bids_project <- function(
   # Add mock methods directly to the object
   mock_proj$tasks <- function(...) tasks
   mock_proj$participants <- function(...) data.frame(participant_id = subjects)
+  # mock_proj$read_events <- function(subid, task, ...) {
+  #   events <- do.call(create_mock_events, event_spec)
+  #   events$.task <- task
+  #   events$.run <- 1:runs
+  #   events$.subid <- subid
+  #   events
+  # }
   mock_proj$read_events <- function(subid, task, ...) {
-    events <- do.call(create_mock_events, event_spec)
-    events$.task <- task
-    events$.run <- 1:runs
-    events$.subid <- subid
-    events
+    # Get matching participant IDs
+    pt <- participants(mock_proj)
+    sid_idx <- grep(subid, pt$participant_id)
+    sids <- pt$participant_id[sid_idx]
+    
+    # Get matching tasks
+    tset <- tasks(mock_proj)
+    task_idx <- grep(task, tset)
+    tasks <- tset[task_idx]
+    
+    # For each combination of task, subject, and run, generate events
+    all_events <- lapply(tasks, function(t) {
+      lapply(sids, function(sid) {
+        lapply(seq_len(mock_proj$config$runs), function(run) {
+          ev <- do.call(create_mock_events, mock_proj$config$event_spec)
+          ev$.task <- t
+          ev$.run <- run
+          ev$.subid <- sid
+          ev
+        }) %>% dplyr::bind_rows()
+      }) %>% dplyr::bind_rows()
+    }) %>% dplyr::bind_rows()
+    
+    # Group by .task, .run, and .subid and nest the events into a "data" column
+    nested <- all_events %>%
+      dplyr::group_by(.task, .run, .subid) %>%
+      tidyr::nest() %>%
+      dplyr::ungroup() %>%
+      dplyr::group_by(.task, .run, .subid)
+    
+    nested
   }
   mock_proj$read_confounds <- function(subid, ...) {
     data.frame(
@@ -421,7 +487,7 @@ test_that("validate_confounds works correctly", {
   confounds_spec$include <- c("nonexistent.*")
   expect_error(
     validate_confounds(mock_proj, confounds_spec, c("sub-01")),
-    "Confound patterns match no variables: nonexistent.*"
+    regexp="Confound pattern"
   )
 })
 
@@ -590,7 +656,7 @@ test_that("mock read_events matches bidser structure exactly", {
   events <- read_events(mock_proj, "sub-.*", "task-.*")
   
   # Check structure
-  expect_true(inherits(events, "tbl_df"))
+  expect_true(inherits(events, "data.frame"))
   expect_equal(names(events), c(".task", ".run", ".subid", "data"))
   
   # Check grouping

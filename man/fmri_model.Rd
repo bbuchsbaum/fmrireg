@@ -2,7 +2,7 @@
 % Please edit documentation in R/fmri_model.R
 \name{fmri_model}
 \alias{fmri_model}
-\title{Construct an fMRI regression model}
+\title{Construct an fMRI Regression Model}
 \usage{
 fmri_model(event_model, baseline_model)
 }

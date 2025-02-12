@@ -16,7 +16,7 @@ test_that("runwise iterator maintains data integrity", {
   
   # Test sequential access
   all_data <- list()
-  for (chunk in rchunks) {
+  foreach::foreach(chunk=rchunks) %do% {
     all_data[[length(all_data) + 1]] <- chunk$data
   }
   
@@ -26,12 +26,12 @@ test_that("runwise iterator maintains data integrity", {
   expect_equal(ncol(all_data[[1]]), 1000)
   
   # Test parallel access with foreach
-  res1 <- foreach(chunk = rchunks) %do% {
+  res1 <- foreach::foreach(chunk = rchunks) %do% {
     colMeans(chunk$data)
   }
   
   # Test parallel access again to ensure iterator resets correctly
-  res2 <- foreach(chunk = rchunks) %do% {
+  res2 <- foreach::foreach(chunk = rchunks) %do% {
     colMeans(chunk$data)
   }
   
@@ -49,7 +49,7 @@ test_that("arbitrary chunking works correctly", {
     rchunks <- data_chunks(dset, nchunks=nchunks)
     
     # Collect all chunk data
-    res <- foreach(chunk = rchunks) %do% {
+    res <- foreach::foreach(chunk = rchunks) %do% {
       list(
         data_dim = dim(chunk$data),
         voxel_indices = range(chunk$voxel_ind),
@@ -74,19 +74,19 @@ test_that("iterator handles edge cases correctly", {
   # Test with single run
   dset_single <- gen_dataset(1, 100, nvox=1000)
   chunks_single <- data_chunks(dset_single, runwise=TRUE)
-  res_single <- foreach(chunk = chunks_single) %do% dim(chunk$data)
+  res_single <- foreach::foreach(chunk = chunks_single) %do% dim(chunk$data)
   expect_equal(length(res_single), 1)
   
   # Test with single voxel
   dset_small <- gen_dataset(2, 100, nvox=1)
   chunks_small <- data_chunks(dset_small, nchunks=1)
-  res_small <- foreach(chunk = chunks_small) %do% dim(chunk$data)
+  res_small <- foreach::foreach(chunk = chunks_small) %do% dim(chunk$data)
   expect_equal(res_small[[1]][2], 1)
   
   # Test with more chunks than voxels
   dset_over <- gen_dataset(2, 100, nvox=5)
   chunks_over <- data_chunks(dset_over, nchunks=10)
-  res_over <- foreach(chunk = chunks_over) %do% dim(chunk$data)
+  res_over <- foreach::foreach(chunk = chunks_over) %do% dim(chunk$data)
   expect_equal(length(res_over), 5)  # Should limit to number of voxels
 })
 
@@ -94,10 +94,10 @@ test_that("matrix_dataset chunking works correctly", {
   # Create a matrix dataset
   data_mat <- matrix(rnorm(1000 * 100), 100, 1000)
   sframe <- sampling_frame(c(50, 50), TR=2)
-  mset <- matrix_dataset(data_mat, sframe)
+  mset <- matrix_dataset(data_mat, TR=2, run_length=c(50,50))
   
   # Test runwise chunking
-  rchunks <- data_chunks(mset, runwise=TRUE)
+  rchunks <- data_chunks.matrix_dataset(mset, runwise=TRUE)
   res_run <- foreach(chunk = rchunks) %do% {
     list(dim=dim(chunk$data), 
          row_indices=range(chunk$row_ind),
@@ -109,7 +109,7 @@ test_that("matrix_dataset chunking works correctly", {
   expect_equal(res_run[[2]]$dim[1], 50)  # Second run length
   
   # Test arbitrary chunking
-  chunks_arb <- data_chunks(mset, nchunks=4)
+  chunks_arb <- data_chunks.matrix_dataset(mset, nchunks=4)
   res_arb <- foreach(chunk = chunks_arb) %do% {
     list(dim=dim(chunk$data),
          voxel_indices=range(chunk$voxel_ind),
@@ -132,12 +132,13 @@ test_that("parallel processing with foreach works correctly", {
     chunks <- data_chunks(dset, nchunks=nchunks)
     
     # Run parallel computation
-    res_par <- foreach(chunk = chunks) %dopar% {
+    res_par <- foreach::foreach(chunk = chunks) %dopar% {
       colMeans(chunk$data)
     }
     
+    chunks <- data_chunks(dset, nchunks=nchunks)
     # Run sequential computation
-    res_seq <- foreach(chunk = chunks) %do% {
+    res_seq <- foreach::foreach(chunk = chunks) %do% {
       colMeans(chunk$data)
     }
     
@@ -152,12 +153,13 @@ test_that("iterator reset functionality works", {
   chunks <- data_chunks(dset, nchunks=5)
   
   # First iteration
-  res1 <- foreach(chunk = chunks) %do% {
+  res1 <- foreach::foreach(chunk = chunks) %do% {
     sum(chunk$data)
   }
   
+  chunks =  data_chunks(dset, nchunks=5)
   # Second iteration
-  res2 <- foreach(chunk = chunks) %do% {
+  res2 <- foreach::foreach(chunk = chunks) %do% {
     sum(chunk$data)
   }
   
@@ -165,10 +167,14 @@ test_that("iterator reset functionality works", {
   expect_equal(res1, res2)
   expect_equal(length(res1), 5)
   
+  chunks =  data_chunks(dset, nchunks=5)
+  
   # Test mixed foreach operators
   res3 <- foreach(chunk = chunks) %do% {
     sum(chunk$data)
   }
+  
+  chunks =  data_chunks(dset, nchunks=5)
   
   res4 <- foreach(chunk = chunks) %dopar% {
     sum(chunk$data)
@@ -184,7 +190,7 @@ test_that("chunk indices are correct and complete", {
   rchunks <- data_chunks(dset, runwise=TRUE)
   run_indices <- list()
   
-  for (chunk in rchunks) {
+  foreach(chunk=rchunks) %do% {
     run_indices[[length(run_indices) + 1]] <- chunk$row_ind
   }
   
@@ -197,7 +203,7 @@ test_that("chunk indices are correct and complete", {
   chunks <- data_chunks(dset, nchunks=3)
   voxel_indices <- list()
   
-  for (chunk in chunks) {
+  foreach(chunk = chunks) %do% {
     voxel_indices[[length(voxel_indices) + 1]] <- chunk$voxel_ind
   }
   

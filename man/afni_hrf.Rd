@@ -15,6 +15,7 @@ afni_hrf(
   nbasis = 1,
   contrasts = NULL,
   id = NULL,
+  lag = 0,
   start = NULL,
   stop = NULL
 )
@@ -39,6 +40,8 @@ Can be used to disambiguate two \code{hrf} terms with the same variable(s) but d
 If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.}
 
 \item{id}{a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
+
+\item{lag}{a temporal offset in seconds which is added to onset before convolution}
 
 \item{start}{the start of the window for sin/poly/csplin models}
 

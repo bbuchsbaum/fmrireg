@@ -4,7 +4,7 @@
 \alias{to_glt.contrast}
 \title{Convert Contrast to GLT}
 \usage{
-to_glt.contrast(x, ...)
+\method{to_glt}{contrast}(x, ...)
 }
 \arguments{
 \item{x}{The contrast to convert.}

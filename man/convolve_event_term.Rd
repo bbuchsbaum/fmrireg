@@ -7,23 +7,16 @@
 convolve_event_term(event_term_obj, hrf_obj, sampling_frame)
 }
 \arguments{
-\item{event_term_obj}{An event term object created by \code{event_term()}.}
+\item{event_term_obj}{An event term object}
 
-\item{hrf_obj}{An HRF object created by \code{create_hrf_object()}.}
+\item{hrf_obj}{An HRF object}
 
-\item{sampling_frame}{A data frame defining the time points at which to sample the convolved signal. Should contain a 'time' column.}
+\item{sampling_frame}{A data frame defining the time points, must have 'time' col}
 }
 \value{
-A numeric vector containing the convolved signal sampled at the times specified in \code{sampling_frame}.
+A numeric vector containing the convolved signal
 }
 \description{
-This function convolves an event term with the specified HRF object over the sampling frame.
-}
-\examples{
-# Assuming 'event_term_obj' and 'hrf_obj' have been created as in previous examples
-sampling_frame <- data.frame(time = seq(0, 30, by = 1))
-convolved_signal <- convolve_event_term(event_term_obj, hrf_obj, sampling_frame)
-
-plot(sampling_frame$time, convolved_signal, type = 'l', xlab = 'Time', ylab = 'Signal')
-
+This function convolves an event term with the specified HRF object
+over the sampling frame.
 }

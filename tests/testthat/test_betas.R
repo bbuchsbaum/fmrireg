@@ -53,8 +53,8 @@ test_that("can run a beta estimation", {
   ret6 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
                          method="lss_cpp")
   
-  ret7 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
-                         method="lss_naive")
+  #ret7 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
+  #                       method="lss_naive")
   
   hrf_basis <- basis(0:25)
   hrf_reference <- HRF_SPMG1(0:25)

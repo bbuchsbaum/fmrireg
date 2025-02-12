@@ -4,14 +4,17 @@
 \alias{shortnames}
 \alias{shortnames.event_model}
 \alias{shortnames.convolved_term}
+\alias{shortnames.event_term}
 \alias{shortnames.matrix_term}
-\title{extract short short names of variable}
+\title{extract short names of variable}
 \usage{
 shortnames(x, ...)
 
 \method{shortnames}{event_model}(x, ...)
 
 \method{shortnames}{convolved_term}(x, ...)
+
+\method{shortnames}{event_term}(x, ...)
 
 \method{shortnames}{matrix_term}(x, ...)
 }

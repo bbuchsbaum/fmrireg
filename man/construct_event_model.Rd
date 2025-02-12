@@ -7,22 +7,13 @@
 construct_event_model(convolved_terms, sampling_frame)
 }
 \arguments{
-\item{convolved_terms}{A named list of convolved terms (numeric vectors), where names correspond to regressor names.}
+\item{convolved_terms}{A named list of convolved terms (numeric vectors)}
 
-\item{sampling_frame}{A data frame defining the time points at which the signals have been sampled.}
+\item{sampling_frame}{A data frame defining time points}
 }
 \value{
-An \code{event_model} object containing the design matrix, sampling frame, and terms.
+An \code{event_model} object
 }
 \description{
-This function assembles an event model from a list of convolved terms and a sampling frame.
-}
-\examples{
-# Assuming 'convolved_terms' is a list of convolved signals
-# 'sampling_frame' is a data frame with a 'time' column
-event_model_obj <- construct_event_model(convolved_terms, sampling_frame)
-
-# View the design matrix
-head(event_model_obj$design_matrix)
-
+Construct Event Model from Convolved Terms
 }

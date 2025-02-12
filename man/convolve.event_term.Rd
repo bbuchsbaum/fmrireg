@@ -15,26 +15,24 @@
 )
 }
 \arguments{
-\item{x}{A data frame containing the input design matrix.}
+\item{x}{A data frame with the design matrix.}
 
-\item{hrf}{A Hemodynamic Response Function to convolve the design matrix with.}
+\item{hrf}{The HRF function.}
 
-\item{sampling_frame}{A data frame specifying the sampling frame for the analysis.}
+\item{sampling_frame}{Data frame specifying the sampling frame.}
 
-\item{drop.empty}{Logical. If TRUE, empty rows in the design matrix will be removed.}
+\item{drop.empty}{Logical; if TRUE, remove empty rows.}
 
-\item{summate}{Logical. If TRUE, the convolved design matrix will be summed.}
+\item{summate}{Logical; if TRUE, sum the convolved HRF.}
 
-\item{precision}{Numeric. The desired precision for the calculations.}
+\item{precision}{Numeric; the convolution precision (default: 0.3).}
 
-\item{...}{Additional arguments to be passed to the function.}
+\item{...}{Additional arguments.}
 }
 \value{
-A convolved design matrix, in tibble format.
+A tibble of the convolved design matrix.
 }
 \description{
-This function takes an event-related design matrix and convolves it with
-a specified Hemodynamic Response Function (HRF) to create a new design matrix
-suitable for fMRI analysis. It also supports additional arguments for
-flexibility and customization.
+This function takes an event-related design matrix and convolves it with a given
+HRF to produce a new design matrix suitable for fMRI analysis.
 }

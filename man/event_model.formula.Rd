@@ -18,13 +18,13 @@
 \arguments{
 \item{x}{A formula specifying the event model.}
 
-\item{data}{The dataset containing the event information.}
+\item{data}{A data.frame containing the event information.}
 
-\item{block}{The block variable, either a formula or a vector of block values.}
+\item{block}{The block variable; either a formula or a vector of block values.}
 
 \item{sampling_frame}{The time series grid over which to sample the function.}
 
-\item{drop_empty}{Logical indicating whether to drop empty events. Default is \code{TRUE}.}
+\item{drop_empty}{Logical indicating whether to drop empty events. Default is TRUE.}
 
 \item{durations}{A numeric vector of event durations. Default is 0 for all events.}
 
@@ -36,10 +36,22 @@
 An event model object.
 }
 \description{
-This function constructs an event model using a formula \code{x}, a dataset \code{data},
-a block variable, and other parameters like sampling frame, drop_empty, durations,
-and precision. It is specifically designed to handle models specified as formulas.
+Constructs an event model using a formula \code{x}, a dataset \code{data}, a block variable,
+and additional parameters (sampling frame, durations, precision, etc.). The right-hand
+side of the formula must consist of HRF terms (of class "hrfspec").
 }
 \details{
 Construct an event model from a formula and data.
+}
+\examples{
+# Example for event_model.formula:
+df <- data.frame(onset = seq(1, 100, by = 10),
+                 run = rep(1:2, each = 5),
+                 x = rnorm(10),
+                 y = rnorm(10))
+# Create a sampling frame (assume sampling_frame() is defined)
+sframe <- sampling_frame(blocklens = c(50, 50), TR = 2)
+# Construct an event model using a formula.
+# Here the left-hand side represents onsets and the right-hand side contains HRF terms.
+ev_model <- event_model(x = onset ~ hrf(x) + hrf(y), data = df, block = ~ run, sampling_frame = sframe)
 }

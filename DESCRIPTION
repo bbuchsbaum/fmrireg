@@ -47,6 +47,7 @@ Roxygen: list(
 Suggests: 
     testthat,
     pls,
+    fmristore,
     knitr,
     rmarkdown,
     roxygen2,
@@ -64,6 +65,7 @@ Suggests:
 Remotes: 
     bbuchsbaum/neuroim2,
     bbuchsbaum/multivarious,
+    bbuchsbaum/fmristore,
     anthonynorth/roxyglobals
 VignetteBuilder: knitr
 URL: https://github.com/bbuchsbaum/fmrireg

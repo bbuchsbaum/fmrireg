@@ -13,5 +13,8 @@ load_fmri_config(yaml_file)
 An fmri_config object containing validated configuration and components
 }
 \description{
-Load and validate fMRI analysis configuration
+This function reads a YAML specification of an fMRI analysis configuration,
+loads a BIDS project via \code{bidser}, then validates the subjects, tasks, events,
+and confounds as specified in the YAML. Finally, it returns an \code{fmri_config}
+object that includes the validated structure.
 }

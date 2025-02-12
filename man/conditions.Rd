@@ -14,8 +14,4 @@ conditions(x, ...)
 \description{
 return the set of condition labels associated with a model term
 }
-\seealso{
-Other conditions: 
-\code{\link{conditions.event_term}()}
-}
 \concept{conditions}

@@ -6,14 +6,6 @@
 \usage{
 create_parametric_basis(basis_spec, data)
 }
-\arguments{
-\item{basis_spec}{Basis specification from YAML}
-
-\item{data}{Data frame containing the variable}
-}
-\value{
-A ParametricBasis object
-}
 \description{
 Create parametric basis from specification
 }

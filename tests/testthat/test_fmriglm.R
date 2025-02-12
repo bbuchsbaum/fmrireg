@@ -3,6 +3,7 @@ facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrir
 facedes$repnum <- factor(facedes$rep_num)
 
 library(testthat)
+library(foreach)
 
 gen_mask_file <- function(d, perc) {
   arr = array(0,d)
@@ -71,8 +72,7 @@ test_that("can construct and run a simple fmri glm from in memory dataset and on
   con <<- contrast_set(pair_contrast( ~ repnum == 1, ~ repnum == 2, name="rep2_rep1"))
   
   mod1 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0)
-  mod1a <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, 
-                   meta_weighting="equal")
+  mod1a <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0)
   mod2 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, 
                   strategy="chunkwise", nchunks=10, verbose=FALSE)
   
@@ -164,9 +164,9 @@ test_that("can construct and run a simple fmri glm two terms and prefix args", {
   vals <- cbind(rep(rnorm(244),6), rep(rnorm(244),6))
   dset <- matrix_dataset(as.matrix(vals),TR=1.5, run_length=rep(244,6), event_table=facedes)
   
-
+  
   mod1 <- fmri_lm(onset ~ hrf(repnum, subset=repnum %in% c(1,2), prefix="r12")+ 
-                          hrf(repnum, subset=repnum %in% c(3,4), prefix="r34"),
+                    hrf(repnum, subset=repnum %in% c(3,4), prefix="r34"),
                   block = ~ run, dataset=dset, durations=0)
  
   
@@ -229,7 +229,7 @@ test_that("can run video fmri design with fmri_file_dataset", {
   scans <- gen_fake_dataset(c(10,10,10,320), 7)
   maskfile <- gen_mask_file(c(10,10,10))
   
-  dset <- fmri_dataset(scans, maskfile,TR=1.5, rep(320,7), base_path="/",mode="bigvec",  event_table=as_tibble(des))
+  dset <- fmri_dataset(scans, maskfile,TR=1.5, rep(320,7), base_path="/",mode="normal",  event_table=as_tibble(des))
   evmod <- event_model(Onset ~ hrf(Video, Condition, basis="spmg1"), 
                        block = ~ run, sampling_frame=sframe, data=des)
   bmod <- baseline_model(basis="bs", degree=4, sframe=sframe)

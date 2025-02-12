@@ -17,7 +17,7 @@ with_package <- function(name) {
 
 #' @noRd
 #' @keywords internal
-as_vectors <- function(x) { function(x, ...) UseMethod("as_vectors") }
+as_vectors <- function(x) { UseMethod("as_vectors") }
 
 #' @importFrom methods setGeneric 
 setGeneric("as_vectors") 
@@ -136,7 +136,7 @@ term_matrices <- function(x, ...) UseMethod("term_matrices")
 longnames <- function(x, ...) UseMethod("longnames")
 
 
-#' extract short short names of variable
+#' extract short names of variable
 #' 
 #' get the short names of a set of variable levels
 #' 
@@ -240,7 +240,7 @@ is_continuous <- function(x) UseMethod("is_continuous")
 
 #' is_categorical
 #' 
-#' checks to see if a variable is cateogircal e.g. factor-based
+#' checks to see if a variable is categorical e.g. factor-based
 #' 
 #' @param x the object
 #' @export
@@ -355,6 +355,20 @@ design_matrix <- function(x, ...) UseMethod("design_matrix")
 #' @param ... additional arguments
 #' @export
 elements <- function(x, ...) UseMethod("elements")
+
+
+#' correlation_map
+#'
+#' A generic function to create a correlation heatmap for an fMRI design matrix.
+#'
+#' @param x The model object (event_model, baseline_model, or fmri_model).
+#' @param ... Additional arguments for the correlation plot.
+#'
+#' @export
+correlation_map <- function(x, ...) {
+  UseMethod("correlation_map")
+}
+
 
 
 #' Evaluate a regressor object over a time grid
@@ -537,7 +551,8 @@ estcon <- function(x, fit, ...) UseMethod("estcon")
 #' @param x the object
 #' @param model_spec the model specification
 #' @param ... extra args
-#' @export
+#' @noRd
+#' @keywords internal
 construct <- function(x, model_spec,...) UseMethod("construct")
 
 
@@ -626,6 +641,8 @@ estimate_contrast <- function(x, fit, colind, ...) UseMethod("estimate_contrast"
 #' 
 #' @param x the dataset 
 #' @param ... extra args
+#' @noRd
+#' @keywords internal
 chunkwise_lm <- function(x, ...) UseMethod("chunkwise_lm")
 
 #' neural input

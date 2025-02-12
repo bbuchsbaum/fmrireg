@@ -2,30 +2,29 @@
 % Please edit documentation in R/event_vector.R
 \name{event_variable}
 \alias{event_variable}
-\title{Create a continuous valued event sequence from a numeric vector}
+\title{Create a continuous event sequence from a numeric vector.}
 \usage{
 event_variable(vec, name, onsets, blockids = 1, durations = 0)
 }
 \arguments{
-\item{vec}{A numeric vector representing the continuous event sequence values}
+\item{vec}{Numeric vector representing continuous event values.}
 
-\item{name}{A character string providing a name for the event sequence}
+\item{name}{Name of the event sequence.}
 
-\item{onsets}{A numeric vector of onsets for each event in the sequence}
+\item{onsets}{Numeric vector of onsets.}
 
-\item{blockids}{A numeric vector of block identifiers for each event in the sequence (default: 1)}
+\item{blockids}{Numeric vector of block IDs (default: 1).}
 
-\item{durations}{A numeric vector of durations for each event in the sequence (default: NULL)}
+\item{durations}{Numeric vector of durations (default: 0).}
 }
 \value{
-An object representing the continuous valued event sequence, with class "event_variable" and "event_seq"
+An object of class "event_variable" and "event_seq".
 }
 \description{
-This function generates a continuous valued event sequence object from a given numeric vector.
-It can be used to create event sequences for continuous predictors in fMRI data analyses.
+Create a continuous event sequence from a numeric vector.
 }
 \examples{
-evar <- event_variable(c(1, 2, 3, 4, 5, 6), "example_var", onsets=seq(1, 100, length.out=6))
+evar <- event_variable(c(1, 2, 3, 4, 5, 6), "example_var", onsets = seq(1, 100, length.out = 6))
 
 }
 \seealso{

@@ -2,7 +2,7 @@
 % Please edit documentation in R/baseline_model.R
 \name{baseline}
 \alias{baseline}
-\title{Create a model specification for modeling low-frequency drift in fmri time series.}
+\title{Create a Baseline Specification.}
 \usage{
 baseline(
   degree = 1,
@@ -12,19 +12,17 @@ baseline(
 )
 }
 \arguments{
-\item{degree}{number of basis terms for each image block (ignored for 'constant' basis)}
+\item{degree}{Number of basis terms per image block (ignored for "constant").}
 
-\item{basis}{the type of polynomial basis.}
+\item{basis}{Type of basis ("constant", "poly", "bs", or "ns").}
 
-\item{name}{the name of the term}
+\item{name}{Optional name for the term.}
 
-\item{intercept}{the type of intercept to include}
-
-\item{constant}{whether to include an intercept term}
+\item{intercept}{Type of intercept to include ("runwise", "global", or "none").}
 }
 \value{
-a \code{baselinespec} list instance.
+A baselinespec list instance.
 }
 \description{
-Create a model specification for modeling low-frequency drift in fmri time series.
+Generates a baselinespec for modeling low-frequency drift in fMRI time series.
 }

@@ -2,25 +2,25 @@
 % Please edit documentation in R/event_vector.R
 \name{convolve_design}
 \alias{convolve_design}
-\title{Convolve HRF with Design Matrix}
+\title{Convolve HRF with Design Matrix.}
 \usage{
 convolve_design(hrf, dmat, globons, durations, summate = TRUE)
 }
 \arguments{
-\item{hrf}{A function representing the hemodynamic response function}
+\item{hrf}{A function representing the HRF.}
 
-\item{dmat}{A design matrix with columns representing different experimental conditions}
+\item{dmat}{Design matrix (with named columns).}
 
-\item{globons}{A numeric vector of global onsets for each event}
+\item{globons}{Numeric vector of global onsets.}
 
-\item{durations}{A numeric vector of event durations}
+\item{durations}{Numeric vector of event durations.}
 
-\item{summate}{A logical value indicating whether to summate the convolved HRF (default: TRUE)}
+\item{summate}{Logical; if TRUE, summate the convolved HRF (default: TRUE).}
 }
 \value{
-A list of regressors, one for each column in the design matrix.
+A list of regressors (one for each column).
 }
 \description{
-This function convolves a given hemodynamic response function (HRF) with the design matrix of an fMRI study.
-It is useful for modeling the expected BOLD signal in response to experimental conditions.
+Convolves a HRF with a design matrix (one column per condition) to produce a
+list of regressors.
 }

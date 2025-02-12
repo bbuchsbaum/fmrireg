@@ -15,23 +15,37 @@ afni_lm(
 )
 }
 \arguments{
-\item{fmri_mod}{An fmri_model object containing the event and baseline models.}
+\item{fmri_mod}{An fmri_model object containing the event and baseline models}
 
-\item{dataset}{An fmri_dataset object containing the scan data and other necessary information.}
+\item{dataset}{An fmri_dataset object containing the scan data and other necessary information}
 
-\item{working_dir}{The working directory (default is the current directory).}
+\item{working_dir}{The working directory (default is the current directory)}
 
-\item{polort}{The number of polynomial baseline regressors (default is to suppress 'polort').}
+\item{polort}{The number of polynomial baseline regressors (default is to suppress 'polort')}
 
-\item{jobs}{The number of jobs to use with '3dDeconvolve' (default is 1).}
+\item{jobs}{The number of jobs to use with '3dDeconvolve' (default is 1)}
 
-\item{censor}{A list of censoring vectors, one per run, or a single vector equal to the total number of scans (default is NULL).}
+\item{censor}{A list of censoring vectors, one per run, or a single vector equal to the total number of scans (default is NULL)}
 
-\item{options}{A list of options to be sent to 3dDeconvolve (default is an empty list).}
+\item{options}{A list of options to be sent to 3dDeconvolve (default is an empty list)}
 }
 \value{
-An afni_lm_spec object containing the fitted model, dataset, working directory, options, and command.
+An afni_lm_spec object containing the fitted model, dataset, working directory, options, and command
 }
 \description{
 This function prepares an fMRI linear model for AFNI's 3dDeconvolve tool.
+It takes an fmri_model object, an fmri_dataset object, and various options
+to control the fitting process.
+}
+\examples{
+etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), 
+run=c(1,1,2,2))
+dset <- fmri_dataset(scans=c("s1.nii", "s2.nii"), mask="mask.nii", TR=1, 
+run_length=c(50,50), event_table=etab)
+
+emodel <- event_model(onset ~ hrf(fac), block = ~ run, data=etab, 
+sampling_frame=dset$sampling_frame)
+bmodel <- baseline_model("bs", degree=4, sframe=dset$sampling_frame)
+fmod <- fmri_model(emodel, bmodel)
+alm <- afni_lm(fmod, dset, jobs=2, options=list(tout=TRUE, errts="residuals.nii.gz"))
 }

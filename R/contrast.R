@@ -1,3 +1,175 @@
+
+
+#' @keywords internal
+#' @noRd
+makeWeights <- function(keepA, keepB=NULL) {
+  weights <- matrix(0, length(keepA), 1)
+  numA <- sum(keepA)
+  weights[keepA,1] <- rep(1/numA, numA)
+  
+  if (!is.null(keepB)) {
+    numB <- sum(keepB)
+    weights[keepB,1] <- -rep(1/numB, numB)
+  }
+  
+  weights
+}
+
+#' Contrast Specification
+#'
+#' @description
+#' Define a linear contrast using a formula expression.
+#'
+#' @param form A formula describing the contrast.
+#' @param name A character label for the contrast.
+#' @param where An expression defining the subset over which the contrast is applied (default: NULL).
+#'
+#' @return A list containing the contrast specification.
+#'
+#' @examples
+#' # A minus B contrast
+#' contrast(~ A - B, name="A_B")
+#'
+#' @export
+contrast <- function(form, name, where=NULL) {
+  assert_that(lazyeval::is_formula(form))
+  if (!is.null(where)) {
+    assert_that(lazyeval::is_formula(where))
+  }
+  ret <- list(A=form,
+              B=NULL,
+              where=where,
+              name=name)
+  
+  class(ret) <- c("contrast_formula_spec", "contrast_spec", "list")
+  ret
+  
+}
+
+#' Unit Contrast
+#'
+#' @description
+#' Construct a contrast that sums to 1 and is used to define contrasts against the baseline.
+#'
+#' @param A A formula representing the contrast expression.
+#' @param name A character string specifying the name of the contrast.
+#' @param where An optional formula specifying the subset of conditions to apply the contrast to.
+#'
+#' @return A unit_contrast_spec object containing the contrast that sums to 1.
+#'
+#' @examples
+#' con <- unit_contrast(~ Face, name="Main_face")
+#'
+#' @export
+unit_contrast <- function(A, name, where=NULL) {
+  assert_that(lazyeval::is_formula(A)) 
+  
+  if (!is.null(where)) {
+    assert_that(lazyeval::is_formula(where))
+  }
+  
+  structure(
+    list(A=A,
+         B=NULL,
+         where=where,
+         name=name),
+    class=c("unit_contrast_spec", "contrast_spec", "list")
+  )
+  
+}
+
+#' One Against All Contrast
+#'
+#' @description
+#' Construct contrasts comparing each factor level against the average of the other levels.
+#'
+#' @param levels A vector of factor levels to be compared.
+#' @param facname A character string specifying the name of the factor containing the supplied levels.
+#' @param where An optional formula specifying the subset over which the contrast is computed.
+#'
+#' @return A contrast_set object containing contrasts comparing each factor level against the average of the other levels.
+#'
+#' @examples
+#' fac <- factor(rep(c("A", "B", "C"), 2))
+#' con <- one_against_all_contrast(levels(fac), "fac")
+#'
+#' @export
+one_against_all_contrast <- function(levels, facname, where=NULL) {
+  if (!is.null(where)) {
+    assert_that(lazyeval::is_formula(where))
+  }
+  
+  ret <- lapply(1:length(levels), function(i) {
+    lev1 <- levels[i]
+    levother <- levels[-i]
+    pair_contrast(as.formula(paste("~", facname, " == ", paste0('"', lev1, '"'))), 
+                  as.formula(paste0("~", facname, "!= ", paste0('"', lev1, '"'))), 
+                  where=where, name=paste0("con_", lev1, "_vs_", "other"))
+  })
+  
+  do.call(contrast_set, ret)
+  
+}
+
+
+#' Create a Set of Contrasts
+#'
+#' @description
+#' Construct a list of contrast_spec objects.
+#'
+#' @param ... A variable-length list of contrast_spec objects.
+#'
+#' @return A list of contrast_spec objects with class "contrast_set".
+#'
+#' @examples
+#' c1 <- contrast(~ A - B, name="A_B")
+#' c2 <- contrast(~ B - C, name="B_C")
+#' contrast_set(c1,c2)
+#'
+#' @export
+#' @import assertthat
+#' @importFrom purrr map_lgl
+contrast_set <- function(...) {
+  ret <- list(...)
+  assertthat::assert_that(all(map_lgl(ret, inherits, "contrast_spec")))
+  class(ret) <- c("contrast_set", "list")
+  ret
+}
+
+
+#' Pairwise Contrasts
+#'
+#' @description
+#' Construct pairwise contrasts for all combinations of factor levels.
+#'
+#' @param levels A vector of factor levels to be compared.
+#' @param where An optional formula specifying the subset over which the contrast is computed.
+#'
+#' @return A contrast_set object containing pairwise contrasts for all combinations of factor levels.
+#'
+#' @examples
+#' pairwise_contrasts(c("A", "B", "C"))
+#'
+#' @export
+#' @importFrom utils combn
+pairwise_contrasts <- function(levels, where=NULL) {
+  if (!is.null(where)) {
+    assert_that(lazyeval::is_formula(where))
+  }
+  
+  cbns <- combn(length(levels),2)
+  ret <- lapply(1:ncol(cbns), function(i) {
+    lev1 <- levels[cbns[1,i]]
+    lev2 <- levels[cbns[2,i]]
+    pair_contrast(as.formula(paste("~", lev1)), as.formula(paste("~", lev2)), where=where, name=paste0("con_", lev1, "_", lev2))
+  })
+  
+  do.call(contrast_set, ret)
+}
+
+
+
+
 #' Pair Contrast
 #'
 #' @description
@@ -225,6 +397,19 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
   class(ret) <- c("unit_contrast", "contrast", "list")
   ret
 }
+
+
+#' @export
+`-.contrast_spec` <- function(e1, e2, ...){
+  assert_that(inherits(e2, "contrast_spec"))
+  structure(list(
+    name=paste0(e1$name, ":", e2$name),
+    con1=e1,
+    con2=e2),
+    class=c("contrast_diff_spec", "contrast_spec", "list")
+  )
+}
+
 
 #' One-way Contrast Weights
 #'
@@ -454,15 +639,17 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
   } else {
     keep <- rep(TRUE, nrow(term.cells))
   }
-
+  
+  frm <- paste0(deparse(lazyeval::f_rhs(x$A)), collapse="")
   frm <- paste0(gsub(":", ".", deparse(lazyeval::f_rhs(x$A))), collapse="")
   A <- as.formula(paste("~", frm))
   
-  if (is_continuous.event_term(term)) {
+  if (is_continuous(term$evterm)) {
     ## hack to handle contrasts with continuous terms
     facs <- !sapply(term$evterm$events, is_continuous)
     term.cells[,!facs] <- 1
   } 
+
   
   modmat <- suppressMessages(tibble::as_tibble(model.matrix(cform,data=term.cells), 
                                                .name_repair="check_unique"))
@@ -470,6 +657,8 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
   weights <- matrix(0, NROW(term.cells), 1)
   weights[keep,1] <-  as.vector(lazyeval::f_eval_rhs(A, data=modmat))
   row.names(weights) <- row.names(term.cells)
+  
+  
   
   ret <- list(
     term=term,
@@ -705,3 +894,202 @@ print.contrast_diff_spec <- function(x,...) {
   cat("contrast difference:", "\n")
   cat("  ", x$con1$name, "-", x$con2$name, "\n")
 }
+
+
+#' plot_contrasts.event_model
+#'
+#' @description
+#' Produces a heatmap of all contrasts defined for an \code{event_model}.
+#' Rows = each contrast (or column of an F-contrast), columns = each regressor in
+#' the full design matrix, and the fill color = the contrast weight.
+#'
+#' @param x An \code{event_model} with (lazily) defined contrasts.
+#' @param absolute_limits Logical; if \code{TRUE}, the color scale is fixed at [-1,1].
+#'   If \code{FALSE}, the range is set to [min, max] of the weights.
+#' @param rotate_x_text Logical; if \code{TRUE}, rotate x-axis labels for readability.
+#' @param ... Further arguments passed to \code{geom_tile}, e.g. \code{color="grey80"}.
+#'
+#' @return A \code{ggplot2} object (a heatmap).
+#' @import ggplot2
+#' @export
+plot_contrasts.event_model <- function(
+    x,
+    absolute_limits = FALSE,
+    rotate_x_text   = TRUE,
+    scale_mode      = c("auto", "diverging", "one_sided"),
+    coord_fixed     = TRUE,
+    ...
+) {
+  # 1) Extract all the design-matrix column names
+  dm <- design_matrix(x)
+  regressor_names <- colnames(dm)
+  
+  # 2) Gather contrast weights (the nested list by term, then by contrast)
+  cws <- contrast_weights(x)
+  
+  # Flatten everything into one big matrix of contrast weights
+  big_mat  <- NULL
+  rownames <- character(0)
+  
+  add_contrast_row <- function(vec, row_name) {
+    if (is.null(big_mat)) {
+      big_mat <<- matrix(vec, nrow = 1)
+      colnames(big_mat) <<- regressor_names
+      rownames <<- row_name
+    } else {
+      big_mat <<- rbind(big_mat, vec)
+      rownames <<- c(rownames, row_name)
+    }
+  }
+  
+  for (term_nm in names(cws)) {
+    term_level <- cws[[term_nm]]
+    if (is.null(term_level)) next
+    
+    for (contrast_nm in names(term_level)) {
+      cw_obj <- term_level[[contrast_nm]]
+      # By default, we store offset_weights in cw_obj$offset_weights
+      W <- cw_obj$offset_weights
+      if (is.null(W)) next  # skip if no offset_weights
+      
+      # (#designCols x #contrastCols)
+      ncols <- ncol(W)
+      for (k in seq_len(ncols)) {
+        this_col <- W[, k]
+        if (ncols > 1) {
+          row_label <- paste0(contrast_nm, "_component", k)
+        } else {
+          row_label <- contrast_nm
+        }
+        add_contrast_row(this_col, row_label)
+      }
+    }
+  }
+  
+  if (is.null(big_mat)) {
+    stop("No contrasts found in this event_model.")
+  }
+  
+  rownames(big_mat) <- rownames
+  
+  # 3) Convert big_mat to a long data frame
+  df_long <- as.data.frame(big_mat, check.names = FALSE)
+  df_long$ContrastName <- rownames(big_mat)
+  df_long <- reshape2::melt(
+    df_long,
+    id.vars      = "ContrastName",
+    variable.name = "Regressor",
+    value.name    = "Weight"
+  )
+  
+  # 4) Build the ggplot
+  plt <- ggplot2::ggplot(
+    df_long,
+    ggplot2::aes(
+      x    = ReorderFactor(Regressor),
+      y    = ReorderFactor(ContrastName, reverse = TRUE),
+      fill = Weight
+    )
+  ) +
+    ggplot2::geom_tile(...)
+  
+  # Decide on color scale
+  scale_mode <- match.arg(scale_mode)
+  wmin <- min(df_long$Weight, na.rm = TRUE)
+  wmax <- max(df_long$Weight, na.rm = TRUE)
+  
+  # If user set absolute_limits=TRUE, we might forcibly use [-1,1] or [0,1]
+  # but let's allow scale_mode to override as well.
+  if (scale_mode == "diverging") {
+    # Diverging scale, centered on 0
+    lim_low  <- if (absolute_limits) -1 else wmin
+    lim_high <- if (absolute_limits)  1 else wmax
+    midpt <- 0
+    
+    plt <- plt + ggplot2::scale_fill_gradient2(
+      limits   = c(lim_low, lim_high),
+      midpoint = midpt,
+      low      = "blue",
+      mid      = "white",
+      high     = "red"
+    )
+    
+  } else if (scale_mode == "one_sided") {
+    # One-sided scale for 0..1 or 0..something
+    lim_low  <- if (absolute_limits) 0 else wmin
+    lim_high <- if (absolute_limits) 1 else wmax
+    
+    plt <- plt + ggplot2::scale_fill_gradient(
+      limits = c(lim_low, lim_high),
+      low    = "white",
+      high   = "red"
+    )
+    
+  } else {
+    # scale_mode == "auto"
+    # If we detect any negative weight, do diverging; otherwise do one-sided
+    if (wmin < 0) {
+      # diverging
+      lim_low  <- if (absolute_limits) -1 else wmin
+      lim_high <- if (absolute_limits)  1 else wmax
+      plt <- plt + ggplot2::scale_fill_gradient2(
+        limits   = c(lim_low, lim_high),
+        midpoint = 0,
+        low      = "blue",
+        mid      = "white",
+        high     = "red"
+      )
+    } else {
+      # one-sided
+      lim_low  <- if (absolute_limits) 0 else wmin
+      lim_high <- if (absolute_limits) 1 else wmax
+      plt <- plt + ggplot2::scale_fill_gradient(
+        limits = c(lim_low, lim_high),
+        low    = "white",
+        high   = "red"
+      )
+    }
+  }
+  
+  # 5) Theming
+  plt <- plt +
+    ggplot2::theme_minimal(base_size = 14) +
+    ggplot2::labs(
+      x    = "Regressor",
+      y    = "Contrast",
+      fill = "Weight"
+    ) +
+    ggplot2::theme(
+      panel.grid  = ggplot2::element_blank(),
+      axis.ticks  = ggplot2::element_blank()
+    )
+  
+  if (rotate_x_text) {
+    plt <- plt + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+  }
+  
+  # 6) Optionally fix the coordinate ratio to keep tiles square
+  if (coord_fixed) {
+    plt <- plt +
+      ggplot2::scale_x_discrete(expand = c(0, 0)) +
+      ggplot2::scale_y_discrete(expand = c(0, 0)) +
+      ggplot2::coord_fixed()
+  }
+  
+  plt
+}
+
+#' A small utility to preserve factor order in ggplot
+#' 
+#' Makes a factor from a character vector but preserves the order of appearance.
+#' If `reverse=TRUE`, it reverses that order.
+#' @keywords internal
+#' @noRd
+ReorderFactor <- function(x, reverse=FALSE) {
+  levs <- unique(as.character(x))
+  if (reverse) levs <- rev(levs)
+  factor(x, levels=levs)
+}
+
+
+

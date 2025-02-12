@@ -2,22 +2,21 @@
 % Please edit documentation in R/event_vector.R
 \name{conditions.event_term}
 \alias{conditions.event_term}
-\title{extract conditions of an \code{event_term}}
+\title{Extract conditions from an event_term.}
 \usage{
 \method{conditions}{event_term}(x, drop.empty = TRUE, ...)
 }
 \arguments{
-\item{x}{the model term}
+\item{x}{An event_term object.}
 
-\item{drop.empty}{whether to remove conditions with no cells (default is TRUE)}
+\item{drop.empty}{Logical; if TRUE, conditions with no cells are dropped (default is TRUE).}
 
-\item{...}{extra args}
+\item{...}{Additional arguments.}
+}
+\value{
+A character vector of condition labels.
 }
 \description{
-extract conditions of an \code{event_term}
+Constructs a vector of condition labels by combining the levels of
+the categorical events.
 }
-\seealso{
-Other conditions: 
-\code{\link{conditions}()}
-}
-\concept{conditions}

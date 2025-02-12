@@ -185,7 +185,7 @@ test_that("create_event_model handles HRF specifications correctly", {
   )
   onsets <- seq(0, 90, length.out=10)
   blocks <- rep(1:2, each=5)
-  sf <- sampling_frame(0, 100, tr=2)
+  sf <- sampling_frame(c(5,5), TR=2)
   
   # Test different HRF specifications
   event_terms <- list(
@@ -221,7 +221,7 @@ test_that("create_event_model handles subset specifications", {
   )
   onsets <- seq(0, 90, length.out=10)
   blocks <- rep(1:2, each=5)
-  sf <- sampling_frame(0, 100, tr=2)
+  sf <- sampling_frame(c(5,5), TR=2)
   
   # Test with subset
   event_terms <- list(

@@ -2,18 +2,20 @@
 % Please edit documentation in R/event_vector.R
 \name{Fcontrasts.event_term}
 \alias{Fcontrasts.event_term}
-\title{Compute F-contrasts for Event Term}
+\title{Compute F-contrasts for an event_term.}
 \usage{
 \method{Fcontrasts}{event_term}(x, ...)
 }
 \arguments{
-\item{x}{An event term object}
+\item{x}{An event_term object.}
 
-\item{...}{Additional arguments passed to the function}
+\item{...}{Additional arguments.}
 }
 \value{
-A list of contrast matrices for main effects and interactions
+A list of contrast matrices.
 }
 \description{
-This function computes F-contrasts for an event term object, considering main effects and interactions.
+Computes F-contrast matrices for main effects and interactions based on the
+categorical event factors. The function uses kronecker products to combine
+difference matrices (Dlist) and constant vectors (Clist).
 }

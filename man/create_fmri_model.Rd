@@ -2,47 +2,7 @@
 % Please edit documentation in R/fmrilm.R
 \name{create_fmri_model}
 \alias{create_fmri_model}
-\title{#' Extract term matrices for an fMRI model
-#'
-#' This function extracts the term matrices for an fMRI model, which consists of event-related terms
-#' and baseline-related terms. The term matrices are used for building the design matrix in fMRI data analysis.
-#'
-#' @param x An object of class "fmri_model" containing the event and baseline models.
-#' @param blocknum (Optional) A numeric vector specifying the block numbers to be included in the term matrices.
-#'                 By default, all unique block numbers in the event model are included.
-#' @return A named list of term matrices, with event terms followed by baseline terms.
-#'         Attributes "event_term_indices" and "baseline_term_indices" store the indices of event and baseline terms,
-#'         "blocknum" stores the block numbers, and "varnames" stores the variable names.
-#' @export
-#' @seealso fmri_model
-term_matrices.fmri_model <- function(x, blocknum=NULL) {
-eterms <- lapply(event_terms(x),
-function(x) as.matrix(design_matrix(x, blocknum)))
-
-bterms <- lapply(baseline_terms(x),
-function(x) as.matrix(design_matrix(x, blocknum)))
-
-if (is.null(blocknum)) {
-blocknum <- sort(unique(x$event_model$blockids))
-}
-
-start <- 1
-eterm_indices <- 1:sum(map_int(eterms, ncol))
-start <- length(eterm_indices) +1
-bterm_indices <- start:(start+sum(map_int(bterms, ncol)))
-#browser()
-term_matrices <- c(eterms, bterms)
-names(term_matrices) <- names(terms(x))
-
-vnames <- unlist(lapply(term_matrices, colnames))
-
-attr(term_matrices, "event_term_indices") <- eterm_indices
-attr(term_matrices, "baseline_term_indices") <- bterm_indices
-attr(term_matrices, "blocknum") <- blocknum
-attr(term_matrices, "varnames") <- vnames
-term_matrices
-}
-Create an fMRI Model}
+\title{Create an fMRI Model}
 \usage{
 create_fmri_model(
   formula,

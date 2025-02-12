@@ -382,94 +382,6 @@ convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.2, half_life
 
 
 
-# 
-# find_best_cor <- function(y,ys) {
-#   w =waveslim::dwt(y, wf="la16", n.levels=4)
-#   g <- expand.grid(maxlevel=1:4, value=seq(.1,3,by=.2), hard=c(TRUE, FALSE))
-#   ret <- lapply(1:nrow(g), function(i) {
-#     ws=manual.thresh(w, max.level=g$maxlevel[i], value=g$value[i], hard=g$hard[i])
-#     recon <- waveslim::idwt(ws)
-#     cor(recon,ys)
-#   })
-#   g$cor = unlist(ret)
-# 
-# 
-# }
-
-# find_best_cor_dct <- function(y,ys) {
-#   w =dct(y)
-#   g <- expand.grid(value=seq(.01,.6,by=.01), hard=c(TRUE, FALSE))
-#   ret <- lapply(1:nrow(g), function(i) {
-#     wt <- w
-#     if (g$hard[i]) {
-#       wt[abs(wt) < g$value[i]] = 0
-#     } else {
-#       wt <- soft_threshold(wt, g$value[i])
-#     }
-#     recon <- idct(wt)
-#     cor(recon,ys)
-#   })
-#   g$cor = unlist(ret)
-# 
-# }
-
-
-# library(compiler)
-# library(complex)
-# 
-# mdct4 <- function(x) {
-#   N <- length(x)
-#   if (N %% 4 != 0) {
-#     stop("MDCT4 only defined for vectors of length multiple of four.")
-#   }
-#   M <- N %/% 2
-#   N4 <- N %/% 4
-#   
-#   rot <- c(tail(x, N4), head(x, -N4))
-#   rot[1:N4] <- -rot[1:N4]
-#   t <- 0:(N4-1)
-#   w <- exp(-1i * 2 * pi * (t + 1 / 8) / N)
-#   c <- rot[2 * t + 1] - rot[N - 2 * t] - 1i * (rot[M + 2 * t + 1] - rot[M - 2 * t])
-#   c <- (2 / sqrt(N)) * w * fft(0.5 * c * w, N4)
-#   y <- numeric(M)
-#   y[2 * t + 1] <- Re(c[t + 1])
-#   y[M - 2 * t] <- -Im(c[t + 1])
-#   return(y)
-# }
-# 
-# imdct4 <- function(x) {
-#   N <- length(x)
-#   if (N %% 2 != 0) {
-#     stop("iMDCT4 only defined for even-length vectors.")
-#   }
-#   M <- N %/% 2
-#   N2 <- N * 2
-#   
-#   t <- 0:(M - 1)
-#   w <- exp(-1i * 2 * pi * (t + 1 / 8) / N2)
-#   c <- x[2 * t + 1] + 1i * x[N - 2 * t + 1]
-#   c <- 0.5 * w * c
-#   c <- fft(c, M)
-#   c <- ((8 / sqrt(N2)) * w) * c
-#   
-#   rot <- numeric(N2)
-#   rot[2 * t + 1] <- Re(c[t + 1])
-#   rot[N + 2 * t + 1] <- Im(c[t + 1])
-#   
-#   t <- seq(1, N2, by = 2)
-#   rot[t] <- -rot[N2 - t + 1]
-#   
-#   t <- 0:(3 * M - 1)
-#   y <- numeric(N2)
-#   y[t + 1] <- rot[t + M + 1]
-#   t <- (3 * M):(N2 - 1)
-#   y[t + 1] <- -rot[t - 3 * M + 1]
-#   return(y)
-# }
-# 
-
-
-
 #' HRF (hemodynamic response function) as a linear function of time
 #'
 #' The `hrf_time` function computes the value of an HRF, which is a simple linear function of time `t`, when `t` is greater than 0 and less than `maxt`.
@@ -493,9 +405,9 @@ hrf_time <- function(t, maxt=22) {
 # 
 # @param t time in seconds
 # @export
-#hrf_ident <- function(t) {
-#  ifelse( t == 0, 1, 0)
-#}
+hrf_ident <- function(t) {
+  ifelse( t == 0, 1, 0)
+}
 
 #' B-spline HRF (hemodynamic response function)
 #'
@@ -625,27 +537,6 @@ hrf_spmg1 <- function(t, P1=5, P2=15,A1=.0833) {
 	
 }
 
-# objective_function <- function(params, desired_peak, desired_fwhm) {
-#   P1 <- params[1]
-#   P2 <- params[2]
-#   hrf <- function(t) hrf_spmg1(t, P1, P2)
-#   t_values <- seq(0, 30, by=0.1)
-#   hrf_values <- sapply(t_values, hrf)
-#   
-#   # Calculate actual peak
-#   actual_peak <- t_values[which.max(hrf_values)]
-#   
-#   # Calculate actual FWHM
-#   half_max <- max(hrf_values) / 2
-#   above_half_max <- t_values[hrf_values > half_max]
-#   actual_fwhm <- max(above_half_max) - min(above_half_max)
-#   
-#   # Calculate the error based on both desired_peak and desired_fwhm
-#   peak_error <- abs(actual_peak - desired_peak)
-#   fwhm_error <- abs(actual_fwhm - desired_fwhm)
-#   
-#   return(peak_error + fwhm_error)
-# }
 
 #' Gamma HRF constructor function
 #' 
@@ -680,6 +571,42 @@ HRF_BSPLINE <- structure(
   span = 24
 )
 
+# Fast analytic first derivative for hrf_spmg1
+#' @keywords internal
+#' @noRd
+hrf_spmg1_deriv <- function(t, P1 = 5, P2 = 15, A1 = .0833) {
+  C <- 1.274527e-13
+  ret <- numeric(length(t))
+  pos <- t >= 0
+  if (any(pos)) {
+    t_pos <- t[pos]
+    ret[pos] <- exp(-t_pos) * (A1 * t_pos^(P1 - 1) * (P1 - t_pos) -
+                                 C   * t_pos^(P2 - 1) * (P2 - t_pos))
+  }
+  ret
+}
+
+# Fast analytic second derivative for hrf_spmg1
+#' @keywords internal
+#' @noRd
+hrf_spmg1_second_deriv <- function(t, P1 = 5, P2 = 15, A1 = .0833) {
+  C <- 1.274527e-13
+  ret <- numeric(length(t))
+  pos <- t >= 0
+  if (any(pos)) {
+    t_pos <- t[pos]
+    # Let D1 = A1 * t^(P1-1) * (P1 - t) and D2 = C * t^(P2-1) * (P2 - t)
+    D1 <- A1 * t_pos^(P1 - 1) * (P1 - t_pos)
+    D2 <- C   * t_pos^(P2 - 1) * (P2 - t_pos)
+    # Their derivatives:
+    D1_prime <- A1 * ((P1 - 1) * t_pos^(P1 - 2) * (P1 - t_pos) - t_pos^(P1 - 1))
+    D2_prime <- C   * ((P2 - 1) * t_pos^(P2 - 2) * (P2 - t_pos) - t_pos^(P2 - 1))
+    ret[pos] <- exp(-t_pos) * (D1_prime - D2_prime - (D1 - D2))
+  }
+  ret
+}
+
+
 #' SPM Canonical HRF constructor function
 #' 
 #' @export 
@@ -690,16 +617,28 @@ HRF_SPMG1 <- structure(
   class = c("SPMGHRF", "HRF", "function")
 )
 
+
+#' SPM Canonical HRF constructor function with temporal derivative
+#' 
+#' @export 
+#' @family HRF
+#' @describeIn HRF-class SPMG1 HRF function object
 HRF_SPMG2 <- structure(
-  HRF(gen_hrf_set(hrf_spmg1, makeDeriv(hrf_spmg1)), "SPMG2", nbasis=2),
+  HRF(gen_hrf_set(hrf_spmg1, hrf_spmg1_deriv), "SPMG2", nbasis = 2),
   class = c("SPMGHRF", "HRF", "function")
 )
 
+#' SPM Canonical HRF constructor function with spatial and temporal derivatives
+#' 
+#' @export 
+#' @family HRF
+#' @describeIn HRF-class SPMG1 HRF function object
 HRF_SPMG3 <- structure(
-  HRF(gen_hrf_set(hrf_spmg1, makeDeriv(hrf_spmg1), makeDeriv(makeDeriv(hrf_spmg1))), 
-      "SPMG3", nbasis=3, param_names=c("A1", "A2")),
+  HRF(gen_hrf_set(hrf_spmg1, hrf_spmg1_deriv, hrf_spmg1_second_deriv),
+      "SPMG3", nbasis = 3, param_names = c("A1", "A2")),
   class = c("SPMGHRF", "HRF", "function")
 )
+
 
 
 #' evaluate.HRF
@@ -1033,78 +972,9 @@ hrfspec <- function(vars, label=NULL, basis=HRF_SPMG1, onsets=NULL, durations=NU
   class(ret) <- c("hrfspec", "list")
   ret
 }
-#hrfspec <- function(vars, label=NULL, basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, 
-#                    subset=NULL, precision=.3, 
-#                    contrasts=NULL, id=NULL, summate=TRUE) {
-#  
-#  
-#  
-#  assert_that(inherits(basis, "HRF"))
-#  termname <- paste0(vars, collapse="::")
-#  
-#  varnames <- if (!is.null(prefix)) {
-#    paste0(prefix, "_", vars)
-#  } else {
-#    vars
-#  }
-#  
-#  if (is.null(id)) {
-#    id <- termname
-#  }
-#  
-#  if (is.null(label)) {
-#    label <- paste0("hrf(", paste0(varnames, collapse=","), ")")
-#  }
-#  
-#  cset <- if (inherits(contrasts, "contrast_spec")) {
-#    contrast_set(con1=contrasts)
-#  } else if (inherits(contrasts, "contrast_set")) {
-#    contrasts
-#  } 
-#  
-#  
-#  
-#  
-#  
-#  
-#  
-#  ret <- list(
-#    name=termname, 
-#    label=label,
-#    id=id, 
-#    vars=vars,
-#    varnames=varnames, 
-#    hrf=basis,
-#    onsets=onsets,
-#    durations=durations,
-#    prefix=prefix,
-#    subset=subset,
-#    precision=precision,
-#    contrasts=cset,
-#    summate=summate)
-#  
-#  class(ret) <- c("hrfspec", "list")
-#  ret
-#  
-#}
 
 
 
-#construct_event_term <- function(x, model_spec, onsets) {
-#  ## TODO what if we are missing a block id?
-#  onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
-#  durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
-#  varlist <- lapply(seq_along(x$vars), function(i) {
-#    base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
-#  }) 
-#  names(varlist) <- x$varnames 
-#  subs <- if (!is.null(x$subset)) {
-#    base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) 
-#  } else {
-#    rep(TRUE, length(onsets))
-#  }
-#  et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
-#}
 
 #' Construct an Event Term
 #'
@@ -1127,6 +997,7 @@ construct_event_term <- function(x, model_spec,onsets) {
   }
   
   # Evaluate all vars as expressions in data environment
+  #browser()
   varlist <- lapply(seq_along(x$vars), function(i) {
     eval(parse(text = x$vars[[i]]), envir = data_env, enclos = parent.frame())
   })
@@ -1141,6 +1012,7 @@ construct_event_term <- function(x, model_spec,onsets) {
   }
   
   # Create event term
+  #browser()
   et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
   et
 }
@@ -1215,76 +1087,6 @@ construct.hrfspec <- function(x, model_spec, ...) {
 }
 
 
-# construct_additive_event_term <- function(x, model_spec) {
-#   ## TODO what if we are missing a block id?
-#   onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
-#   durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
-#   
-#   varlist <- lapply(seq_along(x$vars), function(i) {
-#     base::eval(parse(text=x$vars[[i]]), envir=model_spec$event_table, enclos=parent.frame())
-#   })
-#   
-#   names(varlist) <- x$varnames
-#   
-#   subs <- if (!is.null(x$subset)) {
-#     base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) 
-#   } else {
-#     rep(TRUE, length(onsets))
-#   }
-#   
-#   mat <- do.call(cbind, varlist)
-#   vlist <- list(mat)
-#   names(vlist) <- x$name
-#   
-#   et <- event_term(vlist, onsets, model_spec$blockids, durations, subs)
-# }
-
-
-# hrf_add <- function(..., basis=HRF_SPMG1, onsets=NULL, durations=NULL,
-#                     prefix=NULL, subset=NULL, precision=.2, nbasis=1,contrasts=list(), id=NULL) {
-#   parsed <- .hrf_parse(..., prefix=prefix, basis=basis, nbasis=nbasis, termsep="+")
-# 
-#   if (is.null(id)) {
-#     id <- parsed$termname
-#   }
-# 
-# 
-# 
-#   ret <- list(
-#     name=parsed$termname,
-#     varnames=parsed$varnames,
-#     vars=parsed$term,
-#     label=parsed$label,
-#     hrf=parsed$basis,
-#     onsets=onsets,
-#     durations=durations,
-#     prefix=prefix,
-#     subset=substitute(subset),
-#     precision=precision,
-#     contrasts=contrasts)
-# 
-#   class(ret) <- c("hrf_add_spec", "hrfspec", "list")
-#   ret
-# }
-# 
-# # @export
-# construct.hrf_add_spec <- function(x, model_spec) {
-#   et <- construct_additive_event_term(x, model_spec)
-#   cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate)
-# 
-#   ret <- list(
-#     varname=et$varname,
-#     evterm=et,
-#     design_matrix=cterm,
-#     sampling_frame=model_spec$sampling_frame,
-#     contrasts=x$contrasts,
-#     hrfspec=x,
-#     id=x$id
-#   )
-# 
-#   class(ret) <- c("convolved_term", "fmri_term", "list")
-#   ret
-# }
 
 
 #' trialwise
@@ -1387,6 +1189,7 @@ afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",
                                   "gam", "spmg2", "spmg3", "wav"), 
                                   onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, 
                                   nbasis=1, contrasts=NULL, id=NULL, 
+                                  lag=0,
                                   start=NULL, stop=NULL) {
   
   ## TODO cryptic error message when argument is mispelled and is then added to ...

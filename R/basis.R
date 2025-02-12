@@ -70,6 +70,34 @@ Poly <- function(x, degree) {
   ret
 }
 
+# Poly <- function(x, degree) {
+#   mc <- match.call()
+#   
+#   # If x is already numeric, do the polynomial expansion now (old behavior)
+#   if (is.numeric(x)) {
+#     pres <- stats::poly(x, degree)
+#   } else {
+#     # If x is not numeric (likely a symbol like `modulator`),
+#     # defer actual polynomial expansion until sub_basis.Poly() or similar.
+#     pres <- NULL
+#   }
+#   
+#   n <- paste0("poly_", as.character(mc[["x"]]), "_", degree)
+#   
+#   ret <- list(
+#     x       = x,       # might be a numeric vector or a symbol
+#     y       = pres,    # either the poly(...) matrix OR NULL
+#     fun     = "poly",
+#     argname = as.character(mc[["x"]]),
+#     name    = n,
+#     degree  = degree,
+#     call    = mc       # store original call for lazy eval
+#   )
+#   
+#   class(ret) <- c("Poly", "ParametricBasis")
+#   ret
+# }
+
 #' Standardized basis
 #' 
 #' Standardize a numeric vector by centering and scaling, handling NAs appropriately

@@ -15,8 +15,8 @@ matrix_term(varname, mat)
 A matrix_term object.
 }
 \description{
-This function creates a matrix_term object, which is a set of regression
-variables stored as a numeric matrix.
+Creates a matrix_term object, which is a set of regression variables stored as
+a numeric matrix.
 }
 \details{
 Create a matrix_term object.

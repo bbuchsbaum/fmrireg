@@ -2,16 +2,16 @@
 % Please edit documentation in R/baseline_model.R
 \name{nuisance}
 \alias{nuisance}
-\title{nuisance}
+\title{Create a Nuisance Specification.}
 \usage{
 nuisance(x)
 }
 \arguments{
-\item{x}{a \code{matrix}}
+\item{x}{A matrix.}
 }
 \value{
-a class of type \code{nuisancespec}
+An object of class "nuisancespec".
 }
 \description{
-a 'nuisance' term that consists of an arbitrary numeric matrix with the same number of rows as image time points.
+Returns a nuisance term specification from a numeric matrix.
 }

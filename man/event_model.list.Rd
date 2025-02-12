@@ -16,19 +16,19 @@
 )
 }
 \arguments{
-\item{x}{A list of HRF specifications. All elements in \code{x} must be of type \code{hrfspec}.}
+\item{x}{A list of HRF specifications.}
 
-\item{data}{The dataset containing the event information.}
+\item{data}{The dataset (a data.frame) containing event information.}
 
-\item{block}{The block variable, either a formula or a vector of block values.}
+\item{block}{The block variable; either a formula or a vector of block values.}
 
 \item{sampling_frame}{The time series grid over which to sample the function.}
 
-\item{drop_empty}{Logical indicating whether to drop empty events. Default is \code{TRUE}.}
+\item{drop_empty}{Logical indicating whether to drop empty events. Default is TRUE.}
 
 \item{durations}{A numeric vector of event durations. Default is 0 for all events.}
 
-\item{precision}{Numeric value indicating the precision hrf sampling. Default is 0.3.}
+\item{precision}{Numeric value indicating the precision for HRF sampling. Default is 0.3.}
 
 \item{...}{Additional arguments.}
 }
@@ -36,10 +36,22 @@
 An event model object.
 }
 \description{
-This function constructs an event model from a list of hemodynamic response function
-(HRF) specifications \code{x}, along with other parameters like data, block, sampling frame,
-and durations. It is specifically designed to handle lists of HRF specifications.
+Constructs an event model from a list of hemodynamic response function (HRF)
+specifications (\code{x}), along with additional parameters (data, block, sampling frame,
+durations, etc.). All elements in \code{x} must be of type \code{hrfspec}.
 }
 \details{
 Construct an event model from a list of HRF specifications.
+}
+\examples{
+# Example for event_model.list:
+# Assume HRF_SPMG1 is a predefined hrfspec object.
+df <- data.frame(onset = seq(1, 100, by = 10),
+                 run = rep(1:2, each = 5))
+# Create a list of HRF specifications:
+hrf_list <- list(HRF_SPMG1)
+# Create a sampling frame (assume sampling_frame() is defined)
+sframe <- sampling_frame(blocklens = c(50, 50), TR = 2)
+# Construct the event model
+ev_model <- event_model.list(x = hrf_list, data = df, block = ~ run, sampling_frame = sframe)
 }

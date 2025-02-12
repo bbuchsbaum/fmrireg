@@ -7,43 +7,16 @@
 construct_event_term_from_spec(regressor_spec, events_data, hrf_objects)
 }
 \arguments{
-\item{regressor_spec}{A list containing the specification of a single regressor from the YAML configuration, including 'type', 'variables', 'hrf', and optionally 'subset'.}
+\item{regressor_spec}{A list containing the specification of a single regressor}
 
-\item{events_data}{A data frame containing event information, including onsets, durations, and any variables referenced in the regressor specification.}
+\item{events_data}{A data frame containing event information}
 
-\item{hrf_objects}{A named list of HRF objects, where names correspond to HRF identifiers used in 'regressor_spec$hrf'.}
+\item{hrf_objects}{A named list of HRF objects}
 }
 \value{
-A list containing the 'event_term' object, the 'hrf' object, and the 'type' of the regressor.
+An hrfspec object or similar
 }
 \description{
-This function constructs an event term based on the regressor specification, events data, and HRF objects.
-}
-\examples{
-# Assume that 'events_data' is a data frame with columns 'onset', 'duration', 'stim'
-events_data <- data.frame(
-  onset = c(0, 10, 20),
-  duration = c(1, 1, 1),
-  stim = c('A', 'B', 'A')
-)
-
-# Create HRF objects
-hrf_spec <- list(type = "HRF_SPMG1")
-hrf_obj <- create_hrf_object(hrf_spec)
-hrf_objects <- list(canonical = hrf_obj)
-
-# Regressor specification
-regressor_spec <- list(
-  type = "hrf",
-  variables = c("stim"),
-  hrf = "canonical",
-  subset = NULL
-)
-
-# Construct the event term
-term_info <- construct_event_term_from_spec(regressor_spec, events_data, hrf_objects)
-
-# Access the event term
-event_term_obj <- term_info$event_term
-
+This function constructs an event term based on the regressor specification,
+events data, and HRF objects.
 }

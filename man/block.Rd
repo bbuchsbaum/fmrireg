@@ -2,16 +2,16 @@
 % Please edit documentation in R/baseline_model.R
 \name{block}
 \alias{block}
-\title{a block variable, which is constant over the span of a scanning run}
+\title{Create a Block Variable.}
 \usage{
 block(x)
 }
 \arguments{
-\item{x}{the block variable}
+\item{x}{The block variable.}
 }
 \value{
-an instance of a class \code{blockspec}
+An object of class "blockspec".
 }
 \description{
-a block variable, which is constant over the span of a scanning run
+Returns a block variable that is constant over the span of a scanning run.
 }

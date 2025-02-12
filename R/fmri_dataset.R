@@ -170,54 +170,65 @@ fmri_mem_dataset <- function(scans, mask, TR,
 
 #' Create a Latent Dataset Object
 #'
-#' This function creates a latent dataset object, which encapsulates a dimension-reduced subspace of "latent variables".
-#' The dataset is a list containing information about the latent neuroimaging vector, TR, number of runs, event table, base path, sampling frame, and censor.
+#' This function creates a latent dataset object, which encapsulates a dimension-reduced
+#' subspace of "latent variables". The dataset is a list containing information about the latent
+#' neuroimaging vector, TR, number of runs, event table, base path, sampling frame, and censor.
 #'
-#' @param lvec An instance of class \code{LatentNeuroVec}.
+#' @param lvec An instance of class \code{LatentNeuroVec}. (Typically, a \code{LatentNeuroVec} is
+#'   created using the \code{fmristore} package.)
 #' @param TR Repetition time (TR) of the fMRI acquisition.
 #' @param run_length A numeric vector specifying the length of each run in the dataset.
 #' @param event_table An optional data frame containing event information. Default is an empty data frame.
 #'
-#' @return A latent dataset object of class c("latent_dataset", "fmri_dataset", "list").
+#' @return A latent dataset object of class \code{c("latent_dataset", "matrix_dataset", "fmri_dataset", "list")}.
+#'
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' # Create a matrix with 100 rows and 1000 columns (voxels)
-#' X <- matrix(rnorm(100*1000), 100, 1000)
+#' X <- matrix(rnorm(100 * 1000), 100, 1000)
 #' pres <- prcomp(X)
-#' basis <- pres$x[,1:25]
-#' loadings <- pres$rotation[,1:25]
+#' basis <- pres$x[, 1:25]
+#' loadings <- pres$rotation[, 1:25]
 #' offset <- colMeans(X)
 #'
-#' # Create a LatentNeuroVec object
-#' lvec <- neuroim2::LatentNeuroVec(basis, loadings, neuroim2::NeuroSpace(c(10,10,10,100)), 
-#' mask=rep(TRUE,1000), offset=offset)
+#' # Create a LatentNeuroVec object (requires the fmristore package)
+#' lvec <- fmristore::LatentNeuroVec(basis, loadings,
+#'             neuroim2::NeuroSpace(c(10, 10, 10, 100)),
+#'             mask = rep(TRUE, 1000), offset = offset)
 #'
 #' # Create a latent_dataset
-#' dset <- latent_dataset(lvec, TR=2, run_length=100)
-#' @export
-latent_dataset <- function(lvec, TR, run_length, event_table=data.frame()) {
-  assert_that(sum(run_length) == dim(lvec)[4])
+#' dset <- latent_dataset(lvec, TR = 2, run_length = 100)
+#' }
+latent_dataset <- function(lvec, TR, run_length, event_table = data.frame()) {
+  # Lazy check: make sure fmristore is installed (fmristore is not a hard dependency)
+  if (!requireNamespace("fmristore", quietly = TRUE)) {
+    stop("The 'fmristore' package is required to create a latent_dataset. Please install fmristore.",
+         call. = FALSE)
+  }
+  
+  # Ensure the total run length matches the number of time points in lvec
+  assertthat::assert_that(
+    sum(run_length) == dim(lvec)[4],
+    msg = "Sum of run lengths must equal the 4th dimension of lvec"
+  )
   
   frame <- sampling_frame(run_length, TR)
   
   ret <- list(
-    lvec=lvec,
-    datamat=lvec@basis,
-    TR=TR,
-    nruns=length(run_length),
-    event_table=event_table,
-    sampling_frame=frame,
-    mask=rep(1,ncol(lvec@basis))
+    lvec = lvec,
+    datamat = lvec@basis,
+    TR = TR,
+    nruns = length(run_length),
+    event_table = event_table,
+    sampling_frame = frame,
+    mask = rep(1, ncol(lvec@basis))
   )
   
   class(ret) <- c("latent_dataset", "matrix_dataset", "fmri_dataset", "list")
   ret
-  
 }
-
-
-
 #' Create an fMRI Dataset Object from a Set of Scans
 #'
 #' This function creates an fMRI dataset object from a set of scans, design information, and other data. The dataset is a list containing information about the scans, mask, TR, number of runs, event table, base path, sampling frame, censor, mode, and preload.
@@ -437,7 +448,7 @@ chunk_iter <- function(x, nchunks, get_chunk) {
 #' @return A list of data chunks, with each chunk containing the data, voxel indices, row indices, and chunk number.
 #' @importFrom neuroim2 series
 #' @autoglobal
-#' @noRd
+#' @export
 #'
 #' @examples
 #' # Create an fmri_mem_dataset
@@ -535,6 +546,7 @@ data_chunks.fmri_file_dataset <- function(x, nchunks=1, runwise=FALSE, ...) {
                      chunk_num=chunk_num)
   }
 
+ 
   # Then create iterator based on strategy
   if (runwise) {
     chunk_iter(x, length(x$scans), get_run_chunk)
@@ -558,7 +570,7 @@ data_chunks.fmri_file_dataset <- function(x, nchunks=1, runwise=FALSE, ...) {
 #' @param ... Additional arguments.
 #'
 #' @return A list of data chunks, with each chunk containing the data, voxel indices, row indices, and chunk number.
-#' @noRd
+#' @export
 #'
 #' @examples
 #' # Create a matrix_dataset
@@ -766,9 +778,20 @@ print.latent_dataset <- function(x, ...) {
   cat("\n")
 }
 
+#' Pretty Print a Chunk Iterator
+#'
+#' This function prints a summary of a chunk iterator using colored output.
+#'
+#' @param x A chunkiter object.
+#' @param ... Additional arguments (ignored).
 #' @export
 print.chunkiter <- function(x, ...) {
-  cat(paste("chunk iterator with", x$nchunks, " chunks"))
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    stop("Please install the crayon package to use this function.")
+  }
+  cat(crayon::blue("Chunk Iterator:\n"))
+  cat(crayon::magenta("  Total number of chunks: "), x$nchunks, "\n")
+  invisible(x)
 }
 
 #' Convert an fMRI Dataset to a Matrix Dataset
@@ -819,6 +842,32 @@ as.matrix_dataset.fmri_file_dataset <- function(x, ...) {
     event_table = x$event_table
   )
 }
+
+
+#' Pretty Print a Data Chunk Object
+#'
+#' This function prints a summary of a data chunk using crayon for colored output.
+#'
+#' @param x A data_chunk object.
+#' @param ... Additional arguments (ignored).
+#' @export
+print.data_chunk <- function(x, ...) {
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    stop("Please install the crayon package to use this function.")
+  }
+  cat(crayon::blue("Data Chunk Object\n"))
+  cat(crayon::magenta("  Chunk number: "), x$chunk_num, "\n")
+  cat(crayon::magenta("  Number of voxels: "), length(x$voxel_ind), "\n")
+  cat(crayon::magenta("  Number of rows: "), length(x$row_ind), "\n")
+  if (!is.null(dim(x$data))) {
+    cat(crayon::magenta("  Data dimensions: "), paste(dim(x$data), collapse = " x "), "\n")
+  } else {
+    cat(crayon::magenta("  Data: "), paste(head(x$data, 10), collapse = ", "), "\n")
+  }
+  invisible(x)
+}
+
+
 
 
 
