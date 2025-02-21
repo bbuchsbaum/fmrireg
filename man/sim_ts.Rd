@@ -10,6 +10,7 @@ sim_ts(
   nreps = 12,
   amps = rep(1, ncond),
   isi = c(3, 6),
+  ampsd = 0,
   TR = 1.5
 )
 }
@@ -25,6 +26,8 @@ sim_ts(
 \item{isi}{A vector of length 2 specifying the range of inter-stimulus intervals to sample from (default is c(3, 6) seconds).}
 
 \item{TR}{The repetition time of the fMRI acquisition (default is 1.5 seconds).}
+
+\item{apmsd}{the standard deviation of the amplitudes (default is 0).}
 }
 \value{
 A list with the following components:

@@ -10,11 +10,12 @@
   ran,
   block,
   method = c("mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "r1", "pls",
-    "pls_global", "ols", "lowrank_hrf"),
+    "pls_global", "ols", "fracridge", "lowrank_hrf"),
   basemod = NULL,
   hrf_basis = NULL,
   hrf_ref = NULL,
   maxit = 100,
+  fracs = 0.5,
   ...
 )
 }

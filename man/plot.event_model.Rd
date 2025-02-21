@@ -2,44 +2,56 @@
 % Please edit documentation in R/event_model.R
 \name{plot.event_model}
 \alias{plot.event_model}
-\title{Plot an event_model using ggforce pagination}
+\title{Plot an event_model object}
 \usage{
 \method{plot}{event_model}(
   x,
   y,
   term_name = NULL,
-  page = 1,
-  facet_ncol = 1,
-  theme_custom = ggplot2::theme_bw(base_size = 14),
-  line_size = 1,
-  color_palette = "Set1",
-  hide_legend_threshold = 25,
+  longnames = TRUE,
+  title = NULL,
   xlab = "Time",
   ylab = "Value",
-  title = NULL,
-  longnames = TRUE,
+  line_size = 1,
+  color_palette = "Set1",
+  facet_ncol = 1,
+  theme_custom = ggplot2::theme_bw(base_size = 14),
+  hide_legend_threshold = 25,
   ...
 )
 }
 \arguments{
 \item{x}{An event_model object.}
 
-\item{y}{Unused (for S3 signature).}
+\item{y}{Unused.}
 
-\item{term_name}{A single term to plot. If NULL, we combine all terms into one big data set.}
+\item{term_name}{Optional: Name of the term to plot. If NULL, the first term is plotted.}
 
-\item{page}{Which \code{ggforce} page to display (default=1).}
+\item{longnames}{Logical flag; if TRUE, use long condition names; if FALSE, use short names. Default is TRUE.}
 
-\item{facet_ncol}{Number of facet columns (default=1).}
+\item{title}{Optional title for the plot. If not provided, a default title is generated.}
 
-\item{...}{Other arguments (e.g. line size, color palette, etc.) for the plot.}
+\item{xlab}{Label for the x-axis. Default is "Time".}
+
+\item{ylab}{Label for the y-axis. Default is "Value".}
+
+\item{line_size}{Numeric value for the line thickness in the plot. Default is 1.}
+
+\item{color_palette}{The name of a ColorBrewer palette to use. Default is "Set1".}
+
+\item{facet_ncol}{Number of columns for facet_wrap. Default is 1.}
+
+\item{theme_custom}{A ggplot2 theme to apply. Default is theme_bw with base_size 14.}
+
+\item{hide_legend_threshold}{If the number of unique conditions exceeds this threshold, the legend is hidden. Default is 25.}
+
+\item{...}{Additional arguments passed to ggplot2::geom_line().}
 }
 \value{
-A ggplot object. If \code{term_name=NULL}, the plot uses pagination
-so you can call multiple times with different \code{page} values.
+A ggplot2 plot object.
 }
 \description{
-Uses \code{ggforce::facet_wrap_paginate} so that if \code{term_name=NULL},
-all terms are combined into one big data frame, and you can pass \code{page}
-to see different pages.
+Creates a detailed plot of an event_model object by visualizing its design matrix.
+The design matrix is first converted into a long-format tibble and then plotted over time,
+with separate panels for each block. Several customization options are available.
 }

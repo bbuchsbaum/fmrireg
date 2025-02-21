@@ -10,6 +10,7 @@ new_best_hrf_result(
   cluster_representatives = NULL,
   reassigned_hrfs = NULL,
   L_best_hrfs = NULL,
+  L_unique = NULL,
   L_proj = NULL,
   X_proj = NULL,
   reassigned_hrfs_smoothed = NULL
@@ -24,7 +25,9 @@ new_best_hrf_result(
 
 \item{reassigned_hrfs}{integer vector of HRF IDs assigned to each voxel}
 
-\item{L_best_hrfs}{matrix of the best HRFs}
+\item{L_best_hrfs}{matrix of all best HRFs found}
+
+\item{L_unique}{matrix of unique HRFs (one per cluster/representative)}
 
 \item{L_proj}{matrix of the library projected into data space}
 

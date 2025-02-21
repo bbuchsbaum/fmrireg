@@ -365,6 +365,14 @@ get_data_matrix.fmri_mem_dataset <- function(x, ...) {
 }
 
 
+#' @export
+get_data_matrix.fmri_file_dataset <- function(x, ...) {
+  bvec <- get_data(x)
+  mask <- get_mask(x)
+  series(bvec, which(mask != 0))
+}
+
+
 
 #' @import memoise
 #' @keywords internal
