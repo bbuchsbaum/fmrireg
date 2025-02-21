@@ -1092,8 +1092,7 @@ correlation_map.event_model <- function(x,
 #'
 #' @return A ggplot2 plot object.
 #' @export
-#' Visualize the entire design matrix of an event_model as a heatmap, with optional rescaling
-#'
+#' 
 #' @param x An `event_model` object.
 #' @param rescale_cols Logical; if TRUE, columns are rescaled to (-1,1) before plotting.
 #' @inheritParams design_matrix_heatmap.event_model

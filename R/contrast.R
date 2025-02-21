@@ -904,8 +904,8 @@ print.contrast_diff_spec <- function(x,...) {
 #' the full design matrix, and the fill color = the contrast weight.
 #'
 #' @param x An \code{event_model} with (lazily) defined contrasts.
-#' @param absolute_limits Logical; if \code{TRUE}, the color scale is fixed at [-1,1].
-#'   If \code{FALSE}, the range is set to [min, max] of the weights.
+#' @param absolute_limits Logical; if \code{TRUE}, the color scale is fixed at (-1,1).
+#'   If \code{FALSE}, the range is set to (min, max) of the weights.
 #' @param rotate_x_text Logical; if \code{TRUE}, rotate x-axis labels for readability.
 #' @param ... Further arguments passed to \code{geom_tile}, e.g. \code{color="grey80"}.
 #'

@@ -16,8 +16,8 @@ plot_contrasts.event_model(
 \arguments{
 \item{x}{An \code{event_model} with (lazily) defined contrasts.}
 
-\item{absolute_limits}{Logical; if \code{TRUE}, the color scale is fixed at \link{-1,1}.
-If \code{FALSE}, the range is set to \link{min, max} of the weights.}
+\item{absolute_limits}{Logical; if \code{TRUE}, the color scale is fixed at (-1,1).
+If \code{FALSE}, the range is set to (min, max) of the weights.}
 
 \item{rotate_x_text}{Logical; if \code{TRUE}, rotate x-axis labels for readability.}
 
