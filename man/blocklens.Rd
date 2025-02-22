@@ -2,15 +2,63 @@
 % Please edit documentation in R/all_generic.R
 \name{blocklens}
 \alias{blocklens}
-\title{get block lengths}
+\title{Get block/run lengths}
 \usage{
 blocklens(x, ...)
 }
 \arguments{
-\item{x}{the object}
+\item{x}{The object containing block information (typically a sampling_frame or dataset)}
 
-\item{...}{extra args}
+\item{...}{Additional arguments passed to methods}
+}
+\value{
+A numeric vector where:
+\itemize{
+\item Each element is the number of scans in a block/run
+\item Length equals the number of blocks/runs
+\item Values are positive integers
+}
 }
 \description{
-get the number of scans/images in each block
+Get the number of scans or timepoints in each block/run of the dataset. Block lengths
+are used to:
+\itemize{
+\item Define the temporal structure of the experiment
+\item Allocate memory for data matrices
+\item Validate data dimensions across runs
+\item Calculate global timing information
 }
+}
+\examples{
+# Create a sampling frame with varying run lengths
+sframe <- sampling_frame(
+  blocklens = c(100, 150, 100),  # Different length runs
+  TR = 2
+)
+
+# Get number of scans per run
+run_lengths <- blocklens(sframe)  # Returns: c(100, 150, 100)
+
+# Use block lengths to create a dataset
+total_scans <- sum(run_lengths)  # 350 total timepoints
+X <- matrix(rnorm(total_scans * 10), total_scans, 10)  # 10 voxels
+dset <- matrix_dataset(
+  X,
+  TR = 2,
+  run_length = run_lengths
+)
+
+# Verify block lengths in dataset
+dset_lengths <- blocklens(dset)
+
+# Use lengths to create time vectors for each run
+time_vectors <- lapply(run_lengths, function(len) seq(0, by = 2, length.out = len))
+}
+\seealso{
+\code{\link[=blockids]{blockids()}}, \code{\link[=split_by_block]{split_by_block()}}, \code{\link[=sampling_frame]{sampling_frame()}}
+
+Other block_operations: 
+\code{\link{blockids}()},
+\code{\link{split_by_block}()}
+}
+\concept{block_operations}

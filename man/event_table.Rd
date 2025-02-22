@@ -3,22 +3,64 @@
 \name{event_table}
 \alias{event_table}
 \alias{event_table.convolved_term}
-\title{event_table}
+\title{Extract event table from a term or model}
 \usage{
 event_table(x)
 
 \method{event_table}{convolved_term}(x)
 }
 \arguments{
-\item{x}{the term}
+\item{x}{The object to extract events from (typically an event_term, convolved_term, or event_model)}
 }
 \value{
-A \code{data.frame} containing the event table.
+A tibble containing the event information with columns for:
+\itemize{
+\item Factor variables (e.g., condition, stimulus type)
+\item Continuous variables (e.g., reaction times, intensities)
+\item Basis function expansions (if applicable)
+}
 }
 \description{
-This function extracts the event table from the provided term \code{x} and returns it
-as a \code{data.frame}.
+Extract the event table from a term or model as a data frame. The event table contains
+the experimental design information, with one row per event and columns for different
+variables (e.g., conditions, onsets, durations). For event terms, this returns the raw
+event data. For convolved terms, this includes any basis function expansions.
 }
-\details{
-Extract event_table as a \code{data.frame}.
+\examples{
+# Create an event term with multiple variables
+event_data <- data.frame(
+  condition = factor(c("face", "house", "face", "house")),
+  rt = c(0.8, 1.2, 0.9, 1.1),
+  onsets = c(1, 10, 20, 30),
+  run = c(1, 1, 1, 1)
+)
+
+# Create event term
+eterm <- event_term(
+  list(
+    condition = event_data$condition,
+    rt = event_data$rt
+  ),
+  onsets = event_data$onsets,
+  blockids = event_data$run
+)
+
+# Extract event table
+etable <- event_table(eterm)
+
+# Create and extract from convolved term
+sframe <- sampling_frame(blocklens = 50, TR = 2)
+evmodel <- event_model(
+  onsets ~ hrf(condition) + hrf(rt),
+  data = event_data,
+  block = ~run,
+  sampling_frame = sframe
+)
+
+# Get event table with basis expansions
+model_events <- event_table(evmodel)
 }
+\seealso{
+\code{\link[=event_term]{event_term()}}, \code{\link[=event_model]{event_model()}}
+}
+\concept{events}

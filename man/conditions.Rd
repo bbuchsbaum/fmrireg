@@ -7,11 +7,56 @@
 conditions(x, ...)
 }
 \arguments{
-\item{x}{the model term}
+\item{x}{The model term (typically an event_term, event_model, or convolved_term)}
 
-\item{...}{extra args}
+\item{...}{Additional arguments passed to methods. Common arguments include:
+\item{drop.empty}{Logical; if TRUE, conditions with no events are dropped}
+\item{exclude_basis}{Logical; if TRUE, basis function labels are excluded}}
+}
+\value{
+A character vector of condition labels
 }
 \description{
-return the set of condition labels associated with a model term
+Return the set of condition labels associated with a model term. Conditions represent
+the unique experimental conditions in the design, typically formed from factor levels
+and/or basis functions. For example, a term with factor "stimulus" (levels: face, house)
+and two basis functions would have conditions: \code{"stimulus[face]:basis1"}, \code{"stimulus[face]:basis2"},
+\code{"stimulus[house]:basis1"}, \code{"stimulus[house]:basis2"}.
+}
+\examples{
+# Create a simple event model with a categorical predictor
+event_data <- data.frame(
+  stimulus = factor(c("face", "house", "face", "house")),
+  onsets = c(1, 10, 20, 30),
+  run = c(1, 1, 1, 1)
+)
+
+# Create a sampling frame
+sframe <- sampling_frame(blocklens = 50, TR = 2)
+
+# Create an event model with canonical HRF
+evmodel <- event_model(
+  onsets ~ hrf(stimulus),
+  data = event_data,
+  block = ~run,
+  sampling_frame = sframe
+)
+
+# Get condition labels
+conditions(evmodel)  # Returns: c("stimulus[face]", "stimulus[house]")
+
+# Create model with multiple basis functions
+evmodel2 <- event_model(
+  onsets ~ hrf(stimulus, basis = "fourier", nbasis = 2),
+  data = event_data,
+  block = ~run,
+  sampling_frame = sframe
+)
+
+# Get conditions with basis functions
+conditions(evmodel2)  # Returns conditions with basis labels
+}
+\seealso{
+\code{\link[=cells]{cells()}}, \code{\link[=event_model]{event_model()}}, \code{\link[=hrf]{hrf()}}
 }
 \concept{conditions}

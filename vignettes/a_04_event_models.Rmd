@@ -18,7 +18,7 @@ An "event model" is a description of an fMRI experiment, which consists of a col
 
 Consider a basic design, consisting of four stimulus types, each repeated 4 times over the course of a single scanning run. The stimuli are pictures of *faces*, *scenes*, *tools* and *object* presented for 2s a piece in a pseudorandom order. There is a uniformly distributed (4-7s) inter-stimulus interval (ISI) separating each stimulus presentation.
 
-```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+```{r}
 library(fmrireg)
 ```
 
@@ -55,7 +55,8 @@ Now the fun part. We create an **event_model** that describes the experimental m
 
 ```{r}
 
-emodel <- event_model(onset ~ hrf(stim), data=simple_design, block = ~ run, sampling_frame=sframe)
+
+emodel <- event_model(onset ~ fmrireg::hrf(stim, basis=fmrireg::HRF_SPMG1), data=simple_design, block = ~ run, sampling_frame=sframe)
 
 ```
 
@@ -65,7 +66,7 @@ print(emodel)
 
 And we can plot the model:
 
-```{r}
+```{r, fig.width = 7, fig.height = 5}
 plot(emodel)
 ```
 

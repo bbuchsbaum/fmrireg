@@ -7,30 +7,57 @@
 shift(x, ...)
 }
 \arguments{
-\item{x}{An object representing a time series or a time-based data structure.}
+\item{x}{An object representing a time series or a time-based data structure}
 
-\item{...}{extra args}
+\item{...}{Additional arguments passed to methods. Common arguments include:
+\item{offset}{Numeric; amount to shift by (positive = forward, negative = backward)}
+\item{pad}{Value to use for padding shifted regions (default = 0)}}
 }
 \value{
-An object of the same class as the input, shifted by the specified amount.
+An object of the same class as the input, with values shifted in time:
+\itemize{
+\item Values are moved by the specified offset
+\item Object structure and dimensions are preserved
+\item Empty regions are filled with padding value
+}
 }
 \description{
-This is a generic function to shift time series objects. The goal is to
-provide a simple way to apply time shifts to various time series objects,
-such as regressors and time series data.
+Apply a temporal shift to a time series object. This function shifts the values in time
+while preserving the structure of the object. Common uses include:
+\itemize{
+\item Aligning regressors with different temporal offsets
+\item Applying temporal derivatives to time series
+\item Correcting for timing differences between signals
+}
 }
 \examples{
-\dontrun{
-# Shift a regressor object
-shifted_regressor <- shift(my_regressor, 5)
+# Create a simple time series with events
+event_data <- data.frame(
+  onsets = c(1, 10, 20, 30),
+  run = c(1, 1, 1, 1)
+)
 
-# Shift a time series object
-shifted_time_series <- shift(my_time_series, -2)
-}
+# Create sampling frame
+sframe <- sampling_frame(blocklens = 50, TR = 2)
 
+# Create regressor from events
+reg <- regressor(
+  onsets = event_data$onsets,
+  sampling_frame = sframe
+)
+
+# Shift regressor forward by 2 seconds
+reg_forward <- shift(reg, offset = 2)
+
+# Shift regressor backward by 1 second
+reg_backward <- shift(reg, offset = -1)
+
+# Evaluate original and shifted regressors
+times <- seq(0, 50, by = 2)
+orig_values <- evaluate(reg, times)
+shifted_values <- evaluate(reg_forward, times)
 }
 \seealso{
-Other shift: 
-\code{\link{shift.regressor}()}
+\code{\link[=regressor]{regressor()}}, \code{\link[=evaluate]{evaluate()}}
 }
-\concept{shift}
+\concept{time_series}

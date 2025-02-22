@@ -767,7 +767,8 @@ write_glt.glt_contrast <- function(x, fname=NULL) {
 #'
 #' @return The estimated contrast.
 #'
-#' @export
+#' @noRd
+#' @keywords internal
 estcon.contrast <- function(x, fit, indices, ...) {
   wts <- numeric(length(fit$assign))
   wts[indices] <- x$weights

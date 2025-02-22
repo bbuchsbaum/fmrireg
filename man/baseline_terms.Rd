@@ -2,19 +2,69 @@
 % Please edit documentation in R/all_generic.R
 \name{baseline_terms}
 \alias{baseline_terms}
-\title{baseline_terms}
+\title{Extract baseline terms from a model}
 \usage{
 baseline_terms(x)
 }
 \arguments{
-\item{x}{the model object}
+\item{x}{The model object (typically an fmri_model)}
 }
 \value{
-A list containing the 'baseline_term's.
+A list of baseline_term objects. Each baseline_term represents a different
+component of the non-experimental signal and contains:
+\itemize{
+\item varname: Name of the term (e.g., "drift", "block", "motion")
+\item design_matrix: Matrix of baseline regressors
+\item term_type: Type of baseline term ("drift", "block", or "nuisance")
+}
 }
 \description{
-This function extracts a list of 'baseline_term's from the provided model object \code{x}.
+Extract the baseline and nuisance terms from a model object, separating them from
+experimental event terms. Baseline terms represent non-experimental components of the
+fMRI signal, such as:
+\itemize{
+\item Drift terms (modeling scanner drift)
+\item Block terms (modeling run-specific baselines)
+\item Nuisance terms (e.g., motion parameters, physiological noise)
 }
-\details{
-Extract a list of 'baseline_term's from the model object.
 }
+\examples{
+# Create a model with both event and baseline terms
+event_data <- data.frame(
+  stimulus = factor(c("face", "house", "face", "house")),
+  onsets = c(1, 10, 20, 30),
+  run = c(1, 1, 1, 1)
+)
+
+# Create sampling frame
+sframe <- sampling_frame(blocklens = 50, TR = 2)
+
+# Create event model
+evmodel <- event_model(
+  onsets ~ hrf(stimulus),
+  data = event_data,
+  block = ~run,
+  sampling_frame = sframe
+)
+
+# Create baseline model with drift and block terms
+bmodel <- baseline_model(
+  basis = "bs",    # B-spline basis for drift
+  degree = 3,      # Cubic drift model
+  sframe = sframe
+)
+
+# Combine into full model
+fmodel <- fmri_model(evmodel, bmodel)
+
+# Extract only the baseline terms
+baseline_terms(fmodel)  # Returns list with drift and block terms
+}
+\seealso{
+\code{\link[=event_terms]{event_terms()}}, \code{\link[=fmri_model]{fmri_model()}}, \code{\link[=baseline_model]{baseline_model()}}
+
+Other model_components: 
+\code{\link{event_terms}()},
+\code{\link{term_indices}()}
+}
+\concept{model_components}

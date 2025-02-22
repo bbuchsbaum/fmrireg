@@ -3,7 +3,7 @@
 \name{estimate_betas}
 \alias{estimate_betas}
 \alias{estimate_betas.latent_dataset}
-\title{estimate trialwise beta coefficients for a dataset}
+\title{Estimate Beta Coefficients for fMRI Data}
 \usage{
 estimate_betas(x, ...)
 
@@ -42,6 +42,16 @@ estimate_betas(x, ...)
 \item{prewhiten}{currently experimental, default to \code{FALSE}.}
 }
 \value{
+A list of class "fmri_betas" containing:
+\itemize{
+\item betas_fixed: Fixed effect coefficients
+\item betas_ran: Random (trial-wise) coefficients
+\item design_ran: Design matrix for random effects
+\item design_fixed: Design matrix for fixed effects
+\item design_base: Design matrix for baseline model
+\item Additional components depending on method
+}
+
 A list of class "fmri_betas" containing the following components:
 \itemize{
 \item betas_fixed: Matrix representing the fixed effect betas
@@ -52,16 +62,75 @@ A list of class "fmri_betas" containing the following components:
 }
 }
 \description{
+Estimate beta coefficients (regression parameters) from fMRI data using various methods.
+This function supports different estimation approaches for:
+\itemize{
+\item Single-trial beta estimation
+\item Fixed and random effects
+\item Various regularization techniques
+\item Optional HRF estimation
+}
+
 This function estimates betas (regression coefficients) for fixed and random effects
 in a matrix dataset using various methods.
 }
-\seealso{
-\code{\link{matrix_dataset}}, \code{\link{baseline_model}}
+\details{
+This is a generic function with methods for different dataset types:
+\itemize{
+\item fmri_dataset: For volumetric fMRI data
+\item matrix_dataset: For matrix-format data
+\item latent_dataset: For dimensionality-reduced data
+}
 
-Other estimate_betas: 
-\code{\link{estimate_betas.matrix_dataset}()}
+Available estimation methods include:
+\itemize{
+\item mixed: Mixed-effects model using rrBLUP
+\item r1: Rank-1 GLM with joint HRF estimation
+\item lss: Least-squares separate estimation
+\item pls: Partial least squares regression
+\item ols: Ordinary least squares
+\item fracridge: Fractional ridge regression
+}
+}
+\examples{
+# Create example data
+event_data <- data.frame(
+  condition = factor(c("A", "B", "A", "B")),
+  onsets = c(1, 10, 20, 30),
+  run = c(1, 1, 1, 1)
+)
+
+# Create sampling frame and dataset
+sframe <- sampling_frame(blocklens = 50, TR = 2)
+dset <- matrix_dataset(
+  matrix(rnorm(100 * 2), 100, 2),
+  TR = 2,
+  run_length = 50,
+  event_table = event_data
+)
+
+# Estimate betas using mixed-effects model
+betas <- estimate_betas(
+  dset,
+  fixed = onset ~ hrf(condition),
+  ran = onset ~ trialwise(),
+  block = ~run,
+  method = "mixed"
+)
+
+}
+\references{
+Mumford, J. A., et al. (2012). Deconvolving BOLD activation in event-related designs for multivoxel pattern classification analyses. NeuroImage, 59(3), 2636-2643.
+
+Pedregosa, F., et al. (2015). Data-driven HRF estimation for encoding and decoding models. NeuroImage, 104, 209-220.
+}
+\seealso{
+\code{\link{fmri_dataset}}, \code{\link{matrix_dataset}}, \code{\link{latent_dataset}}
+
+\code{\link{matrix_dataset}}, \code{\link{baseline_model}}
 
 Other estimate_betas: 
 \code{\link{estimate_betas.matrix_dataset}()}
 }
 \concept{estimate_betas}
+\concept{model_estimation}

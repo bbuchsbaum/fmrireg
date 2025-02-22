@@ -2,15 +2,53 @@
 % Please edit documentation in R/all_generic.R
 \name{standard_error}
 \alias{standard_error}
-\title{standard_error}
+\title{Extract Standard Errors from a Model Fit}
 \usage{
 standard_error(x, ...)
 }
 \arguments{
-\item{x}{the object}
+\item{x}{The fitted model object}
 
-\item{...}{extra arguments}
+\item{...}{Additional arguments passed to methods. Common arguments include:
+\item{type}{The type of standard errors to extract (e.g., "estimates" or "contrasts")}}
+}
+\value{
+A tibble or matrix containing standard errors of parameter estimates
 }
 \description{
-extract standard errors from fitted model
+Extract standard errors of parameter estimates from a fitted model object.
+This is part of a family of functions for extracting statistical measures.
 }
+\examples{
+# Create example data
+event_data <- data.frame(
+  condition = factor(c("A", "B", "A", "B")),
+  onsets = c(1, 10, 20, 30),
+  run = c(1, 1, 1, 1)
+)
+
+# Create sampling frame and dataset
+sframe <- sampling_frame(blocklens = 50, TR = 2)
+dset <- matrix_dataset(
+  matrix(rnorm(100 * 2), 100, 2),
+  TR = 2,
+  run_length = 50,
+  event_table = event_data
+)
+
+# Fit model
+fit <- fmri_lm(
+  onsets ~ hrf(condition),
+  block = ~run,
+  dataset = dset
+)
+
+# Extract standard errors
+se <- standard_error(fit)
+}
+\seealso{
+Other statistical_measures: 
+\code{\link{p_values}()},
+\code{\link{stats}()}
+}
+\concept{statistical_measures}

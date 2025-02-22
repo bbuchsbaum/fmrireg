@@ -2,20 +2,63 @@
 % Please edit documentation in R/all_generic.R
 \name{data_chunks}
 \alias{data_chunks}
-\title{return a set of data chunks}
+\title{Return a set of data chunks}
 \usage{
 data_chunks(x, nchunks, ...)
 }
 \arguments{
-\item{x}{the dataset}
+\item{x}{The dataset to chunk (typically an fmri_dataset or matrix_dataset)}
 
-\item{nchunks}{the number of data chunks}
-
-\item{...}{extra args}
+\item{...}{Additional arguments passed to methods. Common arguments include:
+\item{nchunks}{Integer; number of chunks to create}
+\item{runwise}{Logical; if TRUE, create one chunk per run}
+\item{parallel}{Logical; if TRUE, prepare chunks for parallel processing}}
 }
 \value{
-an \code{iterator} returning on data chunk per iteration
+An iterator object that yields data chunks, where each chunk contains:
+\itemize{
+\item data: Matrix of data values for this chunk
+\item chunk_num: Index of this chunk
+\item voxel_ind: Indices of voxels in this chunk
+\item row_ind: Indices of timepoints in this chunk
+}
 }
 \description{
-return a set of data chunks
+Split a dataset into manageable chunks for processing. This is particularly useful
+for parallel processing of large fMRI datasets. Chunks can be created either by run
+(runwise=TRUE) or by dividing the data into a specified number of pieces. Each chunk
+contains a subset of the data and metadata about its position in the full dataset.
 }
+\examples{
+# Create a simple matrix dataset
+X <- matrix(rnorm(100 * 1000), 100, 1000)  # 100 timepoints, 1000 voxels
+dset <- matrix_dataset(
+  X, 
+  TR = 2,
+  run_length = c(50, 50)  # Two runs of 50 timepoints each
+)
+
+# Create chunks by run
+run_chunks <- data_chunks(dset, runwise = TRUE)
+
+# Process each run chunk
+foreach::foreach(chunk = run_chunks) \%do\% {
+  # chunk$data contains the data for one run
+  # chunk$row_ind shows which timepoints are included
+  mean_signal <- colMeans(chunk$data)
+}
+
+# Create arbitrary number of chunks
+vox_chunks <- data_chunks(dset, nchunks = 4)
+
+# Process chunks in parallel
+foreach::foreach(chunk = vox_chunks) \%dopar\% {
+  # chunk$data contains subset of voxels
+  # chunk$voxel_ind shows which voxels are included
+  apply(chunk$data, 2, sd)
+}
+}
+\seealso{
+\code{\link[=matrix_dataset]{matrix_dataset()}}, \code{\link[=fmri_dataset]{fmri_dataset()}}, \code{\link[foreach:foreach]{foreach::foreach()}}
+}
+\concept{iterators}

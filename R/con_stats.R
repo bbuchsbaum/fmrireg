@@ -240,7 +240,8 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
 }
 
 
-#' @export
+#' @keywords internal
+#' @noRd
 #' @autoglobal
 estimate_contrast.contrast <- function(x, fit, colind, ...) {
   ret <- fit_contrasts(fit, x$weights, colind, se=TRUE)
@@ -265,6 +266,8 @@ estimate_contrast.contrast <- function(x, fit, colind, ...) {
 
 #' @export
 #' @autoglobal
+#' @keywords internal
+#' @noRd
 estimate_contrast.Fcontrast <- function(x, fit, colind, ...) {
   ret <- fit_Fcontrasts(fit, x$weights, colind)
   tibble(

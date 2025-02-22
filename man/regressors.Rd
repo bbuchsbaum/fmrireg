@@ -2,16 +2,67 @@
 % Please edit documentation in R/all_generic.R
 \name{regressors}
 \alias{regressors}
-\title{extract regressor set}
+\title{Extract regressor set}
 \usage{
 regressors(x, ...)
 }
 \arguments{
-\item{x}{a model object that contains regressors (or can generate them)}
+\item{x}{A model object that contains regressors (or can generate them)}
 
-\item{...}{extra args}
+\item{...}{Additional arguments passed to methods. Common arguments include:
+\item{condition}{Character; specific condition to extract regressors for}
+\item{block}{Numeric; specific block/run to extract regressors from}
+\item{basis}{Character; type of basis functions to use}}
+}
+\value{
+A list of regressor objects, where each regressor contains:
+\itemize{
+\item values: Numeric vector of regressor values over time
+\item onsets: Original event onset times
+\item condition: Associated experimental condition
+\item block: Associated run/block number
+}
 }
 \description{
-extract regressor set
+Extract a set of regressors from a model object. Regressors represent the predicted
+BOLD response for different experimental conditions or model components. For event-related
+designs, each regressor is typically a convolution of event onsets with an HRF. For
+baseline terms, regressors might represent drift or nuisance components.
+}
+\examples{
+# Create event data with two conditions
+event_data <- data.frame(
+  condition = factor(c("face", "house", "face", "house")),
+  onsets = c(1, 10, 20, 30),
+  run = c(1, 1, 1, 1)
+)
+
+# Create sampling frame
+sframe <- sampling_frame(blocklens = 50, TR = 2)
+
+# Create event model with canonical HRF
+evmodel <- event_model(
+  onsets ~ hrf(condition),
+  data = event_data,
+  block = ~run,
+  sampling_frame = sframe
+)
+
+# Extract all regressors
+reg_list <- regressors(evmodel)
+
+# Create model with multiple basis functions
+evmodel2 <- event_model(
+  onsets ~ hrf(condition, basis = "fourier", nbasis = 2),
+  data = event_data,
+  block = ~run,
+  sampling_frame = sframe
+)
+
+# Extract regressors with basis functions
+reg_list2 <- regressors(evmodel2)
+}
+\seealso{
+\code{\link[=event_model]{event_model()}}, \code{\link[=HRF_SPMG1]{HRF_SPMG1()}}, \code{\link[=convolve]{convolve()}}
 }
 \concept{regressors}

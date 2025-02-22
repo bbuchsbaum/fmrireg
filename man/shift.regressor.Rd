@@ -17,8 +17,4 @@ Positive values will shift the object to the right, while negative values will s
 \description{
 Shift method for the regressor class
 }
-\seealso{
-Other shift: 
-\code{\link{shift}()}
-}
 \concept{shift}

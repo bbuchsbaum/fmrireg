@@ -2,15 +2,53 @@
 % Please edit documentation in R/all_generic.R
 \name{stats}
 \alias{stats}
-\title{stats}
+\title{Extract Test Statistics from a Model Fit}
 \usage{
 stats(x, ...)
 }
 \arguments{
-\item{x}{the object}
+\item{x}{The fitted model object}
 
-\item{...}{extra arguments}
+\item{...}{Additional arguments passed to methods. Common arguments include:
+\item{type}{The type of statistics to extract (e.g., "estimates", "contrasts", or "F")}}
+}
+\value{
+A tibble or matrix containing test statistics
 }
 \description{
-extract statistics from fitted model
+Extract test statistics (e.g., t-statistics, F-statistics) from a fitted model object.
+This is part of a family of functions for extracting statistical measures.
 }
+\examples{
+# Create example data
+event_data <- data.frame(
+  condition = factor(c("A", "B", "A", "B")),
+  onsets = c(1, 10, 20, 30),
+  run = c(1, 1, 1, 1)
+)
+
+# Create sampling frame and dataset
+sframe <- sampling_frame(blocklens = 50, TR = 2)
+dset <- matrix_dataset(
+  matrix(rnorm(100 * 2), 100, 2),
+  TR = 2,
+  run_length = 50,
+  event_table = event_data
+)
+
+# Fit model
+fit <- fmri_lm(
+  onsets ~ hrf(condition),
+  block = ~run,
+  dataset = dset
+)
+
+# Extract test statistics
+tstats <- stats(fit)
+}
+\seealso{
+Other statistical_measures: 
+\code{\link{p_values}()},
+\code{\link{standard_error}()}
+}
+\concept{statistical_measures}

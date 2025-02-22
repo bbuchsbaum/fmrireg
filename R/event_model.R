@@ -26,7 +26,7 @@
   # in the formula environment. Then return that result (which should be an hrfspec).
   fun_name <- rlang::call_name(expr)
   if (fun_name %in% c("hrf", "trialwise", "afni_hrf", "afni_trialwise")) {
-    # Evaluate the call in the formula’s environment
+    # Evaluate the call in the formula's environment
     evald <- rlang::eval_tidy(expr, env=fenv)
     # 'evald' should be an hrfspec (or related).
     return(evald)
@@ -201,8 +201,17 @@ event_model.formula <- function(x, data, block, sampling_frame, drop_empty = TRU
   #browser()
   
   event_spec <- formspec(formula, data)
-  assert_that(all(map_lgl(event_spec$rhs, inherits, "hrfspec")),
-              msg = "all terms on right-hand side must be 'hrfspec' terms")
+  assert_that(
+    all(map_lgl(event_spec$rhs, function(x) {
+      is_spec <- inherits(x, "hrfspec")
+      if (!is_spec) {
+        warning(sprintf("Term '%s' is of class '%s', expected 'hrfspec'", 
+                       deparse(x), class(x)[1]))
+      }
+      is_spec
+    })),
+    msg = "all terms on right-hand side must be 'hrfspec' terms. Make sure hrf() is available."
+  )
   
   model_spec <- list(
     formula = formula, 
@@ -709,14 +718,33 @@ plot.event_model <- function(x, y, term_name = NULL, longnames = TRUE,
     dfx <- dflist[[term_name]]
   }
   
-  # Build the ggplot.
-  p <- ggplot2::ggplot(dfx, ggplot2::aes_string(x = ".time", y = "value", colour = "condition")) +
-    ggplot2::geom_line(size = line_size, ...) +
-    ggplot2::facet_wrap(~ .block, ncol = facet_ncol) +
-    ggplot2::labs(title = if (!is.null(title)) title else paste("Event Model:", plot_term),
-                  x = xlab, y = ylab, colour = "Condition") +
-    ggplot2::scale_color_brewer(palette = color_palette) +
-    theme_custom
+  # Fix 1: Handle color palette for large number of conditions
+  n_conditions <- length(unique(dfx$condition))
+  if (n_conditions > 9) {
+    # Use a different palette that can handle more colors
+    colors <- grDevices::rainbow(n_conditions)
+    p <- ggplot2::ggplot(dfx, ggplot2::aes_string(x = ".time", y = "value", colour = "condition")) +
+      ggplot2::geom_line(size = line_size, ...) +
+      ggplot2::facet_wrap(~ .block, ncol = facet_ncol) +
+      ggplot2::labs(title = if (!is.null(title)) title else paste("Event Model:", plot_term),
+                    x = xlab, y = ylab, colour = "Condition") +
+      ggplot2::scale_color_manual(values = colors) +
+      theme_custom
+  } else {
+    # Use original RColorBrewer palette for 9 or fewer conditions
+    p <- ggplot2::ggplot(dfx, ggplot2::aes_string(x = ".time", y = "value", colour = "condition")) +
+      ggplot2::geom_line(size = line_size, ...) +
+      ggplot2::facet_wrap(~ .block, ncol = facet_ncol) +
+      ggplot2::labs(title = if (!is.null(title)) title else paste("Event Model:", plot_term),
+                    x = xlab, y = ylab, colour = "Condition") +
+      ggplot2::scale_color_brewer(palette = color_palette) +
+      theme_custom
+  }
+  
+  # Fix 2: Add y-axis limits to prevent missing values warning
+  y_range <- range(dfx$value, na.rm = TRUE)
+  y_buffer <- diff(y_range) * 0.05  # Add 5% buffer
+  p <- p + ggplot2::ylim(y_range[1] - y_buffer, y_range[2] + y_buffer)
   
   # Hide the legend if there are too many unique conditions.
   if (length(unique(dfx$condition)) > hide_legend_threshold) {
@@ -1095,7 +1123,6 @@ correlation_map.event_model <- function(x,
 #' 
 #' @param x An `event_model` object.
 #' @param rescale_cols Logical; if TRUE, columns are rescaled to (-1,1) before plotting.
-#' @inheritParams design_matrix_heatmap.event_model
 #' @export
 design_map.event_model <- function(x,
                                          rescale_cols    = TRUE,

@@ -7,10 +7,56 @@
 elements(x, ...)
 }
 \arguments{
-\item{x}{the term}
+\item{x}{The term or variable object (typically an event_term, event_factor, or event_variable)}
 
-\item{...}{additional arguments}
+\item{...}{Additional arguments passed to methods}
+}
+\value{
+A vector containing the ordered elements:
+\itemize{
+\item For factors: The factor levels in their defined order
+\item For numeric variables: Unique values in ascending order
+\item For event terms: Combined elements from all variables
+}
 }
 \description{
-return the ordered elements of a term/variable
+Extract the unique elements from a term or variable in their natural order. For
+categorical variables (factors), this returns the factor levels. For continuous
+variables, this returns the unique values in ascending order. For event terms with
+multiple variables, this returns the combined elements.
 }
+\details{
+Return the ordered elements of a term or variable.
+}
+\examples{
+# Create event terms with different types
+
+# Categorical variable
+event_data <- data.frame(
+  condition = factor(c("A", "B", "A", "B"), levels = c("B", "A")),
+  onsets = c(1, 10, 20, 30),
+  run = c(1, 1, 1, 1)
+)
+cat_term <- event_term(
+  list(condition = event_data$condition),
+  onsets = event_data$onsets,
+  blockids = event_data$run
+)
+elements(cat_term)  # Returns: c("B", "A")
+
+# Continuous variable
+event_data$rt <- c(1.2, 0.8, 1.1, 0.9)
+cont_term <- event_term(
+  list(rt = event_data$rt),
+  onsets = event_data$onsets,
+  blockids = event_data$run
+)
+elements(cont_term)  # Returns: c(0.8, 0.9, 1.1, 1.2)
+}
+\seealso{
+\code{\link[=levels]{levels()}}, \code{\link[=event_term]{event_term()}}
+
+Other term_properties: 
+\code{\link{levels}()}
+}
+\concept{term_properties}

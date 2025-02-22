@@ -7,8 +7,53 @@
 levels(x)
 }
 \arguments{
-\item{x}{the term}
+\item{x}{The term (typically an event_factor, event_variable, event_matrix, or event_term)}
+}
+\value{
+A character vector containing:
+\itemize{
+\item For event_factor: The factor levels
+\item For event_variable: The variable name
+\item For event_matrix: The column names
+\item For event_term: The interaction of factor levels for categorical variables
+}
 }
 \description{
-extract the levels of a term
+Extract the levels of a term. For categorical terms (event_factor), this returns the
+factor levels. For continuous terms (event_variable), this returns the variable name.
+For matrix terms, this returns the column names. For event terms with multiple factors,
+this returns the interaction of all factor levels.
 }
+\examples{
+# Factor event
+event_data <- data.frame(
+  stimulus = factor(c("face", "house", "face", "house")),
+  onsets = c(1, 10, 20, 30),
+  run = c(1, 1, 1, 1)
+)
+fac_term <- event_term(
+  list(stimulus = event_data$stimulus),
+  onsets = event_data$onsets,
+  blockids = event_data$run
+)
+levels(fac_term)  # Returns: c("face", "house")
+
+# Multiple factor event
+event_data$location <- factor(c("left", "right", "left", "right"))
+multi_term <- event_term(
+  list(
+    stimulus = event_data$stimulus,
+    location = event_data$location
+  ),
+  onsets = event_data$onsets,
+  blockids = event_data$run
+)
+levels(multi_term)  # Returns: c("face:left", "house:left", "face:right", "house:right")
+}
+\seealso{
+\code{\link[=event_term]{event_term()}}, \code{\link[=event_factor]{event_factor()}}, \code{\link[=event_variable]{event_variable()}}
+
+Other term_properties: 
+\code{\link{elements}()}
+}
+\concept{term_properties}

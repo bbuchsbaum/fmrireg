@@ -23,6 +23,33 @@ shortnames(x, ...)
 
 \item{...}{extra args}
 }
+\value{
+A character vector containing the simplified condition names.
+}
 \description{
-get the short names of a set of variable levels
+get the short names of a set of variable levels. Short names are simplified condition
+names without the term prefix. For example, if a term has conditions "term#level1" and
+"term#level2", the short names would be "level1" and "level2".
+}
+\examples{
+# Create a data frame with experimental design 
+event_data <- data.frame(
+  fac = c("a", "B", "A", "B"),
+  onsets = c(1, 10, 20, 80), 
+  run = c(1, 1, 1, 1)
+)
+
+# Create a sampling frame
+sframe <- sampling_frame(blocklens = 50, TR = 2)
+
+# Create an event model
+evmodel <- event_model(
+  onsets ~ hrf(fac), 
+  data = event_data,
+  block = ~run,
+  sampling_frame = sframe
+)
+
+# Get short names of conditions
+shortnames(evmodel)  # Returns: c("a", "B", "A")
 }

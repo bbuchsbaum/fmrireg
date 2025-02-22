@@ -19,12 +19,66 @@ design_matrix(x, ...)
 \method{design_matrix}{fmri_model}(x, blockid = NULL, ...)
 }
 \arguments{
-\item{x}{the term}
+\item{x}{The term or model object (typically an event_term, event_model, baseline_model, or fmri_model)}
 
-\item{...}{additional arguments}
+\item{...}{Additional arguments passed to methods. Common arguments include:
+\item{blockid}{Numeric vector specifying which blocks/runs to include}}
 
 \item{blockid}{the block id to extract}
 }
-\description{
-construct a design matrix from the term
+\value{
+A tibble containing the design matrix, where:
+\itemize{
+\item Rows represent time points (scans)
+\item Columns represent predictor variables
+\item Column names indicate the condition or regressor
 }
+}
+\description{
+Extract or construct the design matrix from a model term or object. The design matrix
+contains the predictor variables used in the model, with one row per time point and
+one column per predictor. For event-related designs, the design matrix typically
+contains the convolved HRF responses. For baseline terms, it contains drift and
+nuisance regressors.
+}
+\details{
+Construct a design matrix from a term or model.
+}
+\examples{
+# Create event data
+event_data <- data.frame(
+  condition = factor(c("face", "house", "face", "house")),
+  rt = c(0.8, 1.2, 0.9, 1.1),
+  onsets = c(1, 10, 20, 30),
+  run = c(1, 1, 1, 1)
+)
+
+# Create sampling frame
+sframe <- sampling_frame(blocklens = 50, TR = 2)
+
+# Create event model with multiple terms
+evmodel <- event_model(
+  onsets ~ hrf(condition) + hrf(rt),
+  data = event_data,
+  block = ~run,
+  sampling_frame = sframe
+)
+
+# Get full design matrix
+dmat <- design_matrix(evmodel)
+
+# Get design matrix for specific block
+block1_dmat <- design_matrix(evmodel, blockid = 1)
+
+# Create and get baseline design matrix
+bmodel <- baseline_model(basis = "bs", degree = 3, sframe = sframe)
+bdmat <- design_matrix(bmodel)
+
+# Get combined design matrix from full model
+fmodel <- fmri_model(evmodel, bmodel)
+full_dmat <- design_matrix(fmodel)
+}
+\seealso{
+\code{\link[=event_model]{event_model()}}, \code{\link[=baseline_model]{baseline_model()}}, \code{\link[=fmri_model]{fmri_model()}}
+}
+\concept{design_matrices}

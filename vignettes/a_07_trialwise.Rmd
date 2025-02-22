@@ -20,7 +20,7 @@ First we load in an experimental design.
 
 library(dplyr)
 library(fmrireg)
-facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE) %>% filter(run == 1)
+facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE) %>% dplyr::filter(run == 1)
 ## we had a constant value to the design used later to model the mean stimulus response over all trials.
 facedes$constant <- factor(rep(1, nrow(facedes)))
 
@@ -49,6 +49,8 @@ dset <- fmri_mem_dataset(scans=scans,
                  mask=mask, 
                  TR=1.5, 
                  event_table=facedes)
+
+print(dset)
 
 ```
 

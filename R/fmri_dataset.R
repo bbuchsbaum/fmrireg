@@ -443,6 +443,12 @@ chunk_iter <- function(x, nchunks, get_chunk) {
   iter
 }
 
+#' @export
+blocklens.matrix_dataset <- function(x, ...) {
+  x$run_length
+}
+
+
 
 #' Create Data Chunks for fmri_mem_dataset Objects
 #'

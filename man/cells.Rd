@@ -23,16 +23,59 @@ cells(x, ...)
 \item{drop.empty}{Logical; if TRUE, remove cells with no events.}
 }
 \value{
+A tibble containing the experimental cells with attributes:
+\item{count}{Number of events in each cell}
+\item{rownames}{Cell names when cells have multiple factors}
+
 A list of data frames containing the cells.
 
 A tibble containing the cells with a "count" attribute.
 }
 \description{
-return the experimental cells that are in a model term as a table
+Return the experimental cells that are in a model term as a table. Experimental cells
+represent unique combinations of factor levels in the design. For example, if a design
+has factors A (levels: a1, a2) and B (levels: b1, b2), the cells would be: a1:b1,
+a1:b2, a2:b1, a2:b2.
 }
 \examples{
+# Create a simple factorial design
+evlist <- list(
+  fac1 = factor(c("A", "B", "A", "B")),
+  fac2 = factor(c("1", "1", "2", "2"))
+)
+
+# Create an event term
+eterm <- event_term(
+  evlist,
+  onsets = 1:4,
+  blockids = rep(1, 4)
+)
+
+# Get the experimental cells
+cells(eterm)  # Returns cells: A:1, A:2, B:1, B:2
+
+# Create an event model
+event_data <- data.frame(
+  fac = c("a", "B", "A", "B"),
+  onsets = c(1, 10, 20, 80),
+  run = c(1, 1, 1, 1)
+)
+sframe <- sampling_frame(blocklens = 50, TR = 2)
+evmodel <- event_model(
+  onsets ~ hrf(fac),
+  data = event_data,
+  block = ~run,
+  sampling_frame = sframe
+)
+
+# Get cells from the model
+cells(evmodel)
 evlist <- list(fac1 = factor(c("A", "B", "A", "B")), 
                fac2 = factor(c("1", "1", "2", "2")))
 eterm <- event_term(evlist, onsets = 1:4, blockids = rep(1, 4))
 cells(eterm)
 }
+\seealso{
+\code{\link[=event_term]{event_term()}}, \code{\link[=event_model]{event_model()}}
+}
+\concept{cells}

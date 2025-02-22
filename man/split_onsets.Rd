@@ -2,15 +2,67 @@
 % Please edit documentation in R/all_generic.R
 \name{split_onsets}
 \alias{split_onsets}
-\title{split an onset vector into a list}
+\title{Split Event Onsets into Lists by Factor Levels or Blocks}
 \usage{
 split_onsets(x, ...)
 }
 \arguments{
-\item{x}{the object associated with the onset vector}
+\item{x}{The object containing onset information (typically an event_term or event_model)}
 
-\item{...}{extra args}
+\item{...}{Additional arguments passed to methods. Common arguments include:
+\item{sframe}{A sampling_frame object defining the temporal structure}
+\item{global}{Logical; if TRUE, convert to global onset times}
+\item{blocksplit}{Logical; if TRUE, further split by block/run IDs}}
+}
+\value{
+A list of numeric vectors where:
+\itemize{
+\item Each element contains onsets for one condition/block
+\item Names correspond to condition labels
+\item If blocksplit=TRUE, each condition contains a nested list of blocks
+}
 }
 \description{
-split an onset vector into a list
+Split a vector of event onsets into separate lists based on factor levels and/or block IDs.
+This is useful for:
+\itemize{
+\item Separating events by experimental conditions
+\item Organizing onsets by scanning runs/blocks
+\item Preparing onset times for AFNI analysis
+\item Analyzing timing patterns within conditions
 }
+}
+\examples{
+# Create example data with multiple conditions and blocks
+event_data <- data.frame(
+  condition = factor(c("A", "B", "A", "B", "A", "B")),
+  onsets = c(1, 10, 30, 40, 70, 80),
+  run = c(1, 1, 2, 2, 3, 3)
+)
+
+# Create sampling frame
+sframe <- sampling_frame(blocklens = c(25, 25, 25), TR = 2)
+
+# Create event term
+eterm <- event_term(
+  list(condition = event_data$condition),
+  onsets = event_data$onsets,
+  blockids = event_data$run
+)
+
+# Split onsets by condition
+split_by_cond <- split_onsets(eterm, sframe)
+# Returns list with onsets for conditions A and B
+
+# Split by condition and block
+split_by_block <- split_onsets(eterm, sframe, blocksplit = TRUE)
+# Returns nested list: conditions -> blocks -> onsets
+
+# Get global onset times
+split_global <- split_onsets(eterm, sframe, global = TRUE)
+# Returns onsets adjusted for block timing
+}
+\seealso{
+\code{\link[=event_term]{event_term()}}, \code{\link[=sampling_frame]{sampling_frame()}}, \code{\link[=global_onsets]{global_onsets()}}
+}
+\concept{timing_functions}

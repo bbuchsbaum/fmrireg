@@ -5,68 +5,52 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<meta name="description" content="fmrireg">
 <title>Event Models • fmrireg</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.2.2/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.2.2/bootstrap.bundle.min.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous">
-<!-- bootstrap-toc --><script src="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@v1.0.1/dist/bootstrap-toc.min.js" integrity="sha256-4veVQbu7//Lk5TSmc7YV48MxtMy98e26cf5MrgZYnwo=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><!-- search --><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Event Models">
-<meta property="og:description" content="fmrireg">
-<!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
-<script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
-<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-<![endif]-->
+<script src="../deps/bootstrap-5.2.2/bootstrap.bundle.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Event Models">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
-    
 
-    <nav class="navbar fixed-top navbar-light navbar-expand-lg bg-light"><div class="container">
-    
+
+    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
     <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.0.1</small>
 
-    
+
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item">
-  <a class="nav-link" href="../reference/index.html">Reference</a>
-</li>
+<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
-  <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
-  <div class="dropdown-menu" aria-labelledby="dropdown-articles">
-    <a class="dropdown-item" href="../articles/Overview.html">Overview</a>
-    <a class="dropdown-item" href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a>
-    <a class="dropdown-item" href="../articles/a_02_regressor.html">Building Regressors</a>
-    <a class="dropdown-item" href="../articles/a_03_baseline_model.html">Baseline Model</a>
-    <a class="dropdown-item" href="../articles/a_04_event_models.html">Event Models</a>
-    <a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a>
-    <a class="dropdown-item" href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a>
-    <a class="dropdown-item" href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a>
-  </div>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="../articles/Overview.html">Overview</a></li>
+    <li><a class="dropdown-item" href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a></li>
+    <li><a class="dropdown-item" href="../articles/a_02_regressor.html">Building Regressors</a></li>
+    <li><a class="dropdown-item" href="../articles/a_03_baseline_model.html">Baseline Model</a></li>
+    <li><a class="dropdown-item" href="../articles/a_04_event_models.html">Event Models</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><a class="dropdown-item" href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a></li>
+    <li><a class="dropdown-item" href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a></li>
+  </ul>
 </li>
       </ul>
-<form class="form-inline my-2 my-lg-0" role="search">
-        <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off">
-</form>
-
-      <ul class="navbar-nav">
-<li class="nav-item">
-  <a class="external-link nav-link" href="https://github.com/bbuchsbaum/fmrireg/" aria-label="github">
-    <span class="fab fa fab fa-github fa-lg"></span>
-     
-  </a>
-</li>
+<ul class="navbar-nav">
+<li class="nav-item"><form class="form-inline" role="search">
+ <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
+</form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/bbuchsbaum/fmrireg/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
-    
+
   </div>
 </nav><div class="container template-article">
 
@@ -75,11 +59,12 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="" class="logo" alt=""><h1>Event Models</h1>
+
+      <h1>Event Models</h1>
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2023-05-09</h4>
+            <h4 data-toc-skip class="date">2025-02-22</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/HEAD/vignettes/a_04_event_models.Rmd" class="external-link"><code>vignettes/a_04_event_models.Rmd</code></a></small>
       <div class="d-none name"><code>a_04_event_models.Rmd</code></div>
@@ -107,11 +92,18 @@ are pictures of <em>faces</em>, <em>scenes</em>, <em>tools</em> and
 is a uniformly distributed (4-7s) inter-stimulus interval (ISI)
 separating each stimulus presentation.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/fmrireg" class="external-link">fmrireg</a></span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">## Attaching package: 'fmrireg'</span></span></code></pre>
+<pre><code><span><span class="co">## The following object is masked from 'package:stats':</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##     convolve</span></span></code></pre>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cond</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"face"</span>, <span class="st">"scene"</span>, <span class="st">"tool"</span>, <span class="st">"object"</span><span class="op">)</span></span>
 <span><span class="va">NSTIM</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">cond</span><span class="op">)</span><span class="op">*</span><span class="fl">4</span></span></code></pre></div>
 <p>Now we contruct a “design table” by randomly sampling from the four
 conditions:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">simple_design</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>stim<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">cond</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, </span>
 <span>                     ISI<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">4</span><span class="op">:</span><span class="fl">7</span>, <span class="va">NSTIM</span>, replace<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span>, </span>
 <span>                     run<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">NSTIM</span><span class="op">)</span>,</span>
@@ -120,42 +112,54 @@ conditions:</p>
 variables. Then we construct a <strong>sampling_frame</strong> which
 define the temporal sampling and block structure of the experiment. Here
 we have only 1 block and a repetition frequency (TR) of 2.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">simple_design</span><span class="op">$</span><span class="va">onset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="va">simple_design</span><span class="op">$</span><span class="va">ISI</span><span class="op">+</span><span class="fl">2</span><span class="op">)</span> <span class="op">-</span><span class="fl">2</span></span>
 <span><span class="va">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
 <span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span>blocklens<span class="op">=</span><span class="fl">70</span>, <span class="va">TR</span><span class="op">)</span></span></code></pre></div>
 <p>Now the fun part. We create an <strong>event_model</strong> that
 describes the experimental model in terms of the stimulus onsets,
 conditions, and hemodynamic response function (‘hrf’).</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span><span class="op">)</span>, data<span class="op">=</span><span class="va">simple_design</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] "onset"     "hrf(stim)"</span></span></code></pre>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## event_model </span></span>
-<span><span class="co">##   onset ~ hrf(stim) </span></span>
-<span><span class="co">##   Num Terms 1 </span></span>
-<span><span class="co">##   Num Events:  16 </span></span>
-<span><span class="co">##   Num Columns:  4 </span></span>
-<span><span class="co">##   Num Blocks:  1 </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## Term: 1  fmri_term:  convolved_term </span></span>
-<span><span class="co">##    Term Name:  stim </span></span>
-<span><span class="co">##    Formula:   ~ (stim - 1) </span></span>
-<span><span class="co">##    Num Events:  16 </span></span>
-<span><span class="co">##    Num Rows:  70 </span></span>
-<span><span class="co">##    Num Columns:  4 </span></span>
-<span><span class="co">##    Conditions:  stim[face] stim[object] stim[scene] stim[tool] </span></span>
-<span><span class="co">##    Term Types:  event_factor</span></span></code></pre>
-<p>And we can plot the model:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu">fmrireg</span><span class="fu">::</span><span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span>, basis<span class="op">=</span><span class="fu">fmrireg</span><span class="fu">::</span><span class="va"><a href="../reference/HRF-class.html">HRF_SPMG1</a></span><span class="op">)</span>, data<span class="op">=</span><span class="va">simple_design</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">## ╔══════════════════════════════════════════╗</span></span>
+<span><span class="co">## ║           fMRI Event Model               ║</span></span>
+<span><span class="co">## ╚══════════════════════════════════════════╝</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##  Model Formula:</span></span>
+<span><span class="co">##    <span style="color: #00BBBB;">onset ~ fmrireg::hrf(stim, basis = fmrireg::HRF_SPMG1)</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 📈 Model Summary:</span></span>
+<span><span class="co">##   • Number of Terms: <span style="color: #BBBB00;">1</span> </span></span>
+<span><span class="co">##   • Total Events: <span style="color: #BBBB00;">16</span> </span></span>
+<span><span class="co">##   • Design Matrix Columns: <span style="color: #BBBB00;">4</span> </span></span>
+<span><span class="co">##   • Number of Blocks: <span style="color: #BBBB00;">1</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 📋 Event Table Preview:</span></span>
+<span><span class="co">##   • Variables: <span style="color: #00BB00;">stim, ISI, run, trial, onset</span> </span></span>
+<span><span class="co">##     stim ISI run trial onset</span></span>
+<span><span class="co">## 1   face   6   1     1     6</span></span>
+<span><span class="co">## 2   tool   4   1     2    12</span></span>
+<span><span class="co">## 3 object   4   1     3    18</span></span>
+<span><span class="co">##   ... ( 13  more rows )</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 🔍 Model Terms:</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Term <span style="color: #0000BB;">1</span> : <span style="color: #BB00BB;">stim</span> </span></span>
+<span><span class="co">##     • Conditions: <span style="color: #00BB00;">stim[face], stim[object], stim[scene], stim[tool]</span> </span></span>
+<span><span class="co">##     • HRF Type: <span style="color: #BBBB00;">SPMG1</span> </span></span>
+<span><span class="co">##     • Basis Functions: <span style="color: #BBBB00;">1</span></span></span></code></pre>
+<p>And we can plot the model:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_04_event_models_files/figure-html/unnamed-chunk-7-1.png" width="700"></p>
+<p><img src="a_04_event_models_files/figure-html/unnamed-chunk-7-1.png" width="672"></p>
 </div>
 <div class="section level2">
 <h2 id="a-simple-fmri-design-with-multiple-blocks">A simple fMRI design with multiple blocks<a class="anchor" aria-label="anchor" href="#a-simple-fmri-design-with-multiple-blocks"></a>
 </h2>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cond</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"face"</span>, <span class="st">"scene"</span>, <span class="st">"tool"</span>, <span class="st">"object"</span><span class="op">)</span></span>
 <span><span class="va">NSTIM</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">cond</span><span class="op">)</span><span class="op">*</span><span class="fl">4</span></span>
 <span></span>
@@ -176,25 +180,36 @@ conditions, and hemodynamic response function (‘hrf’).</p>
 <span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span>blocklens<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">70</span>,<span class="fl">70</span><span class="op">)</span>, <span class="va">TR</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">## create the event model d</span></span>
-<span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span><span class="op">)</span>, data<span class="op">=</span><span class="va">design</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] "onset"     "hrf(stim)"</span></span></code></pre>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## event_model </span></span>
-<span><span class="co">##   onset ~ hrf(stim) </span></span>
-<span><span class="co">##   Num Terms 1 </span></span>
-<span><span class="co">##   Num Events:  32 </span></span>
-<span><span class="co">##   Num Columns:  4 </span></span>
-<span><span class="co">##   Num Blocks:  2 </span></span>
+<span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span><span class="op">)</span>, data<span class="op">=</span><span class="va">design</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">## ╔══════════════════════════════════════════╗</span></span>
+<span><span class="co">## ║           fMRI Event Model               ║</span></span>
+<span><span class="co">## ╚══════════════════════════════════════════╝</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Term: 1  fmri_term:  convolved_term </span></span>
-<span><span class="co">##    Term Name:  stim </span></span>
-<span><span class="co">##    Formula:   ~ (stim - 1) </span></span>
-<span><span class="co">##    Num Events:  32 </span></span>
-<span><span class="co">##    Num Rows:  140 </span></span>
-<span><span class="co">##    Num Columns:  4 </span></span>
-<span><span class="co">##    Conditions:  stim[face] stim[object] stim[scene] stim[tool] </span></span>
-<span><span class="co">##    Term Types:  event_factor</span></span></code></pre>
+<span><span class="co">##  Model Formula:</span></span>
+<span><span class="co">##    <span style="color: #00BBBB;">onset ~ hrf(stim)</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 📈 Model Summary:</span></span>
+<span><span class="co">##   • Number of Terms: <span style="color: #BBBB00;">1</span> </span></span>
+<span><span class="co">##   • Total Events: <span style="color: #BBBB00;">32</span> </span></span>
+<span><span class="co">##   • Design Matrix Columns: <span style="color: #BBBB00;">4</span> </span></span>
+<span><span class="co">##   • Number of Blocks: <span style="color: #BBBB00;">2</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 📋 Event Table Preview:</span></span>
+<span><span class="co">##   • Variables: <span style="color: #00BB00;">stim, ISI, run, onset</span> </span></span>
+<span><span class="co">##    stim ISI run onset</span></span>
+<span><span class="co">## 1  tool   4   1     4</span></span>
+<span><span class="co">## 2  face   4   1    10</span></span>
+<span><span class="co">## 3 scene   6   1    18</span></span>
+<span><span class="co">##   ... ( 29  more rows )</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 🔍 Model Terms:</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Term <span style="color: #0000BB;">1</span> : <span style="color: #BB00BB;">stim</span> </span></span>
+<span><span class="co">##     • Conditions: <span style="color: #00BB00;">stim[face], stim[object], stim[scene], stim[tool]</span> </span></span>
+<span><span class="co">##     • HRF Type: <span style="color: #BBBB00;">spmg1</span> </span></span>
+<span><span class="co">##     • Basis Functions: <span style="color: #BBBB00;">1</span></span></span></code></pre>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
 <p><img src="a_04_event_models_files/figure-html/unnamed-chunk-8-1.png" width="672"></p>
@@ -220,81 +235,98 @@ conditions, and hemodynamic response function (‘hrf’).</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##     stim   task ISI run onset</span></span>
-<span><span class="co">## 1   tool ignore   6   1     6</span></span>
-<span><span class="co">## 2   tool attend   4   1    12</span></span>
-<span><span class="co">## 3   face ignore   6   1    20</span></span>
-<span><span class="co">## 4 object ignore   3   1    25</span></span>
-<span><span class="co">## 5   face ignore   3   1    30</span></span>
-<span><span class="co">## 6   tool ignore   4   1    36</span></span></code></pre>
+<span><span class="co">## 1   face ignore   6   1     6</span></span>
+<span><span class="co">## 2   tool ignore   3   1    11</span></span>
+<span><span class="co">## 3   tool attend   5   1    18</span></span>
+<span><span class="co">## 4 object attend   4   1    24</span></span>
+<span><span class="co">## 5   face attend   5   1    31</span></span>
+<span><span class="co">## 6 object ignore   3   1    36</span></span></code></pre>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">## create a 'sampling_frame' describing the temporal outline of the scan consisting of 70 images collected every once every 2 seconds.</span></span>
 <span><span class="va">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
 <span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span>blocklens<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>,<span class="fl">100</span><span class="op">)</span>, <span class="va">TR</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">## create the event model d</span></span>
-<span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span>, <span class="va">task</span><span class="op">)</span>, data<span class="op">=</span><span class="va">design</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] "onset"           "hrf(stim, task)"</span></span></code></pre>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## event_model </span></span>
-<span><span class="co">##   onset ~ hrf(stim, task) </span></span>
-<span><span class="co">##   Num Terms 1 </span></span>
-<span><span class="co">##   Num Events:  64 </span></span>
-<span><span class="co">##   Num Columns:  8 </span></span>
-<span><span class="co">##   Num Blocks:  2 </span></span>
+<span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span>, <span class="va">task</span><span class="op">)</span>, data<span class="op">=</span><span class="va">design</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">## ╔══════════════════════════════════════════╗</span></span>
+<span><span class="co">## ║           fMRI Event Model               ║</span></span>
+<span><span class="co">## ╚══════════════════════════════════════════╝</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Term: 1  fmri_term:  convolved_term </span></span>
-<span><span class="co">##    Term Name:  stim:task </span></span>
-<span><span class="co">##    Formula:   ~ (stim:task - 1) </span></span>
-<span><span class="co">##    Num Events:  64 </span></span>
-<span><span class="co">##    Num Rows:  200 </span></span>
-<span><span class="co">##    Num Columns:  8 </span></span>
-<span><span class="co">##    Conditions:  stim[face]:task[attend] stim[object]:task[attend] stim[scene]:task[attend] stim[tool]:task[attend] stim[face]:task[ignore] stim[object]:task[ignore] stim[scene]:task[ignore] stim[tool]:task[ignore] </span></span>
-<span><span class="co">##    Term Types:  event_factor event_factor</span></span></code></pre>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<span><span class="co">##  Model Formula:</span></span>
+<span><span class="co">##    <span style="color: #00BBBB;">onset ~ hrf(stim, task)</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 📈 Model Summary:</span></span>
+<span><span class="co">##   • Number of Terms: <span style="color: #BBBB00;">1</span> </span></span>
+<span><span class="co">##   • Total Events: <span style="color: #BBBB00;">64</span> </span></span>
+<span><span class="co">##   • Design Matrix Columns: <span style="color: #BBBB00;">8</span> </span></span>
+<span><span class="co">##   • Number of Blocks: <span style="color: #BBBB00;">2</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 📋 Event Table Preview:</span></span>
+<span><span class="co">##   • Variables: <span style="color: #00BB00;">stim, task, ISI, run, onset</span> </span></span>
+<span><span class="co">##   stim   task ISI run onset</span></span>
+<span><span class="co">## 1 face ignore   6   1     6</span></span>
+<span><span class="co">## 2 tool ignore   3   1    11</span></span>
+<span><span class="co">## 3 tool attend   5   1    18</span></span>
+<span><span class="co">##   ... ( 61  more rows )</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 🔍 Model Terms:</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Term <span style="color: #0000BB;">1</span> : <span style="color: #BB00BB;">stim..task</span> </span></span>
+<span><span class="co">##     • Conditions: <span style="color: #00BB00;">stim[face]:task[attend], stim[object]:task[attend], stim[scene]:task[attend], stim[tool]:task[attend], stim[face]:task[ignore], stim[object]:task[ignore], stim[scene]:task[ignore], stim[tool]:task[ignore]</span> </span></span>
+<span><span class="co">##     • HRF Type: <span style="color: #BBBB00;">spmg1</span> </span></span>
+<span><span class="co">##     • Basis Functions: <span style="color: #BBBB00;">1</span></span></span></code></pre>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
 <p><img src="a_04_event_models_files/figure-html/unnamed-chunk-9-1.png" width="672"></p>
 </div>
 <div class="section level2">
 <h2 id="an-event-related-design-with-an-amplitude-modulated-variable">An event-related design with an amplitude-modulated variable<a class="anchor" aria-label="anchor" href="#an-event-related-design-with-an-amplitude-modulated-variable"></a>
 </h2>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
 <span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span>blocklens<span class="op">=</span><span class="fl">70</span>, <span class="va">TR</span><span class="op">)</span></span>
 <span><span class="va">simple_design</span><span class="op">$</span><span class="va">RT</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">simple_design</span><span class="op">)</span>, mean<span class="op">=</span><span class="fl">700</span>, sd<span class="op">=</span><span class="fl">100</span><span class="op">)</span><span class="op">)</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span></span>
 <span></span>
 <span></span>
 <span><span class="co">## create the event model d</span></span>
-<span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">RT</span><span class="op">)</span>, data<span class="op">=</span><span class="va">simple_design</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] "onset"     "hrf(stim)" "hrf(RT)"</span></span></code></pre>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## event_model </span></span>
-<span><span class="co">##   onset ~ hrf(stim) + hrf(RT) </span></span>
-<span><span class="co">##   Num Terms 2 </span></span>
-<span><span class="co">##   Num Events:  16 </span></span>
-<span><span class="co">##   Num Columns:  5 </span></span>
-<span><span class="co">##   Num Blocks:  1 </span></span>
+<span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">RT</span><span class="op">)</span>, data<span class="op">=</span><span class="va">simple_design</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">## ╔══════════════════════════════════════════╗</span></span>
+<span><span class="co">## ║           fMRI Event Model               ║</span></span>
+<span><span class="co">## ╚══════════════════════════════════════════╝</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Term: 1  fmri_term:  convolved_term </span></span>
-<span><span class="co">##    Term Name:  stim </span></span>
-<span><span class="co">##    Formula:   ~ (stim - 1) </span></span>
-<span><span class="co">##    Num Events:  16 </span></span>
-<span><span class="co">##    Num Rows:  70 </span></span>
-<span><span class="co">##    Num Columns:  4 </span></span>
-<span><span class="co">##    Conditions:  stim[face] stim[object] stim[scene] stim[tool] </span></span>
-<span><span class="co">##    Term Types:  event_factor</span></span>
+<span><span class="co">##  Model Formula:</span></span>
+<span><span class="co">##    <span style="color: #00BBBB;">onset ~ hrf(stim) + hrf(RT)</span> </span></span>
 <span><span class="co">## </span></span>
+<span><span class="co">## 📈 Model Summary:</span></span>
+<span><span class="co">##   • Number of Terms: <span style="color: #BBBB00;">2</span> </span></span>
+<span><span class="co">##   • Total Events: <span style="color: #BBBB00;">16</span> </span></span>
+<span><span class="co">##   • Design Matrix Columns: <span style="color: #BBBB00;">5</span> </span></span>
+<span><span class="co">##   • Number of Blocks: <span style="color: #BBBB00;">1</span> </span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Term: 2  fmri_term:  convolved_term </span></span>
-<span><span class="co">##    Term Name:  RT </span></span>
-<span><span class="co">##    Formula:   ~ (RT - 1) </span></span>
-<span><span class="co">##    Num Events:  16 </span></span>
-<span><span class="co">##    Num Rows:  70 </span></span>
-<span><span class="co">##    Num Columns:  1 </span></span>
-<span><span class="co">##    Conditions:  RT </span></span>
-<span><span class="co">##    Term Types:  event_variable</span></span></code></pre>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<span><span class="co">## 📋 Event Table Preview:</span></span>
+<span><span class="co">##   • Variables: <span style="color: #00BB00;">stim, ISI, run, trial, onset, RT</span> </span></span>
+<span><span class="co">##     stim ISI run trial onset         RT</span></span>
+<span><span class="co">## 1   face   6   1     1     6 -0.4982170</span></span>
+<span><span class="co">## 2   tool   4   1     2    12  0.6717969</span></span>
+<span><span class="co">## 3 object   4   1     3    18 -0.1475667</span></span>
+<span><span class="co">##   ... ( 13  more rows )</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 🔍 Model Terms:</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Term <span style="color: #0000BB;">1</span> : <span style="color: #BB00BB;">stim</span> </span></span>
+<span><span class="co">##     • Conditions: <span style="color: #00BB00;">stim[face], stim[object], stim[scene], stim[tool]</span> </span></span>
+<span><span class="co">##     • HRF Type: <span style="color: #BBBB00;">spmg1</span> </span></span>
+<span><span class="co">##     • Basis Functions: <span style="color: #BBBB00;">1</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Term <span style="color: #0000BB;">2</span> : <span style="color: #BB00BB;">RT</span> </span></span>
+<span><span class="co">##     • Conditions: <span style="color: #00BB00;">RT</span> </span></span>
+<span><span class="co">##     • HRF Type: <span style="color: #BBBB00;">spmg1</span> </span></span>
+<span><span class="co">##     • Basis Functions: <span style="color: #BBBB00;">1</span></span></span></code></pre>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">emodel</span>, <span class="st">"RT"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="a_04_event_models_files/figure-html/unnamed-chunk-10-1.png" width="672"></p>
 </div>
@@ -302,7 +334,7 @@ conditions, and hemodynamic response function (‘hrf’).</p>
 <h2 id="an-event-related-design-with-an-amplitude-modulated-variable-crossed-with-factor">An event-related design with an amplitude-modulated variable crossed
 with factor<a class="anchor" aria-label="anchor" href="#an-event-related-design-with-an-amplitude-modulated-variable-crossed-with-factor"></a>
 </h2>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
 <span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span>blocklens<span class="op">=</span><span class="fl">70</span>, <span class="va">TR</span><span class="op">)</span></span>
 <span></span>
@@ -310,92 +342,107 @@ with factor<a class="anchor" aria-label="anchor" href="#an-event-related-design-
 <span><span class="va">simple_design</span><span class="op">$</span><span class="va">RT</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">simple_design</span><span class="op">)</span>, mean<span class="op">=</span><span class="fl">700</span>, sd<span class="op">=</span><span class="fl">100</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">## create the event model d</span></span>
-<span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span>, <span class="va">RT</span><span class="op">)</span>, data<span class="op">=</span><span class="va">simple_design</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] "onset"         "hrf(stim)"     "hrf(stim, RT)"</span></span></code></pre>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## event_model </span></span>
-<span><span class="co">##   onset ~ hrf(stim) + hrf(stim, RT) </span></span>
-<span><span class="co">##   Num Terms 2 </span></span>
-<span><span class="co">##   Num Events:  16 </span></span>
-<span><span class="co">##   Num Columns:  8 </span></span>
-<span><span class="co">##   Num Blocks:  1 </span></span>
+<span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span>, <span class="va">RT</span><span class="op">)</span>, data<span class="op">=</span><span class="va">simple_design</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">## ╔══════════════════════════════════════════╗</span></span>
+<span><span class="co">## ║           fMRI Event Model               ║</span></span>
+<span><span class="co">## ╚══════════════════════════════════════════╝</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Term: 1  fmri_term:  convolved_term </span></span>
-<span><span class="co">##    Term Name:  stim </span></span>
-<span><span class="co">##    Formula:   ~ (stim - 1) </span></span>
-<span><span class="co">##    Num Events:  16 </span></span>
-<span><span class="co">##    Num Rows:  70 </span></span>
-<span><span class="co">##    Num Columns:  4 </span></span>
-<span><span class="co">##    Conditions:  stim[face] stim[object] stim[scene] stim[tool] </span></span>
-<span><span class="co">##    Term Types:  event_factor</span></span>
+<span><span class="co">##  Model Formula:</span></span>
+<span><span class="co">##    <span style="color: #00BBBB;">onset ~ hrf(stim) + hrf(stim, RT)</span> </span></span>
 <span><span class="co">## </span></span>
+<span><span class="co">## 📈 Model Summary:</span></span>
+<span><span class="co">##   • Number of Terms: <span style="color: #BBBB00;">2</span> </span></span>
+<span><span class="co">##   • Total Events: <span style="color: #BBBB00;">16</span> </span></span>
+<span><span class="co">##   • Design Matrix Columns: <span style="color: #BBBB00;">8</span> </span></span>
+<span><span class="co">##   • Number of Blocks: <span style="color: #BBBB00;">1</span> </span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Term: 2  fmri_term:  convolved_term </span></span>
-<span><span class="co">##    Term Name:  stim:RT </span></span>
-<span><span class="co">##    Formula:   ~ (stim:RT - 1) </span></span>
-<span><span class="co">##    Num Events:  16 </span></span>
-<span><span class="co">##    Num Rows:  70 </span></span>
-<span><span class="co">##    Num Columns:  4 </span></span>
-<span><span class="co">##    Conditions:  stim[face]:RT stim[object]:RT stim[scene]:RT stim[tool]:RT </span></span>
-<span><span class="co">##    Term Types:  event_factor event_variable</span></span></code></pre>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<span><span class="co">## 📋 Event Table Preview:</span></span>
+<span><span class="co">##   • Variables: <span style="color: #00BB00;">stim, ISI, run, trial, onset, RT</span> </span></span>
+<span><span class="co">##     stim ISI run trial onset         RT</span></span>
+<span><span class="co">## 1   face   6   1     1     6 -0.4525721</span></span>
+<span><span class="co">## 2   tool   4   1     2    12  1.2814768</span></span>
+<span><span class="co">## 3 object   4   1     3    18  0.8778785</span></span>
+<span><span class="co">##   ... ( 13  more rows )</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 🔍 Model Terms:</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Term <span style="color: #0000BB;">1</span> : <span style="color: #BB00BB;">stim</span> </span></span>
+<span><span class="co">##     • Conditions: <span style="color: #00BB00;">stim[face], stim[object], stim[scene], stim[tool]</span> </span></span>
+<span><span class="co">##     • HRF Type: <span style="color: #BBBB00;">spmg1</span> </span></span>
+<span><span class="co">##     • Basis Functions: <span style="color: #BBBB00;">1</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Term <span style="color: #0000BB;">2</span> : <span style="color: #BB00BB;">stim..RT</span> </span></span>
+<span><span class="co">##     • Conditions: <span style="color: #00BB00;">stim[face]:RT, stim[object]:RT, stim[scene]:RT, stim[tool]:RT</span> </span></span>
+<span><span class="co">##     • HRF Type: <span style="color: #BBBB00;">spmg1</span> </span></span>
+<span><span class="co">##     • Basis Functions: <span style="color: #BBBB00;">1</span></span></span></code></pre>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">emodel</span>, <span class="st">"stim:RT"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="a_04_event_models_files/figure-html/unnamed-chunk-11-1.png" width="672"></p>
 </div>
 <div class="section level2">
 <h2 id="trialwise-event-model-to-construct-beta-series-estimates">Trialwise event model to construct “beta-series” estimates<a class="anchor" aria-label="anchor" href="#trialwise-event-model-to-construct-beta-series-estimates"></a>
 </h2>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
 <span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span>blocklens<span class="op">=</span><span class="fl">70</span>, <span class="va">TR</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># create the event model d</span></span>
-<span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/trialwise.html">trialwise</a></span><span class="op">(</span><span class="op">)</span>, data<span class="op">=</span><span class="va">simple_design</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] "onset"       "trialwise()"</span></span></code></pre>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## event_model </span></span>
-<span><span class="co">##   onset ~ trialwise() </span></span>
-<span><span class="co">##   Num Terms 1 </span></span>
-<span><span class="co">##   Num Events:  16 </span></span>
-<span><span class="co">##   Num Columns:  16 </span></span>
-<span><span class="co">##   Num Blocks:  1 </span></span>
+<span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/trialwise.html">trialwise</a></span><span class="op">(</span><span class="op">)</span>, data<span class="op">=</span><span class="va">simple_design</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame<span class="op">=</span><span class="va">sframe</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">## ╔══════════════════════════════════════════╗</span></span>
+<span><span class="co">## ║           fMRI Event Model               ║</span></span>
+<span><span class="co">## ╚══════════════════════════════════════════╝</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Term: 1  fmri_term:  trialwise_convolved_term </span></span>
-<span><span class="co">##    Term Name:  trialwise </span></span>
-<span><span class="co">##    Formula:   ~ (trialwise - 1) </span></span>
-<span><span class="co">##    Num Events:  16 </span></span>
-<span><span class="co">##    Num Rows:  70 </span></span>
-<span><span class="co">##    Num Columns:  16 </span></span>
-<span><span class="co">##    Conditions:  trialwise[01] trialwise[02] trialwise[03] trialwise[04] trialwise[05] trialwise[06] trialwise[07] trialwise[08] trialwise[09] trialwise[10] trialwise[11] trialwise[12] trialwise[13] trialwise[14] trialwise[15] trialwise[16] </span></span>
-<span><span class="co">##    Term Types:  event_factor</span></span></code></pre>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<span><span class="co">##  Model Formula:</span></span>
+<span><span class="co">##    <span style="color: #00BBBB;">onset ~ trialwise()</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 📈 Model Summary:</span></span>
+<span><span class="co">##   • Number of Terms: <span style="color: #BBBB00;">1</span> </span></span>
+<span><span class="co">##   • Total Events: <span style="color: #BBBB00;">16</span> </span></span>
+<span><span class="co">##   • Design Matrix Columns: <span style="color: #BBBB00;">16</span> </span></span>
+<span><span class="co">##   • Number of Blocks: <span style="color: #BBBB00;">1</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 📋 Event Table Preview:</span></span>
+<span><span class="co">##   • Variables: <span style="color: #00BB00;">stim, ISI, run, trial, onset, RT</span> </span></span>
+<span><span class="co">##     stim ISI run trial onset         RT</span></span>
+<span><span class="co">## 1   face   6   1     1     6 -0.4525721</span></span>
+<span><span class="co">## 2   tool   4   1     2    12  1.2814768</span></span>
+<span><span class="co">## 3 object   4   1     3    18  0.8778785</span></span>
+<span><span class="co">##   ... ( 13  more rows )</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## 🔍 Model Terms:</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Term <span style="color: #0000BB;">1</span> : <span style="color: #BB00BB;">trialwise</span> </span></span>
+<span><span class="co">##     • Conditions: <span style="color: #00BB00;">trialwise[01], trialwise[02], trialwise[03], trialwise[04], trialwise[05], trialwise[06], trialwise[07], trialwise[08], trialwise[09], trialwise[10], trialwise[11], trialwise[12], trialwise[13], trialwise[14], trialwise[15], trialwise[16]</span> </span></span>
+<span><span class="co">##     • HRF Type: <span style="color: #BBBB00;">spmg1</span> </span></span>
+<span><span class="co">##     • Basis Functions: <span style="color: #BBBB00;">1</span></span></span></code></pre>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">emodel</span>, <span class="st">"trialwise"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="a_04_event_models_files/figure-html/unnamed-chunk-12-1.png" width="672"></p>
 </div>
-  </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
 </div>
 
 
 
     <footer><div class="pkgdown-footer-left">
-  <p></p>
-<p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley Buchsbaum</a>.</p>
+  <p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p></p>
-<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.7.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
 </div>
 
     </footer>
 </div>
 
-  
 
-  
+
+
 
   </body>
 </html>

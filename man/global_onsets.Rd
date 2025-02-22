@@ -2,22 +2,66 @@
 % Please edit documentation in R/all_generic.R
 \name{global_onsets}
 \alias{global_onsets}
-\title{return the "global" onsets of an object.}
+\title{Return the global onsets of an object}
 \usage{
 global_onsets(x, onsets, ...)
 }
 \arguments{
-\item{x}{the object}
+\item{x}{The object containing timing information (typically a sampling_frame)}
 
-\item{onsets}{the relative onset times of the events}
+\item{onsets}{A numeric vector of relative onset times within each run/block}
 
-\item{...}{extra args}
+\item{...}{Additional arguments passed to methods. Common arguments include:
+\item{blockids}{Numeric vector specifying which block/run each onset belongs to}
+\item{TR}{Numeric; repetition time in seconds}}
+}
+\value{
+A numeric vector of global onset times where:
+\itemize{
+\item Each onset is adjusted by the cumulative duration of previous runs
+\item Times are in the same units as the input onsets (typically seconds)
+\item NA is returned for onsets that exceed their block duration
+}
 }
 \description{
-global onsets are defined as cumulative time over runs, i.e. it does not reset to zero for each run.
+Convert relative onset times to global (cumulative) onset times across runs. Global onsets
+are defined as cumulative time over runs, meaning they do not reset to zero for each run.
+This is useful for:
+\itemize{
+\item Converting run-specific onsets to experiment-wide timings
+\item Aligning events across multiple runs
+\item Computing temporal distances between events in different runs
+}
+}
+\examples{
+# Create a sampling frame with three runs
+sframe <- sampling_frame(
+  blocklens = c(100, 100, 100),  # 100 scans per run
+  TR = 2                         # 2 seconds per scan
+)
+
+# Define events in each run
+run_onsets <- c(10, 20, 30)     # Events at 10s, 20s, 30s
+run_ids <- c(1, 2, 3)           # One event per run
+
+# Convert to global onsets
+global_times <- global_onsets(
+  sframe,
+  onsets = run_onsets,
+  blockids = run_ids
+)
+# Returns: c(10, 220, 430)
+# Because:
+#  - Run 1: 10s
+#  - Run 2: 20s + (100 scans * 2s) = 220s
+#  - Run 3: 30s + (200 scans * 2s) = 430s
 }
 \seealso{
-Other global_onsets: 
-\code{\link{global_onsets.sampling_frame}()}
+\code{\link[=sampling_frame]{sampling_frame()}}, \code{\link[=event_model]{event_model()}}
+
+Other timing: 
+\code{\link{durations}()},
+\code{\link{onsets}()},
+\code{\link{samples}()}
 }
-\concept{global_onsets}
+\concept{timing}

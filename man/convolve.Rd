@@ -2,24 +2,61 @@
 % Please edit documentation in R/all_generic.R
 \name{convolve}
 \alias{convolve}
-\title{convolve}
+\title{Convolve a term with a hemodynamic response function}
 \usage{
 convolve(x, hrf, sampling_frame, ...)
 }
 \arguments{
-\item{x}{an event sequence}
+\item{x}{The event sequence (typically an event_term or event_model)}
 
-\item{hrf}{a hemodynamic response function}
+\item{hrf}{The hemodynamic response function to use for convolution}
 
-\item{sampling_frame}{the time series grid over which to sample the function.}
+\item{sampling_frame}{The time series grid over which to sample the convolved function}
 
-\item{...}{extra args}
+\item{...}{Additional arguments passed to methods. Common arguments include:
+\item{drop.empty}{Logical; if TRUE, empty events are dropped}
+\item{summate}{Logical; if TRUE, sum the convolved HRF over event durations}
+\item{precision}{Numeric; precision of HRF sampling (default: 0.3)}}
+}
+\value{
+A tibble containing the convolved design matrix, with columns for each condition
 }
 \description{
-This function convolves an event sequence \code{x} with a hemodynamic response function \code{hrf}
-over a specified time series grid \code{sampling_frame}. It is a generic function that dispatches
-to the appropriate method
+This function convolves an event sequence with a hemodynamic response function (HRF)
+over a specified time series grid. The convolution models the expected BOLD response
+to the events. For event-related designs, each event is convolved with the HRF and
+the results are summed. For block designs, the duration of each event is taken into
+account during convolution.
 }
-\details{
-Convolve a term \code{x} with a hemodynamic response function (HRF) over a \code{sampling_frame}.
+\examples{
+# Create a simple event-related design
+event_data <- data.frame(
+  condition = factor(c("A", "B", "A", "B")),
+  onsets = c(1, 10, 20, 30),
+  run = c(1, 1, 1, 1)
+)
+
+# Create a sampling frame
+sframe <- sampling_frame(blocklens = 50, TR = 2)
+
+# Create an event term
+eterm <- event_term(
+  list(condition = event_data$condition),
+  onsets = event_data$onsets,
+  blockids = event_data$run
+)
+
+# Convolve with canonical HRF
+convolved <- convolve(eterm, HRF_SPMG1, sframe)
+
+# Convolve with multiple basis functions
+convolved_fourier <- convolve(
+  eterm, 
+  getHRF("fourier", nbasis = 2),
+  sframe
+)
 }
+\seealso{
+\code{\link[=HRF_SPMG1]{HRF_SPMG1()}}, \code{\link[=event_term]{event_term()}}, \code{\link[=sampling_frame]{sampling_frame()}}
+}
+\concept{convolution}

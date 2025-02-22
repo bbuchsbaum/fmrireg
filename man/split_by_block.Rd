@@ -2,15 +2,65 @@
 % Please edit documentation in R/all_generic.R
 \name{split_by_block}
 \alias{split_by_block}
-\title{split_by_block}
+\title{Split variables by block ID}
 \usage{
 split_by_block(x, ...)
 }
 \arguments{
-\item{x}{the object}
+\item{x}{The object containing data to split (typically a sampling_frame or dataset)}
 
-\item{...}{extra args}
+\item{...}{Additional arguments passed to methods}
+
+\item{vals}{The values to split by block (if not contained in x)}
+}
+\value{
+A list where each element contains data from one block:
+\itemize{
+\item List length equals number of blocks
+\item Each element contains values from one block
+\item Order matches the original block sequence
+}
 }
 \description{
-split variables by block id
+Split a vector or matrix of values into separate pieces based on block/run IDs.
+This function is useful for:
+\itemize{
+\item Separating data into individual runs
+\item Processing blocks independently
+\item Analyzing run-specific patterns
 }
+}
+\examples{
+# Create a sampling frame with multiple runs
+sframe <- sampling_frame(
+  blocklens = c(50, 50, 50),  # 3 runs of 50 scans each
+  TR = 2
+)
+
+# Create some example data
+data_values <- rnorm(150)  # 150 values (50 per run)
+
+# Split data by run
+run_data <- split_by_block(sframe, data_values)
+# Returns list with 3 elements, each containing 50 values
+
+# Create matrix dataset
+X <- matrix(rnorm(150 * 10), 150, 10)  # 150 timepoints, 10 voxels
+dset <- matrix_dataset(
+  X,
+  TR = 2,
+  run_length = c(50, 50, 50)
+)
+
+# Split matrix data by run
+run_matrices <- split_by_block(dset)
+# Returns list with 3 matrices, each 50 x 10
+}
+\seealso{
+\code{\link[=sampling_frame]{sampling_frame()}}, \code{\link[=blockids]{blockids()}}, \code{\link[=blocklens]{blocklens()}}
+
+Other block_operations: 
+\code{\link{blockids}()},
+\code{\link{blocklens}()}
+}
+\concept{block_operations}
