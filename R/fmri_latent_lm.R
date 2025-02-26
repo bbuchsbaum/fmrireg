@@ -173,7 +173,7 @@ coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts"), recon=
 #' @return A tibble containing the standard error values.
 #' @seealso fmri_latent_lm
 #' @importFrom Matrix rowSums t
-standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE) {
+standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE,...) {
   type <- match.arg(type)
  
   if (!recon) {

@@ -53,5 +53,6 @@ df <- data.frame(onset = seq(1, 100, by = 10),
 sframe <- sampling_frame(blocklens = c(50, 50), TR = 2)
 # Construct an event model using a formula.
 # Here the left-hand side represents onsets and the right-hand side contains HRF terms.
-ev_model <- event_model(x = onset ~ hrf(x) + hrf(y), data = df, block = ~ run, sampling_frame = sframe)
+ev_model <- event_model(x = onset ~ hrf(x) + hrf(y), data = df, 
+            block = ~ run, sampling_frame = sframe)
 }

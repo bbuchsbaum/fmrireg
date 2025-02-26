@@ -48,11 +48,13 @@ Default value is 0 (no duration).}
 }
 \value{
 A list containing the following elements:
+\describe{
 \item{formula}{The formula used to create the model.}
 \item{design}{The design matrix for the model, with one row per time point and one column per predictor variable.}
 \item{block_indices}{A list of indices defining the start and end time points of each block.}
 \item{baseline}{A vector containing the estimated baseline fMRI signal level for each block.}
 \item{dur}{A vector containing the duration (in seconds) of each event or block in the design.}
+}
 }
 \description{
 This function creates an event-based fMRI regression model, represented as a data structure.

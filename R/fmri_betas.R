@@ -9,10 +9,69 @@ ridge_betas <- function(X, Y, penalty_factor=rep(1,ncol(X)), lambda=.01) {
 
 #' @noRd
 #' @keywords internal
+fracridge_betas <- function(X, Y, fracs=0.5) {
+  # Ensure X is a proper numeric matrix
+  if (!is.matrix(X)) {
+    X <- as.matrix(X)
+  }
+  
+  # Ensure Y is numeric
+  if (!is.vector(Y) && !is.matrix(Y)) {
+    Y <- as.numeric(Y)
+  }
+  
+  # Add column names if missing (needed for dimnames in fracridge)
+  if (is.null(colnames(X))) {
+    colnames(X) <- paste0("X", seq_len(ncol(X)))
+  }
+  
+  # Use the fracridge implementation from fracridge.R
+  tryCatch({
+    fit <- fracridge(X, Y, fracs=fracs)
+    
+    # Extract coefficients for the specified fraction
+    coefs_array <- fit$coef
+    
+    # Handle different dimensions based on input shape
+    if (is.array(coefs_array) && length(dim(coefs_array)) == 3) {
+      # Extract the coefficients for the first (and only) fraction
+      return(coefs_array[, 1, ])
+    } else if (is.matrix(coefs_array)) {
+      # For matrix case
+      return(coefs_array)
+    } else {
+      # For vector case or any other
+      return(as.numeric(coefs_array))
+    }
+  }, error = function(e) {
+    # Direct implementation as fallback
+    message("Falling back to direct ridge solution: ", e$message)
+    
+    # Direct implementation with proper fractional approach
+    svd_result <- svd(X)
+    U <- svd_result$u
+    S <- svd_result$d
+    V <- svd_result$v
+    
+    # Compute OLS coefficients in rotated space
+    UTy <- crossprod(U, Y)
+    beta_ols_rot <- UTy / S
+    
+    # Scale by appropriate fraction
+    scales <- S^2 / (S^2 + (1-fracs)/fracs * mean(S^2))
+    beta_frac <- V %*% (scales * beta_ols_rot)
+    
+    return(beta_frac)
+  })
+}
+
+
+#' @noRd
+#' @keywords internal
 pls_betas <- function(X, Y, ncomp=3) {
   with_package("pls")
   dx <- list(X=as.matrix(X), Y=Y)
-  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="simpls", scale=TRUE, maxit=500)
+  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="simpls", scale=TRUE, maxit=1500)
   coef(fit, ncomp=ncomp)[,,1]
 }
 
@@ -22,7 +81,7 @@ pls_betas <- function(X, Y, ncomp=3) {
 pls_global_betas <- function(X, Y, ncomp=3) {
   with_package("pls")
   dx <- list(X=as.matrix(X), Y=Y)
-  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="widekernelpls", scale=TRUE, maxit=500)
+  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="widekernelpls", scale=TRUE, maxit=1500)
   coef(fit, ncomp=ncomp)[,,1]
 }
 
@@ -46,16 +105,120 @@ slm_betas <- function(X, Y) {
 }
 
 
-#' @noRd
 #' @keywords internal
+#' @noRd
 mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
-  with_package("rrBLUP")  
-  fit <- rrBLUP::mixed.solve(Y, Z=X[,ran_ind], X=X[,c(fixed_ind)], bounds=c(c(1e-05, .2)))
-  c(fit$u, fit$b)
+  # Ensure X is a matrix
+  X <- as.matrix(X)
+  
+  # Check dimensions and prevent 0-dim matrices
+  if (ncol(X) == 0 || nrow(X) == 0) {
+    stop("Design matrix X has zero rows or columns")
+  }
+  
+  # Ensure ran_ind has proper values
+  if (length(ran_ind) == 0) {
+    stop("No random effect indices specified")
+  }
+  
+  # Handle case when fixed_ind is NULL
+  if (is.null(fixed_ind)) {
+    fixed_ind <- integer(0)  # Empty integer vector
+  }
+  
+  # Check if indices are out of bounds
+  if (max(c(ran_ind, fixed_ind)) > ncol(X)) {
+    stop("Index out of bounds: indices exceed number of columns in X")
+  }
+  
+  # Ensure Y is a vector
+  if (!is.vector(Y)) {
+    Y <- as.vector(Y)
+  }
+  
+  # Try to use rrBLUP if available
+  tryCatch({
+    with_package("rrBLUP")
+    
+    # If fixed_ind is empty, use a minimal X matrix (intercept only)
+    X_fixed <- if (length(fixed_ind) == 0) {
+      matrix(1, nrow = nrow(X), ncol = 1)
+    } else {
+      X[, fixed_ind, drop = FALSE]
+    }
+    
+    
+    fit <- rrBLUP::mixed.solve(Y, 
+                               Z = X[, ran_ind, drop = FALSE], 
+                               X = X_fixed) 
+                               #bounds = c(1e-07, 0.5))
+    
+    # Return results, handling the case where fixed_ind is empty
+    if (length(fixed_ind) == 0) {
+      return(fit$u)  # Only return random effects
+    } else {
+      return(c(fit$u, fit$b))  # Return both random and fixed effects
+    }
+  }, 
+  error = function(e) {
+    # If rrBLUP fails, try using our C++ implementation if available
+    message("rrBLUP mixed.solve failed, attempting alternative: ", e$message)
+    
+    if (requireNamespace("Rcpp", quietly = TRUE) && 
+        exists("mixed_solve_cpp", mode = "function")) {
+      
+      # Use the C++ implementation with proper input validation
+      X_fixed <- if (length(fixed_ind) == 0) {
+        matrix(1, nrow = nrow(X), ncol = 1)
+      } else {
+        X[, fixed_ind, drop = FALSE]
+      }
+      
+      fit <- tryCatch({
+        mixed_solve_cpp(y = Y, 
+                        Z = X[, ran_ind, drop = FALSE], 
+                        X = X_fixed)
+      }, error = function(e2) {
+        # If even that fails, use a fallback
+        message("C++ mixed model solver also failed: ", e2$message)
+        if (length(fixed_ind) == 0) {
+          return(list(u = rep(0, length(ran_ind))))
+        } else {
+          return(list(
+            u = rep(0, length(ran_ind)),
+            beta = rep(0, length(fixed_ind))
+          ))
+        }
+      })
+      
+      # Return results based on whether fixed_ind is empty
+      if (length(fixed_ind) == 0) {
+        return(fit$u)
+      } else {
+        return(c(fit$u, fit$beta))
+      }
+    } else {
+      # Last resort - return zeros
+      message("No alternative mixed model solver available")
+      if (length(fixed_ind) == 0) {
+        return(rep(0, length(ran_ind)))
+      } else {
+        return(rep(0, length(c(ran_ind, fixed_ind))))
+      }
+    }
+  })
 }
 
 mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
-  fit <- mixed_solve_internal(as.matrix(Y), Z=X[,ran_ind,drop=FALSE], X=X[,c(fixed_ind),drop=FALSE],  bounds=c(c(1e-05, .2)))
+  # Handle case when fixed_ind is NULL by using a constant
+  X_fixed <- if (is.null(fixed_ind) || length(fixed_ind) == 0) {
+    matrix(1, nrow = nrow(X), ncol = 1)
+  } else {
+    X[, fixed_ind, drop = FALSE]
+  }
+  
+  fit <- mixed_solve_internal(as.matrix(Y), Z = X[, ran_ind, drop = FALSE], 
+                             X = X_fixed, bounds = c(1e-05, .2))
   c(fit$u, fit$b)
 }
 
@@ -76,6 +239,7 @@ mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
 #' @param hrf_basis A matrix of basis functions for the HRF (default: NULL).
 #' @param hrf_ref A reference HRF vector for initializing and constraining the HRF estimation (default: NULL).
 #' @param maxit Maximum number of iterations for the optimization (default: 100).
+#' @param fracs Fraction of ridge regression to use (default: 0.5).
 #' @param ... Additional arguments passed to the estimation method.
 #'
 #' @return A list of class "fmri_betas" containing the following components:
@@ -111,7 +275,8 @@ mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
 #' facedes$frun <- factor(facedes$run)
 #' scans <- paste0("rscan0", 1:6, ".nii")
 #'
-#' dset <- fmri_dataset(scans=scans, mask="mask.nii", TR=1.5, run_length=rep(436,6), event_table=facedes)
+#' dset <- fmri_dataset(scans=scans, mask="mask.nii", TR=1.5, 
+#'         run_length=rep(436,6), event_table=facedes)
 #' fixed = onset ~ hrf(run)
 #' ran = onset ~ trialwise()
 #' block = ~ run
@@ -125,8 +290,8 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
                                         basemod = NULL,
                                         hrf_basis = NULL,
                                         hrf_ref = NULL,
-                                        maxit = 100,
-                                        fracs=.5,
+                                        maxit = 1000,
+                                        fracs = 0.5,
                                         ...) {
   method <- match.arg(method)
   dset <- x
@@ -149,7 +314,9 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
   }
   
   bdes <- gen_beta_design(fixed, ran, block, bmod, dset, method = method)
-  betas <- run_estimate_betas(bdes, dset, method, hrf_basis = hrf_basis, hrf_ref = hrf_ref, block=block, maxit = maxit, ...)
+  betas <- run_estimate_betas(bdes, dset, method, hrf_basis = hrf_basis, 
+                              hrf_ref = hrf_ref, block=block, maxit = maxit, fracs=fracs,
+                              ...)
   
   # Check dimensions before indexing
   message(sprintf("beta_matrix dimensions: %d x %d", 
@@ -185,7 +352,17 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
 
 
 #' @keywords internal
-run_estimate_betas <- function(bdes, dset, method, hrf_basis = NULL, hrf_ref = NULL, block, maxit = 100, ncomp=4, ...) {
+run_estimate_betas <- function(bdes, dset, method, 
+                               hrf_basis = NULL, 
+                               hrf_ref = NULL, 
+                               block, maxit = 100, 
+                               ncomp=4, fracs=.5,
+                               ...) {
+  method <- match.arg(method, c("r1_glms", "r1", "lss", "lss_naive", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge"))
+  
+  # Capture ... into dotargs
+  dotargs <- list(...)
+  
   get_X <- function() {
     X <- if (is.null(bdes$fixed)) bdes$dmat_ran else cbind(bdes$dmat_ran, bdes$dmat_fixed)
     Base <- as.matrix(bdes$dmat_base)
@@ -228,19 +405,48 @@ run_estimate_betas <- function(bdes, dset, method, hrf_basis = NULL, hrf_ref = N
     xdat <- get_X()
     estimate_r1(dset, xdat, hrf_basis, hrf_ref, maxit)
   } else if (method == "lss") {
-    lss_fast(dset, bdes, use_cpp = FALSE)
+    # Estimate random effects using LSS
+    beta_matrix_ran <- lss_fast(dset, bdes, use_cpp = FALSE)
+    
+    # If fixed effects are present, estimate them separately with OLS
+    if (!is.null(bdes$fixed_ind) && length(bdes$fixed_ind) > 0) {
+      # Get data and design matrices
+      data_matrix <- get_data_matrix(dset)
+      mask_idx <- which(get_mask(dset) > 0)
+      vecs <- neuroim2::vectors(data_matrix, subset = mask_idx)
+      
+      # Prepare the full design matrix (base + fixed)
+      X_base_fixed <- cbind(as.matrix(bdes$dmat_base), as.matrix(bdes$dmat_fixed))
+      
+      # Estimate fixed effects with OLS
+      beta_matrix_fixed <- do.call(cbind, furrr::future_map(vecs, function(v) {
+        fit <- lm.fit(X_base_fixed, v)
+        # Extract only the fixed effect coefficients (excluding baseline)
+        coef(fit)[(ncol(bdes$dmat_base) + 1):length(coef(fit))]
+      }))
+      
+      # Combine random and fixed effects into a single beta matrix
+      # Order: [random effects, fixed effects]
+      beta_matrix <- rbind(beta_matrix_ran, beta_matrix_fixed)
+    } else {
+      # No fixed effects, just return random effects
+      beta_matrix <- beta_matrix_ran
+    }
+    
+    list(beta_matrix = beta_matrix, estimated_hrf = NULL)
   } else if (method == "lss_cpp") {
-    lss_fast(dset, bdes, use_cpp = TRUE)
+    beta_matrix <- lss_fast(dset, bdes, use_cpp = TRUE)
+    list(beta_matrix = beta_matrix, estimated_hrf = NULL)
   } else if (method == "pls") {
     vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) >0))
     xdat <- get_X()
    
-    res <-
-      do.call(cbind, furrr::future_map(vecs, function(v) {
+    res <- do.call(cbind, furrr::future_map(vecs, function(v) {
         v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
         pls_betas(xdat$X, v0, ncomp = ncomp)
-      }))
-    list(beta_matrix=as.matrix(res), estimated_hrf=NULL)
+    }))
+    
+    list(beta_matrix = as.matrix(res), estimated_hrf = NULL)
   } else if (method == "pls_global") {
     vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) >0))
     xdat <- get_X()
@@ -259,49 +465,23 @@ run_estimate_betas <- function(bdes, dset, method, hrf_basis = NULL, hrf_ref = N
     Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
     list(beta_matrix=ols_betas(xdat$X, Y0), estimated_hrf=NULL)
   } else if (method == "fracridge") {
-    # ---------------------------------
-    # 1) gather arguments
-    message("Using fractional ridge regression with fraction: ", fracs)
-    if (is.null(fracs)) {
-      fracs <- 1.0  # default to unregularized or minimal ridge
-    }
-    # We will only accept a single fraction for now
-    if (length(fracs) != 1L) {
-      stop("For 'fracridge' method, please supply a single 'fracs' value (e.g. fracs=0.5).")
-    }
-    tol <- dotargs$tol %||% 1e-10
-
-    # 2) build design
+    vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) > 0))
     xdat <- get_X()
-    X <- xdat$X
-    # Y is all voxels
-    Y <- as.matrix(get_data(dset))  # nTime x nVox
-    # 3) partial out baseline
-    Base <- xdat$Base
-    # Residual from baseline
-    Y0 <- resid(lsfit(Base, Y, intercept=FALSE))
-
-    # 4) call fracridge, which can handle multiple columns of Y
-    #    NOTE: fracridge() expects X as nObs x p, Y as nObs x b
-    #    Here, nObs = nrow(X) = nTime, b = nVox. 
-    #    We supply fracs=fracs, tol=tol
-    frfit <- fracridge(X, Y0, fracs=fracs, tol=tol)
-    # frfit$coef is p x 1 x b if we used a single fraction
-    # => dimension is (p, 1, nVox).
-    # so we can drop the middle dimension => p x nVox.
-
-    coefs_3d <- frfit$coef  # array dim: p x 1 x nVox
-    if (length(dim(coefs_3d)) == 3) {
-      beta_matrix <- coefs_3d[, 1, ]  # p x nVox
-    } else {
-      # if single-target or single fraction might also be p x nVox directly
-      beta_matrix <- coefs_3d
+    
+    # Ensure X is properly formatted before processing
+    if (!is.matrix(xdat$X)) {
+      message("Converting design matrix to proper numeric matrix format")
+      xdat$X <- as.matrix(xdat$X)
     }
-    # Done, return betas
-    list(
-      beta_matrix  = beta_matrix, 
-      estimated_hrf= NULL  # or frfit if you want
-    )
+    
+    message("Using fractional ridge regression with fraction: ", fracs)
+    
+    res <- do.call(cbind, furrr::future_map(vecs, function(v) {
+      v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
+      fracridge_betas(xdat$X, v0, fracs = fracs)
+    }))
+    
+    list(beta_matrix=as.matrix(res), estimated_hrf=NULL)
   } else if (method == "lowrank_hrf") {
     rsam <- seq(0, 24, by=.25)
     # 1. Find best HRFs with clustering
@@ -457,11 +637,12 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
 #'
 #' @export
 estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,  
-                                        method=c("r1_glms", "r1", "lss", "lss_naive", "mixed", "pls", "pls_global", "ols"), 
+                                        method=c("r1_glms", "r1", "lss", "lss_naive", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge"), 
                                         basemod=NULL,
                                         hrf_basis = NULL,
                                         hrf_ref = NULL,
-                                        ncomp=4, lambda=.01,...) {
+                                        ncomp=4, lambda=.01,
+                                        fracs=.5, ...) {
   
   method <- match.arg(method)
   dset <- x
@@ -473,22 +654,34 @@ estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,
     basemod
   }
 
+
   bdes <- gen_beta_design(fixed, ran, block, bmod, dset)
-  betas <- run_estimate_betas(bdes, dset, method, ncomp=ncomp)
+  betas <- run_estimate_betas(bdes, dset, method, ncomp=ncomp, fracs=fracs)
   
-  ran <- as.matrix(betas[bdes$ran_ind,,drop=FALSE])
-  fixed <- as.matrix(betas[bdes$fixed_ind,,drop=FALSE])
+  # Access beta_matrix from the list returned by run_estimate_betas
+  beta_matrix <- betas$beta_matrix
+  
+  # Extract random and fixed effects from the beta matrix
+  if (length(bdes$ran_ind) > 0) {
+    ran <- as.matrix(beta_matrix[bdes$ran_ind,,drop=FALSE])
+  } else {
+    ran <- NULL
+  }
+  
+  if (length(bdes$fixed_ind) > 0) {
+    fixed <- as.matrix(beta_matrix[bdes$fixed_ind,,drop=FALSE])
+  } else {
+    fixed <- NULL
+  }
   
   ret <- list(betas_fixed=fixed,
               betas_ran=ran,
-              #design=bdes$dmat_all,
               design_ran=bdes$dmat_ran,
               design_fixed=bdes$dmat_fixed,
               design_base=bdes$dmat_base)
   
   class(ret) <-  c("fmri_betas")
   ret
-  
 }
 
 #' Estimate betas for a latent dataset
@@ -521,8 +714,8 @@ estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,
 #' @export
 #' @rdname estimate_betas
 estimate_betas.latent_dataset <- function(x, fixed=NULL, ran, block, 
-                                          method=c("mixed", "pls", "pls_global", "ols"), 
-                                          basemod=NULL, ncomp=4, lambda=.01, prewhiten=FALSE,...) {
+                                         method=c("mixed", "pls", "pls_global", "ols"), 
+                                         basemod=NULL, ncomp=4, lambda=.01, prewhiten=FALSE,...) {
   
   method <- match.arg(method)
   dset <- x
@@ -546,12 +739,24 @@ estimate_betas.latent_dataset <- function(x, fixed=NULL, ran, block,
   
   betas <- run_estimate_betas(bdes, dset, method, ncomp=ncomp)
   
-  ran <- as.matrix(betas[bdes$ran_ind,,drop=FALSE])
-  fixed <- as.matrix(betas[bdes$fixed_ind,,drop=FALSE])
+  # Access beta_matrix from the list returned by run_estimate_betas
+  beta_matrix <- betas$beta_matrix
+  
+  # Extract random and fixed effects from the beta matrix
+  if (length(bdes$ran_ind) > 0) {
+    ran <- as.matrix(beta_matrix[bdes$ran_ind,,drop=FALSE])
+  } else {
+    ran <- NULL
+  }
+  
+  if (length(bdes$fixed_ind) > 0) {
+    fixed <- as.matrix(beta_matrix[bdes$fixed_ind,,drop=FALSE])
+  } else {
+    fixed <- NULL
+  }
   
   ret <- list(betas_fixed=fixed,
               betas_ran=ran,
-              #design=bdes$dmat_all,
               design_ran=bdes$dmat_ran,
               design_fixed=bdes$dmat_fixed,
               design_base=bdes$dmat_base,
@@ -652,7 +857,7 @@ inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise")) 
   # and injects `basis=new_basis` into calls named in fun_names.
   recfun <- function(expr) {
     if (!is_call(expr)) {
-      return(expr)  # If it’s not a call, return as is
+      return(expr)  # If it's not a call, return as is
     }
     thisfun <- call_name(expr)
     
@@ -689,6 +894,8 @@ inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise")) 
   newform <- new_formula(lhs = lhs, rhs = rhs_new, env = f_env)
   newform
 }
+
+
 
 
 

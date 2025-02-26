@@ -1,4 +1,3 @@
-
 ###############################################################################
 ## event_model.R
 ##
@@ -15,7 +14,11 @@
 ##  - Removed extraneous debugging prints.
 ###############################################################################
 
-
+#' @importFrom utils head
+#' @importFrom plotly plot_ly layout animation_opts
+#' @importFrom tidyr complete pivot_longer
+#' @importFrom dplyr mutate
+#' @importFrom rlang .data
 .pre_eval_hrf_calls <- function(expr, fenv) {
   # If it's NOT a call, just return as-is
   if (!rlang::is_call(expr)) {
@@ -84,7 +87,13 @@ event_model.list <- function(x, data, block, sampling_frame, drop_empty = TRUE, 
   if (rlang::is_formula(block)) {
     ## TODO: check that the block variable exists in data and warn if onsets are off.
     block_rhs <- rlang::f_rhs(block)
-    blockvals <- rlang::eval_tidy(block_rhs, data)
+    # Handle the special case of ~1 (constant block)
+    if (identical(block_rhs, 1L) || identical(block_rhs, 1)) {
+      # For ~1, create a vector of all 1s with length = nrow(data)
+      blockvals <- rep(1, nrow(data))
+    } else {
+      blockvals <- rlang::eval_tidy(block_rhs, data)
+    }
   } else {
     blockvals <- block
   }
@@ -152,10 +161,12 @@ event_model.list <- function(x, data, block, sampling_frame, drop_empty = TRUE, 
 #' sframe <- sampling_frame(blocklens = c(50, 50), TR = 2)
 #' # Construct an event model using a formula.
 #' # Here the left-hand side represents onsets and the right-hand side contains HRF terms.
-#' ev_model <- event_model(x = onset ~ hrf(x) + hrf(y), data = df, block = ~ run, sampling_frame = sframe)
+#' ev_model <- event_model(x = onset ~ hrf(x) + hrf(y), data = df, 
+#'             block = ~ run, sampling_frame = sframe)
 #' @export
 #' @importFrom purrr map_lgl
-event_model.formula <- function(x, data, block, sampling_frame, drop_empty = TRUE, durations = 0, precision = 0.3, ...) {
+event_model.formula <- function(x, data, block, sampling_frame, drop_empty = TRUE, 
+                                durations = 0, precision = 0.3, ...) {
   formula <- x
   #environment(formula) <- environment()
   stopifnot(inherits(formula, "formula"))
@@ -164,7 +175,13 @@ event_model.formula <- function(x, data, block, sampling_frame, drop_empty = TRU
   if (rlang::is_formula(block)) {
     ## TODO: check that block exists in data and warn if onsets are way off.
     block_rhs <- rlang::f_rhs(block)
-    blockvals <- rlang::eval_tidy(block_rhs, data)
+    # Handle the special case of ~1 (constant block)
+    if (identical(block_rhs, 1L) || identical(block_rhs, 1)) {
+      # For ~1, create a vector of all 1s with length = nrow(data)
+      blockvals <- rep(1, nrow(data))
+    } else {
+      blockvals <- rlang::eval_tidy(block_rhs, data)
+    }
   } else {
     blockvals <- block
   }
@@ -619,7 +636,7 @@ print.event_model <- function(x, ...) {
     cat("\n📋 Event Table Preview:\n")
     cat("  • Variables:", crayon::green(paste(names(x$model_spec$event_table), collapse = ", ")), "\n")
     if (nrow(x$model_spec$event_table) > 3) {
-      print(head(x$model_spec$event_table, 3))
+      print(utils::head(x$model_spec$event_table, 3))
       cat("  ... (", nrow(x$model_spec$event_table) - 3, " more rows )\n")
     } else {
       print(x$model_spec$event_table)
@@ -840,8 +857,6 @@ plot.event_model <- function(x, y, term_name = NULL, longnames = TRUE,
 #' @return An event_model object.
 #'
 #' @examples
-#' library(fmrireg)
-#' library(rlang)
 #'
 #' # Example with variables as character strings:
 #' event_terms <- list(
@@ -877,6 +892,19 @@ create_event_model <- function(event_terms,
   if (is.factor(block)) {
     block <- as.integer(as.character(block))
   }
+  
+  # Handle formula block
+  if (rlang::is_formula(block)) {
+    block_rhs <- rlang::f_rhs(block)
+    # Handle the special case of ~1 (constant block)
+    if (identical(block_rhs, 1L) || identical(block_rhs, 1)) {
+      # For ~1, create a vector of all 1s with length = nrow(events)
+      block <- rep(1, nrow(events))
+    } else {
+      block <- rlang::eval_tidy(block_rhs, events)
+    }
+  }
+  
   assert_that(is.increasing(block), msg = "'block' must consist of strictly increasing integers")
   assert_that(length(block) == nrow(events))
   
@@ -978,6 +1006,8 @@ create_event_model <- function(event_terms,
   event_model(form, events, block, sampling_frame, drop_empty=drop_empty, durations=durations, precision=precision)
 }
 
+
+#' @export
 plotly.event_model <- function(x, 
                                term_name = NULL,
                                title = NULL,
@@ -986,9 +1016,7 @@ plotly.event_model <- function(x,
                                line_size = 2,
                                hide_legend_threshold = 25,
                                ...) {
-  library(dplyr)
-  library(tidyr)
-  library(plotly)
+ 
   
   all_terms  <- terms(x)
   term_names <- sapply(all_terms, `[[`, "varname")
@@ -998,13 +1026,13 @@ plotly.event_model <- function(x,
   # Helper: convert one event_term -> long tibble with .Term label
   to_long <- function(term, lbl) {
     dm <- design_matrix(term)
-    df <- as_tibble(dm, .name_repair="unique") %>%
-      mutate(.time  = sframe$time,
+    df <- tibble::as_tibble(dm, .name_repair="unique") %>%
+      dplyr::mutate(.time  = sframe$time,
              .block = sframe$blockids) %>%
-      pivot_longer(cols = -c(.time, .block), 
+      tidyr::pivot_longer(cols = -c(.time, .block), 
                    names_to = "condition", 
                    values_to = "value") %>%
-      mutate(.Term = lbl)
+      dplyr::mutate(.Term = lbl)
     df
   }
   
@@ -1015,17 +1043,17 @@ plotly.event_model <- function(x,
     idx <- match(term_name, term_names)
     df  <- to_long(all_terms[[idx]], term_name)
     
-    p <- plot_ly(df, 
+    p <- plotly::plot_ly(df, 
                  x = ~.time, y = ~value,
                  split = ~condition,       # each condition -> separate trace
                  type="scatter", mode="lines",
                  line = list(width=line_size),
                  ...) %>%
-      layout(title = title %||% paste("Event Model:", term_name),
+      plotly::layout(title = title %||% paste("Event Model:", term_name),
              xaxis = list(title=xlab),
              yaxis = list(title=ylab))
     if (length(unique(df$condition)) > hide_legend_threshold) {
-      p <- p %>% layout(showlegend = FALSE)
+      p <- p %>% plotly::layout(showlegend = FALSE)
     }
     return(p)
   }
@@ -1039,16 +1067,16 @@ plotly.event_model <- function(x,
   all_conds_char <- unique(big_df$condition)
   
   big_df <- big_df %>%
-    mutate(.Term     = factor(.Term,     levels = all_terms_char),
-           condition = factor(condition, levels = all_conds_char))
+    dplyr::mutate(.Term     = factor(.data$.Term,     levels = all_terms_char),
+           condition = factor(.data$condition, levels = all_conds_char))
   
   # "Complete" so each frame has every .time × condition combo:
   # fill missing with NA
   big_df <- big_df %>%
-    complete(.Term, .time, condition, fill = list(value = NA, .block=NA))
+    tidyr::complete(.Term, .time, condition, fill = list(value = NA, .block=NA))
   
   # Build the plotly with frame=~.Term for animation
-  p <- plot_ly(
+  p <- plotly::plot_ly(
     data = big_df,
     x = ~.time,
     y = ~value,
@@ -1059,16 +1087,16 @@ plotly.event_model <- function(x,
     line  = list(width=line_size),
     ...
   ) %>%
-    layout(
+    plotly::layout(
       title = title %||% "Event Model (All Terms)",
       xaxis = list(title=xlab),
       yaxis = list(title=ylab)
     ) %>%
     # Force redraw so old lines don't persist
-    animation_opts(frame=1, transition=0, redraw=TRUE)
+    plotly::animation_opts(frame=1, transition=0, redraw=TRUE)
   
   if (length(all_conds_char) > hide_legend_threshold) {
-    p <- p %>% layout(showlegend = FALSE)
+    p <- p %>% plotly::layout(showlegend = FALSE)
   }
   p
 }

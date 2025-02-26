@@ -24,8 +24,10 @@ cells(x, ...)
 }
 \value{
 A tibble containing the experimental cells with attributes:
+\describe{
 \item{count}{Number of events in each cell}
 \item{rownames}{Cell names when cells have multiple factors}
+}
 
 A list of data frames containing the cells.
 

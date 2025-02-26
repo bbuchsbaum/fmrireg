@@ -14,7 +14,7 @@
   basemod = NULL,
   hrf_basis = NULL,
   hrf_ref = NULL,
-  maxit = 100,
+  maxit = 1000,
   fracs = 0.5,
   ...
 )
@@ -37,6 +37,8 @@
 \item{hrf_ref}{A reference HRF vector for initializing and constraining the HRF estimation (default: NULL).}
 
 \item{maxit}{Maximum number of iterations for the optimization (default: 100).}
+
+\item{fracs}{Fraction of ridge regression to use (default: 0.5).}
 
 \item{...}{Additional arguments passed to the estimation method.}
 }
@@ -75,7 +77,8 @@ facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrir
 facedes$frun <- factor(facedes$run)
 scans <- paste0("rscan0", 1:6, ".nii")
 
-dset <- fmri_dataset(scans=scans, mask="mask.nii", TR=1.5, run_length=rep(436,6), event_table=facedes)
+dset <- fmri_dataset(scans=scans, mask="mask.nii", TR=1.5, 
+        run_length=rep(436,6), event_table=facedes)
 fixed = onset ~ hrf(run)
 ran = onset ~ trialwise()
 block = ~ run

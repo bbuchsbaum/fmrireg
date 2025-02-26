@@ -17,11 +17,13 @@
 #' @param use_box_constraints Logical. If \code{TRUE} and \code{m=3}, we forcibly set \code{h[1]=1} and \code{h[2:3] \in [-1,1]}.
 #'
 #' @return A list with:
+#' \describe{
 #'   \item{beta}{Numeric vector of length k (event amplitudes).}
 #'   \item{h}{Numeric vector of length m (basis weights).}
 #'   \item{omega}{Numeric vector of length q for nuisance, or numeric(0) if none.}
 #'   \item{converged}{Logical, TRUE if the L-BFGS-B optimizer converged.}
 #'   \item{value}{The final objective (residual sum of squares / 2).}
+#' }
 #'
 #' @examples
 #' # Minimal usage example
@@ -207,24 +209,56 @@ r1_glm_betas <- function(X, y, Z = NULL,
 
 
 #' keywords internal
-estimate_r1 <- function(dset, xdat, hrf_basis, hrf_ref, maxit=100,
-                        flip_sign=TRUE, use_box_constraints=FALSE) {
-  # dset => fmri_dataset
-  # xdat => a structure with X in xdat$X, Base in xdat$Base, etc.
+estimate_r1 <- function(dset, xdat, hrf_basis, hrf_ref, maxit = 100,
+                       flip_sign = TRUE, use_box_constraints = FALSE) {
+  # Ensure correct data types and validate inputs
+  if (is.null(hrf_basis)) {
+    stop("hrf_basis must not be NULL for the r1 method")
+  }
+  if (is.null(hrf_ref)) {
+    stop("hrf_ref must not be NULL for the r1 method")
+  }
   
-  mask_idx <- which(get_mask(dset)>0)
-  vecs <- neuroim2::vectors(get_data(dset), subset=mask_idx)
+  hrf_basis <- as.matrix(hrf_basis)
+  hrf_ref   <- as.numeric(hrf_ref)
   
-  nvox <- length(vecs)
-  message("Estimating betas with rank-1 across ", nvox, " voxels ...")
+  # Pull out voxel data from the fmri_dataset
+  vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) > 0))
+  nvoxels <- length(vecs)
   
-  # We'll store betas in [k x nvox] matrix
-  # We'll also store the final HRFs in [T x nvox], T = nrow(hrf_basis)
-  k <- ncol(xdat$X)/ncol(hrf_basis)
-  beta_mat <- matrix(NA, k, nvox)
-  hrfs     <- matrix(NA, nrow(hrf_basis), nvox)
+  if (nvoxels == 0) {
+    stop("No voxels found in dataset mask")
+  }
   
-  for (i in seq_len(nvox)) {
+  # Show message about estimation (from original function)
+  message("Estimating betas with rank-1 across ", nvoxels, " voxels ...")
+  
+  # Dimensions
+  n <- nrow(xdat$X)        # number of time points
+  m <- ncol(hrf_basis)     # number of basis functions
+  
+  if (m <= 0) {
+    stop("hrf_basis must have at least one column")
+  }
+  
+  # The stacked X has shape n x (k*m). So k is (ncol(xdat$X) / m).
+  k <- ncol(xdat$X) / m
+  if (round(k) != k) {
+    stop("xdat$X does not match 'm'; ensure (k*m) columns for some integer k.")
+  }
+  
+  if (k <= 0 || is.na(k)) {
+    stop("Invalid k value: ", k, " (must be positive)")
+  }
+  
+  # For the betas: each sub-design -> one amplitude => total k amplitudes
+  # We'll store them in a k x nvox matrix
+  beta_res <- matrix(NA, k, nvoxels)
+  
+  # Prepare to store the estimated HRF for each voxel
+  estimated_hrfs <- matrix(NA, nrow = nrow(hrf_basis), ncol = nvoxels)
+  
+  for (i in seq_len(nvoxels)) {
     v <- vecs[[i]]
     # remove baseline
     v0 <- resid(lsfit(xdat$Base, v, intercept=FALSE))
@@ -238,16 +272,16 @@ estimate_r1 <- function(dset, xdat, hrf_basis, hrf_ref, maxit=100,
                         flip_sign=flip_sign,
                         use_box_constraints=use_box_constraints)
     
-    beta_mat[,i] <- fit$beta
+    beta_res[,i] <- fit$beta
     # Reconstruct the actual HRF shape
     hshape <- as.vector(hrf_basis %*% fit$h)
-    hrfs[,i] <- hshape
+    estimated_hrfs[,i] <- hshape
   }
   
   # Return the big matrix of betas and hrfs
   list(
-    beta_matrix = beta_mat,
-    estimated_hrf = hrfs
+    beta_matrix = beta_res,
+    estimated_hrf = estimated_hrfs
   )
 }
 
@@ -274,7 +308,7 @@ estimate_r1 <- function(dset, xdat, hrf_basis, hrf_ref, maxit=100,
 #'   \item{estimated_hrf}{A \eqn{T \times nvox} matrix of the per-voxel estimated HRF shape}
 #'
 #' @details
-#' This is the \emph{“Rank-1 GLM with Separate Designs”} approach (sometimes
+#' This is the \emph{"Rank-1 GLM with Separate Designs"} approach (sometimes
 #' called the Mumford method). We partition \code{xdat$X} into \eqn{k} sub-designs,
 #' each \eqn{n \times m}. For each voxel, we remove the baseline using
 #' \code{\link{lsfit}} and call \code{\link{r1_glms_betas}} to solve for the

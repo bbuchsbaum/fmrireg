@@ -43,13 +43,13 @@ estimate_betas(x, ...)
 }
 \value{
 A list of class "fmri_betas" containing:
-\itemize{
-\item betas_fixed: Fixed effect coefficients
-\item betas_ran: Random (trial-wise) coefficients
-\item design_ran: Design matrix for random effects
-\item design_fixed: Design matrix for fixed effects
-\item design_base: Design matrix for baseline model
-\item Additional components depending on method
+\describe{
+\item{betas_fixed}{Fixed effect coefficients}
+\item{betas_ran}{Random (trial-wise) coefficients}
+\item{design_ran}{Design matrix for random effects}
+\item{design_fixed}{Design matrix for fixed effects}
+\item{design_base}{Design matrix for baseline model}
+\item{method_specific}{Additional components specific to the estimation method used}
 }
 
 A list of class "fmri_betas" containing the following components:
@@ -64,11 +64,11 @@ A list of class "fmri_betas" containing the following components:
 \description{
 Estimate beta coefficients (regression parameters) from fMRI data using various methods.
 This function supports different estimation approaches for:
-\itemize{
-\item Single-trial beta estimation
-\item Fixed and random effects
-\item Various regularization techniques
-\item Optional HRF estimation
+\describe{
+\item{single}{Single-trial beta estimation}
+\item{effects}{Fixed and random effects}
+\item{regularization}{Various regularization techniques}
+\item{hrf}{Optional HRF estimation}
 }
 
 This function estimates betas (regression coefficients) for fixed and random effects
@@ -76,20 +76,20 @@ in a matrix dataset using various methods.
 }
 \details{
 This is a generic function with methods for different dataset types:
-\itemize{
-\item fmri_dataset: For volumetric fMRI data
-\item matrix_dataset: For matrix-format data
-\item latent_dataset: For dimensionality-reduced data
+\describe{
+\item{fmri_dataset}{For volumetric fMRI data}
+\item{matrix_dataset}{For matrix-format data}
+\item{latent_dataset}{For dimensionality-reduced data}
 }
 
 Available estimation methods include:
-\itemize{
-\item mixed: Mixed-effects model using rrBLUP
-\item r1: Rank-1 GLM with joint HRF estimation
-\item lss: Least-squares separate estimation
-\item pls: Partial least squares regression
-\item ols: Ordinary least squares
-\item fracridge: Fractional ridge regression
+\describe{
+\item{mixed}{Mixed-effects model using rrBLUP}
+\item{r1}{Rank-1 GLM with joint HRF estimation}
+\item{lss}{Least-squares separate estimation}
+\item{pls}{Partial least squares regression}
+\item{ols}{Ordinary least squares}
+\item{fracridge}{Fractional ridge regression}
 }
 }
 \examples{

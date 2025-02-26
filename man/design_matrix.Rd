@@ -22,7 +22,9 @@ design_matrix(x, ...)
 \item{x}{The term or model object (typically an event_term, event_model, baseline_model, or fmri_model)}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
-\item{blockid}{Numeric vector specifying which blocks/runs to include}}
+\itemize{
+\item{blockid}{Numeric vector specifying which blocks/runs to include}
+}}
 
 \item{blockid}{the block id to extract}
 }

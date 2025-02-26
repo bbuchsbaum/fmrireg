@@ -27,8 +27,10 @@ longnames(x, ...)
 \item{x}{The object to extract names from (typically an event_term, event_model, or convolved_term)}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
+\describe{
 \item{exclude_basis}{Logical; if TRUE, exclude basis function labels from names}
-\item{drop_empty}{Logical; if TRUE, drop empty condition levels}}
+\item{drop_empty}{Logical; if TRUE, drop empty condition levels}
+}}
 }
 \value{
 A character vector containing the full condition names with term prefixes and basis functions

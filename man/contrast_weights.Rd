@@ -22,11 +22,13 @@ contrast_weights(x, ...)
 }
 \value{
 A list containing:
+\describe{
 \item{term}{The model term the contrast is applied to}
 \item{name}{The name of the contrast}
 \item{weights}{A matrix of contrast weights}
 \item{condnames}{The condition names associated with the weights}
 \item{contrast_spec}{The original contrast specification}
+}
 }
 \description{
 This function calculates the contrast weights based on the contrast specification

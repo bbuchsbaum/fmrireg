@@ -576,35 +576,15 @@ data_chunks.fmri_file_dataset <- function(x, nchunks=1, runwise=FALSE, ...) {
 
 #' Create Data Chunks for matrix_dataset Objects
 #'
-#' This function creates data chunks for matrix_dataset objects. It allows for the retrieval of run-wise or sequence-wise data chunks, as well as arbitrary chunks.
+#' This function creates data chunks for matrix_dataset objects. It allows for the retrieval 
+#' of run-wise or sequence-wise data chunks, as well as arbitrary chunks.
 #'
-#' @param x An object of class 'matrix_dataset'.
-#' @param nchunks The number of data chunks to create. Default is 1.
-#' @param runwise If TRUE, the data chunks are created run-wise. Default is FALSE.
-#' @param ... Additional arguments.
-#'
-#' @return A list of data chunks, with each chunk containing the data, voxel indices, row indices, and chunk number.
+#' @param x An object of class 'matrix_dataset'
+#' @param nchunks The number of chunks to split the data into. Default is 1.
+#' @param runwise If TRUE, creates run-wise chunks instead of arbitrary chunks
+#' @param ... Additional arguments passed to methods
+#' @return A list of data chunks, each containing data, indices and chunk number
 #' @export
-#'
-#' @examples
-#' # Create a matrix_dataset
-#' # ... (see example for matrix_dataset)
-#'
-#' # Create an iterator with 5 chunks
-#' iter <- data_chunks(dset, nchunks=5)
-#' `%do%` <- foreach::`%do%`
-#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
-#' length(y) == 5
-#'
-#' # Create an iterator with 100 chunks
-#' iter <- data_chunks(dset, nchunks=100)
-#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
-#' length(y) == 100
-#'
-#' # Create a "runwise" iterator
-#' iter <- data_chunks(dset, runwise=TRUE)
-#' y <- foreach::foreach(chunk = iter) %do% { colMeans(chunk$data) }
-#' length(y) == 2
 data_chunks.matrix_dataset <- function(x, nchunks=1, runwise=FALSE,...) {
   get_run_chunk <- function(chunk_num) {
     ind <- which(blockids(x$sampling_frame) == chunk_num)

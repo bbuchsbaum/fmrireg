@@ -283,3 +283,65 @@ test_that("create_event_model handles block-wise onsets correctly", {
   dm <- design_matrix(model)
   expect_equal(nrow(dm), sum(blocklens))
 })
+
+test_that("event_model handles ~1 block formula correctly", {
+  # Setup test data
+  set.seed(123)
+  
+  # Create simple dataset
+  events <- data.frame(
+    x = rnorm(10),
+    onset = seq(0, 18, by=2)
+  )
+  
+  # Create sampling frame for a single block
+  sf <- sampling_frame(blocklens = 10, TR = 2)
+  
+  # Create event terms
+  event_terms <- list(
+    list(
+      variables = c("x"),
+      hrf = "spmg1"
+    )
+  )
+  
+  # Model with block = ~1
+  model1 <- create_event_model(
+    event_terms = event_terms,
+    events = events,
+    onsets = events$onset,
+    block = ~1,
+    sampling_frame = sf
+  )
+  
+  # Model with explicit block vector
+  model2 <- create_event_model(
+    event_terms = event_terms,
+    events = events,
+    onsets = events$onset,
+    block = rep(1, nrow(events)),
+    sampling_frame = sf
+  )
+  
+  # Tests
+  expect_s3_class(model1, "event_model")
+  
+  # Check that all events are in a single block
+  expect_equal(length(unique(model1$model_spec$blockids)), 1)
+  expect_equal(model1$model_spec$blockids, rep(1, nrow(events)))
+  
+  # Compare with explicit vector model
+  expect_equal(model1$model_spec$blockids, model2$model_spec$blockids)
+  expect_equal(model1$model_spec$blockvals, model2$model_spec$blockvals)
+  
+  # Design matrices should be identical
+  dm1 <- design_matrix(model1)
+  dm2 <- design_matrix(model2)
+  expect_equal(dm1, dm2)
+  
+  # Also test with event_model.formula directly
+  form <- onset ~ hrf(x)
+  model3 <- event_model(form, events, block = ~1, sampling_frame = sf)
+  expect_s3_class(model3, "event_model")
+  expect_equal(length(unique(model3$model_spec$blockids)), 1)
+})

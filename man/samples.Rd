@@ -10,8 +10,10 @@ samples(x, ...)
 \item{x}{The object containing timing information (typically a sampling_frame or regressor)}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
+\describe{
 \item{blockids}{Numeric vector specifying which blocks/runs to include}
-\item{global}{Logical; if TRUE, return cumulative times across runs}}
+\item{global}{Logical; if TRUE, return cumulative times across runs}
+}}
 }
 \value{
 A numeric vector of sampling times in seconds, where:

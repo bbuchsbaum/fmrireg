@@ -44,8 +44,6 @@ HRF specifications (hrfspec objects), builds a formula string, and then assemble
 the final event model.
 }
 \examples{
-library(fmrireg)
-library(rlang)
 
 # Example with variables as character strings:
 event_terms <- list(

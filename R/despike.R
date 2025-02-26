@@ -134,28 +134,3 @@ instantaneous_correlation_rcpp <- function(x, y, eta, offset = 0) {
 }
 
 
-### see roll_cor
-
-
-## we were going to add dynamic psychophysiological interactions
-## also, ppi between all brain regions
-
-# dyncor <- function(x,y, window=7, symmetric=FALSE) {
-#   assertthat::assert_that(length(x) == length(y))
-#   halfwin <- as.integer(window/2)
-#   furrr::future_map_dbl(1:length(x), function(i) {
-#     start <- max(i-window, 1)
-#     if (i > halfwin) {
-#       cor(x[start:i], y[start:i])
-#     } else {
-#       NA
-#     }
-#     
-#   })
-# }
-  
-#}
-
-
-
-

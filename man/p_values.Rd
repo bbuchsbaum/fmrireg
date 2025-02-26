@@ -10,7 +10,9 @@ p_values(x, ...)
 \item{x}{The fitted model object}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
-\item{type}{The type of p-values to extract (e.g., "estimates" or "contrasts")}}
+\describe{
+\item{type}{The type of p-values to extract (e.g., "estimates" or "contrasts")}
+}}
 }
 \value{
 A tibble or matrix containing p-values

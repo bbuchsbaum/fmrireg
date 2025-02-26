@@ -14,7 +14,7 @@ blocklens(x, ...)
 \value{
 A numeric vector where:
 \itemize{
-\item Each element is the number of scans in a block/run
+\item Each element is the number of scans in a block or run
 \item Length equals the number of blocks/runs
 \item Values are positive integers
 }
@@ -23,10 +23,10 @@ A numeric vector where:
 Get the number of scans or timepoints in each block/run of the dataset. Block lengths
 are used to:
 \itemize{
-\item Define the temporal structure of the experiment
-\item Allocate memory for data matrices
-\item Validate data dimensions across runs
-\item Calculate global timing information
+\item Define the temporal structure of the experiment by specifying scan counts and timing per run
+\item Allocate memory for data matrices by pre-allocating arrays based on scan counts
+\item Validate data dimensions across runs by checking against expected lengths
+\item Calculate global timing information by computing cumulative timing across runs
 }
 }
 \examples{

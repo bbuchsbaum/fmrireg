@@ -4,6 +4,7 @@ facedes$repnum <- factor(facedes$rep_num)
 
 library(testthat)
 library(foreach)
+library(ggrepel)
 
 gen_mask_file <- function(d, perc) {
   arr = array(0,d)

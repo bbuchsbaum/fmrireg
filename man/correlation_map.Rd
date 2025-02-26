@@ -10,9 +10,11 @@ correlation_map(x, ...)
 \item{x}{The model object (event_model, baseline_model, or fmri_model)}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
+\describe{
 \item{method}{Correlation method ("pearson" or "spearman")}
 \item{half_matrix}{Logical; if TRUE, show only lower triangle}
-\item{absolute_limits}{Logical; if TRUE, set color limits to [-1,1]}}
+\item{absolute_limits}{Logical; if TRUE, set color limits to [-1,1]}
+}}
 }
 \value{
 A ggplot2 object containing the correlation heatmap, where:

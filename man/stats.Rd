@@ -10,7 +10,9 @@ stats(x, ...)
 \item{x}{The fitted model object}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
-\item{type}{The type of statistics to extract (e.g., "estimates", "contrasts", or "F")}}
+\describe{
+\item{type}{The type of statistics to extract (e.g., "estimates", "contrasts", or "F")}
+}}
 }
 \value{
 A tibble or matrix containing test statistics

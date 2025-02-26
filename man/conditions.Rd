@@ -10,8 +10,10 @@ conditions(x, ...)
 \item{x}{The model term (typically an event_term, event_model, or convolved_term)}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
+\itemize{
 \item{drop.empty}{Logical; if TRUE, conditions with no events are dropped}
-\item{exclude_basis}{Logical; if TRUE, basis function labels are excluded}}
+\item{exclude_basis}{Logical; if TRUE, basis function labels are excluded}
+}}
 }
 \value{
 A character vector of condition labels

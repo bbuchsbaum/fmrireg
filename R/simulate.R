@@ -170,3 +170,324 @@ simulate_fmri_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
     conditions = clean$condition
   )
 }
+
+#' Simulate fMRI Time Courses, Return Shared Onsets + Column-Specific Amplitudes/Durations
+#'
+#' Generates \eqn{n} time-series (columns) with a single set of onsets, but
+#' *resampled* amplitudes/durations for each column if \code{amplitude_sd>0}
+#' or \code{duration_sd>0}. Each column also gets independent noise. The result
+#' is a list containing:
+#' \itemize{
+#'   \item \code{time_series}: a \code{matrix_dataset} with \eqn{T \times n}.
+#'         The \code{event_table} uses the first column's amplitude/duration draws.
+#'   \item \code{ampmat}: an \eqn{n\_events \times n} matrix of per-column amplitudes.
+#'   \item \code{durmat}: an \eqn{n\_events \times n} matrix of per-column durations.
+#'   \item \code{hrf_info}: info about the HRF.
+#'   \item \code{noise_params}: info about noise generation (type + AR coefficients + SD).
+#' }
+#'
+#' @details
+#' - If \code{noise_type="ar1"} and you do not provide \code{noise_ar}, we
+#'   default to \code{c(0.3)}.
+#' - If \code{noise_type="ar2"} and you do not provide a 2-element \code{noise_ar},
+#'   we default to \code{c(0.3, 0.2)}.
+#' - Onsets are either provided or generated once for all columns.
+#' - **Amplitudes/durations** are re-sampled \emph{inside the loop} so each
+#'   column can differ randomly. The final arrays \code{ampmat} and \code{durmat}
+#'   each have one column per time-series.
+#' - The \code{matrix_dataset}'s \code{event_table} records the first column's
+#'   amplitudes/durations. If you need each column's, see \code{ampmat} and
+#'   \code{durmat}.
+#'
+#' @param n Number of time-series (columns).
+#' @param total_time Numeric. Total scan length (seconds).
+#' @param TR Numeric. Repetition time (seconds).
+#' @param hrf Hemodynamic response function, e.g. \code{HRF_SPMG1}.
+#' @param n_events Number of events (ignored if \code{onsets} is provided).
+#' @param onsets Optional numeric vector of event onsets. If \code{NULL}, will be generated.
+#' @param isi_dist One of \code{"even"}, \code{"uniform"}, or \code{"exponential"}.
+#'   Default is \code{"even"} so events are evenly spaced from 0..total_time.
+#' @param isi_min,isi_max For \code{isi_dist="uniform"}.
+#' @param isi_rate For \code{isi_dist="exponential"}.
+#' @param durations Numeric, scalar or length-\code{n_events}. If \code{duration_sd>0},
+#'   random sampling is done per column.
+#' @param duration_sd Numeric. If >0, random variation in durations.
+#' @param duration_dist \code{"lognormal"} or \code{"gamma"} (strictly positive).
+#' @param amplitudes Numeric, scalar or length-\code{n_events}. If \code{amplitude_sd>0},
+#'   random sampling is done per column.
+#' @param amplitude_sd Numeric. If >0, random variation in amplitudes.
+#' @param amplitude_dist \code{"lognormal"}, \code{"gamma"}, or \code{"gaussian"} (can be negative).
+#' @param single_trial If TRUE, each event is a separate single-trial regressor that gets summed.
+#' @param noise_type \code{"none"}, \code{"white"}, \code{"ar1"}, or \code{"ar2"}.
+#' @param noise_ar Numeric vector for AR(1) or AR(2). If missing or insufficient,
+#'   defaults are used (0.3 for AR(1); c(0.3,0.2) for AR(2)).
+#' @param noise_sd Std dev of the noise.
+#' @param random_seed Optional integer for reproducibility.
+#' @param verbose If TRUE, prints messages.
+#'
+#' @return A list containing:
+#' \describe{
+#'   \item{\code{time_series}}{A \code{matrix_dataset} with \eqn{T \times n} data
+#'         and \code{event_table} for the *first* column's random draws.}
+#'   \item{\code{ampmat}}{An \eqn{n\_events \times n} numeric matrix of amplitudes.}
+#'   \item{\code{durmat}}{An \eqn{n\_events \times n} numeric matrix of durations.}
+#'   \item{\code{hrf_info}}{A list with HRF metadata.}
+#'   \item{\code{noise_params}}{A list describing noise generation.}
+#' }
+#'
+#' @importFrom stats rnorm rexp runif rgamma rlnorm arima.sim
+#' @export
+simulate_fmri <- function(
+    n                 = 1,
+    total_time        = 240,
+    TR                = 2,
+    hrf               = HRF_SPMG1,
+    
+    n_events          = 10,
+    onsets            = NULL,
+    isi_dist          = c("even", "uniform", "exponential"),
+    isi_min           = 2,
+    isi_max           = 6,
+    isi_rate          = 0.25,
+    
+    durations         = 0,
+    duration_sd       = 0,
+    duration_dist     = c("lognormal", "gamma"),
+    
+    amplitudes        = 1,
+    amplitude_sd      = 0,
+    amplitude_dist    = c("lognormal", "gamma", "gaussian"),
+    
+    single_trial      = FALSE,
+    noise_type        = c("none", "white", "ar1", "ar2"),
+    noise_ar          = NULL,
+    noise_sd          = 1.0,
+    
+    random_seed       = NULL,
+    verbose           = FALSE,
+    buffer            = 16
+) {
+  # ---------------------------
+  # 0) Setup
+  # ---------------------------
+  if (!is.null(random_seed)) {
+    set.seed(random_seed)
+  }
+  
+  isi_dist        <- match.arg(isi_dist)
+  noise_type      <- match.arg(noise_type)
+  duration_dist   <- match.arg(duration_dist)
+  amplitude_dist  <- match.arg(amplitude_dist)
+  
+  # Handle default AR params if user omitted or gave insufficient length
+  if (noise_type == "ar1") {
+    if (is.null(noise_ar) || length(noise_ar) < 1) {
+      noise_ar <- 0.3
+      if (verbose) message("Defaulting to noise_ar = 0.3 for AR(1).")
+    }
+  } else if (noise_type == "ar2") {
+    if (is.null(noise_ar) || length(noise_ar) < 2) {
+      noise_ar <- c(0.3, 0.2)
+      if (verbose) message("Defaulting to noise_ar = c(0.3, 0.2) for AR(2).")
+    }
+  }
+  
+  # Original time grid without buffer (for event generation)
+  effective_time <- total_time - buffer
+  
+  # Sample event onsets - ensure they only occur in the effective time, not the buffer
+  if (isi_dist == "uniform") {
+    isi_samples <- runif(n_events, min = isi_min, max = isi_max)
+  } else if (isi_dist == "exponential") {
+    isi_samples <- isi_min + rexp(n_events, rate = isi_rate)
+  } else if (isi_dist == "even") {
+    isi_samples <- rep(effective_time / n_events, n_events)
+  }
+  
+  # Generate onsets cumulative ISIs, but ensure they fall within effective_time
+  onsets <- cumsum(isi_samples)
+  if (max(onsets) > effective_time) {
+    # Keep only events that fit within effective time
+    keepers <- which(onsets <= effective_time)
+    onsets <- onsets[keepers]
+    n_events <- length(onsets)
+    message(sprintf("Reduced to %d events to fit within effective time", n_events))
+  }
+  
+  # Final time grid with buffer
+  n_time_points <- ceiling(total_time / TR)
+  time_grid <- seq(0, by = TR, length.out = n_time_points)
+  
+  # ---------------------------
+  # 1) Helper fns to sample durations/amplitudes for 1 column
+  # ---------------------------
+  do_sample_durations <- function() {
+    if (length(durations) == 1L) {
+      base_durs <- rep(durations, n_events)
+    } else {
+      if (length(durations) != n_events) {
+        stop("durations must be length=1 or match n_events.")
+      }
+      base_durs <- durations
+    }
+    dvals <- base_durs
+    if (duration_sd > 0) {
+      if (duration_dist == "lognormal") {
+        dvals <- sapply(seq_len(n_events), function(i) {
+          if (base_durs[i] <= 0) {
+            stop("durations must be >0 for lognormal sampling.")
+          }
+          rlnorm(1, meanlog = log(base_durs[i]), sdlog = duration_sd)
+        })
+      } else {
+        # gamma
+        dvals <- sapply(seq_len(n_events), function(i) {
+          mu <- base_durs[i]
+          if (mu <= 0) {
+            stop("durations must be >0 for gamma sampling.")
+          }
+          sigma <- duration_sd
+          shape_par <- (mu^2)/(sigma^2)
+          rate_par  <- mu/(sigma^2)
+          rgamma(1, shape=shape_par, rate=rate_par)
+        })
+      }
+    }
+    dvals
+  }
+  
+  do_sample_amplitudes <- function() {
+    if (length(amplitudes) == 1L) {
+      base_amps <- rep(amplitudes, n_events)
+    } else {
+      if (length(amplitudes) != n_events) {
+        stop("amplitudes must be length=1 or match n_events.")
+      }
+      base_amps <- amplitudes
+    }
+    avals <- base_amps
+    if (amplitude_sd > 0) {
+      if (amplitude_dist == "lognormal") {
+        avals <- sapply(seq_len(n_events), function(i) {
+          if (base_amps[i] <= 0) {
+            stop("amplitudes must be >0 for lognormal sampling.")
+          }
+          rlnorm(1, meanlog = log(base_amps[i]), sdlog = amplitude_sd)
+        })
+      } else if (amplitude_dist == "gamma") {
+        avals <- sapply(seq_len(n_events), function(i) {
+          mu <- base_amps[i]
+          if (mu <= 0) {
+            stop("amplitudes must be >0 for gamma sampling.")
+          }
+          sigma <- amplitude_sd
+          shape_par <- (mu^2)/(sigma^2)
+          rate_par  <- mu/(sigma^2)
+          rgamma(1, shape=shape_par, rate=rate_par)
+        })
+      } else {
+        # "gaussian"
+        avals <- sapply(seq_len(n_events), function(i) {
+          rnorm(1, mean=base_amps[i], sd=amplitude_sd)
+        })
+      }
+    }
+    avals
+  }
+  
+  # ---------------------------
+  # 2) Build data matrix, col by col
+  #    plus store amplitude/duration in big matrices
+  # ---------------------------
+  signal_list <- vector("list", n)
+  ampmat <- matrix(NA, nrow=n_events, ncol=n)  # amplitude
+  durmat <- matrix(NA, nrow=n_events, ncol=n)  # durations
+  
+  for (ii in seq_len(n)) {
+    # sample for column ii
+    this_dur <- do_sample_durations()
+    this_amp <- do_sample_amplitudes()
+    
+    durmat[, ii] <- this_dur
+    ampmat[, ii] <- this_amp
+    
+    # Build the BOLD signal using the full time grid (including buffer)
+    if (!single_trial) {
+      reg <- regressor(
+        onsets    = onsets,
+        hrf       = hrf,
+        duration  = this_dur,
+        amplitude = this_amp
+      )
+      bold_signal <- evaluate(reg, grid=time_grid)
+    } else {
+      bold_signal <- numeric(n_time_points)
+      for (j in seq_along(onsets)) {
+        sreg <- single_trial_regressor(
+          onsets    = onsets[j],
+          hrf       = hrf,
+          duration  = this_dur[j],
+          amplitude = this_amp[j]
+        )
+        bold_signal <- bold_signal + evaluate(sreg, time_grid)
+      }
+    }
+    
+    # Add noise to the entire signal including buffer
+    if (noise_type == "none") {
+      noisy_tc <- bold_signal
+    } else {
+      if (noise_type == "white") {
+        eps <- rnorm(n_time_points, 0, noise_sd)
+      } else if (noise_type == "ar1") {
+        eps <- arima.sim(model=list(ar=noise_ar), n=n_time_points, sd=noise_sd)
+      } else if (noise_type == "ar2") {
+        eps <- arima.sim(model=list(ar=noise_ar), n=n_time_points, sd=noise_sd)
+      }
+      noisy_tc <- bold_signal + eps
+    }
+    signal_list[[ii]] <- noisy_tc
+  }
+  
+  sim_matrix <- do.call(cbind, signal_list)
+  
+  # ---------------------------
+  # 3) matrix_dataset
+  #    event_table = first column's durations/amplitudes
+  # ---------------------------
+  event_tab <- data.frame(
+    run       = 1,
+    onset     = onsets,
+    duration  = durmat[,1],
+    amplitude = ampmat[,1]
+  )
+  
+  ds <- matrix_dataset(
+    datamat     = sim_matrix,
+    TR          = TR,
+    run_length  = n_time_points,
+    event_table = event_tab
+  )
+  
+  # ---------------------------
+  # 4) Return
+  # ---------------------------
+  out <- list(
+    time_series  = ds,         # matrix_dataset T x n
+    ampmat       = ampmat,     # n_events x n
+    durmat       = durmat,     # n_events x n
+    hrf_info     = list(
+      hrf_class = class(hrf),
+      hrf_name  = attr(hrf, "name"),
+      nbasis    = nbasis(hrf),
+      span      = attr(hrf, "span")
+    ),
+    noise_params = list(
+      noise_type = noise_type,
+      noise_ar   = noise_ar,
+      noise_sd   = noise_sd
+    )
+  )
+  
+  return(out)
+}

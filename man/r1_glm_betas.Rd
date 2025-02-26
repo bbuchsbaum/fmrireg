@@ -36,11 +36,13 @@ event onset with \code{m} basis functions, then horizontally stacking them for k
 }
 \value{
 A list with:
+\describe{
 \item{beta}{Numeric vector of length k (event amplitudes).}
 \item{h}{Numeric vector of length m (basis weights).}
 \item{omega}{Numeric vector of length q for nuisance, or numeric(0) if none.}
 \item{converged}{Logical, TRUE if the L-BFGS-B optimizer converged.}
 \item{value}{The final objective (residual sum of squares / 2).}
+}
 }
 \description{
 Jointly estimates activation coefficients (betas) and an HRF shape (in a given basis)

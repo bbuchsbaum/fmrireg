@@ -14,9 +14,11 @@ convolve(x, hrf, sampling_frame, ...)
 \item{sampling_frame}{The time series grid over which to sample the convolved function}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
+\itemize{
 \item{drop.empty}{Logical; if TRUE, empty events are dropped}
 \item{summate}{Logical; if TRUE, sum the convolved HRF over event durations}
-\item{precision}{Numeric; precision of HRF sampling (default: 0.3)}}
+\item{precision}{Numeric; precision of HRF sampling (default: 0.3)}
+}}
 }
 \value{
 A tibble containing the convolved design matrix, with columns for each condition

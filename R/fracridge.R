@@ -136,18 +136,34 @@ fracridge <- function(X, y, fracs = seq(0.1, 1.0, by = 0.1), tol = 1e-10) {
     }
   }
   
-  # Format output
+  # Keep coef_array as a 3D array regardless of dimensions
+  # Only modify alpha_matrix
   if (single_target) {
-    coef_array <- drop(coef_array)
     alpha_matrix <- drop(alpha_matrix)
+    # DO NOT use: coef_array <- drop(coef_array)
   }
   
-  dimnames(coef_array) <- list(
-    colnames(X),
-    sprintf("frac_%.2f", fracs),
-    if (single_target) NULL else sprintf("target_%d", seq_len(b))
-  )
+  # Apply dimnames more safely
+  tryCatch({
+    if (is.vector(coef_array)) {
+      # Handle vector case (rare but could happen)
+      dim(coef_array) <- c(length(coef_array), 1, 1)
+    } else if (is.matrix(coef_array)) {
+      # Handle matrix case
+      dim(coef_array) <- c(nrow(coef_array), ncol(coef_array), 1)
+    }
+    
+    # Now safe to set dimnames
+    dimnames(coef_array) <- list(
+      colnames(X),
+      sprintf("frac_%.2f", fracs),
+      if (single_target) NULL else sprintf("target_%d", seq_len(b))
+    )
+  }, error = function(e) {
+    warning("Could not set dimnames on coefficient array: ", e$message)
+  })
   
+  # Return the result
   structure(
     list(
       coef = coef_array,

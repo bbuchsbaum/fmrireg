@@ -10,9 +10,11 @@ regressors(x, ...)
 \item{x}{A model object that contains regressors (or can generate them)}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
+\describe{
 \item{condition}{Character; specific condition to extract regressors for}
 \item{block}{Numeric; specific block/run to extract regressors from}
-\item{basis}{Character; type of basis functions to use}}
+\item{basis}{Character; type of basis functions to use}
+}}
 }
 \value{
 A list of regressor objects, where each regressor contains:

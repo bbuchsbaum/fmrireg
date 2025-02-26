@@ -10,25 +10,29 @@ neural_input(x, ...)
 \item{x}{A regressor object containing event timing information}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
+\describe{
 \item{start}{Numeric; start time of the input function}
 \item{end}{Numeric; end time of the input function}
-\item{resolution}{Numeric; temporal resolution in seconds (default: 0.33)}}
+\item{resolution}{Numeric; temporal resolution in seconds (default: 0.33)}
+}}
 }
 \value{
 A list containing:
-\itemize{
-\item time: Numeric vector of time points
-\item neural_input: Numeric vector of input amplitudes at each time point
+\describe{
+\item{time}{Numeric vector of time points}
+\item{neural_input}{Numeric vector of input amplitudes at each time point}
 }
 }
 \description{
 Converts event timing information into a neural input function representing the underlying
 neural activity before HRF convolution. This function is useful for:
-\itemize{
-\item Creating stimulus functions for fMRI analysis
-\item Modeling sustained vs. transient neural activity
-\item Generating inputs for HRF convolution
-\item Visualizing the temporal structure of experimental designs
+}
+\details{
+\describe{
+\item{stimulus}{Creating stimulus functions for fMRI analysis}
+\item{modeling}{Modeling sustained vs. transient neural activity}
+\item{inputs}{Generating inputs for HRF convolution}
+\item{visualization}{Visualizing the temporal structure of experimental designs}
 }
 }
 \examples{

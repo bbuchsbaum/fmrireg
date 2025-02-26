@@ -57,11 +57,13 @@ setGeneric("as_vectors")
 #' @export
 #' 
 #' @return A list containing the following elements:
-#' \item{formula}{The formula used to create the model.}
-#' \item{design}{The design matrix for the model, with one row per time point and one column per predictor variable.}
-#' \item{block_indices}{A list of indices defining the start and end time points of each block.}
-#' \item{baseline}{A vector containing the estimated baseline fMRI signal level for each block.}
-#' \item{dur}{A vector containing the duration (in seconds) of each event or block in the design.}
+#' \describe{
+#'   \item{formula}{The formula used to create the model.}
+#'   \item{design}{The design matrix for the model, with one row per time point and one column per predictor variable.}
+#'   \item{block_indices}{A list of indices defining the start and end time points of each block.}
+#'   \item{baseline}{A vector containing the estimated baseline fMRI signal level for each block.}
+#'   \item{dur}{A vector containing the duration (in seconds) of each event or block in the design.}
+#' }
 #' 
 #' @examples 
 #' # Create a data frame with experimental design
@@ -192,11 +194,13 @@ design_env <- function(x, ...) UseMethod("design_env")
 #' @param x The contrast specification object
 #' @param ... Extra arguments passed to specific methods
 #' @return A list containing:
-#'   \item{term}{The model term the contrast is applied to}
-#'   \item{name}{The name of the contrast}
-#'   \item{weights}{A matrix of contrast weights}
-#'   \item{condnames}{The condition names associated with the weights}
-#'   \item{contrast_spec}{The original contrast specification}
+#' \describe{
+#'     \item{term}{The model term the contrast is applied to}
+#'     \item{name}{The name of the contrast}
+#'     \item{weights}{A matrix of contrast weights}
+#'     \item{condnames}{The condition names associated with the weights}
+#'     \item{contrast_spec}{The original contrast specification}
+#' }
 #' @examples
 #' # Create a data frame with experimental design
 #' event_data <- data.frame(
@@ -256,11 +260,15 @@ term_names <- function(x) UseMethod("term_names")
 #' 
 #' @param x The object (typically an event_term or event_model)
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{drop.empty}{Logical; if TRUE, cells with no events are removed (default)}
-#'   \item{exclude_basis}{Logical; if TRUE, basis functions are excluded from cell names}
+#' \describe{
+#'     \item{drop.empty}{Logical; if TRUE, cells with no events are removed (default)}
+#'     \item{exclude_basis}{Logical; if TRUE, basis functions are excluded from cell names}
+#' }
 #' @return A tibble containing the experimental cells with attributes:
-#'   \item{count}{Number of events in each cell}
-#'   \item{rownames}{Cell names when cells have multiple factors}
+#' \describe{
+#'     \item{count}{Number of events in each cell}
+#'     \item{rownames}{Cell names when cells have multiple factors}
+#' }
 #' @examples
 #' # Create a simple factorial design
 #' evlist <- list(
@@ -311,8 +319,10 @@ cells <- function(x, ...) UseMethod("cells")
 #' 
 #' @param x The model term (typically an event_term, event_model, or convolved_term)
 #' @param ... Additional arguments passed to methods. Common arguments include:
+#' \itemize{
 #'   \item{drop.empty}{Logical; if TRUE, conditions with no events are dropped}
 #'   \item{exclude_basis}{Logical; if TRUE, basis function labels are excluded}
+#' }
 #' @return A character vector of condition labels
 #' @examples
 #' # Create a simple event model with a categorical predictor
@@ -366,9 +376,11 @@ conditions <- function(x, ...) UseMethod("conditions")
 #' @param hrf The hemodynamic response function to use for convolution
 #' @param sampling_frame The time series grid over which to sample the convolved function
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{drop.empty}{Logical; if TRUE, empty events are dropped}
-#'   \item{summate}{Logical; if TRUE, sum the convolved HRF over event durations}
-#'   \item{precision}{Numeric; precision of HRF sampling (default: 0.3)}
+#'   \itemize{
+#'     \item{drop.empty}{Logical; if TRUE, empty events are dropped}
+#'     \item{summate}{Logical; if TRUE, sum the convolved HRF over event durations}
+#'     \item{precision}{Numeric; precision of HRF sampling (default: 0.3)}
+#'   }
 #' @return A tibble containing the convolved design matrix, with columns for each condition
 #' @examples
 #' # Create a simple event-related design
@@ -801,7 +813,9 @@ run <- function(x,...) UseMethod("run")
 #' 
 #' @param x The term or model object (typically an event_term, event_model, baseline_model, or fmri_model)
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{blockid}{Numeric vector specifying which blocks/runs to include}
+#'   \itemize{
+#'     \item{blockid}{Numeric vector specifying which blocks/runs to include}
+#'   }
 #' @return A tibble containing the design matrix, where:
 #'   \itemize{
 #'     \item Rows represent time points (scans)
@@ -906,9 +920,11 @@ elements <- function(x, ...) UseMethod("elements")
 #'
 #' @param x The model object (event_model, baseline_model, or fmri_model)
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{method}{Correlation method ("pearson" or "spearman")}
-#'   \item{half_matrix}{Logical; if TRUE, show only lower triangle}
-#'   \item{absolute_limits}{Logical; if TRUE, set color limits to \[-1,1\]}
+#'   \describe{
+#'     \item{method}{Correlation method ("pearson" or "spearman")}
+#'     \item{half_matrix}{Logical; if TRUE, show only lower triangle}
+#'     \item{absolute_limits}{Logical; if TRUE, set color limits to \[-1,1\]}
+#'   }
 #' @return A ggplot2 object containing the correlation heatmap, where:
 #'   \itemize{
 #'     \item Rows and columns represent model terms
@@ -1037,9 +1053,11 @@ fitted_hrf <- function(x, sample_at, ...) UseMethod("fitted_hrf")
 #' 
 #' @param x A model object that contains regressors (or can generate them)
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{condition}{Character; specific condition to extract regressors for}
-#'   \item{block}{Numeric; specific block/run to extract regressors from}
-#'   \item{basis}{Character; type of basis functions to use}
+#'   \describe{
+#'     \item{condition}{Character; specific condition to extract regressors for}
+#'     \item{block}{Numeric; specific block/run to extract regressors from}
+#'     \item{basis}{Character; type of basis functions to use}
+#'   }
 #' @return A list of regressor objects, where each regressor contains:
 #'   \itemize{
 #'     \item values: Numeric vector of regressor values over time
@@ -1089,21 +1107,23 @@ regressors <- function(x, ...) UseMethod("regressors")
 #' @description
 #' Apply a temporal shift to a time series object. This function shifts the values in time 
 #' while preserving the structure of the object. Common uses include:
-#' \itemize{
-#'   \item Aligning regressors with different temporal offsets
-#'   \item Applying temporal derivatives to time series
-#'   \item Correcting for timing differences between signals
+#' \describe{
+#'   \item{alignment}{Aligning regressors with different temporal offsets}
+#'   \item{derivatives}{Applying temporal derivatives to time series}
+#'   \item{correction}{Correcting for timing differences between signals}
 #' }
 #'
 #' @param x An object representing a time series or a time-based data structure
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{offset}{Numeric; amount to shift by (positive = forward, negative = backward)}
-#'   \item{pad}{Value to use for padding shifted regions (default = 0)}
+#'   \describe{
+#'     \item{offset}{Numeric; amount to shift by (positive = forward, negative = backward)}
+#'     \item{pad}{Value to use for padding shifted regions (default = 0)}
+#'   }
 #' @return An object of the same class as the input, with values shifted in time:
-#'   \itemize{
-#'     \item Values are moved by the specified offset
-#'     \item Object structure and dimensions are preserved
-#'     \item Empty regions are filled with padding value
+#'   \describe{
+#'     \item{Values}{Values are moved by the specified offset}
+#'     \item{Structure}{Object structure and dimensions are preserved}
+#'     \item{Padding}{Empty regions are filled with padding value}
 #'   }
 #' @examples
 #' # Create a simple time series with events
@@ -1156,8 +1176,10 @@ shift <- function(x, ...) {
 #' @param x The object containing timing information (typically a sampling_frame)
 #' @param onsets A numeric vector of relative onset times within each run/block
 #' @param ... Additional arguments passed to methods. Common arguments include:
+#' \describe{
 #'   \item{blockids}{Numeric vector specifying which block/run each onset belongs to}
 #'   \item{TR}{Numeric; repetition time in seconds}
+#' }
 #' @return A numeric vector of global onset times where:
 #'   \itemize{
 #'     \item Each onset is adjusted by the cumulative duration of previous runs
@@ -1254,15 +1276,17 @@ nbasis <- function(x) UseMethod("nbasis")
 #' 
 #' @param x The dataset to chunk (typically an fmri_dataset or matrix_dataset)
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{nchunks}{Integer; number of chunks to create}
-#'   \item{runwise}{Logical; if TRUE, create one chunk per run}
-#'   \item{parallel}{Logical; if TRUE, prepare chunks for parallel processing}
+#'   \describe{
+#'     \item{nchunks}{Integer; number of chunks to create}
+#'     \item{runwise}{Logical; if TRUE, create one chunk per run}
+#'     \item{parallel}{Logical; if TRUE, prepare chunks for parallel processing}
+#'   }
 #' @return An iterator object that yields data chunks, where each chunk contains:
-#'   \itemize{
-#'     \item data: Matrix of data values for this chunk
-#'     \item chunk_num: Index of this chunk
-#'     \item voxel_ind: Indices of voxels in this chunk
-#'     \item row_ind: Indices of timepoints in this chunk
+#'   \describe{
+#'     \item{data}{Matrix of data values for this chunk}
+#'     \item{chunk_num}{Index of this chunk}
+#'     \item{voxel_ind}{Indices of voxels in this chunk}
+#'     \item{row_ind}{Indices of timepoints in this chunk}
 #'   }
 #' @examples
 #' # Create a simple matrix dataset
@@ -1451,8 +1475,10 @@ amplitudes <- function(x) UseMethod("amplitudes")
 #'
 #' @param x The object containing timing information (typically a sampling_frame or regressor)
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{blockids}{Numeric vector specifying which blocks/runs to include}
-#'   \item{global}{Logical; if TRUE, return cumulative times across runs}
+#'   \describe{
+#'     \item{blockids}{Numeric vector specifying which blocks/runs to include}
+#'     \item{global}{Logical; if TRUE, return cumulative times across runs}
+#'   }
 #' @return A numeric vector of sampling times in seconds, where:
 #'   \itemize{
 #'     \item Each value represents a scan acquisition time
@@ -1601,20 +1627,20 @@ blockids <- function(x) UseMethod("blockids")
 #' Get the number of scans or timepoints in each block/run of the dataset. Block lengths 
 #' are used to:
 #' \itemize{
-#'   \item Define the temporal structure of the experiment
-#'   \item Allocate memory for data matrices
-#'   \item Validate data dimensions across runs
-#'   \item Calculate global timing information
+#'   \item Define the temporal structure of the experiment by specifying scan counts and timing per run
+#'   \item Allocate memory for data matrices by pre-allocating arrays based on scan counts
+#'   \item Validate data dimensions across runs by checking against expected lengths
+#'   \item Calculate global timing information by computing cumulative timing across runs
 #' }
 #'
 #' @param x The object containing block information (typically a sampling_frame or dataset)
 #' @param ... Additional arguments passed to methods
 #' @return A numeric vector where:
-#'   \itemize{
-#'     \item Each element is the number of scans in a block/run
-#'     \item Length equals the number of blocks/runs
-#'     \item Values are positive integers
-#'   }
+#' \itemize{
+#'   \item Each element is the number of scans in a block or run
+#'   \item Length equals the number of blocks/runs 
+#'   \item Values are positive integers
+#' }
 #' @examples
 #' # Create a sampling frame with varying run lengths
 #' sframe <- sampling_frame(
@@ -1648,25 +1674,27 @@ blocklens <- function(x, ...) UseMethod("blocklens")
 #' 
 #' @description
 #' Create F-contrasts to test for overall effects of model terms. F-contrasts are used to:
-#' \itemize{
-#'   \item Test for any effect of a categorical predictor
-#'   \item Compare multiple basis functions simultaneously
-#'   \item Test for nonlinear effects of continuous predictors
-#'   \item Evaluate overall significance of model terms
-#' }
+#'\describe{
+#'   \item{categorical}{Test for any effect of a categorical predictor}
+#'   \item{basis}{Compare multiple basis functions simultaneously}
+#'   \item{nonlinear}{Test for nonlinear effects of continuous predictors}
+#'   \item{overall}{Evaluate overall significance of model terms}
+#'}
 #'
 #' @param x The model term to generate contrasts for (typically an event_term or event_model)
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{basis}{Character; type of basis functions used}
-#'   \item{nbasis}{Integer; number of basis functions}
-#'   \item{exclude}{Character vector of conditions to exclude}
+#'\describe{
+#'     \item{basis}{Character; type of basis functions used}
+#'     \item{nbasis}{Integer; number of basis functions} 
+#'     \item{exclude}{Character vector of conditions to exclude}
+#'}
 #' @return A list of contrast specifications where each contains:
-#'   \itemize{
-#'     \item weights: Matrix of contrast weights
-#'     \item term: The model term being tested
-#'     \item name: Descriptive name for the contrast
-#'     \item df: Degrees of freedom for the contrast
-#'   }
+#'\describe{
+#'     \item{weights}{Matrix of contrast weights}
+#'     \item{term}{The model term being tested}
+#'     \item{name}{Descriptive name for the contrast}
+#'     \item{df}{Degrees of freedom for the contrast}
+#'}
 #' @examples
 #' # Create event data with multiple conditions
 #' event_data <- data.frame(
@@ -1747,24 +1775,27 @@ build_afni_stims <- function(x, ...) UseMethod("build_afni_stims")
 #'
 #' Split a vector of event onsets into separate lists based on factor levels and/or block IDs.
 #' This is useful for:
-#' \itemize{
-#'   \item Separating events by experimental conditions
-#'   \item Organizing onsets by scanning runs/blocks
-#'   \item Preparing onset times for AFNI analysis
-#'   \item Analyzing timing patterns within conditions
+#' 
+#' \describe{
+#'   \item{separation}{Separating events by experimental conditions}
+#'   \item{organization}{Organizing onsets by scanning runs/blocks}
+#'   \item{preparation}{Preparing onset times for AFNI analysis}
+#'   \item{analysis}{Analyzing timing patterns within conditions}
 #' }
 #'
 #' @param x The object containing onset information (typically an event_term or event_model)
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{sframe}{A sampling_frame object defining the temporal structure}
-#'   \item{global}{Logical; if TRUE, convert to global onset times}
-#'   \item{blocksplit}{Logical; if TRUE, further split by block/run IDs}
+#' \describe{
+#'     \item{sframe}{A sampling_frame object defining the temporal structure}
+#'     \item{global}{Logical; if TRUE, convert to global onset times}
+#'     \item{blocksplit}{Logical; if TRUE, further split by block IDs}
+#' }
 #' @return A list of numeric vectors where:
-#'   \itemize{
-#'     \item Each element contains onsets for one condition/block
-#'     \item Names correspond to condition labels
-#'     \item If blocksplit=TRUE, each condition contains a nested list of blocks
-#'   }
+#' \describe{
+#'     \item{Elements}{Each element contains onsets for one condition/block}
+#'     \item{Names}{Names correspond to condition labels}
+#'     \item{Nested Structure}{If blocksplit=TRUE, each condition contains a nested list of blocks}
+#' }
 #' @examples
 #' # Create example data with multiple conditions and blocks
 #' event_data <- data.frame(
@@ -1829,7 +1860,9 @@ chunkwise_lm <- function(x, ...) UseMethod("chunkwise_lm")
 #'
 #' @param x The fitted model object
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{type}{The type of standard errors to extract (e.g., "estimates" or "contrasts")}
+#'   \describe{
+#'     \item{type}{The type of standard errors to extract (e.g., "estimates" or "contrasts")}
+#'   }
 #' @return A tibble or matrix containing standard errors of parameter estimates
 #' @examples
 #' # Create example data
@@ -1868,7 +1901,9 @@ standard_error <- function(x, ...) UseMethod("standard_error")
 #'
 #' @param x The fitted model object
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{type}{The type of statistics to extract (e.g., "estimates", "contrasts", or "F")}
+#'   \describe{
+#'     \item{type}{The type of statistics to extract (e.g., "estimates", "contrasts", or "F")}
+#'   }
 #' @return A tibble or matrix containing test statistics
 #' @examples
 #' # Create example data
@@ -1907,7 +1942,9 @@ stats <- function(x, ...) UseMethod("stats")
 #'
 #' @param x The fitted model object
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{type}{The type of p-values to extract (e.g., "estimates" or "contrasts")}
+#'   \describe{
+#'     \item{type}{The type of p-values to extract (e.g., "estimates" or "contrasts")}
+#'   }
 #' @return A tibble or matrix containing p-values
 #' @examples
 #' # Create example data
@@ -1948,8 +1985,10 @@ p_values <- function(x, ...) UseMethod("p_values")
 #'
 #' @param x The object to extract names from (typically an event_term, event_model, or convolved_term)
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{exclude_basis}{Logical; if TRUE, exclude basis function labels from names}
-#'   \item{drop_empty}{Logical; if TRUE, drop empty condition levels}
+#' \describe{
+#'     \item{exclude_basis}{Logical; if TRUE, exclude basis function labels from names}
+#'     \item{drop_empty}{Logical; if TRUE, drop empty condition levels}
+#' }
 #' @return A character vector containing the full condition names with term prefixes and basis functions
 #' @examples
 #' # Create example data with multiple conditions
@@ -1997,15 +2036,16 @@ longnames <- function(x, ...) UseMethod("longnames")
 #' @description
 #' Estimate beta coefficients (regression parameters) from fMRI data using various methods.
 #' This function supports different estimation approaches for:
-#' \itemize{
-#'   \item Single-trial beta estimation
-#'   \item Fixed and random effects
-#'   \item Various regularization techniques
-#'   \item Optional HRF estimation
+#' \describe{
+#'   \item{single}{Single-trial beta estimation}
+#'   \item{effects}{Fixed and random effects}
+#'   \item{regularization}{Various regularization techniques}
+#'   \item{hrf}{Optional HRF estimation}
 #' }
 #'
 #' @param x The dataset object (fmri_dataset, matrix_dataset, or latent_dataset)
 #' @param ... Additional arguments passed to specific methods. Common arguments include:
+#' \describe{
 #'   \item{fixed}{Formula specifying fixed effects (constant across trials)}
 #'   \item{ran}{Formula specifying random effects (varying by trial)}
 #'   \item{block}{Formula specifying the block/run structure}
@@ -2013,33 +2053,34 @@ longnames <- function(x, ...) UseMethod("longnames")
 #'   \item{basemod}{Optional baseline model to regress out}
 #'   \item{hrf_basis}{Basis functions for HRF estimation}
 #'   \item{hrf_ref}{Reference HRF for initialization}
+#' }
 #'
 #' @return A list of class "fmri_betas" containing:
-#'   \itemize{
-#'     \item betas_fixed: Fixed effect coefficients
-#'     \item betas_ran: Random (trial-wise) coefficients  
-#'     \item design_ran: Design matrix for random effects
-#'     \item design_fixed: Design matrix for fixed effects
-#'     \item design_base: Design matrix for baseline model
-#'     \item Additional components depending on method
-#'   }
+#' \describe{
+#'     \item{betas_fixed}{Fixed effect coefficients}
+#'     \item{betas_ran}{Random (trial-wise) coefficients}
+#'     \item{design_ran}{Design matrix for random effects}
+#'     \item{design_fixed}{Design matrix for fixed effects}
+#'     \item{design_base}{Design matrix for baseline model}
+#'     \item{method_specific}{Additional components specific to the estimation method used}
+#' }
 #'
 #' @details
 #' This is a generic function with methods for different dataset types:
-#' \itemize{
-#'   \item fmri_dataset: For volumetric fMRI data
-#'   \item matrix_dataset: For matrix-format data
-#'   \item latent_dataset: For dimensionality-reduced data
+#' \describe{
+#'   \item{fmri_dataset}{For volumetric fMRI data}
+#'   \item{matrix_dataset}{For matrix-format data}
+#'   \item{latent_dataset}{For dimensionality-reduced data}
 #' }
 #'
 #' Available estimation methods include:
-#' \itemize{
-#'   \item mixed: Mixed-effects model using rrBLUP
-#'   \item r1: Rank-1 GLM with joint HRF estimation
-#'   \item lss: Least-squares separate estimation
-#'   \item pls: Partial least squares regression
-#'   \item ols: Ordinary least squares
-#'   \item fracridge: Fractional ridge regression
+#' \describe{
+#'   \item{mixed}{Mixed-effects model using rrBLUP}
+#'   \item{r1}{Rank-1 GLM with joint HRF estimation}
+#'   \item{lss}{Least-squares separate estimation}
+#'   \item{pls}{Partial least squares regression}
+#'   \item{ols}{Ordinary least squares}
+#'   \item{fracridge}{Fractional ridge regression}
 #' }
 #'
 #' @examples
@@ -2083,24 +2124,27 @@ estimate_betas <- function(x, ...) UseMethod("estimate_betas")
 #'
 #' Converts event timing information into a neural input function representing the underlying
 #' neural activity before HRF convolution. This function is useful for:
-#' \itemize{
-#'   \item Creating stimulus functions for fMRI analysis
-#'   \item Modeling sustained vs. transient neural activity
-#'   \item Generating inputs for HRF convolution
-#'   \item Visualizing the temporal structure of experimental designs
+#' 
+#' \describe{
+#'   \item{stimulus}{Creating stimulus functions for fMRI analysis}
+#'   \item{modeling}{Modeling sustained vs. transient neural activity}
+#'   \item{inputs}{Generating inputs for HRF convolution}
+#'   \item{visualization}{Visualizing the temporal structure of experimental designs}
 #' }
 #'
 #' @param x A regressor object containing event timing information
 #' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \item{start}{Numeric; start time of the input function}
-#'   \item{end}{Numeric; end time of the input function}
-#'   \item{resolution}{Numeric; temporal resolution in seconds (default: 0.33)}
+#' \describe{
+#'     \item{start}{Numeric; start time of the input function}
+#'     \item{end}{Numeric; end time of the input function} 
+#'     \item{resolution}{Numeric; temporal resolution in seconds (default: 0.33)}
+#' }
 #'
 #' @return A list containing:
-#'   \itemize{
-#'     \item time: Numeric vector of time points
-#'     \item neural_input: Numeric vector of input amplitudes at each time point
-#'   }
+#' \describe{
+#'     \item{time}{Numeric vector of time points}
+#'     \item{neural_input}{Numeric vector of input amplitudes at each time point}
+#' }
 #'
 #' @examples
 #' # Create a regressor with multiple events

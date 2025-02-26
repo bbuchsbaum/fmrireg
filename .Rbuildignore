@@ -11,3 +11,5 @@
 ^Meta$
 ^\.github$
 ^data-raw$
+^\.vscode
+fmrireg.code-workspace

@@ -10,26 +10,30 @@ split_onsets(x, ...)
 \item{x}{The object containing onset information (typically an event_term or event_model)}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
+\describe{
 \item{sframe}{A sampling_frame object defining the temporal structure}
 \item{global}{Logical; if TRUE, convert to global onset times}
-\item{blocksplit}{Logical; if TRUE, further split by block/run IDs}}
+\item{blocksplit}{Logical; if TRUE, further split by block IDs}
+}}
 }
 \value{
 A list of numeric vectors where:
-\itemize{
-\item Each element contains onsets for one condition/block
-\item Names correspond to condition labels
-\item If blocksplit=TRUE, each condition contains a nested list of blocks
+\describe{
+\item{Elements}{Each element contains onsets for one condition/block}
+\item{Names}{Names correspond to condition labels}
+\item{Nested Structure}{If blocksplit=TRUE, each condition contains a nested list of blocks}
 }
 }
 \description{
 Split a vector of event onsets into separate lists based on factor levels and/or block IDs.
 This is useful for:
-\itemize{
-\item Separating events by experimental conditions
-\item Organizing onsets by scanning runs/blocks
-\item Preparing onset times for AFNI analysis
-\item Analyzing timing patterns within conditions
+}
+\details{
+\describe{
+\item{separation}{Separating events by experimental conditions}
+\item{organization}{Organizing onsets by scanning runs/blocks}
+\item{preparation}{Preparing onset times for AFNI analysis}
+\item{analysis}{Analyzing timing patterns within conditions}
 }
 }
 \examples{

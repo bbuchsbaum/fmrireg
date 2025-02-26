@@ -10,24 +10,26 @@ shift(x, ...)
 \item{x}{An object representing a time series or a time-based data structure}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
+\describe{
 \item{offset}{Numeric; amount to shift by (positive = forward, negative = backward)}
-\item{pad}{Value to use for padding shifted regions (default = 0)}}
+\item{pad}{Value to use for padding shifted regions (default = 0)}
+}}
 }
 \value{
 An object of the same class as the input, with values shifted in time:
-\itemize{
-\item Values are moved by the specified offset
-\item Object structure and dimensions are preserved
-\item Empty regions are filled with padding value
+\describe{
+\item{Values}{Values are moved by the specified offset}
+\item{Structure}{Object structure and dimensions are preserved}
+\item{Padding}{Empty regions are filled with padding value}
 }
 }
 \description{
 Apply a temporal shift to a time series object. This function shifts the values in time
 while preserving the structure of the object. Common uses include:
-\itemize{
-\item Aligning regressors with different temporal offsets
-\item Applying temporal derivatives to time series
-\item Correcting for timing differences between signals
+\describe{
+\item{alignment}{Aligning regressors with different temporal offsets}
+\item{derivatives}{Applying temporal derivatives to time series}
+\item{correction}{Correcting for timing differences between signals}
 }
 }
 \examples{

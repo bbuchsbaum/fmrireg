@@ -5,6 +5,7 @@
 #'
 #' @inheritParams fmri_lm
 #' @param nchunks Number of data chunks when strategy is "chunkwise". Default is 10.
+#' @param meta_weighting Method for combining results across runs/chunks. Either "inv_var" for inverse variance weighting or "equal" for equal weighting. Default is "inv_var".
 #' @return A fitted robust linear regression model for fMRI data analysis.
 #' @export
 #' @examples

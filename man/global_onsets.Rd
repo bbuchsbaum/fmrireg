@@ -12,8 +12,10 @@ global_onsets(x, onsets, ...)
 \item{onsets}{A numeric vector of relative onset times within each run/block}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
+\describe{
 \item{blockids}{Numeric vector specifying which block/run each onset belongs to}
-\item{TR}{Numeric; repetition time in seconds}}
+\item{TR}{Numeric; repetition time in seconds}
+}}
 }
 \value{
 A numeric vector of global onset times where:

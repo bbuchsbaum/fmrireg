@@ -30,7 +30,8 @@ An object of class "event_factor" and "event_seq".
 Create a categorical event sequence from a factor.
 }
 \examples{
-efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), "abc", onsets = seq(1, 100, length.out = 6))
+efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), "abc", 
+        onsets = seq(1, 100, length.out = 6))
 
 }
 \seealso{

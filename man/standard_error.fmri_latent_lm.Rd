@@ -4,7 +4,7 @@
 \alias{standard_error.fmri_latent_lm}
 \title{Calculate the standard error for an fmri_latent_lm object}
 \usage{
-\method{standard_error}{fmri_latent_lm}(x, type = c("estimates", "contrasts"), recon = FALSE)
+\method{standard_error}{fmri_latent_lm}(x, type = c("estimates", "contrasts"), recon = FALSE, ...)
 }
 \arguments{
 \item{x}{An fmri_latent_lm object.}

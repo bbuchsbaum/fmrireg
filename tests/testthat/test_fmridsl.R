@@ -2,6 +2,7 @@ library(testthat)
 library(bidser)
 library(mockery)
 
+
 # Helper function to create mock event data
 create_mock_events <- function(
     n_events = 20,

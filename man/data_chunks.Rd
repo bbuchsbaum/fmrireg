@@ -10,17 +10,19 @@ data_chunks(x, nchunks, ...)
 \item{x}{The dataset to chunk (typically an fmri_dataset or matrix_dataset)}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
+\describe{
 \item{nchunks}{Integer; number of chunks to create}
 \item{runwise}{Logical; if TRUE, create one chunk per run}
-\item{parallel}{Logical; if TRUE, prepare chunks for parallel processing}}
+\item{parallel}{Logical; if TRUE, prepare chunks for parallel processing}
+}}
 }
 \value{
 An iterator object that yields data chunks, where each chunk contains:
-\itemize{
-\item data: Matrix of data values for this chunk
-\item chunk_num: Index of this chunk
-\item voxel_ind: Indices of voxels in this chunk
-\item row_ind: Indices of timepoints in this chunk
+\describe{
+\item{data}{Matrix of data values for this chunk}
+\item{chunk_num}{Index of this chunk}
+\item{voxel_ind}{Indices of voxels in this chunk}
+\item{row_ind}{Indices of timepoints in this chunk}
 }
 }
 \description{

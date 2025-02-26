@@ -13,26 +13,28 @@ Fcontrasts(x, ...)
 \item{x}{The model term to generate contrasts for (typically an event_term or event_model)}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
+\describe{
 \item{basis}{Character; type of basis functions used}
 \item{nbasis}{Integer; number of basis functions}
-\item{exclude}{Character vector of conditions to exclude}}
+\item{exclude}{Character vector of conditions to exclude}
+}}
 }
 \value{
 A list of contrast specifications where each contains:
-\itemize{
-\item weights: Matrix of contrast weights
-\item term: The model term being tested
-\item name: Descriptive name for the contrast
-\item df: Degrees of freedom for the contrast
+\describe{
+\item{weights}{Matrix of contrast weights}
+\item{term}{The model term being tested}
+\item{name}{Descriptive name for the contrast}
+\item{df}{Degrees of freedom for the contrast}
 }
 }
 \description{
 Create F-contrasts to test for overall effects of model terms. F-contrasts are used to:
-\itemize{
-\item Test for any effect of a categorical predictor
-\item Compare multiple basis functions simultaneously
-\item Test for nonlinear effects of continuous predictors
-\item Evaluate overall significance of model terms
+\describe{
+\item{categorical}{Test for any effect of a categorical predictor}
+\item{basis}{Compare multiple basis functions simultaneously}
+\item{nonlinear}{Test for nonlinear effects of continuous predictors}
+\item{overall}{Evaluate overall significance of model terms}
 }
 }
 \examples{

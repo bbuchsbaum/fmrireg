@@ -34,11 +34,11 @@ lss_fast <- function(dset, bdes, Y=NULL, use_cpp = TRUE) {
   }
   
   if (use_cpp) {
-    print("using cpp")
+    ##print("using cpp")
     res <- compute_residuals_cpp(X_base_fixed, data_matrix, dmat_ran)
     beta_matrix <- lss_compute_cpp(res$Q_dmat_ran, res$residual_data)
   } else {
-    print("using r")
+    ##print("using r")
     # Pure R implementation
     P_base_fixed <- MASS::ginv(X_base_fixed)
     Q_base_fixed <- diag(n_timepoints) - X_base_fixed %*% P_base_fixed
@@ -65,25 +65,56 @@ lss_compute_r <- function(Q_dmat_ran, residual_data) {
     # Current trial regressor
     c <- Q_dmat_ran[, i, drop = FALSE]
     
+    # Skip if current regressor has very low variance
+    c_norm <- drop(crossprod(c))
+    if (c_norm < 1e-10) {
+      beta_matrix[i, ] <- 0
+      next
+    }
+    
+    # If there's only one event, we can just do a simple regression
+    if (n_events == 1) {
+      s <- c / c_norm
+      beta_matrix[i, ] <- drop(crossprod(s, residual_data))
+      next
+    }
+    
     # Sum of other trial regressors
-    b <- rowSums(Q_dmat_ran[, -i, drop = FALSE])
-    b <- matrix(b, ncol=1)
+    b <- Q_dmat_ran[, -i, drop = FALSE]
+    
+    # If all other regressors are very close to zero, just use this regressor
+    if (ncol(b) == 0 || all(colSums(b^2) < 1e-10)) {
+      s <- c / c_norm
+      beta_matrix[i, ] <- drop(crossprod(s, residual_data))
+      next
+    }
+    
+    # Sum the columns of b
+    b_sum <- rowSums(b)
+    b <- matrix(b_sum, ncol=1)
+    
+    # Check if b is essentially zero
+    b_norm <- drop(crossprod(b))
+    if (b_norm < 1e-10) {
+      # If other regressors sum to approximately zero, use this regressor directly
+      s <- c / c_norm
+      beta_matrix[i, ] <- drop(crossprod(s, residual_data))
+      next
+    }
     
     # Compute v = c - b(b'b)^(-1)b'c
-    b_norm <- drop(crossprod(b))
-    if(b_norm > 1e-10) {
-      bc <- drop(crossprod(b, c))
-      v <- c - (bc/b_norm) * b
-    } else {
-      v <- c
-    }
+    bc <- drop(crossprod(b, c))
+    v <- c - (bc/b_norm) * b
     
     # Compute cvdot = c'v
     cvdot <- drop(crossprod(c, v))
     
-    # Handle numerical stability
-    if (abs(cvdot) < 1e-5 * drop(crossprod(c))) {
-      s <- rep(0, n_timepoints)
+    # Handle numerical stability - only set to zero if truly negligible
+    # compared to both c_norm and v_norm
+    v_norm <- drop(crossprod(v))
+    if (abs(cvdot) < 1e-8 * sqrt(c_norm * v_norm)) {
+      # Try direct regression as fallback
+      s <- c / c_norm
     } else {
       s <- v / cvdot
     }

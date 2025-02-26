@@ -1,5 +1,6 @@
 options(mc.cores=2)
 library(testthat)
+library(assertthat)
 
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 lopdes <- read.table(system.file("extdata", "design_aug.txt", package = "fmrireg"), header=TRUE)
@@ -168,7 +169,7 @@ test_that("event_model with duplicate terms at different lags", {
   sframe <- sampling_frame(blocklens=100, TR=1)
   etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), Run=rep(1,4))
   ev <- event_model(onsets ~ hrf(fac) + hrf(fac,lag=5, prefix="phase2") , data=etab, block= ~ Run, sampling_frame=sframe)
-  
+  expect_true(!is.null(ev))
   
 })
 
@@ -278,10 +279,6 @@ test_that("facedes model with bspline parametric basis", {
 #   expect_true(durations(reg1)[1] == 0)
 #   expect_true(amplitudes(reg1)[1] == 1)
 # })
-
-
-library(testthat)
-library(assertthat)
 
 # Test null_regressor
 test_that("null_regressor creates a valid object", {

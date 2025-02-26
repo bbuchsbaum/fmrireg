@@ -242,7 +242,8 @@ EV <- function(vals, name, onsets, blockids, durations = 1, subset = rep(TRUE, l
 #' @return An object of class "event_factor" and "event_seq".
 #'
 #' @examples
-#' efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), "abc", onsets = seq(1, 100, length.out = 6))
+#' efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), "abc", 
+#'         onsets = seq(1, 100, length.out = 6))
 #'
 #' @seealso \code{\link{event_model}}
 #' @export 
@@ -847,7 +848,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
     dplyr::mutate(.blockids = blockids, .globons = globons, .durations = durations) |>
     dplyr::group_by(.blockids) |>
     dplyr::do({
-      d <- dplyr::select(., 1:ncond)
+      d <- dplyr::select(., all_of(seq_len(ncond)))
       reg <- convolve_design(hrf, d, .$.globons, .$.durations, summate = summate)
       sam <- samples(sampling_frame, blockids = as.integer(as.character(.$.blockids[1])), global = TRUE)
       ## NOTE: This loop could be parallelized if necessary.
@@ -860,7 +861,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
       ret
     })
   
-  cmat <- cmat %>% dplyr::ungroup() %>% dplyr::select(-.blockids)
+  cmat <- cmat |> dplyr::ungroup() |> dplyr::select(!.blockids)
   
   if (nbasis(hrf) > 1) {
     blevs <- paste("[", 1:nbasis(hrf), "]", sep = "")
