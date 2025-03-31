@@ -1,172 +1,346 @@
 ---
-title: "Event Models"
+title: "Building Event-Related fMRI Models"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Event Models}
+  %\VignetteIndexEntry{Building Event Models}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-
-## fMRI event models
-
-An "event model" is a description of an fMRI experiment, which consists of a collection of experimental "events" (stimuli/conditions/responses) which are embedded in an experimental design. By convolving each event type with a hemodynamic response function we from a set of regressors that are used to model and make inferences about the BOLD response. 
-
-## A simple fMRI design
-
-Consider a basic design, consisting of four stimulus types, each repeated 4 times over the course of a single scanning run. The stimuli are pictures of *faces*, *scenes*, *tools* and *object* presented for 2s a piece in a pseudorandom order. There is a uniformly distributed (4-7s) inter-stimulus interval (ISI) separating each stimulus presentation.
-
-```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7, 
+  fig.height = 5,
+  message = FALSE,
+  warning = FALSE
+)
 library(fmrireg)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(plotly)
 ```
 
-```{r, message=FALSE,fig.width = 7, fig.height = 5}
+## Introduction: Modeling Task Effects
 
-cond <- c("face", "scene", "tool", "object")
-NSTIM <- length(cond)*4
+An **event model** describes the expected BOLD signal changes related to experimental events (stimuli, conditions, responses, etc.). It forms the core of the task-related component of an fMRI General Linear Model (GLM).
 
-```
+`fmrireg` primarily uses the `event_model()` function to create these models. It takes experimental design information (event onsets, conditions, durations) and combines it with Hemodynamic Response Function (HRF) specifications to generate the task regressors.
 
+This vignette focuses on the common formula-based interface for `event_model()`. There's also a list-based interface (`event_model.list`) and a more programmatic `create_event_model()` function for advanced use cases.
 
-Now we contruct a "design table" by randomly sampling from the four conditions:
+## A Simple Single-Factor Design (Single Run)
 
-```{r, message=FALSE}
+Consider a basic design with four stimulus types (*face*, *scene*, *tool*, *object*), each presented 4 times for 2s, separated by a variable ISI (4-7s). The total scan duration is 70 TRs (TR=2s).
 
-simple_design <- data.frame(stim=factor(sample(rep(cond, 4))), 
-                     ISI=sample(4:7, NSTIM, replace=TRUE), 
-                     run=rep(1, NSTIM),
-                     trial=factor(1:NSTIM))
-
-```
-
-Event onsets are calculated as the cumulative sum of the ISI variables. Then we construct a **sampling_frame** which define the temporal sampling and block structure of the experiment. Here we have only 1 block and a repetition frequency (TR) of 2.
-
-```{r, message=FALSE}
-
-simple_design$onset <- cumsum(simple_design$ISI+2) -2
+```{r setup_simple_design}
 TR <- 2
-sframe <- sampling_frame(blocklens=70, TR)
-
-```
-
-Now the fun part. We create an **event_model** that describes the experimental model in terms of the stimulus onsets, conditions, and hemodynamic response function ('hrf').
-
-```{r}
-
-emodel <- event_model(onset ~ hrf(stim), data=simple_design, block = ~ run, sampling_frame=sframe)
-
-```
-
-```{r}
-print(emodel)
-```
-
-And we can plot the model:
-
-```{r, fig.width = 7, fig.height = 5}
-plot(emodel)
-```
-
-## A simple fMRI design with multiple blocks
-
-```{r, message=FALSE,fig.width = 7, fig.height = 5}
-
 cond <- c("face", "scene", "tool", "object")
-NSTIM <- length(cond)*4
+NSTIM <- length(cond) * 4
 
-## construct a design table with two blocks
-design1 <- data.frame(stim=factor(sample(rep(cond, 4))), 
-                     ISI=sample(4:7, 16, replace=TRUE), 
-                     run=rep(1, NSTIM))
-design2 <- data.frame(stim=factor(sample(rep(cond, 4))), 
-                     ISI=sample(4:7, 16, replace=TRUE), 
-                     run=rep(2, NSTIM))
-design1$onset <- cumsum(design1$ISI+2) -2
-design2$onset <- cumsum(design2$ISI+2) -2
+# Construct the design table
+set.seed(123) # for reproducibility
+simple_design <- data.frame(
+  stim = factor(sample(rep(cond, 4))),
+  ISI = sample(10:20, NSTIM, replace = TRUE),  # Increased ISI range for better spacing
+  run = rep(1, NSTIM),
+  trial = factor(1:NSTIM)
+)
 
-design <- rbind(design1, design2)
+# Calculate onsets (cumulative sum of duration (2s) + ISI)
+simple_design$onset <- cumsum(c(0, simple_design$ISI[-NSTIM] + 2))
 
-## create a 'sampling_frame' describing the temporal outline of the scan consisting of 70 images collected every once every 2 seconds.
-TR <- 2
-sframe <- sampling_frame(blocklens=c(70,70), TR)
+# Define the sampling frame (temporal structure of the scan)
+sframe_single_run <- sampling_frame(blocklens = 140, TR = TR)
 
-## create the event model d
-emodel <- event_model(onset ~ hrf(stim), data=design, block = ~ run, sampling_frame=sframe)
-print(emodel)
-plot(emodel)
+head(simple_design)
 ```
 
-## A two-factor fMRI design with multiple blocks
+Now, we create the `event_model`. The formula `onset ~ hrf(stim)` specifies that:
 
+*   `onset` is the column in `simple_design` containing event start times.
+*   `hrf(stim)` defines a term where the `stim` factor levels determine the conditions. Each level will be convolved with the default HRF (`HRF_SPMG1`).
 
-```{r, message=FALSE,fig.width = 7, fig.height = 5}
+The `block = ~ run` argument links events to scanning runs (here, just one run).
 
+```{r create_simple_model}
+emodel_simple <- event_model(onset ~ hrf(stim), 
+                             data = simple_design, 
+                             block = ~ run, 
+                             sampling_frame = sframe_single_run)
+
+# Print the model summary
+print(emodel_simple)
+```
+
+## Visualizing the Event Model
+
+We can plot the generated regressors using `plot()` (which uses `ggplot2`) or `plotly()` for an interactive version.
+
+```{r plot_simple_model}
+# Static plot (ggplot2)
+plot(emodel_simple)
+
+# Interactive plot (plotly)
+# plotly(emodel_simple)
+```
+
+The plot shows the predicted BOLD timecourse for each condition (`stim` level) convolved with the default HRF.
+
+## Design with Multiple Runs
+
+Let's extend the design to two runs.
+
+```{r setup_multi_block}
+# Construct a design table with two runs
+design_list <- lapply(1:2, function(run_idx) {
+  df <- data.frame(
+    stim = factor(sample(rep(cond, 4))),
+    ISI = sample(10:20, NSTIM, replace = TRUE),  # Increased ISI range for better spacing
+    run = rep(run_idx, NSTIM)
+  )
+  df$onset <- cumsum(c(0, df$ISI[-NSTIM] + 2))
+  df
+})
+design_multi_run <- bind_rows(design_list)
+
+# Sampling frame for two runs of 140s each
+sframe_multi_run <- sampling_frame(blocklens = c(140, 140), TR = TR)
+
+head(design_multi_run)
+```
+
+The `event_model` call remains the same, but now `block = ~ run` correctly maps events to their respective runs based on the `run` column and the `sampling_frame`.
+
+```{r create_multi_block_model}
+emodel_multi_run <- event_model(onset ~ hrf(stim), 
+                                data = design_multi_run, 
+                                block = ~ run, 
+                                sampling_frame = sframe_multi_run)
+
+print(emodel_multi_run)
+plot(emodel_multi_run) + 
+  facet_wrap(~.block, ncol = 1) # Show blocks separately
+```
+
+## Two-Factor Design
+
+Now consider a design crossing stimulus type (`stim`) with task instruction (`task`: attend vs. ignore).
+
+```{r setup_two_factor}
 cond1 <- c("face", "scene", "tool", "object")
 cond2 <- c("attend", "ignore")
-comb <- expand.grid(stim=cond1, task=cond2)
-NSTIM <- nrow(comb) * 4
+comb <- expand.grid(stim = cond1, task = cond2)
+NSTIM_TF <- nrow(comb) * 4 # 8 conditions * 4 reps per run
 
-design <- do.call(rbind, lapply(1:2, function(i) {
-  ind <- sample(rep(1:nrow(comb), length.out=NSTIM))
-  d <- data.frame(stim=factor(comb$stim[ind]),
-             task=factor(comb$task[ind]),
-             ISI=sample(2:6, NSTIM, replace=TRUE), 
-             run=rep(i, NSTIM))
-  d$onset <- cumsum(d$ISI+2) -2
-  d
-}))
+# Design for two runs
+design_two_factor_list <- lapply(1:2, function(run_idx) {
+  ind <- sample(rep(1:nrow(comb), length.out = NSTIM_TF))
+  df <- data.frame(
+    stim = factor(comb$stim[ind]),
+    task = factor(comb$task[ind]),
+    ISI = sample(6:15, NSTIM_TF, replace = TRUE),  # Increased ISI range for better spacing
+    run = rep(run_idx, NSTIM_TF)
+  )
+  df$onset <- cumsum(c(0, df$ISI[-NSTIM_TF] + 2))
+  df
+})
+design_two_factor <- bind_rows(design_two_factor_list)
 
-head(design)
-       
-## create a 'sampling_frame' describing the temporal outline of the scan consisting of 70 images collected every once every 2 seconds.
-TR <- 2
-sframe <- sampling_frame(blocklens=c(100,100), TR)
+# Sampling frame for two runs, potentially longer
+sframe_two_factor <- sampling_frame(blocklens = c(200, 200), TR = TR)
 
-## create the event model d
-emodel <- event_model(onset ~ hrf(stim, task), data=design, block = ~ run, sampling_frame=sframe)
-print(emodel)
-plot(emodel)
+head(design_two_factor)
 ```
 
-## An event-related design with an amplitude-modulated variable
+The formula `onset ~ hrf(stim, task)` automatically creates regressors for the interaction of `stim` and `task`.
 
-```{r, message=FALSE,fig.width = 7, fig.height = 5}
-TR <- 2
-sframe <- sampling_frame(blocklens=70, TR)
-simple_design$RT <- scale(rnorm(nrow(simple_design), mean=700, sd=100))[,1]
+```{r create_two_factor_model}
+emodel_two_factor <- event_model(onset ~ hrf(stim, task), 
+                                 data = design_two_factor, 
+                                 block = ~ run, 
+                                 sampling_frame = sframe_two_factor)
+print(emodel_two_factor)
 
-
-## create the event model d
-emodel <- event_model(onset ~ hrf(stim) + hrf(RT), data=simple_design, block = ~ run, sampling_frame=sframe)
-print(emodel)
-plot(emodel, "RT")
+# Plotting all interaction terms can be busy; consider plotly
+# plot(emodel_two_factor)
+# plotly(emodel_two_factor)
 ```
 
-## An event-related design with an amplitude-modulated variable crossed with factor
+## Amplitude Modulation (Parametric Regressors)
 
-```{r, message=FALSE,fig.width = 7, fig.height = 5}
-TR <- 2
-sframe <- sampling_frame(blocklens=70, TR)
+We can model how a continuous variable (like reaction time, RT) modulates the amplitude of the BOLD response. This is done by including the modulating variable within the `hrf()` call.
 
+```{r setup_pmod}
+# Use the simple single-run design and add a simulated RT column
+simple_design$RT <- rnorm(nrow(simple_design), mean = 700, sd = 100)
 
-simple_design$RT <- scale(rnorm(nrow(simple_design), mean=700, sd=100))
-
-## create the event model d
-emodel <- event_model(onset ~ hrf(stim) + hrf(stim, RT), data=simple_design, block = ~ run, sampling_frame=sframe)
-print(emodel)
-plot(emodel, "stim:RT")
+# It's often recommended to center parametric modulators
+simple_design$RT_centered <- scale(simple_design$RT, center = TRUE, scale = FALSE)[,1]
+head(simple_design)
 ```
 
-## Trialwise event model to construct "beta-series" estimates
+Here, `hrf(RT_centered)` creates a single parametric regressor reflecting RT variations, orthogonal to the average stimulus effect modeled by `hrf(stim)`.
 
-```{r, message=FALSE,fig.width = 7, fig.height = 5}
-TR <- 2
-sframe <- sampling_frame(blocklens=70, TR)
+```{r create_pmod_model}
+emodel_pmod <- event_model(onset ~ hrf(stim) + hrf(RT_centered), 
+                           data = simple_design, 
+                           block = ~ run, 
+                           sampling_frame = sframe_single_run)
+print(emodel_pmod)
 
-# create the event model d
-emodel <- event_model(onset ~ trialwise(), data=simple_design, block = ~ run, sampling_frame=sframe)
-print(emodel)
-plot(emodel, "trialwise")
+# Plot the RT parametric modulator term
+plot(emodel_pmod, term_name = "RT_centered") 
+# plotly(emodel_pmod, term_name = "RT_centered")
 ```
+
+## Interaction Between Factors and Amplitude Modulation
+
+We can also model how a parametric modulator interacts with a factor. For example, does RT modulate the response differently for faces vs. scenes? The formula `hrf(stim, RT_centered)` creates separate RT modulators for each level of `stim`.
+
+```{r create_pmod_interaction}
+emodel_pmod_int <- event_model(onset ~ hrf(stim) + hrf(stim, RT_centered), 
+                               data = simple_design, 
+                               block = ~ run, 
+                               sampling_frame = sframe_single_run)
+print(emodel_pmod_int)
+
+# Plot the interaction term - results in multiple regressors
+plot(emodel_pmod_int, term_name = "stim:RT_centered")
+# plotly(emodel_pmod_int, term_name = "stim:RT_centered")
+```
+
+## Specifying Different HRFs
+
+By default, `hrf()` uses the SPM canonical HRF (`HRF_SPMG1`). You can specify a different HRF basis for any term using the `basis` argument within the `hrf()` call in the model formula. 
+
+Here are the main ways to specify the `basis`:
+
+1.  **By Name (String):** Use a recognized name for common HRFs:
+    *   `"spmg1"` (default), `"spmg2"`, `"spmg3"`
+    *   `"gaussian"`, `"gamma"`
+    *   `"bspline"` or `"bs"` (use `nbasis` to set number of splines)
+    *   `"tent"` (use `nbasis` to set number of tent functions)
+
+2.  **Using Pre-defined `HRF` Objects:** Pass an exported `HRF` object directly. Examples include `HRF_SPMG1`, `HRF_GAUSSIAN`, `HRF_SPMG2`, `HRF_SPMG3`, `HRF_BSPLINE`, `HRF_DAGUERRE`, `HRF_DAGUERRE_BASIS`.
+
+3.  **Using Custom Functions `f(t)`:** Provide your own function definition that accepts time `t` as the first argument.
+
+4.  **Using `gen_hrf()` Results:** Create a customized HRF using `gen_hrf()`, `hrf_blocked()`, `hrf_lagged()`, etc., and pass the resulting `HRF` object.
+
+**Discovering Available Options:** You can easily explore all available HRF types using the `list_available_hrfs()` function:
+
+```{r list_hrfs}
+# List basic information about available HRFs
+list_available_hrfs()
+
+# Get detailed descriptions
+list_available_hrfs(details = TRUE)
+```
+
+For more details and examples of different HRF types, refer to the documentation for `hrf()` and the "Hemodynamic Response Functions" vignette (`vignette("a_01_hemodynamic_response", package = "fmrireg")`).
+
+Here are a few examples within the `event_model` context:
+
+```{r specify_hrf}
+# Example 1: Using basis name string "gaussian"
+# Model stim effects with SPMG1 and RT effects with Gaussian HRF
+emodel_diff_hrf <- event_model(onset ~ hrf(stim, basis="spmg1") + hrf(RT_centered, basis="gaussian"), 
+                               data = simple_design, 
+                               block = ~ run, 
+                               sampling_frame = sframe_single_run)
+print(emodel_diff_hrf)
+plot(emodel_diff_hrf, term_name = "RT_centered") # Plot the Gaussian RT regressor
+
+# Example 2: Using a pre-defined HRF object (SPMG3)
+# Model stim effects with SPM+derivs (HRF_SPMG3)
+emodel_spmg3 <- event_model(onset ~ hrf(stim, basis=HRF_SPMG3), 
+                            data = simple_design, 
+                            block = ~ run, 
+                            sampling_frame = sframe_single_run)
+print(emodel_spmg3) # Note nbasis=3 for the hrf
+plot(emodel_spmg3, term_name = "stim") # Plotting shows the 3 basis functions for one condition
+# plotly(emodel_spmg3) # Better for exploring many conditions
+
+# Example 3: Using a custom function (simple linear ramp)
+linear_ramp_hrf <- function(t) { ifelse(t > 0 & t < 10, t/10, 0) }
+emodel_custom_hrf <- event_model(onset ~ hrf(stim, basis=linear_ramp_hrf), 
+                                 data = simple_design, 
+                                 block = ~ run, 
+                                 sampling_frame = sframe_single_run)
+print(emodel_custom_hrf)
+plot(emodel_custom_hrf, term_name = "stim")
+
+# Example 4: Using gen_hrf() to create a lagged Gaussian
+lagged_gauss <- gen_hrf(hrf_gaussian, lag = 2, name = "Lagged Gaussian")
+emodel_gen_hrf <- event_model(onset ~ hrf(stim, basis = lagged_gauss), 
+                              data = simple_design, 
+                              block = ~ run, 
+                              sampling_frame = sframe_single_run)
+print(emodel_gen_hrf)
+plot(emodel_gen_hrf, term_name = "stim")
+```
+
+## Trialwise Models for Beta-Series Analysis
+
+To model each trial individually (e.g., for beta-series correlation), use `trialwise()` in the formula. This creates a separate regressor for every single event specified by the `onset` variable.
+
+```{r create_trialwise}
+emodel_trialwise <- event_model(onset ~ trialwise(), 
+                                data = simple_design, 
+                                block = ~ run, 
+                                sampling_frame = sframe_single_run)
+print(emodel_trialwise)
+
+# Plotting trialwise models can be very dense!
+# It generates one condition per trial.
+# plot(emodel_trialwise)
+# plotly(emodel_trialwise) # Use plotly to explore
+```
+
+## Accessing Model Components
+
+Once an `event_model` is created, you can extract its components:
+
+```{r access_components}
+# List the terms in the model
+terms_list <- terms(emodel_pmod_int)
+print(names(terms_list))
+
+# Get all condition names (column names in the design matrix)
+conds <- conditions(emodel_pmod_int)
+cat("\nFirst 10 conditions:", head(conds, 10), "...\n")
+
+# Extract the full design matrix
+dmat_events <- design_matrix(emodel_pmod_int)
+cat("\nEvent design matrix dimensions:", dim(dmat_events), "\n")
+# head(dmat_events[, 1:6])
+
+# Contrast weights and F-contrasts can also be extracted (see contrasts vignette)
+# contrast_weights(emodel_pmod_int)
+# Fcontrasts(emodel_pmod_int)
+```
+
+## Visualizing the Design Matrix and Correlations
+
+Two functions help visualize the structure of the event design matrix:
+
+*   `design_map`: Shows the matrix values as a heatmap.
+*   `correlation_map`: Shows the correlation between regressors.
+
+```{r matrix_viz}
+# Heatmap of the design matrix for the 2-factor model
+design_map(emodel_two_factor, rotate_x_text = TRUE) +
+  labs(title = "Design Matrix Heatmap (Two-Factor Model)")
+
+# Correlation map for the same model
+correlation_map(emodel_two_factor, rotate_x_text = TRUE) +
+  labs(title = "Regressor Correlation Map (Two-Factor Model)")
+
+```
+
+This `event_model` represents the task-related part of the fMRI model. It's typically combined with a `baseline_model` (containing drift terms, intercepts, nuisance regressors) within functions like `fmri_model` or `fmri_lm` to perform a full GLM analysis.

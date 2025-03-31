@@ -1,130 +1,337 @@
 ---
-title: "Contrasts"
+title: "Contrasts in fmrireg"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Contrasts}
+  %\VignetteIndexEntry{Contrasts in fmrireg}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
 library(fmrireg)
-```
-## Contrasts
-
-Statistical contrasts are an important component of *f*MRI analyses. Contrasts allow for testing of hypotheses about the relative brain activity between two or more conditions. Our aim is to provide a flexible interface for describing contrasts and generating contrast weight vectors that can be applied to linear models.
-
-### A simple 2 by 2 experiment
-
-The approach we take in specifying contrasts is to formulate them as regular R expressions using the `~` operator. To demonstrate, lets start with a simple two-by-two design with factors *category* with levels [face,scene] and *attention* with levels [attend,ignore]. For this simple design, we assume each condition is repeated twice in a single run.
-
-First we construct the fMRI design as follows:
-
-```{r}
-
-design <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignore"), replication=c(1,2))
-design$onsets <- seq(1, 100, length.out=nrow(design))
-design$block <- rep(1,nrow(design))
+library(dplyr)
+library(knitr)
+library(ggplot2)
+options(width=100)
+knitr::opts_chunk$set(fig.width=7, fig.height=6, message=FALSE, warning=FALSE)
 ```
 
-```{r, echo=FALSE}
-knitr::kable(design)
+## Introduction to Contrasts
+
+Statistical contrasts are a fundamental component of *f*MRI analyses, allowing researchers to test specific hypotheses about differences in brain activity between experimental conditions. The `fmrireg` package provides a flexible and powerful system for defining, computing, and applying contrasts to linear models fitted to fMRI data.
+
+This vignette explores the various ways to specify contrasts in `fmrireg`, from simple pairwise comparisons to more complex interactions and polynomial trends.
+
+## Example: A 2x2 Factorial Design
+
+To illustrate the contrast functionalities, let's use a simple two-by-two factorial design. We have two factors:
+
+1.  **category**: with levels "face" and "scene"
+2.  **attention**: with levels "attend" and "ignore"
+
+We'll assume each unique condition is repeated twice within a single run.
+
+First, we construct the event table representing this design:
+
+```{r design_setup}
+design <- expand.grid(category = c("face", "scene"), 
+                      attention = c("attend", "ignore"), 
+                      replication = c(1, 2))
+design$onset <- seq(1, 100, length.out = nrow(design)) # Assign arbitrary onsets
+design$block <- rep(1, nrow(design))                  # Single block (run)
+
+# Ensure factors are factors
+design$category <- factor(design$category)
+design$attention <- factor(design$attention)
+
+kable(design, caption = "2x2 Experimental Design Table")
+
+# Define a sampling frame and create the event model
+sframe <- sampling_frame(blocklens = 120, TR = 2)
+emodel <- event_model(onset ~ hrf(category, attention), 
+                      block = ~block, 
+                      data = design, 
+                      sampling_frame = sframe)
+
+# Extract the event term for contrast calculation
+# In this simple model, there's only one event term
+event_term <- terms(emodel)[[1]] 
+
+kable(cells(event_term), caption = "Cells within the 'category:attention' event term")
 ```
 
-### Creating contrasts to test experimental effects
+This `event_term` object encapsulates the structure of our experimental conditions and will be used to compute contrast weights.
 
-In a two by two design, there are a number of experimental effects that we might be interested in testing, for example: (1) the effect of *category* (face > scene), (2) the effect of *attention* (attend > ignored), and (3) the interaction between *category* and *attention*. All of these effects can be formulated as contrasts of weighted averages of condition effects, yielding directional (i.e. signed) *t*-statistics. Below we show how each contrast can be expressed:
+## Basic Contrasts: `pair_contrast`
 
-1. `face_scene <- pair_contrast(~ category == "face", ~ category == "scene")`
-2. `attend_ignored <- pair_contrast(~ attention == "attend", ~ attention == "ignored")`
-3. `category_by_attention <- contrast(~ (face:attend - face:ignored) - (scene:attend + scene:ignored), name="category_by_attention"))`
+The most common type of contrast compares the average activation of one set of conditions against another. The `pair_contrast` function provides a convenient way to define such sum-to-zero contrasts.
 
-In the following sections we will explain the syntax used in the examples above.
+### Defining Pair Contrasts
 
-### Contrasting two sets of conditions
+`pair_contrast` takes two formulas, `A` and `B`, defining the conditions to compare, and a mandatory `name`.
 
-We often want to compare two conditions, or two *sets of conditions*, for a difference in *f*MRI activity. Such contrasts can be described, generically, as involving an expression `A - B`, where `A` represents the weights for the first set of conditions and `B` represents the weights for the second set of conditions. 
+Let's define contrasts for the main effects of *category* (face vs. scene) and *attention* (attend vs. ignore):
 
-If sum of the `A` weights is 1 and the sum of the 'B' weights is also 1, then the difference in these weights (`A - B`) is 0. Thus, the difference in the weights *sum to zero*, which is what we want when the **null hypothesis** is that A == B.
+```{r define_pair_contrasts}
+# Main effect of category: face > scene
+con_face_vs_scene <- pair_contrast(~ category == "face", 
+                                 ~ category == "scene", 
+                                 name = "face_vs_scene")
 
-
-### The `pair_contrast` function
-
-A simple way to contruct this sort of `A - B` contrast is to use the `pair_contrast` function, which takes as arguments two "matching expressions", `A` and `B`. In example 1 from the previous section, the first expression (`category == "face"`) matches all conditions where the category `factor` equals the level "face". The second expression (`category == "scene"`) matches all conditions where the category `factor` equals the level "scene". 
-
-To compute contrast weights, every matching level in the two expressions will be assigned a weight of 1 for a match and zero otherwise. The respective binary weight vectors are then normalized to sum to 1 and then subtracted (`A - B`) to form the contrast weights.
-
-Notice in the above examples, the contrasts are defined abstractly without supplying any corresponding design information. To compute the contrast weights, however, we need to supply the design information. Below, we show a complete example.
-
-```{r}
-sframe <- sampling_frame(100, 2)
-emodel <- event_model(onsets ~ hrf(category,attention), block=~block, data=design, sampling_frame=sframe)
-term1 <- terms(emodel)[[1]] 
+# Main effect of attention: attend > ignore
+con_attend_vs_ignore <- pair_contrast(~ attention == "attend", 
+                                    ~ attention == "ignore", 
+                                    name = "attend_vs_ignore")
 ```
 
-And here is the relevant model term (the only term in this model):
+### Computing Contrast Weights
 
-```{r, echo=FALSE}
-term1
+Contrast specifications are abstract until applied to a specific model term structure. The `contrast_weights` function computes the numerical weights based on the levels within the term.
+
+```{r compute_pair_weights}
+wts_face_vs_scene <- contrast_weights(con_face_vs_scene, event_term)
+wts_attend_vs_ignore <- contrast_weights(con_attend_vs_ignore, event_term)
+
+cat("Weights for 'face_vs_scene':\n")
+kable(wts_face_vs_scene$weights, col.names = wts_face_vs_scene$name)
+
+cat("\nWeights for 'attend_vs_ignore':\n")
+kable(wts_attend_vs_ignore$weights, col.names = wts_attend_vs_ignore$name)
 ```
 
-Now, we create two `pair_contrast`s and compute the weights:
+Notice how `pair_contrast` automatically averages over the levels *not* mentioned in the formulas. For `face_vs_scene`, it averages over 'attend' and 'ignore' within each category level before contrasting. The resulting weights sum to zero (0.25 * 2 + (-0.25) * 2 = 0).
 
-```{r}
-con1 <- pair_contrast(~ category == "face", ~ category == "scene", name="face_scene")
-con2 <- pair_contrast(~ attention == "attend", ~ attention == "ignore", name="attend_ignore")
+## Unit Contrasts: Comparing to Baseline
 
-wts1 <- contrast_weights(con1, term1)
-wts2 <- contrast_weights(con2, term1)
+Sometimes, we want to test whether activation for a condition (or set of conditions) is significantly different from the implicit baseline (often represented by the intercept in the model). `unit_contrast` is used for this purpose. It creates contrasts that sum to 1.
 
+```{r unit_contrasts}
+con_face_vs_baseline <- unit_contrast(~ category == "face", name = "face_gt_baseline")
+con_attend_vs_baseline <- unit_contrast(~ attention == "attend", name = "attend_gt_baseline")
+
+wts_face_vs_baseline <- contrast_weights(con_face_vs_baseline, event_term)
+wts_attend_vs_baseline <- contrast_weights(con_attend_vs_baseline, event_term)
+
+cat("Weights for 'face_gt_baseline':\n")
+kable(wts_face_vs_baseline$weights, col.names = wts_face_vs_baseline$name)
+
+cat("\nWeights for 'attend_gt_baseline':\n")
+kable(wts_attend_vs_baseline$weights, col.names = wts_attend_vs_baseline$name)
+```
+These weights average the specified conditions and compare them against zero (the implicit baseline).
+
+## General Contrasts with `contrast()`
+
+The `contrast()` function allows for more complex contrasts defined by a single formula expression. This is useful for interactions or specific linear combinations of conditions.
+
+Let's define the interaction contrast: (face:attend - face:ignore) - (scene:attend - scene:ignore). This tests if the effect of attention differs between categories.
+
+```{r general_contrast}
+# Interaction contrast
+con_interaction <- contrast(
+  ~ (face.attend - face.ignore) - (scene.attend - scene.ignore),
+  name = "category_X_attention"
+)
+
+wts_interaction <- contrast_weights(con_interaction, event_term)
+
+cat("Weights for 'category_X_attention':\n")
+kable(wts_interaction$weights, col.names = wts_interaction$name)
 ```
 
-wts1:
+Note: In the formula for `contrast()`, condition names are formed by joining factor levels with dots (e.g., `face.attend`). The `contrast_weights` function evaluates this formula in an environment where each condition name corresponds to a column vector (1 for that condition, 0 otherwise).
 
-```{r, echo=FALSE}
-wts1
+## Contrasts for Main Effects and Interactions
 
-knitr::kable(wts1$weights)
+While `pair_contrast` and `contrast` are flexible, `fmrireg` provides convenience functions for standard ANOVA-like contrasts.
+
+*   `oneway_contrast`: Generates contrasts for the main effect of a single factor (sum-to-zero coding).
+*   `interaction_contrast`: Generates contrasts for interaction effects between two or more factors.
+
+These often result in multiple contrast columns (F-contrasts) testing the overall effect.
+
+```{r anova_contrasts}
+# Main effect of category (will produce 1 contrast vector)
+con_main_category <- oneway_contrast(~ category, name = "Main_Category")
+wts_main_category <- contrast_weights(con_main_category, event_term)
+
+# Interaction effect (will produce 1 contrast vector for a 2x2 design)
+con_int_cat_att <- interaction_contrast(~ category * attention, name = "Interaction_CatAtt")
+wts_int_cat_att <- contrast_weights(con_int_cat_att, event_term)
+
+cat("Weights for 'Main_Category' (oneway_contrast):\n")
+kable(wts_main_category$weights)
+
+cat("\nWeights for 'Interaction_CatAtt' (interaction_contrast):\n")
+kable(wts_int_cat_att$weights)
+```
+Note that the weights generated by `interaction_contrast(~ category * attention)` match those we manually specified using `contrast()`. For factors with more levels, these functions would generate multiple orthogonal contrast columns.
+
+## Polynomial Contrasts for Ordered Factors
+
+If a factor represents ordered levels (e.g., different task difficulty levels, time points), `poly_contrast` can test for trends (linear, quadratic, etc.).
+
+Let's add an 'intensity' factor to our design:
+
+```{r poly_design}
+design_poly <- expand.grid(category = c("face", "scene"), 
+                           intensity = c(1, 2, 3), # Ordered factor
+                           replication = c(1))
+design_poly$onset <- seq(1, 60, length.out = nrow(design_poly))
+design_poly$block <- rep(1, nrow(design_poly)) 
+design_poly$intensity <- factor(design_poly$intensity, ordered = TRUE)
+
+kable(design_poly, caption = "Design with Ordered 'intensity' Factor")
+
+emodel_poly <- event_model(onset ~ hrf(category, intensity), 
+                           block = ~block, 
+                           data = design_poly, 
+                           sampling_frame = sframe)
+event_term_poly <- terms(emodel_poly)[[1]]
 ```
 
-wts2:
+Now, define a polynomial contrast to test for linear and quadratic trends of intensity:
 
-```{r, echo=FALSE}
-wts2
-knitr::kable(wts2$weights)
+```{r poly_contrast}
+con_poly_intensity <- poly_contrast(~ intensity, degree = 2, name = "Intensity_Trend")
+wts_poly_intensity <- contrast_weights(con_poly_intensity, event_term_poly)
+
+cat("Weights for 'Intensity_Trend' (poly_contrast, degree=2):\n")
+kable(wts_poly_intensity$weights)
+```
+The output has two columns: `poly1` for the linear trend and `poly2` for the quadratic trend.
+
+## Helper Functions for Common Comparisons
+
+Two helpers simplify common multi-level comparisons:
+
+*   `pairwise_contrasts`: Creates all unique pairwise comparisons between levels of a factor.
+*   `one_against_all_contrast`: Compares each level against the average of all other levels.
+
+```{r helper_contrasts}
+# All pairwise contrasts for category (trivial here, but useful for >2 levels)
+con_pairwise_cat <- pairwise_contrasts(levels(design$category), 
+                                     facname = "category", 
+                                     name_prefix = "cat")
+# (This would create 'cat_face_scene')
+
+# Compare each attention level vs the other
+con_one_all_att <- one_against_all_contrast(levels(design$attention), facname = "attention")
+
+# Combine the *elements* of the two contrast sets into a single list
+combined_contrasts <- c(con_pairwise_cat, con_one_all_att)
+# Create a new contrast_set from the combined list elements using do.call
+con_set_helpers <- do.call(contrast_set, combined_contrasts)
+
+# Calculate weights (demonstrating contrast_set)
+wts_helpers <- contrast_weights(con_set_helpers, event_term)
+
+# Display weights for one_against_all
+cat("Weights for 'con_attend_vs_other':\n")
+kable(wts_helpers$con_attend_vs_other$weights)
+cat("\nWeights for 'con_ignore_vs_other':\n")
+kable(wts_helpers$con_ignore_vs_other$weights)
 ```
 
+## Grouping Contrasts: `contrast_set`
 
-## Unit contrasts and the "implicit baseline"
+You can group multiple contrast specifications using `contrast_set`. When `contrast_weights` is called on a `contrast_set`, it returns a named list of computed contrast weight objects.
 
-a "unit contrast" tests whether activation, averaged over one or more conditions, is greater than the baseline activity. In this case "baseline" is defined as the level of activation captured by the intercept term, or the *implicit baseline* in *f*MRI parlance. Because all beta estimates are already expressed relative to the intercept term, main effect contrast vectors always sum to 1, rather than 0. We therefore refer to the sum-to-one contrasts as: "unit contrasts". 
+```{r contrast_set_example}
+# Combine several previously defined contrasts
+all_contrasts <- contrast_set(
+  con_face_vs_scene,
+  con_attend_vs_ignore,
+  con_interaction,
+  con_face_vs_baseline
+)
 
-Below we show how to construct two unit contrasts, one testing for the effect of `face > baseline` and for `scene - baseline`:
+print(all_contrasts)
 
-```{r}
-con1 <- unit_contrast(~ category == "face", name="face_baseline")
-con2 <- unit_contrast(~ category == "scene",name="scene_baseline")
+# Compute weights for the entire set
+all_weights <- contrast_weights(all_contrasts, event_term)
 
-wts1 <- contrast_weights(con1, term1)
-wts2 <- contrast_weights(con2, term1)
-
-
+# Access weights for a specific contrast within the set
+cat("\nAccessing weights for 'face_vs_scene' from the set:\n")
+kable(all_weights$face_vs_scene$weights)
 ```
 
-wts1:
+## Applying Contrasts in `fmri_lm`
 
-```{r, echo=FALSE}
-wts1
+Contrasts are typically specified within the `hrf()` function in the `fmri_lm` formula. You can provide a single contrast specification or a `contrast_set`.
 
-knitr::kable(wts1$weights)
+```{r apply_contrasts_model, eval=FALSE}
+# Simulate some simple data for demonstration
+ysim <- matrix(rnorm(120 * 3), 120, 3) # 3 voxels
+dataset_sim <- matrix_dataset(ysim, TR = 2, run_length = 120, event_table = design)
+
+# Fit model with the contrast set defined earlier
+fmri_fit <- fmri_lm(
+  formula = onset ~ hrf(category, attention, contrasts = all_contrasts),
+  block = ~ block,
+  dataset = dataset_sim,
+  strategy = "chunkwise" # Use chunkwise for matrix_dataset
+)
+
+# Print summary of the fitted model (shows contrasts)
+print(fmri_fit)
 ```
 
-wts2:
+*(Note: The above fitting code is set to `eval=FALSE` to avoid lengthy computation in the vignette build, but demonstrates the principle.)*
 
-```{r, echo=FALSE}
-wts2
+## Extracting Contrast Results
 
-knitr::kable(wts2$weights)
+After fitting a model with contrasts, you can extract the results using standard accessor functions, specifying `type = "contrasts"` or `type = "F"`:
+
+*   `coef(fmri_fit, type = "contrasts")`: Estimated contrast values.
+*   `stats(fmri_fit, type = "contrasts")`: t-statistics for contrasts.
+*   `standard_error(fmri_fit, type = "contrasts")`: Standard errors for contrasts.
+*   `stats(fmri_fit, type = "F")`: F-statistics (if F-contrasts were defined, e.g., via `oneway_contrast`).
+
+```{r extract_results, eval=FALSE}
+# Extract estimated contrast values
+contrast_estimates <- coef(fmri_fit, type = "contrasts")
+kable(contrast_estimates, caption = "Estimated Contrast Values")
+
+# Extract t-statistics
+contrast_tstats <- stats(fmri_fit, type = "contrasts")
+kable(contrast_tstats, caption = "Contrast t-statistics")
+
+# Extract standard errors
+contrast_se <- standard_error(fmri_fit, type = "contrasts")
+kable(contrast_se, caption = "Contrast Standard Errors")
 ```
+
+## Visualizing Contrast Weights
+
+The `plot_contrasts` function provides a heatmap visualization of the contrast weights applied across all regressors in the design matrix (including baseline terms if present).
+
+```{r plot_contrasts_example}
+# We need to add contrasts *directly* to the event model for plotting
+emodel_with_cons <- event_model(
+  onset ~ hrf(category, attention, contrasts = all_contrasts),
+  block = ~ block, 
+  data = design, 
+  sampling_frame = sframe
+)
+
+# Plot the contrasts (using default baseline model)
+plot_contrasts(emodel_with_cons, rotate_x_text = TRUE, coord_fixed = FALSE)
+```
+This plot helps verify that contrasts are specified correctly relative to the full model design matrix.
+
+## Exporting Contrasts to AFNI GLT Format
+
+For users interacting with AFNI, the `to_glt` function can convert computed contrast weights into AFNI's General Linear Test (GLT) string format.
+
+```{r afni_glt}
+glt_interaction <- to_glt(wts_interaction)
+cat("AFNI GLT string for interaction contrast:\n")
+print(glt_interaction$glt_str)
+```
+
+## Conclusion
+
+The `fmrireg` package offers a comprehensive system for defining and applying statistical contrasts in fMRI analysis. From simple pairwise comparisons (`pair_contrast`) and baseline tests (`unit_contrast`) to complex formula-based definitions (`contrast`), trend analysis (`poly_contrast`), and ANOVA-style effects (`oneway_contrast`, `interaction_contrast`), researchers have fine-grained control over hypothesis testing. The integration with `fmri_lm` and visualization tools like `plot_contrasts` facilitates robust and interpretable fMRI modeling.

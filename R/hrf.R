@@ -190,23 +190,52 @@ gen_hrf_library <- function(fun, pgrid, ...) {
 #'
 #' @return An HRF object with the specified properties.
 #'
+#' @details
+#' The package provides several pre-defined HRF types that can be used in modeling fMRI responses:
+#'
+#' **Canonical HRFs:**
+#' * `"spmg1"` or `HRF_SPMG1`: SPM's canonical HRF (single basis function)
+#' * `"spmg2"` or `HRF_SPMG2`: SPM canonical + temporal derivative (2 basis functions)
+#' * `"spmg3"` or `HRF_SPMG3`: SPM canonical + temporal and dispersion derivatives (3 basis functions)
+#' * `"gaussian"` or `HRF_GAUSSIAN`: Gaussian-shaped HRF with peak around 5-6s
+#' * `"gamma"` or `HRF_GAMMA`: Gamma function-based HRF with longer tail
+#'
+#' **Flexible basis sets:**
+#' * `"bspline"` or `"bs"` or `HRF_BSPLINE`: B-spline basis for flexible HRF modeling
+#' * `"tent"`: Tent (triangular) basis functions for flexible HRF modeling
+#' * `"daguerre"` or `HRF_DAGUERRE`: Daguerre basis functions
+#'
+#' To see a complete list of available HRF types with details, use the `list_available_hrfs()` function.
+#'
 #' @examples
 #' hrf <- HRF(hrf_gamma, "gamma", nbasis=1, param_names=c("shape", "rate"))
 #' resp <- evaluate(hrf, seq(0, 24, by=1))
 #'
+#' # List all available HRF types
+#' list_available_hrfs(details = TRUE)
+#'
 #' @export
 #' @rdname HRF-class
 HRF <- function(fun, name, nbasis=1, span=24, param_names=NULL) {
-  vals <- fun(seq(0,span))
+  vals <- try(fun(seq(0, span)), silent = TRUE)
 
-  if (nbasis == 1) {
-    peak <- max(vals, na.rm=TRUE)
+  peak <- if (!inherits(vals, "try-error") && !is.null(vals)) {
+    if (nbasis == 1) {
+      max(vals, na.rm = TRUE)
+    } else if (is.matrix(vals)) {
+      max(apply(vals, 2, max, na.rm = TRUE))
+    } else {
+      NA # Unable to determine peak
+    }
   } else {
-    peak <- max(apply(vals, 2, max, na.rm=TRUE))
+    NA # Error during evaluation or null result
   }
-  
-  scale_factor <- 1/peak
-  
+
+  scale_factor <- if (!is.na(peak) && peak != 0) {
+    1 / peak
+  } else {
+    NA # Cannot compute scale_factor if peak is NA or zero
+  }
   
   structure(fun, name=name, 
             nbasis=as.integer(nbasis), 
@@ -1517,83 +1546,100 @@ daguerre_basis <- function(t, n_basis = 3, scale = 1) {
   
   # Normalize basis functions
   for(i in 1:n_basis) {
-    basis[,i] <- basis[,i] / max(abs(basis[,i]))
+    # Avoid division by zero if a basis function is all zero
+    max_abs_val <- max(abs(basis[,i]))
+    if (max_abs_val > 1e-10) {
+      basis[,i] <- basis[,i] / max_abs_val
+    }
   }
   
   basis
 }
 
-#' Daguerre HRF
+#' Daguerre HRF constructor
 #'
 #' @description
-#' Creates a hemodynamic response function using Daguerre spherical basis functions.
-#' When nbasis=1, returns a canonical-like HRF. When nbasis>1, returns the full
-#' basis set.
+#' Creates an HRF object using Daguerre spherical basis functions.
+#' When nbasis=1, returns a canonical-like HRF derived from the first 3 bases.
+#' When nbasis>1, returns the full basis set.
 #'
-#' @param t Time points in seconds
 #' @param n_basis Number of basis functions (default: 1)
 #' @param scale Scale parameter for the time axis (default: 4)
-#' @return When nbasis=1, returns a vector of HRF values. When nbasis>1, returns
-#'         a matrix where each column is a basis function.
+#' @return An HRF object (function) that takes time `t`.
 #' @export
-HRF_DAGUERRE <- function(t, n_basis=1, scale=4) {
-  # Handle negative time points
-  pos <- t >= 0
-  
-  if(n_basis == 1) {
-    # Return canonical-like HRF
-    y <- numeric(length(t))
-    if(any(pos)) {
-      basis <- daguerre_basis(t[pos], 3, scale)  # Use 3 basis functions
-      weights <- c(1, -0.5, 0.2)
-      y[pos] <- basis %*% weights
-    }
-    y <- y / max(abs(y))
-  } else {
-    # Return basis set
-    y <- matrix(0, length(t), n_basis)
-    if(any(pos)) {
-      y[pos,] <- daguerre_basis(t[pos], n_basis, scale)
-    }
+HRF_DAGUERRE <- function(n_basis=1, scale=4) {
+
+  # Define the core function that takes 't'
+  hrf_eval_func <- function(t) {
+      # Handle negative time points
+      pos <- t >= 0
+      res_len <- length(t)
+
+      if(n_basis == 1) {
+          # Return canonical-like HRF
+          y <- numeric(res_len)
+          if(any(pos)) {
+              # Use 3 basis functions internally to create the canonical shape
+              internal_nbasis <- 3
+              basis <- daguerre_basis(t[pos], internal_nbasis, scale)
+              weights <- c(1, -0.5, 0.2) # Predefined weights for canonical shape
+              y_pos <- basis %*% weights
+              max_abs_y_pos <- max(abs(y_pos))
+              # Normalize canonical shape, handle case where it might be zero
+              y[pos] <- if (max_abs_y_pos > 1e-10) y_pos / max_abs_y_pos else y_pos
+          }
+      } else {
+          # Return basis set
+          y <- matrix(0, res_len, n_basis)
+          if(any(pos)) {
+              y[pos,] <- daguerre_basis(t[pos], n_basis, scale)
+              # Normalization of basis columns happens within daguerre_basis
+          }
+      }
+      return(y)
   }
-  
-  structure(
-    function(t) HRF_DAGUERRE(t, n_basis, scale),
-    class = c("HRF", "function"),
-    name = "HRF_DAGUERRE",
-    nbasis = n_basis
+
+  # Use the HRF constructor to wrap the evaluation function
+  HRF(
+      fun = hrf_eval_func,
+      name = paste0("HRF_DAGUERRE(n=", n_basis, ", scale=", scale, ")"),
+      nbasis = n_basis
   )
 }
 
 #' Create Daguerre basis HRF set
 #'
 #' @description
-#' Creates a set of hemodynamic response functions using Daguerre spherical basis
-#' functions. Returns the full basis set rather than a single canonical response.
+#' Creates an HRF object representing a set of hemodynamic response functions
+#' using Daguerre spherical basis functions.
 #'
-#' @param t Time points in seconds
 #' @param n_basis Number of basis functions (default: 3)
 #' @param scale Scale parameter for the time axis (default: 4)
-#' @return Matrix where each column is a basis function
+#' @return An HRF object (function) that takes time `t` and returns the basis set matrix.
 #' @examples
+#' hrf_dag_basis_obj <- HRF_DAGUERRE_BASIS(n_basis = 3)
 #' t <- seq(0, 32, by=0.1)
-#' basis_set <- HRF_DAGUERRE_BASIS(t)
+#' basis_set <- hrf_dag_basis_obj(t)
 #' matplot(t, basis_set, type='l', xlab='Time (s)', ylab='Response')
 #' @export
-HRF_DAGUERRE_BASIS <- function(t, n_basis=3, scale=4) {
-  # Handle negative time points
-  y <- matrix(0, length(t), n_basis)
-  pos <- t >= 0
-  
-  if(any(pos)) {
-    y[pos,] <- daguerre_basis(t[pos], n_basis, scale)
+HRF_DAGUERRE_BASIS <- function(n_basis=3, scale=4) {
+  # Define the core function that takes 't'
+  basis_eval_func <- function(t) {
+      y <- matrix(0, length(t), n_basis)
+      pos <- t >= 0
+      if(any(pos)) {
+          # Ensure daguerre_basis exists and is accessible
+          y[pos,] <- daguerre_basis(t[pos], n_basis, scale)
+      }
+      return(y)
   }
-  
-  structure(
-    function(t) HRF_DAGUERRE_BASIS(t, n_basis, scale),
-    class = c("HRF", "function"),
-    name = "HRF_DAGUERRE_BASIS",
-    nbasis = n_basis
+
+  # Use the HRF constructor to wrap the evaluation function
+  HRF(
+      fun = basis_eval_func,
+      name = paste0("HRF_DAGUERRE_BASIS(n=", n_basis, ", scale=", scale, ")"),
+      nbasis = n_basis
+      # span could be estimated based on scale/nbasis if needed
   )
 }
 
@@ -1699,4 +1745,90 @@ print.GaussianHRF <- function(x, ...) {
   
   cat("║ Shape: Bell curve with single peak       ║\n")
   cat("╚══════════════════════════════════════════╝\n")
+}
+
+#' List all available hemodynamic response functions (HRFs)
+#'
+#' @description
+#' This function returns a structured list of all available HRF types in the package,
+#' making it easy to discover and explore the different options.
+#'
+#' @param details Logical; if TRUE, include detailed descriptions for each HRF type
+#'
+#' @return A data frame with columns:
+#' \describe{
+#'   \item{name}{The name of the HRF (string identifier)}
+#'   \item{object}{The corresponding pre-defined HRF object name (if available)}
+#'   \item{nbasis}{Number of basis functions}
+#'   \item{description}{Brief description of the HRF type (if details=TRUE)}
+#'   \item{function_name}{The associated generator function (if applicable)}
+#' }
+#'
+#' @examples
+#' # List all available HRFs with basic information
+#' list_available_hrfs()
+#'
+#' # Get detailed descriptions
+#' list_available_hrfs(details = TRUE)
+#'
+#' # Use the information to create an event model with a specific HRF
+#' \dontrun{
+#' hrfs <- list_available_hrfs()
+#' # Choose the 'gaussian' HRF
+#' event_model(onset ~ hrf(condition, basis = "gaussian"), 
+#'             data = event_data,
+#'             block = ~run, 
+#'             sampling_frame = sframe)
+#' }
+#'
+#' @export
+list_available_hrfs <- function(details = FALSE) {
+  hrfs <- data.frame(
+    name = c(
+      "spmg1", "spmg2", "spmg3", 
+      "gaussian", "gamma", 
+      "bspline", "bs", 
+      "tent",
+      "daguerre"
+    ),
+    object = c(
+      "HRF_SPMG1", "HRF_SPMG2", "HRF_SPMG3",
+      "HRF_GAUSSIAN", "HRF_GAMMA",
+      "HRF_BSPLINE", "HRF_BSPLINE", 
+      NA, 
+      "HRF_DAGUERRE"
+    ),
+    nbasis = c(
+      1, 2, 3,
+      1, 1,
+      "variable", "variable",
+      "variable",
+      "variable"
+    ),
+    stringsAsFactors = FALSE
+  )
+  
+  if (details) {
+    hrfs$description <- c(
+      "SPM canonical HRF", 
+      "SPM canonical HRF with temporal derivative",
+      "SPM canonical HRF with temporal and dispersion derivatives",
+      "Gaussian-shaped HRF with peak at ~5-6s",
+      "Gamma-shaped HRF with longer tail than Gaussian",
+      "B-spline basis functions for flexible HRF modeling",
+      "Alias for bspline",
+      "Tent basis functions (triangular) for flexible HRF modeling",
+      "Daguerre basis functions for efficient representation of HRF shape"
+    )
+    
+    hrfs$function_name <- c(
+      "hrf_spmg1", "NA", "NA",
+      "hrf_gaussian", "hrf_gamma",
+      "hrf_bspline", "hrf_bspline",
+      "NA",
+      "NA"
+    )
+  }
+  
+  hrfs
 }

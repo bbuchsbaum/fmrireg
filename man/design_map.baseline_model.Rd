@@ -4,7 +4,7 @@
 \alias{design_map.baseline_model}
 \title{Heatmap visualization of the baseline_model design matrix}
 \usage{
-design_map.baseline_model(
+\method{design_map}{baseline_model}(
   x,
   block_separators = TRUE,
   rotate_x_text = TRUE,

@@ -1,0 +1,544 @@
+---
+title: "Using the fmriDSL Configuration System"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using the fmriDSL Configuration System}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, message=FALSE}
+library(fmrireg)
+library(yaml)
+```
+
+## Introduction
+
+The fmrireg package provides a declarative configuration system (fmriDSL - Domain Specific Language) that allows users to specify complex fMRI analysis designs using a simple YAML format. This approach offers several advantages:
+
+- **Reproducibility**: The analysis configuration is stored in a human-readable text file that can be version-controlled and shared
+- **Separation of concerns**: The analysis specification is completely separated from the analysis execution code
+- **Validation**: The configuration is validated both at the schema level and against the actual BIDS dataset
+- **Standardization**: Analysis parameters are organized into a standardized structure
+- **Documentation**: The configuration serves as self-documentation of the analysis choices
+
+This vignette demonstrates how to write, validate, and use a YAML configuration file with the fmriDSL system. The configuration is processed by the `load_fmri_config()` function, which returns an `fmri_config` object that can be used to build and fit models.
+
+## Top-Level YAML Structure
+
+A complete fmriDSL configuration consists of the following top-level sections:
+
+```yaml
+dataset:      # [Required] BIDS dataset paths and selection criteria
+events:       # [Required] Event column mapping definitions
+regressors:   # [Required] Regressor specifications
+model:        # [Required] Model definition and mappings
+
+# Optional sections
+confounds:    # Confound variable specifications
+baseline:     # Baseline/drift model specifications  
+hrfs:         # Custom hemodynamic response function definitions
+parametric:   # Parametric transformation specifications
+contrasts:    # Statistical contrast definitions
+```
+
+Let's explore each section in detail.
+
+## Dataset Section
+
+The `dataset` section specifies the BIDS dataset location and selection criteria.
+
+```yaml
+dataset:
+  path: /path/to/bids/dataset           # [Required] Absolute path to BIDS dataset
+  relpath: func                         # [Required] Relative path to functional data (usually "func")
+  subjects:                             # [Optional] Subject selection criteria
+    include: [sub-01, sub-02, sub-03]   # Specific subjects to include (BIDS format)
+    exclude: [sub-04]                   # Subjects to exclude
+  tasks: [task-stroop, task-memory]     # [Optional] Tasks to include (if omitted, all available tasks are used)
+  runs: [run-01, run-02]                # [Optional] Runs to include (if omitted, all available runs are used)
+  scan_params:                          # [Optional] Scan parameters
+    TR:                                 # TR (repetition time) in seconds
+      default: 2.0                      # Default TR for all scans
+      overrides:                        # TR overrides for specific patterns
+        - pattern: task-restingstate    # Pattern to match in BIDS filename
+          value: 1.5                    # TR value for matching files
+    run_length:                         # Run duration in volumes
+      default:                          # Default run lengths by task
+        task-stroop: 180                # 180 volumes for stroop task
+        task-memory: 240                # 240 volumes for memory task
+      overrides:                        # Run length overrides for specific patterns
+        - pattern: sub-01_task-stroop   # Pattern to match in BIDS filename
+          value: 200                    # Run length value for matching files
+```
+
+The `path` field should point to the root of your BIDS dataset. The `subjects`, `tasks`, and `runs` sections allow you to select specific portions of your dataset. If these are omitted, all available data will be used.
+
+## Events Section
+
+The `events` section defines how to map columns in the BIDS events.tsv files to variables in your model.
+
+```yaml
+events:
+  onset: onset           # [Required] Column name for event onsets (in seconds)
+  duration: duration     # [Required] Column name for event durations (in seconds)
+  block: run             # [Required] Column name for block/run identifier
+  
+  # Custom variable mappings (optional but typical)
+  condition:             # Define a variable named 'condition'
+    column: trial_type   # Maps to the 'trial_type' column in events.tsv
+    onset: custom_onset  # [Optional] Override the default onset column for this variable 
+    duration: custom_dur # [Optional] Override the default duration column for this variable
+  
+  response_time:         # Define a variable named 'response_time'
+    column: rt           # Maps to the 'rt' column in events.tsv
+    
+  accuracy:              # Define a variable named 'accuracy'
+    column: correct      # Maps to the 'correct' column in events.tsv
+```
+
+The `onset`, `duration`, and `block` fields are required and specify the column names in your events.tsv files that contain this information. Additional variables can be defined by mapping them to columns in the events.tsv files.
+
+## Regressors Section
+
+The `regressors` section defines how to create regressors from your event data. This is where you specify the design of your GLM.
+
+```yaml
+regressors:
+  # Simple categorical regressor using canonical HRF
+  faces:                      # Regressor name
+    type: hrf                 # Type: Convolve events with HRF
+    variables: [condition]    # Variable to use (defined in events section)
+    subset: "condition == 'face'"  # Filter condition (optional)
+    hrf: canonical            # HRF to use (defined in hrfs section or built-in)
+    lag: 0                    # [Optional] Additional lag to apply to the HRF (in seconds)
+    transform: [zscore]       # [Optional] Transformations to apply to the regressor values
+    
+  # Parametric modulation regressor
+  rt_mod:
+    type: hrf_parametric      # Type: Parametric modulator
+    variables: [response_time]  # Parametric variable to use
+    subset: "accuracy == 1"   # Only correct trials (optional)
+    hrf: canonical            # HRF to use
+    basis:                    # Basis expansion for parametric effect
+      type: polynomial        # Polynomial expansion (or 'Poly', case-insensitive)
+      parameters:
+        degree: 2             # Quadratic expansion (degree 2)
+        
+  # Trialwise regressor (no convolution)
+  motion_outliers:
+    type: trialwise           # Type: No convolution, direct inclusion
+    variables: [framewise_displacement]  # Variable to use
+    transform: [zscore]       # Optional transformation
+```
+
+Each regressor is given a name (e.g., `faces`, `rt_mod`, `motion_outliers`) and requires a `type` field that determines how it's constructed:
+
+- `hrf`: Standard convolution of events with an HRF
+- `hrf_parametric`: Parametric modulation with HRF convolution
+- `trialwise`: Direct inclusion without convolution (e.g., for motion parameters)
+
+The `variables` field specifies which variable(s) from the `events` section to use, and `subset` allows filtering specific events.
+
+## HRFs Section
+
+The `hrfs` section allows you to define custom hemodynamic response functions.
+
+```yaml
+hrfs:
+  canonical:                # HRF name
+    type: HRF_SPMG1         # Built-in canonical HRF
+    lag: 0                  # [Optional] Additional lag to apply (in seconds)
+    width: 32               # [Optional] Width of the HRF in seconds
+    summate: true           # [Optional] Whether to sum the response over each trial duration
+    normalize: true         # [Optional] Whether to normalize the HRF to have a peak height of 1
+    
+  double_gamma:             # Custom HRF name
+    type: HRF_SPMG2         # Double gamma function (canonical + derivative)
+    
+  custom_gaussian:          # Custom HRF name
+    type: HRF_GAUSSIAN      # Gaussian HRF
+    parameters:             # Parameters for this HRF
+      mean: 5               # Mean at 5 seconds
+      sd: 1.5               # Standard deviation of 1.5 seconds
+      
+  custom_basis:             # Custom HRF name
+    type: HRF_BSPLINE       # B-spline basis set
+    parameters:             # Parameters for this basis
+      knots: [0, 4, 8, 12, 16, 20]  # Knot locations in seconds
+      degree: 3             # Cubic B-splines
+      
+  user_defined:             # For custom HRF functions defined by the user
+    type: custom            # Indicates a user-defined HRF
+    definition: "my_hrf_function"  # Name of the R function to use
+```
+
+The package provides several built-in HRF types:
+
+- `HRF_SPMG1`: Standard canonical HRF
+- `HRF_SPMG2`: Canonical HRF with temporal derivative
+- `HRF_SPMG3`: Canonical HRF with temporal and dispersion derivatives
+- `HRF_GAUSSIAN`: Gaussian HRF
+- `HRF_GAMMA`: Gamma HRF
+- `HRF_BSPLINE`: B-spline basis set
+- `HRF_DAGUERRE`: Daguerre basis
+- `HRF_DAGUERRE_BASIS`: Daguerre basis set
+
+## Parametric Section
+
+The `parametric` section defines transformations for parametric variables.
+
+```yaml
+parametric:
+  response_time:            # Variable name (from events section)
+    transform: [center, log]  # Transformations to apply (in order)
+    
+  framewise_displacement:   # Variable name
+    transform: [zscore]     # Z-score transformation
+    
+  accuracy:                 # Variable name
+    basis:                  # Basis expansion
+      type: polynomial      # Polynomial basis (or 'Poly', case-insensitive)
+      parameters:
+        degree: 2           # Quadratic (degree 2)
+```
+
+Supported transformations include:
+
+- `center`: Center variable to mean 0
+- `scale`: Scale variable to standard deviation 1
+- `zscore`: Center and scale (equivalent to `[center, scale]`)
+- `log`: Natural logarithm
+- `exp`: Exponential
+- `within_subject`: Center within each subject
+
+Basis expansions include:
+
+- `polynomial` or `Poly`: Polynomial expansion
+- `bspline` or `BSpline`: B-spline expansion
+- `ns`: Natural spline expansion
+- `Standardized`: Standardized version of the variable
+- `Ident`: Identity transformation (no change)
+
+## Baseline Section
+
+The `baseline` section configures the baseline/drift model.
+
+```yaml
+baseline:
+  basis: bspline            # Basis function for drift modeling
+  degree: 3                 # Degree of basis expansion
+  intercept: runwise        # Intercept handling: runwise, global, or none
+  confounds:                # Confound variables (optional)
+    include: ["trans_.*", "rot_.*"]  # Include translation and rotation parameters
+    exclude: [".*_derivative.*"]     # Exclude derivatives
+```
+
+The `basis` can be one of:
+
+- `constant`: No drift modeling, just intercept
+- `poly`: Polynomial drift
+- `bspline`: B-spline drift (recommended)
+- `ns`: Natural spline drift
+
+The `intercept` setting determines how intercepts are handled:
+
+- `runwise`: Separate intercept for each run (recommended)
+- `global`: Single intercept across all runs
+- `none`: No intercept
+
+## Confounds Section
+
+The `confounds` section specifies which confound variables to include from the BIDS confounds.tsv files.
+
+```yaml
+confounds:
+  include: ["trans_x", "trans_y", "trans_z", "rot_x", "rot_y", "rot_z"]  # Motion parameters
+  exclude: []  # Patterns to exclude (optional)
+```
+
+The `include` field specifies which variables to include. Regex patterns are supported. If omitted, all available confounds are included.
+
+## Contrasts Section
+
+The `contrasts` section defines statistical contrasts for your model.
+
+```yaml
+contrasts:
+  # Simple contrast using a formula
+  faces_vs_houses:            # Contrast name
+    type: formula             # Formula-based contrast
+    expression: "faces - houses"  # Linear combination of regressor names
+    where: "condition != 'other'"  # [Optional] Filter expression for data
+    include: "sub-01.*"       # [Optional] Include pattern for subjects/runs
+    exclude: ".*_broken"      # [Optional] Exclude pattern for subjects/runs
+    
+  # One condition versus all others
+  faces_vs_all:
+    type: one_against_all     # One condition vs all others
+    factors: [condition]      # Factor to use
+    levels: [faces]           # Level to contrast against others
+    
+  # Contrast for a specific factor
+  main_effect_task:
+    type: oneway              # One-way ANOVA style contrast
+    factors: [condition]      # Factor to use
+    
+  # Interaction contrast
+  task_by_difficulty:
+    type: interaction         # Interaction contrast
+    factors: [condition, difficulty]  # Factors that interact
+    
+  # Pairwise contrasts
+  pairwise_conditions:
+    type: pair                # Pairwise contrasts between levels
+    factors: [condition]      # Factor to use
+    
+  # Individual conditions vs baseline
+  unit_contrasts:
+    type: unit                # Each condition vs baseline
+    factors: [condition]      # Factor to use
+    
+  # Polynomial contrasts for ordinal factors
+  difficulty_trend:
+    type: polynomial          # Polynomial trend analysis
+    factors: [difficulty]     # Ordinal factor
+    degree: 2                 # Degree of polynomial (quadratic)
+```
+
+Supported contrast types include:
+
+- `formula`: Manual formula with regressor names
+- `one_against_all`: One level vs all others
+- `pair`: Pairwise comparisons
+- `unit`: Unit contrasts (each condition vs baseline)
+- `oneway`: Main effect of factor
+- `interaction`: Interaction between factors
+- `polynomial`: Polynomial contrasts for ordered factors
+
+The optional fields `where`, `include`, and `exclude` can be used to filter contrasts by data condition or subject/run patterns.
+
+## Model Section
+
+The `model` section ties everything together, defining which regressors and contrasts to include in your specific model.
+
+```yaml
+model:
+  name: full_model           # Model name
+  factors: [condition, difficulty]  # Variables to treat as factors
+  parametric: [response_time]  # Variables to treat as parametric
+  
+  # Model-specific event mappings
+  events:
+    onset: onset             # Onset column
+    duration: duration       # Duration column
+    block: run               # Block/run column
+    condition: trial_type    # Map model variable 'condition' to column 'trial_type'
+    difficulty: difficulty   # Map model variable 'difficulty' to column 'difficulty'
+    response_time: rt        # Map model variable 'response_time' to column 'rt'
+  
+  # Model-specific regressor selection
+  regressors:
+    faces:                   # Include the 'faces' regressor defined earlier
+    houses:                  # Include the 'houses' regressor
+    rt_mod:                  # Include the 'rt_mod' parametric regressor
+    
+  # Model-specific contrast selection
+  contrasts:
+    faces_vs_houses:         # Include the 'faces_vs_houses' contrast
+    main_effect_task:        # Include the 'main_effect_task' contrast
+```
+
+The `factors` and `parametric` fields declare how variables should be treated in the model. The `events` section maps model variables to event file columns. The `regressors` and `contrasts` sections select which regressors and contrasts to include in this particular model.
+
+## Loading and Validation
+
+Once you've created your YAML configuration file, you can load it with the `load_fmri_config()` function:
+
+```{r, eval=FALSE}
+config <- load_fmri_config("my_analysis_config.yaml")
+```
+
+The function performs two levels of validation:
+
+1. **Schema validation**: Checks that the YAML structure matches the expected schema, all required fields are present, and values have the correct types
+2. **Context-dependent validation**: Checks that the configuration is valid for your specific BIDS dataset (subjects exist, tasks exist, event columns exist, etc.)
+
+If validation fails, you'll receive detailed error messages explaining what needs to be fixed. For example, if a required field is missing, you might see "Required field 'X' is missing at path 'Y'", or if an event column doesn't exist in your data, you might see "Column 'Z' not found in event file for subject 'sub-01', task 'task-X'".
+
+## Example
+
+Below is a complete example of a configuration file and how to load it:
+
+```yaml
+# Complete example configuration (my_analysis_config.yaml)
+dataset:
+  path: /path/to/bids/dataset
+  relpath: func
+  subjects:
+    include: [sub-01, sub-02, sub-03]
+  tasks: [task-face]
+
+events:
+  onset: onset
+  duration: duration
+  block: run
+  condition:
+    column: trial_type
+  response_time:
+    column: rt
+
+hrfs:
+  canonical:
+    type: HRF_SPMG1
+
+regressors:
+  faces:
+    type: hrf
+    variables: [condition]
+    subset: "condition == 'face'"
+    hrf: canonical
+  houses:
+    type: hrf
+    variables: [condition]
+    subset: "condition == 'house'"
+    hrf: canonical
+  rt_mod:
+    type: hrf_parametric
+    variables: [response_time]
+    hrf: canonical
+    basis:
+      type: polynomial
+      parameters:
+        degree: 1
+
+baseline:
+  basis: bspline
+  degree: 3
+  intercept: runwise
+
+confounds:
+  include: ["trans_x", "trans_y", "trans_z", "rot_x", "rot_y", "rot_z"]
+
+contrasts:
+  faces_vs_houses:
+    type: formula
+    expression: "faces - houses"
+  main_effect_condition:
+    type: oneway
+    factors: [condition]
+
+model:
+  name: face_vs_house
+  factors: [condition]
+  parametric: [response_time]
+  events:
+    onset: onset
+    duration: duration
+    block: run
+    condition: trial_type
+    response_time: rt
+  regressors:
+    faces:
+    houses:
+    rt_mod:
+  contrasts:
+    faces_vs_houses:
+    main_effect_condition:
+```
+
+Loading and inspecting the configuration:
+
+```{r, eval=FALSE}
+# Load the configuration
+config <- load_fmri_config("my_analysis_config.yaml")
+
+# Inspect the configuration
+print(config)
+```
+
+The `print` method for `fmri_config` objects provides a convenient summary of the loaded configuration:
+
+```
+fMRI Analysis Configuration
+
+=== Dataset ===
+BIDS Project Path: /path/to/bids/dataset
+Relative Path (func): func
+Selected Subjects: 3 total
+  - sub-01
+  - sub-02
+  - sub-03
+Selected Tasks:
+  - task-face
+
+=== Events ===
+--- Top-Level Event Column Mappings ---
+  Onset Column: 'onset'
+  Duration Column: 'duration'
+  Block Column: 'run'
+--- Variable Mappings (Top Level) ---
+  condition -> column: 'trial_type'
+  response_time -> column: 'rt'
+
+=== Model: face_vs_house ===
+--- Model Variable Roles ---
+Factors:
+  - condition
+Parametric:
+  - response_time
+--- Model-Specific Event Variable -> Column Maps ---
+  Onset Column (model): 'onset'
+  Duration Column (model): 'duration'
+  Block Column (model): 'run'
+  condition -> column: 'trial_type'
+  response_time -> column: 'rt'
+--- HRF Specifications (Used in Model) ---
+  canonical: type=HRF_SPMG1
+--- Regressors (Used in Model) ---
+  faces: type=hrf, vars=[condition]
+  houses: type=hrf, vars=[condition]
+  rt_mod: type=hrf_parametric, vars=[response_time], basis=polynomial
+
+=== Build Status ===
+Status: ✓ Successfully Built
+```
+
+## Using the Configuration
+
+Once you have loaded and validated a configuration, you can use it to build and fit models. The `fmri_config` object contains all the necessary information about your dataset, variables, and model specifications.
+
+Here's a brief overview of how you might use the configuration in your analysis workflow:
+
+```{r, eval=FALSE}
+# Load the configuration
+config <- load_fmri_config("my_analysis_config.yaml")
+
+# Build a subject-level model
+subject_id <- "sub-01"
+subject_model <- build_subject_model(config, subject_id)
+
+# Fit the model
+fit <- fit_model(subject_model)
+
+# Generate contrasts
+contrasts <- generate_contrasts(fit, config)
+
+# Save results
+save_results(fit, contrasts, output_dir = "results")
+```
+
+**Note:** The function names above (`build_subject_model`, `fit_model`, `generate_contrasts`, and `save_results`) are illustrative examples of the typical workflow steps that would use the `config` object, not necessarily actual function names in the package. Refer to the package documentation for the specific functions available for model building and fitting.
+
+## Conclusion
+
+The fmriDSL configuration system provides a powerful and flexible way to specify complex fMRI analyses. By separating the analysis specification from the analysis code, it promotes reproducibility and facilitates sharing analysis designs. The validation system helps catch errors early, before running computationally expensive analyses.
+
+The YAML format is human-readable and easy to understand, while still capturing all the complexity needed for advanced fMRI modeling. We recommend using this approach for all your fMRI analyses with the fmrireg package. 

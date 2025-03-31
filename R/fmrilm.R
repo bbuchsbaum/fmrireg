@@ -343,30 +343,46 @@ pull_stat <- function(x, type, element) {
 
 #' Extract Model Coefficients from an fmri_lm Object
 #'
-#' This function extracts model coefficients (estimates) from an \code{fmri_lm} object.
+#' This function extracts model coefficients (estimates) from an `fmri_lm` object.
 #'
-#' @param object An \code{fmri_lm} object.
-#' @param type The type of coefficients to extract: \code{"betas"} or \code{"contrasts"}. Default is \code{"betas"}.
-#' @param recon Logical. If \code{TRUE}, reconstructs the coefficients into a neuroimaging volume. Default is \code{FALSE}.
+#' @param object An `fmri_lm` object.
+#' @param type The type of coefficients to extract: `"betas"` or `"contrasts"`. Default is `"betas"'.
+#' @param include_baseline Logical. If `TRUE`, include coefficients for baseline regressors along with event regressors.
+#'                         If `FALSE` (default), only event regressors are returned.
+#' @param recon Logical. If `TRUE`, reconstructs the coefficients into a neuroimaging volume. Default is `FALSE`.
 #' @param ... Additional arguments (currently unused).
 #' @return A tibble or matrix of coefficients.
 #' @export
-coef.fmri_lm <- function(object, type = c("betas", "contrasts"), recon = FALSE, ...) {
+coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baseline = FALSE, recon = FALSE, ...) {
   type <- match.arg(type)
-  res <- if (type == "betas") {
-    pull_stat(object, "betas", "estimate")
-  } else if (type == "contrasts") {
-    pull_stat(object, "contrasts", "estimate")
+  
+  if (type == "contrasts") {
+    # Contrast handling remains the same
+    res <- pull_stat(object, "contrasts", "estimate")
+  } else if (type == "betas") {
+    # Get all beta estimates first
+    all_betas <- object$result$betas$data[[1]]$estimate[[1]]
+    
+    if (include_baseline) {
+      # Return all betas, ensure correct names from the full design matrix
+      res <- all_betas
+      colnames(res) <- colnames(design_matrix(object$model))
+      # Convert back to tibble for consistency if needed, though matrix might be better here
+      # res <- as_tibble(res)
+    } else {
+      # Default: return only event betas
+      res <- all_betas[, object$result$event_indices, drop = FALSE]
+      colnames(res) <- conditions(object$model$event_model)
+      # Ensure tibble output for consistency with original behavior
+      res <- suppressMessages(as_tibble(res, .name_repair = "check_unique"))
+    }
+  } else {
+    # Should not happen due to match.arg, but defensive coding
+    stop("Invalid type specified.")
   }
   
-  # Reconstruction functionality can be added here if necessary
-  # if (recon && inherits(object$dataset, "fmri_dataset")) {
-  #   m <- get_mask(object$dataset)
-  #   sp <- space(m)
-  #   SparseNeuroVec(as.matrix(res), neuroim2::add_dim(sp, ncol(res)), mask = m)
-  # } else {
-  #   res
-  # }
+  # Reconstruction functionality can be added here if necessary (applies to the 'res' matrix/tibble)
+  # if (recon && inherits(object$dataset, "fmri_dataset")) { ... }
   
   return(res)
 }

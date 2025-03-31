@@ -22,23 +22,27 @@
 #'       }
 #'   }
 #' 
+#' @importFrom assertthat assert_that
 #' @examples
 #' # Simulate 3 conditions with different amplitudes
-#' sim <- sim_ts(ncond = 3, amps = c(1, 1.5, 2), TR = 2)
+#' sim <- simulate_bold_signal(ncond = 3, amps = c(1, 1.5, 2), TR = 2)
 #' 
 #' # Plot the simulated time series
 #' matplot(sim$mat[,1], sim$mat[,-1], type = "l", 
 #'         xlab = "Time (s)", ylab = "BOLD Response")
 #' 
 #' @export
-sim_ts <- function(ncond, hrf=HRF_SPMG1, nreps=12, amps=rep(1,ncond), isi=c(3,6), ampsd=0, TR=1.5) {
+simulate_bold_signal <- function(ncond, hrf=HRF_SPMG1, nreps=12, amps=rep(1,ncond), isi=c(3,6), ampsd=0, TR=1.5) {
   assert_that(length(amps) == ncond, 
               msg = "Length of amplitudes vector must match number of total trials (ncond")
+  # Note: If ampsd > 0, amplitude variability is sampled *once per condition*,
+  # meaning all trials of a given condition share the same sampled amplitude.
   assert_that(length(isi) == 2 && isi[2] > isi[1], 
               msg = "ISI must be a vector of length 2 with isi[2] > isi[1]")
   assert_that(TR > 0, msg = "TR must be positive")
   
-  cond <- letters[1:ncond]
+  # Use robust condition naming
+  cond <- paste0("Cond", 1:ncond) 
   trials <- sample(rep(cond, nreps))
   isis <- sample(isi[1]:isi[2], length(trials), replace=TRUE)
   onset <- cumsum(isis)
@@ -77,11 +81,11 @@ sim_ts <- function(ncond, hrf=HRF_SPMG1, nreps=12, amps=rep(1,ncond), isi=c(3,6)
 #' @examples
 #' # Simulate noise for a 5-minute scan with TR=2s
 #' n_timepoints <- 150  # 5 minutes * 60 seconds / 2s TR
-#' noise <- simulate_fmri_noise(n_timepoints, TR = 2)
+#' noise <- simulate_noise_vector(n_timepoints, TR = 2)
 #' plot(noise, type = "l", xlab = "Time Point", ylab = "Signal")
 #' 
 #' @export
-simulate_fmri_noise <- function(n, TR = 1.5, ar = c(0.3), ma = c(0.5), sd = 1, 
+simulate_noise_vector <- function(n, TR = 1.5, ar = c(0.3), ma = c(0.5), sd = 1, 
                                drift_freq = 1/128, drift_amplitude = 2,
                                physio = TRUE, seed = NULL) {
   if (!is.null(seed)) {
@@ -121,7 +125,7 @@ simulate_fmri_noise <- function(n, TR = 1.5, ar = c(0.3), ma = c(0.5), sd = 1,
 #'
 #' @return A list containing:
 #'   \itemize{
-#'     \item clean: The simulated signals without noise (from sim_ts)
+#'     \item clean: The simulated signals without noise (from simulate_bold_signal)
 #'     \item noisy: The signals with added noise
 #'     \item noise: The simulated noise component
 #'     \item onsets: Trial onset times
@@ -130,7 +134,7 @@ simulate_fmri_noise <- function(n, TR = 1.5, ar = c(0.3), ma = c(0.5), sd = 1,
 #'
 #' @examples
 #' # Simulate a dataset with 3 conditions
-#' data <- simulate_fmri_dataset(ncond = 3, TR = 2, snr = 0.5)
+#' data <- simulate_simple_dataset(ncond = 3, TR = 2, snr = 0.5)
 #' 
 #' # Plot clean and noisy data
 #' par(mfrow = c(2,1))
@@ -140,14 +144,14 @@ simulate_fmri_noise <- function(n, TR = 1.5, ar = c(0.3), ma = c(0.5), sd = 1,
 #'         main = "Noisy Signal", xlab = "Time (s)", ylab = "BOLD")
 #'
 #' @export
-simulate_fmri_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5, 
+simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5, 
                                  hrf = HRF_SPMG1, seed = NULL) {
   if (!is.null(seed)) {
     set.seed(seed)
   }
   
   # Generate clean signals
-  clean <- sim_ts(ncond = ncond, nreps = nreps, TR = TR, hrf = hrf)
+  clean <- simulate_bold_signal(ncond = ncond, nreps = nreps, TR = TR, hrf = hrf)
   
   # Calculate noise level based on SNR
   signal_sd <- sd(as.vector(clean$mat[,-1]))
@@ -156,8 +160,8 @@ simulate_fmri_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
   # Generate noise for each condition
   n_timepoints <- nrow(clean$mat)
   noise_mat <- replicate(ncond, 
-                        simulate_fmri_noise(n = n_timepoints, TR = TR, 
-                                         sd = noise_sd, seed = seed))
+                        simulate_noise_vector(n = n_timepoints, TR = TR, 
+                                         sd = noise_sd))
   
   # Combine signal and noise
   noisy_mat <- cbind(clean$mat[,1], clean$mat[,-1] + noise_mat)
@@ -237,7 +241,7 @@ simulate_fmri_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #'
 #' @importFrom stats rnorm rexp runif rgamma rlnorm arima.sim
 #' @export
-simulate_fmri <- function(
+simulate_fmri_matrix <- function(
     n                 = 1,
     total_time        = 240,
     TR                = 2,

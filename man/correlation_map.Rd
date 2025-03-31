@@ -72,5 +72,8 @@ correlation_map(fmodel, method = "pearson", half_matrix = TRUE)
 }
 \seealso{
 \code{\link[=event_model]{event_model()}}, \code{\link[=baseline_model]{baseline_model()}}
+
+Other visualization: 
+\code{\link{design_map}()}
 }
 \concept{visualization}

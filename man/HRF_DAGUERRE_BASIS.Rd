@@ -4,24 +4,23 @@
 \alias{HRF_DAGUERRE_BASIS}
 \title{Create Daguerre basis HRF set}
 \usage{
-HRF_DAGUERRE_BASIS(t, n_basis = 3, scale = 4)
+HRF_DAGUERRE_BASIS(n_basis = 3, scale = 4)
 }
 \arguments{
-\item{t}{Time points in seconds}
-
 \item{n_basis}{Number of basis functions (default: 3)}
 
 \item{scale}{Scale parameter for the time axis (default: 4)}
 }
 \value{
-Matrix where each column is a basis function
+An HRF object (function) that takes time \code{t} and returns the basis set matrix.
 }
 \description{
-Creates a set of hemodynamic response functions using Daguerre spherical basis
-functions. Returns the full basis set rather than a single canonical response.
+Creates an HRF object representing a set of hemodynamic response functions
+using Daguerre spherical basis functions.
 }
 \examples{
+hrf_dag_basis_obj <- HRF_DAGUERRE_BASIS(n_basis = 3)
 t <- seq(0, 32, by=0.1)
-basis_set <- HRF_DAGUERRE_BASIS(t)
+basis_set <- hrf_dag_basis_obj(t)
 matplot(t, basis_set, type='l', xlab='Time (s)', ylab='Response')
 }

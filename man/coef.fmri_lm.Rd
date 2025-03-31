@@ -4,12 +4,21 @@
 \alias{coef.fmri_lm}
 \title{Extract Model Coefficients from an fmri_lm Object}
 \usage{
-\method{coef}{fmri_lm}(object, type = c("betas", "contrasts"), recon = FALSE, ...)
+\method{coef}{fmri_lm}(
+  object,
+  type = c("betas", "contrasts"),
+  include_baseline = FALSE,
+  recon = FALSE,
+  ...
+)
 }
 \arguments{
 \item{object}{An \code{fmri_lm} object.}
 
-\item{type}{The type of coefficients to extract: \code{"betas"} or \code{"contrasts"}. Default is \code{"betas"}.}
+\item{type}{The type of coefficients to extract: \code{"betas"} or \code{"contrasts"}. Default is `"betas"'.}
+
+\item{include_baseline}{Logical. If \code{TRUE}, include coefficients for baseline regressors along with event regressors.
+If \code{FALSE} (default), only event regressors are returned.}
 
 \item{recon}{Logical. If \code{TRUE}, reconstructs the coefficients into a neuroimaging volume. Default is \code{FALSE}.}
 

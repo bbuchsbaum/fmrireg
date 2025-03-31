@@ -2,19 +2,20 @@
 % Please edit documentation in R/fmridsl.R
 \name{load_fmri_config}
 \alias{load_fmri_config}
-\title{Load and validate fMRI analysis configuration}
+\title{Load, Validate, and Build fMRI Analysis Configuration}
 \usage{
 load_fmri_config(yaml_file)
 }
 \arguments{
-\item{yaml_file}{Path to YAML configuration file}
+\item{yaml_file}{Path to the YAML configuration file.}
 }
 \value{
-An fmri_config object containing validated configuration and components
+An \code{fmri_config} object.
 }
 \description{
-This function reads a YAML specification of an fMRI analysis configuration,
-loads a BIDS project via \code{bidser}, then validates the subjects, tasks, events,
-and confounds as specified in the YAML. Finally, it returns an \code{fmri_config}
-object that includes the validated structure.
+This is the main user-facing function. It reads a YAML specification,
+validates it against the DSL schema, applies defaults, performs context-
+dependent BIDS validation (subjects, tasks, event/confound columns),
+infers variable roles for the model, and returns a validated \code{fmri_config}
+object ready for model building.
 }

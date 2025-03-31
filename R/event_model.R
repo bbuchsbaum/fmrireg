@@ -353,7 +353,24 @@ parse_term <- function(vars, ttype) {
   if (dim > 1) {
     for (i in 2:dim) term[i] <- deparse(vars[[i]], backtick = TRUE)
   }
-  for (i in 1:dim) term[i] <- attr(terms(reformulate(term[i])), "term.labels")
+  
+  # Loop to potentially simplify term labels
+  for (i in 1:dim) {
+    current_term_str <- term[i]
+    # Check if it's a simple variable name (alphanumeric + underscore/dot)
+    if (grepl("^[a-zA-Z_][a-zA-Z0-9_.]*$", current_term_str)) {
+      # If simple, keep it as is, skip the terms() call
+      term[i] <- current_term_str 
+    } else {
+      # If complex, try the original logic to get the term label
+      term[i] <- tryCatch({
+        attr(terms(reformulate(current_term_str)), "term.labels")
+      }, error = function(e) {
+        warning("Could not extract term label for: ", current_term_str, ". Using original string. Error: ", e$message)
+        current_term_str # Fallback to the original string on error
+      })
+    }
+  }
   
   full.call <- paste(ttype, "(", term[1], sep = "")
   if (dim > 1) {

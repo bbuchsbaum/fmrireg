@@ -1,4 +1,3 @@
-
 #' Generate an AFNI Linear Model from an fmri_config object
 #'
 #' This function takes an fmri_config object and generates an AFNI linear model
@@ -597,7 +596,7 @@ run.afni_lm_spec <- function(x, outdir, execute=TRUE, execfun=system, prepend=""
 #' 
 #' @param x the contrast to convert
 #' @param ... extra args
-#' @keywords internal
+#' @export
 to_glt <- function(x, ...) UseMethod("to_glt")
 
 

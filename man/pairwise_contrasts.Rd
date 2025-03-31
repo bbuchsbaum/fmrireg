@@ -4,12 +4,16 @@
 \alias{pairwise_contrasts}
 \title{Pairwise Contrasts}
 \usage{
-pairwise_contrasts(levels, where = NULL)
+pairwise_contrasts(levels, facname, where = NULL, name_prefix = "con")
 }
 \arguments{
 \item{levels}{A vector of factor levels to be compared.}
 
+\item{facname}{The name of the factor variable (column name in the design) these levels belong to.}
+
 \item{where}{An optional formula specifying the subset over which the contrast is computed.}
+
+\item{name_prefix}{A character string to prefix the generated contrast names (default: "con").}
 }
 \value{
 A contrast_set object containing pairwise contrasts for all combinations of factor levels.
@@ -18,6 +22,8 @@ A contrast_set object containing pairwise contrasts for all combinations of fact
 Construct pairwise contrasts for all combinations of factor levels.
 }
 \examples{
-pairwise_contrasts(c("A", "B", "C"))
+# Assuming 'my_factor' is a column name
+pairwise_contrasts(c("A", "B", "C"), facname = "my_factor")
+pairwise_contrasts(c("A", "B", "C"), facname = "my_factor", name_prefix = "pair")
 
 }

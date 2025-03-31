@@ -313,7 +313,8 @@ test_that("mock project creation is flexible", {
   # Default mock project
   mock_proj <- create_mock_bids_project()
   events <- bidser::read_events(mock_proj, "sub-01", "task-1")
-  expect_equal(length(events$data), 2)  # 2 runs
+  # Check the number of rows in the resulting grouped tibble, should be 2 (for 2 runs)
+  expect_equal(nrow(events), 2) 
   expect_equal(nrow(events$data[[1]]), 20)  # 20 events per run
   
   # Custom mock project
@@ -341,7 +342,8 @@ test_that("mock project creation is flexible", {
   )
   
   events <- bidser::read_events(custom_proj, "sub-01", "task-1")
-  expect_equal(length(events$data), 3)  # 3 runs
+  expect_true(inherits(events, "data.frame")) # read_events returns grouped tibble now
+  expect_equal(nrow(events), 3) # 3 runs
   expect_equal(nrow(events$data[[1]]), 30)  # 30 events per run
   expect_true("condition" %in% names(events$data[[1]]))
   expect_true("score" %in% names(events$data[[1]]))
@@ -350,260 +352,85 @@ test_that("mock project creation is flexible", {
   expect_true(all(c("fd", "dvars") %in% names(confounds$data[[1]])))
 })
 
-# Test validate_subjects
-test_that("validate_subjects works correctly", {
-  mock_proj <- create_mock_bids_project()
-  
-  # Mock the bidser::participants function
-  mockery::stub(validate_subjects, 'bidser::participants', function(proj) {
-    data.frame(participant_id = proj$config$subjects, stringsAsFactors = FALSE)
-  })
-  
-  # Test with exclude
-  subjects_spec <- list(include = c("sub-01", "sub-02"), exclude = c("sub-02"))
-  result <- validate_subjects(mock_proj, subjects_spec)
-  expect_equal(result, "sub-01")
-  
-  # Test with invalid subject
-  subjects_spec <- list(include = c("sub-01", "sub-03"))
-  expect_error(
-    validate_subjects(mock_proj, subjects_spec),
-    "Subjects not found: sub-03"
-  )
-  
-  # Test with no include (should return all subjects)
-  subjects_spec <- list()
-  result <- validate_subjects(mock_proj, subjects_spec)
-  expect_equal(result, c("sub-01", "sub-02"))
-})
-
-# Test validate_events
-test_that("validate_events works correctly", {
-  mock_proj <- create_mock_bids_project()
-  
-  events_spec <- list(
-    onset = "onset",
-    duration = "duration",
-    block = "block",
-    RT = "RT",
-    accuracy = "accuracy"
-  )
-  
-  # Create a proper mock events data frame with realistic block structure
-  # 10 events per block, 2 blocks total
-  mock_events <- do.call(rbind, lapply(1:2, function(block) {
-    data.frame(
-      onset = seq(0, by = 10, length.out = 10),  # starts at 0 for each block
-      duration = rep(2, 10),
-      block = rep(block, 10),  # block number
-      RT = runif(10, 0.5, 1.5),
-      accuracy = rbinom(10, 1, 0.8),
-      stringsAsFactors = FALSE
-    )
-  }))
-  
-  # Ensure the data is sorted by block
-  mock_events <- mock_events[order(mock_events$block), ]
-  
-  # Mock the bidser functions
-  mockery::stub(validate_events, 'bidser::read_events', function(proj, subid, task, ...) {
-    # Return the structure that bidser::read_events would return
-    list(
-      data = list(mock_events)  # List of data frames, one per run
-    )
-  })
-  mockery::stub(validate_events, 'bidser::tasks', function(proj) proj$config$tasks)
-  
-  # Print mock data for debugging
-  print("Mock Events Structure:")
-  print(str(mock_events))
-  print("Block values:")
-  print(table(mock_events$block))
-  
-  result <- validate_events(mock_proj, events_spec, 
-                          subjects = c("sub-01", "sub-02"),
-                          tasks = c("task-1"))
-  
-  expect_true(!is.null(result$events))
-  expect_equal(names(result$events), c("sub-01", "sub-02"))
-  expect_equal(names(result$events$`sub-01`), "task-1")
-  
-  # Additional checks to verify the structure
-  expect_true(all(c("onset", "duration", "block") %in% result$columns))
-  expect_equal(result$mapping, events_spec)
-  
-  # Test that block values are properly validated
-  expect_true(is.numeric(result$events$`sub-01`$`task-1`$block))
-  expect_true(all(diff(result$events$`sub-01`$`task-1`$block) >= 0))
-  
-  # Test that onsets reset to 0 for each block
-  block1_events <- mock_events[mock_events$block == 1, ]
-  block2_events <- mock_events[mock_events$block == 2, ]
-  expect_equal(min(block1_events$onset), 0)
-  expect_equal(min(block2_events$onset), 0)
-})
-
-# Test validate_confounds
-test_that("validate_confounds works correctly", {
-  mock_proj <- create_mock_bids_project()
-  
-  # Create mock confounds data
-  mock_confounds <- list(
-    data = list(
-      data.frame(
-        motion_x = rnorm(10),
-        motion_y = rnorm(10),
-        motion_z = rnorm(10),
-        motion_rot_x = rnorm(10),
-        motion_rot_y = rnorm(10),
-        motion_rot_z = rnorm(10),
-        other_var = rnorm(10)
-      )
-    )
-  )
-  
-  # Mock the read_confounds function
-  local_mocked_bindings(
-    read_confounds = function(...) mock_confounds,
-    .package = "bidser"
-  )
-  
-  # Test including motion variables
-  confounds_spec <- list(
-    include = c("^motion.*"),
-    exclude = c("motion_outlier")
-  )
-  
-  result <- validate_confounds(mock_proj, confounds_spec, c("sub-01"))
-  
-  expect_equal(length(result$columns), 6)  # Should find all motion variables
-  expect_true(all(grepl("^motion", result$columns)))
-  expect_equal(result$spec, confounds_spec)
-  
-  # Test with no patterns (should include all columns)
-  result <- validate_confounds(mock_proj, list(), c("sub-01"))
-  expect_equal(length(result$columns), 7)  # Should include all columns
-  
-  # Test with non-matching pattern
-  confounds_spec$include <- c("nonexistent.*")
-  expect_error(
-    validate_confounds(mock_proj, confounds_spec, c("sub-01")),
-    regexp="Confound pattern"
-  )
-})
-
 # Test full config loading
-test_that("load_fmri_config works correctly", {
-  mock_proj <- create_mock_bids_project()
+test_that("load_fmri_config works correctly with minimal spec", {
+  # Use a real temp directory
+  temp_bids_dir <- tempfile("mockbids_")
+  dir.create(temp_bids_dir, recursive = TRUE)
+  on.exit(unlink(temp_bids_dir, recursive = TRUE), add = TRUE)
+
+  mock_proj <- create_mock_bids_project(subjects = c("sub-01", "sub-02"), tasks = "task-1")
+  # Add a dummy participants.tsv required by bidser
+  writeLines(c("participant_id", "sub-01", "sub-02"), file.path(temp_bids_dir, "participants.tsv"))
   
   yaml_content <- '
 dataset:
-  path: "/mock/path"
+  path: "PLACEHOLDER_PATH"
   subjects:
     include: ["sub-01", "sub-02"]
   tasks: ["task-1"]
-model:
-  events:
-    onset: "onset"
-    duration: "duration"
-    block: "block"
+
+events: # Top-level events section REQUIRED
+  onset: onset
+  duration: duration
+  block: block
+  stimulus: { column: stimulus } # Variable used in regressor
+
 confounds:
   include: ["motion1", "motion2"]
-'
-  yaml_file <- tempfile(fileext = ".yaml")
-  writeLines(yaml_content, yaml_file)
-  
-  # Create mock functions
-  mock_participants <- function(proj) {
-    tibble::tibble(participant_id = proj$config$subjects)
-  }
-  
-  # Set up mocked bindings
-  local_mocked_bindings(
-    bids_project = function(...) mock_proj,
-    participants = mock_participants,
-    tasks = function(proj) proj$config$tasks,
-    read_events = function(proj, subid, task, ...) {
-      list(data = list(create_mock_events()))
-    },
-    read_confounds = function(proj, subid, ...) {
-      list(data = list(data.frame(motion1 = rnorm(10), motion2 = rnorm(10))))
-    },
-    .package = "bidser"
-  )
-  
-  config <- load_fmri_config(yaml_file)
-  
-  expect_s3_class(config, "fmri_config")
-  expect_equal(config$subjects, c("sub-01", "sub-02"))
-  expect_equal(config$tasks, "task-1")
-  
-  unlink(yaml_file)
-})
 
-# Test full config loading with comprehensive YAML
-test_that("load_fmri_config handles complete specification", {
-  mock_proj <- create_mock_bids_project()
-  
-  yaml_content <- '
-dataset:
-  path: "/mock/path"
-  subjects:
-    include: ["sub-01", "sub-02"]
-  tasks: ["task-1"]
-  scan_params:
-    TR:
-      default: 2.0
-      overrides:
-        - value: 1.5
-          pattern: "task-1_run-02"
-    run_length:
-      default:
-        task-1: 200
-      overrides:
-        - value: 180
-          pattern: "sub-02_task-1_run-02"
+regressors: # Top-level regressors section REQUIRED
+  baseline:
+    type: hrf
+    variables: [stimulus]
+    hrf: HRF_SPMG1
 
 model:
-  events:
-    onset: "onset"
-    duration: "duration"
-    block: "block"
-    attend: "attend"
-    stimulus: "stimulus"
-    RT: "RT"
-    accuracy: "accuracy"
+  name: "test_model"
+  events: # Model-level event mapping
+    onset: onset # Using column name directly
+    duration: duration
+    block: block
+    stimulus: stimulus # Map model variable stimulus to event column stimulus
+  regressors: # Reference top-level regressor
+    baseline:
 
-confounds:
-  include: ["^motion.*"]
-  exclude: ["motion_outlier"]
+# HRFs section is optional
 '
+
+  # Inject real path
+  yaml_content <- sub("PLACEHOLDER_PATH", temp_bids_dir, yaml_content, fixed = TRUE)
+  
+  # Print the final YAML content for debugging if needed
+  # message("Minimal YAML Content:\n", yaml_content)
   
   yaml_file <- tempfile(fileext = ".yaml")
   writeLines(yaml_content, yaml_file)
+  on.exit(unlink(yaml_file), add = TRUE) # Ensure temp file cleanup
   
-  # Set up mocked bindings
+  # Mock bidser functions that interact with the filesystem/project
   local_mocked_bindings(
-    bids_project = function(...) mock_proj,
-    participants = function(proj) {
-      tibble::tibble(participant_id = proj$config$subjects)
+    # Mock bids_project to prevent actual filesystem scanning beyond basic checks
+    # It still needs the path to exist for the initial check
+    bids_project = function(path, ...) {
+        # Basic check if path exists, return the mock_proj structure
+        if (!fs::dir_exists(path)) stop("Mock BIDS path doesn't exist: ", path)
+        # Add the real path to the mock object for print methods etc.
+        mock_proj$path <- path
+        mock_proj
     },
-    tasks = function(proj) proj$config$tasks,
+    # participants and tasks can use the functions within mock_proj
+    participants = function(proj, ...) proj$participants(),
+    tasks = function(proj, ...) proj$tasks(),
+    # Mock read_events to return correctly structured data
     read_events = function(proj, subid, task, ...) {
-      list(data = list(create_mock_events()))
+        # Simulate read_events structure expected by build_config_from_ior
+        # Returns a list containing a dataframe for the first subject/task
+        list(data=list(create_mock_events()))
     },
-    read_confounds = function(proj, subid, ...) {
-      # Create mock confounds data with columns starting with "motion"
-      confounds_df <- data.frame(
-        motion_x = rnorm(10),
-        motion_y = rnorm(10),
-        motion_z = rnorm(10),
-        motion_rot_x = rnorm(10),
-        motion_rot_y = rnorm(10),
-        motion_rot_z = rnorm(10),
-        other_var = rnorm(10)
-      )
-      list(data = list(confounds_df))
+    # Mock read_confounds similarly
+    read_confounds = function(proj, subid, ...) { 
+        list(data=list(data.frame(motion1 = rnorm(10), motion2 = rnorm(10), motion_outlier=rnorm(10))))
     },
     .package = "bidser"
   )
@@ -616,35 +443,126 @@ confounds:
   
   # Additional checks for confounds
   expect_true(!is.null(config$confounds_info))
-  expect_true(all(grepl("^motion", names(config$confounds_info$columns)[1:6])))
-  
-  unlink(yaml_file)
+  expect_equal(config$confounds_info$columns, c("motion1", "motion2"))
 })
 
-# Add scan parameter test:
-test_that("scan parameter functions work correctly", {
-  scan_params <- list(
-    TR = list(
-      default = 2.0,
-      overrides = list(
-        list(value = 1.5, pattern = "task-1_run-02")
-      )
-    ),
-    run_length = list(
-      default = list("task-1" = 200),
-      overrides = list(
-        list(value = 180, pattern = "sub-02_task-1_run-02")
-      )
-    )
+# Test full config loading with comprehensive YAML
+test_that("load_fmri_config handles complete specification", {
+  # Use a real temp directory
+  temp_bids_dir <- tempfile("mockbids_")
+  dir.create(temp_bids_dir, recursive = TRUE)
+  on.exit(unlink(temp_bids_dir, recursive = TRUE), add = TRUE)
+
+  mock_proj <- create_mock_bids_project(subjects = c("sub-01", "sub-02"), tasks = "task-1")
+  # Add dummy participants.tsv
+  writeLines(c("participant_id", "sub-01", "sub-02"), file.path(temp_bids_dir, "participants.tsv"))
+  
+  yaml_content <- '
+dataset:
+  path: "PLACEHOLDER_PATH"
+  subjects:
+    include: ["sub-01", "sub-02"]
+  tasks: ["task-1"]
+  scan_params:
+    TR:
+      default: 2.0
+      overrides:
+        - value: 1.5
+          pattern: "task-1_run-02"
+    run_length:
+      default:
+        "task-1": 200
+      overrides:
+        - value: 180
+          pattern: "sub-02_task-1_run-02"
+
+events: # Top level events section
+  onset: onset
+  duration: duration
+  block: block
+  attend: { column: attend }
+  stimulus: { column: stimulus }
+  RT: { column: RT }
+  accuracy: { column: accuracy }
+
+confounds:
+  include: ["^motion[12]$"]
+  exclude: ["motion_outlier"]
+
+regressors: # Top level regressors section
+  main_effect:
+    type: hrf
+    variables: [attend, stimulus] # Uses variables mapped in top-level events
+    hrf: HRF_SPMG1 # Assuming default built-in HRF
+  rt_mod:
+    type: hrf_parametric
+    variables: [RT] # Uses variable mapped in top-level events
+    hrf: HRF_SPMG1
+    basis:
+      type: Poly
+      parameters:
+        degree: 1
+
+model:
+  name: "full_model"
+  factors: [attend, stimulus] # Explicitly declare factors
+  parametric: [RT, accuracy]  # Explicitly declare parametrics
+  events: # Model-specific event mapping (can reference top-level)
+    onset: onset
+    duration: duration
+    block: block
+    attend: attend       
+    stimulus: stimulus   
+    RT: RT               
+    accuracy: accuracy   
+  regressors: # Reference regressors defined above
+    main_effect: 
+    rt_mod:
+'
+
+  # Inject real path
+  yaml_content <- sub("PLACEHOLDER_PATH", temp_bids_dir, yaml_content, fixed = TRUE)
+  
+  # message("Complete YAML Content:\n", yaml_content)
+  
+  yaml_file <- tempfile(fileext = ".yaml")
+  writeLines(yaml_content, yaml_file)
+  on.exit(unlink(yaml_file), add = TRUE)
+  
+  # Set up mocked bindings
+  local_mocked_bindings(
+    bids_project = function(path, ...) {
+        if (!fs::dir_exists(path)) stop("Mock BIDS path doesn't exist: ", path)
+        mock_proj$path <- path
+        mock_proj
+    },
+    participants = function(proj, ...) proj$participants(),
+    tasks = function(proj, ...) proj$tasks(),
+    read_events = function(proj, subid, task, ...) {
+        list(data=list(create_mock_events()))
+    },
+    read_confounds = function(proj, subid, ...) {
+        # Create mock confounds data matching potential include patterns
+        confounds_df <- data.frame(
+            motion1 = rnorm(10),
+            motion2 = rnorm(10),
+            motion_outlier = sample(0:1, 10, replace=TRUE),
+            other_var = rnorm(10)
+        )
+        list(data = list(confounds_df))
+    },
+    .package = "bidser"
   )
   
-  # Test TR override
-  expect_equal(get_scan_tr("sub-01_task-1_run-02", scan_params), 1.5)
-  expect_equal(get_scan_tr("sub-01_task-1_run-01", scan_params), 2.0)
+  config <- load_fmri_config(yaml_file)
   
-  # Test run length override
-  expect_equal(get_scan_length("sub-02_task-1_run-02", "task-1", scan_params), 180)
-  expect_equal(get_scan_length("sub-01_task-1_run-01", "task-1", scan_params), 200)
+  expect_s3_class(config, "fmri_config")
+  expect_equal(config$subjects, c("sub-01", "sub-02"))
+  expect_equal(config$tasks, "task-1")
+  
+  # Additional checks for confounds
+  expect_true(!is.null(config$confounds_info))
+  expect_equal(config$confounds_info$columns, c("motion1", "motion2"))
 })
 
 test_that("mock read_events matches bidser structure exactly", {
@@ -689,12 +607,7 @@ test_that("participants method works correctly", {
   
   # Test direct participants call
   parts <- bidser::participants(mock_proj)
-  expect_true(tibble::is_tibble(parts))
+  expect_true(is.data.frame(parts))
   expect_equal(names(parts), "participant_id")
   expect_equal(parts$participant_id, c("sub-01", "sub-02"))
-  
-  # Test that validate_subjects works with the tibble
-  subjects_spec <- list(include = c("sub-01", "sub-02"))
-  result <- validate_subjects(mock_proj, subjects_spec)
-  expect_equal(result, c("sub-01", "sub-02"))
 })

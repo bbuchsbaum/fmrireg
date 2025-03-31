@@ -34,7 +34,7 @@ sub-designs (\code{X_list}), one for each condition (or event). It then calls
 amplitudes.
 }
 \details{
-This is the \emph{“Rank-1 GLM with Separate Designs”} approach (sometimes
+This is the \emph{"Rank-1 GLM with Separate Designs"} approach (sometimes
 called the Mumford method). We partition \code{xdat$X} into \eqn{k} sub-designs,
 each \eqn{n \times m}. For each voxel, we remove the baseline using
 \code{\link{lsfit}} and call \code{\link{r1_glms_betas}} to solve for the

@@ -1,5 +1,5 @@
 ---
-title: "Single Trial Beta Estimation"
+title: "Single-Trial Beta Estimation for fMRI Analysis"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -9,87 +9,169 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-
-## Estimating single-trial event amplitudes for use in "beta series" analyses and MVPA analyses.
-
-It is common in fMRI analysis want to obtain estimates of BOLD amplitude for each *trial* (rather than condition) in an experiment. Estimation of single-trial beta coefficients can be done in `fmrireg` with the `estimate_betas` function.
-
-First we load in an experimental design.
-
-```{r, message=FALSE, warning=FALSE}
-
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(dplyr)
 library(fmrireg)
-facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE) %>% dplyr::filter(run == 1)
-## we had a constant value to the design used later to model the mean stimulus response over all trials.
+```
+
+## Introduction: Why Estimate Single-Trial Betas?
+
+Standard fMRI analysis often estimates the average BOLD response amplitude for each experimental condition. However, sometimes it's valuable to estimate the response amplitude for *each individual trial* or event. This approach yields a "beta series" - a sequence of beta coefficients, one for each trial.
+
+Single-trial beta estimates are useful for several advanced analysis techniques:
+
+*   **Beta Series Correlation:** Analyzing functional connectivity by correlating the trial-by-trial beta series between different brain regions.
+*   **Multivoxel Pattern Analysis (MVPA):** Using the pattern of single-trial betas across voxels as input for machine learning classifiers to decode experimental conditions or cognitive states.
+*   **Relating Neural Activity to Behavior:** Examining trial-by-trial correlations between brain activation (betas) and behavioral measures (e.g., reaction time, accuracy).
+
+`fmrireg` provides the `estimate_betas()` function to compute these single-trial coefficients using various estimation methods.
+
+## Setting up the Data and Design
+
+First, let's load an example experimental design table and create a dummy fMRI dataset.
+
+```{r load_design}
+# Load design, filter for one run for simplicity
+facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header = TRUE) %>% 
+  dplyr::filter(run == 1)
+
+# Add a constant factor - useful for modeling the mean response
 facedes$constant <- factor(rep(1, nrow(facedes)))
 
+head(facedes)
 ```
 
-Now we generate an fMRI data using random values.
+Now, we generate some random fMRI data for demonstration purposes.
 
-```{r, message=FALSE, warning=FALSE}
+```{r generate_data}
+D <- 5 # Dimension for a small simulated brain
+# Create a list containing one NeuroVec for the single run
+scans <- list(local({
+  arr <- array(rnorm(D*D*D*300), c(D, D, D, 300))
+  bspace <- neuroim2::NeuroSpace(dim = c(D, D, D, 300))
+  neuroim2::NeuroVec(arr, bspace)
+}))
 
-D <- 5
-scans <- lapply(1:length(unique(facedes$run)), function(i) {
-    arr <- array(rnorm(D*D*D*300), c(D,D,D, 300))
-    bspace <- neuroim2::NeuroSpace(dim=c(D,D,D,300))
-    neuroim2::NeuroVec(arr, bspace)
-})
-  
-mask <- neuroim2::LogicalNeuroVol(array(rnorm(D*D*D), c(D,D,D)) > 0, neuroim2::NeuroSpace(dim=c(D,D,D)))
-  
+# Create a mask volume
+mask <- neuroim2::LogicalNeuroVol(array(rnorm(D*D*D), c(D,D,D)) > 0, 
+                                  neuroim2::NeuroSpace(dim = c(D, D, D)))
 ```
 
-Now we create a instance of type `fmri_mem_dataset` which encapsulates infromation about the data, temporal layout, and experimental design of an "in memory" fmri dataset.
+Finally, we create an `fmri_mem_dataset` instance, which holds the data, timing information (TR), and the experimental design table.
 
-```{r, message=FALSE,warning=FALSE}
-
-dset <- fmri_mem_dataset(scans=scans, 
-                 mask=mask, 
-                 TR=1.5, 
-                 event_table=facedes)
-
+```{r create_dataset}
+dset <- fmri_mem_dataset(scans = scans, 
+                         mask = mask, 
+                         TR = 1.5, 
+                         event_table = facedes)
 print(dset)
-
 ```
 
-Now we're ready to run the beta estimation analysis. There are two components to the model: a fixed effects formula and a random effects formula. The fixed effects part models the condition-specific responses, and the random effects part models the trial-specific responses. For the random effect part, we want to model every onset separately, so we use the `trialwise` hrf modeling function. For the fixed part, we use a standard `hrf` modeling function.
+## Estimating Betas with `estimate_betas`
 
-The method we use is "pls" for **partial least squares** (via the `pls` package), which effectively acts as a regularized least squares estimation procedure. Simulations show that `pls` produces trialwise beta estimates for closely space onsets (e.g. overlapping hrfs) that are similar to the "least squares sum" approach (citation needed). By modeling the mean effect with `fixed = onset ~ hrf(constant)` the "random effects" `onset ~ trialwise()` capture the deviations from that mean, with regularization achieved by using partial least squares estimation with a small number of components (here, n=3). Other fixed effects can also be modeled, and could include events of no interest that should be covaried out when estimating the beta coefficients of interest.
+The `estimate_betas()` function requires specifying the model structure and the estimation method.
 
-When the onsets are *not* closely space together, ordinary least squares using the "ols" method is appropriate. For method "ols", however, a constant fixed effect should not be used, since it is a linear combination of the random effects, so we omit the "fixed" term.
+**Model Structure:**
 
-```{r, message=FALSE, warning=FALSE}
-  
+The model typically has two main parts, specified via formulas:
 
-res <- fmrireg:::estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
-                       method="pls", ncomp=3)
+1.  `ran = ...`: This defines the **random effects** component, which models the trial-specific responses. To estimate a separate beta for *every* trial, we use the special `trialwise()` term. For example, `ran = onset ~ trialwise()` creates one regressor for each row in the `event_table` based on the `onset` column.
+2.  `fixed = ...` (Optional): This defines the **fixed effects** component, modeling effects assumed to be constant across trials. This is often used to model the *average* response across all trials or specific conditions, allowing the `trialwise()` betas to represent deviations from this mean. It can also include nuisance regressors (e.g., events of no interest) that should be regressed out *before* estimating the trialwise betas of interest.
+3.  `block = ...`: Specifies the run structure, essential for correctly handling timing and baseline modeling across runs.
 
-names(res)
+**Estimation Methods (`method` argument):**
 
-res_ols <- fmrireg:::estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
-                       method="ols", ncomp=3)
+Estimating single-trial betas can be challenging, especially with rapid event-related designs where the HRF responses to consecutive trials overlap significantly, leading to high collinearity between trial regressors. `estimate_betas` offers several methods to address this:
 
-  
+*   `"ols"` (Ordinary Least Squares): Standard GLM estimation. **Warning:** Highly sensitive to collinearity. Often yields unstable/unreliable beta estimates in typical fMRI designs. Generally *not* recommended for beta series analysis unless trials are very widely spaced. If used, typically *omit* the `fixed` term if it models an average response, as it would be perfectly collinear with the sum of `trialwise` regressors.
+*   `"lss"` / `"lss_cpp"` (Least Squares - Separate): Implements the approach described by Mumford et al. (2012). It fits a separate GLM for each trial, where the trial of interest is modeled explicitly and all *other* trials are collapsed into a single nuisance regressor. This aims to reduce collinearity between the trial of interest and other trials. `lss_cpp` uses a faster C++ implementation.
+*   `"pls"` (Partial Least Squares): Uses PLS regression (via the `pls` package). Acts as a regularized regression method, often performing well with collinear regressors. By modeling the mean effect in `fixed` and trial deviations in `ran`, PLS can effectively estimate the trialwise components.
+*   `"fracridge"` (Fractional Ridge Regression): Implements ridge regression but with a fractional penalty, offering another form of regularization useful for collinear designs. Requires the `fracridge` package.
+*   `"mixed"` / `"mixed_cpp"` (Linear Mixed Models): Uses LMMs (via `rrBLUP` or an internal C++ solver) to model trial effects as random deviations from fixed effects. Can be robust but potentially computationally intensive.
+*   `"r1"` / `"r1_glms"`: Implements Rank-1 GLM methods that can jointly estimate the HRF shape along with betas (Pedregosa et al., 2015). `r1_glms` is adapted for single-trial estimation.
+*   `"lowrank_hrf"`: A newer method that first estimates voxelwise HRFs using `find_best_hrf` and then uses these estimated HRFs in an LSS-like procedure. Can be beneficial if HRF shape varies significantly across the brain.
+
+**Choosing a Method:** `"lss"` (or `"lss_cpp"`) is a common and often effective choice. `"pls"` and `"fracridge"` offer good regularization for highly collinear designs. `"mixed"` provides a statistically principled approach but can be slower. `"ols"` should generally be avoided.
+
+**Example using PLS:**
+
+Here, we use PLS. We model the average response across all trials using `fixed = onset ~ hrf(constant)` and the trial-specific deviations using `ran = onset ~ trialwise()`.
+
+```{r estimate_pls}
+# Using ::: for internal function visibility during development/testing
+# In package use, call fmrireg::estimate_betas
+res_pls <- fmrireg:::estimate_betas(dset, 
+                                  fixed = onset ~ hrf(constant), 
+                                  ran = onset ~ trialwise(), 
+                                  block = ~ run, 
+                                  method = "pls", 
+                                  ncomp = 3) # ncomp controls PLS regularization
+
+print(names(res_pls))
 ```
 
-We can plot the fixed effects model, which here is a single regressor. 
+**Example using OLS (for illustration):**
 
-```{r, message=FALSE, warning=FALSE, fig.width=8, fig.height=5}
+If using OLS, we typically omit the `fixed` term modeling the average response to avoid collinearity.
 
-plot(res$fixed_model)
-
+```{r estimate_ols}
+# Note: OLS is generally not recommended due to collinearity
+res_ols <- fmrireg:::estimate_betas(dset, 
+                                  ran = onset ~ trialwise(), # No fixed term
+                                  block = ~ run, 
+                                  method = "ols") 
 ```
 
-We can also plot the random effects model, where there is one regressor per trial.
+## Interpreting the Output
 
+The `estimate_betas` function returns a list object of class `fmri_betas` containing:
 
-```{r, message=FALSE, warning=FALSE, fig.width=8, fig.height=5}
+*   `betas_fixed`: A `NeuroVec` (if input was `fmri_dataset`) or matrix containing the estimated coefficients for the `fixed` effects model.
+*   `betas_ran`: A `NeuroVec` or matrix containing the estimated single-trial coefficients for the `ran` effects model (the beta series).
+*   `design_fixed`: The design matrix for the fixed effects.
+*   `design_ran`: The design matrix for the random (trialwise) effects.
+*   `design_base`: The design matrix for the baseline model (intercepts, drift, etc.).
+*   `fixed_model`: The `event_model` object for the fixed effects.
+*   `ran_model`: The `event_model` object for the random effects.
+*   `basemod`: The baseline model used.
 
-plot(res$ran_model)
+Let's look at the dimensions of the random betas matrix (voxels x trials):
 
+```{r show_betas_ran}
+# For matrix_dataset input, betas_ran is a matrix
+# For fmri_dataset input, it would be a NeuroVec
+if (is.matrix(res_pls$betas_ran)) {
+  print(dim(res_pls$betas_ran))
+} else {
+  print(neuroim2::space(res_pls$betas_ran))
+}
 ```
+
+## Visualizing the Models
+
+We can plot the design matrices for the fixed and random effects components.
+
+The fixed effects model here contains just one regressor representing the average response (`constant`).
+
+```{r plot_fixed, fig.width=8, fig.height=3}
+if (!is.null(res_pls$fixed_model)) {
+  plot(res_pls$fixed_model)
+}
+```
+
+The random effects model contains one regressor for *each trial*.
+
+```{r plot_random, fig.width=8, fig.height=5}
+# Plotting all trial regressors can be busy!
+# Consider using plotly for interaction if needed, or plotting subsets.
+# plot(res_pls$ran_model)
+# For demonstration, let's plot the design map instead:
+design_map(res_pls$ran_model, rescale_cols = FALSE) + 
+  ggplot2::theme(axis.text.x = ggplot2::element_text(angle=90, hjust=1, size=6))
+```
+
+The resulting `betas_ran` contains the estimated amplitudes for each of these trial-specific regressors, ready for use in further analyses like beta-series correlation or MVPA.
 
 
 

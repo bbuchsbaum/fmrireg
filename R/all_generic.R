@@ -92,7 +92,7 @@ get_data <- function(x, ...) UseMethod("get_data")
 #' @param x the dataset
 #' @param ... extra args
 #' @keywords internal
-#' @noRd
+#' @export
 get_data_matrix <- function(x, ...) UseMethod("get_data_matrix")
 
 
@@ -2184,3 +2184,23 @@ estimate_betas <- function(x, ...) UseMethod("estimate_betas")
 #' \code{\link{regressor}}, \code{\link{evaluate.regressor}}, \code{\link{HRF_SPMG1}}
 #' @export
 neural_input <- function(x, ...) UseMethod("neural_input")
+
+#' Visualize the entire design matrix as a heatmap
+#'
+#' Generate a heatmap visualization of a design matrix, showing regressor values over time.
+#' This is useful for inspecting the temporal structure of fMRI design matrices.
+#'
+#' @param x The model object (event_model, baseline_model, or fmri_model)
+#' @param ... Additional arguments passed to methods. Common arguments include:
+#'   \describe{
+#'     \item{rescale_cols}{Logical; if TRUE, columns are rescaled to (-1,1)}
+#'     \item{block_separators}{Logical; if TRUE, draw white lines between blocks}
+#'     \item{rotate_x_text}{Logical; if TRUE, rotate x-axis labels by 45 degrees}
+#'   }
+#' @return A ggplot2 object containing the design matrix heatmap
+#' @export
+#' @family visualization
+#' @seealso [correlation_map()], [event_model()], [baseline_model()]
+design_map <- function(x, ...) {
+  UseMethod("design_map")
+}

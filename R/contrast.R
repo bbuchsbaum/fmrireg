@@ -1,5 +1,3 @@
-
-
 #' @keywords internal
 #' @noRd
 makeWeights <- function(keepA, keepB=NULL) {
@@ -143,25 +141,38 @@ contrast_set <- function(...) {
 #' Construct pairwise contrasts for all combinations of factor levels.
 #'
 #' @param levels A vector of factor levels to be compared.
+#' @param facname The name of the factor variable (column name in the design) these levels belong to.
 #' @param where An optional formula specifying the subset over which the contrast is computed.
+#' @param name_prefix A character string to prefix the generated contrast names (default: "con").
 #'
 #' @return A contrast_set object containing pairwise contrasts for all combinations of factor levels.
 #'
 #' @examples
-#' pairwise_contrasts(c("A", "B", "C"))
+#' # Assuming 'my_factor' is a column name
+#' pairwise_contrasts(c("A", "B", "C"), facname = "my_factor")
+#' pairwise_contrasts(c("A", "B", "C"), facname = "my_factor", name_prefix = "pair")
 #'
 #' @export
 #' @importFrom utils combn
-pairwise_contrasts <- function(levels, where=NULL) {
+pairwise_contrasts <- function(levels, facname, where=NULL, name_prefix = "con") {
+  assert_that(is.character(facname), length(facname) == 1, msg = "'facname' must be a single string.")
   if (!is.null(where)) {
     assert_that(lazyeval::is_formula(where))
   }
   
-  cbns <- combn(length(levels),2)
+  if (length(levels) < 2) {
+    stop("pairwise_contrasts requires at least two levels.")
+  }
+  
+  cbns <- combn(length(levels), 2)
   ret <- lapply(1:ncol(cbns), function(i) {
     lev1 <- levels[cbns[1,i]]
     lev2 <- levels[cbns[2,i]]
-    pair_contrast(as.formula(paste("~", lev1)), as.formula(paste("~", lev2)), where=where, name=paste0("con_", lev1, "_", lev2))
+    # Construct formulas using the factor name
+    formula_A <- as.formula(paste("~", facname, "==", paste0('"', lev1, '"')))
+    formula_B <- as.formula(paste("~", facname, "==", paste0('"', lev2, '"')))
+    pair_contrast(formula_A, formula_B, 
+                  where=where, name=paste0(name_prefix, "_", lev1, "_", lev2))
   })
   
   do.call(contrast_set, ret)
@@ -442,7 +453,7 @@ contrast_weights.oneway_contrast_spec <- function(x, term,...) {
     warning("one-way contrast has more than one factor specified, taking first one only.")
   }
   
-  cmat <- generate_main_effect_contrast(reduced.term.cells, fac[1], count)
+  cmat <- generate_main_effect_contrast(reduced.term.cells, fac[1])
   #fac <- as.factor(lazyeval::f_eval_rhs(x$A, reduced.term.cells))
   #contrasts(fac) <- contr.sum(levels(fac))
   #excon <- model.matrix(~ fac - 1)
@@ -738,6 +749,18 @@ to_glt.contrast <- function(x,...) {
 #' Write GLT to File
 #'
 #' @description
+#' Write a generic function for writing GLT contrast to a file.
+#'
+#' @param x The GLT contrast object
+#' @param ... Additional arguments passed to methods
+#' @export
+write_glt <- function(x, ...) {
+  UseMethod("write_glt")
+}
+
+#' Write GLT to File
+#'
+#' @description
 #' Write a GLT contrast to a file.
 #'
 #' @param x The GLT contrast to write.
@@ -896,6 +919,17 @@ print.contrast_diff_spec <- function(x,...) {
   cat("  ", x$con1$name, "-", x$con2$name, "\n")
 }
 
+#' plot_contrasts
+#'
+#' @description
+#' Generic function for plotting contrasts.
+#'
+#' @param x Object containing contrast information
+#' @param ... Additional arguments passed to methods
+#' @export
+plot_contrasts <- function(x, ...) {
+  UseMethod("plot_contrasts")
+}
 
 #' plot_contrasts.event_model
 #'
@@ -1090,6 +1124,48 @@ ReorderFactor <- function(x, reverse=FALSE) {
   levs <- unique(as.character(x))
   if (reverse) levs <- rev(levs)
   factor(x, levels=levs)
+}
+
+#' Contrast Weights for a Contrast Set
+#'
+#' @description
+#' Compute the contrast weights for each contrast specification within a contrast_set object.
+#'
+#' @param x A contrast_set object (a list of contrast_spec objects).
+#' @param term A term object against which weights should be computed.
+#' @param ... Additional arguments passed to individual contrast_weights methods.
+#'
+#' @return A named list where each element is the result of calling contrast_weights 
+#'         on the corresponding contrast_spec in the set. The list names are the 
+#'         names of the individual contrasts.
+#'
+#' @export
+#' @importFrom purrr map set_names
+contrast_weights.contrast_set <- function(x, term, ...) {
+  # Ensure x is a list (contrast_set inherits from list)
+  if (!is.list(x)) {
+    stop("Input 'x' must be a contrast_set (list).")
+  }
+  
+  # Iterate through each contrast spec in the set
+  results_list <- purrr::map(x, function(contrast_spec) {
+    # Check if the element is actually a contrast_spec
+    if (!inherits(contrast_spec, "contrast_spec")) {
+      warning(paste("Element", contrast_spec$name, "is not a contrast_spec object, skipping."))
+      return(NULL)
+    }
+    # Compute weights for the individual contrast spec
+    contrast_weights(contrast_spec, term, ...)
+  })
+  
+  # Filter out any NULL results (if any elements weren't contrast_spec)
+  results_list <- results_list[!sapply(results_list, is.null)]
+  
+  # Set the names of the results list based on the names of the contrasts
+  contrast_names <- purrr::map_chr(results_list, "name")
+  results_list <- purrr::set_names(results_list, contrast_names)
+  
+  return(results_list)
 }
 
 

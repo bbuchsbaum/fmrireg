@@ -256,8 +256,19 @@ block <- function(x) {
 construct.baselinespec <- function(x, model_spec, ...) {
   sampling_frame <- if (!is.null(model_spec$sampling_frame)) model_spec$sampling_frame else model_spec
   
-  # Compute baseline covariates for each block.
-  ret <- lapply(sampling_frame$blocklens, function(bl) x$fun(seq(1, bl), degree = x$degree))
+  # Compute baseline covariates for each block, passing correct argument name
+  ret <- lapply(sampling_frame$blocklens, function(bl) {
+    if (x$basis == "ns") {
+      # Natural splines use 'df' argument
+      x$fun(seq(1, bl), df = x$degree)
+    } else if (x$basis %in% c("poly", "bs")) {
+      # Polynomial and B-splines use 'degree'
+      x$fun(seq(1, bl), degree = x$degree)
+    } else { 
+      # Constant basis takes no extra args other than x
+      x$fun(seq(1, bl))
+    }
+  })
   
   if (x$basis == "constant" && x$intercept == "global") {
     colind <- lapply(ret, function(x) 1:1)
@@ -526,7 +537,7 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
   term_names <- names(all_terms)
   
   # Remove constant terms from plotting.
-  cidx <- grep("constant", term_names, ignore.case = TRUE)
+  cidx <- grep("^constant", term_names, ignore.case = TRUE)
   if (length(cidx) > 0) {
     all_terms <- all_terms[-cidx]
     term_names <- term_names[-cidx]
@@ -553,17 +564,36 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
   })
   names(dflist) <- term_names
   
-  # Select the term to plot.
+  # Select the term to plot, allowing for partial matching.
   if (is.null(term_name)) {
-    dfx <- dflist[[term_names[1]]]
-    plot_term <- term_names[1]
+    plot_term_idx <- 1
+    plot_term <- term_names[plot_term_idx]
+    message(paste("No term_name specified, plotting the first available term:", plot_term))
   } else {
-    if (!term_name %in% term_names) {
-      stop("The specified term_name is not found in the baseline model terms.")
+    exact_match <- which(term_names == term_name)
+    if (length(exact_match) == 1) {
+      plot_term_idx <- exact_match
+      plot_term <- term_names[plot_term_idx]
+    } else {
+      # Try partial matching if no exact match
+      partial_matches <- grep(term_name, term_names, ignore.case = TRUE)
+      if (length(partial_matches) == 1) {
+        plot_term_idx <- partial_matches
+        plot_term <- term_names[plot_term_idx]
+        message(paste("Found unique partial match for '", term_name, "': using term '", plot_term, "'", sep=""))
+      } else if (length(partial_matches) == 0) {
+        stop("Specified term_name '", term_name, "' not found. Available terms: ", 
+             paste(term_names, collapse=", "))
+      } else {
+        # Multiple partial matches
+        stop("Specified term_name '", term_name, "' matches multiple terms: ", 
+             paste(term_names[partial_matches], collapse=", "), ". Please be more specific.")
+      }
     }
-    dfx <- dflist[[term_name]]
-    plot_term <- term_name
   }
+  
+  # Get the data for the selected term
+  dfx <- dflist[[plot_term]]
   
   # Create the ggplot.
   p <- ggplot2::ggplot(dfx, ggplot2::aes_string(x = ".time", y = "value", colour = "condition")) +
@@ -571,7 +601,12 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
     ggplot2::facet_wrap(~ .block, ncol = 1) +
     ggplot2::labs(title = if (!is.null(title)) title else paste("Baseline Model:", plot_term),
                   x = xlab, y = ylab, colour = "Condition") +
-    ggplot2::scale_color_brewer(palette = color_palette) +
+    # Use a different color scale if many conditions to avoid brewer error
+    if (length(unique(dfx$condition)) > 9) {
+       ggplot2::scale_color_viridis_d()
+    } else {
+       ggplot2::scale_color_brewer(palette = color_palette)
+    }
     ggplot2::theme_minimal(base_size = 14) +
     ggplot2::theme(legend.position = "bottom",
                    plot.title = ggplot2::element_text(face = "bold", hjust = 0.5),

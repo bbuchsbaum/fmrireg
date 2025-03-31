@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Overview of the fmrireg Package"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -9,95 +9,132 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-
-## Overview of the `fmrireg` package
-
-The analysis of Functional Magnetic Resonance Imaging (fMRI) has a lot of complexities due to the large amount of data, the fact that the data is in the form of multi-dimensional images (usually, 4-dimensional -- x,y,z, and time), the fact that the hemodynamic response is sluggish and delayed (4-6s) with respect to stimulus presentation or task events, the existence of physiological noise and other "nuisance" signals, issues related to multiple comparisons, and the existence of spatially and temporally auto-correlated errors in the signal.
-
-However, if we push all that complexity to the side for a moment, standard "univariate" fMRI analysis involves simple multiple regression analysis applied to every 3d location ("voxel") in the brain. The goal of the `fmrireg` package is to provide a convenient interface, in the spirit of other R regression modeling tools, for analyzing fMRI data. We therefore use a R's formula interface to specify regression models in a way that makes for convenient and readable code.
-
-## The building blocks of an fMRI regression model
-
-The basic, or lowest level, unit of an fMRI regression model is the **hemodynamic response function** (HRF). The HRF is a model of the mapping, or transfer function, between an external stimulus (or neural event) and a BOLD signal. A commonly used HRF is the so-called SPM canonical HRF:
-
-
-```{r, echo=FALSE,results='hide', message=FALSE, warning=FALSE}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=6, fig.height=4)
 library(fmrireg)
 ```
 
-```{r, fig.width=6}
+## Introduction
 
-time <- seq(0,24, by=.2)
-plot(time, hrf_spmg1(time), type='l', xlab="time", ylab="BOLD activity")
+The `fmrireg` package provides a convenient, formula-based interface for building and analyzing fMRI regression models in R, inspired by standard R modeling tools like `lm()` and `glm()`.
 
-```
+While fMRI analysis involves complexities like large datasets, spatio-temporal correlations, and physiological noise, the core of standard univariate analysis is multiple regression applied voxelwise. `fmrireg` aims to simplify the specification and estimation of these regression models.
 
-Currently, `fmrireg` provides several builtin HRFs that can be used to model BOLD activity. See the vignette "Hemodynamic Response Functions" for a detailed overview. Choosing the correct HRF depends on the use case and aims of the analysis, but the SPM canaonical function is usually a good default choice.
+This vignette provides a high-level overview of the key steps and components involved in using `fmrireg`.
 
-## Regressors
+## Key Components and Workflow
 
-A "regressor" is simply an independent variable in a multiple regression model. In fMRI analysis, however, regressors are constructed by "convolving" a set of onset times--the vector of times at which certain task events occur--with a chosen HRF. Imagine we have a stimulus that is presented every 16 seconds with 8 repetitions. We can construct a "regressor" by convolving the chosen HRF with a vector onset times (in seconds), whereby each element of the vector corresponds to time at which a stimulus occurs.
+A typical fMRI analysis workflow with `fmrireg` involves these main stages:
 
-Below we use the function `gen_hrf` to create a special function that has the class "HRF". An alternative is to use the pre-made HRF objects, for example, `HRF_SPMG1` if we want to use th SPM canonical function. Once we create a regressor with the `regressor` constructor function, we can evaluate it at any arbitrary time points. In other words, just as the HRFs are functions of time, so too are `regressor`s. The difference is that `regressor`, when evaluated at time *t* sum over all the constituent HRFs, the domain of which are determined by the onset vector.
+1.  **Data Representation:** Defining how your fMRI data and experimental design are organized.
+2.  **Model Building:** Specifying the regression model using formulas, including:
+    *   Defining Hemodynamic Response Functions (HRFs).
+    *   Creating event-related regressors (`event_model`).
+    *   Modeling baseline components like drift and nuisance factors (`baseline_model`).
+    *   Defining contrasts of interest (`contrast`).
+3.  **Model Estimation:** Fitting the specified model to the data (e.g., using `fmri_lm`).
+4.  **Advanced Topics:** Exploring single-trial estimation, simulation, or translation to other packages.
 
-In the code below, we evaluate the regressor at every time point between 1 and 140.
+### 1. Data Representation
 
-```{r, fig.width=6}
+Before modeling, you need to represent your fMRI data and its structure. `fmrireg` uses objects like:
 
-onsets <- seq(0, 16*8, by=16)
-hrf <- gen_hrf(hrf_spmg1)
-reg <- regressor(onsets, hrf=hrf)
+*   `fmri_dataset` / `fmri_mem_dataset`: Encapsulates the 4D fMRI data (potentially file-backed or in-memory), mask information, TR, run structure, and the experimental design table.
+*   `sampling_frame`: Defines the temporal structure – the number of scans per run (`blocklens`) and the repetition time (`TR`).
 
-grid <- seq(0,140, by=1)
-plot(grid, evaluate(reg, grid), type='l', ylab="BOLD activity", xlab="time", main="ISI = 16")
-
-```
-
-To better illustrate how a regressor sums over its constituent HRFs, we can place the onsets closer together, so that the HRFs overlap in time:
-
-```{r, fig.width=6}
-
-onsets <- seq(0, 16*8, by=6)
-hrf <- gen_hrf(hrf_spmg1)
-reg <- regressor(onsets, hrf=hrf)
-
-grid <- seq(0,140, by=1)
-plot(grid, evaluate(reg, grid), type='l', ylab="BOLD activity", xlab="time", main="ISI = 6")
-
-
-```
-
-In `fmrireg` it is generally not necessary to manually create regressors as we have done above. Rather, regressors are created "behind the scenes" by the higher-level modeling functions, such as `event_model`. However, the facility to create individual regressors, for the purposes of learning fMRI analysis or in conducting special analyses, may still be useful.
-
-## Event Models
-
-An HRF is a function from time to BOLD activity: *f(t) -> y*. A regressor is a function of time that sums up BOLD activity over a sequence of spaced events. In conventional fMRI analysis, a regressor refers to a single column of a design matrix. For example, if we have two task conditions, **face** and **scene**, we would generate one face regressor and one scene regressor. However, in statistical modeling of experiments, we generally think not in terms of single columns of a design matrix, but rather in terms of the "factors", which in this case might call "stim_type", with levels "scene" and "face". A complex regression model often involves a factorial combination of different categorical variables, which can be then be examined for main effects, interactions, and other contrasts.
-
-Before we discuss event models, we need to briefly introduce the `fmrireg`'s class for describing how scans are sampled over time and organized in **blocks** (sometimes also referred to as runs or scans). A "block" simply refers to a consecutive set of images (usually a few hundred), collected back to back over the course of one fMRI scan. An fMRI "session" consists of a number of these scanning blocks. Each individual image in a block is separated by a fixed interval, called the "TR" (repetition time). We encode this information (the number of blocks, the number of images in each block, and the TR) in a `sampling_frame` object. Below, we create a `sampling_frame` for an experiment with 5 blocks, each containing 200 images, and with a TR of 2s.
-
-```{r}
-
-nblocks <- 5
-sframe <- sampling_frame(rep(200, 5), TR=2)
+```{r sampling_frame_example}
+# Example: 5 runs, 200 scans/run, TR=2s
+sframe <- sampling_frame(blocklens = rep(200, 5), TR = 2)
 sframe
-
 ```
 
+### 2. Model Building
 
+#### a) Hemodynamic Response Function (HRF)
 
+The HRF models the BOLD signal response to a brief neural event. `fmrireg` provides various pre-defined HRFs (e.g., `HRF_SPMG1`, `HRF_GAUSSIAN`) and functions to create or modify them (`gen_hrf`, `hrf_blocked`, `hrf_lagged`).
 
+```{r hrf_example}
+# Plot the SPM canonical HRF
+time <- seq(0, 24, by = 0.2)
+plot(time, HRF_SPMG1(time), type = 'l', xlab = "Time (s)", ylab = "BOLD Response",
+     main = "SPM Canonical HRF (HRF_SPMG1)")
+```
 
+*   **See Vignette:** `vignette("a_01_hemodynamic_response", package = "fmrireg")`
 
+#### b) Event Model (`event_model`)
 
+This defines the task-related part of your GLM. You specify how experimental events (onsets, conditions, durations) map to regressors using a formula syntax. The `hrf()` or `afni_hrf()` functions within the formula link event variables to specific HRF shapes.
 
+```{r event_model_example, eval=FALSE}
+# Example: Model effect of 'stim_type', using SPMG1 HRF
+# (Assuming 'my_design_table' and 'my_sampling_frame' exist)
+event_mod <- event_model(onset ~ hrf(stim_type), 
+                         data = my_design_table, 
+                         block = ~ run_id, 
+                         sampling_frame = my_sampling_frame)
+```
 
+*   **See Vignette:** `vignette("a_04_event_models", package = "fmrireg")`
 
+#### c) Baseline Model (`baseline_model`)
 
+This models non-task-related components like scanner drift, run intercepts, and other nuisance factors (e.g., motion parameters).
 
+```{r baseline_model_example}
+# Example: Cubic B-spline drift model + run intercepts
+# (Requires 'sframe' defined earlier)
+base_mod <- baseline_model(basis = "bs", degree = 3, sframe = sframe)
+print(base_mod)
+```
 
+*   **See Vignette:** `vignette("a_03_baseline_model", package = "fmrireg")`
 
+#### d) Contrasts (`pair_contrast`, `unit_contrast`, etc.)
 
+Contrasts define specific comparisons between condition estimates.
 
+```{r contrast_example}
+# Example: Contrast comparing 'face' vs 'scene' levels of 'stim_type'
+face_vs_scene <- pair_contrast(~ stim_type == "face", ~ stim_type == "scene", name = "FvS")
+print(face_vs_scene)
+```
 
+*   **See Vignette:** `vignette("a_05_contrasts", package = "fmrireg")`
 
+### 3. Model Estimation (`fmri_model`, `fmri_lm`)
+
+You combine the event and baseline models into a full `fmri_model` and then fit it to your `fmri_dataset` using estimation functions like `fmri_lm` (for standard GLM) or `estimate_betas` (for single-trial betas).
+
+```{r fmri_model_example, eval=FALSE}
+# Combine event and baseline models
+full_model <- fmri_model(event_mod, base_mod)
+
+# Fit the GLM
+# (Requires 'my_dataset' of class fmri_dataset)
+fit <- fmri_lm(full_model, dataset = my_dataset)
+
+# Extract contrast results
+con_table <- contrast_stats(fit, "FvS") 
+```
+
+*   **See Vignettes:**
+    *   `vignette("a_09_linear_model", package = "fmrireg")`
+    *   `vignette("a_07_trialwise", package = "fmrireg")`
+
+### 4. Advanced Topics
+
+`fmrireg` also supports:
+
+*   **Simulation:** Creating artificial fMRI data (`simulate_fmri_matrix`).
+    *   `vignette("a_08_simulation", package = "fmrireg")`
+*   **AFNI Translation:** Generating scripts for AFNI's `3dDeconvolve` (`afni_lm`).
+    *   `vignette("a_06_afni", package = "fmrireg")`
+*   **Low-level Regressors:** Manually creating and manipulating regressors (`regressor`).
+    *   `vignette("a_02_regressor", package = "fmrireg")`
+
+## Getting Started
+
+This overview provides a map of the `fmrireg` package. For detailed explanations and examples, please refer to the specific vignettes linked above.
 

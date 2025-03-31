@@ -4,7 +4,7 @@
 \alias{plot_contrasts.event_model}
 \title{plot_contrasts.event_model}
 \usage{
-plot_contrasts.event_model(
+\method{plot_contrasts}{event_model}(
   x,
   absolute_limits = FALSE,
   rotate_x_text = TRUE,

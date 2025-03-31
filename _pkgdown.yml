@@ -23,6 +23,8 @@ articles:
   - a_05_contrasts
   - a_06_afni
   - a_07_trialwise
+  - a_08_simulation
+  - a_09_linear_model
 
 
 reference:

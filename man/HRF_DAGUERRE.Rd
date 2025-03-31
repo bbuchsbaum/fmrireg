@@ -2,23 +2,20 @@
 % Please edit documentation in R/hrf.R
 \name{HRF_DAGUERRE}
 \alias{HRF_DAGUERRE}
-\title{Daguerre HRF}
+\title{Daguerre HRF constructor}
 \usage{
-HRF_DAGUERRE(t, n_basis = 1, scale = 4)
+HRF_DAGUERRE(n_basis = 1, scale = 4)
 }
 \arguments{
-\item{t}{Time points in seconds}
-
 \item{n_basis}{Number of basis functions (default: 1)}
 
 \item{scale}{Scale parameter for the time axis (default: 4)}
 }
 \value{
-When nbasis=1, returns a vector of HRF values. When nbasis>1, returns
-a matrix where each column is a basis function.
+An HRF object (function) that takes time \code{t}.
 }
 \description{
-Creates a hemodynamic response function using Daguerre spherical basis functions.
-When nbasis=1, returns a canonical-like HRF. When nbasis>1, returns the full
-basis set.
+Creates an HRF object using Daguerre spherical basis functions.
+When nbasis=1, returns a canonical-like HRF derived from the first 3 bases.
+When nbasis>1, returns the full basis set.
 }

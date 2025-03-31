@@ -4,7 +4,7 @@
 \alias{design_map.event_model}
 \title{Visualize the entire design matrix of an event_model as a heatmap}
 \usage{
-design_map.event_model(
+\method{design_map}{event_model}(
   x,
   rescale_cols = TRUE,
   block_separators = TRUE,

@@ -4,7 +4,7 @@
 \alias{design_map.fmri_model}
 \title{Heatmap visualization of the combined fmri_model design matrix}
 \usage{
-design_map.fmri_model(
+\method{design_map}{fmri_model}(
   x,
   block_separators = TRUE,
   rotate_x_text = TRUE,

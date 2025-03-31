@@ -358,7 +358,7 @@ run_estimate_betas <- function(bdes, dset, method,
                                block, maxit = 100, 
                                ncomp=4, fracs=.5,
                                ...) {
-  method <- match.arg(method, c("r1_glms", "r1", "lss", "lss_naive", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge"))
+  method <- match.arg(method, c("r1_glms", "r1", "lss", "lss_naive", "lss_cpp", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge", "lowrank_hrf"))
   
   # Capture ... into dotargs
   dotargs <- list(...)
@@ -403,7 +403,15 @@ run_estimate_betas <- function(bdes, dset, method,
     lss_naive(dset, bdes)
   } else if (method == "r1") {
     xdat <- get_X()
-    estimate_r1(dset, xdat, hrf_basis, hrf_ref, maxit)
+    r1_result <- estimate_r1(dset, xdat, hrf_basis, hrf_ref, maxit)
+
+    # Make sure r1_result has the expected beta_matrix structure
+    if (!is.list(r1_result) || is.null(r1_result$beta_matrix)) {
+      stop("estimate_r1 did not return a valid result with beta_matrix component")
+    }
+
+    # Return the structured result
+    return(r1_result)
   } else if (method == "lss") {
     # Estimate random effects using LSS
     beta_matrix_ran <- lss_fast(dset, bdes, use_cpp = FALSE)
@@ -463,7 +471,9 @@ run_estimate_betas <- function(bdes, dset, method,
     xdat <- get_X()
     Y <- do.call(cbind, lapply(vecs, function(v) v))
     Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
-    list(beta_matrix=ols_betas(xdat$X, Y0), estimated_hrf=NULL)
+    beta_matrix <- ols_betas(xdat$X, Y0)
+    # Ensure we return a list with beta_matrix as a named component
+    list(beta_matrix = as.matrix(beta_matrix), estimated_hrf = NULL)
   } else if (method == "fracridge") {
     vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) > 0))
     xdat <- get_X()
@@ -540,7 +550,7 @@ run_estimate_betas <- function(bdes, dset, method,
     
     list(beta_matrix = beta_matrix, estimated_hrf = NULL)
   } else {
-    stop("Invalid method. Supported methods are 'r1_glms', 'r1', 'mixed', 'pls', 'pls_global', and 'ols'")
+    stop("Invalid method. Supported methods are 'r1_glms', 'r1', 'lss', 'lss_naive', 'mixed', 'mixed_cpp', 'pls', 'pls_global', 'ols', 'fracridge', and 'lowrank_hrf'")
   }
 }
 
@@ -637,7 +647,7 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
 #'
 #' @export
 estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,  
-                                        method=c("r1_glms", "r1", "lss", "lss_naive", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge"), 
+                                        method=c("r1_glms", "r1", "lss", "lss_cpp", "lss_naive", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge"), 
                                         basemod=NULL,
                                         hrf_basis = NULL,
                                         hrf_ref = NULL,

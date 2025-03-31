@@ -61,7 +61,7 @@ test_that("can run a beta estimation", {
   ret8 <- estimate_betas(dset, ran = onset ~ trialwise(basis=basis), block = ~ run, 
                          method="r1", hrf_basis=hrf_basis, hrf_ref=hrf_reference)
   
-  ret8 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
+  ret9 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
                          method="lowrank_hrf")
   
 
@@ -75,6 +75,7 @@ test_that("can run a beta estimation", {
   expect_true(!is.null(ret6))
   #expect_true(!is.null(ret7))
   expect_true(!is.null(ret8))
+  expect_true(!is.null(ret9))
   
 })
 

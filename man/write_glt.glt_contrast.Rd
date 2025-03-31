@@ -4,7 +4,7 @@
 \alias{write_glt.glt_contrast}
 \title{Write GLT to File}
 \usage{
-write_glt.glt_contrast(x, fname = NULL)
+\method{write_glt}{glt_contrast}(x, fname = NULL)
 }
 \arguments{
 \item{x}{The GLT contrast to write.}
