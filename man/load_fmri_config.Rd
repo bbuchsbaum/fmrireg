@@ -19,3 +19,10 @@ dependent BIDS validation (subjects, tasks, event/confound columns),
 infers variable roles for the model, and returns a validated \code{fmri_config}
 object ready for model building.
 }
+\examples{
+\dontrun{
+  # Assuming a valid config.yaml exists
+  # config <- load_fmri_config("config.yaml")
+  # print(config)
+}
+}

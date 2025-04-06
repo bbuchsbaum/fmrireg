@@ -1,613 +1,302 @@
-library(testthat)
-library(bidser)
-library(mockery)
+# tests/testthat/helper-bids.R (or place directly in test file)
 
-
-# Helper function to create mock event data
-create_mock_events <- function(
-    n_events = 20,
-    onset_interval = 10,
-    duration = 2,
-    conditions = list(
-      attend = list(values = c("on", "off"), each = n_events / 2),
-      stimulus = list(values = c("face", "house"), rep = n_events / 2)
-    ),
-    continuous = list(
-      RT = list(min = 0.5, max = 1.5),
-      accuracy = list(prob = 0.8, n = n_events)
-    )
+# Helper to create a temporary BIDS structure for testing
+# Returns the root path of the temporary directory
+setup_temp_bids <- function(
+    subjects = c("sub-01"),
+    tasks = c("task-test"),
+    runs_per_task = 1,
+    n_volumes = 50,
+    event_cols = c("onset", "duration", "trial_type", "response_time"),
+    confound_cols = c("trans_x", "trans_y", "trans_z", "rot_x", "rot_y", "rot_z", "csf", "white_matter", "motion_outlier"),
+    session = NULL, # Optional session name (e.g., "ses-01")
+    tr = 2.0
 ) {
-  onsets <- seq(0, by = onset_interval, length.out = n_events)
-  events <- data.frame(
-    onset = onsets,
-    duration = rep(duration, n_events),
-    block = seq_len(n_events)
-  )
-  # Add conditions
-  for (cond in names(conditions)) {
-    cond_info <- conditions[[cond]]
-    if (!is.null(cond_info$values)) {
-      if (!is.null(cond_info$each)) {
-        events[[cond]] <- rep(cond_info$values, each = cond_info$each)
-      } else if (!is.null(cond_info$rep)) {
-        events[[cond]] <- rep(cond_info$values, cond_info$rep)
+
+  # Create a unique temporary directory for this test run
+  # Using testthat's local temp dir is safer for cleanup
+  # Requires testthat >= 3.0.0 for local_tempdir
+  # If older, use tempdir() and manage cleanup manually with on.exit
+  # root_dir <- local_tempdir(pattern = "bids_test_") # Needs testthat >= 3.0.0
+  # Manual temp dir for broader compatibility:
+  root_dir <- tempfile(pattern = "bids_test_")
+  dir.create(root_dir, recursive = TRUE)
+  # Ensure cleanup happens when the calling test context exits
+  # This requires the helper to be called *within* a test_that block or context
+  # Alternatively, return the path and have the test call unlink.
+  # Let's return the path and rely on the test for cleanup.
+
+  # 1. Create dataset_description.json
+  desc_content <- sprintf('{
+    "Name": "Test BIDS Dataset",
+    "BIDSVersion": "1.6.0",
+    "Authors": ["Test Generator"],
+    "RepetitionTime": %f
+  }', tr)
+  writeLines(desc_content, file.path(root_dir, "dataset_description.json"))
+
+  # 2. Create participants.tsv
+  part_df <- data.frame(participant_id = subjects)
+  # Add dummy age column if needed
+  if (nrow(part_df) > 0) part_df$age <- sample(20:40, nrow(part_df), replace = TRUE)
+  write.table(part_df, file.path(root_dir, "participants.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
+
+  # 3. Create subject/session/func directories and files
+  for (sub in subjects) {
+    sub_path <- file.path(root_dir, sub)
+    session_path <- if (!is.null(session)) file.path(sub_path, session) else sub_path
+    func_path <- file.path(session_path, "func")
+    dir.create(func_path, recursive = TRUE)
+
+    for (task in tasks) {
+      for (run in 1:runs_per_task) {
+        run_str <- sprintf("run-%02d", run)
+        base_name <- paste(sub,
+                           if (!is.null(session)) session else NULL,
+                           paste0("task-", task),
+                           run_str,
+                           "bold", sep = "_")
+        base_name_conf <- paste(sub,
+                                if (!is.null(session)) session else NULL,
+                                paste0("task-", task),
+                                run_str,
+                                "desc-confounds_timeseries", sep = "_") # FMRIPREP style
+
+        # Create dummy events.tsv
+        n_events <- sample(5:15, 1) # Random number of events
+        events_df <- data.frame(matrix(runif(n_events * (length(event_cols)-2)), n_events, length(event_cols)-2))
+        names(events_df) <- setdiff(event_cols, c("onset", "duration"))
+        # Ensure specific types if needed for tests
+        if("trial_type" %in% names(events_df)) events_df$trial_type <- sample(c("A","B"), n_events, replace=TRUE)
+        if("response_time" %in% names(events_df)) events_df$response_time <- rnorm(n_events, 1, 0.2)
+
+        events_df$onset <- sort(runif(n_events, 0, n_volumes * tr - 10)) # Ensure onsets are sorted
+        events_df$duration <- runif(n_events, 0.5, 3)
+        events_df <- events_df[, event_cols] # Ensure correct order
+        write.table(events_df, file.path(func_path, paste0(base_name, "_events.tsv")), sep = "\t", row.names = FALSE, quote = FALSE)
+
+        # Create dummy confounds.tsv
+        confounds_df <- data.frame(matrix(rnorm(n_volumes * length(confound_cols)), n_volumes, length(confound_cols)))
+        names(confounds_df) <- confound_cols
+        write.table(confounds_df, file.path(func_path, paste0(base_name_conf, ".tsv")), sep = "\t", row.names = FALSE, quote = FALSE)
+
+        # Create dummy bold.nii.gz (just an empty file for existence check)
+        # For real tests needing data, neuroim2 would be used here.
+        file.create(file.path(func_path, paste0(base_name, ".nii.gz")))
       }
     }
   }
-  # Add continuous variables
-  for (var in names(continuous)) {
-    var_info <- continuous[[var]]
-    if (!is.null(var_info$min) && !is.null(var_info$max)) {
-      events[[var]] <- runif(n_events, min = var_info$min, max = var_info$max)
-    } else if (!is.null(var_info$prob) && !is.null(var_info$n)) {
-      events[[var]] <- rbinom(n_events, size = var_info$n, prob = var_info$prob)
-    }
-  }
-  events
+  return(root_dir)
 }
 
-# Helper function to create mock confound data
-create_mock_confounds <- function(
-    n_volumes = 200,
-    variables = list(
-      motion1 = list(mean = 0, sd = 1),
-      motion2 = list(mean = 0, sd = 1)
-    )
-) {
-  confounds <- lapply(variables, function(var) {
-    rnorm(n_volumes, mean = var$mean, sd = var$sd)
-  })
-  as.data.frame(confounds)
-}
 
-# Create S3 methods for bids_project class
-#' @export
-participants.bids_project <- function(x, ...) {
-  # Return a tibble with participant_id column
-  tibble::tibble(participant_id = x$part_df$participant_id)
-}
-
-#' @export
-tasks.bids_project <- function(x, ...) {
-  x$config$tasks
-}
-
-#' @export
-read_events.bids_project <- function(x, subid = ".*", task = ".*") {
-  # Validate inputs
-  pt <- participants(x)
-  idx <- grep(subid, pt$participant_id)
-  
-  if (length(idx) == 0) {
-    stop(paste("no matching participants for 'subid' regex: ", subid))
-  }
-  
-  sids <- pt$participant_id[idx]
-  
-  taskset <- tasks(x)
-  task.idx <- grep(task, taskset)
-  
-  if (length(task.idx) == 0) {
-    stop(paste("no matching tasks for 'task' regex: ", task))
-  }
-  
-  tasks <- taskset[task.idx]
-  
-  # Generate events for each task/subject/run combination
-  lapply(tasks, function(t) {
-    lapply(sids, function(sid) {
-      # Generate events for each run
-      run_events <- lapply(seq_len(x$config$runs), function(run) {
-        events <- do.call(create_mock_events, x$config$event_spec)
-        # Add required columns in correct order
-        events$.task <- t
-        events$.run <- run
-        events$.subid <- sid
-        events
-      }) %>% dplyr::bind_rows()
-      
-      if (nrow(run_events) > 0) {
-        run_events
-      } else {
-        NULL
-      }
-    }) %>% 
-      dplyr::bind_rows() %>%
-      dplyr::group_by(.task, .run, .subid) %>%
-      tidyr::nest()
-  }) %>% dplyr::bind_rows()
-}
-
-#' @export
-print.bids_events <- function(x, ...) {
-  cat("BIDS Events Data\n")
-  cat("Participant:", x$participant_id, "\n")
-  cat("Task:", x$task, "\n")
-  cat("Runs:", length(x$data), "\n")
-  cat("Events per run:", sapply(x$data, nrow), "\n")
-}
-
-#' @export
-read_confounds.bids_project <- function(x, subid, task=NULL, cvars=NULL, nest=TRUE, ...) {
-  # Validate subject exists
-  pt <- participants(x)
-  idx <- grep(subid, pt$participant_id)
-  
-  if (length(idx) == 0) {
-    stop(paste("no matching participants found for regex: ", subid))
-  }
-  
-  # Generate confounds for each run
-  run_confounds <- lapply(seq_len(x$config$runs), function(run) {
-    do.call(create_mock_confounds, 
-            c(list(n_volumes = x$config$n_volumes), 
-              x$config$confound_spec))
-  })
-  
-  if (nest) {
-    data.frame(
-      participant_id = rep(subid, x$config$runs),
-      run = seq_len(x$config$runs),
-      session = rep(1, x$config$runs),
-      data = I(run_confounds),
-      stringsAsFactors = FALSE
-    )
-  } else {
-    run_confounds
-  }
-}
-
-#' @export
-print.bids_project <- function(x, ...) {
-  cat("BIDS Project:", x$name, "\n")
-  cat("Path:", x$path, "\n")
-  cat("Subjects:", length(x$config$subjects), "\n")
-  cat("Tasks:", paste(x$config$tasks, collapse=", "), "\n")
-  cat("Runs per task:", x$config$runs, "\n")
-}
-
-read_events.bids_project <- function(x, subid = ".*", task = ".*", ...) {
-  # Get matching participant IDs.
-  pt <- participants(x)
-  sids <- grep(subid, pt$participant_id, value = TRUE)
-  
-  # Get matching tasks.
-  tset <- tasks(x)
-  tasks <- grep(task, tset, value = TRUE)
-  
-  # For each combination of task, subject, and run, generate events.
-  all_events <- lapply(tasks, function(t) {
-    lapply(sids, function(sid) {
-      lapply(seq_len(x$config$runs), function(run) {
-        ev <- do.call(create_mock_events, x$config$event_spec)
-        ev$.task <- t
-        ev$.run <- run
-        ev$.subid <- sid
-        ev
-      }) %>% dplyr::bind_rows()
-    }) %>% dplyr::bind_rows()
-  }) %>% dplyr::bind_rows()
-  
-  # Now group and nest the events so that the result has four columns:
-  # .task, .run, .subid, and data.
-  nested <- all_events %>%
-    dplyr::group_by(.task, .run, .subid) %>%
-    tidyr::nest() %>%
-    dplyr::ungroup() %>%
-    dplyr::group_by(.task, .run, .subid)
-  
-  nested
-}
-
-# Main mock BIDS project creator
-create_mock_bids_project <- function(
-    subjects = c("sub-01", "sub-02"),
-    tasks = c("task-1"),
-    runs = 2,
-    n_volumes = 200,
-    event_spec = list(
-      n_events = 20,
-      onset_interval = 10,
-      duration = 2,
-      conditions = list(
-        attend = list(values = c("on", "off"), each = 10),
-        stimulus = list(values = c("face", "house"), rep = 10)
-      ),
-      continuous = list(
-        RT = list(min = 0.5, max = 1.5),
-        accuracy = list(prob = 0.8, n = 1)
-      )
-    ),
-    confound_spec = list(
-      variables = list(
-        motion1 = list(mean = 0, sd = 1),
-        motion2 = list(mean = 0, sd = 1)
-      )
-    )
-) {
-  # Create mock project structure
-  mock_proj <- structure(
-    list(
-      name = "mock_project",
-      path = "/mock/path",
-      has_fmriprep = TRUE,
-      has_sessions = FALSE,
-      part_df = data.frame(
-        participant_id = subjects,
-        stringsAsFactors = FALSE
-      ),
-      config = list(
-        subjects = subjects,
-        tasks = tasks,
-        runs = runs,
-        n_volumes = n_volumes,
-        event_spec = event_spec,
-        confound_spec = confound_spec
-      )
-    ),
-    class = "bids_project"
+test_that("load_fmri_config handles minimal valid configuration", {
+  # Setup temporary BIDS structure
+  bids_root <- setup_temp_bids(
+    subjects = c("sub-01"),
+    tasks = c("task-test"),
+    runs_per_task = 1,
+    event_cols = c("onset", "duration", "trial_type"),
+    confound_cols = c("csf", "white_matter") # Only provide needed confounds
   )
-  
-  # Add mock methods directly to the object
-  mock_proj$tasks <- function(...) tasks
-  mock_proj$participants <- function(...) data.frame(participant_id = subjects)
-  # mock_proj$read_events <- function(subid, task, ...) {
-  #   events <- do.call(create_mock_events, event_spec)
-  #   events$.task <- task
-  #   events$.run <- 1:runs
-  #   events$.subid <- subid
-  #   events
-  # }
-  mock_proj$read_events <- function(subid, task, ...) {
-    # Get matching participant IDs
-    pt <- participants(mock_proj)
-    sid_idx <- grep(subid, pt$participant_id)
-    sids <- pt$participant_id[sid_idx]
-    
-    # Get matching tasks
-    tset <- tasks(mock_proj)
-    task_idx <- grep(task, tset)
-    tasks <- tset[task_idx]
-    
-    # For each combination of task, subject, and run, generate events
-    all_events <- lapply(tasks, function(t) {
-      lapply(sids, function(sid) {
-        lapply(seq_len(mock_proj$config$runs), function(run) {
-          ev <- do.call(create_mock_events, mock_proj$config$event_spec)
-          ev$.task <- t
-          ev$.run <- run
-          ev$.subid <- sid
-          ev
-        }) %>% dplyr::bind_rows()
-      }) %>% dplyr::bind_rows()
-    }) %>% dplyr::bind_rows()
-    
-    # Group by .task, .run, and .subid and nest the events into a "data" column
-    nested <- all_events %>%
-      dplyr::group_by(.task, .run, .subid) %>%
-      tidyr::nest() %>%
-      dplyr::ungroup() %>%
-      dplyr::group_by(.task, .run, .subid)
-    
-    nested
-  }
-  mock_proj$read_confounds <- function(subid, ...) {
-    data.frame(
-      participant_id = rep(subid, runs),
-      run = 1:runs,
-      session = rep(1, runs),
-      data = I(lapply(1:runs, function(r) {
-        do.call(create_mock_confounds, 
-                c(list(n_volumes = n_volumes), 
-                  confound_spec))
-      })),
-      stringsAsFactors = FALSE
-    )
-  }
-  
-  mock_proj
-}
+  # Ensure cleanup of the temporary directory
+  on.exit(unlink(bids_root, recursive = TRUE, force = TRUE), add = TRUE)
 
-# Example usage:
-test_that("mock project creation is flexible", {
-  # Default mock project
-  mock_proj <- create_mock_bids_project()
-  events <- bidser::read_events(mock_proj, "sub-01", "task-1")
-  # Check the number of rows in the resulting grouped tibble, should be 2 (for 2 runs)
-  expect_equal(nrow(events), 2) 
-  expect_equal(nrow(events$data[[1]]), 20)  # 20 events per run
-  
-  # Custom mock project
-  custom_proj <- create_mock_bids_project(
-    subjects = c("sub-01", "sub-02", "sub-03"),
-    tasks = c("task-1", "task-2"),
-    runs = 3,
-    event_spec = list(
-      n_events = 30,
-      onset_interval = 8,
-      duration = 1.5,
-      conditions = list(
-        condition = list(values = c("A", "B", "C"), each = 10)
-      ),
-      continuous = list(
-        score = list(min = 0, max = 100)
-      )
-    ),
-    confound_spec = list(
-      variables = list(
-        fd = list(mean = 0.2, sd = 0.1),
-        dvars = list(mean = 1, sd = 0.5)
-      )
-    )
-  )
-  
-  events <- bidser::read_events(custom_proj, "sub-01", "task-1")
-  expect_true(inherits(events, "data.frame")) # read_events returns grouped tibble now
-  expect_equal(nrow(events), 3) # 3 runs
-  expect_equal(nrow(events$data[[1]]), 30)  # 30 events per run
-  expect_true("condition" %in% names(events$data[[1]]))
-  expect_true("score" %in% names(events$data[[1]]))
-  
-  confounds <- bidser::read_confounds(custom_proj, "sub-01")
-  expect_true(all(c("fd", "dvars") %in% names(confounds$data[[1]])))
-})
-
-# Test full config loading
-test_that("load_fmri_config works correctly with minimal spec", {
-  # Use a real temp directory
-  temp_bids_dir <- tempfile("mockbids_")
-  dir.create(temp_bids_dir, recursive = TRUE)
-  on.exit(unlink(temp_bids_dir, recursive = TRUE), add = TRUE)
-
-  mock_proj <- create_mock_bids_project(subjects = c("sub-01", "sub-02"), tasks = "task-1")
-  # Add a dummy participants.tsv required by bidser
-  writeLines(c("participant_id", "sub-01", "sub-02"), file.path(temp_bids_dir, "participants.tsv"))
-  
-  yaml_content <- '
+  # Define minimal YAML content
+  yaml_content <- sprintf('
 dataset:
-  path: "PLACEHOLDER_PATH"
+  path: "%s" # Use the temporary path
   subjects:
-    include: ["sub-01", "sub-02"]
-  tasks: ["task-1"]
+    include: [sub-01]
+  tasks: [task-test] # Use the task name from setup_temp_bids
 
-events: # Top-level events section REQUIRED
-  onset: onset
-  duration: duration
-  block: block
-  stimulus: { column: stimulus } # Variable used in regressor
+events:
+  onset_column: onset
+  duration_column: duration
+  block_column: run # Need a block column in events data or mapping
 
-confounds:
-  include: ["motion1", "motion2"]
-
-regressors: # Top-level regressors section REQUIRED
-  baseline:
+terms:
+  stim_effect:
     type: hrf
-    variables: [stimulus]
-    hrf: HRF_SPMG1
+    variables: [condition] # This is the *model* variable name
 
 model:
-  name: "test_model"
-  events: # Model-level event mapping
-    onset: onset # Using column name directly
-    duration: duration
-    block: block
-    stimulus: stimulus # Map model variable stimulus to event column stimulus
-  regressors: # Reference top-level regressor
-    baseline:
+  name: "MinimalModel"
+  variable_mapping:
+    condition: trial_type # Map model condition
+    run: .run # Map model run
+              # OR map to an actual column if it exists
+  terms:
+    - stim_effect
+  variable_roles: # Optional, but good practice
+    factors: [condition]
+  baseline: # Explicitly minimal baseline
+    basis: constant
+    intercept: global
+    confound_variables: [] # No confounds used
+', gsub("\\\\", "/", bids_root)) # Ensure forward slashes for path
 
-# HRFs section is optional
-'
-
-  # Inject real path
-  yaml_content <- sub("PLACEHOLDER_PATH", temp_bids_dir, yaml_content, fixed = TRUE)
-  
-  # Print the final YAML content for debugging if needed
-  # message("Minimal YAML Content:\n", yaml_content)
-  
-  yaml_file <- tempfile(fileext = ".yaml")
-  writeLines(yaml_content, yaml_file)
-  on.exit(unlink(yaml_file), add = TRUE) # Ensure temp file cleanup
-  
-  # Mock bidser functions that interact with the filesystem/project
-  local_mocked_bindings(
-    # Mock bids_project to prevent actual filesystem scanning beyond basic checks
-    # It still needs the path to exist for the initial check
-    bids_project = function(path, ...) {
-        # Basic check if path exists, return the mock_proj structure
-        if (!fs::dir_exists(path)) stop("Mock BIDS path doesn't exist: ", path)
-        # Add the real path to the mock object for print methods etc.
-        mock_proj$path <- path
-        mock_proj
-    },
-    # participants and tasks can use the functions within mock_proj
-    participants = function(proj, ...) proj$participants(),
-    tasks = function(proj, ...) proj$tasks(),
-    # Mock read_events to return correctly structured data
-    read_events = function(proj, subid, task, ...) {
-        # Simulate read_events structure expected by build_config_from_ior
-        # Returns a list containing a dataframe for the first subject/task
-        list(data=list(create_mock_events()))
-    },
-    # Mock read_confounds similarly
-    read_confounds = function(proj, subid, ...) { 
-        list(data=list(data.frame(motion1 = rnorm(10), motion2 = rnorm(10), motion_outlier=rnorm(10))))
-    },
-    .package = "bidser"
-  )
-  
-  config <- load_fmri_config(yaml_file)
-  
-  expect_s3_class(config, "fmri_config")
-  expect_equal(config$subjects, c("sub-01", "sub-02"))
-  expect_equal(config$tasks, "task-1")
-  
-  # Additional checks for confounds
-  expect_true(!is.null(config$confounds_info))
-  expect_equal(config$confounds_info$columns, c("motion1", "motion2"))
-})
-
-# Test full config loading with comprehensive YAML
-test_that("load_fmri_config handles complete specification", {
-  # Use a real temp directory
-  temp_bids_dir <- tempfile("mockbids_")
-  dir.create(temp_bids_dir, recursive = TRUE)
-  on.exit(unlink(temp_bids_dir, recursive = TRUE), add = TRUE)
-
-  mock_proj <- create_mock_bids_project(subjects = c("sub-01", "sub-02"), tasks = "task-1")
-  # Add dummy participants.tsv
-  writeLines(c("participant_id", "sub-01", "sub-02"), file.path(temp_bids_dir, "participants.tsv"))
-  
-  yaml_content <- '
-dataset:
-  path: "PLACEHOLDER_PATH"
-  subjects:
-    include: ["sub-01", "sub-02"]
-  tasks: ["task-1"]
-  scan_params:
-    TR:
-      default: 2.0
-      overrides:
-        - value: 1.5
-          pattern: "task-1_run-02"
-    run_length:
-      default:
-        "task-1": 200
-      overrides:
-        - value: 180
-          pattern: "sub-02_task-1_run-02"
-
-events: # Top level events section
-  onset: onset
-  duration: duration
-  block: block
-  attend: { column: attend }
-  stimulus: { column: stimulus }
-  RT: { column: RT }
-  accuracy: { column: accuracy }
-
-confounds:
-  include: ["^motion[12]$"]
-  exclude: ["motion_outlier"]
-
-regressors: # Top level regressors section
-  main_effect:
-    type: hrf
-    variables: [attend, stimulus] # Uses variables mapped in top-level events
-    hrf: HRF_SPMG1 # Assuming default built-in HRF
-  rt_mod:
-    type: hrf_parametric
-    variables: [RT] # Uses variable mapped in top-level events
-    hrf: HRF_SPMG1
-    basis:
-      type: Poly
-      parameters:
-        degree: 1
-
-model:
-  name: "full_model"
-  factors: [attend, stimulus] # Explicitly declare factors
-  parametric: [RT, accuracy]  # Explicitly declare parametrics
-  events: # Model-specific event mapping (can reference top-level)
-    onset: onset
-    duration: duration
-    block: block
-    attend: attend       
-    stimulus: stimulus   
-    RT: RT               
-    accuracy: accuracy   
-  regressors: # Reference regressors defined above
-    main_effect: 
-    rt_mod:
-'
-
-  # Inject real path
-  yaml_content <- sub("PLACEHOLDER_PATH", temp_bids_dir, yaml_content, fixed = TRUE)
-  
-  # message("Complete YAML Content:\n", yaml_content)
-  
+  # Write YAML to a temporary file
   yaml_file <- tempfile(fileext = ".yaml")
   writeLines(yaml_content, yaml_file)
   on.exit(unlink(yaml_file), add = TRUE)
-  
-  # Set up mocked bindings
-  local_mocked_bindings(
-    bids_project = function(path, ...) {
-        if (!fs::dir_exists(path)) stop("Mock BIDS path doesn't exist: ", path)
-        mock_proj$path <- path
-        mock_proj
-    },
-    participants = function(proj, ...) proj$participants(),
-    tasks = function(proj, ...) proj$tasks(),
-    read_events = function(proj, subid, task, ...) {
-        list(data=list(create_mock_events()))
-    },
-    read_confounds = function(proj, subid, ...) {
-        # Create mock confounds data matching potential include patterns
-        confounds_df <- data.frame(
-            motion1 = rnorm(10),
-            motion2 = rnorm(10),
-            motion_outlier = sample(0:1, 10, replace=TRUE),
-            other_var = rnorm(10)
-        )
-        list(data = list(confounds_df))
-    },
-    .package = "bidser"
-  )
-  
-  config <- load_fmri_config(yaml_file)
-  
+
+  # Load the configuration
+  # Mocking read_events/read_confounds minimally if needed by build_config_from_ior
+  # Depending on bidser implementation details, mocking might still be required
+  # if it doesn't handle the simple structure correctly.
+  # Assuming build_config_from_ior uses bidser functions that work with the temp structure:
+  config <- NULL
+  expect_no_error(config <- load_fmri_config(yaml_file))
+
+  # Assertions on the loaded config object
   expect_s3_class(config, "fmri_config")
-  expect_equal(config$subjects, c("sub-01", "sub-02"))
-  expect_equal(config$tasks, "task-1")
-  
-  # Additional checks for confounds
-  expect_true(!is.null(config$confounds_info))
-  expect_equal(config$confounds_info$columns, c("motion1", "motion2"))
+  expect_true(config$validated)
+  expect_equal(config$subjects, c("sub-01"))
+  expect_equal(config$tasks, c("task-test"))
+  expect_equal(config$spec$model$name, "MinimalModel")
+  expect_true("stim_effect" %in% config$spec$model$terms)
+  expect_true("condition" %in% config$variable_roles$factors)
+  expect_equal(config$spec$model$baseline$basis, "constant")
+  expect_equal(length(config$spec$model$baseline$confound_variables), 0)
+  expect_equal(config$events_info$mapping$onset_column, "onset")
 })
 
-test_that("mock read_events matches bidser structure exactly", {
-  mock_proj <- create_mock_bids_project(
+# source("helper-bids.R") # If helper is separate
+
+test_that("load_fmri_config handles features like parametric, contrasts, confounds", {
+  # Setup BIDS structure with relevant columns
+  bids_root <- setup_temp_bids(
     subjects = c("sub-01", "sub-02"),
-    tasks = c("task-1", "task-2"),
-    runs = 2
+    tasks = c("task-mixed"),
+    runs_per_task = 2,
+    event_cols = c("onset", "duration", "trial_type", "rt", "accuracy", "run_id"), # Added rt, accuracy, run_id
+    confound_cols = c("csf", "white_matter", "trans_x", "rot_y", "motion_outlier01", "cosine00")
   )
-  
-  events <- read_events(mock_proj, "sub-.*", "task-.*")
-  
-  # Check structure
-  expect_true(inherits(events, "data.frame"))
-  expect_equal(names(events), c(".task", ".run", ".subid", "data"))
-  
-  # Check grouping
-  expect_true(dplyr::is_grouped_df(events))
-  expect_equal(dplyr::group_vars(events), c(".task", ".run", ".subid"))
-  
-  # Check contents
-  expect_equal(unique(events$.task), c("task-1", "task-2"))
-  expect_equal(unique(events$.run), c(1, 2))
-  expect_equal(unique(events$.subid), c("sub-01", "sub-02"))
-  
-  # Check nested data
-  first_data <- events$data[[1]]
-  expect_true(is.data.frame(first_data))
-  expect_true("onset" %in% names(first_data))
-  expect_true("duration" %in% names(first_data))
-})
+  on.exit(unlink(bids_root, recursive = TRUE, force = TRUE), add = TRUE)
 
-test_that("participants method works correctly", {
-  mock_proj <- create_mock_bids_project()
-  
-  # Set up mocked binding for participants
-  local_mocked_bindings(
-    participants = function(proj) {
-      tibble::tibble(participant_id = proj$config$subjects)
-    },
-    .package = "bidser"
-  )
-  
-  # Test direct participants call
-  parts <- bidser::participants(mock_proj)
-  expect_true(is.data.frame(parts))
-  expect_equal(names(parts), "participant_id")
-  expect_equal(parts$participant_id, c("sub-01", "sub-02"))
+  # Define YAML using various features
+  yaml_content <- sprintf('
+dataset:
+  path: "%s"
+  subjects:
+    include: [sub-01] # Select only sub-01
+  tasks: [task-mixed]
+  runs: [run-01, run-02] # Select both runs
+
+events:
+  onset_column: onset
+  duration_column: duration
+  block_column: run_id # Map to the column in the generated events file
+
+hrfs:
+  canonical:
+    type: HRF_SPMG1
+  shifted:
+    type: HRF_SPMG1
+    lag: 1.5 # Apply a lag to this HRF
+
+confounds:
+  include: ["csf", "white_matter", "^trans.*", "^rot.*"] # Select some confounds
+  exclude: ["motion_outlier.*"] # Exclude outliers
+
+terms:
+  stim_effect:
+    type: hrf
+    variables: [condition] # Model variable name
+    hrf: canonical
+    subset: "accuracy == 1" # Use only correct trials for this term
+  rt_mod:
+    type: parametric
+    variables: [condition, rt] # Modulate condition by rt
+    hrf: shifted # Use the lagged HRF
+    transform: [center] # Center the modulator
+    basis:
+      type: Poly
+      parameters: { degree: 1 } # Linear basis for RT effect
+    subset: "accuracy == 1"
+  motion:
+    type: nuisance # Include motion without convolution
+    variables: [mx, my, mz, rx, ry, rz] # Model variable names for motion
+
+contrasts:
+  condA_vs_condB:
+    type: formula
+    expression: "condition[A] - condition[B]" # Contrast model variables
+
+model:
+  name: "FeatureTestModel"
+  baseline:
+    basis: bspline
+    degree: 3
+    intercept: runwise
+    confound_variables: [wm, csf] # Use model variable names for baseline confounds
+  variable_mapping:
+    condition: trial_type # BIDS column
+    rt: response_time    # BIDS column
+    accuracy: accuracy     # BIDS column (will be inferred as factor, but we override)
+    run_id: run_id         # BIDS column for block
+    # Confound mappings
+    wm: white_matter
+    csf: csf
+    mx: trans_x
+    my: trans_y
+    mz: trans_z
+    rx: rot_x
+    ry: rot_y
+    rz: rot_z
+  variable_roles:
+    factors: [condition] # trial_type is already factor-like
+    parametric: [rt, accuracy] # Treat numeric accuracy as parametric here
+  terms: # Select terms defined globally
+    - stim_effect
+    - rt_mod
+    - motion # Include motion nuisance term
+  contrasts: # Select contrasts defined globally
+    - condA_vs_condB
+', gsub("\\\\", "/", bids_root))
+
+  # Write YAML file
+  yaml_file <- tempfile(fileext = ".yaml")
+  writeLines(yaml_content, yaml_file)
+  on.exit(unlink(yaml_file), add = TRUE)
+
+  # Load config (mocking might still be needed if bidser has issues with temp files)
+  # Assuming build_config_from_ior works with the temp structure:
+  config <- NULL
+  expect_no_error(config <- load_fmri_config(yaml_file))
+
+  # --- Assertions ---
+  expect_s3_class(config, "fmri_config")
+  expect_true(config$validated)
+  expect_equal(config$subjects, "sub-01") # Check subject filtering
+  expect_equal(config$tasks, "task-mixed")
+
+  # Check confound selection
+  expect_true(!is.null(config$confounds_info))
+  # Note: The exact selected columns depend on the generated mock data column names
+  # We expect csf, white_matter, trans_x, rot_y to be selected
+  # We expect motion_outlier01 to be excluded
+  expect_true(all(c("csf", "white_matter", "trans_x", "rot_y") %in% config$confounds_info$columns))
+  expect_false("motion_outlier01" %in% config$confounds_info$columns)
+  expect_false("cosine00" %in% config$confounds_info$columns) # Not included
+
+  # Check baseline confounds used in the model
+  expect_equal(config$spec$model$baseline$confound_variables, c("wm", "csf"))
+
+  # Check variable roles
+  expect_true("condition" %in% config$variable_roles$factors)
+  expect_true("rt" %in% config$variable_roles$parametric)
+  expect_true("accuracy" %in% config$variable_roles$parametric) # Check override
+
+  # Check selected terms and contrasts
+  expect_true(all(c("stim_effect", "rt_mod", "motion") %in% config$spec$model$terms))
+  expect_true("condA_vs_condB" %in% config$spec$model$contrasts)
+
+  # Check term details were parsed correctly (e.g., parametric basis)
+  expect_equal(config$spec$terms$rt_mod$basis$type, "Poly")
+  expect_equal(config$spec$terms$rt_mod$transform, list("center"))
+
+  # Check HRF details
+  expect_equal(config$spec$hrfs$shifted$lag, 1.5)
 })

@@ -2,7 +2,7 @@
 % Please edit documentation in R/fmridsl.R
 \name{parse_and_validate_config}
 \alias{parse_and_validate_config}
-\title{Parse, Validate, and Normalize fMRI Configuration from YAML}
+\title{Parse, Validate Schema, Apply Defaults, and Return IOR}
 \usage{
 parse_and_validate_config(yaml_file)
 }
@@ -10,11 +10,9 @@ parse_and_validate_config(yaml_file)
 \item{yaml_file}{Path to the YAML configuration file.}
 }
 \value{
-A nested list representing the validated and normalized configuration (IOR).
+A list (IOR) representing the configuration, with defaults applied.
 }
 \description{
-Reads a YAML file, validates its structure and types against the DSL schema,
-applies default values, and returns a validated intermediate list representation (IOR).
-Stops with an informative error if validation fails.
+Parse, Validate Schema, Apply Defaults, and Return IOR
 }
 \keyword{internal}

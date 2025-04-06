@@ -41,6 +41,27 @@ An HRF object with the specified properties.
 \description{
 The \code{HRF} function creates an object representing a hemodynamic response function (HRF). It is a class constructor for HRFs.
 }
+\details{
+The package provides several pre-defined HRF types that can be used in modeling fMRI responses:
+
+\strong{Canonical HRFs:}
+\itemize{
+\item \code{"spmg1"} or \code{HRF_SPMG1}: SPM's canonical HRF (single basis function)
+\item \code{"spmg2"} or \code{HRF_SPMG2}: SPM canonical + temporal derivative (2 basis functions)
+\item \code{"spmg3"} or \code{HRF_SPMG3}: SPM canonical + temporal and dispersion derivatives (3 basis functions)
+\item \code{"gaussian"} or \code{HRF_GAUSSIAN}: Gaussian-shaped HRF with peak around 5-6s
+\item \code{"gamma"} or \code{HRF_GAMMA}: Gamma function-based HRF with longer tail
+}
+
+\strong{Flexible basis sets:}
+\itemize{
+\item \code{"bspline"} or \code{"bs"} or \code{HRF_BSPLINE}: B-spline basis for flexible HRF modeling
+\item \code{"tent"}: Tent (triangular) basis functions for flexible HRF modeling
+\item \code{"daguerre"} or \code{HRF_DAGUERRE}: Daguerre basis functions
+}
+
+To see a complete list of available HRF types with details, use the \code{list_available_hrfs()} function.
+}
 \section{Functions}{
 \itemize{
 \item \code{HRF_GAMMA()}: Gamma HRF function object
@@ -59,6 +80,9 @@ The \code{HRF} function creates an object representing a hemodynamic response fu
 \examples{
 hrf <- HRF(hrf_gamma, "gamma", nbasis=1, param_names=c("shape", "rate"))
 resp <- evaluate(hrf, seq(0, 24, by=1))
+
+# List all available HRF types
+list_available_hrfs(details = TRUE)
 
 }
 \concept{HRF}
