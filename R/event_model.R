@@ -276,7 +276,7 @@ Fcontrasts.event_model <- function(x, ...) {
       stop("Cannot compute Fcontrasts: design matrix missing 'col_indices' attribute.")
   }
   
-  ret <- unlist(lapply(seq_along(terms(x)), function(i) {
+  ret_list <- lapply(seq_along(terms(x)), function(i) {
     term_i <- terms(x)[[i]]
     term_indices_vec <- tind[[ names(terms(x))[i] ]]
     
@@ -320,7 +320,13 @@ Fcontrasts.event_model <- function(x, ...) {
         NULL
     }
     
-  }), recursive = FALSE)
+  })
+
+  # Drop NULL entries for terms without F-contrasts
+  ret_list <- ret_list[!sapply(ret_list, is.null)]
+
+  # Concatenate without modifying individual elements
+  ret <- if (length(ret_list)) do.call(c, ret_list) else list()
   ret
 }
 
