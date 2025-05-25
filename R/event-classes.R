@@ -13,7 +13,9 @@
 # @param onsets Numeric vector of event onsets (seconds).
 # @param blockids Numeric vector of block IDs (non-decreasing integers).
 # @param durations Numeric vector of event durations (seconds), or a scalar.
-# @param subset Optional logical vector indicating which events to keep.
+# @param subset Optional logical vector indicating which events to keep. If
+#   provided, the vector must be the same length as `onsets` and contain no `NA`
+#   values.
 # 
 # @return An S3 object of class `event` and `event_seq`, containing:
 #   \item{varname}{Sanitized variable name.} 
@@ -41,7 +43,15 @@ event <- function(value, name, onsets, blockids, durations = 0, subset = NULL) {
   # -------------------------------------
   
   n_initial <- length(onsets)
-  if (is.null(subset)) { subset <- rep(TRUE, n_initial) }
+  if (!is.null(subset)) {
+      assertthat::assert_that(length(subset) == n_initial,
+        msg = sprintf("subset length (%d) must match onsets length (%d)",
+                      length(subset), n_initial))
+      assertthat::assert_that(!anyNA(subset),
+        msg = "subset cannot contain NA values")
+  } else {
+      subset <- rep(TRUE, n_initial)
+  }
   
   # --------------------------------------------
   # 1. Validate / recycle / pre-process with the existing helper
@@ -150,7 +160,9 @@ event <- function(value, name, onsets, blockids, durations = 0, subset = NULL) {
 #' @param onsets Numeric vector of event onsets (seconds).
 #' @param blockids Numeric vector of block IDs.
 #' @param durations Numeric vector of event durations (seconds), or a scalar.
-#' @param subset Optional logical vector indicating which events to keep.
+#' @param subset Optional logical vector indicating which events to keep. If
+#'   provided, the vector must match `onsets` in length and contain no `NA`
+#'   values.
 #'
 #' @return An S3 object of class `event` and `event_seq`.
 #'
@@ -188,7 +200,9 @@ event_factor <- function(fac, name, onsets, blockids = 1, durations = 0, subset 
 #' @param onsets Numeric vector of event onsets (seconds).
 #' @param blockids Numeric vector of block IDs.
 #' @param durations Numeric vector of event durations (seconds), or a scalar.
-#' @param subset Optional logical vector indicating which events to keep.
+#' @param subset Optional logical vector indicating which events to keep. If
+#'   provided, the vector must match `onsets` in length and contain no `NA`
+#'   values.
 #'
 #' @return An S3 object of class `event` and `event_seq`.
 #'
@@ -226,7 +240,9 @@ event_variable <- function(vec, name, onsets, blockids = 1, durations = 0, subse
 #' @param onsets Numeric vector of event onsets (seconds).
 #' @param blockids Numeric vector of block IDs.
 #' @param durations Numeric vector of event durations (seconds), or a scalar.
-#' @param subset Optional logical vector indicating which events to keep.
+#' @param subset Optional logical vector indicating which events to keep. If
+#'   provided, the vector must match `onsets` in length and contain no `NA`
+#'   values.
 #'
 #' @return An S3 object of class `event` and `event_seq`.
 #'
@@ -267,7 +283,9 @@ event_matrix <- function(mat, name, onsets, blockids = 1, durations = 0, subset 
 #' @param onsets Numeric vector of event onsets (seconds).
 #' @param blockids Numeric vector of block IDs.
 #' @param durations Numeric vector of event durations (seconds), or a scalar.
-#' @param subset Optional logical vector indicating which events to keep.
+#' @param subset Optional logical vector indicating which events to keep. If
+#'   provided, the vector must match `onsets` in length and contain no `NA`
+#'   values.
 #'
 #' @return An S3 object of class `event` and `event_seq`.
 #'
