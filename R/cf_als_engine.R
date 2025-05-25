@@ -37,6 +37,14 @@ cf_als_engine <- function(X_list_proj, Y_proj,
     stop("lambda_b and lambda_h must be non-negative")
   }
 
+  cholSolve <- function(M, b) {
+    if (!is.finite(det(M)) || rcond(M) < 1e-8) {
+      M <- M + 1e-4 * diag(nrow(M))
+    }
+    L <- chol(M)
+    backsolve(L, forwardsolve(t(L), b))
+  }
+
   init <- ls_svd_engine(X_list_proj, Y_proj,
                         lambda_init = 0,
                         h_ref_shape_norm = h_ref_shape_norm,
@@ -48,12 +56,10 @@ cf_als_engine <- function(X_list_proj, Y_proj,
   XtX_list <- lapply(X_list_proj, crossprod)
   XtY_list <- lapply(X_list_proj, function(X) crossprod(X, Y_proj))
 
-  if (fullXtX_flag) {
-    XtX_full_list <- matrix(vector("list", k * k), k, k)
-    for (l in seq_len(k)) {
-      for (m in seq_len(k)) {
-        XtX_full_list[[l, m]] <- crossprod(X_list_proj[[l]], X_list_proj[[m]])
-      }
+  XtX_full_list <- matrix(vector("list", k * k), k, k)
+  for (l in seq_len(k)) {
+    for (m in seq_len(k)) {
+      XtX_full_list[[l, m]] <- crossprod(X_list_proj[[l]], X_list_proj[[m]])
     }
   }
 
@@ -65,14 +71,11 @@ cf_als_engine <- function(X_list_proj, Y_proj,
       G_vx <- matrix(0.0, k, k)
       for (l in seq_len(k)) {
         for (m in seq_len(k)) {
-          term <- if (fullXtX_flag) XtX_full_list[[l, m]]
-                  else if (l == m) XtX_list[[l]]
-                  else NULL
-          if (!is.null(term))
-            G_vx[l, m] <- crossprod(h_vx, term %*% h_vx)
+          term <- XtX_full_list[[l, m]]
+          G_vx[l, m] <- crossprod(h_vx, term %*% h_vx)
         }
       }
-      b_current[, vx] <- solve(G_vx + lambda_b * diag(k), DhTy_vx)
+      b_current[, vx] <- cholSolve(G_vx + lambda_b * diag(k), DhTy_vx)
     }
 
     for (vx in seq_len(v)) {
@@ -89,14 +92,14 @@ cf_als_engine <- function(X_list_proj, Y_proj,
           lhs <- lhs + b_vx[l]^2 * XtX_list[[l]]
         }
       }
-      h_current[, vx] <- solve(lhs, rhs)
+      h_current[, vx] <- cholSolve(lhs, rhs)
     }
   }
 
   scl <- apply(abs(h_current), 2, max)
   flip <- rep(1.0, v)
   if (!is.null(h_ref_shape_norm)) {
-    align <- as.numeric(crossprod(h_ref_shape_norm, h_current))
+    align <- colSums(h_current * h_ref_shape_norm)
     flip[align < 0 & scl > epsilon_scale] <- -1.0
   }
   eff_scl <- pmax(scl, epsilon_scale)
