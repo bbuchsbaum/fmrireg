@@ -859,3 +859,49 @@ test_that("event_model correctly names columns for Ident() and combined basis fu
   expect_setequal(cols_bs_id_hrf, expected_bs_id_hrf_cols)
 
 })
+
+
+# New tests for prefix, subset, and row count errors
+
+test_that("prefix works with multi-variable term", {
+  td <- create_test_data(seed = 111)
+  events <- td$events
+  sf <- td$sf
+
+  model_pre <- event_model(
+    onset ~ hrf(condition, modulator, prefix = "pre"),
+    data = events,
+    block = ~block,
+    sampling_frame = sf
+  )
+  cols <- colnames(design_matrix(model_pre))
+  expect_setequal(cols, c("pre_condition.a_modulator", "pre_condition.b_modulator"))
+})
+
+test_that("subset expression filters events", {
+  td <- create_test_data(seed = 222)
+  events <- td$events
+  sf <- td$sf
+  events$flag <- rep(c(TRUE, FALSE), length.out = nrow(events))
+
+  m_sub <- event_model(onset ~ hrf(condition, subset = flag),
+                       data = events, block = ~block, sampling_frame = sf)
+  m_manual <- event_model(onset ~ hrf(condition),
+                          data = subset(events, flag),
+                          block = ~block, sampling_frame = sf)
+
+  expect_equal(design_matrix(m_sub), design_matrix(m_manual), ignore_attr = TRUE)
+})
+
+test_that("error when onset length mismatched with data", {
+  td <- create_test_data(seed = 333)
+  events <- td$events
+  sf <- td$sf
+  bad_onsets <- events$onset[-nrow(events)]
+  expect_error(
+    event_model(bad_onsets ~ hrf(condition), data = events,
+                block = ~block, sampling_frame = sf),
+    "Length of extracted onset variable"
+  )
+})
+
