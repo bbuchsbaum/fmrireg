@@ -81,6 +81,22 @@ test_that("hrfs block validates entries", {
   expect_equal(res$hrfs$custom$type, "GammaFunction")
 })
 
+test_that("missing hrfs block uses canonical default", {
+  tf <- tempfile(fileext = ".yml")
+  cfg <- list(
+    dataset = list(path = "./data"),
+    events = list(onset_column = "onset", duration_column = "duration", block_column = "run"),
+    variables = list(),
+    terms = list(),
+    models = list()
+  )
+  write_yaml(cfg, tf)
+  on.exit(unlink(tf))
+
+  res <- AD(tf)
+  expect_equal(res$hrfs$canonical$type, "SPMCanonical")
+})
+
 test_that("invalid hrfs entry fails", {
   tf <- tempfile(fileext = ".yml")
   cfg <- list(
