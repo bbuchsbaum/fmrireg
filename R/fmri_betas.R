@@ -273,6 +273,7 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
                                         basemod = NULL,
                                         maxit = 1000,
                                         fracs = 0.5,
+                                        progress = TRUE,
                                         ...) {
   method <- match.arg(method)
   dset <- x
@@ -286,8 +287,9 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
   }
   
   bdes <- gen_beta_design(fixed, ran, block, bmod, dset, method = method)
-  betas <- run_estimate_betas(bdes, dset, method, block=block, maxit = maxit, fracs=fracs,
-                              ...)
+  betas <- run_estimate_betas(bdes, dset, method, block = block,
+                              maxit = maxit, fracs = fracs,
+                              progress = progress, ...)
   
   # Check dimensions before indexing
   message(sprintf("beta_matrix dimensions: %d x %d", 
@@ -323,49 +325,44 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
 
 
 #' @keywords internal
-run_estimate_betas <- function(bdes, dset, method, 
-                               block, maxit = 100, 
-                               ncomp=4, fracs=.5,
+run_estimate_betas <- function(bdes, dset, method,
+                               block, maxit = 100,
+                               ncomp = 4, fracs = .5,
+                               progress = TRUE,
                                ...) {
   method <- match.arg(method, c("lss", "lss_naive", "lss_cpp", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge", "lowrank_hrf"))
   
   # Capture ... into dotargs
   dotargs <- list(...)
   
-  get_X <- function() {
-    X <- if (is.null(bdes$fixed)) bdes$dmat_ran else cbind(bdes$dmat_ran, bdes$dmat_fixed)
-    Base <- as.matrix(bdes$dmat_base)
-    X[is.na(X)] <- 0
-    list(Base = Base, X = X)
-  }
-  
+  xdat <- build_design_data(bdes)
+
   if (method == "mixed") {
-    vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) > 0))
-    xdat <- get_X()
-    res <- do.call(cbind, furrr::future_map(vecs, function(v) {
+    vecs <- masked_vectors(dset)
+    res <- map_voxels(vecs, function(v) {
       v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
-      mixed_betas(xdat$X, v0, ran_ind = seq_len(ncol(bdes$dmat_ran)), 
-                 fixed_ind = if(!is.null(bdes$dmat_fixed)) {
-                   (ncol(bdes$dmat_ran) + 1):(ncol(bdes$dmat_ran) + ncol(bdes$dmat_fixed))
-                 } else {
-                   NULL
-                 })
-    }))
-    list(beta_matrix=as.matrix(res), estimated_hrf=NULL)
-  } else if (method == "mixed_cpp") {
-    vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) > 0))
-    xdat <- get_X()
-    res <- do.call(cbind, furrr::future_map(vecs, function(v) {
-      v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
-      mixed_betas_cpp(as.matrix(xdat$X), v0, ran_ind = seq_len(ncol(bdes$dmat_ran)), 
-                  fixed_ind = if(!is.null(bdes$dmat_fixed)) {
+      mixed_betas(xdat$X, v0, ran_ind = seq_len(ncol(bdes$dmat_ran)),
+                  fixed_ind = if (!is.null(bdes$dmat_fixed)) {
                     (ncol(bdes$dmat_ran) + 1):(ncol(bdes$dmat_ran) + ncol(bdes$dmat_fixed))
                   } else {
                     NULL
                   })
-    }))
-    
-    list(beta_matrix=as.matrix(res), estimated_hrf=NULL)
+    }, .progress = progress)
+    list(beta_matrix = as.matrix(res), estimated_hrf = NULL)
+  } else if (method == "mixed_cpp") {
+    vecs <- masked_vectors(dset)
+    res <- map_voxels(vecs, function(v) {
+      v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
+      mixed_betas_cpp(as.matrix(xdat$X), v0,
+                  ran_ind = seq_len(ncol(bdes$dmat_ran)),
+                  fixed_ind = if (!is.null(bdes$dmat_fixed)) {
+                    (ncol(bdes$dmat_ran) + 1):(ncol(bdes$dmat_ran) + ncol(bdes$dmat_fixed))
+                  } else {
+                    NULL
+                  })
+    }, .progress = progress)
+
+    list(beta_matrix = as.matrix(res), estimated_hrf = NULL)
     
   
   }  else if (method == "lss_naive") {
@@ -385,11 +382,10 @@ run_estimate_betas <- function(bdes, dset, method,
       X_base_fixed <- cbind(as.matrix(bdes$dmat_base), as.matrix(bdes$dmat_fixed))
       
       # Estimate fixed effects with OLS
-      beta_matrix_fixed <- do.call(cbind, furrr::future_map(vecs, function(v) {
+      beta_matrix_fixed <- map_voxels(vecs, function(v) {
         fit <- lm.fit(X_base_fixed, v)
-        # Extract only the fixed effect coefficients (excluding baseline)
         coef(fit)[(ncol(bdes$dmat_base) + 1):length(coef(fit))]
-      }))
+      }, .progress = progress)
       
       # Combine random and fixed effects into a single beta matrix
       # Order: [random effects, fixed effects]
@@ -404,20 +400,18 @@ run_estimate_betas <- function(bdes, dset, method,
     beta_matrix <- lss_fast(dset, bdes, use_cpp = TRUE)
     list(beta_matrix = beta_matrix, estimated_hrf = NULL)
   } else if (method == "pls") {
-    vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) >0))
-    xdat <- get_X()
-   
-    res <- do.call(cbind, furrr::future_map(vecs, function(v) {
+    vecs <- masked_vectors(dset)
+
+    res <- map_voxels(vecs, function(v) {
         v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
         pls_betas(xdat$X, v0, ncomp = ncomp)
-    }))
-    
+    }, .progress = progress)
+
     list(beta_matrix = as.matrix(res), estimated_hrf = NULL)
   } else if (method == "pls_global") {
-    vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) >0))
-    xdat <- get_X()
-    Y <- do.call(cbind, lapply(vecs, function(v) v))
-    
+    vecs <- masked_vectors(dset)
+    Y <- map_voxels(vecs, function(v) v, .progress = progress)
+
     if (ncomp < log(ncol(Y))) {
       warning("'ncomp' for pls_global method is less than log(nvoxels), consider increasing.")
     }
@@ -425,16 +419,14 @@ run_estimate_betas <- function(bdes, dset, method,
     Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
     list(beta_matrix=pls_global_betas(xdat$X, Y0, ncomp=ncomp), estimated_hrf=NULL)
   } else if (method == "ols") {
-    vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) >0))
-    xdat <- get_X()
-    Y <- do.call(cbind, lapply(vecs, function(v) v))
+    vecs <- masked_vectors(dset)
+    Y <- map_voxels(vecs, function(v) v, .progress = progress)
     Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
     beta_matrix <- ols_betas(xdat$X, Y0)
     # Ensure we return a list with beta_matrix as a named component
     list(beta_matrix = as.matrix(beta_matrix), estimated_hrf = NULL)
   } else if (method == "fracridge") {
-    vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) > 0))
-    xdat <- get_X()
+    vecs <- masked_vectors(dset)
     
     # Ensure X is properly formatted before processing
     if (!is.matrix(xdat$X)) {
@@ -444,10 +436,10 @@ run_estimate_betas <- function(bdes, dset, method,
     
     message("Using fractional ridge regression with fraction: ", fracs)
     
-    res <- do.call(cbind, furrr::future_map(vecs, function(v) {
+    res <- map_voxels(vecs, function(v) {
       v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
       fracridge_betas(xdat$X, v0, fracs = fracs)
-    }))
+    }, .progress = progress)
     
     list(beta_matrix=as.matrix(res), estimated_hrf=NULL)
   } else if (method == "lowrank_hrf") {
@@ -592,11 +584,11 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
 #' @seealso \code{\link{matrix_dataset}}, \code{\link{baseline_model}}
 #'
 #' @export
-estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,  
-                                        method=c("lss", "lss_cpp", "lss_naive", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge"), 
-                                        basemod=NULL,
-                                        ncomp=4, lambda=.01,
-                                        fracs=.5, ...) {
+estimate_betas.matrix_dataset <- function(x, fixed = NULL, ran, block,
+                                        method = c("lss", "lss_cpp", "lss_naive", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge"),
+                                        basemod = NULL,
+                                        ncomp = 4, lambda = .01,
+                                        fracs = .5, progress = TRUE, ...) {
   
   method <- match.arg(method)
   dset <- x
@@ -610,7 +602,8 @@ estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,
 
 
   bdes <- gen_beta_design(fixed, ran, block, bmod, dset)
-  betas <- run_estimate_betas(bdes, dset, method, ncomp=ncomp, fracs=fracs)
+  betas <- run_estimate_betas(bdes, dset, method, ncomp = ncomp,
+                              fracs = fracs, progress = progress)
   
   # Access beta_matrix from the list returned by run_estimate_betas
   beta_matrix <- betas$beta_matrix
@@ -667,9 +660,10 @@ estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,
 #'
 #' @export
 #' @rdname estimate_betas
-estimate_betas.latent_dataset <- function(x, fixed=NULL, ran, block, 
-                                         method=c("mixed", "pls", "pls_global", "ols"), 
-                                         basemod=NULL, ncomp=4, lambda=.01, prewhiten=FALSE,...) {
+estimate_betas.latent_dataset <- function(x, fixed = NULL, ran, block,
+                                         method = c("mixed", "pls", "pls_global", "ols"),
+                                         basemod = NULL, ncomp = 4, lambda = .01,
+                                         prewhiten = FALSE, progress = TRUE, ...) {
   
   method <- match.arg(method)
   dset <- x
@@ -691,7 +685,8 @@ estimate_betas.latent_dataset <- function(x, fixed=NULL, ran, block,
     ###
   }
   
-  betas <- run_estimate_betas(bdes, dset, method, ncomp=ncomp)
+  betas <- run_estimate_betas(bdes, dset, method, ncomp = ncomp,
+                              progress = progress)
   
   # Access beta_matrix from the list returned by run_estimate_betas
   beta_matrix <- betas$beta_matrix
@@ -747,16 +742,15 @@ estimate_betas.latent_dataset <- function(x, fixed=NULL, ran, block,
 #'
 #' @export 
 #' @autoglobal
-estimate_hrf <- function(form, fixed=NULL, block, dataset, 
-                           bs=c("tp", "ts", "cr", "ps"), 
-                           rsam=seq(0,20,by=1),
-                           basemod=NULL,
-                           k=8,
-                           fx=TRUE) {
+estimate_hrf <- function(form, fixed = NULL, block, dataset,
+                           bs = c("tp", "ts", "cr", "ps"),
+                           rsam = seq(0, 20, by = 1),
+                           basemod = NULL,
+                           k = 8,
+                           fx = TRUE,
+                           progress = TRUE) {
   with_package("mgcv")
   dset <- dataset
-  bvec <- get_data(dset)
-  mask <- get_mask(dset)
   
   onset_var <- lazyeval::f_lhs(form)
   dvars <- lazyeval::f_rhs(form)
@@ -783,7 +777,8 @@ estimate_hrf <- function(form, fixed=NULL, block, dataset,
   X_cond <- as.matrix(design_matrix(emat_cond))
   #browser()
   
-  res <- do.call(cbind, furrr::future_map(neuroim2::vectors(bvec, subset=which(mask>0)), function(v) {
+  vecs <- masked_vectors(dset)
+  res <- map_voxels(vecs, function(v) {
     gam.1 <- if (has_fixed) {
       mgcv::gam(v ~ mgcv::s(X_cond, bs=bs, fx=TRUE, k=8) + X_fixed + X_base)
     } else {
@@ -793,8 +788,8 @@ estimate_hrf <- function(form, fixed=NULL, block, dataset,
     time <- rsam
     xb <- matrix(colMeans(X_base), length(time),ncol(X_base), byrow=TRUE)
     ##xf <- matrix(colMeans(X_fixed), length(time),ncol(X_fixed), byrow=TRUE)
-    predict(gam.1, list(X_cond=time, X_base=xb, X_fixed=xf))
-  }))
+    predict(gam.1, list(X_cond = time, X_base = xb, X_fixed = xf))
+  }, .progress = progress)
   
   res
   
