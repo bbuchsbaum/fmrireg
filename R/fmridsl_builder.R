@@ -297,3 +297,146 @@ load_fmri_config <- function(yaml_file) {
   validated_ior <- parse_and_validate_config(yaml_file)
   build_config_from_ior(validated_ior)
 }
+#' Load Events and Confounds for a Subject
+#'
+#' Helper used by DSL sprint 2 to gather all subject level data needed for
+#' model building. The function loads event files and selected confound
+#' columns for a single subject and resolves run lengths and the effective TR
+#' using the scan parameter settings in the configuration object.
+#'
+#' @param config Validated `fmri_config` object returned by
+#'   [load_fmri_config()] or [build_config_from_ior()].
+#' @param subject_id Subject identifier to load.
+#'
+#' @return A list with elements `events_df`, `confounds_df`, `run_lengths`, and
+#'   `TR`.
+#' @keywords internal
+load_and_prepare_subject_data <- function(config, subject_id) {
+  if (!requireNamespace("bidser", quietly = TRUE)) {
+    stop("Package 'bidser' is required to load BIDS data.")
+  }
+
+  if (!inherits(config, "fmri_config") || !isTRUE(config$validated)) {
+    stop("'config' must be a validated fmri_config object")
+  }
+
+  if (!(subject_id %in% config$subjects)) {
+    stop(sprintf("Subject '%s' not listed in configuration", subject_id))
+  }
+
+  proj  <- config$project
+  tasks <- config$tasks
+  runs  <- config$runs
+
+  # --- Load events ---
+  ev_res <- bidser::read_events(
+    proj,
+    subid = subject_id,
+    task  = tasks,
+    run   = runs
+  )
+
+  if (nrow(ev_res) == 0) {
+    stop(sprintf("No event files found for subject %s", subject_id))
+  }
+
+  events_df <- ev_res %>%
+    tidyr::unnest(.data$data) %>%
+    dplyr::arrange(.data$.run)
+
+  # --- Determine run lengths and TR ---
+  sp <- config$spec$dataset$scan_params
+  rl_defaults   <- sp$run_lengths %||% numeric()
+  rl_overrides  <- sp$run_length_overrides %||% numeric()
+  TR_default    <- sp$TR %||% NA_real_
+  TR_overrides  <- sp$TR_overrides %||% numeric()
+
+  run_info <- events_df %>% dplyr::distinct(.data$.run, .data$.task) %>%
+    dplyr::arrange(as.numeric(.data$.run))
+
+  run_lengths <- rep(NA_integer_, nrow(run_info))
+  TR_vals     <- rep(NA_real_, nrow(run_info))
+
+  for (i in seq_len(nrow(run_info))) {
+    task_id <- run_info$.task[i]
+    run_id  <- sprintf("run-%02d", as.numeric(run_info$.run[i]))
+    context_str <- paste(subject_id, task_id, run_id, sep = "_")
+
+    # run length override patterns
+    matched <- FALSE
+    for (pat in names(rl_overrides)) {
+      if (grepl(pat, context_str)) {
+        run_lengths[i] <- rl_overrides[[pat]]
+        matched <- TRUE
+        break
+      }
+    }
+    if (!matched) {
+      run_lengths[i] <- rl_defaults[[task_id]] %||% NA_integer_
+    }
+
+    # TR override per run
+    matched <- FALSE
+    for (pat in names(TR_overrides)) {
+      if (grepl(pat, context_str)) {
+        TR_vals[i] <- TR_overrides[[pat]]
+        matched <- TRUE
+        break
+      }
+    }
+    if (!matched) {
+      TR_vals[i] <- TR_default
+    }
+  }
+
+  if (anyNA(run_lengths)) {
+    stop("Could not resolve run lengths for all runs")
+  }
+  if (anyNA(TR_vals)) {
+    stop("Could not determine TR for all runs")
+  }
+  if (length(unique(TR_vals)) > 1) {
+    warning("Multiple TR values found; using first")
+  }
+  effective_TR <- TR_vals[1]
+
+  # --- Load confounds ---
+  conf_cols <- character()
+  nuisance_vars <- config$variable_roles$NuisanceSource %||% character()
+  if (length(nuisance_vars) > 0) {
+    conf_cols <- vapply(
+      nuisance_vars,
+      function(v) config$spec$variables[[v]]$bids_column,
+      character(1)
+    )
+  }
+
+  if (length(config$confounds_info$groups) > 0) {
+    group_cols <- unlist(config$confounds_info$groups, use.names = FALSE)
+    conf_cols <- union(conf_cols, group_cols)
+  }
+  conf_cols <- unique(conf_cols)
+
+  confounds_df <- NULL
+  if (length(conf_cols) > 0) {
+    cf_res <- bidser::read_confounds(
+      proj,
+      subid = subject_id,
+      task  = tasks,
+      run   = runs,
+      cvars = conf_cols
+    )
+    if (nrow(cf_res) > 0) {
+      confounds_df <- tidyr::unnest(cf_res, .data$data) %>%
+        dplyr::arrange(as.numeric(.data$run))
+    }
+  }
+
+  list(
+    events_df    = events_df,
+    confounds_df = confounds_df,
+    run_lengths  = run_lengths,
+    TR           = effective_TR
+  )
+}
+
