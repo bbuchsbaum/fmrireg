@@ -265,6 +265,67 @@ parse_and_validate_config <- function(yaml_file) {
     config_list$dataset <- ds
   }
 
+  if (check_type(config_list, "events", "object", "", errors)) {
+    ev <- config_list$events
+    ev_path <- "events"
+
+    if (check_required(ev, "onset_column", ev_path, errors)) {
+      check_type(ev, "onset_column", "string", ev_path, errors)
+    }
+
+    if (check_required(ev, "duration_column", ev_path, errors)) {
+      check_type(ev, "duration_column", "string", ev_path, errors)
+    }
+
+    if (check_required(ev, "block_column", ev_path, errors)) {
+      check_type(ev, "block_column", "string", ev_path, errors)
+    }
+
+    config_list$events <- ev
+  }
+
+  if (exists("hrfs", config_list)) {
+    if (check_type(config_list, "hrfs", "object", "", errors, allow_null = TRUE)) {
+      hrfs <- config_list$hrfs
+      hrfs_path <- "hrfs"
+      if (!is.null(hrfs)) {
+        for (nm in names(hrfs)) {
+          if (check_type(hrfs, nm, "object", hrfs_path, errors)) {
+            h <- hrfs[[nm]]
+            h_path <- paste0(hrfs_path, "$", nm)
+
+            if (check_required(h, "type", h_path, errors)) {
+              check_enum(
+                h,
+                "type",
+                c(
+                  "SPMCanonical",
+                  "SPMCanonicalDerivs",
+                  "GammaFunction",
+                  "Gaussian",
+                  "BSplineBasisHRF",
+                  "TentBasisHRF",
+                  "FourierBasisHRF",
+                  "DaguerreBasisHRF",
+                  "CustomR"
+                ),
+                h_path,
+                errors
+              )
+            }
+
+            if (check_type(h, "derivatives", "array[string]", h_path, errors, allow_null = TRUE)) {
+              check_enum(h, "derivatives", c("Temporal", "Dispersion"), h_path, errors, allow_null = TRUE)
+            }
+
+            check_type(h, "parameters", "object", h_path, errors, allow_null = TRUE)
+            check_type(h, "definition", "string", h_path, errors, allow_null = TRUE)
+          }
+        }
+      }
+    }
+  }
+
   errors$stop_if_invalid("Configuration validation failed")
 
   config_list
