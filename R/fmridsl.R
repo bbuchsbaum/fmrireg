@@ -326,6 +326,80 @@ parse_and_validate_config <- function(yaml_file) {
     }
   }
 
+  if (check_type(config_list, "variables", "object", "", errors)) {
+    vars <- config_list$variables
+    vars_path <- "variables"
+    for (nm in names(vars)) {
+      if (check_type(vars, nm, "object", vars_path, errors)) {
+        v <- vars[[nm]]
+        v_path <- paste0(vars_path, "$", nm)
+        if (check_required(v, "bids_column", v_path, errors)) {
+          check_type(v, "bids_column", "string", v_path, errors)
+        }
+        if (check_required(v, "role", v_path, errors)) {
+          check_enum(
+            v,
+            "role",
+            c("Factor", "Numeric", "NuisanceSource", "TrialIndex", "GroupID"),
+            v_path,
+            errors
+          )
+        }
+      }
+    }
+    config_list$variables <- vars
+  }
+
+  if (exists("transformations", config_list)) {
+    if (check_type(config_list, "transformations", "object", "", errors, allow_null = TRUE)) {
+      trans <- config_list$transformations
+      trans_path <- "transformations"
+      if (!is.null(trans)) {
+        for (nm in names(trans)) {
+          if (check_type(trans, nm, "object", trans_path, errors)) {
+            tentry <- trans[[nm]]
+            t_path <- paste0(trans_path, "$", nm)
+
+            if (check_required(tentry, "source_variable", t_path, errors)) {
+              check_type(tentry, "source_variable", "string", t_path, errors)
+            }
+
+            if (check_required(tentry, "ops", t_path, errors)) {
+              ops <- tentry$ops
+              op_field_path <- paste0(t_path, "$ops")
+              if (is.null(ops) || !(is.list(ops) || (is.vector(ops) && !is.matrix(ops)))) {
+                errors$add_error(op_field_path, "Field must be an array of operations.")
+              } else {
+                for (i in seq_along(ops)) {
+                  op <- ops[[i]]
+                  op_path <- paste0(op_field_path, "[", i, "]")
+                  if (is.character(op) && length(op) == 1) {
+                    check_enum(list(x = op), "x",
+                              c("center", "scale-sd", "z-score", "log", "exp",
+                                "factorize", "demean-by-group"),
+                              op_path, errors)
+                  } else if (is.list(op)) {
+                    if (check_required(op, "type", op_path, errors)) {
+                      check_enum(op, "type",
+                                c("scale-within-group", "clip", "recode-levels"),
+                                op_path, errors)
+                    }
+                    check_type(op, "group_by_variable", "string", op_path, errors, allow_null = TRUE)
+                    check_type(op, "min", "number", op_path, errors, allow_null = TRUE)
+                    check_type(op, "max", "number", op_path, errors, allow_null = TRUE)
+                    check_type(op, "level_map", "object", op_path, errors, allow_null = TRUE)
+                  } else {
+                    errors$add_error(op_path, "Each op must be a string or object.")
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   errors$stop_if_invalid("Configuration validation failed")
 
   config_list
