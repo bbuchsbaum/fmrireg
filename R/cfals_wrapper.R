@@ -74,8 +74,30 @@ fmrireg_hrf_cfals <- function(fmri_data_obj,
                        fullXtX_flag = fullXtX,
                        max_alt = max_alt)
 
+  # reconstruct HRF shapes on the sampling grid
+  Phi <- reconstruction_matrix(hrf_basis, sframe)
+  recon_hrf <- Phi %*% fit$h
+
+  # predicted BOLD and residuals
+  n <- nrow(Y)
+  v <- ncol(Y)
+  pred <- matrix(0, n, v)
+  for (c in seq_along(X_list)) {
+    pred <- pred + (X_list[[c]] %*% fit$h) *
+      matrix(rep(fit$beta[c, ], each = n), n, v)
+  }
+  resids <- Y - pred
+
+  # simple R^2 per voxel
+  SST <- colSums((Y - rowMeans(Y))^2)
+  SSE <- colSums(resids^2)
+  r2 <- 1 - SSE / SST
+
   out <- list(h = fit$h,
               beta = fit$beta,
+              reconstructed_hrfs = recon_hrf,
+              residuals = resids,
+              gof_per_voxel = r2,
               hrf_basis_used = hrf_basis,
               lambda_used = c(beta = lam_beta, h = lam_h),
               design_info = list(d = nbasis(hrf_basis),
