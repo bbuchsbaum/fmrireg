@@ -13,7 +13,9 @@
 #' @param max_alt number of alternating updates after initialization
 #' @param epsilon_svd tolerance for singular value screening
 #' @param epsilon_scale tolerance for scale in identifiability step
-#' @return list with matrices `h` (d x v) and `beta` (k x v)
+#' @return list with matrices `h` (d x v) and `beta` (k x v). The
+#'   matrix `h` has an attribute `"iterations"` recording the number
+#'   of alternating updates performed.
 #' @keywords internal
 #' @noRd
 cf_als_engine <- function(X_list_proj, Y_proj,
@@ -37,11 +39,9 @@ cf_als_engine <- function(X_list_proj, Y_proj,
     stop("lambda_b and lambda_h must be non-negative")
   }
 
-  cholSolve <- function(M, b) {
-    if (!is.finite(det(M)) || rcond(M) < 1e-8) {
-      M <- M + 1e-4 * diag(nrow(M))
-    }
-    L <- chol(M)
+  cholSolve <- function(M, b, eps = max(epsilon_svd, epsilon_scale)) {
+    L <- tryCatch(chol(M),
+                  error = function(e) chol(M + eps * diag(nrow(M))))
     backsolve(L, forwardsolve(t(L), b))
   }
 
@@ -56,11 +56,15 @@ cf_als_engine <- function(X_list_proj, Y_proj,
   XtX_list <- lapply(X_list_proj, crossprod)
   XtY_list <- lapply(X_list_proj, function(X) crossprod(X, Y_proj))
 
-  XtX_full_list <- matrix(vector("list", k * k), k, k)
-  for (l in seq_len(k)) {
-    for (m in seq_len(k)) {
-      XtX_full_list[[l, m]] <- crossprod(X_list_proj[[l]], X_list_proj[[m]])
+  if (fullXtX_flag) {
+    XtX_full_list <- matrix(vector("list", k * k), k, k)
+    for (l in seq_len(k)) {
+      for (m in seq_len(k)) {
+        XtX_full_list[[l, m]] <- crossprod(X_list_proj[[l]], X_list_proj[[m]])
+      }
     }
+  } else {
+    XtX_full_list <- NULL
   }
 
   for (iter in seq_len(max_alt)) {
@@ -70,9 +74,13 @@ cf_als_engine <- function(X_list_proj, Y_proj,
         crossprod(h_vx, XtY_list[[c]][, vx]), numeric(1))
       G_vx <- matrix(0.0, k, k)
       for (l in seq_len(k)) {
-        for (m in seq_len(k)) {
-          term <- XtX_full_list[[l, m]]
-          G_vx[l, m] <- crossprod(h_vx, term %*% h_vx)
+        if (fullXtX_flag) {
+          for (m in seq_len(k)) {
+            term <- XtX_full_list[[l, m]]
+            G_vx[l, m] <- crossprod(h_vx, term %*% h_vx)
+          }
+        } else {
+          G_vx[l, l] <- crossprod(h_vx, XtX_list[[l]] %*% h_vx)
         }
       }
       b_current[, vx] <- cholSolve(G_vx + lambda_b * diag(k), DhTy_vx)
@@ -111,6 +119,7 @@ cf_als_engine <- function(X_list_proj, Y_proj,
     b_final[, zero_idx] <- 0
   }
 
+  attr(h_final, "iterations") <- max_alt
   list(h = h_final, beta = b_final)
 }
 
