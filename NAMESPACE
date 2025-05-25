@@ -476,6 +476,7 @@ S3method(reconstruction_matrix,HRF)
 export(penalty_matrix)
 S3method(penalty_matrix,HRF)
 export(project_confounds)
+export(create_fmri_design)
 export(fmrireg_hrf_cfals)
 
 S3method(print,fmrireg_cfals_fit)
