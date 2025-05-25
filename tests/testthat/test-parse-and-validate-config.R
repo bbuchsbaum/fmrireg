@@ -167,3 +167,68 @@ test_that("invalid transformations entry fails", {
 
   expect_error(AD(tf), "Configuration validation failed")
 })
+
+test_that("confound_groups block validates entries", {
+  tf <- tempfile(fileext = ".yml")
+  cfg <- list(
+    dataset = list(path = "./data"),
+    events = list(onset_column = "onset", duration_column = "duration", block_column = "run"),
+    variables = list(),
+    confound_groups = list(motion = list(select_by_pattern = c("trans.*", "rot.*"))),
+    terms = list(),
+    models = list()
+  )
+  write_yaml(cfg, tf)
+  on.exit(unlink(tf))
+
+  res <- AD(tf)
+  expect_true("motion" %in% names(res$confound_groups))
+})
+
+test_that("confound_groups entry missing selectors fails", {
+  tf <- tempfile(fileext = ".yml")
+  cfg <- list(
+    dataset = list(path = "./data"),
+    events = list(onset_column = "onset", duration_column = "duration", block_column = "run"),
+    variables = list(),
+    confound_groups = list(bad = list()),
+    terms = list(),
+    models = list()
+  )
+  write_yaml(cfg, tf)
+  on.exit(unlink(tf))
+
+  expect_error(AD(tf), "Configuration validation failed")
+})
+
+test_that("terms block validates conditional fields", {
+  tf <- tempfile(fileext = ".yml")
+  cfg <- list(
+    dataset = list(path = "./data"),
+    events = list(onset_column = "onset", duration_column = "duration", block_column = "run"),
+    variables = list(cond = list(bids_column = "condition", role = "Factor")),
+    terms = list(myterm = list(type = "EventRelated", event_variables = list("cond"))),
+    models = list()
+  )
+  write_yaml(cfg, tf)
+  on.exit(unlink(tf))
+
+  res <- AD(tf)
+  expect_equal(res$terms$myterm$type, "EventRelated")
+})
+
+test_that("parametric modulation term missing mod_var fails", {
+  tf <- tempfile(fileext = ".yml")
+  cfg <- list(
+    dataset = list(path = "./data"),
+    events = list(onset_column = "onset", duration_column = "duration", block_column = "run"),
+    variables = list(cond = list(bids_column = "condition", role = "Factor"),
+                     rt = list(bids_column = "rt", role = "Numeric")),
+    terms = list(pm = list(type = "ParametricModulation", selector_vars = list("cond"))),
+    models = list()
+  )
+  write_yaml(cfg, tf)
+  on.exit(unlink(tf))
+
+  expect_error(AD(tf), "Configuration validation failed")
+})

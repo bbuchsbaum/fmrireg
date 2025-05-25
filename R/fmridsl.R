@@ -400,6 +400,125 @@ parse_and_validate_config <- function(yaml_file) {
     }
   }
 
+  if (exists("confound_groups", config_list)) {
+    if (check_type(config_list, "confound_groups", "object", "", errors, allow_null = TRUE)) {
+      cg <- config_list$confound_groups
+      cg_path <- "confound_groups"
+      if (!is.null(cg)) {
+        for (nm in names(cg)) {
+          if (check_type(cg, nm, "object", cg_path, errors)) {
+            grp <- cg[[nm]]
+            g_path <- paste0(cg_path, "$", nm)
+            have_pat  <- exists("select_by_pattern", grp)
+            have_col  <- exists("select_by_bids_column", grp)
+            check_type(grp, "select_by_pattern", "array[string]", g_path, errors, allow_null = TRUE)
+            check_type(grp, "select_by_bids_column", "array[string]", g_path, errors, allow_null = TRUE)
+            if (!have_pat && !have_col) {
+              errors$add_error(g_path, "Must specify 'select_by_pattern' or 'select_by_bids_column'.")
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (check_type(config_list, "terms", "object", "", errors)) {
+    terms <- config_list$terms
+    terms_path <- "terms"
+    for (nm in names(terms)) {
+      if (check_type(terms, nm, "object", terms_path, errors)) {
+        t <- terms[[nm]]
+        t_path <- paste0(terms_path, "$", nm)
+
+        if (check_required(t, "type", t_path, errors)) {
+          check_enum(
+            t,
+            "type",
+            c("EventRelated", "ParametricModulation", "Trialwise", "NuisanceRegressors"),
+            t_path,
+            errors
+          )
+        }
+
+        # conditional required fields
+        if (!is.null(t$type)) {
+          if (t$type %in% c("EventRelated", "Trialwise")) {
+            if (check_required(t, "event_variables", t_path, errors)) {
+              check_type(t, "event_variables", "array[string]", t_path, errors)
+            }
+          } else if (t$type == "ParametricModulation") {
+            if (check_required(t, "selector_vars", t_path, errors)) {
+              check_type(t, "selector_vars", "array[string]", t_path, errors)
+            }
+            if (check_required(t, "mod_var", t_path, errors)) {
+              check_type(t, "mod_var", "string", t_path, errors)
+            }
+          } else if (t$type == "NuisanceRegressors") {
+            if (check_required(t, "nuisance_source_variables", t_path, errors)) {
+              check_type(t, "nuisance_source_variables", "array[string]", t_path, errors)
+            }
+          }
+        }
+
+        if (exists("event_variables", t)) {
+          check_type(t, "event_variables", "array[string]", t_path, errors, allow_null = TRUE)
+        }
+        if (exists("selector_vars", t)) {
+          check_type(t, "selector_vars", "array[string]", t_path, errors, allow_null = TRUE)
+        }
+        if (exists("mod_var", t)) {
+          check_type(t, "mod_var", "string", t_path, errors, allow_null = TRUE)
+        }
+        if (exists("nuisance_source_variables", t)) {
+          check_type(t, "nuisance_source_variables", "array[string]", t_path, errors, allow_null = TRUE)
+        }
+
+        if (exists("hrf", t)) {
+          check_type(t, "hrf", "string", t_path, errors, allow_null = TRUE)
+        } else {
+          t$hrf <- "canonical"
+        }
+
+        if (exists("subset", t)) {
+          check_type(t, "subset", "string", t_path, errors, allow_null = TRUE)
+        }
+
+        if (exists("lag", t)) {
+          check_type(t, "lag", "number", t_path, errors, allow_null = TRUE)
+        } else {
+          t$lag <- 0
+        }
+
+        if (exists("modulator_basis", t)) {
+          if (check_type(t, "modulator_basis", "object", t_path, errors)) {
+            mb <- t$modulator_basis
+            mb_path <- paste0(t_path, "$modulator_basis")
+            if (check_required(mb, "type", mb_path, errors)) {
+              check_enum(
+                mb,
+                "type",
+                c("Polynomial", "BSpline", "Standardized", "Identity", "NSpline"),
+                mb_path,
+                errors
+              )
+            }
+            if (check_type(mb, "parameters", "object", mb_path, errors, allow_null = TRUE)) {
+              if (!is.null(mb$type) && mb$type == "Polynomial") {
+                params_path <- paste0(mb_path, "$parameters")
+                if (check_required(mb$parameters, "degree", params_path, errors)) {
+                  check_type(mb$parameters, "degree", "integer", params_path, errors)
+                }
+              }
+            }
+          }
+        }
+
+        terms[[nm]] <- t
+      }
+    }
+    config_list$terms <- terms
+  }
+
   errors$stop_if_invalid("Configuration validation failed")
 
   config_list
