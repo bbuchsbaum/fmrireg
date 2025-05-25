@@ -641,6 +641,51 @@ parse_and_validate_config <- function(yaml_file) {
     }
   }
 
+  ## DSL-206: Cross-reference validation
+  cr_level <- config_list$validation_settings$cross_references %||% "Error"
+  if (!identical(cr_level, "Off")) {
+    hrf_names <- names(config_list$hrfs) %||% character()
+    term_names <- names(config_list$terms) %||% character()
+    contrast_names <- names(config_list$contrasts) %||% character()
+
+    check_ref <- function(ok, path, msg) {
+      if (!ok) {
+        if (identical(cr_level, "Error")) {
+          errors$add_error(path, msg)
+        } else if (identical(cr_level, "Warn")) {
+          warning(msg, call. = FALSE)
+        }
+      }
+    }
+
+    for (tnm in term_names) {
+      hrf_name <- config_list$terms[[tnm]]$hrf %||% "canonical"
+      ok <- (hrf_name %in% hrf_names) || identical(hrf_name, "canonical")
+      check_ref(ok, paste0("terms$", tnm, "$hrf"),
+                paste0("HRF '", hrf_name, "' referenced in term '", tnm, "' not defined"))
+    }
+
+    model_names <- vapply(config_list$models, `[[`, "name", FUN.VALUE = character(1))
+    for (i in seq_along(config_list$models)) {
+      model <- config_list$models[[i]]
+      m_path_terms <- paste0("models[", i, "]$terms")
+      for (t in model$terms %||% list()) {
+        check_ref(t %in% term_names, m_path_terms,
+                  paste0("Term '", t, "' referenced in model '", model$name, "' not defined"))
+      }
+      m_path_contrasts <- paste0("models[", i, "]$contrasts")
+      for (c in model$contrasts %||% list()) {
+        check_ref(c %in% contrast_names, m_path_contrasts,
+                  paste0("Contrast '", c, "' referenced in model '", model$name, "' not defined"))
+      }
+    }
+
+    if (!is.null(config_list$default_model)) {
+      check_ref(config_list$default_model %in% model_names, "default_model",
+                paste0("default_model '", config_list$default_model, "' not found among models"))
+    }
+  }
+
   errors$stop_if_invalid("Configuration validation failed")
 
   attr(config_list, "validated_schema") <- TRUE
