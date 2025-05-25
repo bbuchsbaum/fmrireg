@@ -2,8 +2,9 @@
 #'
 #' High level wrapper that prepares design matrices and dispatches to
 #' the desired estimation engine.  This function supports the fast
-#' `ls_svd` initialisation, the one-step refinement `ls_svd_1als`, or
-#' the full alternating scheme implemented in `cf_als_engine`.
+#' \emph{LS+SVD} initialisation, the one-step refinement
+#' \emph{LS+SVD+1ALS}, or the full alternating scheme implemented in
+#' `cf_als_engine`.
 #'
 #' @param fmri_data_obj An `fmri_dataset` or numeric matrix of BOLD data
 #'   (time points x voxels). If a dataset, sampling information is
@@ -26,7 +27,25 @@
 #'   when `method = "cf_als"`.
 #' @return An object of class `fmrireg_cfals_fit` containing the
 #'   estimated HRF coefficients and amplitudes.
-#' @details R\eqn{^2} is computed on the data after confound projection.
+#' @details
+#' The `method` argument selects between the closed-form
+#' \code{"ls_svd_only"}, the default \code{"ls_svd_1als"} which adds one
+#' ALS refinement step, or the iterative \code{"cf_als"} engine.  The
+#' ridge penalties \code{lambda_init}, \code{lambda_b} and
+#' \code{lambda_h} control regularisation of the initial solve, the
+#' beta-update and the h-update respectively.  Setting
+#' \code{fullXtX = TRUE} includes cross-condition terms in the h-update
+#' (when supported by the chosen engine).  R\eqn{^2} is computed on the
+#' data after confound projection.
+#'
+#' @examples
+#' sframe <- sampling_frame(blocklens = 40, TR = 1)
+#' ev_df <- data.frame(onset = c(5, 15, 25), block = 1)
+#' emod <- event_model(onset ~ hrf(constant), data = ev_df,
+#'                     block = ~ block, sampling_frame = sframe)
+#' Y <- matrix(rnorm(40 * 2), 40, 2)
+#' fit <- fmrireg_cfals(Y, emod, HRF_SPMG1)
+#' print(fit)
 #' @export
 fmrireg_cfals <- function(fmri_data_obj,
                          event_model,

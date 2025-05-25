@@ -479,6 +479,7 @@ export(project_confounds)
 export(create_fmri_design)
 export(fmrireg_hrf_cfals)
 export(fmrireg_cfals)
+export(fmrireg_cfals_fit)
 
 S3method(print,fmrireg_cfals_fit)
 S3method(summary,fmrireg_cfals_fit)
