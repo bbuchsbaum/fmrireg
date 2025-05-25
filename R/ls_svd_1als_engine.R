@@ -27,6 +27,19 @@ ls_svd_1als_engine <- function(X_list_proj, Y_proj,
                                svd_backend = c("base_R"),
                                epsilon_svd = 1e-8,
                                epsilon_scale = 1e-8) {
+
+  if (lambda_init < 0 || lambda_b < 0 || lambda_h < 0)
+    stop("Lambdas must be non-negative")
+  stopifnot(is.list(X_list_proj), length(X_list_proj) >= 1)
+  d <- ncol(X_list_proj[[1]])
+  if (!is.null(h_ref_shape_norm) && length(h_ref_shape_norm) != d)
+    stop("`h_ref_shape_norm` must be length d")
+
+  cholSolve <- function(M, B) {
+    R <- tryCatch(chol(M),
+                  error = function(e) chol(M + 1e-6 * diag(nrow(M))))
+    backsolve(R, forwardsolve(t(R), B))
+  }
   init <- ls_svd_engine(X_list_proj, Y_proj,
                         lambda_init = lambda_init,
                         h_ref_shape_norm = h_ref_shape_norm,
@@ -43,6 +56,7 @@ ls_svd_1als_engine <- function(X_list_proj, Y_proj,
   XtX_list <- lapply(X_list_proj, crossprod)
   XtY_list <- lapply(X_list_proj, function(X) crossprod(X, Y_proj))
 
+  XtX_full_list <- NULL
   if (fullXtX_flag) {
     XtX_full_list <- matrix(vector("list", k * k), k, k)
     for (l in seq_len(k)) {
@@ -59,17 +73,19 @@ ls_svd_1als_engine <- function(X_list_proj, Y_proj,
     h_vx <- h_current[, vx]
     DhTy_vx <- vapply(seq_len(k), function(c)
       crossprod(h_vx, XtY_list[[c]][, vx]), numeric(1))
-    G_vx <- matrix(0.0, k, k)
-    for (l in seq_len(k)) {
-      for (m in seq_len(k)) {
-        term <- if (fullXtX_flag) XtX_full_list[[l, m]]
-                else if (l == m) XtX_list[[l]]
-                else NULL
-        if (!is.null(term))
-          G_vx[l, m] <- crossprod(h_vx, term %*% h_vx)
+    if (fullXtX_flag) {
+      G_vx <- matrix(0.0, k, k)
+      for (l in seq_len(k)) {
+        for (m in seq_len(k)) {
+          G_vx[l, m] <- crossprod(h_vx, XtX_full_list[[l, m]] %*% h_vx)
+        }
       }
+    } else {
+      diag_vals <- vapply(seq_len(k), function(c)
+        crossprod(h_vx, XtX_list[[c]] %*% h_vx), numeric(1))
+      G_vx <- diag(diag_vals, k)
     }
-    B_als[, vx] <- solve(G_vx + lambda_b * diag(k), DhTy_vx)
+    B_als[, vx] <- cholSolve(G_vx + lambda_b * diag(k), DhTy_vx)
   }
 
   b_current <- B_als
@@ -88,7 +104,7 @@ ls_svd_1als_engine <- function(X_list_proj, Y_proj,
         lhs <- lhs + b_vx[l]^2 * XtX_list[[l]]
       }
     }
-    H_als[, vx] <- solve(lhs, rhs)
+    H_als[, vx] <- cholSolve(lhs, rhs)
   }
 
   scl <- apply(abs(H_als), 2, max)
@@ -105,6 +121,9 @@ ls_svd_1als_engine <- function(X_list_proj, Y_proj,
     H_final[, zero_idx] <- 0
     B_final[, zero_idx] <- 0
   }
+
+  dimnames(H_final) <- list(NULL, colnames(Y_proj))
+  dimnames(B_final) <- list(names(X_list_proj), colnames(Y_proj))
 
   list(h = H_final, beta = B_final,
        h_ls_svd = init$h, beta_ls_svd = init$beta)
