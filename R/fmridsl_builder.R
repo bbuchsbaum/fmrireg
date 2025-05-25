@@ -143,6 +143,55 @@ build_config_from_ior <- function(validated_ior) {
         warning(msg, call. = FALSE)
       }
     }
+
+    ## DSL-204: Validate variables -> BIDS column mapping
+    rep_confounds_df <- NULL
+    tryCatch({
+      conf_res <- bidser::read_confounds(
+        project,
+        subid = rep_sub,
+        task  = rep_task,
+        run   = rep_run
+      )
+      if (nrow(conf_res) > 0 && length(conf_res$data) > 0 && !is.null(conf_res$data[[1]])) {
+        rep_confounds_df <- conf_res$data[[1]]
+      }
+    }, error = function(e) {
+      msg <- paste0("Failed to load confounds for representative subject/task/run: ", e$message)
+      if (identical(bids_check_level, "Error")) {
+        errors$add_error("confounds", msg)
+      } else if (identical(bids_check_level, "Warn")) {
+        warning(msg, call. = FALSE)
+      }
+    })
+
+    event_cols <- if (!is.null(rep_events_df)) names(rep_events_df) else character()
+    conf_cols  <- if (!is.null(rep_confounds_df)) names(rep_confounds_df) else character()
+
+    for (var_nm in names(validated_ior$variables)) {
+      var <- validated_ior$variables[[var_nm]]
+      bcol <- var$bids_column
+      path <- paste0("variables$", var_nm, "$bids_column")
+      if (identical(var$role, "NuisanceSource")) {
+        if (!(bcol %in% conf_cols)) {
+          msg <- paste0("Confound column '", bcol, "' not found in confounds file.")
+          if (identical(bids_check_level, "Error")) {
+            errors$add_error(path, msg)
+          } else if (identical(bids_check_level, "Warn")) {
+            warning(msg, call. = FALSE)
+          }
+        }
+      } else {
+        if (!(bcol %in% event_cols)) {
+          msg <- paste0("Event column '", bcol, "' not found in events file.")
+          if (identical(bids_check_level, "Error")) {
+            errors$add_error(path, msg)
+          } else if (identical(bids_check_level, "Warn")) {
+            warning(msg, call. = FALSE)
+          }
+        }
+      }
+    }
   }
 
   errors$stop_if_invalid("BIDS content validation failed")
