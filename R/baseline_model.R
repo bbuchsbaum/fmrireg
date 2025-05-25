@@ -27,13 +27,19 @@
 #' the corresponding column indices for each matrix as they would appear
 #' when combined into a block-diagonal structure.
 #'
-#' @param mat_list A list of matrices.
+#' @param mat_list A list of matrices. Each element must be a matrix.
 #' @return A list where each element is an integer vector of column indices
 #'         corresponding to the matrix in the input list.
 #' @noRd
 #' @keywords internal
 get_col_inds <- function(mat_list) {
-  stopifnot(is.list(mat_list))
+  # mat_list must be a list containing only matrices
+  if (!is.list(mat_list)) {
+    stop("mat_list must be a list")
+  }
+  if (!all(vapply(mat_list, is.matrix, logical(1)))) {
+    stop("All elements of mat_list must be matrices")
+  }
   ncols_per_block <- vapply(mat_list, ncol, integer(1))
   if (any(ncols_per_block < 0)) {
       stop("Matrices in mat_list must have non-negative number of columns.")
