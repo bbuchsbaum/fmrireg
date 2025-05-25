@@ -30,12 +30,20 @@ ls_svd_engine <- function(X_list_proj, Y_proj, lambda_init = 1,
     if (nrow(X) != n) stop("Design matrices must have same rows as Y_proj")
     if (ncol(X) != d) stop("All design matrices must have the same column count")
   }
+  if (!is.null(h_ref_shape_norm) && length(h_ref_shape_norm) != d)
+    stop("`h_ref_shape_norm` must have length d")
+
+  cholSolve <- function(M, B, eps = max(epsilon_svd, epsilon_scale)) {
+    L <- tryCatch(chol(M),
+                  error = function(e) chol(M + eps * diag(nrow(M))))
+    backsolve(L, forwardsolve(t(L), B))
+  }
 
   Xbig <- do.call(cbind, X_list_proj)
   XtX  <- crossprod(Xbig)
   Xty  <- crossprod(Xbig, Y_proj)
   XtX_ridge <- XtX + lambda_init * diag(ncol(Xbig))
-  Gamma_hat <- chol2inv(chol(XtX_ridge)) %*% Xty
+  Gamma_hat <- cholSolve(XtX_ridge, Xty)
 
   H_out <- matrix(0.0, d, v)
   B_out <- matrix(0.0, k, v)
@@ -64,6 +72,9 @@ ls_svd_engine <- function(X_list_proj, Y_proj, lambda_init = 1,
     H_final[, zero_idx] <- 0
     B_final[, zero_idx] <- 0
   }
+
+  dimnames(H_final) <- list(NULL, colnames(Y_proj))
+  dimnames(B_final) <- list(names(X_list_proj), colnames(Y_proj))
 
   list(h = H_final, beta = B_final, Gamma_hat = Gamma_hat)
 }
