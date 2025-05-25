@@ -797,3 +797,45 @@ build_baseline_model_from_dsl <- function(fmri_config, model, subject_data) {
                  intercept = intercept,
                  nuisance_list = nuisance_list)
 }
+
+#' Construct event_model from DSL term specifications
+#'
+#' Implements DSL2-502. Given a list of `hrfspec` and `covariatespec`
+#' objects produced by [convert_terms_to_specs()], this helper calls
+#' [event_model()] with the appropriate data extracted from the
+#' configuration and subject events.
+#'
+#' @param term_specs Named list of term specification objects.
+#' @param fmri_config Validated `fmri_config` object.
+#' @param subject_data List returned by [load_and_prepare_subject_data()].
+#' @return An `event_model` object.
+#' @keywords internal
+build_event_model_from_dsl <- function(term_specs,
+                                       fmri_config,
+                                       subject_data) {
+  stopifnot(is.list(term_specs))
+  stopifnot(inherits(fmri_config, "fmri_config"))
+
+  ev_defs <- fmri_config$spec$events
+  on_col   <- ev_defs$onset_column
+  dur_col  <- ev_defs$duration_column
+  block_col <- ev_defs$block_column
+
+  ev_df <- subject_data$events_df
+
+  data_df <- data.frame(
+    onset = ev_df[[on_col]],
+    duration = ev_df[[dur_col]],
+    block = ev_df[[block_col]],
+    stringsAsFactors = FALSE
+  )
+
+  sframe <- sampling_frame(blocklens = subject_data$run_lengths,
+                           TR = subject_data$TR)
+
+  event_model(term_specs,
+              data = data_df,
+              block = data_df$block,
+              sampling_frame = sframe,
+              durations = data_df$duration)
+}
