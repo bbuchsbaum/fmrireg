@@ -330,8 +330,6 @@ fit_contrasts <- function(lmfit, conmat, colind, se=TRUE) {
   resvar <- rss/rdf
   sigma <- sqrt(resvar)
   
-  p1 <- 1:lmfit$rank
-  
   if (se) {
     Qr <- qr.lm(lmfit)
     cov.unscaled <- try(chol2inv(Qr$qr))
