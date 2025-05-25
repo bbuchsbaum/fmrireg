@@ -317,6 +317,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' @param strategy The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
+#' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
 #' @param ... Additional arguments.
 #' @return A fitted linear regression model for fMRI data analysis.
 #' @export
@@ -345,7 +346,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' strategy="chunkwise", nchunks=1, dataset=dset)
 #' 
 fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE, robust = FALSE,
-                    strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, ...) {
+                    strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, progress = FALSE, ...) {
   
   strategy <- match.arg(strategy)
   
@@ -367,7 +368,8 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
   
   model <- create_fmri_model(formula, block, baseline_model, dataset, durations = durations, drop_empty = drop_empty)
   # Pass use_fast_path down
-  ret <- fmri_lm_fit(model, dataset, strategy, robust, nchunks, use_fast_path = use_fast_path, ...)
+  ret <- fmri_lm_fit(model, dataset, strategy, robust, nchunks,
+                     use_fast_path = use_fast_path, progress = progress, ...)
   return(ret)
 }
 
@@ -384,12 +386,13 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
 #' @param robust Logical. Whether to use robust fitting. Default is \code{FALSE}.
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
+#' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
 #' @param ... Additional arguments.
 #' @return A fitted fMRI linear regression model with the specified fitting strategy.
 #' @keywords internal
 #' @seealso \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{fmri_dataset}}
-fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"), 
-                        robust = FALSE, nchunks = 10, use_fast_path = FALSE, ...) {
+fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
+                        robust = FALSE, nchunks = 10, use_fast_path = FALSE, progress = FALSE, ...) {
   strategy <- match.arg(strategy)
   
   # Error checking
@@ -461,14 +464,16 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   # or extract weights (fast path).
   result <- switch(strategy,
                    "runwise" = runwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
-                                         robust = robust, use_fast_path = use_fast_path, ...),
+                                         robust = robust, use_fast_path = use_fast_path,
+                                         progress = progress, ...),
                    "chunkwise" = {
                      if (inherits(dataset, "latent_dataset")) {
                        chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
-                                    nchunks, robust = robust, ...) # Do not pass use_fast_path
+                                   nchunks, robust = robust, progress = progress, ...) # Do not pass use_fast_path
                      } else {
                        chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
-                                    nchunks, robust = robust, use_fast_path = use_fast_path, ...)
+                                   nchunks, robust = robust, use_fast_path = use_fast_path,
+                                   progress = progress, ...)
                      }
                    })
   
@@ -969,10 +974,16 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 #' @param robust Logical. Whether to use robust linear modeling (default is \code{FALSE}).
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
+#' @param progress Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
-chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, robust = FALSE, verbose = FALSE, use_fast_path = FALSE) {
+chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, robust = FALSE,
+                                      verbose = FALSE, use_fast_path = FALSE, progress = FALSE) {
   chunks <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
+  if (progress) {
+    pb <- cli::cli_progress_bar("Fitting chunks", total = length(chunks), clear = FALSE)
+    on.exit(cli::cli_progress_done(id = pb), add = TRUE)
+  }
   form <- get_formula(model)
   tmats <- term_matrices(model)
   vnames <- attr(tmats, "varnames")
@@ -997,21 +1008,22 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
       
       lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
       
-      cres <- foreach::foreach(ym = chunks, .verbose = verbose) %dopar% {
+      cres <- vector("list", length(chunks))
+      for (i in seq_along(chunks)) {
+        ym <- chunks[[i]]
         if (verbose) message("Processing chunk ", ym$chunk_num)
-        data_env[[ ".y"]] <- as.matrix(ym$data) # Corrected [[ ]] indexing
-        
-        # Pass the full contrast objects list to lmfun -> fit_lm_contrasts
-        # Need to ensure lmfun/fit_lm_contrasts can handle the combined list format
-        # Original fit_lm_contrasts took conlist and fcon separately? No, looked like one list.
-        ret <- lmfun(form, data_env, contrast_objects, vnames, fcon=NULL, modmat = modmat) # Pass contrast_objects as conlist, fcon=NULL as it's handled internally now
-        
+        data_env[[".y"]] <- as.matrix(ym$data)
+
+        ret <- lmfun(form, data_env, contrast_objects, vnames, fcon = NULL, modmat = modmat)
+
         rss <- colSums(as.matrix(ret$fit$residuals^2))
         rdf <- ret$fit$df.residual
         resvar <- rss / rdf
         sigma <- sqrt(resvar)
-        
-        list(bstats = ret$bstats, contrasts = ret$contrasts, rss = rss, rdf = rdf, sigma = sigma)
+
+        cres[[i]] <- list(bstats = ret$bstats, contrasts = ret$contrasts,
+                          rss = rss, rdf = rdf, sigma = sigma)
+        if (progress) cli::cli_progress_update(id = pb)
       }
 
   } else {
@@ -1038,28 +1050,27 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
       proj <- .fast_preproject(modmat)
       Vu <- proj$XtXinv 
       
-      cres <- foreach::foreach(ym = chunks, .verbose = verbose, .packages = c("dplyr", "purrr")) %dopar% {
+      cres <- vector("list", length(chunks))
+      for (i in seq_along(chunks)) {
+          ym <- chunks[[i]]
           if (verbose) message("Processing chunk (fast path) ", ym$chunk_num)
-          Ymat <- as.matrix(ym$data) # n x V_chunk
-          # DEBUG: Check number of voxels in chunk
-          if(verbose) message("  Chunk ", ym$chunk_num, ": ncol(Ymat) = ", ncol(Ymat))
-          
-          # Perform fast LM calculation
-          res <- .fast_lm_matrix(Ymat, proj) # Returns list(betas, rss, sigma, sigma2)
-          
-          # Use actual column names from the model matrix instead of global vnames
+          Ymat <- as.matrix(ym$data)
+          if (verbose) message("  Chunk ", ym$chunk_num, ": ncol(Ymat) = ", ncol(Ymat))
+
+          res <- .fast_lm_matrix(Ymat, proj)
+
           actual_vnames <- colnames(modmat)
           bstats <- beta_stats_matrix(res$betas, proj$XtXinv, res$sigma, proj$dfres, actual_vnames)
-          
-          # Pass extracted weights lists to fit_lm_contrasts_fast
-          contrasts <- fit_lm_contrasts_fast(res$betas, res$sigma2, proj$XtXinv, simple_conlist_weights, fconlist_weights, proj$dfres)
-        
-          
-          list(bstats = bstats, 
-               contrasts = contrasts, # fit_lm_contrasts_fast now returns list compatible with unpack
-               rss = res$rss, 
-               rdf = proj$dfres, 
-               sigma = res$sigma)
+
+          contrasts <- fit_lm_contrasts_fast(res$betas, res$sigma2, proj$XtXinv,
+                                             simple_conlist_weights, fconlist_weights, proj$dfres)
+
+          cres[[i]] <- list(bstats = bstats,
+                            contrasts = contrasts,
+                            rss = res$rss,
+                            rdf = proj$dfres,
+                            sigma = res$sigma)
+          if (progress) cli::cli_progress_update(id = pb)
       }
       # -------- End New Fast Path --------
   }
@@ -1083,12 +1094,18 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
 #' @param contrast_objects The list of full contrast objects.
 #' @param robust Logical. Whether to use robust linear modeling (default is \code{FALSE}).
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
+#' @param progress Logical. Display a progress bar for run processing. Default is \code{FALSE}.
 #' @return A list containing the combined results from runwise linear model analysis.
 #' @keywords internal
 #' @autoglobal
-runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = FALSE, use_fast_path = FALSE) {
+runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = FALSE,
+                       use_fast_path = FALSE, progress = FALSE) {
   # Get an iterator of data chunks (runs)
   chunks <- exec_strategy("runwise")(dset)
+  if (progress) {
+    pb <- cli::cli_progress_bar("Fitting runs", total = length(chunks), clear = FALSE)
+    on.exit(cli::cli_progress_done(id = pb), add = TRUE)
+  }
   form <- get_formula(model)
   # Global design matrix needed for pooling compatibility? Or just for Vu?
   modmat_global <- design_matrix(model)
@@ -1103,29 +1120,27 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
       # Slow path uses lmfun which calls fit_lm_contrasts, expects full contrast objects
       lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
       
-      cres <- foreach::foreach(ym = chunks, .verbose = verbose) %dopar% {
+      cres <- vector("list", length(chunks))
+      for (i in seq_along(chunks)) {
+        ym <- chunks[[i]]
         if (verbose) message("Processing run ", ym$chunk_num)
         tmats <- term_matrices(model, ym$chunk_num)
         vnames <- attr(tmats, "varnames")
-        event_indices = attr(tmats, "event_term_indices")
-        baseline_indices = attr(tmats, "baseline_term_indices")
-        
+        event_indices <- attr(tmats, "event_term_indices")
+        baseline_indices <- attr(tmats, "baseline_term_indices")
+
         data_env <- list2env(tmats)
-        # Use standard R subsetting, ensure quotes are correct
-        data_env$.y <- as.matrix(ym$data) 
-        # Original fit uses lm.fit or lm per run
-        ret <- lmfun(form, data_env, contrast_objects, vnames, fcon=NULL)
-        
-        # Extract results
+        data_env$.y <- as.matrix(ym$data)
+        ret <- lmfun(form, data_env, contrast_objects, vnames, fcon = NULL)
+
         rss <- colSums(as.matrix(ret$fit$residuals^2))
         rdf <- ret$fit$df.residual
         resvar <- rss / rdf
         sigma <- sqrt(resvar)
-        
-        # Return structure expected by pooling logic
-        list(
-          conres = ret$contrasts, # Original: list of tibbles from estimate_contrast calls
-          bstats = ret$bstats,   # Original: tibble from beta_stats
+
+        cres[[i]] <- list(
+          conres = ret$contrasts,
+          bstats = ret$bstats,
           event_indices = event_indices,
           baseline_indices = baseline_indices,
           rss = rss,
@@ -1133,6 +1148,7 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
           resvar = resvar,
           sigma = sigma
         )
+        if (progress) cli::cli_progress_update(id = pb)
       }
       # -------- End Original Slow Path --------
       
@@ -1155,61 +1171,52 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
       
       # .export needed? conlist, fcon, model should be available.
       # Add functions from this package? .packages = c("dplyr", "purrr", "fmrireg")? Or rely on namespace?
-      cres <- foreach::foreach(ym = chunks, .verbose = verbose, .packages = c("dplyr", "purrr")) %dopar% {
+      cres <- vector("list", length(chunks))
+      for (i in seq_along(chunks)) {
+        ym <- chunks[[i]]
         if (verbose) message("Processing run (fast path) ", ym$chunk_num)
-        
-        # Get run-specific term matrices and variable names
+
         tmats <- term_matrices(model, ym$chunk_num)
         vnames <- attr(tmats, "varnames")
-        event_indices = attr(tmats, "event_term_indices")
-        baseline_indices = attr(tmats, "baseline_term_indices")
-        
-        # Construct run-specific design matrix (X_run)
-        # Need the global formula `form`
+        event_indices <- attr(tmats, "event_term_indices")
+        baseline_indices <- attr(tmats, "baseline_term_indices")
+
         data_env_run <- list2env(tmats)
-        # Add placeholder .y for model.matrix - size based on this run's term matrices
-        n_timepoints_run <- nrow(tmats[[1]]) # Assuming all term matrices have same rows for the run
+        n_timepoints_run <- nrow(tmats[[1]])
         if (n_timepoints_run == 0) {
-            # Handle empty run? Return NULL or empty results?
             warning(paste("Skipping empty run:", ym$chunk_num))
-            return(NULL) # Skip this iteration
+            next
         }
         data_env_run[[".y"]] <- rep(0, n_timepoints_run)
         X_run <- model.matrix(form, data_env_run)
-        
-        # Compute run-specific projector
+
         proj_run <- .fast_preproject(X_run)
-        
-        # Get run data
-        Y_run <- as.matrix(ym$data) # n_run x V (assuming V is consistent across runs)
-        
-        # Check dimensions
+
+        Y_run <- as.matrix(ym$data)
+
         if (nrow(X_run) != nrow(Y_run)) {
             stop(paste("Dimension mismatch in run", ym$chunk_num, ": X_run rows (", nrow(X_run), ") != Y_run rows (", nrow(Y_run), ")"))
         }
-        
-        # Perform fast LM calculation
+
         res <- .fast_lm_matrix(Y_run, proj_run)
-        
-        # Use actual column names from the model matrix instead of global vnames
+
         actual_vnames <- colnames(X_run)
         bstats <- beta_stats_matrix(res$betas, proj_run$XtXinv, res$sigma, proj_run$dfres, actual_vnames)
-        
-        # Calculate contrasts 
-        # Pass extracted weights lists
-        conres <- fit_lm_contrasts_fast(res$betas, res$sigma2, proj_run$XtXinv, simple_conlist_weights, fconlist_weights, proj_run$dfres)
-        
-        # Return structure compatible with pooling logic
-        list(
-          conres = conres, # List of tibbles from fit_lm_contrasts_fast
-          bstats = bstats, # Tibble from beta_stats_matrix
+
+        conres <- fit_lm_contrasts_fast(res$betas, res$sigma2, proj_run$XtXinv,
+                                         simple_conlist_weights, fconlist_weights, proj_run$dfres)
+
+        cres[[i]] <- list(
+          conres = conres,
+          bstats = bstats,
           event_indices = event_indices,
           baseline_indices = baseline_indices,
           rss = res$rss,
           rdf = proj_run$dfres,
-          resvar = res$sigma2, # Need resvar for pooling? Check meta_ methods.
+          resvar = res$sigma2,
           sigma = res$sigma
         )
+        if (progress) cli::cli_progress_update(id = pb)
       }
       
       # Filter out NULL results from skipped empty runs
