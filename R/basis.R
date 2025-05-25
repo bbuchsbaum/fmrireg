@@ -33,7 +33,6 @@ sub_basis <-  function(x, subset) UseMethod("sub_basis")
 #' @return an instance of class \code{Ident} extending \code{ParametricBasis}
 #' @export 
 Ident <- function(...) {
-  mc <- match.call()
   vlist <- list(...)
 
   varnames <- as.list(substitute(list(...)))[-1]
