@@ -135,22 +135,23 @@ beta_stats <- function(lmfit, varnames, se=TRUE) {
         sigma=list(sigma)))
     )
   } else {
-    stop("unimplemented")
     betamat <- t(betamat)
     colnames(betamat) <- varnames
+
     ret <- dplyr::tibble(
       type="beta",
       name="parameter_estimates",
       stat_type="effect",
-      df.residual=rdf,
-      conmat=list(NULL),
-      colind=list(NULL),
-      data=list(tibble(
-        estimate=list(betamat),
-        se=list(NULL),
-        stat=list(NULL),
-        prob=list(NULL),
-        sigma=list(NULL)))
+      df.residual = rdf,
+      conmat = list(NULL),
+      colind = list(NULL),
+      data = list(tibble(
+        estimate = list(betamat),
+        se       = list(NULL),
+        stat     = list(NULL),
+        prob     = list(NULL),
+        sigma    = list(sigma)
+      ))
     )
   }
 }
