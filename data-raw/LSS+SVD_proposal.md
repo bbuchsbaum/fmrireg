@@ -101,6 +101,28 @@ This function builds upon LS+SVD by adding one ALS iteration.
     4.  **Identifiability:** Apply scale and sign constraints to `H_als` and `B_als` (as in Step 4 of `ls_svd_engine`) to get `H_final`, `B_final`.
     5.  **Return:** `list(h = H_final, beta = B_final, h_ls_svd = h_0, beta_ls_svd = b_0)`.
 
+**Reference Implementation Outline (R)**
+
+```r
+ls_svd_1als_engine <- function(X_list_proj, Y_proj,
+                               lambda_init = 1,
+                               lambda_b = 10,
+                               lambda_h = 1,
+                               fullXtX_flag = FALSE,
+                               h_ref_shape_norm = NULL, ...) {
+  init <- ls_svd_engine(X_list_proj, Y_proj,
+                        lambda_init = lambda_init,
+                        h_ref_shape_norm = h_ref_shape_norm, ...)
+  XtX_list <- lapply(X_list_proj, crossprod)
+  XtY_list <- lapply(X_list_proj, function(x) crossprod(x, Y_proj))
+  # optional cross-terms if fullXtX_flag
+  # perform one beta and h update
+  # apply identifiability as in ls_svd_engine
+  list(h = H_final, beta = B_final,
+       h_ls_svd = init$h, beta_ls_svd = init$beta)
+}
+```
+
 **4. Top-Level User Function (`fmrireg_cfals`)**
 
 This function will wrap the engine calls.
