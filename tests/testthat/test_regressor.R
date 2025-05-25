@@ -189,6 +189,12 @@ test_that("can construct a model with a raw covariate term", {
   expect_true(!is.null(fmod))
 })
 
+test_that("covariate captures subset expression", {
+  df <- data.frame(x = 1:4, y = 5:8, flag = c(TRUE, FALSE, TRUE, FALSE))
+  cspec <- covariate(x, y, data = df, subset = flag)
+  expect_true(identical(cspec$subset, rlang::expr(flag)))
+})
+
 test_that("facedes model with rep_num", {
   facedes$repnum <- factor(facedes$rep_num)
   sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
