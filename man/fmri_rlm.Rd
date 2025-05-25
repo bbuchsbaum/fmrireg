@@ -13,7 +13,6 @@ fmri_rlm(
   drop_empty = TRUE,
   strategy = c("runwise", "chunkwise"),
   nchunks = 10,
-  meta_weighting = c("inv_var", "equal"),
   ...
 )
 }
@@ -33,8 +32,6 @@ fmri_rlm(
 \item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
 
 \item{nchunks}{Number of data chunks when strategy is "chunkwise". Default is 10.}
-
-\item{meta_weighting}{Method for combining results across runs/chunks. Either "inv_var" for inverse variance weighting or "equal" for equal weighting. Default is "inv_var".}
 
 \item{...}{Additional arguments.}
 }
