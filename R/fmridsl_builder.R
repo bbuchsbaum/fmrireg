@@ -91,6 +91,60 @@ build_config_from_ior <- function(validated_ior) {
     }
   }
 
+  ## DSL-203: Validate existence of essential event columns
+  if (length(resolved_subs) > 0 && length(requested_tasks) > 0) {
+    rep_sub  <- resolved_subs[1]
+    rep_task <- requested_tasks[1]
+    rep_run  <- if (length(requested_runs) > 0) requested_runs[1] else NULL
+
+    rep_events_df <- NULL
+    tryCatch({
+      ev_res <- bidser::read_events(
+        project,
+        subid = rep_sub,
+        task  = rep_task,
+        run   = rep_run
+      )
+      if (nrow(ev_res) > 0 && length(ev_res$data) > 0 && !is.null(ev_res$data[[1]])) {
+        rep_events_df <- ev_res$data[[1]]
+      }
+    }, error = function(e) {
+      msg <- paste0("Failed to load events for representative subject/task/run: ", e$message)
+      if (identical(bids_check_level, "Error")) {
+        errors$add_error("events", msg)
+      } else if (identical(bids_check_level, "Warn")) {
+        warning(msg, call. = FALSE)
+      }
+    })
+
+    if (!is.null(rep_events_df)) {
+      essential_cols <- c(
+        validated_ior$events$onset_column,
+        validated_ior$events$duration_column,
+        validated_ior$events$block_column
+      )
+      missing_cols <- setdiff(essential_cols, names(rep_events_df))
+      if (length(missing_cols) > 0) {
+        msg <- paste0(
+          "Required event columns missing: ",
+          paste(missing_cols, collapse = ", ")
+        )
+        if (identical(bids_check_level, "Error")) {
+          errors$add_error("events", msg)
+        } else if (identical(bids_check_level, "Warn")) {
+          warning(msg, call. = FALSE)
+        }
+      }
+    } else {
+      msg <- "No events data found for representative subject/task/run"
+      if (identical(bids_check_level, "Error")) {
+        errors$add_error("events", msg)
+      } else if (identical(bids_check_level, "Warn")) {
+        warning(msg, call. = FALSE)
+      }
+    }
+  }
+
   errors$stop_if_invalid("BIDS content validation failed")
 
   config <- list(
