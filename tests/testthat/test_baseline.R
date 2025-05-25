@@ -67,7 +67,7 @@ test_that("can construct a baseline_model with basis='constant'", {
   sframe <- sampling_frame(blocklens=c(100,100), TR=2)
   # Intercept option should be ignored/overridden when basis is constant
   bmodel_runwise <- baseline_model(basis="constant", sframe=sframe, intercept="runwise")
-  bmodel_global <- baseline_model(basis="constant", sframe=sframe, intercept="global")
+  bmodel <- baseline_model(basis="constant", sframe=sframe, intercept="global")
   bmodel_none <- baseline_model(basis="constant", sframe=sframe, intercept="none")
   
   # Expect only 1 column (the constant baseline itself) regardless of intercept 
@@ -93,9 +93,15 @@ test_that("can construct a baseline_model with basis='constant'", {
   expect_equal(names(terms(bmodel_runwise)), c("drift"))
   
   # basis='constant', intercept='global' -> drift term = single column of 1s. Total = 1 col.
-  expect_equal(ncol(design_matrix(bmodel_global)), 1)
-  expect_equal(length(terms(bmodel_global)), 1)
-  expect_equal(names(terms(bmodel_global)), c("drift"))
+  expect_equal(ncol(design_matrix(bmodel)), 1)
+  expect_equal(length(terms(bmodel)), 1)
+  expect_equal(names(terms(bmodel)), c("drift"))
+
+  # Using blockid should subset rows by block
+  expect_equal(
+    nrow(design_matrix(bmodel, blockid = 2)),
+    blocklens(sframe)[2]
+  )
   
   # basis='constant', intercept='none' -> treated like 'runwise' by construct.baselinespec? No, intercept is passed.
   # construct.baselinespec doesn't explicitly use intercept='none' for constant basis differently than 'runwise'.
