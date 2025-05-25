@@ -724,3 +724,76 @@ convert_terms_to_specs <- function(fmri_config, model, var_env) {
   res
 }
 
+#' Parse Baseline Basis Specification
+#'
+#' Helper for DSL2-501. Converts a baseline basis definition from the DSL
+#' (either a shorthand string like "BSpline(3)" or a structured list)
+#' into the arguments required by [baseline_model()].
+#'
+#' @param basis_def Baseline basis definition (character or list).
+#' @return List with elements `basis` and `degree`.
+#' @keywords internal
+parse_baseline_basis <- function(basis_def) {
+  if (is.null(basis_def)) {
+    return(list(basis = "bs", degree = 3L))
+  }
+  if (is.list(basis_def)) {
+    type <- basis_def$type %||% "BSpline"
+    degree <- basis_def$parameters$degree %||% 3L
+  } else if (is.character(basis_def)) {
+    m <- regexec("^([A-Za-z]+)\\s*(?:\\((\\d+)\\))?$", basis_def)
+    reg <- regmatches(basis_def, m)[[1]]
+    if (length(reg) == 0) {
+      stop(sprintf("Cannot parse basis specification '%s'", basis_def), call. = FALSE)
+    }
+    type <- reg[2]
+    degree <- if (length(reg) >= 3 && nzchar(reg[3])) as.integer(reg[3]) else 3L
+  } else {
+    stop("Invalid basis specification", call. = FALSE)
+  }
+
+  type_map <- c(Polynomial = "poly", BSpline = "bs", NSpline = "ns", Constant = "constant")
+  b <- type_map[[type]]
+  if (is.null(b)) {
+    stop(sprintf("Unknown baseline basis type '%s'", type), call. = FALSE)
+  }
+  if (identical(b, "constant")) degree <- 1L
+  list(basis = b, degree = as.integer(degree))
+}
+
+#' Construct baseline_model from DSL model definition
+#'
+#' Implements DSL2-501. Uses the configuration, model specification,
+#' and loaded subject data to create a [baseline_model()] object.
+#'
+#' @param fmri_config Validated `fmri_config` object.
+#' @param model Single model definition from `fmri_config$spec$models`.
+#' @param subject_data Result from [load_and_prepare_subject_data()].
+#' @return A `baseline_model` object.
+#' @keywords internal
+build_baseline_model_from_dsl <- function(fmri_config, model, subject_data) {
+  stopifnot(inherits(fmri_config, "fmri_config"))
+  bl <- model$baseline %||% list()
+  basis_info <- parse_baseline_basis(bl$basis %||% "BSpline(3)")
+  intercept_map <- c(PerRun = "runwise", Global = "global", None = "none")
+  intercept <- intercept_map[[bl$intercept %||% "PerRun"]]
+
+  sframe <- sampling_frame(blocklens = subject_data$run_lengths,
+                           TR = subject_data$TR)
+
+  groups <- bl$include_confound_groups %||% list()
+  group_cols <- unique(unlist(fmri_config$confounds_info$groups[groups], use.names = FALSE))
+
+  nuisance_list <- NULL
+  if (!is.null(subject_data$confounds_df) && length(group_cols) > 0) {
+    cf_df <- subject_data$confounds_df
+    cf_df <- dplyr::select(cf_df, dplyr::all_of(group_cols), run)
+    nuisance_list <- split(as.matrix(cf_df[, group_cols, drop = FALSE]), cf_df$run)
+  }
+
+  baseline_model(basis = basis_info$basis,
+                 degree = basis_info$degree,
+                 sframe = sframe,
+                 intercept = intercept,
+                 nuisance_list = nuisance_list)
+}
