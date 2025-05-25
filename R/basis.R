@@ -172,7 +172,7 @@ columns.Standardized <- function(x) {
 BSpline <- function(x, degree) {
   mc <- match.call()
   argname <- as.character(mc[["x"]])[1]
-  pres <- bs(x,degree)
+  pres <- bs(x, degree = degree)
   n <- paste0("bs_", argname)
   ret <- list(x=x, y=pres, fun="bs", argname=argname, 
               name=n,
