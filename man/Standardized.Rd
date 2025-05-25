@@ -13,5 +13,6 @@ Standardized(x)
 an instance of class \code{Standardized} extending \code{ParametricBasis}
 }
 \description{
-Standardize a numeric vector by centering and scaling, handling NAs appropriately
+Standardize a numeric vector by centering and scaling, handling NAs appropriately.\cr
+\strong{Note}: If the computed standard deviation is \code{NA} or zero, a small constant (\code{1e-6}) is used. The returned matrix has one column named after the standardized variable.
 }

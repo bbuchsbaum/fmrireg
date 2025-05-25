@@ -99,7 +99,10 @@ Poly <- function(x, degree) {
 
 #' Standardized basis
 #' 
-#' Standardize a numeric vector by centering and scaling, handling NAs appropriately
+#' Standardize a numeric vector by centering and scaling, handling NAs appropriately.
+#' If the computed standard deviation is \code{NA} or zero, a small constant
+#' (\code{1e-6}) is used instead to avoid division by zero.
+#' The returned basis matrix has one column with this standardized name.
 #' 
 #' @param x a numeric vector to standardize. Missing values are allowed and will be replaced with 0 after standardization.
 #' @return an instance of class \code{Standardized} extending \code{ParametricBasis}
@@ -111,13 +114,14 @@ Standardized <- function(x) {
   x_clean <- x[!is.na(x)]
   x_mean <- mean(x_clean)
   x_sd <- sd(x_clean)
+  if (is.na(x_sd) || x_sd == 0) x_sd <- 1e-6
   
   # Standardize, replacing NAs with 0
   standardized <- (x - x_mean) / x_sd
   standardized[is.na(standardized)] <- 0
   
   n <- paste0("std", "_", as.character(mc[["x"]]))
-  ret <- list(x=x, y=matrix(standardized, ncol=1), 
+  ret <- list(x=x, y=matrix(standardized, ncol=1, dimnames=list(NULL, n)),
               mean=x_mean, sd=x_sd,
               fun="standardized", 
               argname=as.character(mc[["x"]]), 
@@ -129,10 +133,12 @@ Standardized <- function(x) {
 #' @export
 predict.Standardized <- function(object, newdata, ...) {
   # Standardize new data using stored mean and sd
-  standardized <- (newdata - object$mean) / object$sd
+  sd_val <- object$sd
+  if (is.na(sd_val) || sd_val == 0) sd_val <- 1e-6
+  standardized <- (newdata - object$mean) / sd_val
   # Replace NAs with 0 to match training behavior
   standardized[is.na(standardized)] <- 0
-  matrix(standardized, ncol=1)
+  matrix(standardized, ncol=1, dimnames=list(NULL, object$name))
 }
 
 #' @export
