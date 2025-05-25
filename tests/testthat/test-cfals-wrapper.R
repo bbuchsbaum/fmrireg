@@ -50,6 +50,18 @@ test_that("fmrireg_hrf_cfals works across HRF bases", {
   }
 })
 
+test_that("fmrireg_cfals wrapper supports multiple methods", {
+  dat <- simulate_cfals_wrapper_data(HRF_SPMG3)
+  methods <- c("ls_svd_only", "ls_svd_1als", "cf_als")
+  for (m in methods) {
+    fit <- fmrireg_cfals(dat$Y, dat$event_model, HRF_SPMG3,
+                         method = m, lambda_b = 0.1, lambda_h = 0.1,
+                         lambda_init = 0.5, max_alt = 1)
+    expect_equal(dim(fit$h), c(nbasis(HRF_SPMG3), ncol(dat$Y)))
+    expect_equal(dim(fit$beta), c(length(dat$X_list), ncol(dat$Y)))
+  }
+})
+
 test_that("cfals handles low-signal data", {
   dat <- simulate_cfals_wrapper_data(HRF_SPMG3, noise_sd = 0.5, signal_scale = 0.01)
   fit <- fmrireg_hrf_cfals(dat$Y, dat$event_model, HRF_SPMG3)
