@@ -130,8 +130,17 @@ test_that("event_basis wrapper works and creates correct event object", {
   expect_equal(levels(eb), expected_cols, ignore_attr = TRUE) 
   
   expect_s3_class(eb$meta$basis, "ParametricBasis")
-  #expect_equal(eb$meta$basis, basis, ignore_attr = TRUE) 
+  #expect_equal(eb$meta$basis, basis, ignore_attr = TRUE)
   expect_null(eb$meta$levels)
+})
+
+test_that("BSpline constructor respects degree argument", {
+  skip_if_not_installed("splines")
+  x <- seq(0, 1, length.out = 10)
+  deg <- 4
+  b <- BSpline(x, degree = deg)
+  expect_equal(ncol(b$y), deg)
+  expect_equal(nbasis(b), deg)
 })
 
 # ==================================
