@@ -409,3 +409,93 @@ load_and_prepare_subject_data <- function(config, subject_id) {
     TR = as.numeric(effective_TR)
   )
 }
+
+#' Instantiate an HRF Object from DSL Definition
+#'
+#' Given the name of an HRF defined in an `fmri_config`, this helper
+#' returns the corresponding `HRF` object with any specified global
+#' decorators applied. If the `hrfs` block is omitted from the
+#' configuration, only a default `canonical` HRF (SPM canonical) is
+#' available.
+#'
+#' @param hrf_name Name of the HRF to retrieve.
+#' @param fmri_config A validated `fmri_config` object.
+#'
+#' @return An object of class `HRF`.
+#' @keywords internal
+get_hrf_from_dsl <- function(hrf_name, fmri_config) {
+  defs <- fmri_config$hrfs %||% list(canonical = list(type = "SPMCanonical"))
+
+  if (!hrf_name %in% names(defs)) {
+    stop(sprintf("HRF '%s' not defined in configuration", hrf_name), call. = FALSE)
+  }
+
+  def <- defs[[hrf_name]]
+  type <- def$type
+  params <- def$parameters %||% list()
+
+  base <- switch(type,
+    SPMCanonical = HRF_SPMG1,
+    SPMCanonicalDerivs = {
+      derivs <- def$derivatives %||% character()
+      if ("Dispersion" %in% derivs) {
+        HRF_SPMG3
+      } else {
+        HRF_SPMG2
+      }
+    },
+    GammaFunction = as_hrf(
+      function(t) hrf_gamma(t,
+        shape = params$shape %||% 6,
+        rate  = params$rate  %||% 1
+      ),
+      name = "gamma",
+      params = list(shape = params$shape %||% 6, rate = params$rate %||% 1)
+    ),
+    Gaussian = as_hrf(
+      function(t) hrf_gaussian(t,
+        mean = params$mean %||% 6,
+        sd   = params$sd   %||% 2
+      ),
+      name = "gaussian",
+      params = list(mean = params$mean %||% 6, sd = params$sd %||% 2)
+    ),
+    BSplineBasisHRF = do.call(hrfspline_generator, params),
+    TentBasisHRF    = do.call(hrf_tent_generator, params),
+    FourierBasisHRF = do.call(hrf_fourier_generator, params),
+    DaguerreBasisHRF = do.call(hrf_daguerre_generator, params),
+    CustomR = {
+      fun_name <- def$definition
+      if (is.null(fun_name)) {
+        stop("CustomR HRF requires a 'definition' field", call. = FALSE)
+      }
+      fun <- NULL
+      if (is.function(fun_name)) {
+        fun <- fun_name
+      } else if (exists(fun_name, mode = "function")) {
+        fun <- get(fun_name, mode = "function")
+      } else if (file.exists(fun_name)) {
+        env <- new.env(parent = baseenv())
+        sys.source(fun_name, envir = env)
+        if (exists(fun_name, envir = env, mode = "function")) {
+          fun <- get(fun_name, envir = env)
+        } else {
+          stop(sprintf("Function '%s' not found after sourcing", fun_name), call. = FALSE)
+        }
+      } else {
+        stop(sprintf("Cannot resolve custom HRF function '%s'", fun_name), call. = FALSE)
+      }
+      as_hrf(fun, name = fun_name)
+    },
+    stop(sprintf("Unknown HRF type '%s'", type))
+  )
+
+  lag      <- def$lag %||% 0
+  width    <- def$width %||% 0
+  summate  <- def$summate %||% TRUE
+  normalize <- def$normalize %||% FALSE
+
+  gen_hrf(base, lag = lag, width = width,
+          summate = summate, normalize = normalize)
+}
+
