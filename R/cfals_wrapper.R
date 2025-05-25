@@ -98,22 +98,22 @@ fmrireg_cfals <- function(fmri_data_obj,
   SSE <- colSums(resids^2)
   r2 <- 1 - SSE / SST
 
-  out <- list(h = fit$h,
-              beta = fit$beta,
-              reconstructed_hrfs = recon_hrf,
-              residuals = resids,
-              gof_per_voxel = r2,
-              hrf_basis_used = hrf_basis,
-              lambda_used = c(init = lambda_init,
-                               beta = lambda_b,
-                               h = lambda_h),
-              design_info = list(d = design$d,
-                                 k = length(X_list),
-                                 n = n,
-                                 v = v,
-                                 fullXtX = fullXtX),
-              method_used = method)
-  class(out) <- c("fmrireg_cfals_fit", "list")
+  out <- fmrireg_cfals_fit(h_coeffs = fit$h,
+                           beta_amps = fit$beta,
+                           method = method,
+                           lambdas = c(init = lambda_init,
+                                       beta = lambda_b,
+                                       h = lambda_h),
+                           call = match.call(),
+                           hrf_basis = hrf_basis,
+                           design_info = list(d = design$d,
+                                              k = length(X_list),
+                                              n = n,
+                                              v = v,
+                                              fullXtX = fullXtX),
+                           residuals = resids,
+                           recon_hrf = recon_hrf,
+                           gof = r2)
   out
 }
 
