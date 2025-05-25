@@ -126,7 +126,6 @@ blockids.event_model <- function(x) {
   x$blockids
 }
 
-#' @importFrom tibble as_tibble
 #' @export
 #' @rdname design_matrix
 design_matrix.event_model <- function(x, blockid = NULL, ...) {
