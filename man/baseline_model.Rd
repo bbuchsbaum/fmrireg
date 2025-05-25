@@ -20,7 +20,7 @@ baseline_model(
 \item{sframe}{A sampling_frame object.}
 
 \item{intercept}{Character; whether to include an intercept ("runwise", "global", or "none").
-(Automatically set to FALSE when basis == "constant".)}
+Ignored when \code{basis == "constant"} because the drift term already provides the constant baseline.}
 
 \item{nuisance_list}{Optional list of nuisance matrices (one matrix per fMRI block).}
 }

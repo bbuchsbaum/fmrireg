@@ -111,7 +111,8 @@ make_nuisance_term <- function(nuisance_list,
 #' @param degree Integer; degree of the spline/polynomial function.
 #' @param sframe A sampling_frame object.
 #' @param intercept Character; whether to include an intercept ("runwise", "global", or "none").
-#'   (Automatically set to FALSE when basis == "constant".)
+#'   Ignored when \code{basis == "constant"} because the drift term already
+#'   provides the constant baseline.
 #' @param nuisance_list Optional list of nuisance matrices (one matrix per fMRI block).
 #'
 #' @return An object of class "baseline_model".
