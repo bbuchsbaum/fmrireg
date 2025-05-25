@@ -63,6 +63,7 @@ Suggests:
     forecast,
     shiny,
     mgcv,
+    progressr,
     ggforce,
     roxyglobals (>= 0.2.1),
     bidser
@@ -95,6 +96,7 @@ Collate:
     'event_vector.R'
     'find_hrf.R'
     'fmri_betas.R'
+    'beta_utils.R'
     'fmri_dataset.R'
     'fmri_group_dataset.R'
     'fmri_latent_lm.R'
