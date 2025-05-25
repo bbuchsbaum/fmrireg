@@ -472,7 +472,8 @@ nuisance <- function(x) {
 
 #' @export
 construct.nuisancespec <- function(x, model_spec, ...) {
-  mat <- eval(parse(text = x$varname), envir = model_spec$aux_data, enclos = parent.frame())
+  expr <- rlang::parse_expr(as.character(x$varname))
+  mat <- rlang::eval_tidy(expr, data = model_spec$aux_data, env = parent.frame())
   matrix_term(x$name, mat)
 }
 
