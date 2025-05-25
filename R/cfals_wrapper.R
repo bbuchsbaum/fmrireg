@@ -19,6 +19,7 @@
 #' @param max_alt Number of alternating updates after initialisation.
 #' @return An object of class `fmrireg_cfals_fit` containing the
 #'   estimated HRF coefficients and amplitudes.
+#' @details R\eqn{^2} is computed on the data after confound projection.
 #' @export
 fmrireg_hrf_cfals <- function(fmri_data_obj,
                               event_model,
@@ -46,9 +47,11 @@ fmrireg_hrf_cfals <- function(fmri_data_obj,
     stop("'event_model' must be an 'event_model' object")
   }
 
-  if (!inherits(hrf_basis, "HRF")) {
-    stop("'hrf_basis' must be an object of class 'HRF'")
+  if (inherits(hrf_basis, "HRF") == FALSE) {
+    stop("`hrf_basis` must inherit from class 'HRF'")
   }
+
+  stopifnot(lam_beta >= 0, lam_h >= 0, max_alt >= 0)
 
   # build regressors for each condition using the provided basis
   reg_lists <- lapply(event_model$terms, regressors.event_term,
@@ -73,6 +76,7 @@ fmrireg_hrf_cfals <- function(fmri_data_obj,
                        lambda_h = lam_h,
                        fullXtX_flag = fullXtX,
                        max_alt = max_alt)
+  rownames(fit$beta) <- cond_names
 
   # reconstruct HRF shapes on the sampling grid
   Phi <- reconstruction_matrix(hrf_basis, sframe)
@@ -81,8 +85,8 @@ fmrireg_hrf_cfals <- function(fmri_data_obj,
   # predicted BOLD and residuals in the projected space
   n <- nrow(Yp)
   v <- ncol(Yp)
-  pred_p <- Reduce(`+`, Map(function(Zc, bc) {
-    Zc %*% (fit$h * bc)
+  pred_p <- Reduce(`+`, Map(function(Xc, bc) {
+    Xc %*% (fit$h * matrix(bc, nrow = nrow(fit$h), ncol = v, byrow = TRUE))
   }, Xp, asplit(fit$beta, 1)))
   resids <- Yp - pred_p
 
@@ -100,8 +104,8 @@ fmrireg_hrf_cfals <- function(fmri_data_obj,
               lambda_used = c(beta = lam_beta, h = lam_h),
               design_info = list(d = nbasis(hrf_basis),
                                  k = length(X_list),
-                                 n = nrow(Y),
-                                 v = ncol(Y),
+                                 n = nrow(Yp),
+                                 v = ncol(Yp),
                                  fullXtX = fullXtX))
   class(out) <- c("fmrireg_cfals_fit", "list")
   out
