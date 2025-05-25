@@ -232,3 +232,56 @@ test_that("parametric modulation term missing mod_var fails", {
 
   expect_error(AD(tf), "Configuration validation failed")
 })
+
+test_that("models block validates entries", {
+  tf <- tempfile(fileext = ".yml")
+  cfg <- list(
+    dataset = list(path = "./data"),
+    events = list(onset_column = "onset", duration_column = "duration", block_column = "run"),
+    variables = list(cond = list(bids_column = "condition", role = "Factor")),
+    terms = list(t1 = list(type = "EventRelated", event_variables = list("cond"))),
+    models = list(list(name = "m1", terms = list("t1")))
+  )
+  write_yaml(cfg, tf)
+  on.exit(unlink(tf))
+
+  res <- AD(tf)
+  expect_equal(res$models[[1]]$name, "m1")
+  expect_equal(res$models[[1]]$baseline$intercept, "PerRun")
+})
+
+test_that("invalid model entry fails", {
+  tf <- tempfile(fileext = ".yml")
+  cfg <- list(
+    dataset = list(path = "./data"),
+    events = list(onset_column = "onset", duration_column = "duration", block_column = "run"),
+    variables = list(cond = list(bids_column = "condition", role = "Factor")),
+    terms = list(t1 = list(type = "EventRelated", event_variables = list("cond"))),
+    models = list(list(terms = list("t1")))
+  )
+  write_yaml(cfg, tf)
+  on.exit(unlink(tf))
+
+  expect_error(AD(tf), "Configuration validation failed")
+})
+
+test_that("contrasts and settings validate", {
+  tf <- tempfile(fileext = ".yml")
+  cfg <- list(
+    dataset = list(path = "./data"),
+    events = list(onset_column = "onset", duration_column = "duration", block_column = "run"),
+    variables = list(cond = list(bids_column = "condition", role = "Factor")),
+    terms = list(t1 = list(type = "EventRelated", event_variables = list("cond"))),
+    contrasts = list(c1 = list(type = "Formula", expression = "t1")),
+    models = list(list(name = "m1", terms = list("t1"))),
+    default_model = "m1",
+    validation_settings = list(cross_references = "Warn", bids_content_checks = "Off")
+  )
+  write_yaml(cfg, tf)
+  on.exit(unlink(tf))
+
+  res <- AD(tf)
+  expect_equal(res$contrasts$c1$type, "Formula")
+  expect_equal(res$default_model, "m1")
+  expect_equal(res$validation_settings$cross_references, "Warn")
+})
