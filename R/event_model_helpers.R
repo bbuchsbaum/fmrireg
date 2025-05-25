@@ -34,8 +34,10 @@ find_and_eval_hrf_calls <- function(expr, data, f_env) {
     }
     
     # Recursive case: Traverse arguments of other calls (like + or *)
-    # Use lapply for clarity instead of explicit loop + c()
-    results <- unlist(lapply(rlang::call_args(expr), find_and_eval_hrf_calls, data, f_env), recursive = FALSE)
+    # Collect results from each argument and concatenate while preserving
+    # list structure (so each hrfspec remains intact)
+    results_list <- lapply(rlang::call_args(expr), find_and_eval_hrf_calls, data, f_env)
+    results <- do.call(c, results_list)
     return(results)
     
   } else {
