@@ -342,24 +342,95 @@ build_afni_stims.afni_hrf_convolved_term <- function(x, iresp=FALSE, tr_times=1)
 #' @keywords internal
 #' @noRd
 build_afni_stims.afni_trialwise_convolved_term <- function(x, iresp=FALSE, tr_times=1) {
-  
-  purge_nulls <- function(A) {
-    A[!sapply(A, is.null)]
+  eterm <- x$evterm
+  sf <- x$sampling_frame
+  hrf_name <- as.character(x$hrfspec$hrf) # Get HRF name
+
+  # Extract the trial variable name specified in afni_trialwise(TRIAL_VAR, ...)
+  trial_var_name <- eterm$varname # This should be 'trial' or whatever was passed
+
+  # Get the full event table associated with this term
+  full_event_table <- event_table(eterm)
+
+  # Ensure the trial variable and any modulators exist in the event table
+  if (!(trial_var_name %in% names(full_event_table))) {
+    stop(paste("Trial variable '", trial_var_name, "' not found in event table for term '", eterm$name, "'."))
   }
   
-  #stimlabels <- longnames(x)
-  stimfile <- paste(x$varname, "_times.1D", sep = "")
-  dmat <- design_matrix(x$evterm)
+  # Get modulators if any. This part might need adjustment based on how modulators are stored.
+  # For afni_trialwise, the main 'modulator' is the trial variable itself.
+  # Additional parametric modulators would be columns in the event_table.
+  # The -stim_times_IM format is onset*modulator1:modulator2 etc.
+  # For basic afni_trialwise("trial"), the modulator is just the trial number (or a unique trial ID).
+  # If the user supplied `afni_trialwise("trial", modulate_by="RT")`, then RT would be a modulator.
+  # For now, let's assume the 'trial' column itself is the modulator if no other is specified.
+
+  # Check if `x$hrfspec` contains explicit modulator names
+  modulator_vars <- x$hrfspec$modulate_by
+  if (is.null(modulator_vars)) {
+      # If no explicit modulators, use the trial_var_name as the modulator for amplitude (common for -IM)
+      # However, AFNI's -stim_times_IM expects onsets and *optional* modulators.
+      # If only trial-wise HRFs are desired without amplitude modulation per trial,
+      # we still need a 'modulator' for AFNI, often it's implicitly 1 for each trial.
+      # For now, we will format it as onset*trial_value
+      modulator_vars <- trial_var_name 
+  }
   
-  hrf_name <- as.character(x$hrfspec$hrf)
-  blids <- sort(unique(blockids(x$evterm)))
-  ons <- split_onsets(x$evterm, x$sampling_frame, global=FALSE, blocksplit=TRUE)
-  ons <- lapply(blids, function(bid) {
-    O <- sapply(ons, "[[", as.character(bid))
-    unlist(O[!sapply(O, is.null)])
+  if (!all(modulator_vars %in% names(full_event_table))) {
+      stop(paste("One or more modulator variables not found in event table:", paste(modulator_vars, collapse=", ")))
+  }
+
+  stim_label <- longnames(eterm) # Should be a unique label for this IM regressor
+  stim_file_name <- paste0(stim_label, "_IM_times.1D")
+
+  # Prepare onsets and modulators per run, in AFNI's asterisk format
+  # e.g., run 1: "10*mod1a:mod2a 20*mod1b:mod2b ...", run 2: "5*mod1c:mod2c ..."
+  onsets_IM_per_run <- lapply(unique(sf$blockids), function(run_id) {
+    run_events <- full_event_table[full_event_table[[sf$block_name]] == run_id, , drop = FALSE]
+    if (nrow(run_events) == 0) {
+      return("*") # AFNI placeholder for empty run
+    }
+    
+    sapply(1:nrow(run_events), function(i) {
+      onset_val <- run_events$onset[i]
+      mod_values <- sapply(modulator_vars, function(mvar) run_events[[mvar]][i])
+      paste0(onset_val, "*", paste(mod_values, collapse=":"))
+    }) |> paste(collapse = " ")
   })
-  names(ons) <- blids
-  afni_stim_im_times(x$varname, stimfile, hrf_name, ons, blids)
+
+  # Create the afni_stim_im_times object
+  afni_stim_obj <- afni_stim_im_times(
+    label = stim_label,
+    file_name = stim_file_name,
+    hrf = hrf_name, # HRF model string like 'SPMG1'
+    onsets = onsets_IM_per_run, # This should be a list of character strings, one per run
+    blockids = unique(sf$blockids) # The unique run/block identifiers
+  )
+  
+  # build_afni_stims can return a single stim object or a list of them.
+  # For afni_trialwise, it's typically one -stim_times_IM directive.
+  return(list(afni_stim_obj)) # Ensure it's returned in a list as expected by build_decon_command processing
+}
+
+#' @export
+#' @rdname build_afni_stims
+build_afni_stims.event_term <- function(x, iresp=FALSE, tr_times=1) {
+  # This method handles plain event_terms created from standard hrf() calls.
+  # These are not directly translated into AFNI -stim_times or similar directives.
+  # They might be relevant if we were generating -stim_regressor from an existing matrix,
+  # but that's not the purpose of this function family.
+  # We return NULL to indicate no AFNI-specific stimulus file for this term.
+  # The calling function (build_decon_command) should filter out NULLs.
+  
+  # Optionally, issue a message if verbose debugging is needed.
+  # message(paste("Skipping AFNI stimulus generation for standard event term:", x$name,"(class:", paste(class(x), collapse=", "), ") whose hrfspec is of class:", paste(class(hrfspec(x)), collapse=", ")))
+  return(NULL)
+}
+
+# Helper function to extract HRF spec, safely returning NULL if not found
+#' @keywords internal
+if (!exists("hrfspec", mode = "function")) {
+  hrfspec <- function(x) attr(x, "hrfspec")
 }
 
 #' @keywords internal
@@ -439,32 +510,12 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   assert_that(sum(duplicated(gltnames))  == 0, msg="Cannot have two GLTs with the same name")
   
   func_terms <- terms(model$event_model)
-  
- 
-  ## construct list of afni stims
-  
-
+  message("number of functional terms: ", length(func_terms))
   
   afni_stims <- lapply(func_terms, function(term) { build_afni_stims(term, iresp=opts[["iresp"]], tr_times=opts[["TR_times"]]) })
+  afni_stims <- Filter(Negate(is.null), afni_stims) # Filter out NULLs
+  afni_stims <- unlist(afni_stims, recursive = FALSE) # Unlist one level
   
-  
-  ## this hack is here to unravel terms that produce have mutiple sub-terms as occurs with 'Poly' and friends.
-  out <- list()
-  counter <- 1
-  for (x in afni_stims) {
-    if (inherits(x, "afni_stim")) {
-      out[[counter]] <- x
-      counter <- counter + 1
-    } else {
-      for (s in x) {
-        out[[counter]] <- s
-        counter <- counter + 1
-      }
-    }
-  }
-  
-  afni_stims <- out
-
   afni_baseline_mats <- build_baseline_stims(model)
   
   purge_nulls <- function(A) {

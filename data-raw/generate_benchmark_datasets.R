@@ -102,9 +102,25 @@ generate_BM_Canonical_HighSNR <- function() {
     }
   }
   
+  # Create event_table for matrix_dataset
+  benchmark_event_table <- data.frame(
+    onset = event_onsets,
+    condition = condition_labels,
+    duration = 0.5 # Assuming fixed duration for this benchmark
+  )
+  
+  # Create matrix_dataset
+  core_data <- matrix_dataset(
+    datamat = final_sim$time_series$datamat,
+    TR = COMMON_PARAMS$TR,
+    run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
+    event_table = benchmark_event_table
+  )
+  
   list(
     description = "Canonical HRF (SPMG1), high SNR, 3 conditions, fixed amplitudes per condition",
-    Y_noisy = final_sim$time_series$datamat,
+    core_data = core_data, # Encapsulated data
+    Y_noisy = final_sim$time_series$datamat, # Still available for direct access
     Y_clean = clean_sim$time_series$datamat,
     X_list_true_hrf = X_list_true_hrf,
     true_hrf_parameters = list(type = "SPMG1", hrf_object = hrf_variants$canonical),
@@ -180,8 +196,24 @@ generate_BM_Canonical_LowSNR <- function() {
     }
   }
   
+  # Create event_table for matrix_dataset
+  benchmark_event_table <- data.frame(
+    onset = event_onsets,
+    condition = condition_labels,
+    duration = 0.5 # Assuming fixed duration for this benchmark
+  )
+  
+  # Create matrix_dataset
+  core_data <- matrix_dataset(
+    datamat = final_sim$time_series$datamat,
+    TR = COMMON_PARAMS$TR,
+    run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
+    event_table = benchmark_event_table
+  )
+  
   list(
     description = "Canonical HRF (SPMG1), low SNR, 3 conditions, fixed amplitudes per condition",
+    core_data = core_data,
     Y_noisy = final_sim$time_series$datamat,
     Y_clean = clean_sim$time_series$datamat,
     X_list_true_hrf = X_list_true_hrf,
@@ -257,8 +289,24 @@ generate_BM_HRF_Variability_AcrossVoxels <- function() {
   hrf_group_assignment <- c(rep("canonical", n_voxels_per_group), 
                            rep("variant1", n_voxels_per_group))
   
+  # Create event_table for matrix_dataset
+  benchmark_event_table <- data.frame(
+    onset = event_onsets,
+    condition = condition_labels,
+    duration = 0.5 # Assuming fixed duration for this benchmark
+  )
+  
+  # Create matrix_dataset
+  core_data <- matrix_dataset(
+    datamat = Y_combined,
+    TR = COMMON_PARAMS$TR,
+    run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
+    event_table = benchmark_event_table
+  )
+  
   list(
     description = "HRF varies across voxel groups, 2 conditions, moderate SNR",
+    core_data = core_data,
     Y_noisy = Y_combined,
     true_hrf_parameters = list(
       canonical = list(type = "SPMG1", hrf_object = hrf_variants$canonical),
@@ -306,8 +354,24 @@ generate_BM_Trial_Amplitude_Variability <- function() {
   condition_labels <- rep("Cond1", 20)
   event_onsets <- final_sim$time_series$event_table$onset
   
+  # Create event_table for matrix_dataset
+  benchmark_event_table <- data.frame(
+    onset = event_onsets,
+    condition = condition_labels,
+    duration = 0.5 # Assuming fixed duration for this benchmark
+  )
+  
+  # Create matrix_dataset
+  core_data <- matrix_dataset(
+    datamat = final_sim$time_series$datamat,
+    TR = COMMON_PARAMS$TR,
+    run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
+    event_table = benchmark_event_table
+  )
+  
   list(
     description = "Single condition with significant trial-to-trial amplitude variability",
+    core_data = core_data,
     Y_noisy = final_sim$time_series$datamat,
     true_hrf_parameters = list(type = "SPMG1", hrf_object = hrf_variants$canonical),
     event_onsets = event_onsets,
@@ -407,8 +471,25 @@ generate_BM_Complex_Realistic <- function() {
                            rep("variant1", n_voxels_per_group),
                            rep("variant2", n_voxels_per_group))
   
+  # Create event_table for matrix_dataset
+  # Use actual event durations from sim_group1 (they are the same across groups for this sim)
+  benchmark_event_table <- data.frame(
+    onset = event_onsets,
+    condition = condition_labels,
+    duration = sim_group1$time_series$event_table$duration 
+  )
+  
+  # Create matrix_dataset
+  core_data <- matrix_dataset(
+    datamat = Y_combined,
+    TR = COMMON_PARAMS$TR,
+    run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
+    event_table = benchmark_event_table
+  )
+  
   list(
     description = "Complex realistic scenario: 3 HRF groups, 3 conditions, variable durations/amplitudes, AR(2) noise",
+    core_data = core_data,
     Y_noisy = Y_combined,
     true_hrf_parameters = list(
       canonical = list(type = "SPMG1", hrf_object = hrf_variants$canonical),

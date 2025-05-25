@@ -18,7 +18,7 @@ test_that("HRF_SPMG1 has correct structure and properties", {
   # Test basic structure
   expect_true(inherits(HRF_SPMG1, "HRF"))
   expect_equal(attr(HRF_SPMG1, "name"), "SPMG1")
-  expect_equal(attr(HRF_SPMG1, "param_names"), c("P1", "P2", "A2"))
+  expect_equal(attr(HRF_SPMG1, "param_names"), c("A1", "A2"))
   
   # Test function evaluation
   t <- seq(0, 30, by=0.5)

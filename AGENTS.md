@@ -471,3 +471,17 @@ graph TD
 ```
 
 This architecture allows for considerable flexibility in defining complex fMRI models while maintaining a structured approach to regressor generation and naming. The separation of specification (e.g., `hrfspec`) from realization (e.g., `event_term`, convolved regressors) is a powerful design pattern.
+
+## Benchmark Datasets
+
+`fmrireg` now includes a suite of 5 benchmark datasets designed for robust testing and validation of fMRI analysis methods, particularly HRF fitting and beta estimation. These datasets are generated with known ground truth parameters, covering a range of scenarios from simple high-SNR conditions to complex designs with HRF variability, trial-specific amplitude changes, and realistic noise models.
+
+Key features include:
+- **5 Standardized Scenarios**: Covering canonical HRFs, low/high SNR, HRF variability, trial amplitude modulation, and complex realistic designs.
+- **Comprehensive Ground Truth**: Each dataset provides detailed ground truth for BOLD signals, HRF parameters, condition/trial betas, and noise characteristics.
+- **Easy Access & Integration**: Functions like `load_benchmark_dataset()`, `list_benchmark_datasets()`, and `evaluate_method_performance()` allow for straightforward loading, exploration, and evaluation.
+- **`matrix_dataset` Structure**: The core BOLD data and experimental timing are encapsulated in a `matrix_dataset` object within each benchmark, promoting consistency with `fmrireg` data structures.
+
+These benchmarks facilitate standardized evaluation, fair comparison of methods, and serve as an educational tool for understanding fMRI analysis challenges.
+
+For detailed information, usage examples, and technical specifications, please refer to the "Using fMRI Benchmark Datasets" vignette (`vignettes/benchmark_datasets.Rmd`) and the accompanying guide (`inst/doc/benchmark_datasets_guide.md`).
