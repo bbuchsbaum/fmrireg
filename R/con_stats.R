@@ -207,7 +207,13 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
   #                 SSE / (n-p)
   #
   
-  cm <- solve((cmat %*% cov.unscaled %*% t(cmat)))
+  M <- cmat %*% cov.unscaled %*% t(cmat)
+
+  # Use tryCatch for solve() in case M is singular
+  cm <- tryCatch(solve(M), error = function(e) {
+    warning(paste("Singular matrix in F-contrast computation (C(X'X)^-1C'). Details:", e$message))
+    matrix(NaN, nrow = nrow(M), ncol = ncol(M))
+  })
   
   #Fstat <- map_dbl(1:ncol(betamat), function(i) {
   #  b <- betamat[,i]
