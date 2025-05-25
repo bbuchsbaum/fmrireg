@@ -497,30 +497,42 @@ list_available_hrfs <- function(details = FALSE) {
 # Define Static HRF Objects -----
 HRF_GAMMA <- as_hrf(hrf_gamma, name="gamma", params=list(shape=6, rate=1))
 HRF_GAUSSIAN <- as_hrf(hrf_gaussian, name="gaussian", params=list(mean=6, sd=2))
-HRF_SPMG1 <- as_hrf(hrf_spmg1, name="SPMG1", params=list(A1=0.0833, A2=1.274527e-13))
+HRF_SPMG1 <- as_hrf(hrf_spmg1, name="SPMG1", params=list(P1=5, P2=15, A1=0.0833))
 HRF_SPMG2 <- bind_basis(
-      as_hrf(hrf_spmg1, name="spmg1_base", params=list(A1=0.0833, A2=1.274527e-13)),
-      as_hrf(hrf_spmg1_deriv, name="spmg1_deriv", params=list(A1=0.0833, A2=1.274527e-13))
+  as_hrf(hrf_spmg1, name="SPMG1_canonical", params=list(P1=5, P2=15, A1=0.0833)),
+  as_hrf(hrf_spmg1_deriv, name="SPMG1_temporal_deriv", params=list(P1=5, P2=15, A1=0.0833))
 )
 attr(HRF_SPMG2, "name") <- "SPMG2"
 HRF_SPMG3 <- bind_basis(
-      as_hrf(hrf_spmg1, name="spmg1_base", params=list(A1=0.0833, A2=1.274527e-13)),
-      as_hrf(hrf_spmg1_deriv, name="spmg1_deriv", params=list(A1=0.0833, A2=1.274527e-13)),
-      as_hrf(hrf_spmg1_second_deriv, name="spmg1_sderiv", params=list(A1=0.0833, A2=1.274527e-13))
+  as_hrf(hrf_spmg1, name="SPMG1_canonical", params=list(P1=5, P2=15, A1=0.0833)),
+  as_hrf(hrf_spmg1_deriv, name="SPMG1_temporal_deriv", params=list(P1=5, P2=15, A1=0.0833)),
+  as_hrf(hrf_spmg1_second_deriv, name="SPMG1_dispersion_deriv", params=list(P1=5, P2=15, A1=0.0833))
 )
 attr(HRF_SPMG3, "name") <- "SPMG3"
 
 # Define HRF Generators (Functions returning HRF objects) -----
-hrfspline_generator <- function(nbasis=5, span=24) {
-  degree <- 3 # Standard cubic b-spline degree
-  min_nbasis <- degree + 1
-  
-  effective_nbasis <- nbasis
-  if (nbasis < min_nbasis) {
-      warning(sprintf("Requested nbasis=%d is less than degree+1=%d for bspline. Using effective_nbasis=%d.", 
-                      nbasis, min_nbasis, min_nbasis), call. = FALSE)
-      effective_nbasis <- min_nbasis
+hrf_bspline_generator <- function(nbasis=5, span=24) {
+  # Validate inputs
+  if (nbasis < 1) {
+    stop("nbasis must be at least 1", call. = FALSE)
   }
+  if (span <= 0) {
+    stop("span must be positive", call. = FALSE)
+  }
+  
+  # Ensure nbasis is integer
+  nbasis <- as.integer(nbasis)
+  
+  # For B-splines, the effective number of basis functions depends on:
+  # - degree: polynomial degree of the splines
+  # - number of interior knots
+  # - boundary conditions
+  # 
+  # splines::bs with df=nbasis and intercept=FALSE should give exactly nbasis columns
+  # But let's be defensive and handle edge cases
+  
+  degree <- 3 # Default cubic B-splines
+  effective_nbasis <- max(1, nbasis) # Ensure at least 1 basis function
   
   # Directly use splines::bs ensuring intercept=FALSE and using effective_nbasis
   f_bspline <- function(t) {
@@ -580,9 +592,15 @@ hrf_fourier_generator <- function(nbasis=5, span=24) {
   )
 }
 hrf_daguerre_generator <- function(nbasis=3, scale=4) {
-  # Assuming HRF_DAGUERRE_BASIS returns an HRF object
-  HRF_DAGUERRE_BASIS(n_basis=nbasis, scale=scale)
+  as_hrf(
+    f = function(t) daguerre_basis(t, n_basis=nbasis, scale=scale),
+    name="daguerre", nbasis=as.integer(nbasis), span=24,
+    params=list(n_basis=nbasis, scale=scale)
+  )
 }
+
+# Define additional static HRF objects that depend on generators -----
+HRF_BSPLINE <- hrf_bspline_generator(nbasis=5, span=24)
 
 # Define HRF Registry -----
 
@@ -593,7 +611,7 @@ HRF_REGISTRY <- list(
   spmg3    = HRF_SPMG3,
   gamma    = HRF_GAMMA,
   gaussian = HRF_GAUSSIAN,
-  bspline  = hrfspline_generator,
+  bspline  = hrf_bspline_generator,
   tent     = hrf_tent_generator,
   fourier  = hrf_fourier_generator,
   daguerre = hrf_daguerre_generator

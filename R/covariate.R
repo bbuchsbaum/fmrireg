@@ -159,7 +159,7 @@ event_table.covariate_convolved_term <- function(x) {
   }))
   
   colnames(ret) <- cnames
-  suppressMessages(as_tibble(ret,.name_repair="check_unique"))
+  suppressMessages(tibble::as_tibble(ret,.name_repair="check_unique"))
   
 }
 

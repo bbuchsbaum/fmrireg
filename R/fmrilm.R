@@ -528,7 +528,7 @@ fitted_hrf.fmri_lm <- function(x, sample_at = seq(0, 24, by = 1), ...) {
       excond_expanded
     )
     
-    list(pred = as.matrix(yh), design = as_tibble(design))
+    list(pred = as.matrix(yh), design = tibble::as_tibble(design))
   })
   
   names(pred) <- names(eterms)
@@ -580,7 +580,7 @@ pull_stat_revised <- function(x, type, element) {
     beta_matrix <- x$result$betas$data[[1]]$estimate[[1]]
     ret <- beta_matrix[, x$result$event_indices, drop = FALSE]
     colnames(ret) <- conditions(x$model$event_model)
-    suppressMessages(as_tibble(ret, .name_repair = "check_unique"))
+    suppressMessages(tibble::as_tibble(ret, .name_repair = "check_unique"))
   } else if (type == "contrasts") {
     ret <- x$result$contrasts %>% dplyr::filter(type == "contrast")
     if (nrow(ret) == 0) {
@@ -638,7 +638,7 @@ pull_stat <- function(x, type, element) {
     }
     
     # Ensure tibble output for consistency with original behavior
-    res <- suppressMessages(as_tibble(ret, .name_repair = "check_unique"))
+    res <- suppressMessages(tibble::as_tibble(ret, .name_repair = "check_unique"))
   } else if (type == "contrasts") {
     ret <- x$result$contrasts %>% dplyr::filter(type == "contrast")
     if (nrow(ret) == 0) {
@@ -716,7 +716,7 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
       }
       
       # Ensure tibble output for consistency with original behavior
-      res <- suppressMessages(as_tibble(res, .name_repair = "check_unique"))
+      res <- suppressMessages(tibble::as_tibble(res, .name_repair = "check_unique"))
     }
   } else {
     # Should not happen due to match.arg, but defensive coding

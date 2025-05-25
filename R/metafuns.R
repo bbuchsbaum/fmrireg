@@ -156,7 +156,7 @@ meta_Fcontrasts <- function(ftab) {
   ret <- meta_stouffer(pval,se)
   dplyr::tibble(type=ftab$type[1], name=ftab$name[1], stat_type="meta_zfstat", 
          conmat=list(ftab$conmat[[1]]),
-         colind=list(ftab$colind[[1]]), data=list(as_tibble(ret)))
+         colind=list(ftab$colind[[1]]), data=list(tibble::as_tibble(ret)))
 }
 
 

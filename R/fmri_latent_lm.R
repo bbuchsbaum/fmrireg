@@ -158,7 +158,7 @@ coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts"), recon=
     
     out <- t(as.matrix(bvals)[comp,]) %*% t(lds)
     out <- as.matrix(t(out))
-    as_tibble(out)
+    tibble::as_tibble(out)
   } else {
     bvals
   }
@@ -191,7 +191,7 @@ standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), r
         sqrt(rowSums((lds %*% (CR * cov.unscaled[i,i])) * lds))
       }))
       colnames(ret) <- conditions(x$model$event_model)
-      as_tibble(ret, .name_repair="check_unique")
+      tibble::as_tibble(ret, .name_repair="check_unique")
     } else {
       # Handle contrasts case
       contrasts_df <- x$result$contrasts %>% dplyr::filter(type == "contrast")
@@ -209,7 +209,7 @@ standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), r
       }))
       
       colnames(ret) <- contrasts_df$name  # Use names from the contrasts tibble
-      as_tibble(ret, .name_repair="check_unique")
+      tibble::as_tibble(ret, .name_repair="check_unique")
     }
   }
 }
@@ -222,11 +222,11 @@ stats.fmri_latent_lm <- function(x,type = c("estimates", "contrasts"), recon = F
       if (type == "estimates") {
         bvals <- coef(x, type = "estimates", recon=TRUE)
         errs <- standard_error(x, type = "estimates", recon=TRUE)
-        as_tibble(bvals/errs)
+        tibble::as_tibble(bvals/errs)
       } else {
         cvals <- coef(x, type="contrasts", recon=TRUE)
         errs <- standard_error(x, type = "contrasts", recon=TRUE)
-        as_tibble(cvals/errs)
+        tibble::as_tibble(cvals/errs)
       }
     }
 }

@@ -349,7 +349,7 @@ test_that("can run video fmri design with fmri_file_dataset", {
   scans <- gen_fake_dataset(c(10,10,10,320), 7)
   maskfile <- gen_mask_file(c(10,10,10))
   
-  dset <- fmri_dataset(scans, maskfile,TR=1.5, rep(320,7), base_path="/",mode="normal",  event_table=as_tibble(des))
+  dset <- fmri_dataset(scans, maskfile,TR=1.5, rep(320,7), base_path="/",mode="normal",  event_table=tibble::as_tibble(des))
   evmod <- event_model(Onset ~ hrf(Video, Condition, basis="spmg1"), 
                        block = ~ run, sampling_frame=sframe, data=des)
   bmod <- baseline_model(basis="bs", degree=4, sframe=sframe)
