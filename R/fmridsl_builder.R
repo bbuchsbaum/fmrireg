@@ -655,3 +655,72 @@ process_variables_and_transformations <- function(fmri_config, subject_data) {
 
   env
 }
+#' Convert DSL Terms to hrfspec/covariatespec Objects
+#'
+#' Implements DSL2-401. For a given model definition and processed
+#' variable environment, this helper creates a named list of term
+#' specification objects suitable for `event_model()`.
+#'
+#' @param fmri_config Validated `fmri_config` object.
+#' @param model A single model definition from `fmri_config$spec$models`.
+#' @param var_env Environment returned by `process_variables_and_transformations()`.
+#'
+#' @return Named list of `hrfspec` and `covariatespec` objects.
+#' @keywords internal
+convert_terms_to_specs <- function(fmri_config, model, var_env) {
+  stopifnot(inherits(fmri_config, "fmri_config"))
+  term_defs <- fmri_config$spec$terms %||% list()
+  term_names <- model$terms %||% character()
+
+  res <- list()
+
+  for (tnm in term_names) {
+    tdef <- term_defs[[tnm]]
+    if (is.null(tdef)) {
+      stop(sprintf("Term '%s' not defined in configuration", tnm), call. = FALSE)
+    }
+
+    subset_expr <- if (!is.null(tdef$subset)) rlang::parse_expr(tdef$subset) else NULL
+
+    if (identical(tdef$type, "NuisanceRegressors")) {
+      vars <- tdef$nuisance_source_variables
+      data_df <- as.data.frame(mget(vars, envir = var_env))
+      spec <- covariate(!!!rlang::syms(vars), data = data_df, id = tnm, subset = subset_expr)
+      res[[tnm]] <- spec
+      next
+    }
+
+    hrf_name <- tdef$hrf %||% "canonical"
+    hobj <- get_hrf_from_dsl(hrf_name, fmri_config$spec)
+    lag_val <- tdef$lag %||% 0
+    if (!is.null(lag_val) && lag_val != 0) {
+      hobj <- gen_hrf(hobj, lag = lag_val)
+    }
+
+    if (identical(tdef$type, "ParametricModulation")) {
+      mod_name <- tdef$mod_var
+      if (!is.null(tdef$modulator_basis)) {
+        deg_part <- tdef$modulator_basis$parameters$degree %||% ""
+        mod_name <- paste0(mod_name, "_", tolower(tdef$modulator_basis$type),
+                            if (!identical(deg_part, "")) paste0("_deg", deg_part) else "")
+      }
+      vars <- c(tdef$selector_vars, mod_name)
+    } else if (identical(tdef$type, "EventRelated")) {
+      vars <- tdef$event_variables
+    } else if (identical(tdef$type, "Trialwise")) {
+      spec <- trialwise(basis = hobj, lag = 0, id = tnm)
+      if (!is.null(subset_expr)) spec$subset <- subset_expr
+      res[[tnm]] <- spec
+      next
+    } else {
+      stop(sprintf("Unknown term type '%s'", tdef$type), call. = FALSE)
+    }
+
+    expr <- rlang::expr(hrf(!!!rlang::syms(vars), basis = hobj, id = !!tnm, subset = !!subset_expr))
+    spec <- rlang::eval_bare(expr, var_env)
+    res[[tnm]] <- spec
+  }
+
+  res
+}
+
