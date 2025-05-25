@@ -43,9 +43,9 @@ test_that("fmrireg_hrf_cfals works across HRF bases", {
     dat <- simulate_cfals_wrapper_data(b)
     fit <- fmrireg_hrf_cfals(dat$Y, dat$event_model, b,
                              lam_beta = 0.1, lam_h = 0.1)
-    expect_equal(dim(fit$h), c(nbasis(b), ncol(dat$Y)))
-    expect_equal(dim(fit$beta), c(length(dat$X_list), ncol(dat$Y)))
-    recon <- reconstruction_matrix(b, dat$sframe) %*% fit$h
+    expect_equal(dim(fit$h_coeffs), c(nbasis(b), ncol(dat$Y)))
+    expect_equal(dim(fit$beta_amps), c(length(dat$X_list), ncol(dat$Y)))
+    recon <- reconstruction_matrix(b, dat$sframe) %*% fit$h_coeffs
     expect_true(all(is.finite(recon)))
   }
 })
@@ -57,8 +57,8 @@ test_that("fmrireg_cfals wrapper supports multiple methods", {
     fit <- fmrireg_cfals(dat$Y, dat$event_model, HRF_SPMG3,
                          method = m, lambda_b = 0.1, lambda_h = 0.1,
                          lambda_init = 0.5, max_alt = 1)
-    expect_equal(dim(fit$h), c(nbasis(HRF_SPMG3), ncol(dat$Y)))
-    expect_equal(dim(fit$beta), c(length(dat$X_list), ncol(dat$Y)))
+    expect_equal(dim(fit$h_coeffs), c(nbasis(HRF_SPMG3), ncol(dat$Y)))
+    expect_equal(dim(fit$beta_amps), c(length(dat$X_list), ncol(dat$Y)))
   }
 })
 
