@@ -301,3 +301,35 @@ test_that("contrasts and settings validate", {
   expect_equal(res$default_model, "m1")
   expect_equal(res$validation_settings$cross_references, "Warn")
 })
+
+test_that("undefined HRF reference triggers error", {
+  tf <- tempfile(fileext = ".yml")
+  cfg <- list(
+    dataset = list(path = "./data"),
+    events = list(onset_column = "onset", duration_column = "duration", block_column = "run"),
+    variables = list(cond = list(bids_column = "condition", role = "Factor")),
+    terms = list(t1 = list(type = "EventRelated", event_variables = list("cond"), hrf = "missing")),
+    models = list(list(name = "m1", terms = list("t1")))
+  )
+  write_yaml(cfg, tf)
+  on.exit(unlink(tf))
+
+  expect_error(AD(tf), "Configuration validation failed")
+})
+
+test_that("missing term reference warns when cross_references Warn", {
+  tf <- tempfile(fileext = ".yml")
+  cfg <- list(
+    dataset = list(path = "./data"),
+    events = list(onset_column = "onset", duration_column = "duration", block_column = "run"),
+    variables = list(cond = list(bids_column = "condition", role = "Factor")),
+    terms = list(t1 = list(type = "EventRelated", event_variables = list("cond"))),
+    models = list(list(name = "m1", terms = list("t1", "t2"))),
+    validation_settings = list(cross_references = "Warn")
+  )
+  write_yaml(cfg, tf)
+  on.exit(unlink(tf))
+
+  expect_warning(res <- AD(tf))
+  expect_equal(res$models[[1]]$name, "m1")
+})
