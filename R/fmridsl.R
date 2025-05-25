@@ -102,3 +102,41 @@ ValidationErrors <- R6::R6Class(
     }
   )
 )
+
+#' Recursively Apply Default Values to a Configuration List
+#'
+#' Merges a list of defaults into a configuration list. For any element
+#' present in `defaults` but missing from `data`, the default value is
+#' inserted. If both `data` and `defaults` contain a given element and
+#' both values are lists, the merging is performed recursively.
+#'
+#' @param data A list parsed from the user YAML configuration.
+#' @param defaults A list of default values following the DSL specification.
+#'
+#' @return A list with defaults applied where values were missing.
+#' @keywords internal
+#' @noRd
+apply_defaults <- function(data, defaults) {
+  if (!is.list(data) || !is.list(defaults)) return(data)
+
+  data_names     <- names(data) %||% character()
+  defaults_names <- names(defaults) %||% character()
+
+  # Add missing keys from defaults
+  missing_keys <- setdiff(defaults_names, data_names)
+  for (key in missing_keys) {
+    data[[key]] <- defaults[[key]]
+  }
+
+  # Recurse into common list elements
+  common_keys <- intersect(data_names, defaults_names)
+  for (key in common_keys) {
+    if (is.list(defaults[[key]]) && !is.null(data[[key]]) && is.list(data[[key]])) {
+      if (length(defaults[[key]]) > 0 || length(data[[key]]) > 0) {
+        data[[key]] <- apply_defaults(data[[key]], defaults[[key]])
+      }
+    }
+  }
+
+  data
+}
