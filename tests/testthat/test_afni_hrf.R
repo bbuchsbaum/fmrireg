@@ -114,3 +114,48 @@ test_that("can construct an an afni model with trialwise regressor and a Polynom
   expect_equal(2, length(baseline_terms(fmod)))
   expect_null(contrast_weights(fmod)$repnum)
 })
+
+test_that("afni_hrf accepts precision, summate, and lag", {
+
+  facedes$repnum <- factor(facedes$rep_num)
+  scans <- paste0("rscan0", 1:6, ".nii")
+  dset <- fmri_dataset(scans=scans,
+                       mask="mask.nii",
+                       TR=1.5,
+                       run_length=rep(436,6),
+                       event_table=facedes)
+
+  dset <- .assign_dummy_mask_to_dataset(dset)
+
+  espec <- event_model(onset ~ afni_hrf(repnum, basis="spmg1", precision=0.2, summate=FALSE, lag=2),
+                       data=facedes,
+                       block=~run,
+                       sampling_frame=dset$sampling_frame)
+
+  term <- terms(espec)[[1]]
+  expect_equal(term$hrfspec$precision, 0.2)
+  expect_false(term$hrfspec$summate)
+  expect_equal(term$hrfspec$lag, 2)
+})
+
+test_that("afni_trialwise accepts precision and summate", {
+
+  scans <- paste0("rscan0", 1:6, ".nii")
+  dset <- fmri_dataset(scans=scans,
+                       mask="mask.nii",
+                       TR=1.5,
+                       run_length=rep(436,6),
+                       event_table=facedes)
+
+  dset <- .assign_dummy_mask_to_dataset(dset)
+
+  espec <- event_model(onset ~ afni_trialwise("trial", precision=0.2, summate=FALSE),
+                       data=facedes,
+                       block=~run,
+                       sampling_frame=dset$sampling_frame)
+
+  term <- terms(espec)[[1]]
+  expect_equal(term$hrfspec$precision, 0.2)
+  expect_false(term$hrfspec$summate)
+})
+
