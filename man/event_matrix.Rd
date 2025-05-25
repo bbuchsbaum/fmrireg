@@ -19,6 +19,11 @@ event_matrix(mat, name, onsets, blockids = 1, durations = 0, subset = NULL)
 
 \item{subset}{Optional logical vector indicating which events to keep.}
 }
+\details{
+When \code{mat} has more than one column and column names are provided,
+they are sanitized using \code{.sanitizeName()}. The sanitized names are
+returned by \code{levels()} on the resulting event object.
+}
 \value{
 An S3 object of class \code{event} and \code{event_seq}.
 }

@@ -152,6 +152,10 @@ event <- function(value, name, onsets, blockids, durations = 0, subset = NULL) {
 #' @param durations Numeric vector of event durations (seconds), or a scalar.
 #' @param subset Optional logical vector indicating which events to keep.
 #'
+#' If `mat` has column names and more than one column, those names are
+#' sanitized using `.sanitizeName()` before being stored. The sanitized
+#' column names are returned by `levels()` for the resulting event object.
+#'
 #' @return An S3 object of class `event` and `event_seq`.
 #'
 #' @examples
@@ -228,6 +232,10 @@ event_variable <- function(vec, name, onsets, blockids = 1, durations = 0, subse
 #' @param durations Numeric vector of event durations (seconds), or a scalar.
 #' @param subset Optional logical vector indicating which events to keep.
 #'
+#' If `mat` has column names and more than one column, those names are
+#' sanitized using `.sanitizeName()` before being stored. The sanitized
+#' column names are returned by `levels()` for the resulting event object.
+#'
 #' @return An S3 object of class `event` and `event_seq`.
 #'
 #' @examples
@@ -247,6 +255,10 @@ event_matrix <- function(mat, name, onsets, blockids = 1, durations = 0, subset 
   assert_that(nrow(mat) == length(onsets),
               msg = sprintf("Length mismatch for '%s': nrow(mat)=%d, length(onsets)=%d",
                           name, nrow(mat), length(onsets)))
+  # Sanitize column names when multiple columns are provided
+  if (ncol(mat) > 1 && !is.null(colnames(mat))) {
+      colnames(mat) <- .sanitizeName(colnames(mat))
+  }
   
   # Call the unified internal constructor
   event(value = mat, 

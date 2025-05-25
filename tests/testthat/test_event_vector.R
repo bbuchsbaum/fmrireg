@@ -100,6 +100,14 @@ test_that("event_matrix wrapper works and creates correct event object", {
   expect_null(em$meta)
 })
 
+test_that("event_matrix sanitizes colnames when necessary", {
+  mat <- matrix(rnorm(4), ncol = 2)
+  colnames(mat) <- c("A B", "C-D")
+  onsets <- c(1, 2)
+  ev <- event_matrix(mat, "mat", onsets, rep(1, 2))
+  expect_equal(levels(ev), .sanitizeName(c("A B", "C-D")), ignore_attr = TRUE)
+})
+
 # Add test for event_basis wrapper
 test_that("event_basis wrapper works and creates correct event object", {
   skip_if_not_installed("splines")
