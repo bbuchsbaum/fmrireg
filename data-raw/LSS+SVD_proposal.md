@@ -180,10 +180,18 @@ This function will wrap the engine calls.
     *   `fmrireg` helper: `create_fmri_design(event_obj, basis_spec)` returning `X.list`, `d`, `k`, `Phi_matrix_for_recon`, `h_ref_shape_norm_for_basis`. (Handles FIR and potentially other `fmrireg` bases).
     *   **DoD:** Helper functions created and tested.
 6.  **`CFALS-INT-02`: Implement `fmrireg_cfals` Top-Level Function**
-    *   Wrapper function as detailed in Section 4.
-    *   Handles `method` argument to call `ls_svd_engine` or `ls_svd_1als_engine`.
-    *   Passes correctly prepared inputs (projected data, `d`, `k`, `h_ref_shape_norm`) to engines.
-    *   **DoD:** User function callable; basic execution flow works for "ls_svd_only" and "ls_svd_1als" methods with FIR basis.
+    *   Build on the existing wrapper in `R/cfals_wrapper.R` (`fmrireg_hrf_cfals`).
+    *   Provide a `method` argument that dispatches to `ls_svd_engine`,
+        `ls_svd_1als_engine`, or the full `cf_als_engine`.
+    *   Use `create_fmri_design()` and `project_confounds()` from
+        `cfals_design_utils.R` to prepare `X_list`, `Y`, and reference HRF
+        information prior to calling the engines.
+    *   Ensure returned objects conform to the `fmrireg_cfals_fit` structure
+        defined in `cfals_methods.R` so that plotting and summary methods work
+        across all estimation modes.
+    *   **DoD:** User function callable with all methods, correctly interfaces
+        with existing engines and produces valid `fmrireg_cfals_fit` objects for
+        FIR-based examples.
 7.  **`CFALS-INT-03`: Output Object & Basic Methods**
     *   Define and implement `fmrireg_cfals_fit` S3/S4 class.
     *   Include `h_coeffs`, `beta_amps`, `method_used`, `lambdas`, `call`.
