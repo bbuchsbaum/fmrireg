@@ -323,9 +323,9 @@ construct.baselinespec <- function(x, model_spec, ...) {
     mat <- matrix(1, nrow = sum(bl), ncol = 1)
     cnames <- paste0("base_", x$basis)
     colnames(mat) <- cnames
-    # colind and rowind are simple for a single global column
+    # column index is a single value, but rows are tracked per block
     colind <- list(1)
-    rowind <- list(1:nrow(mat))
+    rowind <- split(seq_len(nrow(mat)), blockids(sampling_frame))
     return(baseline_term(x$name, mat, colind, rowind))
   }
   
