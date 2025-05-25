@@ -192,6 +192,68 @@ build_config_from_ior <- function(validated_ior) {
         }
       }
     }
+
+    ## DSL-205: Confound group resolution and baseline checks
+    resolved_groups <- list()
+    if (!is.null(validated_ior$confound_groups)) {
+      for (grp_nm in names(validated_ior$confound_groups)) {
+        grp <- validated_ior$confound_groups[[grp_nm]]
+        matches <- character()
+        if (!is.null(grp$select_by_pattern)) {
+          for (pat in grp$select_by_pattern) {
+            matches <- union(matches, grep(pat, conf_cols, value = TRUE))
+          }
+        }
+        if (!is.null(grp$select_by_bids_column)) {
+          missing_cols <- setdiff(grp$select_by_bids_column, conf_cols)
+          if (length(missing_cols) > 0) {
+            msg <- paste0(
+              "Confound column(s) not found for group '", grp_nm,
+              "': ", paste(missing_cols, collapse = ", ")
+            )
+            if (identical(bids_check_level, "Error")) {
+              errors$add_error(paste0("confound_groups$", grp_nm), msg)
+            } else if (identical(bids_check_level, "Warn")) {
+              warning(msg, call. = FALSE)
+            }
+          }
+          matches <- union(matches, intersect(grp$select_by_bids_column, conf_cols))
+        }
+        if (length(matches) == 0) {
+          msg <- paste0("No confound columns resolved for group '", grp_nm, "'")
+          if (identical(bids_check_level, "Error")) {
+            errors$add_error(paste0("confound_groups$", grp_nm), msg)
+          } else if (identical(bids_check_level, "Warn")) {
+            warning(msg, call. = FALSE)
+          }
+        }
+        resolved_groups[[grp_nm]] <- matches
+      }
+    }
+
+    cr_level <- validated_ior$validation_settings$cross_references %||% "Error"
+    for (i in seq_along(validated_ior$models)) {
+      model <- validated_ior$models[[i]]
+      groups <- model$baseline$include_confound_groups %||% list()
+      for (g in groups) {
+        path <- paste0("models[", i, "]$baseline$include_confound_groups")
+        if (!(g %in% names(resolved_groups))) {
+          msg <- paste0("Confound group '", g, "' not defined")
+          if (identical(cr_level, "Error")) {
+            errors$add_error(path, msg)
+          } else if (identical(cr_level, "Warn")) {
+            warning(msg, call. = FALSE)
+          }
+        } else if (length(resolved_groups[[g]]) == 0) {
+          msg <- paste0("Confound group '", g, "' resolved to no columns")
+          if (identical(bids_check_level, "Error")) {
+            errors$add_error(path, msg)
+          } else if (identical(bids_check_level, "Warn")) {
+            warning(msg, call. = FALSE)
+          }
+        }
+      }
+    }
   }
 
   errors$stop_if_invalid("BIDS content validation failed")
