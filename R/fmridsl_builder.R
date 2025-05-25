@@ -297,3 +297,115 @@ load_fmri_config <- function(yaml_file) {
   validated_ior <- parse_and_validate_config(yaml_file)
   build_config_from_ior(validated_ior)
 }
+#' Load Events and Confounds for a Subject
+#'
+#' Helper used by the DSL model builder. Given a validated
+#' `fmri_config` and a subject identifier, this loads all matching
+#' event files and any requested confound variables. Run lengths and
+#' the effective TR are derived from the configuration scan parameters.
+#'
+#' @param config Validated \code{fmri_config} object.
+#' @param subject_id Subject ID string.
+#'
+#' @return List with elements \code{events_df}, \code{confounds_df},
+#'   \code{run_lengths}, and \code{TR}.
+#' @noRd
+#' @keywords internal
+load_and_prepare_subject_data <- function(config, subject_id) {
+  if (!inherits(config, "fmri_config") || !isTRUE(config$validated)) {
+    stop("'config' must be a validated fmri_config")
+  }
+  if (!subject_id %in% config$subjects) {
+    stop(sprintf("Subject '%s' not listed in configuration.", subject_id))
+  }
+
+  tasks <- config$tasks
+  runs  <- config$runs
+
+  events_res <- bidser::read_events(
+    config$project,
+    subid = subject_id,
+    task  = if (length(tasks) > 0) paste(tasks, collapse = "|") else NULL,
+    run   = if (length(runs) > 0) paste(runs, collapse = "|") else NULL
+  )
+
+  if (nrow(events_res) == 0) {
+    warning("No events found for subject", call. = FALSE)
+    events_df <- data.frame()
+  } else {
+    events_df <- tidyr::unnest(events_res, data)
+    events_df <- dplyr::arrange(events_df, .data$.run)
+  }
+
+  sp <- config$spec$dataset$scan_params
+  default_TR <- sp$TR %||% NA_real_
+  TR_over <- sp$TR_overrides %||% list()
+
+  effective_TR <- default_TR
+  if (length(TR_over) > 0 && nrow(events_df) > 0) {
+    run_tags <- paste0(
+      "sub-", subject_id, "_task-", events_df$.task,
+      "_run-", sprintf("%02d", as.numeric(events_df$.run))
+    )
+    for (pat in names(TR_over)) {
+      if (any(grepl(pat, run_tags))) {
+        effective_TR <- TR_over[[pat]]
+        break
+      }
+    }
+  }
+  if (is.na(effective_TR)) {
+    stop("TR could not be determined for subject")
+  }
+
+  default_rl <- sp$run_lengths %||% list()
+  rl_over <- sp$run_length_overrides %||% list()
+  run_info <- unique(events_df[, c(".run", ".task")])
+  final_rl <- integer(nrow(run_info))
+
+  for (i in seq_len(nrow(run_info))) {
+    rstr <- sprintf("run-%02d", as.numeric(run_info$.run[i]))
+    tstr <- run_info$.task[i]
+    matched <- FALSE
+    for (pat in names(rl_over)) {
+      test <- paste0("sub-", subject_id, "_task-", tstr, "_", rstr)
+      if (grepl(pat, test)) {
+        final_rl[i] <- rl_over[[pat]]
+        matched <- TRUE
+        break
+      }
+    }
+    if (!matched) {
+      final_rl[i] <- default_rl[[tstr]] %||% NA_integer_
+    }
+  }
+  if (any(is.na(final_rl))) {
+    stop("Run lengths could not be determined for all runs")
+  }
+
+  conf_columns <- unique(unlist(config$confounds_info$groups, use.names = FALSE))
+  if (length(conf_columns) > 0) {
+    conf_res <- bidser::read_confounds(
+      config$project,
+      subid = subject_id,
+      task  = if (length(tasks) > 0) paste(tasks, collapse = "|") else NULL,
+      run   = if (length(runs) > 0) paste(runs, collapse = "|") else NULL
+    )
+    if (nrow(conf_res) == 0) {
+      confounds_df <- NULL
+    } else {
+      confounds_df <- tidyr::unnest(conf_res, data)
+      confounds_df <- dplyr::arrange(confounds_df, as.numeric(run))
+      confounds_df <- dplyr::select(confounds_df, dplyr::all_of(conf_columns))
+    }
+  } else {
+    confounds_df <- NULL
+  }
+
+  list(
+    events_df = events_df,
+    confounds_df = confounds_df,
+    run_lengths = as.integer(final_rl),
+    TR = as.numeric(effective_TR)
+  )
+}
