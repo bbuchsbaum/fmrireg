@@ -7,7 +7,7 @@
 #' @param hrf The hemodynamic response function to use (default is HRF_SPMG1).
 #' @param nreps The number of repetitions per condition (default is 12).
 #' @param amps A vector of amplitudes for each condition (default is a vector of 1s with length ncond).
-#' @param apmsd the standard deviation of the amplitudes (default is 0).
+#' @param ampsd The standard deviation of the amplitudes (default is 0).
 #' @param isi A vector of length 2 specifying the range of inter-stimulus intervals to sample from (default is c(3, 6) seconds).
 #' @param TR The repetition time of the fMRI acquisition (default is 1.5 seconds).
 #'
@@ -33,8 +33,8 @@
 #' 
 #' @export
 simulate_bold_signal <- function(ncond, hrf=HRF_SPMG1, nreps=12, amps=rep(1,ncond), isi=c(3,6), ampsd=0, TR=1.5) {
-  assert_that(length(amps) == ncond, 
-              msg = "Length of amplitudes vector must match number of total trials (ncond")
+  assert_that(length(amps) == ncond,
+              msg = "Length of 'amps' must equal 'ncond'")
   # Note: If ampsd > 0, amplitude variability is sampled *once per condition*,
   # meaning all trials of a given condition share the same sampled amplitude.
   assert_that(length(isi) == 2 && isi[2] > isi[1], 
@@ -44,10 +44,11 @@ simulate_bold_signal <- function(ncond, hrf=HRF_SPMG1, nreps=12, amps=rep(1,ncon
   # Use robust condition naming
   cond <- paste0("Cond", 1:ncond) 
   trials <- sample(rep(cond, nreps))
-  isis <- sample(isi[1]:isi[2], length(trials), replace=TRUE)
+  isis <- runif(length(trials), min = isi[1], max = isi[2])
   onset <- cumsum(isis)
   
-  time <- seq(0, max(onset+12), by=TR)
+  span <- attr(hrf, "span") %||% 12
+  time <- seq(0, max(onset) + span, by = TR)
   ymat <- do.call(cbind, lapply(1:length(cond), function(i) {
     idx <- which(trials == cond[i])
     reg <- regressor(onset[idx], hrf, amplitude=rnorm(1, mean=amps[i], sd=ampsd))
@@ -241,6 +242,31 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #'
 #' @importFrom stats rnorm rexp runif rgamma rlnorm arima.sim
 #' @export
+
+# Internal helper for value resampling
+.resample_param <- function(base, sd, dist = c("lognormal", "gamma", "gaussian"),
+                            allow_negative = FALSE) {
+  dist <- match.arg(dist)
+  out  <- base
+  if (sd > 0) {
+    out <- vapply(seq_along(base), function(i) {
+      mu <- base[i]
+      if (!allow_negative && mu <= 0 && dist != "gaussian") {
+        stop("base values must be >0 for lognormal or gamma sampling")
+      }
+      switch(dist,
+             lognormal = rlnorm(1, meanlog = log(mu), sdlog = sd),
+             gamma = {
+               shape_par <- (mu^2) / (sd^2)
+               rate_par  <- mu / (sd^2)
+               rgamma(1, shape = shape_par, rate = rate_par)
+             },
+             gaussian = rnorm(1, mean = mu, sd = sd))
+    }, numeric(1))
+  }
+  out
+}
+
 simulate_fmri_matrix <- function(
     n                 = 1,
     total_time        = 240,
@@ -334,32 +360,9 @@ simulate_fmri_matrix <- function(
       }
       base_durs <- durations
     }
-    dvals <- base_durs
-    if (duration_sd > 0) {
-      if (duration_dist == "lognormal") {
-        dvals <- sapply(seq_len(n_events), function(i) {
-          if (base_durs[i] <= 0) {
-            stop("durations must be >0 for lognormal sampling.")
-          }
-          rlnorm(1, meanlog = log(base_durs[i]), sdlog = duration_sd)
-        })
-      } else {
-        # gamma
-        dvals <- sapply(seq_len(n_events), function(i) {
-          mu <- base_durs[i]
-          if (mu <= 0) {
-            stop("durations must be >0 for gamma sampling.")
-          }
-          sigma <- duration_sd
-          shape_par <- (mu^2)/(sigma^2)
-          rate_par  <- mu/(sigma^2)
-          rgamma(1, shape=shape_par, rate=rate_par)
-        })
-      }
-    }
-    dvals
+    .resample_param(base_durs, duration_sd, duration_dist)
   }
-  
+
   do_sample_amplitudes <- function() {
     if (length(amplitudes) == 1L) {
       base_amps <- rep(amplitudes, n_events)
@@ -369,34 +372,18 @@ simulate_fmri_matrix <- function(
       }
       base_amps <- amplitudes
     }
-    avals <- base_amps
-    if (amplitude_sd > 0) {
-      if (amplitude_dist == "lognormal") {
-        avals <- sapply(seq_len(n_events), function(i) {
-          if (base_amps[i] <= 0) {
-            stop("amplitudes must be >0 for lognormal sampling.")
-          }
-          rlnorm(1, meanlog = log(base_amps[i]), sdlog = amplitude_sd)
-        })
-      } else if (amplitude_dist == "gamma") {
-        avals <- sapply(seq_len(n_events), function(i) {
-          mu <- base_amps[i]
-          if (mu <= 0) {
-            stop("amplitudes must be >0 for gamma sampling.")
-          }
-          sigma <- amplitude_sd
-          shape_par <- (mu^2)/(sigma^2)
-          rate_par  <- mu/(sigma^2)
-          rgamma(1, shape=shape_par, rate=rate_par)
-        })
-      } else {
-        # "gaussian"
-        avals <- sapply(seq_len(n_events), function(i) {
-          rnorm(1, mean=base_amps[i], sd=amplitude_sd)
-        })
-      }
-    }
-    avals
+    .resample_param(base_amps, amplitude_sd, amplitude_dist,
+                    allow_negative = (amplitude_dist == "gaussian"))
+  }
+
+  gen_noise <- function() {
+    switch(noise_type,
+           none  = rep(0, n_time_points),
+           white = rnorm(n_time_points, 0, noise_sd),
+           ar1   = arima.sim(model = list(ar = noise_ar),
+                             n = n_time_points, sd = noise_sd),
+           ar2   = arima.sim(model = list(ar = noise_ar),
+                             n = n_time_points, sd = noise_sd))
   }
   
   # ---------------------------
@@ -438,18 +425,8 @@ simulate_fmri_matrix <- function(
     }
     
     # Add noise to the entire signal including buffer
-    if (noise_type == "none") {
-      noisy_tc <- bold_signal
-    } else {
-      if (noise_type == "white") {
-        eps <- rnorm(n_time_points, 0, noise_sd)
-      } else if (noise_type == "ar1") {
-        eps <- arima.sim(model=list(ar=noise_ar), n=n_time_points, sd=noise_sd)
-      } else if (noise_type == "ar2") {
-        eps <- arima.sim(model=list(ar=noise_ar), n=n_time_points, sd=noise_sd)
-      }
-      noisy_tc <- bold_signal + eps
-    }
+    eps <- gen_noise()
+    noisy_tc <- bold_signal + eps
     signal_list[[ii]] <- noisy_tc
   }
   
