@@ -179,8 +179,19 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
 
   cov.unscaled <- try(chol2inv(Qr$qr))
   
-  cmat <- matrix(0, ncol(conmat), ncol(cov.unscaled))
-  cmat[,colind] <- t(conmat)
+  cmat <- matrix(0, nrow(conmat), ncol(cov.unscaled))
+  if (ncol(conmat) == length(colind)) {
+    cmat[, colind] <- conmat
+  } else if (nrow(conmat) == length(colind)) {
+    cmat[, colind] <- t(conmat)
+  } else {
+    stop(
+      sprintf(
+        "F contrast weight matrix dimensions %d x %d do not match length(colind) %d",
+        nrow(conmat), ncol(conmat), length(colind)
+      )
+    )
+  }
   
   cfs <- coef(lmfit)
   
