@@ -40,14 +40,17 @@ as.character.AFNI_HRF <- function(x,...) {
 #' @export
 #' @return an \code{afni_hrfspec} instance
 afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",           
-                                  "tent",   "csplin", "poly",  "sin",        
-                                  "gam", "spmg2", "spmg3", "wav"), 
+                                  "tent",   "csplin", "poly",  "sine",        
+                                  "gamma", "spmg2", "spmg3", "wav"), 
                                   onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, 
                                   nbasis=1, contrasts=NULL, id=NULL, 
                                   lag=0,
                                   start=NULL, stop=NULL) {
   
   ## TODO cryptic error message when argument is mispelled and is then added to ...
+  basis <- tolower(basis)
+  if (basis == "sin") basis <- "sine"
+  if (basis == "gam") basis <- "gamma"
   basis <- match.arg(basis)
   
   vars <- as.list(base::substitute(list(...)))[-1]
@@ -136,6 +139,8 @@ afni_trialwise <- function(label, basis=c("spmg1", "block", "dmblock", "gamma", 
                       id=NULL, start=0, stop=22) {
   
   ## TODO cryptic error message when argument is mispelled and is then added to ...
+  basis <- tolower(basis)
+  if (basis == "gam") basis <- "gamma"
   basis <- match.arg(basis)
   
   hrf <- if (!is.null(durations)) {
@@ -274,6 +279,9 @@ AFNI_WAV <- function(d=1) AFNI_HRF(name="WAV", nbasis=as.integer(1), params=list
 #' @keywords internal
 #' @noRd
 get_AFNI_HRF <- function(name, nbasis=1, duration=1, b=0, c=18) {
+  name <- tolower(name)
+  if (name == "sin") name <- "sine"
+  if (name == "gam") name <- "gamma"
   hrf <- switch(name,
                 gamma=AFNI_GAM(),
                 spmg1=AFNI_SPMG1(d=duration),
