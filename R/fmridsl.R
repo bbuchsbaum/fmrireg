@@ -176,6 +176,9 @@ parse_and_validate_config <- function(yaml_file) {
       onset_column = "onset",
       duration_column = "duration",
       block_column = "run"
+    ),
+    hrfs = list(
+      canonical = list(type = "SPMCanonical")
     )
   )
 
