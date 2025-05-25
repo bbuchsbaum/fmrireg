@@ -839,3 +839,20 @@ build_event_model_from_dsl <- function(term_specs,
               sampling_frame = sframe,
               durations = data_df$duration)
 }
+
+#' Assemble fmri_model from event and baseline components
+#'
+#' Implements DSL2-503. This helper simply calls [fmri_model()]
+#' to combine an `event_model` and a `baseline_model` into a
+#' full `fmri_model` object.
+#'
+#' @param event_model An `event_model` object.
+#' @param baseline_model A `baseline_model` object.
+#' @return An `fmri_model` object.
+#' @keywords internal
+build_fmri_model_from_dsl <- function(event_model, baseline_model) {
+  stopifnot(inherits(event_model, "event_model"))
+  stopifnot(inherits(baseline_model, "baseline_model"))
+  fmri_model(event_model, baseline_model)
+}
+
