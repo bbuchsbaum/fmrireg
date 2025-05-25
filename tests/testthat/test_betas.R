@@ -98,7 +98,7 @@ test_that("can run a beta estimation with different durations", {
   dset <- gen_dset(5, facedes)
 
   hf <- gen_hrf(hrf_spmg1, width=2, lag=5)
-  ret1 <- estimate_betas(dset, fixed = onset ~ hrf(constant, durations=1), ran = onset ~ trialwise(durations=5),
+  ret1 <- estimate_betas(dset, fixed = onset ~ hrf(constant, durations=1), ran = onset ~ trialwise(),
                          block = ~ run,
                          method="pls", ncomp=1)
 
@@ -132,7 +132,7 @@ test_that("can run a beta estimation with multiple basis functions", {
   #                                 method="pls",ncomp=3)
   
   est <- estimate_betas(dset, fixed = onset ~ hrf(constant, durations=0),
-                                   ran = onset ~ trialwise(durations=0), block = ~ run,
+                                   ran = onset ~ trialwise(), block = ~ run,
                                    method="pls",ncomp=3)
 
 
@@ -154,7 +154,7 @@ test_that("can run a beta estimation with custom basis", {
   #                       method="pls_global",ncomp=30)
   
   est <- estimate_betas(dset, fixed = onset ~ hrf(constant,durations=0),
-                                   ran = onset ~ trialwise(durations=0), block = ~ run,
+                                   ran = onset ~ trialwise(), block = ~ run,
                                    method="pls",ncomp=3)
 
   expect_true(!is.null(est))
@@ -179,7 +179,7 @@ test_that("can run a beta estimation with fixed duration", {
   
   
   est <- estimate_betas(dset, fixed = onset ~ hrf(constant),
-                        ran = onset ~ trialwise(durations=4), block = ~ run, 
+                        ran = onset ~ trialwise(), block = ~ run, 
                         method="pls_global",ncomp=20)
   
   expect_true(!is.null(est))

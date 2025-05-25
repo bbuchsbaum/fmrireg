@@ -402,16 +402,37 @@ run_estimate_betas <- function(bdes, dset, method,
   }  else if (method == "lss_naive") {
     lss_naive(dset, bdes)
   } else if (method == "r1") {
+    # R1 method using rank-1 GLM
+    vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) > 0))
     xdat <- get_X()
-    r1_result <- estimate_r1(dset, xdat, hrf_basis, hrf_ref, maxit)
-
-    # Make sure r1_result has the expected beta_matrix structure
-    if (!is.list(r1_result) || is.null(r1_result$beta_matrix)) {
-      stop("estimate_r1 did not return a valid result with beta_matrix component")
-    }
-
-    # Return the structured result
-    return(r1_result)
+    nvoxels <- length(vecs)
+    
+    # Convert hrf_basis and hrf_ref to matrices/vectors
+    hrf_basis <- as.matrix(hrf_basis)
+    hrf_ref <- as.numeric(hrf_ref)
+    
+    estimated_hrfs <- matrix(NA, nrow = nrow(hrf_basis), ncol = nvoxels)
+    
+    message("Estimating betas using Rank-1 GLM method...")
+    
+    res <- do.call(cbind, furrr::future_map(vecs, function(v) {
+      v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
+      
+      # Use r1_glm_betas from rank1_estimation.R
+      fit_result <- r1_glm_betas(
+        X = as.matrix(xdat$X),
+        y = as.numeric(v0),
+        Z = NULL,
+        hrf_basis = hrf_basis,
+        hrf_ref = hrf_ref,
+        maxit = maxit
+      )
+      
+      # Extract beta coefficients
+      fit_result$beta
+    }))
+    
+    list(beta_matrix = as.matrix(res), estimated_hrf = estimated_hrfs)
   } else if (method == "lss") {
     # Estimate random effects using LSS
     beta_matrix_ran <- lss_fast(dset, bdes, use_cpp = FALSE)
@@ -573,9 +594,16 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
   # For R1 methods, we need to track both expanded and collapsed indices
   is_r1_method <- !is.null(method) && method %in% c("r1", "r1_glms")
   if (is_r1_method) {
-    # Get the number of basis functions from the design matrix
-    n_basis <- ncol(dmat_ran) / nrow(emod_ran$model_spec$event_table)
-    n_events <- ncol(dmat_ran)/n_basis
+    # Handle trialwise() events where event_table might be NULL
+    if (is.null(emod_ran$model_spec$event_table)) {
+      # For trialwise() events, each column is one event with 1 basis function
+      n_basis <- 1
+      n_events <- ncol(dmat_ran)
+    } else {
+      # Get the number of basis functions from the design matrix
+      n_basis <- ncol(dmat_ran) / nrow(emod_ran$model_spec$event_table)
+      n_events <- ncol(dmat_ran)/n_basis
+    }
   
     # Create both expanded and collapsed indices
     ran_ind <- 1:n_events  # Collapsed indices for R1 methods
