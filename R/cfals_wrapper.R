@@ -50,21 +50,10 @@ fmrireg_hrf_cfals <- function(fmri_data_obj,
     stop("'hrf_basis' must be an object of class 'HRF'")
   }
 
-  # build regressors for each condition using the provided basis
-  reg_lists <- lapply(event_model$terms, regressors.event_term,
-                      hrf = hrf_basis,
-                      sampling_frame = sframe,
-                      summate = FALSE,
-                      drop.empty = TRUE)
-  regs <- unlist(reg_lists, recursive = FALSE)
-  cond_names <- names(regs)
-  sample_times <- samples(sframe, global = TRUE)
-  X_list <- lapply(regs, function(r) {
-    evaluate(r, sample_times, precision = sframe$precision)
-  })
-  names(X_list) <- cond_names
+  design <- create_fmri_design(event_model, hrf_basis)
+  X_list <- design$X_list
 
-  proj <- project_confounds(X_list, Y, confound_obj)
+  proj <- project_confounds(Y, X_list, confound_obj)
   Xp <- proj$X_list
   Yp <- proj$Y
 
@@ -72,10 +61,11 @@ fmrireg_hrf_cfals <- function(fmri_data_obj,
                        lambda_b = lam_beta,
                        lambda_h = lam_h,
                        fullXtX_flag = fullXtX,
+                       h_ref_shape_norm = design$h_ref_shape_norm,
                        max_alt = max_alt)
 
   # reconstruct HRF shapes on the sampling grid
-  Phi <- reconstruction_matrix(hrf_basis, sframe)
+  Phi <- design$Phi
   recon_hrf <- Phi %*% fit$h
 
   # predicted BOLD and residuals in the projected space
