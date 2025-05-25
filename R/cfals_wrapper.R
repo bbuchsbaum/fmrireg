@@ -78,18 +78,16 @@ fmrireg_hrf_cfals <- function(fmri_data_obj,
   Phi <- reconstruction_matrix(hrf_basis, sframe)
   recon_hrf <- Phi %*% fit$h
 
-  # predicted BOLD and residuals
-  n <- nrow(Y)
-  v <- ncol(Y)
-  pred <- matrix(0, n, v)
-  for (c in seq_along(X_list)) {
-    pred <- pred + (X_list[[c]] %*% fit$h) *
-      matrix(rep(fit$beta[c, ], each = n), n, v)
-  }
-  resids <- Y - pred
+  # predicted BOLD and residuals in the projected space
+  n <- nrow(Yp)
+  v <- ncol(Yp)
+  pred_p <- Reduce(`+`, Map(function(Zc, bc) {
+    Zc %*% (fit$h * bc)
+  }, Xp, asplit(fit$beta, 1)))
+  resids <- Yp - pred_p
 
-  # simple R^2 per voxel
-  SST <- colSums((Y - rowMeans(Y))^2)
+  # simple R^2 per voxel computed on projected data
+  SST <- colSums((Yp - matrix(colMeans(Yp), n, v, TRUE))^2)
   SSE <- colSums(resids^2)
   r2 <- 1 - SSE / SST
 
