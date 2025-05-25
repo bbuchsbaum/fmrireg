@@ -119,15 +119,24 @@ construct.covariatespec <- function(x, model_spec, sampling_frame=NULL, ...) {
   }))
   
   colnames(mat) <- x$varnames
-  
+
   cterm <- covariate_term(x$name, mat)
-  
+
   sframe <- if (is.null(sampling_frame)) {
     model_spec$sampling_frame
   } else {
     sampling_frame
   }
-  
+
+  ## Validate that the covariate matrix matches the sampling frame length
+  expected_rows <- sum(sframe$blocklens)
+  if (nrow(mat) != expected_rows) {
+    stop(sprintf(
+      "Covariate term '%s' has %d rows but sampling_frame expects %d",
+      x$name, nrow(mat), expected_rows
+    ), call. = FALSE)
+  }
+
   ret <- list(
     varname=x$name,
     spec=x,
