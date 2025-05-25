@@ -2,27 +2,9 @@
 % Please edit documentation in R/hrf.R
 \name{HRF}
 \alias{HRF}
-\alias{HRF_GAMMA}
-\alias{HRF_GAUSSIAN}
-\alias{HRF_BSPLINE}
-\alias{HRF_SPMG1}
-\alias{HRF_SPMG2}
-\alias{HRF_SPMG3}
 \title{HRF Constructor Function}
 \usage{
 HRF(fun, name, nbasis = 1, span = 24, param_names = NULL)
-
-HRF_GAMMA(t, shape = 6, rate = 1)
-
-HRF_GAUSSIAN(t, mean = 6, sd = 2)
-
-HRF_BSPLINE(t, span = 24, N = 5, degree = 3)
-
-HRF_SPMG1(t, P1 = 5, P2 = 15, A1 = 0.0833)
-
-HRF_SPMG2(t)
-
-HRF_SPMG3(t)
 }
 \arguments{
 \item{fun}{A function representing the hemodynamic response, mapping from time to BOLD response.}
@@ -62,21 +44,6 @@ The package provides several pre-defined HRF types that can be used in modeling 
 
 To see a complete list of available HRF types with details, use the \code{list_available_hrfs()} function.
 }
-\section{Functions}{
-\itemize{
-\item \code{HRF_GAMMA()}: Gamma HRF function object
-
-\item \code{HRF_GAUSSIAN()}: Gaussian HRF function object
-
-\item \code{HRF_BSPLINE()}: BSpline HRF function object
-
-\item \code{HRF_SPMG1()}: SPMG1 HRF function object
-
-\item \code{HRF_SPMG2()}: SPMG1 HRF function object
-
-\item \code{HRF_SPMG3()}: SPMG1 HRF function object
-
-}}
 \examples{
 hrf <- HRF(hrf_gamma, "gamma", nbasis=1, param_names=c("shape", "rate"))
 resp <- evaluate(hrf, seq(0, 24, by=1))
@@ -85,5 +52,3 @@ resp <- evaluate(hrf, seq(0, 24, by=1))
 list_available_hrfs(details = TRUE)
 
 }
-\concept{HRF}
-\keyword{internal}

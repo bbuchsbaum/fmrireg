@@ -13,10 +13,6 @@ dctbasis <- function(n, p=n, const=FALSE) {
   ret
 }
 
-#osplinebasis <- function() {
-#  
-#}
-
 
 #' sub_basis
 #' 
@@ -45,7 +41,7 @@ Ident <- function(...) {
   names(vlist) <- varnames
   y <- do.call(cbind, vlist)
   
-  ret <- list(x=vlist, y=y, varnames=varnames, name=paste(varnames, collapse="_"))
+  ret <- list(vlist=vlist, y=y, varnames=varnames, name=paste(varnames, collapse="_"))
   class(ret) <- c("Ident", "ParametricBasis")
   ret
 }
@@ -63,9 +59,12 @@ Ident <- function(...) {
 #' @export 
 Poly <- function(x, degree) {
   mc <- match.call()
+  argname <- as.character(mc[["x"]])
   pres <- poly(x,degree)
-  n <- paste0("poly", "_", as.character(mc[["x"]]), "_", degree)
-  ret <- list(x=x,y=pres,fun="poly",argname=as.character(mc[["x"]]), name=n, degree=degree)
+  n <- paste0("poly_", argname)
+  ret <- list(x=x,y=pres,fun="poly",argname=argname, 
+              name=n,
+              degree=degree)
   class(ret) <- c("Poly", "ParametricBasis")
   ret
 }
@@ -139,7 +138,7 @@ predict.Standardized <- function(object, newdata, ...) {
 #' @export
 sub_basis.Standardized <- function(x, subset) {
   ret <- list(x=x$x[subset],
-              y=x$y[subset,],
+              y=x$y[subset, , drop = FALSE],
               fun=x$fun,
               argname=x$argname,
               name=x$name,
@@ -151,12 +150,12 @@ sub_basis.Standardized <- function(x, subset) {
 
 #' @export
 levels.Standardized <- function(x) {
-  x$name
+  x$argname 
 }
 
 #' @export
 columns.Standardized <- function(x) {
-  paste0(x$name)
+  continuous_token(x$name)
 }
 
 
@@ -172,10 +171,12 @@ columns.Standardized <- function(x) {
 #' @return an \code{BSpline} list instance
 BSpline <- function(x, degree) {
   mc <- match.call()
-  
+  argname <- as.character(mc[["x"]])[1]
   pres <- bs(x,degree)
-  n <- paste0("bs", "_", as.character(mc[["x"]]), "_", degree)[1]
-  ret <- list(x=x,y=pres,fun="bs",argname=as.character(mc[["x"]])[1], name=n, degree=degree)
+  n <- paste0("bs_", argname)
+  ret <- list(x=x, y=pres, fun="bs", argname=argname, 
+              name=n,
+              degree=degree)
   class(ret) <- c("BSpline", "ParametricBasis")
   
   ret
@@ -193,7 +194,6 @@ sub_basis.Poly <- function(x, subset) {
        y=x$y[subset,],
        fun=x$fun,
        argname=x$argname,
-       name=x$name,
        degree=x$degree)
   class(ret) <- c("Poly", "ParametricBasis")
   ret
@@ -202,33 +202,37 @@ sub_basis.Poly <- function(x, subset) {
 #' @export
 sub_basis.BSpline <- function(x, subset) {
   ret <- list(x=x$x[subset],
-              y=x$y[subset,],
+              y=x$y[subset, , drop=FALSE],
               fun=x$fun,
               argname=x$argname,
-              name=x$name,
               degree=x$degree)
-  class(ret) <- c("Poly", "ParametricBasis")
+  class(ret) <- c("BSpline", "ParametricBasis")
   ret
 }
 
 #' @export
 sub_basis.Ident <- function(x, subset) {
-  vlist <- lapply(x$vlist, function(v) v[subset])
-  ret <- list(vlist=vlist, varnames=x$varnames, name="Ident")
+  ret <- list(y = x$y[subset, , drop = FALSE], 
+              varnames = x$varnames, 
+              fun = "ident")
   class(ret) <- c("Ident", "ParametricBasis")
   ret
 }
 
 #' @export
-predict.BSpline <- function(object,newdata,...) {
-  predict(object$y, newdata)
+predict.BSpline <- function(object, newdata, ...) {
+  # Rebuild using bs() and stored attributes
+  splines::bs(newdata, degree = object$degree,
+     knots = attr(object$y, "knots"),
+     Boundary.knots = attr(object$y, "Boundary.knots"))
 }
 
 #' @export
 predict.Ident <- function(object,newdata,...) {
-  ret <- as.data.frame(do.call(rbind, lapply(object$varnames, function(v) base::eval(v, newdata))))
-  names(ret) <- object$varnames
-  ret
+  if (!is.matrix(newdata) && !is.data.frame(newdata)) {
+      stop("newdata for predict.Ident should be matrix or data.frame containing necessary columns")
+  }
+  return(as.matrix(newdata[, object$varnames, drop=FALSE]))
 }
 
 #' @export
@@ -238,27 +242,274 @@ levels.Ident <- function(x) {
 
 #' @export
 levels.BSpline <- function(x) {
-  seq(1, x$degree)
+  ncols <- ncol(x$y)
+  if (is.null(ncols) || ncols == 0) {
+    return(character(0))
+  }
+  indices <- seq_len(ncols)
+  zeropad(indices, ncols) # Pad based on the number of columns
 }
 
 #' @export
 levels.Poly <- function(x) {
-  seq(1,x$degree)
+  ncols <- ncol(x$y) 
+  if (is.null(ncols) || ncols == 0) {
+    return(character(0))
+  }
+  indices <- seq_len(ncols) # Or seq_len(x$degree)
+  zeropad(indices, x$degree) 
 }
 
-#' @noRd
+#' @export
 columns.Poly <- function(x) {
-  paste0(x$name, ".", seq(1, x$degree))
+  # Use degree for padding width
+  indices <- seq_len(x$degree)
+  padded_indices <- zeropad(indices, x$degree) # Enforces min width 
+  # Return only the padded index as the condition tag component
+  continuous_token(padded_indices)
 }
 
-#' @noRd
+#' @export
 columns.BSpline <- function(x) {
-  paste0(x$name, ".", seq(1, x$degree))
+  # Use degree for padding width
+  indices <- seq_len(x$degree)
+  padded_indices <- zeropad(indices, x$degree) # Enforces min width 
+  # Return only the padded index as the condition tag component
+  continuous_token(padded_indices)
 }
 
-#' @noRd
+#' @export
 columns.Ident <- function(x) {
-  x$varnames
+  continuous_token(x$varnames)
 }
 
+
+#' @export
+nbasis.BSpline <- function(x) {
+  x$degree
+}
+
+#' @export
+nbasis.Poly <- function(x) {
+  x$degree
+}
+
+#' Z-score (global) basis
+#'
+#' @param x numeric vector (NAs allowed)
+#' @return object of class c("Scale","ParametricBasis")
+#' @export
+Scale <- function(x) {
+  mc <- match.call()
+  varname <- as.character(mc[["x"]])
+  mu <- mean(x, na.rm = TRUE)
+  sd_ <- stats::sd(x, na.rm = TRUE)
+  if (is.na(sd_) || sd_ == 0) sd_ <- 1e-6 # Add guard for sd_ == 0 or NA
+  z  <- (x - mu)/sd_
+  z[is.na(z)] <- 0
+  
+  final_name <- paste0("z_", varname)
+  ret <- list(x = x,
+              y = matrix(z, ncol = 1, dimnames=list(NULL, final_name)),
+              mean = mu,
+              sd   = sd_,
+              fun  = "scale",
+              argname = varname,
+              name = final_name)
+  class(ret) <- c("Scale","ParametricBasis")
+  ret
+}
+
+#' @export
+#' @name predict.ParametricBasis
+#' @title Predict Method for ParametricBasis Objects
+#' @rdname predict.ParametricBasis
+predict.Scale <- function(object, newdata, ...) {
+  z <- (newdata - object$mean)/object$sd
+  z[is.na(z)] <- 0
+  matrix(z, ncol = 1, dimnames=list(NULL, object$name))
+}
+
+#' @export
+#' @rdname sub_basis
+sub_basis.Scale <- function(x, subset) {
+  ret <- x
+  ret$x <- x$x[subset]
+  # Perform subsetting
+  subsetted_y <- x$y[subset, , drop = FALSE]
+  # Ensure the result is a matrix, specifically N x 1 if it was originally
+  if (!is.matrix(subsetted_y)) {
+    # This case indicates an unexpected dimension drop.
+    # Reform it into an N x 1 matrix.
+    # The number of rows should be length(ret$x) if subsetting was consistent.
+    # warning("Dimension dropped unexpectedly during Standardized/Scale basis subsetting. Re-casting to matrix.", call.=FALSE)
+    ret$y <- matrix(subsetted_y, ncol = 1, dimnames = list(NULL, colnames(x$y)))
+  } else {
+    ret$y <- subsetted_y
+  }
+  class(ret) <- class(x)
+  ret
+}
+
+#' @export
+#' @name levels.ParametricBasis
+#' @title Get Levels/Names for ParametricBasis Objects
+#' @rdname levels.ParametricBasis
+levels.Scale  <- function(x) x$argname
+
+#' @export
+#' @name columns.ParametricBasis
+#' @title Get Column Name Information for ParametricBasis Objects
+#' @rdname columns.ParametricBasis
+columns.Scale <- function(x) {
+  continuous_token(x$name)
+}
+
+
+#' Z-score within groups
+#' 
+#' @param x numeric vector
+#' @param g grouping factor / character / integer of same length as x
+#' @export
+ScaleWithin <- function(x, g) {
+  mc <- match.call()
+  varname <- as.character(mc[["x"]])
+  grpname <- as.character(mc[["g"]])
+  stopifnot(length(x) == length(g))
+  g <- as.factor(g)
+  
+  # pre-compute means/sds per group (ignoring NAs)
+  stats <- tapply(seq_along(x), g, function(idx) {
+    mu <- mean(x[idx], na.rm = TRUE)
+    sd_ <- stats::sd(x[idx], na.rm = TRUE)
+    # Handle groups with sd=0 or only one non-NA value
+    if (is.na(sd_) || sd_ == 0) sd_ <- 1e-6 # Use small value instead of 0 or NA
+    c(mean = mu, sd = sd_)
+  })
+  mus <- sapply(stats, `[[`, "mean")
+  sds <- sapply(stats, `[[`, "sd")
+  
+  z <- mapply(function(val, grp) {
+              grp_name <- as.character(grp) # Ensure factor level name is used
+              mu <- mus[grp_name]; sd_ <- sds[grp_name]
+              if (is.na(val) || is.na(mu) || is.na(sd_)) 0
+              else (val - mu) / sd_
+            },
+            x, g, SIMPLIFY = TRUE)
+  
+  final_name <- paste0("z_", varname, "_by_", grpname)
+  ret <- list(x = x,
+              group = g,
+              y = matrix(z, ncol = 1, dimnames=list(NULL, final_name)),
+              means = mus,
+              sds   = sds,
+              fun   = "scale_within",
+              argname = varname,
+              grpname = grpname,
+              name = final_name)
+  class(ret) <- c("ScaleWithin","ParametricBasis")
+  ret
+}
+
+#' @export
+#' @rdname predict.ParametricBasis
+predict.ScaleWithin <- function(object, newdata, newgroup, ...) {
+  stopifnot(length(newdata) == length(newgroup))
+  newgroup <- as.factor(newgroup)
+  
+  z <- mapply(function(val, grp) {
+      grp_name <- as.character(grp) # Ensure factor level name used for indexing
+      mu <- object$means[grp_name]; sd_ <- object$sds[grp_name]
+      if (is.na(val) || is.na(mu) || is.na(sd_)) 0 # Handle missing group stats in newdata
+      else (val - mu)/sd_
+    },
+    newdata, newgroup, SIMPLIFY = TRUE)
+  matrix(z, ncol = 1, dimnames=list(NULL, object$name))
+}
+
+#' @export
+#' @rdname sub_basis
+sub_basis.ScaleWithin <- function(x, subset) {
+  ret <- x
+  ret$x     <- x$x[subset]
+  ret$group <- x$group[subset]
+  ret$y     <- x$y[subset,,drop = FALSE]
+  class(ret) <- class(x)
+  ret
+}
+
+#' @export
+#' @rdname levels.ParametricBasis
+levels.ScaleWithin  <- function(x) x$argname
+
+#' @export
+#' @rdname columns.ParametricBasis
+columns.ScaleWithin <- function(x) {
+  continuous_token(x$name)
+}
+
+
+#' Robust Scaling (Median/MAD)
+#'
+#' @param x numeric vector (NAs allowed)
+#' @return object of class c("RobustScale","ParametricBasis")
+#' @export
+RobustScale <- function(x) {
+  mc <- match.call()
+  varname <- as.character(mc[["x"]])
+  med <- stats::median(x, na.rm = TRUE)
+  mad_ <- stats::mad(x, na.rm = TRUE)  # Default constant=1.4826
+  if (is.na(mad_) || mad_ == 0) mad_ <- 1e-6 # Handle zero MAD
+  z <- (x - med)/mad_
+  z[is.na(z)] <- 0
+  
+  final_name <- paste0("robz_", varname)
+  ret <- list(x = x,
+              y = matrix(z,  ncol = 1, dimnames=list(NULL, final_name)),
+              median = med,
+              mad    = mad_,
+              fun = "robust_scale",
+              argname = varname,
+              name = final_name)
+  class(ret) <- c("RobustScale","ParametricBasis")
+  ret
+}
+
+#' @export
+#' @rdname predict.ParametricBasis
+predict.RobustScale <- function(object, newdata, ...) {
+  z <- (newdata - object$median)/object$mad
+  z[is.na(z)] <- 0
+  matrix(z, ncol = 1, dimnames=list(NULL, object$name))
+}
+
+#' @export
+#' @rdname sub_basis
+# Use the same logic as Scale
+sub_basis.RobustScale <- sub_basis.Scale
+
+#' @export
+#' @rdname levels.ParametricBasis
+levels.RobustScale  <- function(x) x$argname
+
+#' @export
+#' @rdname columns.ParametricBasis
+columns.RobustScale <- columns.Scale
+
+# Add nbasis methods -----
+
+#' @export
+nbasis.Scale        <- function(x) 1L
+
+#' @export
+nbasis.ScaleWithin  <- function(x) 1L
+
+#' @export
+nbasis.RobustScale  <- function(x) 1L
+
+#' @export
+nbasis.Standardized <- function(x) 1L
+
+#' @export
+nbasis.Ident        <- function(x) ncol(x$y)
 

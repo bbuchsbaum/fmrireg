@@ -7,37 +7,11 @@
 list_available_hrfs(details = FALSE)
 }
 \arguments{
-\item{details}{Logical; if TRUE, include detailed descriptions for each HRF type}
+\item{details}{Logical; if TRUE, attempt to add descriptions (basic for now).}
 }
 \value{
-A data frame with columns:
-\describe{
-\item{name}{The name of the HRF (string identifier)}
-\item{object}{The corresponding pre-defined HRF object name (if available)}
-\item{nbasis}{Number of basis functions}
-\item{description}{Brief description of the HRF type (if details=TRUE)}
-\item{function_name}{The associated generator function (if applicable)}
-}
+A data frame with columns: name, type (object/generator), nbasis_default.
 }
 \description{
-This function returns a structured list of all available HRF types in the package,
-making it easy to discover and explore the different options.
-}
-\examples{
-# List all available HRFs with basic information
-list_available_hrfs()
-
-# Get detailed descriptions
-list_available_hrfs(details = TRUE)
-
-# Use the information to create an event model with a specific HRF
-\dontrun{
-hrfs <- list_available_hrfs()
-# Choose the 'gaussian' HRF
-event_model(onset ~ hrf(condition, basis = "gaussian"), 
-            data = event_data,
-            block = ~run, 
-            sampling_frame = sframe)
-}
-
+Reads the internal HRF registry to list available HRF types.
 }

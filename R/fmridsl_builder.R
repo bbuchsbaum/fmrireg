@@ -1,4 +1,3 @@
-
 # --- Helper Functions ---
 
 #' @keywords internal

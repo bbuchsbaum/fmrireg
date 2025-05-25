@@ -2,6 +2,15 @@ facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrir
 library(assertthat)
 options(mc.cores=2)
 
+# Helper function to assign a dummy mask to a dataset object
+# This prevents errors when tests use dummy file paths for masks/scans
+# with fmri_file_dataset, as some operations might try to access dset$mask.
+.assign_dummy_mask_to_dataset <- function(dset) {
+  dummy_mask_space <- neuroim2::NeuroSpace(dim = c(5L, 5L, 5L)) # Arbitrary small dimensions
+  dset$mask <- neuroim2::NeuroVol(array(1L, dim = dim(dummy_mask_space)), dummy_mask_space)
+  return(dset) # Return the modified dataset
+}
+
 context("afni")
 
 test_that("can construct an simple afni native stimulus model", {
@@ -14,6 +23,7 @@ test_that("can construct an simple afni native stimulus model", {
                        run_length=rep(436,6),
                        event_table=facedes)
   
+  dset <- .assign_dummy_mask_to_dataset(dset)
   
   espec <- event_model(onset ~ afni_hrf(repnum, basis="csplin", nbasis=8, start=0, stop=18), data=facedes, block=~run, sampling_frame=dset$sampling_frame)
   bspec <- baseline_model(basis="bs", degree=5, sframe=dset$sampling_frame)
@@ -39,6 +49,7 @@ test_that("can construct an an afni model with trialwise regressor", {
                        run_length=rep(436,6),
                        event_table=facedes)
   
+  dset <- .assign_dummy_mask_to_dataset(dset)
   
   espec <- event_model(onset ~ hrf(constant, basis="spmg1") + afni_trialwise("trial", basis="spmg1"), data=facedes, block=~run, sampling_frame=dset$sampling_frame)
   bspec <- baseline_model(basis="bs", degree=5, sframe=dset$sampling_frame)
@@ -64,6 +75,7 @@ test_that("can construct an an afni model with a constant", {
                        run_length=rep(436,6),
                        event_table=facedes)
   
+  dset <- .assign_dummy_mask_to_dataset(dset)
   
   espec <- event_model(onset ~ afni_hrf(constant, basis="spmg1"), data=facedes, 
                        block=~run, sampling_frame=dset$sampling_frame)
@@ -85,6 +97,8 @@ test_that("can construct an an afni model with trialwise regressor and a Polynom
                        TR=1.5,
                        run_length=rep(436,6),
                        event_table=facedes)
+  
+  dset <- .assign_dummy_mask_to_dataset(dset)
   
   espec <- event_model(onset ~ afni_trialwise("trial") + hrf(fmrireg::Poly(repnum,2)), 
                       data=facedes, 

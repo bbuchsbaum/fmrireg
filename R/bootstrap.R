@@ -46,8 +46,8 @@
 #' result <- multiresponse_bootstrap_lm(modmat = X, data_env = list(.y = y),
 #'                                     nboot = 100, block_size = 20)
 #' }
-#'
-#' @export
+#' @noRd 
+#' @keywords internal
 multiresponse_bootstrap_lm <- function(form, data_env, 
                                      conlist, 
                                      vnames, 

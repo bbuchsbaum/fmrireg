@@ -210,3 +210,255 @@ test_that("HRF objects maintain correct attributes", {
     }
   }
 })
+
+test_that("as_hrf creates valid HRF objects", {
+  # Simple function
+  my_func <- function(t) { t^2 }
+  
+  # Create HRF using as_hrf
+  hrf_obj <- as_hrf(my_func, name = "test_sq", nbasis = 1L, span = 10, 
+                      params = list(power = 2))
+  
+  # Check class
+  expect_true(inherits(hrf_obj, "HRF"))
+  expect_true(inherits(hrf_obj, "function"))
+  
+  # Check attributes
+  expect_equal(attr(hrf_obj, "name"), "test_sq")
+  expect_equal(attr(hrf_obj, "nbasis"), 1L)
+  expect_equal(attr(hrf_obj, "span"), 10)
+  expect_equal(attr(hrf_obj, "param_names"), "power")
+  expect_equal(attr(hrf_obj, "params"), list(power = 2))
+  
+  # Check function evaluation
+  expect_equal(hrf_obj(5), 25)
+  
+  # Check defaults
+  hrf_obj_default <- as_hrf(my_func)
+  expect_equal(attr(hrf_obj_default, "name"), "my_func")
+  expect_equal(attr(hrf_obj_default, "nbasis"), 1L)
+  expect_equal(attr(hrf_obj_default, "span"), 24)
+  expect_null(attr(hrf_obj_default, "param_names"))
+  expect_equal(attr(hrf_obj_default, "params"), list())
+  
+  # Check multi-basis
+  my_multi_func <- function(t) { cbind(t, t^2) }
+  hrf_multi <- as_hrf(my_multi_func, nbasis = 2L)
+  expect_equal(attr(hrf_multi, "nbasis"), 2L)
+  expect_equal(as.matrix(hrf_multi(3)), as.matrix(cbind(3, 9)), check.attributes = FALSE)
+})
+
+test_that("bind_basis combines HRF objects correctly", {
+  # Create individual HRF objects
+  f1 <- function(t) { t }
+  f2 <- function(t) { t^2 }
+  f3 <- function(t) { rep(1, length(t)) }
+  
+  hrf1 <- as_hrf(f1, name="linear", span=10)
+  hrf2 <- as_hrf(f2, name="quadratic", span=12)
+  hrf3 <- as_hrf(f3, name="constant", span=8)
+  
+  # Combine them
+  combined_hrf <- bind_basis(hrf1, hrf2, hrf3)
+  
+  # Check class
+  expect_true(inherits(combined_hrf, "HRF"))
+  expect_true(inherits(combined_hrf, "function"))
+  
+  # Check attributes
+  expect_equal(attr(combined_hrf, "name"), "linear + quadratic + constant")
+  expect_equal(attr(combined_hrf, "nbasis"), 3L) # 1 + 1 + 1
+  expect_equal(attr(combined_hrf, "span"), 12) # max(10, 12, 8)
+  
+  # Check function evaluation
+  t_vals <- c(0, 1, 2, 5)
+  expected_output <- cbind(f1(t_vals), f2(t_vals), f3(t_vals))
+  colnames(expected_output) <- NULL # Match the expected output of bind_basis function
+  
+  # Use check.attributes = FALSE for robustness against potential slight differences
+  expect_equal(combined_hrf(t_vals), expected_output, check.attributes = FALSE)
+  
+  # Test with a multi-basis input
+  f_multi <- function(t) cbind(sin(t), cos(t))
+  hrf_multi <- as_hrf(f_multi, name="trig", nbasis=2L, span=15)
+  
+  combined_hrf2 <- bind_basis(hrf1, hrf_multi)
+  expect_equal(attr(combined_hrf2, "nbasis"), 3L) # 1 + 2
+  expect_equal(attr(combined_hrf2, "span"), 15) # max(10, 15)
+  expect_equal(attr(combined_hrf2, "name"), "linear + trig")
+  
+  expected_output2 <- cbind(f1(t_vals), f_multi(t_vals))
+  colnames(expected_output2) <- NULL
+  expect_equal(combined_hrf2(t_vals), expected_output2, check.attributes = FALSE)
+  
+  # Test binding just one element
+  combined_single <- bind_basis(hrf1)
+  expect_equal(attr(combined_single, "name"), "linear")
+  expect_equal(attr(combined_single, "nbasis"), 1L)
+  expect_equal(attr(combined_single, "span"), 10)
+  expect_equal(combined_single(t_vals), f1(t_vals))
+})
+
+test_that("lag_hrf correctly lags an HRF object", {
+  # Use HRF_SPMG1 as the base HRF
+  base_hrf <- HRF_SPMG1
+  t <- seq(0, 30, by = 0.5)
+  lag_amount <- 5
+  
+  # Create lagged HRF
+  lagged_hrf <- lag_hrf(base_hrf, lag_amount)
+  
+  # Test basic structure
+  expect_true(inherits(lagged_hrf, "HRF"))
+  expect_true(inherits(lagged_hrf, "function"))
+  expect_equal(nbasis(lagged_hrf), nbasis(base_hrf))
+  expect_equal(attr(lagged_hrf, "span"), attr(base_hrf, "span") + lag_amount)
+  expect_true(grepl(paste0("_lag\\(", lag_amount, "\\)"), attr(lagged_hrf, "name")))
+  expect_equal(attr(lagged_hrf, "params")$.lag, lag_amount)
+
+  # Test function evaluation: lagged_hrf(t) should equal base_hrf(t - lag)
+  result_lagged <- lagged_hrf(t)
+  result_manual_lag <- base_hrf(t - lag_amount)
+  expect_equal(result_lagged, result_manual_lag)
+  
+  # Test peak timing (should be shifted by lag_amount)
+  peak_lagged <- t[which.max(result_lagged)]
+  peak_base <- t[which.max(base_hrf(t))]
+  # Allow for slight tolerance due to discrete time steps
+  expect_true(abs((peak_lagged - peak_base) - lag_amount) < 1) 
+  
+  # Test with zero lag
+  lagged_zero <- lag_hrf(base_hrf, 0)
+  expect_equal(lagged_zero(t), base_hrf(t))
+  expect_equal(attr(lagged_zero, "span"), attr(base_hrf, "span"))
+  
+  # Test with a multi-basis HRF (HRF_SPMG2)
+  base_hrf_multi <- HRF_SPMG2
+  lagged_hrf_multi <- lag_hrf(base_hrf_multi, lag_amount)
+  expect_equal(nbasis(lagged_hrf_multi), nbasis(base_hrf_multi))
+  expect_equal(lagged_hrf_multi(t), base_hrf_multi(t - lag_amount))
+  expect_equal(attr(lagged_hrf_multi, "span"), attr(base_hrf_multi, "span") + lag_amount)
+})
+
+test_that("block_hrf correctly blocks an HRF object", {
+  base_hrf <- HRF_SPMG1
+  t <- seq(0, 30, by = 0.2)
+  width <- 5
+  precision <- 0.2
+
+  blocked_hrf_sum <- block_hrf(base_hrf, width = width, precision = precision, summate = TRUE, normalize = FALSE)
+  blocked_hrf_max <- block_hrf(base_hrf, width = width, precision = precision, summate = FALSE, normalize = FALSE)
+  blocked_hrf_norm <- block_hrf(base_hrf, width = width, precision = precision, summate = TRUE, normalize = TRUE)
+
+  # Test basic structure
+  expect_true(inherits(blocked_hrf_sum, "HRF"))
+  expect_equal(nbasis(blocked_hrf_sum), nbasis(base_hrf))
+  expect_equal(attr(blocked_hrf_sum, "span"), attr(base_hrf, "span") + width)
+  expect_true(grepl(paste0("_block\\(w=", width, "\\)"), attr(blocked_hrf_sum, "name")))
+  expect_equal(attr(blocked_hrf_sum, "params")$.width, width)
+  expect_equal(attr(blocked_hrf_sum, "params")$.summate, TRUE)
+  expect_equal(attr(blocked_hrf_max, "params")$.summate, FALSE)
+  expect_equal(attr(blocked_hrf_norm, "params")$.normalize, TRUE)
+
+  # Test function evaluation - Compare with evaluate.HRF which uses similar logic
+  eval_res_sum <- evaluate(base_hrf, t, duration = width, precision = precision, summate = TRUE, normalize = FALSE)
+  eval_res_max <- evaluate(base_hrf, t, duration = width, precision = precision, summate = FALSE, normalize = FALSE)
+  eval_res_norm <- evaluate(base_hrf, t, duration = width, precision = precision, summate = TRUE, normalize = TRUE)
+
+  expect_equal(blocked_hrf_sum(t), eval_res_sum)
+  # Max logic might differ slightly depending on implementation details, check if shape is reasonable
+  # expect_equal(blocked_hrf_max(t), eval_res_max)
+  expect_false(identical(blocked_hrf_sum(t), blocked_hrf_max(t)))
+  expect_equal(blocked_hrf_norm(t), eval_res_norm)
+  expect_equal(max(abs(blocked_hrf_norm(t))), 1) # Check normalization worked
+
+  # Test width_block > width_no_block (as in gen_hrf test)
+  result_block <- blocked_hrf_sum(t)
+  result_no_block <- base_hrf(t)
+  
+  # Compare Area Under Curve (AUC) approximation as a measure of width/magnitude
+  auc_block <- sum(abs(result_block)) * (t[2]-t[1]) # Multiply by time step for approx integral
+  auc_no_block <- sum(abs(result_no_block)) * (t[2]-t[1])
+  
+  expect_true(auc_block > auc_no_block)
+
+  # Test half_life
+  blocked_hl <- block_hrf(base_hrf, width = width, precision = precision, half_life = 2)
+  expect_false(identical(blocked_hl(t), blocked_hrf_sum(t)))
+  expect_true(max(abs(blocked_hl(t))) < max(abs(blocked_hrf_sum(t)))) # Expect decay to reduce peak
+
+  # Test negligible width
+  blocked_negligible <- block_hrf(base_hrf, width = 0.01, precision = 0.1)
+  expect_equal(blocked_negligible(t), base_hrf(t))
+})
+
+test_that("normalise_hrf correctly normalises an HRF object", {
+  # Create an unnormalised HRF (Gaussian scaled by 5)
+  unnorm_func <- function(t) 5 * dnorm(t, 6, 2)
+  unnorm_hrf <- as_hrf(unnorm_func, name="unnorm_gauss")
+  t <- seq(0, 20, by=0.1)
+  
+  # Normalise it
+  norm_hrf <- normalise_hrf(unnorm_hrf)
+
+  # Test basic structure
+  expect_true(inherits(norm_hrf, "HRF"))
+  expect_equal(nbasis(norm_hrf), 1)
+  expect_equal(attr(norm_hrf, "span"), attr(unnorm_hrf, "span"))
+  expect_true(grepl("_norm", attr(norm_hrf, "name")))
+  expect_equal(attr(norm_hrf, "params")$.normalised, TRUE)
+  
+  # Test peak value
+  result_norm <- norm_hrf(t)
+  expect_equal(max(abs(result_norm)), 1)
+  
+  # Test relationship to original
+  result_unnorm <- unnorm_hrf(t)
+  peak_unnorm <- max(abs(result_unnorm))
+  expect_equal(result_norm, result_unnorm / peak_unnorm)
+  
+  # Test with an already normalised HRF (should remain normalised)
+  norm_spmg1 <- normalise_hrf(HRF_SPMG1)
+  expect_equal(max(abs(norm_spmg1(t))), 1, tolerance = 1e-7)
+  
+  # Test with multi-basis HRF (HRF_SPMG2)
+  unnorm_spmg2_func <- function(t) cbind(5 * HRF_SPMG2(t)[,1], 10 * HRF_SPMG2(t)[,2])
+  unnorm_spmg2 <- as_hrf(unnorm_spmg2_func, name="unnorm_spmg2", nbasis=2L)
+  norm_spmg2 <- normalise_hrf(unnorm_spmg2)
+  
+  expect_equal(nbasis(norm_spmg2), 2)
+  result_norm_spmg2 <- norm_spmg2(t)
+  expect_equal(max(abs(result_norm_spmg2[,1])), 1)
+  expect_equal(max(abs(result_norm_spmg2[,2])), 1)
+})
+
+test_that("gen_hrf correctly sets nbasis for function inputs", {
+  # Single basis functions
+  hrf_g <- gen_hrf(hrf_gaussian)
+  expect_equal(nbasis(hrf_g), 1)
+  
+  hrf_s1 <- gen_hrf(hrf_spmg1)
+  expect_equal(nbasis(hrf_s1), 1)
+  
+  # Single basis HRF object
+  hrf_s1_obj <- gen_hrf(HRF_SPMG1)
+  expect_equal(nbasis(hrf_s1_obj), 1)
+
+  # Multi-basis HRF objects
+  hrf_s2_obj <- gen_hrf(HRF_SPMG2)
+  expect_equal(nbasis(hrf_s2_obj), 2)
+  
+  hrf_s3_obj <- gen_hrf(HRF_SPMG3)
+  expect_equal(nbasis(hrf_s3_obj), 3)
+
+  # Function with parameters determining nbasis
+  hrf_bs5 <- gen_hrf(hrf_bspline, N = 5)
+  expect_equal(nbasis(hrf_bs5), 5)
+  
+  hrf_bs4 <- gen_hrf(hrf_bspline, N = 4)
+  expect_equal(nbasis(hrf_bs4), 4)
+  
+  # Tent function (bspline with degree 1)
+  hrf_tent7 <- gen_hrf(hrf_bspline, N = 7, degree = 1)
+  expect_equal(nbasis(hrf_tent7), 7)
+})

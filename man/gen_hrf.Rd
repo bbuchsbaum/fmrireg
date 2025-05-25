@@ -2,7 +2,7 @@
 % Please edit documentation in R/hrf.R
 \name{gen_hrf}
 \alias{gen_hrf}
-\title{Construct an HRF Instance}
+\title{Construct an HRF Instance using Decorators}
 \usage{
 gen_hrf(
   hrf,
@@ -11,44 +11,43 @@ gen_hrf(
   precision = 0.1,
   summate = TRUE,
   normalize = FALSE,
-  name = "gen_hrf",
+  name = NULL,
   span = NULL,
   ...
 )
 }
 \arguments{
-\item{hrf}{A function mapping from time to signal.}
+\item{hrf}{A function \code{f(t)} or an existing \code{HRF} object.}
 
-\item{lag}{Optional lag in seconds.}
+\item{lag}{Optional lag in seconds. If non-zero, applies \code{lag_hrf}.}
 
-\item{width}{Optional block width in seconds.}
+\item{width}{Optional block width in seconds. If non-zero, applies \code{block_hrf}.}
 
-\item{precision}{Sampling precision in seconds.}
+\item{precision}{Sampling precision for block convolution (passed to \code{block_hrf}). Default is 0.1.}
 
-\item{summate}{Whether to allow each impulse response function to "add" up (default: TRUE).}
+\item{summate}{Whether to summate within blocks (passed to \code{block_hrf}). Default is TRUE.}
 
-\item{normalize}{Rescale so that the peak of the output is 1 (default: FALSE).}
+\item{normalize}{If TRUE, applies \code{normalise_hrf} at the end. Default is FALSE.}
 
-\item{name}{The assigned name of the generated HRF.}
+\item{name}{Optional name for the \emph{final} HRF object. If NULL (default), a name is generated based on the base HRF and applied decorators.}
 
-\item{span}{The span of the HRF (maximum width in seconds after which function reverts to zero).}
+\item{span}{Optional span for the \emph{final} HRF object. If NULL (default), the span is determined by the base HRF and decorators.}
 
-\item{...}{Extra parameters for the \code{hrf} function.}
+\item{...}{Extra arguments passed to the \emph{base} HRF function if \code{hrf} is a function.}
 }
 \value{
-An instance of type \code{HRF} inheriting from \code{function}.
+A final \code{HRF} object, potentially modified by decorators.
 }
 \description{
-\code{gen_hrf} takes a raw function \code{f(t)} and returns an HRF (Hemodynamic Response Function) instance.
+\code{gen_hrf} takes a base HRF function or object and applies optional lag,
+blocking, and normalization decorators based on arguments.
 }
 \examples{
+# Lagged SPMG1
+grf_lag <- gen_hrf(HRF_SPMG1, lag=3)
+# Blocked Gaussian
+grf_block <- gen_hrf(hrf_gaussian, width=5, precision=0.2)
+# Lagged and Blocked, then Normalized
+grf_both_norm <- gen_hrf(HRF_SPMG1, lag=2, width=4, normalize=TRUE)
 
-## Generate an HRF using SPMG1 canonical HRF, a lag of 3, and a width of 2.
-grf <- gen_hrf(hrf_spmg1, lag=3, width=2)
-grf(0:20)
-
-hg <- purrr::partial(hrf_gaussian, mean=4, sd=1)
-grf <- gen_hrf(hg, lag=1, width=2)
-
-vals <- grf(0:20)
 }

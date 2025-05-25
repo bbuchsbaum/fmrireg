@@ -11,10 +11,6 @@ chunkwise_rlm(dset, model, conlist, fcon, nchunks, verbose = FALSE)
 
 \item{model}{The \code{fmri_model} used for the analysis.}
 
-\item{conlist}{The list of contrasts used in the analysis.}
-
-\item{fcon}{The F-contrasts used in the analysis.}
-
 \item{nchunks}{The number of chunks to divide the dataset into.}
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}

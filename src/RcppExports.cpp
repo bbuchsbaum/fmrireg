@@ -12,16 +12,19 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // instantaneous_correlation_rcpp
-NumericVector instantaneous_correlation_rcpp(NumericVector x, NumericVector y, double eta, int offset);
-RcppExport SEXP _fmrireg_instantaneous_correlation_rcpp(SEXP xSEXP, SEXP ySEXP, SEXP etaSEXP, SEXP offsetSEXP) {
+NumericVector instantaneous_correlation_rcpp(NumericVector x, NumericVector y, double eta, double tau_half, int offset, int warmup, std::string fill);
+RcppExport SEXP _fmrireg_instantaneous_correlation_rcpp(SEXP xSEXP, SEXP ySEXP, SEXP etaSEXP, SEXP tau_halfSEXP, SEXP offsetSEXP, SEXP warmupSEXP, SEXP fillSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
     Rcpp::traits::input_parameter< double >::type eta(etaSEXP);
+    Rcpp::traits::input_parameter< double >::type tau_half(tau_halfSEXP);
     Rcpp::traits::input_parameter< int >::type offset(offsetSEXP);
-    rcpp_result_gen = Rcpp::wrap(instantaneous_correlation_rcpp(x, y, eta, offset));
+    Rcpp::traits::input_parameter< int >::type warmup(warmupSEXP);
+    Rcpp::traits::input_parameter< std::string >::type fill(fillSEXP);
+    rcpp_result_gen = Rcpp::wrap(instantaneous_correlation_rcpp(x, y, eta, tau_half, offset, warmup, fill));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -101,14 +104,51 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// evaluate_regressor_fast
+SEXP evaluate_regressor_fast(const arma::vec& grid, const arma::vec& onsets, const arma::vec& durations, const arma::vec& amplitudes, const arma::mat& hrfFine, double dt, double span);
+RcppExport SEXP _fmrireg_evaluate_regressor_fast(SEXP gridSEXP, SEXP onsetsSEXP, SEXP durationsSEXP, SEXP amplitudesSEXP, SEXP hrfFineSEXP, SEXP dtSEXP, SEXP spanSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type grid(gridSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type onsets(onsetsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type durations(durationsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type amplitudes(amplitudesSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type hrfFine(hrfFineSEXP);
+    Rcpp::traits::input_parameter< double >::type dt(dtSEXP);
+    Rcpp::traits::input_parameter< double >::type span(spanSEXP);
+    rcpp_result_gen = Rcpp::wrap(evaluate_regressor_fast(grid, onsets, durations, amplitudes, hrfFine, dt, span));
+    return rcpp_result_gen;
+END_RCPP
+}
+// evaluate_regressor_cpp
+SEXP evaluate_regressor_cpp(const arma::vec& grid, const arma::vec& onsets, const arma::vec& durations, const arma::vec& amplitudes, const arma::mat& hrf_matrix, double hrf_span, double precision, std::string method);
+RcppExport SEXP _fmrireg_evaluate_regressor_cpp(SEXP gridSEXP, SEXP onsetsSEXP, SEXP durationsSEXP, SEXP amplitudesSEXP, SEXP hrf_matrixSEXP, SEXP hrf_spanSEXP, SEXP precisionSEXP, SEXP methodSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type grid(gridSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type onsets(onsetsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type durations(durationsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type amplitudes(amplitudesSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type hrf_matrix(hrf_matrixSEXP);
+    Rcpp::traits::input_parameter< double >::type hrf_span(hrf_spanSEXP);
+    Rcpp::traits::input_parameter< double >::type precision(precisionSEXP);
+    Rcpp::traits::input_parameter< std::string >::type method(methodSEXP);
+    rcpp_result_gen = Rcpp::wrap(evaluate_regressor_cpp(grid, onsets, durations, amplitudes, hrf_matrix, hrf_span, precision, method));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_fmrireg_instantaneous_correlation_rcpp", (DL_FUNC) &_fmrireg_instantaneous_correlation_rcpp, 4},
+    {"_fmrireg_instantaneous_correlation_rcpp", (DL_FUNC) &_fmrireg_instantaneous_correlation_rcpp, 7},
     {"_fmrireg_compute_residuals_cpp", (DL_FUNC) &_fmrireg_compute_residuals_cpp, 3},
     {"_fmrireg_lss_compute_cpp", (DL_FUNC) &_fmrireg_lss_compute_cpp, 2},
     {"_fmrireg_mixed_solve_internal", (DL_FUNC) &_fmrireg_mixed_solve_internal, 8},
     {"_fmrireg_neural_input_rcpp", (DL_FUNC) &_fmrireg_neural_input_rcpp, 4},
     {"_fmrireg_evaluate_regressor_convolution", (DL_FUNC) &_fmrireg_evaluate_regressor_convolution, 9},
+    {"_fmrireg_evaluate_regressor_fast", (DL_FUNC) &_fmrireg_evaluate_regressor_fast, 7},
+    {"_fmrireg_evaluate_regressor_cpp", (DL_FUNC) &_fmrireg_evaluate_regressor_cpp, 8},
     {NULL, NULL, 0}
 };
 

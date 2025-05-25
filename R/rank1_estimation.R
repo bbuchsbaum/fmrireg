@@ -1,398 +1,238 @@
-#' Rank-1 GLM Solver
-#'
-#' Jointly estimates activation coefficients (betas) and an HRF shape (in a given basis)
-#' under a Rank-1 constraint. Allows optional nuisance regressors. 
-#' Can optionally apply box constraints if \code{m=3} and sign-flip to ensure 
-#' positive correlation with a reference HRF.
-#'
-#' @param X A numeric matrix of size \eqn{n \times (k*m)}, with n timepoints,
-#'   k conditions, and m basis functions. Typically formed by convolving each
-#'   event onset with \code{m} basis functions, then horizontally stacking them for k conditions.
-#' @param y A length-n numeric vector of fMRI data (single voxel).
-#' @param Z Optional numeric matrix of nuisance regressors, \eqn{n \times q}. If NULL, no nuisance.
-#' @param hrf_basis A \eqn{T \times m} matrix of basis functions for the HRF.
-#' @param hrf_ref A length-T numeric vector of some reference HRF shape, for an optional sign-flip check.
-#' @param maxit Max number of L-BFGS-B iterations. Default 100.
-#' @param flip_sign Logical. If \code{TRUE}, we ensure the final HRF is positively correlated with \code{hrf_ref}.
-#' @param use_box_constraints Logical. If \code{TRUE} and \code{m=3}, we forcibly set \code{h[1]=1} and \code{h[2:3] \in [-1,1]}.
-#'
-#' @return A list with:
-#' \describe{
-#'   \item{beta}{Numeric vector of length k (event amplitudes).}
-#'   \item{h}{Numeric vector of length m (basis weights).}
-#'   \item{omega}{Numeric vector of length q for nuisance, or numeric(0) if none.}
-#'   \item{converged}{Logical, TRUE if the L-BFGS-B optimizer converged.}
-#'   \item{value}{The final objective (residual sum of squares / 2).}
-#' }
-#'
-#' @examples
-#' # Minimal usage example
-#' set.seed(42)
-#' n <- 200; k <- 10; m <- 3
-#' X <- matrix(rnorm(n*k*m), n, k*m)
-#' y <- rnorm(n)
-#' hrf_basis <- matrix(rnorm(32*m), 32, m)
-#' hrf_ref   <- dgamma(seq(0, 31, length.out=32), shape=6, rate=1)
-#'
-#' fit <- r1_glm_betas(X, y, NULL, hrf_basis, hrf_ref, maxit=50)
-#' str(fit)
+##############################################################################
+## fast‑rank1.R      – vectorised, QR‑cached rank‑1 GLM solvers             ##
+##############################################################################
+#' @include utils-internal.R
+NULL
+
+############################################################
+## helpers shared by both public functions                ##
+############################################################
+.r1_postproc <- function(h, beta, hrf_basis, hrf_ref, flip_sign) {
+  hrf_est <- drop(hrf_basis %*% h)
+  sc      <- max(abs(hrf_est)); if (sc < 1e-12) sc <- 1
+  h       <- h   / sc
+  beta    <- beta* sc
+  hrf_est <- hrf_est / sc
+
+  if (flip_sign && sum(hrf_est * hrf_ref) < 0) {
+    hrf_est <- -hrf_est; beta <- -beta; h <- -h
+  }
+  list(h = h, beta = beta, hrf_est = hrf_est)
+}
+
+############################################################
+##  r1_glm_betas()  – stacked design                      ##
+############################################################
+#' Rank‑1 GLM (stacked design)
+#' @inheritParams r1_glm_betas
+#' @param method  `"als"` (default) or `"svd"`
 #' @export
-r1_glm_betas <- function(X, y, Z = NULL, 
-                         hrf_basis, 
+r1_glm_betas <- function(X, y, Z = NULL,
+                         hrf_basis,
                          hrf_ref,
-                         maxit = 100,
-                         flip_sign = FALSE,
-                         use_box_constraints = FALSE) 
+                         maxit               = 100,
+                         flip_sign           = TRUE,
+                         use_box_constraints = FALSE,
+                         method              = c("als", "svd"))
 {
-  n <- length(y)
-  m <- ncol(hrf_basis)   # number of basis functions
-  k <- ncol(X) / m       # number of conditions
-  if (round(k) != k) {
-    stop("X does not align with 'm'; X should have 'k*m' columns for integer k.")
+  method <- match.arg(method)
+  n  <- length(y)
+  m  <- ncol(hrf_basis)
+  k  <- ncol(X) / m;  stopifnot(k == round(k))
+  q  <- if (is.null(Z)) 0L else ncol(Z)
+  if (is.null(Z)) Z <- matrix(0, n, 0)
+
+  if (method == "svd" && use_box_constraints)
+    stop("`method=\"svd\"` cannot enforce box‑constraints; set `use_box_constraints = FALSE` or use `method=\"als\"`.")
+
+  ##########################################################################
+  ## FAST   engine 1: SVD  (+ two OLS)                                    ##
+  ##########################################################################
+  if (method == "svd") {
+    # Step‑1: dominant singular vector of X'y  (reshaped m×k)
+    Vh     <- matrix(crossprod(X, y), m, k)
+    sv     <- svd(Vh, nu = 1, nv = 1)
+    h_raw  <- sv$u
+    beta   <- sv$d[1] * sv$v[, 1]
+
+    # Step‑2: optional nuisance regressors
+    if (q) {
+      res <- y - X %*% as.vector(kronecker(beta, h_raw))
+      omega <- qr.coef(qr(Z), res)
+    } else omega <- numeric(0)
+
+    out  <- .r1_postproc(h_raw, beta, hrf_basis, hrf_ref, flip_sign)
+    return(list(beta      = out$beta,
+                h         = out$h,
+                omega     = omega,
+                converged = TRUE,
+                value     = NA_real_))
   }
-  q <- if (!is.null(Z)) ncol(Z) else 0
-  
-  # If Z is absent, treat it as empty matrix
-  if (is.null(Z)) {
-    Z <- matrix(0, n, 0)
-    q <- 0
+
+  ##########################################################################
+  ## FAST   engine 2: ALS  (+ L‑BFGS‑B polish)                            ##
+  ##########################################################################
+  ## ---- split X once so we can re‑use BLAS                               ##
+  Xb   <- lapply(seq_len(k), \(j) X[, ((j-1)*m + 1):(j*m), drop = FALSE])
+  Xt   <- lapply(Xb, t)
+  Xall <- X %*% kronecker(matrix(1, k, 1), diag(m))
+  Xtall<- t(Xall)
+
+  ## ---- ALS warm start  --------------------------------------------------
+  h    <- colMeans(hrf_basis)          # non‑zero start
+  beta <- rep(0, k);  z <- rep(0, k)
+
+  for (iter in 1:3) {
+    # 1) beta,z  given h
+    D <- cbind(do.call(cbind, lapply(Xb, \(B) B %*% h)),
+               Xall %*% h,
+               Z)
+    coef <- qr.coef(qr(D), y)
+    beta <- coef[        1:k]
+    z    <- rep(coef[k+1], k)
+    omega<- if (q) coef[-(1:(k+1))] else numeric(0)
+
+    # 2)    h    given beta,z
+    y2   <- y - Z %*% omega
+    pred <- rowSums(mapply(\(B,b) (B %*% h) * b, Xb, beta, SIMPLIFY = FALSE))
+    h    <- qr.coef(qr(Xall * sum(z)), y2 - pred)
   }
-  
-  # Possibly do a thin-QR if n >> (k*m)
-  use_QR <- FALSE
-  if (nrow(X) > ncol(X)) {
-    qrX <- qr(X)
-    if (qrX$rank == ncol(X)) {
-      Q <- qr.Q(qrX)
-      R <- qr.R(qrX)
-      X_tilde <- R
-      y_tilde <- t(Q) %*% y
-      Z_tilde <- if (q > 0) t(Q) %*% Z else matrix(0, ncol(X), 0)
-      use_QR <- TRUE
-    } else {
-      X_tilde <- X
-      y_tilde <- y
-      Z_tilde <- Z
-    }
-  } else {
-    X_tilde <- X
-    y_tilde <- y
-    Z_tilde <- Z
-  }
-  
-  # Initial guesses
-  init_beta <- rep(0, k)      
-  init_h    <- rep(0, m)         
-  init_omega <- if (q > 0) rep(0, q) else numeric(0)
-  z0 <- c(init_beta, init_h, init_omega)
-  
-  # Box constraints if m=3
+
+  ## ---- L‑BFGS‑B  polish  ------------------------------------------------
+  par0   <- c(h, beta, z, omega)
+  lower  <- upper <- rep(-Inf, length(par0))
   if (use_box_constraints && m == 3) {
-    # Force h[1]=1, rest in [-1,1]
-    lower <- c(rep(-Inf, k), 1, -1, -1)
-    upper <- c(rep( Inf, k), 1,  1,  1)
-  } else {
-    lower <- rep(-Inf, length(z0))
-    upper <- rep( Inf, length(z0))
+    lower[m+1] <- upper[m+1] <- 1
+    lower[m+2:3] <- -1; upper[m+2:3] <- 1
   }
-  
-  if (q > 0) {
-    # Extend for nuisance
-    lower <- c(lower, rep(-Inf, q))
-    upper <- c(upper, rep( Inf, q))
+
+  htemp  <- matrix(0, n, k)          # reused workspace
+
+  obj_grad <- function(w) {
+    h    <- w[1:m]
+    beta <- w[m + 1L + 0:(k-1)]
+    z    <- w[m + k + 1L + 0:(k-1)]
+    omega<- if (q) w[-(1:(m+2*k))] else numeric(0)
+
+    for (j in seq_len(k))
+      htemp[, j] <- Xb[[j]] %*% h
+
+    pred <- htemp %*% beta + (Xall %*% h) * sum(z) +
+            if (q) Z %*% omega else 0
+    res  <- y - pred
+
+    f    <- 0.5 * sum(res^2) - 1e-6 * h[1]^2          # tiny ridge
+
+    # gradients (all BLAS)
+    grad_beta <- -colSums(htemp * res)
+    g_z       <- -sum((Xall %*% h) * res)
+    grad_z    <- rep(g_z, k)
+    grad_h    <- -Reduce(`+`, Map(\(B,b) b * (t(B) %*% res), Xt, beta)) -
+                 sum(z) * (Xtall %*% res) + h
+    grad_omega<- if (q) -crossprod(Z, res) else numeric(0)
+
+    list(value    = f,
+         gradient = c(grad_h, grad_beta, grad_z, grad_omega))
   }
-  
-  # The objective + gradient
-  obj_grad <- function(z) {
-    beta <- z[1:k]
-    h    <- z[(k+1):(k+m)]
-    omega <- if (q>0) z[(k+m+1):(k+m+q)] else numeric(0)
-    
-    # Pred = X * (beta ⊗ h) + Z * omega
-    # We store them as "hb = outer(h, beta)" (dim [m x k]) => Flatten => length m*k
-    # Then X %*% hb = predicted contribution from rank-1
-    if (use_QR) {
-      hb <- as.vector(outer(h, beta))
-      pred <- X_tilde %*% hb
-      if (q>0) pred <- pred + Z_tilde %*% omega
-      res <- y_tilde - pred
-    } else {
-      hb <- as.vector(outer(h, beta))
-      pred <- X %*% hb
-      if (q>0) pred <- pred + Z %*% omega
-      res <- y - pred
-    }
-    
-    f <- 0.5*sum(res^2)
-    # Slight penalty to deter h from being zero
-    f <- f - 1e-6*h[1]^2
-    
-    # gradient wrt. (beta, h, omega)
-    # (The direct summation approach is used here for clarity.)
-    
-    # grad wrt omega
-    grad_omega <- if (q>0) -t(if(use_QR) Z_tilde else Z) %*% res else numeric(0)
-    
-    # We'll re-construct X if not using QR
-    X_full <- if (use_QR) X_tilde else X
-    
-    grad_beta <- rep(0, k)
-    grad_h    <- rep(0, m)
-    
-    # Partition X into k blocks of size m
-    for (j in seq_len(k)) {
-      idx_start <- (j-1)*m + 1
-      idx_end   <- j*m
-      Xj <- X_full[, idx_start:idx_end, drop=FALSE]
-      # residual-based partial derivative
-      # grad wrt beta[j] = -(Xj*h)^T * res
-      Xj_h <- Xj %*% h
-      grad_beta[j] <- - as.numeric(t(Xj_h) %*% res)
-      
-      # grad wrt h
-      # For each h[i], partial derivative is sum(...) of -res * beta[j]*Xj
-      # simpler as: -beta[j] * t(Xj) %*% res
-      tmp <- t(Xj) %*% res
-      grad_h <- grad_h - beta[j]*tmp
-    }
-    # small penalty on h[1]
-    grad_h[1] <- grad_h[1] - 2e-6*h[1]
-    
-    grad <- c(grad_beta, grad_h, grad_omega)
-    list(value=f, gradient=grad)
-  }
-  
-  # Do the L-BFGS-B
-  fit <- optim(
-    par     = z0,
-    fn      = function(z) obj_grad(z)$value,
-    gr      = function(z) obj_grad(z)$gradient,
-    method  = "L-BFGS-B",
-    lower   = lower,
-    upper   = upper,
-    control = list(maxit = maxit, factr = 1e7)
-  )
-  
-  z_opt <- fit$par
-  beta_opt <- z_opt[1:k]
-  h_opt    <- z_opt[(k+1):(k+m)]
-  omega_opt <- if (q>0) z_opt[(k+m+1):(k+m+q)] else numeric(0)
-  
-  # If not using box constraints, fix scale: max(|hrf|) = 1 => scale betas
-  Bh <- as.vector(hrf_basis %*% h_opt)
-  if (!(use_box_constraints && (m==3))) {
-    sc <- max(abs(Bh))
-    if (sc < 1e-12) sc <- 1
-    h_opt    <- h_opt / sc
-    beta_opt <- beta_opt * sc
-    Bh       <- Bh / sc
-  }
-  
-  # Optionally ensure HRF correlation is positive
-  if (flip_sign) {
-    if (sum(Bh*hrf_ref) < 0) {
-      h_opt    <- -h_opt
-      beta_opt <- -beta_opt
-      Bh       <- -Bh
-    }
-  }
-  
-  list(
-    beta      = beta_opt,
-    h         = h_opt,
-    omega     = omega_opt,
-    converged = (fit$convergence == 0),
-    value     = fit$value
-  )
+
+  opt <- optim(par0,
+               fn = \(p) obj_grad(p)$value,
+               gr = \(p) obj_grad(p)$gradient,
+               method  = "L-BFGS-B",
+               lower   = lower,
+               upper   = upper,
+               control = list(maxit = maxit, factr = 1e7))
+
+  h      <- opt$par[1:m]
+  beta   <- opt$par[m + 1L + 0:(k-1)]
+  omega  <- if (q) opt$par[-(1:(m+2*k))] else numeric(0)
+
+  out <- .r1_postproc(h, beta, hrf_basis, hrf_ref, flip_sign)
+
+  list(beta      = out$beta,
+       h         = out$h,
+       omega     = omega,
+       converged = opt$convergence == 0,
+       value     = opt$value)
 }
 
+############################################################
+##  r1_glms_betas() – Mumford/split designs               ##
+############################################################
+#' Rank‑1 GLM (Mumford / split designs)
+#' @inheritParams r1_glms_betas
+#' @param method `"als"` (default) or `"svd"`
+#' @export
+r1_glms_betas <- function(X_list,
+                          X_all = NULL,
+                          y, Z = NULL,
+                          hrf_basis,
+                          hrf_ref,
+                          maxit  = 100,
+                          method = c("als", "svd"))
+{
+  method <- match.arg(method)
+  n  <- length(y)
+  k  <- length(X_list)
+  m  <- ncol(hrf_basis)
+  q  <- if (is.null(Z)) 0L else ncol(Z)
+  if (is.null(Z)) Z <- matrix(0, n, 0)
 
+  if (is.null(X_all))
+    X_all <- do.call(cbind, X_list) %*%
+             kronecker(matrix(1, k, 1), diag(m))
 
-#' keywords internal
-estimate_r1 <- function(dset, xdat, hrf_basis, hrf_ref, maxit = 100,
-                       flip_sign = TRUE, use_box_constraints = FALSE) {
-  # Ensure correct data types and validate inputs
-  if (is.null(hrf_basis)) {
-    stop("hrf_basis must not be NULL for the r1 method")
+  if (method == "svd") {
+    # build the stacked design once, reuse r1_glm_betas()
+    X_stack <- do.call(cbind, X_list)
+    fit <- r1_glm_betas(X_stack, y, Z,
+                        hrf_basis, hrf_ref,
+                        method = "svd")
+    attr(fit$beta, "estimated_hrf")  <- fit$h %*% t(hrf_basis)
+    attr(fit$beta, "basis_weights")  <- fit$h
+    return(fit$beta)
   }
-  if (is.null(hrf_ref)) {
-    stop("hrf_ref must not be NULL for the r1 method")
+
+  ## -------------- ALS + L‑BFGS‑B  ----------------------------------------
+  Xt      <- lapply(X_list, t)
+  Xt_all  <- t(X_all)
+  htemp   <- matrix(0, n, k)
+
+  init_par<- c(rep(1, m), rep(1, k), rep(1, k))  # h, beta, z
+
+  obj_grad <- function(w) {
+    h    <- w[1:m]
+    beta <- w[m + 1L + 0:(k-1)]
+    z    <- w[m + k + 1L + 0:(k-1)]
+
+    for (j in seq_len(k))
+      htemp[, j] <- X_list[[j]] %*% h
+
+    pred <- htemp %*% beta + (X_all %*% h) * sum(z)
+    res  <- y - pred
+    f    <- 0.5 * sum(res^2) - 1e-6*h[1]^2
+
+    grad_beta <- -colSums(htemp * res)
+    g_z       <- -sum((X_all %*% h) * res)
+    grad_z    <- rep(g_z, k)
+    grad_h    <- -Reduce(`+`, Map(\(B,b) b * (t(B) %*% res), Xt, beta)) -
+                 sum(z) * (Xt_all %*% res) + h
+
+    list(value    = f,
+         gradient = c(grad_h, grad_beta, grad_z))
   }
-  
-  hrf_basis <- as.matrix(hrf_basis)
-  hrf_ref   <- as.numeric(hrf_ref)
-  
-  # Pull out voxel data from the fmri_dataset
-  vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) > 0))
-  nvoxels <- length(vecs)
-  
-  if (nvoxels == 0) {
-    stop("No voxels found in dataset mask")
-  }
-  
-  # Show message about estimation (from original function)
-  message("Estimating betas with rank-1 across ", nvoxels, " voxels ...")
-  
-  # Dimensions
-  n <- nrow(xdat$X)        # number of time points
-  m <- ncol(hrf_basis)     # number of basis functions
-  
-  if (m <= 0) {
-    stop("hrf_basis must have at least one column")
-  }
-  
-  # The stacked X has shape n x (k*m). So k is (ncol(xdat$X) / m).
-  k <- ncol(xdat$X) / m
-  if (round(k) != k) {
-    stop("xdat$X does not match 'm'; ensure (k*m) columns for some integer k.")
-  }
-  
-  if (k <= 0 || is.na(k)) {
-    stop("Invalid k value: ", k, " (must be positive)")
-  }
-  
-  # For the betas: each sub-design -> one amplitude => total k amplitudes
-  # We'll store them in a k x nvox matrix
-  beta_res <- matrix(NA, k, nvoxels)
-  
-  # Prepare to store the estimated HRF for each voxel
-  estimated_hrfs <- matrix(NA, nrow = nrow(hrf_basis), ncol = nvoxels)
-  
-  for (i in seq_len(nvoxels)) {
-    v <- vecs[[i]]
-    # remove baseline
-    v0 <- resid(lsfit(xdat$Base, v, intercept=FALSE))
-    
-    fit <- r1_glm_betas(X=as.matrix(xdat$X),
-                        y=as.numeric(v0),
-                        Z=NULL,
-                        hrf_basis=hrf_basis,
-                        hrf_ref=hrf_ref,
-                        maxit=maxit,
-                        flip_sign=flip_sign,
-                        use_box_constraints=use_box_constraints)
-    
-    beta_res[,i] <- fit$beta
-    # Reconstruct the actual HRF shape
-    hshape <- as.vector(hrf_basis %*% fit$h)
-    estimated_hrfs[,i] <- hshape
-  }
-  
-  # Return the big matrix of betas and hrfs
-  list(
-    beta_matrix = beta_res,
-    estimated_hrf = estimated_hrfs
-  )
+
+  opt <- optim(init_par,
+               fn  = \(p) obj_grad(p)$value,
+               gr  = \(p) obj_grad(p)$gradient,
+               method = "L-BFGS-B",
+               control = list(maxit = maxit, factr = 1e7))
+
+  h     <- opt$par[1:m]
+  beta  <- opt$par[m + 1L + 0:(k-1)]
+  out   <- .r1_postproc(h, beta, hrf_basis, hrf_ref, TRUE)
+
+  attr(out$beta, "estimated_hrf") <- out$hrf_est
+  attr(out$beta, "basis_weights") <- out$h
+  out$beta
 }
-
-#' Estimate betas using Rank-1 GLM with separate designs (Mumford-style approach)
-#'
-#' This function estimates single-trial (or single-condition) betas in a rank-1
-#' framework by splitting the design matrix \code{xdat$X} into a list of separate
-#' sub-designs (\code{X_list}), one for each condition (or event). It then calls
-#' \code{r1_glms_betas()} to jointly estimate the HRF shape and the per-condition
-#' amplitudes. 
-#'
-#' @param dset An \code{fmri_dataset} object containing voxel data and mask
-#' @param xdat A list typically returned by \code{get_X()}, containing:
-#'    \itemize{
-#'      \item \code{X}: The \emph{stacked} design matrix of dimension \eqn{n \times (k*m)}
-#'      \item \code{Base}: The baseline design matrix, dimension \eqn{n \times p}
-#'    }
-#' @param hrf_basis A \eqn{T \times m} matrix of HRF basis functions
-#' @param hrf_ref A length-\eqn{T} vector representing a reference HRF shape
-#' @param maxit Maximum number of L-BFGS-B iterations (default 100)
-#'
-#' @return A list containing:
-#'   \item{beta_matrix}{A \eqn{k \times nvox} matrix of estimated condition amplitudes}
-#'   \item{estimated_hrf}{A \eqn{T \times nvox} matrix of the per-voxel estimated HRF shape}
-#'
-#' @details
-#' This is the \emph{"Rank-1 GLM with Separate Designs"} approach (sometimes
-#' called the Mumford method). We partition \code{xdat$X} into \eqn{k} sub-designs,
-#' each \eqn{n \times m}. For each voxel, we remove the baseline using
-#' \code{\link{lsfit}} and call \code{\link{r1_glms_betas}} to solve for the
-#' event-wise betas under a rank-1 HRF constraint.
-#'
-#' @keywords internal
-estimate_r1_glms <- function(dset, xdat, hrf_basis, hrf_ref, maxit = 100) {
-  # Ensure correct data types
-  hrf_basis <- as.matrix(hrf_basis)
-  hrf_ref   <- as.numeric(hrf_ref)
-  
-  # Pull out voxel data from the fmri_dataset
-  vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) > 0))
-  nvoxels <- length(vecs)
-  
-  # Dimensions
-  n <- nrow(xdat$X)        # number of time points
-  m <- ncol(hrf_basis)     # number of basis functions
-  # The stacked X has shape n x (k*m). So k is (ncol(xdat$X) / m).
-  k <- ncol(xdat$X) / m
-  if (round(k) != k) {
-    stop("xdat$X does not match 'm'; ensure (k*m) columns for some integer k.")
-  }
-  
-  # Partition xdat$X into a list of sub-designs: each sub-design is n x m
-  X_list <- lapply(seq_len(k), function(i) {
-    idx_start <- (i - 1)*m + 1
-    idx_end   <- i*m
-    Xi <- xdat$X[, idx_start:idx_end, drop=FALSE]
-    as.matrix(Xi)
-  })
-  
-  # Prepare to store the estimated HRF for each voxel
-  estimated_hrfs <- matrix(NA, nrow = nrow(hrf_basis), ncol = nvoxels)
-  
-  # For the betas: each sub-design -> one amplitude => total k amplitudes
-  # We'll store them in a k x nvox matrix
-  beta_res <- matrix(NA, k, nvoxels)
-  
-  # Loop over voxels
-  res <- purrr::imap_dfc(vecs, function(v, i) {
-    # Remove baseline from the voxel time series
-    v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
-    
-    # Call the "separate designs" rank-1 solver
-    # r1_glms_betas is your function that handles sub-designs for each condition
-    beta_v <- r1_glms_betas(
-      X_list    = X_list,
-      X_all     = NULL,    # Not used in this version
-      y         = as.numeric(v0),
-      Z         = NULL,    # Could pass if you want nuisance
-      hrf_basis = hrf_basis,
-      hrf_ref   = hrf_ref,
-      maxit     = maxit
-    )
-    
-    # The solver presumably attaches "estimated_hrf" as an attribute
-    # or returns it as well. Let's assume it's in attr(..., "estimated_hrf")
-    hrf_v <- attr(beta_v, "estimated_hrf")
-    if (!is.null(hrf_v)) {
-      estimated_hrfs[, i] <<- hrf_v
-    }
-    
-    # We'll store the betas in the results object
-    beta_v
-  })
-  
-  # 'res' is a tibble with columns for each voxel. We want a numeric matrix k x nvox.
-  # We can convert it easily:
-  betas_mat <- as.matrix(res)
-  # That is dimension [n, ???], so let's confirm that each column is length k:
-  # Actually, each column might be length k, so betas_mat is k x nvox if the tibble is rowwise
-  # or the opposite. Let's do t() if needed:
-  
-  # If 'res' was constructed via imap_dfc, each column is the entire vector "beta_v".
-  # So each column is length k. That means betas_mat is k x nvox => perfect.
-  
-  list(
-    beta_matrix   = betas_mat,
-    estimated_hrf = estimated_hrfs
-  )
-}
-
-
-
-
-

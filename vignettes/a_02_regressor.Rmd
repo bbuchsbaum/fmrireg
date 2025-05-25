@@ -43,7 +43,7 @@ onsets <- seq(0, 10 * 12, by = 12)
 # Duration is 0 by default
 reg1 <- regressor(onsets = onsets, hrf = HRF_SPMG1)
 
-# Print the regressor object to see its properties
+# Print the regressor object to see its properties (uses new print.Reg method)
 print(reg1)
 
 # Access components using helper functions
@@ -63,7 +63,7 @@ scan_times <- seq(0, 140, by = TR)
 # Evaluate the regressor at scan times
 predicted_bold <- evaluate(reg1, scan_times)
 
-# Plot the predicted timecourse
+# Plot the predicted timecourse using ggplot2
 plot_df <- data.frame(Time = scan_times, Response = predicted_bold)
 ggplot(plot_df, aes(x = Time, y = Response)) +
   geom_line(linewidth = 1) +
@@ -73,11 +73,12 @@ ggplot(plot_df, aes(x = Time, y = Response)) +
        y = "Predicted Response") +
   theme_minimal()
 
-# The plot.regressor method provides a quick base R plot
-# plot(reg1, samples = scan_times)
+# The autoplot() method provides a quick ggplot object
+# library(ggplot2)
+# autoplot(reg1, grid = scan_times)
 ```
 
-The `plot()` method for regressor objects provides a quick way to visualize the evaluated timecourse, including vertical lines indicating the event onsets.
+The `autoplot()` method (requires `ggplot2`) provides a quick way to visualize the evaluated timecourse.
 
 ## Varying Event Durations
 
@@ -210,7 +211,10 @@ scan_times_basis <- seq(0, max(onsets_basis) + 30, by = TR)
 pred_basis_matrix <- evaluate(reg_basis, scan_times_basis)
 dim(pred_basis_matrix) # rows = time points, cols = basis functions
 
-# Plot the basis set regressors
+# Plot the basis set regressors using autoplot
+# autoplot(reg_basis, grid = scan_times_basis)
+
+# Or plot manually with ggplot
 colnames(pred_basis_matrix) <- paste0("Basis_", 1:ncol(pred_basis_matrix))
 plot_df_basis <- as.data.frame(pred_basis_matrix) %>% 
   mutate(Time = scan_times_basis) %>% 
@@ -225,31 +229,6 @@ ggplot(plot_df_basis, aes(x = Time, y = Response, color = Basis)) +
        color = "Basis Function") +
   theme_minimal()
 ```
-
-## Single Trial Regressors
-
-For some analyses (like beta-series correlation), you need to model *each individual trial* with its own regressor. The `single_trial_regressor()` function creates a regressor for just one event.
-
-```{r single_trial}
-# Create a regressor for a single trial at t=20s, duration 2s
-st_reg <- single_trial_regressor(onsets = 20, hrf = HRF_SPMG1, duration = 2)
-print(st_reg)
-
-# Evaluate and plot
-scan_times_st <- seq(0, 60, by = TR)
-pred_st <- evaluate(st_reg, scan_times_st)
-
-plot_df_st <- data.frame(Time = scan_times_st, Response = pred_st)
-ggplot(plot_df_st, aes(x = Time, y = Response)) +
-  geom_line(linewidth = 1) +
-  geom_vline(xintercept = onsets(st_reg), linetype = "dashed", color = "red", alpha = 0.7) +
-  labs(title = "Single Trial Regressor (Onset=20s, Duration=2s)",
-       x = "Time (seconds)",
-       y = "Predicted Response") +
-  theme_minimal()
-```
-
-Typically, you would create a list of these single trial regressors, one for each event in your experiment.
 
 ## Shifting Regressors
 

@@ -1,181 +1,255 @@
-#' Soft-threshold function
+#' Turn any function into an HRF object
 #'
-#' This function applies soft-thresholding to the input values, setting values below the threshold to zero
-#' and shrinking the remaining values by the threshold amount.
+#' This is the core constructor for creating HRF objects in the refactored system.
+#' It takes a function `f(t)` and attaches standard HRF attributes.
 #'
-#' @param x A numeric vector of input values
-#' @param threshold A non-negative threshold value for the soft-thresholding operation
-#'
-#' @return A numeric vector with the soft-thresholded values
-#'
-#' @noRd
-soft_threshold <- function(x, threshold) {
-  if (threshold < 0) {
-    stop("Threshold value should be non-negative.")
-  }
-  
-  sign(x) * pmax(0, abs(x) - threshold)
+#' @param f The function to be turned into an HRF object. It must accept a single argument `t` (time).
+#' @param name The name for the HRF object. Defaults to the deparsed name of `f`.
+#' @param nbasis The number of basis functions represented by `f`. Defaults to 1L.
+#' @param span The nominal time span (duration in seconds) of the HRF. Defaults to 24.
+#' @param params A named list of parameters associated with the HRF function `f`. Defaults to an empty list.
+#' @param ... Additional arguments to pass to the function f.
+#' @return A new HRF object.
+#' @keywords internal
+#' @export
+as_hrf <- function(f, name = deparse(substitute(f)), nbasis = 1L, span = 24,
+                   params = list()) {
+  assertthat::assert_that(is.function(f))
+  assertthat::assert_that(is.character(name), length(name) == 1)
+  assertthat::assert_that(is.numeric(nbasis), length(nbasis) == 1)
+  assertthat::assert_that(is.numeric(span), length(span) == 1)
+  assertthat::assert_that(is.list(params))
+
+  structure(
+    f,
+    class        = c("HRF", "function"),
+    name         = name,
+    nbasis       = as.integer(nbasis),
+    span         = span,
+    param_names  = names(params),
+    params       = params
+  )
 }
 
-#' Construct an HRF Instance
+
+#' Bind HRFs into a Basis Set
+#'
+#' Combines multiple HRF objects into a single multi-basis HRF object.
+#' The resulting function evaluates each input HRF at time `t` and returns the results column-bound together.
+#'
+#' @param ... One or more HRF objects created by `as_hrf` or other HRF constructors/decorators.
+#'
+#' @return A new HRF object representing the combined basis set.
+#'
+#' @keywords internal
+#' @export
+#' @importFrom assertthat assert_that
+bind_basis <- function(...) {
+  xs <- list(...)
+  assertthat::assert_that(length(xs) > 0, msg = "bind_basis requires at least one HRF object.")
+  assertthat::assert_that(all(sapply(xs, inherits, "HRF")), msg = "All inputs to bind_basis must be HRF objects.")
+
+  # Handle single HRF case explicitly
+  if (length(xs) == 1) {
+    return(xs[[1]])
+  }
+
+  # Calculate combined attributes
+  combined_nbasis <- sum(vapply(xs, attr, 0L, "nbasis"))
+  combined_span <- max(vapply(xs, attr, 0, "span"))
+  combined_name <- paste(sapply(xs, attr, "name"), collapse = " + ")
+
+  # Create the combined function
+  combined_func <- function(t) {
+    do.call(cbind, lapply(xs, function(f) f(t)))
+  }
+
+  # Use as_hrf to create the new HRF object
+  as_hrf(
+    f = combined_func,
+    name = combined_name,
+    nbasis = combined_nbasis,
+    span = combined_span,
+    params = list() # Params usually don't combine meaningfully
+  )
+}
+
+
+#' Construct an HRF Instance using Decorators
 #' 
 #' @description
-#' `gen_hrf` takes a raw function `f(t)` and returns an HRF (Hemodynamic Response Function) instance.
-#' 
-#' @param hrf A function mapping from time to signal.
-#' @param lag Optional lag in seconds.
-#' @param width Optional block width in seconds.
-#' @param precision Sampling precision in seconds.
-#' @param summate Whether to allow each impulse response function to "add" up (default: TRUE).
-#' @param normalize Rescale so that the peak of the output is 1 (default: FALSE).
-#' @param name The assigned name of the generated HRF.
-#' @param span The span of the HRF (maximum width in seconds after which function reverts to zero).
-#' @param ... Extra parameters for the `hrf` function.
-#' 
-#' @return An instance of type `HRF` inheriting from `function`.
+#' `gen_hrf` takes a base HRF function or object and applies optional lag,
+#' blocking, and normalization decorators based on arguments.
+#'
+#' @param hrf A function `f(t)` or an existing `HRF` object.
+#' @param lag Optional lag in seconds. If non-zero, applies `lag_hrf`.
+#' @param width Optional block width in seconds. If non-zero, applies `block_hrf`.
+#' @param precision Sampling precision for block convolution (passed to `block_hrf`). Default is 0.1.
+#' @param summate Whether to summate within blocks (passed to `block_hrf`). Default is TRUE.
+#' @param normalize If TRUE, applies `normalise_hrf` at the end. Default is FALSE.
+#' @param name Optional name for the *final* HRF object. If NULL (default), a name is generated based on the base HRF and applied decorators.
+#' @param span Optional span for the *final* HRF object. If NULL (default), the span is determined by the base HRF and decorators.
+#' @param ... Extra arguments passed to the *base* HRF function if `hrf` is a function.
+#'
+#' @return A final `HRF` object, potentially modified by decorators.
 #' 
 #' @examples 
-#' 
-#' ## Generate an HRF using SPMG1 canonical HRF, a lag of 3, and a width of 2.
-#' grf <- gen_hrf(hrf_spmg1, lag=3, width=2)
-#' grf(0:20)
-#' 
-#' hg <- purrr::partial(hrf_gaussian, mean=4, sd=1)
-#' grf <- gen_hrf(hg, lag=1, width=2)
-#' 
-#' vals <- grf(0:20)
+#' # Lagged SPMG1
+#' grf_lag <- gen_hrf(HRF_SPMG1, lag=3)
+#' # Blocked Gaussian
+#' grf_block <- gen_hrf(hrf_gaussian, width=5, precision=0.2)
+#' # Lagged and Blocked, then Normalized
+#' grf_both_norm <- gen_hrf(HRF_SPMG1, lag=2, width=4, normalize=TRUE)
+#'
 #' @export
 gen_hrf <- function(hrf, lag=0, width=0, precision=.1, 
-                    summate=TRUE, normalize=FALSE, name="gen_hrf", span=NULL, ...) {
-  .orig <- list(...)
-  
-  if (width != 0) {
-    assert_that(width > 0)
-    #hrf <- gen_hrf_blocked(hrf, width=width, precision=precision, 
-    #                       summate=summate, normalize=normalize, ...)
-    hrf <- gen_hrf_blocked(hrf, width=width, precision=precision, summate=summate, normalize=normalize)
-  }
-  
-  if (lag !=0) {
-    hrf <- gen_hrf_lagged(hrf, lag=lag)
-  }
-  
-  f <- if (length(.orig) > 0) {
-    ret <- function(t) {
-      do.call(hrf, c(list(t), .orig))
+                    summate=TRUE, normalize=FALSE, name=NULL, span=NULL, ...) {
+
+  # 1. Ensure we start with an HRF object
+  if (is.function(hrf) && !inherits(hrf, "HRF")) {
+    # If it's a plain function, convert it using as_hrf
+    # Determine nbasis by evaluating the function
+    test_t <- 1:10 # A small sample range
+    test_val <- try(hrf(test_t, ...), silent = TRUE)
+    determined_nbasis <- if (!inherits(test_val, "try-error") && !is.null(test_val)) {
+      if (is.matrix(test_val)) ncol(test_val) else 1L
+    } else {
+      warning(paste("Could not determine nbasis for function", deparse(substitute(hrf)), "- defaulting to 1. Evaluation failed."))
+      1L
     }
-    attr(ret, "params") <- .orig
-    ret
+    
+    # Pass extra args (...) here if they are meant for the base function construction
+    base_hrf <- as_hrf(f = function(t) hrf(t, ...),
+                       name = deparse(substitute(hrf)),
+                       nbasis = determined_nbasis) # Pass determined nbasis
+                       # Let as_hrf determine default span, params
+  } else if (inherits(hrf, "HRF")) {
+    # If already an HRF object, use it directly
+    base_hrf <- hrf
+    if (length(list(...)) > 0) {
+      warning("Ignoring extra arguments (...) because 'hrf' is already an HRF object.")
+    }
   } else {
-    hrf
+    stop("'hrf' must be a function or an HRF object.")
   }
-  
-  vals <- f(0:2)
-  
-  nb <- if (is.vector(vals)) {
-    1
-  } else if (is.matrix(vals)) {
-    ncol(vals)
-  } else {
-    stop("gen_hrf: constructed hrf is invalid")
+
+  # Apply decorators conditionally
+  decorated_hrf <- base_hrf
+
+  # Apply width decorator first if needed
+  if (width != 0) {
+    # Check positivity *before* applying
+    stopifnot(width > 0)
+    # Note: block_hrf handles normalize=FALSE internally by default
+    decorated_hrf <- block_hrf(decorated_hrf, width=width, precision=precision,
+                               summate=summate, normalize=FALSE)
   }
-  
-  if (is.null(span)) {
-    span <- 16 + lag + (width*2)
+
+  # Apply lag decorator if needed
+  if (lag != 0) {
+    decorated_hrf <- lag_hrf(decorated_hrf, lag=lag)
   }
-  
-  HRF(f, name=name, nbasis=nb, span=span)
+
+  # Apply normalization decorator last if needed
+  if (normalize) {
+    decorated_hrf <- normalise_hrf(decorated_hrf)
+  }
+
+  # Override name and span if provided by user
+  if (!is.null(name)) {
+    attr(decorated_hrf, "name") <- name
+  }
+  if (!is.null(span)) {
+    attr(decorated_hrf, "span") <- span
+  }
+
+  # Return the final (potentially decorated) HRF object
+  return(decorated_hrf)
 }
 
 
 #' Generate an Empirical Hemodynamic Response Function
 #' 
 #' @description
-#' `gen_empirical_hrf` generates an empirical hemodynamic response function (HRF) using provided time points and HRF values.
+#' `empirical_hrf` generates an empirical HRF using provided time points and values.
 #' 
 #' @param t Time points.
 #' @param y Values of HRF at time `t[i]`.
 #' @param name Name of the generated HRF.
-#' 
-#' @return An instance of type `HRF` inheriting from `function`.
-#' 
-#' @examples 
-#' 
-#' y <- -poly(0:24, 2)[,2]
-#' emphrf <- gen_empirical_hrf(0:24, y)
-#' ## plot(emphrf(seq(0,24,by=.5)), type='l')
+#' @return An instance of type `HRF`.
 #' @export
-gen_empirical_hrf <- function(t, y, name="empirical_hrf") {
-  f <- approxfun(t,y, yright=0, yleft=0)
-  HRF(f, name=name, nbasis=1)
+empirical_hrf <- function(t, y, name = "empirical_hrf") {
+  as_hrf(stats::approxfun(t, y, yright = 0, yleft = 0),
+         name = name, nbasis = 1L, span = max(t, na.rm = TRUE))
 }
 
+#' @export
+#' @rdname empirical_hrf
+#' @keywords internal
+gen_empirical_hrf <- function(...) {
+  .Deprecated("empirical_hrf")
+  empirical_hrf(...)
+}
 
 
 #' Generate an HRF Basis Set
 #' 
 #' @description
-#' `gen_hrf_set` constructs an HRF basis set from one or more component functions.
-#' This function is used to create arbitrary sets of basis functions for fMRI modeling.
-#' 
-#' @param ... A list of functions f(t) mapping from time to amplitude.
-#' @param span The span in seconds of the HRF.
-#' @param name The name of the HRF.
-#' 
-#' @return An instance of type `HRF` inheriting from `function`.
-#' 
-#' @family gen_hrf
-#' 
-#' @examples 
-#' 
-#' hrf1 <- hrf_spmg1 |> gen_hrf(lag=0)
-#' hrf2 <- hrf_spmg1 |> gen_hrf(lag=3)
-#' hrf3 <- hrf_spmg1 |> gen_hrf(lag=6)
-#' 
-#' hset <- gen_hrf_set(hrf1, hrf2, hrf3)
+#' `hrf_set` constructs an HRF basis set from one or more component HRF objects.
+#'
+#' @param ... One or more HRF objects.
+#' @param name The name for the combined HRF set.
+#' @return A combined HRF object.
 #' @export
-gen_hrf_set <- function(..., span=32, name="hrf_set") {
-  hrflist <- list(...)
-  assertthat::assert_that(all(sapply(hrflist, is.function)))
-  f <- function(t) {
-    do.call("cbind", lapply(hrflist, function(fun) fun(t)))
-  }
-  
-  HRF(f, name=name, span=span, nbasis=length(hrflist))
+hrf_set <- function(..., name = "hrf_set") {
+  combined_hrf <- bind_basis(...)
+  attr(combined_hrf, "name") <- name
+  combined_hrf
+}
+
+#' @export
+#' @rdname hrf_set
+#' @keywords internal
+gen_hrf_set <- function(...) {
+  .Deprecated("hrf_set")
+  hrf_set(...)
 }
 
 
-
-#' Generate an HRF (hemodynamic response function) library
+#' Generate an HRF library from a parameter grid
 #'
-#' This internal function generates an HRF library by applying the provided HRF generating function (`fun`) to each row of the parameter grid (`pgrid`). Additional arguments can be passed to the generating function using `...`.
+#' @description
+#' `hrf_library` applies a base HRF generating function to each row of a parameter grid.
 #'
 #' @param fun A function that generates an HRF, given a set of parameters.
-#' @param pgrid A data frame containing the parameter grid, where each row represents a set of parameters to be passed to the HRF generating function.
-#' @param ... Additional arguments to be passed to the HRF generating function.
-#' @family gen_hrf
-#' @keywords internal
-#' @return A list of HRFs generated by applying the HRF generating function to each row of the parameter grid.
-#' @noRd
-gen_hrf_library <- function(fun, pgrid, ...) {
-  # Extract the names and default values of the parameters of the HRF function
-  default_params <- formals(fun)[-1] ## exclude t
-  
-  # Apply the function to each row of the parameter grid, merging with default parameters
-  hrflist <- lapply(1:nrow(pgrid), function(i) {
-    # Merge default parameters with the actual parameters from the grid
-    merged_params <- modifyList(default_params, as.list(pgrid[i, , drop = FALSE]))
-    
-    # Ensure additional arguments are passed
-    do.call(gen_hrf, c(fun, merged_params, ...))
+#' @param pgrid A data frame where each row is a set of parameters.
+#' @param ... Additional arguments passed to `fun`.
+#' @return A combined HRF object representing the library.
+#' @importFrom purrr pmap partial
+#' @export
+hrf_library <- function(fun, pgrid, ...) {
+  # Ensure fun returns an HRF object
+  hrf_list <- purrr::pmap(pgrid, function(...) {
+      params <- list(...)
+      # Assuming 'fun' is designed to take these params and return an HRF
+      # If fun itself is just a base function, we need to wrap it
+      # Let's assume fun already produces an HRF or can be wrapped by as_hrf
+      # This part might need adjustment based on typical usage of 'fun'
+      do.call(fun, c(params, list(...))) # Pass original dots as well?
+      # Safest might be if 'fun' is expected to return an HRF object directly
+      # Example: fun = function(lag) HRF_SPMG1 |> lag_hrf(lag)
   })
-  
-  # Assuming gen_hrf_set exists and is responsible for aggregating the HRF outputs into a set
-  do.call(gen_hrf_set, hrflist)
+  # Bind the generated HRFs
+  do.call(bind_basis, hrf_list)
 }
 
-
-
+#' @export
+#' @rdname hrf_library
+#' @keywords internal
+gen_hrf_library <- function(...) {
+  .Deprecated("hrf_library")
+  hrf_library(...)
+}
 
 
 #' HRF Constructor Function
@@ -246,34 +320,8 @@ HRF <- function(fun, name, nbasis=1, span=24, param_names=NULL) {
   
 }
 
-#' AFNI HRF Constructor Function
-#'
-#' @description
-#' The `AFNI_HRF` function creates an object representing an AFNI-specific hemodynamic response function (HRF). It is a class constructor for AFNI HRFs.
-#'
-#' @param name A string specifying the name of the AFNI HRF.
-#' @param nbasis An integer representing the number of basis functions for the AFNI HRF.
-#' @param params A list containing the parameter values for the AFNI HRF.
-#'
-#' @return An AFNI_HRF object with the specified properties.
-#'
-#' @seealso HRF
-#'
 #' @export
-#' @rdname AFNI_HRF-class
-AFNI_HRF <- function(name, nbasis, params) {
-  structure(name, 
-            nbasis=as.integer(nbasis), 
-            params=params, 
-            class=c("AFNI_HRF"))
-  
-}
-
-
-#' @export
-as.character.AFNI_HRF <- function(x,...) {
-  paste(x, "\\(", paste(attr(x, "params"), collapse=","), "\\)", sep="")
-}
+nbasis.HRF <- function(x) attr(x, "nbasis")
 
 
 
@@ -302,8 +350,10 @@ makeDeriv <- function(HRF, n=1) {
 #' @return A function representing the lagged HRF. If `lag` is a vector of lags, the function returns an HRF set.
 #' @family gen_hrf
 #' @examples
+#' \donttest{
 #' hrf_lag5 <- gen_hrf_lagged(HRF_SPMG1, lag=5)
 #' hrf_lag5(0:20)
+#' }
 #'
 #' @export
 gen_hrf_lagged <- function(hrf, lag=2, normalize=FALSE, ...) {
@@ -363,1472 +413,310 @@ gen_hrf_blocked <- function(hrf=hrf_gaussian, width=5, precision=.1,
 hrf_blocked <- gen_hrf_blocked
 
 
-#' Convolve hemodynamic response with a block duration
+
+
+
+#' Soft-threshold function
 #'
-#' This function convolves a hemodynamic response function (HRF) with a block duration, producing a time-varying response 
-#' for the specified duration. The function supports various HRFs, block widths, precision levels, half-lives, and normalization.
+#' This function applies soft-thresholding to the input values, setting values below the threshold to zero
+#' and shrinking the remaining values by the threshold amount.
 #'
-#' @param t A vector of time points in seconds at which the convolved response will be evaluated
-#' @param hrf The hemodynamic response function to be convolved, provided as a function (default: hrf_gaussian)
-#' @param width The fixed width of the response block in seconds (default: 5)
-#' @param precision The sampling precision of the response in seconds (default: 0.2)
-#' @param half_life The half-life of the exponential decay function in seconds, used to model attenuation (default: Inf)
-#' @param summate A logical value indicating whether to sum the impulse response functions (default: TRUE)
-#'                If FALSE, the function returns the maximum value at each time point.
-#' @param normalize A logical value indicating whether to normalize the output so that its peak value is 1 (default: FALSE)
-#' @param ... Additional arguments passed to the HRF function
+#' @param x A numeric vector of input values
+#' @param threshold A non-negative threshold value for the soft-thresholding operation
 #'
-#' @return A vector of convolved responses at the specified time points
+#' @return A numeric vector with the soft-thresholded values
 #'
-#' @examples
-#' time_points <- seq(0, 20, by = 0.5)
-#' block_response <- convolve_block(time_points, hrf=hrf_spmg1, 
-#' width=5, precision=0.2)
-#' plot(time_points, block_response, type='l', 
-#' main='Convolved Hemodynamic Response with Block Duration')
-#'
-#' @export
-convolve_block <- function(t, hrf=hrf_gaussian, width=5, precision=.2, half_life=Inf, summate=TRUE, normalize=FALSE, ...) {
- 
-  hmat <- sapply(seq(0, width, by=precision), function(offset) {
-    hrf(t-offset,...) * exp(-offset/half_life)
-  })
-  
-  ret <- if (summate) {
-    rowSums(hmat)
-  } else {
-    #r <- range(hmat[,1])
-    #apply(hmat,1,function(vals) vals[which.max(abs(vals))])
-    apply(hmat,1,function(vals) vals[which.max(vals)])
-  }
-  
-  if (normalize) {
-    ret <- ret/max(abs(ret))
-  } 
-  
-  ret
-}
-
-
-
-#' HRF (hemodynamic response function) as a linear function of time
-#'
-#' The `hrf_time` function computes the value of an HRF, which is a simple linear function of time `t`, when `t` is greater than 0 and less than `maxt`.
-#'
-#' @param t A numeric value representing time in seconds.
-#' @param maxt A numeric value representing the maximum time point in the domain. Default value is 22.
-#' @return A numeric value representing the value of the HRF at the given time `t`.
-#' @family hrf_functions
-#' @export
-#' @examples
-#' # Compute the HRF value for t = 5 seconds with the default maximum time
-#' hrf_val <- hrf_time(5)
-#'
-#' # Compute the HRF value for t = 5 seconds with a custom maximum time of 30 seconds
-#' hrf_val_custom_maxt <- hrf_time(5, maxt = 30)
-hrf_time <- function(t, maxt=22) {
-  ifelse(t > 0 & t < maxt, t, 0)
-}
-
-# hrf_ident
-# 
-# @param t time in seconds
-# @export
-hrf_ident <- function(t) {
-  ifelse( t == 0, 1, 0)
-}
-
-#' B-spline HRF (hemodynamic response function)
-#'
-#' The `hrf_bspline` function computes the B-spline representation of an HRF (hemodynamic response function) at given time points `t`.
-#'
-#' @param t A vector of time points.
-#' @param span A numeric value representing the temporal window over which the basis set spans. Default value is 20.
-#' @param N An integer representing the number of basis functions. Default value is 5.
-#' @param degree An integer representing the degree of the spline. Default value is 3.
-#' @return A matrix representing the B-spline basis for the HRF at the given time points `t`.
-#' @family hrf_functions
-#' @examples
-#' # Compute the B-spline HRF representation for time points from 0 to 20 with 0.5 increments
-#' hrfb <- hrf_bspline(seq(0, 20, by = .5), N = 4, degree = 2)
-#' @export
-#' @importFrom splines bs
-hrf_bspline <- function(t, span=24, N=5, degree=3) {
-	
-	ord <- 1 + degree
-	nIknots <- N - ord + 1
-	if (nIknots < 0) {
-		nIknots <- 0
-		#warning("'df' was too small; have used  ", ord - (1 - intercept))
-	}
-	
-	knots <- if (nIknots > 0) {
-				knots <- seq.int(from = 0, to = 1, length.out = nIknots + 2)[-c(1, nIknots + 2)]
-				stats::quantile(seq(0,span), knots)
-			} else {
-				0
-			}
-	
-	if (any(t < 0)) {
-		t[t < 0] <- 0
-	}
-	
-	if(any(t > span)) {
-		t[t > span] <- 0
-	}
-	
-	splines::bs(t, df=N, knots=knots, degree=degree, Boundary.knots=c(0,span))
-}
-
-
-#' Gamma HRF (hemodynamic response function)
-#'
-#' The `hrf_gamma` function computes the gamma density-based HRF (hemodynamic response function) at given time points `t`.
-#'
-#' @param t A vector of time points.
-#' @param shape A numeric value representing the shape parameter for the gamma probability density function. Default value is 6.
-#' @param rate A numeric value representing the rate parameter for the gamma probability density function. Default value is 1.
-#' @return A numeric vector representing the gamma HRF at the given time points `t`.
-#' @family hrf_functions
-#' @examples
-#' # Compute the gamma HRF representation for time points from 0 to 20 with 0.5 increments
-#' hrf_gamma <- hrf_gamma(seq(0, 20, by = .5), shape = 6, rate = 1)
-#' @export
-hrf_gamma <- function(t, shape=6, rate=1) {
-  stats::dgamma(t, shape=shape, rate=rate)
-}
-
-#' Gaussian HRF (hemodynamic response function)
-#'
-#' The `hrf_gaussian` function computes the Gaussian density-based HRF (hemodynamic response function) at given time points `t`.
-#'
-#' @param t A vector of time points.
-#' @param mean A numeric value representing the mean of the Gaussian probability density function. Default value is 6.
-#' @param sd A numeric value representing the standard deviation of the Gaussian probability density function. Default value is 2.
-#' @return A numeric vector representing the Gaussian HRF at the given time points `t`.
-#' @family hrf_functions
-#' @examples
-#' # Compute the Gaussian HRF representation for time points from 0 to 20 with 0.5 increments
-#' hrf_gaussian <- hrf_gaussian(seq(0, 20, by = .5), mean = 6, sd = 2)
-#' @export
-hrf_gaussian <- function(t, mean=6, sd=2) {
-	dnorm(t, mean=mean, sd=sd)
-}
-
-
-
-#' Mexican Hat HRF (hemodynamic response function)
-#'
-#' The `hrf_mexhat` function computes the Mexican hat wavelet-based HRF (hemodynamic response function) at given time points `t`.
-#'
-#' @param t A vector of time points.
-#' @param mean A numeric value representing the mean of the Mexican hat wavelet. Default value is 6.
-#' @param sd A numeric value representing the standard deviation of the Mexican hat wavelet. Default value is 2.
-#' @return A numeric vector representing the Mexican hat wavelet-based HRF at the given time points `t`.
-#' @family hrf_functions
-#' @examples
-#' # Compute the Mexican hat HRF representation for time points from 0 to 20 with 0.5 increments
-#' hrf_mexhat <- hrf_mexhat(seq(0, 20, by = .5), mean = 6, sd = 2)
-#' @export
-hrf_mexhat <- function(t, mean = 6, sd = 2) {
-  t0 <- t - mean
-  a <- (1 - (t0 / sd)^2) * exp(-t0^2 / (2 * sd^2))
-  scale <- sqrt(2 / (3 * sd * pi^(1/4)))
-  return(scale * a)
-}
-
-#' hrf_spmg1
-#'
-#' A hemodynamic response function based on the SPM canonical double gamma parameterization.
-#'
-#' This function models the hemodynamic response using the canonical double gamma parameterization
-#' in the SPM software. The HRF is defined by a linear combination of two gamma functions with
-#' different exponents (P1 and P2) and amplitudes (A1 and A2). It is commonly used in fMRI data
-#' analysis to estimate the BOLD (blood-oxygen-level-dependent) signal changes associated with
-#' neural activity.
-#'
-#' @param t A vector of time points.
-#' @param P1 The first exponent parameter (default: 5).
-#' @param P2 The second exponent parameter (default: 15).
-#' @param A1 Amplitude scaling factor for the positive gamma function component; normally fixed at .0833
-#' @return A vector of HRF values at the given time points.
-#' @family hrf_functions
-#' @export
-#' @examples
-#' # Generate a time vector
-#' time_points <- seq(0, 30, by=0.1)
-#' # Compute the HRF values using the SPM canonical double gamma parameterization
-#' hrf_values <- hrf_spmg1(time_points)
-#' # Plot the HRF values
-#' plot(time_points, hrf_values, type='l', main='SPM Canonical Double Gamma HRF')
-hrf_spmg1 <- function(t, P1=5, P2=15,A1=.0833) {
- 	ifelse(t < 0, 0, exp(-t)*(A1*t^P1 - 1.274527e-13*t^P2))
-	
-}
-
-
-#' Gamma HRF constructor function
-#' 
-#' @keywords internal
-#' @export
-#' @family HRF
-#' @describeIn HRF-class Gamma HRF function object
-HRF_GAMMA <- structure(
-  HRF(hrf_gamma, "gamma", param_names=c("shape", "rate")),
-  class = c("GammaHRF", "HRF", "function")
-)
-
-#' Gaussian HRF constructor function
-#' 
-#' @export
-#' @family HRF
-#' @describeIn HRF-class Gaussian HRF function object
-HRF_GAUSSIAN <- structure(
-  HRF(hrf_gaussian, name="gaussian", param_names=c("mean", "sd")),
-  class = c("GaussianHRF", "HRF", "function")
-)
-
-#' BSpline HRF constructor function
-#' 
-#' @export
-#' @family HRF
-#' @describeIn HRF-class BSpline HRF function object
-HRF_BSPLINE <- structure(
-  HRF(gen_hrf(hrf_bspline), name="bspline", nbasis=5),
-  class = c("BSplineHRF", "HRF", "function"),
-  degree = 3,
-  span = 24
-)
-
-# Fast analytic first derivative for hrf_spmg1
-#' @keywords internal
-#' @noRd
-hrf_spmg1_deriv <- function(t, P1 = 5, P2 = 15, A1 = .0833) {
-  C <- 1.274527e-13
-  ret <- numeric(length(t))
-  pos <- t >= 0
-  if (any(pos)) {
-    t_pos <- t[pos]
-    ret[pos] <- exp(-t_pos) * (A1 * t_pos^(P1 - 1) * (P1 - t_pos) -
-                                 C   * t_pos^(P2 - 1) * (P2 - t_pos))
-  }
-  ret
-}
-
-# Fast analytic second derivative for hrf_spmg1
-#' @keywords internal
-#' @noRd
-hrf_spmg1_second_deriv <- function(t, P1 = 5, P2 = 15, A1 = .0833) {
-  C <- 1.274527e-13
-  ret <- numeric(length(t))
-  pos <- t >= 0
-  if (any(pos)) {
-    t_pos <- t[pos]
-    # Let D1 = A1 * t^(P1-1) * (P1 - t) and D2 = C * t^(P2-1) * (P2 - t)
-    D1 <- A1 * t_pos^(P1 - 1) * (P1 - t_pos)
-    D2 <- C   * t_pos^(P2 - 1) * (P2 - t_pos)
-    # Their derivatives:
-    D1_prime <- A1 * ((P1 - 1) * t_pos^(P1 - 2) * (P1 - t_pos) - t_pos^(P1 - 1))
-    D2_prime <- C   * ((P2 - 1) * t_pos^(P2 - 2) * (P2 - t_pos) - t_pos^(P2 - 1))
-    ret[pos] <- exp(-t_pos) * (D1_prime - D2_prime - (D1 - D2))
-  }
-  ret
-}
-
-
-#' SPM Canonical HRF constructor function
-#' 
-#' @export 
-#' @family HRF
-#' @describeIn HRF-class SPMG1 HRF function object
-HRF_SPMG1 <- structure(
-  HRF(hrf_spmg1, "SPMG1", param_names=c("A1", "A2")),
-  class = c("SPMGHRF", "HRF", "function")
-)
-
-
-#' SPM Canonical HRF constructor function with temporal derivative
-#' 
-#' @export 
-#' @family HRF
-#' @describeIn HRF-class SPMG1 HRF function object
-HRF_SPMG2 <- structure(
-  HRF(gen_hrf_set(hrf_spmg1, hrf_spmg1_deriv), "SPMG2", nbasis = 2),
-  class = c("SPMGHRF", "HRF", "function")
-)
-
-#' SPM Canonical HRF constructor function with spatial and temporal derivatives
-#' 
-#' @export 
-#' @family HRF
-#' @describeIn HRF-class SPMG1 HRF function object
-HRF_SPMG3 <- structure(
-  HRF(gen_hrf_set(hrf_spmg1, hrf_spmg1_deriv, hrf_spmg1_second_deriv),
-      "SPMG3", nbasis = 3, param_names = c("A1", "A2")),
-  class = c("SPMGHRF", "HRF", "function")
-)
-
-
-
-#' evaluate.HRF
-#'
-#' This function evaluates a hemodynamic response function (HRF) for a given set of time points (grid) and other parameters.
-#' It is used to generate the predicted BOLD (blood-oxygen-level-dependent) signal changes in fMRI data analysis.
-#'
-#' @param x The HRF function.
-#' @param grid A vector of time points.
-#' @param amplitude The scaling value for the event (default: 1).
-#' @param duration The duration of the event (default: 0).
-#' @param precision The temporal resolution used for computing summed responses when duration > 0 (default: 0.2).
-#' @param summate Whether the HRF response increases its amplitude as a function of stimulus duration (default: TRUE).
-#' @param normalize Scale output so that peak is 1 (default: FALSE).
-#' @param ... extra args
-#' @return A vector of HRF values at the specified time points.
-#' @examples
-#' hrf1 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=.1)
-#' hrf2 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=.1, summate=FALSE)
-#' @export
-evaluate.HRF <- function(x, grid, amplitude=1, duration=0, precision=.2, summate=TRUE, normalize=FALSE, ...) {
-  if (duration < precision) {
-    if (normalize) {
-      x(grid)*amplitude*attr(x, "scale_factor")   
-    } else {
-      x(grid)*amplitude
-    }
-  } else if (nbasis(x) == 1) {
-    samples <- seq(0, duration, by=precision)
-    #sfac <- attr(x, "scale_factor") 
-    
-    hmat <- sapply(samples, function(offset) {
-      x(grid-offset)*amplitude
-    })
-    
-    ret <- if (summate) {
-      rowSums(hmat)
-    } else {
-      #rowMeans(hmat)
-      apply(hmat,1,function(vals) vals[which.max(vals)])
-    }
-    
-    if (normalize) {
-      ret <- ret/max(abs(ret))
-    }
-    
-    ret
-  } else {
-    mat <- Reduce("+", lapply(seq(0, duration, by=precision), function(offset) {
-      x(grid-offset)*amplitude   
-    }))
-    
-    if (normalize) {
-      mat <- apply(mat, 2, function(vals) vals/max(abs(vals)))
-    }
-    
-    mat
-  }
-}
-
-
-#' evaluate.hrfspec
-#'
-#' This function evaluates a hemodynamic response function (HRF) specified by an hrfspec object for a given set of time points (grid) and other parameters.
-#' It is a wrapper function that calls the evaluate.HRF function with the HRF function contained in the hrfspec object.
-#'
-#' @param x The hrfspec object containing the HRF function.
-#' @param grid A vector of time points.
-#' @param amplitude The scaling value for the event (default: 1).
-#' @param duration The duration of the event (default: 0).
-#' @param precision The temporal resolution used for computing summed responses when duration > 0 (default: 0.1).
-#' @param ... Additional arguments to be passed to the evaluate.HRF function.
-#' @return A vector of HRF values at the specified time points.
-#' @noRd
-evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1, ...) {
-  evaluate(x$hrf, grid,amplitude, duration, precision)
-}
-
-
-#' @export
-nbasis.HRF <- function(x) attr(x, "nbasis")
-
-
-
-
-#' getHRF
-#'
-#' This function retrieves a specified hemodynamic response function (HRF) by name and creates an HRF object with specified properties.
-#'
-#' @param name The name of the HRF function. Available options: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs".
-#' @param nbasis The number of basis functions (if relevant, default: 5).
-#' @param span The temporal window over which the basis sets span (default: 24).
-#' @param lag The time lag parameter (default: 0).
-#' @param width The width parameter (default: 0).
-#' @param summate Whether the HRF response increases its amplitude as a function of stimulus duration (default: TRUE).
-#' @param normalize Whether to scale output so that the peak is 1 (default: FALSE).
-#' @param ... Additional arguments passed to the gen_hrf function.
-#' @return An HRF object with the specified properties.
-#' @keywords internal
-#' @noRd
-getHRF <- function(name=c("gam", "gamma", "spmg1", "spmg2", 
-                          "spmg3", "bspline", "gaussian", "tent", "bs"), 
-                   nbasis=5, span=24,lag=0,width=0, summate=TRUE, normalize=FALSE, ...) {
-  name <- match.arg(name)
-	nb <- nbasis
-	hrf <- switch(name,
-			gamma=gen_hrf(hrf_gamma,lag=lag, span=span,width=width, summate=summate, normalize=normalize, name="gamma"),
-			gam=gen_hrf(hrf_gamma,lag=lag,span=span,width=width, summate=summate, normalize=normalize, name="gamma"),
-			gaussian=gen_hrf(HRF_GAUSSIAN,lag=lag,span=span, width=width, summate=summate, normalize=normalize, name="gaussian"),
-			spmg1=gen_hrf(HRF_SPMG1,lag=lag,span=span, width=width, summate=summate, normalize=normalize, name="spmg1"),
-			spmg2=gen_hrf(HRF_SPMG2,lag=lag,span=span, width=width, summate=summate, normalize=normalize, name="spmg2"),
-			spmg3=gen_hrf(HRF_SPMG3,lag=lag,span=span, width=width, summate=summate, normalize=normalize, name="spmg3"),
-			tent=gen_hrf(purrr::partial(hrf_bspline, degree=1, span=span, N=nb), lag=lag, width=width, summate=summate, normalize=normalize, name="tent", ...),
-			bs=gen_hrf(purrr::partial(hrf_bspline,N=nb,degree=3,span=span), lag=lag, width=width, summate=summate, normalize=normalize, name="bspline", ...),
-			bspline=gen_hrf(purrr::partial(hrf_bspline, N=nb, degree=3, span=span), lag=lag,width=width, summate=summate, normalize=normalize, name="bspline", ...)
-	)
-	
-	if (is.null(hrf)) {
-		stop("could not find create hrf named: ", name)
-	}
-	
-	hrf
-}
-
-#' hrf_sine
-#'
-#' A hemodynamic response function using the Sine Basis Set.
-#'
-#' @param t A vector of times.
-#' @param span The temporal window over which the basis sets span (default: 24).
-#' @param N The number of basis functions (default: 5).
-#' @return A matrix of sine basis functions.
-#' @family hrf_functions
-#' @export
-#' @examples
-#' hrf_sine_basis <- hrf_sine(seq(0, 20, by = 0.5), N = 4)
-hrf_sine <- function(t, span = 24, N = 5) {
-  sine_basis <- sapply(1:N, function(n) {
-    sin(2 * pi * n * t / span)
-  })
-  return(sine_basis)
-}
-
-#' hrf_inv_logit
-#'
-#' A hemodynamic response function using the difference of two Inverse Logit functions.
-#'
-#' @param t A vector of times.
-#' @param mu1 The time-to-peak for the rising phase (mean of the first logistic function).
-#' @param s1 The width (slope) of the first logistic function.
-#' @param mu2 The time-to-peak for the falling phase (mean of the second logistic function).
-#' @param s2 The width (slope) of the second logistic function.
-#' @param lag The time delay (default: 0).
-#' @return A vector of the difference of two Inverse Logit HRF values.
-#' @family hrf_functions
-#' @export
-#' @examples
-#' hrf_inv_logit_basis <- hrf_inv_logit(seq(0, 20, by = 0.5), mu1 = 6, s1 = 1, mu2 = 16, s2 = 1)
-hrf_inv_logit <- function(t, mu1 = 6, s1 = 1, mu2 = 16, s2 = 1, lag = 0) {
-  inv_logit1 <- 1 / (1 + exp(-(t - lag - mu1) / s1))
-  inv_logit2 <- 1 / (1 + exp(-(t - lag - mu2) / s2))
-  return(inv_logit1 - inv_logit2)
-}
-
-
-#' @keywords internal
-#' @noRd
-make_hrf <- function(basis, lag, nbasis=1) {
-  if (!is.numeric(lag) || length(lag) > 1) {
-    stop("hrf: 'lag' must be a numeric scalar")
-  }
-  
-  if (is.character(basis)) {
-    getHRF(basis, nbasis=nbasis, lag=lag)
-  } else if (inherits(basis, "HRF")) {
-    if (lag > 0) {
-      HRF(gen_hrf_lagged(basis, lag=lag), name=basis$name, nbasis=basis$nbasis)
-    } else {
-      basis
-    }
-    
-  } else if (is.function(basis)) {
-    test <- basis(1:10)
-    nb <- if (is.vector(test)) {
-      1
-    } else {
-      assert_that(is.matrix(test), "basis function must return vector or matrix")
-      ncol(test) 
-    }
-    HRF(gen_hrf_lagged(basis,lag=lag), name="custom_hrf", nbasis=nb)
-  } else {
-    stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
-  }
-  
-}
-
-#### TODO character variables need an "as.factor"
-
-#' hemodynamic regressor specification function for model formulas.
-#' 
-#' This function is to be used in formulas for fitting functions, e.g. onsets ~ hrf(fac1,fac2) ...
-#' 
-#' 
-#' @param ... the variable names, all of which must be present in the enclosing environment (e.g. an \code{event_model} object)
-#' @param basis the impulse response function or the name of a pre-supplied function, one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian".
-#' @param onsets optional onsets override. If missing, onsets will be taken from the \code{event_model}
-#' @param durations optional durations override. If missing, onsets will be taken from the \code{event_model}
-#' @param prefix a character string that is prepended to the variable names and used to identify the term. 
-#'               Can be used to disambiguate two \code{hrf} terms with the same variable(s) but different onsets or basis functions.
-#' @param subset an expression indicating the subset of 'onsets' to keep
-#' @param precision sampling precision in seconds
-#' @param nbasis number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.
-#' @param contrasts one or more \code{contrast_spec} objects created with the \code{contrast} function. 
-#' If multiple contrasts are required, then these should be wrapped in a \code{list} or \code{contrast_set}.
-#' @param id a  unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.
-#' @param lag a temporal offset in seconds which is added to onset before convolution
-#' @param summate whether impulse amplitudes sum up when duration is greater than 0. 
-#' @examples 
-#' 
-#' ## 'hrf' is typically used in the context of \code{formula}s.
-#' 
-#' form <- onsets ~ hrf(x) + hrf(y) + hrf(x,y)
-#' 
-#' @export
-#' @importFrom rlang enquos enexpr
-#' @return an \code{hrfspec} instance
-hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.3, 
-                nbasis=1, contrasts=NULL, id=NULL, lag=0, summate=TRUE) {
-  
-  vars <- rlang::enquos(...)
-  #vars <- as.list(substitute(...))[-1] 
-  
-  parsed <- parse_term(vars, "hrf")
-  term <- parsed$term
-  label <- parsed$label
-  
-  basis <- make_hrf(basis, lag, nbasis=nbasis)
-  
-  ret <- hrfspec(
-    term,
-    label=label,
-    basis,
-    basis=basis,         ## basis function of type "HRF"
-    onsets=onsets,       ## optional onsets vector -- should this be lazy? onsets = ~ onsets
-    durations=durations, ## optional durations vector
-    prefix=prefix,       ## prefix
-    subset=rlang::enexpr(subset), ## quoted subset expression
-    precision=precision,
-    contrasts=contrasts,
-    summate=summate)
-  
-  class(ret) <- c("hrfspec", "list")
-  ret
-}
-
-
-#' hemodynamic regressor specification function
-#'
-#' @param vars Variables involved in the term. Can be a character vector of variable names or expressions captured using `rlang::exprs`.
-#' @param label Optional label for the term.
-#' @param basis The impulse response function or the name of a pre-supplied function.
-#' @param onsets Optional onsets override.
-#' @param durations Optional durations override.
-#' @param prefix Character string prepended to variable names.
-#' @param subset Expression indicating a subset of onsets to keep.
-#' @param precision Sampling precision in seconds.
-#' @param contrasts One or more `contrast_spec` objects.
-#' @param id Unique identifier for the term.
-#' @param summate Logical indicating whether to summate overlapping HRFs.
-#' @param data_env Environment containing event data, where variables and expressions are evaluated.
-#'
-#' @return An `hrfspec` instance.
 #' @noRd
 #' @keywords internal
-hrfspec <- function(vars, label=NULL, basis=HRF_SPMG1, onsets=NULL, durations=NULL, prefix=NULL, 
-                    subset=NULL, precision=.3, 
-                    contrasts=NULL, id=NULL, summate=TRUE, data_env = NULL) {
-
-  assert_that(inherits(basis, "HRF"))
-  
-  # vars can be symbols, calls (expressions), or character strings
-  varnames <- sapply(vars, function(v) {
-    if (rlang::is_symbol(v) || rlang::is_call(v)) {
-      deparse(v)
-    } else if (is.character(v)) {
-      v
-    } else {
-      stop("variables must be symbols, expressions, or character strings")
-    }
-  })
-  
-  termname <- paste0(varnames, collapse="::")
-  
-  if (!is.null(prefix)) {
-    varnames <- paste0(prefix, "_", varnames)
+soft_threshold <- function(x, threshold) {
+  if (threshold < 0) {
+    stop("Threshold value should be non-negative.")
   }
 
-  if (is.null(id)) {
-    id <- termname
-  }
-  
-  if (is.null(label)) {
-    label <- paste0("hrf(", paste0(varnames, collapse=","), ")")
-  }
-  
-  cset <- if (inherits(contrasts, "contrast_spec")) {
-    contrast_set(con1=contrasts)
-  } else if (inherits(contrasts, "contrast_set")) {
-    contrasts
-  } else {
-    NULL
-  }
-  
-  ret <- list(
-    name=termname, 
-    label=label,
-    id=id, 
-    vars=vars,
-    varnames=varnames, 
-    hrf=basis,
-    onsets=onsets,
-    durations=durations,
-    prefix=prefix,
-    subset=subset,
-    precision=precision,
-    contrasts=cset,
-    summate=summate,
-    data_env = data_env  # Store the data environment
-  )
-  
-  class(ret) <- c("hrfspec", "list")
-  ret
+  sign(x) * pmax(0, abs(x) - threshold)
 }
 
 
-
-
-#' Construct an Event Term
-#'
-#' @param x An `hrfspec` object.
-#' @param model_spec The model specification object.
-#' @param onsets The event onsets.
-#'
-#' @return An `event_term` object.
-#' @keywords internal
-#' @noRd
-construct_event_term <- function(x, model_spec,onsets) {
-  # Use onsets and durations, defaulting to model_spec if not specified
-  onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
-  durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
-  
-  # Use the data environment from hrfspec
-  data_env <- x$data_env
-  if (is.null(data_env)) {
-    data_env <- list2env(as.list(model_spec$event_table), parent = parent.frame())
-  }
-  
-  # Evaluate all vars as expressions in data environment
-  #browser()
-  varlist <- lapply(seq_along(x$vars), function(i) {
-    eval(parse(text = x$vars[[i]]), envir = data_env, enclos = parent.frame())
-  })
-  
-  names(varlist) <- x$varnames
-  
-  # Evaluate subset expression if provided
-  subs <- if (!is.null(x$subset)) {
-    eval(x$subset, envir = data_env, enclos = parent.frame())
-  } else {
-    rep(TRUE, length(onsets))
-  }
-  
-  # Create event term
-  #browser()
-  et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
-  et
-}
-
-
-#' @export
-nbasis.hrfspec <- function(x) {
-  nbasis(x$hrf)
-}
-
-#' @export
-construct.hrfspec <- function(x, model_spec, ...) {
-  ons <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
-  et <- construct_event_term(x,model_spec, ons)
-  
-  ## could be lazy
-  cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate, precision=model_spec$precision)
-  
-  ret <- list(
-    varname=et$varname,
-    evterm=et,
-    design_matrix=as.data.frame(cterm),
-    sampling_frame=model_spec$sampling_frame,
-    hrfspec=x,
-    contrasts=x$contrasts,
-    id=if(!is.null(x$id)) x$id else et$varname
-  )
-  
-  class(ret) <- c("convolved_term", "fmri_term", "list") 
-  ret
-}
-
-
-.hrf_parse <- function(..., prefix=NULL, basis=HRF_SPMG1, nbasis=1, lag=0, termsep=":") {
-  vars <- as.list(substitute(list(...)))[-1] 
-  #browser()
-  if (length(vars) > 0) {
-    parsed <- parse_term(vars, "hrf")
-    term <- parsed$term
-    label <- parsed$label
-  } else {
-    stop("hrf: must have at least one variable")
-  }
-  
-  basis <- if (is.character(basis)) {
-    getHRF(basis, nbasis=nbasis, lag=lag)
-  } else if (inherits(basis, "HRF")) {
-    if (lag > 0) {
-      HRF(gen_hrf_lagged(basis, lag=lag), name=basis$name)
-    } else {
-      basis
-    }
-    
-  } else if (is.function(basis)) {
-    test <- basis(1:10)
-    HRF(gen_hrf_lagged(basis,lag=lag,...), name="custom_hrf", nbasis=ncol(test))
-  } else {
-    stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
-  }
-  
-  
-  varnames <- if (!is.null(prefix)) {
-    paste0(prefix, "_", parsed$term)
-  } else {
-    parsed$term
-    
-  }
-  
-  termname <- paste0(varnames, collapse=termsep)
-  
-  list(vars=vars, parsed=parsed, term=term, label=label, basis=basis, varnames=varnames, termname=termname)
-}
-
-
-
-
-#' trialwise
-#' 
-#' This function is to be used in formulas for fitting functions, e.g. onsets ~ trialwise() ...
-#' 
-#' @inheritParams hrf
-
-#' 
-#' @param label the label for the generated variable.
-#' @param add_sum add the sum of all trialwise regressors to the set. 
-#' This can be sued to model the average effect. 
-#' 
-#' @examples 
-#' x <- trialwise(basis="gaussian", onsets=c(1,17,25), durations=c(1,2,3))
-#' 
-#' @export
-#' @return a \code{trialwisespec} instance.
-trialwise <- function(label="trialwise", basis="spmg1", onsets=NULL, durations=NULL, 
-                      prefix=NULL, subset=NULL, precision=.3, id=NULL, add_sum=FALSE) {
- 
-  termname = label
-  
-  if (is.null(id)) {
-    id <- termname
-  }  
-
-  basis <- if (!inherits(basis, "HRF") && is.function(basis)) {
-    gen_hrf(basis)
-  } else if (is.character(basis)) {
-    getHRF(basis)
-  } else if (inherits(basis, "HRF")) {
-    basis
-  } else {
-    stop(paste("illegal type for basis arg: ", class(basis)))
-  }
-  
-  assert_that(inherits(basis, "HRF"))
-  
-  ret <- list(
-    name=termname,
-    varnames=list("trialwise"),
-    label="trialwise",
-    hrf=basis,
-    onsets=onsets,
-    durations=durations,
-    prefix=prefix,
-    subset=substitute(subset),
-    precision=precision,
-    contrasts=list(),
-    add_sum=add_sum)
-  
-  class(ret) <- c("trialwisespec", "hrfspec", "list")
-  ret
-}
-
-#' @export
-construct.trialwisespec <- function(x, model_spec, ...) {
-  
-  ## compied almost verbatim from construct.hrfspec
-  onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
-  durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
-  
- 
-  tind <- seq(1, length(onsets))
-  trial_index <- formatC(seq(1, length(onsets)), width = nchar(as.character(max(tind))), format = "d", flag = "0")
-  #trial_index <- factor(seq(1, length(onsets)))
-  trial_index <- factor(trial_index)
-  varlist <- list(trial_index)
-  names(varlist) <- x$varname
-  
-  subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
-  et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
-  cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
-  
-  ret <- list(
-    varname=et$varname,
-    evterm=et,
-    design_matrix=cterm,
-    sampling_frame=model_spec$sampling_frame,
-    contrasts=x$contrasts,
-    hrfspec=x,
-    id=x$id
-  )
-  
-  class(ret) <- c("trialwise_convolved_term", "convolved_term", "fmri_term", "list") 
-  ret
-}
-
-
-#' construct an native AFNI hrf specification for '3dDeconvolve' with the 'stim_times' argument.
-#' 
-#' @inheritParams hrf
-#' @param start the start of the window for sin/poly/csplin models
-#' @param stop the stop time for sin/poly/csplin models
-#' @export
-#' @return an \code{afni_hrfspec} instance
-afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",           
-                                  "tent",   "csplin", "poly",  "sin",        
-                                  "gam", "spmg2", "spmg3", "wav"), 
-                                  onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, 
-                                  nbasis=1, contrasts=NULL, id=NULL, 
-                                  lag=0,
-                                  start=NULL, stop=NULL) {
-  
-  ## TODO cryptic error message when argument is mispelled and is then added to ...
-  basis <- match.arg(basis)
-  
-  vars <- as.list(substitute(list(...)))[-1] 
-  parsed <- parse_term(vars, "afni_hrf")
-  term <- parsed$term
-  label <- parsed$label
-  
-  hrf <- if (!is.null(durations)) {
-    assert_that(length(durations) == 1, msg="afni_hrf does not currently accept variable durations")
-    get_AFNI_HRF(basis, nbasis=nbasis, duration=durations[1], b=start, c=stop)
-  } else {
-    get_AFNI_HRF(basis, nbasis=nbasis, b=start, c=stop)
-  }
-  
-  
-  varnames <- if (!is.null(prefix)) {
-    paste0(prefix, "_", term)
-  } else {
-    term
-  }
-  
-  termname <- paste0(varnames, collapse="::")
-  
-  if (is.null(id)) {
-    id <- termname
-  }  
-  
-  cset <- if (inherits(contrasts, "contrast_spec")) {
-    contrast_set(con1=contrasts)
-  } else if (inherits(contrasts, "contrast_set")) {
-    contrasts
-  } 
-  
-  ret <- list(
-    name=termname,
-    id=id,
-    varnames=varnames,
-    vars=term,
-    label=label,
-    hrf=hrf,
-    onsets=onsets,
-    durations=durations,
-    prefix=prefix,
-    subset=substitute(subset),
-    lag=lag,
-    contrasts=cset)
-  
-  class(ret) <- c("afni_hrfspec", "hrfspec", "list")
-  ret
-  
-}
-
-#' construct a native AFNI hrf specification for '3dDeconvolve' and individually modulated events using the 'stim_times_IM' argument.
-#' 
-#' 
-#' @param label name of regressor
-#' @param start start of hrf (for multiple basis hrfs)
-#' @param stop end of hrf (for multiple basis hrfs)
-#' 
-#' @inheritParams hrf
-#' @examples 
-#' 
-#' 
-#' tw <- afni_trialwise("trialwise", basis="gamma", onsets=seq(1,100,by=5))
-#' 
-#' @export
-#' @return an \code{afni_trialwise_hrfspec} instance
-afni_trialwise <- function(label, basis=c("spmg1", "block", "dmblock", "gamma", "wav"), 
-                     onsets=NULL, durations=0, subset=NULL, 
-                      id=NULL, start=0, stop=22) {
-  
-  ## TODO cryptic error message when argument is mispelled and is then added to ...
-  basis <- match.arg(basis)
-  
-  hrf <- if (!is.null(durations)) {
-    assert_that(length(durations) == 1, msg="afni_trialwise does not currently accept variable durations")
-    get_AFNI_HRF(basis, nbasis=1, duration=durations[1], b=start, c=stop)
-  } else {
-    get_AFNI_HRF(basis, nbasis=1, b=start, c=stop)
-  }
-  
-  
-  if (is.null(id)) {
-    id <- label
-  }  
-  
-  ret <- list(
-    name=label,
-    varname=label,
-    id=id,
-    hrf=hrf,
-    onsets=onsets,
-    durations=durations,
-    subset=substitute(subset))
-  
-  class(ret) <- c("afni_trialwise_hrfspec", "hrfspec", "list")
-  ret
-  
-}
-
-#' @export
-construct.afni_hrfspec <- function(x, model_spec, ...) {
-  
-  et <- construct_event_term(x, model_spec)
-  
-  ## do not convolve an afni term
-  ##cterm <- convolve(et, x$hrf, model_spec$sampling_frame, summate=x$summate)
-  
-  ret <- list(
-    varname=et$varname,
-    evterm=et,
-    sampling_frame=model_spec$sampling_frame,
-    hrfspec=x,
-    contrasts=x$contrasts,
-    id=if(!is.null(x$id)) x$id else et$varname
-  )
-  
-  class(ret) <- c("afni_hrf_convolved_term", "convolved_term", "fmri_term", "list") 
-  ret
-}
-
-
-#' @export
-construct.afni_trialwise_hrfspec <- function(x, model_spec, ...) {
-  
-  ## compied almost verbatim from construct.hrfspec
-  onsets <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
-  durations <- if (!is.null(x$durations)) x$durations else model_spec$durations
-  
-  trial_index <- factor(seq(1, length(onsets)))
-  
-  varlist <- list(trial_index)
-  names(varlist) <- x$varname
-  
-  subs <- if (!is.null(x$subset)) base::eval(x$subset, envir=model_spec$event_table, enclos=parent.frame()) else rep(TRUE, length(onsets))
-  
-  et <- event_term(varlist, onsets, model_spec$blockids, durations, subs)
-  #cterm <- convolve(et, x$hrf, model_spec$sampling_frame)
-  
-  ret <- list(
-    varname=et$varname,
-    evterm=et,
-    sampling_frame=model_spec$sampling_frame,
-    hrfspec=x,
-    id=x$id
-  )
-  
-  class(ret) <- c("afni_trialwise_convolved_term", "convolved_term", "fmri_term", "list") 
-  ret
-}
-
-
-#' @keywords internal
-#' @noRd
-AFNI_SPMG1 <- function(d=1) AFNI_HRF(name="SPMG1", nbasis=as.integer(1), params=list(d=d)) 
-
-#' @keywords internal
-#' @noRd
-AFNI_SPMG2 <- function(d=1) AFNI_HRF(name="SPMG2", nbasis=as.integer(2), params=list(d=d))
-
-#' @keywords internal
-#' @noRd
-AFNI_SPMG3 <- function(d=1) AFNI_HRF(name="SPMG3", nbasis=as.integer(3), params=list(d=d))
-
-#' @keywords internal
-#' @noRd
-AFNI_BLOCK <- function(d=1,p=1) AFNI_HRF(name="BLOCK", nbasis=as.integer(1), params=list(d=d,p=p))
-
-#' @keywords internal
-#' @noRd
-AFNI_dmBLOCK <- function(d=1,p=1) AFNI_HRF(name="dmBLOCK", nbasis=as.integer(1), params=list(d=d,p=p))
-
-#' @keywords internal
-#' @noRd
-AFNI_TENT <- function(b=0,c=18, n=10) AFNI_HRF(name="TENT", nbasis=as.integer(n), params=list(b=b,c=c,n=n))
-
-#' @keywords internal
-#' @noRd
-AFNI_CSPLIN <- function(b=0,c=18, n=6) AFNI_HRF(name="CSPLIN", nbasis=as.integer(n), params=list(b=b,c=c,n=n))
-
-#' @keywords internal
-#' @noRd
-AFNI_POLY <- function(b=0,c=18, n=10) AFNI_HRF(name="POLY", nbasis=as.integer(n), params=list(b=b,c=c,n=n))
-
-#' @keywords internal
-#' @noRd
-AFNI_SIN <- function(b=0,c=18, n=10) AFNI_HRF(name="SIN", nbasis=as.integer(n), params=list(b=b,c=c,n=n))
-
-#' @keywords internal
-#' @noRd
-AFNI_GAM <- function(p=8.6,q=.547) AFNI_HRF(name="GAM", nbasis=as.integer(1), params=list(p=p,q=q))
-
-#' @keywords internal
-#' @noRd
-AFNI_WAV <- function(d=1) AFNI_HRF(name="WAV", nbasis=as.integer(1), params=list(d=1))
-
-
-#' @keywords internal
-#' @noRd
-get_AFNI_HRF <- function(name, nbasis=1, duration=1, b=0, c=18) {
-  hrf <- switch(name,
-                gamma=AFNI_GAM(),
-                spmg1=AFNI_SPMG1(d=duration),
-                spmg2=AFNI_SPMG2(d=duration),
-                spmg3=AFNI_SPMG3(d=duration),
-                csplin=AFNI_CSPLIN(b=b,c=c, n=nbasis),
-                poly=AFNI_POLY(b=b,c=c, n=nbasis),
-                sine=AFNI_SIN(b=b,c=c,n=nbasis),
-                wav=AFNI_WAV(),
-                block=AFNI_BLOCK(d=duration),
-                dmblock=AFNI_dmBLOCK())
-  
-  if (is.null(hrf)) {
-    stop("could not find afni hrf named: ", name)
-  }
-  
-  hrf
-  
-}
-
-
-#' Hemodynamic Response Function with Half-Cosine Basis
-#'
-#' This function models a hemodynamic response function (HRF) using four half-period cosine basis functions.
-#' The HRF consists of an initial dip, a rise to peak, a fall and undershoot, and a recovery to the baseline.
-#'
-#' @param t A vector of time values.
-#' @param h1 Duration of the initial dip in seconds.
-#' @param h2 Duration of the rise to peak in seconds.
-#' @param h3 Duration of the fall and undershoot in seconds.
-#' @param h4 Duration of the recovery to baseline in seconds.
-#' @param f1 Height of the starting point.
-#' @param f2 Height of the end point.
-#' @return A vector of HRF values corresponding to the input time values.
-#' @references Woolrich, M. W., Behrens, T. E., & Smith, S. M. (2004). Constrained linear basis sets for HRF modelling using Variational Bayes. NeuroImage, 21(4), 1748-1761.
-#' @export
-hrf_half_cosine <- function(t, h1=1, h2=5, h3=7,h4=7, f1=0, f2=0) {
-  rising_half_cosine <- function(t, f1, t0, w) {
-    return(f1/2 * (1 - cos(pi * (t - t0) / w)))
-  }
-  
-  falling_half_cosine <- function(t, f1, t0, w) {
-    return(f1/2 * (1 + cos(pi * (t - t0) / w)))
-  }
-  
-  #falling_half_cosine <- function(t, f1, t0, w) {
-  #  return(f1/2 * (1 + cos(pi * (t - t0) / w)))
-  #}
-  
-  ret = dplyr::case_when(
-    t < 0 ~ 0,
-    t <= h1 ~ falling_half_cosine(t, f1, 0, h1),
-    (t > h1) & t <= (h1+h2) ~ rising_half_cosine(t, 1, h1, h2),
-    (t > (h1+h2)) & t <= (h1+h2+h3) ~ falling_half_cosine(t,1,(h1+h2), h3),
-    (t > (h1+h2+h3)) & t <= (h1+h2+h3+h4) ~ rising_half_cosine(t,f2,(h1+h2+h3), h4),
-    (t > h1+h2+h3+h4) ~ f2,
-  )
-  return(ret)
-}
-
-
-#' HRF Toeplitz Matrix
-#' 
-#' @description
-#' Create a Toeplitz matrix for hemodynamic response function (HRF) convolution.
-#' 
-#' @param hrf The hemodynamic response function.
-#' @param time A numeric vector representing the time points.
-#' @param len The length of the output Toeplitz matrix.
-#' @param sparse Logical, if TRUE, the output Toeplitz matrix is returned as a sparse matrix (default: FALSE).
-#' 
-#' @return A Toeplitz matrix for HRF convolution.
-#' @export
-hrf_toeplitz <- function(hrf, time, len, sparse=FALSE) {
-  hreg <- hrf(time)
-  padding <- len - length(hreg)
-  H <- pracma::Toeplitz(c(hreg, rep(0, padding)), c(hreg[1], rep(0, len-1)))
-  H <- Matrix::Matrix(H, sparse=sparse)
-  H
-}
-
-
-
-    
-
-#' Generate Daguerre spherical basis functions
-#' 
-#' @description
-#' Creates a set of Daguerre spherical basis functions. These are orthogonal 
-#' polynomials on [0,∞) with respect to the weight function w(x) = x^2 * exp(-x).
-#' They are particularly useful for modeling hemodynamic responses as they naturally
-#' decay to zero and can capture various response shapes.
-#'
-#' @param t Time points at which to evaluate the basis functions
-#' @param n_basis Number of basis functions to generate (default: 3)
-#' @param scale Scale parameter for the time axis (default: 1)
-#' @return A matrix with columns containing the basis functions
-#' @keywords internal
-#' @noRd
-daguerre_basis <- function(t, n_basis = 3, scale = 1) {
-  # Scale time
-  x <- t/scale
-  
-  # Initialize basis matrix
-  basis <- matrix(0, length(x), n_basis)
-  
-  # First basis function (n=0)
-  basis[,1] <- exp(-x/2)
-  
-  if(n_basis > 1) {
-    # Second basis function (n=1)
-    basis[,2] <- (1 - x) * exp(-x/2)
-  }
-  
-  if(n_basis > 2) {
-    # Higher order basis functions using recurrence relation
-    for(n in 3:n_basis) {
-      k <- n - 1
-      basis[,n] <- ((2*k - 1 - x) * basis[,n-1] - (k - 1) * basis[,n-2]) / k
-    }
-  }
-  
-  # Normalize basis functions
-  for(i in 1:n_basis) {
-    # Avoid division by zero if a basis function is all zero
-    max_abs_val <- max(abs(basis[,i]))
-    if (max_abs_val > 1e-10) {
-      basis[,i] <- basis[,i] / max_abs_val
-    }
-  }
-  
-  basis
-}
-
-#' Daguerre HRF constructor
-#'
-#' @description
-#' Creates an HRF object using Daguerre spherical basis functions.
-#' When nbasis=1, returns a canonical-like HRF derived from the first 3 bases.
-#' When nbasis>1, returns the full basis set.
-#'
-#' @param n_basis Number of basis functions (default: 1)
-#' @param scale Scale parameter for the time axis (default: 4)
-#' @return An HRF object (function) that takes time `t`.
-#' @export
-HRF_DAGUERRE <- function(n_basis=1, scale=4) {
-
-  # Define the core function that takes 't'
-  hrf_eval_func <- function(t) {
-      # Handle negative time points
-      pos <- t >= 0
-      res_len <- length(t)
-
-      if(n_basis == 1) {
-          # Return canonical-like HRF
-          y <- numeric(res_len)
-          if(any(pos)) {
-              # Use 3 basis functions internally to create the canonical shape
-              internal_nbasis <- 3
-              basis <- daguerre_basis(t[pos], internal_nbasis, scale)
-              weights <- c(1, -0.5, 0.2) # Predefined weights for canonical shape
-              y_pos <- basis %*% weights
-              max_abs_y_pos <- max(abs(y_pos))
-              # Normalize canonical shape, handle case where it might be zero
-              y[pos] <- if (max_abs_y_pos > 1e-10) y_pos / max_abs_y_pos else y_pos
-          }
-      } else {
-          # Return basis set
-          y <- matrix(0, res_len, n_basis)
-          if(any(pos)) {
-              y[pos,] <- daguerre_basis(t[pos], n_basis, scale)
-              # Normalization of basis columns happens within daguerre_basis
-          }
-      }
-      return(y)
-  }
-
-  # Use the HRF constructor to wrap the evaluation function
-  HRF(
-      fun = hrf_eval_func,
-      name = paste0("HRF_DAGUERRE(n=", n_basis, ", scale=", scale, ")"),
-      nbasis = n_basis
-  )
-}
-
-#' Create Daguerre basis HRF set
-#'
-#' @description
-#' Creates an HRF object representing a set of hemodynamic response functions
-#' using Daguerre spherical basis functions.
-#'
-#' @param n_basis Number of basis functions (default: 3)
-#' @param scale Scale parameter for the time axis (default: 4)
-#' @return An HRF object (function) that takes time `t` and returns the basis set matrix.
-#' @examples
-#' hrf_dag_basis_obj <- HRF_DAGUERRE_BASIS(n_basis = 3)
-#' t <- seq(0, 32, by=0.1)
-#' basis_set <- hrf_dag_basis_obj(t)
-#' matplot(t, basis_set, type='l', xlab='Time (s)', ylab='Response')
-#' @export
-HRF_DAGUERRE_BASIS <- function(n_basis=3, scale=4) {
-  # Define the core function that takes 't'
-  basis_eval_func <- function(t) {
-      y <- matrix(0, length(t), n_basis)
-      pos <- t >= 0
-      if(any(pos)) {
-          # Ensure daguerre_basis exists and is accessible
-          y[pos,] <- daguerre_basis(t[pos], n_basis, scale)
-      }
-      return(y)
-  }
-
-  # Use the HRF constructor to wrap the evaluation function
-  HRF(
-      fun = basis_eval_func,
-      name = paste0("HRF_DAGUERRE_BASIS(n=", n_basis, ", scale=", scale, ")"),
-      nbasis = n_basis
-      # span could be estimated based on scale/nbasis if needed
-  )
-}
-
-#' Print method for HRF objects
-#'
-#' @param x An HRF object
-#' @param ... Additional arguments passed to print
-#' @export
-print.HRF <- function(x, ...) {
-  # Get attributes
-  name <- attr(x, "name")
-  nbasis <- nbasis(x)
-  params <- attr(x, "param_names")
-  
-  # Header with box drawing characters
-  cat("╔══════════════════════════════════════════╗\n")
-  cat("║ Hemodynamic Response Function (HRF)      ║\n")
-  cat("╠══════════════════════════════════════════╣\n")
-  
-  # Basic info
-  cat(sprintf("║ %-38s ║\n", paste("Type:", name)))
-  cat(sprintf("║ %-38s ║\n", paste("Basis functions:", nbasis)))
-  
-  # Parameters if they exist
-  if (!is.null(params)) {
-    cat("║ Parameters:                              ║\n")
-    for (param in params) {
-      cat(sprintf("║   • %-34s ║\n", param))
-    }
-  }
-  
-  cat("╚══════════════════════════════════════════╝\n")
-}
-
-#' Print method for B-spline HRF objects
-#'
-#' @param x A B-spline HRF object
-#' @param ... Additional arguments passed to print
-#' @export
-print.BSplineHRF <- function(x, ...) {
-  # Get attributes
-  nbasis <- nbasis(x)
-  degree <- attr(x, "degree")
-  span <- attr(x, "span")
-  
-  cat("╔══════════════════════════════════════════╗\n")
-  cat("║ B-Spline HRF                            ║\n")
-  cat("╠══════════════════════════════════════════╣\n")
-  cat(sprintf("║ %-38s ║\n", paste("Basis functions:", nbasis)))
-  cat(sprintf("║ %-38s ║\n", paste("Spline degree:", degree)))
-  cat(sprintf("║ %-38s ║\n", paste("Time span:", span, "seconds")))
-  cat("╚══════════════════════════════════════════╝\n")
-}
-
-#' Print method for SPMG HRF objects
-#'
-#' @param x An SPMG HRF object
-#' @param ... Additional arguments passed to print
-#' @export
-print.SPMGHRF <- function(x, ...) {
-  # Get attributes
-  name <- attr(x, "name")
-  nbasis <- nbasis(x)
-  params <- attr(x, "param_names")
-  
-  cat("╔══════════════════════════════════════════╗\n")
-  cat("║ SPM Canonical HRF                        ║\n")
-  cat("╠══════════════════════════════════════════╣\n")
-  cat(sprintf("║ %-38s ║\n", paste("Type:", name)))
-  cat(sprintf("║ %-38s ║\n", paste("Components:", nbasis)))
-  
-  # Describe components based on nbasis
-  cat("║ Included components:                      ║\n")
-  cat(sprintf("║   • %-34s ║\n", "Canonical HRF"))
-  if (nbasis >= 2) {
-    cat(sprintf("║   • %-34s ║\n", "Temporal derivative"))
-  }
-  if (nbasis >= 3) {
-    cat(sprintf("║   • %-34s ║\n", "Dispersion derivative"))
-  }
-  
-  cat("╚══════════════════════════════════════════╝\n")
-}
-
-#' Print method for Gaussian HRF objects
-#'
-#' @param x A Gaussian HRF object
-#' @param ... Additional arguments passed to print
-#' @export
-print.GaussianHRF <- function(x, ...) {
-  # Get attributes
-  params <- attr(x, "param_names")
-  
-  cat("╔══════════════════════════════════════════╗\n")
-  cat("║ Gaussian HRF                            ║\n")
-  cat("╠══════════════════════════════════════════╣\n")
-  
-  # Parameters section
-  cat("║ Parameters:                              ║\n")
-  for (param in params) {
-    cat(sprintf("║   • %-34s ║\n", param))
-  }
-  
-  cat("║ Shape: Bell curve with single peak       ║\n")
-  cat("╚══════════════════════════════════════════╝\n")
-}
 
 #' List all available hemodynamic response functions (HRFs)
 #'
 #' @description
-#' This function returns a structured list of all available HRF types in the package,
-#' making it easy to discover and explore the different options.
+#' Reads the internal HRF registry to list available HRF types.
 #'
-#' @param details Logical; if TRUE, include detailed descriptions for each HRF type
-#'
-#' @return A data frame with columns:
-#' \describe{
-#'   \item{name}{The name of the HRF (string identifier)}
-#'   \item{object}{The corresponding pre-defined HRF object name (if available)}
-#'   \item{nbasis}{Number of basis functions}
-#'   \item{description}{Brief description of the HRF type (if details=TRUE)}
-#'   \item{function_name}{The associated generator function (if applicable)}
-#' }
-#'
-#' @examples
-#' # List all available HRFs with basic information
-#' list_available_hrfs()
-#'
-#' # Get detailed descriptions
-#' list_available_hrfs(details = TRUE)
-#'
-#' # Use the information to create an event model with a specific HRF
-#' \dontrun{
-#' hrfs <- list_available_hrfs()
-#' # Choose the 'gaussian' HRF
-#' event_model(onset ~ hrf(condition, basis = "gaussian"), 
-#'             data = event_data,
-#'             block = ~run, 
-#'             sampling_frame = sframe)
-#' }
-#'
+#' @param details Logical; if TRUE, attempt to add descriptions (basic for now).
+#' @return A data frame with columns: name, type (object/generator), nbasis_default.
 #' @export
 list_available_hrfs <- function(details = FALSE) {
-  hrfs <- data.frame(
-    name = c(
-      "spmg1", "spmg2", "spmg3", 
-      "gaussian", "gamma", 
-      "bspline", "bs", 
-      "tent",
-      "daguerre"
-    ),
-    object = c(
-      "HRF_SPMG1", "HRF_SPMG2", "HRF_SPMG3",
-      "HRF_GAUSSIAN", "HRF_GAMMA",
-      "HRF_BSPLINE", "HRF_BSPLINE", 
-      NA, 
-      "HRF_DAGUERRE"
-    ),
-    nbasis = c(
-      1, 2, 3,
-      1, 1,
-      "variable", "variable",
-      "variable",
-      "variable"
-    ),
-    stringsAsFactors = FALSE
-  )
+  # Get names directly from the registry
+  hrf_names <- names(HRF_REGISTRY)
   
-  if (details) {
-    hrfs$description <- c(
-      "SPM canonical HRF", 
-      "SPM canonical HRF with temporal derivative",
-      "SPM canonical HRF with temporal and dispersion derivatives",
-      "Gaussian-shaped HRF with peak at ~5-6s",
-      "Gamma-shaped HRF with longer tail than Gaussian",
-      "B-spline basis functions for flexible HRF modeling",
-      "Alias for bspline",
-      "Tent basis functions (triangular) for flexible HRF modeling",
-      "Daguerre basis functions for efficient representation of HRF shape"
-    )
+  # Determine type and default nbasis by inspecting registry entries
+  hrf_info <- lapply(hrf_names, function(name) {
+    entry <- HRF_REGISTRY[[name]]
+    type <- if (inherits(entry, 'HRF')) "object" else if (is.function(entry)) "generator" else "unknown"
     
-    hrfs$function_name <- c(
-      "hrf_spmg1", "NA", "NA",
-      "hrf_gaussian", "hrf_gamma",
-      "hrf_bspline", "hrf_bspline",
-      "NA",
-      "NA"
-    )
+    nbasis_default <- NA
+    if (type == "object") {
+      nbasis_default <- tryCatch(nbasis(entry), error = function(e) NA)
+    } else if (type == "generator") {
+      fmls <- formals(entry)
+      if ("nbasis" %in% names(fmls)) {
+        nb_val <- fmls$nbasis
+        if(is.numeric(nb_val)) nbasis_default <- nb_val 
+      } 
+      if(is.na(nbasis_default)) nbasis_default <- "variable"
+    }
+    
+    # Check if this name is an alias (points to the same object/func as another primary name)
+    is_alias <- FALSE
+    if (type == "object") {
+      primary_names <- names(HRF_REGISTRY)[sapply(HRF_REGISTRY, identical, entry)]
+      is_alias <- length(primary_names) > 1 && name %in% primary_names[primary_names != name]
+    } else if (type == "generator") {
+      # More complex for functions, check if it points to the same generator function
+      # For now, let's assume aliases only exist for objects, or mark known ones
+      is_alias <- name %in% c("gam", "bs")
+    }
+
+    list(name = name, type = type, nbasis_default = as.character(nbasis_default), is_alias = is_alias) 
+  })
+  
+  # Combine into a data frame
+  hrf_df <- do.call(rbind.data.frame, c(hrf_info, list(stringsAsFactors = FALSE)))
+  
+  # Add basic descriptions if requested
+  if (details) {
+      hrf_df$description <- paste(hrf_df$name, "HRF", 
+                                  ifelse(hrf_df$type == "generator", "(generator)", "(object)"),
+                                  ifelse(hrf_df$is_alias, "(alias)", ""))
   }
   
-  hrfs
+  hrf_df
+}
+
+# Define Static HRF Objects -----
+HRF_GAMMA <- as_hrf(hrf_gamma, name="gamma", params=list(shape=6, rate=1))
+HRF_GAUSSIAN <- as_hrf(hrf_gaussian, name="gaussian", params=list(mean=6, sd=2))
+HRF_SPMG1 <- as_hrf(hrf_spmg1, name="SPMG1", params=list(A1=0.0833, A2=1.274527e-13))
+HRF_SPMG2 <- bind_basis(
+      as_hrf(hrf_spmg1, name="spmg1_base", params=list(A1=0.0833, A2=1.274527e-13)),
+      as_hrf(hrf_spmg1_deriv, name="spmg1_deriv", params=list(A1=0.0833, A2=1.274527e-13))
+)
+attr(HRF_SPMG2, "name") <- "SPMG2"
+HRF_SPMG3 <- bind_basis(
+      as_hrf(hrf_spmg1, name="spmg1_base", params=list(A1=0.0833, A2=1.274527e-13)),
+      as_hrf(hrf_spmg1_deriv, name="spmg1_deriv", params=list(A1=0.0833, A2=1.274527e-13)),
+      as_hrf(hrf_spmg1_second_deriv, name="spmg1_sderiv", params=list(A1=0.0833, A2=1.274527e-13))
+)
+attr(HRF_SPMG3, "name") <- "SPMG3"
+
+# Define HRF Generators (Functions returning HRF objects) -----
+hrfspline_generator <- function(nbasis=5, span=24) {
+  degree <- 3 # Standard cubic b-spline degree
+  min_nbasis <- degree + 1
+  
+  effective_nbasis <- nbasis
+  if (nbasis < min_nbasis) {
+      warning(sprintf("Requested nbasis=%d is less than degree+1=%d for bspline. Using effective_nbasis=%d.", 
+                      nbasis, min_nbasis, min_nbasis), call. = FALSE)
+      effective_nbasis <- min_nbasis
+  }
+  
+  # Directly use splines::bs ensuring intercept=FALSE and using effective_nbasis
+  f_bspline <- function(t) {
+    # Ensure t is within bounds for bs()
+    valid_t_idx <- t >= 0 & t <= span
+    if (!any(valid_t_idx)) {
+      # If all t are outside span, return zeros
+      return(matrix(0, nrow = length(t), ncol = effective_nbasis))
+    }
+    
+    # Initialize result matrix with zeros
+    res_mat <- matrix(0, nrow = length(t), ncol = effective_nbasis)
+    
+    # Call bs only on valid time points using effective_nbasis for df
+    bs_matrix <- tryCatch({
+        # Use df=effective_nbasis and intercept=FALSE
+        splines::bs(t[valid_t_idx], df = effective_nbasis, degree = degree, 
+                    Boundary.knots = c(0, span), intercept = FALSE)
+    }, error = function(e) {
+        warning(sprintf("splines::bs failed for effective_nbasis=%d, span=%d: %s", 
+                        effective_nbasis, span, e$message), call. = FALSE)
+        NULL # Return NULL on error
+    })
+
+    # Fill the result matrix if bs calculation succeeded and dimensions match
+    if (!is.null(bs_matrix) && ncol(bs_matrix) == effective_nbasis) {
+      res_mat[valid_t_idx, ] <- bs_matrix
+    } else if (!is.null(bs_matrix)) {
+      # Handle unexpected column count from bs()
+       warning(sprintf("splines::bs returned %d columns, expected %d for effective_nbasis=%d, span=%d. Returning zeros.", 
+                      ncol(bs_matrix), effective_nbasis, effective_nbasis, span), call. = FALSE)
+       # Keep res_mat as zeros
+    }
+    # Return the matrix (potentially zeros if errors occurred)
+    return(res_mat)
+  }
+
+  # Use as_hrf to create the HRF object, using effective_nbasis
+  as_hrf(
+    f = f_bspline,
+    name = "bspline", nbasis = as.integer(effective_nbasis), span = span, # Use effective_nbasis here!
+    params = list(nbasis = effective_nbasis, degree = degree, span = span) # Store effective params
+  )
+}
+hrf_tent_generator <- function(nbasis=5, span=24) {
+  as_hrf(
+    f = function(t) hrf_bspline(t, span=span, N=nbasis, degree=1),
+    name="tent", nbasis=as.integer(nbasis), span=span,
+    params=list(N=nbasis, degree=1, span=span)
+  )
+}
+hrf_fourier_generator <- function(nbasis=5, span=24) {
+  as_hrf(
+    f = function(t) hrf_fourier(t, span=span, nbasis=nbasis),
+    name="fourier", nbasis=as.integer(nbasis), span=span,
+    params=list(nbasis=nbasis, span=span)
+  )
+}
+hrf_daguerre_generator <- function(nbasis=3, scale=4) {
+  # Assuming HRF_DAGUERRE_BASIS returns an HRF object
+  HRF_DAGUERRE_BASIS(n_basis=nbasis, scale=scale)
+}
+
+# Define HRF Registry -----
+
+#' @keywords internal
+HRF_REGISTRY <- list(
+  spmg1    = HRF_SPMG1,
+  spmg2    = HRF_SPMG2,
+  spmg3    = HRF_SPMG3,
+  gamma    = HRF_GAMMA,
+  gaussian = HRF_GAUSSIAN,
+  bspline  = hrfspline_generator,
+  tent     = hrf_tent_generator,
+  fourier  = hrf_fourier_generator,
+  daguerre = hrf_daguerre_generator
+)
+
+HRF_REGISTRY$gam <- HRF_REGISTRY$gamma
+HRF_REGISTRY$bs  <- HRF_REGISTRY$bspline
+
+# getHRF function using the registry (Minimal Version) -----
+
+#' getHRF
+#'
+#' Retrieves an HRF by name from the registry and applies decorators.
+#'
+#' @inheritParams getHRF # Inherit from the previously defined getHRF for params
+#' @param ... Additional arguments passed to generator functions (e.g., `scale` for daguerre).
+#' @return An HRF object.
+#' @keywords internal
+#' @noRd
+getHRF <- function(name = "spmg1", # Default to spmg1
+                   nbasis=5, span=24,
+                   lag=0, width=0,
+                   summate=TRUE, normalize=FALSE, ...) {
+
+  key   <- match.arg(tolower(name), names(HRF_REGISTRY))
+  entry <- HRF_REGISTRY[[key]]
+
+  base <- if (inherits(entry, "HRF")) {
+            entry # Use pre-defined object
+      } else {
+            # Call generator, passing nbasis, span, and any relevant ... args
+            gen_args <- c(list(nbasis=as.integer(nbasis), span=span), list(...))
+            # Only pass args the generator actually accepts
+            valid_args <- gen_args[names(gen_args) %in% names(formals(entry))]
+            do.call(entry, valid_args)
+          }
+
+  # Apply decorators
+  if (width != 0) {
+      stopifnot(width > 0)
+      base <- block_hrf(base, width = width, summate = summate)
+  }
+  if (lag != 0) {
+      base <- lag_hrf(base, lag = lag)
+  }
+  if (normalize) {
+      base <- normalise_hrf(base)
+  }
+
+  attr(base, "name") <- key # Set name attribute to the matched registry key
+  base
+}
+
+#' Evaluate an HRF Object
+#'
+#' This function evaluates a hemodynamic response function (HRF) object for a given set of time points (grid) and other parameters.
+#' It handles both point evaluation (duration=0) and block evaluation (duration > 0).
+#'
+#' @param x The HRF object (inherits from `HRF` and `function`).
+#' @param grid A numeric vector of time points at which to evaluate the HRF.
+#' @param amplitude The scaling value for the event (default: 1).
+#' @param duration The duration of the event (seconds). If > 0, the HRF is evaluated over this duration (default: 0).
+#' @param precision The temporal resolution for evaluating responses when duration > 0 (default: 0.2).
+#' @param summate Logical; whether the HRF response should accumulate over the duration (default: TRUE). If FALSE, the maximum response within the duration window is taken (currently only supported for single-basis HRFs).
+#' @param normalize Logical; scale output so that the peak absolute value is 1 (default: FALSE). Applied *after* amplitude scaling and duration processing.
+#' @param ... Additional arguments (unused).
+#' @return A numeric vector or matrix of HRF values at the specified time points.
+#' @export
+evaluate.HRF <- function(x, grid, amplitude = 1, duration = 0,
+                         precision = .2, summate = TRUE, normalize = FALSE, ...) {
+  
+  # Base function incorporating amplitude
+  base <- function(g) amplitude * x(g)
+
+  # Evaluate based on duration
+  out <- if (duration < precision) {
+      # Point evaluation
+    base(grid)
+  } else {
+      # Block evaluation
+    offs <- seq(0, duration, by = precision)
+      # Evaluate HRF at shifted time points for each offset
+      # Use lapply to handle potential matrix output from multi-basis HRFs
+      hlist <- lapply(offs, function(o) base(grid - o))
+      
+      # Check if the result for the first offset is a matrix (multi-basis)
+      is_multi_basis <- is.matrix(hlist[[1]])
+      
+      if (is_multi_basis) {
+          # Combine matrices (summation is standard for multi-basis)
+          if (summate) {
+             Reduce("+", hlist)
+    } else {
+             # Taking max per-basis-column across offsets is non-standard and complex.
+             # Sticking to summation for multi-basis block designs.
+             warning("summate=FALSE is not typically used with multi-basis HRFs during block evaluation. Using summation.", call. = FALSE)
+             Reduce("+", hlist)
+          }
+      } else {
+          # Single basis HRF: hlist contains vectors, bind them into a matrix
+        hmat <- do.call(cbind, hlist)
+          if (summate) {
+              rowSums(hmat)
+          } else {
+              # For single basis, take the max across the duration window at each grid point
+              apply(hmat, 1, max, na.rm = TRUE) 
+              # Alternative: find which offset gives max? apply(hmat, 1, function(vals) vals[which.max(vals)])
+          }
+      }
+  }
+
+  # Apply normalization if requested, handling matrix/vector case
+  if (normalize) {
+      if (is.matrix(out)) {
+          apply(out, 2, function(col) {
+              peak_val <- max(abs(col), na.rm = TRUE)
+              if (!is.na(peak_val) && peak_val != 0) col / peak_val else col
+          })
+      } else {
+          peak_val <- max(abs(out), na.rm = TRUE)
+          if (!is.na(peak_val) && peak_val != 0) out / peak_val else out
+      }
+  } else {
+    out
+  }
 }

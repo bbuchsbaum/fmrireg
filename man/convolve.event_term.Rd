@@ -15,24 +15,27 @@
 )
 }
 \arguments{
-\item{x}{A data frame with the design matrix.}
+\item{x}{An \code{event_term} object. Must have \code{term_tag} and \code{hrfspec} attributes set.}
 
-\item{hrf}{The HRF function.}
+\item{hrf}{The HRF function (typically from \code{attr(x, "hrfspec")$hrf}).}
 
 \item{sampling_frame}{Data frame specifying the sampling frame.}
 
-\item{drop.empty}{Logical; if TRUE, remove empty rows.}
+\item{drop.empty}{Logical; passed to \code{conditions()} and \code{design_matrix()} to determine
+which conditions/columns to include in the convolution.}
 
 \item{summate}{Logical; if TRUE, sum the convolved HRF.}
 
 \item{precision}{Numeric; the convolution precision (default: 0.3).}
 
-\item{...}{Additional arguments.}
+\item{...}{Additional arguments (unused).}
 }
 \value{
-A tibble of the convolved design matrix.
+A tibble of the convolved design matrix with columns named according to the standard grammar.
 }
 \description{
 This function takes an event-related design matrix and convolves it with a given
 HRF to produce a new design matrix suitable for fMRI analysis.
+It is responsible for applying the final column naming scheme
+(\code{term_tag_condition_tag_b##}) using the \code{make_column_names} helper.
 }

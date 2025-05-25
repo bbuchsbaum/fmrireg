@@ -32,17 +32,17 @@ The \code{gen_hrf_lagged} function takes an HRF function and applies a specified
 
 }}
 \examples{
+\donttest{
 hrf_lag5 <- gen_hrf_lagged(HRF_SPMG1, lag=5)
 hrf_lag5(0:20)
+}
 
 }
 \seealso{
 Other gen_hrf: 
-\code{\link{gen_hrf_blocked}()},
-\code{\link{gen_hrf_set}()}
+\code{\link{gen_hrf_blocked}()}
 
 Other gen_hrf: 
-\code{\link{gen_hrf_blocked}()},
-\code{\link{gen_hrf_set}()}
+\code{\link{gen_hrf_blocked}()}
 }
 \concept{gen_hrf}

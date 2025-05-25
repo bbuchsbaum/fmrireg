@@ -2,15 +2,15 @@
 % Please edit documentation in R/event_vector.R
 \name{print.event_term}
 \alias{print.event_term}
-\title{Print event_term objects.}
+\title{Print event_term objects}
 \usage{
 \method{print}{event_term}(x, ...)
 }
 \arguments{
 \item{x}{An event_term object.}
 
-\item{...}{Additional arguments.}
+\item{...}{Additional arguments (unused).}
 }
 \description{
-Print event_term objects.
+Provides a concise summary of an event_term object using cli.
 }

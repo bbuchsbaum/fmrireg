@@ -14,6 +14,7 @@ fmri_lm(
   robust = FALSE,
   strategy = c("runwise", "chunkwise"),
   nchunks = 10,
+  use_fast_path = FALSE,
   ...
 )
 }
@@ -35,6 +36,8 @@ fmri_lm(
 \item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
 
 \item{nchunks}{Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.}
+
+\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
 
 \item{...}{Additional arguments.}
 }

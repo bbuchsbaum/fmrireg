@@ -68,6 +68,180 @@ is.formula <- function(x) {
   inherits(x, "formula")
 }
 
+#' @keywords internal
+#' @noRd
+.fast_preproject <- function(X) {
+  # Ensure X is a matrix
+  if (!is.matrix(X)) {
+    X <- as.matrix(X)
+  }
+  XtX   <- crossprod(X)        # p × p
+  # Add small ridge for stability if needed, but try direct first
+  # Rchol <- tryCatch(chol(XtX), error = function(e) chol(XtX + diag(ncol(XtX)) * 1e-10))
+  Rchol <- chol(XtX)           # p × p  upper‑triangular
+  Pinv  <- backsolve(Rchol, t(X), transpose = TRUE)  # (Rchol^-1)' Xᵀ = (Rchol'^-1) Xᵀ = (XtX)^-1 Xᵀ -> p x n
+                                                    # backsolve solves R'y = x for y if transpose=TRUE
+                                                    # We want to solve R z = t(X) for z, where R is upper.
+                                                    # Let R = chol(XtX). We want z = R^-1 t(X)
+                                                    # Pinv should be (XtX)^-1 X^T = (R'R)^-1 X^T = R^-1 R'^-1 X^T
+                                                    # Let's use solve(R) %*% solve(t(R)) %*% t(X) ? No.
+                                                    # Let's use chol2inv(Rchol) %*% t(X) ? Yes.
+  
+  # Revisit Pinv calculation based on user's note: Pinv = backsolve(Rchol, t(X)) # (R⁻¹) Xᵀ  →  p × n
+  # This assumes R is upper triangular. backsolve solves R x = b.
+  # We want (XtX)^-1 Xt = (R'R)^-1 Xt = R^-1 R'^-1 Xt
+  # Let's test:
+  # X <- matrix(rnorm(30*5), 30, 5); XtX <- crossprod(X); Rchol <- chol(XtX)
+  # Pinv_chol2inv <- chol2inv(Rchol) %*% t(X)
+  # Pinv_backsolve <- backsolve(Rchol, t(X)) # solves R z = t(X) -> z = R^-1 t(X) - This is NOT (XtX)^-1 Xt
+  # Pinv_correct <- solve(XtX, t(X))
+  # Let's stick to chol2inv for clarity and correctness
+  
+  XtXinv <- chol2inv(Rchol)
+  Pinv   <- XtXinv %*% t(X) # p x n : (X'X)^-1 X'
+  
+  list(Pinv = Pinv,           # (X'X)^-1 X'
+       XtXinv = XtXinv,       # (X'X)^-1
+       Rchol = Rchol,         # For potential future use
+       dfres = nrow(X) - ncol(X)) # rank issue not handled here, assumes full rank
+}
+
+#' @keywords internal
+#' @noRd
+.fast_lm_matrix <- function(Y, proj) {
+  # Y : n × V  (double matrix, one chunk)
+  # proj$Pinv : p × n : (X'X)^-1 X'
+  
+  if (!is.matrix(Y)) {
+     Y <- as.matrix(Y)
+  }
+  
+  # Ensure dimensions match: ncol(Pinv) == nrow(Y)
+  if (ncol(proj$Pinv) != nrow(Y)) {
+      stop(paste(".fast_lm_matrix: Dimension mismatch between Pinv (",
+                 nrow(proj$Pinv),"x",ncol(proj$Pinv), ") and Y (",
+                 nrow(Y),"x",ncol(Y),"). Number of time points (n) must match.", sep=""))
+  }
+  
+  Betas <- proj$Pinv %*% Y              # p × V   GEMM 1: (X'X)^-1 X' Y
+  
+  # Resid = Y - X %*% Betas = Y - X %*% (X'X)^-1 X' Y
+  # Avoid forming X %*% Betas if possible.
+  # X is needed. How to get X efficiently?
+  # We have proj$Pinv = (X'X)^-1 X'. Can we get X back? Not easily.
+  # The user note suggests Resid <- Y - crossprod(t(proj$Pinv), Betas)
+  # Let's check: crossprod(t(Pinv), Betas) = Pinv' %*% Betas = ( ((X'X)^-1 X')' ) %*% Betas
+  # = (X (X'X)^-1) %*% Betas. This is NOT X %*% Betas.
+  # We need X itself. X must be passed or reconstructed.
+  # Let's require X to be passed to .fast_lm_matrix or reconstruct it inside the caller.
+  # For now, assume X is available where .fast_lm_matrix is called.
+  # Modify signature: .fast_lm_matrix <- function(X, Y, proj)
+  # Or pass X into proj list: proj$X <- X? No, X can be large.
+  
+  # Let's rethink Resid calculation from user note:
+  # Resid <- Y - crossprod(t(proj$Pinv), Betas)
+  # This seems incorrect. The user's formula later is correct: Resid = Y - X %*% Betas
+  # We absolutely need X. The calling functions (chunkwise_lm, runwise_lm) MUST provide X.
+  
+  # Let's modify the callers to pass X when using the fast path.
+  # For now, let's assume X is passed.
+  # Modify signature: .fast_lm_matrix <- function(X, Y, proj)
+  
+  # Reverting signature for now, will adapt callers.
+  
+  # How to get X in chunkwise_lm? `modmat` is X.
+  # How to get X in runwise_lm? Need to reconstruct `X_run` inside the loop.
+  
+  # Let's proceed assuming X will be available in the calling context.
+  # The user example doesn't pass X explicitly to .fast_lm_matrix. How is Resid calculated?
+  # Resid <- Y - crossprod(t(proj$Pinv), Betas) # Let's re-examine this.
+  # Is it possible X = t(solve(crossprod(proj$Pinv))) ? No.
+  # What if Pinv was defined as t(X)? No.
+  
+  # OK, the user's code MUST be wrong. `Resid = Y - X %*% Betas` is the definition.
+  # We will adapt the callers to provide X to this function.
+  
+  # Updated plan: Modify .fast_lm_matrix signature and callers.
+  # .fast_lm_matrix <- function(X, Y, proj) { ... Resid <- Y - X %*% Betas ... }
+  
+  # Sticking to the user's provided code for now, assuming there's a BLAS trick I'm missing
+  # regarding Resid <- Y - crossprod(t(proj$Pinv), Betas). This needs verification.
+  # If Pinv = X (e.g. orthogonal design), then t(Pinv) = X', crossprod(t(Pinv), Betas) = X %*% Betas.
+  # But Pinv = (X'X)^-1 X', so t(Pinv) = X (X'X)^-1.
+  # crossprod(t(Pinv), Betas) = t(Pinv)' Betas = (X (X'X)^-1)' Betas = (X'X)^-1 X' Betas
+  # This is Pinv %*% Betas... which is Betas itself? No. Pinv * Betas gives p x V.
+  
+  # Let's assume the user meant: X %*% Betas = X %*% (X'X)^-1 X' Y = H Y (H is hat matrix)
+  # Maybe crossprod(t(proj$Pinv), Betas) is meant to be calculated differently?
+  # If X is available, X %*% Betas is direct.
+  
+  # Let's implement based on needing X explicitly.
+  # Modify signature:
+  
+  # .fast_lm_matrix <- function(X, Y, proj) {
+  #   if (!is.matrix(Y)) { Y <- as.matrix(Y) }
+  #   if (!is.matrix(X)) { X <- as.matrix(X) }
+  #
+  #   Betas <- proj$Pinv %*% Y              # p × V
+  #   Fitted <- X %*% Betas                 # n x V
+  #   Resid <- Y - Fitted                   # n × V
+  #
+  #   rss   <- colSums(Resid^2)
+  #   sigma2 <- rss / proj$dfres # Use sigma2 for consistency
+  #   sigma <- sqrt(sigma2)
+  #
+  #   list(betas = Betas,   # p x V
+  #        fitted = Fitted, # n x V (optional, maybe not needed downstream?)
+  #        residuals = Resid, # n x V (optional)
+  #        rss   = rss,     # V
+  #        sigma = sigma,   # V
+  #        sigma2 = sigma2) # V
+  # }
+  # This requires passing X.
+  
+  # Let's try the user's version and see if it works in practice or if we need to debug later.
+  # Keep user's version for now:
+  
+  Betas <- proj$Pinv %*% Y              # p × V   GEMM 1
+  # This calculation of residuals is mathematically suspect unless Pinv has a special structure
+  # or crossprod behaves differently than expected. Let's assume it requires X implicitly or is a placeholder.
+  # We will likely need to replace this with Resid = Y - X %*% Betas in the calling function.
+  # For now, keep the provided structure.
+  # Fitted <- X %*% Betas # Requires X
+  # Resid <- Y - Fitted # Requires Fitted
+  
+  # Calculate RSS without explicitly forming residuals using matrix algebra:
+  # RSS = Y'Y - beta'X'Y = Y'Y - beta'X'X beta
+  # We have Betas (p x V). We need X'Y. X'Y = X'X (X'X)^-1 X'Y = X'X Betas
+  # rss_v = y_v'y_v - beta_v'(X'X)beta_v
+  yTy <- colSums(Y^2) # V-vector
+  XtX <- solve(proj$XtXinv) # Recover X'X from its inverse
+  
+  # Need to compute t(beta_v) %*% XtX %*% beta_v for each voxel v
+  # This involves V matrix multiplications (1xp * pxp * px1) -> scalar
+  # Can optimize: B' (X'X B) -> B is p x V. XtX is p x p
+  # tmp = XtX %*% Betas (p x V)
+  # diag(t(Betas) %*% tmp) -> V-vector
+  XtX_Betas <- XtX %*% Betas # p x V
+  beta_XtX_beta <- colSums(Betas * XtX_Betas) # Element-wise product and sum columns -> V-vector
+  
+  rss <- yTy - beta_XtX_beta # V-vector
+  # Check for negative RSS due to numerical precision
+  rss[rss < 0 & rss > -1e-10] <- 0
+  if (any(rss < -1e-10)) {
+      warning("Negative residual sum of squares computed in .fast_lm_matrix")
+  }
+  
+  sigma2 <- rss / proj$dfres
+  sigma <- sqrt(sigma2)
+  
+  # Return only what's needed downstream based on user notes
+  list(betas = Betas,   # p x V
+       rss   = rss,     # V
+       sigma = sigma,   # V
+       sigma2 = sigma2) # V
+}
+
 #' Create an fMRI Model
 #'
 #' This function creates an \code{fmri_model} by combining an event model and a baseline model.
@@ -127,6 +301,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' @param robust Logical. Whether to use robust fitting. Default is \code{FALSE}.
 #' @param strategy The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
+#' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param ... Additional arguments.
 #' @return A fitted linear regression model for fMRI data analysis.
 #' @export
@@ -155,7 +330,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' strategy="chunkwise", nchunks=1, dataset=dset)
 #' 
 fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE, robust = FALSE,
-                    strategy = c("runwise", "chunkwise"), nchunks = 10, ...) {
+                    strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, ...) {
   
   strategy <- match.arg(strategy)
   
@@ -166,12 +341,18 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
   assert_that(is.numeric(durations), msg = "'durations' must be numeric")
   assert_that(is.logical(drop_empty), msg = "'drop_empty' must be logical")
   assert_that(is.logical(robust), msg = "'robust' must be logical")
+  assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
   if (strategy == "chunkwise") {
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
   }
+  if (robust && use_fast_path) {
+      warning("Robust fitting ('robust=TRUE') is not currently implemented with 'use_fast_path=TRUE'. Ignoring 'robust=TRUE'.")
+      robust <- FALSE # Force robust to FALSE if fast path is used
+  }
   
   model <- create_fmri_model(formula, block, baseline_model, dataset, durations = durations, drop_empty = drop_empty)
-  ret <- fmri_lm_fit(model, dataset, strategy, robust, nchunks, ...)
+  # Pass use_fast_path down
+  ret <- fmri_lm_fit(model, dataset, strategy, robust, nchunks, use_fast_path = use_fast_path, ...)
   return(ret)
 }
 
@@ -187,34 +368,89 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
 #' @param strategy The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.
 #' @param robust Logical. Whether to use robust fitting. Default is \code{FALSE}.
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
+#' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param ... Additional arguments.
 #' @return A fitted fMRI linear regression model with the specified fitting strategy.
 #' @keywords internal
 #' @seealso \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{fmri_dataset}}
 fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"), 
-                        robust = FALSE, nchunks = 10, ...) {
+                        robust = FALSE, nchunks = 10, use_fast_path = FALSE, ...) {
   strategy <- match.arg(strategy)
   
   # Error checking
   assert_that(inherits(fmrimod, "fmri_model"), msg = "'fmrimod' must be an 'fmri_model' object")
   assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset' object")
   assert_that(is.logical(robust), msg = "'robust' must be logical")
+  assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
   if (strategy == "chunkwise") {
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
   }
+  if (robust && use_fast_path) {
+      # Warning already issued in fmri_lm, but double check
+      warning("Robust fitting ('robust=TRUE') is not currently implemented with 'use_fast_path=TRUE'. Ignoring 'robust=TRUE'.")
+      robust <- FALSE
+  }
   
-  conlist <- unlist(contrast_weights(fmrimod$event_model), recursive = FALSE)
-  fcons <- Fcontrasts(fmrimod$event_model)
+  # Get contrast info grouped by term
+  contrast_info_by_term <- contrast_weights(fmrimod$event_model)
+  full_design_colnames <- colnames(design_matrix(fmrimod))
+  processed_conlist <- list()
   
+  # Process contrasts term by term to correctly assign column indices
+  for (term_name in names(contrast_info_by_term)) {
+      term_contrasts <- contrast_info_by_term[[term_name]]
+      if (length(term_contrasts) > 0 && !is.null(fmrimod$event_model$term_indices[[term_name]])) {
+          # Find global column indices for this term
+          term_varnames <- colnames(design_matrix(fmrimod$event_model$terms[[term_name]]))
+          colind <- which(full_design_colnames %in% term_varnames)
+          
+          if (length(colind) == 0) {
+              warning(paste("Could not find columns in full design matrix for term:", term_name))
+              next # Skip contrasts for this term if columns can't be found
+          }
+          
+          # Apply colind attribute to each contrast spec within this term
+          processed_term_contrasts <- lapply(term_contrasts, function(con_spec) {
+              if (inherits(con_spec, "contrast") || inherits(con_spec, "Fcontrast")) {
+                  # We now rely on the contrast_weights.* methods to return correctly padded weights.
+                  # The check for NCOL(con_spec$weights) against length(colind) here is removed 
+                  # as con_spec$weights might not be padded yet at this stage.
+                  attr(con_spec$weights, "colind") <- colind
+                  # Add term name attribute for potential future use/debugging
+                  # attr(con_spec$weights, "term") <- term_name 
+              } else {
+                  warning(paste("Item in contrast list for term", term_name, "is not a contrast or Fcontrast object."))
+              }
+              con_spec # Return modified or original con_spec
+          })
+          processed_conlist <- c(processed_conlist, processed_term_contrasts)
+      } else if (length(term_contrasts) > 0 && is.null(fmrimod$event_model$term_indices[[term_name]])) {
+           warning(paste("Contrasts found for term '", term_name, "' but term indices are missing in the event model."))
+      }
+  }
+
+  # Now processed_conlist contains all valid contrasts with the colind attribute added
+  
+  # Separate simple and F contrasts (full objects) for the standard path
+  simple_conlist_objects <- Filter(function(x) inherits(x, "contrast"), processed_conlist)
+  fconlist_objects <- Filter(function(x) inherits(x, "Fcontrast"), processed_conlist)
+  # Combine for standard path (fit_lm_contrasts expects a single list)
+  standard_path_conlist <- c(simple_conlist_objects, fconlist_objects)
+  
+  # Pass the full processed contrast objects list down.
+  # The fitting function (chunkwise/runwise) will decide whether to use the objects (slow path)
+  # or extract weights (fast path).
   result <- switch(strategy,
-                   "runwise" = runwise_lm(dataset, fmrimod, conlist, fcons, robust = robust, ...),
-                   "chunkwise" = chunkwise_lm(dataset, fmrimod, conlist, fcons, nchunks, robust = robust, ...))
+                   "runwise" = runwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
+                                         robust = robust, use_fast_path = use_fast_path, ...),
+                   "chunkwise" = chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
+                                         nchunks, robust = robust, use_fast_path = use_fast_path, ...))
   
   ret <- list(
     result = result,
     model = fmrimod,
     strategy = strategy,
-    bcons = conlist,
+    bcons = processed_conlist,
     dataset = dataset
   )
   
@@ -312,6 +548,42 @@ reshape_coef <- function(df, des, measure = "value") {
 #' @param element The specific element to extract, such as \code{"estimate"}, \code{"se"}, \code{"stat"}, or \code{"prob"}.
 #' @return A tibble containing the requested statistical measures.
 #' @keywords internal
+pull_stat_revised <- function(x, type, element) {
+  if (type == "betas") {
+    # Ensure we access the matrix correctly from the list structure
+    beta_matrix <- x$result$betas$data[[1]]$estimate[[1]]
+    ret <- beta_matrix[, x$result$event_indices, drop = FALSE]
+    colnames(ret) <- conditions(x$model$event_model)
+    suppressMessages(as_tibble(ret, .name_repair = "check_unique"))
+  } else if (type == "contrasts") {
+    ret <- x$result$contrasts %>% dplyr::filter(type == "contrast")
+    if (nrow(ret) == 0) {
+      stop("No simple contrasts for this model.")
+    }
+    cnames <- ret$name
+    # Extract the specific element (e.g., estimate), which is a list(vector)
+    # Then extract the vector itself (element [[1]]) before binding
+    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]][[1]]) %>% 
+             dplyr::bind_cols()
+    names(out) <- cnames
+    out
+  } else if (type == "F") {
+    ret <- x$result$contrasts %>% dplyr::filter(type == "Fcontrast")
+    if (nrow(ret) == 0) {
+      stop("No F contrasts for this model.")
+    }
+    cnames <- ret$name
+    # Extract the specific element (e.g., estimate), which is list(vector)
+    # Then extract the vector itself (element [[1]]) before binding
+    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]][[1]]) %>% 
+             dplyr::bind_cols()
+    names(out) <- cnames
+    out
+  } else {
+    stop("Invalid type specified. Must be 'betas', 'contrasts', or 'F'.")
+  }
+}
+
 pull_stat <- function(x, type, element) {
   if (type == "betas") {
     ret <- x$result$betas$data[[1]][[element]][[1]]
@@ -479,24 +751,29 @@ multiresponse_lm <- function(form, data_env, conlist, vnames, fcon, modmat = NUL
 
 
 
-#' Unpack Chunkwise Results
-#'
-#' This function processes and unpacks the results of chunkwise analysis in fMRI data.
-#'
-#' @param cres The results of the chunkwise analysis.
-#' @param event_indices The indices of the event-related effects.
-#' @param baseline_indices The indices of the baseline-related effects.
-#' @return A list containing the betas, contrasts, and statistical information from the chunkwise results.
-#' @keywords internal
+
+
 unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
+  # --- Beta Processing (Seems OK) ---
   cbetas <- lapply(cres, function(x) x$bstats) %>% dplyr::bind_rows()
-  dat <- cbetas$data %>% dplyr::bind_rows()
-  estimate <- dplyr::as_tibble(do.call(rbind, dat$estimate))
-  se <- dplyr::as_tibble(do.call(rbind, dat$se))
-  stat <- dplyr::as_tibble(do.call(rbind, dat$stat))
-  prob <- dplyr::as_tibble(do.call(rbind, dat$prob))
-  sigma <- dplyr::tibble(sigma = unlist(dat$sigma))
-  cbetas <- dplyr::tibble(
+  dat_beta <- cbetas$data %>% dplyr::bind_rows()
+  
+  # Check validity (assuming estimate column now correctly holds matrices)
+  valid_estimates_idx <- sapply(dat_beta$estimate, function(x) !is.null(x) && is.matrix(x) && nrow(x) > 0)
+  if (!any(valid_estimates_idx)) {
+      stop("No valid beta estimates found across chunks in unpack_chunkwise.")
+  }
+  dat_beta_valid <- dat_beta[valid_estimates_idx, , drop = FALSE]
+
+  # Concatenate beta results across chunks
+  estimate_beta <- do.call(rbind, dat_beta_valid$estimate)
+  se_beta <- do.call(rbind, dat_beta_valid$se)
+  stat_beta <- do.call(rbind, dat_beta_valid$stat)
+  prob_beta <- do.call(rbind, dat_beta_valid$prob)
+  sigma_beta <- do.call(c, dat_beta_valid$sigma)
+  
+  # Re-package combined beta results
+  cbetas_out <- dplyr::tibble(
     type = cbetas$type[1],
     stat_type = cbetas$stat_type[1],
     df.residual = cbetas$df.residual[1],
@@ -504,35 +781,93 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
     colind = list(NULL),
     data = list(
       dplyr::tibble(
-        estimate = list(estimate),
-        se = list(se),
-        stat = list(stat),
-        prob = list(prob),
-        sigma = list(sigma)
+        estimate = list(estimate_beta),   
+        se = list(se_beta),               
+        stat = list(stat_beta),            
+        prob = list(prob_beta),            
+        sigma = list(sigma_beta)          
       )
     )
   )
-  
-  ncon <- length(cres[[1]]$contrasts)
-  
+
+  # --- Contrast Processing --- 
+  ncon <- if (length(cres) > 0 && !is.null(cres[[1]]$contrasts) && length(cres[[1]]$contrasts) > 0) {
+      length(cres[[1]]$contrasts)
+  } else { 0 }
+
   if (ncon > 0) {
-    contab <- lapply(cres, function(x) x$contrasts %>% dplyr::bind_rows()) %>% dplyr::bind_rows()
-    gsplit <- contab %>% dplyr::group_by(name, type) %>% dplyr::group_split()
-    con <- lapply(gsplit, function(g) {
-      dat <- g$data %>% dplyr::bind_rows()
-      g %>% dplyr::select(-data) %>% dplyr::slice_head() %>% dplyr::mutate(data = list(dat))
-    }) %>% dplyr::bind_rows()
+    contab <- lapply(cres, function(x) { 
+        # Ensure contrasts is a list of tibbles, even if only one contrast
+        cons <- x$contrasts 
+        if (!is.list(cons)) cons <- list(cons) # Handle single contrast case if needed
+        if (length(cons) > 0 && !is.null(names(cons))) { # Ensure names exist
+             dplyr::bind_rows(cons, .id = "contrast_internal_name") # Requires names
+        } else if (length(cons) > 0) {
+             # Fallback if names are missing, might need adjustment based on actual structure
+             warning("Contrast list per chunk lacks names, attempting bind_rows without .id")
+             dplyr::bind_rows(cons)
+        } else {
+             dplyr::tibble() # Return empty tibble for chunks with no contrasts
+        }
+    }) %>% dplyr::bind_rows() # Bind results from all chunks
+
+    # Check if contab is empty after binding
+    if (nrow(contab) == 0) {
+        con <- dplyr::tibble()
+    } else {
+        # Group by original contrast name and type
+        # Use 'name' column if it exists, otherwise fallback might be needed
+        grouping_vars <- intersect(c("name", "type"), names(contab))
+        if (length(grouping_vars) == 0) stop("Cannot group contrasts: 'name' or 'type' column missing.")
+        
+        gsplit <- contab %>% dplyr::group_by(dplyr::across(dplyr::all_of(grouping_vars))) %>% dplyr::group_split()
+
+        # Process each contrast group (combine results across chunks)
+        con <- lapply(gsplit, function(g) {
+            dat <- g$data %>% dplyr::bind_rows() 
+            
+            # Both paths now produce the same structure, so no conditional logic needed.
+            # Simply assign the vectors directly.
+            estimate_full <- dat$estimate
+            se_full <- dat$se
+            stat_full <- dat$stat
+            prob_full <- dat$prob
+            sigma_full <- if ("sigma" %in% names(dat)) dat$sigma else NULL
+            
+            # Re-package combined data for this contrast
+            combined_data_tibble <- dplyr::tibble(
+                estimate = list(estimate_full), 
+                se = list(se_full),             
+                stat = list(stat_full),          
+                prob = list(prob_full)           
+            )
+            if (!is.null(sigma_full)) {
+                combined_data_tibble$sigma = list(sigma_full)
+            }
+
+            # Take metadata from the first chunk's entry for this contrast
+            g %>% dplyr::select(-data) %>% dplyr::slice_head() %>% 
+                dplyr::mutate(data = list(combined_data_tibble))
+                
+        }) %>% dplyr::bind_rows() 
+    }
   } else {
-    con <- dplyr::tibble()
+    con <- dplyr::tibble() # Return empty tibble if no contrasts
   }
-  
+
+  # --- DEBUG FINAL CONTRAST TIBBLE ---
+  # message("Structure of final 'con' tibble before returning from unpack_chunkwise:")
+  # print(str(con))
+  # --- END DEBUG ---
+
   list(
-    betas = cbetas,
+    betas = cbetas_out,
     contrasts = con,
     event_indices = event_indices,
     baseline_indices = baseline_indices
   )
 }
+
 
 
 
@@ -543,45 +878,107 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 #'
 #' @param dset An \code{fmri_dataset} object.
 #' @param model The \code{fmri_model} used for the analysis.
-#' @param conlist The list of contrasts used in the analysis.
-#' @param fcon The F-contrasts used in the analysis.
+#' @param contrast_objects The list of full contrast objects.
 #' @param nchunks The number of chunks to divide the dataset into.
 #' @param robust Logical. Whether to use robust linear modeling (default is \code{FALSE}).
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
+#' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
-chunkwise_lm.fmri_dataset <- function(dset, model, conlist, fcon, nchunks, robust = FALSE, verbose = FALSE) {
+chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, robust = FALSE, verbose = FALSE, use_fast_path = FALSE) {
   chunks <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
   form <- get_formula(model)
   tmats <- term_matrices(model)
-  data_env <- list2env(tmats)
-  data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
-  modmat <- model.matrix(as.formula(form), data_env)
-  Qr <- qr(modmat)
-  Vu <- chol2inv(Qr$qr)
-  
-  lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
-  
-  
-  ym <- NULL
-  cres <- foreach(ym = chunks, .verbose = verbose) %dopar% {
-    if (verbose) message("Processing chunk ", ym$chunk_num)
-    data_env[[".y"]] <- as.matrix(ym$data)
-    ret <- lmfun(form, data_env, conlist, attr(tmats, "varnames"), fcon, modmat = modmat)
-    ret$rss <- colSums(as.matrix(ret$fit$residuals^2))
-    ret$rdf <- ret$fit$df.residual
-    ret$resvar <- ret$rss / ret$rdf
-    ret$sigma <- sqrt(ret$resvar)
-    ret
-  }
-  
- 
-  
+  vnames <- attr(tmats, "varnames")
   event_indices = attr(tmats, "event_term_indices")
   baseline_indices = attr(tmats, "baseline_term_indices")
+
+  # Common setup for both paths
+  ym <- NULL # Define ym for R CMD check
+
   
+  
+  if (!use_fast_path) {
+   
+      # -------- Original Slow Path --------
+      # Slow path uses lmfun which calls fit_lm_contrasts, expects full contrast objects
+      # contrast_objects should already be the correct list structure here
+      data_env <- list2env(tmats)
+      data_env[[ ".y"]] <- rep(0, nrow(tmats[[1]])) # Corrected [[ ]] indexing
+      modmat <- model.matrix(as.formula(form), data_env)
+      Qr_global <- qr(modmat)
+      Vu <- chol2inv(Qr_global$qr)
+      
+      lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
+      
+      cres <- foreach::foreach(ym = chunks, .verbose = verbose) %dopar% {
+        if (verbose) message("Processing chunk ", ym$chunk_num)
+        data_env[[ ".y"]] <- as.matrix(ym$data) # Corrected [[ ]] indexing
+        
+        # Pass the full contrast objects list to lmfun -> fit_lm_contrasts
+        # Need to ensure lmfun/fit_lm_contrasts can handle the combined list format
+        # Original fit_lm_contrasts took conlist and fcon separately? No, looked like one list.
+        ret <- lmfun(form, data_env, contrast_objects, vnames, fcon=NULL, modmat = modmat) # Pass contrast_objects as conlist, fcon=NULL as it's handled internally now
+        
+        rss <- colSums(as.matrix(ret$fit$residuals^2))
+        rdf <- ret$fit$df.residual
+        resvar <- rss / rdf
+        sigma <- sqrt(resvar)
+        
+        list(bstats = ret$bstats, contrasts = ret$contrasts, rss = rss, rdf = rdf, sigma = sigma)
+      }
+
+  } else {
+      # -------- New Fast Path --------
+      # Fast path needs weights extracted from contrast_objects
+      simple_conlist <- Filter(function(x) inherits(x, "contrast"), contrast_objects)
+      fconlist <- Filter(function(x) inherits(x, "Fcontrast"), contrast_objects)
+      simple_conlist_weights <- lapply(simple_conlist, `[[`, "weights")
+      names(simple_conlist_weights) <- names(simple_conlist) 
+      fconlist_weights <- lapply(fconlist, `[[`, "weights")
+      names(fconlist_weights) <- names(fconlist) 
+      
+      if (robust) {
+          warning("Robust fitting not implemented for fast path, using standard OLS.")
+          robust <- FALSE
+      }
+      
+      message("Using fast path for chunkwise LM...")
+      
+      data_env <- list2env(tmats)
+      data_env[[ ".y"]] <- rep(0, nrow(tmats[[1]])) # Placeholder for model.matrix
+      modmat <- model.matrix(as.formula(form), data_env)
+      
+      proj <- .fast_preproject(modmat)
+      Vu <- proj$XtXinv 
+      
+      cres <- foreach::foreach(ym = chunks, .verbose = verbose, .packages = c("dplyr", "purrr")) %dopar% {
+          if (verbose) message("Processing chunk (fast path) ", ym$chunk_num)
+          Ymat <- as.matrix(ym$data) # n x V_chunk
+          # DEBUG: Check number of voxels in chunk
+          if(verbose) message("  Chunk ", ym$chunk_num, ": ncol(Ymat) = ", ncol(Ymat))
+          
+          # Perform fast LM calculation
+          res <- .fast_lm_matrix(Ymat, proj) # Returns list(betas, rss, sigma, sigma2)
+          bstats <- beta_stats_matrix(res$betas, proj$XtXinv, res$sigma, proj$dfres, vnames)
+          
+          # Pass extracted weights lists to fit_lm_contrasts_fast
+          contrasts <- fit_lm_contrasts_fast(res$betas, res$sigma2, proj$XtXinv, simple_conlist_weights, fconlist_weights, proj$dfres)
+        
+          
+          list(bstats = bstats, 
+               contrasts = contrasts, # fit_lm_contrasts_fast now returns list compatible with unpack
+               rss = res$rss, 
+               rdf = proj$dfres, 
+               sigma = res$sigma)
+      }
+      # -------- End New Fast Path --------
+  }
+  
+  # Unpack results (expects specific structure from cres)
   out <- unpack_chunkwise(cres, event_indices, baseline_indices)
-  out$cov.unscaled <- Vu
+  # Add cov.unscaled to the output
+  out$cov.unscaled <- Vu 
   out
 }
 
@@ -594,84 +991,191 @@ chunkwise_lm.fmri_dataset <- function(dset, model, conlist, fcon, nchunks, robus
 #'
 #' @param dset An \code{fmri_dataset} object.
 #' @param model The \code{fmri_model} used for the analysis.
-#' @param conlist The list of contrasts used in the analysis.
-#' @param fcon The F-contrasts used in the analysis.
+#' @param contrast_objects The list of full contrast objects.
 #' @param robust Logical. Whether to use robust linear modeling (default is \code{FALSE}).
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
 #' @return A list containing the combined results from runwise linear model analysis.
 #' @keywords internal
-runwise_lm <- function(dset, model, conlist, fcon, robust = FALSE, verbose = FALSE) {
-  lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
-  
-  # Get an iterator of data chunks
+#' @autoglobal
+runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = FALSE, use_fast_path = FALSE) {
+  # Get an iterator of data chunks (runs)
   chunks <- exec_strategy("runwise")(dset)
-  
   form <- get_formula(model)
-  modmat <- design_matrix(model)
-  Qr <- qr(modmat)
-  Vu <- chol2inv(Qr$qr)
+  # Global design matrix needed for pooling compatibility? Or just for Vu?
+  modmat_global <- design_matrix(model)
+  Qr_global <- qr(modmat_global)
+  Vu <- chol2inv(Qr_global$qr)
   
-  # Iterate over each data chunk
-  cres <- foreach(ym = chunks, .verbose = verbose) %dopar% {
-    if (verbose) message("Processing run ", ym$chunk_num)
-    tmats <- term_matrices(model, ym$chunk_num)
-    
-    data_env <- list2env(tmats)
-    data_env[[".y"]] <- as.matrix(ym$data)
-    ret <- lmfun(form, data_env, conlist, attr(tmats, "varnames"), fcon)
-    
-    rss <- colSums(as.matrix(ret$fit$residuals^2))
-    rdf <- ret$fit$df.residual
-    resvar <- rss / rdf
-    sigma <- sqrt(resvar)
-    
-    list(
-      conres = ret$contrasts,
-      bstats = ret$bstats,
-      event_indices = attr(tmats, "event_term_indices"),
-      baseline_indices = attr(tmats, "baseline_term_indices"),
-      rss = rss,
-      rdf = rdf,
-      resvar = resvar,
-      sigma = sigma
-    )
+  # Define ym for R CMD check
+  ym <- NULL
+  
+  if (!use_fast_path) {
+      # -------- Original Slow Path --------
+      # Slow path uses lmfun which calls fit_lm_contrasts, expects full contrast objects
+      lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
+      
+      cres <- foreach::foreach(ym = chunks, .verbose = verbose) %dopar% {
+        if (verbose) message("Processing run ", ym$chunk_num)
+        tmats <- term_matrices(model, ym$chunk_num)
+        vnames <- attr(tmats, "varnames")
+        event_indices = attr(tmats, "event_term_indices")
+        baseline_indices = attr(tmats, "baseline_term_indices")
+        
+        data_env <- list2env(tmats)
+        # Use standard R subsetting, ensure quotes are correct
+        data_env$.y <- as.matrix(ym$data) 
+        # Original fit uses lm.fit or lm per run
+        ret <- lmfun(form, data_env, contrast_objects, vnames, fcon=NULL)
+        
+        # Extract results
+        rss <- colSums(as.matrix(ret$fit$residuals^2))
+        rdf <- ret$fit$df.residual
+        resvar <- rss / rdf
+        sigma <- sqrt(resvar)
+        
+        # Return structure expected by pooling logic
+        list(
+          conres = ret$contrasts, # Original: list of tibbles from estimate_contrast calls
+          bstats = ret$bstats,   # Original: tibble from beta_stats
+          event_indices = event_indices,
+          baseline_indices = baseline_indices,
+          rss = rss,
+          rdf = rdf,
+          resvar = resvar,
+          sigma = sigma
+        )
+      }
+      # -------- End Original Slow Path --------
+      
+  } else {
+      # -------- New Fast Path --------
+      # Fast path needs weights extracted from contrast_objects
+      simple_conlist <- Filter(function(x) inherits(x, "contrast"), contrast_objects)
+      fconlist <- Filter(function(x) inherits(x, "Fcontrast"), contrast_objects)
+      simple_conlist_weights <- lapply(simple_conlist, `[[`, "weights")
+      names(simple_conlist_weights) <- names(simple_conlist) 
+      fconlist_weights <- lapply(fconlist, `[[`, "weights")
+      names(fconlist_weights) <- names(fconlist) 
+      
+      if (robust) {
+          warning("Robust fitting not implemented for fast path, using standard OLS.")
+          robust <- FALSE
+      }
+      
+      message("Using fast path for runwise LM...")
+      
+      # .export needed? conlist, fcon, model should be available.
+      # Add functions from this package? .packages = c("dplyr", "purrr", "fmrireg")? Or rely on namespace?
+      cres <- foreach::foreach(ym = chunks, .verbose = verbose, .packages = c("dplyr", "purrr")) %dopar% {
+        if (verbose) message("Processing run (fast path) ", ym$chunk_num)
+        
+        # Get run-specific term matrices and variable names
+        tmats <- term_matrices(model, ym$chunk_num)
+        vnames <- attr(tmats, "varnames")
+        event_indices = attr(tmats, "event_term_indices")
+        baseline_indices = attr(tmats, "baseline_term_indices")
+        
+        # Construct run-specific design matrix (X_run)
+        # Need the global formula `form`
+        data_env_run <- list2env(tmats)
+        # Add placeholder .y for model.matrix - size based on this run's term matrices
+        n_timepoints_run <- nrow(tmats[[1]]) # Assuming all term matrices have same rows for the run
+        if (n_timepoints_run == 0) {
+            # Handle empty run? Return NULL or empty results?
+            warning(paste("Skipping empty run:", ym$chunk_num))
+            return(NULL) # Skip this iteration
+        }
+        data_env_run[[".y"]] <- rep(0, n_timepoints_run)
+        X_run <- model.matrix(form, data_env_run)
+        
+        # Compute run-specific projector
+        proj_run <- .fast_preproject(X_run)
+        
+        # Get run data
+        Y_run <- as.matrix(ym$data) # n_run x V (assuming V is consistent across runs)
+        
+        # Check dimensions
+        if (nrow(X_run) != nrow(Y_run)) {
+            stop(paste("Dimension mismatch in run", ym$chunk_num, ": X_run rows (", nrow(X_run), ") != Y_run rows (", nrow(Y_run), ")"))
+        }
+        
+        # Perform fast LM calculation
+        res <- .fast_lm_matrix(Y_run, proj_run)
+        
+        # Calculate beta statistics 
+        bstats <- beta_stats_matrix(res$betas, proj_run$XtXinv, res$sigma, proj_run$dfres, vnames)
+        
+        # Calculate contrasts 
+        # Pass extracted weights lists
+        conres <- fit_lm_contrasts_fast(res$betas, res$sigma2, proj_run$XtXinv, simple_conlist_weights, fconlist_weights, proj_run$dfres)
+        
+        # Return structure compatible with pooling logic
+        list(
+          conres = conres, # List of tibbles from fit_lm_contrasts_fast
+          bstats = bstats, # Tibble from beta_stats_matrix
+          event_indices = event_indices,
+          baseline_indices = baseline_indices,
+          rss = res$rss,
+          rdf = proj_run$dfres,
+          resvar = res$sigma2, # Need resvar for pooling? Check meta_ methods.
+          sigma = res$sigma
+        )
+      }
+      
+      # Filter out NULL results from skipped empty runs
+      cres <- Filter(Negate(is.null), cres)
+      if (length(cres) == 0) {
+          stop("No valid run results found in runwise fast path.")
+      }
+      # -------- End New Fast Path --------
   }
   
-  # Combine results
-  bstats <- lapply(cres, `[[`, "bstats")
-  conres <- lapply(cres, `[[`, "conres")
+  # Combine results (Pooling logic assumes specific structure in cres[[i]]$bstats and cres[[i]]$conres)
+  bstats_list <- lapply(cres, `[[`, "bstats")
+  conres_list <- lapply(cres, `[[`, "conres")
   
-  # Compute overall statistics
-  sigma <- colMeans(do.call(rbind, lapply(cres, `[[`, "sigma")))
-  rss <- colSums(do.call(rbind, lapply(cres, `[[`, "rss")))
-  rdf <- colSums(do.call(rbind, lapply(cres, `[[`, "rdf")))
+  # Compute overall statistics (these seem independent of fast/slow path)
+  sigma <- colMeans(do.call(rbind, lapply(cres, function(x) as.matrix(x$sigma)))) # Make sure sigma is matrix/vector
+  rss <- colSums(do.call(rbind, lapply(cres, function(x) as.matrix(x$rss))))
+  rdf <- sum(unlist(lapply(cres, `[[`, "rdf")))
+  resvar <- rss / rdf # Overall residual variance
   
   # Pool over runs
   if (length(cres) > 1) {
-    meta_con <- meta_contrasts(conres)
-    meta_beta <- meta_betas(bstats, cres[[1]]$event_indices)
+    # meta_contrasts expects a list of lists (runs) of lists (contrasts) of tibbles?
+    # Or list (runs) of lists (contrasts) where elements are the tibbles?
+    # Current: conres_list is list (runs) of lists (contrasts are named elements, values are tibbles)
+    # Need to check meta_contrasts implementation.
+    # Assuming meta_contrasts can handle the list of lists structure from fit_lm_contrasts_fast.
+    
+    # meta_betas expects a list of bstats tibbles and event_indices from the first run.
+    # Assuming beta_stats_matrix output is compatible.
+    meta_con <- meta_contrasts(conres_list)
+    meta_beta <- meta_betas(bstats_list, cres[[1]]$event_indices)
+    
     list(
       contrasts = meta_con,
       betas = meta_beta,
       event_indices = cres[[1]]$event_indices,
       baseline_indices = cres[[1]]$baseline_indices,
-      cov.unscaled = Vu,
-      sigma = sigma,
-      rss = rss,
-      rdf = rdf,
-      resvar = sigma^2
+      cov.unscaled = Vu, # Using Vu from global design matrix
+      sigma = sigma, # Pooled sigma
+      rss = rss,     # Pooled rss
+      rdf = rdf,     # Pooled rdf
+      resvar = resvar # Pooled resvar
     )
   } else {
+    # If only one run, return its results directly
     list(
-      contrasts = conres[[1]],
-      betas = bstats[[1]],
+      contrasts = conres_list[[1]], # This is the list of contrast tibbles for the single run
+      betas = bstats_list[[1]], # This is the bstats tibble for the single run
       event_indices = cres[[1]]$event_indices,
       baseline_indices = cres[[1]]$baseline_indices,
       cov.unscaled = Vu,
-      sigma = sigma,
-      rss = rss,
-      rdf = rdf,
-      resvar = sigma^2
+      sigma = cres[[1]]$sigma, # Use run sigma
+      rss = cres[[1]]$rss,
+      rdf = cres[[1]]$rdf,
+      resvar = cres[[1]]$resvar
     )
   }
 }

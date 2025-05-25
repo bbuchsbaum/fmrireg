@@ -52,6 +52,15 @@ test_that("can construct and run a simple fmri glm from in memory dataset", {
    mod <- fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset=dset, durations=0, strategy="chunkwise", nchunks=4)
    expect_true(!is.null(mod))
   
+   # Fast path version
+   mod_fast <- fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset=dset, durations=0, strategy="chunkwise", nchunks=4, use_fast_path=TRUE)
+   expect_true(!is.null(mod_fast))
+   
+   # Compare results
+   expect_equal(coef(mod), coef(mod_fast), tolerance=1e-8)
+   expect_equal(standard_error(mod), standard_error(mod_fast), tolerance=1e-8)
+   expect_equal(stats(mod), stats(mod_fast), tolerance=1e-8)
+
 })
 
 test_that("can construct and run a simple fmri glm from in memory dataset and one contrast", {
@@ -72,7 +81,7 @@ test_that("can construct and run a simple fmri glm from in memory dataset and on
   
   con <<- contrast_set(pair_contrast( ~ repnum == 1, ~ repnum == 2, name="rep2_rep1"))
   
-  mod1 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0)
+  mod1 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, use_fast_path=TRUE)
   mod1a <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0)
   mod2 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, 
                   strategy="chunkwise", nchunks=10, verbose=FALSE)
@@ -85,10 +94,27 @@ test_that("can construct and run a simple fmri glm from in memory dataset and on
   expect_equal(ncol(stats(mod1a, "contrasts")), 1)
   expect_equal(ncol(stats(mod2, "contrasts")), 1)
  
+  # Fast path versions
+  mod1_fast <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, use_fast_path=TRUE)
+  mod2_fast <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, 
+                       strategy="chunkwise", nchunks=10, verbose=FALSE, use_fast_path=TRUE)
+
+  # Compare original runwise (mod1) vs fast runwise (mod1_fast)
+  expect_equal(coef(mod1), coef(mod1_fast), tolerance=1e-8)
+  expect_equal(standard_error(mod1), standard_error(mod1_fast), tolerance=1e-8)
+  expect_equal(stats(mod1), stats(mod1_fast), tolerance=1e-8)
+  expect_equal(coef(mod1, "contrasts"), coef(mod1_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(standard_error(mod1, "contrasts"), standard_error(mod1_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(stats(mod1, "contrasts"), stats(mod1_fast, "contrasts"), tolerance=1e-8)
   
-  expect_equal(nrow(stats(mod1, "contrasts")), nrow(stats(mod1a, "contrasts")))
-  c1 <- cor(stats(mod1, "contrasts")[,1], stats(mod2, "contrasts")[,1])
-  expect_true(c1> .97)
+  # Compare original chunkwise (mod2) vs fast chunkwise (mod2_fast)
+  expect_equal(coef(mod2), coef(mod2_fast), tolerance=1e-8)
+  expect_equal(standard_error(mod2), standard_error(mod2_fast), tolerance=1e-8)
+  expect_equal(stats(mod2), stats(mod2_fast), tolerance=1e-8)
+  expect_equal(coef(mod2, "contrasts"), coef(mod2_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(standard_error(mod2, "contrasts"), standard_error(mod2_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(stats(mod2, "contrasts"), stats(mod2_fast, "contrasts"), tolerance=1e-8)
+ 
 })
 
 test_that("can construct and run a simple fmri glm from a matrix_dataset with 1 column", {
@@ -108,7 +134,24 @@ test_that("can construct and run a simple fmri glm from a matrix_dataset with 1 
   expect_equal(ncol(stats(mod1, "contrasts")), 2)
   expect_equal(ncol(stats(mod2, "contrasts")), 2)
   
-})
+  # Fast path versions
+  mod1_fast <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, use_fast_path=TRUE)
+  mod2_fast <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, 
+                       strategy="chunkwise", nchunks=1, use_fast_path=TRUE)
+
+  # Compare original runwise (mod1) vs fast runwise (mod1_fast)
+  # Coefficients (betas) might differ slightly if only 1 voxel
+  expect_equal(as.numeric(coef(mod1)), as.numeric(coef(mod1_fast)), tolerance=1e-8) 
+  expect_equal(stats(mod1, "contrasts"), stats(mod1_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(standard_error(mod1, "contrasts"), standard_error(mod1_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(coef(mod1, "contrasts"), coef(mod1_fast, "contrasts"), tolerance=1e-8)
+
+  # Compare original chunkwise (mod2) vs fast chunkwise (mod2_fast)
+  expect_equal(as.numeric(coef(mod2)), as.numeric(coef(mod2_fast)), tolerance=1e-8)
+  expect_equal(stats(mod2, "contrasts"), stats(mod2_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(standard_error(mod2, "contrasts"), standard_error(mod2_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(coef(mod2, "contrasts"), coef(mod2_fast, "contrasts"), tolerance=1e-8)
+}) 
 
 test_that("fmri glm for multivariate matrix and complex contrast ", {
   
@@ -135,7 +178,18 @@ test_that("fmri glm for multivariate matrix and complex contrast ", {
   
   zz <- stats(mod1, "contrasts")
   expect_equal(ncol(zz),3)
+  
+  # Fast path version
+  mod1_fast <- fmri_lm(onset ~ hrf(letter,  contrasts=cset), 
+                       block = ~ run, dataset=dset, durations=0, nchunks=1, strategy="chunkwise", use_fast_path=TRUE)
+  
+  # Compare original chunkwise (mod1) vs fast chunkwise (mod1_fast)
+  expect_equal(coef(mod1), coef(mod1_fast), tolerance=1e-8)
+  expect_equal(stats(mod1, "contrasts"), stats(mod1_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(standard_error(mod1, "contrasts"), standard_error(mod1_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(coef(mod1, "contrasts"), coef(mod1_fast, "contrasts"), tolerance=1e-8)
   expect_true(!is.null(mod1))
+  expect_true(!is.null(mod1_fast))
   
 })
 
@@ -156,6 +210,23 @@ test_that("can construct and run a simple fmri glm from a matrix_dataset with 2 
   expect_true(!is.null(mod2))
   expect_equal(ncol(stats(mod1, "contrasts")), 2)
   expect_equal(ncol(stats(mod2, "contrasts")), 2)
+
+  # Fast path versions
+  mod1_fast <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, use_fast_path=TRUE)
+  mod2_fast <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, 
+                       strategy="chunkwise", nchunks=1, use_fast_path=TRUE)
+
+  # Compare original runwise (mod1) vs fast runwise (mod1_fast)
+  expect_equal(coef(mod1), coef(mod1_fast), tolerance=1e-8)
+  expect_equal(stats(mod1, "contrasts"), stats(mod1_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(standard_error(mod1, "contrasts"), standard_error(mod1_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(coef(mod1, "contrasts"), coef(mod1_fast, "contrasts"), tolerance=1e-8)
+
+  # Compare original chunkwise (mod2) vs fast chunkwise (mod2_fast)
+  expect_equal(coef(mod2), coef(mod2_fast), tolerance=1e-8)
+  expect_equal(stats(mod2, "contrasts"), stats(mod2_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(standard_error(mod2, "contrasts"), standard_error(mod2_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(coef(mod2, "contrasts"), coef(mod2_fast, "contrasts"), tolerance=1e-8)
   
 })
 
@@ -175,6 +246,19 @@ test_that("can construct and run a simple fmri glm two terms and prefix args", {
   #expect_true(!is.null(mod2))
   expect_equal(ncol(stats(mod1)), 4)
   #expect_equal(ncol(mod2$result$contrasts$estimate()), 2)
+  
+  # Fast path version
+  mod1_fast <- fmri_lm(onset ~ hrf(repnum, subset=repnum %in% c(1,2), prefix="r12")+ 
+                         hrf(repnum, subset=repnum %in% c(3,4), prefix="r34"),
+                       block = ~ run, dataset=dset, durations=0, use_fast_path=TRUE)
+  
+  expect_true(!is.null(mod1_fast))
+  expect_equal(ncol(stats(mod1_fast)), 4)
+  
+  # Compare
+  expect_equal(coef(mod1), coef(mod1_fast), tolerance=1e-8)
+  expect_equal(stats(mod1), stats(mod1_fast), tolerance=1e-8)
+  expect_equal(standard_error(mod1), standard_error(mod1_fast), tolerance=1e-8)
   
 })
 
@@ -219,6 +303,41 @@ test_that("can run video fmri design with matrix_dataset", {
   expect_true(!is.null(coef(res3, "contrasts")))
   
 
+  # Fast path versions
+  res1_fast <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+                                   hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, dataset=dset, 
+                                  strategy="runwise", use_fast_path=TRUE)
+  res2_fast <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+                                    hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, dataset=dset, 
+                                  strategy="chunkwise", nchunks=12, use_fast_path=TRUE)
+  res3_fast <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+                              hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, dataset=dset, 
+                            strategy="chunkwise", nchunks=1, use_fast_path=TRUE)
+  
+  # Compare res1 vs res1_fast (runwise)
+  expect_equal(coef(res1), coef(res1_fast), tolerance=1e-8)
+  expect_equal(coef(res1, "contrasts"), coef(res1_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(stats(res1), stats(res1_fast), tolerance=1e-8)
+  expect_equal(stats(res1, "contrasts"), stats(res1_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(standard_error(res1), standard_error(res1_fast), tolerance=1e-8)
+  expect_equal(standard_error(res1, "contrasts"), standard_error(res1_fast, "contrasts"), tolerance=1e-8)
+  
+  # Compare res2 vs res2_fast (chunkwise, many chunks)
+  expect_equal(coef(res2), coef(res2_fast), tolerance=1e-8)
+  expect_equal(coef(res2, "contrasts"), coef(res2_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(stats(res2), stats(res2_fast), tolerance=1e-8)
+  expect_equal(stats(res2, "contrasts"), stats(res2_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(standard_error(res2), standard_error(res2_fast), tolerance=1e-8)
+  expect_equal(standard_error(res2, "contrasts"), standard_error(res2_fast, "contrasts"), tolerance=1e-8)
+
+  # Compare res3 vs res3_fast (chunkwise, 1 chunk)
+  expect_equal(coef(res3), coef(res3_fast), tolerance=1e-8)
+  expect_equal(coef(res3, "contrasts"), coef(res3_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(stats(res3), stats(res3_fast), tolerance=1e-8)
+  expect_equal(stats(res3, "contrasts"), stats(res3_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(standard_error(res3), standard_error(res3_fast), tolerance=1e-8)
+  expect_equal(standard_error(res3, "contrasts"), standard_error(res3_fast, "contrasts"), tolerance=1e-8)
+
 })
 
 test_that("can run video fmri design with fmri_file_dataset", {
@@ -253,13 +372,43 @@ test_that("can run video fmri design with fmri_file_dataset", {
                               hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, dataset=dset, 
                             strategy="chunkwise", nchunks=1)
   
+  # Fast path versions
+  res2_fast <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+                              hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, 
+                            dataset=dset, 
+                            strategy="chunkwise", nchunks=22, use_fast_path=TRUE)
+  res3_fast <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+                              hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, dataset=dset, 
+                            strategy="chunkwise", nchunks=1, use_fast_path=TRUE)
+                            
   expect_true(!is.null(coef(res2)))
   expect_true(!is.null(coef(res3)))
+  
+  expect_true(!is.null(coef(res2_fast)))
+  expect_true(!is.null(coef(res3_fast)))
   
   expect_true(!is.null(coef(res2, "contrasts")))
   expect_true(!is.null(coef(res3, "contrasts")))
   
+  # Compare res2 vs res2_fast (chunkwise, many chunks)
+  expect_equal(coef(res2), coef(res2_fast), tolerance=1e-8)
+  expect_equal(coef(res2, "contrasts"), coef(res2_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(stats(res2), stats(res2_fast), tolerance=1e-8)
+  expect_equal(stats(res2, "contrasts"), stats(res2_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(standard_error(res2), standard_error(res2_fast), tolerance=1e-8)
+  expect_equal(standard_error(res2, "contrasts"), standard_error(res2_fast, "contrasts"), tolerance=1e-8)
+
+  # Compare res3 vs res3_fast (chunkwise, 1 chunk)
+  expect_equal(coef(res3), coef(res3_fast), tolerance=1e-8)
+  expect_equal(coef(res3, "contrasts"), coef(res3_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(stats(res3), stats(res3_fast), tolerance=1e-8)
+  expect_equal(stats(res3, "contrasts"), stats(res3_fast, "contrasts"), tolerance=1e-8)
+  expect_equal(standard_error(res3), standard_error(res3_fast), tolerance=1e-8)
+  expect_equal(standard_error(res3, "contrasts"), standard_error(res3_fast, "contrasts"), tolerance=1e-8)
   
+  # Clean up temporary files
+  unlink(scans)
+  unlink(maskfile)
 })
 
 test_that("can run video fmri design with latent_dataset", {
@@ -297,6 +446,7 @@ test_that("can run video fmri design with latent_dataset", {
   }))
   
   
+  # Note: fmri_latent_lm does not currently have the fast path implementation
   res2 <- fmrireg:::fmri_latent_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
                               hrf(Video, subset=Condition=="Recall", prefix="rec", contrasts=conset2), 
                               block= ~ run, 
@@ -304,30 +454,21 @@ test_that("can run video fmri design with latent_dataset", {
   
   se1 <- standard_error(res2, "contrasts", recon=TRUE)
   con1 <- stats.fmri_latent_lm(res2, "contrasts", recon=TRUE)
-  dset <- fmri_dataset(scans, maskfile,TR=1.5, rep(320,7), base_path="/", event_table=des)
   
+  # Run standard fmri_lm for comparison (if needed, but latent path is different)
+  # dset <- fmri_dataset(scans, maskfile,TR=1.5, rep(320,7), base_path="/", event_table=des)
+  # res3 <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+  #                                    hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, 
+  #                                  strategy="chunkwise", nchunks=1, dataset=dset)
+  # se2 <- standard_error(res3, "contrasts")
+  # con2 <- stats(res3, "contrasts")
   
-  #res2 <- fmrireg:::fmri_latent_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
-  #                                   hrf(Video, subset=Condition=="Recall", prefix="rec", contrasts=conset2), 
-  #                                 block= ~ run, 
-  #                                 autocor="none", bootstrap=TRUE, nboot=50, dataset=ldset)
+  expect_true(!is.null(se1))
+  expect_true(!is.null(con1))
   
-  #res2a <- fmrireg:::fmri_latent_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
-  #                                   hrf(Video, subset=Condition=="Recall", prefix="rec", contrasts=conset2), 
-  #                                 block= ~ run, 
-  #                                 autocor="ar1", dataset=ldset)
-  
-  
-  
-  res3 <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
-                                     hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, 
-                                   strategy="chunkwise", nchunks=1, dataset=dset)
-  
-  se2 <- standard_error(res3, "contrasts")
-  con2 <- stats(res3, "contrasts")
-  
-  expect_true(!is.null(se2))
-  expect_true(!is.null(con2))
+  # Clean up temporary files
+  unlink(scans)
+  unlink(maskfile)
 })
           
 

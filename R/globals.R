@@ -3,8 +3,6 @@
 utils::globalVariables(c(
   ".time", # <plot.baseline_model>
   ".block", # <plot.baseline_model>
-  ".blockids", # <convolve.event_term>
-  ".", # <convolve.event_term>
   "xf", # <estimate_hrf>
   "index", # <cells.fmri_model>
   "type", # <cells.fmri_model>

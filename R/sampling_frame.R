@@ -1,4 +1,16 @@
-#' Construct a sampling_frame
+# ---------------------------------------------------------------------
+# low‑level constructor – never exported
+#' @noRd
+#' @keywords internal
+new_sampling_frame <- function(blocklens, TR, start_time, precision) {
+  structure(
+    list(blocklens = blocklens,
+         TR        = TR,
+         start_time = start_time,
+         precision = precision),
+    class = "sampling_frame")
+}
+
 #'
 #' A \code{sampling_frame} describes the block structure and temporal sampling of an fMRI paradigm.
 #'
@@ -17,160 +29,113 @@
 #'
 #' @return A list with class "sampling_frame" describing the block structure and temporal sampling of an fMRI paradigm.
 #' @export
-sampling_frame <- function(blocklens, TR, start_time=TR/2, precision=.1) {
-  # Add comprehensive input validation
-  assert_that(all(TR > 0), msg="TR (repetition time) must be positive")
-  assert_that(all(blocklens > 0), msg="Block lengths must be positive integers")
-  assert_that(precision > 0 && precision < min(TR), 
-              msg="Precision must be positive and less than the minimum TR")
-  assert_that(all(start_time >= 0), 
-              msg="Start time must be non-negative")
+sampling_frame <- function(blocklens, TR, start_time = TR / 2, precision = .1)
+{
+  # --- recycle & validate ------------------------------------------------
+  # Ensure all vectors have the same length
+  max_len <- max(length(blocklens), length(TR), length(start_time))
+  blocklens <- rep_len(blocklens, max_len)
+  TR <- rep_len(TR, max_len)
+  start_time <- rep_len(start_time, max_len)
   
-  # Add warnings for potential issues
-  if (length(blocklens) > 50) {
-    warning("There are more than 50 blocks in sampling_frame")
+  # Validate inputs with proper error messages
+  if (!all(blocklens > 0)) {
+    stop("Block lengths must be positive")
   }
-  
-  total_samples <- sum(blocklens)
-  if (total_samples > 1e6) {
-    warning("Large number of samples (>1M) may impact performance")
+  if (!all(TR > 0)) {
+    stop("TR values must be positive")
   }
-  
-  if (length(TR) == 1) {
-    TR <- rep(TR, length(blocklens))
+  if (!all(start_time >= 0)) {
+    stop("Start times must be non-negative")
   }
-  
-  if (length(start_time) == 1) {
-    start_time <- rep(start_time, length(blocklens))
+  if (precision <= 0) {
+    stop("Precision must be positive")
   }
-  
-  blockids <- rep(1:length(blocklens), blocklens)
-  scan_time <- unlist(lapply(1:length(blocklens), function(i) seq(start_time[i], by=TR[i], length.out=blocklens[i])))
-  
-  ret <- list(blocklens=blocklens,
-              TR=TR,
-              start_time=start_time,
-              blockids=blockids,
-              time=scan_time,
-              precision=precision)
-  
-  class(ret) <- c("sampling_frame", "list")
-  ret
+  if (precision >= min(TR)) {
+    stop("Precision must be positive and less than the minimum TR")
+  }
+
+  new_sampling_frame(blocklens, TR, start_time, precision)
 }
 
-#' Extract samples from a sampling_frame
-#'
-#' This function extracts the relative or global time of each sample/acquisition from a \code{sampling_frame}.
-#'
-#' @param x A sampling_frame object.
-#' @param blockids A numeric vector of block IDs to extract the samples from. If NULL (default), all block IDs are used.
-#' @param global A logical value. If TRUE, the global time (with respect to the first block) of each sample/acquisition is returned. If FALSE (default), the relative time (with respect to the last block) of each sample/acquisition is returned.
-#' @param ... Additional arguments (currently unused).
-#'
-#' @examples
-#' frame <- sampling_frame(blocklens = c(100, 100, 100), TR = 2, precision = 0.5)
-#' # The relative time (with respect to the last block) in seconds of each sample/acquisition
-#' sam <- samples(frame)
-#' # The global time (with respect to the first block) of each sample/acquisition
-#' gsam <- samples(frame, global = TRUE)
-#'
-#' @return A numeric vector of sample times extracted from the specified \code{sampling_frame}.
+# ---------------------------------------------------------------------
+# vectorised helpers (no memoise, no lapply)
 #' @export
-samples.sampling_frame <- memoise::memoise(function(x, blockids=NULL, global=FALSE, ...) {
-  if (is.null(blockids)) {
-    blockids <- seq(1, length(x$blocklens))
-  }
-  
-  if (!global) {
-    unlist(lapply(blockids, function(b) {
-      seq(x$start_time[b], by=x$TR[b], length.out=x$blocklens[b])
-    }))
-  } else {
-    unlist(lapply(blockids, function(b) {
-      start <- if (b > 1) {
-        sum(x$blocklens[1:(b-1)])*x$TR[b] + x$start_time[b] 
-      } else {
-        x$start_time[b]
-      }
-      
-      seq(start, by=x$TR[b], length.out=x$blocklens[b])
-    }))
-  }
-})
+samples.sampling_frame <- function(x, blockids = NULL, global = FALSE) {
+  if (is.null(blockids)) blockids <- seq_along(x$blocklens)
 
-#' Compute global onsets from a sampling_frame
-#'
-#' This function computes the global onsets (with respect to the first block) for a given \code{sampling_frame}.
-#'
-#' @param x A sampling_frame object.
-#' @param onsets A numeric vector of onsets within the specified blocks.
-#' @param blockids A numeric vector of block IDs corresponding to the onsets.
-#' @param ... Additional arguments (currently unused).
-#'
-#' @examples
-#' frame <- sampling_frame(blocklens = c(100, 100, 100), TR = 2, precision = 0.5)
-#' onsets <- c(10, 20, 30)
-#' blockids <- c(1, 2, 3)
-#' global_onsets(frame, onsets, blockids)
-#'
-#' @return A numeric vector of global onsets computed from the specified \code{sampling_frame}.
-#' @export
-#' @family global_onsets
-global_onsets.sampling_frame <- memoise::memoise(function(x, onsets, blockids,...) {
+  # number of scans per selected block
+  lens <- x$blocklens[blockids]
+
+  # fast allocate
+  idx <- sequence(lens) - 1                   # 0‑based within block
   
-  ids <- rep(1:length(unique(blockids)), table(blockids))
-  
-  if (max(ids) > length(x$blocklens)) {
-    stop("there are more block ids than block lengths, cannot compute global onsets")
-  }
-  
-  purrr::map_dbl(1:length(onsets),function(i) {
-    blocknum <- ids[i]
-    offset <- (sum(x$blocklens[1:blocknum]) - x$blocklens[blocknum])*x$TR[blocknum]
-    if (onsets[i] > x$blocklens[blocknum]*x$TR[blocknum]) {
-      NA
-    } else {
-      onsets[i] + offset
-    }
+  # Calculate relative times within each block
+  block_times <- rep(blockids, lens)  # which block each sample belongs to
+  times <- x$start_time[block_times] + idx * x$TR[block_times]
+
+  if (global) {
+    # For global timing, add the cumulative time offset from previous blocks
+    # Calculate cumulative time at the end of each block
+    block_durations <- x$blocklens * x$TR
+    cumulative_time <- c(0, cumsum(block_durations))
     
-  })
-})  
-
-#' @export
-split_by_block.sampling_frame <- function(x, vals, ...) {
-  split(vals, x$blockids)
+    # Add the cumulative time offset for each block
+    time_offsets <- cumulative_time[block_times]
+    times + time_offsets
+  } else {
+    times
+  }
 }
 
 #' @export
-blockids.sampling_frame <- function(x) {
-  x$blockids
-}
+global_onsets.sampling_frame <- function(x, onsets, blockids) {
+  # Calculate cumulative time offsets for each block
+  block_durations <- x$blocklens * x$TR
+  cumulative_time <- c(0, cumsum(block_durations))
+  
+  blockids <- as.integer(blockids)
+  stopifnot(length(onsets) == length(blockids),
+            all(blockids >= 1L), all(blockids <= length(x$blocklens)))
 
-#' @export
-blocklens.sampling_frame <- function(x,...) {
-  x$blocklens
+  onsets + cumulative_time[blockids]
 }
 
 #' @export
 print.sampling_frame <- function(x, ...) {
-  # Header
-  cat("\n═══ Sampling Frame ═══\n")
+  n_blk <- length(x$blocklens)
+  total_scans <- sum(x$blocklens)
   
-  # Structure information
-  cat("\n📊 Structure:\n")
-  cat(crayon::blue("  • Blocks:"), length(x$blocklens), "\n")
-  cat(crayon::blue("  • Total timepoints:"), sum(x$blocklens), "\n")
-  cat(crayon::blue("  • Block lengths:"), paste(x$blocklens, collapse=", "), "\n")
+  cat("Sampling Frame\n")
+  cat("==============\n\n")
   
-  # Timing information
-  cat("\n⏱️  Timing:\n")
-  cat(crayon::blue("  • TR:"), paste(unique(x$TR), collapse=", "), "seconds\n")
-  cat(crayon::blue("  • Start times:"), paste(unique(x$start_time), collapse=", "), "seconds\n")
-  cat(crayon::blue("  • Precision:"), x$precision, "seconds\n")
+  cat("Structure:\n")
+  cat(sprintf("  %d block%s\n", n_blk, if (n_blk > 1) "s" else ""))
+  cat(sprintf("  Total scans: %d\n\n", total_scans))
   
-  # Duration information
-  cat("\n📈 Duration:\n")
-  cat(crayon::blue("  • Total duration:"), sum(x$blocklens * x$TR), "seconds\n")
+  cat("Timing:\n")
+  cat(sprintf("  TR: %s s\n", paste(unique(x$TR), collapse = ", ")))
+  cat(sprintf("  Precision: %.3g s\n\n", x$precision))
   
-  cat("\n")
+  cat("Duration:\n")
+  total_time <- sum(x$blocklens * x$TR)
+  cat(sprintf("  Total time: %.1f s\n", total_time))
+  
+  invisible(x)
+}
+
+#' Extract Block IDs from a Sampling Frame
+#'
+#' Returns an integer vector indicating the block ID for each scan.
+#'
+#' @param x A sampling_frame object.
+#' @return An integer vector.
+#' @export
+blockids.sampling_frame <- function(x) {
+  rep(seq_along(x$blocklens), times = x$blocklens)
+}
+
+#' @export
+blocklens.sampling_frame <- function(x) {
+    x$blocklens
 }

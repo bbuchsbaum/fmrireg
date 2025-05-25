@@ -1,4 +1,3 @@
-
 #' Meta-analysis using Stouffer's method
 #'
 #' This function performs a meta-analysis on input p-values and standard errors using Stouffer's method.
@@ -70,14 +69,39 @@ meta_stouffer <- function(pval, se) {
 meta_fixef <- function(ctab, weighting=c("inv_var", "equal")) {
   weighting <- match.arg(weighting)
   
-  se <- do.call(cbind, ctab$data %>% purrr::map(~ .$se))
-  beta <- do.call(cbind, ctab$data %>% purrr::map(~ .$estimate))
+  # Extract the list-column, then unlist each element before cbind
+  se_list <- ctab$data %>% purrr::map(~ .$se)
+  beta_list <- ctab$data %>% purrr::map(~ .$estimate)
   
-  ret <- do_fixef(se,beta,weighting)
+  # Check if the first element is a list (indicative of fast path output)
+  # If so, unlist each element. Assume consistency across the list.
+  if (length(se_list) > 0 && is.list(se_list[[1]])) {
+    se_list <- lapply(se_list, function(x) x[[1]])
+  }
+  if (length(beta_list) > 0 && is.list(beta_list[[1]])) {
+    beta_list <- lapply(beta_list, function(x) x[[1]])
+  }
   
+  # Now se_list and beta_list should contain numeric vectors/matrices
+  se <- do.call(cbind, se_list)
+  beta <- do.call(cbind, beta_list)
+  
+  # Handle cases where cbind might produce a vector if only one contrast/run
+  if (is.vector(se)) se <- matrix(se, ncol = 1)
+  if (is.vector(beta)) beta <- matrix(beta, ncol = 1)
+  
+  # Ensure dimensions match if possible (can be tricky if runs have different numbers of voxels)
+  # This assumes all runs/contrasts being pooled have the same number of rows (voxels/observations)
+  if (nrow(se) != nrow(beta)) {
+      stop("Mismatch in number of observations between estimates and standard errors in meta_fixef.")
+  }
+
+  ret <- do_fixef(se, beta, weighting)
+  
+  # Package results
   dplyr::tibble(type=ctab$type[1], name=ctab$name[1], stat_type="meta_zstat", 
                 conmat=list(ctab$conmat[[1]]),
-         colind=list(ctab$colind[[1]]), data=list(ret))
+         colind=list(ctab$colind[[1]]), data=list(ret)) # ret from do_fixef is already a tibble
   
 }
 

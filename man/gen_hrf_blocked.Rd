@@ -55,7 +55,6 @@ The \code{gen_hrf_blocked} function creates a blocked HRF by convolving the inpu
 }}
 \seealso{
 Other gen_hrf: 
-\code{\link{gen_hrf_lagged}()},
-\code{\link{gen_hrf_set}()}
+\code{\link{gen_hrf_lagged}()}
 }
 \concept{gen_hrf}

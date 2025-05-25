@@ -7,17 +7,18 @@
 \method{design_matrix}{event_term}(x, drop.empty = TRUE, ...)
 }
 \arguments{
-\item{x}{An event_term object.}
+\item{x}{An \code{event_term} object.}
 
-\item{drop.empty}{Logical; if TRUE, columns with no events are removed.}
+\item{drop.empty}{Logical; if TRUE (default), columns with zero variance (or all zeros)
+that are not part of an intercept term are removed.}
 
-\item{...}{Additional arguments.}
+\item{...}{Additional arguments (unused).}
 }
 \value{
 A tibble representing the design matrix.
 }
 \description{
 This function creates a design matrix from an event_term object by first
-populating a local environment with event values and then applying model.matrix
-to the formula derived from the event_term.
+building a data frame containing columns for each event variable and then
+applying \code{model.matrix} using the term's formula.
 }

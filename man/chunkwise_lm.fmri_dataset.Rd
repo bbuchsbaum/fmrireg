@@ -7,11 +7,11 @@
 \method{chunkwise_lm}{fmri_dataset}(
   dset,
   model,
-  conlist,
-  fcon,
+  contrast_objects,
   nchunks,
   robust = FALSE,
-  verbose = FALSE
+  verbose = FALSE,
+  use_fast_path = FALSE
 )
 }
 \arguments{
@@ -19,15 +19,15 @@
 
 \item{model}{The \code{fmri_model} used for the analysis.}
 
-\item{conlist}{The list of contrasts used in the analysis.}
-
-\item{fcon}{The F-contrasts used in the analysis.}
+\item{contrast_objects}{The list of full contrast objects.}
 
 \item{nchunks}{The number of chunks to divide the dataset into.}
 
 \item{robust}{Logical. Whether to use robust linear modeling (default is \code{FALSE}).}
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
+
+\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
 }
 \value{
 A list containing the unpacked chunkwise results.

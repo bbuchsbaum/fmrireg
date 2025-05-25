@@ -2,7 +2,7 @@
 % Please edit documentation in R/sampling_frame.R
 \name{sampling_frame}
 \alias{sampling_frame}
-\title{Construct a sampling_frame}
+\title{A \code{sampling_frame} describes the block structure and temporal sampling of an fMRI paradigm.}
 \usage{
 sampling_frame(blocklens, TR, start_time = TR/2, precision = 0.1)
 }

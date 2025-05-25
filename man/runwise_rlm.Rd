@@ -17,8 +17,6 @@ runwise_rlm(
 \arguments{
 \item{model}{The \code{fmri_model} used for the analysis.}
 
-\item{conlist}{The list of contrasts used in the analysis.}
-
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
 }
 \description{

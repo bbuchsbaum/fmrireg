@@ -152,15 +152,16 @@ if (is.matrix(res_pls$betas_ran)) {
 
 We can plot the design matrices for the fixed and random effects components.
 
-The fixed effects model here contains just one regressor representing the average response (`constant`).
+The fixed effects model here contains just one regressor representing the average response (`constant`). The term tag will be `constant` and the condition tag `constant.1`.
 
 ```{r plot_fixed, fig.width=8, fig.height=3}
 if (!is.null(res_pls$fixed_model)) {
-  plot(res_pls$fixed_model)
+  # The term name is now 'constant'
+  plot(res_pls$fixed_model, term_name = "constant") 
 }
 ```
 
-The random effects model contains one regressor for *each trial*.
+The random effects model contains one regressor for *each trial*. The term tag will be `trialwise`, and condition tags will be like `trialwise.1`, `trialwise.2`, etc.
 
 ```{r plot_random, fig.width=8, fig.height=5}
 # Plotting all trial regressors can be busy!

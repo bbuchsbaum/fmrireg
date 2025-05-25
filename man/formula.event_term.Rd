@@ -6,6 +6,14 @@
 \usage{
 \method{formula}{event_term}(x, ...)
 }
+\arguments{
+\item{x}{An \code{event_term} object.}
+
+\item{...}{Additional arguments (unused).}
+}
+\value{
+A formula object.
+}
 \description{
-Build a formula for an event term.
+Creates a formula suitable for \code{model.matrix} (e.g., \code{~ Var1:Var2 - 1}).
 }

@@ -1,8 +1,8 @@
 Package: fmrireg
 Type: Package
 Title: R package for the anlysis of fmri data
-Version: 0.0.1
-LinkingTo: Rcpp,RcppArmadillo, roptim
+Version: 0.1.0
+LinkingTo: Rcpp,RcppArmadillo, roptim, RcppParallel
 Date: 2023-03-07
 Authors@R: person("Bradley", "Buchsbaum",, role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
 License: GPL (>= 2)
@@ -72,3 +72,53 @@ Remotes:
 VignetteBuilder: knitr
 URL: https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues
+Collate: 
+    'RcppExports.R'
+    'afni.R'
+    'all_generic.R'
+    'autoplot-methods.R'
+    'baseline_model.R'
+    'basis.R'
+    'bootstrap.R'
+    'con_stats.R'
+    'contrast.R'
+    'covariate.R'
+    'design_plot.R'
+    'despike.R'
+    'evaluate-helpers.R'
+    'utils-internal.R'
+    'event-classes.R'
+    'event_model_helpers.R'
+    'event_model.R'
+    'event_vector.R'
+    'find_hrf.R'
+    'fmri_betas.R'
+    'fmri_dataset.R'
+    'fmri_group_dataset.R'
+    'fmri_latent_lm.R'
+    'fmri_model.R'
+    'fmridsl.R'
+    'fmridsl_builder.R'
+    'fmrilm.R'
+    'fmrireg.R'
+    'fmrirlm.R'
+    'fracridge.R'
+    'gen_contrast.R'
+    'globals.R'
+    'hrf-afni.R'
+    'hrf-formula.R'
+    'hrf-functions.R'
+    'hrf.R'
+    'hrf_decorators.R'
+    'hrf_smoothing_kernel.R'
+    'lss.R'
+    'metafuns.R'
+    'mixed_solve.R'
+    'naming-utils.R'
+    'rank1_estimation.R'
+    'reg-constructor.R'
+    'reg-methods.R'
+    'regressor.R'
+    'sampling_frame.R'
+    'simulate.R'
+    'whiten.R'

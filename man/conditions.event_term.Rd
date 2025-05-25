@@ -4,19 +4,29 @@
 \alias{conditions.event_term}
 \title{Extract conditions from an event_term.}
 \usage{
-\method{conditions}{event_term}(x, drop.empty = TRUE, ...)
+\method{conditions}{event_term}(x, drop.empty = TRUE, expand_basis = FALSE, ...)
 }
 \arguments{
-\item{x}{An event_term object.}
+\item{x}{An \code{event_term} object.}
 
-\item{drop.empty}{Logical; if TRUE, conditions with no cells are dropped (default is TRUE).}
+\item{drop.empty}{Logical; if TRUE (default), conditions corresponding to
+combinations with zero observed events (based on \code{cells()}) are dropped.}
 
-\item{...}{Additional arguments.}
+\item{expand_basis}{Logical; if FALSE (default), returns the base condition tags
+(e.g., \code{cond.A_poly_RT_01}). If TRUE, adds basis suffixes (\verb{_b##})
+based on the term's HRF specification (e.g., \code{cond.A_poly_RT_01_b01}).}
+
+\item{...}{Additional arguments (unused).}
 }
 \value{
-A character vector of condition labels.
+A character vector of condition tags.
 }
 \description{
-Constructs a vector of condition labels by combining the levels of
-the categorical events.
+Constructs a vector of condition tags representing all unique combinations
+of levels/columns across the events in the term. The format follows the
+new naming grammar: \code{Token1_Token2...} where tokens are \code{Var.Level} or
+\code{basis_var_k}, using \verb{_} as a separator for interactions.
+}
+\details{
+This function is central to generating names for the design matrix columns.
 }

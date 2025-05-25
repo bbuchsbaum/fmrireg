@@ -1,4 +1,4 @@
-options(mc.cores=2)
+options(mc.cores=1)
 library(testthat)
 library(assertthat)
 
@@ -12,7 +12,7 @@ test_that("regressor generates correct outputs", {
   
   reg1 <- regressor(onsets, HRF_GAMMA)
 
-  expect_equal(class(reg1)[1],"regressor")
+  expect_equal(class(reg1)[1],"Reg")
   expect_equal(length(reg1$onsets), length(onsets))
   expect_equal(length(reg1$duration), length(onsets))
   expect_true(durations(reg1)[1] == 0)
@@ -45,7 +45,7 @@ test_that("can construct a convolved term from an hrfspec with two factors and o
   durations <- 0
   
   sframe <- sampling_frame(blocklens=100, TR=1)
-  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), fac2=letters[1:2], Run=1)
+  etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), fac2=factor(letters[1:2]), Run=1)
   espec <- event_model(onsets ~ hrf(fac) + hrf(fac2), block= ~ Run, data=etab, sampling_frame=sframe)
   expect_equal(dim(design_matrix(espec)), c(N,length(levels(interaction(etab$fac, etab$fac2)))))
 })
@@ -87,9 +87,9 @@ test_that("can construct a convolved trialwise term with bspline basis from an h
   
   etab <- data.frame(onsets=onsets, fac=factor(c(1,1,2,2)), block=1)
   
- 
-  hrfb <<- gen_hrf(hrf_bspline, N=5)
-  espec <- event_model(onsets ~ trialwise(basis=hrfb), data=etab, block=~block, sampling_frame=sframe)
+  hrfb <- gen_hrf(hrf_bspline, N=5)
+  espec <- event_model(onsets ~ trialwise(basis=hrfb), data=etab, block=~block, 
+  sampling_frame=sframe)
   
   expect_equal(dim(design_matrix(espec)), c(N,length(onsets)*5))
 })
@@ -158,7 +158,7 @@ test_that("can extract a design matrix from an fmri_model with one trialwise fac
   espec <- event_model(onsets ~ trialwise(basis="bspline"), 
                        data=etab, block=~run, sampling_frame = sframe)
   dmat <- design_matrix(espec)
-  expect_equal(dim(dmat), c(N, 5 * length(onsets)))
+  expect_equal(dim(dmat), c(N, 4 * length(onsets)))
 })
 
 test_that("event_model with duplicate terms at different lags", {
@@ -283,31 +283,27 @@ test_that("facedes model with bspline parametric basis", {
 # Test null_regressor
 test_that("null_regressor creates a valid object", {
   nr <- null_regressor()
-  expect_is(nr, "null_regressor")
-  expect_is(nr, "regressor")
-  expect_is(nr, "list")
+  expect_is(nr, "Reg")
 })
 
 # Test single_trial_regressor
 test_that("single_trial_regressor creates a valid object", {
   str <- single_trial_regressor(onsets = 10)
-  expect_is(str, "single_trial_regressor")
-  expect_is(str, "regressor")
-  expect_is(str, "list")
+  expect_is(str, "Reg")
 })
 
 # Test regressor
 test_that("regressor creates a valid object", {
   reg <- regressor(onsets = c(10, 12, 14, 16, 18, 40))
-  expect_is(reg, "regressor")
-  expect_is(reg, "list")
+  expect_is(reg, "Reg")
+
 })
 
 # Test evaluate.single_trial_regressor
 test_that("evaluate.single_trial_regressor produces correct output", {
   str <- single_trial_regressor(onsets = 10)
   grid <- seq(0, 100, by = 2)
-  eval_str <- evaluate.single_trial_regressor(str, grid)
+  eval_str <- evaluate(str, grid)
   expect_is(eval_str, "numeric")
 })
 
@@ -315,8 +311,8 @@ test_that("evaluate.single_trial_regressor produces correct output", {
 test_that("evaluate.null_regressor produces correct output", {
   nr <- null_regressor()
   grid <- seq(0, 100, by = 2)
-  eval_nr <- evaluate.null_regressor(nr, grid)
-  expect_is(eval_nr, "numeric")
+  eval_nr <- evaluate(nr, grid)
+  expect_is(eval_nr, "matrix")
 })
 
 

@@ -157,7 +157,7 @@ sframe_two_factor <- sampling_frame(blocklens = c(200, 200), TR = TR)
 head(design_two_factor)
 ```
 
-The formula `onset ~ hrf(stim, task)` automatically creates regressors for the interaction of `stim` and `task`.
+The formula `onset ~ hrf(stim, task)` automatically creates regressors for the interaction of `stim` and `task`. The term tag will default to `stim_task`.
 
 ```{r create_two_factor_model}
 emodel_two_factor <- event_model(onset ~ hrf(stim, task), 
@@ -165,6 +165,7 @@ emodel_two_factor <- event_model(onset ~ hrf(stim, task),
                                  block = ~ run, 
                                  sampling_frame = sframe_two_factor)
 print(emodel_two_factor)
+# Column names will be like stim_task_stim.face_task.attend
 
 # Plotting all interaction terms can be busy; consider plotly
 # plot(emodel_two_factor)
@@ -184,7 +185,7 @@ simple_design$RT_centered <- scale(simple_design$RT, center = TRUE, scale = FALS
 head(simple_design)
 ```
 
-Here, `hrf(RT_centered)` creates a single parametric regressor reflecting RT variations, orthogonal to the average stimulus effect modeled by `hrf(stim)`.
+Here, `hrf(stim)` creates the main effect term (tag: `stim`), and `hrf(RT_centered)` creates the parametric modulator term (tag: `RT_centered`).
 
 ```{r create_pmod_model}
 emodel_pmod <- event_model(onset ~ hrf(stim) + hrf(RT_centered), 
@@ -192,8 +193,9 @@ emodel_pmod <- event_model(onset ~ hrf(stim) + hrf(RT_centered),
                            block = ~ run, 
                            sampling_frame = sframe_single_run)
 print(emodel_pmod)
+# Column names: stim_stim.face, ..., stim_stim.object, RT_centered_RT_centered
 
-# Plot the RT parametric modulator term
+# Plot the RT parametric modulator term (using its term tag)
 plot(emodel_pmod, term_name = "RT_centered") 
 # plotly(emodel_pmod, term_name = "RT_centered")
 ```
@@ -202,16 +204,19 @@ plot(emodel_pmod, term_name = "RT_centered")
 
 We can also model how a parametric modulator interacts with a factor. For example, does RT modulate the response differently for faces vs. scenes? The formula `hrf(stim, RT_centered)` creates separate RT modulators for each level of `stim`.
 
+Here, `hrf(stim)` is one term (tag: `stim`). The interaction `hrf(stim, RT_centered)` is a second term (tag: `stim_RT_centered`).
+
 ```{r create_pmod_interaction}
 emodel_pmod_int <- event_model(onset ~ hrf(stim) + hrf(stim, RT_centered), 
                                data = simple_design, 
                                block = ~ run, 
                                sampling_frame = sframe_single_run)
 print(emodel_pmod_int)
+# Columns: stim_stim.face, ..., stim_RT_centered_stim.face_RT_centered, ...
 
-# Plot the interaction term - results in multiple regressors
-plot(emodel_pmod_int, term_name = "stim:RT_centered")
-# plotly(emodel_pmod_int, term_name = "stim:RT_centered")
+# Plot the interaction term (using its term tag)
+plot(emodel_pmod_int, term_name = "stim_RT_centered")
+# plotly(emodel_pmod_int, term_name = "stim_RT_centered")
 ```
 
 ## Specifying Different HRFs
@@ -248,7 +253,7 @@ Here are a few examples within the `event_model` context:
 
 ```{r specify_hrf}
 # Example 1: Using basis name string "gaussian"
-# Model stim effects with SPMG1 and RT effects with Gaussian HRF
+# Term tags: "stim", "RT_centered"
 emodel_diff_hrf <- event_model(onset ~ hrf(stim, basis="spmg1") + hrf(RT_centered, basis="gaussian"), 
                                data = simple_design, 
                                block = ~ run, 
@@ -257,16 +262,18 @@ print(emodel_diff_hrf)
 plot(emodel_diff_hrf, term_name = "RT_centered") # Plot the Gaussian RT regressor
 
 # Example 2: Using a pre-defined HRF object (SPMG3)
-# Model stim effects with SPM+derivs (HRF_SPMG3)
+# Term tag: "stim"
 emodel_spmg3 <- event_model(onset ~ hrf(stim, basis=HRF_SPMG3), 
                             data = simple_design, 
                             block = ~ run, 
                             sampling_frame = sframe_single_run)
 print(emodel_spmg3) # Note nbasis=3 for the hrf
+# Columns: stim_stim.face_b01, stim_stim.face_b02, ...
 plot(emodel_spmg3, term_name = "stim") # Plotting shows the 3 basis functions for one condition
 # plotly(emodel_spmg3) # Better for exploring many conditions
 
 # Example 3: Using a custom function (simple linear ramp)
+# Term tag: "stim"
 linear_ramp_hrf <- function(t) { ifelse(t > 0 & t < 10, t/10, 0) }
 emodel_custom_hrf <- event_model(onset ~ hrf(stim, basis=linear_ramp_hrf), 
                                  data = simple_design, 
@@ -276,6 +283,7 @@ print(emodel_custom_hrf)
 plot(emodel_custom_hrf, term_name = "stim")
 
 # Example 4: Using gen_hrf() to create a lagged Gaussian
+# Term tag: "stim"
 lagged_gauss <- gen_hrf(hrf_gaussian, lag = 2, name = "Lagged Gaussian")
 emodel_gen_hrf <- event_model(onset ~ hrf(stim, basis = lagged_gauss), 
                               data = simple_design, 
@@ -295,6 +303,8 @@ emodel_trialwise <- event_model(onset ~ trialwise(),
                                 block = ~ run, 
                                 sampling_frame = sframe_single_run)
 print(emodel_trialwise)
+# Term tag: "trialwise"
+# Columns: trialwise_trial.1, trialwise_trial.2, ...
 
 # Plotting trialwise models can be very dense!
 # It generates one condition per trial.
@@ -307,13 +317,16 @@ print(emodel_trialwise)
 Once an `event_model` is created, you can extract its components:
 
 ```{r access_components}
-# List the terms in the model
+# List the terms in the model (names are now term tags)
 terms_list <- terms(emodel_pmod_int)
 print(names(terms_list))
+# Expected: "stim", "stim_RT_centered"
 
-# Get all condition names (column names in the design matrix)
+# Get all condition names (full column names)
 conds <- conditions(emodel_pmod_int)
-cat("\nFirst 10 conditions:", head(conds, 10), "...\n")
+# Example: stim_stim.face, stim_stim.scene, ..., 
+#          stim_RT_centered_stim.face_RT_centered, ...
+cat("\nFirst 6 column names:", head(colnames(design_matrix(emodel_pmod_int)), 6), "...\n")
 
 # Extract the full design matrix
 dmat_events <- design_matrix(emodel_pmod_int)
@@ -341,6 +354,7 @@ design_map(emodel_two_factor, rotate_x_text = TRUE) +
 correlation_map(emodel_two_factor, rotate_x_text = TRUE) +
   labs(title = "Regressor Correlation Map (Two-Factor Model)")
 
+# The column names in the plots will now reflect the new naming scheme.
 ```
 
 This `event_model` represents the task-related part of the fMRI model. It's typically combined with a `baseline_model` (containing drift terms, intercepts, nuisance regressors) within functions like `fmri_model` or `fmri_lm` to perform a full GLM analysis.

@@ -2,7 +2,7 @@
 % Please edit documentation in R/hrf.R
 \name{evaluate.HRF}
 \alias{evaluate.HRF}
-\title{evaluate.HRF}
+\title{Evaluate an HRF Object}
 \usage{
 \method{evaluate}{HRF}(
   x,
@@ -16,30 +16,26 @@
 )
 }
 \arguments{
-\item{x}{The HRF function.}
+\item{x}{The HRF object (inherits from \code{HRF} and \code{function}).}
 
-\item{grid}{A vector of time points.}
+\item{grid}{A numeric vector of time points at which to evaluate the HRF.}
 
 \item{amplitude}{The scaling value for the event (default: 1).}
 
-\item{duration}{The duration of the event (default: 0).}
+\item{duration}{The duration of the event (seconds). If > 0, the HRF is evaluated over this duration (default: 0).}
 
-\item{precision}{The temporal resolution used for computing summed responses when duration > 0 (default: 0.2).}
+\item{precision}{The temporal resolution for evaluating responses when duration > 0 (default: 0.2).}
 
-\item{summate}{Whether the HRF response increases its amplitude as a function of stimulus duration (default: TRUE).}
+\item{summate}{Logical; whether the HRF response should accumulate over the duration (default: TRUE). If FALSE, the maximum response within the duration window is taken (currently only supported for single-basis HRFs).}
 
-\item{normalize}{Scale output so that peak is 1 (default: FALSE).}
+\item{normalize}{Logical; scale output so that the peak absolute value is 1 (default: FALSE). Applied \emph{after} amplitude scaling and duration processing.}
 
-\item{...}{extra args}
+\item{...}{Additional arguments (unused).}
 }
 \value{
-A vector of HRF values at the specified time points.
+A numeric vector or matrix of HRF values at the specified time points.
 }
 \description{
-This function evaluates a hemodynamic response function (HRF) for a given set of time points (grid) and other parameters.
-It is used to generate the predicted BOLD (blood-oxygen-level-dependent) signal changes in fMRI data analysis.
-}
-\examples{
-hrf1 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=.1)
-hrf2 <- evaluate(HRF_SPMG1, grid=seq(0,20,by=1.5), duration=2, precision=.1, summate=FALSE)
+This function evaluates a hemodynamic response function (HRF) object for a given set of time points (grid) and other parameters.
+It handles both point evaluation (duration=0) and block evaluation (duration > 0).
 }

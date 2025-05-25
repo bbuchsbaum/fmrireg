@@ -62,85 +62,107 @@
 #'               line_size = 1.5,
 #'               color_palette = "Set2",
 #'               facet_ncol = 1)
-#' }
+#' }-------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
-                        plot_title = NULL,
-                        x_label = "Time",
-                        y_label = "Value",
-                        line_size = 1,
-                        color_palette = "Set1",
-                        facet_ncol = 1,
-                        theme_custom = ggplot2::theme_bw(base_size = 14),
-                        legend_threshold = 25,
-                        ...) {
-  with_package("shiny")
+                         plot_title = NULL,
+                         x_label = "Time (s)", y_label = "Amplitude",
+                         line_size = 1,
+                         color_palette = "viridis",      # <- colour‑blind safe
+                         facet_ncol   = 2,               # <- sensible default
+                         theme_custom = ggplot2::theme_minimal(base_size = 15) +
+                                        ggplot2::theme(panel.spacing = ggplot2::unit(1, "lines")),
+                         legend_threshold = 30, ...){
+
+  with_package(c("shiny", "plotly", "bslib", "thematic"))
   stopifnot(inherits(fmrimod, "fmri_model"))
-  
-  # Extract event terms from the fmri_model.
-  all_terms <- terms(fmrimod)
-  term_names <- sapply(all_terms, "[[", "varname")
-  if (is.null(term_names) || length(term_names) == 0) {
-    stop("No terms found in the fMRI model.")
-  }
-  
+
+  # ── prep ------------------------------------------------------------------
+  terms_all  <- terms(fmrimod)
+  term_names <- vapply(terms_all, `[[`, character(1), "varname")
+
+  if (is.null(term_name)) term_name <- term_names[1]
+  if (!(term_name %in% term_names))
+      stop("term_name not found in model: ", term_name)
+
   sframe <- fmrimod$event_model$sampling_frame
-  if (!all(c("time", "blockids") %in% names(sframe))) {
-    stop("The sampling_frame must contain 'time' and 'blockids' components.")
+  df_time <- sframe$time
+  df_block<- sframe$blockids
+
+  longify <- function(term){
+    dm   <- tibble::as_tibble(design_matrix(term), .name_repair = "unique")
+    dm$.block <- df_block
+    dm$.time  <- df_time
+
+    # pretty column names
+    cn <- if (longnames) conditions(term) else shortnames(term)
+    if (!is.null(cn) && length(cn)==ncol(dm)-2) names(dm)[1:(ncol(dm)-2)] <- cn
+
+    tidyr::pivot_longer(dm, -c(.time,.block),
+                        names_to = "condition", values_to = "value")
   }
-  
-  # Convert each term's design matrix into long format.
-  dflist <- lapply(all_terms, function(term) {
-    dm <- suppressMessages(tibble::as_tibble(design_matrix(term), .name_repair = "check_unique"))
-    dm$.block <- sframe$blockids
-    dm$.time <- sframe$time
-    cnames <- if (longnames) conditions(term) else shortnames(term)
-    if (!is.null(cnames) && length(cnames) == (ncol(dm) - 2)) {
-      names(dm)[1:(ncol(dm) - 2)] <- cnames
-    }
-    tidyr::pivot_longer(dm, cols = -c(.time, .block), names_to = "condition", values_to = "value")
-  })
-  names(dflist) <- term_names
-  
-  # Define UI for Shiny app.
+  df_long <- lapply(terms_all, longify)
+  names(df_long) <- term_names
+
+  # ── shiny UI --------------------------------------------------------------
   ui <- shiny::fluidPage(
-    shiny::titlePanel("Design Plot for fMRI Model"),
-    shiny::sidebarLayout(
-      shiny::sidebarPanel(
-        shiny::selectInput("term", "Select Term", choices = term_names, selected = term_names[1]),
-        shiny::selectInput("block", "Select Block", choices = c("All", sort(unique(dflist[[1]]$.block)))),
-        shiny::sliderInput("time_range", "Time Range:",
-                           min = min(sframe$time),
-                           max = max(sframe$time),
-                           value = c(min(sframe$time), max(sframe$time)))
-      ),
-      shiny::mainPanel(
-        shiny::plotOutput("dplot", height = "600px")
+    theme = bslib::bs_theme(bg = "#fafafa", fg = "#222", primary = "#4c72b0"),
+    bslib::card(
+      bslib::card_header("🎨  fmrireg design viewer"),
+      bslib::layout_sidebar(
+        sidebar = list(
+          shiny::selectInput("term",   "Term",      term_names, term_name),
+          shiny::selectInput("block",  "Block",     c("all", sort(unique(df_block)))),
+          shiny::sliderInput("timer",  "Time‑window",
+                             min(df_time), max(df_time),
+                             value = range(df_time), step = diff(range(df_time))/200),
+          shiny::checkboxInput("zero", "Y‑axis starts at zero", TRUE),
+          shiny::hr(),
+          shiny::helpText("Drag to zoom, double‑click to reset.")
+        ),
+        shiny::mainPanel(
+          plotly::plotlyOutput("plot", height = "650px", inline = TRUE)
+        )
       )
     )
   )
-  
-  # Define server for Shiny app.
-  server <- function(input, output, session) {
-    output$dplot <- shiny::renderPlot({
-      dfx <- dflist[[input$term]]
-      df_filtered <- dfx %>% dplyr::filter(dplyr::between(.time, input$time_range[1], input$time_range[2]))
-      if (input$block != "All") {
-        df_filtered <- dplyr::filter(df_filtered, .block == input$block)
-      }
-      p <- ggplot2::ggplot(df_filtered, ggplot2::aes(x = .time, y = value, colour = condition)) +
-        ggplot2::geom_line(size = line_size, ...) +
-        ggplot2::facet_wrap(~ .block, ncol = facet_ncol) +
-        ggplot2::labs(title = if (!is.null(plot_title)) plot_title else paste("Design Plot:", input$term),
-                      x = x_label, y = y_label, colour = "Condition") +
-        ggplot2::scale_color_brewer(palette = color_palette) +
-        theme_custom
-      if (length(unique(df_filtered$condition)) > legend_threshold) {
-        p <- p + ggplot2::guides(colour = "none")
-      }
-      p
+
+  # ── server ----------------------------------------------------------------
+  server <- function(input, output, session){
+
+    reactive_df <- shiny::reactive({
+      d <- df_long[[input$term]]
+      d <- d[d$.time >= input$timer[1] & d$.time <= input$timer[2], ]
+      if (input$block != "all") d <- d[d$.block == input$block, ]
+      d
+    })
+
+    output$plot <- plotly::renderPlotly({
+      d <- reactive_df()
+      gg <- ggplot2::ggplot(
+              d, ggplot2::aes(.time, value,
+                              colour = condition,
+                              text = paste0("t = ", round(.time,2),
+                                            "<br>cond = ", condition,
+                                            "<br>val = ", signif(value,3)))
+            ) +
+            ggplot2::geom_line(size = line_size, ...) +
+            ggplot2::facet_wrap(~ .block, ncol = facet_ncol) +
+            ggplot2::labs(title   = plot_title %||% paste("Design:", input$term),
+                          x = x_label, y = y_label, colour = "Condition") +
+            theme_custom +
+            { if (tolower(color_palette) == "viridis")
+                  ggplot2::scale_colour_viridis_d(option = "C")
+              else ggplot2::scale_colour_brewer(palette = color_palette) } +
+            { if (input$zero) ggplot2::expand_limits(y = 0) } +
+            { if (length(unique(d$condition)) > legend_threshold)
+                  ggplot2:: guides(colour = "none") }
+
+      plotly::ggplotly(gg, tooltip = "text") |>
+        plotly::layout(hovermode = "closest") |>
+        plotly::config(displaylogo = FALSE, modeBarButtonsToRemove = c("lasso2d"))
     })
   }
-  
-  # Launch the Shiny app.
-  shiny::shinyApp(ui = ui, server = server)
+
+  shiny::shinyApp(ui, server)
 }

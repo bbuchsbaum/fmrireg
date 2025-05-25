@@ -118,17 +118,17 @@ ggplot(plot_df_params, aes(x = Time, y = Response, color = Parameters)) +
 
 `gen_hrf` can also directly incorporate lags and durations (see later sections).
 
-## Modeling Event Duration with `hrf_blocked`
+## Modeling Event Duration with `block_hrf`
 
-fMRI events often have a duration (e.g., a stimulus presented for several seconds). The `hrf_blocked` function (or `gen_hrf_blocked`) modifies an HRF to model the response to a sustained event of a specific `width` (duration). Internally, it convolves the original HRF with a boxcar function of the specified width.
+fMRI events often have a duration (e.g., a stimulus presented for several seconds). The `block_hrf` function (or `gen_hrf` with a `width` argument) modifies an HRF to model the response to a sustained event of a specific `width` (duration). Internally, it convolves the original HRF with a boxcar function of the specified width.
 
 The `precision` argument controls the sampling resolution used for this convolution.
 
 ```{r blocked_hrfs}
 # Create blocked HRFs using the SPM canonical HRF with different durations
-hrf_spm_w1 <- hrf_blocked(HRF_SPMG1, width = 1)
-hrf_spm_w2 <- hrf_blocked(HRF_SPMG1, width = 2)
-hrf_spm_w4 <- hrf_blocked(HRF_SPMG1, width = 4)
+hrf_spm_w1 <- block_hrf(HRF_SPMG1, width = 1)
+hrf_spm_w2 <- block_hrf(HRF_SPMG1, width = 2)
+hrf_spm_w4 <- block_hrf(HRF_SPMG1, width = 4)
 
 # Evaluate
 resp_w1 <- hrf_spm_w1(time_points)
@@ -148,7 +148,7 @@ plot_df_blocked <- data.frame(
 ggplot(plot_df_blocked, aes(x = Time, y = Response, color = Duration)) +
   geom_line(linewidth = 1) +
   labs(title = "SPM Canonical HRF for Different Event Durations",
-       subtitle = "Using hrf_blocked()",
+       subtitle = "Using block_hrf()",
        x = "Time (seconds)",
        y = "BOLD Response",
        color = "Duration") +
@@ -157,13 +157,13 @@ ggplot(plot_df_blocked, aes(x = Time, y = Response, color = Duration)) +
 
 ### Normalization
 
-By default, longer durations lead to higher peak responses (assuming summation, see next section). Setting `normalize=TRUE` in `hrf_blocked` rescales the response so the peak amplitude is approximately 1, regardless of duration.
+By default, longer durations lead to higher peak responses (assuming summation, see next section). Setting `normalize=TRUE` in `block_hrf` (or `gen_hrf`) rescales the response so the peak amplitude is approximately 1, regardless of duration.
 
 ```{r blocked_normalized}
 # Create normalized blocked HRFs
-hrf_spm_w1_norm <- hrf_blocked(HRF_SPMG1, width = 1, normalize = TRUE)
-hrf_spm_w2_norm <- hrf_blocked(HRF_SPMG1, width = 2, normalize = TRUE)
-hrf_spm_w4_norm <- hrf_blocked(HRF_SPMG1, width = 4, normalize = TRUE)
+hrf_spm_w1_norm <- block_hrf(HRF_SPMG1, width = 1, normalize = TRUE)
+hrf_spm_w2_norm <- block_hrf(HRF_SPMG1, width = 2, normalize = TRUE)
+hrf_spm_w4_norm <- block_hrf(HRF_SPMG1, width = 4, normalize = TRUE)
 
 # Evaluate
 resp_w1_norm <- hrf_spm_w1_norm(time_points)
@@ -183,7 +183,7 @@ plot_df_blocked_norm <- data.frame(
 ggplot(plot_df_blocked_norm, aes(x = Time, y = Response, color = Duration)) +
   geom_line(linewidth = 1) +
   labs(title = "Normalized SPM Canonical HRF for Different Durations",
-       subtitle = "Using hrf_blocked(normalize = TRUE)",
+       subtitle = "Using block_hrf(normalize = TRUE)",
        x = "Time (seconds)",
        y = "BOLD Response",
        color = "Duration") +
@@ -193,13 +193,13 @@ ggplot(plot_df_blocked_norm, aes(x = Time, y = Response, color = Duration)) +
 
 ### Modeling Saturation with `summate`
 
-The `summate` argument in `hrf_blocked` controls whether the response accumulates over the duration (`summate=TRUE`, default) or saturates (`summate=FALSE`). Saturation implies that the response reaches a plateau and doesn't increase further with longer stimulation.
+The `summate` argument in `block_hrf` controls whether the response accumulates over the duration (`summate=TRUE`, default) or saturates (`summate=FALSE`). Saturation implies that the response reaches a plateau and doesn't increase further with longer stimulation.
 
 ```{r blocked_summate_false}
 # Create non-summating blocked HRFs
-hrf_spm_w2_nosum <- hrf_blocked(HRF_SPMG1, width = 2, summate = FALSE)
-hrf_spm_w4_nosum <- hrf_blocked(HRF_SPMG1, width = 4, summate = FALSE)
-hrf_spm_w8_nosum <- hrf_blocked(HRF_SPMG1, width = 8, summate = FALSE)
+hrf_spm_w2_nosum <- block_hrf(HRF_SPMG1, width = 2, summate = FALSE)
+hrf_spm_w4_nosum <- block_hrf(HRF_SPMG1, width = 4, summate = FALSE)
+hrf_spm_w8_nosum <- block_hrf(HRF_SPMG1, width = 8, summate = FALSE)
 
 # Evaluate
 resp_w2_nosum <- hrf_spm_w2_nosum(time_points)
@@ -219,7 +219,7 @@ plot_df_blocked_nosum <- data.frame(
 ggplot(plot_df_blocked_nosum, aes(x = Time, y = Response, color = Duration)) +
   geom_line(linewidth = 1) +
   labs(title = "Non-Summating (Saturating) SPM HRF for Different Durations",
-       subtitle = "Using hrf_blocked(summate = FALSE)",
+       subtitle = "Using block_hrf(summate = FALSE)",
        x = "Time (seconds)",
        y = "BOLD Response",
        color = "Duration") +
@@ -230,9 +230,9 @@ We can combine `summate=FALSE` and `normalize=TRUE`:
 
 ```{r blocked_summate_false_norm}
 # Create normalized, non-summating blocked HRFs
-hrf_spm_w2_nosum_norm <- hrf_blocked(HRF_SPMG1, width = 2, summate = FALSE, normalize = TRUE)
-hrf_spm_w4_nosum_norm <- hrf_blocked(HRF_SPMG1, width = 4, summate = FALSE, normalize = TRUE)
-hrf_spm_w8_nosum_norm <- hrf_blocked(HRF_SPMG1, width = 8, summate = FALSE, normalize = TRUE)
+hrf_spm_w2_nosum_norm <- block_hrf(HRF_SPMG1, width = 2, summate = FALSE, normalize = TRUE)
+hrf_spm_w4_nosum_norm <- block_hrf(HRF_SPMG1, width = 4, summate = FALSE, normalize = TRUE)
+hrf_spm_w8_nosum_norm <- block_hrf(HRF_SPMG1, width = 8, summate = FALSE, normalize = TRUE)
 
 # Evaluate
 resp_w2_nosum_norm <- hrf_spm_w2_nosum_norm(time_points)
@@ -252,7 +252,7 @@ plot_df_blocked_nosum_norm <- data.frame(
 ggplot(plot_df_blocked_nosum_norm, aes(x = Time, y = Response, color = Duration)) +
   geom_line(linewidth = 1) +
   labs(title = "Normalized, Non-Summating SPM HRF for Different Durations",
-       subtitle = "Using hrf_blocked(summate = FALSE, normalize = TRUE)",
+       subtitle = "Using block_hrf(summate = FALSE, normalize = TRUE)",
        x = "Time (seconds)",
        y = "BOLD Response",
        color = "Duration") +
@@ -297,13 +297,13 @@ ggplot(plot_df_lagged, aes(x = Time, y = Response, color = Lag)) +
 
 ## Combining Lag and Duration
 
-We can combine `hrf_lagged` and `hrf_blocked` using the pipe operator (`%>%`) from `dplyr` (or `magrittr`).
+We can combine `hrf_lagged` and `block_hrf` using the pipe operator (`%>%`) from `dplyr` (or `magrittr`).
 
 ```{r lagged_blocked_hrfs}
 # Create HRFs that are both lagged and blocked
-hrf_lb_1 <- HRF_GAUSSIAN %>% hrf_lagged(1) %>% hrf_blocked(width = 1, normalize = TRUE)
-hrf_lb_3 <- HRF_GAUSSIAN %>% hrf_lagged(3) %>% hrf_blocked(width = 3, normalize = TRUE)
-hrf_lb_5 <- HRF_GAUSSIAN %>% hrf_lagged(5) %>% hrf_blocked(width = 5, normalize = TRUE)
+hrf_lb_1 <- HRF_GAUSSIAN %>% hrf_lagged(1) %>% block_hrf(width = 1, normalize = TRUE)
+hrf_lb_3 <- HRF_GAUSSIAN %>% hrf_lagged(3) %>% block_hrf(width = 3, normalize = TRUE)
+hrf_lb_5 <- HRF_GAUSSIAN %>% hrf_lagged(5) %>% block_hrf(width = 5, normalize = TRUE)
 
 # Evaluate
 resp_lb_1 <- hrf_lb_1(time_points)
@@ -323,7 +323,7 @@ plot_df_lagged_blocked <- data.frame(
 ggplot(plot_df_lagged_blocked, aes(x = Time, y = Response, color = Settings)) +
   geom_line(linewidth = 1) +
   labs(title = "Gaussian HRFs with Combined Lag and Duration",
-       subtitle = "Using hrf_lagged() %>% hrf_blocked()",
+       subtitle = "Using hrf_lagged() %>% block_hrf()",
        x = "Time (seconds)",
        y = "BOLD Response",
        color = "Settings") +
@@ -521,7 +521,7 @@ sim_times <- 0:24
 set.seed(42) # For reproducibility
 sim_profile <- rowMeans(replicate(20, {
   h <- hrf_spmg1 %>% hrf_lagged(lag = runif(n = 1, min = -1, max = 1)) %>%
-                    hrf_blocked(width = runif(n = 1, min = 0, max = 2))
+                    block_hrf(width = runif(n = 1, min = 0, max = 2))
   h(sim_times)
 }))
 
@@ -554,7 +554,7 @@ n_sim <- 50
 sim_mat <- replicate(n_sim, {
   hrf_func <- hrf_spmg1 %>%
               hrf_lagged(lag = runif(1, -2, 2)) %>%
-              hrf_blocked(width = runif(1, 0, 3))
+              block_hrf(width = runif(1, 0, 3))
   hrf_func(sim_times)
 })
 

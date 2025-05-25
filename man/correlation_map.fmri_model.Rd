@@ -15,13 +15,13 @@
 \arguments{
 \item{x}{An \code{fmri_model}.}
 
-\item{method}{Correlation method, "pearson" or "spearman".}
+\item{method}{Correlation method (e.g., "pearson", "spearman").}
 
-\item{half_matrix}{Logical; if TRUE, mask out the upper-triangle.}
+\item{half_matrix}{Logical; if TRUE, display only the lower triangle of the matrix.}
 
-\item{absolute_limits}{Logical; if TRUE, fix color scale to -1..+1.}
+\item{absolute_limits}{Logical; if TRUE, set color scale limits from -1 to 1.}
 
-\item{...}{Further arguments passed to \code{\link{.correlation_map_common}}.}
+\item{...}{Additional arguments passed to internal plotting functions.}
 }
 \description{
 Generates a correlation heatmap of the columns in an \code{fmri_model}'s combined

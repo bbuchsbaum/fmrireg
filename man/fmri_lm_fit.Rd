@@ -10,6 +10,7 @@ fmri_lm_fit(
   strategy = c("runwise", "chunkwise"),
   robust = FALSE,
   nchunks = 10,
+  use_fast_path = FALSE,
   ...
 )
 }
@@ -23,6 +24,8 @@ fmri_lm_fit(
 \item{robust}{Logical. Whether to use robust fitting. Default is \code{FALSE}.}
 
 \item{nchunks}{Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.}
+
+\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
 
 \item{...}{Additional arguments.}
 }

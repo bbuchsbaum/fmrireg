@@ -4,16 +4,21 @@
 \alias{runwise_lm}
 \title{Perform Runwise Linear Modeling on fMRI Dataset}
 \usage{
-runwise_lm(dset, model, conlist, fcon, robust = FALSE, verbose = FALSE)
+runwise_lm(
+  dset,
+  model,
+  contrast_objects,
+  robust = FALSE,
+  verbose = FALSE,
+  use_fast_path = FALSE
+)
 }
 \arguments{
 \item{dset}{An \code{fmri_dataset} object.}
 
 \item{model}{The \code{fmri_model} used for the analysis.}
 
-\item{conlist}{The list of contrasts used in the analysis.}
-
-\item{fcon}{The F-contrasts used in the analysis.}
+\item{contrast_objects}{The list of full contrast objects.}
 
 \item{robust}{Logical. Whether to use robust linear modeling (default is \code{FALSE}).}
 

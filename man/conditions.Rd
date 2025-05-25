@@ -2,9 +2,18 @@
 % Please edit documentation in R/all_generic.R
 \name{conditions}
 \alias{conditions}
+\alias{conditions.afni_hrf_convolved_term}
+\alias{conditions.afni_trialwise_convolved_term}
+\alias{conditions.convolved_term}
 \title{Conditions}
 \usage{
 conditions(x, ...)
+
+\method{conditions}{afni_hrf_convolved_term}(x, ...)
+
+\method{conditions}{afni_trialwise_convolved_term}(x, ...)
+
+\method{conditions}{convolved_term}(x, ...)
 }
 \arguments{
 \item{x}{The model term (typically an event_term, event_model, or convolved_term)}

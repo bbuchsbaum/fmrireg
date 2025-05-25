@@ -1,0 +1,522 @@
+## Micro-DSL (v2.6) & Output Format
+Your output must be **Pure Markdown** that implies the structure defined by the Micro-DSL. **Do NOT output EBNF token names** (e.g., `H1_TOKEN`). Generate the actual Markdown (e.g., `# My Title`, `@f my_func(...)`).
+**1. Markup Tokens (Implicitly Handled by Markdown):**
+`H1` = `# text`
+`H2` = `## text`
+`NL` = Newline (use sparingly, primarily to end logical entries or separate blocks)
+`HR` = `---` (use to separate major logical groups within a section, or between sections)
+`Bul` = `- ` (dash + space for general bullets in Header/Legend/Deps)
+`IndBul`= `  - ` (two spaces + dash + space for indented `Desc` lines under an `@sigil` entry)
+**2. DSL Sigils:**
+`@f` = Function `@d` = Data object (e.g., from `data()`)
+`@g` = S4/S3 Generic `@m` = S4/S3 Method (class dispatch)
+`@c` = R6/R7 constructor (if present)
+**3. Other DSL Symbols:**
+`|` = Separates multiple function names (e.g., `name1|name2`)
+`[...]` = Used for:
+* Constructor variants: `ConstructorName[VariantA|VariantB]`
+* Method dispatch classes: `methodName[ClassA|ClassB]`
+`(...)` = Parameter list in an entry signature.
+`param?` = Optional parameter.
+`param?=val`= Optional parameter with a default value.
+`|` = Separates signature from short description (after params or name if no params).
+`->` = Separates short description from return type. Omit if no return value (side-effect).
+`!` = Prefix for inline notes (e.g., `!dep`, `!note: text`). There is no space between `!` and the note keyword.
+**4. Document Skeleton:**
+`Legend?` (H2 "Legend:" + type abbreviation table)
+`Header` (H1 PackageName; optional H2 "Core Purpose:", H2 "Key Objects & Concepts:")
+`Sections+` (H2 `1.` Title; H2 Title (unnumbered ok); optional H3 "Usage:")
+`Entries*` (@sigil lines + optional indented bullets)
+`Deps?` (H2 "Key R Dependencies:")
+**5. Entry Line Structure:**
+`@sigil name(|name)*[variant|ClassA|ClassB]? (alias alt1,alt2)? (param1?=val, param2?, ...)? | Short, pithy description -> ReturnTypeAbbr !note_type: Optional note text`
+* **Rules for Entry Line:**
+* Omit `()` if no parameters.
+* Omit `-> ReturnTypeAbbr` if function has no return value (side-effect only).
+* Bundle identical signatures using `name1|name2`.
+* Use `ConstructorName[VariantA|VariantB]` for constructor subtypes.
+* Use `methodName[DispatchClassA|DispatchClassB]` for S4/S3 methods.
+* Notes (`!notetype: text` or `!notetype`) are optional postfixes. Ensure no leading space (e.g., `!ok` not `! ok`).
+* Truncate parameter list with `...` if it exceeds 8 parameters (e.g., `(param1, param2, ..., param8, ...)`).
+* Example of grouping aliases and optional params: `@f read_csv|read_tsv (file, col_types?="auto", ...) | Parse delimited file -> tib`
+**6. Indented Description Bullets (`Desc` lines under an Entry):**
+* Format: ` - param_name : type_abbr (constants: val1, "val2" | key_funcs: fnA, fnB)? Brief, essential clarification.`
+* Include `(constants: ...)` for params that take a small, fixed set of string literals.
+* Include `(key_funcs: ...)` for params that expect specific functions from the package as input.
+* **Only include if adding significant clarity** beyond the signature. Omit for common/obvious parameters (e.g., `x`, `...`) or standard defaults (e.g., `drop=TRUE`).
+* If an `Entry` already fits in ≤ 110 characters, do not add `Desc` lines unless they would prevent ambiguity.
+* Can also be plain text for general notes: ` - General descriptive point.`
+**7. Type Abbreviations:**
+* Use very short (1-4 letter) type abbreviations (e.g., `NS` for NeuroSpace, `iv` for integer vector, `chr` for character, `log` for logical, `mat` for matrix, `obj` for generic S4/R6 object).
+* Reuse type abbreviations whenever identical across entries; do not invent synonyms (e.g., use `int` consistently, not `int`, `intv`, `iv` interchangeably).
+**7. Type Abbreviations (deprecated – see next subsection):**
+* Use very short (1-4 char) codes, reusing consistently (e.g., `int` not `intv`).
+* Built-in codes: int, dbl, num, chr, lgl, lst, vec, df, tib, tbl, mat, arr, fn, env, obj, NS
+* Provide a `## Legend:` block only when introducing abbreviations beyond this list.
+## Compression Heuristics & Content Selection:
+1. **Focus:** Public, user-facing API. Omit internal helpers, unexported symbols, and direct S4 slot accessors (like `slotNames` or methods that just return a slot value if there's already a clear getter). Include only symbols present in NAMESPACE export list.
+2. **Grouping:**
+* Group trivial getters or functions with identical signatures and purpose using `name1|name2`.
+* Group constructors with identical fields but different return subtypes using `ConstructorName[VariantA|VariantB]`.
+* Group S3/S4 methods with identical implementations/docs using `methodName[ClassA|ClassB]`.
+3. **Methods:** Define generics with `@g`. Emit methods (`@m`) **only** when their behavior, parameters, or return type significantly differ from the generic, or to explicitly list key supported classes.
+4. **Omissions:** Skip indented parameter descriptions (`Desc` lines) for obvious defaults (e.g., `drop=TRUE`, `smooth=FALSE`) or very common arguments like `x` or `...` unless they have package-specific meaning. The cheatsheet is not full documentation.
+5. **Notes:** Use `!` notes sparingly for critical info (e.g., `!dep`, `!imp`, `!retlist`, `!side`).
+6. **Re-exports:** Skip functions and generics re-exported from other packages (e.g., if `dplyr::filter` is re-exported, do not list it).
+## Output Contract:
+* **Pure Markdown only.** Adhere strictly to the Micro-DSL v2.6.
+* No commentary, no intro/outro paragraphs, no code fences unless part of a `CODE_BLOCK_TOKEN` within a `BlockContent` (rarely needed for cheatsheets).
+* If any line violates the DSL, regenerate until fully compliant—no prose explanations.
+* Generation stops at first line that begins with a second `#` at H1 depth (e.g., if `\\n#` is used as a stop sequence).
+* Use a single blank line to separate `Entry` blocks if it aids readability, but avoid excessive blank lines. Use `---` (`HR_TOKEN`) to separate major thematic groups within a section or at the end of sections.
+* All parens/brackets/pipes must be balanced.
+## Self-Check (Mental Step - Crucial):
+Before finalizing, review your output against these critical checks:
+1. Does every content line belong to a defined DSL structure (Header, Legend, Section, Entry, Desc, Deps, Block bullet)?
+2. Is the DSL syntax for `Entry` lines (sigils, names, params, `|`, `->`, `!`) correctly used? No bare `->` tokens.
+3. (reserved)
+4. For any abbreviation NOT in the built-in list, is it defined in `## Legend:`?
+5. Have you omitted non-essential details and internal functions?
+
+## Few-shot Exemplar
+```markdown
+# dummyPkg
+## Legend:
+- int : integer
+- chr : character
+## 1. Core Functions
+@f add (x, y) | Sum two ints -> int
+```
+
+## Formal Grammar "v2.6 Micro-EBNF"
+Cheatsheet ::= Header Legend? Section+ Deps?
+Legend ::= H2_TOKEN TEXT_CONTENT NEWLINE_TOKEN Block
+Header ::= H1_TOKEN TEXT_CONTENT NEWLINE_TOKEN+ (H2Section)*
+H2Section ::= H2_TOKEN TEXT_CONTENT NEWLINE_TOKEN Block
+Section ::= H2_TOKEN (NUMBER_TOKEN PERIOD_TOKEN)? TEXT_CONTENT NEWLINE_TOKEN UsageBlock? Entry+ HR_TOKEN?
+UsageBlock ::= H3_TOKEN "Usage:" NEWLINE_TOKEN Block
+Entry ::= Sigil_TOKEN EntryIdent ParamList? Bar_TOKEN TEXT_CONTENT ArrowReturn Note? NEWLINE_TOKEN Desc*
+Sigil_TOKEN ::= AT_F_TOKEN | AT_D_TOKEN | AT_G_TOKEN | AT_M_TOKEN // Lexer provides @f, @d, @g, @m
+EntryIdent ::= IdentGroup MethodOrVariantClass? AliasSpec?
+IdentGroup ::= IDENT_TOKEN ("|" IDENT_TOKEN)* // For "foo|bar"
+MethodOrVariantClass ::= LBRACKET_TOKEN IDENT_TOKEN (PIPE_TOKEN IDENT_TOKEN)* RBRACKET_TOKEN // For "[ClassA|ClassB]" or "[variantA|variantB]"
+AliasSpec ::= LPAREN_TOKEN ALIAS_KEYWORD_TOKEN IDENT_TOKEN (COMMA_TOKEN IDENT_TOKEN)* RPAREN_TOKEN // For "(alias alt1, alt2)"
+ParamList ::= LPAREN_TOKEN Param (COMMA_TOKEN Param)* RPAREN_TOKEN
+Param ::= IDENT_TOKEN (EQUALS_TOKEN DefaultValue)? OPTIONAL_MARKER_TOKEN?
+DefaultValue ::= LITERAL_TOKEN | IDENT_TOKEN
+ArrowReturn ::= (ARROW_TOKEN IDENT_TOKEN)?
+Note ::= EXCLAMATION_TOKEN NOTETYPE_TOKEN (COLON_TOKEN TEXT_CONTENT)? NEWLINE_TOKEN?
+Desc ::= INDENT_TOKEN BULLET_MARKER_TOKEN (ParamDesc | TEXT_CONTENT) NEWLINE_TOKEN
+ParamDesc ::= IDENT_TOKEN COLON_TOKEN TYPE_ABBR_TOKEN ParamExtra? TEXT_CONTENT?
+ParamExtra ::= LPAREN_TOKEN (ConstantsSpec | KeyFuncsSpec) RPAREN_TOKEN
+ConstantsSpec ::= "constants:" (IDENT_TOKEN|LITERAL_TOKEN) (COMMA_TOKEN (IDENT_TOKEN|LITERAL_TOKEN))*
+KeyFuncsSpec ::= "key_funcs:" IDENT_TOKEN (COMMA_TOKEN IDENT_TOKEN)*
+Deps ::= H2_TOKEN "Key R Dependencies:" NEWLINE_TOKEN Block
+Block ::= (Bullet | TEXT_CONTENT | CODE_BLOCK_TOKEN)* (NEWLINE_TOKEN | EOF_TOKEN)
+Bullet ::= BULLET_MARKER_TOKEN TEXT_CONTENT NEWLINE_TOKEN
+/* --- LEXER-IMPLIED TOKENS (Illustrative) ---
+All previous tokens from v2.4, plus:
+AT_G_TOKEN, AT_M_TOKEN // @g, @m
+// The lexer provides LBRACKET_TOKEN, IDENT_TOKEN, PIPE_TOKEN, RBRACKET_TOKEN.
+// The parser, guided by the Sigil_TOKEN (@f for constructor variants, @m for method classes),
+// will interpret the content of MethodOrVariantClass appropriately.
+*/
+
+---
+
+# fmrireg
+## Legend:
+- `fcfg`: fmri_config object
+- `fds`: fmri_dataset (generic parent class)
+- `mfds`: matrix_dataset object
+- `fmfs`: fmri_file_dataset object
+- `fmmds`: fmri_mem_dataset object
+- `lds`: latent_dataset object
+- `fgds`: FMRIGroupDataset R6 object
+- `sf`: sampling_frame object
+- `evf`: event_factor object
+- `evv`: event_variable object
+- `evm`: event_matrix object
+- `evb`: event_basis object
+- `evt`: event_term object
+- `hrfsp`: hrfspec object (from `hrf()`)
+- `ahrfsp`: afni_hrfspec object (from `afni_hrf()`)
+- `atwhrfsp`: afni_trialwise_hrfspec object (from `afni_trialwise()`)
+- `covsp`: covariatespec object (from `covariate()`)
+- `blsp`: baselinespec object (from `baseline()`)
+- `bksp`: blockspec object (from `block()`)
+- `nuissp`: nuisancespec object (from `nuisance()`)
+- `hrfobj`: HRF object (class `HRF`)
+- `ahrfobj`: AFNI_HRF object
+- `emod`: event_model object
+- `bmod`: baseline_model object
+- `fmod`: fmri_model object
+- `flm`: fmri_lm fit object
+- `frlm`: fmri_rlm fit object
+- `fllm`: fmri_latent_lm fit object
+- `fbeta`: fmri_betas object
+- `bhrfres`: best_hrf_result object
+- `csp`: contrast_spec (generic parent class)
+- `con`: contrast object
+- `fcon`: Fcontrast object
+- `gltc`: glt_contrast object
+- `gltcl`: glt_contrast_list object
+- `regobj`: Reg object (regressor)
+- `fr`: fracridge object
+- `frcv`: fracridge_cv object
+- `pbs`: ParametricBasis object (e.g., Poly, BSpline)
+- `form`: R formula
+- `lst`: list
+- `chr`: character string
+- `num`: numeric (double or integer)
+- `dbl`: double
+- `int`: integer
+- `lgl`: logical
+- `df`: data.frame
+- `tib`: tibble
+- `mat`: matrix
+- `arr`: array
+- `vec`: vector (generic)
+- `fn`: function
+- `env`: environment
+- `obj`: generic R object
+
+## 1. Configuration & Datasets
+### Usage:
+- Start by loading a YAML configuration using `load_fmri_config()` or `read_fmri_config()`.
+- Alternatively, create datasets directly:
+    - `fmri_dataset()` for file-based volumetric data.
+    - `fmri_mem_dataset()` for in-memory volumetric data.
+    - `matrix_dataset()` for 2D matrix data.
+    - `latent_dataset()` for dimensionality-reduced data.
+- For multi-subject analyses, manage individual datasets with `FMRIGroupDataset$new(...)`.
+- Convert between dataset types using `as.matrix_dataset()`.
+@f read_fmri_config (file_name, base_path?=NULL) | Read a basic fMRI configuration file -> fcfg
+@f load_fmri_config (yaml_file) | Load, validate, and build fMRI analysis configuration from YAML -> fcfg
+@f fmri_dataset (scans, mask, TR, run_length, event_table?=data.frame(), base_path?=".", censor?=NULL, preload?=FALSE, mode?="normal") | Create an fMRI dataset from image files -> fmfs
+  - mode : chr (constants: "normal", "bigvec", "mmap", "filebacked") Storage mode for image data.
+@f fmri_mem_dataset (scans, mask, TR, run_length?=sapply(scans, function(x) dim(x)[4]), event_table?=data.frame(), base_path?=".", censor?=NULL) | Create an fMRI dataset from in-memory NeuroVec objects -> fmmds
+@f matrix_dataset (datamat, TR, run_length, event_table?=data.frame()) | Create a dataset from a data matrix -> mfds
+@f latent_dataset (lvec, TR, run_length, event_table?=data.frame()) | Create a dataset from a LatentNeuroVec object -> lds
+@c FMRIGroupDataset (datasets, subject_ids, tasks?=NULL, runs?=NULL) | Manages multiple fMRI datasets (subjects) -> fgds
+@g as.matrix_dataset (x, ...) | Convert an fMRI dataset to a matrix_dataset -> mfds
+@m as.matrix_dataset[fmri_file_dataset|fmri_mem_dataset|matrix_dataset] (x, ...) -> mfds
+@g get_data_matrix (x, ...) | Get the data as a standard R matrix -> mat
+@m get_data_matrix[fmri_file_dataset|fmri_mem_dataset|matrix_dataset] (x, ...) -> mat
+@g data_chunks (x, nchunks, ...) | Create an iterator for data chunks -> obj
+  - runwise : lgl If TRUE, create one chunk per run.
+@m data_chunks[fmri_mem_dataset|fmri_file_dataset|matrix_dataset] (x, nchunks?=1, runwise?=FALSE, ...) -> obj !retclass: chunkiter
+
+## 2. Core Building Blocks: Events & Timing
+### Usage:
+- Define the temporal structure of your experiment using `sampling_frame()`.
+- Represent different types of event sequences:
+    - `event_factor()` for categorical conditions.
+    - `event_variable()` for continuous modulators.
+    - `event_matrix()` for multiple continuous modulators.
+    - `event_basis()` for events modulated by a basis set (e.g., from `Poly()`, `BSpline()`).
+- Combine multiple event sequences into an `event_term()` if they share onsets and represent an interaction or combined modulation.
+@f sampling_frame (blocklens, TR, start_time?=TR/2, precision?=0.1) | Describes block structure and temporal sampling -> sf
+@f event_factor (fac, name, onsets, blockids?=1, durations?=0, subset?=NULL) | Create a categorical event sequence from a factor/character vector -> evf
+@f event_variable (vec, name, onsets, blockids?=1, durations?=0, subset?=NULL) | Create a continuous event sequence from a numeric vector -> evv
+@f event_matrix (mat, name, onsets, blockids?=1, durations?=0, subset?=NULL) | Create a continuous event set from a numeric matrix -> evm
+@f event_basis (basis, name?=NULL, onsets, blockids?=1, durations?=0, subset?=NULL) | Create an event set from a ParametricBasis object -> evb
+  - basis : pbs (key_funcs: Poly, BSpline, Ident, Scale, RobustScale, ScaleWithin, Standardized) The parametric basis object.
+@f event_term (evlist, onsets, blockids, durations?=0, subset?=NULL) | Create an event model term from a list of variables -> evt
+  - evlist : lst Named list of factors, numeric vectors, matrices, or ParametricBasis objects.
+@g blocklens (x, ...) | Get lengths of each block/run -> num
+@m blocklens[sampling_frame|event_model|fmri_model|matrix_dataset] (x, ...) -> num
+@g blockids (x) | Get block/run ID for each scan/timepoint -> num
+@m blockids[sampling_frame|event_term|event_model|convolved_term] (x) -> num
+@g samples (x, ...) | Get sampling times (scan acquisition times) -> num
+@m samples[sampling_frame] (x, blockids?=NULL, global?=FALSE) -> num
+@g global_onsets (x, onsets, ...) | Convert relative onsets to global (cumulative) onsets -> num
+@m global_onsets[sampling_frame] (x, onsets, blockids) -> num
+@g onsets (x) | Get event onset times -> num
+@m onsets[Reg|event_term|convolved_term] (x) -> num
+@g durations (x) | Get event durations -> num
+@m durations[Reg] (x) -> num
+@g amplitudes (x) | Get event amplitudes -> num
+@m amplitudes[Reg] (x) -> num
+
+## 3. Hemodynamic Response Functions (HRFs)
+### Usage:
+- Use pre-defined HRF objects like `HRF_SPMG1`, `HRF_GAMMA`.
+- Or, generate HRFs using functions like `hrf_gaussian()`, `hrf_bspline()`, then convert to an `HRF` object using `as_hrf()` or `gen_hrf()`.
+- `gen_hrf()` can also apply decorators like lag or blocking.
+- Combine multiple `HRF` objects into a basis set using `hrf_set()` or `bind_basis()`.
+- Explore available HRFs with `list_available_hrfs()`.
+@d HRF_GAMMA | Pre-defined Gamma HRF object -> hrfobj
+@d HRF_GAUSSIAN | Pre-defined Gaussian HRF object -> hrfobj
+@d HRF_SPMG1 | Pre-defined SPM canonical HRF (1 basis) -> hrfobj
+@d HRF_SPMG2 | Pre-defined SPM canonical + temporal derivative (2 bases) -> hrfobj
+@d HRF_SPMG3 | Pre-defined SPM canonical + temporal & dispersion derivatives (3 bases) -> hrfobj
+@f HRF (fun, name, nbasis?=1, span?=24, param_names?=NULL) | Constructor for HRF objects -> hrfobj
+@f as_hrf (f, name?=deparse(substitute(f)), nbasis?=1L, span?=24, params?=list()) | Convert a function to an HRF object -> hrfobj
+@f gen_hrf (hrf, lag?=0, width?=0, precision?=0.1, summate?=TRUE, normalize?=FALSE, name?=NULL, span?=NULL, ...) | Construct an HRF instance, optionally applying decorators -> hrfobj
+  - hrf : fn|hrfobj|chr Base HRF function, object, or name (constants: "gamma", "spmg1", "gaussian", ...).
+@f empirical_hrf (t, y, name?="empirical_hrf") | Generate an empirical HRF from time points and values -> hrfobj
+@f hrf_set (..., name?="hrf_set") | Construct an HRF basis set from multiple HRF objects -> hrfobj
+@f bind_basis (...) | Combine multiple HRF objects into a single multi-basis HRF object -> hrfobj
+@f hrf_library (fun, pgrid, ...) | Generate an HRF library from a parameter grid -> hrfobj
+@f list_available_hrfs (details?=FALSE) | List available HRF types -> df
+@f lag_hrf (hrf, lag) | Apply a temporal lag to an HRF object -> hrfobj
+@f block_hrf (hrf, width, precision?=0.1, half_life?=Inf, summate?=TRUE, normalize?=FALSE) | Create a blocked HRF by convolving with a boxcar -> hrfobj
+@f normalise_hrf (hrf) | Normalise an HRF object (peak absolute value to 1) -> hrfobj
+@f hrf_time (t, maxt?=22) | Linear HRF -> num
+@f hrf_bspline (t, span?=24, N?=5, degree?=3, ...) | B-spline HRF basis -> mat
+@f hrf_gamma (t, shape?=6, rate?=1) | Gamma HRF -> num
+@f hrf_gaussian (t, mean?=6, sd?=2) | Gaussian HRF -> num
+@f hrf_mexhat (t, mean?=6, sd?=2) | Mexican Hat wavelet HRF -> num
+@f hrf_spmg1 (t, P1?=5, P2?=15, A1?=0.0833) | SPM canonical HRF (1 basis) -> num
+@f hrf_sine (t, span?=24, N?=5) | Sine basis set HRF -> mat
+@f hrf_inv_logit (t, mu1?=6, s1?=1, mu2?=16, s2?=1, lag?=0) | Difference of two Inverse Logit HRF -> num
+@f hrf_half_cosine (t, h1?=1, h2?=5, h3?=7, h4?=7, f1?=0, f2?=0) | Four half-period cosine basis HRF -> num
+@f hrf_fourier (t, span?=24, nbasis?=5) | Fourier basis set HRF -> mat
+@f hrf_toeplitz (hrf, time, len, sparse?=FALSE) | Create a Toeplitz matrix for HRF convolution -> mat
+@g nbasis (x) | Get number of basis functions -> int
+@m nbasis[HRF|hrfspec|BSpline|Poly|Ident|Scale|ScaleWithin|RobustScale|Standardized|covariate_convolved_term|Reg] (x) -> int
+@g evaluate (x, grid, ...) | Evaluate an object (HRF, Regressor) over a time grid -> num|mat
+@m evaluate[HRF] (x, grid, amplitude?=1, duration?=0, precision?=0.2, summate?=TRUE, normalize?=FALSE, ...) -> num|mat
+@m evaluate[hrfspec] (x, grid, amplitude?=1, duration?=0, precision?=0.1, ...) -> num|mat
+
+## 4. Model Specification Terms
+### Usage:
+- Use `hrf()` within model formulas passed to `event_model()` or `fmri_lm()` to define event-related regressors.
+  - `hrf(variable, basis="spmg1", id="myterm", contrasts=my_contrast_set)`
+  - The `basis` argument in `hrf()` can be a string (e.g., "gamma", "spmg1") or an `HRF` object (e.g., `HRF_GAUSSIAN`, `gen_hrf(...)`).
+- For parametric modulation, use basis transformation functions like `Poly(RT, 2)` or `BSpline(modulator, 3)` as variables within `hrf()`.
+  - `hrf(condition, Poly(RT, 2))`
+- Use `trialwise()` for single-trial modeling.
+- Use `covariate()` for regressors that should not be convolved with an HRF (e.g., motion parameters).
+- For baseline modeling (passed to `baseline_model()` or `fmri_model()`):
+  - `baseline()` specifies drift terms (e.g., polynomial, b-spline).
+  - `block()` specifies block/run intercepts.
+  - `nuisance()` specifies nuisance regressors provided as matrices.
+@f hrf (..., basis?="spmg1", onsets?=NULL, durations?=NULL, prefix?=NULL, subset?=NULL, precision?=0.3, nbasis?=1, contrasts?=NULL, id?=NULL, name?=NULL, lag?=0, summate?=TRUE) | Specify HRF-convolved term in a formula -> hrfsp
+  - basis : chr|hrfobj (constants: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "fourier", "daguerre", HRF_SPMG1, HRF_GAUSSIAN) HRF type or object.
+  - contrasts : csp|lst Optional contrast_spec or list of contrast_specs.
+@f trialwise (basis?="spmg1", lag?=0, nbasis?=1, add_sum?=FALSE, label?="trial") | Specify a trial-wise regressor term in a formula -> hrfsp
+  - basis : chr|hrfobj (constants: "gamma", "spmg1", ...) HRF type or object.
+@f covariate (..., data, id?=NULL, prefix?=NULL) | Specify a non-convolved covariate term -> covsp
+@f baseline (degree?=1, basis?="constant", name?=NULL, intercept?="runwise") | Specify baseline/drift term -> blsp
+  - basis : chr (constants: "constant", "poly", "bs", "ns") Type of basis for drift.
+  - intercept : chr (constants: "runwise", "global", "none") Type of intercept.
+@f block (x) | Specify a block variable (for run-wise intercepts) -> bksp
+@f nuisance (x) | Specify a nuisance variable/matrix -> nuissp
+@f Ident (...) | Identity basis (pass through raw variables) -> pbs
+@f Poly (x, degree) | Orthogonal polynomial basis -> pbs
+@f BSpline (x, degree) | B-spline basis -> pbs
+@f Standardized (x) | Standardize (center and scale) a variable -> pbs
+@f Scale (x) | Z-score (global) a variable -> pbs
+@f ScaleWithin (x, g) | Z-score within groups -> pbs
+@f RobustScale (x) | Robustly scale (median/MAD) a variable -> pbs
+@g sub_basis (x, subset) | Subset a parametric basis regressor -> pbs
+@m sub_basis[Ident|Poly|BSpline|Standardized|Scale|ScaleWithin|RobustScale] (x, subset) -> pbs
+
+## 5. Model Assembly
+### Usage:
+- Construct an `event_model()` by providing a formula (using `hrf()`, `trialwise()`, `covariate()`) or a list of `hrfspec` objects, along with event data and a `sampling_frame`.
+- Construct a `baseline_model()` using `baseline()` for drift, and optionally providing nuisance regressors.
+- Combine `event_model` and `baseline_model` into a full `fmri_model()`.
+- Alternatively, use `build_fmri_model_from_config()` if you have a configuration object from `load_fmri_config()`.
+@g event_model (x, data, block, sampling_frame, drop_empty?=TRUE, durations?=0, ...) | Construct an event-based fMRI regression model -> emod
+  - x : form|lst Model formula or list of hrfspec objects.
+@f baseline_model (basis? ="constant", degree?=1, sframe, intercept?="runwise", nuisance_list?=NULL) | Construct a baseline model (drift, block intercepts, nuisance) -> bmod
+  - basis : chr (constants: "constant", "poly", "bs", "ns") Basis for drift.
+  - intercept : chr (constants: "runwise", "global", "none") Intercept type.
+@f fmri_model (event_model, baseline_model) | Combine event and baseline models -> fmod
+@f build_fmri_model_from_config (config, subject_id) | Build an fmri_model from a validated fmri_config object -> fmod
+@g design_matrix (x, ...) | Extract or construct the design matrix -> tib
+@m design_matrix[event_model|baseline_model|fmri_model|event_term|baseline_term] (x, blockid?=NULL, ...) -> tib
+@g terms (x, ...) | Get terms from a model -> lst
+@m terms[event_model|baseline_model|fmri_model] (x, ...) -> lst
+@g event_terms (x) | Extract event-related terms from a model -> lst
+@m event_terms[fmri_model] (x) -> lst
+@g baseline_terms (x) | Extract baseline/nuisance terms from a model -> lst
+@m baseline_terms[fmri_model] (x) -> lst
+@g conditions (x, ...) | Get condition labels from a model/term -> chr
+@m conditions[event_model|baseline_model|fmri_model|event_term|convolved_term] (x, drop.empty?=TRUE, expand_basis?=FALSE, ...) -> vec
+@g cells (x, ...) | Get experimental cells from a model/term -> tib
+@m cells[event|event_term|event_model|baseline_model|fmri_model|convolved_term|covariate_convolved_term] (x, drop.empty?=TRUE, ...) -> tib
+@g longnames (x, ...) | Get extended names of variable levels (term prefix, basis info) -> chr
+@m longnames[event_term|event_model|convolved_term] (x, ...) -> chr
+
+## 6. Model Fitting & Estimation
+### Usage:
+- Fit a standard GLM using `fmri_lm()`.
+- Fit a robust GLM using `fmri_rlm()`.
+- Fit a GLM on latent component data using `fmri_latent_lm()`.
+- Estimate trial-wise betas or mixed-effects models using `estimate_betas()`.
+  - The `method` argument offers choices like "lss", "mixed", "r1".
+- Find the best HRF for voxels using `find_best_hrf()`.
+- Use `fracridge()` or `fracridge_cv()` for fractional ridge regression.
+- Use `r1_glm_betas()` or `r1_glms_betas()` for Rank-1 GLM estimation.
+@f fmri_lm (formula, block, baseline_model?=NULL, dataset, durations?=0, drop_empty?=TRUE, robust?=FALSE, strategy?="runwise", nchunks?=10, use_fast_path?=FALSE, ...) | Fit a linear model to fMRI data -> flm
+  - strategy : chr (constants: "runwise", "chunkwise") Data processing strategy.
+@f fmri_rlm (formula, block, baseline_model?=NULL, dataset, durations?=0, drop_empty?=TRUE, strategy?="runwise", nchunks?=10, meta_weighting?="inv_var", ...) | Fit a robust linear model to fMRI data -> frlm
+  - strategy : chr (constants: "runwise", "chunkwise") Data processing strategy.
+  - meta_weighting : chr (constants: "inv_var", "equal") Method for combining results.
+@f fmri_latent_lm (formula, block, baseline_model?=NULL, dataset, durations, drop_empty?=TRUE, robust?=FALSE, autocor?="none", bootstrap?=FALSE, nboot?=1000, ...) | Fit GLM from a latent component dataset -> fllm
+  - autocor : chr (constants: "none", "auto", "ar1", "ar2", "arma") Autocorrelation correction.
+@g estimate_betas (x, ...) | Estimate beta coefficients -> fbeta
+@m estimate_betas[fmri_dataset|matrix_dataset|latent_dataset] (x, fixed?=NULL, ran, block, method?=(...), basemod?=NULL, hrf_basis?=NULL, hrf_ref?=NULL, ...) -> fbeta
+  - method : chr (constants: "mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "r1", "pls", "pls_global", "ols", "fracridge", "lowrank_hrf") Estimation method.
+@f estimate_hrf (form, fixed?=NULL, block, dataset, bs?="tp", rsam?=seq(0,20,by=1), basemod?=NULL, k?=8, fx?=TRUE) | Estimate HRF using GAMs -> mat
+  - bs : chr (constants: "tp", "ts", "cr", "ps") Basis for smooth term in GAM.
+@g find_best_hrf (dataset, onset_var, hrflib?=NULL, rsam?=seq(0,24,by=1), ncomp?=5, nsplits?=3, block?=NULL, basemod?=NULL, ...) | Find best HRF for voxels -> bhrfres
+@m find_best_hrf[matrix_dataset|fmri_mem_dataset] (dataset, onset_var, hrflib?=NULL, ...) -> bhrfres
+@f fracridge (X, y, fracs?=seq(0.1,1,by=0.1), tol?=1e-10) | Fractional ridge regression -> fr
+@f fracridge_cv (X, y, frac_grid?=seq(0.1,1,by=0.1), tol?=1e-10, cv?=5, scoring?="r2") | Fractional ridge regression with cross-validation -> frcv
+@f r1_glm_betas (X, y, Z?=NULL, hrf_basis, hrf_ref, maxit?=100, flip_sign?=TRUE, use_box_constraints?=FALSE, method?="als") | Rank-1 GLM (stacked design) -> lst
+  - method : chr (constants: "als", "svd") Estimation method.
+@f r1_glms_betas (X_list, X_all?=NULL, y, Z?=NULL, hrf_basis, hrf_ref, maxit?=100, method?="als") | Rank-1 GLM (Mumford/split designs) -> vec
+  - method : chr (constants: "als", "svd") Estimation method.
+@g coef (object, ...) | Extract model coefficients -> tib|mat
+@m coef[fmri_lm|fmri_latent_lm] (object, type?="betas", include_baseline?=FALSE, recon?=FALSE, ...) -> tib|mat
+  - type : chr (constants: "betas", "contrasts") Type of coefficients.
+@g stats (x, ...) | Extract test statistics -> tib|mat
+@m stats[fmri_lm|fmri_latent_lm] (x, type?="estimates", ...) -> tib|mat
+  - type : chr (constants: "estimates", "contrasts", "F") Type of statistics.
+@g standard_error (x, ...) | Extract standard errors -> tib|mat
+@m standard_error[fmri_lm|fmri_latent_lm] (x, type?="estimates", ...) -> tib|mat
+  - type : chr (constants: "estimates", "contrasts") Type of standard errors.
+@g p_values (x, ...) | Extract p-values -> tib|mat
+@m p_values[fmri_lm] (x, type?="estimates", ...) -> tib|mat
+  - type : chr (constants: "estimates", "contrasts", "F") Type of p-values.
+@g fitted_hrf (x, sample_at, ...) | Compute fitted HRF -> lst
+@m fitted_hrf[fmri_lm] (x, sample_at?=seq(0,24,by=1), ...) -> lst
+
+## 7. Contrasts
+### Usage:
+- Define individual contrasts using functions like `contrast()` (for formula-based), `pair_contrast()`, `column_contrast()` (regex-based), `poly_contrast()`, `unit_contrast()`, `oneway_contrast()`, `interaction_contrast()`.
+- Group multiple contrast specifications using `contrast_set()`.
+- Pass contrast sets to `hrf(contrasts=...)` to associate them with specific model terms during model specification.
+- Alternatively, compute contrasts on a fitted `fmri_lm` object using `coef(fit, type="contrasts")`.
+- Generate F-contrasts for main effects or interactions using `generate_main_effect_contrast()` or `generate_interaction_contrast()`.
+@f contrast (form, name, where?=NULL) | Define a linear contrast using a formula -> csp !retclass: contrast_formula_spec
+@f unit_contrast (A, name, where?=NULL) | Define a unit contrast (sums to 1, vs baseline) -> csp !retclass: unit_contrast_spec
+@f pair_contrast (A, B, name, where?=NULL) | Define a sum-to-zero contrast between two expressions -> csp !retclass: pair_contrast_spec
+@f column_contrast (pattern_A, pattern_B?=NULL, name, where?=NULL) | Define a contrast by regex on design matrix columns -> csp !retclass: column_contrast_spec
+@f poly_contrast (A, name, where?=NULL, degree?=1, value_map?=NULL) | Define polynomial contrasts for ordered factor levels -> csp !retclass: poly_contrast_spec
+@f oneway_contrast (A, name, where?=NULL) | Define a one-way (main effect) F-contrast -> csp !retclass: oneway_contrast_spec
+@f interaction_contrast (A, name, where?=NULL) | Define an interaction F-contrast -> csp !retclass: interaction_contrast_spec
+@f one_against_all_contrast (levels, facname, where?=NULL) | Compare each factor level against all others -> obj !retclass: contrast_set
+@f pairwise_contrasts (levels, facname, where?=NULL, name_prefix?="con") | Generate all pairwise contrasts for factor levels -> obj !retclass: contrast_set
+@f contrast_set (...) | Combine multiple contrast_spec objects -> obj !retclass: contrast_set
+@f generate_main_effect_contrast (des, factor) | Generate main effect contrast matrix -> mat
+@f generate_interaction_contrast (des, factors) | Generate interaction contrast matrix -> mat
+@g Fcontrasts (x, ...) | Generate F-contrasts for a model term or model -> lst|fcon
+@m Fcontrasts[event_term|event_model|convolved_term] (x, ...) -> lst|fcon
+@g contrast_weights (x, ...) | Calculate contrast weights -> lst|con
+@m contrast_weights[unit_contrast_spec|oneway_contrast_spec|interaction_contrast_spec|poly_contrast_spec|pair_contrast_spec|column_contrast_spec|contrast_formula_spec|contrast_diff_spec|contrast_set|convolved_term|event_model|fmri_model] (x, term, ...) -> lst|con
+
+## 8. AFNI Integration
+### Usage:
+- Specify AFNI-compatible HRFs in model formulas using `afni_hrf()` or `afni_trialwise()`.
+  - `afni_hrf(variable, basis="GAM", id="my_afni_term")`
+  - The `basis` argument takes AFNI-specific HRF model names (e.g., "GAM", "BLOCK", "TENT").
+- Construct an AFNI linear model specification using `afni_lm()`, taking an `fmri_model` and `fmri_dataset`.
+- Generate an `afni_lm_spec` from an `fmri_config` object using `gen_afni_lm()`.
+- Convert `fmrireg` contrasts to AFNI GLT strings using `to_glt()`.
+@f AFNI_HRF (name, nbasis, params) | Constructor for AFNI-specific HRF objects -> ahrfobj
+@f afni_hrf (..., basis?="spmg1", onsets?=NULL, durations?=NULL, prefix?=NULL, subset?=NULL, nbasis?=1, contrasts?=NULL, id?=NULL, lag?=0, start?=NULL, stop?=NULL) | Specify AFNI HRF term for 'stim_times' -> ahrfsp
+  - basis : chr (constants: "spmg1", "block", "dmblock", "tent", "csplin", "poly", "sin", "gam", "spmg2", "spmg3", "wav") AFNI HRF model.
+@f afni_trialwise (label, basis?="spmg1", onsets?=NULL, durations?=0, subset?=NULL, id?=NULL, start?=0, stop?=22) | Specify AFNI trialwise HRF term for 'stim_times_IM' -> atwhrfsp
+  - basis : chr (constants: "spmg1", "block", "dmblock", "gamma", "wav") AFNI HRF model for trialwise.
+@f afni_lm (fmri_mod, dataset, working_dir?=".", polort?=-1, jobs?=1, censor?=NULL, options?=list()) | Set up fMRI linear model for AFNI's 3dDeconvolve -> obj !retclass: afni_lm_spec
+@g gen_afni_lm (x, ...) | Generate an AFNI linear model command from a configuration -> obj !retclass: afni_lm_spec
+@m gen_afni_lm[fmri_config] (x, ...) -> obj !retclass: afni_lm_spec
+@g to_glt (x, ...) | Convert a contrast to an AFNI 'GLT' string -> gltc|gltcl
+@m to_glt[contrast] (x, ...) -> gltc|gltcl
+@f write_glt (x, ...) | Write GLT contrast to a file
+@m write_glt[glt_contrast] (x, fname?=NULL)
+
+## 9. Regressors & Evaluation
+### Usage:
+- Create individual regressor objects using `regressor()` (or its alias `Reg()`).
+- For single trial modeling, `single_trial_regressor()` is a convenient wrapper.
+- Evaluate regressors at specific time points using `evaluate()`.
+  - `evaluate(my_regressor, grid = seq(0, 100, by=TR), method="fft")`
+@f Reg (onsets, hrf?=HRF_SPMG1, duration?=0, amplitude?=1, span?=40, summate?=TRUE) | Constructor for regressor objects -> regobj
+@f regressor (onsets, hrf?=HRF_SPMG1, duration?=0, amplitude?=1, span?=40, summate?=TRUE) | Alias for Reg() -> regobj
+@f single_trial_regressor (onsets, hrf?=HRF_SPMG1, duration?=0, amplitude?=1, span?=24) | Create a single trial regressor -> regobj
+@m evaluate[Reg] (x, grid, precision?=0.33, method?="fft", sparse?=FALSE, ...) -> num|mat
+  - method : chr (constants: "fft", "conv", "Rconv", "loop") Evaluation method.
+@g shift (x, ...) | Apply a temporal shift to a time series object -> obj
+@m shift[Reg] (x, shift_amount, ...) -> regobj
+@g regressors (x, ...) | Extract a set of regressors from a model object -> lst
+@m regressors[event_term] (x, hrf, sampling_frame, summate?=FALSE, drop.empty?=TRUE) -> lst
+@f convolve_design (hrf, dmat, globons, durations, summate?=TRUE) | Convolve HRF with design matrix columns -> lst !retel: regobj
+@g convolve (x, hrf, sampling_frame, ...) | Convolve a term with an HRF -> tib
+@m convolve[event_term] (x, hrf, sampling_frame, drop.empty?=TRUE, summate?=TRUE, precision?=0.3, ...) -> tib
+
+## 10. Utilities & Low-Level
+### Usage:
+- `despike()` for removing spikes from time series.
+- `instantaneous_correlation()` for dynamic correlation.
+- `hrf_smoothing_kernel()` for temporal similarity matrix.
+- `vec_len()` for vector norm.
+- `sanitize()` for cleaning names.
+- `translate_legacy_pattern()` for updating old regex patterns.
+- Rcpp functions are typically for internal use but available.
+@f despike (x, k?=7, thresh?=6, method?="median") | Despike a univariate time series -> lst
+  - method : chr (constants: "median", "interp", "na") Spike handling method.
+@f instantaneous_correlation (x, y, eta?=NULL, tau_half?=NULL, offset?=0, warmup?=NULL, fill?="zero") | Exponentially-weighted instantaneous correlation -> num
+  - fill : chr (constants: "zero", "na", "last") Value for y outside valid range.
+@f instantaneous_correlation_rcpp (x, y, eta, offset?=0) | Rcpp version of instantaneous_correlation -> vec
+@f compute_residuals_cpp (X_base_fixed, data_matrix, dmat_ran) | Rcpp: Compute residuals for LSS -> lst
+@f lss_compute_cpp (Q_dmat_ran, residual_data) | Rcpp: Compute LSS betas -> mat
+@f mixed_solve_cpp (y, Z?=NULL, K?=NULL, X?=NULL, method?="REML", bounds?=c(1e-9,1e9), SE?=FALSE, return_Hinv?=FALSE) | Rcpp: Mixed model solver -> lst
+@f neural_input_rcpp (x, from, to, resolution) | Rcpp: Generate neural input function -> mat
+@f evaluate_regressor_convolution (grid, onsets, durations, amplitudes, hrf_values, hrf_span, start, end, precision) | Rcpp: Evaluate regressor via direct convolution -> mat
+@f evaluate_regressor_fast (grid, onsets, durations, amplitudes, hrfFine, dt, span) | Rcpp: Evaluate regressor via FFT (legacy name) -> mat
+@f evaluate_regressor_cpp (grid, onsets, durations, amplitudes, hrf_matrix, hrf_span, precision, method?="fft") | Rcpp: Unified regressor evaluation -> mat
+  - method : chr (constants: "fft", "conv") C++ evaluation method.
+@f hrf_smoothing_kernel (len, TR?=2, form?=onset~trialwise(), buffer_scans?=3L, normalise?=TRUE, method?="gram") | Compute HRF smoothing kernel -> mat
+  - method : chr (constants: "gram", "cosine") Kernel computation method.
+@f vec_len (vec, axis?=1) | Euclidean norm of vector or matrix axis -> num
+@f sanitize (x, allow_dot?=TRUE) | Sanitize strings for R names -> chr
+@f translate_legacy_pattern (pattern) | Translate legacy contrast regex patterns -> chr
+@g neural_input (x, ...) | Generate neural input function from event timing -> lst
+@m neural_input[Reg] (x, start, end, resolution?=0.33) -> lst
+
+## 11. Plotting & Diagnostics
+### Usage:
+- `design_plot()`: Interactive Shiny app to visualize design matrices.
+- `plot_contrasts()`: Heatmap of contrast weights against design matrix columns.
+- `correlation_map()`: Heatmap of correlations between design matrix columns.
+- `design_map()`: Static heatmap of the design matrix.
+- Standard `plot()` methods are available for `fmri_model`, `baseline_model`.
+- `autoplot()` (from ggplot2) is available for `Reg` objects.
+@f design_plot (fmrimod, term_name?=NULL, longnames?=FALSE, plot_title?=NULL, x_label?="Time (s)", y_label?="Amplitude", ...) | Interactive Shiny plot of design matrix -> shiny.appobj
+@g plot_contrasts (x, ...) | Plot contrasts -> obj !retclass: ggplot
+@m plot_contrasts[event_model] (x, absolute_limits?=FALSE, rotate_x_text?=TRUE, scale_mode?="auto", coord_fixed?=TRUE, ...) -> obj !retclass: ggplot
+@g correlation_map (x, ...) | Create correlation heatmap of design matrix -> obj !retclass: ggplot
+@m correlation_map[baseline_model|fmri_model|event_model] (x, method?="pearson", half_matrix?=FALSE, absolute_limits?=TRUE, ...) -> obj !retclass: ggplot
+@g design_map (x, ...) | Heatmap visualization of design matrix -> obj !retclass: ggplot
+@m design_map[baseline_model|fmri_model|event_model] (x, block_separators?=TRUE, rotate_x_text?=TRUE, fill_midpoint?=NULL, fill_limits?=NULL, ...) -> obj !retclass: ggplot
+@m autoplot[Reg] (object, grid?=NULL, precision?=0.1, method?="fft", ...) | Plot an fMRI regressor object -> obj !retclass: ggplot
+
+## 12. Generics (Exported from this package)
+### Usage:
+- These are S3 generics. Methods for specific classes (e.g., `evaluate.Reg`, `convolve.event_term`) are dispatched automatically.
+@g event_model (x, data, block, sampling_frame, drop_empty?=TRUE, durations?=0, ...) | Construct an event-based fMRI regression model -> emod
+@g get_data (x, ...) | Get data from a dataset object -> obj
+@g get_mask (x, ...) | Get mask from a dataset object -> obj
+@g get_formula (x, ...) | Get formula from a model object -> form
+@g term_matrices (x, ...) | Get term matrices from a model -> lst
+@g design_env (x, ...) | Get design matrices as an environment -> env
+@g parent_terms (x) | Get parent terms of a model component -> chr
+@g term_names (x) | Get names of terms in a model -> chr
+@g term_indices (x, ...) | Get column indices for terms in design matrix -> lst
+@g run (x, ...) | Run a command or analysis step
+@g elements (x, ...) | Get ordered elements of a term/variable -> vec|lst
+@g estcon (x, fit, ...) | Estimate contrast (internal)
+@g construct (x, model_spec, ...) | Construct a model term from a specification (internal)
+@g build_afni_stims (x, ...) | Generate AFNI stimuli for 3dDeconvolve (internal)
+@g split_onsets (x, ...) | Split event onsets by factor levels or blocks -> lst
+@g estimate_contrast (x, fit, colind, ...) | Estimate contrast values from a fit (internal)
+@g chunkwise_lm (x, ...) | Perform chunkwise linear model estimation (internal)
+@g p_values (x, ...) | Extract p-values from a model fit -> tib|mat
+```

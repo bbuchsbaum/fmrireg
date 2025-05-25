@@ -2,7 +2,7 @@
 % Please edit documentation in R/rank1_estimation.R
 \name{r1_glm_betas}
 \alias{r1_glm_betas}
-\title{Rank-1 GLM Solver}
+\title{Rank‑1 GLM (stacked design)}
 \usage{
 r1_glm_betas(
   X,
@@ -11,54 +11,14 @@ r1_glm_betas(
   hrf_basis,
   hrf_ref,
   maxit = 100,
-  flip_sign = FALSE,
-  use_box_constraints = FALSE
+  flip_sign = TRUE,
+  use_box_constraints = FALSE,
+  method = c("als", "svd")
 )
 }
 \arguments{
-\item{X}{A numeric matrix of size \eqn{n \times (k*m)}, with n timepoints,
-k conditions, and m basis functions. Typically formed by convolving each
-event onset with \code{m} basis functions, then horizontally stacking them for k conditions.}
-
-\item{y}{A length-n numeric vector of fMRI data (single voxel).}
-
-\item{Z}{Optional numeric matrix of nuisance regressors, \eqn{n \times q}. If NULL, no nuisance.}
-
-\item{hrf_basis}{A \eqn{T \times m} matrix of basis functions for the HRF.}
-
-\item{hrf_ref}{A length-T numeric vector of some reference HRF shape, for an optional sign-flip check.}
-
-\item{maxit}{Max number of L-BFGS-B iterations. Default 100.}
-
-\item{flip_sign}{Logical. If \code{TRUE}, we ensure the final HRF is positively correlated with \code{hrf_ref}.}
-
-\item{use_box_constraints}{Logical. If \code{TRUE} and \code{m=3}, we forcibly set \code{h[1]=1} and \code{h[2:3] \in [-1,1]}.}
-}
-\value{
-A list with:
-\describe{
-\item{beta}{Numeric vector of length k (event amplitudes).}
-\item{h}{Numeric vector of length m (basis weights).}
-\item{omega}{Numeric vector of length q for nuisance, or numeric(0) if none.}
-\item{converged}{Logical, TRUE if the L-BFGS-B optimizer converged.}
-\item{value}{The final objective (residual sum of squares / 2).}
-}
+\item{method}{\code{"als"} (default) or \code{"svd"}}
 }
 \description{
-Jointly estimates activation coefficients (betas) and an HRF shape (in a given basis)
-under a Rank-1 constraint. Allows optional nuisance regressors.
-Can optionally apply box constraints if \code{m=3} and sign-flip to ensure
-positive correlation with a reference HRF.
-}
-\examples{
-# Minimal usage example
-set.seed(42)
-n <- 200; k <- 10; m <- 3
-X <- matrix(rnorm(n*k*m), n, k*m)
-y <- rnorm(n)
-hrf_basis <- matrix(rnorm(32*m), 32, m)
-hrf_ref   <- dgamma(seq(0, 31, length.out=32), shape=6, rate=1)
-
-fit <- r1_glm_betas(X, y, NULL, hrf_basis, hrf_ref, maxit=50)
-str(fit)
+Rank‑1 GLM (stacked design)
 }

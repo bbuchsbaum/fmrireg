@@ -1,61 +1,60 @@
 
-#' @keywords internal
-#' @noRd
+
+#' Fast factorial contrast generators
+#'
+#' Returns a matrix **N_cells × N_contrasts** – *each row is a design cell*,
+#' columns are independent contrasts (difference‑coded for the factors you ask
+#' for, grand‑mean for the rest).  Suitable for `tcrossprod(dm, C)` or
+#' `lm.fit(design, y)` followed by `%*% coef` in the usual way.
+#'
+#' @param des      data.frame with one column per factor (must be `factor`)
+#' @param factors  character vector: which factor(s) get **difference coding**.
+#'                 • `generate_main_effect_contrast()` takes a **single**
+#'                   factor name.<br>
+#'                 • `generate_interaction_contrast()` takes ≥ 2 for an
+#'                   interaction (or 1 to reproduce a main‑effect matrix).
+#'
+#' @return numeric matrix **nrow = ∏ levels(f) , ncol = ∏ (Lᵢ − 1)** for the
+#'         chosen factors.
+#'
 #' @examples
-#' des <- data.frame(time=factor(rep(1:4, 1)), condition=factor(rep(c("face", "scene"), each=2)))
-#' con <- generate_interaction_contrast(des, c("time", "condition"))
+#' des <- expand.grid(Time = factor(1:4),
+#'                    Cond = factor(c("face","scene")))
+#'
+#' # Main effect of Time (4‑1 = 3 contrasts)
+#' M <- generate_main_effect_contrast(des, "Time")
+#'
+#' # Full Time×Cond interaction ( (4‑1)*(2‑1) = 3 contrasts )
+#' I <- generate_interaction_contrast(des, c("Time","Cond"))
+#' dim(I)   # 8 rows (cells) × 3 columns (contrasts)
+#' @export
 generate_interaction_contrast <- function(des, factors) {
-  assert_that(all(factors %in% names(des)), msg=paste("Contrast factors:", factors, "--> not found in design table."))
-  
-  # Create lists of contrast vectors/matrices for each factor
-  Clist <- lapply(names(des), function(ev) rep(1, nlevels(des[[ev]])))
-  Dlist <- lapply(names(des), function(ev) t(-diff(diag(nlevels(des[[ev]])))))
-  
-  nfac <- length(Clist)
-  mats <- vector("list", nfac)
-  ind <- match(factors, names(des))
-  
-  # Assign difference contrasts to specified factors
-  mats[ind] <- Dlist[ind]
-  mats[-ind] <- Clist[-ind]  # Assign ones to other factors
-  
-  # Compute the Kronecker product
-  cmat <- Reduce(kronecker, mats)
-  
-  # Correct dimension check
-  if (nrow(cmat) != prod(sapply(des, nlevels))) {
-    stop("Contrasts: design table and contrast matrix have different number of rows.")
+
+  stopifnot(all(factors %in% names(des)))
+  fac_names <- names(des)
+
+  build_block <- function(f, diff_needed) {
+    L <- nlevels(f)
+    if (diff_needed)             # (L x (L-1)) difference coding
+      -t(diff(diag(L)))          # rows = levels, cols = contrasts
+    else
+      matrix(1, nrow = L, ncol = 1)
   }
-  
-  return(cmat)
+
+  blocks   <- Map(build_block, des, fac_names %in% factors)
+  C_matrix <- Reduce(kronecker, blocks)
+
+  # Assert rows = design cells
+  n_cells <- prod(vapply(des, nlevels, 1L))
+  stopifnot(nrow(C_matrix) == n_cells)
+
+  C_matrix
 }
 
-#' @keywords internal
-#' @noRd
-#' @examples
-#' des = data.frame(time=factor(c(1,1,2,2,3,3)), condition=factor(rep(c("face", "scene"), each=3)))
-#' con <- generate_main_effect_contrast(des, "time")
+#' @rdname generate_interaction_contrast
+#' @export
 generate_main_effect_contrast <- function(des, factor) {
-  assert_that(factor %in% names(des), msg=paste("Contrast factor:", factor, " --> not found in design table."))
-  
-  # Create lists of contrast vectors/matrices for each factor
-  Clist <- lapply(names(des), function(ev) rep(1, nlevels(des[[ev]])))
-  Dlist <- lapply(names(des), function(ev) t(-diff(diag(nlevels(des[[ev]])))))
-  
-  nfac <- length(Clist)
-  i <- match(factor, names(des))
-  
-  mats <- vector("list", nfac)
-  mats[[i]] <- Dlist[[i]]    # Assign difference contrast to the main effect factor
-  mats[-i] <- Clist[-i]      # Assign ones to other factors
-  
-  # Compute the Kronecker product
-  ret <- Reduce(kronecker, mats)
-  
-  # Correct dimension check
-  if (nrow(ret) != prod(sapply(des, nlevels))) {
-    stop("Contrasts: design table and contrast matrix have different number of rows.")
-  }
-  
-  return(ret)
+  if (length(factor) != 1L)
+    stop("main‑effect contrast expects exactly one factor name")
+  generate_interaction_contrast(des, factor)
 }

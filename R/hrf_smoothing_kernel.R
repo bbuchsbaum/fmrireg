@@ -6,32 +6,38 @@
 #' @param len The number of scans.
 #' @param TR The repetition time (default is 2 seconds).
 #' @param form the `trialwise` formula expression, see examples.
+#' @param buffer_scans The number of scans to buffer before and after the event.
+#' @param normalise Whether to normalise the kernel.
+#' @param method The method to use for computing the kernel.
 #' @export
 #' @examples
 #' form <- onsets ~ trialwise(basis="gaussian")
 #' sk <- hrf_smoothing_kernel(100, TR=1.5, form)
 #' @return a smoothing matrix
-hrf_smoothing_kernel <- function(len, TR=2, form) {
-  with_package("proxy")
-  buffer <- 6
-  sframe <- sampling_frame(len+buffer,TR)
-  onsets <- samples(sframe)
-  
-  dfx <- data.frame(onsets=samples(sframe), block=rep(1,len+buffer))
-  
-  #em <- event_model(onsets ~ trialwise(basis={{basis}}), block=~ block, 
-  #                  data=dfx, sampling_frame=sframe)
-  
-  em <- event_model(form, block=~ block, 
-                                      data=dfx, sampling_frame=sframe)
-  
-  dmat <- as.matrix(design_matrix(em))
-  #m <- as.matrix(proxy::simil(t(dmat), "cosine"))
-  m <- dmat %*% t(dmat)
-  ret <- m[(buffer/2):((len-1)+buffer/2),(buffer/2):((len-1)+buffer/2)]
-  ret
-}
+hrf_smoothing_kernel <- function(len, TR = 2,
+                                 form  = onset ~ trialwise(),
+                                 buffer_scans = 3L,
+                                 normalise = TRUE,
+                                 method = c("gram", "cosine")) {
 
+  method <- match.arg(method)
+  n_buf  <- as.integer(buffer_scans)
+
+  sf   <- sampling_frame(len + 2 * n_buf, TR)
+  dfx  <- data.frame(onset = samples(sf), block = 1L)
+  em   <- event_model(form, data = dfx, block = ~ block, sampling_frame = sf)
+  X    <- as.matrix(design_matrix(em))
+
+  K <- switch(method,
+              gram   = X %*% t(X),
+              cosine = tcrossprod(scale(X, FALSE, sqrt(colSums(X^2)))))
+
+  if (normalise)
+    K <- K / diag(K)                                       # make diag = 1
+
+  keep <- (n_buf + 1):(n_buf + len)
+  K[keep, keep, drop = FALSE]
+}
 
 #' Design kernel for a given design matrix
 #'

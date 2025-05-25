@@ -105,8 +105,9 @@ fmri_model <- function(event_model, baseline_model) {
 #' @param x An fmri_model object.
 #' @return (Not implemented)
 #' @keywords internal
+#' @noRd
 prediction_matrix <- function(x) {
-  # TODO: Implement prediction matrix computation.
+  stop("not implemented")
 }
 
 
@@ -266,7 +267,10 @@ print.fmri_model <- function(x, ...) {
 #' event+baseline design matrix.
 #'
 #' @param x An \code{fmri_model}.
-#' @inheritParams correlation_map.event_model
+#' @param method Correlation method (e.g., "pearson", "spearman").
+#' @param half_matrix Logical; if TRUE, display only the lower triangle of the matrix.
+#' @param absolute_limits Logical; if TRUE, set color scale limits from -1 to 1.
+#' @param ... Additional arguments passed to internal plotting functions.
 #' @export
 correlation_map.fmri_model <- function(x,
                                        method          = c("pearson", "spearman"),
@@ -379,8 +383,3 @@ design_map.fmri_model <- function(x,
   
   plt
 }
-
-###############################################################################
-## End of fmrimodel.R
-###############################################################################
-

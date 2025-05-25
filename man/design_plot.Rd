@@ -9,13 +9,14 @@ design_plot(
   term_name = NULL,
   longnames = FALSE,
   plot_title = NULL,
-  x_label = "Time",
-  y_label = "Value",
+  x_label = "Time (s)",
+  y_label = "Amplitude",
   line_size = 1,
-  color_palette = "Set1",
-  facet_ncol = 1,
-  theme_custom = ggplot2::theme_bw(base_size = 14),
-  legend_threshold = 25,
+  color_palette = "viridis",
+  facet_ncol = 2,
+  theme_custom = ggplot2::theme_minimal(base_size = 15) + ggplot2::theme(panel.spacing =
+    ggplot2::unit(1, "lines")),
+  legend_threshold = 30,
   ...
 )
 }
@@ -90,5 +91,5 @@ if (interactive()) {
               line_size = 1.5,
               color_palette = "Set2",
               facet_ncol = 1)
-}
+}-------------------------------------------------------------------------
 }

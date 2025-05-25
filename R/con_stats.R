@@ -370,3 +370,253 @@ fit_contrasts <- function(lmfit, conmat, colind, se=TRUE) {
   }
 }
 
+#' @keywords internal
+#' @noRd
+#' @autoglobal
+.fast_t_contrast  <- function(B, sigma2, XtXinv, l, df) {
+  # B:      p x V matrix (betas)
+  # sigma2: V-vector (residual variance)
+  # XtXinv: p x p matrix (inverse crossproduct of design)
+  # l:      1 x p vector/matrix (contrast weights)
+  # df:     scalar (residual degrees of freedom)
+  
+  # Ensure l is a row vector (matrix)
+  if (!is.matrix(l)) {
+    l <- matrix(l, nrow = 1)
+  }
+  
+  est  <- drop(l %*% B)                # 1 × V  (BLAS GEMV)
+  s2   <- as.numeric(l %*% XtXinv %*% t(l)) # scalar Var(est) / sigma2
+  
+  # Avoid division by zero or NaNs if s2 or sigma2 are zero/negative
+  se   <- sqrt(pmax(0, s2 * sigma2))            # 1 × V
+  
+  tval <- ifelse(se < .Machine$double.eps^0.5, 0, est / se)
+  pval <- 2 * pt(-abs(tval), df)
+
+  list(estimate = est,
+       se       = se,
+       stat     = tval,
+       prob     = pval,
+       sigma    = sqrt(pmax(0, sigma2)), # Include sigma for potential compatibility
+       stat_type = "tstat")
+}
+
+#' @keywords internal
+#' @noRd
+#' @autoglobal
+.fast_F_contrast <- function(B, sigma2, XtXinv, L, df) {
+  # B:      p x V matrix (betas)
+  # sigma2: V-vector (residual variance)
+  # XtXinv: p x p matrix
+  # L:      r x p matrix (contrast weights)
+  # df:     scalar (residual degrees of freedom)
+  
+  if (!is.matrix(L)) {
+      stop(".fast_F_contrast requires L to be a matrix.")
+  }
+  
+  r   <- nrow(L)
+  U   <- L %*% B                    # r × V   (BLAS GEMM) : L*beta
+  M   <- L %*% XtXinv %*% t(L)      # r × r   : L (X'X)^-1 L'
+  
+  # Use tryCatch for solve() in case M is singular
+  Cinv <- tryCatch(solve(M), error = function(e) {
+    warning(paste("Singular matrix in F-contrast computation (L(X'X)^-1 L'). Details:", e$message))
+    # Return a matrix of NaNs or zeros? Let's use NaNs.
+    matrix(NaN, nrow = r, ncol = r)
+  })
+
+  # qf = diag(t(U) %*% Cinv %*% U)
+  # Efficient computation: colSums((t(U) %*% Cinv) * t(U))
+  # Check if Cinv contains NaNs
+  if (any(is.nan(Cinv))) {
+      qf <- rep(NaN, ncol(U))
+  } else {
+      tmp  <- t(U) %*% Cinv           # V x r
+      qf  <- colSums(tmp * t(U))      # V-vector, each element is u_v' Cinv u_v
+  }
+  
+  estimate <- qf / r # Numerator mean square: (LB)' (L(X'X)^-1 L')^-1 (LB) / r
+  se <- sigma2 # Denominator mean square (residual variance)
+  
+  # Avoid division by zero/NaNs
+  Fval <- ifelse(abs(se) < .Machine$double.eps^0.5 | is.nan(qf), 
+                 NaN, 
+                 estimate / se)
+                 
+  pval <- pf(Fval, r, df, lower.tail = FALSE)
+
+  list(estimate = estimate, # Numerator MS
+       se       = se,       # Denominator MS (sigma2)
+       stat     = Fval,
+       prob     = pval,
+       stat_type = "Fstat")
+}
+
+#' @keywords internal
+#' @noRd
+#' @autoglobal
+fit_lm_contrasts_fast <- function(B, sigma2, XtXinv, conlist, fconlist, df) {
+  # B:        p x V matrix (betas)
+  # sigma2:   V-vector (residual variance)
+  # XtXinv:   p x p matrix
+  # conlist:  Named list of simple contrast vectors/matrices (1xp or px1)
+  # fconlist: Named list of F contrast matrices (rxp)
+  # df:       Scalar residual df
+
+  # ----- simple contrasts (t) -----
+  simples <- purrr::imap(conlist, function(l, nm) {
+    # Ensure l has colind attribute attached in fmri_lm_fit
+    colind <- attr(l, "colind")
+    if (is.null(colind)) {
+        warning(paste("Missing 'colind' attribute for simple contrast:", nm))
+        # Cannot compute contrast without knowing which columns it applies to.
+        # Need to decide how to handle this - skip contrast? Error?
+        # For now, return NULL, will be filtered out by bind_rows.
+        # Return NULL for this specific contrast, imap will handle it.
+        return(NULL)
+    }
+    
+    # Create full contrast vector/matrix padded with zeros
+    p <- nrow(XtXinv)
+    if (is.matrix(l)) { # Should be 1xp or px1
+        if (ncol(l) == 1) l <- t(l) # Ensure it's 1xp
+        if (ncol(l) != length(colind)) stop(paste("Contrast matrix columns mismatch colind for contrast:", nm))
+        full_l <- matrix(0, nrow = 1, ncol = p)
+        full_l[, colind] <- l
+    } else { # Vector
+        if (length(l) != length(colind)) stop(paste("Contrast vector length mismatch colind for contrast:", nm))
+        full_l <- matrix(0, nrow = 1, ncol = p)
+        full_l[, colind] <- l
+    }
+    
+    res <- .fast_t_contrast(B, sigma2, XtXinv, full_l, df)
+    # Package into tibble matching estimate_contrast.contrast output structure
+    dplyr::tibble(type      = "contrast",
+           name      = nm,
+           stat_type = res$stat_type,
+           df.residual = df,
+           conmat    = list(l), # Store original contrast weights
+           colind    = list(colind),
+           data      = list(dplyr::tibble(
+             estimate = res$estimate, # V-vector -- REMOVE list() wrapper
+             se       = res$se,       # V-vector -- REMOVE list() wrapper
+             stat     = res$stat,     # V-vector -- REMOVE list() wrapper
+             prob     = res$prob,     # V-vector -- REMOVE list() wrapper
+             sigma    = res$sigma     # V-vector -- REMOVE list() wrapper
+           )))
+  })
+
+  # ----- F contrasts -----
+  Fcons <- purrr::imap(fconlist, function(L, nm) {
+    colind <- attr(L, "colind")
+    if (is.null(colind)) {
+        warning(paste("Missing 'colind' attribute for F contrast:", nm))
+        return(NULL) # Return NULL for this specific contrast
+    }
+        
+    # Create full contrast matrix padded with zeros
+    p <- nrow(XtXinv)
+    if (!is.matrix(L)) stop("F contrast weights must be a matrix")
+    if (ncol(L) != length(colind)) stop(paste("F contrast matrix columns mismatch colind for contrast:", nm))
+        
+    full_L <- matrix(0, nrow = nrow(L), ncol = p)
+    full_L[, colind] <- L
+    
+    res <- .fast_F_contrast(B, sigma2, XtXinv, full_L, df)
+    # Package into tibble matching estimate_contrast.Fcontrast output structure
+    dplyr::tibble(type      = "Fcontrast",
+           name      = nm,
+           stat_type = res$stat_type,
+           df.residual = df,
+           conmat    = list(L), # Store original contrast weights
+           colind    = list(colind),
+           data      = list(dplyr::tibble(
+             estimate = res$estimate, # V-vector (Num MS) -- REMOVE list() wrapper
+             se       = res$se,       # V-vector (Den MS = sigma2) -- REMOVE list() wrapper
+             stat     = res$stat,     # V-vector (F stat) -- REMOVE list() wrapper
+             prob     = res$prob      # V-vector -- REMOVE list() wrapper
+           )))
+  })
+
+  # Return a list containing a single tibble, similar to fit_lm_contrasts output?
+  # Original fit_lm_contrasts returned list(contrasts=conres, bstats=bstats, fit=fit)
+  # The callers (chunkwise_lm, runwise_lm) process this.
+  # Let's return just the combined tibble for now, callers need adjustment.
+  # Or return a list structure mimicking the original?
+  # Mimic structure: list(contrasts = list(combined_tibble), bstats = ..., fit=NULL)
+  # For now, return just the tibble of contrasts.
+  # Callers will need modification.
+  
+  # Let's return the structure expected by runwise/chunkwise logic if possible.
+  # The original `fit_lm_contrasts` returned a list where each element was a contrast result (tibble).
+  # Let's try returning a list of tibbles, one per contrast.
+  # Combine the lists of tibbles, filtering out any NULLs from failed contrasts
+  all_cons_list <- c(Filter(Negate(is.null), simples), Filter(Negate(is.null), Fcons))
+  
+  # Ensure the list is named correctly
+  names(all_cons_list) <- unlist(lapply(all_cons_list, function(x) x$name[1]))
+  
+  # Return the list of tibbles
+  all_cons_list
+}
+
+#' @keywords internal
+#' @noRd
+#' @autoglobal
+beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames) {
+  # Betas:    p x V matrix
+  # XtXinv:   p x p matrix
+  # sigma:    V-vector (residual std dev)
+  # dfres:    Scalar residual df
+  # varnames: p-vector of coefficient names
+  
+  p <- nrow(Betas)
+  V <- ncol(Betas)
+  sigma2 <- sigma^2 # V-vector
+  
+  # Compute SE for each beta, each voxel
+  # se(beta_i) = sqrt( [XtXinv]_ii * sigma2 )
+  diag_XtXinv <- diag(XtXinv)
+  if (any(diag_XtXinv < 0)) {
+      # Handle potential numerical issues if diagonal is negative
+      warning("Negative diagonal elements found in XtXinv during beta SE calculation.")
+      diag_XtXinv[diag_XtXinv < 0] <- NaN
+  }
+  se_scaling <- sqrt(diag_XtXinv) # p-vector
+  
+  # Outer product: V-vector sigma with p-vector se_scaling -> V x p matrix
+  vc <- outer(sigma, se_scaling) # SEs for all betas (rows=voxels, cols=betas)
+  
+  betamat <- t(Betas) # V x p matrix (voxels x betas)
+  colnames(betamat) <- varnames
+  colnames(vc) <- varnames
+  
+  # Compute t-stats: element-wise division
+  # Avoid division by zero
+  tstat <- ifelse(abs(vc) < .Machine$double.eps^0.5, 0, betamat / vc)
+  
+  # Compute p-values
+  prob <- 2 * pt(-abs(tstat), dfres)
+  
+  # Package into the same tibble structure as beta_stats
+  ret <- dplyr::tibble(
+    type = "beta",
+    name = "parameter_estimates",
+    stat_type = "tstat",
+    df.residual = dfres,
+    conmat = list(NULL), # Keep consistent structure
+    colind = list(NULL),
+    data = list(dplyr::tibble(
+      estimate = list(betamat), # V x p matrix
+      se = list(vc),       # V x p matrix
+      stat = list(tstat),    # V x p matrix
+      prob = list(prob),     # V x p matrix
+      sigma = list(sigma)    # V-vector
+    ))
+  )
+  
+  return(ret)
+}
+

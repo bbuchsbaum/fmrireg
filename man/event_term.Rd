@@ -4,38 +4,51 @@
 \alias{event_term}
 \title{Create an event model term from a named list of variables.}
 \usage{
-event_term(evlist, onsets, blockids, durations = 1, subset = NULL)
+event_term(evlist, onsets, blockids, durations = 0, subset = NULL)
 }
 \arguments{
-\item{evlist}{A list of named variables.}
+\item{evlist}{A named list of variables (factors, numeric, matrices, ParametricBasis objects).
+The names are used as variable identifiers within the term.}
 
 \item{onsets}{Numeric vector of onset times (in seconds).}
 
-\item{blockids}{Numeric vector of block numbers.}
+\item{blockids}{Numeric vector of block numbers (non-decreasing integers).}
 
-\item{durations}{Numeric vector of event durations (default is 1).}
+\item{durations}{Numeric vector of event durations (seconds, default is 0).
+Can be scalar (recycled) or vector matching length of \code{onsets}.}
 
-\item{subset}{Logical vector indicating which onsets to retain (default is NULL).}
+\item{subset}{Optional logical vector indicating which events to retain (applied before processing).}
 }
 \value{
-A list with components:
-\itemize{
-\item varname: concatenated variable names,
-\item events: a list of event objects,
-\item subset: the retained onsets,
-\item event_table: a tibble with event information,
-\item onsets, blockids, durations.
-}
+A list object with class \code{c("event_term", "event_seq")}. Contains:
+\item{varname}{Concatenated variable names from \code{evlist}.}
+\item{events}{A named list of the processed \code{event} objects.}
+\item{subset}{The \code{subset} vector used.}
+\item{event_table}{A tibble representing the combinations of descriptive levels/names
+for each event in the term, constructed using \code{elements(..., values=FALSE)}.}
+\item{onsets}{Numeric vector of onsets (after processing/subsetting).}
+\item{blockids}{Numeric vector of block IDs (after processing/subsetting).}
+\item{durations}{Numeric vector of durations (after processing/subsetting).}
 }
 \description{
-Generates an event model term from a list of named variables along with their
-onsets, block IDs, and durations. Optionally, a subset of onsets can be retained.
+Generates an \code{event_term} object which represents the combination of one
+or more event sequences (e.g., a factor crossed with a numeric modulator).
+It takes a list of variables (factors, numeric vectors, matrices, basis objects)
+along with shared onsets, block IDs, and durations.
+It uses the \code{EV} factory internally to create standardized \code{event} objects for each variable.
 }
 \examples{
 x1 <- factor(rep(letters[1:3], 10))
 x2 <- factor(rep(1:3, each = 10))
-eterm <- event_term(list(x1 = x1, x2 = x2),
-                    onsets = seq(1, 100, length.out = 30),
-                    blockids = rep(1, 30))
+onsets <- seq(1, 100, length.out = 30)
+blockids <- rep(1:3, each = 10)
+
+eterm <- event_term(list(Condition = x1, Group = x2),
+                    onsets = onsets,
+                    blockids = blockids)
+print(eterm)
+head(event_table(eterm))
+levels(eterm)
+head(design_matrix(eterm))
 
 }

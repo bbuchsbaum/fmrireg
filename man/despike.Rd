@@ -2,20 +2,40 @@
 % Please edit documentation in R/despike.R
 \name{despike}
 \alias{despike}
-\title{Despike Time Series Data}
+\title{Despike a Univariate Time Series}
 \usage{
-despike(x, k = 7, thresh = 6)
+despike(x, k = 7, thresh = 6, method = c("median", "interp", "na"))
 }
 \arguments{
-\item{x}{A numeric vector containing the time series data.}
+\item{x}{numeric vector – the raw time‑series}
 
-\item{k}{The window size for the running median (default: 7).}
+\item{k}{odd integer – window length of the running median (default 7)}
 
-\item{thresh}{The threshold for identifying spikes (default: 6).}
+\item{thresh}{positive – threshold in robust z‑scores (default 6)}
+
+\item{method}{how to treat detected spikes:
+\emph{"median"} (replace by local median – default),
+\emph{"interp"} (linear interpolate),
+\emph{"na"} (set to NA, just flag)}
 }
 \value{
-A numeric vector with the spikes removed.
+A list with two elements
+\itemize{
+\item \strong{clean} – despiked series (same length as \code{x})
+\item \strong{spike_idx} – integer indices of points deemed spikes
+}
 }
 \description{
-Remove spikes from time series data using running median and a threshold.
+Robustly remove (or flag) isolated spikes using a running median
+\itemize{
+\item MAD test (Hoaglin et al. JASA 1986).
+}
+}
+\examples{
+set.seed(1); y <- sin(1:300 / 20) + rnorm(300, 0, .1)
+y[c(50, 180)] <- 4           # add two huge spikes
+out <- despike(y, k = 11)
+matplot(cbind(y, out$clean), type = "l", lty = 1,
+        col = c("grey50","red"), ylab = "value")
+points(out$spike_idx, y[out$spike_idx], pch = 19)
 }

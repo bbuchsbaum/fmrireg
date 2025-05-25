@@ -2,31 +2,54 @@
 % Please edit documentation in R/despike.R
 \name{instantaneous_correlation}
 \alias{instantaneous_correlation}
-\title{Compute Instantaneous Correlation between Two Signals}
+\title{Exponentially‑Weighted Instantaneous Correlation}
 \usage{
-instantaneous_correlation(x, y, eta, offset = 0)
+instantaneous_correlation(
+  x,
+  y,
+  eta = NULL,
+  tau_half = NULL,
+  offset = 0,
+  warmup = NULL,
+  fill = c("zero", "na", "last")
+)
 }
 \arguments{
-\item{x}{Numeric vector. First time-series signal.}
+\item{x, y}{numeric vectors of equal length}
 
-\item{y}{Numeric vector. Second time-series signal.}
+\item{eta}{decay constant (mutually exclusive with \code{tau_half})}
 
-\item{eta}{Positive numeric value. Decay parameter for the exponential weighting function.}
+\item{tau_half}{half‑life of the EWMA window (overrides \code{eta} if given)}
 
-\item{offset}{Integer. Temporal offset between the two signals. Defaults to 0.}
+\item{offset}{integer lag so that \eqn{\rho(t)} compares
+\eqn{x[t]} with \eqn{y[t-offset]}}
+
+\item{warmup}{integer – set the first \code{warmup} points to \code{NA}
+(\code{default = ceiling(4/eta)})}
+
+\item{fill}{value for \code{y} outside valid range (\code{"zero"}, \code{"na"}, \code{"last"})}
 }
 \value{
-Numeric vector of instantaneous correlation coefficients.
+numeric vector \code{rho} of length \code{length(x)}
 }
 \description{
-Computes the instantaneous correlation between two signals using an exponential decay weighting function, allowing for efficient recursive computation.
+Computes, online and in \strong{O(N)} time, the correlation between two
+signals using an EWMA window:
+\eqn{\alpha = e^{-η}} or equivalently
+half‑life \verb{τ½ = log(2)/η}.
 }
+\section{Use cases}{
+
+\itemize{
+\item \strong{Real‑time functional connectivity} in real‑time fMRI
+\item \strong{Streaming quality control} – detect sudden desynchronisation
+\item \strong{Motion artefact flagging} – correlate FD/FD' with global signal
+\item \strong{Econometrics} – high‑frequency lead‑lag correlations
+}
+}
+
 \examples{
-# Example signals
-x <- sin(seq(0, 2 * pi, length.out = 100))
-y <- cos(seq(0, 2 * pi, length.out = 100))
-# Compute instantaneous correlation
-rho <- instantaneous_correlation(x, y, eta = 0.1)
-# Plot the result
-plot(rho, type = 'l', ylab = 'Instantaneous Correlation', xlab = 'Time')
+x <- rnorm(1000); y <- filter(x, 0.9, "recursive") + rnorm(1000, 0, .3)
+rho <- instantaneous_correlation(x, y, tau_half = 10)
+plot(rho, type = "l")
 }
