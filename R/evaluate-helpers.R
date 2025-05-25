@@ -156,20 +156,16 @@ eval_Rconv <- function(p, ...) {
     lowres <- matrix(0, length(p$grid), nb)
     for (b in 1:nb) {
       highres_conv <- stats::convolve(delta, rev(samhrf[, b]), type = "open")
-      output_len <- length(delta) + nrow(samhrf) - 1
-      valid_len <- length(p$fine_grid) 
-      start_index_conv <- 1 
-      highres_trimmed <- highres_conv[start_index_conv : (start_index_conv + valid_len -1)] 
+      valid_len <- length(p$fine_grid)
+      highres_trimmed <- highres_conv[1:valid_len]
       interp_res <- approx(p$fine_grid, highres_trimmed, xout = p$grid, rule = 2)$y
       lowres[, b] <- interp_res
     }
     result <- lowres
   } else {
     highres_conv <- stats::convolve(delta, rev(as.vector(samhrf)), type = "open")
-    output_len <- length(delta) + length(samhrf) - 1
     valid_len <- length(p$fine_grid)
-    start_index_conv <- 1
-    highres_trimmed <- highres_conv[start_index_conv : (start_index_conv + valid_len - 1)]
+    highres_trimmed <- highres_conv[1:valid_len]
     result <- approx(p$fine_grid, highres_trimmed, xout = p$grid, rule = 2)$y
   }
   result
