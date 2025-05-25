@@ -64,8 +64,9 @@ Suggests:
     shiny,
     mgcv,
     ggforce,
-    roxyglobals (>= 0.2.1)
-Remotes: 
+    roxyglobals (>= 0.2.1),
+    bidser
+Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/multivarious,
     bbuchsbaum/fmristore,
