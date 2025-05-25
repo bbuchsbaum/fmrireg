@@ -516,7 +516,126 @@ parse_and_validate_config <- function(yaml_file) {
         terms[[nm]] <- t
       }
     }
+
     config_list$terms <- terms
+  }
+
+  if (exists("contrasts", config_list)) {
+    if (check_type(config_list, "contrasts", "object", "", errors, allow_null = TRUE)) {
+      cons <- config_list$contrasts
+      cons_path <- "contrasts"
+      if (!is.null(cons)) {
+        for (nm in names(cons)) {
+          if (check_type(cons, nm, "object", cons_path, errors)) {
+            cdef <- cons[[nm]]
+            c_path <- paste0(cons_path, "$", nm)
+
+            if (check_required(cdef, "type", c_path, errors)) {
+              check_enum(
+                cdef,
+                "type",
+                c(
+                  "Formula", "Pair", "OneAgainstAll",
+                  "Unit", "Oneway", "Interaction",
+                  "Polynomial", "ColumnRegex"
+                ),
+                c_path,
+                errors
+              )
+            }
+
+            check_type(cdef, "expression", "string", c_path, errors, allow_null = TRUE)
+            check_type(cdef, "factors", "array[string]", c_path, errors, allow_null = TRUE)
+            check_type(cdef, "where", "string", c_path, errors, allow_null = TRUE)
+          }
+        }
+      }
+    }
+  }
+
+  if (check_type(config_list, "models", "array[object]", "", errors)) {
+    mods <- config_list$models
+    mods_path <- "models"
+    if (length(mods) == 0) {
+      errors$add_error(mods_path, "At least one model must be specified.")
+    }
+    for (i in seq_along(mods)) {
+      m <- mods[[i]]
+      m_path <- paste0(mods_path, "[", i, "]")
+      if (is.list(m)) {
+        if (check_required(m, "name", m_path, errors)) {
+          check_type(m, "name", "string", m_path, errors)
+          check_pattern(list(name = m$name), "name", "^(?!(?:_meta|_generated)).*$", m_path, errors)
+        }
+
+        if (exists("baseline", m)) {
+          if (check_type(m, "baseline", "object", m_path, errors, allow_null = TRUE)) {
+            bl <- m$baseline
+            bl_path <- paste0(m_path, "$baseline")
+            if (exists("basis", bl)) {
+              check_type(bl, "basis", "string", bl_path, errors, allow_null = TRUE)
+            } else {
+              bl$basis <- "BSpline(3)"
+            }
+            if (exists("intercept", bl)) {
+              check_enum(bl, "intercept", c("PerRun", "Global", "None"), bl_path, errors, allow_null = TRUE)
+            } else {
+              bl$intercept <- "PerRun"
+            }
+            if (exists("include_confound_groups", bl)) {
+              check_type(bl, "include_confound_groups", "array[string]", bl_path, errors, allow_null = TRUE)
+            } else {
+              bl$include_confound_groups <- list()
+            }
+            m$baseline <- bl
+          }
+        } else {
+          m$baseline <- list(basis = "BSpline(3)", intercept = "PerRun", include_confound_groups = list())
+        }
+
+        if (check_required(m, "terms", m_path, errors)) {
+          check_type(m, "terms", "array[string]", m_path, errors)
+        }
+        if (exists("contrasts", m)) {
+          check_type(m, "contrasts", "array[string]", m_path, errors, allow_null = TRUE)
+        } else {
+          m$contrasts <- list()
+        }
+        mods[[i]] <- m
+      } else {
+        errors$add_error(m_path, "Each model must be an object.")
+      }
+    }
+    config_list$models <- mods
+  }
+
+  if (exists("default_model", config_list)) {
+    check_type(config_list, "default_model", "string", "", errors, allow_null = TRUE)
+  }
+
+  if (exists("validation_settings", config_list)) {
+    if (check_type(config_list, "validation_settings", "object", "", errors, allow_null = TRUE)) {
+      vs <- config_list$validation_settings
+      vs_path <- "validation_settings"
+      if (!is.null(vs)) {
+        if (exists("cross_references", vs)) {
+          check_enum(vs, "cross_references", c("Error", "Warn", "Off"), vs_path, errors, allow_null = TRUE)
+        } else {
+          vs$cross_references <- "Error"
+        }
+        if (exists("bids_content_checks", vs)) {
+          check_enum(vs, "bids_content_checks", c("Error", "Warn", "Off"), vs_path, errors, allow_null = TRUE)
+        } else {
+          vs$bids_content_checks <- "Warn"
+        }
+        if (exists("allow_unknown_yaml_keys", vs)) {
+          check_type(vs, "allow_unknown_yaml_keys", "boolean", vs_path, errors, allow_null = TRUE)
+        } else {
+          vs$allow_unknown_yaml_keys <- FALSE
+        }
+      }
+      config_list$validation_settings <- vs
+    }
   }
 
   errors$stop_if_invalid("Configuration validation failed")
