@@ -1,6 +1,3 @@
-
-
-
 #' Get the formula representation of an fMRI model
 #'
 #' This function extracts the formula from an \code{fmri_model} object.
@@ -33,13 +30,31 @@ term_matrices.fmri_model <- function(x, blocknum = NULL) {
     blocknum <- sort(unique(x$event_model$blockids))
   }
   
-  # Extract design matrices for event and baseline terms
-  eterms <- lapply(event_terms(x), function(term) as.matrix(design_matrix(term, blocknum)))
-  bterms <- lapply(baseline_terms(x), function(term) as.matrix(design_matrix(term, blocknum)))
+  # Get the full convolved design matrix from the event model
+  event_dm <- design_matrix(x$event_model, blockid = blocknum)
+  
+  # Get the baseline design matrix
+  baseline_dm <- design_matrix(x$baseline_model, blockid = blocknum)
+  
+  # Extract individual term matrices using the col_indices attribute
+  col_indices <- attr(x$event_model$design_matrix, "col_indices")
+  if (is.null(col_indices)) {
+    stop("Event model design matrix missing 'col_indices' attribute needed to extract individual term matrices.")
+  }
+  
+  # Extract event term matrices from the full convolved design matrix
+  eterms <- lapply(names(col_indices), function(term_name) {
+    indices <- col_indices[[term_name]]
+    as.matrix(event_dm[, indices, drop = FALSE])
+  })
+  names(eterms) <- names(col_indices)
+  
+  # Extract baseline term matrices (baseline terms are simpler, one per term)
+  bterms <- lapply(baseline_terms(x), function(term) as.matrix(design_matrix(term, blockid = blocknum)))
   
   # Compute indices for event and baseline terms
-  num_event_cols <- sum(sapply(eterms, ncol))
-  num_baseline_cols <- sum(sapply(bterms, ncol))
+  num_event_cols <- ncol(event_dm)
+  num_baseline_cols <- ncol(baseline_dm)
   
   eterm_indices <- 1:num_event_cols
   bterm_indices <- (num_event_cols + 1):(num_event_cols + num_baseline_cols)
@@ -49,7 +64,7 @@ term_matrices.fmri_model <- function(x, blocknum = NULL) {
   names(term_matrices) <- names(terms(x))
   
   # Collect variable names
-  vnames <- unlist(lapply(term_matrices, colnames))
+  vnames <- c(colnames(event_dm), colnames(baseline_dm))
   
   # Set attributes
   attr(term_matrices, "event_term_indices") <- eterm_indices
@@ -273,7 +288,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
   }
   
   ev_model <- event_model(
-    x=formula,
+    formula_or_list = formula,
     block = block,
     data = dataset$event_table,
     sampling_frame = dataset$sampling_frame,
@@ -399,23 +414,27 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   # Process contrasts term by term to correctly assign column indices
   for (term_name in names(contrast_info_by_term)) {
       term_contrasts <- contrast_info_by_term[[term_name]]
-      if (length(term_contrasts) > 0 && !is.null(fmrimod$event_model$term_indices[[term_name]])) {
-          # Find global column indices for this term
-          term_varnames <- colnames(design_matrix(fmrimod$event_model$terms[[term_name]]))
-          colind <- which(full_design_colnames %in% term_varnames)
+      
+      # Get col_indices from design matrix instead of term_indices from event model
+      col_indices <- attr(fmrimod$event_model$design_matrix, "col_indices")
+      
+      if (length(term_contrasts) > 0 && !is.null(col_indices) && !is.null(col_indices[[term_name]])) {
+          # Get the column indices directly from col_indices instead of trying to match names
+          # The col_indices already contains the correct indices for this term
+          colind <- col_indices[[term_name]]
           
           if (length(colind) == 0) {
-              warning(paste("Could not find columns in full design matrix for term:", term_name))
+              warning(paste("No column indices found for term:", term_name))
               next # Skip contrasts for this term if columns can't be found
           }
           
           # Apply colind attribute to each contrast spec within this term
           processed_term_contrasts <- lapply(term_contrasts, function(con_spec) {
               if (inherits(con_spec, "contrast") || inherits(con_spec, "Fcontrast")) {
-                  # We now rely on the contrast_weights.* methods to return correctly padded weights.
-                  # The check for NCOL(con_spec$weights) against length(colind) here is removed 
-                  # as con_spec$weights might not be padded yet at this stage.
+                  # Set the colind attribute on the contrast weights for the slow path
                   attr(con_spec$weights, "colind") <- colind
+                  # Also set it directly on the contrast object for estimate_contrast
+                  attr(con_spec, "colind") <- colind
                   # Add term name attribute for potential future use/debugging
                   # attr(con_spec$weights, "term") <- term_name 
               } else {
@@ -424,8 +443,8 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
               con_spec # Return modified or original con_spec
           })
           processed_conlist <- c(processed_conlist, processed_term_contrasts)
-      } else if (length(term_contrasts) > 0 && is.null(fmrimod$event_model$term_indices[[term_name]])) {
-           warning(paste("Contrasts found for term '", term_name, "' but term indices are missing in the event model."))
+      } else if (length(term_contrasts) > 0 && (is.null(col_indices) || is.null(col_indices[[term_name]]))) {
+           warning(paste("Contrasts found for term '", term_name, "' but col_indices are missing in the event model design matrix."))
       }
   }
 
@@ -443,8 +462,15 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   result <- switch(strategy,
                    "runwise" = runwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                          robust = robust, use_fast_path = use_fast_path, ...),
-                   "chunkwise" = chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
-                                         nchunks, robust = robust, use_fast_path = use_fast_path, ...))
+                   "chunkwise" = {
+                     if (inherits(dataset, "latent_dataset")) {
+                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
+                                    nchunks, robust = robust, ...) # Do not pass use_fast_path
+                     } else {
+                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
+                                    nchunks, robust = robust, use_fast_path = use_fast_path, ...)
+                     }
+                   })
   
   ret <- list(
     result = result,
@@ -587,9 +613,32 @@ pull_stat_revised <- function(x, type, element) {
 pull_stat <- function(x, type, element) {
   if (type == "betas") {
     ret <- x$result$betas$data[[1]][[element]][[1]]
-    ret <- ret[, x$result$event_indices, drop = FALSE]
-    colnames(ret) <- conditions(x$model$event_model)
-    suppressMessages(as_tibble(ret, .name_repair = "check_unique"))
+    
+    # Check bounds and filter valid indices
+    max_col <- ncol(ret)
+    valid_event_indices <- x$result$event_indices[x$result$event_indices <= max_col]
+    
+    if (length(valid_event_indices) == 0) {
+      warning("No valid event indices found in pull_stat. Using all available columns.")
+      valid_event_indices <- 1:max_col
+    }
+    
+    ret <- ret[, valid_event_indices, drop = FALSE]
+    
+    # Use the actual column names from the design matrix instead of conditions()
+    # This avoids duplicate names when multiple terms have the same variables
+    dm <- design_matrix(x$model)
+    if (!is.null(dm) && ncol(dm) >= max(valid_event_indices)) {
+      actual_colnames <- colnames(dm)[valid_event_indices]
+      colnames(ret) <- actual_colnames
+    } else {
+      # Fallback: use conditions but make them unique
+      condition_names <- conditions(x$model$event_model)[1:length(valid_event_indices)]
+      colnames(ret) <- make.names(condition_names, unique = TRUE)
+    }
+    
+    # Ensure tibble output for consistency with original behavior
+    res <- suppressMessages(as_tibble(ret, .name_repair = "check_unique"))
   } else if (type == "contrasts") {
     ret <- x$result$contrasts %>% dplyr::filter(type == "contrast")
     if (nrow(ret) == 0) {
@@ -643,8 +692,29 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
       # res <- as_tibble(res)
     } else {
       # Default: return only event betas
-      res <- all_betas[, object$result$event_indices, drop = FALSE]
-      colnames(res) <- conditions(object$model$event_model)
+      # Check bounds and filter valid indices
+      max_col <- ncol(all_betas)
+      valid_event_indices <- object$result$event_indices[object$result$event_indices <= max_col]
+      
+      if (length(valid_event_indices) == 0) {
+        warning("No valid event indices found in coef.fmri_lm. Using all available columns.")
+        valid_event_indices <- 1:max_col
+      }
+      
+      res <- all_betas[, valid_event_indices, drop = FALSE]
+      
+      # Use the actual column names from the design matrix instead of conditions()
+      # This avoids duplicate names when multiple terms have the same variables
+      dm <- design_matrix(object$model)
+      if (!is.null(dm) && ncol(dm) >= max(valid_event_indices)) {
+        actual_colnames <- colnames(dm)[valid_event_indices]
+        colnames(res) <- actual_colnames
+      } else {
+        # Fallback: use conditions but make them unique
+        condition_names <- conditions(object$model$event_model)[1:length(valid_event_indices)]
+        colnames(res) <- make.names(condition_names, unique = TRUE)
+      }
+      
       # Ensure tibble output for consistency with original behavior
       res <- suppressMessages(as_tibble(res, .name_repair = "check_unique"))
     }
@@ -712,9 +782,17 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts")) {
 fit_lm_contrasts <- function(fit, conlist, fcon, vnames, se = TRUE) {
   conres <- if (!is.null(conlist)) {
     ret <- lapply(conlist, function(con) {
-      estimate_contrast(con, fit, attr(con, "term_indices"))
+      # Extract colind from the contrast object's attributes
+      colind <- attr(con, "colind")
+      if (is.null(colind)) {
+        warning(paste("Missing colind attribute for contrast:", con$name %||% "unnamed"))
+        return(NULL) # Skip this contrast
+      }
+      estimate_contrast(con, fit, colind)
     })
-    names(ret) <- names(conlist)
+    # Filter out NULL results
+    ret <- ret[!sapply(ret, is.null)]
+    names(ret) <- sapply(conlist[!sapply(ret, is.null)], function(x) x$name %||% "unnamed")
     ret
   } else {
     list()
@@ -746,7 +824,15 @@ multiresponse_lm <- function(form, data_env, conlist, vnames, fcon, modmat = NUL
     lm.fit(modmat, data_env$.y)
   }
   
-  fit_lm_contrasts(lm_fit, conlist, fcon, vnames)
+  # Use the actual column names from the model matrix instead of vnames
+  # This ensures the dimensions match correctly
+  actual_vnames <- if (is.null(modmat)) {
+    names(coef(lm_fit))
+  } else {
+    colnames(modmat)
+  }
+  
+  fit_lm_contrasts(lm_fit, conlist, fcon, actual_vnames)
 }
 
 
@@ -960,7 +1046,10 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
           
           # Perform fast LM calculation
           res <- .fast_lm_matrix(Ymat, proj) # Returns list(betas, rss, sigma, sigma2)
-          bstats <- beta_stats_matrix(res$betas, proj$XtXinv, res$sigma, proj$dfres, vnames)
+          
+          # Use actual column names from the model matrix instead of global vnames
+          actual_vnames <- colnames(modmat)
+          bstats <- beta_stats_matrix(res$betas, proj$XtXinv, res$sigma, proj$dfres, actual_vnames)
           
           # Pass extracted weights lists to fit_lm_contrasts_fast
           contrasts <- fit_lm_contrasts_fast(res$betas, res$sigma2, proj$XtXinv, simple_conlist_weights, fconlist_weights, proj$dfres)
@@ -1102,8 +1191,9 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
         # Perform fast LM calculation
         res <- .fast_lm_matrix(Y_run, proj_run)
         
-        # Calculate beta statistics 
-        bstats <- beta_stats_matrix(res$betas, proj_run$XtXinv, res$sigma, proj_run$dfres, vnames)
+        # Use actual column names from the model matrix instead of global vnames
+        actual_vnames <- colnames(X_run)
+        bstats <- beta_stats_matrix(res$betas, proj_run$XtXinv, res$sigma, proj_run$dfres, actual_vnames)
         
         # Calculate contrasts 
         # Pass extracted weights lists

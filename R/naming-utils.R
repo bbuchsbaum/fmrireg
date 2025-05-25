@@ -84,6 +84,9 @@ make_term_tag <- function(hrfspec, existing_tags = character()) {
 
   if (!is.null(hrfspec$id)) {
     tag_base <- sanitize(hrfspec$id, allow_dot = FALSE)
+  } else if (!is.null(hrfspec$prefix)) {
+    # If no explicit id but prefix is provided, use prefix as the term tag
+    tag_base <- sanitize(hrfspec$prefix, allow_dot = FALSE)
   } else {
     is_ident_only <- FALSE
     is_known_generative_basis <- FALSE

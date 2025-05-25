@@ -399,6 +399,11 @@ design_matrix.baseline_term <- function(x, blockid = NULL, allrows = FALSE, ...)
   }
 }
 
+#' @export
+conditions.baseline_term <- function(x, ...) {
+  colnames(x$design_matrix)
+}
+
 #' Construct a Block Term.
 #'
 #' Constructs a constant block intercept term based on block IDs.

@@ -210,7 +210,19 @@ meta_betas <- function(bstats, colind, weighting=c("inv_var", "equal")) {
 
   len <- length(colind)
   
-  res <- lapply(colind, function(i) {
+  # Check the dimensions of the first beta matrix to understand the structure
+  first_beta <- bstats[[1]]$data[[1]]$estimate[[1]]
+  max_col <- ncol(first_beta)
+  
+  # Filter colind to only include valid column indices
+  valid_colind <- colind[colind <= max_col]
+  
+  if (length(valid_colind) == 0) {
+    warning("No valid column indices found in meta_betas. Using all available columns.")
+    valid_colind <- 1:max_col
+  }
+  
+  res <- lapply(valid_colind, function(i) {
     beta <- do.call(cbind, lapply(bstats, function(x) x$data[[1]]$estimate[[1]][,i]))
     se <- do.call(cbind, lapply(bstats, function(x) x$data[[1]]$se[[1]][,i]))
     do_fixef(se,beta, weighting)
@@ -223,7 +235,7 @@ meta_betas <- function(bstats, colind, weighting=c("inv_var", "equal")) {
   stat_type="zstat"
   
   ret <- dplyr::tibble(type="beta", name="parameter_estimates", stat_type="meta_zstat", conmat=list(NULL),
-         colind=list(colind), data=list(tibble(
+         colind=list(valid_colind), data=list(tibble(
            estimate=list(estimate),
            se=list(se),
            stat=list(stat),

@@ -135,19 +135,26 @@ design_matrix.event_model <- function(x, blockid = NULL, ...) {
   if (is.null(blockid)) {
     dm
   } else {
-    # Assumes sampling_frame blockids are 1-based consecutive after parse_event_model
-    # We stored the *original* blockids in event_model$blockids
-    # Need to map blockid argument to row indices.
-    # This requires access to the original block vector or the sampling frame.
-    all_blockids <- x$blockids
-    if (is.null(all_blockids)) { # Fallback if blockids weren't stored?
-         warning("Block IDs not stored in event_model; cannot subset design matrix by block.")
-         return(dm)
+    # The design matrix has one row per timepoint, not per event
+    # We need to map blockid to timepoint indices using the sampling frame
+    sampling_frame <- x$sampling_frame
+    if (is.null(sampling_frame)) {
+        warning("Sampling frame not stored in event_model; cannot subset design matrix by block.")
+        return(dm)
     }
-    keep_rows <- all_blockids %in% blockid
+    
+    # Get the block IDs for each timepoint from the sampling frame
+    timepoint_blockids <- blockids(sampling_frame)
+    if (is.null(timepoint_blockids)) {
+        warning("Cannot determine timepoint block IDs from sampling frame.")
+        return(dm)
+    }
+    
+    # Find timepoints that belong to the requested blocks
+    keep_rows <- timepoint_blockids %in% blockid
     if (!any(keep_rows)) {
-        warning("Specified blockid(s) not found in the model.")
-        # Return empty tibble with same colnames?
+        warning("Specified blockid(s) not found in the sampling frame.")
+        # Return empty tibble with same colnames
         return(dm[0, , drop = FALSE]) 
     }
     dm[keep_rows, , drop = FALSE]
@@ -255,12 +262,9 @@ contrast_weights.event_model <- function(x, ...) {
   names(ret) <- tnames
   # Filter out terms that had no contrasts defined
   ret <- ret[!sapply(ret, is.null)]
-  # Flatten list-of-lists to a single-level list of contrasts without term prefix
-  if (length(ret) == 0) {
-    list()
-  } else {
-    do.call(c, ret)
-  }
+  # Return the grouped structure instead of flattening
+  # This preserves the term grouping that fmri_lm_fit expects
+  return(ret)
 }
 
 #' @export

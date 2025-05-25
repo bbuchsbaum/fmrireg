@@ -74,7 +74,13 @@ event <- function(value, name, onsets, blockids, durations = 0, subset = NULL) {
       basis_subset <- sub_basis(value, subset)
       switch_result <- list(value = basis_subset$y, meta = list(basis = basis_subset))
   } else if (is.factor(value) || is.character(value)) {
-      original_levels <- levels(value) # Store original levels
+      # Store original levels - handle both factors and character vectors
+      original_levels <- if (is.factor(value)) {
+          levels(value)
+      } else {
+          # For character vectors, get unique values as levels
+          unique(as.character(value))
+      }
       # Create factor 'f' using subsetted values BUT preserving original levels
       f <- factor(as.character(value)[keep_indices], levels = original_levels)
       if (length(f) == 0) {

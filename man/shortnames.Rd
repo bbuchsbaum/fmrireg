@@ -3,15 +3,12 @@
 \name{shortnames}
 \alias{shortnames}
 \alias{shortnames.event_term}
-\alias{shortnames.convolved_term}
 \alias{shortnames.event_model}
 \title{Short Names}
 \usage{
 shortnames(x, ...)
 
 \method{shortnames}{event_term}(x, ...)
-
-\method{shortnames}{convolved_term}(x, ...)
 
 \method{shortnames}{event_model}(x, ...)
 }

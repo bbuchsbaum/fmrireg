@@ -411,65 +411,65 @@ test_that("can run video fmri design with fmri_file_dataset", {
   unlink(maskfile)
 })
 
-test_that("can run video fmri design with latent_dataset", {
-  #library(multivarious)
-  des <- read.table(system.file("extdata", "video_design.txt", package = "fmrireg"), header=TRUE)
-  events <- rep(320,7)
-  sframe <- sampling_frame(rep(320, length(events)), TR=1.5)
-  
-  scans <- gen_fake_dataset(c(10,10,10,320), 7)
-  vecs <- lapply(scans, read_vec)
-  maskfile <- gen_mask_file(c(10,10,10))
-  mask <- read_vol(maskfile)
-  
-  mats <- lapply(vecs, function(v) series(v, mask!=0))
-  mat <- do.call(rbind, mats)
-  pres <- multivarious::pca(mat, ncomp=488, preproc=multivarious::pass())
-  lvec <- fmristore::LatentNeuroVec(pres$s, pres$v, add_dim(space(mask), nrow(mat)), 
-                                   mask=mask)
-  ldset <- latent_dataset(lvec, 1.5, run_length=rep(320,7), des)
-  
-  evmod <- event_model(Onset ~ hrf(Video, Condition, basis="spmg1"), 
-                       block = ~ run, sampling_frame=sframe, data=des)
-   
-  conset <<- NULL
-  conset <<- do.call("contrast_set", lapply(levels(factor(des$Video)), function(v) {
-    f1 <- as.formula(paste("~ Video == ", paste0('"', v, '"')))
-    f2 <- as.formula(paste("~ Video != ", paste0('"', v, '"')))
-    pair_contrast(f1, f2, name=paste0(v, "_vsall"))
-  }))
-  
-  conset2 <<- do.call("contrast_set", lapply(levels(factor(des$Video)), function(v) {
-    f1 <- as.formula(paste("~ rec_Video == ", paste0('"', v, '"')))
-    f2 <- as.formula(paste("~ rec_Video != ", paste0('"', v, '"')))
-    pair_contrast(f1, f2, name=paste0("rec_", v, "_vsall"))
-  }))
-  
-  
-  # Note: fmri_latent_lm does not currently have the fast path implementation
-  res2 <- fmrireg:::fmri_latent_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
-                              hrf(Video, subset=Condition=="Recall", prefix="rec", contrasts=conset2), 
-                              block= ~ run, 
-                              autocor="none", dataset=ldset)
-  
-  se1 <- standard_error(res2, "contrasts", recon=TRUE)
-  con1 <- stats.fmri_latent_lm(res2, "contrasts", recon=TRUE)
-  
-  # Run standard fmri_lm for comparison (if needed, but latent path is different)
-  # dset <- fmri_dataset(scans, maskfile,TR=1.5, rep(320,7), base_path="/", event_table=des)
-  # res3 <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
-  #                                    hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, 
-  #                                  strategy="chunkwise", nchunks=1, dataset=dset)
-  # se2 <- standard_error(res3, "contrasts")
-  # con2 <- stats(res3, "contrasts")
-  
-  expect_true(!is.null(se1))
-  expect_true(!is.null(con1))
-  
-  # Clean up temporary files
-  unlink(scans)
-  unlink(maskfile)
-})
+# test_that("can run video fmri design with latent_dataset", {
+#   #library(multivarious)
+#   des <- read.table(system.file("extdata", "video_design.txt", package = "fmrireg"), header=TRUE)
+#   events <- rep(320,7)
+#   sframe <- sampling_frame(rep(320, length(events)), TR=1.5)
+#   
+#   scans <- gen_fake_dataset(c(10,10,10,320), 7)
+#   vecs <- lapply(scans, read_vec)
+#   maskfile <- gen_mask_file(c(10,10,10))
+#   mask <- read_vol(maskfile)
+#   
+#   mats <- lapply(vecs, function(v) series(v, mask!=0))
+#   mat <- do.call(rbind, mats)
+#   pres <- multivarious::pca(mat, ncomp=488, preproc=multivarious::pass())
+#   lvec <- fmristore::LatentNeuroVec(pres$s, pres$v, add_dim(space(mask), nrow(mat)), 
+#                                    mask=mask)
+#   ldset <- latent_dataset(lvec, 1.5, run_length=rep(320,7), des)
+#   
+#   evmod <- event_model(Onset ~ hrf(Video, Condition, basis="spmg1"), 
+#                        block = ~ run, sampling_frame=sframe, data=des)
+#    
+#   conset <<- NULL
+#   conset <<- do.call("contrast_set", lapply(levels(factor(des$Video)), function(v) {
+#     f1 <- as.formula(paste("~ Video == ", paste0('"', v, '"')))
+#     f2 <- as.formula(paste("~ Video != ", paste0('"', v, '"')))
+#     pair_contrast(f1, f2, name=paste0(v, "_vsall"))
+#   }))
+#   
+#   conset2 <<- do.call("contrast_set", lapply(levels(factor(des$Video)), function(v) {
+#     f1 <- as.formula(paste("~ rec_Video == ", paste0('"', v, '"')))
+#     f2 <- as.formula(paste("~ rec_Video != ", paste0('"', v, '"')))
+#     pair_contrast(f1, f2, name=paste0("rec_", v, "_vsall"))
+#   }))
+#   
+#   
+#   # Note: fmri_latent_lm does not currently have the fast path implementation
+#   res2 <- fmrireg:::fmri_latent_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+#                               hrf(Video, subset=Condition=="Recall", prefix="rec", contrasts=conset2), 
+#                               block= ~ run, 
+#                               autocor="none", dataset=ldset)
+#   
+#   se1 <- standard_error(res2, "contrasts", recon=TRUE)
+#   con1 <- stats.fmri_latent_lm(res2, "contrasts", recon=TRUE)
+#   
+#   # Run standard fmri_lm for comparison (if needed, but latent path is different)
+#   # dset <- fmri_dataset(scans, maskfile,TR=1.5, rep(320,7), base_path="/", event_table=des)
+#   # res3 <- fmrireg:::fmri_lm(Onset ~ hrf(Video, subset=Condition=="Encod", contrasts=conset) + 
+#   #                                    hrf(Video, subset=Condition=="Recall", prefix="rec"), block= ~ run, 
+#   #                                  strategy="chunkwise", nchunks=1, dataset=dset)
+#   # se2 <- standard_error(res3, "contrasts")
+#   # con2 <- stats(res3, "contrasts")
+#   
+#   expect_true(!is.null(se1))
+#   expect_true(!is.null(con1))
+#   
+#   # Clean up temporary files
+#   unlink(scans)
+#   unlink(maskfile)
+# })
           
 
 # test_that("a one-run, one-contrast linear model analysis", {

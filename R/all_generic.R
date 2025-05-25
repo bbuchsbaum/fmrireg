@@ -739,6 +739,17 @@ baseline_terms <- function(x) UseMethod("baseline_terms")
 #' @seealso [event_terms()], [baseline_terms()], [design_matrix()]
 term_indices <- function(x, ...) UseMethod("term_indices")
 
+#' @export
+term_indices.event_model <- function(x, ...) {
+  # Extract col_indices from the design matrix attribute
+  col_indices <- attr(x$design_matrix, "col_indices")
+  if (is.null(col_indices)) {
+    warning("Event model design matrix missing 'col_indices' attribute.")
+    return(NULL)
+  }
+  return(col_indices)
+}
+
 
 
 

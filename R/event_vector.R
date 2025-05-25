@@ -1080,7 +1080,7 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
   ## ----------------------------------------------------------------
   # model.matrix might return fewer columns than expected if interactions 
   # lead to rank deficiency. drop.empty applies to the *output* matrix.
-  if (drop.empty) {
+  if (isTRUE(drop.empty)) {
       # Check for intercept columns and constant columns
       # Intercept columns are named "(Intercept)" 
       # Constant columns have zero variance but non-zero values (e.g., all ones)

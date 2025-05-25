@@ -8,7 +8,7 @@
 \usage{
 nbasis(x)
 
-\method{nbasis}{convolved_term}(x)
+\method{nbasis}{convolved_term}(x, ...)
 
 \method{nbasis}{Reg}(x)
 }
