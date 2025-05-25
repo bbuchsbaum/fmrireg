@@ -1,17 +1,16 @@
 #' @keywords internal
 #' @noRd
 parse_term <- function(vars, ttype) {
-  dim <- length(vars) # number of variables
-  term <- deparse(vars[[1]],backtick=TRUE) # first covariate
-  if (dim>1) # then deal with further covariates
-    for (i in 2:dim) term[i]<-deparse(vars[[i]],backtick=TRUE)
-  for (i in 1:dim) term[i] <- attr(terms(reformulate(term[i])),"term.labels")
-  
-  full.call<-paste(ttype, "(",term[1],sep="")
-  if (dim > 1) for (i in 2:dim) full.call<-paste(full.call,",",term[i],sep="")
-  label <- paste(full.call,")",sep="")   # label for parameters of this term  
-  
-  list(term=term, label=label)
+  nvars <- length(vars) # number of variables
+
+  term <- vapply(vars, function(v) {
+    parsed <- deparse(v, backtick = TRUE)
+    attr(terms(reformulate(parsed)), "term.labels")
+  }, character(1))
+
+  label <- sprintf("%s(%s)", ttype, paste(term, collapse = ","))
+
+  list(term = term, label = label)
 }
 
 #' Construct a Covariate Term
