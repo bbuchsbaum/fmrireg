@@ -40,7 +40,8 @@ Imports:
     R6,
     splines,
     crayon,
-    plotly
+    plotly,
+    yaml
 RoxygenNote: 7.3.2.9000
 Roxygen: list(
     markdown = TRUE,
