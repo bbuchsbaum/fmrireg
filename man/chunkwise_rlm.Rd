@@ -4,16 +4,30 @@
 \alias{chunkwise_rlm}
 \title{Perform Chunkwise Robust Linear Modeling on fMRI Dataset}
 \usage{
-chunkwise_rlm(dset, model, conlist, fcon, nchunks, verbose = FALSE)
+chunkwise_rlm(
+  dset,
+  model,
+  contrast_objects,
+  nchunks,
+  verbose = FALSE,
+  use_fast_path = FALSE,
+  progress = FALSE
+)
 }
 \arguments{
 \item{dset}{An \code{fmri_dataset} object.}
 
 \item{model}{The \code{fmri_model} used for the analysis.}
 
+\item{contrast_objects}{The list of full contrast objects.}
+
 \item{nchunks}{The number of chunks to divide the dataset into.}
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
+
+\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based fast computation.}
+
+\item{progress}{Logical. Show a progress bar during chunk processing.}
 }
 \description{
 Perform Chunkwise Robust Linear Modeling on fMRI Dataset

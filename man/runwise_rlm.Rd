@@ -5,19 +5,26 @@
 \title{Perform Runwise Robust Linear Modeling on fMRI Dataset}
 \usage{
 runwise_rlm(
-  dataset,
+  dset,
   model,
-  conlist,
-  fcons,
-  meta_weighting = c("inv_var", "equal"),
+  contrast_objects,
   verbose = FALSE,
-  ...
+  use_fast_path = FALSE,
+  progress = FALSE
 )
 }
 \arguments{
+\item{dset}{An \code{fmri_dataset} object.}
+
 \item{model}{The \code{fmri_model} used for the analysis.}
 
+\item{contrast_objects}{The list of full contrast objects.}
+
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
+
+\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based fast computation.}
+
+\item{progress}{Logical. Show a progress bar during run processing.}
 }
 \description{
 Perform Runwise Robust Linear Modeling on fMRI Dataset

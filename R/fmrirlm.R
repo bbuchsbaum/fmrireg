@@ -5,7 +5,6 @@
 #'
 #' @inheritParams fmri_lm
 #' @param nchunks Number of data chunks when strategy is "chunkwise". Default is 10.
-#' @param meta_weighting Method for combining results across runs/chunks. Either "inv_var" for inverse variance weighting or "equal" for equal weighting. Default is "inv_var".
 #' @return A fitted robust linear regression model for fMRI data analysis.
 #' @export
 #' @examples
@@ -16,86 +15,42 @@
 #' dset2 <- matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
 #' lm.1 <- fmri_rlm(onset ~ hrf(fac), block= ~ run, dataset=dset)
 #' lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run, dataset=dset2)
-fmri_rlm <- function(formula, block, baseline_model=NULL, dataset, 
-                     durations=0, drop_empty=TRUE,
-                     strategy=c("runwise", "chunkwise"), 
-                     nchunks=10,
-                     meta_weighting=c("inv_var", "equal"),
+fmri_rlm <- function(formula, block, baseline_model = NULL, dataset,
+                     durations = 0, drop_empty = TRUE,
+                     strategy = c("runwise", "chunkwise"),
+                     nchunks = 10,
                      ...) {
-  
-  strategy <- match.arg(strategy)
-  meta_weighting <- match.arg(meta_weighting)
-  
-  # Error checking
-  assert_that(is.formula(formula), msg = "'formula' must be a formula")
-  assert_that(is.formula(block), msg = "'block' must be a formula")
-  assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset'")
-  assert_that(is.numeric(durations), msg = "'durations' must be numeric")
-  if (strategy == "chunkwise") {
-    assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
-  }
-  
-  model <- create_fmri_model(formula, block, baseline_model, dataset, durations, drop_empty)
-  ret <- fmri_lm_fit(model, dataset, strategy, robust=TRUE, nchunks=nchunks, 
-                     meta_weighting=meta_weighting, ...)
-  
-  class(ret) <- c("fmri_rlm", "fmri_lm")
-  return(ret)
+
+  res <- fmri_lm(formula, block, baseline_model = baseline_model, dataset = dataset,
+                 durations = durations, drop_empty = drop_empty,
+                 strategy = strategy, nchunks = nchunks,
+                 robust = TRUE, ...)
+  class(res) <- c("fmri_rlm", class(res))
+  res
 }
 
 #' Perform Chunkwise Robust Linear Modeling on fMRI Dataset
 #'
 #' @inheritParams chunkwise_lm.fmri_dataset
 #' @keywords internal
-chunkwise_rlm <- function(dset, model, conlist, fcon, nchunks, verbose = FALSE) {
-  chunks <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
-  form <- get_formula(model)
-  tmats <- term_matrices(model)
-  data_env <- list2env(tmats)
-  modmat <- model.matrix(as.formula(form), data_env)
-  
-  ctrl <- robustbase::lmrob.control(k.max=500, maxit.scale=500)
-  
-  cres <- foreach(ym = chunks, .verbose = verbose) %dopar% {
-    if (verbose) message("Processing chunk ", ym$chunk_num)
-    
-    results <- lapply(1:ncol(ym$data), function(i) {
-      data_env$.y <- ym$data[,i]
-      fit <- robustbase::lmrob(as.formula(form), data = data_env, control = ctrl)
-      fit_lm_contrasts(fit, conlist, fcon, attr(tmats, "varnames"))
-    })
-    
-    # Combine results for this chunk
-    bstats <- lapply(results, function(x) x$bstats) %>% dplyr::bind_rows()
-    contrasts <- lapply(results, function(x) x$contrasts) %>% dplyr::bind_rows()
-    
-    list(
-      bstats = bstats,
-      contrasts = contrasts,
-      event_indices = attr(tmats, "event_term_indices"),
-      baseline_indices = attr(tmats, "baseline_term_indices")
-    )
-  }
-  
-  unpack_chunkwise(cres, attr(tmats, "event_term_indices"), 
-                   attr(tmats, "baseline_term_indices"))
+chunkwise_rlm <- function(dset, model, contrast_objects, nchunks,
+                          verbose = FALSE, use_fast_path = FALSE,
+                          progress = FALSE) {
+  chunkwise_lm.fmri_dataset(dset, model, contrast_objects, nchunks,
+                            robust = TRUE, verbose = verbose,
+                            use_fast_path = use_fast_path, progress = progress)
 }
 
 #' Perform Runwise Robust Linear Modeling on fMRI Dataset
 #'
 #' @inheritParams runwise_lm
 #' @keywords internal
-runwise_rlm <- function(dataset, model, conlist, fcons,
-                       meta_weighting=c("inv_var", "equal"), 
-                       verbose=FALSE, ...) {
-  # Set up robust control parameters
-  ctrl <- robustbase::lmrob.control(k.max=500, maxit.scale=500)
-  
-  runwise_fit(dataset, model, conlist, fcons,
-             fit_fun=multiresponse_rlm,
-             meta_weighting=meta_weighting,
-             verbose=verbose,
-             control=ctrl, ...)
+runwise_rlm <- function(dset, model, contrast_objects,
+                       verbose = FALSE, use_fast_path = FALSE,
+                       progress = FALSE) {
+  runwise_lm(dset, model, contrast_objects, robust = TRUE,
+             verbose = verbose, use_fast_path = use_fast_path,
+             progress = progress)
 }
 
 #' Fit a multiresponse robust linear model
