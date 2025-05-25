@@ -18,11 +18,12 @@ NULL
 #'
 #' @export
 #' @rdname AFNI_HRF-class
-AFNI_HRF <- function(name, nbasis, params) {
-  structure(name, 
-            nbasis=as.integer(nbasis), 
-            params=params, 
-            class=c("AFNI_HRF"))
+AFNI_HRF <- function(name, nbasis, params, span = 24) {
+  structure(name,
+            nbasis = as.integer(nbasis),
+            params = params,
+            span = span,
+            class = c("AFNI_HRF", "HRF"))
   
 }
 
@@ -39,12 +40,12 @@ as.character.AFNI_HRF <- function(x,...) {
 #' @param stop the stop time for sin/poly/csplin models
 #' @export
 #' @return an \code{afni_hrfspec} instance
-afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",           
-                                  "tent",   "csplin", "poly",  "sine",        
-                                  "gamma", "spmg2", "spmg3", "wav"), 
-                                  onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, 
-                                  nbasis=1, contrasts=NULL, id=NULL, 
-                                  lag=0,
+afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",
+                                  "tent",   "csplin", "poly",  "sin",
+                                  "gam", "spmg2", "spmg3", "wav"),
+                                  onsets=NULL, durations=NULL, prefix=NULL, subset=NULL,
+                                  nbasis=1, contrasts=NULL, id=NULL,
+                                  lag=0, precision = 0.3, summate = TRUE,
                                   start=NULL, stop=NULL) {
   
   ## TODO cryptic error message when argument is mispelled and is then added to ...
@@ -112,6 +113,8 @@ afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",
     prefix=prefix,
     subset=rlang::enexpr(subset), # Capture subset expression
     lag=lag,
+    precision = precision,
+    summate = summate,
     contrasts=cset)
   
   class(ret) <- c("afni_hrfspec", "hrfspec", "list")
@@ -134,9 +137,10 @@ afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",
 #' 
 #' @export
 #' @return an \code{afni_trialwise_hrfspec} instance
-afni_trialwise <- function(label, basis=c("spmg1", "block", "dmblock", "gamma", "wav"), 
-                     onsets=NULL, durations=0, subset=NULL, 
-                      id=NULL, start=0, stop=22) {
+afni_trialwise <- function(label, basis=c("spmg1", "block", "dmblock", "gamma", "wav"),
+                     onsets=NULL, durations=0, subset=NULL,
+                      id=NULL, start=0, stop=22,
+                      precision = 0.3, summate = TRUE) {
   
   ## TODO cryptic error message when argument is mispelled and is then added to ...
   basis <- tolower(basis)
@@ -162,7 +166,9 @@ afni_trialwise <- function(label, basis=c("spmg1", "block", "dmblock", "gamma", 
     hrf=hrf,
     onsets=onsets,
     durations=durations,
-    subset=rlang::enexpr(subset))
+    subset=rlang::enexpr(subset),
+    precision = precision,
+    summate = summate)
   
   class(ret) <- c("afni_trialwise_hrfspec", "hrfspec", "list")
   ret
@@ -184,6 +190,9 @@ construct.afni_hrfspec <- function(x, model_spec, ...) {
     evterm=et,
     sampling_frame=model_spec$sampling_frame,
     hrfspec=x,
+    precision = x$precision,
+    summate = x$summate,
+    lag = x$lag,
     contrasts=x$contrasts,
     id=if(!is.null(x$id)) x$id else et$varname
   )
@@ -223,6 +232,8 @@ construct.afni_trialwise_hrfspec <- function(x, model_spec, ...) {
     evterm=et,
     sampling_frame=model_spec$sampling_frame,
     hrfspec=x,
+    precision = x$precision,
+    summate = x$summate,
     id=x$id
   )
   
