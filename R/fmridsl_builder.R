@@ -31,6 +31,10 @@ build_config_from_ior <- function(validated_ior) {
 
   errors$stop_if_invalid("Cannot proceed without a valid BIDS project")
 
+  # Initialize info containers
+  events_info <- list(columns = character(), mapping = validated_ior$events)
+  confounds_info <- list(available_columns = character(), groups = list())
+
   bids_check_level <- validated_ior$validation_settings$bids_content_checks %||% "Warn"
 
   ## DSL-202: Validate subject, task, and run selections against BIDS content
@@ -107,6 +111,7 @@ build_config_from_ior <- function(validated_ior) {
       )
       if (nrow(ev_res) > 0 && length(ev_res$data) > 0 && !is.null(ev_res$data[[1]])) {
         rep_events_df <- ev_res$data[[1]]
+        events_info$columns <- names(rep_events_df)
       }
     }, error = function(e) {
       msg <- paste0("Failed to load events for representative subject/task/run: ", e$message)
@@ -155,6 +160,7 @@ build_config_from_ior <- function(validated_ior) {
       )
       if (nrow(conf_res) > 0 && length(conf_res$data) > 0 && !is.null(conf_res$data[[1]])) {
         rep_confounds_df <- conf_res$data[[1]]
+        confounds_info$available_columns <- names(rep_confounds_df)
       }
     }, error = function(e) {
       msg <- paste0("Failed to load confounds for representative subject/task/run: ", e$message)
@@ -228,6 +234,7 @@ build_config_from_ior <- function(validated_ior) {
           }
         }
         resolved_groups[[grp_nm]] <- matches
+        confounds_info$groups[[grp_nm]] <- matches
       }
     }
 
@@ -258,12 +265,19 @@ build_config_from_ior <- function(validated_ior) {
 
   errors$stop_if_invalid("BIDS content validation failed")
 
+  roles_vec <- vapply(validated_ior$variables, `[[`, character(1), "role")
+  variable_roles <- split(names(roles_vec), roles_vec)
+  variable_roles <- lapply(variable_roles, unname)
+
   config <- list(
     spec      = validated_ior,
     project   = project,
     subjects  = resolved_subs,
     tasks     = requested_tasks,
     runs      = requested_runs,
+    events_info = events_info,
+    confounds_info = confounds_info,
+    variable_roles = variable_roles,
     validated = TRUE
   )
   class(config) <- "fmri_config"
