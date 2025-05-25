@@ -2,16 +2,24 @@
 % Please edit documentation in R/all_generic.R
 \name{get_data_matrix}
 \alias{get_data_matrix}
-\title{get_data_matrix}
+\title{Extract data matrix}
 \usage{
 get_data_matrix(x, ...)
 }
 \arguments{
-\item{x}{the dataset}
+\item{x}{The dataset object.}
 
-\item{...}{extra args}
+\item{...}{Additional arguments passed to methods.}
+}
+\value{
+A numeric matrix containing the BOLD data.
 }
 \description{
-get_data_matrix
+Return the BOLD time series from a dataset as a numeric matrix. Rows correspond to voxels and columns to scans.
 }
-\keyword{internal}
+\examples{
+X <- matrix(rnorm(20), 4, 5)
+dset <- matrix_dataset(X, TR = 1, run_length = 5)
+mat <- get_data_matrix(dset)
+dim(mat)
+}

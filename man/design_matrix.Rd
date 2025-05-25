@@ -5,6 +5,7 @@
 \alias{design_matrix.convolved_term}
 \alias{design_matrix.event_model}
 \alias{design_matrix.fmri_model}
+\alias{design_matrix.afni_hrf_convolved_term}
 \title{design_matrix}
 \usage{
 design_matrix(x, ...)
@@ -14,6 +15,8 @@ design_matrix(x, ...)
 \method{design_matrix}{event_model}(x, blockid = NULL, ...)
 
 \method{design_matrix}{fmri_model}(x, blockid = NULL, ...)
+
+\method{design_matrix}{afni_hrf_convolved_term}(x, blockid = NULL, ...)
 }
 \arguments{
 \item{x}{The term or model object (typically an event_term, event_model, baseline_model, or fmri_model)}

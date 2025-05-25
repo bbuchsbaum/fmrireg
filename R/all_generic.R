@@ -88,11 +88,22 @@ event_model <- function(x, data, block, sampling_frame, drop_empty=TRUE, duratio
 get_data <- function(x, ...) UseMethod("get_data")
 
 
-#' get_data_matrix
-#' 
-#' @param x the dataset
-#' @param ... extra args
-#' @keywords internal
+#' Extract data matrix
+#'
+#' Return the BOLD time series from a dataset as a numeric matrix. Rows
+#' correspond to voxels and columns to scans.
+#'
+#' @param x The dataset object.
+#' @param ... Additional arguments passed to methods.
+#'
+#' @return A numeric matrix containing the data values.
+#'
+#' @examples
+#' X <- matrix(rnorm(20), 4, 5)
+#' dset <- matrix_dataset(X, TR = 1, run_length = 5)
+#' mat <- get_data_matrix(dset)
+#' dim(mat)
+#'
 #' @export
 get_data_matrix <- function(x, ...) UseMethod("get_data_matrix")
 
@@ -2279,6 +2290,11 @@ design_matrix.convolved_term <- function(x, blockid=NULL, ...) {
   } 
 }
 
+#' @describeIn design_matrix Design matrix for AFNI-convolved terms
+#'
+#' AFNI-convolved terms rely on AFNI software for design matrix
+#' construction. This method stops with an informative message.
+#'
 #' @export
 design_matrix.afni_hrf_convolved_term <- function(x, blockid=NULL, ...) {
   stop("afni_hrf_convolved_term delegates design matrix construction to AFNI")
