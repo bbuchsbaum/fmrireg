@@ -808,11 +808,13 @@ build_baseline_model_from_dsl <- function(fmri_config, model, subject_data) {
 #' @param term_specs Named list of term specification objects.
 #' @param fmri_config Validated `fmri_config` object.
 #' @param subject_data List returned by [load_and_prepare_subject_data()].
+#' @param progress Logical; show progress during event model construction.
 #' @return An `event_model` object.
 #' @keywords internal
 build_event_model_from_dsl <- function(term_specs,
                                        fmri_config,
-                                       subject_data) {
+                                       subject_data,
+                                       progress = FALSE) {
   stopifnot(is.list(term_specs))
   stopifnot(inherits(fmri_config, "fmri_config"))
 
@@ -837,7 +839,8 @@ build_event_model_from_dsl <- function(term_specs,
               data = data_df,
               block = data_df$block,
               sampling_frame = sframe,
-              durations = data_df$duration)
+              durations = data_df$duration,
+              progress = progress)
 }
 
 #' Assemble fmri_model from event and baseline components
@@ -854,5 +857,64 @@ build_fmri_model_from_dsl <- function(event_model, baseline_model) {
   stopifnot(inherits(event_model, "event_model"))
   stopifnot(inherits(baseline_model, "baseline_model"))
   fmri_model(event_model, baseline_model)
+}
+
+#' Build an fmri_model from a validated configuration
+#'
+#' Implements DSL2-504. This user-facing helper orchestrates the
+#' entire DSL pipeline for a single subject: data loading,
+#' variable processing, term conversion, and model assembly.
+#'
+#' @param config A validated `fmri_config` object.
+#' @param subject_id Subject identifier string.
+#' @param model_name Optional model name to build. Defaults to
+#'   `config$default_model` or the first model.
+#' @param progress Logical; show progress for event model realisation.
+#' @return An `fmri_model` object.
+#' @export
+build_fmri_model_from_config <- function(config, subject_id,
+                                         model_name = NULL,
+                                         progress = FALSE) {
+  if (!inherits(config, "fmri_config") || !isTRUE(config$validated)) {
+    stop("'config' must be a validated fmri_config", call. = FALSE)
+  }
+
+  subject_id <- sub("^sub-", "", subject_id)
+  if (!subject_id %in% config$subjects) {
+    stop(sprintf("Subject '%s' not listed in configuration.", subject_id),
+         call. = FALSE)
+  }
+
+  if (is.null(model_name)) {
+    model_name <- config$default_model %||% config$spec$models[[1]]$name
+  }
+  model <- NULL
+  for (m in config$spec$models) {
+    if (identical(m$name, model_name)) {
+      model <- m
+      break
+    }
+  }
+  if (is.null(model)) {
+    stop(sprintf("Model '%s' not found in configuration.", model_name),
+         call. = FALSE)
+  }
+
+  if (progress) message("Loading subject data...")
+  sdat <- load_and_prepare_subject_data(config, subject_id)
+
+  if (progress) message("Processing variables...")
+  var_env <- process_variables_and_transformations(config, sdat)
+
+  if (progress) message("Converting terms...")
+  term_specs <- convert_terms_to_specs(config, model, var_env)
+
+  if (progress) message("Building event model...")
+  ev_mod <- build_event_model_from_dsl(term_specs, config, sdat, progress = progress)
+
+  if (progress) message("Building baseline model...")
+  bl_mod <- build_baseline_model_from_dsl(config, model, sdat)
+
+  build_fmri_model_from_dsl(ev_mod, bl_mod)
 }
 
