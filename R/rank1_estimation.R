@@ -94,7 +94,8 @@ r1_glm_betas <- function(X, y, Z = NULL,
 
     # 2)    h    given beta,z
     y2   <- y - Z %*% omega
-    pred <- rowSums(mapply(\(B,b) (B %*% h) * b, Xb, beta, SIMPLIFY = FALSE))
+    pred_list <- mapply(\(B,b) (B %*% h) * b, Xb, beta, SIMPLIFY = FALSE)
+    pred <- rowSums(do.call(cbind, pred_list))
     h    <- qr.coef(qr(Xall * sum(z)), y2 - pred)
   }
 

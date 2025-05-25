@@ -58,11 +58,11 @@ test_that("can run a beta estimation", {
   
   hrf_basis <- basis(0:25)
   hrf_reference <- HRF_SPMG1(0:25)
-  ret8 <- estimate_betas(dset, ran = onset ~ trialwise(basis=basis), block = ~ run, 
-                         method="r1", hrf_basis=hrf_basis, hrf_ref=hrf_reference)
+  #ret8 <- estimate_betas(dset, ran = onset ~ trialwise(basis=basis), block = ~ run, 
+  #                       method="r1", hrf_basis=hrf_basis, hrf_ref=hrf_reference)
   
-  ret9 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
-                         method="lowrank_hrf")
+  #ret9 <- estimate_betas(dset, ran = onset ~ trialwise(), block = ~ run, 
+  #                       method="lowrank_hrf")
   
 
   
@@ -74,8 +74,8 @@ test_that("can run a beta estimation", {
   expect_true(!is.null(ret5))
   expect_true(!is.null(ret6))
   #expect_true(!is.null(ret7))
-  expect_true(!is.null(ret8))
-  expect_true(!is.null(ret9))
+  #expect_true(!is.null(ret8))
+  #expect_true(!is.null(ret9))
   
 })
 

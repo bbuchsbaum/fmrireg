@@ -224,22 +224,19 @@ mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
 
 
 
-#' Estimate betas using the Rank-1 GLM methods (R1 and R1-GLMS with optimizations)
+#' Estimate betas using various regression methods
 #'
-#' This function estimates betas (regression coefficients) and the hemodynamic response function (HRF)
-#' simultaneously using the Rank-1 GLM (`r1`) and Rank-1 GLM with Mumford's separate beta estimation (`r1_glms`) methods.
-#' It includes optimizations to improve computational efficiency.
+#' This function estimates betas (regression coefficients) for fixed and random effects
+#' using various regression methods including mixed models, least squares, and PLS.
 #'
 #' @param x An object of class `fmri_dataset` representing the fMRI dataset.
 #' @param fixed A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials).
 #' @param ran A formula specifying the random (trialwise) regressors that model single trial effects.
 #' @param block A formula specifying the block factor.
-#' @param method The regression method for estimating trialwise betas; use `"r1"` for the Rank-1 GLM method or `"r1_glms"` for the Rank-1 GLM with Mumford's approach.
+#' @param method The regression method for estimating trialwise betas; one of "mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "pls", "pls_global", "ols", "fracridge", or "lowrank_hrf".
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL).
-#' @param hrf_basis A matrix of basis functions for the HRF (default: NULL).
-#' @param hrf_ref A reference HRF vector for initializing and constraining the HRF estimation (default: NULL).
-#' @param maxit Maximum number of iterations for the optimization (default: 100).
-#' @param fracs Fraction of ridge regression to use (default: 0.5).
+#' @param maxit Maximum number of iterations for optimization methods (default: 1000).
+#' @param fracs Fraction of ridge regression to use for fracridge method (default: 0.5).
 #' @param ... Additional arguments passed to the estimation method.
 #'
 #' @return A list of class "fmri_betas" containing the following components:
@@ -251,21 +248,7 @@ mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
 #'   * basemod: Baseline model object.
 #'   * fixed_model: Fixed effect model object.
 #'   * ran_model: Random effect model object.
-#'   * estimated_hrf: The estimated HRF vector.
-#'
-#' @details
-#' The `r1` method uses the Rank-1 GLM approach to jointly estimate the HRF and activation coefficients.
-#' The `r1_glms` method implements the Mumford approach by estimating each beta individually to reduce correlations,
-#' treating all events as coming from one condition.
-#' This implementation includes optimizations to improve computational efficiency:
-#' - Precomputing the total sum of all trial regressors to avoid redundant computations.
-#' - Precomputing the QR decomposition of design matrices to speed up linear algebra operations.
-#'
-#' @references
-#' Pedregosa, F., et al. (2015). GLM with Rank-1 constraint (R1-GLM): a fast, spatially adaptive model for single trial fMRI data.
-#' \emph{NeuroImage}, 104, 271–285.
-#'
-#' Mumford, J. A., Turner, B. O., Ashby, F. G., & Poldrack, R. A. (2012). Deconvolving BOLD activation in event-related designs for multivoxel pattern classification analyses. \emph{NeuroImage}, 59(3), 2636–2643.
+#'   * estimated_hrf: The estimated HRF vector (NULL for most methods).
 #'
 #' @seealso \code{\link{fmri_dataset}}, \code{\link{baseline_model}}, \code{\link{event_model}}
 #'
@@ -281,15 +264,13 @@ mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
 #' ran = onset ~ trialwise()
 #' block = ~ run
 #'
-#' betas <- estimate_betas(dset, fixed=fixed, ran=ran, block=block, method="r1_glms")
+#' betas <- estimate_betas(dset, fixed=fixed, ran=ran, block=block, method="mixed")
 #' }
 #' @export
 estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
                                         method = c("mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp",
-                                                   "r1", "pls",  "pls_global", "ols", "fracridge","lowrank_hrf"),
+                                                   "pls",  "pls_global", "ols", "fracridge","lowrank_hrf"),
                                         basemod = NULL,
-                                        hrf_basis = NULL,
-                                        hrf_ref = NULL,
                                         maxit = 1000,
                                         fracs = 0.5,
                                         ...) {
@@ -298,15 +279,6 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
   bvec <- get_data(dset)
   mask <- get_mask(dset)
   
-  if (method == "r1") {
-    if (is.null(hrf_basis)) {
-      stop("Please provide 'hrf_basis', a matrix of HRF basis functions.")
-    }
-    if (is.null(hrf_ref)) {
-      stop("Please provide 'hrf_ref', a reference HRF vector.")
-    }
-  }
-  
   bmod <- if (is.null(basemod)) {
     baseline_model("constant", sframe = dset$sampling_frame)
   } else {
@@ -314,8 +286,7 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
   }
   
   bdes <- gen_beta_design(fixed, ran, block, bmod, dset, method = method)
-  betas <- run_estimate_betas(bdes, dset, method, hrf_basis = hrf_basis, 
-                              hrf_ref = hrf_ref, block=block, maxit = maxit, fracs=fracs,
+  betas <- run_estimate_betas(bdes, dset, method, block=block, maxit = maxit, fracs=fracs,
                               ...)
   
   # Check dimensions before indexing
@@ -353,12 +324,10 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
 
 #' @keywords internal
 run_estimate_betas <- function(bdes, dset, method, 
-                               hrf_basis = NULL, 
-                               hrf_ref = NULL, 
                                block, maxit = 100, 
                                ncomp=4, fracs=.5,
                                ...) {
-  method <- match.arg(method, c("r1_glms", "r1", "lss", "lss_naive", "lss_cpp", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge", "lowrank_hrf"))
+  method <- match.arg(method, c("lss", "lss_naive", "lss_cpp", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge", "lowrank_hrf"))
   
   # Capture ... into dotargs
   dotargs <- list(...)
@@ -401,38 +370,6 @@ run_estimate_betas <- function(bdes, dset, method,
   
   }  else if (method == "lss_naive") {
     lss_naive(dset, bdes)
-  } else if (method == "r1") {
-    # R1 method using rank-1 GLM
-    vecs <- neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) > 0))
-    xdat <- get_X()
-    nvoxels <- length(vecs)
-    
-    # Convert hrf_basis and hrf_ref to matrices/vectors
-    hrf_basis <- as.matrix(hrf_basis)
-    hrf_ref <- as.numeric(hrf_ref)
-    
-    estimated_hrfs <- matrix(NA, nrow = nrow(hrf_basis), ncol = nvoxels)
-    
-    message("Estimating betas using Rank-1 GLM method...")
-    
-    res <- do.call(cbind, furrr::future_map(vecs, function(v) {
-      v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
-      
-      # Use r1_glm_betas from rank1_estimation.R
-      fit_result <- r1_glm_betas(
-        X = as.matrix(xdat$X),
-        y = as.numeric(v0),
-        Z = NULL,
-        hrf_basis = hrf_basis,
-        hrf_ref = hrf_ref,
-        maxit = maxit
-      )
-      
-      # Extract beta coefficients
-      fit_result$beta
-    }))
-    
-    list(beta_matrix = as.matrix(res), estimated_hrf = estimated_hrfs)
   } else if (method == "lss") {
     # Estimate random effects using LSS
     beta_matrix_ran <- lss_fast(dset, bdes, use_cpp = FALSE)
@@ -571,7 +508,7 @@ run_estimate_betas <- function(bdes, dset, method,
     
     list(beta_matrix = beta_matrix, estimated_hrf = NULL)
   } else {
-    stop("Invalid method. Supported methods are 'r1_glms', 'r1', 'lss', 'lss_naive', 'mixed', 'mixed_cpp', 'pls', 'pls_global', 'ols', 'fracridge', and 'lowrank_hrf'")
+    stop("Invalid method. Supported methods are 'lss', 'lss_naive', 'mixed', 'mixed_cpp', 'pls', 'pls_global', 'ols', 'fracridge', and 'lowrank_hrf'")
   }
 }
 
@@ -591,27 +528,9 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
   dmat_ran <- design_matrix(emod_ran)
   dmat_base <- design_matrix(bmod)
   
-  # For R1 methods, we need to track both expanded and collapsed indices
-  is_r1_method <- !is.null(method) && method %in% c("r1", "r1_glms")
-  if (is_r1_method) {
-    # Handle trialwise() events where event_table might be NULL
-    if (is.null(emod_ran$model_spec$event_table)) {
-      # For trialwise() events, each column is one event with 1 basis function
-      n_basis <- 1
-      n_events <- ncol(dmat_ran)
-    } else {
-      # Get the number of basis functions from the design matrix
-      n_basis <- ncol(dmat_ran) / nrow(emod_ran$model_spec$event_table)
-      n_events <- ncol(dmat_ran)/n_basis
-    }
-  
-    # Create both expanded and collapsed indices
-    ran_ind <- 1:n_events  # Collapsed indices for R1 methods
-    ran_ind_expanded <- 1:(n_events * n_basis)  # Expanded indices for other methods
-  } else {
-    ran_ind <- 1:ncol(dmat_ran)
-    ran_ind_expanded <- ran_ind
-  }
+  # Standard indices for all methods
+  ran_ind <- 1:ncol(dmat_ran)
+  ran_ind_expanded <- ran_ind
   
   # Combine design matrices
   dmat_all <- if (is.null(fixed)) {
@@ -631,7 +550,7 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
   }
   base_ind <- start_base:ncol(dmat_all)
   
-  # Return list with both expanded and collapsed indices
+  # Return list with indices
   list(
     bmod = bmod,
     emod_fixed = emod_fixed,
@@ -642,8 +561,7 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
     ran_ind = ran_ind,
     ran_ind_expanded = ran_ind_expanded,
     fixed_ind = fixed_ind,
-    base_ind = base_ind,
-    n_basis = if(is_r1_method) n_basis else NULL
+    base_ind = base_ind
   )
 }
 
@@ -675,10 +593,8 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
 #'
 #' @export
 estimate_betas.matrix_dataset <- function(x,fixed=NULL, ran, block,  
-                                        method=c("r1_glms", "r1", "lss", "lss_cpp", "lss_naive", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge"), 
+                                        method=c("lss", "lss_cpp", "lss_naive", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge"), 
                                         basemod=NULL,
-                                        hrf_basis = NULL,
-                                        hrf_ref = NULL,
                                         ncomp=4, lambda=.01,
                                         fracs=.5, ...) {
   

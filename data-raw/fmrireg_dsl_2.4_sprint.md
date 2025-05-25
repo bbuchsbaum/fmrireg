@@ -198,4 +198,58 @@ Okay, here's a sprint plan broken down into tickets for implementing the fmrireg
 *   Clear error messages are produced for invalid DSL files.
 *   Basic documentation for the DSL v2.4 structure is drafted.
 
-This sprint focuses heavily on the "front-end" of the DSL processing, ensuring that the configuration is correctly understood and validated before attempting to build complex `fmri_model` objects.
+Addendum: working with bidser package:
+
+Okay, here's a concise guide for the engineer working on the BIDS integration parts of Sprint 1 (DSL-201 to DSL-205), focusing on how to leverage the `bidser` package.
+
+**Key `bidser` Functions for DSL Sprint 1 (Semantic Validation & BIDS Integration):**
+
+The engineer will primarily interact with the `fmri_config$project` object, which is a `bids_project` object created by `bidser::bids_project()`.
+
+1.  **Loading the BIDS Project (DSL-201):**
+    *   **`bidser::bids_project(path_to_bids_root, fmriprep = FALSE)`:** This is the first step. The `path_to_bids_root` comes from `fmri_config$spec$dataset$path`. `fmriprep = FALSE` is specified in `fmridsl_builder.R::build_config_from_ior`, meaning we are primarily interested in the raw BIDS structure for now, though `bidser` can also handle derivatives. The `fmri_config$project` slot will hold this object.
+    *   *Engineer's Task:* Ensure this is called correctly and the resulting object is stored. Check for basic path existence before calling.
+
+2.  **Validating Subject, Task, Run Availability (DSL-202):**
+    *   **`bidser::participants(bids_project_object)`:** Returns a character vector of participant IDs (e.g., `"01"`, `"02"`) found in `participants.tsv`. These are *without* the `"sub-"` prefix.
+        *   *Engineer's Task:* Compare the `fmri_config$spec$dataset$subjects$include` / `exclude` lists (which should also be prefix-stripped for comparison) against this vector.
+    *   **`bidser::tasks(bids_project_object)`:** Returns a character vector of unique task names (e.g., `"rest"`, `"nback"`) found across the dataset. These are *without* the `"task-"` prefix.
+        *   *Engineer's Task:* Compare `fmri_config$spec$dataset$tasks` against this.
+    *   **`bidser::runs(bids_project_object, subid, task, session)`:** (Conceptual - `bidser` might not have a direct `runs()` function that lists all available run numbers for a given subject/task/session. `search_files` might be used, or a more specific helper within `bidser`.)
+        *   *Engineer's Task:* To validate specified runs, the engineer might need to use `bidser::search_files()` with appropriate filters (e.g., for `_bold.nii.gz` files for a given subject/task) and then parse the `run-` entity from the returned filenames or their encoded attributes.
+        *   Alternatively, if `fmri_config$spec$dataset$runs` is provided, it can be a primary filter. The check is more about whether *any* data can be found for these runs, rather than an exhaustive list of all possible runs.
+
+3.  **Validating Event Column Existence (DSL-203):**
+    *   **`bidser::read_events(bids_project_object, subid, task, run, session)`:** This function reads the `events.tsv` file(s) matching the criteria and returns a nested tibble. The actual event data is in the `data` list-column.
+        *   *Engineer's Task:* Call this for a *representative* subject/task/run (e.g., the first valid combination found). Access the first data frame (e.g., `read_events_output$data[[1]]`) and check if `fmri_config$spec$events$onset_column`, `duration_column`, and `block_column` exist as column names in that data frame.
+
+4.  **Validating `variables` to BIDS Column Mapping (DSL-204):**
+    *   This involves checking two sources: `events.tsv` and `confounds.tsv`.
+    *   **For event-derived variables:** Use the representative `events.tsv` data frame loaded in DSL-203. For each entry in `fmri_config$variables` where the `bids_column` is expected to come from an event file, check if that `bids_column` exists in the representative `events_df`.
+    *   **For confound-derived variables (NuisanceSource):**
+        *   **`bidser::confound_files(bids_project_object, subid, task, run, session)`:** Finds paths to potential confound files.
+        *   **`bidser::read_confounds(bids_project_object, ...)`:** Reads these files. This function also handles selection of specific confound variables (`cvars` argument).
+        *   *Engineer's Task:* For a representative subject/task/run, load the confounds. For each entry in `fmri_config$variables` with `role: NuisanceSource`, check if its `bids_column` exists in the columns of the loaded confound data.
+
+5.  **Validating Confound Group Resolution & Baseline Confounds (DSL-205):**
+    *   Use `bidser::read_confounds()` for a representative subject/task/run to get the *full list of available confound column names* from the BIDS dataset.
+    *   *Engineer's Task:*
+        *   For each group in `fmri_config$confound_groups`:
+            *   If `select_by_pattern` is used, apply `grep()` for each pattern against the list of available confound names from BIDS. Collect all matches.
+            *   If `select_by_bids_column` is used, check if these explicit column names exist in the available BIDS confounds.
+        *   For each model in `fmri_config$models`:
+            *   For each group name listed in `model$baseline$include_confound_groups`:
+                *   Check if the group name is a defined key in `fmri_config$confound_groups`.
+                *   Verify that the resolution of this group (from the step above) yields at least one actual confound column from BIDS.
+
+**General `bidser` Usage Notes for the Engineer:**
+
+*   **Entity Naming:** `bidser` functions often return BIDS entity values *without* their prefixes (e.g., `participants()` returns `"01"`, not `"sub-01"`). The DSL stores user input which might or might not have prefixes. The engineer needs to be consistent when comparing, likely by stripping prefixes from DSL values or adding them to `bidser` outputs before comparison. The `generate_bids_filename` and `generate_bids_path` helpers in `mock_bids.R` (which might be internalized or moved to `bidser`) handle prefixing correctly.
+*   **File Searching with `search_files()`:** This is a versatile function.
+    *   `search_files(proj, regex = "pattern", subid = "01", task = "rest", full_path = TRUE, fmriprep = TRUE/FALSE, ...)`
+    *   It matches against BIDS entities stored as attributes on file nodes in `bidser`'s internal tree. The keys for these attributes are usually the short BIDS keys (e.g., `sub`, `ses`, `task`, `run`, `desc`, `space`, `suffix`, `kind`).
+    *   The `fmriprep` argument in `search_files` can be used to target raw BIDS (`fmriprep = FALSE`) or derivatives (`fmriprep = TRUE`).
+*   **Encoding Filenames with `bidser::encode(filename_string)`:** This utility can parse a BIDS filename string and return a list of its constituent entities. This can be useful for robustly extracting metadata if needed, though direct attribute access from `search_files` results is often simpler.
+*   **Error Handling:** Wrap calls to `bidser` functions in `tryCatch` or check return values (e.g., for `NULL` or zero-length vectors/data frames) to handle missing data or BIDS inconsistencies gracefully and report them via the `ValidationErrors` object.
+
+By using these `bidser` functions, the engineer can efficiently query the BIDS dataset structure and content to perform the necessary semantic validations required by the DSL implementation.
