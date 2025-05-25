@@ -686,6 +686,52 @@ parse_and_validate_config <- function(yaml_file) {
     }
   }
 
+  ## DSL-207: Role/type compatibility checks
+  var_roles <- vapply(config_list$variables, `[[`, "role", FUN.VALUE = character(1))
+  var_names <- names(config_list$variables) %||% character()
+
+  check_var_role <- function(var, allowed, path) {
+    if (!(var %in% var_names)) {
+      errors$add_error(path, paste0("Variable '", var, "' not defined in variables block"))
+    } else {
+      role <- var_roles[[var]]
+      if (!(role %in% allowed)) {
+        errors$add_error(path,
+          paste0("Variable '", var, "' has role '", role,
+                 "' but must be one of: ", paste(allowed, collapse = ", ")))
+      }
+    }
+  }
+
+  for (tnm in names(config_list$terms)) {
+    term <- config_list$terms[[tnm]]
+    tpath <- paste0("terms$", tnm)
+    if (term$type %in% c("EventRelated", "Trialwise")) {
+      for (v in term$event_variables %||% list()) {
+        check_var_role(v, c("Factor", "Numeric"), paste0(tpath, "$event_variables"))
+      }
+    } else if (term$type == "ParametricModulation") {
+      for (v in term$selector_vars %||% list()) {
+        check_var_role(v, c("Factor", "Numeric"), paste0(tpath, "$selector_vars"))
+      }
+      if (!is.null(term$mod_var)) {
+        mv_path <- paste0(tpath, "$mod_var")
+        check_var_role(term$mod_var, c("Numeric"), mv_path)
+        if (!is.null(term$modulator_basis) && term$mod_var %in% var_names) {
+          if (var_roles[[term$mod_var]] != "Numeric") {
+            errors$add_error(paste0(tpath, "$modulator_basis"),
+              paste0("modulator_basis requires numeric mod_var but variable '",
+                     term$mod_var, "' has role '", var_roles[[term$mod_var]], "'"))
+          }
+        }
+      }
+    } else if (term$type == "NuisanceRegressors") {
+      for (v in term$nuisance_source_variables %||% list()) {
+        check_var_role(v, c("NuisanceSource"), paste0(tpath, "$nuisance_source_variables"))
+      }
+    }
+  }
+
   errors$stop_if_invalid("Configuration validation failed")
 
   attr(config_list, "validated_schema") <- TRUE
