@@ -1,7 +1,127 @@
+#' Estimate Rank-1 HRF Using LS+SVD/CF-ALS Methods
+#'
+#' High level wrapper that prepares design matrices and dispatches to
+#' the desired estimation engine.  This function supports the fast
+#' `ls_svd` initialisation, the one-step refinement `ls_svd_1als`, or
+#' the full alternating scheme implemented in `cf_als_engine`.
+#'
+#' @param fmri_data_obj An `fmri_dataset` or numeric matrix of BOLD data
+#'   (time points x voxels). If a dataset, sampling information is
+#'   taken from the object.
+#' @param event_model An `event_model` describing the stimuli to use
+#'   for HRF estimation.
+#' @param hrf_basis An `HRF` basis object used for the convolution
+#'   design matrices.
+#' @param confound_obj Optional matrix of confound regressors with the
+#'   same number of rows as the data matrix.
+#' @param method Estimation method. One of "ls_svd_only",
+#'   "ls_svd_1als" (default) or "cf_als".
+#' @param lambda_init Ridge penalty for the initial GLM solve used by
+#'   `ls_svd` based methods.
+#' @param lambda_b Ridge penalty for the beta update step.
+#' @param lambda_h Ridge penalty for the h update step.
+#' @param fullXtX Logical; if `TRUE` include cross condition terms in
+#'   the h update (where supported).
+#' @param max_alt Number of alternating updates after initialisation
+#'   when `method = "cf_als"`.
+#' @return An object of class `fmrireg_cfals_fit` containing the
+#'   estimated HRF coefficients and amplitudes.
+#' @details R\eqn{^2} is computed on the data after confound projection.
+#' @export
+fmrireg_cfals <- function(fmri_data_obj,
+                         event_model,
+                         hrf_basis,
+                         confound_obj = NULL,
+                         method = c("ls_svd_1als", "ls_svd_only", "cf_als"),
+                         lambda_init = 1,
+                         lambda_b = 10,
+                         lambda_h = 1,
+                         fullXtX = FALSE,
+                         max_alt = 1) {
+
+  method <- match.arg(method)
+
+  if (inherits(fmri_data_obj, "fmri_dataset")) {
+    Y <- get_data_matrix(fmri_data_obj)
+  } else if (is.matrix(fmri_data_obj)) {
+    Y <- fmri_data_obj
+  } else {
+    stop("'fmri_data_obj' must be an 'fmri_dataset' or matrix")
+  }
+
+  sframe <- if (inherits(fmri_data_obj, "fmri_dataset"))
+    fmri_data_obj$sampling_frame else attr(fmri_data_obj, "sampling_frame")
+
+  if (is.null(sframe)) {
+    stop("Sampling information could not be determined from input")
+  }
+
+  design <- create_fmri_design(event_model, hrf_basis)
+  X_list <- design$X_list
+  cond_names <- names(X_list)
+
+  proj <- project_confounds(Y, X_list, confound_obj)
+  Xp <- proj$X_list
+  Yp <- proj$Y
+
+  fit <- switch(method,
+    ls_svd_only = ls_svd_engine(Xp, Yp,
+                                lambda_init = lambda_init,
+                                h_ref_shape_norm = design$h_ref_shape_norm),
+    ls_svd_1als = ls_svd_1als_engine(Xp, Yp,
+                                     lambda_init = lambda_init,
+                                     lambda_b = lambda_b,
+                                     lambda_h = lambda_h,
+                                     fullXtX_flag = fullXtX,
+                                     h_ref_shape_norm = design$h_ref_shape_norm),
+    cf_als = cf_als_engine(Xp, Yp,
+                           lambda_b = lambda_b,
+                           lambda_h = lambda_h,
+                           fullXtX_flag = fullXtX,
+                           h_ref_shape_norm = design$h_ref_shape_norm,
+                           max_alt = max_alt)
+  )
+
+  rownames(fit$beta) <- cond_names
+
+  Phi <- design$Phi
+  recon_hrf <- Phi %*% fit$h
+
+  n <- nrow(Yp)
+  v <- ncol(Yp)
+  pred_p <- Reduce(`+`, Map(function(Xc, bc) {
+    Xc %*% (fit$h * matrix(bc, nrow = nrow(fit$h), ncol = v, byrow = TRUE))
+  }, Xp, asplit(fit$beta, 1)))
+  resids <- Yp - pred_p
+
+  SST <- colSums((Yp - matrix(colMeans(Yp), n, v, TRUE))^2)
+  SSE <- colSums(resids^2)
+  r2 <- 1 - SSE / SST
+
+  out <- list(h = fit$h,
+              beta = fit$beta,
+              reconstructed_hrfs = recon_hrf,
+              residuals = resids,
+              gof_per_voxel = r2,
+              hrf_basis_used = hrf_basis,
+              lambda_used = c(init = lambda_init,
+                               beta = lambda_b,
+                               h = lambda_h),
+              design_info = list(d = design$d,
+                                 k = length(X_list),
+                                 n = n,
+                                 v = v,
+                                 fullXtX = fullXtX),
+              method_used = method)
+  class(out) <- c("fmrireg_cfals_fit", "list")
+  out
+}
+
 #' Fit Rank-1 HRF Using CF-ALS
 #'
-#' High level wrapper implementing CF-ALS HRF estimation
-#' for data stored in standard `fmrireg` objects.
+#' Convenience wrapper for the original CF-ALS implementation.  This
+#' function simply calls [fmrireg_cfals()] with `method = "cf_als"` and
+#' retains the historical argument names.
 #'
 #' @param fmri_data_obj An `fmri_dataset` or numeric matrix of BOLD data
 #'   (time points x voxels). If a dataset, sampling information is
@@ -21,6 +141,7 @@
 #'   estimated HRF coefficients and amplitudes.
 #' @details R\eqn{^2} is computed on the data after confound projection.
 #' @export
+
 fmrireg_hrf_cfals <- function(fmri_data_obj,
                               event_model,
                               hrf_basis,
@@ -29,86 +150,13 @@ fmrireg_hrf_cfals <- function(fmri_data_obj,
                               lam_h = 1,
                               fullXtX = FALSE,
                               max_alt = 1) {
-
-  if (inherits(fmri_data_obj, "fmri_dataset")) {
-    Y <- get_data_matrix(fmri_data_obj)
-    sframe <- fmri_data_obj$sampling_frame
-  } else if (is.matrix(fmri_data_obj)) {
-    Y <- fmri_data_obj
-    sframe <- attr(fmri_data_obj, "sampling_frame")
-    if (is.null(sframe)) {
-      stop("Matrix input must have a 'sampling_frame' attribute")
-    }
-  } else {
-    stop("'fmri_data_obj' must be an 'fmri_dataset' or matrix")
-  }
-
-  if (!inherits(event_model, "event_model")) {
-    stop("'event_model' must be an 'event_model' object")
-  }
-
-  if (inherits(hrf_basis, "HRF") == FALSE) {
-    stop("`hrf_basis` must inherit from class 'HRF'")
-  }
-
-  stopifnot(lam_beta >= 0, lam_h >= 0, max_alt >= 0)
-
-  # build regressors for each condition using the provided basis
-  reg_lists <- lapply(event_model$terms, regressors.event_term,
-                      hrf = hrf_basis,
-                      sampling_frame = sframe,
-                      summate = FALSE,
-                      drop.empty = TRUE)
-  regs <- unlist(reg_lists, recursive = FALSE)
-  cond_names <- names(regs)
-  sample_times <- samples(sframe, global = TRUE)
- 
-  design <- create_fmri_design(event_model, hrf_basis)
-  X_list <- design$X_list
-
-
-  proj <- project_confounds(Y, X_list, confound_obj)
-  Xp <- proj$X_list
-  Yp <- proj$Y
-
-  fit <- cf_als_engine(Xp, Yp,
-                       lambda_b = lam_beta,
-                       lambda_h = lam_h,
-                       fullXtX_flag = fullXtX,
-                       h_ref_shape_norm = design$h_ref_shape_norm,
-                       max_alt = max_alt)
-  rownames(fit$beta) <- cond_names
-
-  # reconstruct HRF shapes on the sampling grid
-  Phi <- design$Phi
-  recon_hrf <- Phi %*% fit$h
-
-  # predicted BOLD and residuals in the projected space
-  n <- nrow(Yp)
-  v <- ncol(Yp)
-  pred_p <- Reduce(`+`, Map(function(Xc, bc) {
-    Xc %*% (fit$h * matrix(bc, nrow = nrow(fit$h), ncol = v, byrow = TRUE))
-  }, Xp, asplit(fit$beta, 1)))
-  resids <- Yp - pred_p
-
-  # simple R^2 per voxel computed on projected data
-  SST <- colSums((Yp - matrix(colMeans(Yp), n, v, TRUE))^2)
-  SSE <- colSums(resids^2)
-  r2 <- 1 - SSE / SST
-
-  out <- list(h = fit$h,
-              beta = fit$beta,
-              reconstructed_hrfs = recon_hrf,
-              residuals = resids,
-              gof_per_voxel = r2,
-              hrf_basis_used = hrf_basis,
-              lambda_used = c(beta = lam_beta, h = lam_h),
-              design_info = list(d = nbasis(hrf_basis),
-                                 k = length(X_list),
-                                 n = nrow(Yp),
-                                 v = ncol(Yp),
-                                 fullXtX = fullXtX))
-  class(out) <- c("fmrireg_cfals_fit", "list")
-  out
+  fmrireg_cfals(fmri_data_obj,
+                event_model,
+                hrf_basis,
+                confound_obj = confound_obj,
+                method = "cf_als",
+                lambda_b = lam_beta,
+                lambda_h = lam_h,
+                fullXtX = fullXtX,
+                max_alt = max_alt)
 }
-
