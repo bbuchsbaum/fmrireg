@@ -49,7 +49,7 @@ fit_Ftests <- function(object) {
     f <- ms/(ssr[i]/dfr)
     
     P <- pf(f, df, dfr, lower.tail = FALSE)
-    list(F=f, P=p)
+    list(F = f, P = P)
   })
   
   FMat <- do.call(rbind, lapply(ret, "[[", "F"))
