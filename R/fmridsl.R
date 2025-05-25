@@ -643,6 +643,7 @@ parse_and_validate_config <- function(yaml_file) {
 
   errors$stop_if_invalid("Configuration validation failed")
 
+  attr(config_list, "validated_schema") <- TRUE
   config_list
 }
 
