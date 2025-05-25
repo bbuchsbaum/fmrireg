@@ -326,7 +326,7 @@ build_afni_stims.afni_hrf_convolved_term <- function(x, iresp=FALSE, tr_times=1)
   stimfiles <- paste(stimlabels, "_times.1D", sep = "")
   dmat <- design_matrix(x$evterm)
   
-  hrf_name <- as.character(x$hrf$hrf)
+  hrf_name <- as.character(x$hrfspec$hrf)
   blids <- unique(blockids(x$evterm))
   split_ons <- split_onsets(x$evterm, x$sampling_frame, global=FALSE, blocksplit = TRUE)
   names(split_ons) <- stimlabels
@@ -351,7 +351,7 @@ build_afni_stims.afni_trialwise_convolved_term <- function(x, iresp=FALSE, tr_ti
   stimfile <- paste(x$varname, "_times.1D", sep = "")
   dmat <- design_matrix(x$evterm)
   
-  hrf_name <- as.character(x$hrf$hrf)
+  hrf_name <- as.character(x$hrfspec$hrf)
   blids <- sort(unique(blockids(x$evterm)))
   ons <- split_onsets(x$evterm, x$sampling_frame, global=FALSE, blocksplit=TRUE)
   ons <- lapply(blids, function(bid) {
