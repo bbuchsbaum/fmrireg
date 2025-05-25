@@ -563,7 +563,7 @@ print.baseline_model <- function(x, ...) {
 #' @param ... Additional arguments passed to ggplot2::geom_line.
 #'
 #' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap labs theme_minimal scale_color_brewer
-#' @importFrom tidyr gather
+#' @importFrom tidyr pivot_longer
 #' @autoglobal
 #' @export
 plot.baseline_model <- function(x, term_name = NULL, title = NULL, 
@@ -610,7 +610,8 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
     }
     dm_tib$.block <- sframe$blockids
     dm_tib$.time <- sframe$time
-    tidyr::gather(dm_tib, key = "condition", value = "value", - .time, - .block)
+    tidyr::pivot_longer(dm_tib, cols = -c(.time, .block),
+                        names_to = "condition", values_to = "value")
   })
   names(dflist) <- plotting_term_names
   
