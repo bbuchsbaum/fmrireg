@@ -4,7 +4,7 @@
 \alias{covariate}
 \title{Construct a Covariate Term}
 \usage{
-covariate(..., data, id = NULL, prefix = NULL)
+covariate(..., data, id = NULL, prefix = NULL, subset = NULL)
 }
 \arguments{
 \item{...}{A variable argument set of covariate names.}
@@ -14,6 +14,7 @@ covariate(..., data, id = NULL, prefix = NULL)
 \item{id}{An optional identifier for the covariate term.}
 
 \item{prefix}{An optional prefix to add to the covariate names.}
+\item{subset}{Optional expression used to subset the covariate data.}
 }
 \value{
 A list containing information about the covariate term with class

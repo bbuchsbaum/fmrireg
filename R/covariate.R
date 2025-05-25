@@ -41,6 +41,7 @@ parse_term <- function(vars, ttype) {
 #' @param data A data.frame containing the variables.
 #' @param id An optional identifier for the covariate term.
 #' @param prefix An optional prefix to add to the covariate names.
+#' @param subset Optional expression used to subset the covariate data.
 #'
 #' @return A list containing information about the covariate term with class 
 #' 'covariatespec' that can be used within an event_model.
@@ -72,7 +73,7 @@ parse_term <- function(vars, ttype) {
 #' * [hrf()] for creating HRF-convolved event terms
 #'
 #' @export
-covariate <- function(..., data, id=NULL, prefix=NULL) {
+covariate <- function(..., data, id=NULL, prefix=NULL, subset=NULL) {
   vars <- as.list(substitute(list(...)))[-1] 
   parsed <- parse_term(vars, "covariate")
   term <- parsed$term
@@ -97,7 +98,7 @@ covariate <- function(..., data, id=NULL, prefix=NULL) {
     varnames=varnames, ## list of all variables (e.g. list(x,y))
     vars=term, ## list of unparsed vars
     label=label, ## "covariate(x)" the full expression
-    subset=substitute(subset))
+    subset=rlang::enexpr(subset))
   
   class(ret) <- c("covariatespec", "hrfspec", "list")
   ret
