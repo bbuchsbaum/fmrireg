@@ -14,7 +14,21 @@
 #' @param recon_hrf Matrix of reconstructed HRF shapes.
 #' @param gof Numeric vector of goodness-of-fit statistics per voxel.
 #' @return An object of class \code{fmrireg_cfals_fit}.
-#' @keywords internal
+#' @description
+#' Container class storing the results of CFALS estimation.  Fields
+#' include the HRF basis coefficients (`h_coeffs`), condition amplitudes
+#' (`beta_amps`), details of the estimation method, regularisation
+#' parameters and design information.
+#'
+#' @examples
+#' sframe <- sampling_frame(blocklens = 20, TR = 1)
+#' ev_df <- data.frame(onset = c(5, 15), block = 1)
+#' emod <- event_model(onset ~ hrf(constant), data = ev_df,
+#'                     block = ~ block, sampling_frame = sframe)
+#' Y <- matrix(rnorm(20 * 1), 20, 1)
+#' fit <- fmrireg_cfals(Y, emod, HRF_SPMG1)
+#' str(fit)
+#' @export
 fmrireg_cfals_fit <- function(h_coeffs, beta_amps, method, lambdas, call,
                               hrf_basis, design_info, residuals,
                               recon_hrf = NULL, gof = NULL) {
