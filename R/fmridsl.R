@@ -140,3 +140,133 @@ apply_defaults <- function(data, defaults) {
 
   data
 }
+
+#' Parse, Apply Defaults, and Validate a DSL Configuration
+#'
+#' Reads a YAML configuration file, merges in default values as
+#' specified by the DSL, and performs basic schema validation for the
+#' required top-level sections and the \code{dataset} block (DSL-105).
+#'
+#' Validation checks ensure required fields exist and have the correct
+#' basic types. The \code{dataset$scan_params} sub-fields are also
+#' flattened so that override objects become named vectors.
+#'
+#' @param yaml_file Path to the YAML configuration file.
+#'
+#' @return A list representing the validated configuration with
+#'   defaults applied.  An error is thrown if validation fails.
+#' @keywords internal
+parse_and_validate_config <- function(yaml_file) {
+  config_list <- parse_yaml_to_list(yaml_file)
+
+  defaults <- list(
+    dataset = list(
+      relpath = "func",
+      subjects = list(include = NULL, exclude = NULL),
+      tasks = NULL,
+      runs = NULL,
+      scan_params = list(
+        TR = NULL,
+        TR_overrides = list(),
+        run_lengths = list(),
+        run_length_overrides = list()
+      )
+    ),
+    events = list(
+      onset_column = "onset",
+      duration_column = "duration",
+      block_column = "run"
+    )
+  )
+
+  config_list <- apply_defaults(config_list, defaults)
+
+  errors <- ValidationErrors$new()
+
+  required_sections <- c("dataset", "events", "variables", "terms", "models")
+  for (sec in required_sections) {
+    check_required(config_list, sec, "", errors)
+  }
+
+  if (check_type(config_list, "dataset", "object", "", errors)) {
+    ds <- config_list$dataset
+    ds_path <- "dataset"
+
+    if (check_required(ds, "path", ds_path, errors)) {
+      check_type(ds, "path", "string", ds_path, errors)
+    }
+
+    if (exists("relpath", ds)) {
+      rp <- ds$relpath
+      if (is.character(rp)) {
+        if (length(rp) > 1) {
+          check_type(ds, "relpath", "array[string]", ds_path, errors)
+        }
+      } else {
+        check_type(ds, "relpath", "array[string]", ds_path, errors)
+        if (!is.null(ds$relpath)) ds$relpath <- unlist(ds$relpath)
+      }
+    }
+
+    if (check_type(ds, "subjects", "object", ds_path, errors, allow_null = TRUE)) {
+      if (!is.null(ds$subjects)) {
+        sub_path <- paste0(ds_path, "$subjects")
+        check_type(ds$subjects, "include", "array[string]", sub_path, errors, allow_null = TRUE)
+        check_pattern(ds$subjects, "include", "^sub-[0-9A-Za-z]+$", sub_path, errors, allow_null = TRUE)
+        check_type(ds$subjects, "exclude", "array[string]", sub_path, errors, allow_null = TRUE)
+        check_pattern(ds$subjects, "exclude", "^sub-[0-9A-Za-z]+$", sub_path, errors, allow_null = TRUE)
+      }
+    }
+
+    if (check_type(ds, "tasks", "array[string]", ds_path, errors, allow_null = TRUE)) {
+      check_pattern(ds, "tasks", "^task-[a-zA-Z0-9]+$", ds_path, errors, allow_null = TRUE)
+    }
+
+    if (check_type(ds, "runs", "array[string]", ds_path, errors, allow_null = TRUE)) {
+      check_pattern(ds, "runs", "^run-[0-9]+$", ds_path, errors, allow_null = TRUE)
+    }
+
+    if (check_type(ds, "scan_params", "object", ds_path, errors, allow_null = TRUE)) {
+      sp <- ds$scan_params
+      sp_path <- paste0(ds_path, "$scan_params")
+      if (!is.null(sp)) {
+        check_type(sp, "TR", "number", sp_path, errors, allow_null = TRUE)
+
+        if (check_type(sp, "TR_overrides", "object", sp_path, errors, allow_null = TRUE)) {
+          if (!is.null(sp$TR_overrides)) {
+            for (nm in names(sp$TR_overrides)) {
+              check_type(sp$TR_overrides, nm, "number", paste0(sp_path, "$TR_overrides$", nm), errors)
+            }
+            sp$TR_overrides <- unlist(sp$TR_overrides)
+          }
+        }
+
+        if (check_type(sp, "run_lengths", "object", sp_path, errors, allow_null = TRUE)) {
+          if (!is.null(sp$run_lengths)) {
+            for (nm in names(sp$run_lengths)) {
+              check_type(sp$run_lengths, nm, "integer", paste0(sp_path, "$run_lengths$", nm), errors)
+            }
+            sp$run_lengths <- unlist(sp$run_lengths)
+          }
+        }
+
+        if (check_type(sp, "run_length_overrides", "object", sp_path, errors, allow_null = TRUE)) {
+          if (!is.null(sp$run_length_overrides)) {
+            for (nm in names(sp$run_length_overrides)) {
+              check_type(sp$run_length_overrides, nm, "integer", paste0(sp_path, "$run_length_overrides$", nm), errors)
+            }
+            sp$run_length_overrides <- unlist(sp$run_length_overrides)
+          }
+        }
+        ds$scan_params <- sp
+      }
+    }
+
+    config_list$dataset <- ds
+  }
+
+  errors$stop_if_invalid("Configuration validation failed")
+
+  config_list
+}
+
