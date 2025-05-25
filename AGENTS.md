@@ -480,6 +480,22 @@ Key features include:
 - **5 Standardized Scenarios**: Covering canonical HRFs, low/high SNR, HRF variability, trial amplitude modulation, and complex realistic designs.
 - **Comprehensive Ground Truth**: Each dataset provides detailed ground truth for BOLD signals, HRF parameters, condition/trial betas, and noise characteristics.
 - **Easy Access & Integration**: Functions like `load_benchmark_dataset()`, `list_benchmark_datasets()`, and `evaluate_method_performance()` allow for straightforward loading, exploration, and evaluation.
+
+- **Output of `list_benchmark_datasets()`**
+
+                                                        Dataset
+BM_Canonical_HighSNR                       BM_Canonical_HighSNR
+BM_Canonical_LowSNR                         BM_Canonical_LowSNR
+BM_HRF_Variability_AcrossVoxels BM_HRF_Variability_AcrossVoxels
+BM_Trial_Amplitude_Variability   BM_Trial_Amplitude_Variability
+BM_Complex_Realistic                       BM_Complex_Realistic
+                                                                                                                       Description
+BM_Canonical_HighSNR                                 Canonical HRF (SPMG1), high SNR, 3 conditions, fixed amplitudes per condition
+BM_Canonical_LowSNR                                   Canonical HRF (SPMG1), low SNR, 3 conditions, fixed amplitudes per condition
+BM_HRF_Variability_AcrossVoxels                                         HRF varies across voxel groups, 2 conditions, moderate SNR
+BM_Trial_Amplitude_Variability                              Single condition with significant trial-to-trial amplitude variability
+BM_Complex_Realistic            Complex realistic scenario: 3 HRF groups, 3 conditions, variable durations/amplitudes, AR(2) noise
+
 - **`matrix_dataset` Structure**: The core BOLD data and experimental timing are encapsulated in a `matrix_dataset` object within each benchmark, promoting consistency with `fmrireg` data structures.
 
 These benchmarks facilitate standardized evaluation, fair comparison of methods, and serve as an educational tool for understanding fMRI analysis challenges.
