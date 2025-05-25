@@ -205,6 +205,8 @@ This function will wrap the engine calls.
     *   Integration tests for `fmrireg_cfals` with at least one real (public) fMRI dataset using an FIR basis.
     *   Validate against expected behavior (e.g., `fullXtX_flag` effect, lambda effects qualitatively).
     *   **DoD:** Good test coverage; results are plausible on real data.
+    *   *Implemented initial unit tests for `ls_svd_1als_engine` and an integration
+      test verifying `fullXtX` handling via `fmrireg_cfals`.*
 9.  **`CFALS-DOC-01`: User Documentation**
     *   Man pages for `fmrireg_cfals` and `fmrireg_cfals_fit`.
     *   Clear explanation of `method` choices, lambdas, `fullXtX_flag`.
