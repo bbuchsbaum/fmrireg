@@ -499,3 +499,159 @@ get_hrf_from_dsl <- function(hrf_name, fmri_config) {
           summate = summate, normalize = normalize)
 }
 
+#' Apply Transformation Operations
+#'
+#' Internal helper used by the DSL builder to process variable
+#' transformations defined in an `fmri_config` object.
+#'
+#' @param x Vector or factor to transform.
+#' @param ops List of operations (strings or lists) specifying the
+#'   transformations to apply in order.
+#' @param env Environment containing additional variables referenced by
+#'   transformation ops.
+#' @param block Optional grouping vector used for group-based operations
+#'   like `demean-by-group`.
+#' @return Transformed object.
+#' @keywords internal
+apply_transform_ops <- function(x, ops, env = parent.frame(), block = NULL) {
+  for (op in ops) {
+    if (is.character(op)) {
+      if (op == "center") {
+        mu <- mean(x, na.rm = TRUE)
+        x <- x - mu
+      } else if (op == "scale-sd") {
+        sdv <- stats::sd(x, na.rm = TRUE)
+        if (is.na(sdv) || sdv == 0) sdv <- 1e-6
+        x <- x / sdv
+      } else if (op == "z-score") {
+        mu <- mean(x, na.rm = TRUE)
+        sdv <- stats::sd(x, na.rm = TRUE)
+        if (is.na(sdv) || sdv == 0) sdv <- 1e-6
+        x <- (x - mu) / sdv
+      } else if (op == "log") {
+        x <- log(x)
+      } else if (op == "exp") {
+        x <- exp(x)
+      } else if (op == "factorize") {
+        x <- as.factor(x)
+      } else if (op == "demean-by-group") {
+        if (is.null(block)) {
+          stop("demean-by-group requires grouping variable", call. = FALSE)
+        }
+        mus <- tapply(x, block, mean, na.rm = TRUE)
+        x <- x - mus[as.character(block)]
+      }
+    } else if (is.list(op)) {
+      type <- op$type
+      if (type == "scale-within-group") {
+        gname <- op$group_by_variable
+        g <- env[[gname]]
+        if (is.null(g)) {
+          stop(sprintf("group_by_variable '%s' not found", gname), call. = FALSE)
+        }
+        mus <- tapply(x, g, mean, na.rm = TRUE)
+        sds <- tapply(x, g, sd, na.rm = TRUE)
+        sds[is.na(sds) | sds == 0] <- 1e-6
+        x <- mapply(function(val, grp) {
+          mu <- mus[as.character(grp)]
+          sdv <- sds[as.character(grp)]
+          (val - mu) / sdv
+        }, x, g)
+      } else if (type == "clip") {
+        if (!is.null(op$min)) x <- pmax(op$min, x)
+        if (!is.null(op$max)) x <- pmin(op$max, x)
+      } else if (type == "recode-levels") {
+        lvlmap <- op$level_map %||% list()
+        if (!is.factor(x)) x <- factor(x)
+        levs <- levels(x)
+        for (nm in names(lvlmap)) {
+          levs[levs == nm] <- lvlmap[[nm]]
+        }
+        levels(x) <- levs
+      }
+    }
+  }
+  x
+}
+
+#' Create Parametric Basis from DSL Definition
+#'
+#' @param basis_def Basis definition list from the DSL.
+#' @param x Numeric vector used to build the basis.
+#' @return A `ParametricBasis` object.
+#' @keywords internal
+create_basis_from_dsl <- function(basis_def, x) {
+  params <- basis_def$parameters %||% list()
+  type <- basis_def$type
+  switch(type,
+    Polynomial = Poly(x, degree = params$degree %||% 1),
+    BSpline    = BSpline(x, degree = params$degree %||% 3),
+    Standardized = Standardized(x),
+    Identity   = Ident(x),
+    stop(sprintf("Unknown basis type '%s'", type))
+  )
+}
+
+#' Process Variables and Transformations into Environment
+#'
+#' Implements DSL2-301. Creates a unified environment containing all
+#' raw variables, derived variables from the `transformations` block,
+#' and basis-expanded variables for any parametric modulators.
+#'
+#' @param fmri_config Validated `fmri_config` object.
+#' @param subject_data List returned by `load_and_prepare_subject_data()`.
+#' @return Environment with model variables available by name.
+#' @keywords internal
+process_variables_and_transformations <- function(fmri_config, subject_data) {
+  env <- new.env(parent = baseenv())
+
+  events_df   <- subject_data$events_df
+  conf_df     <- subject_data$confounds_df
+  var_defs    <- fmri_config$spec$variables
+  block_var   <- fmri_config$spec$events$block_column
+
+  # Raw variables
+  for (nm in names(var_defs)) {
+    def <- var_defs[[nm]]
+    col <- def$bids_column
+    val <- if (identical(def$role, "NuisanceSource")) {
+      if (is.null(conf_df)) NULL else conf_df[[col]]
+    } else {
+      events_df[[col]]
+    }
+    if (identical(def$role, "Factor")) {
+      val <- as.factor(val)
+    } else if (identical(def$role, "Numeric")) {
+      val <- as.numeric(val)
+    }
+    env[[nm]] <- val
+  }
+
+  # Derived variables
+  trans_defs <- fmri_config$spec$transformations %||% list()
+  if (length(trans_defs) > 0) {
+    for (nm in names(trans_defs)) {
+      tdef <- trans_defs[[nm]]
+      src  <- env[[tdef$source_variable]]
+      env[[nm]] <- apply_transform_ops(src, tdef$ops, env, events_df[[block_var]])
+    }
+  }
+
+  # Basis-expanded modulators
+  term_defs <- fmri_config$spec$terms %||% list()
+  for (tnm in names(term_defs)) {
+    term <- term_defs[[tnm]]
+    if (!is.null(term$modulator_basis)) {
+      mod_var <- term$mod_var
+      val <- env[[mod_var]]
+      if (is.null(val)) next
+      basis_obj <- create_basis_from_dsl(term$modulator_basis, val)
+      deg_part <- term$modulator_basis$parameters$degree %||% ""
+      name <- paste0(mod_var, "_", tolower(term$modulator_basis$type),
+                     if (!identical(deg_part, "")) paste0("_deg", deg_part) else "")
+      env[[name]] <- basis_obj$y
+    }
+  }
+
+  env
+}
