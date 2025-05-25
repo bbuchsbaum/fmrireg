@@ -176,12 +176,14 @@ test_that("event_model with duplicate terms at different lags", {
 test_that("can construct a model with a raw covariate term", {
   facedes$repnum <- factor(facedes$rep_num)
   sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
-  cdat <<- data.frame(x = rnorm(sum(sframe$blocklens)), y = rnorm(sum(sframe$blocklens)))
+  cdat <- data.frame(x = rnorm(sum(sframe$blocklens)), y = rnorm(sum(sframe$blocklens)))
   
   espec <- event_model(onset ~ hrf(rt) + covariate(x, y, data=cdat) , data=facedes, block=~run, sampling_frame=sframe)
   dmat <- design_matrix(espec)
 
   expect_equal(dim(dmat), c(sum(sframe$blocklens), 3))
+  expect_equal(dmat$x, cdat$x)
+  expect_equal(dmat$y, cdat$y)
   
   bmod <- baseline_model(basis="constant", sframe=sframe)
   fmod <- fmri_model(espec,bmod)

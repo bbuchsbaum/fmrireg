@@ -115,7 +115,8 @@ covariate_term <- function(varname, mat) {
 #' @export
 construct.covariatespec <- function(x, model_spec, sampling_frame=NULL, ...) {
   mat <- do.call(cbind, lapply(x$vars, function(v) {
-    eval(parse(text=v), envir=x$data)
+    expr <- rlang::parse_expr(v)
+    rlang::eval_tidy(expr, data = x$data)
   }))
   
   colnames(mat) <- x$varnames
