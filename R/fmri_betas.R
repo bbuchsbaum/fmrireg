@@ -596,7 +596,8 @@ estimate_betas.latent_dataset <- function(x, fixed = NULL, ran, block,
 #' @param basemod A `baseline_model` instance to regress out of data before HRF estimation (default: NULL)
 #' @param k the dimension of the basis, default is 8
 #' @param fx indicates whether the term is a fixed d.f. regression spline (TRUE) or a penalized regression spline (FALSE); default is TRUE.
-#' 
+#' @param progress Logical; display progress during estimation.
+#'
 #' @return A matrix with the estimated HRF values for each voxel
 #'
 #' @importFrom neuroim2 vectors
