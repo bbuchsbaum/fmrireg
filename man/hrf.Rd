@@ -45,6 +45,7 @@ Can be used to disambiguate two \code{hrf} terms with the same variable(s) but d
 Must be NULL, a single contrast spec, or a \emph{named} list of contrast specs.}
 
 \item{id}{a unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
+\item{name}{Optional human-readable name for the term.}
 
 \item{lag}{a temporal offset in seconds which is added to onset before convolution}
 
