@@ -63,11 +63,10 @@ sampling_frame <- function(blocklens, TR, start_time = TR / 2, precision = .1)
 #' Sampling times for a sampling frame
 #'
 #' @rdname samples
-#' @inheritParams samples
 #' @param blockids Numeric vector specifying which blocks/runs to include.
 #' @param global Logical; if TRUE, return cumulative times across runs.
 #' @export
-samples.sampling_frame <- function(x, blockids = NULL, global = FALSE) {
+samples.sampling_frame <- function(x, blockids = NULL, global = FALSE,...) {
   if (is.null(blockids)) blockids <- seq_along(x$blocklens)
 
   # number of scans per selected block
@@ -95,10 +94,9 @@ samples.sampling_frame <- function(x, blockids = NULL, global = FALSE) {
 }
 
 #' @rdname global_onsets
-#' @inheritParams global_onsets
 #' @param blockids Integer vector of block IDs
 #' @export
-global_onsets.sampling_frame <- function(x, onsets, blockids) {
+global_onsets.sampling_frame <- function(x, onsets, blockids,...) {
   # Calculate cumulative time offsets for each block
   block_durations <- x$blocklens * x$TR
   cumulative_time <- c(0, cumsum(block_durations))
@@ -148,9 +146,8 @@ blockids.sampling_frame <- function(x) {
 #' Get block lengths from a sampling frame
 #'
 #' @rdname blocklens
-#' @inheritParams blocklens
 #' @return Numeric vector giving the number of scans in each block.
 #' @export
-blocklens.sampling_frame <- function(x) {
+blocklens.sampling_frame <- function(x,...) {
     x$blocklens
 }

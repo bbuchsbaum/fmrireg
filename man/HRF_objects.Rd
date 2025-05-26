@@ -8,6 +8,7 @@
 \alias{HRF_GAMMA}
 \alias{HRF_GAUSSIAN}
 \alias{HRF_BSPLINE}
+\alias{HRF_FIR}
 \title{Pre-defined Hemodynamic Response Function Objects}
 \usage{
 HRF_GAMMA(t, shape = 6, rate = 1)
@@ -19,8 +20,6 @@ HRF_SPMG1(t, P1 = 5, P2 = 15, A1 = 0.0833)
 HRF_SPMG2(t)
 
 HRF_SPMG3(t)
-
-HRF_BSPLINE(t)
 }
 \arguments{
 \item{t}{Numeric vector of time points (in seconds) at which to evaluate the HRF}
@@ -57,6 +56,7 @@ for creating custom HRFs.
 
 \describe{
 \item{\code{HRF_BSPLINE}}{B-spline basis HRF (5 basis functions)}
+\item{\code{HRF_FIR}}{Finite Impulse Response (FIR) basis HRF (default 12 basis functions)}
 }
 }
 

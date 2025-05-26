@@ -133,7 +133,7 @@ get_formula <- function(x, ...) UseMethod("get_formula")
 #' @param x the object
 #' @param ... extra args
 #' @keywords internal
-#' @noRd
+#' @export
 term_matrices <- function(x, ...) UseMethod("term_matrices")
 
 

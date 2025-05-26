@@ -417,17 +417,17 @@ evaluate_regressor <- function(x, grid, precision = 0.3, ...) {
 ###############################################################################
 
 #' @export
-nbasis.regressor <- function(x) nbasis(x$hrf)
+nbasis.regressor <- function(x,...) nbasis(x$hrf)
 
 #' @export
-nbasis.HRF <- function(x) attr(x, "nbasis")
+nbasis.HRF <- function(x,...) attr(x, "nbasis")
 
 #' @export
-nbasis.AFNI_HRF <- function(x) attr(x, "nbasis")
+nbasis.AFNI_HRF <- function(x,...) attr(x, "nbasis")
 
 #' @export
 #' @rdname nbasis
-nbasis.hrfspec <- function(x) nbasis(x$hrf)
+nbasis.hrfspec <- function(x, ...) nbasis(x$hrf)
 
 #' @export
 #' @rdname onsets

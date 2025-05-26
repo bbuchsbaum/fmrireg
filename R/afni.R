@@ -428,7 +428,7 @@ build_afni_stims.afni_trialwise_convolved_term <- function(x, iresp=FALSE, tr_ti
 
 #' @export
 #' @rdname build_afni_stims
-build_afni_stims.event_term <- function(x, iresp=FALSE, tr_times=1) {
+build_afni_stims.event_term <- function(x, iresp=FALSE, tr_times=1,...) {
   # This method handles plain event_terms created from standard hrf() calls.
   # These are not directly translated into AFNI -stim_times or similar directives.
   # They might be relevant if we were generating -stim_regressor from an existing matrix,

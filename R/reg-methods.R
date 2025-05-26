@@ -163,7 +163,7 @@ print.Reg <- function(x, ...) {
 #' @export
 #' @rdname nbasis
 #' @method nbasis Reg
-nbasis.Reg <- function(x) nbasis(x$hrf)
+nbasis.Reg <- function(x, ...) nbasis(x$hrf)
 
 #' @export
 #' @rdname onsets

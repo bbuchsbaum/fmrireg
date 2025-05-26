@@ -12,6 +12,8 @@
 \item{blockid}{Optional block identifier to subset rows.}
 
 \item{allrows}{Logical; if \code{TRUE}, return all rows for the selected block.}
+
+\item{...}{Additional arguments (currently unused).}
 }
 \value{
 A tibble containing baseline regressors.

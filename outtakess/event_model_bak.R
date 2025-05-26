@@ -474,7 +474,7 @@ event_table.convolved_term <- function(x) event_table(x$evterm)
 
 #' @export
 #' @rdname nbasis
-nbasis.convolved_term <- function(x) nbasis(x$hrf)
+nbasis.convolved_term <- function(x,...) nbasis(x$hrf)
 
 #' @export
 cells.event_model <- function(x, ...) {

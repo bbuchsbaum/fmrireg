@@ -466,10 +466,10 @@ hrf_lwu <- function(t, tau = 6, sigma = 2.5, rho = 0.35, normalize = "none") {
 #'   Default is \code{"none"}.
 #' @return A numeric matrix of dimension \code{length(t) x 4}. Columns are:
 #'   \\itemize{
-#'     \\item{\\code{h0}: LWU HRF evaluated at \code{theta0}, \code{h(t; \tau_0, \sigma_0, \rho_0)}}
-#'     \\item{\\code{d_tau}: Partial derivative \code{\\partial h / \\partial \\tau} evaluated at \code{theta0}}
-#'     \\item{\\code{d_sigma}: Partial derivative \code{\\partial h / \\partial \\sigma} evaluated at \code{theta0}}
-#'     \\item{\\code{d_rho}: Partial derivative \code{\\partial h / \\partial \\rho} evaluated at \code{theta0}}
+#'     \\item{\\code{h0}: LWU HRF evaluated at \code{theta0}, \\eqn{h(t; \\tau_0, \\sigma_0, \\rho_0)}}
+#'     \\item{\\code{d_tau}: Partial derivative \\eqn{\\partial h / \\partial \\tau} evaluated at \code{theta0}}
+#'     \\item{\\code{d_sigma}: Partial derivative \\eqn{\\partial h / \\partial \\sigma} evaluated at \code{theta0}}
+#'     \\item{\\code{d_rho}: Partial derivative \\eqn{\\partial h / \\partial \\rho} evaluated at \code{theta0}}
 #'   }
 #' @family hrf_functions
 #' @seealso \code{\link{hrf_lwu}}, \code{\link[numDeriv]{grad}}

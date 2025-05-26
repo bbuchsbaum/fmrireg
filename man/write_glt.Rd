@@ -6,12 +6,18 @@
 \title{Write GLT to File}
 \usage{
 write_glt(x, ...)
+
+\method{write_glt}{glt_contrast}(x, fname = NULL, ...)
 }
 \arguments{
-\item{x}{The GLT contrast object}
+\item{x}{The GLT contrast to write.}
 
 \item{...}{Additional arguments passed to methods}
+
+\item{fname}{File path for the GLT specification}
 }
 \description{
 Write a generic function for writing GLT contrast to a file.
+
+Write a GLT contrast to a file.
 }

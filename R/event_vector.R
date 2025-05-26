@@ -693,7 +693,7 @@ convolve_design <- function(hrf, dmat, globons, durations, summate = TRUE) {
 #' @param summate Logical; sum HRF responses
 #' @param drop.empty Logical; drop empty conditions
 #' @export
-regressors.event_term <- function(x, hrf, sampling_frame, summate = FALSE, drop.empty = TRUE) {
+regressors.event_term <- function(x, hrf, sampling_frame, summate = FALSE, drop.empty = TRUE, ...) {
   globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
   durations <- x$durations
   blockids <- x$blockids

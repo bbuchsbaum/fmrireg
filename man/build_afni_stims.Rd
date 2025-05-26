@@ -7,13 +7,18 @@
 \usage{
 build_afni_stims(x, ...)
 
-\method{build_afni_stims}{event_term}(x, iresp = FALSE, tr_times = 1)
+\method{build_afni_stims}{event_term}(x, iresp = FALSE, tr_times = 1, ...)
 
 build_afni_stims(x, ...)
 }
 \arguments{
-\item{x}{Term object}
-\item{...}{Additional arguments}
+\item{x}{the term}
+
+\item{...}{extra args}
+
+\item{iresp}{Logical; generate -iresp files when TRUE}
+
+\item{tr_times}{Numeric; TR timing for stimuli}
 }
 \value{
 List of stimulus descriptors or \code{NULL}

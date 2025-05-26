@@ -322,7 +322,7 @@ HRF <- function(fun, name, nbasis=1, span=24, param_names=NULL) {
 
 #' @rdname nbasis
 #' @export
-nbasis.HRF <- function(x) attr(x, "nbasis")
+nbasis.HRF <- function(x,...) attr(x, "nbasis")
 
 
 
@@ -515,6 +515,7 @@ list_available_hrfs <- function(details = FALSE) {
 #' @section Flexible Basis Sets:
 #' \describe{
 #'   \item{\code{HRF_BSPLINE}}{B-spline basis HRF (5 basis functions)}
+#'   \item{\code{HRF_FIR}}{Finite Impulse Response (FIR) basis HRF (default 12 basis functions)}
 #' }
 #' 
 #' @section Usage:
@@ -578,7 +579,7 @@ list_available_hrfs <- function(details = FALSE) {
 #' }
 #' 
 #' @name HRF_objects
-#' @aliases HRF_SPMG1 HRF_SPMG2 HRF_SPMG3 HRF_GAMMA HRF_GAUSSIAN HRF_BSPLINE
+#' @aliases HRF_SPMG1 HRF_SPMG2 HRF_SPMG3 HRF_GAMMA HRF_GAUSSIAN HRF_BSPLINE HRF_FIR
 #' @family hrf
 #' @seealso \code{\link{evaluate.HRF}}, \code{\link{gen_hrf}}, \code{\link{list_available_hrfs}}
 NULL
@@ -625,87 +626,102 @@ hrf_bspline_generator <- function(nbasis=5, span=24) {
   # Ensure nbasis is integer
   nbasis <- as.integer(nbasis)
   
-  # For B-splines, the effective number of basis functions depends on:
-  # - degree: polynomial degree of the splines
-  # - number of interior knots
-  # - boundary conditions
-  # 
-  # splines::bs with df=nbasis and intercept=FALSE should give exactly nbasis columns
-  # But let's be defensive and handle edge cases
-  
   degree <- 3 # Default cubic B-splines
-  effective_nbasis <- max(1, nbasis) # Ensure at least 1 basis function
+  effective_nbasis <- max(1, nbasis) 
   
-  # Directly use splines::bs ensuring intercept=FALSE and using effective_nbasis
   f_bspline <- function(t) {
-    # Ensure t is within bounds for bs()
     valid_t_idx <- t >= 0 & t <= span
     if (!any(valid_t_idx)) {
-      # If all t are outside span, return zeros
       return(matrix(0, nrow = length(t), ncol = effective_nbasis))
     }
     
-    # Initialize result matrix with zeros
     res_mat <- matrix(0, nrow = length(t), ncol = effective_nbasis)
     
-    # Call bs only on valid time points using effective_nbasis for df
     bs_matrix <- tryCatch({
-        # Use df=effective_nbasis and intercept=FALSE
         splines::bs(t[valid_t_idx], df = effective_nbasis, degree = degree, 
                     Boundary.knots = c(0, span), intercept = FALSE)
     }, error = function(e) {
         warning(sprintf("splines::bs failed for effective_nbasis=%d, span=%d: %s", 
                         effective_nbasis, span, e$message), call. = FALSE)
-        NULL # Return NULL on error
+        NULL 
     })
 
-    # Fill the result matrix if bs calculation succeeded and dimensions match
     if (!is.null(bs_matrix) && ncol(bs_matrix) == effective_nbasis) {
       res_mat[valid_t_idx, ] <- bs_matrix
     } else if (!is.null(bs_matrix)) {
-      # Handle unexpected column count from bs()
        warning(sprintf("splines::bs returned %d columns, expected %d for effective_nbasis=%d, span=%d. Returning zeros.", 
                       ncol(bs_matrix), effective_nbasis, effective_nbasis, span), call. = FALSE)
-       # Keep res_mat as zeros
     }
-    # Return the matrix (potentially zeros if errors occurred)
     return(res_mat)
   }
 
-  # Use as_hrf to create the HRF object, using effective_nbasis
   as_hrf(
     f = f_bspline,
-    name = "bspline", nbasis = as.integer(effective_nbasis), span = span, # Use effective_nbasis here!
-    params = list(nbasis = effective_nbasis, degree = degree, span = span) # Store effective params
+    name = "bspline", nbasis = as.integer(effective_nbasis), span = span,
+    params = list(nbasis = effective_nbasis, degree = degree, span = span) 
   )
 }
+
 hrf_tent_generator <- function(nbasis=5, span=24) {
   as_hrf(
-    f = function(t) hrf_bspline(t, span=span, N=nbasis, degree=1),
+    f = function(t) hrf_bspline(t, span=span, N=nbasis, degree=1), # hrf_bspline from hrf-functions.R
     name="tent", nbasis=as.integer(nbasis), span=span,
     params=list(N=nbasis, degree=1, span=span)
   )
 }
+
 hrf_fourier_generator <- function(nbasis=5, span=24) {
   as_hrf(
-    f = function(t) hrf_fourier(t, span=span, nbasis=nbasis),
+    f = function(t) hrf_fourier(t, span=span, nbasis=nbasis), # hrf_fourier from hrf-functions.R
     name="fourier", nbasis=as.integer(nbasis), span=span,
     params=list(nbasis=nbasis, span=span)
   )
 }
+
 hrf_daguerre_generator <- function(nbasis=3, scale=4) {
   as_hrf(
-    f = function(t) daguerre_basis(t, n_basis=nbasis, scale=scale),
-    name="daguerre", nbasis=as.integer(nbasis), span=24,
+    f = function(t) daguerre_basis(t, n_basis=nbasis, scale=scale), # daguerre_basis from hrf-functions.R
+    name="daguerre", nbasis=as.integer(nbasis), span=24, # Default span, daguerre is time-scaled
     params=list(n_basis=nbasis, scale=scale)
   )
 }
 
-# Define additional static HRF objects that depend on generators -----
+hrf_fir_generator <- function(nbasis = 12, span = 24) {
+  assertthat::assert_that(
+    is.numeric(nbasis) && length(nbasis) == 1 && nbasis >= 1,
+    msg = "`nbasis` must be a single positive integer."
+  )
+  assertthat::assert_that(
+    is.numeric(span) && length(span) == 1 && span > 0,
+    msg = "`span` must be a single positive number."
+  )
+  nbasis <- as.integer(nbasis)
+  bin_width <- span / nbasis
 
-#' @rdname HRF_objects
-#' @export
-HRF_BSPLINE <- hrf_bspline_generator(nbasis=5, span=24)
+  f_fir <- function(t) {
+    if (!is.numeric(t) || length(t) == 0) {
+      return(matrix(0, nrow = 0, ncol = nbasis))
+    }
+    output_matrix <- matrix(0, nrow = length(t), ncol = nbasis)
+    for (i in seq_along(t)) {
+      current_t <- t[i]
+      if (!is.na(current_t) && current_t >= 0 && current_t < span) {
+        bin_index <- if (current_t == 0) 1 else floor(current_t / bin_width) + 1
+        bin_index <- min(bin_index, nbasis) 
+        output_matrix[i, bin_index] <- 1
+      }
+    }
+    return(output_matrix)
+  }
+
+  as_hrf(
+    f = f_fir,
+    name = "fir",
+    nbasis = nbasis,
+    span = span,
+    params = list(nbasis = nbasis, span = span, bin_width = bin_width)
+  )
+}
 
 # Define HRF Registry -----
 
@@ -720,7 +736,8 @@ HRF_REGISTRY <- list(
   tent     = hrf_tent_generator,
   fourier  = hrf_fourier_generator,
   daguerre = hrf_daguerre_generator,
-  lwu      = hrf_lwu # Add LWU function as a generator
+  fir      = hrf_fir_generator,
+  lwu      = hrf_lwu 
 )
 
 HRF_REGISTRY$gam <- HRF_REGISTRY$gamma
@@ -732,7 +749,6 @@ HRF_REGISTRY$bs  <- HRF_REGISTRY$bspline
 #'
 #' Retrieves an HRF by name from the registry and applies decorators.
 #'
-#' @inheritParams getHRF # Inherit from the previously defined getHRF for params
 #' @param ... Additional arguments passed to generator functions (e.g., `scale` for daguerre).
 #' @return An HRF object.
 #' @keywords internal

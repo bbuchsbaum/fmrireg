@@ -2,11 +2,12 @@
 #'
 #' This function extracts the formula from an \code{fmri_model} object.
 #'
-#' @inheritParams get_formula
 #' @return A formula representing the model.
+#' @param x An \code{fmri_model} object.
+#' @param ... Additional arguments.
 #' @rdname get_formula
 #' @export
-get_formula.fmri_model <- function(x) {
+get_formula.fmri_model <- function(x,...) {
   assert_that(inherits(x, "fmri_model"), msg = "'x' must be an 'fmri_model' object")
   term_names <- names(terms(x))
   form <- paste(".y ~", paste(term_names, collapse = " + "), "-1")
@@ -25,7 +26,7 @@ get_formula.fmri_model <- function(x) {
 #'         \code{"blocknum"} stores the block numbers, and \code{"varnames"} stores the variable names.
 #' @export
 #' @rdname term_matrices
-term_matrices.fmri_model <- function(x, blocknum = NULL) {
+term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
   assert_that(inherits(x, "fmri_model"), msg = "'x' must be an 'fmri_model' object")
   
   if (is.null(blocknum)) {
@@ -767,7 +768,7 @@ stats.fmri_lm <- function(x, type = c("estimates", "contrasts", "F"), ...) {
 #'   \code{"contrasts"}.
 #' @return A tibble containing the standard errors.
 #' @export
-standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts")) {
+standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
   type <- match.arg(type)
   if (type == "estimates") {
     pull_stat(x, "betas", "se")

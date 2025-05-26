@@ -219,7 +219,7 @@ hrfspec <- function(vars, label=NULL, basis=HRF_SPMG1, ...) {
 
 
 #' @export
-nbasis.hrfspec <- function(x) {
+nbasis.hrfspec <- function(x, ...) {
   nbasis(x$hrf)
 }
 

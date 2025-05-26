@@ -1425,7 +1425,7 @@ write_glt <- function(x, ...) {
 #'
 #' @export
 #' @rdname write_glt
-write_glt.glt_contrast <- function(x, fname=NULL) {
+write_glt.glt_contrast <- function(x, fname=NULL,...) {
   con <- if (is.null(fname)) {
     file(fname, "w")
   } else {
