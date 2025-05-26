@@ -682,6 +682,16 @@ convolve_design <- function(hrf, dmat, globons, durations, summate = TRUE) {
   reglist
 }
 
+#' Extract regressors for an event term
+#'
+#' Convolve the event-term design matrix with an HRF and return the
+#' resulting regressors.
+#'
+#' @rdname regressors
+#' @param hrf HRF function
+#' @param sampling_frame sampling_frame object
+#' @param summate Logical; sum HRF responses
+#' @param drop.empty Logical; drop empty conditions
 #' @export
 regressors.event_term <- function(x, hrf, sampling_frame, summate = FALSE, drop.empty = TRUE) {
   globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
