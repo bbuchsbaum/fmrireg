@@ -326,6 +326,9 @@ Scale <- function(x) {
 }
 
 #' @export
+#' @param object ParametricBasis object
+#' @param newdata Numeric vector of new values
+#' @param ... Additional arguments
 #' @name predict.ParametricBasis
 #' @title Predict Method for ParametricBasis Objects
 #' @rdname predict.ParametricBasis
@@ -357,12 +360,14 @@ sub_basis.Scale <- function(x, subset) {
 }
 
 #' @export
+#' @param x ParametricBasis object
 #' @name levels.ParametricBasis
 #' @title Get Levels/Names for ParametricBasis Objects
 #' @rdname levels.ParametricBasis
 levels.Scale  <- function(x) x$argname
 
 #' @export
+#' @param x ParametricBasis object
 #' @name columns.ParametricBasis
 #' @title Get Column Name Information for ParametricBasis Objects
 #' @rdname columns.ParametricBasis
