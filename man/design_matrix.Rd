@@ -3,20 +3,20 @@
 \name{design_matrix}
 \alias{design_matrix}
 \alias{design_matrix.convolved_term}
+\alias{design_matrix.afni_hrf_convolved_term}
 \alias{design_matrix.event_model}
 \alias{design_matrix.fmri_model}
-\alias{design_matrix.afni_hrf_convolved_term}
 \title{design_matrix}
 \usage{
 design_matrix(x, ...)
 
 \method{design_matrix}{convolved_term}(x, blockid = NULL, ...)
 
+\method{design_matrix}{afni_hrf_convolved_term}(x, blockid = NULL, ...)
+
 \method{design_matrix}{event_model}(x, blockid = NULL, ...)
 
 \method{design_matrix}{fmri_model}(x, blockid = NULL, ...)
-
-\method{design_matrix}{afni_hrf_convolved_term}(x, blockid = NULL, ...)
 }
 \arguments{
 \item{x}{The term or model object (typically an event_term, event_model, baseline_model, or fmri_model)}
@@ -57,6 +57,14 @@ The final naming is applied by \code{convolve.event_term} and assembled by
 \code{build_event_model_design_matrix}.
 }
 }
+\section{Methods (by class)}{
+\itemize{
+\item \code{design_matrix(afni_hrf_convolved_term)}: Design matrix for AFNI-convolved terms
+
+AFNI-convolved terms rely on AFNI software for design matrix
+construction. This method stops with an informative message.
+
+}}
 \seealso{
 \code{\link[=event_model]{event_model()}}, \code{\link[=baseline_model]{baseline_model()}}, \code{\link[=fmri_model]{fmri_model()}}
 }

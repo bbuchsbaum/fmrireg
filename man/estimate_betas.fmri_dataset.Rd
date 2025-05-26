@@ -10,7 +10,7 @@
   ran,
   block,
   method = c("mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "pls", "pls_global",
-    "ols", "lowrank_hrf"),
+    "ols"),
   basemod = NULL,
   maxit = 1000,
   fracs = 0.5,
@@ -27,11 +27,15 @@
 
 \item{block}{A formula specifying the block factor.}
 
-\item{method}{The regression method for estimating trialwise betas; one of "mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "pls", "pls_global", "ols", or "lowrank_hrf".}
+\item{method}{The regression method for estimating trialwise betas; one of "mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "pls", "pls_global", or "ols".}
 
 \item{basemod}{A \code{baseline_model} instance to regress out of data before beta estimation (default: NULL).}
 
 \item{maxit}{Maximum number of iterations for optimization methods (default: 1000).}
+
+\item{fracs}{Fraction of voxels used for prewhitening.}
+
+\item{progress}{Logical; show progress bar.}
 
 \item{...}{Additional arguments passed to the estimation method.}
 }

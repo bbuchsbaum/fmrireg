@@ -2,17 +2,23 @@
 % Please edit documentation in R/baseline_model.R
 \name{terms.baseline_model}
 \alias{terms.baseline_model}
-\title{Return the Terms of a Baseline Model.}
+\title{Return the Terms of a Baseline Model}
 \usage{
 \method{terms}{baseline_model}(x, ...)
 }
 \arguments{
 \item{x}{A baseline_model object.}
+
 \item{...}{Passed to underlying term constructors (unused here).}
 }
 \value{
 A list of terms (drift, block, nuisance).
 }
 \description{
-Return the Terms of a Baseline Model.
+Return the Terms of a Baseline Model
+}
+\examples{
+sframe <- sampling_frame(blocklens = 10, TR = 1)
+bmod <- baseline_model(sframe = sframe)
+terms(bmod)
 }

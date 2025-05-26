@@ -719,7 +719,8 @@ HRF_REGISTRY <- list(
   bspline  = hrf_bspline_generator,
   tent     = hrf_tent_generator,
   fourier  = hrf_fourier_generator,
-  daguerre = hrf_daguerre_generator
+  daguerre = hrf_daguerre_generator,
+  lwu      = hrf_lwu # Add LWU function as a generator
 )
 
 HRF_REGISTRY$gam <- HRF_REGISTRY$gamma

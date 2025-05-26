@@ -12,6 +12,8 @@
 \item{type}{A character string specifying whether to return the standard error for "estimates" or "contrasts".}
 
 \item{recon}{Logical, if TRUE, the function calculates the standard error for reconstructed data.}
+
+\item{...}{Additional arguments (currently unused).}
 }
 \value{
 A tibble containing the standard error values.

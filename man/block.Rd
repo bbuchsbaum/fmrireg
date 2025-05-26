@@ -2,7 +2,7 @@
 % Please edit documentation in R/baseline_model.R
 \name{block}
 \alias{block}
-\title{Create a Block Variable.}
+\title{Create a Block Variable}
 \usage{
 block(x)
 }
@@ -14,4 +14,7 @@ An object of class "blockspec".
 }
 \description{
 Returns a block variable that is constant over the span of a scanning run.
+}
+\examples{
+block(run)
 }

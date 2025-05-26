@@ -24,10 +24,12 @@ hrf_sine_basis <- hrf_sine(seq(0, 20, by = 0.5), N = 4)
 }
 \seealso{
 Other hrf_functions: 
+\code{\link{hrf_basis_lwu}()},
 \code{\link{hrf_bspline}()},
 \code{\link{hrf_gamma}()},
 \code{\link{hrf_gaussian}()},
 \code{\link{hrf_inv_logit}()},
+\code{\link{hrf_lwu}()},
 \code{\link{hrf_mexhat}()},
 \code{\link{hrf_spmg1}()},
 \code{\link{hrf_time}()}

@@ -1,4 +1,3 @@
-
 #' @importFrom splines bs
 #' @importFrom stats dgamma dnorm quantile
 NULL
@@ -371,5 +370,179 @@ daguerre_basis <- function(t, n_basis = 3, scale = 1) {
   }
   
   basis
+}
+
+#' Lag-Width-Undershoot (LWU) HRF
+#'
+#' Computes the Lag-Width-Undershoot (LWU) hemodynamic response function.
+#' This model uses two Gaussian components to model the main response and an optional undershoot.
+#' The formula is:
+#' \\deqn{h(t; \\tau, \\sigma, \\rho) = e^{-\\frac{(t-\\tau)^2}{2\\sigma^{2}}} - \\rho e^{-\\frac{(t-\\tau-2\\sigma)^2}{2(1.6\\sigma)^{2}}}}
+#'
+#' @param t A numeric vector of time points (in seconds).
+#' @param tau Lag of the main Gaussian component (time-to-peak of the positive lobe, in seconds). Default: 6.
+#' @param sigma Width (standard deviation) of the main Gaussian component (in seconds). Must be > 0.05. Default: 2.5.
+#' @param rho Amplitude of the undershoot Gaussian component, relative to the main component. Must be between 0 and 1.5. Default: 0.35.
+#' @param normalize Character string specifying normalization type:
+#'   \\itemize{
+#'     \\item{\\code{"none"}: No normalization is applied (default).}
+#'     \\item{\\code{"height"}: The HRF is scaled so that its maximum absolute value is 1.}
+#'   }
+#' @return A numeric vector representing the LWU HRF values at the given time points `t`.
+#' @family hrf_functions
+#' @export
+#' @examples
+#' t_points <- seq(0, 30, by = 0.1)
+#'
+#' # Default LWU HRF
+#' lwu_default <- hrf_lwu(t_points)
+#' plot(t_points, lwu_default, type = "l", main = "LWU HRF (Default Params)", ylab = "Amplitude")
+#'
+#' # LWU HRF with no undershoot
+#' lwu_no_undershoot <- hrf_lwu(t_points, rho = 0)
+#' lines(t_points, lwu_no_undershoot, col = "blue")
+#'
+#' # LWU HRF with a wider main peak and larger undershoot
+#' lwu_custom <- hrf_lwu(t_points, tau = 7, sigma = 1.5, rho = 0.5)
+#' lines(t_points, lwu_custom, col = "red")
+#' legend("topright", c("Default", "No Undershoot (rho=0)", "Custom (tau=7, sigma=1.5, rho=0.5)"),
+#'        col = c("black", "blue", "red"), lty = 1, cex = 0.8)
+#'
+#' # Height-normalized HRF
+#' lwu_normalized <- hrf_lwu(t_points, tau = 6, sigma = 1, rho = 0.35, normalize = "height")
+#' plot(t_points, lwu_normalized, type = "l", main = "Height-Normalized LWU HRF", ylab = "Amplitude")
+#' abline(h = c(-1, 1), lty = 2, col = "grey") # Max absolute value should be 1
+hrf_lwu <- function(t, tau = 6, sigma = 2.5, rho = 0.35, normalize = "none") {
+  assertthat::assert_that(is.numeric(t), msg = "`t` must be numeric.")
+  assertthat::assert_that(is.numeric(tau) && length(tau) == 1, msg = "`tau` must be a single numeric value.")
+  assertthat::assert_that(is.numeric(sigma) && length(sigma) == 1, msg = "`sigma` must be a single numeric value.")
+  assertthat::assert_that(sigma > 0.05, msg = "`sigma` must be > 0.05.")
+  assertthat::assert_that(is.numeric(rho) && length(rho) == 1, msg = "`rho` must be a single numeric value.")
+  assertthat::assert_that(rho >= 0 && rho <= 1.5, msg = "`rho` must be between 0 and 1.5.")
+  assertthat::assert_that(normalize %in% c("none", "height", "area"),
+                        msg = "`normalize` must be one of 'none', 'height', or 'area'.")
+
+  if (normalize == "area") {
+    warning("`normalize = \"area\"` is not yet fully implemented for hrf_lwu and will behave like `normalize = \"none\"`. Area normalization typically requires numerical integration and careful definition of the integration window for HRFs.", call. = FALSE)
+    normalize <- "none"
+  }
+
+  # Main positive Gaussian component
+  term1_exponent <- -((t - tau)^2) / (2 * sigma^2)
+  term1 <- exp(term1_exponent)
+
+  # Undershoot Gaussian component
+  # tau_u = tau + 2*sigma (peak of undershoot relative to stimulus onset)
+  # sigma_u = 1.6*sigma (width of undershoot)
+  term2_exponent <- -((t - (tau + 2 * sigma))^2) / (2 * (1.6 * sigma)^2)
+  term2 <- rho * exp(term2_exponent)
+
+  response <- term1 - term2
+
+  if (normalize == "height") {
+    max_abs_val <- max(abs(response), na.rm = TRUE)
+    if (max_abs_val > 1e-10) { # Avoid division by zero or tiny numbers
+      response <- response / max_abs_val
+    }
+  }
+
+  return(response)
+}
+
+#' LWU HRF Basis for Taylor Expansion
+#'
+#' Constructs the basis set for the Lag-Width-Undershoot (LWU) HRF model,
+#' intended for Taylor expansion-based fitting. The basis consists of the
+#' LWU HRF evaluated at a given expansion point \code{theta0}, and its
+#' partial derivatives with respect to its parameters (tau, sigma, rho).
+#'
+#' @param theta0 A numeric vector of length 3 specifying the expansion point
+#'   \code{c(tau0, sigma0, rho0)} for the LWU parameters.
+#' @param t A numeric vector of time points (in seconds) at which to evaluate the basis.
+#' @param normalize_primary Character string, one of \code{"none"} or \code{"height"}.
+#'   If \code{"height"}, the primary HRF column (\code{h0(t)}) is normalized to have a
+#'   peak absolute value of 1. For Taylor expansion fitting as described in Fit_LRU.md,
+#'   this should typically be \code{"none"} as the scaling is absorbed by the beta coefficient.
+#'   Default is \code{"none"}.
+#' @return A numeric matrix of dimension \code{length(t) x 4}. Columns are:
+#'   \\itemize{
+#'     \\item{\\code{h0}: LWU HRF evaluated at \code{theta0}, \code{h(t; \tau_0, \sigma_0, \rho_0)}}
+#'     \\item{\\code{d_tau}: Partial derivative \code{\\partial h / \\partial \\tau} evaluated at \code{theta0}}
+#'     \\item{\\code{d_sigma}: Partial derivative \code{\\partial h / \\partial \\sigma} evaluated at \code{theta0}}
+#'     \\item{\\code{d_rho}: Partial derivative \code{\\partial h / \\partial \\rho} evaluated at \code{theta0}}
+#'   }
+#' @family hrf_functions
+#' @seealso \code{\link{hrf_lwu}}, \code{\link[numDeriv]{grad}}
+#' @export
+#' @importFrom numDeriv grad
+#' @examples
+#' t_points <- seq(0, 30, by = 0.5)
+#' theta0_default <- c(tau = 6, sigma = 1, rho = 0.35)
+#'
+#' # Generate the basis set
+#' lwu_basis <- hrf_basis_lwu(theta0_default, t_points)
+#' dim(lwu_basis) # Should be length(t_points) x 4
+#' head(lwu_basis)
+#'
+#' # Plot the basis functions
+#' matplot(t_points, lwu_basis, type = "l", lty = 1,
+#'         main = "LWU HRF Basis Functions", ylab = "Value", xlab = "Time (s)")
+#' legend("topright", colnames(lwu_basis), col = 1:4, lty = 1, cex = 0.8)
+#'
+#' # Example with primary HRF normalization (not typical for Taylor fitting step)
+#' lwu_basis_norm_h0 <- hrf_basis_lwu(theta0_default, t_points, normalize_primary = "height")
+#' plot(t_points, lwu_basis_norm_h0[,1], type="l", main="Normalized h0 in Basis")
+#' max(abs(lwu_basis_norm_h0[,1])) # Should be 1
+hrf_basis_lwu <- function(theta0, t, normalize_primary = "none") {
+  assertthat::assert_that(is.numeric(theta0) && length(theta0) == 3,
+                        msg = "`theta0` must be a numeric vector of length 3: c(tau, sigma, rho).")
+  names(theta0) <- c("tau", "sigma", "rho") # Ensure names for numDeriv::grad
+  assertthat::assert_that(is.numeric(t), msg = "`t` must be numeric.")
+  assertthat::assert_that(normalize_primary %in% c("none", "height"),
+                        msg = "`normalize_primary` must be one of 'none' or 'height'.")
+
+  # Safety checks for sigma0 and rho0 from theta0, consistent with hrf_lwu
+  assertthat::assert_that(theta0["sigma"] > 0.05, msg = "sigma in `theta0` must be > 0.05.")
+  assertthat::assert_that(theta0["rho"] >= 0 && theta0["rho"] <= 1.5,
+                        msg = "rho in `theta0` must be between 0 and 1.5.")
+
+  # Function to pass to numDeriv::grad - parameters must be the first argument
+  # and it must return a scalar or vector (hrf_lwu returns a vector of length(t_val))
+  target_func_for_grad <- function(params_vec, t_val) {
+    hrf_lwu(t = t_val, tau = params_vec[1], sigma = params_vec[2], rho = params_vec[3], normalize = "none")
+  }
+
+  # Calculate h0 (the HRF at theta0)
+  h0 <- hrf_lwu(t = t, tau = theta0["tau"], sigma = theta0["sigma"], rho = theta0["rho"], normalize = "none")
+
+  if (normalize_primary == "height") {
+    max_abs_h0 <- max(abs(h0), na.rm = TRUE)
+    if (max_abs_h0 > 1e-10) {
+      h0 <- h0 / max_abs_h0
+    }
+  }
+
+  # Calculate partial derivatives using numDeriv::grad
+  # grad() will iterate over each element of `t` if `target_func_for_grad` is vectorized over t,
+  # which it is. We want the gradient for each time point.
+  # However, numDeriv::grad expects the function to return a single scalar for jacobian calculation.
+  # So, we must loop over t points for numDeriv.
+
+  deriv_matrix <- matrix(NA, nrow = length(t), ncol = 3)
+  colnames(deriv_matrix) <- c("d_tau", "d_sigma", "d_rho")
+
+  for (i in seq_along(t)) {
+    # numDeriv::grad needs a function that takes params and returns a SINGLE value
+    # So we create a wrapper for each time point t[i]
+    current_t_func <- function(params_vec) {
+      hrf_lwu(t = t[i], tau = params_vec[1], sigma = params_vec[2], rho = params_vec[3], normalize = "none")
+    }
+    # Calculate gradient (vector of 3 partial derivatives) at t[i] w.r.t theta0
+    grad_at_t_i <- numDeriv::grad(func = current_t_func, x = theta0)
+    deriv_matrix[i, ] <- grad_at_t_i
+  }
+
+  basis_mat <- cbind(h0 = h0, deriv_matrix)
+  return(basis_mat)
 }
 

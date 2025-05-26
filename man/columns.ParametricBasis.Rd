@@ -13,6 +13,9 @@
 
 \method{columns}{RobustScale}(x)
 }
+\arguments{
+\item{x}{ParametricBasis object}
+}
 \description{
 Get Column Name Information for ParametricBasis Objects
 }

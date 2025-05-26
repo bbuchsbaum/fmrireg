@@ -35,6 +35,8 @@ estimate_hrf(
 \item{k}{the dimension of the basis, default is 8}
 
 \item{fx}{indicates whether the term is a fixed d.f. regression spline (TRUE) or a penalized regression spline (FALSE); default is TRUE.}
+
+\item{progress}{Logical; display progress during estimation.}
 }
 \value{
 A matrix with the estimated HRF values for each voxel

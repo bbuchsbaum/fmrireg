@@ -23,6 +23,14 @@
 
 \item{...}{Additional arguments passed to internal plotting functions.}
 }
+\value{
+A ggplot2 plot object.
+}
 \description{
 Generates a correlation heatmap of the columns in a \code{baseline_model}'s design matrix.
+}
+\examples{
+sframe <- sampling_frame(blocklens = 5, TR = 1)
+bmod <- baseline_model(sframe = sframe)
+if (requireNamespace("ggplot2", quietly = TRUE)) correlation_map(bmod)
 }

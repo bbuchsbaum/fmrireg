@@ -2,7 +2,7 @@
 % Please edit documentation in R/baseline_model.R
 \name{baseline}
 \alias{baseline}
-\title{Create a Baseline Specification.}
+\title{Create a Baseline Specification}
 \usage{
 baseline(
   degree = 1,
@@ -25,4 +25,7 @@ A baselinespec list instance.
 }
 \description{
 Generates a baselinespec for modeling low-frequency drift in fMRI time series.
+}
+\examples{
+baseline(degree = 3, basis = "bs")
 }

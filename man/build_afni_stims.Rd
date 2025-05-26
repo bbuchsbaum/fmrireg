@@ -6,12 +6,14 @@
 \title{Build AFNI stimulus definitions}
 \usage{
 build_afni_stims(x, ...)
+
+\method{build_afni_stims}{event_term}(x, iresp = FALSE, tr_times = 1)
+
+build_afni_stims(x, ...)
 }
 \arguments{
 \item{x}{Term object}
 \item{...}{Additional arguments}
-\item{iresp}{Logical; generate -iresp files when TRUE}
-\item{tr_times}{Numeric; TR timing for stimuli}
 }
 \value{
 List of stimulus descriptors or \code{NULL}
@@ -19,5 +21,5 @@ List of stimulus descriptors or \code{NULL}
 \description{
 Generate stimulus files for AFNI's 3dDeconvolve.
 }
-\family{AFNI}
+\concept{AFNI}
 \keyword{internal}

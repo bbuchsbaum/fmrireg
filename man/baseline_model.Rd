@@ -2,7 +2,7 @@
 % Please edit documentation in R/baseline_model.R
 \name{baseline_model}
 \alias{baseline_model}
-\title{Construct a Baseline Model.}
+\title{Construct a Baseline Model}
 \usage{
 baseline_model(
   basis = c("constant", "poly", "bs", "ns"),

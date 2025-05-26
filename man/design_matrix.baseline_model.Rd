@@ -2,7 +2,7 @@
 % Please edit documentation in R/baseline_model.R
 \name{design_matrix.baseline_model}
 \alias{design_matrix.baseline_model}
-\title{Construct a Design Matrix for a Baseline Model.}
+\title{Construct a Design Matrix for a Baseline Model}
 \usage{
 \method{design_matrix}{baseline_model}(x, blockid = NULL, allrows = FALSE, ...)
 }
@@ -13,7 +13,7 @@
 
 \item{allrows}{Logical; if TRUE, returns all rows for the block.}
 
-\item{\dots}{Additional arguments passed to underlying term methods.}
+\item{...}{Additional arguments passed to underlying term methods.}
 }
 \value{
 A tibble representing the design matrix.
@@ -21,4 +21,9 @@ A tibble representing the design matrix.
 \description{
 Combines the drift term, block intercept term, and nuisance term (if any)
 into a complete design matrix.
+}
+\examples{
+sframe <- sampling_frame(blocklens = 10, TR = 1)
+bmod <- baseline_model(sframe = sframe)
+design_matrix(bmod)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/baseline_model.R
 \name{plot.baseline_model}
 \alias{plot.baseline_model}
-\title{Plot a Baseline Model.}
+\title{Plot a Baseline Model}
 \usage{
 \method{plot}{baseline_model}(
   x,
@@ -33,8 +33,17 @@ If omitted, the first non-constant term is plotted.}
 
 \item{...}{Additional arguments passed to ggplot2::geom_line.}
 }
+\value{
+A ggplot2 plot object.
+}
 \description{
 Creates a detailed ggplot2 visualization of the baseline model design matrix.
 Each non-constant term is plotted over time. The plot includes separate panels
 for each block and supports customization of titles, axis labels, line size, and color palette.
+}
+\examples{
+sframe <- sampling_frame(blocklens = 5, TR = 1)
+bmod <- baseline_model(sframe = sframe)
+if (requireNamespace("ggplot2", quietly = TRUE)) plot(bmod)
+
 }

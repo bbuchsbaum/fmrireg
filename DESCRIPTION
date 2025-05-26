@@ -88,6 +88,7 @@ Collate:
     'con_stats.R'
     'contrast.R'
     'covariate.R'
+    'data_fmri_benchmark_datasets.R'
     'design_plot.R'
     'evaluate-helpers.R'
     'utils-internal.R'

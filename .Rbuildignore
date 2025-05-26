@@ -5,7 +5,7 @@
 ^codecov\.yml$
 ^README.Rmd
 ^_pkgdown.yml
-^oouttakess
+^outtakess
 ^test_data
 ^doc$
 ^Meta$
@@ -13,3 +13,4 @@
 ^data-raw$
 ^\.vscode
 fmrireg.code-workspace
+data-raw/

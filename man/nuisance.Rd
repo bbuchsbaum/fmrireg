@@ -2,7 +2,7 @@
 % Please edit documentation in R/baseline_model.R
 \name{nuisance}
 \alias{nuisance}
-\title{Create a Nuisance Specification.}
+\title{Create a Nuisance Specification}
 \usage{
 nuisance(x)
 }
@@ -14,4 +14,8 @@ An object of class "nuisancespec".
 }
 \description{
 Returns a nuisance term specification from a numeric matrix.
+}
+\examples{
+mat <- matrix(rnorm(10), nrow = 5)
+nuisance(mat)
 }

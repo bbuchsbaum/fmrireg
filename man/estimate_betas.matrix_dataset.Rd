@@ -36,6 +36,10 @@
 
 \item{lambda}{Lambda parameter (not currently used; default: 0.01)}
 
+\item{fracs}{Fraction of voxels used for prewhitening.}
+
+\item{progress}{Logical; show progress bar.}
+
 \item{...}{Additional arguments passed to the estimation method}
 }
 \value{

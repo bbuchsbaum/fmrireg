@@ -41,6 +41,8 @@ estimate_betas(x, ...)
 \item{lambda}{Lambda parameter (not currently used; default: 0.01)}
 
 \item{prewhiten}{currently experimental, default to \code{FALSE}.}
+
+\item{progress}{Logical; show progress bar.}
 }
 \value{
 A list of class "fmri_betas" containing:

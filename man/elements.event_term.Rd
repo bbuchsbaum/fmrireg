@@ -7,6 +7,8 @@
 \method{elements}{event_term}(x, what = c("values", "labels"), ...)
 }
 \arguments{
+\item{x}{event_term object}
+
 \item{what}{Character, either "values" to return numeric data or "labels" for descriptive names.}
 
 \item{...}{Additional arguments passed down (e.g., \code{transformed} for \code{elements.event}).}

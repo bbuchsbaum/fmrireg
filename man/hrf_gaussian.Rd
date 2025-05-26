@@ -25,9 +25,11 @@ hrf_gaussian_vals <- hrf_gaussian(seq(0, 20, by = .5), mean = 6, sd = 2)
 }
 \seealso{
 Other hrf_functions: 
+\code{\link{hrf_basis_lwu}()},
 \code{\link{hrf_bspline}()},
 \code{\link{hrf_gamma}()},
 \code{\link{hrf_inv_logit}()},
+\code{\link{hrf_lwu}()},
 \code{\link{hrf_mexhat}()},
 \code{\link{hrf_sine}()},
 \code{\link{hrf_spmg1}()},

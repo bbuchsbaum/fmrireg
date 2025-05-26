@@ -13,6 +13,9 @@
 
 \method{levels}{RobustScale}(x)
 }
+\arguments{
+\item{x}{ParametricBasis object}
+}
 \description{
 Get Levels/Names for ParametricBasis Objects
 }

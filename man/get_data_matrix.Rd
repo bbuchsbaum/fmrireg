@@ -12,14 +12,16 @@ get_data_matrix(x, ...)
 \item{...}{Additional arguments passed to methods.}
 }
 \value{
-A numeric matrix containing the BOLD data.
+A numeric matrix containing the data values.
 }
 \description{
-Return the BOLD time series from a dataset as a numeric matrix. Rows correspond to voxels and columns to scans.
+Return the BOLD time series from a dataset as a numeric matrix. Rows
+correspond to voxels and columns to scans.
 }
 \examples{
 X <- matrix(rnorm(20), 4, 5)
 dset <- matrix_dataset(X, TR = 1, run_length = 5)
 mat <- get_data_matrix(dset)
 dim(mat)
+
 }
