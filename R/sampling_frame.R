@@ -60,6 +60,12 @@ sampling_frame <- function(blocklens, TR, start_time = TR / 2, precision = .1)
 
 # ---------------------------------------------------------------------
 # vectorised helpers (no memoise, no lapply)
+#' Sampling times for a sampling frame
+#'
+#' @rdname samples
+#' @inheritParams samples
+#' @param blockids Numeric vector specifying which blocks/runs to include.
+#' @param global Logical; if TRUE, return cumulative times across runs.
 #' @export
 samples.sampling_frame <- function(x, blockids = NULL, global = FALSE) {
   if (is.null(blockids)) blockids <- seq_along(x$blocklens)
