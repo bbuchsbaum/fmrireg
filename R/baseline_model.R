@@ -246,6 +246,8 @@ design_matrix.baseline_model <- function(x, blockid = NULL, allrows = FALSE, ...
 #' Return the Terms of a Baseline Model
 #'
 #' @param x A baseline_model object.
+#' @param ... Passed to underlying term constructors (unused here).
+#' @rdname terms.baseline_model
 #' @return A list of terms (drift, block, nuisance).
 #' @examples
 #' sframe <- sampling_frame(blocklens = 10, TR = 1)
