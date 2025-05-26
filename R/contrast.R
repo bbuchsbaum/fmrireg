@@ -1672,14 +1672,17 @@ plot_contrasts.event_model <- function(
   
   rownames(big_mat) <- rownames
   
-  # 3) Convert big_mat to a long data frame
-  df_long <- as.data.frame(big_mat, check.names = FALSE)
-  df_long$ContrastName <- rownames(big_mat)
-  df_long <- reshape2::melt(
-    df_long,
-    id.vars      = "ContrastName",
-    variable.name = "Regressor",
-    value.name    = "Weight"
+  # 3) Convert big_mat to a long data frame using modern base R approach
+  # Create indices for row and column positions
+  row_indices <- rep(seq_len(nrow(big_mat)), ncol(big_mat))
+  col_indices <- rep(seq_len(ncol(big_mat)), each = nrow(big_mat))
+  
+  # Create the long format data frame
+  df_long <- data.frame(
+    ContrastName = rownames(big_mat)[row_indices],
+    Regressor = colnames(big_mat)[col_indices],
+    Weight = as.vector(big_mat),
+    stringsAsFactors = FALSE
   )
   
   # 4) Build the ggplot

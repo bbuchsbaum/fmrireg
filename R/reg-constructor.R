@@ -58,7 +58,7 @@ Reg <- function(onsets, hrf=HRF_SPMG1, duration=0, amplitude=1, span=40, summate
   
   # Ensure HRF is a valid HRF object using make_hrf 
   # Explicitly namespace internal function call (Ticket G-3)
-  hrf  <- fmrireg:::make_hrf(hrf, lag = 0) 
+  hrf  <- make_hrf(hrf, lag = 0) 
   assert_that(inherits(hrf, "HRF"), msg = "Invalid 'hrf' provided or generated.")
   
   # Determine final span using %||% helper (ensure helper is available)

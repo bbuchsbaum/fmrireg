@@ -47,6 +47,7 @@
 #'                                     nboot = 100, block_size = 20)
 #' }
 #' @keywords internal
+#' @importFrom foreach foreach %dopar%
 multiresponse_bootstrap_lm <- function(form, data_env, 
                                      conlist, 
                                      vnames, 

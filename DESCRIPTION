@@ -37,11 +37,11 @@ Imports:
     methods,
     numDeriv,
     RcppArmadillo (>= 0.10.1.0),
-    R6,
     splines,
     crayon,
     plotly,
-    cli
+    cli,
+    colorplane
 RoxygenNote: 7.3.2.9000
 Roxygen: list(
     markdown = TRUE,

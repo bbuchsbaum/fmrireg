@@ -643,6 +643,7 @@ exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchun
 
 #' @keywords internal
 #' @noRd
+#' @importFrom deflist deflist
 arbitrary_chunks <- function(x, nchunks) {
   #print("arbitrary chunks")
   #browser()
