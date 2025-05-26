@@ -1285,6 +1285,7 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
 #' @param x An fmri_lm_result object.
 #' @param ... Additional arguments (unused).
 #' @export
+#' @rdname print
 print.fmri_lm <- function(x, ...) {
   # optional: check if crayon is installed
   if (!requireNamespace("crayon", quietly = TRUE)) {

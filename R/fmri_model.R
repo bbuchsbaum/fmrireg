@@ -201,6 +201,7 @@ plot.fmri_model <- function(x, ...) {
 }
 
 #' @export
+#' @rdname print
 print.fmri_model <- function(x, ...) {
   # Header with fancy border
   cat("\n╔══════════════════════════════════════════╗")

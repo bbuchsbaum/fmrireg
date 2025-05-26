@@ -17,6 +17,7 @@
 #' @importFrom dplyr mutate across where
 #' @export
 #' @method autoplot Reg
+#' @rdname autoplot
 autoplot.Reg <- function(object, grid = NULL, precision = 0.1, method = "fft", ...) {
   
   # Determine evaluation grid if not provided
