@@ -2,6 +2,7 @@
 % Please edit documentation in R/contrast.R
 \name{write_glt}
 \alias{write_glt}
+\alias{write_glt.glt_contrast}
 \title{Write GLT to File}
 \usage{
 write_glt(x, ...)

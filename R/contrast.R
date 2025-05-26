@@ -1421,9 +1421,10 @@ write_glt <- function(x, ...) {
 #' Write a GLT contrast to a file.
 #'
 #' @param x The GLT contrast to write.
-#' @param fname The file name to write to.
+#' @param fname File path for the GLT specification
 #'
 #' @export
+#' @rdname write_glt
 write_glt.glt_contrast <- function(x, fname=NULL) {
   con <- if (is.null(fname)) {
     file(fname, "w")
