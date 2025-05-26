@@ -10,9 +10,9 @@
 #' @param precision Numeric sampling precision for internal HRF evaluation and convolution (seconds).
 #' @param method The evaluation method: 
 #'   \itemize{
-#'     \item{"fft"}{ (Default) Uses the fast C++ FFT convolution (`evaluate_regressor_fast`). Generally recommended.  
+#'     \item{"conv"}{ (Default) Uses the C++ direct convolution (`evaluate_regressor_convolution`). Generally safer and more predictable.}
+#'     \item{"fft"}{ Uses the fast C++ FFT convolution (`evaluate_regressor_fast`). Can be faster but may fail with very fine precision or wide grids.  
 #'       Extremely fine `precision` or wide `grid` ranges may trigger an internal FFT size exceeding ~1e7, which results in an error.}
-#'     \item{"conv"}{ Uses the C++ direct convolution (`evaluate_regressor_convolution`).}
 #'     \item{"Rconv"}{ Uses an R-based convolution (`stats::convolve`). Requires constant event durations and a regular sampling grid. Can be faster than the R loop for many events meeting these criteria.}
 #'     \item{"loop"}{ Uses a pure R implementation involving looping through onsets. Can be slower, especially for many onsets.}
 #'   }
@@ -25,7 +25,7 @@
 #' @importFrom memoise memoise
 #' @importFrom stats approx median convolve
 #' @importFrom Rcpp evalCpp
-evaluate.Reg <- function(x, grid, precision=.33, method=c("fft", "conv", "Rconv", "loop"), sparse = FALSE, ...) {
+evaluate.Reg <- function(x, grid, precision=.33, method=c("conv", "fft", "Rconv", "loop"), sparse = FALSE, ...) {
   
   method <- match.arg(method)
   
@@ -39,10 +39,10 @@ evaluate.Reg <- function(x, grid, precision=.33, method=c("fft", "conv", "Rconv"
   
   # --- Method Dispatch to Internal Engines ---
   eng_fun <- switch(method,
-     fft   = eval_fft,    # To be defined in evaluate-helpers.R
-     conv  = eval_conv,   # To be defined in evaluate-helpers.R
-     Rconv = eval_Rconv,  # To be defined in evaluate-helpers.R
-     loop  = eval_loop,   # To be defined in evaluate-helpers.R
+     conv  = eval_conv,   # Now the default - safer direct convolution
+     fft   = eval_fft,    # FFT-based (faster but can fail with large FFT sizes)
+     Rconv = eval_Rconv,  # R-based convolution
+     loop  = eval_loop,   # Pure R loop implementation
      stop("Invalid evaluation method: ", method) # Should not happen due to match.arg
   )
   

@@ -4,7 +4,7 @@
 \alias{autoplot.Reg}
 \title{Autoplot method for Reg objects}
 \usage{
-\method{autoplot}{Reg}(object, grid = NULL, precision = 0.1, method = "fft", ...)
+\method{autoplot}{Reg}(object, grid = NULL, precision = 0.1, method = "conv", ...)
 }
 \arguments{
 \item{object}{A \code{Reg} object (or one inheriting from it, like \code{regressor}).}

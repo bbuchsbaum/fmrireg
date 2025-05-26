@@ -119,5 +119,6 @@ Collate:
     'reg-methods.R'
     'regressor.R'
     'sampling_frame.R'
-    'simulate.R',
+    'simulate.R'
     'zzz.R'
+

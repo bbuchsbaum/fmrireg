@@ -3,6 +3,7 @@
 #include <RcppParallel.h>
 #include <unordered_map>
 #include <mutex>
+#include <sstream>
 
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::depends(RcppParallel)]]
@@ -222,7 +223,7 @@ inline uword nextPow2(uword v) {
 }
 
 /*──────────────────────────────────────────────────────────────────────
-  4.  parallel worker over basis functions - No Caching
+  4.  parallel worker over basis functions - Thread Safe Version
 ──────────────────────────────────────────────────────────────────────*/
 struct HRFworker : public Worker {
     const arma::cx_vec& NeuralFFT;
@@ -230,6 +231,10 @@ struct HRFworker : public Worker {
     const uword nFFT_; 
     double t0, dt;
     arma::mat& out;
+    
+    // Thread-local error tracking
+    mutable std::mutex error_mutex;
+    mutable std::vector<std::string> thread_errors;
 
     HRFworker(const arma::cx_vec& NeuralFFT_,
               const arma::mat& hrfFine_,
@@ -244,35 +249,66 @@ struct HRFworker : public Worker {
         const uword nGrid = out.n_rows;
         const uword nConv = nFFT_; 
         
+        // Cache grid values to avoid repeated access to shared memory
+        arma::vec grid_cache(nGrid);
+        for (uword g = 0; g < nGrid; ++g) {
+            grid_cache[g] = out(g, 0);
+        }
+        
         for (std::size_t k = begin; k < end; ++k) {
-            // 4a. Compute FFT of hrf column directly (no caching)
-            arma::cx_vec HRFfft = arma::fft(hrfFine.col(k), nFFT_);
-            
-            // Ensure dimensions match before multiplying (still useful)
-            if (NeuralFFT.n_elem != HRFfft.n_elem) {
-                 Rcpp::Rcerr << "Error in HRFworker: FFT dimension mismatch for basis " << k 
-                           << ". NeuralFFT: " << NeuralFFT.n_elem 
-                           << ", HRFfft: " << HRFfft.n_elem 
-                           << ". Skipping this basis.\n";
-                 continue; // Skip to the next basis function
-            }
-                 
-            arma::vec conv = arma::real(arma::ifft(NeuralFFT % HRFfft));
-
-            // 4b. down‑sample into out(·, k+1) using linear interpolation
-            for (uword g = 0; g < nGrid; ++g) {
-                double grid_val = out(g, 0); // Get grid value from first column
-                double pos = (grid_val - t0) / dt; // Position on the fine 'conv' grid
+            try {
+                // 4a. Compute FFT of hrf column directly (no caching)
+                arma::cx_vec HRFfft = arma::fft(hrfFine.col(k), nFFT_);
                 
-                if (pos < 0 || pos >= nConv - 1) {
-                    uword idx = (pos <= 0) ? 0 : nConv - 1;
-                    out(g, k + 1) = conv[idx]; 
-                } else {
-                    uword lo = (uword) std::floor(pos);
-                    double alpha = pos - lo; 
-                    out(g, k + 1) = (1.0 - alpha) * conv[lo] + alpha * conv[lo + 1];
+                // Ensure dimensions match before multiplying
+                if (NeuralFFT.n_elem != HRFfft.n_elem) {
+                    // Thread-safe error logging
+                    std::lock_guard<std::mutex> lock(error_mutex);
+                    std::ostringstream oss;
+                    oss << "Error in HRFworker: FFT dimension mismatch for basis " << k 
+                        << ". NeuralFFT: " << NeuralFFT.n_elem 
+                        << ", HRFfft: " << HRFfft.n_elem 
+                        << ". Skipping this basis.";
+                    thread_errors.push_back(oss.str());
+                    continue; // Skip to the next basis function
                 }
+                     
+                arma::vec conv = arma::real(arma::ifft(NeuralFFT % HRFfft));
+
+                // 4b. down‑sample into out(·, k+1) using linear interpolation
+                // Each thread writes to its own column (k+1), so no race condition
+                for (uword g = 0; g < nGrid; ++g) {
+                    double grid_val = grid_cache[g]; // Use cached value
+                    double pos = (grid_val - t0) / dt; // Position on the fine 'conv' grid
+                    
+                    if (pos < 0 || pos >= nConv - 1) {
+                        uword idx = (pos <= 0) ? 0 : nConv - 1;
+                        out(g, k + 1) = conv[idx]; 
+                    } else {
+                        uword lo = (uword) std::floor(pos);
+                        double alpha = pos - lo; 
+                        out(g, k + 1) = (1.0 - alpha) * conv[lo] + alpha * conv[lo + 1];
+                    }
+                }
+            } catch (const std::exception& e) {
+                // Thread-safe error handling
+                std::lock_guard<std::mutex> lock(error_mutex);
+                std::ostringstream oss;
+                oss << "Exception in HRFworker for basis " << k << ": " << e.what();
+                thread_errors.push_back(oss.str());
             }
+        }
+    }
+    
+    // Method to check for errors after parallel execution
+    void checkErrors() const {
+        if (!thread_errors.empty()) {
+            std::ostringstream oss;
+            oss << "Errors occurred during parallel execution:\n";
+            for (const auto& error : thread_errors) {
+                oss << "  " << error << "\n";
+            }
+            Rcpp::warning(oss.str());
         }
     }
 };
@@ -309,8 +345,11 @@ SEXP evaluate_regressor_fast(const arma::vec& grid,
 
     HRFworker w(NeuralFFT, hrfFine, nFFT, t0, dt, out);
     parallelFor(0, nbasis, w, 1);           
+    
+    // Check for any errors that occurred during parallel execution
+    w.checkErrors();
 
-    return Rcpp::wrap(out.tail_cols(nbasis));   
+    return Rcpp::wrap(out.tail_cols(nbasis));
 }
 
 /*──────────────────────────────────────────────────────────────────────
