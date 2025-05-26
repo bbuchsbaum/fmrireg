@@ -108,7 +108,7 @@ make_nuisance_term <- function(nuisance_list,
 ## Section 2: Baseline Model Construction and Specification
 ## ============================================================================
 
-#' Construct a Baseline Model.
+#' Construct a Baseline Model
 #'
 #' Builds a baseline model to account for noise and non–event-related variance.
 #' This model may include a drift term, a block intercept term, and nuisance regressors.
@@ -170,7 +170,7 @@ baseline_model <- function(basis = c("constant", "poly", "bs", "ns"), degree = 1
   ret
 }
 
-#' Create a Baseline Specification.
+#' Create a Baseline Specification
 #'
 #' Generates a baselinespec for modeling low-frequency drift in fMRI time series.
 #'
@@ -180,8 +180,10 @@ baseline_model <- function(basis = c("constant", "poly", "bs", "ns"), degree = 1
 #' @param intercept Type of intercept to include ("runwise", "global", or "none").
 #'
 #' @return A baselinespec list instance.
+#' @examples
+#' baseline(degree = 3, basis = "bs")
 #' @export
-baseline <- function(degree = 1, basis = c("constant", "poly", "bs", "ns"), name = NULL, 
+baseline <- function(degree = 1, basis = c("constant", "poly", "bs", "ns"), name = NULL,
                      intercept = c("runwise", "global", "none")) {
   
   basis <- match.arg(basis)
@@ -218,7 +220,7 @@ baseline <- function(degree = 1, basis = c("constant", "poly", "bs", "ns"), name
 ## Section 3: Design Matrix and Term Functions for Baseline Models
 ## ============================================================================
 
-#' Construct a Design Matrix for a Baseline Model.
+#' Construct a Design Matrix for a Baseline Model
 #'
 #' Combines the drift term, block intercept term, and nuisance term (if any)
 #' into a complete design matrix.
@@ -227,6 +229,10 @@ baseline <- function(degree = 1, basis = c("constant", "poly", "bs", "ns"), name
 #' @param blockid Optional block ID to extract a subset.
 #' @param allrows Logical; if TRUE, returns all rows for the block.
 #' @return A tibble representing the design matrix.
+#' @examples
+#' sframe <- sampling_frame(blocklens = 10, TR = 1)
+#' bmod <- baseline_model(sframe = sframe)
+#' design_matrix(bmod)
 #' @export
 #' @importFrom purrr map
 #' @importFrom dplyr bind_cols
@@ -237,10 +243,14 @@ design_matrix.baseline_model <- function(x, blockid = NULL, allrows = FALSE, ...
   dplyr::bind_cols(mats)
 }
 
-#' Return the Terms of a Baseline Model.
+#' Return the Terms of a Baseline Model
 #'
 #' @param x A baseline_model object.
 #' @return A list of terms (drift, block, nuisance).
+#' @examples
+#' sframe <- sampling_frame(blocklens = 10, TR = 1)
+#' bmod <- baseline_model(sframe = sframe)
+#' terms(bmod)
 #' @export
 #' @importFrom purrr map_lgl
 terms.baseline_model <- function(x, ...) {
@@ -248,12 +258,16 @@ terms.baseline_model <- function(x, ...) {
   x$terms
 }
 
-#' Retrieve Cells of a Baseline Model.
+#' Retrieve Cells of a Baseline Model
 #'
 #' Combines the cells from all baseline terms into a tibble with an index.
 #'
 #' @param x A baseline_model object.
 #' @return A tibble with columns: term, level, basis, and index.
+#' @examples
+#' sframe <- sampling_frame(blocklens = 10, TR = 1)
+#' bmod <- baseline_model(sframe = sframe)
+#' cells(bmod)
 #' @export
 #' @importFrom dplyr mutate tibble
 #' @importFrom stringr str_pad
@@ -282,12 +296,14 @@ cells.baseline_model <- function(x, ...) {
 ## Section 4: Block and Nuisance Specification Helpers
 ## ============================================================================
 
-#' Create a Block Variable.
+#' Create a Block Variable
 #'
 #' Returns a block variable that is constant over the span of a scanning run.
 #'
 #' @param x The block variable.
 #' @return An object of class "blockspec".
+#' @examples
+#' block(run)
 #' @export
 block <- function(x) {
   varname <- substitute(x)
@@ -300,7 +316,7 @@ block <- function(x) {
   ret
 }
 
-#' Construct a Baseline Specification from a Sampling Frame.
+#' Construct a Baseline Specification from a Sampling Frame
 #'
 #' Given a baselinespec object and a sampling frame, constructs the baseline
 #' covariates for each block by applying the baseline function to each block.
@@ -370,7 +386,7 @@ construct.baselinespec <- function(x, model_spec, ...) {
   baseline_term(x$name, mat, colind, rowind)
 }
 
-#' Construct a Baseline Term.
+#' Construct a Baseline Term
 #'
 #' Creates a baseline_term object given a covariate matrix and its associated
 #' column and row indices.
@@ -393,6 +409,18 @@ baseline_term <- function(varname, mat, colind, rowind) {
   ret
 }
 
+#' Design matrix for a baseline term
+#'
+#' Extract the design matrix from a single baseline term object.
+#'
+#' @param x A `baseline_term` object.
+#' @param blockid Optional block identifier to subset rows.
+#' @param allrows Logical; if `TRUE`, return all rows for the selected block.
+#' @return A tibble containing baseline regressors.
+#' @examples
+#' sframe <- sampling_frame(blocklens = 10, TR = 1)
+#' bmod <- baseline_model(sframe = sframe)
+#' dm <- design_matrix(baseline_terms(bmod)$drift)
 #' @export
 design_matrix.baseline_term <- function(x, blockid = NULL, allrows = FALSE, ...) {
   if (is.null(blockid)) {
@@ -450,18 +478,21 @@ construct_block_term <- function(vname, sframe, intercept = c("global", "runwise
   baseline_term(vname, mat, colind, rowind) 
 }
 
-#' @export
+#' @noRd
 term_names.baseline_model <- function(x) {
   xt <- terms(x)
   unlist(lapply(xt, function(term) term$varname))
 }
 
-#' Create a Nuisance Specification.
+#' Create a Nuisance Specification
 #'
 #' Returns a nuisance term specification from a numeric matrix.
 #'
 #' @param x A matrix.
 #' @return An object of class "nuisancespec".
+#' @examples
+#' mat <- matrix(rnorm(10), nrow = 5)
+#' nuisance(mat)
 #' @export
 nuisance <- function(x) {
   varname <- substitute(x)
@@ -487,13 +518,18 @@ construct.blockspec <- function(x, model_spec, ...) {
 ## Section 4: Print and Plot Methods for Baseline Models
 ## ============================================================================
 
-#' Print a Baseline Model.
+#' Print a Baseline Model
 #'
 #' Displays key information about the baseline model components and a preview
 #' of the design matrix.
 #'
 #' @param x A baseline_model object.
 #' @param ... Additional arguments (ignored).
+#' @return The input object, invisibly.
+#' @examples
+#' sframe <- sampling_frame(blocklens = 5, TR = 1)
+#' bmod <- baseline_model(sframe = sframe)
+#' print(bmod)
 #' @export
 print.baseline_model <- function(x, ...) {
   # Extract component information using helper
@@ -554,7 +590,7 @@ print.baseline_model <- function(x, ...) {
   cat("╚══════════════════════════════════════════╝\n")
 }
 
-#' Plot a Baseline Model.
+#' Plot a Baseline Model
 #'
 #' Creates a detailed ggplot2 visualization of the baseline model design matrix.
 #' Each non-constant term is plotted over time. The plot includes separate panels
@@ -569,6 +605,11 @@ print.baseline_model <- function(x, ...) {
 #' @param line_size Numeric value for line thickness (default: 1).
 #' @param color_palette A palette name for the line colors (default: "Set1").
 #' @param ... Additional arguments passed to ggplot2::geom_line.
+#' @return A ggplot2 plot object.
+#' @examples
+#' sframe <- sampling_frame(blocklens = 5, TR = 1)
+#' bmod <- baseline_model(sframe = sframe)
+#' if (requireNamespace("ggplot2", quietly = TRUE)) plot(bmod)
 #'
 #' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap labs theme_minimal scale_color_brewer
 #' @importFrom tidyr pivot_longer
@@ -687,6 +728,11 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
 #' @param half_matrix Logical; if TRUE, display only the lower triangle of the matrix.
 #' @param absolute_limits Logical; if TRUE, set color scale limits from -1 to 1.
 #' @param ... Additional arguments passed to internal plotting functions.
+#' @return A ggplot2 plot object.
+#' @examples
+#' sframe <- sampling_frame(blocklens = 5, TR = 1)
+#' bmod <- baseline_model(sframe = sframe)
+#' if (requireNamespace("ggplot2", quietly = TRUE)) correlation_map(bmod)
 #' @export
 correlation_map.baseline_model <- function(x,
                                            method          = c("pearson", "spearman"),
@@ -719,6 +765,10 @@ correlation_map.baseline_model <- function(x,
 #' @importFrom tibble as_tibble
 #' @importFrom tidyr pivot_longer
 #' @return A ggplot2 plot object.
+#' @examples
+#' sframe <- sampling_frame(blocklens = 5, TR = 1)
+#' bmod <- baseline_model(sframe = sframe)
+#' if (requireNamespace("ggplot2", quietly = TRUE)) design_map(bmod)
 #' @export
 design_map.baseline_model <- function(x,
                                       block_separators = TRUE,
