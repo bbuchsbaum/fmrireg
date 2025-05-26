@@ -263,6 +263,7 @@ terms.baseline_model <- function(x, ...) {
 #' Combines the cells from all baseline terms into a tibble with an index.
 #'
 #' @param x A baseline_model object.
+#' @param ... Currently unused.
 #' @return A tibble with columns: term, level, basis, and index.
 #' @examples
 #' sframe <- sampling_frame(blocklens = 10, TR = 1)
@@ -271,6 +272,7 @@ terms.baseline_model <- function(x, ...) {
 #' @export
 #' @importFrom dplyr mutate tibble
 #' @importFrom stringr str_pad
+#' @rdname cells
 cells.baseline_model <- function(x, ...) {
   # Use lapply over x$terms
   cells_list <- lapply(x$terms, function(term) {

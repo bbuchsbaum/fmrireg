@@ -8,6 +8,7 @@
 }
 \arguments{
 \item{x}{A baseline_model object.}
+\item{...}{Currently unused.}
 }
 \value{
 A tibble with columns: term, level, basis, and index.
