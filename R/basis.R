@@ -379,6 +379,7 @@ sub_basis.Scale <- function(x, subset) {
 #' @export
 #' @name levels.ParametricBasis
 #' @title Get Levels/Names for ParametricBasis Objects
+#' @param x ParametricBasis object
 #' @rdname levels.ParametricBasis
 levels.Scale  <- function(x) x$argname
 
