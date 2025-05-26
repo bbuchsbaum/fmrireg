@@ -1,30 +1,14 @@
-#' @importFrom utils head
-#' @importFrom purrr map_lgl map map_chr set_names
-#' @importFrom rlang is_formula f_rhs eval_tidy f_env %||% abort
-#' @import assertthat
-#' @importFrom dplyr mutate
-
-#' @section Column-name grammar (>= vX.Y):
-#'   Design matrix column names follow the structure: 
-#'   `term_tag` + `_` + `condition_tag` + ``` `_b##` basis suffix ```.
-#'   See `?fmrireg_naming` (TODO: create this help page) or `?event_model` for details.
-#'   Any user-supplied `pattern_*` arguments in `column_contrast` are matched *after* 
-#'   this grammar is applied.
+#' Translate legacy contrast regex patterns
 #'
-
+#' Convert older column-naming patterns to the current naming scheme.
+#'
+#' @param pattern Character string with the legacy regex.
+#' @return Updated regex string.
 #' @keywords internal
-#' @noRd
-#' @export translate_legacy_pattern
+#' @export
+#' @name translate_legacy_pattern
 #' @rdname translate_legacy_pattern
-#' Translate legacy contrast regex patterns to new naming scheme.
-#' 
-#' This helper function takes a regex pattern designed for the old fmrireg
-#' column naming syntax (e.g., using ':', 'basis[]', 'Var[Level]') and attempts to translate
-#' it to match the new naming grammar (e.g., using '_', '_b##', 'Var.Level').
-#' 
-#' @param pattern Character string containing the legacy regex pattern.
-#' @return Character string with the translated pattern.
-#' @keywords internal
+
 translate_legacy_pattern <- function(pattern) {
   # 1. Replace Var[Level] -> Var.Level (Do this first)
   # Handles VarName[LevelName] -> VarName.LevelName
