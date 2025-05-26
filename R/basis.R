@@ -25,6 +25,22 @@ dctbasis <- function(n, p=n, const=FALSE) {
 sub_basis <-  function(x, subset) UseMethod("sub_basis")
 
 
+#' Predict from a ParametricBasis object
+#'
+#' Dispatch to the appropriate method for transforming new data
+#' according to a specific parametric basis.
+#'
+#' @param object ParametricBasis object.
+#' @param newdata Numeric vector to transform.
+#' @param ... Additional arguments.
+#' @param newgroup Optional factor for group-dependent bases.
+#' @rdname predict.ParametricBasis
+#' @export
+predict.ParametricBasis <- function(object, newdata, ...) {
+  UseMethod("predict", object)
+}
+
+
 #' Ident
 #' 
 #' A basis that applies identity transform to a set of raw variables.
@@ -130,6 +146,7 @@ Standardized <- function(x) {
 }
 
 #' @export
+#' @rdname predict.ParametricBasis
 predict.Standardized <- function(object, newdata, ...) {
   # Standardize new data using stored mean and sd
   sd_val <- object$sd
@@ -189,6 +206,7 @@ BSpline <- function(x, degree) {
 
 
 #' @export
+#' @rdname predict.ParametricBasis
 predict.Poly <- function(object,newdata,...) {
   predict(object$y, newdata)
 }
@@ -225,6 +243,7 @@ sub_basis.Ident <- function(x, subset) {
 }
 
 #' @export
+#' @rdname predict.ParametricBasis
 predict.BSpline <- function(object, newdata, ...) {
   # Rebuild using bs() and stored attributes
   splines::bs(newdata, degree = object$degree,
@@ -233,6 +252,7 @@ predict.BSpline <- function(object, newdata, ...) {
 }
 
 #' @export
+#' @rdname predict.ParametricBasis
 predict.Ident <- function(object,newdata,...) {
   if (!is.matrix(newdata) && !is.data.frame(newdata)) {
       stop("newdata for predict.Ident should be matrix or data.frame containing necessary columns")
