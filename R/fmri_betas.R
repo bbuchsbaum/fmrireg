@@ -177,6 +177,8 @@ mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
 #' @param method The regression method for estimating trialwise betas; one of "mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "pls", "pls_global", or "ols".
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL).
 #' @param maxit Maximum number of iterations for optimization methods (default: 1000).
+#' @param fracs Fraction of voxels used for prewhitening.
+#' @param progress Logical; show progress bar.
 #' @param ... Additional arguments passed to the estimation method.
 #'
 #' @return A list of class "fmri_betas" containing the following components:
@@ -436,6 +438,8 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
 #' @param ncomp Number of PLS components for the "pls" and "pls_global" methods (default: 4)
 #' @param lambda Lambda parameter (not currently used; default: 0.01)
+#' @param fracs Fraction of voxels used for prewhitening.
+#' @param progress Logical; show progress bar.
 #' @param ... Additional arguments passed to the estimation method
 #' 
 #' @family estimate_betas

@@ -2041,6 +2041,7 @@ longnames.convolved_term <- function(x, ...) {
 #' }
 #'
 #' @param x The dataset object (fmri_dataset, matrix_dataset, or latent_dataset)
+#' @param progress Logical; show progress bar.
 #' @param ... Additional arguments passed to specific methods. Common arguments include:
 #' \describe{
 #'   \item{fixed}{Formula specifying fixed effects (constant across trials)}
