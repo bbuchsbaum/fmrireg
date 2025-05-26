@@ -23,6 +23,7 @@ get_formula.fmri_model <- function(x) {
 #'         Attributes \code{"event_term_indices"} and \code{"baseline_term_indices"} store the indices of event and baseline terms,
 #'         \code{"blocknum"} stores the block numbers, and \code{"varnames"} stores the variable names.
 #' @export
+#' @rdname term_matrices
 term_matrices.fmri_model <- function(x, blocknum = NULL) {
   assert_that(inherits(x, "fmri_model"), msg = "'x' must be an 'fmri_model' object")
   
