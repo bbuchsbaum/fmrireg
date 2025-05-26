@@ -1723,7 +1723,7 @@ gen_afni_lm <- function(x, ...) UseMethod("gen_afni_lm")
 #' @param x the term
 #' @param ... extra args
 #' @keywords internal
-#' @noRd
+#' @rdname build_afni_stims
 build_afni_stims <- function(x, ...) UseMethod("build_afni_stims")
 
 #' Split Event Onsets into Lists by Factor Levels or Blocks

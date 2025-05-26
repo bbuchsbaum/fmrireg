@@ -306,6 +306,17 @@ build_baseline_stims <- function(x) {
   unlist(ret, recursive=FALSE)
 }
 
+#' Build AFNI stimulus definitions
+#'
+#' Generate stimulus files for AFNI's 3dDeconvolve.
+#' @param x Term object
+#' @param ... Additional arguments
+#' @return List of stimulus descriptors or `NULL`
+#' @export
+#' @family AFNI
+#' @rdname build_afni_stims
+build_afni_stims <- function(x, ...) UseMethod("build_afni_stims")
+
 #' @keywords internal
 #' @noRd
 build_afni_stims.convolved_term <- function(x, iresp=FALSE, tr_times=1) {
