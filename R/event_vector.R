@@ -533,6 +533,7 @@ is_categorical.event_term <- function(x) !is_continuous(x)
 #' @name elements.event_term
 #' @title Extract Elements (Values or Labels) from an Event Term
 #' @export
+#' @param x event_term object
 #' @param what Character, either "values" to return numeric data or "labels" for descriptive names.
 #' @param ... Additional arguments passed down (e.g., `transformed` for `elements.event`).
 elements.event_term <- function(x, what = c("values", "labels"), ...) {
