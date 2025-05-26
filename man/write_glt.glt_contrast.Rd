@@ -9,7 +9,7 @@
 \arguments{
 \item{x}{The GLT contrast to write.}
 
-\item{fname}{The file name to write to.}
+\item{fname}{File path for the GLT specification}
 }
 \description{
 Write a GLT contrast to a file.
