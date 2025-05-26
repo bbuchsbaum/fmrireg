@@ -170,6 +170,7 @@ coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts"), recon=
 #' @param x An fmri_latent_lm object.
 #' @param type A character string specifying whether to return the standard error for "estimates" or "contrasts".
 #' @param recon Logical, if TRUE, the function calculates the standard error for reconstructed data.
+#' @param ... Additional arguments (currently unused).
 #' @return A tibble containing the standard error values.
 #' @seealso fmri_latent_lm
 #' @importFrom Matrix rowSums t
