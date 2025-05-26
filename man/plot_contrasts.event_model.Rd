@@ -20,6 +20,8 @@
 If \code{FALSE}, the range is set to (min, max) of the weights.}
 
 \item{rotate_x_text}{Logical; if \code{TRUE}, rotate x-axis labels for readability.}
+\item{scale_mode}{Character; 'auto', 'diverging', or 'one_sided' color scaling.}
+\item{coord_fixed}{Logical; if TRUE, use fixed aspect ratio.}
 
 \item{...}{Further arguments passed to \code{geom_tile}, e.g. \code{color="grey80"}.}
 }

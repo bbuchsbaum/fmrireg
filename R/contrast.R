@@ -1615,6 +1615,8 @@ plot_contrasts <- function(x, ...) {
 #' @param absolute_limits Logical; if \code{TRUE}, the color scale is fixed at (-1,1).
 #'   If \code{FALSE}, the range is set to (min, max) of the weights.
 #' @param rotate_x_text Logical; if \code{TRUE}, rotate x-axis labels for readability.
+#' @param scale_mode Character; 'auto', 'diverging', or 'one_sided' color scaling.
+#' @param coord_fixed Logical; if TRUE, use fixed aspect ratio.
 #' @param ... Further arguments passed to \code{geom_tile}, e.g. \code{color="grey80"}.
 #'
 #' @return A \code{ggplot2} object (a heatmap).
