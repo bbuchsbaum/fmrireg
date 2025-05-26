@@ -21,6 +21,9 @@ library(doParallel)
 # Set up parallel processing with 1 core
 registerDoParallel(cores = 1)
 
+# Limit RcppParallel threads
+options(fmrireg.num_threads = 2)
+
 set.seed(42)  # For reproducible examples
 ```
 
@@ -33,6 +36,8 @@ Statistical analysis of fMRI data typically involves fitting a linear model to e
 3. Estimating condition-specific effects
 4. Computing contrasts between conditions
 5. Testing statistical hypotheses about brain activity
+
+Thread usage in internal routines can be adjusted globally. Set `options(fmrireg.num_threads = <n>)` or the environment variable `FMRIREG_NUM_THREADS` before loading the package to control how many threads RcppParallel uses.
 
 This vignette demonstrates how to conduct a complete linear model analysis using the `fmrireg` package, from data simulation to statistical inference.
 

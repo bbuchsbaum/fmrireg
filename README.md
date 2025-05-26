@@ -17,3 +17,8 @@ vignettes:
 
 See examples of use of `fmrireg` in the
 [vignettes](https://bbuchsbaum.github.io/fmrireg/articles/index.html).
+
+## Thread configuration
+
+The internal C++ routines use [RcppParallel](https://rcppcore.github.io/RcppParallel/). You can control the number of threads by setting the R option `fmrireg.num_threads` or the environment variable `FMRIREG_NUM_THREADS` before loading the package. If either is set, `fmrireg` calls `RcppParallel::setThreadOptions()` when it loads.
+
