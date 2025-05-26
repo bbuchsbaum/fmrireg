@@ -312,6 +312,8 @@ build_baseline_stims <- function(x) {
 #' Generate stimulus files for AFNI's 3dDeconvolve.
 #' @param x Term object
 #' @param ... Additional arguments
+#' @param iresp Logical; generate -iresp files when TRUE
+#' @param tr_times Numeric; TR timing for stimuli
 #' @return List of stimulus descriptors or `NULL`
 #' @export
 #' @family AFNI

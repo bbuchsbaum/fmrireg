@@ -10,6 +10,8 @@ build_afni_stims(x, ...)
 \arguments{
 \item{x}{Term object}
 \item{...}{Additional arguments}
+\item{iresp}{Logical; generate -iresp files when TRUE}
+\item{tr_times}{Numeric; TR timing for stimuli}
 }
 \value{
 List of stimulus descriptors or \code{NULL}
