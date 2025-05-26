@@ -2,8 +2,9 @@
 #'
 #' This function extracts the formula from an \code{fmri_model} object.
 #'
-#' @param x An \code{fmri_model} object.
+#' @inheritParams get_formula
 #' @return A formula representing the model.
+#' @rdname get_formula
 #' @export
 get_formula.fmri_model <- function(x) {
   assert_that(inherits(x, "fmri_model"), msg = "'x' must be an 'fmri_model' object")
