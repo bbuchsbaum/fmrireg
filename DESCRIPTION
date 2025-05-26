@@ -9,7 +9,7 @@ License: GPL (>= 2)
 Maintainer: Bradley Buchsbaum <brad.buchsbaum@gmail.com>
 Description: fmrireg is a package for the analysis of functional magnetic resonance imaging (fMRI) data. Facilities are provided to construct flexible hemodynamic response functions, experimental regressors, and conduct univariate fMRI analyses.
 Encoding: UTF-8
-LazyData: yes
+LazyData: false
 Depends:
     R (>= 4.0.0)
 Imports:
@@ -41,7 +41,7 @@ Imports:
     splines,
     crayon,
     plotly,
-    yaml
+    cli
 RoxygenNote: 7.3.2.9000
 Roxygen: list(
     markdown = TRUE,

@@ -70,6 +70,6 @@ input_sustained <- neural_input(
 
 }
 \seealso{
-\code{\link{regressor}}, \code{\link{evaluate.regressor}}, \code{\link{HRF_SPMG1}}
+\code{\link{regressor}}, \code{\link{evaluate.Reg}}, \code{\link{HRF_SPMG1}}
 }
 \concept{regressor_functions}

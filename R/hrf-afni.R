@@ -1,6 +1,5 @@
 #' @importFrom assertthat assert_that
 #' @importFrom rlang enexpr
-#' @importFrom base substitute
 NULL
 
 #' AFNI HRF Constructor Function
@@ -11,6 +10,7 @@ NULL
 #' @param name A string specifying the name of the AFNI HRF.
 #' @param nbasis An integer representing the number of basis functions for the AFNI HRF.
 #' @param params A list containing the parameter values for the AFNI HRF.
+#' @param span A numeric value representing the span in seconds of the HRF. Default is 24.
 #'
 #' @return An AFNI_HRF object with the specified properties.
 #'

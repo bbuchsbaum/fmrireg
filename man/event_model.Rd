@@ -52,13 +52,6 @@ or needed by the \code{hrfspec} objects.}
 \item{progress}{Logical indicating whether to show a progress bar during term realisation. Default is FALSE.}
 
 \item{...}{Additional arguments (currently unused).}
-
-\item{x}{The model specification, typically a \code{formula}. The formula should have the following format:
-response ~ predictor1 + predictor2 + ... + predictorN
-where \code{response} is a numeric vector of fMRI signal values, and \code{predictor1} to \code{predictorN} are
-predictor variables. Each predictor variable should be specified as a function of categorical
-variables (factors) and/or continuous variables. The functions should have the prefix "hrf", and can
-be defined using the \code{hrf()} function (see \code{hrf} documentation for details).}
 }
 \value{
 A list containing the following elements:

@@ -244,6 +244,11 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #' @export
 
 # Internal helper for value resampling
+#' @param base Base values to resample from
+#' @param sd Standard deviation for resampling
+#' @param dist Distribution to use for resampling
+#' @param allow_negative Whether to allow negative values
+#' @keywords internal
 .resample_param <- function(base, sd, dist = c("lognormal", "gamma", "gaussian"),
                             allow_negative = FALSE) {
   dist <- match.arg(dist)

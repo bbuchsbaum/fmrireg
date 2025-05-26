@@ -10,8 +10,6 @@ split_by_block(x, ...)
 \item{x}{The object containing data to split (typically a sampling_frame or dataset)}
 
 \item{...}{Additional arguments passed to methods}
-
-\item{vals}{The values to split by block (if not contained in x)}
 }
 \value{
 A list where each element contains data from one block:

@@ -6,7 +6,7 @@
 \alias{nbasis.Reg}
 \title{Return number of basis functions associated with HRF}
 \usage{
-nbasis(x)
+nbasis(x, ...)
 
 \method{nbasis}{convolved_term}(x, ...)
 
@@ -14,6 +14,8 @@ nbasis(x)
 }
 \arguments{
 \item{x}{The object to query (typically an HRF, hrfspec, or convolved_term)}
+
+\item{...}{Additional arguments passed to methods}
 }
 \value{
 An integer indicating the number of basis functions:
@@ -63,6 +65,7 @@ nbasis(evmodel)  # Returns: 3 (basis functions per condition)
 \code{\link[=HRF_SPMG1]{HRF_SPMG1()}}, \code{\link[=event_model]{event_model()}}
 
 Other hrf: 
+\code{\link{HRF_objects}},
 \code{\link{fitted_hrf}()}
 }
 \concept{hrf}

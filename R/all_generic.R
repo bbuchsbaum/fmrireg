@@ -28,7 +28,7 @@ setGeneric("as_vectors")
 #' This function creates an event-based fMRI regression model, represented as a data structure.
 #' 
 #' @importFrom lazyeval f_eval
-#' @param x The model specification, typically a `formula`. The formula should have the following format:
+#' @param formula_or_list The model specification, typically a `formula`. The formula should have the following format:
 #'    response ~ predictor1 + predictor2 + ... + predictorN
 #' where `response` is a numeric vector of fMRI signal values, and `predictor1` to `predictorN` are
 #' predictor variables. Each predictor variable should be specified as a function of categorical
@@ -75,7 +75,7 @@ setGeneric("as_vectors")
 #' #  with a separate baseline for each run
 #' evmodel <- event_model(onsets ~ hrf(onsets), data=event_data, block=~run, sampling_frame=sframe)
 #' dmat <- design_matrix(evmodel)
-event_model <- function(x, data, block, sampling_frame, drop_empty=TRUE, durations=0, ...) { UseMethod("event_model") }
+event_model <- function(formula_or_list, data, block, sampling_frame, drop_empty=TRUE, durations=0, ...) { UseMethod("event_model") }
 
 
 
@@ -1179,6 +1179,7 @@ global_onsets <- function(x, onsets, ...) UseMethod("global_onsets")
 #' basis functions used to model the response shape.
 #' 
 #' @param x The object to query (typically an HRF, hrfspec, or convolved_term)
+#' @param ... Additional arguments passed to methods
 #' @return An integer indicating the number of basis functions:
 #'   \itemize{
 #'     \item 1 for canonical HRFs (e.g., SPM gamma)
@@ -1217,7 +1218,7 @@ global_onsets <- function(x, onsets, ...) UseMethod("global_onsets")
 #' @export
 #' @family hrf
 #' @seealso [HRF_SPMG1()], [event_model()]
-nbasis <- function(x) UseMethod("nbasis")
+nbasis <- function(x, ...) UseMethod("nbasis")
 
 
  
@@ -1230,9 +1231,9 @@ nbasis <- function(x) UseMethod("nbasis")
 #' contains a subset of the data and metadata about its position in the full dataset.
 #' 
 #' @param x The dataset to chunk (typically an fmri_dataset or matrix_dataset)
+#' @param nchunks Integer; number of chunks to create (ignored if runwise=TRUE)
 #' @param ... Additional arguments passed to methods. Common arguments include:
 #'   \describe{
-#'     \item{nchunks}{Integer; number of chunks to create}
 #'     \item{runwise}{Logical; if TRUE, create one chunk per run}
 #'     \item{parallel}{Logical; if TRUE, prepare chunks for parallel processing}
 #'   }
@@ -1488,7 +1489,6 @@ samples <- function(x, ...) UseMethod("samples")
 #' }
 #'
 #' @param x The object containing data to split (typically a sampling_frame or dataset)
-#' @param vals The values to split by block (if not contained in x)
 #' @param ... Additional arguments passed to methods
 #' @return A list where each element contains data from one block:
 #'   \itemize{
@@ -2177,7 +2177,7 @@ estimate_betas <- function(x, ...) UseMethod("estimate_betas")
 #'
 #' @family regressor_functions
 #' @seealso 
-#' \code{\link{regressor}}, \code{\link{evaluate.regressor}}, \code{\link{HRF_SPMG1}}
+#' \code{\link{regressor}}, \code{\link{evaluate.Reg}}, \code{\link{HRF_SPMG1}}
 #' @export
 neural_input <- function(x, ...) UseMethod("neural_input")
 

@@ -9,9 +9,10 @@ data_chunks(x, nchunks, ...)
 \arguments{
 \item{x}{The dataset to chunk (typically an fmri_dataset or matrix_dataset)}
 
+\item{nchunks}{Integer; number of chunks to create (ignored if runwise=TRUE)}
+
 \item{...}{Additional arguments passed to methods. Common arguments include:
 \describe{
-\item{nchunks}{Integer; number of chunks to create}
 \item{runwise}{Logical; if TRUE, create one chunk per run}
 \item{parallel}{Logical; if TRUE, prepare chunks for parallel processing}
 }}

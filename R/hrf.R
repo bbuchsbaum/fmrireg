@@ -495,14 +495,115 @@ list_available_hrfs <- function(details = FALSE) {
 }
 
 # Define Static HRF Objects -----
+
+#' Pre-defined Hemodynamic Response Function Objects
+#' 
+#' A collection of pre-defined HRF objects for common fMRI analysis scenarios.
+#' These objects can be used directly in model specifications or as templates
+#' for creating custom HRFs.
+#' 
+#' @section Canonical HRFs:
+#' \describe{
+#'   \item{\code{HRF_SPMG1}}{SPM canonical HRF (single basis function)}
+#'   \item{\code{HRF_SPMG2}}{SPM canonical HRF with temporal derivative (2 basis functions)}
+#'   \item{\code{HRF_SPMG3}}{SPM canonical HRF with temporal and dispersion derivatives (3 basis functions)}
+#'   \item{\code{HRF_GAMMA}}{Gamma function-based HRF}
+#'   \item{\code{HRF_GAUSSIAN}}{Gaussian function-based HRF}
+#' }
+#' 
+#' @section Flexible Basis Sets:
+#' \describe{
+#'   \item{\code{HRF_BSPLINE}}{B-spline basis HRF (5 basis functions)}
+#' }
+#' 
+#' @section Usage:
+#' All HRF objects can be:
+#' \itemize{
+#'   \item Called as functions with time argument: \code{HRF_SPMG1(t)}
+#'   \item Used in model specifications: \code{hrf(condition, basis = HRF_SPMG1)}
+#'   \item Evaluated with \code{evaluate()} method
+#'   \item Combined with decorators like \code{lag_hrf()} or \code{block_hrf()}
+#' }
+#' 
+#' @param t Numeric vector of time points (in seconds) at which to evaluate the HRF
+#' @param P1,P2 Shape parameters for SPM canonical HRF (default: P1=5, P2=15)
+#' @param A1 Amplitude parameter for SPM canonical HRF (default: 0.0833)
+#' @param shape,rate Parameters for gamma distribution HRF (default: shape=6, rate=1)
+#' @param mean,sd Parameters for Gaussian HRF (default: mean=6, sd=2)
+#' 
+#' @return 
+#' When called as functions, return numeric vectors or matrices of HRF values.
+#' When used as objects, they are HRF objects with class \code{c("HRF", "function")}.
+#' 
+#' @examples
+#' # Evaluate HRFs at specific time points
+#' times <- seq(0, 20, by = 0.5)
+#' 
+#' # Single basis canonical HRF
+#' canonical_response <- HRF_SPMG1(times)
+#' plot(times, canonical_response, type = "l", main = "SPM Canonical HRF")
+#' 
+#' # Multi-basis HRF with derivatives
+#' multi_response <- HRF_SPMG3(times)  # Returns 3-column matrix
+#' matplot(times, multi_response, type = "l", main = "SPM HRF with Derivatives")
+#' 
+#' # Gamma and Gaussian HRFs
+#' gamma_response <- HRF_GAMMA(times)
+#' gaussian_response <- HRF_GAUSSIAN(times)
+#' 
+#' # Compare different HRF shapes
+#' plot(times, canonical_response, type = "l", col = "blue", 
+#'      main = "HRF Comparison", ylab = "Response")
+#' lines(times, gamma_response, col = "red")
+#' lines(times, gaussian_response, col = "green")
+#' legend("topright", c("SPM Canonical", "Gamma", "Gaussian"), 
+#'        col = c("blue", "red", "green"), lty = 1)
+#' 
+#' # Use in model specification
+#' \dontrun{
+#' # In an event model
+#' evmodel <- event_model(
+#'   onsets ~ hrf(condition, basis = HRF_SPMG1),
+#'   data = event_data,
+#'   sampling_frame = sframe
+#' )
+#' 
+#' # With multiple basis functions
+#' evmodel2 <- event_model(
+#'   onsets ~ hrf(condition, basis = HRF_SPMG3),
+#'   data = event_data,
+#'   sampling_frame = sframe
+#' )
+#' }
+#' 
+#' @name HRF_objects
+#' @aliases HRF_SPMG1 HRF_SPMG2 HRF_SPMG3 HRF_GAMMA HRF_GAUSSIAN HRF_BSPLINE
+#' @family hrf
+#' @seealso \code{\link{evaluate.HRF}}, \code{\link{gen_hrf}}, \code{\link{list_available_hrfs}}
+NULL
+
+#' @rdname HRF_objects
+#' @export
 HRF_GAMMA <- as_hrf(hrf_gamma, name="gamma", params=list(shape=6, rate=1))
+
+#' @rdname HRF_objects
+#' @export
 HRF_GAUSSIAN <- as_hrf(hrf_gaussian, name="gaussian", params=list(mean=6, sd=2))
+
+#' @rdname HRF_objects
+#' @export
 HRF_SPMG1 <- as_hrf(hrf_spmg1, name="SPMG1", params=list(P1=5, P2=15, A1=0.0833))
+
+#' @rdname HRF_objects
+#' @export
 HRF_SPMG2 <- bind_basis(
   as_hrf(hrf_spmg1, name="SPMG1_canonical", params=list(P1=5, P2=15, A1=0.0833)),
   as_hrf(hrf_spmg1_deriv, name="SPMG1_temporal_deriv", params=list(P1=5, P2=15, A1=0.0833))
 )
 attr(HRF_SPMG2, "name") <- "SPMG2"
+
+#' @rdname HRF_objects
+#' @export
 HRF_SPMG3 <- bind_basis(
   as_hrf(hrf_spmg1, name="SPMG1_canonical", params=list(P1=5, P2=15, A1=0.0833)),
   as_hrf(hrf_spmg1_deriv, name="SPMG1_temporal_deriv", params=list(P1=5, P2=15, A1=0.0833)),
@@ -600,6 +701,9 @@ hrf_daguerre_generator <- function(nbasis=3, scale=4) {
 }
 
 # Define additional static HRF objects that depend on generators -----
+
+#' @rdname HRF_objects
+#' @export
 HRF_BSPLINE <- hrf_bspline_generator(nbasis=5, span=24)
 
 # Define HRF Registry -----

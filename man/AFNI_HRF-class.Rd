@@ -12,6 +12,8 @@ AFNI_HRF(name, nbasis, params, span = 24)
 \item{nbasis}{An integer representing the number of basis functions for the AFNI HRF.}
 
 \item{params}{A list containing the parameter values for the AFNI HRF.}
+
+\item{span}{A numeric value representing the span in seconds of the HRF. Default is 24.}
 }
 \value{
 An AFNI_HRF object with the specified properties.

@@ -110,7 +110,7 @@ generate_BM_Canonical_HighSNR <- function() {
   )
   
   # Create matrix_dataset
-  core_data <- matrix_dataset(
+  core_data_args <- list(
     datamat = final_sim$time_series$datamat,
     TR = COMMON_PARAMS$TR,
     run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
@@ -119,11 +119,11 @@ generate_BM_Canonical_HighSNR <- function() {
   
   list(
     description = "Canonical HRF (SPMG1), high SNR, 3 conditions, fixed amplitudes per condition",
-    core_data = core_data, # Encapsulated data
+    core_data_args = core_data_args, # Encapsulated data args
     Y_noisy = final_sim$time_series$datamat, # Still available for direct access
     Y_clean = clean_sim$time_series$datamat,
     X_list_true_hrf = X_list_true_hrf,
-    true_hrf_parameters = list(type = "SPMG1", hrf_object = hrf_variants$canonical),
+    true_hrf_parameters = list(type = "SPMG1", hrf_object_name = "HRF_SPMG1"),
     event_onsets = event_onsets,
     condition_labels = condition_labels,
     true_betas_condition = matrix(rep(c(1.0, 1.5, 0.8), each = COMMON_PARAMS$n_voxels), 
@@ -204,7 +204,7 @@ generate_BM_Canonical_LowSNR <- function() {
   )
   
   # Create matrix_dataset
-  core_data <- matrix_dataset(
+  core_data_args <- list(
     datamat = final_sim$time_series$datamat,
     TR = COMMON_PARAMS$TR,
     run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
@@ -213,11 +213,11 @@ generate_BM_Canonical_LowSNR <- function() {
   
   list(
     description = "Canonical HRF (SPMG1), low SNR, 3 conditions, fixed amplitudes per condition",
-    core_data = core_data,
+    core_data_args = core_data_args, # Encapsulated data args
     Y_noisy = final_sim$time_series$datamat,
     Y_clean = clean_sim$time_series$datamat,
     X_list_true_hrf = X_list_true_hrf,
-    true_hrf_parameters = list(type = "SPMG1", hrf_object = hrf_variants$canonical),
+    true_hrf_parameters = list(type = "SPMG1", hrf_object_name = "HRF_SPMG1"),
     event_onsets = event_onsets,
     condition_labels = condition_labels,
     true_betas_condition = matrix(rep(c(1.0, 1.5, 0.8), each = COMMON_PARAMS$n_voxels), 
@@ -297,7 +297,7 @@ generate_BM_HRF_Variability_AcrossVoxels <- function() {
   )
   
   # Create matrix_dataset
-  core_data <- matrix_dataset(
+  core_data_args <- list(
     datamat = Y_combined,
     TR = COMMON_PARAMS$TR,
     run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
@@ -306,11 +306,11 @@ generate_BM_HRF_Variability_AcrossVoxels <- function() {
   
   list(
     description = "HRF varies across voxel groups, 2 conditions, moderate SNR",
-    core_data = core_data,
+    core_data_args = core_data_args, # Encapsulated data args
     Y_noisy = Y_combined,
     true_hrf_parameters = list(
-      canonical = list(type = "SPMG1", hrf_object = hrf_variants$canonical),
-      variant1 = list(type = "SPMG1_modified", hrf_object = hrf_variants$variant1)
+      group1 = list(type = "SPMG1", hrf_object_name = "HRF_SPMG1"),
+      group2 = list(type = "variant1", hrf_object_name = "variant1")
     ),
     event_onsets = event_onsets,
     condition_labels = condition_labels,
@@ -362,7 +362,7 @@ generate_BM_Trial_Amplitude_Variability <- function() {
   )
   
   # Create matrix_dataset
-  core_data <- matrix_dataset(
+  core_data_args <- list(
     datamat = final_sim$time_series$datamat,
     TR = COMMON_PARAMS$TR,
     run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
@@ -371,9 +371,9 @@ generate_BM_Trial_Amplitude_Variability <- function() {
   
   list(
     description = "Single condition with significant trial-to-trial amplitude variability",
-    core_data = core_data,
+    core_data_args = core_data_args, # Encapsulated data args
     Y_noisy = final_sim$time_series$datamat,
-    true_hrf_parameters = list(type = "SPMG1", hrf_object = hrf_variants$canonical),
+    true_hrf_parameters = list(type = "SPMG1", hrf_object_name = "HRF_SPMG1"),
     event_onsets = event_onsets,
     condition_labels = condition_labels,
     true_betas_condition = matrix(1.0, nrow = 1, ncol = COMMON_PARAMS$n_voxels),
@@ -480,7 +480,7 @@ generate_BM_Complex_Realistic <- function() {
   )
   
   # Create matrix_dataset
-  core_data <- matrix_dataset(
+  core_data_args <- list(
     datamat = Y_combined,
     TR = COMMON_PARAMS$TR,
     run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
@@ -489,12 +489,12 @@ generate_BM_Complex_Realistic <- function() {
   
   list(
     description = "Complex realistic scenario: 3 HRF groups, 3 conditions, variable durations/amplitudes, AR(2) noise",
-    core_data = core_data,
+    core_data_args = core_data_args, # Encapsulated data args
     Y_noisy = Y_combined,
     true_hrf_parameters = list(
-      canonical = list(type = "SPMG1", hrf_object = hrf_variants$canonical),
-      variant1 = list(type = "SPMG1_modified1", hrf_object = hrf_variants$variant1),
-      variant2 = list(type = "SPMG1_modified2", hrf_object = hrf_variants$variant2)
+      canonical = list(type = "SPMG1", hrf_object_name = "HRF_SPMG1"),
+      variant1 = list(type = "SPMG1_modified1", hrf_object_name = "variant1"),
+      variant2 = list(type = "SPMG1_modified2", hrf_object_name = "variant2")
     ),
     event_onsets = event_onsets,
     condition_labels = condition_labels,
