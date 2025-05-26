@@ -255,7 +255,16 @@ test_that("generate an event model with one observation per level", {
   lopdes$onset <- lopdes$WordPresentationOnset/1000
   lopdes$Target <- factor(lopdes$Target)
   # Suppress warnings specifically for this call, as empty cells might trigger them
-  expect_warning(ev <- event_model(onset ~ hrf(Target), data=lopdes, block= ~ Run, sampling_frame=sframe), 
+  expect_warning(ev <- event_model(onset ~ hrf(Target), data=lopdes, block= ~ Run, sampling_frame=sframe),
                  regexp = NA) # Expect warnings, but don't fail test if they occur
   expect_true(!is.null(ev))
-}) 
+})
+
+test_that("evaluate.Reg errors when FFT size would be huge", {
+  reg <- regressor(onsets = 0, hrf = HRF_SPMG1)
+  grid <- seq(0, 1, by = 1)
+  expect_error(
+    evaluate(reg, grid, precision = 1e-6, method = "fft"),
+    regexp = "FFT size"
+  )
+})
