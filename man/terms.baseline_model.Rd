@@ -8,6 +8,7 @@
 }
 \arguments{
 \item{x}{A baseline_model object.}
+\item{...}{Passed to underlying term constructors (unused here).}
 }
 \value{
 A list of terms (drift, block, nuisance).
