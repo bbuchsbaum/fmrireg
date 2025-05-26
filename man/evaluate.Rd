@@ -27,7 +27,8 @@ evaluate(x, grid, ...)
 
 \item{method}{The evaluation method:
 \itemize{
-\item{"fft"}{ (Default) Uses the fast C++ FFT convolution (\code{evaluate_regressor_fast}). Generally recommended.}
+\item{"fft"}{ (Default) Uses the fast C++ FFT convolution (\code{evaluate_regressor_fast}). Generally recommended.
+Extremely fine \code{precision} or wide \code{grid} ranges may trigger an internal FFT size exceeding ~1e7, which results in an error.}
 \item{"conv"}{ Uses the C++ direct convolution (\code{evaluate_regressor_convolution}).}
 \item{"Rconv"}{ Uses an R-based convolution (\code{stats::convolve}). Requires constant event durations and a regular sampling grid. Can be faster than the R loop for many events meeting these criteria.}
 \item{"loop"}{ Uses a pure R implementation involving looping through onsets. Can be slower, especially for many onsets.}

@@ -297,6 +297,10 @@ SEXP evaluate_regressor_fast(const arma::vec& grid,
                                          t0, t1, dt);
 
     const uword nFFT = nextPow2(neural.n_elem + hrfFine.n_rows);
+    const double max_fft_size = 1e7; // safeguard for extremely large FFTs
+    if (nFFT > max_fft_size) {
+        Rcpp::stop("Requested precision/time range is too fine: FFT size %u exceeds limit of %.0f", nFFT, max_fft_size);
+    }
     arma::cx_vec NeuralFFT = arma::fft(neural, nFFT);
 
     arma::mat out(grid.n_elem, nbasis+1);
