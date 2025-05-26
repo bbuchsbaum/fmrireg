@@ -17,6 +17,8 @@ generate_main_effect_contrast(des, factor)
 factor name.\if{html}{\out{<br>}}
 • \code{generate_interaction_contrast()} takes ≥ 2 for an
 interaction (or 1 to reproduce a main‑effect matrix).}
+
+\item{factor}{Single factor name for the main effect.}
 }
 \value{
 numeric matrix \strong{nrow = ∏ levels(f) , ncol = ∏ (Lᵢ − 1)} for the

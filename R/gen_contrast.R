@@ -51,6 +51,7 @@ generate_interaction_contrast <- function(des, factors) {
   C_matrix
 }
 
+#' @param factor Single factor name for the main effect.
 #' @rdname generate_interaction_contrast
 #' @export
 generate_main_effect_contrast <- function(des, factor) {
