@@ -228,11 +228,13 @@ baseline <- function(degree = 1, basis = c("constant", "poly", "bs", "ns"), name
 #' @param x A baseline_model object.
 #' @param blockid Optional block ID to extract a subset.
 #' @param allrows Logical; if TRUE, returns all rows for the block.
+#' @param ... Additional arguments passed to underlying term methods.
 #' @return A tibble representing the design matrix.
 #' @examples
 #' sframe <- sampling_frame(blocklens = 10, TR = 1)
 #' bmod <- baseline_model(sframe = sframe)
 #' design_matrix(bmod)
+#' @rdname design_matrix.baseline_model
 #' @export
 #' @importFrom purrr map
 #' @importFrom dplyr bind_cols

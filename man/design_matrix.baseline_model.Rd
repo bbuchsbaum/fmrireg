@@ -12,6 +12,8 @@
 \item{blockid}{Optional block ID to extract a subset.}
 
 \item{allrows}{Logical; if TRUE, returns all rows for the block.}
+
+\item{\dots}{Additional arguments passed to underlying term methods.}
 }
 \value{
 A tibble representing the design matrix.
