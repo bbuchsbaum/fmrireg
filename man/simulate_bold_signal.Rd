@@ -25,9 +25,9 @@ simulate_bold_signal(
 
 \item{isi}{A vector of length 2 specifying the range of inter-stimulus intervals to sample from (default is c(3, 6) seconds).}
 
-\item{TR}{The repetition time of the fMRI acquisition (default is 1.5 seconds).}
+\item{ampsd}{The standard deviation of the amplitudes (default is 0).}
 
-\item{apmsd}{the standard deviation of the amplitudes (default is 0).}
+\item{TR}{The repetition time of the fMRI acquisition (default is 1.5 seconds).}
 }
 \value{
 A list with the following components:

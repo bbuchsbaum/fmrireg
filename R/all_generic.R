@@ -2077,7 +2077,6 @@ longnames.convolved_term <- function(x, ...) {
 #'   \item{lss}{Least-squares separate estimation}
 #'   \item{pls}{Partial least squares regression}
 #'   \item{ols}{Ordinary least squares}
-#'   \item{fracridge}{Fractional ridge regression}
 #' }
 #'
 #' @examples

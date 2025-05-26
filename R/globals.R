@@ -9,6 +9,5 @@ utils::globalVariables(c(
   ".", # <reshape_coef>
   "row_id", # <reshape_coef>
   "name", # <meta_contrasts>
-  "i", # <auto_whiten>
   NULL
 ))

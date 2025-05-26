@@ -4,7 +4,7 @@
 \alias{AFNI_HRF}
 \title{AFNI HRF Constructor Function}
 \usage{
-AFNI_HRF(name, nbasis, params)
+AFNI_HRF(name, nbasis, params, span = 24)
 }
 \arguments{
 \item{name}{A string specifying the name of the AFNI HRF.}

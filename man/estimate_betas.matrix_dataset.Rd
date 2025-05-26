@@ -9,14 +9,13 @@
   fixed = NULL,
   ran,
   block,
-  method = c("r1_glms", "r1", "lss", "lss_cpp", "lss_naive", "mixed", "mixed_cpp", "pls",
-    "pls_global", "ols", "fracridge"),
+  method = c("lss", "lss_cpp", "lss_naive", "mixed", "mixed_cpp", "pls", "pls_global",
+    "ols"),
   basemod = NULL,
-  hrf_basis = NULL,
-  hrf_ref = NULL,
   ncomp = 4,
   lambda = 0.01,
   fracs = 0.5,
+  progress = TRUE,
   ...
 )
 }

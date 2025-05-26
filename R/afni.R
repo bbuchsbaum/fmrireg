@@ -488,13 +488,25 @@ if (!exists("hrfspec", mode = "function")) {
 #' @keywords internal
 #' @noRd
 build_decon_command <- function(model, dataset, working_dir, opts) {
-  ## get the set of stimulus regressors
-  stimlabels <- unlist(lapply(terms(model$event_model), longnames))
+  func_terms <- terms(model$event_model)
+  message("number of functional terms: ", length(func_terms))
+  
+  # First, generate AFNI stims and filter out NULLs
+  afni_stims <- lapply(func_terms, function(term) { build_afni_stims(term, iresp=opts[["iresp"]], tr_times=opts[["TR_times"]]) })
+  afni_stims <- Filter(Negate(is.null), afni_stims) # Filter out NULLs
+  afni_stims <- unlist(afni_stims, recursive = FALSE) # Unlist one level
+  
+  # Now get stimlabels only for terms that generated AFNI stims
+  # We need to identify which terms generated stims
+  terms_with_stims <- func_terms[!sapply(lapply(func_terms, function(term) { build_afni_stims(term, iresp=opts[["iresp"]], tr_times=opts[["TR_times"]]) }), is.null)]
+  stimlabels <- unlist(lapply(terms_with_stims, longnames))
   
   ## all stims must be unique
   assert_that(length(unique(stimlabels)) == length(stimlabels))
 
-  assert_that(length(stimlabels) == length(conditions(model$event_model)))
+  # Note: We can't assert stimlabels == conditions because conditions includes ALL terms,
+  # but stimlabels only includes terms that generate AFNI stims
+  # assert_that(length(stimlabels) == length(conditions(model$event_model)))
   
   ## extract all contrast matrices
   cons <- contrast_weights(model)
@@ -509,19 +521,11 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   assert_that(sum(duplicated(gltnames))  == 0, msg="Cannot have two GLTs with the same name")
   
-  func_terms <- terms(model$event_model)
-  message("number of functional terms: ", length(func_terms))
-  
-  afni_stims <- lapply(func_terms, function(term) { build_afni_stims(term, iresp=opts[["iresp"]], tr_times=opts[["TR_times"]]) })
-  afni_stims <- Filter(Negate(is.null), afni_stims) # Filter out NULLs
-  afni_stims <- unlist(afni_stims, recursive = FALSE) # Unlist one level
-  
   afni_baseline_mats <- build_baseline_stims(model)
   
   purge_nulls <- function(A) {
     A[!sapply(A, is.null)]
   }
-  
   
   opt_stim_labels <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "label")))
   opt_stim_files  <-  purge_nulls(lapply(seq_along(afni_stims), function(i) afni_command_switch(afni_stims[[i]], i, "file")))

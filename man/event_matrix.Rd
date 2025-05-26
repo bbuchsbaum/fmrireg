@@ -17,12 +17,13 @@ event_matrix(mat, name, onsets, blockids = 1, durations = 0, subset = NULL)
 
 \item{durations}{Numeric vector of event durations (seconds), or a scalar.}
 
-\item{subset}{Optional logical vector indicating which events to keep.}
-}
-\details{
-When \code{mat} has more than one column and column names are provided,
-they are sanitized using \code{.sanitizeName()}. The sanitized names are
-returned by \code{levels()} on the resulting event object.
+\item{subset}{Optional logical vector indicating which events to keep. If
+provided, the vector must match \code{onsets} in length and contain no \code{NA}
+values.
+
+If \code{mat} has column names and more than one column, those names are
+sanitized using \code{.sanitizeName()} before being stored. The sanitized
+column names are returned by \code{levels()} for the resulting event object.}
 }
 \value{
 An S3 object of class \code{event} and \code{event_seq}.

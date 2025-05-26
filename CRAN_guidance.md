@@ -1,8 +1,6 @@
-Okay, this is a very strong foundation. By incorporating the excellent review feedback, we can refine it into an even more comprehensive and polished guide.
 
-Here's the integrated and enhanced Markdown guide:
+Main message is that that a an s3 generic is the main documentation site. S3 methods should be linked via @rdname. Only necessary addiotnal information should be documented alongside the s3 method implementation. Thus, when encountering an s3 method impelementation, examine the generic (all_generic.R, generally) for the main documentation. Then all that is needed for the s3 method is @rdname, @export.
 
----
 
 # CRAN Documentation Compliance Strategy (roxygen2)
 

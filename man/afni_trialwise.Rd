@@ -12,7 +12,9 @@ afni_trialwise(
   subset = NULL,
   id = NULL,
   start = 0,
-  stop = 22
+  stop = 22,
+  precision = 0.3,
+  summate = TRUE
 )
 }
 \arguments{
@@ -33,6 +35,10 @@ Can also be an \code{HRF} object.}
 \item{start}{start of hrf (for multiple basis hrfs)}
 
 \item{stop}{end of hrf (for multiple basis hrfs)}
+
+\item{precision}{sampling precision in seconds.}
+
+\item{summate}{whether impulse amplitudes sum up when duration is greater than 0.}
 }
 \value{
 an \code{afni_trialwise_hrfspec} instance

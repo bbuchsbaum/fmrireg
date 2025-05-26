@@ -233,15 +233,12 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
       
       # Check if this is already a convolved term (AFNI only now)
       if (inherits(term, "afni_hrf_convolved_term") || inherits(term, "afni_trialwise_convolved_term")) {
-          # AFNI terms are already "convolved" and should return a placeholder matrix
+          # AFNI terms are already "convolved" and should return NULL
           # since they are meant to be handled by AFNI's 3dDeconvolve, not R's convolution
           warning("AFNI terms are not fully supported in the current event_model pipeline. ", 
                   "They are intended for use with AFNI's 3dDeconvolve.", call. = FALSE)
-          # Return a placeholder matrix with appropriate dimensions
-          n_scans <- sum(sampling_frame$blocklens)
-          placeholder_matrix <- matrix(0, nrow = n_scans, ncol = 1)
-          colnames(placeholder_matrix) <- paste0("AFNI_", attr(term, "term_tag") %||% "term")
-          return(placeholder_matrix)
+          # Return NULL to indicate this term should not contribute columns to the design matrix
+          return(NULL)
       }
       
       # For regular event_term objects, check for hrfspec and convolve
@@ -264,23 +261,45 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
       lapply(terms, convolve_one_term)
   }
 
+  # Filter out NULL matrices (from AFNI terms that don't contribute to design matrix)
+  non_null_indices <- which(!sapply(term_matrices, is.null))
+  term_matrices_filtered <- term_matrices[non_null_indices]
+  terms_filtered <- terms[non_null_indices]
+  
+  # Handle case where all terms are NULL (all AFNI terms)
+  if (length(term_matrices_filtered) == 0) {
+    warning("All terms are AFNI terms that don't contribute to the design matrix. Returning empty design matrix.", call. = FALSE)
+    empty_dm <- tibble::tibble(.rows = sum(sampling_frame$blocklens))
+    attr(empty_dm, "term_spans") <- integer(0)
+    attr(empty_dm, "col_indices") <- list()
+    attr(empty_dm, "colnames_final") <- TRUE
+    return(empty_dm)
+  }
+
   # Calculate col_indices based on term_ncols before combining matrices
-  term_ncols <- vapply(term_matrices, ncol, integer(1))
+  term_ncols <- vapply(term_matrices_filtered, ncol, integer(1))
   term_spans <- cumsum(term_ncols)
   col_indices <- vector("list", length(terms))
   start_idx <- 1
   for (i in seq_along(terms)) {
-      end_idx <- term_spans[i]
-      col_indices[[i]] <- seq.int(start_idx, end_idx)
-      start_idx <- end_idx + 1
+      if (i %in% non_null_indices) {
+        # Find position in filtered list
+        filtered_pos <- which(non_null_indices == i)
+        end_idx <- if (filtered_pos == 1) term_ncols[1] else term_spans[filtered_pos]
+        col_indices[[i]] <- seq.int(start_idx, end_idx)
+        start_idx <- end_idx + 1
+      } else {
+        # AFNI term - no columns
+        col_indices[[i]] <- integer(0)
+      }
   }
   names(col_indices) <- names(terms) # Names are now the term_tags
 
   # --- Combine convolved term matrices --- 
   # Store original names before potential modification by cbind/tibble
-  original_colnames_list <- lapply(term_matrices, colnames)
+  original_colnames_list <- lapply(term_matrices_filtered, colnames)
   # Perform cbind
-  dm_mat <- do.call(cbind, term_matrices)
+  dm_mat <- do.call(cbind, term_matrices_filtered)
   
   # Assign combined list of original names initially proposed by convolve.event_term
   current_colnames <- unlist(original_colnames_list)

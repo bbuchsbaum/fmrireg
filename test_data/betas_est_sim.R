@@ -50,7 +50,6 @@ get_isi_args <- function(mode) {
 #     2) Define the set of methods we want to test
 # -------------------------------------------------------------------
 # Single-trial methods we test for each dataset:
-#   - "fracridge" (with fracs=0.5 as example)
 #   - "lss"
 #   - "r1" (Rank-1)
 #   - "pls" (with ncomp=1..6)

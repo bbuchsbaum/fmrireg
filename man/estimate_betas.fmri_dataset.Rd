@@ -2,20 +2,19 @@
 % Please edit documentation in R/fmri_betas.R
 \name{estimate_betas.fmri_dataset}
 \alias{estimate_betas.fmri_dataset}
-\title{Estimate betas using the Rank-1 GLM methods (R1 and R1-GLMS with optimizations)}
+\title{Estimate betas using various regression methods}
 \usage{
 \method{estimate_betas}{fmri_dataset}(
   x,
   fixed = NULL,
   ran,
   block,
-  method = c("mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "r1", "pls",
-    "pls_global", "ols", "fracridge", "lowrank_hrf"),
+  method = c("mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "pls", "pls_global",
+    "ols", "lowrank_hrf"),
   basemod = NULL,
-  hrf_basis = NULL,
-  hrf_ref = NULL,
   maxit = 1000,
   fracs = 0.5,
+  progress = TRUE,
   ...
 )
 }
@@ -28,17 +27,11 @@
 
 \item{block}{A formula specifying the block factor.}
 
-\item{method}{The regression method for estimating trialwise betas; use \code{"r1"} for the Rank-1 GLM method or \code{"r1_glms"} for the Rank-1 GLM with Mumford's approach.}
+\item{method}{The regression method for estimating trialwise betas; one of "mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "pls", "pls_global", "ols", or "lowrank_hrf".}
 
 \item{basemod}{A \code{baseline_model} instance to regress out of data before beta estimation (default: NULL).}
 
-\item{hrf_basis}{A matrix of basis functions for the HRF (default: NULL).}
-
-\item{hrf_ref}{A reference HRF vector for initializing and constraining the HRF estimation (default: NULL).}
-
-\item{maxit}{Maximum number of iterations for the optimization (default: 100).}
-
-\item{fracs}{Fraction of ridge regression to use (default: 0.5).}
+\item{maxit}{Maximum number of iterations for optimization methods (default: 1000).}
 
 \item{...}{Additional arguments passed to the estimation method.}
 }
@@ -53,23 +46,12 @@ A list of class "fmri_betas" containing the following components:
 \item basemod: Baseline model object.
 \item fixed_model: Fixed effect model object.
 \item ran_model: Random effect model object.
-\item estimated_hrf: The estimated HRF vector.
+\item estimated_hrf: The estimated HRF vector (NULL for most methods).
 }
 }
 \description{
-This function estimates betas (regression coefficients) and the hemodynamic response function (HRF)
-simultaneously using the Rank-1 GLM (\code{r1}) and Rank-1 GLM with Mumford's separate beta estimation (\code{r1_glms}) methods.
-It includes optimizations to improve computational efficiency.
-}
-\details{
-The \code{r1} method uses the Rank-1 GLM approach to jointly estimate the HRF and activation coefficients.
-The \code{r1_glms} method implements the Mumford approach by estimating each beta individually to reduce correlations,
-treating all events as coming from one condition.
-This implementation includes optimizations to improve computational efficiency:
-\itemize{
-\item Precomputing the total sum of all trial regressors to avoid redundant computations.
-\item Precomputing the QR decomposition of design matrices to speed up linear algebra operations.
-}
+This function estimates betas (regression coefficients) for fixed and random effects
+using various regression methods including mixed models, least squares, and PLS.
 }
 \examples{
 \dontrun{
@@ -83,14 +65,8 @@ fixed = onset ~ hrf(run)
 ran = onset ~ trialwise()
 block = ~ run
 
-betas <- estimate_betas(dset, fixed=fixed, ran=ran, block=block, method="r1_glms")
+betas <- estimate_betas(dset, fixed=fixed, ran=ran, block=block, method="mixed")
 }
-}
-\references{
-Pedregosa, F., et al. (2015). GLM with Rank-1 constraint (R1-GLM): a fast, spatially adaptive model for single trial fMRI data.
-\emph{NeuroImage}, 104, 271–285.
-
-Mumford, J. A., Turner, B. O., Ashby, F. G., & Poldrack, R. A. (2012). Deconvolving BOLD activation in event-related designs for multivoxel pattern classification analyses. \emph{NeuroImage}, 59(3), 2636–2643.
 }
 \seealso{
 \code{\link{fmri_dataset}}, \code{\link{baseline_model}}, \code{\link{event_model}}

@@ -16,6 +16,8 @@ afni_hrf(
   contrasts = NULL,
   id = NULL,
   lag = 0,
+  precision = 0.3,
+  summate = TRUE,
   start = NULL,
   stop = NULL
 )
@@ -45,6 +47,10 @@ Must be NULL, a single contrast spec, or a \emph{named} list of contrast specs.}
 \item{id}{a unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.}
 
 \item{lag}{a temporal offset in seconds which is added to onset before convolution}
+
+\item{precision}{sampling precision in seconds.}
+
+\item{summate}{whether impulse amplitudes sum up when duration is greater than 0.}
 
 \item{start}{the start of the window for sin/poly/csplin models}
 

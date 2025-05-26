@@ -14,6 +14,7 @@ covariate(..., data, id = NULL, prefix = NULL, subset = NULL)
 \item{id}{An optional identifier for the covariate term.}
 
 \item{prefix}{An optional prefix to add to the covariate names.}
+
 \item{subset}{Optional expression used to subset the covariate data.}
 }
 \value{

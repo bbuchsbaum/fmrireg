@@ -13,7 +13,8 @@ estimate_hrf(
   rsam = seq(0, 20, by = 1),
   basemod = NULL,
   k = 8,
-  fx = TRUE
+  fx = TRUE,
+  progress = TRUE
 )
 }
 \arguments{

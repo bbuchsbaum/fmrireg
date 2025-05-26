@@ -22,9 +22,7 @@ runwise_rlm(
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
 
-\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based fast computation.}
-
-\item{progress}{Logical. Show a progress bar during run processing.}
+\item{progress}{Logical. Display a progress bar for run processing. Default is \code{FALSE}.}
 }
 \description{
 Perform Runwise Robust Linear Modeling on fMRI Dataset

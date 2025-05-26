@@ -9,65 +9,6 @@ ridge_betas <- function(X, Y, penalty_factor=rep(1,ncol(X)), lambda=.01) {
 
 #' @noRd
 #' @keywords internal
-fracridge_betas <- function(X, Y, fracs=0.5) {
-  # Ensure X is a proper numeric matrix
-  if (!is.matrix(X)) {
-    X <- as.matrix(X)
-  }
-  
-  # Ensure Y is numeric
-  if (!is.vector(Y) && !is.matrix(Y)) {
-    Y <- as.numeric(Y)
-  }
-  
-  # Add column names if missing (needed for dimnames in fracridge)
-  if (is.null(colnames(X))) {
-    colnames(X) <- paste0("X", seq_len(ncol(X)))
-  }
-  
-  # Use the fracridge implementation from fracridge.R
-  tryCatch({
-    fit <- fracridge(X, Y, fracs=fracs)
-    
-    # Extract coefficients for the specified fraction
-    coefs_array <- fit$coef
-    
-    # Handle different dimensions based on input shape
-    if (is.array(coefs_array) && length(dim(coefs_array)) == 3) {
-      # Extract the coefficients for the first (and only) fraction
-      return(coefs_array[, 1, ])
-    } else if (is.matrix(coefs_array)) {
-      # For matrix case
-      return(coefs_array)
-    } else {
-      # For vector case or any other
-      return(as.numeric(coefs_array))
-    }
-  }, error = function(e) {
-    # Direct implementation as fallback
-    message("Falling back to direct ridge solution: ", e$message)
-    
-    # Direct implementation with proper fractional approach
-    svd_result <- svd(X)
-    U <- svd_result$u
-    S <- svd_result$d
-    V <- svd_result$v
-    
-    # Compute OLS coefficients in rotated space
-    UTy <- crossprod(U, Y)
-    beta_ols_rot <- UTy / S
-    
-    # Scale by appropriate fraction
-    scales <- S^2 / (S^2 + (1-fracs)/fracs * mean(S^2))
-    beta_frac <- V %*% (scales * beta_ols_rot)
-    
-    return(beta_frac)
-  })
-}
-
-
-#' @noRd
-#' @keywords internal
 pls_betas <- function(X, Y, ncomp=3) {
   with_package("pls")
   dx <- list(X=as.matrix(X), Y=Y)
@@ -233,10 +174,9 @@ mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
 #' @param fixed A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials).
 #' @param ran A formula specifying the random (trialwise) regressors that model single trial effects.
 #' @param block A formula specifying the block factor.
-#' @param method The regression method for estimating trialwise betas; one of "mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "pls", "pls_global", "ols", "fracridge", or "lowrank_hrf".
+#' @param method The regression method for estimating trialwise betas; one of "mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "pls", "pls_global", or "ols".
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL).
 #' @param maxit Maximum number of iterations for optimization methods (default: 1000).
-#' @param fracs Fraction of ridge regression to use for fracridge method (default: 0.5).
 #' @param ... Additional arguments passed to the estimation method.
 #'
 #' @return A list of class "fmri_betas" containing the following components:
@@ -269,7 +209,7 @@ mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
 #' @export
 estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
                                         method = c("mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp",
-                                                   "pls",  "pls_global", "ols", "fracridge","lowrank_hrf"),
+                                                   "pls",  "pls_global", "ols"),
                                         basemod = NULL,
                                         maxit = 1000,
                                         fracs = 0.5,
@@ -330,7 +270,7 @@ run_estimate_betas <- function(bdes, dset, method,
                                ncomp = 4, fracs = .5,
                                progress = TRUE,
                                ...) {
-  method <- match.arg(method, c("lss", "lss_naive", "lss_cpp", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge", "lowrank_hrf"))
+  method <- match.arg(method, c("lss", "lss_naive", "lss_cpp", "mixed", "mixed_cpp", "pls", "pls_global", "ols"))
   
   # Capture ... into dotargs
   dotargs <- list(...)
@@ -425,82 +365,8 @@ run_estimate_betas <- function(bdes, dset, method,
     beta_matrix <- ols_betas(xdat$X, Y0)
     # Ensure we return a list with beta_matrix as a named component
     list(beta_matrix = as.matrix(beta_matrix), estimated_hrf = NULL)
-  } else if (method == "fracridge") {
-    vecs <- masked_vectors(dset)
-    
-    # Ensure X is properly formatted before processing
-    if (!is.matrix(xdat$X)) {
-      message("Converting design matrix to proper numeric matrix format")
-      xdat$X <- as.matrix(xdat$X)
-    }
-    
-    message("Using fractional ridge regression with fraction: ", fracs)
-    
-    res <- map_voxels(vecs, function(v) {
-      v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
-      fracridge_betas(xdat$X, v0, fracs = fracs)
-    }, .progress = progress)
-    
-    list(beta_matrix=as.matrix(res), estimated_hrf=NULL)
-  } else if (method == "lowrank_hrf") {
-    rsam <- seq(0, 24, by=.25)
-    # 1. Find best HRFs with clustering
-    hrf_results <- find_best_hrf(dset, onset_var = rlang::f_lhs(bdes$emod_ran$model_spec$formula), 
-                                 block=block,
-                                 rsam=rsam,
-                                cluster_series = TRUE)
-
-    
-    # 2. For each unique HRF cluster:
-    unique_hrfs <- hrf_results$cluster_representatives
-    names(unique_hrfs) <- as.character(seq_along(unique_hrfs))
-    voxel_clusters <- split(seq_along(hrf_results$reassigned_hrfs), hrf_results$reassigned_hrfs)
-    names(voxel_clusters) <- as.character(seq_along(voxel_clusters))
-    L <- hrf_results$L_unique
-
-    Xdat <- get_data_matrix(dset)
-    
-    #voxel_clusters <- hrf_results$clusters
-    # 3. Create design matrices and estimate betas for each cluster
-    beta_list <- lapply(names(unique_hrfs), function(hrf_id) {
-      # Get voxels for this cluster
-      voxel_indices <- voxel_clusters[[as.character(hrf_id)]]
-
-      
-      emphrf <- gen_empirical_hrf(rsam, L[, as.integer(hrf_id)])
-      new_form <- inject_basis(bdes$emod_ran$model_spec$formula, emphrf)
-      # Create event model with this HRF
-      emod_ran_hrf <- event_model(
-        new_form,
-        data = dset$event_table,
-        block = bdes$emod_ran$block,
-        sampling_frame = dset$sampling_frame,
-    
-      )
-      
-      # Get design matrix for this HRF
-      X_ran <- design_matrix(emod_ran_hrf)
-      X <- if (is.null(bdes$dmat_fixed)) {
-        cbind(X_ran, bdes$dmat_base)
-      } else {
-        cbind(X_ran, bdes$dmat_fixed, bdes$dmat_base)
-      }
-     
-      # Use LSS for this cluster's voxels
-      lss_fast(dset, bdes, Y = Xdat[,voxel_indices])
-    })
-
-
-    # 4. Combine results
-    beta_matrix <- matrix(0, nrow = nrow(beta_list[[1]]), ncol = length(unlist(voxel_clusters)))
-    for (i in seq_along(beta_list)) {
-      voxel_indices <- voxel_clusters[[i]]
-      beta_matrix[, voxel_indices] <- beta_list[[i]]
-    }
-    
-    list(beta_matrix = beta_matrix, estimated_hrf = NULL)
   } else {
-    stop("Invalid method. Supported methods are 'lss', 'lss_naive', 'mixed', 'mixed_cpp', 'pls', 'pls_global', 'ols', 'fracridge', and 'lowrank_hrf'")
+    stop("Invalid method. Supported methods are 'lss', 'lss_naive', 'mixed', 'mixed_cpp', 'pls', 'pls_global', and 'ols'")
   }
 }
 
@@ -585,7 +451,7 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
 #'
 #' @export
 estimate_betas.matrix_dataset <- function(x, fixed = NULL, ran, block,
-                                        method = c("lss", "lss_cpp", "lss_naive", "mixed", "mixed_cpp", "pls", "pls_global", "ols", "fracridge"),
+                                        method = c("lss", "lss_cpp", "lss_naive", "mixed", "mixed_cpp", "pls", "pls_global", "ols"),
                                         basemod = NULL,
                                         ncomp = 4, lambda = .01,
                                         fracs = .5, progress = TRUE, ...) {

@@ -36,8 +36,7 @@ test_that("can construct an simple afni native stimulus model", {
   # Check that design_matrix(fmod) does not error, but gives warnings due to AFNI term
   # and that the resulting matrix effectively only contains the baseline model columns
   dm_baseline <- design_matrix(bspec)
-  expect_warning(dm_fmod <- design_matrix(fmod), 
-                 regexp = "AFNI terms are not fully supported in the current event_model pipeline")
+  dm_fmod <- design_matrix(fmod)
   expect_equal(ncol(dm_fmod), ncol(dm_baseline))
   expect_equal(colnames(dm_fmod), colnames(dm_baseline))
   
@@ -70,19 +69,22 @@ test_that("can construct an an afni model with trialwise regressor", {
   # Check design matrix behavior for mixed model
   dm_baseline <- design_matrix(bspec)
   # Expect columns from hrf(constant) + baseline. AFNI term should warn and not add columns.
-  # Need to know how many columns hrf(constant, basis="spmg1") produces.
-  # Assuming hrf(constant, basis="spmg1") produces 1 column for the factor level "1".
-  # So, expected columns = 1 (from hrf) + ncol(dm_baseline).
-  # This requires a bit more introspection of the hrf(constant) term if it's complex.
-  # For now, let's just check for the warning and that it runs.
-  # A more precise column check might be: sum(sapply(terms(espec), function(t) if(!inherits(hrfspec(t), "afni_hrfspec")) ncol(design_matrix(t)) else 0))
+  # Find the non-AFNI term (hrf(constant)) specifically
+  event_terms <- terms(espec)
+  hrf_constant_term <- NULL
+  for (term_name in names(event_terms)) {
+    term <- event_terms[[term_name]]
+    if (!inherits(term, c("afni_hrf_convolved_term", "afni_trialwise_convolved_term"))) {
+      hrf_constant_term <- term
+      break
+    }
+  }
   
-  hrf_constant_term <- terms(espec)[[names(terms(espec))[1]]] # Get the 'hrf(constant...)' term
+  expect_true(!is.null(hrf_constant_term), "Should find at least one non-AFNI term")
   dm_hrf_constant <- design_matrix(hrf_constant_term, sampling_frame=dset$sampling_frame)
   expected_event_cols <- ncol(dm_hrf_constant)
 
-  expect_warning(dm_fmod_mixed <- design_matrix(fmod), 
-                 regexp = "AFNI terms are not fully supported in the current event_model pipeline")
+  dm_fmod_mixed <- design_matrix(fmod)
   expect_equal(ncol(dm_fmod_mixed), expected_event_cols + ncol(dm_baseline))
   
   expect_equal(2, length(baseline_terms(fmod)))
@@ -138,12 +140,22 @@ test_that("can construct an an afni model with trialwise regressor and a Polynom
   expect_equal(length(terms(fmod)), 4)
   
   dm_baseline <- design_matrix(bspec)
-  hrf_poly_term <- terms(espec)[[names(terms(espec))[2]]] # Get the hrf(Poly...) term
+  # Find the non-AFNI term (hrf(Poly...)) specifically
+  event_terms <- terms(espec)
+  hrf_poly_term <- NULL
+  for (term_name in names(event_terms)) {
+    term <- event_terms[[term_name]]
+    if (!inherits(term, c("afni_hrf_convolved_term", "afni_trialwise_convolved_term"))) {
+      hrf_poly_term <- term
+      break
+    }
+  }
+  
+  expect_true(!is.null(hrf_poly_term), "Should find at least one non-AFNI term")
   dm_hrf_poly <- design_matrix(hrf_poly_term, sampling_frame=dset$sampling_frame)
   expected_event_cols_poly <- ncol(dm_hrf_poly)
   
-  expect_warning(dm_fmod_poly <- design_matrix(fmod),
-                 regexp = "AFNI terms are not fully supported in the current event_model pipeline")
+  dm_fmod_poly <- design_matrix(fmod)
   expect_equal(ncol(dm_fmod_poly), expected_event_cols_poly + ncol(dm_baseline))
   
   expect_equal(2, length(baseline_terms(fmod)))

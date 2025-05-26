@@ -17,7 +17,9 @@ event_variable(vec, name, onsets, blockids = 1, durations = 0, subset = NULL)
 
 \item{durations}{Numeric vector of event durations (seconds), or a scalar.}
 
-\item{subset}{Optional logical vector indicating which events to keep.}
+\item{subset}{Optional logical vector indicating which events to keep. If
+provided, the vector must match \code{onsets} in length and contain no \code{NA}
+values.}
 }
 \value{
 An S3 object of class \code{event} and \code{event_seq}.

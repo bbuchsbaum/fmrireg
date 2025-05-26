@@ -11,7 +11,8 @@
   nchunks,
   robust = FALSE,
   verbose = FALSE,
-  use_fast_path = FALSE
+  use_fast_path = FALSE,
+  progress = FALSE
 )
 }
 \arguments{
@@ -28,6 +29,8 @@
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
 
 \item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
+
+\item{progress}{Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.}
 }
 \value{
 A list containing the unpacked chunkwise results.

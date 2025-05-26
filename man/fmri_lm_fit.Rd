@@ -11,6 +11,7 @@ fmri_lm_fit(
   robust = FALSE,
   nchunks = 10,
   use_fast_path = FALSE,
+  progress = FALSE,
   ...
 )
 }
@@ -26,6 +27,8 @@ fmri_lm_fit(
 \item{nchunks}{Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.}
 
 \item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
+
+\item{progress}{Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.}
 
 \item{...}{Additional arguments.}
 }

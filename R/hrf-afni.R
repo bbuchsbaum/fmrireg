@@ -143,9 +143,9 @@ afni_trialwise <- function(label, basis=c("spmg1", "block", "dmblock", "gamma", 
                       precision = 0.3, summate = TRUE) {
   
   ## TODO cryptic error message when argument is mispelled and is then added to ...
+  basis <- match.arg(basis)
   basis <- tolower(basis)
   if (basis == "gam") basis <- "gamma"
-  basis <- match.arg(basis)
   
   hrf <- if (!is.null(durations)) {
     assert_that(length(durations) == 1, msg="afni_trialwise does not currently accept variable durations")

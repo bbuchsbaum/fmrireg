@@ -17,6 +17,7 @@ estimate_betas(x, ...)
   ncomp = 4,
   lambda = 0.01,
   prewhiten = FALSE,
+  progress = TRUE,
   ...
 )
 }
@@ -89,7 +90,6 @@ Available estimation methods include:
 \item{lss}{Least-squares separate estimation}
 \item{pls}{Partial least squares regression}
 \item{ols}{Ordinary least squares}
-\item{fracridge}{Fractional ridge regression}
 }
 }
 \examples{

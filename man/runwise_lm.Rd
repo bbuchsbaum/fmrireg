@@ -10,7 +10,8 @@ runwise_lm(
   contrast_objects,
   robust = FALSE,
   verbose = FALSE,
-  use_fast_path = FALSE
+  use_fast_path = FALSE,
+  progress = FALSE
 )
 }
 \arguments{
@@ -23,6 +24,8 @@ runwise_lm(
 \item{robust}{Logical. Whether to use robust linear modeling (default is \code{FALSE}).}
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
+
+\item{progress}{Logical. Display a progress bar for run processing. Default is \code{FALSE}.}
 }
 \value{
 A list containing the combined results from runwise linear model analysis.

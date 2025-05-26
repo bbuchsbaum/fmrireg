@@ -25,9 +25,9 @@ chunkwise_rlm(
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
 
-\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based fast computation.}
+\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
 
-\item{progress}{Logical. Show a progress bar during chunk processing.}
+\item{progress}{Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.}
 }
 \description{
 Perform Chunkwise Robust Linear Modeling on fMRI Dataset

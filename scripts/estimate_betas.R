@@ -64,7 +64,7 @@ option_list <- list(
               help="Percent of confound variance to retain (for confound PCA) [default=%default]."),
 
   make_option(c("--method"), type="character", default="lss",
-              help="Single-trial beta estimation method, e.g., 'lss', 'fracridge', 'ols', 'mixed', etc. [default=%default]."),
+              help="Single-trial beta estimation method, e.g., 'lss', 'ols', 'mixed', etc. [default=%default]."),
 
   make_option(c("-p", "--polort"), type="integer", default=3,
               help="Number of polynomial regressors for baseline modeling (like 'polort' in AFNI). 
@@ -268,7 +268,7 @@ for (i in seq_along(scanpaths)) {
   # or block=~ run if multi-run.
 
   # Estimate betas
-  # The 'method' might be "lss", "fracridge", "ols", "mixed", "pls", etc.
+  # The 'method' might be "lss", "ols", "mixed", "pls", etc.
   # example: method="lss"
   bet_result <- estimate_betas(
     ds,
@@ -277,7 +277,6 @@ for (i in seq_along(scanpaths)) {
     block = ~1, 
     method= method_to_use,
     basemod = bmod
-    # possibly more args if needed, e.g. ncomp=4 for PLS, or fracs=0.5 for fracridge
   )
 
   # bet_result$betas_ran is dimension (#events x #voxels) 
