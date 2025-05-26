@@ -320,6 +320,7 @@ HRF <- function(fun, name, nbasis=1, span=24, param_names=NULL) {
   
 }
 
+#' @rdname nbasis
 #' @export
 nbasis.HRF <- function(x) attr(x, "nbasis")
 

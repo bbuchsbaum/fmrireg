@@ -309,11 +309,13 @@ columns.Ident <- function(x) {
 }
 
 
+#' @rdname nbasis
 #' @export
 nbasis.BSpline <- function(x) {
   x$degree
 }
 
+#' @rdname nbasis
 #' @export
 nbasis.Poly <- function(x) {
   x$degree
@@ -529,18 +531,23 @@ columns.RobustScale <- columns.Scale
 
 # Add nbasis methods -----
 
+#' @rdname nbasis
 #' @export
 nbasis.Scale        <- function(x) 1L
 
+#' @rdname nbasis
 #' @export
 nbasis.ScaleWithin  <- function(x) 1L
 
+#' @rdname nbasis
 #' @export
 nbasis.RobustScale  <- function(x) 1L
 
+#' @rdname nbasis
 #' @export
 nbasis.Standardized <- function(x) 1L
 
+#' @rdname nbasis
 #' @export
 nbasis.Ident        <- function(x) ncol(x$y)
 
