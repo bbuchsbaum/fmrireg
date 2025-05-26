@@ -422,6 +422,7 @@ baseline_term <- function(varname, mat, colind, rowind) {
 #' @param x A `baseline_term` object.
 #' @param blockid Optional block identifier to subset rows.
 #' @param allrows Logical; if `TRUE`, return all rows for the selected block.
+#' @param ... Additional arguments (currently unused).
 #' @return A tibble containing baseline regressors.
 #' @examples
 #' sframe <- sampling_frame(blocklens = 10, TR = 1)
