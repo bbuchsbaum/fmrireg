@@ -2,14 +2,19 @@
 % Please edit documentation in R/all_generic.R
 \name{global_onsets}
 \alias{global_onsets}
+\alias{global_onsets.sampling_frame}
 \title{Return the global onsets of an object}
 \usage{
 global_onsets(x, onsets, ...)
+
+\method{global_onsets}{sampling_frame}(x, onsets, blockids)
 }
 \arguments{
 \item{x}{The object containing timing information (typically a sampling_frame)}
 
 \item{onsets}{A numeric vector of relative onset times within each run/block}
+
+\item{blockids}{Integer vector of block IDs}
 
 \item{...}{Additional arguments passed to methods. Common arguments include:
 \describe{

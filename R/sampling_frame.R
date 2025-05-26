@@ -88,6 +88,9 @@ samples.sampling_frame <- function(x, blockids = NULL, global = FALSE) {
   }
 }
 
+#' @rdname global_onsets
+#' @inheritParams global_onsets
+#' @param blockids Integer vector of block IDs
 #' @export
 global_onsets.sampling_frame <- function(x, onsets, blockids) {
   # Calculate cumulative time offsets for each block
