@@ -472,9 +472,10 @@ get_hrf_from_dsl <- function(hrf_name, fmri_config) {
       fun <- NULL
       if (is.function(fun_name)) {
         fun <- fun_name
-      } else if (exists(fun_name, mode = "function")) {
+        fun_name <- deparse(substitute(fun_name))
+      } else if (is.character(fun_name) && exists(fun_name, mode = "function")) {
         fun <- get(fun_name, mode = "function")
-      } else if (file.exists(fun_name)) {
+      } else if (is.character(fun_name) && file.exists(fun_name)) {
         env <- new.env(parent = baseenv())
         sys.source(fun_name, envir = env)
         if (exists(fun_name, envir = env, mode = "function")) {
@@ -482,8 +483,19 @@ get_hrf_from_dsl <- function(hrf_name, fmri_config) {
         } else {
           stop(sprintf("Function '%s' not found after sourcing", fun_name), call. = FALSE)
         }
+      } else if (is.character(fun_name)) {
+        env <- new.env(parent = baseenv())
+        fun <- tryCatch(eval(parse(text = fun_name), envir = env),
+                        error = function(e) {
+                          stop(sprintf("Failed to evaluate CustomR HRF definition: %s", e$message),
+                               call. = FALSE)
+                        })
+        if (!is.function(fun)) {
+          stop("CustomR HRF definition did not evaluate to a function", call. = FALSE)
+        }
+        fun_name <- "CustomR"
       } else {
-        stop(sprintf("Cannot resolve custom HRF function '%s'", fun_name), call. = FALSE)
+        stop("Invalid 'definition' for CustomR HRF", call. = FALSE)
       }
       as_hrf(fun, name = fun_name)
     },
