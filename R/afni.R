@@ -111,6 +111,7 @@ afni_lm <- function(fmri_mod, dataset, working_dir=".", polort=-1, jobs=1,
 
 
 #' @export
+#' @rdname print
 print.afni_lm_spec <- function(x,...) {
   cat("AFNI linear model via 3dDeconvolve \n")
   cat("  working_dir: ", x$working_dir, "\n")

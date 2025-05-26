@@ -103,6 +103,7 @@ multiresponse_rlm <- function(form, data_env, conlist, vnames, fcon, modmat = NU
 #' @param x An fmri_rlm object
 #' @param ... Additional arguments passed to print.fmri_lm
 #' @export
+#' @rdname print
 print.fmri_rlm <- function(x, ...) {
   cat("\n═══ Robust fMRI Linear Model ═══\n")
   NextMethod()

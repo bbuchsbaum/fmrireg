@@ -531,6 +531,7 @@ elements.event <- function(x, what = c("values", "labels"), transformed = TRUE, 
 #' @param ... Additional arguments (unused).
 #' @import cli
 #' @export
+#' @rdname print
 print.event <- function(x, ...) {
   nevents <- length(x$onsets)
   type <- if (is_continuous(x)) "Continuous" else "Categorical"

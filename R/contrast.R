@@ -1481,6 +1481,7 @@ estcon.contrast <- function(x, fit, indices, ...) {
 #' @param ... Additional arguments (currently unused).
 #'
 #' @export
+#' @rdname print
 print.contrast_set <- function(x, ...) {
   n_contrasts <- length(x)
   
@@ -1527,6 +1528,7 @@ print.contrast_set <- function(x, ...) {
 #' @param ... Additional arguments (currently unused).
 #'
 #' @export
+#' @rdname print
 print.contrast_spec <- function(x,...) {
   cat("contrast:", x$name, "\n")
   cat(" A: ", Reduce(paste, deparse(x$A)), "\n")
@@ -1547,6 +1549,7 @@ print.contrast_spec <- function(x,...) {
 #' @param ... Additional arguments (currently unused).
 #'
 #' @export
+#' @rdname print
 print.contrast <- function(x,...) {
   print(x$contrast_spec)
   cat(" term: ", x$term$varname, "\n")
@@ -1565,6 +1568,7 @@ print.contrast <- function(x,...) {
 #' @param ... Additional arguments (currently unused).
 #'
 #' @export
+#' @rdname print
 print.poly_contrast_spec <- function(x,...) {
   cat("poly contrast:", "\n")
   cat(" A: ", Reduce(paste, deparse(x$A)), "\n")
@@ -1587,6 +1591,7 @@ print.poly_contrast_spec <- function(x,...) {
 #' @param ... Additional arguments (currently unused).
 #'
 #' @export
+#' @rdname print
 print.contrast_diff_spec <- function(x,...) {
   cat("contrast difference:", "\n")
   cat("  ", x$con1$name, "-", x$con2$name, "\n")

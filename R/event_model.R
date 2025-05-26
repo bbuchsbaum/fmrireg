@@ -339,6 +339,7 @@ Fcontrasts.event_model <- function(x, ...) {
 #' @importFrom cli cli_h1 cli_div cli_text cli_h2 cli_ul cli_li cli_end cli_verbatim cli_alert_info
 #' @importFrom utils head
 #' @export
+#' @rdname print
 print.event_model <- function(x, ...) {
   n_terms <- length(x$terms)
   term_names <- names(x$terms)

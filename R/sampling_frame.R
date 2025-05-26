@@ -102,6 +102,7 @@ global_onsets.sampling_frame <- function(x, onsets, blockids) {
 }
 
 #' @export
+#' @rdname print
 print.sampling_frame <- function(x, ...) {
   n_blk <- length(x$blocklens)
   total_scans <- sum(x$blocklens)

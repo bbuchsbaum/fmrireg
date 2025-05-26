@@ -691,6 +691,7 @@ one_chunk <- function(x) {
 }
 
 #' @export
+#' @rdname print
 print.fmri_dataset <- function(x, ...) {
   # Header
   cat("\n═══ fMRI Dataset ═══\n")
@@ -729,6 +730,7 @@ print.fmri_dataset <- function(x, ...) {
 }
 
 #' @export
+#' @rdname print
 print.latent_dataset <- function(x, ...) {
   # Header
   cat("\n═══ Latent Dataset ═══\n")
@@ -779,6 +781,7 @@ print.latent_dataset <- function(x, ...) {
 #' @param x A chunkiter object.
 #' @param ... Additional arguments (ignored).
 #' @export
+#' @rdname print
 print.chunkiter <- function(x, ...) {
   if (!requireNamespace("crayon", quietly = TRUE)) {
     stop("Please install the crayon package to use this function.")
@@ -845,6 +848,7 @@ as.matrix_dataset.fmri_file_dataset <- function(x, ...) {
 #' @param x A data_chunk object.
 #' @param ... Additional arguments (ignored).
 #' @export
+#' @rdname print
 print.data_chunk <- function(x, ...) {
   if (!requireNamespace("crayon", quietly = TRUE)) {
     stop("Please install the crayon package to use this function.")

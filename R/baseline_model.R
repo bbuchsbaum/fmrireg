@@ -531,6 +531,7 @@ construct.blockspec <- function(x, model_spec, ...) {
 #' bmod <- baseline_model(sframe = sframe)
 #' print(bmod)
 #' @export
+#' @rdname print
 print.baseline_model <- function(x, ...) {
   # Extract component information using helper
   drift_cols <- .nz(x$terms$drift)

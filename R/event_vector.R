@@ -1118,6 +1118,7 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
 #' @param x An fmri_term object.
 #' @param ... Additional arguments.
 #' @export
+#' @rdname print
 print.fmri_term <- function(x, ...) {
   cat("fmri_term: ", class(x)[[1]], "\n")
   cat("  Term Name: ", x$varname, "\n")
@@ -1130,6 +1131,7 @@ print.fmri_term <- function(x, ...) {
 #' @param x A convolved_term object.
 #' @param ... Additional arguments.
 #' @export
+#' @rdname print
 print.convolved_term <- function(x, ...) {
   cat("fmri_term: ", class(x)[[1]], "\n")
   cat("  Term Name: ", x$varname, "\n")
@@ -1146,6 +1148,7 @@ print.convolved_term <- function(x, ...) {
 #' @param x An afni_hrf_convolved_term object.
 #' @param ... Additional arguments.
 #' @export
+#' @rdname print
 print.afni_hrf_convolved_term <- function(x, ...) {
   cat("fmri_term: ", class(x)[[1]], "\n")
   cat("  Term Name: ", x$varname, "\n")
@@ -1163,6 +1166,7 @@ print.afni_hrf_convolved_term <- function(x, ...) {
 #' @param ... Additional arguments (unused).
 #' @import cli
 #' @export
+#' @rdname print
 print.event_term <- function(x, ...) {
   nevents <- length(x$onsets)
   nvars <- length(x$events)
