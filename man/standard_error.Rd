@@ -2,9 +2,11 @@
 % Please edit documentation in R/all_generic.R
 \name{standard_error}
 \alias{standard_error}
+\alias{standard_error.fmri_lm}
 \title{Extract Standard Errors from a Model Fit}
 \usage{
 standard_error(x, ...)
+\method{standard_error}{fmri_lm}(x, type = c("estimates", "contrasts"))
 }
 \arguments{
 \item{x}{The fitted model object}
