@@ -758,8 +758,11 @@ stats.fmri_lm <- function(x, type = c("estimates", "contrasts", "F"), ...) {
 #'
 #' This function extracts standard errors from an \code{fmri_lm} object.
 #'
+#' @rdname standard_error
+#'
 #' @param x An \code{fmri_lm} object.
-#' @param type The type of standard errors to extract: \code{"estimates"} or \code{"contrasts"}.
+#' @param type The type of standard errors to extract: \code{"estimates"} or
+#'   \code{"contrasts"}.
 #' @return A tibble containing the standard errors.
 #' @export
 standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts")) {
