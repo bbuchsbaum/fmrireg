@@ -136,6 +136,11 @@ blockids.sampling_frame <- function(x) {
   rep(seq_along(x$blocklens), times = x$blocklens)
 }
 
+#' Get block lengths from a sampling frame
+#'
+#' @rdname blocklens
+#' @inheritParams blocklens
+#' @return Numeric vector giving the number of scans in each block.
 #' @export
 blocklens.sampling_frame <- function(x) {
     x$blocklens
