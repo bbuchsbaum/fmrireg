@@ -56,8 +56,9 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #' @param contrasts one or more \code{contrast_spec} objects created with the \code{contrast}, `pair_contrast` etc. functions. 
 #'                  Must be NULL, a single contrast spec, or a *named* list of contrast specs.
 #' @param id a unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.
+#' @param name Optional human-readable name for the term.
 #' @param lag a temporal offset in seconds which is added to onset before convolution
-#' @param summate whether impulse amplitudes sum up when duration is greater than 0. 
+#' @param summate whether impulse amplitudes sum up when duration is greater than 0.
 #' @examples 
 #' 
 #' ## 'hrf' is typically used in the context of \code{formula}s passed to `event_model`.
