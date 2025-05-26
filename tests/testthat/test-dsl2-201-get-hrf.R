@@ -39,3 +39,10 @@ test_that("CustomR loads function", {
   expect_equal(attr(h, "params")$.lag, 2)
 })
 
+test_that("CustomR evaluates code string", {
+  cfg <- make_cfg(list(custom=list(type="CustomR", definition="function(t) t*0")))
+  h <- GH("custom", cfg)
+  expect_s3_class(h, "HRF")
+  expect_equal(as.numeric(h(0)), 0)
+})
+
