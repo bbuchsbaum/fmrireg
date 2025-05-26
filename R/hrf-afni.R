@@ -49,10 +49,12 @@ afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",
                                   start=NULL, stop=NULL) {
   
   ## TODO cryptic error message when argument is mispelled and is then added to ...
-  basis <- tolower(basis)
+  basis <- tolower(basis)[1]
   if (basis == "sin") basis <- "sine"
   if (basis == "gam") basis <- "gamma"
-  basis <- match.arg(basis)
+  basis <- match.arg(basis,
+                     c("spmg1", "block", "dmblock", "tent", "csplin",
+                       "poly",  "sine", "gamma", "spmg2", "spmg3", "wav"))
   
   vars <- as.list(base::substitute(list(...)))[-1]
   # Convert raw expressions to quosures for compatibility with construct_event_term
@@ -143,9 +145,10 @@ afni_trialwise <- function(label, basis=c("spmg1", "block", "dmblock", "gamma", 
                       precision = 0.3, summate = TRUE) {
   
   ## TODO cryptic error message when argument is mispelled and is then added to ...
-  basis <- tolower(basis)
+  basis <- tolower(basis)[1]
   if (basis == "gam") basis <- "gamma"
-  basis <- match.arg(basis)
+  basis <- match.arg(basis,
+                     c("spmg1", "block", "dmblock", "gamma", "wav"))
   
   hrf <- if (!is.null(durations)) {
     assert_that(length(durations) == 1, msg="afni_trialwise does not currently accept variable durations")
