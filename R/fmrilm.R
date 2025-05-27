@@ -126,138 +126,50 @@ is.formula <- function(x) {
 
 #' @keywords internal
 #' @noRd
-.fast_lm_matrix <- function(Y, proj) {
-  # Y : n × V  (double matrix, one chunk)
-  # proj$Pinv : p × n : (X'X)^-1 X'
-  
+.fast_lm_matrix <- function(X, Y, proj, return_fitted = FALSE) {
+  # X : n × p design matrix
+  # Y : n × V data matrix
+  # proj$Pinv : (X'X)^-1 X'
+
   if (!is.matrix(Y)) {
-     Y <- as.matrix(Y)
+    Y <- as.matrix(Y)
   }
-  
-  # Ensure dimensions match: ncol(Pinv) == nrow(Y)
-  if (ncol(proj$Pinv) != nrow(Y)) {
-      stop(paste(".fast_lm_matrix: Dimension mismatch between Pinv (",
-                 nrow(proj$Pinv),"x",ncol(proj$Pinv), ") and Y (",
-                 nrow(Y),"x",ncol(Y),"). Number of time points (n) must match.", sep=""))
+  if (!is.matrix(X)) {
+    X <- as.matrix(X)
   }
-  
-  Betas <- proj$Pinv %*% Y              # p × V   GEMM 1: (X'X)^-1 X' Y
-  
-  # Resid = Y - X %*% Betas = Y - X %*% (X'X)^-1 X' Y
-  # Avoid forming X %*% Betas if possible.
-  # X is needed. How to get X efficiently?
-  # We have proj$Pinv = (X'X)^-1 X'. Can we get X back? Not easily.
-  # The user note suggests Resid <- Y - crossprod(t(proj$Pinv), Betas)
-  # Let's check: crossprod(t(Pinv), Betas) = Pinv' %*% Betas = ( ((X'X)^-1 X')' ) %*% Betas
-  # = (X (X'X)^-1) %*% Betas. This is NOT X %*% Betas.
-  # We need X itself. X must be passed or reconstructed.
-  # Let's require X to be passed to .fast_lm_matrix or reconstruct it inside the caller.
-  # For now, assume X is available where .fast_lm_matrix is called.
-  # Modify signature: .fast_lm_matrix <- function(X, Y, proj)
-  # Or pass X into proj list: proj$X <- X? No, X can be large.
-  
-  # Let's rethink Resid calculation from user note:
-  # Resid <- Y - crossprod(t(proj$Pinv), Betas)
-  # This seems incorrect. The user's formula later is correct: Resid = Y - X %*% Betas
-  # We absolutely need X. The calling functions (chunkwise_lm, runwise_lm) MUST provide X.
-  
-  # Let's modify the callers to pass X when using the fast path.
-  # For now, let's assume X is passed.
-  # Modify signature: .fast_lm_matrix <- function(X, Y, proj)
-  
-  # Reverting signature for now, will adapt callers.
-  
-  # How to get X in chunkwise_lm? `modmat` is X.
-  # How to get X in runwise_lm? Need to reconstruct `X_run` inside the loop.
-  
-  # Let's proceed assuming X will be available in the calling context.
-  # The user example doesn't pass X explicitly to .fast_lm_matrix. How is Resid calculated?
-  # Resid <- Y - crossprod(t(proj$Pinv), Betas) # Let's re-examine this.
-  # Is it possible X = t(solve(crossprod(proj$Pinv))) ? No.
-  # What if Pinv was defined as t(X)? No.
-  
-  # OK, the user's code MUST be wrong. `Resid = Y - X %*% Betas` is the definition.
-  # We will adapt the callers to provide X to this function.
-  
-  # Updated plan: Modify .fast_lm_matrix signature and callers.
-  # .fast_lm_matrix <- function(X, Y, proj) { ... Resid <- Y - X %*% Betas ... }
-  
-  # Sticking to the user's provided code for now, assuming there's a BLAS trick I'm missing
-  # regarding Resid <- Y - crossprod(t(proj$Pinv), Betas). This needs verification.
-  # If Pinv = X (e.g. orthogonal design), then t(Pinv) = X', crossprod(t(Pinv), Betas) = X %*% Betas.
-  # But Pinv = (X'X)^-1 X', so t(Pinv) = X (X'X)^-1.
-  # crossprod(t(Pinv), Betas) = t(Pinv)' Betas = (X (X'X)^-1)' Betas = (X'X)^-1 X' Betas
-  # This is Pinv %*% Betas... which is Betas itself? No. Pinv * Betas gives p x V.
-  
-  # Let's assume the user meant: X %*% Betas = X %*% (X'X)^-1 X' Y = H Y (H is hat matrix)
-  # Maybe crossprod(t(proj$Pinv), Betas) is meant to be calculated differently?
-  # If X is available, X %*% Betas is direct.
-  
-  # Let's implement based on needing X explicitly.
-  # Modify signature:
-  
-  # .fast_lm_matrix <- function(X, Y, proj) {
-  #   if (!is.matrix(Y)) { Y <- as.matrix(Y) }
-  #   if (!is.matrix(X)) { X <- as.matrix(X) }
-  #
-  #   Betas <- proj$Pinv %*% Y              # p × V
-  #   Fitted <- X %*% Betas                 # n x V
-  #   Resid <- Y - Fitted                   # n × V
-  #
-  #   rss   <- colSums(Resid^2)
-  #   sigma2 <- rss / proj$dfres # Use sigma2 for consistency
-  #   sigma <- sqrt(sigma2)
-  #
-  #   list(betas = Betas,   # p x V
-  #        fitted = Fitted, # n x V (optional, maybe not needed downstream?)
-  #        residuals = Resid, # n x V (optional)
-  #        rss   = rss,     # V
-  #        sigma = sigma,   # V
-  #        sigma2 = sigma2) # V
-  # }
-  # This requires passing X.
-  
-  # Let's try the user's version and see if it works in practice or if we need to debug later.
-  # Keep user's version for now:
-  
-  Betas <- proj$Pinv %*% Y              # p × V   GEMM 1
-  # This calculation of residuals is mathematically suspect unless Pinv has a special structure
-  # or crossprod behaves differently than expected. Let's assume it requires X implicitly or is a placeholder.
-  # We will likely need to replace this with Resid = Y - X %*% Betas in the calling function.
-  # For now, keep the provided structure.
-  # Fitted <- X %*% Betas # Requires X
-  # Resid <- Y - Fitted # Requires Fitted
-  
-  # Calculate RSS without explicitly forming residuals using matrix algebra:
-  # RSS = Y'Y - beta'X'Y = Y'Y - beta'X'X beta
-  # We have Betas (p x V). We need X'Y. X'Y = X'X (X'X)^-1 X'Y = X'X Betas
-  # rss_v = y_v'y_v - beta_v'(X'X)beta_v
-  yTy <- colSums(Y^2) # V-vector
-  XtX <- solve(proj$XtXinv) # Recover X'X from its inverse
-  
-  # Need to compute t(beta_v) %*% XtX %*% beta_v for each voxel v
-  # This involves V matrix multiplications (1xp * pxp * px1) -> scalar
-  # Can optimize: B' (X'X B) -> B is p x V. XtX is p x p
-  # tmp = XtX %*% Betas (p x V)
-  # diag(t(Betas) %*% tmp) -> V-vector
-  XtX_Betas <- XtX %*% Betas # p x V
-  beta_XtX_beta <- colSums(Betas * XtX_Betas) # Element-wise product and sum columns -> V-vector
-  
-  rss <- yTy - beta_XtX_beta # V-vector
-  # Check for negative RSS due to numerical precision
-  rss[rss < 0 & rss > -1e-10] <- 0
-  if (any(rss < -1e-10)) {
+
+  if (ncol(X) != nrow(proj$Pinv) || nrow(X) != nrow(Y)) {
+    stop(".fast_lm_matrix: X and Y dimensions do not match projection matrix")
+  }
+
+  Betas <- proj$Pinv %*% Y
+
+  if (return_fitted) {
+    Fitted <- X %*% Betas
+    rss <- colSums((Y - Fitted)^2)
+  } else {
+    yTy <- colSums(Y^2)
+    XtX <- solve(proj$XtXinv)
+    XtX_Betas <- XtX %*% Betas
+    beta_XtX_beta <- colSums(Betas * XtX_Betas)
+    rss <- yTy - beta_XtX_beta
+    rss[rss < 0 & rss > -1e-10] <- 0
+    if (any(rss < -1e-10)) {
       warning("Negative residual sum of squares computed in .fast_lm_matrix")
+    }
+    Fitted <- NULL
   }
-  
+
   sigma2 <- rss / proj$dfres
   sigma <- sqrt(sigma2)
-  
-  # Return only what's needed downstream based on user notes
-  list(betas = Betas,   # p x V
-       rss   = rss,     # V
-       sigma = sigma,   # V
-       sigma2 = sigma2) # V
+
+  list(
+    betas = Betas,
+    rss   = rss,
+    sigma = sigma,
+    sigma2 = sigma2,
+    fitted = Fitted
+  )
 }
 
 #' Create an fMRI Model
@@ -1106,7 +1018,7 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
           Ymat <- as.matrix(ym$data)
           if (verbose) message("  Chunk ", ym$chunk_num, ": ncol(Ymat) = ", ncol(Ymat))
 
-          res <- .fast_lm_matrix(Ymat, proj)
+          res <- .fast_lm_matrix(modmat, Ymat, proj)
 
           actual_vnames <- colnames(modmat)
           bstats <- beta_stats_matrix(res$betas, proj$XtXinv, res$sigma, proj$dfres, actual_vnames)
@@ -1249,7 +1161,7 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
             stop(paste("Dimension mismatch in run", ym$chunk_num, ": X_run rows (", nrow(X_run), ") != Y_run rows (", nrow(Y_run), ")"))
         }
 
-        res <- .fast_lm_matrix(Y_run, proj_run)
+        res <- .fast_lm_matrix(X_run, Y_run, proj_run)
 
         actual_vnames <- colnames(X_run)
         bstats <- beta_stats_matrix(res$betas, proj_run$XtXinv, res$sigma, proj_run$dfres, actual_vnames)
