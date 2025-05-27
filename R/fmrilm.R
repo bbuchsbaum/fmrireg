@@ -1003,19 +1003,76 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
       }
       
       message("Using fast path for chunkwise LM...")
-      
+
       data_env <- list2env(tmats)
       data_env[[ ".y"]] <- rep(0, nrow(tmats[[1]])) # Placeholder for model.matrix
-      modmat <- model.matrix(as.formula(form), data_env)
-      
+      modmat_orig <- model.matrix(as.formula(form), data_env)
+
+      ar_modeling <- match.arg(cor_struct) != "iid"
+      ar_order <- switch(match.arg(cor_struct),
+                         ar1 = 1L,
+                         ar2 = 2L,
+                         arp = ar_p,
+                         iid = 0L)
+
+      run_chunks <- exec_strategy("runwise")(dset)
+      run_row_inds <- lapply(run_chunks, `[[`, "row_ind")
+
+      if (ar_modeling && cor_iter > 1L) {
+          warning("cor_iter > 1 not supported in chunkwise fast path; using 1")
+          cor_iter <- 1L
+      }
+
+      phi_hat_list <- vector("list", length(run_chunks))
+
+      if (ar_modeling) {
+          X_w_list <- vector("list", length(run_chunks))
+          for (ri in seq_along(run_chunks)) {
+              rch <- run_chunks[[ri]]
+
+              tmats_run <- term_matrices(model, rch$chunk_num)
+              data_env_run <- list2env(tmats_run)
+              n_time_run <- nrow(tmats_run[[1]])
+              data_env_run[[".y"]] <- rep(0, n_time_run)
+              X_run <- model.matrix(as.formula(form), data_env_run)
+              proj_run <- .fast_preproject(X_run)
+              Y_run <- as.matrix(rch$data)
+
+              ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
+              resid_ols <- Y_run - ols$fitted
+              phi_hat_run <- .estimate_ar(rowMeans(resid_ols), ar_order)
+              dummyY <- matrix(0, nrow(X_run), 0)
+              ar_whiten_inplace(dummyY, X_run, phi_hat_run, ar1_exact_first)
+
+              phi_hat_list[[ri]] <- phi_hat_run
+              X_w_list[[ri]] <- X_run
+          }
+          modmat <- do.call(rbind, X_w_list)
+      } else {
+          modmat <- modmat_orig
+      }
       proj <- .fast_preproject(modmat)
-      Vu <- proj$XtXinv 
-      
+      Vu <- proj$XtXinv
+
       cres <- vector("list", length(chunks))
       for (i in seq_along(chunks)) {
           ym <- chunks[[i]]
           if (verbose) message("Processing chunk (fast path) ", ym$chunk_num)
           Ymat <- as.matrix(ym$data)
+
+          if (ar_modeling) {
+              for (ri in seq_along(run_chunks)) {
+                  rows <- run_row_inds[[ri]]
+                  phi <- phi_hat_list[[ri]]
+                  if (!is.null(phi)) {
+                      dummyX <- matrix(0, length(rows), 0)
+                      subY <- Ymat[rows, , drop = FALSE]
+                      ar_whiten_inplace(subY, dummyX, phi, ar1_exact_first)
+                      Ymat[rows, ] <- subY
+                  }
+              }
+          }
+
           if (verbose) message("  Chunk ", ym$chunk_num, ": ncol(Ymat) = ", ncol(Ymat))
 
           res <- .fast_lm_matrix(modmat, Ymat, proj)
