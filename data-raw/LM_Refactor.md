@@ -241,15 +241,15 @@ The current voxelwise AR implementation in the slow path (SPRINT3-05R) does not 
     *   **Depends on:** ARCH-002, ARCH-003, ARCH-004
     *   **Acceptance:** Voxelwise AR uses same solver as other paths
 
-*   **Ticket SPRINT4-03R: Choose and Implement Voxelwise Strategy**
+*   **Ticket SPRINT4-03R: Choose and Implement Voxelwise Strategy** *(implemented)*
     *   **Task:** Implement the chosen memory-efficient approach for voxelwise contrasts.
     *   **Details:**
-        1. **Recommended: Chunked Processing Approach**
+        1. **Chunked Processing Approach** *(chosen)*
            - Minimal memory footprint (< 100 MB)
            - Slightly slower but negligible for most analyses
-           - Already aligns with fmrireg's chunking philosophy
+           - Aligns with fmrireg's existing chunking philosophy
         
-        2. **Alternative: QR Storage** 
+        2. **Alternative: QR Storage**
            - If speed is critical and memory allows (~500MB-1GB)
            - Better for iterative/interactive analyses
            - Store QR decompositions instead of covariance matrices
@@ -259,6 +259,9 @@ The current voxelwise AR implementation in the slow path (SPRINT3-05R) does not 
            - Memory efficiency second
            - Speed optimization third
            - Parallel processing fourth
+    *   **Implementation:** Voxels are processed in small chunks (default size 100),
+        whitening and computing contrasts within each chunk. This keeps memory
+        usage low while maintaining accuracy.
     *   **Depends on:** SPRINT4-01R
     *   **Acceptance:** Whole-brain voxelwise analysis completes without memory errors
 
