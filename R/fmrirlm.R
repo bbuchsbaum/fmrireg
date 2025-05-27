@@ -21,7 +21,9 @@ fmri_rlm <- function(formula, block, baseline_model = NULL, dataset,
                      nchunks = 10,
                      cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
                      cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
-                     ...) {
+                     robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
+                     robust_c_tukey = 4.685, robust_max_iter = 2L,
+                     robust_scale_scope = c("run", "global"), ...) {
 
   res <- fmri_lm(formula, block, baseline_model = baseline_model, dataset = dataset,
                  durations = durations, drop_empty = drop_empty,
@@ -29,7 +31,13 @@ fmri_rlm <- function(formula, block, baseline_model = NULL, dataset,
                  cor_struct = cor_struct, cor_iter = cor_iter,
                  cor_global = cor_global, ar_p = ar_p,
                  ar1_exact_first = ar1_exact_first,
-                 robust = TRUE, ...)
+                 robust = TRUE,
+                 robust_psi = robust_psi,
+                 robust_k_huber = robust_k_huber,
+                 robust_c_tukey = robust_c_tukey,
+                 robust_max_iter = robust_max_iter,
+                 robust_scale_scope = robust_scale_scope,
+                 ...)
   class(res) <- c("fmri_rlm", class(res))
   res
 }
@@ -42,13 +50,23 @@ chunkwise_rlm <- function(dset, model, contrast_objects, nchunks,
                           verbose = FALSE, use_fast_path = FALSE,
                           progress = FALSE,
                           cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
-                          cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE) {
+                          cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
+                          robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
+                          robust_c_tukey = 4.685, robust_max_iter = 2L,
+                          robust_scale_scope = c("run", "global")) {
+  robust_psi <- match.arg(robust_psi)
+  robust_scale_scope <- match.arg(robust_scale_scope)
   chunkwise_lm.fmri_dataset(dset, model, contrast_objects, nchunks,
                             robust = TRUE, verbose = verbose,
                             use_fast_path = use_fast_path, progress = progress,
                             cor_struct = cor_struct, cor_iter = cor_iter,
                             cor_global = cor_global, ar_p = ar_p,
-                            ar1_exact_first = ar1_exact_first)
+                            ar1_exact_first = ar1_exact_first,
+                            robust_psi = robust_psi,
+                            robust_k_huber = robust_k_huber,
+                            robust_c_tukey = robust_c_tukey,
+                            robust_max_iter = robust_max_iter,
+                            robust_scale_scope = robust_scale_scope)
 }
 
 #' Perform Runwise Robust Linear Modeling on fMRI Dataset
@@ -59,13 +77,23 @@ runwise_rlm <- function(dset, model, contrast_objects,
                        verbose = FALSE, use_fast_path = FALSE,
                        progress = FALSE,
                        cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
-                       cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE) {
+                       cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
+                       robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
+                       robust_c_tukey = 4.685, robust_max_iter = 2L,
+                       robust_scale_scope = c("run", "global")) {
+  robust_psi <- match.arg(robust_psi)
+  robust_scale_scope <- match.arg(robust_scale_scope)
   runwise_lm(dset, model, contrast_objects, robust = TRUE,
              verbose = verbose, use_fast_path = use_fast_path,
              progress = progress,
              cor_struct = cor_struct, cor_iter = cor_iter,
              cor_global = cor_global, ar_p = ar_p,
-             ar1_exact_first = ar1_exact_first)
+             ar1_exact_first = ar1_exact_first,
+             robust_psi = robust_psi,
+             robust_k_huber = robust_k_huber,
+             robust_c_tukey = robust_c_tukey,
+             robust_max_iter = robust_max_iter,
+             robust_scale_scope = robust_scale_scope)
 }
 
 #' Fit a multiresponse robust linear model
