@@ -20,6 +20,10 @@ HRF_SPMG1(t, P1 = 5, P2 = 15, A1 = 0.0833)
 HRF_SPMG2(t)
 
 HRF_SPMG3(t)
+
+HRF_BSPLINE(t)
+
+HRF_FIR(t)
 }
 \arguments{
 \item{t}{Numeric vector of time points (in seconds) at which to evaluate the HRF}
@@ -118,6 +122,7 @@ evmodel2 <- event_model(
 
 Other hrf: 
 \code{\link{fitted_hrf}()},
-\code{\link{nbasis}()}
+\code{\link{nbasis}()},
+\code{\link{penalty_matrix}()}
 }
 \concept{hrf}

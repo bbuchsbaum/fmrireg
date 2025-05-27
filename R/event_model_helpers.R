@@ -311,14 +311,22 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
   # Warn if names were actually changed by make.names (indicates initial clash)
   if (!identical(current_colnames, unique_colnames)) {
       changed_indices <- which(current_colnames != unique_colnames)
-      # Provide a more informative warning about which names were auto-suffixed
-      warning_message <- paste0(
-          "Duplicate column names detected and automatically resolved by appending suffixes (e.g., '.1', '.2'). ",
-          "This typically occurs when multiple terms generate identical column name proposals (e.g., from multiple hrf(Ident(X,Y)) calls where 'X' is repeated, or if term_tags clash in unforeseen ways).",
-          " Review model specification if this is unexpected. Changed names include:\n",
-          paste0("  Original: '", current_colnames[changed_indices], "' -> Became: '", unique_colnames[changed_indices], "'", collapse = "\n")
-      )
-      warning(warning_message, call. = FALSE)
+      
+      # Filter out changes that are just empty strings being converted to valid names
+      # These are not real duplicates, just invalid names being fixed
+      real_duplicate_indices <- changed_indices[current_colnames[changed_indices] != ""]
+      
+      # Only warn if there are actual meaningful duplicates (not just empty string fixes)
+      if (length(real_duplicate_indices) > 0) {
+          # Provide a more informative warning about which names were auto-suffixed
+          warning_message <- paste0(
+              "Duplicate column names detected and automatically resolved by appending suffixes (e.g., '.1', '.2'). ",
+              "This typically occurs when multiple terms generate identical column name proposals (e.g., from multiple hrf(Ident(X,Y)) calls where 'X' is repeated, or if term_tags clash in unforeseen ways).",
+              " Review model specification if this is unexpected. Changed names include:\n",
+              paste0("  Original: '", current_colnames[real_duplicate_indices], "' -> Became: '", unique_colnames[real_duplicate_indices], "'", collapse = "\n")
+          )
+          warning(warning_message, call. = FALSE)
+      }
   }
   colnames(dm_mat) <- unique_colnames
   

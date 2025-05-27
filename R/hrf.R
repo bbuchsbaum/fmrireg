@@ -860,3 +860,13 @@ evaluate.HRF <- function(x, grid, amplitude = 1, duration = 0,
     out
   }
 }
+
+# Create pre-defined HRF objects using generators -----
+
+#' @rdname HRF_objects
+#' @export
+HRF_BSPLINE <- hrf_bspline_generator(nbasis=5, span=24)
+
+#' @rdname HRF_objects  
+#' @export
+HRF_FIR <- hrf_fir_generator(nbasis=12, span=24)

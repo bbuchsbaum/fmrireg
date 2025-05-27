@@ -670,6 +670,7 @@ estimate_hrf <- function(form, fixed = NULL, block, dataset,
 
 #' @noRd 
 #' @keywords internal
+#' @importFrom rlang new_formula
 inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise")) {
   stopifnot(is.formula(oldform))
   
@@ -690,8 +691,9 @@ inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise")) 
       }
       # 2) Rebuild the call, then override/add `basis = new_basis`
       call_rebuilt <- as.call(expr_args)
-      call_modified <- call_modify(call_rebuilt, basis = new_basis)
-      return(call_modified)
+      # Manually add the basis argument
+      call_rebuilt$basis <- new_basis
+      return(call_rebuilt)
     } else {
       # Not hrf() or trialwise(), so keep walking
       expr_args <- as.list(expr)
@@ -713,6 +715,184 @@ inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise")) 
   # Build the new formula with the same environment
   newform <- new_formula(lhs = lhs, rhs = rhs_new, env = f_env)
   newform
+}
+
+#' GLM OLS Estimation Convenience Function
+#'
+#' A convenience wrapper around `estimate_betas` for ordinary least squares (OLS) estimation.
+#' This function provides a simplified interface for fitting GLMs using OLS on matrix datasets.
+#' 
+#' **Use Cases:**
+#' - **Condition-level estimation**: Estimates average responses for each experimental condition
+#' - **General linear modeling**: Standard GLM approach for group-level or condition-level effects
+#' - **Multi-trial averaging**: Combines trials of the same condition to estimate mean responses
+#' 
+#' For single-trial estimation where each trial gets its own beta estimate, use `glm_lss()` instead.
+#'
+#' @param dataset A `matrix_dataset` object containing the fMRI time series data
+#' @param model_obj An `event_model` object specifying the experimental design
+#' @param basis_obj An HRF basis object (e.g., from `HRF_SPMG1`, `HRF_FIR`, etc.)
+#' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
+#' @param block A formula specifying the block factor (default: ~ 1 for single block)
+#' @param progress Logical; show progress bar (default: TRUE)
+#' @param ... Additional arguments passed to `estimate_betas`
+#'
+#' @return A list of class "fmri_betas" containing the estimated coefficients
+#'
+#' @examples
+#' \dontrun{
+#' # Create event model and data
+#' event_data <- data.frame(
+#'   onset = c(10, 30, 50, 70),
+#'   condition = factor(c("A", "B", "A", "B")),
+#'   run = rep(1, 4)
+#' )
+#' sframe <- sampling_frame(blocklens = 100, TR = 2)
+#' model_obj <- event_model(onset ~ hrf(condition), 
+#'                         data = event_data, 
+#'                         block = ~ run, 
+#'                         sampling_frame = sframe)
+#' 
+#' # Create data matrix (100 timepoints, 10 voxels)
+#' Y <- matrix(rnorm(1000), 100, 10)
+#' 
+#' # Create matrix_dataset with event table
+#' dset <- matrix_dataset(Y, TR = 2, run_length = 100, event_table = event_data)
+#' 
+#' # Fit with OLS - estimates average response for each condition
+#' fit <- glm_ols(dset, model_obj, HRF_SPMG1)
+#' dim(fit$betas_ran)  # 2 conditions x 10 voxels
+#' }
+#'
+#' @export
+#' @seealso \code{\link{estimate_betas}} for the underlying estimation function, 
+#'   \code{\link{glm_lss}} for single trial estimation
+glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL, 
+                    block = ~ 1, progress = TRUE, ...) {
+  
+  # Validate inputs
+  if (!inherits(dataset, "matrix_dataset")) {
+    stop("dataset must be a matrix_dataset object. Use matrix_dataset() to create one from your data matrix.")
+  }
+  
+  if (!inherits(model_obj, "event_model")) {
+    stop("model_obj must be an event_model object")
+  }
+  
+  # Extract the formula from the event model and inject the new basis
+  original_formula <- model_obj$model_spec$formula_or_list
+  if (is.null(original_formula)) {
+    stop("Cannot extract formula from event_model")
+  }
+  
+  # Inject the new basis into the formula
+  updated_formula <- inject_basis(original_formula, basis_obj)
+  
+  # Call estimate_betas with the updated formula and the dataset's event table
+  estimate_betas(dataset, 
+                fixed = NULL,
+                ran = updated_formula, 
+                block = block,
+                method = "ols",
+                basemod = basemod,
+                progress = progress,
+                ...)
+}
+
+#' GLM LSS Estimation Convenience Function (Single Trial Estimation)
+#'
+#' A convenience wrapper around `estimate_betas` for least squares separate (LSS) estimation.
+#' **This is primarily designed for single trial estimation**, where each individual trial/event 
+#' gets its own separate beta estimate rather than averaging across trials of the same condition.
+#' 
+#' **Primary Use Case - Single Trial Estimation:**
+#' - **Trial-wise beta estimation**: Each trial gets its own beta coefficient
+#' - **Single trial analysis**: Useful for decoding, representational similarity analysis (RSA)
+#' - **Trial-by-trial variability**: Captures individual trial responses rather than condition averages
+#' - **Avoiding trial averaging**: Preserves trial-specific information that would be lost in standard GLM
+#' 
+#' **Method Details:**
+#' LSS (Least Squares Separate) fits a separate model for each trial, where the trial of interest 
+#' gets its own regressor while all other trials of the same condition are modeled together. This 
+#' approach avoids the collinearity issues that would arise from including separate regressors 
+#' for every trial simultaneously.
+#' 
+#' For standard condition-level estimation (averaging trials within conditions), use `glm_ols()` instead.
+#'
+#' @param dataset A `matrix_dataset` object containing the fMRI time series data
+#' @param model_obj An `event_model` object specifying the experimental design
+#' @param basis_obj An HRF basis object (e.g., from `HRF_SPMG1`, `HRF_FIR`, etc.)
+#' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
+#' @param block A formula specifying the block factor (default: ~ 1 for single block)
+#' @param use_cpp Logical; whether to use C++ implementation for speed (default: TRUE)
+#' @param progress Logical; show progress bar (default: TRUE)
+#' @param ... Additional arguments passed to `estimate_betas`
+#'
+#' @return A list of class "fmri_betas" containing the estimated trial-wise coefficients
+#'
+#' @examples
+#' \dontrun{
+#' # Create event model and data
+#' event_data <- data.frame(
+#'   onset = c(10, 30, 50, 70),
+#'   condition = factor(c("A", "B", "A", "B")),
+#'   run = rep(1, 4)
+#' )
+#' sframe <- sampling_frame(blocklens = 100, TR = 2)
+#' model_obj <- event_model(onset ~ hrf(condition), 
+#'                         data = event_data, 
+#'                         block = ~ run, 
+#'                         sampling_frame = sframe)
+#' 
+#' # Create data matrix (100 timepoints, 10 voxels)
+#' Y <- matrix(rnorm(1000), 100, 10)
+#' 
+#' # Simple usage: pass matrix directly (matrix_dataset created automatically)
+#' fit <- glm_lss(Y, model_obj, HRF_SPMG1)
+#' dim(fit$betas_ran)  # 4 trials x 10 voxels (NOT averaged by condition)
+#' 
+#' # This is useful for:
+#' # - Decoding analysis (predicting condition from single trial patterns)
+#' # - RSA (representational similarity analysis)
+#' # - Studying trial-by-trial variability
+#' }
+#'
+#' @export
+#' @seealso \code{\link{estimate_betas}} for the underlying estimation function, 
+#'   \code{\link{glm_ols}} for condition-level estimation
+glm_lss <- function(dataset, model_obj, basis_obj, basemod = NULL, 
+                    block = ~ 1, use_cpp = TRUE, progress = TRUE, ...) {
+  
+  # Validate inputs
+  if (!inherits(dataset, "matrix_dataset")) {
+    stop("dataset must be a matrix_dataset object. Use matrix_dataset() to create one from your data matrix.")
+  }
+  
+  if (!inherits(model_obj, "event_model")) {
+    stop("model_obj must be an event_model object")
+  }
+  
+  # Extract the formula from the event model and inject the new basis
+  original_formula <- model_obj$model_spec$formula_or_list
+  if (is.null(original_formula)) {
+    stop("Cannot extract formula from event_model")
+  }
+  
+  # Inject the new basis into the formula
+  updated_formula <- inject_basis(original_formula, basis_obj)
+  
+  # Choose method based on use_cpp parameter
+  method <- if (use_cpp) "lss_cpp" else "lss"
+  
+  # Call estimate_betas with the updated formula
+  estimate_betas(dataset, 
+                fixed = NULL,
+                ran = updated_formula, 
+                block = block,
+                method = method,
+                basemod = basemod,
+                progress = progress,
+                ...)
 }
 
 

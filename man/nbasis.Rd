@@ -94,6 +94,7 @@ nbasis(evmodel)  # Returns: 3 (basis functions per condition)
 
 Other hrf: 
 \code{\link{HRF_objects}},
-\code{\link{fitted_hrf}()}
+\code{\link{fitted_hrf}()},
+\code{\link{penalty_matrix}()}
 }
 \concept{hrf}

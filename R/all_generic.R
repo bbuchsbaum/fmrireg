@@ -1221,6 +1221,48 @@ global_onsets <- function(x, onsets, ...) UseMethod("global_onsets")
 nbasis <- function(x, ...) UseMethod("nbasis")
 
 
+#' Generate penalty matrix for regularization
+#'
+#' @description
+#' Generate a penalty matrix for regularizing HRF basis coefficients. The penalty matrix
+#' encodes shape priors that discourage implausible or overly wiggly HRF estimates.
+#' Different HRF types use different penalty structures:
+#' 
+#' \itemize{
+#'   \item{FIR/B-spline bases: Roughness penalties based on discrete derivatives}
+#'   \item{SPM canonical + derivatives: Differential shrinkage of derivative terms}
+#'   \item{Fourier bases: Penalties on high-frequency components}
+#'   \item{Default: Identity matrix (ridge penalty)}
+#' }
+#'
+#' @param x The HRF object or basis specification
+#' @param ... Additional arguments passed to specific methods
+#' @return A symmetric positive definite penalty matrix of dimension nbasis(x) × nbasis(x)
+#' @details
+#' The penalty matrix R is used in regularized estimation as λ * h^T R h, where h are
+#' the basis coefficients and λ is the regularization parameter. Well-designed penalty
+#' matrices can significantly improve HRF estimation by encoding smoothness or other
+#' shape constraints.
+#' 
+#' @examples
+#' # FIR basis with smoothness penalty
+#' fir_hrf <- HRF_FIR
+#' R_fir <- penalty_matrix(fir_hrf)
+#' 
+#' # B-spline basis with second-order smoothness
+#' bspline_hrf <- HRF_BSPLINE  
+#' R_bspline <- penalty_matrix(bspline_hrf, order = 2)
+#' 
+#' # SPM canonical with derivative shrinkage
+#' spmg3_hrf <- HRF_SPMG3
+#' R_spmg3 <- penalty_matrix(spmg3_hrf, shrink_deriv = 4)
+#' 
+#' @export
+#' @family hrf
+#' @seealso [nbasis()], [HRF_objects]
+penalty_matrix <- function(x, ...) UseMethod("penalty_matrix")
+
+
  
 #' Return a set of data chunks
 #' 

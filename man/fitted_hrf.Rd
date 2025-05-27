@@ -62,6 +62,7 @@ hrf_values <- fitted_hrf(fit, sample_at = times)
 
 Other hrf: 
 \code{\link{HRF_objects}},
-\code{\link{nbasis}()}
+\code{\link{nbasis}()},
+\code{\link{penalty_matrix}()}
 }
 \concept{hrf}

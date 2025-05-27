@@ -115,10 +115,10 @@ Collate:
     'metafuns.R'
     'mixed_solve.R'
     'naming-utils.R'
+    'penalty_matrix.R'
     'reg-constructor.R'
     'reg-methods.R'
     'regressor.R'
     'sampling_frame.R'
     'simulate.R'
     'zzz.R'
-
