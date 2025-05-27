@@ -127,49 +127,10 @@ is.formula <- function(x) {
 #' @keywords internal
 #' @noRd
 .fast_lm_matrix <- function(X, Y, proj, return_fitted = FALSE) {
-  # X : n × p design matrix
-  # Y : n × V data matrix
-  # proj$Pinv : (X'X)^-1 X'
-
-  if (!is.matrix(Y)) {
-    Y <- as.matrix(Y)
-  }
-  if (!is.matrix(X)) {
-    X <- as.matrix(X)
-  }
-
-  if (ncol(X) != nrow(proj$Pinv) || nrow(X) != nrow(Y)) {
-    stop(".fast_lm_matrix: X and Y dimensions do not match projection matrix")
-  }
-
-  Betas <- proj$Pinv %*% Y
-
-  if (return_fitted) {
-    Fitted <- X %*% Betas
-    rss <- colSums((Y - Fitted)^2)
-  } else {
-    yTy <- colSums(Y^2)
-    XtX <- solve(proj$XtXinv)
-    XtX_Betas <- XtX %*% Betas
-    beta_XtX_beta <- colSums(Betas * XtX_Betas)
-    rss <- yTy - beta_XtX_beta
-    rss[rss < 0 & rss > -1e-10] <- 0
-    if (any(rss < -1e-10)) {
-      warning("Negative residual sum of squares computed in .fast_lm_matrix")
-    }
-    Fitted <- NULL
-  }
-
-  sigma2 <- rss / proj$dfres
-  sigma <- sqrt(sigma2)
-
-  list(
-    betas = Betas,
-    rss   = rss,
-    sigma = sigma,
-    sigma2 = sigma2,
-    fitted = Fitted
-  )
+  ctx <- glm_context(X = X, Y = Y, proj = proj)
+  res <- solve_glm_core(ctx, return_fitted = return_fitted)
+  res$sigma <- sqrt(res$sigma2)
+  res
 }
 
 #' Fast row-wise robust regression for a single run
