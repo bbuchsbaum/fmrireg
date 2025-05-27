@@ -66,7 +66,10 @@ Let's integrate these principles into a revised, comprehensive proposal and tick
 
 **Phase 0: Architectural Foundation (Blockers for subsequent work)**
 
-*   **Ticket ARCH-001: Implement `fmri_lm_config` Object & Factory**
+*   **Ticket ARCH-001: Implement `fmri_lm_config` Object & Factory** *(implemented)*
+    *   New `fmri_lm_control()` factory now lives in `R/fmri_lm_config.R` and returns
+        an `fmri_lm_config` object containing validated `robust` and `ar` option
+        lists.
     *   **Task:** Create `R/fmri_lm_config.R`. Define `fmri_lm_config` S3 class. Implement `fmri_lm_control(robust_options = list(...), ar_options = list(...), ...)` factory function that takes all relevant fitting options, applies defaults, validates, and returns an `fmri_lm_config` object.
     *   **Details:** `robust_options` list to contain `type`, `k_huber`, `c_tukey`, `max_iter`, `scale_scope`, `reestimate_phi`. `ar_options` list to contain `struct`, `p`, `iter_gls`, `global`, `voxelwise`, `exact_first`.
     *   **Acceptance:** Config object created, validated, and holds all fitting parameters.
