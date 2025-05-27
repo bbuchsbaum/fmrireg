@@ -584,7 +584,7 @@ initialize_contrast_storage <- function(conlist, fconlist, n_voxels) {
 #'
 #' @param storage Contrast storage list from `initialize_contrast_storage()`.
 #' @param voxel_index Integer voxel index being processed.
-#' @param qr_w QR decomposition of whitened design matrix for this voxel.
+#' @param qr_or_XtXinv QR decomposition or precomputed XtX inverse for this voxel.
 #' @param beta_w Regression coefficients for this voxel.
 #' @param sigma_w Residual standard deviation for this voxel.
 #' @param conlist Named list of t-contrasts.
@@ -593,9 +593,14 @@ initialize_contrast_storage <- function(conlist, fconlist, n_voxels) {
 #' @param ar_order AR model order.
 #' @keywords internal
 #' @noRd
-store_voxel_contrasts <- function(storage, voxel_index, qr_w, beta_w, sigma_w,
-                                  conlist, fconlist, dfres, ar_order = 0) {
-  XtXinv <- chol2inv(qr.R(qr_w))
+store_voxel_contrasts <- function(storage, voxel_index, qr_or_XtXinv, beta_w,
+                                  sigma_w, conlist, fconlist, dfres,
+                                  ar_order = 0, robust_weights = NULL) {
+  XtXinv <- if (is.matrix(qr_or_XtXinv)) {
+    qr_or_XtXinv
+  } else {
+    chol2inv(qr.R(qr_or_XtXinv))
+  }
   Bv <- matrix(beta_w, ncol = 1)
 
   for (nm in names(conlist)) {
@@ -605,7 +610,8 @@ store_voxel_contrasts <- function(storage, voxel_index, qr_w, beta_w, sigma_w,
     full_l[, colind] <- l
 
     res <- .fast_t_contrast(Bv, sigma_w^2, XtXinv, full_l, dfres,
-                            robust_weights = NULL, ar_order = ar_order)
+                            robust_weights = robust_weights,
+                            ar_order = ar_order)
 
     storage[[nm]]$estimate[voxel_index] <- res$estimate
     storage[[nm]]$se[voxel_index] <- res$se
@@ -621,7 +627,8 @@ store_voxel_contrasts <- function(storage, voxel_index, qr_w, beta_w, sigma_w,
     full_L[, colind] <- L
 
     res <- .fast_F_contrast(Bv, sigma_w^2, XtXinv, full_L, dfres,
-                            robust_weights = NULL, ar_order = ar_order)
+                            robust_weights = robust_weights,
+                            ar_order = ar_order)
 
     storage[[nm]]$estimate[voxel_index] <- res$estimate
     storage[[nm]]$se[voxel_index] <- res$se
@@ -690,6 +697,7 @@ format_contrast_results <- function(storage, dfres) {
 #' @noRd
 fit_lm_contrasts_voxelwise_chunked <- function(X_run, Y_run, phi_matrix,
                                                conlist, fconlist,
+                                               robust_options = NULL,
                                                chunk_size = 100) {
   if (!is.matrix(X_run)) X_run <- as.matrix(X_run)
   if (!is.matrix(Y_run)) Y_run <- as.matrix(Y_run)
@@ -719,13 +727,25 @@ fit_lm_contrasts_voxelwise_chunked <- function(X_run, Y_run, phi_matrix,
       X_w <- tmp$X
       Y_w <- tmp$Y
 
-      qr_w <- qr(X_w)
-      beta_w <- qr.coef(qr_w, Y_w)
-      sigma_w <- sqrt(sum(qr.resid(qr_w, Y_w)^2) /
-                      max(1, nrow(X_w) - qr_w$rank))
+      if (!is.null(robust_options) && robust_options$type != FALSE) {
+        proj_w <- .fast_preproject(X_w)
+        ctx_w <- glm_context(X = X_w, Y = Y_w, proj = proj_w, phi_hat = phi_v)
+        rfit <- robust_iterative_fitter(ctx_w, robust_options, X_w)
+        beta_w <- rfit$betas_robust
+        XtXinv <- rfit$XtWXi_final
+        sigma_w <- rfit$sigma_robust_scale_final
+        rw <- rfit$robust_weights_final
+      } else {
+        qr_w <- qr(X_w)
+        beta_w <- qr.coef(qr_w, Y_w)
+        XtXinv <- chol2inv(qr.R(qr_w))
+        sigma_w <- sqrt(sum(qr.resid(qr_w, Y_w)^2) /
+                        max(1, nrow(X_w) - qr_w$rank))
+        rw <- NULL
+      }
 
-      storage <- store_voxel_contrasts(storage, v, qr_w, beta_w, sigma_w,
-                                       conlist, fconlist, dfres, ar_order)
+      storage <- store_voxel_contrasts(storage, v, XtXinv, beta_w, sigma_w,
+                                       conlist, fconlist, dfres, ar_order, rw)
     }
   }
 
