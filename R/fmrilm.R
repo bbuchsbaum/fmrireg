@@ -1550,7 +1550,7 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
               betas_voxelwise <- matrix(NA_real_, p, n_voxels)
               sigma_voxelwise <- numeric(n_voxels)
               rss_voxelwise <- numeric(n_voxels)
-              XtXinv_list <- vector("list", n_voxels)
+              XtXinv_voxel_list <- vector("list", n_voxels)
               robust_w_list <- if (cfg$robust$type != FALSE) vector("list", n_voxels) else NULL
 
               for (v in seq_len(n_voxels)) {
@@ -1574,25 +1574,25 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                       sigma_fixed_for_vox <- if (cfg$robust$scale_scope == "global" && !is.null(sigma_fixed)) sigma_fixed else NULL
                       rfit <- robust_iterative_fitter(ctx_vox_w, cfg$robust, tmp$X, sigma_fixed_for_vox)
                       betas_voxelwise[, v] <- rfit$betas_robust
-                      XtXinv_list[[v]] <- rfit$XtWXi_final
+                      XtXinv_voxel_list[[v]] <- rfit$XtWXi_final
                       rss_voxelwise[v] <- sum((tmp$Y - tmp$X %*% rfit$betas_robust)^2)
                       sigma_voxelwise[v] <- rfit$sigma_robust_scale_final
                       robust_w_list[[v]] <- rfit$robust_weights_final
                   } else {
                       fit_v <- solve_glm_core(ctx_vox_w)
                       betas_voxelwise[, v] <- fit_v$betas
-                      XtXinv_list[[v]] <- proj_w$XtXinv
+                      XtXinv_voxel_list[[v]] <- proj_w$XtXinv
                       rss_voxelwise[v] <- fit_v$rss
                       sigma_voxelwise[v] <- sqrt(fit_v$sigma2)
                   }
               }
 
-              bstats <- beta_stats_matrix_voxelwise(betas_voxelwise, XtXinv_list,
+              bstats <- beta_stats_matrix_voxelwise(betas_voxelwise, XtXinv_voxel_list,
                                                     sigma_voxelwise, dfres, vnames,
                                                     robust_w_list, ar_order)
 
               conres <- fit_lm_contrasts_voxelwise(betas_voxelwise, sigma_voxelwise^2,
-                                                    XtXinv_list, simple_conlist_weights,
+                                                    XtXinv_voxel_list, simple_conlist_weights,
                                                     fconlist_weights, dfres,
                                                     robust_w_list, ar_order)
 
