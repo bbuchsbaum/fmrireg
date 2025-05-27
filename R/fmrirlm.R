@@ -19,11 +19,16 @@ fmri_rlm <- function(formula, block, baseline_model = NULL, dataset,
                      durations = 0, drop_empty = TRUE,
                      strategy = c("runwise", "chunkwise"),
                      nchunks = 10,
+                     cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
+                     cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
                      ...) {
 
   res <- fmri_lm(formula, block, baseline_model = baseline_model, dataset = dataset,
                  durations = durations, drop_empty = drop_empty,
                  strategy = strategy, nchunks = nchunks,
+                 cor_struct = cor_struct, cor_iter = cor_iter,
+                 cor_global = cor_global, ar_p = ar_p,
+                 ar1_exact_first = ar1_exact_first,
                  robust = TRUE, ...)
   class(res) <- c("fmri_rlm", class(res))
   res
@@ -35,10 +40,15 @@ fmri_rlm <- function(formula, block, baseline_model = NULL, dataset,
 #' @keywords internal
 chunkwise_rlm <- function(dset, model, contrast_objects, nchunks,
                           verbose = FALSE, use_fast_path = FALSE,
-                          progress = FALSE) {
+                          progress = FALSE,
+                          cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
+                          cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE) {
   chunkwise_lm.fmri_dataset(dset, model, contrast_objects, nchunks,
                             robust = TRUE, verbose = verbose,
-                            use_fast_path = use_fast_path, progress = progress)
+                            use_fast_path = use_fast_path, progress = progress,
+                            cor_struct = cor_struct, cor_iter = cor_iter,
+                            cor_global = cor_global, ar_p = ar_p,
+                            ar1_exact_first = ar1_exact_first)
 }
 
 #' Perform Runwise Robust Linear Modeling on fMRI Dataset
@@ -47,10 +57,15 @@ chunkwise_rlm <- function(dset, model, contrast_objects, nchunks,
 #' @keywords internal
 runwise_rlm <- function(dset, model, contrast_objects,
                        verbose = FALSE, use_fast_path = FALSE,
-                       progress = FALSE) {
+                       progress = FALSE,
+                       cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
+                       cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE) {
   runwise_lm(dset, model, contrast_objects, robust = TRUE,
              verbose = verbose, use_fast_path = use_fast_path,
-             progress = progress)
+             progress = progress,
+             cor_struct = cor_struct, cor_iter = cor_iter,
+             cor_global = cor_global, ar_p = ar_p,
+             ar1_exact_first = ar1_exact_first)
 }
 
 #' Fit a multiresponse robust linear model

@@ -321,6 +321,12 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
+#' @param cor_struct Error correlation structure. One of \code{"iid"}, \code{"ar1"}, \code{"ar2"}, or \code{"arp"}.
+#'   Currently only argument threading is implemented.
+#' @param cor_iter Number of GLS iterations. Currently unused.
+#' @param cor_global Logical. If \code{TRUE}, a single AR estimate is used for all runs. Currently unused.
+#' @param ar_p Integer order for \code{cor_struct = "arp"}. Currently unused.
+#' @param ar1_exact_first Logical. If \code{TRUE} apply exact AR(1) scaling to the first sample. Currently unused.
 #' @param ... Additional arguments.
 #' @return A fitted linear regression model for fMRI data analysis.
 #' @export
@@ -349,7 +355,9 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' strategy="chunkwise", nchunks=1, dataset=dset)
 #' 
 fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE, robust = FALSE,
-                    strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, progress = FALSE, ...) {
+                    strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, progress = FALSE,
+                    cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L, cor_global = FALSE,
+                    ar_p = NULL, ar1_exact_first = FALSE, ...) {
   
   strategy <- match.arg(strategy)
   
@@ -361,6 +369,13 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
   assert_that(is.logical(drop_empty), msg = "'drop_empty' must be logical")
   assert_that(is.logical(robust), msg = "'robust' must be logical")
   assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
+  cor_struct <- match.arg(cor_struct)
+  assert_that(is.numeric(cor_iter) && cor_iter >= 1, msg = "'cor_iter' must be >= 1")
+  assert_that(is.logical(cor_global), msg = "'cor_global' must be logical")
+  if (cor_struct == "arp") {
+    assert_that(!is.null(ar_p) && ar_p > 0, msg = "'ar_p' must be positive when cor_struct='arp'")
+  }
+  assert_that(is.logical(ar1_exact_first), msg = "'ar1_exact_first' must be logical")
   if (strategy == "chunkwise") {
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
   }
@@ -372,7 +387,10 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
   model <- create_fmri_model(formula, block, baseline_model, dataset, durations = durations, drop_empty = drop_empty)
   # Pass use_fast_path down
   ret <- fmri_lm_fit(model, dataset, strategy, robust, nchunks,
-                     use_fast_path = use_fast_path, progress = progress, ...)
+                     use_fast_path = use_fast_path, progress = progress,
+                     cor_struct = cor_struct, cor_iter = cor_iter,
+                     cor_global = cor_global, ar_p = ar_p,
+                     ar1_exact_first = ar1_exact_first, ...)
   return(ret)
 }
 
@@ -390,12 +408,19 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
+#' @param cor_struct Error correlation structure. One of \code{"iid"}, \code{"ar1"}, \code{"ar2"}, or \code{"arp"}.
+#' @param cor_iter Number of GLS iterations.
+#' @param cor_global Logical. If \code{TRUE}, estimate a single AR model for all runs.
+#' @param ar_p Integer order for \code{cor_struct = "arp"}.
+#' @param ar1_exact_first Logical. Apply exact AR(1) scaling to first sample.
 #' @param ... Additional arguments.
 #' @return A fitted fMRI linear regression model with the specified fitting strategy.
 #' @keywords internal
 #' @seealso \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{fmri_dataset}}
 fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
-                        robust = FALSE, nchunks = 10, use_fast_path = FALSE, progress = FALSE, ...) {
+                        robust = FALSE, nchunks = 10, use_fast_path = FALSE, progress = FALSE,
+                        cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
+                        cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE, ...) {
   strategy <- match.arg(strategy)
   
   # Error checking
@@ -403,6 +428,13 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset' object")
   assert_that(is.logical(robust), msg = "'robust' must be logical")
   assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
+  cor_struct <- match.arg(cor_struct)
+  assert_that(is.numeric(cor_iter) && cor_iter >= 1, msg = "'cor_iter' must be >= 1")
+  assert_that(is.logical(cor_global), msg = "'cor_global' must be logical")
+  if (cor_struct == "arp") {
+    assert_that(!is.null(ar_p) && ar_p > 0, msg = "'ar_p' must be positive when cor_struct='arp'")
+  }
+  assert_that(is.logical(ar1_exact_first), msg = "'ar1_exact_first' must be logical")
   if (strategy == "chunkwise") {
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
   }
@@ -468,17 +500,26 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   result <- switch(strategy,
                    "runwise" = runwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                          robust = robust, use_fast_path = use_fast_path,
-                                         progress = progress, ...),
+                                         progress = progress,
+                                         cor_struct = cor_struct, cor_iter = cor_iter,
+                                         cor_global = cor_global, ar_p = ar_p,
+                                         ar1_exact_first = ar1_exact_first, ...),
                    "chunkwise" = {
-                     if (inherits(dataset, "latent_dataset")) {
-                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
-                                   nchunks, robust = robust, progress = progress, ...) # Do not pass use_fast_path
-                     } else {
-                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
+                    if (inherits(dataset, "latent_dataset")) {
+                      chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
+                                   nchunks, robust = robust, progress = progress,
+                                   cor_struct = cor_struct, cor_iter = cor_iter,
+                                   cor_global = cor_global, ar_p = ar_p,
+                                   ar1_exact_first = ar1_exact_first, ...) # Do not pass use_fast_path
+                    } else {
+                      chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                    nchunks, robust = robust, use_fast_path = use_fast_path,
-                                   progress = progress, ...)
-                     }
-                   })
+                                   progress = progress,
+                                   cor_struct = cor_struct, cor_iter = cor_iter,
+                                   cor_global = cor_global, ar_p = ar_p,
+                                   ar1_exact_first = ar1_exact_first, ...)
+                    }
+                  })
   
   ret <- list(
     result = result,
@@ -984,7 +1025,9 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
 chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, robust = FALSE,
-                                      verbose = FALSE, use_fast_path = FALSE, progress = FALSE) {
+                                      verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
+                                      cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
+                                      cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE) {
   chunks <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
   if (progress) {
     pb <- cli::cli_progress_bar("Fitting chunks", total = length(chunks), clear = FALSE)
@@ -1105,7 +1148,9 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
 #' @keywords internal
 #' @autoglobal
 runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = FALSE,
-                       use_fast_path = FALSE, progress = FALSE) {
+                       use_fast_path = FALSE, progress = FALSE,
+                       cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
+                       cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE) {
   # Get an iterator of data chunks (runs)
   chunks <- exec_strategy("runwise")(dset)
   if (progress) {
