@@ -401,10 +401,6 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
   if (strategy == "chunkwise") {
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
   }
-  if (robust && use_fast_path) {
-      warning("Robust fitting ('robust=TRUE') is not currently implemented with 'use_fast_path=TRUE'. Ignoring 'robust=TRUE'.")
-      robust <- FALSE # Force robust to FALSE if fast path is used
-  }
   
   model <- create_fmri_model(formula, block, baseline_model, dataset, durations = durations, drop_empty = drop_empty)
   # Pass use_fast_path down
@@ -486,11 +482,6 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   assert_that(is.logical(ar1_exact_first), msg = "'ar1_exact_first' must be logical")
   if (strategy == "chunkwise") {
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
-  }
-  if (robust && use_fast_path) {
-      # Warning already issued in fmri_lm, but double check
-      warning("Robust fitting ('robust=TRUE') is not currently implemented with 'use_fast_path=TRUE'. Ignoring 'robust=TRUE'.")
-      robust <- FALSE
   }
   
   # Get contrast info grouped by term
