@@ -80,6 +80,7 @@ Collate:
     'afni.R'
     'all_generic.R'
     'autoplot-methods.R'
+    'ar_utils.R'
     'baseline_model.R'
     'basis.R'
     'benchmark_datasets.R'
