@@ -53,7 +53,8 @@ chunkwise_rlm <- function(dset, model, contrast_objects, nchunks,
                           cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
                           robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
                           robust_c_tukey = 4.685, robust_max_iter = 2L,
-                          robust_scale_scope = c("run", "global")) {
+                          robust_scale_scope = c("run", "global"),
+                          sigma_fixed = NULL) {
   robust_psi <- match.arg(robust_psi)
   robust_scale_scope <- match.arg(robust_scale_scope)
   chunkwise_lm.fmri_dataset(dset, model, contrast_objects, nchunks,
@@ -62,6 +63,7 @@ chunkwise_rlm <- function(dset, model, contrast_objects, nchunks,
                             cor_struct = cor_struct, cor_iter = cor_iter,
                             cor_global = cor_global, ar_p = ar_p,
                             ar1_exact_first = ar1_exact_first,
+                            sigma_fixed = sigma_fixed,
                             robust_psi = robust_psi,
                             robust_k_huber = robust_k_huber,
                             robust_c_tukey = robust_c_tukey,
@@ -80,7 +82,8 @@ runwise_rlm <- function(dset, model, contrast_objects,
                        cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
                        robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
                        robust_c_tukey = 4.685, robust_max_iter = 2L,
-                       robust_scale_scope = c("run", "global")) {
+                       robust_scale_scope = c("run", "global"),
+                       sigma_fixed = NULL) {
   robust_psi <- match.arg(robust_psi)
   robust_scale_scope <- match.arg(robust_scale_scope)
   runwise_lm(dset, model, contrast_objects, robust = TRUE,
@@ -89,6 +92,7 @@ runwise_rlm <- function(dset, model, contrast_objects,
              cor_struct = cor_struct, cor_iter = cor_iter,
              cor_global = cor_global, ar_p = ar_p,
              ar1_exact_first = ar1_exact_first,
+             sigma_fixed = sigma_fixed,
              robust_psi = robust_psi,
              robust_k_huber = robust_k_huber,
              robust_c_tukey = robust_c_tukey,
