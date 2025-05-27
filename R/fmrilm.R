@@ -1380,12 +1380,6 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
       fconlist_weights <- lapply(fconlist, `[[`, "weights")
       names(fconlist_weights) <- names(fconlist) 
       
-      if (robust) {
-          warning("Robust fitting not implemented for fast path, using standard OLS.")
-          robust <- FALSE
-      }
-      
-
       message("Using fast path for runwise LM...")
 
       ar_modeling <- match.arg(cor_struct) != "iid"
@@ -1424,51 +1418,84 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
             stop(paste("Dimension mismatch in run", ym$chunk_num, ": X_run rows (", nrow(X_run), ") != Y_run rows (", nrow(Y_run), ")"))
         }
 
-        phi_hat_run <- NULL
-        if (ar_modeling) {
-            if (is.null(phi_fixed)) {
-                ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
-                resid_ols <- Y_run - ols$fitted
-                phi_hat_run <- .estimate_ar(rowMeans(resid_ols), ar_order)
-            } else {
-                phi_hat_run <- phi_fixed
-            }
-        }
+        if (robust) {
+            fit_r <- fast_rlm_run(X_run, Y_run, proj_run,
+                                  psi = robust_psi,
+                                  k_huber = robust_k_huber,
+                                  c_tukey = robust_c_tukey,
+                                  max_it = robust_max_iter)
 
-        gls <- NULL
-        proj_iter <- proj_run
-        X_iter <- X_run
-        Y_iter <- Y_run
-        for (iter in seq_len(cor_iter)) {
+            actual_vnames <- colnames(X_run)
+            sigma_vec <- rep(fit_r$sigma, ncol(Y_run))
+            resid_final <- Y_run - X_run %*% fit_r$betas
+            rss <- colSums(resid_final^2)
+            resvar <- rss / fit_r$dfres
+
+            bstats <- beta_stats_matrix(fit_r$betas, fit_r$XtXinv, sigma_vec,
+                                        fit_r$dfres, actual_vnames)
+
+            conres <- fit_lm_contrasts_fast(fit_r$betas, resvar, fit_r$XtXinv,
+                                             simple_conlist_weights, fconlist_weights,
+                                             fit_r$dfres)
+
+            cres[[i]] <- list(
+              conres = conres,
+              bstats = bstats,
+              event_indices = event_indices,
+              baseline_indices = baseline_indices,
+              rss = rss,
+              rdf = fit_r$dfres,
+              resvar = resvar,
+              sigma = sigma_vec
+            )
+
+        } else {
+            phi_hat_run <- NULL
             if (ar_modeling) {
-                X_iter <- X_run
-                Y_iter <- Y_run
-                ar_whiten_inplace(Y_iter, X_iter, phi_hat_run, ar1_exact_first)
-                proj_iter <- .fast_preproject(X_iter)
+                if (is.null(phi_fixed)) {
+                    ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
+                    resid_ols <- Y_run - ols$fitted
+                    phi_hat_run <- .estimate_ar(rowMeans(resid_ols), ar_order)
+                } else {
+                    phi_hat_run <- phi_fixed
+                }
             }
-            gls <- .fast_lm_matrix(X_iter, Y_iter, proj_iter)
-            if (ar_modeling && is.null(phi_fixed) && iter < cor_iter) {
-                resid_gls <- Y_iter - X_iter %*% gls$betas
-                phi_hat_run <- .estimate_ar(rowMeans(resid_gls), ar_order)
+
+            gls <- NULL
+            proj_iter <- proj_run
+            X_iter <- X_run
+            Y_iter <- Y_run
+            for (iter in seq_len(cor_iter)) {
+                if (ar_modeling) {
+                    X_iter <- X_run
+                    Y_iter <- Y_run
+                    ar_whiten_inplace(Y_iter, X_iter, phi_hat_run, ar1_exact_first)
+                    proj_iter <- .fast_preproject(X_iter)
+                }
+                gls <- .fast_lm_matrix(X_iter, Y_iter, proj_iter)
+                if (ar_modeling && is.null(phi_fixed) && iter < cor_iter) {
+                    resid_gls <- Y_iter - X_iter %*% gls$betas
+                    phi_hat_run <- .estimate_ar(rowMeans(resid_gls), ar_order)
+                }
             }
+
+            actual_vnames <- colnames(X_iter)
+            bstats <- beta_stats_matrix(gls$betas, proj_iter$XtXinv, gls$sigma, proj_iter$dfres, actual_vnames)
+
+            conres <- fit_lm_contrasts_fast(gls$betas, gls$sigma2, proj_iter$XtXinv,
+                                             simple_conlist_weights, fconlist_weights, proj_iter$dfres)
+
+            cres[[i]] <- list(
+              conres = conres,
+              bstats = bstats,
+              event_indices = event_indices,
+              baseline_indices = baseline_indices,
+              rss = gls$rss,
+              rdf = proj_iter$dfres,
+              resvar = gls$sigma2,
+              sigma = gls$sigma
+            )
         }
-
-        actual_vnames <- colnames(X_iter)
-        bstats <- beta_stats_matrix(gls$betas, proj_iter$XtXinv, gls$sigma, proj_iter$dfres, actual_vnames)
-
-        conres <- fit_lm_contrasts_fast(gls$betas, gls$sigma2, proj_iter$XtXinv,
-                                         simple_conlist_weights, fconlist_weights, proj_iter$dfres)
-
-        cres[[i]] <- list(
-          conres = conres,
-          bstats = bstats,
-          event_indices = event_indices,
-          baseline_indices = baseline_indices,
-          rss = gls$rss,
-          rdf = proj_iter$dfres,
-          resvar = gls$sigma2,
-          sigma = gls$sigma
-        )
         if (progress) cli::cli_progress_update(id = pb)
       }
       
