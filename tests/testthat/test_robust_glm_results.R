@@ -73,3 +73,14 @@ test_that("fast_rlm_run approximates MASS::rlm", {
   fit_mass <- MASS::rlm(X, y, psi = MASS::psi.huber, k = 1.345)
   expect_equal(as.numeric(fit_fast$betas), as.numeric(fit_mass$coef), tolerance = 0.05)
 })
+
+test_that("fast_rlm_run errors with NA input", {
+  X <- cbind(1, rnorm(5))
+  y <- rnorm(5)
+  X[2, 1] <- NA
+  proj <- fmrireg:::.fast_preproject(X)
+  expect_error(fmrireg:::fast_rlm_run(X, matrix(y, ncol = 1), proj), "NA")
+  X[2, 1] <- 1
+  y[3] <- NA
+  expect_error(fmrireg:::fast_rlm_run(X, matrix(y, ncol = 1), proj), "NA")
+})

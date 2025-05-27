@@ -197,6 +197,9 @@ fast_rlm_run <- function(X, Y, proj,
                          sigma_fixed = NULL) {
 
   psi <- match.arg(psi)
+  if (anyNA(Y) || anyNA(X)) {
+    stop("NA values detected in 'X' or 'Y' for fast_rlm_run")
+  }
   if (!is.matrix(Y)) Y <- as.matrix(Y)
   if (!is.matrix(X)) X <- as.matrix(X)
   if (missing(proj) || is.null(proj)) {
@@ -1310,7 +1313,11 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
 
           bstats_list <- lapply(cres, `[[`, "bstats")
           conres_list <- lapply(cres, `[[`, "conres")
-          sigma <- colMeans(do.call(rbind, lapply(cres, function(x) as.matrix(x$sigma))))
+          rdf_vals <- vapply(cres, `[[`, numeric(1), "rdf")
+          sigma_mat <- do.call(rbind, lapply(seq_along(cres), function(i) {
+            as.matrix(cres[[i]]$sigma^2) * rdf_vals[i]
+          }))
+          sigma <- sqrt(colSums(sigma_mat) / sum(rdf_vals))
           rss <- colSums(do.call(rbind, rss_acc))
           rdf <- sum(vapply(cres, `[[`, numeric(1), "rdf"))
           resvar <- rss / rdf
@@ -1660,9 +1667,13 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
   conres_list <- lapply(cres, `[[`, "conres")
   
   # Compute overall statistics (these seem independent of fast/slow path)
-  sigma <- colMeans(do.call(rbind, lapply(cres, function(x) as.matrix(x$sigma)))) # Make sure sigma is matrix/vector
+  rdf_vals <- unlist(lapply(cres, `[[`, "rdf"))
+  sigma_mat <- do.call(rbind, lapply(seq_along(cres), function(i) {
+    as.matrix(cres[[i]]$sigma^2) * rdf_vals[i]
+  }))
+  sigma <- sqrt(colSums(sigma_mat) / sum(rdf_vals))
   rss <- colSums(do.call(rbind, lapply(cres, function(x) as.matrix(x$rss))))
-  rdf <- sum(unlist(lapply(cres, `[[`, "rdf")))
+  rdf <- sum(rdf_vals)
   resvar <- rss / rdf # Overall residual variance
   
   # Pool over runs

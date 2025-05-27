@@ -55,3 +55,13 @@ test_that("ar_whiten_inplace exact first AR1", {
   expect_equal(Y, Yref)
   expect_equal(X, Xref)
 })
+
+test_that("ar_whiten_inplace errors with NA input", {
+  Y <- matrix(rnorm(4), ncol = 1)
+  X <- matrix(rnorm(4), ncol = 1)
+  Y[2, 1] <- NA
+  expect_error(ar_whiten_inplace(Y, X, 0.3), "NA")
+  Y[2, 1] <- 0
+  X[3, 1] <- NA
+  expect_error(ar_whiten_inplace(Y, X, 0.3), "NA")
+})
