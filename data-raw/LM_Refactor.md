@@ -91,7 +91,7 @@ Let's integrate these principles into a revised, comprehensive proposal and tick
     *   **Depends on:** (none in this phase)
     *   **Acceptance:** AR utilities are self-contained.
 
-*   **Ticket ARCH-005: Implement Robust Engine `robust_iterative_fitter`**
+*   **Ticket ARCH-005: Implement Robust Engine `robust_iterative_fitter`** *(implemented)*
     *   **Task:** Create `R/fmri_robust_fitting.R`. Implement `robust_iterative_fitter(initial_glm_ctx, cfg_robust_options, X_orig_for_resid, sigma_fixed = NULL)`.
     *   **Details:** This function takes an *initial* `glm_context` (typically after OLS on original or whitened data). It performs the IRLS loop:
         1.  Calculate residuals (needs `X_orig_for_resid` which is the `X` corresponding to the `Y` in `initial_glm_ctx` *before* robust weighting).
@@ -212,3 +212,324 @@ Let's integrate these principles into a revised, comprehensive proposal and tick
 ---
 
 This revised plan heavily emphasizes the architectural changes first (Phase 0), then builds the fast paths incrementally (Robust-only, then AR-only, then combined AR+Robust). The `chunkwise` AR+Robust path remains the most intricate. The API is simplified by grouping options into `fmri_lm_control`. The "must-fix" items are critical prerequisites.
+
+---
+
+**Phase 4: Voxelwise AR Contrast Support**
+
+**Problem Statement:**
+The current voxelwise AR implementation in the slow path (SPRINT3-05R) does not compute contrasts. It returns an empty contrast list with a comment "would need proper handling of contrasts". This is a critical gap that prevents users from performing hypothesis testing when using voxelwise AR modeling.
+
+**Technical Challenges:**
+1. Each voxel has different AR parameters, leading to different whitening transformations
+2. The (X'X)^-1 matrix differs for each voxel after whitening
+3. Standard errors must account for voxel-specific whitening
+4. Memory efficiency is crucial when storing per-voxel covariance matrices
+
+**Proposed Solution:**
+
+*   **Ticket SPRINT4-01R: Refactor Voxelwise AR to Use Modular Components**
+    *   **Task:** Replace the current `lm.fit()` calls with the modular `glm_context` and `solve_glm_core` approach.
+    *   **Details:**
+        1. For each voxel:
+            - Create initial `glm_ctx_voxel` with `X_run` and single-voxel `Y`
+            - Estimate voxel-specific `phi_voxel`
+            - Create whitened `glm_ctx_voxel_w` after `ar_whiten_transform`
+            - Call `solve_glm_core` to get betas
+            - Store the whitened `proj$XtXinv` for contrast calculations
+        2. This ensures consistency with other paths and enables contrast support
+    *   **Depends on:** ARCH-002, ARCH-003, ARCH-004
+    *   **Acceptance:** Voxelwise AR uses same solver as other paths
+
+*   **Ticket SPRINT4-03R: Choose and Implement Voxelwise Strategy**
+    *   **Task:** Implement the chosen memory-efficient approach for voxelwise contrasts.
+    *   **Details:**
+        1. **Recommended: Chunked Processing Approach**
+           - Minimal memory footprint (< 100 MB)
+           - Slightly slower but negligible for most analyses
+           - Already aligns with fmrireg's chunking philosophy
+        
+        2. **Alternative: QR Storage** 
+           - If speed is critical and memory allows (~500MB-1GB)
+           - Better for iterative/interactive analyses
+           - Store QR decompositions instead of covariance matrices
+        
+        3. **Implementation priorities:**
+           - Correctness first
+           - Memory efficiency second
+           - Speed optimization third
+           - Parallel processing fourth
+    *   **Depends on:** SPRINT4-01R
+    *   **Acceptance:** Whole-brain voxelwise analysis completes without memory errors
+
+*   **Ticket SPRINT4-02R: Implement Memory-Efficient Voxelwise Contrast Engine**
+    *   **Task:** Create contrast calculation system that avoids storing per-voxel covariance matrices.
+    *   **Details:**
+        **Approach 1 - Store QR Decompositions (Recommended):**
+        ```r
+        # For each voxel, store compact QR instead of (X'X)^-1
+        # QR storage: n×p instead of p×p (typically 3-5x more efficient)
+        
+        fit_lm_contrasts_voxelwise_qr <- function(betas_matrix, qr_list, sigma_vec,
+                                                   conlist, fconlist, dfres) {
+          n_voxels <- ncol(betas_matrix)
+          
+          # Process each contrast
+          contrast_results <- list()
+          
+          for (con_name in names(conlist)) {
+            con_spec <- conlist[[con_name]]
+            colind <- attr(con_spec, "colind")
+            
+            # Allocate result vectors
+            est_vec <- numeric(n_voxels)
+            se_vec <- numeric(n_voxels)
+            
+            # Batch process voxels with similar QR structures
+            for (v in seq_len(n_voxels)) {
+              # Use QR to solve for contrast variance efficiently
+              qr_v <- qr_list[[v]]
+              l_full <- numeric(ncol(qr_v$qr))
+              l_full[colind] <- con_spec
+              
+              # Efficient computation using QR
+              # var(l'beta) = sigma^2 * l'(X'X)^-1*l = sigma^2 * ||Q'l||^2
+              Qtl <- qr.qty(qr_v, l_full)
+              var_contrast <- sum(Qtl[1:qr_v$rank]^2) * sigma_vec[v]^2
+              
+              est_vec[v] <- sum(l_full * betas_matrix[, v])
+              se_vec[v] <- sqrt(var_contrast)
+            }
+            
+            # Compute statistics
+            t_vec <- est_vec / se_vec
+            p_vec <- 2 * pt(abs(t_vec), dfres, lower.tail = FALSE)
+            
+            contrast_results[[con_name]] <- create_contrast_tibble(
+              con_name, est_vec, se_vec, t_vec, p_vec, sigma_vec
+            )
+          }
+          return(contrast_results)
+        }
+        ```
+        
+        **Approach 2 - Chunked Processing (Memory-Constrained):**
+        ```r
+        # Process voxels in chunks, recomputing XtXinv as needed
+        fit_lm_contrasts_voxelwise_chunked <- function(X_run, Y_run, phi_matrix,
+                                                        conlist, fconlist, 
+                                                        chunk_size = 100) {
+          n_voxels <- ncol(Y_run)
+          n_chunks <- ceiling(n_voxels / chunk_size)
+          
+          # Pre-allocate storage for all contrasts
+          contrast_storage <- initialize_contrast_storage(conlist, fconlist, n_voxels)
+          
+          for (chunk_idx in seq_len(n_chunks)) {
+            voxel_idx <- ((chunk_idx-1)*chunk_size + 1):min(chunk_idx*chunk_size, n_voxels)
+            
+            # Process chunk of voxels
+            for (v_local in seq_along(voxel_idx)) {
+              v_global <- voxel_idx[v_local]
+              
+              # Whiten for this voxel
+              phi_v <- phi_matrix[, v_global]
+              tmp <- ar_whiten_transform(X_run, Y_run[, v_global, drop=FALSE], 
+                                         phi_v, exact_first = TRUE)
+              X_w <- tmp$X
+              Y_w <- tmp$Y
+              
+              # Compute what we need for contrasts
+              qr_w <- qr(X_w)
+              beta_w <- qr.coef(qr_w, Y_w)
+              sigma_w <- sqrt(sum(qr.resid(qr_w, Y_w)^2) / (nrow(X_w) - qr_w$rank))
+              
+              # Calculate all contrasts for this voxel
+              store_voxel_contrasts(contrast_storage, v_global, 
+                                    qr_w, beta_w, sigma_w, conlist, fconlist)
+            }
+          }
+          
+          return(format_contrast_results(contrast_storage))
+        }
+        ```
+        
+        **Memory comparison:**
+        - Original: p×p×V matrices = 40×40×100000×8 bytes = 1.28 GB
+        - QR approach: n×p×V = 200×40×100000×8 bytes = 640 MB (2x savings)
+        - Chunked: p×p×chunk_size = 40×40×100×8 bytes = 1.28 MB (1000x savings)
+        
+    *   **Depends on:** SPRINT4-01R
+    *   **Acceptance:** Memory usage stays under 1GB for typical whole-brain analysis
+
+*   **Ticket SPRINT4-04R: Integrate Voxelwise Contrasts into runwise_lm**
+    *   **Task:** Update the voxelwise AR branch in `runwise_lm` to call the new contrast engine.
+    *   **Details:**
+        1. Replace empty `ret$contrasts <- list()` with:
+           ```r
+           conres <- fit_lm_contrasts_voxelwise(
+             betas_voxelwise, 
+             XtXinv_voxel_list,
+             sigma_voxelwise,
+             simple_conlist_weights,
+             fconlist_weights,
+             rdf
+           )
+           ```
+        2. Update `beta_stats_matrix` call to handle voxelwise case
+        3. Ensure proper structure for downstream pooling
+    *   **Depends on:** SPRINT4-02R
+    *   **Acceptance:** Voxelwise AR returns valid contrasts
+
+*   **Ticket SPRINT4-05R: Add Voxelwise AR + Robust Support**
+    *   **Task:** Implement full IRLS for voxelwise AR + robust combination.
+    *   **Details:**
+        1. For each voxel:
+            - Initial OLS → estimate AR parameters
+            - Whiten data with voxel-specific phi
+            - Run IRLS on whitened data
+            - Store robust weights and final estimates
+        2. Use `robust_iterative_fitter` with single-voxel contexts
+        3. Calculate contrasts with both AR and robust adjustments
+    *   **Depends on:** SPRINT4-01R, ARCH-005
+    *   **Acceptance:** Voxelwise AR + Robust fully functional
+
+*   **Ticket SPRINT4-06R: Performance Optimization**
+    *   **Task:** Optimize voxelwise calculations for realistic datasets.
+    *   **Details:**
+        1. Implement parallel processing over voxels (using future/parallel)
+        2. Vectorize where possible (batch similar AR parameters)
+        3. Add progress reporting for long-running analyses
+        4. Consider C++ implementation for inner loops if needed
+    *   **Depends on:** SPRINT4-04R
+    *   **Acceptance:** Voxelwise processing time is practical (< 10x slower than non-voxelwise)
+
+*   **Ticket SPRINT4-07R: Comprehensive Testing**
+    *   **Task:** Add extensive tests for voxelwise AR with contrasts.
+    *   **Details:**
+        1. Test contrast accuracy by comparing single-voxel results to standard lm()
+        2. Test memory efficiency with large numbers of voxels
+        3. Test edge cases (constant voxels, singular designs after whitening)
+        4. Test pooling of voxelwise results across runs
+        5. Verify effective DF calculations include voxel-specific AR orders
+    *   **Depends on:** SPRINT4-04R, SPRINT4-05R
+    *   **Acceptance:** All tests pass, edge cases handled
+
+**Alternative Approach (if memory is critical):**
+
+Instead of storing XtXinv for each voxel, we could:
+1. Compute a "reference" XtXinv using average AR parameters
+2. Store only the deviation of each voxel's XtXinv from reference
+3. Use perturbation theory to approximate voxel-specific standard errors
+
+This would trade some accuracy for substantial memory savings.
+
+---
+
+**Phase 5: Code Modularization and Cleanup**
+
+**Problem Statement:**
+The `fmrilm.R` file has grown to over 2000 lines with mixed responsibilities, duplicated code, and strategy implementations that are nearly 1000 lines each. This violates the modularity principles and makes the code hard to maintain.
+
+*   **Ticket SPRINT5-01R: Extract Model Utilities Module**
+    *   **Task:** Create `R/fmri_model_utils.R` and move model-related utilities.
+    *   **Details:**
+        - Move: `get_formula.fmri_model`, `term_matrices.fmri_model`
+        - Move: `create_fmri_model` (consider renaming to `fmri_model_from_formula`)
+        - Keep these functions focused on model manipulation, not fitting
+    *   **Acceptance:** Clean separation of model creation from fitting logic
+
+*   **Ticket SPRINT5-02R: Extract Results/Methods Module**  
+    *   **Task:** Create `R/fmri_lm_methods.R` for all S3 methods and result extraction.
+    *   **Details:**
+        - Move: `coef.fmri_lm`, `stats.fmri_lm`, `standard_error.fmri_lm`, `print.fmri_lm`
+        - Move: `fitted_hrf.fmri_lm`, `pull_stat`, `pull_stat_revised`
+        - Move: `reshape_coef` and other result manipulation helpers
+    *   **Acceptance:** All S3 methods in one place, separate from fitting logic
+
+*   **Ticket SPRINT5-03R: Create Strategy Base Module**
+    *   **Task:** Create `R/fmri_lm_strategies.R` with shared strategy code.
+    *   **Details:**
+        ```r
+        # Extract common patterns into reusable functions:
+        
+        # Process a single run (used by both strategies)
+        process_run_standard <- function(run_data, model, cfg, phi_fixed = NULL) {
+          # Common OLS/GLS logic
+        }
+        
+        process_run_robust <- function(run_data, model, cfg, phi_fixed = NULL, sigma_fixed = NULL) {
+          # Common robust fitting logic
+        }
+        
+        process_run_ar_robust <- function(run_data, model, cfg, phi_fixed = NULL, sigma_fixed = NULL) {
+          # Common AR+Robust logic
+        }
+        
+        # Pooling utilities
+        pool_run_results <- function(run_results) {
+          # Common pooling logic
+        }
+        ```
+    *   **Acceptance:** Shared logic extracted, no duplication between strategies
+
+*   **Ticket SPRINT5-04R: Refactor runwise_lm Using Shared Components**
+    *   **Task:** Rewrite `runwise_lm` to use the shared strategy components.
+    *   **Details:**
+        1. Reduce from 500+ lines to ~200 lines
+        2. Use `process_run_*` functions from strategy base
+        3. Clear separation of slow/fast paths
+        4. Move voxelwise AR to separate function `runwise_lm_voxelwise`
+    *   **Depends on:** SPRINT5-03R
+    *   **Acceptance:** Cleaner, more maintainable runwise implementation
+
+*   **Ticket SPRINT5-05R: Refactor chunkwise_lm Using Shared Components**
+    *   **Task:** Rewrite `chunkwise_lm` to use the shared strategy components.
+    *   **Details:**
+        1. Reduce from 945 lines to ~300 lines
+        2. Extract pre-computation phase to `prepare_chunkwise_matrices`
+        3. Extract chunk processing to `process_chunk`
+        4. Use shared pooling utilities
+    *   **Depends on:** SPRINT5-03R
+    *   **Acceptance:** Cleaner, more maintainable chunkwise implementation
+
+*   **Ticket SPRINT5-06R: Create Internal Utilities Module**
+    *   **Task:** Create `R/fmri_lm_internal.R` for low-level utilities.
+    *   **Details:**
+        - Move: `.fast_preproject`, `.fast_lm_matrix` (if still needed)
+        - Move: `is.formula` and other small helpers
+        - Document these as internal with proper roxygen2 tags
+        - Consider which should be exported for advanced users
+    *   **Acceptance:** Clean separation of internal utilities
+
+*   **Ticket SPRINT5-07R: Update Imports and Exports**
+    *   **Task:** Ensure all new modules properly import/export functions.
+    *   **Details:**
+        1. Update NAMESPACE via roxygen2
+        2. Add necessary @importFrom statements  
+        3. Document internal functions with @keywords internal
+        4. Run R CMD check to verify no missing imports
+    *   **Depends on:** SPRINT5-01R through SPRINT5-06R
+    *   **Acceptance:** Package builds cleanly with new module structure
+
+*   **Ticket SPRINT5-08R: Integration Testing**
+    *   **Task:** Verify that modularization doesn't break existing functionality.
+    *   **Details:**
+        1. Run full test suite
+        2. Add integration tests that verify module boundaries
+        3. Check that all examples still work
+        4. Benchmark to ensure no performance regression
+    *   **Depends on:** SPRINT5-07R
+    *   **Acceptance:** All tests pass, no performance degradation
+
+**Expected Outcome:**
+- `fmrilm.R` reduced from 2000+ lines to ~400 lines (just core API)
+- Clear module structure:
+  - `fmri_model_utils.R` (~200 lines)
+  - `fmri_lm_methods.R` (~300 lines)
+  - `fmri_lm_strategies.R` (~400 lines)
+  - `fmri_lm_runwise.R` (~300 lines)
+  - `fmri_lm_chunkwise.R` (~400 lines)
+  - `fmri_lm_internal.R` (~150 lines)
+- Easier to maintain, test, and extend
+- Follows single-responsibility principle

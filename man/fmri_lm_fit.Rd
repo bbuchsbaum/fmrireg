@@ -8,15 +8,12 @@ fmri_lm_fit(
   fmrimod,
   dataset,
   strategy = c("runwise", "chunkwise"),
-  robust = FALSE,
-  robust_psi = c("huber", "bisquare"),
-  robust_k_huber = 1.345,
-  robust_c_tukey = 4.685,
-  robust_max_iter = 2L,
-  robust_scale_scope = c("run", "global"),
+  cfg,
   nchunks = 10,
   use_fast_path = FALSE,
   progress = FALSE,
+  extra_nuisance = NULL,
+  keep_extra_nuisance_in_model = FALSE,
   ...
 )
 }
@@ -27,18 +24,17 @@ fmri_lm_fit(
 
 \item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
 
-\item{robust}{Logical. Whether to use robust fitting. Default is \code{FALSE}.}
+\item{cfg}{An \code{fmri_lm_config} object containing all fitting options. See \code{\link{fmri_lm_control}}.}
 
-\item{robust_psi}{Psi-function for row-wise weights when robust fitting is enabled. Either \code{"huber"} or \code{"bisquare"}.}
-\item{robust_k_huber}{Tuning constant \code{k} for Huber weighting.}
-\item{robust_c_tukey}{Tuning constant \code{c} for Tukey bisquare weighting.}
-\item{robust_max_iter}{Maximum number of IRLS iterations.}
-\item{robust_scale_scope}{Scope for robust scale estimation, \code{"run"} or \code{"global"}.}
 \item{nchunks}{Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.}
 
 \item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
 
 \item{progress}{Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.}
+
+\item{extra_nuisance}{Optional matrix or formula specifying additional nuisance regressors.}
+
+\item{keep_extra_nuisance_in_model}{Logical. Whether to keep extra nuisance regressors in the final model. Default is \code{FALSE}.}
 
 \item{...}{Additional arguments.}
 }
@@ -47,7 +43,8 @@ A fitted fMRI linear regression model with the specified fitting strategy.
 }
 \description{
 This function fits an fMRI linear regression model using the specified \code{fmri_model} object, dataset,
-and data splitting strategy (either \code{"runwise"} or \code{"chunkwise"}). When \code{robust = TRUE}, row-wise weights are computed in an Iteratively Reweighted Least Squares loop to down-weight frames with large residuals. Standard errors are based on a robust scale estimate, so resulting p-values are approximate. This function is primarily an internal worker used by \code{fmri_lm}.
+and data splitting strategy (either \code{"runwise"} or \code{"chunkwise"}). It is primarily an internal function
+used by the \code{fmri_lm} function.
 }
 \seealso{
 \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{fmri_dataset}}

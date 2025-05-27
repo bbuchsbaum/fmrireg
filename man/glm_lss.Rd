@@ -74,8 +74,11 @@ model_obj <- event_model(onset ~ hrf(condition),
 # Create data matrix (100 timepoints, 10 voxels)
 Y <- matrix(rnorm(1000), 100, 10)
 
-# Simple usage: pass matrix directly (matrix_dataset created automatically)
-fit <- glm_lss(Y, model_obj, HRF_SPMG1)
+# Create matrix_dataset with event table
+dset <- matrix_dataset(Y, TR = 2, run_length = 100, event_table = event_data)
+
+# Fit with LSS - estimates separate beta for each individual trial
+fit <- glm_lss(dset, model_obj, HRF_SPMG1)
 dim(fit$betas_ran)  # 4 trials x 10 voxels (NOT averaged by condition)
 
 # This is useful for:

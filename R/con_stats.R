@@ -331,12 +331,15 @@ fit_contrasts <- function(lmfit, conmat, colind, se = TRUE) {
 #' @keywords internal
 #' @noRd
 #' @autoglobal
-.fast_t_contrast  <- function(B, sigma2, XtXinv, l, df) {
+.fast_t_contrast  <- function(B, sigma2, XtXinv, l, df, 
+                               robust_weights = NULL, ar_order = 0) {
   # B:      p x V matrix (betas)
   # sigma2: V-vector (residual variance)
   # XtXinv: p x p matrix (inverse crossproduct of design)
   # l:      1 x p vector/matrix (contrast weights)
   # df:     scalar (residual degrees of freedom)
+  # robust_weights: Optional vector of robust weights
+  # ar_order: Order of AR model (0 if none)
   
   # Ensure l is a row vector (matrix)
   if (!is.matrix(l)) {
@@ -349,8 +352,17 @@ fit_contrasts <- function(lmfit, conmat, colind, se = TRUE) {
   # Avoid division by zero or NaNs if s2 or sigma2 are zero/negative
   se   <- sqrt(pmax(0, s2 * sigma2))            # 1 × V
   
+  # Calculate effective df if needed
+  if (!is.null(robust_weights) || ar_order > 0) {
+    p <- nrow(B)
+    n <- df + p  # Total observations
+    df_effective <- calculate_effective_df(n, p, robust_weights, ar_order, method = "simple")
+  } else {
+    df_effective <- df
+  }
+  
   tval <- ifelse(se < .Machine$double.eps^0.5, 0, est / se)
-  pval <- 2 * pt(-abs(tval), df)
+  pval <- 2 * pt(-abs(tval), df_effective)
 
   list(estimate = est,
        se       = se,
@@ -363,12 +375,15 @@ fit_contrasts <- function(lmfit, conmat, colind, se = TRUE) {
 #' @keywords internal
 #' @noRd
 #' @autoglobal
-.fast_F_contrast <- function(B, sigma2, XtXinv, L, df) {
+.fast_F_contrast <- function(B, sigma2, XtXinv, L, df,
+                              robust_weights = NULL, ar_order = 0) {
   # B:      p x V matrix (betas)
   # sigma2: V-vector (residual variance)
   # XtXinv: p x p matrix
   # L:      r x p matrix (contrast weights)
   # df:     scalar (residual degrees of freedom)
+  # robust_weights: Optional vector of robust weights
+  # ar_order: Order of AR model (0 if none)
   
   if (!is.matrix(L)) {
       stop(".fast_F_contrast requires L to be a matrix.")
@@ -399,11 +414,20 @@ fit_contrasts <- function(lmfit, conmat, colind, se = TRUE) {
   se <- sigma2 # Denominator mean square (residual variance)
   
   # Avoid division by zero/NaNs
+  # Calculate effective df if needed
+  if (!is.null(robust_weights) || ar_order > 0) {
+    p <- nrow(B)
+    n <- df + p  # Total observations
+    df_effective <- calculate_effective_df(n, p, robust_weights, ar_order, method = "simple")
+  } else {
+    df_effective <- df
+  }
+  
   Fval <- ifelse(abs(se) < .Machine$double.eps^0.5 | is.nan(qf), 
                  NaN, 
                  estimate / se)
                  
-  pval <- pf(Fval, r, df, lower.tail = FALSE)
+  pval <- pf(Fval, r, df_effective, lower.tail = FALSE)
 
   list(estimate = estimate, # Numerator MS
        se       = se,       # Denominator MS (sigma2)
@@ -415,13 +439,16 @@ fit_contrasts <- function(lmfit, conmat, colind, se = TRUE) {
 #' @keywords internal
 #' @noRd
 #' @autoglobal
-fit_lm_contrasts_fast <- function(B, sigma2, XtXinv, conlist, fconlist, df) {
+fit_lm_contrasts_fast <- function(B, sigma2, XtXinv, conlist, fconlist, df,
+                                  robust_weights = NULL, ar_order = 0) {
   # B:        p x V matrix (betas)
   # sigma2:   V-vector (residual variance)
   # XtXinv:   p x p matrix
   # conlist:  Named list of simple contrast vectors/matrices (1xp or px1)
   # fconlist: Named list of F contrast matrices (rxp)
   # df:       Scalar residual df
+  # robust_weights: Optional vector of robust weights
+  # ar_order: Order of AR model (0 if none)
 
   # ----- simple contrasts (t) -----
   simples <- purrr::imap(conlist, function(l, nm) {
@@ -449,7 +476,7 @@ fit_lm_contrasts_fast <- function(B, sigma2, XtXinv, conlist, fconlist, df) {
         full_l[, colind] <- l
     }
     
-    res <- .fast_t_contrast(B, sigma2, XtXinv, full_l, df)
+    res <- .fast_t_contrast(B, sigma2, XtXinv, full_l, df, robust_weights, ar_order)
     # Package into tibble matching estimate_contrast.contrast output structure
     dplyr::tibble(type      = "contrast",
            name      = nm,
@@ -482,7 +509,7 @@ fit_lm_contrasts_fast <- function(B, sigma2, XtXinv, conlist, fconlist, df) {
     full_L <- matrix(0, nrow = nrow(L), ncol = p)
     full_L[, colind] <- L
     
-    res <- .fast_F_contrast(B, sigma2, XtXinv, full_L, df)
+    res <- .fast_F_contrast(B, sigma2, XtXinv, full_L, df, robust_weights, ar_order)
     # Package into tibble matching estimate_contrast.Fcontrast output structure
     dplyr::tibble(type      = "Fcontrast",
            name      = nm,
@@ -523,16 +550,27 @@ fit_lm_contrasts_fast <- function(B, sigma2, XtXinv, conlist, fconlist, df) {
 #' @keywords internal
 #' @noRd
 #' @autoglobal
-beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames) {
+beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames, 
+                              robust_weights = NULL, ar_order = 0) {
   # Betas:    p x V matrix
   # XtXinv:   p x p matrix
   # sigma:    V-vector (residual std dev)
   # dfres:    Scalar residual df
   # varnames: p-vector of coefficient names
+  # robust_weights: Optional vector of robust weights
+  # ar_order: Order of AR model (0 if none)
   
   p <- nrow(Betas)
   V <- ncol(Betas)
   sigma2 <- sigma^2 # V-vector
+  
+  # Calculate effective degrees of freedom if needed
+  if (!is.null(robust_weights) || ar_order > 0) {
+    n <- dfres + p  # Total observations
+    df_effective <- calculate_effective_df(n, p, robust_weights, ar_order, method = "simple")
+  } else {
+    df_effective <- dfres
+  }
   
   # Compute SE for each beta, each voxel
   # se(beta_i) = sqrt( [XtXinv]_ii * sigma2 )
@@ -555,8 +593,8 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames) {
   # Avoid division by zero
   tstat <- ifelse(abs(vc) < .Machine$double.eps^0.5, 0, betamat / vc)
   
-  # Compute p-values
-  prob <- 2 * pt(-abs(tstat), dfres)
+  # Compute p-values using effective df
+  prob <- 2 * pt(-abs(tstat), df_effective)
   
   # Package into the same tibble structure as beta_stats
   ret <- dplyr::tibble(

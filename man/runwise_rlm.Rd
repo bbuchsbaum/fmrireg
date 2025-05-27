@@ -10,7 +10,18 @@ runwise_rlm(
   contrast_objects,
   verbose = FALSE,
   use_fast_path = FALSE,
-  progress = FALSE
+  progress = FALSE,
+  cor_struct = c("iid", "ar1", "ar2", "arp"),
+  cor_iter = 1L,
+  cor_global = FALSE,
+  ar_p = NULL,
+  ar1_exact_first = FALSE,
+  robust_psi = c("huber", "bisquare"),
+  robust_k_huber = 1.345,
+  robust_c_tukey = 4.685,
+  robust_max_iter = 2L,
+  robust_scale_scope = c("run", "global"),
+  sigma_fixed = NULL
 )
 }
 \arguments{
@@ -22,7 +33,11 @@ runwise_rlm(
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
 
+\item{use_fast_path}{Logical. Whether to use fast path computation (default is \code{FALSE}).}
+
 \item{progress}{Logical. Display a progress bar for run processing. Default is \code{FALSE}.}
+
+\item{sigma_fixed}{Optional fixed robust scale estimate.}
 }
 \description{
 Perform Runwise Robust Linear Modeling on fMRI Dataset

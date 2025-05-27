@@ -8,7 +8,6 @@
 #' @export
 #' @name translate_legacy_pattern
 #' @rdname translate_legacy_pattern
-
 translate_legacy_pattern <- function(pattern) {
   # 1. Replace Var[Level] -> Var.Level (Do this first)
   # Handles VarName[LevelName] -> VarName.LevelName
@@ -107,21 +106,6 @@ translate_legacy_pattern <- function(pattern) {
   w
 }
 
-#' Robust weight calculation using logical masks
-#' Returns a *named* numeric vector (names are condition names)
-#' @keywords internal
-# makeWeights <- function(keepA, keepB=NULL) {
-#   weights <- matrix(0, length(keepA), 1)
-#   numA <- sum(keepA)
-#   weights[keepA,1] <- rep(1/numA, numA)
-#   
-#   if (!is.null(keepB)) {
-#     numB <- sum(keepB)
-#     weights[keepB,1] <- -rep(1/numB, numB)
-#   }
-#   
-#   weights
-# }
 
 #' Robust weight calculation using logical masks
 #' Returns a *named* numeric vector (names are condition names)

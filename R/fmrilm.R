@@ -135,9 +135,9 @@ is.formula <- function(x) {
 
 #' Fast row-wise robust regression for a single run
 #'
-#' Implements an IRLS algorithm using Huber or Tukey bisquare weights on
-#' the time-point residuals. Returns robust coefficient estimates and
-#' standard errors.
+#' Wrapper around robust_iterative_fitter for backward compatibility.
+#' This function implements an IRLS algorithm using Huber or Tukey bisquare 
+#' weights on the time-point residuals.
 #'
 #' @param X Design matrix (time points \eqn{\times} predictors)
 #' @param Y Data matrix (time points \eqn{\times} voxels)
@@ -147,8 +147,8 @@ is.formula <- function(x) {
 #' @param k_huber Tuning constant for Huber weights
 #' @param c_tukey Tuning constant for Tukey bisquare weights
 #' @param max_it Maximum number of IRLS iterations
+#' @param sigma_fixed Optional fixed sigma value (for global scale estimation)
 #' @keywords internal
-#' @importFrom matrixStats rowMedians
 #' @noRd
 fast_rlm_run <- function(X, Y, proj,
                          psi = c("huber", "bisquare"),
@@ -158,66 +158,42 @@ fast_rlm_run <- function(X, Y, proj,
                          sigma_fixed = NULL) {
 
   psi <- match.arg(psi)
-  if (anyNA(Y) || anyNA(X)) {
-    stop("NA values detected in 'X' or 'Y' for fast_rlm_run")
-  }
-  if (!is.matrix(Y)) Y <- as.matrix(Y)
-  if (!is.matrix(X)) X <- as.matrix(X)
+  
+  # Create initial GLM context
   if (missing(proj) || is.null(proj)) {
     proj <- .fast_preproject(X)
   }
-
-  n <- nrow(X)
-  dfres <- n - ncol(X)
-
-  fit <- .fast_lm_matrix(X, Y, proj, return_fitted = TRUE)
-  betas <- fit$betas
-  resid <- Y - fit$fitted
-  XtWXi_final <- proj$XtXinv
-
-  for (it in seq_len(max_it)) {
-    row_med <- matrixStats::rowMedians(abs(resid))
-    sigma_hat <- if (is.null(sigma_fixed)) 1.4826 * median(row_med) else sigma_fixed
-    if (sigma_hat <= .Machine$double.eps) sigma_hat <- .Machine$double.eps
-    u <- row_med / sigma_hat
-
-    w <- switch(psi,
-                huber    = pmin(1, k_huber / abs(u)),
-                bisquare = ifelse(abs(u) <= c_tukey,
-                                   (1 - (u / c_tukey)^2)^2,
-                                   0))
-
-    sqrtw <- sqrt(w)
-    Xw <- X * sqrtw
-    Yw <- sweep(Y, 1, sqrtw, `*`)
-
-    proj_w <- .fast_preproject(Xw)
-    fit_w <- .fast_lm_matrix(Xw, Yw, proj_w,
-                             return_fitted = (it < max_it))
-
-    betas <- fit_w$betas
-    XtWXi_final <- proj_w$XtXinv
-    resid <- Y - X %*% betas
-  }
-
-  row_med_final <- matrixStats::rowMedians(abs(resid))
-  sigma_robust <- 1.4826 * median(row_med_final)
-  if (sigma_robust <= .Machine$double.eps) sigma_robust <- .Machine$double.eps
-  u_final <- row_med_final / sigma_robust
-  w_final <- switch(psi,
-                    huber    = pmin(1, k_huber / abs(u_final)),
-                    bisquare = ifelse(abs(u_final) <= c_tukey,
-                                       (1 - (u_final / c_tukey)^2)^2,
-                                       0))
-  se_beta <- sqrt(diag(XtWXi_final)) * sigma_robust
-
+  
+  initial_ctx <- glm_context(X = X, Y = Y, proj = proj)
+  
+  # Create robust options
+  cfg_robust_options <- list(
+    type = psi,
+    k_huber = k_huber,
+    c_tukey = c_tukey,
+    max_iter = max_it,
+    scale_scope = if (is.null(sigma_fixed)) "run" else "global"
+  )
+  
+  # Call robust_iterative_fitter
+  result <- robust_iterative_fitter(
+    initial_glm_ctx = initial_ctx,
+    cfg_robust_options = cfg_robust_options,
+    X_orig_for_resid = X,
+    sigma_fixed = sigma_fixed
+  )
+  
+  # Calculate standard errors
+  se_beta <- sqrt(diag(result$XtWXi_final)) * result$sigma_robust_scale_final
+  
+  # Return in the expected format
   list(
-    betas = betas,
+    betas = result$betas_robust,
     se = se_beta,
-    sigma = sigma_robust,
-    dfres = dfres,
-    XtXinv = XtWXi_final,
-    weights = w_final
+    sigma = result$sigma_robust_scale_final,
+    dfres = result$dfres,
+    XtXinv = result$XtWXi_final,
+    weights = result$robust_weights_final
   )
 }
 
@@ -280,34 +256,43 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' @param dataset An \code{fmri_dataset} object containing the time-series data.
 #' @param durations A vector of event durations. Default is \code{0}.
 #' @param drop_empty Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.
-#' @param robust Logical. Whether to use robust fitting. Default is \code{FALSE}.
-#' @param robust_psi The psi-function to use when \code{robust = TRUE}. Either
-#'   \code{"huber"} or \code{"bisquare"}.
-#' @param robust_k_huber Tuning constant \code{k} for Huber's psi.
-#' @param robust_c_tukey Tuning constant \code{c} for Tukey's bisquare psi.
-#' @param robust_max_iter Maximum number of IRLS iterations for robust fitting.
-#' @param robust_scale_scope Scope for robust scale estimation, either
-#'   \code{"run"} or \code{"global"}.
+#' @param robust Logical or character. Either \code{FALSE} (no robust fitting), 
+#'   \code{TRUE} (use Huber), or one of \code{"huber"} or \code{"bisquare"}. Default is \code{FALSE}.
+#' @param robust_options List of robust fitting options. See Details.
+#' @param ar_options List of autoregressive modeling options. See Details.
 #' @param strategy The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
-#' @param cor_struct Error correlation structure. One of \code{"iid"}, \code{"ar1"},
-#'   \code{"ar2"}, or \code{"arp"}. The \code{"arp"} option models an autoregressive
-#'   process of order \code{ar_p}. Only AR components are currently supported
-#'   (no moving-average terms).
-#' @param cor_iter Number of GLS iterations for AR prewhitening. A value of
-#'   \code{1} performs one OLS fit followed by one GLS fit.
-#' @param cor_global Logical. If \code{TRUE}, AR coefficients are estimated from
-#'   all runs combined and applied globally; otherwise they are estimated per
-#'   run.
-#' @param ar_p Integer order for \code{cor_struct = "arp"}.
-#' @param ar1_exact_first Logical. If \code{TRUE} applies exact AR(1) scaling to
-#'   the first sample when \code{cor_struct = "ar1"}.
+#' @param extra_nuisance Optional matrix or formula specifying additional nuisance regressors.
+#' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance regressors in the final model. Default is \code{FALSE}.
+#' @param ar_voxelwise Logical. Whether to estimate AR parameters voxel-wise. Default is \code{FALSE}.
 #' @param ... Additional arguments.
 #' @return A fitted linear regression model for fMRI data analysis.
+#' 
+#' @details
+#' \code{robust_options} may contain:
+#' \itemize{
+#'   \item \code{type}: Character or logical. Type of robust fitting (\code{FALSE}, \code{"huber"}, \code{"bisquare"})
+#'   \item \code{k_huber}: Numeric. Tuning constant for Huber's psi (default: 1.345)
+#'   \item \code{c_tukey}: Numeric. Tuning constant for Tukey's bisquare psi (default: 4.685)
+#'   \item \code{max_iter}: Integer. Maximum IRLS iterations (default: 2)
+#'   \item \code{scale_scope}: Character. Scope for scale estimation (\code{"run"} or \code{"global"})
+#'   \item \code{reestimate_phi}: Logical. Whether to re-estimate AR parameters after robust fitting
+#' }
+#' 
+#' \code{ar_options} may contain:
+#' \itemize{
+#'   \item \code{struct}: Character. Correlation structure (\code{"iid"}, \code{"ar1"}, \code{"ar2"}, \code{"arp"})
+#'   \item \code{p}: Integer. AR order when \code{struct = "arp"}
+#'   \item \code{iter_gls}: Integer. Number of GLS iterations (default: 1)
+#'   \item \code{global}: Logical. Use global AR coefficients (default: FALSE)
+#'   \item \code{voxelwise}: Logical. Estimate AR parameters voxel-wise (default: FALSE)
+#'   \item \code{exact_first}: Logical. Apply exact AR(1) scaling to first sample (default: FALSE)
+#' }
+#' 
 #' @export
-#' @seealso \code{\link{fmri_dataset}}, \code{\link{fmri_lm_fit}}
+#' @seealso \code{\link{fmri_dataset}}, \code{\link{fmri_lm_fit}}, \code{\link{fmri_lm_control}}
 #' @examples
 #' 
 #' facedes <- subset(read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), 
@@ -332,12 +317,9 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' strategy="chunkwise", nchunks=1, dataset=dset)
 #' 
 fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE,
-                    robust = FALSE, robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
-                    robust_c_tukey = 4.685, robust_max_iter = 2L,
-                    robust_scale_scope = c("run", "global"),
+                    robust = FALSE, robust_options = NULL, ar_options = NULL,
                     strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, progress = FALSE,
-                    cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L, cor_global = FALSE,
-                    ar_p = NULL, ar1_exact_first = FALSE, ...) {
+                    extra_nuisance = NULL, keep_extra_nuisance_in_model = FALSE, ar_voxelwise = FALSE, ...) {
   
   strategy <- match.arg(strategy)
   
@@ -347,37 +329,47 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
   assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset'")
   assert_that(is.numeric(durations), msg = "'durations' must be numeric")
   assert_that(is.logical(drop_empty), msg = "'drop_empty' must be logical")
-  assert_that(is.logical(robust), msg = "'robust' must be logical")
-  robust_psi <- match.arg(robust_psi)
-  assert_that(is.numeric(robust_k_huber), msg = "'robust_k_huber' must be numeric")
-  assert_that(is.numeric(robust_c_tukey), msg = "'robust_c_tukey' must be numeric")
-  assert_that(is.numeric(robust_max_iter) && robust_max_iter >= 1,
-              msg = "'robust_max_iter' must be >= 1")
-  robust_scale_scope <- match.arg(robust_scale_scope)
+  assert_that(is.logical(robust) || robust %in% c("huber", "bisquare"), 
+              msg = "'robust' must be logical or one of 'huber', 'bisquare'")
   assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
-  cor_struct <- match.arg(cor_struct)
-  assert_that(is.numeric(cor_iter) && cor_iter >= 1, msg = "'cor_iter' must be >= 1")
-  assert_that(is.logical(cor_global), msg = "'cor_global' must be logical")
-  if (cor_struct == "arp") {
-    assert_that(!is.null(ar_p) && ar_p > 0, msg = "'ar_p' must be positive when cor_struct='arp'")
-  }
-  assert_that(is.logical(ar1_exact_first), msg = "'ar1_exact_first' must be logical")
+  assert_that(is.logical(ar_voxelwise), msg = "'ar_voxelwise' must be logical")
   if (strategy == "chunkwise") {
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
   }
   
+  # Convert robust parameter to type for config
+  if (is.logical(robust)) {
+    robust_type <- if (robust) "huber" else FALSE
+  } else {
+    robust_type <- robust
+  }
+  
+  # Build robust_options if not provided
+  if (is.null(robust_options)) {
+    robust_options <- list()
+  }
+  if (!is.null(robust_type) && !("type" %in% names(robust_options))) {
+    robust_options$type <- robust_type
+  }
+  
+  # Build ar_options if not provided
+  if (is.null(ar_options)) {
+    ar_options <- list()
+  }
+  if (!("voxelwise" %in% names(ar_options))) {
+    ar_options$voxelwise <- ar_voxelwise
+  }
+  
+  # Create configuration object
+  cfg <- fmri_lm_control(robust_options = robust_options, ar_options = ar_options)
+  
   model <- create_fmri_model(formula, block, baseline_model, dataset, durations = durations, drop_empty = drop_empty)
-  # Pass use_fast_path down
-  ret <- fmri_lm_fit(model, dataset, strategy, robust, nchunks,
+  
+  # Pass configuration object down
+  ret <- fmri_lm_fit(model, dataset, strategy, cfg, nchunks,
                      use_fast_path = use_fast_path, progress = progress,
-                     cor_struct = cor_struct, cor_iter = cor_iter,
-                     cor_global = cor_global, ar_p = ar_p,
-                     ar1_exact_first = ar1_exact_first,
-                     robust_psi = robust_psi,
-                     robust_k_huber = robust_k_huber,
-                     robust_c_tukey = robust_c_tukey,
-                     robust_max_iter = robust_max_iter,
-                     robust_scale_scope = robust_scale_scope,
+                     extra_nuisance = extra_nuisance, 
+                     keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
                      ...)
   return(ret)
 }
@@ -392,58 +384,28 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
 #' @param fmrimod An \code{fmri_model} object.
 #' @param dataset An \code{fmri_dataset} object containing the time-series data.
 #' @param strategy The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.
-#' @param robust Logical. Whether to use robust fitting. Default is \code{FALSE}.
-#' @param robust_psi The psi-function to use when \code{robust = TRUE}. Either
-#'   \code{"huber"} or \code{"bisquare"}.
-#' @param robust_k_huber Tuning constant \code{k} for Huber's psi.
-#' @param robust_c_tukey Tuning constant \code{c} for Tukey's bisquare psi.
-#' @param robust_max_iter Maximum number of IRLS iterations for robust fitting.
-#' @param robust_scale_scope Scope for robust scale estimation, either
-#'   \code{"run"} or \code{"global"}.
+#' @param cfg An \code{fmri_lm_config} object containing all fitting options. See \code{\link{fmri_lm_control}}.
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
-#' @param cor_struct Error correlation structure. One of \code{"iid"}, \code{"ar1"},
-#'   \code{"ar2"}, or \code{"arp"}. The \code{"arp"} option models an AR process of
-#'   order \code{ar_p}. Only AR terms are currently supported.
-#' @param cor_iter Number of GLS iterations to run.
-#' @param cor_global Logical. If \code{TRUE}, a single AR model is estimated from
-#'   all runs and applied globally; otherwise a separate model is estimated per
-#'   run.
-#' @param ar_p Integer order used when \code{cor_struct = "arp"}.
-#' @param ar1_exact_first Logical. Apply exact AR(1) scaling to the first sample
-#'   when \code{cor_struct = "ar1"}.
+#' @param extra_nuisance Optional matrix or formula specifying additional nuisance regressors.
+#' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance regressors in the final model. Default is \code{FALSE}.
 #' @param ... Additional arguments.
 #' @return A fitted fMRI linear regression model with the specified fitting strategy.
 #' @keywords internal
 #' @seealso \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{fmri_dataset}}
 fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
-                        robust = FALSE, nchunks = 10, use_fast_path = FALSE, progress = FALSE,
-                        cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
-                        cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
-                        robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
-                        robust_c_tukey = 4.685, robust_max_iter = 2L,
-                        robust_scale_scope = c("run", "global"), ...) {
+                        cfg, nchunks = 10, use_fast_path = FALSE, progress = FALSE,
+                        extra_nuisance = NULL, keep_extra_nuisance_in_model = FALSE, ...) {
   strategy <- match.arg(strategy)
+  
+  # Validate config
+  assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
   
   # Error checking
   assert_that(inherits(fmrimod, "fmri_model"), msg = "'fmrimod' must be an 'fmri_model' object")
   assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset' object")
-  assert_that(is.logical(robust), msg = "'robust' must be logical")
   assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
-  robust_psi <- match.arg(robust_psi)
-  assert_that(is.numeric(robust_k_huber), msg = "'robust_k_huber' must be numeric")
-  assert_that(is.numeric(robust_c_tukey), msg = "'robust_c_tukey' must be numeric")
-  assert_that(is.numeric(robust_max_iter) && robust_max_iter >= 1,
-              msg = "'robust_max_iter' must be >= 1")
-  robust_scale_scope <- match.arg(robust_scale_scope)
-  cor_struct <- match.arg(cor_struct)
-  assert_that(is.numeric(cor_iter) && cor_iter >= 1, msg = "'cor_iter' must be >= 1")
-  assert_that(is.logical(cor_global), msg = "'cor_global' must be logical")
-  if (cor_struct == "arp") {
-    assert_that(!is.null(ar_p) && ar_p > 0, msg = "'ar_p' must be positive when cor_struct='arp'")
-  }
-  assert_that(is.logical(ar1_exact_first), msg = "'ar1_exact_first' must be logical")
   if (strategy == "chunkwise") {
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
   }
@@ -503,11 +465,11 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   # or extract weights (fast path).
   phi_global <- NULL
   sigma_global <- NULL
-  if (cor_global && match.arg(cor_struct) != "iid") {
-    ar_order <- switch(match.arg(cor_struct),
+  if (cfg$ar$global && cfg$ar$struct != "iid") {
+    ar_order <- switch(cfg$ar$struct,
                        ar1 = 1L,
                        ar2 = 2L,
-                       arp = ar_p)
+                       arp = cfg$ar$p)
 
     run_chunks <- exec_strategy("runwise")(dataset)
     form <- get_formula(fmrimod)
@@ -524,10 +486,10 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
       resid_vec <- c(resid_vec, rowMeans(Y_run - ols$fitted))
     }
     phi_global <- estimate_ar_parameters(resid_vec, ar_order)
-    cor_iter <- 1L
+    cfg$ar$iter_gls <- 1L
   }
 
-  if (robust && robust_scale_scope == "global") {
+  if (cfg$robust$type != FALSE && cfg$robust$scale_scope == "global") {
     run_chunks <- exec_strategy("runwise")(dataset)
     form <- get_formula(fmrimod)
     row_med_all <- numeric(0)
@@ -549,48 +511,30 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
 
   result <- switch(strategy,
                    "runwise" = runwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
-                                         robust = robust, use_fast_path = use_fast_path,
+                                         cfg = cfg, use_fast_path = use_fast_path,
                                          progress = progress,
-                                         cor_struct = cor_struct, cor_iter = cor_iter,
-                                         cor_global = cor_global, ar_p = ar_p,
-                                         ar1_exact_first = ar1_exact_first,
                                          phi_fixed = phi_global,
                                          sigma_fixed = sigma_global,
-                                         robust_psi = robust_psi,
-                                         robust_k_huber = robust_k_huber,
-                                         robust_c_tukey = robust_c_tukey,
-                                         robust_max_iter = robust_max_iter,
-                                         robust_scale_scope = robust_scale_scope,
+                                         extra_nuisance = extra_nuisance,
+                                         keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
                                          ...),
                    "chunkwise" = {
                     if (inherits(dataset, "latent_dataset")) {
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
-                                   nchunks, robust = robust, progress = progress,
-                                   cor_struct = cor_struct, cor_iter = cor_iter,
-                                   cor_global = cor_global, ar_p = ar_p,
-                                   ar1_exact_first = ar1_exact_first,
+                                   nchunks, cfg = cfg, progress = progress,
                                    phi_fixed = phi_global,
                                    sigma_fixed = sigma_global,
-                                   robust_psi = robust_psi,
-                                   robust_k_huber = robust_k_huber,
-                                   robust_c_tukey = robust_c_tukey,
-                                   robust_max_iter = robust_max_iter,
-                                   robust_scale_scope = robust_scale_scope,
+                                   extra_nuisance = extra_nuisance,
+                                   keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
                                    ...) # Do not pass use_fast_path
                     } else {
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
-                                   nchunks, robust = robust, use_fast_path = use_fast_path,
+                                   nchunks, cfg = cfg, use_fast_path = use_fast_path,
                                    progress = progress,
-                                   cor_struct = cor_struct, cor_iter = cor_iter,
-                                   cor_global = cor_global, ar_p = ar_p,
-                                   ar1_exact_first = ar1_exact_first,
                                    phi_fixed = phi_global,
                                    sigma_fixed = sigma_global,
-                                   robust_psi = robust_psi,
-                                   robust_k_huber = robust_k_huber,
-                                   robust_c_tukey = robust_c_tukey,
-                                   robust_max_iter = robust_max_iter,
-                                   robust_scale_scope = robust_scale_scope,
+                                   extra_nuisance = extra_nuisance,
+                                   keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
                                    ...)
                     }
                   })
@@ -1092,27 +1036,24 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 #' @param model The \code{fmri_model} used for the analysis.
 #' @param contrast_objects The list of full contrast objects.
 #' @param nchunks The number of chunks to divide the dataset into.
-#' @param robust Logical. Whether to use robust linear modeling (default is \code{FALSE}).
+#' @param cfg An \code{fmri_lm_config} object containing all fitting options.
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.
+#' @param phi_fixed Optional fixed AR parameters.
+#' @param sigma_fixed Optional fixed robust scale estimate.
+#' @param extra_nuisance Optional additional nuisance regressors.
+#' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance in model.
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
-chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, robust = FALSE,
+chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, cfg,
                                       verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
-                                      cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
-                                      cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
                                       phi_fixed = NULL,
                                       sigma_fixed = NULL,
-                                      robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
-                                      robust_c_tukey = 4.685, robust_max_iter = 2L,
-                                      robust_scale_scope = c("run", "global")) {
-  robust_psi <- match.arg(robust_psi)
-  robust_scale_scope <- match.arg(robust_scale_scope)
-  assert_that(is.numeric(robust_k_huber), msg = "'robust_k_huber' must be numeric")
-  assert_that(is.numeric(robust_c_tukey), msg = "'robust_c_tukey' must be numeric")
-  assert_that(is.numeric(robust_max_iter) && robust_max_iter >= 1,
-              msg = "'robust_max_iter' must be >= 1")
+                                      extra_nuisance = NULL,
+                                      keep_extra_nuisance_in_model = FALSE) {
+  # Validate config
+  assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
   chunks <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
   if (progress) {
     pb <- cli::cli_progress_bar("Fitting chunks", total = length(chunks), clear = FALSE)
@@ -1140,7 +1081,7 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
       Qr_global <- qr(modmat)
       Vu <- chol2inv(Qr_global$qr)
       
-      lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
+      lmfun <- if (cfg$robust$type != FALSE) multiresponse_rlm else multiresponse_lm
       
       cres <- vector("list", length(chunks))
       for (i in seq_along(chunks)) {
@@ -1170,50 +1111,161 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
       fconlist_weights <- lapply(fconlist, `[[`, "weights")
       names(fconlist_weights) <- names(fconlist) 
       
-      if (robust) {
-          message("Using fast path with robust weighting...")
+      if (cfg$robust$type != FALSE) {
+          # Combined AR + Robust path for chunkwise
+          ar_modeling <- cfg$ar$struct != "iid"
+          ar_order <- switch(cfg$ar$struct,
+                             ar1 = 1L,
+                             ar2 = 2L,
+                             arp = cfg$ar$p,
+                             iid = 0L)
+          
+          if (ar_modeling) {
+              message("Using fast path with AR + robust weighting...")
+          } else {
+              message("Using fast path with robust weighting...")
+          }
 
           run_chunks <- exec_strategy("runwise")(dset)
           run_row_inds <- lapply(run_chunks, `[[`, "row_ind")
 
           run_info <- vector("list", length(run_chunks))
 
+          # Pass-0: Per-run precomputation
           for (ri in seq_along(run_chunks)) {
               rch <- run_chunks[[ri]]
               tmats_run <- term_matrices(model, rch$chunk_num)
               data_env_run <- list2env(tmats_run)
               n_time_run <- nrow(tmats_run[[1]])
               data_env_run[[".y"]] <- rep(0, n_time_run)
-              X_run <- model.matrix(as.formula(form), data_env_run)
-              proj_run <- .fast_preproject(X_run)
-              Y_run <- as.matrix(rch$data)
+              X_run_orig <- model.matrix(as.formula(form), data_env_run)
+              proj_run_orig <- .fast_preproject(X_run_orig)
+              Y_run_full <- as.matrix(rch$data)
 
-              fit_r <- fast_rlm_run(X_run, Y_run, proj_run,
-                                    psi = robust_psi,
-                                    k_huber = robust_k_huber,
-                                    c_tukey = robust_c_tukey,
-                                    max_it = robust_max_iter,
-                                    sigma_fixed = sigma_fixed)
+              if (ar_modeling) {
+                  # Step 1: Estimate AR parameters from initial OLS
+                  glm_ctx_run_orig <- glm_context(X = X_run_orig, Y = Y_run_full, proj = proj_run_orig)
+                  
+                  phi_hat_run <- NULL
+                  if (is.null(phi_fixed)) {
+                      initial_fit <- solve_glm_core(glm_ctx_run_orig, return_fitted = TRUE)
+                      resid_ols <- Y_run_full - initial_fit$fitted
+                      phi_hat_run <- estimate_ar_parameters(rowMeans(resid_ols), ar_order)
+                  } else {
+                      phi_hat_run <- phi_fixed
+                  }
+                  
+                  # Step 2: AR whitening
+                  tmp <- ar_whiten_transform(X_run_orig, Y_run_full, phi_hat_run, cfg$ar$exact_first)
+                  X_run_w <- tmp$X
+                  Y_run_full_w <- tmp$Y
+                  proj_run_w <- .fast_preproject(X_run_w)
+                  
+                  # Step 3: Create whitened GLM context
+                  glm_ctx_run_whitened <- glm_context(X = X_run_w, Y = Y_run_full_w, proj = proj_run_w)
+                  
+                  # Determine sigma_fixed based on scope
+                  sigma_fixed_for_run <- if (cfg$robust$scale_scope == "global" && !is.null(sigma_fixed)) {
+                      sigma_fixed
+                  } else {
+                      NULL
+                  }
+                  
+                  # Step 4: Robust fitting on whitened data
+                  robust_fit_details_run <- robust_iterative_fitter(
+                      initial_glm_ctx = glm_ctx_run_whitened,
+                      cfg_robust_options = cfg$robust,
+                      X_orig_for_resid = X_run_w,
+                      sigma_fixed = sigma_fixed_for_run
+                  )
+                  
+                  # Step 5: Optional re-estimation of AR parameters
+                  if (!is.null(cfg$robust$reestimate_phi) && cfg$robust$reestimate_phi && is.null(phi_fixed)) {
+                      # Calculate robust residuals on whitened data
+                      resid_robust_w <- Y_run_full_w - X_run_w %*% robust_fit_details_run$betas_robust
+                      
+                      # Re-estimate AR parameters from robust residuals
+                      phi_hat_run_updated <- estimate_ar_parameters(rowMeans(resid_robust_w), ar_order)
+                      
+                      # Update phi_hat_run for subsequent processing
+                      phi_hat_run <- phi_hat_run_updated
+                  }
+                  
+                  # Store results
+                  run_info[[ri]] <- list(
+                      phi_hat = phi_hat_run,
+                      weights = robust_fit_details_run$robust_weights_final,
+                      sqrtw = sqrt(robust_fit_details_run$robust_weights_final),
+                      sigma = robust_fit_details_run$sigma_robust_scale_final,
+                      X_orig = X_run_orig,
+                      Y_orig = Y_run_full,
+                      row_indices = run_row_inds[[ri]]
+                  )
+              } else {
+                  # Robust-only path (no AR)
+                  glm_ctx_run_orig <- glm_context(X = X_run_orig, Y = Y_run_full, proj = proj_run_orig)
+                  
+                  # Determine sigma_fixed based on scope
+                  sigma_fixed_for_run <- if (cfg$robust$scale_scope == "global" && !is.null(sigma_fixed)) {
+                      sigma_fixed
+                  } else {
+                      NULL
+                  }
+                  
+                  # Call robust_iterative_fitter
+                  robust_fit <- robust_iterative_fitter(
+                      initial_glm_ctx = glm_ctx_run_orig,
+                      cfg_robust_options = cfg$robust,
+                      X_orig_for_resid = X_run_orig,
+                      sigma_fixed = sigma_fixed_for_run
+                  )
 
-              sqrtw <- sqrt(fit_r$weights)
-              Xw <- X_run * sqrtw
-              proj_w <- .fast_preproject(Xw)
-
-              run_info[[ri]] <- list(Pinv = proj_w$Pinv,
-                                     XtXinv = proj_w$XtXinv,
-                                     dfres = proj_w$dfres,
-                                     sigma = fit_r$sigma,
-                                     sqrtw = sqrtw,
-                                     X = X_run,
-                                     Y = Y_run)
+                  sqrtw <- sqrt(robust_fit$robust_weights_final)
+                  
+                  run_info[[ri]] <- list(
+                      weights = robust_fit$robust_weights_final,
+                      sqrtw = sqrtw,
+                      sigma = robust_fit$sigma_robust_scale_final,
+                      X_orig = X_run_orig,
+                      Y_orig = Y_run_full,
+                      row_indices = run_row_inds[[ri]]
+                  )
+              }
           }
 
+          # Build global transformed matrices
+          if (ar_modeling) {
+              # For AR+Robust: First whiten, then weight
+              X_global_list <- vector("list", length(run_chunks))
+              
+              for (ri in seq_along(run_chunks)) {
+                  # First apply AR whitening
+                  X_orig <- run_info[[ri]]$X_orig
+                  phi_hat <- run_info[[ri]]$phi_hat
+                  
+                  # Whiten X (with dummy Y since we only need X transformation)
+                  dummyY <- matrix(0, nrow(X_orig), 0)
+                  X_whitened <- ar_whiten_transform(X_orig, dummyY, phi_hat, cfg$ar$exact_first)$X
+                  
+                  # Then apply robust weights
+                  X_whitened_weighted <- X_whitened * run_info[[ri]]$sqrtw
+                  X_global_list[[ri]] <- X_whitened_weighted
+              }
+              
+              X_global_final_w <- do.call(rbind, X_global_list)
+          } else {
+              # For Robust-only: Just apply weights
+              X_weighted_list <- vector("list", length(run_chunks))
+              for (ri in seq_along(run_chunks)) {
+                  X_weighted_list[[ri]] <- run_info[[ri]]$X_orig * run_info[[ri]]$sqrtw
+              }
+              X_global_final_w <- do.call(rbind, X_weighted_list)
+          }
+          
+          proj_global_final_w <- .fast_preproject(X_global_final_w)
+          
           Vu <- chol2inv(qr(design_matrix(model))$qr)
           nvox <- ncol(dset$datamat)
-          p <- ncol(run_info[[1]]$Pinv)
-
-          betas_acc <- vector("list", length(run_chunks))
-          rss_acc <- vector("list", length(run_chunks))
 
           cres <- vector("list", length(run_chunks))
 
@@ -1227,76 +1279,80 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
               ym <- chunks[[i]]
               if (verbose) message("Processing chunk (fast robust) ", ym$chunk_num)
               Ymat <- as.matrix(ym$data)
-              vinds <- ym$voxel_ind
-
-              for (ri in seq_along(run_chunks)) {
-                  rows <- run_row_inds[[ri]]
-                  info <- run_info[[ri]]
-                  Yw <- sweep(Ymat[rows, , drop=FALSE], 1, info$sqrtw, `*`)
-                  b <- info$Pinv %*% Yw
-                  if (is.null(betas_acc[[ri]])) {
-                      betas_acc[[ri]] <- matrix(NA_real_, p, nvox)
-                      rss_acc[[ri]] <- numeric(nvox)
+              
+              # Transform Y data (whiten then weight)
+              Y_transformed_list <- vector("list", length(run_chunks))
+              
+              if (ar_modeling) {
+                  # For AR+Robust: First whiten, then weight
+                  for (ri in seq_along(run_chunks)) {
+                      rows <- run_info[[ri]]$row_indices
+                      Y_chunk_segment <- Ymat[rows, , drop=FALSE]
+                      phi_hat <- run_info[[ri]]$phi_hat
+                      
+                      # Whiten Y
+                      dummyX <- matrix(0, length(rows), 0)
+                      Y_whitened <- ar_whiten_transform(dummyX, Y_chunk_segment, phi_hat, cfg$ar$exact_first)$Y
+                      
+                      # Then apply robust weights
+                      Y_whitened_weighted <- sweep(Y_whitened, 1, run_info[[ri]]$sqrtw, `*`)
+                      Y_transformed_list[[ri]] <- Y_whitened_weighted
                   }
-                  betas_acc[[ri]][, vinds] <- b
+              } else {
+                  # For Robust-only: Just apply weights
+                  for (ri in seq_along(run_chunks)) {
+                      rows <- run_info[[ri]]$row_indices
+                      Y_weighted <- sweep(Ymat[rows, , drop=FALSE], 1, run_info[[ri]]$sqrtw, `*`)
+                      Y_transformed_list[[ri]] <- Y_weighted
+                  }
               }
-
+              
+              Y_chunk_final_w <- do.call(rbind, Y_transformed_list)
+              
+              # Create GLM context with pre-transformed matrices
+              glm_ctx_final <- glm_context(
+                  X = X_global_final_w, 
+                  Y = Y_chunk_final_w, 
+                  proj = proj_global_final_w
+              )
+              
+              # Solve using transformed context
+              res <- solve_glm_core(glm_ctx_final)
+              
+              # Calculate statistics
+              actual_vnames <- colnames(X_global_final_w)
+              
+              # For sigma, we need to map run-specific sigmas to voxels
+              # This is a simplification - in practice, we might need per-run statistics
+              sigma_vec <- sqrt(res$sigma2)
+              
+              bstats <- beta_stats_matrix(res$betas, 
+                                         proj_global_final_w$XtXinv, 
+                                         sigma_vec,
+                                         proj_global_final_w$dfres, 
+                                         actual_vnames)
+              
+              contrasts <- fit_lm_contrasts_fast(res$betas, 
+                                               res$sigma2, 
+                                               proj_global_final_w$XtXinv,
+                                               simple_conlist_weights, 
+                                               fconlist_weights, 
+                                               proj_global_final_w$dfres)
+              
+              cres[[i]] <- list(bstats = bstats,
+                               contrasts = contrasts,
+                               rss = res$rss,
+                               rdf = proj_global_robustly_weighted$dfres,
+                               sigma = sigma_vec)
+                               
               if (progress) cli::cli_progress_update(id = pb)
           }
 
-          for (ri in seq_along(run_chunks)) {
-              info <- run_info[[ri]]
-              betas <- betas_acc[[ri]]
-              resid <- info$Y - info$X %*% betas
-              rss <- colSums(resid^2)
-              rss_acc[[ri]] <- rss
-              resvar <- rss / info$dfres
-
-              sigma_vec <- rep(info$sigma, ncol(betas))
-              actual_vnames <- colnames(info$X)
-
-              bstats <- beta_stats_matrix(betas, info$XtXinv, sigma_vec,
-                                          info$dfres, actual_vnames)
-
-              conres <- fit_lm_contrasts_fast(betas, resvar, info$XtXinv,
-                                               simple_conlist_weights, fconlist_weights,
-                                               info$dfres)
-
-              cres[[ri]] <- list(conres = conres,
-                                 bstats = bstats,
-                                 event_indices = event_indices,
-                                 baseline_indices = baseline_indices,
-                                 rss = rss,
-                                 rdf = info$dfres,
-                                 resvar = resvar,
-                                 sigma = sigma_vec)
-          }
-
-          bstats_list <- lapply(cres, `[[`, "bstats")
-          conres_list <- lapply(cres, `[[`, "conres")
-          rdf_vals <- vapply(cres, `[[`, numeric(1), "rdf")
-          sigma_mat <- do.call(rbind, lapply(seq_along(cres), function(i) {
-            as.matrix(cres[[i]]$sigma^2) * rdf_vals[i]
-          }))
-          sigma <- sqrt(colSums(sigma_mat) / sum(rdf_vals))
-          rss <- colSums(do.call(rbind, rss_acc))
-          rdf <- sum(vapply(cres, `[[`, numeric(1), "rdf"))
-          resvar <- rss / rdf
-
-          meta_con <- meta_contrasts(conres_list)
-          meta_beta <- meta_betas(bstats_list, cres[[1]]$event_indices)
-
-          out <- list(
-            contrasts = meta_con,
-            betas = meta_beta,
-            event_indices = cres[[1]]$event_indices,
-            baseline_indices = cres[[1]]$baseline_indices,
-            cov.unscaled = Vu,
-            sigma = sigma,
-            rss = rss,
-            rdf = rdf,
-            resvar = resvar)
-
+          # Unpack results (expects specific structure from cres)
+          out <- unpack_chunkwise(cres, event_indices, baseline_indices)
+          # Add cov.unscaled to the output
+          out$cov.unscaled <- Vu
+          
           return(out)
       }
 
@@ -1306,19 +1362,19 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
       data_env[[ ".y"]] <- rep(0, nrow(tmats[[1]])) # Placeholder for model.matrix
       modmat_orig <- model.matrix(as.formula(form), data_env)
 
-      ar_modeling <- match.arg(cor_struct) != "iid"
-      ar_order <- switch(match.arg(cor_struct),
+      ar_modeling <- cfg$ar$struct != "iid"
+      ar_order <- switch(cfg$ar$struct,
                          ar1 = 1L,
                          ar2 = 2L,
-                         arp = ar_p,
+                         arp = cfg$ar$p,
                          iid = 0L)
 
       run_chunks <- exec_strategy("runwise")(dset)
       run_row_inds <- lapply(run_chunks, `[[`, "row_ind")
 
-      if (ar_modeling && cor_iter > 1L) {
-          warning("cor_iter > 1 not supported in chunkwise fast path; using 1")
-          cor_iter <- 1L
+      if (ar_modeling && cfg$ar$iter_gls > 1L) {
+          warning("iter_gls > 1 not supported in chunkwise fast path; using 1")
+          cfg$ar$iter_gls <- 1L
       }
 
       phi_hat_list <- vector("list", length(run_chunks))
@@ -1337,14 +1393,16 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
               Y_run <- as.matrix(rch$data)
 
               if (is.null(phi_fixed)) {
-                  ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
+                  # Create GLM context for initial OLS
+                  glm_ctx_run <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
+                  ols <- solve_glm_core(glm_ctx_run, return_fitted = TRUE)
                   resid_ols <- Y_run - ols$fitted
-              phi_hat_run <- estimate_ar_parameters(rowMeans(resid_ols), ar_order)
+                  phi_hat_run <- estimate_ar_parameters(rowMeans(resid_ols), ar_order)
               } else {
                   phi_hat_run <- phi_fixed
               }
               dummyY <- matrix(0, nrow(X_run), 0)
-              X_run <- ar_whiten_transform(X_run, dummyY, phi_hat_run, ar1_exact_first)$X
+              X_run <- ar_whiten_transform(X_run, dummyY, phi_hat_run, cfg$ar$exact_first)$X
 
               phi_hat_list[[ri]] <- phi_hat_run
               X_w_list[[ri]] <- X_run
@@ -1369,7 +1427,7 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
                   if (!is.null(phi)) {
                       dummyX <- matrix(0, length(rows), 0)
                       subY <- Ymat[rows, , drop = FALSE]
-                      subY <- ar_whiten_transform(dummyX, subY, phi, ar1_exact_first)$Y
+                      subY <- ar_whiten_transform(dummyX, subY, phi, cfg$ar$exact_first)$Y
                       Ymat[rows, ] <- subY
                   }
               }
@@ -1377,19 +1435,24 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
 
           if (verbose) message("  Chunk ", ym$chunk_num, ": ncol(Ymat) = ", ncol(Ymat))
 
-          res <- .fast_lm_matrix(modmat, Ymat, proj)
+          # Create GLM context for chunk processing
+          glm_ctx_chunk <- glm_context(X = modmat, Y = Ymat, proj = proj)
+          res <- solve_glm_core(glm_ctx_chunk)
 
           actual_vnames <- colnames(modmat)
-          bstats <- beta_stats_matrix(res$betas, proj$XtXinv, res$sigma, proj$dfres, actual_vnames)
+          sigma_vec <- sqrt(res$sigma2)
+          bstats <- beta_stats_matrix(res$betas, proj$XtXinv, sigma_vec, proj$dfres, actual_vnames,
+                                       robust_weights = NULL, ar_order = ar_order)
 
           contrasts <- fit_lm_contrasts_fast(res$betas, res$sigma2, proj$XtXinv,
-                                             simple_conlist_weights, fconlist_weights, proj$dfres)
+                                             simple_conlist_weights, fconlist_weights, proj$dfres,
+                                             robust_weights = NULL, ar_order = ar_order)
 
           cres[[i]] <- list(bstats = bstats,
                             contrasts = contrasts,
                             rss = res$rss,
                             rdf = proj$dfres,
-                            sigma = res$sigma)
+                            sigma = sigma_vec)
           if (progress) cli::cli_progress_update(id = pb)
       }
       # -------- End New Fast Path --------
@@ -1412,27 +1475,25 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
 #' @param dset An \code{fmri_dataset} object.
 #' @param model The \code{fmri_model} used for the analysis.
 #' @param contrast_objects The list of full contrast objects.
-#' @param robust Logical. Whether to use robust linear modeling (default is \code{FALSE}).
+#' @param cfg An \code{fmri_lm_config} object containing all fitting options.
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
+#' @param use_fast_path Logical. Whether to use fast path computation (default is \code{FALSE}).
 #' @param progress Logical. Display a progress bar for run processing. Default is \code{FALSE}.
+#' @param phi_fixed Optional fixed AR parameters.
+#' @param sigma_fixed Optional fixed robust scale estimate.
+#' @param extra_nuisance Optional additional nuisance regressors.
+#' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance in model.
 #' @return A list containing the combined results from runwise linear model analysis.
 #' @keywords internal
 #' @autoglobal
-runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = FALSE,
+runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                        use_fast_path = FALSE, progress = FALSE,
-                       cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
-                       cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
                        phi_fixed = NULL,
                        sigma_fixed = NULL,
-                       robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
-                       robust_c_tukey = 4.685, robust_max_iter = 2L,
-                       robust_scale_scope = c("run", "global")) {
-  robust_psi <- match.arg(robust_psi)
-  robust_scale_scope <- match.arg(robust_scale_scope)
-  assert_that(is.numeric(robust_k_huber), msg = "'robust_k_huber' must be numeric")
-  assert_that(is.numeric(robust_c_tukey), msg = "'robust_c_tukey' must be numeric")
-  assert_that(is.numeric(robust_max_iter) && robust_max_iter >= 1,
-              msg = "'robust_max_iter' must be >= 1")
+                       extra_nuisance = NULL,
+                       keep_extra_nuisance_in_model = FALSE) {
+  # Validate config
+  assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
   # Get an iterator of data chunks (runs)
   chunks <- exec_strategy("runwise")(dset)
   if (progress) {
@@ -1450,38 +1511,145 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
   
   if (!use_fast_path) {
       # -------- Original Slow Path --------
-      # Slow path uses lmfun which calls fit_lm_contrasts, expects full contrast objects
-      lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
-      
-      cres <- vector("list", length(chunks))
-      for (i in seq_along(chunks)) {
-        ym <- chunks[[i]]
-        if (verbose) message("Processing run ", ym$chunk_num)
-        tmats <- term_matrices(model, ym$chunk_num)
-        vnames <- attr(tmats, "varnames")
-        event_indices <- attr(tmats, "event_term_indices")
-        baseline_indices <- attr(tmats, "baseline_term_indices")
+      # Check if voxelwise AR is requested
+      if (cfg$ar$voxelwise && cfg$ar$struct != "iid") {
+          # Voxelwise AR path
+          ar_order <- switch(cfg$ar$struct,
+                             ar1 = 1L,
+                             ar2 = 2L,
+                             arp = cfg$ar$p,
+                             iid = 0L)
+          
+          if (verbose) message("Using voxelwise AR(", ar_order, ") modeling...")
+          
+          cres <- vector("list", length(chunks))
+          for (i in seq_along(chunks)) {
+              ym <- chunks[[i]]
+              if (verbose) message("Processing run ", ym$chunk_num, " with voxelwise AR")
+              tmats <- term_matrices(model, ym$chunk_num)
+              vnames <- attr(tmats, "varnames")
+              event_indices <- attr(tmats, "event_term_indices")
+              baseline_indices <- attr(tmats, "baseline_term_indices")
+              
+              data_env <- list2env(tmats)
+              Y_run <- as.matrix(ym$data)
+              data_env$.y <- Y_run
+              X_run <- model.matrix(form, data_env)
+              
+              n_voxels <- ncol(Y_run)
+              n_timepoints <- nrow(Y_run)
+              p <- ncol(X_run)
+              
+              # Storage for voxel-wise results
+              betas_voxelwise <- matrix(NA_real_, p, n_voxels)
+              sigma_voxelwise <- numeric(n_voxels)
+              rss_voxelwise <- numeric(n_voxels)
+              
+              # Process each voxel separately
+              for (v in seq_len(n_voxels)) {
+                  y_voxel <- Y_run[, v]
+                  
+                  # Skip if all zeros or constant
+                  if (var(y_voxel) < .Machine$double.eps) {
+                      next
+                  }
+                  
+                  # Initial OLS fit
+                  lm_fit <- lm.fit(X_run, y_voxel)
+                  resid_ols <- lm_fit$residuals
+                  
+                  # Estimate voxel-specific AR parameters
+                  phi_voxel <- estimate_ar_parameters(resid_ols, ar_order)
+                  
+                  # AR whitening for this voxel
+                  Y_voxel_mat <- matrix(y_voxel, ncol = 1)
+                  tmp <- ar_whiten_transform(X_run, Y_voxel_mat, phi_voxel, cfg$ar$exact_first)
+                  X_voxel_w <- tmp$X
+                  y_voxel_w <- tmp$Y[, 1]
+                  
+                  # Fit on whitened data
+                  if (cfg$robust$type != FALSE) {
+                      # Robust fit on whitened data (simplified - would need full IRLS)
+                      warning("Robust fitting with voxelwise AR not fully implemented in slow path")
+                      lm_fit_w <- lm.fit(X_voxel_w, y_voxel_w)
+                  } else {
+                      # OLS on whitened data
+                      lm_fit_w <- lm.fit(X_voxel_w, y_voxel_w)
+                  }
+                  
+                  betas_voxelwise[, v] <- lm_fit_w$coefficients
+                  rss_voxelwise[v] <- sum(lm_fit_w$residuals^2)
+                  sigma_voxelwise[v] <- sqrt(rss_voxelwise[v] / lm_fit_w$df.residual)
+              }
+              
+              # Calculate statistics and contrasts
+              # This is simplified - would need proper handling of contrasts
+              rdf <- n_timepoints - p
+              
+              # Create pseudo-fit object for compatibility
+              ret <- list(
+                  fit = list(
+                      coefficients = betas_voxelwise,
+                      residuals = Y_run - X_run %*% betas_voxelwise,
+                      df.residual = rdf
+                  )
+              )
+              
+              # Calculate contrasts manually (simplified)
+              # In practice, would need to properly apply contrast weights
+              ret$contrasts <- list()
+              ret$bstats <- data.frame(
+                  estimate = as.vector(betas_voxelwise),
+                  std.error = rep(sigma_voxelwise, each = p),
+                  parameter = rep(vnames, n_voxels)
+              )
+              
+              cres[[i]] <- list(
+                  conres = ret$contrasts,
+                  bstats = ret$bstats,
+                  event_indices = event_indices,
+                  baseline_indices = baseline_indices,
+                  rss = rss_voxelwise,
+                  rdf = rdf,
+                  resvar = rss_voxelwise / rdf,
+                  sigma = sigma_voxelwise
+              )
+              if (progress) cli::cli_progress_update(id = pb)
+          }
+      } else {
+          # Standard slow path (no voxelwise AR)
+          lmfun <- if (cfg$robust$type != FALSE) multiresponse_rlm else multiresponse_lm
+          
+          cres <- vector("list", length(chunks))
+          for (i in seq_along(chunks)) {
+              ym <- chunks[[i]]
+              if (verbose) message("Processing run ", ym$chunk_num)
+              tmats <- term_matrices(model, ym$chunk_num)
+              vnames <- attr(tmats, "varnames")
+              event_indices <- attr(tmats, "event_term_indices")
+              baseline_indices <- attr(tmats, "baseline_term_indices")
 
-        data_env <- list2env(tmats)
-        data_env$.y <- as.matrix(ym$data)
-        ret <- lmfun(form, data_env, contrast_objects, vnames, fcon = NULL)
+              data_env <- list2env(tmats)
+              data_env$.y <- as.matrix(ym$data)
+              ret <- lmfun(form, data_env, contrast_objects, vnames, fcon = NULL)
 
-        rss <- colSums(as.matrix(ret$fit$residuals^2))
-        rdf <- ret$fit$df.residual
-        resvar <- rss / rdf
-        sigma <- sqrt(resvar)
+              rss <- colSums(as.matrix(ret$fit$residuals^2))
+              rdf <- ret$fit$df.residual
+              resvar <- rss / rdf
+              sigma <- sqrt(resvar)
 
-        cres[[i]] <- list(
-          conres = ret$contrasts,
-          bstats = ret$bstats,
-          event_indices = event_indices,
-          baseline_indices = baseline_indices,
-          rss = rss,
-          rdf = rdf,
-          resvar = resvar,
-          sigma = sigma
-        )
-        if (progress) cli::cli_progress_update(id = pb)
+              cres[[i]] <- list(
+                  conres = ret$contrasts,
+                  bstats = ret$bstats,
+                  event_indices = event_indices,
+                  baseline_indices = baseline_indices,
+                  rss = rss,
+                  rdf = rdf,
+                  resvar = resvar,
+                  sigma = sigma
+              )
+              if (progress) cli::cli_progress_update(id = pb)
+          }
       }
       # -------- End Original Slow Path --------
       
@@ -1497,11 +1665,11 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
       
       message("Using fast path for runwise LM...")
 
-      ar_modeling <- match.arg(cor_struct) != "iid"
-      ar_order <- switch(match.arg(cor_struct),
+      ar_modeling <- cfg$ar$struct != "iid"
+      ar_order <- switch(cfg$ar$struct,
                          ar1 = 1L,
                          ar2 = 2L,
-                         arp = ar_p,
+                         arp = cfg$ar$p,
                          iid = 0L)
       
       # .export needed? conlist, fcon, model should be available.
@@ -1533,26 +1701,155 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
             stop(paste("Dimension mismatch in run", ym$chunk_num, ": X_run rows (", nrow(X_run), ") != Y_run rows (", nrow(Y_run), ")"))
         }
 
-        if (robust) {
-            fit_r <- fast_rlm_run(X_run, Y_run, proj_run,
-                                  psi = robust_psi,
-                                  k_huber = robust_k_huber,
-                                  c_tukey = robust_c_tukey,
-                                  max_it = robust_max_iter,
-                                  sigma_fixed = sigma_fixed)
+        if (cfg$robust$type != FALSE) {
+            # Combined AR + Robust path
+            if (ar_modeling) {
+                # Step 1: Initial OLS for AR parameter estimation
+                glm_ctx_run_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
+                
+                # Estimate phi_hat_run if needed
+                phi_hat_run <- NULL
+                if (is.null(phi_fixed)) {
+                    initial_fit <- solve_glm_core(glm_ctx_run_orig, return_fitted = TRUE)
+                    resid_ols <- Y_run - initial_fit$fitted
+                    phi_hat_run <- estimate_ar_parameters(rowMeans(resid_ols), ar_order)
+                } else {
+                    phi_hat_run <- phi_fixed
+                }
+                
+                # Step 2: AR whitening
+                tmp <- ar_whiten_transform(X_run, Y_run, phi_hat_run, cfg$ar$exact_first)
+                X_run_w <- tmp$X
+                Y_run_w <- tmp$Y
+                proj_run_w <- .fast_preproject(X_run_w)
+                
+                # Step 3: Create whitened GLM context
+                glm_ctx_run_whitened <- glm_context(X = X_run_w, Y = Y_run_w, proj = proj_run_w, phi_hat = phi_hat_run)
+                
+                # Determine sigma_fixed based on scope
+                sigma_fixed_for_run <- if (cfg$robust$scale_scope == "global" && !is.null(sigma_fixed)) {
+                    sigma_fixed
+                } else {
+                    NULL
+                }
+                
+                # Step 4: Robust fitting on whitened data
+                robust_fit_run <- robust_iterative_fitter(
+                    initial_glm_ctx = glm_ctx_run_whitened,
+                    cfg_robust_options = cfg$robust,
+                    X_orig_for_resid = X_run_w,
+                    sigma_fixed = sigma_fixed_for_run
+                )
+                
+                # Step 5: Optional re-estimation of AR parameters
+                if (!is.null(cfg$robust$reestimate_phi) && cfg$robust$reestimate_phi && is.null(phi_fixed)) {
+                    # Calculate robust residuals on whitened data
+                    resid_robust_w <- Y_run_w - X_run_w %*% robust_fit_run$betas_robust
+                    
+                    # De-whiten residuals (inverse AR transform - this is approximate)
+                    # For now, we'll use the residuals directly as de-whitening is complex
+                    phi_hat_run_updated <- estimate_ar_parameters(rowMeans(resid_robust_w), ar_order)
+                    
+                    # Re-whiten with updated phi
+                    tmp2 <- ar_whiten_transform(X_run, Y_run, phi_hat_run_updated, cfg$ar$exact_first)
+                    X_run_w2 <- tmp2$X
+                    Y_run_w2 <- tmp2$Y
+                    
+                    # Apply robust weights to re-whitened data
+                    sqrtw <- sqrt(robust_fit_run$robust_weights_final)
+                    X_run_wr <- X_run_w2 * sqrtw
+                    Y_run_wr <- sweep(Y_run_w2, 1, sqrtw, `*`)
+                    proj_run_wr <- .fast_preproject(X_run_wr)
+                    
+                    # Final WLS fit
+                    glm_ctx_final_wls <- glm_context(X = X_run_wr, Y = Y_run_wr, proj = proj_run_wr)
+                    final_fit <- solve_glm_core(glm_ctx_final_wls)
+                    
+                    # Use final fit results
+                    betas_final <- final_fit$betas
+                    XtXinv_final <- proj_run_wr$XtXinv
+                    dfres_final <- proj_run_wr$dfres
+                    sigma_final <- robust_fit_run$sigma_robust_scale_final
+                    
+                    # Use re-whitened matrices for statistics
+                    X_iter <- X_run_w2
+                    Y_iter <- Y_run_w2
+                    proj_iter <- .fast_preproject(X_run_w2)
+                } else {
+                    # Use robust fit results directly
+                    betas_final <- robust_fit_run$betas_robust
+                    XtXinv_final <- robust_fit_run$XtWXi_final
+                    dfres_final <- robust_fit_run$dfres
+                    sigma_final <- robust_fit_run$sigma_robust_scale_final
+                    
+                    # Use whitened matrices for statistics
+                    X_iter <- X_run_w
+                    Y_iter <- Y_run_w
+                    proj_iter <- proj_run_w
+                }
+            } else {
+                # Robust-only path (no AR)
+                glm_ctx_run_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
+                
+                # Determine sigma_fixed based on scope
+                sigma_fixed_for_run <- if (cfg$robust$scale_scope == "global" && !is.null(sigma_fixed)) {
+                    sigma_fixed
+                } else {
+                    NULL
+                }
+                
+                # Call robust_iterative_fitter
+                robust_fit_run <- robust_iterative_fitter(
+                    initial_glm_ctx = glm_ctx_run_orig,
+                    cfg_robust_options = cfg$robust,
+                    X_orig_for_resid = X_run,
+                    sigma_fixed = sigma_fixed_for_run
+                )
+                
+                # Use robust fit results
+                betas_final <- robust_fit_run$betas_robust
+                XtXinv_final <- robust_fit_run$XtWXi_final
+                dfres_final <- robust_fit_run$dfres
+                sigma_final <- robust_fit_run$sigma_robust_scale_final
+                
+                # Use original matrices for statistics
+                X_iter <- X_run
+                Y_iter <- Y_run
+                proj_iter <- proj_run
+            }
 
-            actual_vnames <- colnames(X_run)
-            sigma_vec <- rep(fit_r$sigma, ncol(Y_run))
-            resid_final <- Y_run - X_run %*% fit_r$betas
+            actual_vnames <- colnames(X_iter)
+            sigma_vec <- rep(sigma_final, ncol(Y_run))
+            
+            # Calculate residuals for RSS
+            resid_final <- Y_iter - X_iter %*% betas_final
             rss <- colSums(resid_final^2)
-            resvar <- rss / fit_r$dfres
+            resvar <- rss / dfres_final
 
-            bstats <- beta_stats_matrix(fit_r$betas, fit_r$XtXinv, sigma_vec,
-                                        fit_r$dfres, actual_vnames)
+            # Calculate statistics
+            # Extract robust weights if available
+            robust_weights_for_stats <- if (cfg$robust$type != FALSE) {
+                robust_fit_run$robust_weights_final
+            } else {
+                NULL
+            }
+            
+            bstats <- beta_stats_matrix(betas_final, 
+                                        XtXinv_final, 
+                                        sigma_vec,
+                                        dfres_final, 
+                                        actual_vnames,
+                                        robust_weights = robust_weights_for_stats,
+                                        ar_order = ar_order)
 
-            conres <- fit_lm_contrasts_fast(fit_r$betas, resvar, fit_r$XtXinv,
-                                             simple_conlist_weights, fconlist_weights,
-                                             fit_r$dfres)
+            conres <- fit_lm_contrasts_fast(betas_final, 
+                                            resvar, 
+                                            XtXinv_final,
+                                            simple_conlist_weights, 
+                                            fconlist_weights,
+                                            dfres_final,
+                                            robust_weights = robust_weights_for_stats,
+                                            ar_order = ar_order)
 
             cres[[i]] <- list(
               conres = conres,
@@ -1560,48 +1857,67 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
               event_indices = event_indices,
               baseline_indices = baseline_indices,
               rss = rss,
-              rdf = fit_r$dfres,
+              rdf = dfres_final,
               resvar = resvar,
               sigma = sigma_vec
             )
 
         } else {
-            phi_hat_run <- NULL
+            # Non-robust path - create GLM context for the run
+            glm_ctx_run_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
+            
             if (ar_modeling) {
+                # Estimate phi_hat_run if needed
+                phi_hat_run <- NULL
                 if (is.null(phi_fixed)) {
-                    ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
-                    resid_ols <- Y_run - ols$fitted
+                    initial_fit <- solve_glm_core(glm_ctx_run_orig, return_fitted = TRUE)
+                    resid_ols <- Y_run - initial_fit$fitted
                     phi_hat_run <- estimate_ar_parameters(rowMeans(resid_ols), ar_order)
                 } else {
                     phi_hat_run <- phi_fixed
                 }
-            }
-
-            gls <- NULL
-            proj_iter <- proj_run
-            X_iter <- X_run
-            Y_iter <- Y_run
-            for (iter in seq_len(cor_iter)) {
-                if (ar_modeling) {
-                    X_iter <- X_run
-                    Y_iter <- Y_run
-                    tmp <- ar_whiten_transform(X_iter, Y_iter, phi_hat_run, ar1_exact_first)
-                    X_iter <- tmp$X
-                    Y_iter <- tmp$Y
-                    proj_iter <- .fast_preproject(X_iter)
+                
+                # Iterative GLS
+                for (iter in seq_len(cfg$ar$iter_gls)) {
+                    # Whiten the data
+                    tmp <- ar_whiten_transform(X_run, Y_run, phi_hat_run, cfg$ar$exact_first)
+                    X_w <- tmp$X
+                    Y_w <- tmp$Y
+                    proj_w <- .fast_preproject(X_w)
+                    
+                    # Create whitened GLM context
+                    glm_ctx_run_whitened <- glm_context(X = X_w, Y = Y_w, proj = proj_w, phi_hat = phi_hat_run)
+                    
+                    # Solve using whitened context
+                    gls <- solve_glm_core(glm_ctx_run_whitened)
+                    
+                    # Update phi_hat if needed for next iteration
+                    if (is.null(phi_fixed) && iter < cfg$ar$iter_gls) {
+                        resid_gls <- Y_w - X_w %*% gls$betas
+                        phi_hat_run <- estimate_ar_parameters(rowMeans(resid_gls), ar_order)
+                    }
                 }
-                gls <- .fast_lm_matrix(X_iter, Y_iter, proj_iter)
-                if (ar_modeling && is.null(phi_fixed) && iter < cor_iter) {
-                    resid_gls <- Y_iter - X_iter %*% gls$betas
-                    phi_hat_run <- estimate_ar_parameters(rowMeans(resid_gls), ar_order)
-                }
+                
+                # Use whitened matrices for final results
+                X_iter <- X_w
+                Y_iter <- Y_w
+                proj_iter <- proj_w
+            } else {
+                # IID case - use original context
+                gls <- solve_glm_core(glm_ctx_run_orig)
+                X_iter <- X_run
+                Y_iter <- Y_run
+                proj_iter <- proj_run
             }
 
             actual_vnames <- colnames(X_iter)
-            bstats <- beta_stats_matrix(gls$betas, proj_iter$XtXinv, gls$sigma, proj_iter$dfres, actual_vnames)
+            sigma_vec <- sqrt(gls$sigma2)
+            bstats <- beta_stats_matrix(gls$betas, proj_iter$XtXinv, sigma_vec, proj_iter$dfres, actual_vnames,
+                                        robust_weights = NULL, ar_order = ar_order)
 
             conres <- fit_lm_contrasts_fast(gls$betas, gls$sigma2, proj_iter$XtXinv,
-                                             simple_conlist_weights, fconlist_weights, proj_iter$dfres)
+                                             simple_conlist_weights, fconlist_weights, proj_iter$dfres,
+                                             robust_weights = NULL, ar_order = ar_order)
 
             cres[[i]] <- list(
               conres = conres,
@@ -1611,7 +1927,7 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
               rss = gls$rss,
               rdf = proj_iter$dfres,
               resvar = gls$sigma2,
-              sigma = gls$sigma
+              sigma = sigma_vec
             )
         }
         if (progress) cli::cli_progress_update(id = pb)

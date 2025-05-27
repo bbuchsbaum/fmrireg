@@ -9,10 +9,14 @@
   model,
   contrast_objects,
   nchunks,
-  robust = FALSE,
+  cfg,
   verbose = FALSE,
   use_fast_path = FALSE,
-  progress = FALSE
+  progress = FALSE,
+  phi_fixed = NULL,
+  sigma_fixed = NULL,
+  extra_nuisance = NULL,
+  keep_extra_nuisance_in_model = FALSE
 )
 }
 \arguments{
@@ -24,13 +28,21 @@
 
 \item{nchunks}{The number of chunks to divide the dataset into.}
 
-\item{robust}{Logical. Whether to use robust linear modeling (default is \code{FALSE}).}
+\item{cfg}{An \code{fmri_lm_config} object containing all fitting options.}
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
 
 \item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
 
 \item{progress}{Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.}
+
+\item{phi_fixed}{Optional fixed AR parameters.}
+
+\item{sigma_fixed}{Optional fixed robust scale estimate.}
+
+\item{extra_nuisance}{Optional additional nuisance regressors.}
+
+\item{keep_extra_nuisance_in_model}{Logical. Whether to keep extra nuisance in model.}
 }
 \value{
 A list containing the unpacked chunkwise results.

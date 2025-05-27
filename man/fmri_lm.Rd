@@ -12,20 +12,15 @@ fmri_lm(
   durations = 0,
   drop_empty = TRUE,
   robust = FALSE,
-  robust_psi = c("huber", "bisquare"),
-  robust_k_huber = 1.345,
-  robust_c_tukey = 4.685,
-  robust_max_iter = 2L,
-  robust_scale_scope = c("run", "global"),
+  robust_options = NULL,
+  ar_options = NULL,
   strategy = c("runwise", "chunkwise"),
   nchunks = 10,
   use_fast_path = FALSE,
   progress = FALSE,
-  cor_struct = c("iid", "ar1", "ar2", "arp"),
-  cor_iter = 1L,
-  cor_global = FALSE,
-  ar_p = NULL,
-  ar1_exact_first = FALSE,
+  extra_nuisance = NULL,
+  keep_extra_nuisance_in_model = FALSE,
+  ar_voxelwise = FALSE,
   ...
 )
 }
@@ -42,12 +37,12 @@ fmri_lm(
 
 \item{drop_empty}{Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.}
 
-\item{robust}{Logical. Whether to use robust fitting. Default is \code{FALSE}.}
-\item{robust_psi}{Psi-function for computing weights when \code{robust = TRUE}. Either \code{"huber"} or \code{"bisquare"}.}
-\item{robust_k_huber}{Tuning constant \code{k} for the Huber psi-function.}
-\item{robust_c_tukey}{Tuning constant \code{c} for the Tukey bisquare psi-function.}
-\item{robust_max_iter}{Maximum number of IRLS iterations.}
-\item{robust_scale_scope}{Scope for estimating the robust scale: \code{"run"} or \code{"global"}.}
+\item{robust}{Logical or character. Either \code{FALSE} (no robust fitting),
+\code{TRUE} (use Huber), or one of \code{"huber"} or \code{"bisquare"}. Default is \code{FALSE}.}
+
+\item{robust_options}{List of robust fitting options. See Details.}
+
+\item{ar_options}{List of autoregressive modeling options. See Details.}
 
 \item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
 
@@ -57,15 +52,11 @@ fmri_lm(
 
 \item{progress}{Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.}
 
-\item{cor_struct}{Error correlation structure. One of \code{"iid"}, \code{"ar1"}, \code{"ar2"}, or \code{"arp"}. The \code{"arp"} option models an AR process of order \code{ar_p}. Only AR terms are currently supported.}
+\item{extra_nuisance}{Optional matrix or formula specifying additional nuisance regressors.}
 
-\item{cor_iter}{Number of GLS iterations for AR prewhitening.}
+\item{keep_extra_nuisance_in_model}{Logical. Whether to keep extra nuisance regressors in the final model. Default is \code{FALSE}.}
 
-\item{cor_global}{Logical. If \code{TRUE}, AR coefficients are estimated from all runs and applied globally.}
-
-\item{ar_p}{Integer order used when \code{cor_struct = "arp"}.}
-
-\item{ar1_exact_first}{Logical. Apply exact AR(1) scaling to the first sample when \code{cor_struct = "ar1"}.}
+\item{ar_voxelwise}{Logical. Whether to estimate AR parameters voxel-wise. Default is \code{FALSE}.}
 
 \item{...}{Additional arguments.}
 }
@@ -75,7 +66,31 @@ A fitted linear regression model for fMRI data analysis.
 \description{
 This function fits a linear regression model for fMRI data analysis using the specified model formula,
 block structure, and dataset. The model can be fit using either a runwise or chunkwise data splitting strategy,
-and an optional row-wise robust fitting procedure can be enabled. When \code{robust = TRUE}, time points with large residuals are down-weighted via an Iteratively Reweighted Least Squares approach. Standard errors are based on a final robust scale estimate and p-values should be interpreted with caution.
+and robust fitting can be enabled if desired. When \code{cor_struct} is set to
+one of the AR options (\code{"ar1"}, \code{"ar2"}, \code{"arp"}), the function
+performs fast AR prewhitening to account for temporal autocorrelation in the
+residuals.
+}
+\details{
+\code{robust_options} may contain:
+\itemize{
+\item \code{type}: Character or logical. Type of robust fitting (\code{FALSE}, \code{"huber"}, \code{"bisquare"})
+\item \code{k_huber}: Numeric. Tuning constant for Huber's psi (default: 1.345)
+\item \code{c_tukey}: Numeric. Tuning constant for Tukey's bisquare psi (default: 4.685)
+\item \code{max_iter}: Integer. Maximum IRLS iterations (default: 2)
+\item \code{scale_scope}: Character. Scope for scale estimation (\code{"run"} or \code{"global"})
+\item \code{reestimate_phi}: Logical. Whether to re-estimate AR parameters after robust fitting
+}
+
+\code{ar_options} may contain:
+\itemize{
+\item \code{struct}: Character. Correlation structure (\code{"iid"}, \code{"ar1"}, \code{"ar2"}, \code{"arp"})
+\item \code{p}: Integer. AR order when \code{struct = "arp"}
+\item \code{iter_gls}: Integer. Number of GLS iterations (default: 1)
+\item \code{global}: Logical. Use global AR coefficients (default: FALSE)
+\item \code{voxelwise}: Logical. Estimate AR parameters voxel-wise (default: FALSE)
+\item \code{exact_first}: Logical. Apply exact AR(1) scaling to first sample (default: FALSE)
+}
 }
 \examples{
 
@@ -102,5 +117,5 @@ strategy="chunkwise", nchunks=1, dataset=dset)
 
 }
 \seealso{
-\code{\link{fmri_dataset}}, \code{\link{fmri_lm_fit}}
+\code{\link{fmri_dataset}}, \code{\link{fmri_lm_fit}}, \code{\link{fmri_lm_control}}
 }

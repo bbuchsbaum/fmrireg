@@ -13,6 +13,16 @@ fmri_rlm(
   drop_empty = TRUE,
   strategy = c("runwise", "chunkwise"),
   nchunks = 10,
+  cor_struct = c("iid", "ar1", "ar2", "arp"),
+  cor_iter = 1L,
+  cor_global = FALSE,
+  ar_p = NULL,
+  ar1_exact_first = FALSE,
+  robust_psi = c("huber", "bisquare"),
+  robust_k_huber = 1.345,
+  robust_c_tukey = 4.685,
+  robust_max_iter = 2L,
+  robust_scale_scope = c("run", "global"),
   ...
 )
 }

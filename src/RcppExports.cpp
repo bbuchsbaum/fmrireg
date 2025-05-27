@@ -11,6 +11,19 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// ar_whiten_inplace
+void ar_whiten_inplace(Rcpp::NumericMatrix Y, Rcpp::NumericMatrix X, const arma::vec& phi_coeffs, bool exact_first_ar1);
+RcppExport SEXP _fmrireg_ar_whiten_inplace(SEXP YSEXP, SEXP XSEXP, SEXP phi_coeffsSEXP, SEXP exact_first_ar1SEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type phi_coeffs(phi_coeffsSEXP);
+    Rcpp::traits::input_parameter< bool >::type exact_first_ar1(exact_first_ar1SEXP);
+    ar_whiten_inplace(Y, X, phi_coeffs, exact_first_ar1);
+    return R_NilValue;
+END_RCPP
+}
 // instantaneous_correlation_rcpp
 NumericVector instantaneous_correlation_rcpp(NumericVector x, NumericVector y, double eta, double tau_half, int offset, int warmup, std::string fill);
 RcppExport SEXP _fmrireg_instantaneous_correlation_rcpp(SEXP xSEXP, SEXP ySEXP, SEXP etaSEXP, SEXP tau_halfSEXP, SEXP offsetSEXP, SEXP warmupSEXP, SEXP fillSEXP) {
@@ -25,21 +38,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type warmup(warmupSEXP);
     Rcpp::traits::input_parameter< std::string >::type fill(fillSEXP);
     rcpp_result_gen = Rcpp::wrap(instantaneous_correlation_rcpp(x, y, eta, tau_half, offset, warmup, fill));
-    return rcpp_result_gen;
-END_RCPP
-}
-// ar_whiten_inplace
-void ar_whiten_inplace(Rcpp::NumericMatrix Y, Rcpp::NumericMatrix X, const arma::vec& phi_coeffs, bool exact_first_ar1 = false);
-RcppExport SEXP _fmrireg_ar_whiten_inplace(SEXP YSEXP, SEXP XSEXP, SEXP phi_coeffsSEXP, SEXP exact_first_ar1SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type Y(YSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type phi_coeffs(phi_coeffsSEXP);
-    Rcpp::traits::input_parameter< bool >::type exact_first_ar1(exact_first_ar1SEXP);
-    ar_whiten_inplace(Y, X, phi_coeffs, exact_first_ar1);
-    rcpp_result_gen = R_NilValue;
     return rcpp_result_gen;
 END_RCPP
 }
@@ -156,6 +154,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_fmrireg_ar_whiten_inplace", (DL_FUNC) &_fmrireg_ar_whiten_inplace, 4},
     {"_fmrireg_instantaneous_correlation_rcpp", (DL_FUNC) &_fmrireg_instantaneous_correlation_rcpp, 7},
     {"_fmrireg_compute_residuals_cpp", (DL_FUNC) &_fmrireg_compute_residuals_cpp, 3},
     {"_fmrireg_lss_compute_cpp", (DL_FUNC) &_fmrireg_lss_compute_cpp, 2},
@@ -164,7 +163,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fmrireg_evaluate_regressor_convolution", (DL_FUNC) &_fmrireg_evaluate_regressor_convolution, 9},
     {"_fmrireg_evaluate_regressor_fast", (DL_FUNC) &_fmrireg_evaluate_regressor_fast, 7},
     {"_fmrireg_evaluate_regressor_cpp", (DL_FUNC) &_fmrireg_evaluate_regressor_cpp, 8},
-    {"_fmrireg_ar_whiten_inplace", (DL_FUNC) &_fmrireg_ar_whiten_inplace, 4},
     {NULL, NULL, 0}
 };
 
