@@ -1279,6 +1279,20 @@ penalty_matrix <- function(x, ...) UseMethod("penalty_matrix")
 hrf_from_coefficients <- function(hrf, h, ...) { UseMethod("hrf_from_coefficients") }
 
 
+#' Reconstruction matrix for an HRF basis
+#'
+#' Returns a matrix \eqn{\Phi} that converts basis coefficients into a
+#' sampled HRF shape.
+#'
+#' @param hrf An object of class `HRF`.
+#' @param sframe A `sampling_frame` object or numeric vector of times.
+#' @param precision Optional sampling interval in seconds when `sframe`
+#'   is a `sampling_frame`. Defaults to the TR of `sframe`.
+#' @return A numeric matrix with one column per basis function.
+#' @export
+reconstruction_matrix <- function(hrf, sframe, ...) { UseMethod("reconstruction_matrix") }
+
+
  
 #' Return a set of data chunks
 #' 
