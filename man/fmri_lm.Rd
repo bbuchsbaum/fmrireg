@@ -16,6 +16,11 @@ fmri_lm(
   nchunks = 10,
   use_fast_path = FALSE,
   progress = FALSE,
+  cor_struct = c("iid", "ar1", "ar2", "arp"),
+  cor_iter = 1L,
+  cor_global = FALSE,
+  ar_p = NULL,
+  ar1_exact_first = FALSE,
   ...
 )
 }
@@ -41,6 +46,16 @@ fmri_lm(
 \item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
 
 \item{progress}{Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.}
+
+\item{cor_struct}{Error correlation structure. One of \code{"iid"}, \code{"ar1"}, \code{"ar2"}, or \code{"arp"}. The \code{"arp"} option models an AR process of order \code{ar_p}. Only AR terms are currently supported.}
+
+\item{cor_iter}{Number of GLS iterations for AR prewhitening.}
+
+\item{cor_global}{Logical. If \code{TRUE}, AR coefficients are estimated from all runs and applied globally.}
+
+\item{ar_p}{Integer order used when \code{cor_struct = "arp"}.}
+
+\item{ar1_exact_first}{Logical. Apply exact AR(1) scaling to the first sample when \code{cor_struct = "ar1"}.}
 
 \item{...}{Additional arguments.}
 }

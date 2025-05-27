@@ -219,6 +219,33 @@ model <- fmri_lm(
 model
 ```
 
+### Accounting for Temporal Autocorrelation
+
+The simulated noise contains AR(1) structure. We can ask `fmri_lm` to apply a
+fast AR(1) prewhitening step by setting `cor_struct = "ar1"`. This estimates the
+AR coefficient from an initial OLS fit, whitens the data and design matrix, and
+refits the GLM.
+
+```{r, message=FALSE}
+model_ar1 <- fmri_lm(
+  formula = onset ~ hrf(condition),
+  block   = ~ run,
+  dataset = dataset,
+  strategy = "chunkwise",
+  nchunks = 1,
+  cor_struct = "ar1",
+  cor_iter = 1
+)
+
+# Compare standard errors (first few voxels)
+se_ols <- standard_error(model)
+se_ar1 <- standard_error(model_ar1)
+head(cbind(OLS = se_ols[[1]], AR1 = se_ar1[[1]]))
+```
+
+The `cor_struct` argument also accepts `"arp"` for higher-order autoregressive
+models. This setting models AR coefficients only (no moving-average terms).
+
 
 
 ## Extracting Model Results

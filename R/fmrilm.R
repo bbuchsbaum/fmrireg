@@ -220,7 +220,10 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #'
 #' This function fits a linear regression model for fMRI data analysis using the specified model formula,
 #' block structure, and dataset. The model can be fit using either a runwise or chunkwise data splitting strategy,
-#' and robust fitting can be enabled if desired.
+#' and robust fitting can be enabled if desired. When \code{cor_struct} is set to
+#' one of the AR options (\code{"ar1"}, \code{"ar2"}, \code{"arp"}), the function
+#' performs fast AR prewhitening to account for temporal autocorrelation in the
+#' residuals.
 #'
 #' @param formula The model formula for experimental events.
 #' @param block The model formula for block structure.
@@ -233,12 +236,18 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
-#' @param cor_struct Error correlation structure. One of \code{"iid"}, \code{"ar1"}, \code{"ar2"}, or \code{"arp"}.
-#'   Currently only argument threading is implemented.
-#' @param cor_iter Number of GLS iterations. Currently unused.
-#' @param cor_global Logical. If \code{TRUE}, a single AR estimate is used for all runs. Currently unused.
-#' @param ar_p Integer order for \code{cor_struct = "arp"}. Currently unused.
-#' @param ar1_exact_first Logical. If \code{TRUE} apply exact AR(1) scaling to the first sample. Currently unused.
+#' @param cor_struct Error correlation structure. One of \code{"iid"}, \code{"ar1"},
+#'   \code{"ar2"}, or \code{"arp"}. The \code{"arp"} option models an autoregressive
+#'   process of order \code{ar_p}. Only AR components are currently supported
+#'   (no moving-average terms).
+#' @param cor_iter Number of GLS iterations for AR prewhitening. A value of
+#'   \code{1} performs one OLS fit followed by one GLS fit.
+#' @param cor_global Logical. If \code{TRUE}, AR coefficients are estimated from
+#'   all runs combined and applied globally; otherwise they are estimated per
+#'   run.
+#' @param ar_p Integer order for \code{cor_struct = "arp"}.
+#' @param ar1_exact_first Logical. If \code{TRUE} applies exact AR(1) scaling to
+#'   the first sample when \code{cor_struct = "ar1"}.
 #' @param ... Additional arguments.
 #' @return A fitted linear regression model for fMRI data analysis.
 #' @export
@@ -320,11 +329,16 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
-#' @param cor_struct Error correlation structure. One of \code{"iid"}, \code{"ar1"}, \code{"ar2"}, or \code{"arp"}.
-#' @param cor_iter Number of GLS iterations.
-#' @param cor_global Logical. If \code{TRUE}, estimate a single AR model for all runs.
-#' @param ar_p Integer order for \code{cor_struct = "arp"}.
-#' @param ar1_exact_first Logical. Apply exact AR(1) scaling to first sample.
+#' @param cor_struct Error correlation structure. One of \code{"iid"}, \code{"ar1"},
+#'   \code{"ar2"}, or \code{"arp"}. The \code{"arp"} option models an AR process of
+#'   order \code{ar_p}. Only AR terms are currently supported.
+#' @param cor_iter Number of GLS iterations to run.
+#' @param cor_global Logical. If \code{TRUE}, a single AR model is estimated from
+#'   all runs and applied globally; otherwise a separate model is estimated per
+#'   run.
+#' @param ar_p Integer order used when \code{cor_struct = "arp"}.
+#' @param ar1_exact_first Logical. Apply exact AR(1) scaling to the first sample
+#'   when \code{cor_struct = "ar1"}.
 #' @param ... Additional arguments.
 #' @return A fitted fMRI linear regression model with the specified fitting strategy.
 #' @keywords internal
