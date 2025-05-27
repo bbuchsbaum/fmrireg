@@ -232,6 +232,13 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' @param durations A vector of event durations. Default is \code{0}.
 #' @param drop_empty Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.
 #' @param robust Logical. Whether to use robust fitting. Default is \code{FALSE}.
+#' @param robust_psi The psi-function to use when \code{robust = TRUE}. Either
+#'   \code{"huber"} or \code{"bisquare"}.
+#' @param robust_k_huber Tuning constant \code{k} for Huber's psi.
+#' @param robust_c_tukey Tuning constant \code{c} for Tukey's bisquare psi.
+#' @param robust_max_iter Maximum number of IRLS iterations for robust fitting.
+#' @param robust_scale_scope Scope for robust scale estimation, either
+#'   \code{"run"} or \code{"global"}.
 #' @param strategy The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
@@ -275,7 +282,10 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' flm <- fmri_lm(onset ~ hrf(face_gen, basis=gen_hrf(hrf_bspline, N=7, span=25)), block = ~ run, 
 #' strategy="chunkwise", nchunks=1, dataset=dset)
 #' 
-fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE, robust = FALSE,
+fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE,
+                    robust = FALSE, robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
+                    robust_c_tukey = 4.685, robust_max_iter = 2L,
+                    robust_scale_scope = c("run", "global"),
                     strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, progress = FALSE,
                     cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L, cor_global = FALSE,
                     ar_p = NULL, ar1_exact_first = FALSE, ...) {
@@ -289,6 +299,12 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
   assert_that(is.numeric(durations), msg = "'durations' must be numeric")
   assert_that(is.logical(drop_empty), msg = "'drop_empty' must be logical")
   assert_that(is.logical(robust), msg = "'robust' must be logical")
+  robust_psi <- match.arg(robust_psi)
+  assert_that(is.numeric(robust_k_huber), msg = "'robust_k_huber' must be numeric")
+  assert_that(is.numeric(robust_c_tukey), msg = "'robust_c_tukey' must be numeric")
+  assert_that(is.numeric(robust_max_iter) && robust_max_iter >= 1,
+              msg = "'robust_max_iter' must be >= 1")
+  robust_scale_scope <- match.arg(robust_scale_scope)
   assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
   cor_struct <- match.arg(cor_struct)
   assert_that(is.numeric(cor_iter) && cor_iter >= 1, msg = "'cor_iter' must be >= 1")
@@ -311,7 +327,13 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
                      use_fast_path = use_fast_path, progress = progress,
                      cor_struct = cor_struct, cor_iter = cor_iter,
                      cor_global = cor_global, ar_p = ar_p,
-                     ar1_exact_first = ar1_exact_first, ...)
+                     ar1_exact_first = ar1_exact_first,
+                     robust_psi = robust_psi,
+                     robust_k_huber = robust_k_huber,
+                     robust_c_tukey = robust_c_tukey,
+                     robust_max_iter = robust_max_iter,
+                     robust_scale_scope = robust_scale_scope,
+                     ...)
   return(ret)
 }
 
@@ -326,6 +348,13 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
 #' @param dataset An \code{fmri_dataset} object containing the time-series data.
 #' @param strategy The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.
 #' @param robust Logical. Whether to use robust fitting. Default is \code{FALSE}.
+#' @param robust_psi The psi-function to use when \code{robust = TRUE}. Either
+#'   \code{"huber"} or \code{"bisquare"}.
+#' @param robust_k_huber Tuning constant \code{k} for Huber's psi.
+#' @param robust_c_tukey Tuning constant \code{c} for Tukey's bisquare psi.
+#' @param robust_max_iter Maximum number of IRLS iterations for robust fitting.
+#' @param robust_scale_scope Scope for robust scale estimation, either
+#'   \code{"run"} or \code{"global"}.
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
@@ -346,7 +375,10 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
 fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                         robust = FALSE, nchunks = 10, use_fast_path = FALSE, progress = FALSE,
                         cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
-                        cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE, ...) {
+                        cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
+                        robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
+                        robust_c_tukey = 4.685, robust_max_iter = 2L,
+                        robust_scale_scope = c("run", "global"), ...) {
   strategy <- match.arg(strategy)
   
   # Error checking
@@ -354,6 +386,12 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset' object")
   assert_that(is.logical(robust), msg = "'robust' must be logical")
   assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
+  robust_psi <- match.arg(robust_psi)
+  assert_that(is.numeric(robust_k_huber), msg = "'robust_k_huber' must be numeric")
+  assert_that(is.numeric(robust_c_tukey), msg = "'robust_c_tukey' must be numeric")
+  assert_that(is.numeric(robust_max_iter) && robust_max_iter >= 1,
+              msg = "'robust_max_iter' must be >= 1")
+  robust_scale_scope <- match.arg(robust_scale_scope)
   cor_struct <- match.arg(cor_struct)
   assert_that(is.numeric(cor_iter) && cor_iter >= 1, msg = "'cor_iter' must be >= 1")
   assert_that(is.logical(cor_global), msg = "'cor_global' must be logical")
@@ -455,7 +493,13 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                          cor_struct = cor_struct, cor_iter = cor_iter,
                                          cor_global = cor_global, ar_p = ar_p,
                                          ar1_exact_first = ar1_exact_first,
-                                         phi_fixed = phi_global, ...),
+                                         phi_fixed = phi_global,
+                                         robust_psi = robust_psi,
+                                         robust_k_huber = robust_k_huber,
+                                         robust_c_tukey = robust_c_tukey,
+                                         robust_max_iter = robust_max_iter,
+                                         robust_scale_scope = robust_scale_scope,
+                                         ...),
                    "chunkwise" = {
                     if (inherits(dataset, "latent_dataset")) {
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
@@ -463,7 +507,13 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                    cor_struct = cor_struct, cor_iter = cor_iter,
                                    cor_global = cor_global, ar_p = ar_p,
                                    ar1_exact_first = ar1_exact_first,
-                                   phi_fixed = phi_global, ...) # Do not pass use_fast_path
+                                   phi_fixed = phi_global,
+                                   robust_psi = robust_psi,
+                                   robust_k_huber = robust_k_huber,
+                                   robust_c_tukey = robust_c_tukey,
+                                   robust_max_iter = robust_max_iter,
+                                   robust_scale_scope = robust_scale_scope,
+                                   ...) # Do not pass use_fast_path
                     } else {
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                    nchunks, robust = robust, use_fast_path = use_fast_path,
@@ -471,7 +521,13 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                    cor_struct = cor_struct, cor_iter = cor_iter,
                                    cor_global = cor_global, ar_p = ar_p,
                                    ar1_exact_first = ar1_exact_first,
-                                   phi_fixed = phi_global, ...)
+                                   phi_fixed = phi_global,
+                                   robust_psi = robust_psi,
+                                   robust_k_huber = robust_k_huber,
+                                   robust_c_tukey = robust_c_tukey,
+                                   robust_max_iter = robust_max_iter,
+                                   robust_scale_scope = robust_scale_scope,
+                                   ...)
                     }
                   })
   
@@ -982,7 +1038,16 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
                                       verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
                                       cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
                                       cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
-                                      phi_fixed = NULL) {
+                                      phi_fixed = NULL,
+                                      robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
+                                      robust_c_tukey = 4.685, robust_max_iter = 2L,
+                                      robust_scale_scope = c("run", "global")) {
+  robust_psi <- match.arg(robust_psi)
+  robust_scale_scope <- match.arg(robust_scale_scope)
+  assert_that(is.numeric(robust_k_huber), msg = "'robust_k_huber' must be numeric")
+  assert_that(is.numeric(robust_c_tukey), msg = "'robust_c_tukey' must be numeric")
+  assert_that(is.numeric(robust_max_iter) && robust_max_iter >= 1,
+              msg = "'robust_max_iter' must be >= 1")
   chunks <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
   if (progress) {
     pb <- cli::cli_progress_bar("Fitting chunks", total = length(chunks), clear = FALSE)
@@ -1167,7 +1232,16 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
                        use_fast_path = FALSE, progress = FALSE,
                        cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
                        cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
-                       phi_fixed = NULL) {
+                       phi_fixed = NULL,
+                       robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
+                       robust_c_tukey = 4.685, robust_max_iter = 2L,
+                       robust_scale_scope = c("run", "global")) {
+  robust_psi <- match.arg(robust_psi)
+  robust_scale_scope <- match.arg(robust_scale_scope)
+  assert_that(is.numeric(robust_k_huber), msg = "'robust_k_huber' must be numeric")
+  assert_that(is.numeric(robust_c_tukey), msg = "'robust_c_tukey' must be numeric")
+  assert_that(is.numeric(robust_max_iter) && robust_max_iter >= 1,
+              msg = "'robust_max_iter' must be >= 1")
   # Get an iterator of data chunks (runs)
   chunks <- exec_strategy("runwise")(dset)
   if (progress) {
