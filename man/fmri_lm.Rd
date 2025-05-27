@@ -12,6 +12,11 @@ fmri_lm(
   durations = 0,
   drop_empty = TRUE,
   robust = FALSE,
+  robust_psi = c("huber", "bisquare"),
+  robust_k_huber = 1.345,
+  robust_c_tukey = 4.685,
+  robust_max_iter = 2L,
+  robust_scale_scope = c("run", "global"),
   strategy = c("runwise", "chunkwise"),
   nchunks = 10,
   use_fast_path = FALSE,
@@ -38,6 +43,11 @@ fmri_lm(
 \item{drop_empty}{Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.}
 
 \item{robust}{Logical. Whether to use robust fitting. Default is \code{FALSE}.}
+\item{robust_psi}{Psi-function for computing weights when \code{robust = TRUE}. Either \code{"huber"} or \code{"bisquare"}.}
+\item{robust_k_huber}{Tuning constant \code{k} for the Huber psi-function.}
+\item{robust_c_tukey}{Tuning constant \code{c} for the Tukey bisquare psi-function.}
+\item{robust_max_iter}{Maximum number of IRLS iterations.}
+\item{robust_scale_scope}{Scope for estimating the robust scale: \code{"run"} or \code{"global"}.}
 
 \item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
 
@@ -65,7 +75,7 @@ A fitted linear regression model for fMRI data analysis.
 \description{
 This function fits a linear regression model for fMRI data analysis using the specified model formula,
 block structure, and dataset. The model can be fit using either a runwise or chunkwise data splitting strategy,
-and robust fitting can be enabled if desired.
+and an optional row-wise robust fitting procedure can be enabled. When \code{robust = TRUE}, time points with large residuals are down-weighted via an Iteratively Reweighted Least Squares approach. Standard errors are based on a final robust scale estimate and p-values should be interpreted with caution.
 }
 \examples{
 

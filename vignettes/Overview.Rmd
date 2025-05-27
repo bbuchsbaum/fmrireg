@@ -115,9 +115,15 @@ full_model <- fmri_model(event_mod, base_mod)
 # (Requires 'my_dataset' of class fmri_dataset)
 fit <- fmri_lm(full_model, dataset = my_dataset)
 
+# Robust fit down-weighting outlier time points
+fit_robust <- fmri_lm(full_model, dataset = my_dataset, robust = TRUE)
+
 # Extract contrast results
-con_table <- contrast_stats(fit, "FvS") 
+con_table <- contrast_stats(fit, "FvS")
 ```
+
+Setting `robust = TRUE` invokes row-wise weighting to lessen the influence of
+motion spikes or other frame-level artifacts.
 
 *   **See Vignettes:**
     *   `vignette("a_09_linear_model", package = "fmrireg")`
