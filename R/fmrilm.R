@@ -409,27 +409,55 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   # Pass the full processed contrast objects list down.
   # The fitting function (chunkwise/runwise) will decide whether to use the objects (slow path)
   # or extract weights (fast path).
+  phi_global <- NULL
+  if (cor_global && match.arg(cor_struct) != "iid") {
+    ar_order <- switch(match.arg(cor_struct),
+                       ar1 = 1L,
+                       ar2 = 2L,
+                       arp = ar_p)
+
+    run_chunks <- exec_strategy("runwise")(dataset)
+    form <- get_formula(fmrimod)
+    resid_vec <- numeric(0)
+    for (rch in run_chunks) {
+      tmats_run <- term_matrices(fmrimod, rch$chunk_num)
+      data_env_run <- list2env(tmats_run)
+      n_time_run <- nrow(tmats_run[[1]])
+      data_env_run[[".y"]] <- rep(0, n_time_run)
+      X_run <- model.matrix(form, data_env_run)
+      proj_run <- .fast_preproject(X_run)
+      Y_run <- as.matrix(rch$data)
+      ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
+      resid_vec <- c(resid_vec, rowMeans(Y_run - ols$fitted))
+    }
+    phi_global <- .estimate_ar(resid_vec, ar_order)
+    cor_iter <- 1L
+  }
+
   result <- switch(strategy,
                    "runwise" = runwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                          robust = robust, use_fast_path = use_fast_path,
                                          progress = progress,
                                          cor_struct = cor_struct, cor_iter = cor_iter,
                                          cor_global = cor_global, ar_p = ar_p,
-                                         ar1_exact_first = ar1_exact_first, ...),
+                                         ar1_exact_first = ar1_exact_first,
+                                         phi_fixed = phi_global, ...),
                    "chunkwise" = {
                     if (inherits(dataset, "latent_dataset")) {
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                    nchunks, robust = robust, progress = progress,
                                    cor_struct = cor_struct, cor_iter = cor_iter,
                                    cor_global = cor_global, ar_p = ar_p,
-                                   ar1_exact_first = ar1_exact_first, ...) # Do not pass use_fast_path
+                                   ar1_exact_first = ar1_exact_first,
+                                   phi_fixed = phi_global, ...) # Do not pass use_fast_path
                     } else {
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                    nchunks, robust = robust, use_fast_path = use_fast_path,
                                    progress = progress,
                                    cor_struct = cor_struct, cor_iter = cor_iter,
                                    cor_global = cor_global, ar_p = ar_p,
-                                   ar1_exact_first = ar1_exact_first, ...)
+                                   ar1_exact_first = ar1_exact_first,
+                                   phi_fixed = phi_global, ...)
                     }
                   })
   
@@ -939,7 +967,8 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, robust = FALSE,
                                       verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
                                       cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
-                                      cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE) {
+                                      cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
+                                      phi_fixed = NULL) {
   chunks <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
   if (progress) {
     pb <- cli::cli_progress_bar("Fitting chunks", total = length(chunks), clear = FALSE)
@@ -1038,9 +1067,13 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
               proj_run <- .fast_preproject(X_run)
               Y_run <- as.matrix(rch$data)
 
-              ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
-              resid_ols <- Y_run - ols$fitted
-              phi_hat_run <- .estimate_ar(rowMeans(resid_ols), ar_order)
+              if (is.null(phi_fixed)) {
+                  ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
+                  resid_ols <- Y_run - ols$fitted
+                  phi_hat_run <- .estimate_ar(rowMeans(resid_ols), ar_order)
+              } else {
+                  phi_hat_run <- phi_fixed
+              }
               dummyY <- matrix(0, nrow(X_run), 0)
               ar_whiten_inplace(dummyY, X_run, phi_hat_run, ar1_exact_first)
 
@@ -1119,7 +1152,8 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
 runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = FALSE,
                        use_fast_path = FALSE, progress = FALSE,
                        cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
-                       cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE) {
+                       cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
+                       phi_fixed = NULL) {
   # Get an iterator of data chunks (runs)
   chunks <- exec_strategy("runwise")(dset)
   if (progress) {
@@ -1228,9 +1262,13 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
 
         phi_hat_run <- NULL
         if (ar_modeling) {
-            ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
-            resid_ols <- Y_run - ols$fitted
-            phi_hat_run <- .estimate_ar(rowMeans(resid_ols), ar_order)
+            if (is.null(phi_fixed)) {
+                ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
+                resid_ols <- Y_run - ols$fitted
+                phi_hat_run <- .estimate_ar(rowMeans(resid_ols), ar_order)
+            } else {
+                phi_hat_run <- phi_fixed
+            }
         }
 
         gls <- NULL
@@ -1245,7 +1283,7 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
                 proj_iter <- .fast_preproject(X_iter)
             }
             gls <- .fast_lm_matrix(X_iter, Y_iter, proj_iter)
-            if (ar_modeling && iter < cor_iter) {
+            if (ar_modeling && is.null(phi_fixed) && iter < cor_iter) {
                 resid_gls <- Y_iter - X_iter %*% gls$betas
                 phi_hat_run <- .estimate_ar(rowMeans(resid_gls), ar_order)
             }
