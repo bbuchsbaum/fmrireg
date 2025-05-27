@@ -34,6 +34,9 @@ evaluate_regressor_cpp <- function(grid, onsets, durations, amplitudes, hrf_matr
 }
 
 ar_whiten_inplace <- function(Y, X, phi_coeffs, exact_first_ar1 = FALSE) {
+    if (anyNA(Y) || anyNA(X)) {
+        stop("NA values detected in 'X' or 'Y' for ar_whiten_inplace")
+    }
     .Call('_fmrireg_ar_whiten_inplace', PACKAGE = 'fmrireg', Y, X, phi_coeffs, exact_first_ar1)
 }
 
