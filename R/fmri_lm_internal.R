@@ -242,3 +242,157 @@ meta_contrasts <- function(conres_list) {
   # Remove NULLs and return
   Filter(Negate(is.null), meta_results)
 }
+
+#' Beta statistics when each voxel has its own projection matrix
+#'
+#' Helper for voxelwise AR fitting where every voxel yields a distinct
+#' whitened design matrix.  Computes standard errors and t statistics using
+#' the per-voxel \code{XtXinv} matrices.
+#'
+#' @keywords internal
+#' @noRd
+beta_stats_matrix_voxelwise <- function(Betas, XtXinv_list, sigma, dfres,
+                                        varnames,
+                                        robust_weights_list = NULL,
+                                        ar_order = 0) {
+  V <- ncol(Betas)
+  p <- nrow(Betas)
+
+  est_mat  <- matrix(NA_real_, V, p)
+  se_mat   <- matrix(NA_real_, V, p)
+  t_mat    <- matrix(NA_real_, V, p)
+  prob_mat <- matrix(NA_real_, V, p)
+
+  for (v in seq_len(V)) {
+    XtXinv <- XtXinv_list[[v]]
+    se_scal <- sqrt(diag(XtXinv))
+
+    rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
+
+    df_eff <- if (!is.null(rw) || ar_order > 0) {
+      n <- dfres + p
+      calculate_effective_df(n, p, rw, ar_order, method = "simple")
+    } else {
+      dfres
+    }
+
+    se_vec <- se_scal * sigma[v]
+    est_vec <- Betas[, v]
+    t_vec <- ifelse(abs(se_vec) < .Machine$double.eps^0.5, 0, est_vec / se_vec)
+    p_vec <- 2 * pt(-abs(t_vec), df_eff)
+
+    est_mat[v, ]  <- est_vec
+    se_mat[v, ]   <- se_vec
+    t_mat[v, ]    <- t_vec
+    prob_mat[v, ] <- p_vec
+  }
+
+  colnames(est_mat)  <- varnames
+  colnames(se_mat)   <- varnames
+  colnames(t_mat)    <- varnames
+  colnames(prob_mat) <- varnames
+
+  tibble::tibble(
+    type = "beta",
+    name = "parameter_estimates",
+    stat_type = "tstat",
+    df.residual = dfres,
+    conmat = list(NULL),
+    colind = list(NULL),
+    data = list(tibble::tibble(
+      estimate = list(est_mat),
+      se = list(se_mat),
+      stat = list(t_mat),
+      prob = list(prob_mat),
+      sigma = list(sigma)
+    ))
+  )
+}
+
+#' Contrast statistics with voxelwise projection matrices
+#'
+#' Computes t and F contrasts when each voxel has a distinct \code{XtXinv}.
+#'
+#' @keywords internal
+#' @noRd
+fit_lm_contrasts_voxelwise <- function(Betas, sigma2, XtXinv_list,
+                                       conlist, fconlist, dfres,
+                                       robust_weights_list = NULL,
+                                       ar_order = 0) {
+  p <- nrow(Betas)
+  V <- ncol(Betas)
+
+  results <- list()
+
+  for (nm in names(conlist)) {
+    l <- conlist[[nm]]
+    colind <- attr(l, "colind")
+    full_l <- matrix(0, nrow = 1, ncol = p)
+    full_l[, colind] <- l
+
+    est <- se <- stat <- prob <- sigma_out <- numeric(V)
+
+    for (v in seq_len(V)) {
+      rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
+      res <- .fast_t_contrast(Betas[, v, drop = FALSE], sigma2[v],
+                              XtXinv_list[[v]], full_l, dfres, rw, ar_order)
+      est[v] <- res$estimate
+      se[v]  <- res$se
+      stat[v] <- res$stat
+      prob[v] <- res$prob
+      sigma_out[v] <- res$sigma
+    }
+
+    results[[nm]] <- tibble::tibble(
+      type = "contrast",
+      name = nm,
+      stat_type = "tstat",
+      df.residual = dfres,
+      conmat = list(l),
+      colind = list(colind),
+      data = list(tibble::tibble(
+        estimate = est,
+        se = se,
+        stat = stat,
+        prob = prob,
+        sigma = sigma_out
+      ))
+    )
+  }
+
+  for (nm in names(fconlist)) {
+    L <- fconlist[[nm]]
+    colind <- attr(L, "colind")
+    full_L <- matrix(0, nrow = nrow(L), ncol = p)
+    full_L[, colind] <- L
+
+    est <- se <- stat <- prob <- numeric(V)
+
+    for (v in seq_len(V)) {
+      rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
+      res <- .fast_F_contrast(Betas[, v, drop = FALSE], sigma2[v],
+                              XtXinv_list[[v]], full_L, dfres, rw, ar_order)
+      est[v]  <- res$estimate
+      se[v]   <- res$se
+      stat[v] <- res$stat
+      prob[v] <- res$prob
+    }
+
+    results[[nm]] <- tibble::tibble(
+      type = "Fcontrast",
+      name = nm,
+      stat_type = "Fstat",
+      df.residual = dfres,
+      conmat = list(L),
+      colind = list(colind),
+      data = list(tibble::tibble(
+        estimate = est,
+        se = se,
+        stat = stat,
+        prob = prob
+      ))
+    )
+  }
+
+  results
+}

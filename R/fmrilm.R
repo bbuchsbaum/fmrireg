@@ -1513,15 +1513,22 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
       # -------- Original Slow Path --------
       # Check if voxelwise AR is requested
       if (cfg$ar$voxelwise && cfg$ar$struct != "iid") {
-          # Voxelwise AR path
+          # Voxelwise AR path using modular solver
           ar_order <- switch(cfg$ar$struct,
                              ar1 = 1L,
                              ar2 = 2L,
                              arp = cfg$ar$p,
                              iid = 0L)
-          
+
+          simple_conlist <- Filter(function(x) inherits(x, "contrast"), contrast_objects)
+          fconlist <- Filter(function(x) inherits(x, "Fcontrast"), contrast_objects)
+          simple_conlist_weights <- lapply(simple_conlist, `[[`, "weights")
+          names(simple_conlist_weights) <- names(simple_conlist)
+          fconlist_weights <- lapply(fconlist, `[[`, "weights")
+          names(fconlist_weights) <- names(fconlist)
+
           if (verbose) message("Using voxelwise AR(", ar_order, ") modeling...")
-          
+
           cres <- vector("list", length(chunks))
           for (i in seq_along(chunks)) {
               ym <- chunks[[i]]
@@ -1530,88 +1537,73 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
               vnames <- attr(tmats, "varnames")
               event_indices <- attr(tmats, "event_term_indices")
               baseline_indices <- attr(tmats, "baseline_term_indices")
-              
+
               data_env <- list2env(tmats)
               Y_run <- as.matrix(ym$data)
               data_env$.y <- Y_run
               X_run <- model.matrix(form, data_env)
-              
+
               n_voxels <- ncol(Y_run)
-              n_timepoints <- nrow(Y_run)
               p <- ncol(X_run)
-              
-              # Storage for voxel-wise results
+              dfres <- nrow(X_run) - p
+
               betas_voxelwise <- matrix(NA_real_, p, n_voxels)
               sigma_voxelwise <- numeric(n_voxels)
               rss_voxelwise <- numeric(n_voxels)
-              
-              # Process each voxel separately
+              XtXinv_list <- vector("list", n_voxels)
+              robust_w_list <- if (cfg$robust$type != FALSE) vector("list", n_voxels) else NULL
+
               for (v in seq_len(n_voxels)) {
-                  y_voxel <- Y_run[, v]
-                  
-                  # Skip if all zeros or constant
-                  if (var(y_voxel) < .Machine$double.eps) {
-                      next
-                  }
-                  
-                  # Initial OLS fit
-                  lm_fit <- lm.fit(X_run, y_voxel)
-                  resid_ols <- lm_fit$residuals
-                  
-                  # Estimate voxel-specific AR parameters
-                  phi_voxel <- estimate_ar_parameters(resid_ols, ar_order)
-                  
-                  # AR whitening for this voxel
-                  Y_voxel_mat <- matrix(y_voxel, ncol = 1)
-                  tmp <- ar_whiten_transform(X_run, Y_voxel_mat, phi_voxel, cfg$ar$exact_first)
-                  X_voxel_w <- tmp$X
-                  y_voxel_w <- tmp$Y[, 1]
-                  
-                  # Fit on whitened data
-                  if (cfg$robust$type != FALSE) {
-                      # Robust fit on whitened data (simplified - would need full IRLS)
-                      warning("Robust fitting with voxelwise AR not fully implemented in slow path")
-                      lm_fit_w <- lm.fit(X_voxel_w, y_voxel_w)
+                  y_voxel <- matrix(Y_run[, v], ncol = 1)
+
+                  ctx_vox <- glm_context(X_run, y_voxel)
+                  ols <- solve_glm_core(ctx_vox, return_fitted = TRUE)
+                  resid_ols <- y_voxel - ols$fitted
+
+                  phi_voxel <- if (is.null(phi_fixed)) {
+                      estimate_ar_parameters(drop(resid_ols), ar_order)
                   } else {
-                      # OLS on whitened data
-                      lm_fit_w <- lm.fit(X_voxel_w, y_voxel_w)
+                      phi_fixed
                   }
-                  
-                  betas_voxelwise[, v] <- lm_fit_w$coefficients
-                  rss_voxelwise[v] <- sum(lm_fit_w$residuals^2)
-                  sigma_voxelwise[v] <- sqrt(rss_voxelwise[v] / lm_fit_w$df.residual)
+
+                  tmp <- ar_whiten_transform(X_run, y_voxel, phi_voxel, cfg$ar$exact_first)
+                  proj_w <- .fast_preproject(tmp$X)
+                  ctx_vox_w <- glm_context(X = tmp$X, Y = tmp$Y, proj = proj_w, phi_hat = phi_voxel)
+
+                  if (cfg$robust$type != FALSE) {
+                      sigma_fixed_for_vox <- if (cfg$robust$scale_scope == "global" && !is.null(sigma_fixed)) sigma_fixed else NULL
+                      rfit <- robust_iterative_fitter(ctx_vox_w, cfg$robust, tmp$X, sigma_fixed_for_vox)
+                      betas_voxelwise[, v] <- rfit$betas_robust
+                      XtXinv_list[[v]] <- rfit$XtWXi_final
+                      rss_voxelwise[v] <- sum((tmp$Y - tmp$X %*% rfit$betas_robust)^2)
+                      sigma_voxelwise[v] <- rfit$sigma_robust_scale_final
+                      robust_w_list[[v]] <- rfit$robust_weights_final
+                  } else {
+                      fit_v <- solve_glm_core(ctx_vox_w)
+                      betas_voxelwise[, v] <- fit_v$betas
+                      XtXinv_list[[v]] <- proj_w$XtXinv
+                      rss_voxelwise[v] <- fit_v$rss
+                      sigma_voxelwise[v] <- sqrt(fit_v$sigma2)
+                  }
               }
-              
-              # Calculate statistics and contrasts
-              # This is simplified - would need proper handling of contrasts
-              rdf <- n_timepoints - p
-              
-              # Create pseudo-fit object for compatibility
-              ret <- list(
-                  fit = list(
-                      coefficients = betas_voxelwise,
-                      residuals = Y_run - X_run %*% betas_voxelwise,
-                      df.residual = rdf
-                  )
-              )
-              
-              # Calculate contrasts manually (simplified)
-              # In practice, would need to properly apply contrast weights
-              ret$contrasts <- list()
-              ret$bstats <- data.frame(
-                  estimate = as.vector(betas_voxelwise),
-                  std.error = rep(sigma_voxelwise, each = p),
-                  parameter = rep(vnames, n_voxels)
-              )
-              
+
+              bstats <- beta_stats_matrix_voxelwise(betas_voxelwise, XtXinv_list,
+                                                    sigma_voxelwise, dfres, vnames,
+                                                    robust_w_list, ar_order)
+
+              conres <- fit_lm_contrasts_voxelwise(betas_voxelwise, sigma_voxelwise^2,
+                                                    XtXinv_list, simple_conlist_weights,
+                                                    fconlist_weights, dfres,
+                                                    robust_w_list, ar_order)
+
               cres[[i]] <- list(
-                  conres = ret$contrasts,
-                  bstats = ret$bstats,
+                  conres = conres,
+                  bstats = bstats,
                   event_indices = event_indices,
                   baseline_indices = baseline_indices,
                   rss = rss_voxelwise,
-                  rdf = rdf,
-                  resvar = rss_voxelwise / rdf,
+                  rdf = dfres,
+                  resvar = sigma_voxelwise^2,
                   sigma = sigma_voxelwise
               )
               if (progress) cli::cli_progress_update(id = pb)
