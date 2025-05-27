@@ -396,3 +396,203 @@ fit_lm_contrasts_voxelwise <- function(Betas, sigma2, XtXinv_list,
 
   results
 }
+
+#' Initialize storage for voxelwise contrast results
+#'
+#' Creates pre-allocated numeric vectors for each contrast so that results can
+#' be filled in incrementally while processing voxels in chunks.
+#'
+#' @param conlist Named list of t-contrast vectors.
+#' @param fconlist Named list of F-contrast matrices.
+#' @param n_voxels Number of voxels to allocate storage for.
+#' @keywords internal
+#' @noRd
+initialize_contrast_storage <- function(conlist, fconlist, n_voxels) {
+  storage <- list()
+
+  for (nm in names(conlist)) {
+    l <- conlist[[nm]]
+    storage[[nm]] <- list(
+      type = "contrast",
+      stat_type = "tstat",
+      conmat = l,
+      colind = attr(l, "colind"),
+      estimate = numeric(n_voxels),
+      se = numeric(n_voxels),
+      stat = numeric(n_voxels),
+      prob = numeric(n_voxels),
+      sigma = numeric(n_voxels)
+    )
+  }
+
+  for (nm in names(fconlist)) {
+    L <- fconlist[[nm]]
+    storage[[nm]] <- list(
+      type = "Fcontrast",
+      stat_type = "Fstat",
+      conmat = L,
+      colind = attr(L, "colind"),
+      estimate = numeric(n_voxels),
+      se = numeric(n_voxels),
+      stat = numeric(n_voxels),
+      prob = numeric(n_voxels)
+    )
+  }
+
+  storage
+}
+
+#' Store contrast results for a single voxel
+#'
+#' Helper used by `fit_lm_contrasts_voxelwise_chunked()` to compute and store
+#' contrast statistics for one voxel using its QR decomposition.
+#'
+#' @param storage Contrast storage list from `initialize_contrast_storage()`.
+#' @param voxel_index Integer voxel index being processed.
+#' @param qr_w QR decomposition of whitened design matrix for this voxel.
+#' @param beta_w Regression coefficients for this voxel.
+#' @param sigma_w Residual standard deviation for this voxel.
+#' @param conlist Named list of t-contrasts.
+#' @param fconlist Named list of F-contrasts.
+#' @param dfres Residual degrees of freedom.
+#' @param ar_order AR model order.
+#' @keywords internal
+#' @noRd
+store_voxel_contrasts <- function(storage, voxel_index, qr_w, beta_w, sigma_w,
+                                  conlist, fconlist, dfres, ar_order = 0) {
+  XtXinv <- chol2inv(qr.R(qr_w))
+  Bv <- matrix(beta_w, ncol = 1)
+
+  for (nm in names(conlist)) {
+    l <- conlist[[nm]]
+    colind <- attr(l, "colind")
+    full_l <- matrix(0, nrow = 1, ncol = nrow(XtXinv))
+    full_l[, colind] <- l
+
+    res <- .fast_t_contrast(Bv, sigma_w^2, XtXinv, full_l, dfres,
+                            robust_weights = NULL, ar_order = ar_order)
+
+    storage[[nm]]$estimate[voxel_index] <- res$estimate
+    storage[[nm]]$se[voxel_index] <- res$se
+    storage[[nm]]$stat[voxel_index] <- res$stat
+    storage[[nm]]$prob[voxel_index] <- res$prob
+    storage[[nm]]$sigma[voxel_index] <- res$sigma
+  }
+
+  for (nm in names(fconlist)) {
+    L <- fconlist[[nm]]
+    colind <- attr(L, "colind")
+    full_L <- matrix(0, nrow = nrow(L), ncol = nrow(XtXinv))
+    full_L[, colind] <- L
+
+    res <- .fast_F_contrast(Bv, sigma_w^2, XtXinv, full_L, dfres,
+                            robust_weights = NULL, ar_order = ar_order)
+
+    storage[[nm]]$estimate[voxel_index] <- res$estimate
+    storage[[nm]]$se[voxel_index] <- res$se
+    storage[[nm]]$stat[voxel_index] <- res$stat
+    storage[[nm]]$prob[voxel_index] <- res$prob
+  }
+
+  storage
+}
+
+#' Format contrast storage into result tibbles
+#'
+#' Converts the contrast storage structure returned by
+#' `initialize_contrast_storage()` into the list-of-tibbles format used by other
+#' contrast functions.
+#'
+#' @param storage List returned by `initialize_contrast_storage()`.
+#' @param dfres Residual degrees of freedom.
+#' @keywords internal
+#' @noRd
+format_contrast_results <- function(storage, dfres) {
+  results <- vector("list", length(storage))
+  names(results) <- names(storage)
+
+  for (nm in names(storage)) {
+    s <- storage[[nm]]
+    dat <- tibble::tibble(
+      estimate = s$estimate,
+      se = s$se,
+      stat = s$stat,
+      prob = s$prob,
+      sigma = s$sigma %||% NULL
+    )
+
+    if (all(is.na(s$sigma))) {
+      dat$sigma <- NULL
+    }
+
+    results[[nm]] <- tibble::tibble(
+      type = s$type,
+      name = nm,
+      stat_type = s$stat_type,
+      df.residual = dfres,
+      conmat = list(s$conmat),
+      colind = list(s$colind),
+      data = list(dat)
+    )
+  }
+
+  results
+}
+
+#' Chunked voxelwise contrast computation
+#'
+#' Implements a memory-efficient voxelwise contrast engine by processing voxels
+#' in small chunks. Each voxel is whitened and analysed independently, and only
+#' temporary matrices for the current chunk are kept in memory.
+#'
+#' @param X_run Design matrix for the current run.
+#' @param Y_run Data matrix (time points \eqn{\times} voxels) for the run.
+#' @param phi_matrix AR coefficients matrix (order \eqn{\times} voxels).
+#' @param conlist Named list of t-contrast vectors.
+#' @param fconlist Named list of F-contrast matrices.
+#' @param chunk_size Number of voxels to process per chunk.
+#' @keywords internal
+#' @noRd
+fit_lm_contrasts_voxelwise_chunked <- function(X_run, Y_run, phi_matrix,
+                                               conlist, fconlist,
+                                               chunk_size = 100) {
+  if (!is.matrix(X_run)) X_run <- as.matrix(X_run)
+  if (!is.matrix(Y_run)) Y_run <- as.matrix(Y_run)
+
+  n_voxels <- ncol(Y_run)
+  if (is.null(dim(phi_matrix))) {
+    phi_matrix <- matrix(phi_matrix, ncol = n_voxels)
+  }
+  if (ncol(phi_matrix) != n_voxels) {
+    stop("phi_matrix columns must equal number of voxels")
+  }
+
+  ar_order <- nrow(phi_matrix)
+  dfres <- nrow(X_run) - qr(X_run)$rank
+  n_chunks <- ceiling(n_voxels / chunk_size)
+
+  storage <- initialize_contrast_storage(conlist, fconlist, n_voxels)
+
+  for (chunk_idx in seq_len(n_chunks)) {
+    idx <- ((chunk_idx - 1) * chunk_size + 1):min(chunk_idx * chunk_size,
+                                                n_voxels)
+
+    for (v in idx) {
+      phi_v <- phi_matrix[, v]
+      tmp <- ar_whiten_transform(X_run, Y_run[, v, drop = FALSE],
+                                 phi_v, exact_first = TRUE)
+      X_w <- tmp$X
+      Y_w <- tmp$Y
+
+      qr_w <- qr(X_w)
+      beta_w <- qr.coef(qr_w, Y_w)
+      sigma_w <- sqrt(sum(qr.resid(qr_w, Y_w)^2) /
+                      max(1, nrow(X_w) - qr_w$rank))
+
+      storage <- store_voxel_contrasts(storage, v, qr_w, beta_w, sigma_w,
+                                       conlist, fconlist, dfres, ar_order)
+    }
+  }
+
+  format_contrast_results(storage, dfres)
+}
