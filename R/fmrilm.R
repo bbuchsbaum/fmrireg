@@ -523,7 +523,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
       ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
       resid_vec <- c(resid_vec, rowMeans(Y_run - ols$fitted))
     }
-    phi_global <- .estimate_ar(resid_vec, ar_order)
+    phi_global <- estimate_ar_parameters(resid_vec, ar_order)
     cor_iter <- 1L
   }
 
@@ -1339,12 +1339,12 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
               if (is.null(phi_fixed)) {
                   ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
                   resid_ols <- Y_run - ols$fitted
-                  phi_hat_run <- .estimate_ar(rowMeans(resid_ols), ar_order)
+              phi_hat_run <- estimate_ar_parameters(rowMeans(resid_ols), ar_order)
               } else {
                   phi_hat_run <- phi_fixed
               }
               dummyY <- matrix(0, nrow(X_run), 0)
-              ar_whiten_inplace(dummyY, X_run, phi_hat_run, ar1_exact_first)
+              X_run <- ar_whiten_transform(X_run, dummyY, phi_hat_run, ar1_exact_first)$X
 
               phi_hat_list[[ri]] <- phi_hat_run
               X_w_list[[ri]] <- X_run
@@ -1369,7 +1369,7 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
                   if (!is.null(phi)) {
                       dummyX <- matrix(0, length(rows), 0)
                       subY <- Ymat[rows, , drop = FALSE]
-                      ar_whiten_inplace(subY, dummyX, phi, ar1_exact_first)
+                      subY <- ar_whiten_transform(dummyX, subY, phi, ar1_exact_first)$Y
                       Ymat[rows, ] <- subY
                   }
               }
@@ -1571,7 +1571,7 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
                 if (is.null(phi_fixed)) {
                     ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
                     resid_ols <- Y_run - ols$fitted
-                    phi_hat_run <- .estimate_ar(rowMeans(resid_ols), ar_order)
+                    phi_hat_run <- estimate_ar_parameters(rowMeans(resid_ols), ar_order)
                 } else {
                     phi_hat_run <- phi_fixed
                 }
@@ -1585,13 +1585,15 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
                 if (ar_modeling) {
                     X_iter <- X_run
                     Y_iter <- Y_run
-                    ar_whiten_inplace(Y_iter, X_iter, phi_hat_run, ar1_exact_first)
+                    tmp <- ar_whiten_transform(X_iter, Y_iter, phi_hat_run, ar1_exact_first)
+                    X_iter <- tmp$X
+                    Y_iter <- tmp$Y
                     proj_iter <- .fast_preproject(X_iter)
                 }
                 gls <- .fast_lm_matrix(X_iter, Y_iter, proj_iter)
                 if (ar_modeling && is.null(phi_fixed) && iter < cor_iter) {
                     resid_gls <- Y_iter - X_iter %*% gls$betas
-                    phi_hat_run <- .estimate_ar(rowMeans(resid_gls), ar_order)
+                    phi_hat_run <- estimate_ar_parameters(rowMeans(resid_gls), ar_order)
                 }
             }
 
