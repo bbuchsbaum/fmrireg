@@ -14,3 +14,12 @@ test_that("fmri_lm runwise AR1 fits without error", {
     NA
   )
 })
+
+test_that("fmri_lm runwise AR1 global fits without error", {
+  expect_error(
+    fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
+            use_fast_path = TRUE,
+            cor_struct = "ar1", cor_global = TRUE),
+    NA
+  )
+})
