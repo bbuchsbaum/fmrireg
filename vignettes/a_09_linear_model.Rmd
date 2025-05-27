@@ -246,6 +246,31 @@ head(cbind(OLS = se_ols[[1]], AR1 = se_ar1[[1]]))
 The `cor_struct` argument also accepts `"arp"` for higher-order autoregressive
 models. This setting models AR coefficients only (no moving-average terms).
 
+### Handling Outliers with Row-Wise Robust Fitting
+
+Real fMRI runs sometimes contain entire time points corrupted by motion or scanner artifacts. The `fmri_lm`
+function can mitigate their impact by enabling row-wise robust weighting. When `robust = TRUE`, an
+Iteratively Reweighted Least Squares loop down-weights frames with large residuals. The `robust_psi`
+argument selects the weighting function and `robust_max_iter` controls the number of iterations.
+
+```{r, message=FALSE}
+model_robust <- fmri_lm(
+  formula = onset ~ hrf(condition),
+  block   = ~ run,
+  dataset = dataset,
+  strategy = "chunkwise",
+  nchunks = 1,
+  robust = TRUE,
+  robust_psi = "huber",
+  robust_max_iter = 2
+)
+
+se_robust <- standard_error(model_robust)
+head(cbind(OLS = se_ols[[1]], Robust = se_robust[[1]]))
+```
+
+Robust fitting guards against outlier time points but will not correct voxel-specific spikes. P-values rely on a robust residual scale and should be interpreted as approximate.
+
 
 
 ## Extracting Model Results
