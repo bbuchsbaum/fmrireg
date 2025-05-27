@@ -407,6 +407,16 @@ The current voxelwise AR implementation in the slow path (SPRINT3-05R) does not 
     *   **Depends on:** SPRINT4-04R
     *   **Acceptance:** Voxelwise processing time is practical (< 10x slower than non-voxelwise)
 
+    *Implementation Status:* parallel processing of voxels via `future.apply`
+    has been integrated in `runwise_lm`. Progress reporting now uses
+    `progressr` when parallel execution is enabled. Further vectorisation is
+    limited by per-voxel AR parameter estimation.
+
+    *Rcpp Optimization Plan:* evaluate the heaviest inner loops (whitening,
+    robust fitting) using `profvis`. Candidate functions will be ported to C++
+    with Rcpp, starting with the voxelwise AR-whitening step. This will be
+    prototyped in a separate branch once baseline functionality is validated.
+
 *   **Ticket SPRINT4-07R: Comprehensive Testing**
     *   **Task:** Add extensive tests for voxelwise AR with contrasts.
     *   **Details:**

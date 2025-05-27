@@ -267,6 +267,8 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' @param extra_nuisance Optional matrix or formula specifying additional nuisance regressors.
 #' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance regressors in the final model. Default is \code{FALSE}.
 #' @param ar_voxelwise Logical. Whether to estimate AR parameters voxel-wise. Default is \code{FALSE}.
+#' @param parallel_voxels Logical. If TRUE, voxelwise processing uses parallel
+#'   workers via `future.apply`. Default is \code{FALSE}.
 #' @param ... Additional arguments.
 #' @return A fitted linear regression model for fMRI data analysis.
 #' 
@@ -319,7 +321,8 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE,
                     robust = FALSE, robust_options = NULL, ar_options = NULL,
                     strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, progress = FALSE,
-                    extra_nuisance = NULL, keep_extra_nuisance_in_model = FALSE, ar_voxelwise = FALSE, ...) {
+                    extra_nuisance = NULL, keep_extra_nuisance_in_model = FALSE, ar_voxelwise = FALSE,
+                    parallel_voxels = FALSE, ...) {
   
   strategy <- match.arg(strategy)
   
@@ -368,8 +371,9 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
   # Pass configuration object down
   ret <- fmri_lm_fit(model, dataset, strategy, cfg, nchunks,
                      use_fast_path = use_fast_path, progress = progress,
-                     extra_nuisance = extra_nuisance, 
+                     extra_nuisance = extra_nuisance,
                      keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
+                     parallel_voxels = parallel_voxels,
                      ...)
   return(ret)
 }
@@ -390,13 +394,16 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
 #' @param extra_nuisance Optional matrix or formula specifying additional nuisance regressors.
 #' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance regressors in the final model. Default is \code{FALSE}.
+#' @param parallel_voxels Logical. If TRUE, voxelwise AR processing within runs
+#'   is parallelised using `future.apply`. Default is \code{FALSE}.
 #' @param ... Additional arguments.
 #' @return A fitted fMRI linear regression model with the specified fitting strategy.
 #' @keywords internal
 #' @seealso \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{fmri_dataset}}
 fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                         cfg, nchunks = 10, use_fast_path = FALSE, progress = FALSE,
-                        extra_nuisance = NULL, keep_extra_nuisance_in_model = FALSE, ...) {
+                        extra_nuisance = NULL, keep_extra_nuisance_in_model = FALSE,
+                        parallel_voxels = FALSE, ...) {
   strategy <- match.arg(strategy)
   
   # Validate config
@@ -517,6 +524,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                          sigma_fixed = sigma_global,
                                          extra_nuisance = extra_nuisance,
                                          keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
+                                         parallel_voxels = parallel_voxels,
                                          ...),
                    "chunkwise" = {
                     if (inherits(dataset, "latent_dataset")) {
@@ -1483,6 +1491,8 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, cf
 #' @param sigma_fixed Optional fixed robust scale estimate.
 #' @param extra_nuisance Optional additional nuisance regressors.
 #' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance in model.
+#' @param parallel_voxels Logical. If TRUE, process voxels in parallel using
+#'   `future.apply`. Default is \code{FALSE}.
 #' @return A list containing the combined results from runwise linear model analysis.
 #' @keywords internal
 #' @autoglobal
@@ -1491,7 +1501,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                        phi_fixed = NULL,
                        sigma_fixed = NULL,
                        extra_nuisance = NULL,
-                       keep_extra_nuisance_in_model = FALSE) {
+                       keep_extra_nuisance_in_model = FALSE,
+                       parallel_voxels = FALSE) {
   # Validate config
   assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
   # Get an iterator of data chunks (runs)
@@ -1553,9 +1564,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
               XtXinv_voxel_list <- vector("list", n_voxels)
               robust_w_list <- if (cfg$robust$type != FALSE) vector("list", n_voxels) else NULL
 
-              for (v in seq_len(n_voxels)) {
+              process_voxel <- function(v) {
                   y_voxel <- matrix(Y_run[, v], ncol = 1)
-
                   ctx_vox <- glm_context(X_run, y_voxel)
                   ols <- solve_glm_core(ctx_vox, return_fitted = TRUE)
                   resid_ols <- y_voxel - ols$fitted
@@ -1573,18 +1583,44 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                   if (cfg$robust$type != FALSE) {
                       sigma_fixed_for_vox <- if (cfg$robust$scale_scope == "global" && !is.null(sigma_fixed)) sigma_fixed else NULL
                       rfit <- robust_iterative_fitter(ctx_vox_w, cfg$robust, tmp$X, sigma_fixed_for_vox)
-                      betas_voxelwise[, v] <- rfit$betas_robust
-                      XtXinv_voxel_list[[v]] <- rfit$XtWXi_final
-                      rss_voxelwise[v] <- sum((tmp$Y - tmp$X %*% rfit$betas_robust)^2)
-                      sigma_voxelwise[v] <- rfit$sigma_robust_scale_final
-                      robust_w_list[[v]] <- rfit$robust_weights_final
+                      list(beta = rfit$betas_robust,
+                           XtXinv = rfit$XtWXi_final,
+                           rss = sum((tmp$Y - tmp$X %*% rfit$betas_robust)^2),
+                           sigma = rfit$sigma_robust_scale_final,
+                           rw = rfit$robust_weights_final)
                   } else {
                       fit_v <- solve_glm_core(ctx_vox_w)
-                      betas_voxelwise[, v] <- fit_v$betas
-                      XtXinv_voxel_list[[v]] <- proj_w$XtXinv
-                      rss_voxelwise[v] <- fit_v$rss
-                      sigma_voxelwise[v] <- sqrt(fit_v$sigma2)
+                      list(beta = fit_v$betas,
+                           XtXinv = proj_w$XtXinv,
+                           rss = fit_v$rss,
+                           sigma = sqrt(fit_v$sigma2),
+                           rw = NULL)
                   }
+              }
+
+              voxel_indices <- seq_len(n_voxels)
+              voxel_results <- if (parallel_voxels) {
+                  with_package("future.apply")
+                  if (progress) {
+                      with_package("progressr")
+                      progressr::with_progress({
+                          p <- progressr::progressor(along = voxel_indices)
+                          future.apply::future_lapply(voxel_indices, function(v) { p(); process_voxel(v) })
+                      })
+                  } else {
+                      future.apply::future_lapply(voxel_indices, process_voxel)
+                  }
+              } else {
+                  lapply(voxel_indices, process_voxel)
+              }
+
+              for (v in voxel_indices) {
+                  res_v <- voxel_results[[v]]
+                  betas_voxelwise[, v] <- res_v$beta
+                  XtXinv_voxel_list[[v]] <- res_v$XtXinv
+                  rss_voxelwise[v] <- res_v$rss
+                  sigma_voxelwise[v] <- res_v$sigma
+                  if (!is.null(robust_w_list)) robust_w_list[[v]] <- res_v$rw
               }
 
               bstats <- beta_stats_matrix_voxelwise(betas_voxelwise, XtXinv_voxel_list,
