@@ -193,7 +193,8 @@ fast_rlm_run <- function(X, Y, proj,
                          psi = c("huber", "bisquare"),
                          k_huber = 1.345,
                          c_tukey = 4.685,
-                         max_it = 2L) {
+                         max_it = 2L,
+                         sigma_fixed = NULL) {
 
   psi <- match.arg(psi)
   if (!is.matrix(Y)) Y <- as.matrix(Y)
@@ -212,7 +213,7 @@ fast_rlm_run <- function(X, Y, proj,
 
   for (it in seq_len(max_it)) {
     row_med <- matrixStats::rowMedians(abs(resid))
-    sigma_hat <- 1.4826 * median(row_med)
+    sigma_hat <- if (is.null(sigma_fixed)) 1.4826 * median(row_med) else sigma_fixed
     if (sigma_hat <= .Machine$double.eps) sigma_hat <- .Machine$double.eps
     u <- row_med / sigma_hat
 
@@ -546,6 +547,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   # The fitting function (chunkwise/runwise) will decide whether to use the objects (slow path)
   # or extract weights (fast path).
   phi_global <- NULL
+  sigma_global <- NULL
   if (cor_global && match.arg(cor_struct) != "iid") {
     ar_order <- switch(match.arg(cor_struct),
                        ar1 = 1L,
@@ -570,6 +572,26 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
     cor_iter <- 1L
   }
 
+  if (robust && robust_scale_scope == "global") {
+    run_chunks <- exec_strategy("runwise")(dataset)
+    form <- get_formula(fmrimod)
+    row_med_all <- numeric(0)
+    for (rch in run_chunks) {
+      tmats_run <- term_matrices(fmrimod, rch$chunk_num)
+      data_env_run <- list2env(tmats_run)
+      n_time_run <- nrow(tmats_run[[1]])
+      data_env_run[[".y"]] <- rep(0, n_time_run)
+      X_run <- model.matrix(form, data_env_run)
+      proj_run <- .fast_preproject(X_run)
+      Y_run <- as.matrix(rch$data)
+      ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
+      row_med_all <- c(row_med_all,
+                       matrixStats::rowMedians(abs(Y_run - ols$fitted)))
+    }
+    sigma_global <- 1.4826 * median(row_med_all)
+    if (sigma_global <= .Machine$double.eps) sigma_global <- .Machine$double.eps
+  }
+
   result <- switch(strategy,
                    "runwise" = runwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                          robust = robust, use_fast_path = use_fast_path,
@@ -578,6 +600,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                          cor_global = cor_global, ar_p = ar_p,
                                          ar1_exact_first = ar1_exact_first,
                                          phi_fixed = phi_global,
+                                         sigma_fixed = sigma_global,
                                          robust_psi = robust_psi,
                                          robust_k_huber = robust_k_huber,
                                          robust_c_tukey = robust_c_tukey,
@@ -592,6 +615,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                    cor_global = cor_global, ar_p = ar_p,
                                    ar1_exact_first = ar1_exact_first,
                                    phi_fixed = phi_global,
+                                   sigma_fixed = sigma_global,
                                    robust_psi = robust_psi,
                                    robust_k_huber = robust_k_huber,
                                    robust_c_tukey = robust_c_tukey,
@@ -606,6 +630,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                    cor_global = cor_global, ar_p = ar_p,
                                    ar1_exact_first = ar1_exact_first,
                                    phi_fixed = phi_global,
+                                   sigma_fixed = sigma_global,
                                    robust_psi = robust_psi,
                                    robust_k_huber = robust_k_huber,
                                    robust_c_tukey = robust_c_tukey,
@@ -1123,6 +1148,7 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
                                       cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
                                       cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
                                       phi_fixed = NULL,
+                                      sigma_fixed = NULL,
                                       robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
                                       robust_c_tukey = 4.685, robust_max_iter = 2L,
                                       robust_scale_scope = c("run", "global")) {
@@ -1211,7 +1237,8 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
                                     psi = robust_psi,
                                     k_huber = robust_k_huber,
                                     c_tukey = robust_c_tukey,
-                                    max_it = robust_max_iter)
+                                    max_it = robust_max_iter,
+                                    sigma_fixed = sigma_fixed)
 
               sqrtw <- sqrt(fit_r$weights)
               Xw <- X_run * sqrtw
@@ -1437,6 +1464,7 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
                        cor_struct = c("iid", "ar1", "ar2", "arp"), cor_iter = 1L,
                        cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
                        phi_fixed = NULL,
+                       sigma_fixed = NULL,
                        robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
                        robust_c_tukey = 4.685, robust_max_iter = 2L,
                        robust_scale_scope = c("run", "global")) {
@@ -1551,7 +1579,8 @@ runwise_lm <- function(dset, model, contrast_objects, robust = FALSE, verbose = 
                                   psi = robust_psi,
                                   k_huber = robust_k_huber,
                                   c_tukey = robust_c_tukey,
-                                  max_it = robust_max_iter)
+                                  max_it = robust_max_iter,
+                                  sigma_fixed = sigma_fixed)
 
             actual_vnames <- colnames(X_run)
             sigma_vec <- rep(fit_r$sigma, ncol(Y_run))
