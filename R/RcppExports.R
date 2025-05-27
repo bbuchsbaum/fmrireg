@@ -33,3 +33,7 @@ evaluate_regressor_cpp <- function(grid, onsets, durations, amplitudes, hrf_matr
     .Call('_fmrireg_evaluate_regressor_cpp', PACKAGE = 'fmrireg', grid, onsets, durations, amplitudes, hrf_matrix, hrf_span, precision, method)
 }
 
+ar_whiten_inplace <- function(Y, X, phi_coeffs, exact_first_ar1 = FALSE) {
+    .Call('_fmrireg_ar_whiten_inplace', PACKAGE = 'fmrireg', Y, X, phi_coeffs, exact_first_ar1)
+}
+
