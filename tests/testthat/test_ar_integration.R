@@ -121,3 +121,37 @@ test_that("cor_iter > 1 runs", {
   )
 })
 
+# Test ARp recovery for p > 2
+
+test_that("arp recovers coefficients", {
+  set.seed(7)
+  phi <- c(0.6, -0.3, 0.2)
+  dset <- simulate_ar_dataset(ar_coeff = phi, n_runs = 2)
+
+  model <- create_fmri_model(onset ~ hrf(cond), block = ~ run, dataset = dset, durations = 0)
+  X <- design_matrix(model)
+  proj <- .fast_preproject(X)
+  Y <- get_data_matrix(dset)
+  ols <- .fast_lm_matrix(X, Y, proj, return_fitted = TRUE)
+  resid_ols <- Y - ols$fitted
+  phi_hat <- .estimate_ar(rowMeans(resid_ols), length(phi))
+  expect_equal(as.numeric(phi_hat), phi, tolerance = 0.1)
+
+  mod_arp <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+                     use_fast_path = TRUE, cor_struct = "arp", ar_p = length(phi))
+  expect_true(!is.null(coef(mod_arp)))
+})
+
+# Test arp with p=1 matches ar1
+
+test_that("arp with p=1 matches ar1", {
+  set.seed(8)
+  phi <- 0.5
+  dset <- simulate_ar_dataset(ar_coeff = phi, n_runs = 2)
+  mod_ar1 <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+                     use_fast_path = TRUE, cor_struct = "ar1")
+  mod_arp1 <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+                      use_fast_path = TRUE, cor_struct = "arp", ar_p = 1)
+  expect_equal(coef(mod_ar1), coef(mod_arp1), tolerance = 1e-6)
+})
+
