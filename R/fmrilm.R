@@ -237,6 +237,13 @@ fast_rlm_run <- function(X, Y, proj,
 
   row_med_final <- matrixStats::rowMedians(abs(resid))
   sigma_robust <- 1.4826 * median(row_med_final)
+  if (sigma_robust <= .Machine$double.eps) sigma_robust <- .Machine$double.eps
+  u_final <- row_med_final / sigma_robust
+  w_final <- switch(psi,
+                    huber    = pmin(1, k_huber / abs(u_final)),
+                    bisquare = ifelse(abs(u_final) <= c_tukey,
+                                       (1 - (u_final / c_tukey)^2)^2,
+                                       0))
   se_beta <- sqrt(diag(XtWXi_final)) * sigma_robust
 
   list(
@@ -244,7 +251,8 @@ fast_rlm_run <- function(X, Y, proj,
     se = se_beta,
     sigma = sigma_robust,
     dfres = dfres,
-    XtXinv = XtWXi_final
+    XtXinv = XtWXi_final,
+    weights = w_final
   )
 }
 
@@ -1182,10 +1190,130 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, ro
       names(fconlist_weights) <- names(fconlist) 
       
       if (robust) {
-          warning("Robust fitting not implemented for fast path, using standard OLS.")
-          robust <- FALSE
+          message("Using fast path with robust weighting...")
+
+          run_chunks <- exec_strategy("runwise")(dset)
+          run_row_inds <- lapply(run_chunks, `[[`, "row_ind")
+
+          run_info <- vector("list", length(run_chunks))
+
+          for (ri in seq_along(run_chunks)) {
+              rch <- run_chunks[[ri]]
+              tmats_run <- term_matrices(model, rch$chunk_num)
+              data_env_run <- list2env(tmats_run)
+              n_time_run <- nrow(tmats_run[[1]])
+              data_env_run[[".y"]] <- rep(0, n_time_run)
+              X_run <- model.matrix(as.formula(form), data_env_run)
+              proj_run <- .fast_preproject(X_run)
+              Y_run <- as.matrix(rch$data)
+
+              fit_r <- fast_rlm_run(X_run, Y_run, proj_run,
+                                    psi = robust_psi,
+                                    k_huber = robust_k_huber,
+                                    c_tukey = robust_c_tukey,
+                                    max_it = robust_max_iter)
+
+              sqrtw <- sqrt(fit_r$weights)
+              Xw <- X_run * sqrtw
+              proj_w <- .fast_preproject(Xw)
+
+              run_info[[ri]] <- list(Pinv = proj_w$Pinv,
+                                     XtXinv = proj_w$XtXinv,
+                                     dfres = proj_w$dfres,
+                                     sigma = fit_r$sigma,
+                                     sqrtw = sqrtw,
+                                     X = X_run,
+                                     Y = Y_run)
+          }
+
+          Vu <- chol2inv(qr(design_matrix(model))$qr)
+          nvox <- ncol(dset$datamat)
+          p <- ncol(run_info[[1]]$Pinv)
+
+          betas_acc <- vector("list", length(run_chunks))
+          rss_acc <- vector("list", length(run_chunks))
+
+          cres <- vector("list", length(run_chunks))
+
+          chunks <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
+          if (progress) {
+            pb <- cli::cli_progress_bar("Fitting chunks", total = length(chunks), clear = FALSE)
+            on.exit(cli::cli_progress_done(id = pb), add = TRUE)
+          }
+
+          for (i in seq_along(chunks)) {
+              ym <- chunks[[i]]
+              if (verbose) message("Processing chunk (fast robust) ", ym$chunk_num)
+              Ymat <- as.matrix(ym$data)
+              vinds <- ym$voxel_ind
+
+              for (ri in seq_along(run_chunks)) {
+                  rows <- run_row_inds[[ri]]
+                  info <- run_info[[ri]]
+                  Yw <- sweep(Ymat[rows, , drop=FALSE], 1, info$sqrtw, `*`)
+                  b <- info$Pinv %*% Yw
+                  if (is.null(betas_acc[[ri]])) {
+                      betas_acc[[ri]] <- matrix(NA_real_, p, nvox)
+                      rss_acc[[ri]] <- numeric(nvox)
+                  }
+                  betas_acc[[ri]][, vinds] <- b
+              }
+
+              if (progress) cli::cli_progress_update(id = pb)
+          }
+
+          for (ri in seq_along(run_chunks)) {
+              info <- run_info[[ri]]
+              betas <- betas_acc[[ri]]
+              resid <- info$Y - info$X %*% betas
+              rss <- colSums(resid^2)
+              rss_acc[[ri]] <- rss
+              resvar <- rss / info$dfres
+
+              sigma_vec <- rep(info$sigma, ncol(betas))
+              actual_vnames <- colnames(info$X)
+
+              bstats <- beta_stats_matrix(betas, info$XtXinv, sigma_vec,
+                                          info$dfres, actual_vnames)
+
+              conres <- fit_lm_contrasts_fast(betas, resvar, info$XtXinv,
+                                               simple_conlist_weights, fconlist_weights,
+                                               info$dfres)
+
+              cres[[ri]] <- list(conres = conres,
+                                 bstats = bstats,
+                                 event_indices = event_indices,
+                                 baseline_indices = baseline_indices,
+                                 rss = rss,
+                                 rdf = info$dfres,
+                                 resvar = resvar,
+                                 sigma = sigma_vec)
+          }
+
+          bstats_list <- lapply(cres, `[[`, "bstats")
+          conres_list <- lapply(cres, `[[`, "conres")
+          sigma <- colMeans(do.call(rbind, lapply(cres, function(x) as.matrix(x$sigma))))
+          rss <- colSums(do.call(rbind, rss_acc))
+          rdf <- sum(vapply(cres, `[[`, numeric(1), "rdf"))
+          resvar <- rss / rdf
+
+          meta_con <- meta_contrasts(conres_list)
+          meta_beta <- meta_betas(bstats_list, cres[[1]]$event_indices)
+
+          out <- list(
+            contrasts = meta_con,
+            betas = meta_beta,
+            event_indices = cres[[1]]$event_indices,
+            baseline_indices = cres[[1]]$baseline_indices,
+            cov.unscaled = Vu,
+            sigma = sigma,
+            rss = rss,
+            rdf = rdf,
+            resvar = resvar)
+
+          return(out)
       }
-      
+
       message("Using fast path for chunkwise LM...")
 
       data_env <- list2env(tmats)
