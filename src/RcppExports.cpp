@@ -28,6 +28,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// ar_whiten_inplace
+void ar_whiten_inplace(Rcpp::NumericMatrix Y, Rcpp::NumericMatrix X, const arma::vec& phi_coeffs, bool exact_first_ar1 = false);
+RcppExport SEXP _fmrireg_ar_whiten_inplace(SEXP YSEXP, SEXP XSEXP, SEXP phi_coeffsSEXP, SEXP exact_first_ar1SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type phi_coeffs(phi_coeffsSEXP);
+    Rcpp::traits::input_parameter< bool >::type exact_first_ar1(exact_first_ar1SEXP);
+    ar_whiten_inplace(Y, X, phi_coeffs, exact_first_ar1);
+    rcpp_result_gen = R_NilValue;
+    return rcpp_result_gen;
+END_RCPP
+}
 // compute_residuals_cpp
 List compute_residuals_cpp(const arma::mat& X_base_fixed, const arma::mat& data_matrix, const arma::mat& dmat_ran);
 RcppExport SEXP _fmrireg_compute_residuals_cpp(SEXP X_base_fixedSEXP, SEXP data_matrixSEXP, SEXP dmat_ranSEXP) {
@@ -149,6 +164,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fmrireg_evaluate_regressor_convolution", (DL_FUNC) &_fmrireg_evaluate_regressor_convolution, 9},
     {"_fmrireg_evaluate_regressor_fast", (DL_FUNC) &_fmrireg_evaluate_regressor_fast, 7},
     {"_fmrireg_evaluate_regressor_cpp", (DL_FUNC) &_fmrireg_evaluate_regressor_cpp, 8},
+    {"_fmrireg_ar_whiten_inplace", (DL_FUNC) &_fmrireg_ar_whiten_inplace, 4},
     {NULL, NULL, 0}
 };
 
