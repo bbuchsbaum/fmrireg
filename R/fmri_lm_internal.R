@@ -397,6 +397,141 @@ fit_lm_contrasts_voxelwise <- function(Betas, sigma2, XtXinv_list,
   results
 }
 
+#' Contrast statistics using stored QR decompositions
+#'
+#' Computes voxelwise t and F contrasts when each voxel stores only the
+#' QR decomposition of its design matrix. This avoids keeping full
+#' \code{XtXinv} matrices in memory.
+#'
+#' @param Betas p x V matrix of regression coefficients.
+#' @param qr_list List of QR objects, one per voxel.
+#' @param sigma Numeric vector of residual standard deviations per voxel.
+#' @param conlist Named list of t contrast vectors (with \code{colind} attribute).
+#' @param fconlist Named list of F contrast matrices (with \code{colind} attribute).
+#' @param dfres Residual degrees of freedom.
+#' @param robust_weights_list Optional list of robust weights per voxel.
+#' @param ar_order AR model order used for effective df calculation.
+#' @return List of tibbles, one per contrast.
+#' @keywords internal
+#' @noRd
+fit_lm_contrasts_voxelwise_qr <- function(Betas, qr_list, sigma,
+                                          conlist, fconlist, dfres,
+                                          robust_weights_list = NULL,
+                                          ar_order = 0) {
+  p <- nrow(Betas)
+  V <- ncol(Betas)
+
+  results <- list()
+
+  for (nm in names(conlist)) {
+    l <- conlist[[nm]]
+    colind <- attr(l, "colind")
+    full_l <- numeric(p)
+    full_l[colind] <- l
+
+    est <- se <- stat <- prob <- sigma_out <- numeric(V)
+
+    for (v in seq_len(V)) {
+      qr_v <- qr_list[[v]]
+      rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
+
+      Qtl <- qr.qty(qr_v, full_l)
+      var_con <- sum(Qtl[1:qr_v$rank]^2) * sigma[v]^2
+
+      est[v] <- sum(full_l * Betas[, v])
+      se[v]  <- sqrt(var_con)
+
+      df_eff <- if (!is.null(rw) || ar_order > 0) {
+        n <- dfres + p
+        calculate_effective_df(n, p, rw, ar_order, method = "simple")
+      } else {
+        dfres
+      }
+
+      stat[v] <- ifelse(se[v] < .Machine$double.eps^0.5, 0, est[v] / se[v])
+      prob[v] <- 2 * pt(-abs(stat[v]), df_eff)
+      sigma_out[v] <- sigma[v]
+    }
+
+    results[[nm]] <- tibble::tibble(
+      type = "contrast",
+      name = nm,
+      stat_type = "tstat",
+      df.residual = dfres,
+      conmat = list(l),
+      colind = list(colind),
+      data = list(tibble::tibble(
+        estimate = est,
+        se = se,
+        stat = stat,
+        prob = prob,
+        sigma = sigma_out
+      ))
+    )
+  }
+
+  for (nm in names(fconlist)) {
+    L <- fconlist[[nm]]
+    colind <- attr(L, "colind")
+    full_L <- matrix(0, nrow = nrow(L), ncol = p)
+    full_L[, colind] <- L
+
+    est <- se <- stat <- prob <- numeric(V)
+
+    for (v in seq_len(V)) {
+      qr_v <- qr_list[[v]]
+      rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
+
+      RinvLt <- backsolve(qr.R(qr_v), t(full_L), upper.tri = TRUE)
+      M <- crossprod(RinvLt)
+      Cinv <- tryCatch(solve(M), error = function(e) {
+        warning("Singular matrix in F contrast computation")
+        matrix(NaN, nrow(M), ncol(M))
+      })
+
+      LB <- full_L %*% Betas[, v]
+
+      qf <- if (any(is.nan(Cinv))) {
+        NaN
+      } else {
+        drop(t(LB) %*% Cinv %*% LB)
+      }
+
+      est[v] <- qf / nrow(full_L)
+      se[v]  <- sigma[v]^2
+
+      df_eff <- if (!is.null(rw) || ar_order > 0) {
+        n <- dfres + p
+        calculate_effective_df(n, p, rw, ar_order, method = "simple")
+      } else {
+        dfres
+      }
+
+      Fval <- ifelse(abs(se[v]) < .Machine$double.eps^0.5 || is.nan(qf),
+                      NaN, est[v] / se[v])
+      stat[v] <- Fval
+      prob[v] <- pf(Fval, nrow(full_L), df_eff, lower.tail = FALSE)
+    }
+
+    results[[nm]] <- tibble::tibble(
+      type = "Fcontrast",
+      name = nm,
+      stat_type = "Fstat",
+      df.residual = dfres,
+      conmat = list(L),
+      colind = list(colind),
+      data = list(tibble::tibble(
+        estimate = est,
+        se = se,
+        stat = stat,
+        prob = prob
+      ))
+    )
+  }
+
+  results
+}
+
 #' Initialize storage for voxelwise contrast results
 #'
 #' Creates pre-allocated numeric vectors for each contrast so that results can
