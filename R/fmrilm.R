@@ -172,6 +172,82 @@ is.formula <- function(x) {
   )
 }
 
+#' Fast row-wise robust regression for a single run
+#'
+#' Implements an IRLS algorithm using Huber or Tukey bisquare weights on
+#' the time-point residuals. Returns robust coefficient estimates and
+#' standard errors.
+#'
+#' @param X Design matrix (time points \eqn{\times} predictors)
+#' @param Y Data matrix (time points \eqn{\times} voxels)
+#' @param proj Preprojection list from \code{.fast_preproject(X)}
+#' @param psi Psi function for weighting, either \code{"huber"} or
+#'   \code{"bisquare"}
+#' @param k_huber Tuning constant for Huber weights
+#' @param c_tukey Tuning constant for Tukey bisquare weights
+#' @param max_it Maximum number of IRLS iterations
+#' @keywords internal
+#' @importFrom matrixStats rowMedians
+#' @noRd
+fast_rlm_run <- function(X, Y, proj,
+                         psi = c("huber", "bisquare"),
+                         k_huber = 1.345,
+                         c_tukey = 4.685,
+                         max_it = 2L) {
+
+  psi <- match.arg(psi)
+  if (!is.matrix(Y)) Y <- as.matrix(Y)
+  if (!is.matrix(X)) X <- as.matrix(X)
+  if (missing(proj) || is.null(proj)) {
+    proj <- .fast_preproject(X)
+  }
+
+  n <- nrow(X)
+  dfres <- n - ncol(X)
+
+  fit <- .fast_lm_matrix(X, Y, proj, return_fitted = TRUE)
+  betas <- fit$betas
+  resid <- Y - fit$fitted
+  XtWXi_final <- proj$XtXinv
+
+  for (it in seq_len(max_it)) {
+    row_med <- matrixStats::rowMedians(abs(resid))
+    sigma_hat <- 1.4826 * median(row_med)
+    if (sigma_hat <= .Machine$double.eps) sigma_hat <- .Machine$double.eps
+    u <- row_med / sigma_hat
+
+    w <- switch(psi,
+                huber    = pmin(1, k_huber / abs(u)),
+                bisquare = ifelse(abs(u) <= c_tukey,
+                                   (1 - (u / c_tukey)^2)^2,
+                                   0))
+
+    sqrtw <- sqrt(w)
+    Xw <- X * sqrtw
+    Yw <- sweep(Y, 1, sqrtw, `*`)
+
+    proj_w <- .fast_preproject(Xw)
+    fit_w <- .fast_lm_matrix(Xw, Yw, proj_w,
+                             return_fitted = (it < max_it))
+
+    betas <- fit_w$betas
+    XtWXi_final <- proj_w$XtXinv
+    resid <- Y - X %*% betas
+  }
+
+  row_med_final <- matrixStats::rowMedians(abs(resid))
+  sigma_robust <- 1.4826 * median(row_med_final)
+  se_beta <- sqrt(diag(XtWXi_final)) * sigma_robust
+
+  list(
+    betas = betas,
+    se = se_beta,
+    sigma = sigma_robust,
+    dfres = dfres,
+    XtXinv = XtWXi_final
+  )
+}
+
 #' Create an fMRI Model
 #'
 #' This function creates an \code{fmri_model} by combining an event model and a baseline model.
