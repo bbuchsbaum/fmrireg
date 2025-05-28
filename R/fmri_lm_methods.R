@@ -320,7 +320,7 @@ print.fmri_lm <- function(x, ...) {
     # Robust info
     if (cfg$robust$type != FALSE) {
       cli::cli_li("Robust method: {.field {cfg$robust$type}}")
-      cli::cli_li("Robust tuning: {.val {cfg$robust$tuning}}")
+      cli::cli_li("Robust tuning: {.val {cfg$robust$c_tukey}}")
     }
     cli::cli_end()
   }

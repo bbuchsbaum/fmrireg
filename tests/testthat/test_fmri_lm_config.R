@@ -11,12 +11,12 @@ test_that("fmri_lm_control creates valid config objects", {
   cfg2 <- fmri_lm_control(
     robust_options = list(
       type = "bisquare",
-      tuning = 4.685,
+      c_tukey = 4.685,
       max_iter = 20
     )
   )
   expect_equal(cfg2$robust$type, "bisquare")
-  expect_equal(cfg2$robust$tuning, 4.685)
+  expect_equal(cfg2$robust$c_tukey, 4.685)
   expect_equal(cfg2$robust$max_iter, 20)
   
   # AR config
@@ -55,10 +55,10 @@ test_that("fmri_lm_control validates inputs", {
     "should be one of"
   )
   
-  # Invalid tuning parameter - currently not validated
+  # Invalid c_tukey parameter - currently not validated
   # expect_error(
-  #   fmri_lm_control(robust_options = list(type = "bisquare", tuning = -1)),
-  #   "tuning"
+  #   fmri_lm_control(robust_options = list(type = "bisquare", c_tukey = -1)),
+  #   "c_tukey"
   # )
   
   # Missing ar_p for arp - currently uses default

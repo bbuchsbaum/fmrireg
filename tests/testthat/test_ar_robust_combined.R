@@ -49,7 +49,7 @@ test_that("AR + Robust combination works in runwise", {
     block = ~ run,
     dataset = dset,
     strategy = "runwise",
-    robust_options = list(type = "bisquare", tuning = 4.685),
+    robust_options = list(type = "bisquare", c_tukey = 4.685),
     ar_options = list(struct = "ar1", iter_gls = 1),
     use_fast_path = TRUE
   )
