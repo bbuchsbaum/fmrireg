@@ -40,7 +40,7 @@
 #' cfg <- fmri_lm_control(
 #'   robust = list(
 #'     type = "bisquare",
-#'     tuning = 4.685
+#'     c_tukey = 4.685
 #'   )
 #' )
 #' 
