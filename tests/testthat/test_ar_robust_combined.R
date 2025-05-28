@@ -11,12 +11,12 @@ test_that("AR + Robust combination works in runwise", {
   
   # Create design
   onsets <- c(10, 30, 50, 70, 90)
-  block <- rep(1:n_runs, each = n_time/n_runs)
+  blockvar <- rep(1:n_runs, each = n_time/n_runs)
   
   # Generate AR(1) errors with outliers
   Y <- matrix(0, n_time, n_vox)
   for (run in 1:n_runs) {
-    run_idx <- which(block == run)
+    run_idx <- which(blockvar == run)
     for (v in 1:n_vox) {
       # AR(1) noise
       noise <- numeric(length(run_idx))
@@ -38,17 +38,16 @@ test_that("AR + Robust combination works in runwise", {
   # Add signal
   ev_df <- data.frame(
     onset = rep(onsets, n_runs),
-    block = rep(1:n_runs, each = length(onsets))
+    run = rep(1:n_runs, each = length(onsets))
   )
   
-  dset <- matrix_dataset(Y, TR = 1)
+  dset <- matrix_dataset(Y, TR = 1, run_length = rep(n_time/n_runs, n_runs), event_table = ev_df)
   
-  # Fit with AR + Robust
+  # Fit with AR + Robust  
   fit <- fmri_lm(
     onset ~ hrf(onset, hrf_spmg1()),
-    block = block,
+    block = ~ run,
     dataset = dset,
-    data = ev_df,
     strategy = "runwise",
     robust_options = list(type = "bisquare", tuning = 4.685),
     ar_options = list(struct = "ar1", iter_gls = 1),
@@ -87,14 +86,13 @@ test_that("AR + Robust with re-estimation works", {
   # Add outliers that might affect AR estimation
   Y[c(10, 20, 30), 1] <- Y[c(10, 20, 30), 1] + 10
   
-  dset <- matrix_dataset(Y, TR = 1)
+  dset <- matrix_dataset(Y, TR = 1, run_length = n_time, event_table = data.frame(onset = c(15, 35, 55), run = 1))
   
   # Fit with re-estimation
   fit_reest <- fmri_lm(
-    ~ hrf(onset, hrf_spmg1()),
-    block = rep(1, n_time),
+    onset ~ hrf(onset, hrf_spmg1()),
+    block = ~ run,
     dataset = dset,
-    data = data.frame(onset = c(15, 35, 55)),
     robust_options = list(
       type = "huber",
       k_huber = 1.345,
@@ -106,10 +104,9 @@ test_that("AR + Robust with re-estimation works", {
   
   # Fit without re-estimation
   fit_no_reest <- fmri_lm(
-    ~ hrf(onset, hrf_spmg1()),
-    block = rep(1, n_time),
+    onset ~ hrf(onset, hrf_spmg1()),
+    block = ~ run,
     dataset = dset,
-    data = data.frame(onset = c(15, 35, 55)),
     robust_options = list(
       type = "huber",
       k_huber = 1.345,
@@ -130,13 +127,13 @@ test_that("process_run_ar_robust handles edge cases", {
   n_vox <- 2
   
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
-  dset <- matrix_dataset(Y, TR = 2)
+  dset <- matrix_dataset(Y, TR = 2, run_length = n_time, event_table = data.frame(onset = c(5, 15), run = 1))
   
   # Create minimal model
-  sframe <- sampling_frame(rep(1, n_time), TR = 2)
-  ev <- event_model(~ hrf(onset, hrf_spmg1()),
-                    block = sframe,
-                    data = data.frame(onset = c(5, 15)))
+  sframe <- sampling_frame(n_time, TR = 2)
+  ev <- event_model(onset ~ hrf(onset, hrf_spmg1()),
+                    data = data.frame(onset = c(5, 15), run = 1),
+                    block = ~ run)
   bmodel <- baseline_model(sframe, degree = 1)
   fmodel <- fmri_model(ev, bmodel)
   
@@ -174,10 +171,10 @@ test_that("Chunkwise AR + Robust works", {
   
   # Generate AR data
   Y <- matrix(0, n_time, n_vox)
-  block <- rep(1:n_runs, each = n_time/n_runs)
+  blockvar <- rep(1:n_runs, each = n_time/n_runs)
   
   for (run in 1:n_runs) {
-    run_idx <- which(block == run)
+    run_idx <- which(blockvar == run)
     ar_coef <- 0.5 + 0.2 * (run - 1)  # Different AR per run
     
     for (v in 1:n_vox) {
@@ -197,17 +194,17 @@ test_that("Chunkwise AR + Robust works", {
     }
   }
   
-  dset <- matrix_dataset(Y, TR = 1)
+  dset <- matrix_dataset(Y, TR = 1, run_length = rep(n_time/n_runs, n_runs), 
+                         event_table = data.frame(
+                           onset = rep(c(10, 20), n_runs),
+                           run = rep(1:n_runs, each = 2)
+                         ))
   
   # Test chunkwise with AR + Robust
   fit_chunk <- fmri_lm(
-    ~ hrf(onset, hrf_spmg1()),
-    block = block,
+    onset ~ hrf(onset, hrf_spmg1()),
+    block = ~ run,
     dataset = dset,
-    data = data.frame(
-      onset = rep(c(10, 20), n_runs),
-      block = rep(1:n_runs, each = 2)
-    ),
     strategy = "chunkwise",
     nchunks = 2,
     robust_options = list(type = "huber"),
