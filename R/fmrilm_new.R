@@ -48,8 +48,8 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
     ar_options = ar_options
   )
   
-  # Override robust type if specified at top level
-  if (!is.null(robust)) {
+  # Override robust type if specified at top level and not FALSE
+  if (!isFALSE(robust)) {
     cfg$robust$type <- robust
   }
   
@@ -175,7 +175,8 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                        ar2 = 2L,
                        arp = cfg$ar$p)
     
-    run_chunks <- exec_strategy("runwise")(dataset)
+    chunk_iter <- exec_strategy("runwise")(dataset)
+    run_chunks <- collect_chunks(chunk_iter)
     form <- get_formula(fmrimod)
     resid_vec <- numeric(0)
     
@@ -198,7 +199,8 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   }
   
   if (cfg$robust$type != FALSE && cfg$robust$scale_scope == "global") {
-    run_chunks <- exec_strategy("runwise")(dataset)
+    chunk_iter <- exec_strategy("runwise")(dataset)
+    run_chunks <- collect_chunks(chunk_iter)
     form <- get_formula(fmrimod)
     row_med_all <- numeric(0)
     

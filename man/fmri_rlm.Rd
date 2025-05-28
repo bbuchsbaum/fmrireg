@@ -27,19 +27,19 @@ fmri_rlm(
 )
 }
 \arguments{
-\item{formula}{The model formula for experimental events.}
+\item{formula}{A formula specifying the linear model to fit to the fMRI data}
 
-\item{block}{The model formula for block structure.}
+\item{block}{A factor or character vector indicating the block structure}
 
-\item{baseline_model}{(Optional) A \code{baseline_model} object. Default is \code{NULL}.}
+\item{baseline_model}{An optional baseline model object}
 
-\item{dataset}{An \code{fmri_dataset} object containing the time-series data.}
+\item{dataset}{An fmri_dataset object containing the fMRI data}
 
-\item{durations}{A vector of event durations. Default is \code{0}.}
+\item{durations}{Event durations (default 0 for impulse events)}
 
-\item{drop_empty}{Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.}
+\item{drop_empty}{Drop empty factor levels from block}
 
-\item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
+\item{strategy}{The fitting strategy: "runwise" or "chunkwise"}
 
 \item{nchunks}{Number of data chunks when strategy is "chunkwise". Default is 10.}
 

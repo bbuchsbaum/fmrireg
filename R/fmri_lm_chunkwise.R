@@ -34,7 +34,8 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, cf
   assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
   
   # Get chunks
-  chunks <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
+  chunk_iter <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
+  chunks <- collect_chunks(chunk_iter)
   
   # Progress bar setup
   if (progress) {

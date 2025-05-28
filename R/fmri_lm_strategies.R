@@ -342,7 +342,9 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
   modmat_orig <- model.matrix(as.formula(form), data_env)
   
   # Get run structure
-  run_chunks <- exec_strategy("runwise")(dataset)
+  chunk_iter <- exec_strategy("runwise")(dataset)
+  run_chunks <- collect_chunks(chunk_iter)
+  
   run_row_inds <- lapply(run_chunks, `[[`, "row_ind")
   
   # AR order

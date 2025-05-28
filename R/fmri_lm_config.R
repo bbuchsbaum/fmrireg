@@ -27,6 +27,10 @@
 #' @export
 fmri_lm_control <- function(robust_options = list(),
                             ar_options = list()) {
+  # Handle NULL inputs
+  if (is.null(robust_options)) robust_options <- list()
+  if (is.null(ar_options)) ar_options <- list()
+  
   # defaults for robust fitting
   default_robust <- list(
     type = FALSE,

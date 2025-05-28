@@ -91,7 +91,7 @@ test_that("fmri_lm accepts new config API", {
   # This should work with new API
   expect_error({
     fit <- fmri_lm(
-      onset ~ hrf(onset, hrf_spmg1()),
+      onset ~ hrf(onset, basis = "spmg1"),
       block = ~ block,
       dataset = dset,
       robust_options = cfg$robust,
@@ -127,7 +127,7 @@ test_that("config options propagate correctly", {
   
   # Test AR options propagate
   fit_ar <- fmri_lm(
-    onset ~ hrf(onset, hrf_spmg1()),
+    onset ~ hrf(onset, basis = "spmg1"),
     block = ~ block,
     dataset = dset,
     ar_options = list(struct = "ar1", iter_gls = 1)
@@ -138,10 +138,11 @@ test_that("config options propagate correctly", {
   
   # Test robust options propagate
   fit_robust <- fmri_lm(
-    onset ~ hrf(onset, hrf_spmg1()),
+    onset ~ hrf(onset, basis = "spmg1"),
     block = ~ block,
     dataset = dset,
-    robust_options = list(type = "bisquare", max_iter = 10)
+    robust = "bisquare",
+    robust_options = list(max_iter = 10)
   )
   
   expect_equal(attr(fit_robust, "config")$robust$type, "bisquare")

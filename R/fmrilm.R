@@ -478,7 +478,9 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                        ar2 = 2L,
                        arp = cfg$ar$p)
 
-    run_chunks <- exec_strategy("runwise")(dataset)
+    chunk_iter <- exec_strategy("runwise")(dataset)
+    run_chunks <- collect_chunks(chunk_iter)
+    
     form <- get_formula(fmrimod)
     resid_vec <- numeric(0)
     for (rch in run_chunks) {
@@ -497,7 +499,8 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   }
 
   if (cfg$robust$type != FALSE && cfg$robust$scale_scope == "global") {
-    run_chunks <- exec_strategy("runwise")(dataset)
+    chunk_iter <- exec_strategy("runwise")(dataset)
+    run_chunks <- collect_chunks(chunk_iter)
     form <- get_formula(fmrimod)
     row_med_all <- numeric(0)
     for (rch in run_chunks) {
@@ -1054,7 +1057,7 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 #' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance in model.
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
-chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, cfg,
+chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks, cfg,
                                       verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
                                       phi_fixed = NULL,
                                       sigma_fixed = NULL,
@@ -1062,7 +1065,8 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, cf
                                       keep_extra_nuisance_in_model = FALSE) {
   # Validate config
   assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
-  chunks <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
+  chunk_iter <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
+  chunks <- collect_chunks(chunk_iter)
   if (progress) {
     pb <- cli::cli_progress_bar("Fitting chunks", total = length(chunks), clear = FALSE)
     on.exit(cli::cli_progress_done(id = pb), add = TRUE)
@@ -1134,7 +1138,8 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, cf
               message("Using fast path with robust weighting...")
           }
 
-          run_chunks <- exec_strategy("runwise")(dset)
+          chunk_iter <- exec_strategy("runwise")(dset)
+          run_chunks <- collect_chunks(chunk_iter)
           run_row_inds <- lapply(run_chunks, `[[`, "row_ind")
 
           run_info <- vector("list", length(run_chunks))
@@ -1277,7 +1282,8 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, cf
 
           cres <- vector("list", length(run_chunks))
 
-          chunks <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
+          chunk_iter <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
+          chunks <- collect_chunks(chunk_iter)
           if (progress) {
             pb <- cli::cli_progress_bar("Fitting chunks", total = length(chunks), clear = FALSE)
             on.exit(cli::cli_progress_done(id = pb), add = TRUE)
@@ -1377,7 +1383,8 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, cf
                          arp = cfg$ar$p,
                          iid = 0L)
 
-      run_chunks <- exec_strategy("runwise")(dset)
+      chunk_iter <- exec_strategy("runwise")(dset)
+      run_chunks <- collect_chunks(chunk_iter)
       run_row_inds <- lapply(run_chunks, `[[`, "row_ind")
 
       if (ar_modeling && cfg$ar$iter_gls > 1L) {
@@ -1506,7 +1513,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   # Validate config
   assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
   # Get an iterator of data chunks (runs)
-  chunks <- exec_strategy("runwise")(dset)
+  chunk_iter <- exec_strategy("runwise")(dset)
+  chunks <- collect_chunks(chunk_iter)
   if (progress) {
     pb <- cli::cli_progress_bar("Fitting runs", total = length(chunks), clear = FALSE)
     on.exit(cli::cli_progress_done(id = pb), add = TRUE)

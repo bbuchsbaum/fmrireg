@@ -35,7 +35,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
   
   # Get run chunks
-  chunks <- exec_strategy("runwise")(dset)
+  chunk_iter <- exec_strategy("runwise")(dset)
+  chunks <- collect_chunks(chunk_iter)
   
   # Progress bar setup
   if (progress) {

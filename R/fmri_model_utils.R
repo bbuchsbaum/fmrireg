@@ -101,6 +101,18 @@ term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
 #' @export
 create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, drop_empty = TRUE, durations = 0) {
   # Handle block variable
+  if (inherits(block, "formula")) {
+    # Evaluate formula against event_table
+    block_var <- all.vars(block)
+    if (length(block_var) != 1) {
+      stop("Block formula must specify exactly one variable")
+    }
+    if (!block_var %in% names(dataset$event_table)) {
+      stop(sprintf("Block variable '%s' not found in event_table", block_var))
+    }
+    block <- dataset$event_table[[block_var]]
+  }
+  
   if (is.character(block)) {
     block <- factor(block)
   }
@@ -114,16 +126,28 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
     block <- droplevels(block)
   }
   
-  # Create sampling frame
-  sframe <- sampling_frame(block, dataset$TR)
+  # Create sampling frame using run_length from dataset
+  if (!is.null(dataset$sampling_frame)) {
+    sframe <- dataset$sampling_frame
+  } else {
+    # Fallback to using run_length if available
+    if (!is.null(dataset$run_length)) {
+      sframe <- sampling_frame(dataset$run_length, dataset$TR)
+    } else {
+      stop("Dataset must have either sampling_frame or run_length")
+    }
+  }
   
   # Create baseline model if not provided
   if (is.null(baseline_model)) {
-    baseline_model <- baseline_model(sframe, degree = 3, intercept = TRUE)
+    baseline_model <- baseline_model(basis = "poly", degree = 3, sframe = sframe, intercept = "global")
   }
   
   # Create event model
-  event_model <- event_model(formula, block = sframe, durations = durations)
+  # For event_model, we need to pass the event table data along with block assignments
+  event_data <- dataset$event_table
+  event_model <- event_model(formula, data = event_data, block = block, 
+                           sampling_frame = sframe, durations = durations)
   
   # Combine into fmri_model
   fmri_model(event_model, baseline_model)

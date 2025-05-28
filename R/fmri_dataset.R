@@ -640,6 +640,17 @@ exec_strategy <- function(strategy=c("voxelwise", "runwise", "chunkwise"), nchun
   
 }
 
+#' Collect all chunks from a chunk iterator
+#' @keywords internal
+#' @noRd
+collect_chunks <- function(chunk_iter) {
+  chunks <- list()
+  for (i in seq_len(chunk_iter$nchunks)) {
+    chunks[[i]] <- chunk_iter$nextElem()
+  }
+  chunks
+}
+
 
 #' @keywords internal
 #' @noRd

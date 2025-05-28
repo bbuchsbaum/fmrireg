@@ -467,8 +467,9 @@ construct_block_term <- function(vname, sframe, intercept = c("global", "runwise
     mat <- matrix(1, nrow = n_total_scans, ncol = 1)
     cnames <- paste0(vname, "_global")
     colnames(mat) <- cnames
-    colind <- list(1)
-    rowind <- list(1:n_total_scans)
+    # Even for global intercept, we need to respect block structure for row indices
+    colind <- rep(list(1), n_blocks)  # Same column for all blocks
+    rowind <- split(1:n_total_scans, blockids_vec)  # Split rows by block
   } else {
     # Runwise intercept: use model.matrix once
     # Create the factor directly for model.matrix

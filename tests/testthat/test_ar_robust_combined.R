@@ -45,11 +45,12 @@ test_that("AR + Robust combination works in runwise", {
   
   # Fit with AR + Robust  
   fit <- fmri_lm(
-    onset ~ hrf(onset, hrf_spmg1()),
+    onset ~ hrf(onset, basis="spmg1"),
     block = ~ run,
     dataset = dset,
     strategy = "runwise",
-    robust_options = list(type = "bisquare", c_tukey = 4.685),
+    robust = "bisquare",
+    robust_options = list(c_tukey = 4.685),
     ar_options = list(struct = "ar1", iter_gls = 1),
     use_fast_path = TRUE
   )
@@ -90,7 +91,7 @@ test_that("AR + Robust with re-estimation works", {
   
   # Fit with re-estimation
   fit_reest <- fmri_lm(
-    onset ~ hrf(onset, hrf_spmg1()),
+    onset ~ hrf(onset, basis="spmg1"),
     block = ~ run,
     dataset = dset,
     robust_options = list(
@@ -104,7 +105,7 @@ test_that("AR + Robust with re-estimation works", {
   
   # Fit without re-estimation
   fit_no_reest <- fmri_lm(
-    onset ~ hrf(onset, hrf_spmg1()),
+    onset ~ hrf(onset, basis="spmg1"),
     block = ~ run,
     dataset = dset,
     robust_options = list(
@@ -131,10 +132,11 @@ test_that("process_run_ar_robust handles edge cases", {
   
   # Create minimal model
   sframe <- sampling_frame(n_time, TR = 2)
-  ev <- event_model(onset ~ hrf(onset, hrf_spmg1()),
+  ev <- event_model(onset ~ hrf(onset, basis="spmg1"),
                     data = data.frame(onset = c(5, 15), run = 1),
-                    block = ~ run)
-  bmodel <- baseline_model(sframe, degree = 1)
+                    block = ~ run,
+                    sampling_frame = sframe)
+  bmodel <- baseline_model(basis = "poly", degree = 1, sframe = sframe)
   fmodel <- fmri_model(ev, bmodel)
   
   # Create config
@@ -144,10 +146,11 @@ test_that("process_run_ar_robust handles edge cases", {
   )
   
   # Get run chunk
-  chunks <- exec_strategy("runwise")(dset)
+  chunk_iter <- fmrireg:::exec_strategy("runwise")(dset)
+  chunks <- fmrireg:::collect_chunks(chunk_iter)
   
   # Process with AR + Robust
-  result <- process_run_ar_robust(
+  result <- fmrireg:::process_run_ar_robust(
     run_chunk = chunks[[1]],
     model = fmodel,
     cfg = cfg
@@ -202,12 +205,13 @@ test_that("Chunkwise AR + Robust works", {
   
   # Test chunkwise with AR + Robust
   fit_chunk <- fmri_lm(
-    onset ~ hrf(onset, hrf_spmg1()),
+    onset ~ hrf(onset, basis="spmg1"),
     block = ~ run,
     dataset = dset,
     strategy = "chunkwise",
     nchunks = 2,
-    robust_options = list(type = "huber"),
+    robust = "huber",
+    robust_options = list(),
     ar_options = list(struct = "ar1"),
     use_fast_path = TRUE
   )
