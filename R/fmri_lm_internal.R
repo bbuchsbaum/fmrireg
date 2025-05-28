@@ -1,6 +1,8 @@
 #' @title Internal Utilities for fMRI Linear Models
 #' @description Low-level utilities used throughout the fmri_lm implementation
 #' @keywords internal
+#' @importFrom stats chol qr pt pf
+#' @importFrom tibble tibble
 
 #' Check if object is a formula
 #' @keywords internal
@@ -28,13 +30,17 @@ is.formula <- function(x) {
     X <- as.matrix(X)
   }
   XtX   <- crossprod(X)        # p × p
-  # Add small ridge for stability if needed, but try direct first
-  # Rchol <- tryCatch(chol(XtX), error = function(e) chol(XtX + diag(ncol(XtX)) * 1e-10))
-  Rchol <- chol(XtX)           # p × p  upper‑triangular
-  Pinv  <- backsolve(Rchol, t(X), transpose = TRUE)  # (Rchol^-1)' Xᵀ = (Rchol'^-1) Xᵀ = (XtX)^-1 Xᵀ -> p x n
-  
+  # Add small ridge for stability if needed
+  Rchol <- tryCatch(chol(XtX), error = function(e) {
+    # Add small ridge parameter for numerical stability
+    ridge <- 1e-10
+    chol(XtX + diag(ncol(XtX)) * ridge)
+  })
   # (XᵀX)⁻¹ via Cholesky
   XtXinv <- chol2inv(Rchol)
+  
+  # Pinv = (X'X)^-1 X'
+  Pinv <- XtXinv %*% t(X)
   
   # QR decomposition
   qr_decomp <- qr(X)

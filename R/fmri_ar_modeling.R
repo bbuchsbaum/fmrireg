@@ -51,8 +51,9 @@ ar_whiten_transform <- function(X, Y, phi, exact_first = FALSE) {
   if (!is.matrix(X)) X <- as.matrix(X)
   if (!is.matrix(Y)) Y <- as.matrix(Y)
 
-  Xw <- X
-  Yw <- Y
+  # Make explicit copies to ensure modification
+  Xw <- X + 0  # Force copy
+  Yw <- Y + 0  # Force copy
   ar_whiten_inplace(Yw, Xw, phi, exact_first)
   list(X = Xw, Y = Yw)
 }

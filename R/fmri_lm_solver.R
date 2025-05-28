@@ -33,20 +33,14 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
   }
 
   betas <- proj$Pinv %*% Y
-
-  if (return_fitted) {
-    fitted <- X %*% betas
-    rss <- colSums((Y - fitted)^2)
-  } else {
-    yTy <- colSums(Y^2)
-    XtX <- solve(proj$XtXinv)
-    XtX_betas <- XtX %*% betas
-    beta_XtX_beta <- colSums(betas * XtX_betas)
-    rss <- yTy - beta_XtX_beta
-    rss[rss < 0 & rss > -1e-10] <- 0
-    if (any(rss < -1e-10)) {
-      warning("Negative residual sum of squares computed in solve_glm_core")
-    }
+  
+  # Always compute fitted values for numerical stability
+  fitted <- X %*% betas
+  residuals <- Y - fitted
+  rss <- colSums(residuals^2)
+  
+  # Return fitted only if requested
+  if (!return_fitted) {
     fitted <- NULL
   }
 

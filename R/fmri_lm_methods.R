@@ -1,6 +1,9 @@
 #' @title S3 Methods for fmri_lm Objects
 #' @description Methods for extracting results and information from fitted fmri_lm objects
 #' @keywords internal
+#' @importFrom dplyr filter bind_cols %>%
+#' @importFrom tibble tibble as_tibble
+#' @importFrom cli cli_h1 cli_h2 cli_ul cli_li cli_end cli_rule cli_text
 
 #' Extract HRF from Fitted Model
 #'
