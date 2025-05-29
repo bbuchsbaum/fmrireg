@@ -57,6 +57,20 @@ basis_suffix <- function(j, nb) {
   paste0("_b", zeropad(j, nb))
 }
 
+#' Create Feature Suffix
+#'
+#' Generates the `_f##` suffix for multi-column continuous events.
+#'
+#' @param j Integer vector of feature indices (1-based).
+#' @param nf Total number of features.
+#' @return Character vector of suffixes (e.g., `_f01`, `_f02`).
+#' @export
+#' @examples
+#' feature_suffix(1:3, 5)
+feature_suffix <- function(j, nf) {
+  paste0("_f", zeropad(j, nf))
+}
+
 #' Make Tags Unique with Hash Separator
 #'
 #' Wraps `make.unique` using `#` as the separator.

@@ -101,8 +101,8 @@ recycle_or_error <- function(x, target, label) {
     # Categorical: Use actual levels
     vapply(lvls, \(l) .label_component(ev, l), character(1))
   } else if (is_continuous(ev) && length(lvls) > 1) {
-    # Continuous multi-column (matrix/basis): Use index 1:ncol
-    vapply(seq_along(lvls), \(k) .label_component(ev, k), character(1))
+    # Continuous multi-column (matrix/basis): Use feature names
+    vapply(lvls, \(l) .label_component(ev, l), character(1))
   } else if (is_continuous(ev) && length(lvls) == 1) {
     # Single continuous variable (vector): Just the variable name
     .label_component(ev) # level = NULL implicit
