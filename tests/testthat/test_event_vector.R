@@ -108,6 +108,21 @@ test_that("event_matrix sanitizes colnames when necessary", {
   expect_equal(levels(ev), .sanitizeName(c("A B", "C-D")), ignore_attr = TRUE)
 })
 
+test_that("event_matrix assigns feature suffix names when colnames missing", {
+  mat <- matrix(seq_len(6), ncol = 2)
+  onsets <- 1:3
+  ev <- event_matrix(mat, "m", onsets, rep(1, 3))
+  expect_equal(levels(ev), c("f01", "f02"), ignore_attr = TRUE)
+})
+
+test_that("event_matrix assigns feature suffix names when colnames duplicated", {
+  mat <- matrix(seq_len(6), ncol = 2)
+  colnames(mat) <- c("dup", "dup")
+  onsets <- 1:3
+  ev <- event_matrix(mat, "m", onsets, rep(1, 3))
+  expect_equal(levels(ev), c("f01", "f02"), ignore_attr = TRUE)
+})
+
 # Add test for event_basis wrapper
 test_that("event_basis wrapper works and creates correct event object", {
   skip_if_not_installed("splines")
@@ -149,6 +164,20 @@ test_that("BSpline constructor respects degree argument", {
   b <- BSpline(x, degree = deg)
   expect_equal(ncol(b$y), deg)
   expect_equal(nbasis(b), deg)
+})
+
+test_that("feature and basis suffixes combine in convolve", {
+  mat <- matrix(seq_len(6), ncol = 2)
+  onsets <- 1:3
+  ev <- event_matrix(mat, "m", onsets, rep(1, 3))
+  term <- event_term(list(m = ev), onsets, blockids = rep(1, 3))
+  attr(term, "term_tag") <- "term"
+  sf <- sampling_frame(blocklens = 10, TR = 1)
+  cmat <- convolve(term, hrf = HRF_SPMG3, sampling_frame = sf)
+  expect_equal(colnames(cmat),
+               c("term_f01_b01", "term_f02_b01",
+                 "term_f01_b02", "term_f02_b02",
+                 "term_f01_b03", "term_f02_b03"))
 })
 
 # ==================================

@@ -164,9 +164,10 @@ event <- function(value, name, onsets, blockids, durations = 0, subset = NULL) {
 #'   provided, the vector must match `onsets` in length and contain no `NA`
 #'   values.
 #'
-#' If `mat` has column names and more than one column, those names are
-#' sanitized using `.sanitizeName()` before being stored. The sanitized
-#' column names are returned by `levels()` for the resulting event object.
+#' Column names are sanitized using `.sanitizeName()` if provided. If
+#' column names are missing or not unique, deterministic feature suffixes
+#' (`f01`, `f02`, ...) are generated instead. The resulting names are
+#' returned by `levels()` for the event object.
 #'
 #' @return An S3 object of class `event` and `event_seq`.
 #'
@@ -271,9 +272,12 @@ event_matrix <- function(mat, name, onsets, blockids = 1, durations = 0, subset 
   assert_that(nrow(mat) == length(onsets),
               msg = sprintf("Length mismatch for '%s': nrow(mat)=%d, length(onsets)=%d",
                           name, nrow(mat), length(onsets)))
-  # Sanitize column names when multiple columns are provided
-  if (ncol(mat) > 1 && !is.null(colnames(mat))) {
-      colnames(mat) <- .sanitizeName(colnames(mat))
+  # Ensure deterministic column names
+  cn <- colnames(mat)
+  if (is.null(cn) || anyDuplicated(cn)) {
+      colnames(mat) <- feature_suffix(seq_len(ncol(mat)), ncol(mat))
+  } else {
+      colnames(mat) <- .sanitizeName(cn)
   }
   
   # Call the unified internal constructor
