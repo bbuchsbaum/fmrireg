@@ -180,6 +180,25 @@ test_that("feature and basis suffixes combine in convolve", {
                  "term_f01_b03", "term_f02_b03"))
 })
 
+
+test_that("design_matrix.event_term returns feature suffixes for matrix input", {
+  mat <- matrix(seq_len(6), ncol = 2)
+  onsets <- 1:3
+  term <- event_term(list(m = mat), onsets, blockids = rep(1, 3))
+  dm <- design_matrix(term)
+  expect_equal(colnames(dm), c("f01", "f02"))
+  expect_equal(as.matrix(dm), mat, ignore_attr = TRUE)
+})
+
+test_that("design_matrix.event_term uses sanitized colnames when provided", {
+  mat <- matrix(seq_len(6), ncol = 2)
+  colnames(mat) <- c("A B", "C-D")
+  onsets <- 1:3
+  term <- event_term(list(m = mat), onsets, blockids = rep(1, 3))
+  dm <- design_matrix(term)
+  expect_equal(colnames(dm), .sanitizeName(c("A B", "C-D")), ignore_attr = TRUE)
+})
+
 # ==================================
 # Tests for event_term
 # ==================================
