@@ -180,6 +180,7 @@ test_that("feature and basis suffixes combine in convolve", {
                  "term_f01_b03", "term_f02_b03"))
 })
 
+
 test_that("design_matrix.event_term returns feature suffixes for matrix input", {
   mat <- matrix(seq_len(6), ncol = 2)
   onsets <- 1:3
