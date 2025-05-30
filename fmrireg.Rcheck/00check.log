@@ -1,0 +1,243 @@
+* using log directory ‘/Users/bbuchsbaum/code/fmrireg/fmrireg.Rcheck’
+* using R version 4.3.2 (2023-10-31)
+* using platform: aarch64-apple-darwin20 (64-bit)
+* R was compiled by
+    Apple clang version 14.0.0 (clang-1400.0.29.202)
+    GNU Fortran (GCC) 12.2.0
+* running under: macOS Sonoma 14.3
+* using session charset: UTF-8
+* using options ‘--no-examples --no-manual --no-vignettes --as-cran’
+* checking for file ‘fmrireg/DESCRIPTION’ ... OK
+* checking extension type ... Package
+* this is package ‘fmrireg’ version ‘0.1.0’
+* package encoding: UTF-8
+* checking CRAN incoming feasibility ... [2s/12s] NOTE
+Maintainer: ‘Bradley Buchsbaum <brad.buchsbaum@gmail.com>’
+
+New submission
+
+Unknown, possibly misspelled, fields in DESCRIPTION:
+  ‘Remotes’
+
+Suggests or Enhances not in mainstream repositories:
+  fmristore, bidser
+
+Package has a VignetteBuilder field but no prebuilt vignette index.
+
+Found the following (possibly) invalid URLs:
+  URL: https://codecov.io/github/bbuchsbaum/fmrireg (moved to https://app.codecov.io/github/bbuchsbaum/fmrireg)
+    From: README.md
+    Status: 200
+    Message: OK
+  URL: https://travis-ci.org/bbuchsbaum/fmrireg (moved to https://app.travis-ci.com/bbuchsbaum/fmrireg)
+    From: README.md
+    Status: 200
+    Message: OK
+
+The Title field should be in title case. Current version is:
+‘R package for the anlysis of fmri data’
+In title case that is:
+‘R Package for the Anlysis of Fmri Data’
+
+The Description field should not start with the package name,
+  'This package' or similar.
+
+The Date field is over a month old.
+
+Size of tarball: 26386183 bytes
+* checking package namespace information ... OK
+* checking package dependencies ... NOTE
+Imports includes 28 non-default packages.
+Importing from so many packages makes the package vulnerable to any of
+them becoming unavailable.  Move as many as possible to Suggests and
+use conditionally.
+
+Package in Depends/Imports which should probably only be in LinkingTo: ‘RcppArmadillo’
+* checking if this is a source package ... OK
+* checking if there is a namespace ... OK
+* checking for executable files ... OK
+* checking for hidden files and directories ... NOTE
+Found the following hidden files and directories:
+  .claude
+These were most likely included in error. See section ‘Package
+structure’ in the ‘Writing R Extensions’ manual.
+
+CRAN-pack does not know about
+  .claude
+* checking for portable file names ... OK
+* checking for sufficient/correct file permissions ... OK
+* checking whether package ‘fmrireg’ can be installed ... [16s/18s] OK
+* used C++ compiler: ‘Apple clang version 15.0.0 (clang-1500.1.0.2.5)’
+* used SDK: ‘MacOSX14.2.sdk’
+* checking C++ specification ... OK
+  Not all R platforms support C++17
+* checking installed package size ... NOTE
+  installed size is 27.8Mb
+  sub-directories of 1Mb or more:
+    extdata  25.3Mb
+* checking package directory ... OK
+* checking for future file timestamps ... OK
+* checking DESCRIPTION meta-information ... OK
+* checking top-level files ... NOTE
+Non-standard files/directories found at top level:
+  ‘AGENTS.md’ ‘CLAUDE.md’ ‘CRAN_guidance.md’
+  ‘README_benchmark_datasets.md’ ‘auto_fix_s3_docs.R’ ‘bench’
+  ‘benchmark_datasets_guide.md’ ‘debug_warning.R’ ‘debug_warning2.R’
+  ‘eventvector_refactor_todo.md’ ‘experimental’
+  ‘fix_duplicate_rdnames.R’ ‘fix_s3_docs.R’ ‘fmrireg_cheatsheet.md’
+  ‘repomix-output.txt’ ‘scripts’ ‘test_convenience_functions.R’
+  ‘test_improved_convenience.R’ ‘test_real_duplicates.R’
+  ‘test_user_error.R’
+* checking for left-over files ... OK
+* checking index information ... OK
+* checking package subdirectories ... OK
+* checking R files for non-ASCII characters ... WARNING
+Found the following files with non-ASCII characters:
+  baseline_model.R
+  contrast.R
+  design_plot.R
+  event-classes.R
+  event_vector.R
+  fmri_dataset.R
+  fmri_model.R
+  fmrilm.R
+  fmrirlm.R
+  gen_contrast.R
+Portable packages must use only ASCII characters in their R code,
+except perhaps in comments.
+Use \uxxxx escapes for other characters.
+* checking R files for syntax errors ... OK
+* checking whether the package can be loaded ... OK
+* checking whether the package can be loaded with stated dependencies ... OK
+* checking whether the package can be unloaded cleanly ... OK
+* checking whether the namespace can be loaded with stated dependencies ... OK
+* checking whether the namespace can be unloaded cleanly ... OK
+* checking loading without being on the library search path ... OK
+* checking startup messages can be suppressed ... OK
+* checking use of S3 registration ... OK
+* checking dependencies in R code ... WARNING
+'::' or ':::' imports not declared from:
+  ‘MASS’ ‘RcppParallel’ ‘bslib’ ‘future.apply’
+'loadNamespace' or 'requireNamespace' call not declared from: ‘future.apply’
+Namespaces in Imports field not imported from:
+  ‘RANN’ ‘RcppArmadillo’ ‘colorplane’ ‘iterators’
+  All declared Imports should be used.
+Missing or unexported objects:
+  ‘fmrireg::convolve.event_term’ ‘fmrireg::make_column_names’
+  ‘stats::findInterval’
+* checking S3 generic/method consistency ... WARNING
+labels:
+  function(object, ...)
+labels.event:
+  function(x, ...)
+See section ‘Generic functions and methods’ in the ‘Writing R
+Extensions’ manual.
+* checking replacement functions ... OK
+* checking foreign function calls ... OK
+* checking R code for possible problems ... [10s/11s] NOTE
+mixed_betas_cpp: warning in mixed_solve_internal(as.matrix(Y), Z = X[,
+  ran_ind, drop = FALSE], X = X_fixed, bounds = c(1e-05, 0.2)): partial
+  argument match of 'Z' to 'Z_in'
+mixed_betas_cpp: warning in mixed_solve_internal(as.matrix(Y), Z = X[,
+  ran_ind, drop = FALSE], X = X_fixed, bounds = c(1e-05, 0.2)): partial
+  argument match of 'X' to 'X_in'
+.correlation_map_common: no visible binding for global variable ‘Var2’
+.correlation_map_common: no visible binding for global variable ‘Var1’
+.correlation_map_common: no visible binding for global variable
+  ‘Correlation’
+autoplot.Reg: no visible global function definition for ‘starts_with’
+cells.event: no visible global function definition for ‘:=’
+cells.event_term: no visible global function definition for ‘:=’
+chunkwise_lm.fmri_dataset_old: no visible binding for global variable
+  ‘proj_global_robustly_weighted’
+chunkwise_lm.latent_dataset: no visible binding for global variable
+  ‘multiresponse_arma’
+construct.nuisancespec: no visible global function definition for
+  ‘matrix_term’
+convolve.event_term: no visible global function definition for
+  ‘is_valid_heading’
+design_map.baseline_model: no visible binding for global variable
+  ‘scan_number’
+design_map.baseline_model: no visible binding for global variable
+  ‘Regressor’
+design_map.baseline_model: no visible binding for global variable
+  ‘Value’
+design_map.fmri_model: no visible binding for global variable
+  ‘scan_number’
+design_map.fmri_model: no visible binding for global variable
+  ‘Regressor’
+design_map.fmri_model: no visible binding for global variable ‘Value’
+design_plot : server: no visible binding for global variable ‘value’
+design_plot : server: no visible binding for global variable
+  ‘condition’
+estimate_betas.latent_dataset: no visible global function definition
+  for ‘auto_whiten’
+gen_hrf_blocked: no visible binding for global variable
+  ‘convolve_block’
+hrf_blocked: no visible binding for global variable ‘convolve_block’
+plot_contrasts.event_model: no visible binding for global variable
+  ‘Regressor’
+plot_contrasts.event_model: no visible binding for global variable
+  ‘ContrastName’
+plot_contrasts.event_model: no visible binding for global variable
+  ‘Weight’
+print.event_model: no visible global function definition for
+  ‘capture.output’
+print.fmri_lm_config: no visible global function definition for ‘str’
+run_estimate_betas: no visible global function definition for
+  ‘lss_naive’
+unpack_chunkwise : <anonymous>: no visible binding for global variable
+  ‘data’
+Undefined global functions or variables:
+  := ContrastName Correlation Regressor Value Var1 Var2 Weight
+  auto_whiten capture.output condition convolve_block data
+  is_valid_heading lss_naive matrix_term multiresponse_arma
+  proj_global_robustly_weighted scan_number starts_with str value
+Consider adding
+  importFrom("utils", "capture.output", "data", "str")
+to your NAMESPACE file.
+* checking Rd files ... OK
+* checking Rd metadata ... OK
+* checking Rd line widths ... OK
+* checking Rd cross-references ... OK
+* checking for missing documentation entries ... OK
+* checking for code/documentation mismatches ... OK
+* checking Rd \usage sections ... NOTE
+S3 methods shown with full name in documentation object 'predict.ParametricBasis':
+  ‘predict.ParametricBasis’
+
+The \usage entries for S3 methods should use the \method markup and not
+their full name.
+See chapter ‘Writing R documentation files’ in the ‘Writing R
+Extensions’ manual.
+* checking Rd contents ... OK
+* checking for unstated dependencies in examples ... OK
+* checking contents of ‘data’ directory ... OK
+* checking data for non-ASCII characters ... OK
+* checking data for ASCII and uncompressed saves ... OK
+* checking line endings in C/C++/Fortran sources/headers ... OK
+* checking line endings in Makefiles ... OK
+* checking compilation flags in Makevars ... WARNING
+Non-portable flags in variable 'PKG_CXXFLAGS':
+  -O3 -ffast-math -march=native
+* checking for GNU extensions in Makefiles ... OK
+* checking for portable use of $(BLAS_LIBS) and $(LAPACK_LIBS) ... OK
+* checking use of PKG_*FLAGS in Makefiles ... OK
+* checking use of SHLIB_OPENMP_*FLAGS in Makefiles ... OK
+* checking pragmas in C/C++ headers and code ... OK
+* checking compilation flags used ... NOTE
+Compilation used the following non-portable flag(s):
+  ‘-ffast-math’ ‘-march=native’
+* checking compiled code ... OK
+* checking files in ‘vignettes’ ... WARNING
+Files in the 'vignettes' directory but no files in 'inst/doc':
+  ‘Overview.Rmd’ ‘a_01_hemodynamic_response.Rmd’ ‘a_02_regressor.Rmd’
+  ‘a_03_baseline_model.Rmd’ ‘a_04_event_models.Rmd’
+  ‘a_05_contrasts.Rmd’ ‘a_06_afni.Rmd’ ‘a_07_trialwise.Rmd’
+  ‘a_08_simulation.Rmd’ ‘a_09_linear_model.Rmd’ ‘a_10_dataset.Rmd’
+  ‘benchmark_datasets.Rmd’
+* checking examples ... SKIPPED
+* checking for unstated dependencies in ‘tests’ ... WARNING
+'::' or ':::' import not declared from: ‘RcppParallel’
+'library' or 'require' call not declared from: ‘ggrepel’
+* checking tests ...

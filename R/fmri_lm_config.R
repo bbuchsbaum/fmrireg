@@ -42,12 +42,20 @@ fmri_lm_control <- function(robust_options = list(),
   )
   robust <- utils::modifyList(default_robust, robust_options)
 
-  robust$type <- match.arg(as.character(robust$type),
-                           choices = c("FALSE", "huber", "bisquare"))
+  tryCatch({
+    robust$type <- match.arg(as.character(robust$type),
+                             choices = c("FALSE", "huber", "bisquare"))
+  }, error = function(e) {
+    stop("Invalid robust_psi/type. Must be one of: FALSE, 'huber', 'bisquare'")
+  })
   if (identical(robust$type, "FALSE")) robust$type <- FALSE
   robust$scale_scope <- match.arg(robust$scale_scope, c("run", "global"))
   stopifnot(is.numeric(robust$k_huber), is.numeric(robust$c_tukey))
-  stopifnot(is.numeric(robust$max_iter), robust$max_iter >= 0)
+  stopifnot(is.numeric(robust$max_iter))
+  # Check max_iter even if robust is FALSE - parameter validation should always occur
+  if (robust$max_iter < 1) {
+    stop("robust_max_iter must be at least 1")
+  }
   stopifnot(is.logical(robust$reestimate_phi), length(robust$reestimate_phi) == 1)
 
   # defaults for autoregressive modelling
@@ -63,6 +71,10 @@ fmri_lm_control <- function(robust_options = list(),
 
   ar$struct <- match.arg(ar$struct, c("iid", "ar1", "ar2", "arp"))
   if (!is.null(ar$p)) stopifnot(is.numeric(ar$p), ar$p >= 1)
+  # Validate that p is provided when struct is "arp"
+  if (ar$struct == "arp" && is.null(ar$p)) {
+    stop("p must be specified in ar_options when struct is 'arp'")
+  }
   stopifnot(is.numeric(ar$iter_gls), ar$iter_gls >= 0)
   stopifnot(is.logical(ar$global), length(ar$global) == 1)
   stopifnot(is.logical(ar$voxelwise), length(ar$voxelwise) == 1)

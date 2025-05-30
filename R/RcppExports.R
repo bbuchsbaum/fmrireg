@@ -13,7 +13,7 @@
 #'
 #' @keywords internal
 ar_whiten_inplace <- function(Y, X, phi_coeffs, exact_first_ar1 = FALSE) {
-    invisible(.Call('_fmrireg_ar_whiten_inplace', PACKAGE = 'fmrireg', Y, X, phi_coeffs, exact_first_ar1))
+    .Call('_fmrireg_ar_whiten_inplace', PACKAGE = 'fmrireg', Y, X, phi_coeffs, exact_first_ar1)
 }
 
 instantaneous_correlation_rcpp <- function(x, y, eta = NA_real_, tau_half = NA_real_, offset = 0L, warmup = -1L, fill = "zero") {

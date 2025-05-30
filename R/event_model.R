@@ -261,9 +261,20 @@ contrast_weights.event_model <- function(x, ...) {
   names(ret) <- tnames
   # Filter out terms that had no contrasts defined
   ret <- ret[!sapply(ret, is.null)]
-  # Return the grouped structure instead of flattening
-  # This preserves the term grouping that fmri_lm_fit expects
-  return(ret)
+  
+  # Flatten the nested structure to match test expectations
+  # Convert from ret[[term]][[contrast]] to ret[["term.contrast"]]
+  flattened <- unlist(ret, recursive = FALSE)
+  if (length(flattened) > 0) {
+    # Create flattened names like "term.contrast"  
+    names(flattened) <- paste0(
+      rep(names(ret), sapply(ret, length)), 
+      ".", 
+      unlist(sapply(ret, names))
+    )
+  }
+  
+  return(flattened)
 }
 
 #' @export

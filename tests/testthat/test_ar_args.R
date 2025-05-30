@@ -30,7 +30,7 @@ test_that("ar_p validation works", {
   expect_error(
     fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
             cor_struct = "arp"),
-    "ar_p"
+    "p must be specified in ar_options when struct is 'arp'"
   )
 
   expect_error(

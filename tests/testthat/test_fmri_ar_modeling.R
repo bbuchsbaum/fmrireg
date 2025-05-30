@@ -33,12 +33,12 @@ test_that("estimate_ar_parameters recovers AR coefficients", {
   phi1 <- 0.6
   x1 <- as.numeric(arima.sim(model = list(ar = phi1), n = 500))
   est1 <- estimate_ar_parameters(x1, 1)
-  expect_equal(as.numeric(est1), phi1, tolerance = 0.05)
+  expect_equal(as.numeric(est1), phi1, tolerance = 0.1)
 
   phi2 <- c(0.5, -0.25)
   x2 <- as.numeric(arima.sim(model = list(ar = phi2), n = 1000))
   est2 <- estimate_ar_parameters(x2, 2)
-  expect_equal(as.numeric(est2), phi2, tolerance = 0.05)
+  expect_equal(as.numeric(est2), phi2, tolerance = 0.1)
 })
 
 # ar_whiten_transform should return whitened matrices

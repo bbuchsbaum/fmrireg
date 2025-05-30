@@ -7,19 +7,28 @@ Y <- matrix(rnorm(20*3), 20, 3)
 dset <- matrix_dataset(Y, TR=1, run_length=20, event_table=etab)
 
 test_that("fmri_lm runwise AR1 fits without error", {
+  # Use ar_options parameter
   expect_error(
     fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
             use_fast_path = TRUE,
-            cor_struct = "ar1", cor_iter = 2, ar1_exact_first = TRUE),
+            ar_options = list(
+              struct = "ar1",
+              iter_gls = 2,
+              exact_first = TRUE
+            )),
     NA
   )
 })
 
 test_that("fmri_lm runwise AR1 global fits without error", {
+  # Use ar_options parameter with global pooling
   expect_error(
     fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
             use_fast_path = TRUE,
-            cor_struct = "ar1", cor_global = TRUE),
+            ar_options = list(
+              struct = "ar1",
+              global = TRUE
+            )),
     NA
   )
 })

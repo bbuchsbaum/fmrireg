@@ -92,3 +92,31 @@ From `data-raw/principles.md`:
 - Object-oriented design with S3
 - One way to do one thing
 - Fail fast and locally with clear error messages
+
+## CRITICAL TEST ISSUES RESOLVED (2025-05-28)
+
+All critical functionality tests are now passing after the following fixes:
+
+1. **Config structure mismatch**: FIXED ✓
+   - Updated `solve_integrated_glm` to handle both config structures (`config$ar$struct` and `config$ar_options$cor_struct`)
+   - Added proper config extraction in all pipeline functions
+   - Files modified: `fmri_lm_integrated_solver.R`
+
+2. **Effective df for robust models**: FIXED ✓
+   - Corrected the formula to use sum of weights approach: `df = sum(weights) - p`
+   - File modified: `fmri_lm_effective_df.R`
+
+3. **Missing XtXinv in results**: FIXED ✓
+   - Added XtXinv to all pipeline results for contrast computation
+   - Added dfres to core solver results
+   - Files modified: `fmri_lm_integrated_solver.R`, `fmri_lm_solver.R`
+
+All 6 critical tests now pass:
+- ✓ AR whitening integration
+- ✓ Robust fitting  
+- ✓ Contrast computation
+- ✓ Effective df calculations
+- ✓ Bootstrap functionality
+- ✓ Sandwich variance estimator
+
+The refactored code is now ready for integration with the existing codebase.

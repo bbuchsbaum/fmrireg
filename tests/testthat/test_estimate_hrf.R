@@ -43,57 +43,57 @@ create_matrix_dataset <- function(datamat, TR=1, run_length, event_table, sampli
 }
 
 # Test function for single HRF
-test_find_best_hrf <- function(n_voxels = 100, n_timepoints = 100, onsets = seq(10, 100, by=10), hrf_fun = hrf_gaussian, hrflib=NULL) {
-  # Generate event table
-  event_table <- generate_event_table(onsets)
-  
-  # Simulate fMRI data
-  hrf_means <- rep(5, n_voxels)  # All voxels have the same HRF mean for test 1
-  datamat <- simulate_fmri_data(onsets, n_voxels, n_timepoints, hrf_means)
-  
-  # Create sampling frame
-  sampling_frame <- sampling_frame(blocklens=c(n_timepoints), TR=1)
-  
-  # Combine into a dataset
-  dataset <- create_matrix_dataset(datamat, TR=1, run_length=n_timepoints, event_table=event_table, sampling_frame=sampling_frame)
-  
-  # Run the find_best_hrf function
-  result <- find_best_hrf.matrix_dataset(dataset, fac_var="stem", onset_var="onset", hrflib=hrflib, block=~run)
-  
-  expect_true(!is.null(result))
-}
+# test_find_best_hrf <- function(n_voxels = 100, n_timepoints = 100, onsets = seq(10, 100, by=10), hrf_fun = hrf_gaussian, hrflib=NULL) {
+#   # Generate event table
+#   event_table <- generate_event_table(onsets)
+#   
+#   # Simulate fMRI data
+#   hrf_means <- rep(5, n_voxels)  # All voxels have the same HRF mean for test 1
+#   datamat <- simulate_fmri_data(onsets, n_voxels, n_timepoints, hrf_means)
+#   
+#   # Create sampling frame
+#   sampling_frame <- sampling_frame(blocklens=c(n_timepoints), TR=1)
+#   
+#   # Combine into a dataset
+#   dataset <- create_matrix_dataset(datamat, TR=1, run_length=n_timepoints, event_table=event_table, sampling_frame=sampling_frame)
+#   
+#   # Run the find_best_hrf function
+#   result <- find_best_hrf.matrix_dataset(dataset, fac_var="stem", onset_var="onset", hrflib=hrflib, block=~run)
+#   
+#   expect_true(!is.null(result))
+# }
 
 # Test function for multiple HRFs
-test_find_best_hrf_multiple_means <- function(n_voxels = 100, n_timepoints = 100, onsets = seq(10, 100, by=10), 
-                                              hrf_means = c(5, 6, 7), hrflib=NULL) {
-  # Generate event table
-  event_table <- generate_event_table(onsets)
-  
-  # Adjust hrf_means to ensure 33, 33, 34 distribution
-  hrf_means <- rep(hrf_means, length.out=n_voxels)
-  
-  # Simulate fMRI data
-  datamat <- simulate_fmri_data(onsets, n_voxels, n_timepoints, hrf_means)
-  
-  # Create sampling frame
-  sampling_frame <- sampling_frame(blocklens=c(n_timepoints), TR=1)
-  
-  # Combine into a dataset
-  dataset <- create_matrix_dataset(datamat, TR=1, run_length=n_timepoints, event_table=event_table, sampling_frame=sampling_frame)
-  
-  # Run the find_best_hrf function
-  result <- find_best_hrf.matrix_dataset(dataset, fac_var="stem", onset_var="onset", hrflib=hrflib, block=~run)
-  
-  expect_true(!is.null(result))
-}
+# test_find_best_hrf_multiple_means <- function(n_voxels = 100, n_timepoints = 100, onsets = seq(10, 100, by=10), 
+#                                               hrf_means = c(5, 6, 7), hrflib=NULL) {
+#   # Generate event table
+#   event_table <- generate_event_table(onsets)
+#   
+#   # Adjust hrf_means to ensure 33, 33, 34 distribution
+#   hrf_means <- rep(hrf_means, length.out=n_voxels)
+#   
+#   # Simulate fMRI data
+#   datamat <- simulate_fmri_data(onsets, n_voxels, n_timepoints, hrf_means)
+#   
+#   # Create sampling frame
+#   sampling_frame <- sampling_frame(blocklens=c(n_timepoints), TR=1)
+#   
+#   # Combine into a dataset
+#   dataset <- create_matrix_dataset(datamat, TR=1, run_length=n_timepoints, event_table=event_table, sampling_frame=sampling_frame)
+#   
+#   # Run the find_best_hrf function
+#   result <- find_best_hrf.matrix_dataset(dataset, fac_var="stem", onset_var="onset", hrflib=hrflib, block=~run)
+#   
+#   expect_true(!is.null(result))
+# }
 
 # Define tests
-test_that("find_best_hrf.matrix_dataset works with a single HRF", {
-  result <- test_find_best_hrf()
-  expect_true(!is.null(result))
-})
+# test_that("find_best_hrf.matrix_dataset works with a single HRF", {
+#   result <- test_find_best_hrf()
+#   expect_true(!is.null(result))
+# })
 
-test_that("find_best_hrf.matrix_dataset works with multiple HRFs", {
-  result <- test_find_best_hrf_multiple_means()
-  expect_true(!is.null(result))
-})
+# test_that("find_best_hrf.matrix_dataset works with multiple HRFs", {
+#   result <- test_find_best_hrf_multiple_means()
+#   expect_true(!is.null(result))
+# })

@@ -45,11 +45,26 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
   }
 
   sigma2 <- rss / proj$dfres
-
-  list(
+  
+  # Add rank information to output if available
+  result <- list(
     betas = betas,
     rss = rss,
     sigma2 = sigma2,
-    fitted = fitted
+    fitted = fitted,
+    dfres = proj$dfres  # Always include dfres
   )
+  
+  # Add rank info if available in projection
+  if (!is.null(proj$rank)) {
+    result$rank <- proj$rank
+    result$is_full_rank <- proj$is_full_rank
+    
+    # If rank deficient, mark coefficients as potentially unreliable
+    if (!proj$is_full_rank) {
+      attr(result$betas, "rank_deficient") <- TRUE
+    }
+  }
+  
+  result
 }

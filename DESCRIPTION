@@ -42,7 +42,8 @@ Imports:
     crayon,
     plotly,
     cli,
-    colorplane
+    colorplane,
+    deflist
 RoxygenNote: 7.3.2.9000
 Roxygen: list(
     markdown = TRUE,
@@ -104,19 +105,26 @@ Collate:
     'fmri_betas.R'
     'fmri_dataset.R'
     'fmri_latent_lm.R'
+    'fmri_lm_ar_integration.R'
+    'fmri_lm_ar_params.R'
+    'fmri_lm_bootstrap.R'
     'fmri_lm_chunkwise.R'
     'fmri_lm_config.R'
+    'fmri_lm_config_wrapper.R'
     'fmri_lm_context.R'
+    'fmri_lm_contrasts.R'
+    'fmri_lm_effective_df.R'
+    'fmri_lm_integrated_solver.R'
     'fmri_lm_internal.R'
     'fmri_lm_methods.R'
     'fmri_lm_runwise.R'
+    'fmri_lm_runwise_integrated.R'
     'fmri_lm_solver.R'
     'fmri_lm_strategies.R'
     'fmri_model.R'
     'fmri_model_utils.R'
     'fmri_robust_fitting.R'
     'fmrilm.R'
-    'fmrilm_new.R'
     'fmrireg.R'
     'fmrirlm.R'
     'gen_contrast.R'
@@ -140,4 +148,5 @@ Collate:
     'sampling_frame.R'
     'sandwich_variance_doc.R'
     'simulate.R'
+    'utils_operators.R'
     'zzz.R'

@@ -51,12 +51,22 @@
 #'
 #' @export
 load_benchmark_dataset <- function(dataset_name = "BM_Canonical_HighSNR") {
-  # Temporarily simplified
   all_processed_data <- .ensure_benchmark_data_loaded()
-  if (dataset_name == "all" || dataset_name == "metadata" || !is.null(all_processed_data[[dataset_name]])) {
-    return(list(message = "Dataset loading temporarily simplified"))
+  
+  if (dataset_name == "all") {
+    # Return all datasets except metadata
+    all_names <- names(all_processed_data)
+    all_names <- all_names[all_names != "metadata"]
+    return(all_processed_data[all_names])
+  } else if (dataset_name == "metadata") {
+    return(all_processed_data$metadata)
+  } else if (dataset_name %in% names(all_processed_data)) {
+    return(all_processed_data[[dataset_name]])
   } else {
-    stop("Dataset not found (simplified check).")
+    available_names <- names(all_processed_data)
+    available_names <- available_names[available_names != "metadata"]
+    stop("Dataset '", dataset_name, "' not found. Available datasets: ", 
+         paste(available_names, collapse = ", "))
   }
 }
 
@@ -72,8 +82,22 @@ load_benchmark_dataset <- function(dataset_name = "BM_Canonical_HighSNR") {
 #'
 #' @export
 list_benchmark_datasets <- function() {
-  # Temporarily simplified
-  return(data.frame(Dataset = "dummy", Description = "dummy"))
+  all_processed_data <- .ensure_benchmark_data_loaded()
+  
+  # Get all dataset names except metadata
+  all_names <- names(all_processed_data)
+  dataset_names <- all_names[all_names != "metadata"]
+  
+  # Extract descriptions
+  descriptions <- sapply(dataset_names, function(name) {
+    all_processed_data[[name]]$description %||% "No description available"
+  })
+  
+  data.frame(
+    Dataset = dataset_names,
+    Description = descriptions,
+    stringsAsFactors = FALSE
+  )
 }
 
 #' Get Benchmark Dataset Summary
@@ -92,8 +116,48 @@ list_benchmark_datasets <- function() {
 #'
 #' @export
 get_benchmark_summary <- function(dataset_name) {
-  # Temporarily simplified
-  return(list(summary = "dummy"))
+  all_processed_data <- .ensure_benchmark_data_loaded()
+  
+  if (!dataset_name %in% names(all_processed_data)) {
+    available_names <- names(all_processed_data)
+    available_names <- available_names[available_names != "metadata"]
+    stop("Dataset '", dataset_name, "' not found. Available datasets: ", 
+         paste(available_names, collapse = ", "))
+  }
+  
+  dataset <- all_processed_data[[dataset_name]]
+  
+  # Basic dimensions
+  n_timepoints <- nrow(dataset$Y_noisy)
+  n_voxels <- ncol(dataset$Y_noisy)
+  n_events <- length(dataset$event_onsets)
+  unique_conditions <- unique(dataset$condition_labels)
+  n_conditions <- length(unique_conditions)
+  
+  # Experimental design
+  condition_counts <- table(dataset$condition_labels)
+  
+  # HRF information
+  hrf_info <- dataset$true_hrf_parameters
+  
+  list(
+    description = dataset$description,
+    dimensions = list(
+      n_timepoints = n_timepoints,
+      n_voxels = n_voxels,
+      n_events = n_events,
+      n_conditions = n_conditions
+    ),
+    experimental_design = list(
+      conditions = unique_conditions,
+      events_per_condition = as.list(condition_counts),
+      TR = dataset$TR,
+      total_time = dataset$total_time,
+      target_snr = dataset$target_snr %||% "Not specified"
+    ),
+    hrf_information = hrf_info,
+    noise_information = dataset$noise_parameters %||% "Not available"
+  )
 }
 
 #' Create Design Matrix from Benchmark Dataset
@@ -117,8 +181,62 @@ get_benchmark_summary <- function(dataset_name) {
 #'
 #' @export
 create_design_matrix_from_benchmark <- function(dataset_name, hrf, include_intercept = TRUE) {
-  # Temporarily simplified
-  return(matrix(0,0,0))
+  dataset <- load_benchmark_dataset(dataset_name)
+  
+  # Create time grid
+  time_grid <- seq(0, dataset$total_time, by = dataset$TR)
+  
+  # Get unique conditions
+  unique_conditions <- unique(dataset$condition_labels)
+  n_conditions <- length(unique_conditions)
+  
+  # Create design matrix
+  X_list <- list()
+  
+  for (i in seq_along(unique_conditions)) {
+    cond_name <- unique_conditions[i]
+    cond_onsets <- dataset$event_onsets[dataset$condition_labels == cond_name]
+    
+    if (length(cond_onsets) > 0) {
+      # Use first onset to get duration if available from core_data_args
+      duration <- 0.5  # Default duration
+      if (!is.null(dataset$core_data_args) && !is.null(dataset$core_data_args$event_table)) {
+        first_event_idx <- which(dataset$condition_labels == cond_name)[1]
+        if (first_event_idx <= nrow(dataset$core_data_args$event_table)) {
+          duration <- dataset$core_data_args$event_table$duration[first_event_idx]
+        }
+      }
+      
+      reg <- regressor(cond_onsets, hrf, duration = duration, amplitude = 1)
+      X_list[[cond_name]] <- evaluate(reg, time_grid)
+    }
+  }
+  
+  # Combine into matrix
+  X <- do.call(cbind, X_list)
+  colnames(X) <- names(X_list)
+  
+  # Add intercept if requested
+  if (include_intercept) {
+    intercept <- rep(1, nrow(X))
+    X <- cbind(Intercept = intercept, X)
+  }
+  
+  return(X)
+}
+
+# Helper function for safe correlation calculation
+.safe_cor <- function(x, y) {
+  if (sd(x) == 0 || sd(y) == 0) {
+    # Return 1 if both are constant and equal, 0 if different constants, NA otherwise
+    if (sd(x) == 0 && sd(y) == 0) {
+      return(ifelse(all(x[1] == y), 1, 0))
+    } else {
+      return(NA)
+    }
+  } else {
+    return(cor(x, y))
+  }
 }
 
 #' Evaluate Method Performance on Benchmark Dataset
@@ -149,8 +267,58 @@ create_design_matrix_from_benchmark <- function(dataset_name, hrf, include_inter
 #'
 #' @export
 evaluate_method_performance <- function(dataset_name, estimated_betas, method_name = "Unknown") {
-  # Temporarily simplified
-  return(list(performance = "dummy"))
+  dataset <- load_benchmark_dataset(dataset_name)
+  true_betas <- dataset$true_betas_condition
+  
+  # Check dimensions
+  if (nrow(estimated_betas) != nrow(true_betas) || ncol(estimated_betas) != ncol(true_betas)) {
+    stop("Estimated betas dimensions (", nrow(estimated_betas), " x ", ncol(estimated_betas), 
+         ") don't match true betas dimensions (", nrow(true_betas), " x ", ncol(true_betas), ")")
+  }
+  
+  # Overall metrics
+  correlation <- .safe_cor(as.vector(true_betas), as.vector(estimated_betas))
+  mse <- mean((true_betas - estimated_betas)^2)
+  rmse <- sqrt(mse)
+  mae <- mean(abs(true_betas - estimated_betas))
+  
+  # Condition-specific metrics
+  condition_metrics <- list()
+  for (i in 1:nrow(true_betas)) {
+    cond_corr <- .safe_cor(true_betas[i, ], estimated_betas[i, ])
+    cond_mse <- mean((true_betas[i, ] - estimated_betas[i, ])^2)
+    condition_metrics[[paste0("condition_", i)]] <- list(
+      correlation = cond_corr,
+      mse = cond_mse,
+      rmse = sqrt(cond_mse)
+    )
+  }
+  
+  # Voxel-specific metrics (for each voxel across conditions)
+  voxel_correlations <- numeric(ncol(true_betas))
+  voxel_mse <- numeric(ncol(true_betas))
+  for (j in 1:ncol(true_betas)) {
+    voxel_correlations[j] <- .safe_cor(true_betas[, j], estimated_betas[, j])
+    voxel_mse[j] <- mean((true_betas[, j] - estimated_betas[, j])^2)
+  }
+  
+  list(
+    method_name = method_name,
+    dataset_name = dataset_name,
+    overall_metrics = list(
+      correlation = correlation,
+      mse = mse,
+      rmse = rmse,
+      mae = mae
+    ),
+    condition_metrics = condition_metrics,
+    voxel_metrics = list(
+      correlations = voxel_correlations,
+      mse_values = voxel_mse,
+      mean_correlation = mean(voxel_correlations, na.rm = TRUE),
+      mean_mse = mean(voxel_mse, na.rm = TRUE)
+    )
+  )
 }
 
 # Helper function for null coalescing
@@ -161,25 +329,67 @@ evaluate_method_performance <- function(dataset_name, estimated_betas, method_na
 
 # Helper function to reconstruct HRF objects
 .reconstruct_hrf_object <- function(name) {
-  # Temporarily simplified
-  return(NULL)
+  # Map stored HRF names to actual HRF objects
+  hrf_map <- list(
+    "HRF_SPMG1" = HRF_SPMG1,
+    "HRF_SPMG2" = HRF_SPMG2,
+    "HRF_SPMG3" = HRF_SPMG3
+  )
+  
+  if (name %in% names(hrf_map)) {
+    return(hrf_map[[name]])
+  } else {
+    # For variant HRFs, we'll just return canonical for now
+    # since we don't have the exact reconstructed variants
+    # Use suppressWarnings to avoid cluttering output during normal use
+    return(HRF_SPMG1)
+  }
 }
 
 # Recursive helper to process true_hrf_parameters
 .process_hrf_params <- function(params_list) {
-  # Temporarily simplified
-  return(params_list)
+  if (is.list(params_list) && "hrf_object_name" %in% names(params_list)) {
+    # Single HRF parameter set
+    params_list$hrf_object <- .reconstruct_hrf_object(params_list$hrf_object_name)
+    return(params_list)
+  } else if (is.list(params_list)) {
+    # Multiple HRF parameter sets (e.g., for different voxel groups)
+    return(lapply(params_list, .process_hrf_params))
+  } else {
+    return(params_list)
+  }
 }
 
 .load_and_reconstruct_raw_dataset <- function(ds_raw) {
-  # Temporarily simplified
-  return(ds_raw)
+  # Process the raw dataset to reconstruct HRF objects
+  ds_processed <- ds_raw
+  
+  # Reconstruct HRF parameters if present
+  if (!is.null(ds_raw$true_hrf_parameters)) {
+    ds_processed$true_hrf_parameters <- .process_hrf_params(ds_raw$true_hrf_parameters)
+  }
+  
+  return(ds_processed)
 }
 
 .ensure_benchmark_data_loaded <- function() {
-  # Temporarily simplified
   if (!exists("fmri_benchmark_datasets_processed", envir = .benchmark_data_env)) {
-    .benchmark_data_env$fmri_benchmark_datasets_processed <- list() # Empty list
+    # Load the raw data
+    data("fmri_benchmark_datasets", package = "fmrireg", envir = environment())
+    
+    # Process each dataset
+    processed_data <- list()
+    for (name in names(fmri_benchmark_datasets)) {
+      if (name == "metadata") {
+        processed_data[[name]] <- fmri_benchmark_datasets[[name]]
+      } else {
+        processed_data[[name]] <- .load_and_reconstruct_raw_dataset(fmri_benchmark_datasets[[name]])
+      }
+    }
+    
+    # Store in environment
+    .benchmark_data_env$fmri_benchmark_datasets_processed <- processed_data
   }
+  
   return(.benchmark_data_env$fmri_benchmark_datasets_processed)
 } 

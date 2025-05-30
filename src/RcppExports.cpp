@@ -12,16 +12,17 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // ar_whiten_inplace
-void ar_whiten_inplace(Rcpp::NumericMatrix Y, Rcpp::NumericMatrix X, const arma::vec& phi_coeffs, bool exact_first_ar1);
+Rcpp::List ar_whiten_inplace(Rcpp::NumericMatrix Y, Rcpp::NumericMatrix X, const arma::vec& phi_coeffs, bool exact_first_ar1);
 RcppExport SEXP _fmrireg_ar_whiten_inplace(SEXP YSEXP, SEXP XSEXP, SEXP phi_coeffsSEXP, SEXP exact_first_ar1SEXP) {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type Y(YSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type phi_coeffs(phi_coeffsSEXP);
     Rcpp::traits::input_parameter< bool >::type exact_first_ar1(exact_first_ar1SEXP);
-    ar_whiten_inplace(Y, X, phi_coeffs, exact_first_ar1);
-    return R_NilValue;
+    rcpp_result_gen = Rcpp::wrap(ar_whiten_inplace(Y, X, phi_coeffs, exact_first_ar1));
+    return rcpp_result_gen;
 END_RCPP
 }
 // instantaneous_correlation_rcpp

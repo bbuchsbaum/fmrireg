@@ -24,10 +24,11 @@ test_that("fmri_lm accepts robust arguments", {
 
 # validation of arguments
 test_that("robust argument validation works", {
+  # Test invalid robust_psi through robust_options
   expect_error(
     fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
-            robust = TRUE, robust_psi = "bogus"),
-    "robust_psi"
+            robust_options = list(type = "bogus")),
+    "Invalid robust_psi|robust_psi/type"
   )
 
   expect_error(

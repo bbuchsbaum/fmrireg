@@ -41,8 +41,8 @@ as.character.AFNI_HRF <- function(x,...) {
 #' @export
 #' @return an \code{afni_hrfspec} instance
 afni_hrf <- function(..., basis=c("spmg1", "block", "dmblock",
-                                  "tent",   "csplin", "poly",  "sin",
-                                  "gam", "spmg2", "spmg3", "wav"),
+                                  "tent",   "csplin", "poly",  "sin", "sine",
+                                  "gam", "gamma", "spmg2", "spmg3", "wav"),
                                   onsets=NULL, durations=NULL, prefix=NULL, subset=NULL,
                                   nbasis=1, contrasts=NULL, id=NULL,
                                   lag=0, precision = 0.3, summate = TRUE,

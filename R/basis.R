@@ -34,7 +34,7 @@ sub_basis <-  function(x, subset) UseMethod("sub_basis")
 #' @param newdata Numeric vector to transform.
 #' @param ... Additional arguments.
 #' @param newgroup Optional factor for group-dependent bases.
-#' @rdname predict.ParametricBasis
+#' @rdname predict
 #' @export
 predict.ParametricBasis <- function(object, newdata, ...) {
   UseMethod("predict", object)
@@ -146,7 +146,7 @@ Standardized <- function(x) {
 }
 
 #' @export
-#' @rdname predict.ParametricBasis
+#' @rdname predict
 predict.Standardized <- function(object, newdata, ...) {
   # Standardize new data using stored mean and sd
   sd_val <- object$sd
@@ -206,7 +206,7 @@ BSpline <- function(x, degree) {
 
 
 #' @export
-#' @rdname predict.ParametricBasis
+#' @rdname predict
 predict.Poly <- function(object,newdata,...) {
   predict(object$y, newdata)
 }
@@ -243,7 +243,7 @@ sub_basis.Ident <- function(x, subset) {
 }
 
 #' @export
-#' @rdname predict.ParametricBasis
+#' @rdname predict
 predict.BSpline <- function(object, newdata, ...) {
   # Rebuild using bs() and stored attributes
   splines::bs(newdata, degree = object$degree,
@@ -252,7 +252,7 @@ predict.BSpline <- function(object, newdata, ...) {
 }
 
 #' @export
-#' @rdname predict.ParametricBasis
+#' @rdname predict
 predict.Ident <- function(object,newdata,...) {
   if (!is.matrix(newdata) && !is.data.frame(newdata)) {
       stop("newdata for predict.Ident should be matrix or data.frame containing necessary columns")
@@ -353,7 +353,7 @@ Scale <- function(x) {
 #' @param ... Additional arguments
 #' @name predict.ParametricBasis
 #' @title Predict Method for ParametricBasis Objects
-#' @rdname predict.ParametricBasis
+#' @rdname predict
 predict.Scale <- function(object, newdata, ...) {
   z <- (newdata - object$mean)/object$sd
   z[is.na(z)] <- 0
@@ -381,19 +381,14 @@ sub_basis.Scale <- function(x, subset) {
   ret
 }
 
+#' @method levels Scale
+#' @rdname levels.event
 #' @export
-#' @param x ParametricBasis object
-#' @name levels.ParametricBasis
-#' @title Get Levels/Names for ParametricBasis Objects
-#' @param x ParametricBasis object
-#' @rdname levels.ParametricBasis
 levels.Scale  <- function(x) x$argname
 
+#' @method columns Scale
+#' @rdname columns
 #' @export
-#' @param x ParametricBasis object
-#' @name columns.ParametricBasis
-#' @title Get Column Name Information for ParametricBasis Objects
-#' @rdname columns.ParametricBasis
 columns.Scale <- function(x) {
   continuous_token(x$name)
 }
@@ -445,7 +440,7 @@ ScaleWithin <- function(x, g) {
 }
 
 #' @export
-#' @rdname predict.ParametricBasis
+#' @rdname predict
 predict.ScaleWithin <- function(object, newdata, newgroup, ...) {
   stopifnot(length(newdata) == length(newgroup))
   newgroup <- as.factor(newgroup)
@@ -472,11 +467,11 @@ sub_basis.ScaleWithin <- function(x, subset) {
 }
 
 #' @export
-#' @rdname levels.ParametricBasis
+#' @rdname levels.event
 levels.ScaleWithin  <- function(x) x$argname
 
 #' @export
-#' @rdname columns.ParametricBasis
+#' @rdname columns
 columns.ScaleWithin <- function(x) {
   continuous_token(x$name)
 }
@@ -509,7 +504,7 @@ RobustScale <- function(x) {
 }
 
 #' @export
-#' @rdname predict.ParametricBasis
+#' @rdname predict
 predict.RobustScale <- function(object, newdata, ...) {
   z <- (newdata - object$median)/object$mad
   z[is.na(z)] <- 0
@@ -522,11 +517,11 @@ predict.RobustScale <- function(object, newdata, ...) {
 sub_basis.RobustScale <- sub_basis.Scale
 
 #' @export
-#' @rdname levels.ParametricBasis
+#' @rdname levels.event
 levels.RobustScale  <- function(x) x$argname
 
 #' @export
-#' @rdname columns.ParametricBasis
+#' @rdname columns
 columns.RobustScale <- columns.Scale
 
 # Add nbasis methods -----

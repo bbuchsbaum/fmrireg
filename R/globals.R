@@ -8,6 +8,8 @@ utils::globalVariables(c(
   "type", # <cells.fmri_model>
   ".", # <reshape_coef>
   "row_id", # <reshape_coef>
+  "phi_global", # <runwise_lm>
+  "sigma_global", # <runwise_lm>
   "name", # <meta_contrasts>
   NULL
 ))

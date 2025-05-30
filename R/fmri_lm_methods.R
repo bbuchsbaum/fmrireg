@@ -1,9 +1,6 @@
-#' @title S3 Methods for fmri_lm Objects
-#' @description Methods for extracting results and information from fitted fmri_lm objects
-#' @keywords internal
-#' @importFrom dplyr filter bind_cols %>%
-#' @importFrom tibble tibble as_tibble
-#' @importFrom cli cli_h1 cli_h2 cli_ul cli_li cli_end cli_rule cli_text
+# S3 Methods for fmri_lm Objects
+# Methods for extracting results and information from fitted fmri_lm objects
+
 
 #' Extract HRF from Fitted Model
 #'
@@ -141,17 +138,7 @@ pull_stat <- function(x, type, element) {
   pull_stat_revised(x, type, element)
 }
 
-#' Extract Model Coefficients from an fmri_lm Object
-#'
-#' This function extracts model coefficients (estimates) from an `fmri_lm` object.
-#'
-#' @param object An `fmri_lm` object.
-#' @param type The type of coefficients to extract: `"betas"` or `"contrasts"`. Default is `"betas"'.
-#' @param include_baseline Logical. If `TRUE`, include coefficients for baseline regressors along with event regressors.
-#'                         If `FALSE` (default), only event regressors are returned.
-#' @param recon Logical. If `TRUE`, reconstructs the coefficients into a neuroimaging volume. Default is `FALSE`.
-#' @param ... Additional arguments (currently unused).
-#' @return A tibble or matrix of coefficients.
+#' @method coef fmri_lm
 #' @export
 coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baseline = FALSE, recon = FALSE, ...) {
   type <- match.arg(type)
@@ -167,8 +154,8 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
       # Return all betas, ensure correct names from the full design matrix
       res <- all_betas
       colnames(res) <- colnames(design_matrix(object$model))
-      # Convert back to tibble for consistency if needed, though matrix might be better here
-      # res <- as_tibble(res)
+      # Return as matrix - transpose to get conditions x voxels
+      res <- t(res)
     } else {
       # Default: return only event betas
       # Check bounds and filter valid indices
@@ -194,8 +181,8 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
         colnames(res) <- make.names(condition_names, unique = TRUE)
       }
       
-      # Ensure tibble output for consistency with original behavior
-      res <- suppressMessages(tibble::as_tibble(res, .name_repair = "check_unique"))
+      # Return as matrix - transpose to get conditions x voxels
+      res <- t(res)
     }
   } else {
     # Should not happen due to match.arg, but defensive coding
@@ -208,14 +195,8 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
   return(res)
 }
 
-#' Extract Statistical Values from an fmri_lm Object
-#'
-#' This function extracts statistical values (e.g., t-values, F-values) from an \code{fmri_lm} object.
-#'
-#' @param x An \code{fmri_lm} object.
-#' @param type The type of statistical values to extract: "estimates", "contrasts", or "F". Default is "estimates".
-#' @param ... Additional arguments (currently unused).
-#' @return A tibble of statistical values.
+#' @method stats fmri_lm
+#' @rdname stats
 #' @export
 stats.fmri_lm <- function(x, type = c("estimates", "contrasts", "F"), ...) {
   type <- match.arg(type)
@@ -229,14 +210,8 @@ stats.fmri_lm <- function(x, type = c("estimates", "contrasts", "F"), ...) {
   }
 }
 
-#' Extract Standard Errors from an fmri_lm Object
-#'
-#' This function extracts standard errors from an \code{fmri_lm} object.
-#'
-#' @param x An \code{fmri_lm} object.
-#' @param type The type of standard errors to extract: "estimates" or "contrasts". Default is "estimates".
-#' @param ... Additional arguments (currently unused).
-#' @return A tibble of standard errors.
+#' @method standard_error fmri_lm
+#' @rdname standard_error
 #' @export
 standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
   type <- match.arg(type)
@@ -250,12 +225,7 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
   }
 }
 
-#' Print an fmri_lm_result object
-#'
-#' Provides a colorful and informative printout.
-#'
-#' @param x The fmri_lm object to print
-#' @param ... Additional arguments (unused)
+#' @method print fmri_lm
 #' @export
 print.fmri_lm <- function(x, ...) {
   cli::cli_h1("fMRI Linear Model Results")

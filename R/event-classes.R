@@ -340,15 +340,46 @@ event_basis <- function(basis, name = NULL, onsets, blockids = 1, durations = 0,
 ## Section: Unified S3 Methods for 'event' class
 ## ============================================================================
 
-#' Get levels or column names of an event object
-#' 
-#' Retrieves the appropriate names associated with the event values.
-#' - For factors (stored internally as integers), retrieves names from `$meta$levels`.
-#' - For basis objects, retrieves names via `levels()` method of the stored basis object in `$meta$basis`.
-#' - For matrices or numeric vectors, returns the column names of the internal `$value` matrix.
+#' Extract Levels from fmrireg Objects
 #'
-#' @param x An object of class `event`.
-#' @return A character vector of names.
+#' @description
+#' Extract levels from various fmrireg objects. These methods extend the base R 
+#' \code{\link[base]{levels}} generic to work with fmrireg-specific classes.
+#'
+#' @param x An object from which to extract levels. Can be:
+#'   \itemize{
+#'     \item An \code{event} object - returns factor levels or column names
+#'     \item A \code{Scale} object - returns the variable name
+#'     \item A \code{ScaleWithin} object - returns the variable name
+#'     \item A \code{RobustScale} object - returns the variable name
+#'   }
+#' @return A character vector of levels or names, depending on the object type:
+#'   \itemize{
+#'     \item For categorical events: the factor levels
+#'     \item For continuous events: the column names (matrices) or variable name (vectors)
+#'     \item For scale objects: the variable name being scaled
+#'   }
+#' @examples
+#' # Create a categorical event
+#' fac_event <- event_factor(
+#'   factor(c("A", "B", "A", "B")),
+#'   name = "condition",
+#'   onsets = c(1, 10, 20, 30),
+#'   blockids = rep(1, 4)
+#' )
+#' levels(fac_event)  # Returns: c("A", "B")
+#' 
+#' # Create a continuous event
+#' cont_event <- event_variable(
+#'   c(1.2, 0.8, 1.5, 0.9),
+#'   name = "reaction_time",
+#'   onsets = c(1, 10, 20, 30),
+#'   blockids = rep(1, 4)
+#' )
+#' levels(cont_event)  # Returns: "reaction_time"
+#' @name levels.event
+#' @aliases levels.Scale levels.ScaleWithin levels.RobustScale
+#' @method levels event
 #' @export
 levels.event <- function(x) {
   if (!is.null(x$meta$basis)) {
@@ -367,41 +398,24 @@ levels.event <- function(x) {
 #' @export
 columns.event <- levels.event
 
-#' Check if an event object represents continuous values
-#' 
-#' Checks the `$continuous` flag set by the `event()` constructor.
-#' 
-#' @param x An object of class `event`.
-#' @return Logical `TRUE` if continuous (numeric, matrix, basis), `FALSE` if categorical (factor).
+#' @method is_continuous event
+#' @rdname is_continuous
 #' @export
 is_continuous.event <- function(x) {
   x$continuous
 }
 
-#' Check if an event object represents categorical values
-#' 
-#' Checks if an event is categorical (i.e., not continuous).
-#' 
-#' @param x An object of class `event`.
-#' @return Logical `TRUE` if categorical (factor), `FALSE` if continuous.
+#' @method is_categorical event
+#' @rdname is_categorical
 #' @export
 is_categorical.event <- function(x) {
   !is_continuous(x)
 }
 
-#' Retrieve cells for a single event sequence.
-#'
-#' For categorical events, returns observed factor levels and counts.
-#' For continuous events, returns the variable name as a single cell with the total event count.
-#'
-#' @param x object of class `event`
-#' @param drop.empty Logical; if TRUE (default), rows corresponding to levels with zero
-#'        counts are dropped for categorical events.
-#' @param ... Additional arguments (unused).
-#' @return A one-column tibble (`.level` or `.name`) with a `count` attribute.
-#' @importFrom tibble tibble
-#' @export
+#' @method cells event
 #' @rdname cells
+#' @export
+#' @importFrom tibble tibble
 cells.event <- function(x, drop.empty = TRUE, ...) {
   var_name <- x$varname # Get the variable name
   
@@ -445,24 +459,8 @@ cells.event <- function(x, drop.empty = TRUE, ...) {
   out
 }
 
-#' Extract elements (values or labels) of an event object
-#' 
-#' Returns a list containing the event's data, either the actual numeric values 
-#' or descriptive labels. Used internally by `event_term` and potentially for inspection.
-#'
-#' @param x An event object.
-#' @param what Character, either "values" (default) to return the numeric data matrix 
-#'        (from `$value`), or "labels" to return descriptive names/levels for each 
-#'        event instance (e.g., factor levels as a factor vector, or column names/
-#'        basis levels as a character vector or matrix).
-#' @param transformed Logical; relevant only for basis events when `what="values"`. 
-#'        If TRUE (default), return the transformed basis matrix (`$value`). 
-#'        If FALSE, attempt to return the original pre-transformation values (not robustly supported).
-#' @param ... Additional arguments (unused).
-#' @return A named list containing one element (a matrix or vector). 
-#'         If `what="values"`, an N x K numeric matrix.
-#'         If `what="labels"`, an N-length factor/vector or N x K character matrix.
-#'         The list element name is `x$varname`.
+#' @method elements event
+#' @rdname elements
 #' @export
 elements.event <- function(x, what = c("values", "labels"), transformed = TRUE, ...) {
   

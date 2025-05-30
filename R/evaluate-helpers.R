@@ -195,7 +195,7 @@ eval_loop <- function(p, ...) {
   
   # Pre-calculate nearest grid indices for onsets (more robust than RANN for this)
   # Find the index of the grid point *just before or at* each onset
-  nidx <- stats::findInterval(valid_ons, grid)
+  nidx <- findInterval(valid_ons, grid)
   nidx[nidx == 0] <- 1 
   
   outmat <- matrix(0, length(grid), length(valid_ons) * nb)

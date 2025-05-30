@@ -37,8 +37,7 @@ test_that("condition_basis_list matrix output matches convolve", {
   sf   <- dat$sframe
 
   mat1 <- condition_basis_list(term, HRF_SPMG2, sf, output = "matrix")
-  mat2 <- fmrireg::convolve.event_term(term, hrf = HRF_SPMG2,
-                                       sampling_frame = sf)
+  mat2 <- convolve(term, hrf = HRF_SPMG2, sampling_frame = sf)
 
   expect_equal(mat1, mat2)
 })

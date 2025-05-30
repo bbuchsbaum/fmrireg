@@ -27,23 +27,43 @@ fmri_rlm(
 )
 }
 \arguments{
-\item{formula}{A formula specifying the linear model to fit to the fMRI data}
+\item{formula}{The model formula for experimental events.}
 
-\item{block}{A factor or character vector indicating the block structure}
+\item{block}{The model formula for block structure.}
 
-\item{baseline_model}{An optional baseline model object}
+\item{baseline_model}{(Optional) A \code{baseline_model} object. Default is \code{NULL}.}
 
-\item{dataset}{An fmri_dataset object containing the fMRI data}
+\item{dataset}{An \code{fmri_dataset} object containing the time-series data.}
 
-\item{durations}{Event durations (default 0 for impulse events)}
+\item{durations}{A vector of event durations. Default is \code{0}.}
 
-\item{drop_empty}{Drop empty factor levels from block}
+\item{drop_empty}{Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.}
 
-\item{strategy}{The fitting strategy: "runwise" or "chunkwise"}
+\item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
 
 \item{nchunks}{Number of data chunks when strategy is "chunkwise". Default is 10.}
 
-\item{...}{Additional arguments.}
+\item{cor_struct}{Correlation structure: "iid", "ar1", "ar2", or "arp". Default is "iid".}
+
+\item{cor_iter}{Number of iterations for AR parameter estimation. Default is 1.}
+
+\item{cor_global}{Whether to use global AR parameters. Default is FALSE.}
+
+\item{ar_p}{Order of autoregressive model for "arp" structure. Default is NULL.}
+
+\item{ar1_exact_first}{Whether to use exact AR(1) for first iteration. Default is FALSE.}
+
+\item{robust_psi}{Robust psi function: "huber" or "bisquare". Default is "huber".}
+
+\item{robust_k_huber}{Tuning constant for Huber's psi. Default is 1.345.}
+
+\item{robust_c_tukey}{Tuning constant for Tukey's bisquare. Default is 4.685.}
+
+\item{robust_max_iter}{Maximum iterations for robust fitting. Default is 2.}
+
+\item{robust_scale_scope}{Scope for robust scale estimation: "run" or "global". Default is "run".}
+
+\item{...}{Additional arguments passed to fmri_lm}
 }
 \value{
 A fitted robust linear regression model for fMRI data analysis.

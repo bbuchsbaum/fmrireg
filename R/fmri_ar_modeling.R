@@ -51,10 +51,21 @@ ar_whiten_transform <- function(X, Y, phi, exact_first = FALSE) {
   if (!is.matrix(X)) X <- as.matrix(X)
   if (!is.matrix(Y)) Y <- as.matrix(Y)
 
-  # Make explicit copies to ensure modification
-  Xw <- X + 0  # Force copy
-  Yw <- Y + 0  # Force copy
-  ar_whiten_inplace(Yw, Xw, phi, exact_first)
-  list(X = Xw, Y = Yw)
+  # Debug
+  if (getOption("fmrireg.debug.ar", FALSE)) {
+    message("ar_whiten_transform called with phi=", paste(phi, collapse=","), 
+            " exact_first=", exact_first)
+    message("  X dims: ", nrow(X), "x", ncol(X))
+    message("  Y dims: ", nrow(Y), "x", ncol(Y))
+  }
+
+  # Make copies to avoid modifying the original matrices
+  X_copy <- X + 0  # Force a copy
+  Y_copy <- Y + 0  # Force a copy
+  
+  # Call ar_whiten_inplace which modifies and returns the matrices
+  # Note: ar_whiten_inplace takes (Y, X) and returns list(Y=..., X=...)
+  result <- ar_whiten_inplace(Y_copy, X_copy, phi, exact_first)
+  list(X = result$X, Y = result$Y)
 }
 

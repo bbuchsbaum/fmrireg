@@ -29,9 +29,9 @@ test_that("ar_whiten_inplace AR1", {
   phi <- 0.5
   Yref <- whiten_R(Y, phi)
   Xref <- whiten_R(X, phi)
-  ar_whiten_inplace(Y, X, phi)
-  expect_equal(Y, Yref)
-  expect_equal(X, Xref)
+  result <- ar_whiten_inplace(Y, X, phi)
+  expect_equal(result$Y, Yref)
+  expect_equal(result$X, Xref)
 })
 
 test_that("ar_whiten_inplace AR2", {
@@ -40,9 +40,9 @@ test_that("ar_whiten_inplace AR2", {
   phi <- c(0.6, -0.3)
   Yref <- whiten_R(Y, phi)
   Xref <- whiten_R(X, phi)
-  ar_whiten_inplace(Y, X, phi)
-  expect_equal(Y, Yref)
-  expect_equal(X, Xref)
+  result <- ar_whiten_inplace(Y, X, phi)
+  expect_equal(result$Y, Yref)
+  expect_equal(result$X, Xref)
 })
 
 test_that("ar_whiten_inplace exact first AR1", {
@@ -51,17 +51,19 @@ test_that("ar_whiten_inplace exact first AR1", {
   phi <- 0.4
   Yref <- whiten_R(Y, phi, TRUE)
   Xref <- whiten_R(X, phi, TRUE)
-  ar_whiten_inplace(Y, X, phi, TRUE)
-  expect_equal(Y, Yref)
-  expect_equal(X, Xref)
+  result <- ar_whiten_inplace(Y, X, phi, TRUE)
+  expect_equal(result$Y, Yref)
+  expect_equal(result$X, Xref)
 })
 
-test_that("ar_whiten_inplace errors with NA input", {
+test_that("ar_whiten_transform errors with NA input", {
+  # Test the R wrapper which does check for NA
   Y <- matrix(rnorm(4), ncol = 1)
   X <- matrix(rnorm(4), ncol = 1)
   Y[2, 1] <- NA
-  expect_error(ar_whiten_inplace(Y, X, 0.3), "NA")
+  expect_error(ar_whiten_transform(X, Y, 0.3), "NA")
+  
   Y[2, 1] <- 0
   X[3, 1] <- NA
-  expect_error(ar_whiten_inplace(Y, X, 0.3), "NA")
+  expect_error(ar_whiten_transform(X, Y, 0.3), "NA")
 })

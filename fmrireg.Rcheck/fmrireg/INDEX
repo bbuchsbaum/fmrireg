@@ -1,0 +1,227 @@
+AFNI_HRF                AFNI HRF Constructor Function
+BSpline                 B-spline basis
+Fcontrasts              Generate F-contrasts for a model term
+HRF                     HRF Constructor Function
+HRF_objects             Pre-defined Hemodynamic Response Function
+                        Objects
+Ident                   Ident
+Poly                    Polynomial basis
+RobustScale             Robust Scaling (Median/MAD)
+Scale                   Z-score (global) basis
+ScaleWithin             Z-score within groups
+Standardized            Standardized basis
+afni_hrf                construct an native AFNI hrf specification for
+                        '3dDeconvolve' with the 'stim_times' argument.
+afni_lm                 Set up an fMRI linear model for AFNI's
+                        3dDeconvolve
+afni_trialwise          construct a native AFNI hrf specification for
+                        '3dDeconvolve' and individually modulated
+                        events using the 'stim_times_IM' argument.
+amplitudes              Get event amplitudes from an object
+as.matrix_dataset       Convert an fMRI Dataset to a Matrix Dataset
+autoplot.Reg            Autoplot method for Reg objects
+baseline                Create a Baseline Specification
+baseline_model          Construct a Baseline Model
+baseline_terms          Extract baseline terms from a model
+basis_suffix            Create Basis Function Suffix
+block                   Create a Block Variable
+block_hrf               Create a Blocked HRF Object
+blockids                Get block/run indices
+blocklens               Get block/run lengths
+cells                   The experimental cells of a design
+column_contrast         Column Contrast Specification
+columns                 Extract Column Names or Identifiers
+condition_basis_list    Convert an 'event_term' to a per-condition
+                        basis list
+conditions              Conditions
+contrast                Contrast Specification
+contrast_set            Create a Set of Contrasts
+contrast_weights        Calculate contrast weights for a given contrast
+                        specification and term.
+contrast_weights.column_contrast_spec
+                        Column Contrast Weights
+contrast_weights.contrast_diff_spec
+                        Contrast Difference Weights
+contrast_weights.contrast_formula_spec
+                        Contrast Formula Weights
+contrast_weights.contrast_set
+                        Contrast Weights for a Contrast Set
+contrast_weights.interaction_contrast_spec
+                        Interaction Contrast Weights
+contrast_weights.oneway_contrast_spec
+                        One-way Contrast Weights
+contrast_weights.pair_contrast_spec
+                        Pair Contrast Weights
+contrast_weights.poly_contrast_spec
+                        Polynomial Contrast Weights
+contrast_weights.unit_contrast_spec
+                        Unit Contrast Weights
+convolve                Convolve a term with a hemodynamic response
+                        function
+convolve_design         Convolve HRF with Design Matrix.
+correlation_map         correlation_map
+correlation_map.baseline_model
+                        correlation_map.baseline_model
+correlation_map.fmri_model
+                        correlation_map.fmri_model
+covariate               Construct a Covariate Term
+create_design_matrix_from_benchmark
+                        Create Design Matrix from Benchmark Dataset
+data_chunks             Return a set of data chunks
+data_chunks.fmri_mem_dataset
+                        Create Data Chunks for fmri_mem_dataset Objects
+data_chunks.matrix_dataset
+                        Create Data Chunks for matrix_dataset Objects
+design_map              Visualize the entire design matrix as a heatmap
+design_map.baseline_model
+                        Heatmap visualization of the baseline_model
+                        design matrix
+design_map.fmri_model   Heatmap visualization of the combined
+                        fmri_model design matrix
+design_matrix           design_matrix
+design_plot             Design Plot for fMRI Model
+durations               Get event durations from an object
+elements                elements
+estimate_betas          Estimate Beta Coefficients for fMRI Data
+estimate_betas.fmri_dataset
+                        Estimate betas using various regression methods
+estimate_betas.matrix_dataset
+                        Estimate betas for a matrix dataset
+estimate_hrf            Estimate hemodynamic response function (HRF)
+                        using Generalized Additive Models (GAMs)
+evaluate                Evaluate a regressor object over a time grid
+evaluate.HRF            Evaluate an HRF Object
+evaluate_method_performance
+                        Evaluate Method Performance on Benchmark
+                        Dataset
+event_basis             Create an event set from a ParametricBasis
+                        object.
+event_factor            Create a categorical event sequence from a
+                        factor.
+event_matrix            Create a continuous event set from a matrix.
+event_model             Construct an event model
+event_table             Extract event table from a term or model
+event_term              Create an event model term from a named list of
+                        variables.
+event_terms             Extract event terms from a model
+event_variable          Create a continuous event sequence from a
+                        numeric vector.
+fitted_hrf              fitted_hrf
+fitted_hrf.fmri_lm      Extract HRF from Fitted Model
+fmri_benchmark_datasets
+                        Benchmark fMRI datasets
+fmri_dataset            Create an fMRI Dataset Object from a Set of
+                        Scans
+fmri_latent_lm          Fast fMRI Regression Model Estimation from a
+                        Latent Component Dataset
+fmri_lm                 Fit a Linear Regression Model for fMRI Data
+                        Analysis
+fmri_lm_control         Configuration for fmri_lm fitting
+fmri_mem_dataset        Create an fMRI Memory Dataset Object
+fmri_model              Construct an fMRI Regression Model
+fmri_rlm                Fit a Robust Linear Model for fMRI Data
+                        Analysis
+gen_afni_lm             generate an AFNI linear model command from a
+                        configuration file
+gen_hrf                 Construct an HRF Instance using Decorators
+gen_hrf_blocked         Generate a Blocked HRF Function
+gen_hrf_lagged          Generate a Lagged HRF Function
+generate_interaction_contrast
+                        Fast factorial contrast generators
+get_benchmark_summary   Get Benchmark Dataset Summary
+get_data_matrix         Extract data matrix
+glm_lss                 GLM LSS Estimation Convenience Function (Single
+                        Trial Estimation)
+glm_ols                 GLM OLS Estimation Convenience Function
+global_onsets           Return the global onsets of an object
+hrf                     hemodynamic regressor specification function
+                        for model formulas.
+hrf_basis_lwu           LWU HRF Basis for Taylor Expansion
+hrf_bspline             B-spline HRF (hemodynamic response function)
+hrf_fourier             Fourier basis for HRF modeling
+hrf_from_coefficients   Combine HRF Basis with Coefficients
+hrf_gamma               Gamma HRF (hemodynamic response function)
+hrf_gaussian            Gaussian HRF (hemodynamic response function)
+hrf_half_cosine         Hemodynamic Response Function with Half-Cosine
+                        Basis
+hrf_inv_logit           hrf_inv_logit
+hrf_lwu                 Lag-Width-Undershoot (LWU) HRF
+hrf_mexhat              Mexican Hat HRF (hemodynamic response function)
+hrf_sine                hrf_sine
+hrf_smoothing_kernel    Compute an HRF smoothing kernel
+hrf_spmg1               hrf_spmg1
+hrf_time                HRF (hemodynamic response function) as a linear
+                        function of time
+hrf_toeplitz            HRF Toeplitz Matrix
+interaction_contrast    Interaction Contrast
+is_categorical          Check if a variable is categorical
+is_continuous           Check if a variable is continuous
+labels.event            Get Formatted Labels for a Single Event
+lag_hrf                 Lag an HRF Object
+latent_dataset          Create a Latent Dataset Object
+list_available_hrfs     List all available hemodynamic response
+                        functions (HRFs)
+list_benchmark_datasets
+                        List Available Benchmark Datasets
+load_benchmark_dataset
+                        Load fMRI Benchmark Datasets
+longnames               Extract Long Names of Variable Levels
+matrix_dataset          Create a Matrix Dataset Object
+mixed_solve_cpp         Mixed Model Solver using Rcpp and roptim
+nbasis                  Return number of basis functions associated
+                        with HRF
+neural_input            Generate Neural Input Function from Event
+                        Timing
+normalise_hrf           Normalise an HRF Object
+nuisance                Create a Nuisance Specification
+one_against_all_contrast
+                        One Against All Contrast
+oneway_contrast         One-way Contrast
+onsets                  Get event onsets from an object
+p_values                Extract P-values from a Model Fit
+pair_contrast           Pair Contrast
+pairwise_contrasts      Pairwise Contrasts
+penalty_matrix          Generate penalty matrix for regularization
+penalty_matrix.HRF      Default penalty matrix method
+penalty_matrix.hrfspec
+                        Create penalty matrix for any HRF-like object
+penalty_matrix_methods
+                        Penalty Matrix Methods for HRF Objects
+plot.baseline_model     Plot a Baseline Model
+plot_contrasts          plot_contrasts
+plot_contrasts.event_model
+                        plot_contrasts.event_model
+poly_contrast           Polynomial Contrast
+predict.ParametricBasis
+                        Predict from a ParametricBasis object
+print.afni_lm_spec      Print a Baseline Model
+read_fmri_config        read a basic fMRI configuration file
+reconstruction_matrix   Reconstruction matrix for an HRF basis
+regressor               Construct a Regressor Object
+regressors              Extract regressor set
+run.afni_lm_spec        Run an afni_lm_spec object
+samples                 Extract sampling times
+sampling_frame          A 'sampling_frame' describes the block
+                        structure and temporal sampling of an fMRI
+                        paradigm.
+sanitize                Sanitize Strings for Use in R Names
+shift                   Shift a time series object
+shortnames              Short Names
+simulate_bold_signal    Simulate fMRI Time Series
+simulate_noise_vector   Simulate fMRI Noise
+simulate_simple_dataset
+                        Simulate Complete fMRI Dataset
+single_trial_regressor
+                        Create a single trial regressor
+split_by_block          Split variables by block ID
+split_onsets            Split Event Onsets into Lists by Factor Levels
+                        or Blocks
+standard_error          Extract Standard Errors from a Model Fit
+stats                   Extract Test Statistics from a Model Fit
+sub_basis               sub_basis
+term_indices            Get term indices from a model or term
+to_glt                  convert a contrast to an AFNI 'GLT'
+to_glt.contrast         Convert Contrast to GLT
+trialwise               trialwise
+unit_contrast           Unit Contrast
+write_glt               Write GLT to File

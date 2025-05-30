@@ -1,8 +1,6 @@
-#' @title Runwise Linear Model Strategy
-#' @description Implementation of the runwise fitting strategy using modular components
-#' @keywords internal
-#' @importFrom assertthat assert_that
-#' @importFrom cli cli_progress_bar cli_progress_done cli_progress_update
+# Runwise Linear Model Strategy
+# Implementation of the runwise fitting strategy using modular components
+
 
 #' Perform Runwise Linear Modeling on fMRI Dataset
 #'
@@ -528,9 +526,20 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu) {
       resvar = resvar
     )
   } else {
-    # Single run - return directly
+    # Single run - need to combine contrasts into single tibble format
+    # The conres_list[[1]] is a list of contrast tibbles, but we need a single tibble
+    single_contrasts <- conres_list[[1]]
+    
+    if (length(single_contrasts) > 0) {
+      # Combine the list of contrast tibbles into a single tibble
+      combined_contrasts <- dplyr::bind_rows(single_contrasts)
+    } else {
+      # Empty contrasts
+      combined_contrasts <- tibble::tibble()
+    }
+    
     list(
-      contrasts = conres_list[[1]],
+      contrasts = combined_contrasts,  # Single tibble with all contrasts
       betas = bstats_list[[1]],
       event_indices = event_indices,
       baseline_indices = baseline_indices,

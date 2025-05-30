@@ -45,9 +45,9 @@ test_that("Reg constructor errors on mismatched vector lengths", {
   ons <- c(10, 20, 30)
   # Use regexp to match the error structure flexibly
   expect_error(fmrireg:::Reg(onsets = ons, duration = c(1, 2)), 
-               regexp = "`duration` must be length 1 or 3 \\(got 2\\)")
+               regexp = "Length mismatch for duration: got 2, expected 3")
   expect_error(fmrireg:::Reg(onsets = ons, amplitude = c(1, 2)), 
-               regexp = "`amplitude` must be length 1 or 3 \\(got 2\\)")
+               regexp = "Length mismatch for amplitude: got 2, expected 3")
 })
 
 test_that("Reg constructor filters zero and NA amplitudes (B-3)", {
@@ -251,6 +251,13 @@ test_that("autoplot.Reg runs without error", {
 })
 
 test_that("generate an event model with one observation per level", {
+  # Create mock data since lopdes is not available
+  lopdes <- data.frame(
+    WordPresentationOnset = rep(seq(1000, 10000, by = 1000), 5),
+    Target = factor(rep(c("A", "B", "C", "D", "E"), each = 10)),
+    Run = rep(1:5, each = 10)
+  )
+  
   sframe <- sampling_frame(blocklens=rep(401,5), TR=1.5)
   lopdes$onset <- lopdes$WordPresentationOnset/1000
   lopdes$Target <- factor(lopdes$Target)

@@ -1,0 +1,54 @@
+Package: fmrireg
+Type: Package
+Title: R package for the anlysis of fmri data
+Version: 0.1.0
+LinkingTo: Rcpp,RcppArmadillo, roptim, RcppParallel
+Date: 2023-03-07
+Authors@R: person("Bradley", "Buchsbaum",, role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
+License: GPL (>= 2)
+Maintainer: Bradley Buchsbaum <brad.buchsbaum@gmail.com>
+Description: fmrireg is a package for the analysis of functional magnetic resonance imaging (fMRI) data. Facilities are provided to construct flexible hemodynamic response functions, experimental regressors, and conduct univariate fMRI analyses.
+Encoding: UTF-8
+LazyData: false
+Depends: R (>= 4.0.0)
+Imports: stats, Matrix, RANN, assertthat, stringr, tibble, purrr,
+        foreach, dplyr, ggplot2, gmodels, lazyeval, tidyr, iterators,
+        robustbase, memoise, pracma, matrixStats, furrr, rlang,
+        neuroim2, Rcpp, methods, numDeriv, RcppArmadillo (>= 0.10.1.0),
+        splines, crayon, plotly, cli, colorplane, deflist
+RoxygenNote: 7.3.2.9000
+Roxygen: list( markdown = TRUE, roclets = c("collate", "namespace",
+        "rd", "roxyglobals::global_roclet"))
+Suggests: testthat, pls, fmristore, knitr, rmarkdown, roxygen2, covr,
+        multivarious, rrBLUP, care, glmnet, proxy, cowplot, forecast,
+        shiny, mgcv, progressr, ggforce, roxyglobals (>= 0.2.1), bidser
+Remotes: bbuchsbaum/neuroim2, bbuchsbaum/multivarious,
+        bbuchsbaum/fmristore, anthonynorth/roxyglobals
+VignetteBuilder: knitr
+URL: https://github.com/bbuchsbaum/fmrireg
+BugReports: https://github.com/bbuchsbaum/fmrireg/issues
+Collate: 'RcppExports.R' 'afni.R' 'all_generic.R' 'ar_utils.R'
+        'autoplot-methods.R' 'baseline_model.R' 'basis.R'
+        'benchmark_datasets.R' 'beta_utils.R' 'bootstrap.R'
+        'con_stats.R' 'condition_basis_list.R' 'contrast.R'
+        'covariate.R' 'data_fmri_benchmark_datasets.R' 'design_plot.R'
+        'effective_df.R' 'evaluate-helpers.R' 'utils-internal.R'
+        'event-classes.R' 'event_model_helpers.R' 'event_model.R'
+        'event_vector.R' 'fmri_ar_modeling.R' 'fmri_betas.R'
+        'fmri_dataset.R' 'fmri_latent_lm.R' 'fmri_lm_chunkwise.R'
+        'fmri_lm_config.R' 'fmri_lm_context.R' 'fmri_lm_internal.R'
+        'fmri_lm_methods.R' 'fmri_lm_runwise.R' 'fmri_lm_solver.R'
+        'fmri_lm_strategies.R' 'fmri_model.R' 'fmri_model_utils.R'
+        'fmri_robust_fitting.R' 'fmrilm.R' 'fmrilm_new.R' 'fmrireg.R'
+        'fmrirlm.R' 'gen_contrast.R' 'globals.R' 'hrf-afni.R'
+        'hrf-formula.R' 'hrf-functions.R' 'hrf.R' 'hrf_decorators.R'
+        'hrf_from_coefficients.R' 'hrf_smoothing_kernel.R' 'lss.R'
+        'metafuns.R' 'mixed_solve.R' 'naming-utils.R'
+        'penalty_matrix.R' 'reconstruction_matrix.R'
+        'reg-constructor.R' 'reg-methods.R' 'regressor.R'
+        'sampling_frame.R' 'sandwich_variance_doc.R' 'simulate.R'
+        'zzz.R'
+NeedsCompilation: yes
+Packaged: 2025-05-28 15:29:37 UTC; bbuchsbaum
+Author: Bradley Buchsbaum [aut, cre]
+Built: R 4.3.2; aarch64-apple-darwin20; 2025-05-28 15:30:00 UTC; unix

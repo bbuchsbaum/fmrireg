@@ -1,10 +1,4 @@
-#' Get the formula representation of an fMRI model
-#'
-#' This function extracts the formula from an \code{fmri_model} object.
-#'
-#' @return A formula representing the model.
-#' @param x An \code{fmri_model} object.
-#' @param ... Additional arguments.
+#' @method get_formula fmri_model
 #' @rdname get_formula
 #' @export
 get_formula.fmri_model <- function(x,...) {
@@ -14,18 +8,9 @@ get_formula.fmri_model <- function(x,...) {
   return(as.formula(form))
 }
 
-#' Extract Term Matrices from an fMRI Model
-#'
-#' This function extracts the term matrices from an \code{fmri_model}, which consists of event-related terms
-#' and baseline-related terms. These matrices are used to build the design matrix in fMRI data analysis.
-#'
-#' @param x An \code{fmri_model} object containing the event and baseline models.
-#' @param blocknum (Optional) A numeric vector specifying the block numbers to include. Defaults to all blocks.
-#' @return A named list of term matrices, with event terms followed by baseline terms.
-#'         Attributes \code{"event_term_indices"} and \code{"baseline_term_indices"} store the indices of event and baseline terms,
-#'         \code{"blocknum"} stores the block numbers, and \code{"varnames"} stores the variable names.
-#' @export
+#' @method term_matrices fmri_model
 #' @rdname term_matrices
+#' @export
 term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
   assert_that(inherits(x, "fmri_model"), msg = "'x' must be an 'fmri_model' object")
   
@@ -266,10 +251,6 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
 #' @param extra_nuisance Optional matrix or formula specifying additional nuisance regressors.
 #' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance regressors in the final model. Default is \code{FALSE}.
-#' @param ar_voxelwise Logical. Whether to estimate AR parameters voxel-wise. Default is \code{FALSE}.
-#' @param parallel_voxels Logical. If TRUE, voxelwise processing uses parallel
-#'   workers via `future.apply`. Default is \code{FALSE}.
-#' @param ... Additional arguments.
 #' @return A fitted linear regression model for fMRI data analysis.
 #' 
 #' @details
@@ -322,9 +303,21 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
                     robust = FALSE, robust_options = NULL, ar_options = NULL,
                     strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, progress = FALSE,
                     extra_nuisance = NULL, keep_extra_nuisance_in_model = FALSE, ar_voxelwise = FALSE,
-                    parallel_voxels = FALSE, ...) {
+                    parallel_voxels = FALSE, 
+                    # Individual AR parameters for backward compatibility
+                    cor_struct = NULL, cor_iter = NULL, cor_global = NULL, 
+                    ar1_exact_first = NULL, ar_p = NULL,
+                    # Individual robust parameters for backward compatibility
+                    robust_psi = NULL, robust_max_iter = NULL, robust_scale_scope = NULL,
+                    ...) {
   
   strategy <- match.arg(strategy)
+  
+  # Check for any unexpected arguments in ...
+  dots <- list(...)
+  if (length(dots) > 0) {
+    stop("Unexpected arguments: ", paste(names(dots), collapse = ", "))
+  }
   
   # Error checking
   assert_that(is.formula(formula), msg = "'formula' must be a formula")
@@ -355,9 +348,37 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
     robust_options$type <- robust_type
   }
   
+  # Merge individual robust parameters for backward compatibility
+  if (!is.null(robust_psi) && !("type" %in% names(robust_options))) {
+    robust_options$type <- robust_psi
+  }
+  if (!is.null(robust_max_iter) && !("max_iter" %in% names(robust_options))) {
+    robust_options$max_iter <- robust_max_iter
+  }
+  if (!is.null(robust_scale_scope) && !("scale_scope" %in% names(robust_options))) {
+    robust_options$scale_scope <- robust_scale_scope
+  }
+  
   # Build ar_options if not provided
   if (is.null(ar_options)) {
     ar_options <- list()
+  }
+  
+  # Merge individual AR parameters for backward compatibility
+  if (!is.null(cor_struct) && !("struct" %in% names(ar_options))) {
+    ar_options$struct <- cor_struct
+  }
+  if (!is.null(cor_iter) && !("iter_gls" %in% names(ar_options))) {
+    ar_options$iter_gls <- cor_iter
+  }
+  if (!is.null(cor_global) && !("global" %in% names(ar_options))) {
+    ar_options$global <- cor_global
+  }
+  if (!is.null(ar1_exact_first) && !("exact_first" %in% names(ar_options))) {
+    ar_options$exact_first <- ar1_exact_first
+  }
+  if (!is.null(ar_p) && !("p" %in% names(ar_options))) {
+    ar_options$p <- ar_p
   }
   if (!("voxelwise" %in% names(ar_options))) {
     ar_options$voxelwise <- ar_voxelwise
@@ -369,12 +390,13 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
   model <- create_fmri_model(formula, block, baseline_model, dataset, durations = durations, drop_empty = drop_empty)
   
   # Pass configuration object down
+  # Note: We don't pass ... here because all parameters have been processed
+  # and included in the cfg object
   ret <- fmri_lm_fit(model, dataset, strategy, cfg, nchunks,
                      use_fast_path = use_fast_path, progress = progress,
                      extra_nuisance = extra_nuisance,
                      keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
-                     parallel_voxels = parallel_voxels,
-                     ...)
+                     parallel_voxels = parallel_voxels)
   return(ret)
 }
 
@@ -417,48 +439,48 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
   }
   
-  # Get contrast info grouped by term
-  contrast_info_by_term <- contrast_weights(fmrimod$event_model)
+  # Get contrast info (now flattened from contrast_weights.event_model)
+  contrast_info_flattened <- contrast_weights(fmrimod$event_model)
   full_design_colnames <- colnames(design_matrix(fmrimod))
   processed_conlist <- list()
   
-  # Process contrasts term by term to correctly assign column indices
-  for (term_name in names(contrast_info_by_term)) {
-      term_contrasts <- contrast_info_by_term[[term_name]]
+  # Get column indices from design matrix for each term
+  col_indices <- attr(fmrimod$event_model$design_matrix, "col_indices")
+  
+  if (length(contrast_info_flattened) > 0 && !is.null(col_indices)) {
+    # Process each contrast in the flattened structure
+    for (contrast_name in names(contrast_info_flattened)) {
+      con_spec <- contrast_info_flattened[[contrast_name]]
       
-      # Get col_indices from design matrix instead of term_indices from event model
-      col_indices <- attr(fmrimod$event_model$design_matrix, "col_indices")
+      # Extract term name from flattened name (e.g., "condition.A_vs_B" -> "condition")
+      term_name <- sub("\\..*$", "", contrast_name)
       
-      if (length(term_contrasts) > 0 && !is.null(col_indices) && !is.null(col_indices[[term_name]])) {
-          # Get the column indices directly from col_indices instead of trying to match names
-          # The col_indices already contains the correct indices for this term
-          colind <- col_indices[[term_name]]
-          
-          if (length(colind) == 0) {
-              warning(paste("No column indices found for term:", term_name))
-              next # Skip contrasts for this term if columns can't be found
-          }
-          
-          # Apply colind attribute to each contrast spec within this term
-          processed_term_contrasts <- lapply(term_contrasts, function(con_spec) {
-              if (inherits(con_spec, "contrast") || inherits(con_spec, "Fcontrast")) {
-                  # Set the colind attribute on the contrast weights for the slow path
-                  attr(con_spec$weights, "colind") <- colind
-                  # Also set it directly on the contrast object for estimate_contrast
-                  attr(con_spec, "colind") <- colind
-                  # Add term name attribute for potential future use/debugging
-                  # attr(con_spec$weights, "term") <- term_name 
-              } else {
-                  warning(paste("Item in contrast list for term", term_name, "is not a contrast or Fcontrast object."))
-              }
-              con_spec # Return modified or original con_spec
-          })
-          processed_conlist <- c(processed_conlist, processed_term_contrasts)
-      } else if (length(term_contrasts) > 0 && (is.null(col_indices) || is.null(col_indices[[term_name]]))) {
-           warning(paste("Contrasts found for term '", term_name, "' but col_indices are missing in the event model design matrix."))
+      if (!is.null(col_indices[[term_name]])) {
+        # Get the column indices for this term
+        colind <- col_indices[[term_name]]
+        
+        if (length(colind) == 0) {
+          warning(paste("No column indices found for term:", term_name))
+          next # Skip this contrast if columns can't be found
+        }
+        
+        # Apply colind attribute to the contrast spec
+        if (inherits(con_spec, "contrast") || inherits(con_spec, "Fcontrast")) {
+          # Set the colind attribute on the contrast weights for the slow path
+          attr(con_spec$weights, "colind") <- colind
+          # Also set it directly on the contrast object for estimate_contrast
+          attr(con_spec, "colind") <- colind
+          # Add to processed list
+          processed_conlist[[contrast_name]] <- con_spec
+        } else {
+          warning(paste("Item '", contrast_name, "' is not a contrast or Fcontrast object."))
+        }
+      } else {
+        warning(paste("Contrast '", contrast_name, "' refers to term '", term_name, "' but col_indices are missing."))
       }
+    }
   }
-
+  
   # Now processed_conlist contains all valid contrasts with the colind attribute added
   
   # Separate simple and F contrasts (full objects) for the standard path
@@ -528,7 +550,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                          extra_nuisance = extra_nuisance,
                                          keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
                                          parallel_voxels = parallel_voxels,
-                                         ...),
+                                         ),
                    "chunkwise" = {
                     if (inherits(dataset, "latent_dataset")) {
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
@@ -537,7 +559,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                    sigma_fixed = sigma_global,
                                    extra_nuisance = extra_nuisance,
                                    keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
-                                   ...) # Do not pass use_fast_path
+                                   ) # Do not pass use_fast_path
                     } else {
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                    nchunks, cfg = cfg, use_fast_path = use_fast_path,
@@ -546,7 +568,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                    sigma_fixed = sigma_global,
                                    extra_nuisance = extra_nuisance,
                                    keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
-                                   ...)
+                                   )
                     }
                   })
   
@@ -559,6 +581,10 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   )
   
   class(ret) <- "fmri_lm"
+  
+  # Attach config as attribute for testing
+  attr(ret, "config") <- cfg
+  attr(ret, "strategy") <- strategy
   
   return(ret)
 }
@@ -740,17 +766,7 @@ pull_stat <- function(x, type, element) {
   }
 }
 
-#' Extract Model Coefficients from an fmri_lm Object
-#'
-#' This function extracts model coefficients (estimates) from an `fmri_lm` object.
-#'
-#' @param object An `fmri_lm` object.
-#' @param type The type of coefficients to extract: `"betas"` or `"contrasts"`. Default is `"betas"'.
-#' @param include_baseline Logical. If `TRUE`, include coefficients for baseline regressors along with event regressors.
-#'                         If `FALSE` (default), only event regressors are returned.
-#' @param recon Logical. If `TRUE`, reconstructs the coefficients into a neuroimaging volume. Default is `FALSE`.
-#' @param ... Additional arguments (currently unused).
-#' @return A tibble or matrix of coefficients.
+#' @method coef fmri_lm
 #' @export
 coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baseline = FALSE, recon = FALSE, ...) {
   type <- match.arg(type)
@@ -807,14 +823,8 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
   return(res)
 }
 
-#' Extract Statistical Values from an fmri_lm Object
-#'
-#' This function extracts statistical values (e.g., t-statistics, F-statistics) from an \code{fmri_lm} object.
-#'
-#' @param x An \code{fmri_lm} object.
-#' @param type The type of statistics to extract: \code{"estimates"}, \code{"contrasts"}, or \code{"F"}.
-#' @param ... Additional arguments (currently unused).
-#' @return A tibble containing the requested statistical values.
+#' @method stats fmri_lm
+#' @rdname stats
 #' @export
 stats.fmri_lm <- function(x, type = c("estimates", "contrasts", "F"), ...) {
   type <- match.arg(type)
@@ -827,16 +837,8 @@ stats.fmri_lm <- function(x, type = c("estimates", "contrasts", "F"), ...) {
   }
 }
 
-#' Extract Standard Errors from an fmri_lm Object
-#'
-#' This function extracts standard errors from an \code{fmri_lm} object.
-#'
+#' @method standard_error fmri_lm
 #' @rdname standard_error
-#'
-#' @param x An \code{fmri_lm} object.
-#' @param type The type of standard errors to extract: \code{"estimates"} or
-#'   \code{"contrasts"}.
-#' @return A tibble containing the standard errors.
 #' @export
 standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
   type <- match.arg(type)
@@ -1529,9 +1531,71 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   ym <- NULL
   
   if (!use_fast_path) {
-      # -------- Original Slow Path --------
-      # Check if voxelwise AR is requested
-      if (cfg$ar$voxelwise && cfg$ar$struct != "iid") {
+      # -------- Slow Path using Integrated Solver --------
+      # Check if integrated solver is available
+      has_integrated_solver <- exists("solve_integrated_glm", 
+                                     where = asNamespace("fmrireg"), 
+                                     mode = "function") &&
+                              exists("process_run_integrated", 
+                                     where = asNamespace("fmrireg"),
+                                     mode = "function")
+      
+      if (has_integrated_solver && !cfg$ar$voxelwise) {
+          # Use integrated solver for non-voxelwise cases
+          if (verbose) message("Using integrated solver for slow path...")
+          
+          cres <- vector("list", length(chunks))
+          for (i in seq_along(chunks)) {
+              ym <- chunks[[i]]
+              if (verbose) message("Processing run ", ym$chunk_num)
+              tmats <- term_matrices(model, ym$chunk_num)
+              vnames <- attr(tmats, "varnames")
+              event_indices <- attr(tmats, "event_term_indices")
+              baseline_indices <- attr(tmats, "baseline_term_indices")
+              
+              data_env <- list2env(tmats)
+              data_env$.y <- rep(0, nrow(tmats[[1]]))
+              X_run <- model.matrix(form, data_env)
+              Y_run <- as.matrix(ym$data)
+              
+              # Extract contrast weights
+              simple_conlist <- Filter(function(x) inherits(x, "contrast"), contrast_objects)
+              fconlist <- Filter(function(x) inherits(x, "Fcontrast"), contrast_objects)
+              simple_conlist_weights <- lapply(simple_conlist, `[[`, "weights")
+              names(simple_conlist_weights) <- names(simple_conlist)
+              fconlist_weights <- lapply(fconlist, `[[`, "weights")
+              names(fconlist_weights) <- names(fconlist)
+              
+              # Use integrated solver
+              run_result <- process_run_integrated(
+                  X_run = X_run, 
+                  Y_run = Y_run, 
+                  cfg = cfg,
+                  phi_fixed = phi_fixed,
+                  sigma_fixed = sigma_fixed,
+                  conlist_weights = simple_conlist_weights,
+                  fconlist_weights = fconlist_weights,
+                  vnames = vnames
+              )
+              
+              # Store results in expected format
+              cres[[i]] <- list(
+                  conres = run_result$contrasts,
+                  bstats = beta_stats_matrix(run_result$betas, run_result$XtXinv, 
+                                            run_result$sigma, run_result$dfres, 
+                                            colnames(X_run),
+                                            robust_weights = run_result$robust_weights, 
+                                            ar_order = if (!is.null(run_result$phi_hat)) length(run_result$phi_hat) else 0),
+                  event_indices = event_indices,
+                  baseline_indices = baseline_indices,
+                  rss = run_result$rss,
+                  rdf = run_result$dfres,
+                  resvar = mean(run_result$sigma^2),
+                  sigma = run_result$sigma
+              )
+              if (progress) cli::cli_progress_update(id = pb)
+          }
+      } else if (cfg$ar$voxelwise && cfg$ar$struct != "iid") {
           # Voxelwise AR path using modular solver
           ar_order <- switch(cfg$ar$struct,
                              ar1 = 1L,
@@ -1561,6 +1625,7 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
               Y_run <- as.matrix(ym$data)
               data_env$.y <- Y_run
               X_run <- model.matrix(form, data_env)
+              proj_run <- .fast_preproject(X_run)  # Compute once outside the loop
 
               n_voxels <- ncol(Y_run)
               p <- ncol(X_run)
@@ -1574,7 +1639,7 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
 
               process_voxel <- function(v) {
                   y_voxel <- matrix(Y_run[, v], ncol = 1)
-                  ctx_vox <- glm_context(X_run, y_voxel)
+                  ctx_vox <- glm_context(X_run, y_voxel, proj = proj_run)
                   ols <- solve_glm_core(ctx_vox, return_fitted = TRUE)
                   resid_ols <- y_voxel - ols$fitted
 
@@ -1737,167 +1802,68 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
             stop(paste("Dimension mismatch in run", ym$chunk_num, ": X_run rows (", nrow(X_run), ") != Y_run rows (", nrow(Y_run), ")"))
         }
 
-        if (cfg$robust$type != FALSE) {
-            # Combined AR + Robust path
-            if (ar_modeling) {
-                # Step 1: Initial OLS for AR parameter estimation
-                glm_ctx_run_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
-                
-                # Estimate phi_hat_run if needed
-                phi_hat_run <- NULL
-                if (is.null(phi_fixed)) {
-                    initial_fit <- solve_glm_core(glm_ctx_run_orig, return_fitted = TRUE)
-                    resid_ols <- Y_run - initial_fit$fitted
-                    phi_hat_run <- estimate_ar_parameters(rowMeans(resid_ols), ar_order)
-                } else {
-                    phi_hat_run <- phi_fixed
-                }
-                
-                # Step 2: AR whitening
-                tmp <- ar_whiten_transform(X_run, Y_run, phi_hat_run, cfg$ar$exact_first)
-                X_run_w <- tmp$X
-                Y_run_w <- tmp$Y
-                proj_run_w <- .fast_preproject(X_run_w)
-                
-                # Step 3: Create whitened GLM context
-                glm_ctx_run_whitened <- glm_context(X = X_run_w, Y = Y_run_w, proj = proj_run_w, phi_hat = phi_hat_run)
-                
-                # Determine sigma_fixed based on scope
-                sigma_fixed_for_run <- if (cfg$robust$scale_scope == "global" && !is.null(sigma_fixed)) {
-                    sigma_fixed
-                } else {
-                    NULL
-                }
-                
-                # Step 4: Robust fitting on whitened data
-                robust_fit_run <- robust_iterative_fitter(
-                    initial_glm_ctx = glm_ctx_run_whitened,
-                    cfg_robust_options = cfg$robust,
-                    X_orig_for_resid = X_run_w,
-                    sigma_fixed = sigma_fixed_for_run
-                )
-                
-                # Step 5: Optional re-estimation of AR parameters
-                if (!is.null(cfg$robust$reestimate_phi) && cfg$robust$reestimate_phi && is.null(phi_fixed)) {
-                    # Calculate robust residuals on whitened data
-                    resid_robust_w <- Y_run_w - X_run_w %*% robust_fit_run$betas_robust
-                    
-                    # De-whiten residuals (inverse AR transform - this is approximate)
-                    # For now, we'll use the residuals directly as de-whitening is complex
-                    phi_hat_run_updated <- estimate_ar_parameters(rowMeans(resid_robust_w), ar_order)
-                    
-                    # Re-whiten with updated phi
-                    tmp2 <- ar_whiten_transform(X_run, Y_run, phi_hat_run_updated, cfg$ar$exact_first)
-                    X_run_w2 <- tmp2$X
-                    Y_run_w2 <- tmp2$Y
-                    
-                    # Apply robust weights to re-whitened data
-                    sqrtw <- sqrt(robust_fit_run$robust_weights_final)
-                    X_run_wr <- X_run_w2 * sqrtw
-                    Y_run_wr <- sweep(Y_run_w2, 1, sqrtw, `*`)
-                    proj_run_wr <- .fast_preproject(X_run_wr)
-                    
-                    # Final WLS fit
-                    glm_ctx_final_wls <- glm_context(X = X_run_wr, Y = Y_run_wr, proj = proj_run_wr)
-                    final_fit <- solve_glm_core(glm_ctx_final_wls)
-                    
-                    # Use final fit results
-                    betas_final <- final_fit$betas
-                    XtXinv_final <- proj_run_wr$XtXinv
-                    dfres_final <- proj_run_wr$dfres
-                    sigma_final <- robust_fit_run$sigma_robust_scale_final
-                    
-                    # Use re-whitened matrices for statistics
-                    X_iter <- X_run_w2
-                    Y_iter <- Y_run_w2
-                    proj_iter <- .fast_preproject(X_run_w2)
-                } else {
-                    # Use robust fit results directly
-                    betas_final <- robust_fit_run$betas_robust
-                    XtXinv_final <- robust_fit_run$XtWXi_final
-                    dfres_final <- robust_fit_run$dfres
-                    sigma_final <- robust_fit_run$sigma_robust_scale_final
-                    
-                    # Use whitened matrices for statistics
-                    X_iter <- X_run_w
-                    Y_iter <- Y_run_w
-                    proj_iter <- proj_run_w
-                }
-            } else {
-                # Robust-only path (no AR)
-                glm_ctx_run_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
-                
-                # Determine sigma_fixed based on scope
-                sigma_fixed_for_run <- if (cfg$robust$scale_scope == "global" && !is.null(sigma_fixed)) {
-                    sigma_fixed
-                } else {
-                    NULL
-                }
-                
-                # Call robust_iterative_fitter
-                robust_fit_run <- robust_iterative_fitter(
-                    initial_glm_ctx = glm_ctx_run_orig,
-                    cfg_robust_options = cfg$robust,
-                    X_orig_for_resid = X_run,
-                    sigma_fixed = sigma_fixed_for_run
-                )
-                
-                # Use robust fit results
-                betas_final <- robust_fit_run$betas_robust
-                XtXinv_final <- robust_fit_run$XtWXi_final
-                dfres_final <- robust_fit_run$dfres
-                sigma_final <- robust_fit_run$sigma_robust_scale_final
-                
-                # Use original matrices for statistics
-                X_iter <- X_run
-                Y_iter <- Y_run
-                proj_iter <- proj_run
-            }
-
-            actual_vnames <- colnames(X_iter)
-            sigma_vec <- rep(sigma_final, ncol(Y_run))
+        # Check if we should use the integrated solver
+        # These are internal functions, so check in the package namespace
+        has_integrated_solver <- exists("solve_integrated_glm", 
+                                       where = asNamespace("fmrireg"), 
+                                       mode = "function") &&
+                                exists("process_run_integrated", 
+                                       where = asNamespace("fmrireg"),
+                                       mode = "function")
+        
+        # Always use integrated solver if available (for consistency)
+        use_integrated_solver <- has_integrated_solver
+        
+        if (getOption("fmrireg.debug", FALSE)) {
+          message("Checking integrated solver: robust=", cfg$robust$type, 
+                  ", ar_modeling=", ar_modeling,
+                  ", has_integrated_solver=", has_integrated_solver,
+                  ", use_integrated_solver=", use_integrated_solver)
+        }
+        
+        if (use_integrated_solver) {
+            # Use the integrated solver for AR, Robust, or AR+Robust
+            run_result <- process_run_integrated(
+                X_run = X_run, 
+                Y_run = Y_run, 
+                cfg = cfg,
+                phi_fixed = phi_fixed,
+                sigma_fixed = sigma_fixed,
+                conlist_weights = simple_conlist_weights,
+                fconlist_weights = fconlist_weights,
+                vnames = vnames
+            )
             
-            # Calculate residuals for RSS
-            resid_final <- Y_iter - X_iter %*% betas_final
-            rss <- colSums(resid_final^2)
-            resvar <- rss / dfres_final
-
-            # Calculate statistics
-            # Extract robust weights if available
-            robust_weights_for_stats <- if (cfg$robust$type != FALSE) {
-                robust_fit_run$robust_weights_final
-            } else {
-                NULL
-            }
+            # Extract results in format expected by runwise_lm
+            betas_final <- run_result$betas
+            sigma_vec <- run_result$sigma
+            rss_final <- run_result$rss
+            dfres_final <- run_result$dfres
+            XtXinv_final <- run_result$XtXinv
+            actual_vnames <- colnames(X_run)
             
-            bstats <- beta_stats_matrix(betas_final, 
-                                        XtXinv_final, 
-                                        sigma_vec,
-                                        dfres_final, 
-                                        actual_vnames,
-                                        robust_weights = robust_weights_for_stats,
+            # Calculate beta stats
+            bstats <- beta_stats_matrix(betas_final, XtXinv_final, sigma_vec, 
+                                        dfres_final, actual_vnames,
+                                        robust_weights = run_result$robust_weights, 
                                         ar_order = ar_order)
-
-            conres <- fit_lm_contrasts_fast(betas_final, 
-                                            resvar, 
-                                            XtXinv_final,
-                                            simple_conlist_weights, 
-                                            fconlist_weights,
-                                            dfres_final,
-                                            robust_weights = robust_weights_for_stats,
-                                            ar_order = ar_order)
-
+            
+            # Contrasts were already computed by process_run_integrated
+            conres <- run_result$contrasts
+            
+            # Store results
             cres[[i]] <- list(
               conres = conres,
               bstats = bstats,
               event_indices = event_indices,
               baseline_indices = baseline_indices,
-              rss = rss,
+              rss = rss_final,
               rdf = dfres_final,
-              resvar = resvar,
+              resvar = rss_final / dfres_final,
               sigma = sigma_vec
             )
-
+            
+            if (progress) cli::cli_progress_update(id = pb)
         } else {
             # Non-robust path - create GLM context for the run
             glm_ctx_run_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
@@ -2016,9 +1982,20 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
       resvar = resvar # Pooled resvar
     )
   } else {
-    # If only one run, return its results directly
+    # Single run - need to combine contrasts into single tibble format
+    # The conres_list[[1]] is a list of contrast tibbles, but we need a single tibble
+    single_contrasts <- conres_list[[1]]
+    
+    if (length(single_contrasts) > 0) {
+      # Combine the list of contrast tibbles into a single tibble
+      combined_contrasts <- dplyr::bind_rows(single_contrasts)
+    } else {
+      # Empty contrasts
+      combined_contrasts <- tibble::tibble()
+    }
+    
     list(
-      contrasts = conres_list[[1]], # This is the list of contrast tibbles for the single run
+      contrasts = combined_contrasts,  # Single tibble with all contrasts
       betas = bstats_list[[1]], # This is the bstats tibble for the single run
       event_indices = cres[[1]]$event_indices,
       baseline_indices = cres[[1]]$baseline_indices,

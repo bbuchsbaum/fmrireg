@@ -1,6 +1,3 @@
-This is a fantastic set of refinements, solidifying the practical implementation and robustness of the LWU-HRF fitting pipeline. The clarifications on data input, Taylor breakdown detection, and the tiered work-queue are particularly strong. The "atlas seeding" and "K-means re-centering" for \(\theta_0\) are clever ways to handle spatial heterogeneity efficiently.
-
-Here's the revised, full-blooded proposal, incorporating these final details. This version should be sufficiently detailed for implementation within `fmrireg`.
 
 ---
 

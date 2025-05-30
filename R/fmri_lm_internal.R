@@ -1,8 +1,6 @@
-#' @title Internal Utilities for fMRI Linear Models
-#' @description Low-level utilities used throughout the fmri_lm implementation
-#' @keywords internal
-#' @importFrom stats chol qr pt pf
-#' @importFrom tibble tibble
+# Internal Utilities for fMRI Linear Models
+# Low-level utilities used throughout the fmri_lm implementation
+
 
 #' Check if object is a formula
 #' @keywords internal
@@ -29,28 +27,65 @@ is.formula <- function(x) {
   if (!is.matrix(X)) {
     X <- as.matrix(X)
   }
-  XtX   <- crossprod(X)        # p × p
-  # Add small ridge for stability if needed
-  Rchol <- tryCatch(chol(XtX), error = function(e) {
-    # Add small ridge parameter for numerical stability
-    ridge <- 1e-10
-    chol(XtX + diag(ncol(XtX)) * ridge)
-  })
-  # (XᵀX)⁻¹ via Cholesky
-  XtXinv <- chol2inv(Rchol)
   
-  # Pinv = (X'X)^-1 X'
-  Pinv <- XtXinv %*% t(X)
+  # QR decomposition for rank detection and stable computation
+  qr_decomp <- qr(X, LAPACK = TRUE)
+  rank <- qr_decomp$rank
+  p <- ncol(X)
+  n <- nrow(X)
   
-  # QR decomposition
-  qr_decomp <- qr(X)
+  # Check for rank deficiency
+  if (rank < p) {
+    warning(sprintf("Design matrix is rank deficient: rank = %d, ncol = %d", rank, p))
+  }
+  
+  # Use QR for stable computation
+  if (rank == p) {
+    # Full rank: use Cholesky for efficiency
+    XtX <- crossprod(X)
+    Rchol <- tryCatch(chol(XtX), error = function(e) {
+      # Fallback to SVD if Cholesky fails
+      svd_result <- svd(X)
+      d <- svd_result$d
+      tol <- max(dim(X)) * .Machine$double.eps * max(d)
+      pos <- d > tol
+      V <- svd_result$v[, pos, drop = FALSE]
+      D_inv <- diag(1/d[pos], nrow = sum(pos))
+      XtXinv <- V %*% D_inv^2 %*% t(V)
+      return(list(XtXinv = XtXinv, method = "svd"))
+    })
+    
+    if (is.list(Rchol)) {
+      # SVD was used
+      XtXinv <- Rchol$XtXinv
+    } else {
+      # Cholesky succeeded
+      XtXinv <- chol2inv(Rchol)
+    }
+    Pinv <- XtXinv %*% t(X)
+  } else {
+    # Rank deficient: use SVD-based pseudoinverse
+    svd_result <- svd(X)
+    d <- svd_result$d
+    tol <- max(dim(X)) * .Machine$double.eps * max(d)
+    pos <- d > tol
+    
+    # Moore-Penrose pseudoinverse
+    U <- svd_result$u[, pos, drop = FALSE]
+    V <- svd_result$v[, pos, drop = FALSE]
+    D_inv <- diag(1/d[pos], nrow = sum(pos))
+    Pinv <- V %*% D_inv %*% t(U)
+    XtXinv <- V %*% D_inv^2 %*% t(V)
+  }
   
   # Return everything needed for fast operations
   list(
     qr = qr_decomp,
     Pinv = Pinv,
     XtXinv = XtXinv,
-    dfres = nrow(X) - qr_decomp$rank
+    dfres = n - rank,
+    rank = rank,
+    is_full_rank = (rank == p)
   )
 }
 

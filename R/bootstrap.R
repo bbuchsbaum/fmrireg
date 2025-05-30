@@ -91,6 +91,10 @@ multiresponse_bootstrap_lm <- function(form, data_env,
   
   # Prepare for bootstrap
   yhat <- fitted(lm.orig)
+  # Ensure yhat is a matrix
+  if (is.vector(yhat)) {
+    yhat <- matrix(yhat, ncol = 1)
+  }
   rows <- 1:nrow(yhat)
   nblocks <- as.integer(length(rows)/block_size)
   
@@ -103,7 +107,8 @@ multiresponse_bootstrap_lm <- function(form, data_env,
   }
   
   # Perform bootstrap
-  boot_res <- foreach(1:nboot) %dopar% {
+  boot_res <- vector("list", nboot)
+  for (b in 1:nboot) {
     sam_blocks <- sample(1:length(blocks), replace=TRUE)
     samples <- unlist(blocks[sam_blocks])
     
@@ -116,29 +121,66 @@ multiresponse_bootstrap_lm <- function(form, data_env,
     }
     
     # Generate bootstrap sample
-    rstar <- lm.orig$residuals[samples,]
+    if (is.matrix(lm.orig$residuals)) {
+      rstar <- lm.orig$residuals[samples, , drop = FALSE]
+    } else {
+      rstar <- matrix(lm.orig$residuals[samples], ncol = 1)
+    }
     ynew <- yhat + rstar
     
     # Fit bootstrap model and compute contrasts
     lm.boot <- lm.fit(modmat, ynew)
-    fit_lm_contrasts(lm.boot, conlist, fcon, vnames, se=FALSE) 
+    boot_res[[b]] <- fit_lm_contrasts(lm.boot, conlist, fcon, vnames, se=FALSE) 
   }
   
   # Compute covariance matrices
   con_cov <- if (length(conlist) > 0) {
-    lapply(names(boot_res[[1]]$conres), function(bname) {
-      bm <- do.call(rbind, lapply(boot_res, function(br) {
-        br$conres[[bname]]$estimate
-      }))
-      cov(bm)
+    lapply(names(boot_res[[1]]$contrasts), function(bname) {
+      estimates <- lapply(boot_res, function(br) {
+        # Access the nested structure: data[[1]]$estimate
+        if (!is.null(br$contrasts[[bname]]) && nrow(br$contrasts[[bname]]) > 0) {
+          br$contrasts[[bname]]$data[[1]]$estimate
+        } else {
+          NULL
+        }
+      })
+      # Filter out NULL values and combine
+      estimates <- estimates[!sapply(estimates, is.null)]
+      if (length(estimates) > 0) {
+        bm <- do.call(rbind, estimates)
+        cov(bm)
+      } else {
+        NULL
+      }
     })
+  } else {
+    NULL
   }
   
   beta_cov <- lapply(event_indices, function(i) {
-    bm <- do.call(rbind, lapply(boot_res, function(br) {
-      br$bstats$estimate
-    }))
-    cov(bm)
+    estimates <- lapply(boot_res, function(br) {
+      # Access the nested structure: data[[1]]$estimate[[1]]
+      # beta_stats returns estimates wrapped in an additional list
+      if (!is.null(br$bstats) && nrow(br$bstats) > 0) {
+        estimate_matrix <- br$bstats$data[[1]]$estimate[[1]]
+        # Extract only the row corresponding to event_indices[i] if it exists
+        if (is.matrix(estimate_matrix) && nrow(estimate_matrix) >= i) {
+          estimate_matrix[i, , drop = FALSE]
+        } else {
+          NULL
+        }
+      } else {
+        NULL
+      }
+    })
+    # Filter out NULL values and combine
+    estimates <- estimates[!sapply(estimates, is.null)]
+    if (length(estimates) > 0) {
+      bm <- do.call(rbind, estimates)
+      cov(bm)
+    } else {
+      NULL
+    }
   })
   
   # Return results
