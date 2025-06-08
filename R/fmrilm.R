@@ -78,35 +78,38 @@ is.formula <- function(x) {
   if (!is.matrix(X)) {
     X <- as.matrix(X)
   }
-  XtX   <- crossprod(X)        # p × p
-  # Add small ridge for stability if needed, but try direct first
-  # Rchol <- tryCatch(chol(XtX), error = function(e) chol(XtX + diag(ncol(XtX)) * 1e-10))
-  Rchol <- chol(XtX)           # p × p  upper‑triangular
-  Pinv  <- backsolve(Rchol, t(X), transpose = TRUE)  # (Rchol^-1)' Xᵀ = (Rchol'^-1) Xᵀ = (XtX)^-1 Xᵀ -> p x n
-                                                    # backsolve solves R'y = x for y if transpose=TRUE
-                                                    # We want to solve R z = t(X) for z, where R is upper.
-                                                    # Let R = chol(XtX). We want z = R^-1 t(X)
-                                                    # Pinv should be (XtX)^-1 X^T = (R'R)^-1 X^T = R^-1 R'^-1 X^T
-                                                    # Let's use solve(R) %*% solve(t(R)) %*% t(X) ? No.
-                                                    # Let's use chol2inv(Rchol) %*% t(X) ? Yes.
-  
-  # Revisit Pinv calculation based on user's note: Pinv = backsolve(Rchol, t(X)) # (R⁻¹) Xᵀ  →  p × n
-  # This assumes R is upper triangular. backsolve solves R x = b.
-  # We want (XtX)^-1 Xt = (R'R)^-1 Xt = R^-1 R'^-1 Xt
-  # Let's test:
-  # X <- matrix(rnorm(30*5), 30, 5); XtX <- crossprod(X); Rchol <- chol(XtX)
-  # Pinv_chol2inv <- chol2inv(Rchol) %*% t(X)
-  # Pinv_backsolve <- backsolve(Rchol, t(X)) # solves R z = t(X) -> z = R^-1 t(X) - This is NOT (XtX)^-1 Xt
-  # Pinv_correct <- solve(XtX, t(X))
-  # Let's stick to chol2inv for clarity and correctness
-  
-  XtXinv <- chol2inv(Rchol)
-  Pinv   <- XtXinv %*% t(X) # p x n : (X'X)^-1 X'
-  
-  list(Pinv = Pinv,           # (X'X)^-1 X'
-       XtXinv = XtXinv,       # (X'X)^-1
-       Rchol = Rchol,         # For potential future use
-       dfres = nrow(X) - ncol(X)) # rank issue not handled here, assumes full rank
+
+  qr_decomp <- qr(X, LAPACK = TRUE)
+  rank <- qr_decomp$rank
+  p <- ncol(X)
+  n <- nrow(X)
+
+  if (rank == p) {
+    XtX <- crossprod(X)
+    Rchol <- tryCatch(chol(XtX),
+                      error = function(e) chol(XtX + diag(ncol(XtX)) * 1e-8))
+    XtXinv <- chol2inv(Rchol)
+    Pinv <- XtXinv %*% t(X)
+  } else {
+    svd_result <- svd(X)
+    d <- svd_result$d
+    tol <- max(dim(X)) * .Machine$double.eps * max(d)
+    pos <- d > tol
+    U <- svd_result$u[, pos, drop = FALSE]
+    V <- svd_result$v[, pos, drop = FALSE]
+    D_inv <- diag(1/d[pos], nrow = sum(pos))
+    Pinv <- V %*% D_inv %*% t(U)
+    XtXinv <- V %*% D_inv^2 %*% t(V)
+  }
+
+  list(
+    qr = qr_decomp,
+    Pinv = Pinv,
+    XtXinv = XtXinv,
+    dfres = n - rank,
+    rank = rank,
+    is_full_rank = (rank == p)
+  )
 }
 
 #' @keywords internal
