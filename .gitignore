@@ -5,3 +5,56 @@ inst/doc
 /doc/
 /Meta/
 docs
+
+# Documentation and planning markdown files (keep README.md and NEWS.md)
+CONTRAST_IMPROVEMENTS_PHASE1.md
+FMRIDATASET_MIGRATION_SUMMARY.md
+FMRIDATASET_MIGRATION_PLAN.md
+NAMESPACE_FIXES_SUMMARY.md
+BLOCKLENS_FIX_SUMMARY.md
+MIGRATION_SUMMARY.md
+test_solver_edge_cases_summary.md
+test-naming-utils_summary.md
+test-regressor_summary.md
+lm_consolidation_mapping.md
+lm_consolidation_plan.md
+lm_consolidation_tickets.md
+fmrireg_cheatsheet.md
+CRITICAL_TEST_GAPS_SUMMARY.md
+FIXES_IMPLEMENTED.md
+CLAUDE.md
+CRITICAL_TEST_GAPS.md
+benchmark_datasets_guide.md
+CRAN_guidance.md
+AGENTS.md
+README_benchmark_datasets.md
+eventvector_refactor_todo.md
+
+# Throwaway and debug R files
+migrate_to_fmrihrf.R
+fix_duplicate_rdnames.R
+auto_fix_s3_docs.R
+fix_s3_docs.R
+test_improved_convenience.R
+test_real_duplicates.R
+debug_warning2.R
+debug_warning.R
+test_user_error.R
+test_convenience_functions.R
+
+# Generated output files
+repomix-output.txt
+test_output.txt
+*.tar.gz
+Rplots.pdf
+
+# Package check artifacts
+fmrireg.Rcheck/
+*.Rcheck/
+
+# OS and editor files
+.DS_Store
+fmrireg.code-workspace
+
+# Obsolete CI configuration
+.travis.yml

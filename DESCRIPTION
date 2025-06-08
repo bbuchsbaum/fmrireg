@@ -75,7 +75,9 @@ Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/multivarious,
     bbuchsbaum/fmristore,
-    anthonynorth/roxyglobals
+    anthonynorth/roxyglobals,
+    bbuchsbaum/fmridataset,
+    bbuchsbaum/fmrihrf
 VignetteBuilder: knitr
 URL: https://bbuchsbaum.github.io/fmrireg/, https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues

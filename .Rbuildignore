@@ -24,3 +24,20 @@ data-raw/
 ^bench$
 ^scripts$
 ^fmrireg\.Rcheck$
+
+# Throwaway and debug R files
+^migrate_to_fmrihrf\.R$
+^fix_duplicate_rdnames\.R$
+^auto_fix_s3_docs\.R$
+^fix_s3_docs\.R$
+^test_improved_convenience\.R$
+^test_real_duplicates\.R$
+^debug_warning2\.R$
+^debug_warning\.R$
+^test_user_error\.R$
+^test_convenience_functions\.R$
+
+# Generated output files
+^repomix-output\.txt$
+^test_output\.txt$
+^Rplots\.pdf$
