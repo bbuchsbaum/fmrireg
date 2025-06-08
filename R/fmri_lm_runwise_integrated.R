@@ -76,19 +76,16 @@ process_run_integrated <- function(X_run, Y_run, cfg, phi_fixed = NULL,
   # Compute contrasts if weights provided
   contrasts_result <- NULL
   if (!is.null(conlist_weights) && length(conlist_weights) > 0) {
-    # Use the existing contrast computation function
-    if (exists("fit_lm_contrasts_fast", mode = "function")) {
-      contrasts_result <- fit_lm_contrasts_fast(
-        betas = betas,
-        sigma2 = mean(sigma_vec^2),
-        XtXinv = XtXinv,
-        conlist = conlist_weights,
-        fcon = fconlist_weights,
-        dfres = result$df_residual %||% (nrow(X_run) - ncol(X_run)),
-        robust_weights = result$robust_weights,
-        ar_order = if (!is.null(result$phi_hat)) length(result$phi_hat) else 0
-      )
-    }
+    contrasts_result <- fit_lm_contrasts_fast(
+      B = betas,
+      sigma2 = mean(sigma_vec^2),
+      XtXinv = XtXinv,
+      conlist = conlist_weights,
+      fconlist = fconlist_weights,
+      df = result$df_residual %||% (nrow(X_run) - ncol(X_run)),
+      robust_weights = result$robust_weights,
+      ar_order = if (!is.null(result$phi_hat)) length(result$phi_hat) else 0
+    )
   }
   
   # Build return structure compatible with runwise_lm

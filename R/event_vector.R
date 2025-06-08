@@ -91,7 +91,8 @@ event_term <- function(evlist, onsets, blockids, durations = 0, subset = NULL) {
   
   # Basic check on input lengths before calling EV factory
   getlen <- function(v) {
-    if (is.matrix(v)) nrow(v)
+    if (inherits(v, "event")) length(v$onsets)
+    else if (is.matrix(v)) nrow(v)
     else if (inherits(v, "ParametricBasis")) nrow(v$y) # Check basis matrix dim
     else length(v)
   }
@@ -107,7 +108,11 @@ event_term <- function(evlist, onsets, blockids, durations = 0, subset = NULL) {
     vname_i <- vnames[i]
     
     # Type checking and dispatching (replaces EV factory logic)
-    if (inherits(vals, "ParametricBasis")) {
+    if (inherits(vals, "event")) {
+        # If it's already an event object, just use it as-is
+        # TODO: Consider whether to re-apply subset/durations/etc from current call
+        vals
+    } else if (inherits(vals, "ParametricBasis")) {
         event_basis(basis = vals, name = vname_i, onsets = onsets, blockids = blockids, durations = durations, subset = subset)
     } else if (is.factor(vals) || is.character(vals)) {
         event_factor(fac = vals, name = vname_i, onsets = onsets, blockids = blockids, durations = durations, subset = subset)
@@ -332,12 +337,12 @@ cells.event_term <- function(x, drop.empty = TRUE, ...) {
 .event_set <- function(x, exclude_basis = FALSE) {
   evtab <- event_table(x)
   
-  evset <- if (nbasis(x) > 1 & !exclude_basis) {
-    ncond <- nbasis(x)
+  evset <- if (fmrihrf::nbasis(x) > 1 & !exclude_basis) {
+    ncond <- fmrihrf::nbasis(x)
     # Construct a zero-padded string for basis labels.
     zstr <- paste0(rep("0", ceiling(log10(ncond + 1e-6))), collapse = "")
     
-    evlist <- c(list(factor(paste("basis", zstr, 1:nbasis(x), sep = ""))), cells(x$evterm))
+          evlist <- c(list(factor(paste("basis", zstr, 1:fmrihrf::nbasis(x), sep = ""))), cells(x$evterm))
     names(evlist) <- c("basis", parent_terms(x$evterm))
     evlist <- lapply(evlist, levels)
     ret <- expand.grid(evlist, stringsAsFactors = TRUE)
@@ -372,7 +377,7 @@ cells.convolved_term <- function(x, exclude_basis = FALSE, ...) {
   counts <- if (exclude_basis) {
     rep(attr(cells(x$evterm), "count"), each = 1)
   } else {
-    rep(attr(cells(x$evterm), "count"), each = nbasis(x))
+          rep(attr(cells(x$evterm), "count"), each = fmrihrf::nbasis(x))
   }
   
   ret <- evset[counts > 0, , drop = FALSE]
@@ -409,7 +414,7 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE, ..
         base_cond_tags <- cols 
         if (expand_basis) {
             hrfspec <- attr(x, "hrfspec")
-            nb <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) nbasis(hrfspec$hrf) else 1L
+            nb <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) fmrihrf::nbasis(hrfspec$hrf) else 1L
             final_cond_tags <- add_basis(base_cond_tags, nb)
         } else {
             final_cond_tags <- base_cond_tags
@@ -455,7 +460,7 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE, ..
   # --- Handle expand_basis --- 
   if (expand_basis) {
       hrfspec <- attr(x, "hrfspec")
-      nb <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) nbasis(hrfspec$hrf) else 1L
+      nb <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) fmrihrf::nbasis(hrfspec$hrf) else 1L
       final_cond_tags <- add_basis(base_cond_tags_final, nb)
   } else {
       final_cond_tags <- base_cond_tags_final
@@ -527,7 +532,7 @@ blockids.event_term <- function(x) {
 
 #' @export
 blockids.convolved_term <- function(x) {
-  blockids(x$evterm)
+  fmrihrf::blockids(x$evterm)
 }
 
 ## ============================================================================
@@ -543,11 +548,11 @@ split_onsets.event_term <- function(x, sframe, global = FALSE, blocksplit = FALS
   
   if (length(facs) == 0) {
     ons <- if (global) {
-      global_onsets(sframe, onsets(x), blockids(x))
+      fmrihrf::global_onsets(sframe, onsets(x), fmrihrf::blockids(x))
     } else {
       onsets(x)
     }
-    return(list(split(ons, blockids(x))))
+    return(list(split(ons, fmrihrf::blockids(x))))
   }
   
   # For categorical events, construct a crossed factor.
@@ -561,13 +566,13 @@ split_onsets.event_term <- function(x, sframe, global = FALSE, blocksplit = FALS
   # If error, a more informative error message might be warranted.
   
   ret <- if (global) {
-    split(global_onsets(sframe, onsets(x), blockids(x)), cfac)
+    split(fmrihrf::global_onsets(sframe, onsets(x), fmrihrf::blockids(x)), cfac)
   } else {
     split(onsets(x), cfac)
   }
   
   if (blocksplit) {
-    bsplit <- split(blockids(x), cfac)
+    bsplit <- split(fmrihrf::blockids(x), cfac)
     ret <- lapply(seq_along(ret), function(i) {
       split(ret[[i]], bsplit[[i]])
     })
@@ -611,10 +616,10 @@ convolve_design <- function(hrf, dmat, globons, durations, summate = TRUE) {
     nonzero <- which(amp != 0)
     if (length(nonzero) == 0) {
       # Call Reg directly to create an empty regressor object
-      Reg(onsets = numeric(0), hrf = hrf, amplitude = 0)
+      fmrihrf::regressor(onsets = numeric(0), hrf = hrf, amplitude = 0)
     } else {
       # Call Reg directly here as well
-      Reg(onsets = globons[nonzero], hrf = hrf, amplitude = amp[nonzero], duration = durations[nonzero], summate = summate)
+      fmrihrf::regressor(onsets = globons[nonzero], hrf = hrf, amplitude = amp[nonzero], duration = durations[nonzero], summate = summate)
     }
   })
   
@@ -633,10 +638,10 @@ convolve_design <- function(hrf, dmat, globons, durations, summate = TRUE) {
 #' @param drop.empty Logical; drop empty conditions
 #' @export
 regressors.event_term <- function(x, hrf, sampling_frame, summate = FALSE, drop.empty = TRUE, ...) {
-  globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
+  globons <- fmrihrf::global_onsets(sampling_frame, x$onsets, x$blockids)
   durations <- x$durations
   blockids <- x$blockids
-  nimages <- sum(sampling_frame$blocklens)
+  nimages <- sum(fmrihrf::blocklens(sampling_frame))
   cnames <- conditions(x)
   dmat <- design_matrix(x, drop.empty)
   ncond <- ncol(dmat)
@@ -664,10 +669,10 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   # }
   
   # --- Basic Setup --- 
-  globons <- global_onsets(sampling_frame, x$onsets, x$blockids)
+  globons <- fmrihrf::global_onsets(sampling_frame, x$onsets, x$blockids)
   durations <- x$durations
   blockids <- x$blockids
-  nimages <- sum(sampling_frame$blocklens)
+  nimages <- sum(fmrihrf::blocklens(sampling_frame))
   
   # --- Get Unconvolved Design Matrix (dmat) --- 
   # design_matrix handles dropping empty/rank-deficient columns based on drop.empty
@@ -697,10 +702,10 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
     if(nrow(dblock) == 0 || ncol(dblock) == 0) return(NULL) 
     
     reg <- convolve_design(hrf, dblock, globons_block, durations_block, summate = summate)
-    sam <- samples(sampling_frame, blockids = as.integer(bid), global = TRUE)
+    sam <- fmrihrf::samples(sampling_frame, blockids = as.integer(bid), global = TRUE)
     
     # Combine regressors for this block
-    block_mat <- do.call(cbind, lapply(reg, function(r) evaluate(r, sam, precision = precision)))
+    block_mat <- do.call(cbind, lapply(reg, function(r) fmrihrf::evaluate(r, sam, precision = precision)))
     block_mat
   })
   
@@ -708,7 +713,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   cmat_list <- Filter(Negate(is.null), cmat_list)
   
   # --- Generate Final Column Names --- 
-  nb <- nbasis(hrf)
+  nb <- fmrihrf::nbasis(hrf)
   # Use the base_cnames derived directly from the dmat that was convolved
   cn <- make_column_names(term_tag, base_cnames, nb)
   

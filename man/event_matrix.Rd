@@ -21,10 +21,9 @@ event_matrix(mat, name, onsets, blockids = 1, durations = 0, subset = NULL)
 provided, the vector must match \code{onsets} in length and contain no \code{NA}
 values.
 
-Column names are sanitized using \code{.sanitizeName()} when provided. If
-column names are missing or not unique, deterministic feature suffixes
-(\verb{f01}, \verb{f02}, ...) are generated instead. These names are
-returned by \code{levels()} for the resulting event object.}
+If \code{mat} has column names and more than one column, those names are
+sanitized using \code{.sanitizeName()} before being stored. The sanitized
+column names are returned by \code{levels()} for the resulting event object.}
 }
 \value{
 An S3 object of class \code{event} and \code{event_seq}.

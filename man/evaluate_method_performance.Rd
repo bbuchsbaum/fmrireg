@@ -28,7 +28,7 @@ on benchmark datasets by comparing estimated betas to ground truth.
 \dontrun{
 # Load dataset and create design matrix
 dataset <- load_benchmark_dataset("BM_Canonical_HighSNR")
-X <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", HRF_SPMG1)
+X <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", fmrihrf::HRF_SPMG1)
 
 # Fit simple linear model
 betas <- solve(t(X) \%*\% X) \%*\% t(X) \%*\% dataset$Y_noisy

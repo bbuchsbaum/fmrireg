@@ -167,17 +167,17 @@ get_benchmark_summary <- function(dataset_name) {
 #' against the ground truth.
 #'
 #' @param dataset_name Character string specifying which dataset to use
-#' @param hrf HRF object to use for convolution (e.g., HRF_SPMG1)
+#' @param hrf HRF object to use for convolution (e.g., fmrihrf::HRF_SPMG1)
 #' @param include_intercept Logical, whether to include an intercept column
 #'
 #' @return A matrix with the design matrix (time x conditions)
 #'
 #' @examples
 #' # Create design matrix using canonical HRF
-#' X <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", HRF_SPMG1)
+#' X <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", fmrihrf::HRF_SPMG1)
 #' 
 #' # Test with a different HRF
-#' X_wrong <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", HRF_SPMG2)
+#' X_wrong <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", fmrihrf::HRF_SPMG2)
 #'
 #' @export
 create_design_matrix_from_benchmark <- function(dataset_name, hrf, include_intercept = TRUE) {
@@ -207,8 +207,8 @@ create_design_matrix_from_benchmark <- function(dataset_name, hrf, include_inter
         }
       }
       
-      reg <- regressor(cond_onsets, hrf, duration = duration, amplitude = 1)
-      X_list[[cond_name]] <- evaluate(reg, time_grid)
+      reg <- fmrihrf::regressor(cond_onsets, hrf, duration = duration, amplitude = 1)
+      X_list[[cond_name]] <- fmrihrf::evaluate(reg, time_grid)
     }
   }
   
@@ -254,7 +254,7 @@ create_design_matrix_from_benchmark <- function(dataset_name, hrf, include_inter
 #' \dontrun{
 #' # Load dataset and create design matrix
 #' dataset <- load_benchmark_dataset("BM_Canonical_HighSNR")
-#' X <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", HRF_SPMG1)
+#' X <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", fmrihrf::HRF_SPMG1)
 #' 
 #' # Fit simple linear model
 #' betas <- solve(t(X) %*% X) %*% t(X) %*% dataset$Y_noisy
@@ -331,9 +331,9 @@ evaluate_method_performance <- function(dataset_name, estimated_betas, method_na
 .reconstruct_hrf_object <- function(name) {
   # Map stored HRF names to actual HRF objects
   hrf_map <- list(
-    "HRF_SPMG1" = HRF_SPMG1,
-    "HRF_SPMG2" = HRF_SPMG2,
-    "HRF_SPMG3" = HRF_SPMG3
+    "HRF_SPMG1" = fmrihrf::HRF_SPMG1,
+    "HRF_SPMG2" = fmrihrf::HRF_SPMG2,
+    "HRF_SPMG3" = fmrihrf::HRF_SPMG3
   )
   
   if (name %in% names(hrf_map)) {
@@ -342,7 +342,7 @@ evaluate_method_performance <- function(dataset_name, estimated_betas, method_na
     # For variant HRFs, we'll just return canonical for now
     # since we don't have the exact reconstructed variants
     # Use suppressWarnings to avoid cluttering output during normal use
-    return(HRF_SPMG1)
+    return(fmrihrf::HRF_SPMG1)
   }
 }
 

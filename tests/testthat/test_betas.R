@@ -18,7 +18,7 @@ gen_dset <- function(D=5, des=facedes) {
   
   
   #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
-  fmri_mem_dataset(scans=scans, 
+  fmridataset::fmri_mem_dataset(scans=scans, 
                    mask=mask, 
                    TR=1.5, 
                    event_table=des)
@@ -37,7 +37,7 @@ test_that("can run a beta estimation", {
   
   dset <- gen_dset(5, facedes)
   
-  basis <- gen_hrf(HRF_SPMG3)
+  basis <- fmrihrf::gen_hrf(fmrihrf::HRF_SPMG3)
   
   ret1 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ trialwise(), block = ~ run, 
                        method="pls", ncomp=1)
@@ -69,7 +69,7 @@ test_that("can run a beta estimation", {
 
 # test_that("can accurate estimate an hrf shape with appropriate methods", {
 #   amps <- 1
-#   hrf <- gen_hrf(hrf_half_cosine,h1=2, h2=7, h4=11 )
+#   hrf <- fmrihrf::gen_hrf(hrf_half_cosine,h1=2, h2=7, h4=11 )
 #   ret <- sim_ts(ncond=1, hrf,nreps=20, amps=amps,isi=c(8,16))
 #   
 #   etab <- data.frame(onset=ret$onset, fac=rep("a", length(ret$onset)), run=factor(rep(1, length(ret$onset))))
@@ -85,7 +85,7 @@ test_that("can run a beta estimation with different durations", {
   facedes <- facedes %>% dplyr::filter(run==1)
   dset <- gen_dset(5, facedes)
 
-  hf <- gen_hrf(hrf_spmg1, width=2, lag=5)
+  hf <- fmrihrf::gen_hrf(hrf_spmg1, width=2, lag=5)
   ret1 <- estimate_betas(dset, fixed = onset ~ hrf(constant, durations=1), ran = onset ~ trialwise(),
                          block = ~ run,
                          method="pls", ncomp=1)
@@ -111,7 +111,7 @@ test_that("can run a beta estimation with multiple basis functions", {
 
   #hrfbasis = NULL
   hrfbasis <- do.call(gen_hrf_set, lapply(0:12, function(i) {
-    gen_hrf(hrf_gaussian, lag=i,width=.01)
+    fmrihrf::gen_hrf(hrf_gaussian, lag=i,width=.01)
   }))
 
 
@@ -134,7 +134,7 @@ test_that("can run a beta estimation with custom basis", {
   facedes$constant <- factor(rep(1, nrow(facedes)))
   dset <- gen_dset(5, facedes)
 
-  b1 <<- gen_hrf(hrf_spmg1, lag=1, width=3, normalize=TRUE)
+  b1 <<- fmrihrf::gen_hrf(hrf_spmg1, lag=1, width=3, normalize=TRUE)
 
 
   # est <- estimate_betas(dset, fixed = onset ~ hrf(constant),
@@ -158,12 +158,12 @@ test_that("can run a beta estimation with fixed duration", {
   dset <- gen_dset(5,facedes)
   #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
   
-  dset <- fmri_mem_dataset(scans=dset$scans, 
+  dset <- fmridataset::fmri_mem_dataset(scans=dset$scans, 
                            mask=dset$mask, 
                            TR=1.5, 
                            event_table=facedes)
   
-  b1 <- gen_hrf(hrf_spmg1, lag=1, width=3, normalize=TRUE)
+  b1 <- fmrihrf::gen_hrf(hrf_spmg1, lag=1, width=3, normalize=TRUE)
   
   
   est <- estimate_betas(dset, fixed = onset ~ hrf(constant),

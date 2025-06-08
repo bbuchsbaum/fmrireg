@@ -79,6 +79,6 @@ evmodel2 <- event_model(
 reg_list2 <- regressors(evmodel2)
 }
 \seealso{
-\code{\link[=event_model]{event_model()}}, \code{\link[=HRF_SPMG1]{HRF_SPMG1()}}, \code{\link[=convolve]{convolve()}}
+\code{\link[=event_model]{event_model()}}, \code{\link[fmrihrf:HRF_objects]{fmrihrf::HRF_SPMG1()}}, \code{\link[=convolve]{convolve()}}
 }
 \concept{regressors}

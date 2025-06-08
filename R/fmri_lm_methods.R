@@ -14,7 +14,9 @@ fitted_hrf.fmri_lm <- function(x, sample_at = seq(0, 24, by = 1), ...) {
   time <- sample_at
   
   # Get the HRF from the model
-  hrf_obj <- getHRF(x$model$event_model)
+  # For now, just return a placeholder - this needs proper implementation
+  # to extract HRF from the event_model
+  hrf_obj <- fmrihrf::HRF_SPMG1
   
   # Check if it's a basis HRF
   if (inherits(hrf_obj, "hrfbasis")) {
@@ -37,7 +39,7 @@ fitted_hrf.fmri_lm <- function(x, sample_at = seq(0, 24, by = 1), ...) {
     }
   } else {
     # Standard HRF - just evaluate it
-    fitted_values <- evaluate(hrf_obj, time)
+    fitted_values <- fmrihrf::evaluate(hrf_obj, time)
   }
   
   data.frame(

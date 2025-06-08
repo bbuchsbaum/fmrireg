@@ -54,7 +54,7 @@ test_that("a 3-by-3 Fcontrast", {
 
 test_that("can build a simple contrast from a convolved term", {
   facedes$repnum <- factor(facedes$rep_num)
-  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
   espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
   con <- pair_contrast(~ repnum==-1, ~ repnum==1, name="A_B")
   
@@ -63,7 +63,7 @@ test_that("can build a simple contrast from a convolved term", {
 
 test_that("can build a simple contrast from a convolved term and convert to glt", {
   facedes$repnum <- factor(facedes$rep_num)
-  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
   espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
   con <- pair_contrast(~ repnum==-1, ~ repnum==1, name="A_B")
   
@@ -74,7 +74,7 @@ test_that("can build a simple contrast from a convolved term and convert to glt"
 
 test_that("can build a contrast versus the intercept from a convolved term", {
   facedes$repnum <- factor(facedes$rep_num)
-  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
   espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
   
   con <- unit_contrast(~ repnum, name="A")
@@ -86,7 +86,7 @@ test_that("can build a contrast versus the intercept from a convolved term", {
 
 test_that("can construct a simple pair_contrast", {
   facedes$repnum <- factor(facedes$rep_num)
-  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
   espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
   
   pc <- pair_contrast(~ repnum == 1, ~ repnum ==2, name="B-A")
@@ -97,7 +97,7 @@ test_that("can construct a simple pair_contrast", {
 
 test_that("can build a linear contrast from repnum and value_map", {
    facedes$repnum <- factor(facedes$rep_num)
-   sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+   sframe <- fmrihrf::sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
    espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
   
    con <- poly_contrast(~ repnum, degree=1, value_map=list("-1"=0, "1"=1, "2"=2, "3"=3, "4"=4), name="linear_repnum")
@@ -108,7 +108,7 @@ test_that("can build a linear contrast from repnum and value_map", {
 
 test_that("can build a set of pairwise contrasts", {
   facedes$repnum <- factor(facedes$rep_num)
-  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
   espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
   levs <- levels(facedes$repnum)
   cset <- pairwise_contrasts(levs, facname = "repnum")
@@ -118,7 +118,7 @@ test_that("can build a set of pairwise contrasts", {
 
 test_that("can build a one_against_all contrast set", {
   facedes$repnum <- factor(facedes$rep_num)
-  sframe <- sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=rep(436/2,max(facedes$run)), TR=2)
   espec <- event_model(onset ~  hrf(repnum), data=facedes, block=~run, sampling_frame=sframe)
   levs <- levels(facedes$repnum)
   cset <- one_against_all_contrast(levs, "repnum")
@@ -137,7 +137,7 @@ test_that("can subtract two pairwise contrasts to form an interaction contrast",
   simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"), replication=c(1,2))
   simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
   simple_des$run <- rep(1,nrow(simple_des))
-  sframe <- sampling_frame(blocklens=100, TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=100, TR=2)
   espec <- event_model(onset ~  hrf(category, attention), data=simple_des, block=~run, sampling_frame=sframe)
   con1 <- pair_contrast(~ category=="face", ~ category == "scene", name="face_scene#attend", where=~ attention == "attend")
   con2 <- pair_contrast(~ category=="face", ~ category == "scene", name="face_scene#ignored", where=~ attention == "ignored")
@@ -152,7 +152,7 @@ test_that("can contrast two parametric regressors crossed with a factor", {
   simple_des$run <- rep(1,nrow(simple_des))
   simple_des$RT <- rnorm(nrow(simple_des))
   
-  sframe <- sampling_frame(blocklens=100, TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=100, TR=2)
   espec <- event_model(onset ~  hrf(category), data=simple_des, block=~run, sampling_frame=sframe)
   con <- pair_contrast(~ category == "face", ~ category == "scene", name="face_vs_scene")
   cwts <- contrast_weights(con, terms(espec)[[1]])
@@ -166,7 +166,7 @@ test_that("can contrast two parametric regressors wrapped in Ident for additive 
   simple_des$RT1 <- rnorm(nrow(simple_des))
   simple_des$RT2 <- rnorm(nrow(simple_des))
   
-  sframe <- sampling_frame(blocklens=100, TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=100, TR=2)
   espec <- event_model(onset ~  hrf(Ident(RT1,RT2)), data=simple_des, block=~run, sampling_frame=sframe)
   
   # --- Determine actual column names for safety ---
@@ -233,12 +233,12 @@ test_that("can contrast two basis functions from a custom multi-phase hrf", {
   simple_des$onset <- seq(1,300, length.out=nrow(simple_des))
   simple_des$run <- rep(1,nrow(simple_des))
   
-  hrf_encode <- gen_hrf(hrf_spmg1, normalize=TRUE)
-  hrf_delay <- gen_hrf(hrf_spmg1, lag=3, width=8, normalize=TRUE)
-  hrf_probe <-gen_hrf(hrf_spmg1, lag=11, width=3, normalize=TRUE)  
+  hrf_encode <- fmrihrf::gen_hrf(hrf_spmg1, normalize=TRUE)
+  hrf_delay <- fmrihrf::gen_hrf(hrf_spmg1, lag=3, width=8, normalize=TRUE)
+  hrf_probe <-fmrihrf::gen_hrf(hrf_spmg1, lag=11, width=3, normalize=TRUE)  
   hrf_trial <<- gen_hrf_set(hrf_encode, hrf_delay, hrf_probe)
   
-  sframe <- sampling_frame(blocklens=250, TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=250, TR=2)
   espec <- event_model(onset ~  hrf(trial_type, basis=hrf_trial), data=simple_des, block=~run, sampling_frame=sframe)
   
   # Updated to use new HRF basis suffix naming scheme: _b01, _b02, etc.
@@ -252,7 +252,7 @@ test_that("can form a simple formula contrast", {
   simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"), replication=c(1,2))
   simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
   simple_des$run <- rep(1,nrow(simple_des))
-  sframe <- sampling_frame(blocklens=100, TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=100, TR=2)
   espec <- event_model(onset ~  hrf(category, attention), data=simple_des, block=~run, sampling_frame=sframe)
   
   # Use the new naming scheme: term_tag_condition_tag format
@@ -273,7 +273,7 @@ test_that("can form formula contrast with 3 terms", {
   simple_des <- expand.grid(match=c("match", "nonmatch"), condition=c("NOVEL", "REPEAT"), correct=c("correct","incorrect"))
   simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
   simple_des$run <- rep(1,nrow(simple_des))
-  sframe <- sampling_frame(blocklens=100, TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=100, TR=2)
   espec <- event_model(onset ~  hrf(match, condition, correct), data=simple_des, block=~run, sampling_frame=sframe)
   
   # Use the old shortnames format for formula contrasts (backward compatibility)
@@ -290,7 +290,7 @@ test_that("can form formula contrast with two factor terms and one continuous co
   simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
   simple_des$run <- rep(1,nrow(simple_des))
   simple_des$correct <- as.factor(simple_des$correct)
-  sframe <- sampling_frame(blocklens=100, TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=100, TR=2)
   espec <- event_model(onset ~  hrf(match, condition, correct), data=simple_des, block=~run, sampling_frame=sframe)
   
   # Use the old shortnames format for formula contrasts
@@ -325,7 +325,7 @@ test_that("can form formula contrast with two factor terms and one continuous co
 #   
 #   
 #   conf <- contrast_formula(~ `2` - !`1`, id="repnum")
-#   sframe <- sampling_frame(rep(436/2,max(facedes$run)), TR=2)
+#   sframe <- fmrihrf::sampling_frame(rep(436/2,max(facedes$run)), TR=2)
 #   nuisance <- matrix(rnorm(2*length(sframe$blockids)), length(sframe$blockids), 2)
 #   
 #   bm <- baseline_model(basis="bs", degree=3, sampling_frame=sframe, nuisance_matrix=nuisance)

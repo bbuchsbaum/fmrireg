@@ -130,7 +130,7 @@ construct.covariatespec <- function(x, model_spec, sampling_frame=NULL, ...) {
   }
 
   ## Validate that the covariate matrix matches the sampling frame length
-  expected_rows <- sum(sframe$blocklens)
+  expected_rows <- sum(fmrihrf::blocklens(sframe))
   if (nrow(mat) != expected_rows) {
     stop(sprintf(
       "Covariate term '%s' has %d rows but sampling_frame expects %d",

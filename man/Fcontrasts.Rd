@@ -3,7 +3,7 @@
 \name{Fcontrasts}
 \alias{Fcontrasts}
 \alias{Fcontrasts.convolved_term}
-\title{Generate F-contrasts for a model term}
+\title{Get block/run indices}
 \usage{
 Fcontrasts(x, ...)
 
@@ -20,6 +20,20 @@ Fcontrasts(x, ...)
 }}
 }
 \value{
+A numeric vector where:
+\itemize{
+\item Each element is the block/run ID for that scan
+\item IDs are sequential integers starting from 1
+\item Length matches the total number of scans
+}
+
+A numeric vector where:
+\itemize{
+\item Each element is the number of scans in a block or run
+\item Length equals the number of blocks/runs
+\item Values are positive integers
+}
+
 A list of contrast specifications where each contains:
 \describe{
 \item{weights}{Matrix of contrast weights}
@@ -29,6 +43,24 @@ A list of contrast specifications where each contains:
 }
 }
 \description{
+Get the block or run number associated with each scan/timepoint in the dataset.
+Block indices are used to:
+\itemize{
+\item Track which scans belong to which runs
+\item Split data by experimental blocks
+\item Align events with their corresponding runs
+\item Apply run-specific processing
+}
+
+Get the number of scans or timepoints in each block/run of the dataset. Block lengths
+are used to:
+\itemize{
+\item Define the temporal structure of the experiment by specifying scan counts and timing per run
+\item Allocate memory for data matrices by pre-allocating arrays based on scan counts
+\item Validate data dimensions across runs by checking against expected lengths
+\item Calculate global timing information by computing cumulative timing across runs
+}
+
 Create F-contrasts to test for overall effects of model terms. F-contrasts are used to:
 \describe{
 \item{categorical}{Test for any effect of a categorical predictor}
@@ -38,6 +70,54 @@ Create F-contrasts to test for overall effects of model terms. F-contrasts are u
 }
 }
 \examples{
+# Create a sampling frame with multiple runs
+sframe <- sampling_frame(
+  blocklens = c(50, 75, 50),  # Different length runs
+  TR = 2
+)
+
+# Get block IDs for all scans
+block_ids <- blockids(sframe)
+# Returns: c(1,1,...,1, 2,2,...,2, 3,3,...,3)
+# 50 ones, 75 twos, 50 threes
+
+# Create a matrix dataset
+X <- matrix(rnorm(175 * 10), 175, 10)  # 175 timepoints (50+75+50), 10 voxels
+dset <- fmridataset::matrix_dataset(
+  X,
+  TR = 2,
+  run_length = c(50, 75, 50)
+)
+
+# Get block IDs from dataset
+dataset_blocks <- blockids(dset)
+
+# Use block IDs to split data by run
+run_data <- split(1:nrow(X), dataset_blocks)
+# Returns list with indices for each run
+# Create a sampling frame with varying run lengths
+sframe <- sampling_frame(
+  blocklens = c(100, 150, 100),  # Different length runs
+  TR = 2
+)
+
+# Get number of scans per run
+run_lengths <- blocklens(sframe)  # Returns: c(100, 150, 100)
+
+# Use block lengths to create a dataset
+total_scans <- sum(run_lengths)  # 350 total timepoints
+X <- matrix(rnorm(total_scans * 10), total_scans, 10)  # 10 voxels
+dset <- fmridataset::matrix_dataset(
+  X,
+  TR = 2,
+  run_length = run_lengths
+)
+
+# Verify block lengths in dataset
+dset_lengths <- blocklens(dset)
+
+# Use lengths to create time vectors for each run
+time_vectors <- lapply(run_lengths, function(len) seq(0, by = 2, length.out = len))
 # Create event data with multiple conditions
 event_data <- data.frame(
   condition = factor(c("A", "B", "C", "A", "B", "C")),
@@ -72,6 +152,19 @@ evmodel2 <- event_model(
 basis_contrasts <- Fcontrasts(evmodel2)
 }
 \seealso{
+\code{\link[=blocklens]{blocklens()}}, \code{\link[=split_by_block]{split_by_block()}}, \code{\link[=sampling_frame]{sampling_frame()}}
+Get block/run lengths
+
+\code{\link[=blockids]{blockids()}}, \code{\link[=split_by_block]{split_by_block()}}, \code{\link[=sampling_frame]{sampling_frame()}}
+Generate F-contrasts for a model term
+
 \code{\link[=event_model]{event_model()}}, \code{\link[=contrast_weights]{contrast_weights()}}
+
+Other block_operations: 
+\code{\link{split_by_block}()}
+
+Other block_operations: 
+\code{\link{split_by_block}()}
 }
+\concept{block_operations}
 \concept{contrasts}

@@ -11,20 +11,60 @@ make_hrf <- function(basis, lag, nbasis=1) {
   }
   
   if (is.character(basis)) {
-    # Resolve character name to a base HRF object or function using getHRF
-    # Note: getHRF itself might need simplification later (Ticket 12)
-    # but currently it calls gen_hrf internally for most types.
-    base_hrf_obj <- getHRF(basis, nbasis=nbasis, lag=0)
+    # Map character names to HRF constants
+    hrf_map <- list(
+      "spmg1" = fmrihrf::HRF_SPMG1,
+      "spmg2" = fmrihrf::HRF_SPMG2,
+      "spmg3" = fmrihrf::HRF_SPMG3,
+      "gamma" = fmrihrf::HRF_GAMMA,
+      "gaussian" = fmrihrf::HRF_GAUSSIAN,
+      "bspline" = fmrihrf::HRF_BSPLINE,
+      "fir" = fmrihrf::HRF_FIR
+    )
+    
+    if (basis %in% names(hrf_map)) {
+      base_hrf_obj <- hrf_map[[basis]]
+      # Check if nbasis needs to be customized for bases that support it
+      if (basis == "bspline" && nbasis != fmrihrf::nbasis(base_hrf_obj)) {
+        # Create custom bspline HRF function with specified nbasis
+        span <- attr(base_hrf_obj, "span")
+        if (is.null(span)) span <- 24
+        degree <- attr(base_hrf_obj, "params")$degree
+        if (is.null(degree)) degree <- 3
+        custom_bspline_fn <- function(t) {
+          fmrihrf::hrf_bspline(t, span = span, N = nbasis, degree = degree)
+        }
+        base_hrf_obj <- fmrihrf::as_hrf(custom_bspline_fn, name = "bspline", nbasis = nbasis, span = span)
+      } else if (basis == "fir" && nbasis != fmrihrf::nbasis(base_hrf_obj)) {
+        # Create custom FIR HRF with specified nbasis
+        span <- attr(base_hrf_obj, "span")
+        if (is.null(span)) span <- 24
+        custom_fir_fn <- function(t) {
+          fmrihrf::hrf_tent_generator(span = span, nbasis = nbasis)(t)
+        }
+                base_hrf_obj <- fmrihrf::as_hrf(custom_fir_fn, name = "fir", nbasis = nbasis, span = span)
+      }
+    } else if (basis == "fourier") {
+      # Create Fourier HRF with specified nbasis
+      span <- 24  # Default span for Fourier
+      custom_fourier_fn <- function(t) {
+        fmrihrf::hrf_fourier(t, span = span, nbasis = nbasis)
+      }
+      base_hrf_obj <- fmrihrf::as_hrf(custom_fourier_fn, name = "fourier", nbasis = nbasis, span = span)
+    } else {
+      # For unknown basis names, just use the default (this will likely fail, but matches old behavior)
+      stop("Unknown HRF basis name: ", basis, ". Available options: ", paste(c(names(hrf_map), "fourier"), collapse = ", "))
+    }
     # Apply lag using gen_hrf
-    final_hrf <- gen_hrf(base_hrf_obj, lag = lag)
+    final_hrf <- fmrihrf::gen_hrf(base_hrf_obj, lag = lag)
 
   } else if (inherits(basis, "HRF")) {
     # If it's already an HRF object, apply lag using gen_hrf
-    final_hrf <- gen_hrf(basis, lag = lag)
+    final_hrf <- fmrihrf::gen_hrf(basis, lag = lag)
     
   } else if (is.function(basis)) {
     # If it's a raw function, gen_hrf will handle conversion via as_hrf and apply lag
-    final_hrf <- gen_hrf(basis, lag = lag)
+    final_hrf <- fmrihrf::gen_hrf(basis, lag = lag)
 
   } else {
     stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
@@ -168,7 +208,7 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
 #' @importFrom rlang as_label is_symbol is_call quo_get_expr
 #' @noRd
 #' @keywords internal
-hrfspec <- function(vars, label=NULL, basis=HRF_SPMG1, ...) {
+hrfspec <- function(vars, label=NULL, basis=fmrihrf::HRF_SPMG1, ...) {
 
   assert_that(inherits(basis, "HRF"))
   
@@ -220,7 +260,7 @@ hrfspec <- function(vars, label=NULL, basis=HRF_SPMG1, ...) {
 
 #' @export
 nbasis.hrfspec <- function(x, ...) {
-  nbasis(x$hrf)
+  fmrihrf::nbasis(x$hrf)
 }
 
 #' @export
@@ -262,7 +302,7 @@ construct.hrfspec <- function(x, model_spec, ...) {
 #' @return A vector of HRF values at the specified time points.
 #' @noRd
 evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1, ...) {
-  evaluate(x$hrf, grid,amplitude, duration, precision)
+  fmrihrf::evaluate(x$hrf, grid, amplitude, duration, precision)
 }
 
 #' trialwise

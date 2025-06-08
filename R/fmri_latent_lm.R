@@ -83,7 +83,7 @@ chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FA
   data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
   modmat <- model.matrix(as.formula(form), data_env)
   
-  basismat <- get_data(dset)
+  basismat <- fmridataset::get_data(dset)
 
   #wmat <- if (autocor != "none") {
   #  message("whitening components")
@@ -140,7 +140,7 @@ chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FA
 #' @keywords internal
 #' @noRd
 tibble_to_neurovec <- function(dset, tab, mask) {
-  sp <- neuroim2::space(get_mask(dset))
+  sp <- neuroim2::space(fmridataset::get_mask(dset))
   neuroim2::SparseNeuroVec(as.matrix(tab), neuroim2::add_dim(sp, nrow(tab)), mask=mask)
 }
 

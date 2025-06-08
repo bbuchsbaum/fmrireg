@@ -47,14 +47,14 @@ test_that("design matrix creation works", {
   skip_if_not_installed("fmrireg")
   
   # Test design matrix creation
-  X <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", HRF_SPMG1)
+  X <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", fmrihrf::HRF_SPMG1)
   expect_true(is.matrix(X))
   expect_true(ncol(X) == 4)  # 3 conditions + intercept
   expect_true(nrow(X) > 100)  # Should have many time points
   expect_true("Intercept" %in% colnames(X))
   
   # Test without intercept
-  X_no_int <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", HRF_SPMG1, 
+  X_no_int <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", fmrihrf::HRF_SPMG1, 
                                                   include_intercept = FALSE)
   expect_true(ncol(X_no_int) == 3)  # 3 conditions only
   expect_false("Intercept" %in% colnames(X_no_int))

@@ -20,7 +20,7 @@ condition_basis_list(
 \item{sampling_frame}{A \code{\link{sampling_frame}} object defining the temporal grid.}
 
 \item{...}{Further arguments passed on to
-\code{\link[=convolve.event_term]{convolve.event_term()}} (e.g. \code{drop.empty = FALSE}).}
+\code{\link[=convolve]{convolve()}} (e.g. \code{drop.empty = FALSE}).}
 
 \item{output}{Either "matrix" (default) for the ordinary design matrix
 or "condition_list" for the split-by-condition list.}

@@ -34,7 +34,7 @@ condition_basis_list <- function(x, hrf, sampling_frame, ...,
   base_tags <- fmrireg::conditions(x, expand_basis = FALSE, drop.empty = FALSE)
   if (length(base_tags) == 0L || ncol(dm) == 0L) return(list())
 
-  nb <- fmrireg::nbasis(hrf)
+  nb <- fmrihrf::nbasis(hrf)
   term_tag <- attr(x, "term_tag")
   if (is.null(term_tag) && nzchar(x$varname)) {
     term_tag <- fmrireg::sanitize(x$varname, allow_dot = FALSE)

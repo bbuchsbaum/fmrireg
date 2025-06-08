@@ -215,7 +215,7 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
 
   if (length(terms) == 0) {
     warning("No terms provided to build design matrix.", call. = FALSE)
-    return(tibble::tibble(.rows = sum(sampling_frame$blocklens)))
+    return(tibble::tibble(.rows = sum(fmrihrf::blocklens(sampling_frame))))
   }
 
   # Convolution function for a single term
@@ -269,7 +269,7 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
   # Handle case where all terms are NULL (all AFNI terms)
   if (length(term_matrices_filtered) == 0) {
     warning("All terms are AFNI terms that don't contribute to the design matrix. Returning empty design matrix.", call. = FALSE)
-    empty_dm <- tibble::tibble(.rows = sum(sampling_frame$blocklens))
+    empty_dm <- tibble::tibble(.rows = sum(fmrihrf::blocklens(sampling_frame)))
     attr(empty_dm, "term_spans") <- integer(0)
     attr(empty_dm, "col_indices") <- list()
     attr(empty_dm, "colnames_final") <- TRUE

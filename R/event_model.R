@@ -59,7 +59,7 @@ NULL
 #'                   run = rep(1:2, each=5),
 #'                   cond = factor(rep(c("A","B"), 5)),
 #'                   mod = rnorm(10))
-#' sframe <- sampling_frame(blocklens=c(50, 60), TR=2)
+#' sframe <- fmrihrf::sampling_frame(blocklens=c(50, 60), TR=2)
 #' 
 #' ev_model_form <- event_model(onset ~ hrf(cond) + hrf(mod, basis="spmg3"), 
 #'                             data = des, block = ~run, sampling_frame = sframe)
@@ -118,7 +118,7 @@ event_model <- function(formula_or_list, data, block, sampling_frame,
 
 #' @export
 blocklens.event_model <- function(x, ...) {
-  blocklens(x$sampling_frame)
+  fmrihrf::blocklens(x$sampling_frame)
 }
 
 #' @export
@@ -143,7 +143,7 @@ design_matrix.event_model <- function(x, blockid = NULL, ...) {
     }
     
     # Get the block IDs for each timepoint from the sampling frame
-    timepoint_blockids <- blockids(sampling_frame)
+    timepoint_blockids <- fmrihrf::blockids(sampling_frame)
     if (is.null(timepoint_blockids)) {
         warning("Cannot determine timepoint block IDs from sampling frame.")
         return(dm)
@@ -356,7 +356,7 @@ print.event_model <- function(x, ...) {
   term_names <- names(x$terms)
   n_events <- length(x$blockids)
   n_blocks <- length(unique(x$blockids))
-  total_scans <- sum(blocklens(x$sampling_frame))
+  total_scans <- sum(fmrihrf::blocklens(x$sampling_frame))
   dm <- design_matrix(x)
   dm_dims <- dim(dm)
 

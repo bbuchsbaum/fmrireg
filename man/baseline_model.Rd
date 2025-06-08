@@ -33,7 +33,7 @@ Builds a baseline model to account for noise and non–event-related variance.
 This model may include a drift term, a block intercept term, and nuisance regressors.
 }
 \examples{
-sframe <- sampling_frame(blocklens = c(100, 100), TR = 2)
+sframe <- fmrihrf::sampling_frame(blocklens = c(100, 100), TR = 2)
 bmod <- baseline_model(basis = "bs", degree = 3, sframe = sframe)
 bmod_global <- baseline_model(basis = "bs", degree = 3, sframe = sframe, intercept = "global")
 bmod_nointercept <- baseline_model(basis = "bs", degree = 3, sframe = sframe, intercept = "none")

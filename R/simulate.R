@@ -4,7 +4,7 @@
 #' It generates a realistic event-related design with randomized inter-stimulus intervals and condition orders.
 #'
 #' @param ncond The number of conditions to simulate.
-#' @param hrf The hemodynamic response function to use (default is HRF_SPMG1).
+#' @param hrf The hemodynamic response function to use (default is fmrihrf::HRF_SPMG1).
 #' @param nreps The number of repetitions per condition (default is 12).
 #' @param amps A vector of amplitudes for each condition (default is a vector of 1s with length ncond).
 #' @param ampsd The standard deviation of the amplitudes (default is 0).
@@ -32,7 +32,7 @@
 #'         xlab = "Time (s)", ylab = "BOLD Response")
 #' 
 #' @export
-simulate_bold_signal <- function(ncond, hrf=HRF_SPMG1, nreps=12, amps=rep(1,ncond), isi=c(3,6), ampsd=0, TR=1.5) {
+simulate_bold_signal <- function(ncond, hrf=fmrihrf::HRF_SPMG1, nreps=12, amps=rep(1,ncond), isi=c(3,6), ampsd=0, TR=1.5) {
   assert_that(length(amps) == ncond,
               msg = "Length of 'amps' must equal 'ncond'")
   # Note: If ampsd > 0, amplitude variability is sampled *once per condition*,
@@ -51,8 +51,8 @@ simulate_bold_signal <- function(ncond, hrf=HRF_SPMG1, nreps=12, amps=rep(1,ncon
   time <- seq(0, max(onset) + span, by = TR)
   ymat <- do.call(cbind, lapply(1:length(cond), function(i) {
     idx <- which(trials == cond[i])
-    reg <- regressor(onset[idx], hrf, amplitude=rnorm(1, mean=amps[i], sd=ampsd))
-    evaluate(reg, time)
+    reg <- fmrihrf::regressor(onset[idx], hrf, amplitude=rnorm(1, mean=amps[i], sd=ampsd))
+    fmrihrf::evaluate(reg, time)
   }))
   
   list(onset=onset, condition=trials, mat=cbind(time, ymat))
@@ -121,7 +121,7 @@ simulate_noise_vector <- function(n, TR = 1.5, ar = c(0.3), ma = c(0.5), sd = 1,
 #' @param nreps Number of repetitions per condition (default is 12)
 #' @param TR Repetition time in seconds (default is 1.5)
 #' @param snr Signal-to-noise ratio (default is 0.5)
-#' @param hrf Hemodynamic response function to use (default is HRF_SPMG1)
+#' @param hrf Hemodynamic response function to use (default is fmrihrf::HRF_SPMG1)
 #' @param seed Optional seed for reproducibility (default is NULL)
 #'
 #' @return A list containing:
@@ -146,7 +146,7 @@ simulate_noise_vector <- function(n, TR = 1.5, ar = c(0.3), ma = c(0.5), sd = 1,
 #'
 #' @export
 simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5, 
-                                 hrf = HRF_SPMG1, seed = NULL) {
+                                 hrf = fmrihrf::HRF_SPMG1, seed = NULL) {
   if (!is.null(seed)) {
     set.seed(seed)
   }
@@ -207,7 +207,7 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #' @param n Number of time-series (columns).
 #' @param total_time Numeric. Total scan length (seconds).
 #' @param TR Numeric. Repetition time (seconds).
-#' @param hrf Hemodynamic response function, e.g. \code{HRF_SPMG1}.
+#' @param hrf Hemodynamic response function, e.g. \code{fmrihrf::HRF_SPMG1}.
 #' @param n_events Number of events (ignored if \code{onsets} is provided).
 #' @param onsets Optional numeric vector of event onsets. If \code{NULL}, will be generated.
 #' @param isi_dist One of \code{"even"}, \code{"uniform"}, or \code{"exponential"}.
@@ -276,7 +276,7 @@ simulate_fmri_matrix <- function(
     n                 = 1,
     total_time        = 240,
     TR                = 2,
-    hrf               = HRF_SPMG1,
+    hrf               = fmrihrf::HRF_SPMG1,
     
     n_events          = 10,
     onsets            = NULL,
@@ -409,13 +409,13 @@ simulate_fmri_matrix <- function(
     
     # Build the BOLD signal using the full time grid (including buffer)
     if (!single_trial) {
-      reg <- regressor(
+      reg <- fmrihrf::regressor(
         onsets    = onsets,
         hrf       = hrf,
         duration  = this_dur,
         amplitude = this_amp
       )
-      bold_signal <- evaluate(reg, grid=time_grid)
+      bold_signal <- fmrihrf::evaluate(reg, grid=time_grid)
     } else {
       bold_signal <- numeric(n_time_points)
       for (j in seq_along(onsets)) {
@@ -425,7 +425,7 @@ simulate_fmri_matrix <- function(
           duration  = this_dur[j],
           amplitude = this_amp[j]
         )
-        bold_signal <- bold_signal + evaluate(sreg, time_grid)
+        bold_signal <- bold_signal + fmrihrf::evaluate(sreg, time_grid)
       }
     }
     
@@ -448,7 +448,7 @@ simulate_fmri_matrix <- function(
     amplitude = ampmat[,1]
   )
   
-  ds <- matrix_dataset(
+  ds <- fmridataset::matrix_dataset(
     datamat     = sim_matrix,
     TR          = TR,
     run_length  = n_time_points,
@@ -465,7 +465,7 @@ simulate_fmri_matrix <- function(
     hrf_info     = list(
       hrf_class = class(hrf),
       hrf_name  = attr(hrf, "name"),
-      nbasis    = nbasis(hrf),
+      nbasis    = fmrihrf::nbasis(hrf),
       span      = attr(hrf, "span")
     ),
     noise_params = list(

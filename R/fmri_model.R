@@ -55,7 +55,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
   if (is.null(baseline_model)) {
     base_model_obj <- baseline_model(
       basis = "bs",
-      degree = max(ceiling(median(dataset$sampling_frame$blocklens) / 100), 3),
+      degree = max(ceiling(median(fmrihrf::blocklens(dataset$sampling_frame)) / 100), 3),
       sframe = dataset$sampling_frame
     )
   } else {
@@ -159,7 +159,7 @@ cells.fmri_model <- function(x, ...) {
 
 #' @export
 blocklens.fmri_model <- function(x, ...) {
-  blocklens(x$event_model)
+  fmrihrf::blocklens(x$event_model)
 }
 
 #' @export

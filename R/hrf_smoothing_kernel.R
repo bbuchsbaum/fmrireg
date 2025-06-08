@@ -24,7 +24,7 @@ hrf_smoothing_kernel <- function(len, TR = 2,
   n_buf  <- as.integer(buffer_scans)
 
   sf   <- sampling_frame(len + 2 * n_buf, TR)
-  dfx  <- data.frame(onset = samples(sf), block = 1L)
+  dfx  <- data.frame(onset = fmrihrf::samples(sf), block = 1L)
   em   <- event_model(form, data = dfx, block = ~ block, sampling_frame = sf)
   X    <- as.matrix(design_matrix(em))
 

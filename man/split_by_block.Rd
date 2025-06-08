@@ -2,7 +2,7 @@
 % Please edit documentation in R/all_generic.R
 \name{split_by_block}
 \alias{split_by_block}
-\title{Split variables by block ID}
+\title{Extract sampling times}
 \usage{
 split_by_block(x, ...)
 }
@@ -10,8 +10,20 @@ split_by_block(x, ...)
 \item{x}{The object containing data to split (typically a sampling_frame or dataset)}
 
 \item{...}{Additional arguments passed to methods}
+
+\item{blockids}{Numeric vector specifying which blocks/runs to include (optional)}
+
+\item{global}{Logical; if TRUE, return cumulative times across runs (default: FALSE)}
 }
 \value{
+A numeric vector of sampling times in seconds, where:
+\itemize{
+\item Each value represents a scan acquisition time
+\item Times account for TR (repetition time) spacing
+\item If global=FALSE, times reset at the start of each run
+\item If global=TRUE, times accumulate across runs
+}
+
 A list where each element contains data from one block:
 \itemize{
 \item List length equals number of blocks
@@ -20,6 +32,15 @@ A list where each element contains data from one block:
 }
 }
 \description{
+Get the sampling times for a regressor or sampling frame. These times represent when
+fMRI data was acquired and can be either relative (within each run) or global
+(cumulative across runs). Sampling times are used to:
+\itemize{
+\item Evaluate regressors at scan acquisition times
+\item Align model predictions with data collection
+\item Convert between TR-based and time-based representations
+}
+
 Split a vector or matrix of values into separate pieces based on block/run IDs.
 This function is useful for:
 \itemize{
@@ -29,6 +50,35 @@ This function is useful for:
 }
 }
 \examples{
+# Create a sampling frame with multiple runs
+sframe <- sampling_frame(
+  blocklens = c(100, 100, 100),  # 100 scans per run
+  TR = 2,                        # 2 seconds per scan
+  start_time = 0                 # Start at time 0
+)
+
+# Get relative sampling times (reset each run)
+rel_times <- samples(sframe)
+# First few times: 0, 2, 4, 6, ... (resets each run)
+
+# Get global sampling times (cumulative)
+glob_times <- samples(sframe, global = TRUE)
+# Shows: 0, 2, 4, ..., 198, 200, 202, ..., 598
+
+# Get times for specific runs
+run2_times <- samples(sframe, blockids = 2)
+# Times for second run only
+
+# Create regressor and get its sampling times
+event_data <- data.frame(
+  onsets = c(1, 10, 20),
+  run = c(1, 1, 1)
+)
+reg <- regressor(
+  onsets = event_data$onsets,
+  sampling_frame = sframe
+)
+reg_times <- samples(reg)
 # Create a sampling frame with multiple runs
 sframe <- sampling_frame(
   blocklens = c(50, 50, 50),  # 3 runs of 50 scans each
@@ -44,7 +94,7 @@ run_data <- split_by_block(sframe, data_values)
 
 # Create matrix dataset
 X <- matrix(rnorm(150 * 10), 150, 10)  # 150 timepoints, 10 voxels
-dset <- matrix_dataset(
+dset <- fmridataset::matrix_dataset(
   X,
   TR = 2,
   run_length = c(50, 50, 50)
@@ -55,10 +105,18 @@ run_matrices <- split_by_block(dset)
 # Returns list with 3 matrices, each 50 x 10
 }
 \seealso{
+\code{\link[=sampling_frame]{sampling_frame()}}, \code{\link[=regressor]{regressor()}}, \code{\link[=global_onsets]{global_onsets()}}
+Split variables by block ID
+
 \code{\link[=sampling_frame]{sampling_frame()}}, \code{\link[=blockids]{blockids()}}, \code{\link[=blocklens]{blocklens()}}
 
+Other timing: 
+\code{\link{durations}()},
+\code{\link{nbasis}()},
+\code{\link{onsets}()}
+
 Other block_operations: 
-\code{\link{blockids}()},
-\code{\link{blocklens}()}
+\code{\link{Fcontrasts}()}
 }
 \concept{block_operations}
+\concept{timing}

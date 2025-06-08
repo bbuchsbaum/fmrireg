@@ -9,7 +9,7 @@ simulate_simple_dataset(
   nreps = 12,
   TR = 1.5,
   snr = 0.5,
-  hrf = HRF_SPMG1,
+  hrf = fmrihrf::HRF_SPMG1,
   seed = NULL
 )
 }
@@ -22,7 +22,7 @@ simulate_simple_dataset(
 
 \item{snr}{Signal-to-noise ratio (default is 0.5)}
 
-\item{hrf}{Hemodynamic response function to use (default is HRF_SPMG1)}
+\item{hrf}{Hemodynamic response function to use (default is fmrihrf::HRF_SPMG1)}
 
 \item{seed}{Optional seed for reproducibility (default is NULL)}
 }

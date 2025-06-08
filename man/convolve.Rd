@@ -66,11 +66,11 @@ convolved <- convolve(eterm, HRF_SPMG1, sframe)
 # Convolve with multiple basis functions
 convolved_fourier <- convolve(
   eterm, 
-  getHRF("fourier", nbasis = 2),
+  fmrihrf::gen_hrf("fourier", nbasis = 2),
   sframe
 )
 }
 \seealso{
-\code{\link[=HRF_SPMG1]{HRF_SPMG1()}}, \code{\link[=event_term]{event_term()}}, \code{\link[=sampling_frame]{sampling_frame()}}
+\code{\link[fmrihrf:HRF_objects]{fmrihrf::HRF_SPMG1()}}, \code{\link[=event_term]{event_term()}}, \code{\link[=sampling_frame]{sampling_frame()}}
 }
 \concept{convolution}

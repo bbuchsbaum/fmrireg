@@ -126,7 +126,7 @@ test_that("Event model integration works", {
     run = rep(1, 2)
   )
   
-  sframe <- sampling_frame(blocklens = 50, TR = 2)
+  sframe <- fmrihrf::sampling_frame(blocklens = 50, TR = 2)
   
   # Create event model
   em <- event_model(
@@ -146,7 +146,7 @@ test_that("Event model integration works", {
 })
 
 test_that("Baseline model creates proper drift terms", {
-  sframe <- sampling_frame(blocklens = c(100, 100), TR = 2)
+  sframe <- fmrihrf::sampling_frame(blocklens = c(100, 100), TR = 2)
   
   bmodel <- baseline_model(
     basis = "poly",

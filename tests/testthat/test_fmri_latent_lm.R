@@ -19,7 +19,7 @@ test_that("fmri_latent_lm works with basic latent dataset", {
   
   # Create mask and dataset
   mask <- array(1, dim = c(n_components, 1, 1))
-  dset <- latent_dataset(
+  dset <- fmridataset::latent_dataset(
     latent_data,
     mask = mask,
     TR = 2,
@@ -59,7 +59,7 @@ test_that("fmri_latent_lm handles different options", {
   latent_data <- matrix(rnorm(n_timepoints * n_components), n_timepoints, n_components)
   mask <- array(1, dim = c(n_components, 1, 1))
   
-  dset <- latent_dataset(
+  dset <- fmridataset::latent_dataset(
     latent_data,
     mask = mask,
     TR = 2,
@@ -99,7 +99,7 @@ test_that("fmri_latent_lm handles different options", {
 test_that("fmri_latent_lm validates inputs", {
   # Non-latent dataset should error
   regular_data <- matrix(rnorm(100 * 10), 100, 10)
-  regular_dset <- matrix_dataset(
+  regular_dset <- fmridataset::matrix_dataset(
     regular_data,
     mask = array(1, dim = c(10, 1, 1)),
     TR = 2,
@@ -131,7 +131,7 @@ test_that("latent_dataset creation works correctly", {
   mask_3d <- array(0, dim = c(10, 10, 10))
   mask_3d[,,] <- 1
   
-  dset <- latent_dataset(
+  dset <- fmridataset::latent_dataset(
     latent_data = latent_mat,
     loadings = loadings,
     mask = mask_3d,
@@ -145,7 +145,7 @@ test_that("latent_dataset creation works correctly", {
   expect_equal(dset@TR, 2)
   
   # Test data access
-  chunk <- data_chunks(dset, nchunks = 1)[[1]]
+  chunk <- fmridataset::data_chunks(dset, nchunks = 1)[[1]]
   expect_equal(ncol(chunk$data), n_comp)
   expect_equal(nrow(chunk$data), n_time)
 })
@@ -162,7 +162,7 @@ test_that("chunkwise_lm.latent_dataset processes correctly", {
     run = rep(1, 6)
   )
   
-  dset <- latent_dataset(
+  dset <- fmridataset::latent_dataset(
     latent_data,
     mask = array(1, dim = c(n_comp, 1, 1)),
     TR = 1,

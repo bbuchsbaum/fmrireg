@@ -38,8 +38,8 @@ autoplot.Reg <- function(object, grid = NULL, precision = 0.1, method = "conv", 
   }
   
   # Evaluate the regressor
-  eval_data <- evaluate(object, grid, precision = precision, method = method)
-  nb <- nbasis(object)
+  eval_data <- fmrihrf::evaluate(object, grid, precision = precision, method = method)
+  nb <- fmrihrf::nbasis(object)
   
   # Prepare data frame for plotting
   if (nb == 1) {

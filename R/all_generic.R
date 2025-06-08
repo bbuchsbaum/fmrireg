@@ -85,7 +85,7 @@ event_model <- function(formula_or_list, data, block, sampling_frame, drop_empty
 #' @param ... extra args
 #' @keywords internal
 #' @noRd
-get_data <- function(x, ...) UseMethod("get_data")
+# get_data <- function(x, ...) UseMethod("get_data") # Now imported from fmridataset
 
 
 #' Extract data matrix
@@ -100,12 +100,12 @@ get_data <- function(x, ...) UseMethod("get_data")
 #'
 #' @examples
 #' X <- matrix(rnorm(20), 4, 5)
-#' dset <- matrix_dataset(X, TR = 1, run_length = 5)
+#' dset <- fmridataset::matrix_dataset(X, TR = 1, run_length = 5)
 #' mat <- get_data_matrix(dset)
 #' dim(mat)
 #'
 #' @export
-get_data_matrix <- function(x, ...) UseMethod("get_data_matrix")
+# get_data_matrix <- function(x, ...) UseMethod("get_data_matrix") # Now imported from fmridataset
 
 
 #' get_mask
@@ -116,7 +116,7 @@ get_data_matrix <- function(x, ...) UseMethod("get_data_matrix")
 #' @param ... extra args
 #' @keywords internal
 #' @noRd
-get_mask <- function(x, ...) UseMethod("get_mask")
+# get_mask <- function(x, ...) UseMethod("get_mask") # Now imported from fmridataset
 
 
 #' get_formula
@@ -365,7 +365,7 @@ conditions <- function(x, ...) UseMethod("conditions")
 #' # Convolve with multiple basis functions
 #' convolved_fourier <- convolve(
 #'   eterm, 
-#'   getHRF("fourier", nbasis = 2),
+#'   fmrihrf::gen_hrf("fourier", nbasis = 2),
 #'   sframe
 #' )
 #' @export
@@ -906,9 +906,9 @@ correlation_map <- function(x, ...) {
 #' @return A numeric vector or matrix containing the evaluated regressor values
 #' @seealso [single_trial_regressor()], [regressor()]
 #' @export
-evaluate <- function(x, grid, ...) {
-  UseMethod("evaluate")
-}
+# evaluate <- function(x, grid, ...) {
+#   UseMethod("evaluate")
+# } # Now imported from fmrihrf
 
 
 #' fitted_hrf
@@ -935,7 +935,7 @@ evaluate <- function(x, grid, ...) {
 #' )
 #' 
 #' # Create dataset and sampling frame
-#' dset <- matrix_dataset(X, TR = 2, run_length = 100, event_table = event_data)
+#' dset <- fmridataset::matrix_dataset(X, TR = 2, run_length = 100, event_table = event_data)
 #' sframe <- sampling_frame(blocklens = 100, TR = 2)
 #' 
 #' # Create event model with canonical HRF
@@ -1124,7 +1124,7 @@ shift <- function(x, ...) {
 #' @export
 #' @family timing
 #' @seealso [sampling_frame()], [event_model()]
-global_onsets <- function(x, onsets, ...) UseMethod("global_onsets")
+# global_onsets <- function(x, onsets, ...) UseMethod("global_onsets") # Now imported from fmrihrf
 
 
 
@@ -1152,7 +1152,7 @@ global_onsets <- function(x, onsets, ...) UseMethod("global_onsets")
 #' nbasis(canonical_hrf)  # Returns: 1
 #' 
 #' # Fourier basis set
-#' fourier_hrf <- getHRF("fourier", nbasis = 3)
+#' fourier_hrf <- fmrihrf::gen_hrf("fourier", nbasis = 3)
 #' nbasis(fourier_hrf)  # Returns: 3
 #' 
 #' # Create event model with multiple basis functions
@@ -1278,14 +1278,14 @@ reconstruction_matrix <- function(hrf, sframe, ...) { UseMethod("reconstruction_
 #' @examples
 #' # Create a simple matrix dataset
 #' X <- matrix(rnorm(100 * 1000), 100, 1000)  # 100 timepoints, 1000 voxels
-#' dset <- matrix_dataset(
+#' dset <- fmridataset::matrix_dataset(
 #'   X, 
 #'   TR = 2,
 #'   run_length = c(50, 50)  # Two runs of 50 timepoints each
 #' )
 #' 
 #' # Create chunks by run
-#' run_chunks <- data_chunks(dset, runwise = TRUE)
+#' run_chunks <- fmridataset::data_chunks(dset, runwise = TRUE)
 #' 
 #' # Process each run chunk
 #' foreach::foreach(chunk = run_chunks) %do% {
@@ -1295,7 +1295,7 @@ reconstruction_matrix <- function(hrf, sframe, ...) { UseMethod("reconstruction_
 #' }
 #' 
 #' # Create arbitrary number of chunks
-#' vox_chunks <- data_chunks(dset, nchunks = 4)
+#' vox_chunks <- fmridataset::data_chunks(dset, nchunks = 4)
 #' 
 #' # Process chunks in parallel
 #' foreach::foreach(chunk = vox_chunks) %dopar% {
@@ -1306,7 +1306,7 @@ reconstruction_matrix <- function(hrf, sframe, ...) { UseMethod("reconstruction_
 #' @export
 #' @family iterators
 #' @seealso [matrix_dataset()], [fmri_dataset()], [foreach::foreach()]
-data_chunks <- function(x, nchunks, ...) UseMethod("data_chunks")
+# data_chunks <- function(x, nchunks, ...) UseMethod("data_chunks") # Now imported from fmridataset
 
 
 #' Get event onsets from an object
@@ -1504,7 +1504,7 @@ amplitudes <- function(x) UseMethod("amplitudes")
 #' @export
 #' @family timing
 #' @seealso [sampling_frame()], [regressor()], [global_onsets()]
-samples <- function(x, ...) UseMethod("samples")
+# samples <- function(x, ...) UseMethod("samples") # Now imported from fmrihrf
 
 #' Split variables by block ID
 #' 
@@ -1541,7 +1541,7 @@ samples <- function(x, ...) UseMethod("samples")
 #' 
 #' # Create matrix dataset
 #' X <- matrix(rnorm(150 * 10), 150, 10)  # 150 timepoints, 10 voxels
-#' dset <- matrix_dataset(
+#' dset <- fmridataset::matrix_dataset(
 #'   X,
 #'   TR = 2,
 #'   run_length = c(50, 50, 50)
@@ -1588,7 +1588,7 @@ split_by_block <- function(x, ...) UseMethod("split_by_block")
 #' 
 #' # Create a matrix dataset
 #' X <- matrix(rnorm(175 * 10), 175, 10)  # 175 timepoints (50+75+50), 10 voxels
-#' dset <- matrix_dataset(
+#' dset <- fmridataset::matrix_dataset(
 #'   X,
 #'   TR = 2,
 #'   run_length = c(50, 75, 50)
@@ -1603,7 +1603,7 @@ split_by_block <- function(x, ...) UseMethod("split_by_block")
 #' @export
 #' @family block_operations
 #' @seealso [blocklens()], [split_by_block()], [sampling_frame()]
-blockids <- function(x) UseMethod("blockids")
+# blockids <- function(x) UseMethod("blockids") # Now imported from fmrihrf
 
 #' Get block/run lengths
 #' 
@@ -1638,7 +1638,7 @@ blockids <- function(x) UseMethod("blockids")
 #' # Use block lengths to create a dataset
 #' total_scans <- sum(run_lengths)  # 350 total timepoints
 #' X <- matrix(rnorm(total_scans * 10), total_scans, 10)  # 10 voxels
-#' dset <- matrix_dataset(
+#' dset <- fmridataset::matrix_dataset(
 #'   X,
 #'   TR = 2,
 #'   run_length = run_lengths
@@ -1652,7 +1652,7 @@ blockids <- function(x) UseMethod("blockids")
 #' @export
 #' @family block_operations
 #' @seealso [blockids()], [split_by_block()], [sampling_frame()]
-blocklens <- function(x, ...) UseMethod("blocklens")
+# blocklens <- function(x, ...) UseMethod("blocklens") # Now imported from fmrihrf
 
 #' Generate F-contrasts for a model term
 #' 
@@ -1855,7 +1855,7 @@ chunkwise_lm <- function(x, ...) UseMethod("chunkwise_lm")
 #' 
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 50, TR = 2)
-#' dset <- matrix_dataset(
+#' dset <- fmridataset::matrix_dataset(
 #'   matrix(rnorm(100 * 2), 100, 2),
 #'   TR = 2,
 #'   run_length = 50,
@@ -1894,7 +1894,7 @@ standard_error <- function(x, ...) UseMethod("standard_error")
 #' 
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 50, TR = 2)
-#' dset <- matrix_dataset(
+#' dset <- fmridataset::matrix_dataset(
 #'   matrix(rnorm(100 * 2), 100, 2),
 #'   TR = 2,
 #'   run_length = 50,
@@ -1935,7 +1935,7 @@ stats <- function(x, ...) UseMethod("stats")
 #' 
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 50, TR = 2)
-#' dset <- matrix_dataset(
+#' dset <- fmridataset::matrix_dataset(
 #'   matrix(rnorm(100 * 2), 100, 2),
 #'   TR = 2,
 #'   run_length = 50,
@@ -2114,7 +2114,7 @@ longnames.convolved_term <- function(x, ...) {
 #' 
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 50, TR = 2)
-#' dset <- matrix_dataset(
+#' dset <- fmridataset::matrix_dataset(
 #'   matrix(rnorm(100 * 2), 100, 2),
 #'   TR = 2,
 #'   run_length = 50,
@@ -2260,7 +2260,7 @@ nbasis.convolved_term <- function(x, ...) {
   # Get nbasis from the HRF object in the hrfspec
   hrfspec <- x$hrfspec
   if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
-    nbasis(hrfspec$hrf)
+    fmrihrf::nbasis(hrfspec$hrf)
   } else {
     1L # Default fallback
   }
@@ -2309,7 +2309,7 @@ design_matrix.convolved_term <- function(x, blockid=NULL, ...) {
   if (is.null(blockid)) {
     x$design_matrix
   } else {
-    keep <- blockids(x$sampling_frame) %in% blockid
+    keep <- fmrihrf::blockids(x$sampling_frame) %in% blockid
     x$design_matrix[keep,]
   } 
 }

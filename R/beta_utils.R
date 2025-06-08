@@ -10,7 +10,7 @@ build_design_data <- function(bdes) {
 #' @keywords internal
 #' @noRd
 masked_vectors <- function(dset) {
-  neuroim2::vectors(get_data(dset), subset = which(get_mask(dset) > 0))
+  neuroim2::vectors(fmridataset::get_data(dset), subset = which(fmridataset::get_mask(dset) > 0))
 }
 
 #' Apply a function to voxel vectors with optional progress bar

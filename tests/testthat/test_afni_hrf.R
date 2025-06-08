@@ -16,14 +16,14 @@ context("afni")
 test_that("can construct an simple afni native stimulus model", {
   
   facedes$repnum <- factor(facedes$rep_num)
-  scans <- paste0("rscan0", 1:6, ".nii")
-  dset <- fmri_dataset(scans=scans,
-                       mask="mask.nii",
-                       TR=1.5,
-                       run_length=rep(436,6),
-                       event_table=facedes)
   
-  dset <- .assign_dummy_mask_to_dataset(dset)
+  # Use matrix_dataset instead of fmri_dataset to avoid file I/O issues
+  total_timepoints <- sum(rep(436, 6))
+  dummy_data <- matrix(rnorm(total_timepoints * 10), total_timepoints, 10)
+  dset <- matrix_dataset(datamat = dummy_data,
+                         TR = 1.5,
+                         run_length = rep(436, 6),
+                         event_table = facedes)
   
   # Suppress AFNI warnings for cleaner test output
   suppressWarnings({
@@ -53,14 +53,14 @@ test_that("can construct an an afni model with trialwise regressor", {
   
   facedes$repnum <- factor(facedes$rep_num)
   facedes$constant <- rep(1, nrow(facedes))
-  scans <- paste0("rscan0", 1:6, ".nii")
-  dset <- fmri_dataset(scans=scans,
-                       mask="mask.nii",
-                       TR=1.5,
-                       run_length=rep(436,6),
-                       event_table=facedes)
   
-  dset <- .assign_dummy_mask_to_dataset(dset)
+  # Use matrix_dataset instead of fmri_dataset to avoid file I/O issues
+  total_timepoints <- sum(rep(436, 6))
+  dummy_data <- matrix(rnorm(total_timepoints * 10), total_timepoints, 10)
+  dset <- matrix_dataset(datamat = dummy_data,
+                         TR = 1.5,
+                         run_length = rep(436, 6),
+                         event_table = facedes)
   
   # Suppress AFNI warnings for cleaner test output
   suppressWarnings({
@@ -104,14 +104,14 @@ test_that("can construct an an afni model with a constant", {
   
   facedes$repnum <- factor(facedes$rep_num)
   facedes$constant <- factor(rep(1, nrow(facedes)))
-  scans <- paste0("rscan0", 1:6, ".nii")
-  dset <- fmri_dataset(scans=scans,
-                       mask="mask.nii",
-                       TR=1.5,
-                       run_length=rep(436,6),
-                       event_table=facedes)
   
-  dset <- .assign_dummy_mask_to_dataset(dset)
+  # Use matrix_dataset instead of fmri_dataset to avoid file I/O issues
+  total_timepoints <- sum(rep(436, 6))
+  dummy_data <- matrix(rnorm(total_timepoints * 10), total_timepoints, 10)
+  dset <- matrix_dataset(datamat = dummy_data,
+                         TR = 1.5,
+                         run_length = rep(436, 6),
+                         event_table = facedes)
   
   # Suppress AFNI warnings for cleaner test output
   suppressWarnings({
@@ -130,14 +130,14 @@ test_that("can construct an an afni model with a constant", {
 test_that("can construct an an afni model with trialwise regressor and a Polynomial modulator", {
   
   facedes$repnum <- as.numeric(as.character(facedes$rep_num))
-  scans <- paste0("rscan0", 1:6, ".nii")
-  dset <- fmri_dataset(scans=scans,
-                       mask="mask.nii",
-                       TR=1.5,
-                       run_length=rep(436,6),
-                       event_table=facedes)
   
-  dset <- .assign_dummy_mask_to_dataset(dset)
+  # Use matrix_dataset instead of fmri_dataset to avoid file I/O issues
+  total_timepoints <- sum(rep(436, 6))
+  dummy_data <- matrix(rnorm(total_timepoints * 10), total_timepoints, 10)
+  dset <- matrix_dataset(datamat = dummy_data,
+                         TR = 1.5,
+                         run_length = rep(436, 6),
+                         event_table = facedes)
   
   # Suppress AFNI warnings for cleaner test output
   suppressWarnings({

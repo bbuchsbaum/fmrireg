@@ -41,7 +41,7 @@ event_data <- data.frame(
 
 # Create sampling frame and dataset
 sframe <- sampling_frame(blocklens = 50, TR = 2)
-dset <- matrix_dataset(
+dset <- fmridataset::matrix_dataset(
   matrix(rnorm(100 * 2), 100, 2),
   TR = 2,
   run_length = 50,

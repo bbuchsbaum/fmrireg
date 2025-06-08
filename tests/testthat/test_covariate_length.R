@@ -1,5 +1,5 @@
 test_that("covariate data length must match sampling frame", {
-  sframe <- sampling_frame(blocklens = c(50, 50), TR = 1)
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 1)
 
   # create covariate data that is too short
   bad_dat <- data.frame(x = rnorm(75), y = rnorm(75))

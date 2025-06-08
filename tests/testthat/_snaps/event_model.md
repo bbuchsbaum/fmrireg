@@ -9,6 +9,6 @@
        [7] "StimRT_spmg3_stim_type.Face_rt_b02"  "StimRT_spmg3_stim_type.Scene_rt_b02"
        [9] "StimRT_spmg3_stim_type.Face_rt_b03"  "StimRT_spmg3_stim_type.Scene_rt_b03"
       [11] "PolyX_01"                            "PolyX_02"                           
-      [13] "PolyX_03"                            "ScaleYbyG_z_y_by_group"             
+      [13] "PolyX_03"                            "ScaleYbyG_y"                        
       [15] "Mod_CondA_modulator"                 "Mod_CondB_modulator"                
 

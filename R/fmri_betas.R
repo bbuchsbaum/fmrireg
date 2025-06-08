@@ -219,8 +219,8 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
                                         ...) {
   method <- match.arg(method)
   dset <- x
-  bvec <- get_data(dset)
-  mask <- get_mask(dset)
+  bvec <- fmridataset::get_data(dset)
+  mask <- fmridataset::get_mask(dset)
   
   bmod <- if (is.null(basemod)) {
     baseline_model("constant", sframe = dset$sampling_frame)
@@ -317,7 +317,7 @@ run_estimate_betas <- function(bdes, dset, method,
     if (!is.null(bdes$fixed_ind) && length(bdes$fixed_ind) > 0) {
       # Get data and design matrices
       data_matrix <- get_data_matrix(dset)
-      mask_idx <- which(get_mask(dset) > 0)
+      mask_idx <- which(fmridataset::get_mask(dset) > 0)
       vecs <- neuroim2::vectors(data_matrix, subset = mask_idx)
       
       # Prepare the full design matrix (base + fixed)
@@ -462,7 +462,7 @@ estimate_betas.matrix_dataset <- function(x, fixed = NULL, ran, block,
   
   method <- match.arg(method)
   dset <- x
-  mask <- get_mask(dset)
+  mask <- fmridataset::get_mask(dset)
  
   bmod <- if (is.null(basemod)) {
     baseline_model("constant", sframe=dset$sampling_frame)
@@ -537,7 +537,7 @@ estimate_betas.latent_dataset <- function(x, fixed = NULL, ran, block,
   
   method <- match.arg(method)
   dset <- x
-  mask <- get_mask(dset)
+  mask <- fmridataset::get_mask(dset)
   
   bmod <- if (is.null(basemod)) {
     baseline_model("constant", sframe=dset$sampling_frame)
@@ -731,7 +731,7 @@ inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise")) 
 #'
 #' @param dataset A `matrix_dataset` object containing the fMRI time series data
 #' @param model_obj An `event_model` object specifying the experimental design
-#' @param basis_obj An HRF basis object (e.g., from `HRF_SPMG1`, `HRF_FIR`, etc.)
+#' @param basis_obj An HRF basis object (e.g., from `fmrihrf::HRF_SPMG1`, `HRF_FIR`, etc.)
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
 #' @param block A formula specifying the block factor (default: ~ 1 for single block)
 #' @param progress Logical; show progress bar (default: TRUE)
@@ -747,7 +747,7 @@ inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise")) 
 #'   condition = factor(c("A", "B", "A", "B")),
 #'   run = rep(1, 4)
 #' )
-#' sframe <- sampling_frame(blocklens = 100, TR = 2)
+#' sframe <- fmrihrf::sampling_frame(blocklens = 100, TR = 2)
 #' model_obj <- event_model(onset ~ hrf(condition), 
 #'                         data = event_data, 
 #'                         block = ~ run, 
@@ -760,7 +760,7 @@ inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise")) 
 #' dset <- matrix_dataset(Y, TR = 2, run_length = 100, event_table = event_data)
 #' 
 #' # Fit with OLS - estimates average response for each condition
-#' fit <- glm_ols(dset, model_obj, HRF_SPMG1)
+#' fit <- glm_ols(dset, model_obj, fmrihrf::HRF_SPMG1)
 #' dim(fit$betas_ran)  # 2 conditions x 10 voxels
 #' }
 #'
@@ -821,7 +821,7 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
 #'
 #' @param dataset A `matrix_dataset` object containing the fMRI time series data
 #' @param model_obj An `event_model` object specifying the experimental design
-#' @param basis_obj An HRF basis object (e.g., from `HRF_SPMG1`, `HRF_FIR`, etc.)
+#' @param basis_obj An HRF basis object (e.g., from `fmrihrf::HRF_SPMG1`, `HRF_FIR`, etc.)
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
 #' @param block A formula specifying the block factor (default: ~ 1 for single block)
 #' @param use_cpp Logical; whether to use C++ implementation for speed (default: TRUE)
@@ -838,7 +838,7 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
 #'   condition = factor(c("A", "B", "A", "B")),
 #'   run = rep(1, 4)
 #' )
-#' sframe <- sampling_frame(blocklens = 100, TR = 2)
+#' sframe <- fmrihrf::sampling_frame(blocklens = 100, TR = 2)
 #' model_obj <- event_model(onset ~ hrf(condition), 
 #'                         data = event_data, 
 #'                         block = ~ run, 
@@ -851,7 +851,7 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
 #' dset <- matrix_dataset(Y, TR = 2, run_length = 100, event_table = event_data)
 #' 
 #' # Fit with LSS - estimates separate beta for each individual trial
-#' fit <- glm_lss(dset, model_obj, HRF_SPMG1)
+#' fit <- glm_lss(dset, model_obj, fmrihrf::HRF_SPMG1)
 #' dim(fit$betas_ran)  # 4 trials x 10 voxels (NOT averaged by condition)
 #' 
 #' # This is useful for:

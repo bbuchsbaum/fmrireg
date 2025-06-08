@@ -6,7 +6,7 @@
 \usage{
 simulate_bold_signal(
   ncond,
-  hrf = HRF_SPMG1,
+  hrf = fmrihrf::HRF_SPMG1,
   nreps = 12,
   amps = rep(1, ncond),
   isi = c(3, 6),
@@ -17,7 +17,7 @@ simulate_bold_signal(
 \arguments{
 \item{ncond}{The number of conditions to simulate.}
 
-\item{hrf}{The hemodynamic response function to use (default is HRF_SPMG1).}
+\item{hrf}{The hemodynamic response function to use (default is fmrihrf::HRF_SPMG1).}
 
 \item{nreps}{The number of repetitions per condition (default is 12).}
 

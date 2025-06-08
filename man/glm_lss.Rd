@@ -20,7 +20,7 @@ glm_lss(
 
 \item{model_obj}{An \code{event_model} object specifying the experimental design}
 
-\item{basis_obj}{An HRF basis object (e.g., from \code{HRF_SPMG1}, \code{HRF_FIR}, etc.)}
+\item{basis_obj}{An HRF basis object (e.g., from \code{fmrihrf::HRF_SPMG1}, \code{HRF_FIR}, etc.)}
 
 \item{basemod}{A \code{baseline_model} instance to regress out of data before beta estimation (default: NULL)}
 
@@ -65,7 +65,7 @@ event_data <- data.frame(
   condition = factor(c("A", "B", "A", "B")),
   run = rep(1, 4)
 )
-sframe <- sampling_frame(blocklens = 100, TR = 2)
+sframe <- fmrihrf::sampling_frame(blocklens = 100, TR = 2)
 model_obj <- event_model(onset ~ hrf(condition), 
                         data = event_data, 
                         block = ~ run, 
@@ -78,7 +78,7 @@ Y <- matrix(rnorm(1000), 100, 10)
 dset <- matrix_dataset(Y, TR = 2, run_length = 100, event_table = event_data)
 
 # Fit with LSS - estimates separate beta for each individual trial
-fit <- glm_lss(dset, model_obj, HRF_SPMG1)
+fit <- glm_lss(dset, model_obj, fmrihrf::HRF_SPMG1)
 dim(fit$betas_ran)  # 4 trials x 10 voxels (NOT averaged by condition)
 
 # This is useful for:

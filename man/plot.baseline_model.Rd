@@ -42,7 +42,7 @@ Each non-constant term is plotted over time. The plot includes separate panels
 for each block and supports customization of titles, axis labels, line size, and color palette.
 }
 \examples{
-sframe <- sampling_frame(blocklens = 5, TR = 1)
+sframe <- fmrihrf::sampling_frame(blocklens = 5, TR = 1)
 bmod <- baseline_model(sframe = sframe)
 if (requireNamespace("ggplot2", quietly = TRUE)) plot(bmod)
 

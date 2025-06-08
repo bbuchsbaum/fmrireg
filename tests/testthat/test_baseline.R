@@ -1,6 +1,6 @@
 options(mc.cores=2)
 test_that("can construct a baseline_model with 1 block and 5th order bspline basis", {
-  sframe <- sampling_frame(blocklens=100, TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=100, TR=2)
   bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe)
   
   ## 5 + 1 for constant term
@@ -9,9 +9,9 @@ test_that("can construct a baseline_model with 1 block and 5th order bspline bas
 })
 
 test_that("can construct a baseline_model with 1 block and 5th order bspline basis and nuisance_list", {
-  sframe <- sampling_frame(blocklens=100, TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=100, TR=2)
   nlist <- list(
-    poly(samples(sframe), 3)
+    poly(fmrihrf::samples(sframe), 3)
   )
   
   bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe, nuisance_list=nlist)
@@ -22,7 +22,7 @@ test_that("can construct a baseline_model with 1 block and 5th order bspline bas
 })
 
 test_that("can construct a baseline_model with 2 blocks and 5th order bspline basis", {
-  sframe <- sampling_frame(blocklens=c(100,100), TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=c(100,100), TR=2)
   bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe)
   
   expect_equal(ncol(design_matrix(bmodel)),6*2)
@@ -33,7 +33,7 @@ test_that("can construct a baseline_model with 2 blocks and 5th order bspline ba
 })
 
 test_that("can construct a baseline_model with 2 blocks and global intercept", {
-  sframe <- sampling_frame(blocklens=c(100,100), TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=c(100,100), TR=2)
   # Use poly basis to avoid degree restrictions of bs/ns
   bmodel <- baseline_model(basis="poly", degree=3, sframe=sframe, intercept="global")
   
@@ -46,7 +46,7 @@ test_that("can construct a baseline_model with 2 blocks and global intercept", {
 })
 
 test_that("can construct a baseline_model with 2 blocks and nuisance_list", {
-  sframe <- sampling_frame(blocklens=c(100,100), TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=c(100,100), TR=2)
   nlist <- list(
     matrix(rnorm(100*2), 100, 2), # 2 nuisance regressors block 1
     matrix(rnorm(100*3), 100, 3)  # 3 nuisance regressors block 2
@@ -64,7 +64,7 @@ test_that("can construct a baseline_model with 2 blocks and nuisance_list", {
 })
 
 test_that("can construct a baseline_model with basis='constant'", {
-  sframe <- sampling_frame(blocklens=c(100,100), TR=2)
+  sframe <- fmrihrf::sampling_frame(blocklens=c(100,100), TR=2)
   # Intercept option should be ignored/overridden when basis is constant
   bmodel_runwise <- baseline_model(basis="constant", sframe=sframe, intercept="runwise")
   bmodel <- baseline_model(basis="constant", sframe=sframe, intercept="global")
@@ -100,7 +100,7 @@ test_that("can construct a baseline_model with basis='constant'", {
   # Using blockid should subset rows by block
   expect_equal(
     nrow(design_matrix(bmodel, blockid = 2)),
-    blocklens(sframe)[2]
+    fmrihrf::blocklens(sframe)[2]
   )
   
   # basis='constant', intercept='none' -> treated like 'runwise' by construct.baselinespec? No, intercept is passed.

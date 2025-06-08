@@ -2,7 +2,7 @@
 % Please edit documentation in R/all_generic.R
 \name{fitted_hrf}
 \alias{fitted_hrf}
-\title{fitted_hrf}
+\title{Evaluate a regressor object over a time grid}
 \usage{
 fitted_hrf(x, sample_at, ...)
 }
@@ -12,8 +12,12 @@ fitted_hrf(x, sample_at, ...)
 \item{sample_at}{A vector of time points at which the HRF should be sampled}
 
 \item{...}{Additional arguments passed to methods}
+
+\item{grid}{A numeric vector specifying the time points at which to evaluate the regressor}
 }
 \value{
+A numeric vector or matrix containing the evaluated regressor values
+
 A numeric vector containing the fitted HRF values at the requested time points
 }
 \description{
@@ -22,8 +26,8 @@ The HRF represents the expected BOLD response to neural activity. For models wit
 multiple basis functions, this returns the combined HRF shape.
 }
 \details{
-This generic function computes the fitted hemodynamic response function (HRF) for an object.
-The method needs to be implemented for specific object types.
+Generic function to evaluate a regressor object over a specified time grid.
+Different types of regressors may have different evaluation methods.
 }
 \examples{
 # Create a simple dataset with two conditions
@@ -35,7 +39,7 @@ event_data <- data.frame(
 )
 
 # Create dataset and sampling frame
-dset <- matrix_dataset(X, TR = 2, run_length = 100, event_table = event_data)
+dset <- fmridataset::matrix_dataset(X, TR = 2, run_length = 100, event_table = event_data)
 sframe <- sampling_frame(blocklens = 100, TR = 2)
 
 # Create event model with canonical HRF
@@ -58,10 +62,11 @@ times <- seq(0, 20, by = 0.5)  # Sample from 0-20s every 0.5s
 hrf_values <- fitted_hrf(fit, sample_at = times)
 }
 \seealso{
-\code{\link[=HRF_SPMG1]{HRF_SPMG1()}}, \code{\link[=fmri_lm]{fmri_lm()}}
+\code{\link[fmrihrf:single_trial_regressor]{fmrihrf::single_trial_regressor()}}, \code{\link[=regressor]{regressor()}}
+
+\code{\link[fmrihrf:HRF_objects]{fmrihrf::HRF_SPMG1()}}, \code{\link[=fmri_lm]{fmri_lm()}}
 
 Other hrf: 
-\code{\link{HRF_objects}},
 \code{\link{nbasis}()},
 \code{\link{penalty_matrix}()}
 }

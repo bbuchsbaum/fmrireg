@@ -74,8 +74,8 @@ make_nuisance_term <- function(nuisance_list,
 
   stopifnot(is.list(nuisance_list),
             all(vapply(nuisance_list, is.matrix, logical(1))))
-  nb      <- length(blocklens(sframe))
-  bl_lens <- blocklens(sframe)
+  nb      <- length(fmrihrf::blocklens(sframe))
+  bl_lens <- fmrihrf::blocklens(sframe)
 
   ## --- sanity checks ------------------------------------------------------
   if (length(nuisance_list) != nb)
@@ -98,7 +98,7 @@ make_nuisance_term <- function(nuisance_list,
 
   ## bookkeeping lists
   colind <- get_col_inds(lapply(nuisance_list, as.matrix))
-  rowind <- split(seq_len(nrow(full_mat)), blockids(sframe))
+  rowind <- split(seq_len(nrow(full_mat)), fmrihrf::blockids(sframe))
 
   baseline_term("nuisance", full_mat, colind, rowind)
 }
@@ -124,7 +124,7 @@ make_nuisance_term <- function(nuisance_list,
 #' @return An object of class "baseline_model".
 #'
 #' @examples 
-#' sframe <- sampling_frame(blocklens = c(100, 100), TR = 2)
+#' sframe <- fmrihrf::sampling_frame(blocklens = c(100, 100), TR = 2)
 #' bmod <- baseline_model(basis = "bs", degree = 3, sframe = sframe)
 #' bmod_global <- baseline_model(basis = "bs", degree = 3, sframe = sframe, intercept = "global")
 #' bmod_nointercept <- baseline_model(basis = "bs", degree = 3, sframe = sframe, intercept = "none")
@@ -296,7 +296,12 @@ block <- function(x) {
 construct.baselinespec <- function(x, model_spec, ...) {
   sampling_frame <- if (!is.null(model_spec$sampling_frame)) model_spec$sampling_frame else model_spec
   
-  bl <- blocklens(sampling_frame) # Normalize block lengths usage
+  bl <- fmrihrf::blocklens(sampling_frame) # Normalize block lengths usage
+  
+  # Validate block lengths
+  if (length(bl) == 0 || any(bl <= 0)) {
+    stop("Invalid block lengths: must have at least one block with positive length")
+  }
   
   # Compute baseline covariates for each block, passing correct argument name
   ret_list <- lapply(bl, function(block_len) {
@@ -309,6 +314,11 @@ construct.baselinespec <- function(x, model_spec, ...) {
     }
   })
   
+  # Check that ret_list is not empty
+  if (length(ret_list) == 0) {
+    stop("No baseline terms could be constructed: ret_list is empty")
+  }
+  
   # Simplified handling for global constant intercept
   if (x$basis == "constant" && x$intercept == "global") {
     mat <- matrix(1, nrow = sum(bl), ncol = 1)
@@ -316,7 +326,7 @@ construct.baselinespec <- function(x, model_spec, ...) {
     colnames(mat) <- cnames
     # column index is a single value, but rows are tracked per block
     colind <- list(1)
-    rowind <- split(seq_len(nrow(mat)), blockids(sampling_frame))
+    rowind <- split(seq_len(nrow(mat)), fmrihrf::blockids(sampling_frame))
     return(baseline_term(x$name, mat, colind, rowind))
   }
   
@@ -408,7 +418,7 @@ conditions.baseline_term <- function(x, ...) {
 #' @noRd
 construct_block_term <- function(vname, sframe, intercept = c("global", "runwise")) {
   intercept <- match.arg(intercept)
-  blockids_vec <- blockids(sframe)
+  blockids_vec <- fmrihrf::blockids(sframe)
   blockord <- sort(unique(blockids_vec))
   n_total_scans <- length(blockids_vec)
   n_blocks <- length(blockord)
@@ -486,7 +496,7 @@ construct.blockspec <- function(x, model_spec, ...) {
 #' @param ... Additional arguments (ignored).
 #' @return The input object, invisibly.
 #' @examples
-#' sframe <- sampling_frame(blocklens = 5, TR = 1)
+#' sframe <- fmrihrf::sampling_frame(blocklens = 5, TR = 1)
 #' bmod <- baseline_model(sframe = sframe)
 #' print(bmod)
 #' @export
@@ -567,7 +577,7 @@ print.baseline_model <- function(x, ...) {
 #' @param ... Additional arguments passed to ggplot2::geom_line.
 #' @return A ggplot2 plot object.
 #' @examples
-#' sframe <- sampling_frame(blocklens = 5, TR = 1)
+#' sframe <- fmrihrf::sampling_frame(blocklens = 5, TR = 1)
 #' bmod <- baseline_model(sframe = sframe)
 #' if (requireNamespace("ggplot2", quietly = TRUE)) plot(bmod)
 #'
@@ -690,7 +700,7 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
 #' @param ... Additional arguments passed to internal plotting functions.
 #' @return A ggplot2 plot object.
 #' @examples
-#' sframe <- sampling_frame(blocklens = 5, TR = 1)
+#' sframe <- fmrihrf::sampling_frame(blocklens = 5, TR = 1)
 #' bmod <- baseline_model(sframe = sframe)
 #' if (requireNamespace("ggplot2", quietly = TRUE)) correlation_map(bmod)
 #' @export
@@ -726,7 +736,7 @@ correlation_map.baseline_model <- function(x,
 #' @importFrom tidyr pivot_longer
 #' @return A ggplot2 plot object.
 #' @examples
-#' sframe <- sampling_frame(blocklens = 5, TR = 1)
+#' sframe <- fmrihrf::sampling_frame(blocklens = 5, TR = 1)
 #' bmod <- baseline_model(sframe = sframe)
 #' if (requireNamespace("ggplot2", quietly = TRUE)) design_map(bmod)
 #' @export

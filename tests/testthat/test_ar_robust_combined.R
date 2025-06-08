@@ -131,7 +131,7 @@ test_that("process_run_ar_robust handles edge cases", {
   dset <- matrix_dataset(Y, TR = 2, run_length = n_time, event_table = data.frame(onset = c(5, 15), run = 1))
   
   # Create minimal model
-  sframe <- sampling_frame(n_time, TR = 2)
+  sframe <- fmrihrf::sampling_frame(n_time, TR = 2)
   ev <- event_model(onset ~ hrf(onset, basis="spmg1"),
                     data = data.frame(onset = c(5, 15), run = 1),
                     block = ~ run,
@@ -146,8 +146,8 @@ test_that("process_run_ar_robust handles edge cases", {
   )
   
   # Get run chunk
-  chunk_iter <- fmrireg:::exec_strategy("runwise")(dset)
-  chunks <- fmrireg:::collect_chunks(chunk_iter)
+  chunk_iter <- exec_strategy("runwise")(dset)
+  chunks <- collect_chunks(chunk_iter)
   
   # Process with AR + Robust
   result <- fmrireg:::process_run_ar_robust(

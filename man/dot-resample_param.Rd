@@ -26,7 +26,7 @@
 
 \item{TR}{Numeric. Repetition time (seconds).}
 
-\item{hrf}{Hemodynamic response function, e.g. \code{HRF_SPMG1}.}
+\item{hrf}{Hemodynamic response function, e.g. \code{fmrihrf::HRF_SPMG1}.}
 
 \item{n_events}{Number of events (ignored if \code{onsets} is provided).}
 

@@ -37,7 +37,7 @@ with rows corresponding to scans and columns corresponding to regressors. By def
 it draws horizontal lines separating runs (blocks), and rotates the column labels diagonally.
 }
 \examples{
-sframe <- sampling_frame(blocklens = 5, TR = 1)
+sframe <- fmrihrf::sampling_frame(blocklens = 5, TR = 1)
 bmod <- baseline_model(sframe = sframe)
 if (requireNamespace("ggplot2", quietly = TRUE)) design_map(bmod)
 }

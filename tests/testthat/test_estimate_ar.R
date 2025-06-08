@@ -9,7 +9,7 @@ library(testthat)
 test_that(".estimate_ar recovers AR(1) coefficient", {
   set.seed(123)
   phi <- 0.6
-  x <- as.numeric(arima.sim(model = list(ar = phi), n = 500))
+  x <- as.numeric(arima.sim(model = list(ar = phi), n = 1000))
   est <- .estimate_ar(x, 1)
   expect_equal(as.numeric(est), phi, tolerance = 0.05)
 })

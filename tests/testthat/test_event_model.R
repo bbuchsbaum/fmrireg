@@ -10,7 +10,7 @@ create_test_data <- function(seed = 123, n_events = 10, n_blocks = 2) {
   blocklens <- rep(block_len, n_blocks)
   total_scans <- sum(blocklens)
   TR <- 2
-  sf <- sampling_frame(blocklens = blocklens, TR = TR)
+  sf <- fmrihrf::sampling_frame(blocklens = blocklens, TR = TR)
   
   events <- data.frame(
     x = rnorm(n_events),
@@ -56,7 +56,7 @@ test_that("event_model (formula) creates correct object structure and attributes
   expect_s3_class(model$terms[[1]], "event_term") # Check class of a term
   
   # Check design matrix dimensions (rows should match total scans in sampling frame)
-  expect_equal(nrow(model$design_matrix), sum(blocklens(sf)))
+  expect_equal(nrow(model$design_matrix), sum(fmrihrf::blocklens(sf)))
   
   # 2. Design Matrix Attribute Checks
   dm <- model$design_matrix
@@ -108,7 +108,7 @@ test_that("event_model (list) creates correct object structure and attributes", 
   expect_type(model$terms, "list")
   expect_equal(length(model$terms), length(spec_list))
   expect_s3_class(model$design_matrix, "tbl_df")
-  expect_equal(nrow(model$design_matrix), sum(blocklens(sf)))
+  expect_equal(nrow(model$design_matrix), sum(fmrihrf::blocklens(sf)))
   
   # 2. Design Matrix Attribute Checks
   dm <- model$design_matrix
@@ -171,7 +171,7 @@ test_that("contrast_weights.event_model works with new attributes", {
 # --- Test for B-Spline Basis --- 
 test_that("event_model handles hrf_bspline basis correctly", {
   # Sampling frame with 2 blocks, 100 scans each
-  sf_bspline <- sampling_frame(blocklens = c(100, 100), TR = 2)
+  sf_bspline <- fmrihrf::sampling_frame(blocklens = c(100, 100), TR = 2)
   
   # Events data spanning both blocks
   n_events_bspline <- 20
@@ -201,7 +201,7 @@ test_that("event_model handles hrf_bspline basis correctly", {
   # Check HRF specification within the term
   hrfspec <- attr(model_bspline$terms[[1]], "hrfspec")
   expect_s3_class(hrfspec$hrf, "HRF")
-  expect_equal(nbasis(hrfspec$hrf), 5, info = "Checking nbasis of the HRF object")
+  expect_equal(fmrihrf::nbasis(hrfspec$hrf), 5, info = "Checking nbasis of the HRF object")
   expect_match(attr(hrfspec$hrf, "name"), "bspline", info = "Checking name of the HRF object")
   
   # Check design matrix dimensions
@@ -448,12 +448,12 @@ test_that("Basis suffix test: _b## added correctly for multi-basis HRFs", {
   sf <- td$sf
   
   # HRF with 3 basis functions
-  hrf_multi <- HRF_SPMG3
-  expect_equal(nbasis(hrf_multi), 3)
+  hrf_multi <- fmrihrf::HRF_SPMG3
+  expect_equal(fmrihrf::nbasis(hrf_multi), 3)
   
   # HRF with 1 basis function
-  hrf_single <- HRF_SPMG1
-  expect_equal(nbasis(hrf_single), 1)
+  hrf_single <- fmrihrf::HRF_SPMG1
+  expect_equal(fmrihrf::nbasis(hrf_single), 1)
   
   # Model with multi-basis HRF
   model_multi <- event_model(
@@ -473,7 +473,7 @@ test_that("Basis suffix test: _b## added correctly for multi-basis HRFs", {
   expect_true("Multi_condition.a_modulator_b01" %in% cols_multi)
   expect_true("Multi_condition.b_modulator_b03" %in% cols_multi)
   
-  hrf_single <- HRF_SPMG1
+  hrf_single <- fmrihrf::HRF_SPMG1
   # Model with single-basis HRF
   model_single <- event_model(
     onset ~ hrf(condition, modulator, basis=hrf_single, name="Single"), 
@@ -534,7 +534,7 @@ test_that("Interaction test: columns named correctly for factor*factor and facto
                            "FP_facA.A1_02", "FP_facA.A2_02"))
 
   # Factor x Poly with multi-basis HRF
-  hrf_multi <- HRF_SPMG3
+  hrf_multi <- fmrihrf::HRF_SPMG3
   model_fp_basis <- event_model(
     onset ~ hrf(facA, Poly(contX, 2), basis=hrf_multi, name="FPB"), 
     data = events,
@@ -574,7 +574,7 @@ test_that("formula and list interfaces produce identical design matrices for 3x3
     block = rep(1, n_events)
   )
   # Single block sampling frame
-  sf <- sampling_frame(blocklens = 9, TR = 1)
+  sf <- fmrihrf::sampling_frame(blocklens = 9, TR = 1)
 
   # Formula-based model
   fm <- event_model(
@@ -623,7 +623,7 @@ test_that("event_model handles factor × continuous interaction with custom dura
   
 
   # Confirm the durations argument didn't break row counts
-  expect_equal(nrow(dm_ic), sum(blocklens(sf)))
+  expect_equal(nrow(dm_ic), sum(fmrihrf::blocklens(sf)))
 })
 
 # 2. Fourier Basis on Continuous Modulator
@@ -718,7 +718,7 @@ test_that("event_model durations vector of length 1 is recycled", {
   )
   dm_dur <- design_matrix(model_dur)
 
-  expect_equal(nrow(dm_dur), sum(blocklens(sf)))
+  expect_equal(nrow(dm_dur), sum(fmrihrf::blocklens(sf)))
   # We know duration doesn't affect the column count
   expect_equal(ncol(dm_dur), length(levels(events$condition)))
 })

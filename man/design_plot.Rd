@@ -59,7 +59,7 @@ you to adjust the title, axis labels, line thickness, color palette, and more.
 \examples{
 if (interactive()) {
   ## --- Construct a sampling frame ---
-  sframe <- sampling_frame(blocklens = c(100, 100), TR = 2, precision = 0.5)
+  sframe <- fmrihrf::sampling_frame(blocklens = c(100, 100), TR = 2, precision = 0.5)
 
   ## --- Create a dummy event table ---
   set.seed(123)

@@ -47,10 +47,9 @@ R_spmg3 <- penalty_matrix(spmg3_hrf, shrink_deriv = 4)
 
 }
 \seealso{
-\code{\link[=nbasis]{nbasis()}}, \link{HRF_objects}
+\code{\link[=nbasis]{nbasis()}}, \link[fmrihrf:HRF_objects]{fmrihrf::HRF_objects}
 
 Other hrf: 
-\code{\link{HRF_objects}},
 \code{\link{fitted_hrf}()},
 \code{\link{nbasis}()}
 }

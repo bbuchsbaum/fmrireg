@@ -7,12 +7,12 @@ gen_dataset <- function(nruns, ntp, nvox=1000) {
   vec <- neuroim2::SparseNeuroVec(matrix(rnorm(ntp*nvox), ntp, nvox), space=neuroim2::NeuroSpace(c(10,10,10,ntp)), mask=mask)
   scans <- replicate(nruns, vec, simplify=FALSE)
   
-  dset <- fmri_mem_dataset(scans, mask, TR=2)
+  dset <- fmridataset::fmri_mem_dataset(scans, mask, TR=2)
 }
 
 test_that("runwise iterator maintains data integrity", {
   dset <- gen_dataset(3, 100, nvox=1000)
-  rchunks <- data_chunks(dset, runwise=TRUE)
+  rchunks <- fmridataset::data_chunks(dset, runwise=TRUE)
   
   # Test sequential access
   all_data <- list()
@@ -46,7 +46,7 @@ test_that("arbitrary chunking works correctly", {
   chunk_sizes <- c(2, 5, 10, 20)
   
   for (nchunks in chunk_sizes) {
-    rchunks <- data_chunks(dset, nchunks=nchunks)
+    rchunks <- fmridataset::data_chunks(dset, nchunks=nchunks)
     
     # Collect all chunk data
     res <- foreach::foreach(chunk = rchunks) %do% {
@@ -73,7 +73,7 @@ test_that("arbitrary chunking works correctly", {
 test_that("iterator handles edge cases correctly", {
   # Test with single run
   dset_single <- gen_dataset(1, 100, nvox=1000)
-  chunks_single <- data_chunks(dset_single, runwise=TRUE)
+  chunks_single <- fmridataset::data_chunks(dset_single, runwise=TRUE)
   res_single <- foreach::foreach(chunk = chunks_single) %do% dim(chunk$data)
   expect_equal(length(res_single), 1)
   
@@ -94,10 +94,10 @@ test_that("matrix_dataset chunking works correctly", {
   # Create a matrix dataset
   data_mat <- matrix(rnorm(1000 * 100), 100, 1000)
   sframe <- sampling_frame(c(50, 50), TR=2)
-  mset <- matrix_dataset(data_mat, TR=2, run_length=c(50,50))
+  mset <- fmridataset::matrix_dataset(data_mat, TR=2, run_length=c(50,50))
   
   # Test runwise chunking
-  rchunks <- data_chunks.matrix_dataset(mset, runwise=TRUE)
+  rchunks <- fmridataset::data_chunks(mset, runwise=TRUE)
   res_run <- foreach(chunk = rchunks) %do% {
     list(dim=dim(chunk$data), 
          row_indices=range(chunk$row_ind),
@@ -109,7 +109,7 @@ test_that("matrix_dataset chunking works correctly", {
   expect_equal(res_run[[2]]$dim[1], 50)  # Second run length
   
   # Test arbitrary chunking
-  chunks_arb <- data_chunks.matrix_dataset(mset, nchunks=4)
+  chunks_arb <- fmridataset::data_chunks(mset, nchunks=4)
   res_arb <- foreach(chunk = chunks_arb) %do% {
     list(dim=dim(chunk$data),
          voxel_indices=range(chunk$voxel_ind),
@@ -129,14 +129,14 @@ test_that("parallel processing with foreach works correctly", {
   chunk_sizes <- c(2, 4, 8)
   
   for (nchunks in chunk_sizes) {
-    chunks <- data_chunks(dset, nchunks=nchunks)
+    chunks <- fmridataset::data_chunks(dset, nchunks=nchunks)
     
     # Run parallel computation
     res_par <- foreach::foreach(chunk = chunks) %dopar% {
       colMeans(chunk$data)
     }
     
-    chunks <- data_chunks(dset, nchunks=nchunks)
+    chunks <- fmridataset::data_chunks(dset, nchunks=nchunks)
     # Run sequential computation
     res_seq <- foreach::foreach(chunk = chunks) %do% {
       colMeans(chunk$data)
@@ -150,14 +150,14 @@ test_that("parallel processing with foreach works correctly", {
 
 test_that("iterator reset functionality works", {
   dset <- gen_dataset(3, 100, nvox=1000)
-  chunks <- data_chunks(dset, nchunks=5)
+  chunks <- fmridataset::data_chunks(dset, nchunks=5)
   
   # First iteration
   res1 <- foreach::foreach(chunk = chunks) %do% {
     sum(chunk$data)
   }
   
-  chunks =  data_chunks(dset, nchunks=5)
+  chunks =  fmridataset::data_chunks(dset, nchunks=5)
   # Second iteration
   res2 <- foreach::foreach(chunk = chunks) %do% {
     sum(chunk$data)
@@ -167,14 +167,14 @@ test_that("iterator reset functionality works", {
   expect_equal(res1, res2)
   expect_equal(length(res1), 5)
   
-  chunks =  data_chunks(dset, nchunks=5)
+  chunks =  fmridataset::data_chunks(dset, nchunks=5)
   
   # Test mixed foreach operators
   res3 <- foreach(chunk = chunks) %do% {
     sum(chunk$data)
   }
   
-  chunks =  data_chunks(dset, nchunks=5)
+  chunks =  fmridataset::data_chunks(dset, nchunks=5)
   
   res4 <- foreach(chunk = chunks) %dopar% {
     sum(chunk$data)
@@ -187,7 +187,7 @@ test_that("chunk indices are correct and complete", {
   dset <- gen_dataset(2, 100, nvox=1000)
   
   # Test runwise chunks
-  rchunks <- data_chunks(dset, runwise=TRUE)
+  rchunks <- fmridataset::data_chunks(dset, runwise=TRUE)
   run_indices <- list()
   
   foreach(chunk=rchunks) %do% {
@@ -200,7 +200,7 @@ test_that("chunk indices are correct and complete", {
   expect_equal(length(unique(unlist(run_indices))), 200)  # No duplicates
   
   # Test arbitrary chunks
-  chunks <- data_chunks(dset, nchunks=3)
+  chunks <- fmridataset::data_chunks(dset, nchunks=3)
   voxel_indices <- list()
   
   foreach(chunk = chunks) %do% {
@@ -215,7 +215,7 @@ test_that("chunk indices are correct and complete", {
 
 test_that("can construct and iterate over a runwise iterator", {
   dset <- gen_dataset(5, 100, nvox=1000)
-  rchunks <- data_chunks(dset, runwise=TRUE)
+  rchunks <- fmridataset::data_chunks(dset, runwise=TRUE)
   res <- foreach (chunk = rchunks) %do% {
     list(ncol=ncol(chunk$data), nrow=nrow(chunk$data))
   }
@@ -227,7 +227,7 @@ test_that("can construct and iterate over a runwise iterator", {
 
 test_that("can construct and iterate over a runwise-chunked iterator", {
   dset <- gen_dataset(5, 100, nvox=1000)
-  rchunks <- data_chunks(dset, nchunks=5, runwise=TRUE)
+  rchunks <- fmridataset::data_chunks(dset, nchunks=5, runwise=TRUE)
   res <- foreach (chunk = rchunks) %do% {
     list(ncol=ncol(chunk$data), nrow=nrow(chunk$data))
   }

@@ -13,7 +13,7 @@ create_design_matrix_from_benchmark(
 \arguments{
 \item{dataset_name}{Character string specifying which dataset to use}
 
-\item{hrf}{HRF object to use for convolution (e.g., HRF_SPMG1)}
+\item{hrf}{HRF object to use for convolution (e.g., fmrihrf::HRF_SPMG1)}
 
 \item{include_intercept}{Logical, whether to include an intercept column}
 }
@@ -27,9 +27,9 @@ against the ground truth.
 }
 \examples{
 # Create design matrix using canonical HRF
-X <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", HRF_SPMG1)
+X <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", fmrihrf::HRF_SPMG1)
 
 # Test with a different HRF
-X_wrong <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", HRF_SPMG2)
+X_wrong <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", fmrihrf::HRF_SPMG2)
 
 }

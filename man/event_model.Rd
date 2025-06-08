@@ -118,7 +118,7 @@ des <- data.frame(onset = seq(0, 90, by=10),
                   run = rep(1:2, each=5),
                   cond = factor(rep(c("A","B"), 5)),
                   mod = rnorm(10))
-sframe <- sampling_frame(blocklens=c(50, 60), TR=2)
+sframe <- fmrihrf::sampling_frame(blocklens=c(50, 60), TR=2)
 
 ev_model_form <- event_model(onset ~ hrf(cond) + hrf(mod, basis="spmg3"), 
                             data = des, block = ~run, sampling_frame = sframe)

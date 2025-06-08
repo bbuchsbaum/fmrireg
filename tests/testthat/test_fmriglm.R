@@ -43,7 +43,7 @@ test_that("can construct and run a simple fmri glm from in memory dataset", {
    mask <- neuroim2::LogicalNeuroVol(array(rnorm(10*10*10), c(10,10,10)) > 0, neuroim2::NeuroSpace(dim=c(10,10,10)))
    
    #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
-   dset <- fmri_mem_dataset(scans=scans, 
+   dset <- fmridataset::fmri_mem_dataset(scans=scans, 
                         mask=mask, 
                         TR=1.5, 
                         event_table=facedes)
@@ -74,7 +74,7 @@ test_that("can construct and run a simple fmri glm from in memory dataset and on
   mask <- neuroim2::LogicalNeuroVol(array(rnorm(10*10*10), c(10,10,10)) > 0, neuroim2::NeuroSpace(dim=c(10,10,10)))
   
   #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
-  dset <- fmri_mem_dataset(scans=scans, 
+  dset <- fmridataset::fmri_mem_dataset(scans=scans, 
                            mask=mask, 
                            TR=1.5, 
                            event_table=facedes)
@@ -84,7 +84,7 @@ test_that("can construct and run a simple fmri glm from in memory dataset and on
   mod1 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, use_fast_path=TRUE)
   mod1a <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0)
   mod2 <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, 
-                  strategy="chunkwise", nchunks=10, verbose=FALSE)
+                  strategy="chunkwise", nchunks=10, progress=FALSE)
   
   expect_true(!is.null(mod1))
   expect_true(!is.null(mod1a))
@@ -97,7 +97,7 @@ test_that("can construct and run a simple fmri glm from in memory dataset and on
   # Fast path versions
   mod1_fast <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, use_fast_path=TRUE)
   mod2_fast <- fmri_lm(onset ~ hrf(repnum,  contrasts=con), block = ~ run, dataset=dset, durations=0, 
-                       strategy="chunkwise", nchunks=10, verbose=FALSE, use_fast_path=TRUE)
+                       strategy="chunkwise", nchunks=10, progress=FALSE, use_fast_path=TRUE)
 
   # Compare original runwise (mod1) vs fast runwise (mod1_fast)
   expect_equal(coef(mod1), coef(mod1_fast), tolerance=1e-8)
@@ -120,7 +120,7 @@ test_that("can construct and run a simple fmri glm from in memory dataset and on
 test_that("can construct and run a simple fmri glm from a matrix_dataset with 1 column", {
   
   vals <- rep(rnorm(244),6)
-  dset <- matrix_dataset(as.matrix(vals),TR=1.5, run_length=rep(244,6), event_table=facedes)
+  dset <- fmridataset::matrix_dataset(as.matrix(vals),TR=1.5, run_length=rep(244,6), event_table=facedes)
   
   c1 <- pair_contrast( ~ repnum == 1, ~ repnum == 2, name="rep2_rep1")
   c2 <- pair_contrast( ~ repnum == 3, ~ repnum == 4, name="rep3_rep4")
@@ -158,7 +158,7 @@ test_that("fmri glm for multivariate matrix and complex contrast ", {
   vals <- do.call(cbind, lapply(1:100, function(i) rnorm(244*6)))
   fd <- subset(facedes, null == 0 & rt < 2)
   fd$letter <- sample(factor(rep(letters[1:4], length.out=nrow(fd))))
-  dset <- matrix_dataset(vals,TR=1.5, run_length=rep(244,6), event_table=fd)
+  dset <- fmridataset::matrix_dataset(vals,TR=1.5, run_length=rep(244,6), event_table=fd)
   
   cset <<- contrast_set(pair_contrast( ~ letter %in% c("a", "b"), 
                        ~ letter %in% c("c", "d"),
@@ -196,7 +196,7 @@ test_that("fmri glm for multivariate matrix and complex contrast ", {
 test_that("can construct and run a simple fmri glm from a matrix_dataset with 2 columns", {
   
   vals <- cbind(rep(rnorm(244),6), rep(rnorm(244),6))
-  dset <- matrix_dataset(as.matrix(vals),TR=1.5, run_length=rep(244,6), event_table=facedes)
+  dset <- fmridataset::matrix_dataset(as.matrix(vals),TR=1.5, run_length=rep(244,6), event_table=facedes)
   
   c1 <- pair_contrast( ~ repnum == 1, ~ repnum == 2, name="rep2_rep1")
   c2 <- pair_contrast( ~ repnum == 2, ~ repnum == 3, name="rep3_rep2")
@@ -234,7 +234,7 @@ test_that("can construct and run a simple fmri glm from a matrix_dataset with 2 
 test_that("can construct and run a simple fmri glm two terms and prefix args", {
   
   vals <- cbind(rep(rnorm(244),6), rep(rnorm(244),6))
-  dset <- matrix_dataset(as.matrix(vals),TR=1.5, run_length=rep(244,6), event_table=facedes)
+  dset <- fmridataset::matrix_dataset(as.matrix(vals),TR=1.5, run_length=rep(244,6), event_table=facedes)
   
   
   mod1 <- fmri_lm(onset ~ hrf(repnum, subset=repnum %in% c(1,2), prefix="r12")+ 
@@ -273,7 +273,7 @@ test_that("can run video fmri design with matrix_dataset", {
   bmod <- baseline_model(basis="bs", degree=4, sframe=sframe)
   fmod <- fmri_model(evmod, bmod)
   
-  dset <- matrix_dataset(matrix(rnorm(320*7*100), 320*7, 100),TR=1.5, run_length=rep(320,7), event_table=des)
+  dset <- fmridataset::matrix_dataset(matrix(rnorm(320*7*100), 320*7, 100),TR=1.5, run_length=rep(320,7), event_table=des)
 
   #conset <- fmrireg::one_against_all_contrast(levels(des$Video), "Video")
   
@@ -349,7 +349,7 @@ test_that("can run video fmri design with fmri_file_dataset", {
   scans <- gen_fake_dataset(c(10,10,10,320), 7)
   maskfile <- gen_mask_file(c(10,10,10))
   
-  dset <- fmri_dataset(scans, maskfile,TR=1.5, rep(320,7), base_path="/",mode="normal",  event_table=tibble::as_tibble(des))
+  dset <- fmridataset::fmri_dataset(scans, maskfile,TR=1.5, rep(320,7), base_path="/",mode="normal",  event_table=tibble::as_tibble(des))
   evmod <- event_model(Onset ~ hrf(Video, Condition, basis="spmg1"), 
                        block = ~ run, sampling_frame=sframe, data=des)
   bmod <- baseline_model(basis="bs", degree=4, sframe=sframe)

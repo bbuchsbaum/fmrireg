@@ -14,8 +14,8 @@ simulate_fmri_data <- function(onsets, n_voxels, n_timepoints, hrf_means, noise_
   
   # Generate HRFs for each onset with different means
   hrfs <- lapply(hrf_means, function(mean) {
-    h <- gen_hrf(hrf_gaussian, mean=mean)
-    reg <- regressor(onsets = onsets, hrf = h, duration = 0, amplitude = 1)
+    h <- fmrihrf::gen_hrf(hrf_gaussian, mean=mean)
+    reg <- fmrihrf::regressor(onsets = onsets, hrf = h, duration = 0, amplitude = 1)
     evaluate(reg, timepoints)
   })
   
@@ -52,7 +52,7 @@ create_matrix_dataset <- function(datamat, TR=1, run_length, event_table, sampli
 #   datamat <- simulate_fmri_data(onsets, n_voxels, n_timepoints, hrf_means)
 #   
 #   # Create sampling frame
-#   sampling_frame <- sampling_frame(blocklens=c(n_timepoints), TR=1)
+#   sampling_frame <- fmrihrf::sampling_frame(blocklens=c(n_timepoints), TR=1)
 #   
 #   # Combine into a dataset
 #   dataset <- create_matrix_dataset(datamat, TR=1, run_length=n_timepoints, event_table=event_table, sampling_frame=sampling_frame)
@@ -76,7 +76,7 @@ create_matrix_dataset <- function(datamat, TR=1, run_length, event_table, sampli
 #   datamat <- simulate_fmri_data(onsets, n_voxels, n_timepoints, hrf_means)
 #   
 #   # Create sampling frame
-#   sampling_frame <- sampling_frame(blocklens=c(n_timepoints), TR=1)
+#   sampling_frame <- fmrihrf::sampling_frame(blocklens=c(n_timepoints), TR=1)
 #   
 #   # Combine into a dataset
 #   dataset <- create_matrix_dataset(datamat, TR=1, run_length=n_timepoints, event_table=event_table, sampling_frame=sampling_frame)

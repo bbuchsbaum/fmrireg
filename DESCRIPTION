@@ -13,6 +13,7 @@ LazyData: false
 Depends:
     R (>= 4.0.0)
 Imports:
+    fmrihrf (>= 0.1.0),
     stats,
     Matrix,
     RANN,
@@ -36,6 +37,7 @@ Imports:
     neuroim2,
     Rcpp,
     methods,
+    fmridataset (>= 0.1.0),
     numDeriv,
     RcppArmadillo (>= 0.10.1.0),
     splines,
@@ -95,7 +97,6 @@ Collate:
     'data_fmri_benchmark_datasets.R'
     'design_plot.R'
     'effective_df.R'
-    'evaluate-helpers.R'
     'utils-internal.R'
     'event-classes.R'
     'event_model_helpers.R'
@@ -103,7 +104,6 @@ Collate:
     'event_vector.R'
     'fmri_ar_modeling.R'
     'fmri_betas.R'
-    'fmri_dataset.R'
     'fmri_latent_lm.R'
     'fmri_lm_ar_integration.R'
     'fmri_lm_ar_params.R'
@@ -124,28 +124,19 @@ Collate:
     'fmri_model.R'
     'fmri_model_utils.R'
     'fmri_robust_fitting.R'
+    'fmridataset-imports.R'
+    'fmrihrf-imports.R'
     'fmrilm.R'
     'fmrireg.R'
     'fmrirlm.R'
     'gen_contrast.R'
     'globals.R'
-    'hrf-afni.R'
     'hrf-formula.R'
-    'hrf-functions.R'
-    'hrf.R'
-    'hrf_decorators.R'
-    'hrf_from_coefficients.R'
     'hrf_smoothing_kernel.R'
     'lss.R'
     'metafuns.R'
     'mixed_solve.R'
     'naming-utils.R'
-    'penalty_matrix.R'
-    'reconstruction_matrix.R'
-    'reg-constructor.R'
-    'reg-methods.R'
-    'regressor.R'
-    'sampling_frame.R'
     'sandwich_variance_doc.R'
     'simulate.R'
     'utils_operators.R'

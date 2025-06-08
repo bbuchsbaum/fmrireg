@@ -155,57 +155,22 @@ translate_legacy_pattern <- function(pattern) {
 #' Get Indices of Design Matrix Columns Matching a Pattern
 #'
 #' Retrieves the full list of potential design matrix column names for an
-#' event_term (using `conditions(term, drop.empty = FALSE)`) and returns the
-#' numeric indices of columns whose names match the provided regex pattern.
-#' Handles translation of legacy patterns for backward compatibility.
+#' event_term and returns the numeric indices of columns whose names match 
+#' the provided regex pattern.
 #'
 #' @param term An object of class `event_term`.
-#' @param pattern A character string containing a regular expression (can use legacy syntax).
+#' @param pattern A character string containing a regular expression.
+#' @param expanded Logical; whether to use basis-expanded condition names (default: TRUE).
 #' @param ... Additional arguments passed to `grep()`.
 #' @return An integer vector of the indices of matching column names.
 #'         Returns `integer(0)` if no names match or if the term has no conditions.
 #' @keywords internal
 #' @noRd
-.col_index <- function(term, pattern, ...) {
+.col_index <- function(term, pattern, expanded = TRUE, ...) {
+  # Get condition names using the existing helper
+  all_colnames <- .condnames(term, expanded = expanded)
   
-  # --- Removed legacy pattern translation block ---
-  
-  # Ensure conditions function is available (Should be implicitly available if package loaded)
-  # if (!exists("conditions") || !is.function(conditions)) {
-  #     stop(".col_index requires the 'conditions' function.")
-  # }
-  
-  # --- Removed duplicated basis expansion logic --- 
-  # The caller should decide if expanded names are needed and pass them or call conditions appropriately.
-  # For now, assume the core use case (column_contrast) needs expanded names.
-  # TODO: Refactor later to use a condnames() helper or accept names directly.
-  expand_basis <- TRUE # Default assumption for now, needs refinement
-  hrfspec <- attr(term, "hrfspec")
-  if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
-    hrf_fun <- hrfspec$hrf
-    # Check nbasis generic exists and is applicable
-    # We still need to know if *any* expansion is possible for the default
-    if (exists("nbasis") && is.function(nbasis) && !inherits(try(nbasis(hrf_fun), silent=TRUE), "try-error") && nbasis(hrf_fun) > 1) { 
-      # Expansion is possible, keep expand_basis = TRUE
-    } else {
-      expand_basis <- FALSE # No basis functions or only 1
-    }
-  } else {
-     expand_basis <- FALSE # No HRF spec
-  }
-
-  # Get all potential column names (expanded or not)
-  # Assume conditions() is robust and will stop() on genuine error
-  all_colnames <- conditions(term, drop.empty = FALSE, expand_basis = expand_basis)
-
-  # --- Removed try() wrapper and error check --- 
-  # if (inherits(all_colnames, "try-error") || length(all_colnames) == 0) {
-  #   # Stop if conditions() failed, return integer(0) if empty result (grep handles this)
-  #   stop(paste("Could not retrieve column names via conditions() for term",
-  #                 term$varname, "in .col_index.")) 
-  # }
-
-  # Perform grep using the pattern directly
+  # Return indices of matching columns
   grep(pattern, all_colnames, value = FALSE, ...)
 }
 
@@ -998,8 +963,8 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
   if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
     hrf_fun <- hrfspec$hrf
     # Check nbasis using the nbasis generic
-    if (!inherits(try(nbasis(hrf_fun), silent=TRUE), "try-error") && nbasis(hrf_fun) > 1) {
-       nbasis <- nbasis(hrf_fun)
+    if (!inherits(try(fmrihrf::nbasis(hrf_fun), silent=TRUE), "try-error") && fmrihrf::nbasis(hrf_fun) > 1) {
+       nbasis <- fmrihrf::nbasis(hrf_fun)
        expand_basis <- TRUE
     }
   }

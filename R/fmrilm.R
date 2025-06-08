@@ -204,7 +204,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
   if (is.null(baseline_model)) {
     baseline_model <- baseline_model(
       basis = "bs",
-      degree = max(ceiling(median(dataset$sampling_frame$blocklens) / 100), 3),
+      degree = max(ceiling(median(fmrihrf::blocklens(dataset$sampling_frame)) / 100), 3),
       sframe = dataset$sampling_frame
     )
   } else {
@@ -284,18 +284,18 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' sframe <- sampling_frame(rep(430/2,6), TR=2)
 #' ev <- event_model(onset ~ hrf(face_gen, basis="gaussian"), data=facedes, 
 #' block= ~ run, sampling_frame=sframe)
-#' globonsets <- global_onsets(sframe, facedes$onset, blockids(ev))
+#' globonsets <- fmrihrf::global_onsets(sframe, facedes$onset, fmrihrf::blockids(ev))
 #' reg1_signal <- regressor(globonsets[facedes$face_gen == "male"], hrf=HRF_GAUSSIAN)
 #' reg2_signal <- regressor(globonsets[facedes$face_gen == "female"], hrf=HRF_GAUSSIAN)
 #' time <- samples(sframe, global=TRUE)
-#' y1 <- evaluate(reg1_signal, time)*1.5
-#' y2 <- evaluate(reg2_signal, time)*3.0
+#' y1 <- fmrihrf::evaluate(reg1_signal, time)*1.5
+#' y2 <- fmrihrf::evaluate(reg2_signal, time)*3.0
 #' y <- y1+y2
 #' ys1 <- y + rnorm(length(y), sd=.02)
 #' ys2 <- y + rnorm(length(y), sd=.02)
 #' 
 #' h <<- gen_hrf(hrf_bspline, N=7, span=25)
-#' dset <- matrix_dataset(cbind(ys1,ys2), TR=2, run_length=sframe$blocklens, event_table=facedes)
+#' dset <- matrix_dataset(cbind(ys1,ys2), TR=2, run_length=fmrihrf::blocklens(sframe), event_table=facedes)
 #' flm <- fmri_lm(onset ~ hrf(face_gen, basis=gen_hrf(hrf_bspline, N=7, span=25)), block = ~ run, 
 #' strategy="chunkwise", nchunks=1, dataset=dset)
 #' 
