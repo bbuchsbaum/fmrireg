@@ -476,8 +476,8 @@ fit_lm_contrasts_voxelwise_qr <- function(Betas, qr_list, sigma,
       qr_v <- qr_list[[v]]
       rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
 
-      Qtl <- qr.qty(qr_v, full_l)
-      var_con <- sum(Qtl[1:qr_v$rank]^2) * sigma[v]^2
+      Rinvl <- backsolve(qr.R(qr_v), full_l, upper.tri = TRUE)
+      var_con <- sum(Rinvl^2) * sigma[v]^2
 
       est[v] <- sum(full_l * Betas[, v])
       se[v]  <- sqrt(var_con)
