@@ -476,8 +476,10 @@ fit_lm_contrasts_voxelwise_qr <- function(Betas, qr_list, sigma,
       qr_v <- qr_list[[v]]
       rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
 
-      Rinvl <- backsolve(qr.R(qr_v), full_l, upper.tri = TRUE)
-      var_con <- sum(Rinvl^2) * sigma[v]^2
+      # For contrast variance: Var(c'β) = c' (X'X)^{-1} c σ² = ||R^{-1} c||² σ²
+      # where R is the upper triangular matrix from QR decomposition
+      Rinv_c <- backsolve(qr.R(qr_v), full_l, upper.tri = TRUE)
+      var_con <- sum(Rinv_c^2) * sigma[v]^2
 
       est[v] <- sum(full_l * Betas[, v])
       se[v]  <- sqrt(var_con)

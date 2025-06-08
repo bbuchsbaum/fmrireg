@@ -19,6 +19,7 @@ knitr::opts_chunk$set(
   warning = FALSE
 )
 library(fmrireg)
+library(fmrihrf) # HRF and regressor functionality refactored from fmrireg
 library(dplyr)
 library(ggplot2)
 library(tidyr)

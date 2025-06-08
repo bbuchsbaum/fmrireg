@@ -1,0 +1,184 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "identifier": "fmrireg",
+  "name": "fmrireg",
+  "version": "0.1.0",
+  "description": "fmrireg is a package for the analysis of functional magnetic resonance imaging (fMRI) data. Facilities are provided to construct flexible hemodynamic response functions, experimental regressors, and conduct univariate fMRI analyses.",
+  "license": "https://spdx.org/licenses/GPL-2.0",
+  "url": "https://github.com/bbuchsbaum/fmrireg",
+  "codeRepository": "https://github.com/bbuchsbaum/fmrireg",
+  "issueTracker": "https://github.com/bbuchsbaum/fmrireg/issues",
+  "dateCreated": "2023-03-07",
+  "dateModified": "2024-12-19",
+  "datePublished": "2023-03-07",
+  "programmingLanguage": [
+    "R",
+    "C++"
+  ],
+  "runtimePlatform": "R",
+  "operatingSystem": [
+    "Linux",
+    "Windows",
+    "macOS"
+  ],
+  "softwareRequirements": {
+    "SystemRequirements": "R (>= 4.0.0)"
+  },
+  "relatedLink": [
+    "https://bbuchsbaum.github.io/fmrireg/",
+    "https://CRAN.R-project.org/package=fmrireg"
+  ],
+  "author": [
+    {
+      "@type": "Person",
+      "givenName": "Bradley",
+      "familyName": "Buchsbaum",
+      "email": "brad.buchsbaum@gmail.com",
+      "@id": "https://orcid.org/0000-0002-9552-7573"
+    }
+  ],
+  "maintainer": [
+    {
+      "@type": "Person",
+      "givenName": "Bradley",
+      "familyName": "Buchsbaum",
+      "email": "brad.buchsbaum@gmail.com",
+      "@id": "https://orcid.org/0000-0002-9552-7573"
+    }
+  ],
+  "softwareSuggestions": [
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "testthat",
+      "name": "testthat",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "covr",
+      "name": "covr",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "knitr",
+      "name": "knitr",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "rmarkdown",
+      "name": "rmarkdown",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      }
+    }
+  ],
+  "softwareRequirements": [
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "R",
+      "name": "R",
+      "version": ">= 4.0.0"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "fmrihrf",
+      "name": "fmrihrf",
+      "version": ">= 0.1.0"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "fmridataset",
+      "name": "fmridataset",
+      "version": ">= 0.1.0"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "stats",
+      "name": "stats"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "Matrix",
+      "name": "Matrix"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "dplyr",
+      "name": "dplyr"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "ggplot2",
+      "name": "ggplot2"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "Rcpp",
+      "name": "Rcpp"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "RcppArmadillo",
+      "name": "RcppArmadillo",
+      "version": ">= 0.10.1.0"
+    }
+  ],
+  "applicationCategory": [
+    "Neuroscience",
+    "Statistical Analysis",
+    "Medical Imaging"
+  ],
+  "keywords": [
+    "fMRI",
+    "neuroimaging",
+    "hemodynamic-response",
+    "statistical-analysis",
+    "brain-imaging",
+    "neuroscience",
+    "regression-analysis",
+    "time-series"
+  ],
+  "funding": [
+    {
+      "@type": "MonetaryGrant",
+      "name": "Various research grants supporting neuroimaging research"
+    }
+  ],
+  "developmentStatus": "active",
+  "embargoDate": null,
+  "fileSize": "25MB",
+  "installUrl": "https://github.com/bbuchsbaum/fmrireg",
+  "readme": "https://github.com/bbuchsbaum/fmrireg/blob/main/README.md",
+  "buildInstructions": "https://github.com/bbuchsbaum/fmrireg#installation",
+  "contIntegration": [
+    "https://github.com/bbuchsbaum/fmrireg/actions"
+  ],
+  "referencePublication": [],
+  "provider": {
+    "@id": "https://github.com",
+    "@type": "Organization",
+    "name": "GitHub",
+    "url": "https://github.com"
+  }
+} 

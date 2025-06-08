@@ -1,0 +1,60 @@
+# Update README badges
+on:
+  schedule:
+    # Run weekly on Sundays at 00:00 UTC
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+name: Update badges
+
+jobs:
+  update-badges:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Update README badges
+        run: |
+          # Define badge URLs
+          R_CMD_CHECK="[![R-CMD-check](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml)"
+          CODECOV="[![Codecov test coverage](https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg)](https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main)"
+          LICENSE="[![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)"
+          LIFECYCLE="[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)"
+          
+          # Check if README.md exists, if not check README.rmd
+          if [ -f "README.md" ]; then
+            README_FILE="README.md"
+          elif [ -f "README.rmd" ]; then
+            README_FILE="README.rmd"
+          else
+            echo "No README file found"
+            exit 1
+          fi
+          
+          echo "Updating badges in $README_FILE"
+          
+          # Create a temporary file with updated content
+          {
+            echo "# fmrireg"
+            echo ""
+            echo "$R_CMD_CHECK"
+            echo "$CODECOV" 
+            echo "$LICENSE"
+            echo "$LIFECYCLE"
+            echo ""
+            # Keep the rest of the file after the first empty line following badges
+            tail -n +10 "$README_FILE" 2>/dev/null || echo "<!-- Add your package description here -->"
+          } > README_temp.md
+          
+          # Replace the original file
+          mv README_temp.md "$README_FILE"
+          
+      - name: Commit changes
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add README.md README.rmd 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "Update README badges [skip ci]"
+          git push 

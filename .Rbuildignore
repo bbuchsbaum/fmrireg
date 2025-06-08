@@ -3,8 +3,8 @@
 ^docs$
 ^\.travis\.yml$
 ^codecov\.yml$
-^README.Rmd
-^_pkgdown.yml
+^README\.Rmd$
+^_pkgdown\.yml$
 ^outtakess
 ^test_data
 ^doc$
@@ -14,3 +14,13 @@
 ^\.vscode
 fmrireg.code-workspace
 data-raw/
+^pkgdown$
+^codemeta\.json$
+^\.DS_Store$
+^\.Rhistory$
+^.*\.md$
+^.*\.tar\.gz$
+^experimental$
+^bench$
+^scripts$
+^fmrireg\.Rcheck$

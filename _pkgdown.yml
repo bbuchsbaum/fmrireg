@@ -1,221 +1,97 @@
 url: https://bbuchsbaum.github.io/fmrireg/
+
 template:
   bootstrap: 5
+  theme: arrow-dark
+  bslib:
+    primary: "#0054AD"
+    border-radius: 0.5rem
+    btn-border-radius: 0.25rem
     
 home:
-  title: Regression analaysis for Functional Magnetic Resonance imaging (fMRI) data
+  title: fmrireg • fMRI Analysis in R
+  description: >
+    A comprehensive R package for functional magnetic resonance imaging (fMRI) 
+    data analysis. Provides flexible tools for constructing hemodynamic response 
+    functions, experimental regressors, and conducting univariate analyses.
+  strip_header: true
+
 authors:
   Bradley Buchsbaum:
-    href: https://linguamemoria.org
+    href: https://github.com/bbuchsbaum
 
-development:
-  mode: auto    
-  
+navbar:
+  structure:
+    left:  [intro, reference, articles, tutorials, news]
+    right: [search, github]
+  components:
+    articles:
+      text: Vignettes
+      menu:
+      - text: Getting Started
+      - text: Hemodynamic Response Functions
+        href: articles/a_01_hemodynamic_response.html
+      - text: Building Regressors
+        href: articles/a_02_regressor.html
+      - text: Baseline Models
+        href: articles/a_03_baseline_model.html
+      - text: Event Models
+        href: articles/a_04_event_models.html
+      - text: -------
+      - text: Advanced Topics
+      - text: Contrasts
+        href: articles/a_05_contrasts.html
+      - text: AFNI Integration
+        href: articles/a_06_afni.html
+      - text: Trialwise Analysis
+        href: articles/a_07_trialwise.html
+      - text: Linear Modeling
+        href: articles/a_09_linear_model.html
+      - text: Dataset Management
+        href: articles/a_10_dataset.html
+      - text: -------
+      - text: Resources
+      - text: Benchmark Datasets
+        href: articles/benchmark_datasets.html
+
+# reference section removed to use automatic organization
+
 articles:
-- title: fMRI regression analysis
+- title: Getting Started
   navbar: ~
   contents:
   - Overview
+
+- title: Core Concepts
+  navbar: ~
+  contents:
   - a_01_hemodynamic_response
   - a_02_regressor
   - a_03_baseline_model
   - a_04_event_models
+
+- title: Advanced Analysis
+  navbar: ~
+  contents:
   - a_05_contrasts
-  - a_06_afni
   - a_07_trialwise
   - a_08_simulation
   - a_09_linear_model
 
+- title: Integration & Resources
+  navbar: ~
+  contents:
+  - a_06_afni
+  - a_10_dataset
+  - benchmark_datasets
 
-reference:
-- title: hemodynamic response functions
-  desc: >
-      functions related to hemodynamic response functions 
-- contents:
-  - hrf
-  - hrf_gamma
-  - hrf_gaussian
-  - hrf_spmg1
-  - hrf_time
-  - hrf_inv_logit
-  - hrf_mexhat
-  - hrf_sine
-  - hrf_half_cosine
-  - hrf_bspline
-  - gen_hrf
-  - hrf_blocked
-  - hrf_lagged
-  - hrf_toeplitz
-  - gen_hrf_set
-  - gen_empirical_hrf
-  - gen_hrf_lagged
-  - gen_hrf_blocked
-  - afni_hrf
-  - hrf_smoothing_kernel
-  - BSpline
-  - Ident
-  - Poly
-  
-- title: regressor-related functions
-  desc: >
-    functions related to creating, evaluating, and querying regression-related building blocks
-- contents:
-  - regressor
-  - evaluate
-  - onsets
-  - nbasis
-  - durations
-  - onsets
-  - global_onsets
-  - global_onsets.sampling_frame
-  - amplitudes
-  - samples
-  - samples.sampling_frame
-  - blockids
-  - blocklens
-  - sampling_frame
-  - trialwise
-  - afni_trialwise
-  - null_regressor
-  - single_trial_regressor
-  - convolve
-  - convolve.event_term
-  - convolve_design
-  - convolve_block
-  - shift
-  
-- title: event models
-  desc: >
-    functions for building and querying event models for regression analysis
-- contents:
-  - event_model
-  - event_model.list
-  - event_model.formula
-  - event_table
-  - baseline_model
-  - baseline
-  - baseline_terms
-  - baseline_term
-  - block
-  - construct
-  - event_factor
-  - event_term
-  - event_basis
-  - event_variable
-  - event_matrix
-  - event_terms
-  - matrix_term
-  - design_matrix
-  - conditions
-  - cells
-  - columns
-  - levels
-  - elements
-  - term_matrices.fmri_model
-  # - terms
-  - term_names
-  - parent_terms
-  - shortnames
-  - longnames
-  - is_continuous
-  - is_categorical
-  - term_indices
-  - term_matrices
-  - block_term
-  - nuisance
-  - covariate
-  
-- title: contrasts
-  desc: >
-    functions for creating statistical contrasts 
-- contents:
-  - contrast
-  - contrast_set
-  - contrast_weights
-  - contrast_weights.unit_contrast_spec
-  - contrast_weights.unit_contrast_spec
-  - contrast_weights.poly_contrast_spec
-  - pair_contrast
-  - pairwise_contrasts
-  - unit_contrast
-  - poly_contrast
-  - one_against_all_contrast
-  - Fcontrasts
-  - Fcontrasts.event_term
-  - beta_stats
-  - fit_contrasts
-  - estcon
-  
-- title: datasets
-  desc: >
-    functions related to fMRI dataset representations
-- contents:
-  - fmri_dataset
-  - latent_dataset
-  - fmri_mem_dataset
-  - matrix_dataset
-  - get_data
-  - get_mask
-  - data_chunks
-  - data_chunks.fmri_file_dataset
-  - data_chunks.fmri_mem_dataset
-  - data_chunks.matrix_dataset
-  
-- title: model execution and stats
-  desc: >
-   functions related to running model functions
-- contents:
-  - fmri_model
-  - fmri_lm
-  - fmri_latent_lm
-  - fmri_rlm
-  - afni_lm
-  - fmri_lm_fit
-  - estimate_betas
-  - estimate_betas.fmri_dataset
-  - estimate_betas.matrix_dataset
-  - estimate_hrf
-  - gen_afni_lm
-  - p_values
-  - standard_error
-  - standard_error.fmri_latent_lm
-  - run.afni_lm_spec
-  - chunkwise_lm
-  - stats
+news:
+  releases:
+  - text: "Version 0.1.0"
+    href: https://github.com/bbuchsbaum/fmrireg/releases/tag/v0.1.0
 
-# - title: display and plotting
-#   desc: >
-#     plotting and display related functions
-# - contents
-#   - design_plot
-# 
-  
-- title: miscellaneous 
-  desc: >
-    miscellaneous and utlity functions
-- contents:
-  - split_by_block
-  - split_onsets
-  - split_onsets.event_term
-  - plot.regressor
-  - design_plot
-  - read_fmri_config
-  - fmrireg
-  - despike
-  - soft_threshold
-  - starts_with("print")
-  - starts_with("plot")
-  - evaluate.hrfspec
-  - evaluate.HRF
-  - multiresponse_bootstrap_lm
-  - run
-  
-  
-  
-    
+footer:
+  structure:
+    left: developed_by
+    right: built_with
 
-  
-  
-  
-    
-    

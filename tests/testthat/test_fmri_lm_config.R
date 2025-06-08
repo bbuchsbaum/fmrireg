@@ -46,7 +46,7 @@ test_that("fmri_lm_control validates inputs", {
   # Invalid robust type
   expect_error(
     fmri_lm_control(robust_options = list(type = "invalid")),
-    "should be one of"
+    "Must be one of"
   )
   
   # Invalid AR struct
@@ -147,4 +147,150 @@ test_that("config options propagate correctly", {
   
   expect_equal(attr(fit_robust, "config")$robust$type, "bisquare")
   expect_equal(attr(fit_robust, "config")$robust$max_iter, 10)
+})
+
+test_that("fmri_lm_control handles default values correctly", {
+  # Test all default values
+  cfg <- fmri_lm_control()
+  
+  # Robust defaults
+  expect_equal(cfg$robust$type, FALSE)
+  expect_true(is.list(cfg$robust))
+  
+  # AR defaults
+  expect_equal(cfg$ar$struct, "iid")
+  expect_true(is.list(cfg$ar))
+  
+  # Should have all expected fields
+  expect_true("robust" %in% names(cfg))
+  expect_true("ar" %in% names(cfg))
+})
+
+test_that("fmri_lm_control merges options correctly", {
+  # Test partial options specification
+  cfg1 <- fmri_lm_control(robust_options = list(type = "huber"))
+  expect_equal(cfg1$robust$type, "huber")
+  expect_equal(cfg1$ar$struct, "iid")  # Should keep default
+  
+  cfg2 <- fmri_lm_control(ar_options = list(struct = "ar1"))
+  expect_equal(cfg2$ar$struct, "ar1")
+  expect_equal(cfg2$robust$type, FALSE)  # Should keep default
+  
+  # Test that explicitly provided options override defaults
+  cfg3 <- fmri_lm_control(
+    robust_options = list(type = "bisquare", max_iter = 5),
+    ar_options = list(struct = "ar2", global = FALSE)
+  )
+  expect_equal(cfg3$robust$type, "bisquare")
+  expect_equal(cfg3$robust$max_iter, 5)
+  expect_equal(cfg3$ar$struct, "ar2")
+  expect_false(cfg3$ar$global)
+})
+
+test_that("fmri_lm_control handles edge cases", {
+  # Empty lists should work (use defaults)
+  cfg1 <- fmri_lm_control(robust_options = list(), ar_options = list())
+  expect_equal(cfg1$robust$type, FALSE)
+  expect_equal(cfg1$ar$struct, "iid")
+  
+  # NULL options should work (use defaults)
+  cfg2 <- fmri_lm_control(robust_options = NULL, ar_options = NULL)
+  expect_equal(cfg2$robust$type, FALSE)
+  expect_equal(cfg2$ar$struct, "iid")
+  
+  # Mixed valid and invalid - valid should work
+  cfg3 <- fmri_lm_control(
+    robust_options = list(type = "huber", k_huber = 1.345),
+    ar_options = list(struct = "ar1")
+  )
+  expect_equal(cfg3$robust$type, "huber")
+  expect_equal(cfg3$robust$k_huber, 1.345)
+  expect_equal(cfg3$ar$struct, "ar1")
+})
+
+test_that("config object structure is consistent", {
+  cfg <- fmri_lm_control(
+    robust_options = list(type = "bisquare", c_tukey = 4.0),
+    ar_options = list(struct = "ar2", p = 2)
+  )
+  
+  # Should be proper S3 class
+  expect_s3_class(cfg, "fmri_lm_config")
+  
+  # Should have expected structure
+  expect_true(is.list(cfg))
+  expect_true(is.list(cfg$robust))
+  expect_true(is.list(cfg$ar))
+  
+  # Should be printable without error
+  expect_no_error(print(cfg))
+  
+  # Should work with str() without error
+  expect_no_error(str(cfg))
+})
+
+test_that("robust estimator parameters are handled correctly", {
+  # Test Huber parameters
+  cfg_huber <- fmri_lm_control(
+    robust_options = list(
+      type = "huber",
+      k_huber = 1.5,
+      max_iter = 15,
+      scale_scope = "global"
+    )
+  )
+  expect_equal(cfg_huber$robust$type, "huber")
+  expect_equal(cfg_huber$robust$k_huber, 1.5)
+  expect_equal(cfg_huber$robust$max_iter, 15)
+  expect_equal(cfg_huber$robust$scale_scope, "global")
+  
+  # Test Bisquare parameters
+  cfg_bisquare <- fmri_lm_control(
+    robust_options = list(
+      type = "bisquare",
+      c_tukey = 5.0,
+      max_iter = 25,
+      reestimate_phi = TRUE
+    )
+  )
+  expect_equal(cfg_bisquare$robust$type, "bisquare")
+  expect_equal(cfg_bisquare$robust$c_tukey, 5.0)
+  expect_equal(cfg_bisquare$robust$max_iter, 25)
+  expect_true(cfg_bisquare$robust$reestimate_phi)
+  
+  # Test that non-robust estimation works
+  cfg_no_robust <- fmri_lm_control(robust_options = list(type = FALSE))
+  expect_equal(cfg_no_robust$robust$type, FALSE)
+})
+
+test_that("AR model parameters are configured correctly", {
+  # Test AR(1) parameters
+  cfg_ar1 <- fmri_lm_control(
+    ar_options = list(
+      struct = "ar1",
+      global = TRUE,
+      iter_gls = 3,
+      exact_first = TRUE
+    )
+  )
+  expect_equal(cfg_ar1$ar$struct, "ar1")
+  expect_true(cfg_ar1$ar$global)
+  expect_equal(cfg_ar1$ar$iter_gls, 3)
+  expect_true(cfg_ar1$ar$exact_first)
+  
+  # Test AR(p) parameters
+  cfg_arp <- fmri_lm_control(
+    ar_options = list(
+      struct = "arp",
+      p = 4,
+      voxelwise = TRUE
+    )
+  )
+  expect_equal(cfg_arp$ar$struct, "arp")
+  expect_equal(cfg_arp$ar$p, 4)
+  expect_true(cfg_arp$ar$voxelwise)
+  
+  # Test IID (no autocorrelation)
+  cfg_iid <- fmri_lm_control(ar_options = list(struct = "iid"))
+  expect_equal(cfg_iid$ar$struct, "iid")
 })

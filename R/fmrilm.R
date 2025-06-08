@@ -812,8 +812,8 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
         colnames(res) <- make.names(condition_names, unique = TRUE)
       }
       
-      # Ensure tibble output for consistency with original behavior
-      res <- suppressMessages(tibble::as_tibble(res, .name_repair = "check_unique"))
+      # Return as matrix - transpose to get conditions x voxels
+      res <- t(res)
     }
   } else {
     # Should not happen due to match.arg, but defensive coding

@@ -77,7 +77,7 @@ Remotes:
     bbuchsbaum/fmristore,
     anthonynorth/roxyglobals
 VignetteBuilder: knitr
-URL: https://github.com/bbuchsbaum/fmrireg
+URL: https://bbuchsbaum.github.io/fmrireg/, https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues
 Collate: 
     'RcppExports.R'

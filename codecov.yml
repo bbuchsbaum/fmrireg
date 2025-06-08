@@ -1,12 +1,45 @@
-comment: false
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
 
 coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+  
   status:
     project:
       default:
         target: auto
         threshold: 1%
+        base: auto
+        flags:
+          - unit
+        paths:
+          - "R/"
+          - "src/"
     patch:
       default:
-        target: auto
-        threshold: 1%
+        target: 80%
+        threshold: 5%
+        base: auto
+        flags:
+          - unit
+
+ignore:
+  - "data-raw/"
+  - "docs/"
+  - "inst/"
+  - "man/"
+  - "tests/testthat/_snaps/"
+  - "vignettes/"
+  - "*.md"
+  - "*.yml"
+  - "*.yaml"
+
+flags:
+  unit:
+    paths:
+      - R/
+      - src/

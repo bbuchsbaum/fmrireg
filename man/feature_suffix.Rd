@@ -12,10 +12,10 @@ feature_suffix(j, nf)
 \item{nf}{Total number of features.}
 }
 \value{
-Character vector of suffixes (e.g., \verb{_f01}, \verb{_f02}).
+Character vector of suffixes (e.g., \code{f01}, \code{f02}).
 }
 \description{
-Generates the \verb{_f##} suffix for multi-column continuous events.
+Generates the \code{f##} suffix for multi-column continuous events.
 }
 \examples{
 feature_suffix(1:3, 5)

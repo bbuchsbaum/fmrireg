@@ -19,6 +19,7 @@ knitr::opts_chunk$set(
   warning = FALSE
 )
 library(fmrireg)
+library(fmrihrf) # HRF functionality refactored from fmrireg
 library(dplyr) # For pipe operator %>%
 library(ggplot2) # For plotting
 library(tidyr) # For data manipulation
@@ -38,10 +39,10 @@ Let's look at two common examples: the SPM canonical HRF (`HRF_SPMG1`) and a Gau
 
 ```{r print_hrfs}
 # SPM canonical HRF (based on difference of two gamma functions)
-print(HRF_SPMG1)
+print(fmrihrf::HRF_SPMG1)
 
 # Gaussian HRF
-print(HRF_GAUSSIAN)
+print(fmrihrf::HRF_GAUSSIAN)
 ```
 
 These objects are functions themselves, so you can evaluate them at specific time points:
@@ -50,8 +51,8 @@ These objects are functions themselves, so you can evaluate them at specific tim
 time_points <- seq(0, 25, by = 0.1)
 
 # Evaluate the HRFs
-y_spm <- HRF_SPMG1(time_points)
-y_gauss <- HRF_GAUSSIAN(time_points)
+y_spm <- fmrihrf::HRF_SPMG1(time_points)
+y_gauss <- fmrihrf::HRF_GAUSSIAN(time_points)
 
 # Manually scale each to peak at 1.0 for easier shape comparison
 y_spm_scaled <- y_spm / max(y_spm)
@@ -88,9 +89,9 @@ For example, the `hrf_gaussian` function takes `mean` and `sd` arguments. We can
 ```{r modify_gaussian_params}
 # Create Gaussian HRFs with different parameters using gen_hrf
 # Note: hrf_gaussian is the underlying function, not the HRF object HRF_GAUSSIAN
-hrf_gauss_7_3 <- gen_hrf(hrf_gaussian, mean = 7, sd = 3, name = "Gaussian (Mean=7, SD=3)")
-hrf_gauss_5_2 <- gen_hrf(hrf_gaussian, mean = 5, sd = 2, name = "Gaussian (Mean=5, SD=2)")
-hrf_gauss_4_1 <- gen_hrf(hrf_gaussian, mean = 4, sd = 1, name = "Gaussian (Mean=4, SD=1)")
+hrf_gauss_7_3 <- fmrihrf::gen_hrf(fmrihrf::hrf_gaussian, mean = 7, sd = 3, name = "Gaussian (Mean=7, SD=3)")
+hrf_gauss_5_2 <- fmrihrf::gen_hrf(fmrihrf::hrf_gaussian, mean = 5, sd = 2, name = "Gaussian (Mean=5, SD=2)")
+hrf_gauss_4_1 <- fmrihrf::gen_hrf(fmrihrf::hrf_gaussian, mean = 4, sd = 1, name = "Gaussian (Mean=4, SD=1)")
 
 # Evaluate the new HRFs
 vals1 <- hrf_gauss_7_3(time_points)
@@ -126,9 +127,9 @@ The `precision` argument controls the sampling resolution used for this convolut
 
 ```{r blocked_hrfs}
 # Create blocked HRFs using the SPM canonical HRF with different durations
-hrf_spm_w1 <- block_hrf(HRF_SPMG1, width = 1)
-hrf_spm_w2 <- block_hrf(HRF_SPMG1, width = 2)
-hrf_spm_w4 <- block_hrf(HRF_SPMG1, width = 4)
+hrf_spm_w1 <- fmrihrf::block_hrf(fmrihrf::HRF_SPMG1, width = 1)
+hrf_spm_w2 <- fmrihrf::block_hrf(fmrihrf::HRF_SPMG1, width = 2)
+hrf_spm_w4 <- fmrihrf::block_hrf(fmrihrf::HRF_SPMG1, width = 4)
 
 # Evaluate
 resp_w1 <- hrf_spm_w1(time_points)
@@ -301,9 +302,10 @@ We can combine `hrf_lagged` and `block_hrf` using the pipe operator (`%>%`) from
 
 ```{r lagged_blocked_hrfs}
 # Create HRFs that are both lagged and blocked
-hrf_lb_1 <- HRF_GAUSSIAN %>% hrf_lagged(1) %>% block_hrf(width = 1, normalize = TRUE)
-hrf_lb_3 <- HRF_GAUSSIAN %>% hrf_lagged(3) %>% block_hrf(width = 3, normalize = TRUE)
-hrf_lb_5 <- HRF_GAUSSIAN %>% hrf_lagged(5) %>% block_hrf(width = 5, normalize = TRUE)
+# Use gen_hrf with both lag and width parameters to avoid compatibility issues
+hrf_lb_1 <- fmrihrf::gen_hrf(fmrihrf::hrf_gaussian, lag = 1, width = 1, normalize = TRUE)
+hrf_lb_3 <- fmrihrf::gen_hrf(fmrihrf::hrf_gaussian, lag = 3, width = 3, normalize = TRUE)
+hrf_lb_5 <- fmrihrf::gen_hrf(fmrihrf::hrf_gaussian, lag = 5, width = 5, normalize = TRUE)
 
 # Evaluate
 resp_lb_1 <- hrf_lb_1(time_points)
@@ -335,7 +337,7 @@ Alternatively, `gen_hrf` can apply lag and width directly:
 
 ```{r gen_hrf_lag_width}
 # Using gen_hrf directly
-hrf_lb_gen_3 <- gen_hrf(hrf_gaussian, lag = 3, width = 3, normalize = TRUE)
+hrf_lb_gen_3 <- fmrihrf::gen_hrf(fmrihrf::hrf_gaussian, lag = 3, width = 3, normalize = TRUE)
 resp_lb_gen_3 <- hrf_lb_gen_3(time_points)
 
 # Compare (should be very similar to hrf_lb_3 from piped version)
@@ -428,19 +430,20 @@ plot(time_points, resp_half_cos, type = 'l', lwd = 1.5,
 
 ### Daguerre Polynomial Basis Set
 
-Daguerre polynomials provide an orthogonal basis set on [0, ∞) suitable for modeling decaying responses. `HRF_DAGUERRE_BASIS` provides the basis functions directly.
+Daguerre polynomials provide an orthogonal basis set on [0, ∞) suitable for modeling decaying responses. 
 
-```{r daguerre_basis}
-hrf_dag_3 <- HRF_DAGUERRE_BASIS(n_basis = 3)
-print(hrf_dag_3)
-resp_dag_3 <- hrf_dag_3(time_points)
-matplot(time_points, resp_dag_3, type = 'l', lty = 1, lwd = 1.5,
-        xlab = "Time (seconds)", ylab = "BOLD Response",
-        main = "Daguerre Basis Set (N=3)")
+```{r daguerre_basis, eval=FALSE}
+# Note: Daguerre basis functionality not yet available in fmrihrf
+# hrf_dag_3 <- HRF_DAGUERRE_BASIS(n_basis = 3)
+# print(hrf_dag_3)
+# resp_dag_3 <- hrf_dag_3(time_points)
+# matplot(time_points, resp_dag_3, type = 'l', lty = 1, lwd = 1.5,
+#         xlab = "Time (seconds)", ylab = "BOLD Response",
+#         main = "Daguerre Basis Set (N=3)")
 
 # HRF_DAGUERRE(n_basis=1) provides a canonical-like shape derived from the basis
-hrf_dag_canon <- HRF_DAGUERRE(n_basis = 1)
-resp_dag_canon <- hrf_dag_canon(time_points)
+# hrf_dag_canon <- HRF_DAGUERRE(n_basis = 1)
+# resp_dag_canon <- hrf_dag_canon(time_points)
 # plot(time_points, resp_dag_canon, type='l', main="Canonical Daguerre Shape")
 ```
 
@@ -495,11 +498,11 @@ For example, we can create a basis set from a series of lagged Gaussian HRFs:
 # Create a list of lagged Gaussian HRFs
 lag_times <- seq(0, 10, by = 2)
 list_of_hrfs <- lapply(lag_times, function(lag) {
-  hrf_lagged(HRF_GAUSSIAN, lag = lag)
+  fmrihrf::gen_hrf(fmrihrf::hrf_gaussian, lag = lag)
 })
 
 # Combine them into a single HRF basis set object
-hrf_custom_set <- do.call(gen_hrf_set, list_of_hrfs)
+hrf_custom_set <- do.call(fmrihrf::gen_hrf_set, list_of_hrfs)
 print(hrf_custom_set) # Note: name is default 'hrf_set', nbasis is 6
 
 # Evaluate and plot
@@ -520,8 +523,9 @@ If you have a measured or estimated hemodynamic response profile (e.g., from dec
 sim_times <- 0:24
 set.seed(42) # For reproducibility
 sim_profile <- rowMeans(replicate(20, {
-  h <- hrf_spmg1 %>% hrf_lagged(lag = runif(n = 1, min = -1, max = 1)) %>%
-                    block_hrf(width = runif(n = 1, min = 0, max = 2))
+  # Use gen_hrf to avoid pipe operator issues
+  h <- fmrihrf::gen_hrf(fmrihrf::hrf_spmg1, lag = runif(n = 1, min = -1, max = 1), 
+                       width = runif(n = 1, min = 0, max = 2))
   h(sim_times)
 }))
 
@@ -529,7 +533,7 @@ sim_profile <- rowMeans(replicate(20, {
 sim_profile_norm <- sim_profile / max(sim_profile)
 
 # Create the empirical HRF function from the normalized profile
-emp_hrf <- gen_empirical_hrf(sim_times, sim_profile_norm)
+emp_hrf <- fmrihrf::gen_empirical_hrf(sim_times, sim_profile_norm)
 print(emp_hrf)
 
 # Evaluate and plot (using a finer time grid for interpolation)
@@ -552,9 +556,9 @@ You can create an empirical *basis set* by applying dimensionality reduction (li
 set.seed(123) # for reproducibility
 n_sim <- 50
 sim_mat <- replicate(n_sim, {
-  hrf_func <- hrf_spmg1 %>%
-              hrf_lagged(lag = runif(1, -2, 2)) %>%
-              block_hrf(width = runif(1, 0, 3))
+  # Use gen_hrf to avoid pipe operator issues
+  hrf_func <- fmrihrf::gen_hrf(fmrihrf::hrf_spmg1, lag = runif(1, -2, 2),
+                              width = runif(1, 0, 3))
   hrf_func(sim_times)
 })
 
@@ -591,11 +595,11 @@ for (i in 1:n_components) {
   pc_vec_norm <- pc_vec_zeroed / max_abs
   
   # Create empirical HRF function
-  list_pc_hrfs[[i]] <- gen_empirical_hrf(sim_times, pc_vec_norm)
+  list_pc_hrfs[[i]] <- fmrihrf::gen_empirical_hrf(sim_times, pc_vec_norm)
 }
 
 # 4. Combine PC HRFs into a basis set using gen_hrf_set
-emp_pca_basis <- do.call(gen_hrf_set, list_pc_hrfs)
+emp_pca_basis <- do.call(fmrihrf::gen_hrf_set, list_pc_hrfs)
 print(emp_pca_basis)
 
 # 5. Evaluate and plot the basis functions

@@ -12,6 +12,7 @@ vignette: >
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=6, fig.height=4)
 library(fmrireg)
+library(fmridataset) # Dataset functionality refactored from fmrireg
 library(neuroim2) # For creating example NeuroVec/NeuroVol
 ```
 

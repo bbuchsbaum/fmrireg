@@ -5,6 +5,9 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  schedule:
+    # Run at 09:00 UTC on weekdays
+    - cron: '0 9 * * 1-5'
 
 name: R-CMD-check
 
