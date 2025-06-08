@@ -1,3 +1,6 @@
+# Internal constants
+.CONTRAST_TOLERANCE <- 1e-8
+
 #' Translate legacy contrast regex patterns
 #'
 #' Convert older column-naming patterns to the current naming scheme.
@@ -5,17 +8,28 @@
 #' @param pattern Character string with the legacy regex.
 #' @return Updated regex string.
 #' @keywords internal
-#' @export
+#' @examples
+#' \dontrun{
+#' # Convert old bracket notation to dot notation
+#' translate_legacy_pattern("condition[A]") # Returns "condition.A"
+#' 
+#' # Convert basis notation
+#' translate_legacy_pattern("term:basis[2]") # Returns "term_b2"
+#' }
 #' @name translate_legacy_pattern
 #' @rdname translate_legacy_pattern
 translate_legacy_pattern <- function(pattern) {
+  # Input validation
+  if (!is.character(pattern) || length(pattern) != 1) {
+    stop("pattern must be a single character string", call. = FALSE)
+  }
+  
   # 1. Replace Var[Level] -> Var.Level (Do this first)
   # Handles VarName[LevelName] -> VarName.LevelName
   pattern <- gsub("([A-Za-z0-9_\\.]+)\\[([^]]+)\\]", "\\1.\\2", pattern, perl = TRUE)
 
   # 2. Replace :basis[digits] -> _b<digits>
   # Handles :basis[3] -> _b3
-  #pattern <- gsub(":basis\\[(\\d+)\\]", "_b\\1", pattern, perl = TRUE) # CORRECTED LINE
   pattern <- gsub(":basis\\[(\\d+)\\](\\$?)$", "_b\\1\\2", pattern, perl = TRUE)
   # 3. Replace standalone : -> _ (interaction separator)
   # Uses lookarounds to avoid replacing potential future :: syntax
@@ -42,7 +56,10 @@ translate_legacy_pattern <- function(pattern) {
 }
 
 #' Calculate contrast weights from logical masks
+#' 
+#' This is the unified function for weight calculation from masks.
 #' Returns a *named* numeric vector.
+#' 
 #' @param names Character vector of all condition names.
 #' @param A_mask Logical vector (same length as names) indicating TRUE for conditions in group A.
 #' @param B_mask Logical vector (same length as names) indicating TRUE for conditions in group B. Optional.
@@ -50,18 +67,24 @@ translate_legacy_pattern <- function(pattern) {
 #' @return Named numeric vector of weights.
 #' @keywords internal
 #' @noRd
-.mask_to_weights <- function(names, A_mask, B_mask = NULL, tol = 1e-8) {
+.calculate_mask_weights <- function(names, A_mask, B_mask = NULL, tol = .CONTRAST_TOLERANCE) {
   # Input validation
-  stopifnot(is.character(names)) # names can be empty if upstream condnames is empty, but length checks handle this.
-  stopifnot(is.logical(A_mask), length(A_mask) == length(names))
+  if (!is.character(names)) {
+    stop(".calculate_mask_weights: 'names' must be a character vector", call. = FALSE)
+  }
+  if (!is.logical(A_mask) || length(A_mask) != length(names)) {
+    stop(".calculate_mask_weights: 'A_mask' must be a logical vector with same length as 'names'", call. = FALSE)
+  }
   
   nA <- sum(A_mask)
   nB <- 0 # Initialize nB for the case where B_mask is NULL
 
   if (!is.null(B_mask)) {
-    stopifnot(is.logical(B_mask), length(B_mask) == length(names))
+    if (!is.logical(B_mask) || length(B_mask) != length(names)) {
+      stop(".calculate_mask_weights: 'B_mask' must be a logical vector with same length as 'names'", call. = FALSE)
+    }
     if (any(A_mask & B_mask)) {
-      stop(".mask_to_weights: Masks for group A and group B overlap.", call. = FALSE)
+      stop(".calculate_mask_weights: Masks for group A and group B overlap.", call. = FALSE)
     }
     nB <- sum(B_mask)
   }
@@ -89,13 +112,13 @@ translate_legacy_pattern <- function(pattern) {
   # Warnings for partially defined A-vs-B contrasts (that won't sum to zero as expected)
   if (!is.null(B_mask)) { # These warnings only make sense for A-vs-B type contrasts
     if (nA == 0 && nB > 0) { # A empty, B not (and B_mask was provided)
-      warning(".mask_to_weights: For A-vs-B contrast, Mask A is empty but Mask B is not. Weights will not sum to zero as expected for a balanced comparison.", call. = FALSE)
+      warning(".calculate_mask_weights: For A-vs-B contrast, Mask A is empty but Mask B is not. Weights will not sum to zero as expected for a balanced comparison.", call. = FALSE)
     } else if (nB == 0 && nA > 0) { # B empty, A not (and B_mask was provided)
-      warning(".mask_to_weights: For A-vs-B contrast, Mask B is empty but Mask A is not. Weights will not sum to zero as expected for a balanced comparison.", call. = FALSE)
+      warning(".calculate_mask_weights: For A-vs-B contrast, Mask B is empty but Mask A is not. Weights will not sum to zero as expected for a balanced comparison.", call. = FALSE)
     } else if (nA > 0 && nB > 0) { # Both A and B are defined and non-empty for A-vs-B
         if (abs(sum(w)) > tol) {
            # This scenario (both non-empty, but sum != 0) should be rare with 1/nA and -1/nB
-           warning(".mask_to_weights: Weights for A-vs-B contrast (both groups non-empty) do not sum to zero (Sum: ", sum(w), "). This is unexpected.", call. = FALSE)
+           warning(".calculate_mask_weights: Weights for A-vs-B contrast (both groups non-empty) do not sum to zero (Sum: ", sum(w), "). This is unexpected.", call. = FALSE)
         }
     }
   } 
@@ -106,73 +129,13 @@ translate_legacy_pattern <- function(pattern) {
   w
 }
 
-
-#' Robust weight calculation using logical masks
-#' Returns a *named* numeric vector (names are condition names)
-#' @keywords internal
-#' @noRd
-.make_weights <- function(cond_names, mask_A, mask_B = NULL) {
-  # Check inputs
-  stopifnot(length(cond_names) == length(mask_A))
-  stopifnot(is.logical(mask_A))
-  if (!is.null(mask_B)) {
-      stopifnot(length(cond_names) == length(mask_B))
-      stopifnot(is.logical(mask_B))
-      # Ensure no overlap between A and B masks
-      if (any(mask_A & mask_B)) {
-          stop(".make_weights: Masks A and B overlap.", call. = FALSE)
-      }
-  }
-  
-  w <- numeric(length(mask_A))
-  names(w) <- cond_names
-  
-  numA <- sum(mask_A)
-  if (numA > 0) {
-      w[mask_A] <-  1 / numA
-  }
-  
-  if (!is.null(mask_B)) {
-    numB <- sum(mask_B)
-    if (numB > 0) {
-        w[mask_B] <- -1 / numB
-    } 
-  }
-  
-  # Handle cases where one mask is empty (weights should still sum to 0)
-  if (numA == 0 && !is.null(mask_B) && numB > 0) {
-      warning(".make_weights: Mask A is empty but Mask B is not. Weights will not sum to zero.", call. = FALSE)
-  } else if (numB == 0 && !is.null(mask_B) && numA > 0) {
-       warning(".make_weights: Mask B is empty but Mask A is not. Weights will not sum to zero.", call. = FALSE)
-  } else if (numA == 0 && (is.null(mask_B) || numB == 0)) {
-       warning(".make_weights: Both masks A and B are empty.", call. = FALSE)
-  }
-  
-  w
-}
+# Backward compatibility aliases (will be deprecated in future)
+.mask_to_weights <- .calculate_mask_weights
+.make_weights <- .calculate_mask_weights
 
 
-#' Get Indices of Design Matrix Columns Matching a Pattern
-#'
-#' Retrieves the full list of potential design matrix column names for an
-#' event_term and returns the numeric indices of columns whose names match 
-#' the provided regex pattern.
-#'
-#' @param term An object of class `event_term`.
-#' @param pattern A character string containing a regular expression.
-#' @param expanded Logical; whether to use basis-expanded condition names (default: TRUE).
-#' @param ... Additional arguments passed to `grep()`.
-#' @return An integer vector of the indices of matching column names.
-#'         Returns `integer(0)` if no names match or if the term has no conditions.
-#' @keywords internal
-#' @noRd
-.col_index <- function(term, pattern, expanded = TRUE, ...) {
-  # Get condition names using the existing helper
-  all_colnames <- .condnames(term, expanded = expanded)
-  
-  # Return indices of matching columns
-  grep(pattern, all_colnames, value = FALSE, ...)
-}
+
+
 
 #' Contrast Specification
 #'
@@ -188,12 +151,20 @@ translate_legacy_pattern <- function(pattern) {
 #' @examples
 #' # A minus B contrast
 #' contrast(~ A - B, name="A_B")
+#' 
+#' # With subsetting
+#' contrast(~ A - B, name="A_B_block1", where = ~ block == 1)
 #'
 #' @export
 contrast <- function(form, name, where=NULL) {
-  assert_that(rlang::is_formula(form))
+  # Input validation
+  assert_that(rlang::is_formula(form),
+              msg = "form must be a formula")
+  assert_that(is.character(name) && length(name) == 1,
+              msg = "name must be a single character string")
   if (!is.null(where)) {
-    assert_that(rlang::is_formula(where))
+    assert_that(rlang::is_formula(where),
+                msg = "where must be a formula")
   }
   ret <- list(A=form,
               B=NULL,
@@ -217,14 +188,23 @@ contrast <- function(form, name, where=NULL) {
 #' @return A unit_contrast_spec object containing the contrast that sums to 1.
 #'
 #' @examples
+#' # Test main effect of Face against baseline
 #' con <- unit_contrast(~ Face, name="Main_face")
+#' 
+#' # Test main effect within specific blocks
+#' con2 <- unit_contrast(~ Face, name="Face_early", where = ~ block <= 3)
 #'
 #' @export
 unit_contrast <- function(A, name, where=NULL) {
-  assert_that(rlang::is_formula(A)) 
+  # Input validation
+  assert_that(rlang::is_formula(A),
+              msg = "A must be a formula") 
+  assert_that(is.character(name) && length(name) == 1,
+              msg = "name must be a single character string")
   
   if (!is.null(where)) {
-    assert_that(rlang::is_formula(where))
+    assert_that(rlang::is_formula(where),
+                msg = "where must be a formula")
   }
   
   structure(
@@ -371,6 +351,11 @@ pairwise_contrasts <- function(levels, facname, where=NULL, name_prefix = "con")
 #' pair_contrast(~ category == "face", ~ category == "scene",
 #'              name = "face_vs_scene_block1",
 #'              where = ~ block == 1)
+#' 
+#' # Complex logical expressions
+#' pair_contrast(~ stimulus == "face" & emotion == "happy",
+#'              ~ stimulus == "face" & emotion == "sad",
+#'              name = "happy_vs_sad_faces")
 #'
 #' @seealso
 #' \code{\link{pairwise_contrasts}} for all pairwise comparisons,
@@ -378,12 +363,17 @@ pairwise_contrasts <- function(levels, facname, where=NULL, name_prefix = "con")
 #'
 #' @export
 pair_contrast <- function(A, B, name, where = NULL) {
-  assert_that(rlang::is_formula(A))
-  assert_that(rlang::is_formula(B))
+  # Input validation
+  assert_that(rlang::is_formula(A),
+              msg = "A must be a formula")
+  assert_that(rlang::is_formula(B),
+              msg = "B must be a formula")
+  assert_that(is.character(name) && length(name) == 1,
+              msg = "name must be a single character string")
   
-
   if (!is.null(where)) {
-    assert_that(rlang::is_formula(where))
+    assert_that(rlang::is_formula(where),
+                msg = "where must be a formula")
   }
   
   ret <- list(A=A,
@@ -417,10 +407,15 @@ pair_contrast <- function(A, B, name, where = NULL) {
 #'          \code{\link{pair_contrast}} for pairwise comparisons
 #' @export
 oneway_contrast <- function(A, name, where = NULL) {
-  assert_that(rlang::is_formula(A)) 
+  # Input validation
+  assert_that(rlang::is_formula(A),
+              msg = "A must be a formula") 
+  assert_that(is.character(name) && length(name) == 1,
+              msg = "name must be a single character string")
   
   if (!is.null(where)) {
-    assert_that(rlang::is_formula(where))
+    assert_that(rlang::is_formula(where),
+                msg = "where must be a formula")
   }
   
   structure(
@@ -454,10 +449,15 @@ oneway_contrast <- function(A, name, where = NULL) {
 #'          \code{\link{pair_contrast}} for pairwise comparisons
 #' @export
 interaction_contrast <- function(A, name, where = NULL) {
-  assert_that(rlang::is_formula(A)) 
+  # Input validation
+  assert_that(rlang::is_formula(A),
+              msg = "A must be a formula") 
+  assert_that(is.character(name) && length(name) == 1,
+              msg = "name must be a single character string")
   
   if (!is.null(where)) {
-    assert_that(rlang::is_formula(where))
+    assert_that(rlang::is_formula(where),
+                msg = "where must be a formula")
   }
   
   
@@ -515,11 +515,15 @@ interaction_contrast <- function(A, name, where = NULL) {
 #'
 #' @export
 column_contrast <- function(pattern_A, pattern_B = NULL, name, where = NULL) {
-  assert_that(is.character(pattern_A), length(pattern_A) == 1)
+  # Input validation
+  assert_that(is.character(pattern_A) && length(pattern_A) == 1,
+              msg = "pattern_A must be a single character string")
   if (!is.null(pattern_B)) {
-    assert_that(is.character(pattern_B), length(pattern_B) == 1)
+    assert_that(is.character(pattern_B) && length(pattern_B) == 1,
+                msg = "pattern_B must be a single character string")
   }
-  assert_that(is.character(name), length(name) == 1)
+  assert_that(is.character(name) && length(name) == 1,
+              msg = "name must be a single character string")
   if (!is.null(where)) {
       warning("'where' argument is currently ignored for column_contrast.")
       # assert_that(rlang::is_formula(where)) # Keep structure if needed later
@@ -571,10 +575,21 @@ column_contrast <- function(pattern_A, pattern_B = NULL, name, where = NULL) {
 #'
 #' @export
 poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL) {
-  assert_that(rlang::is_formula(A))
+  # Input validation
+  assert_that(rlang::is_formula(A),
+              msg = "A must be a formula")
+  assert_that(is.character(name) && length(name) == 1,
+              msg = "name must be a single character string")
+  assert_that(is.numeric(degree) && length(degree) == 1 && degree >= 1,
+              msg = "degree must be a positive integer")
   
   if (!is.null(where)) {
-    assert_that(rlang::is_formula(where))
+    assert_that(rlang::is_formula(where),
+                msg = "where must be a formula")
+  }
+  if (!is.null(value_map)) {
+    assert_that(is.list(value_map),
+                msg = "value_map must be a list")
   }
 
   ret <- list(
@@ -650,9 +665,8 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
           cell_names_rel <- apply(relevant_cells, 1, paste, collapse = "_")
           
           # Calculate weights - average of cells identified by formula A
-          # Use the new .mask_to_weights helper
-          weights_rel_named <- .mask_to_weights(names = cell_names_rel, A_mask = keepA_rel, B_mask = NULL) 
-          # .make_weights already averages (divides by nA). So weights_rel_named is correct.
+          # Use the weight calculation helper
+          weights_rel_named <- .calculate_mask_weights(names = cell_names_rel, A_mask = keepA_rel, B_mask = NULL)
           
           # Ensure output is matrix
           weights_out <- matrix(weights_rel_named, ncol = 1)
@@ -1051,7 +1065,7 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
   # --- END FIX --- 
 
   # Calculate base weights relative to the full set of base conditions
-  base_weights_named <- .make_weights(base_condnames_all, mask_A_full, mask_B_full)
+  base_weights_named <- .calculate_mask_weights(base_condnames_all, mask_A_full, mask_B_full)
   
   # --- Basis Expansion --- 
   if (expand_basis) {
@@ -1094,7 +1108,7 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
              }
          }
          # Ensure weights still sum to zero (or close to it)
-         if (abs(sum(weights_out)) > 1e-8) {
+         if (abs(sum(weights_out)) > .CONTRAST_TOLERANCE) {
               warning(paste("Contrast ", x$name, ": Weights do not sum to zero after basis expansion."), call.=FALSE)
          }
          cell_names_out <- expanded_condnames
@@ -1195,12 +1209,12 @@ contrast_weights.column_contrast_spec <- function(x, term, ...) {
          call. = FALSE)
   }
 
-  # --- Calculate weights using .mask_to_weights --- 
+  # --- Calculate weights using weight helper --- 
   mask_A <- seq_along(all_colnames) %in% idx_A
   mask_B <- if (!is.null(x$pattern_B)) seq_along(all_colnames) %in% idx_B else NULL
   
-  # .mask_to_weights handles 1/nA, -1/nB, checks, and warnings
-  weights_vec <- .mask_to_weights(all_colnames, mask_A, mask_B)
+  # .calculate_mask_weights handles 1/nA, -1/nB, checks, and warnings
+  weights_vec <- .calculate_mask_weights(all_colnames, mask_A, mask_B)
   
   # Ensure output is a matrix
   weights_mat <- matrix(weights_vec, ncol = 1)
