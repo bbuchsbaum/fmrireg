@@ -1030,35 +1030,25 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
   mask_B_full <- if (!is.null(keepB_rel)) logical(length(base_condnames_all)) else NULL
   
   if (nrow(relevant_cells) > 0) {
-    # Get the variable names involved in the term (must match cells colnames)
+    # Vectorized construction of condition names for all relevant cells
     term_vars <- names(relevant_cells)
-    
-    for (i in 1:nrow(relevant_cells)) {
-      cell_row <- relevant_cells[i, , drop = FALSE]
-      
-      # Construct the corresponding condition name(s) for this cell row
-      # This needs to handle interactions correctly.
-      # For a single factor 'condition' with level 'a', it should produce 'condition.a'
-      # For factors 'condition', 'task' with levels 'a', 'X', it should produce 'condition.a_task.X'
-      tokens <- vector("character", length(term_vars))
-      for (j in seq_along(term_vars)) {
-         var_name <- term_vars[j]
-         level_val <- cell_row[[var_name]] # Get the factor level value
-         # Assume level_token handles sanitization if needed
-         tokens[j] <- level_token(var_name, level_val)
-      }
-      target_cond_name <- make_cond_tag(tokens)
-      
-      # Find the index in the full list
-      idx <- match(target_cond_name, base_condnames_all)
-      
-      if (!is.na(idx)) {
-        if (i <= length(keepA_rel) && keepA_rel[i]) {
-          mask_A_full[idx] <- TRUE
-        }
-        if (!is.null(mask_B_full) && i <= length(keepB_rel) && keepB_rel[i]) {
-          mask_B_full[idx] <- TRUE
-        }
+    token_df <- Map(function(col, nm) level_token(nm, col), relevant_cells, term_vars)
+    token_df <- as.data.frame(token_df, stringsAsFactors = FALSE)
+    target_cond_names <- apply(token_df, 1, make_cond_tag)
+
+    idx_all <- match(target_cond_names, base_condnames_all)
+
+    len_A <- min(length(keepA_rel), length(idx_all))
+    if (len_A > 0) {
+      idx_A <- idx_all[seq_len(len_A)]
+      mask_A_full[idx_A[keepA_rel[seq_len(len_A)] & !is.na(idx_A)]] <- TRUE
+    }
+
+    if (!is.null(mask_B_full)) {
+      len_B <- min(length(keepB_rel), length(idx_all))
+      if (len_B > 0) {
+        idx_B <- idx_all[seq_len(len_B)]
+        mask_B_full[idx_B[keepB_rel[seq_len(len_B)] & !is.na(idx_B)]] <- TRUE
       }
     }
   }
