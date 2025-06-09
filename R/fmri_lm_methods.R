@@ -53,23 +53,10 @@ fitted_hrf.fmri_lm <- function(x, sample_at = seq(0, 24, by = 1), ...) {
 #' @keywords internal
 #' @noRd
 reshape_coef <- function(df, des, measure = "value") {
-  nvox <- nrow(df)
-  ncon <- ncol(df)
   nrun <- length(levels(des$blockids))
-  ret <- matrix(0, nvox * nrun, ncon / nrun)
-  
-  runids <- sort(unique(des$blockids))
-  
-  currow <- 1
-  for (i in 1:length(runids)) {
-    runs <- which(des$blockids == runids[i])
-    ind <- seq(currow, currow + nvox - 1)
-    currow <- currow + nvox
-    for (j in 1:length(runs)) {
-      ret[ind, j] <- df[, runs[j]]
-    }
-  }
-  
+  run_order <- order(des$blockids)
+  ret <- matrix(t(as.matrix(df[, run_order, drop = FALSE])),
+                nrow = nrun, byrow = TRUE)
   as.data.frame(ret)
 }
 
