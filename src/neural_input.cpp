@@ -60,30 +60,22 @@ static inline uword arma_next_pow2(T v)
 // [[Rcpp::export]]
 List neural_input_rcpp(List x, double from, double to, double resolution) {
   int n = (to - from) / resolution;
+
+  // Convert inputs to Armadillo vectors for buildImpulseTrain
+  arma::vec ons = as<arma::vec>(x["onsets"]);
+  arma::vec dur = as<arma::vec>(x["duration"]);
+  arma::vec amp = as<arma::vec>(x["amplitude"]);
+
+  // Use difference-array method (O(E + N)) implemented in buildImpulseTrain
+  arma::vec out_arma = buildImpulseTrain(ons, dur, amp,
+                                         from, to - resolution, resolution);
+
+  NumericVector out(out_arma.begin(), out_arma.end());
   NumericVector time(n);
-  NumericVector out(n);
-  NumericVector ons = x["onsets"];
-  NumericVector dur = x["duration"];
-  NumericVector amp = x["amplitude"];
-  
-  for (int i = 0; i < ons.length(); i++) {
-    double on = ons[i];
-    double d = dur[i];
-    int startbin = (int) ((on - from) / resolution) + 1;
-    if (d > 0) {
-      int endbin = (int) ((on - from) / resolution + d / resolution) + 1;
-      for (int j = startbin; j <= endbin; j++) {
-        out[j-1] += amp[i];
-      }
-    } else {
-      out[startbin-1] += amp[i];
-    }
-  }
-  
   for (int i = 0; i < n; i++) {
     time[i] = from + (i + 0.5) * resolution;
   }
-  
+
   List result;
   result["time"] = time;
   result["neural_input"] = out;
