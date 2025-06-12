@@ -6,29 +6,14 @@ inst/doc
 /Meta/
 docs
 
-# Documentation and planning markdown files (keep README.md and NEWS.md)
-CONTRAST_IMPROVEMENTS_PHASE1.md
-FMRIDATASET_MIGRATION_SUMMARY.md
-FMRIDATASET_MIGRATION_PLAN.md
-NAMESPACE_FIXES_SUMMARY.md
-BLOCKLENS_FIX_SUMMARY.md
-MIGRATION_SUMMARY.md
-test_solver_edge_cases_summary.md
-test-naming-utils_summary.md
-test-regressor_summary.md
-lm_consolidation_mapping.md
-lm_consolidation_plan.md
-lm_consolidation_tickets.md
-fmrireg_cheatsheet.md
-CRITICAL_TEST_GAPS_SUMMARY.md
-FIXES_IMPLEMENTED.md
-CLAUDE.md
-CRITICAL_TEST_GAPS.md
-benchmark_datasets_guide.md
-CRAN_guidance.md
-AGENTS.md
-README_benchmark_datasets.md
-eventvector_refactor_todo.md
+# Keep only specific markdown files: AGENTS.md, CLAUDE.md, CRAN_guidance.md, NEWS.md, README.md
+# Ignore all other markdown files in root
+*.md
+!AGENTS.md
+!CLAUDE.md
+!CRAN_guidance.md
+!NEWS.md
+!README.md
 
 # Throwaway and debug R files
 migrate_to_fmrihrf.R
