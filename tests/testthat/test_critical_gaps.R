@@ -86,7 +86,7 @@ test_that("Mixed solve handles weighted regression", {
   Z <- diag(n)  # Identity matrix for random effects
   K <- diag(n)  # Identity kinship matrix
   
-  result <- mixed_solve_cpp(y = y, Z = Z, K = K, X = X)
+  result <- fmrilss::mixed_solve(Y = y, Z = Z, K = K, X = X)
   
   expect_equal(length(result$beta), ncol(X))
   expect_true(!is.null(result$Vu))  # Variance component for random effects

@@ -41,6 +41,6 @@ mixed_solve_cpp <- function(y,
                             SE = FALSE,
                             return_Hinv = FALSE) {
 
-  result <- mixed_solve_internal(y, Z, K, X, method, bounds, SE, return_Hinv)
+  result <- fmrilss::mixed_solve(Y = y, Z = Z, K = K, X = X, method = method, bounds = bounds, SE = SE, return_Hinv = return_Hinv)
   return(result)
 }

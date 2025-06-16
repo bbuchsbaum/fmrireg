@@ -23,4 +23,7 @@ Define a linear contrast using a formula expression.
 # A minus B contrast
 contrast(~ A - B, name="A_B")
 
+# With subsetting
+contrast(~ A - B, name="A_B_block1", where = ~ block == 1)
+
 }

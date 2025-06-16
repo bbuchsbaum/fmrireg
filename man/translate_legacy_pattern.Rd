@@ -15,4 +15,13 @@ Updated regex string.
 \description{
 Convert older column-naming patterns to the current naming scheme.
 }
+\examples{
+\dontrun{
+# Convert old bracket notation to dot notation
+translate_legacy_pattern("condition[A]") # Returns "condition.A"
+
+# Convert basis notation
+translate_legacy_pattern("term:basis[2]") # Returns "term_b2"
+}
+}
 \keyword{internal}

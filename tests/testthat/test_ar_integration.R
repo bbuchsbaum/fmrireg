@@ -19,7 +19,7 @@ simulate_ar_dataset <- function(ar_coeff = numeric(), n_runs = 2, n_time = 30, n
     onset = rep(c(5, 15), n_runs),
     cond = factor("A")
   )
-  matrix_dataset(datamat, TR = 1, run_length = rep(n_time, n_runs), event_table = event_tab)
+  fmridataset::matrix_dataset(datamat, TR = 1, run_length = rep(n_time, n_runs), event_table = event_tab)
 }
 
 
@@ -28,9 +28,9 @@ simulate_ar_dataset <- function(ar_coeff = numeric(), n_runs = 2, n_time = 30, n
 test_that("iid and ar1 give similar results on white noise", {
   set.seed(1)
   dset <- simulate_ar_dataset(n_runs = 2, ar_coeff = numeric())
-  mod_iid <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+  mod_iid <- fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
                      use_fast_path = TRUE, ar_options = list(struct = "iid"))
-  mod_ar1 <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+  mod_ar1 <- fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
                      use_fast_path = TRUE, ar_options = list(struct = "ar1"))
   expect_equal(coef(mod_iid), coef(mod_ar1), tolerance = 0.05)
 
@@ -46,17 +46,17 @@ test_that("ar1 recovers phi and adjusts standard errors", {
   dset <- simulate_ar_dataset(ar_coeff = phi, n_runs = 2)
 
   # Test pure AR recovery on raw data (before GLM)
-  Y <- get_data_matrix(dset)
-  phi_raw <- .estimate_ar(rowMeans(Y), 1)
+  Y <- fmridataset::get_data_matrix(dset)
+  phi_raw <- fmrireg:::.estimate_ar(rowMeans(Y), 1)
   # Raw data should show AR structure, though maybe not exactly phi due to simulation
   expect_equal(as.numeric(phi_raw), phi, tolerance = 0.15)
 
-  mod_iid <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+  mod_iid <- fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
                      use_fast_path = TRUE, ar_options = list(struct = "iid"))
-  mod_ar1 <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+  mod_ar1 <- fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
                      use_fast_path = TRUE, ar_options = list(struct = "ar1"))
-  se_iid <- unlist(standard_error(mod_iid))
-  se_ar1 <- unlist(standard_error(mod_ar1))
+  se_iid <- unlist(fmrireg::standard_error(mod_iid))
+  se_ar1 <- unlist(fmrireg::standard_error(mod_ar1))
   expect_gt(se_ar1[1], se_iid[1])
 })
 
@@ -68,8 +68,8 @@ test_that("ar2 recovers coefficients", {
   dset <- simulate_ar_dataset(ar_coeff = phi, n_runs = 2)
 
   # Test on raw data instead of residuals
-  Y <- get_data_matrix(dset)
-  phi_hat <- .estimate_ar(rowMeans(Y), 2)
+  Y <- fmridataset::get_data_matrix(dset)
+  phi_hat <- fmrireg:::.estimate_ar(rowMeans(Y), 2)
   # More tolerance for AR(2) as it's harder to estimate
   expect_equal(as.numeric(phi_hat), phi, tolerance = 0.3)
 })
@@ -80,9 +80,9 @@ test_that("cor_global gives similar results", {
   set.seed(4)
   phi <- 0.4
   dset <- simulate_ar_dataset(ar_coeff = phi, n_runs = 2)
-  mod_run <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+  mod_run <- fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
                      use_fast_path = TRUE, ar_options = list(struct = "ar1", global = FALSE))
-  mod_global <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+  mod_global <- fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
                         use_fast_path = TRUE, ar_options = list(struct = "ar1", global = TRUE))
   expect_equal(coef(mod_run), coef(mod_global), tolerance = 1e-6)
 })
@@ -94,7 +94,7 @@ test_that("ar1_exact_first runs", {
   phi <- 0.4
   dset <- simulate_ar_dataset(ar_coeff = phi, n_runs = 1)
   expect_error(
-    fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+    fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
             use_fast_path = TRUE, ar_options = list(struct = "ar1", exact_first = TRUE)),
     NA
   )
@@ -107,7 +107,7 @@ test_that("cor_iter > 1 runs", {
   phi <- 0.4
   dset <- simulate_ar_dataset(ar_coeff = phi, n_runs = 1)
   expect_error(
-    fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+    fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
             use_fast_path = TRUE, ar_options = list(struct = "ar1", iter_gls = 2)),
     NA
   )
@@ -121,15 +121,15 @@ test_that("arp recovers coefficients", {
   dset <- simulate_ar_dataset(ar_coeff = phi, n_runs = 2)
 
   # Test on raw data - AR(3) is very difficult to estimate accurately
-  Y <- get_data_matrix(dset)
-  phi_hat <- .estimate_ar(rowMeans(Y), length(phi))
+  Y <- fmridataset::get_data_matrix(dset)
+  phi_hat <- fmrireg:::.estimate_ar(rowMeans(Y), length(phi))
   # Very relaxed tolerance for AR(3)
   expect_equal(length(phi_hat), length(phi))
   # Just check the signs are roughly correct
   expect_true(phi_hat[1] > 0.2)  # First coef should be positive
   expect_true(phi_hat[2] < 0)    # Second should be negative
 
-  mod_arp <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+  mod_arp <- fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
                      use_fast_path = TRUE, ar_options = list(struct = "arp", p = length(phi)))
   expect_true(!is.null(coef(mod_arp)))
 })
@@ -140,9 +140,9 @@ test_that("arp with p=1 matches ar1", {
   set.seed(8)
   phi <- 0.5
   dset <- simulate_ar_dataset(ar_coeff = phi, n_runs = 2)
-  mod_ar1 <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+  mod_ar1 <- fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
                      use_fast_path = TRUE, ar_options = list(struct = "ar1"))
-  mod_arp1 <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
+  mod_arp1 <- fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
                       use_fast_path = TRUE, ar_options = list(struct = "arp", p = 1))
   expect_equal(coef(mod_ar1), coef(mod_arp1), tolerance = 1e-6)
 })

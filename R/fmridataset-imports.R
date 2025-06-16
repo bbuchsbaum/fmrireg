@@ -5,7 +5,6 @@
 #' @importFrom fmridataset get_data get_data_matrix get_mask
 #' @importFrom fmridataset data_chunks as.matrix_dataset
 #' @importFrom fmridataset read_fmri_config
-#' @importFrom fmridataset fmri_file_dataset
 #' @importFrom fmridataset exec_strategy collect_chunks
 NULL
 

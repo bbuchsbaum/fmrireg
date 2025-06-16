@@ -2141,70 +2141,6 @@ longnames.convolved_term <- function(x, ...) {
 #' @export
 estimate_betas <- function(x, ...) UseMethod("estimate_betas")
 
-#' Generate Neural Input Function from Event Timing
-#'
-#' Converts event timing information into a neural input function representing the underlying
-#' neural activity before HRF convolution. This function is useful for:
-#' 
-#' \describe{
-#'   \item{stimulus}{Creating stimulus functions for fMRI analysis}
-#'   \item{modeling}{Modeling sustained vs. transient neural activity}
-#'   \item{inputs}{Generating inputs for HRF convolution}
-#'   \item{visualization}{Visualizing the temporal structure of experimental designs}
-#' }
-#'
-#' @param x A regressor object containing event timing information
-#' @param ... Additional arguments passed to methods. Common arguments include:
-#' \describe{
-#'     \item{start}{Numeric; start time of the input function}
-#'     \item{end}{Numeric; end time of the input function} 
-#'     \item{resolution}{Numeric; temporal resolution in seconds (default: 0.33)}
-#' }
-#'
-#' @return A list containing:
-#' \describe{
-#'     \item{time}{Numeric vector of time points}
-#'     \item{neural_input}{Numeric vector of input amplitudes at each time point}
-#' }
-#'
-#' @examples
-#' # Create a regressor with multiple events
-#' reg <- regressor(
-#'   onsets = c(10, 30, 50),
-#'   duration = c(2, 2, 2),
-#'   amplitude = c(1, 1.5, 0.8),
-#'   hrf = HRF_SPMG1
-#' )
-#' 
-#' # Generate neural input function
-#' input <- neural_input(reg, start = 0, end = 60, resolution = 0.5)
-#' 
-#' # Plot the neural input function
-#' plot(input$time, input$neural_input, type = "l",
-#'      xlab = "Time (s)", ylab = "Neural Input",
-#'      main = "Neural Input Function")
-#' 
-#' # Create regressor with varying durations
-#' reg_sustained <- regressor(
-#'   onsets = c(10, 30),
-#'   duration = c(5, 10),  # sustained activity
-#'   amplitude = c(1, 1),
-#'   hrf = HRF_SPMG1
-#' )
-#' 
-#' # Generate and compare neural inputs
-#' input_sustained <- neural_input(
-#'   reg_sustained,
-#'   start = 0,
-#'   end = 60,
-#'   resolution = 0.5
-#' )
-#'
-#' @family regressor_functions
-#' @seealso 
-#' \code{\link{regressor}}, \code{\link{evaluate.Reg}}, \code{\link{HRF_SPMG1}}
-#' @export
-neural_input <- function(x, ...) UseMethod("neural_input")
 
 #' Visualize the entire design matrix as a heatmap
 #'
@@ -2323,3 +2259,15 @@ design_matrix.convolved_term <- function(x, blockid=NULL, ...) {
 design_matrix.afni_hrf_convolved_term <- function(x, blockid=NULL, ...) {
   stop("afni_hrf_convolved_term delegates design matrix construction to AFNI")
 }
+
+#' Write Results from fMRI Analysis
+#'
+#' Generic function to export statistical maps and analysis results from fitted fMRI models
+#' to standardized file formats with appropriate metadata.
+#'
+#' @param x A fitted fMRI model object
+#' @param ... Additional arguments passed to methods
+#' @return Invisible list of created file paths
+#' @export
+#' @family result_export
+write_results <- function(x, ...) UseMethod("write_results")

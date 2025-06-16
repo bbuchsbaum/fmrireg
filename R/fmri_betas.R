@@ -106,7 +106,7 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
     message("rrBLUP mixed.solve failed, attempting alternative: ", e$message)
     
     if (requireNamespace("Rcpp", quietly = TRUE) && 
-        exists("mixed_solve_cpp", mode = "function")) {
+        requireNamespace("fmrilss", quietly = TRUE)) {
       
       # Use the C++ implementation with proper input validation
       X_fixed <- if (length(fixed_ind) == 0) {
@@ -116,9 +116,9 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
       }
       
       fit <- tryCatch({
-        mixed_solve_cpp(y = Y, 
-                        Z = X[, ran_ind, drop = FALSE], 
-                        X = X_fixed)
+        fmrilss::mixed_solve(Y = Y, 
+                            Z = X[, ran_ind, drop = FALSE], 
+                            X = X_fixed)
       }, error = function(e2) {
         # If even that fails, use a fallback
         message("C++ mixed model solver also failed: ", e2$message)
@@ -158,7 +158,7 @@ mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
     X[, fixed_ind, drop = FALSE]
   }
   
-  fit <- mixed_solve_internal(as.matrix(Y), Z = X[, ran_ind, drop = FALSE], 
+  fit <- fmrilss::mixed_solve(Y = as.matrix(Y), Z = X[, ran_ind, drop = FALSE], 
                              X = X_fixed, bounds = c(1e-05, .2))
   c(fit$u, fit$b)
 }
@@ -308,10 +308,22 @@ run_estimate_betas <- function(bdes, dset, method,
     
   
   }  else if (method == "lss_naive") {
-    lss_naive(dset, bdes)
+    fmrilss::lss_naive(dset, bdes)
   } else if (method == "lss") {
-    # Estimate random effects using LSS
-    beta_matrix_ran <- lss_fast(dset, bdes, use_cpp = FALSE)
+    # Estimate random effects using LSS - use fmrilss package
+    data_matrix <- get_data_matrix(dset)
+    dmat_base <- as.matrix(bdes$dmat_base)
+    dmat_fixed <- if (!is.null(bdes$fixed_ind)) as.matrix(bdes$dmat_fixed) else NULL
+    dmat_ran <- as.matrix(bdes$dmat_ran)
+    
+    # Prepare nuisance matrix (baseline + fixed effects)
+    if (!is.null(dmat_fixed)) {
+      nuisance_matrix <- cbind(dmat_base, dmat_fixed)
+    } else {
+      nuisance_matrix <- dmat_base
+    }
+    
+    beta_matrix_ran <- fmrilss::lss(Y = data_matrix, X = dmat_ran, Z = NULL, Nuisance = nuisance_matrix, method = "r_optimized")
     
     # If fixed effects are present, estimate them separately with OLS
     if (!is.null(bdes$fixed_ind) && length(bdes$fixed_ind) > 0) {
@@ -339,7 +351,20 @@ run_estimate_betas <- function(bdes, dset, method,
     
     list(beta_matrix = beta_matrix, estimated_hrf = NULL)
   } else if (method == "lss_cpp") {
-    beta_matrix <- lss_fast(dset, bdes, use_cpp = TRUE)
+    # Use fmrilss package with C++ optimization
+    data_matrix <- get_data_matrix(dset)
+    dmat_base <- as.matrix(bdes$dmat_base)
+    dmat_fixed <- if (!is.null(bdes$fixed_ind)) as.matrix(bdes$dmat_fixed) else NULL
+    dmat_ran <- as.matrix(bdes$dmat_ran)
+    
+    # Prepare nuisance matrix (baseline + fixed effects)
+    if (!is.null(dmat_fixed)) {
+      nuisance_matrix <- cbind(dmat_base, dmat_fixed)
+    } else {
+      nuisance_matrix <- dmat_base
+    }
+    
+    beta_matrix <- fmrilss::lss(Y = data_matrix, X = dmat_ran, Z = NULL, Nuisance = nuisance_matrix, method = "cpp_optimized")
     list(beta_matrix = beta_matrix, estimated_hrf = NULL)
   } else if (method == "pls") {
     vecs <- masked_vectors(dset)

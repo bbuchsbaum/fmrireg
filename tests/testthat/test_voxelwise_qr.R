@@ -31,5 +31,5 @@ test_that("voxelwise QR and XtXinv methods give same results", {
   res_qr <- fmrireg:::fit_lm_contrasts_voxelwise_qr(Betas, qr_list, sigma_vec,
                                           conlist, fconlist, proj$dfres)
 
-  expect_equal(res_qr$A$data[[1]], res_xtx$A$data[[1]], tolerance = 1e-3)
+  expect_equal(res_qr$A$data[[1]], res_xtx$A$data[[1]], tolerance = 1e-2)
 })

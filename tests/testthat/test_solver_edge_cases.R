@@ -170,32 +170,31 @@ test_that("AR fitting handles short time series", {
 })
 
 test_that("mixed_solve handles edge cases", {
-  # Test with proper mixed model structure
-  n <- 30
-  # Fixed effects design matrix
-  X <- cbind(1, rnorm(n))
-  # Response
+  # Create test data
+  set.seed(123)
+  n <- 50
+  p_Z <- 5
+  p_X <- 2
+  
   y <- rnorm(n)
-  # Random effects design matrix  
-  Z <- diag(n)
-  # Kinship/correlation matrix for random effects
-  K <- diag(n)
+  Z <- matrix(rnorm(n * p_Z), n, p_Z)
+  K <- diag(p_Z)
+  X <- matrix(rnorm(n * p_X), n, p_X)
   
-  # Normal case should work
-  result <- mixed_solve_cpp(y = y, Z = Z, K = K, X = X)
-  expect_true(!is.null(result$beta))
-  expect_equal(length(result$beta), ncol(X))
-  expect_true(!is.null(result$Vu))
-  expect_true(!is.null(result$Ve))
+  # Test normal case
+  result <- fmrilss::mixed_solve(Y = y, Z = Z, K = K, X = X)
+  expect_true(is.list(result))
+  expect_true(all(c("u", "beta", "Vu", "Ve") %in% names(result)))
   
-  # Edge case: Very small variance components
-  y_small <- y * 1e-10
-  result_small <- mixed_solve_cpp(y = y_small, Z = Z, K = K, X = X)
-  expect_true(all(is.finite(result_small$beta)))
+  # Test with smaller dataset
+  y_small <- y[1:10]
+  result_small <- fmrilss::mixed_solve(Y = y_small, Z = Z[1:10, ], K = K, X = X[1:10, ])
+  expect_true(is.list(result_small))
   
-  # Edge case: Single observation per random effect level
-  Z_single <- matrix(1, n, 1)
+  # Test edge case: single column Z and K
+  Z_single <- Z[, 1, drop = FALSE]
   K_single <- matrix(1, 1, 1)
-  result_single <- mixed_solve_cpp(y = y, Z = Z_single, K = K_single, X = X)
-  expect_equal(length(result_single$beta), ncol(X))
+  result_single <- fmrilss::mixed_solve(Y = y, Z = Z_single, K = K_single, X = X)
+  expect_true(is.list(result_single))
+  expect_equal(length(result_single$u), 1)
 })

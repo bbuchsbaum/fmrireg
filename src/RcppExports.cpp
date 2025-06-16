@@ -12,8 +12,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // ar_whiten_inplace
-Rcpp::List ar_whiten_inplace(Rcpp::NumericMatrix Y, Rcpp::NumericMatrix X, const arma::vec& phi_coeffs, bool exact_first_ar1);
-RcppExport SEXP _fmrireg_ar_whiten_inplace(SEXP YSEXP, SEXP XSEXP, SEXP phi_coeffsSEXP, SEXP exact_first_ar1SEXP) {
+Rcpp::List ar_whiten_inplace(Rcpp::NumericMatrix Y, Rcpp::NumericMatrix X, const arma::vec& phi_coeffs, bool exact_first_ar1, bool parallel);
+RcppExport SEXP _fmrireg_ar_whiten_inplace(SEXP YSEXP, SEXP XSEXP, SEXP phi_coeffsSEXP, SEXP exact_first_ar1SEXP, SEXP parallelSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -21,8 +21,23 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type phi_coeffs(phi_coeffsSEXP);
     Rcpp::traits::input_parameter< bool >::type exact_first_ar1(exact_first_ar1SEXP);
-    rcpp_result_gen = Rcpp::wrap(ar_whiten_inplace(Y, X, phi_coeffs, exact_first_ar1));
+    Rcpp::traits::input_parameter< bool >::type parallel(parallelSEXP);
+    rcpp_result_gen = Rcpp::wrap(ar_whiten_inplace(Y, X, phi_coeffs, exact_first_ar1, parallel));
     return rcpp_result_gen;
+END_RCPP
+}
+// ar_whiten_void
+void ar_whiten_void(Rcpp::NumericMatrix Y, Rcpp::NumericMatrix X, const arma::vec& phi_coeffs, bool exact_first_ar1, bool parallel);
+RcppExport SEXP _fmrireg_ar_whiten_void(SEXP YSEXP, SEXP XSEXP, SEXP phi_coeffsSEXP, SEXP exact_first_ar1SEXP, SEXP parallelSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type phi_coeffs(phi_coeffsSEXP);
+    Rcpp::traits::input_parameter< bool >::type exact_first_ar1(exact_first_ar1SEXP);
+    Rcpp::traits::input_parameter< bool >::type parallel(parallelSEXP);
+    ar_whiten_void(Y, X, phi_coeffs, exact_first_ar1, parallel);
+    return R_NilValue;
 END_RCPP
 }
 // instantaneous_correlation_rcpp
@@ -42,128 +57,11 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// compute_residuals_cpp
-List compute_residuals_cpp(const arma::mat& X_base_fixed, const arma::mat& data_matrix, const arma::mat& dmat_ran);
-RcppExport SEXP _fmrireg_compute_residuals_cpp(SEXP X_base_fixedSEXP, SEXP data_matrixSEXP, SEXP dmat_ranSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type X_base_fixed(X_base_fixedSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type data_matrix(data_matrixSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type dmat_ran(dmat_ranSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_residuals_cpp(X_base_fixed, data_matrix, dmat_ran));
-    return rcpp_result_gen;
-END_RCPP
-}
-// lss_compute_cpp
-arma::mat lss_compute_cpp(const arma::mat& Q_dmat_ran, const arma::mat& residual_data);
-RcppExport SEXP _fmrireg_lss_compute_cpp(SEXP Q_dmat_ranSEXP, SEXP residual_dataSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type Q_dmat_ran(Q_dmat_ranSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type residual_data(residual_dataSEXP);
-    rcpp_result_gen = Rcpp::wrap(lss_compute_cpp(Q_dmat_ran, residual_data));
-    return rcpp_result_gen;
-END_RCPP
-}
-// mixed_solve_internal
-List mixed_solve_internal(NumericVector y_in, Nullable<NumericMatrix> Z_in, Nullable<NumericMatrix> K_in, Nullable<NumericMatrix> X_in, std::string method, NumericVector bounds, bool SE, bool return_Hinv);
-RcppExport SEXP _fmrireg_mixed_solve_internal(SEXP y_inSEXP, SEXP Z_inSEXP, SEXP K_inSEXP, SEXP X_inSEXP, SEXP methodSEXP, SEXP boundsSEXP, SEXP SESEXP, SEXP return_HinvSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type y_in(y_inSEXP);
-    Rcpp::traits::input_parameter< Nullable<NumericMatrix> >::type Z_in(Z_inSEXP);
-    Rcpp::traits::input_parameter< Nullable<NumericMatrix> >::type K_in(K_inSEXP);
-    Rcpp::traits::input_parameter< Nullable<NumericMatrix> >::type X_in(X_inSEXP);
-    Rcpp::traits::input_parameter< std::string >::type method(methodSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type bounds(boundsSEXP);
-    Rcpp::traits::input_parameter< bool >::type SE(SESEXP);
-    Rcpp::traits::input_parameter< bool >::type return_Hinv(return_HinvSEXP);
-    rcpp_result_gen = Rcpp::wrap(mixed_solve_internal(y_in, Z_in, K_in, X_in, method, bounds, SE, return_Hinv));
-    return rcpp_result_gen;
-END_RCPP
-}
-// neural_input_rcpp
-List neural_input_rcpp(List x, double from, double to, double resolution);
-RcppExport SEXP _fmrireg_neural_input_rcpp(SEXP xSEXP, SEXP fromSEXP, SEXP toSEXP, SEXP resolutionSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type x(xSEXP);
-    Rcpp::traits::input_parameter< double >::type from(fromSEXP);
-    Rcpp::traits::input_parameter< double >::type to(toSEXP);
-    Rcpp::traits::input_parameter< double >::type resolution(resolutionSEXP);
-    rcpp_result_gen = Rcpp::wrap(neural_input_rcpp(x, from, to, resolution));
-    return rcpp_result_gen;
-END_RCPP
-}
-// evaluate_regressor_convolution
-NumericMatrix evaluate_regressor_convolution(NumericVector grid, NumericVector onsets, NumericVector durations, NumericVector amplitudes, NumericMatrix hrf_values, double hrf_span, double start, double end, double precision);
-RcppExport SEXP _fmrireg_evaluate_regressor_convolution(SEXP gridSEXP, SEXP onsetsSEXP, SEXP durationsSEXP, SEXP amplitudesSEXP, SEXP hrf_valuesSEXP, SEXP hrf_spanSEXP, SEXP startSEXP, SEXP endSEXP, SEXP precisionSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type grid(gridSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type onsets(onsetsSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type durations(durationsSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type amplitudes(amplitudesSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type hrf_values(hrf_valuesSEXP);
-    Rcpp::traits::input_parameter< double >::type hrf_span(hrf_spanSEXP);
-    Rcpp::traits::input_parameter< double >::type start(startSEXP);
-    Rcpp::traits::input_parameter< double >::type end(endSEXP);
-    Rcpp::traits::input_parameter< double >::type precision(precisionSEXP);
-    rcpp_result_gen = Rcpp::wrap(evaluate_regressor_convolution(grid, onsets, durations, amplitudes, hrf_values, hrf_span, start, end, precision));
-    return rcpp_result_gen;
-END_RCPP
-}
-// evaluate_regressor_fast
-SEXP evaluate_regressor_fast(const arma::vec& grid, const arma::vec& onsets, const arma::vec& durations, const arma::vec& amplitudes, const arma::mat& hrfFine, double dt, double span);
-RcppExport SEXP _fmrireg_evaluate_regressor_fast(SEXP gridSEXP, SEXP onsetsSEXP, SEXP durationsSEXP, SEXP amplitudesSEXP, SEXP hrfFineSEXP, SEXP dtSEXP, SEXP spanSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type grid(gridSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type onsets(onsetsSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type durations(durationsSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type amplitudes(amplitudesSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type hrfFine(hrfFineSEXP);
-    Rcpp::traits::input_parameter< double >::type dt(dtSEXP);
-    Rcpp::traits::input_parameter< double >::type span(spanSEXP);
-    rcpp_result_gen = Rcpp::wrap(evaluate_regressor_fast(grid, onsets, durations, amplitudes, hrfFine, dt, span));
-    return rcpp_result_gen;
-END_RCPP
-}
-// evaluate_regressor_cpp
-SEXP evaluate_regressor_cpp(const arma::vec& grid, const arma::vec& onsets, const arma::vec& durations, const arma::vec& amplitudes, const arma::mat& hrf_matrix, double hrf_span, double precision, std::string method);
-RcppExport SEXP _fmrireg_evaluate_regressor_cpp(SEXP gridSEXP, SEXP onsetsSEXP, SEXP durationsSEXP, SEXP amplitudesSEXP, SEXP hrf_matrixSEXP, SEXP hrf_spanSEXP, SEXP precisionSEXP, SEXP methodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type grid(gridSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type onsets(onsetsSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type durations(durationsSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type amplitudes(amplitudesSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type hrf_matrix(hrf_matrixSEXP);
-    Rcpp::traits::input_parameter< double >::type hrf_span(hrf_spanSEXP);
-    Rcpp::traits::input_parameter< double >::type precision(precisionSEXP);
-    Rcpp::traits::input_parameter< std::string >::type method(methodSEXP);
-    rcpp_result_gen = Rcpp::wrap(evaluate_regressor_cpp(grid, onsets, durations, amplitudes, hrf_matrix, hrf_span, precision, method));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_fmrireg_ar_whiten_inplace", (DL_FUNC) &_fmrireg_ar_whiten_inplace, 4},
+    {"_fmrireg_ar_whiten_inplace", (DL_FUNC) &_fmrireg_ar_whiten_inplace, 5},
+    {"_fmrireg_ar_whiten_void", (DL_FUNC) &_fmrireg_ar_whiten_void, 5},
     {"_fmrireg_instantaneous_correlation_rcpp", (DL_FUNC) &_fmrireg_instantaneous_correlation_rcpp, 7},
-    {"_fmrireg_compute_residuals_cpp", (DL_FUNC) &_fmrireg_compute_residuals_cpp, 3},
-    {"_fmrireg_lss_compute_cpp", (DL_FUNC) &_fmrireg_lss_compute_cpp, 2},
-    {"_fmrireg_mixed_solve_internal", (DL_FUNC) &_fmrireg_mixed_solve_internal, 8},
-    {"_fmrireg_neural_input_rcpp", (DL_FUNC) &_fmrireg_neural_input_rcpp, 4},
-    {"_fmrireg_evaluate_regressor_convolution", (DL_FUNC) &_fmrireg_evaluate_regressor_convolution, 9},
-    {"_fmrireg_evaluate_regressor_fast", (DL_FUNC) &_fmrireg_evaluate_regressor_fast, 7},
-    {"_fmrireg_evaluate_regressor_cpp", (DL_FUNC) &_fmrireg_evaluate_regressor_cpp, 8},
     {NULL, NULL, 0}
 };
 

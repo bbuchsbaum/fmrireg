@@ -1,3 +1,4 @@
+#define ARMA_DONT_PRINT_FAST_MATH_WARNING
 #include <RcppArmadillo.h>
 #ifdef _OPENMP
 #include <omp.h>
@@ -7,35 +8,47 @@
 using namespace Rcpp;
 using namespace arma;
 
-// internal helper operating on Armadillo views of R matrices
-static void ar_whiten_matrix(arma::mat& M, const arma::vec& phi, bool exact_first_ar1) {
-    const arma::uword n_time = M.n_rows;
-    const arma::uword n_cols = M.n_cols;
-    const arma::uword p = phi.n_elem;
-
-    #pragma omp parallel for
-    for (arma::uword col = 0; col < n_cols; ++col) {
+// Templated helper to eliminate code duplication between Y and X processing
+template<typename Matrix>
+inline void whiten_matrix_impl(Matrix& M, const arma::vec& phi, 
+                               bool exact_first_ar1, bool parallel) {
+    const int n_time = M.nrow();
+    const int n_cols = M.ncol();
+    const int p = phi.n_elem;
+    
+    if (p == 0) return;  // No AR terms, nothing to do
+    
+    const double scale = (exact_first_ar1 && p == 1) ? 
+                         std::sqrt(1.0 - phi[0] * phi[0]) : 1.0;
+    
+    #pragma omp parallel for if(parallel) schedule(static)
+    for (int col = 0; col < n_cols; ++col) {
+        // Use pointer arithmetic for better performance
+        double* colPtr = &M(0, col);
         std::vector<double> prev(p, 0.0);
-        double scale = 1.0;
-        if (exact_first_ar1 && p == 1) {
-            scale = std::sqrt(1.0 - phi[0] * phi[0]);
-        }
-        for (arma::uword t = 0; t < n_time; ++t) {
-            double orig = M(t, col);
+        
+        for (int t = 0; t < n_time; ++t) {
+            double orig = colPtr[t];
             double val = orig;
-            for (arma::uword k = 0; k < p; ++k) {
+            
+            // Apply AR filter: val = orig - sum(phi[k] * prev[k])
+            for (int k = 0; k < p; ++k) {
                 val -= phi[k] * prev[k];
             }
+            
+            // Apply exact first-sample scaling for AR(1) if requested
             if (t == 0 && exact_first_ar1 && p == 1) {
                 val *= scale;
             }
-            if (p > 0) {
-                for (int k = p - 1; k > 0; --k) {
-                    prev[k] = prev[k - 1];
-                }
-                prev[0] = orig;
+            
+            // Update the lag buffer: shift right and insert current original value
+            for (int k = p - 1; k > 0; --k) {
+                prev[k] = prev[k - 1];
             }
-            M(t, col) = val;
+            prev[0] = orig;
+            
+            // Store the whitened value
+            colPtr[t] = val;
         }
     }
 }
@@ -43,29 +56,62 @@ static void ar_whiten_matrix(arma::mat& M, const arma::vec& phi, bool exact_firs
 //' AR(p) whitening of data and design matrices
 //'
 //' Applies a causal AR filter defined by `phi_coeffs` to both `Y` and `X`
-//' matrices in place.
+//' matrices in place. The filter equation is:
+//' 
+//' v_t = y_t - sum(phi_k * y_{t-k}, k=1 to p)
 //'
 //' @param Y Numeric matrix of data (time x voxels)
-//' @param X Numeric matrix of design (time x predictors)
+//' @param X Numeric matrix of design (time x predictors)  
 //' @param phi_coeffs Numeric vector of AR coefficients (length p)
-//' @param exact_first_ar1 Logical, apply exact scaling of first sample for AR(1)
+//' @param exact_first_ar1 Logical, apply exact variance-normalizing scaling 
+//'   of first sample for AR(1). For p > 1, no scaling is applied.
+//' @param parallel Logical, enable OpenMP parallelization across columns
 //'
+//' @details 
+//' The function assumes valid (stationary) AR coefficients are provided.
+//' No checks for stationarity are performed. 
+//' 
+//' For exact_first_ar1 = TRUE and p = 1, the first residual is multiplied 
+//' by sqrt(1 - phi^2) for proper variance normalization. This scaling is 
+//' only applied for AR(1) models.
+//'
+//' @return List with components 'Y' and 'X' containing the whitened matrices
 //' @keywords internal
 // [[Rcpp::export]]
 Rcpp::List ar_whiten_inplace(Rcpp::NumericMatrix Y, Rcpp::NumericMatrix X,
-                       const arma::vec& phi_coeffs, bool exact_first_ar1 = false) {
-
-    // Create Armadillo views on the underlying R matrices without copying
-    arma::mat Ymat(Y.begin(), Y.nrow(), Y.ncol(), false);
-    arma::mat Xmat(X.begin(), X.nrow(), X.ncol(), false);
-
-    // Use the OpenMP-enabled helper to whiten both matrices column-wise
-    ar_whiten_matrix(Ymat, phi_coeffs, exact_first_ar1);
-    ar_whiten_matrix(Xmat, phi_coeffs, exact_first_ar1);
-
-    // Return both matrices as a list
+                             const arma::vec& phi_coeffs, 
+                             bool exact_first_ar1 = false,
+                             bool parallel = true) {
+    
+    // Apply whitening to both matrices using the templated helper
+    whiten_matrix_impl(Y, phi_coeffs, exact_first_ar1, parallel);
+    whiten_matrix_impl(X, phi_coeffs, exact_first_ar1, parallel);
+    
+    // Return both matrices as a list for API compatibility
     return Rcpp::List::create(
         Rcpp::Named("Y") = Y,
         Rcpp::Named("X") = X
     );
+}
+
+//' AR(p) whitening with void return (no-copy version)
+//'
+//' More efficient version that modifies matrices in place without returning
+//' copies. Use when you don't need the return values.
+//'
+//' @param Y Numeric matrix of data (time x voxels) - modified in place
+//' @param X Numeric matrix of design (time x predictors) - modified in place
+//' @param phi_coeffs Numeric vector of AR coefficients (length p)
+//' @param exact_first_ar1 Logical, apply exact scaling of first sample for AR(1)
+//' @param parallel Logical, enable OpenMP parallelization across columns
+//'
+//' @keywords internal
+// [[Rcpp::export]]
+void ar_whiten_void(Rcpp::NumericMatrix Y, Rcpp::NumericMatrix X,
+                    const arma::vec& phi_coeffs, 
+                    bool exact_first_ar1 = false,
+                    bool parallel = true) {
+    
+    whiten_matrix_impl(Y, phi_coeffs, exact_first_ar1, parallel);
+    whiten_matrix_impl(X, phi_coeffs, exact_first_ar1, parallel);
 }

@@ -20,6 +20,10 @@ A unit_contrast_spec object containing the contrast that sums to 1.
 Construct a contrast that sums to 1 and is used to define contrasts against the baseline.
 }
 \examples{
+# Test main effect of Face against baseline
 con <- unit_contrast(~ Face, name="Main_face")
+
+# Test main effect within specific blocks
+con2 <- unit_contrast(~ Face, name="Face_early", where = ~ block <= 3)
 
 }

@@ -11,6 +11,7 @@ fmrireg provides functions for generating experimental design matrices appropria
 \seealso{
 Useful links:
 \itemize{
+  \item \url{https://bbuchsbaum.github.io/fmrireg/}
   \item \url{https://github.com/bbuchsbaum/fmrireg}
   \item Report bugs at \url{https://github.com/bbuchsbaum/fmrireg/issues}
 }

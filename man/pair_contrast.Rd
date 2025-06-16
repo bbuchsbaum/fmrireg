@@ -39,6 +39,11 @@ pair_contrast(~ category == "face", ~ category == "scene",
              name = "face_vs_scene_block1",
              where = ~ block == 1)
 
+# Complex logical expressions
+pair_contrast(~ stimulus == "face" & emotion == "happy",
+             ~ stimulus == "face" & emotion == "sad",
+             name = "happy_vs_sad_faces")
+
 }
 \seealso{
 \code{\link{pairwise_contrasts}} for all pairwise comparisons,

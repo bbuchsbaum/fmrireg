@@ -4,47 +4,48 @@
 #' AR(p) whitening of data and design matrices
 #'
 #' Applies a causal AR filter defined by `phi_coeffs` to both `Y` and `X`
-#' matrices in place.
+#' matrices in place. The filter equation is:
+#' 
+#' v_t = y_t - sum(phi_k * y_{t-k}, k=1 to p)
 #'
 #' @param Y Numeric matrix of data (time x voxels)
-#' @param X Numeric matrix of design (time x predictors)
+#' @param X Numeric matrix of design (time x predictors)  
+#' @param phi_coeffs Numeric vector of AR coefficients (length p)
+#' @param exact_first_ar1 Logical, apply exact variance-normalizing scaling 
+#'   of first sample for AR(1). For p > 1, no scaling is applied.
+#' @param parallel Logical, enable OpenMP parallelization across columns
+#'
+#' @details 
+#' The function assumes valid (stationary) AR coefficients are provided.
+#' No checks for stationarity are performed. 
+#' 
+#' For exact_first_ar1 = TRUE and p = 1, the first residual is multiplied 
+#' by sqrt(1 - phi^2) for proper variance normalization. This scaling is 
+#' only applied for AR(1) models.
+#'
+#' @return List with components 'Y' and 'X' containing the whitened matrices
+#' @keywords internal
+ar_whiten_inplace <- function(Y, X, phi_coeffs, exact_first_ar1 = FALSE, parallel = TRUE) {
+    .Call('_fmrireg_ar_whiten_inplace', PACKAGE = 'fmrireg', Y, X, phi_coeffs, exact_first_ar1, parallel)
+}
+
+#' AR(p) whitening with void return (no-copy version)
+#'
+#' More efficient version that modifies matrices in place without returning
+#' copies. Use when you don't need the return values.
+#'
+#' @param Y Numeric matrix of data (time x voxels) - modified in place
+#' @param X Numeric matrix of design (time x predictors) - modified in place
 #' @param phi_coeffs Numeric vector of AR coefficients (length p)
 #' @param exact_first_ar1 Logical, apply exact scaling of first sample for AR(1)
+#' @param parallel Logical, enable OpenMP parallelization across columns
 #'
 #' @keywords internal
-ar_whiten_inplace <- function(Y, X, phi_coeffs, exact_first_ar1 = FALSE) {
-    .Call('_fmrireg_ar_whiten_inplace', PACKAGE = 'fmrireg', Y, X, phi_coeffs, exact_first_ar1)
+ar_whiten_void <- function(Y, X, phi_coeffs, exact_first_ar1 = FALSE, parallel = TRUE) {
+    invisible(.Call('_fmrireg_ar_whiten_void', PACKAGE = 'fmrireg', Y, X, phi_coeffs, exact_first_ar1, parallel))
 }
 
 instantaneous_correlation_rcpp <- function(x, y, eta = NA_real_, tau_half = NA_real_, offset = 0L, warmup = -1L, fill = "zero") {
     .Call('_fmrireg_instantaneous_correlation_rcpp', PACKAGE = 'fmrireg', x, y, eta, tau_half, offset, warmup, fill)
-}
-
-compute_residuals_cpp <- function(X_base_fixed, data_matrix, dmat_ran) {
-    .Call('_fmrireg_compute_residuals_cpp', PACKAGE = 'fmrireg', X_base_fixed, data_matrix, dmat_ran)
-}
-
-lss_compute_cpp <- function(Q_dmat_ran, residual_data) {
-    .Call('_fmrireg_lss_compute_cpp', PACKAGE = 'fmrireg', Q_dmat_ran, residual_data)
-}
-
-mixed_solve_internal <- function(y_in, Z_in = NULL, K_in = NULL, X_in = NULL, method = "REML", bounds = as.numeric( c(1e-9, 1e9)), SE = FALSE, return_Hinv = FALSE) {
-    .Call('_fmrireg_mixed_solve_internal', PACKAGE = 'fmrireg', y_in, Z_in, K_in, X_in, method, bounds, SE, return_Hinv)
-}
-
-neural_input_rcpp <- function(x, from, to, resolution) {
-    .Call('_fmrireg_neural_input_rcpp', PACKAGE = 'fmrireg', x, from, to, resolution)
-}
-
-evaluate_regressor_convolution <- function(grid, onsets, durations, amplitudes, hrf_values, hrf_span, start, end, precision) {
-    .Call('_fmrireg_evaluate_regressor_convolution', PACKAGE = 'fmrireg', grid, onsets, durations, amplitudes, hrf_values, hrf_span, start, end, precision)
-}
-
-evaluate_regressor_fast <- function(grid, onsets, durations, amplitudes, hrfFine, dt, span) {
-    .Call('_fmrireg_evaluate_regressor_fast', PACKAGE = 'fmrireg', grid, onsets, durations, amplitudes, hrfFine, dt, span)
-}
-
-evaluate_regressor_cpp <- function(grid, onsets, durations, amplitudes, hrf_matrix, hrf_span, precision, method = "fft") {
-    .Call('_fmrireg_evaluate_regressor_cpp', PACKAGE = 'fmrireg', grid, onsets, durations, amplitudes, hrf_matrix, hrf_span, precision, method)
 }
 
