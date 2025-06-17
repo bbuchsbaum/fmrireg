@@ -63,6 +63,19 @@ test_that("can construct a baseline_model with 2 blocks and nuisance_list", {
   expect_true(setequal(names(terms(bmodel)), c("block", "drift", "nuisance")))
 })
 
+test_that("baseline_model accepts data.frame nuisance_list", {
+  sframe <- fmrihrf::sampling_frame(blocklens = 100, TR = 2)
+  nlist <- list(
+    tibble::tibble(a = rnorm(100), b = rnorm(100))
+  )
+
+  bmodel <- baseline_model(basis = "bs", degree = 5,
+                           sframe = sframe, nuisance_list = nlist)
+
+  expect_equal(ncol(design_matrix(bmodel)), 9)
+  expect_true("nuisance" %in% names(terms(bmodel)))
+})
+
 test_that("can construct a baseline_model with basis='constant'", {
   sframe <- fmrihrf::sampling_frame(blocklens=c(100,100), TR=2)
   # Intercept option should be ignored/overridden when basis is constant
