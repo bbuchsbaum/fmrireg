@@ -617,14 +617,19 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL) {
 #'
 #' @export
 contrast_weights.unit_contrast_spec <- function(x, term,...) {
-  # Get cells (categorical only)
+  # All possible condition names (pre-basis expansion)
+  all_condnames <- try(conditions(term, drop.empty = FALSE, expand_basis = FALSE), silent = TRUE)
+  if (inherits(all_condnames, "try-error") || length(all_condnames) == 0) {
+      warning(paste("Contrast '", x$name, "': Failed to get condition names for term '", term$varname, "'."), call. = FALSE)
+      all_condnames <- character(0)
+  }
+
+  weights_out <- matrix(0, nrow = length(all_condnames), ncol = 1)
+  rownames(weights_out) <- all_condnames
+  colnames(weights_out) <- x$name
+
   term_cells <- cells(term)
-  if (nrow(term_cells) == 0) {
-       warning(paste("Contrast '", x$name, "': Term '", term$varname, "' has no categorical cells."), call. = FALSE)
-       weights_out <- matrix(numeric(0), nrow = 0, ncol = 1)
-       colnames(weights_out) <- x$name
-       cell_names_out <- character(0)
-  } else {
+  if (nrow(term_cells) > 0 && length(all_condnames) > 0) {
       # Apply 'where' clause
       keep <- if (!is.null(x$where)) {
         tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
@@ -634,45 +639,24 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
       } else {
         rep(TRUE, nrow(term_cells))
       }
-      
+
       relevant_cells <- term_cells[keep, , drop = FALSE]
-      
+
       if (nrow(relevant_cells) == 0) {
           warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
-          weights_out <- matrix(numeric(0), nrow = 0, ncol = 1)
-          colnames(weights_out) <- x$name
-          cell_names_out <- character(0)
       } else {
-          # For unit_contrast, the formula A usually defines the set of cells to be averaged.
-          # All cells within relevant_cells that are targeted by the formula should get a weight.
-          # If x$A is ~MyFactor, all levels of MyFactor in relevant_cells are included.
-          # Thus, keepA_rel should be TRUE for all rows in relevant_cells. 
-          # If x$A is a logical expression, eval_tidy would handle it, but for unit_contrast 
-          # the simple case implies averaging all specified cells.
-          
-          # The original eval_tidy might not be appropriate if x$A is just a variable name.
-          # keepA_rel <- tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = relevant_cells), error = function(e) {
-          #     warning(paste("Contrast '", x$name, "': Error evaluating formula A: ", e$message), call. = FALSE)
-          #     rep(FALSE, nrow(relevant_cells))
-          # })
-          
-          # For unit_contrast, we average all cells identified by the scope. 
-          # The formula A in unit_contrast (e.g. ~Face) implicitly means all levels of Face.
-          # Therefore, all `relevant_cells` (after `where` clause) should be included in the averaging.
-          keepA_rel <- rep(TRUE, nrow(relevant_cells))
-          
-          # Create unique names/identifiers for the relevant cells
-          cell_names_rel <- apply(relevant_cells, 1, paste, collapse = "_")
-          
-          # Calculate weights - average of cells identified by formula A
-          # Use the weight calculation helper
-          weights_rel_named <- .calculate_mask_weights(names = cell_names_rel, A_mask = keepA_rel, B_mask = NULL)
-          
-          # Ensure output is matrix
-          weights_out <- matrix(weights_rel_named, ncol = 1)
-          rownames(weights_out) <- names(weights_rel_named)
-          colnames(weights_out) <- x$name
-          cell_names_out <- names(weights_rel_named)
+          # Map relevant cells to sanitized condition names
+          term_vars <- names(relevant_cells)
+          token_df <- Map(function(col, nm) level_token(nm, col), relevant_cells, term_vars)
+          token_df <- as.data.frame(token_df, stringsAsFactors = FALSE)
+          target_cond_names <- apply(token_df, 1, make_cond_tag)
+          idx <- match(target_cond_names, all_condnames)
+
+          mask_A_full <- logical(length(all_condnames))
+          mask_A_full[idx[!is.na(idx)]] <- TRUE
+
+          weights_named <- .calculate_mask_weights(all_condnames, mask_A_full)
+          weights_out[,1] <- weights_named
       }
   }
 
@@ -680,8 +664,8 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
   ret <- list(
     term=term,
     name=x$name,
-    weights=weights_out, # Weights relative to relevant cells
-    condnames=cell_names_out, # Names of relevant cells
+    weights=weights_out,
+    condnames=all_condnames,
     contrast_spec=x
   )
   
@@ -874,15 +858,18 @@ contrast_weights.interaction_contrast_spec <- function(x, term,...) {
 #'
 #' @export
 contrast_weights.poly_contrast_spec <- function(x, term,...) {
-  # Get cells (categorical only)
+  all_condnames <- try(conditions(term, drop.empty = FALSE, expand_basis = FALSE), silent = TRUE)
+  if (inherits(all_condnames, "try-error") || length(all_condnames) == 0) {
+      warning(paste("Contrast '", x$name, "': Failed to get condition names for term '", term$varname, "'."), call. = FALSE)
+      all_condnames <- character(0)
+  }
+
+  weights_out <- matrix(0, nrow = length(all_condnames), ncol = x$degree)
+  rownames(weights_out) <- all_condnames
+  colnames(weights_out) <- paste(x$name, 1:x$degree, sep="_")
+
   term_cells <- cells(term)
-  if (nrow(term_cells) == 0) {
-       warning(paste("Contrast '", x$name, "': Term '", term$varname, "' has no categorical cells for poly contrast."), call. = FALSE)
-       weights_out <- matrix(numeric(0), nrow = 0, ncol = x$degree)
-       colnames(weights_out) <- paste(x$name, 1:x$degree, sep="_")
-       cell_names_out <- character(0)
-  } else {
-      # Apply 'where' clause
+  if (nrow(term_cells) > 0 && length(all_condnames) > 0) {
       keep <- if (!is.null(x$where)) {
         tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
             warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
@@ -891,21 +878,16 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
       } else {
         rep(TRUE, nrow(term_cells))
       }
-      
+
       relevant_cells <- term_cells[keep, , drop = FALSE]
 
       if (nrow(relevant_cells) == 0) {
           warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
-          weights_out <- matrix(numeric(0), nrow = 0, ncol = x$degree)
-          colnames(weights_out) <- paste(x$name, 1:x$degree, sep="_")
-          cell_names_out <- character(0)
       } else {
-          # Evaluate the formula A on relevant cells to get the factor levels
           vals_fac <- tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = relevant_cells), error = function(e) {
               stop(paste("Contrast '", x$name, "': Error evaluating formula A: ", e$message), call.=FALSE)
           })
-          
-          # Convert factor levels to numeric values (using value_map or direct coercion)
+
           vals_num <- if (is.null(x$value_map)) {
               tryCatch(as.numeric(as.character(vals_fac)), warning = function(w){
                   stop(paste("Contrast '", x$name, "': Cannot coerce factor levels from formula A to numeric for poly contrast. Use value_map? Error: ", w$message), call.=FALSE)
@@ -917,34 +899,33 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
               }
               unlist(mapped_vals)
           }
-          
-          # Check for sufficient unique points for the polynomial degree
+
           if (length(unique(vals_num)) <= x$degree) {
-               stop(paste("Contrast '", x$name, "': Polynomial degree (", x$degree, 
+               stop(paste("Contrast '", x$name, "': Polynomial degree (", x$degree,
                            ") is too high for the number of unique points (", length(unique(vals_num)), ") in relevant cells."), call.=FALSE)
           }
 
-          # Calculate orthogonal polynomial weights relative to relevant cells
           pvals_mat <- tryCatch(stats::poly(vals_num, degree = x$degree), error = function(e){
                stop(paste("Contrast '", x$name, "': Error calculating polynomial weights: ", e$message), call.=FALSE)
           })
-          
-          # Create unique names/identifiers for the relevant cells 
-          cell_names_rel <- apply(relevant_cells, 1, paste, collapse = "_")
-          rownames(pvals_mat) <- cell_names_rel
-          colnames(pvals_mat) <- paste(x$name, 1:x$degree, sep="_")
-          
-          weights_out <- pvals_mat
-          cell_names_out <- cell_names_rel
+
+          term_vars <- names(relevant_cells)
+          token_df <- Map(function(col, nm) level_token(nm, col), relevant_cells, term_vars)
+          token_df <- as.data.frame(token_df, stringsAsFactors = FALSE)
+          target_cond_names <- apply(token_df, 1, make_cond_tag)
+          idx <- match(target_cond_names, all_condnames)
+          valid_idx <- which(!is.na(idx))
+          if (length(valid_idx) > 0) {
+              weights_out[idx[valid_idx], ] <- pvals_mat[valid_idx, , drop = FALSE]
+          }
       }
   }
-  
-  # Return structure focused on cell-based weights
+
   ret <- list(
     term = term,
     name = x$name,
-    weights = weights_out, # Weights matrix relative to relevant cells
-    condnames = cell_names_out, # Names of relevant cells
+    weights = weights_out,
+    condnames = all_condnames,
     contrast_spec = x
   )
   
