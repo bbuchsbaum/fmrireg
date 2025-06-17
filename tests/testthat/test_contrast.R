@@ -339,3 +339,40 @@ test_that("can form formula contrast with two factor terms and one continuous co
 # })
 # 
 
+
+test_that("pair_contrast respects where clause", {
+  simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"))
+  simple_des$onset <- seq(1, 50, length.out=nrow(simple_des))
+  simple_des$run <- 1
+  sframe <- fmrihrf::sampling_frame(blocklens=50, TR=2)
+  espec <- event_model(onset ~ hrf(category, attention), data=simple_des, block=~run, sampling_frame=sframe)
+
+  con <- pair_contrast(~ category == "face", ~ category == "scene", name="face_vs_scene_attend", where = ~ attention == "attend")
+  cw <- contrast_weights(con, terms(espec)[[1]])
+  wvec <- as.vector(cw$weights)
+  sn <- shortnames(terms(espec)[[1]])
+  face_att <- which(sn == "face:attend")
+  scene_att <- which(sn == "scene:attend")
+  face_ign <- which(sn == "face:ignored")
+  scene_ign <- which(sn == "scene:ignored")
+
+  expect_equal(wvec[face_att], 1)
+  expect_equal(wvec[scene_att], -1)
+  expect_equal(wvec[face_ign], 0)
+  expect_equal(wvec[scene_ign], 0)
+})
+
+test_that("unit_contrast allows where subsetting", {
+  simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"))
+  simple_des$onset <- seq(1, 50, length.out=nrow(simple_des))
+  simple_des$run <- 1
+  sframe <- fmrihrf::sampling_frame(blocklens=50, TR=2)
+  espec <- event_model(onset ~ hrf(category, attention), data=simple_des, block=~run, sampling_frame=sframe)
+
+  con <- unit_contrast(~ category, name="face_only_attend", where = ~ attention == "attend" & category == "face")
+  cw <- contrast_weights(con, terms(espec)[[1]])
+  expect_equal(nrow(cw$weights), 1)
+  expect_equal(as.vector(cw$weights)[1], 1)
+  expect_true(grepl("face:attend", rownames(cw$weights)))
+})
+
