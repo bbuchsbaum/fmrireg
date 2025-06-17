@@ -370,9 +370,32 @@ test_that("unit_contrast allows where subsetting", {
   espec <- event_model(onset ~ hrf(category, attention), data=simple_des, block=~run, sampling_frame=sframe)
 
   con <- unit_contrast(~ category, name="face_only_attend", where = ~ attention == "attend" & category == "face")
-  cw <- contrast_weights(con, terms(espec)[[1]])
-  expect_equal(nrow(cw$weights), 1)
-  expect_equal(as.vector(cw$weights)[1], 1)
-  expect_true(grepl("face:attend", rownames(cw$weights)))
+  term1 <- terms(espec)[[1]]
+  cw <- contrast_weights(con, term1)
+  conds <- conditions(term1, drop.empty = FALSE, expand_basis = FALSE)
+  expect_equal(rownames(cw$weights), conds)
+  wvec <- as.vector(cw$weights)
+  idx_face_att <- which(conds == "category.face_attention.attend")
+  expect_equal(wvec[idx_face_att], 1)
+  expect_true(all(wvec[-idx_face_att] == 0))
+})
+
+test_that("poly_contrast respects where clause", {
+  des <- expand.grid(repnum=factor(1:4), grp=c("A","B"))
+  des$onset <- seq_len(nrow(des))
+  des$run <- 1
+  sframe <- fmrihrf::sampling_frame(blocklens=50, TR=2)
+  espec <- event_model(onset ~ hrf(repnum, grp), data=des, block=~run, sampling_frame=sframe)
+
+  con <- poly_contrast(~ repnum, name="polyrep", degree=1, where=~ grp == "A")
+  term1 <- terms(espec)[[1]]
+  cw <- contrast_weights(con, term1)
+  conds <- conditions(term1, drop.empty=FALSE, expand_basis=FALSE)
+  expect_equal(rownames(cw$weights), conds)
+  poly_vals <- as.vector(poly(1:4, degree=1))
+  idx_A <- grep("grp.A$", conds)
+  idx_B <- grep("grp.B$", conds)
+  expect_equal(as.vector(cw$weights[idx_A,1]), poly_vals)
+  expect_true(all(cw$weights[idx_B,1] == 0))
 })
 
