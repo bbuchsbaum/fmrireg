@@ -199,6 +199,39 @@ term_names.event_model <- function(x) {
   unlist(lapply(xt, function(term) term$varname))
 }
 
+#' Retrieve contrast definitions for an event model
+#'
+#' This function collects the contrast specifications defined for each term
+#' within the model and returns them as a named list.
+#'
+#' @param x An `event_model` object.
+#' @param ... Unused.
+#' @return A named list of contrast specifications.
+#' @export
+contrasts.event_model <- function(x, ...) {
+  term_list <- terms(x)
+  ret <- lapply(seq_along(term_list), function(i) {
+    contrasts(term_list[[i]])
+  })
+  names(ret) <- names(term_list)
+  ret <- ret[!sapply(ret, is.null)]
+  if (length(ret) == 0) return(list())
+  flattened <- unlist(ret, recursive = FALSE)
+  if (length(flattened) > 0) {
+    names(flattened) <- paste0(
+      rep(names(ret), sapply(ret, length)),
+      ".",
+      unlist(sapply(ret, names))
+    )
+  }
+  flattened
+}
+
+#' @export
+contrasts.fmri_model <- function(x, ...) {
+  contrasts(x$event_model)
+}
+
 #' @export
 #' @rdname contrast_weights
 #' @details

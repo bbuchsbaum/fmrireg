@@ -845,6 +845,21 @@ Fcontrasts.event_term <- function(x, max_inter = 4L, ...) {
   final_contrasts_named
 }
 
+#' Retrieve contrast definitions for an event term
+#'
+#' This accessor returns the list of contrast specifications attached to the
+#' term's originating hrfspec, if any.
+#'
+#' @param x An `event_term` object.
+#' @param ... Unused.
+#' @return A list of contrast specifications or `NULL` when none are defined.
+#' @export
+contrasts.event_term <- function(x, ...) {
+  hrfspec <- attr(x, "hrfspec")
+  if (is.null(hrfspec)) return(NULL)
+  hrfspec$contrasts
+}
+
 ## ============================================================================
 ## Section 12: Design Matrix Construction
 ## ============================================================================
