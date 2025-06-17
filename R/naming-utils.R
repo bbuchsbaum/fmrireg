@@ -42,6 +42,23 @@ sanitize <- function(x, allow_dot = TRUE) {
   sanitized
 }
 
+#' Sanitize Factor Level
+#'
+#' Similar to `sanitize()` but if the original level begins with a digit,
+#' remove the leading `"X"` that `make.names` would prepend.
+#'
+#' @param lev A factor level string.
+#' @return Sanitized level string.
+#' @keywords internal
+#' @noRd
+sanitize_level <- function(lev) {
+  sanitized <- sanitize(lev, allow_dot = TRUE)
+  if (grepl("^[0-9]", lev) && startsWith(sanitized, "X")) {
+    sanitized <- sub("^X", "", sanitized)
+  }
+  sanitized
+}
+
 #' Create Basis Function Suffix
 #'
 #' Generates the `_b##` suffix for HRF basis functions.
@@ -167,9 +184,9 @@ make_term_tag <- function(hrfspec, existing_tags = character()) {
 #' @keywords internal
 #' @noRd
 level_token <- function(var, lev) {
-  # Sanitize both parts, allowing dots
+  # Sanitize variable and level parts
   s_var <- sanitize(var, allow_dot = TRUE)
-  s_lev <- sanitize(lev, allow_dot = TRUE)
+  s_lev <- sanitize_level(lev)
   paste0(s_var, ".", s_lev)
 }
 
