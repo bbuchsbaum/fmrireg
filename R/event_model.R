@@ -199,6 +199,16 @@ term_names.event_model <- function(x) {
   unlist(lapply(xt, function(term) term$varname))
 }
 
+# internal helper to normalise contrast row names for matching
+.norm_match_name <- function(nm, prefix) {
+  nm2 <- gsub("[.:]", "_", nm)
+  nm2 <- sub(paste0("^", prefix, "_"), "", nm2)
+  nm2 <- gsub("^(?:[A-Za-z0-9]+_)+", "", nm2, perl = TRUE)
+  nm2 <- gsub("_+", "_", nm2)
+  nm2 <- gsub("(^|_)X(\d+)", "\\1\\2", nm2, perl = TRUE)
+  nm2
+}
+
 #' @export
 #' @rdname contrast_weights
 #' @details
@@ -225,41 +235,48 @@ contrast_weights.event_model <- function(x, ...) {
       if (!inherits(cset, "contrast_set")) class(cset) <- c("contrast_set", class(cset))
       cwlist_local <- contrast_weights(cset, terms(x)[[i]])
       
+
       # Map local weights to full design matrix
-        ret_mapped <- lapply(cwlist_local, function(cw) {
-            if(is.null(cw)) return(NULL) # Skip if contrast calculation failed
+      ret_mapped <- lapply(cwlist_local, function(cw) {
+          if(is.null(cw)) return(NULL) # Skip if contrast calculation failed
 
-            term_cols <- colnames(x$design_matrix)[term_indices_vec]
-            rn <- rownames(cw$weights)
+          term_cols <- colnames(x$design_matrix)[term_indices_vec]
+          rn <- rownames(cw$weights)
 
-            out <- matrix(0, ncond, ncol(cw$weights))
-            colnames(out) <- colnames(cw$weights) # Preserve contrast names if multiple columns
-            rownames(out) <- colnames(x$design_matrix)
+          out <- matrix(0, ncond, ncol(cw$weights))
+          colnames(out) <- colnames(cw$weights) # Preserve contrast names if multiple columns
+          rownames(out) <- colnames(x$design_matrix)
 
-            if (!is.null(rn)) {
-                m <- match(rn, term_cols)
-                if (anyNA(m)) {
-                    warning(sprintf("Contrast '%s' for term '%s' has unmatched row names: %s",
-                                     cw$name, names(terms(x))[i],
-                                     paste(rn[is.na(m)], collapse=", ")), call.=FALSE)
-                }
-                keep <- !is.na(m)
-                if (any(keep)) {
-                    out[term_indices_vec[m[keep]], ] <- cw$weights[keep, , drop=FALSE]
-                }
-            } else {
-                if (nrow(cw$weights) != length(term_indices_vec)){
-                    warning(sprintf("Contrast '%s' for term '%s' has %d rows, but term has %d columns in design matrix. Skipping.",
-                                   cw$name, names(terms(x))[i], nrow(cw$weights), length(term_indices_vec)), call.=FALSE)
-                    return(NULL)
-                }
-                out[term_indices_vec, ] <- cw$weights
-            }
+          if (!is.null(rn)) {
+              m <- match(rn, term_cols)
+              if (anyNA(m)) {
+                  tc_norm <- .norm_match_name(term_cols, names(terms(x))[i])
+                  rn_norm <- .norm_match_name(rn, names(terms(x))[i])
+                  m_alt <- match(rn_norm, tc_norm)
+                  m[is.na(m)] <- m_alt[is.na(m)]
+              }
+              if (anyNA(m)) {
+                  warning(sprintf("Contrast '%s' for term '%s' has unmatched row names: %s",
+                                   cw$name, names(terms(x))[i],
+                                   paste(rn[is.na(m)], collapse=", ")), call.=FALSE)
+              }
+              keep <- !is.na(m)
+              if (any(keep)) {
+                  out[term_indices_vec[m[keep]], ] <- cw$weights[keep, , drop=FALSE]
+              }
+          } else {
+              if (nrow(cw$weights) != length(term_indices_vec)){
+                  warning(sprintf("Contrast '%s' for term '%s' has %d rows, but term has %d columns in design matrix. Skipping.",
+                                 cw$name, names(terms(x))[i], nrow(cw$weights), length(term_indices_vec)), call.=FALSE)
+                  return(NULL)
+              }
+              out[term_indices_vec, ] <- cw$weights
+          }
 
-            # Add attributes/update structure
-            cw$offset_weights <- out
-            cw$condnames <- colnames(x$design_matrix) # Update condnames to full set
-            attr(cw, "term_indices") <- as.vector(term_indices_vec)
+          # Add attributes/update structure
+          cw$offset_weights <- out
+          cw$condnames <- colnames(x$design_matrix) # Update condnames to full set
+          attr(cw, "term_indices") <- as.vector(term_indices_vec)
           cw
       })
       
@@ -330,6 +347,12 @@ Fcontrasts.event_model <- function(x, ...) {
 
             if (!is.null(rn)) {
                 m <- match(rn, term_cols)
+                if (anyNA(m)) {
+                    tc_norm <- .norm_match_name(term_cols, names(terms(x))[i])
+                    rn_norm <- .norm_match_name(rn, names(terms(x))[i])
+                    m_alt <- match(rn_norm, tc_norm)
+                    m[is.na(m)] <- m_alt[is.na(m)]
+                }
                 if (anyNA(m)) {
                     warning(sprintf("F-contrast '%s' for term '%s' has unmatched row names: %s",
                                      con_name, names(terms(x))[i],

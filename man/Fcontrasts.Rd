@@ -68,8 +68,9 @@ Create F-contrasts to test for overall effects of model terms. F-contrasts are u
 \item{nonlinear}{Test for nonlinear effects of continuous predictors}
 \item{overall}{Evaluate overall significance of model terms}
 }
-Row names on the contrast matrices can be matched to specific term columns,
-allowing tests on subsets of levels.
+Row names on the contrast matrices are normalised in the same way as for
+\code{contrast_weights}, then matched to the term columns. This permits
+tests on subsets of levels using abbreviated names.
 }
 \examples{
 # Create a sampling frame with multiple runs
