@@ -53,9 +53,8 @@ sanitize <- function(x, allow_dot = TRUE) {
 #' @noRd
 sanitize_level <- function(lev) {
   sanitized <- sanitize(lev, allow_dot = TRUE)
-  if (grepl("^[0-9]", lev) && startsWith(sanitized, "X")) {
-    sanitized <- sub("^X", "", sanitized)
-  }
+  needs_strip <- grepl("^[0-9]", lev) & startsWith(sanitized, "X")
+  sanitized[needs_strip] <- sub("^X", "", sanitized[needs_strip])
   sanitized
 }
 
