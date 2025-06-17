@@ -54,6 +54,7 @@ test_that("level_token creates Var.Level format", {
   expect_equal(fmrireg:::level_token("cond name", "Level 1"), "cond.name.Level.1")
   expect_equal(fmrireg:::level_token("Input", "20"), "Input.20")
   expect_equal(fmrireg:::level_token("Input", c("1", "2")), c("Input.1", "Input.2"))
+
 })
 
 test_that("continuous_token sanitizes", {
