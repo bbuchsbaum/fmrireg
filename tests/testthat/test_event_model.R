@@ -168,6 +168,32 @@ test_that("contrast_weights.event_model works with new attributes", {
   expect_equal(as.vector(cw$offset_weights[term_indices, ]), c(1, -1))
 })
 
+test_that("contrasts accessors return contrast definitions", {
+  test_data <- create_test_data()
+  events <- test_data$events
+  sf <- test_data$sf
+
+  con1 <- pair_contrast(~ condition == "a", ~ condition == "b", name = "A_vs_B")
+  model <- event_model(
+    onset ~ hrf(condition, contrasts = list(con1)),
+    data = events,
+    block = ~block,
+    sampling_frame = sf
+  )
+
+  term <- terms(model)[[1]]
+  cl_term <- contrasts(term)
+  expect_type(cl_term, "list")
+  expect_equal(length(cl_term), 1)
+  expect_s3_class(cl_term[[1]], "contrast_spec")
+
+  cl_model <- contrasts(model)
+  expect_type(cl_model, "list")
+  expect_equal(length(cl_model), 1)
+  expect_named(cl_model, "condition.A_vs_B")
+  expect_s3_class(cl_model[[1]], "contrast_spec")
+})
+
 # --- Test for B-Spline Basis --- 
 test_that("event_model handles hrf_bspline basis correctly", {
   # Sampling frame with 2 blocks, 100 scans each

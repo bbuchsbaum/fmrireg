@@ -263,6 +263,16 @@ nbasis.hrfspec <- function(x, ...) {
   fmrihrf::nbasis(x$hrf)
 }
 
+#' Retrieve contrast specifications from an hrfspec
+#'
+#' @param x An `hrfspec` object.
+#' @param ... Unused.
+#' @return The list of contrast specifications attached to the hrfspec, or `NULL`.
+#' @export
+contrasts.hrfspec <- function(x, ...) {
+  x$contrasts
+}
+
 #' @export
 construct.hrfspec <- function(x, model_spec, ...) {
   ons <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
