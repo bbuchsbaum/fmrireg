@@ -62,7 +62,7 @@ get_col_inds <- function(mat_list) {
 
 #' Build a baseline_term from a list of block‑wise nuisance matrices
 #'
-#' @param nuisance_list list of numeric matrices, **one per run/block**.
+#' @param nuisance_list list of numeric matrices or data frames, **one per run/block**.
 #' @param sframe        the sampling_frame used in the model.
 #' @param prefix        prefix used when auto‑naming the columns.
 #'
@@ -73,7 +73,10 @@ make_nuisance_term <- function(nuisance_list,
                                prefix = "nuis") {
 
   stopifnot(is.list(nuisance_list),
-            all(vapply(nuisance_list, is.matrix, logical(1))))
+            all(vapply(nuisance_list,
+                        function(x) is.matrix(x) || is.data.frame(x),
+                        logical(1))))
+  nuisance_list <- lapply(nuisance_list, as.matrix)
   nb      <- length(fmrihrf::blocklens(sframe))
   bl_lens <- fmrihrf::blocklens(sframe)
 
@@ -87,7 +90,7 @@ make_nuisance_term <- function(nuisance_list,
     stop("Each nuisance matrix must have nrow == block length for its block.")
 
   ## --- assemble block‑diagonal matrix ------------------------------------
-  full_mat <- as.matrix(Matrix::bdiag(lapply(nuisance_list, unclass)))
+  full_mat <- as.matrix(Matrix::bdiag(nuisance_list))
   ncols    <- ncol(full_mat)
 
   ## names:  prefix#<block>_<col>
@@ -119,7 +122,7 @@ make_nuisance_term <- function(nuisance_list,
 #' @param intercept Character; whether to include an intercept ("runwise", "global", or "none").
 #'   Ignored when \code{basis == "constant"} because the drift term already
 #'   provides the constant baseline.
-#' @param nuisance_list Optional list of nuisance matrices (one matrix per fMRI block).
+#' @param nuisance_list Optional list of nuisance matrices or data frames (one per fMRI block).
 #'
 #' @return An object of class "baseline_model".
 #'

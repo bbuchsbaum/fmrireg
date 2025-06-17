@@ -23,7 +23,7 @@ baseline_model(
 Ignored when \code{basis == "constant"} because the drift term already
 provides the constant baseline.}
 
-\item{nuisance_list}{Optional list of nuisance matrices (one matrix per fMRI block).}
+\item{nuisance_list}{Optional list of nuisance matrices or data frames (one per fMRI block).}
 }
 \value{
 An object of class "baseline_model".
