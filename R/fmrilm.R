@@ -231,6 +231,25 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 
 #' Fit a Linear Regression Model for fMRI Data Analysis
 #'
+#' `fmri_lm` is a generic for fitting fMRI regression models. The
+#' default interface accepts a model formula and dataset. An
+#' alternative method can be used with a preconstructed
+#' \code{fmri_model} object that already contains the design and data.
+#'
+#' @param formula A model formula describing the event structure or an
+#'   \code{fmri_model} object.
+#' @param ... Additional arguments passed to the chosen method.
+#' @return An object of class \code{fmri_lm}.
+#' @export
+fmri_lm <- function(formula, ...) {
+  UseMethod("fmri_lm")
+}
+
+#' @rdname fmri_lm
+#' @export
+
+#' Fit a Linear Regression Model for fMRI Data Analysis
+#'
 #' This function fits a linear regression model for fMRI data analysis using the specified model formula,
 #' block structure, and dataset. The model can be fit using either a runwise or chunkwise data splitting strategy,
 #' and robust fitting can be enabled if desired. When \code{cor_struct} is set to
@@ -302,11 +321,11 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #' flm <- fmri_lm(onset ~ hrf(face_gen, basis=gen_hrf(hrf_bspline, N=7, span=25)), block = ~ run, 
 #' strategy="chunkwise", nchunks=1, dataset=dset)
 #' 
-fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE,
-                    robust = FALSE, robust_options = NULL, ar_options = NULL,
-                    strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, progress = FALSE,
-                    extra_nuisance = NULL, keep_extra_nuisance_in_model = FALSE, ar_voxelwise = FALSE,
-                    parallel_voxels = FALSE, 
+fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE,
+                         robust = FALSE, robust_options = NULL, ar_options = NULL,
+                         strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, progress = FALSE,
+                         extra_nuisance = NULL, keep_extra_nuisance_in_model = FALSE, ar_voxelwise = FALSE,
+                         parallel_voxels = FALSE,
                     # Individual AR parameters for backward compatibility
                     cor_struct = NULL, cor_iter = NULL, cor_global = NULL, 
                     ar1_exact_first = NULL, ar_p = NULL,
@@ -396,6 +415,85 @@ fmri_lm <- function(formula, block, baseline_model = NULL, dataset, durations = 
   # Note: We don't pass ... here because all parameters have been processed
   # and included in the cfg object
   ret <- fmri_lm_fit(model, dataset, strategy, cfg, nchunks,
+                     use_fast_path = use_fast_path, progress = progress,
+                     extra_nuisance = extra_nuisance,
+                     keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
+                     parallel_voxels = parallel_voxels)
+  return(ret)
+}
+
+#' @rdname fmri_lm
+#' @export
+fmri_lm.fmri_model <- function(fmrimod, dataset = NULL,
+                               robust = FALSE, robust_options = NULL,
+                               ar_options = NULL,
+                               strategy = c("runwise", "chunkwise"), nchunks = 10,
+                               use_fast_path = FALSE, progress = FALSE,
+                               extra_nuisance = NULL,
+                               keep_extra_nuisance_in_model = FALSE,
+                               ar_voxelwise = FALSE, parallel_voxels = FALSE,
+                               cor_struct = NULL, cor_iter = NULL,
+                               cor_global = NULL, ar1_exact_first = NULL,
+                               ar_p = NULL,
+                               robust_psi = NULL, robust_max_iter = NULL,
+                               robust_scale_scope = NULL,
+                               ...) {
+  strategy <- match.arg(strategy)
+  assert_that(inherits(fmrimod, "fmri_model"))
+
+  dataset <- dataset %||% fmrimod$dataset %||% attr(fmrimod, "dataset")
+  if (is.null(dataset)) {
+    stop("No dataset found in 'fmrimod' and none supplied.")
+  }
+  assert_that(inherits(dataset, "fmri_dataset"))
+
+  if (is.logical(robust)) {
+    robust_type <- if (robust) "huber" else FALSE
+  } else {
+    robust_type <- robust
+  }
+
+  if (is.null(robust_options)) {
+    robust_options <- list()
+  }
+  if (!is.null(robust_type) && !("type" %in% names(robust_options))) {
+    robust_options$type <- robust_type
+  }
+  if (!is.null(robust_psi) && !("type" %in% names(robust_options))) {
+    robust_options$type <- robust_psi
+  }
+  if (!is.null(robust_max_iter) && !("max_iter" %in% names(robust_options))) {
+    robust_options$max_iter <- robust_max_iter
+  }
+  if (!is.null(robust_scale_scope) && !("scale_scope" %in% names(robust_options))) {
+    robust_options$scale_scope <- robust_scale_scope
+  }
+
+  if (is.null(ar_options)) {
+    ar_options <- list()
+  }
+  if (!is.null(cor_struct) && !("struct" %in% names(ar_options))) {
+    ar_options$struct <- cor_struct
+  }
+  if (!is.null(cor_iter) && !("iter_gls" %in% names(ar_options))) {
+    ar_options$iter_gls <- cor_iter
+  }
+  if (!is.null(cor_global) && !("global" %in% names(ar_options))) {
+    ar_options$global <- cor_global
+  }
+  if (!is.null(ar1_exact_first) && !("exact_first" %in% names(ar_options))) {
+    ar_options$exact_first <- ar1_exact_first
+  }
+  if (!is.null(ar_p) && !("p" %in% names(ar_options))) {
+    ar_options$p <- ar_p
+  }
+  if (!("voxelwise" %in% names(ar_options))) {
+    ar_options$voxelwise <- ar_voxelwise
+  }
+
+  cfg <- fmri_lm_control(robust_options = robust_options, ar_options = ar_options)
+
+  ret <- fmri_lm_fit(fmrimod, dataset, strategy, cfg, nchunks,
                      use_fast_path = use_fast_path, progress = progress,
                      extra_nuisance = extra_nuisance,
                      keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
