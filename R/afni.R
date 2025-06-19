@@ -560,8 +560,21 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
     global_times <- TRUE
   }
   
-  cmdlines <- list(input=paste0(dataset$scans),
-                   mask=paste0(dataset$mask_file),
+  ## support pre-refactor datasets that stored scans/mask directly
+  inputs <- if (!is.null(dataset$scans))
+              dataset$scans
+            else if (!is.null(dataset$backend$source))
+              dataset$backend$source
+            else stop("No input scans found in dataset")
+
+  mask_file <- if (!is.null(dataset$mask_file))
+                 dataset$mask_file
+               else if (!is.null(dataset$backend$mask_source))
+                 dataset$backend$mask_source
+               else NULL
+
+  cmdlines <- list(input=paste0(inputs),
+                   mask=paste0(mask_file),
                    polort=if (opts[["polort"]] > 0) opts[["polort"]] else -1,
                    global_times=if (global_times) TRUE else NULL,
                    num_stimts=length(afni_stims),
