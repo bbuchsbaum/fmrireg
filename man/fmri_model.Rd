@@ -4,15 +4,16 @@
 \alias{fmri_model}
 \title{Construct an fMRI Regression Model}
 \usage{
-fmri_model(event_model, baseline_model)
+fmri_model(event_model, baseline_model, dataset)
 }
 \arguments{
 \item{event_model}{An object of class "event_model" representing the event-related part of the fMRI regression model.}
 
 \item{baseline_model}{An object of class "baseline_model" representing the baseline-related part of the fMRI regression model.}
+\item{dataset}{An \code{fmri_dataset} used to build the model.}
 }
 \value{
-An object of class "fmri_model" containing the event and baseline models.
+An object of class "fmri_model" containing the event and baseline models along with the dataset.
 }
 \description{
 This function constructs an fMRI regression model consisting of an event model
