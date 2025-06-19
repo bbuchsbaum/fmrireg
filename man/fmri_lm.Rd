@@ -32,6 +32,7 @@ fmri_lm(
   robust_scale_scope = NULL,
   ...
 )
+fmri_lm(fmrimod, ...)
 }
 \arguments{
 \item{formula}{The model formula for experimental events.}
@@ -41,6 +42,7 @@ fmri_lm(
 \item{baseline_model}{(Optional) A \code{baseline_model} object. Default is \code{NULL}.}
 
 \item{dataset}{An \code{fmri_dataset} object containing the time-series data.}
+When calling \code{fmri_lm()} with an \code{fmri_model} object this argument is ignored and the dataset attached to the model is used.
 
 \item{durations}{A vector of event durations. Default is \code{0}.}
 
@@ -75,6 +77,8 @@ and robust fitting can be enabled if desired. When \code{cor_struct} is set to
 one of the AR options (\code{"ar1"}, \code{"ar2"}, \code{"arp"}), the function
 performs fast AR prewhitening to account for temporal autocorrelation in the
 residuals.
+Alternatively, you can call \code{fmri_lm()} with an \code{fmri_model} object
+that already contains the event and baseline specification.
 }
 \details{
 \code{robust_options} may contain:
@@ -117,8 +121,13 @@ ys2 <- y + rnorm(length(y), sd=.02)
 
 h <<- gen_hrf(hrf_bspline, N=7, span=25)
 dset <- matrix_dataset(cbind(ys1,ys2), TR=2, run_length=fmrihrf::blocklens(sframe), event_table=facedes)
-flm <- fmri_lm(onset ~ hrf(face_gen, basis=gen_hrf(hrf_bspline, N=7, span=25)), block = ~ run, 
+flm <- fmri_lm(onset ~ hrf(face_gen, basis=gen_hrf(hrf_bspline, N=7, span=25)), block = ~ run,
 strategy="chunkwise", nchunks=1, dataset=dset)
+
+# Alternatively using a pre-built fmri_model
+fmod <- create_fmri_model(onset ~ hrf(face_gen, basis=gen_hrf(hrf_bspline, N=7, span=25)),
+  block = ~ run, dataset = dset)
+flm2 <- fmri_lm(fmod)
 
 }
 \seealso{
