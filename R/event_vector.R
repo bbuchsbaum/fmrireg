@@ -691,6 +691,9 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   
   # --- Convolution per Block --- 
   block_ids <- unique(blockids)
+  # Precompute global sample times once to avoid buggy blockids handling
+  global_samples <- fmrihrf::samples(sampling_frame, global = TRUE)
+  sample_blockids <- fmrihrf::blockids(sampling_frame)
   cmat_list <- lapply(block_ids, function(bid) {
     idx <- which(blockids == bid)
     # Ensure we subset the correct dmat based on drop.empty consistency
@@ -702,7 +705,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
     if(nrow(dblock) == 0 || ncol(dblock) == 0) return(NULL) 
     
     reg <- convolve_design(hrf, dblock, globons_block, durations_block, summate = summate)
-    sam <- fmrihrf::samples(sampling_frame, blockids = as.integer(bid), global = TRUE)
+    sam <- global_samples[sample_blockids == as.integer(bid)]
     
     # Combine regressors for this block
     block_mat <- do.call(cbind, lapply(reg, function(r) fmrihrf::evaluate(r, sam, precision = precision)))
