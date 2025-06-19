@@ -524,7 +524,9 @@ build_decon_command <- function(model, dataset, working_dir, opts) {
   
   ## extract all contrast matrices
   cons <- contrast_weights(model)
-  cons <- unlist(cons, recursive=FALSE)
+  ## ensure contrasts are valid objects
+  cons <- Filter(function(x) inherits(x, "contrast"), cons)
+  assert_that(is.list(cons), all(sapply(cons, inherits, "contrast")))
   
   ## convert to 'glt's
   glts <- lapply(cons, to_glt)
