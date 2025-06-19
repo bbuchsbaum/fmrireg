@@ -735,7 +735,8 @@ term_indices.event_model <- function(x, ...) {
 #'
 #' @param x the command to run
 #' @param ... extra args
-#' @noRd
+#' @export
+#' @rdname run
 run <- function(x,...) UseMethod("run")
 
 
