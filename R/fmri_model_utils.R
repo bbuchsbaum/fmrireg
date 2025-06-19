@@ -81,7 +81,7 @@ term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
 #' @param dataset The fmri_dataset object
 #' @param drop_empty Logical, whether to drop empty blocks
 #' @param durations Duration of events (default 0 for instantaneous events)
-#' @return An fmri_model object
+#' @return An fmri_model object that also stores the \code{dataset}
 #' @export
 create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, drop_empty = TRUE, durations = 0) {
   # Handle block variable
@@ -134,5 +134,5 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
                            sampling_frame = sframe, durations = durations)
   
   # Combine into fmri_model
-  fmri_model(event_model, baseline_model)
+  fmri_model(event_model, baseline_model, dataset)
 }

@@ -73,7 +73,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
     durations = durations
   )
   
-  fmri_model(ev_model, base_model_obj)
+  fmri_model(ev_model, base_model_obj, dataset)
 }
 
 
@@ -84,14 +84,18 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #'
 #' @param event_model An object of class "event_model" representing the event-related part of the fMRI regression model.
 #' @param baseline_model An object of class "baseline_model" representing the baseline-related part of the fMRI regression model.
-#' @return An object of class "fmri_model" containing the event and baseline models.
+#' @param dataset An \code{fmri_dataset} used to build the model.
+#' @return An object of class \code{fmri_model} containing the event and baseline models along with the dataset.
 #' @export
 #' @seealso event_model, baseline_model
-fmri_model <- function(event_model, baseline_model) {
+fmri_model <- function(event_model, baseline_model, dataset) {
   assert_that(inherits(event_model, "event_model"))
   assert_that(inherits(baseline_model, "baseline_model"))
-  
-  fmodel <- list(event_model = event_model, baseline_model = baseline_model)
+  assert_that(inherits(dataset, "fmri_dataset"))
+
+  fmodel <- list(event_model = event_model,
+                 baseline_model = baseline_model,
+                 dataset = dataset)
   class(fmodel) <- "fmri_model"
   fmodel
 }

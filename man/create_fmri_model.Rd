@@ -36,7 +36,7 @@ create_fmri_model(
 \item{durations}{A vector of event durations. Default is \code{0}.}
 }
 \value{
-An fmri_model object
+An fmri_model object that includes the dataset
 
 An \code{fmri_model} object.
 }

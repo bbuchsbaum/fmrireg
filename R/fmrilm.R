@@ -224,7 +224,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
     durations = durations
   )
   
-  fmri_model(ev_model, baseline_model)
+  fmri_model(ev_model, baseline_model, dataset)
 }
 
 

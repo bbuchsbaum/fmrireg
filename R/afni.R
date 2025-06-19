@@ -32,7 +32,7 @@ gen_afni_lm.fmri_config <- function(x, ...) {
                            sframe=dset$sampling_frame, 
                            nuisance_list=nuisance_list)
   
-  fmodel <- fmri_model(emodel, bmodel)
+  fmodel <- fmri_model(emodel, bmodel, dset)
   alm <- afni_lm(fmodel, dset, censor=dset$censor)
   
 }
