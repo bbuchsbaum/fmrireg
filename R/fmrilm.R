@@ -1623,10 +1623,25 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
     on.exit(cli::cli_progress_done(id = pb), add = TRUE)
   }
   form <- get_formula(model)
-  # Global design matrix needed for pooling compatibility? Or just for Vu?
+  # Global design matrix for pooling across runs
   modmat_global <- design_matrix(model)
+  Qr_global <- qr(modmat_global)
   proj_global <- .fast_preproject(modmat_global)
-  Vu <- proj_global$XtXinv
+  if (Qr_global$rank < ncol(modmat_global)) {
+    bad_cols <- colnames(modmat_global)[
+      Qr_global$pivot[(Qr_global$rank + 1):ncol(modmat_global)]
+    ]
+    warning(
+      sprintf(
+        "Global design matrix is rank deficient; problematic columns: %s",
+        paste(bad_cols, collapse = ", ")
+      )
+    )
+    Vu <- MASS::ginv(crossprod(modmat_global))
+    colnames(Vu) <- rownames(Vu) <- colnames(modmat_global)
+  } else {
+    Vu <- proj_global$XtXinv
+  }
   
   # Define ym for R CMD check
   ym <- NULL
