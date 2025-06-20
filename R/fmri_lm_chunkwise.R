@@ -52,8 +52,8 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, cf
   data_env <- list2env(tmats)
   data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
   modmat <- model.matrix(as.formula(form), data_env)
-  Qr_global <- qr(modmat)
-  Vu <- chol2inv(Qr_global$qr)
+  proj_global <- .fast_preproject(modmat)
+  Vu <- proj_global$XtXinv
   
   # Process chunks
   if (use_fast_path) {

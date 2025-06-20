@@ -50,8 +50,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   
   # Global design matrix for Vu calculation
   modmat_global <- design_matrix(model)
-  Qr_global <- qr(modmat_global)
-  Vu <- chol2inv(Qr_global$qr)
+  proj_global <- .fast_preproject(modmat_global)
+  Vu <- proj_global$XtXinv
   
   # Separate contrast types
   simple_conlist <- Filter(function(x) inherits(x, "contrast"), contrast_objects)
