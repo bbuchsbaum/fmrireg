@@ -1193,8 +1193,8 @@ chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks
       data_env <- list2env(tmats)
       data_env[[ ".y"]] <- rep(0, nrow(tmats[[1]])) # Corrected [[ ]] indexing
       modmat <- model.matrix(as.formula(form), data_env)
-      Qr_global <- qr(modmat)
-      Vu <- chol2inv(Qr_global$qr)
+      proj_global <- .fast_preproject(modmat)
+      Vu <- proj_global$XtXinv
       
       lmfun <- if (cfg$robust$type != FALSE) multiresponse_rlm else multiresponse_lm
       
@@ -1380,7 +1380,7 @@ chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks
           
           proj_global_final_w <- .fast_preproject(X_global_final_w)
           
-          Vu <- chol2inv(qr(design_matrix(model))$qr)
+          Vu <- .fast_preproject(design_matrix(model))$XtXinv
           nvox <- ncol(dset$datamat)
 
           cres <- vector("list", length(run_chunks))
@@ -1625,8 +1625,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   form <- get_formula(model)
   # Global design matrix needed for pooling compatibility? Or just for Vu?
   modmat_global <- design_matrix(model)
-  Qr_global <- qr(modmat_global)
-  Vu <- chol2inv(Qr_global$qr)
+  proj_global <- .fast_preproject(modmat_global)
+  Vu <- proj_global$XtXinv
   
   # Define ym for R CMD check
   ym <- NULL
