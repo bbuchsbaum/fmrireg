@@ -705,10 +705,24 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
     if(nrow(dblock) == 0 || ncol(dblock) == 0) return(NULL) 
     
     reg <- convolve_design(hrf, dblock, globons_block, durations_block, summate = summate)
-    sam <- global_samples[sample_blockids == as.integer(bid)]
     
-    # Combine regressors for this block
-    block_mat <- do.call(cbind, lapply(reg, function(r) fmrihrf::evaluate(r, sam, precision = precision)))
+    # FIXED METHOD: Evaluate against all global samples but extract only block-specific rows
+    # This preserves temporal accuracy while maintaining correct dimensions
+    sam_all <- fmrihrf::samples(sampling_frame, global = TRUE)
+    
+    # Evaluate regressors against ALL samples (preserves temporal accuracy)
+    full_block_mat <- do.call(cbind, lapply(reg, function(r) fmrihrf::evaluate(r, sam_all, precision = precision)))
+    
+    # Extract only the rows for this specific block (maintains correct dimensions)
+    block_lengths <- fmrihrf::blocklens(sampling_frame)
+    if (as.integer(bid) == 1) {
+      block_start <- 1
+      block_end <- block_lengths[1]
+    } else {
+      block_start <- sum(block_lengths[1:(as.integer(bid)-1)]) + 1
+      block_end <- sum(block_lengths[1:as.integer(bid)])
+    }
+    block_mat <- full_block_mat[block_start:block_end, , drop = FALSE]
     block_mat
   })
   
