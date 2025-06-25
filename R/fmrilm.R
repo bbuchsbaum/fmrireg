@@ -271,8 +271,6 @@ fmri_lm <- function(formula, ...) {
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
-#' @param extra_nuisance Optional matrix or formula specifying additional nuisance regressors.
-#' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance regressors in the final model. Default is \code{FALSE}.
 #' @return A fitted linear regression model for fMRI data analysis.
 #' 
 #' @details
@@ -324,7 +322,7 @@ fmri_lm <- function(formula, ...) {
 fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE,
                          robust = FALSE, robust_options = NULL, ar_options = NULL,
                          strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, progress = FALSE,
-                         extra_nuisance = NULL, keep_extra_nuisance_in_model = FALSE, ar_voxelwise = FALSE,
+                         ar_voxelwise = FALSE,
                          parallel_voxels = FALSE,
                     # Individual AR parameters for backward compatibility
                     cor_struct = NULL, cor_iter = NULL, cor_global = NULL, 
@@ -416,8 +414,6 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
   # and included in the cfg object
   ret <- fmri_lm_fit(model, dataset, strategy, cfg, nchunks,
                      use_fast_path = use_fast_path, progress = progress,
-                     extra_nuisance = extra_nuisance,
-                     keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
                      parallel_voxels = parallel_voxels)
   return(ret)
 }
@@ -429,8 +425,6 @@ fmri_lm.fmri_model <- function(fmrimod, dataset = NULL,
                                ar_options = NULL,
                                strategy = c("runwise", "chunkwise"), nchunks = 10,
                                use_fast_path = FALSE, progress = FALSE,
-                               extra_nuisance = NULL,
-                               keep_extra_nuisance_in_model = FALSE,
                                ar_voxelwise = FALSE, parallel_voxels = FALSE,
                                cor_struct = NULL, cor_iter = NULL,
                                cor_global = NULL, ar1_exact_first = NULL,
@@ -495,8 +489,6 @@ fmri_lm.fmri_model <- function(fmrimod, dataset = NULL,
 
   ret <- fmri_lm_fit(fmrimod, dataset, strategy, cfg, nchunks,
                      use_fast_path = use_fast_path, progress = progress,
-                     extra_nuisance = extra_nuisance,
-                     keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
                      parallel_voxels = parallel_voxels)
   return(ret)
 }
@@ -515,8 +507,6 @@ fmri_lm.fmri_model <- function(fmrimod, dataset = NULL,
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
-#' @param extra_nuisance Optional matrix or formula specifying additional nuisance regressors.
-#' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance regressors in the final model. Default is \code{FALSE}.
 #' @param parallel_voxels Logical. If TRUE, voxelwise AR processing within runs
 #'   is parallelised using `future.apply`. Default is \code{FALSE}.
 #' @param ... Additional arguments.
@@ -525,7 +515,6 @@ fmri_lm.fmri_model <- function(fmrimod, dataset = NULL,
 #' @seealso \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{fmri_dataset}}
 fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                         cfg, nchunks = 10, use_fast_path = FALSE, progress = FALSE,
-                        extra_nuisance = NULL, keep_extra_nuisance_in_model = FALSE,
                         parallel_voxels = FALSE, ...) {
   strategy <- match.arg(strategy)
   
@@ -648,27 +637,21 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                          progress = progress,
                                          phi_fixed = phi_global,
                                          sigma_fixed = sigma_global,
-                                         extra_nuisance = extra_nuisance,
-                                         keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
-                                         parallel_voxels = parallel_voxels,
+                                         parallel_voxels = parallel_voxels
                                          ),
                    "chunkwise" = {
                     if (inherits(dataset, "latent_dataset")) {
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                    nchunks, cfg = cfg, progress = progress,
                                    phi_fixed = phi_global,
-                                   sigma_fixed = sigma_global,
-                                   extra_nuisance = extra_nuisance,
-                                   keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
+                                   sigma_fixed = sigma_global
                                    ) # Do not pass use_fast_path
                     } else {
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                    nchunks, cfg = cfg, use_fast_path = use_fast_path,
                                    progress = progress,
                                    phi_fixed = phi_global,
-                                   sigma_fixed = sigma_global,
-                                   extra_nuisance = extra_nuisance,
-                                   keep_extra_nuisance_in_model = keep_extra_nuisance_in_model,
+                                   sigma_fixed = sigma_global
                                    )
                     }
                   })
@@ -1156,16 +1139,12 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 #' @param progress Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.
 #' @param phi_fixed Optional fixed AR parameters.
 #' @param sigma_fixed Optional fixed robust scale estimate.
-#' @param extra_nuisance Optional additional nuisance regressors.
-#' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance in model.
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
 chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks, cfg,
                                       verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
                                       phi_fixed = NULL,
-                                      sigma_fixed = NULL,
-                                      extra_nuisance = NULL,
-                                      keep_extra_nuisance_in_model = FALSE) {
+                                      sigma_fixed = NULL) {
   # Validate config
   assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
   chunk_iter <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
@@ -1599,8 +1578,6 @@ chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks
 #' @param progress Logical. Display a progress bar for run processing. Default is \code{FALSE}.
 #' @param phi_fixed Optional fixed AR parameters.
 #' @param sigma_fixed Optional fixed robust scale estimate.
-#' @param extra_nuisance Optional additional nuisance regressors.
-#' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance in model.
 #' @param parallel_voxels Logical. If TRUE, process voxels in parallel using
 #'   `future.apply`. Default is \code{FALSE}.
 #' @return A list containing the combined results from runwise linear model analysis.
@@ -1610,8 +1587,6 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                        use_fast_path = FALSE, progress = FALSE,
                        phi_fixed = NULL,
                        sigma_fixed = NULL,
-                       extra_nuisance = NULL,
-                       keep_extra_nuisance_in_model = FALSE,
                        parallel_voxels = FALSE) {
   # Validate config
   assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
@@ -2084,7 +2059,9 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
     # meta_betas expects a list of bstats tibbles and event_indices from the first run.
     # Assuming beta_stats_matrix output is compatible.
     meta_con <- meta_contrasts(conres_list)
-    meta_beta <- meta_betas(bstats_list, cres[[1]]$event_indices)
+    # Include all beta indices (event + baseline)
+    all_indices <- c(cres[[1]]$event_indices, cres[[1]]$baseline_indices)
+    meta_beta <- meta_betas(bstats_list, all_indices)
     
     list(
       contrasts = meta_con,
@@ -2152,9 +2129,9 @@ print.fmri_lm <- function(x, ...) {
   }
   
   # If we do have crayon, let's color it up:
-  cat(crayon::blue$bold("\n╔════════════════════════════════╗\n"))
-  cat(crayon::blue$bold("║        fmri_lm_result          ║\n"))
-  cat(crayon::blue$bold("╚════════════════════════════════╝\n\n"))
+  cat(crayon::blue$bold("\n==================================\n"))
+  cat(crayon::blue$bold("        fmri_lm_result          \n"))
+  cat(crayon::blue$bold("==================================\n\n"))
   
   # Print the model formula
   cat(crayon::green("Model formula:\n  "))

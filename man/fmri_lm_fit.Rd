@@ -12,8 +12,6 @@ fmri_lm_fit(
   nchunks = 10,
   use_fast_path = FALSE,
   progress = FALSE,
-  extra_nuisance = NULL,
-  keep_extra_nuisance_in_model = FALSE,
   parallel_voxels = FALSE,
   ...
 )
@@ -32,10 +30,6 @@ fmri_lm_fit(
 \item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
 
 \item{progress}{Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.}
-
-\item{extra_nuisance}{Optional matrix or formula specifying additional nuisance regressors.}
-
-\item{keep_extra_nuisance_in_model}{Logical. Whether to keep extra nuisance regressors in the final model. Default is \code{FALSE}.}
 
 \item{parallel_voxels}{Logical. If TRUE, voxelwise AR processing within runs
 is parallelised using \code{future.apply}. Default is \code{FALSE}.}

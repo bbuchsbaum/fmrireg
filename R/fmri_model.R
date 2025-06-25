@@ -208,13 +208,13 @@ plot.fmri_model <- function(x, ...) {
 #' @rdname print
 print.fmri_model <- function(x, ...) {
   # Header with fancy border
-  cat("\n╔══════════════════════════════════════════╗")
-  cat("\n║             fMRI Model                   ║")
-  cat("\n╠══════════════════════════════════════════╣")
+  cat("\n=============================================")
+  cat("\n             fMRI Model                     ")
+  cat("\n=============================================")
   
   # Event Model Section
-  cat("\n║ Event Model                              ║")
-  cat("\n╟──────────────────────────────────────────╢")
+  cat("\n Event Model                                ")
+  cat("\n---------------------------------------------")
   cat("\n║ Formula:", crayon::cyan(Reduce(paste, deparse(x$event_model$model_spec$formula))))
   
   # Event Model Summary
@@ -226,7 +226,7 @@ print.fmri_model <- function(x, ...) {
   
   # Baseline Model Section (if present)
   if (!is.null(x$baseline_model)) {
-    cat("\n╟──────────────────────────────────────────╢")
+    cat("\n---------------------------------------------")
     cat("\n║ Baseline Model                           ║")
     cat("\n║ Components:")
     
@@ -256,7 +256,7 @@ print.fmri_model <- function(x, ...) {
   }
   
   # Total Model Summary
-  cat("\n╟──────────────────────────────────────────╢")
+  cat("\n---------------------------------------------")
   cat("\n║ Total Model                              ║")
   total_cols <- ncol(design_matrix(x))
   cat("\n║   • Total Design Columns:", crayon::yellow(total_cols))

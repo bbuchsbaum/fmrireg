@@ -185,10 +185,13 @@ construct_event_term <- function(hrfspec, model_spec) {
   }
   
   # Call the public event_term constructor
+  # Use hrfspec durations if specified, otherwise fall back to model_spec durations
+  durations_to_use <- if (!is.null(hrfspec$durations)) hrfspec$durations else model_spec$durations
+  
   et <- event_term(evlist = evaluated_vars, 
                    onsets = model_spec$onsets, 
                    blockids = model_spec$blockids, 
-                   durations = model_spec$durations,
+                   durations = durations_to_use,
                    subset = subset_result)
                    
   attr(et, "hrfspec") <- hrfspec

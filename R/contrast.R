@@ -1405,24 +1405,24 @@ print.contrast_set <- function(x, ...) {
   n_contrasts <- length(x)
   
   # Header
-  cat("\n═══ Contrast Set ═══\n")
+  cat("\n=== Contrast Set ===\n")
   
   # Summary
   cat("\n Overview:\n")
-  cat("  • Number of contrasts:", n_contrasts, "\n")
+  cat("  * Number of contrasts:", n_contrasts, "\n")
   
   # Group contrasts by type
   types <- sapply(x, function(con) class(con)[1])
   type_table <- table(types)
   if (length(type_table) > 0) {
-    cat("  • Types of contrasts:\n")
+    cat("  * Types of contrasts:\n")
     for (type in names(type_table)) {
       cat("    -", type, ":", type_table[type], "\n")
     }
   }
   
   # List all contrasts
-  cat("\n🔍 Individual Contrasts:\n")
+  cat("\n  Individual Contrasts:\n")
   for (i in seq_along(x)) {
     cat("\n[", i, "] ", x[[i]]$name, " (", class(x[[i]])[1], ")\n", sep="")
     cat("    Formula: ")

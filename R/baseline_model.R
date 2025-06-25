@@ -4,7 +4,7 @@
 ## This file implements baseline model construction for fMRI analyses.
 ## It includes helper routines for:
 ##   - Extracting column indices from a list of matrices.
-##   - Constructing baseline models that account for drift, block‐wise
+##   - Constructing baseline models that account for drift, block-wise
 ##     intercepts, and nuisance regressors.
 ##   - Creating design matrices and terms for baseline models.
 ##   - Specifying block and nuisance terms.
@@ -60,11 +60,11 @@ get_col_inds <- function(mat_list) {
   })
 }
 
-#' Build a baseline_term from a list of block‑wise nuisance matrices
+#' Build a baseline_term from a list of block-wise nuisance matrices
 #'
 #' @param nuisance_list list of numeric matrices or data frames, **one per run/block**.
 #' @param sframe        the sampling_frame used in the model.
-#' @param prefix        prefix used when auto‑naming the columns.
+#' @param prefix        prefix used when auto-naming the columns.
 #'
 #' @return a baseline_term object (class c("baseline_term","matrix_term",...))
 #' @noRd
@@ -89,7 +89,7 @@ make_nuisance_term <- function(nuisance_list,
                   logical(1))))
     stop("Each nuisance matrix must have nrow == block length for its block.")
 
-  ## --- assemble block‑diagonal matrix ------------------------------------
+  ## --- assemble block-diagonal matrix ------------------------------------
   full_mat <- as.matrix(Matrix::bdiag(nuisance_list))
   ncols    <- ncol(full_mat)
 
@@ -113,7 +113,7 @@ make_nuisance_term <- function(nuisance_list,
 
 #' Construct a Baseline Model
 #'
-#' Builds a baseline model to account for noise and non–event-related variance.
+#' Builds a baseline model to account for noise and non-event-related variance.
 #' This model may include a drift term, a block intercept term, and nuisance regressors.
 #'
 #' @param basis Character; type of basis function ("constant", "poly", "bs", or "ns").
@@ -517,14 +517,14 @@ print.baseline_model <- function(x, ...) {
   drift_name <- if (!is.null(x$terms$drift)) x$terms$drift$varname else "N/A"
   
   # Print header.
-  cat("╔══════════════════════════════════════════╗\n")
-  cat("║           Baseline Model                 ║\n")
-  cat("╠══════════════════════════════════════════╣\n")
+  cat("================================================\n")
+  cat("           Baseline Model                       \n")
+  cat("================================================\n")
   
   # Drift term info.
   if (drift_cols > 0) {
-      cat("║ Drift Components                         ║\n")
-      cat(sprintf("║   • %-35s ║\n", paste("Name:", drift_name)))
+      cat("  Drift Components                           \n")
+      cat(sprintf("    * %-35s\n", paste("Name:", drift_name)))
       cat(sprintf("║   • %-35s ║\n", paste("Basis type:", basis_type)))
       cat(sprintf("║   • %-35s ║\n", paste("Degree:", degree)))
       cat(sprintf("║   • %-35s ║\n", paste("Drift columns:", drift_cols)))
@@ -534,13 +534,13 @@ print.baseline_model <- function(x, ...) {
   # Use correct number of spaces (42) for blank lines
   cat("║                                          ║\n") 
   cat("║ Additional Components                    ║\n")
-  cat(sprintf("║   • %-35s ║\n", paste("Constant columns:", const_cols)))
-  cat(sprintf("║   • %-35s ║\n", paste("Nuisance columns:", nuis_cols)))
+  cat(sprintf("    * %-35s\n", paste("Constant columns:", const_cols)))
+  cat(sprintf("    * %-35s\n", paste("Nuisance columns:", nuis_cols)))
   
   # Summary.
   cat("║                                          ║\n") # Blank line
   cat("║ Model Summary                            ║\n")
-  cat(sprintf("║   • %-35s ║\n", paste("Total columns:", total_cols)))
+  cat(sprintf("    * %-35s\n", paste("Total columns:", total_cols)))
   
   # Preview design matrix.
   cat("║                                          ║\n") # Blank line
@@ -554,7 +554,7 @@ print.baseline_model <- function(x, ...) {
         cat(sprintf("║   %-37s ║\n", row_preview)) 
       }
       # Adjust padding for '...' line
-      if (nrow(dm) > 3) cat("║   ...                                    ║\n") 
+      if (nrow(dm) > 3) cat("    ...                                    \n") 
   } else {
       # Adjust padding for 'no terms' line
       cat("║   (No baseline terms in model)           ║\n") 

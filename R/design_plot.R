@@ -64,11 +64,12 @@
 #'               facet_ncol = 1)
 #' }-------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
+#' @importFrom bslib bs_theme card card_header layout_sidebar
 design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
                          plot_title = NULL,
                          x_label = "Time (s)", y_label = "Amplitude",
                          line_size = 1,
-                         color_palette = "viridis",      # <- colour‑blind safe
+                         color_palette = "viridis",      # <- colour-blind safe
                          facet_ncol   = 2,               # <- sensible default
                          theme_custom = ggplot2::theme_minimal(base_size = 15) +
                                         ggplot2::theme(panel.spacing = ggplot2::unit(1, "lines")),
@@ -77,7 +78,7 @@ design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
   with_package(c("shiny", "plotly", "bslib", "thematic"))
   stopifnot(inherits(fmrimod, "fmri_model"))
 
-  # ── prep ------------------------------------------------------------------
+  # -- prep ------------------------------------------------------------------
   terms_all  <- terms(fmrimod)
   term_names <- vapply(terms_all, `[[`, character(1), "varname")
 
@@ -104,16 +105,16 @@ design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
   df_long <- lapply(terms_all, longify)
   names(df_long) <- term_names
 
-  # ── shiny UI --------------------------------------------------------------
+  # -- shiny UI --------------------------------------------------------------
   ui <- shiny::fluidPage(
     theme = bslib::bs_theme(bg = "#fafafa", fg = "#222", primary = "#4c72b0"),
     bslib::card(
-      bslib::card_header("🎨  fmrireg design viewer"),
+      bslib::card_header("fmrireg design viewer"),
       bslib::layout_sidebar(
         sidebar = list(
           shiny::selectInput("term",   "Term",      term_names, term_name),
           shiny::selectInput("block",  "Block",     c("all", sort(unique(df_block)))),
-          shiny::sliderInput("timer",  "Time‑window",
+          shiny::sliderInput("timer",  "Time-window",
                              min(df_time), max(df_time),
                              value = range(df_time), step = diff(range(df_time))/200),
           shiny::checkboxInput("zero", "Y‑axis starts at zero", TRUE),

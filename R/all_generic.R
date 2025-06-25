@@ -1595,12 +1595,8 @@ split_by_block <- function(x, ...) UseMethod("split_by_block")
 #'   run_length = c(50, 75, 50)
 #' )
 #' 
-#' # Get block IDs from dataset
-#' dataset_blocks <- blockids(dset)
-#' 
-#' # Use block IDs to split data by run
-#' run_data <- split(1:nrow(X), dataset_blocks)
-#' # Returns list with indices for each run
+#' # Note: blockids method for matrix_dataset is in the fmridataset package
+#' # To get block IDs from a dataset, ensure fmridataset is loaded
 #' @export
 #' @family block_operations
 #' @seealso [blocklens()], [split_by_block()], [sampling_frame()]

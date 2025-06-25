@@ -541,17 +541,17 @@ print.event <- function(x, ...) {
   cli::cli_h1("Event Sequence: {.field {x$varname}}")
   
   cli::cli_div(theme = list(span.info = list(color = "blue")))
-  cli::cli_text("{.info • Type:} {type}")
+  cli::cli_text("{.info * Type:} {type}")
   
   # Display Levels (categorical) or Columns (continuous)
   lvls <- levels(x) # Uses levels.event S3 method
   if (!is_continuous(x)) {
-    cli::cli_text("{.info • Levels:} {paste(lvls, collapse = ', ')}")
+    cli::cli_text("{.info * Levels:} {paste(lvls, collapse = ', ')}")
   } else {
-    cli::cli_text("{.info • Columns:} {paste(lvls, collapse = ', ')}")
+    cli::cli_text("{.info * Columns:} {paste(lvls, collapse = ', ')}")
   }
   
-  cli::cli_text("{.info • Events:} {nevents}")
+  cli::cli_text("{.info * Events:} {nevents}")
   
   if (nevents > 0) {
     cli::cli_h2("Timing")
@@ -559,7 +559,7 @@ print.event <- function(x, ...) {
     dur_range <- range(x$durations, na.rm = TRUE)
     onset_range_str <- sprintf("%.2f - %.2f sec", onset_range[1], onset_range[2])
     dur_range_str <- sprintf("%.2f - %.2f sec", dur_range[1], dur_range[2])
-    cli::cli_text("{.info • Onset Range:} {onset_range_str}")
+    cli::cli_text("{.info * Onset Range:} {onset_range_str}")
     cli::cli_text("{.info • Duration Range:} {dur_range_str}")
     
     cli::cli_h2("Blocks")

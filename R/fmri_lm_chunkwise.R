@@ -17,16 +17,12 @@
 #' @param progress Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.
 #' @param phi_fixed Optional fixed AR parameters.
 #' @param sigma_fixed Optional fixed robust scale estimate.
-#' @param extra_nuisance Optional additional nuisance regressors.
-#' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance in model.
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
 chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, cfg,
                                       verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
                                       phi_fixed = NULL,
-                                      sigma_fixed = NULL,
-                                      extra_nuisance = NULL,
-                                      keep_extra_nuisance_in_model = FALSE) {
+                                      sigma_fixed = NULL) {
   
   # Validate config
   assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")

@@ -14,8 +14,6 @@ runwise_lm(
   progress = FALSE,
   phi_fixed = NULL,
   sigma_fixed = NULL,
-  extra_nuisance = NULL,
-  keep_extra_nuisance_in_model = FALSE,
   parallel_voxels = FALSE
 )
 
@@ -29,8 +27,6 @@ runwise_lm(
   progress = FALSE,
   phi_fixed = NULL,
   sigma_fixed = NULL,
-  extra_nuisance = NULL,
-  keep_extra_nuisance_in_model = FALSE,
   parallel_voxels = FALSE
 )
 }
@@ -53,10 +49,6 @@ runwise_lm(
 
 \item{sigma_fixed}{Optional fixed robust scale estimate.}
 
-\item{extra_nuisance}{Optional additional nuisance regressors.}
-
-\item{keep_extra_nuisance_in_model}{Logical. Whether to keep extra nuisance in model.}
-
 \item{parallel_voxels}{Logical. If TRUE, process voxels in parallel using
 \code{future.apply}. Default is \code{FALSE}.}
 }
@@ -66,9 +58,6 @@ A list containing the combined results from runwise linear model analysis.
 A list containing the combined results from runwise linear model analysis.
 }
 \description{
-This function performs a runwise linear model analysis on an fMRI dataset,
-running the linear model on each run separately and then pooling results.
-
 This function performs a runwise linear model analysis on an fMRI dataset by
 running the linear model for each data run and combining the results.
 }

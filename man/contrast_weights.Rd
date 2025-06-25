@@ -35,9 +35,12 @@ This function calculates the contrast weights based on the contrast specificatio
 provided by the user. It is a generic function that dispatches to the appropriate
 method depending on the class of the contrast specification (e.g., unit_contrast_spec,
 pair_contrast_spec, poly_contrast_spec, etc.).
-When row names are provided on the weight matrix, they are matched against
-the corresponding term column names allowing contrasts to target a subset of
-term levels.
+}
+\details{
+If the weight matrices returned by a contrast specification contain row
+names, these are matched to the column names of the corresponding term in
+the design matrix.  This allows contrasts to target only a subset of term
+levels.
 }
 \examples{
 # Create a data frame with experimental design

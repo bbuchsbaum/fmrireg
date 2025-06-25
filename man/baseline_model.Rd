@@ -29,7 +29,7 @@ provides the constant baseline.}
 An object of class "baseline_model".
 }
 \description{
-Builds a baseline model to account for noise and non–event-related variance.
+Builds a baseline model to account for noise and non-event-related variance.
 This model may include a drift term, a block intercept term, and nuisance regressors.
 }
 \examples{

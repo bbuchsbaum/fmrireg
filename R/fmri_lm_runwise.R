@@ -1,5 +1,6 @@
 # Runwise Linear Model Strategy
 # Implementation of the runwise fitting strategy using modular components
+#' @importFrom future.apply future_lapply
 
 
 #' Perform Runwise Linear Modeling on fMRI Dataset
@@ -16,8 +17,6 @@
 #' @param progress Logical. Display a progress bar for run processing. Default is \code{FALSE}.
 #' @param phi_fixed Optional fixed AR parameters.
 #' @param sigma_fixed Optional fixed robust scale estimate.
-#' @param extra_nuisance Optional additional nuisance regressors.
-#' @param keep_extra_nuisance_in_model Logical. Whether to keep extra nuisance in model.
 #' @param parallel_voxels Logical. If TRUE, process voxels in parallel using future.apply.
 #' @return A list containing the combined results from runwise linear model analysis.
 #' @keywords internal
@@ -25,8 +24,6 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                        use_fast_path = FALSE, progress = FALSE,
                        phi_fixed = NULL,
                        sigma_fixed = NULL,
-                       extra_nuisance = NULL,
-                       keep_extra_nuisance_in_model = FALSE,
                        parallel_voxels = FALSE) {
   
   # Validate config
@@ -512,7 +509,9 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu) {
   # Pool over runs
   if (length(cres) > 1) {
     meta_con <- meta_contrasts(conres_list)
-    meta_beta <- meta_betas(bstats_list, event_indices)
+    # Include all beta indices (event + baseline)
+    all_indices <- c(event_indices, baseline_indices)
+    meta_beta <- meta_betas(bstats_list, all_indices)
     
     list(
       contrasts = meta_con,

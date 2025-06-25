@@ -5,6 +5,7 @@
 #'
 #' @keywords internal
 #' @noRd
+#' @importFrom progress progress_bar
 NULL
 
 #' Bootstrap confidence intervals for GLM

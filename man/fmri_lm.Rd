@@ -2,9 +2,13 @@
 % Please edit documentation in R/fmrilm.R
 \name{fmri_lm}
 \alias{fmri_lm}
+\alias{fmri_lm.formula}
+\alias{fmri_lm.fmri_model}
 \title{Fit a Linear Regression Model for fMRI Data Analysis}
 \usage{
-fmri_lm(
+fmri_lm(formula, ...)
+
+\method{fmri_lm}{formula}(
   formula,
   block,
   baseline_model = NULL,
@@ -18,8 +22,6 @@ fmri_lm(
   nchunks = 10,
   use_fast_path = FALSE,
   progress = FALSE,
-  extra_nuisance = NULL,
-  keep_extra_nuisance_in_model = FALSE,
   ar_voxelwise = FALSE,
   parallel_voxels = FALSE,
   cor_struct = NULL,
@@ -32,17 +34,40 @@ fmri_lm(
   robust_scale_scope = NULL,
   ...
 )
-fmri_lm(fmrimod, ...)
+
+\method{fmri_lm}{fmri_model}(
+  fmrimod,
+  dataset = NULL,
+  robust = FALSE,
+  robust_options = NULL,
+  ar_options = NULL,
+  strategy = c("runwise", "chunkwise"),
+  nchunks = 10,
+  use_fast_path = FALSE,
+  progress = FALSE,
+  ar_voxelwise = FALSE,
+  parallel_voxels = FALSE,
+  cor_struct = NULL,
+  cor_iter = NULL,
+  cor_global = NULL,
+  ar1_exact_first = NULL,
+  ar_p = NULL,
+  robust_psi = NULL,
+  robust_max_iter = NULL,
+  robust_scale_scope = NULL,
+  ...
+)
 }
 \arguments{
 \item{formula}{The model formula for experimental events.}
+
+\item{...}{Additional arguments passed to the chosen method.}
 
 \item{block}{The model formula for block structure.}
 
 \item{baseline_model}{(Optional) A \code{baseline_model} object. Default is \code{NULL}.}
 
 \item{dataset}{An \code{fmri_dataset} object containing the time-series data.}
-When calling \code{fmri_lm()} with an \code{fmri_model} object this argument is ignored and the dataset attached to the model is used.
 
 \item{durations}{A vector of event durations. Default is \code{0}.}
 
@@ -62,23 +87,17 @@ When calling \code{fmri_lm()} with an \code{fmri_model} object this argument is 
 \item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
 
 \item{progress}{Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.}
-
-\item{extra_nuisance}{Optional matrix or formula specifying additional nuisance regressors.}
-
-\item{keep_extra_nuisance_in_model}{Logical. Whether to keep extra nuisance regressors in the final model. Default is \code{FALSE}.}
 }
 \value{
+An object of class \code{fmri_lm}.
+
 A fitted linear regression model for fMRI data analysis.
 }
 \description{
-This function fits a linear regression model for fMRI data analysis using the specified model formula,
-block structure, and dataset. The model can be fit using either a runwise or chunkwise data splitting strategy,
-and robust fitting can be enabled if desired. When \code{cor_struct} is set to
-one of the AR options (\code{"ar1"}, \code{"ar2"}, \code{"arp"}), the function
-performs fast AR prewhitening to account for temporal autocorrelation in the
-residuals.
-Alternatively, you can call \code{fmri_lm()} with an \code{fmri_model} object
-that already contains the event and baseline specification.
+\code{fmri_lm} is a generic for fitting fMRI regression models. The
+default interface accepts a model formula and dataset. An
+alternative method can be used with a preconstructed
+\code{fmri_model} object that already contains the design and data.
 }
 \details{
 \code{robust_options} may contain:
@@ -121,13 +140,8 @@ ys2 <- y + rnorm(length(y), sd=.02)
 
 h <<- gen_hrf(hrf_bspline, N=7, span=25)
 dset <- matrix_dataset(cbind(ys1,ys2), TR=2, run_length=fmrihrf::blocklens(sframe), event_table=facedes)
-flm <- fmri_lm(onset ~ hrf(face_gen, basis=gen_hrf(hrf_bspline, N=7, span=25)), block = ~ run,
+flm <- fmri_lm(onset ~ hrf(face_gen, basis=gen_hrf(hrf_bspline, N=7, span=25)), block = ~ run, 
 strategy="chunkwise", nchunks=1, dataset=dset)
-
-# Alternatively using a pre-built fmri_model
-fmod <- create_fmri_model(onset ~ hrf(face_gen, basis=gen_hrf(hrf_bspline, N=7, span=25)),
-  block = ~ run, dataset = dset)
-flm2 <- fmri_lm(fmod)
 
 }
 \seealso{

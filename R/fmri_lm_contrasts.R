@@ -5,6 +5,7 @@
 #'
 #' @keywords internal
 #' @noRd
+#' @importFrom MASS ginv
 NULL
 
 #' Compute contrast estimates and statistics

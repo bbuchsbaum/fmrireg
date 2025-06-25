@@ -3,11 +3,14 @@
 \name{Fcontrasts}
 \alias{Fcontrasts}
 \alias{Fcontrasts.convolved_term}
+\alias{Fcontrasts.event_model}
 \title{Get block/run indices}
 \usage{
 Fcontrasts(x, ...)
 
 \method{Fcontrasts}{convolved_term}(x, ...)
+
+\method{Fcontrasts}{event_model}(x, ...)
 }
 \arguments{
 \item{x}{The model term to generate contrasts for (typically an event_term or event_model)}
@@ -68,8 +71,10 @@ Create F-contrasts to test for overall effects of model terms. F-contrasts are u
 \item{nonlinear}{Test for nonlinear effects of continuous predictors}
 \item{overall}{Evaluate overall significance of model terms}
 }
-Row names on the contrast matrices can be matched to specific term columns,
-allowing tests on subsets of levels.
+}
+\details{
+Row names of the contrast matrices can specify which levels of the term are
+tested.  Any matching is done against the design matrix column names.
 }
 \examples{
 # Create a sampling frame with multiple runs
@@ -91,12 +96,8 @@ dset <- fmridataset::matrix_dataset(
   run_length = c(50, 75, 50)
 )
 
-# Get block IDs from dataset
-dataset_blocks <- blockids(dset)
-
-# Use block IDs to split data by run
-run_data <- split(1:nrow(X), dataset_blocks)
-# Returns list with indices for each run
+# Note: blockids method for matrix_dataset is in the fmridataset package
+# To get block IDs from a dataset, ensure fmridataset is loaded
 # Create a sampling frame with varying run lengths
 sframe <- sampling_frame(
   blocklens = c(100, 150, 100),  # Different length runs

@@ -14,9 +14,7 @@
   use_fast_path = FALSE,
   progress = FALSE,
   phi_fixed = NULL,
-  sigma_fixed = NULL,
-  extra_nuisance = NULL,
-  keep_extra_nuisance_in_model = FALSE
+  sigma_fixed = NULL
 )
 }
 \arguments{
@@ -39,10 +37,6 @@
 \item{phi_fixed}{Optional fixed AR parameters.}
 
 \item{sigma_fixed}{Optional fixed robust scale estimate.}
-
-\item{extra_nuisance}{Optional additional nuisance regressors.}
-
-\item{keep_extra_nuisance_in_model}{Logical. Whether to keep extra nuisance in model.}
 }
 \value{
 A list containing the unpacked chunkwise results.

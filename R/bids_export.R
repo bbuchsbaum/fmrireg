@@ -1,5 +1,6 @@
 # BIDS Export Functions using LabeledVolumeSet
 # Functions for saving fMRI analysis results in BIDS-compliant format
+#' @importFrom jsonlite write_json
 
 #' Write Results from fMRI Linear Model
 #'
@@ -315,23 +316,17 @@ write_results.fmri_lm <- function(x,
   event_indices <- fmrilm_obj$result$event_indices
   baseline_indices <- fmrilm_obj$result$baseline_indices
   
-  # Check what the beta data actually contains by examining its dimensions
+  # Beta data should now always contain all regressors (event + baseline)
   n_beta_cols <- dim(beta_data)[4]  # 4th dimension is number of regressors
   n_total_regressors <- length(full_regressor_names)
-  n_event_regressors <- length(event_indices)
   
-  if (n_beta_cols == n_event_regressors) {
-    # Beta data contains only event regressors (typical for some strategies)
-    regressor_names <- full_regressor_names[event_indices]
-  } else if (n_beta_cols == n_total_regressors) {
-    # Beta data contains all regressors (event + baseline)
-    regressor_names <- full_regressor_names
-  } else {
-    # Try to infer the pattern - this is a fallback
-    warning("Beta data dimensions (", n_beta_cols, ") don't match expected patterns. ",
-            "Using first ", n_beta_cols, " regressor names.")
-    regressor_names <- full_regressor_names[seq_len(n_beta_cols)]
+  if (n_beta_cols != n_total_regressors) {
+    warning("Beta data dimensions (", n_beta_cols, ") don't match total regressors (", 
+            n_total_regressors, "). This should not happen with the updated code.")
   }
+  
+  # Use all regressor names
+  regressor_names <- full_regressor_names
   
   dataset <- fmrilm_obj$dataset
   mask <- fmridataset::get_mask(dataset)
@@ -794,7 +789,11 @@ write_results.fmri_lm <- function(x,
   df_resid <- NULL
   
   tryCatch({
-    if (!is.null(fmrilm_obj$result$betas$df.residual)) {
+    # Check if df.residual is directly in the result structure
+    if (!is.null(fmrilm_obj$result$df.residual)) {
+      df_resid <- as.integer(fmrilm_obj$result$df.residual)
+    } else if (!is.null(fmrilm_obj$result$betas) && "df.residual" %in% names(fmrilm_obj$result$betas)) {
+      # Check if it's in the betas data frame
       df_resid <- as.integer(fmrilm_obj$result$betas$df.residual[1])
     }
   }, error = function(e) {

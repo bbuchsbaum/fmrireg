@@ -1,3 +1,4 @@
+#' @importFrom RcppParallel setThreadOptions
 .onLoad <- function(libname, pkgname) {
   env_threads <- Sys.getenv("FMRIREG_NUM_THREADS", unset = NA)
   opt_threads <- getOption("fmrireg.num_threads", default = NA)
