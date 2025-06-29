@@ -6,8 +6,6 @@
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
 
-The `fmrireg` package provides comprehensive tools for functional magnetic resonance imaging (fMRI) data analysis in R. The package offers flexible facilities for constructing hemodynamic response functions, experimental regressors, and conducting univariate fMRI analyses.
-
 ### Key Features
 
 - **Flexible HRF modeling**: Multiple hemodynamic response function types and basis sets
