@@ -6,8 +6,6 @@
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
 
-### Key Features
-
 - **Flexible HRF modeling**: Multiple hemodynamic response function types and basis sets
 - **Experimental design**: Tools for building event models and baseline regressors  
 - **Statistical analysis**: Robust linear modeling with AR noise correction
