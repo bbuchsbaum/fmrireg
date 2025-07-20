@@ -5,8 +5,6 @@
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
-- **Experimental design**: Tools for building event models and baseline regressors  
-- **Statistical analysis**: Robust linear modeling with AR noise correction
 - **Integration**: Works with AFNI and other neuroimaging software
 - **Visualization**: Rich plotting capabilities for designs and results
 
