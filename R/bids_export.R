@@ -1,6 +1,7 @@
 # BIDS Export Functions using LabeledVolumeSet
 # Functions for saving fMRI analysis results in BIDS-compliant format
 #' @importFrom jsonlite write_json
+NULL
 
 #' Write Results from fMRI Linear Model
 #'
@@ -311,22 +312,26 @@ write_results.fmri_lm <- function(x,
   # Compute beta volumes
   beta_data <- .compute_beta_volumes(fmrilm_obj)
   
-  # Get regressor names - need to match what's actually in the beta data
-  full_regressor_names <- colnames(design_matrix(fmrilm_obj$model))
-  event_indices <- fmrilm_obj$result$event_indices
-  baseline_indices <- fmrilm_obj$result$baseline_indices
+  # Get regressor names from the actual beta data to ensure they match
+  # First get the raw beta matrix from coef() to access column names
+  beta_matrix <- coef(fmrilm_obj, type = "betas", include_baseline = TRUE)
   
   # Beta data should now always contain all regressors (event + baseline)
   n_beta_cols <- dim(beta_data)[4]  # 4th dimension is number of regressors
-  n_total_regressors <- length(full_regressor_names)
   
-  if (n_beta_cols != n_total_regressors) {
-    warning("Beta data dimensions (", n_beta_cols, ") don't match total regressors (", 
-            n_total_regressors, "). This should not happen with the updated code.")
+  # Use the column names from the beta matrix if available
+  if (!is.null(colnames(beta_matrix))) {
+    regressor_names <- colnames(beta_matrix)
+  } else {
+    # Fallback: generate generic names
+    regressor_names <- paste0("beta_", seq_len(n_beta_cols))
   }
   
-  # Use all regressor names
-  regressor_names <- full_regressor_names
+  # Ensure we have the right number of names
+  if (length(regressor_names) != n_beta_cols) {
+    warning("Regressor names don't match beta dimensions. Using generic names.")
+    regressor_names <- paste0("beta_", seq_len(n_beta_cols))
+  }
   
   dataset <- fmrilm_obj$dataset
   mask <- fmridataset::get_mask(dataset)
@@ -891,8 +896,8 @@ write_results.fmri_lm <- function(x,
     stop("Beta data structure is invalid or empty", call. = FALSE)
   }
   
-  # Extract beta data
-  beta_data <- fmrilm_obj$result$betas$data[[1]]$estimate[[1]]
+  # Extract beta data - use coef() to ensure we get all betas including baseline
+  beta_data <- coef(fmrilm_obj, type = "betas", include_baseline = TRUE)
   
   # Additional validation for beta data structure
   if (!is.matrix(beta_data) || nrow(beta_data) == 0 || ncol(beta_data) == 0) {

@@ -87,5 +87,26 @@ test_that("matrix_dataset voxel chunking works", {
 })
 
 test_that("data_chunk object has correct structure", {
-  skip("data_chunk is an internal function in fmridataset, not exported")
+  # data_chunk is now exported in fmridataset
+  
+  # Create a simple test matrix
+  test_mat <- matrix(rnorm(100), nrow = 10, ncol = 10)
+  voxel_ind <- 1:10
+  row_ind <- 1:10
+  chunk_num <- 1
+  
+  # Create a data_chunk
+  chunk <- fmridataset::data_chunk(
+    mat = test_mat,
+    voxel_ind = voxel_ind, 
+    row_ind = row_ind,
+    chunk_num = chunk_num
+  )
+  
+  # Test structure
+  expect_s3_class(chunk, "data_chunk")
+  expect_equal(chunk$data, test_mat)
+  expect_equal(chunk$voxel_ind, voxel_ind)
+  expect_equal(chunk$row_ind, row_ind)
+  expect_equal(chunk$chunk_num, chunk_num)
 })

@@ -188,7 +188,7 @@ meta_contrasts <- function(cres, weighting=c("inv_var", "equal")) {
          colind=list(NULL), data=list(tibble(estimate=list(NULL), se=list(NULL), stat=list(NULL), prob=list(NULL)))))
   }
 
-  gsplit <- ctab %>% group_by(name,type) %>% dplyr::group_split()
+  gsplit <- ctab %>% dplyr::group_by(name,type) %>% dplyr::group_split()
   
   lapply(gsplit, function(tab) {
     type <- tab$type[1]

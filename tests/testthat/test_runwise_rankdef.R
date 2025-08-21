@@ -30,7 +30,7 @@ bspec <- baseline_model(basis = "poly", degree = 1,
                         sframe = sframe, intercept = "runwise",
                         nuisance_list = nlist)
 
-fmod <- fmri_model(espec, bspec)
+fmod <- fmri_model(espec, bspec, dset)
 
 expect_warning(
   fit <- fmri_lm(onset ~ hrf(condition), block = ~run,
@@ -40,4 +40,4 @@ expect_warning(
 )
 
 # cov.unscaled should keep column names
-expect_equal(colnames(fit$cov.unscaled), colnames(design_matrix(fmod)))
+expect_equal(colnames(fit$result$cov.unscaled), colnames(design_matrix(fmod)))

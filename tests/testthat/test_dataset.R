@@ -1,7 +1,18 @@
 test_that("can construct an fmri_dataset", {
-  skip("Skipping fmri_dataset test - requires actual files with new fmridataset package")
-  # The new fmridataset package validates that files exist
-  # This test would need actual files or mock files to work
+  # Use dummy_mode to test without actual files
+  dset <- fmridataset::fmri_dataset(
+    scans = c("dummy1.nii", "dummy2.nii"),
+    mask = "dummy_mask.nii",
+    TR = 2,
+    run_length = c(100, 100),
+    dummy_mode = TRUE
+  )
+  
+  expect_s3_class(dset, "fmri_dataset")
+  expect_equal(length(dset$sampling_frame$blocklens), 2)
+  expect_equal(dset$sampling_frame$blocklens, c(100, 100))
+  # TR is stored per run, so check all are equal to 2
+  expect_equal(dset$sampling_frame$TR, c(2, 2))
 })
 
 

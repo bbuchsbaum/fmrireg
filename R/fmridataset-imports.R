@@ -1,6 +1,5 @@
 # Auto-generated file for fmridataset imports
 
-#' @import fmridataset
 #' @importFrom fmridataset matrix_dataset fmri_mem_dataset latent_dataset fmri_dataset
 #' @importFrom fmridataset get_data get_data_matrix get_mask
 #' @importFrom fmridataset data_chunks as.matrix_dataset

@@ -26,7 +26,7 @@ test_that("can construct and run an fmri_model with matrix data", {
   bspec <- baseline_model(basis = "bs", degree = 5, sframe = dset$sampling_frame)
   
   # Create fmri_model
-  fmod <- fmri_model(espec, bspec)
+  fmod <- fmri_model(espec, bspec, dset)
   
   # Test fmri_model properties
   expect_s3_class(fmod, "fmri_model")
@@ -69,7 +69,7 @@ test_that("can construct fmri_model with real test files", {
     espec <- event_model(onset ~ hrf(repnum), data = facedes_mini,
                         block = ~run, sampling_frame = dset$sampling_frame)
     bspec <- baseline_model(basis = "poly", degree = 3, sframe = dset$sampling_frame)
-    fmod <- fmri_model(espec, bspec)
+    fmod <- fmri_model(espec, bspec, dset)
     
     expect_s3_class(fmod, "fmri_model")
     expect_true(!is.null(fmod))
@@ -104,7 +104,7 @@ test_that("fmri_model handles edge cases correctly", {
                       block = ~run, sampling_frame = dset$sampling_frame)
   bspec <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
   
-  fmod <- fmri_model(espec, bspec)
+  fmod <- fmri_model(espec, bspec, dset)
   
   # Verify basic properties
   expect_s3_class(fmod, "fmri_model")

@@ -1,6 +1,7 @@
 # Runwise Linear Model Strategy
 # Implementation of the runwise fitting strategy using modular components
 #' @importFrom future.apply future_lapply
+NULL
 
 
 #' Perform Runwise Linear Modeling on fMRI Dataset

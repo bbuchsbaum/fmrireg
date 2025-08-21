@@ -4,8 +4,6 @@
 \alias{longnames}
 \alias{longnames.event_term}
 \alias{longnames.event_seq}
-\alias{longnames.afni_hrf_convolved_term}
-\alias{longnames.afni_trialwise_convolved_term}
 \alias{longnames.convolved_term}
 \title{Extract Long Names of Variable Levels}
 \usage{
@@ -14,12 +12,6 @@ longnames(x, ...)
 \method{longnames}{event_term}(x, ...)
 
 \method{longnames}{event_seq}(x, ...)
-
-\method{longnames}{afni_hrf_convolved_term}(x, ...)
-
-\method{longnames}{afni_trialwise_convolved_term}(x, ...)
-
-\method{longnames}{convolved_term}(x, ...)
 
 \method{longnames}{convolved_term}(x, ...)
 }

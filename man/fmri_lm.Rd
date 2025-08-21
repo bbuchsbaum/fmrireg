@@ -59,7 +59,8 @@ fmri_lm(formula, ...)
 )
 }
 \arguments{
-\item{formula}{The model formula for experimental events.}
+\item{formula}{A model formula describing the event structure or an
+\code{fmri_model} object.}
 
 \item{...}{Additional arguments passed to the chosen method.}
 

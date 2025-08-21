@@ -13,10 +13,12 @@ LazyData: false
 Depends:
     R (>= 4.0.0)
 Imports:
+    fmridesign (>= 0.1.0),
     fmrihrf (>= 0.1.0),
     fmrilss (>= 0.1.0),
     stats,
     Matrix,
+    MASS,
     RANN,
     assertthat,
     stringr,
@@ -37,6 +39,7 @@ Imports:
     rlang,
     neuroim2,
     Rcpp,
+    RcppParallel,
     methods,
     fmridataset (>= 0.1.0),
     numDeriv,
@@ -46,12 +49,17 @@ Imports:
     plotly,
     cli,
     colorplane,
-    deflist
+    deflist,
+    bslib,
+    future.apply,
+    jsonlite,
+    progress
 RoxygenNote: 7.3.2.9000
 Roxygen: list(
     markdown = TRUE,
     roclets = c("collate", "namespace", "rd", "roxyglobals::global_roclet"))
 Suggests: 
+    afnireg,
     testthat,
     pls,
     fmristore,
@@ -79,35 +87,25 @@ Remotes:
     anthonynorth/roxyglobals,
     bbuchsbaum/fmridataset,
     bbuchsbaum/fmrihrf,
-    bbuchsbaum/fmrilss
+    bbuchsbaum/fmrilss,
+    bbuchsbaum/fmridesign
 VignetteBuilder: knitr
 URL: https://bbuchsbaum.github.io/fmrireg/, https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues
 Collate: 
     'RcppExports.R'
-    'afni.R'
     'all_generic.R'
     'ar_utils.R'
     'autoplot-methods.R'
-    'baseline_model.R'
-    'basis.R'
     'benchmark_datasets.R'
     'beta_utils.R'
     'bids_export.R'
     'bootstrap.R'
     'con_stats.R'
-    'condition_basis_list.R'
-    'contrast.R'
-    'covariate.R'
     'data_fmri_benchmark_datasets.R'
     'design_matrix-fmri_lm.R'
     'design_plot.R'
     'effective_df.R'
-    'utils-internal.R'
-    'event-classes.R'
-    'event_model_helpers.R'
-    'event_model.R'
-    'event_vector.R'
     'fmri_ar_modeling.R'
     'fmri_betas.R'
     'fmri_latent_lm.R'
@@ -131,6 +129,7 @@ Collate:
     'fmri_model_utils.R'
     'fmri_robust_fitting.R'
     'fmridataset-imports.R'
+    'fmridesign-imports.R'
     'fmrihrf-imports.R'
     'fmrilm.R'
     'fmrilss-imports.R'
@@ -138,12 +137,10 @@ Collate:
     'fmrirlm.R'
     'gen_contrast.R'
     'globals.R'
-    'hrf-formula.R'
     'hrf_smoothing_kernel.R'
     'lss.R'
     'metafuns.R'
     'mixed_solve.R'
-    'naming-utils.R'
     'neuroim2-methods.R'
     'sandwich_variance_doc.R'
     'simulate.R'

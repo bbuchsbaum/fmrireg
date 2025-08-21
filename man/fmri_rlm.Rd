@@ -27,7 +27,8 @@ fmri_rlm(
 )
 }
 \arguments{
-\item{formula}{The model formula for experimental events.}
+\item{formula}{A model formula describing the event structure or an
+\code{fmri_model} object.}
 
 \item{block}{The model formula for block structure.}
 

@@ -695,7 +695,7 @@ estimate_hrf <- function(form, fixed = NULL, block, dataset,
 
 #' @noRd 
 #' @keywords internal
-#' @importFrom rlang new_formula
+#' @importFrom rlang new_formula f_lhs f_rhs f_env is_call call_name
 inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise")) {
   stopifnot(is.formula(oldform))
   
@@ -804,6 +804,20 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
     stop("model_obj must be an event_model object")
   }
   
+  # Validate basis_obj
+  if (is.character(basis_obj)) {
+    # Check if it's a valid HRF basis name
+    valid_basis_names <- c("HRF_SPMG1", "HRF_SPMG2", "HRF_SPMG3", "HRF_FIR", 
+                          "HRF_AFNI", "HRF_GAM", "HRF_IL", "HRF_DD")
+    if (!basis_obj %in% valid_basis_names) {
+      stop(paste0("Unknown HRF basis name: ", basis_obj))
+    }
+    # Convert string to actual basis object from fmrihrf package
+    basis_obj <- get(basis_obj, envir = asNamespace("fmrihrf"))
+  } else if (!inherits(basis_obj, "HRF")) {
+    stop("basis_obj must be an HRF object or a valid HRF basis name")
+  }
+  
   # Extract the formula from the event model and inject the new basis
   original_formula <- model_obj$model_spec$formula_or_list
   if (is.null(original_formula)) {
@@ -898,6 +912,20 @@ glm_lss <- function(dataset, model_obj, basis_obj, basemod = NULL,
   
   if (!inherits(model_obj, "event_model")) {
     stop("model_obj must be an event_model object")
+  }
+  
+  # Validate basis_obj
+  if (is.character(basis_obj)) {
+    # Check if it's a valid HRF basis name
+    valid_basis_names <- c("HRF_SPMG1", "HRF_SPMG2", "HRF_SPMG3", "HRF_FIR", 
+                          "HRF_AFNI", "HRF_GAM", "HRF_IL", "HRF_DD")
+    if (!basis_obj %in% valid_basis_names) {
+      stop(paste0("Unknown HRF basis name: ", basis_obj))
+    }
+    # Convert string to actual basis object from fmrihrf package
+    basis_obj <- get(basis_obj, envir = asNamespace("fmrihrf"))
+  } else if (!inherits(basis_obj, "HRF")) {
+    stop("basis_obj must be an HRF object or a valid HRF basis name")
   }
   
   # Extract the formula from the event model and inject the new basis

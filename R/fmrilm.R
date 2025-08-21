@@ -8,61 +8,6 @@ get_formula.fmri_model <- function(x,...) {
   return(as.formula(form))
 }
 
-#' @method term_matrices fmri_model
-#' @rdname term_matrices
-#' @export
-term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
-  assert_that(inherits(x, "fmri_model"), msg = "'x' must be an 'fmri_model' object")
-  
-  if (is.null(blocknum)) {
-    blocknum <- sort(unique(x$event_model$blockids))
-  }
-  
-  # Get the full convolved design matrix from the event model
-  event_dm <- design_matrix(x$event_model, blockid = blocknum)
-  
-  # Get the baseline design matrix
-  baseline_dm <- design_matrix(x$baseline_model, blockid = blocknum)
-  
-  # Extract individual term matrices using the col_indices attribute
-  col_indices <- attr(x$event_model$design_matrix, "col_indices")
-  if (is.null(col_indices)) {
-    stop("Event model design matrix missing 'col_indices' attribute needed to extract individual term matrices.")
-  }
-  
-  # Extract event term matrices from the full convolved design matrix
-  eterms <- lapply(names(col_indices), function(term_name) {
-    indices <- col_indices[[term_name]]
-    as.matrix(event_dm[, indices, drop = FALSE])
-  })
-  names(eterms) <- names(col_indices)
-  
-  # Extract baseline term matrices (baseline terms are simpler, one per term)
-  bterms <- lapply(baseline_terms(x), function(term) as.matrix(design_matrix(term, blockid = blocknum)))
-  
-  # Compute indices for event and baseline terms
-  num_event_cols <- ncol(event_dm)
-  num_baseline_cols <- ncol(baseline_dm)
-  
-  eterm_indices <- 1:num_event_cols
-  bterm_indices <- (num_event_cols + 1):(num_event_cols + num_baseline_cols)
-  
-  # Combine term matrices
-  term_matrices <- c(eterms, bterms)
-  names(term_matrices) <- names(terms(x))
-  
-  # Collect variable names
-  vnames <- c(colnames(event_dm), colnames(baseline_dm))
-  
-  # Set attributes
-  attr(term_matrices, "event_term_indices") <- eterm_indices
-  attr(term_matrices, "baseline_term_indices") <- bterm_indices
-  attr(term_matrices, "blocknum") <- blocknum
-  attr(term_matrices, "varnames") <- vnames
-  
-  return(term_matrices)
-}
-
 
 
 #' @keywords internal
@@ -74,9 +19,18 @@ is.formula <- function(x) {
 #' @keywords internal
 #' @noRd
 .fast_preproject <- function(X) {
-  # Ensure X is a matrix
+  # Ensure X is a numeric matrix
   if (!is.matrix(X)) {
     X <- as.matrix(X)
+  }
+  # Ensure the matrix is numeric
+  if (!is.numeric(X)) {
+    orig_colnames <- colnames(X)
+    X <- matrix(as.numeric(X), nrow = nrow(X), ncol = ncol(X))
+    # Preserve column names if they exist
+    if (!is.null(orig_colnames)) {
+      colnames(X) <- orig_colnames
+    }
   }
 
   qr_decomp <- qr(X, LAPACK = TRUE)
@@ -247,17 +201,6 @@ fmri_lm <- function(formula, ...) {
 
 #' @rdname fmri_lm
 #' @export
-
-#' Fit a Linear Regression Model for fMRI Data Analysis
-#'
-#' This function fits a linear regression model for fMRI data analysis using the specified model formula,
-#' block structure, and dataset. The model can be fit using either a runwise or chunkwise data splitting strategy,
-#' and robust fitting can be enabled if desired. When \code{cor_struct} is set to
-#' one of the AR options (\code{"ar1"}, \code{"ar2"}, \code{"arp"}), the function
-#' performs fast AR prewhitening to account for temporal autocorrelation in the
-#' residuals.
-#'
-#' @param formula The model formula for experimental events.
 #' @param block The model formula for block structure.
 #' @param baseline_model (Optional) A \code{baseline_model} object. Default is \code{NULL}.
 #' @param dataset An \code{fmri_dataset} object containing the time-series data.
@@ -1599,7 +1542,7 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   }
   form <- get_formula(model)
   # Global design matrix for pooling across runs
-  modmat_global <- design_matrix(model)
+  modmat_global <- as.matrix(design_matrix(model))
   Qr_global <- qr(modmat_global)
   proj_global <- .fast_preproject(modmat_global)
   if (Qr_global$rank < ncol(modmat_global)) {
@@ -1616,6 +1559,7 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
     colnames(Vu) <- rownames(Vu) <- colnames(modmat_global)
   } else {
     Vu <- proj_global$XtXinv
+    colnames(Vu) <- rownames(Vu) <- colnames(modmat_global)
   }
   
   # Define ym for R CMD check

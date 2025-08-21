@@ -11,14 +11,15 @@ vignette: >
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=6, fig.height=4)
+library(fmridesign)
 library(fmrireg)
 ```
 
 ## Introduction
 
-The `fmrireg` package provides a convenient, formula-based interface for building and analyzing fMRI regression models in R, inspired by standard R modeling tools like `lm()` and `glm()`.
+The `fmrireg` package provides tools for analyzing fMRI regression models in R, inspired by standard R modeling tools like `lm()` and `glm()`. It works in conjunction with the `fmridesign` package, which handles the design matrix construction aspects of fMRI analysis.
 
-While fMRI analysis involves complexities like large datasets, spatio-temporal correlations, and physiological noise, the core of standard univariate analysis is multiple regression applied voxelwise. `fmrireg` aims to simplify the specification and estimation of these regression models.
+While fMRI analysis involves complexities like large datasets, spatio-temporal correlations, and physiological noise, the core of standard univariate analysis is multiple regression applied voxelwise. The `fmrireg` and `fmridesign` packages work together to simplify the specification and estimation of these regression models.
 
 This vignette provides a high-level overview of the key steps and components involved in using `fmrireg`.
 

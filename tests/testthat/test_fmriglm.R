@@ -268,12 +268,12 @@ test_that("can run video fmri design with matrix_dataset", {
   events <- rep(320,7)
   sframe <- sampling_frame(rep(320, length(events)), TR=1.5)
   
+  dset <- fmridataset::matrix_dataset(matrix(rnorm(320*7*100), 320*7, 100),TR=1.5, run_length=rep(320,7), event_table=des)
+  
   evmod <- event_model(Onset ~ hrf(Video, Condition, basis="spmg1"), 
                        block = ~ run, sampling_frame=sframe, data=des)
   bmod <- baseline_model(basis="bs", degree=4, sframe=sframe)
-  fmod <- fmri_model(evmod, bmod)
-  
-  dset <- fmridataset::matrix_dataset(matrix(rnorm(320*7*100), 320*7, 100),TR=1.5, run_length=rep(320,7), event_table=des)
+  fmod <- fmri_model(evmod, bmod, dset)
 
   #conset <- fmrireg::one_against_all_contrast(levels(des$Video), "Video")
   
@@ -346,14 +346,14 @@ test_that("can run video fmri design with fmri_file_dataset", {
   events <- rep(320,7)
   sframe <- sampling_frame(rep(320, length(events)), TR=1.5)
   
-  scans <- gen_fake_dataset(c(10,10,10,320), 7)
+  scans <- unlist(gen_fake_dataset(c(10,10,10,320), 7))  # Convert list to character vector
   maskfile <- gen_mask_file(c(10,10,10))
   
   dset <- fmridataset::fmri_dataset(scans, maskfile,TR=1.5, rep(320,7), base_path="/",mode="normal",  event_table=tibble::as_tibble(des))
   evmod <- event_model(Onset ~ hrf(Video, Condition, basis="spmg1"), 
                        block = ~ run, sampling_frame=sframe, data=des)
   bmod <- baseline_model(basis="bs", degree=4, sframe=sframe)
-  fmod <- fmri_model(evmod, bmod)
+  fmod <- fmri_model(evmod, bmod, dset)
 
   conset <<- NULL
   conset <<- do.call("contrast_set", lapply(levels(factor(des$Video)), function(v) {

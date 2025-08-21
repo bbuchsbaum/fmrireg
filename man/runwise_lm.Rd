@@ -58,6 +58,9 @@ A list containing the combined results from runwise linear model analysis.
 A list containing the combined results from runwise linear model analysis.
 }
 \description{
+This function performs a runwise linear model analysis on an fMRI dataset,
+running the linear model on each run separately and then pooling results.
+
 This function performs a runwise linear model analysis on an fMRI dataset by
 running the linear model for each data run and combining the results.
 }

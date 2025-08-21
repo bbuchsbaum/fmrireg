@@ -142,9 +142,16 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
     if (include_baseline) {
       # Return all betas, ensure correct names from the full design matrix
       res <- all_betas
-      colnames(res) <- colnames(design_matrix(object$model))
-      # Return as matrix - transpose to get conditions x voxels
-      res <- t(res)
+      # Only assign column names up to the number of columns in the beta matrix
+      dm_colnames <- colnames(design_matrix(object$model))
+      if (ncol(res) <= length(dm_colnames)) {
+        colnames(res) <- dm_colnames[1:ncol(res)]
+      } else {
+        # This shouldn't happen, but be defensive
+        colnames(res) <- paste0("beta_", 1:ncol(res))
+      }
+      # Return as matrix - voxels x predictors
+      # res <- t(res)  # Removed transpose to maintain standard orientation
     } else {
       # Default: return only event betas
       # Check bounds and filter valid indices
@@ -170,8 +177,8 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
         colnames(res) <- make.names(condition_names, unique = TRUE)
       }
       
-      # Return as matrix - transpose to get conditions x voxels
-      res <- t(res)
+      # Return as matrix - voxels x predictors
+      # res <- t(res)  # Removed transpose to maintain standard orientation
     }
   } else {
     # Should not happen due to match.arg, but defensive coding

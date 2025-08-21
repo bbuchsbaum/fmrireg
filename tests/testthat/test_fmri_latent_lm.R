@@ -60,7 +60,7 @@ test_that("latent_dataset creation works correctly", {
   )
   
   dset <- fmridataset::latent_dataset(
-    lvec = lvec,
+    lvec,
     TR = 2,
     run_length = c(50, 50)
   )

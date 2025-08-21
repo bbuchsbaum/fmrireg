@@ -14,8 +14,15 @@ get_formula.fmri_model <- function(x,...) {
   return(as.formula(form))
 }
 
+#' Extract term matrices from fmri_model
+#'
+#' Extract design matrices for individual terms from an fmri_model object.
+#'
+#' @param x An fmri_model object
+#' @param blocknum Optional vector of block numbers to extract matrices for
+#' @param ... Additional arguments (currently unused)
+#' @return A list of matrices, one for each term in the model
 #' @method term_matrices fmri_model
-#' @rdname term_matrices
 #' @export
 term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
   assert_that(inherits(x, "fmri_model"), msg = "'x' must be an 'fmri_model' object")

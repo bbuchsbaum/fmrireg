@@ -1,6 +1,5 @@
 # Auto-generated file for fmrihrf imports
 
-#' @import fmrihrf
 #' @importFrom fmrihrf HRF as_hrf gen_hrf bind_basis
 #' @importFrom fmrihrf hrf_spmg1 hrf_gamma hrf_gaussian
 #' @importFrom fmrihrf hrf_bspline hrf_mexhat hrf_sine hrf_inv_logit hrf_half_cosine

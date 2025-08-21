@@ -137,7 +137,7 @@ test_that("process_run_ar_robust handles edge cases", {
                     block = ~ run,
                     sampling_frame = sframe)
   bmodel <- baseline_model(basis = "poly", degree = 1, sframe = sframe)
-  fmodel <- fmri_model(ev, bmodel)
+  fmodel <- fmri_model(ev, bmodel, dset)
   
   # Create config
   cfg <- fmri_lm_control(

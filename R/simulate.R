@@ -33,6 +33,7 @@
 #' 
 #' @export
 simulate_bold_signal <- function(ncond, hrf=fmrihrf::HRF_SPMG1, nreps=12, amps=rep(1,ncond), isi=c(3,6), ampsd=0, TR=1.5) {
+  assert_that(ncond > 0, msg = "ncond must be positive")
   assert_that(length(amps) == ncond,
               msg = "Length of 'amps' must equal 'ncond'")
   # Note: If ampsd > 0, amplitude variability is sampled *once per condition*,
@@ -241,6 +242,7 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #' }
 #'
 #' @importFrom stats rnorm rexp runif rgamma rlnorm arima.sim
+#' @importFrom assertthat assert_that
 #' @export
 
 # Internal helper for value resampling
@@ -305,6 +307,13 @@ simulate_fmri_matrix <- function(
   # ---------------------------
   # 0) Setup
   # ---------------------------
+  # Parameter validation
+  assert_that(n > 0, msg = "n must be positive")
+  assert_that(total_time > 0, msg = "total_time must be positive")
+  assert_that(TR > 0, msg = "TR must be positive")
+  assert_that(n_events > 0, msg = "n_events must be positive")
+  assert_that(isi_max > isi_min, msg = "isi_max must be greater than isi_min")
+  
   if (!is.null(random_seed)) {
     set.seed(random_seed)
   }
@@ -419,7 +428,7 @@ simulate_fmri_matrix <- function(
     } else {
       bold_signal <- numeric(n_time_points)
       for (j in seq_along(onsets)) {
-        sreg <- single_trial_regressor(
+        sreg <- fmrihrf::single_trial_regressor(
           onsets    = onsets[j],
           hrf       = hrf,
           duration  = this_dur[j],

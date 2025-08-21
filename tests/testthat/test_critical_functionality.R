@@ -12,13 +12,13 @@ test_that("AR whitening integration works", {
   Y <- X %*% c(1, 2) + as.vector(e)
   
   # Create config with AR
-  config <- fmri_lm_config(
+  config <- fmrireg:::fmri_lm_config(
     robust = FALSE,
     ar_options = list(cor_struct = "ar1", iter = 2)
   )
   
   # Test integrated solver
-  result <- solve_integrated_glm(
+  result <- fmrireg:::solve_integrated_glm(
     X = X,
     Y = matrix(Y, ncol = 1),
     config = config,
@@ -41,18 +41,18 @@ test_that("Robust fitting works", {
   X <- cbind(1, rnorm(n))
   Y <- 2 + 3*X[,2] + rnorm(n)
   
-  # Add outliers
+  # Add outliers - make them more extreme and deterministic
   outliers <- c(10, 20, 30)
-  Y[outliers] <- Y[outliers] + sample(c(-5, 5), 3, replace = TRUE)
+  Y[outliers] <- Y[outliers] + c(8, -8, 8)  # More extreme, deterministic outliers
   
   # Robust config
-  config <- fmri_lm_config(
+  config <- fmrireg:::fmri_lm_config(
     robust = "huber",
     ar_options = list(cor_struct = "none")
   )
   
   # Fit
-  result <- solve_integrated_glm(
+  result <- fmrireg:::solve_integrated_glm(
     X = X,
     Y = matrix(Y, ncol = 1),
     config = config
@@ -72,7 +72,7 @@ test_that("Contrast computation works", {
   X <- cbind(1, rep(c(0, 1), each = 30), rnorm(n))
   Y <- X %*% c(1, 2, 0.5) + rnorm(n)
   
-  config <- fmri_lm_config(robust = FALSE)
+  config <- fmrireg:::fmri_lm_config(robust = FALSE)
   
   # Fit model
   fit_result <- solve_integrated_glm(X, matrix(Y, ncol = 1), config)
@@ -81,7 +81,7 @@ test_that("Contrast computation works", {
   contrast_mat <- matrix(c(0, 1, 0), nrow = 1)
   
   # Compute contrast
-  con_result <- compute_contrast(fit_result, contrast_mat)
+  con_result <- fmrireg:::compute_contrast(fit_result, contrast_mat)
   
   expect_true(!is.null(con_result$estimate))
   expect_true(!is.null(con_result$stderr))
@@ -97,7 +97,7 @@ test_that("Effective df calculations work", {
   p <- 3
   
   # Test AR adjustment
-  df_ar <- compute_effective_df_ar(n, p, ar_coef = 0.6)
+  df_ar <- fmrireg:::compute_effective_df_ar(n, p, ar_coef = 0.6)
   expect_true(df_ar < n - p)  # Should be reduced
   expect_true(df_ar > 0)
   
@@ -112,7 +112,7 @@ test_that("Effective df calculations work", {
   XtWX <- t(X) %*% W %*% X
   XtWXinv <- solve(XtWX)
   
-  df_robust <- compute_effective_df_robust(X, weights, XtWXinv)
+  df_robust <- fmrireg:::compute_effective_df_robust(X, weights, XtWXinv)
   expect_true(df_robust < n - p)  # Should be reduced due to downweighting
   expect_true(df_robust > 0)
 })
@@ -123,11 +123,11 @@ test_that("Bootstrap functionality works", {
   X <- cbind(1, rnorm(n))
   Y <- X %*% c(1, 2) + rnorm(n)
   
-  config <- fmri_lm_config(robust = FALSE)
+  config <- fmrireg:::fmri_lm_config(robust = FALSE)
   fit_result <- solve_integrated_glm(X, matrix(Y, ncol = 1), config)
   
   # Run bootstrap
-  boot_result <- bootstrap_glm_inference(
+  boot_result <- fmrireg:::bootstrap_glm_inference(
     fit_result = fit_result,
     X = X,
     Y = matrix(Y, ncol = 1),
@@ -151,7 +151,7 @@ test_that("Sandwich variance estimator works", {
   residuals <- Y - X %*% solve(crossprod(X), crossprod(X, Y))
   
   # Compute sandwich variance
-  sandwich_vcov <- compute_sandwich_variance(X, matrix(residuals, ncol = 1), type = "HC1")
+  sandwich_vcov <- fmrireg:::compute_sandwich_variance(X, matrix(residuals, ncol = 1), type = "HC1")
   
   expect_equal(dim(sandwich_vcov), c(2, 2))
   expect_true(all(diag(sandwich_vcov) > 0))

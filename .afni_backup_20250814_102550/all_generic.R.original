@@ -1,3 +1,9 @@
+#' @noRd
+#' @keywords internal
+get_methods <- function(obj) {
+  unique(purrr::map_chr(class(obj), ~ methods(class= . )))
+}
+
 
 #' @noRd
 #' @keywords internal
@@ -8,6 +14,13 @@ with_package <- function(name) {
 }
   
 
+
+#' @noRd
+#' @keywords internal
+as_vectors <- function(x) { UseMethod("as_vectors") }
+
+#' @importFrom methods setGeneric 
+setGeneric("as_vectors") 
 
 
 # event_model generic is now imported from fmridesign
@@ -20,6 +33,7 @@ with_package <- function(name) {
 #' @param x the dataset
 #' @param ... extra args
 #' @keywords internal
+#' @noRd
 # get_data <- function(x, ...) UseMethod("get_data") # Now imported from fmridataset
 
 
@@ -38,6 +52,12 @@ with_package <- function(name) {
 get_formula <- function(x, ...) UseMethod("get_formula")
 
 
+#' term_matrices
+#' 
+#' @param x the object
+#' @param ... extra args
+#' @keywords internal
+#' @export
 # term_matrices generic is now imported from fmridesign
 # term_matrices <- function(x, ...) UseMethod("term_matrices")
 
@@ -102,6 +122,19 @@ design_env <- function(x, ...) UseMethod("design_env")
 # See fmridesign-imports.R for re-exports
 
 
+#' parent_terms
+#' 
+#' @param x the object
+#' @keywords internal
+#' @noRd
+parent_terms <- function(x) UseMethod("parent_terms")
+
+
+#' term_names
+#' @param x the object to extra term names from
+#' @noRd
+#' @keywords internal
+term_names <- function(x) UseMethod("term_names")
 
 
 
@@ -265,11 +298,91 @@ design_env <- function(x, ...) UseMethod("design_env")
 # convolve <- function(x, hrf, sampling_frame, ...) UseMethod("convolve")
 
 
+#' Check if a variable is continuous
+#' 
+#' @description
+#' Determines if a variable represents continuous (numeric) rather than categorical data.
+#' For event terms, continuous variables are those that have numeric values (like amplitudes 
+#' or modulators) rather than discrete factor levels. For example, reaction times would be 
+#' continuous, while trial types would be categorical.
+#' 
+#' @param x The object to check (typically an event_term, event_seq, or event_matrix)
+#' @return Logical; TRUE if the variable is continuous (numeric), FALSE if categorical
+#' @examples
+#' # Create event terms with different types
+#' 
+#' # Categorical event (factor)
+#' event_data <- data.frame(
+#'   condition = factor(c("A", "B", "A", "B")),
+#'   onsets = c(1, 10, 20, 30),
+#'   run = c(1, 1, 1, 1)
+#' )
+#' cat_term <- event_term(
+#'   list(condition = event_data$condition),
+#'   onsets = event_data$onsets,
+#'   blockids = event_data$run
+#' )
+#' is_continuous(cat_term)  # Returns: FALSE
+#' 
+#' # Continuous event (numeric)
+#' event_data$rt <- c(0.8, 1.2, 0.9, 1.1)  # reaction times
+#' cont_term <- event_term(
+#'   list(rt = event_data$rt),
+#'   onsets = event_data$onsets,
+#'   blockids = event_data$run
+#' )
+#' is_continuous(cont_term)  # Returns: TRUE
+#' @export
+#' @family variable_type
+#' @seealso [is_categorical()], [event_term()]
 # is_continuous generic is now imported from fmridesign
+# is_continuous <- function(x) UseMethod("is_continuous")
 
 
 
+#' Check if a variable is categorical
+#' 
+#' @description
+#' Determines if a variable represents categorical (factor-based) rather than continuous data.
+#' For event terms, categorical variables are those that have discrete factor levels (like 
+#' trial types or conditions) rather than numeric values. For example, stimulus types 
+#' ("face", "house") would be categorical, while reaction times would be continuous.
+#' This function is complementary to [is_continuous()].
+#' 
+#' @param x The object to check (typically an event_term, event_seq, or event_matrix)
+#' @return Logical; TRUE if the variable is categorical (factor-based), FALSE if continuous
+#' @examples
+#' # Create event terms with different types
+#' 
+#' # Categorical event (factor)
+#' event_data <- data.frame(
+#'   condition = factor(c("face", "house", "face", "house")),
+#'   onsets = c(1, 10, 20, 30),
+#'   run = c(1, 1, 1, 1)
+#' )
+#' cat_term <- event_term(
+#'   list(condition = event_data$condition),
+#'   onsets = event_data$onsets,
+#'   blockids = event_data$run
+#' )
+#' is_categorical(cat_term)  # Returns: TRUE
+#' 
+#' # Continuous event (numeric)
+#' event_data$intensity <- c(0.8, 1.2, 0.9, 1.1)  # stimulus intensity
+#' cont_term <- event_term(
+#'   list(intensity = event_data$intensity),
+#'   onsets = event_data$onsets,
+#'   blockids = event_data$run
+#' )
+#' is_categorical(cont_term)  # Returns: FALSE
+#' @export
+#' @family variable_type
+#' @seealso [is_continuous()], [event_term()]
 # is_categorical generic is now imported from fmridesign
+# is_categorical <- function(x) UseMethod("is_categorical")
+
+# Note: levels is a base R generic from package stats
+# We provide methods for it but don't document the generic itself
 
 
 
@@ -295,15 +408,178 @@ columns <- function(x) UseMethod("columns")
 
 
 
+#' Extract event table from a term or model
+#'
+#' @description
+#' Extract the event table from a term or model as a data frame. The event table contains 
+#' the experimental design information, with one row per event and columns for different 
+#' variables (e.g., conditions, onsets, durations). For event terms, this returns the raw 
+#' event data. For convolved terms, this includes any basis function expansions.
+#'
+#' @param x The object to extract events from (typically an event_term, convolved_term, or event_model)
+#' @return A tibble containing the event information with columns for:
+#'   \itemize{
+#'     \item Factor variables (e.g., condition, stimulus type)
+#'     \item Continuous variables (e.g., reaction times, intensities)
+#'     \item Basis function expansions (if applicable)
+#'   }
+#' @examples
+#' # Create an event term with multiple variables
+#' event_data <- data.frame(
+#'   condition = factor(c("face", "house", "face", "house")),
+#'   rt = c(0.8, 1.2, 0.9, 1.1),
+#'   onsets = c(1, 10, 20, 30),
+#'   run = c(1, 1, 1, 1)
+#' )
+#' 
+#' # Create event term
+#' eterm <- event_term(
+#'   list(
+#'     condition = event_data$condition,
+#'     rt = event_data$rt
+#'   ),
+#'   onsets = event_data$onsets,
+#'   blockids = event_data$run
+#' )
+#' 
+#' # Extract event table
+#' etable <- event_table(eterm)
+#' 
+#' # Create and extract from convolved term
+#' sframe <- sampling_frame(blocklens = 50, TR = 2)
+#' evmodel <- event_model(
+#'   onsets ~ hrf(condition) + hrf(rt),
+#'   data = event_data,
+#'   block = ~run,
+#'   sampling_frame = sframe
+#' )
+#' 
+#' # Get event table with basis expansions
+#' model_events <- event_table(evmodel)
+#' @export
+#' @family events
+#' @seealso [event_term()], [event_model()]
 # event_table generic is now imported from fmridesign
+# event_table <- function(x) UseMethod("event_table")
 
 
 
+#' Extract event terms from a model
+#'
+#' @description
+#' Extract the event-related terms from a model object, separating them from baseline 
+#' or nuisance terms. Event terms represent the experimental conditions and parametric 
+#' modulators in an fMRI design. For example, in a model with both task events 
+#' (e.g., stimulus presentations) and baseline components (e.g., drift terms, motion 
+#' parameters), this function returns only the task-related terms.
+#'
+#' @param x The model object (typically an fmri_model)
+#' @return A list of event_term objects. Each event_term represents a different 
+#' component of the experimental design and contains:
+#'   \itemize{
+#'     \item varname: Name of the term (e.g., "stimulus", "rt")
+#'     \item events: List of event objects (factors or continuous variables)
+#'     \item event_table: Data frame of event information
+#'     \item onsets: Event onset times in seconds
+#'     \item blockids: Run/block identifiers
+#'     \item durations: Event durations in seconds
+#'   }
+#' @examples
+#' # Create a model with both event and baseline terms
+#' event_data <- data.frame(
+#'   stimulus = factor(c("face", "house", "face", "house")),
+#'   rt = c(0.8, 1.2, 0.9, 1.1),
+#'   onsets = c(1, 10, 20, 30),
+#'   run = c(1, 1, 1, 1)
+#' )
+#' 
+#' # Create sampling frame
+#' sframe <- sampling_frame(blocklens = 50, TR = 2)
+#' 
+#' # Create event model
+#' evmodel <- event_model(
+#'   onsets ~ hrf(stimulus) + hrf(rt),
+#'   data = event_data,
+#'   block = ~run,
+#'   sampling_frame = sframe
+#' )
+#' 
+#' # Create baseline model for drift
+#' bmodel <- baseline_model(
+#'   basis = "bs",
+#'   degree = 3,
+#'   sframe = sframe
+#' )
+#' 
+#' # Combine into full model
+#' fmodel <- fmri_model(evmodel, bmodel)
+#' 
+#' # Extract only the event terms
+#' event_terms(fmodel)  # Returns list of stimulus and rt terms
+#' @export
+#' @family model_components
+#' @seealso [baseline_terms()], [fmri_model()]
 # event_terms generic is now imported from fmridesign
+# event_terms <- function(x) UseMethod("event_terms")
 
 
 
+#' Extract baseline terms from a model
+#'
+#' @description
+#' Extract the baseline and nuisance terms from a model object, separating them from 
+#' experimental event terms. Baseline terms represent non-experimental components of the 
+#' fMRI signal, such as:
+#' \itemize{
+#'   \item Drift terms (modeling scanner drift)
+#'   \item Block terms (modeling run-specific baselines)
+#'   \item Nuisance terms (e.g., motion parameters, physiological noise)
+#' }
+#'
+#' @param x The model object (typically an fmri_model)
+#' @return A list of baseline_term objects. Each baseline_term represents a different 
+#' component of the non-experimental signal and contains:
+#'   \itemize{
+#'     \item varname: Name of the term (e.g., "drift", "block", "motion")
+#'     \item design_matrix: Matrix of baseline regressors
+#'     \item term_type: Type of baseline term ("drift", "block", or "nuisance")
+#'   }
+#' @examples
+#' # Create a model with both event and baseline terms
+#' event_data <- data.frame(
+#'   stimulus = factor(c("face", "house", "face", "house")),
+#'   onsets = c(1, 10, 20, 30),
+#'   run = c(1, 1, 1, 1)
+#' )
+#' 
+#' # Create sampling frame
+#' sframe <- sampling_frame(blocklens = 50, TR = 2)
+#' 
+#' # Create event model
+#' evmodel <- event_model(
+#'   onsets ~ hrf(stimulus),
+#'   data = event_data,
+#'   block = ~run,
+#'   sampling_frame = sframe
+#' )
+#' 
+#' # Create baseline model with drift and block terms
+#' bmodel <- baseline_model(
+#'   basis = "bs",    # B-spline basis for drift
+#'   degree = 3,      # Cubic drift model
+#'   sframe = sframe
+#' )
+#' 
+#' # Combine into full model
+#' fmodel <- fmri_model(evmodel, bmodel)
+#' 
+#' # Extract only the baseline terms
+#' baseline_terms(fmodel)  # Returns list with drift and block terms
+#' @export
+#' @family model_components
+#' @seealso [event_terms()], [fmri_model()], [baseline_model()]
 # baseline_terms generic is now imported from fmridesign
+# baseline_terms <- function(x) UseMethod("baseline_terms")
 
 
 #' Get term indices from a model or term
@@ -363,11 +639,34 @@ columns <- function(x) UseMethod("columns")
 #' @export
 #' @family model_components
 #' @seealso [event_terms()], [baseline_terms()], [design_matrix()]
-# term_indices generic is now imported from fmridesign
-# The event_model method was moved to fmridesign
+term_indices <- function(x, ...) UseMethod("term_indices")
+
+#' @export
+term_indices.event_model <- function(x, ...) {
+  # Extract col_indices from the design matrix attribute
+  col_indices <- attr(x$design_matrix, "col_indices")
+  if (is.null(col_indices)) {
+    warning("Event model design matrix missing 'col_indices' attribute.")
+    return(NULL)
+  }
+  return(col_indices)
+}
 
 
 
+
+#' run
+#'
+#' Run a command or analysis step.
+#'
+#' @description
+#' This function runs a command `x` with the provided extra arguments.
+#'
+#' @param x the command to run
+#' @param ... extra args
+#' @export
+#' @rdname run
+run <- function(x,...) UseMethod("run")
 
 
 #' design_matrix
@@ -528,7 +827,20 @@ correlation_map <- function(x, ...) {
 
 
 
-# evaluate is now imported from fmrihrf
+#' Evaluate a regressor object over a time grid
+#' 
+#' Generic function to evaluate a regressor object over a specified time grid.
+#' Different types of regressors may have different evaluation methods.
+#'
+#' @param x The regressor object to evaluate
+#' @param grid A numeric vector specifying the time points at which to evaluate the regressor
+#' @param ... Additional arguments passed to specific methods
+#' @return A numeric vector or matrix containing the evaluated regressor values
+#' @seealso [single_trial_regressor()], [regressor()]
+#' @export
+# evaluate <- function(x, grid, ...) {
+#   UseMethod("evaluate")
+# } # Now imported from fmrihrf
 
 
 #' fitted_hrf
@@ -576,11 +888,123 @@ correlation_map <- function(x, ...) {
 #' # Get fitted HRF at specific timepoints
 #' times <- seq(0, 20, by = 0.5)  # Sample from 0-20s every 0.5s
 #' hrf_values <- fitted_hrf(fit, sample_at = times)
+#' @export
 #' @family hrf
 #' @seealso [HRF_SPMG1()], [fmri_lm()]
-#' @export
 fitted_hrf <- function(x, sample_at, ...) UseMethod("fitted_hrf")
 
+
+#' Extract regressor set
+#' 
+#' @description
+#' Extract a set of regressors from a model object. Regressors represent the predicted 
+#' BOLD response for different experimental conditions or model components. For event-related 
+#' designs, each regressor is typically a convolution of event onsets with an HRF. For 
+#' baseline terms, regressors might represent drift or nuisance components.
+#' 
+#' @param x A model object that contains regressors (or can generate them)
+#' @param ... Additional arguments passed to methods. Common arguments include:
+#'   \describe{
+#'     \item{condition}{Character; specific condition to extract regressors for}
+#'     \item{block}{Numeric; specific block/run to extract regressors from}
+#'     \item{basis}{Character; type of basis functions to use}
+#'   }
+#' @return A list of regressor objects, where each regressor contains:
+#'   \itemize{
+#'     \item values: Numeric vector of regressor values over time
+#'     \item onsets: Original event onset times
+#'     \item condition: Associated experimental condition
+#'     \item block: Associated run/block number
+#'   }
+#' @examples
+#' # Create event data with two conditions
+#' event_data <- data.frame(
+#'   condition = factor(c("face", "house", "face", "house")),
+#'   onsets = c(1, 10, 20, 30),
+#'   run = c(1, 1, 1, 1)
+#' )
+#' 
+#' # Create sampling frame
+#' sframe <- sampling_frame(blocklens = 50, TR = 2)
+#' 
+#' # Create event model with canonical HRF
+#' evmodel <- event_model(
+#'   onsets ~ hrf(condition),
+#'   data = event_data,
+#'   block = ~run,
+#'   sampling_frame = sframe
+#' )
+#' 
+#' # Extract all regressors
+#' reg_list <- regressors(evmodel)
+#' 
+#' # Create model with multiple basis functions
+#' evmodel2 <- event_model(
+#'   onsets ~ hrf(condition, basis = "fourier", nbasis = 2),
+#'   data = event_data,
+#'   block = ~run,
+#'   sampling_frame = sframe
+#' )
+#' 
+#' # Extract regressors with basis functions
+#' reg_list2 <- regressors(evmodel2)
+#' @export
+#' @family regressors
+#' @seealso [event_model()], [HRF_SPMG1()], [convolve()]
+regressors <- function(x, ...) UseMethod("regressors")
+
+#' Shift a time series object
+#'
+#' @description
+#' Apply a temporal shift to a time series object. This function shifts the values in time 
+#' while preserving the structure of the object. Common uses include:
+#' \describe{
+#'   \item{alignment}{Aligning regressors with different temporal offsets}
+#'   \item{derivatives}{Applying temporal derivatives to time series}
+#'   \item{correction}{Correcting for timing differences between signals}
+#' }
+#'
+#' @param x An object representing a time series or a time-based data structure
+#' @param shift_amount Numeric; amount to shift by (positive = forward, negative = backward)
+#' @param ... Additional arguments passed to methods
+#' @return An object of the same class as the input, with values shifted in time:
+#'   \describe{
+#'     \item{Values}{Values are moved by the specified offset}
+#'     \item{Structure}{Object structure and dimensions are preserved}
+#'     \item{Padding}{Empty regions are filled with padding value}
+#'   }
+#' @examples
+#' # Create a simple time series with events
+#' event_data <- data.frame(
+#'   onsets = c(1, 10, 20, 30),
+#'   run = c(1, 1, 1, 1)
+#' )
+#' 
+#' # Create sampling frame
+#' sframe <- sampling_frame(blocklens = 50, TR = 2)
+#' 
+#' # Create regressor from events
+#' reg <- regressor(
+#'   onsets = event_data$onsets,
+#'   sampling_frame = sframe
+#' )
+#' 
+#' # Shift regressor forward by 2 seconds
+#' reg_forward <- shift(reg, offset = 2)
+#' 
+#' # Shift regressor backward by 1 second
+#' reg_backward <- shift(reg, offset = -1)
+#' 
+#' # Evaluate original and shifted regressors
+#' times <- seq(0, 50, by = 2)
+#' orig_values <- evaluate(reg, times)
+#' shifted_values <- evaluate(reg_forward, times)
+#' @export
+#' @family time_series
+#' @seealso [regressor()], [evaluate()]
+shift <- function(x, ...) {
+  UseMethod("shift")
+}
 
 
 
@@ -687,7 +1111,77 @@ fitted_hrf <- function(x, sample_at, ...) UseMethod("fitted_hrf")
 nbasis <- function(x, ...) UseMethod("nbasis")
 
 
+#' Generate penalty matrix for regularization
+#'
+#' @description
+#' Generate a penalty matrix for regularizing HRF basis coefficients. The penalty matrix
+#' encodes shape priors that discourage implausible or overly wiggly HRF estimates.
+#' Different HRF types use different penalty structures:
+#' 
+#' \itemize{
+#'   \item{FIR/B-spline bases: Roughness penalties based on discrete derivatives}
+#'   \item{SPM canonical + derivatives: Differential shrinkage of derivative terms}
+#'   \item{Fourier bases: Penalties on high-frequency components}
+#'   \item{Default: Identity matrix (ridge penalty)}
+#' }
+#'
+#' @param x The HRF object or basis specification
+#' @param ... Additional arguments passed to specific methods
+#' @return A symmetric positive definite penalty matrix of dimension nbasis(x) × nbasis(x)
+#' @details
+#' The penalty matrix R is used in regularized estimation as λ * h^T R h, where h are
+#' the basis coefficients and λ is the regularization parameter. Well-designed penalty
+#' matrices can significantly improve HRF estimation by encoding smoothness or other
+#' shape constraints.
+#' 
+#' @examples
+#' # FIR basis with smoothness penalty
+#' fir_hrf <- HRF_FIR
+#' R_fir <- penalty_matrix(fir_hrf)
+#' 
+#' # B-spline basis with second-order smoothness
+#' bspline_hrf <- HRF_BSPLINE  
+#' R_bspline <- penalty_matrix(bspline_hrf, order = 2)
+#' 
+#' # SPM canonical with derivative shrinkage
+#' spmg3_hrf <- HRF_SPMG3
+#' R_spmg3 <- penalty_matrix(spmg3_hrf, shrink_deriv = 4)
+#' 
+#' @export
+#' @family hrf
+#' @seealso [nbasis()], [HRF_objects]
+penalty_matrix <- function(x, ...) UseMethod("penalty_matrix")
 
+
+#' Combine HRF Basis with Coefficients
+#'
+#' Create a new HRF by linearly weighting the basis functions of an existing HRF.
+#' This is useful for turning estimated basis coefficients into a single
+#' functional HRF.
+#'
+#' @param hrf An object of class `HRF`.
+#' @param h   Numeric vector of length `nbasis(hrf)` giving the weights.
+#' @param name Optional name for the resulting HRF.
+#' @param ... Additional arguments passed to methods.
+#'
+#' @return A new `HRF` object with `nbasis = 1`.
+#' @export
+hrf_from_coefficients <- function(hrf, h, ...) { UseMethod("hrf_from_coefficients") }
+
+
+#' Reconstruction matrix for an HRF basis
+#'
+#' Returns a matrix \eqn{\Phi} that converts basis coefficients into a
+#' sampled HRF shape.
+#'
+#' @param hrf An object of class `HRF`.
+#' @param sframe A `sampling_frame` object or numeric vector of times.
+#' @param precision Optional sampling interval in seconds when `sframe`
+#'   is a `sampling_frame`. Defaults to the TR of `sframe`.
+#' @param ... Additional arguments passed to methods
+#' @return A numeric matrix with one column per basis function.
+#' @export
+reconstruction_matrix <- function(hrf, sframe, ...) { UseMethod("reconstruction_matrix") }
 
 
  
@@ -846,6 +1340,48 @@ nbasis <- function(x, ...) UseMethod("nbasis")
 # durations generic is now imported from fmridesign
 # durations <- function(x) UseMethod("durations")
 
+#' Get event amplitudes from an object
+#' 
+#' @description
+#' Extract the amplitude or intensity values associated with each event. Amplitudes 
+#' represent the strength or magnitude of events and can be used to:
+#' \itemize{
+#'   \item Model parametric modulation of neural responses
+#'   \item Weight events by their intensity or importance
+#'   \item Create amplitude-modulated regressors
+#' }
+#'
+#' @param x The object containing event information (typically an event_term or event_model)
+#' @return A numeric vector of amplitude values, where:
+#'   \itemize{
+#'     \item Each value represents the intensity of an event
+#'     \item Default value of 1 indicates unmodulated events
+#'     \item Order matches the corresponding event sequence
+#'   }
+#' @examples
+#' # Create event data with varying amplitudes
+#' event_data <- data.frame(
+#'   condition = factor(c("stim", "stim", "stim", "stim")),
+#'   onsets = c(1, 10, 20, 30),
+#'   intensity = c(0.5, 1.0, 1.5, 2.0),  # Parametrically varying intensity
+#'   run = c(1, 1, 1, 1)
+#' )
+#' 
+#' # Create event term with amplitudes
+#' eterm <- event_term(
+#'   list(condition = event_data$condition),
+#'   onsets = event_data$onsets,
+#'   amplitudes = event_data$intensity,
+#'   blockids = event_data$run
+#' )
+#' 
+#' # Get amplitudes from term
+#' amp <- amplitudes(eterm)  # Returns: c(0.5, 1.0, 1.5, 2.0)
+#' @export
+#' @family event_properties
+#' @seealso [event_term()], [onsets()]
+amplitudes <- function(x) UseMethod("amplitudes")
+
 #' Extract sampling times
 #' 
 #' @description
@@ -998,7 +1534,7 @@ nbasis <- function(x, ...) UseMethod("nbasis")
 #' @export
 #' @family block_operations
 #' @seealso [blocklens()], [split_by_block()], [sampling_frame()]
-# blockids is now imported from fmrihrf
+# blockids <- function(x) UseMethod("blockids") # Now imported from fmrihrf
 
 #' Get block/run lengths
 #' 
@@ -1047,7 +1583,7 @@ nbasis <- function(x, ...) UseMethod("nbasis")
 #' @export
 #' @family block_operations
 #' @seealso [blockids()], [split_by_block()], [sampling_frame()]
-# blocklens is now imported from fmrihrf
+# blocklens <- function(x, ...) UseMethod("blocklens") # Now imported from fmrihrf
 
 #' Generate F-contrasts for a model term
 #' 
@@ -1112,6 +1648,15 @@ nbasis <- function(x, ...) UseMethod("nbasis")
 #' @seealso [event_model()], [contrast_weights()]
 Fcontrasts <- function(x, ...) UseMethod("Fcontrasts")
 
+#' estcon
+#' 
+#' @param x the object
+#' @param fit the model fit
+#' @param ... extra args
+#' @noRd
+#' @keywords internal
+estcon <- function(x, fit, ...) UseMethod("estcon")
+
 #' construct
 #' 
 #' construct a term given a an hrf spec and model specification
@@ -1127,7 +1672,19 @@ construct <- function(x, model_spec,...) UseMethod("construct")
 
 
 #' generate an AFNI linear model command from a configuration file
+#' 
+#' @param x the config file
+#' @param ... extra args
+#' @export
+gen_afni_lm <- function(x, ...) UseMethod("gen_afni_lm")
 
+#' generate a set of AFNI stimuli for '3dDeconvolve'
+#' 
+#' @param x the term
+#' @param ... extra args
+#' @keywords internal
+#' @rdname build_afni_stims
+build_afni_stims <- function(x, ...) UseMethod("build_afni_stims")
 
 #' Split Event Onsets into Lists by Factor Levels or Blocks
 #'
@@ -1184,7 +1741,8 @@ construct <- function(x, model_spec,...) UseMethod("construct")
 #' @family timing_functions
 #' @seealso [event_term()], [sampling_frame()], [global_onsets()]
 #' @export
-# split_onsets is now imported from fmridesign
+# split_onsets generic is now imported from fmridesign
+# split_onsets <- function(x, ...) UseMethod("split_onsets")
 
 
 
@@ -1405,7 +1963,19 @@ longnames.event_seq <- function(x, ...) {
   longnames.event_term(x, ...)
 }
 
+#' @export
+#' @rdname longnames
+longnames.afni_hrf_convolved_term <- function(x, ...) {
+  # For AFNI terms, use the longnames of the underlying event term
+  longnames(x$evterm, ...)
+}
 
+#' @export
+#' @rdname longnames
+longnames.afni_trialwise_convolved_term <- function(x, ...) {
+  # For AFNI trialwise terms, use the longnames of the underlying event term
+  longnames(x$evterm, ...)
+}
 
 #' @export
 #' @rdname longnames
@@ -1519,7 +2089,19 @@ estimate_betas <- function(x, ...) UseMethod("estimate_betas")
 #' @return A ggplot2 object containing the design matrix heatmap
 # design_map generic moved to fmridesign package
 
+#' @export
+#' @rdname conditions
+conditions.afni_hrf_convolved_term <- function(x, ...) {
+  # For AFNI terms, use the conditions of the underlying event term
+  conditions(x$evterm, ...)
+}
 
+#' @export
+#' @rdname conditions
+conditions.afni_trialwise_convolved_term <- function(x, ...) {
+  # For AFNI trialwise terms, use the conditions of the underlying event term
+  conditions(x$evterm, ...)
+}
 
 #' @export
 #' @rdname conditions
@@ -1528,14 +2110,8 @@ conditions.convolved_term <- function(x, ...) {
   conditions(x$evterm, ...)
 }
 
-#' Extract event table from convolved term
-#'
-#' Extract the event table from a convolved term object.
-#'
-#' @param x A convolved_term object
-#' @return A data.frame containing the event table
-#' @method event_table convolved_term
 #' @export
+#' @rdname event_table
 event_table.convolved_term <- function(x) {
   # For convolved terms, delegate to the underlying event term
   event_table(x$evterm)
@@ -1584,6 +2160,13 @@ shortnames.event_model <- function(x, ...) {
 }
 
 #' @export
+#' @rdname longnames
+longnames.convolved_term <- function(x, ...) {
+  # For convolved terms, delegate to the underlying event term
+  longnames(x$evterm, ...)
+}
+
+#' @export
 #' @rdname design_matrix
 design_matrix.convolved_term <- function(x, blockid=NULL, ...) {
   if (is.null(blockid)) {
@@ -1594,6 +2177,15 @@ design_matrix.convolved_term <- function(x, blockid=NULL, ...) {
   } 
 }
 
+#' @describeIn design_matrix Design matrix for AFNI-convolved terms
+#'
+#' AFNI-convolved terms rely on AFNI software for design matrix
+#' construction. This method stops with an informative message.
+#'
+#' @export
+design_matrix.afni_hrf_convolved_term <- function(x, blockid=NULL, ...) {
+  stop("afni_hrf_convolved_term delegates design matrix construction to AFNI")
+}
 
 #' Write Results from fMRI Analysis
 #'

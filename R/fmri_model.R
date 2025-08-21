@@ -29,8 +29,7 @@
 #' @param drop_empty Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.
 #' @param durations A vector of event durations. Default is \code{0}.
 #' @return An \code{fmri_model} object.
-#' @keywords internal
-#' @noRd
+#' @export
 #' @examples
 #' \dontrun{
 #' # Assuming you have an fmri_dataset object named ds and a formula for events:
@@ -178,7 +177,7 @@ baseline_terms.fmri_model <- function(x) {
 
 #' @export
 contrast_weights.fmri_model <- function(x, ...) {
-  contrast_weights.event_model(x$event_model, ...)
+  contrast_weights(x$event_model, ...)
 }
 
 #' @export

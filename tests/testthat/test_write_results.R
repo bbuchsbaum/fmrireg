@@ -748,7 +748,7 @@ test_that("write_results.fmri_lm cleans up atomic write on error", {
       task = "test",
       space = "MNI152NLin2009cAsym"
     ),
-    "Beta data structure is invalid or empty"
+    "Failed to write BIDS results"
   )
   
   # Assert that the final directory contains no output files
@@ -786,7 +786,7 @@ test_that("write_results.fmri_lm handles fmristore write failure gracefully", {
       task = "test",
       save_betas = TRUE
     ),
-    "Beta data structure is invalid or empty"
+    "Failed to write BIDS results"
   )
   
   # Verify cleanup occurred
