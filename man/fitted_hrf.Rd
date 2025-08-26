@@ -59,8 +59,5 @@ hrf_values <- fitted_hrf(fit, sample_at = times)
 }
 \seealso{
 \code{\link[fmrihrf:HRF_objects]{fmrihrf::HRF_SPMG1()}}, \code{\link[=fmri_lm]{fmri_lm()}}
-
-Other hrf: 
-\code{\link{nbasis}()}
 }
 \concept{hrf}

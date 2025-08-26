@@ -2,7 +2,7 @@
 % Please edit documentation in R/all_generic.R
 \name{Fcontrasts}
 \alias{Fcontrasts}
-\title{Return a set of data chunks}
+\title{Return the global onsets of an object}
 \usage{
 Fcontrasts(x, ...)
 }
@@ -16,6 +16,8 @@ Fcontrasts(x, ...)
 \item{exclude}{Character vector of conditions to exclude}
 }}
 
+\item{onsets}{A numeric vector of relative onset times within each run/block}
+
 \item{nchunks}{Integer; number of chunks to create (ignored if runwise=TRUE)}
 
 \item{blockids}{Numeric vector specifying which blocks/runs to include (optional)}
@@ -23,6 +25,13 @@ Fcontrasts(x, ...)
 \item{global}{Logical; if TRUE, return cumulative times across runs (default: FALSE)}
 }
 \value{
+A numeric vector of global onset times where:
+\itemize{
+\item Each onset is adjusted by the cumulative duration of previous runs
+\item Times are in the same units as the input onsets (typically seconds)
+\item NA is returned for onsets that exceed their block duration
+}
+
 An iterator object that yields data chunks, where each chunk contains:
 \describe{
 \item{data}{Matrix of data values for this chunk}
@@ -83,6 +92,15 @@ A list of contrast specifications where each contains:
 }
 }
 \description{
+Convert relative onset times to global (cumulative) onset times across runs. Global onsets
+are defined as cumulative time over runs, meaning they do not reset to zero for each run.
+This is useful for:
+\itemize{
+\item Converting run-specific onsets to experiment-wide timings
+\item Aligning events across multiple runs
+\item Computing temporal distances between events in different runs
+}
+
 Split a dataset into manageable chunks for processing. This is particularly useful
 for parallel processing of large fMRI datasets. Chunks can be created either by run
 (runwise=TRUE) or by dividing the data into a specified number of pieces. Each chunk
@@ -149,6 +167,27 @@ Create F-contrasts to test for overall effects of model terms. F-contrasts are u
 }
 }
 \examples{
+# Create a sampling frame with three runs
+sframe <- sampling_frame(
+  blocklens = c(100, 100, 100),  # 100 scans per run
+  TR = 2                         # 2 seconds per scan
+)
+
+# Define events in each run
+run_onsets <- c(10, 20, 30)     # Events at 10s, 20s, 30s
+run_ids <- c(1, 2, 3)           # One event per run
+
+# Convert to global onsets
+global_times <- global_onsets(
+  sframe,
+  onsets = run_onsets,
+  blockids = run_ids
+)
+# Returns: c(10, 220, 430)
+# Because:
+#  - Run 1: 10s
+#  - Run 2: 20s + (100 scans * 2s) = 220s
+#  - Run 3: 30s + (200 scans * 2s) = 430s
 # Create a simple matrix dataset
 X <- matrix(rnorm(100 * 1000), 100, 1000)  # 100 timepoints, 1000 voxels
 dset <- fmridataset::matrix_dataset(
@@ -354,6 +393,9 @@ evmodel2 <- event_model(
 basis_contrasts <- Fcontrasts(evmodel2)
 }
 \seealso{
+\code{\link[=sampling_frame]{sampling_frame()}}, \code{\link[=event_model]{event_model()}}
+Return a set of data chunks
+
 \code{\link[=matrix_dataset]{matrix_dataset()}}, \code{\link[=fmri_dataset]{fmri_dataset()}}, \code{\link[foreach:foreach]{foreach::foreach()}}
 Get event onsets from an object
 
@@ -376,15 +418,6 @@ Get block/run lengths
 Generate F-contrasts for a model term
 
 \code{\link[=event_model]{event_model()}}, \code{\link[=contrast_weights]{contrast_weights()}}
-
-Other timing: 
-\code{\link{nbasis}()}
-
-Other timing: 
-\code{\link{nbasis}()}
-
-Other timing: 
-\code{\link{nbasis}()}
 }
 \concept{block_operations}
 \concept{contrasts}

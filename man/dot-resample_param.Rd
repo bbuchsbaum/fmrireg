@@ -12,14 +12,6 @@
 )
 }
 \arguments{
-\item{base}{Base values to resample from}
-
-\item{sd}{Standard deviation for resampling}
-
-\item{dist}{Distribution to use for resampling}
-
-\item{allow_negative}{Whether to allow negative values}
-
 \item{n}{Number of time-series (columns).}
 
 \item{total_time}{Numeric. Total scan length (seconds).}
@@ -106,4 +98,3 @@ amplitudes/durations. If you need each column's, see \code{ampmat} and
 \code{durmat}.
 }
 }
-\keyword{internal}
