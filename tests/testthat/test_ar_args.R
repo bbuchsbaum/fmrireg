@@ -7,7 +7,7 @@ library(testthat)
 # simple synthetic dataset
 etab <- data.frame(onset=c(1,10), repnum=factor(c("A","B")), run=c(1,1))
 Y <- matrix(rnorm(20*5), 20, 5)
-dset <- matrix_dataset(Y, TR=1, run_length=20, event_table=etab)
+dset <- fmridataset::matrix_dataset(Y, TR=1, run_length=20, event_table=etab)
 
 test_that("fmri_lm accepts AR arguments", {
   expect_error(

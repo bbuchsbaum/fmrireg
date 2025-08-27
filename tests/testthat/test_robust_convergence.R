@@ -24,7 +24,7 @@ test_that("robust fitting handles non-convergent data", {
   Y <- rnorm(n)
   Y[seq(1, n, by = 2)] <- 100 * (-1)^(seq(1, n, by = 2))
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   robust_opts <- list(
@@ -51,7 +51,7 @@ test_that("maximum iteration limit is respected", {
   X <- cbind(1, rnorm(n))
   Y <- X %*% c(1, 2) + rnorm(n)
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   # Test with different max_iter values
@@ -87,7 +87,7 @@ test_that("robust fitting handles extreme contamination (30% outliers)", {
   outlier_idx <- sample(n, n_outliers)
   Y[outlier_idx] <- Y[outlier_idx] + rnorm(n_outliers, mean = 10, sd = 2)
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   # Test both Huber and bisquare
@@ -127,7 +127,7 @@ test_that("robust fitting handles extreme contamination (50% outliers)", {
   outlier_idx <- sample(n, n_outliers)
   Y[outlier_idx] <- rnorm(n_outliers, mean = 20, sd = 5)
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   robust_opts <- list(
@@ -163,7 +163,7 @@ test_that("robust fitting handles extreme contamination (70% outliers)", {
   outlier_idx <- sample(n, n_outliers)
   Y[outlier_idx] <- runif(n_outliers, -50, 50)
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   robust_opts <- list(
@@ -192,7 +192,7 @@ test_that("scale estimation handles zero MAD (constant data)", {
   # Constant Y values - MAD would be zero
   Y <- rep(5, n)
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   robust_opts <- list(
@@ -223,7 +223,7 @@ test_that("scale estimation handles near-zero MAD", {
   # Very small noise
   Y <- X %*% c(1, 2, -1) + rnorm(n, sd = 1e-10)
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   robust_opts <- list(
@@ -255,7 +255,7 @@ test_that("weight evolution shows convergence pattern", {
   outlier_idx <- c(5, 15, 25, 35)
   Y[outlier_idx] <- Y[outlier_idx] + 8
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   # Track weights across iterations by running with increasing max_iter
@@ -299,7 +299,7 @@ test_that("tolerance-based convergence would work if implemented", {
   Y <- X %*% c(2, -1) + rnorm(n)
   Y[c(5, 10, 15)] <- Y[c(5, 10, 15)] + 5
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   # If tolerance were implemented, it would be in robust_opts
@@ -340,7 +340,7 @@ test_that("global vs local scale estimation in extreme cases", {
   Y[6:10, 2] <- Y[6:10, 2] + 25   # Medium relative to scale
   Y[11:15, 3] <- Y[11:15, 3] + 200 # Small relative to scale
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = Y, proj = proj)
   
   # Test with local scale
@@ -393,7 +393,7 @@ test_that("leverage points (X-space outliers) are handled", {
   Y <- X %*% beta_true + rnorm(n, sd = 0.5)
   Y[leverage_idx] <- Y[leverage_idx] + 5  # Bad leverage points
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   # Robust regression should downweight bad leverage points
@@ -435,7 +435,7 @@ test_that("robust fitting handles singular or near-singular designs", {
   
   # Check if preprojection handles near-singularity
   expect_warning(
-    proj <- .fast_preproject(X),
+    proj <- fmrireg:::.fast_preproject(X),
     regexp = NA  # May or may not warn
   )
   
@@ -474,7 +474,7 @@ test_that("robust fitting handles data with groups of identical outliers", {
   Y[1:20] <- 50    # 20% identical high values
   Y[21:40] <- -50  # 20% identical low values
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   robust_opts <- list(
@@ -505,7 +505,7 @@ test_that("weight computation edge cases", {
   X <- cbind(1, rnorm(n))
   Y <- rnorm(n)
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   # Test with extremely small scale (forces large scaled residuals)
@@ -570,7 +570,7 @@ test_that("robust fitting performance degrades gracefully with contamination", {
     mse_ols[i] <- mean((ols_beta - beta_true)^2)
     
     # Robust
-    proj <- .fast_preproject(X)
+    proj <- fmrireg:::.fast_preproject(X)
     ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
     
     result <- robust_iterative_fitter(

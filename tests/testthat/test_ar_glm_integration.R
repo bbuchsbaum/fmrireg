@@ -23,7 +23,7 @@ test_that("AR+GLM: AR1 estimation with orthogonal design", {
   y <- 5 * design[,1] + errors
   
   # Create minimal dataset
-  dset <- matrix_dataset(
+  dset <- fmridataset::matrix_dataset(
     matrix(y, ncol = 1), 
     TR = 1, 
     run_length = rep(n_time, n_runs),
@@ -64,11 +64,11 @@ test_that("AR+GLM: Standard errors increase with positive autocorrelation", {
     Y[, v] <- X %*% c(0, 2) + errors
   }
   
-  dset <- matrix_dataset(Y, TR = 1, run_length = n_time)
+  dset <- fmridataset::matrix_dataset(Y, TR = 1, run_length = n_time)
   
   # Create minimal event table for the model  
   etab <- data.frame(onset = 1, run = 1)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n_time, event_table = etab)
+  dset <- fmridataset::matrix_dataset(Y, TR = 1, run_length = n_time, event_table = etab)
   
   # Fit with and without AR correction
   fit_iid <- fmri_lm(onset ~ hrf(onset), block = ~ run, dataset = dset, baseline_model = NULL, 
@@ -106,7 +106,7 @@ test_that("AR+GLM: Global AR estimation works across runs", {
     onset = rep(1, n_runs),
     run = 1:n_runs
   )
-  dset <- matrix_dataset(Y, TR = 1, run_length = rep(n_time_per_run, n_runs), event_table = etab)
+  dset <- fmridataset::matrix_dataset(Y, TR = 1, run_length = rep(n_time_per_run, n_runs), event_table = etab)
   
   # Fit with global AR estimation
   fit_global <- fmri_lm(onset ~ hrf(onset), block = ~ run, dataset = dset, baseline_model = NULL,
@@ -138,7 +138,7 @@ test_that("AR+GLM: Iterative GLS improves estimates", {
   y <- X %*% c(0, true_beta) + errors
   
   etab <- data.frame(onset = 1, run = 1)
-  dset <- matrix_dataset(matrix(y, ncol = 1), TR = 1, run_length = n, event_table = etab)
+  dset <- fmridataset::matrix_dataset(matrix(y, ncol = 1), TR = 1, run_length = n, event_table = etab)
   
   # Fit with different numbers of GLS iterations
   fit_gls1 <- fmri_lm(onset ~ hrf(onset), block = ~ run, dataset = dset, baseline_model = NULL,

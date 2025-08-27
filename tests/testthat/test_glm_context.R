@@ -41,7 +41,7 @@ test_that("solve_glm_core handles basic OLS", {
   Y <- X %*% beta_true + rnorm(n, sd = 0.5)
   
   # Need projection matrix
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   
   ctx <- glm_context(
     X = X,
@@ -69,7 +69,7 @@ test_that("solve_glm_core handles multiple Y columns", {
   X <- cbind(1, rnorm(n))
   Y <- matrix(rnorm(n * n_y), n, n_y)
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   
   ctx <- glm_context(
     X = X,
@@ -93,7 +93,7 @@ test_that("solve_glm_core validates inputs", {
   expect_error(solve_glm_core(ctx_bad), "proj")
   
   # Dimension mismatch
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx_bad2 <- glm_context(
     X = X,
     Y = rnorm(25),  # Wrong size
@@ -102,7 +102,7 @@ test_that("solve_glm_core validates inputs", {
   expect_error(solve_glm_core(ctx_bad2), "dimension")
 })
 
-test_that(".fast_preproject handles rank deficient matrices", {
+test_that("fmrireg:::.fast_preproject handles rank deficient matrices", {
   n <- 50
   X <- cbind(1, rnorm(n), rnorm(n))
   X[, 3] <- X[, 2]  # Make rank deficient
@@ -110,7 +110,7 @@ test_that(".fast_preproject handles rank deficient matrices", {
   # The existing implementation doesn't handle rank deficiency well
   # It will either work (with numerical issues) or fail
   result <- tryCatch({
-    proj <- .fast_preproject(X)
+    proj <- fmrireg:::.fast_preproject(X)
     list(success = TRUE, proj = proj)
   }, error = function(e) {
     list(success = FALSE, error = e)
@@ -146,7 +146,7 @@ test_that("glm_context works with robust weights", {
   Xw <- sqrt(weights) * X
   Yw <- sqrt(weights) * Y
   
-  proj <- .fast_preproject(Xw)
+  proj <- fmrireg:::.fast_preproject(Xw)
   
   ctx <- glm_context(
     X = Xw,
@@ -158,7 +158,7 @@ test_that("glm_context works with robust weights", {
   result <- solve_glm_core(ctx)
   
   # Robust estimate should differ from OLS
-  proj_ols <- .fast_preproject(X)
+  proj_ols <- fmrireg:::.fast_preproject(X)
   ctx_ols <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj_ols)
   result_ols <- solve_glm_core(ctx_ols)
   
@@ -193,7 +193,7 @@ test_that("AR whitening can be applied to glm_context", {
   Xw <- W %*% X
   Yw <- W %*% Y
   
-  proj <- .fast_preproject(Xw)
+  proj <- fmrireg:::.fast_preproject(Xw)
   
   ctx <- glm_context(
     X = Xw,
@@ -213,7 +213,7 @@ test_that("glm_context fields are preserved through operations", {
   X <- cbind(1, rnorm(40))
   Y <- matrix(rnorm(40 * 3), 40, 3)
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   
   ctx <- glm_context(
     X = X,

@@ -152,7 +152,7 @@ test_that("sparse matrix handling for efficiency", {
   Y <- matrix(rnorm(n), ncol = 1)
   
   # Should handle sparse matrix efficiently - use correct glm_context constructor
-  proj <- .fast_preproject(X_sparse)
+  proj <- fmrireg:::.fast_preproject(X_sparse)
   ctx <- glm_context(
     X = X_sparse,
     Y = Y,
@@ -222,7 +222,7 @@ test_that("pre-allocation prevents memory fragmentation", {
   
   # Fill in results using correct glm_context constructor
   for (v in 1:n_voxels) {
-    proj <- .fast_preproject(X)
+    proj <- fmrireg:::.fast_preproject(X)
     ctx <- glm_context(
       X = X,
       Y = Y[, v, drop = FALSE],
@@ -263,7 +263,7 @@ test_that("recycling design matrices saves memory", {
   X_all <- do.call(rbind, replicate(n_runs, X_single, simplify = FALSE))
   
   # Use correct glm_context constructor
-  proj <- .fast_preproject(X_all)
+  proj <- fmrireg:::.fast_preproject(X_all)
   ctx <- glm_context(
     X = X_all,
     Y = Y_all,

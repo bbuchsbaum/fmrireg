@@ -13,7 +13,7 @@ test_that("robust_iterative_fitter works with huber", {
   Y[outlier_idx] <- Y[outlier_idx] + 5
   
   # Initial GLM context
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   # Robust options
@@ -68,7 +68,7 @@ test_that("robust_iterative_fitter works with bisquare", {
   Y[outlier_idx] <- Y[outlier_idx] + rnorm(10, mean = 10, sd = 2)
   
   # Setup
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   
   robust_opts <- list(
@@ -107,7 +107,7 @@ test_that("robust_iterative_fitter handles multiple responses", {
   Y[20:25, 3] <- Y[20:25, 3] - 5
   
   # Setup
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = Y, proj = proj)
   
   robust_opts <- list(
@@ -146,7 +146,7 @@ test_that("robust scale estimation works correctly", {
   Y <- cbind(X %*% c(1, 2) + rnorm(n, sd = 0.5),
              X %*% c(-1, 3) + rnorm(n, sd = 2))  # Different scales
   
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = Y, proj = proj)
   
   # Local scale

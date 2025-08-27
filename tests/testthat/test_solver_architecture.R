@@ -12,7 +12,7 @@ test_that("solve_glm_core handles basic OLS correctly", {
   Y <- X %*% beta_true + rnorm(n, sd = 0.3)
   
   # Create proper GLM context with projection
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(
     X = X,
     Y = matrix(Y, ncol = 1),
@@ -45,7 +45,7 @@ test_that("solve_glm_core handles weighted least squares", {
   Yw <- Y * sqrt_weights
   
   # Create weighted context
-  proj <- .fast_preproject(Xw)
+  proj <- fmrireg:::.fast_preproject(Xw)
   ctx <- glm_context(
     X = Xw,
     Y = matrix(Yw, ncol = 1),
@@ -76,7 +76,7 @@ test_that("solve_glm_core integrates with AR whitening", {
   Y <- X %*% beta_true + as.vector(e)
   
   # Initial OLS fit
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   initial_result <- solve_glm_core(ctx)
   
@@ -88,7 +88,7 @@ test_that("solve_glm_core integrates with AR whitening", {
   whitened <- ar_whiten_transform(X, matrix(Y, ncol = 1), phi_est, exact_first = FALSE)
   
   # Solve whitened problem
-  proj_w <- .fast_preproject(whitened$X)
+  proj_w <- fmrireg:::.fast_preproject(whitened$X)
   ctx_whitened <- glm_context(
     X = whitened$X,
     Y = whitened$Y,
@@ -116,7 +116,7 @@ test_that("solve_glm_core handles rank deficient matrices", {
   # Should handle rank deficiency gracefully - either error or proceed
   # The implementation might use different approaches (SVD, etc.)
   result <- tryCatch({
-    proj <- .fast_preproject(X)
+    proj <- fmrireg:::.fast_preproject(X)
     ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
     solve_glm_core(ctx)
   }, error = function(e) {
@@ -143,7 +143,7 @@ test_that("iterative AR+Robust pipeline works", {
   Y <- X %*% beta + as.vector(e)
   
   # Step 1: Initial OLS fit
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx_init <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   initial_result <- solve_glm_core(ctx_init)
   
@@ -155,7 +155,7 @@ test_that("iterative AR+Robust pipeline works", {
   whitened <- ar_whiten_transform(X, matrix(Y, ncol = 1), phi_est, exact_first = FALSE)
   
   # Step 4: Robust fitting on whitened data
-  proj_w <- .fast_preproject(whitened$X)
+  proj_w <- fmrireg:::.fast_preproject(whitened$X)
   ctx_w <- glm_context(X = whitened$X, Y = whitened$Y, proj = proj_w, phi_hat = phi_est)
   
   robust_config <- list(
@@ -196,7 +196,7 @@ test_that("multi-run solving maintains independence", {
   # Test each run separately to verify independence
   results <- list()
   for (r in 1:n_runs) {
-    proj <- .fast_preproject(X_list[[r]])
+    proj <- fmrireg:::.fast_preproject(X_list[[r]])
     ctx <- glm_context(
       X = X_list[[r]],
       Y = matrix(Y_list[[r]], ncol = 1),
@@ -240,7 +240,7 @@ test_that("voxelwise contrast computation works", {
   contrast_values <- numeric(n_voxels)
   
   for (v in 1:n_voxels) {
-    proj <- .fast_preproject(X)
+    proj <- fmrireg:::.fast_preproject(X)
     ctx <- glm_context(
       X = X,
       Y = Y[, v, drop = FALSE],
@@ -283,7 +283,7 @@ test_that("solver preserves context structure", {
   Y <- rnorm(n)
   
   # Create context with additional fields
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(
     X = X,
     Y = matrix(Y, ncol = 1),

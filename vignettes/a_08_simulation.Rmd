@@ -135,9 +135,10 @@ noise_df <- data.frame(
 )
 
 # Create long format dataframe for plotting without pipes
-noise_long <- reshape2::melt(noise_df, id.vars = "Time", 
-                            variable.name = "NoiseType", 
-                            value.name = "Signal")
+noise_long <- tidyr::pivot_longer(noise_df, 
+                                  cols = -Time,
+                                  names_to = "NoiseType", 
+                                  values_to = "Signal")
 
 # Set factor levels for proper ordering
 noise_long$NoiseType <- factor(noise_long$NoiseType, 
@@ -318,10 +319,10 @@ plot_df <- rbind(
 )
 
 # Convert to long format
-plot_df_long <- reshape2::melt(plot_df, 
-                              id.vars = c("Time", "SNR"),
-                              variable.name = "Type", 
-                              value.name = "Signal")
+plot_df_long <- tidyr::pivot_longer(plot_df, 
+                                    cols = -c(Time, SNR),
+                                    names_to = "Type", 
+                                    values_to = "Signal")
 
 # First approach: Overlay clean and noisy signals
 ggplot(plot_df_long, aes(x = Time, y = Signal, color = Type)) +

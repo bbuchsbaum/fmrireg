@@ -93,13 +93,14 @@ calculate_sandwich_variance <- function(X, residuals, XtXinv, weights = NULL) {
   }
   
   # Calculate meat: X' diag(resid2) X
+  # Correct computation without sqrt (resid2 is already squared)
   if (is.matrix(residuals) && ncol(residuals) > 1) {
     # Multiple response case
     # Average over voxels for now (could be improved)
     resid2_avg <- rowMeans(resid2)
-    meat <- crossprod(X * sqrt(resid2_avg))
+    meat <- crossprod(X, X * resid2_avg)  # X' diag(resid2) X
   } else {
-    meat <- crossprod(X * sqrt(resid2))
+    meat <- crossprod(X, X * as.vector(resid2))  # X' diag(resid2) X
   }
   
   # Sandwich: (X'X)^-1 meat (X'X)^-1

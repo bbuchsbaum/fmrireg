@@ -267,6 +267,36 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
   out
 }
 
+#' Simulate multiple fMRI time series with column-specific parameters
+#'
+#' Generate multiple fMRI time series where each column can have different 
+#' amplitude and duration parameters drawn from specified distributions.
+#'
+#' @param n Number of time-series (columns).
+#' @param total_time Total scan length (seconds).
+#' @param TR Repetition time (seconds).
+#' @param hrf Hemodynamic response function, e.g. \code{fmrihrf::HRF_SPMG1}.
+#' @param n_events Number of events.
+#' @param onsets Optional numeric vector of event onsets.
+#' @param isi_dist Inter-stimulus interval distribution.
+#' @param isi_min,isi_max ISI range for uniform distribution.
+#' @param isi_rate Rate for exponential distribution.
+#' @param durations Event durations.
+#' @param duration_sd Standard deviation for duration sampling.
+#' @param duration_dist Distribution for duration sampling.
+#' @param amplitudes Event amplitudes.
+#' @param amplitude_sd Standard deviation for amplitude sampling.
+#' @param amplitude_dist Distribution for amplitude sampling.
+#' @param single_trial Whether to use single-trial regressors.
+#' @param noise_type Type of noise to add.
+#' @param noise_ar AR coefficients for noise.
+#' @param noise_sd Noise standard deviation.
+#' @param random_seed Random seed for reproducibility.
+#' @param verbose Whether to print messages.
+#'
+#' @return A list with time_series (matrix_dataset), ampmat, durmat, hrf_info, and noise_params.
+#'
+#' @export
 simulate_fmri_matrix <- function(
     n                 = 1,
     total_time        = 240,

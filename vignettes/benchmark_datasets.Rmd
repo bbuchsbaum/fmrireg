@@ -59,24 +59,23 @@ print(summary_info$experimental_design)
 Each benchmark dataset is a list. Key components include:
 
 - `description`: A text summary.
-- `core_data`: A `matrix_dataset` object containing the primary BOLD data (`core_data$datamat`, identical to `Y_noisy`), `TR`, `run_length`, an `event_table` (with onsets, conditions, durations), and a `sampling_frame`.
-- `Y_noisy`: The matrix of noisy BOLD time series (time points x voxels). Also accessible via `core_data$datamat`.
+- `Y_noisy`: The matrix of noisy BOLD time series (time points x voxels).
 - `Y_clean`: (When available) The BOLD signal without noise.
-- `event_onsets`: Vector of event start times. Also available in `core_data$event_table$onset`.
-- `condition_labels`: Vector of condition names for each event. Also available in `core_data$event_table$condition`.
+- `event_onsets`: Vector of event start times.
+- `condition_labels`: Vector of condition names for each event.
+- `event_durations`: Vector of event durations.
 - `true_betas_condition`: Ground truth beta values for each condition.
 - `true_hrf_parameters`: Information about the HRF used in simulation.
-- `TR`, `total_time`: Scan parameters (TR also in `core_data`).
+- `TR`, `total_time`, `run_length`: Scan parameters.
 
 ```{r examine_structure}
-# Look at the BOLD time series dimensions (directly and via core_data)
+# Look at the BOLD time series dimensions and event structure
 cat("Y_noisy BOLD data dimensions:", dim(data$Y_noisy), "\n")
-cat("core_data$datamat dimensions:", dim(data$core_data$datamat), "\n")
 cat("Number of events:", length(data$event_onsets), "\n")
-cat("Events in core_data$event_table:", nrow(data$core_data$event_table), "\n")
 cat("Conditions:", unique(data$condition_labels), "\n")
 cat("Events per condition:", table(data$condition_labels), "\n")
-cat("TR from core_data:", data$core_data$TR, "\n")
+cat("TR:", data$TR, "\n")
+cat("Run length:", data$run_length, "\n")
 ```
 
 ## Visualizing the Data

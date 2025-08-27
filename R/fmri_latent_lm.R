@@ -62,21 +62,34 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
 #'
 #' @param dset A latent dataset object.
 #' @param model The fmri model object.
-#' @param conlist A list of contrasts.
+#' @param contrast_objects A list of contrast objects.
 #' @param nchunks The number of chunks to use for the regression.
-#' @param robust Logical, if TRUE, robust regression will be performed.
+#' @param cfg Configuration object containing robust and AR options.
+#' @param progress Logical, if TRUE, show progress bar.
+#' @param phi_fixed Fixed AR coefficients (optional).
+#' @param sigma_fixed Fixed sigma values (optional).
 #' @param verbose Logical, if TRUE, additional output will be printed.
-#' @param autocor A character string specifying the autocorrelation method to use.
-#' @param bootstrap Logical, if TRUE, bootstrapping will be performed.
-#' @param nboot The number of bootstrap iterations.
-#' @param boot_rows Logical, if TRUE, bootstrap row-wise.
+#' @param ... Additional arguments (for compatibility).
 #' @return A list containing the results of the chunkwise linear regression.
 #' @seealso fmri_latent_lm
 #' @noRd
-chunkwise_lm.latent_dataset <- function(dset, model, conlist, nchunks, robust=FALSE, verbose=FALSE, 
-                                        autocor=c("auto", "ar1", "ar2", "arma", "none"), 
-                                        bootstrap=FALSE, nboot=1000, boot_rows=FALSE) {
-  autocor <- match.arg(autocor)
+chunkwise_lm.latent_dataset <- function(dset, model, contrast_objects, nchunks, 
+                                        cfg = NULL, progress = FALSE, 
+                                        phi_fixed = NULL, sigma_fixed = NULL,
+                                        verbose = FALSE, ...) {
+  # Extract options from cfg if provided
+  robust <- if (!is.null(cfg)) cfg$robust else FALSE
+  autocor <- if (!is.null(cfg) && !is.null(cfg$ar$cor_struct)) {
+    cfg$ar$cor_struct
+  } else {
+    "none"
+  }
+  bootstrap <- FALSE  # Not currently supported through cfg
+  nboot <- 1000
+  boot_rows <- FALSE
+  
+  # Map conlist to maintain backward compatibility
+  conlist <- contrast_objects
   form <- get_formula(model)
   tmats <- term_matrices(model)
   data_env <- list2env(tmats)

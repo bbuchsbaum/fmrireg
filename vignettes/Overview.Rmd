@@ -11,15 +11,15 @@ vignette: >
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=6, fig.height=4)
-library(fmridesign)
 library(fmrireg)
+library(fmrihrf)
 ```
 
 ## Introduction
 
-The `fmrireg` package provides tools for analyzing fMRI regression models in R, inspired by standard R modeling tools like `lm()` and `glm()`. It works in conjunction with the `fmridesign` package, which handles the design matrix construction aspects of fMRI analysis.
+The `fmrireg` package provides tools for analyzing fMRI regression models in R, inspired by standard R modeling tools like `lm()` and `glm()`. It integrates hemodynamic response functions and design matrix construction for comprehensive fMRI analysis.
 
-While fMRI analysis involves complexities like large datasets, spatio-temporal correlations, and physiological noise, the core of standard univariate analysis is multiple regression applied voxelwise. The `fmrireg` and `fmridesign` packages work together to simplify the specification and estimation of these regression models.
+While fMRI analysis involves complexities like large datasets, spatio-temporal correlations, and physiological noise, the core of standard univariate analysis is multiple regression applied voxelwise. The `fmrireg` package simplifies the specification and estimation of these regression models.
 
 This vignette provides a high-level overview of the key steps and components involved in using `fmrireg`.
 
@@ -62,7 +62,7 @@ plot(time, HRF_SPMG1(time), type = 'l', xlab = "Time (s)", ylab = "BOLD Response
      main = "SPM Canonical HRF (HRF_SPMG1)")
 ```
 
-*   **See Vignette:** `vignette("a_01_hemodynamic_response", package = "fmrireg")`
+*   **Related Topic:** Hemodynamic Response Functions
 
 #### b) Event Model (`event_model`)
 
@@ -77,7 +77,7 @@ event_mod <- event_model(onset ~ hrf(stim_type),
                          sampling_frame = my_sampling_frame)
 ```
 
-*   **See Vignette:** `vignette("a_04_event_models", package = "fmrireg")`
+*   **Related Topic:** Event Models
 
 #### c) Baseline Model (`baseline_model`)
 
@@ -90,7 +90,7 @@ base_mod <- baseline_model(basis = "bs", degree = 3, sframe = sframe)
 print(base_mod)
 ```
 
-*   **See Vignette:** `vignette("a_03_baseline_model", package = "fmrireg")`
+*   **Related Topic:** Baseline Models
 
 #### d) Contrasts (`pair_contrast`, `unit_contrast`, etc.)
 
@@ -119,8 +119,8 @@ fit <- fmri_lm(full_model, dataset = my_dataset)
 # Robust fit down-weighting outlier time points
 fit_robust <- fmri_lm(full_model, dataset = my_dataset, robust = TRUE)
 
-# Extract contrast results
-con_table <- contrast_stats(fit, "FvS")
+# Extract contrast results (if contrasts were defined)
+# con_results <- coef(fit)  # Get coefficients
 ```
 
 Setting `robust = TRUE` invokes row-wise weighting to lessen the influence of
@@ -128,7 +128,7 @@ motion spikes or other frame-level artifacts.
 
 *   **See Vignettes:**
     *   `vignette("a_09_linear_model", package = "fmrireg")`
-    *   `vignette("a_07_trialwise", package = "fmrireg")`
+    *   Linear Models and Trialwise Analysis
 
 ### 4. Advanced Topics
 
@@ -137,9 +137,7 @@ motion spikes or other frame-level artifacts.
 *   **Simulation:** Creating artificial fMRI data (`simulate_fmri_matrix`).
     *   `vignette("a_08_simulation", package = "fmrireg")`
 *   **AFNI Translation:** Generating scripts for AFNI's `3dDeconvolve` (`afni_lm`).
-    *   `vignette("a_06_afni", package = "fmrireg")`
 *   **Low-level Regressors:** Manually creating and manipulating regressors (`regressor`).
-    *   `vignette("a_02_regressor", package = "fmrireg")`
 
 ## Getting Started
 

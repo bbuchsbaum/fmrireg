@@ -353,7 +353,7 @@ test_that("matrix inversion stability with Cholesky vs SVD fallback", {
   
   Y <- matrix(rnorm(n * 2), n, 2)
   
-  # This should trigger the SVD fallback in .fast_preproject
+  # This should trigger the SVD fallback in fmrireg:::.fast_preproject
   proj <- suppressWarnings(fmrireg:::.fast_preproject(X))
   ctx <- fmrireg:::glm_context(X = X, Y = Y, proj = proj)
   result <- fmrireg:::solve_glm_core(ctx)

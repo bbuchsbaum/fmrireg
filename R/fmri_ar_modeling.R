@@ -31,8 +31,8 @@ estimate_ar_parameters <- function(residuals_vec, p_order) {
 #' Apply AR whitening transform
 #'
 #' Uses `ar_whiten_inplace()` to apply a causal AR filter defined by
-#' `phi` to both `X` and `Y` matrices. New matrices are returned and the
-#' originals are left unchanged.
+#' `phi` to both `X` and `Y` matrices. Returns whitened copies while
+#' leaving the originals unchanged (due to R's pass-by-value semantics).
 #'
 #' @param X Design matrix (time points \eqn{\times} predictors).
 #' @param Y Data matrix (time points \eqn{\times} observations).
@@ -59,11 +59,14 @@ ar_whiten_transform <- function(X, Y, phi, exact_first = FALSE) {
     message("  Y dims: ", nrow(Y), "x", ncol(Y))
   }
 
-  # Make copies to avoid modifying the original matrices
-  X_copy <- X + 0  # Force a copy
-  Y_copy <- Y + 0  # Force a copy
+  # Make explicit copies to ensure consistent behavior
+  # The C++ function behavior varies depending on how the package is loaded
+  # (modifies in place with devtools::load_all, doesn't with library())
+  # Making copies ensures originals are never modified
+  X_copy <- X + 0  # Force copy
+  Y_copy <- Y + 0  # Force copy
   
-  # Call ar_whiten_inplace which modifies and returns the matrices
+  # Call ar_whiten_inplace with copies
   # Note: ar_whiten_inplace takes (Y, X) and returns list(Y=..., X=...)
   result <- ar_whiten_inplace(Y_copy, X_copy, phi, exact_first)
   list(X = result$X, Y = result$Y)

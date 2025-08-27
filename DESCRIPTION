@@ -67,6 +67,7 @@ Suggests:
     rmarkdown,
     roxygen2,
     covr,
+    gridExtra,
     multivarious,
     rrBLUP,
     care,

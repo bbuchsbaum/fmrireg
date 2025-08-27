@@ -13,7 +13,7 @@ test_that("standard errors are computed correctly for OLS", {
   Y <- X %*% beta + rnorm(n, sd = sigma)
   
   # Create proper GLM context with projection
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(
     X = X,
     Y = matrix(Y, ncol = 1),
@@ -47,7 +47,7 @@ test_that("robust standard errors account for heteroscedasticity", {
   Y <- X %*% beta + errors
   
   # OLS fit
-  proj_ols <- .fast_preproject(X)
+  proj_ols <- fmrireg:::.fast_preproject(X)
   ctx_ols <- glm_context(
     X = X,
     Y = matrix(Y, ncol = 1),
@@ -85,7 +85,7 @@ test_that("effective degrees of freedom computed for AR models", {
   Y <- X %*% c(1, 2) + as.vector(e)
   
   # Initial OLS fit
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(
     X = X,
     Y = matrix(Y, ncol = 1),
@@ -102,7 +102,7 @@ test_that("effective degrees of freedom computed for AR models", {
   whitened <- ar_whiten_transform(X, matrix(Y, ncol = 1), phi_est, exact_first = FALSE)
   
   # Fit on whitened data
-  proj_w <- .fast_preproject(whitened$X)
+  proj_w <- fmrireg:::.fast_preproject(whitened$X)
   ctx_w <- glm_context(
     X = whitened$X,
     Y = whitened$Y,
@@ -131,7 +131,7 @@ test_that("F-statistics computed correctly for contrasts", {
   Y <- X %*% beta + rnorm(n, sd = 2)
   
   # Fit model
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(
     X = X,
     Y = matrix(Y, ncol = 1),
@@ -178,7 +178,7 @@ test_that("multiple comparison corrections work", {
   p_values <- numeric(n_voxels)
   
   for (v in 1:n_voxels) {
-    proj <- .fast_preproject(X)
+    proj <- fmrireg:::.fast_preproject(X)
     ctx <- glm_context(
       X = X,
       Y = Y[, v, drop = FALSE],
@@ -227,7 +227,7 @@ test_that("sandwich variance estimator for robust inference", {
   }
   
   # Simple OLS fit (without cluster correction for now)
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(
     X = X,
     Y = matrix(Y, ncol = 1),
@@ -266,7 +266,7 @@ test_that("confidence intervals have correct coverage", {
     X <- cbind(1, rnorm(n))
     Y <- X %*% true_beta + rnorm(n)
     
-    proj <- .fast_preproject(X)
+    proj <- fmrireg:::.fast_preproject(X)
     ctx <- glm_context(
       X = X,
       Y = matrix(Y, ncol = 1),
@@ -294,7 +294,7 @@ test_that("permutation testing for robust p-values", {
   Y <- 3 + 2 * X[, 2] + rnorm(n)
   
   # Original fit
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(
     X = X,
     Y = matrix(Y, ncol = 1),

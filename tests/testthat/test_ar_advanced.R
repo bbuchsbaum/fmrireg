@@ -37,10 +37,10 @@ create_ar_glm_context <- function(n = 100, p_design = 3, ar_order = 1,
   }
   
   # Create projection
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   
   # Create context
-  glm_context(X = X, Y = Y, proj = proj)
+  fmrireg:::glm_context(X = X, Y = Y, proj = proj)
 }
 
 test_that("whiten_glm_context handles single run AR whitening", {
@@ -53,7 +53,7 @@ test_that("whiten_glm_context handles single run AR whitening", {
   )
   
   # Apply whitening
-  whitened_ctx <- whiten_glm_context(glm_ctx, ar_options)
+  whitened_ctx <- fmrireg:::whiten_glm_context(glm_ctx, ar_options)
   
   # Check that whitening was applied
   expect_true(is.glm_context(whitened_ctx))
@@ -110,8 +110,8 @@ test_that("whiten_glm_context handles multi-run AR whitening with different coef
   }
   
   # Create context
-  proj <- .fast_preproject(X)
-  glm_ctx <- glm_context(X = X, Y = Y, proj = proj)
+  proj <- fmrireg:::.fast_preproject(X)
+  glm_ctx <- fmrireg:::glm_context(X = X, Y = Y, proj = proj)
   
   ar_options <- list(
     cor_struct = "ar1",
@@ -119,7 +119,7 @@ test_that("whiten_glm_context handles multi-run AR whitening with different coef
   )
   
   # Apply whitening
-  whitened_ctx <- whiten_glm_context(glm_ctx, ar_options, run_indices)
+  whitened_ctx <- fmrireg:::whiten_glm_context(glm_ctx, ar_options, run_indices)
   
   # Check results
   expect_true(is.glm_context(whitened_ctx))
@@ -146,7 +146,7 @@ test_that("iterative_ar_solve converges with monitoring", {
   
   # Test with convergence monitoring
   # Message is conditional on convergence, so we don't test for it
-  result <- iterative_ar_solve(glm_ctx, ar_options, max_iter = 5, tol = 1e-3)
+  result <- fmrireg:::iterative_ar_solve(glm_ctx, ar_options, max_iter = 5, tol = 1e-3)
   
   # Check result structure
   expect_true(!is.null(result$betas))
@@ -162,7 +162,7 @@ test_that("iterative_ar_solve handles no AR case", {
     cor_struct = "none"
   )
   
-  result <- iterative_ar_solve(glm_ctx, ar_options)
+  result <- fmrireg:::iterative_ar_solve(glm_ctx, ar_options)
   
   # Should return standard OLS result
   expect_true(is.null(result$ar_coef))
@@ -175,28 +175,37 @@ test_that("compute_ar_effective_df adjusts degrees of freedom correctly", {
   p <- 5
   
   # No AR
-  df_no_ar <- compute_ar_effective_df(n, p, NULL)
+  df_no_ar <- fmrireg:::compute_ar_effective_df(n, p, NULL)
   expect_equal(df_no_ar, n - p)
   
   # Moderate AR(1)
   phi1 <- 0.5
-  df_ar1 <- compute_ar_effective_df(n, p, phi1)
+  df_ar1 <- fmrireg:::compute_ar_effective_df(n, p, phi1)
   expect_true(df_ar1 < df_no_ar)
   expect_true(df_ar1 > 0)
+  # Standard formula: no AR penalty (following SPM/FSL/AFNI)
   expected_df <- n * (1 - phi1^2) - p
   expect_equal(df_ar1, expected_df)
   
   # Strong AR(1)
   phi1_strong <- 0.9
-  df_ar1_strong <- compute_ar_effective_df(n, p, phi1_strong)
+  df_ar1_strong <- fmrireg:::compute_ar_effective_df(n, p, phi1_strong)
   expect_true(df_ar1_strong < df_ar1)
   
   # AR(2)
   phi2 <- c(0.4, 0.3)
-  df_ar2 <- compute_ar_effective_df(n, p, phi2)
+  df_ar2 <- fmrireg:::compute_ar_effective_df(n, p, phi2)
   expect_true(df_ar2 < df_no_ar)
+  # Standard formula: no AR penalty (following SPM/FSL/AFNI)
   expected_df_ar2 <- n * (1 - sum(phi2^2)) - p
   expect_equal(df_ar2, expected_df_ar2)
+  
+  # Test conservative mode with penalize_ar = TRUE
+  df_ar1_conservative <- fmrireg:::compute_ar_effective_df(n, p, phi1, n_runs = 1, penalize_ar = TRUE)
+  expect_equal(df_ar1_conservative, n * (1 - phi1^2) - p - 1)  # Subtract AR order (1)
+  
+  df_ar2_conservative <- fmrireg:::compute_ar_effective_df(n, p, phi2, n_runs = 1, penalize_ar = TRUE)
+  expect_equal(df_ar2_conservative, n * (1 - sum(phi2^2)) - p - 2)  # Subtract AR order (2)
 })
 
 test_that("whiten_glm_context handles AR(3) and AR(4) models", {
@@ -218,15 +227,15 @@ test_that("whiten_glm_context handles AR(3) and AR(4) models", {
     Y[, v] <- signal + errors
   }
   
-  proj <- .fast_preproject(X)
-  glm_ctx <- glm_context(X = X, Y = Y, proj = proj)
+  proj <- fmrireg:::.fast_preproject(X)
+  glm_ctx <- fmrireg:::glm_context(X = X, Y = Y, proj = proj)
   
   ar_options <- list(
     cor_struct = "ar3",
     iter = 1
   )
   
-  whitened_ctx <- whiten_glm_context(glm_ctx, ar_options)
+  whitened_ctx <- fmrireg:::whiten_glm_context(glm_ctx, ar_options)
   
   # Check AR(3) coefficients
   expect_equal(length(whitened_ctx$phi_hat[[1]]), 3)
@@ -241,14 +250,14 @@ test_that("whiten_glm_context handles AR(3) and AR(4) models", {
     Y4[, v] <- signal + errors
   }
   
-  glm_ctx4 <- glm_context(X = X, Y = Y4, proj = proj)
+  glm_ctx4 <- fmrireg:::glm_context(X = X, Y = Y4, proj = proj)
   
   ar_options4 <- list(
     cor_struct = "ar4",
     iter = 1
   )
   
-  whitened_ctx4 <- whiten_glm_context(glm_ctx4, ar_options4)
+  whitened_ctx4 <- fmrireg:::whiten_glm_context(glm_ctx4, ar_options4)
   
   # Check AR(4) coefficients
   expect_equal(length(whitened_ctx4$phi_hat[[1]]), 4)
@@ -274,8 +283,8 @@ test_that("whiten_glm_context handles AR(p) with custom order", {
     Y[, v] <- signal + errors
   }
   
-  proj <- .fast_preproject(X)
-  glm_ctx <- glm_context(X = X, Y = Y, proj = proj)
+  proj <- fmrireg:::.fast_preproject(X)
+  glm_ctx <- fmrireg:::glm_context(X = X, Y = Y, proj = proj)
   
   ar_options <- list(
     cor_struct = "arp",
@@ -283,7 +292,7 @@ test_that("whiten_glm_context handles AR(p) with custom order", {
     iter = 1
   )
   
-  whitened_ctx <- whiten_glm_context(glm_ctx, ar_options)
+  whitened_ctx <- fmrireg:::whiten_glm_context(glm_ctx, ar_options)
   
   # Check AR(p) coefficients
   expect_equal(length(whitened_ctx$phi_hat[[1]]), p_ar)
@@ -311,8 +320,8 @@ test_that("AR methods handle near unit-root processes", {
       Y[, v] <- signal + errors
     }
     
-    proj <- .fast_preproject(X)
-    glm_ctx <- glm_context(X = X, Y = Y, proj = proj)
+    proj <- fmrireg:::.fast_preproject(X)
+    glm_ctx <- fmrireg:::glm_context(X = X, Y = Y, proj = proj)
     
     ar_options <- list(
       cor_struct = "ar1",
@@ -320,13 +329,13 @@ test_that("AR methods handle near unit-root processes", {
     )
     
     # Should handle without error
-    result <- iterative_ar_solve(glm_ctx, ar_options, max_iter = 2)
+    result <- fmrireg:::iterative_ar_solve(glm_ctx, ar_options, max_iter = 2)
     
     expect_true(!is.null(result$ar_coef))
     phi_est <- result$ar_coef[[1]]
     
     # Check effective df adjustment
-    df_adj <- compute_ar_effective_df(n, p_design, phi_est)
+    df_adj <- fmrireg:::compute_ar_effective_df(n, p_design, phi_est)
     expect_true(df_adj > 0)  # Should still be positive
     expect_true(df_adj < n - p_design)  # Should be reduced
     
@@ -350,8 +359,8 @@ test_that("AR methods handle short time series edge cases", {
   X <- cbind(1, matrix(rnorm(n_short * (p_design - 1)), n_short, p_design - 1))
   Y <- matrix(rnorm(n_short * n_vox), n_short, n_vox)
   
-  proj <- .fast_preproject(X)
-  glm_ctx <- glm_context(X = X, Y = Y, proj = proj)
+  proj <- fmrireg:::.fast_preproject(X)
+  glm_ctx <- fmrireg:::glm_context(X = X, Y = Y, proj = proj)
   
   # Try AR(4) with only 10 time points - should handle gracefully
   ar_options <- list(
@@ -360,7 +369,7 @@ test_that("AR methods handle short time series edge cases", {
   )
   
   # This should work but produce warning or handle the edge case
-  whitened_ctx <- whiten_glm_context(glm_ctx, ar_options)
+  whitened_ctx <- fmrireg:::whiten_glm_context(glm_ctx, ar_options)
   
   # AR estimation might fail or return fewer coefficients
   expect_true(is.glm_context(whitened_ctx))
@@ -417,15 +426,15 @@ test_that("Different AR structures per run are handled correctly", {
   }
   
   # Test with AR(2) - should estimate appropriate order for each run
-  proj <- .fast_preproject(X)
-  glm_ctx <- glm_context(X = X, Y = Y, proj = proj)
+  proj <- fmrireg:::.fast_preproject(X)
+  glm_ctx <- fmrireg:::glm_context(X = X, Y = Y, proj = proj)
   
   ar_options <- list(
     cor_struct = "ar2",
     iter = 1
   )
   
-  whitened_ctx <- whiten_glm_context(glm_ctx, ar_options, run_indices)
+  whitened_ctx <- fmrireg:::whiten_glm_context(glm_ctx, ar_options, run_indices)
   
   # Check that we get estimates for each run
   expect_equal(length(whitened_ctx$phi_hat), n_runs)
@@ -448,7 +457,7 @@ test_that("whiten_glm_context handles pre-specified AR coefficients", {
     iter = 1
   )
   
-  whitened_ctx <- whiten_glm_context(glm_ctx, ar_options)
+  whitened_ctx <- fmrireg:::whiten_glm_context(glm_ctx, ar_options)
   
   # Should use the specified phi, not estimate it
   expect_equal(whitened_ctx$phi_hat[[1]], 0.5)
@@ -482,8 +491,8 @@ test_that("Integration with GLM solving pipeline works correctly", {
   }
   
   # Test full pipeline
-  proj <- .fast_preproject(X)
-  glm_ctx <- glm_context(X = X, Y = Y, proj = proj)
+  proj <- fmrireg:::.fast_preproject(X)
+  glm_ctx <- fmrireg:::glm_context(X = X, Y = Y, proj = proj)
   
   ar_options <- list(
     cor_struct = "ar1",
@@ -491,7 +500,7 @@ test_that("Integration with GLM solving pipeline works correctly", {
   )
   
   # Run iterative AR solve
-  result <- iterative_ar_solve(glm_ctx, ar_options, max_iter = 3, tol = 1e-4)
+  result <- fmrireg:::iterative_ar_solve(glm_ctx, ar_options, max_iter = 3, tol = 1e-4)
   
   # Check that betas are recovered reasonably well
   mean_betas <- rowMeans(result$betas)
@@ -518,15 +527,15 @@ test_that("AR whitening preserves rank of design matrix", {
   X <- cbind(1, matrix(rnorm(n * (p - 1)), n, p - 1))
   Y <- matrix(rnorm(n * 3), n, 3)
   
-  proj <- .fast_preproject(X)
-  glm_ctx <- glm_context(X = X, Y = Y, proj = proj)
+  proj <- fmrireg:::.fast_preproject(X)
+  glm_ctx <- fmrireg:::glm_context(X = X, Y = Y, proj = proj)
   
   ar_options <- list(
     cor_struct = "ar2",
     iter = 1
   )
   
-  whitened_ctx <- whiten_glm_context(glm_ctx, ar_options)
+  whitened_ctx <- fmrireg:::whiten_glm_context(glm_ctx, ar_options)
   
   # Check that whitened X still has full rank
   rank_original <- Matrix::rankMatrix(X)[1]
@@ -551,7 +560,7 @@ test_that("Satterthwaite approximation for effective df with AR errors", {
   )
   
   for (ar_struct in ar_structures) {
-    df_effective <- compute_ar_effective_df(n, p, ar_struct$phi)
+    df_effective <- fmrireg:::compute_ar_effective_df(n, p, ar_struct$phi)
     
     # Effective df should decrease with stronger/more AR parameters
     expect_true(df_effective < n - p)
@@ -579,8 +588,8 @@ test_that("whiten_glm_context handles missing data gracefully", {
   # Introduce some NAs
   Y[c(10, 20, 30), 1] <- NA
   
-  proj <- .fast_preproject(X)
-  glm_ctx <- glm_context(X = X, Y = Y, proj = proj)
+  proj <- fmrireg:::.fast_preproject(X)
+  glm_ctx <- fmrireg:::glm_context(X = X, Y = Y, proj = proj)
   
   ar_options <- list(
     cor_struct = "ar1",
@@ -589,7 +598,7 @@ test_that("whiten_glm_context handles missing data gracefully", {
   
   # Should produce an error or handle gracefully
   expect_error(
-    whiten_glm_context(glm_ctx, ar_options),
+    fmrireg:::whiten_glm_context(glm_ctx, ar_options),
     "NA values"
   )
 })
@@ -605,7 +614,7 @@ test_that("AR whitening with exact_first option works correctly", {
   )
   
   # Apply whitening with exact_first = TRUE (default)
-  whitened_ctx <- whiten_glm_context(glm_ctx, ar_options)
+  whitened_ctx <- fmrireg:::whiten_glm_context(glm_ctx, ar_options)
   
   # The first row should be scaled differently with exact_first
   # Check that whitening was applied
@@ -622,7 +631,7 @@ test_that("compute_ar_effective_df handles edge cases", {
   p <- 40
   phi <- 0.95  # Very strong AR
   
-  df <- compute_ar_effective_df(n, p, phi)
+  df <- fmrireg:::compute_ar_effective_df(n, p, phi)
   expect_true(df >= 1)  # Should always be at least 1
   
   # Test with p > n (should still work)
@@ -630,7 +639,7 @@ test_that("compute_ar_effective_df handles edge cases", {
   p <- 40
   phi <- 0.5
   
-  df <- compute_ar_effective_df(n, p, phi)
+  df <- fmrireg:::compute_ar_effective_df(n, p, phi)
   expect_true(df >= 1)  # Should handle gracefully
 })
 
@@ -645,13 +654,13 @@ test_that("iterative_ar_solve respects max_iter parameter", {
   )
   
   # But limit with max_iter
-  result <- iterative_ar_solve(glm_ctx, ar_options, max_iter = 1)
+  result <- fmrireg:::iterative_ar_solve(glm_ctx, ar_options, max_iter = 1)
   
   # Should have stopped after 1 iteration
   expect_true(!is.null(result$ar_coef))
   
   # Compare with more iterations
-  result_more <- iterative_ar_solve(glm_ctx, ar_options, max_iter = 3)
+  result_more <- fmrireg:::iterative_ar_solve(glm_ctx, ar_options, max_iter = 3)
   
   # Coefficients might be different with more iterations
   expect_true(!is.null(result_more$ar_coef))
@@ -667,8 +676,8 @@ test_that("AR whitening handles various design matrix conditions", {
   X_full <- matrix(rnorm(n * p), n, p)
   Y <- matrix(rnorm(n * 3), n, 3)
   
-  proj_full <- .fast_preproject(X_full)
-  glm_ctx_full <- glm_context(X = X_full, Y = Y, proj = proj_full)
+  proj_full <- fmrireg:::.fast_preproject(X_full)
+  glm_ctx_full <- fmrireg:::glm_context(X = X_full, Y = Y, proj = proj_full)
   
   ar_options <- list(
     cor_struct = "ar1",
@@ -676,7 +685,7 @@ test_that("AR whitening handles various design matrix conditions", {
   )
   
   # Should work with full rank matrix
-  whitened_ctx_full <- whiten_glm_context(glm_ctx_full, ar_options)
+  whitened_ctx_full <- fmrireg:::whiten_glm_context(glm_ctx_full, ar_options)
   expect_true(is.glm_context(whitened_ctx_full))
   
   # Test 2: Create a truly rank-deficient matrix
@@ -688,13 +697,13 @@ test_that("AR whitening handles various design matrix conditions", {
   X_rank_def[, 5] <- 2 * X_rank_def[, 3]  # Exact multiple
   
   # This should have rank 3 (not 5)
-  proj_rank_def <- suppressWarnings(.fast_preproject(X_rank_def))
+  proj_rank_def <- suppressWarnings(fmrireg:::.fast_preproject(X_rank_def))
   
   # Even if rank detection doesn't work as expected, AR whitening should still work
-  glm_ctx_rank_def <- glm_context(X = X_rank_def, Y = Y, proj = proj_rank_def)
+  glm_ctx_rank_def <- fmrireg:::glm_context(X = X_rank_def, Y = Y, proj = proj_rank_def)
   
   # Should handle rank deficient case
-  whitened_ctx_rank_def <- whiten_glm_context(glm_ctx_rank_def, ar_options)
+  whitened_ctx_rank_def <- fmrireg:::whiten_glm_context(glm_ctx_rank_def, ar_options)
   expect_true(is.glm_context(whitened_ctx_rank_def))
 })
 
@@ -718,8 +727,8 @@ test_that("AR parameter estimation with pooled residuals works correctly", {
     Y[, v] <- signal + errors
   }
   
-  proj <- .fast_preproject(X)
-  glm_ctx <- glm_context(X = X, Y = Y, proj = proj)
+  proj <- fmrireg:::.fast_preproject(X)
+  glm_ctx <- fmrireg:::glm_context(X = X, Y = Y, proj = proj)
   
   ar_options <- list(
     cor_struct = "ar1",
@@ -727,7 +736,7 @@ test_that("AR parameter estimation with pooled residuals works correctly", {
   )
   
   # Whitening should pool residuals across voxels
-  whitened_ctx <- whiten_glm_context(glm_ctx, ar_options)
+  whitened_ctx <- fmrireg:::whiten_glm_context(glm_ctx, ar_options)
   
   # Pooled estimate should be close to true value
   phi_est <- whitened_ctx$phi_hat[[1]]

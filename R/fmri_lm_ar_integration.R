@@ -188,16 +188,29 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
 #' @return Effective degrees of freedom
 #' @keywords internal
 #' @noRd
-compute_ar_effective_df <- function(n, p, phi) {
+compute_ar_effective_df <- function(n, p, phi, n_runs = 1, penalize_ar = FALSE) {
   if (is.null(phi) || length(phi) == 0) {
     return(n - p)
   }
   
+  # Standard formula used by SPM, FSL, AFNI:
   # For AR(1), effective sample size is approximately n * (1 - phi^2)
-  # For higher orders, use sum of squared AR coefficients
+  # For AR(p), use sum of squared AR coefficients
   ar_factor <- 1 - sum(phi^2)
   ar_factor <- max(ar_factor, 0.1)  # Prevent too small values
   
   effective_n <- n * ar_factor
-  max(effective_n - p, 1)
+  
+  # Standard approach: treat AR coefficients as "known" after estimation
+  # No penalty for estimating AR parameters (following SPM/FSL/AFNI practice)
+  df <- effective_n - p
+  
+  # Optional conservative mode: subtract AR order once (NOT per run)
+  # This is an approximate small-sample correction, not standard in fMRI
+  if (penalize_ar) {
+    ar_order <- if (is.list(phi)) length(phi[[1]]) else length(phi)
+    df <- df - ar_order  # Single penalty, not multiplied by n_runs
+  }
+  
+  max(df, 1)
 }

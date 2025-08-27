@@ -208,7 +208,8 @@ solve_ar_robust_pipeline <- function(glm_ctx, config, run_indices) {
     effective_df = compute_ar_effective_df(
       nrow(glm_ctx$X), 
       ncol(glm_ctx$X),
-      mean(unlist(ar_result$ar_coef))
+      mean(unlist(ar_result$ar_coef)),
+      n_runs = length(ar_result$ar_coef)
     )
   )
 }
@@ -256,8 +257,13 @@ compute_standard_errors <- function(result, glm_ctx) {
 compute_robust_effective_df <- function(X, weights, XtXinv) {
   # Hat matrix trace for weighted regression
   # tr(H) = tr(X(X'WX)^-1 X'W)
-  W <- diag(weights)
-  H_diag <- diag(X %*% XtXinv %*% t(X) %*% W)
-  n <- nrow(X)
-  n - sum(H_diag)
+  # Efficient computation without forming diagonal matrix
+  sqrt_w <- sqrt(weights)
+  Xw <- X * sqrt_w
+  XtWX <- crossprod(Xw)
+  XtWX_inv <- chol2inv(chol(XtWX))
+  # Compute trace without forming full hat matrix
+  # tr(H) = tr(X (X'WX)^-1 X'W) = sum of diagonal elements
+  edf <- sum((Xw %*% XtWX_inv) * Xw)
+  as.numeric(edf)
 }

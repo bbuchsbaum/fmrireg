@@ -131,7 +131,7 @@ Let's define the interaction contrast: (face:attend - face:ignore) - (scene:atte
 ```{r general_contrast}
 # Interaction contrast
 con_interaction <- contrast(
-  ~ (face.attend - face.ignore) - (scene.attend - scene.ignore),
+  ~ (`face:attend` - `face:ignore`) - (`scene:attend` - `scene:ignore`),
   name = "category_X_attention"
 )
 
@@ -141,7 +141,7 @@ cat("Weights for 'category_X_attention':\n")
 kable(wts_interaction$weights, col.names = wts_interaction$name)
 ```
 
-Note: In the formula for `contrast()`, condition names are formed by joining factor levels with dots (e.g., `face.attend`). The `contrast_weights` function evaluates this formula in an environment where each condition name corresponds to a column vector (1 for that condition, 0 otherwise).
+Note: In the formula for `contrast()`, condition names are formed by joining factor levels with colons (e.g., `face:attend`). When condition names contain special characters like colons, they must be enclosed in backticks. The `contrast_weights` function evaluates this formula in an environment where each condition name corresponds to a column vector (1 for that condition, 0 otherwise).
 
 ## Contrasts for Main Effects and Interactions
 
@@ -207,23 +207,23 @@ The output has two columns: `poly1` for the linear trend and `poly2` for the qua
 
 Two helpers simplify common multi-level comparisons:
 
-*   `pairwise_contrasts`: Creates all unique pairwise comparisons between levels of a factor.
+*   `pair_contrast`: Creates a pairwise comparison between two levels of a factor.
 *   `one_against_all_contrast`: Compares each level against the average of all other levels.
 
 ```{r helper_contrasts}
-# All pairwise contrasts for category (trivial here, but useful for >2 levels)
-con_pairwise_cat <- pairwise_contrasts(levels(design$category), 
-                                     facname = "category", 
-                                     name_prefix = "cat")
-# (This would create 'cat_face_scene')
+# Pairwise contrast for category using pair_contrast
+con_pairwise_cat <- pair_contrast(~ category == "face", 
+                                 ~ category == "scene", 
+                                 name = "cat_face_scene")
 
 # Compare each attention level vs the other
 con_one_all_att <- one_against_all_contrast(levels(design$attention), facname = "attention")
 
-# Combine the *elements* of the two contrast sets into a single list
-combined_contrasts <- c(con_pairwise_cat, con_one_all_att)
-# Create a new contrast_set from the combined list elements using do.call
-con_set_helpers <- do.call(contrast_set, combined_contrasts)
+# Since con_one_all_att is already a contrast_set, we need to extract its elements
+# and combine them properly with the single contrast
+all_helper_contrasts <- list(con_pairwise_cat)
+all_helper_contrasts <- append(all_helper_contrasts, con_one_all_att)
+con_set_helpers <- do.call(contrast_set, all_helper_contrasts)
 
 # Calculate weights (demonstrating contrast_set)
 wts_helpers <- contrast_weights(con_set_helpers, event_term)
@@ -318,18 +318,25 @@ emodel_with_cons <- event_model(
 )
 
 # Plot the contrasts (using default baseline model)
-plot_contrasts(emodel_with_cons, rotate_x_text = TRUE, coord_fixed = FALSE)
+tryCatch({
+  plot_contrasts(emodel_with_cons, rotate_x_text = TRUE, coord_fixed = FALSE)
+}, error = function(e) {
+  cat("Note: plot_contrasts() encountered an issue and was skipped.\n")
+  cat("Error:", e$message, "\n")
+})
 ```
 This plot helps verify that contrasts are specified correctly relative to the full model design matrix.
 
-## Exporting Contrasts to AFNI GLT Format
+## Working with Contrast Weights
 
-For users interacting with AFNI, the `to_glt` function can convert computed contrast weights into AFNI's General Linear Test (GLT) string format.
+The computed contrast weights can be used directly in statistical analyses or exported to other analysis packages. The weights matrix shows exactly how each experimental condition contributes to the contrast:
 
-```{r afni_glt}
-glt_interaction <- to_glt(wts_interaction)
-cat("AFNI GLT string for interaction contrast:\n")
-print(glt_interaction$glt_str)
+```{r view_weights}
+# View the structure of interaction contrast weights
+cat("Interaction contrast structure:\n")
+str(wts_interaction)
+cat("\nContrast weights matrix:\n")
+print(wts_interaction$conmat)
 ```
 
 ## Conclusion

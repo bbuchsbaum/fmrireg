@@ -18,7 +18,7 @@ test_that("glm_context creates valid objects", {
   expect_null(ctx$proj)  # Not pre-computed
   
   # Create context with projection
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx2 <- glm_context(X = X, Y = Y, proj = proj)
   
   expect_equal(ctx2$proj$dfres, n - qr(X)$rank)
@@ -34,7 +34,7 @@ test_that("solve_glm_core produces correct results", {
   Y <- X %*% true_beta + rnorm(n, sd = 0.1)
   
   # Create context and solve
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = matrix(Y, ncol = 1), proj = proj)
   result <- solve_glm_core(ctx)
   
@@ -62,7 +62,7 @@ test_that("solve_glm_core handles multiple responses", {
   Y <- X %*% B + matrix(rnorm(n * v, sd = 0.5), n, v)
   
   # Solve
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   ctx <- glm_context(X = X, Y = Y, proj = proj)
   result <- solve_glm_core(ctx, return_fitted = TRUE)
   
@@ -77,11 +77,11 @@ test_that("solve_glm_core handles multiple responses", {
   expect_equal(as.vector(result$betas[,1]), unname(coef(lm1)), tolerance = 1e-10)
 })
 
-test_that(".fast_preproject handles edge cases", {
+test_that("fmrireg:::.fast_preproject handles edge cases", {
   # Square matrix
   n <- 10
   X <- diag(n)
-  proj <- .fast_preproject(X)
+  proj <- fmrireg:::.fast_preproject(X)
   
   expect_equal(proj$dfres, 0)
   expect_equal(proj$XtXinv, diag(n))
@@ -93,7 +93,7 @@ test_that(".fast_preproject handles edge cases", {
   X[, 5] <- X[, 1] + X[, 2]  # Make rank deficient
   
   # Should not error
-  expect_error(proj <- .fast_preproject(X), NA)
+  expect_error(proj <- fmrireg:::.fast_preproject(X), NA)
   expect_true(qr(X)$rank < p)
 })
 
@@ -114,7 +114,7 @@ test_that("solve_glm_core with weights works correctly", {
   Yw <- Y * sqrtw
   
   # Solve
-  proj_w <- .fast_preproject(Xw)
+  proj_w <- fmrireg:::.fast_preproject(Xw)
   ctx_w <- glm_context(X = Xw, Y = matrix(Yw, ncol = 1), proj = proj_w)
   result_w <- solve_glm_core(ctx_w)
   
