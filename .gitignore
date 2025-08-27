@@ -32,6 +32,7 @@ repomix-output.txt
 test_output.txt
 *.tar.gz
 Rplots.pdf
+vignettes/*.html
 
 # Package check artifacts
 fmrireg.Rcheck/
