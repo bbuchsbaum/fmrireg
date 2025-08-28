@@ -59,7 +59,6 @@ Roxygen: list(
     markdown = TRUE,
     roclets = c("collate", "namespace", "rd", "roxyglobals::global_roclet"))
 Suggests: 
-    afnireg,
     testthat,
     pls,
     fmristore,
@@ -79,8 +78,7 @@ Suggests:
     mgcv,
     progressr,
     ggforce,
-    roxyglobals (>= 0.2.1),
-    bidser
+    roxyglobals (>= 0.2.1)
 Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/multivarious,
