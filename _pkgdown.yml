@@ -29,22 +29,14 @@ navbar:
       text: Vignettes
       menu:
       - text: Getting Started
-      - text: Hemodynamic Response Functions
-        href: articles/a_01_hemodynamic_response.html
-      - text: Building Regressors
-        href: articles/a_02_regressor.html
-      - text: Baseline Models
-        href: articles/a_03_baseline_model.html
-      - text: Event Models
-        href: articles/a_04_event_models.html
+      - text: Package Overview
+        href: articles/Overview.html
       - text: -------
       - text: Advanced Topics
       - text: Contrasts
         href: articles/a_05_contrasts.html
-      - text: AFNI Integration
-        href: articles/a_06_afni.html
-      - text: Trialwise Analysis
-        href: articles/a_07_trialwise.html
+      - text: Simulation
+        href: articles/a_08_simulation.html
       - text: Linear Modeling
         href: articles/a_09_linear_model.html
       - text: Dataset Management
@@ -62,27 +54,17 @@ articles:
   contents:
   - Overview
 
-- title: Core Concepts
-  navbar: ~
-  contents:
-  - a_01_hemodynamic_response
-  - a_02_regressor
-  - a_03_baseline_model
-  - a_04_event_models
-
 - title: Advanced Analysis
   navbar: ~
   contents:
   - a_05_contrasts
-  - a_07_trialwise
   - a_08_simulation
   - a_09_linear_model
+  - a_10_dataset
 
-- title: Integration & Resources
+- title: Resources
   navbar: ~
   contents:
-  - a_06_afni
-  - a_10_dataset
   - benchmark_datasets
 
 news:
