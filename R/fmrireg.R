@@ -9,7 +9,7 @@
 #' @useDynLib fmrireg
 #' @importFrom Rcpp evalCpp
 #' @import assertthat
-#' @import stats
+#' @importFrom stats as.formula
 NULL
 
 

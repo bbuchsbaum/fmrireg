@@ -585,7 +585,8 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                    "chunkwise" = {
                     if (inherits(dataset, "latent_dataset")) {
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
-                                   nchunks, cfg = cfg, progress = progress,
+                                   nchunks, cfg, verbose = FALSE, use_fast_path = FALSE,
+                                   progress = progress,
                                    phi_fixed = phi_global,
                                    sigma_fixed = sigma_global
                                    ) # Do not pass use_fast_path

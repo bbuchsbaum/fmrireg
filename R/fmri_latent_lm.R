@@ -73,12 +73,17 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
 #' @return A list containing the results of the chunkwise linear regression.
 #' @seealso fmri_latent_lm
 #' @noRd
-chunkwise_lm.latent_dataset <- function(dset, model, contrast_objects, nchunks, 
-                                        cfg = NULL, progress = FALSE, 
-                                        phi_fixed = NULL, sigma_fixed = NULL,
-                                        verbose = FALSE, ...) {
+chunkwise_lm.latent_dataset <- function(dset, model, contrast_objects, nchunks, cfg,
+                                        verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
+                                        phi_fixed = NULL,
+                                        sigma_fixed = NULL) {
   # Extract options from cfg if provided
-  robust <- if (!is.null(cfg)) cfg$robust else FALSE
+  robust <- if (!is.null(cfg) && !is.null(cfg$robust)) {
+    r <- as.logical(cfg$robust)[1]
+    if (is.na(r)) FALSE else r
+  } else {
+    FALSE
+  }
   autocor <- if (!is.null(cfg) && !is.null(cfg$ar$cor_struct)) {
     cfg$ar$cor_struct
   } else {

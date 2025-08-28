@@ -305,7 +305,6 @@ correlation_map.fmri_model <- function(x,
 #'   \code{limits=} argument. This can clip or expand the color range.
 #' @param ... Additional arguments passed to \code{\link[ggplot2]{geom_tile}}.
 #'
-#' @import ggplot2
 #' @importFrom tibble as_tibble
 #' @importFrom tidyr pivot_longer
 #' @return A ggplot2 plot object.
