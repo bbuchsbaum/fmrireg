@@ -1,17 +1,14 @@
-pandoc: 2.19.2
-pkgdown: 2.0.7
+pandoc: 3.7.0.2
+pkgdown: 2.1.3
 pkgdown_sha: ~
 articles:
-  Overview: Overview.html
-  a_01_hemodynamic_response: a_01_hemodynamic_response.html
-  a_02_regressor: a_02_regressor.html
-  a_03_baseline_model: a_03_baseline_model.html
-  a_04_event_models: a_04_event_models.html
   a_05_contrasts: a_05_contrasts.html
-  a_06_afni: a_06_afni.html
-  a_07_trialwise: a_07_trialwise.html
-last_built: 2023-05-09T14:55Z
+  a_08_simulation: a_08_simulation.html
+  a_09_linear_model: a_09_linear_model.html
+  a_10_dataset: a_10_dataset.html
+  benchmark_datasets: benchmark_datasets.html
+  Overview: Overview.html
+last_built: 2025-08-29T13:06Z
 urls:
   reference: https://bbuchsbaum.github.io/fmrireg/reference
   article: https://bbuchsbaum.github.io/fmrireg/articles
-

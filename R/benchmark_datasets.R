@@ -183,8 +183,9 @@ get_benchmark_summary <- function(dataset_name) {
 create_design_matrix_from_benchmark <- function(dataset_name, hrf, include_intercept = TRUE) {
   dataset <- load_benchmark_dataset(dataset_name)
   
-  # Create time grid
-  time_grid <- seq(0, dataset$total_time, by = dataset$TR)
+  # Create time grid matching the actual data dimensions
+  n_timepoints <- nrow(dataset$Y_noisy)
+  time_grid <- seq(0, by = dataset$TR, length.out = n_timepoints)
   
   # Get unique conditions
   unique_conditions <- unique(dataset$condition_labels)
@@ -212,9 +213,21 @@ create_design_matrix_from_benchmark <- function(dataset_name, hrf, include_inter
     }
   }
   
-  # Combine into matrix
+  # Combine into matrix - handle both vectors and matrices
   X <- do.call(cbind, X_list)
-  colnames(X) <- names(X_list)
+  
+  # Create appropriate column names
+  col_names <- c()
+  for (name in names(X_list)) {
+    element <- X_list[[name]]
+    if (is.matrix(element) && ncol(element) > 1) {
+      # If HRF has multiple basis functions (e.g., with derivatives)
+      col_names <- c(col_names, paste0(name, "_", 1:ncol(element)))
+    } else {
+      col_names <- c(col_names, name)
+    }
+  }
+  colnames(X) <- col_names
   
   # Add intercept if requested
   if (include_intercept) {

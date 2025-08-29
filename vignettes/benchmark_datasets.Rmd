@@ -84,8 +84,8 @@ Let's visualize some aspects of the benchmark dataset:
 
 ```{r visualize_data, fig.width=10, fig.height=6}
 # Plot the first few voxels' time series
-time_points <- seq(0, data$total_time, by = data$TR)
-n_timepoints <- length(time_points)
+n_timepoints <- nrow(data$Y_noisy)
+time_points <- seq(0, by = data$TR, length.out = n_timepoints)
 
 # Create a data frame for plotting
 plot_data <- data.frame(
@@ -116,10 +116,10 @@ One of the key features is the ability to create design matrices with different 
 
 ```{r design_matrices}
 # Create design matrix with the true HRF (canonical)
-X_true <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", HRF_SPMG1)
+X_true <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", fmrihrf::HRF_SPMG1)
 
-# Create design matrix with a different HRF (with derivatives)
-X_wrong <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", HRF_SPMG2)
+# Create design matrix with a different HRF (e.g., a Gaussian HRF instead of canonical)
+X_wrong <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", fmrihrf::HRF_GAUSSIAN)
 
 cat("True HRF design matrix dimensions:", dim(X_true), "\n")
 cat("Alternative HRF design matrix dimensions:", dim(X_wrong), "\n")
@@ -196,7 +196,7 @@ results <- list()
 
 for (dataset_name in datasets_to_test) {
   # Load dataset and create design matrix
-  X <- create_design_matrix_from_benchmark(dataset_name, HRF_SPMG1)
+  X <- create_design_matrix_from_benchmark(dataset_name, fmrihrf::HRF_SPMG1)
   data_test <- load_benchmark_dataset(dataset_name)
   
   # Fit model
@@ -234,26 +234,9 @@ hrf_data <- load_benchmark_dataset("BM_HRF_Variability_AcrossVoxels")
 # Examine the HRF group assignments
 cat("HRF group assignments:", table(hrf_data$true_hrf_group_assignment), "\n")
 
-# Get the true HRF objects
-true_canonical <- hrf_data$true_hrf_parameters$canonical$hrf_object
-true_variant <- hrf_data$true_hrf_parameters$variant1$hrf_object
-
-# Plot the different HRFs
-time_hrf <- seq(0, 20, by = 0.1)
-hrf_canonical <- true_canonical(time_hrf)
-hrf_variant <- true_variant(time_hrf)
-
-hrf_plot_data <- data.frame(
-  Time = rep(time_hrf, 2),
-  HRF = c(hrf_canonical, hrf_variant),
-  Type = rep(c("Canonical", "Variant"), each = length(time_hrf))
-)
-
-ggplot(hrf_plot_data, aes(x = Time, y = HRF, color = Type)) +
-  geom_line(size = 1) +
-  labs(title = "True HRF Shapes Used in BM_HRF_Variability_AcrossVoxels",
-       x = "Time (seconds)", y = "HRF Response") +
-  theme_minimal()
+# Note: The actual HRF objects used vary by voxel
+# The benchmark dataset contains voxels with different HRF shapes to test
+# methods that can handle HRF variability across the brain
 ```
 
 ## Trial Amplitude Variability

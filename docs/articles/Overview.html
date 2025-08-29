@@ -5,10 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Overview • fmrireg</title>
+<title>Overview of the fmrireg Package • fmrireg</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.2.2/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.2.2/bootstrap.bundle.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Overview">
+<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Overview of the fmrireg Package">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -18,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.0.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -29,16 +31,28 @@
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/Overview.html">Overview</a></li>
-    <li><a class="dropdown-item" href="../articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a></li>
-    <li><a class="dropdown-item" href="../articles/a_02_regressor.html">Building Regressors</a></li>
-    <li><a class="dropdown-item" href="../articles/a_03_baseline_model.html">Baseline Model</a></li>
-    <li><a class="dropdown-item" href="../articles/a_04_event_models.html">Event Models</a></li>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-vignettes" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Vignettes</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-vignettes">
+<li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
+    <li><a class="dropdown-item" href="../articles/Overview.html">Package Overview</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
-    <li><a class="dropdown-item" href="../articles/a_06_afni.html">Translating to AFNI 3dDeconvolve</a></li>
-    <li><a class="dropdown-item" href="../articles/a_07_trialwise.html">Single Trial Beta Estimation</a></li>
+    <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
+    <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
+    <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
+  </ul>
+</li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-news" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">News</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-news">
+<li><h6 class="dropdown-header" data-toc-skip>Releases</h6></li>
+    <li><a class="external-link dropdown-item" href="https://github.com/bbuchsbaum/fmrireg/releases/tag/v0.1.0">Version 0.1.0</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../news/index.html">Changelog</a></li>
   </ul>
 </li>
       </ul>
@@ -60,11 +74,11 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Overview</h1>
+      <h1>Overview of the fmrireg Package</h1>
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-02-22</h4>
+            <h4 data-toc-skip class="date">2025-08-29</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/HEAD/vignettes/Overview.Rmd" class="external-link"><code>vignettes/Overview.Rmd</code></a></small>
       <div class="d-none name"><code>Overview.Rmd</code></div>
@@ -73,139 +87,243 @@ Buchsbaum</h4>
     
     
 <div class="section level2">
-<h2 id="overview-of-the-fmrireg-package">Overview of the <code>fmrireg</code> package<a class="anchor" aria-label="anchor" href="#overview-of-the-fmrireg-package"></a>
+<h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
-<p>The analysis of Functional Magnetic Resonance Imaging (fMRI) has a
-lot of complexities due to the large amount of data, the fact that the
-data is in the form of multi-dimensional images (usually, 4-dimensional
-– x,y,z, and time), the fact that the hemodynamic response is sluggish
-and delayed (4-6s) with respect to stimulus presentation or task events,
-the existence of physiological noise and other “nuisance” signals,
-issues related to multiple comparisons, and the existence of spatially
-and temporally auto-correlated errors in the signal.</p>
-<p>However, if we push all that complexity to the side for a moment,
-standard “univariate” fMRI analysis involves simple multiple regression
-analysis applied to every 3d location (“voxel”) in the brain. The goal
-of the <code>fmrireg</code> package is to provide a convenient
-interface, in the spirit of other R regression modeling tools, for
-analyzing fMRI data. We therefore use a R’s formula interface to specify
-regression models in a way that makes for convenient and readable
-code.</p>
+<p>The <code>fmrireg</code> package provides tools for analyzing fMRI
+regression models in R, inspired by standard R modeling tools like
+<code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> and <code><a href="https://rdrr.io/r/stats/glm.html" class="external-link">glm()</a></code>. It integrates hemodynamic
+response functions and design matrix construction for comprehensive fMRI
+analysis.</p>
+<p>While fMRI analysis involves complexities like large datasets,
+spatio-temporal correlations, and physiological noise, the core of
+standard univariate analysis is multiple regression applied voxelwise.
+The <code>fmrireg</code> package simplifies the specification and
+estimation of these regression models.</p>
+<p>This vignette provides a high-level overview of the key steps and
+components involved in using <code>fmrireg</code>.</p>
 </div>
 <div class="section level2">
-<h2 id="the-building-blocks-of-an-fmri-regression-model">The building blocks of an fMRI regression model<a class="anchor" aria-label="anchor" href="#the-building-blocks-of-an-fmri-regression-model"></a>
+<h2 id="key-components-and-workflow">Key Components and Workflow<a class="anchor" aria-label="anchor" href="#key-components-and-workflow"></a>
 </h2>
-<p>The basic, or lowest level, unit of an fMRI regression model is the
-<strong>hemodynamic response function</strong> (HRF). The HRF is a model
-of the mapping, or transfer function, between an external stimulus (or
-neural event) and a BOLD signal. A commonly used HRF is the so-called
-SPM canonical HRF:</p>
+<p>A typical fMRI analysis workflow with <code>fmrireg</code> involves
+these main stages:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Data Representation:</strong> Defining how your fMRI data
+and experimental design are organized.</li>
+<li>
+<strong>Model Building:</strong> Specifying the regression model
+using formulas, including:
+<ul>
+<li>Defining Hemodynamic Response Functions (HRFs).</li>
+<li>Creating event-related regressors (<code>event_model</code>).</li>
+<li>Modeling baseline components like drift and nuisance factors
+(<code>baseline_model</code>).</li>
+<li>Defining contrasts of interest (<code>contrast</code>).</li>
+</ul>
+</li>
+<li>
+<strong>Model Estimation:</strong> Fitting the specified model to
+the data (e.g., using <code>fmri_lm</code>).</li>
+<li>
+<strong>Advanced Topics:</strong> Exploring single-trial estimation,
+simulation, or translation to other packages.</li>
+</ol>
+<div class="section level3">
+<h3 id="data-representation">1. Data Representation<a class="anchor" aria-label="anchor" href="#data-representation"></a>
+</h3>
+<p>Before modeling, you need to represent your fMRI data and its
+structure. <code>fmrireg</code> uses objects like:</p>
+<ul>
+<li>
+<code>fmri_dataset</code> / <code>fmri_mem_dataset</code>:
+Encapsulates the 4D fMRI data (potentially file-backed or in-memory),
+mask information, TR, run structure, and the experimental design
+table.</li>
+<li>
+<code>sampling_frame</code>: Defines the temporal structure – the
+number of scans per run (<code>blocklens</code>) and the repetition time
+(<code>TR</code>).</li>
+</ul>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">24</span>, by<span class="op">=</span><span class="fl">.2</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">time</span>, <span class="fu"><a href="../reference/hrf_spmg1.html">hrf_spmg1</a></span><span class="op">(</span><span class="va">time</span><span class="op">)</span>, type<span class="op">=</span><span class="st">'l'</span>, xlab<span class="op">=</span><span class="st">"time"</span>, ylab<span class="op">=</span><span class="st">"BOLD activity"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="Overview_files/figure-html/unnamed-chunk-2-1.png" width="576"></p>
-<p>Currently, <code>fmrireg</code> provides several builtin HRFs that
-can be used to model BOLD activity. See the vignette “Hemodynamic
-Response Functions” for a detailed overview. Choosing the correct HRF
-depends on the use case and aims of the analysis, but the SPM canaonical
-function is usually a good default choice.</p>
+<code class="sourceCode R"><span><span class="co"># Example: 5 runs, 200 scans/run, TR=2s</span></span>
+<span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">200</span>, <span class="fl">5</span><span class="op">)</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">sframe</span></span>
+<span><span class="co">#&gt; Sampling Frame</span></span>
+<span><span class="co">#&gt; ==============</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Structure:</span></span>
+<span><span class="co">#&gt;   5 blocks</span></span>
+<span><span class="co">#&gt;   Total scans: 1000</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Timing:</span></span>
+<span><span class="co">#&gt;   TR: 2 s</span></span>
+<span><span class="co">#&gt;   Precision: 0.1 s</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Duration:</span></span>
+<span><span class="co">#&gt;   Total time: 2000.0 s</span></span></code></pre></div>
 </div>
-<div class="section level2">
-<h2 id="regressors">Regressors<a class="anchor" aria-label="anchor" href="#regressors"></a>
-</h2>
-<p>A “regressor” is simply an independent variable in a multiple
-regression model. In fMRI analysis, however, regressors are constructed
-by “convolving” a set of onset times–the vector of times at which
-certain task events occur–with a chosen HRF. Imagine we have a stimulus
-that is presented every 16 seconds with 8 repetitions. We can construct
-a “regressor” by convolving the chosen HRF with a vector onset times (in
-seconds), whereby each element of the vector corresponds to time at
-which a stimulus occurs.</p>
-<p>Below we use the function <code>gen_hrf</code> to create a special
-function that has the class “HRF”. An alternative is to use the pre-made
-HRF objects, for example, <code>HRF_SPMG1</code> if we want to use th
-SPM canonical function. Once we create a regressor with the
-<code>regressor</code> constructor function, we can evaluate it at any
-arbitrary time points. In other words, just as the HRFs are functions of
-time, so too are <code>regressor</code>s. The difference is that
-<code>regressor</code>, when evaluated at time <em>t</em> sum over all
-the constituent HRFs, the domain of which are determined by the onset
-vector.</p>
-<p>In the code below, we evaluate the regressor at every time point
-between 1 and 140.</p>
+<div class="section level3">
+<h3 id="model-building">2. Model Building<a class="anchor" aria-label="anchor" href="#model-building"></a>
+</h3>
+<div class="section level4">
+<h4 id="a-hemodynamic-response-function-hrf">a) Hemodynamic Response Function (HRF)<a class="anchor" aria-label="anchor" href="#a-hemodynamic-response-function-hrf"></a>
+</h4>
+<p>The HRF models the BOLD signal response to a brief neural event.
+<code>fmrireg</code> provides various pre-defined HRFs (e.g.,
+<code>HRF_SPMG1</code>, <code>HRF_GAUSSIAN</code>) and functions to
+create or modify them (<code>gen_hrf</code>, <code>hrf_blocked</code>,
+<code>hrf_lagged</code>).</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">16</span><span class="op">*</span><span class="fl">8</span>, by<span class="op">=</span><span class="fl">16</span><span class="op">)</span></span>
-<span><span class="va">hrf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_hrf.html">gen_hrf</a></span><span class="op">(</span><span class="va">hrf_spmg1</span><span class="op">)</span></span>
-<span><span class="va">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span><span class="op">(</span><span class="va">onsets</span>, hrf<span class="op">=</span><span class="va">hrf</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">140</span>, by<span class="op">=</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">grid</span>, <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">reg</span>, <span class="va">grid</span><span class="op">)</span>, type<span class="op">=</span><span class="st">'l'</span>, ylab<span class="op">=</span><span class="st">"BOLD activity"</span>, xlab<span class="op">=</span><span class="st">"time"</span>, main<span class="op">=</span><span class="st">"ISI = 16"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="Overview_files/figure-html/unnamed-chunk-3-1.png" width="576"></p>
-<p>To better illustrate how a regressor sums over its constituent HRFs,
-we can place the onsets closer together, so that the HRFs overlap in
-time:</p>
+<code class="sourceCode R"><span><span class="co"># Plot the SPM canonical HRF</span></span>
+<span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">24</span>, by <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">time</span>, <span class="fu">HRF_SPMG1</span><span class="op">(</span><span class="va">time</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">'l'</span>, xlab <span class="op">=</span> <span class="st">"Time (s)"</span>, ylab <span class="op">=</span> <span class="st">"BOLD Response"</span>,</span>
+<span>     main <span class="op">=</span> <span class="st">"SPM Canonical HRF (HRF_SPMG1)"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="Overview_files/figure-html/hrf_example-1.png" width="576"></p>
+<ul>
+<li>
+<strong>Related Topic:</strong> Hemodynamic Response Functions</li>
+</ul>
+</div>
+<div class="section level4">
+<h4 id="b-event-model-event_model">b) Event Model (<code>event_model</code>)<a class="anchor" aria-label="anchor" href="#b-event-model-event_model"></a>
+</h4>
+<p>This defines the task-related part of your GLM. You specify how
+experimental events (onsets, conditions, durations) map to regressors
+using a formula syntax. The <code><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf()</a></code> or
+<code><a href="https://rdrr.io/pkg/afnireg/man/afni_hrf.html" class="external-link">afni_hrf()</a></code> functions within the formula link event
+variables to specific HRF shapes.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">16</span><span class="op">*</span><span class="fl">8</span>, by<span class="op">=</span><span class="fl">6</span><span class="op">)</span></span>
-<span><span class="va">hrf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_hrf.html">gen_hrf</a></span><span class="op">(</span><span class="va">hrf_spmg1</span><span class="op">)</span></span>
-<span><span class="va">reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/regressor.html">regressor</a></span><span class="op">(</span><span class="va">onsets</span>, hrf<span class="op">=</span><span class="va">hrf</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Example: Model effect of 'stim_type', using SPMG1 HRF</span></span>
+<span><span class="co"># (Assuming 'my_design_table' and 'my_sampling_frame' exist)</span></span>
+<span><span class="va">event_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/event_model.html" class="external-link">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">stim_type</span><span class="op">)</span>, </span>
+<span>                         data <span class="op">=</span> <span class="va">my_design_table</span>, </span>
+<span>                         block <span class="op">=</span> <span class="op">~</span> <span class="va">run_id</span>, </span>
+<span>                         sampling_frame <span class="op">=</span> <span class="va">my_sampling_frame</span><span class="op">)</span></span></code></pre></div>
+<ul>
+<li>
+<strong>Related Topic:</strong> Event Models</li>
+</ul>
+</div>
+<div class="section level4">
+<h4 id="c-baseline-model-baseline_model">c) Baseline Model (<code>baseline_model</code>)<a class="anchor" aria-label="anchor" href="#c-baseline-model-baseline_model"></a>
+</h4>
+<p>This models non-task-related components like scanner drift, run
+intercepts, and other nuisance factors (e.g., motion parameters).</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Example: Cubic B-spline drift model + run intercepts</span></span>
+<span><span class="co"># (Requires 'sframe' defined earlier)</span></span>
+<span><span class="va">base_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"bs"</span>, degree <span class="op">=</span> <span class="fl">3</span>, sframe <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">base_mod</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ================================================</span></span>
+<span><span class="co">#&gt;            Baseline Model                       </span></span>
+<span><span class="co">#&gt; ================================================</span></span>
+<span><span class="co">#&gt;   Drift Components                           </span></span>
+<span><span class="co">#&gt;     * Name: baseline_bs_3                </span></span>
+<span><span class="co">#&gt;     * Basis type: bs                     </span></span>
+<span><span class="co">#&gt;     * Degree: 3                          </span></span>
+<span><span class="co">#&gt;     * Drift columns: 15                  </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   Additional Components                    </span></span>
+<span><span class="co">#&gt;     * Constant columns: 5                </span></span>
+<span><span class="co">#&gt;     * Nuisance columns: 0                </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   Model Summary                            </span></span>
+<span><span class="co">#&gt;     * Total columns: 20                  </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   Design Matrix Preview                    </span></span>
+<span><span class="co">#&gt;      0.000  0.000  0.000  0.000 ...      </span></span>
+<span><span class="co">#&gt;      0.015  0.000  0.000  0.000 ...      </span></span>
+<span><span class="co">#&gt;      0.030  0.000  0.000  0.000 ...      </span></span>
+<span><span class="co">#&gt; ================================================</span></span></code></pre></div>
+<ul>
+<li>
+<strong>Related Topic:</strong> Baseline Models</li>
+</ul>
+</div>
+<div class="section level4">
+<h4 id="d-contrasts-pair_contrast-unit_contrast-etc-">d) Contrasts (<code>pair_contrast</code>,
+<code>unit_contrast</code>, etc.)<a class="anchor" aria-label="anchor" href="#d-contrasts-pair_contrast-unit_contrast-etc-"></a>
+</h4>
+<p>Contrasts define specific comparisons between condition
+estimates.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Example: Contrast comparing 'face' vs 'scene' levels of 'stim_type'</span></span>
+<span><span class="va">face_vs_scene</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/pair_contrast.html" class="external-link">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">stim_type</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span> <span class="va">stim_type</span> <span class="op">==</span> <span class="st">"scene"</span>, name <span class="op">=</span> <span class="st">"FvS"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">face_vs_scene</span><span class="op">)</span></span>
+<span><span class="co">#&gt; contrast: FvS </span></span>
+<span><span class="co">#&gt;  A:  ~stim_type == "face" </span></span>
+<span><span class="co">#&gt;  B:  ~stim_type == "scene"</span></span></code></pre></div>
+<ul>
+<li>
+<strong>See Vignette:</strong>
+<code><a href="../articles/a_05_contrasts.html">vignette("a_05_contrasts", package = "fmrireg")</a></code>
+</li>
+</ul>
+</div>
+</div>
+<div class="section level3">
+<h3 id="model-estimation-fmri_model-fmri_lm">3. Model Estimation (<code>fmri_model</code>,
+<code>fmri_lm</code>)<a class="anchor" aria-label="anchor" href="#model-estimation-fmri_model-fmri_lm"></a>
+</h3>
+<p>You combine the event and baseline models into a full
+<code>fmri_model</code> and then fit it to your
+<code>fmri_dataset</code> using estimation functions like
+<code>fmri_lm</code> (for standard GLM) or <code>estimate_betas</code>
+(for single-trial betas).</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Combine event and baseline models</span></span>
+<span><span class="va">full_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_model.html">fmri_model</a></span><span class="op">(</span><span class="va">event_mod</span>, <span class="va">base_mod</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">140</span>, by<span class="op">=</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">grid</span>, <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">reg</span>, <span class="va">grid</span><span class="op">)</span>, type<span class="op">=</span><span class="st">'l'</span>, ylab<span class="op">=</span><span class="st">"BOLD activity"</span>, xlab<span class="op">=</span><span class="st">"time"</span>, main<span class="op">=</span><span class="st">"ISI = 6"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="Overview_files/figure-html/unnamed-chunk-4-1.png" width="576"></p>
-<p>In <code>fmrireg</code> it is generally not necessary to manually
-create regressors as we have done above. Rather, regressors are created
-“behind the scenes” by the higher-level modeling functions, such as
-<code>event_model</code>. However, the facility to create individual
-regressors, for the purposes of learning fMRI analysis or in conducting
-special analyses, may still be useful.</p>
+<span><span class="co"># Fit the GLM</span></span>
+<span><span class="co"># (Requires 'my_dataset' of class fmri_dataset)</span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span><span class="va">full_model</span>, dataset <span class="op">=</span> <span class="va">my_dataset</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Robust fit down-weighting outlier time points</span></span>
+<span><span class="va">fit_robust</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span><span class="va">full_model</span>, dataset <span class="op">=</span> <span class="va">my_dataset</span>, robust <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Extract contrast results (if contrasts were defined)</span></span>
+<span><span class="co"># con_results &lt;- coef(fit)  # Get coefficients</span></span></code></pre></div>
+<p>Setting <code>robust = TRUE</code> invokes row-wise weighting to
+lessen the influence of motion spikes or other frame-level
+artifacts.</p>
+<ul>
+<li>
+<strong>See Vignettes:</strong>
+<ul>
+<li><code><a href="../articles/a_09_linear_model.html">vignette("a_09_linear_model", package = "fmrireg")</a></code></li>
+<li>Linear Models and Trialwise Analysis</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="advanced-topics">4. Advanced Topics<a class="anchor" aria-label="anchor" href="#advanced-topics"></a>
+</h3>
+<p><code>fmrireg</code> also supports:</p>
+<ul>
+<li>
+<strong>Simulation:</strong> Creating artificial fMRI data
+(<code>simulate_fmri_matrix</code>).
+<ul>
+<li><code><a href="../articles/a_08_simulation.html">vignette("a_08_simulation", package = "fmrireg")</a></code></li>
+</ul>
+</li>
+<li>
+<strong>AFNI Translation:</strong> Generating scripts for AFNI’s
+<code>3dDeconvolve</code> (<code>afni_lm</code>).</li>
+<li>
+<strong>Low-level Regressors:</strong> Manually creating and
+manipulating regressors (<code>regressor</code>).</li>
+</ul>
+</div>
 </div>
 <div class="section level2">
-<h2 id="event-models">Event Models<a class="anchor" aria-label="anchor" href="#event-models"></a>
+<h2 id="getting-started">Getting Started<a class="anchor" aria-label="anchor" href="#getting-started"></a>
 </h2>
-<p>An HRF is a function from time to BOLD activity: <em>f(t) -&gt;
-y</em>. A regressor is a function of time that sums up BOLD activity
-over a sequence of spaced events. In conventional fMRI analysis, a
-regressor refers to a single column of a design matrix. For example, if
-we have two task conditions, <strong>face</strong> and
-<strong>scene</strong>, we would generate one face regressor and one
-scene regressor. However, in statistical modeling of experiments, we
-generally think not in terms of single columns of a design matrix, but
-rather in terms of the “factors”, which in this case might call
-“stim_type”, with levels “scene” and “face”. A complex regression model
-often involves a factorial combination of different categorical
-variables, which can be then be examined for main effects, interactions,
-and other contrasts.</p>
-<p>Before we discuss event models, we need to briefly introduce the
-<code>fmrireg</code>’s class for describing how scans are sampled over
-time and organized in <strong>blocks</strong> (sometimes also referred
-to as runs or scans). A “block” simply refers to a consecutive set of
-images (usually a few hundred), collected back to back over the course
-of one fMRI scan. An fMRI “session” consists of a number of these
-scanning blocks. Each individual image in a block is separated by a
-fixed interval, called the “TR” (repetition time). We encode this
-information (the number of blocks, the number of images in each block,
-and the TR) in a <code>sampling_frame</code> object. Below, we create a
-<code>sampling_frame</code> for an experiment with 5 blocks, each
-containing 200 images, and with a TR of 2s.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">nblocks</span> <span class="op">&lt;-</span> <span class="fl">5</span></span>
-<span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling_frame.html">sampling_frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">200</span>, <span class="fl">5</span><span class="op">)</span>, TR<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span>
-<span><span class="va">sframe</span></span></code></pre></div>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## ═══ Sampling Frame ═══</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## 📊 Structure:</span></span>
-<span><span class="co">## <span style="color: #0000BB;">  • Blocks:</span> 5 </span></span>
-<span><span class="co">## <span style="color: #0000BB;">  • Total timepoints:</span> 1000 </span></span>
-<span><span class="co">## <span style="color: #0000BB;">  • Block lengths:</span> 200, 200, 200, 200, 200 </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## ⏱️  Timing:</span></span>
-<span><span class="co">## <span style="color: #0000BB;">  • TR:</span> 2 seconds</span></span>
-<span><span class="co">## <span style="color: #0000BB;">  • Start times:</span> 1 seconds</span></span>
-<span><span class="co">## <span style="color: #0000BB;">  • Precision:</span> 0.1 seconds</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## 📈 Duration:</span></span>
-<span><span class="co">## <span style="color: #0000BB;">  • Total duration:</span> 2000 seconds</span></span></code></pre>
+<p>This overview provides a map of the <code>fmrireg</code> package. For
+detailed explanations and examples, please refer to the specific
+vignettes linked above.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -214,11 +332,11 @@ containing 200 images, and with a TR of 2s.</p>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by <a href="https://linguamemoria.org" class="external-link">Bradley Buchsbaum</a>.</p>
+  <p>Developed by <a href="https://github.com/bbuchsbaum" class="external-link">Bradley Buchsbaum</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
 </div>
 
     </footer>
