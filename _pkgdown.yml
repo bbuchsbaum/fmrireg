@@ -2,11 +2,13 @@ url: https://bbuchsbaum.github.io/fmrireg/
 
 template:
   bootstrap: 5
-  theme: arrow-dark
+  bootswatch: cosmo
   bslib:
     primary: "#0054AD"
     border-radius: 0.5rem
     btn-border-radius: 0.25rem
+    code-bg: "#f8f9fa"
+    code-color: "#212529"
     
 home:
   title: fmrireg • fMRI Analysis in R
