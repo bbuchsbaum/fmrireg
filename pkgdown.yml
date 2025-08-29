@@ -1,0 +1,14 @@
+pandoc: 3.1.11
+pkgdown: 2.1.3
+pkgdown_sha: ~
+articles:
+  a_05_contrasts: a_05_contrasts.html
+  a_08_simulation: a_08_simulation.html
+  a_09_linear_model: a_09_linear_model.html
+  a_10_dataset: a_10_dataset.html
+  benchmark_datasets: benchmark_datasets.html
+  Overview: Overview.html
+last_built: 2025-08-29T13:11Z
+urls:
+  reference: https://bbuchsbaum.github.io/fmrireg/reference
+  article: https://bbuchsbaum.github.io/fmrireg/articles
