@@ -13,6 +13,9 @@
 
 \item{...}{Additional summary arguments}
 }
+\value{
+A list containing summary statistics invisibly
+}
 \description{
 Summary of Meta-Analysis Results
 }

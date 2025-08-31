@@ -9,6 +9,9 @@ contrast_set(...)
 \arguments{
 \item{...}{contrast specifications}
 }
+\value{
+A list of class "contrast_set" containing the specified contrasts
+}
 \description{
 Create a contrast set
 }

@@ -83,7 +83,7 @@ ols_t_cpp <- function(Y, X) {
 #' Welch two-sample t-test across features
 #' 
 #' @param Y S x P matrix
-#' @param g_in Length S vector of group indicators (1/2 or 0/1)
+#' @param g Length S vector of group indicators (1/2 or 0/1)
 #' @return List with muA, muB, t, df (Welch), nA, nB
 #' @export
 welch_t_cpp <- function(Y, g_in) {
@@ -116,3 +116,4 @@ weighted_bh_cpp <- function(p, w, alpha) {
 bh_qvalues_scaled_cpp <- function(q) {
     .Call('_fmrireg_bh_qvalues_scaled_cpp', PACKAGE = 'fmrireg', q)
 }
+

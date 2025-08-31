@@ -11,6 +11,9 @@
 
 \item{...}{Additional print arguments}
 }
+\value{
+Invisibly returns the input object x
+}
 \description{
 Print Meta-Analysis Results
 }

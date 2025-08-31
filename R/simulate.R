@@ -185,6 +185,7 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #' @param sd Numeric standard deviation for the sampling distribution
 #' @param dist Distribution name: "lognormal", "gamma", or "gaussian"
 #' @param allow_negative Logical; if TRUE, allow negative draws (only used for gaussian)
+#' @return A numeric vector of resampled values with the same length as base
 #' @importFrom stats rnorm rexp runif rgamma rlnorm arima.sim
 #' @importFrom assertthat assert_that
 #' @export

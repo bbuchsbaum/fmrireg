@@ -38,6 +38,8 @@ A ggplot2 object containing the correlation heatmap, where:
 \item Colors indicate correlation strength (-1 to 1)
 \item Darker colors indicate stronger correlations
 }
+
+A ggplot2 object containing the correlation heatmap visualization
 }
 \description{
 Generate a correlation heatmap showing the relationships between columns in a design

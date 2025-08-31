@@ -174,6 +174,7 @@ fmridesign::Fcontrasts
 #' Create a contrast set
 #' 
 #' @param ... contrast specifications
+#' @return A list of class "contrast_set" containing the specified contrasts
 #' @export
 contrast_set <- function(...) {
   fmridesign::contrast_set(...)

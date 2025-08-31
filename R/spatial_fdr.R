@@ -291,6 +291,7 @@ spatial_fdr <- function(z = NULL,
 #'
 #' @param x A spatial_fdr_result object
 #' @param ... Additional print arguments
+#' @return Invisibly returns the input object x
 #' @export
 print.spatial_fdr_result <- function(x, ...) {
   cat("Spatial FDR Results\n")
@@ -318,6 +319,7 @@ print.spatial_fdr_result <- function(x, ...) {
 #'
 #' @param object A spatial_fdr_result object
 #' @param ... Additional summary arguments
+#' @return Invisibly returns the input object
 #' @export
 summary.spatial_fdr_result <- function(object, ...) {
   print(object)

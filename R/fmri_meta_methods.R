@@ -180,6 +180,7 @@ build_contrast_from_names <- function(contrast, object) {
 #'
 #' @param x An fmri_meta object
 #' @param ... Additional print arguments
+#' @return Invisibly returns the input object x
 #' @export
 print.fmri_meta <- function(x, ...) {
   cat("fMRI Meta-Analysis Results\n")
@@ -210,6 +211,7 @@ print.fmri_meta <- function(x, ...) {
 #' @param object An fmri_meta object
 #' @param threshold P-value threshold for significance (default: 0.05)
 #' @param ... Additional summary arguments
+#' @return A list containing summary statistics invisibly
 #' @export
 summary.fmri_meta <- function(object, threshold = 0.05, ...) {
   cat("fMRI Meta-Analysis Summary\n")

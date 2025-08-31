@@ -11,6 +11,9 @@ contrast(x, ...)
 
 \item{...}{passed to methods}
 }
+\value{
+A contrast object with computed contrast weights and statistics
+}
 \description{
 Provide a contrast generic that dispatches on the first argument.
 Falls back to fmridesign::contrast for non-fmri_meta classes.

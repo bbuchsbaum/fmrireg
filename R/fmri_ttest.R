@@ -330,6 +330,7 @@ fmri_ttest <- function(gd,
 #' 
 #' @param x An fmri_ttest_fit object
 #' @param ... Additional print arguments
+#' @return Invisibly returns the input object x
 #' @export
 print.fmri_ttest_fit <- function(x, ...) {
   cat("fmri_ttest Results\n")
@@ -351,6 +352,7 @@ print.fmri_ttest_fit <- function(x, ...) {
 #' 
 #' @param object An fmri_ttest_fit object
 #' @param ... Additional summary arguments
+#' @return Invisibly returns the input object
 #' @export
 summary.fmri_ttest_fit <- function(object, ...) {
   print(object)

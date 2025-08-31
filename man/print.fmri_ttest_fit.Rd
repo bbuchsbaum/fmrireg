@@ -11,6 +11,9 @@
 
 \item{...}{Additional print arguments}
 }
+\value{
+Invisibly returns the input object x
+}
 \description{
 Print method for fmri_ttest_fit
 }

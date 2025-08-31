@@ -59,6 +59,7 @@ design_env <- function(x, ...) UseMethod("design_env")
 #' Falls back to fmridesign::contrast for non-fmri_meta classes.
 #' @param x object
 #' @param ... passed to methods
+#' @return A contrast object with computed contrast weights and statistics
 #' @export
 contrast <- function(x, ...) UseMethod("contrast")
 
@@ -70,6 +71,7 @@ contrast.default <- function(x, ...) fmridesign::contrast(x, ...)
 #' Minimal tidy generic to support fmri_meta tidy() without requiring broom.
 #' @param x object
 #' @param ... passed to methods
+#' @return A tidy data frame with model coefficients and statistics
 #' @export
 tidy <- function(x, ...) UseMethod("tidy")
 
@@ -913,16 +915,16 @@ longnames.convolved_term <- function(x, ...) {
 #' # Create example data
 #' event_data <- data.frame(
 #'   condition = factor(c("A", "B", "A", "B")),
-#'   onsets = c(1, 10, 20, 30),
+#'   onset = c(1, 10, 20, 30),
 #'   run = c(1, 1, 1, 1)
 #' )
 #' 
 #' # Create sampling frame and dataset
-#' sframe <- sampling_frame(blocklens = 50, TR = 2)
+#' sframe <- sampling_frame(blocklens = 100, TR = 2)
 #' dset <- fmridataset::matrix_dataset(
 #'   matrix(rnorm(100 * 2), 100, 2),
 #'   TR = 2,
-#'   run_length = 50,
+#'   run_length = 100,
 #'   event_table = event_data
 #' )
 #' 

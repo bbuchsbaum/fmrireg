@@ -11,6 +11,9 @@
 
 \item{...}{Additional summary arguments}
 }
+\value{
+Invisibly returns the input object
+}
 \description{
 Summary method for fmri_ttest_fit
 }

@@ -20,6 +20,9 @@
 
 \item{allow_negative}{Logical; if TRUE, allow negative draws (only used for gaussian)}
 }
+\value{
+A numeric vector of resampled values with the same length as base
+}
 \description{
 Helper for drawing per-event amplitudes/durations around base values.
 }

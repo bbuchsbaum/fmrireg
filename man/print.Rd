@@ -17,6 +17,9 @@
 
 \item{...}{Additional arguments passed to print.fmri_lm}
 }
+\value{
+Invisibly returns the input object x
+}
 \description{
 Provides a colorful and informative printout.
 }

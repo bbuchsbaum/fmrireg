@@ -130,6 +130,7 @@ validate_group_data <- function(x) {
 #'
 #' @param x A group_data object
 #' @param ... Additional print arguments
+#' @return Invisibly returns the input object x
 #' @export
 print.group_data <- function(x, ...) {
   cat("Group Data Object\n")
@@ -168,6 +169,7 @@ print.group_data <- function(x, ...) {
 #'
 #' @param object A group_data object
 #' @param ... Additional summary arguments
+#' @return Invisibly returns the input object
 #' @export
 summary.group_data <- function(object, ...) {
   cat("Group Data Summary\n")

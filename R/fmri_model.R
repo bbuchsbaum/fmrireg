@@ -212,6 +212,7 @@ plot.fmri_model <- function(x, ...) {
 
 #' @export
 #' @rdname print
+#' @return Invisibly returns the input object x
 print.fmri_model <- function(x, ...) {
   # Header with fancy border
   cat("\n=============================================")

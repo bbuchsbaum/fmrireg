@@ -8,6 +8,7 @@
 #' @param method Correlation method: "pearson" (default) or "spearman"
 #' @param half_matrix Logical; if TRUE, show only lower triangle (default: FALSE)
 #' @param absolute_limits Logical; if TRUE, set color limits to \[-1,1\] (default: TRUE)
+#' @return A ggplot2 object containing the correlation heatmap visualization
 #' @export
 correlation_map.baseline_model <- function(x,
                                           method          = c("pearson", "spearman"),

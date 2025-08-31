@@ -11,6 +11,9 @@ tidy(x, ...)
 
 \item{...}{passed to methods}
 }
+\value{
+A tidy data frame with model coefficients and statistics
+}
 \description{
 Minimal tidy generic to support fmri_meta tidy() without requiring broom.
 }
