@@ -727,9 +727,21 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=progress"
     },
+    "43": {
+      "@type": "SoftwareApplication",
+      "identifier": "magrittr",
+      "name": "magrittr",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=magrittr"
+    },
     "SystemRequirements": null
   },
-  "fileSize": "30922.49KB",
+  "fileSize": "37852.302KB",
   "releaseNotes": "https://github.com/bbuchsbaum/fmrireg/blob/main/NEWS.md",
   "readme": "https://github.com/bbuchsbaum/fmrireg/blob/master/README.md",
   "contIntegration": "https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml"
