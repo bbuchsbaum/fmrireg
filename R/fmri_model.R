@@ -118,8 +118,15 @@ prediction_matrix <- function(x) {
 ## Section 2: Design Matrix and Environment for fMRI Models
 ## ============================================================================
 
+#' Design Matrix for fMRI Models
+#' 
+#' Extract the combined design matrix from an fMRI model containing both event and baseline terms.
+#' 
+#' @param x An fmri_model object
+#' @param blockid Optional numeric vector specifying which blocks/runs to include
+#' @param ... Additional arguments (not used)
+#' @return A tibble containing the combined design matrix with event and baseline terms
 #' @method design_matrix fmri_model
-#' @rdname design_matrix
 #' @export
 #' @importFrom tibble as_tibble
 design_matrix.fmri_model <- function(x, blockid = NULL, ...) {
@@ -166,12 +173,12 @@ blocklens.fmri_model <- function(x, ...) {
 }
 
 #' @export
-event_terms.fmri_model <- function(x) {
+event_terms.fmri_model <- function(x, ...) {
   terms(x$event_model)
 }
 
 #' @export
-baseline_terms.fmri_model <- function(x) {
+baseline_terms.fmri_model <- function(x, ...) {
   terms(x$baseline_model)
 }
 

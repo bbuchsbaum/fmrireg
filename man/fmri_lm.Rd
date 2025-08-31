@@ -36,7 +36,7 @@ fmri_lm(formula, ...)
 )
 
 \method{fmri_lm}{fmri_model}(
-  fmrimod,
+  formula,
   dataset = NULL,
   robust = FALSE,
   robust_options = NULL,
@@ -88,6 +88,26 @@ fmri_lm(formula, ...)
 \item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
 
 \item{progress}{Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.}
+
+\item{ar_voxelwise}{Logical. Estimate AR parameters voxel-wise (overrides \code{ar_options$voxelwise}).}
+
+\item{parallel_voxels}{Logical. Parallelize across voxels where supported.}
+
+\item{cor_struct}{Character. Shorthand for \code{ar_options$struct} (e.g., "ar1", "ar2", "arp").}
+
+\item{cor_iter}{Integer. Shorthand for \code{ar_options$iter_gls}.}
+
+\item{cor_global}{Logical. Shorthand for \code{ar_options$global}.}
+
+\item{ar1_exact_first}{Logical. Shorthand for \code{ar_options$exact_first}.}
+
+\item{ar_p}{Integer. Shorthand for \code{ar_options$p}.}
+
+\item{robust_psi}{Character. Shorthand for \code{robust_options$type} (e.g., "huber", "bisquare").}
+
+\item{robust_max_iter}{Integer. Shorthand for \code{robust_options$max_iter}.}
+
+\item{robust_scale_scope}{Character. Shorthand for \code{robust_options$scale_scope} ("run" or "global").}
 }
 \value{
 An object of class \code{fmri_lm}.

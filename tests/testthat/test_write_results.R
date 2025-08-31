@@ -1,7 +1,6 @@
 # Tests for write_results.fmri_lm BIDS export functionality
 
 library(testthat)
-devtools::load_all('.')  # Load development version
 library(neuroim2)
 library(fmridataset)
 

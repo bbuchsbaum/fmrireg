@@ -214,6 +214,16 @@ fmri_lm <- function(formula, ...) {
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
+#' @param ar_voxelwise Logical. Estimate AR parameters voxel-wise (overrides \code{ar_options$voxelwise}).
+#' @param parallel_voxels Logical. Parallelize across voxels where supported.
+#' @param cor_struct Character. Shorthand for \code{ar_options$struct} (e.g., "ar1", "ar2", "arp").
+#' @param cor_iter Integer. Shorthand for \code{ar_options$iter_gls}.
+#' @param cor_global Logical. Shorthand for \code{ar_options$global}.
+#' @param ar1_exact_first Logical. Shorthand for \code{ar_options$exact_first}.
+#' @param ar_p Integer. Shorthand for \code{ar_options$p}.
+#' @param robust_psi Character. Shorthand for \code{robust_options$type} (e.g., "huber", "bisquare").
+#' @param robust_max_iter Integer. Shorthand for \code{robust_options$max_iter}.
+#' @param robust_scale_scope Character. Shorthand for \code{robust_options$scale_scope} ("run" or "global").
 #' @return A fitted linear regression model for fMRI data analysis.
 #' 
 #' @details
@@ -363,7 +373,7 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
 
 #' @rdname fmri_lm
 #' @export
-fmri_lm.fmri_model <- function(fmrimod, dataset = NULL,
+fmri_lm.fmri_model <- function(formula, dataset = NULL,
                                robust = FALSE, robust_options = NULL,
                                ar_options = NULL,
                                strategy = c("runwise", "chunkwise"), nchunks = 10,
@@ -376,11 +386,11 @@ fmri_lm.fmri_model <- function(fmrimod, dataset = NULL,
                                robust_scale_scope = NULL,
                                ...) {
   strategy <- match.arg(strategy)
-  assert_that(inherits(fmrimod, "fmri_model"))
+  assert_that(inherits(formula, "fmri_model"))
 
-  dataset <- dataset %||% fmrimod$dataset %||% attr(fmrimod, "dataset")
+  dataset <- dataset %||% formula$dataset %||% attr(formula, "dataset")
   if (is.null(dataset)) {
-    stop("No dataset found in 'fmrimod' and none supplied.")
+    stop("No dataset found in 'formula' and none supplied.")
   }
   assert_that(inherits(dataset, "fmri_dataset"))
 
@@ -430,7 +440,7 @@ fmri_lm.fmri_model <- function(fmrimod, dataset = NULL,
 
   cfg <- fmri_lm_control(robust_options = robust_options, ar_options = ar_options)
 
-  ret <- fmri_lm_fit(fmrimod, dataset, strategy, cfg, nchunks,
+  ret <- fmri_lm_fit(formula, dataset, strategy, cfg, nchunks,
                      use_fast_path = use_fast_path, progress = progress,
                      parallel_voxels = parallel_voxels)
   return(ret)
@@ -2108,6 +2118,4 @@ print.fmri_lm <- function(x, ...) {
   
     
     
-
-
 

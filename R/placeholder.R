@@ -1,7 +1,11 @@
 
-# Placeholder for estimate function
-# This appears to be a roxygen2 artifact
+#' Deprecated helper: estimate()
+#'
+#' This function is deprecated. Use \code{estimate_betas()} instead.
+#'
+#' @param ... Ignored.
+#' @return No return value; always errors with a deprecation message.
+#' @export
 estimate <- function(...) {
-  stop("The estimate function is deprecated. Please use estimate_betas() instead.")
+  stop("estimate() is deprecated. Please use estimate_betas() instead.")
 }
-

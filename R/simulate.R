@@ -177,6 +177,40 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
   )
 }
 
+#' Resample parameter vector with specified distribution
+#'
+#' Helper for drawing per-event amplitudes/durations around base values.
+#'
+#' @param base Numeric vector of base values to jitter
+#' @param sd Numeric standard deviation for the sampling distribution
+#' @param dist Distribution name: "lognormal", "gamma", or "gaussian"
+#' @param allow_negative Logical; if TRUE, allow negative draws (only used for gaussian)
+#' @importFrom stats rnorm rexp runif rgamma rlnorm arima.sim
+#' @importFrom assertthat assert_that
+#' @export
+.resample_param <- function(base, sd, dist = c("lognormal", "gamma", "gaussian"),
+                            allow_negative = FALSE) {
+  dist <- match.arg(dist)
+  out  <- base
+  if (sd > 0) {
+    out <- vapply(seq_along(base), function(i) {
+      mu <- base[i]
+      if (!allow_negative && mu <= 0 && dist != "gaussian") {
+        stop("base values must be >0 for lognormal or gamma sampling")
+      }
+      switch(dist,
+             lognormal = rlnorm(1, meanlog = log(mu), sdlog = sd),
+             gamma = {
+               shape_par <- (mu^2) / (sd^2)
+               rate_par  <- mu / (sd^2)
+               rgamma(1, shape = shape_par, rate = rate_par)
+             },
+             gaussian = rnorm(1, mean = mu, sd = sd))
+    }, numeric(1))
+  }
+  out
+}
+
 #' Simulate fMRI Time Courses, Return Shared Onsets + Column-Specific Amplitudes/Durations
 #'
 #' Generates \eqn{n} time-series (columns) with a single set of onsets, but
@@ -230,6 +264,7 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #' @param noise_sd Std dev of the noise.
 #' @param random_seed Optional integer for reproducibility.
 #' @param verbose If TRUE, prints messages.
+#' @param buffer Numeric seconds appended to the end of the time grid to avoid edge truncation (default: 16).
 #'
 #' @return A list containing:
 #' \describe{
@@ -240,61 +275,6 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #'   \item{\code{hrf_info}}{A list with HRF metadata.}
 #'   \item{\code{noise_params}}{A list describing noise generation.}
 #' }
-#'
-#' @importFrom stats rnorm rexp runif rgamma rlnorm arima.sim
-#' @importFrom assertthat assert_that
-#' @export
-.resample_param <- function(base, sd, dist = c("lognormal", "gamma", "gaussian"),
-                            allow_negative = FALSE) {
-  dist <- match.arg(dist)
-  out  <- base
-  if (sd > 0) {
-    out <- vapply(seq_along(base), function(i) {
-      mu <- base[i]
-      if (!allow_negative && mu <= 0 && dist != "gaussian") {
-        stop("base values must be >0 for lognormal or gamma sampling")
-      }
-      switch(dist,
-             lognormal = rlnorm(1, meanlog = log(mu), sdlog = sd),
-             gamma = {
-               shape_par <- (mu^2) / (sd^2)
-               rate_par  <- mu / (sd^2)
-               rgamma(1, shape = shape_par, rate = rate_par)
-             },
-             gaussian = rnorm(1, mean = mu, sd = sd))
-    }, numeric(1))
-  }
-  out
-}
-
-#' Simulate multiple fMRI time series with column-specific parameters
-#'
-#' Generate multiple fMRI time series where each column can have different 
-#' amplitude and duration parameters drawn from specified distributions.
-#'
-#' @param n Number of time-series (columns).
-#' @param total_time Total scan length (seconds).
-#' @param TR Repetition time (seconds).
-#' @param hrf Hemodynamic response function, e.g. \code{fmrihrf::HRF_SPMG1}.
-#' @param n_events Number of events.
-#' @param onsets Optional numeric vector of event onsets.
-#' @param isi_dist Inter-stimulus interval distribution.
-#' @param isi_min,isi_max ISI range for uniform distribution.
-#' @param isi_rate Rate for exponential distribution.
-#' @param durations Event durations.
-#' @param duration_sd Standard deviation for duration sampling.
-#' @param duration_dist Distribution for duration sampling.
-#' @param amplitudes Event amplitudes.
-#' @param amplitude_sd Standard deviation for amplitude sampling.
-#' @param amplitude_dist Distribution for amplitude sampling.
-#' @param single_trial Whether to use single-trial regressors.
-#' @param noise_type Type of noise to add.
-#' @param noise_ar AR coefficients for noise.
-#' @param noise_sd Noise standard deviation.
-#' @param random_seed Random seed for reproducibility.
-#' @param verbose Whether to print messages.
-#'
-#' @return A list with time_series (matrix_dataset), ampmat, durmat, hrf_info, and noise_params.
 #'
 #' @export
 simulate_fmri_matrix <- function(

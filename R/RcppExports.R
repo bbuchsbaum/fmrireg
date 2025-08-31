@@ -49,3 +49,70 @@ instantaneous_correlation_rcpp <- function(x, y, eta = NA_real_, tau_half = NA_r
     .Call('_fmrireg_instantaneous_correlation_rcpp', PACKAGE = 'fmrireg', x, y, eta, tau_half, offset, warmup, fill)
 }
 
+meta_fit_cpp <- function(Y, V, X, method, robust, huber_c = 1.345, robust_iter = 2L, n_threads = 0L) {
+    .Call('_fmrireg_meta_fit_cpp', PACKAGE = 'fmrireg', Y, V, X, method, robust, huber_c, robust_iter, n_threads)
+}
+
+#' Meta-regression with ONE voxelwise covariate
+#' 
+#' @param Y S x P matrix of effect sizes
+#' @param V S x P matrix of variances
+#' @param X S x K design matrix
+#' @param C S x P matrix of voxelwise covariates
+#' @param method Meta-analysis method
+#' @param robust Robust estimation method
+#' @param huber_c Huber tuning constant
+#' @param robust_iter Number of IRLS iterations
+#' @param n_threads Number of OpenMP threads
+#' @return List with results
+#' @export
+meta_fit_vcov_cpp <- function(Y, V, X, C, method, robust, huber_c = 1.345, robust_iter = 2L, n_threads = 0L) {
+    .Call('_fmrireg_meta_fit_vcov_cpp', PACKAGE = 'fmrireg', Y, V, X, C, method, robust, huber_c, robust_iter, n_threads)
+}
+
+#' OLS t-test / ANCOVA across features
+#' 
+#' @param Y S x P matrix (subjects x features)
+#' @param X S x K design matrix with intercept if desired
+#' @return List with beta (K x P), se (K x P), t (K x P), df (scalar), ok (P)
+#' @export
+ols_t_cpp <- function(Y, X) {
+    .Call('_fmrireg_ols_t_cpp', PACKAGE = 'fmrireg', Y, X)
+}
+
+#' Welch two-sample t-test across features
+#' 
+#' @param Y S x P matrix
+#' @param g_in Length S vector of group indicators (1/2 or 0/1)
+#' @return List with muA, muB, t, df (Welch), nA, nB
+#' @export
+welch_t_cpp <- function(Y, g_in) {
+    .Call('_fmrireg_welch_t_cpp', PACKAGE = 'fmrireg', Y, g_in)
+}
+
+#' OLS with ONE voxelwise covariate
+#' 
+#' @param Y S x P matrix of outcomes
+#' @param X S x K design matrix
+#' @param C S x P matrix of voxelwise covariates
+#' @return List with beta ((K+1) x P), se, t, df
+#' @export
+ols_t_vcov_cpp <- function(Y, X, C) {
+    .Call('_fmrireg_ols_t_vcov_cpp', PACKAGE = 'fmrireg', Y, X, C)
+}
+
+group_pi0_counts_cpp <- function(p, group, tau) {
+    .Call('_fmrireg_group_pi0_counts_cpp', PACKAGE = 'fmrireg', p, group, tau)
+}
+
+pi0_smooth_cpp <- function(pi0_raw, neighbors, lambda, iters) {
+    .Call('_fmrireg_pi0_smooth_cpp', PACKAGE = 'fmrireg', pi0_raw, neighbors, lambda, iters)
+}
+
+weighted_bh_cpp <- function(p, w, alpha) {
+    .Call('_fmrireg_weighted_bh_cpp', PACKAGE = 'fmrireg', p, w, alpha)
+}
+
+bh_qvalues_scaled_cpp <- function(q) {
+    .Call('_fmrireg_bh_qvalues_scaled_cpp', PACKAGE = 'fmrireg', q)
+}

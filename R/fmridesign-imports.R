@@ -8,6 +8,7 @@
 #' @importFrom fmridesign Ident Poly BSpline Scale ScaleWithin Standardized RobustScale baseline block
 #' @importFrom fmridesign contrast pair_contrast column_contrast unit_contrast oneway_contrast poly_contrast
 #' @importFrom fmridesign interaction_contrast one_against_all_contrast contrast_set contrast_weights plot_contrasts design_map
+#' @importFrom fmridesign Fcontrasts
 NULL
 
 # Re-export key functions from fmridesign
@@ -83,14 +84,8 @@ fmridesign::is_categorical
 #' @export
 fmridesign::is_continuous
 
-#' @export
-fmridesign::longnames
 
-#' @export
-fmridesign::shortnames
 
-#' @export
-fmridesign::columns
 
 #' @export
 fmridesign::term_indices
@@ -150,9 +145,7 @@ fmridesign::baseline
 #' @export
 fmridesign::block
 
-# Re-export contrast functions
-#' @export
-fmridesign::contrast
+# Re-export contrast functions (except the generic name 'contrast' which we wrap)
 
 #' @export
 fmridesign::pair_contrast
@@ -174,6 +167,9 @@ fmridesign::interaction_contrast
 
 #' @export
 fmridesign::one_against_all_contrast
+
+#' @export
+fmridesign::Fcontrasts
 
 #' Create a contrast set
 #' 

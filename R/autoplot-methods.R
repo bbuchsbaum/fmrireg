@@ -91,7 +91,10 @@ autoplot.Reg <- function(object, grid = NULL, precision = 0.1, method = "conv", 
   stopifnot(is.matrix(DM), ncol(DM) >= 2)  # must have at least 2 columns to correlate
   
   # 1) Compute correlation matrix
-  cormat <- stats::cor(DM, use = "pairwise.complete.obs", method = method)
+  # Suppress warning about standard deviation being zero (expected for constant columns)
+  cormat <- suppressWarnings(
+    stats::cor(DM, use = "pairwise.complete.obs", method = method)
+  )
   
   # 2) Optionally mask to show only the lower triangle.
   #    (Below we keep the diagonal, so i >= j.)

@@ -864,6 +864,7 @@ write_results.fmri_lm <- function(x,
 
 #' Update File Paths in Results After Atomic Move
 #' @keywords internal
+#' @noRd
 .update_file_paths_in_results <- function(created_files, temp_dir, final_path) {
   # Recursively update file paths in the results structure
   for (i in seq_along(created_files)) {

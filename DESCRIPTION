@@ -53,7 +53,8 @@ Imports:
     bslib,
     future.apply,
     jsonlite,
-    progress
+    progress,
+    magrittr
 RoxygenNote: 7.3.2.9000
 Roxygen: list(
     markdown = TRUE,
@@ -92,10 +93,12 @@ VignetteBuilder: knitr
 URL: https://bbuchsbaum.github.io/fmrireg/, https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues
 Collate: 
+    'imports.R'
     'RcppExports.R'
     'all_generic.R'
     'ar_utils.R'
     'autoplot-methods.R'
+    'correlation_map_methods.R'
     'benchmark_datasets.R'
     'beta_utils.R'
     'bids_export.R'
@@ -137,6 +140,16 @@ Collate:
     'fmrirlm.R'
     'gen_contrast.R'
     'globals.R'
+    'group_data.R'
+    'group_data_csv.R'
+    'group_data_h5.R'
+    'group_data_nifti.R'
+    'fmri_meta.R'
+    'fmri_meta_methods.R'
+    'meta_fit.R'
+    'spatial_fdr.R'
+    'fmri_ttest_helpers.R'
+    'fmri_ttest.R'
     'hrf_smoothing_kernel.R'
     'lss.R'
     'metafuns.R'

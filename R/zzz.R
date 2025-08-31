@@ -13,4 +13,23 @@
       RcppParallel::setThreadOptions(numThreads = as.integer(val))
     }, silent = TRUE)
   }
+  
+  # Register S3 methods from fmridesign for Fcontrasts
+  # This ensures the methods are available when fmrireg is loaded
+  # The methods are not exported, so we get them from the namespace
+  if (requireNamespace("fmridesign", quietly = TRUE)) {
+    registerS3method("Fcontrasts", "event_model", 
+                     utils::getFromNamespace("Fcontrasts.event_model", "fmridesign"))
+    registerS3method("Fcontrasts", "event_term", 
+                     utils::getFromNamespace("Fcontrasts.event_term", "fmridesign"))
+    registerS3method("Fcontrasts", "convolved_term", 
+                     utils::getFromNamespace("Fcontrasts.convolved_term", "fmridesign"))
+    
+    # Register correlation_map.event_model from fmridesign
+    # This method doesn't depend on internal functions so it can be safely registered
+    registerS3method("correlation_map", "event_model",
+                     utils::getFromNamespace("correlation_map.event_model", "fmridesign"))
+    # Note: correlation_map.baseline_model is defined locally in correlation_map_methods.R
+    # because it needs access to fmrireg's internal .correlation_map_common function
+  }
 }

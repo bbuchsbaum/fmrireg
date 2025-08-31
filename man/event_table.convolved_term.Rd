@@ -4,7 +4,7 @@
 \alias{event_table.convolved_term}
 \title{Extract event table from convolved term}
 \usage{
-\method{event_table}{convolved_term}(x)
+\method{event_table}{convolved_term}(x, ...)
 }
 \arguments{
 \item{x}{A convolved_term object}

@@ -41,3 +41,6 @@ data-raw/
 ^repomix-output\.txt$
 ^test_output\.txt$
 ^Rplots\.pdf$
+
+.claude
+.pytest_cache

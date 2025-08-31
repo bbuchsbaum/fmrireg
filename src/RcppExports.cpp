@@ -57,11 +57,145 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// meta_fit_cpp
+Rcpp::List meta_fit_cpp(const arma::mat& Y, const arma::mat& V, const arma::mat& X, const std::string method, const std::string robust, const double huber_c, const int robust_iter, const int n_threads);
+RcppExport SEXP _fmrireg_meta_fit_cpp(SEXP YSEXP, SEXP VSEXP, SEXP XSEXP, SEXP methodSEXP, SEXP robustSEXP, SEXP huber_cSEXP, SEXP robust_iterSEXP, SEXP n_threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type V(VSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type robust(robustSEXP);
+    Rcpp::traits::input_parameter< const double >::type huber_c(huber_cSEXP);
+    Rcpp::traits::input_parameter< const int >::type robust_iter(robust_iterSEXP);
+    Rcpp::traits::input_parameter< const int >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(meta_fit_cpp(Y, V, X, method, robust, huber_c, robust_iter, n_threads));
+    return rcpp_result_gen;
+END_RCPP
+}
+// meta_fit_vcov_cpp
+Rcpp::List meta_fit_vcov_cpp(const arma::mat& Y, const arma::mat& V, const arma::mat& X, const arma::mat& C, const std::string method, const std::string robust, const double huber_c, const int robust_iter, const int n_threads);
+RcppExport SEXP _fmrireg_meta_fit_vcov_cpp(SEXP YSEXP, SEXP VSEXP, SEXP XSEXP, SEXP CSEXP, SEXP methodSEXP, SEXP robustSEXP, SEXP huber_cSEXP, SEXP robust_iterSEXP, SEXP n_threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type V(VSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type C(CSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type robust(robustSEXP);
+    Rcpp::traits::input_parameter< const double >::type huber_c(huber_cSEXP);
+    Rcpp::traits::input_parameter< const int >::type robust_iter(robust_iterSEXP);
+    Rcpp::traits::input_parameter< const int >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(meta_fit_vcov_cpp(Y, V, X, C, method, robust, huber_c, robust_iter, n_threads));
+    return rcpp_result_gen;
+END_RCPP
+}
+// ols_t_cpp
+List ols_t_cpp(const arma::mat& Y, const arma::mat& X);
+RcppExport SEXP _fmrireg_ols_t_cpp(SEXP YSEXP, SEXP XSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    rcpp_result_gen = Rcpp::wrap(ols_t_cpp(Y, X));
+    return rcpp_result_gen;
+END_RCPP
+}
+// welch_t_cpp
+List welch_t_cpp(const arma::mat& Y, const IntegerVector& g_in);
+RcppExport SEXP _fmrireg_welch_t_cpp(SEXP YSEXP, SEXP g_inSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type g_in(g_inSEXP);
+    rcpp_result_gen = Rcpp::wrap(welch_t_cpp(Y, g_in));
+    return rcpp_result_gen;
+END_RCPP
+}
+// ols_t_vcov_cpp
+List ols_t_vcov_cpp(const arma::mat& Y, const arma::mat& X, const arma::mat& C);
+RcppExport SEXP _fmrireg_ols_t_vcov_cpp(SEXP YSEXP, SEXP XSEXP, SEXP CSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type C(CSEXP);
+    rcpp_result_gen = Rcpp::wrap(ols_t_vcov_cpp(Y, X, C));
+    return rcpp_result_gen;
+END_RCPP
+}
+// group_pi0_counts_cpp
+List group_pi0_counts_cpp(NumericVector p, IntegerVector group, double tau);
+RcppExport SEXP _fmrireg_group_pi0_counts_cpp(SEXP pSEXP, SEXP groupSEXP, SEXP tauSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type p(pSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type group(groupSEXP);
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    rcpp_result_gen = Rcpp::wrap(group_pi0_counts_cpp(p, group, tau));
+    return rcpp_result_gen;
+END_RCPP
+}
+// pi0_smooth_cpp
+NumericVector pi0_smooth_cpp(NumericVector pi0_raw, List neighbors, double lambda, int iters);
+RcppExport SEXP _fmrireg_pi0_smooth_cpp(SEXP pi0_rawSEXP, SEXP neighborsSEXP, SEXP lambdaSEXP, SEXP itersSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type pi0_raw(pi0_rawSEXP);
+    Rcpp::traits::input_parameter< List >::type neighbors(neighborsSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< int >::type iters(itersSEXP);
+    rcpp_result_gen = Rcpp::wrap(pi0_smooth_cpp(pi0_raw, neighbors, lambda, iters));
+    return rcpp_result_gen;
+END_RCPP
+}
+// weighted_bh_cpp
+List weighted_bh_cpp(NumericVector p, NumericVector w, double alpha);
+RcppExport SEXP _fmrireg_weighted_bh_cpp(SEXP pSEXP, SEXP wSEXP, SEXP alphaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type p(pSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type w(wSEXP);
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    rcpp_result_gen = Rcpp::wrap(weighted_bh_cpp(p, w, alpha));
+    return rcpp_result_gen;
+END_RCPP
+}
+// bh_qvalues_scaled_cpp
+NumericVector bh_qvalues_scaled_cpp(NumericVector q);
+RcppExport SEXP _fmrireg_bh_qvalues_scaled_cpp(SEXP qSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type q(qSEXP);
+    rcpp_result_gen = Rcpp::wrap(bh_qvalues_scaled_cpp(q));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_fmrireg_ar_whiten_inplace", (DL_FUNC) &_fmrireg_ar_whiten_inplace, 5},
     {"_fmrireg_ar_whiten_void", (DL_FUNC) &_fmrireg_ar_whiten_void, 5},
     {"_fmrireg_instantaneous_correlation_rcpp", (DL_FUNC) &_fmrireg_instantaneous_correlation_rcpp, 7},
+    {"_fmrireg_meta_fit_cpp", (DL_FUNC) &_fmrireg_meta_fit_cpp, 8},
+    {"_fmrireg_meta_fit_vcov_cpp", (DL_FUNC) &_fmrireg_meta_fit_vcov_cpp, 9},
+    {"_fmrireg_ols_t_cpp", (DL_FUNC) &_fmrireg_ols_t_cpp, 2},
+    {"_fmrireg_welch_t_cpp", (DL_FUNC) &_fmrireg_welch_t_cpp, 2},
+    {"_fmrireg_ols_t_vcov_cpp", (DL_FUNC) &_fmrireg_ols_t_vcov_cpp, 3},
+    {"_fmrireg_group_pi0_counts_cpp", (DL_FUNC) &_fmrireg_group_pi0_counts_cpp, 3},
+    {"_fmrireg_pi0_smooth_cpp", (DL_FUNC) &_fmrireg_pi0_smooth_cpp, 4},
+    {"_fmrireg_weighted_bh_cpp", (DL_FUNC) &_fmrireg_weighted_bh_cpp, 3},
+    {"_fmrireg_bh_qvalues_scaled_cpp", (DL_FUNC) &_fmrireg_bh_qvalues_scaled_cpp, 1},
     {NULL, NULL, 0}
 };
 
