@@ -1,10 +1,9 @@
----
-title: "Contrasts in fmrireg"
+title: "05. Contrasts and Hypothesis Tests"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Contrasts in fmrireg}
+  %\VignetteIndexEntry{05 Contrasts and Hypothesis Tests}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -338,6 +337,11 @@ str(wts_interaction)
 cat("\nContrast weights matrix:\n")
 print(wts_interaction$conmat)
 ```
+
+## Next
+
+- 06 Benchmark Datasets
+- 07 Group Analysis
 
 ## Conclusion
 

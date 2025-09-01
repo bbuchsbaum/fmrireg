@@ -2,7 +2,7 @@
 
 #' @importFrom fmridesign event_model baseline_model event_factor event_variable event_matrix event_basis condition_basis_list
 #' @importFrom fmridesign covariate nuisance hrf design_matrix conditions cells convolve sanitize onsets durations
-#' @importFrom fmridesign elements blockids event_terms baseline_terms term_matrices is_categorical is_continuous
+#' @importFrom fmridesign elements event_terms baseline_terms term_matrices is_categorical is_continuous
 #' @importFrom fmridesign longnames shortnames columns term_indices split_by_block event_table event_term construct
 #' @importFrom fmridesign convolve_design sub_basis basis_suffix feature_suffix trialwise
 #' @importFrom fmridesign Ident Poly BSpline Scale ScaleWithin Standardized RobustScale baseline block
@@ -66,8 +66,7 @@ fmridesign::durations
 #' @export
 fmridesign::elements
 
-#' @export
-fmridesign::blockids
+## blockids generic is provided by fmrihrf; do not re-export from fmridesign to avoid conflicts
 
 #' @export
 fmridesign::event_terms

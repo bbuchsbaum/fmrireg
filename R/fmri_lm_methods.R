@@ -2,51 +2,11 @@
 # Methods for extracting results and information from fitted fmri_lm objects
 
 
-#' Extract HRF from Fitted Model
-#'
-#' @param x An fmri_lm object
-#' @param sample_at Time points at which to sample the HRF
-#' @param ... Additional arguments
-#' @return A data frame with the fitted HRF
-#' @export
-fitted_hrf.fmri_lm <- function(x, sample_at = seq(0, 24, by = 1), ...) {
-  # Create time vector
-  time <- sample_at
-  
-  # Get the HRF from the model
-  # For now, just return a placeholder - this needs proper implementation
-  # to extract HRF from the event_model
-  hrf_obj <- fmrihrf::HRF_SPMG1
-  
-  # Check if it's a basis HRF
-  if (inherits(hrf_obj, "hrfbasis")) {
-    # Get basis functions
-    basis_mat <- predict(hrf_obj, time)
-    
-    # Get coefficients for the first event term
-    # This is simplified - in practice might want to specify which term
-    event_indices <- x$result$event_indices
-    coefs <- coef(x, type = "betas", include_baseline = FALSE)
-    
-    # Take first few coefficients corresponding to basis
-    nbasis <- ncol(basis_mat)
-    if (ncol(coefs) >= nbasis) {
-      basis_coefs <- as.matrix(coefs[1, 1:nbasis])
-      fitted_values <- basis_mat %*% t(basis_coefs)
-    } else {
-      warning("Not enough coefficients for basis functions")
-      fitted_values <- rep(0, length(time))
-    }
-  } else {
-    # Standard HRF - just evaluate it
-    fitted_values <- fmrihrf::evaluate(hrf_obj, time)
-  }
-  
-  data.frame(
-    time = time,
-    value = as.vector(fitted_values)
-  )
-}
+## Deprecated stub: fitted_hrf.fmri_lm
+## The real implementation lives in R/fmrilm.R. The placeholder
+## implementation previously here has been removed to avoid clobbering
+## the robust method and to prevent duplicate S3 registrations.
+## If needed for reference, see git history prior to this change.
 
 #' Reshape Coefficients
 #' 
@@ -60,72 +20,8 @@ reshape_coef <- function(df, des, measure = "value") {
   as.data.frame(ret)
 }
 
-#' Pull Statistics from fmri_lm Results
-#'
-#' @keywords internal
-#' @noRd
-pull_stat_revised <- function(x, type, element) {
-  if (type == "betas") {
-    # Extract the beta data from the tibble structure
-    beta_data <- x$result$betas$data[[1]]
-    ret <- beta_data[[element]][[1]]
-    
-    # Get valid event indices
-    max_col <- ncol(ret)
-    valid_event_indices <- x$result$event_indices[x$result$event_indices <= max_col]
-    
-    if (length(valid_event_indices) == 0) {
-      warning("No valid event indices found. Using all available columns.")
-      valid_event_indices <- 1:max_col
-    }
-    
-    # Extract only event-related betas
-    ret <- ret[, valid_event_indices, drop = FALSE]
-    
-    # Set column names
-    dm <- design_matrix(x$model)
-    if (!is.null(dm) && ncol(dm) >= max(valid_event_indices)) {
-      actual_colnames <- colnames(dm)[valid_event_indices]
-      colnames(ret) <- actual_colnames
-    } else {
-      # Fallback: use conditions but make them unique
-      condition_names <- conditions(x$model$event_model)[1:length(valid_event_indices)]
-      colnames(ret) <- make.names(condition_names, unique = TRUE)
-    }
-    
-    # Ensure tibble output for consistency with original behavior
-    res <- suppressMessages(tibble::as_tibble(ret, .name_repair = "check_unique"))
-  } else if (type == "contrasts") {
-    ret <- x$result$contrasts %>% dplyr::filter(type == "contrast")
-    if (nrow(ret) == 0) {
-      stop("No simple contrasts for this model.")
-    }
-    cnames <- ret$name
-    out <- lapply(ret$data, function(x) x[[element]]) %>% dplyr::bind_cols()
-    names(out) <- cnames
-    out
-  } else if (type == "F") {
-    ret <- x$result$contrasts %>% dplyr::filter(type == "Fcontrast")
-    if (nrow(ret) == 0) {
-      stop("No F contrasts for this model.")
-    }
-    cnames <- ret$name
-    out <- lapply(ret$data, function(x) x[[element]]) %>% dplyr::bind_cols()
-    names(out) <- cnames
-    out
-  } else {
-    stop("Invalid type specified. Must be 'betas', 'contrasts', or 'F'.")
-  }
-}
-
-#' Pull Statistics (Legacy Version)
-#'
-#' @keywords internal
-#' @noRd
-pull_stat <- function(x, type, element) {
-  # Redirect to revised version
-  pull_stat_revised(x, type, element)
-}
+## pull_stat_revised/pull_stat are defined in R/fmrilm.R
+## Remove duplicate definitions here to ensure a single source of truth.
 
 #' @method coef fmri_lm
 #' @export

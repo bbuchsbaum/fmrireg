@@ -648,22 +648,60 @@ fitted_hrf.fmri_lm <- function(x, sample_at = seq(0, 24, by = 1), ...) {
   
   eterms <- terms(x$model$event_model)
   betas <- coef(x)
-  tind <- x$model$event_model$term_indices
   
-  pred <- lapply(seq_along(tind), function(i) {
-    ind <- tind[[i]]
-    hrf_spec <- eterms[[i]]$hrfspec
-    hrf <- hrf_spec$hrf
-    nb <- attr(hrf, "nbasis")
+  # Get term indices from the fmri_model's term_matrices
+  tmats <- term_matrices(x$model)
+  event_indices <- attr(tmats, "event_term_indices")
+  
+  # If no event terms, return empty list
+  if (is.null(eterms) || length(eterms) == 0) {
+    return(list())
+  }
+  
+  # For each event term, compute its indices based on the term's structure
+  # The event_indices should correspond to the columns for event terms
+  pred <- lapply(seq_along(eterms), function(i) {
+    eterm <- eterms[[i]]
+    
+    # Get the HRF specification (stored as an attribute in fmridesign)
+    hrf_spec <- attr(eterm, "hrfspec")
+    if (is.null(hrf_spec) && !is.null(eterm$hrfspec)) {
+      # Backward-compatibility: some versions may store as a list element
+      hrf_spec <- eterm$hrfspec
+    }
+    
+    # Fallback HRF if spec is missing
+    hrf <- if (!is.null(hrf_spec) && !is.null(hrf_spec$hrf)) hrf_spec$hrf else fmrihrf::HRF_SPMG1
+    # Derive nbasis using fmrihrf helper when possible
+    nb <- tryCatch({ fmrihrf::nbasis(hrf) }, error = function(e) NULL)
+    
+    # If nbasis is NULL, assume it's 1 (single basis function)
+    if (is.null(nb)) {
+      nb <- 1
+    }
+    
+    # Get the conditions (cells) for this term
+    excond <- cells(eterm, exclude_basis = TRUE)
+    ncond <- nrow(excond)
+    
+    # Get the column indices for this term directly from the event_model's col_indices
+    col_indices <- attr(x$model$event_model$design_matrix, "col_indices")
+    term_name <- names(eterms)[i]
+    ind <- col_indices[[term_name]]
+    
+    # Create the HRF basis matrix at sample points
     G <- as.matrix(hrf(sample_at))
     
-    excond <- cells(eterms[[i]], exclude_basis = TRUE)
-    ncond <- nrow(excond)
+    # Create block diagonal matrix for all conditions
     Gex <- do.call(Matrix::bdiag, replicate(ncond, G, simplify = FALSE))
     
+    # Get the relevant betas for this term
     B <- t(betas[, ind, drop = FALSE])
+    
+    # Compute predicted HRF values
     yh <- Gex %*% B
     
+    # Create expanded design info
     excond_expanded <- excond %>% dplyr::slice(rep(1:dplyr::n(), each = length(sample_at)))
     design <- cbind(
       dplyr::tibble(time = rep(sample_at, ncond)),
@@ -673,7 +711,9 @@ fitted_hrf.fmri_lm <- function(x, sample_at = seq(0, 24, by = 1), ...) {
     list(pred = as.matrix(yh), design = tibble::as_tibble(design))
   })
   
+  # Set names from event terms
   names(pred) <- names(eterms)
+  
   return(pred)
 }
 
@@ -2118,4 +2158,3 @@ print.fmri_lm <- function(x, ...) {
   
     
     
-

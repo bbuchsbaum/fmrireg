@@ -450,8 +450,10 @@ spatial_fdr_fmri_meta <- function(object, coef = 1, group = NULL,
       group <- seq_len(nrow(object$coefficients))
     } else {
       # Voxelwise - create 3D blocks
-      if (!is.null(object$data$mask)) {
-        blocks <- create_3d_blocks(object$data$mask)
+      # Prefer in-memory mask_data if available; otherwise use mask
+      mask_obj <- if (!is.null(object$data$mask_data)) object$data$mask_data else object$data$mask
+      if (!is.null(mask_obj)) {
+        blocks <- create_3d_blocks(mask_obj)
         group <- blocks$group_id
         # Store for potential neighbor use
         attr(group, "neighbors") <- blocks$neighbors
@@ -462,8 +464,9 @@ spatial_fdr_fmri_meta <- function(object, coef = 1, group = NULL,
     }
   } else if (is.character(group) && group == "blocks") {
     # Explicitly requested blocks
-    if (!is.null(object$data$mask)) {
-      blocks <- create_3d_blocks(object$data$mask)
+    mask_obj <- if (!is.null(object$data$mask_data)) object$data$mask_data else object$data$mask
+    if (!is.null(mask_obj)) {
+      blocks <- create_3d_blocks(mask_obj)
       group <- blocks$group_id
       attr(group, "neighbors") <- blocks$neighbors
     } else {

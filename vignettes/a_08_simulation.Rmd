@@ -1,10 +1,9 @@
----
-title: "Simulating fMRI Data"
+title: "03. Simulating fMRI Data"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Simulating fMRI Data}
+  %\VignetteIndexEntry{03 Simulating fMRI Data}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -28,6 +27,9 @@ Simulation is an essential tool for fMRI method development, validation, and tea
 
 This vignette demonstrates how to use these functions to create realistic fMRI simulations for various purposes.
 
+## Next
+
+- 04 fMRI Linear Model (GLM)
 ## Simulating Clean BOLD Signals
 
 Let's start with `simulate_bold_signal`, which generates a clean hemodynamic response signal for multiple experimental conditions.

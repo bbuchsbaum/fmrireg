@@ -372,13 +372,22 @@ summary.spatial_fdr_result <- function(object, ...) {
 #' @export
 create_3d_blocks <- function(mask, block_size = c(10, 10, 10), connectivity = 26) {
   
-  # Convert mask to array if needed
-  if (inherits(mask, "NeuroVol")) {
+  # Convert mask to array if needed (also accept file path)
+  if (is.character(mask)) {
+    if (!file.exists(mask)) {
+      stop("mask path does not exist: ", mask, call. = FALSE)
+    }
+    vol <- try(neuroim2::read_vol(mask), silent = TRUE)
+    if (inherits(vol, "try-error")) {
+      stop("Failed to read mask NIfTI from path: ", mask, call. = FALSE)
+    }
+    mask_array <- as.array(vol)
+  } else if (inherits(mask, "NeuroVol")) {
     mask_array <- as.array(mask)
   } else if (is.array(mask) && length(dim(mask)) == 3) {
     mask_array <- mask
   } else {
-    stop("mask must be a 3D array or NeuroVol object", call. = FALSE)
+    stop("mask must be a 3D array, NeuroVol, or file path", call. = FALSE)
   }
   
   dims <- dim(mask_array)

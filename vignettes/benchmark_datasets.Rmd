@@ -1,10 +1,9 @@
----
-title: "Using fMRI Benchmark Datasets"
+title: "06. Benchmark Datasets"
 author: "fmrireg package"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Using fMRI Benchmark Datasets}
+  %\VignetteIndexEntry{06 Benchmark Datasets}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -14,7 +13,8 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.width = 7,
-  fig.height = 5
+  fig.height = 5,
+  fig.alt = "Figure illustrating dataset structure or evaluation results; see caption and text for details."
 )
 ```
 
@@ -53,6 +53,10 @@ summary_info <- get_benchmark_summary("BM_Canonical_HighSNR")
 print(summary_info$dimensions)
 print(summary_info$experimental_design)
 ```
+
+## Next
+
+- 07 Group Analysis
 
 ## Examining the Data Structure
 

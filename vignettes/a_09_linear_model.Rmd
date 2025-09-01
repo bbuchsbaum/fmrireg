@@ -1,10 +1,9 @@
----
-title: "fMRI Linear Model Analysis"
+title: "04. fMRI Linear Model (GLM)"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{fMRI Linear Model Analysis}
+  %\VignetteIndexEntry{04 fMRI Linear Model (GLM)}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -26,6 +25,9 @@ registerDoParallel(cores = 1)
 options(fmrireg.num_threads = 2)
 
 set.seed(42)  # For reproducible examples
+
+# Accessibility: provide default alt-text for figures
+knitr::opts_chunk$set(fig.alt = "Figure illustrating model, design, or results; see caption and text for details.")
 ```
 
 ## Introduction to fMRI Linear Models
@@ -406,10 +408,9 @@ The contrast results show that Condition2 consistently elicits significantly str
 
 Another useful visualization is the fitted hemodynamic response for each condition. This shows the estimated BOLD response over time.
 
-```{r, message=FALSE, fig.width=7, fig.height=8, eval=FALSE}
-# Note: fitted_hrf example - requires contrast_model to be created
-# Extract fitted HRF curves
-fitted_hrfs <- fitted_hrf(contrast_model, sample_at = seq(0, 20, by = 0.5))
+```{r, message=FALSE, fig.width=7, fig.height=8}
+# Extract fitted HRF curves from the fitted model
+fitted_hrfs <- fitted_hrf(model, sample_at = seq(0, 20, by = 0.5))
 
 # Extract the design info and reorganize for plotting
 hrf_data <- lapply(names(fitted_hrfs), function(term) {
@@ -426,11 +427,12 @@ hrf_data <- lapply(names(fitted_hrfs), function(term) {
 # Combine all HRF data
 hrf_df <- do.call(rbind, hrf_data)
 
-# Find the column names that contain the predicted values (likely numbered columns)
-pred_cols <- grep("^[0-9]+$", colnames(hrf_df), value = TRUE)
+# Identify predicted-value columns by excluding known design columns
+design_cols <- union(colnames(fitted_hrfs[[1]]$design), c("term"))
+pred_cols <- setdiff(colnames(hrf_df), design_cols)
 if (length(pred_cols) == 0) {
-  # Try another pattern that might match the columns
-  pred_cols <- grep("^X[0-9]+$", colnames(hrf_df), value = TRUE)
+  # Fallback: match common default names for matrix columns
+  pred_cols <- grep("^(V|X)?[0-9]+$|^pred.*$", colnames(hrf_df), value = TRUE)
 }
 
 # Create a data frame in long format for plotting
@@ -440,7 +442,10 @@ hrf_long <- hrf_df %>%
     names_to = "voxel_id",
     values_to = "response"
   ) %>%
-  mutate(voxel = paste0("voxel", as.numeric(gsub("X", "", voxel_id))))
+  mutate(
+    voxel_index = suppressWarnings(as.integer(gsub("^[^0-9]*", "", voxel_id))),
+    voxel = paste0("voxel", voxel_index)
+  )
 
 # Plot the fitted HRF curves for each condition and voxel
 ggplot(hrf_long, aes(x = time, y = response, color = condition)) +
@@ -612,3 +617,8 @@ For more advanced analyses, you might consider:
 - Using more complex experimental designs with multiple factors
 - Implementing spatial smoothing or other preprocessing steps
 - Extending the GLM with methods like psychophysiological interactions (PPI) or finite impulse response (FIR) models 
+
+## Next
+
+- 05 Contrasts and Hypothesis Tests
+- 07 Group Analysis

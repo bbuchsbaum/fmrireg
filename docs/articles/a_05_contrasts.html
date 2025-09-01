@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Contrasts in fmrireg • fmrireg</title>
+<title> • fmrireg</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Contrasts in fmrireg">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -41,6 +41,7 @@
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -74,11 +75,8 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Contrasts in fmrireg</h1>
-                        <h4 data-toc-skip class="author">Bradley R.
-Buchsbaum</h4>
+      <h1></h1>
             
-            <h4 data-toc-skip class="date">2025-08-29</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/HEAD/vignettes/a_05_contrasts.Rmd" class="external-link"><code>vignettes/a_05_contrasts.Rmd</code></a></small>
       <div class="d-none name"><code>a_05_contrasts.Rmd</code></div>
@@ -86,6 +84,9 @@ Buchsbaum</h4>
 
     
     
+<p>title: “05. Contrasts and Hypothesis Tests” author: “Bradley R.
+Buchsbaum” date: “2025-08-31” output: rmarkdown::html_vignette vignette:
+&gt; % % % —</p>
 <div class="section level2">
 <h2 id="introduction-to-contrasts">Introduction to Contrasts<a class="anchor" aria-label="anchor" href="#introduction-to-contrasts"></a>
 </h2>
@@ -415,7 +416,7 @@ against zero (the implicit baseline).</p>
 <div class="section level2">
 <h2 id="general-contrasts-with-contrast">General Contrasts with <code>contrast()</code><a class="anchor" aria-label="anchor" href="#general-contrasts-with-contrast"></a>
 </h2>
-<p>The <code><a href="https://rdrr.io/pkg/fmridesign/man/contrast.html" class="external-link">contrast()</a></code> function allows for more complex
+<p>The <code><a href="../reference/contrast.html">contrast()</a></code> function allows for more complex
 contrasts defined by a single formula expression. This is useful for
 interactions or specific linear combinations of conditions.</p>
 <p>Let’s define the interaction contrast: (face:attend - face:ignore) -
@@ -423,7 +424,7 @@ interactions or specific linear combinations of conditions.</p>
 differs between categories.</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Interaction contrast</span></span>
-<span><span class="va">con_interaction</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/contrast.html" class="external-link">contrast</a></span><span class="op">(</span></span>
+<span><span class="va">con_interaction</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast.html">contrast</a></span><span class="op">(</span></span>
 <span>  <span class="op">~</span> <span class="op">(</span><span class="va">`face:attend`</span> <span class="op">-</span> <span class="va">`face:ignore`</span><span class="op">)</span> <span class="op">-</span> <span class="op">(</span><span class="va">`scene:attend`</span> <span class="op">-</span> <span class="va">`scene:ignore`</span><span class="op">)</span>,</span>
 <span>  name <span class="op">=</span> <span class="st">"category_X_attention"</span></span>
 <span><span class="op">)</span></span>
@@ -458,7 +459,7 @@ differs between categories.</p>
 </tr>
 </tbody>
 </table>
-<p>Note: In the formula for <code><a href="https://rdrr.io/pkg/fmridesign/man/contrast.html" class="external-link">contrast()</a></code>, condition names are
+<p>Note: In the formula for <code><a href="../reference/contrast.html">contrast()</a></code>, condition names are
 formed by joining factor levels with colons (e.g.,
 <code>face:attend</code>). When condition names contain special
 characters like colons, they must be enclosed in backticks. The
@@ -551,7 +552,7 @@ the overall effect.</p>
 </table>
 <p>Note that the weights generated by
 <code>interaction_contrast(~ category * attention)</code> match those we
-manually specified using <code><a href="https://rdrr.io/pkg/fmridesign/man/contrast.html" class="external-link">contrast()</a></code>. For factors with more
+manually specified using <code><a href="../reference/contrast.html">contrast()</a></code>. For factors with more
 levels, these functions would generate multiple orthogonal contrast
 columns.</p>
 </div>
@@ -994,9 +995,9 @@ contrast:</p>
 <span><span class="co">##   .. ..$ id       : NULL</span></span>
 <span><span class="co">##   .. ..$ vars     :List of 2</span></span>
 <span><span class="co">##   .. .. ..$ : language ~category</span></span>
-<span><span class="co">##   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x1181a9820&gt; </span></span>
+<span><span class="co">##   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x28238ad58&gt; </span></span>
 <span><span class="co">##   .. .. ..$ : language ~attention</span></span>
-<span><span class="co">##   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x1181a9820&gt; </span></span>
+<span><span class="co">##   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x28238ad58&gt; </span></span>
 <span><span class="co">##   .. .. ..- attr(*, "class")= chr [1:2] "quosures" "list"</span></span>
 <span><span class="co">##   .. ..$ varnames : Named chr [1:2] "category" "attention"</span></span>
 <span><span class="co">##   .. .. ..- attr(*, "names")= chr [1:2] "" ""</span></span>
@@ -1043,6 +1044,14 @@ contrast:</p>
 <div class="sourceCode" id="cb51"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">wts_interaction</span><span class="op">$</span><span class="va">conmat</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## NULL</span></span></code></pre>
+</div>
+<div class="section level2">
+<h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
+</h2>
+<ul>
+<li>06 Benchmark Datasets</li>
+<li>07 Group Analysis</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="conclusion">Conclusion<a class="anchor" aria-label="anchor" href="#conclusion"></a>

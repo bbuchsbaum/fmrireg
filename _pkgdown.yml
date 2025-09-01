@@ -43,6 +43,8 @@ navbar:
         href: articles/a_09_linear_model.html
       - text: Dataset Management
         href: articles/a_10_dataset.html
+      - text: Group Analysis
+        href: articles/group_analysis.html
       - text: -------
       - text: Resources
       - text: Benchmark Datasets
@@ -63,6 +65,7 @@ articles:
   - a_08_simulation
   - a_09_linear_model
   - a_10_dataset
+  - group_analysis
 
 - title: Resources
   navbar: ~
@@ -78,4 +81,3 @@ footer:
   structure:
     left: developed_by
     right: built_with
-

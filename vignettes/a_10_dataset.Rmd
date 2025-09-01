@@ -1,16 +1,15 @@
----
-title: "Representing fMRI Data in fmrireg"
+title: "02. Data Structures and Sampling Frames"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Representing fMRI Data}
+  %\VignetteIndexEntry{02 Data Structures and Sampling Frames}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=6, fig.height=4)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=7, fig.height=5, message=FALSE, warning=FALSE)
 library(fmrireg)
 library(fmridataset) # Dataset functionality refactored from fmrireg
 library(neuroim2) # For creating example NeuroVec/NeuroVol
@@ -218,6 +217,10 @@ This dataset type essentially behaves like a `matrix_dataset` where the matrix c
 
 ## Using Dataset Objects
 
+## Next
+
+- 03 Simulating fMRI Data
+- 04 fMRI Linear Model (GLM)
 Once created, these dataset objects serve as the primary data input for `fmrireg`'s modeling functions:
 
 *   `event_model(..., sampling_frame = dset$sampling_frame)`

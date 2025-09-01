@@ -1,16 +1,15 @@
----
-title: "Overview of the fmrireg Package"
+title: "01. Overview and Workflow"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Overview}
+  %\VignetteIndexEntry{01 Overview and Workflow}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=6, fig.height=4)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=7, fig.height=5, message=FALSE, warning=FALSE)
 library(fmrireg)
 library(fmrihrf)
 ```
@@ -143,3 +142,7 @@ motion spikes or other frame-level artifacts.
 
 This overview provides a map of the `fmrireg` package. For detailed explanations and examples, please refer to the specific vignettes linked above.
 
+## Next
+
+- 02 Data Structures and Sampling Frames
+- 03 Simulating fMRI Data

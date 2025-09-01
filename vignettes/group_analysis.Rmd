@@ -1,13 +1,18 @@
----
-title: "Group Analysis with fmrireg"
+title: "07. Group Analysis"
+author: "Bradley R. Buchsbaum"
+date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Group Analysis with fmrireg}
+  %\VignetteIndexEntry{07 Group Analysis}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-```r
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=7, fig.height=5, message=FALSE, warning=FALSE)
+```
+
+```{r}
 library(fmrireg)
 library(ggplot2)
 set.seed(123)
@@ -31,7 +36,7 @@ We simulate 10 subjects across two groups (A/B) for a single ROI. Group B has
 an effect that is 1 unit larger than group A. All subjects have the same SE for
 clarity.
 
-```r
+```{r}
 n_per_group <- 5
 subjects <- sprintf("s%02d", 1:(2 * n_per_group))
 group <- factor(rep(c("A", "B"), each = n_per_group))
@@ -66,7 +71,7 @@ gd
 
 We first fit an intercept-only model, then a model including a group term.
 
-```r
+```{r}
 # Intercept-only (grand mean across subjects)
 fit_fe <- fmri_meta(gd, formula = ~ 1, method = "fe", verbose = FALSE)
 
@@ -81,14 +86,14 @@ Note: With equal SE per subject, fixed-effects and random-effects will yield
 similar point estimates. Random-effects (`method = "pm"`) will estimate between-
 subject heterogeneity (`tau2`) when present.
 
-```r
+```{r}
 fit_pm <- fmri_meta(gd, formula = ~ 1 + group, method = "pm", verbose = FALSE)
 summary(fit_pm)
 ```
 
 # Extract coefficients and a contrast
 
-```r
+```{r}
 coef_names <- colnames(fit_cov$coefficients)
 coef_names
 
@@ -111,7 +116,7 @@ if (any(grepl("group", coef_names))) {
 
 We can visualize the group effects and their 95% CIs for the ROI-level fit.
 
-```r
+```{r}
 df_tidy <- tidy(fit_cov, conf.int = TRUE)
 df_tidy
 
@@ -127,7 +132,7 @@ ggplot(df_tidy, aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) 
 
 For voxelwise analysis, construct `group_data` with format `"h5"` or `"nifti"`:
 
-```r
+```{r}
 # HDF5 (produced via write_results.fmri_lm)
 # gd_h5 <- group_data(h5_paths, format = "h5",
 #                     subjects = subject_ids,
@@ -151,7 +156,7 @@ For multiple comparisons correction that leverages spatial structure, see
 This chunk creates tiny synthetic NIfTI volumes on disk (in a temp dir) for a
 voxelwise demonstration. Group B has a higher effect in a small cube.
 
-```r
+```{r}
 library(neuroim2)
 
 set.seed(42)
@@ -209,7 +214,7 @@ pvals <- 2 * pnorm(-abs(fit_nii$coefficients[, group_col] / fit_nii$se[, group_c
 sum(pvals < 0.05)
 
 # Optionally, apply spatial FDR (group term), using simple blocks
-sfr <- spatial_fdr(fit_nii, coef = colnames(fit_nii$coefficients)[group_col], group = "blocks")
+sfr <- spatial_fdr(fit_nii, p = colnames(fit_nii$coefficients)[group_col], group = "blocks")
 sum(sfr$reject)
 
 # Reconstruct an image for the group effect estimate
@@ -223,7 +228,7 @@ As an alternative to meta-analysis, we can run two-sample voxelwise t-tests
 directly on the per-subject beta maps, using either Welch's unequal-variance
 test or a standard OLS/Student t-test via a simple design matrix.
 
-```r
+```{r}
 # Extract subject x voxel matrix of betas using the mask
 dat <- read_nifti_full(gd_nii)
 Y <- dat$beta  # S x P (subjects x voxels)
@@ -241,7 +246,13 @@ p_welch <- 2 * pt(abs(t_welch), df = df_welch, lower.tail = FALSE)
 
 # OLS (Student) two-sample t-test via design matrix
 ols <- ols_t_cpp(Y, X)
-t_ols <- ols$t["group", ]
+# Handle missing dimnames on t matrix: use rowname if available, else fall back to 2nd row
+rnames_t <- rownames(ols$t)
+if (!is.null(rnames_t) && any(rnames_t == "group")) {
+  t_ols <- ols$t["group", ]
+} else {
+  t_ols <- ols$t[2, ]
+}
 df_ols <- rep(ols$df, ncol(Y))
 p_ols <- 2 * pt(abs(t_ols), df = df_ols, lower.tail = FALSE)
 
