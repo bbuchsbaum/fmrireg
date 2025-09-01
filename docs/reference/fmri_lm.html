@@ -32,6 +32,7 @@ fmri_model object that already contains the design and data."></head><body>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -100,7 +101,7 @@ alternative method can be used with a preconstructed
 <span></span>
 <span><span class="co"># S3 method for class 'fmri_model'</span></span>
 <span><span class="fu">fmri_lm</span><span class="op">(</span></span>
-<span>  <span class="va">fmrimod</span>,</span>
+<span>  <span class="va">formula</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  robust <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  robust_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -183,6 +184,46 @@ alternative method can be used with a preconstructed
 
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
 <dd><p>Logical. Whether to display a progress bar during model fitting. Default is <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-ar-voxelwise">ar_voxelwise<a class="anchor" aria-label="anchor" href="#arg-ar-voxelwise"></a></dt>
+<dd><p>Logical. Estimate AR parameters voxel-wise (overrides <code>ar_options$voxelwise</code>).</p></dd>
+
+
+<dt id="arg-parallel-voxels">parallel_voxels<a class="anchor" aria-label="anchor" href="#arg-parallel-voxels"></a></dt>
+<dd><p>Logical. Parallelize across voxels where supported.</p></dd>
+
+
+<dt id="arg-cor-struct">cor_struct<a class="anchor" aria-label="anchor" href="#arg-cor-struct"></a></dt>
+<dd><p>Character. Shorthand for <code>ar_options$struct</code> (e.g., "ar1", "ar2", "arp").</p></dd>
+
+
+<dt id="arg-cor-iter">cor_iter<a class="anchor" aria-label="anchor" href="#arg-cor-iter"></a></dt>
+<dd><p>Integer. Shorthand for <code>ar_options$iter_gls</code>.</p></dd>
+
+
+<dt id="arg-cor-global">cor_global<a class="anchor" aria-label="anchor" href="#arg-cor-global"></a></dt>
+<dd><p>Logical. Shorthand for <code>ar_options$global</code>.</p></dd>
+
+
+<dt id="arg-ar-exact-first">ar1_exact_first<a class="anchor" aria-label="anchor" href="#arg-ar-exact-first"></a></dt>
+<dd><p>Logical. Shorthand for <code>ar_options$exact_first</code>.</p></dd>
+
+
+<dt id="arg-ar-p">ar_p<a class="anchor" aria-label="anchor" href="#arg-ar-p"></a></dt>
+<dd><p>Integer. Shorthand for <code>ar_options$p</code>.</p></dd>
+
+
+<dt id="arg-robust-psi">robust_psi<a class="anchor" aria-label="anchor" href="#arg-robust-psi"></a></dt>
+<dd><p>Character. Shorthand for <code>robust_options$type</code> (e.g., "huber", "bisquare").</p></dd>
+
+
+<dt id="arg-robust-max-iter">robust_max_iter<a class="anchor" aria-label="anchor" href="#arg-robust-max-iter"></a></dt>
+<dd><p>Integer. Shorthand for <code>robust_options$max_iter</code>.</p></dd>
+
+
+<dt id="arg-robust-scale-scope">robust_scale_scope<a class="anchor" aria-label="anchor" href="#arg-robust-scale-scope"></a></dt>
+<dd><p>Character. Shorthand for <code>robust_options$scale_scope</code> ("run" or "global").</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -7,8 +7,9 @@ articles:
   a_09_linear_model: a_09_linear_model.html
   a_10_dataset: a_10_dataset.html
   benchmark_datasets: benchmark_datasets.html
+  group_analysis: group_analysis.html
   Overview: Overview.html
-last_built: 2025-08-29T17:53Z
+last_built: 2025-09-01T00:47Z
 urls:
   reference: https://bbuchsbaum.github.io/fmrireg/reference
   article: https://bbuchsbaum.github.io/fmrireg/articles
