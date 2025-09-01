@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Simulating fMRI Data • fmrireg</title>
+<title> • fmrireg</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Simulating fMRI Data">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -41,6 +41,7 @@
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -74,11 +75,8 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Simulating fMRI Data</h1>
-                        <h4 data-toc-skip class="author">Bradley R.
-Buchsbaum</h4>
+      <h1></h1>
             
-            <h4 data-toc-skip class="date">2025-08-29</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_08_simulation.Rmd" class="external-link"><code>vignettes/a_08_simulation.Rmd</code></a></small>
       <div class="d-none name"><code>a_08_simulation.Rmd</code></div>
@@ -86,6 +84,9 @@ Buchsbaum</h4>
 
     
     
+<p>title: “03. Simulating fMRI Data” author: “Bradley R. Buchsbaum”
+date: “2025-09-01” output: rmarkdown::html_vignette vignette: &gt; % % %
+—</p>
 <div class="section level2">
 <h2 id="introduction-to-fmri-data-simulation">Introduction to fMRI Data Simulation<a class="anchor" aria-label="anchor" href="#introduction-to-fmri-data-simulation"></a>
 </h2>
@@ -113,8 +114,11 @@ parameters</li>
 realistic fMRI simulations for various purposes.</p>
 </div>
 <div class="section level2">
-<h2 id="simulating-clean-bold-signals">Simulating Clean BOLD Signals<a class="anchor" aria-label="anchor" href="#simulating-clean-bold-signals"></a>
+<h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
 </h2>
+<ul>
+<li>04 fMRI Linear Model (GLM) ## Simulating Clean BOLD Signals</li>
+</ul>
 <p>Let’s start with <code>simulate_bold_signal</code>, which generates a
 clean hemodynamic response signal for multiple experimental
 conditions.</p>

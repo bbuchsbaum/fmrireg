@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Using fMRI Benchmark Datasets • fmrireg</title>
+<title> • fmrireg</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Using fMRI Benchmark Datasets">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -41,6 +41,7 @@
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -74,11 +75,8 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Using fMRI Benchmark Datasets</h1>
-                        <h4 data-toc-skip class="author">fmrireg
-package</h4>
+      <h1></h1>
             
-            <h4 data-toc-skip class="date">2025-08-29</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/benchmark_datasets.Rmd" class="external-link"><code>vignettes/benchmark_datasets.Rmd</code></a></small>
       <div class="d-none name"><code>benchmark_datasets.Rmd</code></div>
@@ -86,6 +84,8 @@ package</h4>
 
     
     
+<p>title: “06. Benchmark Datasets” author: “fmrireg package” date:
+“2025-09-01” output: rmarkdown::html_vignette vignette: &gt; % % % —</p>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
@@ -98,8 +98,6 @@ encountered in fMRI analysis.</p>
 evaluate your analysis methods.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrireg/">fmrireg</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: replacing previous import 'fmridesign::blockids' by</span></span>
-<span><span class="co">#&gt; 'fmrihrf::blockids' when loading 'fmrireg'</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Attaching package: 'fmrireg'</span></span>
 <span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
@@ -109,6 +107,9 @@ evaluate your analysis methods.</p>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Attaching package: 'dplyr'</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:fmrireg':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     group_data</span></span>
 <span><span class="co">#&gt; The following objects are masked from 'package:stats':</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     filter, lag</span></span>
@@ -185,6 +186,13 @@ structure:</p>
 <span><span class="co">#&gt; [1] 4</span></span></code></pre></div>
 </div>
 <div class="section level2">
+<h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
+</h2>
+<ul>
+<li>07 Group Analysis</li>
+</ul>
+</div>
+<div class="section level2">
 <h2 id="examining-the-data-structure">Examining the Data Structure<a class="anchor" aria-label="anchor" href="#examining-the-data-structure"></a>
 </h2>
 <p>Each benchmark dataset is a list. Key components include:</p>
@@ -259,7 +267,7 @@ Scan parameters.</li>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"BOLD Time Series with Event Markers"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>, y <span class="op">=</span> <span class="st">"BOLD Signal"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="benchmark_datasets_files/figure-html/visualize_data-1.png" width="960"></p>
+<p><img src="benchmark_datasets_files/figure-html/visualize_data-1.png" alt="Figure illustrating dataset structure or evaluation results; see caption and text for details." width="960"></p>
 </div>
 <div class="section level2">
 <h2 id="creating-design-matrices">Creating Design Matrices<a class="anchor" aria-label="anchor" href="#creating-design-matrices"></a>
@@ -341,7 +349,7 @@ benchmark dataset:</p>
 <span></span>
 <span><span class="co"># Display plots side by side</span></span>
 <span><span class="fu">gridExtra</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/gridExtra/man/arrangeGrob.html" class="external-link">grid.arrange</a></span><span class="op">(</span><span class="va">p1</span>, <span class="va">p2</span>, ncol <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
-<p><img src="benchmark_datasets_files/figure-html/compare_betas-1.png" width="960"></p>
+<p><img src="benchmark_datasets_files/figure-html/compare_betas-1.png" alt="Figure illustrating dataset structure or evaluation results; see caption and text for details." width="960"></p>
 </div>
 <div class="section level2">
 <h2 id="testing-different-datasets">Testing Different Datasets<a class="anchor" aria-label="anchor" href="#testing-different-datasets"></a>
@@ -424,7 +432,7 @@ benchmark dataset:</p>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Trial-to-Trial Amplitude Variability"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Trial Number"</span>, y <span class="op">=</span> <span class="st">"True Amplitude"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="benchmark_datasets_files/figure-html/trial_variability-1.png" width="768"></p>
+<p><img src="benchmark_datasets_files/figure-html/trial_variability-1.png" alt="Figure illustrating dataset structure or evaluation results; see caption and text for details." width="768"></p>
 </div>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>

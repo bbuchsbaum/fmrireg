@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Representing fMRI Data in fmrireg • fmrireg</title>
+<title> • fmrireg</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Representing fMRI Data in fmrireg">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -41,6 +41,7 @@
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -74,11 +75,8 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Representing fMRI Data in fmrireg</h1>
-                        <h4 data-toc-skip class="author">Bradley R.
-Buchsbaum</h4>
+      <h1></h1>
             
-            <h4 data-toc-skip class="date">2025-08-29</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_10_dataset.Rmd" class="external-link"><code>vignettes/a_10_dataset.Rmd</code></a></small>
       <div class="d-none name"><code>a_10_dataset.Rmd</code></div>
@@ -86,6 +84,9 @@ Buchsbaum</h4>
 
     
     
+<p>title: “02. Data Structures and Sampling Frames” author: “Bradley R.
+Buchsbaum” date: “2025-09-01” output: rmarkdown::html_vignette vignette:
+&gt; % % % —</p>
 <div class="section level2">
 <h2 id="introduction-linking-data-and-design">Introduction: Linking Data and Design<a class="anchor" aria-label="anchor" href="#introduction-linking-data-and-design"></a>
 </h2>
@@ -310,14 +311,8 @@ when reading data (e.g., “normal”, “mmap”).</li>
 <span></span>
 <span><span class="co"># Ensure dummy files are written using their full paths</span></span>
 <span><span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vol-methods.html" class="external-link">write_vol</a></span><span class="op">(</span><span class="va">mask_vol_dummy</span>, <span class="va">mask_file_full_path</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Found more than one class "gzfile" in cache; using the first, from namespace 'BiocGenerics'</span></span>
-<span><span class="co">#&gt; Also defined by 'neuroim2'</span></span>
 <span><span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vec-methods.html" class="external-link">write_vec</a></span><span class="op">(</span><span class="va">scan1_dummy</span>, <span class="va">scan1_file_full_path</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Found more than one class "gzfile" in cache; using the first, from namespace 'BiocGenerics'</span></span>
-<span><span class="co">#&gt; Also defined by 'neuroim2'</span></span>
 <span><span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vec-methods.html" class="external-link">write_vec</a></span><span class="op">(</span><span class="va">scan2_dummy</span>, <span class="va">scan2_file_full_path</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Found more than one class "gzfile" in cache; using the first, from namespace 'BiocGenerics'</span></span>
-<span><span class="co">#&gt; Also defined by 'neuroim2'</span></span>
 <span><span class="co"># --- End Dummy File Creation ---</span></span>
 <span></span>
 <span><span class="co"># Create the file-based dataset object</span></span>
@@ -329,12 +324,6 @@ when reading data (e.g., “normal”, “mmap”).</li>
 <span>                            event_table <span class="op">=</span> <span class="va">events_df</span>, </span>
 <span>                            base_path <span class="op">=</span> <span class="va">tmp_dir</span>,    <span class="co"># Set base_path to the temp directory</span></span>
 <span>                            preload <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># Keep data on disk</span></span>
-<span><span class="co">#&gt; Found more than one class "gzfile" in cache; using the first, from namespace 'BiocGenerics'</span></span>
-<span><span class="co">#&gt; Also defined by 'neuroim2'</span></span>
-<span><span class="co">#&gt; Found more than one class "gzfile" in cache; using the first, from namespace 'BiocGenerics'</span></span>
-<span><span class="co">#&gt; Also defined by 'neuroim2'</span></span>
-<span><span class="co">#&gt; Found more than one class "gzfile" in cache; using the first, from namespace 'BiocGenerics'</span></span>
-<span><span class="co">#&gt; Also defined by 'neuroim2'</span></span>
 <span></span>
 <span><span class="co"># This print statement should now work</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">file_dset</span><span class="op">)</span></span>
@@ -489,13 +478,19 @@ component time series.</p>
 <div class="section level2">
 <h2 id="using-dataset-objects">Using Dataset Objects<a class="anchor" aria-label="anchor" href="#using-dataset-objects"></a>
 </h2>
-<p>Once created, these dataset objects serve as the primary data input
-for <code>fmrireg</code>’s modeling functions:</p>
+</div>
+<div class="section level2">
+<h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
+</h2>
 <ul>
-<li><code>event_model(..., sampling_frame = dset$sampling_frame)</code></li>
-<li><code>baseline_model(..., sframe = dset$sampling_frame)</code></li>
-<li><code>fmri_lm(model, dataset = dset)</code></li>
-<li><code>estimate_betas(..., dataset = dset)</code></li>
+<li><p>03 Simulating fMRI Data</p></li>
+<li><p>04 fMRI Linear Model (GLM) Once created, these dataset objects
+serve as the primary data input for <code>fmrireg</code>’s modeling
+functions:</p></li>
+<li><p><code>event_model(..., sampling_frame = dset$sampling_frame)</code></p></li>
+<li><p><code>baseline_model(..., sframe = dset$sampling_frame)</code></p></li>
+<li><p><code>fmri_lm(model, dataset = dset)</code></p></li>
+<li><p><code>estimate_betas(..., dataset = dset)</code></p></li>
 </ul>
 <p>They provide a standardized way to access data
 (<code>get_data(dset)</code>), masks (<code>get_mask(dset)</code>), and
