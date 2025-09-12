@@ -41,10 +41,14 @@ navbar:
         href: articles/a_08_simulation.html
       - text: Linear Modeling
         href: articles/a_09_linear_model.html
+      - text: Sketched GLM (SRHT/IHS + Nyström)
+        href: articles/sketched-ar.html
       - text: Dataset Management
         href: articles/a_10_dataset.html
       - text: Group Analysis
         href: articles/group_analysis.html
+      - text: Functional Connectivity
+        href: articles/functional_connectivity.html
       - text: -------
       - text: Resources
       - text: Benchmark Datasets
@@ -66,6 +70,8 @@ articles:
   - a_09_linear_model
   - a_10_dataset
   - group_analysis
+  - functional_connectivity
+  - sketched-ar
 
 - title: Resources
   navbar: ~

@@ -675,7 +675,7 @@ chunkwise_lm <- function(x, ...) UseMethod("chunkwise_lm")
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 50, TR = 2)
 #' dset <- fmridataset::matrix_dataset(
-#'   matrix(rnorm(100 * 2), 100, 2),
+#'   matrix(rnorm(50 * 2), 50, 2),
 #'   TR = 2,
 #'   run_length = 50,
 #'   event_table = event_data
@@ -714,7 +714,7 @@ standard_error <- function(x, ...) UseMethod("standard_error")
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 50, TR = 2)
 #' dset <- fmridataset::matrix_dataset(
-#'   matrix(rnorm(100 * 2), 100, 2),
+#'   matrix(rnorm(50 * 2), 50, 2),
 #'   TR = 2,
 #'   run_length = 50,
 #'   event_table = event_data
@@ -739,10 +739,10 @@ stats <- function(x, ...) UseMethod("stats")
 #' This is part of a family of functions for extracting statistical measures.
 #'
 #' @param x The fitted model object
-#' @param ... Additional arguments passed to methods. Common arguments include:
-#'   \describe{
-#'     \item{type}{The type of p-values to extract (e.g., "estimates" or "contrasts")}
-#'   }
+#' @param type Character string specifying the type of p-values to extract. 
+#'   Options typically include "estimates" for parameter estimates and "contrasts" 
+#'   for contrast tests. Defaults to "estimates" in most methods.
+#' @param ... Additional arguments passed to methods
 #' @return A tibble or matrix containing p-values
 #' @examples
 #' # Create example data
@@ -755,7 +755,7 @@ stats <- function(x, ...) UseMethod("stats")
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 50, TR = 2)
 #' dset <- fmridataset::matrix_dataset(
-#'   matrix(rnorm(100 * 2), 100, 2),
+#'   matrix(rnorm(50 * 2), 50, 2),
 #'   TR = 2,
 #'   run_length = 50,
 #'   event_table = event_data
@@ -857,6 +857,16 @@ longnames.event_seq <- function(x, ...) {
 longnames.convolved_term <- function(x, ...) {
   # For convolved terms, delegate to the underlying event term
   longnames(x$evterm, ...)
+}
+
+#' @export
+#' @rdname longnames
+longnames.event_model <- function(x, ...) {
+  terms <- try(event_terms(x), silent = TRUE)
+  if (inherits(terms, "try-error") || is.null(terms)) {
+    return(character(0))
+  }
+  unname(unlist(lapply(terms, function(tt) longnames(tt, ...))))
 }
 
 #' Estimate Beta Coefficients for fMRI Data
@@ -978,6 +988,7 @@ conditions.convolved_term <- function(x, ...) {
 #' Extract the event table from a convolved term object.
 #'
 #' @param x A convolved_term object
+#' @param ... Additional arguments passed to the underlying event_table method
 #' @return A data.frame containing the event table
 #' @method event_table convolved_term
 #' @export
@@ -1045,6 +1056,19 @@ design_matrix.convolved_term <- function(x, blockid=NULL, ...) {
     keep <- fmrihrf::blockids(x$sampling_frame) %in% blockid
     x$design_matrix[keep,]
   } 
+}
+
+#' Block IDs for event_model
+#'
+#' Return the run/block IDs associated with an event_model's sampling frame.
+#'
+#' @param x An event_model object
+#' @param ... Additional arguments passed through
+#' @return Integer vector of block IDs
+#' @method blockids event_model
+#' @export
+blockids.event_model <- function(x, ...) {
+  fmrihrf::blockids(x$sampling_frame, ...)
 }
 
 
