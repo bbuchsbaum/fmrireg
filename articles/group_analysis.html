@@ -40,8 +40,10 @@
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -85,7 +87,7 @@
     
     
 <p>title: “07. Group Analysis” author: “Bradley R. Buchsbaum” date:
-“2025-09-01” output: rmarkdown::html_vignette vignette: &gt; % % % —</p>
+“2025-09-13” output: rmarkdown::html_vignette vignette: &gt; % % % —</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrireg/">fmrireg</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
@@ -93,17 +95,16 @@
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>This vignette demonstrates a simple ROI-based group analysis using
-fmrireg:</p>
-<ul>
-<li>Construct a group dataset from a small tabular data frame</li>
-<li>Fit fixed-effects and random-effects meta-analytic models</li>
-<li>Include a group covariate for a two-group comparison</li>
-<li>Extract and visualize results</li>
-</ul>
-<p>The same workflow generalizes to voxelwise analysis by using
-HDF5/NIfTI inputs via
-<code>group_data(format = "h5"|"nifti")</code>.</p>
+<p>This vignette walks through a compact, end‑to‑end example of group
+analysis with fmrireg. We first construct a small ROI‑level dataset to
+illustrate the basic meta‑regression interface, and then move to a
+voxelwise example using tiny synthetic NIfTI files. Along the way we
+show how to compare groups with fixed‑ and random‑effects meta‑analysis,
+how to obtain exact contrasts either at fit‑time or post‑hoc by saving
+covariance, and how to perform group inference from t‑maps alone using
+Stouffer, Fisher, or Lancaster combinations. The same interface scales
+to full HDF5/NIfTI workflows created by <code><a href="../reference/write_results.html">write_results()</a></code> and
+loaded via <code>group_data(format = "h5"|"nifti")</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="create-a-small-roi-dataset">Create a small ROI dataset<a class="anchor" aria-label="anchor" href="#create-a-small-roi-dataset"></a>
@@ -130,9 +131,8 @@ have the same SE for clarity.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Build group dataset (CSV/ROI format)</span></span>
-<span><span class="va">gd</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/group_data.html">group_data</a></span><span class="op">(</span></span>
+<span><span class="va">gd</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/group_data_from_csv.html">group_data_from_csv</a></span><span class="op">(</span></span>
 <span>  <span class="va">roi_df</span>,</span>
-<span>  format <span class="op">=</span> <span class="st">"csv"</span>,</span>
 <span>  effect_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>beta <span class="op">=</span> <span class="st">"beta"</span>, se <span class="op">=</span> <span class="st">"se"</span><span class="op">)</span>,</span>
 <span>  subject_col <span class="op">=</span> <span class="st">"subject"</span>,</span>
 <span>  roi_col <span class="op">=</span> <span class="st">"roi"</span>,</span>
@@ -168,8 +168,8 @@ term.</p>
 <span><span class="co">#&gt; ROIs analyzed: 1 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Heterogeneity:</span></span>
-<span><span class="co">#&gt;   Mean tau²: 0 </span></span>
-<span><span class="co">#&gt;   Mean I²: NaN %</span></span>
+<span><span class="co">#&gt;   Mean tau^2: 0 </span></span>
+<span><span class="co">#&gt;   Mean I^2: NaN %</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_cov</span><span class="op">)</span></span>
 <span><span class="co">#&gt; fMRI Meta-Analysis Summary</span></span>
 <span><span class="co">#&gt; ==========================</span></span>
@@ -184,8 +184,8 @@ term.</p>
 <span><span class="co">#&gt; ROIs analyzed: 1 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Heterogeneity:</span></span>
-<span><span class="co">#&gt;   Mean tau²: 0 </span></span>
-<span><span class="co">#&gt;   Mean I²: NaN %</span></span>
+<span><span class="co">#&gt;   Mean tau^2: 0 </span></span>
+<span><span class="co">#&gt;   Mean I^2: NaN %</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Coefficients:</span></span>
 <span><span class="co">#&gt;   (Intercept):</span></span>
@@ -216,8 +216,8 @@ heterogeneity (<code>tau2</code>) when present.</p>
 <span><span class="co">#&gt; ROIs analyzed: 1 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Heterogeneity:</span></span>
-<span><span class="co">#&gt;   Mean tau²: 0 </span></span>
-<span><span class="co">#&gt;   Mean I²: NaN %</span></span>
+<span><span class="co">#&gt;   Mean tau^2: 0 </span></span>
+<span><span class="co">#&gt;   Mean I^2: NaN %</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Coefficients:</span></span>
 <span><span class="co">#&gt;   (Intercept):</span></span>
@@ -256,8 +256,7 @@ heterogeneity (<code>tau2</code>) when present.</p>
 <span><span class="co">#&gt; [1] 1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $se</span></span>
-<span><span class="co">#&gt; ExampleROI </span></span>
-<span><span class="co">#&gt;  0.1581139 </span></span>
+<span><span class="co">#&gt; [1] 0.1581139</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $z</span></span>
 <span><span class="co">#&gt; [1] 6.324555</span></span>
@@ -284,8 +283,8 @@ heterogeneity (<code>tau2</code>) when present.</p>
 <span><span class="co">#&gt; ROIs analyzed: 1 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Heterogeneity:</span></span>
-<span><span class="co">#&gt;   Mean tau²: 0 </span></span>
-<span><span class="co">#&gt;   Mean I²: NaN %</span></span>
+<span><span class="co">#&gt;   Mean tau^2: 0 </span></span>
+<span><span class="co">#&gt;   Mean I^2: NaN %</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; attr(,"class")</span></span>
 <span><span class="co">#&gt; [1] "fmri_meta_contrast"</span></span></code></pre></div>
@@ -401,8 +400,8 @@ small cube.</p>
 <span><span class="co">#&gt; Voxels analyzed: 512 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Heterogeneity:</span></span>
-<span><span class="co">#&gt;   Mean tau²: 0 </span></span>
-<span><span class="co">#&gt;   Mean I²: 0 %</span></span>
+<span><span class="co">#&gt;   Mean tau^2: 0 </span></span>
+<span><span class="co">#&gt;   Mean I^2: 0 %</span></span>
 <span></span>
 <span><span class="co"># Get p-values for the group term and count discoveries (uncorrected)</span></span>
 <span><span class="va">group_col</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"group"</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">fit_nii</span><span class="op">$</span><span class="va">coefficients</span><span class="op">)</span><span class="op">)</span></span>
@@ -421,43 +420,73 @@ small cube.</p>
 <span><span class="co">#&gt; [1] -0.09585902  1.08515382</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="exact-contrasts-and-stored-covariance">Exact contrasts and stored covariance<a class="anchor" aria-label="anchor" href="#exact-contrasts-and-stored-covariance"></a>
+</h3>
+<p>You can request exact contrasts at fit-time or store per-voxel
+covariance for exact post-hoc contrasts.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Exact post-hoc contrasts by storing packed Var(beta) per voxel</span></span>
+<span><span class="va">fit_nii_pm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span></span>
+<span>  <span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, method <span class="op">=</span> <span class="st">"pm"</span>,</span>
+<span>  return_cov <span class="op">=</span> <span class="st">"tri"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Exact post-hoc contrast on the group term</span></span>
+<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast.html">contrast</a></span><span class="op">(</span><span class="va">fit_nii_pm</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"(Intercept)"</span> <span class="op">=</span> <span class="fl">0</span>, group <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">con</span><span class="op">)</span></span>
+<span><span class="co">#&gt;          Length Class     Mode     </span></span>
+<span><span class="co">#&gt; estimate 512    -none-    numeric  </span></span>
+<span><span class="co">#&gt; se       512    -none-    numeric  </span></span>
+<span><span class="co">#&gt; z        512    -none-    numeric  </span></span>
+<span><span class="co">#&gt; p        512    -none-    numeric  </span></span>
+<span><span class="co">#&gt; weights    2    -none-    numeric  </span></span>
+<span><span class="co">#&gt; name       1    -none-    character</span></span>
+<span><span class="co">#&gt; parent    17    fmri_meta list</span></span>
+<span></span>
+<span><span class="co"># Exact fit-time contrast without storing covariance</span></span>
+<span><span class="va">fit_nii_con</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span></span>
+<span>  <span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, method <span class="op">=</span> <span class="st">"pm"</span>,</span>
+<span>  contrasts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>                     dimnames <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"group"</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">fit_nii_pm</span><span class="op">$</span><span class="va">model</span><span class="op">$</span><span class="va">X</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">fit_nii_con</span><span class="op">$</span><span class="va">contrasts</span><span class="op">)</span></span>
+<span><span class="co">#&gt; List of 4</span></span>
+<span><span class="co">#&gt;  $ names   : chr "group"</span></span>
+<span><span class="co">#&gt;  $ estimate: num [1:512, 1] 2.05e-02 1.79e-02 -3.49e-03 -5.51e-02 3.53e-05 ...</span></span>
+<span><span class="co">#&gt;  $ se      : num [1:512, 1] 0.204 0.204 0.204 0.204 0.204 ...</span></span>
+<span><span class="co">#&gt;  $ z       : num [1:512, 1] 0.100565 0.0878 -0.017112 -0.269929 0.000173 ...</span></span></code></pre></div>
+</div>
+<div class="section level3">
 <h3 id="two-sample-t-test-welch-and-ols-on-nifti">Two-sample t-test (Welch and OLS) on NIfTI<a class="anchor" aria-label="anchor" href="#two-sample-t-test-welch-and-ols-on-nifti"></a>
 </h3>
 <p>As an alternative to meta-analysis, we can run two-sample voxelwise
 t-tests directly on the per-subject beta maps, using either Welch’s
 unequal-variance test or a standard OLS/Student t-test via a simple
 design matrix.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Extract subject x voxel matrix of betas using the mask</span></span>
-<span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_nifti_full.html">read_nifti_full</a></span><span class="op">(</span><span class="va">gd_nii</span><span class="op">)</span></span>
-<span><span class="va">Y</span> <span class="op">&lt;-</span> <span class="va">dat</span><span class="op">$</span><span class="va">beta</span>  <span class="co"># S x P (subjects x voxels)</span></span>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Welch and classic OLS via high-level R wrapper</span></span>
+<span><span class="va">fit_welch</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span><span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, engine <span class="op">=</span> <span class="st">"welch"</span><span class="op">)</span></span>
+<span><span class="va">t_welch</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_welch</span><span class="op">$</span><span class="va">t</span><span class="op">[</span><span class="st">"group"</span>, <span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">df_welch</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_welch</span><span class="op">$</span><span class="va">df</span><span class="op">[</span><span class="st">"group"</span>, <span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">p_welch</span>   <span class="op">&lt;-</span> <span class="fl">2</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">pt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">t_welch</span><span class="op">)</span>, df <span class="op">=</span> <span class="va">df_welch</span>, lower.tail <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Group indicator</span></span>
-<span><span class="va">g_int</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">grp</span><span class="op">)</span>           <span class="co"># 1=A, 2=B</span></span>
-<span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="st">"(Intercept)"</span> <span class="op">=</span> <span class="fl">1</span>,      <span class="co"># OLS design for Student t</span></span>
-<span>          group <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">grp</span> <span class="op">==</span> <span class="st">"B"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Welch two-sample t-test across features</span></span>
-<span><span class="va">w</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/welch_t_cpp.html">welch_t_cpp</a></span><span class="op">(</span><span class="va">Y</span>, <span class="va">g_int</span><span class="op">)</span></span>
-<span><span class="va">t_welch</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">w</span><span class="op">$</span><span class="va">t</span><span class="op">)</span>   <span class="co"># length P</span></span>
-<span><span class="va">df_welch</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">w</span><span class="op">$</span><span class="va">df</span><span class="op">)</span></span>
-<span><span class="va">p_welch</span> <span class="op">&lt;-</span> <span class="fl">2</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">pt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">t_welch</span><span class="op">)</span>, df <span class="op">=</span> <span class="va">df_welch</span>, lower.tail <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># OLS (Student) two-sample t-test via design matrix</span></span>
-<span><span class="va">ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ols_t_cpp.html">ols_t_cpp</a></span><span class="op">(</span><span class="va">Y</span>, <span class="va">X</span><span class="op">)</span></span>
-<span><span class="co"># Handle missing dimnames on t matrix: use rowname if available, else fall back to 2nd row</span></span>
-<span><span class="va">rnames_t</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">ols</span><span class="op">$</span><span class="va">t</span><span class="op">)</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">rnames_t</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="va">rnames_t</span> <span class="op">==</span> <span class="st">"group"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">t_ols</span> <span class="op">&lt;-</span> <span class="va">ols</span><span class="op">$</span><span class="va">t</span><span class="op">[</span><span class="st">"group"</span>, <span class="op">]</span></span>
+<span><span class="va">fit_ols</span>   <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span><span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, engine <span class="op">=</span> <span class="st">"classic"</span><span class="op">)</span></span>
+<span><span class="co"># Prefer named row; fallback to 2nd row if rownames are missing</span></span>
+<span><span class="va">rn_t</span>      <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">fit_ols</span><span class="op">$</span><span class="va">t</span><span class="op">)</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">rn_t</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="va">rn_t</span> <span class="op">==</span> <span class="st">"group"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">t_ols</span> <span class="op">&lt;-</span> <span class="va">fit_ols</span><span class="op">$</span><span class="va">t</span><span class="op">[</span><span class="st">"group"</span>, <span class="op">]</span></span>
+<span>  <span class="va">df_ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_ols</span><span class="op">$</span><span class="va">df</span><span class="op">[</span><span class="st">"group"</span>, <span class="op">]</span><span class="op">)</span></span>
 <span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>  <span class="va">t_ols</span> <span class="op">&lt;-</span> <span class="va">ols</span><span class="op">$</span><span class="va">t</span><span class="op">[</span><span class="fl">2</span>, <span class="op">]</span></span>
+<span>  <span class="va">t_ols</span> <span class="op">&lt;-</span> <span class="va">fit_ols</span><span class="op">$</span><span class="va">t</span><span class="op">[</span><span class="fl">2</span>, <span class="op">]</span></span>
+<span>  <span class="va">df_ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">fit_ols</span><span class="op">$</span><span class="va">df</span><span class="op">[</span><span class="fl">2</span>, <span class="fl">1</span><span class="op">]</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">t_ols</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="va">df_ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">ols</span><span class="op">$</span><span class="va">df</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">Y</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">p_ols</span> <span class="op">&lt;-</span> <span class="fl">2</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">pt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">t_ols</span><span class="op">)</span>, df <span class="op">=</span> <span class="va">df_ols</span>, lower.tail <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="va">p_ols</span>    <span class="op">&lt;-</span> <span class="fl">2</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">pt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">t_ols</span><span class="op">)</span>, df <span class="op">=</span> <span class="va">df_ols</span>, lower.tail <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Reconstruct quick image for Welch t (using the same mask/space)</span></span>
 <span><span class="va">timg_welch</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="cn">NA_real_</span>, dim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">8</span>, <span class="fl">8</span>, <span class="fl">8</span><span class="op">)</span><span class="op">)</span>, <span class="va">space</span><span class="op">)</span></span>
-<span><span class="va">timg_welch</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">as.array</a></span><span class="op">(</span><span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/read_vol.html" class="external-link">read_vol</a></span><span class="op">(</span><span class="va">mask_path</span><span class="op">)</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">t_welch</span></span>
+<span><span class="va">mask_img</span>   <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">gd_nii</span><span class="op">$</span><span class="va">mask_data</span><span class="op">)</span><span class="op">)</span> <span class="va">gd_nii</span><span class="op">$</span><span class="va">mask_data</span> <span class="kw">else</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/read_vol.html" class="external-link">read_vol</a></span><span class="op">(</span><span class="va">mask_path</span><span class="op">)</span></span>
+<span><span class="va">timg_welch</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">as.array</a></span><span class="op">(</span><span class="va">mask_img</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">t_welch</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">as.array</a></span><span class="op">(</span><span class="va">timg_welch</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] -81.539233   4.582865</span></span>
 <span></span>
@@ -467,6 +496,125 @@ design matrix.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">p_ols</span>   <span class="op">&lt;</span> <span class="fl">0.05</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 51</span></span></code></pre></div>
 </div>
+</div>
+<div class="section level2">
+<h2 id="combining-t-statistics-only-stoufferfisherlancaster">Combining t-statistics only (Stouffer/Fisher/Lancaster)<a class="anchor" aria-label="anchor" href="#combining-t-statistics-only-stoufferfisherlancaster"></a>
+</h2>
+<p>When only per‑subject t‑statistics and degrees‑of‑freedom are
+available, you can still carry out group inference without betas/SEs by
+setting <code>combine =</code> in <code><a href="../reference/fmri_meta.html">fmri_meta()</a></code> (or in
+<code>fmri_ttest(..., engine = "meta")</code>). Stouffer combines signed
+z‑scores and supports equal, inverse‑variance or custom weights; Fisher
+combines p‑values with equal weights; and Lancaster provides a weighted
+Fisher variant by mapping weights to per‑subject degrees‑of‑freedom.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Derive per-subject t images from the synthetic beta/SE example</span></span>
+<span><span class="va">dat_full</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_nifti_full.html">read_nifti_full</a></span><span class="op">(</span><span class="va">gd_nii</span><span class="op">)</span></span>
+<span><span class="va">tmat</span> <span class="op">&lt;-</span> <span class="va">dat_full</span><span class="op">$</span><span class="va">beta</span> <span class="op">/</span> <span class="va">dat_full</span><span class="op">$</span><span class="va">se</span>  <span class="co"># S x P</span></span>
+<span></span>
+<span><span class="co"># Write t images to tempdir for illustration</span></span>
+<span><span class="va">t_paths</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">ids</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">ids</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">img</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="cn">NA_real_</span>, dim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">8</span>, <span class="fl">8</span>, <span class="fl">8</span><span class="op">)</span><span class="op">)</span>, <span class="va">space</span><span class="op">)</span></span>
+<span>  <span class="va">img</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">as.array</a></span><span class="op">(</span><span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/read_vol.html" class="external-link">read_vol</a></span><span class="op">(</span><span class="va">mask_path</span><span class="op">)</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">tmat</span><span class="op">[</span><span class="va">i</span>, <span class="op">]</span></span>
+<span>  <span class="va">pth</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">tmpdir</span>, <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%s_t.nii.gz"</span>, <span class="va">ids</span><span class="op">[</span><span class="va">i</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vol-methods.html" class="external-link">write_vol</a></span><span class="op">(</span><span class="va">img</span>, <span class="va">pth</span><span class="op">)</span></span>
+<span>  <span class="va">t_paths</span><span class="op">[</span><span class="va">i</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">pth</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">gd_t</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/group_data_from_nifti.html">group_data_from_nifti</a></span><span class="op">(</span></span>
+<span>  t_paths <span class="op">=</span> <span class="va">t_paths</span>,</span>
+<span>  df <span class="op">=</span> <span class="fl">60</span>,  <span class="co"># scalar df replicated per subject for demo</span></span>
+<span>  subjects <span class="op">=</span> <span class="va">ids</span>,</span>
+<span>  covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>group <span class="op">=</span> <span class="va">grp</span><span class="op">)</span>,</span>
+<span>  mask <span class="op">=</span> <span class="va">mask_path</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Equal-weight Stouffer</span></span>
+<span><span class="va">fit_st</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"stouffer"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Weighted Stouffer using custom subject weights (e.g., sample size)</span></span>
+<span><span class="va">w_subj</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">ids</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">fit_st_w</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"stouffer"</span>,</span>
+<span>                      weights <span class="op">=</span> <span class="st">"custom"</span>, weights_custom <span class="op">=</span> <span class="va">w_subj</span>,</span>
+<span>                      verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Fisher (equal weights) and Lancaster (weighted Fisher)</span></span>
+<span><span class="va">fit_fi</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"fisher"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="va">fit_la</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"lancaster"</span>,</span>
+<span>                     weights <span class="op">=</span> <span class="st">"custom"</span>, weights_custom <span class="op">=</span> <span class="va">w_subj</span>,</span>
+<span>                     verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="meta-engine-via-fmri_ttest-with-weights">Meta engine via fmri_ttest with weights<a class="anchor" aria-label="anchor" href="#meta-engine-via-fmri_ttest-with-weights"></a>
+</h2>
+<p>The t-test interface supports the meta engine with equal/custom
+weighting.</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit_tt_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span><span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, engine <span class="op">=</span> <span class="st">"meta"</span>,</span>
+<span>                          weights <span class="op">=</span> <span class="st">"equal"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Meta engine with custom subject weights (e.g., sample sizes or reliability)</span></span>
+<span><span class="va">w_subj</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">ids</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">fit_tt_meta_w</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span><span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, engine <span class="op">=</span> <span class="st">"meta"</span>,</span>
+<span>                            weights <span class="op">=</span> <span class="st">"custom"</span>, weights_custom <span class="op">=</span> <span class="va">w_subj</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># t-only combine via fmri_ttest delegation (Lancaster, weighted Fisher)</span></span>
+<span><span class="va">fit_tt_la</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span><span class="va">gd_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, engine <span class="op">=</span> <span class="st">"meta"</span>,</span>
+<span>                        combine <span class="op">=</span> <span class="st">"lancaster"</span>, weights <span class="op">=</span> <span class="st">"custom"</span>,</span>
+<span>                        weights_custom <span class="op">=</span> <span class="va">w_subj</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="roi-t-only-example-stouffer-and-lancaster">ROI t-only example (Stouffer and Lancaster)<a class="anchor" aria-label="anchor" href="#roi-t-only-example-stouffer-and-lancaster"></a>
+</h3>
+<p>You can also combine t-statistics at the ROI level from a tabular
+CSV. Provide per-subject t and df, then choose a combine method.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">roi_t_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  subject <span class="op">=</span> <span class="va">subjects</span>,</span>
+<span>  roi <span class="op">=</span> <span class="st">"ExampleROI"</span>,</span>
+<span>  t <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">subjects</span><span class="op">)</span>, mean <span class="op">=</span> <span class="fl">2.0</span>, sd <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span>
+<span>  df <span class="op">=</span> <span class="fl">40</span>,</span>
+<span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">gd_roi_t</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/group_data_from_csv.html">group_data_from_csv</a></span><span class="op">(</span></span>
+<span>  <span class="va">roi_t_df</span>,</span>
+<span>  effect_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>t <span class="op">=</span> <span class="st">"t"</span>, df <span class="op">=</span> <span class="st">"df"</span><span class="op">)</span>,</span>
+<span>  subject_col <span class="op">=</span> <span class="st">"subject"</span>,</span>
+<span>  roi_col <span class="op">=</span> <span class="st">"roi"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Equal-weight Stouffer on ROI t-statistics</span></span>
+<span><span class="va">fit_roi_st</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_roi_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"stouffer"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Lancaster (weighted Fisher) with custom weights (e.g., per-subject reliability)</span></span>
+<span><span class="va">w_roi</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">subjects</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">fit_roi_la</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_roi_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"lancaster"</span>,</span>
+<span>                        weights <span class="op">=</span> <span class="st">"custom"</span>, weights_custom <span class="op">=</span> <span class="va">w_roi</span>,</span>
+<span>                        verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">fit_roi_st</span><span class="op">$</span><span class="va">method</span>, <span class="va">fit_roi_la</span><span class="op">$</span><span class="va">method</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "pm" "pm"</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="a-brief-recap">A brief recap<a class="anchor" aria-label="anchor" href="#a-brief-recap"></a>
+</h2>
+<p>Meta‑analysis in fmrireg supports fixed‑effects and several
+random‑effects estimators (<code>method = "fe"|"pm"|"dl"|"reml"</code>),
+with optional robust Huber weighting. You can pass subject‑level
+covariates for group comparisons and, when working from t‑maps only, set
+<code>combine =</code> to use Stouffer, Fisher, or Lancaster. Exact
+contrasts are available either at fit‑time (via <code>contrasts=</code>)
+or post‑hoc by saving packed covariance with
+<code>return_cov = "tri"</code> and then calling
+<code><a href="../reference/contrast.html">contrast()</a></code>. Weighting applies to both meta‑regression and
+t‑only combinations (<code>weights = "ivw"|"equal"|"custom"</code>, with
+<code>weights_custom</code> as a vector of length subjects or an S×P
+matrix). The examples above show ROI‑based meta‑regression, voxelwise
+fits from NIfTI, and t‑only combinations via both
+<code><a href="../reference/fmri_meta.html">fmri_meta()</a></code> and
+<code>fmri_ttest(..., engine = "meta")</code>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

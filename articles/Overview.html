@@ -40,8 +40,10 @@
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -85,7 +87,7 @@
     
     
 <p>title: “01. Overview and Workflow” author: “Bradley R. Buchsbaum”
-date: “2025-09-01” output: rmarkdown::html_vignette vignette: &gt; % % %
+date: “2025-09-13” output: rmarkdown::html_vignette vignette: &gt; % % %
 —</p>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
@@ -180,7 +182,7 @@ create or modify them (<code>gen_hrf</code>, <code>hrf_blocked</code>,
 <span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">24</span>, by <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">time</span>, <span class="fu">HRF_SPMG1</span><span class="op">(</span><span class="va">time</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">'l'</span>, xlab <span class="op">=</span> <span class="st">"Time (s)"</span>, ylab <span class="op">=</span> <span class="st">"BOLD Response"</span>,</span>
 <span>     main <span class="op">=</span> <span class="st">"SPM Canonical HRF (HRF_SPMG1)"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="Overview_files/figure-html/hrf_example-1.png" width="672"></p>
+<p><img src="Overview_files/figure-html/hrf_example-1.png" alt="Line plot of the SPM Canonical HRF (BOLD response over time in seconds)" width="672"></p>
 <ul>
 <li>
 <strong>Related Topic:</strong> Hemodynamic Response Functions</li>
@@ -317,6 +319,30 @@ artifacts.</p>
 <strong>Low-level Regressors:</strong> Manually creating and
 manipulating regressors (<code>regressor</code>).</li>
 </ul>
+<div class="section level4">
+<h4 id="acceleration-sketched-nyström-analysis">Acceleration: Sketched / Nyström Analysis<a class="anchor" aria-label="anchor" href="#acceleration-sketched-nystr%C3%B6m-analysis"></a>
+</h4>
+<p>For large problems, you can accelerate voxelwise GLM estimation with:
+- SRHT/IHS temporal sketching to reduce timepoints while preserving LS
+geometry. - Nyström/landmark spatial extension to solve on a subset of
+voxels and extend with parcel‑aware kernels.</p>
+<p>See <code><a href="../articles/sketched-ar.html">vignette("sketched-ar", package = "fmrireg")</a></code> for
+guidance, tradeoffs, and practical defaults.</p>
+</div>
+<div class="section level4">
+<h4 id="group-level-meta-analysis">Group-Level Meta-Analysis<a class="anchor" aria-label="anchor" href="#group-level-meta-analysis"></a>
+</h4>
+<p>Combine subject‑level maps or ROI summaries using
+fixed/random‑effects meta‑regression: - Inputs: HDF5/NIfTI (beta+SE or
+t+df) or ROI CSV. - Random‑effects: Paule–Mandel/DerSimonian–Laird/REML
+alias; optional robust Huber. - t‑only combine:
+Stouffer/Fisher/Lancaster (supports equal/IVW/custom weights where
+applicable). - Exact contrasts: at fit‑time (contrasts=…) or post‑hoc
+via <code>return_cov = "tri"</code> + <code><a href="../reference/contrast.html">contrast()</a></code>. -
+Multiple comparisons: BH FDR or spatial FDR (block/parcel aware).</p>
+<p>See <code><a href="../articles/group_analysis.html">vignette("group_analysis", package = "fmrireg")</a></code> for
+end‑to‑end examples.</p>
+</div>
 </div>
 </div>
 <div class="section level2">
@@ -330,8 +356,12 @@ vignettes linked above.</p>
 <h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
 </h2>
 <ul>
-<li>02 Data Structures and Sampling Frames</li>
-<li>03 Simulating fMRI Data</li>
+<li><a href="/articles/a_10_dataset.html">Dataset Management</a></li>
+<li><a href="/articles/a_08_simulation.html">Simulating fMRI
+Data</a></li>
+<li><a href="/articles/group_analysis.html">Group Analysis</a></li>
+<li><a href="/articles/sketched-ar.html">Sketched/Nyström
+Acceleration</a></li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

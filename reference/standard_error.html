@@ -27,8 +27,10 @@ This is part of a family of functions for extracting statistical measures."></he
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -118,12 +120,11 @@ This is part of a family of functions for extracting statistical measures.</p>
 <span class="r-in"><span><span class="co"># Create sampling frame and dataset</span></span></span>
 <span class="r-in"><span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">50</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu">fmridataset</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span> <span class="op">*</span> <span class="fl">2</span><span class="op">)</span>, <span class="fl">100</span>, <span class="fl">2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">50</span> <span class="op">*</span> <span class="fl">2</span><span class="op">)</span>, <span class="fl">50</span>, <span class="fl">2</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  TR <span class="op">=</span> <span class="fl">2</span>,</span></span>
 <span class="r-in"><span>  run_length <span class="op">=</span> <span class="fl">50</span>,</span></span>
 <span class="r-in"><span>  event_table <span class="op">=</span> <span class="va">event_data</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> sum(run_length) not equal to nrow(datamat)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Fit model</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span></span>
@@ -131,11 +132,9 @@ This is part of a family of functions for extracting statistical measures.</p>
 <span class="r-in"><span>  block <span class="op">=</span> <span class="op">~</span><span class="va">run</span>,</span></span>
 <span class="r-in"><span>  dataset <span class="op">=</span> <span class="va">dset</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'dset' not found</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Extract standard errors</span></span></span>
 <span class="r-in"><span><span class="va">se</span> <span class="op">&lt;-</span> <span class="fu">standard_error</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'fit' not found</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

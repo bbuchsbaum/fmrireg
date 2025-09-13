@@ -29,8 +29,10 @@ mirroring AFNI 3dttest++ functionality within the fmrireg framework."></head><bo
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -79,7 +81,10 @@ mirroring AFNI 3dttest++ functionality within the fmrireg framework.</p>
 <span>  mask <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  voxelwise_cov <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  center_voxelwise <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  voxel_name <span class="op">=</span> <span class="st">"voxel_cov"</span></span>
+<span>  voxel_name <span class="op">=</span> <span class="st">"voxel_cov"</span>,</span>
+<span>  weights <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ivw"</span>, <span class="st">"equal"</span>, <span class="st">"custom"</span><span class="op">)</span>,</span>
+<span>  weights_custom <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  combine <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -149,6 +154,24 @@ mirroring AFNI 3dttest++ functionality within the fmrireg framework.</p>
 
 <dt id="arg-voxel-name">voxel_name<a class="anchor" aria-label="anchor" href="#arg-voxel-name"></a></dt>
 <dd><p>Character string; name for voxelwise coefficient (default: "voxel_cov")</p></dd>
+
+
+<dt id="arg-weights">weights<a class="anchor" aria-label="anchor" href="#arg-weights"></a></dt>
+<dd><p>Character string for meta-engine weighting: "ivw" (default,
+uses provided SE), "equal" (equal weights), or "custom" (supply
+<code>weights_custom</code>). Ignored for classic/welch engines.</p></dd>
+
+
+<dt id="arg-weights-custom">weights_custom<a class="anchor" aria-label="anchor" href="#arg-weights-custom"></a></dt>
+<dd><p>Numeric vector (length S) or matrix (S x P) of custom
+weights when <code>weights = "custom"</code>.</p></dd>
+
+
+<dt id="arg-combine">combine<a class="anchor" aria-label="anchor" href="#arg-combine"></a></dt>
+<dd><p>Optional. When using the meta engine with t-only inputs
+(i.e., per-subject t-statistics and df), specify the t-combination
+method: "stouffer", "fisher", or "lancaster". Passed through to
+<code><a href="fmri_meta.html">fmri_meta()</a></code> when delegating to the meta engine on group_data_*.</p></dd>
 
 </dl></div>
     <div class="section level2">

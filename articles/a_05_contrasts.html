@@ -40,8 +40,10 @@
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -85,7 +87,7 @@
     
     
 <p>title: “05. Contrasts and Hypothesis Tests” author: “Bradley R.
-Buchsbaum” date: “2025-09-01” output: rmarkdown::html_vignette vignette:
+Buchsbaum” date: “2025-09-13” output: rmarkdown::html_vignette vignette:
 &gt; % % % —</p>
 <div class="section level2">
 <h2 id="introduction-to-contrasts">Introduction to Contrasts<a class="anchor" aria-label="anchor" href="#introduction-to-contrasts"></a>
@@ -504,7 +506,7 @@ the overall effect.</p>
 <tbody>
 <tr class="odd">
 <td align="left">face_attend</td>
-<td align="right">1</td>
+<td align="right">-1</td>
 </tr>
 <tr class="even">
 <td align="left">scene_attend</td>
@@ -516,7 +518,7 @@ the overall effect.</p>
 </tr>
 <tr class="even">
 <td align="left">scene_ignore</td>
-<td align="right">-1</td>
+<td align="right">1</td>
 </tr>
 </tbody>
 </table>
@@ -995,9 +997,9 @@ contrast:</p>
 <span><span class="co">##   .. ..$ id       : NULL</span></span>
 <span><span class="co">##   .. ..$ vars     :List of 2</span></span>
 <span><span class="co">##   .. .. ..$ : language ~category</span></span>
-<span><span class="co">##   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x5610075d5308&gt; </span></span>
+<span><span class="co">##   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x5602bd741fa0&gt; </span></span>
 <span><span class="co">##   .. .. ..$ : language ~attention</span></span>
-<span><span class="co">##   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x5610075d5308&gt; </span></span>
+<span><span class="co">##   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x5602bd741fa0&gt; </span></span>
 <span><span class="co">##   .. .. ..- attr(*, "class")= chr [1:2] "quosures" "list"</span></span>
 <span><span class="co">##   .. ..$ varnames : Named chr [1:2] "category" "attention"</span></span>
 <span><span class="co">##   .. .. ..- attr(*, "names")= chr [1:2] "" ""</span></span>
@@ -1049,8 +1051,9 @@ contrast:</p>
 <h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
 </h2>
 <ul>
-<li>06 Benchmark Datasets</li>
-<li>07 Group Analysis</li>
+<li><a href="/articles/benchmark_datasets.html">Benchmark
+Datasets</a></li>
+<li><a href="/articles/group_analysis.html">Group Analysis</a></li>
 </ul>
 </div>
 <div class="section level2">

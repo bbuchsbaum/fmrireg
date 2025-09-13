@@ -31,8 +31,10 @@ the long names would be "term#level1:basis1", "term#level1:basis2", "term#level2
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -78,6 +80,9 @@ the long names would be "term#level1:basis1", "term#level1:basis2", "term#level2
 <span><span class="fu">longnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'convolved_term'</span></span>
+<span><span class="fu">longnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'event_model'</span></span>
 <span><span class="fu">longnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -132,7 +137,6 @@ the long names would be "term#level1:basis1", "term#level1:basis2", "term#level2
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Get long names including basis functions</span></span></span>
 <span class="r-in"><span><span class="va">lnames</span> <span class="op">&lt;-</span> <span class="fu">longnames</span><span class="op">(</span><span class="va">evmodel</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in UseMethod("longnames"):</span> no applicable method for 'longnames' applied to an object of class "c('event_model', 'list')"</span>
 <span class="r-in"><span><span class="co"># Returns: c("condition#A:basis1", "condition#A:basis2",</span></span></span>
 <span class="r-in"><span><span class="co">#           "condition#B:basis1", "condition#B:basis2",</span></span></span>
 <span class="r-in"><span><span class="co">#           "condition#C:basis1", "condition#C:basis2")</span></span></span>

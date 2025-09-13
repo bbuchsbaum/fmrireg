@@ -44,8 +44,10 @@
     <li><a class="dropdown-item" href="articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -76,9 +78,6 @@
   <main id="main" class="col-md-9"><div class="section level1">
 
 <p><a href="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main" class="external-link"><img src="https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg" alt="Codecov test coverage"></a> <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html" class="external-link"><img src="https://img.shields.io/badge/License-GPL_v2-blue.svg" alt="License: GPL v2"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></p>
-<div class="section level2">
-<h2 id="quick-start">Quick Start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
-</h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrireg/">fmrireg</a></span><span class="op">)</span></span>
 <span></span>
@@ -93,7 +92,6 @@
 <span></span>
 <span><span class="co"># Fit the model</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span><span class="va">emod</span>, dataset <span class="op">=</span> <span class="va">bm</span><span class="op">$</span><span class="va">core_data</span><span class="op">)</span></span></code></pre></div>
-</div>
 <div class="section level2">
 <h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
 </h2>

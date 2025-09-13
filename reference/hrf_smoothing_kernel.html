@@ -25,8 +25,10 @@
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -105,9 +107,8 @@
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">form</span> <span class="op">&lt;-</span> <span class="va">onsets</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/trialwise.html" class="external-link">trialwise</a></span><span class="op">(</span>basis<span class="op">=</span><span class="st">"gaussian"</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">form</span> <span class="op">&lt;-</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/trialwise.html" class="external-link">trialwise</a></span><span class="op">(</span>basis<span class="op">=</span><span class="st">"gaussian"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">sk</span> <span class="op">&lt;-</span> <span class="fu">hrf_smoothing_kernel</span><span class="op">(</span><span class="fl">100</span>, TR<span class="op">=</span><span class="fl">1.5</span>, <span class="va">form</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> Onset variable 'onsets' extracted from formula LHS is not numeric (class: function).</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
