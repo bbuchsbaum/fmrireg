@@ -46,6 +46,30 @@
     },
     {
       "@type": "SoftwareApplication",
+      "identifier": "RNifti",
+      "name": "RNifti",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=RNifti"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "ggrepel",
+      "name": "ggrepel",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=ggrepel"
+    },
+    {
+      "@type": "SoftwareApplication",
       "identifier": "pls",
       "name": "pls",
       "provider": {
@@ -351,18 +375,6 @@
     },
     "10": {
       "@type": "SoftwareApplication",
-      "identifier": "stringr",
-      "name": "stringr",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=stringr"
-    },
-    "11": {
-      "@type": "SoftwareApplication",
       "identifier": "tibble",
       "name": "tibble",
       "provider": {
@@ -373,7 +385,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=tibble"
     },
-    "12": {
+    "11": {
       "@type": "SoftwareApplication",
       "identifier": "purrr",
       "name": "purrr",
@@ -385,7 +397,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=purrr"
     },
-    "13": {
+    "12": {
       "@type": "SoftwareApplication",
       "identifier": "foreach",
       "name": "foreach",
@@ -397,7 +409,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=foreach"
     },
-    "14": {
+    "13": {
       "@type": "SoftwareApplication",
       "identifier": "dplyr",
       "name": "dplyr",
@@ -409,7 +421,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=dplyr"
     },
-    "15": {
+    "14": {
       "@type": "SoftwareApplication",
       "identifier": "ggplot2",
       "name": "ggplot2",
@@ -421,19 +433,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=ggplot2"
     },
-    "16": {
-      "@type": "SoftwareApplication",
-      "identifier": "gmodels",
-      "name": "gmodels",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=gmodels"
-    },
-    "17": {
+    "15": {
       "@type": "SoftwareApplication",
       "identifier": "lazyeval",
       "name": "lazyeval",
@@ -445,7 +445,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=lazyeval"
     },
-    "18": {
+    "16": {
       "@type": "SoftwareApplication",
       "identifier": "tidyr",
       "name": "tidyr",
@@ -457,19 +457,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=tidyr"
     },
-    "19": {
-      "@type": "SoftwareApplication",
-      "identifier": "iterators",
-      "name": "iterators",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=iterators"
-    },
-    "20": {
+    "17": {
       "@type": "SoftwareApplication",
       "identifier": "robustbase",
       "name": "robustbase",
@@ -481,31 +469,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=robustbase"
     },
-    "21": {
-      "@type": "SoftwareApplication",
-      "identifier": "memoise",
-      "name": "memoise",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=memoise"
-    },
-    "22": {
-      "@type": "SoftwareApplication",
-      "identifier": "pracma",
-      "name": "pracma",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=pracma"
-    },
-    "23": {
+    "18": {
       "@type": "SoftwareApplication",
       "identifier": "matrixStats",
       "name": "matrixStats",
@@ -517,7 +481,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=matrixStats"
     },
-    "24": {
+    "19": {
       "@type": "SoftwareApplication",
       "identifier": "furrr",
       "name": "furrr",
@@ -529,7 +493,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=furrr"
     },
-    "25": {
+    "20": {
       "@type": "SoftwareApplication",
       "identifier": "rlang",
       "name": "rlang",
@@ -541,7 +505,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=rlang"
     },
-    "26": {
+    "21": {
       "@type": "SoftwareApplication",
       "identifier": "neuroim2",
       "name": "neuroim2",
@@ -553,7 +517,7 @@
       },
       "sameAs": "https://github.com/bbuchsbaum/neuroim2"
     },
-    "27": {
+    "22": {
       "@type": "SoftwareApplication",
       "identifier": "Rcpp",
       "name": "Rcpp",
@@ -565,7 +529,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=Rcpp"
     },
-    "28": {
+    "23": {
       "@type": "SoftwareApplication",
       "identifier": "RcppParallel",
       "name": "RcppParallel",
@@ -577,49 +541,19 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=RcppParallel"
     },
-    "29": {
+    "24": {
       "@type": "SoftwareApplication",
       "identifier": "methods",
       "name": "methods"
     },
-    "30": {
+    "25": {
       "@type": "SoftwareApplication",
       "identifier": "fmridataset",
       "name": "fmridataset",
       "version": ">= 0.1.0",
       "sameAs": "https://github.com/bbuchsbaum/fmridataset"
     },
-    "31": {
-      "@type": "SoftwareApplication",
-      "identifier": "numDeriv",
-      "name": "numDeriv",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=numDeriv"
-    },
-    "32": {
-      "@type": "SoftwareApplication",
-      "identifier": "RcppArmadillo",
-      "name": "RcppArmadillo",
-      "version": ">= 0.10.1.0",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=RcppArmadillo"
-    },
-    "33": {
-      "@type": "SoftwareApplication",
-      "identifier": "splines",
-      "name": "splines"
-    },
-    "34": {
+    "26": {
       "@type": "SoftwareApplication",
       "identifier": "crayon",
       "name": "crayon",
@@ -631,7 +565,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=crayon"
     },
-    "35": {
+    "27": {
       "@type": "SoftwareApplication",
       "identifier": "plotly",
       "name": "plotly",
@@ -643,7 +577,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=plotly"
     },
-    "36": {
+    "28": {
       "@type": "SoftwareApplication",
       "identifier": "cli",
       "name": "cli",
@@ -655,31 +589,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=cli"
     },
-    "37": {
-      "@type": "SoftwareApplication",
-      "identifier": "colorplane",
-      "name": "colorplane",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=colorplane"
-    },
-    "38": {
-      "@type": "SoftwareApplication",
-      "identifier": "deflist",
-      "name": "deflist",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=deflist"
-    },
-    "39": {
+    "29": {
       "@type": "SoftwareApplication",
       "identifier": "bslib",
       "name": "bslib",
@@ -691,7 +601,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=bslib"
     },
-    "40": {
+    "30": {
       "@type": "SoftwareApplication",
       "identifier": "future.apply",
       "name": "future.apply",
@@ -703,7 +613,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=future.apply"
     },
-    "41": {
+    "31": {
       "@type": "SoftwareApplication",
       "identifier": "jsonlite",
       "name": "jsonlite",
@@ -715,7 +625,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=jsonlite"
     },
-    "42": {
+    "32": {
       "@type": "SoftwareApplication",
       "identifier": "progress",
       "name": "progress",
@@ -727,7 +637,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=progress"
     },
-    "43": {
+    "33": {
       "@type": "SoftwareApplication",
       "identifier": "magrittr",
       "name": "magrittr",
@@ -741,7 +651,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "37852.302KB",
+  "fileSize": "16346.287KB",
   "releaseNotes": "https://github.com/bbuchsbaum/fmrireg/blob/main/NEWS.md",
   "readme": "https://github.com/bbuchsbaum/fmrireg/blob/master/README.md",
   "contIntegration": "https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml"
