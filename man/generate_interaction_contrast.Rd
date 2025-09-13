@@ -13,31 +13,31 @@ generate_main_effect_contrast(des, factor)
 \item{des}{data.frame with one column per factor (must be \code{factor})}
 
 \item{factors}{character vector: which factor(s) get \strong{difference coding}.
-• \code{generate_main_effect_contrast()} takes a \strong{single}
+- \code{generate_main_effect_contrast()} takes a \strong{single}
 factor name.\if{html}{\out{<br>}}
-• \code{generate_interaction_contrast()} takes ≥ 2 for an
-interaction (or 1 to reproduce a main‑effect matrix).}
+- \code{generate_interaction_contrast()} takes >= 2 for an
+interaction (or 1 to reproduce a main-effect matrix).}
 
 \item{factor}{Single factor name for the main effect.}
 }
 \value{
-numeric matrix \strong{nrow = ∏ levels(f) , ncol = ∏ (Lᵢ − 1)} for the
+numeric matrix \strong{nrow = prod levels(f) , ncol = prod (Li - 1)} for the
 chosen factors.
 }
 \description{
-Returns a matrix \strong{N_cells × N_contrasts} – \emph{each row is a design cell},
-columns are independent contrasts (difference‑coded for the factors you ask
-for, grand‑mean for the rest).  Suitable for \code{tcrossprod(dm, C)} or
+Returns a matrix \strong{N_cells x N_contrasts} - \emph{each row is a design cell},
+columns are independent contrasts (difference-coded for the factors you ask
+for, grand-mean for the rest).  Suitable for \code{tcrossprod(dm, C)} or
 \code{lm.fit(design, y)} followed by \verb{\%*\% coef} in the usual way.
 }
 \examples{
 des <- expand.grid(Time = factor(1:4),
                    Cond = factor(c("face","scene")))
 
-# Main effect of Time (4‑1 = 3 contrasts)
+# Main effect of Time (4-1 = 3 contrasts)
 M <- generate_main_effect_contrast(des, "Time")
 
-# Full Time×Cond interaction ( (4‑1)*(2‑1) = 3 contrasts )
+# Full TimexCond interaction ( (4-1)*(2-1) = 3 contrasts )
 I <- generate_interaction_contrast(des, c("Time","Cond"))
-dim(I)   # 8 rows (cells) × 3 columns (contrasts)
+dim(I)   # 8 rows (cells) x 3 columns (contrasts)
 }

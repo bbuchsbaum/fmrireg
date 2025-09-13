@@ -53,6 +53,14 @@ meta_fit_cpp <- function(Y, V, X, method, robust, huber_c = 1.345, robust_iter =
     .Call('_fmrireg_meta_fit_cpp', PACKAGE = 'fmrireg', Y, V, X, method, robust, huber_c, robust_iter, n_threads)
 }
 
+meta_fit_contrasts_cpp <- function(Y, V, X, Cmat, method, robust, huber_c = 1.345, robust_iter = 2L, n_threads = 0L) {
+    .Call('_fmrireg_meta_fit_contrasts_cpp', PACKAGE = 'fmrireg', Y, V, X, Cmat, method, robust, huber_c, robust_iter, n_threads)
+}
+
+meta_fit_cov_cpp <- function(Y, V, X, method, robust, huber_c = 1.345, robust_iter = 2L, n_threads = 0L) {
+    .Call('_fmrireg_meta_fit_cov_cpp', PACKAGE = 'fmrireg', Y, V, X, method, robust, huber_c, robust_iter, n_threads)
+}
+
 #' Meta-regression with ONE voxelwise covariate
 #' 
 #' @param Y S x P matrix of effect sizes
@@ -83,7 +91,7 @@ ols_t_cpp <- function(Y, X) {
 #' Welch two-sample t-test across features
 #' 
 #' @param Y S x P matrix
-#' @param g Length S vector of group indicators (1/2 or 0/1)
+#' @param g_in Length S vector of group indicators (1/2 or 0/1)
 #' @return List with muA, muB, t, df (Welch), nA, nB
 #' @export
 welch_t_cpp <- function(Y, g_in) {
@@ -99,6 +107,14 @@ welch_t_cpp <- function(Y, g_in) {
 #' @export
 ols_t_vcov_cpp <- function(Y, X, C) {
     .Call('_fmrireg_ols_t_vcov_cpp', PACKAGE = 'fmrireg', Y, X, C)
+}
+
+cpp_srht_apply <- function(M, rows, signs, perm, scale) {
+    .Call('_fmrireg_cpp_srht_apply', PACKAGE = 'fmrireg', M, rows, signs, perm, scale)
+}
+
+cpp_ihs_latent <- function(X, Z, m, iters) {
+    .Call('_fmrireg_cpp_ihs_latent', PACKAGE = 'fmrireg', X, Z, m, iters)
 }
 
 group_pi0_counts_cpp <- function(p, group, tau) {

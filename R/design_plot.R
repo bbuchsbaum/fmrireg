@@ -117,9 +117,9 @@ design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
           shiny::sliderInput("timer",  "Time-window",
                              min(df_time), max(df_time),
                              value = range(df_time), step = diff(range(df_time))/200),
-          shiny::checkboxInput("zero", "Y‑axis starts at zero", TRUE),
+          shiny::checkboxInput("zero", "Y-axis starts at zero", TRUE),
           shiny::hr(),
-          shiny::helpText("Drag to zoom, double‑click to reset.")
+          shiny::helpText("Drag to zoom, double-click to reset.")
         ),
         shiny::mainPanel(
           plotly::plotlyOutput("plot", height = "650px", inline = TRUE)
@@ -128,7 +128,7 @@ design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
     )
   )
 
-  # ── server ----------------------------------------------------------------
+  # -- server ----------------------------------------------------------------
   server <- function(input, output, session){
 
     reactive_df <- shiny::reactive({

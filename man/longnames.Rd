@@ -5,6 +5,7 @@
 \alias{longnames.event_term}
 \alias{longnames.event_seq}
 \alias{longnames.convolved_term}
+\alias{longnames.event_model}
 \title{Extract Long Names of Variable Levels}
 \usage{
 longnames(x, ...)
@@ -14,6 +15,8 @@ longnames(x, ...)
 \method{longnames}{event_seq}(x, ...)
 
 \method{longnames}{convolved_term}(x, ...)
+
+\method{longnames}{event_model}(x, ...)
 }
 \arguments{
 \item{x}{The object to extract names from (typically an event_term, event_model, or convolved_term)}

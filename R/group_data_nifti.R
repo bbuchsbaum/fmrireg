@@ -219,20 +219,43 @@ read_nifti_header <- function(path) {
 #' @return Array or vector of data
 #' @keywords internal
 read_nifti_data <- function(path, mask = NULL) {
-  tryCatch({
-    # Use neuroim2 for consistency with fmrireg
-    img <- neuroim2::read_vol(path)
-    
+  # Robust NIfTI reader: try neuroim2, then RNifti
+  # Returns a full array or masked vector (if mask provided)
+  #
+  # path: character path to NIfTI
+  # mask: optional array/NeuroVol; if provided, returns vector of masked values
+  
+  # Helper to apply mask or return full array
+  apply_mask <- function(arr, mask) {
     if (!is.null(mask)) {
-      # Return masked data as vector
-      return(img[mask > 0])
-    } else {
-      # Return full array
-      return(as.array(img))
+      return(as.vector(arr[mask > 0]))
     }
-  }, error = function(e) {
-    stop("Failed to read NIfTI data from ", path, ": ", e$message, call. = FALSE)
-  })
+    arr
+  }
+  
+  # Attempt read with neuroim2
+  res <- try(suppressWarnings(neuroim2::read_vol(path)), silent = TRUE)
+  if (!inherits(res, "try-error")) {
+    arr <- try(as.array(res), silent = TRUE)
+    if (!inherits(arr, "try-error") && is.atomic(arr)) {
+      return(apply_mask(arr, mask))
+    }
+  }
+  
+  # Fallback to RNifti if available
+  if (requireNamespace("RNifti", quietly = TRUE)) {
+    arr <- try(RNifti::readNifti(path, internal = FALSE), silent = TRUE)
+    if (!inherits(arr, "try-error")) {
+      # Ensure base type and drop singleton fourth dim if present
+      arr <- as.array(arr)
+      if (length(dim(arr)) == 4 && dim(arr)[4] == 1) {
+        dim(arr) <- dim(arr)[1:3]
+      }
+      return(apply_mask(arr, mask))
+    }
+  }
+  
+  stop("Failed to read NIfTI data from ", path, ": could not parse with neuroim2 or RNifti", call. = FALSE)
 }
 
 #' Validate NIfTI Dimensions
@@ -280,8 +303,8 @@ read_nifti_chunk <- function(gd, voxel_indices) {
   if (!is.null(gd$beta_paths)) {
     beta_data <- matrix(NA_real_, nrow = n_subjects, ncol = n_voxels)
     for (i in seq_len(n_subjects)) {
-      img <- neuroim2::read_vol(gd$beta_paths[i])
-      beta_data[i, ] <- as.vector(img)[voxel_indices]
+      arr <- read_nifti_data(gd$beta_paths[i])
+      beta_data[i, ] <- as.vector(arr)[voxel_indices]
     }
   }
   
@@ -289,8 +312,8 @@ read_nifti_chunk <- function(gd, voxel_indices) {
   if (!is.null(gd$se_paths)) {
     se_data <- matrix(NA_real_, nrow = n_subjects, ncol = n_voxels)
     for (i in seq_len(n_subjects)) {
-      img <- neuroim2::read_vol(gd$se_paths[i])
-      se_data[i, ] <- as.vector(img)[voxel_indices]
+      arr <- read_nifti_data(gd$se_paths[i])
+      se_data[i, ] <- as.vector(arr)[voxel_indices]
     }
   }
   
@@ -298,8 +321,8 @@ read_nifti_chunk <- function(gd, voxel_indices) {
   if (!is.null(gd$var_paths)) {
     se_data <- matrix(NA_real_, nrow = n_subjects, ncol = n_voxels)
     for (i in seq_len(n_subjects)) {
-      img <- neuroim2::read_vol(gd$var_paths[i])
-      var_vals <- as.vector(img)[voxel_indices]
+      arr <- read_nifti_data(gd$var_paths[i])
+      var_vals <- as.vector(arr)[voxel_indices]
       se_data[i, ] <- sqrt(var_vals)
     }
   }
@@ -308,8 +331,8 @@ read_nifti_chunk <- function(gd, voxel_indices) {
   if (!is.null(gd$t_paths)) {
     t_data <- matrix(NA_real_, nrow = n_subjects, ncol = n_voxels)
     for (i in seq_len(n_subjects)) {
-      img <- neuroim2::read_vol(gd$t_paths[i])
-      t_data[i, ] <- as.vector(img)[voxel_indices]
+      arr <- read_nifti_data(gd$t_paths[i])
+      t_data[i, ] <- as.vector(arr)[voxel_indices]
     }
   }
   

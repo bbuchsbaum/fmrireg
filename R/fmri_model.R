@@ -222,20 +222,20 @@ print.fmri_model <- function(x, ...) {
   # Event Model Section
   cat("\n Event Model                                ")
   cat("\n---------------------------------------------")
-  cat("\n║ Formula:", crayon::cyan(Reduce(paste, deparse(x$event_model$model_spec$formula))))
+  cat("\n| Formula:", crayon::cyan(Reduce(paste, deparse(x$event_model$model_spec$formula))))
   
   # Event Model Summary
-  cat("\n║ Summary:")
-  cat("\n║   • Terms:", crayon::yellow(length(terms(x$event_model))))
-  cat("\n║   • Events:", crayon::yellow(nrow(x$event_model$model_spec$event_table)))
-  cat("\n║   • Design Columns:", crayon::yellow(length(conditions(x$event_model))))
-  cat("\n║   • Blocks:", crayon::yellow(length(unique(x$event_model$blockids))))
+  cat("\n| Summary:")
+  cat("\n|   - Terms:", crayon::yellow(length(terms(x$event_model))))
+  cat("\n|   - Events:", crayon::yellow(nrow(x$event_model$model_spec$event_table)))
+  cat("\n|   - Design Columns:", crayon::yellow(length(conditions(x$event_model))))
+  cat("\n|   - Blocks:", crayon::yellow(length(unique(x$event_model$blockids))))
   
   # Baseline Model Section (if present)
   if (!is.null(x$baseline_model)) {
     cat("\n---------------------------------------------")
-    cat("\n║ Baseline Model                           ║")
-    cat("\n║ Components:")
+    cat("\n| Baseline Model                           |")
+    cat("\n| Components:")
     
     # Drift term info
     if (!is.null(x$baseline_model$drift_term)) {
@@ -243,33 +243,33 @@ print.fmri_model <- function(x, ...) {
       basis_type <- x$baseline_model$drift_spec$basis
       degree <- x$baseline_model$drift_spec$degree
       drift_cols <- ncol(design_matrix(x$baseline_model$drift_term))
-      cat("\n║   • Drift:", crayon::magenta(drift_name))
-      cat("\n║     - Type:", crayon::blue(basis_type))
-      cat("\n║     - Degree:", crayon::blue(degree))
-      cat("\n║     - Columns:", crayon::yellow(drift_cols))
+      cat("\n|   - Drift:", crayon::magenta(drift_name))
+      cat("\n|     - Type:", crayon::blue(basis_type))
+      cat("\n|     - Degree:", crayon::blue(degree))
+      cat("\n|     - Columns:", crayon::yellow(drift_cols))
     }
     
     # Block term info
     if (!is.null(x$baseline_model$block_term)) {
       const_cols <- ncol(design_matrix(x$baseline_model$block_term))
-      cat("\n║   • Block Terms:", crayon::yellow(const_cols), "columns")
+      cat("\n|   - Block Terms:", crayon::yellow(const_cols), "columns")
     }
     
     # Nuisance term info
     if (!is.null(x$baseline_model$nuisance_term)) {
       nuis_cols <- ncol(design_matrix(x$baseline_model$nuisance_term))
-      cat("\n║   • Nuisance Terms:", crayon::yellow(nuis_cols), "columns")
+      cat("\n|   - Nuisance Terms:", crayon::yellow(nuis_cols), "columns")
     }
   }
   
   # Total Model Summary
   cat("\n---------------------------------------------")
-  cat("\n║ Total Model                              ║")
+  cat("\n| Total Model                              |")
   total_cols <- ncol(design_matrix(x))
-  cat("\n║   • Total Design Columns:", crayon::yellow(total_cols))
+  cat("\n|   - Total Design Columns:", crayon::yellow(total_cols))
   
   # Footer
-  cat("\n╚══════════════════════════════════════════╝\n")
+  cat("\n=============================================\n")
 }
 
 #' correlation_map.fmri_model
@@ -301,7 +301,7 @@ correlation_map.fmri_model <- function(x,
 #' Produces a single heatmap of *all* columns in the design matrix from an
 #' \code{fmri_model} object, which merges both the event_model and baseline_model
 #' regressors. Rows are scans; columns are regressors.  
-#' Optionally draws horizontal lines between blocks (runs), and rotates x‐axis
+#' Optionally draws horizontal lines between blocks (runs), and rotates x-axis
 #' labels diagonally for readability.
 #'
 #' @param x An \code{fmri_model} object.

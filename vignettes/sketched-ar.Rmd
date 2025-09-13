@@ -1,0 +1,179 @@
+---
+title: "Sketched GLM with Global vs Parcel AR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Sketched GLM with Global vs Parcel AR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+This vignette introduces a fast “sketched GLM” path with shared autoregressive (AR) whitening and optional Nyström landmarking. It is designed to be a drop‑in alternative to voxelwise GLM when you want substantial speedups with high fidelity.
+
+What you’ll see below
+- A quick overview of the approach and when to use it
+- Global vs parcel‑pooled AR whitening (stabilizes noise, boosts generalization)
+- Time sketches that preserve GLM geometry at much smaller m ≈ 6–8·p
+  - SRHT (Subsampled Randomized Hadamard Transform): a fast Johnson–Lindenstrauss embedding built from random signs, a Walsh–Hadamard transform, and row sampling. It acts as an (approximate) isometry on the column space of X, so least‑squares geometry is well preserved at reduced cost.
+  - IHS (Iterative Hessian Sketch): an iterative sketch‑and‑solve method. Each iteration solves a small sketched normal‑equation system to refine the coefficients; 2–3 iterations with m ≈ 6·p are typically indistinguishable from exact least‑squares.
+- Optional Nyström spatial extension (solve on L landmarks, extend to all voxels)
+
+At a glance
+- Typical fidelity: correlations > .9 vs exact voxelwise GLM on synthetic and real designs, with large runtime savings.
+- Knobs: m (sketch rows), iters (IHS iterations), by_cluster (parcel AR), landmarks (Nyström), k_neighbors (Nyström weights).
+
+Approach in one paragraph
+- We first prewhiten in time (globally or per parcel, with light shrinkage across parcels). Then we replace the tall time dimension T with a much smaller sketch m using SRHT or IHS so that the normal equations are nearly identical at a fraction of the cost. If desired, we also replace the large spatial dimension V by solving only on L landmark voxels and extending coefficients back to all voxels via a sparse, parcel‑aware heat‑kernel (Nyström).
+
+```r
+library(fmrireg)
+library(neuroim2)
+library(fmrihrf)
+
+# Synthetic 4D dataset (tiny)
+set.seed(1)
+TR <- 2; Tlen <- 120; dim3 <- c(8L,8L,3L)
+space4d <- NeuroSpace(c(dim3, Tlen))
+maskVol <- LogicalNeuroVol(array(TRUE, dim3), NeuroSpace(dim3))
+
+# Simple two-condition design
+onsets <- seq(20, 200, by=30); conds <- factor(rep(c("A","B"), length.out=length(onsets)))
+events_df <- data.frame(onset=onsets, condition=conds, run=1L)
+sframe <- sampling_frame(blocklens = Tlen, TR = TR)
+em <- event_model(onset ~ hrf(condition), data = events_df, block = ~ run, sampling_frame = sframe)
+X <- design_matrix(em)
+p <- ncol(X); V <- prod(dim3)
+
+# Simulate Y = X B + AR(1) noise
+task_cols <- which(grepl("condition|hrf", colnames(X), ignore.case = TRUE))
+B_true <- matrix(0, p, V); B_true[task_cols,] <- matrix(rnorm(length(task_cols)*V, sd=0.5), length(task_cols), byrow=TRUE)
+ar1_noise <- function(T,V,rho=.3,sd=.5){E <- matrix(0,T,V); E[1,] <- rnorm(V, sd=sd/sqrt(1-rho^2)); for(t in 2:T) E[t,] <- rho*E[t-1,] + rnorm(V,sd=sd); E}
+Y <- X %*% B_true + ar1_noise(Tlen, V)
+
+arr <- array(0, dim=c(dim3, Tlen)); v <- 0L
+for(ix in seq_len(dim3[1])) for(iy in seq_len(dim3[2])) for(iz in seq_len(dim3[3])) { v <- v+1L; arr[ix,iy,iz,] <- as.numeric(Y[,v]) }
+vec <- NeuroVec(arr, space4d)
+dset <- fmri_mem_dataset(scans=list(vec), mask=maskVol, TR=TR, event_table=events_df)
+
+# Build parcels (k-means on coords)
+coords <- expand.grid(x=seq_len(dim3[1]), y=seq_len(dim3[2]), z=seq_len(dim3[3]))
+parcels <- ClusteredNeuroVol(maskVol, kmeans(coords, centers=40)$cluster)
+
+# Global AR + SRHT
+low_srht <- lowrank_control(parcels = parcels, time_sketch = list(method="srht", m = min(8L*p, Tlen)))
+fit_srht_global <- fmri_lm(onset ~ hrf(condition), block = ~ run,
+                           dataset = dset,
+                           engine = "latent_sketch",
+                           lowrank = low_srht,
+                           ar_options = list(by_cluster = FALSE, order = 1L))
+
+# Parcel AR (with shrinkage) + SRHT
+fit_srht_group <- fmri_lm(onset ~ hrf(condition), block = ~ run,
+                          dataset = dset,
+                          engine = "latent_sketch",
+                          lowrank = low_srht,
+                          ar_options = list(by_cluster = TRUE, order = 1L, shrink_c0 = 100))
+
+# IHS (3 iters) + global AR
+low_ihs <- lowrank_control(parcels = parcels, time_sketch = list(method="ihs", m = max(6L*p, p+4L), iters=3L))
+fit_ihs <- fmri_lm(onset ~ hrf(condition), block = ~ run,
+                   dataset = dset,
+                   engine = "latent_sketch",
+                   lowrank = low_ihs,
+                   ar_options = list(by_cluster = FALSE, order = 1L))
+
+# Compare fits quickly
+B_exact <- t(fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)$result$betas$data[[1]]$estimate[[1]])
+cor_srht_glob <- cor(as.numeric(B_exact), as.numeric(fit_srht_global$betas_fixed))
+cor_srht_grp  <- cor(as.numeric(B_exact), as.numeric(fit_srht_group$betas_fixed))
+cor_ihs       <- cor(as.numeric(B_exact), as.numeric(fit_ihs$betas_fixed))
+list(cor_srht_glob=cor_srht_glob, cor_srht_grp=cor_srht_grp, cor_ihs=cor_ihs)
+```
+
+## Landmarks + Nyström (full-voxel, global AR)
+
+Here we solve only on L landmark voxels and extend the coefficients back to all voxels using a sparse, parcel-aware heat-kernel. This can deliver large spatial speedups when V is large.
+
+```r
+# Choose landmarks (L) and neighbors (k)
+L <- 24L; k_nn <- 12L
+low_lm <- lowrank_control(
+  parcels = parcels,
+  landmarks = L,
+  k_neighbors = k_nn,
+  time_sketch = list(method = "srht", m = min(8L*p, Tlen))
+)
+
+fit_lm_srht <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset,
+                       engine = "latent_sketch",
+                       lowrank = low_lm,
+                       ar_options = list(by_cluster = FALSE, order = 1L))
+
+# Compare to exact
+B_exact <- t(fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)$result$betas$data[[1]]$estimate[[1]])
+cor_landmarks <- cor(as.numeric(B_exact), as.numeric(fit_lm_srht$betas_fixed))
+cor_landmarks
+```
+
+Notes:
+- Landmarks are selected by k-means over voxel coordinates and mapped to nearest mask voxels.
+- The extension uses k-NN heat-kernel weights with row-normalization; weights respect parcel geometry via the `parcels` mask.
+- Residual variance is propagated from landmarks via squared weights; you may add a small nugget term near boundaries if needed.
+
+### Choosing landmarks: practical guidance
+
+- How many (L)?
+  - Start with L ≈ V/50 (e.g., 3k landmarks for 150k voxels) and adjust based on speed vs. fidelity.
+  - If memory is tight or V is very large, you can go down to V/100; for near‑voxel fidelity, increase to V/20.
+- Where to place them?
+  - k‑means centers on voxel coordinates (as above) are a solid, fast default. Seed the RNG for reproducibility.
+  - Farthest‑point (a.k.a. max‑min) sampling gives more uniform coverage than k‑means; prefer it if you have irregular masks.
+  - Parcel‑aware: sample landmarks within each parcel proportional to size so every region is represented.
+  - Boundaries: include a small fraction of landmarks near parcel or anatomical borders to better preserve edges.
+- Neighborhood size (k_neighbors) and bandwidth (h)
+  - Use k_neighbors in [8, 32]; 16 is a good default. Larger k smooths more but risks crossing boundaries.
+  - The default bandwidth uses the median distance to the k‑th neighbor; adjust up to smooth more, down to sharpen.
+- Diagnostics
+  - Correlate landmark‑extended betas with a smaller exact or sketched full‑voxel solve on an ROI.
+  - Visualize a few beta maps near sharp boundaries (sulci, ROI borders) to check that edges are preserved.
+  - Compare histogram of t‑values in null tissue; Nyström should not inflate tails.
+
+## Fidelity vs. exact voxelwise GLM
+
+- With m ≈ 6–8·p for SRHT and 2–3 IHS iterations, fixed‑effects betas typically correlate > .9 with the exact voxelwise solution while running far faster.
+- Parcel‑pooled AR stabilizes whitening and often improves out‑of‑sample behavior vs per‑voxel AR, especially on short runs.
+- Landmark Nyström trades a small amount of spatial detail for large speed gains; boundaries are respected via parcel‑aware distances, helping preserve sulcal/ROI edges.
+
+## When to use which knob
+
+- Short runs (small T): favor landmarks first, then sketch if needed.
+- Long runs (large T): sketch in time dominates the speedup; landmarks optional.
+- Memory‑constrained: use landmarks to shrink V; SRHT/IHS keep temporal memory bounded.
+
+## Pros and cons
+
+Pros
+- Large speedups with minimal code changes: `engine = "latent_sketch"` and a small `lowrank_control()` list.
+- Shared AR (global/parcel) reduces variance and improves stability.
+- SRHT/IHS preserve GLM geometry; Nyström respects spatial structure.
+
+Cons
+- Landmark extension introduces controlled spatial shrinkage; if you need strict voxelwise inference, omit landmarks.
+- Sketching slightly perturbs degrees of freedom (uses m − p); choose m conservatively if p is large or X is ill‑conditioned.
+
+## Practical defaults
+
+- Time sketch: `list(method = "srht", m = min(8*p, T))` or IHS with `m ≈ 6*p`, `iters = 2–3`.
+- AR order: 1 is a solid default; use 2 if residuals show lag‑2 structure.
+- Parcel AR: enable with `by_cluster = TRUE`; shrinkage `shrink_c0 = 100` works well.
+- Landmarks: start with `L ≈ V/50`, `k_neighbors ∈ [8, 32]`.
+
+## Reproducibility tips
+
+- Set a seed before building SRHT plans or k‑means landmarks (`set.seed(...)`).
+- Keep m and iters fixed across runs to compare apples‑to‑apples.
+- Validate on a small ROI first: check correlations vs exact, and histogram of t‑maps in null tissue.
+
+## Next
+
+- [fMRI Linear Model (GLM)](/articles/a_09_linear_model.html)
+- [Group Analysis](/articles/group_analysis.html)

@@ -166,7 +166,15 @@ tibble_to_neurovec <- function(dset, tab, mask) {
 coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts"), recon=FALSE, comp=0, ...) {
   bvals <- coef.fmri_lm(object, type=type)
   if (recon) {
-    lds <- object$dataset$lvec@loadings
+    # Extract LatentNeuroVec from dataset
+    lvec <- if (!is.null(object$dataset$lvec)) {
+      object$dataset$lvec
+    } else if (!is.null(object$dataset$backend) && !is.null(object$dataset$backend$data)) {
+      object$dataset$backend$data[[1]]
+    } else {
+      stop("Cannot find LatentNeuroVec in latent_dataset")
+    }
+    lds <- lvec@loadings
     comp <- if (length(comp) == 1 && comp == 0) {
       seq(1, ncol(lds)) 
     } else {
@@ -199,7 +207,15 @@ standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), r
     
     Qr <- x$result$qr
     cov.unscaled <- chol2inv(Qr$qr)
-    lds <- x$dataset$lvec@loadings
+    # Extract LatentNeuroVec from dataset
+    lvec <- if (!is.null(x$dataset$lvec)) {
+      x$dataset$lvec
+    } else if (!is.null(x$dataset$backend) && !is.null(x$dataset$backend$data)) {
+      x$dataset$backend$data[[1]]
+    } else {
+      stop("Cannot find LatentNeuroVec in latent_dataset")
+    }
+    lds <- lvec@loadings
   
     if (type == "estimates") {
       ret <- do.call(cbind, lapply(x$result$event_indices, function(i) {

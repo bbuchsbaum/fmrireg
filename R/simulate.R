@@ -356,7 +356,7 @@ simulate_fmri_matrix <- function(
   onsets <- cumsum(isi_samples)
   if (max(onsets) > effective_time) {
     # Keep only events that fit within effective time
-    keepers <- which(onsets <= effective_time)
+    keepers <- which(onsets < effective_time)
     onsets <- onsets[keepers]
     n_events <- length(onsets)
     message(sprintf("Reduced to %d events to fit within effective time", n_events))

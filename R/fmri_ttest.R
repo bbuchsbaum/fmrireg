@@ -37,6 +37,15 @@
 #' @param voxelwise_cov Optional S x P matrix of voxelwise covariates
 #' @param center_voxelwise Logical; center voxelwise covariate per feature (default: TRUE)
 #' @param voxel_name Character string; name for voxelwise coefficient (default: "voxel_cov")
+#' @param weights Character string for meta-engine weighting: "ivw" (default,
+#'   uses provided SE), "equal" (equal weights), or "custom" (supply
+#'   `weights_custom`). Ignored for classic/welch engines.
+#' @param weights_custom Numeric vector (length S) or matrix (S x P) of custom
+#'   weights when `weights = "custom"`.
+#' @param combine Optional. When using the meta engine with t-only inputs
+#'   (i.e., per-subject t-statistics and df), specify the t-combination
+#'   method: "stouffer", "fisher", or "lancaster". Passed through to
+#'   `fmri_meta()` when delegating to the meta engine on group_data_*.
 #'
 #' @return An fmri_ttest_fit object containing:
 #'   \itemize{
@@ -80,10 +89,14 @@ fmri_ttest <- function(gd,
                       mask = NULL,
                       voxelwise_cov = NULL,
                       center_voxelwise = TRUE,
-                      voxel_name = "voxel_cov") {
+                      voxel_name = "voxel_cov",
+                      weights = c("ivw", "equal", "custom"),
+                      weights_custom = NULL,
+                      combine = NULL) {
   
   engine <- match.arg(engine)
   sign <- match.arg(sign)
+  weights <- match.arg(weights)
   
   if (!is.null(mc)) {
     mc <- match.arg(mc, c("bh", "spatial_fdr"))
@@ -91,15 +104,23 @@ fmri_ttest <- function(gd,
   
   # 1) Normalize input to matrices Y (S x P), optional V (S x P), covars
   if (inherits(gd, "group_data")) {
-    # Extract first block (assuming single contrast)
-    if (length(gd$blocks) != 1) {
-      stop("fmri_ttest expects a single contrast block", call. = FALSE)
+    if (!is.null(gd$blocks)) {
+      if (length(gd$blocks) != 1) {
+        stop("fmri_ttest expects a single contrast block", call. = FALSE)
+      }
+      B <- gd$blocks[[1]]
+      Y <- B$Y  # S x P effects (betas or derived)
+      V <- if (!is.null(B$V)) B$V else NULL  # S x P sampling variances if available
+      covars <- B$covars
+      feature_group <- if (!is.null(B$feature)) B$feature$group else NULL
+    } else {
+      # Modern group_data_* path: leave Y/V unset and use stored covariates
+      B <- NULL
+      Y <- NULL
+      V <- NULL
+      covars <- gd$covariates
+      feature_group <- NULL
     }
-    B <- gd$blocks[[1]]
-    Y <- B$Y  # S x P effects (betas or derived)
-    V <- if (!is.null(B$V)) B$V else NULL  # S x P sampling variances if available
-    covars <- B$covars
-    feature_group <- if (!is.null(B$feature)) B$feature$group else NULL
   } else {
     # Convert data frame to group_data
     if (!inherits(gd, "data.frame")) {
@@ -114,26 +135,26 @@ fmri_ttest <- function(gd,
   }
   
   # 2) Subtract mu0 from Y for testing against constant
-  Y <- Y - mu0
+  if (!is.null(Y)) Y <- Y - mu0
   
   # 3) Build design matrix X from formula
   if (is.null(covars)) {
-    covars <- data.frame(intercept = rep(1, nrow(Y)))
+    covars <- data.frame(intercept = rep(1, if (!is.null(Y)) nrow(Y) else n_subjects(gd)))
   }
   
   X <- stats::model.matrix(stats::as.formula(formula), data = covars)
   storage.mode(X) <- "double"
   K <- ncol(X)
   S <- nrow(X)
-  P <- ncol(Y)
+  P <- if (!is.null(Y)) ncol(Y) else NA_integer_
   
-  if (S != nrow(Y)) {
+  if (!is.null(Y) && S != nrow(Y)) {
     stop("Design matrix rows must match data rows", call. = FALSE)
   }
   
   # 4) Choose engine
   use_meta <- if (engine == "auto") {
-    !is.null(V)
+    !is.null(V) || (inherits(gd, "group_data") && is.null(Y))
   } else {
     engine == "meta"
   }
@@ -176,7 +197,22 @@ fmri_ttest <- function(gd,
     method <- getOption("fmrireg.meta.method", "pm")
     robust <- getOption("fmrireg.meta.robust", "none")
     
-    if (!is.null(voxelwise_cov)) {
+    if (inherits(gd, "group_data") && is.null(Y)) {
+      # Delegate to fmri_meta for group_data_* inputs
+      meta_fit <- fmri_meta(
+        gd, formula = stats::as.formula(formula),
+        method = method, robust = robust,
+        weights = weights, weights_custom = weights_custom,
+        combine = combine,
+        verbose = FALSE
+      )
+      res$beta <- t(meta_fit$coefficients)
+      res$se   <- t(meta_fit$se)
+      res$z    <- res$beta / res$se
+      res$p    <- 2 * stats::pnorm(abs(res$z), lower.tail = FALSE)
+      res$df   <- matrix(Inf, nrow = nrow(res$z), ncol = ncol(res$z))
+      rownames(res$beta) <- rownames(res$se) <- rownames(res$z) <- rownames(res$df) <- colnames(X)
+    } else if (!is.null(voxelwise_cov)) {
       # Update meta_fit wrapper to handle voxelwise
       out <- fmri_meta_fit_extended(
         Y = Y, V = V, X = X,
@@ -187,21 +223,39 @@ fmri_ttest <- function(gd,
         n_threads = getOption("fmrireg.num_threads", 0)
       )
     } else {
+      # Apply weighting variants for meta
+      V_eff <- V
+      if (weights == "equal") {
+        V_eff[] <- 1
+      } else if (weights == "custom") {
+        if (is.null(weights_custom)) {
+          stop("weights='custom' requires 'weights_custom'", call. = FALSE)
+        }
+        if (is.vector(weights_custom) && length(weights_custom) == nrow(V_eff)) {
+          V_eff <- matrix(1/weights_custom, nrow = nrow(V_eff), ncol = ncol(V_eff))
+        } else if (is.matrix(weights_custom) && all(dim(weights_custom) == dim(V_eff))) {
+          V_eff <- 1/weights_custom
+        } else {
+          stop("weights_custom must be length S or SxP to match data", call. = FALSE)
+        }
+      }
       out <- fmri_meta_fit(
-        Y = Y, V = V, X = X,
+        Y = Y, V = V_eff, X = X,
         method = method, robust = robust,
         n_threads = getOption("fmrireg.num_threads", 0)
       )
     }
     
-    res$beta <- out$beta
-    res$se <- out$se
-    res$z <- out$z
-    res$p <- 2 * stats::pnorm(abs(out$z), lower.tail = FALSE)
-    res$df <- matrix(Inf, nrow = nrow(out$z), ncol = ncol(out$z))
+    if (exists("out")) {
+      res$beta <- out$beta
+      res$se <- out$se
+      res$z <- out$z
+      res$p <- 2 * stats::pnorm(abs(out$z), lower.tail = FALSE)
+      res$df <- matrix(Inf, nrow = nrow(out$z), ncol = ncol(out$z))
+    }
     
     # Handle contrast if specified
-    if (!is.null(contrast)) {
+    if (!is.null(contrast) && exists("out")) {
       w <- as.numeric(contrast[colnames(out$beta)])
       w[is.na(w)] <- 0
       num <- colSums(out$beta * w, na.rm = TRUE)
@@ -213,6 +267,28 @@ fmri_ttest <- function(gd,
     
   } else {
     # Classic Student t or Welch
+    # If Y is not yet materialized (e.g., group_data_nifti/h5), load betas
+    if (is.null(Y)) {
+      if (inherits(gd, "group_data_nifti")) {
+        dat_full <- read_nifti_full(gd)
+        if (is.null(dat_full$beta)) {
+          stop("group_data_nifti missing beta paths for classic/welch engines", call. = FALSE)
+        }
+        Y <- dat_full$beta
+        P <- ncol(Y)
+      } else if (inherits(gd, "group_data_h5")) {
+        # Read H5 fully and extract beta matrix if available
+        arr <- read_h5_full(gd, stat = "beta")
+        if (is.null(arr)) {
+          stop("group_data_h5 missing beta statistic for classic/welch engines", call. = FALSE)
+        }
+        # Convert to subjects x voxels
+        Y <- t(arr[, , which(dimnames(arr)$stat == "beta")])
+        P <- ncol(Y)
+      } else {
+        stop("Classic/Welch engines require materialized Y (betas)", call. = FALSE)
+      }
+    }
     has_group <- "group" %in% colnames(covars) && 
                  is.factor(covars$group) && 
                  nlevels(covars$group) == 2

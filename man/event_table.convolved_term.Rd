@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{x}{A convolved_term object}
+
+\item{...}{Additional arguments passed to the underlying event_table method}
 }
 \value{
 A data.frame containing the event table

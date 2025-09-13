@@ -17,7 +17,10 @@ fmri_ttest(
   mask = NULL,
   voxelwise_cov = NULL,
   center_voxelwise = TRUE,
-  voxel_name = "voxel_cov"
+  voxel_name = "voxel_cov",
+  weights = c("ivw", "equal", "custom"),
+  weights_custom = NULL,
+  combine = NULL
 )
 }
 \arguments{
@@ -66,6 +69,18 @@ fmri_ttest(
 \item{center_voxelwise}{Logical; center voxelwise covariate per feature (default: TRUE)}
 
 \item{voxel_name}{Character string; name for voxelwise coefficient (default: "voxel_cov")}
+
+\item{weights}{Character string for meta-engine weighting: "ivw" (default,
+uses provided SE), "equal" (equal weights), or "custom" (supply
+\code{weights_custom}). Ignored for classic/welch engines.}
+
+\item{weights_custom}{Numeric vector (length S) or matrix (S x P) of custom
+weights when \code{weights = "custom"}.}
+
+\item{combine}{Optional. When using the meta engine with t-only inputs
+(i.e., per-subject t-statistics and df), specify the t-combination
+method: "stouffer", "fisher", or "lancaster". Passed through to
+\code{fmri_meta()} when delegating to the meta engine on group_data_*.}
 }
 \value{
 An fmri_ttest_fit object containing:

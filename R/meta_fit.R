@@ -76,6 +76,59 @@ fmri_meta_fit <- function(Y, V, X,
   return(result)
 }
 
+#' Fit Meta-Analysis Models with Exact Contrasts
+#'
+#' Low-level function that calls the C++ meta-analysis implementation and returns
+#' exact contrast statistics c' (X' W X)^(-1) c for provided contrasts.
+#'
+#' @param Y,V,X See fmri_meta_fit
+#' @param Cmat Numeric matrix K x J (columns are contrasts over predictors)
+#' @inheritParams fmri_meta_fit
+#' @return List with base meta outputs plus c_beta, c_se, c_z
+#' @export
+fmri_meta_fit_contrasts <- function(Y, V, X, Cmat,
+                                   method = c("pm", "dl", "fe", "reml"),
+                                   robust = c("none", "huber"),
+                                   huber_c = 1.345,
+                                   robust_iter = 2,
+                                   n_threads = getOption("fmrireg.num_threads", 0)) {
+  method <- match.arg(method)
+  robust <- match.arg(robust)
+  if (!is.matrix(Y)) Y <- as.matrix(Y)
+  if (!is.matrix(V)) V <- as.matrix(V)
+  if (!is.matrix(X)) X <- as.matrix(X)
+  if (!is.matrix(Cmat)) Cmat <- as.matrix(Cmat)
+  if (nrow(Cmat) != ncol(X)) stop("nrow(Cmat) must equal ncol(X)", call. = FALSE)
+  result <- meta_fit_contrasts_cpp(Y, V, X, Cmat, method, robust, huber_c, robust_iter, n_threads)
+  result$method <- method
+  result$robust <- robust
+  result$ok <- as.logical(result$ok)
+  result
+}
+
+#' Fit Meta-Analysis and return packed covariance per voxel
+#'
+#' @inheritParams fmri_meta_fit
+#' @return List with base outputs and cov_tri (tsize x P) where tsize = K*(K+1)/2
+#' @export
+fmri_meta_fit_cov <- function(Y, V, X,
+                             method = c("pm", "dl", "fe", "reml"),
+                             robust = c("none", "huber"),
+                             huber_c = 1.345,
+                             robust_iter = 2,
+                             n_threads = getOption("fmrireg.num_threads", 0)) {
+  method <- match.arg(method)
+  robust <- match.arg(robust)
+  if (!is.matrix(Y)) Y <- as.matrix(Y)
+  if (!is.matrix(V)) V <- as.matrix(V)
+  if (!is.matrix(X)) X <- as.matrix(X)
+  result <- meta_fit_cov_cpp(Y, V, X, method, robust, huber_c, robust_iter, n_threads)
+  result$method <- method
+  result$robust <- robust
+  result$ok <- as.logical(result$ok)
+  result
+}
+
 #' Compute Effective Sample Size for Meta-Analysis
 #'
 #' Computes the effective sample size based on the heterogeneity estimate.

@@ -22,5 +22,7 @@
 An fmri_meta_contrast object with contrast results
 }
 \description{
-Apply Contrast to Meta-Analysis Results
+Note: Uses exact standard errors when covariance is available (return_cov="tri")
+or for ROI CSV fits with non-robust estimation; otherwise uses a diagonal
+variance approximation.
 }

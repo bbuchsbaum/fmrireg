@@ -139,15 +139,19 @@ inline double tau2_PM(const mat& X, const vec& y, const vec& v,
   double a = tau_lo, b = tau_hi, fb = Q_tau2(X, y, v, b, beta_hat) - df;
   if (!arma::is_finite(fb)) fb = -1.0; // force progress
   double mid = a;
+  bool converged = false;
   for (int it = 0; it < max_iter; ++it) {
     mid = 0.5 * (a + b);
     double fm = Q_tau2(X, y, v, mid, beta_hat) - df;
     if (!arma::is_finite(fm)) { a = mid; continue; }
-    if (std::fabs(fm) < tol) break;
+    if (std::fabs(fm) < tol) { converged = true; break; }
     if (fm > 0.0) { a = mid; } else { b = mid; fb = fm; }
   }
   if (!arma::is_finite(mid)) mid = 0.0;
   if (mid < 0.0) mid = 0.0;
+  if (!converged) {
+    Rcpp::warning("Paule-Mandel solver did not fully converge; using last iterate");
+  }
   return mid;
 }
 
@@ -160,6 +164,7 @@ struct MetaResult {
   double I2_fe;
   double df;
   bool ok;
+  mat invXtWX;
   MetaResult() : tau2(0.0), Q_fe(NA_REAL), I2_fe(NA_REAL), df(NA_REAL), ok(false) {}
 };
 
@@ -251,6 +256,7 @@ MetaResult fit_one(const mat& Xfull, const vec& yfull, const vec& vfull,
   out.z    = z;
   out.tau2 = tau2;
   out.ok   = true;
+  out.invXtWX = invXtWX;
   return out;
 }
 
@@ -324,6 +330,168 @@ Rcpp::List meta_fit_cpp(const arma::mat& Y,      // subjects x features
     _["I2_fe"]= I2,
     _["df"]   = DF,
     _["ok"]   = OK
+  );
+}
+
+// [[Rcpp::export]]
+Rcpp::List meta_fit_contrasts_cpp(const arma::mat& Y,      // S x P
+                                  const arma::mat& V,      // S x P (variances)
+                                  const arma::mat& X,      // S x K
+                                  const arma::mat& Cmat,   // K x J (rows are predictors, cols are contrasts)
+                                  const std::string method,
+                                  const std::string robust,
+                                  const double huber_c = 1.345,
+                                  const int robust_iter = 2,
+                                  const int n_threads = 0) {
+  using namespace arma;
+
+  const uword S = Y.n_rows, P = Y.n_cols;
+  if (V.n_rows != S || V.n_cols != P) stop("meta_fit_contrasts_cpp: Y and V must match.");
+  if (X.n_rows != S) stop("meta_fit_contrasts_cpp: X rows must equal nrow(Y).");
+  if (Cmat.n_rows != X.n_cols) stop("meta_fit_contrasts_cpp: nrow(C) must equal ncol(X).");
+
+  int mcode = 0;
+  if (method == "fe") mcode = 0; else if (method=="dl") mcode = 1; else if (method=="pm") mcode = 2; else if (method=="reml") mcode = 3; else stop("Unknown method");
+  bool do_robust = (robust == "huber");
+
+  const uword K = X.n_cols;
+  const uword J = Cmat.n_cols;
+
+  mat B(K, P); B.fill(datum::nan);
+  mat SE(K, P); SE.fill(datum::nan);
+  mat Z(K, P); Z.fill(datum::nan);
+  rowvec TAU2(P); TAU2.fill(datum::nan);
+  rowvec Qfe(P); Qfe.fill(datum::nan);
+  rowvec I2(P); I2.fill(datum::nan);
+  rowvec DF(P); DF.fill(datum::nan);
+  uvec   OK(P,   fill::zeros);
+
+  mat CB(J, P); CB.fill(datum::nan);
+  mat CSE(J, P); CSE.fill(datum::nan);
+  mat CZ(J, P); CZ.fill(datum::nan);
+
+#ifdef _OPENMP
+  int nthreads = n_threads;
+  if (nthreads <= 0) nthreads = omp_get_max_threads();
+#pragma omp parallel for num_threads(nthreads) schedule(static)
+#endif
+  for (int j = 0; j < (int)P; ++j) {
+    vec y = Y.col(j);
+    vec v = V.col(j);
+    MetaResult res = fit_one(X, y, v, mcode, do_robust, huber_c, robust_iter);
+    if (!res.ok) continue;
+
+    B.col(j)   = res.beta;
+    SE.col(j)  = res.se;
+    Z.col(j)   = res.z;
+    TAU2(j)    = res.tau2;
+    Qfe(j)     = res.Q_fe;
+    I2(j)      = res.I2_fe;
+    DF(j)      = res.df;
+    OK(j)      = 1u;
+
+    // Compute contrasts
+    for (uword c = 0; c < J; ++c) {
+      vec cw = Cmat.col(c);
+      double est = dot(cw, res.beta);
+      double varc = as_scalar(cw.t() * res.invXtWX * cw);
+      double sec = (varc > 0.0 && arma::is_finite(varc)) ? std::sqrt(varc) : datum::nan;
+      double zc = (std::isfinite(sec) && sec > 0.0) ? (est / sec) : datum::nan;
+      CB(c, j)  = est;
+      CSE(c, j) = sec;
+      CZ(c, j)  = zc;
+    }
+  }
+
+  return List::create(
+    _["beta"] = B,
+    _["se"]   = SE,
+    _["z"]    = Z,
+    _["tau2"] = TAU2,
+    _["Q_fe"] = Qfe,
+    _["I2_fe"]= I2,
+    _["df"]   = DF,
+    _["ok"]   = OK,
+    _["c_beta"] = CB,
+    _["c_se"] = CSE,
+    _["c_z"] = CZ
+  );
+}
+
+// [[Rcpp::export]]
+Rcpp::List meta_fit_cov_cpp(const arma::mat& Y,      // S x P betas
+                            const arma::mat& V,      // S x P variances
+                            const arma::mat& X,      // S x K
+                            const std::string method,
+                            const std::string robust,
+                            const double huber_c = 1.345,
+                            const int robust_iter = 2,
+                            const int n_threads = 0) {
+  using namespace arma;
+
+  const uword S = Y.n_rows, P = Y.n_cols;
+  if (V.n_rows != S || V.n_cols != P) Rcpp::stop("meta_fit_cov_cpp: Y/V shape mismatch.");
+  if (X.n_rows != S) Rcpp::stop("meta_fit_cov_cpp: X rows must equal nrow(Y).");
+
+  int mcode = 0;
+  if (method == "fe") mcode = 0;
+  else if (method == "dl") mcode = 1;
+  else if (method == "pm") mcode = 2;
+  else if (method == "reml") mcode = 3;
+  else Rcpp::stop("Unknown method: %s", method.c_str());
+
+  bool do_robust = (robust == "huber");
+
+  const uword K = X.n_cols;
+  const uword TSZ = K * (K + 1) / 2;
+  mat B(K, P); B.fill(datum::nan);
+  mat SE(K, P); SE.fill(datum::nan);
+  mat Z(K, P); Z.fill(datum::nan);
+  rowvec TAU2(P); TAU2.fill(datum::nan);
+  rowvec Qfe(P); Qfe.fill(datum::nan);
+  rowvec I2(P); I2.fill(datum::nan);
+  rowvec DF(P); DF.fill(datum::nan);
+  uvec OK(P, fill::zeros);
+  mat COVTRI(TSZ, P); COVTRI.fill(datum::nan);
+
+#ifdef _OPENMP
+  int nthreads = n_threads;
+  if (nthreads <= 0) nthreads = omp_get_max_threads();
+#pragma omp parallel for num_threads(nthreads) schedule(static)
+#endif
+  for (int j = 0; j < (int)P; ++j) {
+    vec y = Y.col(j);
+    vec v = V.col(j);
+    MetaResult res = fit_one(X, y, v, mcode, do_robust, huber_c, robust_iter);
+    if (!res.ok) continue;
+    B.col(j)   = res.beta;
+    SE.col(j)  = res.se;
+    Z.col(j)   = res.z;
+    TAU2(j)    = res.tau2;
+    Qfe(j)     = res.Q_fe;
+    I2(j)      = res.I2_fe;
+    DF(j)      = res.df;
+    OK(j)      = 1u;
+
+    // pack upper triangle
+    uword idx = 0;
+    for (uword a = 0; a < K; ++a) {
+      for (uword b = a; b < K; ++b) {
+        COVTRI(idx++, j) = res.invXtWX(a, b);
+      }
+    }
+  }
+
+  return Rcpp::List::create(
+    Rcpp::Named("beta") = B,
+    Rcpp::Named("se") = SE,
+    Rcpp::Named("z") = Z,
+    Rcpp::Named("tau2") = TAU2,
+    Rcpp::Named("Q_fe") = Qfe,
+    Rcpp::Named("I2_fe") = I2,
+    Rcpp::Named("df") = DF,
+    Rcpp::Named("ok") = OK,
+    Rcpp::Named("cov_tri") = COVTRI
   );
 }
 
@@ -425,4 +593,3 @@ Rcpp::List meta_fit_vcov_cpp(const arma::mat& Y,  // S x P betas
     Rcpp::Named("robust") = robust
   );
 }
-

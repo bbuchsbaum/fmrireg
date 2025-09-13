@@ -11,7 +11,7 @@
 #' @param method The method to use for computing the kernel.
 #' @export
 #' @examples
-#' form <- onsets ~ trialwise(basis="gaussian")
+#' form <- onset ~ trialwise(basis="gaussian")
 #' sk <- hrf_smoothing_kernel(100, TR=1.5, form)
 #' @return a smoothing matrix
 hrf_smoothing_kernel <- function(len, TR = 2,

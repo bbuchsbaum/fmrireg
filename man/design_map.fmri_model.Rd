@@ -35,6 +35,6 @@ A ggplot2 plot object.
 Produces a single heatmap of \emph{all} columns in the design matrix from an
 \code{fmri_model} object, which merges both the event_model and baseline_model
 regressors. Rows are scans; columns are regressors.
-Optionally draws horizontal lines between blocks (runs), and rotates x‐axis
+Optionally draws horizontal lines between blocks (runs), and rotates x-axis
 labels diagonally for readability.
 }

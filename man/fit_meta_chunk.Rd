@@ -11,7 +11,10 @@ fit_meta_chunk(
   robust,
   weights,
   weights_custom,
-  n_threads
+  n_threads,
+  combine = NULL,
+  contrasts = NULL,
+  return_cov = NULL
 )
 }
 \arguments{

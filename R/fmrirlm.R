@@ -123,6 +123,6 @@ multiresponse_rlm <- function(form, data_env, conlist, vnames, fcon, modmat = NU
 #' @export
 #' @rdname print
 print.fmri_rlm <- function(x, ...) {
-  cat("\n═══ Robust fMRI Linear Model ═══\n")
+  cat("\n=== Robust fMRI Linear Model ===\n")
   NextMethod()
 }

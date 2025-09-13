@@ -54,7 +54,7 @@ sframe
 
 The HRF models the BOLD signal response to a brief neural event. `fmrireg` provides various pre-defined HRFs (e.g., `HRF_SPMG1`, `HRF_GAUSSIAN`) and functions to create or modify them (`gen_hrf`, `hrf_blocked`, `hrf_lagged`).
 
-```{r hrf_example}
+```{r hrf_example, fig.alt = "Line plot of the SPM Canonical HRF (BOLD response over time in seconds)"}
 # Plot the SPM canonical HRF
 time <- seq(0, 24, by = 0.2)
 plot(time, HRF_SPMG1(time), type = 'l', xlab = "Time (s)", ylab = "BOLD Response",
@@ -138,11 +138,32 @@ motion spikes or other frame-level artifacts.
 *   **AFNI Translation:** Generating scripts for AFNI's `3dDeconvolve` (`afni_lm`).
 *   **Low-level Regressors:** Manually creating and manipulating regressors (`regressor`).
 
+#### Acceleration: Sketched / Nyström Analysis
+
+For large problems, you can accelerate voxelwise GLM estimation with:
+- SRHT/IHS temporal sketching to reduce timepoints while preserving LS geometry.
+- Nyström/landmark spatial extension to solve on a subset of voxels and extend with parcel‑aware kernels.
+
+See `vignette("sketched-ar", package = "fmrireg")` for guidance, tradeoffs, and practical defaults.
+
+#### Group-Level Meta-Analysis
+
+Combine subject‑level maps or ROI summaries using fixed/random‑effects meta‑regression:
+- Inputs: HDF5/NIfTI (beta+SE or t+df) or ROI CSV.
+- Random‑effects: Paule–Mandel/DerSimonian–Laird/REML alias; optional robust Huber.
+- t‑only combine: Stouffer/Fisher/Lancaster (supports equal/IVW/custom weights where applicable).
+- Exact contrasts: at fit‑time (contrasts=...) or post‑hoc via `return_cov = "tri"` + `contrast()`.
+- Multiple comparisons: BH FDR or spatial FDR (block/parcel aware).
+
+See `vignette("group_analysis", package = "fmrireg")` for end‑to‑end examples.
+
 ## Getting Started
 
 This overview provides a map of the `fmrireg` package. For detailed explanations and examples, please refer to the specific vignettes linked above.
 
 ## Next
 
-- 02 Data Structures and Sampling Frames
-- 03 Simulating fMRI Data
+- [Dataset Management](/articles/a_10_dataset.html)
+- [Simulating fMRI Data](/articles/a_08_simulation.html)
+- [Group Analysis](/articles/group_analysis.html)
+- [Sketched/Nyström Acceleration](/articles/sketched-ar.html)

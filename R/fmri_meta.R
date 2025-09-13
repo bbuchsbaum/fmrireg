@@ -29,12 +29,20 @@
 #'     \item "equal": Equal weights for all subjects
 #'     \item "custom": User-provided weights (must supply weights argument)
 #'   }
-#' @param weights_custom Numeric vector of custom weights (required if weights = "custom")
-#' @param combine For t-statistic only data, combination method:
-#'   \itemize{
-#'     \item "stouffer": Stouffer's Z-score method
-#'     \item "fisher": Fisher's combined probability test
-#'   }
+#' @param weights_custom Numeric vector or matrix of custom weights (required if
+#'   `weights = "custom"`). If a vector, length must equal the number of subjects.
+#'   If a matrix, it must be subjects x features.
+#'
+#' @param combine For t-statistic-only data, combination method ("stouffer",
+#'   "fisher", or "lancaster"). Stouffer combines z-scores and supports
+#'   equal, inverse-variance, or custom weighting (via `weights`). Fisher uses
+#'   equal weights. Lancaster implements a weighted Fisher method by mapping
+#'   weights to per-subject degrees of freedom.
+#' @param contrasts Optional numeric vector or matrix specifying fit-time exact contrasts. If a
+#'   vector is provided, its names must match the column names of the design matrix X. A matrix
+#'   should have columns corresponding to predictors and rows corresponding to contrasts.
+#' @param return_cov Optional. If set to "tri", returns the packed upper-triangular Var(beta)
+#'   per feature under `$cov` to enable exact post-hoc contrasts via `contrast()`.
 #' @param chunk_size Number of voxels to process at once (default: 10000)
 #' @param n_threads Number of parallel threads to use. Defaults to fmrireg.num_threads option.
 #' @param verbose Logical. Print progress messages (default: TRUE)
@@ -65,6 +73,14 @@
 #'
 #' # Stouffer's Z for t-statistics only
 #' fit <- fmri_meta(gd_tstat, combine = "stouffer")
+#'
+#' # Exact post-hoc contrasts by storing covariance
+#' fit_cov <- fmri_meta(gd, formula = ~ 1 + group, method = "pm", return_cov = "tri")
+#' con <- contrast(fit_cov, c("(Intercept)" = 0, group = 1))
+#'
+#' # Exact fit-time contrast without storing covariance
+#' fit_con <- fmri_meta(gd, formula = ~ 1 + group, method = "pm",
+#'                      contrasts = c("(Intercept)" = 0, group = 1))
 #' }
 fmri_meta <- function(data,
                       formula = ~ 1,
@@ -73,6 +89,8 @@ fmri_meta <- function(data,
                       weights = c("ivw", "equal", "custom"),
                       weights_custom = NULL,
                       combine = NULL,
+                      contrasts = NULL,
+                      return_cov = NULL,
                       chunk_size = 10000,
                       n_threads = getOption("fmrireg.num_threads", 0),
                       verbose = TRUE) {
@@ -84,6 +102,7 @@ fmri_meta <- function(data,
   method <- match.arg(method)
   robust <- match.arg(robust)
   weights <- match.arg(weights)
+  if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
   
   # Check for custom weights
   if (weights == "custom" && is.null(weights_custom)) {
@@ -108,6 +127,8 @@ fmri_meta.group_data_h5 <- function(data,
                                     weights = c("ivw", "equal", "custom"),
                                     weights_custom = NULL,
                                     combine = NULL,
+                                    contrasts = NULL,
+                                    return_cov = NULL,
                                     chunk_size = 10000,
                                     n_threads = getOption("fmrireg.num_threads", 0),
                                     verbose = TRUE) {
@@ -115,10 +136,36 @@ fmri_meta.group_data_h5 <- function(data,
   method <- match.arg(method)
   robust <- match.arg(robust)
   weights <- match.arg(weights)
+  if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
   
   # Parse formula and create design matrix
   model_info <- parse_meta_formula(formula, data)
   
+  # Build contrast matrix if provided
+  Cmat <- NULL; contrast_names <- NULL
+  if (!is.null(contrasts)) {
+    if (is.matrix(contrasts)) {
+      # Expect rows = contrasts, cols = predictors
+      if (ncol(contrasts) != ncol(model_info$X)) stop("contrasts columns must match predictors", call. = FALSE)
+      Cmat <- t(contrasts)  # K x J
+      contrast_names <- rownames(contrasts)
+    } else if (is.numeric(contrasts)) {
+      # Named numeric vector
+      w <- rep(0, ncol(model_info$X)); names(w) <- colnames(model_info$X)
+      if (!is.null(names(contrasts))) {
+        w[names(contrasts)] <- contrasts
+      } else if (length(contrasts) == length(w)) {
+        w <- contrasts
+      } else {
+        stop("Unnamed contrast vector must have length equal to number of predictors", call. = FALSE)
+      }
+      Cmat <- matrix(w, ncol = 1)
+      contrast_names <- "contrast1"
+    } else {
+      stop("Unsupported 'contrasts' type; provide matrix or numeric vector", call. = FALSE)
+    }
+  }
+
   # Initialize results storage
   n_voxels <- data$n_voxels
   n_coef <- ncol(model_info$X)
@@ -131,6 +178,12 @@ fmri_meta.group_data_h5 <- function(data,
     Q = rep(NA_real_, n_voxels),
     Q_df = rep(NA_real_, n_voxels)
   )
+  if (!is.null(Cmat)) {
+    n_con <- ncol(Cmat)
+    results$con_est <- matrix(NA_real_, n_voxels, n_con)
+    results$con_se  <- matrix(NA_real_, n_voxels, n_con)
+    results$con_z   <- matrix(NA_real_, n_voxels, n_con)
+  }
   
   # Set column names
   colnames(results$coefficients) <- colnames(model_info$X)
@@ -157,11 +210,14 @@ fmri_meta.group_data_h5 <- function(data,
     chunk_results <- fit_meta_chunk(
       chunk_data,
       model_info$X,
-      method = method,
+      method = if (!is.null(combine)) paste0("combine:", combine) else method,
       robust = robust,
       weights = weights,
       weights_custom = weights_custom,
-      n_threads = n_threads
+      n_threads = n_threads,
+      combine = combine,
+      contrasts = Cmat,
+      return_cov = return_cov
     )
     
     # Store results
@@ -171,6 +227,17 @@ fmri_meta.group_data_h5 <- function(data,
     results$I2[voxel_indices] <- chunk_results$I2
     results$Q[voxel_indices] <- chunk_results$Q
     results$Q_df[voxel_indices] <- chunk_results$Q_df
+    if (!is.null(Cmat) && !is.null(chunk_results$con_est)) {
+      results$con_est[voxel_indices, ] <- t(chunk_results$con_est)
+      results$con_se[voxel_indices, ]  <- t(chunk_results$con_se)
+      results$con_z[voxel_indices, ]   <- t(chunk_results$con_z)
+    }
+    if (identical(return_cov, "tri") && !is.null(chunk_results$cov_tri)) {
+      if (is.null(results$cov_tri)) {
+        results$cov_tri <- matrix(NA_real_, nrow = nrow(chunk_results$cov_tri), ncol = n_voxels)
+      }
+      results$cov_tri[, voxel_indices] <- chunk_results$cov_tri
+    }
     
     if (verbose) {
       setTxtProgressBar(pb, chunk_idx)
@@ -192,13 +259,24 @@ fmri_meta.group_data_h5 <- function(data,
       Q = results$Q,
       Q_df = results$Q_df,
       model = model_info,
-      method = method,
+      method = if (!is.null(combine)) paste0("combine:", combine) else method,
       robust = robust,
       weights = weights,
       data = data,
       formula = formula,
       n_voxels = n_voxels,
-      n_subjects = n_subjects(data)
+      n_subjects = n_subjects(data),
+      contrasts = if (!is.null(Cmat)) list(
+        names = if (!is.null(contrast_names)) contrast_names else paste0("c", seq_len(ncol(Cmat))),
+        estimate = results$con_est,
+        se = results$con_se,
+        z = results$con_z
+      ) else NULL,
+      cov = if (identical(return_cov, "tri")) list(
+        type = "tri",
+        tri = results$cov_tri,
+        coef_names = colnames(model_info$X)
+      ) else NULL
     ),
     class = "fmri_meta"
   )
@@ -212,6 +290,8 @@ fmri_meta.group_data_nifti <- function(data,
                                        weights = c("ivw", "equal", "custom"),
                                        weights_custom = NULL,
                                        combine = NULL,
+                                       contrasts = NULL,
+                                       return_cov = NULL,
                                        chunk_size = 10000,
                                        n_threads = getOption("fmrireg.num_threads", 0),
                                        verbose = TRUE) {
@@ -220,6 +300,7 @@ fmri_meta.group_data_nifti <- function(data,
   method <- match.arg(method)
   robust <- match.arg(robust)
   weights <- match.arg(weights)
+  if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
   
   # Parse formula and create design matrix
   model_info <- parse_meta_formula(formula, data)
@@ -233,6 +314,29 @@ fmri_meta.group_data_nifti <- function(data,
     voxel_indices <- seq_len(n_voxels)
   }
   
+  # Build contrast matrix if provided
+  Cmat <- NULL; contrast_names <- NULL
+  if (!is.null(contrasts)) {
+    if (is.matrix(contrasts)) {
+      if (ncol(contrasts) != ncol(model_info$X)) stop("contrasts columns must match predictors", call. = FALSE)
+      Cmat <- t(contrasts)
+      contrast_names <- rownames(contrasts)
+    } else if (is.numeric(contrasts)) {
+      w <- rep(0, ncol(model_info$X)); names(w) <- colnames(model_info$X)
+      if (!is.null(names(contrasts))) {
+        w[names(contrasts)] <- contrasts
+      } else if (length(contrasts) == length(w)) {
+        w <- contrasts
+      } else {
+        stop("Unnamed contrast vector must have length equal to number of predictors", call. = FALSE)
+      }
+      Cmat <- matrix(w, ncol = 1)
+      contrast_names <- "contrast1"
+    } else {
+      stop("Unsupported 'contrasts' type; provide matrix or numeric vector", call. = FALSE)
+    }
+  }
+
   # Initialize results
   n_coef <- ncol(model_info$X)
   results <- list(
@@ -243,6 +347,12 @@ fmri_meta.group_data_nifti <- function(data,
     Q = rep(NA_real_, n_voxels),
     Q_df = rep(NA_real_, n_voxels)
   )
+  if (!is.null(Cmat)) {
+    n_con <- ncol(Cmat)
+    results$con_est <- matrix(NA_real_, n_voxels, n_con)
+    results$con_se  <- matrix(NA_real_, n_voxels, n_con)
+    results$con_z   <- matrix(NA_real_, n_voxels, n_con)
+  }
   
   colnames(results$coefficients) <- colnames(model_info$X)
   colnames(results$se) <- colnames(model_info$X)
@@ -268,11 +378,14 @@ fmri_meta.group_data_nifti <- function(data,
     chunk_results <- fit_meta_chunk(
       chunk_data,
       model_info$X,
-      method = method,
+      method = if (!is.null(combine)) paste0("combine:", combine) else method,
       robust = robust,
       weights = weights,
       weights_custom = weights_custom,
-      n_threads = n_threads
+      n_threads = n_threads,
+      combine = combine,
+      contrasts = Cmat,
+      return_cov = return_cov
     )
     
     # Store results
@@ -283,6 +396,17 @@ fmri_meta.group_data_nifti <- function(data,
     results$I2[idx_range] <- chunk_results$I2
     results$Q[idx_range] <- chunk_results$Q
     results$Q_df[idx_range] <- chunk_results$Q_df
+    if (identical(return_cov, "tri") && !is.null(chunk_results$cov_tri)) {
+      if (is.null(results$cov_tri)) {
+        results$cov_tri <- matrix(NA_real_, nrow = nrow(chunk_results$cov_tri), ncol = n_voxels)
+      }
+      results$cov_tri[, idx_range] <- chunk_results$cov_tri
+    }
+    if (!is.null(Cmat) && !is.null(chunk_results$con_est)) {
+      results$con_est[idx_range, ] <- t(chunk_results$con_est)
+      results$con_se[idx_range, ]  <- t(chunk_results$con_se)
+      results$con_z[idx_range, ]   <- t(chunk_results$con_z)
+    }
     
     if (verbose) {
       setTxtProgressBar(pb, chunk_idx)
@@ -311,7 +435,18 @@ fmri_meta.group_data_nifti <- function(data,
       formula = formula,
       n_voxels = n_voxels,
       n_subjects = n_subjects(data),
-      voxel_indices = voxel_indices  # Store which voxels were analyzed
+      voxel_indices = voxel_indices,  # Store which voxels were analyzed
+      contrasts = if (!is.null(Cmat)) list(
+        names = if (!is.null(contrast_names)) contrast_names else paste0("c", seq_len(ncol(Cmat))),
+        estimate = results$con_est,
+        se = results$con_se,
+        z = results$con_z
+      ) else NULL,
+      cov = if (identical(return_cov, "tri")) list(
+        type = "tri",
+        tri = results$cov_tri,
+        coef_names = colnames(model_info$X)
+      ) else NULL
     ),
     class = "fmri_meta"
   )
@@ -325,6 +460,8 @@ fmri_meta.group_data_csv <- function(data,
                                      weights = c("ivw", "equal", "custom"),
                                      weights_custom = NULL,
                                      combine = NULL,
+                                     contrasts = NULL,
+                                     return_cov = NULL,   # For consistency with other methods
                                      chunk_size = NULL,  # Not used for CSV
                                      n_threads = 1,       # Single-threaded for ROIs
                                      verbose = TRUE) {
@@ -387,6 +524,33 @@ fmri_meta.group_data_csv <- function(data,
       results$I2[i] <- roi_result$I2
       results$Q[i] <- roi_result$Q
       results$Q_df[i] <- roi_result$Q_df
+    } else if (!is.null(combine) && !is.null(roi_data$t)) {
+      # Combine t-statistics (t-only ROI path). Require intercept-only model.
+      if (ncol(model_info$X) != 1) {
+        stop("combine methods with t-statistics require intercept-only model (~ 1)", call. = FALSE)
+      }
+      tt <- as.numeric(roi_data$t)
+      dfi <- roi_data$df
+      if (is.null(dfi)) {
+        stop("t-statistics provided without 'df'; cannot combine", call. = FALSE)
+      }
+      # Use same combine helper with optional weighting
+      cm <- match.arg(tolower(combine), c("stouffer", "fisher", "lancaster"))
+      # Expand to Sx1 matrices for helper
+      tmat <- matrix(tt, ncol = 1)
+      se_mat <- NULL  # No SE for ROI t-only
+      # Build weights for ROI if requested
+      zc_vec <- combine_t_statistics(tmat, df = dfi, method = cm,
+                                     weights = weights, weights_custom = weights_custom,
+                                     se_mat = se_mat)
+      zc <- as.numeric(zc_vec)
+      # Store as z with se=1
+      results$coefficients[i, ] <- zc
+      results$se[i, ] <- 1
+      results$tau2[i] <- NA_real_
+      results$I2[i] <- NA_real_
+      results$Q[i] <- NA_real_
+      results$Q_df[i] <- NA_real_
     }
     
     if (verbose && i %% 10 == 0) {
@@ -459,46 +623,136 @@ parse_meta_formula <- function(formula, data) {
 #' @param n_threads Number of threads
 #' @return List with meta-analysis results
 #' @keywords internal
-fit_meta_chunk <- function(chunk_data, X, method, robust, weights, weights_custom, n_threads) {
-  # Prepare data matrices
-  Y <- chunk_data$beta  # subjects x voxels
-  V <- chunk_data$se^2   # Convert SE to variance
-  
-  # Handle custom weights if provided
-  if (weights == "equal") {
-    # Equal weights - modify variances to be equal
-    V[] <- 1
-  } else if (weights == "custom" && !is.null(weights_custom)) {
-    # Custom weights - convert to effective variances
-    # w = 1/v => v = 1/w
-    V <- matrix(1/weights_custom, nrow = nrow(V), ncol = ncol(V))
+fit_meta_chunk <- function(chunk_data, X, method, robust, weights, weights_custom, n_threads, combine = NULL, contrasts = NULL, return_cov = NULL) {
+  if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
+
+  # 1) If we have beta/SE, use standard meta-regression
+  if (!is.null(chunk_data$beta) && !is.null(chunk_data$se)) {
+    Y <- chunk_data$beta  # subjects x voxels
+    V <- chunk_data$se^2  # Convert SE to variance
+
+    # Handle custom weights if provided
+    if (weights == "equal") {
+      V[] <- 1
+    } else if (weights == "custom" && !is.null(weights_custom)) {
+      # w = 1/v => v = 1/w
+      V <- matrix(1/weights_custom, nrow = nrow(V), ncol = ncol(V))
+    }
+
+    # Set robust parameters
+    huber_c <- if (robust == "huber") 1.345 else 1.345
+    robust_iter <- if (robust == "huber") 2 else 0
+
+    # Call C++ implementation (with or without contrasts)
+    if (!is.null(contrasts) || identical(return_cov, "tri")) {
+      # Compute and return covariance triangles; derive contrasts in R if requested
+      result <- fmri_meta_fit_cov(
+        Y = Y,
+        V = V,
+        X = X,
+        method = method,
+        robust = robust,
+        huber_c = huber_c,
+        robust_iter = robust_iter,
+        n_threads = n_threads
+      )
+      out <- list(
+        coefficients = t(result$beta),
+        se = t(result$se),
+        tau2 = result$tau2,
+        I2 = result$I2_fe,
+        Q = result$Q_fe,
+        Q_df = result$df,
+        cov_tri = result$cov_tri
+      )
+      if (!is.null(contrasts)) {
+        # Compute contrasts: est = C' beta, se = sqrt(diag(C' V C)) using packed cov
+        K <- ncol(X)
+        tsize <- nrow(result$cov_tri)
+        # reconstruct per voxel cov on the fly for c'Var c
+        C <- contrasts
+        J <- ncol(C)
+        P <- ncol(Y)
+        est <- matrix(NA_real_, J, P)
+        se  <- matrix(NA_real_, J, P)
+        for (p in seq_len(P)) {
+          # unpack upper triangle to matrix
+          Vtri <- result$cov_tri[, p]
+          Vbeta <- matrix(0, ncol(X), ncol(X))
+          idx <- 1L
+          for (a in seq_len(ncol(X))) {
+            for (b in a:ncol(X)) {
+              Vbeta[a, b] <- Vtri[idx]
+              Vbeta[b, a] <- Vtri[idx]
+              idx <- idx + 1L
+            }
+          }
+          bp <- out$coefficients[p, ]  # 1 x K
+          for (j in seq_len(J)) {
+            cw <- C[, j]
+            est[j, p] <- sum(cw * bp)
+            vv <- as.numeric(t(cw) %*% Vbeta %*% cw)
+            se[j, p] <- if (is.finite(vv) && vv >= 0) sqrt(vv) else NA_real_
+          }
+        }
+        out$con_est <- est
+        out$con_se  <- se
+        out$con_z   <- est / se
+      }
+      return(out)
+    } else {
+      result <- fmri_meta_fit(
+        Y = Y,
+        V = V,
+        X = X,
+        method = method,
+        robust = robust,
+        huber_c = huber_c,
+        robust_iter = robust_iter,
+        n_threads = n_threads
+      )
+      return(list(
+        coefficients = t(result$beta),
+        se = t(result$se),
+        tau2 = result$tau2,
+        I2 = result$I2_fe,
+        Q = result$Q_fe,
+        Q_df = result$df
+      ))
+    }
   }
-  
-  # Set robust parameters
-  huber_c <- if (robust == "huber") 1.345 else 1.345
-  robust_iter <- if (robust == "huber") 2 else 0
-  
-  # Call C++ implementation
-  result <- fmri_meta_fit(
-    Y = Y,
-    V = V,
-    X = X,
-    method = method,
-    robust = robust,
-    huber_c = huber_c,
-    robust_iter = robust_iter,
-    n_threads = n_threads
-  )
-  
-  # Transpose results to match expected format (voxels x coefficients)
-  list(
-    coefficients = t(result$beta),
-    se = t(result$se),
-    tau2 = result$tau2,
-    I2 = result$I2_fe,
-    Q = result$Q_fe,
-    Q_df = result$df
-  )
+
+  # 2) If t-statistics are available and no beta/SE, allow combine methods
+  if (!is.null(chunk_data$t)) {
+    # Only intercept-only model is supported for t-only combine
+    if (ncol(X) != 1) {
+      stop("combine methods with t-statistics require intercept-only model (~ 1)", call. = FALSE)
+    }
+    tmat <- chunk_data$t           # subjects x voxels
+    df <- if (!is.null(chunk_data$df)) chunk_data$df else attr(chunk_data$t, "df")
+    if (is.null(df)) {
+      stop("t-statistics provided without 'df'; cannot combine", call. = FALSE)
+    }
+    if (is.null(combine)) {
+      stop("Only t-statistics available; please set combine = 'stouffer' or 'fisher'", call. = FALSE)
+    }
+    method_combine <- match.arg(tolower(combine), c("stouffer", "fisher", "lancaster"))
+    se_mat <- if (!is.null(chunk_data$se)) chunk_data$se else NULL
+    zc <- combine_t_statistics(tmat, df, method = method_combine,
+                               weights = weights, weights_custom = weights_custom,
+                               se_mat = se_mat)
+    # Return as a pseudo meta result: beta = z, se = 1 so z = beta/se
+    return(list(
+      coefficients = matrix(zc, ncol = 1),
+      se = matrix(1, nrow = length(zc), ncol = 1),
+      tau2 = rep(NA_real_, length(zc)),
+      I2 = rep(NA_real_, length(zc)),
+      Q = rep(NA_real_, length(zc)),
+      Q_df = rep(NA_real_, length(zc))
+    ))
+  }
+
+  stop("fit_meta_chunk: No usable data found (need beta+se or t+df)", call. = FALSE)
 }
 
 #' Fit Meta-Analysis for a Single Voxel/ROI

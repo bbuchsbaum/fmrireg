@@ -61,6 +61,10 @@ pvalues.fmri_meta <- function(object, two_tailed = TRUE) {
 
 #' Apply Contrast to Meta-Analysis Results
 #'
+#' Note: Uses exact standard errors when covariance is available (return_cov="tri")
+#' or for ROI CSV fits with non-robust estimation; otherwise uses a diagonal
+#' variance approximation.
+#'
 #' @param x An fmri_meta object
 #' @param contrast Contrast specification. Can be:
 #'   \itemize{
@@ -92,16 +96,71 @@ contrast.fmri_meta <- function(x, contrast, ...) {
     stop("Invalid contrast specification", call. = FALSE)
   }
   
-  # Apply contrast
+  # Apply contrast estimate
   contrast_est <- x$coefficients %*% contrast_weights
   
   # Compute standard error of contrast
-  # SE = sqrt(c' * V * c) where V is diagonal matrix of variances
-  contrast_var <- rowSums((x$se^2) * matrix(contrast_weights^2, 
-                                                  nrow = nrow(x$se), 
-                                                  ncol = length(contrast_weights), 
-                                                  byrow = TRUE))
-  contrast_se <- sqrt(contrast_var)
+  # Prefer exact SE when available
+  use_exact_roi <- inherits(x, "fmri_meta_roi") && inherits(x$data, "group_data_csv") && identical(x$robust, "none")
+  if (use_exact_roi) {
+    # Build X once
+    X <- x$model$X
+    n_rois <- nrow(x$coefficients)
+    contrast_se <- rep(NA_real_, n_rois)
+    for (i in seq_len(n_rois)) {
+      roi_name <- x$roi_names[i]
+      # Extract per-subject SE for this ROI
+      roi_dat <- try(extract_csv_data(x$data, roi = roi_name), silent = TRUE)
+      if (inherits(roi_dat, "try-error") || is.null(roi_dat$se)) {
+        next
+      }
+      se_subj <- as.numeric(roi_dat$se)
+      if (length(se_subj) != nrow(X)) {
+        next
+      }
+      tau2_i <- if (!is.null(x$tau2)) x$tau2[i] else 0
+      w <- 1/(se_subj^2 + max(0, tau2_i))
+      W <- diag(w)
+      XtWX <- t(X) %*% W %*% X
+      Vbeta <- tryCatch(solve(XtWX), error = function(e) MASS::ginv(XtWX))
+      cv <- as.numeric(t(contrast_weights) %*% Vbeta %*% contrast_weights)
+      contrast_se[i] <- if (is.finite(cv) && cv >= 0) sqrt(cv) else NA_real_
+    }
+  } else if (!is.null(x$cov) && is.list(x$cov) && identical(x$cov$type, "tri") && !is.null(x$cov$tri)) {
+    # Exact voxelwise using packed upper-tri covariance
+    tri <- x$cov$tri
+    K <- length(contrast_weights)
+    tsize <- K * (K + 1) / 2
+    if (nrow(tri) != tsize) {
+      stop("Packed covariance size does not match number of predictors", call. = FALSE)
+    }
+    n_feat <- nrow(x$coefficients)
+    contrast_se <- rep(NA_real_, n_feat)
+    for (p in seq_len(n_feat)) {
+      idx <- 1L
+      varp <- 0.0
+      for (a in seq_len(K)) {
+        for (b in a:K) {
+          cab <- tri[idx, p]
+          w <- contrast_weights[a] * contrast_weights[b]
+          if (b > a) {
+            varp <- varp + 2.0 * cab * w
+          } else {
+            varp <- varp + cab * w
+          }
+          idx <- idx + 1L
+        }
+      }
+      contrast_se[p] <- if (is.finite(varp) && varp >= 0) sqrt(varp) else NA_real_
+    }
+  } else {
+    # Approximate SE using only diagonal of Var(beta)
+    contrast_var <- rowSums((x$se^2) * matrix(contrast_weights^2,
+                                              nrow = nrow(x$se),
+                                              ncol = length(contrast_weights),
+                                              byrow = TRUE))
+    contrast_se <- sqrt(contrast_var)
+  }
   
   # Compute z-scores and p-values
   contrast_z <- contrast_est / contrast_se
@@ -199,8 +258,8 @@ print.fmri_meta <- function(x, ...) {
   # Show mean heterogeneity
   if (!is.null(x$tau2)) {
     cat("\nHeterogeneity:\n")
-    cat("  Mean tau²:", mean(x$tau2, na.rm = TRUE), "\n")
-    cat("  Mean I²:", mean(x$I2, na.rm = TRUE), "%\n")
+    cat("  Mean tau^2:", mean(x$tau2, na.rm = TRUE), "\n")
+    cat("  Mean I^2:", mean(x$I2, na.rm = TRUE), "%\n")
   }
   
   invisible(x)

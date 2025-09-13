@@ -219,8 +219,8 @@ This dataset type essentially behaves like a `matrix_dataset` where the matrix c
 
 ## Next
 
-- 03 Simulating fMRI Data
-- 04 fMRI Linear Model (GLM)
+- [Simulating fMRI Data](/articles/a_08_simulation.html)
+- [fMRI Linear Model (GLM)](/articles/a_09_linear_model.html)
 Once created, these dataset objects serve as the primary data input for `fmrireg`'s modeling functions:
 
 *   `event_model(..., sampling_frame = dset$sampling_frame)`

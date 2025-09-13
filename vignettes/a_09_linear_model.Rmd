@@ -620,5 +620,5 @@ For more advanced analyses, you might consider:
 
 ## Next
 
-- 05 Contrasts and Hypothesis Tests
-- 07 Group Analysis
+- [Contrasts and Hypothesis Tests](/articles/a_05_contrasts.html)
+- [Group Analysis](/articles/group_analysis.html)

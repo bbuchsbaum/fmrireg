@@ -102,6 +102,21 @@ stats.fmri_lm <- function(x, type = c("estimates", "contrasts", "F"), ...) {
   }
 }
 
+#' @method p_values fmri_lm
+#' @rdname p_values
+#' @export
+p_values.fmri_lm <- function(x, type = c("estimates", "contrasts"), ...) {
+  type <- match.arg(type)
+  
+  element <- "prob"
+  
+  if (type == "estimates") {
+    pull_stat(x, "betas", element)
+  } else {
+    pull_stat(x, type, element)
+  }
+}
+
 #' @method standard_error fmri_lm
 #' @rdname standard_error
 #' @export

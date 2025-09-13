@@ -149,9 +149,9 @@ facedes$face_gen <- droplevels(factor(facedes$face_gen))
 sframe <- sampling_frame(rep(430/2,6), TR=2)
 ev <- event_model(onset ~ hrf(face_gen, basis="gaussian"), data=facedes, 
 block= ~ run, sampling_frame=sframe)
-globonsets <- fmrihrf::global_onsets(sframe, facedes$onset, fmrihrf::blockids(ev))
-reg1_signal <- regressor(globonsets[facedes$face_gen == "male"], hrf=HRF_GAUSSIAN)
-reg2_signal <- regressor(globonsets[facedes$face_gen == "female"], hrf=HRF_GAUSSIAN)
+globonsets <- fmrihrf::global_onsets(sframe, facedes$onset, facedes$run)
+reg1_signal <- regressor(globonsets[facedes$face_gen == "male"], hrf=fmrihrf::HRF_GAUSSIAN)
+reg2_signal <- regressor(globonsets[facedes$face_gen == "female"], hrf=fmrihrf::HRF_GAUSSIAN)
 time <- samples(sframe, global=TRUE)
 y1 <- fmrihrf::evaluate(reg1_signal, time)*1.5
 y2 <- fmrihrf::evaluate(reg2_signal, time)*3.0
@@ -159,10 +159,14 @@ y <- y1+y2
 ys1 <- y + rnorm(length(y), sd=.02)
 ys2 <- y + rnorm(length(y), sd=.02)
 
-h <<- gen_hrf(hrf_bspline, N=7, span=25)
-dset <- matrix_dataset(cbind(ys1,ys2), TR=2, run_length=fmrihrf::blocklens(sframe), event_table=facedes)
-flm <- fmri_lm(onset ~ hrf(face_gen, basis=gen_hrf(hrf_bspline, N=7, span=25)), block = ~ run, 
-strategy="chunkwise", nchunks=1, dataset=dset)
+h <<- gen_hrf(fmrihrf::hrf_bspline, N=7, span=25)
+dset <- matrix_dataset(cbind(ys1,ys2), TR=2, 
+                       run_length=fmrihrf::blocklens(sframe), 
+                       event_table=facedes)
+flm <- fmri_lm(onset ~ hrf(face_gen, 
+                           basis=gen_hrf(fmrihrf::hrf_bspline, N=7, span=25)), 
+               block = ~ run, 
+               strategy="chunkwise", nchunks=1, dataset=dset)
 
 }
 \seealso{

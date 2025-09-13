@@ -23,6 +23,10 @@ is.formula <- function(x) {
   if (!is.matrix(X)) {
     X <- as.matrix(X)
   }
+  # Validate no missing or non-finite values (tests expect an error on NA input)
+  if (anyNA(X) || any(!is.finite(X))) {
+    stop(".fast_preproject: design matrix contains NA/Inf values", call. = FALSE)
+  }
   # Ensure the matrix is numeric
   if (!is.numeric(X)) {
     orig_colnames <- colnames(X)
@@ -100,6 +104,13 @@ fast_rlm_run <- function(X, Y, proj,
                          sigma_fixed = NULL) {
 
   psi <- match.arg(psi)
+
+  # Validate inputs: robust path should not accept NA/Inf
+  if (anyNA(X) || any(!is.finite(X)) || anyNA(Y) || any(!is.finite(Y))) {
+    stop("fast_rlm_run: X/Y contain NA/Inf values", call. = FALSE)
+  }
+
+
   
   # Create initial GLM context
   if (missing(proj) || is.null(proj)) {
@@ -257,9 +268,9 @@ fmri_lm <- function(formula, ...) {
 #' sframe <- sampling_frame(rep(430/2,6), TR=2)
 #' ev <- event_model(onset ~ hrf(face_gen, basis="gaussian"), data=facedes, 
 #' block= ~ run, sampling_frame=sframe)
-#' globonsets <- fmrihrf::global_onsets(sframe, facedes$onset, fmrihrf::blockids(ev))
-#' reg1_signal <- regressor(globonsets[facedes$face_gen == "male"], hrf=HRF_GAUSSIAN)
-#' reg2_signal <- regressor(globonsets[facedes$face_gen == "female"], hrf=HRF_GAUSSIAN)
+#' globonsets <- fmrihrf::global_onsets(sframe, facedes$onset, facedes$run)
+#' reg1_signal <- regressor(globonsets[facedes$face_gen == "male"], hrf=fmrihrf::HRF_GAUSSIAN)
+#' reg2_signal <- regressor(globonsets[facedes$face_gen == "female"], hrf=fmrihrf::HRF_GAUSSIAN)
 #' time <- samples(sframe, global=TRUE)
 #' y1 <- fmrihrf::evaluate(reg1_signal, time)*1.5
 #' y2 <- fmrihrf::evaluate(reg2_signal, time)*3.0
@@ -267,10 +278,14 @@ fmri_lm <- function(formula, ...) {
 #' ys1 <- y + rnorm(length(y), sd=.02)
 #' ys2 <- y + rnorm(length(y), sd=.02)
 #' 
-#' h <<- gen_hrf(hrf_bspline, N=7, span=25)
-#' dset <- matrix_dataset(cbind(ys1,ys2), TR=2, run_length=fmrihrf::blocklens(sframe), event_table=facedes)
-#' flm <- fmri_lm(onset ~ hrf(face_gen, basis=gen_hrf(hrf_bspline, N=7, span=25)), block = ~ run, 
-#' strategy="chunkwise", nchunks=1, dataset=dset)
+#' h <<- gen_hrf(fmrihrf::hrf_bspline, N=7, span=25)
+#' dset <- matrix_dataset(cbind(ys1,ys2), TR=2, 
+#'                        run_length=fmrihrf::blocklens(sframe), 
+#'                        event_table=facedes)
+#' flm <- fmri_lm(onset ~ hrf(face_gen, 
+#'                            basis=gen_hrf(fmrihrf::hrf_bspline, N=7, span=25)), 
+#'                block = ~ run, 
+#'                strategy="chunkwise", nchunks=1, dataset=dset)
 #' 
 fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE,
                          robust = FALSE, robust_options = NULL, ar_options = NULL,
@@ -283,6 +298,27 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
                     # Individual robust parameters for backward compatibility
                     robust_psi = NULL, robust_max_iter = NULL, robust_scale_scope = NULL,
                     ...) {
+
+  # --- low-rank / sketch engine fast-path (opt-in via ...$engine) ---
+  dots <- list(...)
+  if (!is.null(dots$engine)) {
+    engine  <- dots$engine
+    lowrank <- if (!is.null(dots$lowrank)) dots$lowrank else NULL
+    ar_opts <- if (!is.null(dots$ar_options)) dots$ar_options else NULL
+    # Early dispatch; avoid the standard argument validation path
+    res <- fmri_lm_lowrank_dispatch(
+      formula_or_model = formula,
+      dataset = dataset,
+      block = block,
+      baseline_model = baseline_model,
+      durations = durations,
+      drop_empty = drop_empty,
+      engine  = engine,
+      lowrank = lowrank,
+      ar_options = ar_opts
+    )
+    if (!is.null(res)) return(res)
+  }
   
   strategy <- match.arg(strategy)
   
@@ -385,6 +421,21 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
                                robust_psi = NULL, robust_max_iter = NULL,
                                robust_scale_scope = NULL,
                                ...) {
+  # --- low-rank / sketch engine fast-path (opt-in via ...$engine) ---
+  dots <- list(...)
+  if (!is.null(dots$engine)) {
+    engine  <- dots$engine
+    lowrank <- if (!is.null(dots$lowrank)) dots$lowrank else NULL
+    ar_opts <- if (!is.null(dots$ar_options)) dots$ar_options else NULL
+    res <- fmri_lm_lowrank_dispatch(
+      formula_or_model = formula,
+      dataset = dataset %||% formula$dataset %||% attr(formula, "dataset"),
+      engine  = engine,
+      lowrank = lowrank,
+      ar_options = ar_opts
+    )
+    if (!is.null(res)) return(res)
+  }
   strategy <- match.arg(strategy)
   assert_that(inherits(formula, "fmri_model"))
 

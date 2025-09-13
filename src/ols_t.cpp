@@ -82,7 +82,7 @@ List ols_t_cpp(const arma::mat& Y, const arma::mat& X) {
 //' Welch two-sample t-test across features
 //' 
 //' @param Y S x P matrix
-//' @param g Length S vector of group indicators (1/2 or 0/1)
+//' @param g_in Length S vector of group indicators (1/2 or 0/1)
 //' @return List with muA, muB, t, df (Welch), nA, nB
 //' @export
 // [[Rcpp::export]]

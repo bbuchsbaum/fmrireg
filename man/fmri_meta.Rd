@@ -12,6 +12,8 @@ fmri_meta(
   weights = c("ivw", "equal", "custom"),
   weights_custom = NULL,
   combine = NULL,
+  contrasts = NULL,
+  return_cov = NULL,
   chunk_size = 10000,
   n_threads = getOption("fmrireg.num_threads", 0),
   verbose = TRUE
@@ -45,13 +47,22 @@ Use ~ 1 + group for group comparisons, or include continuous covariates.}
 \item "custom": User-provided weights (must supply weights argument)
 }}
 
-\item{weights_custom}{Numeric vector of custom weights (required if weights = "custom")}
+\item{weights_custom}{Numeric vector or matrix of custom weights (required if
+\code{weights = "custom"}). If a vector, length must equal the number of subjects.
+If a matrix, it must be subjects x features.}
 
-\item{combine}{For t-statistic only data, combination method:
-\itemize{
-\item "stouffer": Stouffer's Z-score method
-\item "fisher": Fisher's combined probability test
-}}
+\item{combine}{For t-statistic-only data, combination method ("stouffer",
+"fisher", or "lancaster"). Stouffer combines z-scores and supports
+equal, inverse-variance, or custom weighting (via \code{weights}). Fisher uses
+equal weights. Lancaster implements a weighted Fisher method by mapping
+weights to per-subject degrees of freedom.}
+
+\item{contrasts}{Optional numeric vector or matrix specifying fit-time exact contrasts. If a
+vector is provided, its names must match the column names of the design matrix X. A matrix
+should have columns corresponding to predictors and rows corresponding to contrasts.}
+
+\item{return_cov}{Optional. If set to "tri", returns the packed upper-triangular Var(beta)
+per feature under \verb{$cov} to enable exact post-hoc contrasts via \code{contrast()}.}
 
 \item{chunk_size}{Number of voxels to process at once (default: 10000)}
 
@@ -89,5 +100,13 @@ fit <- fmri_meta(gd, formula = ~ 1 + age + sex, method = "reml", robust = "huber
 
 # Stouffer's Z for t-statistics only
 fit <- fmri_meta(gd_tstat, combine = "stouffer")
+
+# Exact post-hoc contrasts by storing covariance
+fit_cov <- fmri_meta(gd, formula = ~ 1 + group, method = "pm", return_cov = "tri")
+con <- contrast(fit_cov, c("(Intercept)" = 0, group = 1))
+
+# Exact fit-time contrast without storing covariance
+fit_con <- fmri_meta(gd, formula = ~ 1 + group, method = "pm",
+                     contrasts = c("(Intercept)" = 0, group = 1))
 }
 }

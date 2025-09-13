@@ -21,19 +21,14 @@ Imports:
     MASS,
     RANN,
     assertthat,
-    stringr,
     tibble,
     purrr,
     foreach,
     dplyr,
     ggplot2,
-    gmodels,
     lazyeval,
     tidyr,
-    iterators,
     robustbase,
-    memoise,
-    pracma,
     matrixStats,
     furrr,
     rlang,
@@ -42,14 +37,9 @@ Imports:
     RcppParallel,
     methods,
     fmridataset (>= 0.1.0),
-    numDeriv,
-    RcppArmadillo (>= 0.10.1.0),
-    splines,
     crayon,
     plotly,
     cli,
-    colorplane,
-    deflist,
     bslib,
     future.apply,
     jsonlite,
@@ -61,6 +51,8 @@ Roxygen: list(
     roclets = c("collate", "namespace", "rd", "roxyglobals::global_roclet"))
 Suggests: 
     testthat,
+    RNifti,
+    ggrepel,
     pls,
     fmristore,
     knitr,
@@ -134,6 +126,10 @@ Collate:
     'fmridataset-imports.R'
     'fmridesign-imports.R'
     'fmrihrf-imports.R'
+    'lowrank_control.R'
+    'sketch_time.R'
+    'nystrom_extend.R'
+    'fmri_lm_engine_lowrank.R'
     'fmrilm.R'
     'fmrilss-imports.R'
     'fmrireg.R'

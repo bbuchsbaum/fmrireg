@@ -56,7 +56,7 @@ print(summary_info$experimental_design)
 
 ## Next
 
-- 07 Group Analysis
+- [Group Analysis](/articles/group_analysis.html)
 
 ## Examining the Data Structure
 

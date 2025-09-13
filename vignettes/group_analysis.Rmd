@@ -20,15 +20,7 @@ set.seed(123)
 
 # Overview
 
-This vignette demonstrates a simple ROI-based group analysis using fmrireg:
-
-- Construct a group dataset from a small tabular data frame
-- Fit fixed-effects and random-effects meta-analytic models
-- Include a group covariate for a two-group comparison
-- Extract and visualize results
-
-The same workflow generalizes to voxelwise analysis by using HDF5/NIfTI inputs
-via `group_data(format = "h5"|"nifti")`.
+This vignette walks through a compact, end‑to‑end example of group analysis with fmrireg. We first construct a small ROI‑level dataset to illustrate the basic meta‑regression interface, and then move to a voxelwise example using tiny synthetic NIfTI files. Along the way we show how to compare groups with fixed‑ and random‑effects meta‑analysis, how to obtain exact contrasts either at fit‑time or post‑hoc by saving covariance, and how to perform group inference from t‑maps alone using Stouffer, Fisher, or Lancaster combinations. The same interface scales to full HDF5/NIfTI workflows created by `write_results()` and loaded via `group_data(format = "h5"|"nifti")`.
 
 # Create a small ROI dataset
 
@@ -55,9 +47,8 @@ roi_df <- data.frame(
 )
 
 # Build group dataset (CSV/ROI format)
-gd <- group_data(
+gd <- group_data_from_csv(
   roi_df,
-  format = "csv",
   effect_cols = c(beta = "beta", se = "se"),
   subject_col = "subject",
   roi_col = "roi",
@@ -222,6 +213,32 @@ img_group_est <- coef_image(fit_nii, colnames(fit_nii$coefficients)[group_col], 
 range(as.array(img_group_est), na.rm = TRUE)
 ```
 
+## Exact contrasts and stored covariance
+
+You can request exact contrasts at fit-time or store per-voxel covariance for
+exact post-hoc contrasts.
+
+```{r}
+# Exact post-hoc contrasts by storing packed Var(beta) per voxel
+fit_nii_pm <- fmri_meta(
+  gd_nii, formula = ~ 1 + group, method = "pm",
+  return_cov = "tri", verbose = FALSE
+)
+
+# Exact post-hoc contrast on the group term
+con <- contrast(fit_nii_pm, c("(Intercept)" = 0, group = 1))
+summary(con)
+
+# Exact fit-time contrast without storing covariance
+fit_nii_con <- fmri_meta(
+  gd_nii, formula = ~ 1 + group, method = "pm",
+  contrasts = matrix(c(0, 1), nrow = 1,
+                     dimnames = list("group", colnames(fit_nii_pm$model$X))),
+  verbose = FALSE
+)
+str(fit_nii_con$contrasts)
+```
+
 ## Two-sample t-test (Welch and OLS) on NIfTI
 
 As an alternative to meta-analysis, we can run two-sample voxelwise t-tests
@@ -229,39 +246,134 @@ directly on the per-subject beta maps, using either Welch's unequal-variance
 test or a standard OLS/Student t-test via a simple design matrix.
 
 ```{r}
-# Extract subject x voxel matrix of betas using the mask
-dat <- read_nifti_full(gd_nii)
-Y <- dat$beta  # S x P (subjects x voxels)
+# Welch and classic OLS via high-level R wrapper
+fit_welch <- fmri_ttest(gd_nii, formula = ~ 1 + group, engine = "welch")
+t_welch   <- as.numeric(fit_welch$t["group", ])
+df_welch  <- as.numeric(fit_welch$df["group", ])
+p_welch   <- 2 * pt(abs(t_welch), df = df_welch, lower.tail = FALSE)
 
-# Group indicator
-g_int <- as.integer(grp)           # 1=A, 2=B
-X <- cbind("(Intercept)" = 1,      # OLS design for Student t
-          group = as.integer(grp == "B"))
-
-# Welch two-sample t-test across features
-w <- welch_t_cpp(Y, g_int)
-t_welch <- as.numeric(w$t)   # length P
-df_welch <- as.numeric(w$df)
-p_welch <- 2 * pt(abs(t_welch), df = df_welch, lower.tail = FALSE)
-
-# OLS (Student) two-sample t-test via design matrix
-ols <- ols_t_cpp(Y, X)
-# Handle missing dimnames on t matrix: use rowname if available, else fall back to 2nd row
-rnames_t <- rownames(ols$t)
-if (!is.null(rnames_t) && any(rnames_t == "group")) {
-  t_ols <- ols$t["group", ]
+fit_ols   <- fmri_ttest(gd_nii, formula = ~ 1 + group, engine = "classic")
+# Prefer named row; fallback to 2nd row if rownames are missing
+rn_t      <- rownames(fit_ols$t)
+if (!is.null(rn_t) && any(rn_t == "group")) {
+  t_ols <- fit_ols$t["group", ]
+  df_ols <- as.numeric(fit_ols$df["group", ])
 } else {
-  t_ols <- ols$t[2, ]
+  t_ols <- fit_ols$t[2, ]
+  df_ols <- rep(fit_ols$df[2, 1], length(t_ols))
 }
-df_ols <- rep(ols$df, ncol(Y))
-p_ols <- 2 * pt(abs(t_ols), df = df_ols, lower.tail = FALSE)
+p_ols    <- 2 * pt(abs(t_ols), df = df_ols, lower.tail = FALSE)
 
 # Reconstruct quick image for Welch t (using the same mask/space)
 timg_welch <- NeuroVol(array(NA_real_, dim = c(8, 8, 8)), space)
-timg_welch[as.array(neuroim2::read_vol(mask_path)) > 0] <- t_welch
+mask_img   <- if (!is.null(gd_nii$mask_data)) gd_nii$mask_data else neuroim2::read_vol(mask_path)
+timg_welch[as.array(mask_img) > 0] <- t_welch
 range(as.array(timg_welch), na.rm = TRUE)
 
 # Count uncorrected significant voxels at alpha=0.05
 sum(p_welch < 0.05)
 sum(p_ols   < 0.05)
 ```
+
+# Combining t-statistics only (Stouffer/Fisher/Lancaster)
+
+When only per‑subject t‑statistics and degrees‑of‑freedom are available, you can still carry out group inference without betas/SEs by setting `combine =` in `fmri_meta()` (or in `fmri_ttest(..., engine = "meta")`). Stouffer combines signed z‑scores and supports equal, inverse‑variance or custom weights; Fisher combines p‑values with equal weights; and Lancaster provides a weighted Fisher variant by mapping weights to per‑subject degrees‑of‑freedom.
+
+```{r}
+# Derive per-subject t images from the synthetic beta/SE example
+dat_full <- read_nifti_full(gd_nii)
+tmat <- dat_full$beta / dat_full$se  # S x P
+
+# Write t images to tempdir for illustration
+t_paths <- character(length(ids))
+for (i in seq_along(ids)) {
+  img <- NeuroVol(array(NA_real_, dim = c(8, 8, 8)), space)
+  img[as.array(neuroim2::read_vol(mask_path)) > 0] <- tmat[i, ]
+  pth <- file.path(tmpdir, sprintf("%s_t.nii.gz", ids[i]))
+  write_vol(img, pth)
+  t_paths[i] <- pth
+}
+
+gd_t <- group_data_from_nifti(
+  t_paths = t_paths,
+  df = 60,  # scalar df replicated per subject for demo
+  subjects = ids,
+  covariates = data.frame(group = grp),
+  mask = mask_path
+)
+
+# Equal-weight Stouffer
+fit_st <- fmri_meta(gd_t, formula = ~ 1, combine = "stouffer", verbose = FALSE)
+
+# Weighted Stouffer using custom subject weights (e.g., sample size)
+w_subj <- rep(1, length(ids))
+fit_st_w <- fmri_meta(gd_t, formula = ~ 1, combine = "stouffer",
+                      weights = "custom", weights_custom = w_subj,
+                      verbose = FALSE)
+
+# Fisher (equal weights) and Lancaster (weighted Fisher)
+fit_fi  <- fmri_meta(gd_t, formula = ~ 1, combine = "fisher", verbose = FALSE)
+fit_la  <- fmri_meta(gd_t, formula = ~ 1, combine = "lancaster",
+                     weights = "custom", weights_custom = w_subj,
+                     verbose = FALSE)
+```
+
+# Meta engine via fmri_ttest with weights
+
+The t-test interface supports the meta engine with equal/custom weighting.
+
+```{r}
+fit_tt_meta <- fmri_ttest(gd_nii, formula = ~ 1 + group, engine = "meta",
+                          weights = "equal")
+```
+
+```{r}
+# Meta engine with custom subject weights (e.g., sample sizes or reliability)
+w_subj <- rep(1, length(ids))
+fit_tt_meta_w <- fmri_ttest(gd_nii, formula = ~ 1 + group, engine = "meta",
+                            weights = "custom", weights_custom = w_subj)
+```
+
+```{r}
+# t-only combine via fmri_ttest delegation (Lancaster, weighted Fisher)
+fit_tt_la <- fmri_ttest(gd_t, formula = ~ 1, engine = "meta",
+                        combine = "lancaster", weights = "custom",
+                        weights_custom = w_subj)
+```
+
+## ROI t-only example (Stouffer and Lancaster)
+
+You can also combine t-statistics at the ROI level from a tabular CSV. Provide
+per-subject t and df, then choose a combine method.
+
+```{r}
+roi_t_df <- data.frame(
+  subject = subjects,
+  roi = "ExampleROI",
+  t = rnorm(length(subjects), mean = 2.0, sd = 0.5),
+  df = 40,
+  stringsAsFactors = FALSE
+)
+
+gd_roi_t <- group_data_from_csv(
+  roi_t_df,
+  effect_cols = c(t = "t", df = "df"),
+  subject_col = "subject",
+  roi_col = "roi"
+)
+
+# Equal-weight Stouffer on ROI t-statistics
+fit_roi_st <- fmri_meta(gd_roi_t, formula = ~ 1, combine = "stouffer", verbose = FALSE)
+
+# Lancaster (weighted Fisher) with custom weights (e.g., per-subject reliability)
+w_roi <- rep(1, length(subjects))
+fit_roi_la <- fmri_meta(gd_roi_t, formula = ~ 1, combine = "lancaster",
+                        weights = "custom", weights_custom = w_roi,
+                        verbose = FALSE)
+
+c(fit_roi_st$method, fit_roi_la$method)
+```
+
+# A brief recap
+
+Meta‑analysis in fmrireg supports fixed‑effects and several random‑effects estimators (`method = "fe"|"pm"|"dl"|"reml"`), with optional robust Huber weighting. You can pass subject‑level covariates for group comparisons and, when working from t‑maps only, set `combine =` to use Stouffer, Fisher, or Lancaster. Exact contrasts are available either at fit‑time (via `contrasts=`) or post‑hoc by saving packed covariance with `return_cov = "tri"` and then calling `contrast()`. Weighting applies to both meta‑regression and t‑only combinations (`weights = "ivw"|"equal"|"custom"`, with `weights_custom` as a vector of length subjects or an S×P matrix). The examples above show ROI‑based meta‑regression, voxelwise fits from NIfTI, and t‑only combinations via both `fmri_meta()` and `fmri_ttest(..., engine = "meta")`.

@@ -9,7 +9,7 @@ welch_t_cpp(Y, g_in)
 \arguments{
 \item{Y}{S x P matrix}
 
-\item{g}{Length S vector of group indicators (1/2 or 0/1)}
+\item{g_in}{Length S vector of group indicators (1/2 or 0/1)}
 }
 \value{
 List with muA, muB, t, df (Welch), nA, nB

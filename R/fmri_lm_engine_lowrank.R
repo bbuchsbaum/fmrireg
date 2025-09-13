@@ -1,0 +1,426 @@
+#' Internal: run low-rank/sketched engine under fmri_lm
+#' @keywords internal
+.run_lowrank_engine <- function(fm, dataset, lowrank, ar_options = NULL) {
+  # Design (T x p)
+  X <- as.matrix(design_matrix(fm))
+  Tlen <- nrow(X); p <- ncol(X)
+  varnames <- colnames(X)
+
+  # Latent basis and loadings or full data path
+  if (inherits(dataset, "latent_dataset")) {
+    Z <- as.matrix(fmridataset::get_latent_scores(dataset))   # T x r
+    # Extract LatentNeuroVec from backend
+    lvec <- if (!is.null(dataset$lvec)) {
+      dataset$lvec
+    } else if (!is.null(dataset$backend) && !is.null(dataset$backend$data)) {
+      dataset$backend$data[[1]]
+    } else {
+      stop("Cannot find LatentNeuroVec in latent_dataset")
+    }
+    lds <- lvec@loadings                             # V x r (dgCMatrix or matrix)
+    if (inherits(lds, "Matrix")) {
+      A <- Matrix::t(lds)                            # r x V (sparse)
+    } else {
+      A <- t(lds)
+    }
+    A_is_I <- FALSE
+  } else {
+    # Fallback: treat Z as full voxel data (T x V) and A as identity (V x V)
+    Zfull <- as.matrix(fmridataset::get_data_matrix(dataset))
+    Z <- Zfull
+    A <- NULL
+    A_is_I <- TRUE
+  }
+
+  # --- AR prewhitening options ---
+  ar_opts <- ar_options %||% list()
+  by_cluster <- isTRUE(ar_opts$by_cluster)
+  ar_order <- as.integer(ar_opts$order %||% 1L)
+  no_whiten <- is.character(ar_opts$struct) && identical(ar_opts$struct, "none")
+
+  # Build sketch (shared across all branches)
+  sk <- lowrank$time_sketch %||% list(method = "gaussian", m = min(8L * p, Tlen))
+  if (is.null(sk$m)) sk$m <- min(8L * p, Tlen)
+  S <- make_time_sketch(Tlen, sk)
+
+  # --- No-whitening short-circuit (diagnostics) ---
+  if (no_whiten || ar_order <= 0L) {
+    # Sketch and solve without temporal whitening
+    if (identical(sk$method, "ihs")) {
+      sol <- ihs_latent_solve(X, Z, m = sk$m, iters = as.integer(sk$iters %||% 3L))
+      M <- sol$M; Ginv <- sol$Ginv
+      B <- if (A_is_I) M else M %*% as.matrix(A)
+      # Residuals via one SRHT draw
+      plan <- make_srht_plan(Tlen, sk$m)
+      Xs <- srht_apply(X, plan); Zs <- srht_apply(Z, plan)
+      Rres <- Zs - Xs %*% M
+      RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+      dfres <- max(1L, nrow(Xs) - p)
+      sigma2 <- colSums(RA * RA) / dfres
+    } else if (identical(sk$method, "srht")) {
+      plan <- make_srht_plan(Tlen, sk$m)
+      Xs <- srht_apply(X, plan); Zs <- srht_apply(Z, plan)
+      G <- crossprod(Xs)
+      Ginv <- tryCatch(chol2inv(chol(G)), error = function(e) {
+        ridge <- 1e-6 * sum(diag(G)) / max(1L, ncol(G))
+        chol2inv(chol(G + diag(ridge, ncol(G))))
+      })
+      R <- crossprod(Xs, Zs)
+      M <- Ginv %*% R
+      B <- if (A_is_I) M else M %*% as.matrix(A)
+      Rres <- Zs - Xs %*% M
+      RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+      dfres <- max(1L, nrow(Xs) - p)
+      sigma2 <- colSums(RA * RA) / dfres
+    } else if (identical(sk$method, "gaussian")) {
+      Sg <- S
+      Xs <- Sg %*% X; Zs <- Sg %*% Z
+      G <- crossprod(Xs)
+      Ginv <- tryCatch(chol2inv(chol(G)), error = function(e) {
+        ridge <- 1e-6 * sum(diag(G)) / max(1L, ncol(G))
+        chol2inv(chol(G + diag(ridge, ncol(G))))
+      })
+      R <- crossprod(Xs, Zs)
+      M <- Ginv %*% R
+      B <- if (A_is_I) M else M %*% as.matrix(A)
+      Rres <- Zs - Xs %*% M
+      RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+      dfres <- max(1L, nrow(Xs) - p)
+      sigma2 <- colSums(RA * RA) / dfres
+    } else { # countsketch
+      Xs <- as.matrix(S %*% X); Zs <- as.matrix(S %*% Z)
+      G <- crossprod(Xs)
+      Ginv <- tryCatch(chol2inv(chol(G)), error = function(e) {
+        ridge <- 1e-6 * sum(diag(G)) / max(1L, ncol(G))
+        chol2inv(chol(G + diag(ridge, ncol(G))))
+      })
+      R <- crossprod(Xs, Zs)
+      M <- Ginv %*% R
+      B <- if (A_is_I) M else M %*% as.matrix(A)
+      Rres <- Zs - Xs %*% M
+      RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+      dfres <- max(1L, nrow(Xs) - p)
+      sigma2 <- colSums(RA * RA) / dfres
+    }
+  } else if (by_cluster && !inherits(dataset, "latent_dataset") && !is.null(lowrank$parcels)) {
+    # --- Grouped (by parcel) whitening path, full-voxel dataset only ---
+    # Extract group ids per voxel
+    gids <- if (inherits(lowrank$parcels, "ClusteredNeuroVol")) {
+      as.integer(neuroim2::values(lowrank$parcels))
+    } else {
+      as.integer(lowrank$parcels)
+    }
+    if (length(gids) != ncol(Z)) stop("parcels/group ids length must equal number of voxels")
+    ug <- sort(unique(gids))
+
+    # Accumulators
+    Gsum <- matrix(0, p, p)
+    Rall <- matrix(0, p, ncol(Z))
+    rss <- numeric(ncol(Z))
+
+    # Estimate AR per group from parcel-mean residuals
+    # Global precompute for OLS pinch
+    XtX <- crossprod(X)
+    Pinv <- tryCatch(chol2inv(chol(XtX)) %*% t(X), error = function(e) MASS::ginv(XtX) %*% t(X))
+    # First pass: collect residuals and sizes for shrinkage
+    res_per_group <- vector("list", length(ug))
+    sizes <- integer(length(ug))
+    names(res_per_group) <- as.character(ug)
+    names(sizes) <- as.character(ug)
+    for (g in ug) {
+      Jg <- which(gids == g)
+      if (length(Jg) == 0) next
+      ybar_g <- rowMeans(Z[, Jg, drop = FALSE])
+      beta_g <- Pinv %*% ybar_g
+      resid_g <- ybar_g - drop(X %*% beta_g)
+      res_per_group[[as.character(g)]] <- resid_g
+      sizes[as.character(g)] <- length(Jg)
+    }
+    # Global phi for shrinkage
+    phi_global <- estimate_ar_parameters(unlist(res_per_group, use.names = FALSE), ar_order)
+    c0 <- as.integer(ar_opts$shrink_c0 %||% 100L)
+    # Second pass: whiten, sketch, accumulate
+    plan <- if (identical(sk$method, "srht") || identical(sk$method, "ihs")) make_srht_plan(Tlen, sk$m) else NULL
+    for (g in ug) {
+      Jg <- which(gids == g)
+      if (length(Jg) == 0) next
+      resid_g <- res_per_group[[as.character(g)]]
+      alpha_g <- sizes[as.character(g)]/(sizes[as.character(g)] + c0)
+      phi_g_raw <- estimate_ar_parameters(resid_g, ar_order)
+      phi_g <- alpha_g * phi_g_raw + (1 - alpha_g) * phi_global
+      # Whiten group
+      tmp <- ar_whiten_transform(X, Z[, Jg, drop = FALSE], phi_g, exact_first = TRUE)
+      Xw_g <- tmp$X; Zw_g <- tmp$Y
+      # Sketch
+      if (identical(sk$method, "srht") || identical(sk$method, "ihs")) {
+        Xs_g <- srht_apply(Xw_g, plan); Zs_g <- srht_apply(Zw_g, plan)
+      } else if (identical(sk$method, "gaussian")) {
+        Xs_g <- S %*% Xw_g; Zs_g <- S %*% Zw_g
+      } else { # countsketch
+        Xs_g <- as.matrix(S %*% Xw_g); Zs_g <- as.matrix(S %*% Zw_g)
+      }
+      # Accumulate cross-products
+      Gsum <- Gsum + crossprod(Xs_g)
+      Rall[, Jg] <- crossprod(Xs_g, Zs_g)
+    }
+
+    # Solve and betas
+    Ginv <- tryCatch(chol2inv(chol(Gsum)), error = function(e) {
+      ridge <- 1e-6 * sum(diag(Gsum)) / max(1L, ncol(Gsum))
+      chol2inv(chol(Gsum + diag(ridge, ncol(Gsum))))
+    })
+    M <- Ginv %*% Rall
+    B <- if (A_is_I) M else M %*% as.matrix(A)
+
+    # Residuals per group for sigma2
+    dfres <- max(1L, nrow(S) - p)
+    rss <- rss * 0
+    for (g in ug) {
+      Jg <- which(gids == g)
+      if (length(Jg) == 0) next
+      # Recompute whiten+sketch for residuals
+      ybar_g <- rowMeans(Z[, Jg, drop = FALSE])
+      beta_g <- Pinv %*% ybar_g
+      resid_g <- ybar_g - drop(X %*% beta_g)
+      phi_g <- estimate_ar_parameters(resid_g, ar_order)
+      tmp <- ar_whiten_transform(X, Z[, Jg, drop = FALSE], phi_g, exact_first = TRUE)
+      Xw_g <- tmp$X; Zw_g <- tmp$Y
+      Xs_g <- S %*% Xw_g; Zs_g <- S %*% Zw_g
+      Eg <- Zs_g - Xs_g %*% M[, Jg, drop = FALSE]
+      RA_g <- if (A_is_I) Eg else Eg %*% as.matrix(A)
+      rss[Jg] <- colSums(RA_g * RA_g)
+    }
+    sigma2 <- rss / dfres
+
+  } else {
+    # --- Global AR path ---
+    # Estimate global AR from mean residuals over columns
+    ybar <- rowMeans(Z)
+    XtX <- crossprod(X)
+    Pinv <- tryCatch(chol2inv(chol(XtX)) %*% t(X), error = function(e) MASS::ginv(XtX) %*% t(X))
+    beta <- Pinv %*% ybar
+    resid <- ybar - drop(X %*% beta)
+    phi <- estimate_ar_parameters(resid, ar_order)
+
+    tmp <- ar_whiten_transform(X, Z, phi, exact_first = TRUE)
+    Xw <- tmp$X; Zw <- tmp$Y
+    # Sketch and solve
+    if (identical(sk$method, "ihs")) {
+      if (A_is_I && !is.null(lowrank$landmarks)) {
+        # Landmark solve + Nyström extension
+        L <- as.integer(lowrank$landmarks)
+        mask <- fmridataset::get_mask(dataset)
+        coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
+        km <- stats::kmeans(coords, centers = L, iter.max = 100, nstart = 5)
+        idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
+        lcoords <- coords[idx_lm, , drop = FALSE]
+        # Solve only on landmarks
+        Zw_L <- Zw[, idx_lm, drop = FALSE]
+        sol <- ihs_latent_solve(Xw, Zw_L, m = sk$m, iters = as.integer(sk$iters %||% 3L))
+        M_L <- sol$M; Ginv <- sol$Ginv
+        BL <- M_L  # p x L
+        # Weights and extension
+        W <- build_landmark_weights(coords, lcoords, k = as.integer(lowrank$k_neighbors %||% 16L))
+        B <- extend_betas_landmarks(BL, W)
+        # Variance propagate from landmark residuals via one SRHT draw
+        plan <- make_srht_plan(Tlen, sk$m)
+        Xs <- srht_apply(Xw, plan); Zs_L <- srht_apply(Zw_L, plan)
+        Rres_L <- Zs_L - Xs %*% M_L
+        dfres <- max(1L, nrow(Xs) - p)
+        sigma2_L <- colSums(Rres_L * Rres_L) / dfres
+        W2 <- W; W2@x <- W2@x * W2@x
+        sigma2 <- as.numeric(W2 %*% sigma2_L)
+      } else {
+        sol <- ihs_latent_solve(Xw, Zw, m = sk$m, iters = as.integer(sk$iters %||% 3L))
+        M <- sol$M; Ginv <- sol$Ginv
+        B <- if (A_is_I) M else M %*% as.matrix(A)
+        # Residuals for sigma2 via one SRHT draw
+        plan <- make_srht_plan(Tlen, sk$m)
+        Xs <- srht_apply(Xw, plan); Zs <- srht_apply(Zw, plan)
+        Rres <- Zs - Xs %*% M
+        RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+        dfres <- max(1L, nrow(Xs) - p)
+        sigma2 <- colSums(RA * RA) / dfres
+      }
+    } else if (identical(sk$method, "srht")) {
+      plan <- make_srht_plan(Tlen, sk$m)
+      Xs <- srht_apply(Xw, plan)
+      if (A_is_I && !is.null(lowrank$landmarks)) {
+        L <- as.integer(lowrank$landmarks)
+        mask <- fmridataset::get_mask(dataset)
+        coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
+        km <- stats::kmeans(coords, centers = L, iter.max = 100, nstart = 5)
+        idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
+        lcoords <- coords[idx_lm, , drop = FALSE]
+        Zs_L <- srht_apply(Zw[, idx_lm, drop = FALSE], plan)
+        G <- crossprod(Xs)
+        Ginv <- tryCatch(chol2inv(chol(G)), error = function(e) {
+          ridge <- 1e-6 * sum(diag(G)) / max(1L, ncol(G))
+          chol2inv(chol(G + diag(ridge, ncol(G))))
+        })
+        R_L <- crossprod(Xs, Zs_L)
+        M_L <- Ginv %*% R_L
+        BL <- M_L
+        W <- build_landmark_weights(coords, lcoords, k = as.integer(lowrank$k_neighbors %||% 16L))
+        B <- extend_betas_landmarks(BL, W)
+        Rres_L <- Zs_L - Xs %*% M_L
+        dfres <- max(1L, nrow(Xs) - p)
+        sigma2_L <- colSums(Rres_L * Rres_L) / dfres
+        W2 <- W; W2@x <- W2@x * W2@x
+        sigma2 <- as.numeric(W2 %*% sigma2_L)
+      } else {
+        Zs <- srht_apply(Zw, plan)
+        G <- crossprod(Xs)
+        Ginv <- tryCatch(chol2inv(chol(G)), error = function(e) {
+          ridge <- 1e-6 * sum(diag(G)) / max(1L, ncol(G))
+          chol2inv(chol(G + diag(ridge, ncol(G))))
+        })
+        R <- crossprod(Xs, Zs)
+        M <- Ginv %*% R
+        B <- if (A_is_I) M else M %*% as.matrix(A)
+        Rres <- Zs - Xs %*% M
+        RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+        dfres <- max(1L, nrow(Xs) - p)
+        sigma2 <- colSums(RA * RA) / dfres
+      }
+    } else if (identical(sk$method, "gaussian")) {
+      Xs <- S %*% Xw
+      if (A_is_I && !is.null(lowrank$landmarks)) {
+        L <- as.integer(lowrank$landmarks)
+        mask <- fmridataset::get_mask(dataset)
+        coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
+        km <- stats::kmeans(coords, centers = L, iter.max = 100, nstart = 5)
+        idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
+        lcoords <- coords[idx_lm, , drop = FALSE]
+        Zs_L <- S %*% Zw[, idx_lm, drop = FALSE]
+        G <- crossprod(Xs)
+        Ginv <- tryCatch(chol2inv(chol(G)), error = function(e) {
+          ridge <- 1e-6 * sum(diag(G)) / max(1L, ncol(G))
+          chol2inv(chol(G + diag(ridge, ncol(G))))
+        })
+        R_L <- crossprod(Xs, Zs_L)
+        M_L <- Ginv %*% R_L
+        BL <- M_L
+        W <- build_landmark_weights(coords, lcoords, k = as.integer(lowrank$k_neighbors %||% 16L))
+        B <- extend_betas_landmarks(BL, W)
+        Rres_L <- Zs_L - Xs %*% M_L
+        dfres <- max(1L, nrow(Xs) - p)
+        sigma2_L <- colSums(Rres_L * Rres_L) / dfres
+        W2 <- W; W2@x <- W2@x * W2@x
+        sigma2 <- as.numeric(W2 %*% sigma2_L)
+      } else {
+        Zs <- S %*% Zw
+        G <- crossprod(Xs)
+        Ginv <- tryCatch(chol2inv(chol(G)), error = function(e) {
+          ridge <- 1e-6 * sum(diag(G)) / max(1L, ncol(G))
+          chol2inv(chol(G + diag(ridge, ncol(G))))
+        })
+        R <- crossprod(Xs, Zs)
+        M <- Ginv %*% R
+        B <- if (A_is_I) M else M %*% as.matrix(A)
+        Rres <- Zs - Xs %*% M
+        RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+        dfres <- max(1L, nrow(Xs) - p)
+        sigma2 <- colSums(RA * RA) / dfres
+      }
+    } else { # countsketch
+      Xs <- as.matrix(S %*% Xw)
+      if (A_is_I && !is.null(lowrank$landmarks)) {
+        L <- as.integer(lowrank$landmarks)
+        mask <- fmridataset::get_mask(dataset)
+        coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
+        km <- stats::kmeans(coords, centers = L, iter.max = 100, nstart = 5)
+        idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
+        lcoords <- coords[idx_lm, , drop = FALSE]
+        Zs_L <- as.matrix(S %*% Zw[, idx_lm, drop = FALSE])
+        G <- crossprod(Xs)
+        Ginv <- tryCatch(chol2inv(chol(G)), error = function(e) {
+          ridge <- 1e-6 * sum(diag(G)) / max(1L, ncol(G))
+          chol2inv(chol(G + diag(ridge, ncol(G))))
+        })
+        R_L <- crossprod(Xs, Zs_L)
+        M_L <- Ginv %*% R_L
+        BL <- M_L
+        W <- build_landmark_weights(coords, lcoords, k = as.integer(lowrank$k_neighbors %||% 16L))
+        B <- extend_betas_landmarks(BL, W)
+        Rres_L <- Zs_L - Xs %*% M_L
+        dfres <- max(1L, nrow(Xs) - p)
+        sigma2_L <- colSums(Rres_L * Rres_L) / dfres
+        W2 <- W; W2@x <- W2@x * W2@x
+        sigma2 <- as.numeric(W2 %*% sigma2_L)
+      } else {
+        Zs <- as.matrix(S %*% Zw)
+        G <- crossprod(Xs)
+        Ginv <- tryCatch(chol2inv(chol(G)), error = function(e) {
+          ridge <- 1e-6 * sum(diag(G)) / max(1L, ncol(G))
+          chol2inv(chol(G + diag(ridge, ncol(G))))
+        })
+        R <- crossprod(Xs, Zs)
+        M <- Ginv %*% R
+        B <- if (A_is_I) M else M %*% as.matrix(A)
+        Rres <- Zs - Xs %*% M
+        RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+        dfres <- max(1L, nrow(Xs) - p)
+        sigma2 <- colSums(RA * RA) / dfres
+      }
+    }
+  }
+
+  # Build fmri_lm-like result structure compatible with downstream code
+  # Use matrix-based beta_stats packager for consistent tibble output
+  sigma <- sqrt(pmax(sigma2, 0))
+  bstats <- beta_stats_matrix(Betas = B, XtXinv = Ginv, sigma = sigma,
+                              dfres = dfres, varnames = varnames)
+
+  # Event/baseline indices for coef() methods
+  tmats <- term_matrices(fm)
+  event_indices <- attr(tmats, "event_term_indices")
+  baseline_indices <- attr(tmats, "baseline_term_indices")
+
+  result <- list(
+    betas = bstats,
+    contrasts = dplyr::tibble(),
+    event_indices = event_indices,
+    baseline_indices = baseline_indices,
+    sigma = sigma,
+    rdf = dfres
+  )
+
+  ret <- list(
+    result = result,
+    model = fm,
+    strategy = "sketch",
+    bcons = list(),
+    dataset = dataset,
+    betas_fixed = B,
+    sigma2 = sigma2,
+    vcov_inv = Ginv
+  )
+  class(ret) <- "fmri_lm"
+  ret
+}
+
+#' Internal: dispatch fmri_lm low-rank/sketch engine
+#' @keywords internal
+fmri_lm_lowrank_dispatch <- function(formula_or_model, dataset, engine = NULL, lowrank = NULL,
+                                     block = NULL, baseline_model = NULL,
+                                     durations = 0, drop_empty = TRUE,
+                                     ar_options = NULL) {
+  if (is.null(engine)) return(NULL)
+  engine <- match.arg(engine, c("latent_sketch", "sketch"))
+  if (engine == "latent_sketch") {
+    # Build fmri_model reusing the standard path
+    fm <- if (inherits(formula_or_model, "fmri_model")) {
+      formula_or_model
+    } else {
+      create_fmri_model(formula_or_model,
+                        block = block,
+                        baseline_model = baseline_model,
+                        dataset = dataset,
+                        drop_empty = drop_empty,
+                        durations = durations)
+    }
+    return(.run_lowrank_engine(fm, dataset, lowrank, ar_options = ar_options))
+  }
+  NULL
+}

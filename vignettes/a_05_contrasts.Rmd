@@ -340,8 +340,8 @@ print(wts_interaction$conmat)
 
 ## Next
 
-- 06 Benchmark Datasets
-- 07 Group Analysis
+- [Benchmark Datasets](/articles/benchmark_datasets.html)
+- [Group Analysis](/articles/group_analysis.html)
 
 ## Conclusion
 

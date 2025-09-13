@@ -140,7 +140,7 @@ group_data_from_h5 <- function(paths,
 read_h5_metadata <- function(path) {
   # Use fmristore to read metadata without loading data
   tryCatch({
-    h5_handle <- fmristore::open_labeled_vec(path)
+    h5_handle <- fmristore::read_labeled_vec(path)
     on.exit(h5_handle$close_all())
     
     # Extract metadata
@@ -220,7 +220,7 @@ read_h5_chunk <- function(gd, voxel_indices, stat = NULL) {
     path <- gd$paths[i]
     
     tryCatch({
-      h5_handle <- fmristore::open_labeled_vec(path)
+      h5_handle <- fmristore::read_labeled_vec(path)
       on.exit(h5_handle$close_all())
       
       # Read specific voxels and statistics
@@ -282,7 +282,7 @@ read_h5_full <- function(gd, stat = NULL) {
     path <- gd$paths[i]
     
     tryCatch({
-      h5_handle <- fmristore::open_labeled_vec(path)
+      h5_handle <- fmristore::read_labeled_vec(path)
       on.exit(h5_handle$close_all())
       
       # Read all voxels for specified statistics

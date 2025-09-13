@@ -38,14 +38,6 @@
 #'   \item bootstrap: Logical indicating this is a bootstrap result
 #' }
 #'
-#' @examples
-#' \donttest{
-#' # Simple example with synthetic data
-#' X <- model.matrix(~ x1 + x2, data = data.frame(x1 = rnorm(100), x2 = rnorm(100)))
-#' y <- matrix(rnorm(100 * 3), 100, 3)  # 3 response variables
-#' result <- multiresponse_bootstrap_lm(modmat = X, data_env = list(.y = y),
-#'                                     nboot = 100, block_size = 20)
-#' }
 #' @keywords internal
 #' @importFrom foreach foreach %dopar%
 multiresponse_bootstrap_lm <- function(form, data_env, 
