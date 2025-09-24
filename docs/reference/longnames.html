@@ -31,8 +31,10 @@ the long names would be "term#level1:basis1", "term#level1:basis2", "term#level2
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -78,6 +80,9 @@ the long names would be "term#level1:basis1", "term#level1:basis2", "term#level2
 <span><span class="fu">longnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'convolved_term'</span></span>
+<span><span class="fu">longnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'event_model'</span></span>
 <span><span class="fu">longnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -106,7 +111,7 @@ the long names would be "term#level1:basis1", "term#level1:basis2", "term#level2
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="shortnames.html">shortnames()</a></code>, <code><a href="https://rdrr.io/pkg/fmridesign/man/event_model.html" class="external-link">event_model()</a></code>, <code><a href="https://rdrr.io/pkg/fmridesign/man/event_term.html" class="external-link">event_term()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="shortnames.html">shortnames()</a></code>, <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model()</a></code>, <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_term.html" class="external-link">event_term()</a></code></p></div>
     </div>
 
     <div class="section level2">
@@ -123,8 +128,8 @@ the long names would be "term#level1:basis1", "term#level1:basis2", "term#level2
 <span class="r-in"><span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">60</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create event model with multiple basis functions</span></span></span>
-<span class="r-in"><span><span class="va">evmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">onsets</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"fourier"</span>, nbasis <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span><span class="va">evmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">onsets</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"fourier"</span>, nbasis <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  data <span class="op">=</span> <span class="va">event_data</span>,</span></span>
 <span class="r-in"><span>  block <span class="op">=</span> <span class="op">~</span><span class="va">run</span>,</span></span>
 <span class="r-in"><span>  sampling_frame <span class="op">=</span> <span class="va">sframe</span></span></span>
@@ -132,13 +137,12 @@ the long names would be "term#level1:basis1", "term#level1:basis2", "term#level2
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Get long names including basis functions</span></span></span>
 <span class="r-in"><span><span class="va">lnames</span> <span class="op">&lt;-</span> <span class="fu">longnames</span><span class="op">(</span><span class="va">evmodel</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in UseMethod("longnames"):</span> no applicable method for 'longnames' applied to an object of class "c('event_model', 'list')"</span>
 <span class="r-in"><span><span class="co"># Returns: c("condition#A:basis1", "condition#A:basis2",</span></span></span>
 <span class="r-in"><span><span class="co">#           "condition#B:basis1", "condition#B:basis2",</span></span></span>
 <span class="r-in"><span><span class="co">#           "condition#C:basis1", "condition#C:basis2")</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create simple event term</span></span></span>
-<span class="r-in"><span><span class="va">eterm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/event_term.html" class="external-link">event_term</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span><span class="va">eterm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_term.html" class="external-link">event_term</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>condition <span class="op">=</span> <span class="va">event_data</span><span class="op">$</span><span class="va">condition</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  onsets <span class="op">=</span> <span class="va">event_data</span><span class="op">$</span><span class="va">onsets</span>,</span></span>
 <span class="r-in"><span>  blockids <span class="op">=</span> <span class="va">event_data</span><span class="op">$</span><span class="va">run</span></span></span>

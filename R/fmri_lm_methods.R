@@ -132,6 +132,128 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
   }
 }
 
+#' @noRd
+#' @keywords internal
+.tidy_stat_block <- function(tbl, block = c("betas", "contrasts")) {
+  block <- match.arg(block)
+  if (!inherits(tbl, "tbl_df") || !"data" %in% names(tbl)) {
+    stop("Expected tibble with nested data column", call. = FALSE)
+  }
+
+  nested <- tbl$data[[1]]
+  if (nrow(nested) == 0) {
+    return(tibble::tibble())
+  }
+
+  key_cols <- switch(block,
+    betas = c("estimate", "se", "stat", "prob", "sigma"),
+    contrasts = c("estimate", "se", "stat", "prob", "sigma")
+  )
+
+  if (!all(key_cols %in% names(nested))) {
+    stop("Unexpected structure in nested statistics table", call. = FALSE)
+  }
+
+  cols <- lapply(key_cols, function(nm) {
+    mats <- nested[[nm]]
+    if (length(mats) == 0 || is.null(mats[[1]])) {
+      NULL
+    } else {
+      mats[[1]]
+    }
+  })
+  names(cols) <- key_cols
+  cols
+}
+
+#' @noRd
+#' @keywords internal
+.tidy_fmri_stats <- function(model, type = c("estimates", "contrasts")) {
+  type <- match.arg(type)
+  block <- if (type == "estimates") model$result$betas else model$result$contrasts
+
+  if (is.null(block) || nrow(block) == 0) {
+    return(tibble::tibble())
+  }
+
+  mats <- .tidy_stat_block(block, block = if (type == "estimates") "betas" else "contrasts")
+  if (length(mats) == 0 || any(vapply(mats, is.null, logical(1)))) {
+    return(tibble::tibble())
+  }
+  estimate_mat <- as.matrix(mats$estimate)
+  se_mat <- as.matrix(mats$se)
+  stat_mat <- as.matrix(mats$stat)
+  prob_mat <- as.matrix(mats$prob)
+
+  add_names <- function(target, reference) {
+    if (is.null(colnames(target)) && !is.null(colnames(reference))) {
+      colnames(target) <- colnames(reference)
+    }
+    target
+  }
+
+  stat_mat <- add_names(stat_mat, estimate_mat)
+  se_mat <- add_names(se_mat, estimate_mat)
+  prob_mat <- add_names(prob_mat, estimate_mat)
+  estimate_mat <- add_names(estimate_mat, stat_mat)
+
+  if (is.null(colnames(estimate_mat))) {
+    colnames(estimate_mat) <- paste0("term", seq_len(ncol(estimate_mat)))
+  }
+  se_mat <- add_names(se_mat, estimate_mat)
+  stat_mat <- add_names(stat_mat, estimate_mat)
+  prob_mat <- add_names(prob_mat, estimate_mat)
+
+  term_names <- colnames(estimate_mat)
+  if (type == "contrasts" && !is.null(block$conmat) && length(block$conmat) > 0) {
+    cm <- block$conmat[[1]]
+    if (!is.null(colnames(cm))) {
+      term_names <- colnames(cm)
+    }
+  }
+
+  estimate_df <- as.data.frame(estimate_mat)
+  se_df <- as.data.frame(se_mat)
+  stat_df <- as.data.frame(stat_mat)
+  prob_df <- as.data.frame(prob_mat)
+  colnames(estimate_df) <- term_names
+  colnames(se_df) <- term_names
+  colnames(stat_df) <- term_names
+  colnames(prob_df) <- term_names
+
+  n_vox <- nrow(estimate_df)
+  term_names <- colnames(estimate_df)
+
+  result <- tibble::tibble(
+    voxel = rep(seq_len(n_vox), each = length(term_names)),
+    term = rep(term_names, times = n_vox),
+    estimate = as.vector(as.matrix(estimate_df)),
+    std_error = as.vector(as.matrix(se_df)),
+    statistic = as.vector(as.matrix(stat_df)),
+    p_value = as.vector(as.matrix(prob_df))
+  )
+
+  if (!is.null(block$df.residual)) {
+    result$df_residual <- rep(block$df.residual[1], nrow(result))
+  }
+
+  result
+}
+
+#' @export
+tidy.fmri_lm <- function(x, type = c("estimates", "contrasts"), ...) {
+  stats_tbl <- .tidy_fmri_stats(x, match.arg(type))
+  clean_condition <- function(label) {
+    label <- gsub("^conditioncondition_condition\\.", "", label)
+    label <- gsub("^condition_condition\\.", "", label)
+    gsub("\\.", " ", label)
+  }
+  if (nrow(stats_tbl)) {
+    stats_tbl$term <- clean_condition(stats_tbl$term)
+  }
+  stats_tbl
+}
+
 #' @method print fmri_lm
 #' @export
 print.fmri_lm <- function(x, ...) {

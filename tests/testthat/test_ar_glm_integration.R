@@ -153,3 +153,70 @@ test_that("AR+GLM: Iterative GLS improves estimates", {
   # Coefficients should be similar but potentially refined with more iterations
   expect_equal(coef(fit_gls1), coef(fit_gls2), tolerance = 0.2)
 })
+
+test_that("ar_parameters returns stored AR estimates", {
+  skip_if_not_installed("fmriAR")
+  set.seed(555)
+  n_time <- 80
+  true_phi <- 0.5
+
+  X <- cbind(1, rep(c(0, 1), each = n_time / 2))
+  Y <- matrix(0, n_time, 4)
+  for (v in seq_len(ncol(Y))) {
+    err <- as.numeric(arima.sim(list(ar = true_phi), n = n_time))
+    Y[, v] <- X %*% c(0, 2) + err
+  }
+
+  etab <- data.frame(onset = 1, run = 1)
+  dset <- fmridataset::matrix_dataset(Y, TR = 1, run_length = n_time, event_table = etab)
+
+  fit <- fmri_lm(onset ~ hrf(onset), block = ~ run, dataset = dset, baseline_model = NULL,
+                 ar_options = list(struct = "ar1"), use_fast_path = TRUE)
+
+  ar_avg <- ar_parameters(fit)
+  expect_type(ar_avg, "double")
+  expect_gte(length(ar_avg), 1)
+  expect_true(abs(ar_avg[1]) < 1)
+
+  ar_per_run <- ar_parameters(fit, scope = "per_run")
+  expect_true(is.list(ar_per_run))
+  expect_true(length(ar_per_run) >= 1)
+
+  ar_raw <- ar_parameters(fit, scope = "raw")
+  expect_true(!is.null(ar_raw))
+})
+
+test_that("chunkwise robust fitting produces finite standard errors", {
+  TR <- 2
+  run_length <- c(80, 80)
+  event_table <- data.frame(
+    onset = c(10, 40, 60, 15, 45, 65),
+    duration = 0,
+    condition = rep(c("c1", "c2"), each = 3),
+    run = rep(1:2, each = 3)
+  )
+
+  sframe <- sampling_frame(run_length, TR = TR)
+  time_points <- samples(sframe, global = TRUE)
+  global_onsets <- fmrihrf::global_onsets(sframe, event_table$onset, event_table$run)
+
+  reg1 <- regressor(global_onsets[event_table$condition == "c1"], fmrihrf::HRF_SPMG1, amplitude = 1)
+  reg2 <- regressor(global_onsets[event_table$condition == "c2"], fmrihrf::HRF_SPMG1, amplitude = 1.5)
+  signal <- evaluate(reg1, time_points) + evaluate(reg2, time_points)
+  noise <- simulate_noise_vector(length(time_points), TR = TR, ar = 0.4, sd = 0.4,
+                                 drift_freq = 1/128, drift_amplitude = 0.5, physio = TRUE)
+
+  observed <- signal + noise
+  datamat <- cbind(observed, observed * 0.9, observed * 0.7)
+
+  dset <- fmridataset::matrix_dataset(datamat = datamat, TR = TR,
+                                      run_length = run_length,
+                                      event_table = event_table)
+
+  fit_robust <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset,
+                        strategy = "chunkwise", nchunks = 1,
+                        robust = TRUE, robust_psi = "huber", robust_max_iter = 2)
+
+  se_robust <- standard_error(fit_robust)
+  expect_false(any(!is.finite(se_robust[[1]])))
+})

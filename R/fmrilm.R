@@ -671,7 +671,8 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
     model = fmrimod,
     strategy = strategy,
     bcons = processed_conlist,
-    dataset = dataset
+    dataset = dataset,
+    ar_coef = result$ar_coef
   )
   
   class(ret) <- "fmri_lm"
@@ -1241,7 +1242,8 @@ chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks
         sigma <- sqrt(resvar)
 
         cres[[i]] <- list(bstats = ret$bstats, contrasts = ret$contrasts,
-                          rss = rss, rdf = rdf, sigma = sigma)
+                          rss = rss, rdf = rdf, sigma = sigma,
+                          ar_coef = NULL)
         if (progress) cli::cli_progress_update(id = pb)
       }
 
@@ -1489,7 +1491,8 @@ chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks
                                contrasts = contrasts,
                                rss = res$rss,
                                rdf = proj_global_robustly_weighted$dfres,
-                               sigma = sigma_vec)
+                               sigma = sigma_vec,
+                               ar_coef = NULL)
                                
               if (progress) cli::cli_progress_update(id = pb)
           }
@@ -1599,7 +1602,8 @@ chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks
                             contrasts = contrasts,
                             rss = res$rss,
                             rdf = proj$dfres,
-                            sigma = sigma_vec)
+                            sigma = sigma_vec,
+                            ar_coef = NULL)
           if (progress) cli::cli_progress_update(id = pb)
       }
       # -------- End New Fast Path --------
@@ -1733,7 +1737,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                   rss = run_result$rss,
                   rdf = run_result$dfres,
                   resvar = mean(run_result$sigma^2),
-                  sigma = run_result$sigma
+                  sigma = run_result$sigma,
+                  ar_coef = run_result$phi_hat
               )
               if (progress) cli::cli_progress_update(id = pb)
           }
@@ -1795,23 +1800,25 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                   proj_w <- .fast_preproject(tmp$X)
                   ctx_vox_w <- glm_context(X = tmp$X, Y = tmp$Y, proj = proj_w, phi_hat = phi_voxel)
 
-                  if (cfg$robust$type != FALSE) {
+              if (cfg$robust$type != FALSE) {
                       sigma_fixed_for_vox <- if (cfg$robust$scale_scope == "global" && !is.null(sigma_fixed)) sigma_fixed else NULL
                       rfit <- robust_iterative_fitter(ctx_vox_w, cfg$robust, tmp$X, sigma_fixed_for_vox)
                       list(beta = rfit$betas_robust,
                            XtXinv = rfit$XtWXi_final,
                            rss = sum((tmp$Y - tmp$X %*% rfit$betas_robust)^2),
                            sigma = rfit$sigma_robust_scale_final,
-                           rw = rfit$robust_weights_final)
-                  } else {
+                           rw = rfit$robust_weights_final,
+                           phi = phi_voxel)
+              } else {
                       fit_v <- solve_glm_core(ctx_vox_w)
                       list(beta = fit_v$betas,
                            XtXinv = proj_w$XtXinv,
                            rss = fit_v$rss,
                            sigma = sqrt(fit_v$sigma2),
-                           rw = NULL)
-                  }
+                           rw = NULL,
+                           phi = phi_voxel)
               }
+          }
 
               voxel_indices <- seq_len(n_voxels)
               voxel_results <- if (parallel_voxels) {
@@ -1847,6 +1854,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                                                     fconlist_weights, dfres,
                                                     robust_w_list, ar_order)
 
+              phi_voxel_list <- lapply(voxel_results, `[[`, "phi")
+
               cres[[i]] <- list(
                   conres = conres,
                   bstats = bstats,
@@ -1855,7 +1864,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                   rss = rss_voxelwise,
                   rdf = dfres,
                   resvar = sigma_voxelwise^2,
-                  sigma = sigma_voxelwise
+                  sigma = sigma_voxelwise,
+                  ar_coef = phi_voxel_list
               )
               if (progress) cli::cli_progress_update(id = pb)
           }
@@ -1889,7 +1899,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                   rss = rss,
                   rdf = rdf,
                   resvar = resvar,
-                  sigma = sigma
+                  sigma = sigma,
+                  ar_coef = NULL
               )
               if (progress) cli::cli_progress_update(id = pb)
           }
@@ -2002,7 +2013,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
               rss = rss_final,
               rdf = dfres_final,
               resvar = rss_final / dfres_final,
-              sigma = sigma_vec
+              sigma = sigma_vec,
+              ar_coef = run_result$phi_hat
             )
             
             if (progress) cli::cli_progress_update(id = pb)
@@ -2071,7 +2083,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
               rss = gls$rss,
               rdf = proj_iter$dfres,
               resvar = gls$sigma2,
-              sigma = sigma_vec
+              sigma = sigma_vec,
+              ar_coef = if (ar_modeling) list(phi_hat_run) else NULL
             )
         }
         if (progress) cli::cli_progress_update(id = pb)
@@ -2100,6 +2113,9 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   resvar <- rss / rdf # Overall residual variance
   
   # Pool over runs
+  ar_coef_list <- lapply(cres, function(x) x$ar_coef)
+  ar_coef_list <- Filter(function(x) !is.null(x) && length(unlist(x)) > 0, ar_coef_list)
+
   if (length(cres) > 1) {
     # meta_contrasts expects a list of lists (runs) of lists (contrasts) of tibbles?
     # Or list (runs) of lists (contrasts) where elements are the tibbles?
@@ -2123,7 +2139,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
       sigma = sigma, # Pooled sigma
       rss = rss,     # Pooled rss
       rdf = rdf,     # Pooled rdf
-      resvar = resvar # Pooled resvar
+      resvar = resvar, # Pooled resvar
+      ar_coef = if (length(ar_coef_list) > 0) ar_coef_list else NULL
     )
   } else {
     # Single run - need to combine contrasts into single tibble format
@@ -2147,7 +2164,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
       sigma = cres[[1]]$sigma, # Use run sigma
       rss = cres[[1]]$rss,
       rdf = cres[[1]]$rdf,
-      resvar = cres[[1]]$resvar
+      resvar = cres[[1]]$resvar,
+      ar_coef = if (length(ar_coef_list) > 0) ar_coef_list[[1]] else NULL
     )
   }
 }

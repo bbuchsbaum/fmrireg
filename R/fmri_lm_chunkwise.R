@@ -51,6 +51,16 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, cf
   proj_global <- .fast_preproject(modmat)
   Vu <- proj_global$XtXinv
   
+  # Build run indices for AR-aware slow path
+  run_indices <- NULL
+  if (cfg$ar$struct != "iid") {
+    run_indices <- lapply(
+      collect_chunks(exec_strategy("runwise")(dset)),
+      `[[`,
+      "row_ind"
+    )
+  }
+
   # Process chunks
   if (use_fast_path) {
     # Fast path implementation
@@ -81,6 +91,7 @@ chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, cf
       baseline_indices = baseline_indices,
       Vu = Vu,
       modmat = modmat,
+      run_indices = run_indices,
       verbose = verbose,
       progress = progress
     )
@@ -250,6 +261,9 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
   # Unpack results
   out <- unpack_chunkwise(cres, event_indices, baseline_indices)
   out$cov.unscaled <- Vu
+  ar_coef_list <- lapply(cres, function(x) x$ar_coef)
+  ar_coef_list <- Filter(function(x) !is.null(x) && length(unlist(x)) > 0, ar_coef_list)
+  out$ar_coef <- if (length(ar_coef_list) > 0) ar_coef_list else NULL
   out
 }
 
@@ -258,42 +272,128 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
 #' @noRd
 chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
                               tmats, vnames, event_indices, baseline_indices,
-                              Vu, modmat, verbose = FALSE, progress = FALSE) {
+                              Vu, modmat, run_indices = NULL,
+                              verbose = FALSE, progress = FALSE) {
   
   # Determine fitting function
   lmfun <- if (cfg$robust$type != FALSE) multiresponse_rlm else multiresponse_lm
   
   # Setup data environment
   data_env <- list2env(tmats)
-  
-  cres <- vector("list", length(chunks))
   form <- get_formula(model)
+  proj_modmat <- .fast_preproject(modmat)
+
+  # Prepare contrast weights for integrated solver path
+  simple_conlist <- Filter(function(x) inherits(x, "contrast"), contrast_objects)
+  simple_conlist_weights <- lapply(simple_conlist, function(x) {
+    w <- x$weights
+    attr(w, "colind") <- attr(x, "colind")
+    w
+  })
+  if (length(simple_conlist) > 0) {
+    names(simple_conlist_weights) <- sapply(simple_conlist, `[[`, "name")
+  }
+
+  fconlist <- Filter(function(x) inherits(x, "Fcontrast"), contrast_objects)
+  fconlist_weights <- lapply(fconlist, function(x) {
+    w <- x$weights
+    attr(w, "colind") <- attr(x, "colind")
+    w
+  })
+  if (length(fconlist) > 0) {
+    names(fconlist_weights) <- sapply(fconlist, `[[`, "name")
+  }
+
+  needs_integrated <- !(cfg$ar$struct %in% c("iid", "none")) || cfg$robust$type != FALSE
+  if (needs_integrated && is.null(run_indices)) {
+    run_indices <- list(seq_len(nrow(modmat)))
+  }
+
+  cres <- vector("list", length(chunks))
   
   for (i in seq_along(chunks)) {
     ym <- chunks[[i]]
     if (verbose) message("Processing chunk ", ym$chunk_num)
-    
-    data_env[[".y"]] <- as.matrix(ym$data)
-    
-    ret <- lmfun(form, data_env, contrast_objects, vnames, fcon = NULL, modmat = modmat)
-    
-    rss <- colSums(as.matrix(ret$fit$residuals^2))
-    rdf <- ret$fit$df.residual
-    resvar <- rss / rdf
-    sigma <- sqrt(resvar)
-    
-    cres[[i]] <- list(
-      bstats = ret$bstats,
-      contrasts = ret$contrasts,
-      event_indices = event_indices,
-      baseline_indices = baseline_indices
-    )
-    
+
+    Y_chunk <- as.matrix(ym$data)
+
+    if (needs_integrated) {
+      result <- solve_integrated_glm(
+        X = modmat,
+        Y = Y_chunk,
+        config = cfg,
+        run_indices = run_indices
+      )
+
+      betas <- result$betas %||% result$coefficients
+      if (!is.matrix(betas)) {
+        betas <- as.matrix(betas)
+      }
+
+      XtXinv <- result$XtXinv %||% proj_modmat$XtXinv
+      sigma_vec <- result$sigma %||% sqrt(result$sigma2)
+      sigma_vec <- as.numeric(sigma_vec)
+      if (length(sigma_vec) == 1L) {
+        sigma_vec <- rep(sigma_vec, ncol(betas))
+      }
+      dfres <- result$df_residual %||% proj_modmat$dfres
+      ar_order <- result$ar_order %||% switch(cfg$ar$struct,
+        ar1 = 1L,
+        ar2 = 2L,
+        arp = cfg$ar$p,
+        0L
+      )
+
+      bstats <- beta_stats_matrix(
+        betas,
+        XtXinv,
+        sigma_vec,
+        dfres,
+        colnames(modmat),
+        robust_weights = result$robust_weights,
+        ar_order = ar_order
+      )
+
+      conres <- fit_lm_contrasts_fast(
+        betas,
+        sigma_vec^2,
+        XtXinv,
+        simple_conlist_weights,
+        fconlist_weights,
+        dfres,
+        robust_weights = result$robust_weights,
+        ar_order = ar_order
+      )
+
+      cres[[i]] <- list(
+        bstats = bstats,
+        contrasts = conres,
+        event_indices = event_indices,
+        baseline_indices = baseline_indices,
+        ar_coef = result$ar_coef %||% result$phi_hat
+      )
+    } else {
+      data_env[[".y"]] <- Y_chunk
+
+      ret <- lmfun(form, data_env, contrast_objects, vnames, fcon = NULL, modmat = modmat)
+
+      cres[[i]] <- list(
+        bstats = ret$bstats,
+        contrasts = ret$contrasts,
+        event_indices = event_indices,
+        baseline_indices = baseline_indices,
+        ar_coef = NULL
+      )
+    }
+
     if (progress) cli::cli_progress_update()
   }
   
   # Unpack results
   out <- unpack_chunkwise(cres, event_indices, baseline_indices)
   out$cov.unscaled <- Vu
+  ar_coef_list <- lapply(cres, function(x) x$ar_coef)
+  ar_coef_list <- Filter(function(x) !is.null(x) && length(unlist(x)) > 0, ar_coef_list)
+  out$ar_coef <- if (length(ar_coef_list) > 0) ar_coef_list else NULL
   out
 }

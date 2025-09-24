@@ -182,20 +182,32 @@ NULL
       return(rep(0, order))
     }
 
-    resid_vec <- rowMeans(block, na.rm = TRUE)
-    resid_vec <- resid_vec[is.finite(resid_vec)]
-    if (length(resid_vec) <= order) {
+    accum <- rep(0, order)
+    used  <- 0L
+
+    for (j in seq_len(ncol(block))) {
+      resid_vec <- block[, j]
+      resid_vec <- resid_vec[is.finite(resid_vec)]
+      if (length(resid_vec) <= order) {
+        next
+      }
+
+      phi <- estimate_ar_parameters(resid_vec, order)
+      if (length(phi) < order) {
+        phi <- c(phi, rep(0, order - length(phi)))
+      } else if (length(phi) > order) {
+        phi <- phi[seq_len(order)]
+      }
+
+      accum <- accum + phi
+      used <- used + 1L
+    }
+
+    if (used == 0L) {
       return(rep(0, order))
     }
 
-    phi <- estimate_ar_parameters(resid_vec, order)
-    if (length(phi) < order) {
-      phi <- c(phi, rep(0, order - length(phi)))
-    } else if (length(phi) > order) {
-      phi <- phi[seq_len(order)]
-    }
-
-    phi
+    accum / used
   })
 }
 
@@ -289,16 +301,8 @@ NULL
   if (!is.null(target_order)) {
     phi_list <- .estimate_phi_fixed_order(residuals, target_order, ar_params$pooling, run_indices)
     theta_list <- replicate(length(phi_list), numeric(0), simplify = FALSE)
-    phi_for_plan <- if (identical(ar_params$pooling, "global")) {
-      phi_list[[1]]
-    } else {
-      phi_list
-    }
-    theta_for_plan <- if (identical(ar_params$pooling, "global")) {
-      theta_list[[1]]
-    } else {
-      theta_list
-    }
+    phi_for_plan <- phi_list
+    theta_for_plan <- theta_list
 
     return(fmriAR::compat$plan_from_phi(
       phi = phi_for_plan,

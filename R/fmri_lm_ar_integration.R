@@ -173,16 +173,20 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
   )
 
   # Solve final whitened system
+  proj_white <- .fast_preproject(ar_result$X_white)
   glm_ctx_white <- glm_context(
     X = ar_result$X_white,
     Y = ar_result$Y_white,
-    proj = .fast_preproject(ar_result$X_white)
+    proj = proj_white
   )
 
   result <- solve_glm_core(glm_ctx_white, return_fitted = TRUE)
 
+  result$XtXinv <- proj_white$XtXinv
+
   # Add AR info
   result$ar_coef <- ar_result$ar_coef
+  result$phi_hat <- ar_result$ar_coef
   result$ar_order <- .get_ar_order(ar_result$plan, ar_opts)
   result$ar_plan <- ar_result$plan  # Store for downstream use
 

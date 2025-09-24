@@ -139,8 +139,8 @@ true_signal <- signal1 + signal2
 noise <- simulate_noise_vector(
   n = length(time_points),
   TR = TR,
-  ar = c(0.3),         # AR coefficient (temporal autocorrelation)
-  ma = c(0.2),         # MA coefficient
+  ar = c(0.7),         # Stronger AR(1) coefficient to accentuate autocorrelation
+  ma = numeric(0),     # Pure AR structure keeps the example simple
   drift_freq = 1/128,  # Slow drift
   drift_amplitude = 1, # Moderate drift amplitude
   physio = TRUE,       # Include physiological noise
@@ -229,6 +229,9 @@ fast AR(1) prewhitening step by setting `cor_struct = "ar1"`. This estimates the
 AR coefficient from an initial OLS fit, whitens the data and design matrix, and
 refits the GLM.
 
+With stronger temporal autocorrelation in the simulated noise, the
+prewhitened model recovers tighter standard errors than OLS.
+
 ```{r, message=FALSE}
 model_ar1 <- fmri_lm(
   formula = onset ~ hrf(condition),
@@ -237,14 +240,21 @@ model_ar1 <- fmri_lm(
   strategy = "chunkwise",
   nchunks = 1,
   cor_struct = "ar1",
-  cor_iter = 1
+  cor_iter = 2              # Iterate to refine the AR(1) estimate
 )
 
 # Compare standard errors (first few voxels)
 se_ols <- standard_error(model)
 se_ar1 <- standard_error(model_ar1)
-head(cbind(OLS = se_ols[[1]], AR1 = se_ar1[[1]]))
+head(round(cbind(OLS = se_ols[[1]], AR1 = se_ar1[[1]]), 4))
+
+# Inspect the estimated AR coefficient (shared across voxels in this example)
+model_ar1$ar_coef[[1]]
 ```
+
+The AR(1) model now estimates a non-zero autoregressive coefficient and produces
+notably smaller standard errors than the plain OLS fit, illustrating how
+prewhitening improves efficiency when temporal autocorrelation is present.
 
 The `cor_struct` argument also accepts `"arp"` for higher-order autoregressive
 models. This setting models AR coefficients only (no moving-average terms).
@@ -256,8 +266,7 @@ function can mitigate their impact by enabling row-wise robust weighting. When `
 Iteratively Reweighted Least Squares loop down-weights frames with large residuals. The `robust_psi`
 argument selects the weighting function and `robust_max_iter` controls the number of iterations.
 
-```{r, message=FALSE, eval=FALSE}
-# Note: Robust fitting example - requires bug fix in chunkwise_lm_slow
+```{r, message=FALSE}
 model_robust <- fmri_lm(
   formula = onset ~ hrf(condition),
   block   = ~ run,
@@ -273,7 +282,7 @@ se_robust <- standard_error(model_robust)
 head(cbind(OLS = se_ols[[1]], Robust = se_robust[[1]]))
 ```
 
-Robust fitting guards against outlier time points but will not correct voxel-specific spikes. P-values rely on a robust residual scale and should be interpreted as approximate.
+Robust fitting guards against outlier time points but will not correct voxel-specific spikes. In this simulated example the Huber weights inflate the standard errors slightly, reflecting the additional uncertainty introduced by potential outliers. P-values rely on a robust residual scale and should be interpreted as approximate.
 
 
 
@@ -292,10 +301,21 @@ kable(beta_estimates, caption = "Coefficient estimates for each condition and vo
 
 
 ```{r, message=FALSE, fig.width=7, fig.height=7}
+# Helper to clean condition column labels for readability
+clean_condition_label <- function(x) {
+  x <- gsub("^conditioncondition_condition\\.", "", x)
+  x <- gsub("^condition_condition\\.", "", x)
+  gsub("\\.", " ", x)
+}
+
 # Reshape for plotting (works with both approaches)
-beta_long <- as.data.frame(beta_estimates) %>%
-  mutate(voxel = row_number()) %>%
-  pivot_longer(cols = -voxel, names_to = "condition", values_to = "estimate")
+beta_long <- as.data.frame(t(beta_estimates)) %>%
+  mutate(voxel_index = row_number()) %>%
+  pivot_longer(cols = -voxel_index, names_to = "condition", values_to = "estimate") %>%
+  mutate(
+    condition = clean_condition_label(condition),
+    voxel = paste0("voxel", voxel_index)
+  )
 
 # Plot coefficient estimates
 ggplot(beta_long, aes(x = condition, y = estimate, fill = condition)) +
@@ -321,28 +341,14 @@ The bar plot shows the estimated coefficients for each condition across the thre
 ### 2. T-Statistics and P-Values
 
 ```{r, message=FALSE, fig.width=7, fig.height=5}
-# Extract t-statistics and standard errors
-t_stats <- stats(model)
-std_errors <- standard_error(model)
-```
+estimate_stats <- tidy(model, type = "estimates") %>%
+  filter(grepl("condition", term)) %>%
+  mutate(condition = clean_condition_label(term),
+         voxel = paste0("voxel", voxel)) %>%
+  select(voxel, condition, estimate, std_error, statistic, p_value)
 
-
-```{r, message=FALSE, fig.width=7, fig.height=7, eval=FALSE}
-# Note: Statistical results visualization - requires proper stats() method implementation
-# Display the statistical results
-kable(t_stats, caption = "T-statistics for each condition and voxel")
-kable(std_errors, caption = "Standard errors for each condition and voxel")
-
-# The following code would combine and visualize statistical results:
-# result_summary <- data.frame(
-#   voxel = rep(1:nrow(beta_estimates), ncol(beta_estimates)),
-#   condition = rep(colnames(beta_estimates), each = nrow(beta_estimates)),
-#   estimate = as.vector(as.matrix(beta_estimates)),
-#   t_statistic = as.vector(t_stats),
-#   std_error = as.vector(std_errors)
-# )
-# result_summary$p_value <- 2 * pt(-abs(result_summary$t_statistic), df = run_length - 2)
-# ... visualization code ...
+kable(estimate_stats, digits = 4,
+      caption = "Coefficient estimates with associated statistics by voxel and condition")
 ```
 
 The t-statistics quantify the reliability of the estimated effects. Higher absolute t-values indicate more reliable estimates. In our simulation, all conditions in all voxels show significant activity (p < 0.05).
@@ -351,8 +357,7 @@ The t-statistics quantify the reliability of the estimated effects. Higher absol
 
 A key advantage of the GLM approach is the ability to directly compare conditions using contrasts.
 
-```{r, message=FALSE, fig.width=7, fig.height=5, eval=FALSE}
-# Note: Contrast analysis example - requires bug fix in event_model parsing
+```{r, message=FALSE, fig.width=7, fig.height=5}
 # Define a contrast specification for comparing condition2 vs condition1
 con_spec <- pair_contrast(~ condition == "condition2", ~ condition == "condition1", name = "cond2_minus_cond1")
 
@@ -365,25 +370,16 @@ contrast_model <- fmri_lm(
   nchunks = 1
 )
 
-# Extract contrast results
-contrast_estimates <- coef(contrast_model)
-contrast_tstats <- stats(contrast_model)
-contrast_stderr <- standard_error(contrast_model)
-
-# Combine results into a data frame for display
-contrast_results <- data.frame(
-  voxel = 1:nrow(contrast_estimates),
-  estimate = contrast_estimates[[1]],
-  t_statistic = contrast_tstats[[1]],
-  std_error = contrast_stderr[[1]]
-)
-
-# Calculate p-values and significance
-contrast_results$p_value <- 2 * pt(-abs(contrast_results$t_statistic), df = run_length - 2)
-contrast_results$significant <- contrast_results$p_value < 0.05
+# Extract contrast results using tidy helper
+contrast_results <- tidy(contrast_model, type = "contrasts") %>%
+  filter(term == "cond2_minus_cond1") %>%
+  mutate(
+    voxel = paste0("voxel", voxel),
+    significant = p_value < 0.05
+  )
 ```
 
-```{r, message=FALSE, fig.width=7, fig.height=6, eval=FALSE}
+```{r, message=FALSE, fig.width=7, fig.height=6}
 # Display contrast results
 kable(contrast_results, caption = "Contrast results: condition2 - condition1", digits = 4)
 
@@ -473,8 +469,7 @@ The fitted HRF curves show the temporal profile of the BOLD response for each co
 
 The choice of hemodynamic response function can impact model fit. Let's compare different HRF options.
 
-```{r, message=FALSE, fig.width=7, fig.height=5, eval=FALSE}
-# Note: HRF comparison example - requires fix in model fitting
+```{r, message=FALSE, fig.width=7, fig.height=5}
 # Fit models with different HRF bases
 model_canonical <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "spmg1"),
@@ -510,7 +505,7 @@ extract_model_stats <- function(model, model_name, dataset) {
   
   # Get estimated coefficients (include baseline)
   # Get all coefficients including baseline
-  betas <- as.matrix(coef(model))
+  betas <- as.matrix(coef(model, include_baseline = TRUE))
   
   # Calculate fitted values
   fitted_vals <- design_mat %*% t(betas)
@@ -572,8 +567,7 @@ ggplot(subset(model_comparison_long, metric == "r_squared"),
        y = "R-Squared")
 ```
 
-```{r, message=FALSE, fig.width=7, fig.height=7, eval=FALSE}
-# Note: AIC comparison visualization - requires model_comparison_long
+```{r, message=FALSE, fig.width=7, fig.height=7}
 ggplot(subset(model_comparison_long, metric == "aic"), 
        aes(x = model, y = value, fill = model)) +
   geom_bar(stat = "identity") +

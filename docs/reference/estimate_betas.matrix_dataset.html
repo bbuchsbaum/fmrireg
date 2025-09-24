@@ -27,8 +27,10 @@ in a matrix dataset using various methods."></head><body>
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -69,11 +71,8 @@ in a matrix dataset using various methods.</p>
 <span>  fixed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">ran</span>,</span>
 <span>  <span class="va">block</span>,</span>
-<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lss"</span>, <span class="st">"lss_cpp"</span>, <span class="st">"lss_naive"</span>, <span class="st">"mixed"</span>, <span class="st">"mixed_cpp"</span>, <span class="st">"pls"</span>, <span class="st">"pls_global"</span>,</span>
-<span>    <span class="st">"ols"</span><span class="op">)</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mixed"</span>, <span class="st">"lss"</span>, <span class="st">"ols"</span><span class="op">)</span>,</span>
 <span>  basemod <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  ncomp <span class="op">=</span> <span class="fl">4</span>,</span>
-<span>  lambda <span class="op">=</span> <span class="fl">0.01</span>,</span>
 <span>  fracs <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">...</span></span>
@@ -101,19 +100,11 @@ in a matrix dataset using various methods.</p>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
-<dd><p>The regression method for estimating trialwise betas; one of "mixed", "pls", "pls_global", or "ols" (default: "mixed")</p></dd>
+<dd><p>The regression method for estimating trialwise betas; one of "mixed", "lss", or "ols" (default: "mixed")</p></dd>
 
 
 <dt id="arg-basemod">basemod<a class="anchor" aria-label="anchor" href="#arg-basemod"></a></dt>
 <dd><p>A <code>baseline_model</code> instance to regress out of data before beta estimation (default: NULL)</p></dd>
-
-
-<dt id="arg-ncomp">ncomp<a class="anchor" aria-label="anchor" href="#arg-ncomp"></a></dt>
-<dd><p>Number of PLS components for the "pls" and "pls_global" methods (default: 4)</p></dd>
-
-
-<dt id="arg-lambda">lambda<a class="anchor" aria-label="anchor" href="#arg-lambda"></a></dt>
-<dd><p>Lambda parameter (not currently used; default: 0.01)</p></dd>
 
 
 <dt id="arg-fracs">fracs<a class="anchor" aria-label="anchor" href="#arg-fracs"></a></dt>
@@ -138,7 +129,7 @@ in a matrix dataset using various methods.</p>
 </ul></div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></code>, <code><a href="https://rdrr.io/pkg/fmridesign/man/baseline_model.html" class="external-link">baseline_model</a></code></p>
+    <div class="dont-index"><p><code><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></code>, <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model</a></code></p>
 <p>Other estimate_betas:
 <code><a href="estimate_betas.html">estimate_betas</a>()</code></p></div>
     </div>
