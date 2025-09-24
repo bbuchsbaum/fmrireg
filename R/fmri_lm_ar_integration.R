@@ -1,6 +1,7 @@
 #' AR Integration for GLM
 #'
 #' Functions to integrate AR modeling with the GLM solver pipeline
+#' Now delegates to fmriAR package for all AR operations
 #'
 #' @keywords internal
 #' @noRd
@@ -10,8 +11,8 @@ NULL
 #'
 #' @description
 #' Transforms the design matrix X and response Y in a GLM context
-#' using estimated or provided AR coefficients. Handles multi-run
-#' data by applying whitening separately to each run.
+#' using estimated or provided AR coefficients. Delegates to fmriAR
+#' for all AR operations.
 #'
 #' @param glm_ctx A glm_context object
 #' @param ar_options List with AR configuration:
@@ -25,83 +26,102 @@ NULL
 #' @noRd
 whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
   stopifnot(is.glm_context(glm_ctx))
-  
-  if (is.null(ar_options) || ar_options$cor_struct == "none") {
+
+  ar_opts <- if (is.null(ar_options)) NULL else .normalize_ar_options(ar_options)
+  ar_struct <- if (is.null(ar_opts)) "iid" else ar_opts$struct
+
+  if (is.null(ar_opts) || identical(ar_struct, "iid")) {
     return(glm_ctx)
   }
-  
+
   X <- glm_ctx$X
   Y <- glm_ctx$Y
-  
-  # Determine AR order
-  ar_order <- switch(ar_options$cor_struct,
-    "ar1" = 1,
-    "ar2" = 2,
-    "ar3" = 3,
-    "ar4" = 4,
-    "arp" = ar_options$p %||% stop("p must be specified for cor_struct='arp'"),
-    stop("Unknown AR structure: ", ar_options$cor_struct)
-  )
-  
-  # If no run indices, treat as single run
-  if (is.null(run_indices)) {
-    run_indices <- list(1:nrow(X))
+
+  if (anyNA(X) || anyNA(Y)) {
+    stop("NA values detected in X or Y", call. = FALSE)
   }
-  
-  # Store estimated phi for each run
-  phi_list <- vector("list", length(run_indices))
-  
-  # Apply whitening by run
-  X_whitened <- X * 0  # Initialize
-  Y_whitened <- Y * 0
-  
-  for (i in seq_along(run_indices)) {
-    idx <- run_indices[[i]]
-    
-    # Get phi for this run
-    if (!is.null(ar_options$phi)) {
-      # Use provided phi
-      phi <- ar_options$phi
+
+  # Get residuals for AR estimation
+  if (is.null(glm_ctx$residuals)) {
+    if (!is.null(glm_ctx$proj) && !is.null(glm_ctx$proj$Pinv)) {
+      coef <- glm_ctx$proj$Pinv %*% Y
     } else {
-      # Estimate from residuals
-      if (is.null(glm_ctx$residuals)) {
-        # Need initial OLS residuals
-        proj_temp <- .fast_preproject(X[idx, , drop = FALSE])
-        resid_temp <- Y[idx, , drop = FALSE] - 
-                      X[idx, , drop = FALSE] %*% 
-                      (proj_temp$Pinv %*% Y[idx, , drop = FALSE])
-        
-        # Pool residuals across voxels for stable estimation
-        pooled_resid <- as.vector(resid_temp)
-        phi <- estimate_ar_parameters(pooled_resid, ar_order)
+      coef <- tryCatch(
+        qr.coef(qr(X, LAPACK = TRUE), Y),
+        error = function(e) base::qr.solve(X, Y)
+      )
+    }
+    residuals <- Y - X %*% coef
+  } else {
+    residuals <- glm_ctx$residuals
+  }
+
+  # If phi provided, use it directly
+  if (!is.null(ar_opts$phi)) {
+    phi_input <- ar_opts$phi
+    if (!is.list(phi_input)) {
+      phi_input <- list(phi_input)
+    }
+    run_count <- if (is.null(run_indices)) 1L else length(run_indices)
+    if (run_count > 1L && length(phi_input) == 1L && !isTRUE(ar_opts$global)) {
+      phi_input <- rep(phi_input, run_count)
+    }
+    theta_input <- if (!is.null(ar_opts$theta)) {
+      if (is.list(ar_opts$theta)) {
+        ar_opts$theta
       } else {
-        # Use provided residuals
-        pooled_resid <- as.vector(glm_ctx$residuals[idx, ])
-        phi <- estimate_ar_parameters(pooled_resid, ar_order)
+        list(ar_opts$theta)
+      }
+    } else {
+      replicate(length(phi_input), numeric(0), simplify = FALSE)
+    }
+    if (run_count > 1L && length(theta_input) == 1L && !isTRUE(ar_opts$global)) {
+      theta_input <- rep(theta_input, run_count)
+    }
+    # Create plan from provided coefficients
+    runs <- NULL
+    if (!is.null(run_indices)) {
+      n <- nrow(X)
+      runs <- integer(n)
+      for (i in seq_along(run_indices)) {
+        runs[run_indices[[i]]] <- i
       }
     }
-    
-    phi_list[[i]] <- phi
-    
-    # Apply whitening
-    whitened <- ar_whiten_transform(
-      X[idx, , drop = FALSE],
-      Y[idx, , drop = FALSE],
-      phi,
-      exact_first = TRUE
+
+    pooling_mode <- if (isTRUE(ar_opts$global) || run_count <= 1L) "global" else "run"
+    plan <- fmriAR::compat$plan_from_phi(
+      phi = phi_input,
+      theta = theta_input,
+      runs = runs,
+      pooling = pooling_mode,
+      exact_first = ar_opts$exact_first %||% TRUE
     )
-    
-    X_whitened[idx, ] <- whitened$X
-    Y_whitened[idx, ] <- whitened$Y
+  } else {
+    # Estimate AR using fmriAR
+    plan <- .estimate_ar_via_fmriAR(residuals, ar_opts, run_indices)
   }
-  
+
+  # Apply whitening
+  whitened <- .apply_ar_whitening_via_fmriAR(X, Y, plan, run_indices)
+
+  # Extract phi for compatibility
+  phi_list <- if (!is.null(plan$phi)) {
+    plan$phi
+  } else if (!is.null(plan$phi_by_parcel)) {
+    # Average across parcels
+    list(rowMeans(sapply(plan$phi_by_parcel,
+                        function(x) c(x, rep(0, max(lengths(plan$phi_by_parcel)) - length(x))))))
+  } else {
+    list(numeric(0))
+  }
+
   # Update projection for whitened X
-  proj_new <- .fast_preproject(X_whitened)
-  
+  proj_new <- .fast_preproject(whitened$X)
+
   # Create new context with whitened data
   glm_context(
-    X = X_whitened,
-    Y = Y_whitened,
+    X = whitened$X,
+    Y = whitened$Y,
     proj = proj_new,
     phi_hat = phi_list,
     sigma_robust_scale = glm_ctx$sigma_robust_scale,
@@ -112,7 +132,7 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
 #' Iterative AR estimation and whitening
 #'
 #' @description
-#' Performs iterative AR parameter estimation and whitening.
+#' Performs iterative AR parameter estimation and whitening using fmriAR.
 #' Alternates between estimating AR parameters from residuals
 #' and re-fitting the whitened model.
 #'
@@ -125,53 +145,47 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
 #' @return List with final results including AR coefficients
 #' @keywords internal
 #' @noRd
-iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL, 
+iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
                                max_iter = NULL, tol = 1e-4) {
-  
+
+  ar_opts <- if (is.null(ar_options)) NULL else .normalize_ar_options(ar_options)
+
   if (is.null(max_iter)) {
-    max_iter <- ar_options$iter %||% 2
+    max_iter <- if (is.null(ar_opts)) 1 else ar_opts$iter_gls %||% ar_opts$iter %||% 1
   }
-  
+
+  ar_struct <- if (is.null(ar_opts)) "iid" else ar_opts$struct
+
   # Initial OLS fit
   result <- solve_glm_core(glm_ctx, return_fitted = TRUE)
-  
-  if (ar_options$cor_struct == "none" || max_iter == 0) {
+
+  if (is.null(ar_opts) || identical(ar_struct, "iid") || max_iter == 0) {
     return(result)
   }
-  
-  # Store AR coefficients
-  phi_prev <- NULL
-  
-  for (iter in 1:max_iter) {
-    # Update context with residuals
-    glm_ctx$residuals <- glm_ctx$Y - result$fitted
-    
-    # Apply AR whitening
-    glm_ctx_white <- whiten_glm_context(glm_ctx, ar_options, run_indices)
-    
-    # Check convergence
-    if (!is.null(phi_prev) && !is.null(glm_ctx_white$phi_hat)) {
-      phi_current <- unlist(glm_ctx_white$phi_hat)
-      if (all(abs(phi_current - phi_prev) < tol)) {
-        message("AR parameters converged at iteration ", iter)
-        break
-      }
-      phi_prev <- phi_current
-    } else if (!is.null(glm_ctx_white$phi_hat)) {
-      phi_prev <- unlist(glm_ctx_white$phi_hat)
-    }
-    
-    # Solve whitened system
-    result <- solve_glm_core(glm_ctx_white, return_fitted = TRUE)
-    
-    # Add AR info to result
-    result$ar_coef <- glm_ctx_white$phi_hat
-    result$ar_order <- switch(ar_options$cor_struct,
-      "ar1" = 1, "ar2" = 2, "ar3" = 3, "ar4" = 4,
-      "arp" = ar_options$p
-    )
-  }
-  
+
+  # Use fmriAR for iterative AR-GLS
+  ar_result <- .iterative_ar_gls_via_fmriAR(
+    X = glm_ctx$X,
+    Y = glm_ctx$Y,
+    cfg = ar_opts,
+    run_indices = run_indices,
+    max_iter = max_iter
+  )
+
+  # Solve final whitened system
+  glm_ctx_white <- glm_context(
+    X = ar_result$X_white,
+    Y = ar_result$Y_white,
+    proj = .fast_preproject(ar_result$X_white)
+  )
+
+  result <- solve_glm_core(glm_ctx_white, return_fitted = TRUE)
+
+  # Add AR info
+  result$ar_coef <- ar_result$ar_coef
+  result$ar_order <- .get_ar_order(ar_result$plan, ar_opts)
+  result$ar_plan <- ar_result$plan  # Store for downstream use
+
   result
 }
 
@@ -180,37 +194,34 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
 #' @description
 #' Adjusts degrees of freedom to account for autocorrelation
 #' in the residuals. Uses Satterthwaite-type approximation.
+#' Now delegates to fmriAR adapter for consistency.
 #'
 #' @param n Sample size
 #' @param p Number of parameters
-#' @param phi AR coefficients
+#' @param phi AR coefficients (can be list or vector)
+#' @param plan Optional fmriAR_plan object
+#' @param n_runs Number of runs (for compatibility)
+#' @param penalize_ar Whether to penalize for AR estimation
 #'
 #' @return Effective degrees of freedom
 #' @keywords internal
 #' @noRd
-compute_ar_effective_df <- function(n, p, phi, n_runs = 1, penalize_ar = FALSE) {
-  if (is.null(phi) || length(phi) == 0) {
-    return(n - p)
+compute_ar_effective_df <- function(n, p, phi = NULL, plan = NULL,
+                                   n_runs = 1, penalize_ar = FALSE) {
+  # Delegate to adapter for consistency
+  df <- .compute_ar_effective_df_compat(n, p, plan, phi)
+
+  # Optional penalty for AR estimation (not standard)
+  if (penalize_ar && (!is.null(phi) || !is.null(plan))) {
+    ar_order <- if (!is.null(plan)) {
+      .get_ar_order(plan)
+    } else if (is.list(phi)) {
+      length(phi[[1]])
+    } else {
+      length(phi)
+    }
+    df <- df - ar_order
   }
-  
-  # Standard formula used by SPM, FSL, AFNI:
-  # For AR(1), effective sample size is approximately n * (1 - phi^2)
-  # For AR(p), use sum of squared AR coefficients
-  ar_factor <- 1 - sum(phi^2)
-  ar_factor <- max(ar_factor, 0.1)  # Prevent too small values
-  
-  effective_n <- n * ar_factor
-  
-  # Standard approach: treat AR coefficients as "known" after estimation
-  # No penalty for estimating AR parameters (following SPM/FSL/AFNI practice)
-  df <- effective_n - p
-  
-  # Optional conservative mode: subtract AR order once (NOT per run)
-  # This is an approximate small-sample correction, not standard in fMRI
-  if (penalize_ar) {
-    ar_order <- if (is.list(phi)) length(phi[[1]]) else length(phi)
-    df <- df - ar_order  # Single penalty, not multiplied by n_runs
-  }
-  
+
   max(df, 1)
 }

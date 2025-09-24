@@ -19,3 +19,14 @@ NeuroVol object or matrix
 \description{
 Extract Image/Volume for Coefficient
 }
+\examples{
+toy_meta <- structure(
+  list(
+    coefficients = matrix(c(0.3, 0.1), nrow = 1,
+      dimnames = list(NULL, c("A", "B"))),
+    se = matrix(c(0.05, 0.06), nrow = 1)
+  ),
+  class = "fmri_meta"
+)
+coef_image(toy_meta, coef = "A")
+}

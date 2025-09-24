@@ -6,6 +6,9 @@
 
 #' @method get_formula fmri_model
 #' @rdname get_formula
+#' @examples
+#' fm <- fmrireg:::.demo_fmri_model()
+#' get_formula(fm)
 #' @export
 get_formula.fmri_model <- function(x,...) {
   assert_that(inherits(x, "fmri_model"), msg = "'x' must be an 'fmri_model' object")
@@ -22,6 +25,9 @@ get_formula.fmri_model <- function(x,...) {
 #' @param blocknum Optional vector of block numbers to extract matrices for
 #' @param ... Additional arguments (currently unused)
 #' @return A list of matrices, one for each term in the model
+#' @examples
+#' fm <- fmrireg:::.demo_fmri_model()
+#' term_matrices(fm)
 #' @method term_matrices fmri_model
 #' @export
 term_matrices.fmri_model <- function(x, blocknum = NULL,...) {

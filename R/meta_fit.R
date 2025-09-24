@@ -140,6 +140,8 @@ fmri_meta_fit_cov <- function(Y, V, X,
 #' @return Numeric scalar; effective sample size
 #'
 #' @seealso \code{\link{fmri_meta}}
+#' @examples
+#' meta_effective_n(v = rep(0.05, 3), tau2 = 0.01)
 #' @export
 meta_effective_n <- function(v, tau2) {
   w <- 1 / (v + tau2)
@@ -161,6 +163,9 @@ meta_effective_n <- function(v, tau2) {
 #'   \item{v}{Numeric vector or matrix; sampling variances}
 #'
 #' @seealso \code{\link{fmri_meta}}
+#' @examples
+#' t_to_d(t = 2, df = 18)
+#' t_to_d(t = 2, df = 18, n = 20)
 #' @export
 t_to_d <- function(t, df, n = NULL) {
   if (is.null(n)) {
@@ -189,6 +194,8 @@ t_to_d <- function(t, df, n = NULL) {
 #'   \item{v}{Numeric vector or matrix; sampling variances}
 #'
 #' @seealso \code{\link{fmri_meta}}
+#' @examples
+#' r_to_z(r = 0.4, n = 30)
 #' @export
 r_to_z <- function(r, n) {
   z <- 0.5 * log((1 + r) / (1 - r))
@@ -202,6 +209,8 @@ r_to_z <- function(r, n) {
 #' @return Numeric vector or matrix; correlations
 #'
 #' @seealso \code{\link{fmri_meta}}
+#' @examples
+#' z_to_r(0.2)
 #' @export
 z_to_r <- function(z) {
   (exp(2 * z) - 1) / (exp(2 * z) + 1)

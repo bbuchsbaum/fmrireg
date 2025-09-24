@@ -18,6 +18,9 @@ Numeric scalar; effective sample size
 Computes the effective sample size based on the heterogeneity estimate.
 This is useful for understanding the impact of between-study heterogeneity.
 }
+\examples{
+meta_effective_n(v = rep(0.05, 3), tau2 = 0.01)
+}
 \seealso{
 \code{\link{fmri_meta}}
 }

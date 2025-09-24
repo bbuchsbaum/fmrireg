@@ -85,9 +85,6 @@ test_that("iterator pattern efficiently processes data", {
 })
 
 test_that("parallel processing maintains result consistency", {
-  skip_if_not(getOption("fmrireg.num_threads", 1) > 1, 
-              "Parallel processing not enabled")
-  
   # Setup data - fix event table column name
   n <- 100
   n_voxels <- 20
@@ -164,21 +161,6 @@ test_that("sparse matrix handling for efficiency", {
   
   expect_true(!is.null(result$betas))
   expect_equal(length(result$betas), ncol(X_sparse))
-})
-
-test_that("memory-mapped files work for large datasets", {
-  skip("Memory-mapped file functionality not fully implemented")
-  
-  # Would test fmri_file_dataset functionality
-  # Create temporary file
-  tmp_file <- tempfile(fileext = ".nii")
-  
-  # In real implementation:
-  # - Write large dataset to file
-  # - Create memory-mapped dataset
-  # - Process without loading into memory
-  
-  unlink(tmp_file)
 })
 
 test_that("lazy evaluation prevents unnecessary computation", {
@@ -275,36 +257,4 @@ test_that("recycling design matrices saves memory", {
   # Should handle efficiently - betas matrix has correct dimensions
   expect_equal(nrow(result$betas), ncol(X_all))  # Number of coefficients
   expect_equal(ncol(result$betas), ncol(Y_all))  # Number of response variables
-})
-
-test_that("efficient caching of HRF convolutions", {
-  skip("convolve_hrf function not implemented")
-  
-  # HRFs are expensive to compute, should be cached
-  n_events <- 50
-  TR <- 2
-  n_time <- 200
-  
-  # Event onsets
-  onsets <- sort(runif(n_events, min = 0, max = n_time * TR))
-  
-  # Create HRF - use correct object reference
-  hrf_obj <- fmrihrf::HRF_SPMG1
-  
-  # Would test caching if convolve_hrf existed
-  # First convolution
-  # time1 <- system.time({
-  #   conv1 <- convolve_hrf(hrf_obj, onsets, n_time, TR)
-  # })
-  
-  # Same HRF and parameters should use cache
-  # time2 <- system.time({
-  #   conv2 <- convolve_hrf(hrf_obj, onsets, n_time, TR)
-  # })
-  
-  # Results should be identical
-  # expect_equal(conv1, conv2)
-  
-  # Second call should be faster (if caching implemented)
-  # expect_true(time2["elapsed"] < time1["elapsed"])
 })

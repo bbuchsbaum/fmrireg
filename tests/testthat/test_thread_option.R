@@ -6,14 +6,14 @@ test_that(".onLoad sets thread count from option", {
   
   # Check if thread setting actually works on this platform
   old_threads <- RcppParallel::defaultNumThreads()
-  test_threads <- ifelse(old_threads == 2, 3, 2)  # Pick a different value
-  RcppParallel::setThreadOptions(numThreads = test_threads)
+  # Try to change thread count; if it fails, skip quickly
+  test_threads <- ifelse(old_threads == 2, 3, 2)
+  suppressWarnings(RcppParallel::setThreadOptions(numThreads = test_threads))
   if (RcppParallel::defaultNumThreads() == old_threads) {
     skip("RcppParallel thread setting not working on this platform")
   }
-  # Restore original for the actual test
-  RcppParallel::setThreadOptions(numThreads = old_threads)
-  
+  suppressWarnings(RcppParallel::setThreadOptions(numThreads = old_threads))
+
   old_opt <- getOption("fmrireg.num_threads")
   on.exit({
     options(fmrireg.num_threads = old_opt)
@@ -30,13 +30,12 @@ test_that(".onLoad sets thread count from option", {
    
    # Check if thread setting actually works on this platform
    old_threads <- RcppParallel::defaultNumThreads()
-   test_threads <- ifelse(old_threads == 3, 4, 3)  # Pick a different value
-   RcppParallel::setThreadOptions(numThreads = test_threads)
+   test_threads <- ifelse(old_threads == 3, 4, 3)
+   suppressWarnings(RcppParallel::setThreadOptions(numThreads = test_threads))
    if (RcppParallel::defaultNumThreads() == old_threads) {
      skip("RcppParallel thread setting not working on this platform")
    }
-   # Restore original for the actual test
-   RcppParallel::setThreadOptions(numThreads = old_threads)
+   suppressWarnings(RcppParallel::setThreadOptions(numThreads = old_threads))
    
    old_env <- Sys.getenv("FMRIREG_NUM_THREADS", unset = NA)
    on.exit({

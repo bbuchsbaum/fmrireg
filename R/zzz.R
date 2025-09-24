@@ -24,11 +24,15 @@
                      utils::getFromNamespace("Fcontrasts.event_term", "fmridesign"))
     registerS3method("Fcontrasts", "convolved_term", 
                      utils::getFromNamespace("Fcontrasts.convolved_term", "fmridesign"))
-    
+
     # Register correlation_map.event_model from fmridesign
     # This method doesn't depend on internal functions so it can be safely registered
     registerS3method("correlation_map", "event_model",
                      utils::getFromNamespace("correlation_map.event_model", "fmridesign"))
+
+    # Register our columns() method for event_model objects with the fmridesign generic
+    registerS3method("columns", "event_model", columns.event_model,
+                     envir = asNamespace("fmridesign"))
     # Note: correlation_map.baseline_model is defined locally in correlation_map_methods.R
     # because it needs access to fmrireg's internal .correlation_map_common function
   }

@@ -170,6 +170,22 @@ process_run_robust <- function(run_chunk, model, cfg, sigma_fixed = NULL) {
 #' @keywords internal
 #' @noRd
 process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma_fixed = NULL) {
+  pad_phi <- function(phi, order) {
+    if (order <= 0L) {
+      return(numeric(0))
+    }
+    if (is.null(phi)) {
+      return(rep(0, order))
+    }
+    phi_vec <- as.numeric(phi)
+    if (!length(phi_vec)) {
+      return(rep(0, order))
+    }
+    if (length(phi_vec) < order) {
+      phi_vec <- c(phi_vec, rep(0, order - length(phi_vec)))
+    }
+    phi_vec[seq_len(order)]
+  }
   # Extract data
   Y_run <- as.matrix(run_chunk$data)
   tmats_run <- term_matrices(model, run_chunk$chunk_num)
@@ -193,11 +209,11 @@ process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma
   glm_ctx_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
   
   phi_hat_run <- if (!is.null(phi_fixed)) {
-    phi_fixed
+    pad_phi(phi_fixed, ar_order)
   } else {
     initial_fit <- solve_glm_core(glm_ctx_orig, return_fitted = TRUE)
     resid_ols <- Y_run - initial_fit$fitted
-    estimate_ar_parameters(rowMeans(resid_ols), ar_order)
+    pad_phi(estimate_ar_parameters(rowMeans(resid_ols), ar_order), ar_order)
   }
   
   # Step 2: AR whitening
@@ -230,7 +246,7 @@ process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma
     resid_robust_w <- Y_run_w - X_run_w %*% robust_fit_run$betas_robust
     
     # De-whiten residuals (approximate)
-    phi_hat_run_updated <- estimate_ar_parameters(rowMeans(resid_robust_w), ar_order)
+    phi_hat_run_updated <- pad_phi(estimate_ar_parameters(rowMeans(resid_robust_w), ar_order), ar_order)
     
     # Re-whiten with updated phi
     tmp2 <- ar_whiten_transform(X_run, Y_run, phi_hat_run_updated, cfg$ar$exact_first)

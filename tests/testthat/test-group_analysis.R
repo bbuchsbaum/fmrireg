@@ -187,31 +187,34 @@ test_that("heterogeneity statistics are computed correctly", {
 })
 
 test_that("robust estimation down-weights outliers", {
-  skip("Robust estimation test - requires full implementation")
-  
-  # Create data with outliers
+  set.seed(2024)
+
+  # Create data with strong outliers in the meta-analytic inputs
   n_subjects <- 20
+  beta_values <- c(rnorm(18, mean = 0.3, sd = 0.05), 4, -4)
   test_data <- data.frame(
-    subject = paste0("sub-", 1:n_subjects),
+    subject = paste0("sub-", seq_len(n_subjects)),
     roi = "test_roi",
-    beta = c(rnorm(18, 0.3, 0.1), 2.5, -2.0),  # Two outliers
+    beta = beta_values,
     se = rep(0.1, n_subjects)
   )
-  
+
   gd <- group_data_from_csv(
     test_data,
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
     roi_col = "roi"
   )
-  
-  # Compare robust vs non-robust
+
+  # Compare robust vs non-robust fixed-effects fits
   fit_standard <- fmri_meta(gd, method = "fe", robust = "none", verbose = FALSE)
   fit_robust <- fmri_meta(gd, method = "fe", robust = "huber", verbose = FALSE)
-  
-  # Robust estimate should be closer to the non-outlier mean (0.3)
-  expect_true(abs(coef(fit_robust)[1, 1] - 0.3) < 
-              abs(coef(fit_standard)[1, 1] - 0.3))
+
+  beta_target <- 0.3
+  err_standard <- abs(coef(fit_standard)[1, 1] - beta_target)
+  err_robust <- abs(coef(fit_robust)[1, 1] - beta_target)
+
+  expect_lt(err_robust, err_standard)
 })
 
 test_that("print and summary methods work", {

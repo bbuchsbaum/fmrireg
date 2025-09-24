@@ -12,10 +12,8 @@ estimate_betas(x, ...)
   fixed = NULL,
   ran,
   block,
-  method = c("mixed", "pls", "pls_global", "ols"),
+  method = c("mixed", "lss", "ols"),
   basemod = NULL,
-  ncomp = 4,
-  lambda = 0.01,
   prewhiten = FALSE,
   progress = TRUE,
   ...
@@ -32,13 +30,9 @@ estimate_betas(x, ...)
 
 \item{block}{A formula specifying the block factor}
 
-\item{method}{The regression method for estimating trialwise betas; one of "mixed", "pls", "pls_global", or "ols" (default: "mixed")}
+\item{method}{The regression method for estimating trialwise betas; one of "mixed", "lss", or "ols" (default: "mixed")}
 
 \item{basemod}{A \code{baseline_model} instance to regress out of data before beta estimation (default: NULL)}
-
-\item{ncomp}{Number of PLS components for the "pls" and "pls_global" methods (default: 4)}
-
-\item{lambda}{Lambda parameter (not currently used; default: 0.01)}
 
 \item{prewhiten}{currently experimental, default to \code{FALSE}.}
 

@@ -19,3 +19,7 @@ A tibble containing the combined design matrix with event and baseline terms
 \description{
 Extract the combined design matrix from an fMRI model containing both event and baseline terms.
 }
+\examples{
+fm <- fmrireg:::.demo_fmri_model()
+head(design_matrix(fm))
+}

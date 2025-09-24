@@ -15,3 +15,10 @@ Matrix of standard errors
 \description{
 Extract Standard Errors from Meta-Analysis
 }
+\examples{
+toy_meta <- structure(
+  list(se = matrix(c(0.05, 0.06), nrow = 1)),
+  class = "fmri_meta"
+)
+se(toy_meta)
+}

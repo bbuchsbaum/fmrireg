@@ -26,3 +26,15 @@ Note: Uses exact standard errors when covariance is available (return_cov="tri")
 or for ROI CSV fits with non-robust estimation; otherwise uses a diagonal
 variance approximation.
 }
+\examples{
+toy_meta <- structure(
+  list(
+    coefficients = matrix(c(0.3, 0.1), nrow = 1,
+      dimnames = list(NULL, c("A", "B"))),
+    se = matrix(c(0.05, 0.06), nrow = 1),
+    robust = "none"
+  ),
+  class = "fmri_meta"
+)
+contrast(toy_meta, c(1, -1))
+}

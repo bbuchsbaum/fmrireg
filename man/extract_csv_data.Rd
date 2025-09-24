@@ -19,3 +19,7 @@ List with effect sizes and variances
 \description{
 Extract Data for Meta-Analysis from CSV
 }
+\examples{
+gd <- fmrireg:::.demo_group_data_csv()
+extract_csv_data(gd, roi = "ROI1")
+}

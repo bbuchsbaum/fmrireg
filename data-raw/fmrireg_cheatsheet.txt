@@ -361,7 +361,7 @@ AT_G_TOKEN, AT_M_TOKEN // @g, @m
   - autocor : chr (constants: "none", "auto", "ar1", "ar2", "arma") Autocorrelation correction.
 @g estimate_betas (x, ...) | Estimate beta coefficients -> fbeta
 @m estimate_betas[fmri_dataset|matrix_dataset|latent_dataset] (x, fixed?=NULL, ran, block, method?=(...), basemod?=NULL, hrf_basis?=NULL, hrf_ref?=NULL, ...) -> fbeta
-  - method : chr (constants: "mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "r1", "pls", "pls_global", "ols", "fracridge", "lowrank_hrf") Estimation method.
+  - method : chr (constants: "mixed", "lss", "ols") Estimation method.
 @f estimate_hrf (form, fixed?=NULL, block, dataset, bs?="tp", rsam?=seq(0,20,by=1), basemod?=NULL, k?=8, fx?=TRUE) | Estimate HRF using GAMs -> mat
   - bs : chr (constants: "tp", "ts", "cr", "ps") Basis for smooth term in GAM.
 @g find_best_hrf (dataset, onset_var, hrflib?=NULL, rsam?=seq(0,24,by=1), ncomp?=5, nsplits?=3, block?=NULL, basemod?=NULL, ...) | Find best HRF for voxels -> bhrfres

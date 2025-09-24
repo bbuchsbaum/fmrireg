@@ -91,8 +91,8 @@ run_subject <- function(sid) {
   fixed = elab_onset ~ hrf(Block, basis=hrfb,subset=!is.na(elab_onset))
   ran = elab_onset ~ trialwise(basis=hrfb, subset=!is.na(elab_onset))
   
-  ret <- fmrireg:::estimate_betas(dset, fixed = fixed, ran = ran, block = ~ Scan, method="pls_global",
-                                  ncomp=15)
+  ret <- fmrireg:::estimate_betas(dset, fixed = fixed, ran = ran, block = ~ Scan,
+                                  method = "mixed")
   #ret <- estimate_betas(dset, fixed=fixed, ran=ran)
   #ret <- fmrireg::fmri_lm(elab_onset ~ hrf(attention, felab, basis=hrfb, subset=phase=="encoding" & felab!=0), #+ 
   #                          #hrf(attention,elab, basis=hrfb, subset=phase=="encoding"), 
@@ -346,4 +346,3 @@ set_coef.rma <- function(model, coefs, ...) {
 get_vcov.rma <- function(model, ...) {
   vcov(model)
 }
-

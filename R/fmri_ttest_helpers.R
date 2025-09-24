@@ -20,7 +20,6 @@
 #'   Default is 0 (independence).
 #'
 #' @return A new block with Y = Y_A - Y_B and propagated variance if available
-#'
 #' @export
 paired_diff_block <- function(blkA, blkB, rho = 0) {
   if (!is.matrix(blkA$Y) || !is.matrix(blkB$Y)) {

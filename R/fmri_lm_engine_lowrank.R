@@ -1,5 +1,6 @@
 #' Internal: run low-rank/sketched engine under fmri_lm
 #' @keywords internal
+#' @noRd
 .run_lowrank_engine <- function(fm, dataset, lowrank, ar_options = NULL) {
   # Design (T x p)
   X <- as.matrix(design_matrix(fm))
@@ -211,7 +212,7 @@
         L <- as.integer(lowrank$landmarks)
         mask <- fmridataset::get_mask(dataset)
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
-        km <- stats::kmeans(coords, centers = L, iter.max = 100, nstart = 5)
+        km <- stats::kmeans(coords, centers = L, iter.max = 1000, nstart = 5)
         idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
         lcoords <- coords[idx_lm, , drop = FALSE]
         # Solve only on landmarks
@@ -249,7 +250,7 @@
         L <- as.integer(lowrank$landmarks)
         mask <- fmridataset::get_mask(dataset)
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
-        km <- stats::kmeans(coords, centers = L, iter.max = 100, nstart = 5)
+        km <- stats::kmeans(coords, centers = L, iter.max = 1000, nstart = 5)
         idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
         lcoords <- coords[idx_lm, , drop = FALSE]
         Zs_L <- srht_apply(Zw[, idx_lm, drop = FALSE], plan)
@@ -289,7 +290,7 @@
         L <- as.integer(lowrank$landmarks)
         mask <- fmridataset::get_mask(dataset)
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
-        km <- stats::kmeans(coords, centers = L, iter.max = 100, nstart = 5)
+        km <- stats::kmeans(coords, centers = L, iter.max = 1000, nstart = 5)
         idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
         lcoords <- coords[idx_lm, , drop = FALSE]
         Zs_L <- S %*% Zw[, idx_lm, drop = FALSE]
@@ -329,7 +330,7 @@
         L <- as.integer(lowrank$landmarks)
         mask <- fmridataset::get_mask(dataset)
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
-        km <- stats::kmeans(coords, centers = L, iter.max = 100, nstart = 5)
+        km <- stats::kmeans(coords, centers = L, iter.max = 1000, nstart = 5)
         idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
         lcoords <- coords[idx_lm, , drop = FALSE]
         Zs_L <- as.matrix(S %*% Zw[, idx_lm, drop = FALSE])
@@ -402,6 +403,7 @@
 
 #' Internal: dispatch fmri_lm low-rank/sketch engine
 #' @keywords internal
+#' @noRd
 fmri_lm_lowrank_dispatch <- function(formula_or_model, dataset, engine = NULL, lowrank = NULL,
                                      block = NULL, baseline_model = NULL,
                                      durations = 0, drop_empty = TRUE,

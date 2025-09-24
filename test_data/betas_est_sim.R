@@ -51,17 +51,10 @@ get_isi_args <- function(mode) {
 # -------------------------------------------------------------------
 # Single-trial methods we test for each dataset:
 #   - "lss"
-#   - "r1" (Rank-1)
-#   - "pls" (with ncomp=1..6)
 #   - "ols"
 #   - "mixed"
-#   - "mixed_cpp"
-#
-# If any method references a function not in your code, remove it or
-# define it similarly to the others.
 
-methods_to_test <- c("lss", "pls", "ols", "mixed", "mixed_cpp")
-pls_components  <- 1:6  # for method="pls" only
+methods_to_test <- c("lss", "ols", "mixed")
 
 # Define default HRF basis and reference for rank-1 methods
 # Simple canonical HRF + derivatives
@@ -198,107 +191,25 @@ for (rowi in seq_len(nrow(sim_grid))) {
   # 3B) For each method, estimate single-trial betas & compute correlation
   # -----------------------------------------------------------------
   for (mm in methods_to_test) {
-    # Determine whether to use fixed effects based on method
     use_fixed <- !(mm %in% c("ols", "lss"))
-    
-    # If "pls", we vary ncomp from 1..6
-    if (mm == "pls") {
-      for (nc in pls_components) {
-        # Estimate betas
-        bet_est <- tryCatch({
-          estimate_betas(
-            dset,
-            fixed = if(use_fixed) fixed_form else NULL, 
-            ran   = run_form,
-            block = block_form,
-            method = mm,
-            basemod=bmod,
-            ncomp = nc
-          )
-        }, error = function(e) {
-          message("Error in beta estimation for method ", mm, ", ncomp=", nc, ": ", e$message)
-          return(NULL)
-        })
-        
-        # Skip if estimation failed
-        if (is.null(bet_est)) {
-          res_list[[counter]] <- data.frame(
-            amplitude_sd = amp_sd,
-            noise_type   = ntype,
-            noise_sd     = nsd,
-            isi_mode     = imode,
-            replicate    = parrow$replicate,
-            method       = mm,
-            ncomp        = nc,
-            correlation  = NA
-          )
-          counter <- counter + 1
-          next
-        }
-        
-        # Verify dimensions match before calculating correlation
-        est_events_count <- nrow(bet_est$betas_ran)
-        true_events_count <- nrow(sim_out$ampmat)
-        
-        if (est_events_count != true_events_count) {
-          message("Dimension mismatch: estimated betas has ", est_events_count, 
-                  " events, but true amplitudes has ", true_events_count, " events")
-          # Use only the number of events that match
-          min_events <- min(est_events_count, true_events_count)
-          
-          # Calculate correlation using available events
-          cvals <- numeric(ncol(bet_est$betas_ran))
-          for (col_j in seq_len(ncol(bet_est$betas_ran))) {
-            xtrue <- sim_out$ampmat[1:min_events, col_j, drop=FALSE]
-            xest  <- bet_est$betas_ran[1:min_events, col_j, drop=FALSE]
-            cvals[col_j] <- cor(xtrue, xest)
-          }
-        } else {
-          # Calculate correlation normally
-          cvals <- numeric(ncol(bet_est$betas_ran))
-          for (col_j in seq_len(ncol(bet_est$betas_ran))) {
-            xtrue <- sim_out$ampmat[, col_j]
-            xest  <- bet_est$betas_ran[, col_j]
-            cvals[col_j] <- cor(xtrue, xest)
-          }
-        }
-        
-        mean_corr <- mean(cvals, na.rm=TRUE)
-        
-        # store in result
-        res_list[[counter]] <- data.frame(
-          amplitude_sd = amp_sd,
-          noise_type   = ntype,
-          noise_sd     = nsd,
-          isi_mode     = imode,
-          replicate    = parrow$replicate,
-          method       = mm,
-          ncomp        = nc,
-          correlation  = mean_corr
-        )
-        counter <- counter + 1
-      }
-    } else {
-      # For other methods
-      bet_est <- estimate_betas(
+
+    bet_est <- tryCatch({
+      estimate_betas(
         dset,
-        fixed = if(use_fixed) fixed_form else NULL,
+        fixed = if (use_fixed) fixed_form else NULL,
         ran   = run_form,
         block = block_form,
-        basemod=bmod,
+        basemod = bmod,
         method = mm,
         hrf_basis = default_hrf$basis,
         hrf_ref = default_hrf$reference
       )
-      
-      cvals <- numeric(ncol(bet_est$betas_ran))
-      for (col_j in seq_len(ncol(bet_est$betas_ran))) {
-        xtrue <- sim_out$ampmat[, col_j]
-        xest  <- bet_est$betas_ran[, col_j]
-        cvals[col_j] <- cor(xtrue, xest)
-      }
-      mean_corr <- mean(cvals)
-      
+    }, error = function(e) {
+      message("Error in beta estimation for method ", mm, ": ", e$message)
+      NULL
+    })
+
+    if (is.null(bet_est)) {
       res_list[[counter]] <- data.frame(
         amplitude_sd = amp_sd,
         noise_type   = ntype,
@@ -306,26 +217,56 @@ for (rowi in seq_len(nrow(sim_grid))) {
         isi_mode     = imode,
         replicate    = parrow$replicate,
         method       = mm,
-        ncomp        = NA,
-        correlation  = mean_corr
+        correlation  = NA
       )
       counter <- counter + 1
+      next
     }
-  } # end for mm
+
+    est_events_count <- nrow(bet_est$betas_ran)
+    true_events_count <- nrow(sim_out$ampmat)
+
+    if (est_events_count != true_events_count) {
+      message(
+        "Dimension mismatch: estimated betas has ", est_events_count,
+        " events, but true amplitudes has ", true_events_count, " events"
+      )
+      min_events <- min(est_events_count, true_events_count)
+      cvals <- numeric(ncol(bet_est$betas_ran))
+      for (col_j in seq_len(ncol(bet_est$betas_ran))) {
+        xtrue <- sim_out$ampmat[1:min_events, col_j, drop = FALSE]
+        xest  <- bet_est$betas_ran[1:min_events, col_j, drop = FALSE]
+        cvals[col_j] <- cor(xtrue, xest)
+      }
+    } else {
+      cvals <- numeric(ncol(bet_est$betas_ran))
+      for (col_j in seq_len(ncol(bet_est$betas_ran))) {
+        xtrue <- sim_out$ampmat[, col_j]
+        xest  <- bet_est$betas_ran[, col_j]
+        cvals[col_j] <- cor(xtrue, xest)
+      }
+    }
+
+    mean_corr <- mean(cvals, na.rm = TRUE)
+
+    res_list[[counter]] <- data.frame(
+      amplitude_sd = amp_sd,
+      noise_type   = ntype,
+      noise_sd     = nsd,
+      isi_mode     = imode,
+      replicate    = parrow$replicate,
+      method       = mm,
+      correlation  = mean_corr
+    )
+    counter <- counter + 1
+  }
 } # end for rowi
 
 # -------------------------------------------------------------------
 #     4) Combine results and do some plotting
 # -------------------------------------------------------------------
-sim_results <- dplyr::bind_rows(res_list)
-
-# For convenience, let's define a method label that includes "pls_ncomp" for PLS
-sim_results <- sim_results %>%
-  mutate(method_label = if_else(
-    method == "pls" & !is.na(ncomp),
-    paste0("pls_", ncomp),
-    method
-  ))
+sim_results <- dplyr::bind_rows(res_list) %>%
+  mutate(method_label = method)
 
 # Let's do a quick summarise of the average correlation across replicates
 summary_results <- sim_results %>%

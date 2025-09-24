@@ -15,3 +15,7 @@ Data frame of covariates or NULL
 \description{
 Get Covariates
 }
+\examples{
+gd <- fmrireg:::.demo_group_data_csv()
+get_covariates(gd)
+}

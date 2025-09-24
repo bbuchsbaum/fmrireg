@@ -124,6 +124,7 @@ write_results.fmri_lm <- function(x,
 
 #' Predict Output Files for Overwrite Check
 #' @keywords internal
+#' @noRd
 .predict_output_files <- function(path, entities, desc, strategy, save_betas, contrasts, contrast_stats, fmrilm_obj) {
   predicted_files <- c()
   
@@ -174,6 +175,7 @@ write_results.fmri_lm <- function(x,
 
 #' Validate fmri_lm Object Structure
 #' @keywords internal
+#' @noRd
 .validate_fmrilm_object <- function(x) {
   if (!inherits(x, "fmri_lm")) {
     stop("Input must be an 'fmri_lm' object", call. = FALSE)
@@ -198,6 +200,7 @@ write_results.fmri_lm <- function(x,
 
 #' Create BIDS Entities List
 #' @keywords internal
+#' @noRd
 .create_bids_entities <- function(subject, task, space) {
   
   entities <- list()
@@ -222,6 +225,7 @@ write_results.fmri_lm <- function(x,
 
 #' Sanitize Labels for BIDS Compliance
 #' @keywords internal
+#' @noRd
 .sanitize_label <- function(label) {
   if (is.null(label) || is.na(label)) return(NULL)
   
@@ -240,6 +244,7 @@ write_results.fmri_lm <- function(x,
 
 #' Validate Required BIDS Entities
 #' @keywords internal
+#' @noRd
 .validate_required_entities <- function(entities) {
   if (is.null(entities$subject)) {
     stop("Subject identifier is required. Please provide 'subject' parameter.", 
@@ -259,6 +264,7 @@ write_results.fmri_lm <- function(x,
 
 #' Generate BIDS-Compliant Filename
 #' @keywords internal
+#' @noRd
 .generate_bids_filename <- function(entities, desc = NULL, contrast = NULL, 
                                    stat = NULL, suffix = NULL, extension = "h5") {
   
@@ -307,6 +313,7 @@ write_results.fmri_lm <- function(x,
 
 #' Save Raw Regressor Betas using LabeledVolumeSet
 #' @keywords internal
+#' @noRd
 .save_regressor_betas <- function(fmrilm_obj, path, entities, desc, overwrite) {
   
   # Compute beta volumes
@@ -359,6 +366,7 @@ write_results.fmri_lm <- function(x,
 
 #' Save Contrasts by Statistic Type using LabeledVolumeSet
 #' @keywords internal
+#' @noRd
 .save_contrasts_by_stat <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_stats, overwrite) {
   
   if (is.null(fmrilm_obj$result$contrasts) || nrow(fmrilm_obj$result$contrasts) == 0) {
@@ -425,6 +433,7 @@ write_results.fmri_lm <- function(x,
 
 #' Save Contrasts by Individual Contrast using LabeledVolumeSet
 #' @keywords internal  
+#' @noRd
 .save_contrasts_by_contrast <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_stats, overwrite) {
   
   if (is.null(fmrilm_obj$result$contrasts) || nrow(fmrilm_obj$result$contrasts) == 0) {
@@ -519,6 +528,7 @@ write_results.fmri_lm <- function(x,
 
 #' Save JSON Metadata for Betas
 #' @keywords internal
+#' @noRd
 .save_betas_json_metadata <- function(fmrilm_obj, path, entities, desc, regressor_names, h5_filepath) {
   
   # Generate JSON filename
@@ -570,6 +580,7 @@ write_results.fmri_lm <- function(x,
 
 #' Save JSON Metadata for Contrasts (by stat)
 #' @keywords internal
+#' @noRd
 .save_contrasts_json_metadata <- function(fmrilm_obj, path, entities, desc, stat, contrast_names, contrasts, h5_filepath) {
   
   # Generate JSON filename
@@ -638,6 +649,7 @@ write_results.fmri_lm <- function(x,
 
 #' Save JSON Metadata for Single Contrast
 #' @keywords internal
+#' @noRd
 .save_single_contrast_json_metadata <- function(fmrilm_obj, path, entities, desc, contrast_name, stat_names, contrast_row, h5_filepath) {
   
   # Generate JSON filename
@@ -696,6 +708,7 @@ write_results.fmri_lm <- function(x,
 
 #' Get Units for Statistic Type
 #' @keywords internal
+#' @noRd
 .get_stat_units <- function(stat) {
   switch(stat,
     "beta" = "arbitrary (depends on input data scaling)",
@@ -736,6 +749,7 @@ write_results.fmri_lm <- function(x,
 
 #' Extract Contrast Type Information
 #' @keywords internal
+#' @noRd
 .extract_contrast_type <- function(contrast_row, fmrilm_obj) {
   # Try to determine contrast type from available information
   tryCatch({
@@ -789,6 +803,7 @@ write_results.fmri_lm <- function(x,
 
 #' Extract Degrees of Freedom from fmri_lm Object
 #' @keywords internal
+#' @noRd
 .extract_degrees_of_freedom <- function(fmrilm_obj) {
   # Extract residual degrees of freedom
   df_resid <- NULL
@@ -811,6 +826,7 @@ write_results.fmri_lm <- function(x,
 
 #' Create Temporary Directory for Atomic Writes
 #' @keywords internal
+#' @noRd
 .create_temp_write_dir <- function(base_path) {
   # Create unique temporary directory name
   temp_name <- paste0(".tmp_write_", format(Sys.time(), "%Y%m%d_%H%M%S"), "_", 
@@ -880,6 +896,7 @@ write_results.fmri_lm <- function(x,
 
 #' Clean Up Temporary Write Directory
 #' @keywords internal
+#' @noRd
 .cleanup_temp_write_dir <- function(temp_dir) {
   if (dir.exists(temp_dir)) {
     unlink(temp_dir, recursive = TRUE)
@@ -888,6 +905,7 @@ write_results.fmri_lm <- function(x,
 
 #' Compute Beta Volumes from fmri_lm Object
 #' @keywords internal
+#' @noRd
 .compute_beta_volumes <- function(fmrilm_obj) {
   # Input validation
   if (is.null(fmrilm_obj$result$betas$data) || 
@@ -945,6 +963,7 @@ write_results.fmri_lm <- function(x,
 
 #' Map User Statistic Names to Internal Field Names
 #' @keywords internal
+#' @noRd
 .map_stat_name <- function(stat) {
   # Map user-friendly names to internal contrast data field names
   stat_mapping <- c(
@@ -964,6 +983,7 @@ write_results.fmri_lm <- function(x,
 
 #' Compute Statistical Map Volumes from Contrast Data
 #' @keywords internal
+#' @noRd
 .compute_statistical_volumes <- function(contrast_data, stat, brain_dims, mask, space) {
   stat_matrices <- list()
   contrast_names <- c()

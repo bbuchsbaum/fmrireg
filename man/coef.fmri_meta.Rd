@@ -17,3 +17,10 @@ Matrix of coefficients
 \description{
 Extract Coefficients from Meta-Analysis
 }
+\examples{
+toy_meta <- structure(
+  list(coefficients = matrix(c(0.2, -0.1), nrow = 1)),
+  class = "fmri_meta"
+)
+coef(toy_meta)
+}

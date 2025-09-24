@@ -19,3 +19,19 @@ A list containing summary statistics invisibly
 \description{
 Summary of Meta-Analysis Results
 }
+\examples{
+toy_meta <- structure(
+  list(
+    coefficients = matrix(c(0.3, -0.1), nrow = 1,
+      dimnames = list(NULL, c("A", "B"))),
+    se = matrix(c(0.05, 0.07), nrow = 1),
+    method = "DL",
+    robust = "none",
+    formula = ~ condition,
+    n_subjects = 12,
+    n_rois = 1
+  ),
+  class = "fmri_meta"
+)
+summary(toy_meta, threshold = 0.1)
+}

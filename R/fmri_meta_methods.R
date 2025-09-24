@@ -6,6 +6,12 @@
 #' @param object An fmri_meta object
 #' @param ... Additional arguments
 #' @return Matrix of coefficients
+#' @examples
+#' toy_meta <- structure(
+#'   list(coefficients = matrix(c(0.2, -0.1), nrow = 1)),
+#'   class = "fmri_meta"
+#' )
+#' coef(toy_meta)
 #' @export
 coef.fmri_meta <- function(object, ...) {
   object$coefficients
@@ -15,6 +21,12 @@ coef.fmri_meta <- function(object, ...) {
 #'
 #' @param object An fmri_meta object
 #' @return Matrix of standard errors
+#' @examples
+#' toy_meta <- structure(
+#'   list(se = matrix(c(0.05, 0.06), nrow = 1)),
+#'   class = "fmri_meta"
+#' )
+#' se(toy_meta)
 #' @export
 se <- function(object) {
   UseMethod("se")
@@ -29,6 +41,15 @@ se.fmri_meta <- function(object) {
 #'
 #' @param object An fmri_meta object
 #' @return Matrix of z-scores
+#' @examples
+#' toy_meta <- structure(
+#'   list(
+#'     coefficients = matrix(c(0.2, -0.1), nrow = 1),
+#'     se = matrix(c(0.05, 0.08), nrow = 1)
+#'   ),
+#'   class = "fmri_meta"
+#' )
+#' zscores(toy_meta)
 #' @export
 zscores <- function(object) {
   UseMethod("zscores")
@@ -44,6 +65,15 @@ zscores.fmri_meta <- function(object) {
 #' @param object An fmri_meta object
 #' @param two_tailed Logical. Use two-tailed test (default: TRUE)
 #' @return Matrix of p-values
+#' @examples
+#' toy_meta <- structure(
+#'   list(
+#'     coefficients = matrix(c(0.2, -0.1), nrow = 1),
+#'     se = matrix(c(0.05, 0.08), nrow = 1)
+#'   ),
+#'   class = "fmri_meta"
+#' )
+#' pvalues(toy_meta)
 #' @export
 pvalues <- function(object, two_tailed = TRUE) {
   UseMethod("pvalues")
@@ -74,6 +104,17 @@ pvalues.fmri_meta <- function(object, two_tailed = TRUE) {
 #'   }
 #' @param ... Additional arguments
 #' @return An fmri_meta_contrast object with contrast results
+#' @examples
+#' toy_meta <- structure(
+#'   list(
+#'     coefficients = matrix(c(0.3, 0.1), nrow = 1,
+#'       dimnames = list(NULL, c("A", "B"))),
+#'     se = matrix(c(0.05, 0.06), nrow = 1),
+#'     robust = "none"
+#'   ),
+#'   class = "fmri_meta"
+#' )
+#' contrast(toy_meta, c(1, -1))
 #' @export
 contrast.fmri_meta <- function(x, contrast, ...) {
   # Parse contrast specification
@@ -240,6 +281,20 @@ build_contrast_from_names <- function(contrast, object) {
 #' @param x An fmri_meta object
 #' @param ... Additional print arguments
 #' @return Invisibly returns the input object x
+#' @examples
+#' toy_meta <- structure(
+#'   list(
+#'     coefficients = matrix(0.2, nrow = 1),
+#'     se = matrix(0.05, nrow = 1),
+#'     method = "DL",
+#'     robust = "none",
+#'     formula = ~ condition,
+#'     n_subjects = 12,
+#'     n_rois = 1
+#'   ),
+#'   class = "fmri_meta"
+#' )
+#' print(toy_meta)
 #' @export
 print.fmri_meta <- function(x, ...) {
   cat("fMRI Meta-Analysis Results\n")
@@ -271,6 +326,21 @@ print.fmri_meta <- function(x, ...) {
 #' @param threshold P-value threshold for significance (default: 0.05)
 #' @param ... Additional summary arguments
 #' @return A list containing summary statistics invisibly
+#' @examples
+#' toy_meta <- structure(
+#'   list(
+#'     coefficients = matrix(c(0.3, -0.1), nrow = 1,
+#'       dimnames = list(NULL, c("A", "B"))),
+#'     se = matrix(c(0.05, 0.07), nrow = 1),
+#'     method = "DL",
+#'     robust = "none",
+#'     formula = ~ condition,
+#'     n_subjects = 12,
+#'     n_rois = 1
+#'   ),
+#'   class = "fmri_meta"
+#' )
+#' summary(toy_meta, threshold = 0.1)
 #' @export
 summary.fmri_meta <- function(object, threshold = 0.05, ...) {
   cat("fMRI Meta-Analysis Summary\n")
@@ -309,6 +379,16 @@ summary.fmri_meta <- function(object, threshold = 0.05, ...) {
 #' @param coef Coefficient name or index
 #' @param statistic Type of statistic to extract ("estimate", "se", "z", "p")
 #' @return NeuroVol object or matrix
+#' @examples
+#' toy_meta <- structure(
+#'   list(
+#'     coefficients = matrix(c(0.3, 0.1), nrow = 1,
+#'       dimnames = list(NULL, c("A", "B"))),
+#'     se = matrix(c(0.05, 0.06), nrow = 1)
+#'   ),
+#'   class = "fmri_meta"
+#' )
+#' coef_image(toy_meta, coef = "A")
 #' @export
 coef_image <- function(object, coef = 1, statistic = c("estimate", "se", "z", "p")) {
   UseMethod("coef_image")

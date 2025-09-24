@@ -17,3 +17,13 @@ Matrix of p-values
 \description{
 Compute P-values from Meta-Analysis
 }
+\examples{
+toy_meta <- structure(
+  list(
+    coefficients = matrix(c(0.2, -0.1), nrow = 1),
+    se = matrix(c(0.05, 0.08), nrow = 1)
+  ),
+  class = "fmri_meta"
+)
+pvalues(toy_meta)
+}

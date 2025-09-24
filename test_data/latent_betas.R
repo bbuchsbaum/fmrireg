@@ -31,7 +31,6 @@ rmat <- lvec@basis %*% t(lvec@loadings)
 #svec <- SparseNeuroVec(as.matrix(rmat), space=add_dim(space(lvec@mask), 2240), mask=lvec@mask)
 dset <- matrix_dataset(as.matrix(rmat[,1:20]), TR=1.5, run_length=rep(320,7), event_table=ldset$event_table )  
   
-recon2 <- estimate_betas(dset, fixed = Onset ~ hrf(constant), ran = Onset ~ trialwise(), block = ~ run, 
-                       method="pls", ncomp=8)
-
+recon2 <- estimate_betas(dset, fixed = Onset ~ hrf(constant), ran = Onset ~ trialwise(), block = ~ run,
+                         method = "mixed")
 

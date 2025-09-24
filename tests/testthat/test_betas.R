@@ -41,29 +41,16 @@ test_that("can run a beta estimation", {
   
   basis <- fmrihrf::gen_hrf(fmrihrf::HRF_SPMG3)
   
-  ret1 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ hrf(face_gen), block = ~ run, 
-                       method="pls", ncomp=1)
-  ret2 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ hrf(face_gen), block = ~ run, 
-                         method="pls", ncomp=3)
-  ret3 <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ hrf(face_gen), block = ~ run, 
-                        method="mixed")
-  
-  ret4 <- estimate_betas(dset, ran = onset ~ hrf(face_gen), block = ~ run, 
-                         method="ols")
-  ret5 <- estimate_betas(dset, ran = onset ~ hrf(face_gen), block = ~ run, 
-                         method="lss")
-  ret6 <- estimate_betas(dset, ran = onset ~ hrf(face_gen), block = ~ run, 
-                         method="lss_cpp")
-  
+  ret_mixed <- estimate_betas(dset, fixed = onset ~ hrf(constant), ran = onset ~ hrf(face_gen),
+                              block = ~ run, method = "mixed")
+  ret_ols <- estimate_betas(dset, ran = onset ~ hrf(face_gen), block = ~ run,
+                            method = "ols")
+  ret_lss <- estimate_betas(dset, ran = onset ~ hrf(face_gen), block = ~ run,
+                            method = "lss")
 
-
- 
-  expect_true(!is.null(ret1))
-  expect_true(!is.null(ret2))
-  expect_true(!is.null(ret3))
-  expect_true(!is.null(ret4))
-  expect_true(!is.null(ret5))
-  expect_true(!is.null(ret6))
+  expect_true(!is.null(ret_mixed))
+  expect_true(!is.null(ret_ols))
+  expect_true(!is.null(ret_lss))
   #expect_true(!is.null(ret7))
   #expect_true(!is.null(ret9))
   
@@ -88,13 +75,15 @@ test_that("can run a beta estimation with different durations", {
   dset <- gen_dset(5, facedes)
 
   hf <- fmrihrf::gen_hrf(fmrihrf::hrf_spmg1, width=2, lag=5)
-  ret1 <- estimate_betas(dset, fixed = onset ~ hrf(constant, durations=1), ran = onset ~ hrf(face_gen),
+  ret1 <- estimate_betas(dset, fixed = onset ~ hrf(constant, durations = 1),
+                         ran = onset ~ hrf(face_gen),
                          block = ~ run,
-                         method="pls", ncomp=1)
+                         method = "mixed")
 
-  ret2 <- estimate_betas(dset, fixed = onset ~ hrf(constant, basis=hf), ran = onset ~ hrf(face_gen, basis=hf),
+  ret2 <- estimate_betas(dset, fixed = onset ~ hrf(constant, basis = hf),
+                         ran = onset ~ hrf(face_gen, basis = hf),
                          block = ~ run,
-                         method="pls", ncomp=1)
+                         method = "mixed")
 
 
   expect_true(!is.null(ret1))
@@ -121,9 +110,9 @@ test_that("can run a beta estimation with multiple basis functions", {
   #                                 ran = onset ~ hrf(face_gen, basis=hrfbasis, durations=0), block = ~ run,
   #                                 method="pls",ncomp=3)
   
-  est <- estimate_betas(dset, fixed = onset ~ hrf(constant, durations=0),
-                                   ran = onset ~ hrf(face_gen), block = ~ run,
-                                   method="pls",ncomp=3)
+  est <- estimate_betas(dset, fixed = onset ~ hrf(constant, durations = 0),
+                        ran = onset ~ hrf(face_gen), block = ~ run,
+                        method = "mixed")
 
 
   expect_true(!is.null(est))
@@ -143,9 +132,9 @@ test_that("can run a beta estimation with custom basis", {
   #                       ran = onset ~ hrf(face_gen, basis=b1, durations=0), block = ~ run,
   #                       method="pls_global",ncomp=30)
   
-  est <- estimate_betas(dset, fixed = onset ~ hrf(constant,durations=0),
-                                   ran = onset ~ hrf(face_gen), block = ~ run,
-                                   method="pls",ncomp=3)
+  est <- estimate_betas(dset, fixed = onset ~ hrf(constant, durations = 0),
+                        ran = onset ~ hrf(face_gen), block = ~ run,
+                        method = "mixed")
 
   expect_true(!is.null(est))
 
@@ -169,8 +158,8 @@ test_that("can run a beta estimation with fixed duration", {
   
   
   est <- estimate_betas(dset, fixed = onset ~ hrf(constant),
-                        ran = onset ~ hrf(face_gen), block = ~ run, 
-                        method="pls_global",ncomp=3)
+                        ran = onset ~ hrf(face_gen), block = ~ run,
+                        method = "mixed")
   
   expect_true(!is.null(est))
   

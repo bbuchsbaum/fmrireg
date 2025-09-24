@@ -29,3 +29,11 @@ Creates spatial blocks from a 3D mask for use with spatial_fdr.
 This is useful for voxelwise analyses where you want to group
 nearby voxels together for more powerful multiple comparisons correction.
 }
+\examples{
+mask <- array(c(1L, 1L, 0L,
+                1L, 1L, 0L,
+                0L, 0L, 0L), dim = c(3, 3, 1))
+blocks <- create_3d_blocks(mask, block_size = c(2, 2, 1))
+blocks$n_groups
+
+}

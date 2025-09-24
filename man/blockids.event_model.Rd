@@ -17,3 +17,7 @@ Integer vector of block IDs
 \description{
 Return the run/block IDs associated with an event_model's sampling frame.
 }
+\examples{
+ev <- fmrireg:::.demo_event_model()
+blockids(ev)
+}

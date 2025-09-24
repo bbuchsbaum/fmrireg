@@ -93,6 +93,43 @@ From `data-raw/principles.md`:
 - One way to do one thing
 - Fail fast and locally with clear error messages
 
+## AR MODELING MIGRATION TO fmriAR (2025-09-18)
+
+### Migration Complete
+All AR (autoregressive) modeling functionality has been migrated to the specialized fmriAR package:
+
+1. **Dependencies Updated**: ✓
+   - Added fmriAR to Imports and Remotes in DESCRIPTION
+   - fmriAR provides enhanced AR/ARMA modeling capabilities
+
+2. **Integration Adapter**: ✓
+   - Created `R/fmriAR_adapter.R` for seamless integration
+   - Maps fmrireg configurations to fmriAR parameters
+   - Maintains backward compatibility
+
+3. **Legacy Code Removed**: ✓
+   - Removed `R/fmri_ar_modeling.R`, `R/ar_utils.R`
+   - Removed `src/ar_whiten.cpp` (C++ implementation)
+   - Created compatibility layer for legacy function calls
+
+4. **Benefits**:
+   - Access to advanced features: ARMA models, multiscale pooling, better diagnostics
+   - Improved performance via optimized C++ implementation
+   - Reduced maintenance burden (~600 lines of code removed)
+   - Single source of truth for AR functionality
+
+### API Compatibility
+All existing `fmri_lm()` calls continue to work unchanged:
+- `cor_struct = "ar1"` → delegates to fmriAR with p=1
+- `cor_struct = "ar2"` → delegates to fmriAR with p=2
+- `cor_struct = "arp"` → delegates to fmriAR with user-specified p
+- All options preserved: `exact_first`, `iter_gls`, `global`, etc.
+
+### Testing
+- Integration tests in `test_fmriAR_integration.R`
+- All existing AR tests continue to pass
+- Numerical results match within tolerance
+
 ## CRITICAL TEST ISSUES RESOLVED (2025-05-28)
 
 All critical functionality tests are now passing after the following fixes:
@@ -112,8 +149,8 @@ All critical functionality tests are now passing after the following fixes:
    - Files modified: `fmri_lm_integrated_solver.R`, `fmri_lm_solver.R`
 
 All 6 critical tests now pass:
-- ✓ AR whitening integration
-- ✓ Robust fitting  
+- ✓ AR whitening integration (now via fmriAR)
+- ✓ Robust fitting
 - ✓ Contrast computation
 - ✓ Effective df calculations
 - ✓ Bootstrap functionality

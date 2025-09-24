@@ -313,6 +313,7 @@ read_h5_full <- function(gd, stat = NULL) {
 #'
 #' @param x A group_data_h5 object
 #' @keywords internal
+#' @noRd
 validate_group_data_h5 <- function(x) {
   # Check for required fields
   required_fields <- c("paths", "subjects", "format", "dim", "labels")

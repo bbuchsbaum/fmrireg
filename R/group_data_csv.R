@@ -167,6 +167,7 @@ group_data_from_csv <- function(data,
 #' @param df Data frame to validate against
 #' @return Validated effect_cols list
 #' @keywords internal
+#' @noRd
 validate_effect_cols <- function(effect_cols, df) {
   # Convert to list if needed
   if (!is.list(effect_cols)) {
@@ -232,6 +233,9 @@ wide_to_long_format <- function(df, effect_cols, subject_col) {
 #' @param roi Optional ROI name to extract
 #' @param contrast Optional contrast name to extract
 #' @return List with effect sizes and variances
+#' @examples
+#' gd <- fmrireg:::.demo_group_data_csv()
+#' extract_csv_data(gd, roi = "ROI1")
 #' @export
 extract_csv_data <- function(gd, roi = NULL, contrast = NULL) {
   if (!inherits(gd, "group_data_csv")) {
@@ -309,6 +313,9 @@ extract_csv_data <- function(gd, roi = NULL, contrast = NULL) {
 #'
 #' @param gd A group_data_csv object
 #' @return Character vector of ROI names
+#' @examples
+#' gd <- fmrireg:::.demo_group_data_csv()
+#' get_rois(gd)
 #' @export
 get_rois <- function(gd) {
   if (!inherits(gd, "group_data_csv")) {
@@ -321,6 +328,9 @@ get_rois <- function(gd) {
 #'
 #' @param gd A group_data_csv object
 #' @return Character vector of contrast names
+#' @examples
+#' gd <- fmrireg:::.demo_group_data_csv()
+#' get_contrasts(gd)
 #' @export
 get_contrasts <- function(gd) {
   if (!inherits(gd, "group_data_csv")) {
@@ -333,6 +343,7 @@ get_contrasts <- function(gd) {
 #'
 #' @param x A group_data_csv object
 #' @keywords internal
+#' @noRd
 validate_group_data_csv <- function(x) {
   # Check for required fields
   required_fields <- c("data", "effect_cols", "subject_col", "subjects", "format")

@@ -15,3 +15,7 @@ Integer number of unique subjects
 \description{
 Extract Number of Subjects
 }
+\examples{
+gd <- fmrireg:::.demo_group_data_csv()
+n_subjects(gd)
+}

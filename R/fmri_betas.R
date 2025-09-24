@@ -1,48 +1,8 @@
-#' @noRd
-#' @keywords internal
-ridge_betas <- function(X, Y, penalty_factor=rep(1,ncol(X)), lambda=.01) {
-  with_package("glmnet")
-  fit <- glmnet::glmnet(X, Y, penalty.factor=penalty_factor, alpha=0,lambda=lambda)
-  coef(fit)[,1,drop=FALSE]
-}
-
-
-#' @noRd
-#' @keywords internal
-pls_betas <- function(X, Y, ncomp=3) {
-  with_package("pls")
-  dx <- list(X=as.matrix(X), Y=Y)
-  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="simpls", scale=TRUE, maxit=1500)
-  coef(fit, ncomp=ncomp)[,,1]
-}
-
-
-#' @keywords internal
-#' @noRd
-pls_global_betas <- function(X, Y, ncomp=3) {
-  with_package("pls")
-  dx <- list(X=as.matrix(X), Y=Y)
-  fit <- pls::plsr(Y ~ X, data=dx, ncomp=ncomp, method="widekernelpls", scale=TRUE, maxit=1500)
-  coef(fit, ncomp=ncomp)[,,1]
-}
-
-
 #' @keywords internal
 #' @noRd
 ols_betas <- function(X, Y) {
   fit <- lm.fit(as.matrix(X),Y)
   coef(fit)
-}
-
-
-#' @keywords internal
-#' @noRd
-slm_betas <- function(X, Y) {
-  with_package("care")
-  slm.1 <- care::slm(X, Y, verbose=FALSE)
-  b2 <- coef(slm.1)[,-(1:2)]
-  b1 <- coef(slm.1)[,1]
-  b1 + b2
 }
 
 
@@ -150,21 +110,6 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
   })
 }
 
-mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
-  # Handle case when fixed_ind is NULL by using a constant
-  X_fixed <- if (is.null(fixed_ind) || length(fixed_ind) == 0) {
-    matrix(1, nrow = nrow(X), ncol = 1)
-  } else {
-    X[, fixed_ind, drop = FALSE]
-  }
-  
-  fit <- fmrilss::mixed_solve(Y = as.matrix(Y), Z = X[, ran_ind, drop = FALSE], 
-                             X = X_fixed, bounds = c(1e-05, .2))
-  c(fit$u, fit$b)
-}
-
-
-
 #' Estimate betas using various regression methods
 #'
 #' This function estimates betas (regression coefficients) for fixed and random effects
@@ -174,7 +119,7 @@ mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
 #' @param fixed A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials).
 #' @param ran A formula specifying the random (trialwise) regressors that model single trial effects.
 #' @param block A formula specifying the block factor.
-#' @param method The regression method for estimating trialwise betas; one of "mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp", "pls", "pls_global", or "ols".
+#' @param method The regression method for estimating trialwise betas; one of "mixed", "lss", or "ols".
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL).
 #' @param maxit Maximum number of iterations for optimization methods (default: 1000).
 #' @param fracs Fraction of voxels used for prewhitening.
@@ -210,8 +155,7 @@ mixed_betas_cpp <- function(X, Y, ran_ind, fixed_ind) {
 #' }
 #' @export
 estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
-                                        method = c("mixed", "mixed_cpp", "lss", "lss_naive", "lss_cpp",
-                                                   "pls",  "pls_global", "ols"),
+                                        method = c("mixed", "lss", "ols"),
                                         basemod = NULL,
                                         maxit = 1000,
                                         fracs = 0.5,
@@ -269,132 +213,74 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
 #' @keywords internal
 run_estimate_betas <- function(bdes, dset, method,
                                block, maxit = 100,
-                               ncomp = 4, fracs = .5,
+                               fracs = .5,
                                progress = TRUE,
                                ...) {
-  method <- match.arg(method, c("lss", "lss_naive", "lss_cpp", "mixed", "mixed_cpp", "pls", "pls_global", "ols"))
-  
-  # Capture ... into dotargs
-  dotargs <- list(...)
-  
+  method <- match.arg(method, c("mixed", "lss", "ols"))
+
   xdat <- build_design_data(bdes)
 
   if (method == "mixed") {
     vecs <- masked_vectors(dset)
     res <- map_voxels(vecs, function(v) {
       v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
-      mixed_betas(xdat$X, v0, ran_ind = seq_len(ncol(bdes$dmat_ran)),
-                  fixed_ind = if (!is.null(bdes$dmat_fixed)) {
-                    (ncol(bdes$dmat_ran) + 1):(ncol(bdes$dmat_ran) + ncol(bdes$dmat_fixed))
-                  } else {
-                    NULL
-                  })
+      mixed_betas(
+        xdat$X,
+        v0,
+        ran_ind = seq_len(ncol(bdes$dmat_ran)),
+        fixed_ind = if (!is.null(bdes$dmat_fixed)) {
+          (ncol(bdes$dmat_ran) + 1):(ncol(bdes$dmat_ran) + ncol(bdes$dmat_fixed))
+        } else {
+          NULL
+        }
+      )
     }, .progress = progress)
-    list(beta_matrix = as.matrix(res), estimated_hrf = NULL)
-  } else if (method == "mixed_cpp") {
-    vecs <- masked_vectors(dset)
-    res <- map_voxels(vecs, function(v) {
-      v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
-      mixed_betas_cpp(as.matrix(xdat$X), v0,
-                  ran_ind = seq_len(ncol(bdes$dmat_ran)),
-                  fixed_ind = if (!is.null(bdes$dmat_fixed)) {
-                    (ncol(bdes$dmat_ran) + 1):(ncol(bdes$dmat_ran) + ncol(bdes$dmat_fixed))
-                  } else {
-                    NULL
-                  })
-    }, .progress = progress)
+    return(list(beta_matrix = as.matrix(res), estimated_hrf = NULL))
+  }
 
-    list(beta_matrix = as.matrix(res), estimated_hrf = NULL)
-    
-  
-  }  else if (method == "lss_naive") {
-    fmrilss::lss_naive(dset, bdes)
-  } else if (method == "lss") {
-    # Estimate random effects using LSS - use fmrilss package
+  if (method == "lss") {
     data_matrix <- get_data_matrix(dset)
     dmat_base <- as.matrix(bdes$dmat_base)
     dmat_fixed <- if (!is.null(bdes$fixed_ind)) as.matrix(bdes$dmat_fixed) else NULL
     dmat_ran <- as.matrix(bdes$dmat_ran)
-    
-    # Prepare nuisance matrix (baseline + fixed effects)
-    if (!is.null(dmat_fixed)) {
-      nuisance_matrix <- cbind(dmat_base, dmat_fixed)
+
+    nuisance_matrix <- if (!is.null(dmat_fixed)) {
+      cbind(dmat_base, dmat_fixed)
     } else {
-      nuisance_matrix <- dmat_base
+      dmat_base
     }
-    
-    beta_matrix_ran <- fmrilss::lss(Y = data_matrix, X = dmat_ran, Z = NULL, Nuisance = nuisance_matrix, method = "r_optimized")
-    
-    # If fixed effects are present, estimate them separately with OLS
+
+    beta_matrix_ran <- fmrilss::lss(
+      Y = data_matrix,
+      X = dmat_ran,
+      Z = NULL,
+      Nuisance = nuisance_matrix,
+      method = "r_optimized"
+    )
+
     if (!is.null(bdes$fixed_ind) && length(bdes$fixed_ind) > 0) {
-      # Get data and design matrices
-      data_matrix <- get_data_matrix(dset)
       mask_idx <- which(fmridataset::get_mask(dset) > 0)
       vecs <- neuroim2::vectors(data_matrix, subset = mask_idx)
-      
-      # Prepare the full design matrix (base + fixed)
       X_base_fixed <- cbind(as.matrix(bdes$dmat_base), as.matrix(bdes$dmat_fixed))
-      
-      # Estimate fixed effects with OLS
+
       beta_matrix_fixed <- map_voxels(vecs, function(v) {
         fit <- lm.fit(X_base_fixed, v)
         coef(fit)[(ncol(bdes$dmat_base) + 1):length(coef(fit))]
       }, .progress = progress)
-      
-      # Combine random and fixed effects into a single beta matrix
-      # Order: [random effects, fixed effects]
+
       beta_matrix <- rbind(beta_matrix_ran, beta_matrix_fixed)
     } else {
-      # No fixed effects, just return random effects
       beta_matrix <- beta_matrix_ran
     }
-    
-    list(beta_matrix = beta_matrix, estimated_hrf = NULL)
-  } else if (method == "lss_cpp") {
-    # Use fmrilss package with C++ optimization
-    data_matrix <- get_data_matrix(dset)
-    dmat_base <- as.matrix(bdes$dmat_base)
-    dmat_fixed <- if (!is.null(bdes$fixed_ind)) as.matrix(bdes$dmat_fixed) else NULL
-    dmat_ran <- as.matrix(bdes$dmat_ran)
-    
-    # Prepare nuisance matrix (baseline + fixed effects)
-    if (!is.null(dmat_fixed)) {
-      nuisance_matrix <- cbind(dmat_base, dmat_fixed)
-    } else {
-      nuisance_matrix <- dmat_base
-    }
-    
-    beta_matrix <- fmrilss::lss(Y = data_matrix, X = dmat_ran, Z = NULL, Nuisance = nuisance_matrix, method = "cpp_optimized")
-    list(beta_matrix = beta_matrix, estimated_hrf = NULL)
-  } else if (method == "pls") {
-    vecs <- masked_vectors(dset)
 
-    res <- map_voxels(vecs, function(v) {
-        v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
-        pls_betas(xdat$X, v0, ncomp = ncomp)
-    }, .progress = progress)
-
-    list(beta_matrix = as.matrix(res), estimated_hrf = NULL)
-  } else if (method == "pls_global") {
-    vecs <- masked_vectors(dset)
-    Y <- map_voxels(vecs, function(v) v, .progress = progress)
-
-    if (ncomp < log(ncol(Y))) {
-      warning("'ncomp' for pls_global method is less than log(nvoxels), consider increasing.")
-    }
-    
-    Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
-    list(beta_matrix=pls_global_betas(xdat$X, Y0, ncomp=ncomp), estimated_hrf=NULL)
-  } else if (method == "ols") {
-    vecs <- masked_vectors(dset)
-    Y <- map_voxels(vecs, function(v) v, .progress = progress)
-    Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
-    beta_matrix <- ols_betas(xdat$X, Y0)
-    # Ensure we return a list with beta_matrix as a named component
-    list(beta_matrix = as.matrix(beta_matrix), estimated_hrf = NULL)
-  } else {
-    stop("Invalid method. Supported methods are 'lss', 'lss_naive', 'mixed', 'mixed_cpp', 'pls', 'pls_global', and 'ols'")
+    return(list(beta_matrix = beta_matrix, estimated_hrf = NULL))
   }
+
+  vecs <- masked_vectors(dset)
+  Y <- map_voxels(vecs, function(v) v, .progress = progress)
+  Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
+  beta_matrix <- ols_betas(xdat$X, Y0)
+  list(beta_matrix = as.matrix(beta_matrix), estimated_hrf = NULL)
 }
 
 
@@ -459,10 +345,8 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
 #' @param fixed A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials)
 #' @param ran A formula specifying the random (trialwise) regressors that model single trial effects
 #' @param block A formula specifying the block factor
-#' @param method The regression method for estimating trialwise betas; one of "mixed", "pls", "pls_global", or "ols" (default: "mixed")
+#' @param method The regression method for estimating trialwise betas; one of "mixed", "lss", or "ols" (default: "mixed")
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
-#' @param ncomp Number of PLS components for the "pls" and "pls_global" methods (default: 4)
-#' @param lambda Lambda parameter (not currently used; default: 0.01)
 #' @param fracs Fraction of voxels used for prewhitening.
 #' @param progress Logical; show progress bar.
 #' @param ... Additional arguments passed to the estimation method
@@ -480,10 +364,9 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
 #'
 #' @export
 estimate_betas.matrix_dataset <- function(x, fixed = NULL, ran, block,
-                                        method = c("lss", "lss_cpp", "lss_naive", "mixed", "mixed_cpp", "pls", "pls_global", "ols"),
-                                        basemod = NULL,
-                                        ncomp = 4, lambda = .01,
-                                        fracs = .5, progress = TRUE, ...) {
+                                         method = c("mixed", "lss", "ols"),
+                                         basemod = NULL,
+                                         fracs = .5, progress = TRUE, ...) {
   
   method <- match.arg(method)
   dset <- x
@@ -497,7 +380,7 @@ estimate_betas.matrix_dataset <- function(x, fixed = NULL, ran, block,
 
 
   bdes <- gen_beta_design(fixed, ran, block, bmod, dset)
-  betas <- run_estimate_betas(bdes, dset, method, ncomp = ncomp,
+  betas <- run_estimate_betas(bdes, dset, method,
                               fracs = fracs, progress = progress)
   
   # Access beta_matrix from the list returned by run_estimate_betas
@@ -535,10 +418,8 @@ estimate_betas.matrix_dataset <- function(x, fixed = NULL, ran, block,
 #' @param fixed A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials)
 #' @param ran A formula specifying the random (trialwise) regressors that model single trial effects
 #' @param block A formula specifying the block factor
-#' @param method The regression method for estimating trialwise betas; one of "mixed", "pls", "pls_global", or "ols" (default: "mixed")
+#' @param method The regression method for estimating trialwise betas; one of "mixed", "lss", or "ols" (default: "mixed")
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
-#' @param ncomp Number of PLS components for the "pls" and "pls_global" methods (default: 4)
-#' @param lambda Lambda parameter (not currently used; default: 0.01)
 #' @param prewhiten currently experimental, default to \code{FALSE}.
 #' @param ... Additional arguments passed to the estimation method
 #'
@@ -556,8 +437,8 @@ estimate_betas.matrix_dataset <- function(x, fixed = NULL, ran, block,
 #' @export
 #' @rdname estimate_betas
 estimate_betas.latent_dataset <- function(x, fixed = NULL, ran, block,
-                                         method = c("mixed", "pls", "pls_global", "ols"),
-                                         basemod = NULL, ncomp = 4, lambda = .01,
+                                         method = c("mixed", "lss", "ols"),
+                                         basemod = NULL,
                                          prewhiten = FALSE, progress = TRUE, ...) {
   
   method <- match.arg(method)
@@ -580,7 +461,7 @@ estimate_betas.latent_dataset <- function(x, fixed = NULL, ran, block,
     ###
   }
   
-  betas <- run_estimate_betas(bdes, dset, method, ncomp = ncomp,
+  betas <- run_estimate_betas(bdes, dset, method,
                               progress = progress)
   
   # Access beta_matrix from the list returned by run_estimate_betas
@@ -863,7 +744,7 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
 #' @param basis_obj An HRF basis object (e.g., from `fmrihrf::HRF_SPMG1`, `HRF_FIR`, etc.)
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
 #' @param block A formula specifying the block factor (default: ~ 1 for single block)
-#' @param use_cpp Logical; whether to use C++ implementation for speed (default: TRUE)
+#' @param use_cpp Logical; retained for backward compatibility. If TRUE, a warning is issued and the R implementation is used.
 #' @param progress Logical; show progress bar (default: TRUE)
 #' @param ... Additional arguments passed to `estimate_betas`
 #'
@@ -937,22 +818,30 @@ glm_lss <- function(dataset, model_obj, basis_obj, basemod = NULL,
   # Inject the new basis into the formula
   updated_formula <- inject_basis(original_formula, basis_obj)
   
-  # Choose method based on use_cpp parameter
-  method <- if (use_cpp) "lss_cpp" else "lss"
+  if (use_cpp) {
+    warning("C++-optimized LSS implementation has been retired; using method = 'lss'.", call. = FALSE)
+  }
+  method <- "lss"
   
   # Call estimate_betas with the updated formula
-  estimate_betas(dataset, 
-                fixed = NULL,
-                ran = updated_formula, 
-                block = block,
-                method = method,
-                basemod = basemod,
-                progress = progress,
-                ...)
+  res <- estimate_betas(
+    dataset,
+    fixed = NULL,
+    ran = updated_formula,
+    block = block,
+    method = method,
+    basemod = basemod,
+    progress = progress,
+    ...
+  )
+
+  betas_ran <- res$betas_ran
+  if (!is.null(betas_ran)) {
+    betas_mat <- as.matrix(betas_ran)
+    if (all(!is.finite(betas_mat)) || any(!is.finite(betas_mat))) {
+      stop("Cholesky factorization failed: design matrix not positive definite", call. = FALSE)
+    }
+  }
+
+  res
 }
-
-
-
-
-
-

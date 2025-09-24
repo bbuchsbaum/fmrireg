@@ -546,8 +546,13 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
     for (contrast_name in names(contrast_info_flattened)) {
       con_spec <- contrast_info_flattened[[contrast_name]]
       
-      # Extract term name from flattened name (e.g., "condition.A_vs_B" -> "condition")
-      term_name <- sub("\\..*$", "", contrast_name)
+      # Extract term name from flattened name (e.g., "term#contrast" or "term.contrast")
+      term_name <- trimws(contrast_name)
+      if (grepl("#", term_name, fixed = TRUE)) {
+        term_name <- sub("#.*$", "", term_name)
+      } else {
+        term_name <- sub("\\..*$", "", term_name)
+      }
       
       if (!is.null(col_indices[[term_name]])) {
         # Get the column indices for this term

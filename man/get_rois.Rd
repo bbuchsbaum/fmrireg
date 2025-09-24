@@ -15,3 +15,7 @@ Character vector of ROI names
 \description{
 Get Available ROIs
 }
+\examples{
+gd <- fmrireg:::.demo_group_data_csv()
+get_rois(gd)
+}

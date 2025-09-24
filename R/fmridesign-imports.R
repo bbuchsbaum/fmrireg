@@ -174,6 +174,10 @@ fmridesign::Fcontrasts
 #' 
 #' @param ... contrast specifications
 #' @return A list of class "contrast_set" containing the specified contrasts
+#' @examples
+#' cs <- contrast_set(
+#'   fmridesign::pair_contrast(~condition == "A", ~condition == "B", name = "A_vs_B")
+#' )
 #' @export
 contrast_set <- function(...) {
   fmridesign::contrast_set(...)

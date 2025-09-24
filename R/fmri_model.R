@@ -126,6 +126,9 @@ prediction_matrix <- function(x) {
 #' @param blockid Optional numeric vector specifying which blocks/runs to include
 #' @param ... Additional arguments (not used)
 #' @return A tibble containing the combined design matrix with event and baseline terms
+#' @examples
+#' fm <- fmrireg:::.demo_fmri_model()
+#' head(design_matrix(fm))
 #' @method design_matrix fmri_model
 #' @export
 #' @importFrom tibble as_tibble

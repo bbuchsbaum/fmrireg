@@ -13,6 +13,7 @@ LazyData: false
 Depends:
     R (>= 4.0.0)
 Imports:
+    fmriAR (>= 0.0.0.9000),
     fmridesign (>= 0.1.0),
     fmrihrf (>= 0.1.0),
     fmrilss (>= 0.1.0),
@@ -54,6 +55,7 @@ Suggests:
     RNifti,
     ggrepel,
     pls,
+    doParallel,
     fmristore,
     knitr,
     rmarkdown,
@@ -73,6 +75,7 @@ Suggests:
     ggforce,
     roxyglobals (>= 0.2.1)
 Remotes:
+    bbuchsbaum/fmriAR,
     bbuchsbaum/neuroim2,
     bbuchsbaum/multivarious,
     bbuchsbaum/fmristore,
@@ -84,11 +87,10 @@ Remotes:
 VignetteBuilder: knitr
 URL: https://bbuchsbaum.github.io/fmrireg/, https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues
-Collate: 
+Collate:
     'imports.R'
     'RcppExports.R'
     'all_generic.R'
-    'ar_utils.R'
     'autoplot-methods.R'
     'correlation_map_methods.R'
     'benchmark_datasets.R'
@@ -96,12 +98,14 @@ Collate:
     'bids_export.R'
     'bootstrap.R'
     'compat-legacy-ar.R'
+    'compat-legacy-ar-impl.R'
     'con_stats.R'
     'data_fmri_benchmark_datasets.R'
     'design_matrix-fmri_lm.R'
     'design_plot.R'
+    'doc_example_helpers.R'
     'effective_df.R'
-    'fmri_ar_modeling.R'
+    'fmriAR_adapter.R'
     'fmri_betas.R'
     'fmri_latent_lm.R'
     'fmri_lm_ar_integration.R'

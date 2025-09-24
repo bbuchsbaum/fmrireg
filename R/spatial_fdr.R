@@ -168,8 +168,9 @@ spatial_fdr <- function(z = NULL,
       valid_z <- zz[is.finite(zz)]
       
       if (length(valid_z) < 10) {
-        warning("Too few valid z-values for empirical null; using theoretical null",
-                call. = FALSE)
+        if (isTRUE(verbose)) {
+          message("Too few valid z-values for empirical null; using theoretical null")
+        }
       } else {
         o <- order(abs(valid_z))
         k0 <- floor(0.6 * length(valid_z))
@@ -368,6 +369,13 @@ summary.spatial_fdr_result <- function(object, ...) {
 #'     integer vector of 1-based neighbor IDs for group i}
 #'   \item{n_groups}{Integer scalar; total number of groups created}
 #'   \item{block_size}{Block size used}
+#'
+#' @examples
+#' mask <- array(c(1L, 1L, 0L,
+#'                 1L, 1L, 0L,
+#'                 0L, 0L, 0L), dim = c(3, 3, 1))
+#' blocks <- create_3d_blocks(mask, block_size = c(2, 2, 1))
+#' blocks$n_groups
 #'
 #' @export
 create_3d_blocks <- function(mask, block_size = c(10, 10, 10), connectivity = 26) {

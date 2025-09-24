@@ -22,6 +22,10 @@ List with components:
 Converts t-statistics and degrees of freedom to standardized mean differences
 (Cohen's d) and their sampling variances for meta-analysis.
 }
+\examples{
+t_to_d(t = 2, df = 18)
+t_to_d(t = 2, df = 18, n = 20)
+}
 \seealso{
 \code{\link{fmri_meta}}
 }

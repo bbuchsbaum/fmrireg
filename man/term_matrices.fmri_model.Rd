@@ -19,3 +19,7 @@ A list of matrices, one for each term in the model
 \description{
 Extract design matrices for individual terms from an fmri_model object.
 }
+\examples{
+fm <- fmrireg:::.demo_fmri_model()
+term_matrices(fm)
+}

@@ -2,12 +2,17 @@
 % Please edit documentation in R/all_generic.R
 \name{columns}
 \alias{columns}
+\alias{columns.event_model}
 \title{Extract Column Names or Identifiers}
 \usage{
-columns(x)
+columns(x, ...)
+
+\method{columns}{event_model}(x, ...)
 }
 \arguments{
 \item{x}{An object (typically a ParametricBasis)}
+
+\item{...}{Additional arguments passed to method-specific implementations.}
 }
 \value{
 A character vector of column identifiers
@@ -15,4 +20,18 @@ A character vector of column identifiers
 \description{
 Extract column names or identifiers from an object. For parametric basis objects,
 this returns tokens representing the type of variables (categorical or continuous).
+}
+\examples{
+dat <- data.frame(
+  onsets = c(0, 4, 8),
+  condition = factor(c("A", "B", "A")),
+  run = 1
+)
+ev <- event_model(
+  onsets ~ hrf(condition),
+  data = dat,
+  block = ~ run,
+  sampling_frame = fmrihrf::sampling_frame(blocklens = 12, TR = 2)
+)
+columns(ev)
 }

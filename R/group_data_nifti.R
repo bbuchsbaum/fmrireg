@@ -263,6 +263,7 @@ read_nifti_data <- function(path, mask = NULL) {
 #' @param paths Character vector of NIfTI file paths
 #' @param expected_dim Expected dimensions
 #' @keywords internal
+#' @noRd
 validate_nifti_dimensions <- function(paths, expected_dim) {
   paths <- paths[!is.null(paths)]
   
@@ -379,6 +380,7 @@ read_nifti_full <- function(gd, use_mask = NULL) {
 #'
 #' @param x A group_data_nifti object
 #' @keywords internal
+#' @noRd
 validate_group_data_nifti <- function(x) {
   # Check for at least one data source
   if (is.null(x$beta_paths) && is.null(x$t_paths)) {

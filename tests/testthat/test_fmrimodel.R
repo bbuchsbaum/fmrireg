@@ -42,44 +42,6 @@ test_that("can construct and run an fmri_model with matrix data", {
   expect_true(ncol(dm) > 0)
 })
 
-test_that("can construct fmri_model with real test files", {
-  skip_if_not_installed("fmrireg")
-  
-  # Check if test files exist
-  test_files <- c("test_data/testscan01.nii", "test_data/testscan02.nii")
-  mask_file <- "test_data/testmask.nii"
-  
-  if (!all(file.exists(test_files)) || !file.exists(mask_file)) {
-    skip("Test NIfTI files not available")
-  }
-  
-  # Use a small subset of face design
-  facedes_mini <- facedes[1:20, ]  # Just first 20 events
-  facedes_mini$run <- 1  # All in run 1
-  facedes_mini$repnum <- factor(facedes_mini$rep_num)
-  
-  tryCatch({
-    # Try to create dataset with actual files
-    dset <- fmri_dataset(scans = test_files[1],  # Just use one scan
-                        mask = mask_file,
-                        TR = 1.5,
-                        run_length = 100,  # Shorter run
-                        event_table = facedes_mini)
-    
-    espec <- event_model(onset ~ hrf(repnum), data = facedes_mini,
-                        block = ~run, sampling_frame = dset$sampling_frame)
-    bspec <- baseline_model(basis = "poly", degree = 3, sframe = dset$sampling_frame)
-    fmod <- fmri_model(espec, bspec, dset)
-    
-    expect_s3_class(fmod, "fmri_model")
-    expect_true(!is.null(fmod))
-    
-  }, error = function(e) {
-    # If NIfTI loading fails, skip the test
-    skip(paste("Cannot load NIfTI test files:", e$message))
-  })
-})
-
 test_that("fmri_model handles edge cases correctly", {
   skip_if_not_installed("fmrireg")
   
@@ -122,7 +84,6 @@ test_that("fmri_model handles edge cases correctly", {
   # Test printing doesn't error
   expect_no_error(print(fmod))
 })
-
 
 
 

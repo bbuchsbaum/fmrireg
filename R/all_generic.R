@@ -29,12 +29,14 @@ with_package <- function(name) {
 # get_mask <- function(x, ...) UseMethod("get_mask") # Now imported from fmridataset
 
 
-#' get_formula
-#' 
-#' @param x the object
-#' @param ... extra args
-#' @keywords internal
-#' @noRd
+#' Retrieve the formula underlying a model object
+#'
+#' Generic used to expose the original modelling formula for fitted objects.
+#'
+#' @param x The object to extract a formula from.
+#' @param ... Additional arguments passed to methods.
+#' @return A formula.
+#' @export
 get_formula <- function(x, ...) UseMethod("get_formula")
 
 
@@ -60,6 +62,9 @@ design_env <- function(x, ...) UseMethod("design_env")
 #' @param x object
 #' @param ... passed to methods
 #' @return A contrast object with computed contrast weights and statistics
+#' @examples
+#' meta <- fmrireg:::.demo_fmri_meta()
+#' contrast(meta, c("(Intercept)" = 1))
 #' @export
 contrast <- function(x, ...) UseMethod("contrast")
 
@@ -311,9 +316,34 @@ longnames <- function(x) UseMethod("longnames")
 #' this returns tokens representing the type of variables (categorical or continuous).
 #'
 #' @param x An object (typically a ParametricBasis)
+#' @param ... Additional arguments passed to method-specific implementations.
 #' @return A character vector of column identifiers
+#' @examples
+#' dat <- data.frame(
+#'   onsets = c(0, 4, 8),
+#'   condition = factor(c("A", "B", "A")),
+#'   run = 1
+#' )
+#' ev <- event_model(
+#'   onsets ~ hrf(condition),
+#'   data = dat,
+#'   block = ~ run,
+#'   sampling_frame = fmrihrf::sampling_frame(blocklens = 12, TR = 2)
+#' )
+#' columns(ev)
 #' @export
-columns <- function(x) UseMethod("columns")
+columns <- fmridesign::columns
+
+#' @rdname columns
+#' @export
+columns.event_model <- function(x, ...) {
+  dm <- fmridesign::design_matrix(x)
+  if (is.null(dm)) {
+    character(0)
+  } else {
+    colnames(dm)
+  }
+}
 
 
 
@@ -1065,6 +1095,9 @@ design_matrix.convolved_term <- function(x, blockid=NULL, ...) {
 #' @param x An event_model object
 #' @param ... Additional arguments passed through
 #' @return Integer vector of block IDs
+#' @examples
+#' ev <- fmrireg:::.demo_event_model()
+#' blockids(ev)
 #' @method blockids event_model
 #' @export
 blockids.event_model <- function(x, ...) {

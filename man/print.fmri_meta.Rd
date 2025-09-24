@@ -17,3 +17,18 @@ Invisibly returns the input object x
 \description{
 Print Meta-Analysis Results
 }
+\examples{
+toy_meta <- structure(
+  list(
+    coefficients = matrix(0.2, nrow = 1),
+    se = matrix(0.05, nrow = 1),
+    method = "DL",
+    robust = "none",
+    formula = ~ condition,
+    n_subjects = 12,
+    n_rois = 1
+  ),
+  class = "fmri_meta"
+)
+print(toy_meta)
+}

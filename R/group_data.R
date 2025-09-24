@@ -96,6 +96,7 @@ detect_group_data_format <- function(data) {
 #' @param x A group_data object
 #' @return Invisible TRUE if valid, error otherwise
 #' @keywords internal
+#' @noRd
 validate_group_data <- function(x) {
   if (!inherits(x, "group_data")) {
     stop("Object must be of class 'group_data'", call. = FALSE)
@@ -219,6 +220,9 @@ summary.group_data <- function(object, ...) {
 #'
 #' @param x A group_data object
 #' @return Integer number of unique subjects
+#' @examples
+#' gd <- fmrireg:::.demo_group_data_csv()
+#' n_subjects(gd)
 #' @export
 n_subjects <- function(x) {
   UseMethod("n_subjects")
@@ -233,6 +237,9 @@ n_subjects.group_data <- function(x) {
 #'
 #' @param x A group_data object
 #' @return Character vector of unique subject IDs
+#' @examples
+#' gd <- fmrireg:::.demo_group_data_csv()
+#' get_subjects(gd)
 #' @export
 get_subjects <- function(x) {
   UseMethod("get_subjects")
@@ -247,6 +254,9 @@ get_subjects.group_data <- function(x) {
 #'
 #' @param x A group_data object
 #' @return Data frame of covariates or NULL
+#' @examples
+#' gd <- fmrireg:::.demo_group_data_csv()
+#' get_covariates(gd)
 #' @export
 get_covariates <- function(x) {
   UseMethod("get_covariates")

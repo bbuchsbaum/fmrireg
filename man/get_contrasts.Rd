@@ -15,3 +15,7 @@ Character vector of contrast names
 \description{
 Get Available Contrasts
 }
+\examples{
+gd <- fmrireg:::.demo_group_data_csv()
+get_contrasts(gd)
+}

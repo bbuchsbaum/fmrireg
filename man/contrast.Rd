@@ -18,3 +18,7 @@ A contrast object with computed contrast weights and statistics
 Provide a contrast generic that dispatches on the first argument.
 Falls back to fmridesign::contrast for non-fmri_meta classes.
 }
+\examples{
+meta <- fmrireg:::.demo_fmri_meta()
+contrast(meta, c("(Intercept)" = 1))
+}

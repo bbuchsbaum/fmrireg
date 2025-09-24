@@ -15,3 +15,8 @@ A list of class "contrast_set" containing the specified contrasts
 \description{
 Create a contrast set
 }
+\examples{
+cs <- contrast_set(
+  fmridesign::pair_contrast(~condition == "A", ~condition == "B", name = "A_vs_B")
+)
+}

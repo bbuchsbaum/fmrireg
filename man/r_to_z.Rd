@@ -19,6 +19,9 @@ List with components:
 \description{
 Transforms correlations to Fisher's Z scale for meta-analysis.
 }
+\examples{
+r_to_z(r = 0.4, n = 30)
+}
 \seealso{
 \code{\link{fmri_meta}}
 }

@@ -26,7 +26,7 @@ glm_lss(
 
 \item{block}{A formula specifying the block factor (default: ~ 1 for single block)}
 
-\item{use_cpp}{Logical; whether to use C++ implementation for speed (default: TRUE)}
+\item{use_cpp}{Logical; retained for backward compatibility. If TRUE, a warning is issued and the R implementation is used.}
 
 \item{progress}{Logical; show progress bar (default: TRUE)}
 

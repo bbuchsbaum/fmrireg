@@ -15,6 +15,9 @@ Numeric vector or matrix; correlations
 \description{
 Back-transform Fisher's Z to Correlation
 }
+\examples{
+z_to_r(0.2)
+}
 \seealso{
 \code{\link{fmri_meta}}
 }
