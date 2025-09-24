@@ -87,7 +87,7 @@
     
     
 <p>title: “04. fMRI Linear Model (GLM)” author: “Bradley R. Buchsbaum”
-date: “2025-09-13” output: rmarkdown::html_vignette vignette: &gt; % % %
+date: “2025-09-24” output: rmarkdown::html_vignette vignette: &gt; % % %
 —</p>
 <div class="section level2">
 <h2 id="introduction-to-fmri-linear-models">Introduction to fMRI Linear Models<a class="anchor" aria-label="anchor" href="#introduction-to-fmri-linear-models"></a>
@@ -331,7 +331,7 @@ onset times</li>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Fit a linear model</span></span>
 <span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
-<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,  <span class="co"># Model experimental effects</span></span>
+<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,  <span class="co"># Model experimental effects</span></span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,                     <span class="co"># Block structure</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,                 <span class="co"># Our simulated dataset</span></span>
 <span>  strategy <span class="op">=</span> <span class="st">"chunkwise"</span>,            <span class="co"># Processing strategy</span></span>
@@ -367,7 +367,7 @@ an initial OLS fit, whitens the data and design matrix, and refits the
 GLM.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_ar1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
-<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span>
+<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span>
 <span>  block   <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
 <span>  strategy <span class="op">=</span> <span class="st">"chunkwise"</span>,</span>
@@ -401,7 +401,7 @@ controls the number of iterations.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Note: Robust fitting example - requires bug fix in chunkwise_lm_slow</span></span>
 <span><span class="va">model_robust</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
-<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span>
+<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span>
 <span>  block   <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
 <span>  strategy <span class="op">=</span> <span class="st">"chunkwise"</span>,</span>
@@ -512,11 +512,11 @@ compare conditions using contrasts.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Note: Contrast analysis example - requires bug fix in event_model parsing</span></span>
 <span><span class="co"># Define a contrast specification for comparing condition2 vs condition1</span></span>
-<span><span class="va">con_spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/pair_contrast.html" class="external-link">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"condition2"</span>, <span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"condition1"</span>, name <span class="op">=</span> <span class="st">"cond2_minus_cond1"</span><span class="op">)</span></span>
+<span><span class="va">con_spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.html" class="external-link">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"condition2"</span>, <span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"condition1"</span>, name <span class="op">=</span> <span class="st">"cond2_minus_cond1"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Define a contrast model using the specified contrast in hrf()</span></span>
 <span><span class="va">contrast_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
-<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, contrasts <span class="op">=</span> <span class="va">con_spec</span><span class="op">)</span>,</span>
+<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, contrasts <span class="op">=</span> <span class="va">con_spec</span><span class="op">)</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
 <span>  strategy <span class="op">=</span> <span class="st">"chunkwise"</span>,</span>
@@ -637,7 +637,7 @@ Let’s compare different HRF options.</p>
 <code class="sourceCode R"><span><span class="co"># Note: HRF comparison example - requires fix in model fitting</span></span>
 <span><span class="co"># Fit models with different HRF bases</span></span>
 <span><span class="va">model_canonical</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
-<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"spmg1"</span><span class="op">)</span>,</span>
+<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"spmg1"</span><span class="op">)</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
 <span>  strategy <span class="op">=</span> <span class="st">"chunkwise"</span>,</span>
@@ -645,7 +645,7 @@ Let’s compare different HRF options.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">model_gaussian</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
-<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"gaussian"</span><span class="op">)</span>,</span>
+<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"gaussian"</span><span class="op">)</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
 <span>  strategy <span class="op">=</span> <span class="st">"chunkwise"</span>,</span>
@@ -653,7 +653,7 @@ Let’s compare different HRF options.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">model_bspline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
-<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"bspline"</span>, nbasis <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>,</span>
+<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"bspline"</span>, nbasis <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
 <span>  strategy <span class="op">=</span> <span class="st">"chunkwise"</span>,</span>
@@ -666,7 +666,7 @@ Let’s compare different HRF options.</p>
 <span>  <span class="va">observed_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/get_data_matrix.html" class="external-link">get_data_matrix</a></span><span class="op">(</span><span class="va">dataset</span><span class="op">)</span></span>
 <span>  </span>
 <span>  <span class="co"># Get design matrix (ensure it's a numeric matrix)</span></span>
-<span>  <span class="va">design_mat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/design_matrix.html" class="external-link">design_matrix</a></span><span class="op">(</span><span class="va">model</span><span class="op">$</span><span class="va">model</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">design_mat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html" class="external-link">design_matrix</a></span><span class="op">(</span><span class="va">model</span><span class="op">$</span><span class="va">model</span><span class="op">)</span><span class="op">)</span></span>
 <span>  </span>
 <span>  <span class="co"># Get estimated coefficients (include baseline)</span></span>
 <span>  <span class="co"># Get all coefficients including baseline</span></span>

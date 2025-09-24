@@ -87,7 +87,7 @@
     
     
 <p>title: “Seed-based Functional Connectivity Analysis” author: “Bradley
-R. Buchsbaum” date: “2025-09-13” output: rmarkdown::html_vignette
+R. Buchsbaum” date: “2025-09-24” output: rmarkdown::html_vignette
 vignette: &gt; % % % —</p>
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
@@ -168,8 +168,8 @@ these nuisance signals using basis functions.</p>
 <span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">Tlen</span>, <span class="fl">1</span><span class="op">)</span>, TR <span class="op">=</span> <span class="va">TR</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Model drift using B-splines</span></span>
-<span><span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"bs"</span>, degree <span class="op">=</span> <span class="fl">3</span>, sframe <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span>
-<span><span class="va">X_drift</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/design_matrix.html" class="external-link">design_matrix</a></span><span class="op">(</span><span class="va">bmodel</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"bs"</span>, degree <span class="op">=</span> <span class="fl">3</span>, sframe <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span>
+<span><span class="va">X_drift</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html" class="external-link">design_matrix</a></span><span class="op">(</span><span class="va">bmodel</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">q</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">X_drift</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -178,7 +178,7 @@ these nuisance signals using basis functions.</p>
 <p>Now comes the key insight of our approach: instead of computing
 simple correlations, we’ll treat the seed time series as an experimental
 regressor in a GLM. This allows us to estimate connectivity while
-simultaneously controlling for confounds. The <code><a href="https://rdrr.io/pkg/fmridesign/man/covariate.html" class="external-link">covariate()</a></code>
+simultaneously controlling for confounds. The <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/covariate.html" class="external-link">covariate()</a></code>
 function in fmridesign is perfect for this, as it adds regressors
 without HRF convolution (since the seed signal is already a BOLD time
 series).</p>
@@ -196,15 +196,15 @@ series).</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Build the event model with seed as a covariate</span></span>
-<span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span>
-<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/covariate.html" class="external-link">covariate</a></span><span class="op">(</span><span class="va">seed</span>, data <span class="op">=</span> <span class="va">cov_data</span>, prefix <span class="op">=</span> <span class="st">"seed"</span><span class="op">)</span>,</span>
+<span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/covariate.html" class="external-link">covariate</a></span><span class="op">(</span><span class="va">seed</span>, data <span class="op">=</span> <span class="va">cov_data</span>, prefix <span class="op">=</span> <span class="st">"seed"</span><span class="op">)</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">event_data</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  sampling_frame <span class="op">=</span> <span class="va">sframe</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Reuse our baseline model from above</span></span>
-<span><span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span></span>
+<span><span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span></span>
 <span>  basis <span class="op">=</span> <span class="st">"bs"</span>, </span>
 <span>  degree <span class="op">=</span> <span class="fl">3</span>, </span>
 <span>  sframe <span class="op">=</span> <span class="va">sframe</span></span>
@@ -228,7 +228,7 @@ us how strongly that voxel’s activity relates to the seed after
 accounting for drift.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Find the seed coefficient in our design matrix</span></span>
-<span><span class="va">design_mat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/design_matrix.html" class="external-link">design_matrix</a></span><span class="op">(</span><span class="va">fmodel</span><span class="op">)</span></span>
+<span><span class="va">design_mat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html" class="external-link">design_matrix</a></span><span class="op">(</span><span class="va">fmodel</span><span class="op">)</span></span>
 <span><span class="va">seed_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"seed"</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">design_mat</span><span class="op">)</span>, value <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">seed_cols</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"No seed column found in design matrix"</span><span class="op">)</span></span>
@@ -304,7 +304,7 @@ defined ROI.</p>
 regressors such as motion parameters, physiological signals, or global
 signal regression. The fmrireg framework makes it straightforward to add
 these through the <code>nuisance_list</code> parameter in
-<code><a href="https://rdrr.io/pkg/fmridesign/man/baseline_model.html" class="external-link">baseline_model()</a></code>. You might also apply temporal filtering
+<code><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model()</a></code>. You might also apply temporal filtering
 to focus on specific frequency bands of interest.</p>
 <p>For whole-brain connectivity mapping, this voxelwise approach
 efficiently identifies all regions showing significant functional

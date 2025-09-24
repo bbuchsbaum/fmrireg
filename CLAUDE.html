@@ -177,6 +177,49 @@
 </div>
 </div>
 <div class="section level2">
+<h2 id="ar-modeling-migration-to-fmriar-2025-09-18">AR MODELING MIGRATION TO fmriAR (2025-09-18)<a class="anchor" aria-label="anchor" href="#ar-modeling-migration-to-fmriar-2025-09-18"></a></h2>
+<div class="section level3">
+<h3 id="migration-complete">Migration Complete<a class="anchor" aria-label="anchor" href="#migration-complete"></a></h3>
+<p>All AR (autoregressive) modeling functionality has been migrated to the specialized fmriAR package:</p>
+<ol style="list-style-type: decimal"><li>
+<strong>Dependencies Updated</strong>: ✓
+<ul><li>Added fmriAR to Imports and Remotes in DESCRIPTION</li>
+<li>fmriAR provides enhanced AR/ARMA modeling capabilities</li>
+</ul></li>
+<li>
+<strong>Integration Adapter</strong>: ✓
+<ul><li>Created <code>R/fmriAR_adapter.R</code> for seamless integration</li>
+<li>Maps fmrireg configurations to fmriAR parameters</li>
+<li>Maintains backward compatibility</li>
+</ul></li>
+<li>
+<strong>Legacy Code Removed</strong>: ✓
+<ul><li>Removed <code>R/fmri_ar_modeling.R</code>, <code>R/ar_utils.R</code>
+</li>
+<li>Removed <code>src/ar_whiten.cpp</code> (C++ implementation)</li>
+<li>Created compatibility layer for legacy function calls</li>
+</ul></li>
+<li>
+<strong>Benefits</strong>:
+<ul><li>Access to advanced features: ARMA models, multiscale pooling, better diagnostics</li>
+<li>Improved performance via optimized C++ implementation</li>
+<li>Reduced maintenance burden (~600 lines of code removed)</li>
+<li>Single source of truth for AR functionality</li>
+</ul></li>
+</ol></div>
+<div class="section level3">
+<h3 id="api-compatibility">API Compatibility<a class="anchor" aria-label="anchor" href="#api-compatibility"></a></h3>
+<p>All existing <code><a href="reference/fmri_lm.html">fmri_lm()</a></code> calls continue to work unchanged: - <code>cor_struct = "ar1"</code> → delegates to fmriAR with p=1 - <code>cor_struct = "ar2"</code> → delegates to fmriAR with p=2 - <code>cor_struct = "arp"</code> → delegates to fmriAR with user-specified p - All options preserved: <code>exact_first</code>, <code>iter_gls</code>, <code>global</code>, etc.</p>
+</div>
+<div class="section level3">
+<h3 id="testing-1">Testing<a class="anchor" aria-label="anchor" href="#testing-1"></a></h3>
+<ul><li>Integration tests in <code>test_fmriAR_integration.R</code>
+</li>
+<li>All existing AR tests continue to pass</li>
+<li>Numerical results match within tolerance</li>
+</ul></div>
+</div>
+<div class="section level2">
 <h2 id="critical-test-issues-resolved-2025-05-28">CRITICAL TEST ISSUES RESOLVED (2025-05-28)<a class="anchor" aria-label="anchor" href="#critical-test-issues-resolved-2025-05-28"></a></h2>
 <p>All critical functionality tests are now passing after the following fixes:</p>
 <ol style="list-style-type: decimal"><li>
@@ -200,8 +243,7 @@
 <li>Files modified: <code>fmri_lm_integrated_solver.R</code>, <code>fmri_lm_solver.R</code>
 </li>
 </ul></li>
-</ol><p>All 6 critical tests now pass: - ✓ AR whitening integration - ✓ Robust fitting<br>
-- ✓ Contrast computation - ✓ Effective df calculations - ✓ Bootstrap functionality - ✓ Sandwich variance estimator</p>
+</ol><p>All 6 critical tests now pass: - ✓ AR whitening integration (now via fmriAR) - ✓ Robust fitting - ✓ Contrast computation - ✓ Effective df calculations - ✓ Bootstrap functionality - ✓ Sandwich variance estimator</p>
 <p>The refactored code is now ready for integration with the existing codebase.</p>
 </div>
 </div>

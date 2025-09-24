@@ -136,7 +136,7 @@ They are thin wrappers around methods from fmridesign when appropriate.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="https://rdrr.io/pkg/fmridesign/man/event_model.html" class="external-link">event_model()</a></code>, <code><a href="https://rdrr.io/pkg/fmridesign/man/baseline_model.html" class="external-link">baseline_model()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model()</a></code>, <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model()</a></code></p></div>
     </div>
 
     <div class="section level2">
@@ -153,8 +153,8 @@ They are thin wrappers around methods from fmridesign when appropriate.</p>
 <span class="r-in"><span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">50</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create event model</span></span></span>
-<span class="r-in"><span><span class="va">evmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">onsets</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">rt</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span><span class="va">evmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">onsets</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">rt</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  data <span class="op">=</span> <span class="va">event_data</span>,</span></span>
 <span class="r-in"><span>  block <span class="op">=</span> <span class="op">~</span><span class="va">run</span>,</span></span>
 <span class="r-in"><span>  sampling_frame <span class="op">=</span> <span class="va">sframe</span></span></span>
@@ -165,7 +165,7 @@ They are thin wrappers around methods from fmridesign when appropriate.</p>
 <span class="r-plt img"><img src="correlation_map-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create baseline model</span></span></span>
-<span class="r-in"><span><span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span><span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  basis <span class="op">=</span> <span class="st">"bs"</span>,</span></span>
 <span class="r-in"><span>  degree <span class="op">=</span> <span class="fl">3</span>,</span></span>
 <span class="r-in"><span>  sframe <span class="op">=</span> <span class="va">sframe</span></span></span>

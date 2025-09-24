@@ -78,50 +78,43 @@
   <main id="main" class="col-md-9"><div class="section level1">
 
 <p><a href="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main" class="external-link"><img src="https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg" alt="Codecov test coverage"></a> <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html" class="external-link"><img src="https://img.shields.io/badge/License-GPL_v2-blue.svg" alt="License: GPL v2"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrireg/">fmrireg</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Load a benchmark dataset</span></span>
-<span><span class="va">bm</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_benchmark_dataset.html">load_benchmark_dataset</a></span><span class="op">(</span><span class="st">"BM_Canonical_HighSNR"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Create an event model</span></span>
-<span><span class="va">events</span> <span class="op">&lt;-</span> <span class="va">bm</span><span class="op">$</span><span class="va">core_data</span><span class="op">$</span><span class="va">event_table</span></span>
-<span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="va">bm</span><span class="op">$</span><span class="va">core_data</span><span class="op">$</span><span class="va">run_length</span>, TR <span class="op">=</span> <span class="va">bm</span><span class="op">$</span><span class="va">core_data</span><span class="op">$</span><span class="va">TR</span><span class="op">)</span></span>
-<span><span class="va">emod</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/event_model.html" class="external-link">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">events</span>, </span>
-<span>                   block <span class="op">=</span> <span class="op">~</span><span class="va">run</span>, sampling_frame <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Fit the model</span></span>
-<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span><span class="va">emod</span>, dataset <span class="op">=</span> <span class="va">bm</span><span class="op">$</span><span class="va">core_data</span><span class="op">)</span></span></code></pre></div>
-<div class="section level2">
-<h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
-</h2>
-<p>See comprehensive examples and tutorials in the <a href="https://bbuchsbaum.github.io/fmrireg/articles/index.html">vignettes</a>:</p>
-<ul>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/a_01_hemodynamic_response.html">Hemodynamic Response Functions</a></li>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/a_02_regressor.html">Building Regressors</a></li>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/a_04_event_models.html">Event Models</a></li>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html">Statistical Contrasts</a></li>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html">Linear Modeling</a></li>
-</ul>
+<p>bm &lt;- load_benchmark_dataset(“BM_Canonical_HighSNR”)</p>
 </div>
-<div class="section level2">
-<h2 id="performance-configuration">Performance Configuration<a class="anchor" aria-label="anchor" href="#performance-configuration"></a>
-</h2>
-<p>The internal C++ routines use <a href="https://rcppcore.github.io/RcppParallel/" class="external-link">RcppParallel</a>. You can control the number of threads by setting the R option <code>fmrireg.num_threads</code> or the environment variable <code>FMRIREG_NUM_THREADS</code> before loading the package. If either is set, <code>fmrireg</code> calls <code><a href="https://rdrr.io/pkg/RcppParallel/man/setThreadOptions.html" class="external-link">RcppParallel::setThreadOptions()</a></code> when it loads.</p>
+<div class="section level1">
+<h1 id="create-an-event-model">Create an event model<a class="anchor" aria-label="anchor" href="#create-an-event-model"></a>
+</h1>
+<p>events &lt;- bm<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mi>o</mi><mi>r</mi><msub><mi>e</mi><mi>d</mi></msub><mi>a</mi><mi>t</mi><mi>a</mi></mrow><annotation encoding="application/x-tex">core_data</annotation></semantics></math>event_table sframe &lt;- sampling_frame(blocklens = bm<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mi>o</mi><mi>r</mi><msub><mi>e</mi><mi>d</mi></msub><mi>a</mi><mi>t</mi><mi>a</mi></mrow><annotation encoding="application/x-tex">core_data</annotation></semantics></math>run_length, TR = bm<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mi>o</mi><mi>r</mi><msub><mi>e</mi><mi>d</mi></msub><mi>a</mi><mi>t</mi><mi>a</mi></mrow><annotation encoding="application/x-tex">core_data</annotation></semantics></math>TR) emod &lt;- event_model(onset ~ hrf(condition), data = events, block = ~run, sampling_frame = sframe)</p>
 </div>
-<div class="section level2">
-<h2 id="development-status">Development Status<a class="anchor" aria-label="anchor" href="#development-status"></a>
-</h2>
-<p><code>fmrireg</code> is currently in active development. While the core functionality is stable, the API may change as we continue to improve the package. Please <a href="https://github.com/bbuchsbaum/fmrireg/issues" class="external-link">file issues</a> for bugs or feature requests.</p>
+<div class="section level1">
+<h1 id="fit-the-model">Fit the model<a class="anchor" aria-label="anchor" href="#fit-the-model"></a>
+</h1>
+<p>fit &lt;- fmri_lm(emod, dataset = bm$core_data)</p>
+<pre><code>
+## Documentation
+
+See comprehensive examples and tutorials in the [vignettes](https://bbuchsbaum.github.io/fmrireg/articles/index.html):
+
+- [Hemodynamic Response Functions](https://bbuchsbaum.github.io/fmrireg/articles/a_01_hemodynamic_response.html)
+- [Building Regressors](https://bbuchsbaum.github.io/fmrireg/articles/a_02_regressor.html)
+- [Event Models](https://bbuchsbaum.github.io/fmrireg/articles/a_04_event_models.html)
+- [Statistical Contrasts](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html)
+- [Linear Modeling](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html)
+
+## Performance Configuration
+
+The internal C++ routines use [RcppParallel](https://rcppcore.github.io/RcppParallel/). You can control the number of threads by setting the R option `fmrireg.num_threads` or the environment variable `FMRIREG_NUM_THREADS` before loading the package. If either is set, `fmrireg` calls `RcppParallel::setThreadOptions()` when it loads.
+
+## Development Status
+
+`fmrireg` is currently in active development. While the core functionality is stable, the API may change as we continue to improve the package. Please [file issues](https://github.com/bbuchsbaum/fmrireg/issues) for bugs or feature requests.
+
+## Citation
+
+If you use `fmrireg` in your research, please cite:
+</code></pre>
+<p>Buchsbaum, B. R. (2024). fmrireg: fMRI Analysis in R. R package version 0.1.0. <a href="https://github.com/bbuchsbaum/fmrireg" class="external-link uri">https://github.com/bbuchsbaum/fmrireg</a> ```</p>
 </div>
-<div class="section level2">
-<h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
-</h2>
-<p>If you use <code>fmrireg</code> in your research, please cite:</p>
-<pre><code>Buchsbaum, B. R. (2024). fmrireg: fMRI Analysis in R.
-R package version 0.1.0. https://github.com/bbuchsbaum/fmrireg</code></pre>
-</div>
-</div>
+
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">

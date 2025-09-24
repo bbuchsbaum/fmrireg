@@ -87,7 +87,7 @@
     
     
 <p>title: “01. Overview and Workflow” author: “Bradley R. Buchsbaum”
-date: “2025-09-13” output: rmarkdown::html_vignette vignette: &gt; % % %
+date: “2025-09-24” output: rmarkdown::html_vignette vignette: &gt; % % %
 —</p>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
@@ -193,13 +193,13 @@ create or modify them (<code>gen_hrf</code>, <code>hrf_blocked</code>,
 </h4>
 <p>This defines the task-related part of your GLM. You specify how
 experimental events (onsets, conditions, durations) map to regressors
-using a formula syntax. The <code><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf()</a></code> or
+using a formula syntax. The <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf()</a></code> or
 <code>afni_hrf()</code> functions within the formula link event
 variables to specific HRF shapes.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Example: Model effect of 'stim_type', using SPMG1 HRF</span></span>
 <span><span class="co"># (Assuming 'my_design_table' and 'my_sampling_frame' exist)</span></span>
-<span><span class="va">event_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/event_model.html" class="external-link">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">stim_type</span><span class="op">)</span>, </span>
+<span><span class="va">event_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">stim_type</span><span class="op">)</span>, </span>
 <span>                         data <span class="op">=</span> <span class="va">my_design_table</span>, </span>
 <span>                         block <span class="op">=</span> <span class="op">~</span> <span class="va">run_id</span>, </span>
 <span>                         sampling_frame <span class="op">=</span> <span class="va">my_sampling_frame</span><span class="op">)</span></span></code></pre></div>
@@ -216,7 +216,7 @@ intercepts, and other nuisance factors (e.g., motion parameters).</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Example: Cubic B-spline drift model + run intercepts</span></span>
 <span><span class="co"># (Requires 'sframe' defined earlier)</span></span>
-<span><span class="va">base_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"bs"</span>, degree <span class="op">=</span> <span class="fl">3</span>, sframe <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span>
+<span><span class="va">base_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"bs"</span>, degree <span class="op">=</span> <span class="fl">3</span>, sframe <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">base_mod</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ================================================</span></span>
 <span><span class="co">#&gt;            Baseline Model                       </span></span>
@@ -252,7 +252,7 @@ intercepts, and other nuisance factors (e.g., motion parameters).</p>
 estimates.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Example: Contrast comparing 'face' vs 'scene' levels of 'stim_type'</span></span>
-<span><span class="va">face_vs_scene</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/pair_contrast.html" class="external-link">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">stim_type</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span> <span class="va">stim_type</span> <span class="op">==</span> <span class="st">"scene"</span>, name <span class="op">=</span> <span class="st">"FvS"</span><span class="op">)</span></span>
+<span><span class="va">face_vs_scene</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.html" class="external-link">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">stim_type</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span> <span class="va">stim_type</span> <span class="op">==</span> <span class="st">"scene"</span>, name <span class="op">=</span> <span class="st">"FvS"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">face_vs_scene</span><span class="op">)</span></span>
 <span><span class="co">#&gt; contrast: FvS </span></span>
 <span><span class="co">#&gt;  A:  ~stim_type == "face" </span></span>

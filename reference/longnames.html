@@ -111,7 +111,7 @@ the long names would be "term#level1:basis1", "term#level1:basis2", "term#level2
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="shortnames.html">shortnames()</a></code>, <code><a href="https://rdrr.io/pkg/fmridesign/man/event_model.html" class="external-link">event_model()</a></code>, <code><a href="https://rdrr.io/pkg/fmridesign/man/event_term.html" class="external-link">event_term()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="shortnames.html">shortnames()</a></code>, <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model()</a></code>, <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_term.html" class="external-link">event_term()</a></code></p></div>
     </div>
 
     <div class="section level2">
@@ -128,8 +128,8 @@ the long names would be "term#level1:basis1", "term#level1:basis2", "term#level2
 <span class="r-in"><span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">60</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create event model with multiple basis functions</span></span></span>
-<span class="r-in"><span><span class="va">evmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">onsets</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"fourier"</span>, nbasis <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span><span class="va">evmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">onsets</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"fourier"</span>, nbasis <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  data <span class="op">=</span> <span class="va">event_data</span>,</span></span>
 <span class="r-in"><span>  block <span class="op">=</span> <span class="op">~</span><span class="va">run</span>,</span></span>
 <span class="r-in"><span>  sampling_frame <span class="op">=</span> <span class="va">sframe</span></span></span>
@@ -142,7 +142,7 @@ the long names would be "term#level1:basis1", "term#level1:basis2", "term#level2
 <span class="r-in"><span><span class="co">#           "condition#C:basis1", "condition#C:basis2")</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create simple event term</span></span></span>
-<span class="r-in"><span><span class="va">eterm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/event_term.html" class="external-link">event_term</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span><span class="va">eterm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_term.html" class="external-link">event_term</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>condition <span class="op">=</span> <span class="va">event_data</span><span class="op">$</span><span class="va">condition</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  onsets <span class="op">=</span> <span class="va">event_data</span><span class="op">$</span><span class="va">onsets</span>,</span></span>
 <span class="r-in"><span>  blockids <span class="op">=</span> <span class="va">event_data</span><span class="op">$</span><span class="va">run</span></span></span>

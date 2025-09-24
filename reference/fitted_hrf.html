@@ -116,8 +116,8 @@ The method needs to be implemented for specific object types.</p>
 <span class="r-in"><span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">100</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create event model with canonical HRF</span></span></span>
-<span class="r-in"><span><span class="va">evmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">onsets</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span><span class="va">evmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">onsets</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  data <span class="op">=</span> <span class="va">event_data</span>,</span></span>
 <span class="r-in"><span>  block <span class="op">=</span> <span class="op">~</span><span class="va">run</span>,</span></span>
 <span class="r-in"><span>  sampling_frame <span class="op">=</span> <span class="va">sframe</span></span></span>
@@ -125,7 +125,7 @@ The method needs to be implemented for specific object types.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Fit model</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">onsets</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="va">onsets</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  block <span class="op">=</span> <span class="op">~</span><span class="va">run</span>,</span></span>
 <span class="r-in"><span>  dataset <span class="op">=</span> <span class="va">dset</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>

@@ -105,7 +105,7 @@ gets its own separate beta estimate rather than averaging across trials of the s
 
 
 <dt id="arg-use-cpp">use_cpp<a class="anchor" aria-label="anchor" href="#arg-use-cpp"></a></dt>
-<dd><p>Logical; whether to use C++ implementation for speed (default: TRUE)</p></dd>
+<dd><p>Logical; retained for backward compatibility. If TRUE, a warning is issued and the R implementation is used.</p></dd>
 
 
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
@@ -149,7 +149,7 @@ for every trial simultaneously.</p>
 <span class="r-in"><span>  run <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">4</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu">fmrihrf</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">100</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">model_obj</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/event_model.html" class="external-link">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/fmridesign/man/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, </span></span>
+<span class="r-in"><span><span class="va">model_obj</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, </span></span>
 <span class="r-in"><span>                        data <span class="op">=</span> <span class="va">event_data</span>, </span></span>
 <span class="r-in"><span>                        block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, </span></span>
 <span class="r-in"><span>                        sampling_frame <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span></span>
