@@ -82,6 +82,18 @@
     },
     {
       "@type": "SoftwareApplication",
+      "identifier": "doParallel",
+      "name": "doParallel",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=doParallel"
+    },
+    {
+      "@type": "SoftwareApplication",
       "identifier": "fmristore",
       "name": "fmristore",
       "sameAs": "https://github.com/bbuchsbaum/fmristore"
@@ -301,31 +313,44 @@
     },
     "2": {
       "@type": "SoftwareApplication",
+      "identifier": "fmriAR",
+      "name": "fmriAR",
+      "version": ">= 0.0.0.9000",
+      "sameAs": "https://github.com/bbuchsbaum/fmriAR"
+    },
+    "3": {
+      "@type": "SoftwareApplication",
       "identifier": "fmridesign",
       "name": "fmridesign",
       "version": ">= 0.1.0",
       "sameAs": "https://github.com/bbuchsbaum/fmridesign"
     },
-    "3": {
+    "4": {
       "@type": "SoftwareApplication",
       "identifier": "fmrihrf",
       "name": "fmrihrf",
       "version": ">= 0.1.0",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
       "sameAs": "https://github.com/bbuchsbaum/fmrihrf"
     },
-    "4": {
+    "5": {
       "@type": "SoftwareApplication",
       "identifier": "fmrilss",
       "name": "fmrilss",
       "version": ">= 0.1.0",
       "sameAs": "https://github.com/bbuchsbaum/fmrilss"
     },
-    "5": {
+    "6": {
       "@type": "SoftwareApplication",
       "identifier": "stats",
       "name": "stats"
     },
-    "6": {
+    "7": {
       "@type": "SoftwareApplication",
       "identifier": "Matrix",
       "name": "Matrix",
@@ -337,7 +362,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=Matrix"
     },
-    "7": {
+    "8": {
       "@type": "SoftwareApplication",
       "identifier": "MASS",
       "name": "MASS",
@@ -349,7 +374,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=MASS"
     },
-    "8": {
+    "9": {
       "@type": "SoftwareApplication",
       "identifier": "RANN",
       "name": "RANN",
@@ -361,7 +386,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=RANN"
     },
-    "9": {
+    "10": {
       "@type": "SoftwareApplication",
       "identifier": "assertthat",
       "name": "assertthat",
@@ -373,7 +398,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=assertthat"
     },
-    "10": {
+    "11": {
       "@type": "SoftwareApplication",
       "identifier": "tibble",
       "name": "tibble",
@@ -385,7 +410,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=tibble"
     },
-    "11": {
+    "12": {
       "@type": "SoftwareApplication",
       "identifier": "purrr",
       "name": "purrr",
@@ -397,7 +422,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=purrr"
     },
-    "12": {
+    "13": {
       "@type": "SoftwareApplication",
       "identifier": "foreach",
       "name": "foreach",
@@ -409,7 +434,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=foreach"
     },
-    "13": {
+    "14": {
       "@type": "SoftwareApplication",
       "identifier": "dplyr",
       "name": "dplyr",
@@ -421,7 +446,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=dplyr"
     },
-    "14": {
+    "15": {
       "@type": "SoftwareApplication",
       "identifier": "ggplot2",
       "name": "ggplot2",
@@ -433,7 +458,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=ggplot2"
     },
-    "15": {
+    "16": {
       "@type": "SoftwareApplication",
       "identifier": "lazyeval",
       "name": "lazyeval",
@@ -445,7 +470,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=lazyeval"
     },
-    "16": {
+    "17": {
       "@type": "SoftwareApplication",
       "identifier": "tidyr",
       "name": "tidyr",
@@ -457,7 +482,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=tidyr"
     },
-    "17": {
+    "18": {
       "@type": "SoftwareApplication",
       "identifier": "robustbase",
       "name": "robustbase",
@@ -469,7 +494,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=robustbase"
     },
-    "18": {
+    "19": {
       "@type": "SoftwareApplication",
       "identifier": "matrixStats",
       "name": "matrixStats",
@@ -481,7 +506,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=matrixStats"
     },
-    "19": {
+    "20": {
       "@type": "SoftwareApplication",
       "identifier": "furrr",
       "name": "furrr",
@@ -493,7 +518,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=furrr"
     },
-    "20": {
+    "21": {
       "@type": "SoftwareApplication",
       "identifier": "rlang",
       "name": "rlang",
@@ -505,7 +530,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=rlang"
     },
-    "21": {
+    "22": {
       "@type": "SoftwareApplication",
       "identifier": "neuroim2",
       "name": "neuroim2",
@@ -517,7 +542,7 @@
       },
       "sameAs": "https://github.com/bbuchsbaum/neuroim2"
     },
-    "22": {
+    "23": {
       "@type": "SoftwareApplication",
       "identifier": "Rcpp",
       "name": "Rcpp",
@@ -529,7 +554,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=Rcpp"
     },
-    "23": {
+    "24": {
       "@type": "SoftwareApplication",
       "identifier": "RcppParallel",
       "name": "RcppParallel",
@@ -541,19 +566,19 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=RcppParallel"
     },
-    "24": {
+    "25": {
       "@type": "SoftwareApplication",
       "identifier": "methods",
       "name": "methods"
     },
-    "25": {
+    "26": {
       "@type": "SoftwareApplication",
       "identifier": "fmridataset",
       "name": "fmridataset",
       "version": ">= 0.1.0",
       "sameAs": "https://github.com/bbuchsbaum/fmridataset"
     },
-    "26": {
+    "27": {
       "@type": "SoftwareApplication",
       "identifier": "crayon",
       "name": "crayon",
@@ -565,7 +590,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=crayon"
     },
-    "27": {
+    "28": {
       "@type": "SoftwareApplication",
       "identifier": "plotly",
       "name": "plotly",
@@ -577,7 +602,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=plotly"
     },
-    "28": {
+    "29": {
       "@type": "SoftwareApplication",
       "identifier": "cli",
       "name": "cli",
@@ -589,7 +614,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=cli"
     },
-    "29": {
+    "30": {
       "@type": "SoftwareApplication",
       "identifier": "bslib",
       "name": "bslib",
@@ -601,7 +626,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=bslib"
     },
-    "30": {
+    "31": {
       "@type": "SoftwareApplication",
       "identifier": "future.apply",
       "name": "future.apply",
@@ -613,7 +638,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=future.apply"
     },
-    "31": {
+    "32": {
       "@type": "SoftwareApplication",
       "identifier": "jsonlite",
       "name": "jsonlite",
@@ -625,7 +650,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=jsonlite"
     },
-    "32": {
+    "33": {
       "@type": "SoftwareApplication",
       "identifier": "progress",
       "name": "progress",
@@ -637,7 +662,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=progress"
     },
-    "33": {
+    "34": {
       "@type": "SoftwareApplication",
       "identifier": "magrittr",
       "name": "magrittr",
@@ -651,7 +676,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "16346.287KB",
+  "fileSize": "15427.924KB",
   "releaseNotes": "https://github.com/bbuchsbaum/fmrireg/blob/main/NEWS.md",
   "readme": "https://github.com/bbuchsbaum/fmrireg/blob/master/README.md",
   "contIntegration": "https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml"
