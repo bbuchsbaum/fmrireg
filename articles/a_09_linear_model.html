@@ -249,8 +249,8 @@ amplitudes, add noise, and combine them into a dataset.</p>
 <span><span class="va">noise</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_noise_vector.html">simulate_noise_vector</a></span><span class="op">(</span></span>
 <span>  n <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">time_points</span><span class="op">)</span>,</span>
 <span>  TR <span class="op">=</span> <span class="va">TR</span>,</span>
-<span>  ar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span><span class="op">)</span>,         <span class="co"># AR coefficient (temporal autocorrelation)</span></span>
-<span>  ma <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.2</span><span class="op">)</span>,         <span class="co"># MA coefficient</span></span>
+<span>  ar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.7</span><span class="op">)</span>,         <span class="co"># Stronger AR(1) coefficient to accentuate autocorrelation</span></span>
+<span>  ma <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span>,     <span class="co"># Pure AR structure keeps the example simple</span></span>
 <span>  drift_freq <span class="op">=</span> <span class="fl">1</span><span class="op">/</span><span class="fl">128</span>,  <span class="co"># Slow drift</span></span>
 <span>  drift_amplitude <span class="op">=</span> <span class="fl">1</span>, <span class="co"># Moderate drift amplitude</span></span>
 <span>  physio <span class="op">=</span> <span class="cn">TRUE</span>,       <span class="co"># Include physiological noise</span></span>
@@ -365,6 +365,8 @@ onset times</li>
 <code>cor_struct = "ar1"</code>. This estimates the AR coefficient from
 an initial OLS fit, whitens the data and design matrix, and refits the
 GLM.</p>
+<p>With stronger temporal autocorrelation in the simulated noise, the
+prewhitened model recovers tighter standard errors than OLS.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_ar1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span>
@@ -373,17 +375,26 @@ GLM.</p>
 <span>  strategy <span class="op">=</span> <span class="st">"chunkwise"</span>,</span>
 <span>  nchunks <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  cor_struct <span class="op">=</span> <span class="st">"ar1"</span>,</span>
-<span>  cor_iter <span class="op">=</span> <span class="fl">1</span></span>
+<span>  cor_iter <span class="op">=</span> <span class="fl">2</span>              <span class="co"># Iterate to refine the AR(1) estimate</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Compare standard errors (first few voxels)</span></span>
 <span><span class="va">se_ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span>
 <span><span class="va">se_ar1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">model_ar1</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span>OLS <span class="op">=</span> <span class="va">se_ols</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, AR1 <span class="op">=</span> <span class="va">se_ar1</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##             OLS        AR1</span></span>
-<span><span class="co">## [1,] 0.11620215 0.11620215</span></span>
-<span><span class="co">## [2,] 0.09296172 0.09296172</span></span>
-<span><span class="co">## [3,] 0.06972129 0.06972129</span></span></code></pre>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span>OLS <span class="op">=</span> <span class="va">se_ols</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, AR1 <span class="op">=</span> <span class="va">se_ar1</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">##         OLS    AR1</span></span>
+<span><span class="co">## [1,] 0.1170 0.0943</span></span>
+<span><span class="co">## [2,] 0.0936 0.0604</span></span>
+<span><span class="co">## [3,] 0.0702 0.0340</span></span></code></pre>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Inspect the estimated AR coefficient (shared across voxels in this example)</span></span>
+<span><span class="va">model_ar1</span><span class="op">$</span><span class="va">ar_coef</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
+<pre><code><span><span class="co">## [[1]]</span></span>
+<span><span class="co">## [1] 0.7065745</span></span></code></pre>
+<p>The AR(1) model now estimates a non-zero autoregressive coefficient
+and produces notably smaller standard errors than the plain OLS fit,
+illustrating how prewhitening improves efficiency when temporal
+autocorrelation is present.</p>
 <p>The <code>cor_struct</code> argument also accepts <code>"arp"</code>
 for higher-order autoregressive models. This setting models AR
 coefficients only (no moving-average terms).</p>
@@ -398,9 +409,8 @@ mitigate their impact by enabling row-wise robust weighting. When
 down-weights frames with large residuals. The <code>robust_psi</code>
 argument selects the weighting function and <code>robust_max_iter</code>
 controls the number of iterations.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Note: Robust fitting example - requires bug fix in chunkwise_lm_slow</span></span>
-<span><span class="va">model_robust</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">model_robust</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span>
 <span>  block   <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
@@ -413,9 +423,15 @@ controls the number of iterations.</p>
 <span></span>
 <span><span class="va">se_robust</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">model_robust</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span>OLS <span class="op">=</span> <span class="va">se_ols</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, Robust <span class="op">=</span> <span class="va">se_robust</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">##             OLS     Robust</span></span>
+<span><span class="co">## [1,] 0.11701370 0.06946794</span></span>
+<span><span class="co">## [2,] 0.09361096 0.06946794</span></span>
+<span><span class="co">## [3,] 0.07020822 0.06946794</span></span></code></pre>
 <p>Robust fitting guards against outlier time points but will not
-correct voxel-specific spikes. P-values rely on a robust residual scale
-and should be interpreted as approximate.</p>
+correct voxel-specific spikes. In this simulated example the Huber
+weights inflate the standard errors slightly, reflecting the additional
+uncertainty introduced by potential outliers. P-values rely on a robust
+residual scale and should be interpreted as approximate.</p>
 </div>
 </div>
 <div class="section level2">
@@ -425,7 +441,7 @@ and should be interpreted as approximate.</p>
 <div class="section level3">
 <h3 id="coefficient-estimates">1. Coefficient Estimates<a class="anchor" aria-label="anchor" href="#coefficient-estimates"></a>
 </h3>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Extract coefficient estimates</span></span>
 <span><span class="va">beta_estimates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span>
 <span><span class="fu">kable</span><span class="op">(</span><span class="va">beta_estimates</span>, caption <span class="op">=</span> <span class="st">"Coefficient estimates for each condition and voxel"</span><span class="op">)</span></span></code></pre></div>
@@ -434,23 +450,34 @@ and should be interpreted as approximate.</p>
 <tbody>
 <tr class="odd">
 <td align="left">condition_condition.condition1</td>
-<td align="right">0.7244952</td>
-<td align="right">0.5795961</td>
-<td align="right">0.4346971</td>
+<td align="right">0.6482899</td>
+<td align="right">0.5186319</td>
+<td align="right">0.3889739</td>
 </tr>
 <tr class="even">
 <td align="left">condition_condition.condition2</td>
-<td align="right">2.0257723</td>
-<td align="right">1.6206178</td>
-<td align="right">1.2154634</td>
+<td align="right">1.8880917</td>
+<td align="right">1.5104734</td>
+<td align="right">1.1328550</td>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Reshape for plotting (works with both approaches)</span></span>
-<span><span class="va">beta_long</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">beta_estimates</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
-<span>  <span class="fu">mutate</span><span class="op">(</span>voxel <span class="op">=</span> <span class="fu">row_number</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
-<span>  <span class="fu">pivot_longer</span><span class="op">(</span>cols <span class="op">=</span> <span class="op">-</span><span class="va">voxel</span>, names_to <span class="op">=</span> <span class="st">"condition"</span>, values_to <span class="op">=</span> <span class="st">"estimate"</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Helper to clean condition column labels for readability</span></span>
+<span><span class="va">clean_condition_label</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gsub</a></span><span class="op">(</span><span class="st">"^conditioncondition_condition\\."</span>, <span class="st">""</span>, <span class="va">x</span><span class="op">)</span></span>
+<span>  <span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gsub</a></span><span class="op">(</span><span class="st">"^condition_condition\\."</span>, <span class="st">""</span>, <span class="va">x</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gsub</a></span><span class="op">(</span><span class="st">"\\."</span>, <span class="st">" "</span>, <span class="va">x</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="co"># Reshape for plotting (works with both approaches)</span></span>
+<span><span class="va">beta_long</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">beta_estimates</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>voxel_index <span class="op">=</span> <span class="fu">row_number</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">pivot_longer</span><span class="op">(</span>cols <span class="op">=</span> <span class="op">-</span><span class="va">voxel_index</span>, names_to <span class="op">=</span> <span class="st">"condition"</span>, values_to <span class="op">=</span> <span class="st">"estimate"</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span></span>
+<span>    condition <span class="op">=</span> <span class="fu">clean_condition_label</span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span>
+<span>    voxel <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"voxel"</span>, <span class="va">voxel_index</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Plot coefficient estimates</span></span>
 <span><span class="fu">ggplot</span><span class="op">(</span><span class="va">beta_long</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">condition</span>, y <span class="op">=</span> <span class="va">estimate</span>, fill <span class="op">=</span> <span class="va">condition</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -479,26 +506,77 @@ our multiplication factors (1.0, 0.8, 0.6)</li>
 <div class="section level3">
 <h3 id="t-statistics-and-p-values">2. T-Statistics and P-Values<a class="anchor" aria-label="anchor" href="#t-statistics-and-p-values"></a>
 </h3>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Extract t-statistics and standard errors</span></span>
-<span><span class="va">t_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/stats.html">stats</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span>
-<span><span class="va">std_errors</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Note: Statistical results visualization - requires proper stats() method implementation</span></span>
-<span><span class="co"># Display the statistical results</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">t_stats</span>, caption <span class="op">=</span> <span class="st">"T-statistics for each condition and voxel"</span><span class="op">)</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">std_errors</span>, caption <span class="op">=</span> <span class="st">"Standard errors for each condition and voxel"</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">estimate_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tidy.html">tidy</a></span><span class="op">(</span><span class="va">model</span>, type <span class="op">=</span> <span class="st">"estimates"</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"condition"</span>, <span class="va">term</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>condition <span class="op">=</span> <span class="fu">clean_condition_label</span><span class="op">(</span><span class="va">term</span><span class="op">)</span>,</span>
+<span>         voxel <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"voxel"</span>, <span class="va">voxel</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">select</span><span class="op">(</span><span class="va">voxel</span>, <span class="va">condition</span>, <span class="va">estimate</span>, <span class="va">std_error</span>, <span class="va">statistic</span>, <span class="va">p_value</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># The following code would combine and visualize statistical results:</span></span>
-<span><span class="co"># result_summary &lt;- data.frame(</span></span>
-<span><span class="co">#   voxel = rep(1:nrow(beta_estimates), ncol(beta_estimates)),</span></span>
-<span><span class="co">#   condition = rep(colnames(beta_estimates), each = nrow(beta_estimates)),</span></span>
-<span><span class="co">#   estimate = as.vector(as.matrix(beta_estimates)),</span></span>
-<span><span class="co">#   t_statistic = as.vector(t_stats),</span></span>
-<span><span class="co">#   std_error = as.vector(std_errors)</span></span>
-<span><span class="co"># )</span></span>
-<span><span class="co"># result_summary$p_value &lt;- 2 * pt(-abs(result_summary$t_statistic), df = run_length - 2)</span></span>
-<span><span class="co"># ... visualization code ...</span></span></code></pre></div>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">estimate_stats</span>, digits <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>      caption <span class="op">=</span> <span class="st">"Coefficient estimates with associated statistics by voxel and condition"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Coefficient estimates with associated statistics by voxel and
+condition</caption>
+<thead><tr class="header">
+<th align="left">voxel</th>
+<th align="left">condition</th>
+<th align="right">estimate</th>
+<th align="right">std_error</th>
+<th align="right">statistic</th>
+<th align="right">p_value</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">voxel1</td>
+<td align="left">condition1</td>
+<td align="right">0.6483</td>
+<td align="right">0.1170</td>
+<td align="right">5.5403</td>
+<td align="right">0.0000</td>
+</tr>
+<tr class="even">
+<td align="left">voxel1</td>
+<td align="left">condition2</td>
+<td align="right">0.5186</td>
+<td align="right">0.0936</td>
+<td align="right">5.5403</td>
+<td align="right">0.0000</td>
+</tr>
+<tr class="odd">
+<td align="left">voxel2</td>
+<td align="left">condition1</td>
+<td align="right">-0.5550</td>
+<td align="right">0.7480</td>
+<td align="right">-0.7420</td>
+<td align="right">0.4590</td>
+</tr>
+<tr class="even">
+<td align="left">voxel2</td>
+<td align="left">condition2</td>
+<td align="right">-0.4440</td>
+<td align="right">0.5984</td>
+<td align="right">-0.7420</td>
+<td align="right">0.4590</td>
+</tr>
+<tr class="odd">
+<td align="left">voxel3</td>
+<td align="left">condition1</td>
+<td align="right">-0.7525</td>
+<td align="right">0.3992</td>
+<td align="right">-1.8851</td>
+<td align="right">0.0609</td>
+</tr>
+<tr class="even">
+<td align="left">voxel3</td>
+<td align="left">condition2</td>
+<td align="right">-0.6020</td>
+<td align="right">0.3193</td>
+<td align="right">-1.8851</td>
+<td align="right">0.0609</td>
+</tr>
+</tbody>
+</table>
 <p>The t-statistics quantify the reliability of the estimated effects.
 Higher absolute t-values indicate more reliable estimates. In our
 simulation, all conditions in all voxels show significant activity (p
@@ -509,9 +587,8 @@ simulation, all conditions in all voxels show significant activity (p
 </h3>
 <p>A key advantage of the GLM approach is the ability to directly
 compare conditions using contrasts.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Note: Contrast analysis example - requires bug fix in event_model parsing</span></span>
-<span><span class="co"># Define a contrast specification for comparing condition2 vs condition1</span></span>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Define a contrast specification for comparing condition2 vs condition1</span></span>
 <span><span class="va">con_spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.html" class="external-link">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"condition2"</span>, <span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"condition1"</span>, name <span class="op">=</span> <span class="st">"cond2_minus_cond1"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Define a contrast model using the specified contrast in hrf()</span></span>
@@ -523,27 +600,73 @@ compare conditions using contrasts.</p>
 <span>  nchunks <span class="op">=</span> <span class="fl">1</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Extract contrast results</span></span>
-<span><span class="va">contrast_estimates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">contrast_model</span><span class="op">)</span></span>
-<span><span class="va">contrast_tstats</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/stats.html">stats</a></span><span class="op">(</span><span class="va">contrast_model</span><span class="op">)</span></span>
-<span><span class="va">contrast_stderr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">contrast_model</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Combine results into a data frame for display</span></span>
-<span><span class="va">contrast_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  voxel <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">contrast_estimates</span><span class="op">)</span>,</span>
-<span>  estimate <span class="op">=</span> <span class="va">contrast_estimates</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>,</span>
-<span>  t_statistic <span class="op">=</span> <span class="va">contrast_tstats</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>,</span>
-<span>  std_error <span class="op">=</span> <span class="va">contrast_stderr</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Calculate p-values and significance</span></span>
-<span><span class="va">contrast_results</span><span class="op">$</span><span class="va">p_value</span> <span class="op">&lt;-</span> <span class="fl">2</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">pt</a></span><span class="op">(</span><span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">contrast_results</span><span class="op">$</span><span class="va">t_statistic</span><span class="op">)</span>, df <span class="op">=</span> <span class="va">run_length</span> <span class="op">-</span> <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="va">contrast_results</span><span class="op">$</span><span class="va">significant</span> <span class="op">&lt;-</span> <span class="va">contrast_results</span><span class="op">$</span><span class="va">p_value</span> <span class="op">&lt;</span> <span class="fl">0.05</span></span></code></pre></div>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<span><span class="co"># Extract contrast results using tidy helper</span></span>
+<span><span class="va">contrast_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tidy.html">tidy</a></span><span class="op">(</span><span class="va">contrast_model</span>, type <span class="op">=</span> <span class="st">"contrasts"</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">term</span> <span class="op">==</span> <span class="st">"cond2_minus_cond1"</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span></span>
+<span>    voxel <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"voxel"</span>, <span class="va">voxel</span><span class="op">)</span>,</span>
+<span>    significant <span class="op">=</span> <span class="va">p_value</span> <span class="op">&lt;</span> <span class="fl">0.05</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Display contrast results</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">contrast_results</span>, caption <span class="op">=</span> <span class="st">"Contrast results: condition2 - condition1"</span>, digits <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Visualize the contrast</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">contrast_results</span>, caption <span class="op">=</span> <span class="st">"Contrast results: condition2 - condition1"</span>, digits <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Contrast results: condition2 - condition1</caption>
+<colgroup>
+<col width="8%">
+<col width="20%">
+<col width="10%">
+<col width="11%">
+<col width="11%">
+<col width="9%">
+<col width="13%">
+<col width="13%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">voxel</th>
+<th align="left">term</th>
+<th align="right">estimate</th>
+<th align="right">std_error</th>
+<th align="right">statistic</th>
+<th align="right">p_value</th>
+<th align="right">df_residual</th>
+<th align="left">significant</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">voxel1</td>
+<td align="left">cond2_minus_cond1</td>
+<td align="right">1.2398</td>
+<td align="right">0.1553</td>
+<td align="right">7.9826</td>
+<td align="right">0</td>
+<td align="right">194</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="even">
+<td align="left">voxel2</td>
+<td align="left">cond2_minus_cond1</td>
+<td align="right">0.9918</td>
+<td align="right">0.1243</td>
+<td align="right">7.9826</td>
+<td align="right">0</td>
+<td align="right">194</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="odd">
+<td align="left">voxel3</td>
+<td align="left">cond2_minus_cond1</td>
+<td align="right">0.7439</td>
+<td align="right">0.0932</td>
+<td align="right">7.9826</td>
+<td align="right">0</td>
+<td align="right">194</td>
+<td align="left">TRUE</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Visualize the contrast</span></span>
 <span><span class="fu">ggplot</span><span class="op">(</span><span class="va">contrast_results</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">as.factor</a></span><span class="op">(</span><span class="va">voxel</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">estimate</span>, fill <span class="op">=</span> <span class="va">significant</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">geom_bar</span><span class="op">(</span>stat <span class="op">=</span> <span class="st">"identity"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">theme_minimal</span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
@@ -556,6 +679,7 @@ compare conditions using contrasts.</p>
 <span>       x <span class="op">=</span> <span class="st">"Voxel"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Contrast Estimate"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">scale_fill_manual</span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"FALSE"</span> <span class="op">=</span> <span class="st">"gray"</span>, <span class="st">"TRUE"</span> <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-11-1.png" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
 <p>The contrast results show that Condition2 consistently elicits
 significantly stronger activation than Condition1 across all voxels,
 which matches our simulation parameters (where Condition2 had twice the
@@ -567,7 +691,7 @@ amplitude of Condition1).</p>
 </h2>
 <p>Another useful visualization is the fitted hemodynamic response for
 each condition. This shows the estimated BOLD response over time.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Extract fitted HRF curves from the fitted model</span></span>
 <span><span class="va">fitted_hrfs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fitted_hrf.html">fitted_hrf</a></span><span class="op">(</span><span class="va">model</span>, sample_at <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">20</span>, by <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -619,7 +743,7 @@ each condition. This shows the estimated BOLD response over time.</p>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"BOLD Response"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Condition"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-13-1.png" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-12-1.png" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
 <p>The fitted HRF curves show the temporal profile of the BOLD response
 for each condition. We can observe:</p>
 <ol style="list-style-type: decimal">
@@ -633,9 +757,8 @@ for each condition. We can observe:</p>
 </h2>
 <p>The choice of hemodynamic response function can impact model fit.
 Let’s compare different HRF options.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Note: HRF comparison example - requires fix in model fitting</span></span>
-<span><span class="co"># Fit models with different HRF bases</span></span>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Fit models with different HRF bases</span></span>
 <span><span class="va">model_canonical</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"spmg1"</span><span class="op">)</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
@@ -670,7 +793,7 @@ Let’s compare different HRF options.</p>
 <span>  </span>
 <span>  <span class="co"># Get estimated coefficients (include baseline)</span></span>
 <span>  <span class="co"># Get all coefficients including baseline</span></span>
-<span>  <span class="va">betas</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">betas</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">model</span>, include_baseline <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
 <span>  </span>
 <span>  <span class="co"># Calculate fitted values</span></span>
 <span>  <span class="va">fitted_vals</span> <span class="op">&lt;-</span> <span class="va">design_mat</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">betas</span><span class="op">)</span></span>
@@ -709,9 +832,84 @@ Let’s compare different HRF options.</p>
 <span><span class="va">model_comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">stats_canonical</span>, <span class="va">stats_gaussian</span>, <span class="va">stats_bspline</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Display model comparison</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">model_comparison</span>, caption <span class="op">=</span> <span class="st">"Model comparison statistics"</span>, digits <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Reshape for plotting</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">model_comparison</span>, caption <span class="op">=</span> <span class="st">"Model comparison statistics"</span>, digits <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Model comparison statistics</caption>
+<thead><tr class="header">
+<th align="left">model</th>
+<th align="right">voxel</th>
+<th align="right">r_squared</th>
+<th align="right">aic</th>
+<th align="right">ssr</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">canonical_spm</td>
+<td align="right">1</td>
+<td align="right">0.6500</td>
+<td align="right">-34.1792</td>
+<td align="right">158.7644</td>
+</tr>
+<tr class="even">
+<td align="left">canonical_spm</td>
+<td align="right">2</td>
+<td align="right">0.6500</td>
+<td align="right">-123.4367</td>
+<td align="right">101.6092</td>
+</tr>
+<tr class="odd">
+<td align="left">canonical_spm</td>
+<td align="right">3</td>
+<td align="right">0.6500</td>
+<td align="right">-238.5095</td>
+<td align="right">57.1552</td>
+</tr>
+<tr class="even">
+<td align="left">gaussian</td>
+<td align="right">1</td>
+<td align="right">0.5950</td>
+<td align="right">-4.9647</td>
+<td align="right">183.7349</td>
+</tr>
+<tr class="odd">
+<td align="left">gaussian</td>
+<td align="right">2</td>
+<td align="right">0.5950</td>
+<td align="right">-94.2221</td>
+<td align="right">117.5903</td>
+</tr>
+<tr class="even">
+<td align="left">gaussian</td>
+<td align="right">3</td>
+<td align="right">0.5950</td>
+<td align="right">-209.2949</td>
+<td align="right">66.1446</td>
+</tr>
+<tr class="odd">
+<td align="left">bspline_n5</td>
+<td align="right">1</td>
+<td align="right">0.6533</td>
+<td align="right">-20.0520</td>
+<td align="right">157.2847</td>
+</tr>
+<tr class="even">
+<td align="left">bspline_n5</td>
+<td align="right">2</td>
+<td align="right">0.6533</td>
+<td align="right">-109.3094</td>
+<td align="right">100.6622</td>
+</tr>
+<tr class="odd">
+<td align="left">bspline_n5</td>
+<td align="right">3</td>
+<td align="right">0.6533</td>
+<td align="right">-224.3822</td>
+<td align="right">56.6225</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Reshape for plotting</span></span>
 <span><span class="va">model_comparison_long</span> <span class="op">&lt;-</span> <span class="va">model_comparison</span> <span class="op">%&gt;%</span></span>
 <span>  <span class="fu">pivot_longer</span><span class="op">(</span>cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">r_squared</span>, <span class="va">aic</span>, <span class="va">ssr</span><span class="op">)</span>, names_to <span class="op">=</span> <span class="st">"metric"</span>, values_to <span class="op">=</span> <span class="st">"value"</span><span class="op">)</span></span>
 <span></span>
@@ -730,9 +928,9 @@ Let’s compare different HRF options.</p>
 <span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Model Comparison: R-Squared"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"HRF Model"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"R-Squared"</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Note: AIC comparison visualization - requires model_comparison_long</span></span>
-<span><span class="fu">ggplot</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">model_comparison_long</span>, <span class="va">metric</span> <span class="op">==</span> <span class="st">"aic"</span><span class="op">)</span>, </span>
+<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-13-1.png" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ggplot</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">model_comparison_long</span>, <span class="va">metric</span> <span class="op">==</span> <span class="st">"aic"</span><span class="op">)</span>, </span>
 <span>       <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">model</span>, y <span class="op">=</span> <span class="va">value</span>, fill <span class="op">=</span> <span class="va">model</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">geom_bar</span><span class="op">(</span>stat <span class="op">=</span> <span class="st">"identity"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span><span class="va">voxel</span>, ncol <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span></span>
@@ -746,6 +944,7 @@ Let’s compare different HRF options.</p>
 <span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Model Comparison: AIC (Lower is Better)"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"HRF Model"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"AIC"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-14-1.png" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
 <p>The model comparison shows:</p>
 <ol style="list-style-type: decimal">
 <li>
