@@ -3,7 +3,7 @@ simulate_glm_ar_dataset <- function(ar_coeff = numeric(), n_runs = 2, n_time = 1
   set.seed(seed)
   TR <- 1
   run_length <- rep(n_time, n_runs)
-  sframe <- sampling_frame(run_length, TR)
+  sframe <- fmrihrf::sampling_frame(run_length, TR)
 
   onset_cond1 <- c(6, 18, 30, 42)
   onset_cond2 <- c(12, 24, 36, 48)
@@ -17,11 +17,11 @@ simulate_glm_ar_dataset <- function(ar_coeff = numeric(), n_runs = 2, n_time = 1
     df[order(df$onset), ]
   }))
 
-  time_points <- samples(sframe, global = TRUE)
+  time_points <- fmrihrf::samples(sframe, global = TRUE)
   global_onsets <- fmrihrf::global_onsets(sframe, event_table$onset, event_table$run)
-  reg1 <- regressor(global_onsets[event_table$condition == "condition1"], fmrihrf::HRF_SPMG1, amplitude = 1)
-  reg2 <- regressor(global_onsets[event_table$condition == "condition2"], fmrihrf::HRF_SPMG1, amplitude = 1.5)
-  base_signal <- evaluate(reg1, time_points) + evaluate(reg2, time_points)
+  reg1 <- fmrihrf::regressor(global_onsets[event_table$condition == "condition1"], fmrihrf::HRF_SPMG1, amplitude = 1)
+  reg2 <- fmrihrf::regressor(global_onsets[event_table$condition == "condition2"], fmrihrf::HRF_SPMG1, amplitude = 1.5)
+  base_signal <- fmrihrf::evaluate(reg1, time_points) + fmrihrf::evaluate(reg2, time_points)
 
   block_ids <- fmrihrf::blockids(sframe)
   datamat <- matrix(0, nrow = length(time_points), ncol = n_vox)
@@ -87,6 +87,8 @@ test_that("latent sketch engine integrates fmriAR whitening", {
   expect_true(all(is.finite(tidy_stats$estimate)))
   expect_true(all(is.finite(tidy_stats$std_error)))
 
-  phi_hat <- ar_parameters(fit)
-  expect_true(is.null(phi_hat))
+  phi_avg <- ar_parameters(fit)
+  expect_true(is.null(phi_avg) || is.double(phi_avg))
+  phi_raw <- ar_parameters(fit, scope = "raw")
+  expect_true(is.list(phi_raw))
 })

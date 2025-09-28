@@ -1,7 +1,13 @@
 #' Internal: run low-rank/sketched engine under fmri_lm
 #' @keywords internal
 #' @noRd
-.run_lowrank_engine <- function(fm, dataset, lowrank, ar_options = NULL) {
+.run_lowrank_engine <- function(fm, dataset, lowrank, cfg = NULL, ar_options = NULL) {
+  if (is.null(cfg)) {
+    cfg <- fmri_lm_control(ar_options = ar_options)
+  }
+
+  ar_opts <- cfg$ar %||% list()
+  robust_opts <- cfg$robust %||% list()
   # Design (T x p)
   X <- as.matrix(design_matrix(fm))
   Tlen <- nrow(X); p <- ncol(X)
@@ -34,10 +40,22 @@
   }
 
   # --- AR prewhitening options ---
-  ar_opts <- ar_options %||% list()
   by_cluster <- isTRUE(ar_opts$by_cluster)
-  ar_order <- as.integer(ar_opts$order %||% 1L)
-  no_whiten <- is.character(ar_opts$struct) && identical(ar_opts$struct, "none")
+  ar_struct <- ar_opts$struct %||% "iid"
+  ar_order <- switch(as.character(ar_struct),
+                     "iid" = 0L,
+                     "ar1" = 1L,
+                     "ar2" = 2L,
+                     "ar3" = 3L,
+                     "ar4" = 4L,
+                     "arp" = as.integer(ar_opts$p %||% 0L),
+                     0L)
+  ar_order <- if (is.finite(ar_order)) ar_order else 0L
+  iter_gls <- as.integer(ar_opts$iter_gls %||% 1L)
+  exact_first <- isTRUE(ar_opts$exact_first)
+  shrink_c0 <- as.integer(ar_opts$shrink_c0 %||% 100L)
+  no_whiten <- ar_order <= 0L
+  ar_coef_store <- NULL
 
   # Build sketch (shared across all branches)
   sk <- lowrank$time_sketch %||% list(method = "gaussian", m = min(8L * p, Tlen))
@@ -139,18 +157,20 @@
     }
     # Global phi for shrinkage
     phi_global <- estimate_ar_parameters(unlist(res_per_group, use.names = FALSE), ar_order)
-    c0 <- as.integer(ar_opts$shrink_c0 %||% 100L)
     # Second pass: whiten, sketch, accumulate
     plan <- if (identical(sk$method, "srht") || identical(sk$method, "ihs")) make_srht_plan(Tlen, sk$m) else NULL
+    phi_groups <- vector("list", length(ug))
+    names(phi_groups) <- as.character(ug)
     for (g in ug) {
       Jg <- which(gids == g)
       if (length(Jg) == 0) next
       resid_g <- res_per_group[[as.character(g)]]
-      alpha_g <- sizes[as.character(g)]/(sizes[as.character(g)] + c0)
+      alpha_g <- sizes[as.character(g)]/(sizes[as.character(g)] + shrink_c0)
       phi_g_raw <- estimate_ar_parameters(resid_g, ar_order)
       phi_g <- alpha_g * phi_g_raw + (1 - alpha_g) * phi_global
+      phi_groups[[as.character(g)]] <- phi_g
       # Whiten group
-      tmp <- ar_whiten_transform(X, Z[, Jg, drop = FALSE], phi_g, exact_first = TRUE)
+      tmp <- ar_whiten_transform(X, Z[, Jg, drop = FALSE], phi_g, exact_first = exact_first)
       Xw_g <- tmp$X; Zw_g <- tmp$Y
       # Sketch
       if (identical(sk$method, "srht") || identical(sk$method, "ihs")) {
@@ -174,24 +194,42 @@
     B <- if (A_is_I) M else M %*% as.matrix(A)
 
     # Residuals per group for sigma2
-    dfres <- max(1L, nrow(S) - p)
+    dfres <- if (identical(sk$method, "srht") || identical(sk$method, "ihs")) {
+      max(1L, plan$m - p)
+    } else {
+      max(1L, nrow(S) - p)
+    }
     rss <- rss * 0
     for (g in ug) {
       Jg <- which(gids == g)
       if (length(Jg) == 0) next
-      # Recompute whiten+sketch for residuals
-      ybar_g <- rowMeans(Z[, Jg, drop = FALSE])
-      beta_g <- Pinv %*% ybar_g
-      resid_g <- ybar_g - drop(X %*% beta_g)
-      phi_g <- estimate_ar_parameters(resid_g, ar_order)
-      tmp <- ar_whiten_transform(X, Z[, Jg, drop = FALSE], phi_g, exact_first = TRUE)
+      # Recompute whiten+sketch for residuals using the pooled phi estimates
+      phi_g <- phi_groups[[as.character(g)]] %||% phi_global
+      if (is.null(phi_g) || !length(phi_g)) {
+        ybar_g <- rowMeans(Z[, Jg, drop = FALSE])
+        beta_g <- Pinv %*% ybar_g
+        resid_g <- ybar_g - drop(X %*% beta_g)
+        phi_g <- estimate_ar_parameters(resid_g, ar_order)
+      }
+      tmp <- ar_whiten_transform(X, Z[, Jg, drop = FALSE], phi_g, exact_first = exact_first)
       Xw_g <- tmp$X; Zw_g <- tmp$Y
-      Xs_g <- S %*% Xw_g; Zs_g <- S %*% Zw_g
+      if (identical(sk$method, "srht") || identical(sk$method, "ihs")) {
+        Xs_g <- srht_apply(Xw_g, plan)
+        Zs_g <- srht_apply(Zw_g, plan)
+      } else if (identical(sk$method, "gaussian")) {
+        Xs_g <- S %*% Xw_g
+        Zs_g <- S %*% Zw_g
+      } else { # countsketch
+        Xs_g <- as.matrix(S %*% Xw_g)
+        Zs_g <- as.matrix(S %*% Zw_g)
+      }
       Eg <- Zs_g - Xs_g %*% M[, Jg, drop = FALSE]
       RA_g <- if (A_is_I) Eg else Eg %*% as.matrix(A)
       rss[Jg] <- colSums(RA_g * RA_g)
     }
     sigma2 <- rss / dfres
+    attr(phi_groups, "global_phi") <- phi_global
+    ar_coef_store <- phi_groups
 
   } else {
     # --- Global AR path ---
@@ -203,8 +241,29 @@
     resid <- ybar - drop(X %*% beta)
     phi <- estimate_ar_parameters(resid, ar_order)
 
-    tmp <- ar_whiten_transform(X, Z, phi, exact_first = TRUE)
-    Xw <- tmp$X; Zw <- tmp$Y
+    if (iter_gls > 1L) {
+      phi_current <- phi
+      for (it in seq_len(iter_gls)) {
+        tmp_iter <- ar_whiten_transform(X, Z, phi_current, exact_first = exact_first)
+        Xw <- tmp_iter$X
+        Zw <- tmp_iter$Y
+        if (it < iter_gls) {
+          XtX_iter <- crossprod(Xw)
+          XtXinv_iter <- tryCatch(chol2inv(chol(XtX_iter)),
+                                  error = function(e) MASS::ginv(XtX_iter))
+          beta_iter <- XtXinv_iter %*% crossprod(Xw, Zw)
+          resid_iter <- rowMeans(Zw - Xw %*% beta_iter)
+          phi_current <- estimate_ar_parameters(resid_iter, ar_order)
+        }
+      }
+      phi <- phi_current
+    }
+
+    if (!exists("Xw", inherits = FALSE) || !exists("Zw", inherits = FALSE)) {
+      tmp <- ar_whiten_transform(X, Z, phi, exact_first = exact_first)
+      Xw <- tmp$X
+      Zw <- tmp$Y
+    }
     # Sketch and solve
     if (identical(sk$method, "ihs")) {
       if (A_is_I && !is.null(lowrank$landmarks)) {
@@ -365,6 +424,7 @@
         sigma2 <- colSums(RA * RA) / dfres
       }
     }
+    ar_coef_store <- list(phi)
   }
 
   # Build fmri_lm-like result structure compatible with downstream code
@@ -384,7 +444,8 @@
     event_indices = event_indices,
     baseline_indices = baseline_indices,
     sigma = sigma,
-    rdf = dfres
+    rdf = dfres,
+    ar_coef = ar_coef_store
   )
 
   ret <- list(
@@ -395,9 +456,12 @@
     dataset = dataset,
     betas_fixed = B,
     sigma2 = sigma2,
-    vcov_inv = Ginv
+    vcov_inv = Ginv,
+    ar_coef = ar_coef_store
   )
   class(ret) <- "fmri_lm"
+  attr(ret, "strategy") <- "sketch"
+  attr(ret, "config") <- cfg
   ret
 }
 
@@ -407,7 +471,7 @@
 fmri_lm_lowrank_dispatch <- function(formula_or_model, dataset, engine = NULL, lowrank = NULL,
                                      block = NULL, baseline_model = NULL,
                                      durations = 0, drop_empty = TRUE,
-                                     ar_options = NULL) {
+                                     cfg = NULL, ar_options = NULL) {
   if (is.null(engine)) return(NULL)
   engine <- match.arg(engine, c("latent_sketch", "sketch"))
   if (engine == "latent_sketch") {
@@ -422,7 +486,7 @@ fmri_lm_lowrank_dispatch <- function(formula_or_model, dataset, engine = NULL, l
                         drop_empty = drop_empty,
                         durations = durations)
     }
-    return(.run_lowrank_engine(fm, dataset, lowrank, ar_options = ar_options))
+    return(.run_lowrank_engine(fm, dataset, lowrank, cfg = cfg, ar_options = ar_options))
   }
   NULL
 }

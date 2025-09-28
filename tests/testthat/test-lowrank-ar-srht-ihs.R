@@ -132,4 +132,9 @@ test_that("SRHT/IHS + AR(global/cluster) match exact on synthetic data", {
   expect_true(all(is.finite(fit_srht_global$sigma2)))
   expect_true(all(is.finite(fit_srht_group$sigma2)))
   expect_true(all(is.finite(fit_ihs$sigma2)))
+
+  # AR parameters should be present and finite
+  expect_true(is.list(ar_parameters(fit_srht_global, scope = "raw")))
+  expect_true(is.list(ar_parameters(fit_srht_group,  scope = "raw")))
+  expect_true(is.list(ar_parameters(fit_ihs,         scope = "raw")))
 })

@@ -7,18 +7,22 @@
 \usage{
 ar_parameters(object, ...)
 
-\method{ar_parameters}{fmri_lm}(object, ...)
+\method{ar_parameters}{fmri_lm}(object, scope = c("average", "per_run", "raw"), ...)
 }
 \arguments{
 \item{object}{An object of class \code{fmri_lm}}
 
 \item{...}{Additional arguments (currently unused)}
+
+\item{scope}{Character; \code{"average"} (default) returns the pooled
+average AR coefficients, \code{"per_run"} returns a list of the run-level
+estimates, and \code{"raw"} returns the stored structure without
+post-processing.}
 }
 \value{
-A numeric vector of AR coefficients if AR modeling was used,
-or NULL if no AR modeling was performed (cor_struct = "iid").
-For runwise estimation without global AR, returns the average of
-run-specific estimates.
+Depending on \code{scope}, either a numeric vector of averaged AR
+coefficients, a list of per-run coefficient vectors, or the raw stored
+structure. Returns \code{NULL} when no AR modeling was performed.
 }
 \description{
 Retrieves the estimated autoregressive parameters from a fitted

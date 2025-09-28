@@ -301,29 +301,21 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
 
   # --- low-rank / sketch engine fast-path (opt-in via ...$engine) ---
   dots <- list(...)
-  if (!is.null(dots$engine)) {
-    engine  <- dots$engine
-    lowrank <- if (!is.null(dots$lowrank)) dots$lowrank else NULL
-    ar_opts <- if (!is.null(dots$ar_options)) dots$ar_options else NULL
-    # Early dispatch; avoid the standard argument validation path
-    res <- fmri_lm_lowrank_dispatch(
-      formula_or_model = formula,
-      dataset = dataset,
-      block = block,
-      baseline_model = baseline_model,
-      durations = durations,
-      drop_empty = drop_empty,
-      engine  = engine,
-      lowrank = lowrank,
-      ar_options = ar_opts
-    )
-    if (!is.null(res)) return(res)
-  }
-  
+  engine  <- dots$engine
+  lowrank <- dots$lowrank
+  engine_ar_options <- dots$ar_options
+  engine_robust_options <- dots$robust_options
+  engine_cfg <- dots$cfg
+  # Remove recognised keys so downstream unexpected-arg check passes
+  dots$engine <- NULL
+  dots$lowrank <- NULL
+  dots$ar_options <- NULL
+  dots$robust_options <- NULL
+  dots$cfg <- NULL
+
   strategy <- match.arg(strategy)
   
   # Check for any unexpected arguments in ...
-  dots <- list(...)
   if (length(dots) > 0) {
     stop("Unexpected arguments: ", paste(names(dots), collapse = ", "))
   }
@@ -349,9 +341,28 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
     robust_type <- robust
   }
   
-  # Build robust_options if not provided
+  # Merge engine-supplied option overrides into the explicit arguments
+  if (!is.null(engine_robust_options)) {
+    if (is.null(robust_options)) {
+      robust_options <- engine_robust_options
+    } else {
+      robust_options <- utils::modifyList(robust_options, engine_robust_options)
+    }
+  }
+
+  if (!is.null(engine_ar_options)) {
+    if (is.null(ar_options)) {
+      ar_options <- engine_ar_options
+    } else {
+      ar_options <- utils::modifyList(ar_options, engine_ar_options)
+    }
+  }
+
   if (is.null(robust_options)) {
     robust_options <- list()
+  }
+  if (!is.null(engine_robust_options)) {
+    robust_options <- utils::modifyList(robust_options, engine_robust_options)
   }
   if (!is.null(robust_type) && !("type" %in% names(robust_options))) {
     robust_options$type <- robust_type
@@ -368,11 +379,29 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
     robust_options$scale_scope <- robust_scale_scope
   }
   
-  # Build ar_options if not provided
+  # Allow low-rank shorthand `order` to map into struct/p
+  if (!is.null(ar_options$order) && is.null(ar_options$struct)) {
+    ar_order_tmp <- as.integer(ar_options$order[1])
+    if (!is.finite(ar_order_tmp) || ar_order_tmp <= 0L) {
+      ar_options$struct <- "iid"
+    } else if (ar_order_tmp == 1L) {
+      ar_options$struct <- "ar1"
+    } else if (ar_order_tmp == 2L) {
+      ar_options$struct <- "ar2"
+    } else {
+      ar_options$struct <- "arp"
+      ar_options$p <- ar_options$p %||% ar_order_tmp
+    }
+  }
+  ar_options$order <- NULL
+  
   if (is.null(ar_options)) {
     ar_options <- list()
   }
-  
+  if (!is.null(engine_ar_options)) {
+    ar_options <- utils::modifyList(ar_options, engine_ar_options)
+  }
+
   # Merge individual AR parameters for backward compatibility
   if (!is.null(cor_struct) && !("struct" %in% names(ar_options))) {
     ar_options$struct <- cor_struct
@@ -394,9 +423,34 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
   }
   
   # Create configuration object
-  cfg <- fmri_lm_control(robust_options = robust_options, ar_options = ar_options)
+  cfg <- if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
+    engine_cfg
+  } else {
+    fmri_lm_control(robust_options = robust_options, ar_options = ar_options)
+  }
+
+  # If both were supplied, prefer the merged configuration but keep engine_cfg metadata
+  if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
+    cfg$robust <- engine_cfg$robust
+    cfg$ar <- utils::modifyList(cfg$ar, engine_cfg$ar)
+  }
   
   model <- create_fmri_model(formula, block, baseline_model, dataset, durations = durations, drop_empty = drop_empty)
+
+  if (!is.null(engine)) {
+    res <- fmri_lm_lowrank_dispatch(
+      formula_or_model = model,
+      dataset = dataset,
+      engine = engine,
+      lowrank = lowrank,
+      cfg = cfg
+    )
+    if (!is.null(res)) {
+      attr(res, "config") <- cfg
+      attr(res, "strategy") <- "sketch"
+      return(res)
+    }
+  }
   
   # Pass configuration object down
   # Note: We don't pass ... here because all parameters have been processed
@@ -423,19 +477,16 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
                                ...) {
   # --- low-rank / sketch engine fast-path (opt-in via ...$engine) ---
   dots <- list(...)
-  if (!is.null(dots$engine)) {
-    engine  <- dots$engine
-    lowrank <- if (!is.null(dots$lowrank)) dots$lowrank else NULL
-    ar_opts <- if (!is.null(dots$ar_options)) dots$ar_options else NULL
-    res <- fmri_lm_lowrank_dispatch(
-      formula_or_model = formula,
-      dataset = dataset %||% formula$dataset %||% attr(formula, "dataset"),
-      engine  = engine,
-      lowrank = lowrank,
-      ar_options = ar_opts
-    )
-    if (!is.null(res)) return(res)
-  }
+  engine  <- dots$engine
+  lowrank <- dots$lowrank
+  engine_ar_options <- dots$ar_options
+  engine_robust_options <- dots$robust_options
+  engine_cfg <- dots$cfg
+  dots$engine <- NULL
+  dots$lowrank <- NULL
+  dots$ar_options <- NULL
+  dots$robust_options <- NULL
+  dots$cfg <- NULL
   strategy <- match.arg(strategy)
   assert_that(inherits(formula, "fmri_model"))
 
@@ -489,7 +540,46 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
     ar_options$voxelwise <- ar_voxelwise
   }
 
-  cfg <- fmri_lm_control(robust_options = robust_options, ar_options = ar_options)
+  if (!is.null(ar_options$order) && is.null(ar_options$struct)) {
+    ar_order_tmp <- as.integer(ar_options$order[1])
+    if (!is.finite(ar_order_tmp) || ar_order_tmp <= 0L) {
+      ar_options$struct <- "iid"
+    } else if (ar_order_tmp == 1L) {
+      ar_options$struct <- "ar1"
+    } else if (ar_order_tmp == 2L) {
+      ar_options$struct <- "ar2"
+    } else {
+      ar_options$struct <- "arp"
+      ar_options$p <- ar_options$p %||% ar_order_tmp
+    }
+  }
+  ar_options$order <- NULL
+
+  cfg <- if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
+    engine_cfg
+  } else {
+    fmri_lm_control(robust_options = robust_options, ar_options = ar_options)
+  }
+
+  if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
+    cfg$robust <- engine_cfg$robust
+    cfg$ar <- utils::modifyList(cfg$ar, engine_cfg$ar)
+  }
+
+  if (!is.null(engine)) {
+    res <- fmri_lm_lowrank_dispatch(
+      formula_or_model = formula,
+      dataset = dataset %||% formula$dataset %||% attr(formula, "dataset"),
+      engine = engine,
+      lowrank = lowrank,
+      cfg = cfg
+    )
+    if (!is.null(res)) {
+      attr(res, "config") <- cfg
+      attr(res, "strategy") <- "sketch"
+      return(res)
+    }
+  }
 
   ret <- fmri_lm_fit(formula, dataset, strategy, cfg, nchunks,
                      use_fast_path = use_fast_path, progress = progress,
