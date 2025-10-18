@@ -98,6 +98,7 @@ term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
 #' @export
 create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, drop_empty = TRUE, durations = 0) {
   # Handle block variable
+  formula <- .fmrireg_inject_registered_bases(formula)
   if (inherits(block, "formula")) {
     # Evaluate formula against event_table
     block_var <- all.vars(block)

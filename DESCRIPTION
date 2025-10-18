@@ -88,6 +88,7 @@ VignetteBuilder: knitr
 URL: https://bbuchsbaum.github.io/fmrireg/, https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues
 Collate:
+    'aaa_plugin_api.R'
     'imports.R'
     'RcppExports.R'
     'all_generic.R'
@@ -100,6 +101,7 @@ Collate:
     'compat-legacy-ar.R'
     'compat-legacy-ar-impl.R'
     'con_stats.R'
+    'contrasts_api.R'
     'data_fmri_benchmark_datasets.R'
     'design_matrix-fmri_lm.R'
     'design_plot.R'

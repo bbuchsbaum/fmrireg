@@ -1,0 +1,5 @@
+importFrom(fmrireg, register_engine, register_basis, fit_glm_on_transformed_series)
+importFrom(fmridataset, get_data_matrix)
+importFrom(fmrihrf, HRF_SPMG2)
+export(cca_options)
+useDynLib(fmrireg.cca, .registration = TRUE)

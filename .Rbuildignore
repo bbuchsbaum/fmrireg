@@ -26,6 +26,9 @@ data-raw/
 ^scripts$
 ^fmrireg\.Rcheck$
 
+# Ignore the extension package living at the repo root
+^fmrireg\.cca($|/)
+
 # Throwaway and debug R files
 ^migrate_to_fmrihrf\.R$
 ^fix_duplicate_rdnames\.R$

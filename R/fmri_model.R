@@ -44,6 +44,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
   assert_that(is.formula(block), msg = "'block' must be a formula")
   assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset'")
   assert_that(is.numeric(durations), msg = "'durations' must be numeric")
+  formula <- .fmrireg_inject_registered_bases(formula)
   
   # Replicate durations if a single value is provided.
   if (length(durations) == 1) {

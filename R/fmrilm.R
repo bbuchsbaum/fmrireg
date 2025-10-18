@@ -165,6 +165,7 @@ fast_rlm_run <- function(X, Y, proj,
 #' @keywords internal
 create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, drop_empty = TRUE, durations = 0) {
   assert_that(is.formula(formula), msg = "'formula' must be a formula")
+  formula <- .fmrireg_inject_registered_bases(formula)
   assert_that(is.formula(block), msg = "'block' must be a formula")
   assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset'")
   assert_that(is.numeric(durations), msg = "'durations' must be numeric")
@@ -179,7 +180,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
     assert_that(inherits(baseline_model, "baseline_model"),
                 msg = "'baseline_model' must have class 'baseline_model'")
   }
-  
+
   ev_model <- event_model(
     formula_or_list = formula,
     block = block,
@@ -306,15 +307,35 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
   engine_ar_options <- dots$ar_options
   engine_robust_options <- dots$robust_options
   engine_cfg <- dots$cfg
+  engine_args <- dots$engine_args
   # Remove recognised keys so downstream unexpected-arg check passes
   dots$engine <- NULL
   dots$lowrank <- NULL
   dots$ar_options <- NULL
   dots$robust_options <- NULL
   dots$cfg <- NULL
+  dots$engine_args <- NULL
+
+  if (!is.null(engine_args) && !is.list(engine_args)) {
+    engine_args <- list(engine_args)
+  }
+
+  if (!is.null(engine) && !is.null(dots[[engine]])) {
+    add_args <- dots[[engine]]
+    if (!is.null(add_args) && !is.list(add_args)) {
+      add_args <- list(add_args)
+    }
+    engine_args <- if (is.null(engine_args)) add_args else utils::modifyList(engine_args, add_args)
+    dots[[engine]] <- NULL
+  }
+
+  if (is.null(engine_args)) {
+    engine_args <- list()
+  }
 
   strategy <- match.arg(strategy)
-  
+  formula <- .fmrireg_inject_registered_bases(formula)
+
   # Check for any unexpected arguments in ...
   if (length(dots) > 0) {
     stop("Unexpected arguments: ", paste(names(dots), collapse = ", "))
@@ -438,17 +459,42 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
   model <- create_fmri_model(formula, block, baseline_model, dataset, durations = durations, drop_empty = drop_empty)
 
   if (!is.null(engine)) {
-    res <- fmri_lm_lowrank_dispatch(
-      formula_or_model = model,
-      dataset = dataset,
-      engine = engine,
-      lowrank = lowrank,
-      cfg = cfg
-    )
-    if (!is.null(res)) {
-      attr(res, "config") <- cfg
-      attr(res, "strategy") <- "sketch"
-      return(res)
+    plugin <- get_engine(engine)
+    if (!is.null(plugin)) {
+      if (is.function(plugin$preflight)) {
+        plugin$preflight(model, dataset, engine_args, cfg)
+      }
+      fit <- plugin$fit(model, dataset, engine_args, cfg)
+      if (!inherits(fit, "fmri_lm")) {
+        stop(sprintf("Engine '%s' must return an object of class 'fmri_lm'", engine), call. = FALSE)
+      }
+      if (is.null(attr(fit, "config"))) {
+        attr(fit, "config") <- cfg
+      }
+      if (is.null(attr(fit, "strategy"))) {
+        attr(fit, "strategy") <- "engine"
+      }
+      if (is.null(attr(fit, "engine"))) {
+        attr(fit, "engine") <- engine
+      }
+      return(fit)
+    }
+
+    if (engine %in% c("latent_sketch", "sketch")) {
+      res <- fmri_lm_lowrank_dispatch(
+        formula_or_model = model,
+        dataset = dataset,
+        engine = engine,
+        lowrank = lowrank,
+        cfg = cfg
+      )
+      if (!is.null(res)) {
+        attr(res, "config") <- cfg
+        attr(res, "strategy") <- "sketch"
+        return(res)
+      }
+    } else {
+      stop(sprintf("Unknown engine '%s'.", engine), call. = FALSE)
     }
   }
   
@@ -482,11 +528,30 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
   engine_ar_options <- dots$ar_options
   engine_robust_options <- dots$robust_options
   engine_cfg <- dots$cfg
+  engine_args <- dots$engine_args
   dots$engine <- NULL
   dots$lowrank <- NULL
   dots$ar_options <- NULL
   dots$robust_options <- NULL
   dots$cfg <- NULL
+  dots$engine_args <- NULL
+
+  if (!is.null(engine_args) && !is.list(engine_args)) {
+    engine_args <- list(engine_args)
+  }
+
+  if (!is.null(engine) && !is.null(dots[[engine]])) {
+    add_args <- dots[[engine]]
+    if (!is.null(add_args) && !is.list(add_args)) {
+      add_args <- list(add_args)
+    }
+    engine_args <- if (is.null(engine_args)) add_args else utils::modifyList(engine_args, add_args)
+    dots[[engine]] <- NULL
+  }
+
+  if (is.null(engine_args)) {
+    engine_args <- list()
+  }
   strategy <- match.arg(strategy)
   assert_that(inherits(formula, "fmri_model"))
 
@@ -567,17 +632,42 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
   }
 
   if (!is.null(engine)) {
-    res <- fmri_lm_lowrank_dispatch(
-      formula_or_model = formula,
-      dataset = dataset %||% formula$dataset %||% attr(formula, "dataset"),
-      engine = engine,
-      lowrank = lowrank,
-      cfg = cfg
-    )
-    if (!is.null(res)) {
-      attr(res, "config") <- cfg
-      attr(res, "strategy") <- "sketch"
-      return(res)
+    plugin <- get_engine(engine)
+    if (!is.null(plugin)) {
+      if (is.function(plugin$preflight)) {
+        plugin$preflight(formula, dataset, engine_args, cfg)
+      }
+      fit <- plugin$fit(formula, dataset, engine_args, cfg)
+      if (!inherits(fit, "fmri_lm")) {
+        stop(sprintf("Engine '%s' must return an object of class 'fmri_lm'", engine), call. = FALSE)
+      }
+      if (is.null(attr(fit, "config"))) {
+        attr(fit, "config") <- cfg
+      }
+      if (is.null(attr(fit, "strategy"))) {
+        attr(fit, "strategy") <- "engine"
+      }
+      if (is.null(attr(fit, "engine"))) {
+        attr(fit, "engine") <- engine
+      }
+      return(fit)
+    }
+
+    if (engine %in% c("latent_sketch", "sketch")) {
+      res <- fmri_lm_lowrank_dispatch(
+        formula_or_model = formula,
+        dataset = dataset,
+        engine = engine,
+        lowrank = lowrank,
+        cfg = cfg
+      )
+      if (!is.null(res)) {
+        attr(res, "config") <- cfg
+        attr(res, "strategy") <- "sketch"
+        return(res)
+      }
+    } else {
+      stop(sprintf("Unknown engine '%s'.", engine), call. = FALSE)
     }
   }
 
@@ -623,60 +713,10 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
   }
   
-  # Get contrast info (now flattened from contrast_weights.event_model)
-  contrast_info_flattened <- contrast_weights(fmrimod$event_model)
-  full_design_colnames <- colnames(design_matrix(fmrimod))
-  processed_conlist <- list()
-  
-  # Get column indices from design matrix for each term
-  col_indices <- attr(fmrimod$event_model$design_matrix, "col_indices")
-  
-  if (length(contrast_info_flattened) > 0 && !is.null(col_indices)) {
-    # Process each contrast in the flattened structure
-    for (contrast_name in names(contrast_info_flattened)) {
-      con_spec <- contrast_info_flattened[[contrast_name]]
-      
-      # Extract term name from flattened name (e.g., "term#contrast" or "term.contrast")
-      term_name <- trimws(contrast_name)
-      if (grepl("#", term_name, fixed = TRUE)) {
-        term_name <- sub("#.*$", "", term_name)
-      } else {
-        term_name <- sub("\\..*$", "", term_name)
-      }
-      
-      if (!is.null(col_indices[[term_name]])) {
-        # Get the column indices for this term
-        colind <- col_indices[[term_name]]
-        
-        if (length(colind) == 0) {
-          warning(paste("No column indices found for term:", term_name))
-          next # Skip this contrast if columns can't be found
-        }
-        
-        # Apply colind attribute to the contrast spec
-        if (inherits(con_spec, "contrast") || inherits(con_spec, "Fcontrast")) {
-          # Set the colind attribute on the contrast weights for the slow path
-          attr(con_spec$weights, "colind") <- colind
-          # Also set it directly on the contrast object for estimate_contrast
-          attr(con_spec, "colind") <- colind
-          # Add to processed list
-          processed_conlist[[contrast_name]] <- con_spec
-        } else {
-          warning(paste("Item '", contrast_name, "' is not a contrast or Fcontrast object."))
-        }
-      } else {
-        warning(paste("Contrast '", contrast_name, "' refers to term '", term_name, "' but col_indices are missing."))
-      }
-    }
-  }
-  
-  # Now processed_conlist contains all valid contrasts with the colind attribute added
-  
-  # Separate simple and F contrasts (full objects) for the standard path
-  simple_conlist_objects <- Filter(function(x) inherits(x, "contrast"), processed_conlist)
-  fconlist_objects <- Filter(function(x) inherits(x, "Fcontrast"), processed_conlist)
-  # Combine for standard path (fit_lm_contrasts expects a single list)
-  standard_path_conlist <- c(simple_conlist_objects, fconlist_objects)
+  contrast_prep <- prepare_fmri_lm_contrasts(fmrimod)
+  processed_conlist <- contrast_prep$processed
+  standard_path_conlist <- contrast_prep$standard
+  contrast_objects <- processed_conlist
   
   # Pass the full processed contrast objects list down.
   # The fitting function (chunkwise/runwise) will decide whether to use the objects (slow path)
