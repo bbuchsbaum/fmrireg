@@ -5,8 +5,6 @@
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
-- [Hemodynamic Response Functions](https://bbuchsbaum.github.io/fmrireg/articles/a_01_hemodynamic_response.html)
-- [Building Regressors](https://bbuchsbaum.github.io/fmrireg/articles/a_02_regressor.html)
 - [Event Models](https://bbuchsbaum.github.io/fmrireg/articles/a_04_event_models.html)
 - [Statistical Contrasts](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html)
 - [Linear Modeling](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html)
