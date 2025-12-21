@@ -5,8 +5,6 @@
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
-The internal C++ routines use [RcppParallel](https://rcppcore.github.io/RcppParallel/). You can control the number of threads by setting the R option `fmrireg.num_threads` or the environment variable `FMRIREG_NUM_THREADS` before loading the package. If either is set, `fmrireg` calls `RcppParallel::setThreadOptions()` when it loads.
-
 ## Development Status
 
 `fmrireg` is currently in active development. While the core functionality is stable, the API may change as we continue to improve the package. Please [file issues](https://github.com/bbuchsbaum/fmrireg/issues) for bugs or feature requests.
