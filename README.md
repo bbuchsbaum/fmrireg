@@ -5,8 +5,6 @@
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
-## Development Status
-
 `fmrireg` is currently in active development. While the core functionality is stable, the API may change as we continue to improve the package. Please [file issues](https://github.com/bbuchsbaum/fmrireg/issues) for bugs or feature requests.
 
 ## Citation
