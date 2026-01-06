@@ -76,18 +76,19 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
       }
       
       fit <- tryCatch({
-        fmrilss::mixed_solve(Y = Y, 
-                            Z = X[, ran_ind, drop = FALSE], 
+        fmrilss::mixed_solve(Y = Y,
+                            Z = X[, ran_ind, drop = FALSE],
                             X = X_fixed)
       }, error = function(e2) {
-        # If even that fails, use a fallback
-        message("C++ mixed model solver also failed: ", e2$message)
+        # If even that fails, return NAs with warning
+        warning("C++ mixed model solver also failed: ", e2$message,
+                " - returning NA values.")
         if (length(fixed_ind) == 0) {
-          return(list(u = rep(0, length(ran_ind))))
+          return(list(u = rep(NA_real_, length(ran_ind))))
         } else {
           return(list(
-            u = rep(0, length(ran_ind)),
-            beta = rep(0, length(fixed_ind))
+            u = rep(NA_real_, length(ran_ind)),
+            beta = rep(NA_real_, length(fixed_ind))
           ))
         }
       })
@@ -99,12 +100,13 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
         return(c(fit$u, fit$beta))
       }
     } else {
-      # Last resort - return zeros
-      message("No alternative mixed model solver available")
+      # Last resort - return NAs with warning since zeros would be misleading
+      warning("No alternative mixed model solver available - returning NA values. ",
+              "Results for this voxel will be invalid. Consider installing rrBLUP or fmrilss packages.")
       if (length(fixed_ind) == 0) {
-        return(rep(0, length(ran_ind)))
+        return(rep(NA_real_, length(ran_ind)))
       } else {
-        return(rep(0, length(c(ran_ind, fixed_ind))))
+        return(rep(NA_real_, length(c(ran_ind, fixed_ind))))
       }
     }
   })
@@ -552,8 +554,7 @@ estimate_hrf <- function(form, fixed = NULL, block, dataset,
 
   X_base <- as.matrix(design_matrix(bmod))
   X_cond <- as.matrix(design_matrix(emat_cond))
-  #browser()
-  
+
   vecs <- masked_vectors(dset)
   res <- map_voxels(vecs, function(v) {
     gam.1 <- if (has_fixed) {
@@ -561,11 +562,17 @@ estimate_hrf <- function(form, fixed = NULL, block, dataset,
     } else {
       mgcv::gam(v ~ mgcv::s(X_cond, bs=bs, fx=TRUE, k=8) + X_base)
     }
-    
+
     time <- rsam
-    xb <- matrix(colMeans(X_base), length(time),ncol(X_base), byrow=TRUE)
-    ##xf <- matrix(colMeans(X_fixed), length(time),ncol(X_fixed), byrow=TRUE)
-    predict(gam.1, list(X_cond = time, X_base = xb, X_fixed = xf))
+    xb <- matrix(colMeans(X_base), length(time), ncol(X_base), byrow=TRUE)
+
+    # Build prediction data list based on whether fixed effects are included
+    if (has_fixed) {
+      xf <- matrix(colMeans(X_fixed), length(time), ncol(X_fixed), byrow=TRUE)
+      predict(gam.1, list(X_cond = time, X_base = xb, X_fixed = xf))
+    } else {
+      predict(gam.1, list(X_cond = time, X_base = xb))
+    }
   }, .progress = progress)
   
   res

@@ -89,13 +89,19 @@ multiresponse_bootstrap_lm <- function(form, data_env,
   }
   rows <- 1:nrow(yhat)
   nblocks <- as.integer(length(rows)/block_size)
-  
+
   # Create blocks for resampling
-  blocks <- split(rows, rep(1:nblocks, each=length(rows)/nblocks, length.out=length(rows)))
-  maxind <- max(blocks[[length(blocks)]])
-  if (maxind < nrow(yhat)) {
-    last_block <- (maxind+1):nrow(yhat)
-    blocks <- c(blocks, list(last_block))
+  # Handle edge case when fewer rows than block_size: use single block
+
+  if (nblocks < 1) {
+    blocks <- list(rows)
+  } else {
+    blocks <- split(rows, rep(seq_len(nblocks), each = length(rows) / nblocks, length.out = length(rows)))
+    maxind <- max(blocks[[length(blocks)]])
+    if (maxind < nrow(yhat)) {
+      last_block <- (maxind + 1):nrow(yhat)
+      blocks <- c(blocks, list(last_block))
+    }
   }
   
   # Perform bootstrap

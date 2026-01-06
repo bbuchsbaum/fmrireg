@@ -1289,11 +1289,6 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
     con <- dplyr::tibble() # Return empty tibble if no contrasts
   }
 
-  # --- DEBUG FINAL CONTRAST TIBBLE ---
-  # message("Structure of final 'con' tibble before returning from unpack_chunkwise:")
-  # print(str(con))
-  # --- END DEBUG ---
-
   list(
     betas = cbetas_out,
     contrasts = con,

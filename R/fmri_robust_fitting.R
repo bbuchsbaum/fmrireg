@@ -90,8 +90,10 @@ robust_iterative_fitter <- function(initial_glm_ctx,
     u <- row_med / sigma_hat
     
     # Calculate weights based on psi function
+    # Protect against division by zero when residuals are exactly 0
+    u_safe <- pmax(abs(u), .Machine$double.eps)
     w <- switch(psi_type,
-                huber = pmin(1, k_huber / abs(u)),
+                huber = pmin(1, k_huber / u_safe),
                 bisquare = ifelse(abs(u) <= c_tukey,
                                   (1 - (u / c_tukey)^2)^2,
                                   0))
@@ -128,8 +130,10 @@ robust_iterative_fitter <- function(initial_glm_ctx,
   
   # Final weights for output
   u_final <- row_med_final / sigma_robust
+  # Protect against division by zero when residuals are exactly 0
+  u_final_safe <- pmax(abs(u_final), .Machine$double.eps)
   w_final <- switch(psi_type,
-                    huber = pmin(1, k_huber / abs(u_final)),
+                    huber = pmin(1, k_huber / u_final_safe),
                     bisquare = ifelse(abs(u_final) <= c_tukey,
                                       (1 - (u_final / c_tukey)^2)^2,
                                       0))
