@@ -60,18 +60,24 @@ group_data_from_csv <- function(data,
   # Read data if it's a file path
   if (is.character(data) && length(data) == 1) {
     if (!file.exists(data)) {
-      stop("File does not exist: ", data, call. = FALSE)
+      fmrireg_abort_file(data, arg = "data")
     }
     df <- read.csv(data, stringsAsFactors = FALSE)
   } else if (is.data.frame(data)) {
     df <- data
   } else {
-    stop("'data' must be a file path or data frame", call. = FALSE)
+    fmrireg_abort_input("data", "a file path or data frame", class(data)[1])
   }
-  
+
   # Validate required columns exist
   if (!subject_col %in% names(df)) {
-    stop("Subject column '", subject_col, "' not found in data", call. = FALSE)
+    fmrireg_abort(
+      c(
+        "Subject column not found",
+        "x" = "Column {.val {subject_col}} not found in data",
+        "i" = "Available columns: {.field {names(df)}}"
+      )
+    )
   }
   
   # Validate effect columns
@@ -85,18 +91,35 @@ group_data_from_csv <- function(data,
   
   # Validate optional columns
   if (!is.null(roi_col) && !roi_col %in% names(df)) {
-    stop("ROI column '", roi_col, "' not found in data", call. = FALSE)
+    fmrireg_abort(
+      c(
+        "ROI column not found",
+        "x" = "Column {.val {roi_col}} not found in data",
+        "i" = "Available columns: {.field {names(df)}}"
+      )
+    )
   }
-  
+
   if (!is.null(contrast_col) && !contrast_col %in% names(df)) {
-    stop("Contrast column '", contrast_col, "' not found in data", call. = FALSE)
+    fmrireg_abort(
+      c(
+        "Contrast column not found",
+        "x" = "Column {.val {contrast_col}} not found in data",
+        "i" = "Available columns: {.field {names(df)}}"
+      )
+    )
   }
-  
+
   if (!is.null(covariate_cols)) {
     missing_cols <- setdiff(covariate_cols, names(df))
     if (length(missing_cols) > 0) {
-      stop("Covariate columns not found: ", paste(missing_cols, collapse = ", "), 
-           call. = FALSE)
+      fmrireg_abort(
+        c(
+          "Covariate column{?s} not found",
+          "x" = "Missing: {.field {missing_cols}}",
+          "i" = "Available columns: {.field {names(df)}}"
+        )
+      )
     }
   }
   
@@ -173,42 +196,62 @@ validate_effect_cols <- function(effect_cols, df) {
   if (!is.list(effect_cols)) {
     effect_cols <- as.list(effect_cols)
   }
-  
+
   # Check that names are provided
   if (is.null(names(effect_cols))) {
-    stop("'effect_cols' must be a named vector or list (e.g., c(beta = 'column_name'))", 
-         call. = FALSE)
+    fmrireg_abort(
+      c(
+        "Invalid effect column specification",
+        "x" = "{.arg effect_cols} must be a named vector or list",
+        ">" = "Example: c(beta = 'mean_col', se = 'se_col')"
+      )
+    )
   }
-  
+
   # Validate column names exist
   for (effect_type in names(effect_cols)) {
     col_name <- effect_cols[[effect_type]]
-    
+
     # Handle column prefixes for wide format
     if (!col_name %in% names(df)) {
       # Check if it's a prefix
       matching_cols <- grep(paste0("^", col_name), names(df), value = TRUE)
       if (length(matching_cols) == 0) {
-        stop("Effect column '", col_name, "' (for ", effect_type, ") not found in data", 
-             call. = FALSE)
+        fmrireg_abort(
+          c(
+            "Effect column not found",
+            "x" = "Column {.val {col_name}} for {.field {effect_type}} not in data",
+            "i" = "Available columns: {.field {head(names(df), 10)}}..."
+          )
+        )
       }
     }
   }
-  
+
   # Validate effect type combinations
   has_beta <- "beta" %in% names(effect_cols)
   has_se <- "se" %in% names(effect_cols)
   has_var <- "var" %in% names(effect_cols)
   has_t <- "t" %in% names(effect_cols)
-  
+
   if (has_beta && !has_se && !has_var) {
-    stop("When 'beta' is provided, must also provide 'se' or 'var'", call. = FALSE)
+    fmrireg_abort_config(
+      param = "effect_cols",
+      message = "When 'beta' is provided, must also provide 'se' or 'var'",
+      suggestion = "Add se = 'column_name' or var = 'column_name'"
+    )
   }
-  
+
   if (has_t && !"df" %in% names(effect_cols)) {
-    warning("T-statistics provided without degrees of freedom. Meta-analysis options will be limited.")
+    fmrireg_warn(
+      c(
+        "T-statistics provided without degrees of freedom",
+        "i" = "Meta-analysis options will be limited",
+        ">" = "Consider adding df = 'df_column' to effect_cols"
+      )
+    )
   }
-  
+
   return(effect_cols)
 }
 
@@ -222,9 +265,10 @@ validate_effect_cols <- function(effect_cols, df) {
 wide_to_long_format <- function(df, effect_cols, subject_col) {
   # This is a simplified implementation
   # In practice, might want to use tidyr::pivot_longer or similar
-  
-  stop("Wide format conversion not yet implemented. Please reshape your data to long format.", 
-       call. = FALSE)
+
+  fmrireg_abort_not_implemented(
+    "Wide format conversion is not yet supported. Please reshape your data to long format using tidyr::pivot_longer() or reshape()."
+  )
 }
 
 #' Extract Data for Meta-Analysis from CSV
@@ -238,31 +282,55 @@ wide_to_long_format <- function(df, effect_cols, subject_col) {
 #' extract_csv_data(gd, roi = "ROI1")
 #' @export
 extract_csv_data <- function(gd, roi = NULL, contrast = NULL) {
-  if (!inherits(gd, "group_data_csv")) {
-    stop("Input must be a group_data_csv object", call. = FALSE)
-  }
-  
+  check_inherits(gd, "group_data_csv", arg = "gd")
+
   df <- gd$data
-  
+
   # Filter by ROI if specified
   if (!is.null(roi)) {
     if (is.null(gd$roi_col)) {
-      stop("Cannot filter by ROI: no ROI column specified", call. = FALSE)
+      fmrireg_abort(
+        c(
+          "Cannot filter by ROI",
+          "x" = "No ROI column was specified when creating this group_data object",
+          ">" = "Specify roi_col when calling group_data_from_csv()"
+        )
+      )
     }
     df <- df[df[[gd$roi_col]] == roi, ]
     if (nrow(df) == 0) {
-      stop("No data found for ROI: ", roi, call. = FALSE)
+      available_rois <- unique(gd$data[[gd$roi_col]])
+      fmrireg_abort(
+        c(
+          "No data found for ROI",
+          "x" = "ROI {.val {roi}} not found",
+          "i" = "Available ROIs: {.val {head(available_rois, 5)}}..."
+        )
+      )
     }
   }
-  
+
   # Filter by contrast if specified
   if (!is.null(contrast)) {
     if (is.null(gd$contrast_col)) {
-      stop("Cannot filter by contrast: no contrast column specified", call. = FALSE)
+      fmrireg_abort(
+        c(
+          "Cannot filter by contrast",
+          "x" = "No contrast column was specified when creating this group_data object",
+          ">" = "Specify contrast_col when calling group_data_from_csv()"
+        )
+      )
     }
     df <- df[df[[gd$contrast_col]] == contrast, ]
     if (nrow(df) == 0) {
-      stop("No data found for contrast: ", contrast, call. = FALSE)
+      available_contrasts <- unique(gd$data[[gd$contrast_col]])
+      fmrireg_abort(
+        c(
+          "No data found for contrast",
+          "x" = "Contrast {.val {contrast}} not found",
+          "i" = "Available contrasts: {.val {head(available_contrasts, 5)}}..."
+        )
+      )
     }
   }
   
@@ -318,9 +386,7 @@ extract_csv_data <- function(gd, roi = NULL, contrast = NULL) {
 #' get_rois(gd)
 #' @export
 get_rois <- function(gd) {
-  if (!inherits(gd, "group_data_csv")) {
-    stop("Input must be a group_data_csv object", call. = FALSE)
-  }
+  check_inherits(gd, "group_data_csv", arg = "gd")
   return(gd$rois)
 }
 
@@ -333,9 +399,7 @@ get_rois <- function(gd) {
 #' get_contrasts(gd)
 #' @export
 get_contrasts <- function(gd) {
-  if (!inherits(gd, "group_data_csv")) {
-    stop("Input must be a group_data_csv object", call. = FALSE)
-  }
+  check_inherits(gd, "group_data_csv", arg = "gd")
   return(gd$contrasts)
 }
 
@@ -349,19 +413,29 @@ validate_group_data_csv <- function(x) {
   required_fields <- c("data", "effect_cols", "subject_col", "subjects", "format")
   missing_fields <- setdiff(required_fields, names(x))
   if (length(missing_fields) > 0) {
-    stop("Missing required fields for group_data_csv: ",
-         paste(missing_fields, collapse = ", "), call. = FALSE)
+    fmrireg_abort(
+      c(
+        "Invalid group_data_csv object",
+        "x" = "Missing required field{?s}: {.field {missing_fields}}"
+      )
+    )
   }
-  
+
   # Validate data is a data frame
   if (!is.data.frame(x$data)) {
-    stop("'data' must be a data frame", call. = FALSE)
+    fmrireg_abort_input("data", "a data frame", class(x$data)[1])
   }
-  
+
   # Validate effect_cols structure
   if (!is.list(x$effect_cols) || is.null(names(x$effect_cols))) {
-    stop("'effect_cols' must be a named list", call. = FALSE)
+    fmrireg_abort(
+      c(
+        "Invalid effect_cols structure",
+        "x" = "{.field effect_cols} must be a named list",
+        ">" = "Example: list(beta = 'mean_col', se = 'se_col')"
+      )
+    )
   }
-  
+
   invisible(TRUE)
 }

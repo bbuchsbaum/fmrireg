@@ -338,7 +338,13 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
 
   # Check for any unexpected arguments in ...
   if (length(dots) > 0) {
-    stop("Unexpected arguments: ", paste(names(dots), collapse = ", "))
+    fmrireg_abort(
+      c(
+        "Unexpected arguments passed to fmri_lm()",
+        "x" = "Unknown argument{?s}: {.arg {names(dots)}}",
+        "i" = "Check spelling or see ?fmri_lm for valid parameters"
+      )
+    )
   }
   
   # Error checking
@@ -466,7 +472,14 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
       }
       fit <- plugin$fit(model, dataset, engine_args, cfg)
       if (!inherits(fit, "fmri_lm")) {
-        stop(sprintf("Engine '%s' must return an object of class 'fmri_lm'", engine), call. = FALSE)
+        fmrireg_abort(
+          c(
+            "Engine returned invalid result",
+            "x" = "Engine {.val {engine}} returned {.cls {class(fit)[1]}}",
+            "i" = "Expected an object of class {.cls fmri_lm}"
+          ),
+          class = "fmrireg_error_engine"
+        )
       }
       if (is.null(attr(fit, "config"))) {
         attr(fit, "config") <- cfg
@@ -494,10 +507,22 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
         return(res)
       }
     } else {
-      stop(sprintf("Unknown engine '%s'.", engine), call. = FALSE)
+      available_engines <- names(.fmrireg_engine_registry$engines)
+      fmrireg_abort(
+        c(
+          "Unknown fitting engine",
+          "x" = "Engine {.val {engine}} is not registered",
+          "i" = if (length(available_engines) > 0) {
+            paste0("Available engines: ", paste(available_engines, collapse = ", "))
+          } else {
+            "No custom engines registered; use strategy='runwise' or 'chunkwise'"
+          }
+        ),
+        class = "fmrireg_error_engine"
+      )
     }
   }
-  
+
   # Pass configuration object down
   # Note: We don't pass ... here because all parameters have been processed
   # and included in the cfg object
@@ -639,7 +664,14 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
       }
       fit <- plugin$fit(formula, dataset, engine_args, cfg)
       if (!inherits(fit, "fmri_lm")) {
-        stop(sprintf("Engine '%s' must return an object of class 'fmri_lm'", engine), call. = FALSE)
+        fmrireg_abort(
+          c(
+            "Engine returned invalid result",
+            "x" = "Engine {.val {engine}} returned {.cls {class(fit)[1]}}",
+            "i" = "Expected an object of class {.cls fmri_lm}"
+          ),
+          class = "fmrireg_error_engine"
+        )
       }
       if (is.null(attr(fit, "config"))) {
         attr(fit, "config") <- cfg
@@ -667,7 +699,19 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
         return(res)
       }
     } else {
-      stop(sprintf("Unknown engine '%s'.", engine), call. = FALSE)
+      available_engines <- names(.fmrireg_engine_registry$engines)
+      fmrireg_abort(
+        c(
+          "Unknown fitting engine",
+          "x" = "Engine {.val {engine}} is not registered",
+          "i" = if (length(available_engines) > 0) {
+            paste0("Available engines: ", paste(available_engines, collapse = ", "))
+          } else {
+            "No custom engines registered; use strategy='runwise' or 'chunkwise'"
+          }
+        ),
+        class = "fmrireg_error_engine"
+      )
     }
   }
 
@@ -953,29 +997,41 @@ pull_stat_revised <- function(x, type, element) {
   } else if (type == "contrasts") {
     ret <- x$result$contrasts %>% dplyr::filter(type == "contrast")
     if (nrow(ret) == 0) {
-      stop("No simple contrasts for this model.")
+      fmrireg_abort(
+        c(
+          "No simple contrasts available",
+          "i" = "This model has no t-contrasts defined",
+          ">" = "Define contrasts when calling fmri_lm() or use type='betas'"
+        )
+      )
     }
     cnames <- ret$name
     # Extract the specific element (e.g., estimate), which is a list(vector)
     # Then extract the vector itself (element [[1]]) before binding
-    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]][[1]]) %>% 
+    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]][[1]]) %>%
              dplyr::bind_cols()
     names(out) <- cnames
     out
   } else if (type == "F") {
     ret <- x$result$contrasts %>% dplyr::filter(type == "Fcontrast")
     if (nrow(ret) == 0) {
-      stop("No F contrasts for this model.")
+      fmrireg_abort(
+        c(
+          "No F-contrasts available",
+          "i" = "This model has no F-contrasts defined",
+          ">" = "Define F-contrasts when calling fmri_lm() or use type='betas'"
+        )
+      )
     }
     cnames <- ret$name
     # Extract the specific element (e.g., estimate), which is list(vector)
     # Then extract the vector itself (element [[1]]) before binding
-    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]][[1]]) %>% 
+    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]][[1]]) %>%
              dplyr::bind_cols()
     names(out) <- cnames
     out
   } else {
-    stop("Invalid type specified. Must be 'betas', 'contrasts', or 'F'.")
+    fmrireg_abort_input("type", "one of 'betas', 'contrasts', or 'F'", type)
   }
 }
 
@@ -1011,7 +1067,13 @@ pull_stat <- function(x, type, element) {
   } else if (type == "contrasts") {
     ret <- x$result$contrasts %>% dplyr::filter(type == "contrast")
     if (nrow(ret) == 0) {
-      stop("No simple contrasts for this model.")
+      fmrireg_abort(
+        c(
+          "No simple contrasts available",
+          "i" = "This model has no t-contrasts defined",
+          ">" = "Define contrasts when calling fmri_lm() or use type='betas'"
+        )
+      )
     }
     cnames <- ret$name
     out <- lapply(ret$data, function(x) x[[element]]) %>% dplyr::bind_cols()
@@ -1020,14 +1082,20 @@ pull_stat <- function(x, type, element) {
   } else if (type == "F") {
     ret <- x$result$contrasts %>% dplyr::filter(type == "Fcontrast")
     if (nrow(ret) == 0) {
-      stop("No F contrasts for this model.")
+      fmrireg_abort(
+        c(
+          "No F-contrasts available",
+          "i" = "This model has no F-contrasts defined",
+          ">" = "Define F-contrasts when calling fmri_lm() or use type='betas'"
+        )
+      )
     }
     cnames <- ret$name
     out <- lapply(ret$data, function(x) x[[element]]) %>% dplyr::bind_cols()
     names(out) <- cnames
     out
   } else {
-    stop("Invalid type specified. Must be 'betas', 'contrasts', or 'F'.")
+    fmrireg_abort_input("type", "one of 'betas', 'contrasts', or 'F'", type)
   }
 }
 
@@ -1079,9 +1147,9 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
     }
   } else {
     # Should not happen due to match.arg, but defensive coding
-    stop("Invalid type specified.")
+    fmrireg_abort_input("type", "one of the valid choices", type)
   }
-  
+
   # Reconstruction functionality can be added here if necessary (applies to the 'res' matrix/tibble)
   # if (recon && inherits(object$dataset, "fmri_dataset")) { ... }
   
@@ -2082,7 +2150,13 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
         Y_run <- as.matrix(ym$data)
 
         if (nrow(X_run) != nrow(Y_run)) {
-            stop(paste("Dimension mismatch in run", ym$chunk_num, ": X_run rows (", nrow(X_run), ") != Y_run rows (", nrow(Y_run), ")"))
+            fmrireg_abort_dimension(
+              expected = nrow(X_run),
+              actual = nrow(Y_run),
+              context = paste0("run ", ym$chunk_num),
+              expected_name = "design matrix rows",
+              actual_name = "data matrix rows"
+            )
         }
 
         # Check if we should use the integrated solver
@@ -2223,7 +2297,14 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
       # Filter out NULL results from skipped empty runs
       cres <- Filter(Negate(is.null), cres)
       if (length(cres) == 0) {
-          stop("No valid run results found in runwise fast path.")
+          fmrireg_abort(
+            c(
+              "No valid run results found",
+              "x" = "All runs produced NULL results in fast path fitting",
+              "i" = "Check that your dataset contains valid data and events"
+            ),
+            class = "fmrireg_error_computation"
+          )
       }
       # -------- End New Fast Path --------
   }

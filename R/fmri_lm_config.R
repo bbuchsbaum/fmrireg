@@ -30,7 +30,7 @@ fmri_lm_control <- function(robust_options = list(),
   # Handle NULL inputs
   if (is.null(robust_options)) robust_options <- list()
   if (is.null(ar_options)) ar_options <- list()
-  
+
   # defaults for robust fitting
   default_robust <- list(
     type = FALSE,
@@ -42,21 +42,42 @@ fmri_lm_control <- function(robust_options = list(),
   )
   robust <- utils::modifyList(default_robust, robust_options)
 
-  tryCatch({
-    robust$type <- match.arg(as.character(robust$type),
-                             choices = c("FALSE", "huber", "bisquare"))
-  }, error = function(e) {
-    stop("Invalid robust_psi/type. Must be one of: FALSE, 'huber', 'bisquare'")
-  })
-  if (identical(robust$type, "FALSE")) robust$type <- FALSE
-  robust$scale_scope <- match.arg(robust$scale_scope, c("run", "global"))
-  stopifnot(is.numeric(robust$k_huber), is.numeric(robust$c_tukey))
-  stopifnot(is.numeric(robust$max_iter))
+  # Validate robust$type
+  type_str <- as.character(robust$type)
+  valid_types <- c("FALSE", "huber", "bisquare")
+  if (!type_str %in% valid_types) {
+    fmrireg_abort_config(
+      param = "robust_options$type",
+      message = "Must be one of: FALSE, 'huber', or 'bisquare'",
+      suggestion = paste0("Got '", type_str, "'")
+    )
+  }
+  robust$type <- if (type_str == "FALSE") FALSE else type_str
+
+  # Validate scale_scope
+  if (!robust$scale_scope %in% c("run", "global")) {
+    fmrireg_abort_config(
+      param = "robust_options$scale_scope",
+      message = "Must be 'run' or 'global'",
+      suggestion = paste0("Got '", robust$scale_scope, "'")
+    )
+  }
+
+  # Validate numeric parameters
+  check_numeric(robust$k_huber, arg = "robust_options$k_huber")
+  check_numeric(robust$c_tukey, arg = "robust_options$c_tukey")
+  check_numeric(robust$max_iter, arg = "robust_options$max_iter")
+
   # Check max_iter even if robust is FALSE - parameter validation should always occur
   if (robust$max_iter < 1) {
-    stop("robust_max_iter must be at least 1")
+    fmrireg_abort_config(
+      param = "robust_options$max_iter",
+      message = "Must be at least 1",
+      suggestion = paste0("Got ", robust$max_iter)
+    )
   }
-  stopifnot(is.logical(robust$reestimate_phi), length(robust$reestimate_phi) == 1)
+
+  check_logical_scalar(robust$reestimate_phi, arg = "robust_options$reestimate_phi")
 
   # defaults for autoregressive modelling
   default_ar <- list(
@@ -69,16 +90,51 @@ fmri_lm_control <- function(robust_options = list(),
   )
   ar <- utils::modifyList(default_ar, ar_options)
 
-  ar$struct <- match.arg(ar$struct, c("iid", "ar1", "ar2", "arp"))
-  if (!is.null(ar$p)) stopifnot(is.numeric(ar$p), ar$p >= 1)
+  # Validate ar$struct
+  valid_structs <- c("iid", "ar1", "ar2", "arp")
+  if (!ar$struct %in% valid_structs) {
+    fmrireg_abort_config(
+      param = "ar_options$struct",
+      message = paste0("Must be one of: ", paste(valid_structs, collapse = ", ")),
+      suggestion = paste0("Got '", ar$struct, "'")
+    )
+  }
+
+  # Validate p if provided
+  if (!is.null(ar$p)) {
+    check_numeric(ar$p, arg = "ar_options$p")
+    if (ar$p < 1) {
+      fmrireg_abort_config(
+        param = "ar_options$p",
+        message = "AR order must be at least 1",
+        suggestion = paste0("Got ", ar$p)
+      )
+    }
+  }
+
   # Validate that p is provided when struct is "arp"
   if (ar$struct == "arp" && is.null(ar$p)) {
-    stop("p must be specified in ar_options when struct is 'arp'")
+    fmrireg_abort_config(
+      param = "ar_options$p",
+      message = "Required when struct is 'arp'",
+      suggestion = "Specify the AR order, e.g., ar_options = list(struct = 'arp', p = 3)"
+    )
   }
-  stopifnot(is.numeric(ar$iter_gls), ar$iter_gls >= 0)
-  stopifnot(is.logical(ar$global), length(ar$global) == 1)
-  stopifnot(is.logical(ar$voxelwise), length(ar$voxelwise) == 1)
-  stopifnot(is.logical(ar$exact_first), length(ar$exact_first) == 1)
+
+  # Validate iter_gls
+  check_numeric(ar$iter_gls, arg = "ar_options$iter_gls")
+  if (ar$iter_gls < 0) {
+    fmrireg_abort_config(
+      param = "ar_options$iter_gls",
+      message = "Must be non-negative",
+      suggestion = paste0("Got ", ar$iter_gls)
+    )
+  }
+
+  # Validate logical parameters
+  check_logical_scalar(ar$global, arg = "ar_options$global")
+  check_logical_scalar(ar$voxelwise, arg = "ar_options$voxelwise")
+  check_logical_scalar(ar$exact_first, arg = "ar_options$exact_first")
 
   cfg <- list(robust = robust, ar = ar)
   class(cfg) <- "fmri_lm_config"

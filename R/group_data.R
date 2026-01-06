@@ -52,7 +52,13 @@ group_data <- function(data, format = c("auto", "h5", "nifti", "csv", "fmrilm"),
     nifti = group_data_from_nifti(data, ...),
     csv = group_data_from_csv(data, ...),
     fmrilm = group_data_from_fmrilm(data, ...),
-    stop("Unsupported format: ", format, call. = FALSE)
+    fmrireg_abort(
+      c(
+        "Unsupported data format",
+        "x" = "Format {.val {format}} is not supported",
+        "i" = "Supported formats: {.val h5}, {.val nifti}, {.val csv}, {.val fmrilm}"
+      )
+    )
   )
 }
 
@@ -87,8 +93,13 @@ detect_group_data_format <- function(data) {
     return("csv")
   }
   
-  stop("Could not automatically detect data format. Please specify 'format' argument.", 
-       call. = FALSE)
+  fmrireg_abort(
+    c(
+      "Could not automatically detect data format",
+      "i" = "Unable to infer format from input data",
+      ">" = "Specify format explicitly: group_data(data, format = 'h5')"
+    )
+  )
 }
 
 #' Validate Group Data Object
@@ -99,20 +110,24 @@ detect_group_data_format <- function(data) {
 #' @noRd
 validate_group_data <- function(x) {
   if (!inherits(x, "group_data")) {
-    stop("Object must be of class 'group_data'", call. = FALSE)
+    check_inherits(x, "group_data", arg = "x")
   }
-  
+
   # Check required fields
   required_fields <- c("format", "subjects")
   missing_fields <- setdiff(required_fields, names(x))
   if (length(missing_fields) > 0) {
-    stop("Missing required fields: ", paste(missing_fields, collapse = ", "), 
-         call. = FALSE)
+    fmrireg_abort(
+      c(
+        "Invalid group_data object",
+        "x" = "Missing required field{?s}: {.field {missing_fields}}"
+      )
+    )
   }
-  
+
   # Validate subjects
   if (!is.character(x$subjects) && !is.factor(x$subjects)) {
-    stop("'subjects' must be a character vector or factor", call. = FALSE)
+    fmrireg_abort_input("subjects", "a character vector or factor", class(x$subjects)[1])
   }
   
   # Format-specific validation
