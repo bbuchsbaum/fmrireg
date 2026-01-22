@@ -13,7 +13,8 @@ LazyData: false
 Depends:
     R (>= 4.0.0)
 Imports:
-    fmriAR (>= 0.0.0.9000),
+    fmriAR,
+    fmrigds,
     fmridesign (>= 0.1.0),
     fmrihrf (>= 0.1.0),
     fmrilss (>= 0.1.0),
@@ -46,7 +47,7 @@ Imports:
     jsonlite,
     progress,
     magrittr
-RoxygenNote: 7.3.2.9000
+RoxygenNote: 7.3.3
 Roxygen: list(
     markdown = TRUE,
     roclets = c("collate", "namespace", "rd", "roxyglobals::global_roclet"))
@@ -75,13 +76,10 @@ Suggests:
     ggforce,
     roxyglobals (>= 0.2.1)
 Remotes:
-    bbuchsbaum/fmriAR,
-    bbuchsbaum/neuroim2,
-    bbuchsbaum/multivarious,
     bbuchsbaum/fmristore,
+    bbuchsbaum/fmrigds,
     anthonynorth/roxyglobals,
     bbuchsbaum/fmridataset,
-    bbuchsbaum/fmrihrf,
     bbuchsbaum/fmrilss,
     bbuchsbaum/fmridesign
 VignetteBuilder: knitr
@@ -143,15 +141,21 @@ Collate:
     'gen_contrast.R'
     'globals.R'
     'group_data.R'
+    'group_data_gds.R'
+    'gds_bridge_utils.R'
     'group_data_csv.R'
     'group_data_h5.R'
     'group_data_nifti.R'
     'fmri_meta.R'
+    'fmri_meta_gds.R'
     'fmri_meta_methods.R'
     'meta_fit.R'
     'spatial_fdr.R'
+    'fmri_ttest_gds.R'
     'fmri_ttest_helpers.R'
     'fmri_ttest.R'
+    'fmrigds_registration.R'
+    'fmrigds_registration_helper.R'
     'hrf_smoothing_kernel.R'
     'lss.R'
     'metafuns.R'
@@ -159,6 +163,8 @@ Collate:
     'neuroim2-methods.R'
     'sandwich_variance_doc.R'
     'simulate.R'
+    'soft_subspace_projection.R'
     'utils_operators.R'
+    'volume_quality.R'
     'zzz.R'
     'placeholder.R'
