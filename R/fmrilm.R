@@ -236,6 +236,23 @@ fmri_lm <- function(formula, ...) {
 #' @param robust_psi Character. Shorthand for \code{robust_options$type} (e.g., "huber", "bisquare").
 #' @param robust_max_iter Integer. Shorthand for \code{robust_options$max_iter}.
 #' @param robust_scale_scope Character. Shorthand for \code{robust_options$scale_scope} ("run" or "global").
+#' @param volume_weights_options List of volume weighting options. See \code{\link{fmri_lm_control}}.
+#' @param soft_subspace_options List of soft subspace projection options. See \code{\link{fmri_lm_control}}.
+#' @param volume_weights Logical or character. Simple interface for volume weighting:
+#'   \itemize{
+#'     \item \code{TRUE}: Enable with default method ("inverse_squared")
+#'     \item \code{"inverse_squared"}, \code{"soft_threshold"}, \code{"tukey"}: Enable with specific method
+#'     \item \code{FALSE} or \code{NULL}: Disable (default)
+#'   }
+#'   For fine-grained control, use \code{volume_weights_options} instead.
+#' @param nuisance_projection Matrix, character path, or NULL. Simple interface for
+#'   soft subspace projection:
+#'   \itemize{
+#'     \item Matrix: Use as nuisance timeseries directly
+#'     \item Character: Path to NIfTI mask for WM/CSF voxels
+#'     \item \code{NULL}: Disable (default)
+#'   }
+#'   For fine-grained control (lambda selection, warnings), use \code{soft_subspace_options}.
 #' @return A fitted linear regression model for fMRI data analysis.
 #' 
 #' @details
@@ -290,14 +307,17 @@ fmri_lm <- function(formula, ...) {
 #' 
 fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE,
                          robust = FALSE, robust_options = NULL, ar_options = NULL,
+                         volume_weights_options = NULL, soft_subspace_options = NULL,
                          strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, progress = FALSE,
                          ar_voxelwise = FALSE,
                          parallel_voxels = FALSE,
                     # Individual AR parameters for backward compatibility
-                    cor_struct = NULL, cor_iter = NULL, cor_global = NULL, 
+                    cor_struct = NULL, cor_iter = NULL, cor_global = NULL,
                     ar1_exact_first = NULL, ar_p = NULL,
                     # Individual robust parameters for backward compatibility
                     robust_psi = NULL, robust_max_iter = NULL, robust_scale_scope = NULL,
+                    # Convenience parameters for preprocessing features
+                    volume_weights = NULL, nuisance_projection = NULL,
                     ...) {
 
   # --- low-rank / sketch engine fast-path (opt-in via ...$engine) ---
@@ -442,12 +462,37 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
   if (!("voxelwise" %in% names(ar_options))) {
     ar_options$voxelwise <- ar_voxelwise
   }
-  
+
+  # Map volume_weights convenience parameter to volume_weights_options
+  if (!is.null(volume_weights) && !identical(volume_weights, FALSE)) {
+    if (is.null(volume_weights_options)) volume_weights_options <- list()
+    volume_weights_options$enabled <- TRUE
+    if (is.character(volume_weights)) {
+      volume_weights_options$method <- volume_weights
+    }
+  }
+
+  # Map nuisance_projection convenience parameter to soft_subspace_options
+  if (!is.null(nuisance_projection)) {
+    if (is.null(soft_subspace_options)) soft_subspace_options <- list()
+    soft_subspace_options$enabled <- TRUE
+    if (is.matrix(nuisance_projection)) {
+      soft_subspace_options$nuisance_matrix <- nuisance_projection
+    } else if (is.character(nuisance_projection)) {
+      soft_subspace_options$nuisance_mask <- nuisance_projection
+    }
+  }
+
   # Create configuration object
   cfg <- if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
     engine_cfg
   } else {
-    fmri_lm_control(robust_options = robust_options, ar_options = ar_options)
+    fmri_lm_control(
+      robust_options = robust_options,
+      ar_options = ar_options,
+      volume_weights_options = volume_weights_options,
+      soft_subspace_options = soft_subspace_options
+    )
   }
 
   # If both were supplied, prefer the merged configuration but keep engine_cfg metadata
@@ -512,6 +557,7 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
 fmri_lm.fmri_model <- function(formula, dataset = NULL,
                                robust = FALSE, robust_options = NULL,
                                ar_options = NULL,
+                               volume_weights_options = NULL, soft_subspace_options = NULL,
                                strategy = c("runwise", "chunkwise"), nchunks = 10,
                                use_fast_path = FALSE, progress = FALSE,
                                ar_voxelwise = FALSE, parallel_voxels = FALSE,
@@ -520,6 +566,7 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
                                ar_p = NULL,
                                robust_psi = NULL, robust_max_iter = NULL,
                                robust_scale_scope = NULL,
+                               volume_weights = NULL, nuisance_projection = NULL,
                                ...) {
   # --- low-rank / sketch engine fast-path (opt-in via ...$engine) ---
   dots <- list(...)
@@ -620,10 +667,35 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
   }
   ar_options$order <- NULL
 
+  # Map volume_weights convenience parameter to volume_weights_options
+  if (!is.null(volume_weights) && !identical(volume_weights, FALSE)) {
+    if (is.null(volume_weights_options)) volume_weights_options <- list()
+    volume_weights_options$enabled <- TRUE
+    if (is.character(volume_weights)) {
+      volume_weights_options$method <- volume_weights
+    }
+  }
+
+  # Map nuisance_projection convenience parameter to soft_subspace_options
+  if (!is.null(nuisance_projection)) {
+    if (is.null(soft_subspace_options)) soft_subspace_options <- list()
+    soft_subspace_options$enabled <- TRUE
+    if (is.matrix(nuisance_projection)) {
+      soft_subspace_options$nuisance_matrix <- nuisance_projection
+    } else if (is.character(nuisance_projection)) {
+      soft_subspace_options$nuisance_mask <- nuisance_projection
+    }
+  }
+
   cfg <- if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
     engine_cfg
   } else {
-    fmri_lm_control(robust_options = robust_options, ar_options = ar_options)
+    fmri_lm_control(
+      robust_options = robust_options,
+      ar_options = ar_options,
+      volume_weights_options = volume_weights_options,
+      soft_subspace_options = soft_subspace_options
+    )
   }
 
   if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
@@ -712,7 +784,12 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   if (strategy == "chunkwise") {
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
   }
-  
+
+  # Check for redundant nuisance regressors when soft subspace projection is enabled
+  if (cfg$soft_subspace$enabled && cfg$soft_subspace$warn_redundant) {
+    .check_redundant_nuisance(fmrimod$baseline_model, cfg$soft_subspace)
+  }
+
   contrast_prep <- prepare_fmri_lm_contrasts(fmrimod)
   processed_conlist <- contrast_prep$processed
   standard_path_conlist <- contrast_prep$standard

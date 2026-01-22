@@ -4,12 +4,23 @@
 \alias{fmri_lm_control}
 \title{Configuration for fmri_lm fitting}
 \usage{
-fmri_lm_control(robust_options = list(), ar_options = list())
+fmri_lm_control(
+  robust_options = list(),
+  ar_options = list(),
+  volume_weights_options = list(),
+  soft_subspace_options = list()
+)
 }
 \arguments{
 \item{robust_options}{list of robust fitting options. See Details.}
 
 \item{ar_options}{list of autoregressive modelling options. See Details.}
+
+\item{volume_weights_options}{list of volume weighting options. See Details.
+For simple cases, use the \code{volume_weights} parameter in \code{fmri_lm()} instead.}
+
+\item{soft_subspace_options}{list of soft subspace projection options. See Details.
+For simple cases, use the \code{nuisance_projection} parameter in \code{fmri_lm()} instead.}
 }
 \value{
 An object of class \code{fmri_lm_config}.
@@ -20,6 +31,17 @@ options for robust and autoregressive modelling. It validates inputs and
 applies defaults so downstream functions receive a single structured list.
 }
 \details{
+For common use cases, \code{fmri_lm()} provides convenience parameters that
+are easier to use than these detailed option lists:
+\itemize{
+\item \code{volume_weights = TRUE} enables volume weighting with defaults
+\item \code{volume_weights = "tukey"} enables with Tukey method
+\item \code{nuisance_projection = N} enables soft projection with matrix N
+\item \code{nuisance_projection = "mask.nii"} enables with mask file
+}
+
+Use the \verb{*_options} lists below only when you need fine-grained control.
+
 \code{robust_options} may contain:
 \itemize{
 \item \code{type} (\code{FALSE}, "huber", "bisquare")
@@ -38,5 +60,22 @@ applies defaults so downstream functions receive a single structured list.
 \item \code{global} (logical, use global phi)
 \item \code{voxelwise} (logical)
 \item \code{exact_first} (logical)
+}
+
+\code{volume_weights_options} may contain:
+\itemize{
+\item \code{enabled} (logical, whether to compute and apply volume weights)
+\item \code{method} ("inverse_squared", "soft_threshold", "tukey")
+\item \code{threshold} (numeric, DVARS threshold for weighting)
+\item \code{weights} (optional pre-computed weight vector)
+}
+
+\code{soft_subspace_options} may contain:
+\itemize{
+\item \code{enabled} (logical, whether to apply soft subspace projection)
+\item \code{nuisance_mask} (path to NIfTI mask or logical vector)
+\item \code{nuisance_matrix} (pre-computed nuisance timeseries matrix)
+\item \code{lambda} (numeric, "auto", or "gcv")
+\item \code{warn_redundant} (logical, warn if baseline has nuisance terms)
 }
 }

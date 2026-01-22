@@ -18,6 +18,8 @@ fmri_lm(formula, ...)
   robust = FALSE,
   robust_options = NULL,
   ar_options = NULL,
+  volume_weights_options = NULL,
+  soft_subspace_options = NULL,
   strategy = c("runwise", "chunkwise"),
   nchunks = 10,
   use_fast_path = FALSE,
@@ -32,6 +34,8 @@ fmri_lm(formula, ...)
   robust_psi = NULL,
   robust_max_iter = NULL,
   robust_scale_scope = NULL,
+  volume_weights = NULL,
+  nuisance_projection = NULL,
   ...
 )
 
@@ -41,6 +45,8 @@ fmri_lm(formula, ...)
   robust = FALSE,
   robust_options = NULL,
   ar_options = NULL,
+  volume_weights_options = NULL,
+  soft_subspace_options = NULL,
   strategy = c("runwise", "chunkwise"),
   nchunks = 10,
   use_fast_path = FALSE,
@@ -55,6 +61,8 @@ fmri_lm(formula, ...)
   robust_psi = NULL,
   robust_max_iter = NULL,
   robust_scale_scope = NULL,
+  volume_weights = NULL,
+  nuisance_projection = NULL,
   ...
 )
 }
@@ -80,6 +88,10 @@ fmri_lm(formula, ...)
 \item{robust_options}{List of robust fitting options. See Details.}
 
 \item{ar_options}{List of autoregressive modeling options. See Details.}
+
+\item{volume_weights_options}{List of volume weighting options. See \code{\link{fmri_lm_control}}.}
+
+\item{soft_subspace_options}{List of soft subspace projection options. See \code{\link{fmri_lm_control}}.}
 
 \item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
 
@@ -108,6 +120,23 @@ fmri_lm(formula, ...)
 \item{robust_max_iter}{Integer. Shorthand for \code{robust_options$max_iter}.}
 
 \item{robust_scale_scope}{Character. Shorthand for \code{robust_options$scale_scope} ("run" or "global").}
+
+\item{volume_weights}{Logical or character. Simple interface for volume weighting:
+\itemize{
+\item \code{TRUE}: Enable with default method ("inverse_squared")
+\item \code{"inverse_squared"}, \code{"soft_threshold"}, \code{"tukey"}: Enable with specific method
+\item \code{FALSE} or \code{NULL}: Disable (default)
+}
+For fine-grained control, use \code{volume_weights_options} instead.}
+
+\item{nuisance_projection}{Matrix, character path, or NULL. Simple interface for
+soft subspace projection:
+\itemize{
+\item Matrix: Use as nuisance timeseries directly
+\item Character: Path to NIfTI mask for WM/CSF voxels
+\item \code{NULL}: Disable (default)
+}
+For fine-grained control (lambda selection, warnings), use \code{soft_subspace_options}.}
 }
 \value{
 An object of class \code{fmri_lm}.
