@@ -1,7 +1,7 @@
 Package: fmrireg
 Type: Package
 Title: R package for the anlysis of fmri data
-Version: 0.1.0
+Version: 0.1.1
 LinkingTo: Rcpp,RcppArmadillo, roptim, RcppParallel
 Date: 2023-03-07
 Authors@R: person("Bradley", "Buchsbaum",, role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
