@@ -45,7 +45,10 @@ group_data_from_h5 <- function(paths,
                                contrast = NULL,
                                stat = c("beta", "se"),
                                validate = TRUE) {
-  
+  if (!isTRUE(getOption("fmrireg.suppress_deprecation", FALSE))) {
+    .Deprecated("group_data", msg = "group_data_from_h5() is deprecated. Use group_data(paths, format='h5', ...) instead.")
+  }
+
   # Validate paths
   if (!is.character(paths)) {
     stop("'paths' must be a character vector of file paths", call. = FALSE)
@@ -138,20 +141,59 @@ group_data_from_h5 <- function(paths,
 #' @return List with metadata including dimensions and labels
 #' @keywords internal
 read_h5_metadata <- function(path) {
-  # Use fmristore to read metadata without loading data
+  # Use fmristore to read metadata without fully loading data
   tryCatch({
     h5_handle <- fmristore::read_labeled_vec(path)
-    on.exit(h5_handle$close_all())
-    
-    # Extract metadata
-    meta <- list(
-      dim = h5_handle$dim,
-      labels = h5_handle$labels,
-      mask_dim = h5_handle$mask_dim,
-      has_mask = !is.null(h5_handle$mask)
-    )
-    
-    return(meta)
+
+    # Best-effort close on exit (support both list-based and S4 handles)
+    on.exit({
+      try(h5_handle$close_all(), silent = TRUE)
+      try(h5_handle$close(), silent = TRUE)
+      try(fmristore::close_all(h5_handle), silent = TRUE)
+      try(fmristore::close(h5_handle), silent = TRUE)
+    }, add = TRUE)
+
+    # Legacy list-like handle with $ fields
+    if (is.list(h5_handle) && all(c("dim","labels") %in% names(h5_handle))) {
+      return(list(
+        dim = h5_handle$dim,
+        labels = h5_handle$labels,
+        mask_dim = h5_handle$mask_dim %||% NULL,
+        has_mask = !is.null(h5_handle$mask)
+      ))
+    }
+
+    # S4 or other handle type: attempt to retrieve via slots or accessors
+    if (methods::is(h5_handle, "S4")) {
+      sn <- try(methods::slotNames(h5_handle), silent = TRUE)
+      get_slot <- function(nm) try(methods::slot(h5_handle, nm), silent = TRUE)
+      dim_val <- NULL; labels_val <- NULL; mask_val <- NULL; mask_dim <- NULL
+      if (!inherits(sn, "try-error")) {
+        if ("dim" %in% sn) dim_val <- get_slot("dim")
+        if ("labels" %in% sn) labels_val <- get_slot("labels")
+        if ("mask" %in% sn) mask_val <- get_slot("mask")
+        if ("mask_dim" %in% sn) mask_dim <- get_slot("mask_dim")
+      }
+      # Fallback to potential accessor generics if available
+      if (is.null(dim_val)) dim_val <- try(fmristore::dim(h5_handle), silent = TRUE)
+      if (is.null(labels_val)) labels_val <- try(fmristore::labels(h5_handle), silent = TRUE)
+      if (is.null(mask_val)) mask_val <- try(fmristore::mask(h5_handle), silent = TRUE)
+
+      if (!inherits(dim_val, "try-error") && !inherits(labels_val, "try-error") && !is.null(dim_val) && !is.null(labels_val)) {
+        return(list(
+          dim = dim_val,
+          labels = labels_val,
+          mask_dim = if (!inherits(mask_dim, "try-error")) mask_dim else NULL,
+          has_mask = isTRUE(!inherits(mask_val, "try-error") && !is.null(mask_val))
+        ))
+      }
+
+      # Could not safely introspect S4 handle—informative error for tests to skip
+      stop("Legacy HDF5 reader cannot introspect fmristore S4 handle; use group_data(..., format='h5') via fmrigds instead.")
+    }
+
+    # Unknown handle type
+    stop("Unsupported fmristore handle type")
   }, error = function(e) {
     stop("Failed to read HDF5 metadata from ", path, ": ", e$message, call. = FALSE)
   })
@@ -348,7 +390,10 @@ group_data_from_fmrilm <- function(lm_list,
                                    stat = c("beta", "se"),
                                    subjects = NULL,
                                    covariates = NULL) {
-  
+  if (!isTRUE(getOption("fmrireg.suppress_deprecation", FALSE))) {
+    .Deprecated("group_data", msg = "group_data_from_fmrilm() is deprecated. Use group_data(lm_list, format='fmrilm', ...) instead.")
+  }
+
   if (!is.list(lm_list)) {
     stop("'lm_list' must be a list", call. = FALSE)
   }

@@ -167,8 +167,8 @@ test_that("latent_dataset creation works correctly", {
   # Skip TR check - may not be properly set by latent_dataset
   # expect_equal(dset$TR, 2)
   
-  # Test data access using get_data
-  data <- fmridataset::get_data(dset)
+  # Test data access using get_latent_scores (correct API for latent datasets)
+  data <- fmridataset::get_latent_scores(dset)
   expect_equal(ncol(data), n_comp)
   expect_equal(nrow(data), n_time)
 })

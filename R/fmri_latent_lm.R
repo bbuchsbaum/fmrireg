@@ -101,7 +101,7 @@ chunkwise_lm.latent_dataset <- function(dset, model, contrast_objects, nchunks, 
   data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
   modmat <- model.matrix(as.formula(form), data_env)
   
-  basismat <- fmridataset::get_data(dset)
+  basismat <- fmridataset::get_latent_scores(dset)
 
   #wmat <- if (autocor != "none") {
   #  message("whitening components")

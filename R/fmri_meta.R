@@ -95,8 +95,10 @@ fmri_meta <- function(data,
                       n_threads = getOption("fmrireg.num_threads", 0),
                       verbose = TRUE) {
   
-  # Validate input
-  validate_group_data(data)
+  # Validate legacy group_data only; gds-backed objects skip this
+  if (!inherits(data, "group_data_gds") && !inherits(data, "gds_plan") && !inherits(data, "gds")) {
+    validate_group_data(data)
+  }
   
   # Match arguments
   method <- match.arg(method)
@@ -132,7 +134,10 @@ fmri_meta.group_data_h5 <- function(data,
                                     chunk_size = 10000,
                                     n_threads = getOption("fmrireg.num_threads", 0),
                                     verbose = TRUE) {
-  
+  if (!isTRUE(getOption("fmrireg.suppress_deprecation", FALSE))) {
+    .Deprecated("fmri_meta", msg = "fmri_meta.group_data_h5() is deprecated. Use fmri_meta() with a GDS-backed group_data() object.")
+  }
+
   method <- match.arg(method)
   robust <- match.arg(robust)
   weights <- match.arg(weights)
@@ -140,6 +145,11 @@ fmri_meta.group_data_h5 <- function(data,
   
   # Parse formula and create design matrix
   model_info <- parse_meta_formula(formula, data)
+  coef_names <- colnames(model_info$X)
+  if (is.null(coef_names) && ncol(model_info$X) == 1L) {
+    coef_names <- "(Intercept)"
+    colnames(model_info$X) <- coef_names
+  }
   
   # Build contrast matrix if provided
   Cmat <- NULL; contrast_names <- NULL
@@ -186,8 +196,8 @@ fmri_meta.group_data_h5 <- function(data,
   }
   
   # Set column names
-  colnames(results$coefficients) <- colnames(model_info$X)
-  colnames(results$se) <- colnames(model_info$X)
+  colnames(results$coefficients) <- coef_names
+  colnames(results$se) <- coef_names
   
   # Process in chunks
   n_chunks <- ceiling(n_voxels / chunk_size)
@@ -295,7 +305,10 @@ fmri_meta.group_data_nifti <- function(data,
                                        chunk_size = 10000,
                                        n_threads = getOption("fmrireg.num_threads", 0),
                                        verbose = TRUE) {
-  
+  if (!isTRUE(getOption("fmrireg.suppress_deprecation", FALSE))) {
+    .Deprecated("fmri_meta", msg = "fmri_meta.group_data_nifti() is deprecated. Use fmri_meta() with a GDS-backed group_data() object.")
+  }
+
   # Similar to group_data_h5 but using read_nifti_chunk
   method <- match.arg(method)
   robust <- match.arg(robust)
@@ -465,6 +478,9 @@ fmri_meta.group_data_csv <- function(data,
                                      chunk_size = NULL,  # Not used for CSV
                                      n_threads = 1,       # Single-threaded for ROIs
                                      verbose = TRUE) {
+  if (!isTRUE(getOption("fmrireg.suppress_deprecation", FALSE))) {
+    .Deprecated("fmri_meta", msg = "fmri_meta.group_data_csv() is deprecated. Use fmri_meta() with a GDS-backed group_data() object.")
+  }
   
   method <- match.arg(method)
   robust <- match.arg(robust)

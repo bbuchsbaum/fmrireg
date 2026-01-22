@@ -46,15 +46,17 @@ test_that("Landmark SRHT + global AR matches exact reasonably on synthetic data"
   B_exact <- t(fit_exact$result$betas$data[[1]]$estimate[[1]])
 
   # Parcels via kmeans on coords
+  # Suppress kmeans convergence warnings - non-convergence is expected with small random data
   coords <- expand.grid(x = seq_len(dim3[1]), y = seq_len(dim3[2]), z = seq_len(dim3[3]))
-  parcels <- ClusteredNeuroVol(maskVol, kmeans(coords, centers = 30)$cluster)
+  parcels <- suppressWarnings(ClusteredNeuroVol(maskVol, kmeans(coords, centers = 30)$cluster))
 
   # Landmark SRHT + global AR
+  # Suppress kmeans convergence warnings that can occur during landmark selection
   L <- 36L  # Increased landmarks for better coverage
   low <- lowrank_control(parcels = parcels, landmarks = L, k_neighbors = 16L,
                          time_sketch = list(method = "srht", m = min(10L * p, Tlen)))
-  fit_lm <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset, engine = "latent_sketch", lowrank = low,
-                    ar_options = list(by_cluster = FALSE, order = 1L))
+  fit_lm <- suppressWarnings(fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset, engine = "latent_sketch", lowrank = low,
+                    ar_options = list(by_cluster = FALSE, order = 1L)))
 
   # Checks
   expect_equal(dim(fit_lm$betas_fixed), dim(B_exact))

@@ -744,7 +744,7 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
 #' @param basis_obj An HRF basis object (e.g., from `fmrihrf::HRF_SPMG1`, `HRF_FIR`, etc.)
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
 #' @param block A formula specifying the block factor (default: ~ 1 for single block)
-#' @param use_cpp Logical; retained for backward compatibility. If TRUE, a warning is issued and the R implementation is used.
+#' @param use_cpp Deprecated. The C++ implementation has been retired. This parameter is ignored; fmrilss is always used.
 #' @param progress Logical; show progress bar (default: TRUE)
 #' @param ... Additional arguments passed to `estimate_betas`
 #'
@@ -783,8 +783,8 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
 #' @export
 #' @seealso \code{\link{estimate_betas}} for the underlying estimation function, 
 #'   \code{\link{glm_ols}} for condition-level estimation
-glm_lss <- function(dataset, model_obj, basis_obj, basemod = NULL, 
-                    block = ~ 1, use_cpp = TRUE, progress = TRUE, ...) {
+glm_lss <- function(dataset, model_obj, basis_obj, basemod = NULL,
+                    block = ~ 1, use_cpp = FALSE, progress = TRUE, ...) {
   
   # Validate inputs
   if (!inherits(dataset, "matrix_dataset")) {

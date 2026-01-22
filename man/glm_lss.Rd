@@ -10,7 +10,7 @@ glm_lss(
   basis_obj,
   basemod = NULL,
   block = ~1,
-  use_cpp = TRUE,
+  use_cpp = FALSE,
   progress = TRUE,
   ...
 )
@@ -26,7 +26,7 @@ glm_lss(
 
 \item{block}{A formula specifying the block factor (default: ~ 1 for single block)}
 
-\item{use_cpp}{Logical; retained for backward compatibility. If TRUE, a warning is issued and the R implementation is used.}
+\item{use_cpp}{Deprecated. The C++ implementation has been retired. This parameter is ignored; fmrilss is always used.}
 
 \item{progress}{Logical; show progress bar (default: TRUE)}
 

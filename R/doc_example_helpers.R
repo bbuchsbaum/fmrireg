@@ -82,14 +82,15 @@
     beta = c(0.2, 0.1, 0.3, 0.15, 0.25, 0.2),
     se = rep(0.1, 6)
   )
-  group_data_from_csv(
+  # Suppress deprecation warning - this helper uses legacy function for compatibility
+  suppressWarnings(group_data_from_csv(
     df,
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
     roi_col = "roi",
     contrast_col = "contrast",
     covariate_cols = "age"
-  )
+  ))
 }
 
 #' Internal: demo fmri_meta fit using CSV group data
