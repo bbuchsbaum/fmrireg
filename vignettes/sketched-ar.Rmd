@@ -24,69 +24,163 @@ At a glance
 Approach in one paragraph
 - We first prewhiten in time (globally or per parcel, with light shrinkage across parcels). Then we replace the tall time dimension T with a much smaller sketch m using SRHT or IHS so that the normal equations are nearly identical at a fraction of the cost. If desired, we also replace the large spatial dimension V by solving only on L landmark voxels and extending coefficients back to all voxels via a sparse, parcel‑aware heat‑kernel (Nyström).
 
+### Set up a synthetic dataset
+
+We start with a small 8 x 8 x 3 volume and 120 time-points so the
+example runs quickly. A two-condition event design is convolved with the
+canonical HRF to produce the design matrix.
+
 ```r
 library(fmrireg)
 library(neuroim2)
 library(fmrihrf)
 
-# Synthetic 4D dataset (tiny)
 set.seed(1)
-TR <- 2; Tlen <- 120; dim3 <- c(8L,8L,3L)
+TR <- 2; Tlen <- 120; dim3 <- c(8L, 8L, 3L)
 space4d <- NeuroSpace(c(dim3, Tlen))
 maskVol <- LogicalNeuroVol(array(TRUE, dim3), NeuroSpace(dim3))
 
-# Simple two-condition design
-onsets <- seq(20, 200, by=30); conds <- factor(rep(c("A","B"), length.out=length(onsets)))
-events_df <- data.frame(onset=onsets, condition=conds, run=1L)
+onsets  <- seq(20, 200, by = 30)
+conds   <- factor(rep(c("A", "B"), length.out = length(onsets)))
+events_df <- data.frame(onset = onsets, condition = conds, run = 1L)
+
 sframe <- sampling_frame(blocklens = Tlen, TR = TR)
-em <- event_model(onset ~ hrf(condition), data = events_df, block = ~ run, sampling_frame = sframe)
+em <- event_model(onset ~ hrf(condition), data = events_df,
+                  block = ~ run, sampling_frame = sframe)
 X <- design_matrix(em)
 p <- ncol(X); V <- prod(dim3)
+```
 
-# Simulate Y = X B + AR(1) noise
+### Simulate data with AR(1) noise
+
+The observed data is `Y = X B + noise` where the noise follows an AR(1)
+process with `rho = 0.3`. This gives the sketched solvers something
+realistic to whiten against.
+
+```r
 task_cols <- which(grepl("condition|hrf", colnames(X), ignore.case = TRUE))
-B_true <- matrix(0, p, V); B_true[task_cols,] <- matrix(rnorm(length(task_cols)*V, sd=0.5), length(task_cols), byrow=TRUE)
-ar1_noise <- function(T,V,rho=.3,sd=.5){E <- matrix(0,T,V); E[1,] <- rnorm(V, sd=sd/sqrt(1-rho^2)); for(t in 2:T) E[t,] <- rho*E[t-1,] + rnorm(V,sd=sd); E}
+B_true <- matrix(0, p, V)
+B_true[task_cols, ] <- matrix(rnorm(length(task_cols) * V, sd = 0.5),
+                              length(task_cols), byrow = TRUE)
+
+ar1_noise <- function(T, V, rho = .3, sd = .5) {
+  E <- matrix(0, T, V)
+  E[1, ] <- rnorm(V, sd = sd / sqrt(1 - rho^2))
+  for (t in 2:T) E[t, ] <- rho * E[t - 1, ] + rnorm(V, sd = sd)
+  E
+}
+
 Y <- X %*% B_true + ar1_noise(Tlen, V)
+```
 
-arr <- array(0, dim=c(dim3, Tlen)); v <- 0L
-for(ix in seq_len(dim3[1])) for(iy in seq_len(dim3[2])) for(iz in seq_len(dim3[3])) { v <- v+1L; arr[ix,iy,iz,] <- as.numeric(Y[,v]) }
-vec <- NeuroVec(arr, space4d)
-dset <- fmri_mem_dataset(scans=list(vec), mask=maskVol, TR=TR, event_table=events_df)
+### Pack into an fmri dataset
 
-# Build parcels (k-means on coords)
-coords <- expand.grid(x=seq_len(dim3[1]), y=seq_len(dim3[2]), z=seq_len(dim3[3]))
-parcels <- ClusteredNeuroVol(maskVol, kmeans(coords, centers=40)$cluster)
+The simulated matrix is reshaped into a 4-D `NeuroVec` and wrapped in an
+`fmri_mem_dataset` so it can be passed to `fmri_lm()`.
 
-# Global AR + SRHT
-low_srht <- lowrank_control(parcels = parcels, time_sketch = list(method="srht", m = min(8L*p, Tlen)))
-fit_srht_global <- fmri_lm(onset ~ hrf(condition), block = ~ run,
-                           dataset = dset,
-                           engine = "latent_sketch",
-                           lowrank = low_srht,
-                           ar_options = list(by_cluster = FALSE, order = 1L))
+```r
+arr <- array(0, dim = c(dim3, Tlen)); v <- 0L
+for (ix in seq_len(dim3[1]))
+  for (iy in seq_len(dim3[2]))
+    for (iz in seq_len(dim3[3])) {
+      v <- v + 1L
+      arr[ix, iy, iz, ] <- as.numeric(Y[, v])
+    }
 
-# Parcel AR (with shrinkage) + SRHT
-fit_srht_group <- fmri_lm(onset ~ hrf(condition), block = ~ run,
-                          dataset = dset,
-                          engine = "latent_sketch",
-                          lowrank = low_srht,
-                          ar_options = list(by_cluster = TRUE, order = 1L, shrink_c0 = 100))
+vec  <- NeuroVec(arr, space4d)
+dset <- fmri_mem_dataset(scans = list(vec), mask = maskVol,
+                         TR = TR, event_table = events_df)
+```
 
-# IHS (3 iters) + global AR
-low_ihs <- lowrank_control(parcels = parcels, time_sketch = list(method="ihs", m = max(6L*p, p+4L), iters=3L))
-fit_ihs <- fmri_lm(onset ~ hrf(condition), block = ~ run,
-                   dataset = dset,
-                   engine = "latent_sketch",
-                   lowrank = low_ihs,
-                   ar_options = list(by_cluster = FALSE, order = 1L))
+### Build parcels
 
-# Compare fits quickly
-B_exact <- t(fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)$result$betas$data[[1]]$estimate[[1]])
+Parcels are used both for parcel-pooled AR whitening and for
+parcel-aware Nystrom extension later. Here we simply k-means cluster on
+voxel coordinates.
+
+```r
+coords  <- expand.grid(x = seq_len(dim3[1]),
+                       y = seq_len(dim3[2]),
+                       z = seq_len(dim3[3]))
+parcels <- ClusteredNeuroVol(maskVol, kmeans(coords, centers = 40)$cluster)
+```
+
+### Fit with Global AR + SRHT sketch
+
+`engine = "latent_sketch"` activates the sketched path.
+`lowrank_control()` sets the sketch method and size; here we use SRHT
+with `m = 8p` rows. Setting `by_cluster = FALSE` pools a single AR(1)
+coefficient across the whole brain.
+
+```r
+low_srht <- lowrank_control(
+  parcels     = parcels,
+  time_sketch = list(method = "srht", m = min(8L * p, Tlen))
+)
+
+fit_srht_global <- fmri_lm(
+  onset ~ hrf(condition), block = ~ run,
+  dataset    = dset,
+  engine     = "latent_sketch",
+  lowrank    = low_srht,
+  ar_options = list(by_cluster = FALSE, order = 1L)
+)
+```
+
+### Fit with Parcel AR + SRHT sketch
+
+Switching `by_cluster = TRUE` estimates a separate AR coefficient per
+parcel, then shrinks them toward the global mean (`shrink_c0 = 100`).
+This stabilizes whitening in small or noisy parcels.
+
+```r
+fit_srht_group <- fmri_lm(
+  onset ~ hrf(condition), block = ~ run,
+  dataset    = dset,
+  engine     = "latent_sketch",
+  lowrank    = low_srht,
+  ar_options = list(by_cluster = TRUE, order = 1L, shrink_c0 = 100)
+)
+```
+
+### Fit with IHS sketch
+
+IHS (Iterative Hessian Sketch) is an alternative to SRHT. It refines
+its solution over a few iterations; 2-3 iterations with `m ~ 6p` are
+typically sufficient for near-exact results.
+
+```r
+low_ihs <- lowrank_control(
+  parcels     = parcels,
+  time_sketch = list(method = "ihs", m = max(6L * p, p + 4L), iters = 3L)
+)
+
+fit_ihs <- fmri_lm(
+  onset ~ hrf(condition), block = ~ run,
+  dataset    = dset,
+  engine     = "latent_sketch",
+  lowrank    = low_ihs,
+  ar_options = list(by_cluster = FALSE, order = 1L)
+)
+```
+
+### Compare sketched fits to exact OLS
+
+We fit the same model without sketching and correlate the resulting
+beta maps. Correlations above 0.9 indicate that the sketch
+faithfully preserves the GLM solution.
+
+```r
+B_exact <- t(fmri_lm(onset ~ hrf(condition), block = ~ run,
+                      dataset = dset)$result$betas$data[[1]]$estimate[[1]])
+
 cor_srht_glob <- cor(as.numeric(B_exact), as.numeric(fit_srht_global$betas_fixed))
 cor_srht_grp  <- cor(as.numeric(B_exact), as.numeric(fit_srht_group$betas_fixed))
 cor_ihs       <- cor(as.numeric(B_exact), as.numeric(fit_ihs$betas_fixed))
-list(cor_srht_glob=cor_srht_glob, cor_srht_grp=cor_srht_grp, cor_ihs=cor_ihs)
+
+list(cor_srht_glob = cor_srht_glob,
+     cor_srht_grp  = cor_srht_grp,
+     cor_ihs       = cor_ihs)
 ```
 
 ## Landmarks + Nyström (full-voxel, global AR)
