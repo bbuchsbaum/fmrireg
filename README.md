@@ -22,11 +22,15 @@ fit <- fmri_lm(emod, dataset = bm$core_data)
 
 See comprehensive examples and tutorials in the [vignettes](https://bbuchsbaum.github.io/fmrireg/articles/index.html):
 
-- [Hemodynamic Response Functions](https://bbuchsbaum.github.io/fmrireg/articles/a_01_hemodynamic_response.html)
-- [Building Regressors](https://bbuchsbaum.github.io/fmrireg/articles/a_02_regressor.html)
-- [Event Models](https://bbuchsbaum.github.io/fmrireg/articles/a_04_event_models.html)
+- [Package Overview](https://bbuchsbaum.github.io/fmrireg/articles/Overview.html)
 - [Statistical Contrasts](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html)
+- [Simulation](https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.html)
 - [Linear Modeling](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html)
+- [Dataset Management](https://bbuchsbaum.github.io/fmrireg/articles/a_10_dataset.html)
+- [Group Analysis](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.html)
+- [Functional Connectivity](https://bbuchsbaum.github.io/fmrireg/articles/functional_connectivity.html)
+- [Sketched GLM](https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.html)
+- [Benchmark Datasets](https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.html)
 
 ## Performance Configuration
 
