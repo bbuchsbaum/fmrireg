@@ -687,7 +687,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "15554.756KB",
+  "fileSize": "15554.598KB",
   "releaseNotes": "https://github.com/bbuchsbaum/fmrireg/blob/main/NEWS.md",
   "readme": "https://github.com/bbuchsbaum/fmrireg/blob/master/README.md",
   "contIntegration": "https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml"
