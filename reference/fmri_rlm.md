@@ -1,0 +1,131 @@
+# Fit a Robust Linear Model for fMRI Data Analysis
+
+This function fits a robust linear regression model for fMRI data
+analysis using the specified model formula, block structure, and
+dataset. The model can be fit using either a runwise or chunkwise data
+splitting strategy.
+
+## Usage
+
+``` r
+fmri_rlm(
+  formula,
+  block,
+  baseline_model = NULL,
+  dataset,
+  durations = 0,
+  drop_empty = TRUE,
+  strategy = c("runwise", "chunkwise"),
+  nchunks = 10,
+  cor_struct = c("iid", "ar1", "ar2", "arp"),
+  cor_iter = 1L,
+  cor_global = FALSE,
+  ar_p = NULL,
+  ar1_exact_first = FALSE,
+  robust_psi = c("huber", "bisquare"),
+  robust_k_huber = 1.345,
+  robust_c_tukey = 4.685,
+  robust_max_iter = 2L,
+  robust_scale_scope = c("run", "global"),
+  ...
+)
+```
+
+## Arguments
+
+- formula:
+
+  A model formula describing the event structure or an `fmri_model`
+  object.
+
+- block:
+
+  The model formula for block structure.
+
+- baseline_model:
+
+  (Optional) A `baseline_model` object. Default is `NULL`.
+
+- dataset:
+
+  An `fmri_dataset` object containing the time-series data.
+
+- durations:
+
+  A vector of event durations. Default is `0`.
+
+- drop_empty:
+
+  Logical. Whether to remove factor levels with zero size. Default is
+  `TRUE`.
+
+- strategy:
+
+  The data splitting strategy, either `"runwise"` or `"chunkwise"`.
+  Default is `"runwise"`.
+
+- nchunks:
+
+  Number of data chunks when strategy is "chunkwise". Default is 10.
+
+- cor_struct:
+
+  Correlation structure: "iid", "ar1", "ar2", or "arp". Default is
+  "iid".
+
+- cor_iter:
+
+  Number of iterations for AR parameter estimation. Default is 1.
+
+- cor_global:
+
+  Whether to use global AR parameters. Default is FALSE.
+
+- ar_p:
+
+  Order of autoregressive model for "arp" structure. Default is NULL.
+
+- ar1_exact_first:
+
+  Whether to use exact AR(1) for first iteration. Default is FALSE.
+
+- robust_psi:
+
+  Robust psi function: "huber" or "bisquare". Default is "huber".
+
+- robust_k_huber:
+
+  Tuning constant for Huber's psi. Default is 1.345.
+
+- robust_c_tukey:
+
+  Tuning constant for Tukey's bisquare. Default is 4.685.
+
+- robust_max_iter:
+
+  Maximum iterations for robust fitting. Default is 2.
+
+- robust_scale_scope:
+
+  Scope for robust scale estimation: "run" or "global". Default is
+  "run".
+
+- ...:
+
+  Additional arguments passed to fmri_lm
+
+## Value
+
+A fitted robust linear regression model for fMRI data analysis.
+
+## Examples
+
+``` r
+etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))
+etab2 <- data.frame(onset=c(1,30,65,75), fac=factor(c("A", "B", "A", "B")), run=c(1,1,1,1))
+mat <- matrix(rnorm(100*100), 100,100)
+dset <- fmridataset::matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
+dset2 <- fmridataset::matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
+lm.1 <- fmri_rlm(onset ~ hrf(fac), block= ~ run, dataset=dset)
+lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run, dataset=dset2)
+```

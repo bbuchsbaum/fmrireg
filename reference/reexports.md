@@ -1,0 +1,88 @@
+# Objects exported from other packages
+
+These objects are imported from other packages. Follow the links below
+to see their documentation.
+
+- fmridataset:
+
+  [`as.matrix_dataset`](https://bbuchsbaum.github.io/fmridataset/reference/as.matrix_dataset.html),
+  [`data_chunks`](https://bbuchsbaum.github.io/fmridataset/reference/data_chunks.html),
+  [`fmri_dataset`](https://bbuchsbaum.github.io/fmridataset/reference/fmri_dataset.html),
+  [`fmri_mem_dataset`](https://bbuchsbaum.github.io/fmridataset/reference/fmri_mem_dataset.html),
+  [`get_data`](https://bbuchsbaum.github.io/fmridataset/reference/get_data.html),
+  [`get_data_matrix`](https://bbuchsbaum.github.io/fmridataset/reference/get_data_matrix.html),
+  [`get_mask`](https://bbuchsbaum.github.io/fmridataset/reference/get_mask.html),
+  [`latent_dataset`](https://bbuchsbaum.github.io/fmridataset/reference/latent_dataset.html),
+  [`matrix_dataset`](https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html),
+  [`read_fmri_config`](https://bbuchsbaum.github.io/fmridataset/reference/read_fmri_config.html)
+
+- fmridesign:
+
+  [`baseline`](https://bbuchsbaum.github.io/fmridesign/reference/baseline.html),
+  [`baseline_model`](https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html),
+  [`baseline_terms`](https://bbuchsbaum.github.io/fmridesign/reference/baseline_terms.html),
+  [`basis_suffix`](https://bbuchsbaum.github.io/fmridesign/reference/basis_suffix.html),
+  [`block`](https://bbuchsbaum.github.io/fmridesign/reference/block.html),
+  [`BSpline`](https://bbuchsbaum.github.io/fmridesign/reference/BSpline.html),
+  [`cells`](https://bbuchsbaum.github.io/fmridesign/reference/cells.html),
+  [`column_contrast`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.html),
+  [`condition_basis_list`](https://bbuchsbaum.github.io/fmridesign/reference/condition_basis_list.html),
+  [`conditions`](https://bbuchsbaum.github.io/fmridesign/reference/conditions.html),
+  [`construct`](https://bbuchsbaum.github.io/fmridesign/reference/construct.html),
+  [`contrast_weights`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html),
+  [`convolve`](https://bbuchsbaum.github.io/fmridesign/reference/convolve.html),
+  [`convolve_design`](https://bbuchsbaum.github.io/fmridesign/reference/convolve_design.html),
+  [`covariate`](https://bbuchsbaum.github.io/fmridesign/reference/covariate.html),
+  [`design_map`](https://bbuchsbaum.github.io/fmridesign/reference/design_map.html),
+  [`design_matrix`](https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html),
+  [`durations`](https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-reexports.html),
+  [`elements`](https://bbuchsbaum.github.io/fmridesign/reference/elements.html),
+  [`event_basis`](https://bbuchsbaum.github.io/fmridesign/reference/event_basis.html),
+  [`event_factor`](https://bbuchsbaum.github.io/fmridesign/reference/event_factor.html),
+  [`event_matrix`](https://bbuchsbaum.github.io/fmridesign/reference/event_matrix.html),
+  [`event_model`](https://bbuchsbaum.github.io/fmridesign/reference/event_model.html),
+  [`event_table`](https://bbuchsbaum.github.io/fmridesign/reference/event_table.html),
+  [`event_term`](https://bbuchsbaum.github.io/fmridesign/reference/event_term.html),
+  [`event_terms`](https://bbuchsbaum.github.io/fmridesign/reference/event_terms.html),
+  [`event_variable`](https://bbuchsbaum.github.io/fmridesign/reference/event_variable.html),
+  [`Fcontrasts`](https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.html),
+  [`feature_suffix`](https://bbuchsbaum.github.io/fmridesign/reference/feature_suffix.html),
+  [`hrf`](https://bbuchsbaum.github.io/fmridesign/reference/hrf.html),
+  [`Ident`](https://bbuchsbaum.github.io/fmridesign/reference/Ident.html),
+  [`interaction_contrast`](https://bbuchsbaum.github.io/fmridesign/reference/interaction_contrast.html),
+  [`is_categorical`](https://bbuchsbaum.github.io/fmridesign/reference/is_categorical.html),
+  [`is_continuous`](https://bbuchsbaum.github.io/fmridesign/reference/is_continuous.html),
+  [`nuisance`](https://bbuchsbaum.github.io/fmridesign/reference/nuisance.html),
+  [`one_against_all_contrast`](https://bbuchsbaum.github.io/fmridesign/reference/one_against_all_contrast.html),
+  [`oneway_contrast`](https://bbuchsbaum.github.io/fmridesign/reference/oneway_contrast.html),
+  [`onsets`](https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-reexports.html),
+  [`pair_contrast`](https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.html),
+  [`plot_contrasts`](https://bbuchsbaum.github.io/fmridesign/reference/plot_contrasts.html),
+  [`Poly`](https://bbuchsbaum.github.io/fmridesign/reference/Poly.html),
+  [`poly_contrast`](https://bbuchsbaum.github.io/fmridesign/reference/poly_contrast.html),
+  [`RobustScale`](https://bbuchsbaum.github.io/fmridesign/reference/RobustScale.html),
+  [`sanitize`](https://bbuchsbaum.github.io/fmridesign/reference/sanitize.html),
+  `Scale`,
+  [`ScaleWithin`](https://bbuchsbaum.github.io/fmridesign/reference/ScaleWithin.html),
+  [`split_by_block`](https://bbuchsbaum.github.io/fmridesign/reference/split_by_block.html),
+  [`Standardized`](https://bbuchsbaum.github.io/fmridesign/reference/Standardized.html),
+  [`sub_basis`](https://bbuchsbaum.github.io/fmridesign/reference/sub_basis.html),
+  [`term_indices`](https://bbuchsbaum.github.io/fmridesign/reference/term_indices.html),
+  [`term_matrices`](https://bbuchsbaum.github.io/fmridesign/reference/term_matrices.html),
+  [`trialwise`](https://bbuchsbaum.github.io/fmridesign/reference/trialwise.html),
+  [`unit_contrast`](https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.html)
+
+- fmrihrf:
+
+  [`as_hrf`](https://bbuchsbaum.github.io/fmrihrf/reference/as_hrf.html),
+  [`blockids`](https://bbuchsbaum.github.io/fmrihrf/reference/blockids.html),
+  [`blocklens`](https://bbuchsbaum.github.io/fmrihrf/reference/blocklens.html),
+  [`evaluate`](https://bbuchsbaum.github.io/fmrihrf/reference/evaluate.html),
+  [`gen_hrf`](https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html),
+  [`global_onsets`](https://bbuchsbaum.github.io/fmrihrf/reference/global_onsets.html),
+  `HRF`,
+  [`hrf_spmg1`](https://bbuchsbaum.github.io/fmrihrf/reference/hrf_spmg1.html),
+  [`nbasis`](https://bbuchsbaum.github.io/fmrihrf/reference/nbasis.html),
+  [`regressor`](https://bbuchsbaum.github.io/fmrihrf/reference/regressor.html),
+  [`samples`](https://bbuchsbaum.github.io/fmrihrf/reference/samples.html),
+  [`sampling_frame`](https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html)

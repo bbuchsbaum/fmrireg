@@ -13,7 +13,7 @@ fmri_model object that already contains the design and data."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -84,6 +84,8 @@ alternative method can be used with a preconstructed
 <span>  robust <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  robust_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ar_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  volume_weights_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  soft_subspace_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"runwise"</span>, <span class="st">"chunkwise"</span><span class="op">)</span>,</span>
 <span>  nchunks <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  use_fast_path <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -98,6 +100,8 @@ alternative method can be used with a preconstructed
 <span>  robust_psi <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  robust_max_iter <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  robust_scale_scope <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  volume_weights <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  nuisance_projection <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -108,6 +112,8 @@ alternative method can be used with a preconstructed
 <span>  robust <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  robust_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ar_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  volume_weights_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  soft_subspace_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"runwise"</span>, <span class="st">"chunkwise"</span><span class="op">)</span>,</span>
 <span>  nchunks <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  use_fast_path <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -122,6 +128,8 @@ alternative method can be used with a preconstructed
 <span>  robust_psi <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  robust_max_iter <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  robust_scale_scope <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  volume_weights <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  nuisance_projection <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -170,6 +178,14 @@ alternative method can be used with a preconstructed
 
 <dt id="arg-ar-options">ar_options<a class="anchor" aria-label="anchor" href="#arg-ar-options"></a></dt>
 <dd><p>List of autoregressive modeling options. See Details.</p></dd>
+
+
+<dt id="arg-volume-weights-options">volume_weights_options<a class="anchor" aria-label="anchor" href="#arg-volume-weights-options"></a></dt>
+<dd><p>List of volume weighting options. See <code><a href="fmri_lm_control.html">fmri_lm_control</a></code>.</p></dd>
+
+
+<dt id="arg-soft-subspace-options">soft_subspace_options<a class="anchor" aria-label="anchor" href="#arg-soft-subspace-options"></a></dt>
+<dd><p>List of soft subspace projection options. See <code><a href="fmri_lm_control.html">fmri_lm_control</a></code>.</p></dd>
 
 
 <dt id="arg-strategy">strategy<a class="anchor" aria-label="anchor" href="#arg-strategy"></a></dt>
@@ -226,6 +242,21 @@ alternative method can be used with a preconstructed
 
 <dt id="arg-robust-scale-scope">robust_scale_scope<a class="anchor" aria-label="anchor" href="#arg-robust-scale-scope"></a></dt>
 <dd><p>Character. Shorthand for <code>robust_options$scale_scope</code> ("run" or "global").</p></dd>
+
+
+<dt id="arg-volume-weights">volume_weights<a class="anchor" aria-label="anchor" href="#arg-volume-weights"></a></dt>
+<dd><p>Logical or character. Simple interface for volume weighting:</p><ul><li><p><code>TRUE</code>: Enable with default method ("inverse_squared")</p></li>
+<li><p><code>"inverse_squared"</code>, <code>"soft_threshold"</code>, <code>"tukey"</code>: Enable with specific method</p></li>
+<li><p><code>FALSE</code> or <code>NULL</code>: Disable (default)</p></li>
+</ul><p>For fine-grained control, use <code>volume_weights_options</code> instead.</p></dd>
+
+
+<dt id="arg-nuisance-projection">nuisance_projection<a class="anchor" aria-label="anchor" href="#arg-nuisance-projection"></a></dt>
+<dd><p>Matrix, character path, or NULL. Simple interface for
+soft subspace projection:</p><ul><li><p>Matrix: Use as nuisance timeseries directly</p></li>
+<li><p>Character: Path to NIfTI mask for WM/CSF voxels</p></li>
+<li><p><code>NULL</code>: Disable (default)</p></li>
+</ul><p>For fine-grained control (lambda selection, warnings), use <code>soft_subspace_options</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -292,7 +323,7 @@ alternative method can be used with a preconstructed
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer></div>

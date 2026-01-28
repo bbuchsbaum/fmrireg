@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -87,7 +87,7 @@
     
     
 <p>title: “03. Simulating fMRI Data” author: “Bradley R. Buchsbaum”
-date: “2025-09-24” output: rmarkdown::html_vignette vignette: &gt; % % %
+date: “2026-01-28” output: rmarkdown::html_vignette vignette: &gt; % % %
 —</p>
 <div class="section level2">
 <h2 id="introduction-to-fmri-data-simulation">Introduction to fMRI Data Simulation<a class="anchor" aria-label="anchor" href="#introduction-to-fmri-data-simulation"></a>
@@ -153,7 +153,7 @@ conditions.</p>
 <span>       y <span class="op">=</span> <span class="st">"BOLD Response"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Condition"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-2-1.png" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-2-1.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Mark trial onsets on the time axis</span></span>
 <span><span class="fu">ggplot</span><span class="op">(</span><span class="va">df_long</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Time</span>, y <span class="op">=</span> <span class="va">Response</span>, color <span class="op">=</span> <span class="va">Condition</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -165,7 +165,7 @@ conditions.</p>
 <span>       y <span class="op">=</span> <span class="st">"BOLD Response"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Condition"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-2-2.png" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-2-2.png" class="r-plt" alt="" width="672"></p>
 <p>The function returns a list containing: -
 <strong><code>onset</code></strong>: Event onset times -
 <strong><code>condition</code></strong>: Condition labels for each event
@@ -253,7 +253,7 @@ separately and combined.</p>
 <span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Simulated fMRI Noise Components: Time Courses"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Signal Amplitude"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-3-1.png" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-3-1.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># --- Power Spectrum Analysis ---</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">stats</span><span class="op">)</span></span>
@@ -330,7 +330,7 @@ separately and combined.</p>
 <span>       y <span class="op">=</span> <span class="st">"Power"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">coord_cartesian</span><span class="op">(</span>xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.25</span><span class="op">)</span><span class="op">)</span>  <span class="co"># Limit to Nyquist frequency</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-3-2.png" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-3-2.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Also plot with log scale to show all components together</span></span>
 <span><span class="fu">ggplot</span><span class="op">(</span><span class="va">spec_df</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Frequency</span>, y <span class="op">=</span> <span class="va">Power</span>, color <span class="op">=</span> <span class="va">NoiseType</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -343,7 +343,7 @@ separately and combined.</p>
 <span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">theme</span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">coord_cartesian</span><span class="op">(</span>xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.25</span><span class="op">)</span><span class="op">)</span>  <span class="co"># Limit to Nyquist frequency</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-3-3.png" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-3-3.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Special zoom-in plot to focus on drift component</span></span>
 <span><span class="va">drift_freq_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.min</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">spec_df</span><span class="op">$</span><span class="va">Frequency</span> <span class="op">-</span> <span class="va">drift_freq</span><span class="op">)</span><span class="op">)</span></span>
@@ -359,7 +359,7 @@ separately and combined.</p>
 <span>       x <span class="op">=</span> <span class="st">"Frequency (Hz)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Power"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">coord_cartesian</span><span class="op">(</span>xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.05</span><span class="op">)</span><span class="op">)</span>  <span class="co"># Zoom in on low frequencies</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-3-4.png" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-3-4.png" class="r-plt" alt="" width="672"></p>
 <p>The simulation shows five distinct types of noise components:</p>
 <ol style="list-style-type: decimal">
 <li><p><strong>White Noise</strong>: Random fluctuations with equal
@@ -442,7 +442,7 @@ signal-to-noise ratio (SNR).</p>
 <span>       color <span class="op">=</span> <span class="st">"Signal Type"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">scale_color_manual</span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Clean"</span> <span class="op">=</span> <span class="st">"darkred"</span>, <span class="st">"Noisy"</span> <span class="op">=</span> <span class="st">"steelblue"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">theme</span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-4-1.png" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-4-1.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Second approach: Plot signal+noise and then just signal below it</span></span>
 <span><span class="co"># Create custom panel plots for each SNR</span></span>
@@ -481,13 +481,13 @@ signal-to-noise ratio (SNR).</p>
 <span></span>
 <span><span class="co"># Display plots in sequence</span></span>
 <span><span class="va">p1</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-4-2.png" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-4-2.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">p2</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-4-3.png" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-4-3.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">p3</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-4-4.png" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-4-4.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Calculate statistics (using standard R to avoid pipe operator issues)</span></span>
 <span><span class="va">snr_stats_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -641,7 +641,7 @@ different response profiles.</p>
 <span>       y <span class="op">=</span> <span class="st">"Signal"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Voxel"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set2"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-5-1.png" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-5-1.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Plot the amplitude and duration matrices to visualize trial-by-trial variations</span></span>
 <span><span class="va">amp_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">sim_matrix</span><span class="op">$</span><span class="va">ampmat</span><span class="op">)</span></span>
@@ -677,7 +677,7 @@ different response profiles.</p>
 <span>       y <span class="op">=</span> <span class="st">"Amplitude"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Voxel"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set2"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-5-2.png" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-5-2.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Plot duration variation across voxels</span></span>
 <span><span class="fu">ggplot</span><span class="op">(</span><span class="va">dur_long</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Event</span>, y <span class="op">=</span> <span class="va">Duration</span>, color <span class="op">=</span> <span class="va">Voxel</span>, group <span class="op">=</span> <span class="va">Voxel</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -689,7 +689,7 @@ different response profiles.</p>
 <span>       y <span class="op">=</span> <span class="st">"Duration (seconds)"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Voxel"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set2"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-5-3.png" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/unnamed-chunk-5-3.png" class="r-plt" alt="" width="672"></p>
 <p>This function is particularly powerful for simulating multiple
 related time series with: - <strong>Shared event timing</strong> but
 individual variation in: - <strong>Amplitude</strong> (per event, per
@@ -740,7 +740,7 @@ simulations.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer>

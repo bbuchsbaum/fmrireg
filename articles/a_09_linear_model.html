@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -87,7 +87,7 @@
     
     
 <p>title: “04. fMRI Linear Model (GLM)” author: “Bradley R. Buchsbaum”
-date: “2025-09-24” output: rmarkdown::html_vignette vignette: &gt; % % %
+date: “2026-01-28” output: rmarkdown::html_vignette vignette: &gt; % % %
 —</p>
 <div class="section level2">
 <h2 id="introduction-to-fmri-linear-models">Introduction to fMRI Linear Models<a class="anchor" aria-label="anchor" href="#introduction-to-fmri-linear-models"></a>
@@ -219,7 +219,7 @@ different amplitudes.</p>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Event"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-2-1.png" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-2-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
 <p>Now that we have our experimental design, let’s simulate the fMRI
 time series. We’ll create signals for each condition with different
 amplitudes, add noise, and combine them into a dataset.</p>
@@ -301,7 +301,7 @@ amplitudes, add noise, and combine them into a dataset.</p>
 <span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Simulated fMRI Time Series Components"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Signal Amplitude"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-3-1.png" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-3-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
 <p>Our simulated dataset now contains:</p>
 <ol style="list-style-type: decimal">
 <li>
@@ -493,7 +493,7 @@ residual scale and should be interpreted as approximate.</p>
 <span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Estimated Coefficients by Condition and Voxel"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Condition"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Coefficient Estimate"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-8-1.png" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-8-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
 <p>The bar plot shows the estimated coefficients for each condition
 across the three simulated voxels. Note that:</p>
 <ul>
@@ -679,7 +679,7 @@ compare conditions using contrasts.</p>
 <span>       x <span class="op">=</span> <span class="st">"Voxel"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Contrast Estimate"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">scale_fill_manual</span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"FALSE"</span> <span class="op">=</span> <span class="st">"gray"</span>, <span class="st">"TRUE"</span> <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-11-1.png" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-11-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
 <p>The contrast results show that Condition2 consistently elicits
 significantly stronger activation than Condition1 across all voxels,
 which matches our simulation parameters (where Condition2 had twice the
@@ -743,7 +743,7 @@ each condition. This shows the estimated BOLD response over time.</p>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"BOLD Response"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Condition"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-12-1.png" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-12-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
 <p>The fitted HRF curves show the temporal profile of the BOLD response
 for each condition. We can observe:</p>
 <ol style="list-style-type: decimal">
@@ -928,7 +928,7 @@ Let’s compare different HRF options.</p>
 <span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Model Comparison: R-Squared"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"HRF Model"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"R-Squared"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-13-1.png" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-13-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">ggplot</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">model_comparison_long</span>, <span class="va">metric</span> <span class="op">==</span> <span class="st">"aic"</span><span class="op">)</span>, </span>
 <span>       <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">model</span>, y <span class="op">=</span> <span class="va">value</span>, fill <span class="op">=</span> <span class="va">model</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -944,7 +944,7 @@ Let’s compare different HRF options.</p>
 <span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Model Comparison: AIC (Lower is Better)"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"HRF Model"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"AIC"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-14-1.png" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<p><img src="a_09_linear_model_files/figure-html/unnamed-chunk-14-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
 <p>The model comparison shows:</p>
 <ol style="list-style-type: decimal">
 <li>
@@ -1026,7 +1026,7 @@ Tests</a></li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer>

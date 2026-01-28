@@ -11,7 +11,7 @@ applies defaults so downstream functions receive a single structured list."></he
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -68,7 +68,12 @@ applies defaults so downstream functions receive a single structured list.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">fmri_lm_control</span><span class="op">(</span>robust_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>, ar_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">fmri_lm_control</span><span class="op">(</span></span>
+<span>  robust_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  ar_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  volume_weights_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  soft_subspace_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -82,6 +87,16 @@ applies defaults so downstream functions receive a single structured list.</p>
 <dt id="arg-ar-options">ar_options<a class="anchor" aria-label="anchor" href="#arg-ar-options"></a></dt>
 <dd><p>list of autoregressive modelling options. See Details.</p></dd>
 
+
+<dt id="arg-volume-weights-options">volume_weights_options<a class="anchor" aria-label="anchor" href="#arg-volume-weights-options"></a></dt>
+<dd><p>list of volume weighting options. See Details.
+For simple cases, use the <code>volume_weights</code> parameter in <code><a href="fmri_lm.html">fmri_lm()</a></code> instead.</p></dd>
+
+
+<dt id="arg-soft-subspace-options">soft_subspace_options<a class="anchor" aria-label="anchor" href="#arg-soft-subspace-options"></a></dt>
+<dd><p>list of soft subspace projection options. See Details.
+For simple cases, use the <code>nuisance_projection</code> parameter in <code><a href="fmri_lm.html">fmri_lm()</a></code> instead.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -89,7 +104,13 @@ applies defaults so downstream functions receive a single structured list.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p><code>robust_options</code> may contain:</p><ul><li><p><code>type</code> (<code>FALSE</code>, "huber", "bisquare")</p></li>
+    <p>For common use cases, <code><a href="fmri_lm.html">fmri_lm()</a></code> provides convenience parameters that
+are easier to use than these detailed option lists:</p><ul><li><p><code>volume_weights = TRUE</code> enables volume weighting with defaults</p></li>
+<li><p><code>volume_weights = "tukey"</code> enables with Tukey method</p></li>
+<li><p><code>nuisance_projection = N</code> enables soft projection with matrix N</p></li>
+<li><p><code>nuisance_projection = "mask.nii"</code> enables with mask file</p></li>
+</ul><p>Use the <code>*_options</code> lists below only when you need fine-grained control.</p>
+<p><code>robust_options</code> may contain:</p><ul><li><p><code>type</code> (<code>FALSE</code>, "huber", "bisquare")</p></li>
 <li><p><code>k_huber</code></p></li>
 <li><p><code>c_tukey</code></p></li>
 <li><p><code>max_iter</code></p></li>
@@ -101,6 +122,15 @@ applies defaults so downstream functions receive a single structured list.</p>
 <li><p><code>global</code> (logical, use global phi)</p></li>
 <li><p><code>voxelwise</code> (logical)</p></li>
 <li><p><code>exact_first</code> (logical)</p></li>
+</ul><p><code>volume_weights_options</code> may contain:</p><ul><li><p><code>enabled</code> (logical, whether to compute and apply volume weights)</p></li>
+<li><p><code>method</code> ("inverse_squared", "soft_threshold", "tukey")</p></li>
+<li><p><code>threshold</code> (numeric, DVARS threshold for weighting)</p></li>
+<li><p><code>weights</code> (optional pre-computed weight vector)</p></li>
+</ul><p><code>soft_subspace_options</code> may contain:</p><ul><li><p><code>enabled</code> (logical, whether to apply soft subspace projection)</p></li>
+<li><p><code>nuisance_mask</code> (path to NIfTI mask or logical vector)</p></li>
+<li><p><code>nuisance_matrix</code> (pre-computed nuisance timeseries matrix)</p></li>
+<li><p><code>lambda</code> (numeric, "auto", or "gcv")</p></li>
+<li><p><code>warn_redundant</code> (logical, warn if baseline has nuisance terms)</p></li>
 </ul></div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -112,7 +142,7 @@ applies defaults so downstream functions receive a single structured list.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer></div>

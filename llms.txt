@@ -1,0 +1,480 @@
+[![R-CMD-check](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml)
+[![Codecov test
+coverage](https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg)](https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main)
+[![License: GPL
+v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+[![Lifecycle:
+experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+
+``` r
+bm <- load_benchmark_dataset("BM_Canonical_HighSNR")
+
+# Create an event model
+events <- bm$core_data$event_table
+sframe <- sampling_frame(blocklens = bm$core_data$run_length, TR = bm$core_data$TR)
+emod <- event_model(onset ~ hrf(condition), data = events,
+                   block = ~run, sampling_frame = sframe)
+
+# Fit the model
+fit <- fmri_lm(emod, dataset = bm$core_data)
+```
+
+## Documentation
+
+See comprehensive examples and tutorials in the
+[vignettes](https://bbuchsbaum.github.io/fmrireg/articles/index.html):
+
+- [Hemodynamic Response
+  Functions](https://bbuchsbaum.github.io/fmrireg/articles/a_01_hemodynamic_response.html)
+- [Building
+  Regressors](https://bbuchsbaum.github.io/fmrireg/articles/a_02_regressor.html)
+- [Event
+  Models](https://bbuchsbaum.github.io/fmrireg/articles/a_04_event_models.html)
+- [Statistical
+  Contrasts](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html)
+- [Linear
+  Modeling](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html)
+
+## Performance Configuration
+
+The internal C++ routines use
+[RcppParallel](https://rcppcore.github.io/RcppParallel/). You can
+control the number of threads by setting the R option
+`fmrireg.num_threads` or the environment variable `FMRIREG_NUM_THREADS`
+before loading the package. If either is set, `fmrireg` calls
+[`RcppParallel::setThreadOptions()`](https://rdrr.io/pkg/RcppParallel/man/setThreadOptions.html)
+when it loads.
+
+## Development Status
+
+`fmrireg` is currently in active development. While the core
+functionality is stable, the API may change as we continue to improve
+the package. Please [file
+issues](https://github.com/bbuchsbaum/fmrireg/issues) for bugs or
+feature requests.
+
+## Citation
+
+If you use `fmrireg` in your research, please cite:
+
+    Buchsbaum, B. R. (2024). fmrireg: fMRI Analysis in R.
+    R package version 0.1.0. https://github.com/bbuchsbaum/fmrireg
+
+# Package index
+
+## All functions
+
+- [`apply_soft_projection()`](https://bbuchsbaum.github.io/fmrireg/reference/apply_soft_projection.md)
+  : Apply Soft Projection to Data and Design
+
+- [`ar_parameters()`](https://bbuchsbaum.github.io/fmrireg/reference/ar_parameters.md)
+  : Extract Estimated AR Parameters from fmri_lm Fit
+
+- [`as.array(`*`<NeuroVec>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/as.array.NeuroVec.md)
+  : Coerce NeuroVec to base array
+
+- [`autoplot(`*`<Reg>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/autoplot.md)
+  : Autoplot method for Reg objects
+
+- [`blockids(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/blockids.event_model.md)
+  : Block IDs for event_model
+
+- [`coef(`*`<fmri_meta>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/coef.fmri_meta.md)
+  : Extract Coefficients from Meta-Analysis
+
+- [`coef_image()`](https://bbuchsbaum.github.io/fmrireg/reference/coef_image.md)
+  : Extract Image/Volume for Coefficient
+
+- [`coef_image(`*`<fmri_ttest_fit>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/coef_image.fmri_ttest_fit.md)
+  : Extract Coefficient Image from fmri_ttest_fit
+
+- [`columns()`](https://bbuchsbaum.github.io/fmrireg/reference/columns.md)
+  : Extract Column Names or Identifiers
+
+- [`compute_dvars()`](https://bbuchsbaum.github.io/fmrireg/reference/compute_dvars.md)
+  : Compute DVARS (Temporal Derivative of Timecourses)
+
+- [`compute_lm_contrasts()`](https://bbuchsbaum.github.io/fmrireg/reference/compute_lm_contrasts.md)
+  : Compute linear model contrast statistics (public API)
+
+- [`compute_lm_contrasts_from_suffstats()`](https://bbuchsbaum.github.io/fmrireg/reference/compute_lm_contrasts_from_suffstats.md)
+  : Compute contrast statistics from sufficient statistics (public API)
+
+- [`conditions(`*`<convolved_term>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/conditions.md)
+  : Visualize the entire design matrix as a heatmap
+
+- [`contrast()`](https://bbuchsbaum.github.io/fmrireg/reference/contrast.md)
+  : Contrast generic
+
+- [`contrast(`*`<fmri_meta>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/contrast.fmri_meta.md)
+  : Apply Contrast to Meta-Analysis Results
+
+- [`contrast_set()`](https://bbuchsbaum.github.io/fmrireg/reference/contrast_set.md)
+  : Create a contrast set
+
+- [`correlation_map()`](https://bbuchsbaum.github.io/fmrireg/reference/correlation_map.md)
+  : correlation_map
+
+- [`correlation_map(`*`<fmri_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/correlation_map.fmri_model.md)
+  : correlation_map.fmri_model
+
+- [`create_3d_blocks()`](https://bbuchsbaum.github.io/fmrireg/reference/create_3d_blocks.md)
+  : Create 3D Blocks for Voxelwise Analysis
+
+- [`create_design_matrix_from_benchmark()`](https://bbuchsbaum.github.io/fmrireg/reference/create_design_matrix_from_benchmark.md)
+  : Create Design Matrix from Benchmark Dataset
+
+- [`design_map(`*`<fmri_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/design_map.fmri_model.md)
+  : Heatmap visualization of the combined fmri_model design matrix
+
+- [`design_matrix(`*`<convolved_term>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/design_matrix.convolved_term.md)
+  : Design Matrix for Convolved Terms
+
+- [`design_matrix(`*`<fmri_lm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/design_matrix.fmri_lm.md)
+  : Design Matrix Method for fmri_lm Objects
+
+- [`design_matrix(`*`<fmri_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/design_matrix.fmri_model.md)
+  : Design Matrix for fMRI Models
+
+- [`design_plot()`](https://bbuchsbaum.github.io/fmrireg/reference/design_plot.md)
+  : Design Plot for fMRI Model
+
+- [`.fmrireg_engine_registry`](https://bbuchsbaum.github.io/fmrireg/reference/dot-fmrireg_engine_registry.md)
+  : Plugin registration and helpers for fmrireg
+
+- [`.resample_param()`](https://bbuchsbaum.github.io/fmrireg/reference/dot-resample_param.md)
+  : Resample parameter vector with specified distribution
+
+- [`dvars_to_weights()`](https://bbuchsbaum.github.io/fmrireg/reference/dvars_to_weights.md)
+  : Convert DVARS to Volume Weights
+
+- [`estimate()`](https://bbuchsbaum.github.io/fmrireg/reference/estimate.md)
+  : Deprecated helper: estimate()
+
+- [`estimate_betas()`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_betas.md)
+  : Estimate Beta Coefficients for fMRI Data
+
+- [`estimate_betas(`*`<fmri_dataset>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_betas.fmri_dataset.md)
+  : Estimate betas using various regression methods
+
+- [`estimate_betas(`*`<matrix_dataset>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_betas.matrix_dataset.md)
+  : Estimate betas for a matrix dataset
+
+- [`estimate_hrf()`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_hrf.md)
+  : Estimate hemodynamic response function (HRF) using Generalized
+  Additive Models (GAMs)
+
+- [`evaluate_method_performance()`](https://bbuchsbaum.github.io/fmrireg/reference/evaluate_method_performance.md)
+  : Evaluate Method Performance on Benchmark Dataset
+
+- [`event_table(`*`<convolved_term>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/event_table.convolved_term.md)
+  : Extract event table from convolved term
+
+- [`extract_csv_data()`](https://bbuchsbaum.github.io/fmrireg/reference/extract_csv_data.md)
+  : Extract Data for Meta-Analysis from CSV
+
+- [`extract_nuisance_timeseries()`](https://bbuchsbaum.github.io/fmrireg/reference/extract_nuisance_timeseries.md)
+  : Extract Nuisance Timeseries from Mask
+
+- [`fit_contrasts()`](https://bbuchsbaum.github.io/fmrireg/reference/fit_contrasts.md)
+  : Fit Contrasts
+
+- [`fit_contrasts(`*`<default>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/fit_contrasts.default.md)
+  : Fit Contrasts for Linear Model (Default Method)
+
+- [`fit_contrasts(`*`<fmri_lm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/fit_contrasts.fmri_lm.md)
+  : Fit Contrasts for fMRI Linear Model Objects
+
+- [`fit_glm_from_suffstats()`](https://bbuchsbaum.github.io/fmrireg/reference/fit_glm_from_suffstats.md)
+  : Fit GLM from sufficient statistics
+
+- [`fit_glm_on_transformed_series()`](https://bbuchsbaum.github.io/fmrireg/reference/fit_glm_on_transformed_series.md)
+  : Fit the core GLM on a transformed time-series matrix
+
+- [`fit_glm_with_config()`](https://bbuchsbaum.github.io/fmrireg/reference/fit_glm_with_config.md)
+  : Fit GLM with full config (AR/robust) on a transformed series
+
+- [`fitted_hrf()`](https://bbuchsbaum.github.io/fmrireg/reference/fitted_hrf.md)
+  : fitted_hrf
+
+- [`fitted_hrf(`*`<fmri_lm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/fitted_hrf.fmri_lm.md)
+  : Compute Fitted Hemodynamic Response Functions for an fmri_lm Object
+
+- [`flip_sign()`](https://bbuchsbaum.github.io/fmrireg/reference/flip_sign.md)
+  : Flip Sign of Coefficients
+
+- [`fmri_benchmark_datasets`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_benchmark_datasets.md)
+  : Benchmark fMRI datasets
+
+- [`fmri_latent_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_latent_lm.md)
+  : Fast fMRI Regression Model Estimation from a Latent Component
+  Dataset
+
+- [`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
+  : Fit a Linear Regression Model for fMRI Data Analysis
+
+- [`fmri_lm_control()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm_control.md)
+  : Configuration for fmri_lm fitting
+
+- [`fmri_meta()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta.md)
+  : Fit Group-Level Meta-Analysis
+
+- [`fmri_meta_fit()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta_fit.md)
+  : Fit Meta-Analysis Models
+
+- [`fmri_meta_fit_contrasts()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta_fit_contrasts.md)
+  : Fit Meta-Analysis Models with Exact Contrasts
+
+- [`fmri_meta_fit_cov()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta_fit_cov.md)
+  : Fit Meta-Analysis and return packed covariance per voxel
+
+- [`fmri_meta_fit_extended()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta_fit_extended.md)
+  : Extended Meta-Analysis Fit with Voxelwise Covariate
+
+- [`fmri_model()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_model.md)
+  : Construct an fMRI Regression Model
+
+- [`fmri_ols_fit()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_ols_fit.md)
+  : OLS Fit with Optional Voxelwise Covariate
+
+- [`fmri_rlm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_rlm.md)
+  : Fit a Robust Linear Model for fMRI Data Analysis
+
+- [`fmri_ttest()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_ttest.md)
+  : fmrireg t-tests for Group Analysis
+
+- [`generate_interaction_contrast()`](https://bbuchsbaum.github.io/fmrireg/reference/generate_interaction_contrast.md)
+  [`generate_main_effect_contrast()`](https://bbuchsbaum.github.io/fmrireg/reference/generate_interaction_contrast.md)
+  : Fast factorial contrast generators
+
+- [`get_benchmark_summary()`](https://bbuchsbaum.github.io/fmrireg/reference/get_benchmark_summary.md)
+  : Get Benchmark Dataset Summary
+
+- [`get_contrasts()`](https://bbuchsbaum.github.io/fmrireg/reference/get_contrasts.md)
+  : Get Available Contrasts
+
+- [`get_covariates()`](https://bbuchsbaum.github.io/fmrireg/reference/get_covariates.md)
+  : Get Covariates
+
+- [`get_rois()`](https://bbuchsbaum.github.io/fmrireg/reference/get_rois.md)
+  : Get Available ROIs
+
+- [`get_subjects()`](https://bbuchsbaum.github.io/fmrireg/reference/get_subjects.md)
+  : Get Subject IDs
+
+- [`glm_lss()`](https://bbuchsbaum.github.io/fmrireg/reference/glm_lss.md)
+  : GLM LSS Estimation Convenience Function (Single Trial Estimation)
+
+- [`glm_ols()`](https://bbuchsbaum.github.io/fmrireg/reference/glm_ols.md)
+  : GLM OLS Estimation Convenience Function
+
+- [`group_data()`](https://bbuchsbaum.github.io/fmrireg/reference/group_data.md)
+  : Create Group Dataset for Meta-Analysis
+
+- [`group_data_from_csv()`](https://bbuchsbaum.github.io/fmrireg/reference/group_data_from_csv.md)
+  : Create Group Dataset from CSV File or Data Frame
+
+- [`group_data_from_fmrilm()`](https://bbuchsbaum.github.io/fmrireg/reference/group_data_from_fmrilm.md)
+  : Create Group Dataset from fmri_lm Objects
+
+- [`group_data_from_h5()`](https://bbuchsbaum.github.io/fmrireg/reference/group_data_from_h5.md)
+  : Create Group Dataset from HDF5 Files
+
+- [`group_data_from_nifti()`](https://bbuchsbaum.github.io/fmrireg/reference/group_data_from_nifti.md)
+  : Create Group Dataset from NIfTI Files
+
+- [`hrf_smoothing_kernel()`](https://bbuchsbaum.github.io/fmrireg/reference/hrf_smoothing_kernel.md)
+  : Compute an HRF smoothing kernel
+
+- [`list_benchmark_datasets()`](https://bbuchsbaum.github.io/fmrireg/reference/list_benchmark_datasets.md)
+  : List Available Benchmark Datasets
+
+- [`load_benchmark_dataset()`](https://bbuchsbaum.github.io/fmrireg/reference/load_benchmark_dataset.md)
+  : Load fMRI Benchmark Datasets
+
+- [`longnames()`](https://bbuchsbaum.github.io/fmrireg/reference/longnames.md)
+  : Extract Long Names of Variable Levels
+
+- [`lowrank_control()`](https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.md)
+  : Low-rank / sketch controls for fast GLM
+
+- [`meta_effective_n()`](https://bbuchsbaum.github.io/fmrireg/reference/meta_effective_n.md)
+  : Compute Effective Sample Size for Meta-Analysis
+
+- [`meta_fit_vcov_cpp()`](https://bbuchsbaum.github.io/fmrireg/reference/meta_fit_vcov_cpp.md)
+  : Meta-regression with ONE voxelwise covariate
+
+- [`mixed_solve_cpp()`](https://bbuchsbaum.github.io/fmrireg/reference/mixed_solve_cpp.md)
+  : Mixed Model Solver using Rcpp and roptim
+
+- [`n_subjects()`](https://bbuchsbaum.github.io/fmrireg/reference/n_subjects.md)
+  : Extract Number of Subjects
+
+- [`ols_t_cpp()`](https://bbuchsbaum.github.io/fmrireg/reference/ols_t_cpp.md)
+  : OLS t-test / ANCOVA across features
+
+- [`ols_t_vcov_cpp()`](https://bbuchsbaum.github.io/fmrireg/reference/ols_t_vcov_cpp.md)
+  : OLS with ONE voxelwise covariate
+
+- [`p_values()`](https://bbuchsbaum.github.io/fmrireg/reference/p_values.md)
+  : Extract P-values from a Model Fit
+
+- [`paired_diff_block()`](https://bbuchsbaum.github.io/fmrireg/reference/paired_diff_block.md)
+  : Helper Functions for fmri_ttest
+
+- [`print(`*`<fmri_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.md)
+  [`print(`*`<fmri_lm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.md)
+  [`print(`*`<fmri_rlm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.md)
+  : Print an fmri_lm_result object
+
+- [`print(`*`<fmri_meta>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.fmri_meta.md)
+  : Print Meta-Analysis Results
+
+- [`print(`*`<fmri_ttest_fit>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.fmri_ttest_fit.md)
+  : Print method for fmri_ttest_fit
+
+- [`print(`*`<group_data>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.group_data.md)
+  : Print Group Data Object
+
+- [`print(`*`<spatial_fdr_result>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.spatial_fdr_result.md)
+  : Print Spatial FDR Results
+
+- [`pvalues()`](https://bbuchsbaum.github.io/fmrireg/reference/pvalues.md)
+  : Compute P-values from Meta-Analysis
+
+- [`r_to_z()`](https://bbuchsbaum.github.io/fmrireg/reference/r_to_z.md)
+  : Convert Correlation to Fisher's Z
+
+- [`read_h5_full()`](https://bbuchsbaum.github.io/fmrireg/reference/read_h5_full.md)
+  : Read All Data from HDF5 Files
+
+- [`read_nifti_full()`](https://bbuchsbaum.github.io/fmrireg/reference/read_nifti_full.md)
+  : Read All Data from NIfTI Files
+
+- [`register_basis()`](https://bbuchsbaum.github.io/fmrireg/reference/register_basis.md)
+  : Register an HRF/basis constructor
+
+- [`register_engine()`](https://bbuchsbaum.github.io/fmrireg/reference/register_engine.md)
+  :
+
+  Register a plugin engine for `fmri_lm`
+
+- [`resolve_basis()`](https://bbuchsbaum.github.io/fmrireg/reference/resolve_basis.md)
+  : Resolve a registered basis function by name
+
+- [`se()`](https://bbuchsbaum.github.io/fmrireg/reference/se.md) :
+  Extract Standard Errors from Meta-Analysis
+
+- [`shortnames()`](https://bbuchsbaum.github.io/fmrireg/reference/shortnames.md)
+  : Short Names
+
+- [`simulate_bold_signal()`](https://bbuchsbaum.github.io/fmrireg/reference/simulate_bold_signal.md)
+  : Simulate fMRI Time Series
+
+- [`simulate_fmri_matrix()`](https://bbuchsbaum.github.io/fmrireg/reference/simulate_fmri_matrix.md)
+  : Simulate fMRI Time Courses, Return Shared Onsets + Column-Specific
+  Amplitudes/Durations
+
+- [`simulate_noise_vector()`](https://bbuchsbaum.github.io/fmrireg/reference/simulate_noise_vector.md)
+  : Simulate fMRI Noise
+
+- [`simulate_simple_dataset()`](https://bbuchsbaum.github.io/fmrireg/reference/simulate_simple_dataset.md)
+  : Simulate Complete fMRI Dataset
+
+- [`soft_projection()`](https://bbuchsbaum.github.io/fmrireg/reference/soft_projection.md)
+  : Create Soft Projection Operator
+
+- [`soft_subspace_options()`](https://bbuchsbaum.github.io/fmrireg/reference/soft_subspace_options.md)
+  : Soft Subspace Control Options
+
+- [`soft_subspace_projection`](https://bbuchsbaum.github.io/fmrireg/reference/soft_subspace_projection.md)
+  : Soft Subspace Projection for Nuisance Removal
+
+- [`spatial_fdr()`](https://bbuchsbaum.github.io/fmrireg/reference/spatial_fdr.md)
+  : Spatially-Aware Multiple Comparisons Correction
+
+- [`standard_error()`](https://bbuchsbaum.github.io/fmrireg/reference/standard_error.md)
+  : Extract Standard Errors from a Model Fit
+
+- [`stats()`](https://bbuchsbaum.github.io/fmrireg/reference/stats.md) :
+  Extract Test Statistics from a Model Fit
+
+- [`summary(`*`<fmri_meta>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/summary.fmri_meta.md)
+  : Summary of Meta-Analysis Results
+
+- [`summary(`*`<fmri_ttest_fit>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/summary.fmri_ttest_fit.md)
+  : Summary method for fmri_ttest_fit
+
+- [`summary(`*`<group_data>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/summary.group_data.md)
+  : Summary of Group Data Object
+
+- [`summary(`*`<spatial_fdr_result>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/summary.spatial_fdr_result.md)
+  : Summary of Spatial FDR Results
+
+- [`t_to_beta_se()`](https://bbuchsbaum.github.io/fmrireg/reference/t_to_beta_se.md)
+  : Convert t-statistics to Effect Sizes
+
+- [`t_to_d()`](https://bbuchsbaum.github.io/fmrireg/reference/t_to_d.md)
+  : Convert T-statistics to Effect Sizes and Variances
+
+- [`term_matrices(`*`<fmri_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/term_matrices.fmri_model.md)
+  : Extract term matrices from fmri_model
+
+- [`tidy()`](https://bbuchsbaum.github.io/fmrireg/reference/tidy.md) :
+  Tidy generic
+
+- [`tidy(`*`<fmri_meta>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/tidy.fmri_meta.md)
+  : Tidy Meta-Analysis Results
+
+- [`volume_quality`](https://bbuchsbaum.github.io/fmrireg/reference/volume_quality.md)
+  : Volume Quality Metrics and Temporal Weighting
+
+- [`volume_weights()`](https://bbuchsbaum.github.io/fmrireg/reference/volume_weights.md)
+  : Compute Volume Quality Weights from Data
+
+- [`welch_t_cpp()`](https://bbuchsbaum.github.io/fmrireg/reference/welch_t_cpp.md)
+  : Welch two-sample t-test across features
+
+- [`write_results()`](https://bbuchsbaum.github.io/fmrireg/reference/write_results.md)
+  : Write Results from fMRI Analysis
+
+- [`write_results(`*`<fmri_lm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/write_results.fmri_lm.md)
+  : Write Results from fMRI Linear Model
+
+- [`write_results(`*`<fmri_meta>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/write_results.fmri_meta.md)
+  : Write Meta-Analysis Results
+
+- [`z_to_r()`](https://bbuchsbaum.github.io/fmrireg/reference/z_to_r.md)
+  : Back-transform Fisher's Z to Correlation
+
+- [`zscores()`](https://bbuchsbaum.github.io/fmrireg/reference/zscores.md)
+  : Compute Z-scores from Meta-Analysis
+
+# Articles
+
+### Getting Started
+
+- [UNKNOWN
+  TITLE](https://bbuchsbaum.github.io/fmrireg/articles/Overview.md):
+
+### Advanced Analysis
+
+- [UNKNOWN
+  TITLE](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.md):
+- [UNKNOWN
+  TITLE](https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.md):
+- [UNKNOWN
+  TITLE](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.md):
+- [UNKNOWN
+  TITLE](https://bbuchsbaum.github.io/fmrireg/articles/a_10_dataset.md):
+- [UNKNOWN
+  TITLE](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.md):
+- [UNKNOWN
+  TITLE](https://bbuchsbaum.github.io/fmrireg/articles/functional_connectivity.md):
+- [Sketched GLM with Global vs Parcel
+  AR](https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.md):
+
+### Resources
+
+- [UNKNOWN
+  TITLE](https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.md):

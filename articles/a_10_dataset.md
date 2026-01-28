@@ -1,0 +1,358 @@
+# 
+
+title: “02. Data Structures and Sampling Frames” author: “Bradley R.
+Buchsbaum” date: “2026-01-28” output: rmarkdown::html_vignette vignette:
+\> % % % —
+
+## Introduction: Linking Data and Design
+
+Effective fMRI analysis requires associating the measured brain activity
+(the imaging data) with crucial metadata, including:
+
+- **Temporal Structure:** When each scan was acquired (TR) and how scans
+  are grouped into runs.
+- **Spatial Structure:** Which brain locations (voxels) are included in
+  the analysis (mask).
+- **Experimental Design:** Timing and properties of experimental events
+  or conditions.
+
+The `fmrireg` package uses several **dataset objects** to encapsulate
+this information, providing a consistent input format for modeling
+functions like `event_model`, `baseline_model`, `fmri_lm`, and
+`estimate_betas`.
+
+This vignette describes the main dataset classes and how to create them.
+
+## The `sampling_frame`
+
+Before diving into datasets, recall the `sampling_frame` object
+(introduced in the Overview and detailed in other vignettes). It defines
+the fundamental temporal structure shared by all dataset types:
+
+- `blocklens`: A vector specifying the number of scans (time points) in
+  each run.
+- `TR`: The repetition time (time between scans) in seconds.
+
+``` r
+sframe_example <- sampling_frame(blocklens = c(150, 160), TR = 2.0)
+print(sframe_example)
+#> Sampling frame
+#> - Blocks: 2 
+#> - Scans: 310 (per block: 150, 160 )
+#> - TR: 2 s
+#> - Duration: 619 s
+```
+
+Dataset objects internally create or utilize a `sampling_frame` based on
+the provided run lengths and TR.
+
+## Overview of Dataset Classes
+
+`fmrireg` offers different dataset classes depending on how your data is
+stored:
+
+- **`fmri_mem_dataset`:** For volumetric fMRI data already loaded into R
+  memory (as `NeuroVec` objects).
+- **`fmri_file_dataset`:** For volumetric fMRI data stored in image
+  files (e.g., NIfTI) on disk.
+- **`matrix_dataset`:** For fMRI data represented as a standard R matrix
+  (time points x voxels/components).
+- **`latent_dataset`:** For dimension-reduced data (e.g., PCA/ICA
+  components), typically requiring the `fmristore` package.
+
+All these inherit from a base `fmri_dataset` class.
+
+## In-Memory Volumetric Data (`fmri_mem_dataset`)
+
+Use this when your fMRI runs are loaded as
+[`neuroim2::NeuroVec`](https://bbuchsbaum.github.io/neuroim2/reference/NeuroVec-class.html)
+objects in your R session.
+
+**Key Arguments:**
+
+- `scans`: A *list* of `NeuroVec` objects, one for each run.
+- `mask`: A
+  [`neuroim2::NeuroVol`](https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html)
+  or
+  [`neuroim2::LogicalNeuroVol`](https://bbuchsbaum.github.io/neuroim2/reference/LogicalNeuroVol-class.html)
+  object representing the brain mask.
+- `TR`: Repetition time (seconds).
+- `run_length` (Optional): Vector of run lengths; if omitted, inferred
+  from the dimensions of the `NeuroVec` objects in `scans`.
+- `event_table` (Optional): A `data.frame` containing experimental
+  design information.
+
+``` r
+# Create minimal example data (2 runs)
+d <- c(5, 5, 5, 20) # Small dimensions for example
+mask_vol <- neuroim2::LogicalNeuroVol(array(TRUE, d[1:3]), neuroim2::NeuroSpace(d[1:3]))
+
+scan1 <- neuroim2::NeuroVec(array(rnorm(prod(d)), d), neuroim2::NeuroSpace(d))
+scan2 <- neuroim2::NeuroVec(array(rnorm(prod(d)), d), neuroim2::NeuroSpace(d))
+
+# Example event table
+events_df <- data.frame(
+  onset = c(5, 15, 5, 15), 
+  condition = factor(c("A", "B", "A", "B")),
+  run = c(1, 1, 2, 2)
+)
+
+# Create the dataset object
+mem_dset <- fmri_mem_dataset(scans = list(scan1, scan2), 
+                             mask = mask_vol, 
+                             TR = 2.0, 
+                             # run_length automatically inferred as c(20, 20)
+                             event_table = events_df)
+
+print(mem_dset)
+#> 
+#> === fMRI Dataset ===
+#> 
+#> ** Dimensions:
+#>   - Timepoints: 40 
+#>   - Runs: 2  
+#>   - Objects: 2 pre-loaded NeuroVec object(s)
+#>   - Voxels in mask: (lazy)
+#> 
+#> ** Temporal Structure:
+#>   - TR: 2 seconds
+#>   - Run lengths: 20, 20 
+#> 
+#> ** Event Table:
+#>   - Rows: 4 
+#>   - Variables: onset, condition, run 
+#>   - First few events:
+#>   onset condition run
+#> 1     5         A   1
+#> 2    15         B   1
+#> 3     5         A   2
+# Access components
+print(mem_dset$sampling_frame)
+#> Sampling frame
+#> - Blocks: 2 
+#> - Scans: 40 (per block: 20, 20 )
+#> - TR: 2 s
+#> - Duration: 79 s
+```
+
+## File-Based Volumetric Data (`fmri_file_dataset`)
+
+This is often the most practical option for typical fMRI analyses where
+data resides in files.
+
+**Key Arguments:**
+
+- `scans`: A character vector of file paths to the 4D fMRI image files
+  (e.g., `.nii.gz`), one path per run.
+- `mask`: A character string giving the file path to the 3D mask image
+  file.
+- `TR`: Repetition time (seconds).
+- `run_length`: A numeric vector specifying the number of volumes (time
+  points) in each run file listed in `scans`.
+- `event_table` (Optional): A `data.frame` with experimental design
+  info.
+- `base_path` (Optional): A path to prepend to relative file paths in
+  `scans` and `mask`.
+- `preload` (Optional, Default: `FALSE`): If `TRUE`, load the mask and
+  scan data into memory immediately. If `FALSE` (recommended for large
+  data), data is read only when accessed.
+- `mode` (Optional): Storage mode for `neuroim2` when reading data
+  (e.g., “normal”, “mmap”).
+
+``` r
+# --- Create Dummy Files (for illustration only) ---
+# In a real analysis, these files would already exist.
+tmp_dir <- tempdir()
+mask_filename <- "mask.nii.gz"
+scan1_filename <- "run1.nii.gz"
+scan2_filename <- "run2.nii.gz"
+
+mask_file_full_path <- file.path(tmp_dir, mask_filename)
+scan1_file_full_path <- file.path(tmp_dir, scan1_filename)
+scan2_file_full_path <- file.path(tmp_dir, scan2_filename)
+
+# Create small dummy mask and scans using neuroim2 functionality
+d <- c(5, 5, 5) # Mask dimensions
+d_run1 <- c(d, 20) # Run 1 dimensions (time=20)
+d_run2 <- c(d, 25) # Run 2 dimensions (time=25)
+
+mask_vol_dummy <- neuroim2::NeuroVol(array(1, d), neuroim2::NeuroSpace(d))
+scan1_dummy <- neuroim2::NeuroVec(array(rnorm(prod(d_run1)), d_run1), neuroim2::NeuroSpace(d_run1))
+scan2_dummy <- neuroim2::NeuroVec(array(rnorm(prod(d_run2)), d_run2), neuroim2::NeuroSpace(d_run2))
+
+# Ensure dummy files are written using their full paths
+neuroim2::write_vol(mask_vol_dummy, mask_file_full_path)
+neuroim2::write_vec(scan1_dummy, scan1_file_full_path)
+neuroim2::write_vec(scan2_dummy, scan2_file_full_path)
+# --- End Dummy File Creation ---
+
+# Create the file-based dataset object
+# Pass only filenames to 'scans' and 'mask', and specify the directory in 'base_path'
+file_dset <- fmri_dataset(scans = c(scan1_filename, scan2_filename), 
+                            mask = mask_filename, 
+                            TR = 1.5, 
+                            run_length = c(20, 25), # Must match time dim of files
+                            event_table = events_df, 
+                            base_path = tmp_dir,    # Set base_path to the temp directory
+                            preload = FALSE) # Keep data on disk
+
+# This print statement should now work
+print(file_dset)
+#> 
+#> === fMRI Dataset ===
+#> 
+#> ** Dimensions:
+#>   - Timepoints: 45 
+#>   - Runs: 2  
+#>   - Backend: nifti_backend 
+#>   - Data dimensions: 45 x ? (timepoints x voxels)
+#>   - Voxels in mask: (lazy)
+#> 
+#> ** Temporal Structure:
+#>   - TR: 1.5 seconds
+#>   - Run lengths: 20, 25 
+#> 
+#> ** Event Table:
+#>   - Rows: 4 
+#>   - Variables: onset, condition, run 
+#>   - First few events:
+#> # A tibble: 3 × 3
+#>   onset condition   run
+#>   <dbl> <fct>     <dbl>
+#> 1     5 A             1
+#> 2    15 B             1
+#> 3     5 A             2
+
+# Clean up dummy files (optional, commented out for vignette)
+# file.remove(mask_file_full_path, scan1_file_full_path, scan2_file_full_path)
+```
+
+Using `preload=FALSE` is memory-efficient as only the required data
+segments are read when needed (e.g., during model fitting).
+
+## Matrix Data (`matrix_dataset`)
+
+Use this if your fMRI data is already represented as a 2D matrix where
+rows are time points and columns are voxels or components (e.g., after
+surface projection or ROI averaging).
+
+**Key Arguments:**
+
+- `datamat`: The numeric matrix (time x features).
+- `TR`: Repetition time (seconds).
+- `run_length`: Vector specifying the number of rows (time points)
+  belonging to each run.
+- `event_table` (Optional): A `data.frame` with design info (must have
+  same total number of rows as `datamat`).
+
+``` r
+# Example matrix (100 time points, 50 features/voxels)
+# Two runs of 50 time points each
+time_points <- 100
+features <- 50
+run_len <- c(50, 50)
+example_matrix <- matrix(rnorm(time_points * features), time_points, features)
+
+# Example event table for matrix data
+events_mat_df <- data.frame(
+  onset = c(seq(5, 45, by=10), seq(5, 45, by=10)), 
+  condition = factor(rep(c("C", "D"), 10)),
+  run = rep(1:2, each = 5)
+)
+
+mat_dset <- matrix_dataset(datamat = example_matrix, 
+                           TR = 2.5, 
+                           run_length = run_len,
+                           event_table = events_mat_df)
+
+print(mat_dset)
+#> 
+#> === fMRI Dataset ===
+#> 
+#> ** Dimensions:
+#>   - Timepoints: 100 
+#>   - Runs: 2  
+#>   - Matrix: 100 x 50 (timepoints x voxels)
+#>   - Voxels in mask: (lazy)
+#> 
+#> ** Temporal Structure:
+#>   - TR: 2.5 seconds
+#>   - Run lengths: 50, 50 
+#> 
+#> ** Event Table:
+#>   - Rows: 20 
+#>   - Variables: onset, condition, run 
+#>   - First few events:
+#>   onset condition run
+#> 1     5         C   1
+#> 2    15         D   1
+#> 3    25         C   1
+print(mat_dset$sampling_frame)
+#> Sampling frame
+#> - Blocks: 2 
+#> - Scans: 100 (per block: 50, 50 )
+#> - TR: 2.5 s
+#> - Duration: 248.75 s
+```
+
+For `matrix_dataset`, the concept of a spatial mask is implicit; all
+columns provided in `datamat` are included.
+
+## Latent Data (`latent_dataset`)
+
+This class is designed for data that has undergone dimensionality
+reduction (e.g., PCA, ICA). It wraps a `LatentNeuroVec` object, which
+stores the basis vectors (latent components over time) and loadings
+(spatial maps of components). Creating and using `LatentNeuroVec`
+objects typically requires the `fmristore` package.
+
+**Key Arguments:**
+
+- `lvec`: A `LatentNeuroVec` object from the `fmristore` package.
+- `TR`: Repetition time (seconds).
+- `run_length`: Vector specifying run lengths (must sum to the time
+  dimension of `lvec`).
+- `event_table` (Optional): Experimental design `data.frame`.
+
+``` r
+# Conceptual example (requires fmristore package and a LatentNeuroVec)
+# Assuming 'my_latent_neuro_vec' is a LatentNeuroVec object representing
+# 20 components over 300 time points (2 runs of 150)
+
+# latent_dset <- latent_dataset(lvec = my_latent_neuro_vec, 
+#                              TR = 2.0, 
+#                              run_length = c(150, 150),
+#                              event_table = some_event_df)
+# 
+# print(latent_dset)
+```
+
+This dataset type essentially behaves like a `matrix_dataset` where the
+matrix columns are the latent component time series.
+
+## Using Dataset Objects
+
+## Next
+
+- [Simulating fMRI
+  Data](https://bbuchsbaum.github.io/articles/a_08_simulation.md)
+
+- [fMRI Linear Model
+  (GLM)](https://bbuchsbaum.github.io/articles/a_09_linear_model.md)
+  Once created, these dataset objects serve as the primary data input
+  for `fmrireg`’s modeling functions:
+
+- `event_model(..., sampling_frame = dset$sampling_frame)`
+
+- `baseline_model(..., sframe = dset$sampling_frame)`
+
+- `fmri_lm(model, dataset = dset)`
+
+- `estimate_betas(..., dataset = dset)`
+
+They provide a standardized way to access data (`get_data(dset)`), masks
+(`get_mask(dset)`), and timing information (`blocklens(dset)`,
+`blockids(dset)`), regardless of the underlying storage format.
+
+Choosing the appropriate dataset class depends on where your data
+resides (memory, files) and its format (volumetric, matrix, latent).
