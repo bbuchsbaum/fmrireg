@@ -5,8 +5,6 @@
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
-```r
-bm <- load_benchmark_dataset("BM_Canonical_HighSNR")
 
 # Create an event model
 events <- bm$core_data$event_table
