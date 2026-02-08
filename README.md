@@ -5,8 +5,6 @@
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
-
-# Create an event model
 events <- bm$core_data$event_table
 sframe <- sampling_frame(blocklens = bm$core_data$run_length, TR = bm$core_data$TR)
 emod <- event_model(onset ~ hrf(condition), data = events,
