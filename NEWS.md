@@ -1,3 +1,18 @@
+# fmrireg 0.1.2
+
+## Bug Fixes
+
+* Fixed low-rank/sketch residual degrees of freedom to use original timepoints (`T - p`) instead of sketch rows.
+* Replaced placeholder `fit_contrasts.fmri_lm()` outputs with computed standard errors, test statistics, and p-values.
+* Consolidated duplicate meta-analysis pathways to shared implementations and removed inconsistent behavior across runwise/chunkwise pooling.
+* Fixed F-contrast meta pooling to combine evidence via p-values rather than averaging F statistics.
+* Fixed thread-safety issue in C++ meta kernels by deferring Paule-Mandel non-convergence warnings until after OpenMP regions.
+* Added bounds validation and safer inverse fallback in sketch kernels to prevent unsafe indexing and hard failures on ill-conditioned data.
+* Improved AR pipeline consistency for whitened covariance/fitted/residual handling and unified AR effective-df calculations.
+* Added regression coverage for `fit_contrasts.fmri_lm()` to prevent placeholder-stat regressions.
+
+---
+
 # fmrireg 0.1.1
 
 ## Bug Fixes
