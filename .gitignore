@@ -37,6 +37,16 @@ vignettes/*.html
 # Package check artifacts
 fmrireg.Rcheck/
 *.Rcheck/
+..Rcheck/
+
+# Coverage artifacts
+coverage/
+*.gcov
+*.gcda
+*.gcno
+
+# OMC state (oh-my-claudecode)
+.omc/
 
 # OS and editor files
 .DS_Store
