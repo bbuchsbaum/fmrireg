@@ -54,22 +54,8 @@ compute_effective_df_ar <- function(n, p, ar_coef) {
   if (is.null(ar_coef)) {
     return(n - p)
   }
-  
-  # If list (multiple runs), pool the coefficients
-  if (is.list(ar_coef)) {
-    phi <- mean(unlist(ar_coef))
-  } else {
-    phi <- ar_coef[1]  # Use first coefficient for AR(p)
-  }
-  
-  # Effective sample size for AR(1)
-  # n_eff = n * (1 - phi^2) / (1 + phi^2)
-  # Simplified approximation: n_eff ≈ n * (1 - phi^2)
-  ar_factor <- 1 - phi^2
-  ar_factor <- max(ar_factor, 0.1)  # Prevent too small values
-  
-  n_eff <- n * ar_factor
-  max(n_eff - p, 1)
+
+  .compute_ar_effective_df_compat(n = n, p = p, ar_coef = ar_coef)
 }
 
 #' Effective df for robust models

@@ -109,7 +109,12 @@ solve_ar_pipeline <- function(glm_ctx, ar_options, run_indices) {
   
   # Add XtXinv if not present
   if (is.null(result$XtXinv)) {
-    result$XtXinv <- glm_ctx$proj$XtXinv
+    if (!is.null(result$X_white)) {
+      result$XtXinv <- .fast_preproject(result$X_white)$XtXinv
+    } else {
+      warning("AR solver did not return whitened XtXinv; using unwhitened fallback.")
+      result$XtXinv <- glm_ctx$proj$XtXinv
+    }
   }
   
   result
@@ -203,8 +208,8 @@ solve_ar_robust_pipeline <- function(glm_ctx, config, run_indices) {
     ar_coef = ar_result$ar_coef,
     XtXinv = robust_result$XtWXi_final,
     dfres = robust_result$dfres,
-    fitted = glm_ctx$X %*% robust_result$betas_robust,
-    residuals = glm_ctx$Y - glm_ctx$X %*% robust_result$betas_robust,
+    fitted = glm_ctx_white$X %*% robust_result$betas_robust,
+    residuals = glm_ctx_white$Y - glm_ctx_white$X %*% robust_result$betas_robust,
     effective_df = compute_ar_effective_df(
       nrow(glm_ctx$X), 
       ncol(glm_ctx$X),

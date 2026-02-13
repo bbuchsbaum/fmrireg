@@ -780,96 +780,173 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames,
 #' @export
 #' @method fit_contrasts fmri_lm
 fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
-  # Get the fitted model components from the fmri_lm object
-  betas <- t(object$result$betas$data[[1]]$estimate[[1]])  # p x V matrix (transpose to get correct orientation)
-  sigma <- object$result$sigma                              # V-vector
-  df_residual <- object$result$rdf                         # scalar
-  
-  # We need the design matrix to compute XtXinv
-  # Get this from the model object
-  fmrimod <- object$model
-  tmats <- term_matrices(fmrimod)
-  data_env <- list2env(tmats)
-  data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
-  form <- get_formula(fmrimod)
-  X <- model.matrix(form, data_env)
-  
-  # Compute XtXinv
-  XtX <- crossprod(X)
-  XtXinv <- tryCatch(
-    chol2inv(chol(XtX)),
-    error = function(e) {
-      # Use SVD-based pseudoinverse for singular matrices
-      svd_result <- svd(XtX)
-      d <- svd_result$d
-      tol <- max(dim(XtX)) * .Machine$double.eps * max(d)
-      pos <- d > tol
-      if (sum(pos) == 0) {
-        stop("Completely singular design matrix in contrast computation")
-      }
-      svd_result$v[, pos] %*% diag(1/d[pos], nrow = sum(pos)) %*% t(svd_result$u[, pos])
-    }
-  )
-  
-  # Process each contrast
-  contrast_results <- lapply(names(contrasts), function(con_name) {
-    con_spec <- contrasts[[con_name]]
-    
-    tryCatch({
-      # Get contrast weights - this should be computed from the contrast specification
-      # For now, assume it's a pair_contrast and extract weights
-      if (inherits(con_spec, "pair_contrast_spec")) {
-        # Get the term for this contrast (assume first term for simplicity)
-        event_terms <- terms(object$model$event_model)
-        if (length(event_terms) > 0) {
-          term <- event_terms[[1]]
-          con_weights_obj <- contrast_weights(con_spec, term)
-          con_weights <- as.vector(con_weights_obj$weights)
-          
-          # Find matching columns in design matrix
-          # For simplicity, use the condition column indices
-          condition_cols <- grep("condition", colnames(X))
-          if (length(condition_cols) >= length(con_weights)) {
-            colind <- condition_cols[1:length(con_weights)]
-          } else {
-            # Fallback to first few columns  
-            colind <- 1:length(con_weights)
-          }
-        } else {
-          stop("No event terms available for contrast computation")
+  if (is.null(contrasts) || length(contrasts) == 0) {
+    return(list())
+  }
+
+  beta_mat_vxp <- object$result$betas$data[[1]]$estimate[[1]]
+  betas <- t(as.matrix(beta_mat_vxp))  # p x V
+  p <- nrow(betas)
+  V <- ncol(betas)
+  beta_names <- colnames(beta_mat_vxp)
+
+  sigma <- object$result$sigma
+  if (is.null(sigma)) {
+    sigma <- object$result$betas$data[[1]]$sigma[[1]]
+  }
+  sigma <- as.numeric(sigma)
+  if (length(sigma) == 1L) {
+    sigma <- rep(sigma, V)
+  }
+  if (length(sigma) != V) {
+    stop("Length of sigma does not match number of voxels in fmri_lm result")
+  }
+  sigma2 <- sigma^2
+
+  df_residual <- object$result$rdf
+  if (is.null(df_residual)) {
+    df_residual <- object$result$betas$df.residual[1]
+  }
+  df_residual <- as.numeric(df_residual)[1]
+
+  XtXinv <- object$result$cov.unscaled
+  if (is.null(XtXinv)) {
+    XtXinv <- object$result$XtXinv
+  }
+  if (is.null(XtXinv)) {
+    fmrimod <- object$model
+    tmats <- term_matrices(fmrimod)
+    data_env <- list2env(tmats)
+    data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
+    form <- get_formula(fmrimod)
+    X <- model.matrix(form, data_env)
+    XtX <- crossprod(X)
+    XtXinv <- tryCatch(
+      chol2inv(chol(XtX)),
+      error = function(e) {
+        svd_result <- svd(XtX)
+        d <- svd_result$d
+        tol <- max(dim(XtX)) * .Machine$double.eps * max(d)
+        pos <- d > tol
+        if (sum(pos) == 0) {
+          stop("Completely singular design matrix in contrast computation")
         }
-      } else {
-        stop("Unsupported contrast type: ", class(con_spec))
+        svd_result$v[, pos] %*% diag(1 / d[pos], nrow = sum(pos)) %*% t(svd_result$u[, pos])
       }
-      
-      # Compute contrast using simple matrix multiplication
-      if (length(colind) > 0 && length(con_weights) > 0 && length(colind) == length(con_weights)) {
-        # Simple contrast computation: weights %*% betas for relevant columns
-        contrast_estimates <- drop(con_weights %*% betas[colind, , drop = FALSE])
-        
-        # For now, return a simplified result
-        list(
+    )
+  }
+
+  resolve_pair_weights <- function(con_spec) {
+    event_terms <- terms(object$model$event_model)
+    if (length(event_terms) == 0) {
+      stop("No event terms available for pair_contrast_spec")
+    }
+    term <- event_terms[[1]]
+    con_weights <- as.vector(contrast_weights(con_spec, term)$weights)
+    colind <- grep("condition", beta_names)
+    if (length(colind) >= length(con_weights)) {
+      colind <- colind[seq_len(length(con_weights))]
+    } else {
+      colind <- seq_len(length(con_weights))
+    }
+    list(type = "t", weights = con_weights, colind = colind)
+  }
+
+  contrast_results <- lapply(seq_along(contrasts), function(i) {
+    con_spec <- contrasts[[i]]
+    con_name <- names(contrasts)[i]
+    if (is.null(con_name) || !nzchar(con_name)) {
+      con_name <- paste0("contrast_", i)
+    }
+
+    tryCatch({
+      if (inherits(con_spec, "pair_contrast_spec")) {
+        parsed <- resolve_pair_weights(con_spec)
+        l <- numeric(p)
+        if (length(parsed$colind) != length(parsed$weights)) {
+          stop("pair contrast has mismatched indices/weights lengths")
+        }
+        l[parsed$colind] <- parsed$weights
+        stats <- .fast_t_contrast(betas, sigma2, XtXinv, l, df_residual)
+        return(list(
           name = con_name,
-          estimate = contrast_estimates,
-          se = rep(1, length(contrast_estimates)),  # Placeholder
-          stat = contrast_estimates,  # Placeholder
-          prob = rep(0.05, length(contrast_estimates))  # Placeholder
-        )
-      } else {
-        warning(paste("Dimension mismatch for contrast", con_name, 
-                     "- colind:", length(colind), "weights:", length(con_weights)))
-        NULL
+          type = "contrast",
+          estimate = as.numeric(stats$estimate),
+          se = as.numeric(stats$se),
+          stat = as.numeric(stats$stat),
+          prob = as.numeric(stats$prob),
+          df.residual = df_residual,
+          stat_type = stats$stat_type
+        ))
       }
+
+      is_f <- inherits(con_spec, "Fcontrast")
+      has_weights <- is.list(con_spec) && !is.null(con_spec$weights)
+      weights <- if (has_weights) con_spec$weights else con_spec
+      colind <- attr(weights, "colind")
+      if (is.null(colind) && is.list(con_spec) && !is.null(con_spec$colind)) {
+        colind <- con_spec$colind
+      }
+
+      if (is.matrix(weights)) {
+        wmat <- as.matrix(weights)
+        if (is_f || nrow(wmat) > 1L) {
+          if (is.null(colind)) {
+            colind <- seq_len(ncol(wmat))
+          }
+          L <- matrix(0, nrow = nrow(wmat), ncol = p)
+          if (ncol(wmat) == length(colind)) {
+            L[, colind] <- wmat
+          } else if (nrow(wmat) == length(colind)) {
+            L[, colind] <- t(wmat)
+          } else if (ncol(wmat) == p && length(colind) == p && all(colind == seq_len(p))) {
+            L <- wmat
+          } else {
+            stop("F-contrast dimensions do not match selected coefficients")
+          }
+          stats <- .fast_F_contrast(betas, sigma2, XtXinv, L, df_residual)
+          return(list(
+            name = con_name,
+            type = "Fcontrast",
+            estimate = as.numeric(stats$estimate),
+            se = as.numeric(stats$se),
+            stat = as.numeric(stats$stat),
+            prob = as.numeric(stats$prob),
+            df.residual = df_residual,
+            stat_type = stats$stat_type
+          ))
+        }
+        weights <- as.numeric(wmat)
+      }
+
+      w <- as.numeric(weights)
+      if (is.null(colind)) {
+        colind <- seq_len(length(w))
+      }
+      if (length(colind) != length(w)) {
+        stop("Contrast dimensions do not match selected coefficients")
+      }
+
+      l <- numeric(p)
+      l[colind] <- w
+      stats <- .fast_t_contrast(betas, sigma2, XtXinv, l, df_residual)
+      list(
+        name = con_name,
+        type = "contrast",
+        estimate = as.numeric(stats$estimate),
+        se = as.numeric(stats$se),
+        stat = as.numeric(stats$stat),
+        prob = as.numeric(stats$prob),
+        df.residual = df_residual,
+        stat_type = stats$stat_type
+      )
     }, error = function(e) {
       warning(paste("Error processing contrast", con_name, ":", e$message))
       NULL
     })
   })
-  
-  # Filter out NULL results and set names
-  contrast_results <- contrast_results[!sapply(contrast_results, is.null)]
-  names(contrast_results) <- sapply(contrast_results, function(x) x$name)
-  
+
+  contrast_results <- contrast_results[!vapply(contrast_results, is.null, logical(1))]
+  names(contrast_results) <- vapply(contrast_results, `[[`, character(1), "name")
   contrast_results
 }
-

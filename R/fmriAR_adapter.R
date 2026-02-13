@@ -493,17 +493,41 @@ NULL
       }
     }
   } else if (!is.null(ar_coef)) {
-    phi <- if (is.list(ar_coef)) unlist(ar_coef) else ar_coef
+    if (is.list(ar_coef)) {
+      max_len <- max(lengths(ar_coef))
+      phi_mat <- sapply(ar_coef, function(x) c(x, rep(0, max_len - length(x))))
+      phi <- rowMeans(phi_mat)
+    } else {
+      phi <- ar_coef
+    }
   }
 
   if (is.null(phi) || length(phi) == 0) {
     return(n - p)
   }
 
-  # Standard formula (matching existing fmrireg)
-  ar_factor <- 1 - sum(phi^2)
-  ar_factor <- max(ar_factor, 0.1)
-  effective_n <- n * ar_factor
+  # Effective sample size via lag-correlation inflation:
+  # n_eff = n / (1 + 2 * sum_{k>=1} (1-k/n) rho_k)
+  rho <- tryCatch(
+    {
+      if (length(phi) == 1L) {
+        phi[1]^(seq_len(n - 1L))
+      } else {
+        stats::ARMAacf(ar = phi, ma = numeric(0), lag.max = n - 1L)[-1]
+      }
+    },
+    error = function(e) NULL
+  )
+  if (is.null(rho) || length(rho) == 0) {
+    return(n - p)
+  }
+  k <- seq_along(rho)
+  denom <- 1 + 2 * sum((1 - k / n) * rho)
+  if (!is.finite(denom) || denom <= 0) {
+    return(n - p)
+  }
+  effective_n <- n / denom
+  effective_n <- min(max(effective_n, p + 1), n)
 
   max(effective_n - p, 1)
 }

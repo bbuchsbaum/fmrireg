@@ -183,6 +183,8 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
   result <- solve_glm_core(glm_ctx_white, return_fitted = TRUE)
 
   result$XtXinv <- proj_white$XtXinv
+  result$X_white <- ar_result$X_white
+  result$Y_white <- ar_result$Y_white
 
   # Add AR info
   result$ar_coef <- ar_result$ar_coef

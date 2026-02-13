@@ -2,6 +2,20 @@
 #include <RcppArmadillo.h>
 using namespace arma;
 
+static inline bool inv_sympd_safe(mat& out, const mat& A) {
+  try {
+    out = inv_sympd(A);
+    return true;
+  } catch (...) {
+    try {
+      out = pinv(A);
+      return true;
+    } catch (...) {
+      return false;
+    }
+  }
+}
+
 // In-place Walsh-Hadamard transform on each column; n must be power of 2
 static void fwht_cols(mat& X) {
   int n = X.n_rows;
@@ -26,10 +40,22 @@ arma::mat cpp_srht_apply(const arma::mat& M,
                          const arma::uvec& perm,
                          const double scale) {
   int T = M.n_rows, K = M.n_cols;
+  if ((int)signs.n_elem != T) {
+    Rcpp::stop("cpp_srht_apply: length(signs) must equal nrow(M).");
+  }
+  if ((int)perm.n_elem != T) {
+    Rcpp::stop("cpp_srht_apply: length(perm) must equal nrow(M).");
+  }
   // 1) D (random signs)
   mat X = M.each_col() % signs;
   // 2) H (Hadamard) on power-of-two padded length
   int T2 = 1; while (T2 < T) T2 <<= 1;
+  if (perm.n_elem > 0 && perm.max() >= (uword)T2) {
+    Rcpp::stop("cpp_srht_apply: perm contains out-of-bounds indices.");
+  }
+  if (rows.n_elem > 0 && rows.max() >= (uword)T) {
+    Rcpp::stop("cpp_srht_apply: rows contains out-of-bounds indices.");
+  }
   mat Xpad(T2, K, fill::zeros);
   Xpad.rows(0, T-1) = X;
   fwht_cols(Xpad);
@@ -45,6 +71,9 @@ arma::mat cpp_srht_apply(const arma::mat& M,
 // One IHS iteration helper
 static void ihs_iter(const mat& X, const mat& Z, int m, mat& M, mat& Ginv_out) {
   int T = X.n_rows;
+  if (m <= 0 || m > T) {
+    Rcpp::stop("ihs_iter: sketch size m must satisfy 0 < m <= nrow(X).");
+  }
   // Build SRHT plan
   arma::vec signs = 2.0 * randu<vec>(T) - 1.0; signs.transform( [](double v){ return v>=0 ? 1.0 : -1.0; } );
   arma::uvec perm = randperm(T);
@@ -54,7 +83,10 @@ static void ihs_iter(const mat& X, const mat& Z, int m, mat& M, mat& Ginv_out) {
   mat Xs = cpp_srht_apply(X, rows, signs, perm, scale);
   mat Zs = cpp_srht_apply(Z, rows, signs, perm, scale);
   mat G = Xs.t() * Xs;
-  mat Ginv = inv_sympd(G);
+  mat Ginv;
+  if (!inv_sympd_safe(Ginv, G)) {
+    Rcpp::stop("ihs_iter: unable to invert sketched Gram matrix.");
+  }
   mat R = Xs.t() * (Zs - Xs * M);
   mat dM = Ginv * R;
   M += dM;

@@ -11,6 +11,8 @@
   # Design (T x p)
   X <- as.matrix(design_matrix(fm))
   Tlen <- nrow(X); p <- ncol(X)
+  # Residual df should reflect original time samples, not sketch rows.
+  dfres_full <- max(1L, Tlen - p)
   varnames <- colnames(X)
 
   # Latent basis and loadings or full data path
@@ -74,7 +76,7 @@
       Xs <- srht_apply(X, plan); Zs <- srht_apply(Z, plan)
       Rres <- Zs - Xs %*% M
       RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
-      dfres <- max(1L, nrow(Xs) - p)
+      dfres <- dfres_full
       sigma2 <- colSums(RA * RA) / dfres
     } else if (identical(sk$method, "srht")) {
       plan <- make_srht_plan(Tlen, sk$m)
@@ -89,7 +91,7 @@
       B <- if (A_is_I) M else M %*% as.matrix(A)
       Rres <- Zs - Xs %*% M
       RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
-      dfres <- max(1L, nrow(Xs) - p)
+      dfres <- dfres_full
       sigma2 <- colSums(RA * RA) / dfres
     } else if (identical(sk$method, "gaussian")) {
       Sg <- S
@@ -104,7 +106,7 @@
       B <- if (A_is_I) M else M %*% as.matrix(A)
       Rres <- Zs - Xs %*% M
       RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
-      dfres <- max(1L, nrow(Xs) - p)
+      dfres <- dfres_full
       sigma2 <- colSums(RA * RA) / dfres
     } else { # countsketch
       Xs <- as.matrix(S %*% X); Zs <- as.matrix(S %*% Z)
@@ -118,7 +120,7 @@
       B <- if (A_is_I) M else M %*% as.matrix(A)
       Rres <- Zs - Xs %*% M
       RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
-      dfres <- max(1L, nrow(Xs) - p)
+      dfres <- dfres_full
       sigma2 <- colSums(RA * RA) / dfres
     }
   } else if (by_cluster && !inherits(dataset, "latent_dataset") && !is.null(lowrank$parcels)) {
@@ -194,11 +196,7 @@
     B <- if (A_is_I) M else M %*% as.matrix(A)
 
     # Residuals per group for sigma2
-    dfres <- if (identical(sk$method, "srht") || identical(sk$method, "ihs")) {
-      max(1L, plan$m - p)
-    } else {
-      max(1L, nrow(S) - p)
-    }
+    dfres <- dfres_full
     rss <- rss * 0
     for (g in ug) {
       Jg <- which(gids == g)
@@ -286,7 +284,7 @@
         plan <- make_srht_plan(Tlen, sk$m)
         Xs <- srht_apply(Xw, plan); Zs_L <- srht_apply(Zw_L, plan)
         Rres_L <- Zs_L - Xs %*% M_L
-        dfres <- max(1L, nrow(Xs) - p)
+        dfres <- dfres_full
         sigma2_L <- colSums(Rres_L * Rres_L) / dfres
         W2 <- W; W2@x <- W2@x * W2@x
         sigma2 <- as.numeric(W2 %*% sigma2_L)
@@ -299,7 +297,7 @@
         Xs <- srht_apply(Xw, plan); Zs <- srht_apply(Zw, plan)
         Rres <- Zs - Xs %*% M
         RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
-        dfres <- max(1L, nrow(Xs) - p)
+        dfres <- dfres_full
         sigma2 <- colSums(RA * RA) / dfres
       }
     } else if (identical(sk$method, "srht")) {
@@ -324,7 +322,7 @@
         W <- build_landmark_weights(coords, lcoords, k = as.integer(lowrank$k_neighbors %||% 16L))
         B <- extend_betas_landmarks(BL, W)
         Rres_L <- Zs_L - Xs %*% M_L
-        dfres <- max(1L, nrow(Xs) - p)
+        dfres <- dfres_full
         sigma2_L <- colSums(Rres_L * Rres_L) / dfres
         W2 <- W; W2@x <- W2@x * W2@x
         sigma2 <- as.numeric(W2 %*% sigma2_L)
@@ -340,7 +338,7 @@
         B <- if (A_is_I) M else M %*% as.matrix(A)
         Rres <- Zs - Xs %*% M
         RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
-        dfres <- max(1L, nrow(Xs) - p)
+        dfres <- dfres_full
         sigma2 <- colSums(RA * RA) / dfres
       }
     } else if (identical(sk$method, "gaussian")) {
@@ -364,7 +362,7 @@
         W <- build_landmark_weights(coords, lcoords, k = as.integer(lowrank$k_neighbors %||% 16L))
         B <- extend_betas_landmarks(BL, W)
         Rres_L <- Zs_L - Xs %*% M_L
-        dfres <- max(1L, nrow(Xs) - p)
+        dfres <- dfres_full
         sigma2_L <- colSums(Rres_L * Rres_L) / dfres
         W2 <- W; W2@x <- W2@x * W2@x
         sigma2 <- as.numeric(W2 %*% sigma2_L)
@@ -380,7 +378,7 @@
         B <- if (A_is_I) M else M %*% as.matrix(A)
         Rres <- Zs - Xs %*% M
         RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
-        dfres <- max(1L, nrow(Xs) - p)
+        dfres <- dfres_full
         sigma2 <- colSums(RA * RA) / dfres
       }
     } else { # countsketch
@@ -404,7 +402,7 @@
         W <- build_landmark_weights(coords, lcoords, k = as.integer(lowrank$k_neighbors %||% 16L))
         B <- extend_betas_landmarks(BL, W)
         Rres_L <- Zs_L - Xs %*% M_L
-        dfres <- max(1L, nrow(Xs) - p)
+        dfres <- dfres_full
         sigma2_L <- colSums(Rres_L * Rres_L) / dfres
         W2 <- W; W2@x <- W2@x * W2@x
         sigma2 <- as.numeric(W2 %*% sigma2_L)
@@ -420,7 +418,7 @@
         B <- if (A_is_I) M else M %*% as.matrix(A)
         Rres <- Zs - Xs %*% M
         RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
-        dfres <- max(1L, nrow(Xs) - p)
+        dfres <- dfres_full
         sigma2 <- colSums(RA * RA) / dfres
       }
     }

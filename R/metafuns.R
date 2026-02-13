@@ -151,9 +151,11 @@ do_fixef <- function(se, beta, weighting) {
 #' @noRd
 meta_Fcontrasts <- function(ftab) {
   pval <- do.call(cbind, ftab$data %>% purrr::map(~ .$prob))
-  se <- do.call(cbind, ftab$data %>% purrr::map(~ .$se))
-  
-  ret <- meta_stouffer(pval,se)
+  # For F-contrasts we pool evidence from p-values and avoid using sigma2-like
+  # quantities as inverse-variance weights.
+  se <- matrix(1, nrow = nrow(pval), ncol = ncol(pval))
+
+  ret <- meta_stouffer(pval, se)
   dplyr::tibble(type=ftab$type[1], name=ftab$name[1], stat_type="meta_zfstat", 
          conmat=list(ftab$conmat[[1]]),
          colind=list(ftab$colind[[1]]), data=list(tibble::as_tibble(ret)))
@@ -180,25 +182,7 @@ meta_Fcontrasts <- function(ftab) {
 #' @noRd
 #' @global name
 meta_contrasts <- function(cres, weighting=c("inv_var", "equal")) {
- 
-  weighting <- match.arg(weighting)
-  ctab <- unlist(cres, recursive=FALSE) %>% dplyr::bind_rows()
-  if (nrow(ctab) == 0) {
-    return(dplyr::tibble(type="contrast", name="meta_contrast", stat_type="meta_zstat", conmat=list(NULL),
-         colind=list(NULL), data=list(tibble(estimate=list(NULL), se=list(NULL), stat=list(NULL), prob=list(NULL)))))
-  }
-
-  gsplit <- ctab %>% dplyr::group_by(name,type) %>% dplyr::group_split()
-  
-  lapply(gsplit, function(tab) {
-    type <- tab$type[1]
-    if (type == "Fcontrast") {
-      meta_Fcontrasts(tab)
-    } else if (type == "contrast") {
-      meta_fixef(tab)
-    }
-  }) %>% dplyr::bind_rows()
-  
+  .meta_contrasts_impl(cres, weighting = weighting)
 }
 
 # Internal: Combine t-statistics across subjects per feature
@@ -331,6 +315,11 @@ combine_t_statistics <- function(tmat, df, method = c("stouffer", "fisher", "lan
 #' @noRd
 #' @importFrom dplyr tibble
 meta_betas <- function(bstats, colind, weighting=c("inv_var", "equal")) {
+  .meta_betas_impl(bstats, colind, weighting = weighting)
+}
+
+# Shared implementation used by both legacy and current call sites.
+.meta_betas_impl <- function(bstats, colind, weighting=c("inv_var", "equal")) {
   weighting <- match.arg(weighting)
 
   len <- length(colind)
@@ -365,5 +354,31 @@ meta_betas <- function(bstats, colind, weighting=c("inv_var", "equal")) {
            se=list(se),
            stat=list(stat),
            prob=list(prob))))
-  
+
+}
+
+# Shared implementation used by both legacy and current call sites.
+.meta_contrasts_impl <- function(cres, weighting=c("inv_var", "equal")) {
+  weighting <- match.arg(weighting)
+  ctab <- unlist(cres, recursive = FALSE) %>% dplyr::bind_rows()
+  if (nrow(ctab) == 0) {
+    return(dplyr::tibble(
+      type = "contrast",
+      name = "meta_contrast",
+      stat_type = "meta_zstat",
+      conmat = list(NULL),
+      colind = list(NULL),
+      data = list(tibble(estimate = list(NULL), se = list(NULL), stat = list(NULL), prob = list(NULL)))
+    ))
+  }
+
+  gsplit <- ctab %>% dplyr::group_by(name, type) %>% dplyr::group_split()
+  lapply(gsplit, function(tab) {
+    type <- tab$type[1]
+    if (type == "Fcontrast") {
+      meta_Fcontrasts(tab)
+    } else if (type == "contrast") {
+      meta_fixef(tab)
+    }
+  }) %>% dplyr::bind_rows()
 }

@@ -116,7 +116,8 @@ inline double tau2_DL(const mat& X, const vec& y, const vec& v) {
 // Paule–Mandel via simple bisection on f(tau2) = Q(tau2) - df.
 // Monotone decreasing in tau2, bracket [0, tau_hi] until sign change.
 inline double tau2_PM(const mat& X, const vec& y, const vec& v,
-                      double tol = 1e-6, int max_iter = 50) {
+                      double tol = 1e-6, int max_iter = 50,
+                      bool* warned_nonconverged = nullptr) {
   const uword m = y.n_elem;
   const uword p = X.n_cols;
   const double df = (double)m - (double)p;
@@ -149,8 +150,8 @@ inline double tau2_PM(const mat& X, const vec& y, const vec& v,
   }
   if (!arma::is_finite(mid)) mid = 0.0;
   if (mid < 0.0) mid = 0.0;
-  if (!converged) {
-    Rcpp::warning("Paule-Mandel solver did not fully converge; using last iterate");
+  if (!converged && warned_nonconverged != nullptr) {
+    *warned_nonconverged = true;
   }
   return mid;
 }
@@ -164,8 +165,9 @@ struct MetaResult {
   double I2_fe;
   double df;
   bool ok;
+  bool pm_nonconverged;
   mat invXtWX;
-  MetaResult() : tau2(0.0), Q_fe(NA_REAL), I2_fe(NA_REAL), df(NA_REAL), ok(false) {}
+  MetaResult() : tau2(0.0), Q_fe(NA_REAL), I2_fe(NA_REAL), df(NA_REAL), ok(false), pm_nonconverged(false) {}
 };
 
 enum Method { FE=0, DL=1, PM=2, REML_ALIAS=3 };
@@ -220,7 +222,9 @@ MetaResult fit_one(const mat& Xfull, const vec& yfull, const vec& vfull,
   } else if (M == DL) {
     tau2 = tau2_DL(X, y, v);
   } else { // PM or REML_ALIAS -> use PM solver (robust & fast)
-    tau2 = tau2_PM(X, y, v);
+    bool pm_warn = false;
+    tau2 = tau2_PM(X, y, v, 1e-6, 50, &pm_warn);
+    out.pm_nonconverged = pm_warn;
   }
   if (!arma::is_finite(tau2) || tau2 < 0.0) tau2 = 0.0;
 
@@ -293,6 +297,7 @@ Rcpp::List meta_fit_cpp(const arma::mat& Y,      // subjects x features
   arma::rowvec I2(P); I2.fill(datum::nan);
   arma::rowvec DF(P); DF.fill(datum::nan);
   arma::uvec   OK(P,   fill::zeros);
+  arma::uvec PM_WARN(P, fill::zeros);
 
   // Parallel over features
 #ifdef _OPENMP
@@ -319,6 +324,11 @@ Rcpp::List meta_fit_cpp(const arma::mat& Y,      // subjects x features
     I2(j)      = res.I2_fe;
     DF(j)      = res.df;
     OK(j)      = 1u;
+    PM_WARN(j) = res.pm_nonconverged ? 1u : 0u;
+  }
+
+  if (arma::accu(PM_WARN) > 0) {
+    Rcpp::warning("Paule-Mandel solver did not fully converge for some features; using last iterate");
   }
 
   return List::create(
@@ -365,6 +375,7 @@ Rcpp::List meta_fit_contrasts_cpp(const arma::mat& Y,      // S x P
   rowvec I2(P); I2.fill(datum::nan);
   rowvec DF(P); DF.fill(datum::nan);
   uvec   OK(P,   fill::zeros);
+  uvec PM_WARN(P, fill::zeros);
 
   mat CB(J, P); CB.fill(datum::nan);
   mat CSE(J, P); CSE.fill(datum::nan);
@@ -389,6 +400,7 @@ Rcpp::List meta_fit_contrasts_cpp(const arma::mat& Y,      // S x P
     I2(j)      = res.I2_fe;
     DF(j)      = res.df;
     OK(j)      = 1u;
+    PM_WARN(j) = res.pm_nonconverged ? 1u : 0u;
 
     // Compute contrasts
     for (uword c = 0; c < J; ++c) {
@@ -401,6 +413,10 @@ Rcpp::List meta_fit_contrasts_cpp(const arma::mat& Y,      // S x P
       CSE(c, j) = sec;
       CZ(c, j)  = zc;
     }
+  }
+
+  if (arma::accu(PM_WARN) > 0) {
+    Rcpp::warning("Paule-Mandel solver did not fully converge for some features; using last iterate");
   }
 
   return List::create(
@@ -452,6 +468,7 @@ Rcpp::List meta_fit_cov_cpp(const arma::mat& Y,      // S x P betas
   rowvec I2(P); I2.fill(datum::nan);
   rowvec DF(P); DF.fill(datum::nan);
   uvec OK(P, fill::zeros);
+  uvec PM_WARN(P, fill::zeros);
   mat COVTRI(TSZ, P); COVTRI.fill(datum::nan);
 
 #ifdef _OPENMP
@@ -472,6 +489,7 @@ Rcpp::List meta_fit_cov_cpp(const arma::mat& Y,      // S x P betas
     I2(j)      = res.I2_fe;
     DF(j)      = res.df;
     OK(j)      = 1u;
+    PM_WARN(j) = res.pm_nonconverged ? 1u : 0u;
 
     // pack upper triangle
     uword idx = 0;
@@ -480,6 +498,10 @@ Rcpp::List meta_fit_cov_cpp(const arma::mat& Y,      // S x P betas
         COVTRI(idx++, j) = res.invXtWX(a, b);
       }
     }
+  }
+
+  if (arma::accu(PM_WARN) > 0) {
+    Rcpp::warning("Paule-Mandel solver did not fully converge for some features; using last iterate");
   }
 
   return Rcpp::List::create(
@@ -550,6 +572,7 @@ Rcpp::List meta_fit_vcov_cpp(const arma::mat& Y,  // S x P betas
   rowvec I2(P); I2.fill(datum::nan);
   rowvec DF(P); DF.fill(datum::nan);
   uvec OK(P, fill::zeros);
+  uvec PM_WARN(P, fill::zeros);
   
   int nth = n_threads;
 #ifdef _OPENMP
@@ -578,6 +601,11 @@ Rcpp::List meta_fit_vcov_cpp(const arma::mat& Y,  // S x P betas
     I2(j) = res.I2_fe;
     DF(j) = res.df;
     OK(j) = 1u;
+    PM_WARN(j) = res.pm_nonconverged ? 1u : 0u;
+  }
+
+  if (arma::accu(PM_WARN) > 0) {
+    Rcpp::warning("Paule-Mandel solver did not fully converge for some features; using last iterate");
   }
   
   return Rcpp::List::create(

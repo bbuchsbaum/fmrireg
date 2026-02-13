@@ -41,14 +41,19 @@ calculate_effective_df <- function(n, p, robust_weights = NULL,
   # Adjustment for AR models
   df_ar_adjust <- 1
   if (ar_order > 0) {
-    # Simple adjustment: lose ar_order degrees of freedom
-    # More sophisticated: could use spectral density at zero
+    # With only AR order (no coefficients), use a conservative
+    # correlation-inflation approximation for effective sample size.
+    # This avoids the near-no-op behavior of (n - ar_order) / n.
     if (method == "simple") {
-      df_ar_adjust <- (n - ar_order) / n
+      k <- seq_len(ar_order)
+      denom <- 1 + 2 * sum(1 - k / n)
+      df_ar_adjust <- 1 / max(denom, 1)
     } else {
       # Satterthwaite-style adjustment would go here
-      # For now, use simple method
-      df_ar_adjust <- (n - ar_order) / n
+      # For now, match the conservative simple method.
+      k <- seq_len(ar_order)
+      denom <- 1 + 2 * sum(1 - k / n)
+      df_ar_adjust <- 1 / max(denom, 1)
     }
   }
   
