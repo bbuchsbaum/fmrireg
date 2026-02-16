@@ -52,5 +52,20 @@ coverage/
 .DS_Store
 fmrireg.code-workspace
 
+# Compiled object files and shared libraries
+src/*.o
+src/*.so
+src/*.dll
+
+# R CMD check result cache
+.rcmdcheck_result.rds
+
+# Benchmark outputs
+bench/*.csv
+bench/*.out
+
+# Scratch files
+gds.txt
+
 # Obsolete CI configuration
 .travis.yml
