@@ -2,8 +2,8 @@
   "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
   "@type": "SoftwareSourceCode",
   "identifier": "fmrireg",
-  "description": "fmrireg is a package for the analysis of functional magnetic resonance imaging (fMRI) data. Facilities are provided to construct flexible hemodynamic response functions, experimental regressors, and conduct univariate fMRI analyses.",
-  "name": "fmrireg: R package for the anlysis of fmri data",
+  "description": "Provides tools for the analysis of functional magnetic resonance imaging (fMRI) data. Facilities are included to construct flexible hemodynamic response functions, experimental regressors, and conduct univariate fMRI regression analyses.",
+  "name": "fmrireg: Regression Analysis of Functional Magnetic Resonance Imaging Data",
   "relatedLink": "https://bbuchsbaum.github.io/fmrireg/",
   "codeRepository": "https://github.com/bbuchsbaum/fmrireg",
   "issueTracker": "https://github.com/bbuchsbaum/fmrireg/issues",
@@ -184,18 +184,6 @@
     },
     {
       "@type": "SoftwareApplication",
-      "identifier": "care",
-      "name": "care",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=care"
-    },
-    {
-      "@type": "SoftwareApplication",
       "identifier": "glmnet",
       "name": "glmnet",
       "provider": {
@@ -280,18 +268,6 @@
     },
     {
       "@type": "SoftwareApplication",
-      "identifier": "ggforce",
-      "name": "ggforce",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=ggforce"
-    },
-    {
-      "@type": "SoftwareApplication",
       "identifier": "roxyglobals",
       "name": "roxyglobals",
       "version": ">= 0.2.1",
@@ -302,6 +278,18 @@
         "url": "https://cran.r-project.org"
       },
       "sameAs": "https://github.com/anthonynorth/roxyglobals"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "withr",
+      "name": "withr",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=withr"
     }
   ],
   "softwareRequirements": {
@@ -687,7 +675,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "15558.471KB",
+  "fileSize": "15603.418KB",
   "releaseNotes": "https://github.com/bbuchsbaum/fmrireg/blob/main/NEWS.md",
   "readme": "https://github.com/bbuchsbaum/fmrireg/blob/master/README.md",
   "contIntegration": "https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml"
