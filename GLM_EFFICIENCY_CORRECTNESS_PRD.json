@@ -1,0 +1,436 @@
+{
+  "prd_id": "PRD-GLM-AR-ROBUST-2026-02-15",
+  "title": "GLM Fitting Correctness and Efficiency Hardening",
+  "date": "2026-02-16",
+  "status": "in_progress",
+  "owners": [
+    "fmrireg-core"
+  ],
+  "objective": "Eliminate identified correctness defects and reduce end-to-end GLM runtime/memory, with AR processing routed through fmriAR in production pathways.",
+  "scope": {
+    "in_scope": [
+      "runwise and chunkwise GLM pathways",
+      "integrated AR/robust solver pathway",
+      "AR estimation/whitening adapter integration with fmriAR",
+      "contrast/statistics correctness for heteroskedastic multi-voxel outputs",
+      "regression and new test coverage for fixed-parameter and routing behaviors"
+    ],
+    "out_of_scope": [
+      "new statistical models beyond AR/robust GLM",
+      "UI/reporting changes",
+      "cross-package API redesign outside fmrireg/fmriAR adapter boundaries"
+    ]
+  },
+  "pathways": [
+    {
+      "name": "Runwise Fast/Integrated",
+      "trace": [
+        "fmri_lm()",
+        "fmri_lm_fit()",
+        "runwise_lm()",
+        "process_run_integrated()",
+        "solve_integrated_glm()",
+        "iterative_ar_solve()",
+        ".iterative_ar_gls_via_fmriAR()",
+        ".estimate_ar_via_fmriAR()",
+        ".apply_ar_whitening_via_fmriAR()",
+        "robust_iterative_fitter()",
+        "fit_lm_contrasts_fast()"
+      ],
+      "primary_files": [
+        "R/fmrilm.R",
+        "R/fmri_lm_runwise_integrated.R",
+        "R/fmri_lm_integrated_solver.R",
+        "R/fmri_lm_ar_integration.R",
+        "R/fmriAR_adapter.R",
+        "R/fmri_robust_fitting.R",
+        "R/con_stats.R"
+      ]
+    },
+    {
+      "name": "Chunkwise Fast",
+      "trace": [
+        "fmri_lm()",
+        "fmri_lm_fit()",
+        "chunkwise_lm.fmri_dataset()",
+        "chunkwise_lm_fast()",
+        "prepare_chunkwise_matrices()",
+        "process_chunk()",
+        "solve_glm_core()",
+        "fit_lm_contrasts_fast()"
+      ],
+      "primary_files": [
+        "R/fmri_lm_chunkwise.R",
+        "R/fmri_lm_strategies.R",
+        "R/fmri_lm_solver.R",
+        "R/con_stats.R"
+      ]
+    }
+  ],
+  "bottlenecks": [
+    {
+      "id": "B1",
+      "summary": "Fixed-order AR estimation loops over voxels and repeatedly estimates AR coefficients.",
+      "evidence": {
+        "code": [
+          "R/fmriAR_adapter.R:162",
+          "R/fmriAR_adapter.R:188",
+          "R/fmriAR_adapter.R:195",
+          "R/fmriAR_adapter.R:294",
+          "R/fmriAR_adapter.R:307"
+        ],
+        "profile": "Runwise AR+robust profile: .estimate_ar_via_fmriAR/.estimate_phi_fixed_order/estimate_ar_parameters dominated total time (~93%/~93%/~80% by total in sampled run)."
+      },
+      "impact": "High runtime cost as voxel count and AR iterations grow.",
+      "optimization_candidates": [
+        "Replace per-voxel loop with one fmriAR estimation pass per run/pool and derive pooled phi without repeated estimate_ar_parameters calls.",
+        "Use cached residual summaries or vectorized Yule-Walker implementation when fixed order is requested."
+      ]
+    },
+    {
+      "id": "B2",
+      "summary": "solve_glm_core always materializes fitted and residual matrices, increasing memory traffic.",
+      "evidence": {
+        "code": [
+          "R/fmri_lm_solver.R:38",
+          "R/fmri_lm_solver.R:39",
+          "R/fmri_lm_solver.R:40"
+        ],
+        "profile": "Chunkwise AR+robust profile: solve_glm_core/%*% dominated self time (~60% total for solve_glm_core, ~37% self for %*%)."
+      },
+      "impact": "High peak memory and matrix multiply cost for large V.",
+      "optimization_candidates": [
+        "Add an RSS-only execution mode in solve_glm_core to skip fitted/residual allocation when not required.",
+        "Introduce blockwise residual accumulation for very large voxel matrices."
+      ]
+    },
+    {
+      "id": "B3",
+      "summary": "Repeated whitening calls in chunkwise processing rebuild transforms for each chunk.",
+      "evidence": {
+        "code": [
+          "R/fmri_lm_strategies.R:696",
+          "R/fmri_lm_strategies.R:713",
+          "R/fmri_lm_strategies.R:759"
+        ],
+        "profile": "Chunkwise profile shows repeated whiten/apply costs (fmriAR::whiten_apply and arma_whiten_inplace)."
+      },
+      "impact": "Moderate runtime overhead; worsens with chunk count.",
+      "optimization_candidates": [
+        "Cache and reuse run-level whitening operators/plans across chunks.",
+        "Fuse run-segment transforms to reduce repeated overhead."
+      ]
+    },
+    {
+      "id": "B4",
+      "summary": "Repeated model matrix construction and term extraction in precompute passes.",
+      "evidence": {
+        "code": [
+          "R/fmrilm.R:813",
+          "R/fmrilm.R:835",
+          "R/fmri_lm_strategies.R:581",
+          "R/fmri_lm_strategies.R:604"
+        ]
+      },
+      "impact": "Moderate overhead for many runs.",
+      "optimization_candidates": [
+        "Cache per-run X matrices once per fit.",
+        "Avoid repeated term_matrices/model.matrix calls where run design is invariant."
+      ]
+    }
+  ],
+  "correctness_issues": [
+    {
+      "id": "C1",
+      "summary": "Fixed AR coefficients were not consistently propagated to integrated AR pathways.",
+      "status": "resolved",
+      "fix_refs": [
+        "R/fmri_lm_integrated_solver.R:56",
+        "R/fmri_lm_integrated_solver.R:166",
+        "R/fmri_lm_runwise_integrated.R:23",
+        "R/fmri_lm_ar_integration.R:166"
+      ],
+      "tests": [
+        "tests/testthat/test_glm_regressions_and_routing.R:21"
+      ]
+    },
+    {
+      "id": "C2",
+      "summary": "Fixed robust sigma (global scale) was not consistently honored by integrated robust pipelines.",
+      "status": "resolved",
+      "fix_refs": [
+        "R/fmri_lm_integrated_solver.R:142",
+        "R/fmri_lm_integrated_solver.R:198",
+        "R/fmri_lm_runwise_integrated.R:30"
+      ],
+      "tests": [
+        "tests/testthat/test_glm_regressions_and_routing.R:1"
+      ]
+    },
+    {
+      "id": "C3",
+      "summary": "process_run_integrated used inconsistent df field names and scalarized contrast variance.",
+      "status": "resolved",
+      "fix_refs": [
+        "R/fmri_lm_runwise_integrated.R:55",
+        "R/fmri_lm_runwise_integrated.R:68",
+        "R/fmri_lm_runwise_integrated.R:90"
+      ],
+      "tests": [
+        "tests/testthat/test_glm_regressions_and_routing.R:46",
+        "tests/testthat/test_glm_regressions_and_routing.R:67"
+      ]
+    },
+    {
+      "id": "C4",
+      "summary": "Chunkwise robust weights for stats were misaligned by averaging across runs instead of preserving row order.",
+      "status": "resolved",
+      "fix_refs": [
+        "R/fmri_lm_chunkwise.R:154"
+      ],
+      "tests": [
+        "tests/testthat/test_glm_regressions_and_routing.R"
+      ]
+    },
+    {
+      "id": "C5",
+      "summary": "coef(..., include_baseline=TRUE) could fail with pooled multi-run dimname mismatch.",
+      "status": "resolved",
+      "fix_refs": [
+        "R/fmrilm.R:1126"
+      ],
+      "tests": [
+        "tests/testthat/test_glm_regressions_and_routing.R:97"
+      ]
+    },
+    {
+      "id": "C6",
+      "summary": "AR effective-df expectation mismatch and fmriAR::compat plan warnings remain in fmriAR integration tests.",
+      "status": "resolved",
+      "refs": [
+        "tests/testthat/test_fmriAR_integration.R:120",
+        "R/fmriAR_adapter.R:484"
+      ],
+      "notes": "Harmonized tests to adapter's ACF-based effective-n contract and removed compat plan warnings in integration tests."
+    },
+    {
+      "id": "C7",
+      "summary": "robust_iterative_fitter computes and returns sigma_robust from final residuals even when sigma_fixed is provided; scale_scope is currently not used to alter estimator behavior.",
+      "status": "resolved",
+      "refs": [
+        "R/fmri_robust_fitting.R:53",
+        "R/fmri_robust_fitting.R:82",
+        "R/fmri_robust_fitting.R:123"
+      ],
+      "notes": "Implemented explicit run/global/voxel scale behavior, sigma_fixed-consistent reporting, and propagated voxel scale components through robust solver pathways."
+    }
+  ],
+  "ar_routing_policy": {
+    "requirement": "All production AR estimation and whitening pathways must execute through fmriAR adapter calls.",
+    "current_state": "mostly_enforced",
+    "evidence": [
+      "tests/testthat/test_glm_regressions_and_routing.R:225",
+      "tests/testthat/test_glm_regressions_and_routing.R:273",
+      "tests/testthat/test_glm_regressions_and_routing.R:322",
+      "tests/testthat/test_glm_regressions_and_routing.R:349"
+    ],
+    "remaining_gaps": [
+      "Voxelwise branch in R/fmrilm.R still calls estimate_ar_parameters directly (intentional for voxel-specific AR mode).",
+      "Legacy fallback remains opt-in via options (fmrireg.ar.fixed_order_legacy_fallback and fmrireg.ar.nonvoxel_legacy_fallback) for resilience."
+    ]
+  },
+  "workstreams": [
+    {
+      "id": "W1",
+      "name": "AR Routing and Estimation Throughput",
+      "deliverables": [
+        "Refactor fixed-order AR estimation to avoid per-voxel loop in .estimate_phi_fixed_order.",
+        "Guarantee fmriAR-based estimation/whitening in all non-fallback production paths.",
+        "Add adapter-level telemetry counters for fit_noise/whiten_apply calls in debug mode."
+      ],
+      "acceptance_criteria": [
+        "No direct stats::ar calls in active production pathways when fmriAR is installed.",
+        "On benchmark dataset (n=480, V=1200, 3 runs, ar1 iter_gls=3), AR estimation stage runtime reduced by >=40% relative to current baseline.",
+        "Routing test asserts fit_noise and whiten_apply are called for runwise and chunkwise AR paths."
+      ]
+    },
+    {
+      "id": "W2",
+      "name": "Core Solve Memory/Compute Efficiency",
+      "deliverables": [
+        "Add RSS-only mode to solve_glm_core and wire callers that do not need fitted/residual outputs.",
+        "Introduce optional blockwise residual/RSS computation path for large voxel matrices."
+      ],
+      "acceptance_criteria": [
+        "On benchmark dataset (same as above), peak memory reduced by >=25%.",
+        "Total wall time reduced by >=20% for runwise AR+robust and >=15% for chunkwise AR+robust.",
+        "Numerical parity for betas and inferential stats within tolerance 1e-8 against baseline implementation."
+      ]
+    },
+    {
+      "id": "W3",
+      "name": "Robust Scale Correctness",
+      "deliverables": [
+        "Define and implement scale_scope semantics (global/run/voxel) consistently in robust_iterative_fitter.",
+        "If sigma_fixed is supplied, enforce return semantics explicitly (report fixed scale or both fixed/apparent scales).",
+        "Document behavior in fmri_lm_control and man pages."
+      ],
+      "acceptance_criteria": [
+        "Dedicated tests validate each scale_scope mode and sigma_fixed behavior.",
+        "No regressions in existing robust and AR+robust suites.",
+        "Returned sigma fields are unambiguous and consistent across solver pathways."
+      ]
+    },
+    {
+      "id": "W4",
+      "name": "Effective DF Harmonization",
+      "deliverables": [
+        "Resolve formula expectation mismatch for AR effective df and update tests/docs.",
+        "Normalize fmriAR compat plan construction to avoid warnings when theta is omitted."
+      ],
+      "acceptance_criteria": [
+        "tests/testthat/test_fmriAR_integration.R passes with zero failures and warning count reduced to 0 for plan_from_phi usage.",
+        "Documented effective-df formula and rationale in code comments and test expectations."
+      ]
+    }
+  ],
+  "test_plan": {
+    "regression_tests_required": [
+      "devtools::test(filter = 'glm_regressions_and_routing')",
+      "devtools::test(filter = 'ar_glm_integration|ar_robust_combined|runwise_rankdef')",
+      "devtools::test(filter = 'fmriAR_integration')"
+    ],
+    "new_tests_to_add": [
+      {
+        "name": "test_ar_routing_chunkwise_fmriAR",
+        "purpose": "Verify chunkwise AR path routes through fmriAR fit_noise/whiten_apply."
+      },
+      {
+        "name": "test_robust_scale_scope_semantics",
+        "purpose": "Validate global/run/voxel scale_scope behavior and sigma_fixed return semantics."
+      },
+      {
+        "name": "test_solve_glm_core_rss_only_parity",
+        "purpose": "Ensure optimized RSS-only mode matches current residual-based RSS/sigma2 output."
+      },
+      {
+        "name": "test_effective_df_formula_contract",
+        "purpose": "Pin expected AR effective-df calculation against documented formula and multi-run phi inputs."
+      },
+      {
+        "name": "test_ar_fixed_order_vectorized_parity",
+        "purpose": "Ensure vectorized AR estimation path matches baseline phi estimates within tolerance."
+      }
+    ],
+    "performance_benchmarks": [
+      "Add reproducible benchmark script under bench/ for runwise and chunkwise AR+robust workloads.",
+      "Track wall time, peak RSS, and top-profile frames before/after optimization."
+    ]
+  },
+  "already_completed_in_this_cycle": [
+    "Propagated phi_fixed and sigma_fixed through integrated solver pathways.",
+    "Made iterative_ar_solve honor fixed phi directly without re-estimation loop.",
+    "Fixed process_run_integrated df/sigma/contrast variance handling.",
+    "Fixed pooled coefficient naming for include_baseline=TRUE.",
+    "Aligned chunkwise robust weights to global row order.",
+    "Added targeted regression/routing tests in tests/testthat/test_glm_regressions_and_routing.R.",
+    "Reworked fixed-order AR estimation to perform one fmriAR fit per run/pool block (eliminating per-voxel estimate loop on the hot path).",
+    "Added a memory-lean RSS path in solve_glm_core for callers that do not require fitted matrices.",
+    "Added chunkwise fmriAR routing regression coverage and solve_glm_core RSS parity regression coverage.",
+    "Resolved fmriAR integration effective-df mismatch and plan_from_phi warning failures.",
+    "Implemented robust scale scope semantics (run/global/voxel), including local alias normalization and voxel-scale propagation through robust/integrated pathways."
+    ,
+    "Disabled legacy fixed-order per-voxel AR fallback by default (configurable via option) to keep production AR processing on fmriAR-routed fast path.",
+    "Added benchmark harness at bench/glm_efficiency_benchmark.R to quantify runwise/chunkwise AR+robust timing and legacy fallback overhead.",
+    "Rerouted remaining non-voxelwise AR estimation calls in R/fmri_lm_strategies.R to .estimate_ar_parameters_routed.",
+    "Rerouted non-voxelwise AR estimation calls in R/fmri_lm_engine_lowrank.R to .estimate_ar_parameters_routed.",
+    "Updated non-voxelwise router in R/fmrilm.R to default to zero-AR fallback (no legacy estimator) unless explicit legacy opt-in is enabled.",
+    "Added regression tests for non-voxelwise fallback contract and legacy opt-in behavior.",
+    "Removed redundant initial solve in iterative_ar_solve for AR-enabled paths and added AR-coefficient convergence early-stop in iterative AR GLS.",
+    "Optimized robust_iterative_fitter to use RSS-only solves throughout IRLS and added tolerance/min_iter early stopping for robust coefficient convergence.",
+    "Updated fixed-order fmriAR estimation to force ARMA(p,0) fixed-order coefficients, preventing unintended order-0 selection in the fast routed path.",
+    "Hardened benchmark harness to load local source via pkgload::load_all and report repeat-based median/mean/sd metrics (with warmup and raw outputs).",
+    "Removed redundant second whitening pass in solve_ar_robust_pipeline by reusing iterative_ar_solve whitened matrices directly.",
+    "Added regression test asserting integrated AR+robust whitening calls equal iter_gls (no redundant extra whitening).",
+    "Added iterative_ar_solve return_solution=FALSE path so AR+robust pipeline can reuse AR-whitened matrices without paying for an unnecessary final GLS solve.",
+    "Increased AR iteration early-stop default tolerance and enforced a minimum AR iteration count before convergence checks to improve runwise throughput while preserving stability.",
+    "Enabled fmriAR adapter whitening in parallel mode by default (configurable via fmrireg.ar.parallel_whiten option).",
+    "Relaxed redundant-whitening regression test assertion to allow adaptive early stopping (whitening calls in [1, iter_gls]).",
+    "Implemented representative-voxel subset AR updates in .iterative_ar_gls_via_fmriAR, with full-data whitening deferred to a single final pass.",
+    "Reduced default representative AR update subset to 64 voxels (configurable via fmrireg.ar.estimation_max_vox).",
+    "Added regression coverage proving subset whitening occurs in intermediate AR iterations before the final full-data whitening pass.",
+    "Optimized chunkwise process_chunk by replacing per-run list+rbind assembly with in-place preallocated matrix assignment for transformed Y.",
+    "Reduced hot-loop weighting overhead by replacing sweep-based row scaling with direct vectorized multiplication in chunkwise and robust IRLS paths.",
+    "Cached per-run zero-column dummy design matrices in chunkwise precomputation to avoid repeated per-chunk allocations during AR whitening.",
+    "Added regression coverage to validate robust-only chunk row mapping/parity after in-place chunk assembly optimization.",
+    "Stabilized flaky leverage-point robust convergence test with deterministic seed."
+  ],
+  "latest_benchmark_results": {
+    "script": "bench/glm_efficiency_benchmark.R",
+    "timestamp_local": "2026-02-16",
+    "methodology": "local source benchmark via pkgload::load_all, warmup + repeated runs, median/mean/sd reporting",
+    "config": {
+      "n_runs": 3,
+      "run_len": 160,
+      "n_vox": 1200,
+      "ar_options": {
+        "struct": "ar1",
+        "iter_gls": 3
+      },
+      "robust_options": {
+        "type": "huber",
+        "max_iter": 5,
+        "scale_scope": "run"
+      },
+      "n_reps": 10,
+      "warmup": 1
+    },
+    "comparison_to_prior_local_10rep": {
+      "runwise_legacy_false": {
+        "before_median_sec": 0.134,
+        "after_median_sec": 0.0665,
+        "improvement_pct": 50.37
+      },
+      "chunkwise_legacy_false": {
+        "before_median_sec": 0.0945,
+        "after_median_sec": 0.0835,
+        "improvement_pct": 11.64
+      }
+    },
+    "comparison_to_prior_pass": {
+      "runwise_legacy_false": {
+        "before_median_sec": 0.069,
+        "after_median_sec": 0.0665,
+        "improvement_pct": 3.62
+      }
+    },
+    "results": [
+      {
+        "strategy": "runwise",
+        "legacy_fallback": false,
+        "elapsed_sec_median": 0.0665
+      },
+      {
+        "strategy": "runwise",
+        "legacy_fallback": true,
+        "elapsed_sec_median": 0.066
+      },
+      {
+        "strategy": "chunkwise",
+        "legacy_fallback": false,
+        "elapsed_sec_median": 0.0835
+      },
+      {
+        "strategy": "chunkwise",
+        "legacy_fallback": true,
+        "elapsed_sec_median": 0.084
+      }
+    ]
+  },
+  "release_criteria": [
+    "All acceptance criteria across W1-W4 satisfied.",
+    "No failing tests in targeted regression suites.",
+    "Benchmark report committed with baseline vs optimized metrics.",
+    "AR routing policy validated in CI for runwise and chunkwise production paths."
+  ]
+}

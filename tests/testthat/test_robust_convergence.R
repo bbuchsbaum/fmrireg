@@ -378,6 +378,7 @@ test_that("global vs local scale estimation in extreme cases", {
 })
 
 test_that("leverage points (X-space outliers) are handled", {
+  set.seed(4243)
   n <- 100
   p <- 3
   

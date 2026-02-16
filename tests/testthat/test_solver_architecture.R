@@ -65,6 +65,7 @@ test_that("solve_glm_core handles weighted least squares", {
 })
 
 test_that("solve_glm_core integrates with AR whitening", {
+  set.seed(4242)
   # Generate AR(1) data
   n <- 100
   ar_coef <- 0.7
@@ -129,6 +130,7 @@ test_that("solve_glm_core handles rank deficient matrices", {
 })
 
 test_that("iterative AR+Robust pipeline works", {
+  set.seed(4242)
   # Data with both autocorrelation and outliers
   n <- 100
   X <- cbind(1, rnorm(n))
