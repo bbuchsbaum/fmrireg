@@ -28,7 +28,7 @@
 #'   * `k_huber`
 #'   * `c_tukey`
 #'   * `max_iter`
-#'   * `scale_scope` ("run", "global")
+#'   * `scale_scope` ("run", "global", "voxel")
 #'   * `reestimate_phi` (logical)
 #'
 #' `ar_options` may contain:
@@ -38,6 +38,8 @@
 #'   * `global` (logical, use global phi)
 #'   * `voxelwise` (logical)
 #'   * `exact_first` (logical)
+#'   * `censor` (integer vector of timepoints to exclude from AR estimation,
+#'     logical vector where TRUE = censored, or "auto" to extract from dataset)
 #'
 #' `volume_weights_options` may contain:
 #'   * `enabled` (logical, whether to compute and apply volume weights)
@@ -81,7 +83,8 @@ fmri_lm_control <- function(robust_options = list(),
     stop("Invalid robust_psi/type. Must be one of: FALSE, 'huber', 'bisquare'")
   })
   if (identical(robust$type, "FALSE")) robust$type <- FALSE
-  robust$scale_scope <- match.arg(robust$scale_scope, c("run", "global"))
+  robust$scale_scope <- match.arg(robust$scale_scope, c("run", "global", "voxel", "local"))
+  if (identical(robust$scale_scope, "local")) robust$scale_scope <- "voxel"
   stopifnot(is.numeric(robust$k_huber), is.numeric(robust$c_tukey))
   stopifnot(is.numeric(robust$max_iter))
   # Check max_iter even if robust is FALSE - parameter validation should always occur
@@ -97,7 +100,8 @@ fmri_lm_control <- function(robust_options = list(),
     iter_gls = 1L,
     global = FALSE,
     voxelwise = FALSE,
-    exact_first = FALSE
+    exact_first = FALSE,
+    censor = NULL
   )
   ar <- utils::modifyList(default_ar, ar_options)
 
@@ -111,6 +115,15 @@ fmri_lm_control <- function(robust_options = list(),
   stopifnot(is.logical(ar$global), length(ar$global) == 1)
   stopifnot(is.logical(ar$voxelwise), length(ar$voxelwise) == 1)
   stopifnot(is.logical(ar$exact_first), length(ar$exact_first) == 1)
+  # Validate censor: NULL, "auto", integer vector, or logical vector
+
+  if (!is.null(ar$censor)) {
+    if (is.character(ar$censor)) {
+      ar$censor <- match.arg(ar$censor, "auto")
+    } else if (!is.numeric(ar$censor) && !is.logical(ar$censor)) {
+      stop("ar_options$censor must be NULL, 'auto', an integer vector, or a logical vector")
+    }
+  }
 
   # defaults for volume weighting
   default_volume_weights <- list(

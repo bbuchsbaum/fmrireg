@@ -158,7 +158,7 @@
       sizes[as.character(g)] <- length(Jg)
     }
     # Global phi for shrinkage
-    phi_global <- estimate_ar_parameters(unlist(res_per_group, use.names = FALSE), ar_order)
+    phi_global <- .estimate_ar_parameters_routed(unlist(res_per_group, use.names = FALSE), ar_order)
     # Second pass: whiten, sketch, accumulate
     plan <- if (identical(sk$method, "srht") || identical(sk$method, "ihs")) make_srht_plan(Tlen, sk$m) else NULL
     phi_groups <- vector("list", length(ug))
@@ -168,7 +168,7 @@
       if (length(Jg) == 0) next
       resid_g <- res_per_group[[as.character(g)]]
       alpha_g <- sizes[as.character(g)]/(sizes[as.character(g)] + shrink_c0)
-      phi_g_raw <- estimate_ar_parameters(resid_g, ar_order)
+      phi_g_raw <- .estimate_ar_parameters_routed(resid_g, ar_order)
       phi_g <- alpha_g * phi_g_raw + (1 - alpha_g) * phi_global
       phi_groups[[as.character(g)]] <- phi_g
       # Whiten group
@@ -207,7 +207,7 @@
         ybar_g <- rowMeans(Z[, Jg, drop = FALSE])
         beta_g <- Pinv %*% ybar_g
         resid_g <- ybar_g - drop(X %*% beta_g)
-        phi_g <- estimate_ar_parameters(resid_g, ar_order)
+        phi_g <- .estimate_ar_parameters_routed(resid_g, ar_order)
       }
       tmp <- ar_whiten_transform(X, Z[, Jg, drop = FALSE], phi_g, exact_first = exact_first)
       Xw_g <- tmp$X; Zw_g <- tmp$Y
@@ -237,7 +237,7 @@
     Pinv <- tryCatch(chol2inv(chol(XtX)) %*% t(X), error = function(e) MASS::ginv(XtX) %*% t(X))
     beta <- Pinv %*% ybar
     resid <- ybar - drop(X %*% beta)
-    phi <- estimate_ar_parameters(resid, ar_order)
+    phi <- .estimate_ar_parameters_routed(resid, ar_order)
 
     if (iter_gls > 1L) {
       phi_current <- phi
@@ -251,7 +251,7 @@
                                   error = function(e) MASS::ginv(XtX_iter))
           beta_iter <- XtXinv_iter %*% crossprod(Xw, Zw)
           resid_iter <- rowMeans(Zw - Xw %*% beta_iter)
-          phi_current <- estimate_ar_parameters(resid_iter, ar_order)
+          phi_current <- .estimate_ar_parameters_routed(resid_iter, ar_order)
         }
       }
       phi <- phi_current
@@ -269,7 +269,9 @@
         L <- as.integer(lowrank$landmarks)
         mask <- fmridataset::get_mask(dataset)
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
-        km <- stats::kmeans(coords, centers = L, iter.max = 1000, nstart = 5)
+        km_iter <- as.integer(lowrank$kmeans_iter_max %||% 1000L)
+        km_nstart <- as.integer(lowrank$kmeans_nstart %||% 10L)
+        km <- stats::kmeans(coords, centers = L, iter.max = km_iter, nstart = km_nstart)
         idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
         lcoords <- coords[idx_lm, , drop = FALSE]
         # Solve only on landmarks
@@ -307,7 +309,9 @@
         L <- as.integer(lowrank$landmarks)
         mask <- fmridataset::get_mask(dataset)
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
-        km <- stats::kmeans(coords, centers = L, iter.max = 1000, nstart = 5)
+        km_iter <- as.integer(lowrank$kmeans_iter_max %||% 1000L)
+        km_nstart <- as.integer(lowrank$kmeans_nstart %||% 10L)
+        km <- stats::kmeans(coords, centers = L, iter.max = km_iter, nstart = km_nstart)
         idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
         lcoords <- coords[idx_lm, , drop = FALSE]
         Zs_L <- srht_apply(Zw[, idx_lm, drop = FALSE], plan)
@@ -347,7 +351,9 @@
         L <- as.integer(lowrank$landmarks)
         mask <- fmridataset::get_mask(dataset)
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
-        km <- stats::kmeans(coords, centers = L, iter.max = 1000, nstart = 5)
+        km_iter <- as.integer(lowrank$kmeans_iter_max %||% 1000L)
+        km_nstart <- as.integer(lowrank$kmeans_nstart %||% 10L)
+        km <- stats::kmeans(coords, centers = L, iter.max = km_iter, nstart = km_nstart)
         idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
         lcoords <- coords[idx_lm, , drop = FALSE]
         Zs_L <- S %*% Zw[, idx_lm, drop = FALSE]
@@ -387,7 +393,9 @@
         L <- as.integer(lowrank$landmarks)
         mask <- fmridataset::get_mask(dataset)
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
-        km <- stats::kmeans(coords, centers = L, iter.max = 1000, nstart = 5)
+        km_iter <- as.integer(lowrank$kmeans_iter_max %||% 1000L)
+        km_nstart <- as.integer(lowrank$kmeans_nstart %||% 10L)
+        km <- stats::kmeans(coords, centers = L, iter.max = km_iter, nstart = km_nstart)
         idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
         lcoords <- coords[idx_lm, , drop = FALSE]
         Zs_L <- as.matrix(S %*% Zw[, idx_lm, drop = FALSE])

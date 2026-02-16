@@ -1,43 +1,40 @@
-context("runwise_lm rank deficiency")
+test_that("runwise_lm handles rank deficiency gracefully", {
+  options(mc.cores = 1)
 
-options(mc.cores=1)
+  set.seed(123)
 
-library(testthat)
-library(fmrireg)
+  sframe <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 1)
 
-set.seed(123)
+  # simple event table with one event per run
+  etab <- data.frame(onset = c(1, 1),
+                     condition = factor(c("A", "A")),
+                     run = c(1, 2))
 
-sframe <- fmrihrf::sampling_frame(blocklens = c(10,10), TR = 1)
+  Y <- matrix(rnorm(sum(fmrihrf::blocklens(sframe)) * 2),
+              sum(fmrihrf::blocklens(sframe)), 2)
 
-# simple event table with one event per run
-etab <- data.frame(onset = c(1,1),
-                   condition = factor(c("A","A")),
-                   run = c(1,2))
+  dset <- matrix_dataset(Y, TR = 1,
+                         run_length = fmrihrf::blocklens(sframe),
+                         event_table = etab)
 
-Y <- matrix(rnorm(sum(fmrihrf::blocklens(sframe)) * 2),
-            sum(fmrihrf::blocklens(sframe)), 2)
+  espec <- event_model(onset ~ hrf(condition), data = etab,
+                       block = ~run, sampling_frame = sframe)
 
-dset <- matrix_dataset(Y, TR = 1,
-                       run_length = fmrihrf::blocklens(sframe),
-                       event_table = etab)
+  # nuisance columns duplicate the runwise intercept
+  nlist <- list(matrix(1, 10, 1), matrix(1, 10, 1))
+  bspec <- baseline_model(basis = "poly", degree = 1,
+                          sframe = sframe, intercept = "runwise",
+                          nuisance_list = nlist)
 
-espec <- event_model(onset ~ hrf(condition), data = etab,
-                     block = ~run, sampling_frame = sframe)
+  fmod <- fmri_model(espec, bspec, dset)
 
-# nuisance columns duplicate the runwise intercept
-nlist <- list(matrix(1,10,1), matrix(1,10,1))
-bspec <- baseline_model(basis = "poly", degree = 1,
-                        sframe = sframe, intercept = "runwise",
-                        nuisance_list = nlist)
+  expect_warning(
+    fit <- fmri_lm(onset ~ hrf(condition), block = ~run,
+                   dataset = dset, baseline_model = bspec,
+                   strategy = "runwise", use_fast_path = TRUE),
+    regexp = "rank deficient"
+  )
 
-fmod <- fmri_model(espec, bspec, dset)
-
-expect_warning(
-  fit <- fmri_lm(onset ~ hrf(condition), block = ~run,
-                 dataset = dset, baseline_model = bspec,
-                 strategy = "runwise", use_fast_path = TRUE),
-  regexp = "rank deficient"
-)
-
-# cov.unscaled should keep column names
-expect_equal(colnames(fit$result$cov.unscaled), colnames(design_matrix(fmod)))
+  # cov.unscaled should keep column names
+  expect_equal(colnames(fit$result$cov.unscaled), colnames(design_matrix(fmod)))
+})

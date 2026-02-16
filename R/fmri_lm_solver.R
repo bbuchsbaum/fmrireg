@@ -33,14 +33,18 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
   }
 
   betas <- proj$Pinv %*% Y
-  
-  # Always compute fitted values for numerical stability
-  fitted <- X %*% betas
-  residuals <- Y - fitted
-  rss <- colSums(residuals^2)
-  
-  # Return fitted only if requested
-  if (!return_fitted) {
+
+  if (return_fitted) {
+    fitted <- X %*% betas
+    residuals <- Y - fitted
+    rss <- colSums(residuals^2)
+  } else {
+    # Memory-lean path: avoid allocating n x V fitted/residual matrices when
+    # only RSS/sigma2 are needed.
+    XtY <- crossprod(X, Y)
+    yTy <- colSums(Y * Y)
+    rss <- yTy - colSums(betas * XtY)
+    rss <- pmax(rss, 0)
     fitted <- NULL
   }
 

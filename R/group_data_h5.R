@@ -149,8 +149,7 @@ read_h5_metadata <- function(path) {
     on.exit({
       try(h5_handle$close_all(), silent = TRUE)
       try(h5_handle$close(), silent = TRUE)
-      try(fmristore::close_all(h5_handle), silent = TRUE)
-      try(fmristore::close(h5_handle), silent = TRUE)
+      try(close(h5_handle), silent = TRUE)
     }, add = TRUE)
 
     # Legacy list-like handle with $ fields
@@ -175,9 +174,9 @@ read_h5_metadata <- function(path) {
         if ("mask_dim" %in% sn) mask_dim <- get_slot("mask_dim")
       }
       # Fallback to potential accessor generics if available
-      if (is.null(dim_val)) dim_val <- try(fmristore::dim(h5_handle), silent = TRUE)
-      if (is.null(labels_val)) labels_val <- try(fmristore::labels(h5_handle), silent = TRUE)
-      if (is.null(mask_val)) mask_val <- try(fmristore::mask(h5_handle), silent = TRUE)
+      if (is.null(dim_val)) dim_val <- try(dim(h5_handle), silent = TRUE)
+      if (is.null(labels_val)) labels_val <- try(labels(h5_handle), silent = TRUE)
+      if (is.null(mask_val)) mask_val <- tryCatch(get_mask(h5_handle), error = function(e) NULL)
 
       if (!inherits(dim_val, "try-error") && !inherits(labels_val, "try-error") && !is.null(dim_val) && !is.null(labels_val)) {
         return(list(

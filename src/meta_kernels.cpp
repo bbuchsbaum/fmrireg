@@ -109,7 +109,7 @@ inline double tau2_DL(const mat& X, const vec& y, const vec& v) {
 
   double num = Q0 - df;
   double tau2 = (denom > 0.0) ? std::max(0.0, num / denom) : 0.0;
-  if (!arma::is_finite(tau2)) tau2 = 0.0;
+  if (!std::isfinite(tau2)) tau2 = 0.0;
   return tau2;
 }
 
@@ -124,13 +124,13 @@ inline double tau2_PM(const mat& X, const vec& y, const vec& v,
 
   vec beta_hat;
   double f0 = Q_tau2(X, y, v, 0.0, beta_hat) - df;
-  if (!arma::is_finite(f0) || f0 <= 0.0) return 0.0;
+  if (!std::isfinite(f0) || f0 <= 0.0) return 0.0;
 
   // Find upper bound
   double tau_lo = 0.0, tau_hi = std::max(1.0, 1000.0 * median(v));
   for (int k = 0; k < 20; ++k) {
     double fhi = Q_tau2(X, y, v, tau_hi, beta_hat) - df;
-    if (!arma::is_finite(fhi)) tau_hi *= 2.0; // try larger
+    if (!std::isfinite(fhi)) tau_hi *= 2.0; // try larger
     else if (fhi <= 0.0) break;
     else tau_hi *= 2.0;
     if (tau_hi > 1e12) break;
@@ -138,17 +138,17 @@ inline double tau2_PM(const mat& X, const vec& y, const vec& v,
 
   // Bisection
   double a = tau_lo, b = tau_hi, fb = Q_tau2(X, y, v, b, beta_hat) - df;
-  if (!arma::is_finite(fb)) fb = -1.0; // force progress
+  if (!std::isfinite(fb)) fb = -1.0; // force progress
   double mid = a;
   bool converged = false;
   for (int it = 0; it < max_iter; ++it) {
     mid = 0.5 * (a + b);
     double fm = Q_tau2(X, y, v, mid, beta_hat) - df;
-    if (!arma::is_finite(fm)) { a = mid; continue; }
+    if (!std::isfinite(fm)) { a = mid; continue; }
     if (std::fabs(fm) < tol) { converged = true; break; }
     if (fm > 0.0) { a = mid; } else { b = mid; fb = fm; }
   }
-  if (!arma::is_finite(mid)) mid = 0.0;
+  if (!std::isfinite(mid)) mid = 0.0;
   if (mid < 0.0) mid = 0.0;
   if (!converged && warned_nonconverged != nullptr) {
     *warned_nonconverged = true;
@@ -226,7 +226,7 @@ MetaResult fit_one(const mat& Xfull, const vec& yfull, const vec& vfull,
     tau2 = tau2_PM(X, y, v, 1e-6, 50, &pm_warn);
     out.pm_nonconverged = pm_warn;
   }
-  if (!arma::is_finite(tau2) || tau2 < 0.0) tau2 = 0.0;
+  if (!std::isfinite(tau2) || tau2 < 0.0) tau2 = 0.0;
 
   // Base weights
   vec w = 1.0 / (v + tau2);
@@ -407,7 +407,7 @@ Rcpp::List meta_fit_contrasts_cpp(const arma::mat& Y,      // S x P
       vec cw = Cmat.col(c);
       double est = dot(cw, res.beta);
       double varc = as_scalar(cw.t() * res.invXtWX * cw);
-      double sec = (varc > 0.0 && arma::is_finite(varc)) ? std::sqrt(varc) : datum::nan;
+      double sec = (varc > 0.0 && std::isfinite(varc)) ? std::sqrt(varc) : datum::nan;
       double zc = (std::isfinite(sec) && sec > 0.0) ? (est / sec) : datum::nan;
       CB(c, j)  = est;
       CSE(c, j) = sec;

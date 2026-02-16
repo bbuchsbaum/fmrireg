@@ -58,7 +58,8 @@ solve_integrated_glm <- function(X, Y, config, run_indices = NULL) {
       cor_struct = config$ar$struct,
       iter = config$ar$iter_gls,
       exact_first = config$ar$exact_first,
-      p = config$ar$p
+      p = config$ar$p,
+      phi = config$ar$phi %||% config$ar$phi_fixed
     )
   } else {
     config$ar_options
@@ -142,13 +143,17 @@ solve_robust_pipeline <- function(glm_ctx, robust_options) {
     initial_glm_ctx = glm_ctx,
     cfg_robust_options = robust_config,
     X_orig_for_resid = glm_ctx$X,
-    sigma_fixed = NULL
+    sigma_fixed = robust_config$sigma_fixed %||% NULL
   )
+
+  sigma_scale <- robust_result$sigma_robust_scale_components %||%
+    robust_result$sigma_robust_scale_final
+  sigma2 <- as.numeric(sigma_scale)^2
   
   # Format output
   list(
     betas = robust_result$betas_robust,
-    sigma2 = robust_result$sigma_robust_scale_final^2,
+    sigma2 = sigma2,
     robust_weights = robust_result$robust_weights_final,
     XtXinv = robust_result$XtWXi_final,
     dfres = robust_result$dfres,
@@ -167,18 +172,29 @@ solve_ar_robust_pipeline <- function(glm_ctx, config, run_indices) {
       cor_struct = config$ar$struct,
       iter = config$ar$iter_gls,
       exact_first = config$ar$exact_first,
-      p = config$ar$p
+      p = config$ar$p,
+      phi = config$ar$phi %||% config$ar$phi_fixed
     )
   } else {
     config$ar_options
   }
   
   # Step 1: Iterative AR whitening
-  ar_result <- iterative_ar_solve(glm_ctx, ar_options, run_indices)
+  ar_result <- iterative_ar_solve(
+    glm_ctx,
+    ar_options,
+    run_indices,
+    return_solution = FALSE
+  )
   
-  # Step 2: Apply final AR whitening
-  glm_ctx$residuals <- glm_ctx$Y - ar_result$fitted
-  glm_ctx_white <- whiten_glm_context(glm_ctx, ar_options, run_indices)
+  # Step 2: Reuse final AR-whitened matrices from iterative_ar_solve.
+  # Avoid a redundant second whitening pass.
+  proj_white <- .fast_preproject(ar_result$X_white)
+  glm_ctx_white <- glm_context(
+    X = ar_result$X_white,
+    Y = ar_result$Y_white,
+    proj = proj_white
+  )
   
   # Step 3: Robust fitting on whitened data
   robust_config <- if (is.character(config$robust)) {
@@ -197,13 +213,17 @@ solve_ar_robust_pipeline <- function(glm_ctx, config, run_indices) {
     initial_glm_ctx = glm_ctx_white,
     cfg_robust_options = robust_config,
     X_orig_for_resid = glm_ctx_white$X,
-    sigma_fixed = NULL
+    sigma_fixed = robust_config$sigma_fixed %||% NULL
   )
+
+  sigma_scale <- robust_result$sigma_robust_scale_components %||%
+    robust_result$sigma_robust_scale_final
+  sigma2 <- as.numeric(sigma_scale)^2
   
   # Combine results
   list(
     betas = robust_result$betas_robust,
-    sigma2 = robust_result$sigma_robust_scale_final^2,
+    sigma2 = sigma2,
     robust_weights = robust_result$robust_weights_final,
     ar_coef = ar_result$ar_coef,
     XtXinv = robust_result$XtWXi_final,

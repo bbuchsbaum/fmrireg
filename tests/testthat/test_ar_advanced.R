@@ -173,6 +173,23 @@ test_that("compute_ar_effective_df adjusts degrees of freedom correctly", {
   # Test AR(1)
   n <- 100
   p <- 5
+  expected_eff_df <- function(phi, penalize_ar = FALSE) {
+    if (is.null(phi) || length(phi) == 0L) return(n - p)
+    rho <- if (length(phi) == 1L) {
+      phi[1]^(seq_len(n - 1L))
+    } else {
+      stats::ARMAacf(ar = phi, ma = numeric(0), lag.max = n - 1L)[-1]
+    }
+    k <- seq_along(rho)
+    denom <- 1 + 2 * sum((1 - k / n) * rho)
+    eff_n <- n / denom
+    eff_n <- min(max(eff_n, p + 1), n)
+    df <- max(eff_n - p, 1)
+    if (isTRUE(penalize_ar)) {
+      df <- max(df - length(phi), 1)
+    }
+    df
+  }
   
   # No AR
   df_no_ar <- fmrireg:::compute_ar_effective_df(n, p, NULL)
@@ -183,9 +200,7 @@ test_that("compute_ar_effective_df adjusts degrees of freedom correctly", {
   df_ar1 <- fmrireg:::compute_ar_effective_df(n, p, phi1)
   expect_true(df_ar1 < df_no_ar)
   expect_true(df_ar1 > 0)
-  # Standard formula: no AR penalty (following SPM/FSL/AFNI)
-  expected_df <- n * (1 - phi1^2) - p
-  expect_equal(df_ar1, expected_df)
+  expect_equal(df_ar1, expected_eff_df(phi1), tolerance = 1e-10)
   
   # Strong AR(1)
   phi1_strong <- 0.9
@@ -196,16 +211,14 @@ test_that("compute_ar_effective_df adjusts degrees of freedom correctly", {
   phi2 <- c(0.4, 0.3)
   df_ar2 <- fmrireg:::compute_ar_effective_df(n, p, phi2)
   expect_true(df_ar2 < df_no_ar)
-  # Standard formula: no AR penalty (following SPM/FSL/AFNI)
-  expected_df_ar2 <- n * (1 - sum(phi2^2)) - p
-  expect_equal(df_ar2, expected_df_ar2)
+  expect_equal(df_ar2, expected_eff_df(phi2), tolerance = 1e-10)
   
   # Test conservative mode with penalize_ar = TRUE
   df_ar1_conservative <- fmrireg:::compute_ar_effective_df(n, p, phi1, n_runs = 1, penalize_ar = TRUE)
-  expect_equal(df_ar1_conservative, n * (1 - phi1^2) - p - 1)  # Subtract AR order (1)
+  expect_equal(df_ar1_conservative, expected_eff_df(phi1, penalize_ar = TRUE), tolerance = 1e-10)
   
   df_ar2_conservative <- fmrireg:::compute_ar_effective_df(n, p, phi2, n_runs = 1, penalize_ar = TRUE)
-  expect_equal(df_ar2_conservative, n * (1 - sum(phi2^2)) - p - 2)  # Subtract AR order (2)
+  expect_equal(df_ar2_conservative, expected_eff_df(phi2, penalize_ar = TRUE), tolerance = 1e-10)
 })
 
 test_that("whiten_glm_context handles AR(3) and AR(4) models", {

@@ -1,8 +1,11 @@
 # Tests for write_results.fmri_lm BIDS export functionality
 
 library(testthat)
-library(neuroim2)
-library(fmridataset)
+library(fmrireg)
+# neuroim2 and fmridataset are imported by fmrireg; avoid explicit library()
+# which can cause namespace unload conflicts during R CMD check
+requireNamespace("neuroim2", quietly = TRUE)
+requireNamespace("fmridataset", quietly = TRUE)
 
 # Helper function to create minimal test dataset
 create_test_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50) {
@@ -139,6 +142,44 @@ test_that("write_results.fmri_lm handles contrast export strategies", {
   
   # Should have files for each contrast
   expect_true("A_vs_B" %in% names(result2))
+})
+
+test_that("write_results.fmri_lm exports gds outputs", {
+  skip_if_not_installed("fmrigds")
+  skip_if_not_installed("jsonlite")
+
+  mod <- create_test_fmri_lm()
+
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE), add = TRUE)
+
+  result <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    space = "MNI152",
+    format = "gds"
+  )
+
+  expect_true("gds" %in% names(result))
+  expect_true(file.exists(result$gds$h5))
+  expect_true(file.exists(result$gds$plan))
+
+  plan <- readRDS(result$gds$plan)
+  gd <- fmrigds::compute(plan)
+
+  assays_present <- names(fmrigds::assays(gd))
+  expect_true(all(c("beta", "var", "se") %in% assays_present))
+
+  beta_arr <- fmrigds::assay(gd, "beta")
+  beta_matrix <- beta_arr[, 1, , drop = FALSE]
+  dim(beta_matrix) <- c(dim(beta_arr)[1], dim(beta_arr)[3])
+  dimnames(beta_matrix) <- list(dimnames(beta_arr)[[1]], dimnames(beta_arr)[[3]])
+
+  beta_expected <- mod$result$betas$data[[1]]$estimate[[1]]
+  expect_equal(unname(beta_matrix), unname(beta_expected), tolerance = 1e-8)
 })
 
 test_that("write_results.fmri_lm creates valid JSON metadata", {

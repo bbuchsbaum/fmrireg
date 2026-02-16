@@ -5,7 +5,7 @@
 \title{Perform Chunkwise Linear Modeling on fMRI Dataset}
 \usage{
 \method{chunkwise_lm}{fmri_dataset_old}(
-  dset,
+  x,
   model,
   contrast_objects,
   nchunks,
@@ -14,11 +14,12 @@
   use_fast_path = FALSE,
   progress = FALSE,
   phi_fixed = NULL,
-  sigma_fixed = NULL
+  sigma_fixed = NULL,
+  ...
 )
 }
 \arguments{
-\item{dset}{An \code{fmri_dataset} object.}
+\item{x}{An \code{fmri_dataset} object.}
 
 \item{model}{The \code{fmri_model} used for the analysis.}
 

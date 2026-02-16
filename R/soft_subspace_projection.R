@@ -245,7 +245,7 @@ print.soft_projection <- function(x, ...) {
   # From very small (near full projection) to very large (minimal projection)
   log_lambda_range <- log(c(min(d^2) / 100, max(d^2) * 100))
 
-  opt <- optimize(gcv_score, interval = log_lambda_range)
+  opt <- stats::optimize(gcv_score, interval = log_lambda_range)
   exp(opt$minimum)
 }
 

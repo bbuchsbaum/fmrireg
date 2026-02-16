@@ -612,6 +612,31 @@ For more advanced analyses, you might consider:
 - Implementing spatial smoothing or other preprocessing steps
 - Extending the GLM with methods like psychophysiological interactions (PPI) or finite impulse response (FIR) models 
 
+## From first‑level to group analysis (GDS)
+
+You can export subject‑level results with `write_results()` and then load them for group analysis via `group_data()` (which returns a GDS object backed by fmrigds):
+
+```{r}
+# HDF5 written by write_results.fmri_lm
+# h5_paths <- Sys.glob("derivatives/sub-*/task-*_desc-GLMstatmap_bold.h5")
+# gd <- group_data(h5_paths, format = "h5", subjects = basename(dirname(h5_paths)))
+# fit <- fmri_meta(gd, formula = ~ 1 + group, method = "pm")
+
+# NIfTI (beta/SE)
+# gd_nii <- group_data(list(beta = beta_paths, se = se_paths), format = "nifti",
+#                      subjects = ids, mask = mask_path)
+# fit_nii <- fmri_meta(gd_nii, formula = ~ 1 + group, method = "fe")
+
+# Inspect the pipeline with fmrigds
+# pl <- fmrigds::plan(gd)
+# pl <- fmrigds::reduce(pl, method = "meta:fe", formula = ~ 1 + group)
+# fmrigds::explain_plan(pl)
+# invisible(fmrigds::preview(pl, n = 1, assays = "beta"))
+# res <- fmrigds::compute(pl)
+```
+
+Note: `group_data()` now routes through fmrigds (GDS). Legacy constructors (`group_data_from_h5()`/`_nifti()`/`_csv()`) are preserved for backward compatibility but will be deprecated.
+
 ## Next
 
 - [Contrasts and Hypothesis Tests](/articles/a_05_contrasts.html)

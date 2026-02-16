@@ -14,7 +14,7 @@
 #' @param robust_k_huber Tuning constant for Huber's psi. Default is 1.345.
 #' @param robust_c_tukey Tuning constant for Tukey's bisquare. Default is 4.685.
 #' @param robust_max_iter Maximum iterations for robust fitting. Default is 2.
-#' @param robust_scale_scope Scope for robust scale estimation: "run" or "global". Default is "run".
+#' @param robust_scale_scope Scope for robust scale estimation: "run", "global", or "voxel". Default is "run".
 #' @param ... Additional arguments passed to fmri_lm
 #' @return A fitted robust linear regression model for fMRI data analysis.
 #' @export
@@ -34,7 +34,7 @@ fmri_rlm <- function(formula, block, baseline_model = NULL, dataset,
                      cor_global = FALSE, ar_p = NULL, ar1_exact_first = FALSE,
                      robust_psi = c("huber", "bisquare"), robust_k_huber = 1.345,
                      robust_c_tukey = 4.685, robust_max_iter = 2L,
-                     robust_scale_scope = c("run", "global"), ...) {
+                     robust_scale_scope = c("run", "global", "voxel"), ...) {
 
   # Create robust options
   robust_options <- list(

@@ -75,6 +75,7 @@ test_that("whitening via fmriAR works correctly", {
   # Create a simple AR plan
   plan <- fmriAR::compat$plan_from_phi(
     phi = c(0.5, 0.2),
+    theta = numeric(0),
     exact_first = FALSE
   )
 
@@ -121,18 +122,20 @@ test_that("effective df calculation with fmriAR plan", {
   skip_if_not_installed("fmriAR")
 
   # Create a simple plan
-  plan <- fmriAR::compat$plan_from_phi(phi = c(0.5))
+  plan <- fmriAR::compat$plan_from_phi(phi = c(0.5), theta = numeric(0))
 
   # Test effective df
   df <- .compute_ar_effective_df_compat(n = 100, p = 5, plan = plan)
 
-  # With phi = 0.5, ar_factor = 1 - 0.25 = 0.75
-  # effective_n = 100 * 0.75 = 75
-  # df = 75 - 5 = 70
-  expect_equal(df, 70)
+  # Match adapter's ACF-based effective-n calculation.
+  rho <- 0.5^(seq_len(99))
+  k <- seq_along(rho)
+  denom <- 1 + 2 * sum((1 - k / 100) * rho)
+  expected_df <- max(min(100 / denom, 100) - 5, 1)
+  expect_equal(df, expected_df)
 
-  # Test with no AR
-  plan_no_ar <- fmriAR::compat$plan_from_phi(phi = numeric(0))
+  # Test with no AR (construct minimal plan to avoid compat warnings).
+  plan_no_ar <- structure(list(phi = list(numeric(0))), class = "fmriAR_plan")
   df_no_ar <- .compute_ar_effective_df_compat(n = 100, p = 5, plan = plan_no_ar)
   expect_equal(df_no_ar, 95)
 })

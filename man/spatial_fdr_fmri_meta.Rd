@@ -14,7 +14,8 @@ spatial_fdr_fmri_meta(
   neighbors = NULL,
   min_pi0 = 0.05,
   empirical_null = TRUE,
-  verbose = FALSE
+  verbose = FALSE,
+  ...
 )
 }
 \arguments{

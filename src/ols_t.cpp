@@ -213,7 +213,7 @@ List ols_t_vcov_cpp(const arma::mat& Y, const arma::mat& X, const arma::mat& C) 
     mat Minv;
     Minv.set_size(K + 1, K + 1);
     
-    if (!arma::is_finite(Ssch) || Ssch <= 1e-12) {
+    if (!std::isfinite(Ssch) || Ssch <= 1e-12) {
       // Fallback: full inverse of augmented matrix
       mat M(K + 1, K + 1, fill::zeros);
       M(span(0, K - 1), span(0, K - 1)) = XtX;

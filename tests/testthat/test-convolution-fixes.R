@@ -226,11 +226,23 @@ test_that("block-specific sampling preserves global event timing", {
 })
 
 test_that("regression test: original problematic case", {
-  skip_if_not(file.exists("../../../events_testdat.txt"),
-              message = "Original test data file not found")
-  
-  # Load the original problematic data
-  events <- read.table("../../../events_testdat.txt", header = TRUE, stringsAsFactors = FALSE)
+  # Synthesize data matching the original events_testdat.txt structure:
+  # 3 runs x 169 TRs @ TR=1.77, Repetition (3 levels) x Saliency (5 levels)
+  set.seed(42)
+  runs <- 1:3
+  rep_levels <- c("rep1", "rep2", "rep3")
+  sal_levels <- c("high", "medhigh", "med", "medlow", "low")
+  events_list <- lapply(runs, function(r) {
+    onsets <- sort(runif(30, min = 2, max = 169 * 1.77 - 10))
+    data.frame(
+      Onset = onsets,
+      Repetition = factor(rep(rep_levels, length.out = 30), levels = rep_levels),
+      Saliency = factor(rep(sal_levels, length.out = 30), levels = sal_levels),
+      Run = r,
+      stringsAsFactors = FALSE
+    )
+  })
+  events <- do.call(rbind, events_list)
   events$Input <- factor(events$Saliency)
   
   sframe <- sampling_frame(rep(169, 3), TR = 1.77)
@@ -253,5 +265,5 @@ test_that("regression test: original problematic case", {
   col_sums <- apply(dmat, 2, sum)
   zero_cols <- sum(col_sums == 0)
   expect_lt(zero_cols / ncol(dmat), 0.2,
-            info = "Less than 20% of columns should be zero (allowing for edge cases)")
+            label = "fraction of zero columns")
 })

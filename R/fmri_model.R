@@ -149,7 +149,7 @@ design_matrix.fmri_model <- function(x, blockid = NULL, ...) {
 #' @importFrom tibble as_tibble
 #' @keywords internal
 #' @noRd
-design_env.fmri_model <- function(x, blockid = NULL) {
+design_env.fmri_model <- function(x, blockid = NULL, ...) {
   stop("Not implemented")
 }
 

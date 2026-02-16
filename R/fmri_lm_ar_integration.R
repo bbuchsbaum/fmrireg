@@ -141,14 +141,18 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
 #' @param run_indices Run structure
 #' @param max_iter Maximum iterations
 #' @param tol Convergence tolerance for AR parameters
+#' @param return_solution Logical; if FALSE, skip final GLS solve and return
+#'   whitened matrices and AR metadata only.
 #'
 #' @return List with final results including AR coefficients
 #' @keywords internal
 #' @noRd
 iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
-                               max_iter = NULL, tol = 1e-4) {
+                               max_iter = NULL, tol = 5e-3,
+                               return_solution = TRUE) {
 
   ar_opts <- if (is.null(ar_options)) NULL else .normalize_ar_options(ar_options)
+  tol <- ar_opts$tol %||% tol
 
   if (is.null(max_iter)) {
     max_iter <- if (is.null(ar_opts)) 1 else ar_opts$iter_gls %||% ar_opts$iter %||% 1
@@ -156,10 +160,31 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
 
   ar_struct <- if (is.null(ar_opts)) "iid" else ar_opts$struct
 
-  # Initial OLS fit
-  result <- solve_glm_core(glm_ctx, return_fitted = TRUE)
-
   if (is.null(ar_opts) || identical(ar_struct, "iid") || max_iter == 0) {
+    return(solve_glm_core(glm_ctx, return_fitted = TRUE))
+  }
+
+  # Honor fixed AR coefficients when supplied (skip AR re-estimation loop).
+  if (!is.null(ar_opts$phi)) {
+    glm_ctx_white <- whiten_glm_context(glm_ctx, ar_opts, run_indices)
+    if (!isTRUE(return_solution)) {
+      return(list(
+        X_white = glm_ctx_white$X,
+        Y_white = glm_ctx_white$Y,
+        XtXinv = glm_ctx_white$proj$XtXinv,
+        ar_coef = glm_ctx_white$phi_hat,
+        phi_hat = glm_ctx_white$phi_hat,
+        ar_order = .get_ar_order(plan = NULL, cfg = ar_opts),
+        ar_plan = NULL
+      ))
+    }
+    result <- solve_glm_core(glm_ctx_white, return_fitted = TRUE)
+    result$XtXinv <- glm_ctx_white$proj$XtXinv
+    result$X_white <- glm_ctx_white$X
+    result$Y_white <- glm_ctx_white$Y
+    result$ar_coef <- glm_ctx_white$phi_hat
+    result$phi_hat <- glm_ctx_white$phi_hat
+    result$ar_order <- .get_ar_order(plan = NULL, cfg = ar_opts)
     return(result)
   }
 
@@ -169,11 +194,24 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
     Y = glm_ctx$Y,
     cfg = ar_opts,
     run_indices = run_indices,
-    max_iter = max_iter
+    max_iter = max_iter,
+    tol = tol
   )
 
   # Solve final whitened system
   proj_white <- .fast_preproject(ar_result$X_white)
+  if (!isTRUE(return_solution)) {
+    return(list(
+      X_white = ar_result$X_white,
+      Y_white = ar_result$Y_white,
+      XtXinv = proj_white$XtXinv,
+      ar_coef = ar_result$ar_coef,
+      phi_hat = ar_result$ar_coef,
+      ar_order = .get_ar_order(ar_result$plan, ar_opts),
+      ar_plan = ar_result$plan
+    ))
+  }
+
   glm_ctx_white <- glm_context(
     X = ar_result$X_white,
     Y = ar_result$Y_white,

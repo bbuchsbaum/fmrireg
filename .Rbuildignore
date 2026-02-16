@@ -48,3 +48,26 @@ data-raw/
 
 .claude
 .pytest_cache
+
+# GDS integration files (not yet committed; live in fmrigds)
+^R/group_data_gds\.R$
+^R/gds_bridge_utils\.R$
+^R/fmri_meta_gds\.R$
+^R/fmri_ttest_gds\.R$
+^R/fmrigds_registration\.R$
+^R/fmrigds_registration_helper\.R$
+
+# GDS integration tests (match excluded GDS source files above)
+^tests/testthat/test-gds-.*\.R$
+^tests/testthat/helper-fmrigds\.R$
+
+# Hidden directories
+^\.omc$
+
+# Non-standard top-level files
+^GLM_EFFICIENCY_CORRECTNESS_PRD\.json$
+
+# Temp check output
+^\.rcmdcheck_result\.rds$
+^Makefile$
+^gds\.txt$

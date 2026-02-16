@@ -49,7 +49,21 @@ group_data <- function(data, format = c("auto", "h5", "nifti", "csv", "fmrilm"),
   
   switch(format,
     h5 = group_data_from_h5(data, ...),
-    nifti = group_data_from_nifti(data, ...),
+    nifti = {
+      if (is.list(data) && !is.null(names(data))) {
+        args <- list(
+          beta_paths = data$beta,
+          se_paths = data$se,
+          var_paths = data$var,
+          t_paths = data$t,
+          df = data$df
+        )
+        args <- args[!vapply(args, is.null, logical(1))]
+        do.call(group_data_from_nifti, c(args, list(...)))
+      } else {
+        group_data_from_nifti(data, ...)
+      }
+    },
     csv = group_data_from_csv(data, ...),
     fmrilm = group_data_from_fmrilm(data, ...),
     stop("Unsupported format: ", format, call. = FALSE)
@@ -98,15 +112,20 @@ detect_group_data_format <- function(data) {
 #' @keywords internal
 #' @noRd
 validate_group_data <- function(x) {
+  # Skip validation for gds-backed objects (new format)
+  if (inherits(x, "group_data_gds") || inherits(x, "gds_plan") || inherits(x, "gds")) {
+    return(invisible(TRUE))
+  }
+
   if (!inherits(x, "group_data")) {
     stop("Object must be of class 'group_data'", call. = FALSE)
   }
-  
-  # Check required fields
+
+  # Check required fields (only for legacy formats)
   required_fields <- c("format", "subjects")
   missing_fields <- setdiff(required_fields, names(x))
   if (length(missing_fields) > 0) {
-    stop("Missing required fields: ", paste(missing_fields, collapse = ", "), 
+    stop("Missing required fields: ", paste(missing_fields, collapse = ", "),
          call. = FALSE)
   }
   

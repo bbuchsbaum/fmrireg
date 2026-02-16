@@ -93,6 +93,34 @@ fmri_ttest <- function(gd,
                       weights = c("ivw", "equal", "custom"),
                       weights_custom = NULL,
                       combine = NULL) {
+  # Fast-path for gds-backed objects: delegate to fmrigds reducers
+  if (inherits(gd, "gds") || inherits(gd, "group_data_gds")) {
+    gds_fn <- get0("fmri_ttest.group_data_gds", envir = asNamespace("fmrireg"),
+                   ifnotfound = NULL)
+    if (is.null(gds_fn) && requireNamespace("fmrigds", quietly = TRUE)) {
+      gds_fn <- get0("fmri_ttest.group_data_gds",
+                     envir = asNamespace("fmrigds"), ifnotfound = NULL)
+    }
+    if (!is.null(gds_fn)) {
+      return(gds_fn(gd,
+                    formula = formula,
+                    engine = match.arg(engine),
+                    paired = paired,
+                    mu0 = mu0,
+                    contrast = contrast,
+                    mc = mc,
+                    alpha = alpha,
+                    sign = match.arg(sign),
+                    mask = mask,
+                    voxelwise_cov = voxelwise_cov,
+                    center_voxelwise = center_voxelwise,
+                    voxel_name = voxel_name,
+                    weights = match.arg(weights),
+                    weights_custom = weights_custom,
+                    combine = combine))
+    }
+    stop("GDS-backed group_data requires the 'fmrigds' package.", call. = FALSE)
+  }
   
   engine <- match.arg(engine)
   sign <- match.arg(sign)

@@ -48,7 +48,7 @@ Use the \verb{*_options} lists below only when you need fine-grained control.
 \item \code{k_huber}
 \item \code{c_tukey}
 \item \code{max_iter}
-\item \code{scale_scope} ("run", "global")
+\item \code{scale_scope} ("run", "global", "voxel")
 \item \code{reestimate_phi} (logical)
 }
 
@@ -60,6 +60,8 @@ Use the \verb{*_options} lists below only when you need fine-grained control.
 \item \code{global} (logical, use global phi)
 \item \code{voxelwise} (logical)
 \item \code{exact_first} (logical)
+\item \code{censor} (integer vector of timepoints to exclude from AR estimation,
+logical vector where TRUE = censored, or "auto" to extract from dataset)
 }
 
 \code{volume_weights_options} may contain:

@@ -14,6 +14,9 @@ NULL
 #' @param task Task identifier (e.g., "nback", "rest"). Required for BIDS compliance.
 #' @param space Spatial reference (e.g., "MNI152NLin2009cAsym"). Optional but recommended.
 #' @param desc Description of the analysis (default: "GLM")
+#' @param format Character vector specifying output formats. Supported values
+#'   are `"h5"` (default BIDS/HDF5 export) and `"gds"` (fmrigds-compatible
+#'   assays plus an `.rds` plan describing the dataset). You may request both.
 #' @param strategy Storage strategy: "by_stat" (group contrasts by statistic) or "by_contrast" (separate files)
 #' @param save_betas Logical. Save raw regressor betas (default: TRUE)
 #' @param contrasts Character vector of contrast names to save. NULL saves all contrasts
@@ -43,6 +46,7 @@ write_results.fmri_lm <- function(x,
                                   task = NULL, 
                                   space = NULL,
                                   desc = "GLM",
+                                  format = c("h5"),
                                   strategy = c("by_stat", "by_contrast"),
                                   save_betas = TRUE,
                                   contrasts = NULL,
@@ -52,6 +56,10 @@ write_results.fmri_lm <- function(x,
                                   ...) {
   
   strategy <- match.arg(strategy)
+  format <- match.arg(format, c("h5", "gds"), several.ok = TRUE)
+  if (length(format) == 0) format <- "h5"
+  produce_h5 <- "h5" %in% format
+  produce_gds <- "gds" %in% format
   
   # Input validation
   if (validate_inputs) {
@@ -71,13 +79,21 @@ write_results.fmri_lm <- function(x,
   
   # Check for existing files if overwrite is FALSE
   if (!overwrite) {
-    # Only check for the main betas file as a simple overwrite check
-    # More sophisticated checking can be added later
-    if (save_betas) {
+    if (produce_h5 && save_betas) {
       beta_filename <- .generate_bids_filename(entities, desc = desc, suffix = "betas", extension = "h5")
       beta_filepath <- file.path(path, beta_filename)
       if (file.exists(beta_filepath)) {
         stop("File ", beta_filepath, " already exists. Set overwrite = TRUE to replace it.", call. = FALSE)
+      }
+    }
+    if (produce_gds) {
+      gds_h5_filename <- .generate_bids_filename(entities, desc = desc, suffix = "gds", extension = "h5")
+      gds_plan_filename <- .generate_bids_filename(entities, desc = desc, suffix = "gds", extension = "json")
+      gds_h5_path <- file.path(path, gds_h5_filename)
+      gds_plan_path <- file.path(path, gds_plan_filename)
+      if (file.exists(gds_h5_path) || file.exists(gds_plan_path)) {
+        stop("GDS export targets already exist (", gds_h5_path, " or ", gds_plan_path,
+             "). Set overwrite = TRUE to replace them.", call. = FALSE)
       }
     }
   }
@@ -94,24 +110,40 @@ write_results.fmri_lm <- function(x,
     created_files <- list()
     
     # Save raw regressor betas
-    if (save_betas) {
+    if (produce_h5 && save_betas) {
       beta_files <- .save_regressor_betas(x, temp_dir, entities, desc, overwrite)
       created_files <- c(created_files, list(betas = beta_files))
     }
     
     # Save contrast results
-    if (strategy == "by_stat") {
-      contrast_files <- .save_contrasts_by_stat(x, temp_dir, entities, desc, 
-                                                contrasts, contrast_stats, overwrite)
-    } else {
-      contrast_files <- .save_contrasts_by_contrast(x, temp_dir, entities, desc,
-                                                    contrasts, contrast_stats, overwrite)
+    if (produce_h5) {
+      if (strategy == "by_stat") {
+        contrast_files <- .save_contrasts_by_stat(x, temp_dir, entities, desc, 
+                                                  contrasts, contrast_stats, overwrite)
+      } else {
+        contrast_files <- .save_contrasts_by_contrast(x, temp_dir, entities, desc,
+                                                      contrasts, contrast_stats, overwrite)
+      }
+      created_files <- c(created_files, contrast_files)
     }
-    
-    created_files <- c(created_files, contrast_files)
+
+    if (produce_gds) {
+      if (!requireNamespace("fmrigds", quietly = TRUE)) {
+        stop("fmrigds package is required for GDS export. Please install fmrigds.", call. = FALSE)
+      }
+      gds_files <- .save_gds_outputs(x, temp_dir, entities, desc)
+      created_files <- c(created_files, list(gds = gds_files))
+    }
     
     # Atomic move: if all writes succeeded, move temp_dir contents to final location
     created_files <- .finalize_atomic_write(temp_dir, path, created_files)
+
+    if (produce_gds && "gds" %in% names(created_files)) {
+      gds_h5_final <- created_files$gds$h5
+      gds_plan_final <- created_files$gds$plan
+      disk_plan <- fmrigds::gds(source = gds_h5_final, format = "h5")
+      saveRDS(disk_plan, gds_plan_final)
+    }
     
     invisible(created_files)
     
@@ -526,6 +558,118 @@ write_results.fmri_lm <- function(x,
 }
 
 
+#' Save GDS representation of subject results
+#' @keywords internal
+#' @noRd
+.save_gds_outputs <- function(fmrilm_obj, path, entities, desc) {
+  # Collect beta-level statistics
+  betas_tbl <- fmrilm_obj$result$betas$data[[1]]
+  extract_component <- function(col) {
+    if (is.null(col)) return(NULL)
+    if (is.list(col)) {
+      col <- col[[1]]
+    }
+    col
+  }
+  beta_mat <- extract_component(betas_tbl$estimate)
+  se_mat   <- extract_component(betas_tbl$se)
+  stat_mat <- extract_component(betas_tbl$stat)
+  prob_mat <- extract_component(betas_tbl$prob)
+
+  if (is.null(beta_mat) || is.null(se_mat)) {
+    stop("Unable to extract beta estimates or standard errors for GDS export.", call. = FALSE)
+  }
+
+  # Determine dimensions and labels
+  n_vox <- nrow(beta_mat)
+  n_coef <- ncol(beta_mat)
+  contrast_names <- colnames(beta_mat) %||% paste0("beta", seq_len(n_coef))
+  subject_label <- entities$subject %||% "subject1"
+  subject_dimnames <- subject_label
+
+  sample_labels <- rownames(beta_mat)
+  if (is.null(sample_labels)) {
+    sample_labels <- sprintf("voxel_%0*d", ceiling(log10(n_vox + 1)), seq_len(n_vox))
+  }
+
+  # Assemble assays
+  beta_array <- array(beta_mat, dim = c(n_vox, 1, n_coef),
+                      dimnames = list(sample_labels, subject_dimnames, contrast_names))
+  se_array   <- array(se_mat, dim = c(n_vox, 1, n_coef),
+                      dimnames = list(sample_labels, subject_dimnames, contrast_names))
+  var_array  <- array(se_mat^2, dim = c(n_vox, 1, n_coef),
+                      dimnames = list(sample_labels, subject_dimnames, contrast_names))
+
+  assays <- list(beta = beta_array, var = var_array, se = se_array)
+
+  if (!is.null(stat_mat)) {
+    t_array <- array(stat_mat, dim = c(n_vox, 1, n_coef),
+                     dimnames = list(sample_labels, subject_dimnames, contrast_names))
+    assays$t <- t_array
+  }
+  if (!is.null(prob_mat)) {
+    p_array <- array(prob_mat, dim = c(n_vox, 1, n_coef),
+                     dimnames = list(sample_labels, subject_dimnames, contrast_names))
+    assays$p <- p_array
+  }
+  df_resid <- .extract_degrees_of_freedom(fmrilm_obj)
+
+  # Build spatial description from mask
+  dataset <- fmrilm_obj$dataset
+  mask_vol <- fmridataset::get_mask(dataset)
+  mask_array <- as.logical(as.array(mask_vol))
+  neuro_space <- neuroim2::space(mask_vol)
+  affine <- neuro_space@trans
+  voxel_space <- fmrigds::space_voxel(dim = dim(mask_array), affine = affine, mask_bitmap = mask_array)
+
+  # Assemble column metadata
+  col_df <- data.frame(subject = subject_label, stringsAsFactors = FALSE)
+  rownames(col_df) <- subject_label
+  if (!is.null(entities$task)) col_df$task <- entities$task
+  if (!is.null(entities$space)) col_df$space <- entities$space
+
+  # Metadata about the model
+  model_formula <- tryCatch({
+    form <- get_formula(fmrilm_obj$model)
+    if (is.null(form)) NULL else as.character(form)
+  }, error = function(e) NULL)
+
+  metadata <- list(
+    schema_version = "0.1.0",
+    model = list(
+      formula = model_formula,
+    regressors = contrast_names,
+    df_residual = df_resid
+  ),
+    generated_by = list(
+      package = "fmrireg",
+      version = as.character(utils::packageVersion("fmrireg"))
+    ),
+    created = format(Sys.time(), "%Y-%m-%dT%H:%M:%S")
+  )
+
+  gds_obj <- fmrigds::as_gds(
+    assays,
+    space = voxel_space,
+    subjects = subject_label,
+    contrasts = contrast_names,
+    col_data = col_df,
+    metadata = metadata
+  )
+
+  gds_h5_filename <- .generate_bids_filename(entities, desc = desc, suffix = "gds", extension = "h5")
+  gds_h5_path <- file.path(path, gds_h5_filename)
+
+  write_plan <- fmrigds::write_out(gds_obj, path = gds_h5_path, format = "h5")
+  fmrigds::compute(write_plan)
+
+  plan_filename <- .generate_bids_filename(entities, desc = desc, suffix = "gds", extension = "rds")
+  plan_path <- file.path(path, plan_filename)
+
+  list(h5 = gds_h5_path, plan = plan_path)
+}
+
+
 #' Save JSON Metadata for Betas
 #' @keywords internal
 #' @noRd
@@ -815,6 +959,8 @@ write_results.fmri_lm <- function(x,
     } else if (!is.null(fmrilm_obj$result$betas) && "df.residual" %in% names(fmrilm_obj$result$betas)) {
       # Check if it's in the betas data frame
       df_resid <- as.integer(fmrilm_obj$result$betas$df.residual[1])
+    } else if (!is.null(fmrilm_obj$result$contrasts) && "df.residual" %in% names(fmrilm_obj$result$contrasts)) {
+      df_resid <- as.integer(fmrilm_obj$result$contrasts$df.residual[1])
     }
   }, error = function(e) {
     # If extraction fails, leave NULL

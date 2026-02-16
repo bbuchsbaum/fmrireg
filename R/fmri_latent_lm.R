@@ -60,7 +60,7 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
 #'          chunkwise linear regression on latent datasets. The function handles different
 #'          autocorrelation options, as well as robust regression and bootstrapping.
 #'
-#' @param dset A latent dataset object.
+#' @param x A latent dataset object.
 #' @param model The fmri model object.
 #' @param contrast_objects A list of contrast objects.
 #' @param nchunks The number of chunks to use for the regression.
@@ -73,10 +73,11 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
 #' @return A list containing the results of the chunkwise linear regression.
 #' @seealso fmri_latent_lm
 #' @noRd
-chunkwise_lm.latent_dataset <- function(dset, model, contrast_objects, nchunks, cfg,
+chunkwise_lm.latent_dataset <- function(x, model, contrast_objects, nchunks, cfg,
                                         verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
                                         phi_fixed = NULL,
-                                        sigma_fixed = NULL) {
+                                        sigma_fixed = NULL, ...) {
+  dset <- x
   # Extract options from cfg if provided
   robust <- if (!is.null(cfg) && !is.null(cfg$robust)) {
     r <- as.logical(cfg$robust)[1]

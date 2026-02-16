@@ -11,6 +11,7 @@
   task = NULL,
   space = NULL,
   desc = "GLM",
+  format = c("h5"),
   strategy = c("by_stat", "by_contrast"),
   save_betas = TRUE,
   contrasts = NULL,
@@ -32,6 +33,10 @@
 \item{space}{Spatial reference (e.g., "MNI152NLin2009cAsym"). Optional but recommended.}
 
 \item{desc}{Description of the analysis (default: "GLM")}
+
+\item{format}{Character vector specifying output formats. Supported values
+are \code{"h5"} (default BIDS/HDF5 export) and \code{"gds"} (fmrigds-compatible
+assays plus an \code{.rds} plan describing the dataset). You may request both.}
 
 \item{strategy}{Storage strategy: "by_stat" (group contrasts by statistic) or "by_contrast" (separate files)}
 

@@ -5,6 +5,10 @@ library(fmrireg)
 library(testthat)
 library(Matrix)
 
+# These tests exercise extreme edge cases of internal solver functions
+# and are platform-sensitive; skip on CRAN.
+skip_on_cran()
+
 # Helper function to create ill-conditioned matrices with specific condition number
 create_ill_conditioned_matrix <- function(n, p, target_kappa) {
   # Use SVD to construct matrix with specific condition number

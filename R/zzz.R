@@ -36,4 +36,6 @@
     # Note: correlation_map.baseline_model is defined locally in correlation_map_methods.R
     # because it needs access to fmrireg's internal .correlation_map_common function
   }
+
+  # fmrigds bridge registrations happen via fmrigds .onLoad when available
 }

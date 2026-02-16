@@ -11,10 +11,13 @@ NULL
 #'
 #' @param residuals_vec Numeric vector of residuals
 #' @param p_order Integer AR order
+#' @param censor Integer vector of 1-based indices to exclude from AR estimation,
+#'   or NULL for no censoring. Censored timepoints are excluded when computing
+#'   autocorrelations.
 #' @return Numeric vector of AR coefficients
 #' @keywords internal
 #' @noRd
-estimate_ar_parameters <- function(residuals_vec, p_order) {
+estimate_ar_parameters <- function(residuals_vec, p_order, censor = NULL) {
   stopifnot(is.numeric(residuals_vec))
   stopifnot(length(p_order) == 1L, p_order >= 1L)
 
@@ -26,14 +29,15 @@ estimate_ar_parameters <- function(residuals_vec, p_order) {
     stop("NA values detected in 'residuals_vec' for estimate_ar_parameters")
   }
 
-  # Try fmriAR first
+  # Try fmriAR first (supports censor)
   residuals_mat <- matrix(residuals_vec, ncol = 1)
   plan <- tryCatch(
     fmriAR::fit_noise(
       resid = residuals_mat,
       method = "ar",
       p = p_order,
-      p_max = p_order
+      p_max = p_order,
+      censor = censor
     ),
     error = function(e) NULL
   )
@@ -45,7 +49,15 @@ estimate_ar_parameters <- function(residuals_vec, p_order) {
     }
   }
 
-  # Fall back to Yule-Walker implementation
+  # Fall back to Yule-Walker implementation (excludes censored manually if needed)
+  if (!is.null(censor) && length(censor) > 0) {
+    # For fallback, simply exclude censored points from estimation
+    valid_idx <- setdiff(seq_along(residuals_vec), censor)
+    if (length(valid_idx) <= p_order) {
+      return(rep(0, p_order))
+    }
+    residuals_vec <- residuals_vec[valid_idx]
+  }
   fallback_phi <- .estimate_ar(residuals_vec, p_order)
   if (length(fallback_phi) == 0L) {
     return(numeric(0))
@@ -60,10 +72,13 @@ estimate_ar_parameters <- function(residuals_vec, p_order) {
 #' @param Y Data matrix
 #' @param phi AR coefficients
 #' @param exact_first Logical for exact first sample scaling
+#' @param censor Integer vector of 1-based indices that were censored during
+#'   AR estimation. Passed to whiten_apply for consistent segment handling.
+#' @param ... Additional arguments (ignored)
 #' @return List with whitened X and Y
 #' @keywords internal
 #' @noRd
-ar_whiten_transform <- function(X, Y, phi, exact_first = FALSE, ...) {
+ar_whiten_transform <- function(X, Y, phi, exact_first = FALSE, censor = NULL, ...) {
   if (anyNA(X) || anyNA(Y)) {
     stop("NA values detected in 'X' or 'Y' for ar_whiten_transform")
   }
@@ -74,7 +89,7 @@ ar_whiten_transform <- function(X, Y, phi, exact_first = FALSE, ...) {
   # Debug
   if (getOption("fmrireg.debug.ar", FALSE)) {
     message("ar_whiten_transform (via fmriAR) called with phi=", paste(phi, collapse=","),
-            " exact_first=", exact_first)
+            " exact_first=", exact_first, " censor=", if(is.null(censor)) "NULL" else length(censor))
     message("  X dims: ", nrow(X), "x", ncol(X))
     message("  Y dims: ", nrow(Y), "x", ncol(Y))
   }
@@ -101,7 +116,8 @@ ar_whiten_transform <- function(X, Y, phi, exact_first = FALSE, ...) {
     plan = plan,
     X = X,
     Y = Y,
-    parallel = TRUE
+    parallel = TRUE,
+    censor = censor
   )
 
   list(X = result$X, Y = result$Y)

@@ -119,7 +119,7 @@ fmri_lm(formula, ...)
 
 \item{robust_max_iter}{Integer. Shorthand for \code{robust_options$max_iter}.}
 
-\item{robust_scale_scope}{Character. Shorthand for \code{robust_options$scale_scope} ("run" or "global").}
+\item{robust_scale_scope}{Character. Shorthand for \code{robust_options$scale_scope} ("run", "global", or "voxel").}
 
 \item{volume_weights}{Logical or character. Simple interface for volume weighting:
 \itemize{

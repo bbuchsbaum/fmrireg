@@ -79,6 +79,62 @@ is.formula <- function(x) {
   res
 }
 
+#' Estimate fixed-order AR coefficients via fmriAR adapter with legacy fallback
+#' @keywords internal
+#' @noRd
+.estimate_ar_parameters_routed <- function(residuals_vec, ar_order, run_indices = NULL, censor = NULL) {
+  if (is.null(ar_order) || ar_order <= 0L) {
+    return(numeric(0))
+  }
+
+  resid_mat <- as.matrix(residuals_vec)
+  if (ncol(resid_mat) == 0L || nrow(resid_mat) <= ar_order) {
+    return(rep(0, ar_order))
+  }
+
+  ar_cfg <- switch(as.integer(ar_order),
+    `1` = list(struct = "ar1"),
+    `2` = list(struct = "ar2"),
+    list(struct = "arp", p = as.integer(ar_order))
+  )
+
+  plan <- tryCatch(
+    .estimate_ar_via_fmriAR(
+      residuals = resid_mat,
+      cfg = ar_cfg,
+      run_indices = run_indices,
+      censor = censor
+    ),
+    error = function(e) NULL
+  )
+
+  phi <- NULL
+  if (!is.null(plan)) {
+    if (!is.null(plan$phi) && length(plan$phi) > 0L) {
+      phi <- as.numeric(plan$phi[[1]])
+    } else if (!is.null(plan$phi_by_parcel) && length(plan$phi_by_parcel) > 0L) {
+      phi <- as.numeric(plan$phi_by_parcel[[1]])
+    }
+  }
+
+  if (is.null(phi) || !length(phi)) {
+    if (!isTRUE(getOption("fmrireg.ar.nonvoxel_legacy_fallback", FALSE))) {
+      phi <- rep(0, ar_order)
+    } else {
+      phi <- estimate_ar_parameters(drop(resid_mat[, 1]), ar_order, censor = censor)
+    }
+  }
+
+  phi <- as.numeric(phi)
+  if (length(phi) < ar_order) {
+    phi <- c(phi, rep(0, ar_order - length(phi)))
+  } else if (length(phi) > ar_order) {
+    phi <- phi[seq_len(ar_order)]
+  }
+  phi[!is.finite(phi)] <- 0
+  phi
+}
+
 #' Fast row-wise robust regression for a single run
 #'
 #' Wrapper around robust_iterative_fitter for backward compatibility.
@@ -235,7 +291,7 @@ fmri_lm <- function(formula, ...) {
 #' @param ar_p Integer. Shorthand for \code{ar_options$p}.
 #' @param robust_psi Character. Shorthand for \code{robust_options$type} (e.g., "huber", "bisquare").
 #' @param robust_max_iter Integer. Shorthand for \code{robust_options$max_iter}.
-#' @param robust_scale_scope Character. Shorthand for \code{robust_options$scale_scope} ("run" or "global").
+#' @param robust_scale_scope Character. Shorthand for \code{robust_options$scale_scope} ("run", "global", or "voxel").
 #' @param volume_weights_options List of volume weighting options. See \code{\link{fmri_lm_control}}.
 #' @param soft_subspace_options List of soft subspace projection options. See \code{\link{fmri_lm_control}}.
 #' @param volume_weights Logical or character. Simple interface for volume weighting:
@@ -810,8 +866,9 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
     run_chunks <- collect_chunks(chunk_iter)
     
     form <- get_formula(fmrimod)
-    resid_vec <- numeric(0)
-    for (rch in run_chunks) {
+    resid_chunks <- vector("list", length(run_chunks))
+    for (ri in seq_along(run_chunks)) {
+      rch <- run_chunks[[ri]]
       tmats_run <- term_matrices(fmrimod, rch$chunk_num)
       data_env_run <- list2env(tmats_run)
       n_time_run <- nrow(tmats_run[[1]])
@@ -820,9 +877,10 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
       proj_run <- .fast_preproject(X_run)
       Y_run <- as.matrix(rch$data)
       ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
-      resid_vec <- c(resid_vec, rowMeans(Y_run - ols$fitted))
+      resid_chunks[[ri]] <- rowMeans(Y_run - ols$fitted)
     }
-    phi_global <- estimate_ar_parameters(resid_vec, ar_order)
+    resid_vec <- unlist(resid_chunks, use.names = FALSE)
+    phi_global <- .estimate_ar_parameters_routed(resid_vec, ar_order)
     cfg$ar$iter_gls <- 1L
   }
 
@@ -830,8 +888,9 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
     chunk_iter <- exec_strategy("runwise")(dataset)
     run_chunks <- collect_chunks(chunk_iter)
     form <- get_formula(fmrimod)
-    row_med_all <- numeric(0)
-    for (rch in run_chunks) {
+    row_med_chunks <- vector("list", length(run_chunks))
+    for (ri in seq_along(run_chunks)) {
+      rch <- run_chunks[[ri]]
       tmats_run <- term_matrices(fmrimod, rch$chunk_num)
       data_env_run <- list2env(tmats_run)
       n_time_run <- nrow(tmats_run[[1]])
@@ -840,9 +899,9 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
       proj_run <- .fast_preproject(X_run)
       Y_run <- as.matrix(rch$data)
       ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
-      row_med_all <- c(row_med_all,
-                       matrixStats::rowMedians(abs(Y_run - ols$fitted)))
+      row_med_chunks[[ri]] <- matrixStats::rowMedians(abs(Y_run - ols$fitted))
     }
+    row_med_all <- unlist(row_med_chunks, use.names = FALSE)
     sigma_global <- 1.4826 * median(row_med_all)
     if (sigma_global <= .Machine$double.eps) sigma_global <- .Machine$double.eps
   }
@@ -1123,7 +1182,21 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
     if (include_baseline) {
       # Return all betas, ensure correct names from the full design matrix
       res <- all_betas
-      colnames(res) <- colnames(design_matrix(object$model))
+      dm_colnames <- colnames(design_matrix(object$model))
+      if (!is.null(dm_colnames)) {
+        if (length(dm_colnames) == ncol(res)) {
+          colnames(res) <- dm_colnames
+        } else {
+          beta_colind <- tryCatch(object$result$betas$colind[[1]], error = function(e) NULL)
+          if (!is.null(beta_colind) &&
+              length(beta_colind) == ncol(res) &&
+              max(beta_colind) <= length(dm_colnames)) {
+            colnames(res) <- dm_colnames[beta_colind]
+          } else {
+            colnames(res) <- make.names(paste0("beta_", seq_len(ncol(res))), unique = TRUE)
+          }
+        }
+      }
       # Convert back to tibble for consistency if needed, though matrix might be better here
       # res <- as_tibble(res)
     } else {
@@ -1387,7 +1460,7 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 #' This function performs a chunkwise linear model analysis on an fMRI dataset,
 #' splitting the dataset into chunks and running the linear model on each chunk.
 #'
-#' @param dset An \code{fmri_dataset} object.
+#' @param x An \code{fmri_dataset} object.
 #' @param model The \code{fmri_model} used for the analysis.
 #' @param contrast_objects The list of full contrast objects.
 #' @param nchunks The number of chunks to divide the dataset into.
@@ -1399,10 +1472,11 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 #' @param sigma_fixed Optional fixed robust scale estimate.
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
-chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks, cfg,
+chunkwise_lm.fmri_dataset_old <- function(x, model, contrast_objects, nchunks, cfg,
                                       verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
                                       phi_fixed = NULL,
-                                      sigma_fixed = NULL) {
+                                      sigma_fixed = NULL, ...) {
+  dset <- x
   # Validate config
   assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
   chunk_iter <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
@@ -1504,7 +1578,7 @@ chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks
                   if (is.null(phi_fixed)) {
                       initial_fit <- solve_glm_core(glm_ctx_run_orig, return_fitted = TRUE)
                       resid_ols <- Y_run_full - initial_fit$fitted
-                      phi_hat_run <- estimate_ar_parameters(rowMeans(resid_ols), ar_order)
+                      phi_hat_run <- .estimate_ar_parameters_routed(rowMeans(resid_ols), ar_order)
                   } else {
                       phi_hat_run <- phi_fixed
                   }
@@ -1539,7 +1613,7 @@ chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks
                       resid_robust_w <- Y_run_full_w - X_run_w %*% robust_fit_details_run$betas_robust
                       
                       # Re-estimate AR parameters from robust residuals
-                      phi_hat_run_updated <- estimate_ar_parameters(rowMeans(resid_robust_w), ar_order)
+                      phi_hat_run_updated <- .estimate_ar_parameters_routed(rowMeans(resid_robust_w), ar_order)
                       
                       # Update phi_hat_run for subsequent processing
                       phi_hat_run <- phi_hat_run_updated
@@ -1754,7 +1828,7 @@ chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks
                   glm_ctx_run <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
                   ols <- solve_glm_core(glm_ctx_run, return_fitted = TRUE)
                   resid_ols <- Y_run - ols$fitted
-                  phi_hat_run <- estimate_ar_parameters(rowMeans(resid_ols), ar_order)
+                  phi_hat_run <- .estimate_ar_parameters_routed(rowMeans(resid_ols), ar_order)
               } else {
                   phi_hat_run <- phi_fixed
               }
@@ -2235,7 +2309,7 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                 if (is.null(phi_fixed)) {
                     initial_fit <- solve_glm_core(glm_ctx_run_orig, return_fitted = TRUE)
                     resid_ols <- Y_run - initial_fit$fitted
-                    phi_hat_run <- estimate_ar_parameters(rowMeans(resid_ols), ar_order)
+                    phi_hat_run <- .estimate_ar_parameters_routed(rowMeans(resid_ols), ar_order)
                 } else {
                     phi_hat_run <- phi_fixed
                 }
@@ -2257,7 +2331,7 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                     # Update phi_hat if needed for next iteration
                     if (is.null(phi_fixed) && iter < cfg$ar$iter_gls) {
                         resid_gls <- Y_w - X_w %*% gls$betas
-                        phi_hat_run <- estimate_ar_parameters(rowMeans(resid_gls), ar_order)
+                        phi_hat_run <- .estimate_ar_parameters_routed(rowMeans(resid_gls), ar_order)
                     }
                 }
                 

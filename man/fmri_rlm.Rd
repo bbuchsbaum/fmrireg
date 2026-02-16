@@ -22,7 +22,7 @@ fmri_rlm(
   robust_k_huber = 1.345,
   robust_c_tukey = 4.685,
   robust_max_iter = 2L,
-  robust_scale_scope = c("run", "global"),
+  robust_scale_scope = c("run", "global", "voxel"),
   ...
 )
 }
@@ -62,7 +62,7 @@ fmri_rlm(
 
 \item{robust_max_iter}{Maximum iterations for robust fitting. Default is 2.}
 
-\item{robust_scale_scope}{Scope for robust scale estimation: "run" or "global". Default is "run".}
+\item{robust_scale_scope}{Scope for robust scale estimation: "run", "global", or "voxel". Default is "run".}
 
 \item{...}{Additional arguments passed to fmri_lm}
 }

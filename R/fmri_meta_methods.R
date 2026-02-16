@@ -568,7 +568,7 @@ write_results.fmri_meta <- function(x, path = ".", prefix = "meta",
 spatial_fdr_fmri_meta <- function(object, coef = 1, group = NULL,
                                  alpha = 0.05, tau = 0.5, lambda = 1.0,
                                  neighbors = NULL, min_pi0 = 0.05,
-                                 empirical_null = TRUE, verbose = FALSE) {
+                                 empirical_null = TRUE, verbose = FALSE, ...) {
   # Get coefficient index
   if (is.character(coef)) {
     coef_idx <- which(colnames(object$coefficients) == coef)

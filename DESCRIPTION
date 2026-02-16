@@ -1,13 +1,14 @@
 Package: fmrireg
 Type: Package
-Title: R package for the anlysis of fmri data
+Title: Regression Analysis of Functional Magnetic Resonance Imaging Data
 Version: 0.1.2
 LinkingTo: Rcpp,RcppArmadillo, roptim, RcppParallel
-Date: 2023-03-07
 Authors@R: person("Bradley", "Buchsbaum",, role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
 License: GPL (>= 2)
-Maintainer: Bradley Buchsbaum <brad.buchsbaum@gmail.com>
-Description: fmrireg is a package for the analysis of functional magnetic resonance imaging (fMRI) data. Facilities are provided to construct flexible hemodynamic response functions, experimental regressors, and conduct univariate fMRI analyses.
+Description: Provides tools for the analysis of functional magnetic resonance
+    imaging (fMRI) data. Facilities are included to construct flexible
+    hemodynamic response functions, experimental regressors, and conduct
+    univariate fMRI regression analyses.
 Encoding: UTF-8
 LazyData: false
 Depends:
@@ -50,7 +51,7 @@ Imports:
 RoxygenNote: 7.3.3
 Roxygen: list(
     markdown = TRUE,
-    roclets = c("collate", "namespace", "rd", "roxyglobals::global_roclet"))
+    roclets = c("namespace", "rd", "roxyglobals::global_roclet"))
 Suggests: 
     testthat,
     RNifti,
@@ -65,7 +66,6 @@ Suggests:
     gridExtra,
     multivarious,
     rrBLUP,
-    care,
     glmnet,
     proxy,
     cowplot,
@@ -73,8 +73,8 @@ Suggests:
     shiny,
     mgcv,
     progressr,
-    ggforce,
-    roxyglobals (>= 0.2.1)
+    roxyglobals (>= 0.2.1),
+    withr
 Remotes:
     bbuchsbaum/fmristore,
     bbuchsbaum/fmrigds,
@@ -85,80 +85,3 @@ Remotes:
 VignetteBuilder: knitr
 URL: https://bbuchsbaum.github.io/fmrireg/, https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues
-Collate:
-    'aaa_plugin_api.R'
-    'imports.R'
-    'RcppExports.R'
-    'all_generic.R'
-    'autoplot-methods.R'
-    'correlation_map_methods.R'
-    'benchmark_datasets.R'
-    'beta_utils.R'
-    'bids_export.R'
-    'bootstrap.R'
-    'compat-legacy-ar.R'
-    'compat-legacy-ar-impl.R'
-    'con_stats.R'
-    'contrasts_api.R'
-    'data_fmri_benchmark_datasets.R'
-    'design_matrix-fmri_lm.R'
-    'design_plot.R'
-    'doc_example_helpers.R'
-    'effective_df.R'
-    'fmriAR_adapter.R'
-    'fmri_betas.R'
-    'fmri_latent_lm.R'
-    'fmri_lm_ar_integration.R'
-    'fmri_lm_ar_params.R'
-    'fmri_lm_bootstrap.R'
-    'fmri_lm_chunkwise.R'
-    'fmri_lm_config.R'
-    'fmri_lm_config_wrapper.R'
-    'fmri_lm_context.R'
-    'fmri_lm_contrasts.R'
-    'fmri_lm_effective_df.R'
-    'fmri_lm_integrated_solver.R'
-    'fmri_lm_internal.R'
-    'fmri_lm_methods.R'
-    'fmri_lm_runwise.R'
-    'fmri_lm_runwise_integrated.R'
-    'fmri_lm_solver.R'
-    'fmri_lm_strategies.R'
-    'fmri_model.R'
-    'fmri_model_utils.R'
-    'fmri_robust_fitting.R'
-    'fmridataset-imports.R'
-    'fmridesign-imports.R'
-    'fmrihrf-imports.R'
-    'lowrank_control.R'
-    'sketch_time.R'
-    'nystrom_extend.R'
-    'fmri_lm_engine_lowrank.R'
-    'fmrilm.R'
-    'fmrilss-imports.R'
-    'fmrireg.R'
-    'fmrirlm.R'
-    'gen_contrast.R'
-    'globals.R'
-    'group_data.R'
-    'group_data_csv.R'
-    'group_data_h5.R'
-    'group_data_nifti.R'
-    'fmri_meta.R'
-    'fmri_meta_methods.R'
-    'meta_fit.R'
-    'spatial_fdr.R'
-    'fmri_ttest_helpers.R'
-    'fmri_ttest.R'
-    'hrf_smoothing_kernel.R'
-    'lss.R'
-    'metafuns.R'
-    'mixed_solve.R'
-    'neuroim2-methods.R'
-    'sandwich_variance_doc.R'
-    'simulate.R'
-    'soft_subspace_projection.R'
-    'utils_operators.R'
-    'volume_quality.R'
-    'zzz.R'
-    'placeholder.R'

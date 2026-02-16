@@ -102,7 +102,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
       phi_fixed = phi_fixed,
       sigma_fixed = sigma_fixed,
       verbose = verbose,
-      progress = progress
+      progress = progress,
+      dataset = dset
     )
   } else {
     runwise_lm_slow(
@@ -113,7 +114,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
       event_indices = event_indices,
       baseline_indices = baseline_indices,
       verbose = verbose,
-      progress = progress
+      progress = progress,
+      dataset = dset
     )
   }
   
@@ -125,8 +127,9 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
 #' @keywords internal
 #' @noRd
 runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist_weights,
-                           event_indices, baseline_indices, phi_fixed = NULL, 
-                           sigma_fixed = NULL, verbose = FALSE, progress = FALSE) {
+                           event_indices, baseline_indices, phi_fixed = NULL,
+                           sigma_fixed = NULL, verbose = FALSE, progress = FALSE,
+                           dataset = NULL) {
   
   cres <- vector("list", length(chunks))
   ar_order <- switch(cfg$ar$struct,
@@ -148,14 +151,15 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
     # Determine which processing function to use
     if (cfg$robust$type != FALSE && cfg$ar$struct != "iid") {
       # Combined AR + Robust
-      res <- process_run_ar_robust(ym, model, cfg, phi_fixed, sigma_fixed)
+      res <- process_run_ar_robust(ym, model, cfg, phi_fixed, sigma_fixed, dataset = dataset)
     } else if (cfg$robust$type != FALSE) {
       # Robust only
-      res <- process_run_robust(ym, model, cfg, sigma_fixed)
+      res <- process_run_robust(ym, model, cfg, sigma_fixed, dataset = dataset)
     } else {
       # Standard (with or without AR)
-      res <- process_run_standard(ym, model, cfg, phi_fixed, 
-                                 simple_conlist_weights, fconlist_weights)
+      res <- process_run_standard(ym, model, cfg, phi_fixed,
+                                 simple_conlist_weights, fconlist_weights,
+                                 dataset = dataset)
     }
     
     # Calculate statistics
@@ -213,25 +217,47 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
 #' Runwise LM Slow Path
 #' @keywords internal
 #' @noRd
-runwise_lm_slow <- function(chunks, model, cfg, contrast_objects, 
+runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
                            event_indices, baseline_indices,
-                           verbose = FALSE, progress = FALSE) {
-  
+                           verbose = FALSE, progress = FALSE, dataset = NULL) {
+
   # Determine fitting function
   lmfun <- if (cfg$robust$type != FALSE) multiresponse_rlm else multiresponse_lm
-  
+
   cres <- vector("list", length(chunks))
   form <- get_formula(model)
-  
+
   for (i in seq_along(chunks)) {
     ym <- chunks[[i]]
     if (verbose) message("Processing run (slow path) ", ym$chunk_num)
-    
+
     tmats <- term_matrices(model, ym$chunk_num)
     vnames <- attr(tmats, "varnames")
-    
+
     data_env <- list2env(tmats)
-    data_env$.y <- as.matrix(ym$data)
+    Y_run <- as.matrix(ym$data)
+
+    # Build design matrix for preprocessing
+    n_time_run <- nrow(tmats[[1]])
+    data_env[[".y"]] <- rep(0, n_time_run)
+    X_run <- model.matrix(form, data_env)
+
+    # Apply preprocessing (volume weights and/or soft subspace projection)
+    preproc <- preprocess_run_data(X_run, Y_run, cfg, dataset, ym$chunk_num)
+
+    # Update design matrix terms and data in data_env
+    # Note: preprocessing may have transformed X, so we need to update tmats
+    if (cfg$volume_weights$enabled || cfg$soft_subspace$enabled) {
+      # For slow path with preprocessing, we need to use pre-transformed matrices
+      # This is a limitation - slow path doesn't fully support preprocessing
+      # Issue warning and use original data
+      if (cfg$volume_weights$enabled || cfg$soft_subspace$enabled) {
+        warning("Preprocessing (volume_weights/soft_subspace) with slow path is experimental.",
+                " Consider using use_fast_path=TRUE for full support.", call. = FALSE)
+      }
+    }
+    data_env$.y <- preproc$Y
+
     ret <- lmfun(form, data_env, contrast_objects, vnames, fcon = NULL)
     
     rss <- colSums(as.matrix(ret$fit$residuals^2))

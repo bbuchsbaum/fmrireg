@@ -56,6 +56,9 @@ group_data_from_csv <- function(data,
                                 contrast_col = NULL,
                                 covariate_cols = NULL,
                                 wide_format = FALSE) {
+  if (!isTRUE(getOption("fmrireg.suppress_deprecation", FALSE))) {
+    .Deprecated("group_data", msg = "group_data_from_csv() is deprecated. Use group_data(data, format='csv', ...) instead.")
+  }
   
   # Read data if it's a file path
   if (is.character(data) && length(data) == 1) {

@@ -7,7 +7,7 @@
 #' This function performs a chunkwise linear model analysis on an fMRI dataset,
 #' splitting the dataset into chunks and running the linear model on each chunk.
 #'
-#' @param dset An \code{fmri_dataset} object.
+#' @param x An \code{fmri_dataset} object.
 #' @param model The \code{fmri_model} used for the analysis.
 #' @param contrast_objects The list of full contrast objects.
 #' @param nchunks The number of chunks to divide the dataset into.
@@ -19,10 +19,11 @@
 #' @param sigma_fixed Optional fixed robust scale estimate.
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
-chunkwise_lm.fmri_dataset <- function(dset, model, contrast_objects, nchunks, cfg,
+chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
                                       verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
                                       phi_fixed = NULL,
-                                      sigma_fixed = NULL) {
+                                      sigma_fixed = NULL, ...) {
+  dset <- x
   
   # Validate config
   assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
@@ -151,13 +152,11 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
       actual_vnames <- colnames(precomp$X_global)
       sigma_vec <- sqrt(chunk_res$sigma2)
       
-      # For robust methods, we need to use the run-specific robust weights
-      # This is a simplification - in practice might need more careful handling
+      # Build global robust weights aligned with precomp$X_global row order.
       robust_weights_for_stats <- if (robust_modeling) {
-        # Average weights across runs (approximation)
         run_weights <- lapply(precomp$run_info, `[[`, "weights")
-        if (!any(sapply(run_weights, is.null))) {
-          rowMeans(do.call(cbind, run_weights))
+        if (!any(vapply(run_weights, is.null, logical(1)))) {
+          unlist(run_weights, use.names = FALSE)
         } else {
           NULL
         }
@@ -206,14 +205,22 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
     data_env <- list2env(tmats)
     data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
     modmat <- model.matrix(as.formula(form), data_env)
+
+    # Check if preprocessing is requested but strategy may not fully support it
+    if (cfg$volume_weights$enabled || cfg$soft_subspace$enabled) {
+      warning("Preprocessing (volume_weights/soft_subspace) with chunkwise OLS ",
+              "requires use of runwise strategy or AR/robust options for full support.",
+              " Consider using strategy='runwise' with use_fast_path=TRUE.", call. = FALSE)
+    }
+
     proj <- .fast_preproject(modmat)
-    
+
     cres <- vector("list", length(chunks))
-    
+
     for (i in seq_along(chunks)) {
       ym <- chunks[[i]]
       if (verbose) message("Processing chunk (fast path) ", ym$chunk_num)
-      
+
       Ymat <- as.matrix(ym$data)
       
       # Create GLM context and solve
@@ -336,7 +343,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
       if (length(sigma_vec) == 1L) {
         sigma_vec <- rep(sigma_vec, ncol(betas))
       }
-      dfres <- result$df_residual %||% proj_modmat$dfres
+      dfres <- result$dfres %||% result$df_residual %||% proj_modmat$dfres
       ar_order <- result$ar_order %||% switch(cfg$ar$struct,
         ar1 = 1L,
         ar2 = 2L,
