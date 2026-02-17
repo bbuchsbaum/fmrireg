@@ -43,11 +43,30 @@ is.formula <- function(x) {
   n <- nrow(X)
 
   if (rank == p) {
-    XtX <- crossprod(X)
-    Rchol <- tryCatch(chol(XtX),
-                      error = function(e) chol(XtX + diag(ncol(XtX)) * 1e-8))
-    XtXinv <- chol2inv(Rchol)
-    Pinv <- XtXinv %*% t(X)
+    # Full rank: solve via QR to avoid instability from normal equations.
+    qr_based <- tryCatch({
+      R <- qr.R(qr_decomp)[seq_len(p), seq_len(p), drop = FALSE]
+      Rinv <- backsolve(R, diag(p))
+      list(
+        XtXinv = tcrossprod(Rinv),
+        Pinv = qr.solve(X, diag(n))
+      )
+    }, error = function(e) NULL)
+
+    if (!is.null(qr_based)) {
+      XtXinv <- qr_based$XtXinv
+      Pinv <- qr_based$Pinv
+    } else {
+      svd_result <- svd(X)
+      d <- svd_result$d
+      tol <- max(dim(X)) * .Machine$double.eps * max(d)
+      pos <- d > tol
+      U <- svd_result$u[, pos, drop = FALSE]
+      V <- svd_result$v[, pos, drop = FALSE]
+      D_inv <- diag(1/d[pos], nrow = sum(pos))
+      Pinv <- V %*% D_inv %*% t(U)
+      XtXinv <- V %*% D_inv^2 %*% t(V)
+    }
   } else {
     svd_result <- svd(X)
     d <- svd_result$d

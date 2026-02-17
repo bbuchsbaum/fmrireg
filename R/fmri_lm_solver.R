@@ -28,11 +28,28 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
   if (!is.matrix(X)) X <- as.matrix(X)
   if (!is.matrix(Y)) Y <- as.matrix(Y)
 
-  if (ncol(X) != nrow(proj$Pinv) || nrow(X) != nrow(Y)) {
-    stop("solve_glm_core: X and Y dimensions do not match projection matrix")
+  if (nrow(X) != nrow(Y)) {
+    stop("solve_glm_core: X and Y dimensions do not match")
   }
 
-  betas <- proj$Pinv %*% Y
+  if (isTRUE(proj$is_full_rank) && !is.null(proj$qr)) {
+    # Full-rank path: solve from QR directly for numerical stability.
+    betas <- tryCatch(
+      qr.coef(proj$qr, Y),
+      error = function(e) NULL
+    )
+    if (is.null(betas)) {
+      if (is.null(proj$Pinv) || ncol(X) != nrow(proj$Pinv)) {
+        stop("solve_glm_core: QR solve failed and projection matrix dimensions do not match")
+      }
+      betas <- proj$Pinv %*% Y
+    }
+  } else {
+    if (is.null(proj$Pinv) || ncol(X) != nrow(proj$Pinv)) {
+      stop("solve_glm_core: X and projection matrix dimensions do not match")
+    }
+    betas <- proj$Pinv %*% Y
+  }
 
   if (return_fitted) {
     fitted <- X %*% betas
