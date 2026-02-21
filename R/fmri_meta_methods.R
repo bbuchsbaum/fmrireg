@@ -390,12 +390,12 @@ summary.fmri_meta <- function(object, threshold = 0.05, ...) {
 #' )
 #' coef_image(toy_meta, coef = "A")
 #' @export
-coef_image <- function(object, coef = 1, statistic = c("estimate", "se", "z", "p")) {
+coef_image <- function(object, coef = 1, statistic = c("estimate", "se", "z", "p"), ...) {
   UseMethod("coef_image")
 }
 
 #' @export
-coef_image.fmri_meta <- function(object, coef = 1, statistic = c("estimate", "se", "z", "p")) {
+coef_image.fmri_meta <- function(object, coef = 1, statistic = c("estimate", "se", "z", "p"), ...) {
   statistic <- match.arg(statistic)
   
   # Get coefficient index

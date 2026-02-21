@@ -250,7 +250,7 @@
           XtXinv_iter <- tryCatch(chol2inv(chol(XtX_iter)),
                                   error = function(e) MASS::ginv(XtX_iter))
           beta_iter <- XtXinv_iter %*% crossprod(Xw, Zw)
-          resid_iter <- rowMeans(Zw - Xw %*% beta_iter)
+          resid_iter <- rowMeans(Z - X %*% beta_iter)
           phi_current <- .estimate_ar_parameters_routed(resid_iter, ar_order)
         }
       }

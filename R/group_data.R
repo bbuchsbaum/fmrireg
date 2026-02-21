@@ -185,6 +185,11 @@ print.group_data <- function(x, ...) {
   invisible(x)
 }
 
+#' @export
+print.group_data_gds <- function(x, ...) {
+  .print_group_data_gds(x, ...)
+}
+
 #' Summary of Group Data Object
 #'
 #' @param object A group_data object
@@ -252,6 +257,11 @@ n_subjects.group_data <- function(x) {
   length(unique(x$subjects))
 }
 
+#' @export
+n_subjects.group_data_gds <- function(x) {
+  .n_subjects_group_data_gds(x)
+}
+
 #' Get Subject IDs
 #'
 #' @param x A group_data object
@@ -269,6 +279,11 @@ get_subjects.group_data <- function(x) {
   unique(as.character(x$subjects))
 }
 
+#' @export
+get_subjects.group_data_gds <- function(x) {
+  .get_subjects_group_data_gds(x)
+}
+
 #' Get Covariates
 #'
 #' @param x A group_data object
@@ -284,4 +299,9 @@ get_covariates <- function(x) {
 #' @export
 get_covariates.group_data <- function(x) {
   x$covariates
+}
+
+#' @export
+get_covariates.group_data_gds <- function(x) {
+  .get_covariates_group_data_gds(x)
 }

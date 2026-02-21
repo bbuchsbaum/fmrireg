@@ -293,6 +293,35 @@ fmri_meta.group_data_h5 <- function(data,
 }
 
 #' @export
+fmri_meta.group_data_gds <- function(data,
+                                     formula = ~ 1,
+                                     method = c("pm", "fe", "dl", "reml"),
+                                     robust = c("none", "huber", "t"),
+                                     weights = c("ivw", "equal", "custom"),
+                                     weights_custom = NULL,
+                                     combine = NULL,
+                                     contrasts = NULL,
+                                     return_cov = NULL,
+                                     chunk_size = 10000,
+                                     n_threads = getOption("fmrireg.num_threads", 0),
+                                     verbose = TRUE) {
+  .fmri_meta_group_data_gds_impl(
+    data = data,
+    formula = formula,
+    method = method,
+    robust = robust,
+    weights = weights,
+    weights_custom = weights_custom,
+    combine = combine,
+    contrasts = contrasts,
+    return_cov = return_cov,
+    chunk_size = chunk_size,
+    n_threads = n_threads,
+    verbose = verbose
+  )
+}
+
+#' @export
 fmri_meta.group_data_nifti <- function(data,
                                        formula = ~ 1,
                                        method = c("pm", "fe", "dl", "reml"),

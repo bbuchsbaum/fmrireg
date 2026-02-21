@@ -54,6 +54,7 @@ pvals <- p_values(fit)
 }
 \seealso{
 Other statistical_measures: 
+\code{\link{coef_names}()},
 \code{\link{standard_error}()},
 \code{\link{stats}()}
 }

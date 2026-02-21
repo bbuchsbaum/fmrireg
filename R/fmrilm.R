@@ -2349,7 +2349,7 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
                     
                     # Update phi_hat if needed for next iteration
                     if (is.null(phi_fixed) && iter < cfg$ar$iter_gls) {
-                        resid_gls <- Y_w - X_w %*% gls$betas
+                        resid_gls <- Y_run - X_run %*% gls$betas
                         phi_hat_run <- .estimate_ar_parameters_routed(rowMeans(resid_gls), ar_order)
                     }
                 }

@@ -326,6 +326,158 @@ print.fmri_lm <- function(x, ...) {
   
   cli::cli_rule()
   cli::cli_text("{.emph Use coef(), stats(), or standard_error() to extract results}")
-  
+
   invisible(x)
+}
+
+#' @rdname coef_names
+#' @param type Which set of names to return: \code{"estimates"} (default) for
+#'   event regressor names, \code{"contrasts"} for simple contrast names,
+#'   \code{"F"} for F-contrast names, or \code{"all"} for a named list of all
+#'   three.
+#' @examples
+#' # Create a small example
+#' X <- matrix(rnorm(50 * 4), 50, 4)
+#' edata <- data.frame(
+#'   condition = factor(c("A", "B", "A", "B")),
+#'   onsets = c(1, 12, 25, 38),
+#'   run = c(1, 1, 1, 1)
+#' )
+#' dset <- fmridataset::matrix_dataset(X, TR = 2, run_length = 50,
+#'                                     event_table = edata)
+#' fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
+#' coef_names(fit)
+#' @method coef_names fmri_lm
+#' @export
+coef_names.fmri_lm <- function(x, type = c("estimates", "contrasts", "F", "all"), ...) {
+  type <- match.arg(type)
+
+  get_estimate_names <- function() {
+    dm <- design_matrix(x$model)
+    ei <- x$result$event_indices
+    max_col <- if (!is.null(dm)) ncol(dm) else max(ei)
+    valid_idx <- ei[ei <= max_col]
+    if (!is.null(dm) && length(valid_idx) > 0) {
+      colnames(dm)[valid_idx]
+    } else {
+      conds <- conditions(x$model$event_model)
+      make.names(conds[seq_along(valid_idx)], unique = TRUE)
+    }
+  }
+
+  get_contrast_names <- function() {
+    ct <- x$result$contrasts
+    if (is.null(ct) || nrow(ct) == 0) return(character(0))
+    simple <- ct[ct$type == "contrast", , drop = FALSE]
+    if (nrow(simple) == 0) return(character(0))
+    simple$name
+  }
+
+  get_f_names <- function() {
+    ct <- x$result$contrasts
+    if (is.null(ct) || nrow(ct) == 0) return(character(0))
+    fcons <- ct[ct$type == "Fcontrast", , drop = FALSE]
+    if (nrow(fcons) == 0) return(character(0))
+    fcons$name
+  }
+
+  switch(type,
+    estimates = get_estimate_names(),
+    contrasts = get_contrast_names(),
+    "F" = get_f_names(),
+    all = list(
+      estimates = get_estimate_names(),
+      contrasts = get_contrast_names(),
+      "F" = get_f_names()
+    )
+  )
+}
+
+#' @rdname coef_image
+#' @param statistic For \code{fmri_lm} objects: one of \code{"estimate"},
+#'   \code{"se"}, \code{"tstat"}, or \code{"prob"}.
+#' @param type For \code{fmri_lm} objects: which coefficient set to index into:
+#'   \code{"estimates"} (default), \code{"contrasts"}, or \code{"F"}.
+#' @param ... Additional arguments (currently unused).
+#' @examples
+#' # Create a small example
+#' X <- matrix(rnorm(50 * 4), 50, 4)
+#' edata <- data.frame(
+#'   condition = factor(c("A", "B", "A", "B")),
+#'   onsets = c(1, 12, 25, 38),
+#'   run = c(1, 1, 1, 1)
+#' )
+#' dset <- fmridataset::matrix_dataset(X, TR = 2, run_length = 50,
+#'                                     event_table = edata)
+#' fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
+#' # Get coefficient estimates as a numeric vector
+#' coef_image(fit, coef = 1)
+#' @method coef_image fmri_lm
+#' @export
+coef_image.fmri_lm <- function(object, coef = 1,
+                                statistic = c("estimate", "se", "tstat", "prob"),
+                                type = c("estimates", "contrasts", "F"),
+                                ...) {
+  statistic <- match.arg(statistic)
+  type <- match.arg(type)
+
+  # Map statistic to the internal element names used by pull_stat
+  element <- switch(statistic,
+    estimate = "estimate",
+    se       = "se",
+    tstat    = "stat",
+    prob     = "prob"
+  )
+
+  # ---- resolve coef to a column index ----
+  available <- coef_names(object, type = type)
+  if (length(available) == 0) {
+    stop("No coefficients of type '", type, "' available in this model.",
+         call. = FALSE)
+  }
+
+  if (is.character(coef)) {
+    idx <- match(coef, available)
+    if (is.na(idx)) {
+      stop("Coefficient '", coef, "' not found. Available names: ",
+           paste(available, collapse = ", "), call. = FALSE)
+    }
+  } else {
+    idx <- as.integer(coef)
+    if (idx < 1 || idx > length(available)) {
+      stop("Coefficient index ", idx, " out of range [1, ",
+           length(available), "].", call. = FALSE)
+    }
+  }
+
+  # ---- extract the values vector for the requested coefficient ----
+  if (type == "estimates") {
+    mat <- object$result$betas$data[[1]][[element]][[1]]
+    ei <- object$result$event_indices
+    valid_idx <- ei[ei <= ncol(mat)]
+    values <- mat[, valid_idx[idx]]
+  } else if (type == "contrasts") {
+    ct <- object$result$contrasts
+    simple <- ct[ct$type == "contrast", , drop = FALSE]
+    values <- simple$data[[idx]][[element]][[1]]
+  } else {
+    # F-contrasts
+    ct <- object$result$contrasts
+    fcons <- ct[ct$type == "Fcontrast", , drop = FALSE]
+    values <- fcons$data[[idx]][[element]][[1]]
+  }
+
+  # ---- reconstruct spatial image if possible ----
+  tryCatch({
+    mask <- fmridataset::get_mask(object$dataset)
+    sp <- neuroim2::space(mask)
+    mask_idx <- which(as.logical(mask))
+    vol_array <- array(NA_real_, dim(sp))
+    vol_array[mask_idx] <- values
+    neuroim2::NeuroVol(vol_array, sp)
+  }, error = function(e) {
+    # Non-spatial dataset: return raw vector with informative name
+    names(values) <- NULL
+    values
+  })
 }

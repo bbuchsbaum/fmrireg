@@ -684,6 +684,20 @@ chunkwise_lm <- function(x, ...) UseMethod("chunkwise_lm")
 
 
 
+#' Get Available Coefficient Names
+#'
+#' Return the names of available coefficients from a fitted model object.
+#' This helps users discover which coefficient names can be passed to
+#' \code{\link{coef_image}} or other extraction functions.
+#'
+#' @param x A fitted model object
+#' @param ... Additional arguments passed to methods
+#' @return A character vector of coefficient names
+#' @export
+#' @family statistical_measures
+#' @seealso \code{\link{coef_image}}, \code{\link{coef}}
+coef_names <- function(x, ...) UseMethod("coef_names")
+
 #' Extract Standard Errors from a Model Fit
 #'
 #' Extract standard errors of parameter estimates from a fitted model object.

@@ -127,22 +127,22 @@ group_data <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...
 }
 
 # Basic S3 bridges to keep helpers working on gds-backed objects
-n_subjects.group_data_gds <- function(x) {
+.n_subjects_group_data_gds <- function(x) {
   x <- if (inherits(x, "gds_plan")) fmrigds::compute(x) else x
   length(fmrigds::subjects(x))
 }
 
-get_subjects.group_data_gds <- function(x) {
+.get_subjects_group_data_gds <- function(x) {
   x <- if (inherits(x, "gds_plan")) fmrigds::compute(x) else x
   fmrigds::subjects(x)
 }
 
-get_covariates.group_data_gds <- function(x) {
+.get_covariates_group_data_gds <- function(x) {
   x <- if (inherits(x, "gds_plan")) fmrigds::compute(x) else x
   fmrigds::col_data(x)
 }
 
-print.group_data_gds <- function(x, ...) {
+.print_group_data_gds <- function(x, ...) {
   cat("group_data (backed by gds)\n")
   if (inherits(x, "gds_plan")) {
     try(fmrigds::explain(x), silent = TRUE)

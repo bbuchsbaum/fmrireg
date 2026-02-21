@@ -60,6 +60,7 @@ se <- standard_error(fit)
 }
 \seealso{
 Other statistical_measures: 
+\code{\link{coef_names}()},
 \code{\link{p_values}()},
 \code{\link{stats}()}
 }

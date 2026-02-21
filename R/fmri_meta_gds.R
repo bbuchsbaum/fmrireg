@@ -1,14 +1,5 @@
-#' fmri_meta method for gds-backed group_data
-#' 
-#' Delegates to fmrigds reducers via a plan, then wraps results into an
-#' fmri_meta-compatible object for continuity of print/summary tooling.
-#' 
-#' The returned object additionally includes `roi_names` when available,
-#' carrying the sample/ROI labels from the input GDS.
-#'
-#' @inheritParams fmri_meta.group_data_h5
-#' @keywords internal
-fmri_meta.group_data_gds <- function(data,
+# Implementation for fmri_meta.group_data_gds (wrapper lives in fmri_meta.R)
+.fmri_meta_group_data_gds_impl <- function(data,
                           formula = ~ 1,
                           method = c("pm", "fe", "dl", "reml"),
                           robust = c("none", "huber", "t"),

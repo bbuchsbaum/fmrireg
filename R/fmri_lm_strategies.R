@@ -259,7 +259,7 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
 
       # Update phi if needed for next iteration
       if (is.null(phi_fixed) && iter < cfg$ar$iter_gls) {
-        resid_gls <- Y_w - X_w %*% gls$betas
+        resid_gls <- Y_run - X_run %*% gls$betas
         phi_hat_run <- .estimate_ar_parameters_routed(rowMeans(resid_gls), ar_order, censor = censor_run)
       }
     }

@@ -54,6 +54,7 @@ tstats <- stats(fit)
 }
 \seealso{
 Other statistical_measures: 
+\code{\link{coef_names}()},
 \code{\link{p_values}()},
 \code{\link{standard_error}()}
 }
