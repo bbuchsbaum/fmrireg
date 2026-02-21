@@ -1,0 +1,19 @@
+ecosystem: true
+package: fmrireg
+language: R
+role: model
+tags:
+  - fmri
+  - neuroimaging
+  - glm
+  - regression
+  - hemodynamic
+entrypoints:
+  - fmrireg::fmri_lm
+  - fmrireg::fmri_rlm
+  - fmrireg::fmri_model
+  - fmrireg::fmri_meta
+  - fmrireg::estimate_betas
+  - fmrireg::fmri_dataset
+release_tag: eco-atlas
+asset: atlas-pack.tgz

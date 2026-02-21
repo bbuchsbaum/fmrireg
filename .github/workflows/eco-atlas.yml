@@ -1,0 +1,61 @@
+name: eco-atlas
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write  # needed to create/update a Release asset
+
+jobs:
+  build-eco-atlas:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: |
+            any::jsonlite
+            any::digest
+            any::desc
+
+      - name: Build EcoAtlas snippet/symbol packs
+        env:
+          ECO_ATLAS_OUT: atlas
+          ECO_ATLAS_MAX_SNIPPETS: "200"
+          ECO_ATLAS_INCLUDE_TESTS: "0"
+        run: Rscript tools/eco_atlas_extract.R
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Distill microcards via LLM (OpenAI Responses API)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ECO_ATLAS_MODEL: gpt-4o-mini
+          ECO_ATLAS_OUT: atlas
+          ECO_ATLAS_MAX_CARDS_PER_SNIPPET: "2"
+          ECO_ATLAS_REQUESTS_PER_RUN: "60"
+          ECO_ATLAS_INCLUDE_TEST_CARDS: "0"
+          ECO_ATLAS_MIN_SYMBOLS: "1"
+          ECO_ATLAS_MIN_CARDS: "1"
+          ECO_ATLAS_ENFORCE_EXPORT_SYMBOLS: "1"
+          ECO_ATLAS_ENFORCE_ENTRYPOINTS: "1"
+        run: node tools/eco_atlas_distill.mjs
+
+      - name: Pack
+        run: tar -czf atlas-pack.tgz atlas/
+
+      - name: Publish Release asset (eco-atlas)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view eco-atlas --repo "$GITHUB_REPOSITORY" \
+            || gh release create eco-atlas -t "eco-atlas" -n "Auto-generated EcoAtlas pack"
+          gh release upload eco-atlas atlas-pack.tgz --clobber
