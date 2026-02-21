@@ -64,6 +64,11 @@ data-raw/
 # Hidden directories
 ^\.omc$
 
+# EcoOracle onboarding
+^\.ecosystem\.yml$
+^tools$
+^manual_cards\.jsonl$
+
 # Non-standard top-level files
 ^GLM_EFFICIENCY_CORRECTNESS_PRD\.json$
 
