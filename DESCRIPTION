@@ -82,7 +82,9 @@ Remotes:
     bbuchsbaum/fmridataset,
     bbuchsbaum/fmrilss,
     bbuchsbaum/fmridesign,
-    bbuchsbaum/neuroatlas
+    bbuchsbaum/neuroatlas,
+    bbuchsbaum/delarr,
+    bbuchsbaum/fmrilatent
 VignetteBuilder: knitr
 URL: https://bbuchsbaum.github.io/fmrireg/, https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues
