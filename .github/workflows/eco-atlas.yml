@@ -17,12 +17,9 @@ jobs:
 
       - uses: r-lib/actions/setup-r@v2
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: |
-            any::jsonlite
-            any::digest
-            any::desc
+      - name: Install R packages
+        run: install.packages(c("jsonlite", "digest", "desc"))
+        shell: Rscript {0}
 
       - name: Build EcoAtlas snippet/symbol packs
         env:

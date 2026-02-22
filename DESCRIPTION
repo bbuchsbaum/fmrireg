@@ -73,9 +73,6 @@ Suggests:
     shiny,
     mgcv,
     progressr,
-    quarto,
-    tinytable,
-    neuroatlas,
     roxyglobals (>= 0.2.1),
     withr
 Remotes:
@@ -84,7 +81,8 @@ Remotes:
     anthonynorth/roxyglobals,
     bbuchsbaum/fmridataset,
     bbuchsbaum/fmrilss,
-    bbuchsbaum/fmridesign
+    bbuchsbaum/fmridesign,
+    bbuchsbaum/neuroatlas
 VignetteBuilder: knitr
 URL: https://bbuchsbaum.github.io/fmrireg/, https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues

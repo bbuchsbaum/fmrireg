@@ -1,5 +1,10 @@
 # fmrireg 0.1.2
 
+## Changes
+
+* Moved PDF report generation (`report.fmri_lm`) to the standalone
+  `fmrireport` package. Use `fmrireport::report()` for report rendering.
+
 ## Bug Fixes
 
 * Fixed low-rank/sketch residual degrees of freedom to use original timepoints (`T - p`) instead of sketch rows.
