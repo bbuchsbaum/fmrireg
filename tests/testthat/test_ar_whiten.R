@@ -57,7 +57,6 @@ test_that("ar_whiten_inplace exact first AR1", {
 })
 
 test_that("ar_whiten_transform errors with NA input", {
-  skip("ar_whiten_transform moved to fmriAR package")
   # Test the R wrapper which does check for NA
   Y <- matrix(rnorm(4), ncol = 1)
   X <- matrix(rnorm(4), ncol = 1)

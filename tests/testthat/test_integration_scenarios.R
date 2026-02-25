@@ -144,8 +144,12 @@ test_that("Complex contrast specifications work with all model types", {
   
   expect_s3_class(result_standard, "fmri_lm")
   
-  # Test simple contrasts (skip known issue with pair_contrast dimensions)
-  skip("fit_contrasts with pair_contrast has known non-conformable arguments issue")
+  # Post-hoc pair contrasts should be computable on fmri_lm fits.
+  pc <- pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B")
+  cres <- fit_contrasts(result_standard, list(A_vs_B = pc))
+  expect_true("A_vs_B" %in% names(cres))
+  expect_false(any(is.na(cres$A_vs_B$stat)))
+  expect_length(cres$A_vs_B$estimate, ncol(data_mat))
 })
 
 test_that("Missing data handling works across components", {

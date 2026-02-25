@@ -107,7 +107,6 @@ test_that("volume_weights convenience function works", {
 })
 
 test_that("apply_volume_weights transforms X and Y correctly", {
-  skip("apply_volume_weights not yet implemented")
   set.seed(42)
   X <- matrix(rnorm(100 * 5), nrow = 100, ncol = 5)
   Y <- matrix(rnorm(100 * 50), nrow = 100, ncol = 50)
@@ -129,7 +128,6 @@ test_that("apply_volume_weights transforms X and Y correctly", {
 })
 
 test_that("apply_volume_weights validates inputs", {
-  skip("apply_volume_weights not yet implemented")
   X <- matrix(1:20, nrow = 10, ncol = 2)
   Y <- matrix(1:30, nrow = 10, ncol = 3)
   wrong_weights <- rep(1, 5)  # Wrong length

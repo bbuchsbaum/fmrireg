@@ -810,17 +810,58 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
     return(list())
   }
 
-  beta_mat_vxp <- object$result$betas$data[[1]]$estimate[[1]]
-  betas <- t(as.matrix(beta_mat_vxp))  # p x V
-  p <- nrow(betas)
-  V <- ncol(betas)
-  beta_names <- colnames(beta_mat_vxp)
-
   sigma <- object$result$sigma
   if (is.null(sigma)) {
     sigma <- object$result$betas$data[[1]]$sigma[[1]]
   }
   sigma <- as.numeric(sigma)
+
+  beta_mat_raw <- tryCatch(
+    suppressWarnings(as.matrix(coef(object, type = "betas"))),
+    error = function(e) object$result$betas$data[[1]]$estimate[[1]]
+  )
+
+  event_idx_hint <- as.integer(object$result$event_indices %||% integer(0))
+  expected_p <- length(event_idx_hint)
+
+  if (expected_p > 0L) {
+    if (ncol(beta_mat_raw) == expected_p) {
+      beta_mat_vxp <- beta_mat_raw
+    } else if (nrow(beta_mat_raw) == expected_p) {
+      beta_mat_vxp <- t(beta_mat_raw)
+    } else if (length(sigma) > 1L && ncol(beta_mat_raw) == length(sigma)) {
+      beta_mat_vxp <- t(beta_mat_raw)
+    } else {
+      stop("Unable to align beta matrix orientation with event coefficient count")
+    }
+  } else if (length(sigma) > 1L) {
+    if (nrow(beta_mat_raw) == length(sigma)) {
+      beta_mat_vxp <- beta_mat_raw
+    } else if (ncol(beta_mat_raw) == length(sigma)) {
+      beta_mat_vxp <- t(beta_mat_raw)
+    } else {
+      stop("Unable to align beta matrix orientation with voxel count from sigma")
+    }
+  } else {
+    beta_mat_vxp <- beta_mat_raw
+  }
+
+  betas <- t(as.matrix(beta_mat_vxp))  # p x V
+  p <- nrow(betas)
+  V <- ncol(betas)
+
+  beta_names <- colnames(beta_mat_vxp)
+  if (is.null(beta_names)) {
+    dm_names <- tryCatch(colnames(design_matrix(object$model)), error = function(e) NULL)
+    event_idx <- as.integer(object$result$event_indices %||% integer(0))
+    if (!is.null(dm_names) && length(event_idx) == ncol(beta_mat_vxp) && length(event_idx) > 0L &&
+        max(event_idx) <= length(dm_names)) {
+      beta_names <- dm_names[event_idx]
+    } else {
+      beta_names <- paste0("beta_", seq_len(ncol(beta_mat_vxp)))
+    }
+  }
+
   if (length(sigma) == 1L) {
     sigma <- rep(sigma, V)
   }
@@ -862,6 +903,22 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
       }
     )
   }
+  XtXinv <- as.matrix(XtXinv)
+  if (nrow(XtXinv) != p || ncol(XtXinv) != p) {
+    event_idx <- as.integer(object$result$event_indices %||% integer(0))
+    if (length(event_idx) == p && length(event_idx) > 0L &&
+        max(event_idx) <= nrow(XtXinv) && max(event_idx) <= ncol(XtXinv)) {
+      XtXinv <- XtXinv[event_idx, event_idx, drop = FALSE]
+    } else {
+      stop(
+        sprintf(
+          "Incompatible covariance dimensions for post-hoc contrasts: XtXinv is %dx%d but beta matrix has %d coefficients",
+          nrow(XtXinv), ncol(XtXinv), p
+        ),
+        call. = FALSE
+      )
+    }
+  }
 
   resolve_pair_weights <- function(con_spec) {
     event_terms <- terms(object$model$event_model)
@@ -869,13 +926,34 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
       stop("No event terms available for pair_contrast_spec")
     }
     term <- event_terms[[1]]
-    con_weights <- as.vector(contrast_weights(con_spec, term)$weights)
-    colind <- grep("condition", beta_names)
-    if (length(colind) >= length(con_weights)) {
-      colind <- colind[seq_len(length(con_weights))]
-    } else {
+    cweights <- contrast_weights(con_spec, term)$weights
+    con_weights <- as.vector(cweights)
+    w_names <- rownames(cweights)
+
+    colind <- integer(0)
+    if (!is.null(w_names) && !is.null(beta_names)) {
+      colind <- match(w_names, beta_names)
+      if (anyNA(colind)) {
+        colind <- vapply(w_names, function(nm) {
+          exact <- which(beta_names == nm)
+          if (length(exact) == 1L) return(exact)
+          suffix <- which(endsWith(beta_names, nm))
+          if (length(suffix) == 1L) return(suffix)
+          NA_integer_
+        }, integer(1))
+      }
+      if (anyNA(colind)) {
+        colind <- integer(0)
+      }
+    }
+
+    if (length(colind) == 0L) {
+      if (length(con_weights) > p) {
+        stop("pair contrast has more weights than available coefficients")
+      }
       colind <- seq_len(length(con_weights))
     }
+
     list(type = "t", weights = con_weights, colind = colind)
   }
 

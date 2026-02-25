@@ -150,6 +150,8 @@ read_h5_metadata <- function(path) {
       try(h5_handle$close_all(), silent = TRUE)
       try(h5_handle$close(), silent = TRUE)
       try(close(h5_handle), silent = TRUE)
+      try(close(h5_handle@obj), silent = TRUE)
+      try(h5_handle@obj$close_all(), silent = TRUE)
     }, add = TRUE)
 
     # Legacy list-like handle with $ fields
@@ -162,33 +164,30 @@ read_h5_metadata <- function(path) {
       ))
     }
 
-    # S4 or other handle type: attempt to retrieve via slots or accessors
-    if (methods::is(h5_handle, "S4")) {
+    # S4 handle (current fmristore LabeledVolumeSet)
+    if (isS4(h5_handle)) {
       sn <- try(methods::slotNames(h5_handle), silent = TRUE)
-      get_slot <- function(nm) try(methods::slot(h5_handle, nm), silent = TRUE)
-      dim_val <- NULL; labels_val <- NULL; mask_val <- NULL; mask_dim <- NULL
-      if (!inherits(sn, "try-error")) {
-        if ("dim" %in% sn) dim_val <- get_slot("dim")
-        if ("labels" %in% sn) labels_val <- get_slot("labels")
-        if ("mask" %in% sn) mask_val <- get_slot("mask")
-        if ("mask_dim" %in% sn) mask_dim <- get_slot("mask_dim")
-      }
-      # Fallback to potential accessor generics if available
-      if (is.null(dim_val)) dim_val <- try(dim(h5_handle), silent = TRUE)
-      if (is.null(labels_val)) labels_val <- try(labels(h5_handle), silent = TRUE)
-      if (is.null(mask_val)) mask_val <- tryCatch(get_mask(h5_handle), error = function(e) NULL)
+      labels_val <- tryCatch(as.character(methods::slot(h5_handle, "labels")), error = function(e) NULL)
+      mask_val <- tryCatch(methods::slot(h5_handle, "mask"), error = function(e) NULL)
+      mask_dim <- if (!is.null(mask_val)) tryCatch(dim(mask_val), error = function(e) NULL) else NULL
+      dim_val <- NULL
 
-      if (!inherits(dim_val, "try-error") && !inherits(labels_val, "try-error") && !is.null(dim_val) && !is.null(labels_val)) {
+      if (!is.null(mask_dim) && length(mask_dim) >= 3 && !is.null(labels_val)) {
+        dim_val <- c(as.integer(mask_dim[1:3]), length(labels_val))
+      } else if (!inherits(sn, "try-error") && "dim" %in% sn) {
+        dim_val <- tryCatch(methods::slot(h5_handle, "dim"), error = function(e) NULL)
+      }
+
+      if (!is.null(dim_val) && !is.null(labels_val)) {
         return(list(
-          dim = dim_val,
+          dim = as.integer(dim_val),
           labels = labels_val,
-          mask_dim = if (!inherits(mask_dim, "try-error")) mask_dim else NULL,
-          has_mask = isTRUE(!inherits(mask_val, "try-error") && !is.null(mask_val))
+          mask_dim = if (!is.null(mask_dim)) as.integer(mask_dim) else NULL,
+          has_mask = !is.null(mask_val)
         ))
       }
 
-      # Could not safely introspect S4 handle—informative error for tests to skip
-      stop("Legacy HDF5 reader cannot introspect fmristore S4 handle; use group_data(..., format='h5') via fmrigds instead.")
+      stop("Failed to introspect fmristore S4 HDF5 handle")
     }
 
     # Unknown handle type
@@ -255,42 +254,88 @@ read_h5_chunk <- function(gd, voxel_indices, stat = NULL) {
   if (is.null(stat)) {
     stat <- gd$stat
   }
-  
-  # Read from each subject's file
-  data_list <- lapply(seq_along(gd$paths), function(i) {
+
+  n_subjects <- length(gd$paths)
+  n_voxels <- length(voxel_indices)
+
+  beta_data <- if ("beta" %in% stat) matrix(NA_real_, nrow = n_subjects, ncol = n_voxels) else NULL
+  se_data <- if (any(c("se", "var") %in% stat)) matrix(NA_real_, nrow = n_subjects, ncol = n_voxels) else NULL
+  t_data <- if (any(c("t", "tstat") %in% stat)) matrix(NA_real_, nrow = n_subjects, ncol = n_voxels) else NULL
+
+  for (i in seq_along(gd$paths)) {
     path <- gd$paths[i]
-    
+
     tryCatch({
       h5_handle <- fmristore::read_labeled_vec(path)
-      on.exit(h5_handle$close_all())
-      
-      # Read specific voxels and statistics
-      if (gd$file_type == "by_stat") {
-        # File has statistics as labels
-        data <- h5_handle$read_voxels(voxel_indices, labels = stat)
-      } else if (gd$file_type == "by_contrast") {
-        # File has contrasts as labels, need to extract specific contrast
-        if (!is.null(gd$contrast)) {
-          data <- h5_handle$read_voxels(voxel_indices, labels = gd$contrast)
-          # Now extract the statistics from within the contrast
-          # This depends on how the data is structured
-        } else {
-          stop("Contrast must be specified for by_contrast files", call. = FALSE)
+      on.exit({
+        try(h5_handle$close_all(), silent = TRUE)
+        try(h5_handle$close(), silent = TRUE)
+        try(close(h5_handle), silent = TRUE)
+        try(close(h5_handle@obj), silent = TRUE)
+        try(h5_handle@obj$close_all(), silent = TRUE)
+      }, add = TRUE)
+
+      if (gd$file_type != "by_stat") {
+        stop("Only by_stat HDF5 layout is supported by read_h5_chunk")
+      }
+
+      if (is.list(h5_handle) && !is.null(h5_handle$read_voxels)) {
+        data_list <- h5_handle$read_voxels(voxel_indices, labels = unique(c(stat, "beta", "se", "var", "t", "tstat")))
+        if (!is.null(beta_data) && !is.null(data_list$beta)) beta_data[i, ] <- as.numeric(data_list$beta)
+        if (!is.null(se_data)) {
+          if (!is.null(data_list$se)) {
+            se_data[i, ] <- as.numeric(data_list$se)
+          } else if (!is.null(data_list$var)) {
+            se_data[i, ] <- sqrt(as.numeric(data_list$var))
+          }
+        }
+        if (!is.null(t_data)) {
+          if (!is.null(data_list$t)) t_data[i, ] <- as.numeric(data_list$t)
+          if (!is.null(data_list$tstat)) t_data[i, ] <- as.numeric(data_list$tstat)
+        }
+      } else if (isS4(h5_handle)) {
+        labels_available <- tryCatch(as.character(methods::slot(h5_handle, "labels")), error = function(e) character(0))
+        data_group <- h5_handle@obj[["data"]]
+        read_label <- function(lbl) {
+          if (!(lbl %in% labels_available)) return(NULL)
+          ds <- data_group[[lbl]]
+          as.numeric(ds[voxel_indices])
+        }
+
+        if (!is.null(beta_data)) {
+          vals <- read_label("beta")
+          if (!is.null(vals)) beta_data[i, ] <- vals
+        }
+        if (!is.null(se_data)) {
+          vals_se <- read_label("se")
+          vals_var <- read_label("var")
+          if (!is.null(vals_se)) {
+            se_data[i, ] <- vals_se
+          } else if (!is.null(vals_var)) {
+            se_data[i, ] <- sqrt(vals_var)
+          }
+        }
+        if (!is.null(t_data)) {
+          vals_t <- read_label("t")
+          vals_tstat <- read_label("tstat")
+          if (!is.null(vals_t)) t_data[i, ] <- vals_t
+          if (!is.null(vals_tstat)) t_data[i, ] <- vals_tstat
         }
       } else {
-        # Raw betas file
-        data <- h5_handle$read_voxels(voxel_indices)
+        stop("Unsupported fmristore handle type")
       }
-      
-      return(data)
     }, error = function(e) {
       warning("Failed to read from ", path, ": ", e$message)
-      return(NULL)
     })
-  })
-  
-  names(data_list) <- gd$subjects
-  return(data_list)
+  }
+
+  result <- list()
+  if (!is.null(beta_data)) result$beta <- beta_data
+  if (!is.null(se_data)) result$se <- se_data
+  if (!is.null(t_data)) result$t <- t_data
+  if (!is.null(gd$df)) result$df <- gd$df
+
+  result
 }
 
 #' Read All Data from HDF5 Files
@@ -314,30 +359,22 @@ read_h5_full <- function(gd, stat = NULL) {
   n_subjects <- length(gd$paths)
   n_stats <- length(stat)
   n_voxels <- gd$n_voxels
-  
-  # Pre-allocate array
   data_array <- array(NA_real_, dim = c(n_voxels, n_subjects, n_stats))
-  
-  # Read each subject's data
-  for (i in seq_along(gd$paths)) {
-    path <- gd$paths[i]
-    
-    tryCatch({
-      h5_handle <- fmristore::read_labeled_vec(path)
-      on.exit(h5_handle$close_all())
-      
-      # Read all voxels for specified statistics
-      if (gd$file_type == "by_stat") {
-        for (j in seq_along(stat)) {
-          data_array[, i, j] <- h5_handle$read_data(labels = stat[j])
-        }
-      } else {
-        # Handle other file types
-        # Implementation depends on exact structure
+
+  chunk <- read_h5_chunk(gd, voxel_indices = seq_len(n_voxels), stat = stat)
+  for (j in seq_along(stat)) {
+    sname <- stat[j]
+    if (sname == "var") {
+      if (!is.null(chunk$se)) {
+        data_array[, , j] <- t(chunk$se^2)
       }
-    }, error = function(e) {
-      warning("Failed to read from ", path, ": ", e$message)
-    })
+    } else if (sname %in% names(chunk)) {
+      data_array[, , j] <- t(chunk[[sname]])
+    } else if (sname == "tstat" && !is.null(chunk$t)) {
+      data_array[, , j] <- t(chunk$t)
+    } else if (sname == "t" && !is.null(chunk$t)) {
+      data_array[, , j] <- t(chunk$t)
+    }
   }
   
   # Add dimension names

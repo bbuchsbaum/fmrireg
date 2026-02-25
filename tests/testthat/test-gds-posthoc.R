@@ -1,6 +1,6 @@
 test_that("posthoc fdr:spatial matches spatial_fdr() per coefficient", {
-  skip("GDS spatial FDR parity under review")
   skip_if_not_installed("fmrigds")
+  fmrireg:::.ensure_fmrigds_registered()
   set.seed(42)
   # Build a tiny gds with z assay (features x coef)
   P <- 50; K <- 2

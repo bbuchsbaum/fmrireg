@@ -44,7 +44,6 @@ test_that("estimate_ar_parameters recovers AR coefficients", {
 # ar_whiten_transform should return whitened matrices
 
 test_that("ar_whiten_transform whitens X and Y", {
-  skip("ar_whiten_transform moved to fmriAR package")
   Y <- matrix(1:4, ncol = 1)
   X <- matrix(4:1, ncol = 1)
   phi <- 0.5
@@ -58,10 +57,8 @@ test_that("ar_whiten_transform whitens X and Y", {
 # ar_whiten_transform error on NA
 
 test_that("ar_whiten_transform errors with NA", {
-  skip("ar_whiten_transform moved to fmriAR package")
   Y <- matrix(rnorm(4), ncol = 1)
   X <- matrix(rnorm(4), ncol = 1)
   Y[2, 1] <- NA
   expect_error(ar_whiten_transform(X, Y, 0.3), "NA")
 })
-

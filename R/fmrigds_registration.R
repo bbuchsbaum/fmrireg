@@ -135,7 +135,10 @@
     if (length(dim(p_arr)) == 2L) p_arr <- array(p_arr, dim = c(dim(p_arr)[1L], 1L, dim(p_arr)[2L]))
   }
 
-  dims <- dim(p_arr)
+  dims <- if (!is.null(z_arr)) dim(z_arr) else dim(p_arr)
+  if (is.null(dims) || length(dims) != 3L) {
+    stop("fdr:spatial expected assay dimensions [features x subjects x contrasts]", call. = FALSE)
+  }
   Q <- array(NA_real_, dim = dims)
   for (j in seq_len(dims[2L])) {
     for (k in seq_len(dims[3L])) {

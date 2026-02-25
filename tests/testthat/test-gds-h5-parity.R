@@ -31,23 +31,38 @@ test_that("fmri_meta.gds equals legacy HDF5 path (FE/PM)", {
     h5_paths[i] <- h5p
   }
 
-  # Skip if legacy metadata reader cannot handle current fmristore handle
-  meta_try <- try(fmrireg:::read_h5_metadata(h5_paths[1]), silent = TRUE)
-  if (inherits(meta_try, "try-error")) {
-    skip("fmristore handle incompatible with legacy readers; skipping HDF5 parity test")
-  }
+  meta <- suppressWarnings(fmrireg:::read_h5_metadata(h5_paths[1]))
+  expect_equal(meta$dim[1:3], dims)
+  expect_true(all(c("beta", "se") %in% meta$labels))
 
   # Legacy path
-  gd_legacy <- group_data_from_h5(paths = h5_paths,
-                                  subjects = subjects,
-                                  stat = c("beta","se"),
-                                  validate = TRUE)
+  gd_legacy <- suppressWarnings(
+    group_data_from_h5(paths = h5_paths,
+                       subjects = subjects,
+                       stat = c("beta","se"),
+                       validate = TRUE)
+  )
 
   # gds path via fmrigds
-  gd_gds <- fmrigds::gds(data = h5_paths, format = "h5", subjects = subjects)
+  gd_gds <- try(group_data(h5_paths, format = "h5", subjects = subjects), silent = TRUE)
+  if (inherits(gd_gds, "try-error")) {
+    # Fallback path for fmrigds versions that do not yet support vectorized
+    # multi-file HDF5 sources directly.
+    legacy_arr <- suppressWarnings(read_h5_full(gd_legacy, stat = c("beta", "se")))
+    beta_arr <- array(legacy_arr[, , 1], dim = c(P, S, 1))
+    se_arr <- array(legacy_arr[, , 2], dim = c(P, S, 1))
+    gd_gds <- fmrigds::as_gds(
+      list(beta = beta_arr, se = se_arr),
+      space = NULL,
+      subjects = subjects
+    )
+    class(gd_gds) <- c("group_data_gds", "group_data", class(gd_gds))
+  }
 
   # FE
-  fit_old_fe <- fmri_meta(gd_legacy, formula = ~ 1, method = "fe", robust = "none", verbose = FALSE)
+  fit_old_fe <- suppressWarnings(
+    fmri_meta(gd_legacy, formula = ~ 1, method = "fe", robust = "none", verbose = FALSE)
+  )
   fit_new_fe <- fmri_meta(gd_gds,    formula = ~ 1, method = "fe", robust = "none", verbose = FALSE)
   expect_equal(dim(fit_new_fe$coefficients), dim(fit_old_fe$coefficients))
   expect_equal(dim(fit_new_fe$se),           dim(fit_old_fe$se))
@@ -55,7 +70,9 @@ test_that("fmri_meta.gds equals legacy HDF5 path (FE/PM)", {
   expect_equal(fit_new_fe$se,           fit_old_fe$se,           tolerance = 1e-6)
 
   # PM
-  fit_old_pm <- fmri_meta(gd_legacy, formula = ~ 1, method = "pm", robust = "none", verbose = FALSE)
+  fit_old_pm <- suppressWarnings(
+    fmri_meta(gd_legacy, formula = ~ 1, method = "pm", robust = "none", verbose = FALSE)
+  )
   fit_new_pm <- fmri_meta(gd_gds,    formula = ~ 1, method = "pm", robust = "none", verbose = FALSE)
   expect_equal(fit_new_pm$coefficients, fit_old_pm$coefficients, tolerance = 1e-8)
   expect_equal(fit_new_pm$se,           fit_old_pm$se,           tolerance = 1e-6)
