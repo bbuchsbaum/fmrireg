@@ -3,8 +3,6 @@ facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrir
 facedes$repnum <- factor(facedes$rep_num)
 
 library(testthat)
-library(foreach)
-library(ggrepel)
 
 gen_mask_file <- function(d, perc) {
   arr = array(0,d)
@@ -516,6 +514,5 @@ test_that("can run video fmri design with fmri_file_dataset", {
 #   mod <- fmri_glm(config$event_model, 
 #                   dataset=dset, durations=0)
 # })
-
 
 

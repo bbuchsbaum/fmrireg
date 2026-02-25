@@ -41,14 +41,18 @@ is.formula <- function(x) {
   rank <- qr_decomp$rank
   p <- ncol(X)
   n <- nrow(X)
+  pivot <- qr_decomp$pivot %||% seq_len(p)
 
   if (rank == p) {
     # Full rank: solve via QR to avoid instability from normal equations.
     qr_based <- tryCatch({
       R <- qr.R(qr_decomp)[seq_len(p), seq_len(p), drop = FALSE]
       Rinv <- backsolve(R, diag(p))
+      XtXinv_pivot <- tcrossprod(Rinv)
+      XtXinv <- matrix(0, nrow = p, ncol = p)
+      XtXinv[pivot, pivot] <- XtXinv_pivot
       list(
-        XtXinv = tcrossprod(Rinv),
+        XtXinv = XtXinv,
         Pinv = qr.solve(X, diag(n))
       )
     }, error = function(e) NULL)
@@ -77,6 +81,10 @@ is.formula <- function(x) {
     D_inv <- diag(1/d[pos], nrow = sum(pos))
     Pinv <- V %*% D_inv %*% t(U)
     XtXinv <- V %*% D_inv^2 %*% t(V)
+  }
+
+  if (!is.null(colnames(X))) {
+    dimnames(XtXinv) <- list(colnames(X), colnames(X))
   }
 
   list(
