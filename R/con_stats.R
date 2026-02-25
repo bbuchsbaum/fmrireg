@@ -767,6 +767,32 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames,
   return(ret)
 }
 
+#' @keywords internal
+#' @noRd
+.enforce_contrast_scope <- function(colind, scope, contrast_name) {
+  if (is.null(scope) || is.null(scope$allowed_colind) || is.null(colind)) {
+    return(invisible(TRUE))
+  }
+
+  allowed <- as.integer(scope$allowed_colind)
+  used <- as.integer(colind)
+  bad <- setdiff(used, allowed)
+  if (length(bad) == 0L) {
+    return(invisible(TRUE))
+  }
+
+  reason <- as.character(scope$reason %||% "")
+  msg <- paste0(
+    "Contrast '", contrast_name, "' references unsupported coefficient indices for this fit: ",
+    paste(bad, collapse = ", ")
+  )
+  if (nzchar(reason)) {
+    msg <- paste0(msg, ". ", reason)
+  }
+
+  stop(msg, call. = FALSE)
+}
+
 #' Fit Contrasts for fMRI Linear Model Objects
 #'
 #' @description
@@ -808,6 +834,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
     df_residual <- object$result$betas$df.residual[1]
   }
   df_residual <- as.numeric(df_residual)[1]
+  contrast_scope <- object$result$contrast_scope %||% NULL
 
   XtXinv <- object$result$cov.unscaled
   if (is.null(XtXinv)) {
@@ -862,6 +889,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
     tryCatch({
       if (inherits(con_spec, "pair_contrast_spec")) {
         parsed <- resolve_pair_weights(con_spec)
+        .enforce_contrast_scope(parsed$colind, contrast_scope, con_name)
         l <- numeric(p)
         if (length(parsed$colind) != length(parsed$weights)) {
           stop("pair contrast has mismatched indices/weights lengths")
@@ -894,6 +922,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
           if (is.null(colind)) {
             colind <- seq_len(ncol(wmat))
           }
+          .enforce_contrast_scope(colind, contrast_scope, con_name)
           L <- matrix(0, nrow = nrow(wmat), ncol = p)
           if (ncol(wmat) == length(colind)) {
             L[, colind] <- wmat
@@ -923,6 +952,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
       if (is.null(colind)) {
         colind <- seq_len(length(w))
       }
+      .enforce_contrast_scope(colind, contrast_scope, con_name)
       if (length(colind) != length(w)) {
         stop("Contrast dimensions do not match selected coefficients")
       }
@@ -941,6 +971,9 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
         stat_type = stats$stat_type
       )
     }, error = function(e) {
+      if (grepl("unsupported coefficient indices", conditionMessage(e), fixed = TRUE)) {
+        stop(conditionMessage(e), call. = FALSE)
+      }
       warning(paste("Error processing contrast", con_name, ":", e$message))
       NULL
     })

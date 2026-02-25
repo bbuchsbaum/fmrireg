@@ -65,7 +65,6 @@ Suggests:
     covr,
     gridExtra,
     multivarious,
-    rrBLUP,
     glmnet,
     proxy,
     cowplot,

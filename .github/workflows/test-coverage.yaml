@@ -28,6 +28,14 @@ jobs:
           extra-packages: any::covr, any::xml2
           needs: coverage
 
+      - name: Parity matrix tests
+        run: |
+          testthat::test_local(
+            filter = "rrr-parity-matrix|rrr-gls-engine",
+            reporter = testthat::SummaryReporter$new()
+          )
+        shell: Rscript {0}
+
       - name: Test coverage
         run: |
           cov <- covr::package_coverage(

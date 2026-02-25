@@ -68,3 +68,37 @@ test_that("register_engine integrates with fmri_lm via fit_glm_on_transformed_se
   expect_equal(attr(fit, "engine"), engine_name)
   expect_equal(attr(fit, "strategy"), "engine")
 })
+
+test_that("sketch engine alias dispatches to latent sketch path", {
+  dset <- .demo_matrix_dataset()
+
+  fit <- fmri_lm(
+    onsets ~ hrf(condition),
+    block = ~run,
+    dataset = dset,
+    engine = "sketch"
+  )
+
+  expect_s3_class(fit, "fmri_lm")
+  expect_equal(attr(fit, "strategy"), "sketch")
+  expect_true(!is.null(fit$betas_fixed))
+})
+
+test_that("sketch engine alias dispatches for fmri_model method", {
+  dset <- .demo_matrix_dataset()
+  model <- create_fmri_model(
+    formula = onsets ~ hrf(condition),
+    block = ~run,
+    dataset = dset
+  )
+
+  fit <- fmri_lm(
+    model,
+    dataset = dset,
+    engine = "sketch"
+  )
+
+  expect_s3_class(fit, "fmri_lm")
+  expect_equal(attr(fit, "strategy"), "sketch")
+  expect_true(!is.null(fit$betas_fixed))
+})

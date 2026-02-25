@@ -958,7 +958,7 @@ longnames.event_model <- function(x, ...) {
 #'
 #' Available estimation methods include:
 #' \describe{
-#'   \item{mixed}{Mixed-effects model using rrBLUP}
+#'   \item{mixed}{Mixed-effects model using ridge/BLUP estimation}
 #'   \item{r1}{Rank-1 GLM with joint HRF estimation}
 #'   \item{lss}{Least-squares separate estimation}
 #'   \item{pls}{Partial least squares regression}

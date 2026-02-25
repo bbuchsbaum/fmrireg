@@ -38,4 +38,8 @@
   }
 
   # fmrigds bridge registrations happen via fmrigds .onLoad when available
+
+  if (exists(".register_builtin_engines", mode = "function")) {
+    try(.register_builtin_engines(), silent = TRUE)
+  }
 }
