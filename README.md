@@ -1,12 +1,10 @@
 # fmrireg
 
 [![R-CMD-check](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml)
-[![Codecov test coverage](https://codecov.io/gh/bbuchsbaum/fmrireg/branch/master/graph/badge.svg)](https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=master)
+[![Codecov test coverage](https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg)](https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
-**fmrireg** provides tools for the analysis of functional magnetic resonance
-imaging (fMRI) data in R. It supports flexible hemodynamic response functions,
 experimental regressor construction, and univariate fMRI regression using a
 formula-based interface inspired by `lm()` and `glm()`.
 
