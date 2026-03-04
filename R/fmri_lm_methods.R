@@ -1,13 +1,6 @@
 # S3 Methods for fmri_lm Objects
 # Methods for extracting results and information from fitted fmri_lm objects
 
-
-## Deprecated stub: fitted_hrf.fmri_lm
-## The real implementation lives in R/fmrilm.R. The placeholder
-## implementation previously here has been removed to avoid clobbering
-## the robust method and to prevent duplicate S3 registrations.
-## If needed for reference, see git history prior to this change.
-
 #' Reshape Coefficients
 #' 
 #' @keywords internal

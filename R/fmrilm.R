@@ -995,23 +995,56 @@ fitted_hrf.fmri_lm <- function(x, sample_at = seq(0, 24, by = 1), ...) {
   # Error checking
   assert_that(inherits(x, "fmri_lm"), msg = "'x' must be an 'fmri_lm' object")
   assert_that(is.numeric(sample_at), msg = "'sample_at' must be numeric")
+  assert_that(all(is.finite(sample_at)), msg = "'sample_at' must contain only finite values")
   
   eterms <- terms(x$model$event_model)
-  betas <- coef(x)
-  
-  # Get term indices from the fmri_model's term_matrices
-  tmats <- term_matrices(x$model)
-  event_indices <- attr(tmats, "event_term_indices")
   
   # If no event terms, return empty list
   if (is.null(eterms) || length(eterms) == 0) {
     return(list())
   }
+
+  # Pull coefficients directly from model results (voxels x coefficients)
+  betas <- x$result$betas$data[[1]]$estimate[[1]]
+  if (!is.matrix(betas)) {
+    betas <- as.matrix(betas)
+  }
+
+  # Column mapping for each event term
+  col_indices <- attr(x$model$event_model$design_matrix, "col_indices")
+  if (is.null(col_indices) || length(col_indices) == 0L) {
+    stop("Event model design matrix is missing 'col_indices' metadata.", call. = FALSE)
+  }
+
+  term_names <- names(eterms)
+  sample_n <- length(sample_at)
+  nvox <- nrow(betas)
   
   # For each event term, compute its indices based on the term's structure
-  # The event_indices should correspond to the columns for event terms
   pred <- lapply(seq_along(eterms), function(i) {
     eterm <- eterms[[i]]
+    term_name <- term_names[[i]]
+    if (is.null(term_name) || !nzchar(term_name)) {
+      term_name <- paste0("term_", i)
+    }
+
+    ind <- col_indices[[term_name]]
+    if (is.null(ind) || length(ind) == 0L) {
+      stop(sprintf("No coefficient indices found for event term '%s'.", term_name), call. = FALSE)
+    }
+    if (any(!is.finite(ind))) {
+      stop(sprintf("Coefficient indices for term '%s' contain non-finite values.", term_name), call. = FALSE)
+    }
+    ind <- as.integer(ind)
+    if (any(ind < 1L) || any(ind > ncol(betas))) {
+      stop(
+        sprintf(
+          "Coefficient indices for term '%s' are out of bounds (max index %d, available %d).",
+          term_name, max(ind), ncol(betas)
+        ),
+        call. = FALSE
+      )
+    }
     
     # Get the HRF specification (stored as an attribute in fmridesign)
     hrf_spec <- attr(eterm, "hrfspec")
@@ -1022,47 +1055,63 @@ fitted_hrf.fmri_lm <- function(x, sample_at = seq(0, 24, by = 1), ...) {
     
     # Fallback HRF if spec is missing
     hrf <- if (!is.null(hrf_spec) && !is.null(hrf_spec$hrf)) hrf_spec$hrf else fmrihrf::HRF_SPMG1
-    # Derive nbasis using fmrihrf helper when possible
-    nb <- tryCatch({ fmrihrf::nbasis(hrf) }, error = function(e) NULL)
-    
-    # If nbasis is NULL, assume it's 1 (single basis function)
-    if (is.null(nb)) {
-      nb <- 1
+    if (!is.function(hrf)) {
+      stop(sprintf("HRF specification for term '%s' is not callable.", term_name), call. = FALSE)
     }
     
     # Get the conditions (cells) for this term
     excond <- cells(eterm, exclude_basis = TRUE)
     ncond <- nrow(excond)
-    
-    # Get the column indices for this term directly from the event_model's col_indices
-    col_indices <- attr(x$model$event_model$design_matrix, "col_indices")
-    term_name <- names(eterms)[i]
-    ind <- col_indices[[term_name]]
-    
+
+    excond_expanded <- excond[rep(seq_len(ncond), each = sample_n), , drop = FALSE]
+    design <- tibble::add_column(
+      tibble::as_tibble(excond_expanded),
+      time = rep(sample_at, ncond),
+      .before = 1L
+    )
+
+    if (sample_n == 0L || ncond == 0L) {
+      return(list(pred = matrix(numeric(0), nrow = 0L, ncol = nvox), design = design))
+    }
+
     # Create the HRF basis matrix at sample points
     G <- as.matrix(hrf(sample_at))
-    
-    # Create block diagonal matrix for all conditions
-    Gex <- do.call(Matrix::bdiag, replicate(ncond, G, simplify = FALSE))
-    
-    # Get the relevant betas for this term
+    if (nrow(G) != sample_n) {
+      stop(
+        sprintf(
+          "HRF basis for term '%s' returned %d rows for %d sample points.",
+          term_name, nrow(G), sample_n
+        ),
+        call. = FALSE
+      )
+    }
+
+    nbasis_term <- ncol(G)
+    expected_cols <- ncond * nbasis_term
+    if (length(ind) != expected_cols) {
+      stop(
+        sprintf(
+          "Term '%s' expects %d coefficient columns (%d conditions x %d basis), but found %d.",
+          term_name, expected_cols, ncond, nbasis_term, length(ind)
+        ),
+        call. = FALSE
+      )
+    }
+
+    # Select term coefficients and apply basis per condition (avoids large block-diagonal allocation).
     B <- t(betas[, ind, drop = FALSE])
-    
-    # Compute predicted HRF values
-    yh <- Gex %*% B
-    
-    # Create expanded design info
-    excond_expanded <- excond %>% dplyr::slice(rep(1:dplyr::n(), each = length(sample_at)))
-    design <- cbind(
-      dplyr::tibble(time = rep(sample_at, ncond)),
-      excond_expanded
-    )
-    
-    list(pred = as.matrix(yh), design = tibble::as_tibble(design))
+    yh_blocks <- vector("list", ncond)
+    for (j in seq_len(ncond)) {
+      idx <- ((j - 1L) * nbasis_term + 1L):(j * nbasis_term)
+      yh_blocks[[j]] <- G %*% B[idx, , drop = FALSE]
+    }
+    yh <- do.call(rbind, yh_blocks)
+
+    list(pred = as.matrix(yh), design = design)
   })
   
   # Set names from event terms
-  names(pred) <- names(eterms)
+  names(pred) <- term_names
   
   return(pred)
 }
