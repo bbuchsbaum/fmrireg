@@ -1,4 +1,5 @@
-title: "02. Data Structures and Sampling Frames"
+---
+title: "02 Data Structures and Sampling Frames"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -217,10 +218,6 @@ This dataset type essentially behaves like a `matrix_dataset` where the matrix c
 
 ## Using Dataset Objects
 
-## Next
-
-- [Simulating fMRI Data](/articles/a_08_simulation.html)
-- [fMRI Linear Model (GLM)](/articles/a_09_linear_model.html)
 Once created, these dataset objects serve as the primary data input for `fmrireg`'s modeling functions:
 
 *   `event_model(..., sampling_frame = dset$sampling_frame)`
@@ -230,4 +227,9 @@ Once created, these dataset objects serve as the primary data input for `fmrireg
 
 They provide a standardized way to access data (`get_data(dset)`), masks (`get_mask(dset)`), and timing information (`blocklens(dset)`, `blockids(dset)`), regardless of the underlying storage format.
 
-Choosing the appropriate dataset class depends on where your data resides (memory, files) and its format (volumetric, matrix, latent). 
+Choosing the appropriate dataset class depends on where your data resides (memory, files) and its format (volumetric, matrix, latent).
+
+## Next
+
+- `vignette("a_08_simulation", package = "fmrireg")` — Simulating fMRI data
+- `vignette("a_09_linear_model", package = "fmrireg")` — fMRI Linear Model (GLM)

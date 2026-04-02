@@ -51,7 +51,7 @@ fit  <- fmri_lm(fmod, dataset = dset)
 Full documentation and tutorials are available at
 <https://bbuchsbaum.github.io/fmrireg/>. Vignettes include:
 
-- [Package Overview](https://bbuchsbaum.github.io/fmrireg/articles/Overview.html)
+- [Package Overview](https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html)
 - [Statistical Contrasts](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html)
 - [Simulation](https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.html)
 - [Linear Modeling](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html)
@@ -96,3 +96,8 @@ https://github.com/bbuchsbaum/fmrireg
 ## License
 
 GPL (>= 2)
+
+<!-- albersdown:theme-note:start -->
+## Albers theme
+This package uses the albersdown theme. Existing vignette theme hooks are replaced so `albers.css` and local `albers.js` render consistently on CRAN and GitHub Pages. The defaults are configured via `params$family` and `params$preset` (family = 'ochre', preset = 'homage'). The pkgdown site uses `template: { package: albersdown }`.
+<!-- albersdown:theme-note:end -->

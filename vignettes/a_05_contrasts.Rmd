@@ -1,4 +1,5 @@
-title: "05. Contrasts and Hypothesis Tests"
+---
+title: "05 Contrasts and Hypothesis Tests"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -8,13 +9,12 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+```{r setup, include=FALSE}
 library(fmrireg)
 library(dplyr)
 library(knitr)
 library(ggplot2)
-options(width=100)
-knitr::opts_chunk$set(fig.width=7, fig.height=6, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=7, fig.height=6, message=FALSE, warning=FALSE)
 ```
 
 ## Introduction to Contrasts
@@ -307,22 +307,19 @@ kable(contrast_se, caption = "Contrast Standard Errors")
 
 The `plot_contrasts` function provides a heatmap visualization of the contrast weights applied across all regressors in the design matrix (including baseline terms if present).
 
-```{r plot_contrasts_example}
-# We need to add contrasts *directly* to the event model for plotting
+```{r plot_contrasts_setup, include=FALSE}
+# Build event model with contrasts for plotting
 emodel_with_cons <- event_model(
   onset ~ hrf(category, attention, contrasts = all_contrasts),
-  block = ~ block, 
-  data = design, 
+  block = ~ block,
+  data = design,
   sampling_frame = sframe
 )
+```
 
-# Plot the contrasts (using default baseline model)
-tryCatch({
-  plot_contrasts(emodel_with_cons, rotate_x_text = TRUE, coord_fixed = FALSE)
-}, error = function(e) {
-  cat("Note: plot_contrasts() encountered an issue and was skipped.\n")
-  cat("Error:", e$message, "\n")
-})
+```{r plot_contrasts_example, error=TRUE}
+# Plot the contrast weights across all regressors
+plot_contrasts(emodel_with_cons, rotate_x_text = TRUE, coord_fixed = FALSE)
 ```
 This plot helps verify that contrasts are specified correctly relative to the full model design matrix.
 
@@ -338,11 +335,11 @@ cat("\nContrast weights matrix:\n")
 print(wts_interaction$conmat)
 ```
 
-## Next
-
-- [Benchmark Datasets](/articles/benchmark_datasets.html)
-- [Group Analysis](/articles/group_analysis.html)
-
 ## Conclusion
 
 The `fmrireg` package offers a comprehensive system for defining and applying statistical contrasts in fMRI analysis. From simple pairwise comparisons (`pair_contrast`) and baseline tests (`unit_contrast`) to complex formula-based definitions (`contrast`), trend analysis (`poly_contrast`), and ANOVA-style effects (`oneway_contrast`, `interaction_contrast`), researchers have fine-grained control over hypothesis testing. The integration with `fmri_lm` and visualization tools like `plot_contrasts` facilitates robust and interpretable fMRI modeling.
+
+## Next
+
+- `vignette("benchmark_datasets", package = "fmrireg")` — Benchmark datasets
+- `vignette("group_analysis", package = "fmrireg")` — Group analysis

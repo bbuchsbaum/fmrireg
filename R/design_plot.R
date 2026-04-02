@@ -62,8 +62,8 @@
 #'               line_size = 1.5,
 #'               color_palette = "Set2",
 #'               facet_ncol = 1)
-#' }-------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
+#' }
+#'
 #' @importFrom bslib bs_theme card card_header layout_sidebar
 design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
                          plot_title = NULL,

@@ -1,4 +1,5 @@
-title: "06. Benchmark Datasets"
+---
+title: "06 Benchmark Datasets"
 author: "fmrireg package"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -14,15 +15,17 @@ knitr::opts_chunk$set(
   comment = "#>",
   fig.width = 7,
   fig.height = 5,
+  message = FALSE,
+  warning = FALSE,
   fig.alt = "Figure illustrating dataset structure or evaluation results; see caption and text for details."
 )
 ```
 
 ## Introduction
 
-The `fmrireg` package includes a comprehensive set of benchmark datasets designed for testing and evaluating HRF fitting, beta estimation, and other fMRI analysis methods. These datasets provide known ground truth for various challenging scenarios commonly encountered in fMRI analysis.
+How do you know whether your HRF fitting or beta estimation method actually works? You need data where the ground truth is known — specific effect sizes, noise levels, and HRF shapes — so you can measure how well your method recovers them.
 
-This vignette demonstrates how to use these benchmark datasets to evaluate your analysis methods.
+The `fmrireg` package ships a set of benchmark datasets designed for exactly this purpose. Each dataset provides controlled signal, noise, and experimental parameters so you can rigorously evaluate and compare analysis methods.
 
 ```{r load_library}
 library(fmrireg)
@@ -53,10 +56,6 @@ summary_info <- get_benchmark_summary("BM_Canonical_HighSNR")
 print(summary_info$dimensions)
 print(summary_info$experimental_design)
 ```
-
-## Next
-
-- [Group Analysis](/articles/group_analysis.html)
 
 ## Examining the Data Structure
 
@@ -288,4 +287,8 @@ Key advantages:
 - **Reproducible**: Fixed random seeds ensure consistent results
 - **Extensible**: Framework allows easy addition of new benchmark scenarios
 
-These datasets enable rigorous, standardized evaluation of fMRI analysis methods and facilitate fair comparisons between different approaches. 
+These datasets enable rigorous, standardized evaluation of fMRI analysis methods and facilitate fair comparisons between different approaches.
+
+## Next
+
+- `vignette("group_analysis", package = "fmrireg")` — Group analysis

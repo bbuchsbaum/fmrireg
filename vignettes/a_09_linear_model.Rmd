@@ -1,4 +1,5 @@
-title: "04. fMRI Linear Model (GLM)"
+---
+title: "04 fMRI Linear Model (GLM)"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -8,7 +9,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
 library(fmrireg)
 library(fmrihrf)
 library(ggplot2)
@@ -27,7 +28,7 @@ options(fmrireg.num_threads = 2)
 set.seed(42)  # For reproducible examples
 
 # Accessibility: provide default alt-text for figures
-knitr::opts_chunk$set(fig.alt = "Figure illustrating model, design, or results; see caption and text for details.")
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.alt = "Figure illustrating model, design, or results; see caption and text for details.")
 ```
 
 ## Introduction to fMRI Linear Models
@@ -48,7 +49,7 @@ This vignette demonstrates how to conduct a complete linear model analysis using
 
 First, let's create a realistic fMRI dataset with known parameters. We'll simulate a simple experiment with two conditions that have different amplitudes.
 
-```{r, message=FALSE, fig.width=7, fig.height=5}
+```{r create-event-table, message=FALSE, fig.width=7, fig.height=5}
 # Create an experimental design with two conditions
 # Condition 1: 10 events with amplitude 1.0
 # Condition 2: 10 events with amplitude 2.0
@@ -113,7 +114,7 @@ ggplot(event_long, aes(x = time, y = onset, color = condition)) +
 
 Now that we have our experimental design, let's simulate the fMRI time series. We'll create signals for each condition with different amplitudes, add noise, and combine them into a dataset.
 
-```{r, message=FALSE, fig.width=7, fig.height=8}
+```{r simulate-signals, message=FALSE, fig.width=7, fig.height=8}
 # Simulate the true BOLD signals for each condition
 # First, convert our events to global indices
 global_onsets <- global_onsets(sframe, event_table$onset, blockids(sframe)[event_table$run])
@@ -208,7 +209,7 @@ Now we can fit a linear model to our simulated data using the `fmri_lm` function
 2. The block structure of the data
 3. The dataset
 
-```{r, message=FALSE, fig.width=7, fig.height=6}
+```{r fit-linear-model, message=FALSE, fig.width=7, fig.height=6}
 # Fit a linear model
 model <- fmri_lm(
   formula = onset ~ hrf(condition),  # Model experimental effects
@@ -232,7 +233,7 @@ refits the GLM.
 With stronger temporal autocorrelation in the simulated noise, the
 prewhitened model recovers tighter standard errors than OLS.
 
-```{r, message=FALSE}
+```{r fit-ar1-model, message=FALSE}
 model_ar1 <- fmri_lm(
   formula = onset ~ hrf(condition),
   block   = ~ run,
@@ -266,7 +267,7 @@ function can mitigate their impact by enabling row-wise robust weighting. When `
 Iteratively Reweighted Least Squares loop down-weights frames with large residuals. The `robust_psi`
 argument selects the weighting function and `robust_max_iter` controls the number of iterations.
 
-```{r, message=FALSE}
+```{r fit-robust-model, message=FALSE}
 model_robust <- fmri_lm(
   formula = onset ~ hrf(condition),
   block   = ~ run,
@@ -292,7 +293,7 @@ Let's extract and visualize the results from our linear model.
 
 ### 1. Coefficient Estimates
 
-```{r, message=FALSE, fig.width=7, fig.height=5}
+```{r extract-coefficients, message=FALSE, fig.width=7, fig.height=5}
 # Extract coefficient estimates
 beta_estimates <- coef(model)
 kable(beta_estimates, caption = "Coefficient estimates for each condition and voxel")
@@ -300,14 +301,16 @@ kable(beta_estimates, caption = "Coefficient estimates for each condition and vo
 
 
 
-```{r, message=FALSE, fig.width=7, fig.height=7}
+```{r clean-condition-label, include=FALSE}
 # Helper to clean condition column labels for readability
 clean_condition_label <- function(x) {
   x <- gsub("^conditioncondition_condition\\.", "", x)
   x <- gsub("^condition_condition\\.", "", x)
   gsub("\\.", " ", x)
 }
+```
 
+```{r plot-coefficients, message=FALSE, fig.width=7, fig.height=7}
 # Reshape for plotting (works with both approaches)
 beta_long <- as.data.frame(t(beta_estimates)) %>%
   mutate(voxel_index = row_number()) %>%
@@ -340,7 +343,7 @@ The bar plot shows the estimated coefficients for each condition across the thre
 
 ### 2. T-Statistics and P-Values
 
-```{r, message=FALSE, fig.width=7, fig.height=5}
+```{r extract-statistics, message=FALSE, fig.width=7, fig.height=5}
 estimate_stats <- tidy(model, type = "estimates") %>%
   filter(grepl("condition", term)) %>%
   mutate(condition = clean_condition_label(term),
@@ -357,7 +360,7 @@ The t-statistics quantify the reliability of the estimated effects. Higher absol
 
 A key advantage of the GLM approach is the ability to directly compare conditions using contrasts.
 
-```{r, message=FALSE, fig.width=7, fig.height=5}
+```{r define-and-fit-contrast, message=FALSE, fig.width=7, fig.height=5}
 # Define a contrast specification for comparing condition2 vs condition1
 con_spec <- pair_contrast(~ condition == "condition2", ~ condition == "condition1", name = "cond2_minus_cond1")
 
@@ -379,7 +382,7 @@ contrast_results <- tidy(contrast_model, type = "contrasts") %>%
   )
 ```
 
-```{r, message=FALSE, fig.width=7, fig.height=6}
+```{r plot-contrast-results, message=FALSE, fig.width=7, fig.height=6}
 # Display contrast results
 kable(contrast_results, caption = "Contrast results: condition2 - condition1", digits = 4)
 
@@ -404,7 +407,7 @@ The contrast results show that Condition2 consistently elicits significantly str
 
 Another useful visualization is the fitted hemodynamic response for each condition. This shows the estimated BOLD response over time.
 
-```{r, message=FALSE, fig.width=7, fig.height=8}
+```{r extract-fitted-hrf, message=FALSE, fig.width=7, fig.height=8}
 # Extract fitted HRF curves from the fitted model
 fitted_hrfs <- fitted_hrf(model, sample_at = seq(0, 20, by = 0.5))
 
@@ -469,7 +472,7 @@ The fitted HRF curves show the temporal profile of the BOLD response for each co
 
 The choice of hemodynamic response function can impact model fit. Let's compare different HRF options.
 
-```{r, message=FALSE, fig.width=7, fig.height=5}
+```{r fit-comparison-models, message=FALSE}
 # Fit models with different HRF bases
 model_canonical <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "spmg1"),
@@ -494,37 +497,39 @@ model_bspline <- fmri_lm(
   strategy = "chunkwise",
   nchunks = 1
 )
+```
 
+```{r extract-model-stats-fn, include=FALSE}
 # Function to extract model fit statistics
 extract_model_stats <- function(model, model_name, dataset) {
   # Get observed data
   observed_data <- get_data_matrix(dataset)
-  
+
   # Get design matrix (ensure it's a numeric matrix)
   design_mat <- as.matrix(design_matrix(model$model))
-  
+
   # Get estimated coefficients (include baseline)
   # Get all coefficients including baseline
   betas <- as.matrix(coef(model, include_baseline = TRUE))
-  
+
   # Calculate fitted values
   fitted_vals <- design_mat %*% t(betas)
-  
+
   # Calculate residuals
   resids <- observed_data - fitted_vals
-  
+
   # Calculate sum of squared residuals
   ssr <- colSums(resids^2)
-  
+
   # Calculate R-squared
   tss <- apply(observed_data, 2, function(y) sum((y - mean(y))^2))
   r_squared <- 1 - ssr/tss
-  
+
   # Calculate AIC
   n <- nrow(observed_data)
   p <- ncol(design_mat)
   aic <- n * log(ssr/n) + 2 * p
-  
+
   # Return results
   data.frame(
     model = model_name,
@@ -534,7 +539,9 @@ extract_model_stats <- function(model, model_name, dataset) {
     ssr = ssr
   )
 }
+```
 
+```{r plot-r-squared, message=FALSE, fig.width=7, fig.height=5}
 # Extract statistics for each model
 stats_canonical <- extract_model_stats(model_canonical, "canonical_spm", dataset)
 stats_gaussian <- extract_model_stats(model_gaussian, "gaussian", dataset)
@@ -567,8 +574,8 @@ ggplot(subset(model_comparison_long, metric == "r_squared"),
        y = "R-Squared")
 ```
 
-```{r, message=FALSE, fig.width=7, fig.height=7}
-ggplot(subset(model_comparison_long, metric == "aic"), 
+```{r plot-aic, message=FALSE, fig.width=7, fig.height=7}
+ggplot(subset(model_comparison_long, metric == "aic"),
        aes(x = model, y = value, fill = model)) +
   geom_bar(stat = "identity") +
   facet_wrap(~voxel, ncol = 3) +
@@ -616,28 +623,28 @@ For more advanced analyses, you might consider:
 
 You can export subject‑level results with `write_results()` and then load them for group analysis via `group_data()` (which returns a GDS object backed by fmrigds):
 
-```{r}
+```{r gds-example, eval=FALSE}
 # HDF5 written by write_results.fmri_lm
-# h5_paths <- Sys.glob("derivatives/sub-*/task-*_desc-GLMstatmap_bold.h5")
-# gd <- group_data(h5_paths, format = "h5", subjects = basename(dirname(h5_paths)))
-# fit <- fmri_meta(gd, formula = ~ 1 + group, method = "pm")
+h5_paths <- Sys.glob("derivatives/sub-*/task-*_desc-GLMstatmap_bold.h5")
+gd <- group_data(h5_paths, format = "h5", subjects = basename(dirname(h5_paths)))
+fit <- fmri_meta(gd, formula = ~ 1 + group, method = "pm")
 
 # NIfTI (beta/SE)
-# gd_nii <- group_data(list(beta = beta_paths, se = se_paths), format = "nifti",
-#                      subjects = ids, mask = mask_path)
-# fit_nii <- fmri_meta(gd_nii, formula = ~ 1 + group, method = "fe")
+gd_nii <- group_data(list(beta = beta_paths, se = se_paths), format = "nifti",
+                     subjects = ids, mask = mask_path)
+fit_nii <- fmri_meta(gd_nii, formula = ~ 1 + group, method = "fe")
 
 # Inspect the pipeline with fmrigds
-# pl <- fmrigds::plan(gd)
-# pl <- fmrigds::reduce(pl, method = "meta:fe", formula = ~ 1 + group)
-# fmrigds::explain_plan(pl)
-# invisible(fmrigds::preview(pl, n = 1, assays = "beta"))
-# res <- fmrigds::compute(pl)
+pl <- fmrigds::plan(gd)
+pl <- fmrigds::reduce(pl, method = "meta:fe", formula = ~ 1 + group)
+fmrigds::explain_plan(pl)
+invisible(fmrigds::preview(pl, n = 1, assays = "beta"))
+res <- fmrigds::compute(pl)
 ```
 
 Note: `group_data()` now routes through fmrigds (GDS). Legacy constructors (`group_data_from_h5()`/`_nifti()`/`_csv()`) are preserved for backward compatibility but will be deprecated.
 
 ## Next
 
-- [Contrasts and Hypothesis Tests](/articles/a_05_contrasts.html)
-- [Group Analysis](/articles/group_analysis.html)
+- `vignette("a_05_contrasts", package = "fmrireg")` — Contrasts and Hypothesis Tests
+- `vignette("group_analysis", package = "fmrireg")` — Group Analysis

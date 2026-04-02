@@ -1,4 +1,5 @@
-title: "Seed-based Functional Connectivity Analysis"
+---
+title: "12 Functional Connectivity (Seed-based)"
 author: "Bradley R. Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -26,7 +27,7 @@ To illustrate the method clearly, we'll work with simulated data where we know t
 
 First, we'll generate a simulated fMRI dataset where we control which voxels are functionally connected. This allows us to validate our analysis method since we know the true connectivity pattern.
 
-```{r}
+```{r simulate-baseline-data}
 set.seed(42)
 
 # Set up the temporal parameters for our scan
@@ -53,7 +54,7 @@ dim(Y)
 
 Now we'll create our ground truth connectivity pattern. We generate a seed time series with temporal autocorrelation (mimicking real neural activity) and inject this signal into a subset of voxels to create a "network" that's functionally connected to our seed.
 
-```{r}
+```{r inject-network-signal}
 # Generate a seed signal with realistic temporal properties
 seed_ts <- arima.sim(model = list(ar = 0.5), n = Tlen)
 seed_ts <- as.numeric(base::scale(seed_ts))
@@ -71,7 +72,7 @@ Y[, net_idx] <- Y[, net_idx] + 0.6 * seed_ts
 
 Before we can accurately estimate connectivity, we need to account for low-frequency scanner drift that can create spurious correlations between voxels. The fmrireg package provides flexible tools for modeling these nuisance signals using basis functions.
 
-```{r}
+```{r model-drift}
 # Create a sampling frame for our single run
 sframe <- sampling_frame(rep(Tlen, 1), TR = TR)
 
@@ -85,7 +86,7 @@ q <- ncol(X_drift)
 
 Now comes the key insight of our approach: instead of computing simple correlations, we'll treat the seed time series as an experimental regressor in a GLM. This allows us to estimate connectivity while simultaneously controlling for confounds. The `covariate()` function in fmridesign is perfect for this, as it adds regressors without HRF convolution (since the seed signal is already a BOLD time series).
 
-```{r}
+```{r fit-connectivity-glm}
 # Set up the event model structure
 # We need a minimal event_data frame to define the model structure
 event_data <- data.frame(
@@ -129,7 +130,7 @@ fit <- fmri_lm(
 
 With the model fitted, we can now extract the connectivity statistics. The t-statistic for the seed regressor at each voxel tells us how strongly that voxel's activity relates to the seed after accounting for drift.
 
-```{r}
+```{r extract-connectivity-stats}
 # Find the seed coefficient in our design matrix
 design_mat <- design_matrix(fmodel)
 seed_cols <- grep("seed", colnames(design_mat), value = TRUE)
@@ -155,7 +156,7 @@ summary(t_seed)
 
 Since we know which voxels belong to our simulated network, we can check whether our connectivity analysis successfully recovered them. Voxels in the network should show significantly higher connectivity statistics than background voxels.
 
-```{r}
+```{r validate-network-recovery}
 mean_abs_t_network    <- mean(abs(t_seed[net_idx]), na.rm = TRUE)
 mean_abs_t_background <- mean(abs(t_seed[-net_idx]), na.rm = TRUE)
 c(mean_abs_t_network = mean_abs_t_network, mean_abs_t_background = mean_abs_t_background)
@@ -167,7 +168,7 @@ The network voxels show substantially stronger connectivity with the seed, confi
 
 A histogram of the t-statistics reveals the distribution of connectivity strengths across the brain. The red lines indicate the range of connectivity values within our known network, demonstrating clear separation from the background noise.
 
-```{r}
+```{r plot-connectivity-map}
 # Clean data for visualization
 t_seed_clean <- t_seed[!is.na(t_seed)]
 net_idx_clean <- intersect(net_idx, which(!is.na(t_seed)))
@@ -197,4 +198,3 @@ For whole-brain connectivity mapping, this voxelwise approach efficiently identi
 ## Summary
 
 This vignette has demonstrated how fmrireg's flexible GLM framework extends naturally to functional connectivity analysis. By treating the seed time series as an experimental regressor rather than computing simple correlations, we gain the ability to control for confounds and obtain proper statistical inference. The same design matrix and model fitting infrastructure used for task-based fMRI analysis seamlessly handles connectivity studies, highlighting the versatility of the fmrireg package.
-
