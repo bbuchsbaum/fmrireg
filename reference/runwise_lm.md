@@ -1,29 +1,12 @@
 # Perform Runwise Linear Modeling on fMRI Dataset
 
 This function performs a runwise linear model analysis on an fMRI
-dataset, running the linear model on each run separately and then
-pooling results.
-
-This function performs a runwise linear model analysis on an fMRI
 dataset by running the linear model for each data run and combining the
 results.
 
 ## Usage
 
 ``` r
-runwise_lm(
-  dset,
-  model,
-  contrast_objects,
-  cfg,
-  verbose = FALSE,
-  use_fast_path = FALSE,
-  progress = FALSE,
-  phi_fixed = NULL,
-  sigma_fixed = NULL,
-  parallel_voxels = FALSE
-)
-
 runwise_lm(
   dset,
   model,
@@ -83,9 +66,6 @@ runwise_lm(
   Default is `FALSE`.
 
 ## Value
-
-A list containing the combined results from runwise linear model
-analysis.
 
 A list containing the combined results from runwise linear model
 analysis.

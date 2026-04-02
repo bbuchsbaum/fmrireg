@@ -89,6 +89,12 @@
 - [`dvars_to_weights()`](https://bbuchsbaum.github.io/fmrireg/reference/dvars_to_weights.md)
   : Convert DVARS to Volume Weights
 
+- [`engine_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/engine_spec.md)
+  : Inspect a Registered Engine Specification
+
+- [`engine_specs()`](https://bbuchsbaum.github.io/fmrireg/reference/engine_specs.md)
+  : List Registered Engine Specifications
+
 - [`estimate()`](https://bbuchsbaum.github.io/fmrireg/reference/estimate.md)
   : Deprecated helper: estimate()
 
@@ -366,6 +372,9 @@
 
 - [`tidy(`*`<fmri_meta>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/tidy.fmri_meta.md)
   : Tidy Meta-Analysis Results
+
+- [`tidy_fitted_hrf()`](https://bbuchsbaum.github.io/fmrireg/reference/tidy_fitted_hrf.md)
+  : Tidy fitted HRF curves from an fmri_lm fit
 
 - [`volume_quality`](https://bbuchsbaum.github.io/fmrireg/reference/volume_quality.md)
   : Volume Quality Metrics and Temporal Weighting

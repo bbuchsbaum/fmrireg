@@ -10,7 +10,8 @@
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Advanced Plugin Development">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<script src="../extra.js"></script><meta property="og:title" content="Advanced Plugin Development">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -88,7 +89,7 @@
 
     
     
-<script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.remove("palette-red","palette-lapis","palette-ochre","palette-teal","palette-green","palette-violet","preset-homage","preset-study","preset-structural","preset-adobe","preset-midnight");document.body.classList.add("palette-ochre","preset-homage");});</script><div class="section level2">
+<script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.remove("palette-red","palette-lapis","palette-ochre","palette-teal","palette-green","palette-violet","preset-homage","preset-study","preset-structural","preset-adobe","preset-midnight");document.body.classList.add("palette-red","preset-homage");});</script><div class="section level2">
 <h2 id="why-use-the-plugin-api">Why use the plugin API?<a class="anchor" aria-label="anchor" href="#why-use-the-plugin-api"></a>
 </h2>
 <p>The plugin API is for advanced users who want to extend
@@ -292,21 +293,21 @@ when the caller already requested <code>robust = FALSE</code>.</li>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;      config robust_type robust_max_iter normalized</span></span>
-<span><span class="co">#&gt; 1 requested        &lt;NA&gt;              NA      FALSE</span></span>
-<span><span class="co">#&gt; 2  executed        &lt;NA&gt;              NA      FALSE</span></span></code></pre></div>
+<span><span class="co">#&gt; 1 requested       FALSE              10      FALSE</span></span>
+<span><span class="co">#&gt; 2  executed       FALSE               2       TRUE</span></span></code></pre></div>
 <p>If a caller enables an unsupported feature such as
 <code>robust = TRUE</code>, the engine is rejected before
 <code>fit()</code> is called.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">unsupported_message</span></span>
-<span><span class="co">#&gt; NULL</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "vignette_centered_engine does not support robust fitting; set robust = FALSE"</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="how-can-you-inspect-engine-specs">How can you inspect engine specs?<a class="anchor" aria-label="anchor" href="#how-can-you-inspect-engine-specs"></a>
 </h2>
 <p>Built-in and plugin engines now share the same spec object. The
-read-only accessors <code>engine_spec()</code> and
-<code>engine_specs()</code> expose that metadata without requiring
+read-only accessors <code><a href="../reference/engine_spec.html">engine_spec()</a></code> and
+<code><a href="../reference/engine_specs.html">engine_specs()</a></code> expose that metadata without requiring
 access to internal registries. If you are working against an older
 installed build where those helpers are not yet available, you can still
 fall back to the registry names for a lightweight diagnostic.</p>
@@ -329,9 +330,17 @@ fall back to the registry names for a lightweight diagnostic.</p>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="co">#&gt;                       name registered</span></span>
-<span><span class="co">#&gt; 1 vignette_centered_engine       TRUE</span></span>
-<span><span class="co">#&gt; 2                  rrr_gls       TRUE</span></span></code></pre></div>
+<span><span class="co">#&gt; &lt;fmrireg_engine_spec&gt;</span></span>
+<span><span class="co">#&gt; name: vignette_centered_engine</span></span>
+<span><span class="co">#&gt; source: plugin | strategy: engine</span></span>
+<span><span class="co">#&gt; aliases: &lt;none&gt;</span></span>
+<span><span class="co">#&gt; capabilities: robust=FALSE, preprocessing=FALSE, ar_voxelwise=TRUE, ar_by_cluster=TRUE</span></span>
+<span><span class="co">#&gt; &lt;fmrireg_engine_spec&gt;</span></span>
+<span><span class="co">#&gt; name: rrr_gls</span></span>
+<span><span class="co">#&gt; source: builtin | strategy: engine</span></span>
+<span><span class="co">#&gt; aliases: &lt;none&gt;</span></span>
+<span><span class="co">#&gt; capabilities: robust=FALSE, preprocessing=FALSE, ar_voxelwise=FALSE, ar_by_cluster=FALSE</span></span>
+<span><span class="co">#&gt; requires: event regressors</span></span></code></pre></div>
 <p>The full registry is also available as a list of specs.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"engine_specs"</span>, envir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ns-internal.html" class="external-link">asNamespace</a></span><span class="op">(</span><span class="st">"fmrireg"</span><span class="op">)</span>, inherits <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
@@ -342,7 +351,8 @@ fall back to the registry names for a lightweight diagnostic.</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">spec_names</span></span>
-<span><span class="co">#&gt; [1] "rrr_gls"                  "vignette_centered_engine"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "latent_sketch"            "rrr_gls"                 </span></span>
+<span><span class="co">#&gt; [3] "vignette_centered_engine"</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="what-should-extension-authors-remember">What should extension authors remember?<a class="anchor" aria-label="anchor" href="#what-should-extension-authors-remember"></a>

@@ -16,8 +16,10 @@ make_time_sketch(Tlen, ctrl)
 
 - ctrl:
 
-  List(method = "gaussian"\|"countsketch", m, iters)
+  List(method = "gaussian"\|"countsketch"\|"srht"\|"ihs", m, iters)
 
 ## Value
 
-Dense or sparse sketch matrix S
+A dense or sparse sketch matrix for Gaussian/CountSketch methods; `NULL`
+for `"srht"` and `"ihs"` because those methods are applied via
+plans/operators.

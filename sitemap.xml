@@ -55,6 +55,8 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/dot-fmrireg_engine_registry.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/dot-resample_param.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/dvars_to_weights.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/engine_spec.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/engine_specs.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/estimate.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/estimate_betas.fmri_dataset.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/estimate_betas.html</loc></url>
@@ -151,6 +153,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/reshape_coef.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/resolve_basis.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/runwise_lm.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/runwise_lm_impl.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/sandwich_variance.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/se.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/shortnames.html</loc></url>
@@ -175,6 +178,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/term_matrices.fmri_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/tidy.fmri_meta.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/tidy.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/tidy_fitted_hrf.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/volume_quality.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/volume_weights.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/welch_t_cpp.html</loc></url>

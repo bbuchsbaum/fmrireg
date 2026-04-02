@@ -78,6 +78,8 @@ fmri_ttest(
 
   - "bh": Benjamini-Hochberg FDR
 
+  - "by": Benjamini-Yekutieli FDR
+
   - "spatial_fdr": Spatially-aware FDR
 
 - alpha:
@@ -145,6 +147,10 @@ An fmri_ttest_fit object containing:
 - df: Matrix of degrees of freedom
 
 - q: Matrix of FDR-adjusted p-values (if mc is used)
+
+- z_contrast: Vector of contrast z-scores (if contrast is used)
+
+- p_contrast: Vector of contrast p-values (if contrast is used)
 
 ## Examples
 

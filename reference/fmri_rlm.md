@@ -127,5 +127,6 @@ mat <- matrix(rnorm(100*100), 100,100)
 dset <- fmridataset::matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
 dset2 <- fmridataset::matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
 lm.1 <- fmri_rlm(onset ~ hrf(fac), block= ~ run, dataset=dset)
+#> Warning: M-step did NOT converge. Returning unconverged SM-estimate
 lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run, dataset=dset2)
 ```

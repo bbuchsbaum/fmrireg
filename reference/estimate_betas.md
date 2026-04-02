@@ -217,6 +217,4 @@ betas <- estimate_betas(
 #> converged
 #> final  value 420.227933 
 #> converged
-#> rrBLUP mixed.solve failed, attempting alternative: Please install the rrBLUP package to use this functionality
-#> rrBLUP mixed.solve failed, attempting alternative: Please install the rrBLUP package to use this functionality
 ```

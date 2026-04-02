@@ -206,8 +206,8 @@ data.frame(
   )
 )
 #>      config robust_type robust_max_iter normalized
-#> 1 requested        <NA>              NA      FALSE
-#> 2  executed        <NA>              NA      FALSE
+#> 1 requested       FALSE              10      FALSE
+#> 2  executed       FALSE               2       TRUE
 ```
 
 If a caller enables an unsupported feature such as `robust = TRUE`, the
@@ -215,16 +215,19 @@ engine is rejected before `fit()` is called.
 
 ``` r
 unsupported_message
-#> NULL
+#> [1] "vignette_centered_engine does not support robust fitting; set robust = FALSE"
 ```
 
 ## How can you inspect engine specs?
 
 Built-in and plugin engines now share the same spec object. The
-read-only accessors `engine_spec()` and `engine_specs()` expose that
-metadata without requiring access to internal registries. If you are
-working against an older installed build where those helpers are not yet
-available, you can still fall back to the registry names for a
+read-only accessors
+[`engine_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/engine_spec.md)
+and
+[`engine_specs()`](https://bbuchsbaum.github.io/fmrireg/reference/engine_specs.md)
+expose that metadata without requiring access to internal registries. If
+you are working against an older installed build where those helpers are
+not yet available, you can still fall back to the registry names for a
 lightweight diagnostic.
 
 ``` r
@@ -246,9 +249,17 @@ if (has_public_specs) {
     )
   )
 }
-#>                       name registered
-#> 1 vignette_centered_engine       TRUE
-#> 2                  rrr_gls       TRUE
+#> <fmrireg_engine_spec>
+#> name: vignette_centered_engine
+#> source: plugin | strategy: engine
+#> aliases: <none>
+#> capabilities: robust=FALSE, preprocessing=FALSE, ar_voxelwise=TRUE, ar_by_cluster=TRUE
+#> <fmrireg_engine_spec>
+#> name: rrr_gls
+#> source: builtin | strategy: engine
+#> aliases: <none>
+#> capabilities: robust=FALSE, preprocessing=FALSE, ar_voxelwise=FALSE, ar_by_cluster=FALSE
+#> requires: event regressors
 ```
 
 The full registry is also available as a list of specs.
@@ -262,7 +273,8 @@ if (exists("engine_specs", envir = asNamespace("fmrireg"), inherits = FALSE)) {
 }
 
 spec_names
-#> [1] "rrr_gls"                  "vignette_centered_engine"
+#> [1] "latent_sketch"            "rrr_gls"                 
+#> [3] "vignette_centered_engine"
 ```
 
 ## What should extension authors remember?
