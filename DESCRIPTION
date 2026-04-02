@@ -87,3 +87,4 @@ Remotes:
 VignetteBuilder: knitr
 URL: https://bbuchsbaum.github.io/fmrireg/, https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues
+Config/Needs/website: albersdown
