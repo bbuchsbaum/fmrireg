@@ -223,7 +223,7 @@
   coef_mat <- if (!is.null(beta)) t(beta) else NULL
   se_mat   <- if (!is.null(se))   t(se)   else NULL
   # Apply dimnames to match legacy (rows = features/ROI, cols = term names)
-  sample_labels <- attr(data, "fmrireg_sample_labels")
+  sample_labels <- .fmri_ttest_sample_labels(data, NULL)
 
   if (!is.null(coef_mat)) {
     dimnames(coef_mat) <- list(sample_labels, coef_terms %||% colnames(coef_mat))

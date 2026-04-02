@@ -1,8 +1,9 @@
 #' Build a time sketch matrix S (m x T)
 #'
 #' @param Tlen Integer time length
-#' @param ctrl List(method = "gaussian"|"countsketch", m, iters)
-#' @return Dense or sparse sketch matrix S
+#' @param ctrl List(method = "gaussian"|"countsketch"|"srht"|"ihs", m, iters)
+#' @return A dense or sparse sketch matrix for Gaussian/CountSketch methods;
+#'   `NULL` for `"srht"` and `"ihs"` because those methods are applied via plans/operators.
 #' @keywords internal
 make_time_sketch <- function(Tlen, ctrl) {
   stopifnot(is.list(ctrl))

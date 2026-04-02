@@ -9,10 +9,11 @@ make_time_sketch(Tlen, ctrl)
 \arguments{
 \item{Tlen}{Integer time length}
 
-\item{ctrl}{List(method = "gaussian"|"countsketch", m, iters)}
+\item{ctrl}{List(method = "gaussian"|"countsketch"|"srht"|"ihs", m, iters)}
 }
 \value{
-Dense or sparse sketch matrix S
+A dense or sparse sketch matrix for Gaussian/CountSketch methods;
+\code{NULL} for \code{"srht"} and \code{"ihs"} because those methods are applied via plans/operators.
 }
 \description{
 Build a time sketch matrix S (m x T)

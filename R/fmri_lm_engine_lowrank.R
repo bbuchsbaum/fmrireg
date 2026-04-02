@@ -1,18 +1,60 @@
 #' Internal: run low-rank/sketched engine under fmri_lm
 #' @keywords internal
 #' @noRd
+.preflight_lowrank_engine <- function(fm, dataset, lowrank, cfg) {
+  if (!inherits(fm, "fmri_model")) {
+    stop("latent_sketch engine requires an 'fmri_model' object", call. = FALSE)
+  }
+  if (is.null(dataset)) {
+    stop("latent_sketch engine requires a dataset", call. = FALSE)
+  }
+  if (!inherits(cfg, "fmri_lm_config")) {
+    stop("latent_sketch engine requires an 'fmri_lm_config' object", call. = FALSE)
+  }
+  
+  invisible(TRUE)
+}
+
+#' Internal: plugin-compatible preflight for low-rank engine
+#' @keywords internal
+#' @noRd
+.preflight_lowrank_engine_plugin <- function(model, dataset, args, cfg) {
+  .preflight_lowrank_engine(
+    fm = model,
+    dataset = dataset,
+    lowrank = args$lowrank %||% list(),
+    cfg = cfg
+  )
+}
+
+#' Internal: map latent-space results back into voxel space
+#' @keywords internal
+#' @noRd
+.lowrank_project_voxels <- function(x, A, A_is_I) {
+  if (A_is_I) {
+    return(x)
+  }
+
+  as.matrix(x %*% A)
+}
+
+#' Internal: run low-rank/sketched engine under fmri_lm
+#' @keywords internal
+#' @noRd
 .run_lowrank_engine <- function(fm, dataset, lowrank, cfg = NULL, ar_options = NULL) {
   if (is.null(cfg)) {
     cfg <- fmri_lm_control(ar_options = ar_options)
   }
+  lowrank <- lowrank %||% list()
+  .preflight_lowrank_engine(fm, dataset, lowrank, cfg)
 
   ar_opts <- cfg$ar %||% list()
-  robust_opts <- cfg$robust %||% list()
   # Design (T x p)
   X <- as.matrix(design_matrix(fm))
   Tlen <- nrow(X); p <- ncol(X)
-  # Residual df should reflect original time samples, not sketch rows.
-  dfres_full <- max(1L, Tlen - p)
+  rank_x_full <- as.integer(Matrix::rankMatrix(X)[1])
+  # Residual df should reflect original time samples and effective design rank, not sketch rows.
+  dfres_full <- max(1L, Tlen - rank_x_full)
   varnames <- colnames(X)
 
   # Latent basis and loadings or full data path
@@ -70,12 +112,12 @@
     if (identical(sk$method, "ihs")) {
       sol <- ihs_latent_solve(X, Z, m = sk$m, iters = as.integer(sk$iters %||% 3L))
       M <- sol$M; Ginv <- sol$Ginv
-      B <- if (A_is_I) M else M %*% as.matrix(A)
+      B <- .lowrank_project_voxels(M, A, A_is_I)
       # Residuals via one SRHT draw
       plan <- make_srht_plan(Tlen, sk$m)
       Xs <- srht_apply(X, plan); Zs <- srht_apply(Z, plan)
       Rres <- Zs - Xs %*% M
-      RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+      RA <- .lowrank_project_voxels(Rres, A, A_is_I)
       dfres <- dfres_full
       sigma2 <- colSums(RA * RA) / dfres
     } else if (identical(sk$method, "srht")) {
@@ -88,9 +130,9 @@
       })
       R <- crossprod(Xs, Zs)
       M <- Ginv %*% R
-      B <- if (A_is_I) M else M %*% as.matrix(A)
+      B <- .lowrank_project_voxels(M, A, A_is_I)
       Rres <- Zs - Xs %*% M
-      RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+      RA <- .lowrank_project_voxels(Rres, A, A_is_I)
       dfres <- dfres_full
       sigma2 <- colSums(RA * RA) / dfres
     } else if (identical(sk$method, "gaussian")) {
@@ -103,9 +145,9 @@
       })
       R <- crossprod(Xs, Zs)
       M <- Ginv %*% R
-      B <- if (A_is_I) M else M %*% as.matrix(A)
+      B <- .lowrank_project_voxels(M, A, A_is_I)
       Rres <- Zs - Xs %*% M
-      RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+      RA <- .lowrank_project_voxels(Rres, A, A_is_I)
       dfres <- dfres_full
       sigma2 <- colSums(RA * RA) / dfres
     } else { # countsketch
@@ -117,9 +159,9 @@
       })
       R <- crossprod(Xs, Zs)
       M <- Ginv %*% R
-      B <- if (A_is_I) M else M %*% as.matrix(A)
+      B <- .lowrank_project_voxels(M, A, A_is_I)
       Rres <- Zs - Xs %*% M
-      RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+      RA <- .lowrank_project_voxels(Rres, A, A_is_I)
       dfres <- dfres_full
       sigma2 <- colSums(RA * RA) / dfres
     }
@@ -193,7 +235,7 @@
       chol2inv(chol(Gsum + diag(ridge, ncol(Gsum))))
     })
     M <- Ginv %*% Rall
-    B <- if (A_is_I) M else M %*% as.matrix(A)
+    B <- .lowrank_project_voxels(M, A, A_is_I)
 
     # Residuals per group for sigma2
     dfres <- dfres_full
@@ -222,7 +264,7 @@
         Zs_g <- as.matrix(S %*% Zw_g)
       }
       Eg <- Zs_g - Xs_g %*% M[, Jg, drop = FALSE]
-      RA_g <- if (A_is_I) Eg else Eg %*% as.matrix(A)
+      RA_g <- .lowrank_project_voxels(Eg, A, A_is_I)
       rss[Jg] <- colSums(RA_g * RA_g)
     }
     sigma2 <- rss / dfres
@@ -293,12 +335,12 @@
       } else {
         sol <- ihs_latent_solve(Xw, Zw, m = sk$m, iters = as.integer(sk$iters %||% 3L))
         M <- sol$M; Ginv <- sol$Ginv
-        B <- if (A_is_I) M else M %*% as.matrix(A)
+        B <- .lowrank_project_voxels(M, A, A_is_I)
         # Residuals for sigma2 via one SRHT draw
         plan <- make_srht_plan(Tlen, sk$m)
         Xs <- srht_apply(Xw, plan); Zs <- srht_apply(Zw, plan)
         Rres <- Zs - Xs %*% M
-        RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+        RA <- .lowrank_project_voxels(Rres, A, A_is_I)
         dfres <- dfres_full
         sigma2 <- colSums(RA * RA) / dfres
       }
@@ -339,9 +381,9 @@
         })
         R <- crossprod(Xs, Zs)
         M <- Ginv %*% R
-        B <- if (A_is_I) M else M %*% as.matrix(A)
+        B <- .lowrank_project_voxels(M, A, A_is_I)
         Rres <- Zs - Xs %*% M
-        RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+        RA <- .lowrank_project_voxels(Rres, A, A_is_I)
         dfres <- dfres_full
         sigma2 <- colSums(RA * RA) / dfres
       }
@@ -381,9 +423,9 @@
         })
         R <- crossprod(Xs, Zs)
         M <- Ginv %*% R
-        B <- if (A_is_I) M else M %*% as.matrix(A)
+        B <- .lowrank_project_voxels(M, A, A_is_I)
         Rres <- Zs - Xs %*% M
-        RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+        RA <- .lowrank_project_voxels(Rres, A, A_is_I)
         dfres <- dfres_full
         sigma2 <- colSums(RA * RA) / dfres
       }
@@ -423,9 +465,9 @@
         })
         R <- crossprod(Xs, Zs)
         M <- Ginv %*% R
-        B <- if (A_is_I) M else M %*% as.matrix(A)
+        B <- .lowrank_project_voxels(M, A, A_is_I)
         Rres <- Zs - Xs %*% M
-        RA <- if (A_is_I) Rres else Rres %*% as.matrix(A)
+        RA <- .lowrank_project_voxels(Rres, A, A_is_I)
         dfres <- dfres_full
         sigma2 <- colSums(RA * RA) / dfres
       }
@@ -436,21 +478,47 @@
   # Build fmri_lm-like result structure compatible with downstream code
   # Use matrix-based beta_stats packager for consistent tibble output
   sigma <- sqrt(pmax(sigma2, 0))
-  bstats <- beta_stats_matrix(Betas = B, XtXinv = Ginv, sigma = sigma,
-                              dfres = dfres, varnames = varnames)
+  bstats <- beta_stats_matrix(
+    Betas = B,
+    XtXinv = Ginv,
+    sigma = sigma,
+    dfres = dfres,
+    varnames = varnames,
+    ar_order = ar_order
+  )
 
   # Event/baseline indices for coef() methods
   tmats <- term_matrices(fm)
   event_indices <- attr(tmats, "event_term_indices")
   baseline_indices <- attr(tmats, "baseline_term_indices")
+  contrast_prep <- prepare_fmri_lm_contrasts(fm)
+  contrast_results <- if (length(contrast_prep$standard) > 0L) {
+    dplyr::bind_rows(
+      fit_lm_contrasts_fast(
+        B = B,
+        sigma2 = sigma2,
+        XtXinv = Ginv,
+        conlist = lapply(contrast_prep$simple, `[[`, "weights"),
+        fconlist = lapply(contrast_prep$f, `[[`, "weights"),
+        df = dfres,
+        ar_order = ar_order
+      )
+    )
+  } else {
+    dplyr::tibble()
+  }
+  rss <- sigma2 * dfres
 
   result <- list(
     betas = bstats,
-    contrasts = dplyr::tibble(),
+    contrasts = contrast_results,
     event_indices = event_indices,
     baseline_indices = baseline_indices,
+    cov.unscaled = Ginv,
     sigma = sigma,
     rdf = dfres,
+    rss = rss,
+    resvar = sigma2,
     ar_coef = ar_coef_store
   )
 
@@ -458,7 +526,7 @@
     result = result,
     model = fm,
     strategy = "sketch",
-    bcons = list(),
+    bcons = contrast_prep$processed,
     dataset = dataset,
     betas_fixed = B,
     sigma2 = sigma2,
@@ -469,6 +537,18 @@
   attr(ret, "strategy") <- "sketch"
   attr(ret, "config") <- cfg
   ret
+}
+
+#' Internal: plugin-compatible fit for low-rank engine
+#' @keywords internal
+#' @noRd
+.fit_lowrank_engine_plugin <- function(model, dataset, args, cfg) {
+  .run_lowrank_engine(
+    fm = model,
+    dataset = dataset,
+    lowrank = args$lowrank %||% list(),
+    cfg = cfg
+  )
 }
 
 #' Internal: dispatch fmri_lm low-rank/sketch engine

@@ -135,6 +135,8 @@ test_that("config options propagate correctly", {
   
   # Check that config was stored
   expect_equal(attr(fit_ar, "config")$ar$struct, "ar1")
+  expect_equal(attr(fit_ar, "requested_config")$ar$struct, "ar1")
+  expect_equal(attr(fit_ar, "executed_config")$ar$struct, "ar1")
   
   # Test robust options propagate
   fit_robust <- fmri_lm(
@@ -147,6 +149,9 @@ test_that("config options propagate correctly", {
   
   expect_equal(attr(fit_robust, "config")$robust$type, "bisquare")
   expect_equal(attr(fit_robust, "config")$robust$max_iter, 10)
+  expect_equal(attr(fit_robust, "requested_config")$robust$max_iter, 10)
+  expect_equal(attr(fit_robust, "executed_config")$robust$max_iter, 10)
+  expect_equal(attr(fit_robust, "config"), attr(fit_robust, "executed_config"))
 })
 
 test_that("fmri_lm_control handles default values correctly", {

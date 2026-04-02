@@ -37,33 +37,8 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
     Y <- as.vector(Y)
   }
   
-  # Try to use rrBLUP if available
+  # Try C++ mixed model implementation
   tryCatch({
-    with_package("rrBLUP")
-    
-    # If fixed_ind is empty, use a minimal X matrix (intercept only)
-    X_fixed <- if (length(fixed_ind) == 0) {
-      matrix(1, nrow = nrow(X), ncol = 1)
-    } else {
-      X[, fixed_ind, drop = FALSE]
-    }
-    
-    
-    fit <- rrBLUP::mixed.solve(Y, 
-                               Z = X[, ran_ind, drop = FALSE], 
-                               X = X_fixed) 
-                               #bounds = c(1e-07, 0.5))
-    
-    # Return results, handling the case where fixed_ind is empty
-    if (length(fixed_ind) == 0) {
-      return(fit$u)  # Only return random effects
-    } else {
-      return(c(fit$u, fit$b))  # Return both random and fixed effects
-    }
-  }, 
-  error = function(e) {
-    # If rrBLUP fails, try using our C++ implementation if available
-    message("rrBLUP mixed.solve failed, attempting alternative: ", e$message)
     
     if (requireNamespace("Rcpp", quietly = TRUE) && 
         requireNamespace("fmrilss", quietly = TRUE)) {

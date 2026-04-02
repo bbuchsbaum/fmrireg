@@ -12,6 +12,8 @@
 group_data <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...) {
   format <- match.arg(format)
   dots <- list(...)
+  legacy_sample_labels <- NULL
+  legacy_feature_group <- NULL
   # Legacy compatibility: for CSV/tabular in-memory data, preserve group_data_csv
   if (identical(format, "csv") && is.data.frame(data) && !("contrast" %in% names(data))) {
     # Delegate to legacy constructor to satisfy tests expecting group_data_csv
@@ -39,6 +41,35 @@ group_data <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...
     if (!is.null(dots$sample_col) && dots$sample_col %in% names(data)) {
       sc <- dots$sample_col
       sample_labels <- as.character(data[[sc]][!duplicated(data[[sc]])])
+      legacy_sample_labels <- sample_labels
+    }
+    if (is.null(dots$row_data) && !is.null(sample_labels)) {
+      row_df <- data.frame(sample = sample_labels, row.names = sample_labels, check.names = FALSE)
+      if (!is.null(dots$feature_group)) {
+        feature_group <- dots$feature_group
+        legacy_feature_group <- feature_group
+        if (length(feature_group) != length(sample_labels)) {
+          stop("feature_group must have length equal to number of samples", call. = FALSE)
+        }
+        row_df$feature_group <- feature_group
+        dots$feature_group <- NULL
+      }
+      dots$row_data <- row_df
+    } else if (!is.null(dots$row_data) && !is.null(sample_labels) && !"sample" %in% names(dots$row_data)) {
+      dots$row_data$sample <- sample_labels
+      if (is.null(rownames(dots$row_data))) {
+        rownames(dots$row_data) <- sample_labels
+      }
+    }
+    if (is.null(legacy_sample_labels) && !is.null(dots$row_data)) {
+      if ("sample" %in% names(dots$row_data)) {
+        legacy_sample_labels <- as.character(dots$row_data$sample)
+      } else if (!is.null(rownames(dots$row_data))) {
+        legacy_sample_labels <- rownames(dots$row_data)
+      }
+    }
+    if (is.null(legacy_feature_group) && !is.null(dots$row_data) && "feature_group" %in% names(dots$row_data)) {
+      legacy_feature_group <- dots$row_data$feature_group
     }
     # Build col_data from provided covariate_cols if present
     if (!is.null(dots$covariate_cols)) {
@@ -64,18 +95,12 @@ group_data <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...
     # Try direct data.frame first
     gd_try <- try(do.call(fmrigds::gds, c(list(source = data_local, format = fformat), dots)), silent = TRUE)
     if (!inherits(gd_try, "try-error")) {
-      gd <- gd_try
-      if (!is.null(sample_labels)) attr(gd, "fmrireg_sample_labels") <- sample_labels
-      class(gd) <- c("group_data_gds", "group_data", class(gd))
-      return(gd)
+      return(.annotate_group_data_gds(gd_try, legacy_sample_labels, legacy_feature_group))
     }
     # Try list(data=df) variant
     gd_try2 <- try(do.call(fmrigds::gds, c(list(source = list(data = data_local), format = fformat), dots)), silent = TRUE)
     if (!inherits(gd_try2, "try-error")) {
-      gd <- gd_try2
-      if (!is.null(sample_labels)) attr(gd, "fmrireg_sample_labels") <- sample_labels
-      class(gd) <- c("group_data_gds", "group_data", class(gd))
-      return(gd)
+      return(.annotate_group_data_gds(gd_try2, legacy_sample_labels, legacy_feature_group))
     }
     # Fallback: temp CSV path
     tmpfile <- tempfile(fileext = ".csv")
@@ -118,9 +143,15 @@ group_data <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...
   }
 
   gd <- do.call(fmrigds::gds, c(list(source = src, format = fformat), dots))
-  # Attach sample labels when available
-  if (exists("sample_labels") && !is.null(sample_labels)) {
-    attr(gd, "fmrireg_sample_labels") <- sample_labels
+  .annotate_group_data_gds(gd, legacy_sample_labels, legacy_feature_group)
+}
+
+.annotate_group_data_gds <- function(gd, sample_labels = NULL, feature_group = NULL) {
+  if (!is.null(sample_labels)) {
+    attr(gd, "fmrireg_sample_labels") <- as.character(sample_labels)
+  }
+  if (!is.null(feature_group)) {
+    attr(gd, "fmrireg_feature_group") <- feature_group
   }
   class(gd) <- c("group_data_gds", "group_data", class(gd))
   gd

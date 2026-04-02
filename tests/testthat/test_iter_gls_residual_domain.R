@@ -100,8 +100,11 @@ test_that(".run_lowrank_engine re-estimates AR from raw-domain residuals", {
   lowrank <- list(time_sketch = list(method = "gaussian", m = n))
   cfg <- list(
     ar = list(struct = "ar1", iter_gls = 2L, exact_first = TRUE, by_cluster = FALSE),
-    robust = list()
+    robust = list(type = FALSE),
+    volume_weights = list(enabled = FALSE),
+    soft_subspace = list(enabled = FALSE)
   )
+  class(cfg) <- "fmri_lm_config"
 
   captured <- list()
 
@@ -126,6 +129,9 @@ test_that(".run_lowrank_engine re-estimates AR from raw-domain residuals", {
     ar_whiten_transform = function(X, Y, phi_hat, exact_first, ...) {
       list(X = 2 * X, Y = 3 * Y)
     },
+    prepare_fmri_lm_contrasts = function(fmrimod) {
+      list(processed = list(), simple = list(), f = list(), standard = list())
+    },
     .estimate_ar_parameters_routed = function(residuals_vec, ar_order, run_indices = NULL, censor = NULL) {
       captured[[length(captured) + 1L]] <<- as.numeric(residuals_vec)
       0.4
@@ -145,4 +151,71 @@ test_that(".run_lowrank_engine re-estimates AR from raw-domain residuals", {
 
   expect_equal(unname(captured[[2]]), unname(expected_raw))
   expect_gt(max(abs(captured[[2]] - expected_white)), 1e-6)
+})
+
+test_that(".run_lowrank_engine uses design rank when computing rdf", {
+  n <- 8L
+  v <- 3L
+  X <- cbind("(Intercept)" = 1, x = seq_len(n), dup = seq_len(n))
+  set.seed(42)
+  Z <- matrix(rnorm(n * v), nrow = n, ncol = v)
+  
+  etab <- data.frame(onset = 1, run = 1)
+  dataset <- fmridataset::matrix_dataset(Z, TR = 1, run_length = n, event_table = etab)
+  fm_dummy <- structure(list(), class = "fmri_model")
+  
+  lowrank <- list(time_sketch = list(method = "gaussian", m = n))
+  cfg <- list(
+    ar = list(struct = "iid", iter_gls = 1L, exact_first = FALSE, by_cluster = FALSE),
+    robust = list(type = FALSE),
+    volume_weights = list(enabled = FALSE),
+    soft_subspace = list(enabled = FALSE)
+  )
+  class(cfg) <- "fmri_lm_config"
+  
+  captured_dfres <- NULL
+  
+  with_mocked_bindings(
+    {
+      out <- fmrireg:::.run_lowrank_engine(
+        fm = fm_dummy,
+        dataset = dataset,
+        lowrank = lowrank,
+        cfg = cfg
+      )
+      expect_equal(out$result$rdf, n - qr(X)$rank)
+    },
+    design_matrix = function(fm) X,
+    term_matrices = function(fm, ...) {
+      tm <- list()
+      attr(tm, "event_term_indices") <- 1:2
+      attr(tm, "baseline_term_indices") <- 3L
+      tm
+    },
+    make_time_sketch = function(Tlen, sk) diag(Tlen),
+    prepare_fmri_lm_contrasts = function(fmrimod) {
+      list(processed = list(), simple = list(), f = list(), standard = list())
+    },
+    beta_stats_matrix = function(Betas, XtXinv, sigma, dfres, varnames, ...) {
+      captured_dfres <<- dfres
+      dplyr::tibble(
+        type = "beta",
+        name = "parameter_estimates",
+        stat_type = "tstat",
+        df.residual = dfres,
+        conmat = list(NULL),
+        colind = list(NULL),
+        data = list(dplyr::tibble(
+          estimate = list(t(Betas)),
+          se = list(matrix(1, nrow = ncol(Betas), ncol = nrow(Betas))),
+          stat = list(matrix(0, nrow = ncol(Betas), ncol = nrow(Betas))),
+          prob = list(matrix(1, nrow = ncol(Betas), ncol = nrow(Betas))),
+          sigma = list(sigma)
+        ))
+      )
+    },
+    .package = "fmrireg"
+  )
+  
+  expect_equal(captured_dfres, n - qr(X)$rank)
 })

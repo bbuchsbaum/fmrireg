@@ -8,7 +8,7 @@ requireNamespace("neuroim2", quietly = TRUE)
 requireNamespace("fmridataset", quietly = TRUE)
 
 # Helper function to create minimal test dataset
-create_test_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50) {
+create_test_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50, sparse_mask = FALSE) {
   set.seed(123)  # For reproducible tests
   
   # Create synthetic brain scans
@@ -19,8 +19,13 @@ create_test_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50) {
   })
   
   # Create brain mask (all voxels active for simplicity)
+  mask_array <- array(TRUE, dims)
+  if (isTRUE(sparse_mask)) {
+    mask_array[] <- FALSE
+    mask_array[seq_len(max(1, floor(prod(dims) / 2)))] <- TRUE
+  }
   mask <- neuroim2::LogicalNeuroVol(
-    array(TRUE, dims), 
+    mask_array,
     neuroim2::NeuroSpace(dim = dims)
   )
   
@@ -44,11 +49,11 @@ create_test_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50) {
 }
 
 # Helper function to create minimal fmri_lm object
-create_test_fmri_lm <- function() {
+create_test_fmri_lm <- function(sparse_mask = FALSE) {
   set.seed(123)
   
   # Create test dataset
-  dset <- create_test_dataset()
+  dset <- create_test_dataset(sparse_mask = sparse_mask)
   
   # Fit a simple model with contrasts
   con <- contrast_set(pair_contrast( ~ condition == "A", ~ condition == "B", name="A_vs_B"))
@@ -182,6 +187,43 @@ test_that("write_results.fmri_lm exports gds outputs", {
   expect_equal(unname(beta_matrix), unname(beta_expected), tolerance = 1e-8)
 })
 
+test_that("write_results.fmri_lm enforces overwrite for gds exports", {
+  skip_if_not_installed("fmrigds")
+  skip_if_not_installed("jsonlite")
+  
+  mod <- create_test_fmri_lm()
+  
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE), add = TRUE)
+  
+  result <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    space = "MNI152",
+    format = "gds",
+    overwrite = FALSE
+  )
+  
+  expect_true(file.exists(result$gds$h5))
+  expect_true(file.exists(result$gds$plan))
+  
+  expect_error(
+    write_results(
+      mod,
+      path = temp_dir,
+      subject = "01",
+      task = "test",
+      space = "MNI152",
+      format = "gds",
+      overwrite = FALSE
+    ),
+    "Output files already exist"
+  )
+})
+
 test_that("write_results.fmri_lm creates valid JSON metadata", {
   skip_if_not_installed("fmristore")
   skip_if_not_installed("jsonlite")
@@ -281,7 +323,7 @@ test_that("write_results.fmri_lm handles overwrite behavior correctly", {
       space = "MNI152NLin2009cAsym",
       overwrite = FALSE
     ),
-    "already exists.*overwrite = TRUE",
+    "Output files already exist: .*overwrite = TRUE",
     info = "Should provide clear guidance on how to overwrite"
   )
   
@@ -323,6 +365,45 @@ test_that("write_results.fmri_lm handles overwrite behavior correctly", {
   beta_data_read <- fmristore::read_labeled_vec(result2$betas$h5)
   expect_true(!is.null(beta_data_read))
   expect_true(inherits(beta_data_read, "LabeledVolumeSet"))
+})
+
+test_that("write_results.fmri_lm enforces overwrite for contrast-only exports", {
+  skip_if_not_installed("fmristore")
+  skip_if_not_installed("jsonlite")
+  
+  mod <- create_test_fmri_lm()
+  
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE))
+  
+  result1 <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    strategy = "by_stat",
+    contrast_stats = "beta",
+    save_betas = FALSE,
+    overwrite = FALSE
+  )
+  
+  expect_true(file.exists(result1$beta$h5))
+  expect_true(file.exists(result1$beta$json))
+  
+  expect_error(
+    write_results(
+      mod,
+      path = temp_dir,
+      subject = "01",
+      task = "test",
+      strategy = "by_stat",
+      contrast_stats = "beta",
+      save_betas = FALSE,
+      overwrite = FALSE
+    ),
+    "Output files already exist"
+  )
 })
 
 test_that("write_results.fmri_lm uses atomic write pattern", {
@@ -429,6 +510,49 @@ test_that("write_results.fmri_lm correctly writes numerical data to HDF5", {
     expect_true(!is.null(contrast_data_read))
     expect_true(inherits(contrast_data_read, "LabeledVolumeSet"))
   }
+})
+
+test_that("write_results.fmri_lm keeps contrast sidecar basenames aligned", {
+  skip_if_not_installed("fmristore")
+  skip_if_not_installed("jsonlite")
+  
+  mod <- create_test_fmri_lm()
+  
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE))
+  
+  by_stat <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    strategy = "by_stat",
+    save_betas = FALSE,
+    contrast_stats = c("beta", "tstat")
+  )
+  
+  expect_equal(tools::file_path_sans_ext(basename(by_stat$beta$h5)),
+               tools::file_path_sans_ext(basename(by_stat$beta$json)))
+  expect_equal(tools::file_path_sans_ext(basename(by_stat$tstat$h5)),
+               tools::file_path_sans_ext(basename(by_stat$tstat$json)))
+  
+  temp_dir2 <- tempfile()
+  dir.create(temp_dir2)
+  on.exit(unlink(temp_dir2, recursive = TRUE), add = TRUE)
+  
+  by_contrast <- write_results(
+    mod,
+    path = temp_dir2,
+    subject = "01",
+    task = "test",
+    strategy = "by_contrast",
+    save_betas = FALSE,
+    contrast_stats = c("beta", "tstat")
+  )
+  
+  expect_equal(tools::file_path_sans_ext(basename(by_contrast$A_vs_B$h5)),
+               tools::file_path_sans_ext(basename(by_contrast$A_vs_B$json)))
 })
 
 test_that("write_results.fmri_lm validates ModelInfo content in JSON", {
@@ -705,6 +829,32 @@ test_that("write_results.fmri_lm handles degenerate data gracefully", {
   
   # Basic validation that the object is accessible
   expect_true(is(beta_data_read, "LabeledVolumeSet"))
+})
+
+test_that("write_results.fmri_lm supports sparse masks", {
+  skip_if_not_installed("fmristore")
+  skip_if_not_installed("jsonlite")
+  
+  mod <- create_test_fmri_lm(sparse_mask = TRUE)
+  
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE))
+  
+  result <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    save_betas = TRUE,
+    strategy = "by_stat",
+    contrast_stats = "beta"
+  )
+  
+  expect_true(file.exists(result$betas$h5))
+  expect_true(file.exists(result$betas$json))
+  expect_true(file.exists(result$beta$h5))
+  expect_true(file.exists(result$beta$json))
 })
 
 test_that("write_results.fmri_lm validates CreationTime format for BIDS compliance", {

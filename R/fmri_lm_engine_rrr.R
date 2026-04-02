@@ -14,25 +14,6 @@
 
   args <- .rrr_normalize_args(args)
 
-  tmats <- term_matrices(model)
-  event_indices <- attr(tmats, "event_term_indices")
-  if (is.null(event_indices) || length(event_indices) == 0L) {
-    stop("rrr_gls engine requires at least one event/task regressor", call. = FALSE)
-  }
-
-  robust_type <- cfg$robust$type %||% FALSE
-  if (!identical(robust_type, FALSE)) {
-    stop("rrr_gls does not support robust fitting; set robust = FALSE", call. = FALSE)
-  }
-
-  if (isTRUE(cfg$ar$voxelwise)) {
-    stop("rrr_gls supports only shared (non-voxelwise) temporal covariance", call. = FALSE)
-  }
-
-  if (isTRUE(cfg$ar$by_cluster)) {
-    stop("rrr_gls does not support parcel-specific AR whitening", call. = FALSE)
-  }
-
   invisible(TRUE)
 }
 
@@ -101,6 +82,13 @@
 
   rank_x <- qr(X0, LAPACK = TRUE)$rank
   dfres <- max(1L, nrow(X0) - rank_z - rank_x)
+  n_effective <- dfres + rank_z + rank_x
+  df_inference <- calculate_effective_df(
+    n = n_effective,
+    p = rank_z + rank_x,
+    ar_order = white$ar_order,
+    method = "simple"
+  )
 
   if (task_fit$rank_used > 0L && ncol(V_r) > 0L) {
     Y_r <- Y0 %*% V_r
@@ -175,6 +163,7 @@
     event_indices = event_indices,
     se_event = se_event,
     dfres = dfres,
+    df_inference = df_inference,
     varnames = varnames,
     sigma = sigma
   )
@@ -186,7 +175,8 @@
       XtXinv = D_task,
       conlist = scoped_contrasts$simple,
       fconlist = scoped_contrasts$f,
-      df = dfres
+      df = dfres,
+      ar_order = white$ar_order
     )
   } else {
     list()
@@ -209,7 +199,7 @@
       est <- as.numeric(data_tbl$estimate)
       se_boot <- as.numeric(boot$se_t[[nm]])
       stat <- ifelse(abs(se_boot) < .Machine$double.eps^0.5, 0, est / se_boot)
-      prob <- 2 * pt(-abs(stat), df = dfres)
+      prob <- 2 * pt(-abs(stat), df = df_inference)
 
       data_tbl$se <- se_boot
       data_tbl$stat <- stat
@@ -371,8 +361,8 @@
     } else {
       stop("rrr_gls: cannot find latent loadings in latent_dataset", call. = FALSE)
     }
-    L <- as.matrix(lvec@loadings)
-    return(Z %*% t(L))
+    L <- lvec@loadings
+    return(as.matrix(Z %*% Matrix::t(L)))
   }
 
   as.matrix(fmridataset::get_data_matrix(dataset))
@@ -659,7 +649,7 @@
 .rrr_filter_task_contrasts <- function(simple_weights, f_weights, event_indices, policy = "warn_drop") {
   policy <- match.arg(policy, c("warn_drop", "drop", "error"))
   event_indices <- as.integer(event_indices)
-  event_map <- setNames(seq_along(event_indices), as.character(event_indices))
+  event_map <- stats::setNames(seq_along(event_indices), as.character(event_indices))
   dropped <- character(0)
 
   remap <- function(weight_list) {
@@ -751,7 +741,8 @@
 #' Internal: build beta statistics table with task-only inference
 #' @keywords internal
 #' @noRd
-.rrr_build_beta_stats <- function(B_full, event_indices, se_event, dfres, varnames, sigma) {
+.rrr_build_beta_stats <- function(B_full, event_indices, se_event, dfres, df_inference = dfres,
+                                  varnames, sigma) {
   B_full <- as.matrix(B_full)
   V <- ncol(B_full)
   p <- nrow(B_full)
@@ -761,7 +752,7 @@
   se[, event_indices] <- se_event
 
   stat <- estimate / se
-  prob <- 2 * pt(-abs(stat), df = dfres)
+  prob <- 2 * pt(-abs(stat), df = df_inference)
 
   colnames(estimate) <- varnames
   colnames(se) <- varnames
@@ -876,12 +867,32 @@
 #' @keywords internal
 #' @noRd
 .register_builtin_engines <- function() {
+  if (is.null(get_engine("latent_sketch"))) {
+    register_engine(
+      name = "latent_sketch",
+      preflight = .preflight_lowrank_engine_plugin,
+      fit = .fit_lowrank_engine_plugin,
+      capabilities = list(
+        robust = FALSE,
+        preprocessing = FALSE,
+        ar_voxelwise = FALSE,
+        requires_parcels_for_by_cluster = TRUE,
+        forbid_by_cluster_dataset_classes = "latent_dataset"
+      )
+    )
+  }
+
   if (is.null(get_engine("rrr_gls"))) {
     register_engine(
       name = "rrr_gls",
       preflight = .preflight_rrr_gls_engine,
       fit = .fit_rrr_gls_engine,
       capabilities = list(
+        robust = FALSE,
+        preprocessing = FALSE,
+        ar_voxelwise = FALSE,
+        ar_by_cluster = FALSE,
+        requires_event_regressors = TRUE,
         rank_constrained = TRUE,
         whitening = "shared_ar",
         se_modes = c("conditional", "bootstrap"),

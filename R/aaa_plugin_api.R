@@ -10,7 +10,11 @@
 #'   to return an `fmri_lm` object.
 #' @param preflight Optional function invoked before fitting; receives the same
 #'   arguments as `fit` and can signal errors early.
-#' @param capabilities Optional named list describing the engine (for future use).
+#' @param capabilities Optional named list describing engine support for global
+#'   `fmri_lm()` options. Recognized fields currently include `robust`,
+#'   `preprocessing`, `ar_voxelwise`, `ar_by_cluster`, plus contextual rules
+#'   such as `requires_event_regressors`, `requires_parcels_for_by_cluster`,
+#'   and `forbid_by_cluster_dataset_classes`.
 #' @return Invisibly, `TRUE`.
 #' @export
 register_engine <- function(name, fit, preflight = NULL, capabilities = list()) {
@@ -38,6 +42,244 @@ get_engine <- function(name) {
     return(NULL)
   }
   .fmrireg_engine_registry[[name]]
+}
+
+#' @keywords internal
+.builtin_engine_aliases <- function(name) {
+  if (identical(name, "latent_sketch")) {
+    "sketch"
+  } else {
+    character()
+  }
+}
+
+#' @keywords internal
+.builtin_engine_source <- function(name) {
+  if (name %in% c("latent_sketch", "rrr_gls")) {
+    "builtin"
+  } else {
+    "plugin"
+  }
+}
+
+#' @keywords internal
+.new_engine_spec <- function(name, registration, include_functions = FALSE) {
+  spec <- list(
+    name = name,
+    source = .builtin_engine_source(name),
+    aliases = .builtin_engine_aliases(name),
+    strategy = if (identical(name, "latent_sketch")) "sketch" else "engine",
+    capabilities = .normalize_engine_capabilities(registration$capabilities),
+    has_preflight = is.function(registration$preflight)
+  )
+
+  if (isTRUE(include_functions)) {
+    spec$fit <- registration$fit
+    spec$preflight <- registration$preflight
+  }
+
+  class(spec) <- c("fmrireg_engine_spec", "list")
+  spec
+}
+
+#' @keywords internal
+get_engine_spec <- function(name, include_functions = FALSE) {
+  if (!is.character(name) || length(name) != 1L || !nzchar(name)) {
+    return(NULL)
+  }
+
+  registration <- get_engine(name)
+  if (is.null(registration)) {
+    return(NULL)
+  }
+
+  .new_engine_spec(name, registration, include_functions = include_functions)
+}
+
+#' @keywords internal
+list_engine_specs <- function(include_functions = FALSE) {
+  engine_names <- sort(ls(.fmrireg_engine_registry, all.names = TRUE))
+  specs <- lapply(engine_names, get_engine_spec, include_functions = include_functions)
+  names(specs) <- engine_names
+  specs
+}
+
+#' Inspect a Registered Engine Specification
+#'
+#' Returns a read-only description of a registered engine, including its
+#' normalized capabilities, source (`"builtin"` vs `"plugin"`), aliases, and
+#' dispatch strategy. This is intended for extension authors and diagnostic
+#' tooling; it does not expose the underlying fit/preflight functions.
+#'
+#' @param name Engine name, such as `"rrr_gls"` or `"latent_sketch"`.
+#' @return A list of class `fmrireg_engine_spec`, or `NULL` if the engine is not
+#'   registered.
+#' @export
+engine_spec <- function(name) {
+  get_engine_spec(name, include_functions = FALSE)
+}
+
+#' List Registered Engine Specifications
+#'
+#' Returns the read-only specifications for all currently registered engines.
+#'
+#' @return A named list of `fmrireg_engine_spec` objects.
+#' @export
+engine_specs <- function() {
+  list_engine_specs(include_functions = FALSE)
+}
+
+#' @export
+print.fmrireg_engine_spec <- function(x, ...) {
+  stopifnot(inherits(x, "fmrireg_engine_spec"))
+
+  aliases <- if (length(x$aliases) > 0L) {
+    paste(x$aliases, collapse = ", ")
+  } else {
+    "<none>"
+  }
+
+  caps <- x$capabilities %||% list()
+  capability_summary <- c(
+    paste0("robust=", caps$robust),
+    paste0("preprocessing=", caps$preprocessing),
+    paste0("ar_voxelwise=", caps$ar_voxelwise),
+    paste0("ar_by_cluster=", caps$ar_by_cluster)
+  )
+
+  cat("<fmrireg_engine_spec>\n", sep = "")
+  cat("name: ", x$name, "\n", sep = "")
+  cat("source: ", x$source, " | strategy: ", x$strategy, "\n", sep = "")
+  cat("aliases: ", aliases, "\n", sep = "")
+  cat("capabilities: ", paste(capability_summary, collapse = ", "), "\n", sep = "")
+
+  if (isTRUE(caps$requires_event_regressors)) {
+    cat("requires: event regressors\n", sep = "")
+  }
+  if (isTRUE(caps$requires_parcels_for_by_cluster)) {
+    cat("requires: parcels when by_cluster = TRUE\n", sep = "")
+  }
+  if (length(caps$forbid_by_cluster_dataset_classes) > 0L) {
+    cat(
+      "forbids by_cluster for: ",
+      paste(caps$forbid_by_cluster_dataset_classes, collapse = ", "),
+      "\n",
+      sep = ""
+    )
+  }
+
+  invisible(x)
+}
+
+#' @keywords internal
+.normalize_engine_capabilities <- function(capabilities = NULL) {
+  defaults <- list(
+    robust = TRUE,
+    preprocessing = TRUE,
+    ar_voxelwise = TRUE,
+    ar_by_cluster = TRUE,
+    requires_event_regressors = FALSE,
+    requires_parcels_for_by_cluster = FALSE,
+    forbid_by_cluster_dataset_classes = character()
+  )
+
+  capabilities <- capabilities %||% list()
+  utils::modifyList(defaults, capabilities)
+}
+
+#' @keywords internal
+.validate_engine_capabilities <- function(engine, cfg, capabilities = NULL) {
+  stopifnot(is.character(engine), length(engine) == 1L, nzchar(engine))
+  stopifnot(inherits(cfg, "fmri_lm_config"))
+
+  caps <- .normalize_engine_capabilities(capabilities)
+
+  if (identical(caps$robust, FALSE) && !identical(cfg$robust$type %||% FALSE, FALSE)) {
+    stop(sprintf("%s does not support robust fitting; set robust = FALSE", engine), call. = FALSE)
+  }
+
+  preprocessing_enabled <- isTRUE(cfg$volume_weights$enabled) || isTRUE(cfg$soft_subspace$enabled)
+  if (identical(caps$preprocessing, FALSE) && preprocessing_enabled) {
+    stop(sprintf("%s does not support volume_weights or soft_subspace preprocessing", engine), call. = FALSE)
+  }
+
+  if (identical(caps$ar_voxelwise, FALSE) && isTRUE(cfg$ar$voxelwise)) {
+    stop(sprintf("%s supports only shared (non-voxelwise) temporal covariance", engine), call. = FALSE)
+  }
+
+  if (identical(caps$ar_by_cluster, FALSE) && isTRUE(cfg$ar$by_cluster)) {
+    stop(sprintf("%s does not support parcel-specific AR whitening", engine), call. = FALSE)
+  }
+
+  invisible(caps)
+}
+
+#' @keywords internal
+.validate_engine_context <- function(engine, model, dataset, args, cfg, capabilities = NULL) {
+  stopifnot(is.character(engine), length(engine) == 1L, nzchar(engine))
+  stopifnot(inherits(model, "fmri_model"))
+  stopifnot(inherits(cfg, "fmri_lm_config"))
+
+  caps <- .normalize_engine_capabilities(capabilities)
+  args <- args %||% list()
+
+  if (isTRUE(caps$requires_event_regressors)) {
+    tmats <- term_matrices(model)
+    event_indices <- attr(tmats, "event_term_indices")
+    if (is.null(event_indices) || length(event_indices) == 0L) {
+      stop(sprintf("%s engine requires at least one event/task regressor", engine), call. = FALSE)
+    }
+  }
+
+  if (isTRUE(cfg$ar$by_cluster) && isTRUE(caps$requires_parcels_for_by_cluster)) {
+    lowrank <- args$lowrank %||% list()
+    if (is.null(lowrank$parcels)) {
+      stop(sprintf("%s requires `lowrank$parcels` when ar_options$by_cluster = TRUE", engine), call. = FALSE)
+    }
+  }
+
+  if (isTRUE(cfg$ar$by_cluster) && length(caps$forbid_by_cluster_dataset_classes) > 0L) {
+    matches <- caps$forbid_by_cluster_dataset_classes[
+      vapply(caps$forbid_by_cluster_dataset_classes, function(cls) inherits(dataset, cls), logical(1))
+    ]
+    if (length(matches) > 0L) {
+      stop(
+        sprintf("%s does not support by_cluster AR whitening for %s inputs", engine, matches[[1L]]),
+        call. = FALSE
+      )
+    }
+  }
+
+  invisible(caps)
+}
+
+#' @keywords internal
+.derive_engine_execution_config <- function(cfg, capabilities = NULL) {
+  stopifnot(inherits(cfg, "fmri_lm_config"))
+  caps <- .normalize_engine_capabilities(capabilities)
+
+  executed <- unserialize(serialize(cfg, NULL))
+
+  if (identical(caps$robust, FALSE)) {
+    executed$robust <- fmri_lm_control()$robust
+  }
+
+  if (identical(caps$preprocessing, FALSE)) {
+    defaults <- fmri_lm_control()
+    executed$volume_weights <- defaults$volume_weights
+    executed$soft_subspace <- defaults$soft_subspace
+  }
+
+  if (identical(caps$ar_voxelwise, FALSE)) {
+    executed$ar$voxelwise <- FALSE
+  }
+
+  if (identical(caps$ar_by_cluster, FALSE) && "by_cluster" %in% names(executed$ar)) {
+    executed$ar$by_cluster <- FALSE
+  }
+
+  class(executed) <- class(cfg)
+  executed
 }
 
 #' Register an HRF/basis constructor
@@ -318,7 +560,7 @@ fit_glm_on_transformed_series <- function(model, Y, cfg = NULL, dataset = NULL,
     ar_coef = result$ar_coef
   )
   class(ret) <- "fmri_lm"
-  attr(ret, "config") <- cfg
+  ret <- .fmri_lm_attach_config_metadata(ret, requested_cfg = cfg, executed_cfg = cfg)
   attr(ret, "strategy") <- strategy
   attr(ret, "engine") <- engine
   ret
@@ -417,7 +659,7 @@ fit_glm_with_config <- function(model, Y, cfg = NULL, dataset = NULL,
     ar_coef = result$ar_coef
   )
   class(ret) <- "fmri_lm"
-  attr(ret, "config") <- cfg
+  ret <- .fmri_lm_attach_config_metadata(ret, requested_cfg = cfg, executed_cfg = cfg)
   attr(ret, "strategy") <- strategy
   attr(ret, "engine") <- engine
   ret
@@ -489,7 +731,7 @@ fit_glm_from_suffstats <- function(model, XtX, XtS, StS, df,
   dataset <- dataset %||% model$dataset
   ret <- list(result = result, model = model, strategy = strategy, bcons = processed_conlist, dataset = dataset, ar_coef = result$ar_coef)
   class(ret) <- "fmri_lm"
-  attr(ret, "config") <- cfg
+  ret <- .fmri_lm_attach_config_metadata(ret, requested_cfg = cfg, executed_cfg = cfg)
   attr(ret, "strategy") <- strategy
   attr(ret, "engine") <- engine
   ret

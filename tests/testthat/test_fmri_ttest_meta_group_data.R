@@ -56,3 +56,50 @@ test_that("fmri_ttest(meta) works with group_data_nifti and weights", {
   expect_true(all(is.finite(fit_cu$z)))
 })
 
+test_that("fmri_ttest classic and welch materialize group_data_nifti betas", {
+  skip_on_cran()
+  skip_if_not_installed("neuroim2")
+
+  library(neuroim2)
+
+  space <- NeuroSpace(c(3, 3, 1), spacing = c(2, 2, 2))
+  n_vox <- prod(dim(space))
+  ids <- sprintf("sub-%02d", 1:6)
+  grp <- factor(rep(c("A", "B"), each = 3))
+
+  tmpdir <- tempdir()
+  beta_paths <- character(length(ids))
+  se_paths <- character(length(ids))
+
+  set.seed(2)
+  for (i in seq_along(ids)) {
+    b <- array(rnorm(n_vox, sd = 0.02), dim = c(3, 3, 1))
+    b <- b + if (grp[i] == "A") 1 else 2
+    s <- array(0.2, dim = c(3, 3, 1))
+    beta_paths[i] <- file.path(tmpdir, sprintf("%s_classic_beta.nii.gz", ids[i]))
+    se_paths[i] <- file.path(tmpdir, sprintf("%s_classic_se.nii.gz", ids[i]))
+    write_vol(NeuroVol(b, space), beta_paths[i])
+    write_vol(NeuroVol(s, space), se_paths[i])
+  }
+
+  mask_path <- file.path(tmpdir, "classic_mask.nii.gz")
+  write_vol(NeuroVol(array(1, dim = c(3, 3, 1)), space), mask_path)
+
+  gd <- group_data_from_nifti(
+    beta_paths = beta_paths,
+    se_paths = se_paths,
+    subjects = ids,
+    covariates = data.frame(group = grp),
+    mask = mask_path
+  )
+
+  fit_classic <- fmri_ttest(gd, formula = ~ 1 + group, engine = "classic")
+  fit_welch <- fmri_ttest(gd, formula = ~ 1 + group, engine = "welch")
+
+  expect_equal(dim(fit_classic$beta), c(2, n_vox))
+  expect_equal(dim(fit_welch$beta), c(2, n_vox))
+  expect_equal(rownames(fit_classic$beta), c("(Intercept)", "group"))
+  expect_equal(rownames(fit_welch$beta), c("(Intercept)", "group"))
+  expect_true(mean(fit_classic$beta["group", ]) < 0)
+  expect_true(mean(fit_welch$beta["group", ]) < 0)
+})

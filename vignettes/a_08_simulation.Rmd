@@ -9,18 +9,16 @@ output:
     css: albers.css
     includes:
       in_header: albers-header.html
-vignette: >
-  %\VignetteIndexEntry{03 Simulating fMRI Data}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
 params:
-  family: ochre
+  family: red
   preset: homage
 resource_files:
 - albers.css
 - albers.js
 - albers-header.html
 
+vignette: |
+  %\VignetteIndexEntry{03 Simulating fMRI Data} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}
@@ -47,6 +45,7 @@ cat(sprintf(
   params$preset
 ))
 ```
+
 
 ```{r load-packages}
 library(fmrireg)

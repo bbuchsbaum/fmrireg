@@ -5,7 +5,7 @@
 \alias{.fmrireg_engine_registry}
 \title{Plugin registration and helpers for fmrireg}
 \format{
-An object of class \code{environment} of length 1.
+An object of class \code{environment} of length 2.
 }
 \usage{
 .fmrireg_engine_registry

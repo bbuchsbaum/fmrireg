@@ -4,7 +4,7 @@
 \alias{.finalize_atomic_write}
 \title{Finalize Atomic Write by Moving Files}
 \usage{
-.finalize_atomic_write(temp_dir, final_path, created_files)
+.finalize_atomic_write(temp_dir, final_path, created_files, overwrite = FALSE)
 }
 \description{
 Finalize Atomic Write by Moving Files

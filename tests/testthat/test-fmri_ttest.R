@@ -60,11 +60,12 @@ test_that("fmri_ttest works for two-sample t-test", {
   expect_s3_class(fit, "fmri_ttest_fit")
   expect_equal(nrow(fit$beta), 2)  # Intercept + group
   expect_true("(Intercept)" %in% rownames(fit$beta))
-  expect_true("groupB" %in% rownames(fit$beta))
+  expect_true("group" %in% rownames(fit$beta))
   
   # Group effect should be detected
-  group_p <- fit$p["groupB", ]
+  group_p <- fit$p["group", ]
   expect_true(mean(group_p < 0.05) > 0.3)  # At least 30% significant
+  expect_true(mean(fit$beta["group", ]) < 0) # default sign is A - B
 })
 
 test_that("fmri_ttest works with Welch t-test", {
@@ -230,6 +231,12 @@ test_that("flip_sign works correctly", {
   expect_equal(fit_partial$beta["(Intercept)", ], fit$beta["(Intercept)", ])
   expect_equal(fit_partial$beta["groupB", ], -fit$beta["groupB", ])
   expect_equal(fit_partial$beta["age", ], fit$beta["age", ])
+
+  fit$p_contrast <- c(0.1, 0.2)
+  fit$t_contrast <- c(-2, 3)
+  fit_contrast <- flip_sign(fit)
+  expect_equal(fit_contrast$p_contrast, fit$p_contrast)
+  expect_equal(fit_contrast$t_contrast, -fit$t_contrast)
 })
 
 test_that("print and summary methods work", {
@@ -256,4 +263,209 @@ test_that("print and summary methods work", {
   expect_output(print(fit), "fmri_ttest Results")
   expect_output(print(fit), "Engine: classic")
   expect_output(summary(fit), "Coefficients")
+})
+
+test_that("group coefficient sign convention is stable across engines", {
+  set.seed(131)
+
+  S <- 24
+  P <- 10
+  group <- factor(rep(c("A", "B"), each = S / 2))
+  Y <- matrix(rnorm(S * P, sd = 0.1), nrow = S, ncol = P)
+  Y[group == "B", ] <- Y[group == "B", ] + 2
+  V <- matrix(0.2, nrow = S, ncol = P)
+
+  gd <- structure(
+    list(
+      blocks = list(
+        list(
+          Y = Y,
+          V = V,
+          covars = data.frame(group = group),
+          feature = NULL
+        )
+      )
+    ),
+    class = "group_data"
+  )
+
+  fit_classic <- fmri_ttest(gd, formula = ~ 1 + group, engine = "classic")
+  fit_classic_flip <- fmri_ttest(gd, formula = ~ 1 + group, engine = "classic", sign = "BminusA")
+  fit_welch <- fmri_ttest(gd, formula = ~ 1 + group, engine = "welch")
+  fit_welch_flip <- fmri_ttest(gd, formula = ~ 1 + group, engine = "welch", sign = "BminusA")
+  fit_meta <- fmri_ttest(gd, formula = ~ 1 + group, engine = "meta")
+  fit_meta_flip <- fmri_ttest(gd, formula = ~ 1 + group, engine = "meta", sign = "BminusA")
+
+  expect_equal(rownames(fit_classic$beta), c("(Intercept)", "group"))
+  expect_equal(rownames(fit_welch$beta), c("(Intercept)", "group"))
+  expect_equal(rownames(fit_meta$beta), c("(Intercept)", "group"))
+  expect_true(mean(fit_classic$beta["group", ]) < 0)
+  expect_true(mean(fit_welch$beta["group", ]) < 0)
+  expect_true(mean(fit_meta$beta["group", ]) < 0)
+  expect_equal(fit_classic_flip$beta["group", ], -fit_classic$beta["group", ])
+  expect_equal(fit_welch_flip$beta["group", ], -fit_welch$beta["group", ])
+  expect_equal(fit_meta_flip$beta["group", ], -fit_meta$beta["group", ])
+})
+
+test_that("fmri_ttest computes exact contrasts where supported", {
+  set.seed(132)
+
+  S <- 18
+  P <- 8
+  group <- factor(rep(c("A", "B"), each = S / 2))
+  age <- seq(20, 54, length.out = S)
+  Y <- matrix(rnorm(S * P, sd = 0.15), nrow = S, ncol = P)
+  Y[group == "B", ] <- Y[group == "B", ] + 1
+  Y <- Y + outer(as.numeric(scale(age)), rep(0.1, P))
+  V <- matrix(0.3, nrow = S, ncol = P)
+
+  gd <- structure(
+    list(
+      blocks = list(
+        list(
+          Y = Y,
+          V = V,
+          covars = data.frame(group = group, age = age),
+          feature = NULL
+        )
+      )
+    ),
+    class = "group_data"
+  )
+
+  contrast <- c(group = 1, age = 0.5)
+  fit_classic <- fmri_ttest(gd, formula = ~ 1 + group + age, engine = "classic", contrast = contrast)
+  fit_meta <- fmri_ttest(gd, formula = ~ 1 + group + age, engine = "meta", contrast = contrast)
+
+  expect_true(all(is.finite(fit_classic$z_contrast)))
+  expect_true(all(is.finite(fit_meta$z_contrast)))
+  expect_equal(length(fit_classic$z_contrast), P)
+  expect_equal(length(fit_meta$z_contrast), P)
+  expect_true(all(fit_classic$p_contrast >= 0 & fit_classic$p_contrast <= 1))
+  expect_true(all(fit_meta$p_contrast >= 0 & fit_meta$p_contrast <= 1))
+})
+
+test_that("fmri_ttest rejects unsupported contrast combinations explicitly", {
+  set.seed(133)
+
+  S <- 12
+  P <- 6
+  group <- factor(rep(c("A", "B"), each = S / 2))
+  Y <- matrix(rnorm(S * P), nrow = S, ncol = P)
+  V <- matrix(0.2, nrow = S, ncol = P)
+  voxel_cov <- matrix(rnorm(S * P), nrow = S, ncol = P)
+
+  gd <- structure(
+    list(
+      blocks = list(
+        list(
+          Y = Y,
+          V = V,
+          covars = data.frame(group = group),
+          feature = NULL
+        )
+      )
+    ),
+    class = "group_data"
+  )
+
+  expect_error(
+    fmri_ttest(gd, formula = ~ 1 + group, engine = "meta", contrast = c(group = 1), voxelwise_cov = voxel_cov),
+    "contrast is not supported with voxelwise_cov in meta analyses"
+  )
+  expect_error(
+    fmri_ttest(gd, formula = ~ 1 + group, engine = "welch", contrast = c(`(Intercept)` = 1, group = 1)),
+    "Welch contrasts currently support only the group coefficient"
+  )
+})
+
+test_that("fmri_ttest errors when spatial_fdr metadata is unavailable", {
+  set.seed(134)
+
+  S <- 15
+  P <- 20
+  gd <- structure(
+    list(
+      blocks = list(
+        list(
+          Y = matrix(rnorm(S * P), nrow = S, ncol = P),
+          V = NULL,
+          covars = data.frame(subject = seq_len(S)),
+          feature = NULL
+        )
+      )
+    ),
+    class = "group_data"
+  )
+
+  expect_error(
+    fmri_ttest(gd, formula = ~ 1, engine = "classic", mc = "spatial_fdr"),
+    "requires feature grouping metadata"
+  )
+})
+
+test_that("fmri_ttest validates custom weights", {
+  set.seed(135)
+
+  S <- 10
+  P <- 5
+  gd <- structure(
+    list(
+      blocks = list(
+        list(
+          Y = matrix(rnorm(S * P), nrow = S, ncol = P),
+          V = matrix(0.2, nrow = S, ncol = P),
+          covars = data.frame(subject = seq_len(S)),
+          feature = NULL
+        )
+      )
+    ),
+    class = "group_data"
+  )
+
+  expect_error(
+    fmri_ttest(gd, formula = ~ 1, engine = "meta", weights = "custom", weights_custom = rep(1, S - 1)),
+    "weights_custom must be length S or SxP"
+  )
+  expect_error(
+    fmri_ttest(gd, formula = ~ 1, engine = "meta", weights = "custom", weights_custom = c(rep(1, S - 1), 0)),
+    "finite positive"
+  )
+})
+
+test_that("fmri_ttest covers paired, auto, mu0, voxelwise_cov, and coef_image", {
+  set.seed(136)
+
+  S <- 14
+  P <- 12
+  group <- factor(rep(c("A", "B"), each = S / 2))
+  Y <- matrix(rnorm(S * P, mean = 2), nrow = S, ncol = P)
+  V <- matrix(0.25, nrow = S, ncol = P)
+  voxel_cov <- matrix(rnorm(S * P), nrow = S, ncol = P)
+
+  gd <- structure(
+    list(
+      blocks = list(
+        list(
+          Y = Y,
+          V = V,
+          covars = data.frame(group = group),
+          feature = list(group = rep(1:3, each = 4))
+        )
+      )
+    ),
+    class = "group_data"
+  )
+
+  fit_auto <- fmri_ttest(gd, formula = ~ 1, engine = "auto")
+  fit_mu0 <- fmri_ttest(gd, formula = ~ 1, engine = "classic", mu0 = 2)
+  fit_paired <- fmri_ttest(gd, formula = ~ 1, engine = "classic", paired = TRUE)
+  fit_vcov <- fmri_ttest(gd, formula = ~ 1, engine = "classic", voxelwise_cov = voxel_cov)
+
+  expect_equal(fit_auto$engine, "meta")
+  expect_true(abs(mean(fit_mu0$beta["(Intercept)", ])) < 0.5)
+  expect_equal(rownames(fit_paired$beta), "(Intercept)")
+  expect_true("voxel_cov" %in% rownames(fit_vcov$beta))
+  expect_equal(coef_image(fit_vcov, coef = "voxel_cov", statistic = "estimate"), fit_vcov$beta["voxel_cov", ])
+  expect_true(all(is.finite(coef_image(fit_vcov, coef = "voxel_cov", statistic = "z"))))
 })

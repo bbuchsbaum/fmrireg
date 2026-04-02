@@ -15,7 +15,11 @@ to return an \code{fmri_lm} object.}
 \item{preflight}{Optional function invoked before fitting; receives the same
 arguments as \code{fit} and can signal errors early.}
 
-\item{capabilities}{Optional named list describing the engine (for future use).}
+\item{capabilities}{Optional named list describing engine support for global
+\code{fmri_lm()} options. Recognized fields currently include \code{robust},
+\code{preprocessing}, \code{ar_voxelwise}, \code{ar_by_cluster}, plus contextual rules
+such as \code{requires_event_regressors}, \code{requires_parcels_for_by_cluster},
+and \code{forbid_by_cluster_dataset_classes}.}
 }
 \value{
 Invisibly, \code{TRUE}.

@@ -21,11 +21,11 @@ NULL
 #' @param parallel_voxels Logical. If TRUE, process voxels in parallel using future.apply.
 #' @return A list containing the combined results from runwise linear model analysis.
 #' @keywords internal
-runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
-                       use_fast_path = FALSE, progress = FALSE,
-                       phi_fixed = NULL,
-                       sigma_fixed = NULL,
-                       parallel_voxels = FALSE) {
+runwise_lm_impl <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
+                            use_fast_path = FALSE, progress = FALSE,
+                            phi_fixed = NULL,
+                            sigma_fixed = NULL,
+                            parallel_voxels = FALSE) {
   
   # Validate config
   assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
@@ -204,7 +204,8 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
       rss = res$rss,
       rdf = res$dfres,
       resvar = res$sigma2,
-      sigma = sigma_vec
+      sigma = sigma_vec,
+      ar_coef = res$phi_hat %||% NULL
     )
     
     if (progress) cli::cli_progress_update()
@@ -273,7 +274,8 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
       rss = rss,
       rdf = rdf,
       resvar = resvar,
-      sigma = sigma
+      sigma = sigma,
+      ar_coef = NULL
     )
     
     if (progress) cli::cli_progress_update()
@@ -505,7 +507,8 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
       rss = rss_voxelwise,
       rdf = rdf,
       resvar = rss_voxelwise / rdf,
-      sigma = sigma_voxelwise
+      sigma = sigma_voxelwise,
+      ar_coef = lapply(seq_len(n_voxels), function(v) as.numeric(phi_voxelwise[, v]))
     )
     
     if (progress) cli::cli_progress_update()
@@ -534,6 +537,9 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu) {
   resvar <- rss / rdf
   
   # Pool over runs
+  ar_coef_list <- lapply(cres, `[[`, "ar_coef")
+  ar_coef_list <- Filter(function(x) !is.null(x) && length(unlist(x)) > 0, ar_coef_list)
+
   if (length(cres) > 1) {
     meta_con <- meta_contrasts(conres_list)
     # Include all beta indices (event + baseline)
@@ -549,7 +555,8 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu) {
       sigma = sigma,
       rss = rss,
       rdf = rdf,
-      resvar = resvar
+      resvar = resvar,
+      ar_coef = if (length(ar_coef_list) > 0) ar_coef_list else NULL
     )
   } else {
     # Single run - need to combine contrasts into single tibble format
@@ -573,7 +580,8 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu) {
       sigma = cres[[1]]$sigma,
       rss = cres[[1]]$rss,
       rdf = cres[[1]]$rdf,
-      resvar = cres[[1]]$resvar
+      resvar = cres[[1]]$resvar,
+      ar_coef = if (length(ar_coef_list) > 0) ar_coef_list[[1]] else NULL
     )
   }
 }

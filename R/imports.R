@@ -34,5 +34,11 @@ utils::globalVariables(c(
   # Variables from robust fitting
   "proj_global_robustly_weighted", "multiresponse_arma", "auto_whiten",
   # Package data
-  "fmri_benchmark_datasets"
+  "fmri_benchmark_datasets",
+  # GDS bridge helpers (registered dynamically by fmrigds)
+  ".fmri_meta_group_data_gds_impl",
+  ".get_covariates_group_data_gds",
+  ".get_subjects_group_data_gds",
+  ".n_subjects_group_data_gds",
+  ".print_group_data_gds"
 ))

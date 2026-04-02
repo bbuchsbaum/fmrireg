@@ -51,6 +51,7 @@ fmri_ttest(
 \itemize{
 \item NULL: No correction (default)
 \item "bh": Benjamini-Hochberg FDR
+\item "by": Benjamini-Yekutieli FDR
 \item "spatial_fdr": Spatially-aware FDR
 }}
 
@@ -92,6 +93,8 @@ An fmri_ttest_fit object containing:
 \item p: Matrix of p-values
 \item df: Matrix of degrees of freedom
 \item q: Matrix of FDR-adjusted p-values (if mc is used)
+\item z_contrast: Vector of contrast z-scores (if contrast is used)
+\item p_contrast: Vector of contrast p-values (if contrast is used)
 }
 }
 \description{

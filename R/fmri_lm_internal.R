@@ -23,9 +23,19 @@ is.formula <- function(x) {
 #' @keywords internal
 #' @noRd
 .fast_preproject <- function(X) {
-  # Ensure X is a matrix
+  # Ensure X is a numeric matrix
   if (!is.matrix(X)) {
     X <- as.matrix(X)
+  }
+  if (anyNA(X) || any(!is.finite(X))) {
+    stop(".fast_preproject: design matrix contains NA/Inf values", call. = FALSE)
+  }
+  if (!is.numeric(X)) {
+    orig_colnames <- colnames(X)
+    X <- matrix(as.numeric(X), nrow = nrow(X), ncol = ncol(X))
+    if (!is.null(orig_colnames)) {
+      colnames(X) <- orig_colnames
+    }
   }
   
   # QR decomposition for rank detection and stable computation
@@ -113,31 +123,10 @@ is.formula <- function(x) {
 #' @keywords internal
 #' @noRd
 .fast_lm_matrix <- function(X, Y, proj, return_fitted = FALSE) {
-  # Use pre-computed components
-  B <- proj$Pinv %*% Y  # p × V
-  
-  if (return_fitted) {
-    fitted <- X %*% B     # n × V
-    resid  <- Y - fitted  # n × V
-  } else {
-    resid <- Y - X %*% B  # n × V
-  }
-  
-  rss    <- colSums(resid^2)  # V-vector
-  sigma2 <- rss / proj$dfres  # V-vector
-  
-  ret <- list(
-    betas = B,
-    rss = rss,
-    sigma2 = sigma2,
-    dfres = proj$dfres
-  )
-  
-  if (return_fitted) {
-    ret$fitted <- fitted
-  }
-  
-  ret
+  ctx <- glm_context(X = X, Y = Y, proj = proj)
+  res <- solve_glm_core(ctx, return_fitted = return_fitted)
+  res$sigma <- sqrt(res$sigma2)
+  res
 }
 
 #' Meta-analysis of Beta Statistics Across Runs

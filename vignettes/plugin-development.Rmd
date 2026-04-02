@@ -7,18 +7,16 @@ output:
     css: albers.css
     includes:
       in_header: albers-header.html
-vignette: >
-  %\VignetteIndexEntry{Advanced Plugin Development}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
 params:
-  family: ochre
+  family: red
   preset: homage
 resource_files:
 - albers.css
 - albers.js
 - albers-header.html
 
+vignette: |
+  %\VignetteIndexEntry{Advanced Plugin Development} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include = FALSE}
@@ -46,6 +44,7 @@ cat(sprintf(
   params$preset
 ))
 ```
+
 
 ## Why use the plugin API?
 
