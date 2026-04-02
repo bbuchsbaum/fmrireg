@@ -85,3 +85,41 @@ design_plot(
 A Shiny app that displays the design plot.
 
 ## Examples
+
+``` r
+if (interactive()) {
+  ## --- Construct a sampling frame ---
+  sframe <- fmrihrf::sampling_frame(blocklens = c(100, 100), TR = 2, precision = 0.5)
+
+  ## --- Create a dummy event table ---
+  set.seed(123)
+  event_table <- data.frame(
+    onset = seq(10, 190, length.out = 20),
+    x = rnorm(20),
+    y = rnorm(20),
+    run = rep(1:2, each = 10)
+  )
+
+  ## --- Construct a baseline model ---
+  base_mod <- baseline_model(basis = "bs", degree = 3, sframe = sframe, intercept = "runwise")
+
+  ## --- Construct an event model using a formula ---
+  ev_mod <- event_model(x = onset ~ hrf(x) + hrf(y), data = event_table,
+                        block = ~ run, sampling_frame = sframe,
+                        drop_empty = TRUE, durations = rep(0, nrow(event_table)))
+
+  ## --- Combine into an fMRI model ---
+  fmri_mod <- fmri_model(ev_mod, base_mod)
+
+  ## --- Launch the interactive design plot ---
+  design_plot(fmrimod = fmri_mod,
+              term_name = NULL,
+              longnames = TRUE,
+              plot_title = "fMRI Design Matrix",
+              x_label = "Time (s)",
+              y_label = "Signal",
+              line_size = 1.5,
+              color_palette = "Set2",
+              facet_ncol = 1)
+}
+```

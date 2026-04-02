@@ -47,13 +47,11 @@ Y[50, ] <- Y[50, ] + 5  # Add artifact
 
 # One-step computation of weights
 result <- volume_weights(Y, return_dvars = TRUE)
-#> Error in volume_weights(Y, return_dvars = TRUE): could not find function "volume_weights"
 cat("DVARS at artifact:", round(result$dvars[50], 2), "\n")
-#> Error in result$dvars: object of type 'closure' is not subsettable
+#> DVARS at artifact: 3.38 
 cat("Weight at artifact:", round(result$weights[50], 3), "\n")
-#> Error in result$weights: object of type 'closure' is not subsettable
+#> Weight at artifact: 0.163 
 
 # With Tukey method for more aggressive downweighting
 w_tukey <- volume_weights(Y, method = "tukey")
-#> Error in volume_weights(Y, method = "tukey"): could not find function "volume_weights"
 ```

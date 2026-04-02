@@ -186,8 +186,8 @@ fmri_lm(
 
 - robust_scale_scope:
 
-  Character. Shorthand for `robust_options$scale_scope` ("run" or
-  "global").
+  Character. Shorthand for `robust_options$scale_scope` ("run",
+  "global", or "voxel").
 
 - volume_weights:
 

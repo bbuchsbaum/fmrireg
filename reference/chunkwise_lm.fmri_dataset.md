@@ -9,7 +9,7 @@ on each chunk.
 ``` r
 # S3 method for class 'fmri_dataset'
 chunkwise_lm(
-  dset,
+  x,
   model,
   contrast_objects,
   nchunks,
@@ -18,13 +18,14 @@ chunkwise_lm(
   use_fast_path = FALSE,
   progress = FALSE,
   phi_fixed = NULL,
-  sigma_fixed = NULL
+  sigma_fixed = NULL,
+  ...
 )
 ```
 
 ## Arguments
 
-- dset:
+- x:
 
   An `fmri_dataset` object.
 

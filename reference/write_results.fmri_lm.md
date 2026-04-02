@@ -15,6 +15,7 @@ write_results(
   task = NULL,
   space = NULL,
   desc = "GLM",
+  format = c("h5"),
   strategy = c("by_stat", "by_contrast"),
   save_betas = TRUE,
   contrasts = NULL,
@@ -51,6 +52,13 @@ write_results(
 - desc:
 
   Description of the analysis (default: "GLM")
+
+- format:
+
+  Character vector specifying output formats. Supported values are
+  `"h5"` (default BIDS/HDF5 export) and `"gds"` (fmrigds-compatible
+  assays plus an `.rds` plan describing the dataset). You may request
+  both.
 
 - strategy:
 

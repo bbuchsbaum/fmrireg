@@ -1,8 +1,4 @@
-# 
-
-title: “02. Data Structures and Sampling Frames” author: “Bradley R.
-Buchsbaum” date: “2026-01-28” output: rmarkdown::html_vignette vignette:
-\> % % % —
+# 02 Data Structures and Sampling Frames
 
 ## Introduction: Linking Data and Design
 
@@ -332,22 +328,12 @@ matrix columns are the latent component time series.
 
 ## Using Dataset Objects
 
-## Next
-
-- [Simulating fMRI
-  Data](https://bbuchsbaum.github.io/articles/a_08_simulation.md)
-
-- [fMRI Linear Model
-  (GLM)](https://bbuchsbaum.github.io/articles/a_09_linear_model.md)
-  Once created, these dataset objects serve as the primary data input
-  for `fmrireg`’s modeling functions:
+Once created, these dataset objects serve as the primary data input for
+`fmrireg`’s modeling functions:
 
 - `event_model(..., sampling_frame = dset$sampling_frame)`
-
 - `baseline_model(..., sframe = dset$sampling_frame)`
-
 - `fmri_lm(model, dataset = dset)`
-
 - `estimate_betas(..., dataset = dset)`
 
 They provide a standardized way to access data (`get_data(dset)`), masks
@@ -356,3 +342,10 @@ They provide a standardized way to access data (`get_data(dset)`), masks
 
 Choosing the appropriate dataset class depends on where your data
 resides (memory, files) and its format (volumetric, matrix, latent).
+
+## Next
+
+- [`vignette("a_08_simulation", package = "fmrireg")`](https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.md)
+  — Simulating fMRI data
+- [`vignette("a_09_linear_model", package = "fmrireg")`](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.md)
+  — fMRI Linear Model (GLM)

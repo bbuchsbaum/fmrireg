@@ -49,7 +49,6 @@ opts <- soft_subspace_options(
   nuisance_mask = "path/to/wm_csf_mask.nii.gz",
   lambda = "auto"
 )
-#> Error in soft_subspace_options(enabled = TRUE, nuisance_mask = "path/to/wm_csf_mask.nii.gz",     lambda = "auto"): could not find function "soft_subspace_options"
 
 # Using pre-computed nuisance matrix
 N <- matrix(rnorm(100 * 20), 100, 20)
@@ -58,5 +57,4 @@ opts <- soft_subspace_options(
   nuisance_matrix = N,
   lambda = 0.5
 )
-#> Error in soft_subspace_options(enabled = TRUE, nuisance_matrix = N, lambda = 0.5): could not find function "soft_subspace_options"
 ```

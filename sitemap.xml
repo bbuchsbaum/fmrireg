@@ -1,15 +1,16 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/404.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/CLAUDE.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmrireg/articles/Overview.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/articles/a_10_dataset.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/articles/functional_connectivity.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/articles/index.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/articles/plugin-development.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/authors.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/index.html</loc></url>
@@ -28,6 +29,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/coef.fmri_meta.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/coef_image.fmri_ttest_fit.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/coef_image.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/coef_names.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/columns.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/compute_dvars.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/compute_lm_contrasts.html</loc></url>

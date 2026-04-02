@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -15,16 +15,18 @@
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/fmrireg.html">Get started</a></li>
+<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-vignettes" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Vignettes</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-vignettes"><li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
-    <li><a class="dropdown-item" href="../articles/Overview.html">Package Overview</a></li>
+    <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
@@ -55,6 +57,24 @@
       <small>Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.2" id="fmrireg-012">fmrireg 0.1.2<a class="anchor" aria-label="anchor" href="#fmrireg-012"></a></h2>
+<div class="section level3">
+<h3 id="changes-0-1-2">Changes<a class="anchor" aria-label="anchor" href="#changes-0-1-2"></a></h3>
+<ul><li>Moved PDF report generation (<code>report.fmri_lm</code>) to the standalone <code>fmrireport</code> package. Use <code>fmrireport::report()</code> for report rendering.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-1-2">Bug Fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-1-2"></a></h3>
+<ul><li>Fixed low-rank/sketch residual degrees of freedom to use original timepoints (<code>T - p</code>) instead of sketch rows.</li>
+<li>Replaced placeholder <code><a href="../reference/fit_contrasts.fmri_lm.html">fit_contrasts.fmri_lm()</a></code> outputs with computed standard errors, test statistics, and p-values.</li>
+<li>Consolidated duplicate meta-analysis pathways to shared implementations and removed inconsistent behavior across runwise/chunkwise pooling.</li>
+<li>Fixed F-contrast meta pooling to combine evidence via p-values rather than averaging F statistics.</li>
+<li>Fixed thread-safety issue in C++ meta kernels by deferring Paule-Mandel non-convergence warnings until after OpenMP regions.</li>
+<li>Added bounds validation and safer inverse fallback in sketch kernels to prevent unsafe indexing and hard failures on ill-conditioned data.</li>
+<li>Improved AR pipeline consistency for whitened covariance/fitted/residual handling and unified AR effective-df calculations.</li>
+<li>Added regression coverage for <code><a href="../reference/fit_contrasts.fmri_lm.html">fit_contrasts.fmri_lm()</a></code> to prevent placeholder-stat regressions.</li>
+</ul><hr></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.1" id="fmrireg-011">fmrireg 0.1.1<a class="anchor" aria-label="anchor" href="#fmrireg-011"></a></h2>
 <div class="section level3">

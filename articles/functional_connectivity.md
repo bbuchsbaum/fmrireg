@@ -1,8 +1,4 @@
-# 
-
-title: “Seed-based Functional Connectivity Analysis” author: “Bradley R.
-Buchsbaum” date: “2026-01-28” output: rmarkdown::html_vignette vignette:
-\> % % % —
+# 12 Functional Connectivity (Seed-based)
 
 ## Overview
 
@@ -219,7 +215,7 @@ if (length(t_seed_clean) > 0) {
 }
 ```
 
-![](functional_connectivity_files/figure-html/unnamed-chunk-7-1.png)
+![](functional_connectivity_files/figure-html/plot-connectivity-map-1.png)
 
 ## Extending to Real Data
 

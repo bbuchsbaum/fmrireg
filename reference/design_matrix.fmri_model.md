@@ -41,8 +41,8 @@ head(design_matrix(fm))
 #> 2                1.14                  0                 0.444            0.222
 #> 3                1.78                  0                 0.222            0.444
 #> 4                2.21                  0                 0                0    
-#> 5                0                     0.0483            0                0    
-#> 6                0                     1.07              0                0    
+#> 5                0                     0.0624            0                0    
+#> 6                0                     1.14              0                0    
 #> # ℹ 6 more variables: base_bs3_block_1 <dbl>, base_bs1_block_2 <dbl>,
 #> #   base_bs2_block_2 <dbl>, base_bs3_block_2 <dbl>, constant_1 <dbl>,
 #> #   constant_2 <dbl>

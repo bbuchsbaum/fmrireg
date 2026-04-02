@@ -1,41 +1,21 @@
-# 
-
-title: “06. Benchmark Datasets” author: “fmrireg package” date:
-“2026-01-28” output: rmarkdown::html_vignette vignette: \> % % % —
+# 06 Benchmark Datasets
 
 ## Introduction
 
-The `fmrireg` package includes a comprehensive set of benchmark datasets
-designed for testing and evaluating HRF fitting, beta estimation, and
-other fMRI analysis methods. These datasets provide known ground truth
-for various challenging scenarios commonly encountered in fMRI analysis.
+How do you know whether your HRF fitting or beta estimation method
+actually works? You need data where the ground truth is known — specific
+effect sizes, noise levels, and HRF shapes — so you can measure how well
+your method recovers them.
 
-This vignette demonstrates how to use these benchmark datasets to
-evaluate your analysis methods.
+The `fmrireg` package ships a set of benchmark datasets designed for
+exactly this purpose. Each dataset provides controlled signal, noise,
+and experimental parameters so you can rigorously evaluate and compare
+analysis methods.
 
 ``` r
 library(fmrireg)
-#> Registered S3 method overwritten by 'fmridesign':
-#>   method               from   
-#>   print.sampling_frame fmrihrf
-#> 
-#> Attaching package: 'fmrireg'
-#> The following object is masked from 'package:stats':
-#> 
-#>     convolve
 library(ggplot2)
 library(dplyr)
-#> 
-#> Attaching package: 'dplyr'
-#> The following object is masked from 'package:fmrireg':
-#> 
-#>     group_data
-#> The following objects are masked from 'package:stats':
-#> 
-#>     filter, lag
-#> The following objects are masked from 'package:base':
-#> 
-#>     intersect, setdiff, setequal, union
 ```
 
 ## Available Benchmark Datasets
@@ -106,11 +86,6 @@ print(summary_info$experimental_design)
 #> $target_snr
 #> [1] 4
 ```
-
-## Next
-
-- [Group
-  Analysis](https://bbuchsbaum.github.io/articles/group_analysis.md)
 
 ## Examining the Data Structure
 
@@ -384,3 +359,8 @@ Key advantages:
 
 These datasets enable rigorous, standardized evaluation of fMRI analysis
 methods and facilitate fair comparisons between different approaches.
+
+## Next
+
+- [`vignette("group_analysis", package = "fmrireg")`](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.md)
+  — Group analysis

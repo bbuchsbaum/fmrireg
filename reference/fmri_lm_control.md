@@ -71,7 +71,7 @@ Use the `*_options` lists below only when you need fine-grained control.
 
 - `max_iter`
 
-- `scale_scope` ("run", "global")
+- `scale_scope` ("run", "global", "voxel")
 
 - `reestimate_phi` (logical)
 
@@ -88,6 +88,10 @@ Use the `*_options` lists below only when you need fine-grained control.
 - `voxelwise` (logical)
 
 - `exact_first` (logical)
+
+- `censor` (integer vector of timepoints to exclude from AR estimation,
+  logical vector where TRUE = censored, or "auto" to extract from
+  dataset)
 
 `volume_weights_options` may contain:
 

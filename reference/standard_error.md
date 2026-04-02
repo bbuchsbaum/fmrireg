@@ -46,6 +46,7 @@ A tibble or matrix containing standard errors of parameter estimates
 ## See also
 
 Other statistical_measures:
+[`coef_names()`](https://bbuchsbaum.github.io/fmrireg/reference/coef_names.md),
 [`p_values()`](https://bbuchsbaum.github.io/fmrireg/reference/p_values.md),
 [`stats()`](https://bbuchsbaum.github.io/fmrireg/reference/stats.md)
 

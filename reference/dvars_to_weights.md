@@ -47,23 +47,19 @@ set.seed(123)
 Y <- matrix(rnorm(100 * 50), nrow = 100, ncol = 50)
 Y[50, ] <- Y[50, ] + 5
 dvars <- compute_dvars(Y)
-#> Error in compute_dvars(Y): could not find function "compute_dvars"
 
 # Compare different weighting methods
 w_inv <- dvars_to_weights(dvars, method = "inverse_squared")
-#> Error in dvars_to_weights(dvars, method = "inverse_squared"): could not find function "dvars_to_weights"
 w_soft <- dvars_to_weights(dvars, method = "soft_threshold")
-#> Error in dvars_to_weights(dvars, method = "soft_threshold"): could not find function "dvars_to_weights"
 w_tukey <- dvars_to_weights(dvars, method = "tukey")
-#> Error in dvars_to_weights(dvars, method = "tukey"): could not find function "dvars_to_weights"
 
 # Check weight at the artifact volume
 cat("Weights at volume 50:\n")
 #> Weights at volume 50:
 cat("  inverse_squared:", round(w_inv[50], 3), "\n")
-#> Error: object 'w_inv' not found
+#>   inverse_squared: 0.163 
 cat("  soft_threshold:", round(w_soft[50], 3), "\n")
-#> Error: object 'w_soft' not found
+#>   soft_threshold: 0.393 
 cat("  tukey:", round(w_tukey[50], 3), "\n")
-#> Error: object 'w_tukey' not found
+#>   tukey: 0 
 ```

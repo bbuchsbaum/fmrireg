@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title> • fmrireg</title>
+<title>02 Data Structures and Sampling Frames • fmrireg</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="02 Data Structures and Sampling Frames">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -29,17 +29,19 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/fmrireg.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-vignettes" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Vignettes</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-vignettes">
 <li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
-    <li><a class="dropdown-item" href="../articles/Overview.html">Package Overview</a></li>
+    <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
@@ -77,8 +79,11 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1></h1>
+      <h1>02 Data Structures and Sampling Frames</h1>
+                        <h4 data-toc-skip class="author">Bradley R.
+Buchsbaum</h4>
             
+            <h4 data-toc-skip class="date">2026-04-02</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_10_dataset.Rmd" class="external-link"><code>vignettes/a_10_dataset.Rmd</code></a></small>
       <div class="d-none name"><code>a_10_dataset.Rmd</code></div>
@@ -86,9 +91,6 @@
 
     
     
-<p>title: “02. Data Structures and Sampling Frames” author: “Bradley R.
-Buchsbaum” date: “2026-01-28” output: rmarkdown::html_vignette vignette:
-&gt; % % % —</p>
 <div class="section level2">
 <h2 id="introduction-linking-data-and-design">Introduction: Linking Data and Design<a class="anchor" aria-label="anchor" href="#introduction-linking-data-and-design"></a>
 </h2>
@@ -456,20 +458,13 @@ component time series.</p>
 <div class="section level2">
 <h2 id="using-dataset-objects">Using Dataset Objects<a class="anchor" aria-label="anchor" href="#using-dataset-objects"></a>
 </h2>
-</div>
-<div class="section level2">
-<h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
-</h2>
+<p>Once created, these dataset objects serve as the primary data input
+for <code>fmrireg</code>’s modeling functions:</p>
 <ul>
-<li><p><a href="/articles/a_08_simulation.html">Simulating fMRI
-Data</a></p></li>
-<li><p><a href="/articles/a_09_linear_model.html">fMRI Linear Model
-(GLM)</a> Once created, these dataset objects serve as the primary data
-input for <code>fmrireg</code>’s modeling functions:</p></li>
-<li><p><code>event_model(..., sampling_frame = dset$sampling_frame)</code></p></li>
-<li><p><code>baseline_model(..., sframe = dset$sampling_frame)</code></p></li>
-<li><p><code>fmri_lm(model, dataset = dset)</code></p></li>
-<li><p><code>estimate_betas(..., dataset = dset)</code></p></li>
+<li><code>event_model(..., sampling_frame = dset$sampling_frame)</code></li>
+<li><code>baseline_model(..., sframe = dset$sampling_frame)</code></li>
+<li><code>fmri_lm(model, dataset = dset)</code></li>
+<li><code>estimate_betas(..., dataset = dset)</code></li>
 </ul>
 <p>They provide a standardized way to access data
 (<code>get_data(dset)</code>), masks (<code>get_mask(dset)</code>), and
@@ -478,6 +473,18 @@ timing information (<code>blocklens(dset)</code>,
 format.</p>
 <p>Choosing the appropriate dataset class depends on where your data
 resides (memory, files) and its format (volumetric, matrix, latent).</p>
+</div>
+<div class="section level2">
+<h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
+</h2>
+<ul>
+<li>
+<code><a href="../articles/a_08_simulation.html">vignette("a_08_simulation", package = "fmrireg")</a></code> —
+Simulating fMRI data</li>
+<li>
+<code><a href="../articles/a_09_linear_model.html">vignette("a_09_linear_model", package = "fmrireg")</a></code> —
+fMRI Linear Model (GLM)</li>
+</ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

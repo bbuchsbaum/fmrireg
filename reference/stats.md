@@ -38,6 +38,7 @@ A tibble or matrix containing test statistics
 ## See also
 
 Other statistical_measures:
+[`coef_names()`](https://bbuchsbaum.github.io/fmrireg/reference/coef_names.md),
 [`p_values()`](https://bbuchsbaum.github.io/fmrireg/reference/p_values.md),
 [`standard_error()`](https://bbuchsbaum.github.io/fmrireg/reference/standard_error.md)
 

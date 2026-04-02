@@ -1,3 +1,5 @@
+# install.packages(“remotes”)
+
 [![R-CMD-check](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg)](https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main)
@@ -6,26 +8,54 @@ v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/l
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
-``` r
-bm <- load_benchmark_dataset("BM_Canonical_HighSNR")
+# install.packages(“remotes”)
 
-# Create an event model
-events <- bm$core_data$event_table
-sframe <- sampling_frame(blocklens = bm$core_data$run_length, TR = bm$core_data$TR)
-emod <- event_model(onset ~ hrf(condition), data = events,
-                   block = ~run, sampling_frame = sframe)
+remotes::install_github(“bbuchsbaum/fmrireg”)
 
-# Fit the model
-fit <- fmri_lm(emod, dataset = bm$core_data)
-```
+    ## Quick start
+
+    ```r
+    library(fmrireg)
+
+    # Define the temporal structure: 2 runs, 100 scans each, TR = 2s
+    sframe <- sampling_frame(blocklens = c(100, 100), TR = 2)
+
+    # Build an event model from an experimental design table
+    emod <- event_model(onset ~ hrf(condition, basis = "spmg1"),
+                        data = design_table,
+                        block = ~ run,
+                        sampling_frame = sframe)
+
+    # Add a baseline model with polynomial drift
+    bmod <- baseline_model(basis = "bs", degree = 5, sframe = sframe)
+
+    # Combine into a full fMRI model and fit
+    fmod <- fmri_model(emod, bmod)
+    fit  <- fmri_lm(fmod, dataset = dset)
+
+## Key features
+
+- **HRF library** – SPM canonical, gamma, Gaussian, B-spline, and custom
+  basis sets, with decorators for lag, block, and normalization.
+- **Formula interface** – Specify event models with `onset ~ hrf(...)`
+  syntax; supports categorical events, continuous modulators, and
+  multi-basis expansions.
+- **Contrast system** – Flexible contrasts via formulas, including
+  pairwise, polynomial, and F-contrasts.
+- **Robust estimation** – OLS, iteratively reweighted least squares
+  (IWLS), and sandwich variance estimators.
+- **AR correction** – Autoregressive noise modeling via the
+  [fmriAR](https://github.com/bbuchsbaum/fmriAR) package.
+- **Performance** – C++ solvers (Rcpp/RcppArmadillo) with optional
+  multithreading via RcppParallel.
 
 ## Documentation
 
-See comprehensive examples and tutorials in the
-[vignettes](https://bbuchsbaum.github.io/fmrireg/articles/index.html):
+Full documentation and tutorials are available at
+<https://bbuchsbaum.github.io/fmrireg/>. Vignettes include:
 
 - [Package
-  Overview](https://bbuchsbaum.github.io/fmrireg/articles/Overview.html)
+  Overview](https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html)
 - [Statistical
   Contrasts](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html)
 - [Simulation](https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.html)
@@ -42,27 +72,44 @@ See comprehensive examples and tutorials in the
 - [Benchmark
   Datasets](https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.html)
 
-## Performance Configuration
+## Reporting
+
+PDF report generation for `fmri_lm` fits is provided by the separate
+[fmrireport](https://github.com/bbuchsbaum/fmrireport) package:
+
+``` r
+fmrireport::report(fit, output_dir = "results")
+```
+
+## Performance configuration
 
 The internal C++ routines use
-[RcppParallel](https://rcppcore.github.io/RcppParallel/). You can
-control the number of threads by setting the R option
-`fmrireg.num_threads` or the environment variable `FMRIREG_NUM_THREADS`
-before loading the package. If either is set, `fmrireg` calls
-[`RcppParallel::setThreadOptions()`](https://rdrr.io/pkg/RcppParallel/man/setThreadOptions.html)
-when it loads.
+[RcppParallel](https://rcppcore.github.io/RcppParallel/). Control the
+thread count with:
 
-## Development Status
+``` r
+options(fmrireg.num_threads = 4)
+```
 
-`fmrireg` is currently in active development. While the core
-functionality is stable, the API may change as we continue to improve
-the package. Please [file
-issues](https://github.com/bbuchsbaum/fmrireg/issues) for bugs or
-feature requests.
+or set the environment variable `FMRIREG_NUM_THREADS` before loading the
+package.
 
 ## Citation
 
-If you use `fmrireg` in your research, please cite:
+If you use fmrireg in your research, please cite:
 
-    Buchsbaum, B. R. (2024). fmrireg: fMRI Analysis in R.
-    R package version 0.1.0. https://github.com/bbuchsbaum/fmrireg
+    Buchsbaum, B. R. (2025). fmrireg: Regression Analysis of Functional
+    Magnetic Resonance Imaging Data. R package version 0.1.2.
+    https://github.com/bbuchsbaum/fmrireg
+
+## License
+
+GPL (\>= 2)
+
+## Albers theme
+
+This package uses the albersdown theme. Existing vignette theme hooks
+are replaced so `albers.css` and local `albers.js` render consistently
+on CRAN and GitHub Pages. The defaults are configured via
+`params$family` and `params$preset` (family = ‘ochre’, preset =
+‘homage’). The pkgdown site uses `template: { package: albersdown }`.

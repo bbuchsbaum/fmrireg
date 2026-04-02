@@ -1,13 +1,21 @@
-# 
+# 03 Simulating fMRI Data
 
-title: “03. Simulating fMRI Data” author: “Bradley R. Buchsbaum” date:
-“2026-01-28” output: rmarkdown::html_vignette vignette: \> % % % —
+``` r
+library(fmrireg)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(stats)
+set.seed(123)
+```
 
 ## Introduction to fMRI Data Simulation
 
-Simulation is an essential tool for fMRI method development, validation,
-and teaching. The `fmrireg` package offers several functions to simulate
-fMRI data with varying levels of complexity:
+When developing or validating an fMRI analysis pipeline, you need data
+where the ground truth is known – real fMRI data doesn’t come with known
+effect sizes or noise parameters. Simulation fills this gap. The
+`fmrireg` package offers several functions to simulate fMRI data with
+varying levels of complexity:
 
 1.  **`simulate_bold_signal`**: Simulates clean BOLD responses for
     multiple experimental conditions
@@ -21,9 +29,7 @@ fMRI data with varying levels of complexity:
 This vignette demonstrates how to use these functions to create
 realistic fMRI simulations for various purposes.
 
-## Next
-
-- 04 fMRI Linear Model (GLM) \## Simulating Clean BOLD Signals
+## Simulating Clean BOLD Signals
 
 Let’s start with `simulate_bold_signal`, which generates a clean
 hemodynamic response signal for multiple experimental conditions.
@@ -32,11 +38,15 @@ hemodynamic response signal for multiple experimental conditions.
 # Simulate 3 conditions with different amplitudes
 sim <- simulate_bold_signal(ncond = 3, amps = c(1.0, 1.5, 2.0), TR = 2)
 
-# Extract the data and plot
+# Extract the data
 time <- sim$mat[,1]  # First column contains time
 signals <- sim$mat[,-1]  # Other columns contain condition signals
+```
 
-# Create a tidy dataframe for plotting
+We reshape the data into long format so ggplot2 can map each condition
+to a separate color.
+
+``` r
 df <- data.frame(
   Time = time,
   Cond1 = signals[,1],
@@ -44,11 +54,12 @@ df <- data.frame(
   Cond3 = signals[,3]
 )
 
-df_long <- tidyr::pivot_longer(df, cols = c(Cond1, Cond2, Cond3), 
-                        names_to = "Condition", 
+df_long <- tidyr::pivot_longer(df, cols = c(Cond1, Cond2, Cond3),
+                        names_to = "Condition",
                         values_to = "Response")
+```
 
-# Plot using ggplot2
+``` r
 ggplot(df_long, aes(x = Time, y = Response, color = Condition)) +
   geom_line() +
   theme_minimal() +
@@ -59,10 +70,12 @@ ggplot(df_long, aes(x = Time, y = Response, color = Condition)) +
   scale_color_brewer(palette = "Set1")
 ```
 
-![](a_08_simulation_files/figure-html/unnamed-chunk-2-1.png)
+![](a_08_simulation_files/figure-html/plot-bold-signals-1.png)
+
+Adding dashed vertical lines at each event onset makes the relationship
+between stimulus timing and the hemodynamic response easier to see.
 
 ``` r
-# Mark trial onsets on the time axis
 ggplot(df_long, aes(x = Time, y = Response, color = Condition)) +
   geom_line() +
   geom_vline(xintercept = sim$onset, linetype = "dashed", alpha = 0.3) +
@@ -74,7 +87,7 @@ ggplot(df_long, aes(x = Time, y = Response, color = Condition)) +
   scale_color_brewer(palette = "Set1")
 ```
 
-![](a_08_simulation_files/figure-html/unnamed-chunk-2-2.png)
+![](a_08_simulation_files/figure-html/plot-bold-with-onsets-1.png)
 
 The function returns a list containing: - **`onset`**: Event onset
 times - **`condition`**: Condition labels for each event - **`mat`**:
@@ -93,44 +106,56 @@ its components, let’s simulate and visualize them separately and
 combined.
 
 ``` r
-# Simulation parameters
 n_timepoints <- 200
 TR <- 2
 time <- seq(0, (n_timepoints - 1) * TR, by = TR)
+set.seed(123)
+```
 
-# Create noise components with clear differences
-set.seed(123) # For reproducibility
+First, pure white noise – random fluctuations with no temporal
+structure.
 
-# 1. Simulate Pure White Noise
-noise_white <- simulate_noise_vector(n_timepoints, TR = TR, 
+``` r
+noise_white <- simulate_noise_vector(n_timepoints, TR = TR,
                                   ar = 0, ma = 0,
                                   drift_amplitude = 0, physio = FALSE, sd = 1)
 ```
 
-    ## Warning in min(Mod(polyroot(c(1, -model$ar)))): no non-missing arguments to
-    ## min; returning Inf
+Next, ARMA noise introduces temporal autocorrelation, which makes the
+signal “smoother” than white noise.
 
 ``` r
-# 2. Simulate ARMA Noise (without drift/physio)
-noise_arma <- simulate_noise_vector(n_timepoints, TR = TR, 
-                                 ar = c(0.6), ma = c(0.3), 
+noise_arma <- simulate_noise_vector(n_timepoints, TR = TR,
+                                 ar = c(0.6), ma = c(0.3),
                                  drift_amplitude = 0, physio = FALSE, sd = 1)
+```
 
-# 3. Generate Drift Component Directly
+Scanner drift is a slow oscillation that shifts the baseline over the
+course of a run.
+
+``` r
 drift_freq <- 1/128
 drift_amplitude <- 2
 noise_drift <- drift_amplitude * sin(2 * pi * drift_freq * time)
+```
 
-# 4. Generate Physiological Noise Component Directly
-# Make physiological components more prominent
-noise_cardiac <- 1.5 * sin(2 * pi * 0.3 * time)  # Respiratory (~0.3 Hz)
-noise_respiratory <- 1.0 * sin(2 * pi * 0.8 * time)  # Cardiac-like (~0.8 Hz, observable with TR=2s)
+Physiological noise adds quasi-periodic fluctuations at respiratory and
+cardiac-like frequencies.
+
+``` r
+noise_cardiac <- 1.5 * sin(2 * pi * 0.3 * time)
+noise_respiratory <- 1.0 * sin(2 * pi * 0.8 * time)
 noise_physio <- noise_cardiac + noise_respiratory
+```
 
-# 5. Simulate Combined Noise (ARMA + Drift + Physio)
+Finally, we combine the ARMA, drift, and physiological components to
+mimic what a real scanner would produce.
+
+``` r
 noise_combined <- noise_arma + noise_drift + noise_physio
+```
 
-# Combine into a data frame for plotting time courses
+``` r
 noise_df <- data.frame(
   Time = time,
   White_Noise = noise_white,
@@ -140,101 +165,81 @@ noise_df <- data.frame(
   Combined_Noise = noise_combined
 )
 
-# Create long format dataframe for plotting without pipes
-noise_long <- tidyr::pivot_longer(noise_df, 
+noise_long <- tidyr::pivot_longer(noise_df,
                                   cols = -Time,
-                                  names_to = "NoiseType", 
+                                  names_to = "NoiseType",
                                   values_to = "Signal")
 
-# Set factor levels for proper ordering
-noise_long$NoiseType <- factor(noise_long$NoiseType, 
-                              levels = c("White_Noise", "ARMA_Noise", 
-                                        "Drift_Component", "Physiological_Noise", 
+noise_long$NoiseType <- factor(noise_long$NoiseType,
+                              levels = c("White_Noise", "ARMA_Noise",
+                                        "Drift_Component", "Physiological_Noise",
                                         "Combined_Noise"),
-                              labels = c("White Noise", "ARMA Noise", 
-                                        "Drift Component", "Physiological Noise", 
+                              labels = c("White Noise", "ARMA Noise",
+                                        "Drift Component", "Physiological Noise",
                                         "Combined Noise"))
+```
 
-# Plot Time Courses (Faceted)
+``` r
 ggplot(noise_long, aes(x = Time, y = Signal, color = NoiseType)) +
   geom_line() +
-  facet_wrap(~NoiseType, ncol = 1, scales = "free_y") + # Use free_y scales
+  facet_wrap(~NoiseType, ncol = 1, scales = "free_y") +
   theme_minimal() +
-  theme(legend.position = "none") + # Remove legend as facets show type
+  theme(legend.position = "none") +
   labs(title = "Simulated fMRI Noise Components: Time Courses",
        x = "Time (seconds)",
        y = "Signal Amplitude")
 ```
 
-![](a_08_simulation_files/figure-html/unnamed-chunk-3-1.png)
+![](a_08_simulation_files/figure-html/plot-noise-timecourses-1.png)
+
+### Power Spectrum Analysis
+
+Power spectra reveal the frequency content of each noise type. White
+noise has a flat spectrum, while ARMA noise concentrates power at lower
+frequencies.
 
 ``` r
-# --- Power Spectrum Analysis ---
-library(stats)
-
-calculate_spectrum <- function(signal, TR) {
-  # Detrend
-  signal <- signal - mean(signal)
-  
-  # Calculate FFT
-  n <- length(signal)
-  # Get proper periodogram-based power spectrum
-  fft_result <- fft(signal)
-  # Get power - divide by n to normalize
-  power <- Mod(fft_result)^2 / n
-  
-  # Get positive frequencies only (up to Nyquist)
-  nyquist_index <- floor(n/2) + 1
-  freq <- seq(0, 1/(2*TR), length.out = nyquist_index)
-  power_pos <- power[1:nyquist_index]
-  
-  # For one-sided spectrum, multiply by 2 (except DC and Nyquist)
-  if (n > 1) {
-    power_pos[2:(length(power_pos)-ifelse(n %% 2 == 0, 1, 0))] <- 
-      2 * power_pos[2:(length(power_pos)-ifelse(n %% 2 == 0, 1, 0))]
-  }
-  
-  # Return as data frame
-  data.frame(Frequency = freq, Power = power_pos)
-}
-
-# Calculate spectra
 spec_white <- calculate_spectrum(noise_white, TR)
 spec_arma <- calculate_spectrum(noise_arma, TR)
 spec_drift <- calculate_spectrum(noise_drift, TR)
 spec_physio <- calculate_spectrum(noise_physio, TR)
 spec_combined <- calculate_spectrum(noise_combined, TR)
+```
 
-# Add noise type column to each data frame
+``` r
 spec_white$NoiseType <- "White Noise"
 spec_arma$NoiseType <- "ARMA Noise"
 spec_drift$NoiseType <- "Drift Component"
 spec_physio$NoiseType <- "Physiological Noise"
 spec_combined$NoiseType <- "Combined Noise"
 
-# Combine all spectra into one data frame
 spec_df <- rbind(spec_white, spec_arma, spec_drift, spec_physio, spec_combined)
 
-# Set factor levels for proper ordering
-spec_df$NoiseType <- factor(spec_df$NoiseType, 
-                           levels = c("White Noise", "ARMA Noise", 
-                                     "Drift Component", "Physiological Noise", 
+spec_df$NoiseType <- factor(spec_df$NoiseType,
+                           levels = c("White Noise", "ARMA Noise",
+                                     "Drift Component", "Physiological Noise",
                                      "Combined Noise"))
+```
 
-# Create better drift visualization
-# First, generate a longer drift signal to better resolve low frequencies
+We also compute a high-resolution drift spectrum from a longer signal to
+better resolve the low-frequency peak.
+
+``` r
 n_long <- 1024
 time_long <- seq(0, (n_long - 1) * TR, by = TR)
 drift_long <- drift_amplitude * sin(2 * pi * drift_freq * time_long)
 spec_drift_long <- calculate_spectrum(drift_long, TR)
 spec_drift_long$NoiseType <- "Drift Component (High Resolution)"
+```
 
-# Plot Power Spectra in regular scale to show true spectral shape
+Each panel below shows the power spectrum of a different noise
+component. The dashed green line in the drift panel shows the
+high-resolution version.
+
+``` r
 ggplot() +
-  # Regular components
   geom_line(data = spec_df, aes(x = Frequency, y = Power, color = NoiseType)) +
-  # Add high-resolution drift component
-  geom_line(data = subset(spec_drift_long, Frequency <= 0.05), 
+  geom_line(data = subset(spec_drift_long, Frequency <= 0.05),
            aes(x = Frequency, y = Power), color = "darkgreen", linetype = "dashed") +
   theme_minimal() +
   facet_wrap(~NoiseType, ncol = 1, scales = "free_y") +
@@ -243,34 +248,39 @@ ggplot() +
        x = "Frequency (Hz)",
        y = "Power") +
   scale_color_brewer(palette = "Set1") +
-  coord_cartesian(xlim = c(0, 0.25))  # Limit to Nyquist frequency
+  coord_cartesian(xlim = c(0, 0.25))
 ```
 
-![](a_08_simulation_files/figure-html/unnamed-chunk-3-2.png)
+![](a_08_simulation_files/figure-html/plot-spectra-faceted-1.png)
+
+Plotting all spectra on a single log-scaled axis makes it easy to
+compare their relative magnitudes.
 
 ``` r
-# Also plot with log scale to show all components together
 ggplot(spec_df, aes(x = Frequency, y = Power, color = NoiseType)) +
   geom_line() +
   theme_minimal() +
   labs(title = "Power Spectra of Different Noise Components (Log Scale)",
        x = "Frequency (Hz)",
        y = "Power (log scale)") +
-  scale_y_log10() +  # Log scale to see all components
+  scale_y_log10() +
   scale_color_brewer(palette = "Set1") +
   theme(legend.position = "top") +
-  coord_cartesian(xlim = c(0, 0.25))  # Limit to Nyquist frequency
+  coord_cartesian(xlim = c(0, 0.25))
 ```
 
-![](a_08_simulation_files/figure-html/unnamed-chunk-3-3.png)
+![](a_08_simulation_files/figure-html/plot-spectra-log-1.png)
+
+Zooming in on the very low-frequency region confirms the drift component
+peaks at the expected frequency (marked by the red dotted line).
 
 ``` r
-# Special zoom-in plot to focus on drift component
 drift_freq_idx <- which.min(abs(spec_df$Frequency - drift_freq))
+
 ggplot() +
-  geom_line(data = subset(spec_df, NoiseType == "Drift Component"), 
+  geom_line(data = subset(spec_df, NoiseType == "Drift Component"),
            aes(x = Frequency, y = Power), color = "darkgreen") +
-  geom_line(data = subset(spec_drift_long, Frequency <= 0.05), 
+  geom_line(data = subset(spec_drift_long, Frequency <= 0.05),
            aes(x = Frequency, y = Power), color = "darkgreen", linetype = "dashed") +
   geom_vline(xintercept = drift_freq, linetype = "dotted", color = "red") +
   theme_minimal() +
@@ -278,10 +288,10 @@ ggplot() +
        subtitle = paste("Expected peak at", drift_freq, "Hz"),
        x = "Frequency (Hz)",
        y = "Power") +
-  coord_cartesian(xlim = c(0, 0.05))  # Zoom in on low frequencies
+  coord_cartesian(xlim = c(0, 0.05))
 ```
 
-![](a_08_simulation_files/figure-html/unnamed-chunk-3-4.png)
+![](a_08_simulation_files/figure-html/plot-drift-zoom-1.png)
 
 The simulation shows five distinct types of noise components:
 
@@ -315,49 +325,31 @@ to create a complete fMRI dataset with a specified signal-to-noise ratio
 (SNR).
 
 ``` r
-# Set seed for reproducibility
 set.seed(42)
 
-# Simulate a dataset with 3 conditions and different SNR levels
 data_snr_1.0 <- simulate_simple_dataset(ncond = 3, TR = 2, snr = 1.0)
 data_snr_0.5 <- simulate_simple_dataset(ncond = 3, TR = 2, snr = 0.5)
 data_snr_0.2 <- simulate_simple_dataset(ncond = 3, TR = 2, snr = 0.2)
+```
 
-# Improved function to create data frame for plotting
-create_plot_df <- function(data, snr_label) {
-  time <- data$clean$mat[,1]
-  
-  # Extract clean signals and noisy signals 
-  # Instead of averaging, use the condition with the clearest signal pattern
-  # Usually the middle column has the most distinct pattern
-  best_column <- which.max(apply(data$clean$mat[,-1], 2, function(x) max(x) - min(x)))
-  clean_signal <- data$clean$mat[, best_column + 1]  # +1 because column 1 is time
-  noisy_signal <- data$noisy[, best_column + 1]      # Corresponding noisy signal
-  
-  df <- data.frame(
-    Time = time,
-    Clean = clean_signal,
-    Noisy = noisy_signal,
-    SNR = snr_label
-  )
-  
-  return(df)
-}
-
-# Combine data for different SNR values
+``` r
 plot_df <- rbind(
   create_plot_df(data_snr_1.0, "SNR = 1.0"),
   create_plot_df(data_snr_0.5, "SNR = 0.5"),
   create_plot_df(data_snr_0.2, "SNR = 0.2")
 )
 
-# Convert to long format
-plot_df_long <- tidyr::pivot_longer(plot_df, 
+plot_df_long <- tidyr::pivot_longer(plot_df,
                                     cols = -c(Time, SNR),
-                                    names_to = "Type", 
+                                    names_to = "Type",
                                     values_to = "Signal")
+```
 
-# First approach: Overlay clean and noisy signals
+The overlay plot shows the clean signal (red) against the noisy
+measurement (blue) at each SNR level. As SNR decreases, the noise
+increasingly obscures the true signal.
+
+``` r
 ggplot(plot_df_long, aes(x = Time, y = Signal, color = Type)) +
   geom_line() +
   facet_wrap(~SNR, ncol = 1) +
@@ -371,64 +363,31 @@ ggplot(plot_df_long, aes(x = Time, y = Signal, color = Type)) +
   theme(legend.position = "top")
 ```
 
-![](a_08_simulation_files/figure-html/unnamed-chunk-4-1.png)
+![](a_08_simulation_files/figure-html/plot-snr-overlay-1.png)
+
+The decomposition plots below separate each SNR level into its signal,
+noise, and combined components. At SNR = 1.0 the signal is clearly
+visible; by SNR = 0.2 the noise dominates.
 
 ``` r
-# Second approach: Plot signal+noise and then just signal below it
-# Create custom panel plots for each SNR
-plot_faceted <- function(df, snr_value) {
-  df_subset <- subset(df, SNR == snr_value)
-  
-  # Calculate the noise component
-  noise <- df_subset$Noisy - df_subset$Clean
-  
-  # Create a data frame for the decomposition plot
-  decomp_df <- data.frame(
-    Time = rep(df_subset$Time, 3),
-    Component = factor(rep(c("Signal+Noise", "Signal", "Noise"), each = length(df_subset$Time)),
-                      levels = c("Signal+Noise", "Signal", "Noise")),
-    Value = c(df_subset$Noisy, df_subset$Clean, noise)
-  )
-  
-  # Plot with custom y-axis ranges
-  ggplot(decomp_df, aes(x = Time, y = Value, color = Component)) +
-    geom_line() +
-    facet_wrap(~Component, ncol = 1, scales = "free_y") +
-    theme_minimal() +
-    labs(title = paste("Signal Decomposition at", snr_value),
-         x = "Time (seconds)",
-         y = "Amplitude") +
-    scale_color_manual(values = c("Signal+Noise" = "steelblue", 
-                                 "Signal" = "darkred", 
-                                 "Noise" = "darkgreen")) +
-    theme(legend.position = "none")
-}
-
-# Create each SNR plot
-p1 <- plot_faceted(plot_df, "SNR = 1.0")
-p2 <- plot_faceted(plot_df, "SNR = 0.5")
-p3 <- plot_faceted(plot_df, "SNR = 0.2")
-
-# Display plots in sequence
-p1
+plot_faceted(plot_df, "SNR = 1.0")
 ```
 
-![](a_08_simulation_files/figure-html/unnamed-chunk-4-2.png)
+![](a_08_simulation_files/figure-html/plot-decomposition-snr1-1.png)
 
 ``` r
-p2
+plot_faceted(plot_df, "SNR = 0.5")
 ```
 
-![](a_08_simulation_files/figure-html/unnamed-chunk-4-3.png)
+![](a_08_simulation_files/figure-html/plot-decomposition-snr05-1.png)
 
 ``` r
-p3
+plot_faceted(plot_df, "SNR = 0.2")
 ```
 
-![](a_08_simulation_files/figure-html/unnamed-chunk-4-4.png)
+![](a_08_simulation_files/figure-html/plot-decomposition-snr02-1.png)
 
 ``` r
-# Calculate statistics (using standard R to avoid pipe operator issues)
 snr_stats_list <- list()
 for (snr_val in unique(plot_df_long$SNR)) {
   for (type_val in unique(plot_df_long$Type)) {
@@ -443,8 +402,9 @@ for (snr_val in unique(plot_df_long$SNR)) {
   }
 }
 snr_stats <- do.call(rbind, snr_stats_list)
+```
 
-# Print the statistics
+``` r
 knitr::kable(snr_stats, caption = "Statistics of clean and noisy signals at different SNR levels")
 ```
 
@@ -489,8 +449,6 @@ particularly useful for simulating multiple voxels or regions with
 related but slightly different response profiles.
 
 ``` r
-# Simulate 5 voxels (columns) with shared event timing
-# but variation in amplitudes and durations
 sim_matrix <- simulate_fmri_matrix(
   n = 5,                  # 5 voxels/regions
   total_time = 200,       # 200 seconds of scan time
@@ -503,12 +461,12 @@ sim_matrix <- simulate_fmri_matrix(
   noise_type = "ar1",     # AR(1) noise
   noise_sd = 0.5          # Noise standard deviation
 )
+```
 
-# Extract the time series data
+``` r
 ts_data <- sim_matrix$time_series
 matrix_data <- ts_data$datamat
 
-# Create a tidy data frame for plotting
 time_points <- seq(0, by = 2, length.out = nrow(matrix_data))
 plot_data <- data.frame(Time = time_points)
 
@@ -517,13 +475,17 @@ for(i in 1:ncol(matrix_data)) {
 }
 
 plot_data_long <- tidyr::pivot_longer(
-  plot_data, 
-  cols = starts_with("Voxel"), 
-  names_to = "Voxel", 
+  plot_data,
+  cols = starts_with("Voxel"),
+  names_to = "Voxel",
   values_to = "Signal"
 )
+```
 
-# Plot all time series
+All five simulated voxels share the same event timing, but their
+response amplitudes and durations vary independently.
+
+``` r
 ggplot(plot_data_long, aes(x = Time, y = Signal, color = Voxel)) +
   geom_line(alpha = 0.8) +
   theme_minimal() +
@@ -534,10 +496,9 @@ ggplot(plot_data_long, aes(x = Time, y = Signal, color = Voxel)) +
   scale_color_brewer(palette = "Set2")
 ```
 
-![](a_08_simulation_files/figure-html/unnamed-chunk-5-1.png)
+![](a_08_simulation_files/figure-html/plot-matrix-timeseries-1.png)
 
 ``` r
-# Plot the amplitude and duration matrices to visualize trial-by-trial variations
 amp_df <- as.data.frame(sim_matrix$ampmat)
 colnames(amp_df) <- paste0("Voxel", 1:ncol(amp_df))
 amp_df$Event <- 1:nrow(amp_df)
@@ -546,22 +507,25 @@ dur_df <- as.data.frame(sim_matrix$durmat)
 colnames(dur_df) <- paste0("Voxel", 1:ncol(dur_df))
 dur_df$Event <- 1:nrow(dur_df)
 
-# Transform to long format
 amp_long <- tidyr::pivot_longer(
-  amp_df, 
-  cols = starts_with("Voxel"), 
-  names_to = "Voxel", 
+  amp_df,
+  cols = starts_with("Voxel"),
+  names_to = "Voxel",
   values_to = "Amplitude"
 )
 
 dur_long <- tidyr::pivot_longer(
-  dur_df, 
-  cols = starts_with("Voxel"), 
-  names_to = "Voxel", 
+  dur_df,
+  cols = starts_with("Voxel"),
+  names_to = "Voxel",
   values_to = "Duration"
 )
+```
 
-# Plot amplitude variation across voxels
+The amplitude plot shows how each voxel’s response magnitude varies from
+event to event around the base amplitude of 1.
+
+``` r
 ggplot(amp_long, aes(x = Event, y = Amplitude, color = Voxel, group = Voxel)) +
   geom_line() +
   geom_point() +
@@ -573,10 +537,12 @@ ggplot(amp_long, aes(x = Event, y = Amplitude, color = Voxel, group = Voxel)) +
   scale_color_brewer(palette = "Set2")
 ```
 
-![](a_08_simulation_files/figure-html/unnamed-chunk-5-2.png)
+![](a_08_simulation_files/figure-html/plot-amplitude-variation-1.png)
+
+Duration variation follows the same pattern – each voxel draws its event
+durations independently around the base of 2 seconds.
 
 ``` r
-# Plot duration variation across voxels
 ggplot(dur_long, aes(x = Event, y = Duration, color = Voxel, group = Voxel)) +
   geom_line() +
   geom_point() +
@@ -588,7 +554,7 @@ ggplot(dur_long, aes(x = Event, y = Duration, color = Voxel, group = Voxel)) +
   scale_color_brewer(palette = "Set2")
 ```
 
-![](a_08_simulation_files/figure-html/unnamed-chunk-5-3.png)
+![](a_08_simulation_files/figure-html/plot-duration-variation-1.png)
 
 This function is particularly powerful for simulating multiple related
 time series with: - **Shared event timing** but individual variation
@@ -621,3 +587,7 @@ voxels/regions with shared timing but response variation: use
 These functions provide a powerful toolkit for method development,
 validation, or teaching fMRI analysis concepts through realistic
 simulations.
+
+## Next
+
+- 04 fMRI Linear Model (GLM)

@@ -77,22 +77,21 @@ A list with class `"soft_projection"` containing:
 set.seed(123)
 N <- matrix(rnorm(100 * 20), nrow = 100, ncol = 20)
 proj <- soft_projection(N, lambda = "auto")
-#> Error in soft_projection(N, lambda = "auto"): could not find function "soft_projection"
 
 # Apply to data and design
 Y <- matrix(rnorm(100 * 50), nrow = 100, ncol = 50)
 Y_clean <- proj$P_lambda(Y)
-#> Error in proj$P_lambda: object of type 'closure' is not subsettable
 
 # Full workflow: project both data and design
 X <- cbind(1, rnorm(100), rnorm(100))  # intercept + 2 predictors
 cleaned <- apply_soft_projection(proj, Y, X)
-#> Error in apply_soft_projection(proj, Y, X): could not find function "apply_soft_projection"
 # Now fit GLM with cleaned$Y and cleaned$X
 
 # Using GCV for lambda selection (data-driven)
 proj_gcv <- soft_projection(N, lambda = "gcv", Y = Y)
-#> Error in soft_projection(N, lambda = "gcv", Y = Y): could not find function "soft_projection"
 print(proj_gcv)  # Shows selected lambda and effective df
-#> Error: object 'proj_gcv' not found
+#> <soft_projection>
+#>   Lambda:6182(gcv)
+#>   Nuisance dimensions: 20 
+#>   Effective df removed: 0.32 
 ```

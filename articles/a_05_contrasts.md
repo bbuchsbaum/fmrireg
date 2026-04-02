@@ -1,8 +1,4 @@
-# 
-
-title: “05. Contrasts and Hypothesis Tests” author: “Bradley R.
-Buchsbaum” date: “2026-01-28” output: rmarkdown::html_vignette vignette:
-\> % % % —
+# 05 Contrasts and Hypothesis Tests
 
 ## Introduction to Contrasts
 
@@ -57,6 +53,7 @@ kable(design, caption = "2x2 Experimental Design Table")
 2x2 Experimental Design Table
 
 ``` r
+
 # Define a sampling frame and create the event model
 sframe <- sampling_frame(blocklens = 120, TR = 2)
 emodel <- event_model(onset ~ hrf(category, attention), 
@@ -120,11 +117,7 @@ wts_face_vs_scene <- contrast_weights(con_face_vs_scene, event_term)
 wts_attend_vs_ignore <- contrast_weights(con_attend_vs_ignore, event_term)
 
 cat("Weights for 'face_vs_scene':\n")
-```
-
-    ## Weights for 'face_vs_scene':
-
-``` r
+#> Weights for 'face_vs_scene':
 kable(wts_face_vs_scene$weights, col.names = wts_face_vs_scene$name)
 ```
 
@@ -136,13 +129,10 @@ kable(wts_face_vs_scene$weights, col.names = wts_face_vs_scene$name)
 | category.scene_attention.ignore |          -0.5 |
 
 ``` r
+
 cat("\nWeights for 'attend_vs_ignore':\n")
-```
-
-    ## 
-    ## Weights for 'attend_vs_ignore':
-
-``` r
+#> 
+#> Weights for 'attend_vs_ignore':
 kable(wts_attend_vs_ignore$weights, col.names = wts_attend_vs_ignore$name)
 ```
 
@@ -173,11 +163,7 @@ wts_face_vs_baseline <- contrast_weights(con_face_vs_baseline, event_term)
 wts_attend_vs_baseline <- contrast_weights(con_attend_vs_baseline, event_term)
 
 cat("Weights for 'face_gt_baseline':\n")
-```
-
-    ## Weights for 'face_gt_baseline':
-
-``` r
+#> Weights for 'face_gt_baseline':
 kable(wts_face_vs_baseline$weights, col.names = wts_face_vs_baseline$name)
 ```
 
@@ -189,13 +175,10 @@ kable(wts_face_vs_baseline$weights, col.names = wts_face_vs_baseline$name)
 | category.scene_attention.ignore |             0.25 |
 
 ``` r
+
 cat("\nWeights for 'attend_gt_baseline':\n")
-```
-
-    ## 
-    ## Weights for 'attend_gt_baseline':
-
-``` r
+#> 
+#> Weights for 'attend_gt_baseline':
 kable(wts_attend_vs_baseline$weights, col.names = wts_attend_vs_baseline$name)
 ```
 
@@ -231,11 +214,7 @@ con_interaction <- contrast(
 wts_interaction <- contrast_weights(con_interaction, event_term)
 
 cat("Weights for 'category_X_attention':\n")
-```
-
-    ## Weights for 'category_X_attention':
-
-``` r
+#> Weights for 'category_X_attention':
 kable(wts_interaction$weights, col.names = wts_interaction$name)
 ```
 
@@ -277,11 +256,7 @@ con_int_cat_att <- interaction_contrast(~ category * attention, name = "Interact
 wts_int_cat_att <- contrast_weights(con_int_cat_att, event_term)
 
 cat("Weights for 'Main_Category' (oneway_contrast):\n")
-```
-
-    ## Weights for 'Main_Category' (oneway_contrast):
-
-``` r
+#> Weights for 'Main_Category' (oneway_contrast):
 kable(wts_main_category$weights)
 ```
 
@@ -293,13 +268,10 @@ kable(wts_main_category$weights)
 | category.scene_attention.ignore |               1 |
 
 ``` r
+
 cat("\nWeights for 'Interaction_CatAtt' (interaction_contrast):\n")
-```
-
-    ## 
-    ## Weights for 'Interaction_CatAtt' (interaction_contrast):
-
-``` r
+#> 
+#> Weights for 'Interaction_CatAtt' (interaction_contrast):
 kable(wts_int_cat_att$weights)
 ```
 
@@ -348,6 +320,7 @@ kable(design_poly, caption = "Design with Ordered 'intensity' Factor")
 Design with Ordered ‘intensity’ Factor
 
 ``` r
+
 emodel_poly <- event_model(onset ~ hrf(category, intensity), 
                            block = ~block, 
                            data = design_poly, 
@@ -363,11 +336,7 @@ con_poly_intensity <- poly_contrast(~ intensity, degree = 2, name = "Intensity_T
 wts_poly_intensity <- contrast_weights(con_poly_intensity, event_term_poly)
 
 cat("Weights for 'Intensity_Trend' (poly_contrast, degree=2):\n")
-```
-
-    ## Weights for 'Intensity_Trend' (poly_contrast, degree=2):
-
-``` r
+#> Weights for 'Intensity_Trend' (poly_contrast, degree=2):
 kable(wts_poly_intensity$weights)
 ```
 
@@ -412,11 +381,7 @@ wts_helpers <- contrast_weights(con_set_helpers, event_term)
 
 # Display weights for one_against_all
 cat("Weights for 'con_attend_vs_other':\n")
-```
-
-    ## Weights for 'con_attend_vs_other':
-
-``` r
+#> Weights for 'con_attend_vs_other':
 kable(wts_helpers$con_attend_vs_other$weights)
 ```
 
@@ -429,12 +394,8 @@ kable(wts_helpers$con_attend_vs_other$weights)
 
 ``` r
 cat("\nWeights for 'con_ignore_vs_other':\n")
-```
-
-    ## 
-    ## Weights for 'con_ignore_vs_other':
-
-``` r
+#> 
+#> Weights for 'con_ignore_vs_other':
 kable(wts_helpers$con_ignore_vs_other$weights)
 ```
 
@@ -461,44 +422,37 @@ all_contrasts <- contrast_set(
 )
 
 print(all_contrasts)
-```
+#> 
+#> === Contrast Set ===
+#> 
+#>  Overview:
+#>   * Number of contrasts: 4 
+#>   * Types of contrasts:
+#>     - contrast_formula_spec : 1 
+#>     - pair_contrast_spec : 2 
+#>     - unit_contrast_spec : 1 
+#> 
+#>   Individual Contrasts:
+#> 
+#> [1] face_vs_scene (pair_contrast_spec)
+#>     Formula: ~category == "face" vs  ~category == "scene"
+#> 
+#> [2] attend_vs_ignore (pair_contrast_spec)
+#>     Formula: ~attention == "attend" vs  ~attention == "ignore"
+#> 
+#> [3] category_X_attention (contrast_formula_spec)
+#>     Formula: ~(`face:attend` - `face:ignore`) - (`scene:attend` - `scene:ignore`)
+#> 
+#> [4] face_gt_baseline (unit_contrast_spec)
+#>     Formula: ~category == "face"
 
-    ## 
-    ## === Contrast Set ===
-    ## 
-    ##  Overview:
-    ##   * Number of contrasts: 4 
-    ##   * Types of contrasts:
-    ##     - contrast_formula_spec : 1 
-    ##     - pair_contrast_spec : 2 
-    ##     - unit_contrast_spec : 1 
-    ## 
-    ##   Individual Contrasts:
-    ## 
-    ## [1] face_vs_scene (pair_contrast_spec)
-    ##     Formula: ~category == "face" vs  ~category == "scene"
-    ## 
-    ## [2] attend_vs_ignore (pair_contrast_spec)
-    ##     Formula: ~attention == "attend" vs  ~attention == "ignore"
-    ## 
-    ## [3] category_X_attention (contrast_formula_spec)
-    ##     Formula: ~(`face:attend` - `face:ignore`) - (`scene:attend` - `scene:ignore`)
-    ## 
-    ## [4] face_gt_baseline (unit_contrast_spec)
-    ##     Formula: ~category == "face"
-
-``` r
 # Compute weights for the entire set
 all_weights <- contrast_weights(all_contrasts, event_term)
 
 # Access weights for a specific contrast within the set
 cat("\nAccessing weights for 'face_vs_scene' from the set:\n")
-```
-
-    ## 
-    ## Accessing weights for 'face_vs_scene' from the set:
-
-``` r
+#> 
+#> Accessing weights for 'face_vs_scene' from the set:
 kable(all_weights$face_vs_scene$weights)
 ```
 
@@ -570,21 +524,8 @@ contrast weights applied across all regressors in the design matrix
 (including baseline terms if present).
 
 ``` r
-# We need to add contrasts *directly* to the event model for plotting
-emodel_with_cons <- event_model(
-  onset ~ hrf(category, attention, contrasts = all_contrasts),
-  block = ~ block, 
-  data = design, 
-  sampling_frame = sframe
-)
-
-# Plot the contrasts (using default baseline model)
-tryCatch({
-  plot_contrasts(emodel_with_cons, rotate_x_text = TRUE, coord_fixed = FALSE)
-}, error = function(e) {
-  cat("Note: plot_contrasts() encountered an issue and was skipped.\n")
-  cat("Error:", e$message, "\n")
-})
+# Plot the contrast weights across all regressors
+plot_contrasts(emodel_with_cons, rotate_x_text = TRUE, coord_fixed = FALSE)
 ```
 
 ![](a_05_contrasts_files/figure-html/plot_contrasts_example-1.png) This
@@ -601,127 +542,108 @@ contrast:
 ``` r
 # View the structure of interaction contrast weights
 cat("Interaction contrast structure:\n")
-```
-
-    ## Interaction contrast structure:
-
-``` r
+#> Interaction contrast structure:
 str(wts_interaction)
-```
-
-    ## List of 5
-    ##  $ term         :List of 9
-    ##   ..$ varname         : chr "category:attention"
-    ##   ..$ events          :List of 2
-    ##   .. ..$ category :List of 7
-    ##   .. .. ..$ varname   : chr "category"
-    ##   .. .. .. ..- attr(*, "orig_names")= chr "category"
-    ##   .. .. ..$ onsets    : num [1:8] 1 15.1 29.3 43.4 57.6 ...
-    ##   .. .. ..$ durations : num [1:8] 0 0 0 0 0 0 0 0
-    ##   .. .. ..$ blockids  : int [1:8] 1 1 1 1 1 1 1 1
-    ##   .. .. ..$ value     : int [1:8, 1] 1 2 1 2 1 2 1 2
-    ##   .. .. .. ..- attr(*, "dimnames")=List of 2
-    ##   .. .. .. .. ..$ : NULL
-    ##   .. .. .. .. ..$ : chr "category"
-    ##   .. .. .. .. .. ..- attr(*, "orig_names")= chr "category"
-    ##   .. .. ..$ continuous: logi FALSE
-    ##   .. .. ..$ meta      :List of 1
-    ##   .. .. .. ..$ levels: chr [1:2] "face" "scene"
-    ##   .. .. ..- attr(*, "class")= chr [1:2] "event" "event_seq"
-    ##   .. ..$ attention:List of 7
-    ##   .. .. ..$ varname   : chr "attention"
-    ##   .. .. .. ..- attr(*, "orig_names")= chr "attention"
-    ##   .. .. ..$ onsets    : num [1:8] 1 15.1 29.3 43.4 57.6 ...
-    ##   .. .. ..$ durations : num [1:8] 0 0 0 0 0 0 0 0
-    ##   .. .. ..$ blockids  : int [1:8] 1 1 1 1 1 1 1 1
-    ##   .. .. ..$ value     : int [1:8, 1] 1 1 2 2 1 1 2 2
-    ##   .. .. .. ..- attr(*, "dimnames")=List of 2
-    ##   .. .. .. .. ..$ : NULL
-    ##   .. .. .. .. ..$ : chr "attention"
-    ##   .. .. .. .. .. ..- attr(*, "orig_names")= chr "attention"
-    ##   .. .. ..$ continuous: logi FALSE
-    ##   .. .. ..$ meta      :List of 1
-    ##   .. .. .. ..$ levels: chr [1:2] "attend" "ignore"
-    ##   .. .. ..- attr(*, "class")= chr [1:2] "event" "event_seq"
-    ##   ..$ subset          : logi [1:8] TRUE TRUE TRUE TRUE TRUE TRUE ...
-    ##   ..$ event_table     : tibble [8 × 2] (S3: tbl_df/tbl/data.frame)
-    ##   .. ..$ category : Factor w/ 2 levels "face","scene": 1 2 1 2 1 2 1 2
-    ##   .. ..$ attention: Factor w/ 2 levels "attend","ignore": 1 1 2 2 1 1 2 2
-    ##   ..$ onsets          : num [1:8] 1 15.1 29.3 43.4 57.6 ...
-    ##   ..$ blockids        : int [1:8] 1 1 1 1 1 1 1 1
-    ##   ..$ durations       : num [1:8] 0 0 0 0 0 0 0 0
-    ##   ..$ condition_levels: chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"
-    ##   ..$ condition_ids   : int [1:8] 1 2 3 4 1 2 3 4
-    ##   ..- attr(*, "class")= chr [1:2] "event_term" "event_seq"
-    ##   ..- attr(*, "hrfspec")=List of 16
-    ##   .. ..$ name     : chr "category:attention"
-    ##   .. ..$ label    : chr "hrf(category,attention)"
-    ##   .. ..$ id       : NULL
-    ##   .. ..$ vars     :List of 2
-    ##   .. .. ..$ : language ~category
-    ##   .. .. .. ..- attr(*, ".Environment")=<environment: 0x56459e7212a8> 
-    ##   .. .. ..$ : language ~attention
-    ##   .. .. .. ..- attr(*, ".Environment")=<environment: 0x56459e7212a8> 
-    ##   .. .. ..- attr(*, "class")= chr [1:2] "quosures" "list"
-    ##   .. ..$ varnames : Named chr [1:2] "category" "attention"
-    ##   .. .. ..- attr(*, "names")= chr [1:2] "" ""
-    ##   .. ..$ hrf      :function (t)  
-    ##   .. .. ..- attr(*, "class")= chr [1:2] "HRF" "function"
-    ##   .. .. ..- attr(*, "name")= chr "SPMG1"
-    ##   .. .. ..- attr(*, "nbasis")= int 1
-    ##   .. .. ..- attr(*, "span")= num 24
-    ##   .. .. ..- attr(*, "param_names")= chr [1:3] "P1" "P2" "A1"
-    ##   .. .. ..- attr(*, "params")=List of 3
-    ##   .. .. .. ..$ P1: num 5
-    ##   .. .. .. ..$ P2: num 15
-    ##   .. .. .. ..$ A1: num 0.0833
-    ##   .. ..$ hrf_fun  : NULL
-    ##   .. ..$ onsets   : NULL
-    ##   .. ..$ durations: NULL
-    ##   .. ..$ prefix   : NULL
-    ##   .. ..$ subset   : NULL
-    ##   .. ..$ precision: num 0.3
-    ##   .. ..$ contrasts: NULL
-    ##   .. ..$ summate  : logi TRUE
-    ##   .. ..$ uid      : chr "t01"
-    ##   .. ..$ term_tag : chr "category_attention"
-    ##   .. ..- attr(*, "class")= chr [1:2] "hrfspec" "list"
-    ##   ..- attr(*, "term_tag")= chr "category_attention"
-    ##   ..- attr(*, "uid")= chr "t01"
-    ##  $ name         : chr "category_X_attention"
-    ##  $ weights      : num [1:4, 1] 1 -1 -1 1
-    ##   ..- attr(*, "dimnames")=List of 2
-    ##   .. ..$ : chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"
-    ##   .. ..$ : NULL
-    ##  $ condnames    : chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"
-    ##  $ contrast_spec:List of 4
-    ##   ..$ A    :Class 'formula'  language ~(`face:attend` - `face:ignore`) - (`scene:attend` - `scene:ignore`)
-    ##   .. .. ..- attr(*, ".Environment")=<environment: R_GlobalEnv> 
-    ##   ..$ B    : NULL
-    ##   ..$ where: NULL
-    ##   ..$ name : chr "category_X_attention"
-    ##   ..- attr(*, "class")= chr [1:3] "contrast_formula_spec" "contrast_spec" "list"
-    ##  - attr(*, "class")= chr [1:2] "contrast" "list"
-
-``` r
+#> List of 5
+#>  $ term         :List of 9
+#>   ..$ varname         : chr "category:attention"
+#>   ..$ events          :List of 2
+#>   .. ..$ category :List of 7
+#>   .. .. ..$ varname   : chr "category"
+#>   .. .. .. ..- attr(*, "orig_names")= chr "category"
+#>   .. .. ..$ onsets    : num [1:8] 1 15.1 29.3 43.4 57.6 ...
+#>   .. .. ..$ durations : num [1:8] 0 0 0 0 0 0 0 0
+#>   .. .. ..$ blockids  : int [1:8] 1 1 1 1 1 1 1 1
+#>   .. .. ..$ value     : int [1:8, 1] 1 2 1 2 1 2 1 2
+#>   .. .. .. ..- attr(*, "dimnames")=List of 2
+#>   .. .. .. .. ..$ : NULL
+#>   .. .. .. .. ..$ : chr "category"
+#>   .. .. .. .. .. ..- attr(*, "orig_names")= chr "category"
+#>   .. .. ..$ continuous: logi FALSE
+#>   .. .. ..$ meta      :List of 1
+#>   .. .. .. ..$ levels: chr [1:2] "face" "scene"
+#>   .. .. ..- attr(*, "class")= chr [1:2] "event" "event_seq"
+#>   .. ..$ attention:List of 7
+#>   .. .. ..$ varname   : chr "attention"
+#>   .. .. .. ..- attr(*, "orig_names")= chr "attention"
+#>   .. .. ..$ onsets    : num [1:8] 1 15.1 29.3 43.4 57.6 ...
+#>   .. .. ..$ durations : num [1:8] 0 0 0 0 0 0 0 0
+#>   .. .. ..$ blockids  : int [1:8] 1 1 1 1 1 1 1 1
+#>   .. .. ..$ value     : int [1:8, 1] 1 1 2 2 1 1 2 2
+#>   .. .. .. ..- attr(*, "dimnames")=List of 2
+#>   .. .. .. .. ..$ : NULL
+#>   .. .. .. .. ..$ : chr "attention"
+#>   .. .. .. .. .. ..- attr(*, "orig_names")= chr "attention"
+#>   .. .. ..$ continuous: logi FALSE
+#>   .. .. ..$ meta      :List of 1
+#>   .. .. .. ..$ levels: chr [1:2] "attend" "ignore"
+#>   .. .. ..- attr(*, "class")= chr [1:2] "event" "event_seq"
+#>   ..$ subset          : logi [1:8] TRUE TRUE TRUE TRUE TRUE TRUE ...
+#>   ..$ event_table     : tibble [8 × 2] (S3: tbl_df/tbl/data.frame)
+#>   .. ..$ category : Factor w/ 2 levels "face","scene": 1 2 1 2 1 2 1 2
+#>   .. ..$ attention: Factor w/ 2 levels "attend","ignore": 1 1 2 2 1 1 2 2
+#>   ..$ onsets          : num [1:8] 1 15.1 29.3 43.4 57.6 ...
+#>   ..$ blockids        : int [1:8] 1 1 1 1 1 1 1 1
+#>   ..$ durations       : num [1:8] 0 0 0 0 0 0 0 0
+#>   ..$ condition_levels: chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"
+#>   ..$ condition_ids   : int [1:8] 1 2 3 4 1 2 3 4
+#>   ..- attr(*, "class")= chr [1:2] "event_term" "event_seq"
+#>   ..- attr(*, "hrfspec")=List of 17
+#>   .. ..$ name     : chr "category:attention"
+#>   .. ..$ label    : chr "hrf(category,attention)"
+#>   .. ..$ id       : NULL
+#>   .. ..$ vars     :List of 2
+#>   .. .. ..$ : language ~category
+#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x555a8b2e5ac8> 
+#>   .. .. ..$ : language ~attention
+#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x555a8b2e5ac8> 
+#>   .. .. ..- attr(*, "class")= chr [1:2] "quosures" "list"
+#>   .. ..$ varnames : Named chr [1:2] "category" "attention"
+#>   .. .. ..- attr(*, "names")= chr [1:2] "" ""
+#>   .. ..$ hrf      :function (t)  
+#>   .. .. ..- attr(*, "class")= chr [1:2] "HRF" "function"
+#>   .. .. ..- attr(*, "name")= chr "SPMG1"
+#>   .. .. ..- attr(*, "nbasis")= int 1
+#>   .. .. ..- attr(*, "span")= num 24
+#>   .. .. ..- attr(*, "param_names")= chr [1:3] "P1" "P2" "A1"
+#>   .. .. ..- attr(*, "params")=List of 3
+#>   .. .. .. ..$ P1: num 5
+#>   .. .. .. ..$ P2: num 15
+#>   .. .. .. ..$ A1: num 0.0833
+#>   .. ..$ hrf_fun  : NULL
+#>   .. ..$ onsets   : NULL
+#>   .. ..$ durations: NULL
+#>   .. ..$ prefix   : NULL
+#>   .. ..$ subset   : NULL
+#>   .. ..$ precision: num 0.3
+#>   .. ..$ contrasts: NULL
+#>   .. ..$ summate  : logi TRUE
+#>   .. ..$ normalize: logi FALSE
+#>   .. ..$ uid      : chr "t01"
+#>   .. ..$ term_tag : chr "category_attention"
+#>   .. ..- attr(*, "class")= chr [1:2] "hrfspec" "list"
+#>   ..- attr(*, "term_tag")= chr "category_attention"
+#>   ..- attr(*, "uid")= chr "t01"
+#>  $ name         : chr "category_X_attention"
+#>  $ weights      : num [1:4, 1] 1 -1 -1 1
+#>   ..- attr(*, "dimnames")=List of 2
+#>   .. ..$ : chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"
+#>   .. ..$ : NULL
+#>  $ condnames    : chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"
+#>  $ contrast_spec:List of 4
+#>   ..$ A    :Class 'formula'  language ~(`face:attend` - `face:ignore`) - (`scene:attend` - `scene:ignore`)
+#>   .. .. ..- attr(*, ".Environment")=<environment: R_GlobalEnv> 
+#>   ..$ B    : NULL
+#>   ..$ where: NULL
+#>   ..$ name : chr "category_X_attention"
+#>   ..- attr(*, "class")= chr [1:3] "contrast_formula_spec" "contrast_spec" "list"
+#>  - attr(*, "class")= chr [1:2] "contrast" "list"
 cat("\nContrast weights matrix:\n")
-```
-
-    ## 
-    ## Contrast weights matrix:
-
-``` r
+#> 
+#> Contrast weights matrix:
 print(wts_interaction$conmat)
+#> NULL
 ```
-
-    ## NULL
-
-## Next
-
-- [Benchmark
-  Datasets](https://bbuchsbaum.github.io/articles/benchmark_datasets.md)
-- [Group
-  Analysis](https://bbuchsbaum.github.io/articles/group_analysis.md)
 
 ## Conclusion
 
@@ -734,3 +656,10 @@ complex formula-based definitions (`contrast`), trend analysis
 hypothesis testing. The integration with `fmri_lm` and visualization
 tools like `plot_contrasts` facilitates robust and interpretable fMRI
 modeling.
+
+## Next
+
+- [`vignette("benchmark_datasets", package = "fmrireg")`](https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.md)
+  — Benchmark datasets
+- [`vignette("group_analysis", package = "fmrireg")`](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.md)
+  — Group analysis

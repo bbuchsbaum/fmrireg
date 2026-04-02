@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title> • fmrireg</title>
+<title>05 Contrasts and Hypothesis Tests • fmrireg</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="05 Contrasts and Hypothesis Tests">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -29,17 +29,19 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/fmrireg.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-vignettes" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Vignettes</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-vignettes">
 <li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
-    <li><a class="dropdown-item" href="../articles/Overview.html">Package Overview</a></li>
+    <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
@@ -77,8 +79,11 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1></h1>
+      <h1>05 Contrasts and Hypothesis Tests</h1>
+                        <h4 data-toc-skip class="author">Bradley R.
+Buchsbaum</h4>
             
+            <h4 data-toc-skip class="date">2026-04-02</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_05_contrasts.Rmd" class="external-link"><code>vignettes/a_05_contrasts.Rmd</code></a></small>
       <div class="d-none name"><code>a_05_contrasts.Rmd</code></div>
@@ -86,9 +91,6 @@
 
     
     
-<p>title: “05. Contrasts and Hypothesis Tests” author: “Bradley R.
-Buchsbaum” date: “2026-01-28” output: rmarkdown::html_vignette vignette:
-&gt; % % % —</p>
 <div class="section level2">
 <h2 id="introduction-to-contrasts">Introduction to Contrasts<a class="anchor" aria-label="anchor" href="#introduction-to-contrasts"></a>
 </h2>
@@ -197,7 +199,8 @@ run.</p>
 </tbody>
 </table>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Define a sampling frame and create the event model</span></span>
+<code class="sourceCode R"><span></span>
+<span><span class="co"># Define a sampling frame and create the event model</span></span>
 <span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">120</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">category</span>, <span class="va">attention</span><span class="op">)</span>, </span>
 <span>                      block <span class="op">=</span> <span class="op">~</span><span class="va">block</span>, </span>
@@ -274,10 +277,9 @@ computes the numerical weights based on the levels within the term.</p>
 <code class="sourceCode R"><span><span class="va">wts_face_vs_scene</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">con_face_vs_scene</span>, <span class="va">event_term</span><span class="op">)</span></span>
 <span><span class="va">wts_attend_vs_ignore</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">con_attend_vs_ignore</span>, <span class="va">event_term</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'face_vs_scene':\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Weights for 'face_vs_scene':</span></span></code></pre>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_face_vs_scene</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_face_vs_scene</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'face_vs_scene':\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Weights for 'face_vs_scene':</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_face_vs_scene</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_face_vs_scene</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -302,12 +304,12 @@ computes the numerical weights based on the levels within the term.</p>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nWeights for 'attend_vs_ignore':\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Weights for 'attend_vs_ignore':</span></span></code></pre>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_attend_vs_ignore</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_attend_vs_ignore</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nWeights for 'attend_vs_ignore':\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Weights for 'attend_vs_ignore':</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_attend_vs_ignore</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_attend_vs_ignore</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -347,17 +349,16 @@ of conditions) is significantly different from the implicit baseline
 (often represented by the intercept in the model).
 <code>unit_contrast</code> is used for this purpose. It creates
 contrasts that sum to 1.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">con_face_vs_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.html" class="external-link">unit_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">category</span> <span class="op">==</span> <span class="st">"face"</span>, name <span class="op">=</span> <span class="st">"face_gt_baseline"</span><span class="op">)</span></span>
 <span><span class="va">con_attend_vs_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.html" class="external-link">unit_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">attention</span> <span class="op">==</span> <span class="st">"attend"</span>, name <span class="op">=</span> <span class="st">"attend_gt_baseline"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">wts_face_vs_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">con_face_vs_baseline</span>, <span class="va">event_term</span><span class="op">)</span></span>
 <span><span class="va">wts_attend_vs_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">con_attend_vs_baseline</span>, <span class="va">event_term</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'face_gt_baseline':\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Weights for 'face_gt_baseline':</span></span></code></pre>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_face_vs_baseline</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_face_vs_baseline</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'face_gt_baseline':\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Weights for 'face_gt_baseline':</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_face_vs_baseline</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_face_vs_baseline</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -382,12 +383,12 @@ contrasts that sum to 1.</p>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nWeights for 'attend_gt_baseline':\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Weights for 'attend_gt_baseline':</span></span></code></pre>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_attend_vs_baseline</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_attend_vs_baseline</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nWeights for 'attend_gt_baseline':\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Weights for 'attend_gt_baseline':</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_attend_vs_baseline</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_attend_vs_baseline</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -424,7 +425,7 @@ interactions or specific linear combinations of conditions.</p>
 <p>Let’s define the interaction contrast: (face:attend - face:ignore) -
 (scene:attend - scene:ignore). This tests if the effect of attention
 differs between categories.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Interaction contrast</span></span>
 <span><span class="va">con_interaction</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast.html">contrast</a></span><span class="op">(</span></span>
 <span>  <span class="op">~</span> <span class="op">(</span><span class="va">`face:attend`</span> <span class="op">-</span> <span class="va">`face:ignore`</span><span class="op">)</span> <span class="op">-</span> <span class="op">(</span><span class="va">`scene:attend`</span> <span class="op">-</span> <span class="va">`scene:ignore`</span><span class="op">)</span>,</span>
@@ -433,10 +434,9 @@ differs between categories.</p>
 <span></span>
 <span><span class="va">wts_interaction</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">con_interaction</span>, <span class="va">event_term</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'category_X_attention':\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Weights for 'category_X_attention':</span></span></code></pre>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_interaction</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_interaction</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'category_X_attention':\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Weights for 'category_X_attention':</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_interaction</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_interaction</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -485,7 +485,7 @@ interaction effects between two or more factors.</li>
 </ul>
 <p>These often result in multiple contrast columns (F-contrasts) testing
 the overall effect.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Main effect of category (will produce 1 contrast vector)</span></span>
 <span><span class="va">con_main_category</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/oneway_contrast.html" class="external-link">oneway_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">category</span>, name <span class="op">=</span> <span class="st">"Main_Category"</span><span class="op">)</span></span>
 <span><span class="va">wts_main_category</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">con_main_category</span>, <span class="va">event_term</span><span class="op">)</span></span>
@@ -494,10 +494,9 @@ the overall effect.</p>
 <span><span class="va">con_int_cat_att</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/interaction_contrast.html" class="external-link">interaction_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">category</span> <span class="op">*</span> <span class="va">attention</span>, name <span class="op">=</span> <span class="st">"Interaction_CatAtt"</span><span class="op">)</span></span>
 <span><span class="va">wts_int_cat_att</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">con_int_cat_att</span>, <span class="va">event_term</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'Main_Category' (oneway_contrast):\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Weights for 'Main_Category' (oneway_contrast):</span></span></code></pre>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_main_category</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'Main_Category' (oneway_contrast):\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Weights for 'Main_Category' (oneway_contrast):</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_main_category</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -522,12 +521,12 @@ the overall effect.</p>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nWeights for 'Interaction_CatAtt' (interaction_contrast):\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Weights for 'Interaction_CatAtt' (interaction_contrast):</span></span></code></pre>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_int_cat_att</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nWeights for 'Interaction_CatAtt' (interaction_contrast):\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Weights for 'Interaction_CatAtt' (interaction_contrast):</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_int_cat_att</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -565,7 +564,7 @@ columns.</p>
 difficulty levels, time points), <code>poly_contrast</code> can test for
 trends (linear, quadratic, etc.).</p>
 <p>Let’s add an ‘intensity’ factor to our design:</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">design_poly</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span>category <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"face"</span>, <span class="st">"scene"</span><span class="op">)</span>, </span>
 <span>                           intensity <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span>, <span class="co"># Ordered factor</span></span>
 <span>                           replication <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
@@ -628,22 +627,22 @@ trends (linear, quadratic, etc.).</p>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">emodel_poly</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">category</span>, <span class="va">intensity</span><span class="op">)</span>, </span>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="va">emodel_poly</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">category</span>, <span class="va">intensity</span><span class="op">)</span>, </span>
 <span>                           block <span class="op">=</span> <span class="op">~</span><span class="va">block</span>, </span>
 <span>                           data <span class="op">=</span> <span class="va">design_poly</span>, </span>
 <span>                           sampling_frame <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span>
 <span><span class="va">event_term_poly</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">emodel_poly</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
 <p>Now, define a polynomial contrast to test for linear and quadratic
 trends of intensity:</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">con_poly_intensity</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/poly_contrast.html" class="external-link">poly_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">intensity</span>, degree <span class="op">=</span> <span class="fl">2</span>, name <span class="op">=</span> <span class="st">"Intensity_Trend"</span><span class="op">)</span></span>
 <span><span class="va">wts_poly_intensity</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">con_poly_intensity</span>, <span class="va">event_term_poly</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'Intensity_Trend' (poly_contrast, degree=2):\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Weights for 'Intensity_Trend' (poly_contrast, degree=2):</span></span></code></pre>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_poly_intensity</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'Intensity_Trend' (poly_contrast, degree=2):\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Weights for 'Intensity_Trend' (poly_contrast, degree=2):</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_poly_intensity</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -698,7 +697,7 @@ two levels of a factor.</li>
 <code>one_against_all_contrast</code>: Compares each level against
 the average of all other levels.</li>
 </ul>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Pairwise contrast for category using pair_contrast</span></span>
 <span><span class="va">con_pairwise_cat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.html" class="external-link">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">category</span> <span class="op">==</span> <span class="st">"face"</span>, </span>
 <span>                                 <span class="op">~</span> <span class="va">category</span> <span class="op">==</span> <span class="st">"scene"</span>, </span>
@@ -717,10 +716,9 @@ the average of all other levels.</li>
 <span><span class="va">wts_helpers</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">con_set_helpers</span>, <span class="va">event_term</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Display weights for one_against_all</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'con_attend_vs_other':\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Weights for 'con_attend_vs_other':</span></span></code></pre>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_helpers</span><span class="op">$</span><span class="va">con_attend_vs_other</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'con_attend_vs_other':\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Weights for 'con_attend_vs_other':</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_helpers</span><span class="op">$</span><span class="va">con_attend_vs_other</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -745,12 +743,11 @@ the average of all other levels.</li>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nWeights for 'con_ignore_vs_other':\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Weights for 'con_ignore_vs_other':</span></span></code></pre>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_helpers</span><span class="op">$</span><span class="va">con_ignore_vs_other</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nWeights for 'con_ignore_vs_other':\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Weights for 'con_ignore_vs_other':</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_helpers</span><span class="op">$</span><span class="va">con_ignore_vs_other</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -783,7 +780,7 @@ the average of all other levels.</li>
 <code>contrast_set</code>. When <code>contrast_weights</code> is called
 on a <code>contrast_set</code>, it returns a named list of computed
 contrast weight objects.</p>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Combine several previously defined contrasts</span></span>
 <span><span class="va">all_contrasts</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_set.html">contrast_set</a></span><span class="op">(</span></span>
 <span>  <span class="va">con_face_vs_scene</span>,</span>
@@ -792,40 +789,39 @@ contrast weight objects.</p>
 <span>  <span class="va">con_face_vs_baseline</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">all_contrasts</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## === Contrast Set ===</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##  Overview:</span></span>
-<span><span class="co">##   * Number of contrasts: 4 </span></span>
-<span><span class="co">##   * Types of contrasts:</span></span>
-<span><span class="co">##     - contrast_formula_spec : 1 </span></span>
-<span><span class="co">##     - pair_contrast_spec : 2 </span></span>
-<span><span class="co">##     - unit_contrast_spec : 1 </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##   Individual Contrasts:</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## [1] face_vs_scene (pair_contrast_spec)</span></span>
-<span><span class="co">##     Formula: ~category == "face" vs  ~category == "scene"</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## [2] attend_vs_ignore (pair_contrast_spec)</span></span>
-<span><span class="co">##     Formula: ~attention == "attend" vs  ~attention == "ignore"</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## [3] category_X_attention (contrast_formula_spec)</span></span>
-<span><span class="co">##     Formula: ~(`face:attend` - `face:ignore`) - (`scene:attend` - `scene:ignore`)</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## [4] face_gt_baseline (unit_contrast_spec)</span></span>
-<span><span class="co">##     Formula: ~category == "face"</span></span></code></pre>
-<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Compute weights for the entire set</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">all_contrasts</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; === Contrast Set ===</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;  Overview:</span></span>
+<span><span class="co">#&gt;   * Number of contrasts: 4 </span></span>
+<span><span class="co">#&gt;   * Types of contrasts:</span></span>
+<span><span class="co">#&gt;     - contrast_formula_spec : 1 </span></span>
+<span><span class="co">#&gt;     - pair_contrast_spec : 2 </span></span>
+<span><span class="co">#&gt;     - unit_contrast_spec : 1 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   Individual Contrasts:</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [1] face_vs_scene (pair_contrast_spec)</span></span>
+<span><span class="co">#&gt;     Formula: ~category == "face" vs  ~category == "scene"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [2] attend_vs_ignore (pair_contrast_spec)</span></span>
+<span><span class="co">#&gt;     Formula: ~attention == "attend" vs  ~attention == "ignore"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [3] category_X_attention (contrast_formula_spec)</span></span>
+<span><span class="co">#&gt;     Formula: ~(`face:attend` - `face:ignore`) - (`scene:attend` - `scene:ignore`)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [4] face_gt_baseline (unit_contrast_spec)</span></span>
+<span><span class="co">#&gt;     Formula: ~category == "face"</span></span>
+<span></span>
+<span><span class="co"># Compute weights for the entire set</span></span>
 <span><span class="va">all_weights</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">all_contrasts</span>, <span class="va">event_term</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Access weights for a specific contrast within the set</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nAccessing weights for 'face_vs_scene' from the set:\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Accessing weights for 'face_vs_scene' from the set:</span></span></code></pre>
-<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">kable</span><span class="op">(</span><span class="va">all_weights</span><span class="op">$</span><span class="va">face_vs_scene</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nAccessing weights for 'face_vs_scene' from the set:\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Accessing weights for 'face_vs_scene' from the set:</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">all_weights</span><span class="op">$</span><span class="va">face_vs_scene</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -857,7 +853,7 @@ contrast weight objects.</p>
 <p>Contrasts are typically specified within the <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf()</a></code>
 function in the <code>fmri_lm</code> formula. You can provide a single
 contrast specification or a <code>contrast_set</code>.</p>
-<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Simulate some simple data for demonstration</span></span>
 <span><span class="va">ysim</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">120</span> <span class="op">*</span> <span class="fl">3</span><span class="op">)</span>, <span class="fl">120</span>, <span class="fl">3</span><span class="op">)</span> <span class="co"># 3 voxels</span></span>
 <span><span class="va">dataset_sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span><span class="va">ysim</span>, TR <span class="op">=</span> <span class="fl">2</span>, run_length <span class="op">=</span> <span class="fl">120</span>, event_table <span class="op">=</span> <span class="va">design</span><span class="op">)</span></span>
@@ -896,7 +892,7 @@ errors for contrasts.</li>
 <code>stats(fmri_fit, type = "F")</code>: F-statistics (if
 F-contrasts were defined, e.g., via <code>oneway_contrast</code>).</li>
 </ul>
-<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Extract estimated contrast values</span></span>
 <span><span class="va">contrast_estimates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fmri_fit</span>, type <span class="op">=</span> <span class="st">"contrasts"</span><span class="op">)</span></span>
 <span><span class="fu">kable</span><span class="op">(</span><span class="va">contrast_estimates</span>, caption <span class="op">=</span> <span class="st">"Estimated Contrast Values"</span><span class="op">)</span></span>
@@ -915,22 +911,9 @@ F-contrasts were defined, e.g., via <code>oneway_contrast</code>).</li>
 <p>The <code>plot_contrasts</code> function provides a heatmap
 visualization of the contrast weights applied across all regressors in
 the design matrix (including baseline terms if present).</p>
-<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># We need to add contrasts *directly* to the event model for plotting</span></span>
-<span><span class="va">emodel_with_cons</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span>
-<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">category</span>, <span class="va">attention</span>, contrasts <span class="op">=</span> <span class="va">all_contrasts</span><span class="op">)</span>,</span>
-<span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">block</span>, </span>
-<span>  data <span class="op">=</span> <span class="va">design</span>, </span>
-<span>  sampling_frame <span class="op">=</span> <span class="va">sframe</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Plot the contrasts (using default baseline model)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span><span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/plot_contrasts.html" class="external-link">plot_contrasts</a></span><span class="op">(</span><span class="va">emodel_with_cons</span>, rotate_x_text <span class="op">=</span> <span class="cn">TRUE</span>, coord_fixed <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="op">}</span>, error <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Note: plot_contrasts() encountered an issue and was skipped.\n"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Error:"</span>, <span class="va">e</span><span class="op">$</span><span class="va">message</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Plot the contrast weights across all regressors</span></span>
+<span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/plot_contrasts.html" class="external-link">plot_contrasts</a></span><span class="op">(</span><span class="va">emodel_with_cons</span>, rotate_x_text <span class="op">=</span> <span class="cn">TRUE</span>, coord_fixed <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="a_05_contrasts_files/figure-html/plot_contrasts_example-1.png" class="r-plt" alt="" width="672">
 This plot helps verify that contrasts are specified correctly relative
 to the full model design matrix.</p>
@@ -942,121 +925,110 @@ to the full model design matrix.</p>
 analyses or exported to other analysis packages. The weights matrix
 shows exactly how each experimental condition contributes to the
 contrast:</p>
-<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># View the structure of interaction contrast weights</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Interaction contrast structure:\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Interaction contrast structure:</span></span></code></pre>
-<div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">wts_interaction</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## List of 5</span></span>
-<span><span class="co">##  $ term         :List of 9</span></span>
-<span><span class="co">##   ..$ varname         : chr "category:attention"</span></span>
-<span><span class="co">##   ..$ events          :List of 2</span></span>
-<span><span class="co">##   .. ..$ category :List of 7</span></span>
-<span><span class="co">##   .. .. ..$ varname   : chr "category"</span></span>
-<span><span class="co">##   .. .. .. ..- attr(*, "orig_names")= chr "category"</span></span>
-<span><span class="co">##   .. .. ..$ onsets    : num [1:8] 1 15.1 29.3 43.4 57.6 ...</span></span>
-<span><span class="co">##   .. .. ..$ durations : num [1:8] 0 0 0 0 0 0 0 0</span></span>
-<span><span class="co">##   .. .. ..$ blockids  : int [1:8] 1 1 1 1 1 1 1 1</span></span>
-<span><span class="co">##   .. .. ..$ value     : int [1:8, 1] 1 2 1 2 1 2 1 2</span></span>
-<span><span class="co">##   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
-<span><span class="co">##   .. .. .. .. ..$ : NULL</span></span>
-<span><span class="co">##   .. .. .. .. ..$ : chr "category"</span></span>
-<span><span class="co">##   .. .. .. .. .. ..- attr(*, "orig_names")= chr "category"</span></span>
-<span><span class="co">##   .. .. ..$ continuous: logi FALSE</span></span>
-<span><span class="co">##   .. .. ..$ meta      :List of 1</span></span>
-<span><span class="co">##   .. .. .. ..$ levels: chr [1:2] "face" "scene"</span></span>
-<span><span class="co">##   .. .. ..- attr(*, "class")= chr [1:2] "event" "event_seq"</span></span>
-<span><span class="co">##   .. ..$ attention:List of 7</span></span>
-<span><span class="co">##   .. .. ..$ varname   : chr "attention"</span></span>
-<span><span class="co">##   .. .. .. ..- attr(*, "orig_names")= chr "attention"</span></span>
-<span><span class="co">##   .. .. ..$ onsets    : num [1:8] 1 15.1 29.3 43.4 57.6 ...</span></span>
-<span><span class="co">##   .. .. ..$ durations : num [1:8] 0 0 0 0 0 0 0 0</span></span>
-<span><span class="co">##   .. .. ..$ blockids  : int [1:8] 1 1 1 1 1 1 1 1</span></span>
-<span><span class="co">##   .. .. ..$ value     : int [1:8, 1] 1 1 2 2 1 1 2 2</span></span>
-<span><span class="co">##   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
-<span><span class="co">##   .. .. .. .. ..$ : NULL</span></span>
-<span><span class="co">##   .. .. .. .. ..$ : chr "attention"</span></span>
-<span><span class="co">##   .. .. .. .. .. ..- attr(*, "orig_names")= chr "attention"</span></span>
-<span><span class="co">##   .. .. ..$ continuous: logi FALSE</span></span>
-<span><span class="co">##   .. .. ..$ meta      :List of 1</span></span>
-<span><span class="co">##   .. .. .. ..$ levels: chr [1:2] "attend" "ignore"</span></span>
-<span><span class="co">##   .. .. ..- attr(*, "class")= chr [1:2] "event" "event_seq"</span></span>
-<span><span class="co">##   ..$ subset          : logi [1:8] TRUE TRUE TRUE TRUE TRUE TRUE ...</span></span>
-<span><span class="co">##   ..$ event_table     : tibble [8 × 2] (S3: tbl_df/tbl/data.frame)</span></span>
-<span><span class="co">##   .. ..$ category : Factor w/ 2 levels "face","scene": 1 2 1 2 1 2 1 2</span></span>
-<span><span class="co">##   .. ..$ attention: Factor w/ 2 levels "attend","ignore": 1 1 2 2 1 1 2 2</span></span>
-<span><span class="co">##   ..$ onsets          : num [1:8] 1 15.1 29.3 43.4 57.6 ...</span></span>
-<span><span class="co">##   ..$ blockids        : int [1:8] 1 1 1 1 1 1 1 1</span></span>
-<span><span class="co">##   ..$ durations       : num [1:8] 0 0 0 0 0 0 0 0</span></span>
-<span><span class="co">##   ..$ condition_levels: chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"</span></span>
-<span><span class="co">##   ..$ condition_ids   : int [1:8] 1 2 3 4 1 2 3 4</span></span>
-<span><span class="co">##   ..- attr(*, "class")= chr [1:2] "event_term" "event_seq"</span></span>
-<span><span class="co">##   ..- attr(*, "hrfspec")=List of 16</span></span>
-<span><span class="co">##   .. ..$ name     : chr "category:attention"</span></span>
-<span><span class="co">##   .. ..$ label    : chr "hrf(category,attention)"</span></span>
-<span><span class="co">##   .. ..$ id       : NULL</span></span>
-<span><span class="co">##   .. ..$ vars     :List of 2</span></span>
-<span><span class="co">##   .. .. ..$ : language ~category</span></span>
-<span><span class="co">##   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x56459e7212a8&gt; </span></span>
-<span><span class="co">##   .. .. ..$ : language ~attention</span></span>
-<span><span class="co">##   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x56459e7212a8&gt; </span></span>
-<span><span class="co">##   .. .. ..- attr(*, "class")= chr [1:2] "quosures" "list"</span></span>
-<span><span class="co">##   .. ..$ varnames : Named chr [1:2] "category" "attention"</span></span>
-<span><span class="co">##   .. .. ..- attr(*, "names")= chr [1:2] "" ""</span></span>
-<span><span class="co">##   .. ..$ hrf      :function (t)  </span></span>
-<span><span class="co">##   .. .. ..- attr(*, "class")= chr [1:2] "HRF" "function"</span></span>
-<span><span class="co">##   .. .. ..- attr(*, "name")= chr "SPMG1"</span></span>
-<span><span class="co">##   .. .. ..- attr(*, "nbasis")= int 1</span></span>
-<span><span class="co">##   .. .. ..- attr(*, "span")= num 24</span></span>
-<span><span class="co">##   .. .. ..- attr(*, "param_names")= chr [1:3] "P1" "P2" "A1"</span></span>
-<span><span class="co">##   .. .. ..- attr(*, "params")=List of 3</span></span>
-<span><span class="co">##   .. .. .. ..$ P1: num 5</span></span>
-<span><span class="co">##   .. .. .. ..$ P2: num 15</span></span>
-<span><span class="co">##   .. .. .. ..$ A1: num 0.0833</span></span>
-<span><span class="co">##   .. ..$ hrf_fun  : NULL</span></span>
-<span><span class="co">##   .. ..$ onsets   : NULL</span></span>
-<span><span class="co">##   .. ..$ durations: NULL</span></span>
-<span><span class="co">##   .. ..$ prefix   : NULL</span></span>
-<span><span class="co">##   .. ..$ subset   : NULL</span></span>
-<span><span class="co">##   .. ..$ precision: num 0.3</span></span>
-<span><span class="co">##   .. ..$ contrasts: NULL</span></span>
-<span><span class="co">##   .. ..$ summate  : logi TRUE</span></span>
-<span><span class="co">##   .. ..$ uid      : chr "t01"</span></span>
-<span><span class="co">##   .. ..$ term_tag : chr "category_attention"</span></span>
-<span><span class="co">##   .. ..- attr(*, "class")= chr [1:2] "hrfspec" "list"</span></span>
-<span><span class="co">##   ..- attr(*, "term_tag")= chr "category_attention"</span></span>
-<span><span class="co">##   ..- attr(*, "uid")= chr "t01"</span></span>
-<span><span class="co">##  $ name         : chr "category_X_attention"</span></span>
-<span><span class="co">##  $ weights      : num [1:4, 1] 1 -1 -1 1</span></span>
-<span><span class="co">##   ..- attr(*, "dimnames")=List of 2</span></span>
-<span><span class="co">##   .. ..$ : chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"</span></span>
-<span><span class="co">##   .. ..$ : NULL</span></span>
-<span><span class="co">##  $ condnames    : chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"</span></span>
-<span><span class="co">##  $ contrast_spec:List of 4</span></span>
-<span><span class="co">##   ..$ A    :Class 'formula'  language ~(`face:attend` - `face:ignore`) - (`scene:attend` - `scene:ignore`)</span></span>
-<span><span class="co">##   .. .. ..- attr(*, ".Environment")=&lt;environment: R_GlobalEnv&gt; </span></span>
-<span><span class="co">##   ..$ B    : NULL</span></span>
-<span><span class="co">##   ..$ where: NULL</span></span>
-<span><span class="co">##   ..$ name : chr "category_X_attention"</span></span>
-<span><span class="co">##   ..- attr(*, "class")= chr [1:3] "contrast_formula_spec" "contrast_spec" "list"</span></span>
-<span><span class="co">##  - attr(*, "class")= chr [1:2] "contrast" "list"</span></span></code></pre>
-<div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nContrast weights matrix:\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Contrast weights matrix:</span></span></code></pre>
-<div class="sourceCode" id="cb50"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">wts_interaction</span><span class="op">$</span><span class="va">conmat</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## NULL</span></span></code></pre>
-</div>
-<div class="section level2">
-<h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
-</h2>
-<ul>
-<li><a href="/articles/benchmark_datasets.html">Benchmark
-Datasets</a></li>
-<li><a href="/articles/group_analysis.html">Group Analysis</a></li>
-</ul>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Interaction contrast structure:\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Interaction contrast structure:</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">wts_interaction</span><span class="op">)</span></span>
+<span><span class="co">#&gt; List of 5</span></span>
+<span><span class="co">#&gt;  $ term         :List of 9</span></span>
+<span><span class="co">#&gt;   ..$ varname         : chr "category:attention"</span></span>
+<span><span class="co">#&gt;   ..$ events          :List of 2</span></span>
+<span><span class="co">#&gt;   .. ..$ category :List of 7</span></span>
+<span><span class="co">#&gt;   .. .. ..$ varname   : chr "category"</span></span>
+<span><span class="co">#&gt;   .. .. .. ..- attr(*, "orig_names")= chr "category"</span></span>
+<span><span class="co">#&gt;   .. .. ..$ onsets    : num [1:8] 1 15.1 29.3 43.4 57.6 ...</span></span>
+<span><span class="co">#&gt;   .. .. ..$ durations : num [1:8] 0 0 0 0 0 0 0 0</span></span>
+<span><span class="co">#&gt;   .. .. ..$ blockids  : int [1:8] 1 1 1 1 1 1 1 1</span></span>
+<span><span class="co">#&gt;   .. .. ..$ value     : int [1:8, 1] 1 2 1 2 1 2 1 2</span></span>
+<span><span class="co">#&gt;   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">#&gt;   .. .. .. .. ..$ : NULL</span></span>
+<span><span class="co">#&gt;   .. .. .. .. ..$ : chr "category"</span></span>
+<span><span class="co">#&gt;   .. .. .. .. .. ..- attr(*, "orig_names")= chr "category"</span></span>
+<span><span class="co">#&gt;   .. .. ..$ continuous: logi FALSE</span></span>
+<span><span class="co">#&gt;   .. .. ..$ meta      :List of 1</span></span>
+<span><span class="co">#&gt;   .. .. .. ..$ levels: chr [1:2] "face" "scene"</span></span>
+<span><span class="co">#&gt;   .. .. ..- attr(*, "class")= chr [1:2] "event" "event_seq"</span></span>
+<span><span class="co">#&gt;   .. ..$ attention:List of 7</span></span>
+<span><span class="co">#&gt;   .. .. ..$ varname   : chr "attention"</span></span>
+<span><span class="co">#&gt;   .. .. .. ..- attr(*, "orig_names")= chr "attention"</span></span>
+<span><span class="co">#&gt;   .. .. ..$ onsets    : num [1:8] 1 15.1 29.3 43.4 57.6 ...</span></span>
+<span><span class="co">#&gt;   .. .. ..$ durations : num [1:8] 0 0 0 0 0 0 0 0</span></span>
+<span><span class="co">#&gt;   .. .. ..$ blockids  : int [1:8] 1 1 1 1 1 1 1 1</span></span>
+<span><span class="co">#&gt;   .. .. ..$ value     : int [1:8, 1] 1 1 2 2 1 1 2 2</span></span>
+<span><span class="co">#&gt;   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">#&gt;   .. .. .. .. ..$ : NULL</span></span>
+<span><span class="co">#&gt;   .. .. .. .. ..$ : chr "attention"</span></span>
+<span><span class="co">#&gt;   .. .. .. .. .. ..- attr(*, "orig_names")= chr "attention"</span></span>
+<span><span class="co">#&gt;   .. .. ..$ continuous: logi FALSE</span></span>
+<span><span class="co">#&gt;   .. .. ..$ meta      :List of 1</span></span>
+<span><span class="co">#&gt;   .. .. .. ..$ levels: chr [1:2] "attend" "ignore"</span></span>
+<span><span class="co">#&gt;   .. .. ..- attr(*, "class")= chr [1:2] "event" "event_seq"</span></span>
+<span><span class="co">#&gt;   ..$ subset          : logi [1:8] TRUE TRUE TRUE TRUE TRUE TRUE ...</span></span>
+<span><span class="co">#&gt;   ..$ event_table     : tibble [8 × 2] (S3: tbl_df/tbl/data.frame)</span></span>
+<span><span class="co">#&gt;   .. ..$ category : Factor w/ 2 levels "face","scene": 1 2 1 2 1 2 1 2</span></span>
+<span><span class="co">#&gt;   .. ..$ attention: Factor w/ 2 levels "attend","ignore": 1 1 2 2 1 1 2 2</span></span>
+<span><span class="co">#&gt;   ..$ onsets          : num [1:8] 1 15.1 29.3 43.4 57.6 ...</span></span>
+<span><span class="co">#&gt;   ..$ blockids        : int [1:8] 1 1 1 1 1 1 1 1</span></span>
+<span><span class="co">#&gt;   ..$ durations       : num [1:8] 0 0 0 0 0 0 0 0</span></span>
+<span><span class="co">#&gt;   ..$ condition_levels: chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"</span></span>
+<span><span class="co">#&gt;   ..$ condition_ids   : int [1:8] 1 2 3 4 1 2 3 4</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "class")= chr [1:2] "event_term" "event_seq"</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "hrfspec")=List of 17</span></span>
+<span><span class="co">#&gt;   .. ..$ name     : chr "category:attention"</span></span>
+<span><span class="co">#&gt;   .. ..$ label    : chr "hrf(category,attention)"</span></span>
+<span><span class="co">#&gt;   .. ..$ id       : NULL</span></span>
+<span><span class="co">#&gt;   .. ..$ vars     :List of 2</span></span>
+<span><span class="co">#&gt;   .. .. ..$ : language ~category</span></span>
+<span><span class="co">#&gt;   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x555a8b2e5ac8&gt; </span></span>
+<span><span class="co">#&gt;   .. .. ..$ : language ~attention</span></span>
+<span><span class="co">#&gt;   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x555a8b2e5ac8&gt; </span></span>
+<span><span class="co">#&gt;   .. .. ..- attr(*, "class")= chr [1:2] "quosures" "list"</span></span>
+<span><span class="co">#&gt;   .. ..$ varnames : Named chr [1:2] "category" "attention"</span></span>
+<span><span class="co">#&gt;   .. .. ..- attr(*, "names")= chr [1:2] "" ""</span></span>
+<span><span class="co">#&gt;   .. ..$ hrf      :function (t)  </span></span>
+<span><span class="co">#&gt;   .. .. ..- attr(*, "class")= chr [1:2] "HRF" "function"</span></span>
+<span><span class="co">#&gt;   .. .. ..- attr(*, "name")= chr "SPMG1"</span></span>
+<span><span class="co">#&gt;   .. .. ..- attr(*, "nbasis")= int 1</span></span>
+<span><span class="co">#&gt;   .. .. ..- attr(*, "span")= num 24</span></span>
+<span><span class="co">#&gt;   .. .. ..- attr(*, "param_names")= chr [1:3] "P1" "P2" "A1"</span></span>
+<span><span class="co">#&gt;   .. .. ..- attr(*, "params")=List of 3</span></span>
+<span><span class="co">#&gt;   .. .. .. ..$ P1: num 5</span></span>
+<span><span class="co">#&gt;   .. .. .. ..$ P2: num 15</span></span>
+<span><span class="co">#&gt;   .. .. .. ..$ A1: num 0.0833</span></span>
+<span><span class="co">#&gt;   .. ..$ hrf_fun  : NULL</span></span>
+<span><span class="co">#&gt;   .. ..$ onsets   : NULL</span></span>
+<span><span class="co">#&gt;   .. ..$ durations: NULL</span></span>
+<span><span class="co">#&gt;   .. ..$ prefix   : NULL</span></span>
+<span><span class="co">#&gt;   .. ..$ subset   : NULL</span></span>
+<span><span class="co">#&gt;   .. ..$ precision: num 0.3</span></span>
+<span><span class="co">#&gt;   .. ..$ contrasts: NULL</span></span>
+<span><span class="co">#&gt;   .. ..$ summate  : logi TRUE</span></span>
+<span><span class="co">#&gt;   .. ..$ normalize: logi FALSE</span></span>
+<span><span class="co">#&gt;   .. ..$ uid      : chr "t01"</span></span>
+<span><span class="co">#&gt;   .. ..$ term_tag : chr "category_attention"</span></span>
+<span><span class="co">#&gt;   .. ..- attr(*, "class")= chr [1:2] "hrfspec" "list"</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "term_tag")= chr "category_attention"</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "uid")= chr "t01"</span></span>
+<span><span class="co">#&gt;  $ name         : chr "category_X_attention"</span></span>
+<span><span class="co">#&gt;  $ weights      : num [1:4, 1] 1 -1 -1 1</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">#&gt;   .. ..$ : chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"</span></span>
+<span><span class="co">#&gt;   .. ..$ : NULL</span></span>
+<span><span class="co">#&gt;  $ condnames    : chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"</span></span>
+<span><span class="co">#&gt;  $ contrast_spec:List of 4</span></span>
+<span><span class="co">#&gt;   ..$ A    :Class 'formula'  language ~(`face:attend` - `face:ignore`) - (`scene:attend` - `scene:ignore`)</span></span>
+<span><span class="co">#&gt;   .. .. ..- attr(*, ".Environment")=&lt;environment: R_GlobalEnv&gt; </span></span>
+<span><span class="co">#&gt;   ..$ B    : NULL</span></span>
+<span><span class="co">#&gt;   ..$ where: NULL</span></span>
+<span><span class="co">#&gt;   ..$ name : chr "category_X_attention"</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "class")= chr [1:3] "contrast_formula_spec" "contrast_spec" "list"</span></span>
+<span><span class="co">#&gt;  - attr(*, "class")= chr [1:2] "contrast" "list"</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nContrast weights matrix:\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Contrast weights matrix:</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">wts_interaction</span><span class="op">$</span><span class="va">conmat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; NULL</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="conclusion">Conclusion<a class="anchor" aria-label="anchor" href="#conclusion"></a>
@@ -1072,6 +1044,18 @@ control over hypothesis testing. The integration with
 <code>fmri_lm</code> and visualization tools like
 <code>plot_contrasts</code> facilitates robust and interpretable fMRI
 modeling.</p>
+</div>
+<div class="section level2">
+<h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
+</h2>
+<ul>
+<li>
+<code><a href="../articles/benchmark_datasets.html">vignette("benchmark_datasets", package = "fmrireg")</a></code> —
+Benchmark datasets</li>
+<li>
+<code><a href="../articles/group_analysis.html">vignette("group_analysis", package = "fmrireg")</a></code> — Group
+analysis</li>
+</ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

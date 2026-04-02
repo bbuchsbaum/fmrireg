@@ -1,7 +1,4 @@
-# 
-
-title: “04. fMRI Linear Model (GLM)” author: “Bradley R. Buchsbaum”
-date: “2026-01-28” output: rmarkdown::html_vignette vignette: \> % % % —
+# 04 fMRI Linear Model (GLM)
 
 ## Introduction to fMRI Linear Models
 
@@ -69,6 +66,7 @@ kable(head(event_table), caption = "First few rows of the experimental design")
 First few rows of the experimental design
 
 ``` r
+
 # Create a sampling frame
 sframe <- sampling_frame(blocklens = run_length, TR = TR)
 
@@ -109,7 +107,8 @@ ggplot(event_long, aes(x = time, y = onset, color = condition)) +
 ```
 
 ![Figure illustrating model, design, or results; see caption and text
-for details.](a_09_linear_model_files/figure-html/unnamed-chunk-2-1.png)
+for
+details.](a_09_linear_model_files/figure-html/create-event-table-1.png)
 
 Now that we have our experimental design, let’s simulate the fMRI time
 series. We’ll create signals for each condition with different
@@ -196,7 +195,8 @@ ggplot(signal_long, aes(x = time, y = signal, color = component)) +
 ```
 
 ![Figure illustrating model, design, or results; see caption and text
-for details.](a_09_linear_model_files/figure-html/unnamed-chunk-3-1.png)
+for
+details.](a_09_linear_model_files/figure-html/simulate-signals-1.png)
 
 Our simulated dataset now contains:
 
@@ -227,25 +227,24 @@ model <- fmri_lm(
 
 # Print a summary of the model
 model
+#> 
+#> ==================================
+#>         fmri_lm_result          
+#> ==================================
+#> 
+#> Model formula:
+#>   ~ onset hrf(condition) 
+#> 
+#> Fitting strategy:  chunkwise 
+#> 
+#> Baseline parameters:  4 
+#> Design parameters:    2 
+#> Contrasts:           None
+#> 
+#> Use coef(...), stats(...), etc. to extract results.
+#> 
+#> 
 ```
-
-    ## 
-    ## ==================================
-    ##         fmri_lm_result          
-    ## ==================================
-    ## 
-    ## Model formula:
-    ##   ~ onset hrf(condition) 
-    ## 
-    ## Fitting strategy:  chunkwise 
-    ## 
-    ## Baseline parameters:  4 
-    ## Design parameters:    2 
-    ## Contrasts:           None
-    ## 
-    ## Use coef(...), stats(...), etc. to extract results.
-    ## 
-    ## 
 
 ### Accounting for Temporal Autocorrelation
 
@@ -272,20 +271,16 @@ model_ar1 <- fmri_lm(
 se_ols <- standard_error(model)
 se_ar1 <- standard_error(model_ar1)
 head(round(cbind(OLS = se_ols[[1]], AR1 = se_ar1[[1]]), 4))
-```
+#>         OLS    AR1
+#> [1,] 0.1170 0.0943
+#> [2,] 0.0936 0.0604
+#> [3,] 0.0702 0.0339
 
-    ##         OLS    AR1
-    ## [1,] 0.1170 0.0943
-    ## [2,] 0.0936 0.0604
-    ## [3,] 0.0702 0.0340
-
-``` r
 # Inspect the estimated AR coefficient (shared across voxels in this example)
 model_ar1$ar_coef[[1]]
+#> [[1]]
+#> [1] 0.7059095
 ```
-
-    ## [[1]]
-    ## [1] 0.7065745
 
 The AR(1) model now estimates a non-zero autoregressive coefficient and
 produces notably smaller standard errors than the plain OLS fit,
@@ -319,12 +314,11 @@ model_robust <- fmri_lm(
 
 se_robust <- standard_error(model_robust)
 head(cbind(OLS = se_ols[[1]], Robust = se_robust[[1]]))
+#>             OLS     Robust
+#> [1,] 0.11701370 0.06946794
+#> [2,] 0.09361096 0.06946794
+#> [3,] 0.07020822 0.06946794
 ```
-
-    ##             OLS     Robust
-    ## [1,] 0.11701370 0.06946794
-    ## [2,] 0.09361096 0.06946794
-    ## [3,] 0.07020822 0.06946794
 
 Robust fitting guards against outlier time points but will not correct
 voxel-specific spikes. In this simulated example the Huber weights
@@ -352,13 +346,6 @@ kable(beta_estimates, caption = "Coefficient estimates for each condition and vo
 Coefficient estimates for each condition and voxel
 
 ``` r
-# Helper to clean condition column labels for readability
-clean_condition_label <- function(x) {
-  x <- gsub("^conditioncondition_condition\\.", "", x)
-  x <- gsub("^condition_condition\\.", "", x)
-  gsub("\\.", " ", x)
-}
-
 # Reshape for plotting (works with both approaches)
 beta_long <- as.data.frame(t(beta_estimates)) %>%
   mutate(voxel_index = row_number()) %>%
@@ -385,7 +372,8 @@ ggplot(beta_long, aes(x = condition, y = estimate, fill = condition)) +
 ```
 
 ![Figure illustrating model, design, or results; see caption and text
-for details.](a_09_linear_model_files/figure-html/unnamed-chunk-8-1.png)
+for
+details.](a_09_linear_model_files/figure-html/plot-coefficients-1.png)
 
 The bar plot shows the estimated coefficients for each condition across
 the three simulated voxels. Note that:
@@ -465,6 +453,7 @@ kable(contrast_results, caption = "Contrast results: condition2 - condition1", d
 Contrast results: condition2 - condition1
 
 ``` r
+
 # Visualize the contrast
 ggplot(contrast_results, aes(x = as.factor(voxel), y = estimate, fill = significant)) +
   geom_bar(stat = "identity") +
@@ -482,7 +471,7 @@ ggplot(contrast_results, aes(x = as.factor(voxel), y = estimate, fill = signific
 
 ![Figure illustrating model, design, or results; see caption and text
 for
-details.](a_09_linear_model_files/figure-html/unnamed-chunk-11-1.png)
+details.](a_09_linear_model_files/figure-html/plot-contrast-results-1.png)
 
 The contrast results show that Condition2 consistently elicits
 significantly stronger activation than Condition1 across all voxels,
@@ -550,7 +539,7 @@ ggplot(hrf_long, aes(x = time, y = response, color = condition)) +
 
 ![Figure illustrating model, design, or results; see caption and text
 for
-details.](a_09_linear_model_files/figure-html/unnamed-chunk-12-1.png)
+details.](a_09_linear_model_files/figure-html/extract-fitted-hrf-1.png)
 
 The fitted HRF curves show the temporal profile of the BOLD response for
 each condition. We can observe:
@@ -589,47 +578,9 @@ model_bspline <- fmri_lm(
   strategy = "chunkwise",
   nchunks = 1
 )
+```
 
-# Function to extract model fit statistics
-extract_model_stats <- function(model, model_name, dataset) {
-  # Get observed data
-  observed_data <- get_data_matrix(dataset)
-  
-  # Get design matrix (ensure it's a numeric matrix)
-  design_mat <- as.matrix(design_matrix(model$model))
-  
-  # Get estimated coefficients (include baseline)
-  # Get all coefficients including baseline
-  betas <- as.matrix(coef(model, include_baseline = TRUE))
-  
-  # Calculate fitted values
-  fitted_vals <- design_mat %*% t(betas)
-  
-  # Calculate residuals
-  resids <- observed_data - fitted_vals
-  
-  # Calculate sum of squared residuals
-  ssr <- colSums(resids^2)
-  
-  # Calculate R-squared
-  tss <- apply(observed_data, 2, function(y) sum((y - mean(y))^2))
-  r_squared <- 1 - ssr/tss
-  
-  # Calculate AIC
-  n <- nrow(observed_data)
-  p <- ncol(design_mat)
-  aic <- n * log(ssr/n) + 2 * p
-  
-  # Return results
-  data.frame(
-    model = model_name,
-    voxel = 1:ncol(observed_data),
-    r_squared = r_squared,
-    aic = aic,
-    ssr = ssr
-  )
-}
-
+``` r
 # Extract statistics for each model
 stats_canonical <- extract_model_stats(model_canonical, "canonical_spm", dataset)
 stats_gaussian <- extract_model_stats(model_gaussian, "gaussian", dataset)
@@ -657,6 +608,7 @@ kable(model_comparison, caption = "Model comparison statistics", digits = 4)
 Model comparison statistics
 
 ``` r
+
 # Reshape for plotting
 model_comparison_long <- model_comparison %>%
   pivot_longer(cols = c(r_squared, aic, ssr), names_to = "metric", values_to = "value")
@@ -679,11 +631,10 @@ ggplot(subset(model_comparison_long, metric == "r_squared"),
 ```
 
 ![Figure illustrating model, design, or results; see caption and text
-for
-details.](a_09_linear_model_files/figure-html/unnamed-chunk-13-1.png)
+for details.](a_09_linear_model_files/figure-html/plot-r-squared-1.png)
 
 ``` r
-ggplot(subset(model_comparison_long, metric == "aic"), 
+ggplot(subset(model_comparison_long, metric == "aic"),
        aes(x = model, y = value, fill = model)) +
   geom_bar(stat = "identity") +
   facet_wrap(~voxel, ncol = 3) +
@@ -700,8 +651,7 @@ ggplot(subset(model_comparison_long, metric == "aic"),
 ```
 
 ![Figure illustrating model, design, or results; see caption and text
-for
-details.](a_09_linear_model_files/figure-html/unnamed-chunk-14-1.png)
+for details.](a_09_linear_model_files/figure-html/plot-aic-1.png)
 
 The model comparison shows:
 
@@ -752,9 +702,42 @@ Implementing spatial smoothing or other preprocessing steps - Extending
 the GLM with methods like psychophysiological interactions (PPI) or
 finite impulse response (FIR) models
 
+## From first‑level to group analysis (GDS)
+
+You can export subject‑level results with
+[`write_results()`](https://bbuchsbaum.github.io/fmrireg/reference/write_results.md)
+and then load them for group analysis via
+[`group_data()`](https://bbuchsbaum.github.io/fmrireg/reference/group_data.md)
+(which returns a GDS object backed by fmrigds):
+
+``` r
+# HDF5 written by write_results.fmri_lm
+h5_paths <- Sys.glob("derivatives/sub-*/task-*_desc-GLMstatmap_bold.h5")
+gd <- group_data(h5_paths, format = "h5", subjects = basename(dirname(h5_paths)))
+fit <- fmri_meta(gd, formula = ~ 1 + group, method = "pm")
+
+# NIfTI (beta/SE)
+gd_nii <- group_data(list(beta = beta_paths, se = se_paths), format = "nifti",
+                     subjects = ids, mask = mask_path)
+fit_nii <- fmri_meta(gd_nii, formula = ~ 1 + group, method = "fe")
+
+# Inspect the pipeline with fmrigds
+pl <- fmrigds::plan(gd)
+pl <- fmrigds::reduce(pl, method = "meta:fe", formula = ~ 1 + group)
+fmrigds::explain_plan(pl)
+invisible(fmrigds::preview(pl, n = 1, assays = "beta"))
+res <- fmrigds::compute(pl)
+```
+
+Note:
+[`group_data()`](https://bbuchsbaum.github.io/fmrireg/reference/group_data.md)
+now routes through fmrigds (GDS). Legacy constructors
+([`group_data_from_h5()`](https://bbuchsbaum.github.io/fmrireg/reference/group_data_from_h5.md)/`_nifti()`/`_csv()`)
+are preserved for backward compatibility but will be deprecated.
+
 ## Next
 
-- [Contrasts and Hypothesis
-  Tests](https://bbuchsbaum.github.io/articles/a_05_contrasts.md)
-- [Group
-  Analysis](https://bbuchsbaum.github.io/articles/group_analysis.md)
+- [`vignette("a_05_contrasts", package = "fmrireg")`](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.md)
+  — Contrasts and Hypothesis Tests
+- [`vignette("group_analysis", package = "fmrireg")`](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.md)
+  — Group Analysis

@@ -36,6 +36,7 @@ A tibble or matrix containing p-values
 ## See also
 
 Other statistical_measures:
+[`coef_names()`](https://bbuchsbaum.github.io/fmrireg/reference/coef_names.md),
 [`standard_error()`](https://bbuchsbaum.github.io/fmrireg/reference/standard_error.md),
 [`stats()`](https://bbuchsbaum.github.io/fmrireg/reference/stats.md)
 

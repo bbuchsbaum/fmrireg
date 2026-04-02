@@ -75,32 +75,10 @@ print(summary_info)
 #> [1] "HRF_SPMG1"
 #> 
 #> $hrf_information$hrf_object
-#> function (t) 
-#> {
-#>     do.call(orig_f, c(list(t = t), callable_params_list))
-#> }
-#> <bytecode: 0x560c33c370b8>
-#> <environment: 0x560c33c387c0>
-#> attr(,"class")
-#> [1] "HRF"      "function"
-#> attr(,"name")
-#> [1] "SPMG1"
-#> attr(,"nbasis")
-#> [1] 1
-#> attr(,"span")
-#> [1] 24
-#> attr(,"param_names")
-#> [1] "P1" "P2" "A1"
-#> attr(,"params")
-#> attr(,"params")$P1
-#> [1] 5
-#> 
-#> attr(,"params")$P2
-#> [1] 15
-#> 
-#> attr(,"params")$A1
-#> [1] 0.0833
-#> 
+#> -- HRF: SPMG1 --------------------------------------------- 
+#>    Basis functions: 1 
+#>    Span: 24 s
+#>    Parameters: P1 = 5, P2 = 15, A1 = 0.0833 
 #> 
 #> 
 #> $noise_information
