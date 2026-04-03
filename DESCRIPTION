@@ -4,7 +4,7 @@ Title: Regression Analysis of Functional Magnetic Resonance Imaging Data
 Version: 0.1.2
 LinkingTo: Rcpp,RcppArmadillo, roptim, RcppParallel
 Authors@R: person("Bradley", "Buchsbaum",, role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
-License: GPL (>= 2)
+License: MIT + file LICENSE
 Description: Provides tools for the analysis of functional magnetic resonance
     imaging (fMRI) data. Facilities are included to construct flexible
     hemodynamic response functions, experimental regressors, and conduct

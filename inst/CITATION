@@ -1,0 +1,9 @@
+bibentry(
+  bibtype  = "Manual",
+  title    = "fmrireg: Regression Analysis of Functional Magnetic Resonance Imaging Data",
+  author   = person("Bradley", "Buchsbaum", email = "brad.buchsbaum@gmail.com", role = c("aut", "cre")),
+  year     = "2026",
+  note     = "R package version 0.1.2",
+  url      = "https://bbuchsbaum.github.io/fmrireg/",
+  header   = "To cite fmrireg in publications use:"
+)
