@@ -7,7 +7,7 @@
   "relatedLink": "https://bbuchsbaum.github.io/fmrireg/",
   "codeRepository": "https://github.com/bbuchsbaum/fmrireg",
   "issueTracker": "https://github.com/bbuchsbaum/fmrireg/issues",
-  "license": "https://spdx.org/licenses/GPL-2.0",
+  "license": "https://spdx.org/licenses/MIT",
   "version": "0.1.2",
   "programmingLanguage": {
     "@type": "ComputerLanguage",
@@ -663,7 +663,24 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "4768.615KB",
+  "fileSize": "4796.848KB",
+  "citation": [
+    {
+      "@type": "SoftwareSourceCode",
+      "datePublished": "2026",
+      "author": [
+        {
+          "@type": "Person",
+          "givenName": "Bradley",
+          "familyName": "Buchsbaum",
+          "email": "brad.buchsbaum@gmail.com"
+        }
+      ],
+      "name": "fmrireg: Regression Analysis of Functional Magnetic Resonance Imaging Data",
+      "url": "https://bbuchsbaum.github.io/fmrireg/",
+      "description": "R package version 0.1.2"
+    }
+  ],
   "releaseNotes": "https://github.com/bbuchsbaum/fmrireg/blob/main/NEWS.md",
   "readme": "https://github.com/bbuchsbaum/fmrireg/blob/master/README.md",
   "contIntegration": "https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml"
