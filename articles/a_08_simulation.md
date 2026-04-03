@@ -1,4 +1,4 @@
-# 03 Simulating fMRI Data
+# Simulating fMRI Data
 
 ``` r
 library(fmrireg)

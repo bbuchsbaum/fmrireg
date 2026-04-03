@@ -5,13 +5,13 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Advanced Plugin Development • fmrireg</title>
+<title>Plugin Development • fmrireg</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
-<script src="../extra.js"></script><meta property="og:title" content="Advanced Plugin Development">
+<script src="../extra.js"></script><meta property="og:title" content="Plugin Development">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -80,7 +80,7 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Advanced Plugin Development</h1>
+      <h1>Plugin Development</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/plugin-development.Rmd" class="external-link"><code>vignettes/plugin-development.Rmd</code></a></small>
@@ -105,7 +105,7 @@ return standard <code>fmri_lm</code> objects.</li>
 </ul>
 <p>This vignette shows how to register both kinds of extensions, how
 engine capabilities interact with global <code><a href="../reference/fmri_lm.html">fmri_lm()</a></code> options,
-and how to inspect the engine-spec metadata that drives dispatch.</p>
+and how to inspect the engine metadata that drives dispatch.</p>
 </div>
 <div class="section level2">
 <h2 id="how-do-you-build-a-minimal-dataset">How do you build a minimal dataset?<a class="anchor" aria-label="anchor" href="#how-do-you-build-a-minimal-dataset"></a>
@@ -257,39 +257,31 @@ code runs. It also keeps two configurations on the fitted object:</p>
 <code><a href="../reference/fmri_lm.html">fmri_lm()</a></code>
 </li>
 <li>
-<code>executed_config</code>: the engine-scoped configuration
-actually passed into the engine after unsupported sections were
-normalized away. In the current implementation, subordinate
-robust-tuning values such as <code>max_iter</code> may be reset even
-when the caller already requested <code>robust = FALSE</code>.</li>
+<code>executed_config</code>: the engine-scoped configuration that
+the engine actually received after unsupported sections were normalized
+away</li>
 </ul>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">requested_cfg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">fit_plugin</span>, <span class="st">"requested_config"</span><span class="op">)</span></span>
 <span><span class="va">executed_cfg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">fit_plugin</span>, <span class="st">"executed_config"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">cfg_value</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">cfg</span>, <span class="va">section</span>, <span class="va">field</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">cfg</span><span class="op">)</span> <span class="op">||</span> <span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">cfg</span><span class="op">[[</span><span class="va">section</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> <span class="op">||</span> <span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">cfg</span><span class="op">[[</span><span class="va">section</span><span class="op">]</span><span class="op">]</span><span class="op">[[</span><span class="va">field</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="cn">NA</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span>  <span class="va">cfg</span><span class="op">[[</span><span class="va">section</span><span class="op">]</span><span class="op">]</span><span class="op">[[</span><span class="va">field</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="va">requested_max_iter</span> <span class="op">&lt;-</span> <span class="fu">cfg_value</span><span class="op">(</span><span class="va">requested_cfg</span>, <span class="st">"robust"</span>, <span class="st">"max_iter"</span><span class="op">)</span></span>
-<span><span class="va">executed_max_iter</span> <span class="op">&lt;-</span> <span class="fu">cfg_value</span><span class="op">(</span><span class="va">executed_cfg</span>, <span class="st">"robust"</span>, <span class="st">"max_iter"</span><span class="op">)</span></span>
+<span><span class="va">value_or_na</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">||</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0</span><span class="op">)</span> <span class="cn">NA</span> <span class="kw">else</span> <span class="va">x</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"requested"</span>, <span class="st">"executed"</span><span class="op">)</span>,</span>
 <span>  robust_type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fu">cfg_value</span><span class="op">(</span><span class="va">requested_cfg</span>, <span class="st">"robust"</span>, <span class="st">"type"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fu">cfg_value</span><span class="op">(</span><span class="va">executed_cfg</span>, <span class="st">"robust"</span>, <span class="st">"type"</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fu">value_or_na</span><span class="op">(</span><span class="va">requested_cfg</span><span class="op">$</span><span class="va">robust</span><span class="op">$</span><span class="va">type</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fu">value_or_na</span><span class="op">(</span><span class="va">executed_cfg</span><span class="op">$</span><span class="va">robust</span><span class="op">$</span><span class="va">type</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  robust_max_iter <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="va">requested_max_iter</span>,</span>
-<span>    <span class="va">executed_max_iter</span></span>
+<span>    <span class="fu">value_or_na</span><span class="op">(</span><span class="va">requested_cfg</span><span class="op">$</span><span class="va">robust</span><span class="op">$</span><span class="va">max_iter</span><span class="op">)</span>,</span>
+<span>    <span class="fu">value_or_na</span><span class="op">(</span><span class="va">executed_cfg</span><span class="op">$</span><span class="va">robust</span><span class="op">$</span><span class="va">max_iter</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  normalized <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="cn">FALSE</span>,</span>
-<span>    <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/Matrix/man/all.equal-methods.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">requested_max_iter</span>, <span class="va">executed_max_iter</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/Matrix/man/all.equal-methods.html" class="external-link">all.equal</a></span><span class="op">(</span></span>
+<span>      <span class="fu">value_or_na</span><span class="op">(</span><span class="va">requested_cfg</span><span class="op">$</span><span class="va">robust</span><span class="op">$</span><span class="va">max_iter</span><span class="op">)</span>,</span>
+<span>      <span class="fu">value_or_na</span><span class="op">(</span><span class="va">executed_cfg</span><span class="op">$</span><span class="va">robust</span><span class="op">$</span><span class="va">max_iter</span><span class="op">)</span></span>
+<span>    <span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;      config robust_type robust_max_iter normalized</span></span>
@@ -305,52 +297,33 @@ when the caller already requested <code>robust = FALSE</code>.</li>
 <div class="section level2">
 <h2 id="how-can-you-inspect-engine-specs">How can you inspect engine specs?<a class="anchor" aria-label="anchor" href="#how-can-you-inspect-engine-specs"></a>
 </h2>
-<p>Built-in and plugin engines now share the same spec object. The
-read-only accessors <code><a href="../reference/engine_spec.html">engine_spec()</a></code> and
-<code><a href="../reference/engine_specs.html">engine_specs()</a></code> expose that metadata without requiring
-access to internal registries. If you are working against an older
-installed build where those helpers are not yet available, you can still
-fall back to the registry names for a lightweight diagnostic.</p>
+<p>Built-in and plugin engines share the same spec object. The exported
+accessors <code><a href="../reference/engine_spec.html">engine_spec()</a></code> and <code><a href="../reference/engine_specs.html">engine_specs()</a></code>
+give you the metadata you need without touching internal registries.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">has_public_specs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"engine_spec"</span>, envir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ns-internal.html" class="external-link">asNamespace</a></span><span class="op">(</span><span class="st">"fmrireg"</span><span class="op">)</span>, inherits <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="va">has_public_specs</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">plugin_spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/get.html" class="external-link">get</a></span><span class="op">(</span><span class="st">"engine_spec"</span>, envir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ns-internal.html" class="external-link">asNamespace</a></span><span class="op">(</span><span class="st">"fmrireg"</span><span class="op">)</span><span class="op">)</span><span class="op">(</span><span class="va">engine_name</span><span class="op">)</span></span>
-<span>  <span class="va">builtin_spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/get.html" class="external-link">get</a></span><span class="op">(</span><span class="st">"engine_spec"</span>, envir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ns-internal.html" class="external-link">asNamespace</a></span><span class="op">(</span><span class="st">"fmrireg"</span><span class="op">)</span><span class="op">)</span><span class="op">(</span><span class="st">"rrr_gls"</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plugin_spec</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">builtin_spec</span><span class="op">)</span></span>
-<span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>  <span class="va">registry</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/get.html" class="external-link">get</a></span><span class="op">(</span><span class="st">".fmrireg_engine_registry"</span>, envir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ns-internal.html" class="external-link">asNamespace</a></span><span class="op">(</span><span class="st">"fmrireg"</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">spec_row</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/engine_spec.html">engine_spec</a></span><span class="op">(</span><span class="va">name</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>    name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">engine_name</span>, <span class="st">"rrr_gls"</span><span class="op">)</span>,</span>
-<span>    registered <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>      <span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="va">engine_name</span>, envir <span class="op">=</span> <span class="va">registry</span>, inherits <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
-<span>      <span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"rrr_gls"</span>, envir <span class="op">=</span> <span class="va">registry</span>, inherits <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span>    <span class="op">)</span></span>
+<span>    name <span class="op">=</span> <span class="va">spec</span><span class="op">$</span><span class="va">name</span>,</span>
+<span>    source <span class="op">=</span> <span class="va">spec</span><span class="op">$</span><span class="va">source</span>,</span>
+<span>    strategy <span class="op">=</span> <span class="va">spec</span><span class="op">$</span><span class="va">strategy</span>,</span>
+<span>    aliases <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">spec</span><span class="op">$</span><span class="va">aliases</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
+<span>    robust <span class="op">=</span> <span class="va">spec</span><span class="op">$</span><span class="va">capabilities</span><span class="op">$</span><span class="va">robust</span>,</span>
+<span>    preprocessing <span class="op">=</span> <span class="va">spec</span><span class="op">$</span><span class="va">capabilities</span><span class="op">$</span><span class="va">preprocessing</span>,</span>
+<span>    stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="co">#&gt; &lt;fmrireg_engine_spec&gt;</span></span>
-<span><span class="co">#&gt; name: vignette_centered_engine</span></span>
-<span><span class="co">#&gt; source: plugin | strategy: engine</span></span>
-<span><span class="co">#&gt; aliases: &lt;none&gt;</span></span>
-<span><span class="co">#&gt; capabilities: robust=FALSE, preprocessing=FALSE, ar_voxelwise=TRUE, ar_by_cluster=TRUE</span></span>
-<span><span class="co">#&gt; &lt;fmrireg_engine_spec&gt;</span></span>
-<span><span class="co">#&gt; name: rrr_gls</span></span>
-<span><span class="co">#&gt; source: builtin | strategy: engine</span></span>
-<span><span class="co">#&gt; aliases: &lt;none&gt;</span></span>
-<span><span class="co">#&gt; capabilities: robust=FALSE, preprocessing=FALSE, ar_voxelwise=FALSE, ar_by_cluster=FALSE</span></span>
-<span><span class="co">#&gt; requires: event regressors</span></span></code></pre></div>
-<p>The full registry is also available as a list of specs.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"engine_specs"</span>, envir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ns-internal.html" class="external-link">asNamespace</a></span><span class="op">(</span><span class="st">"fmrireg"</span><span class="op">)</span>, inherits <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">spec_names</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/get.html" class="external-link">get</a></span><span class="op">(</span><span class="st">"engine_specs"</span>, envir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ns-internal.html" class="external-link">asNamespace</a></span><span class="op">(</span><span class="st">"fmrireg"</span><span class="op">)</span><span class="op">)</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>  <span class="va">registry</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/get.html" class="external-link">get</a></span><span class="op">(</span><span class="st">".fmrireg_engine_registry"</span>, envir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ns-internal.html" class="external-link">asNamespace</a></span><span class="op">(</span><span class="st">"fmrireg"</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="va">spec_names</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ls.html" class="external-link">ls</a></span><span class="op">(</span><span class="va">registry</span>, all.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">spec_names</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
+<span>  <span class="fu">spec_row</span><span class="op">(</span><span class="va">engine_name</span><span class="op">)</span>,</span>
+<span>  <span class="fu">spec_row</span><span class="op">(</span><span class="st">"rrr_gls"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;                       name  source strategy aliases robust preprocessing</span></span>
+<span><span class="co">#&gt; 1 vignette_centered_engine  plugin   engine          FALSE         FALSE</span></span>
+<span><span class="co">#&gt; 2                  rrr_gls builtin   engine          FALSE         FALSE</span></span></code></pre></div>
+<p>The full registry is available as a named list of spec objects.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="../reference/engine_specs.html">engine_specs</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "latent_sketch"            "rrr_gls"                 </span></span>
 <span><span class="co">#&gt; [3] "vignette_centered_engine"</span></span></code></pre></div>
 </div>

@@ -1,4 +1,4 @@
-# 01 Overview and Workflow
+# Overview and Workflow
 
 ## Introduction
 

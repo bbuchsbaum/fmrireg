@@ -1,4 +1,4 @@
-# 07 Group Analysis
+# Group Analysis
 
 ``` r
 library(fmrireg)

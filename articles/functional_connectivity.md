@@ -1,4 +1,4 @@
-# 12 Functional Connectivity (Seed-based)
+# Functional Connectivity (Seed-Based)
 
 ## Overview
 
@@ -157,17 +157,17 @@ seed_col_name <- seed_cols[1]
 seed_col_idx <- which(colnames(design_mat) == seed_col_name)
 
 # Extract connectivity statistics
-all_stats <- stats(fit, type = "estimates")
-t_seed <- as.numeric(all_stats[seed_col_idx, ])
+all_stats <- as.matrix(stats(fit, type = "estimates"))
+t_seed <- as.numeric(all_stats[, seed_col_idx])
 
 # Also get p-values for significance testing
-all_pvals <- p_values(fit, type = "estimates")
-p_seed <- as.numeric(all_pvals[seed_col_idx, ])
+all_pvals <- as.matrix(p_values(fit, type = "estimates"))
+p_seed <- as.numeric(all_pvals[, seed_col_idx])
 
 # Check the distribution of our connectivity map
 summary(t_seed)
 #>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-#>  0.9319  0.9319  0.9319  0.9319  0.9319  0.9319
+#> -2.6023 -0.5454  0.1341  0.1169  0.8527  3.1262
 ```
 
 ## Validating the Results
@@ -180,9 +180,16 @@ than background voxels.
 ``` r
 mean_abs_t_network    <- mean(abs(t_seed[net_idx]), na.rm = TRUE)
 mean_abs_t_background <- mean(abs(t_seed[-net_idx]), na.rm = TRUE)
+
+stopifnot(
+  is.finite(mean_abs_t_network),
+  is.finite(mean_abs_t_background),
+  mean_abs_t_network > mean_abs_t_background
+)
+
 c(mean_abs_t_network = mean_abs_t_network, mean_abs_t_background = mean_abs_t_background)
 #>    mean_abs_t_network mean_abs_t_background 
-#>                   NaN             0.9319114
+#>             0.9016440             0.8091196
 ```
 
 The network voxels show substantially stronger connectivity with the
@@ -191,28 +198,34 @@ connected regions.
 
 ## Visualizing the Connectivity Map
 
-A histogram of the t-statistics reveals the distribution of connectivity
-strengths across the brain. The red lines indicate the range of
-connectivity values within our known network, demonstrating clear
-separation from the background noise.
+A rank-ordered view makes the signal easier to read than a gray
+histogram. The connected voxels are highlighted in red, so you can see
+where the injected network separates from the background.
 
 ``` r
-# Clean data for visualization
-t_seed_clean <- t_seed[!is.na(t_seed)]
-net_idx_clean <- intersect(net_idx, which(!is.na(t_seed)))
+keep <- which(is.finite(t_seed))
+ord <- keep[order(t_seed[keep], decreasing = TRUE)]
+is_network <- ord %in% net_idx
 
-if (length(t_seed_clean) > 0) {
-  hist(t_seed_clean, breaks = 40, col = "gray", 
-       main = "Seed-based Connectivity Map", 
-       xlab = "t-statistic")
-  
-  if (length(net_idx_clean) > 0) {
-    q_vals <- quantile(t_seed[net_idx_clean], c(0.1, 0.9), na.rm = TRUE)
-    abline(v = q_vals, col = "red", lwd = 2, lty = 2)
-    legend("topright", legend = c("Network 10th/90th percentile"), 
-           lty = 2, col = "red", bty = "n")
-  }
-}
+stopifnot(length(ord) > 0)
+
+plot(
+  seq_along(ord),
+  t_seed[ord],
+  pch = 16,
+  col = ifelse(is_network, "firebrick", "gray70"),
+  main = "Seed-Based Connectivity Map",
+  xlab = "Voxel rank",
+  ylab = "Seed regressor t-statistic"
+)
+abline(h = 0, lty = 2, col = "gray40")
+legend(
+  "topright",
+  legend = c("Connected voxels", "Background voxels"),
+  col = c("firebrick", "gray70"),
+  pch = 16,
+  bty = "n"
+)
 ```
 
 ![](functional_connectivity_files/figure-html/plot-connectivity-map-1.png)

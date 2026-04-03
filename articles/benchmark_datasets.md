@@ -1,4 +1,4 @@
-# 06 Benchmark Datasets
+# Benchmark Datasets
 
 ## Introduction
 

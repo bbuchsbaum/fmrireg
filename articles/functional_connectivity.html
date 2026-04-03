@@ -5,13 +5,13 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>12 Functional Connectivity (Seed-based) • fmrireg</title>
+<title>Functional Connectivity (Seed-Based) • fmrireg</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
-<script src="../extra.js"></script><meta property="og:title" content="12 Functional Connectivity (Seed-based)">
+<script src="../extra.js"></script><meta property="og:title" content="Functional Connectivity (Seed-Based)">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -80,11 +80,11 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>12 Functional Connectivity (Seed-based)</h1>
+      <h1>Functional Connectivity (Seed-Based)</h1>
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-04-02</h4>
+            <h4 data-toc-skip class="date">2026-04-03</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/functional_connectivity.Rmd" class="external-link"><code>vignettes/functional_connectivity.Rmd</code></a></small>
       <div class="d-none name"><code>functional_connectivity.Rmd</code></div>
@@ -240,17 +240,17 @@ accounting for drift.</p>
 <span><span class="va">seed_col_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">design_mat</span><span class="op">)</span> <span class="op">==</span> <span class="va">seed_col_name</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Extract connectivity statistics</span></span>
-<span><span class="va">all_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/stats.html">stats</a></span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"estimates"</span><span class="op">)</span></span>
-<span><span class="va">t_seed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">all_stats</span><span class="op">[</span><span class="va">seed_col_idx</span>, <span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">all_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="../reference/stats.html">stats</a></span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"estimates"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">t_seed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">all_stats</span><span class="op">[</span>, <span class="va">seed_col_idx</span><span class="op">]</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Also get p-values for significance testing</span></span>
-<span><span class="va">all_pvals</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/p_values.html">p_values</a></span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"estimates"</span><span class="op">)</span></span>
-<span><span class="va">p_seed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">all_pvals</span><span class="op">[</span><span class="va">seed_col_idx</span>, <span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">all_pvals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="../reference/p_values.html">p_values</a></span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"estimates"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">p_seed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">all_pvals</span><span class="op">[</span>, <span class="va">seed_col_idx</span><span class="op">]</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Check the distribution of our connectivity map</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. </span></span>
-<span><span class="co">#&gt;  0.9319  0.9319  0.9319  0.9319  0.9319  0.9319</span></span></code></pre></div>
+<span><span class="co">#&gt; -2.6023 -0.5454  0.1341  0.1169  0.8527  3.1262</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="validating-the-results">Validating the Results<a class="anchor" aria-label="anchor" href="#validating-the-results"></a>
@@ -262,9 +262,16 @@ statistics than background voxels.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mean_abs_t_network</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">[</span><span class="va">net_idx</span><span class="op">]</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">mean_abs_t_background</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">[</span><span class="op">-</span><span class="va">net_idx</span><span class="op">]</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">mean_abs_t_network</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">mean_abs_t_background</span><span class="op">)</span>,</span>
+<span>  <span class="va">mean_abs_t_network</span> <span class="op">&gt;</span> <span class="va">mean_abs_t_background</span></span>
+<span><span class="op">)</span></span>
+<span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mean_abs_t_network <span class="op">=</span> <span class="va">mean_abs_t_network</span>, mean_abs_t_background <span class="op">=</span> <span class="va">mean_abs_t_background</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    mean_abs_t_network mean_abs_t_background </span></span>
-<span><span class="co">#&gt;                   NaN             0.9319114</span></span></code></pre></div>
+<span><span class="co">#&gt;             0.9016440             0.8091196</span></span></code></pre></div>
 <p>The network voxels show substantially stronger connectivity with the
 seed, confirming that our method successfully identifies functionally
 connected regions.</p>
@@ -272,27 +279,33 @@ connected regions.</p>
 <div class="section level2">
 <h2 id="visualizing-the-connectivity-map">Visualizing the Connectivity Map<a class="anchor" aria-label="anchor" href="#visualizing-the-connectivity-map"></a>
 </h2>
-<p>A histogram of the t-statistics reveals the distribution of
-connectivity strengths across the brain. The red lines indicate the
-range of connectivity values within our known network, demonstrating
-clear separation from the background noise.</p>
+<p>A rank-ordered view makes the signal easier to read than a gray
+histogram. The connected voxels are highlighted in red, so you can see
+where the injected network separates from the background.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Clean data for visualization</span></span>
-<span><span class="va">t_seed_clean</span> <span class="op">&lt;-</span> <span class="va">t_seed</span><span class="op">[</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="va">net_idx_clean</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">intersect</a></span><span class="op">(</span><span class="va">net_idx</span>, <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">keep</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">ord</span> <span class="op">&lt;-</span> <span class="va">keep</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">[</span><span class="va">keep</span><span class="op">]</span>, decreasing <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">is_network</span> <span class="op">&lt;-</span> <span class="va">ord</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">net_idx</span></span>
 <span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">t_seed_clean</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">hist</a></span><span class="op">(</span><span class="va">t_seed_clean</span>, breaks <span class="op">=</span> <span class="fl">40</span>, col <span class="op">=</span> <span class="st">"gray"</span>, </span>
-<span>       main <span class="op">=</span> <span class="st">"Seed-based Connectivity Map"</span>, </span>
-<span>       xlab <span class="op">=</span> <span class="st">"t-statistic"</span><span class="op">)</span></span>
-<span>  </span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">net_idx_clean</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">q_vals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">[</span><span class="va">net_idx_clean</span><span class="op">]</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.9</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/graphics/abline.html" class="external-link">abline</a></span><span class="op">(</span>v <span class="op">=</span> <span class="va">q_vals</span>, col <span class="op">=</span> <span class="st">"red"</span>, lwd <span class="op">=</span> <span class="fl">2</span>, lty <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/graphics/legend.html" class="external-link">legend</a></span><span class="op">(</span><span class="st">"topright"</span>, legend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Network 10th/90th percentile"</span><span class="op">)</span>, </span>
-<span>           lty <span class="op">=</span> <span class="fl">2</span>, col <span class="op">=</span> <span class="st">"red"</span>, bty <span class="op">=</span> <span class="st">"n"</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">ord</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">ord</span><span class="op">)</span>,</span>
+<span>  <span class="va">t_seed</span><span class="op">[</span><span class="va">ord</span><span class="op">]</span>,</span>
+<span>  pch <span class="op">=</span> <span class="fl">16</span>,</span>
+<span>  col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">is_network</span>, <span class="st">"firebrick"</span>, <span class="st">"gray70"</span><span class="op">)</span>,</span>
+<span>  main <span class="op">=</span> <span class="st">"Seed-Based Connectivity Map"</span>,</span>
+<span>  xlab <span class="op">=</span> <span class="st">"Voxel rank"</span>,</span>
+<span>  ylab <span class="op">=</span> <span class="st">"Seed regressor t-statistic"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/abline.html" class="external-link">abline</a></span><span class="op">(</span>h <span class="op">=</span> <span class="fl">0</span>, lty <span class="op">=</span> <span class="fl">2</span>, col <span class="op">=</span> <span class="st">"gray40"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/legend.html" class="external-link">legend</a></span><span class="op">(</span></span>
+<span>  <span class="st">"topright"</span>,</span>
+<span>  legend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Connected voxels"</span>, <span class="st">"Background voxels"</span><span class="op">)</span>,</span>
+<span>  col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"firebrick"</span>, <span class="st">"gray70"</span><span class="op">)</span>,</span>
+<span>  pch <span class="op">=</span> <span class="fl">16</span>,</span>
+<span>  bty <span class="op">=</span> <span class="st">"n"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <p><img src="functional_connectivity_files/figure-html/plot-connectivity-map-1.png" class="r-plt" alt="" width="672"></p>
 </div>
 <div class="section level2">

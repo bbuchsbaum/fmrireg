@@ -1,4 +1,4 @@
-# 04 fMRI Linear Model (GLM)
+# fMRI Linear Model (GLM)
 
 ## Introduction to fMRI Linear Models
 

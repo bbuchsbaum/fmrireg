@@ -1,4 +1,4 @@
-# 02 Data Structures and Sampling Frames
+# Data Structures and Sampling Frames
 
 ## Introduction: Linking Data and Design
 
