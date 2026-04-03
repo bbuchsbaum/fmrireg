@@ -1,5 +1,5 @@
 ---
-title: 02 Data Structures and Sampling Frames
+title: Data Structures and Sampling Frames
 author: Bradley R. Buchsbaum
 date: '`r Sys.Date()`'
 output:
@@ -18,7 +18,7 @@ resource_files:
 - albers-header.html
 
 vignette: |
-  %\VignetteIndexEntry{02 Data Structures and Sampling Frames} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{Data Structures and Sampling Frames} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}

@@ -1,5 +1,5 @@
 ---
-title: 04 fMRI Linear Model (GLM)
+title: fMRI Linear Model (GLM)
 author: Bradley R. Buchsbaum
 date: '`r Sys.Date()`'
 output:
@@ -18,7 +18,7 @@ resource_files:
 - albers-header.html
 
 vignette: |
-  %\VignetteIndexEntry{04 fMRI Linear Model (GLM)} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{fMRI Linear Model (GLM)} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE}

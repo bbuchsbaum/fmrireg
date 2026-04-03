@@ -1,5 +1,5 @@
 ---
-title: 07 Group Analysis
+title: Group Analysis
 author: Bradley R. Buchsbaum
 date: '`r Sys.Date()`'
 output:
@@ -18,7 +18,7 @@ resource_files:
 - albers-header.html
 
 vignette: |
-  %\VignetteIndexEntry{07 Group Analysis} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{Group Analysis} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}

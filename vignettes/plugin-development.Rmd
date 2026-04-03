@@ -1,5 +1,5 @@
 ---
-title: Advanced Plugin Development
+title: Plugin Development
 output:
   rmarkdown::html_vignette:
     toc: yes
@@ -16,7 +16,7 @@ resource_files:
 - albers-header.html
 
 vignette: |
-  %\VignetteIndexEntry{Advanced Plugin Development} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{Plugin Development} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include = FALSE}
@@ -57,7 +57,7 @@ forking the package. Two extension points are available:
 
 This vignette shows how to register both kinds of extensions, how engine
 capabilities interact with global `fmri_lm()` options, and how to inspect the
-engine-spec metadata that drives dispatch.
+engine metadata that drives dispatch.
 
 ## How do you build a minimal dataset?
 
@@ -192,38 +192,30 @@ The central dispatcher validates unsupported options before engine code runs.
 It also keeps two configurations on the fitted object:
 
 - `requested_config`: what the caller supplied to `fmri_lm()`
-- `executed_config`: the engine-scoped configuration actually passed into the
-  engine after unsupported sections were normalized away. In the current
-  implementation, subordinate robust-tuning values such as `max_iter` may be
-  reset even when the caller already requested `robust = FALSE`.
+- `executed_config`: the engine-scoped configuration that the engine actually
+  received after unsupported sections were normalized away
 
 ```{r config-metadata}
 requested_cfg <- attr(fit_plugin, "requested_config")
 executed_cfg <- attr(fit_plugin, "executed_config")
-
-cfg_value <- function(cfg, section, field) {
-  if (is.null(cfg) || is.null(cfg[[section]]) || is.null(cfg[[section]][[field]])) {
-    return(NA)
-  }
-  cfg[[section]][[field]]
-}
-
-requested_max_iter <- cfg_value(requested_cfg, "robust", "max_iter")
-executed_max_iter <- cfg_value(executed_cfg, "robust", "max_iter")
+value_or_na <- function(x) if (is.null(x) || length(x) == 0) NA else x
 
 data.frame(
   config = c("requested", "executed"),
   robust_type = c(
-    as.character(cfg_value(requested_cfg, "robust", "type")),
-    as.character(cfg_value(executed_cfg, "robust", "type"))
+    as.character(value_or_na(requested_cfg$robust$type)),
+    as.character(value_or_na(executed_cfg$robust$type))
   ),
   robust_max_iter = c(
-    requested_max_iter,
-    executed_max_iter
+    value_or_na(requested_cfg$robust$max_iter),
+    value_or_na(executed_cfg$robust$max_iter)
   ),
   normalized = c(
     FALSE,
-    !isTRUE(all.equal(requested_max_iter, executed_max_iter))
+    !isTRUE(all.equal(
+      value_or_na(requested_cfg$robust$max_iter),
+      value_or_na(executed_cfg$robust$max_iter)
+    ))
   )
 )
 ```
@@ -255,44 +247,34 @@ unsupported_message
 
 ## How can you inspect engine specs?
 
-Built-in and plugin engines now share the same spec object. The read-only
-accessors `engine_spec()` and `engine_specs()` expose that metadata without
-requiring access to internal registries. If you are working against an older
-installed build where those helpers are not yet available, you can still fall
-back to the registry names for a lightweight diagnostic.
+Built-in and plugin engines share the same spec object. The exported accessors
+`engine_spec()` and `engine_specs()` give you the metadata you need without
+touching internal registries.
 
 ```{r inspect-engine-specs}
-has_public_specs <- exists("engine_spec", envir = asNamespace("fmrireg"), inherits = FALSE)
-
-if (has_public_specs) {
-  plugin_spec <- get("engine_spec", envir = asNamespace("fmrireg"))(engine_name)
-  builtin_spec <- get("engine_spec", envir = asNamespace("fmrireg"))("rrr_gls")
-
-  print(plugin_spec)
-  print(builtin_spec)
-} else {
-  registry <- get(".fmrireg_engine_registry", envir = asNamespace("fmrireg"))
+spec_row <- function(name) {
+  spec <- engine_spec(name)
   data.frame(
-    name = c(engine_name, "rrr_gls"),
-    registered = c(
-      exists(engine_name, envir = registry, inherits = FALSE),
-      exists("rrr_gls", envir = registry, inherits = FALSE)
-    )
+    name = spec$name,
+    source = spec$source,
+    strategy = spec$strategy,
+    aliases = paste(spec$aliases, collapse = ", "),
+    robust = spec$capabilities$robust,
+    preprocessing = spec$capabilities$preprocessing,
+    stringsAsFactors = FALSE
   )
 }
+
+rbind(
+  spec_row(engine_name),
+  spec_row("rrr_gls")
+)
 ```
 
-The full registry is also available as a list of specs.
+The full registry is available as a named list of spec objects.
 
 ```{r list-engine-specs}
-if (exists("engine_specs", envir = asNamespace("fmrireg"), inherits = FALSE)) {
-  spec_names <- names(get("engine_specs", envir = asNamespace("fmrireg"))())
-} else {
-  registry <- get(".fmrireg_engine_registry", envir = asNamespace("fmrireg"))
-  spec_names <- sort(ls(registry, all.names = TRUE))
-}
-
-spec_names
+sort(names(engine_specs()))
 ```
 
 ## What should extension authors remember?
