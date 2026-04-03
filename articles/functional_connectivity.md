@@ -69,6 +69,15 @@ net_idx    <- c(seed_voxel, sample(setdiff(1:V, seed_voxel), 40))  # 41 connecte
 
 # Add the seed signal to network voxels (creating functional connectivity)
 Y[, net_idx] <- Y[, net_idx] + 0.6 * seed_ts
+
+# Rebuild the dataset from the modified matrix so the injected network signal
+# is the data used by downstream model fitting.
+dset_modified <- fmridataset::matrix_dataset(
+  Y,
+  TR = TR,
+  run_length = Tlen,
+  event_table = data.frame(onset = 0, run = 1)
+)
 ```
 
 ## Modeling Scanner Drift
@@ -127,10 +136,6 @@ bmodel <- baseline_model(
   sframe = sframe
 )
 
-# Update the dataset with our modified data that includes the network signal
-dset_modified <- dset
-dset_modified$data <- Y
-
 # Combine event and baseline models with the dataset
 fmodel <- fmri_model(emodel, bmodel, dset_modified)
 
@@ -147,54 +152,70 @@ strongly that voxel’s activity relates to the seed after accounting for
 drift.
 
 ``` r
-# Find the seed coefficient in our design matrix
-design_mat <- design_matrix(fmodel)
-seed_cols <- grep("seed", colnames(design_mat), value = TRUE)
+# Extract connectivity statistics using the estimate output itself
+all_stats <- as.matrix(stats(fit, type = "estimates"))
+seed_cols <- grep("seed", colnames(all_stats), value = TRUE)
 if (length(seed_cols) == 0) {
-  stop("No seed column found in design matrix")
+  stop("No seed estimate found in fitted model output")
 }
 seed_col_name <- seed_cols[1]
-seed_col_idx <- which(colnames(design_mat) == seed_col_name)
-
-# Extract connectivity statistics
-all_stats <- as.matrix(stats(fit, type = "estimates"))
-t_seed <- as.numeric(all_stats[, seed_col_idx])
+t_seed <- as.numeric(all_stats[, seed_col_name])
 
 # Also get p-values for significance testing
 all_pvals <- as.matrix(p_values(fit, type = "estimates"))
-p_seed <- as.numeric(all_pvals[, seed_col_idx])
+p_seed <- as.numeric(all_pvals[, seed_col_name])
 
 # Check the distribution of our connectivity map
 summary(t_seed)
 #>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-#> -2.6023 -0.5454  0.1341  0.1169  0.8527  3.1262
+#> -2.6023 -0.4003  0.3842  1.2858  1.2451  9.9411
 ```
 
 ## Validating the Results
 
 Since we know which voxels belong to our simulated network, we can check
 whether our connectivity analysis successfully recovered them. Voxels in
-the network should show significantly higher connectivity statistics
-than background voxels.
+the network should have much larger t-statistics than background voxels
+and should dominate the top-ranked discoveries.
 
 ``` r
 mean_abs_t_network    <- mean(abs(t_seed[net_idx]), na.rm = TRUE)
 mean_abs_t_background <- mean(abs(t_seed[-net_idx]), na.rm = TRUE)
+sig_rate_network <- mean(p_seed[net_idx] < 0.05, na.rm = TRUE)
+sig_rate_background <- mean(p_seed[-net_idx] < 0.05, na.rm = TRUE)
+
+top_ranked <- order(t_seed, decreasing = TRUE)[seq_along(net_idx)]
+top_rank_enrichment <- mean(top_ranked %in% net_idx)
 
 stopifnot(
   is.finite(mean_abs_t_network),
   is.finite(mean_abs_t_background),
-  mean_abs_t_network > mean_abs_t_background
+  is.finite(sig_rate_network),
+  is.finite(sig_rate_background),
+  is.finite(top_rank_enrichment),
+  mean_abs_t_network > 5 * mean_abs_t_background,
+  sig_rate_network > 0.9,
+  sig_rate_background < 0.1,
+  top_rank_enrichment > 0.9
 )
 
-c(mean_abs_t_network = mean_abs_t_network, mean_abs_t_background = mean_abs_t_background)
-#>    mean_abs_t_network mean_abs_t_background 
-#>             0.9016440             0.8091196
+c(
+  mean_abs_t_network = mean_abs_t_network,
+  mean_abs_t_background = mean_abs_t_background,
+  sig_rate_network = sig_rate_network,
+  sig_rate_background = sig_rate_background,
+  top_rank_enrichment = top_rank_enrichment
+)
+#>    mean_abs_t_network mean_abs_t_background      sig_rate_network 
+#>            7.65896313            0.80911959            1.00000000 
+#>   sig_rate_background   top_rank_enrichment 
+#>            0.04186047            1.00000000
 ```
 
-The network voxels show substantially stronger connectivity with the
-seed, confirming that our method successfully identifies functionally
-connected regions.
+The network voxels dominate the top-ranked statistics and are
+significant far more often than background voxels, confirming that the
+fitted model recovers the injected connectivity pattern rather than a
+diffuse background effect.
 
 ## Visualizing the Connectivity Map
 

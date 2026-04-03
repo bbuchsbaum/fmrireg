@@ -594,9 +594,9 @@ str(wts_interaction)
 #>   .. ..$ id       : NULL
 #>   .. ..$ vars     :List of 2
 #>   .. .. ..$ : language ~category
-#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x555a3445b640> 
+#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x55c0451fe968> 
 #>   .. .. ..$ : language ~attention
-#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x555a3445b640> 
+#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x55c0451fe968> 
 #>   .. .. ..- attr(*, "class")= chr [1:2] "quosures" "list"
 #>   .. ..$ varnames : Named chr [1:2] "category" "attention"
 #>   .. .. ..- attr(*, "names")= chr [1:2] "" ""

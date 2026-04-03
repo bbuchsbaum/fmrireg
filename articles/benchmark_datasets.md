@@ -212,12 +212,14 @@ cat("Wrong HRF - RMSE:", round(performance_wrong$overall_metrics$rmse, 3), "\n")
 true_betas <- data$true_betas_condition
 
 # Create comparison plots
-comparison_data <- data.frame(
-  True = as.vector(true_betas),
-  Estimated_Correct = as.vector(betas_correct[-1, ]),
-  Estimated_Wrong = as.vector(betas_wrong[-1, ]),
-  Condition = rep(paste("Condition", 1:3), each = ncol(true_betas))
-)
+comparison_data <- dplyr::bind_rows(lapply(seq_len(nrow(true_betas)), function(i) {
+  data.frame(
+    True = true_betas[i, ],
+    Estimated_Correct = betas_correct[-1, ][i, ],
+    Estimated_Wrong = betas_wrong[-1, ][i, ],
+    Condition = paste("Condition", i)
+  )
+}))
 
 # Plot true vs estimated (correct HRF)
 p1 <- ggplot(comparison_data, aes(x = True, y = Estimated_Correct, color = Condition)) +
