@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/bbuchsbaum/fmrireg/blob/master/DESCRIPTION)
+[`inst/CITATION`](https://github.com/bbuchsbaum/fmrireg/blob/master/inst/CITATION)
 
 Buchsbaum B (2026). *fmrireg: Regression Analysis of Functional Magnetic
 Resonance Imaging Data*. R package version 0.1.2,

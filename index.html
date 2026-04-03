@@ -80,33 +80,36 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
 
-<p><a href="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main" class="external-link"><img src="https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg" alt="Codecov test coverage"></a> <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html" class="external-link"><img src="https://img.shields.io/badge/License-GPL_v2-blue.svg" alt="License: GPL v2"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></p>
+<p><a href="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main" class="external-link"><img src="https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg" alt="Codecov test coverage"></a> <a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#stable" class="external-link"><img src="https://img.shields.io/badge/lifecycle-stable-brightgreen.svg" alt="Lifecycle: stable"></a></p>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"bbuchsbaum/fmrireg"</span><span class="op">)</span></span></code></pre></div>
 </div>
-<div class="section level1">
-<h1 id="installpackagesremotes">install.packages(“remotes”)<a class="anchor" aria-label="anchor" href="#installpackagesremotes"></a>
-</h1>
-<p>remotes::install_github(“bbuchsbaum/fmrireg”)</p>
-<pre><code>
-## Quick start
-
-```r
-library(fmrireg)
-
-# Define the temporal structure: 2 runs, 100 scans each, TR = 2s
-sframe &lt;- sampling_frame(blocklens = c(100, 100), TR = 2)
-
-# Build an event model from an experimental design table
-emod &lt;- event_model(onset ~ hrf(condition, basis = "spmg1"),
-                    data = design_table,
-                    block = ~ run,
-                    sampling_frame = sframe)
-
-# Add a baseline model with polynomial drift
-bmod &lt;- baseline_model(basis = "bs", degree = 5, sframe = sframe)
-
-# Combine into a full fMRI model and fit
-fmod &lt;- fmri_model(emod, bmod)
-fit  &lt;- fmri_lm(fmod, dataset = dset)</code></pre>
+<div class="section level2">
+<h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
+</h2>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrireg/">fmrireg</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Define the temporal structure: 2 runs, 100 scans each, TR = 2s</span></span>
+<span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">100</span><span class="op">)</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Build an event model from an experimental design table</span></span>
+<span><span class="va">emod</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"spmg1"</span><span class="op">)</span>,</span>
+<span>                    data <span class="op">=</span> <span class="va">design_table</span>,</span>
+<span>                    block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
+<span>                    sampling_frame <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Add a baseline model with polynomial drift</span></span>
+<span><span class="va">bmod</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"bs"</span>, degree <span class="op">=</span> <span class="fl">5</span>, sframe <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Combine into a full fMRI model and fit</span></span>
+<span><span class="va">fmod</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fmri_model.html">fmri_model</a></span><span class="op">(</span><span class="va">emod</span>, <span class="va">bmod</span><span class="op">)</span></span>
+<span><span class="va">fit</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span><span class="va">fmod</span>, dataset <span class="op">=</span> <span class="va">dset</span><span class="op">)</span></span></code></pre></div>
+</div>
 <div class="section level2">
 <h2 id="key-features">Key features<a class="anchor" aria-label="anchor" href="#key-features"></a>
 </h2>
@@ -145,14 +148,14 @@ fit  &lt;- fmri_lm(fmod, dataset = dset)</code></pre>
 <h2 id="reporting">Reporting<a class="anchor" aria-label="anchor" href="#reporting"></a>
 </h2>
 <p>PDF report generation for <code>fmri_lm</code> fits is provided by the separate <a href="https://github.com/bbuchsbaum/fmrireport" class="external-link">fmrireport</a> package:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">fmrireport</span><span class="fu">::</span><span class="fu">report</span><span class="op">(</span><span class="va">fit</span>, output_dir <span class="op">=</span> <span class="st">"results"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="performance-configuration">Performance configuration<a class="anchor" aria-label="anchor" href="#performance-configuration"></a>
 </h2>
 <p>The internal C++ routines use <a href="https://rcppcore.github.io/RcppParallel/" class="external-link">RcppParallel</a>. Control the thread count with:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>fmrireg.num_threads <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
 <p>or set the environment variable <code>FMRIREG_NUM_THREADS</code> before loading the package.</p>
 </div>
@@ -167,7 +170,7 @@ https://github.com/bbuchsbaum/fmrireg</code></pre>
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
 </h2>
-<p>GPL (&gt;= 2)</p>
+<p>MIT</p>
 <!-- albersdown:theme-note:start -->
 </div>
 <div class="section level2">
@@ -176,7 +179,6 @@ https://github.com/bbuchsbaum/fmrireg</code></pre>
 <p>This package uses the albersdown theme. Existing vignette theme hooks are replaced so <code>albers.css</code> and local <code>albers.js</code> render consistently on CRAN and GitHub Pages. The defaults are configured via <code>params$family</code> and <code>params$preset</code> (family = ‘red’, preset = ‘homage’). The pkgdown site uses <code>template: { package: albersdown }</code> together with generated <code>pkgdown/extra.css</code> and <code>pkgdown/extra.js</code> so the theme is linked and activated on site pages. <!-- albersdown:theme-note:end --></p>
 </div>
 </div>
-
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
@@ -188,7 +190,9 @@ https://github.com/bbuchsbaum/fmrireg</code></pre>
 <div class="license">
 <h2 data-toc-skip>License</h2>
 <ul class="list-unstyled">
-<li>GPL (&gt;= 2)</li>
+<li>
+<a href="https://opensource.org/licenses/mit-license.php" class="external-link">MIT</a> + file <a href="LICENSE-text.html">LICENSE</a>
+</li>
 </ul>
 </div>
 

@@ -1,37 +1,39 @@
-# install.packages(“remotes”)
-
 [![R-CMD-check](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg)](https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main)
-[![License: GPL
-v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+[![License:
+MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Lifecycle:
-experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
 
-# install.packages(“remotes”)
+## Installation
 
-remotes::install_github(“bbuchsbaum/fmrireg”)
+``` r
+install.packages("remotes")
+remotes::install_github("bbuchsbaum/fmrireg")
+```
 
-    ## Quick start
+## Quick start
 
-    ```r
-    library(fmrireg)
+``` r
+library(fmrireg)
 
-    # Define the temporal structure: 2 runs, 100 scans each, TR = 2s
-    sframe <- sampling_frame(blocklens = c(100, 100), TR = 2)
+# Define the temporal structure: 2 runs, 100 scans each, TR = 2s
+sframe <- sampling_frame(blocklens = c(100, 100), TR = 2)
 
-    # Build an event model from an experimental design table
-    emod <- event_model(onset ~ hrf(condition, basis = "spmg1"),
-                        data = design_table,
-                        block = ~ run,
-                        sampling_frame = sframe)
+# Build an event model from an experimental design table
+emod <- event_model(onset ~ hrf(condition, basis = "spmg1"),
+                    data = design_table,
+                    block = ~ run,
+                    sampling_frame = sframe)
 
-    # Add a baseline model with polynomial drift
-    bmod <- baseline_model(basis = "bs", degree = 5, sframe = sframe)
+# Add a baseline model with polynomial drift
+bmod <- baseline_model(basis = "bs", degree = 5, sframe = sframe)
 
-    # Combine into a full fMRI model and fit
-    fmod <- fmri_model(emod, bmod)
-    fit  <- fmri_lm(fmod, dataset = dset)
+# Combine into a full fMRI model and fit
+fmod <- fmri_model(emod, bmod)
+fit  <- fmri_lm(fmod, dataset = dset)
+```
 
 ## Key features
 
@@ -104,7 +106,7 @@ If you use fmrireg in your research, please cite:
 
 ## License
 
-GPL (\>= 2)
+MIT
 
 ## Albers theme
 
