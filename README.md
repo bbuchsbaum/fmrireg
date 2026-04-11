@@ -60,6 +60,39 @@ Full documentation and tutorials are available at
 - [Sketched GLM](https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.html)
 - [Benchmark Datasets](https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.html)
 
+## Command line
+
+Install the package:
+
+```r
+remotes::install_github("bbuchsbaum/fmrireg")
+```
+
+Install the command wrapper:
+
+```r
+fmrireg::install_cli("~/.local/bin", overwrite = TRUE)
+```
+
+If needed, add the directory to `PATH`:
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Check the command:
+
+```sh
+fmrireg --help
+```
+
+Inspect bundled benchmark datasets:
+
+```sh
+fmrireg benchmark list
+fmrireg benchmark summary --dataset BM_Canonical_HighSNR --json
+```
+
 ## Reporting
 
 PDF report generation for `fmri_lm` fits is provided by the separate
