@@ -1,0 +1,31 @@
+#!/usr/bin/env Rscript
+
+args_all <- commandArgs(FALSE)
+file_arg <- grep("^--file=", args_all, value = TRUE)
+script_path <- if (length(file_arg) > 0L) {
+  normalizePath(sub("^--file=", "", file_arg[[1]]), winslash = "/", mustWork = FALSE)
+} else {
+  "exec/fmrireg"
+}
+source_root <- normalizePath(file.path(dirname(script_path), ".."), winslash = "/", mustWork = FALSE)
+
+installed_bootstrap <- if (requireNamespace("fmrireg", quietly = TRUE)) {
+  system.file("cli", "bootstrap.R", package = "fmrireg")
+} else {
+  ""
+}
+
+bootstrap_candidates <- c(
+  installed_bootstrap,
+  file.path(source_root, "cli", "bootstrap.R"),
+  file.path(source_root, "inst", "cli", "bootstrap.R")
+)
+bootstrap_candidates <- bootstrap_candidates[nzchar(bootstrap_candidates)]
+bootstrap <- bootstrap_candidates[file.exists(bootstrap_candidates)][1]
+
+if (is.na(bootstrap) || !nzchar(bootstrap)) {
+  stop("Unable to locate fmrireg CLI bootstrap script.")
+}
+
+source(bootstrap, local = TRUE)
+fmrireg_cli_bootstrap("fmrireg")

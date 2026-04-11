@@ -72,6 +72,7 @@ Suggests:
     shiny,
     mgcv,
     progressr,
+    pkgload,
     roxyglobals (>= 0.2.1),
     withr
 Remotes:
