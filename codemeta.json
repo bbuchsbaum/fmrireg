@@ -256,6 +256,18 @@
     },
     {
       "@type": "SoftwareApplication",
+      "identifier": "pkgload",
+      "name": "pkgload",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=pkgload"
+    },
+    {
+      "@type": "SoftwareApplication",
       "identifier": "roxyglobals",
       "name": "roxyglobals",
       "version": ">= 0.2.1",
@@ -302,8 +314,7 @@
     "3": {
       "@type": "SoftwareApplication",
       "identifier": "fmrigds",
-      "name": "fmrigds",
-      "sameAs": "https://github.com/bbuchsbaum/fmrigds"
+      "name": "fmrigds"
     },
     "4": {
       "@type": "SoftwareApplication",
@@ -663,7 +674,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "4796.848KB",
+  "fileSize": "4818.325KB",
   "citation": [
     {
       "@type": "SoftwareSourceCode",
