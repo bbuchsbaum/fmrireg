@@ -1,39 +1,33 @@
 [![R-CMD-check](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg)](https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main)
-[![License:
-MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: GPL
+v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Lifecycle:
-stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
+experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
-## Installation
+remotes::install_github(“bbuchsbaum/fmrireg”)
 
-``` r
-install.packages("remotes")
-remotes::install_github("bbuchsbaum/fmrireg")
-```
+    ## Quick start
 
-## Quick start
+    ```r
+    library(fmrireg)
 
-``` r
-library(fmrireg)
+    # Define the temporal structure: 2 runs, 100 scans each, TR = 2s
+    sframe <- sampling_frame(blocklens = c(100, 100), TR = 2)
 
-# Define the temporal structure: 2 runs, 100 scans each, TR = 2s
-sframe <- sampling_frame(blocklens = c(100, 100), TR = 2)
+    # Build an event model from an experimental design table
+    emod <- event_model(onset ~ hrf(condition, basis = "spmg1"),
+                        data = design_table,
+                        block = ~ run,
+                        sampling_frame = sframe)
 
-# Build an event model from an experimental design table
-emod <- event_model(onset ~ hrf(condition, basis = "spmg1"),
-                    data = design_table,
-                    block = ~ run,
-                    sampling_frame = sframe)
+    # Add a baseline model with polynomial drift
+    bmod <- baseline_model(basis = "bs", degree = 5, sframe = sframe)
 
-# Add a baseline model with polynomial drift
-bmod <- baseline_model(basis = "bs", degree = 5, sframe = sframe)
-
-# Combine into a full fMRI model and fit
-fmod <- fmri_model(emod, bmod)
-fit  <- fmri_lm(fmod, dataset = dset)
-```
+    # Combine into a full fMRI model and fit
+    fmod <- fmri_model(emod, bmod)
+    fit  <- fmri_lm(fmod, dataset = dset)
 
 ## Key features
 
@@ -73,6 +67,39 @@ Full documentation and tutorials are available at
   GLM](https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.html)
 - [Benchmark
   Datasets](https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.html)
+
+## Command line
+
+Install the package:
+
+``` r
+remotes::install_github("bbuchsbaum/fmrireg")
+```
+
+Install the command wrapper:
+
+``` r
+fmrireg::install_cli("~/.local/bin", overwrite = TRUE)
+```
+
+If needed, add the directory to `PATH`:
+
+``` sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Check the command:
+
+``` sh
+fmrireg --help
+```
+
+Inspect bundled benchmark datasets:
+
+``` sh
+fmrireg benchmark list
+fmrireg benchmark summary --dataset BM_Canonical_HighSNR --json
+```
 
 ## Reporting
 
@@ -310,6 +337,9 @@ linked and activated on site pages.
 - [`fmri_ttest()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_ttest.md)
   : fmrireg t-tests for Group Analysis
 
+- [`fmrireg_cli()`](https://bbuchsbaum.github.io/fmrireg/reference/fmrireg_cli.md)
+  : Run the fmrireg command line interface
+
 - [`generate_interaction_contrast()`](https://bbuchsbaum.github.io/fmrireg/reference/generate_interaction_contrast.md)
   [`generate_main_effect_contrast()`](https://bbuchsbaum.github.io/fmrireg/reference/generate_interaction_contrast.md)
   : Fast factorial contrast generators
@@ -352,6 +382,9 @@ linked and activated on site pages.
 
 - [`hrf_smoothing_kernel()`](https://bbuchsbaum.github.io/fmrireg/reference/hrf_smoothing_kernel.md)
   : Compute an HRF smoothing kernel
+
+- [`install_cli()`](https://bbuchsbaum.github.io/fmrireg/reference/install_cli.md)
+  : Install the fmrireg command wrapper
 
 - [`list_benchmark_datasets()`](https://bbuchsbaum.github.io/fmrireg/reference/list_benchmark_datasets.md)
   : List Available Benchmark Datasets

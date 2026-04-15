@@ -190,6 +190,9 @@
 - [`fmri_ttest()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_ttest.md)
   : fmrireg t-tests for Group Analysis
 
+- [`fmrireg_cli()`](https://bbuchsbaum.github.io/fmrireg/reference/fmrireg_cli.md)
+  : Run the fmrireg command line interface
+
 - [`generate_interaction_contrast()`](https://bbuchsbaum.github.io/fmrireg/reference/generate_interaction_contrast.md)
   [`generate_main_effect_contrast()`](https://bbuchsbaum.github.io/fmrireg/reference/generate_interaction_contrast.md)
   : Fast factorial contrast generators
@@ -232,6 +235,9 @@
 
 - [`hrf_smoothing_kernel()`](https://bbuchsbaum.github.io/fmrireg/reference/hrf_smoothing_kernel.md)
   : Compute an HRF smoothing kernel
+
+- [`install_cli()`](https://bbuchsbaum.github.io/fmrireg/reference/install_cli.md)
+  : Install the fmrireg command wrapper
 
 - [`list_benchmark_datasets()`](https://bbuchsbaum.github.io/fmrireg/reference/list_benchmark_datasets.md)
   : List Available Benchmark Datasets
