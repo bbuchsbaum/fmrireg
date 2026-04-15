@@ -77,7 +77,7 @@ Suggests:
     withr
 Remotes:
     bbuchsbaum/fmristore,
-    bbuchsbaum/fmrigds,
+    bbuchsbaum/fmrigds@b131500b8e91e116c76f5d0df2a91cb7ecb4de14,
     anthonynorth/roxyglobals,
     bbuchsbaum/fmridataset,
     bbuchsbaum/fmrilss,
