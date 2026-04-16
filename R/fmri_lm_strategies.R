@@ -1,6 +1,22 @@
 # Shared Strategy Components for fMRI Linear Models
 # Common functions used by both runwise and chunkwise strategies
 
+#' Apply over independent work units with optional future-based parallelism
+#'
+#' @keywords internal
+#' @noRd
+.future_lapply_units <- function(X, FUN, parallel = FALSE) {
+  if (isTRUE(parallel) && requireNamespace("future.apply", quietly = TRUE)) {
+    future.apply::future_lapply(
+      X,
+      FUN,
+      future.seed = TRUE
+    )
+  } else {
+    lapply(X, FUN)
+  }
+}
+
 #' Extract Censor Vector from Dataset
 #'
 #' @description

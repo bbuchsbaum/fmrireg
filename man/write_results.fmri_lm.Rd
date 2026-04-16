@@ -14,6 +14,7 @@
   format = c("h5"),
   strategy = c("by_stat", "by_contrast"),
   save_betas = TRUE,
+  estimate_stats = NULL,
   contrasts = NULL,
   contrast_stats = c("beta", "tstat", "pval", "se"),
   overwrite = FALSE,
@@ -36,11 +37,17 @@
 
 \item{format}{Character vector specifying output formats. Supported values
 are \code{"h5"} (default BIDS/HDF5 export) and \code{"gds"} (fmrigds-compatible
-assays plus an \code{.rds} plan describing the dataset). You may request both.}
+assays plus an \code{.rds} plan describing the dataset), and \code{"nifti"}
+(4D NIfTI sets plus JSON/TSV manifests). You may request multiple formats.}
 
 \item{strategy}{Storage strategy: "by_stat" (group contrasts by statistic) or "by_contrast" (separate files)}
 
 \item{save_betas}{Logical. Save raw regressor betas (default: TRUE)}
+
+\item{estimate_stats}{Character vector of regressor-level statistics to save for
+NIfTI export. Supported values are \code{c("beta", "se", "tstat", "pval")}.
+When \code{NULL} (default), this is derived from \code{save_betas} so existing
+HDF5 behavior is preserved.}
 
 \item{contrasts}{Character vector of contrast names to save. NULL saves all contrasts}
 
@@ -56,8 +63,9 @@ assays plus an \code{.rds} plan describing the dataset). You may request both.}
 Invisible list of file paths created
 }
 \description{
-Exports statistical maps from an fmri_lm object to HDF5 files with BIDS-compliant
-naming and JSON metadata sidecars using the fmristore LabeledVolumeSet infrastructure.
+Exports statistical maps from an fmri_lm object using BIDS-style filenames,
+JSON sidecars, and format-specific storage backends including HDF5, GDS, and
+NIfTI image sets.
 }
 \examples{
 \dontrun{
@@ -67,6 +75,8 @@ write_results(fitted_model, subject = "01", task = "nback")
 # Save only specific contrasts and statistics  
 write_results(fitted_model, 
               subject = "01", task = "nback", space = "MNI152NLin2009cAsym",
+              format = "nifti",
+              estimate_stats = c("beta", "se", "tstat"),
               contrasts = c("FacesVsPlaces", "GoVsNoGo"),
               contrast_stats = c("beta", "tstat"))
 }

@@ -132,6 +132,104 @@ test_that("parallel processing maintains result consistency", {
   )
 })
 
+test_that("runwise future path matches sequential results", {
+  skip_if_not_installed("future")
+
+  old_plan <- future::plan()
+  on.exit(future::plan(old_plan), add = TRUE)
+  future::plan(future::sequential)
+
+  set.seed(1)
+  n_time <- 120
+  n_voxels <- 24
+  Y <- matrix(rnorm(n_time * n_voxels), n_time, n_voxels)
+
+  event_data <- data.frame(
+    onset = seq(5, 115, by = 10),
+    condition = factor(rep(c("A", "B"), 6)),
+    run = rep(1:2, each = 6)
+  )
+
+  dset <- fmridataset::matrix_dataset(
+    Y,
+    TR = 1,
+    run_length = c(60, 60),
+    event_table = event_data
+  )
+
+  for (use_fast_path in c(FALSE, TRUE)) {
+    fit_seq <- fmri_lm(
+      onset ~ hrf(condition),
+      block = ~ run,
+      dataset = dset,
+      strategy = "runwise",
+      use_fast_path = use_fast_path,
+      parallel_voxels = FALSE
+    )
+
+    fit_future <- fmri_lm(
+      onset ~ hrf(condition),
+      block = ~ run,
+      dataset = dset,
+      strategy = "runwise",
+      use_fast_path = use_fast_path,
+      parallel_voxels = TRUE
+    )
+
+    expect_equal(coef(fit_future), coef(fit_seq), tolerance = 1e-10)
+  }
+})
+
+test_that("chunkwise future path matches sequential results", {
+  skip_if_not_installed("future")
+
+  old_plan <- future::plan()
+  on.exit(future::plan(old_plan), add = TRUE)
+  future::plan(future::sequential)
+
+  set.seed(2)
+  n_time <- 120
+  n_voxels <- 24
+  Y <- matrix(rnorm(n_time * n_voxels), n_time, n_voxels)
+
+  event_data <- data.frame(
+    onset = seq(5, 115, by = 10),
+    condition = factor(rep(c("A", "B"), 6)),
+    run = rep(1:2, each = 6)
+  )
+
+  dset <- fmridataset::matrix_dataset(
+    Y,
+    TR = 1,
+    run_length = c(60, 60),
+    event_table = event_data
+  )
+
+  for (use_fast_path in c(FALSE, TRUE)) {
+    fit_seq <- fmri_lm(
+      onset ~ hrf(condition),
+      block = ~ run,
+      dataset = dset,
+      strategy = "chunkwise",
+      nchunks = 3,
+      use_fast_path = use_fast_path,
+      parallel_voxels = FALSE
+    )
+
+    fit_future <- fmri_lm(
+      onset ~ hrf(condition),
+      block = ~ run,
+      dataset = dset,
+      strategy = "chunkwise",
+      nchunks = 3,
+      use_fast_path = use_fast_path,
+      parallel_voxels = TRUE
+    )
+
+    expect_equal(coef(fit_future), coef(fit_seq), tolerance = 1e-10)
+  }
+})
+
 test_that("sparse matrix handling for efficiency", {
   # Design matrix with many zeros (e.g., event design)
   n <- 200

@@ -103,7 +103,8 @@ runwise_lm_impl <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
       sigma_fixed = sigma_fixed,
       verbose = verbose,
       progress = progress,
-      dataset = dset
+      dataset = dset,
+      parallel_units = parallel_voxels
     )
   } else {
     runwise_lm_slow(
@@ -115,7 +116,8 @@ runwise_lm_impl <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
       baseline_indices = baseline_indices,
       verbose = verbose,
       progress = progress,
-      dataset = dset
+      dataset = dset,
+      parallel_units = parallel_voxels
     )
   }
   
@@ -129,23 +131,21 @@ runwise_lm_impl <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
 runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist_weights,
                            event_indices, baseline_indices, phi_fixed = NULL,
                            sigma_fixed = NULL, verbose = FALSE, progress = FALSE,
-                           dataset = NULL) {
-  
-  cres <- vector("list", length(chunks))
+                           dataset = NULL, parallel_units = FALSE) {
   ar_order <- switch(cfg$ar$struct,
                      ar1 = 1L,
                      ar2 = 2L,
                      arp = cfg$ar$p,
                      iid = 0L)
-  
-  for (i in seq_along(chunks)) {
+
+  worker <- function(i) {
     ym <- chunks[[i]]
     if (verbose) message("Processing run (fast path) ", ym$chunk_num)
     
     # Skip empty runs
     if (ncol(ym$data) == 0 || nrow(ym$data) == 0) {
       warning(paste("Skipping empty run", ym$chunk_num))
-      next
+      return(NULL)
     }
     
     # Determine which processing function to use
@@ -196,7 +196,7 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
       ar_order = res$ar_order
     )
     
-    cres[[i]] <- list(
+    list(
       conres = conres,
       bstats = bstats,
       event_indices = event_indices,
@@ -207,10 +207,13 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
       sigma = sigma_vec,
       ar_coef = res$phi_hat %||% NULL
     )
-    
-    if (progress) cli::cli_progress_update()
   }
-  
+
+  cres <- .future_lapply_units(seq_along(chunks), worker, parallel = parallel_units)
+  if (progress) {
+    for (i in seq_along(cres)) cli::cli_progress_update()
+  }
+
   # Filter out NULL results from skipped empty runs
   Filter(Negate(is.null), cres)
 }
@@ -220,15 +223,15 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
 #' @noRd
 runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
                            event_indices, baseline_indices,
-                           verbose = FALSE, progress = FALSE, dataset = NULL) {
+                           verbose = FALSE, progress = FALSE, dataset = NULL,
+                           parallel_units = FALSE) {
 
   # Determine fitting function
   lmfun <- if (cfg$robust$type != FALSE) multiresponse_rlm else multiresponse_lm
 
-  cres <- vector("list", length(chunks))
   form <- get_formula(model)
 
-  for (i in seq_along(chunks)) {
+  worker <- function(i) {
     ym <- chunks[[i]]
     if (verbose) message("Processing run (slow path) ", ym$chunk_num)
 
@@ -266,7 +269,7 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     resvar <- rss / rdf
     sigma <- sqrt(resvar)
     
-    cres[[i]] <- list(
+    list(
       conres = ret$contrasts,
       bstats = ret$bstats,
       event_indices = event_indices,
@@ -277,10 +280,13 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
       sigma = sigma,
       ar_coef = NULL
     )
-    
-    if (progress) cli::cli_progress_update()
   }
-  
+
+  cres <- .future_lapply_units(seq_along(chunks), worker, parallel = parallel_units)
+  if (progress) {
+    for (i in seq_along(cres)) cli::cli_progress_update()
+  }
+
   cres
 }
 

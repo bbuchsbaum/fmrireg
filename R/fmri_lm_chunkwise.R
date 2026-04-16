@@ -22,7 +22,8 @@
 chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
                                       verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
                                       phi_fixed = NULL,
-                                      sigma_fixed = NULL, ...) {
+                                      sigma_fixed = NULL,
+                                      parallel_voxels = FALSE, ...) {
   dset <- x
   
   # Validate config
@@ -77,7 +78,8 @@ chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
       phi_fixed = phi_fixed,
       sigma_fixed = sigma_fixed,
       verbose = verbose,
-      progress = progress
+      progress = progress,
+      parallel_chunks = parallel_voxels
     )
   } else {
     # Slow path implementation
@@ -94,7 +96,8 @@ chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
       modmat = modmat,
       run_indices = run_indices,
       verbose = verbose,
-      progress = progress
+      progress = progress,
+      parallel_chunks = parallel_voxels
     )
   }
   
@@ -107,7 +110,8 @@ chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
 chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
                               event_indices, baseline_indices, Vu,
                               phi_fixed = NULL, sigma_fixed = NULL,
-                              verbose = FALSE, progress = FALSE) {
+                              verbose = FALSE, progress = FALSE,
+                              parallel_chunks = FALSE) {
   
   # Separate contrast types
   simple_conlist <- Filter(function(x) inherits(x, "contrast"), contrast_objects)
@@ -139,9 +143,7 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
     precomp <- prepare_chunkwise_matrices(model, dset, cfg, phi_fixed, sigma_fixed)
     
     # Process chunks with pre-computed matrices
-    cres <- vector("list", length(chunks))
-    
-    for (i in seq_along(chunks)) {
+    worker <- function(i) {
       ym <- chunks[[i]]
       if (verbose) message("Processing chunk (fast path) ", ym$chunk_num)
       
@@ -187,16 +189,18 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
         ar_order = precomp$ar_order
       )
       
-      cres[[i]] <- list(
+      list(
         bstats = bstats,
         contrasts = conres,
         event_indices = event_indices,
         baseline_indices = baseline_indices
       )
-      
-      if (progress) cli::cli_progress_update()
     }
-    
+
+    cres <- .future_lapply_units(seq_along(chunks), worker, parallel = parallel_chunks)
+    if (progress) {
+      for (i in seq_along(cres)) cli::cli_progress_update()
+    }
   } else {
     # Simple OLS case - no pre-computation needed
     ar_order <- 0L
@@ -215,9 +219,7 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
 
     proj <- .fast_preproject(modmat)
 
-    cres <- vector("list", length(chunks))
-
-    for (i in seq_along(chunks)) {
+    worker <- function(i) {
       ym <- chunks[[i]]
       if (verbose) message("Processing chunk (fast path) ", ym$chunk_num)
 
@@ -254,14 +256,17 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
         ar_order = ar_order
       )
       
-      cres[[i]] <- list(
+      list(
         bstats = bstats,
         contrasts = conres,
         event_indices = event_indices,
         baseline_indices = baseline_indices
       )
-      
-      if (progress) cli::cli_progress_update()
+    }
+
+    cres <- .future_lapply_units(seq_along(chunks), worker, parallel = parallel_chunks)
+    if (progress) {
+      for (i in seq_along(cres)) cli::cli_progress_update()
     }
   }
   
@@ -280,7 +285,8 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
 chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
                               tmats, vnames, event_indices, baseline_indices,
                               Vu, modmat, run_indices = NULL,
-                              verbose = FALSE, progress = FALSE) {
+                              verbose = FALSE, progress = FALSE,
+                              parallel_chunks = FALSE) {
   
   # Determine fitting function
   lmfun <- if (cfg$robust$type != FALSE) multiresponse_rlm else multiresponse_lm
@@ -316,9 +322,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     run_indices <- list(seq_len(nrow(modmat)))
   }
 
-  cres <- vector("list", length(chunks))
-  
-  for (i in seq_along(chunks)) {
+  worker <- function(i) {
     ym <- chunks[[i]]
     if (verbose) message("Processing chunk ", ym$chunk_num)
 
@@ -372,7 +376,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
         ar_order = ar_order
       )
 
-      cres[[i]] <- list(
+      list(
         bstats = bstats,
         contrasts = conres,
         event_indices = event_indices,
@@ -384,7 +388,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
 
       ret <- lmfun(form, data_env, contrast_objects, vnames, fcon = NULL, modmat = modmat)
 
-      cres[[i]] <- list(
+      list(
         bstats = ret$bstats,
         contrasts = ret$contrasts,
         event_indices = event_indices,
@@ -392,8 +396,11 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
         ar_coef = NULL
       )
     }
+  }
 
-    if (progress) cli::cli_progress_update()
+  cres <- .future_lapply_units(seq_along(chunks), worker, parallel = parallel_chunks)
+  if (progress) {
+    for (i in seq_along(cres)) cli::cli_progress_update()
   }
   
   # Unpack results

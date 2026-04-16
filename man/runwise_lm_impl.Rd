@@ -36,7 +36,8 @@ runwise_lm_impl(
 
 \item{sigma_fixed}{Optional fixed robust scale estimate.}
 
-\item{parallel_voxels}{Logical. If TRUE, process voxels in parallel using future.apply.}
+\item{parallel_voxels}{Logical. If TRUE, \code{future.apply} is used for
+supported parallel execution paths.}
 }
 \value{
 A list containing the combined results from runwise linear model analysis.

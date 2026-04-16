@@ -103,7 +103,10 @@ fmri_lm(formula, ...)
 
 \item{ar_voxelwise}{Logical. Estimate AR parameters voxel-wise (overrides \code{ar_options$voxelwise}).}
 
-\item{parallel_voxels}{Logical. Parallelize across voxels where supported.}
+\item{parallel_voxels}{Logical. Parallelize across independent work units where
+supported. This uses \code{future.apply} for voxelwise AR fits in
+\code{runwise}, and for outer run/chunk processing in \code{runwise} and
+\code{chunkwise}.}
 
 \item{cor_struct}{Character. Shorthand for \code{ar_options$struct} (e.g., "ar1", "ar2", "arp").}
 

@@ -31,8 +31,8 @@ fmri_lm_fit(
 
 \item{progress}{Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.}
 
-\item{parallel_voxels}{Logical. If TRUE, voxelwise AR processing within runs
-is parallelised using \code{future.apply}. Default is \code{FALSE}.}
+\item{parallel_voxels}{Logical. If TRUE, \code{future.apply} is used for
+supported parallel execution paths. Default is \code{FALSE}.}
 
 \item{...}{Additional arguments.}
 }

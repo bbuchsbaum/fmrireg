@@ -9,6 +9,7 @@ requireNamespace("fmridataset", quietly = TRUE)
 
 # Helper function to create minimal test dataset
 create_test_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50, sparse_mask = FALSE) {
+  skip_if_not_installed("fmridataset")
   set.seed(123)  # For reproducible tests
   
   # Create synthetic brain scans
@@ -50,6 +51,7 @@ create_test_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50, sparse_mas
 
 # Helper function to create minimal fmri_lm object
 create_test_fmri_lm <- function(sparse_mask = FALSE) {
+  skip_if_not_installed("fmridataset")
   set.seed(123)
   
   # Create test dataset
@@ -431,6 +433,93 @@ test_that("write_results.fmri_lm uses atomic write pattern", {
   # Files should exist in final location
   expect_true(file.exists(result$betas$h5))
   expect_true(file.exists(result$betas$json))
+})
+
+test_that("write_results.fmri_lm exports nifti regressor statistic sets", {
+  skip_if_not_installed("jsonlite")
+
+  mod <- create_test_fmri_lm()
+
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE))
+
+  result <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    space = "MNI152NLin2009cAsym",
+    format = "nifti",
+    estimate_stats = c("beta", "se", "tstat"),
+    save_betas = FALSE
+  )
+
+  expect_true("nifti" %in% names(result))
+  expect_true("regressors" %in% names(result$nifti))
+  expect_true(all(c("beta", "se", "tstat") %in% names(result$nifti$regressors)))
+
+  for (stat in c("beta", "se", "tstat")) {
+    expect_true(file.exists(result$nifti$regressors[[stat]]$nii))
+    expect_true(file.exists(result$nifti$regressors[[stat]]$json))
+    expect_true(file.exists(result$nifti$regressors[[stat]]$tsv))
+  }
+
+  beta_json <- jsonlite::read_json(result$nifti$regressors$beta$json)
+  expect_equal(beta_json$MapType, "regressor")
+  expect_equal(beta_json$StatisticType, "BETA")
+  expect_true(length(beta_json$RegressorOrder) > 0)
+})
+
+test_that("write_results.fmri_lm exports nifti contrast sets with manifests", {
+  skip_if_not_installed("jsonlite")
+
+  mod <- create_test_fmri_lm()
+
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE))
+
+  by_stat <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    format = "nifti",
+    strategy = "by_stat",
+    save_betas = FALSE,
+    contrast_stats = c("beta", "tstat")
+  )
+
+  expect_true("nifti" %in% names(by_stat))
+  expect_true("contrasts" %in% names(by_stat$nifti))
+  expect_true("beta" %in% names(by_stat$nifti$contrasts))
+  expect_true("tstat" %in% names(by_stat$nifti$contrasts))
+  expect_true(file.exists(by_stat$nifti$contrasts$beta$nii))
+  expect_true(file.exists(by_stat$nifti$contrasts$beta$json))
+  expect_true(file.exists(by_stat$nifti$contrasts$beta$tsv))
+
+  temp_dir2 <- tempfile()
+  dir.create(temp_dir2)
+  on.exit(unlink(temp_dir2, recursive = TRUE), add = TRUE)
+
+  by_contrast <- write_results(
+    mod,
+    path = temp_dir2,
+    subject = "01",
+    task = "test",
+    format = "nifti",
+    strategy = "by_contrast",
+    save_betas = FALSE,
+    contrast_stats = c("beta", "tstat")
+  )
+
+  expect_true("nifti" %in% names(by_contrast))
+  expect_true("contrasts" %in% names(by_contrast$nifti))
+  expect_true("A_vs_B" %in% names(by_contrast$nifti$contrasts))
+  expect_true(file.exists(by_contrast$nifti$contrasts$A_vs_B$nii))
+  expect_true(file.exists(by_contrast$nifti$contrasts$A_vs_B$json))
+  expect_true(file.exists(by_contrast$nifti$contrasts$A_vs_B$tsv))
 })
 
 test_that("write_results.fmri_lm works with minimal contrast set", {

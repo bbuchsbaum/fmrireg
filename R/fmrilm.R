@@ -516,7 +516,9 @@ fmri_lm <- function(formula, ...) {
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
 #' @param ar_voxelwise Logical. Estimate AR parameters voxel-wise (overrides \code{ar_options$voxelwise}).
-#' @param parallel_voxels Logical. Parallelize across voxels where supported.
+#' @param parallel_voxels Logical. Parallelize across independent work units where
+#'   supported. This uses `future.apply` for voxelwise AR fits in `runwise`,
+#'   and for outer run/chunk processing in `runwise` and `chunkwise`.
 #' @param cor_struct Character. Shorthand for \code{ar_options$struct} (e.g., "ar1", "ar2", "arp").
 #' @param cor_iter Integer. Shorthand for \code{ar_options$iter_gls}.
 #' @param cor_global Logical. Shorthand for \code{ar_options$global}.
@@ -763,8 +765,8 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
-#' @param parallel_voxels Logical. If TRUE, voxelwise AR processing within runs
-#'   is parallelised using `future.apply`. Default is \code{FALSE}.
+#' @param parallel_voxels Logical. If TRUE, `future.apply` is used for supported
+#'   parallel execution paths. Default is \code{FALSE}.
 #' @param ... Additional arguments.
 #' @return A fitted fMRI linear regression model with the specified fitting strategy.
 #' @keywords internal
@@ -871,7 +873,8 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                    nchunks, cfg = cfg, use_fast_path = use_fast_path,
                                    progress = progress,
                                    phi_fixed = phi_global,
-                                   sigma_fixed = sigma_global
+                                   sigma_fixed = sigma_global,
+                                   parallel_voxels = parallel_voxels
                                    )
                     }
                   })
@@ -1500,8 +1503,8 @@ chunkwise_lm.fmri_dataset_old <- function(x, model, contrast_objects, nchunks, c
 #' @param progress Logical. Display a progress bar for run processing. Default is \code{FALSE}.
 #' @param phi_fixed Optional fixed AR parameters.
 #' @param sigma_fixed Optional fixed robust scale estimate.
-#' @param parallel_voxels Logical. If TRUE, process voxels in parallel using
-#'   `future.apply`. Default is \code{FALSE}.
+#' @param parallel_voxels Logical. If TRUE, `future.apply` is used for
+#'   supported parallel execution paths. Default is \code{FALSE}.
 #' @return A list containing the combined results from runwise linear model analysis.
 #' @keywords internal
 #' @autoglobal
