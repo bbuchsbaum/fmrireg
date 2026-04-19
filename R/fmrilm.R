@@ -355,107 +355,25 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
   }
   
-  # Convert robust parameter to type for config
-  if (is.logical(robust)) {
-    robust_type <- if (robust) "huber" else FALSE
-  } else {
-    robust_type <- robust
-  }
-  
-  # Merge engine-supplied option overrides into the explicit arguments
-  if (!is.null(engine_robust_options)) {
-    if (is.null(robust_options)) {
-      robust_options <- engine_robust_options
-    } else {
-      robust_options <- utils::modifyList(robust_options, engine_robust_options)
-    }
-  }
+  # Build configuration using shared helper
+  cfg <- build_fmri_lm_cfg(
+    robust = robust,
+    robust_options = robust_options,
+    ar_options = ar_options,
+    engine_robust_options = engine_robust_options,
+    engine_ar_options = engine_ar_options,
+    engine_cfg = engine_cfg,
+    cor_struct = cor_struct,
+    cor_iter = cor_iter,
+    cor_global = cor_global,
+    ar1_exact_first = ar1_exact_first,
+    ar_p = ar_p,
+    ar_voxelwise = ar_voxelwise,
+    robust_psi = robust_psi,
+    robust_max_iter = robust_max_iter,
+    robust_scale_scope = robust_scale_scope
+  )
 
-  if (!is.null(engine_ar_options)) {
-    if (is.null(ar_options)) {
-      ar_options <- engine_ar_options
-    } else {
-      ar_options <- utils::modifyList(ar_options, engine_ar_options)
-    }
-  }
-
-  if (is.null(robust_options)) {
-    robust_options <- list()
-  }
-  if (!is.null(engine_robust_options)) {
-    robust_options <- utils::modifyList(robust_options, engine_robust_options)
-  }
-  if (!is.null(robust_type) && !("type" %in% names(robust_options))) {
-    robust_options$type <- robust_type
-  }
-  
-  # Merge individual robust parameters for backward compatibility
-  if (!is.null(robust_psi) && !("type" %in% names(robust_options))) {
-    robust_options$type <- robust_psi
-  }
-  if (!is.null(robust_max_iter) && !("max_iter" %in% names(robust_options))) {
-    robust_options$max_iter <- robust_max_iter
-  }
-  if (!is.null(robust_scale_scope) && !("scale_scope" %in% names(robust_options))) {
-    robust_options$scale_scope <- robust_scale_scope
-  }
-  
-  # Allow low-rank shorthand `order` to map into struct/p
-  if (!is.null(ar_options$order) && is.null(ar_options$struct)) {
-    ar_order_tmp <- as.integer(ar_options$order[1])
-    if (!is.finite(ar_order_tmp) || ar_order_tmp <= 0L) {
-      ar_options$struct <- "iid"
-    } else if (ar_order_tmp == 1L) {
-      ar_options$struct <- "ar1"
-    } else if (ar_order_tmp == 2L) {
-      ar_options$struct <- "ar2"
-    } else {
-      ar_options$struct <- "arp"
-      ar_options$p <- ar_options$p %||% ar_order_tmp
-    }
-  }
-  ar_options$order <- NULL
-  
-  if (is.null(ar_options)) {
-    ar_options <- list()
-  }
-  if (!is.null(engine_ar_options)) {
-    ar_options <- utils::modifyList(ar_options, engine_ar_options)
-  }
-
-  # Merge individual AR parameters for backward compatibility
-  if (!is.null(cor_struct) && !("struct" %in% names(ar_options))) {
-    ar_options$struct <- cor_struct
-  }
-  if (!is.null(cor_iter) && !("iter_gls" %in% names(ar_options))) {
-    ar_options$iter_gls <- cor_iter
-  }
-  if (!is.null(cor_global) && !("global" %in% names(ar_options))) {
-    ar_options$global <- cor_global
-  }
-  if (!is.null(ar1_exact_first) && !("exact_first" %in% names(ar_options))) {
-    ar_options$exact_first <- ar1_exact_first
-  }
-  if (!is.null(ar_p) && !("p" %in% names(ar_options))) {
-    ar_options$p <- ar_p
-  }
-  if (!("voxelwise" %in% names(ar_options))) {
-    ar_options$voxelwise <- ar_voxelwise
-  }
-  
-  # Create configuration object
-  cfg <- if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
-    engine_cfg
-  } else {
-    fmri_lm_control(robust_options = robust_options, ar_options = ar_options)
-  }
-
-  # If both were supplied, prefer the merged configuration but keep engine_cfg metadata
-  if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
-    cfg$robust <- engine_cfg$robust
-    cfg$ar <- utils::modifyList(cfg$ar, engine_cfg$ar)
-  }
-  
   model <- create_fmri_model(formula, block, baseline_model, dataset, durations = durations, drop_empty = drop_empty)
 
   if (!is.null(engine)) {
@@ -561,75 +479,24 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
   }
   assert_that(inherits(dataset, "fmri_dataset"))
 
-  if (is.logical(robust)) {
-    robust_type <- if (robust) "huber" else FALSE
-  } else {
-    robust_type <- robust
-  }
-
-  if (is.null(robust_options)) {
-    robust_options <- list()
-  }
-  if (!is.null(robust_type) && !("type" %in% names(robust_options))) {
-    robust_options$type <- robust_type
-  }
-  if (!is.null(robust_psi) && !("type" %in% names(robust_options))) {
-    robust_options$type <- robust_psi
-  }
-  if (!is.null(robust_max_iter) && !("max_iter" %in% names(robust_options))) {
-    robust_options$max_iter <- robust_max_iter
-  }
-  if (!is.null(robust_scale_scope) && !("scale_scope" %in% names(robust_options))) {
-    robust_options$scale_scope <- robust_scale_scope
-  }
-
-  if (is.null(ar_options)) {
-    ar_options <- list()
-  }
-  if (!is.null(cor_struct) && !("struct" %in% names(ar_options))) {
-    ar_options$struct <- cor_struct
-  }
-  if (!is.null(cor_iter) && !("iter_gls" %in% names(ar_options))) {
-    ar_options$iter_gls <- cor_iter
-  }
-  if (!is.null(cor_global) && !("global" %in% names(ar_options))) {
-    ar_options$global <- cor_global
-  }
-  if (!is.null(ar1_exact_first) && !("exact_first" %in% names(ar_options))) {
-    ar_options$exact_first <- ar1_exact_first
-  }
-  if (!is.null(ar_p) && !("p" %in% names(ar_options))) {
-    ar_options$p <- ar_p
-  }
-  if (!("voxelwise" %in% names(ar_options))) {
-    ar_options$voxelwise <- ar_voxelwise
-  }
-
-  if (!is.null(ar_options$order) && is.null(ar_options$struct)) {
-    ar_order_tmp <- as.integer(ar_options$order[1])
-    if (!is.finite(ar_order_tmp) || ar_order_tmp <= 0L) {
-      ar_options$struct <- "iid"
-    } else if (ar_order_tmp == 1L) {
-      ar_options$struct <- "ar1"
-    } else if (ar_order_tmp == 2L) {
-      ar_options$struct <- "ar2"
-    } else {
-      ar_options$struct <- "arp"
-      ar_options$p <- ar_options$p %||% ar_order_tmp
-    }
-  }
-  ar_options$order <- NULL
-
-  cfg <- if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
-    engine_cfg
-  } else {
-    fmri_lm_control(robust_options = robust_options, ar_options = ar_options)
-  }
-
-  if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
-    cfg$robust <- engine_cfg$robust
-    cfg$ar <- utils::modifyList(cfg$ar, engine_cfg$ar)
-  }
+  # Build configuration using shared helper
+  cfg <- build_fmri_lm_cfg(
+    robust = robust,
+    robust_options = robust_options,
+    ar_options = ar_options,
+    engine_robust_options = engine_robust_options,
+    engine_ar_options = engine_ar_options,
+    engine_cfg = engine_cfg,
+    cor_struct = cor_struct,
+    cor_iter = cor_iter,
+    cor_global = cor_global,
+    ar1_exact_first = ar1_exact_first,
+    ar_p = ar_p,
+    ar_voxelwise = ar_voxelwise,
+    robust_psi = robust_psi,
+    robust_max_iter = robust_max_iter,
+    robust_scale_scope = robust_scale_scope
+  )
 
   if (!is.null(engine)) {
     plugin <- get_engine(engine)

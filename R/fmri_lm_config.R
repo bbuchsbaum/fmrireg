@@ -114,3 +114,122 @@ get_ar_order <- function(cfg) {
          arp = as.integer(cfg$ar$p %||% 0L),
          0L)
 }
+
+#' Build fmri_lm config from mixed parameter sources
+#'
+#' Consolidates config building logic used by fmri_lm methods.
+#' Handles backward compatibility parameters and option merging.
+#'
+#' @param robust Logical or character ("huber", "bisquare")
+#' @param robust_options List of robust fitting options
+#' @param ar_options List of AR modeling options
+#' @param engine_robust_options Override robust options from engine
+#' @param engine_ar_options Override AR options from engine
+#' @param engine_cfg Pre-built config from engine
+#' @param cor_struct Shorthand for ar_options$struct
+#' @param cor_iter Shorthand for ar_options$iter_gls
+#' @param cor_global Shorthand for ar_options$global
+#' @param ar1_exact_first Shorthand for ar_options$exact_first
+#' @param ar_p Shorthand for ar_options$p
+#' @param ar_voxelwise Shorthand for ar_options$voxelwise
+#' @param robust_psi Shorthand for robust_options$type
+#' @param robust_max_iter Shorthand for robust_options$max_iter
+#' @param robust_scale_scope Shorthand for robust_options$scale_scope
+#' @return An fmri_lm_config object
+#' @keywords internal
+#' @noRd
+build_fmri_lm_cfg <- function(robust = FALSE, robust_options = NULL, ar_options = NULL,
+                               engine_robust_options = NULL, engine_ar_options = NULL,
+                               engine_cfg = NULL,
+                               cor_struct = NULL, cor_iter = NULL, cor_global = NULL,
+                               ar1_exact_first = NULL, ar_p = NULL, ar_voxelwise = FALSE,
+                               robust_psi = NULL, robust_max_iter = NULL,
+                               robust_scale_scope = NULL) {
+
+  # Convert robust parameter to type
+  robust_type <- if (is.logical(robust)) {
+    if (robust) "huber" else FALSE
+  } else {
+    robust
+  }
+
+  # Initialize options lists
+  if (is.null(robust_options)) robust_options <- list()
+  if (is.null(ar_options)) ar_options <- list()
+
+  # Merge engine-supplied options
+  if (!is.null(engine_robust_options)) {
+    robust_options <- utils::modifyList(robust_options, engine_robust_options)
+  }
+  if (!is.null(engine_ar_options)) {
+    ar_options <- utils::modifyList(ar_options, engine_ar_options)
+  }
+
+  # Apply robust type if not already set
+
+  if (!is.null(robust_type) && !("type" %in% names(robust_options))) {
+    robust_options$type <- robust_type
+  }
+
+  # Merge individual robust parameters (backward compatibility)
+  if (!is.null(robust_psi) && !("type" %in% names(robust_options))) {
+    robust_options$type <- robust_psi
+  }
+  if (!is.null(robust_max_iter) && !("max_iter" %in% names(robust_options))) {
+    robust_options$max_iter <- robust_max_iter
+  }
+  if (!is.null(robust_scale_scope) && !("scale_scope" %in% names(robust_options))) {
+    robust_options$scale_scope <- robust_scale_scope
+  }
+
+  # Handle low-rank shorthand order -> struct/p mapping
+  if (!is.null(ar_options$order) && is.null(ar_options$struct)) {
+    ar_order_tmp <- as.integer(ar_options$order[1])
+    if (!is.finite(ar_order_tmp) || ar_order_tmp <= 0L) {
+      ar_options$struct <- "iid"
+    } else if (ar_order_tmp == 1L) {
+      ar_options$struct <- "ar1"
+    } else if (ar_order_tmp == 2L) {
+      ar_options$struct <- "ar2"
+    } else {
+      ar_options$struct <- "arp"
+      ar_options$p <- ar_options$p %||% ar_order_tmp
+    }
+    ar_options$order <- NULL
+  }
+
+  # Merge individual AR parameters (backward compatibility)
+  if (!is.null(cor_struct) && !("struct" %in% names(ar_options))) {
+    ar_options$struct <- cor_struct
+  }
+  if (!is.null(cor_iter) && !("iter_gls" %in% names(ar_options))) {
+    ar_options$iter_gls <- cor_iter
+  }
+  if (!is.null(cor_global) && !("global" %in% names(ar_options))) {
+    ar_options$global <- cor_global
+  }
+  if (!is.null(ar1_exact_first) && !("exact_first" %in% names(ar_options))) {
+    ar_options$exact_first <- ar1_exact_first
+  }
+  if (!is.null(ar_p) && !("p" %in% names(ar_options))) {
+    ar_options$p <- ar_p
+  }
+  if (!("voxelwise" %in% names(ar_options))) {
+    ar_options$voxelwise <- ar_voxelwise
+  }
+
+  # Create config object
+  cfg <- if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
+    engine_cfg
+  } else {
+    fmri_lm_control(robust_options = robust_options, ar_options = ar_options)
+  }
+
+  # Merge with engine_cfg if both provided
+  if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
+    cfg$robust <- engine_cfg$robust
+    cfg$ar <- utils::modifyList(cfg$ar, engine_cfg$ar)
+  }
+
+  cfg
+}
