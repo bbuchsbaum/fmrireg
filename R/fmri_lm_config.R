@@ -91,3 +91,26 @@ print.fmri_lm_config <- function(x, ...) {
   str(list(robust = x$robust, ar = x$ar), give.attr = FALSE)
   invisible(x)
 }
+
+#' Get AR order from config
+#'
+#' Extracts the autoregressive order from an fmri_lm_config object.
+#' This centralizes the mapping from struct names to numeric order.
+#'
+#' @param cfg An `fmri_lm_config` object or a list with `$ar$struct` and optionally `$ar$p`
+#' @return Integer AR order (0L for iid/none, 1L for ar1, 2L for ar2, etc.)
+#' @keywords internal
+#' @noRd
+get_ar_order <- function(cfg) {
+
+  struct <- cfg$ar$struct %||% "iid"
+  switch(as.character(struct),
+         iid = 0L,
+         none = 0L,
+         ar1 = 1L,
+         ar2 = 2L,
+         ar3 = 3L,
+         ar4 = 4L,
+         arp = as.integer(cfg$ar$p %||% 0L),
+         0L)
+}

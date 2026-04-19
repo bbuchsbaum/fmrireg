@@ -337,12 +337,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
         sigma_vec <- rep(sigma_vec, ncol(betas))
       }
       dfres <- result$df_residual %||% proj_modmat$dfres
-      ar_order <- result$ar_order %||% switch(cfg$ar$struct,
-        ar1 = 1L,
-        ar2 = 2L,
-        arp = cfg$ar$p,
-        0L
-      )
+      ar_order <- result$ar_order %||% get_ar_order(cfg)
 
       bstats <- beta_stats_matrix(
         betas,

@@ -30,12 +30,8 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
   proj_run <- .fast_preproject(X_run)
   
   # AR modeling if needed
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
-  
+  ar_order <- get_ar_order(cfg)
+
   if (cfg$ar$struct != "iid") {
     # Estimate AR parameters
     phi_hat_run <- if (!is.null(phi_fixed)) {
@@ -199,12 +195,8 @@ process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma
   proj_run <- .fast_preproject(X_run)
   
   # AR order
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
-  
+  ar_order <- get_ar_order(cfg)
+
   # Step 1: Initial OLS for AR parameter estimation
   glm_ctx_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
   
@@ -362,12 +354,8 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
   run_row_inds <- lapply(run_chunks, `[[`, "row_ind")
   
   # AR order
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
-  
+  ar_order <- get_ar_order(cfg)
+
   ar_modeling <- cfg$ar$struct != "iid"
   
   # Pre-compute per-run information

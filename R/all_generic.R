@@ -10,23 +10,14 @@ with_package <- function(name) {
 
 
 
-# event_model generic is now imported from fmridesign
+# NOTE: Many generics are imported from specialized packages:
+# - fmridesign: event_model, term_matrices, contrast_weights, cells, conditions,
+#               convolve, is_continuous, is_categorical, event_table, event_terms,
+#               baseline_terms, term_indices, design_matrix, elements, onsets,
+#               durations, split_by_block, Fcontrasts, split_onsets
+# - fmridataset: get_data, get_data_matrix, get_mask, data_chunks
+# - fmrihrf: evaluate, global_onsets, nbasis, samples, blockids, blocklens
 # See fmridesign-imports.R for re-exports
-
-
-
-#' get_data
-#' 
-#' @param x the dataset
-#' @param ... extra args
-#' @keywords internal
-# get_data <- function(x, ...) UseMethod("get_data") # Now imported from fmridataset
-
-
-# get_data_matrix <- function(x, ...) UseMethod("get_data_matrix") # Now imported from fmridataset
-
-
-# get_mask <- function(x, ...) UseMethod("get_mask") # Now imported from fmridataset
 
 
 #' Retrieve the formula underlying a model object
@@ -38,11 +29,6 @@ with_package <- function(name) {
 #' @return A formula.
 #' @export
 get_formula <- function(x, ...) UseMethod("get_formula")
-
-
-# term_matrices generic is now imported from fmridesign
-# term_matrices <- function(x, ...) UseMethod("term_matrices")
-
 
 
 #' design_env
@@ -125,11 +111,6 @@ tidy <- function(x, ...) UseMethod("tidy")
 #'   name = "A_vs_B"
 #' )
 #' 
-# contrast_weights generic is now imported from fmridesign
-# See fmridesign-imports.R for re-exports
-
-
-
 
 
 #' The experimental cells of a design
@@ -183,11 +164,6 @@ tidy <- function(x, ...) UseMethod("tidy")
 #' @export
 #' @family cells
 #' @seealso [event_term()], [event_model()]
-# cells generic is now imported from fmridesign
-# cells <- function(x, ...) UseMethod("cells")
-
-
-
 #' Conditions
 #' 
 #' Return the set of condition labels associated with a model term. Conditions represent 
@@ -236,11 +212,6 @@ tidy <- function(x, ...) UseMethod("tidy")
 #' @export
 #' @family conditions
 #' @seealso [cells()], [event_model()], [hrf()]
-# conditions generic is now imported from fmridesign
-# conditions <- function(x, ...) UseMethod("conditions")
-
-
-
 #' Convolve a term with a hemodynamic response function
 #'
 #' @description
@@ -288,18 +259,6 @@ tidy <- function(x, ...) UseMethod("tidy")
 #' @export
 #' @family convolution
 #' @seealso [HRF_SPMG1()], [event_term()], [sampling_frame()]
-# convolve generic is now imported from fmridesign
-# convolve <- function(x, hrf, sampling_frame, ...) UseMethod("convolve")
-
-
-# is_continuous generic is now imported from fmridesign
-
-
-
-# is_categorical generic is now imported from fmridesign
-
-
-
 #' columns
 #' 
 #' return the column labels associated with the elements of a term.
@@ -347,29 +306,12 @@ columns.event_model <- function(x, ...) {
 
 
 
-# event_table generic is now imported from fmridesign
-
-
-
-# event_terms generic is now imported from fmridesign
-
-
-
-# baseline_terms generic is now imported from fmridesign
-
-
-# term_indices generic is now imported from fmridesign
 # The event_model method was moved to fmridesign
 
 
 
 
 
-# design_matrix generic is now imported from fmridesign
-# design_matrix <- function(x, ...) { UseMethod("design_matrix") }
-
-# elements generic is now imported from fmridesign
-# elements <- function(x, ...) UseMethod("elements")
 
 
 #' correlation_map
@@ -439,11 +381,6 @@ correlation_map <- function(x, ...) {
   UseMethod("correlation_map")
 }
 
-
-
-# evaluate is now imported from fmrihrf
-
-
 #' fitted_hrf
 #'
 #' This generic function computes the fitted hemodynamic response function (HRF) for an object.
@@ -498,36 +435,12 @@ fitted_hrf <- function(x, sample_at, ...) UseMethod("fitted_hrf")
 
 
 
-# global_onsets <- function(x, onsets, ...) UseMethod("global_onsets") # Now imported from fmrihrf
-
-
-
-# nbasis generic is now imported from fmrihrf package
-# See fmrihrf-imports.R for the import statement
 
 
 
 
 
- 
-# data_chunks <- function(x, nchunks, ...) UseMethod("data_chunks") # Now imported from fmridataset
 
-
-# onsets generic is now imported from fmridesign
-# onsets <- function(x) UseMethod("onsets")
-
-
-# durations generic is now imported from fmridesign
-# durations <- function(x) UseMethod("durations")
-
-# samples <- function(x, ...) UseMethod("samples") # Now imported from fmrihrf
-
-# split_by_block generic is now imported from fmridesign
-# split_by_block <- function(x, ...) UseMethod("split_by_block")
-
-# blockids is now imported from fmrihrf
-
-# blocklens is now imported from fmrihrf
 
 #' Generate F-contrasts for a model term
 #' 
@@ -585,8 +498,6 @@ fitted_hrf <- function(x, sample_at, ...) UseMethod("fitted_hrf")
 #'   sampling_frame = sframe
 #' )
 #' 
-# Fcontrasts generic is now imported from fmridesign
-
 #' construct
 #' 
 #' construct a term given a an hrf spec and model specification
@@ -659,8 +570,6 @@ construct <- function(x, model_spec,...) UseMethod("construct")
 #' @family timing_functions
 #' @seealso [event_term()], [sampling_frame()], [global_onsets()]
 #' @export
-# split_onsets is now imported from fmridesign
-
 
 
 #' estimate contrast
@@ -1002,7 +911,6 @@ estimate_betas <- function(x, ...) UseMethod("estimate_betas")
 #'     \item{rotate_x_text}{Logical; if TRUE, rotate x-axis labels by 45 degrees}
 #'   }
 #' @return A ggplot2 object containing the design matrix heatmap
-# design_map generic moved to fmridesign package
 
 
 

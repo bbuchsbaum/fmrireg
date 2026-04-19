@@ -724,10 +724,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   phi_global <- NULL
   sigma_global <- NULL
   if (cfg$ar$global && cfg$ar$struct != "iid") {
-    ar_order <- switch(cfg$ar$struct,
-                       ar1 = 1L,
-                       ar2 = 2L,
-                       arp = cfg$ar$p)
+    ar_order <- get_ar_order(cfg)
 
     chunk_iter <- exec_strategy("runwise")(dataset)
     run_chunks <- collect_chunks(chunk_iter)
@@ -1385,12 +1382,8 @@ chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks
       if (cfg$robust$type != FALSE) {
           # Combined AR + Robust path for chunkwise
           ar_modeling <- cfg$ar$struct != "iid"
-          ar_order <- switch(cfg$ar$struct,
-                             ar1 = 1L,
-                             ar2 = 2L,
-                             arp = cfg$ar$p,
-                             iid = 0L)
-          
+          ar_order <- get_ar_order(cfg)
+
           if (ar_modeling) {
               message("Using fast path with AR + robust weighting...")
           } else {
@@ -1637,11 +1630,7 @@ chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks
       modmat_orig <- model.matrix(as.formula(form), data_env)
 
       ar_modeling <- cfg$ar$struct != "iid"
-      ar_order <- switch(cfg$ar$struct,
-                         ar1 = 1L,
-                         ar2 = 2L,
-                         arp = cfg$ar$p,
-                         iid = 0L)
+      ar_order <- get_ar_order(cfg)
 
       chunk_iter <- exec_strategy("runwise")(dset)
       run_chunks <- collect_chunks(chunk_iter)
@@ -1869,11 +1858,7 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
           }
       } else if (cfg$ar$voxelwise && cfg$ar$struct != "iid") {
           # Voxelwise AR path using modular solver
-          ar_order <- switch(cfg$ar$struct,
-                             ar1 = 1L,
-                             ar2 = 2L,
-                             arp = cfg$ar$p,
-                             iid = 0L)
+          ar_order <- get_ar_order(cfg)
 
           simple_conlist <- Filter(function(x) inherits(x, "contrast"), contrast_objects)
           fconlist <- Filter(function(x) inherits(x, "Fcontrast"), contrast_objects)
@@ -2045,12 +2030,8 @@ runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
       message("Using fast path for runwise LM...")
 
       ar_modeling <- cfg$ar$struct != "iid"
-      ar_order <- switch(cfg$ar$struct,
-                         ar1 = 1L,
-                         ar2 = 2L,
-                         arp = cfg$ar$p,
-                         iid = 0L)
-      
+      ar_order <- get_ar_order(cfg)
+
       # .export needed? conlist, fcon, model should be available.
       # Add functions from this package? .packages = c("dplyr", "purrr", "fmrireg")? Or rely on namespace?
       cres <- vector("list", length(chunks))

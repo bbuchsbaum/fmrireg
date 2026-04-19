@@ -129,12 +129,8 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
                            sigma_fixed = NULL, verbose = FALSE, progress = FALSE) {
   
   cres <- vector("list", length(chunks))
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
-  
+  ar_order <- get_ar_order(cfg)
+
   for (i in seq_along(chunks)) {
     ym <- chunks[[i]]
     if (verbose) message("Processing run (fast path) ", ym$chunk_num)
@@ -264,12 +260,8 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
                                 verbose = FALSE, progress = FALSE, 
                                 parallel_voxels = FALSE) {
   
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
-  
+  ar_order <- get_ar_order(cfg)
+
   if (verbose) message("Using voxelwise AR(", ar_order, ") modeling...")
   
   cres <- vector("list", length(chunks))
