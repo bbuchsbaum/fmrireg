@@ -154,49 +154,37 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
                                  simple_conlist_weights, fconlist_weights)
     }
     
-    # Calculate statistics
-    actual_vnames <- colnames(res$X_final)
-    sigma_vec <- sqrt(res$sigma2)
-    
     # Extract robust weights if available
     robust_weights_for_stats <- if (cfg$robust$type != FALSE && !is.null(res$robust_weights)) {
       res$robust_weights
     } else {
       NULL
     }
-    
-    # Beta statistics
-    bstats <- beta_stats_matrix(
-      res$betas, 
-      res$XtXinv, 
-      sigma_vec,
-      res$dfres, 
-      actual_vnames,
+
+    # Compute chunk statistics using shared helper
+    chunk_stats <- compute_chunk_stats(
+      betas = res$betas,
+      sigma2 = res$sigma2,
+      XtXinv = res$XtXinv,
+      dfres = res$dfres,
+      varnames = colnames(res$X_final),
+      simple_conlist_weights = simple_conlist_weights,
+      fconlist_weights = fconlist_weights,
+      event_indices = event_indices,
+      baseline_indices = baseline_indices,
       robust_weights = robust_weights_for_stats,
       ar_order = res$ar_order
     )
-    
-    # Contrast statistics
-    conres <- fit_lm_contrasts_fast(
-      res$betas, 
-      res$sigma2, 
-      res$XtXinv,
-      simple_conlist_weights, 
-      fconlist_weights,
-      res$dfres,
-      robust_weights = robust_weights_for_stats,
-      ar_order = res$ar_order
-    )
-    
+
     cres[[i]] <- list(
-      conres = conres,
-      bstats = bstats,
+      conres = chunk_stats$contrasts,
+      bstats = chunk_stats$bstats,
       event_indices = event_indices,
       baseline_indices = baseline_indices,
       rss = res$rss,
       rdf = res$dfres,
       resvar = res$sigma2,
-      sigma = sigma_vec
+      sigma = sqrt(res$sigma2)
     )
     
     if (progress) cli::cli_progress_update()
@@ -518,20 +506,10 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu) {
       resvar = resvar
     )
   } else {
-    # Single run - need to combine contrasts into single tibble format
-    # The conres_list[[1]] is a list of contrast tibbles, but we need a single tibble
-    single_contrasts <- conres_list[[1]]
-    
-    if (length(single_contrasts) > 0) {
-      # Combine the list of contrast tibbles into a single tibble
-      combined_contrasts <- dplyr::bind_rows(single_contrasts)
-    } else {
-      # Empty contrasts
-      combined_contrasts <- tibble::tibble()
-    }
-    
+    # Single run - return same structure as multi-run for consistency
+    # conres_list[[1]] is already a list of contrast tibbles
     list(
-      contrasts = combined_contrasts,  # Single tibble with all contrasts
+      contrasts = conres_list[[1]],  # List of contrast tibbles (same as meta_contrasts)
       betas = bstats_list[[1]],
       event_indices = event_indices,
       baseline_indices = baseline_indices,

@@ -165,34 +165,19 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
         NULL
       }
       
-      # Beta statistics
-      bstats <- beta_stats_matrix(
-        chunk_res$betas,
-        precomp$proj_global$XtXinv,
-        sigma_vec,
-        precomp$proj_global$dfres,
-        actual_vnames,
-        robust_weights = robust_weights_for_stats,
-        ar_order = precomp$ar_order
-      )
-      
-      # Contrast statistics
-      conres <- fit_lm_contrasts_fast(
-        chunk_res$betas,
-        chunk_res$sigma2,
-        precomp$proj_global$XtXinv,
-        simple_conlist_weights,
-        fconlist_weights,
-        precomp$proj_global$dfres,
-        robust_weights = robust_weights_for_stats,
-        ar_order = precomp$ar_order
-      )
-      
-      cres[[i]] <- list(
-        bstats = bstats,
-        contrasts = conres,
+      # Compute chunk statistics using shared helper
+      cres[[i]] <- compute_chunk_stats(
+        betas = chunk_res$betas,
+        sigma2 = chunk_res$sigma2,
+        XtXinv = precomp$proj_global$XtXinv,
+        dfres = precomp$proj_global$dfres,
+        varnames = actual_vnames,
+        simple_conlist_weights = simple_conlist_weights,
+        fconlist_weights = fconlist_weights,
         event_indices = event_indices,
-        baseline_indices = baseline_indices
+        baseline_indices = baseline_indices,
+        robust_weights = robust_weights_for_stats,
+        ar_order = precomp$ar_order
       )
       
       if (progress) cli::cli_progress_update()
@@ -220,38 +205,19 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
       glm_ctx_chunk <- glm_context(X = modmat, Y = Ymat, proj = proj)
       res <- solve_glm_core(glm_ctx_chunk)
       
-      # Calculate statistics
-      actual_vnames <- colnames(modmat)
-      sigma_vec <- sqrt(res$sigma2)
-      
-      # Beta statistics
-      bstats <- beta_stats_matrix(
-        res$betas,
-        proj$XtXinv,
-        sigma_vec,
-        proj$dfres,
-        actual_vnames,
-        robust_weights = NULL,
-        ar_order = ar_order
-      )
-      
-      # Contrast statistics
-      conres <- fit_lm_contrasts_fast(
-        res$betas,
-        res$sigma2,
-        proj$XtXinv,
-        simple_conlist_weights,
-        fconlist_weights,
-        proj$dfres,
-        robust_weights = NULL,
-        ar_order = ar_order
-      )
-      
-      cres[[i]] <- list(
-        bstats = bstats,
-        contrasts = conres,
+      # Compute chunk statistics using shared helper
+      cres[[i]] <- compute_chunk_stats(
+        betas = res$betas,
+        sigma2 = res$sigma2,
+        XtXinv = proj$XtXinv,
+        dfres = proj$dfres,
+        varnames = colnames(modmat),
+        simple_conlist_weights = simple_conlist_weights,
+        fconlist_weights = fconlist_weights,
         event_indices = event_indices,
-        baseline_indices = baseline_indices
+        baseline_indices = baseline_indices,
+        robust_weights = NULL,
+        ar_order = ar_order
       )
       
       if (progress) cli::cli_progress_update()
@@ -339,30 +305,24 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
       dfres <- result$df_residual %||% proj_modmat$dfres
       ar_order <- result$ar_order %||% get_ar_order(cfg)
 
-      bstats <- beta_stats_matrix(
-        betas,
-        XtXinv,
-        sigma_vec,
-        dfres,
-        colnames(modmat),
-        robust_weights = result$robust_weights,
-        ar_order = ar_order
-      )
-
-      conres <- fit_lm_contrasts_fast(
-        betas,
-        sigma_vec^2,
-        XtXinv,
-        simple_conlist_weights,
-        fconlist_weights,
-        dfres,
+      # Compute chunk statistics using shared helper
+      chunk_stats <- compute_chunk_stats(
+        betas = betas,
+        sigma2 = sigma_vec^2,
+        XtXinv = XtXinv,
+        dfres = dfres,
+        varnames = colnames(modmat),
+        simple_conlist_weights = simple_conlist_weights,
+        fconlist_weights = fconlist_weights,
+        event_indices = event_indices,
+        baseline_indices = baseline_indices,
         robust_weights = result$robust_weights,
         ar_order = ar_order
       )
 
       cres[[i]] <- list(
-        bstats = bstats,
-        contrasts = conres,
+        bstats = chunk_stats$bstats,
+        contrasts = chunk_stats$contrasts,
         event_indices = event_indices,
         baseline_indices = baseline_indices,
         ar_coef = result$ar_coef %||% result$phi_hat

@@ -1,12 +1,119 @@
 # Internal Utilities for fMRI Linear Models
 # Low-level utilities used throughout the fmri_lm implementation
 
+# ============================================================================
+# Default Constants
+# ============================================================================
+
+#' Default chunk sizes for different operations
+#' @keywords internal
+#' @noRd
+.DEFAULT_CHUNK_SIZE_META <- 10000L
+.DEFAULT_CHUNK_SIZE_CONTRAST <- 100L
+.DEFAULT_BLOCK_SIZE_BOOTSTRAP <- 30L
+
+#' Numerical tolerances
+#' @keywords internal
+#' @noRd
+.SVD_TOLERANCE_SCALE <- 1.0
+.MIN_VARIANCE_THRESHOLD <- 1e-10
+
+# ============================================================================
+# Null/Empty Handling Utilities
+# ============================================================================
+
+#' Check if indices are empty (NULL or length 0)
+#' @keywords internal
+#' @noRd
+is_empty_indices <- function(x) {
+  is.null(x) || length(x) == 0L
+}
+
+#' Ensure indices are an integer vector (convert NULL to integer(0))
+#' @keywords internal
+#' @noRd
+as_indices <- function(x) {
+  if (is.null(x)) integer(0L) else as.integer(x)
+}
+
+#' Ensure value is a matrix
+#' @keywords internal
+#' @noRd
+ensure_matrix <- function(x) {
+  if (is.matrix(x)) x else as.matrix(x)
+}
+
+#' Ensure value is a numeric vector
+#' @keywords internal
+#' @noRd
+ensure_numeric <- function(x) {
+  if (is.numeric(x)) x else as.numeric(x)
+}
+
+# ============================================================================
+# Core Utilities
+# ============================================================================
 
 #' Check if object is a formula
 #' @keywords internal
 #' @noRd
 is.formula <- function(x) {
   inherits(x, "formula")
+}
+
+#' Compute chunk statistics (beta stats + contrasts)
+#'
+#' Unified helper for computing statistics from GLM results.
+#' Used by both runwise and chunkwise processing paths.
+#'
+#' @param betas p x V matrix of coefficients
+#' @param sigma2 V-vector of residual variances
+#' @param XtXinv p x p matrix (X'X)^-1
+#' @param dfres Residual degrees of freedom
+#' @param varnames p-vector of coefficient names
+#' @param simple_conlist_weights Named list of simple contrast weight vectors
+#' @param fconlist_weights Named list of F-contrast weight matrices
+#' @param event_indices Indices of event-related parameters
+#' @param baseline_indices Indices of baseline parameters
+#' @param robust_weights Optional vector of robust weights
+#' @param ar_order Order of AR model (0 if none)
+#' @return List with bstats, contrasts, event_indices, baseline_indices
+#' @keywords internal
+#' @noRd
+compute_chunk_stats <- function(betas, sigma2, XtXinv, dfres, varnames,
+                                 simple_conlist_weights, fconlist_weights,
+                                 event_indices, baseline_indices,
+                                 robust_weights = NULL, ar_order = 0L) {
+
+  sigma_vec <- sqrt(sigma2)
+
+  bstats <- beta_stats_matrix(
+    betas,
+    XtXinv,
+    sigma_vec,
+    dfres,
+    varnames,
+    robust_weights = robust_weights,
+    ar_order = ar_order
+  )
+
+  conres <- fit_lm_contrasts_fast(
+    betas,
+    sigma2,
+    XtXinv,
+    simple_conlist_weights,
+    fconlist_weights,
+    dfres,
+    robust_weights = robust_weights,
+    ar_order = ar_order
+  )
+
+  list(
+    bstats = bstats,
+    contrasts = conres,
+    event_indices = event_indices,
+    baseline_indices = baseline_indices
+  )
 }
 
 #' Fast Pre-projection of Design Matrix

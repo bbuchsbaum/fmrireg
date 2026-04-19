@@ -1,6 +1,48 @@
 # Group Data Structures for Meta-Analysis
 # Generic constructor and format dispatch for group-level fMRI data
 
+# ============================================================================
+# Validation Helpers
+# ============================================================================
+
+#' Check for required fields in a group_data object
+#'
+#' @param x Object to validate
+#' @param required_fields Character vector of required field names
+#' @param context Optional context string for error messages
+#' @return Invisible TRUE if valid, error otherwise
+#' @keywords internal
+#' @noRd
+check_required_fields <- function(x, required_fields, context = NULL) {
+  missing_fields <- setdiff(required_fields, names(x))
+  if (length(missing_fields) > 0) {
+    prefix <- if (!is.null(context)) paste0(context, ": ") else ""
+    stop(prefix, "Missing required fields: ",
+         paste(missing_fields, collapse = ", "), call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+#' Validate that a field is of expected type
+#'
+#' @param x Value to check
+#' @param field_name Name of field (for error message)
+#' @param expected_type Character string describing expected type
+#' @param check_fn Function that returns TRUE if type is valid
+#' @return Invisible TRUE if valid, error otherwise
+#' @keywords internal
+#' @noRd
+check_field_type <- function(x, field_name, expected_type, check_fn) {
+  if (!check_fn(x)) {
+    stop("'", field_name, "' must be ", expected_type, call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+# ============================================================================
+# Main Constructor
+# ============================================================================
+
 #' Create Group Dataset for Meta-Analysis
 #'
 #' Generic constructor that creates a group dataset from various input formats
@@ -101,19 +143,13 @@ validate_group_data <- function(x) {
   if (!inherits(x, "group_data")) {
     stop("Object must be of class 'group_data'", call. = FALSE)
   }
-  
-  # Check required fields
-  required_fields <- c("format", "subjects")
-  missing_fields <- setdiff(required_fields, names(x))
-  if (length(missing_fields) > 0) {
-    stop("Missing required fields: ", paste(missing_fields, collapse = ", "), 
-         call. = FALSE)
-  }
-  
-  # Validate subjects
-  if (!is.character(x$subjects) && !is.factor(x$subjects)) {
-    stop("'subjects' must be a character vector or factor", call. = FALSE)
-  }
+
+  # Check required fields using helper
+  check_required_fields(x, c("format", "subjects"))
+
+  # Validate subjects type
+  check_field_type(x$subjects, "subjects", "a character vector or factor",
+                   function(v) is.character(v) || is.factor(v))
   
   # Format-specific validation
   if (inherits(x, "group_data_h5")) {

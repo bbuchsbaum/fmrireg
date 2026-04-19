@@ -345,23 +345,15 @@ get_contrasts <- function(gd) {
 #' @keywords internal
 #' @noRd
 validate_group_data_csv <- function(x) {
-  # Check for required fields
-  required_fields <- c("data", "effect_cols", "subject_col", "subjects", "format")
-  missing_fields <- setdiff(required_fields, names(x))
-  if (length(missing_fields) > 0) {
-    stop("Missing required fields for group_data_csv: ",
-         paste(missing_fields, collapse = ", "), call. = FALSE)
-  }
-  
-  # Validate data is a data frame
-  if (!is.data.frame(x$data)) {
-    stop("'data' must be a data frame", call. = FALSE)
-  }
-  
-  # Validate effect_cols structure
-  if (!is.list(x$effect_cols) || is.null(names(x$effect_cols))) {
-    stop("'effect_cols' must be a named list", call. = FALSE)
-  }
-  
+  # Check for required fields using helper
+  check_required_fields(x,
+    c("data", "effect_cols", "subject_col", "subjects", "format"),
+    context = "group_data_csv")
+
+  # Validate field types
+  check_field_type(x$data, "data", "a data frame", is.data.frame)
+  check_field_type(x$effect_cols, "effect_cols", "a named list",
+                   function(v) is.list(v) && !is.null(names(v)))
+
   invisible(TRUE)
 }

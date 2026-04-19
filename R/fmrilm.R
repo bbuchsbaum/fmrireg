@@ -1588,29 +1588,27 @@ chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks
               # Calculate statistics
               actual_vnames <- colnames(X_global_final_w)
               
-              # For sigma, we need to map run-specific sigmas to voxels
-              # This is a simplification - in practice, we might need per-run statistics
-              sigma_vec <- sqrt(res$sigma2)
-              
-              bstats <- beta_stats_matrix(res$betas, 
-                                         proj_global_final_w$XtXinv, 
-                                         sigma_vec,
-                                         proj_global_final_w$dfres, 
-                                         actual_vnames)
-              
-              contrasts <- fit_lm_contrasts_fast(res$betas, 
-                                               res$sigma2, 
-                                               proj_global_final_w$XtXinv,
-                                               simple_conlist_weights, 
-                                               fconlist_weights, 
-                                               proj_global_final_w$dfres)
-              
-              cres[[i]] <- list(bstats = bstats,
-                               contrasts = contrasts,
-                               rss = res$rss,
-                               rdf = proj_global_robustly_weighted$dfres,
-                               sigma = sigma_vec,
-                               ar_coef = NULL)
+              # Compute chunk statistics using shared helper
+              chunk_stats <- compute_chunk_stats(
+                betas = res$betas,
+                sigma2 = res$sigma2,
+                XtXinv = proj_global_final_w$XtXinv,
+                dfres = proj_global_final_w$dfres,
+                varnames = actual_vnames,
+                simple_conlist_weights = simple_conlist_weights,
+                fconlist_weights = fconlist_weights,
+                event_indices = event_indices,
+                baseline_indices = baseline_indices
+              )
+
+              cres[[i]] <- list(
+                bstats = chunk_stats$bstats,
+                contrasts = chunk_stats$contrasts,
+                rss = res$rss,
+                rdf = proj_global_robustly_weighted$dfres,
+                sigma = sqrt(res$sigma2),
+                ar_coef = NULL
+              )
                                
               if (progress) cli::cli_progress_update(id = pb)
           }
@@ -1703,21 +1701,28 @@ chunkwise_lm.fmri_dataset_old <- function(dset, model, contrast_objects, nchunks
           glm_ctx_chunk <- glm_context(X = modmat, Y = Ymat, proj = proj)
           res <- solve_glm_core(glm_ctx_chunk)
 
-          actual_vnames <- colnames(modmat)
-          sigma_vec <- sqrt(res$sigma2)
-          bstats <- beta_stats_matrix(res$betas, proj$XtXinv, sigma_vec, proj$dfres, actual_vnames,
-                                       robust_weights = NULL, ar_order = ar_order)
+          # Compute chunk statistics using shared helper
+          chunk_stats <- compute_chunk_stats(
+            betas = res$betas,
+            sigma2 = res$sigma2,
+            XtXinv = proj$XtXinv,
+            dfres = proj$dfres,
+            varnames = colnames(modmat),
+            simple_conlist_weights = simple_conlist_weights,
+            fconlist_weights = fconlist_weights,
+            event_indices = event_indices,
+            baseline_indices = baseline_indices,
+            ar_order = ar_order
+          )
 
-          contrasts <- fit_lm_contrasts_fast(res$betas, res$sigma2, proj$XtXinv,
-                                             simple_conlist_weights, fconlist_weights, proj$dfres,
-                                             robust_weights = NULL, ar_order = ar_order)
-
-          cres[[i]] <- list(bstats = bstats,
-                            contrasts = contrasts,
-                            rss = res$rss,
-                            rdf = proj$dfres,
-                            sigma = sigma_vec,
-                            ar_coef = NULL)
+          cres[[i]] <- list(
+            bstats = chunk_stats$bstats,
+            contrasts = chunk_stats$contrasts,
+            rss = res$rss,
+            rdf = proj$dfres,
+            sigma = sqrt(res$sigma2),
+            ar_coef = NULL
+          )
           if (progress) cli::cli_progress_update(id = pb)
       }
       # -------- End New Fast Path --------

@@ -18,17 +18,16 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
   }
   
   # Ensure ran_ind has proper values
-  if (length(ran_ind) == 0) {
+  if (is_empty_indices(ran_ind)) {
     stop("No random effect indices specified")
   }
-  
-  # Handle case when fixed_ind is NULL
-  if (is.null(fixed_ind)) {
-    fixed_ind <- integer(0)  # Empty integer vector
-  }
-  
+
+  # Normalize fixed_ind to integer vector
+  fixed_ind <- as_indices(fixed_ind)
+
   # Check if indices are out of bounds
-  if (max(c(ran_ind, fixed_ind)) > ncol(X)) {
+  all_indices <- c(ran_ind, fixed_ind)
+  if (length(all_indices) > 0 && max(all_indices) > ncol(X)) {
     stop("Index out of bounds: indices exceed number of columns in X")
   }
   
@@ -42,7 +41,7 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
     with_package("rrBLUP")
     
     # If fixed_ind is empty, use a minimal X matrix (intercept only)
-    X_fixed <- if (length(fixed_ind) == 0) {
+    X_fixed <- if (is_empty_indices(fixed_ind)) {
       matrix(1, nrow = nrow(X), ncol = 1)
     } else {
       X[, fixed_ind, drop = FALSE]
@@ -55,7 +54,7 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
                                #bounds = c(1e-07, 0.5))
     
     # Return results, handling the case where fixed_ind is empty
-    if (length(fixed_ind) == 0) {
+    if (is_empty_indices(fixed_ind)) {
       return(fit$u)  # Only return random effects
     } else {
       return(c(fit$u, fit$b))  # Return both random and fixed effects
@@ -69,7 +68,7 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
         requireNamespace("fmrilss", quietly = TRUE)) {
       
       # Use the C++ implementation with proper input validation
-      X_fixed <- if (length(fixed_ind) == 0) {
+      X_fixed <- if (is_empty_indices(fixed_ind)) {
         matrix(1, nrow = nrow(X), ncol = 1)
       } else {
         X[, fixed_ind, drop = FALSE]
@@ -83,7 +82,7 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
         # If even that fails, return NAs with warning
         warning("C++ mixed model solver also failed: ", e2$message,
                 " - returning NA values.")
-        if (length(fixed_ind) == 0) {
+        if (is_empty_indices(fixed_ind)) {
           return(list(u = rep(NA_real_, length(ran_ind))))
         } else {
           return(list(
@@ -94,7 +93,7 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
       })
       
       # Return results based on whether fixed_ind is empty
-      if (length(fixed_ind) == 0) {
+      if (is_empty_indices(fixed_ind)) {
         return(fit$u)
       } else {
         return(c(fit$u, fit$beta))
@@ -103,7 +102,7 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
       # Last resort - return NAs with warning since zeros would be misleading
       warning("No alternative mixed model solver available - returning NA values. ",
               "Results for this voxel will be invalid. Consider installing rrBLUP or fmrilss packages.")
-      if (length(fixed_ind) == 0) {
+      if (is_empty_indices(fixed_ind)) {
         return(rep(NA_real_, length(ran_ind)))
       } else {
         return(rep(NA_real_, length(c(ran_ind, fixed_ind))))

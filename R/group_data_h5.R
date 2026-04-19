@@ -315,19 +315,16 @@ read_h5_full <- function(gd, stat = NULL) {
 #' @keywords internal
 #' @noRd
 validate_group_data_h5 <- function(x) {
-  # Check for required fields
-  required_fields <- c("paths", "subjects", "format", "dim", "labels")
-  missing_fields <- setdiff(required_fields, names(x))
-  if (length(missing_fields) > 0) {
-    stop("Missing required fields for group_data_h5: ", 
-         paste(missing_fields, collapse = ", "), call. = FALSE)
-  }
-  
+  # Check for required fields using helper
+  check_required_fields(x,
+    c("paths", "subjects", "format", "dim", "labels"),
+    context = "group_data_h5")
+
   # Validate paths and subjects have same length
   if (length(x$paths) != length(x$subjects)) {
     stop("Length of paths and subjects must match", call. = FALSE)
   }
-  
+
   invisible(TRUE)
 }
 
