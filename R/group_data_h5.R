@@ -445,8 +445,9 @@ group_data_from_fmrilm <- function(lm_list,
   
   # Get dimensions from first object
   first_lm <- lm_list[[1]]
-  mask <- fmridataset::get_mask(first_lm$dataset)
-  space <- neuroim2::space(mask)
+  spatial <- .fmri_dataset_mask_space(first_lm$dataset, "group data reconstruction")
+  mask <- spatial$mask_array
+  space <- spatial$space
   dim <- c(dim(space), length(stat))
   
   # Create in-memory group_data object

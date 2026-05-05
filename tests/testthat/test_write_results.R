@@ -48,6 +48,41 @@ create_test_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50, sparse_mas
   return(dset)
 }
 
+create_test_file_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50) {
+  set.seed(123)
+
+  scans <- lapply(1:2, function(run) {
+    arr <- array(rnorm(prod(dims) * n_timepoints), c(dims, n_timepoints))
+    bspace <- neuroim2::NeuroSpace(dim = c(dims, n_timepoints))
+    neuroim2::NeuroVec(arr, bspace)
+  })
+
+  mask <- neuroim2::LogicalNeuroVol(
+    array(TRUE, dims),
+    neuroim2::NeuroSpace(dim = dims)
+  )
+
+  backend <- fmridataset::nifti_backend(
+    source = scans,
+    mask_source = mask,
+    mode = "normal"
+  )
+
+  event_table <- data.frame(
+    onset = c(5, 15, 25, 35, 45,
+              5, 15, 25, 35, 45),
+    condition = factor(rep(c("A", "B", "A", "B", "A"), 2)),
+    run = rep(1:2, each = 5)
+  )
+
+  fmridataset::fmri_dataset(
+    scans = backend,
+    TR = 1.5,
+    run_length = rep(n_timepoints, 2),
+    event_table = event_table
+  )
+}
+
 # Helper function to create minimal fmri_lm object
 create_test_fmri_lm <- function(sparse_mask = FALSE) {
   set.seed(123)
@@ -69,6 +104,22 @@ create_test_fmri_lm <- function(sparse_mask = FALSE) {
   )
   
   return(mod)
+}
+
+create_test_file_fmri_lm <- function() {
+  set.seed(123)
+  dset <- create_test_file_dataset()
+  con <- contrast_set(pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"))
+
+  fmri_lm(
+    onset ~ hrf(condition, contrasts = con),
+    block = ~ run,
+    dataset = dset,
+    durations = 0,
+    strategy = "chunkwise",
+    nchunks = 2,
+    progress = FALSE
+  )
 }
 
 test_that("write_results.fmri_lm creates expected files", {
@@ -105,6 +156,40 @@ test_that("write_results.fmri_lm creates expected files", {
                     result$betas$h5))
   expect_true(grepl("sub-01_task-test_space-MNI152NLin2009cAsym_desc-GLM_betas\\.json$", 
                     result$betas$json))
+})
+
+test_that("write_results.fmri_lm recovers space for file-backed array masks", {
+  skip_if_not_installed("fmristore")
+  skip_if_not_installed("jsonlite")
+
+  mod <- create_test_file_fmri_lm()
+  expect_type(fmridataset::get_mask(mod$dataset), "logical")
+  expect_true(is.array(fmridataset::get_mask(mod$dataset)))
+
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE))
+
+  result <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    space = "MNI152NLin2009cAsym",
+    format = "h5",
+    strategy = "by_contrast"
+  )
+
+  expect_true(file.exists(result$betas$h5))
+  expect_true(file.exists(result$A_vs_B$h5))
+})
+
+test_that("coef_image.fmri_lm recovers space for file-backed array masks", {
+  mod <- create_test_file_fmri_lm()
+  img <- coef_image(mod, coef = 1, type = "estimates")
+
+  expect_s4_class(img, "NeuroVol")
+  expect_equal(dim(img), c(3L, 3L, 2L))
 })
 
 test_that("write_results.fmri_lm handles contrast export strategies", {

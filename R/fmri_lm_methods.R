@@ -462,9 +462,9 @@ coef_image.fmri_lm <- function(object, coef = 1,
 
   # ---- reconstruct spatial image if possible ----
   tryCatch({
-    mask <- fmridataset::get_mask(object$dataset)
-    sp <- neuroim2::space(mask)
-    mask_idx <- which(as.logical(mask))
+    spatial <- .fmri_dataset_mask_space(object$dataset, "coefficient image reconstruction")
+    sp <- spatial$space
+    mask_idx <- which(spatial$mask_array)
     vol_array <- array(NA_real_, dim(sp))
     vol_array[mask_idx] <- values
     neuroim2::NeuroVol(vol_array, sp)

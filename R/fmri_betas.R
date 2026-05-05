@@ -139,7 +139,8 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
   method <- match.arg(method)
   dset <- x
   bvec <- fmridataset::get_data(dset)
-  mask <- fmridataset::get_mask(dset)
+  spatial <- .fmri_dataset_mask_space(dset, "beta image reconstruction")
+  mask <- neuroim2::LogicalNeuroVol(spatial$mask_array, spatial$space)
   
   bmod <- if (is.null(basemod)) {
     baseline_model("constant", sframe = dset$sampling_frame)
@@ -159,10 +160,10 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
   
   
   nbetas <- nrow(betas$beta_matrix)
-  ospace_ran <- neuroim2::add_dim(neuroim2::space(mask), length(bdes$ran_ind))
+  ospace_ran <- neuroim2::add_dim(spatial$space, length(bdes$ran_ind))
   
   if (!is.null(bdes$fixed_ind)) {
-    ospace_fixed <- neuroim2::add_dim(neuroim2::space(mask), length(bdes$fixed_ind))
+    ospace_fixed <- neuroim2::add_dim(spatial$space, length(bdes$fixed_ind))
     fixed <- neuroim2::NeuroVec(as.matrix(betas$beta_matrix[bdes$fixed_ind, , drop = FALSE]), ospace_fixed, mask = mask)
   } else {
     fixed <- NULL

@@ -403,9 +403,9 @@ write_results.fmri_lm <- function(x,
     regressor_names <- paste0("beta_", seq_len(n_beta_cols))
   }
   
-  dataset <- fmrilm_obj$dataset
-  mask <- fmridataset::get_mask(dataset)
-  space <- neuroim2::space(mask)
+  spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "raw beta export")
+  mask_array <- spatial$mask_array
+  space <- spatial$space
   
   # Generate filename for raw betas  
   filename <- .generate_bids_filename(entities, desc = desc, suffix = "betas", extension = "h5")
@@ -414,7 +414,7 @@ write_results.fmri_lm <- function(x,
   # Save using fmristore infrastructure
   tryCatch({
     # Create 3D mask volume for fmristore
-    mask_vol <- neuroim2::LogicalNeuroVol(mask, space)
+    mask_vol <- neuroim2::LogicalNeuroVol(mask_array, space)
     h5_handle <- fmristore::write_labeled_vec(beta_data, mask_vol, regressor_names, file = filepath)
     h5_handle$close_all()
   }, error = function(e) {
@@ -448,10 +448,9 @@ write_results.fmri_lm <- function(x,
   }
   
   # Get spatial information
-  dataset <- fmrilm_obj$dataset
-  mask <- fmridataset::get_mask(dataset)
-  mask_array <- as.logical(as.array(mask))
-  space <- neuroim2::space(mask)
+  spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "contrast export")
+  mask_array <- spatial$mask_array
+  space <- spatial$space
   brain_dims <- dim(mask_array)
   
   # Validate mask dimensionality
@@ -510,10 +509,9 @@ write_results.fmri_lm <- function(x,
   }
   
   # Get spatial information
-  dataset <- fmrilm_obj$dataset
-  mask <- fmridataset::get_mask(dataset)
-  mask_array <- as.logical(as.array(mask))
-  space <- neuroim2::space(mask)
+  spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "contrast export")
+  mask_array <- spatial$mask_array
+  space <- spatial$space
   brain_dims <- dim(mask_array)
   
   # Validate mask dimensionality
@@ -645,11 +643,10 @@ write_results.fmri_lm <- function(x,
   df_resid <- .extract_degrees_of_freedom(fmrilm_obj)
 
   # Build spatial description from mask
-  dataset <- fmrilm_obj$dataset
-  mask_vol <- fmridataset::get_mask(dataset)
-  mask_array <- as.logical(as.array(mask_vol))
-  neuro_space <- neuroim2::space(mask_vol)
-  affine <- neuro_space@trans
+  spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "GDS export")
+  mask_array <- spatial$mask_array
+  neuro_space <- spatial$space
+  affine <- neuroim2::trans(neuro_space)
   voxel_space <- fmrigds::space_voxel(dim = dim(mask_array), affine = affine, mask_bitmap = mask_array)
 
   # Assemble column metadata
@@ -1232,10 +1229,9 @@ write_results.fmri_lm <- function(x,
   }
   
   # Get spatial information from dataset
-  dataset <- fmrilm_obj$dataset
-  mask <- fmridataset::get_mask(dataset)
-  mask_array <- as.logical(as.array(mask))
-  space <- neuroim2::space(mask)
+  spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "beta volume reconstruction")
+  mask_array <- spatial$mask_array
+  space <- spatial$space
   
   # Reshape beta data to 4D array [X, Y, Z, #regressors]
   brain_dims <- dim(mask_array)
