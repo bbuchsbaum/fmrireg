@@ -640,6 +640,74 @@ test_that("write_results.fmri_lm keeps contrast sidecar basenames aligned", {
                tools::file_path_sans_ext(basename(by_contrast$A_vs_B$json)))
 })
 
+test_that("write_results.fmri_lm supports regex contrast selection", {
+  skip_if_not_installed("fmristore")
+  skip_if_not_installed("jsonlite")
+
+  mod <- create_test_fmri_lm()
+
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE), add = TRUE)
+
+  result <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    strategy = "by_contrast",
+    save_betas = FALSE,
+    contrasts = "^A_.*_B$",
+    contrast_match = "regex",
+    contrast_stats = "beta"
+  )
+
+  expect_named(result, "A_vs_B")
+  expect_true(file.exists(result$A_vs_B$h5))
+})
+
+test_that("write_results.fmri_lm uses statistic descriptions for contrast files", {
+  skip_if_not_installed("fmristore")
+  skip_if_not_installed("jsonlite")
+
+  mod <- create_test_fmri_lm()
+
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE), add = TRUE)
+
+  by_stat <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    strategy = "by_stat",
+    save_betas = FALSE,
+    contrast_stats = c("beta", "tstat")
+  )
+
+  expect_match(basename(by_stat$beta$h5), "desc-beta_bold\\.h5$")
+  expect_match(basename(by_stat$tstat$h5), "desc-tstat_bold\\.h5$")
+  expect_false(grepl("_stat-", basename(by_stat$beta$h5), fixed = TRUE))
+
+  temp_dir2 <- tempfile()
+  dir.create(temp_dir2)
+  on.exit(unlink(temp_dir2, recursive = TRUE), add = TRUE)
+
+  by_contrast <- write_results(
+    mod,
+    path = temp_dir2,
+    subject = "01",
+    task = "test",
+    strategy = "by_contrast",
+    save_betas = FALSE,
+    contrast_stats = "beta"
+  )
+
+  expect_match(basename(by_contrast$A_vs_B$h5), "contrast-AvsB_desc-beta_bold\\.h5$")
+  expect_false(grepl("_stat-", basename(by_contrast$A_vs_B$h5), fixed = TRUE))
+})
+
 test_that("write_results.fmri_lm validates ModelInfo content in JSON", {
   skip_if_not_installed("fmristore")
   skip_if_not_installed("jsonlite")

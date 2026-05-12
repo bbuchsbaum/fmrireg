@@ -20,6 +20,10 @@ NULL
 #' @param strategy Storage strategy: "by_stat" (group contrasts by statistic) or "by_contrast" (separate files)
 #' @param save_betas Logical. Save raw regressor betas (default: TRUE)
 #' @param contrasts Character vector of contrast names to save. NULL saves all contrasts
+#' @param contrast_match How to match `contrasts`: `"auto"` first matches exact
+#'   contrast names and treats unmatched selectors as regular expressions;
+#'   `"exact"` uses literal names only; `"regex"` treats all selectors as regular
+#'   expressions.
 #' @param contrast_stats Character vector of contrast statistics to save (default: c("beta", "tstat", "pval", "se"))
 #' @param overwrite Logical. Overwrite existing files (default: FALSE)
 #' @param validate_inputs Logical. Validate fmrilm object structure (default: TRUE)
@@ -50,12 +54,14 @@ write_results.fmri_lm <- function(x,
                                   strategy = c("by_stat", "by_contrast"),
                                   save_betas = TRUE,
                                   contrasts = NULL,
+                                  contrast_match = c("auto", "exact", "regex"),
                                   contrast_stats = c("beta", "tstat", "pval", "se"),
                                   overwrite = FALSE,
                                   validate_inputs = TRUE,
                                   ...) {
   
   strategy <- match.arg(strategy)
+  contrast_match <- match.arg(contrast_match)
   format <- match.arg(format, c("h5", "gds"), several.ok = TRUE)
   if (length(format) == 0) format <- "h5"
   produce_h5 <- "h5" %in% format
@@ -85,6 +91,7 @@ write_results.fmri_lm <- function(x,
     strategy = strategy,
     save_betas = save_betas,
     contrasts = contrasts,
+    contrast_match = contrast_match,
     contrast_stats = contrast_stats,
     fmrilm_obj = x
   )
@@ -123,10 +130,10 @@ write_results.fmri_lm <- function(x,
     if (produce_h5) {
       if (strategy == "by_stat") {
         contrast_files <- .save_contrasts_by_stat(x, temp_dir, entities, desc, 
-                                                  contrasts, contrast_stats, overwrite)
+                                                  contrasts, contrast_match, contrast_stats, overwrite)
       } else {
         contrast_files <- .save_contrasts_by_contrast(x, temp_dir, entities, desc,
-                                                      contrasts, contrast_stats, overwrite)
+                                                      contrasts, contrast_match, contrast_stats, overwrite)
       }
       created_files <- c(created_files, contrast_files)
     }
@@ -168,7 +175,7 @@ write_results.fmri_lm <- function(x,
 #' Predict Output Files for Overwrite Check
 #' @keywords internal
 #' @noRd
-.predict_output_files <- function(path, entities, desc, format, strategy, save_betas, contrasts, contrast_stats, fmrilm_obj) {
+.predict_output_files <- function(path, entities, desc, format, strategy, save_betas, contrasts, contrast_match, contrast_stats, fmrilm_obj) {
   predicted_files <- c()
   produce_h5 <- "h5" %in% format
   produce_gds <- "gds" %in% format
@@ -186,7 +193,7 @@ write_results.fmri_lm <- function(x,
   if (produce_h5 && !is.null(fmrilm_obj$result$contrasts) && nrow(fmrilm_obj$result$contrasts) > 0) {
     available_contrasts <- fmrilm_obj$result$contrasts
     if (!is.null(contrasts)) {
-      available_contrasts <- available_contrasts[available_contrasts$name %in% contrasts, ]
+      available_contrasts <- .select_contrasts(available_contrasts, contrasts, contrast_match)
     }
     
     if (nrow(available_contrasts) > 0) {
@@ -198,9 +205,9 @@ write_results.fmri_lm <- function(x,
           }, logical(1)))
           
           if (has_stat) {
-            stat_desc <- paste0(desc, "statmap")
-            filename_h5 <- .generate_bids_filename(entities, desc = stat_desc, stat = stat, suffix = "bold", extension = "h5")
-            filename_json <- .generate_bids_filename(entities, desc = stat_desc, stat = stat, suffix = "bold", extension = "json")
+            stat_desc <- .stat_desc(desc, stat)
+            filename_h5 <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = "h5")
+            filename_json <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = "json")
             predicted_files <- c(predicted_files, 
                                 file.path(path, filename_h5),
                                 file.path(path, filename_json))
@@ -215,7 +222,7 @@ write_results.fmri_lm <- function(x,
           
           if (any(available_stats)) {
             contrast_name <- available_contrasts$name[i]
-            stat_desc <- paste0(desc, "statmap")
+            stat_desc <- if (sum(available_stats) == 1) .stat_desc(desc, contrast_stats[available_stats][1]) else desc
             filename_h5 <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "h5")
             filename_json <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "json")
             predicted_files <- c(predicted_files, 
@@ -234,6 +241,50 @@ write_results.fmri_lm <- function(x,
   }
   
   unique(predicted_files)
+}
+
+#' Select Contrasts by Exact Name or Regex
+#' @keywords internal
+#' @noRd
+.select_contrasts <- function(contrast_tbl, contrasts = NULL, contrast_match = c("auto", "exact", "regex")) {
+  if (is.null(contrasts)) {
+    return(contrast_tbl)
+  }
+
+  contrast_match <- match.arg(contrast_match)
+  contrast_names <- contrast_tbl$name
+  keep <- rep(FALSE, length(contrast_names))
+
+  for (selector in contrasts) {
+    exact_keep <- contrast_names == selector
+
+    if (contrast_match == "exact") {
+      keep <- keep | exact_keep
+      next
+    }
+
+    if (contrast_match == "auto" && any(exact_keep)) {
+      keep <- keep | exact_keep
+      next
+    }
+
+    regex_keep <- tryCatch(
+      grepl(selector, contrast_names, perl = TRUE),
+      error = function(e) {
+        stop("Invalid contrast regex '", selector, "': ", e$message, call. = FALSE)
+      }
+    )
+    keep <- keep | regex_keep
+  }
+
+  contrast_tbl[keep, , drop = FALSE]
+}
+
+#' Build Description Entity for Statistic-Specific Maps
+#' @keywords internal
+#' @noRd
+.stat_desc <- function(desc, stat) {
+  .sanitize_label(stat)
 }
 
 #' Validate fmri_lm Object Structure
@@ -430,7 +481,7 @@ write_results.fmri_lm <- function(x,
 #' Save Contrasts by Statistic Type using LabeledVolumeSet
 #' @keywords internal
 #' @noRd
-.save_contrasts_by_stat <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_stats, overwrite) {
+.save_contrasts_by_stat <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_match, contrast_stats, overwrite) {
   
   if (is.null(fmrilm_obj$result$contrasts) || nrow(fmrilm_obj$result$contrasts) == 0) {
     warning("No contrasts found in fmrilm object")
@@ -440,7 +491,7 @@ write_results.fmri_lm <- function(x,
   # Filter contrasts if specified
   available_contrasts <- fmrilm_obj$result$contrasts
   if (!is.null(contrasts)) {
-    available_contrasts <- available_contrasts[available_contrasts$name %in% contrasts, ]
+    available_contrasts <- .select_contrasts(available_contrasts, contrasts, contrast_match)
     if (nrow(available_contrasts) == 0) {
       warning("None of the specified contrasts found in model")
       return(list())
@@ -469,9 +520,8 @@ write_results.fmri_lm <- function(x,
     stat_data <- .compute_statistical_volumes(available_contrasts, stat, brain_dims, mask_array, space)
     
     if (!is.null(stat_data)) {
-      # Generate filename with desc-statmap suffix (BIDS compliant)
-      stat_desc <- paste0(desc, "statmap")
-      filename <- .generate_bids_filename(entities, desc = stat_desc, stat = stat, suffix = "bold")
+      stat_desc <- .stat_desc(desc, stat)
+      filename <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold")
       filepath <- file.path(path, filename)
       
       h5_handle <- fmristore::write_labeled_vec(stat_data$neurovec, mask_vol, stat_data$contrast_names, file = filepath)
@@ -491,7 +541,7 @@ write_results.fmri_lm <- function(x,
 #' Save Contrasts by Individual Contrast using LabeledVolumeSet
 #' @keywords internal  
 #' @noRd
-.save_contrasts_by_contrast <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_stats, overwrite) {
+.save_contrasts_by_contrast <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_match, contrast_stats, overwrite) {
   
   if (is.null(fmrilm_obj$result$contrasts) || nrow(fmrilm_obj$result$contrasts) == 0) {
     warning("No contrasts found in fmrilm object")
@@ -501,7 +551,7 @@ write_results.fmri_lm <- function(x,
   # Filter contrasts if specified
   available_contrasts <- fmrilm_obj$result$contrasts
   if (!is.null(contrasts)) {
-    available_contrasts <- available_contrasts[available_contrasts$name %in% contrasts, ]
+    available_contrasts <- .select_contrasts(available_contrasts, contrasts, contrast_match)
     if (nrow(available_contrasts) == 0) {
       warning("None of the specified contrasts found in model")
       return(list())
@@ -566,8 +616,7 @@ write_results.fmri_lm <- function(x,
       ospace_stat <- neuroim2::add_dim(space, length(available_stats))
       stat_vec <- neuroim2::NeuroVec(stat_array, ospace_stat)
       
-      # Generate filename with desc-statmap suffix (BIDS compliant)
-      stat_desc <- paste0(desc, "statmap")
+      stat_desc <- if (length(available_stats) == 1) .stat_desc(desc, available_stats[[1]]) else desc
       filename <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold")
       filepath <- file.path(path, filename)
       
@@ -755,8 +804,8 @@ write_results.fmri_lm <- function(x,
 .save_contrasts_json_metadata <- function(fmrilm_obj, path, entities, desc, stat, contrast_names, contrasts, h5_filepath) {
   
   # Generate JSON filename
-  stat_desc <- paste0(desc, "statmap")
-  filename <- .generate_bids_filename(entities, desc = stat_desc, stat = stat, suffix = "bold", extension = "json")
+  stat_desc <- .stat_desc(desc, stat)
+  filename <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = "json")
   filepath <- file.path(path, filename)
   
   # Extract contrast definitions
@@ -824,7 +873,7 @@ write_results.fmri_lm <- function(x,
 .save_single_contrast_json_metadata <- function(fmrilm_obj, path, entities, desc, contrast_name, stat_names, contrast_row, h5_filepath) {
   
   # Generate JSON filename
-  stat_desc <- paste0(desc, "statmap")
+  stat_desc <- if (length(stat_names) == 1) .stat_desc(desc, stat_names[[1]]) else desc
   filename <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "json")
   filepath <- file.path(path, filename)
   

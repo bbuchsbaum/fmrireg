@@ -15,6 +15,7 @@
   strategy = c("by_stat", "by_contrast"),
   save_betas = TRUE,
   contrasts = NULL,
+  contrast_match = c("auto", "exact", "regex"),
   contrast_stats = c("beta", "tstat", "pval", "se"),
   overwrite = FALSE,
   validate_inputs = TRUE,
@@ -43,6 +44,11 @@ assays plus an \code{.rds} plan describing the dataset). You may request both.}
 \item{save_betas}{Logical. Save raw regressor betas (default: TRUE)}
 
 \item{contrasts}{Character vector of contrast names to save. NULL saves all contrasts}
+
+\item{contrast_match}{How to match \code{contrasts}: \code{"auto"} first matches exact
+contrast names and treats unmatched selectors as regular expressions;
+\code{"exact"} uses literal names only; \code{"regex"} treats all selectors as regular
+expressions.}
 
 \item{contrast_stats}{Character vector of contrast statistics to save (default: c("beta", "tstat", "pval", "se"))}
 
