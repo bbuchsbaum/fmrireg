@@ -13,6 +13,7 @@ fmri_lm_fit(
   use_fast_path = FALSE,
   progress = FALSE,
   parallel_voxels = FALSE,
+  parallel_chunks = FALSE,
   ...
 )
 }
@@ -25,7 +26,9 @@ fmri_lm_fit(
 
 \item{cfg}{An \code{fmri_lm_config} object containing all fitting options. See \code{\link{fmri_lm_control}}.}
 
-\item{nchunks}{Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.}
+\item{nchunks}{Number of data chunks when strategy is \code{"chunkwise"}.
+This controls memory partitioning; chunks are processed sequentially unless
+\code{parallel_chunks = TRUE}. Default is \code{10}.}
 
 \item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
 
@@ -33,6 +36,10 @@ fmri_lm_fit(
 
 \item{parallel_voxels}{Logical. If TRUE, voxelwise AR processing within runs
 is parallelised using \code{future.apply}. Default is \code{FALSE}.}
+
+\item{parallel_chunks}{Logical. If TRUE and \code{strategy = "chunkwise"},
+process chunks with \code{future.apply::future_lapply()} using the active
+\code{future} plan. Default is \code{FALSE}.}
 
 \item{...}{Additional arguments.}
 }

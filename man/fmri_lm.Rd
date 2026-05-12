@@ -36,6 +36,7 @@ fmri_lm(formula, ...)
   robust_scale_scope = NULL,
   volume_weights = NULL,
   nuisance_projection = NULL,
+  parallel_chunks = FALSE,
   ...
 )
 
@@ -63,6 +64,7 @@ fmri_lm(formula, ...)
   robust_scale_scope = NULL,
   volume_weights = NULL,
   nuisance_projection = NULL,
+  parallel_chunks = FALSE,
   ...
 )
 }
@@ -95,7 +97,9 @@ fmri_lm(formula, ...)
 
 \item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
 
-\item{nchunks}{Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.}
+\item{nchunks}{Number of data chunks when strategy is \code{"chunkwise"}.
+This controls memory partitioning; chunks are processed sequentially unless
+\code{parallel_chunks = TRUE}. Default is \code{10}.}
 
 \item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
 
@@ -103,7 +107,8 @@ fmri_lm(formula, ...)
 
 \item{ar_voxelwise}{Logical. Estimate AR parameters voxel-wise (overrides \code{ar_options$voxelwise}).}
 
-\item{parallel_voxels}{Logical. Parallelize across voxels where supported.}
+\item{parallel_voxels}{Logical. Parallelize across voxels where supported;
+this does not control chunkwise execution.}
 
 \item{cor_struct}{Character. Shorthand for \code{ar_options$struct} (e.g., "ar1", "ar2", "arp").}
 
@@ -137,6 +142,10 @@ soft subspace projection:
 \item \code{NULL}: Disable (default)
 }
 For fine-grained control (lambda selection, warnings), use \code{soft_subspace_options}.}
+
+\item{parallel_chunks}{Logical. For \code{strategy = "chunkwise"}, process
+chunks with \code{future.apply::future_lapply()} using the active
+\code{future} plan. Default is \code{FALSE}.}
 }
 \value{
 An object of class \code{fmri_lm}.

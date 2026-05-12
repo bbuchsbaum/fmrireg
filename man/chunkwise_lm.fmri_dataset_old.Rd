@@ -13,6 +13,7 @@
   verbose = FALSE,
   use_fast_path = FALSE,
   progress = FALSE,
+  parallel_chunks = FALSE,
   phi_fixed = NULL,
   sigma_fixed = NULL,
   ...
@@ -34,6 +35,9 @@
 \item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
 
 \item{progress}{Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.}
+
+\item{parallel_chunks}{Logical. If \code{TRUE}, process chunks with
+\code{future.apply::future_lapply()} using the active future plan.}
 
 \item{phi_fixed}{Optional fixed AR parameters.}
 

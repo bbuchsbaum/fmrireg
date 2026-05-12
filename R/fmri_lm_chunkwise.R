@@ -15,25 +15,32 @@
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.
+#' @param parallel_chunks Logical. If \code{TRUE}, process chunks with
+#'   \code{future.apply::future_lapply()} using the active future plan.
 #' @param phi_fixed Optional fixed AR parameters.
 #' @param sigma_fixed Optional fixed robust scale estimate.
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
 chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
                                       verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
+                                      parallel_chunks = FALSE,
                                       phi_fixed = NULL,
                                       sigma_fixed = NULL, ...) {
   dset <- x
   
   # Validate config
   assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
+  assert_that(
+    is.logical(parallel_chunks) && length(parallel_chunks) == 1L && !is.na(parallel_chunks),
+    msg = "'parallel_chunks' must be TRUE or FALSE"
+  )
   
   # Get chunks
   chunk_iter <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
   chunks <- collect_chunks(chunk_iter)
   
   # Progress bar setup
-  if (progress) {
+  if (progress && !parallel_chunks) {
     pb <- cli::cli_progress_bar("Fitting chunks", total = length(chunks), clear = FALSE)
     on.exit(cli::cli_progress_done(id = pb), add = TRUE)
   }
@@ -77,7 +84,8 @@ chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
       phi_fixed = phi_fixed,
       sigma_fixed = sigma_fixed,
       verbose = verbose,
-      progress = progress
+      progress = progress,
+      parallel_chunks = parallel_chunks
     )
   } else {
     # Slow path implementation
@@ -94,11 +102,44 @@ chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
       modmat = modmat,
       run_indices = run_indices,
       verbose = verbose,
-      progress = progress
+      progress = progress,
+      parallel_chunks = parallel_chunks
     )
   }
   
   result
+}
+
+#' Apply a function to chunk data, optionally through the active future plan
+#' @keywords internal
+#' @noRd
+.chunkwise_apply <- function(chunks, FUN, parallel_chunks = FALSE, progress = FALSE) {
+  if (!isTRUE(parallel_chunks)) {
+    return(lapply(seq_along(chunks), function(i) {
+      out <- FUN(i, chunks[[i]])
+      if (progress) cli::cli_progress_update()
+      out
+    }))
+  }
+
+  if (!requireNamespace("future.apply", quietly = TRUE)) {
+    stop("parallel_chunks requires the future.apply package.", call. = FALSE)
+  }
+
+  if (progress && requireNamespace("progressr", quietly = TRUE)) {
+    return(progressr::with_progress({
+      p <- progressr::progressor(steps = length(chunks))
+      future.apply::future_lapply(seq_along(chunks), function(i) {
+        out <- FUN(i, chunks[[i]])
+        p()
+        out
+      }, future.seed = TRUE)
+    }))
+  }
+
+  future.apply::future_lapply(seq_along(chunks), function(i) {
+    FUN(i, chunks[[i]])
+  }, future.seed = TRUE)
 }
 
 #' Chunkwise LM Fast Path
@@ -107,7 +148,8 @@ chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
 chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
                               event_indices, baseline_indices, Vu,
                               phi_fixed = NULL, sigma_fixed = NULL,
-                              verbose = FALSE, progress = FALSE) {
+                              verbose = FALSE, progress = FALSE,
+                              parallel_chunks = FALSE) {
   
   # Separate contrast types
   simple_conlist <- Filter(function(x) inherits(x, "contrast"), contrast_objects)
@@ -139,10 +181,7 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
     precomp <- prepare_chunkwise_matrices(model, dset, cfg, phi_fixed, sigma_fixed)
     
     # Process chunks with pre-computed matrices
-    cres <- vector("list", length(chunks))
-    
-    for (i in seq_along(chunks)) {
-      ym <- chunks[[i]]
+    cres <- .chunkwise_apply(chunks, function(i, ym) {
       if (verbose) message("Processing chunk (fast path) ", ym$chunk_num)
       
       # Process chunk using pre-computed matrices
@@ -187,15 +226,13 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
         ar_order = precomp$ar_order
       )
       
-      cres[[i]] <- list(
+      list(
         bstats = bstats,
         contrasts = conres,
         event_indices = event_indices,
         baseline_indices = baseline_indices
       )
-      
-      if (progress) cli::cli_progress_update()
-    }
+    }, parallel_chunks = parallel_chunks, progress = progress)
     
   } else {
     # Simple OLS case - no pre-computation needed
@@ -215,10 +252,7 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
 
     proj <- .fast_preproject(modmat)
 
-    cres <- vector("list", length(chunks))
-
-    for (i in seq_along(chunks)) {
-      ym <- chunks[[i]]
+    cres <- .chunkwise_apply(chunks, function(i, ym) {
       if (verbose) message("Processing chunk (fast path) ", ym$chunk_num)
 
       Ymat <- as.matrix(ym$data)
@@ -254,15 +288,13 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
         ar_order = ar_order
       )
       
-      cres[[i]] <- list(
+      list(
         bstats = bstats,
         contrasts = conres,
         event_indices = event_indices,
         baseline_indices = baseline_indices
       )
-      
-      if (progress) cli::cli_progress_update()
-    }
+    }, parallel_chunks = parallel_chunks, progress = progress)
   }
   
   # Unpack results
@@ -280,13 +312,12 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
 chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
                               tmats, vnames, event_indices, baseline_indices,
                               Vu, modmat, run_indices = NULL,
-                              verbose = FALSE, progress = FALSE) {
+                              verbose = FALSE, progress = FALSE,
+                              parallel_chunks = FALSE) {
   
   # Determine fitting function
   lmfun <- if (cfg$robust$type != FALSE) multiresponse_rlm else multiresponse_lm
   
-  # Setup data environment
-  data_env <- list2env(tmats)
   form <- get_formula(model)
   proj_modmat <- .fast_preproject(modmat)
 
@@ -316,10 +347,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     run_indices <- list(seq_len(nrow(modmat)))
   }
 
-  cres <- vector("list", length(chunks))
-  
-  for (i in seq_along(chunks)) {
-    ym <- chunks[[i]]
+  cres <- .chunkwise_apply(chunks, function(i, ym) {
     if (verbose) message("Processing chunk ", ym$chunk_num)
 
     Y_chunk <- as.matrix(ym$data)
@@ -372,7 +400,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
         ar_order = ar_order
       )
 
-      cres[[i]] <- list(
+      list(
         bstats = bstats,
         contrasts = conres,
         event_indices = event_indices,
@@ -380,11 +408,12 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
         ar_coef = result$ar_coef %||% result$phi_hat
       )
     } else {
-      data_env[[".y"]] <- Y_chunk
+      chunk_data_env <- list2env(tmats)
+      chunk_data_env[[".y"]] <- Y_chunk
 
-      ret <- lmfun(form, data_env, contrast_objects, vnames, fcon = NULL, modmat = modmat)
+      ret <- lmfun(form, chunk_data_env, contrast_objects, vnames, fcon = NULL, modmat = modmat)
 
-      cres[[i]] <- list(
+      list(
         bstats = ret$bstats,
         contrasts = ret$contrasts,
         event_indices = event_indices,
@@ -392,9 +421,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
         ar_coef = NULL
       )
     }
-
-    if (progress) cli::cli_progress_update()
-  }
+  }, parallel_chunks = parallel_chunks, progress = progress)
   
   # Unpack results
   out <- unpack_chunkwise(cres, event_indices, baseline_indices)

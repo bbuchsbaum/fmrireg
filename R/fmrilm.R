@@ -512,11 +512,17 @@ fmri_lm <- function(formula, ...) {
 #' @param robust_options List of robust fitting options. See Details.
 #' @param ar_options List of autoregressive modeling options. See Details.
 #' @param strategy The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.
-#' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
+#' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}.
+#'   This controls memory partitioning; chunks are processed sequentially unless
+#'   \code{parallel_chunks = TRUE}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
 #' @param ar_voxelwise Logical. Estimate AR parameters voxel-wise (overrides \code{ar_options$voxelwise}).
-#' @param parallel_voxels Logical. Parallelize across voxels where supported.
+#' @param parallel_voxels Logical. Parallelize across voxels where supported;
+#'   this does not control chunkwise execution.
+#' @param parallel_chunks Logical. For \code{strategy = "chunkwise"}, process
+#'   chunks with \code{future.apply::future_lapply()} using the active
+#'   \code{future} plan. Default is \code{FALSE}.
 #' @param cor_struct Character. Shorthand for \code{ar_options$struct} (e.g., "ar1", "ar2", "arp").
 #' @param cor_iter Integer. Shorthand for \code{ar_options$iter_gls}.
 #' @param cor_global Logical. Shorthand for \code{ar_options$global}.
@@ -607,6 +613,7 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
                     robust_psi = NULL, robust_max_iter = NULL, robust_scale_scope = NULL,
                     # Convenience parameters for preprocessing features
                     volume_weights = NULL, nuisance_projection = NULL,
+                    parallel_chunks = FALSE,
                     ...) {
   engine_ctx <- .fmri_lm_extract_engine_context(list(...))
   engine <- engine_ctx$engine
@@ -629,6 +636,10 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
               msg = "'robust' must be logical or one of 'huber', 'bisquare'")
   assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
   assert_that(is.logical(ar_voxelwise), msg = "'ar_voxelwise' must be logical")
+  assert_that(
+    is.logical(parallel_chunks) && length(parallel_chunks) == 1L && !is.na(parallel_chunks),
+    msg = "'parallel_chunks' must be TRUE or FALSE"
+  )
   if (strategy == "chunkwise") {
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
   }
@@ -674,7 +685,8 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
   # and included in the cfg object
   ret <- fmri_lm_fit(model, dataset, strategy, cfg, nchunks,
                      use_fast_path = use_fast_path, progress = progress,
-                     parallel_voxels = parallel_voxels)
+                     parallel_voxels = parallel_voxels,
+                     parallel_chunks = parallel_chunks)
   return(ret)
 }
 
@@ -693,6 +705,7 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
                                robust_psi = NULL, robust_max_iter = NULL,
                                robust_scale_scope = NULL,
                                volume_weights = NULL, nuisance_projection = NULL,
+                               parallel_chunks = FALSE,
                                ...) {
   engine_ctx <- .fmri_lm_extract_engine_context(list(...))
   engine <- engine_ctx$engine
@@ -703,6 +716,10 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
   engine_args <- engine_ctx$engine_args
   strategy <- match.arg(strategy)
   assert_that(inherits(formula, "fmri_model"))
+  assert_that(
+    is.logical(parallel_chunks) && length(parallel_chunks) == 1L && !is.na(parallel_chunks),
+    msg = "'parallel_chunks' must be TRUE or FALSE"
+  )
 
   dataset <- dataset %||% formula$dataset %||% attr(formula, "dataset")
   if (is.null(dataset)) {
@@ -745,7 +762,8 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
 
   ret <- fmri_lm_fit(formula, dataset, strategy, cfg, nchunks,
                      use_fast_path = use_fast_path, progress = progress,
-                     parallel_voxels = parallel_voxels)
+                     parallel_voxels = parallel_voxels,
+                     parallel_chunks = parallel_chunks)
   return(ret)
 }
 
@@ -760,18 +778,23 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
 #' @param dataset An \code{fmri_dataset} object containing the time-series data.
 #' @param strategy The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.
 #' @param cfg An \code{fmri_lm_config} object containing all fitting options. See \code{\link{fmri_lm_control}}.
-#' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}. Default is \code{10}.
+#' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}.
+#'   This controls memory partitioning; chunks are processed sequentially unless
+#'   \code{parallel_chunks = TRUE}. Default is \code{10}.
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
 #' @param parallel_voxels Logical. If TRUE, voxelwise AR processing within runs
 #'   is parallelised using `future.apply`. Default is \code{FALSE}.
+#' @param parallel_chunks Logical. If TRUE and \code{strategy = "chunkwise"},
+#'   process chunks with \code{future.apply::future_lapply()} using the active
+#'   \code{future} plan. Default is \code{FALSE}.
 #' @param ... Additional arguments.
 #' @return A fitted fMRI linear regression model with the specified fitting strategy.
 #' @keywords internal
 #' @seealso \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{fmri_dataset}}
 fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                         cfg, nchunks = 10, use_fast_path = FALSE, progress = FALSE,
-                        parallel_voxels = FALSE, ...) {
+                        parallel_voxels = FALSE, parallel_chunks = FALSE, ...) {
   strategy <- match.arg(strategy)
   
   # Validate config
@@ -781,8 +804,14 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   assert_that(inherits(fmrimod, "fmri_model"), msg = "'fmrimod' must be an 'fmri_model' object")
   assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset' object")
   assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
+  assert_that(
+    is.logical(parallel_chunks) && length(parallel_chunks) == 1L && !is.na(parallel_chunks),
+    msg = "'parallel_chunks' must be TRUE or FALSE"
+  )
   if (strategy == "chunkwise") {
     assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
+  } else if (isTRUE(parallel_chunks)) {
+    warning("'parallel_chunks' only applies when strategy = 'chunkwise'.", call. = FALSE)
   }
 
   # Check for redundant nuisance regressors when soft subspace projection is enabled
@@ -860,6 +889,13 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                          ),
                    "chunkwise" = {
                     if (inherits(dataset, "latent_dataset")) {
+                      if (isTRUE(parallel_chunks)) {
+                        warning(
+                          "'parallel_chunks' is not currently supported for latent_dataset; ",
+                          "using sequential chunkwise fitting.",
+                          call. = FALSE
+                        )
+                      }
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                    nchunks, cfg, verbose = FALSE, use_fast_path = FALSE,
                                    progress = progress,
@@ -870,6 +906,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                    nchunks, cfg = cfg, use_fast_path = use_fast_path,
                                    progress = progress,
+                                   parallel_chunks = parallel_chunks,
                                    phi_fixed = phi_global,
                                    sigma_fixed = sigma_global
                                    )
@@ -1460,12 +1497,15 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
 #' @param progress Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.
+#' @param parallel_chunks Logical. If \code{TRUE}, process chunks with
+#'   \code{future.apply::future_lapply()} using the active future plan.
 #' @param phi_fixed Optional fixed AR parameters.
 #' @param sigma_fixed Optional fixed robust scale estimate.
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
 chunkwise_lm.fmri_dataset_old <- function(x, model, contrast_objects, nchunks, cfg,
                                       verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
+                                      parallel_chunks = FALSE,
                                       phi_fixed = NULL,
                                       sigma_fixed = NULL, ...) {
   # Legacy shim retained for callers that still reference the historical helper.
@@ -1478,6 +1518,7 @@ chunkwise_lm.fmri_dataset_old <- function(x, model, contrast_objects, nchunks, c
     verbose = verbose,
     use_fast_path = use_fast_path,
     progress = progress,
+    parallel_chunks = parallel_chunks,
     phi_fixed = phi_fixed,
     sigma_fixed = sigma_fixed,
     ...
