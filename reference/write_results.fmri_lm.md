@@ -19,6 +19,7 @@ write_results(
   strategy = c("by_stat", "by_contrast"),
   save_betas = TRUE,
   contrasts = NULL,
+  contrast_match = c("auto", "exact", "regex"),
   contrast_stats = c("beta", "tstat", "pval", "se"),
   overwrite = FALSE,
   validate_inputs = TRUE,
@@ -72,6 +73,13 @@ write_results(
 - contrasts:
 
   Character vector of contrast names to save. NULL saves all contrasts
+
+- contrast_match:
+
+  How to match `contrasts`: `"auto"` first matches exact contrast names
+  and treats unmatched selectors as regular expressions; `"exact"` uses
+  literal names only; `"regex"` treats all selectors as regular
+  expressions.
 
 - contrast_stats:
 
