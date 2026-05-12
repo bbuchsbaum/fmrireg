@@ -1,8 +1,9 @@
 # Write Results from fMRI Linear Model
 
-Exports statistical maps from an fmri_lm object to HDF5 files with
-BIDS-compliant naming and JSON metadata sidecars using the fmristore
-LabeledVolumeSet infrastructure.
+Exports statistical maps from an fmri_lm object with BIDS-compliant
+naming and JSON metadata sidecars. Supported image outputs are HDF5
+LabeledVolumeSet files and NIfTI files; an fmrigds representation can
+also be requested.
 
 ## Usage
 
@@ -56,10 +57,9 @@ write_results(
 
 - format:
 
-  Character vector specifying output formats. Supported values are
-  `"h5"` (default BIDS/HDF5 export) and `"gds"` (fmrigds-compatible
-  assays plus an `.rds` plan describing the dataset). You may request
-  both.
+  Output format(s). Use `"h5"` for BIDS-style HDF5 outputs, `"nifti"`
+  for BIDS-style NIfTI outputs, `"gds"` for fmrigds-compatible assays
+  plus an `.rds` plan, or a character vector to write multiple formats.
 
 - strategy:
 
