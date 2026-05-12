@@ -272,6 +272,78 @@ test_that("write_results.fmri_lm exports gds outputs", {
   expect_equal(unname(beta_matrix), unname(beta_expected), tolerance = 1e-8)
 })
 
+test_that("write_results.fmri_lm exports nifti outputs", {
+  skip_if_not_installed("RNifti")
+  skip_if_not_installed("jsonlite")
+
+  mod <- create_test_fmri_lm()
+
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE), add = TRUE)
+
+  result <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    space = "MNI152",
+    format = "nifti",
+    strategy = "by_stat",
+    contrast_stats = c("beta", "tstat")
+  )
+
+  expect_true("betas" %in% names(result))
+  expect_true("nifti" %in% names(result$betas))
+  expect_false("h5" %in% names(result$betas))
+  expect_true(file.exists(result$betas$nifti))
+  expect_true(grepl("_betas\\.nii\\.gz$", result$betas$nifti))
+  expect_true(file.exists(result$betas$json))
+
+  beta_img <- RNifti::readNifti(result$betas$nifti, internal = FALSE)
+  beta_expected <- coef(mod, type = "betas", include_baseline = TRUE)
+  expect_equal(as.integer(dim(beta_img)), c(3L, 3L, 2L, ncol(beta_expected)))
+
+  expect_true("beta" %in% names(result))
+  expect_true(file.exists(result$beta$nifti))
+  expect_true(grepl("_desc-beta_bold\\.nii\\.gz$", result$beta$nifti))
+
+  json_content <- jsonlite::read_json(result$betas$json)
+  expect_true("NIfTI" %in% unlist(json_content$DataInfo$FileFormat))
+})
+
+test_that("write_results.fmri_lm can export h5 and nifti together", {
+  skip_if_not_installed("fmristore")
+  skip_if_not_installed("RNifti")
+  skip_if_not_installed("jsonlite")
+
+  mod <- create_test_fmri_lm()
+
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE), add = TRUE)
+
+  result <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    space = "MNI152",
+    format = c("h5", "nifti"),
+    strategy = "by_stat",
+    contrast_stats = "beta"
+  )
+
+  expect_true(file.exists(result$betas$h5))
+  expect_true(file.exists(result$betas$nifti))
+  expect_true(file.exists(result$beta$h5))
+  expect_true(file.exists(result$beta$nifti))
+
+  json_content <- jsonlite::read_json(result$betas$json)
+  formats <- unlist(json_content$DataInfo$FileFormat)
+  expect_true(all(c("HDF5", "NIfTI") %in% formats))
+})
+
 test_that("write_results.fmri_lm enforces overwrite for gds exports", {
   skip_if_not_installed("fmrigds")
   skip_if_not_installed("jsonlite")

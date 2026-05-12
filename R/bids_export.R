@@ -5,8 +5,10 @@ NULL
 
 #' Write Results from fMRI Linear Model
 #'
-#' Exports statistical maps from an fmri_lm object to HDF5 files with BIDS-compliant
-#' naming and JSON metadata sidecars using the fmristore LabeledVolumeSet infrastructure.
+#' Exports statistical maps from an fmri_lm object with BIDS-compliant naming
+#' and JSON metadata sidecars. Supported image outputs are HDF5
+#' LabeledVolumeSet files and NIfTI files; an fmrigds representation can also
+#' be requested.
 #'
 #' @param x An fmri_lm object containing fitted model results
 #' @param path Output directory path. If NULL, uses current working directory
@@ -14,9 +16,9 @@ NULL
 #' @param task Task identifier (e.g., "nback", "rest"). Required for BIDS compliance.
 #' @param space Spatial reference (e.g., "MNI152NLin2009cAsym"). Optional but recommended.
 #' @param desc Description of the analysis (default: "GLM")
-#' @param format Character vector specifying output formats. Supported values
-#'   are `"h5"` (default BIDS/HDF5 export) and `"gds"` (fmrigds-compatible
-#'   assays plus an `.rds` plan describing the dataset). You may request both.
+#' @param format Output format(s). Use `"h5"` for BIDS-style HDF5 outputs,
+#'   `"nifti"` for BIDS-style NIfTI outputs, `"gds"` for fmrigds-compatible
+#'   assays plus an `.rds` plan, or a character vector to write multiple formats.
 #' @param strategy Storage strategy: "by_stat" (group contrasts by statistic) or "by_contrast" (separate files)
 #' @param save_betas Logical. Save raw regressor betas (default: TRUE)
 #' @param contrasts Character vector of contrast names to save. NULL saves all contrasts
@@ -36,9 +38,9 @@ NULL
 #' \dontrun{
 #' # Save all results using default settings
 #' write_results(fitted_model, subject = "01", task = "nback")
-#' 
-#' # Save only specific contrasts and statistics  
-#' write_results(fitted_model, 
+#'
+#' # Save only specific contrasts and statistics
+#' write_results(fitted_model,
 #'               subject = "01", task = "nback", space = "MNI152NLin2009cAsym",
 #'               contrasts = c("FacesVsPlaces", "GoVsNoGo"),
 #'               contrast_stats = c("beta", "tstat"))
@@ -47,7 +49,7 @@ NULL
 write_results.fmri_lm <- function(x,
                                   path = NULL,
                                   subject = NULL,
-                                  task = NULL, 
+                                  task = NULL,
                                   space = NULL,
                                   desc = "GLM",
                                   format = c("h5"),
@@ -59,30 +61,32 @@ write_results.fmri_lm <- function(x,
                                   overwrite = FALSE,
                                   validate_inputs = TRUE,
                                   ...) {
-  
+
   strategy <- match.arg(strategy)
   contrast_match <- match.arg(contrast_match)
-  format <- match.arg(format, c("h5", "gds"), several.ok = TRUE)
+  format <- match.arg(format, c("h5", "nifti", "gds"), several.ok = TRUE)
   if (length(format) == 0) format <- "h5"
   produce_h5 <- "h5" %in% format
+  produce_nifti <- "nifti" %in% format
   produce_gds <- "gds" %in% format
-  
+  image_formats <- .image_output_formats(format)
+
   # Input validation
   if (validate_inputs) {
     .validate_fmrilm_object(x)
   }
-  
+
   # Set default path
   if (is.null(path)) {
     path <- getwd()
   }
-  
+
   # Create BIDS entities list
   entities <- .create_bids_entities(subject, task, space)
-  
+
   # Validate required entities
   .validate_required_entities(entities)
-  
+
   predicted_files <- .predict_output_files(
     path = path,
     entities = entities,
@@ -95,7 +99,7 @@ write_results.fmri_lm <- function(x,
     contrast_stats = contrast_stats,
     fmrilm_obj = x
   )
-  
+
   if (!overwrite) {
     existing_files <- predicted_files[file.exists(predicted_files)]
     if (length(existing_files) > 0) {
@@ -107,35 +111,58 @@ write_results.fmri_lm <- function(x,
       )
     }
   }
-  
+
   # Create output directory if needed
   if (!dir.exists(path)) {
     dir.create(path, recursive = TRUE)
   }
-  
+
   # Use atomic write pattern with temporary directory
   temp_dir <- .create_temp_write_dir(path)
   finalized <- NULL
-  
+
   tryCatch({
     created_files <- list()
-    
+
     # Save raw regressor betas
-    if (produce_h5 && save_betas) {
-      beta_files <- .save_regressor_betas(x, temp_dir, entities, desc, overwrite)
-      created_files <- c(created_files, list(betas = beta_files))
+    if (save_betas) {
+      if (produce_h5) {
+        beta_files <- .save_regressor_betas(x, temp_dir, entities, desc, overwrite,
+                                            output_formats = image_formats)
+        created_files <- .merge_created_files(created_files, list(betas = beta_files))
+      }
+      if (produce_nifti) {
+        beta_files <- .save_regressor_betas_nifti(x, temp_dir, entities, desc, overwrite,
+                                                  output_formats = image_formats)
+        created_files <- .merge_created_files(created_files, list(betas = beta_files))
+      }
     }
-    
+
     # Save contrast results
     if (produce_h5) {
       if (strategy == "by_stat") {
-        contrast_files <- .save_contrasts_by_stat(x, temp_dir, entities, desc, 
-                                                  contrasts, contrast_match, contrast_stats, overwrite)
+        contrast_files <- .save_contrasts_by_stat(x, temp_dir, entities, desc,
+                                                  contrasts, contrast_match, contrast_stats, overwrite,
+                                                  output_formats = image_formats)
       } else {
         contrast_files <- .save_contrasts_by_contrast(x, temp_dir, entities, desc,
-                                                      contrasts, contrast_match, contrast_stats, overwrite)
+                                                      contrasts, contrast_match, contrast_stats, overwrite,
+                                                      output_formats = image_formats)
       }
-      created_files <- c(created_files, contrast_files)
+      created_files <- .merge_created_files(created_files, contrast_files)
+    }
+
+    if (produce_nifti) {
+      if (strategy == "by_stat") {
+        contrast_files <- .save_contrasts_by_stat_nifti(x, temp_dir, entities, desc,
+                                                        contrasts, contrast_match, contrast_stats, overwrite,
+                                                        output_formats = image_formats)
+      } else {
+        contrast_files <- .save_contrasts_by_contrast_nifti(x, temp_dir, entities, desc,
+                                                            contrasts, contrast_match, contrast_stats, overwrite,
+                                                            output_formats = image_formats)
+      }
+      created_files <- .merge_created_files(created_files, contrast_files)
     }
 
     if (produce_gds) {
@@ -145,11 +172,11 @@ write_results.fmri_lm <- function(x,
       gds_files <- .save_gds_outputs(x, temp_dir, entities, desc)
       created_files <- c(created_files, list(gds = gds_files))
     }
-    
+
     # Atomic move: if all writes succeeded, move temp_dir contents to final location
     finalized <- .finalize_atomic_write(temp_dir, path, created_files, overwrite = overwrite)
     created_files <- finalized$files
-    
+
     if (produce_gds && "gds" %in% names(created_files)) {
       .write_gds_plan_file(
         gds_h5_final = created_files$gds$h5,
@@ -158,11 +185,11 @@ write_results.fmri_lm <- function(x,
         backup_root = file.path(temp_dir, ".overwrite_backup")
       )
     }
-    
+
     .cleanup_temp_write_dir(temp_dir)
-    
+
     invisible(created_files)
-    
+
   }, error = function(e) {
     if (!is.null(finalized)) {
       .rollback_finalized_write(finalized$transaction)
@@ -178,24 +205,31 @@ write_results.fmri_lm <- function(x,
 .predict_output_files <- function(path, entities, desc, format, strategy, save_betas, contrasts, contrast_match, contrast_stats, fmrilm_obj) {
   predicted_files <- c()
   produce_h5 <- "h5" %in% format
+  produce_nifti <- "nifti" %in% format
   produce_gds <- "gds" %in% format
-  
+  produce_image <- produce_h5 || produce_nifti
+
   # Predict beta files
-  if (produce_h5 && save_betas) {
-    beta_h5 <- .generate_bids_filename(entities, desc = desc, suffix = "betas", extension = "h5")
+  if (produce_image && save_betas) {
     beta_json <- .generate_bids_filename(entities, desc = desc, suffix = "betas", extension = "json")
-    predicted_files <- c(predicted_files, 
-                        file.path(path, beta_h5), 
-                        file.path(path, beta_json))
+    if (produce_h5) {
+      beta_h5 <- .generate_bids_filename(entities, desc = desc, suffix = "betas", extension = "h5")
+      predicted_files <- c(predicted_files, file.path(path, beta_h5))
+    }
+    if (produce_nifti) {
+      beta_nii <- .generate_bids_filename(entities, desc = desc, suffix = "betas", extension = "nii.gz")
+      predicted_files <- c(predicted_files, file.path(path, beta_nii))
+    }
+    predicted_files <- c(predicted_files, file.path(path, beta_json))
   }
-  
+
   # Predict contrast files
-  if (produce_h5 && !is.null(fmrilm_obj$result$contrasts) && nrow(fmrilm_obj$result$contrasts) > 0) {
+  if (produce_image && !is.null(fmrilm_obj$result$contrasts) && nrow(fmrilm_obj$result$contrasts) > 0) {
     available_contrasts <- fmrilm_obj$result$contrasts
     if (!is.null(contrasts)) {
       available_contrasts <- .select_contrasts(available_contrasts, contrasts, contrast_match)
     }
-    
+
     if (nrow(available_contrasts) > 0) {
       if (strategy == "by_stat") {
         # Files grouped by statistic
@@ -203,14 +237,19 @@ write_results.fmri_lm <- function(x,
           has_stat <- any(vapply(available_contrasts$data, function(entry) {
             .map_stat_name(stat) %in% names(entry)
           }, logical(1)))
-          
+
           if (has_stat) {
             stat_desc <- .stat_desc(desc, stat)
-            filename_h5 <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = "h5")
             filename_json <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = "json")
-            predicted_files <- c(predicted_files, 
-                                file.path(path, filename_h5),
-                                file.path(path, filename_json))
+            if (produce_h5) {
+              filename_h5 <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = "h5")
+              predicted_files <- c(predicted_files, file.path(path, filename_h5))
+            }
+            if (produce_nifti) {
+              filename_nii <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = "nii.gz")
+              predicted_files <- c(predicted_files, file.path(path, filename_nii))
+            }
+            predicted_files <- c(predicted_files, file.path(path, filename_json))
           }
         }
       } else {
@@ -219,28 +258,59 @@ write_results.fmri_lm <- function(x,
           available_stats <- vapply(contrast_stats, function(stat) {
             .map_stat_name(stat) %in% names(available_contrasts$data[[i]])
           }, logical(1))
-          
+
           if (any(available_stats)) {
             contrast_name <- available_contrasts$name[i]
             stat_desc <- if (sum(available_stats) == 1) .stat_desc(desc, contrast_stats[available_stats][1]) else desc
-            filename_h5 <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "h5")
             filename_json <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "json")
-            predicted_files <- c(predicted_files, 
-                                file.path(path, filename_h5),
-                                file.path(path, filename_json))
+            if (produce_h5) {
+              filename_h5 <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "h5")
+              predicted_files <- c(predicted_files, file.path(path, filename_h5))
+            }
+            if (produce_nifti) {
+              filename_nii <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "nii.gz")
+              predicted_files <- c(predicted_files, file.path(path, filename_nii))
+            }
+            predicted_files <- c(predicted_files, file.path(path, filename_json))
           }
         }
       }
     }
   }
-  
+
   if (produce_gds) {
     gds_h5 <- .generate_bids_filename(entities, desc = desc, suffix = "gds", extension = "h5")
     gds_plan <- .generate_bids_filename(entities, desc = desc, suffix = "gds", extension = "rds")
     predicted_files <- c(predicted_files, file.path(path, gds_h5), file.path(path, gds_plan))
   }
-  
+
   unique(predicted_files)
+}
+
+#' Image Output Formats
+#' @keywords internal
+#' @noRd
+.image_output_formats <- function(format) {
+  intersect(c("h5", "nifti"), format)
+}
+
+#' Merge Nested Created File Lists
+#' @keywords internal
+#' @noRd
+.merge_created_files <- function(existing, additions) {
+  if (length(additions) == 0) {
+    return(existing)
+  }
+  for (nm in names(additions)) {
+    if (!is.null(existing[[nm]]) && is.list(existing[[nm]]) && is.list(additions[[nm]])) {
+      for (child in names(additions[[nm]])) {
+        existing[[nm]][[child]] <- additions[[nm]][[child]]
+      }
+    } else {
+      existing[[nm]] <- additions[[nm]]
+    }
+  }
+  existing
 }
 
 #' Select Contrasts by Exact Name or Regex
@@ -294,19 +364,19 @@ write_results.fmri_lm <- function(x,
   if (!inherits(x, "fmri_lm")) {
     stop("Input must be an 'fmri_lm' object", call. = FALSE)
   }
-  
+
   if (is.null(x$result)) {
     stop("fmri_lm object has not been fitted (missing $result component)", call. = FALSE)
   }
-  
+
   if (is.null(x$result$betas)) {
     stop("fmri_lm object missing beta estimates", call. = FALSE)
   }
-  
+
   if (is.null(x$model)) {
     stop("fmri_lm object missing model specification", call. = FALSE)
   }
-  
+
   if (is.null(x$dataset)) {
     stop("fmri_lm object missing dataset information", call. = FALSE)
   }
@@ -316,24 +386,24 @@ write_results.fmri_lm <- function(x,
 #' @keywords internal
 #' @noRd
 .create_bids_entities <- function(subject, task, space) {
-  
+
   entities <- list()
-  
+
   # Subject: sanitize and store
   if (!is.null(subject)) {
     entities$subject <- .sanitize_label(subject)
   }
-  
+
   # Task: sanitize and store
   if (!is.null(task)) {
     entities$task <- .sanitize_label(task)
   }
-  
+
   # Space: sanitize and store
   if (!is.null(space)) {
     entities$space <- .sanitize_label(space)
   }
-  
+
   return(entities)
 }
 
@@ -342,17 +412,17 @@ write_results.fmri_lm <- function(x,
 #' @noRd
 .sanitize_label <- function(label) {
   if (is.null(label) || is.na(label)) return(NULL)
-  
+
   # Convert to character and remove invalid characters
   label <- as.character(label)
   # BIDS labels must be alphanumeric only (no hyphens allowed in labels)
   label <- gsub("[^a-zA-Z0-9]", "", label)
-  
+
   if (nchar(label) == 0) {
     warning("Label sanitization resulted in empty string")
     return(NULL)  # Return NULL instead of empty string to properly trigger validation
   }
-  
+
   return(label)
 }
 
@@ -361,15 +431,15 @@ write_results.fmri_lm <- function(x,
 #' @noRd
 .validate_required_entities <- function(entities) {
   if (is.null(entities$subject)) {
-    stop("Subject identifier is required. Please provide 'subject' parameter.", 
+    stop("Subject identifier is required. Please provide 'subject' parameter.",
          call. = FALSE)
   }
-  
+
   if (is.null(entities$task)) {
     stop("Task identifier is required for BIDS compliance. Please provide 'task' parameter.",
          call. = FALSE)
   }
-  
+
   # Space is optional but recommended
   if (is.null(entities$space)) {
     warning("Spatial reference not specified. Consider providing 'space' parameter for better BIDS compliance.")
@@ -379,67 +449,68 @@ write_results.fmri_lm <- function(x,
 #' Generate BIDS-Compliant Filename
 #' @keywords internal
 #' @noRd
-.generate_bids_filename <- function(entities, desc = NULL, contrast = NULL, 
+.generate_bids_filename <- function(entities, desc = NULL, contrast = NULL,
                                    stat = NULL, suffix = NULL, extension = "h5") {
-  
+
   parts <- c()
-  
+
   # Required/standard entities in BIDS order
   if (!is.null(entities$subject)) {
     parts <- c(parts, paste0("sub-", entities$subject))
   }
-  
+
   if (!is.null(entities$task)) {
     parts <- c(parts, paste0("task-", entities$task))
   }
-  
+
   if (!is.null(entities$space)) {
     parts <- c(parts, paste0("space-", entities$space))
   }
-  
+
   if (!is.null(contrast)) {
     parts <- c(parts, paste0("contrast-", .sanitize_label(contrast)))
   }
-  
+
   if (!is.null(stat)) {
     parts <- c(parts, paste0("stat-", stat))
   }
-  
+
   if (!is.null(desc)) {
     parts <- c(parts, paste0("desc-", desc))
   }
-  
+
   # Add suffix
   if (!is.null(suffix)) {
     parts <- c(parts, suffix)
   }
-  
+
   # Combine parts
   filename <- paste(parts, collapse = "_")
-  
+
   # Add extension
   if (!is.null(extension)) {
     filename <- paste0(filename, ".", extension)
   }
-  
+
   return(filename)
 }
 
 #' Save Raw Regressor Betas using LabeledVolumeSet
 #' @keywords internal
 #' @noRd
-.save_regressor_betas <- function(fmrilm_obj, path, entities, desc, overwrite) {
-  
+.save_regressor_betas <- function(fmrilm_obj, path, entities, desc, overwrite,
+                                  output_formats = "h5") {
+
   # Compute beta volumes
   beta_data <- .compute_beta_volumes(fmrilm_obj)
-  
+
   # Get regressor names from the actual beta data to ensure they match
   # First get the raw beta matrix from coef() to access column names
   beta_matrix <- coef(fmrilm_obj, type = "betas", include_baseline = TRUE)
-  
+
   # Beta data should now always contain all regressors (event + baseline)
   n_beta_cols <- dim(beta_data)[4]  # 4th dimension is number of regressors
-  
+
   # Use the column names from the beta matrix if available
   if (!is.null(colnames(beta_matrix))) {
     regressor_names <- colnames(beta_matrix)
@@ -447,21 +518,21 @@ write_results.fmri_lm <- function(x,
     # Fallback: generate generic names
     regressor_names <- paste0("beta_", seq_len(n_beta_cols))
   }
-  
+
   # Ensure we have the right number of names
   if (length(regressor_names) != n_beta_cols) {
     warning("Regressor names don't match beta dimensions. Using generic names.")
     regressor_names <- paste0("beta_", seq_len(n_beta_cols))
   }
-  
+
   spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "raw beta export")
   mask_array <- spatial$mask_array
   space <- spatial$space
-  
-  # Generate filename for raw betas  
+
+  # Generate filename for raw betas
   filename <- .generate_bids_filename(entities, desc = desc, suffix = "betas", extension = "h5")
   filepath <- file.path(path, filename)
-  
+
   # Save using fmristore infrastructure
   tryCatch({
     # Create 3D mask volume for fmristore
@@ -471,23 +542,57 @@ write_results.fmri_lm <- function(x,
   }, error = function(e) {
     stop("Failed to write LabeledVolumeSet: ", e$message, call. = FALSE)
   })
-  
+
   # Generate and save JSON metadata
-  json_filepath <- .save_betas_json_metadata(fmrilm_obj, path, entities, desc, regressor_names, filepath)
-  
+  json_filepath <- .save_betas_json_metadata(fmrilm_obj, path, entities, desc, regressor_names, filepath,
+                                             output_formats = output_formats)
+
   return(list(h5 = filepath, json = json_filepath))
+}
+
+#' Save Raw Regressor Betas as NIfTI
+#' @keywords internal
+#' @noRd
+.save_regressor_betas_nifti <- function(fmrilm_obj, path, entities, desc, overwrite,
+                                        output_formats = "nifti") {
+
+  beta_data <- .compute_beta_volumes(fmrilm_obj)
+  beta_matrix <- coef(fmrilm_obj, type = "betas", include_baseline = TRUE)
+  n_beta_cols <- dim(beta_data)[4]
+
+  if (!is.null(colnames(beta_matrix))) {
+    regressor_names <- colnames(beta_matrix)
+  } else {
+    regressor_names <- paste0("beta_", seq_len(n_beta_cols))
+  }
+
+  if (length(regressor_names) != n_beta_cols) {
+    warning("Regressor names don't match beta dimensions. Using generic names.")
+    regressor_names <- paste0("beta_", seq_len(n_beta_cols))
+  }
+
+  filename <- .generate_bids_filename(entities, desc = desc, suffix = "betas", extension = "nii.gz")
+  filepath <- file.path(path, filename)
+
+  .write_nifti_volume(beta_data, filepath, "raw regressor beta NIfTI")
+
+  json_filepath <- .save_betas_json_metadata(fmrilm_obj, path, entities, desc, regressor_names, filepath,
+                                             output_formats = output_formats)
+
+  list(nifti = filepath, json = json_filepath)
 }
 
 #' Save Contrasts by Statistic Type using LabeledVolumeSet
 #' @keywords internal
 #' @noRd
-.save_contrasts_by_stat <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_match, contrast_stats, overwrite) {
-  
+.save_contrasts_by_stat <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_match, contrast_stats, overwrite,
+                                    output_formats = "h5") {
+
   if (is.null(fmrilm_obj$result$contrasts) || nrow(fmrilm_obj$result$contrasts) == 0) {
     warning("No contrasts found in fmrilm object")
     return(list())
   }
-  
+
   # Filter contrasts if specified
   available_contrasts <- fmrilm_obj$result$contrasts
   if (!is.null(contrasts)) {
@@ -497,57 +602,113 @@ write_results.fmri_lm <- function(x,
       return(list())
     }
   }
-  
+
   # Get spatial information
   spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "contrast export")
   mask_array <- spatial$mask_array
   space <- spatial$space
   brain_dims <- dim(mask_array)
-  
+
   # Validate mask dimensionality
   if (length(mask_array) != prod(brain_dims)) {
-    stop("Mask length (", length(mask_array), 
-         ") does not match product of space dims (", prod(brain_dims), ").", 
+    stop("Mask length (", length(mask_array),
+         ") does not match product of space dims (", prod(brain_dims), ").",
          call. = FALSE)
   }
-  
+
   mask_vol <- neuroim2::LogicalNeuroVol(mask_array, space)
-  
+
   created_files <- list()
-  
+
   # Save each statistic type separately
   for (stat in contrast_stats) {
     stat_data <- .compute_statistical_volumes(available_contrasts, stat, brain_dims, mask_array, space)
-    
+
     if (!is.null(stat_data)) {
       stat_desc <- .stat_desc(desc, stat)
       filename <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold")
       filepath <- file.path(path, filename)
-      
+
       h5_handle <- fmristore::write_labeled_vec(stat_data$neurovec, mask_vol, stat_data$contrast_names, file = filepath)
       h5_handle$close_all()
-      
+
       # Save JSON metadata
-      json_filepath <- .save_contrasts_json_metadata(fmrilm_obj, path, entities, desc, 
-                                                     stat, stat_data$contrast_names, available_contrasts, filepath)
-      
+      json_filepath <- .save_contrasts_json_metadata(fmrilm_obj, path, entities, desc,
+                                                     stat, stat_data$contrast_names, available_contrasts, filepath,
+                                                     output_formats = output_formats)
+
       created_files[[stat]] <- list(h5 = filepath, json = json_filepath)
     }
   }
-  
+
   return(created_files)
 }
 
-#' Save Contrasts by Individual Contrast using LabeledVolumeSet
-#' @keywords internal  
+#' Save Contrasts by Statistic Type as NIfTI
+#' @keywords internal
 #' @noRd
-.save_contrasts_by_contrast <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_match, contrast_stats, overwrite) {
-  
+.save_contrasts_by_stat_nifti <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_match,
+                                          contrast_stats, overwrite, output_formats = "nifti") {
+
   if (is.null(fmrilm_obj$result$contrasts) || nrow(fmrilm_obj$result$contrasts) == 0) {
     warning("No contrasts found in fmrilm object")
     return(list())
   }
-  
+
+  available_contrasts <- fmrilm_obj$result$contrasts
+  if (!is.null(contrasts)) {
+    available_contrasts <- .select_contrasts(available_contrasts, contrasts, contrast_match)
+    if (nrow(available_contrasts) == 0) {
+      warning("None of the specified contrasts found in model")
+      return(list())
+    }
+  }
+
+  spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "contrast NIfTI export")
+  mask_array <- spatial$mask_array
+  space <- spatial$space
+  brain_dims <- dim(mask_array)
+
+  if (length(mask_array) != prod(brain_dims)) {
+    stop("Mask length (", length(mask_array),
+         ") does not match product of space dims (", prod(brain_dims), ").",
+         call. = FALSE)
+  }
+
+  created_files <- list()
+
+  for (stat in contrast_stats) {
+    stat_data <- .compute_statistical_volumes(available_contrasts, stat, brain_dims, mask_array, space)
+
+    if (!is.null(stat_data)) {
+      stat_desc <- .stat_desc(desc, stat)
+      filename <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = "nii.gz")
+      filepath <- file.path(path, filename)
+
+      .write_nifti_volume(stat_data$neurovec, filepath, paste0("contrast ", stat, " NIfTI"))
+
+      json_filepath <- .save_contrasts_json_metadata(fmrilm_obj, path, entities, desc,
+                                                     stat, stat_data$contrast_names, available_contrasts, filepath,
+                                                     output_formats = output_formats)
+
+      created_files[[stat]] <- list(nifti = filepath, json = json_filepath)
+    }
+  }
+
+  created_files
+}
+
+#' Save Contrasts by Individual Contrast using LabeledVolumeSet
+#' @keywords internal
+#' @noRd
+.save_contrasts_by_contrast <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_match, contrast_stats, overwrite,
+                                        output_formats = "h5") {
+
+  if (is.null(fmrilm_obj$result$contrasts) || nrow(fmrilm_obj$result$contrasts) == 0) {
+    warning("No contrasts found in fmrilm object")
+    return(list())
+  }
+
   # Filter contrasts if specified
   available_contrasts <- fmrilm_obj$result$contrasts
   if (!is.null(contrasts)) {
@@ -557,29 +718,29 @@ write_results.fmri_lm <- function(x,
       return(list())
     }
   }
-  
+
   # Get spatial information
   spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "contrast export")
   mask_array <- spatial$mask_array
   space <- spatial$space
   brain_dims <- dim(mask_array)
-  
+
   # Validate mask dimensionality
   if (length(mask_array) != prod(brain_dims)) {
-    stop("Mask length (", length(mask_array), 
-         ") does not match product of space dims (", prod(brain_dims), ").", 
+    stop("Mask length (", length(mask_array),
+         ") does not match product of space dims (", prod(brain_dims), ").",
          call. = FALSE)
   }
-  
+
   mask_vol <- neuroim2::LogicalNeuroVol(mask_array, space)
-  
+
   created_files <- list()
-  
+
   # Save each contrast separately with all its statistics
   for (i in seq_len(nrow(available_contrasts))) {
     contrast_name <- available_contrasts$name[i]
     contrast_data <- available_contrasts$data[[i]]
-    
+
     # Map user statistic names to internal field names and collect available statistics
     available_stats <- c()
     mapped_stats <- c()
@@ -590,13 +751,13 @@ write_results.fmri_lm <- function(x,
         mapped_stats <- c(mapped_stats, internal_stat_name)  # Store internal name for data access
       }
     }
-    
+
     if (length(available_stats) > 0) {
       # Create 4D array for this contrast's statistics - optimized version
       stat_array <- array(0, dim = c(brain_dims, length(available_stats)))
       mask_indices <- which(mask_array, arr.ind = TRUE)
       n_mask_voxels <- sum(mask_array)
-      
+
       # Vectorized assignment using mask indices
       for (j in seq_along(available_stats)) {
         internal_stat_name <- mapped_stats[j]
@@ -611,27 +772,114 @@ write_results.fmri_lm <- function(x,
         }
         stat_array[cbind(mask_indices, j)] <- stat_values
       }
-      
+
       # Create NeuroVec using add_dim
       ospace_stat <- neuroim2::add_dim(space, length(available_stats))
       stat_vec <- neuroim2::NeuroVec(stat_array, ospace_stat)
-      
+
       stat_desc <- if (length(available_stats) == 1) .stat_desc(desc, available_stats[[1]]) else desc
       filename <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold")
       filepath <- file.path(path, filename)
-      
+
       h5_handle <- fmristore::write_labeled_vec(stat_vec, mask_vol, available_stats, file = filepath)
       h5_handle$close_all()
-      
+
       # Save JSON metadata
       json_filepath <- .save_single_contrast_json_metadata(fmrilm_obj, path, entities, desc,
-                                                          contrast_name, available_stats, available_contrasts[i, ], filepath)
-      
+                                                          contrast_name, available_stats, available_contrasts[i, ], filepath,
+                                                          output_formats = output_formats)
+
       created_files[[contrast_name]] <- list(h5 = filepath, json = json_filepath)
     }
   }
-  
+
   return(created_files)
+}
+
+#' Save Contrasts by Individual Contrast as NIfTI
+#' @keywords internal
+#' @noRd
+.save_contrasts_by_contrast_nifti <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_match,
+                                              contrast_stats, overwrite, output_formats = "nifti") {
+
+  if (is.null(fmrilm_obj$result$contrasts) || nrow(fmrilm_obj$result$contrasts) == 0) {
+    warning("No contrasts found in fmrilm object")
+    return(list())
+  }
+
+  available_contrasts <- fmrilm_obj$result$contrasts
+  if (!is.null(contrasts)) {
+    available_contrasts <- .select_contrasts(available_contrasts, contrasts, contrast_match)
+    if (nrow(available_contrasts) == 0) {
+      warning("None of the specified contrasts found in model")
+      return(list())
+    }
+  }
+
+  spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "contrast NIfTI export")
+  mask_array <- spatial$mask_array
+  space <- spatial$space
+  brain_dims <- dim(mask_array)
+
+  if (length(mask_array) != prod(brain_dims)) {
+    stop("Mask length (", length(mask_array),
+         ") does not match product of space dims (", prod(brain_dims), ").",
+         call. = FALSE)
+  }
+
+  created_files <- list()
+
+  for (i in seq_len(nrow(available_contrasts))) {
+    contrast_name <- available_contrasts$name[i]
+    contrast_data <- available_contrasts$data[[i]]
+
+    available_stats <- c()
+    mapped_stats <- c()
+    for (stat in contrast_stats) {
+      internal_stat_name <- .map_stat_name(stat)
+      if (internal_stat_name %in% names(contrast_data)) {
+        available_stats <- c(available_stats, stat)
+        mapped_stats <- c(mapped_stats, internal_stat_name)
+      }
+    }
+
+    if (length(available_stats) > 0) {
+      stat_array <- array(0, dim = c(brain_dims, length(available_stats)))
+      mask_indices <- which(mask_array, arr.ind = TRUE)
+      n_mask_voxels <- sum(mask_array)
+
+      for (j in seq_along(available_stats)) {
+        internal_stat_name <- mapped_stats[j]
+        stat_values <- contrast_data[[internal_stat_name]][[1]]
+        if (length(stat_values) != n_mask_voxels) {
+          stop(
+            "Statistic '", available_stats[[j]], "' for contrast '", contrast_name,
+            "' has ", length(stat_values),
+            " values but mask contains ", n_mask_voxels, " in-mask voxels.",
+            call. = FALSE
+          )
+        }
+        stat_array[cbind(mask_indices, j)] <- stat_values
+      }
+
+      ospace_stat <- neuroim2::add_dim(space, length(available_stats))
+      stat_vec <- neuroim2::NeuroVec(stat_array, ospace_stat)
+
+      stat_desc <- if (length(available_stats) == 1) .stat_desc(desc, available_stats[[1]]) else desc
+      filename <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "nii.gz")
+      filepath <- file.path(path, filename)
+
+      .write_nifti_volume(stat_vec, filepath, paste0("contrast ", contrast_name, " NIfTI"))
+
+      json_filepath <- .save_single_contrast_json_metadata(fmrilm_obj, path, entities, desc,
+                                                          contrast_name, available_stats, available_contrasts[i, ], filepath,
+                                                          output_formats = output_formats)
+
+      created_files[[contrast_name]] <- list(nifti = filepath, json = json_filepath)
+    }
+  }
+
+  created_files
 }
 
 
@@ -749,15 +997,16 @@ write_results.fmri_lm <- function(x,
 #' Save JSON Metadata for Betas
 #' @keywords internal
 #' @noRd
-.save_betas_json_metadata <- function(fmrilm_obj, path, entities, desc, regressor_names, h5_filepath) {
-  
+.save_betas_json_metadata <- function(fmrilm_obj, path, entities, desc, regressor_names, h5_filepath,
+                                      output_formats = "h5") {
+
   # Generate JSON filename
   filename <- .generate_bids_filename(entities, desc = desc, suffix = "betas", extension = "json")
   filepath <- file.path(path, filename)
-  
+
   # Extract source information
   sources <- .extract_source_files(fmrilm_obj)
-  
+
   # Create metadata structure
   metadata <- list(
     Description = "Raw regressor beta coefficients from GLM analysis",
@@ -774,11 +1023,7 @@ write_results.fmri_lm <- function(x,
       NumRegressors = as.integer(length(regressor_names))
     ),
     RegressorOrder = as.character(regressor_names),
-    DataInfo = list(
-      FileFormat = "HDF5",
-      Storage = "LabeledVolumeSet",
-      Units = "arbitrary (depends on input data scaling)"
-    ),
+    DataInfo = .image_data_info(output_formats, "arbitrary (depends on input data scaling)"),
     GeneratedBy = list(
       Name = "fmrireg::write_results",
       Version = as.character(utils::packageVersion("fmrireg")),
@@ -786,28 +1031,29 @@ write_results.fmri_lm <- function(x,
     ),
     CreationTime = format(Sys.time(), "%Y-%m-%dT%H:%M:%S")
   )
-  
+
   # Add spatial reference if available
   if (!is.null(entities$space)) {
     metadata$SpatialReference = entities$space
   }
-  
+
   # Save JSON
   jsonlite::write_json(metadata, filepath, pretty = TRUE, auto_unbox = TRUE)
-  
+
   return(filepath)
 }
 
 #' Save JSON Metadata for Contrasts (by stat)
 #' @keywords internal
 #' @noRd
-.save_contrasts_json_metadata <- function(fmrilm_obj, path, entities, desc, stat, contrast_names, contrasts, h5_filepath) {
-  
+.save_contrasts_json_metadata <- function(fmrilm_obj, path, entities, desc, stat, contrast_names, contrasts, h5_filepath,
+                                          output_formats = "h5") {
+
   # Generate JSON filename
   stat_desc <- .stat_desc(desc, stat)
   filename <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = "json")
   filepath <- file.path(path, filename)
-  
+
   # Extract contrast definitions
   contrast_definitions <- list()
   for (i in seq_len(nrow(contrasts))) {
@@ -820,11 +1066,11 @@ write_results.fmri_lm <- function(x,
       )
     }
   }
-  
+
   # Extract source information and degrees of freedom
   sources <- .extract_source_files(fmrilm_obj)
   df_resid <- .extract_degrees_of_freedom(fmrilm_obj)
-  
+
   # Create metadata structure
   metadata <- list(
     Description = paste("Contrast", stat, "statistics from GLM analysis"),
@@ -838,16 +1084,12 @@ write_results.fmri_lm <- function(x,
       neuroim2 = as.character(utils::packageVersion("neuroim2"))
     ),
     ModelInfo = list(
-      Type = "General Linear Model", 
+      Type = "General Linear Model",
       Formula = as.character(deparse(get_formula(fmrilm_obj$model)))
     ),
     ContrastOrder = contrast_names,
     ContrastDefinitions = contrast_definitions,
-    DataInfo = list(
-      FileFormat = "HDF5",
-      Storage = "LabeledVolumeSet",
-      Units = .get_stat_units(stat)
-    ),
+    DataInfo = .image_data_info(output_formats, .get_stat_units(stat)),
     GeneratedBy = list(
       Name = "fmrireg::write_results",
       Version = as.character(utils::packageVersion("fmrireg")),
@@ -855,32 +1097,33 @@ write_results.fmri_lm <- function(x,
     ),
     CreationTime = format(Sys.time(), "%Y-%m-%dT%H:%M:%S")
   )
-  
+
   # Add spatial reference if available
   if (!is.null(entities$space)) {
     metadata$SpatialReference = entities$space
   }
-  
+
   # Save JSON
   jsonlite::write_json(metadata, filepath, pretty = TRUE, auto_unbox = TRUE)
-  
+
   return(filepath)
 }
 
 #' Save JSON Metadata for Single Contrast
 #' @keywords internal
 #' @noRd
-.save_single_contrast_json_metadata <- function(fmrilm_obj, path, entities, desc, contrast_name, stat_names, contrast_row, h5_filepath) {
-  
+.save_single_contrast_json_metadata <- function(fmrilm_obj, path, entities, desc, contrast_name, stat_names, contrast_row, h5_filepath,
+                                                output_formats = "h5") {
+
   # Generate JSON filename
   stat_desc <- if (length(stat_names) == 1) .stat_desc(desc, stat_names[[1]]) else desc
   filename <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "json")
   filepath <- file.path(path, filename)
-  
+
   # Extract source information and degrees of freedom
   sources <- .extract_source_files(fmrilm_obj)
   df_resid <- .extract_degrees_of_freedom(fmrilm_obj)
-  
+
   # Create metadata structure
   metadata <- list(
     Description = paste("Statistical maps for contrast", contrast_name, "from GLM analysis"),
@@ -902,11 +1145,7 @@ write_results.fmri_lm <- function(x,
       Type = .extract_contrast_type(contrast_row, fmrilm_obj)
     ),
     StatisticOrder = stat_names,
-    DataInfo = list(
-      FileFormat = "HDF5",
-      Storage = "LabeledVolumeSet",
-      Units = "various (see StatisticOrder for mapping)"
-    ),
+    DataInfo = .image_data_info(output_formats, "various (see StatisticOrder for mapping)"),
     GeneratedBy = list(
       Name = "fmrireg::write_results",
       Version = as.character(utils::packageVersion("fmrireg")),
@@ -914,15 +1153,15 @@ write_results.fmri_lm <- function(x,
     ),
     CreationTime = format(Sys.time(), "%Y-%m-%dT%H:%M:%S")
   )
-  
+
   # Add spatial reference if available
   if (!is.null(entities$space)) {
     metadata$SpatialReference = entities$space
   }
-  
+
   # Save JSON
   jsonlite::write_json(metadata, filepath, pretty = TRUE, auto_unbox = TRUE)
-  
+
   return(filepath)
 }
 
@@ -946,7 +1185,7 @@ write_results.fmri_lm <- function(x,
 .extract_source_files <- function(fmrilm_obj) {
   # Try to extract source file information from dataset
   sources <- character(0)
-  
+
   tryCatch({
     # Check if dataset has source information
     if (!is.null(fmrilm_obj$dataset) && !is.null(attr(fmrilm_obj$dataset, "source_files"))) {
@@ -963,7 +1202,7 @@ write_results.fmri_lm <- function(x,
     # If extraction fails, leave empty
     sources <<- character(0)
   })
-  
+
   return(sources)
 }
 
@@ -974,25 +1213,25 @@ write_results.fmri_lm <- function(x,
   # Try to determine contrast type from available information
   tryCatch({
     contrast_data <- contrast_row$data[[1]]
-    
+
     # Check what statistics are available to infer type
     available_stats <- names(contrast_data)
-    
+
     # If F-statistic is present, it's likely an F-contrast
     if ("fstat" %in% available_stats || "f" %in% available_stats) {
       return("F-contrast")
     }
-    
+
     # If only t-statistic, beta, and p-values, likely a t-contrast
     if (any(c("tstat", "t") %in% available_stats)) {
       return("t-contrast")
     }
-    
+
     # Check if contrast has matrix information (safer approach)
     # Use safe column access to avoid warnings
     has_contrast_matrix <- "contrast_matrix" %in% names(contrast_row)
     has_weights <- "weights" %in% names(contrast_row)
-    
+
     if (has_contrast_matrix && !is.null(contrast_row[["contrast_matrix"]])) {
       # If we can access the contrast matrix, check dimensions
       contrast_matrix <- contrast_row[["contrast_matrix"]]
@@ -1005,16 +1244,16 @@ write_results.fmri_lm <- function(x,
       # Check weights if available
       return("t-contrast")
     }
-    
+
     # Default fallback based on naming patterns
     contrast_name <- contrast_row$name
     if (grepl("vs|VS|_vs_|-vs-", contrast_name)) {
       return("t-contrast")  # Pairwise comparisons are usually t-contrasts
     }
-    
+
     # Default to generic contrast
     return("contrast")
-    
+
   }, error = function(e) {
     # If extraction fails, return generic type
     return("contrast")
@@ -1027,7 +1266,7 @@ write_results.fmri_lm <- function(x,
 .extract_degrees_of_freedom <- function(fmrilm_obj) {
   # Extract residual degrees of freedom
   df_resid <- NULL
-  
+
   tryCatch({
     # Check if df.residual is directly in the result structure
     if (!is.null(fmrilm_obj$result$df.residual)) {
@@ -1042,7 +1281,7 @@ write_results.fmri_lm <- function(x,
     # If extraction fails, leave NULL
     df_resid <<- NULL
   })
-  
+
   return(df_resid)
 }
 
@@ -1051,15 +1290,15 @@ write_results.fmri_lm <- function(x,
 #' @noRd
 .create_temp_write_dir <- function(base_path) {
   # Create unique temporary directory name
-  temp_name <- paste0(".tmp_write_", format(Sys.time(), "%Y%m%d_%H%M%S"), "_", 
+  temp_name <- paste0(".tmp_write_", format(Sys.time(), "%Y%m%d_%H%M%S"), "_",
                       sample(10000:99999, 1))
   temp_dir <- file.path(base_path, temp_name)
-  
+
   # Create temporary directory
   if (!dir.create(temp_dir, recursive = TRUE)) {
     stop("Failed to create temporary directory: ", temp_dir, call. = FALSE)
   }
-  
+
   return(temp_dir)
 }
 
@@ -1073,12 +1312,12 @@ write_results.fmri_lm <- function(x,
   if (!overwrite) {
     stop("Output file already exists: ", file, call. = FALSE)
   }
-  
+
   backup_file <- file.path(backup_root, relative_name)
   if (!dir.exists(dirname(backup_file))) {
     dir.create(dirname(backup_file), recursive = TRUE)
   }
-  
+
   if (!file.rename(file, backup_file)) {
     if (!file.copy(file, backup_file, overwrite = TRUE)) {
       stop("Failed to back up existing file: ", file, call. = FALSE)
@@ -1087,7 +1326,7 @@ write_results.fmri_lm <- function(x,
       stop("Failed to remove existing file after backup: ", file, call. = FALSE)
     }
   }
-  
+
   backup_file
 }
 
@@ -1099,7 +1338,7 @@ write_results.fmri_lm <- function(x,
   rel_paths <- sub(paste0("^", temp_dir, "/"), "", temp_files)
   final_files <- file.path(final_path, rel_paths)
   existing_targets <- final_files[file.exists(final_files)]
-  
+
   if (!overwrite && length(existing_targets) > 0) {
     stop(
       "Output files already exist: ",
@@ -1108,12 +1347,12 @@ write_results.fmri_lm <- function(x,
       call. = FALSE
     )
   }
-  
+
   backup_root <- file.path(temp_dir, ".overwrite_backup")
   backup_map <- character(0)
   moved_files <- character(0)
   success <- FALSE
-  
+
   on.exit({
     if (!success) {
       .rollback_finalized_write(list(
@@ -1122,19 +1361,19 @@ write_results.fmri_lm <- function(x,
       ))
     }
   }, add = TRUE)
-  
+
   for (i in seq_along(temp_files)) {
     temp_file <- temp_files[[i]]
     # Get relative path within temp directory
     rel_path <- rel_paths[[i]]
     final_file <- final_files[[i]]
-    
+
     # Ensure destination directory exists
     final_dir <- dirname(final_file)
     if (!dir.exists(final_dir)) {
       dir.create(final_dir, recursive = TRUE)
     }
-    
+
     backup_file <- .stash_existing_file(
       final_file,
       backup_root = backup_root,
@@ -1144,7 +1383,7 @@ write_results.fmri_lm <- function(x,
     if (!is.null(backup_file)) {
       backup_map[[final_file]] <- backup_file
     }
-    
+
     # Move file
     if (!file.rename(temp_file, final_file)) {
       # If rename fails, try copy + delete
@@ -1155,11 +1394,11 @@ write_results.fmri_lm <- function(x,
     }
     moved_files <- c(moved_files, final_file)
   }
-  
+
   # Update file paths in created_files to point to final locations
   updated_files <- .update_file_paths_in_results(created_files, temp_dir, final_path)
   success <- TRUE
-  
+
   list(
     files = updated_files,
     transaction = list(
@@ -1200,13 +1439,13 @@ write_results.fmri_lm <- function(x,
 .rollback_finalized_write <- function(transaction) {
   moved_files <- rev(transaction$moved_files %||% character(0))
   backup_map <- transaction$backup_map %||% character(0)
-  
+
   for (file in moved_files) {
     if (file.exists(file)) {
       file.remove(file)
     }
   }
-  
+
   if (length(backup_map) > 0) {
     for (final_file in names(backup_map)) {
       backup_file <- backup_map[[final_file]]
@@ -1236,7 +1475,7 @@ write_results.fmri_lm <- function(x,
       relative_name = basename(gds_plan_final)
     )
   }
-  
+
   success <- FALSE
   on.exit({
     if (!success && !is.null(backup_file) && file.exists(backup_file)) {
@@ -1249,12 +1488,47 @@ write_results.fmri_lm <- function(x,
       }
     }
   }, add = TRUE)
-  
+
   disk_plan <- fmrigds::gds(source = gds_h5_final, format = "h5")
   saveRDS(disk_plan, gds_plan_final)
   success <- TRUE
-  
+
   invisible(gds_plan_final)
+}
+
+#' Write a NIfTI Volume
+#' @keywords internal
+#' @noRd
+.write_nifti_volume <- function(volume, filepath, context) {
+  tryCatch({
+    if (inherits(volume, "NeuroVec")) {
+      neuroim2::write_vec(volume, filepath)
+    } else {
+      neuroim2::write_vol(volume, filepath)
+    }
+  }, error = function(e) {
+    stop("Failed to write ", context, ": ", e$message, call. = FALSE)
+  })
+  filepath
+}
+
+#' DataInfo Metadata for Image Outputs
+#' @keywords internal
+#' @noRd
+.image_data_info <- function(output_formats, units) {
+  output_formats <- .image_output_formats(output_formats)
+  if (length(output_formats) == 0) {
+    output_formats <- "h5"
+  }
+
+  file_formats <- c(h5 = "HDF5", nifti = "NIfTI")
+  storage <- c(h5 = "LabeledVolumeSet", nifti = "NIfTI-1 image")
+
+  list(
+    FileFormat = unname(file_formats[output_formats]),
+    Storage = unname(storage[output_formats]),
+    Units = units
+  )
 }
 
 #' Compute Beta Volumes from fmri_lm Object
@@ -1262,38 +1536,38 @@ write_results.fmri_lm <- function(x,
 #' @noRd
 .compute_beta_volumes <- function(fmrilm_obj) {
   # Input validation
-  if (is.null(fmrilm_obj$result$betas$data) || 
-      length(fmrilm_obj$result$betas$data) == 0 || 
+  if (is.null(fmrilm_obj$result$betas$data) ||
+      length(fmrilm_obj$result$betas$data) == 0 ||
       is.null(fmrilm_obj$result$betas$data[[1]]$estimate) ||
       length(fmrilm_obj$result$betas$data[[1]]$estimate) == 0) {
     stop("Beta data structure is invalid or empty", call. = FALSE)
   }
-  
+
   # Extract beta data - use coef() to ensure we get all betas including baseline
   beta_data <- coef(fmrilm_obj, type = "betas", include_baseline = TRUE)
-  
+
   # Additional validation for beta data structure
   if (!is.matrix(beta_data) || nrow(beta_data) == 0 || ncol(beta_data) == 0) {
     stop("Beta data structure is invalid or empty", call. = FALSE)
   }
-  
+
   # Get spatial information from dataset
   spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "beta volume reconstruction")
   mask_array <- spatial$mask_array
   space <- spatial$space
-  
+
   # Reshape beta data to 4D array [X, Y, Z, #regressors]
   brain_dims <- dim(mask_array)
   n_regressors <- ncol(beta_data)
   n_mask_voxels <- sum(mask_array)
-  
+
   # Validate mask dimensionality
   if (length(mask_array) != prod(brain_dims)) {
-    stop("Mask length (", length(mask_array), 
-         ") does not match product of space dims (", prod(brain_dims), ").", 
+    stop("Mask length (", length(mask_array),
+         ") does not match product of space dims (", prod(brain_dims), ").",
          call. = FALSE)
   }
-  
+
   # Validate beta data dimensions match mask
   if (nrow(beta_data) != n_mask_voxels) {
     stop(
@@ -1302,21 +1576,21 @@ write_results.fmri_lm <- function(x,
       call. = FALSE
     )
   }
-  
+
   # Create 4D array - optimized vectorized version
   beta_array <- array(0, dim = c(brain_dims, n_regressors))
-  
+
   # Vectorized assignment: create mask indices once, then assign all regressors
   mask_indices <- which(mask_array, arr.ind = TRUE)
   for (i in seq_len(n_regressors)) {
     beta_array[cbind(mask_indices, i)] <- beta_data[, i]
   }
-  
+
   # Create NeuroVec for the betas
   # Use add_dim to properly extend 3D space to 4D
   ospace_beta <- neuroim2::add_dim(space, n_regressors)
   beta_vec <- neuroim2::NeuroVec(beta_array, ospace_beta)
-  
+
   return(beta_vec)
 }
 
@@ -1327,12 +1601,12 @@ write_results.fmri_lm <- function(x,
   # Map user-friendly names to internal contrast data field names
   stat_mapping <- c(
     "beta" = "estimate",
-    "tstat" = "stat", 
+    "tstat" = "stat",
     "se" = "se",
     "pval" = "prob",
     "sigma" = "sigma"
   )
-  
+
   if (stat %in% names(stat_mapping)) {
     return(stat_mapping[[stat]])
   } else {
@@ -1346,10 +1620,10 @@ write_results.fmri_lm <- function(x,
 .compute_statistical_volumes <- function(contrast_data, stat, brain_dims, mask, space) {
   stat_matrices <- list()
   contrast_names <- c()
-  
+
   # Map user statistic name to internal field name
   internal_stat_name <- .map_stat_name(stat)
-  
+
   for (i in seq_len(nrow(contrast_data))) {
     contrast_entry <- contrast_data$data[[i]]
     if (internal_stat_name %in% names(contrast_entry)) {
@@ -1363,23 +1637,23 @@ write_results.fmri_lm <- function(x,
       contrast_names[i] <- contrast_data$name[i]
     }
   }
-  
+
   # Remove NULL entries
   valid_indices <- !sapply(stat_matrices, is.null)
   stat_matrices <- stat_matrices[valid_indices]
   contrast_names <- contrast_names[valid_indices]
-  
+
   if (length(stat_matrices) == 0) {
     return(NULL)
   }
-  
+
   # Create 4D array [X, Y, Z, #contrasts] - optimized version
   n_contrasts <- length(stat_matrices)
   stat_array <- array(0, dim = c(brain_dims, n_contrasts))
   mask_array <- as.logical(mask)
   mask_indices <- which(mask_array, arr.ind = TRUE)
   n_mask_voxels <- sum(mask_array)
-  
+
   # Vectorized assignment using mask indices
   for (i in seq_len(n_contrasts)) {
     if (length(stat_matrices[[i]]) != n_mask_voxels) {
@@ -1392,11 +1666,11 @@ write_results.fmri_lm <- function(x,
     }
     stat_array[cbind(mask_indices, i)] <- stat_matrices[[i]]
   }
-  
+
   # Create NeuroVec using add_dim to properly extend 3D space to 4D
   ospace_contrast <- neuroim2::add_dim(space, n_contrasts)
   neurovec <- neuroim2::NeuroVec(stat_array, ospace_contrast)
-  
+
   return(list(
     neurovec = neurovec,
     contrast_names = contrast_names

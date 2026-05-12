@@ -35,9 +35,9 @@
 
 \item{desc}{Description of the analysis (default: "GLM")}
 
-\item{format}{Character vector specifying output formats. Supported values
-are \code{"h5"} (default BIDS/HDF5 export) and \code{"gds"} (fmrigds-compatible
-assays plus an \code{.rds} plan describing the dataset). You may request both.}
+\item{format}{Output format(s). Use \code{"h5"} for BIDS-style HDF5 outputs,
+\code{"nifti"} for BIDS-style NIfTI outputs, \code{"gds"} for fmrigds-compatible
+assays plus an \code{.rds} plan, or a character vector to write multiple formats.}
 
 \item{strategy}{Storage strategy: "by_stat" (group contrasts by statistic) or "by_contrast" (separate files)}
 
@@ -62,8 +62,10 @@ expressions.}
 Invisible list of file paths created
 }
 \description{
-Exports statistical maps from an fmri_lm object to HDF5 files with BIDS-compliant
-naming and JSON metadata sidecars using the fmristore LabeledVolumeSet infrastructure.
+Exports statistical maps from an fmri_lm object with BIDS-compliant naming
+and JSON metadata sidecars. Supported image outputs are HDF5
+LabeledVolumeSet files and NIfTI files; an fmrigds representation can also
+be requested.
 }
 \examples{
 \dontrun{
