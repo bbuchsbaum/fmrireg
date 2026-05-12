@@ -104,3 +104,64 @@ test_that("contrast weights are properly exported", {
   # contrast_weights may return NULL for simple event models without explicit contrasts
   expect_true(is.null(cw) || is.list(cw))
 })
+
+test_that("list-built hrfspec subsets match formula interface", {
+  skip_if_not_installed("fmridesign")
+
+  keep_a <- function(x) x == "A"
+
+  event_data <- data.frame(
+    onset = c(1, 10, 20, 30),
+    condition = factor(c("A", "B", "A", "B")),
+    duration = 1,
+    run = rep(1, 4)
+  )
+
+  sframe <- sampling_frame(blocklens = 40, TR = 2)
+
+  formula_eq <- event_model(
+    onset ~ hrf(condition, id = "stim", subset = condition == "A"),
+    data = event_data,
+    block = ~run,
+    sampling_frame = sframe,
+    durations = event_data$duration
+  )
+
+  list_eq <- event_model(
+    list(stim = hrf(condition, id = "stim", subset = condition == "A")),
+    data = event_data,
+    block = ~run,
+    sampling_frame = sframe,
+    durations = event_data$duration
+  )
+
+  expect_equal(names(formula_eq$terms), names(list_eq$terms))
+  expect_equal(colnames(design_matrix(formula_eq)), colnames(design_matrix(list_eq)))
+  expect_equal(
+    unname(as.matrix(design_matrix(formula_eq))),
+    unname(as.matrix(design_matrix(list_eq)))
+  )
+
+  formula_helper <- event_model(
+    onset ~ hrf(condition, id = "stim", subset = keep_a(condition)),
+    data = event_data,
+    block = ~run,
+    sampling_frame = sframe,
+    durations = event_data$duration
+  )
+
+  list_helper <- event_model(
+    list(stim = hrf(condition, id = "stim", subset = keep_a(condition))),
+    data = event_data,
+    block = ~run,
+    sampling_frame = sframe,
+    durations = event_data$duration
+  )
+
+  expect_equal(names(formula_helper$terms), names(list_helper$terms))
+  expect_equal(colnames(design_matrix(formula_helper)), colnames(design_matrix(list_helper)))
+  expect_equal(
+    unname(as.matrix(design_matrix(formula_helper))),
+    unname(as.matrix(design_matrix(list_helper)))
+  )
+})
