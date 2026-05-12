@@ -110,7 +110,7 @@ test_that("fmrireg:::.fast_preproject handles rank deficient matrices", {
   # The existing implementation doesn't handle rank deficiency well
   # It will either work (with numerical issues) or fail
   result <- tryCatch({
-    proj <- fmrireg:::.fast_preproject(X)
+    proj <- suppressWarnings(fmrireg:::.fast_preproject(X))
     list(success = TRUE, proj = proj)
   }, error = function(e) {
     list(success = FALSE, error = e)

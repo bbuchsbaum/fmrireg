@@ -46,10 +46,7 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
     if (!is.null(glm_ctx$proj) && !is.null(glm_ctx$proj$Pinv)) {
       coef <- glm_ctx$proj$Pinv %*% Y
     } else {
-      coef <- tryCatch(
-        qr.coef(qr(X, LAPACK = TRUE), Y),
-        error = function(e) base::qr.solve(X, Y)
-      )
+      coef <- .fast_preproject(X)$Pinv %*% Y
     }
     residuals <- Y - X %*% coef
   } else {

@@ -455,7 +455,7 @@ NULL
 
   # Initial residuals
   coef <- tryCatch(base::qr.solve(X, Y_est), error = function(e) {
-    qr.coef(qr(X, LAPACK = TRUE), Y_est)
+    .fast_preproject(X)$Pinv %*% Y_est
   })
   residuals <- Y_est - X %*% coef
 
@@ -495,7 +495,7 @@ NULL
     if (iter < n_iter) {
       coef <- tryCatch(
         base::qr.solve(whitened_est$X, whitened_est$Y),
-        error = function(e) qr.coef(qr(whitened_est$X, LAPACK = TRUE), whitened_est$Y)
+        error = function(e) .fast_preproject(whitened_est$X)$Pinv %*% whitened_est$Y
       )
       residuals <- Y_est - X %*% coef
     }

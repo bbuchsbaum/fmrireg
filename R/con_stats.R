@@ -29,6 +29,92 @@ fit_contrasts <- function(object, ...) UseMethod("fit_contrasts")
   list(betamat = betamat, sigma = sigma, dfres = dfres)
 }
 
+.lm_cov_unscaled <- function(lmfit, varnames = NULL, warn = TRUE) {
+  qrx <- qr.lm(lmfit)
+  coefs <- as.matrix(coef(lmfit))
+  p <- nrow(coefs)
+  rank <- qrx$rank
+  pivot <- qrx$pivot %||% seq_len(p)
+  estimable <- if (rank > 0L) pivot[seq_len(rank)] else integer(0)
+  aliased <- if (rank < p) pivot[seq.int(rank + 1L, p)] else integer(0)
+
+  cov.unscaled <- matrix(0, nrow = p, ncol = p)
+  if (rank > 0L) {
+    R <- qr.R(qrx)[seq_len(rank), seq_len(rank), drop = FALSE]
+    cov_est <- chol2inv(R)
+    cov.unscaled[estimable, estimable] <- cov_est
+  }
+
+  if (is.null(varnames)) {
+    varnames <- rownames(coefs)
+  }
+  if (!is.null(varnames) && length(varnames) == p) {
+    dimnames(cov.unscaled) <- list(varnames, varnames)
+  }
+
+  rank_info <- list(
+    rank = rank,
+    is_full_rank = rank == p,
+    estimable = estimable,
+    aliased = aliased,
+    tol = NA_real_
+  )
+  cov.unscaled <- .attach_rank_attrs(cov.unscaled, rank_info)
+
+  if (warn && length(aliased) > 0L) {
+    warning(.rank_deficiency_message(rank, p, aliased, varnames), call. = FALSE)
+  }
+
+  cov.unscaled
+}
+
+.aliased_indices <- function(...) {
+  vals <- list(...)
+  for (val in vals) {
+    aliased <- attr(val, "aliased", exact = TRUE)
+    if (!is.null(aliased) && length(aliased) > 0L) {
+      return(as.integer(aliased))
+    }
+  }
+  integer(0)
+}
+
+.contrast_uses_aliased <- function(L, aliased, tol = sqrt(.Machine$double.eps)) {
+  if (length(aliased) == 0L) {
+    return(FALSE)
+  }
+  L <- as.matrix(L)
+  aliased <- aliased[aliased <= ncol(L)]
+  if (length(aliased) == 0L) {
+    return(FALSE)
+  }
+  any(abs(L[, aliased, drop = FALSE]) > tol, na.rm = TRUE)
+}
+
+.warn_nonestimable_contrast <- function(contrast_name = NULL, aliased, coef_names = NULL) {
+  aliased_names <- if (!is.null(coef_names) && length(coef_names) >= max(aliased, 0L)) {
+    coef_names[aliased]
+  } else {
+    paste0("#", aliased)
+  }
+  if (length(aliased_names) > 8L) {
+    aliased_names <- c(aliased_names[seq_len(8L)], "...")
+  }
+  prefix <- if (!is.null(contrast_name) && nzchar(contrast_name)) {
+    paste0("Contrast '", contrast_name, "'")
+  } else {
+    "Contrast"
+  }
+  warning(
+    paste0(
+      prefix,
+      " references non-estimable coefficients in a rank-deficient design: ",
+      paste(aliased_names, collapse = ", ")
+    ),
+    call. = FALSE
+  )
+}
+
 #' @keywords internal
 #' @noRd
 fit_Ftests <- function(object) {
@@ -119,8 +205,13 @@ beta_stats <- function(lmfit, varnames, se = TRUE) {
   colnames(betamat) <- varnames
 
   if (se) {
-    cov.unscaled <- chol2inv(qr.lm(lmfit)$qr)
+    cov.unscaled <- .lm_cov_unscaled(lmfit, varnames = varnames)
+    aliased <- attr(cov.unscaled, "aliased", exact = TRUE) %||% integer(0)
     coef_se      <- sqrt(diag(cov.unscaled))
+    if (length(aliased) > 0L) {
+      coef_se[aliased] <- NA_real_
+      betamat[, aliased] <- NA_real_
+    }
     vc           <- outer(sigma, coef_se)
     colnames(vc) <- varnames
     tstat        <- ifelse(abs(vc) < .Machine$double.eps^0.5, 0, betamat / vc)
@@ -188,7 +279,8 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
   sigma2  <- basics$sigma^2
   rdf     <- basics$dfres
 
-  cov.unscaled <- chol2inv(qr.lm(lmfit)$qr)
+  cov.unscaled <- .lm_cov_unscaled(lmfit)
+  aliased <- attr(cov.unscaled, "aliased", exact = TRUE) %||% integer(0)
 
   cmat <- matrix(0, nrow(conmat), nrow(betamat))
   if (ncol(conmat) == length(colind)) {
@@ -199,6 +291,22 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
     stop(sprintf(
       "F contrast weight matrix dimensions %d x %d do not match length(colind) %d",
       nrow(conmat), ncol(conmat), length(colind)
+    ))
+  }
+
+  if (.contrast_uses_aliased(cmat, aliased)) {
+    .warn_nonestimable_contrast(NULL, aliased, rownames(betamat))
+    estimate <- rep(NA_real_, ncol(betamat))
+    Fstat <- rep(NA_real_, ncol(betamat))
+    return(structure(list(
+      conmat      = conmat,
+      estimate    = estimate,
+      se          = sigma2,
+      df.residual = rdf,
+      stat        = Fstat,
+      prob        = rep(NA_real_, ncol(betamat)),
+      stat_type   = "Fstat"),
+      class = c("Fstat", "result_stat")
     ))
   }
 
@@ -315,9 +423,21 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, ...) {
   ct <- drop(t(cmat) %*% betamat)
 
   if (se) {
-    cov.unscaled <- chol2inv(qr.lm(object)$qr)
-    var_est      <- as.numeric(t(cmat) %*% cov.unscaled %*% cmat)
-    se_vec       <- sqrt(var_est) * sigma
+    cov.unscaled <- .lm_cov_unscaled(object)
+    aliased <- attr(cov.unscaled, "aliased", exact = TRUE) %||% integer(0)
+
+    if (.contrast_uses_aliased(t(cmat), aliased)) {
+      .warn_nonestimable_contrast(NULL, aliased, rownames(betamat))
+      ct <- rep(NA_real_, length(sigma))
+      se_vec <- rep(NA_real_, length(sigma))
+      stat <- rep(NA_real_, length(sigma))
+      prob <- rep(NA_real_, length(sigma))
+    } else {
+      var_est      <- as.numeric(t(cmat) %*% cov.unscaled %*% cmat)
+      se_vec       <- sqrt(var_est) * sigma
+      stat         <- ct / se_vec
+      prob         <- 2 * pt(-abs(stat), rdf)
+    }
 
     structure(list(
       conmat      = cmat,
@@ -325,8 +445,8 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, ...) {
       df.residual = rdf,
       estimate    = ct,
       se          = se_vec,
-      stat        = ct / se_vec,
-      prob        = 2 * pt(-abs(ct / se_vec), rdf),
+      stat        = stat,
+      prob        = prob,
       stat_type   = "tstat"),
       class = c("tstat", "result_stat")
     )
@@ -346,7 +466,8 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, ...) {
 #' @noRd
 #' @autoglobal
 .fast_t_contrast  <- function(B, sigma2, XtXinv, l, df, 
-                               robust_weights = NULL, ar_order = 0) {
+                               robust_weights = NULL, ar_order = 0,
+                               aliased = integer(0), contrast_name = NULL) {
   # B:      p x V matrix (betas)
   # sigma2: V-vector (residual variance)
   # XtXinv: p x p matrix (inverse crossproduct of design)
@@ -358,6 +479,19 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, ...) {
   # Ensure l is a row vector (matrix)
   if (!is.matrix(l)) {
     l <- matrix(l, nrow = 1)
+  }
+
+  if (.contrast_uses_aliased(l, aliased)) {
+    .warn_nonestimable_contrast(contrast_name, aliased, rownames(B) %||% colnames(XtXinv))
+    nvox <- ncol(B)
+    return(list(
+      estimate = rep(NA_real_, nvox),
+      se       = rep(NA_real_, nvox),
+      stat     = rep(NA_real_, nvox),
+      prob     = rep(NA_real_, nvox),
+      sigma    = sqrt(pmax(0, sigma2)),
+      stat_type = "tstat"
+    ))
   }
   
   est  <- drop(l %*% B)                # 1 × V  (BLAS GEMV)
@@ -390,7 +524,8 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, ...) {
 #' @noRd
 #' @autoglobal
 .fast_F_contrast <- function(B, sigma2, XtXinv, L, df,
-                              robust_weights = NULL, ar_order = 0) {
+                              robust_weights = NULL, ar_order = 0,
+                              aliased = integer(0), contrast_name = NULL) {
   # B:      p x V matrix (betas)
   # sigma2: V-vector (residual variance)
   # XtXinv: p x p matrix
@@ -401,6 +536,18 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, ...) {
   
   if (!is.matrix(L)) {
       stop(".fast_F_contrast requires L to be a matrix.")
+  }
+
+  if (.contrast_uses_aliased(L, aliased)) {
+    .warn_nonestimable_contrast(contrast_name, aliased, rownames(B) %||% colnames(XtXinv))
+    nvox <- ncol(B)
+    return(list(
+      estimate = rep(NA_real_, nvox),
+      se       = sigma2,
+      stat     = rep(NA_real_, nvox),
+      prob     = rep(NA_real_, nvox),
+      stat_type = "Fstat"
+    ))
   }
   
   r   <- nrow(L)
@@ -454,26 +601,30 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, ...) {
 #' @noRd
 #' @autoglobal
 fit_lm_contrasts_fast <- function(B, sigma2, XtXinv, conlist, fconlist, df,
-                                  robust_weights = NULL, ar_order = 0) {
+                                  robust_weights = NULL, ar_order = 0,
+                                  aliased = NULL) {
   # Validate inputs
   if (!is.matrix(B)) stop("B must be a matrix (p x V)")
   if (!is.matrix(XtXinv)) stop("XtXinv must be a matrix (p x p)")
   if (nrow(B) != nrow(XtXinv) || nrow(XtXinv) != ncol(XtXinv)) {
     stop("Dimension mismatch: B must be p x V, XtXinv must be p x p")
   }
+  aliased <- aliased %||% .aliased_indices(B, XtXinv)
   
   # Process t-contrasts
   tcontrast_results <- process_t_contrasts(
     B = B, sigma2 = sigma2, XtXinv = XtXinv, 
     conlist = conlist, df = df,
-    robust_weights = robust_weights, ar_order = ar_order
+    robust_weights = robust_weights, ar_order = ar_order,
+    aliased = aliased
   )
   
   # Process F-contrasts  
   fcontrast_results <- process_f_contrasts(
     B = B, sigma2 = sigma2, XtXinv = XtXinv,
     fconlist = fconlist, df = df,
-    robust_weights = robust_weights, ar_order = ar_order
+    robust_weights = robust_weights, ar_order = ar_order,
+    aliased = aliased
   )
   
   # Combine results
@@ -490,7 +641,8 @@ fit_lm_contrasts_fast <- function(B, sigma2, XtXinv, conlist, fconlist, df,
 #' @noRd
 #' @autoglobal
 process_t_contrasts <- function(B, sigma2, XtXinv, conlist, df, 
-                                robust_weights = NULL, ar_order = 0) {
+                                robust_weights = NULL, ar_order = 0,
+                                aliased = integer(0)) {
   if (length(conlist) == 0) return(list())
   
   results <- vector("list", length(conlist))
@@ -509,7 +661,7 @@ process_t_contrasts <- function(B, sigma2, XtXinv, conlist, df,
       
       # Compute contrast statistics
       stats <- .fast_t_contrast(B, sigma2, XtXinv, full_contrast, df, 
-                               robust_weights, ar_order)
+                               robust_weights, ar_order, aliased, con_name)
       
       # Package results in expected format
       results[[i]] <- package_tcontrast_result(
@@ -531,7 +683,8 @@ process_t_contrasts <- function(B, sigma2, XtXinv, conlist, df,
 #' @noRd
 #' @autoglobal
 process_f_contrasts <- function(B, sigma2, XtXinv, fconlist, df,
-                                robust_weights = NULL, ar_order = 0) {
+                                robust_weights = NULL, ar_order = 0,
+                                aliased = integer(0)) {
   if (length(fconlist) == 0) return(list())
   
   results <- vector("list", length(fconlist))
@@ -550,7 +703,7 @@ process_f_contrasts <- function(B, sigma2, XtXinv, fconlist, df,
       
       # Compute contrast statistics
       stats <- .fast_F_contrast(B, sigma2, XtXinv, full_contrast, df,
-                               robust_weights, ar_order)
+                               robust_weights, ar_order, aliased, con_name)
       
       # Package results in expected format
       results[[i]] <- package_fcontrast_result(
@@ -714,6 +867,7 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames,
   p <- nrow(Betas)
   V <- ncol(Betas)
   sigma2 <- sigma^2 # V-vector
+  aliased <- .aliased_indices(Betas, XtXinv)
   
   # Calculate effective degrees of freedom if needed
   if (!is.null(robust_weights) || ar_order > 0) {
@@ -731,6 +885,9 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames,
       warning("Negative diagonal elements found in XtXinv during beta SE calculation.")
       diag_XtXinv[diag_XtXinv < 0] <- NaN
   }
+  if (length(aliased) > 0L) {
+    diag_XtXinv[aliased] <- NA_real_
+  }
   se_scaling <- sqrt(diag_XtXinv) # p-vector
   
   # Outer product: V-vector sigma with p-vector se_scaling -> V x p matrix
@@ -739,6 +896,10 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames,
   betamat <- t(Betas) # V x p matrix (voxels x betas)
   colnames(betamat) <- varnames
   colnames(vc) <- varnames
+  if (length(aliased) > 0L) {
+    betamat[, aliased] <- NA_real_
+    vc[, aliased] <- NA_real_
+  }
   
   # Compute t-stats: element-wise division
   # Avoid division by zero
@@ -888,27 +1049,16 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
     data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
     form <- get_formula(fmrimod)
     X <- model.matrix(form, data_env)
-    XtX <- crossprod(X)
-    XtXinv <- tryCatch(
-      chol2inv(chol(XtX)),
-      error = function(e) {
-        svd_result <- svd(XtX)
-        d <- svd_result$d
-        tol <- max(dim(XtX)) * .Machine$double.eps * max(d)
-        pos <- d > tol
-        if (sum(pos) == 0) {
-          stop("Completely singular design matrix in contrast computation")
-        }
-        svd_result$v[, pos] %*% diag(1 / d[pos], nrow = sum(pos)) %*% t(svd_result$u[, pos])
-      }
-    )
+    XtXinv <- .fast_preproject(X)$XtXinv
   }
+  xtx_aliased <- attr(XtXinv, "aliased", exact = TRUE) %||% integer(0)
   XtXinv <- as.matrix(XtXinv)
   if (nrow(XtXinv) != p || ncol(XtXinv) != p) {
     event_idx <- as.integer(object$result$event_indices %||% integer(0))
     if (length(event_idx) == p && length(event_idx) > 0L &&
         max(event_idx) <= nrow(XtXinv) && max(event_idx) <= ncol(XtXinv)) {
       XtXinv <- XtXinv[event_idx, event_idx, drop = FALSE]
+      xtx_aliased <- stats::na.omit(match(xtx_aliased, event_idx))
     } else {
       stop(
         sprintf(
@@ -919,6 +1069,12 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
       )
     }
   }
+  if (!is.null(beta_names) && length(beta_names) == p) {
+    rownames(betas) <- beta_names
+    dimnames(XtXinv) <- list(beta_names, beta_names)
+  }
+  attr(betas, "aliased") <- as.integer(xtx_aliased)
+  attr(XtXinv, "aliased") <- as.integer(xtx_aliased)
 
   resolve_pair_weights <- function(con_spec) {
     event_terms <- terms(object$model$event_model)
@@ -973,7 +1129,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
           stop("pair contrast has mismatched indices/weights lengths")
         }
         l[parsed$colind] <- parsed$weights
-        stats <- .fast_t_contrast(betas, sigma2, XtXinv, l, df_residual)
+        stats <- .fast_t_contrast(betas, sigma2, XtXinv, l, df_residual, aliased = xtx_aliased, contrast_name = con_name)
         return(list(
           name = con_name,
           type = "contrast",
@@ -1011,7 +1167,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
           } else {
             stop("F-contrast dimensions do not match selected coefficients")
           }
-          stats <- .fast_F_contrast(betas, sigma2, XtXinv, L, df_residual)
+          stats <- .fast_F_contrast(betas, sigma2, XtXinv, L, df_residual, aliased = xtx_aliased, contrast_name = con_name)
           return(list(
             name = con_name,
             type = "Fcontrast",
@@ -1037,7 +1193,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
 
       l <- numeric(p)
       l[colind] <- w
-      stats <- .fast_t_contrast(betas, sigma2, XtXinv, l, df_residual)
+      stats <- .fast_t_contrast(betas, sigma2, XtXinv, l, df_residual, aliased = xtx_aliased, contrast_name = con_name)
       list(
         name = con_name,
         type = "contrast",

@@ -32,8 +32,10 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
     stop("solve_glm_core: X and Y dimensions do not match")
   }
 
-  if (isTRUE(proj$is_full_rank) && !is.null(proj$qr)) {
-    # Full-rank path: solve from QR directly for numerical stability.
+  if (!is.null(proj$qr)) {
+    # Solve from the same tolerance-aware QR used for rank diagnostics. In
+    # rank-deficient designs, aliased coefficients are set to zero internally
+    # for fitted values and marked via attributes for downstream inference.
     betas <- tryCatch(
       qr.coef(proj$qr, Y),
       error = function(e) NULL
@@ -44,11 +46,25 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
       }
       betas <- proj$Pinv %*% Y
     }
+    if (is.null(dim(betas))) {
+      betas <- matrix(betas, ncol = 1L)
+    }
+    betas[!is.finite(betas)] <- 0
   } else {
     if (is.null(proj$Pinv) || ncol(X) != nrow(proj$Pinv)) {
       stop("solve_glm_core: X and projection matrix dimensions do not match")
     }
     betas <- proj$Pinv %*% Y
+  }
+
+  aliased <- as.integer(proj$aliased %||% attr(proj$XtXinv, "aliased") %||% integer(0))
+  if (!is.null(colnames(X)) && nrow(betas) == length(colnames(X))) {
+    rownames(betas) <- colnames(X)
+  }
+  if (length(aliased) > 0L) {
+    attr(betas, "rank_deficient") <- TRUE
+    attr(betas, "aliased") <- aliased
+    attr(betas, "estimable") <- as.integer(proj$estimable %||% integer(0))
   }
 
   if (return_fitted) {
@@ -80,10 +96,14 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
   if (!is.null(proj$rank)) {
     result$rank <- proj$rank
     result$is_full_rank <- proj$is_full_rank
+    result$aliased <- aliased
+    result$estimable <- as.integer(proj$estimable %||% integer(0))
     
     # If rank deficient, mark coefficients as potentially unreliable
     if (!proj$is_full_rank) {
       attr(result$betas, "rank_deficient") <- TRUE
+      attr(result$betas, "aliased") <- aliased
+      attr(result$betas, "estimable") <- as.integer(proj$estimable %||% integer(0))
     }
   }
   

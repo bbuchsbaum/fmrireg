@@ -9,6 +9,62 @@ is.formula <- function(x) {
   inherits(x, "formula")
 }
 
+.rank_deficiency_message <- function(rank, p, aliased, varnames = NULL, context = "Design matrix") {
+  aliased_names <- if (!is.null(varnames) && length(varnames) >= max(aliased, 0L)) {
+    varnames[aliased]
+  } else {
+    paste0("#", aliased)
+  }
+
+  if (length(aliased_names) > 8L) {
+    aliased_names <- c(aliased_names[seq_len(8L)], "...")
+  }
+
+  sprintf(
+    "%s is rank deficient: rank %d < %d columns. Aliased columns: %s",
+    context,
+    rank,
+    p,
+    paste(aliased_names, collapse = ", ")
+  )
+}
+
+.design_rank_info <- function(X, tol = 1e-7) {
+  if (!is.matrix(X)) {
+    X <- as.matrix(X)
+  }
+  p <- ncol(X)
+  n <- nrow(X)
+  if (p == 0L || n == 0L) {
+    stop(".fast_preproject: design matrix must have at least one row and one column", call. = FALSE)
+  }
+
+  qrx <- qr(X, tol = tol, LAPACK = FALSE)
+  rank <- qrx$rank
+  pivot <- qrx$pivot %||% seq_len(p)
+  estimable <- if (rank > 0L) pivot[seq_len(rank)] else integer(0)
+  aliased <- if (rank < p) pivot[seq.int(rank + 1L, p)] else integer(0)
+
+  list(
+    qr = qrx,
+    rank = rank,
+    pivot = pivot,
+    estimable = estimable,
+    aliased = aliased,
+    is_full_rank = (rank == p),
+    tol = tol
+  )
+}
+
+.attach_rank_attrs <- function(x, rank_info) {
+  attr(x, "rank") <- rank_info$rank
+  attr(x, "is_full_rank") <- rank_info$is_full_rank
+  attr(x, "estimable") <- rank_info$estimable
+  attr(x, "aliased") <- rank_info$aliased
+  attr(x, "rank_tolerance") <- rank_info$tol
+  x
+}
+
 #' Fast Pre-projection of Design Matrix
 #'
 #' @description
@@ -22,7 +78,7 @@ is.formula <- function(x) {
 #'   - dfres: Residual degrees of freedom
 #' @keywords internal
 #' @noRd
-.fast_preproject <- function(X) {
+.fast_preproject <- function(X, tol = 1e-7) {
   # Ensure X is a numeric matrix
   if (!is.matrix(X)) {
     X <- as.matrix(X)
@@ -38,30 +94,43 @@ is.formula <- function(x) {
     }
   }
   
-  # QR decomposition for rank detection and stable computation
-  qr_decomp <- qr(X, LAPACK = TRUE)
-  rank <- qr_decomp$rank
+  # QR decomposition for rank detection and stable computation. Use the
+  # LINPACK path here because its rank is tolerance-aware and matches lm.fit.
+  rank_info <- .design_rank_info(X, tol = tol)
+  qr_decomp <- rank_info$qr
+  rank <- rank_info$rank
   p <- ncol(X)
   n <- nrow(X)
-  pivot <- qr_decomp$pivot %||% seq_len(p)
+  pivot <- rank_info$pivot
+  estimable <- rank_info$estimable
+  aliased <- rank_info$aliased
   
   # Check for rank deficiency
   if (rank < p) {
-    warning(sprintf("Design matrix is rank deficient: rank = %d, ncol = %d", rank, p))
+    warning(.rank_deficiency_message(rank, p, aliased, colnames(X)), call. = FALSE)
   }
   
   # Use numerically stable decompositions
-  if (rank == p) {
-    # Full rank: avoid normal equations to prevent stability loss on near-collinear designs.
+  if (rank > 0L) {
     qr_based <- tryCatch({
-      R <- qr.R(qr_decomp)[seq_len(p), seq_len(p), drop = FALSE]
-      Rinv <- backsolve(R, diag(p))
+      R <- qr.R(qr_decomp)[seq_len(rank), seq_len(rank), drop = FALSE]
+      Rinv <- backsolve(R, diag(rank))
       XtXinv_pivot <- tcrossprod(Rinv)
       XtXinv <- matrix(0, nrow = p, ncol = p)
-      XtXinv[pivot, pivot] <- XtXinv_pivot
+      XtXinv[estimable, estimable] <- XtXinv_pivot
+
+      Pinv <- qr.coef(qr_decomp, diag(n))
+      if (is.null(dim(Pinv))) {
+        Pinv <- matrix(Pinv, nrow = p)
+      }
+      Pinv[!is.finite(Pinv)] <- 0
+      if (length(aliased) > 0L) {
+        Pinv[aliased, ] <- 0
+      }
+
       list(
         XtXinv = XtXinv,
-        Pinv = qr.solve(X, diag(n))
+        Pinv = Pinv
       )
     }, error = function(e) NULL)
 
@@ -69,43 +138,42 @@ is.formula <- function(x) {
       XtXinv <- qr_based$XtXinv
       Pinv <- qr_based$Pinv
     } else {
-      svd_result <- svd(X)
+      X_est <- X[, estimable, drop = FALSE]
+      svd_result <- svd(X_est)
       d <- svd_result$d
-      tol <- max(dim(X)) * .Machine$double.eps * max(d)
-      pos <- d > tol
+      sv_tol <- tol * max(d)
+      pos <- d > sv_tol
       U <- svd_result$u[, pos, drop = FALSE]
       V <- svd_result$v[, pos, drop = FALSE]
       D_inv <- diag(1/d[pos], nrow = sum(pos))
-      Pinv <- V %*% D_inv %*% t(U)
-      XtXinv <- V %*% D_inv^2 %*% t(V)
+      Pinv_est <- V %*% D_inv %*% t(U)
+      XtXinv_est <- V %*% D_inv^2 %*% t(V)
+      Pinv <- matrix(0, nrow = p, ncol = n)
+      XtXinv <- matrix(0, nrow = p, ncol = p)
+      Pinv[estimable, ] <- Pinv_est
+      XtXinv[estimable, estimable] <- XtXinv_est
     }
   } else {
-    # Rank deficient: use SVD-based pseudoinverse
-    svd_result <- svd(X)
-    d <- svd_result$d
-    tol <- max(dim(X)) * .Machine$double.eps * max(d)
-    pos <- d > tol
-    
-    # Moore-Penrose pseudoinverse
-    U <- svd_result$u[, pos, drop = FALSE]
-    V <- svd_result$v[, pos, drop = FALSE]
-    D_inv <- diag(1/d[pos], nrow = sum(pos))
-    Pinv <- V %*% D_inv %*% t(U)
-    XtXinv <- V %*% D_inv^2 %*% t(V)
+    Pinv <- matrix(0, nrow = p, ncol = n)
+    XtXinv <- matrix(0, nrow = p, ncol = p)
   }
 
   if (!is.null(colnames(X))) {
     dimnames(XtXinv) <- list(colnames(X), colnames(X))
+    rownames(Pinv) <- colnames(X)
   }
 
   # Return everything needed for fast operations
   list(
     qr = qr_decomp,
-    Pinv = Pinv,
-    XtXinv = XtXinv,
+    Pinv = .attach_rank_attrs(Pinv, rank_info),
+    XtXinv = .attach_rank_attrs(XtXinv, rank_info),
     dfres = n - rank,
     rank = rank,
-    is_full_rank = (rank == p)
+    is_full_rank = (rank == p),
+    estimable = estimable,
+    aliased = aliased,
+    rank_tolerance = tol
   )
 }
 

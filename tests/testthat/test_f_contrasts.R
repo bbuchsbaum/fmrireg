@@ -235,7 +235,7 @@ test_that("Edge cases for F-contrasts", {
   
   # Empty contrast matrix - will error in matrix multiplication
   expect_error(
-    fmrireg:::compute_f_statistic(fit_result, matrix(nrow = 0, ncol = 2))
+    suppressWarnings(fmrireg:::compute_f_statistic(fit_result, matrix(nrow = 0, ncol = 2)))
   )
   
   # Wrong number of columns - will error in matrix multiplication
@@ -267,8 +267,11 @@ test_that("F-tests with rank-deficient contrasts", {
   # True effects
   Y <- 10 + 2*(group == 2) - 1*(group == 3) + rnorm(n)
   
-  # Fit will handle rank deficiency
-  fit_result <- fit_model(X, Y)
+  # Fit will handle rank deficiency and report the aliased column.
+  expect_warning(
+    fit_result <- fit_model(X, Y),
+    regexp = "rank deficient"
+  )
   
   # Test contrasts that respect the constraint
   # Compare group 2 vs group 1

@@ -84,7 +84,7 @@ test_that("fmrireg:::.fast_preproject handles edge cases", {
   proj <- fmrireg:::.fast_preproject(X)
   
   expect_equal(proj$dfres, 0)
-  expect_equal(proj$XtXinv, diag(n))
+  expect_equal(c(proj$XtXinv), c(diag(n)))
   
   # Rank deficient matrix
   n <- 20
@@ -92,9 +92,14 @@ test_that("fmrireg:::.fast_preproject handles edge cases", {
   X <- matrix(rnorm(n * p), n, p)
   X[, 5] <- X[, 1] + X[, 2]  # Make rank deficient
   
-  # Should not error
-  expect_error(proj <- fmrireg:::.fast_preproject(X), NA)
+  # Should not error, but should report the aliased column.
+  expect_warning(
+    proj <- fmrireg:::.fast_preproject(X),
+    regexp = "rank deficient"
+  )
   expect_true(qr(X)$rank < p)
+  expect_equal(proj$rank, qr(X)$rank)
+  expect_equal(proj$aliased, 5)
 })
 
 test_that("solve_glm_core with weights works correctly", {

@@ -80,7 +80,7 @@
   V_r <- task_fit$V_r
   D_task <- task_fit$XtXinv_task
 
-  rank_x <- qr(X0, LAPACK = TRUE)$rank
+  rank_x <- .design_rank_info(X0)$rank
   dfres <- max(1L, nrow(X0) - rank_z - rank_x)
   n_effective <- dfres + rank_z + rank_x
   df_inference <- calculate_effective_df(
@@ -498,8 +498,9 @@
     return(list(X0 = Xw_task, Y0 = Yw, rank_z = 0L))
   }
 
-  qr_z <- qr(Zw, LAPACK = TRUE)
-  rank_z <- qr_z$rank
+  rank_z_info <- .design_rank_info(Zw)
+  qr_z <- rank_z_info$qr
+  rank_z <- rank_z_info$rank
   if (rank_z <= 0L) {
     return(list(X0 = Xw_task, Y0 = Yw, rank_z = 0L))
   }
@@ -567,8 +568,9 @@
   k <- ncol(X0)
   V <- ncol(Y0)
 
-  qr_x <- qr(X0, LAPACK = TRUE)
-  rank_x <- qr_x$rank
+  rank_x_info <- .design_rank_info(X0)
+  qr_x <- rank_x_info$qr
+  rank_x <- rank_x_info$rank
   if (rank_x <= 0L) {
     return(list(
       B_task = matrix(0, nrow = k, ncol = V),
