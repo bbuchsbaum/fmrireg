@@ -47,6 +47,7 @@ Before modeling, you need to represent your fMRI data and its structure.
   per run (`blocklens`) and the repetition time (`TR`).
 
 ``` r
+
 # Example: 5 runs, 200 scans/run, TR=2s
 sframe <- sampling_frame(blocklens = rep(200, 5), TR = 2)
 sframe
@@ -67,6 +68,7 @@ The HRF models the BOLD signal response to a brief neural event.
 `hrf_blocked`, `hrf_lagged`).
 
 ``` r
+
 # Plot the SPM canonical HRF
 time <- seq(0, 24, by = 0.2)
 plot(time, HRF_SPMG1(time), type = 'l', xlab = "Time (s)", ylab = "BOLD Response",
@@ -88,6 +90,7 @@ using a formula syntax. The
 specific HRF shapes.
 
 ``` r
+
 # A simple design table with two stimulus types
 design_table <- data.frame(
   onset = c(10, 40, 70, 100, 130, 160, 190, 220),
@@ -97,6 +100,7 @@ design_table <- data.frame(
 ```
 
 ``` r
+
 # Model the effect of stim_type, convolved with the SPM canonical HRF
 event_mod <- event_model(onset ~ hrf(stim_type),
                          data = design_table,
@@ -113,6 +117,7 @@ This models non-task-related components like scanner drift, run
 intercepts, and other nuisance factors (e.g., motion parameters).
 
 ``` r
+
 # Example: Cubic B-spline drift model + run intercepts
 # (Requires 'sframe' defined earlier)
 base_mod <- baseline_model(basis = "bs", degree = 3, sframe = sframe)
@@ -147,6 +152,7 @@ print(base_mod)
 Contrasts define specific comparisons between condition estimates.
 
 ``` r
+
 # Example: Contrast comparing 'face' vs 'scene' levels of 'stim_type'
 face_vs_scene <- pair_contrast(~ stim_type == "face", ~ stim_type == "scene", name = "FvS")
 print(face_vs_scene)
@@ -166,6 +172,7 @@ then fit it to your `fmri_dataset` using estimation functions like
 betas).
 
 ``` r
+
 # Combine event and baseline models
 full_model <- fmri_model(event_mod, base_mod)
 

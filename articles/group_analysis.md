@@ -1,6 +1,7 @@
 # Group Analysis
 
 ``` r
+
 library(fmrireg)
 library(ggplot2)
 set.seed(123)
@@ -24,6 +25,7 @@ B has an effect that is 1 unit larger than group A. All subjects have
 the same SE for clarity.
 
 ``` r
+
 n_per_group <- 5
 subjects <- sprintf("s%02d", 1:(2 * n_per_group))
 group <- factor(rep(c("A", "B"), each = n_per_group))
@@ -61,6 +63,7 @@ We first fit an intercept-only model, then a model including a group
 term.
 
 ``` r
+
 fit_fe <- fmri_meta(gd, formula = ~ 1, method = "fe", verbose = FALSE)
 
 fit_cov <- fmri_meta(gd, formula = ~ 1 + group, method = "fe", verbose = FALSE)
@@ -111,6 +114,7 @@ yield similar point estimates. Random-effects (`method = "pm"`) will
 estimate between- subject heterogeneity (`tau2`) when present.
 
 ``` r
+
 fit_pm <- fmri_meta(gd, formula = ~ 1 + group, method = "pm", verbose = FALSE)
 summary(fit_pm)
 #> fMRI Meta-Analysis Summary
@@ -143,6 +147,7 @@ summary(fit_pm)
 ## Extract coefficients and a contrast
 
 ``` r
+
 coef_names <- colnames(fit_cov$coefficients)
 coef_names
 #> [1] "(Intercept)" "groupB"
@@ -203,6 +208,7 @@ We can visualize the group effects and their 95% CIs for the ROI-level
 fit.
 
 ``` r
+
 df_tidy <- tidy(fit_cov, conf.int = TRUE)
 df_tidy
 #> # A tibble: 2 × 10
@@ -228,6 +234,7 @@ For voxelwise analysis, construct `group_data` with format `"nifti"` or
 `"h5"`:
 
 ``` r
+
 # HDF5 (produced via write_results.fmri_lm)
 # gd_h5 <- fmrireg::group_data(h5_paths, format = "h5",
 #                     subjects = subject_ids,
@@ -256,6 +263,7 @@ for a voxelwise demonstration. Group B has a higher effect in a small
 cube.
 
 ``` r
+
 library(neuroim2)
 
 set.seed(42)
@@ -333,6 +341,7 @@ You can request exact contrasts at fit-time or store per-voxel
 covariance for exact post-hoc contrasts.
 
 ``` r
+
 fit_nii_pm <- fmri_meta(
   gd_nii, formula = ~ 1 + group, method = "pm",
   return_cov = "tri", verbose = FALSE
@@ -371,6 +380,7 @@ unequal-variance test or a standard OLS/Student t-test via a simple
 design matrix.
 
 ``` r
+
 fit_welch <- fmri_ttest(gd_nii, formula = ~ 1 + group, engine = "welch")
 t_welch   <- as.numeric(fit_welch$t["group", ])
 df_welch  <- as.numeric(fit_welch$df["group", ])
@@ -411,6 +421,7 @@ combines p-values with equal weights; and Lancaster provides a weighted
 Fisher variant by mapping weights to per-subject degrees-of-freedom.
 
 ``` r
+
 dat_full <- read_nifti_full(gd_nii)
 tmat <- dat_full$beta / dat_full$se
 
@@ -433,6 +444,7 @@ gd_t <- group_data_from_nifti(
 ```
 
 ``` r
+
 fit_st <- fmri_meta(gd_t, formula = ~ 1, combine = "stouffer", verbose = FALSE)
 
 w_subj <- rep(1, length(ids))
@@ -452,17 +464,20 @@ The t-test interface supports the meta engine with equal/custom
 weighting.
 
 ``` r
+
 fit_tt_meta <- fmri_ttest(gd_nii, formula = ~ 1 + group, engine = "meta",
                           weights = "equal")
 ```
 
 ``` r
+
 w_subj <- rep(1, length(ids))
 fit_tt_meta_w <- fmri_ttest(gd_nii, formula = ~ 1 + group, engine = "meta",
                             weights = "custom", weights_custom = w_subj)
 ```
 
 ``` r
+
 fit_tt_la <- fmri_ttest(gd_t, formula = ~ 1, engine = "meta",
                         combine = "lancaster", weights = "custom",
                         weights_custom = w_subj)
@@ -474,6 +489,7 @@ You can also combine t-statistics at the ROI level from a tabular CSV.
 Provide per-subject t and df, then choose a combine method.
 
 ``` r
+
 roi_t_df <- data.frame(
   subject = subjects,
   roi = "ExampleROI",

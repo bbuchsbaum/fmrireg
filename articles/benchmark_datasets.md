@@ -13,6 +13,7 @@ and experimental parameters so you can rigorously evaluate and compare
 analysis methods.
 
 ``` r
+
 library(fmrireg)
 library(ggplot2)
 library(dplyr)
@@ -23,6 +24,7 @@ library(dplyr)
 Let’s start by exploring what benchmark datasets are available:
 
 ``` r
+
 # List all available datasets
 datasets_info <- list_benchmark_datasets()
 print(datasets_info)
@@ -45,6 +47,7 @@ print(datasets_info)
 Let’s load the high SNR canonical dataset and explore its structure:
 
 ``` r
+
 # Load the high SNR dataset
 data <- load_benchmark_dataset("BM_Canonical_HighSNR")
 
@@ -103,6 +106,7 @@ Each benchmark dataset is a list. Key components include:
 - `TR`, `total_time`, `run_length`: Scan parameters.
 
 ``` r
+
 # Look at the BOLD time series dimensions and event structure
 cat("Y_noisy BOLD data dimensions:", dim(data$Y_noisy), "\n")
 #> Y_noisy BOLD data dimensions: 150 100
@@ -123,6 +127,7 @@ cat("Run length:", data$run_length, "\n")
 Let’s visualize some aspects of the benchmark dataset:
 
 ``` r
+
 # Plot the first few voxels' time series
 n_timepoints <- nrow(data$Y_noisy)
 time_points <- seq(0, by = data$TR, length.out = n_timepoints)
@@ -160,6 +165,7 @@ One of the key features is the ability to create design matrices with
 different HRF assumptions:
 
 ``` r
+
 # Create design matrix with the true HRF (canonical)
 X_true <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", fmrihrf::HRF_SPMG1)
 
@@ -178,6 +184,7 @@ Let’s demonstrate how to evaluate a simple method (OLS) on the benchmark
 dataset:
 
 ``` r
+
 # Fit ordinary least squares with the correct HRF
 betas_correct <- solve(t(X_true) %*% X_true) %*% t(X_true) %*% data$Y_noisy
 
@@ -208,6 +215,7 @@ cat("Wrong HRF - RMSE:", round(performance_wrong$overall_metrics$rmse, 3), "\n")
 ## Comparing True vs Estimated Betas
 
 ``` r
+
 # Get true betas
 true_betas <- data$true_betas_condition
 
@@ -248,6 +256,7 @@ details.](benchmark_datasets_files/figure-html/compare_betas-1.png)
 Let’s compare performance across different benchmark scenarios:
 
 ``` r
+
 # Test on different datasets
 datasets_to_test <- c("BM_Canonical_HighSNR", "BM_Canonical_LowSNR")
 results <- list()
@@ -289,6 +298,7 @@ print(results_df)
 Let’s explore the dataset with HRF variability across voxels:
 
 ``` r
+
 # Load the HRF variability dataset
 hrf_data <- load_benchmark_dataset("BM_HRF_Variability_AcrossVoxels")
 
@@ -306,6 +316,7 @@ cat("HRF group assignments:", table(hrf_data$true_hrf_group_assignment), "\n")
 Let’s examine the trial-to-trial variability dataset:
 
 ``` r
+
 # Load the trial variability dataset
 trial_data <- load_benchmark_dataset("BM_Trial_Amplitude_Variability")
 

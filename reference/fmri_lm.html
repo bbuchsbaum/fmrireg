@@ -104,6 +104,7 @@ alternative method can be used with a preconstructed
 <span>  robust_scale_scope <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  volume_weights <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  nuisance_projection <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  parallel_chunks <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -132,6 +133,7 @@ alternative method can be used with a preconstructed
 <span>  robust_scale_scope <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  volume_weights <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  nuisance_projection <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  parallel_chunks <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -195,7 +197,9 @@ alternative method can be used with a preconstructed
 
 
 <dt id="arg-nchunks">nchunks<a class="anchor" aria-label="anchor" href="#arg-nchunks"></a></dt>
-<dd><p>Number of data chunks when strategy is <code>"chunkwise"</code>. Default is <code>10</code>.</p></dd>
+<dd><p>Number of data chunks when strategy is <code>"chunkwise"</code>.
+This controls memory partitioning; chunks are processed sequentially unless
+<code>parallel_chunks = TRUE</code>. Default is <code>10</code>.</p></dd>
 
 
 <dt id="arg-use-fast-path">use_fast_path<a class="anchor" aria-label="anchor" href="#arg-use-fast-path"></a></dt>
@@ -211,7 +215,8 @@ alternative method can be used with a preconstructed
 
 
 <dt id="arg-parallel-voxels">parallel_voxels<a class="anchor" aria-label="anchor" href="#arg-parallel-voxels"></a></dt>
-<dd><p>Logical. Parallelize across voxels where supported.</p></dd>
+<dd><p>Logical. Parallelize across voxels where supported;
+this does not control chunkwise execution.</p></dd>
 
 
 <dt id="arg-cor-struct">cor_struct<a class="anchor" aria-label="anchor" href="#arg-cor-struct"></a></dt>
@@ -259,6 +264,12 @@ soft subspace projection:</p><ul><li><p>Matrix: Use as nuisance timeseries direc
 <li><p>Character: Path to NIfTI mask for WM/CSF voxels</p></li>
 <li><p><code>NULL</code>: Disable (default)</p></li>
 </ul><p>For fine-grained control (lambda selection, warnings), use <code>soft_subspace_options</code>.</p></dd>
+
+
+<dt id="arg-parallel-chunks">parallel_chunks<a class="anchor" aria-label="anchor" href="#arg-parallel-chunks"></a></dt>
+<dd><p>Logical. For <code>strategy = "chunkwise"</code>, process
+chunks with <code><a href="https://future.apply.futureverse.org/reference/future_lapply.html" class="external-link">future.apply::future_lapply()</a></code> using the active
+<code>future</code> plan. Default is <code>FALSE</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

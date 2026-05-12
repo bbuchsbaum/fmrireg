@@ -39,6 +39,7 @@ fmri_lm(
   robust_scale_scope = NULL,
   volume_weights = NULL,
   nuisance_projection = NULL,
+  parallel_chunks = FALSE,
   ...
 )
 
@@ -67,6 +68,7 @@ fmri_lm(
   robust_scale_scope = NULL,
   volume_weights = NULL,
   nuisance_projection = NULL,
+  parallel_chunks = FALSE,
   ...
 )
 ```
@@ -133,7 +135,9 @@ fmri_lm(
 
 - nchunks:
 
-  Number of data chunks when strategy is `"chunkwise"`. Default is `10`.
+  Number of data chunks when strategy is `"chunkwise"`. This controls
+  memory partitioning; chunks are processed sequentially unless
+  `parallel_chunks = TRUE`. Default is `10`.
 
 - use_fast_path:
 
@@ -152,7 +156,8 @@ fmri_lm(
 
 - parallel_voxels:
 
-  Logical. Parallelize across voxels where supported.
+  Logical. Parallelize across voxels where supported; this does not
+  control chunkwise execution.
 
 - cor_struct:
 
@@ -216,6 +221,12 @@ fmri_lm(
   For fine-grained control (lambda selection, warnings), use
   `soft_subspace_options`.
 
+- parallel_chunks:
+
+  Logical. For `strategy = "chunkwise"`, process chunks with
+  [`future.apply::future_lapply()`](https://future.apply.futureverse.org/reference/future_lapply.html)
+  using the active `future` plan. Default is `FALSE`.
+
 ## Value
 
 An object of class `fmri_lm`.
@@ -268,6 +279,7 @@ A fitted linear regression model for fMRI data analysis.
 ## Examples
 
 ``` r
+
 facedes <- subset(read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), 
 header=TRUE), face_gen != "n/a")
 facedes$face_gen <- droplevels(factor(facedes$face_gen))

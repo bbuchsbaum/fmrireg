@@ -17,6 +17,7 @@ fmri_lm_fit(
   use_fast_path = FALSE,
   progress = FALSE,
   parallel_voxels = FALSE,
+  parallel_chunks = FALSE,
   ...
 )
 ```
@@ -43,7 +44,9 @@ fmri_lm_fit(
 
 - nchunks:
 
-  Number of data chunks when strategy is `"chunkwise"`. Default is `10`.
+  Number of data chunks when strategy is `"chunkwise"`. This controls
+  memory partitioning; chunks are processed sequentially unless
+  `parallel_chunks = TRUE`. Default is `10`.
 
 - use_fast_path:
 
@@ -59,6 +62,12 @@ fmri_lm_fit(
 
   Logical. If TRUE, voxelwise AR processing within runs is parallelised
   using `future.apply`. Default is `FALSE`.
+
+- parallel_chunks:
+
+  Logical. If TRUE and `strategy = "chunkwise"`, process chunks with
+  [`future.apply::future_lapply()`](https://future.apply.futureverse.org/reference/future_lapply.html)
+  using the active `future` plan. Default is `FALSE`.
 
 - ...:
 

@@ -80,5 +80,6 @@ A matrix with the estimated HRF values for each voxel
 ## Examples
 
 ``` r
+
 # To be added
 ```

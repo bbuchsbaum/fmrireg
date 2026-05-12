@@ -81,91 +81,85 @@
   <main id="main" class="col-md-9"><div class="section level1">
 
 <p><a href="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main" class="external-link"><img src="https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg" alt="Codecov test coverage"></a> <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html" class="external-link"><img src="https://img.shields.io/badge/License-GPL_v2-blue.svg" alt="License: GPL v2"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></p>
-<p>remotes::install_github(“bbuchsbaum/fmrireg”)</p>
+</div>
+<div class="section level1">
+<h1 id="define-the-temporal-structure-2-runs-100-scans-each-tr--2s">Define the temporal structure: 2 runs, 100 scans each, TR = 2s<a class="anchor" aria-label="anchor" href="#define-the-temporal-structure-2-runs-100-scans-each-tr--2s"></a>
+</h1>
+<p>sframe &lt;- sampling_frame(blocklens = c(100, 100), TR = 2)</p>
+</div>
+<div class="section level1">
+<h1 id="build-an-event-model-from-an-experimental-design-table">Build an event model from an experimental design table<a class="anchor" aria-label="anchor" href="#build-an-event-model-from-an-experimental-design-table"></a>
+</h1>
+<p>emod &lt;- event_model(onset ~ hrf(condition, basis = “spmg1”), data = design_table, block = ~ run, sampling_frame = sframe)</p>
+</div>
+<div class="section level1">
+<h1 id="add-a-baseline-model-with-polynomial-drift">Add a baseline model with polynomial drift<a class="anchor" aria-label="anchor" href="#add-a-baseline-model-with-polynomial-drift"></a>
+</h1>
+<p>bmod &lt;- baseline_model(basis = “bs”, degree = 5, sframe = sframe)</p>
+</div>
+<div class="section level1">
+<h1 id="combine-into-a-full-fmri-model-and-fit">Combine into a full fMRI model and fit<a class="anchor" aria-label="anchor" href="#combine-into-a-full-fmri-model-and-fit"></a>
+</h1>
+<p>fmod &lt;- fmri_model(emod, bmod) fit &lt;- fmri_lm(fmod, dataset = dset)</p>
 <pre><code>
-## Quick start
+## Key features
+
+- **HRF library** -- SPM canonical, gamma, Gaussian, B-spline, and custom
+  basis sets, with decorators for lag, block, and normalization.
+- **Formula interface** -- Specify event models with `onset ~ hrf(...)` syntax;
+  supports categorical events, continuous modulators, and multi-basis expansions.
+- **Contrast system** -- Flexible contrasts via formulas, including pairwise,
+  polynomial, and F-contrasts.
+- **Robust estimation** -- OLS, iteratively reweighted least squares (IWLS),
+  and sandwich variance estimators.
+- **AR correction** -- Autoregressive noise modeling via the
+  [fmriAR](https://github.com/bbuchsbaum/fmriAR) package.
+- **Performance** -- C++ solvers (Rcpp/RcppArmadillo) with optional
+  multithreading via RcppParallel.
+
+## Documentation
+
+Full documentation and tutorials are available at
+&lt;https://bbuchsbaum.github.io/fmrireg/&gt;. Vignettes include:
+
+- [Package Overview](https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html)
+- [Statistical Contrasts](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html)
+- [Simulation](https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.html)
+- [Linear Modeling](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html)
+- [Dataset Management](https://bbuchsbaum.github.io/fmrireg/articles/a_10_dataset.html)
+- [Group Analysis](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.html)
+- [Functional Connectivity](https://bbuchsbaum.github.io/fmrireg/articles/functional_connectivity.html)
+- [Sketched GLM](https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.html)
+- [Benchmark Datasets](https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.html)
+
+## Command line
+
+Install the package:
 
 ```r
-library(fmrireg)
-
-# Define the temporal structure: 2 runs, 100 scans each, TR = 2s
-sframe &lt;- sampling_frame(blocklens = c(100, 100), TR = 2)
-
-# Build an event model from an experimental design table
-emod &lt;- event_model(onset ~ hrf(condition, basis = "spmg1"),
-                    data = design_table,
-                    block = ~ run,
-                    sampling_frame = sframe)
-
-# Add a baseline model with polynomial drift
-bmod &lt;- baseline_model(basis = "bs", degree = 5, sframe = sframe)
-
-# Combine into a full fMRI model and fit
-fmod &lt;- fmri_model(emod, bmod)
-fit  &lt;- fmri_lm(fmod, dataset = dset)</code></pre>
-<div class="section level2">
-<h2 id="key-features">Key features<a class="anchor" aria-label="anchor" href="#key-features"></a>
-</h2>
-<ul>
-<li>
-<strong>HRF library</strong> – SPM canonical, gamma, Gaussian, B-spline, and custom basis sets, with decorators for lag, block, and normalization.</li>
-<li>
-<strong>Formula interface</strong> – Specify event models with <code>onset ~ hrf(...)</code> syntax; supports categorical events, continuous modulators, and multi-basis expansions.</li>
-<li>
-<strong>Contrast system</strong> – Flexible contrasts via formulas, including pairwise, polynomial, and F-contrasts.</li>
-<li>
-<strong>Robust estimation</strong> – OLS, iteratively reweighted least squares (IWLS), and sandwich variance estimators.</li>
-<li>
-<strong>AR correction</strong> – Autoregressive noise modeling via the <a href="https://github.com/bbuchsbaum/fmriAR" class="external-link">fmriAR</a> package.</li>
-<li>
-<strong>Performance</strong> – C++ solvers (Rcpp/RcppArmadillo) with optional multithreading via RcppParallel.</li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
-</h2>
-<p>Full documentation and tutorials are available at <a href="https://bbuchsbaum.github.io/fmrireg/" class="uri">https://bbuchsbaum.github.io/fmrireg/</a>. Vignettes include:</p>
-<ul>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html">Package Overview</a></li>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html">Statistical Contrasts</a></li>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.html">Simulation</a></li>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html">Linear Modeling</a></li>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/a_10_dataset.html">Dataset Management</a></li>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.html">Group Analysis</a></li>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/functional_connectivity.html">Functional Connectivity</a></li>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.html">Sketched GLM</a></li>
-<li><a href="https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.html">Benchmark Datasets</a></li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="command-line">Command line<a class="anchor" aria-label="anchor" href="#command-line"></a>
-</h2>
-<p>Install the package:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"bbuchsbaum/fmrireg"</span><span class="op">)</span></span></code></pre></div>
+remotes::install_github("bbuchsbaum/fmrireg")</code></pre>
 <p>Install the command wrapper:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">fmrireg</span><span class="fu">::</span><span class="fu"><a href="reference/install_cli.html">install_cli</a></span><span class="op">(</span><span class="st">"~/.local/bin"</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>If needed, add the directory to <code>PATH</code>:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="bu">export</span> <span class="va">PATH</span><span class="op">=</span><span class="st">"</span><span class="va">$HOME</span><span class="st">/.local/bin:</span><span class="va">$PATH</span><span class="st">"</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="bu">export</span> <span class="va">PATH</span><span class="op">=</span><span class="st">"</span><span class="va">$HOME</span><span class="st">/.local/bin:</span><span class="va">$PATH</span><span class="st">"</span></span></code></pre></div>
 <p>Check the command:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="ex">fmrireg</span> <span class="at">--help</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="ex">fmrireg</span> <span class="at">--help</span></span></code></pre></div>
 <p>Inspect bundled benchmark datasets:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="ex">fmrireg</span> benchmark list</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="ex">fmrireg</span> benchmark summary <span class="at">--dataset</span> BM_Canonical_HighSNR <span class="at">--json</span></span></code></pre></div>
-</div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="ex">fmrireg</span> benchmark list</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="ex">fmrireg</span> benchmark summary <span class="at">--dataset</span> BM_Canonical_HighSNR <span class="at">--json</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="reporting">Reporting<a class="anchor" aria-label="anchor" href="#reporting"></a>
 </h2>
 <p>PDF report generation for <code>fmri_lm</code> fits is provided by the separate <a href="https://github.com/bbuchsbaum/fmrireport" class="external-link">fmrireport</a> package:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">fmrireport</span><span class="fu">::</span><span class="fu">report</span><span class="op">(</span><span class="va">fit</span>, output_dir <span class="op">=</span> <span class="st">"results"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="performance-configuration">Performance configuration<a class="anchor" aria-label="anchor" href="#performance-configuration"></a>
 </h2>
 <p>The internal C++ routines use <a href="https://rcppcore.github.io/RcppParallel/" class="external-link">RcppParallel</a>. Control the thread count with:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>fmrireg.num_threads <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
 <p>or set the environment variable <code>FMRIREG_NUM_THREADS</code> before loading the package.</p>
 </div>
@@ -189,6 +183,7 @@ https://github.com/bbuchsbaum/fmrireg</code></pre>
 <p>This package uses the albersdown theme. Existing vignette theme hooks are replaced so <code>albers.css</code> and local <code>albers.js</code> render consistently on CRAN and GitHub Pages. The defaults are configured via <code>params$family</code> and <code>params$preset</code> (family = ‘red’, preset = ‘homage’). The pkgdown site uses <code>template: { package: albersdown }</code> together with generated <code>pkgdown/extra.css</code> and <code>pkgdown/extra.js</code> so the theme is linked and activated on site pages. <!-- albersdown:theme-note:end --></p>
 </div>
 </div>
+
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">

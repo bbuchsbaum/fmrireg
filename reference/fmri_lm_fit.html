@@ -79,6 +79,7 @@ used by the <code>fmri_lm</code> function.</p>
 <span>  use_fast_path <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  parallel_voxels <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  parallel_chunks <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -104,7 +105,9 @@ used by the <code>fmri_lm</code> function.</p>
 
 
 <dt id="arg-nchunks">nchunks<a class="anchor" aria-label="anchor" href="#arg-nchunks"></a></dt>
-<dd><p>Number of data chunks when strategy is <code>"chunkwise"</code>. Default is <code>10</code>.</p></dd>
+<dd><p>Number of data chunks when strategy is <code>"chunkwise"</code>.
+This controls memory partitioning; chunks are processed sequentially unless
+<code>parallel_chunks = TRUE</code>. Default is <code>10</code>.</p></dd>
 
 
 <dt id="arg-use-fast-path">use_fast_path<a class="anchor" aria-label="anchor" href="#arg-use-fast-path"></a></dt>
@@ -118,6 +121,12 @@ used by the <code>fmri_lm</code> function.</p>
 <dt id="arg-parallel-voxels">parallel_voxels<a class="anchor" aria-label="anchor" href="#arg-parallel-voxels"></a></dt>
 <dd><p>Logical. If TRUE, voxelwise AR processing within runs
 is parallelised using <code>future.apply</code>. Default is <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-parallel-chunks">parallel_chunks<a class="anchor" aria-label="anchor" href="#arg-parallel-chunks"></a></dt>
+<dd><p>Logical. If TRUE and <code>strategy = "chunkwise"</code>,
+process chunks with <code><a href="https://future.apply.futureverse.org/reference/future_lapply.html" class="external-link">future.apply::future_lapply()</a></code> using the active
+<code>future</code> plan. Default is <code>FALSE</code>.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

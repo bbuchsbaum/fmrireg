@@ -82,6 +82,7 @@ This method is currently experimental.
 
 ``` r
 
+
 # Estimate the fMRI regression model using the latent dataset
 #result <- fmri_latent_lm(formula = formula, block = block, dataset = dset,
 #                          durations = NULL, drop_empty = TRUE, robust = FALSE)

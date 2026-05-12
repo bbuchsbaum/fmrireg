@@ -21,6 +21,7 @@ We will work with a small matrix-backed dataset so every example is fast
 and fully reproducible.
 
 ``` r
+
 n_time <- 80L
 n_voxels <- 24L
 
@@ -50,6 +51,7 @@ maps a string name to a constructor. That name can then be used inside
 `hrf(...)` just like built-in bases.
 
 ``` r
+
 basis_name <- "vignette_bspline_basis"
 
 register_basis(
@@ -89,6 +91,7 @@ delegates to
 [`fit_glm_on_transformed_series()`](https://bbuchsbaum.github.io/fmrireg/reference/fit_glm_on_transformed_series.md).
 
 ``` r
+
 engine_name <- "vignette_centered_engine"
 
 register_engine(
@@ -173,6 +176,7 @@ runs. It also keeps two configurations on the fitted object:
   actually received after unsupported sections were normalized away
 
 ``` r
+
 requested_cfg <- attr(fit_plugin, "requested_config")
 executed_cfg <- attr(fit_plugin, "executed_config")
 value_or_na <- function(x) if (is.null(x) || length(x) == 0) NA else x
@@ -204,6 +208,7 @@ If a caller enables an unsupported feature such as `robust = TRUE`, the
 engine is rejected before `fit()` is called.
 
 ``` r
+
 unsupported_message
 #> [1] "vignette_centered_engine does not support robust fitting; set robust = FALSE"
 ```
@@ -218,6 +223,7 @@ and
 give you the metadata you need without touching internal registries.
 
 ``` r
+
 spec_row <- function(name) {
   spec <- engine_spec(name)
   data.frame(
@@ -243,6 +249,7 @@ rbind(
 The full registry is available as a named list of spec objects.
 
 ``` r
+
 sort(names(engine_specs()))
 #> [1] "latent_sketch"            "rrr_gls"                 
 #> [3] "vignette_centered_engine"

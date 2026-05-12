@@ -1,6 +1,7 @@
 # Sketched GLM with Global vs Parcel AR
 
 ``` r
+
 library(fmrireg)
 library(neuroim2)
 library(fmrihrf)
@@ -46,6 +47,7 @@ example runs quickly. A two-condition event design is convolved with the
 canonical HRF to produce the design matrix.
 
 ``` r
+
 TR <- 2; Tlen <- 120; dim3 <- c(8L, 8L, 3L)
 space4d <- NeuroSpace(c(dim3, Tlen))
 maskVol <- LogicalNeuroVol(array(TRUE, dim3), NeuroSpace(dim3))
@@ -68,6 +70,7 @@ process with `rho = 0.3`. This gives the sketched solvers something
 realistic to whiten against.
 
 ``` r
+
 task_cols <- which(grepl("condition|hrf", colnames(X), ignore.case = TRUE))
 B_true <- matrix(0, p, V)
 B_true[task_cols, ] <- matrix(rnorm(length(task_cols) * V, sd = 1.0),
@@ -82,6 +85,7 @@ We reshape the simulated matrix into a 4D NeuroVec for
 [`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md).
 
 ``` r
+
 vec  <- NeuroVec(arr, space4d)
 dset <- fmri_mem_dataset(scans = list(vec), mask = maskVol,
                          TR = TR, event_table = events_df)
@@ -94,6 +98,7 @@ parcel-aware Nystrom extension later. Here we simply k-means cluster on
 voxel coordinates.
 
 ``` r
+
 coords  <- expand.grid(x = seq_len(dim3[1]),
                        y = seq_len(dim3[2]),
                        z = seq_len(dim3[3]))
@@ -109,6 +114,7 @@ Setting `by_cluster = FALSE` pools a single AR(1) coefficient across the
 whole brain.
 
 ``` r
+
 low_srht <- lowrank_control(
   parcels     = parcels,
   time_sketch = list(method = "srht", m = min(8L * p, Tlen))
@@ -130,6 +136,7 @@ parcel, then shrinks them toward the global mean (`shrink_c0 = 100`).
 This stabilizes whitening in small or noisy parcels.
 
 ``` r
+
 fit_srht_group <- fmri_lm(
   onset ~ hrf(condition), block = ~ run,
   dataset    = dset,
@@ -146,6 +153,7 @@ solution over a few iterations; 2-3 iterations with `m ~ 6p` are
 typically sufficient for near-exact results.
 
 ``` r
+
 low_ihs <- lowrank_control(
   parcels     = parcels,
   time_sketch = list(method = "ihs", m = max(6L * p, p + 4L), iters = 3L)
@@ -170,6 +178,7 @@ this moderate-SNR setting, correlations above 0.9 indicate that the
 sketch is preserving the task part of the GLM solution well.
 
 ``` r
+
 fit_exact_iid <- fmri_lm(
   onset ~ hrf(condition), block = ~ run,
   dataset = dset,
@@ -237,6 +246,7 @@ to all voxels using a sparse, parcel-aware heat-kernel. This can deliver
 large spatial speedups when V is large.
 
 ``` r
+
 # Choose landmarks (L) and neighbors (k)
 L <- 24L; k_nn <- 12L
 low_lm <- lowrank_control(

@@ -27,6 +27,7 @@ voxels are functionally connected. This allows us to validate our
 analysis method since we know the true connectivity pattern.
 
 ``` r
+
 set.seed(42)
 
 # Set up the temporal parameters for our scan
@@ -58,6 +59,7 @@ activity) and inject this signal into a subset of voxels to create a
 “network” that’s functionally connected to our seed.
 
 ``` r
+
 # Generate a seed signal with realistic temporal properties
 seed_ts <- arima.sim(model = list(ar = 0.5), n = Tlen)
 seed_ts <- as.numeric(base::scale(seed_ts))
@@ -88,6 +90,7 @@ between voxels. The fmrireg package provides flexible tools for modeling
 these nuisance signals using basis functions.
 
 ``` r
+
 # Create a sampling frame for our single run
 sframe <- sampling_frame(rep(Tlen, 1), TR = TR)
 
@@ -109,6 +112,7 @@ without HRF convolution (since the seed signal is already a BOLD time
 series).
 
 ``` r
+
 # Set up the event model structure
 # We need a minimal event_data frame to define the model structure
 event_data <- data.frame(
@@ -152,6 +156,7 @@ strongly that voxel’s activity relates to the seed after accounting for
 drift.
 
 ``` r
+
 # Extract connectivity statistics using the estimate output itself
 all_stats <- as.matrix(stats(fit, type = "estimates"))
 seed_cols <- grep("seed", colnames(all_stats), value = TRUE)
@@ -179,6 +184,7 @@ the network should have much larger t-statistics than background voxels
 and should dominate the top-ranked discoveries.
 
 ``` r
+
 mean_abs_t_network    <- mean(abs(t_seed[net_idx]), na.rm = TRUE)
 mean_abs_t_background <- mean(abs(t_seed[-net_idx]), na.rm = TRUE)
 sig_rate_network <- mean(p_seed[net_idx] < 0.05, na.rm = TRUE)
@@ -224,6 +230,7 @@ histogram. The connected voxels are highlighted in red, so you can see
 where the injected network separates from the background.
 
 ``` r
+
 keep <- which(is.finite(t_seed))
 ord <- keep[order(t_seed[keep], decreasing = TRUE)]
 is_network <- ord %in% net_idx

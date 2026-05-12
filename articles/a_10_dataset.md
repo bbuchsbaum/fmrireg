@@ -30,6 +30,7 @@ the fundamental temporal structure shared by all dataset types:
 - `TR`: The repetition time (time between scans) in seconds.
 
 ``` r
+
 sframe_example <- sampling_frame(blocklens = c(150, 160), TR = 2.0)
 print(sframe_example)
 #> Sampling frame
@@ -79,6 +80,7 @@ objects in your R session.
   design information.
 
 ``` r
+
 # Create minimal example data (2 runs)
 d <- c(5, 5, 5, 20) # Small dimensions for example
 mask_vol <- neuroim2::LogicalNeuroVol(array(TRUE, d[1:3]), neuroim2::NeuroSpace(d[1:3]))
@@ -156,6 +158,7 @@ data resides in files.
   (e.g., “normal”, “mmap”).
 
 ``` r
+
 # --- Create Dummy Files (for illustration only) ---
 # In a real analysis, these files would already exist.
 tmp_dir <- tempdir()
@@ -242,6 +245,7 @@ surface projection or ROI averaging).
   same total number of rows as `datamat`).
 
 ``` r
+
 # Example matrix (100 time points, 50 features/voxels)
 # Two runs of 50 time points each
 time_points <- 100
@@ -311,6 +315,7 @@ objects typically requires the `fmristore` package.
 - `event_table` (Optional): Experimental design `data.frame`.
 
 ``` r
+
 # Conceptual example (requires fmristore package and a LatentNeuroVec)
 # Assuming 'my_latent_neuro_vec' is a LatentNeuroVec object representing
 # 20 components over 300 time points (2 runs of 150)

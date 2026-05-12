@@ -17,6 +17,7 @@ chunkwise_lm(
   verbose = FALSE,
   use_fast_path = FALSE,
   progress = FALSE,
+  parallel_chunks = FALSE,
   phi_fixed = NULL,
   sigma_fixed = NULL,
   ...
@@ -58,6 +59,12 @@ chunkwise_lm(
 
   Logical. Display a progress bar for chunk processing. Default is
   `FALSE`.
+
+- parallel_chunks:
+
+  Logical. If `TRUE`, process chunks with
+  [`future.apply::future_lapply()`](https://future.apply.futureverse.org/reference/future_lapply.html)
+  using the active future plan.
 
 - phi_fixed:
 

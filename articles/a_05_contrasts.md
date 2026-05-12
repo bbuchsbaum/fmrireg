@@ -26,6 +26,7 @@ run.
 First, we construct the event table representing this design:
 
 ``` r
+
 design <- expand.grid(category = c("face", "scene"), 
                       attention = c("attend", "ignore"), 
                       replication = c(1, 2))
@@ -50,9 +51,10 @@ kable(design, caption = "2x2 Experimental Design Table")
 | face     | ignore    |           2 |  85.85714 |     1 |
 | scene    | ignore    |           2 | 100.00000 |     1 |
 
-2x2 Experimental Design Table
+2x2 Experimental Design Table {.table}
 
 ``` r
+
 
 # Define a sampling frame and create the event model
 sframe <- sampling_frame(blocklens = 120, TR = 2)
@@ -75,7 +77,7 @@ kable(cells(event_term), caption = "Cells within the 'category:attention' event 
 | face     | ignore    |
 | scene    | ignore    |
 
-Cells within the ‘category:attention’ event term
+Cells within the ‘category:attention’ event term {.table}
 
 This `event_term` object encapsulates the structure of our experimental
 conditions and will be used to compute contrast weights.
@@ -95,6 +97,7 @@ Let’s define contrasts for the main effects of *category* (face
 vs. scene) and *attention* (attend vs. ignore):
 
 ``` r
+
 # Main effect of category: face > scene
 con_face_vs_scene <- pair_contrast(~ category == "face", 
                                  ~ category == "scene", 
@@ -113,6 +116,7 @@ term structure. The `contrast_weights` function computes the numerical
 weights based on the levels within the term.
 
 ``` r
+
 wts_face_vs_scene <- contrast_weights(con_face_vs_scene, event_term)
 wts_attend_vs_ignore <- contrast_weights(con_attend_vs_ignore, event_term)
 
@@ -129,6 +133,7 @@ kable(wts_face_vs_scene$weights, col.names = wts_face_vs_scene$name)
 | category.scene_attention.ignore |          -0.5 |
 
 ``` r
+
 
 cat("\nWeights for 'attend_vs_ignore':\n")
 #> 
@@ -156,6 +161,7 @@ represented by the intercept in the model). `unit_contrast` is used for
 this purpose. It creates contrasts that sum to 1.
 
 ``` r
+
 con_face_vs_baseline <- unit_contrast(~ category == "face", name = "face_gt_baseline")
 con_attend_vs_baseline <- unit_contrast(~ attention == "attend", name = "attend_gt_baseline")
 
@@ -175,6 +181,7 @@ kable(wts_face_vs_baseline$weights, col.names = wts_face_vs_baseline$name)
 | category.scene_attention.ignore |             0.25 |
 
 ``` r
+
 
 cat("\nWeights for 'attend_gt_baseline':\n")
 #> 
@@ -205,6 +212,7 @@ Let’s define the interaction contrast: (face:attend - face:ignore) -
 differs between categories.
 
 ``` r
+
 # Interaction contrast
 con_interaction <- contrast(
   ~ (`face:attend` - `face:ignore`) - (`scene:attend` - `scene:ignore`),
@@ -247,6 +255,7 @@ These often result in multiple contrast columns (F-contrasts) testing
 the overall effect.
 
 ``` r
+
 # Main effect of category (will produce 1 contrast vector)
 con_main_category <- oneway_contrast(~ category, name = "Main_Category")
 wts_main_category <- contrast_weights(con_main_category, event_term)
@@ -268,6 +277,7 @@ kable(wts_main_category$weights)
 | category.scene_attention.ignore |               1 |
 
 ``` r
+
 
 cat("\nWeights for 'Interaction_CatAtt' (interaction_contrast):\n")
 #> 
@@ -298,6 +308,7 @@ quadratic, etc.).
 Let’s add an ‘intensity’ factor to our design:
 
 ``` r
+
 design_poly <- expand.grid(category = c("face", "scene"), 
                            intensity = c(1, 2, 3), # Ordered factor
                            replication = c(1))
@@ -317,9 +328,10 @@ kable(design_poly, caption = "Design with Ordered 'intensity' Factor")
 | face     | 3         |           1 |  48.2 |     1 |
 | scene    | 3         |           1 |  60.0 |     1 |
 
-Design with Ordered ‘intensity’ Factor
+Design with Ordered ‘intensity’ Factor {.table}
 
 ``` r
+
 
 emodel_poly <- event_model(onset ~ hrf(category, intensity), 
                            block = ~block, 
@@ -332,6 +344,7 @@ Now, define a polynomial contrast to test for linear and quadratic
 trends of intensity:
 
 ``` r
+
 con_poly_intensity <- poly_contrast(~ intensity, degree = 2, name = "Intensity_Trend")
 wts_poly_intensity <- contrast_weights(con_poly_intensity, event_term_poly)
 
@@ -362,6 +375,7 @@ Two helpers simplify common multi-level comparisons:
   all other levels.
 
 ``` r
+
 # Pairwise contrast for category using pair_contrast
 con_pairwise_cat <- pair_contrast(~ category == "face", 
                                  ~ category == "scene", 
@@ -393,6 +407,7 @@ kable(wts_helpers$con_attend_vs_other$weights)
 | category.scene_attention.ignore |                -0.5 |
 
 ``` r
+
 cat("\nWeights for 'con_ignore_vs_other':\n")
 #> 
 #> Weights for 'con_ignore_vs_other':
@@ -413,6 +428,7 @@ When `contrast_weights` is called on a `contrast_set`, it returns a
 named list of computed contrast weight objects.
 
 ``` r
+
 # Combine several previously defined contrasts
 all_contrasts <- contrast_set(
   con_face_vs_scene,
@@ -471,6 +487,7 @@ function in the `fmri_lm` formula. You can provide a single contrast
 specification or a `contrast_set`.
 
 ``` r
+
 # Simulate some simple data for demonstration
 ysim <- matrix(rnorm(120 * 3), 120, 3) # 3 voxels
 dataset_sim <- matrix_dataset(ysim, TR = 2, run_length = 120, event_table = design)
@@ -504,6 +521,7 @@ standard accessor functions, specifying `type = "contrasts"` or
   defined, e.g., via `oneway_contrast`).
 
 ``` r
+
 # Extract estimated contrast values
 contrast_estimates <- coef(fmri_fit, type = "contrasts")
 kable(contrast_estimates, caption = "Estimated Contrast Values")
@@ -524,6 +542,7 @@ contrast weights applied across all regressors in the design matrix
 (including baseline terms if present).
 
 ``` r
+
 # Plot the contrast weights across all regressors
 plot_contrasts(emodel_with_cons, rotate_x_text = TRUE, coord_fixed = FALSE)
 ```
@@ -540,6 +559,7 @@ shows exactly how each experimental condition contributes to the
 contrast:
 
 ``` r
+
 # View the structure of interaction contrast weights
 cat("Interaction contrast structure:\n")
 #> Interaction contrast structure:
@@ -594,9 +614,9 @@ str(wts_interaction)
 #>   .. ..$ id       : NULL
 #>   .. ..$ vars     :List of 2
 #>   .. .. ..$ : language ~category
-#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x5559fd9ff010> 
+#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x55f5742501e0> 
 #>   .. .. ..$ : language ~attention
-#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x5559fd9ff010> 
+#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x55f5742501e0> 
 #>   .. .. ..- attr(*, "class")= chr [1:2] "quosures" "list"
 #>   .. ..$ varnames : Named chr [1:2] "category" "attention"
 #>   .. .. ..- attr(*, "names")= chr [1:2] "" ""

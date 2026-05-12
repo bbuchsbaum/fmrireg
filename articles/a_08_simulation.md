@@ -1,6 +1,7 @@
 # Simulating fMRI Data
 
 ``` r
+
 library(fmrireg)
 library(ggplot2)
 library(dplyr)
@@ -35,6 +36,7 @@ Let’s start with `simulate_bold_signal`, which generates a clean
 hemodynamic response signal for multiple experimental conditions.
 
 ``` r
+
 # Simulate 3 conditions with different amplitudes
 sim <- simulate_bold_signal(ncond = 3, amps = c(1.0, 1.5, 2.0), TR = 2)
 
@@ -47,6 +49,7 @@ We reshape the data into long format so ggplot2 can map each condition
 to a separate color.
 
 ``` r
+
 df <- data.frame(
   Time = time,
   Cond1 = signals[,1],
@@ -60,6 +63,7 @@ df_long <- tidyr::pivot_longer(df, cols = c(Cond1, Cond2, Cond3),
 ```
 
 ``` r
+
 ggplot(df_long, aes(x = Time, y = Response, color = Condition)) +
   geom_line() +
   theme_minimal() +
@@ -76,6 +80,7 @@ Adding dashed vertical lines at each event onset makes the relationship
 between stimulus timing and the hemodynamic response easier to see.
 
 ``` r
+
 ggplot(df_long, aes(x = Time, y = Response, color = Condition)) +
   geom_line() +
   geom_vline(xintercept = sim$onset, linetype = "dashed", alpha = 0.3) +
@@ -106,6 +111,7 @@ its components, let’s simulate and visualize them separately and
 combined.
 
 ``` r
+
 n_timepoints <- 200
 TR <- 2
 time <- seq(0, (n_timepoints - 1) * TR, by = TR)
@@ -116,6 +122,7 @@ First, pure white noise – random fluctuations with no temporal
 structure.
 
 ``` r
+
 noise_white <- simulate_noise_vector(n_timepoints, TR = TR,
                                   ar = 0, ma = 0,
                                   drift_amplitude = 0, physio = FALSE, sd = 1)
@@ -125,6 +132,7 @@ Next, ARMA noise introduces temporal autocorrelation, which makes the
 signal “smoother” than white noise.
 
 ``` r
+
 noise_arma <- simulate_noise_vector(n_timepoints, TR = TR,
                                  ar = c(0.6), ma = c(0.3),
                                  drift_amplitude = 0, physio = FALSE, sd = 1)
@@ -134,6 +142,7 @@ Scanner drift is a slow oscillation that shifts the baseline over the
 course of a run.
 
 ``` r
+
 drift_freq <- 1/128
 drift_amplitude <- 2
 noise_drift <- drift_amplitude * sin(2 * pi * drift_freq * time)
@@ -143,6 +152,7 @@ Physiological noise adds quasi-periodic fluctuations at respiratory and
 cardiac-like frequencies.
 
 ``` r
+
 noise_cardiac <- 1.5 * sin(2 * pi * 0.3 * time)
 noise_respiratory <- 1.0 * sin(2 * pi * 0.8 * time)
 noise_physio <- noise_cardiac + noise_respiratory
@@ -152,10 +162,12 @@ Finally, we combine the ARMA, drift, and physiological components to
 mimic what a real scanner would produce.
 
 ``` r
+
 noise_combined <- noise_arma + noise_drift + noise_physio
 ```
 
 ``` r
+
 noise_df <- data.frame(
   Time = time,
   White_Noise = noise_white,
@@ -180,6 +192,7 @@ noise_long$NoiseType <- factor(noise_long$NoiseType,
 ```
 
 ``` r
+
 ggplot(noise_long, aes(x = Time, y = Signal, color = NoiseType)) +
   geom_line() +
   facet_wrap(~NoiseType, ncol = 1, scales = "free_y") +
@@ -199,6 +212,7 @@ noise has a flat spectrum, while ARMA noise concentrates power at lower
 frequencies.
 
 ``` r
+
 spec_white <- calculate_spectrum(noise_white, TR)
 spec_arma <- calculate_spectrum(noise_arma, TR)
 spec_drift <- calculate_spectrum(noise_drift, TR)
@@ -207,6 +221,7 @@ spec_combined <- calculate_spectrum(noise_combined, TR)
 ```
 
 ``` r
+
 spec_white$NoiseType <- "White Noise"
 spec_arma$NoiseType <- "ARMA Noise"
 spec_drift$NoiseType <- "Drift Component"
@@ -225,6 +240,7 @@ We also compute a high-resolution drift spectrum from a longer signal to
 better resolve the low-frequency peak.
 
 ``` r
+
 n_long <- 1024
 time_long <- seq(0, (n_long - 1) * TR, by = TR)
 drift_long <- drift_amplitude * sin(2 * pi * drift_freq * time_long)
@@ -237,6 +253,7 @@ component. The dashed green line in the drift panel shows the
 high-resolution version.
 
 ``` r
+
 ggplot() +
   geom_line(data = spec_df, aes(x = Frequency, y = Power, color = NoiseType)) +
   geom_line(data = subset(spec_drift_long, Frequency <= 0.05),
@@ -257,6 +274,7 @@ Plotting all spectra on a single log-scaled axis makes it easy to
 compare their relative magnitudes.
 
 ``` r
+
 ggplot(spec_df, aes(x = Frequency, y = Power, color = NoiseType)) +
   geom_line() +
   theme_minimal() +
@@ -275,6 +293,7 @@ Zooming in on the very low-frequency region confirms the drift component
 peaks at the expected frequency (marked by the red dotted line).
 
 ``` r
+
 drift_freq_idx <- which.min(abs(spec_df$Frequency - drift_freq))
 
 ggplot() +
@@ -325,6 +344,7 @@ to create a complete fMRI dataset with a specified signal-to-noise ratio
 (SNR).
 
 ``` r
+
 set.seed(42)
 
 data_snr_1.0 <- simulate_simple_dataset(ncond = 3, TR = 2, snr = 1.0)
@@ -333,6 +353,7 @@ data_snr_0.2 <- simulate_simple_dataset(ncond = 3, TR = 2, snr = 0.2)
 ```
 
 ``` r
+
 plot_df <- rbind(
   create_plot_df(data_snr_1.0, "SNR = 1.0"),
   create_plot_df(data_snr_0.5, "SNR = 0.5"),
@@ -350,6 +371,7 @@ measurement (blue) at each SNR level. As SNR decreases, the noise
 increasingly obscures the true signal.
 
 ``` r
+
 ggplot(plot_df_long, aes(x = Time, y = Signal, color = Type)) +
   geom_line() +
   facet_wrap(~SNR, ncol = 1) +
@@ -370,24 +392,28 @@ noise, and combined components. At SNR = 1.0 the signal is clearly
 visible; by SNR = 0.2 the noise dominates.
 
 ``` r
+
 plot_faceted(plot_df, "SNR = 1.0")
 ```
 
 ![](a_08_simulation_files/figure-html/plot-decomposition-snr1-1.png)
 
 ``` r
+
 plot_faceted(plot_df, "SNR = 0.5")
 ```
 
 ![](a_08_simulation_files/figure-html/plot-decomposition-snr05-1.png)
 
 ``` r
+
 plot_faceted(plot_df, "SNR = 0.2")
 ```
 
 ![](a_08_simulation_files/figure-html/plot-decomposition-snr02-1.png)
 
 ``` r
+
 snr_stats_list <- list()
 for (snr_val in unique(plot_df_long$SNR)) {
   for (type_val in unique(plot_df_long$Type)) {
@@ -405,6 +431,7 @@ snr_stats <- do.call(rbind, snr_stats_list)
 ```
 
 ``` r
+
 knitr::kable(snr_stats, caption = "Statistics of clean and noisy signals at different SNR levels")
 ```
 
@@ -417,7 +444,7 @@ knitr::kable(snr_stats, caption = "Statistics of clean and noisy signals at diff
 | SNR = 0.2 | Clean | 0.6342752 | 0.8631817 |  2.804079 |
 | SNR = 0.2 | Noisy | 1.2170041 | 5.2307652 | 25.249274 |
 
-Statistics of clean and noisy signals at different SNR levels
+Statistics of clean and noisy signals at different SNR levels {.table}
 
 This visualization shows how different SNR levels affect the fMRI time
 series. The lower the SNR, the more the noise dominates the signal. For
@@ -449,6 +476,7 @@ particularly useful for simulating multiple voxels or regions with
 related but slightly different response profiles.
 
 ``` r
+
 sim_matrix <- simulate_fmri_matrix(
   n = 5,                  # 5 voxels/regions
   total_time = 200,       # 200 seconds of scan time
@@ -464,6 +492,7 @@ sim_matrix <- simulate_fmri_matrix(
 ```
 
 ``` r
+
 ts_data <- sim_matrix$time_series
 matrix_data <- ts_data$datamat
 
@@ -486,6 +515,7 @@ All five simulated voxels share the same event timing, but their
 response amplitudes and durations vary independently.
 
 ``` r
+
 ggplot(plot_data_long, aes(x = Time, y = Signal, color = Voxel)) +
   geom_line(alpha = 0.8) +
   theme_minimal() +
@@ -499,6 +529,7 @@ ggplot(plot_data_long, aes(x = Time, y = Signal, color = Voxel)) +
 ![](a_08_simulation_files/figure-html/plot-matrix-timeseries-1.png)
 
 ``` r
+
 amp_df <- as.data.frame(sim_matrix$ampmat)
 colnames(amp_df) <- paste0("Voxel", 1:ncol(amp_df))
 amp_df$Event <- 1:nrow(amp_df)
@@ -526,6 +557,7 @@ The amplitude plot shows how each voxel’s response magnitude varies from
 event to event around the base amplitude of 1.
 
 ``` r
+
 ggplot(amp_long, aes(x = Event, y = Amplitude, color = Voxel, group = Voxel)) +
   geom_line() +
   geom_point() +
@@ -543,6 +575,7 @@ Duration variation follows the same pattern – each voxel draws its event
 durations independently around the base of 2 seconds.
 
 ``` r
+
 ggplot(dur_long, aes(x = Event, y = Duration, color = Voxel, group = Voxel)) +
   geom_line() +
   geom_point() +

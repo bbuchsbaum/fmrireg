@@ -77,6 +77,7 @@ splitting the dataset into chunks and running the linear model on each chunk.</p
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  use_fast_path <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  parallel_chunks <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  phi_fixed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  sigma_fixed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
@@ -117,6 +118,11 @@ splitting the dataset into chunks and running the linear model on each chunk.</p
 
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
 <dd><p>Logical. Display a progress bar for chunk processing. Default is <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-parallel-chunks">parallel_chunks<a class="anchor" aria-label="anchor" href="#arg-parallel-chunks"></a></dt>
+<dd><p>Logical. If <code>TRUE</code>, process chunks with
+<code><a href="https://future.apply.futureverse.org/reference/future_lapply.html" class="external-link">future.apply::future_lapply()</a></code> using the active future plan.</p></dd>
 
 
 <dt id="arg-phi-fixed">phi_fixed<a class="anchor" aria-label="anchor" href="#arg-phi-fixed"></a></dt>

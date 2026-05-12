@@ -30,6 +30,7 @@ We’ll simulate a simple experiment with two conditions that have
 different amplitudes.
 
 ``` r
+
 # Create an experimental design with two conditions
 # Condition 1: 10 events with amplitude 1.0
 # Condition 2: 10 events with amplitude 2.0
@@ -63,9 +64,10 @@ kable(head(event_table), caption = "First few rows of the experimental design")
 |   1 | 179.36446 | condition1 |
 |   1 | 181.04834 | condition1 |
 
-First few rows of the experimental design
+First few rows of the experimental design {.table}
 
 ``` r
+
 
 # Create a sampling frame
 sframe <- sampling_frame(blocklens = run_length, TR = TR)
@@ -115,6 +117,7 @@ series. We’ll create signals for each condition with different
 amplitudes, add noise, and combine them into a dataset.
 
 ``` r
+
 # Simulate the true BOLD signals for each condition
 # First, convert our events to global indices
 global_onsets <- global_onsets(sframe, event_table$onset, blockids(sframe)[event_table$run])
@@ -216,6 +219,7 @@ function. We need to specify:
 3.  The dataset
 
 ``` r
+
 # Fit a linear model
 model <- fmri_lm(
   formula = onset ~ hrf(condition),  # Model experimental effects
@@ -257,6 +261,7 @@ With stronger temporal autocorrelation in the simulated noise, the
 prewhitened model recovers tighter standard errors than OLS.
 
 ``` r
+
 model_ar1 <- fmri_lm(
   formula = onset ~ hrf(condition),
   block   = ~ run,
@@ -301,6 +306,7 @@ residuals. The `robust_psi` argument selects the weighting function and
 `robust_max_iter` controls the number of iterations.
 
 ``` r
+
 model_robust <- fmri_lm(
   formula = onset ~ hrf(condition),
   block   = ~ run,
@@ -333,6 +339,7 @@ Let’s extract and visualize the results from our linear model.
 ### 1. Coefficient Estimates
 
 ``` r
+
 # Extract coefficient estimates
 beta_estimates <- coef(model)
 kable(beta_estimates, caption = "Coefficient estimates for each condition and voxel")
@@ -343,9 +350,10 @@ kable(beta_estimates, caption = "Coefficient estimates for each condition and vo
 | condition_condition.condition1 | 0.6482899 | 0.5186319 | 0.3889739 |
 | condition_condition.condition2 | 1.8880917 | 1.5104734 | 1.1328550 |
 
-Coefficient estimates for each condition and voxel
+Coefficient estimates for each condition and voxel {.table}
 
 ``` r
+
 # Reshape for plotting (works with both approaches)
 beta_long <- as.data.frame(t(beta_estimates)) %>%
   mutate(voxel_index = row_number()) %>%
@@ -386,6 +394,7 @@ the three simulated voxels. Note that:
 ### 2. T-Statistics and P-Values
 
 ``` r
+
 estimate_stats <- tidy(model, type = "estimates") %>%
   filter(grepl("condition", term)) %>%
   mutate(condition = clean_condition_label(term),
@@ -406,6 +415,7 @@ kable(estimate_stats, digits = 4,
 | voxel3 | condition2 |  -0.6020 |    0.3193 |   -1.8851 |  0.0609 |
 
 Coefficient estimates with associated statistics by voxel and condition
+{.table}
 
 The t-statistics quantify the reliability of the estimated effects.
 Higher absolute t-values indicate more reliable estimates. In our
@@ -418,6 +428,7 @@ A key advantage of the GLM approach is the ability to directly compare
 conditions using contrasts.
 
 ``` r
+
 # Define a contrast specification for comparing condition2 vs condition1
 con_spec <- pair_contrast(~ condition == "condition2", ~ condition == "condition1", name = "cond2_minus_cond1")
 
@@ -440,19 +451,21 @@ contrast_results <- tidy(contrast_model, type = "contrasts") %>%
 ```
 
 ``` r
+
 # Display contrast results
 kable(contrast_results, caption = "Contrast results: condition2 - condition1", digits = 4)
 ```
 
-| voxel  | term              | estimate | std_error | statistic | p_value | df_residual | significant |
-|:-------|:------------------|---------:|----------:|----------:|--------:|------------:|:------------|
-| voxel1 | cond2_minus_cond1 |   1.2398 |    0.1553 |    7.9826 |       0 |         194 | TRUE        |
-| voxel2 | cond2_minus_cond1 |   0.9918 |    0.1243 |    7.9826 |       0 |         194 | TRUE        |
-| voxel3 | cond2_minus_cond1 |   0.7439 |    0.0932 |    7.9826 |       0 |         194 | TRUE        |
+| voxel | term | estimate | std_error | statistic | p_value | df_residual | significant |
+|:---|:---|---:|---:|---:|---:|---:|:---|
+| voxel1 | cond2_minus_cond1 | 1.2398 | 0.1553 | 7.9826 | 0 | 194 | TRUE |
+| voxel2 | cond2_minus_cond1 | 0.9918 | 0.1243 | 7.9826 | 0 | 194 | TRUE |
+| voxel3 | cond2_minus_cond1 | 0.7439 | 0.0932 | 7.9826 | 0 | 194 | TRUE |
 
-Contrast results: condition2 - condition1
+Contrast results: condition2 - condition1 {.table}
 
 ``` r
+
 
 # Visualize the contrast
 ggplot(contrast_results, aes(x = as.factor(voxel), y = estimate, fill = significant)) +
@@ -484,6 +497,7 @@ Another useful visualization is the fitted hemodynamic response for each
 condition. This shows the estimated BOLD response over time.
 
 ``` r
+
 # Extract fitted HRF curves from the fitted model
 fitted_hrfs <- fitted_hrf(model, sample_at = seq(0, 20, by = 0.5))
 
@@ -554,6 +568,7 @@ The choice of hemodynamic response function can impact model fit. Let’s
 compare different HRF options.
 
 ``` r
+
 # Fit models with different HRF bases
 model_canonical <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "spmg1"),
@@ -581,6 +596,7 @@ model_bspline <- fmri_lm(
 ```
 
 ``` r
+
 # Extract statistics for each model
 stats_canonical <- extract_model_stats(model_canonical, "canonical_spm", dataset)
 stats_gaussian <- extract_model_stats(model_gaussian, "gaussian", dataset)
@@ -605,9 +621,10 @@ kable(model_comparison, caption = "Model comparison statistics", digits = 4)
 | bspline_n5    |     2 |    0.6533 | -109.3094 | 100.6622 |
 | bspline_n5    |     3 |    0.6533 | -224.3822 |  56.6225 |
 
-Model comparison statistics
+Model comparison statistics {.table}
 
 ``` r
+
 
 # Reshape for plotting
 model_comparison_long <- model_comparison %>%
@@ -634,6 +651,7 @@ ggplot(subset(model_comparison_long, metric == "r_squared"),
 for details.](a_09_linear_model_files/figure-html/plot-r-squared-1.png)
 
 ``` r
+
 ggplot(subset(model_comparison_long, metric == "aic"),
        aes(x = model, y = value, fill = model)) +
   geom_bar(stat = "identity") +
@@ -711,6 +729,7 @@ and then load them for group analysis via
 (which returns a GDS object backed by fmrigds):
 
 ``` r
+
 # HDF5 written by write_results.fmri_lm
 h5_paths <- Sys.glob("derivatives/sub-*/task-*_desc-GLMstatmap_bold.h5")
 gd <- group_data(h5_paths, format = "h5", subjects = basename(dirname(h5_paths)))
