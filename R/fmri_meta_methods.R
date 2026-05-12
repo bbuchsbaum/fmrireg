@@ -417,7 +417,9 @@ coef_image.fmri_meta <- function(object, coef = 1, statistic = c("estimate", "se
   )
   
   # Convert to image if spatial data
-  if (inherits(object$data, "group_data_h5") || inherits(object$data, "group_data_nifti")) {
+  if (inherits(object$data, "group_data_h5") ||
+      inherits(object$data, "group_data_nifti") ||
+      inherits(object$data, "group_data_gds")) {
     values <- reconstruct_image(values, object)
   }
   
@@ -468,6 +470,41 @@ reconstruct_image <- function(values, object) {
                                   spacing = object$data$voxel_size)
     
     return(neuroim2::NeuroVol(vol_data, space))
+  } else if (inherits(object$data, "group_data_gds")) {
+    if (!requireNamespace("fmrigds", quietly = TRUE)) {
+      return(values)
+    }
+
+    gds_space <- tryCatch(fmrigds::space(object$data), error = function(e) NULL)
+    if (!inherits(gds_space, "space_voxel")) {
+      return(values)
+    }
+
+    full_values <- rep(NA_real_, prod(gds_space$dim))
+    if (!is.null(gds_space$mask_idx) && identical(gds_space$storage, "packed")) {
+      if (length(values) != length(gds_space$mask_idx)) {
+        stop(
+          "Values have length ", length(values),
+          " but voxel-space mask contains ", length(gds_space$mask_idx),
+          " voxels.",
+          call. = FALSE
+        )
+      }
+      full_values[gds_space$mask_idx] <- values
+    } else {
+      if (length(values) != length(full_values)) {
+        stop(
+          "Values have length ", length(values),
+          " but voxel space contains ", length(full_values),
+          " voxels.",
+          call. = FALSE
+        )
+      }
+      full_values <- values
+    }
+
+    space <- .fmri_meta_neuro_space_from_gds(gds_space)
+    return(neuroim2::NeuroVol(array(full_values, dim = gds_space$dim), space))
   }
   
   # For non-spatial data, just return values
@@ -477,79 +514,607 @@ reconstruct_image <- function(values, object) {
 #' Write Meta-Analysis Results
 #'
 #' @param x An fmri_meta object
-#' @param path Output directory
-#' @param prefix File name prefix
-#' @param format Output format ("nifti" or "h5")
-#' @param ... Additional arguments passed to write_results.fmri_lm
+#' @param path Output directory path. If NULL, uses current working directory.
+#' @param subject Optional subject or group identifier. Unlike subject-level
+#'   GLM exports, meta-analysis outputs may omit this for group-level maps.
+#' @param task Optional task identifier.
+#' @param space Optional spatial reference label.
+#' @param desc Description of the analysis (default: "Meta").
+#' @param format Output format(s). Use `"h5"` for HDF5 LabeledVolumeSet
+#'   outputs, `"nifti"` for NIfTI outputs, or a character vector to write both.
+#' @param strategy Storage strategy. `"by_stat"` writes one file per statistic
+#'   with coefficients along the 4th dimension; `"by_coefficient"` writes one
+#'   file per coefficient with statistics along the 4th dimension.
+#' @param coefficients Character vector of coefficient names to save. NULL
+#'   saves all coefficients.
+#' @param coefficient_match How to match `coefficients`: `"auto"` first matches
+#'   exact names and treats unmatched selectors as regular expressions;
+#'   `"exact"` uses literal names only; `"regex"` treats all selectors as
+#'   regular expressions.
+#' @param coefficient_stats Character vector of coefficient statistics to save.
+#'   Supported values are `"beta"`, `"se"`, `"z"`, and `"pval"`.
+#' @param heterogeneity Logical. Save heterogeneity maps (`tau2`, `I2`, `Q`,
+#'   `Q_df`) when available.
+#' @param overwrite Logical. Overwrite existing files (default: FALSE).
+#' @param validate_inputs Logical. Validate fmri_meta object structure
+#'   (default: TRUE).
+#' @param ... Additional arguments passed to internal functions.
 #' @return Invisible list of created files
 #' @export
-write_results.fmri_meta <- function(x, path = ".", prefix = "meta", 
-                                    format = c("nifti", "h5"), ...) {
-  format <- match.arg(format)
-  
+write_results.fmri_meta <- function(x,
+                                    path = NULL,
+                                    subject = NULL,
+                                    task = NULL,
+                                    space = NULL,
+                                    desc = "Meta",
+                                    format = c("h5"),
+                                    strategy = c("by_stat", "by_coefficient"),
+                                    coefficients = NULL,
+                                    coefficient_match = c("auto", "exact", "regex"),
+                                    coefficient_stats = c("beta", "se", "z", "pval"),
+                                    heterogeneity = TRUE,
+                                    overwrite = FALSE,
+                                    validate_inputs = TRUE,
+                                    ...) {
+  strategy <- match.arg(strategy)
+  coefficient_match <- match.arg(coefficient_match)
+  format <- match.arg(format, c("h5", "nifti"), several.ok = TRUE)
+  if (length(format) == 0) {
+    format <- "h5"
+  }
+  coefficient_stats <- .normalize_fmri_meta_stats(coefficient_stats)
+  output_formats <- .image_output_formats(format)
+
+  if (validate_inputs) {
+    .validate_fmri_meta_object(x)
+  }
+
+  if ("h5" %in% format && !requireNamespace("fmristore", quietly = TRUE)) {
+    stop("fmristore package is required for HDF5 export. Please install fmristore.", call. = FALSE)
+  }
+  if (!requireNamespace("jsonlite", quietly = TRUE)) {
+    stop("jsonlite package is required for write_results metadata sidecars.", call. = FALSE)
+  }
+
+  if (is.null(path)) {
+    path <- getwd()
+  }
+
+  entities <- .create_bids_entities(subject, task, space)
+  coef_names <- .fmri_meta_coef_names(x)
+  coef_idx <- .select_fmri_meta_coefficients(coef_names, coefficients, coefficient_match)
+
+  predicted_files <- .predict_fmri_meta_output_files(
+    path = path,
+    entities = entities,
+    desc = desc,
+    format = format,
+    strategy = strategy,
+    coefficient_names = coef_names[coef_idx],
+    coefficient_stats = coefficient_stats,
+    heterogeneity = heterogeneity && .fmri_meta_has_heterogeneity(x)
+  )
+
+  if (!overwrite) {
+    existing_files <- predicted_files[file.exists(predicted_files)]
+    if (length(existing_files) > 0) {
+      stop(
+        "Output files already exist: ",
+        paste(existing_files, collapse = ", "),
+        ". Set overwrite = TRUE to replace them.",
+        call. = FALSE
+      )
+    }
+  }
+
   if (!dir.exists(path)) {
     dir.create(path, recursive = TRUE)
   }
-  
-  created_files <- list()
-  
-  # Write each coefficient
-  coef_names <- colnames(x$coefficients)
-  
-  for (i in seq_along(coef_names)) {
-    coef_name <- make.names(coef_names[i])
-    
-    # Extract images
-    est_img <- coef_image(x, i, "estimate")
-    se_img <- coef_image(x, i, "se")
-    z_img <- coef_image(x, i, "z")
-    p_img <- coef_image(x, i, "p")
-    
-    if (format == "nifti") {
-      # Write NIfTI files
-      est_file <- file.path(path, paste0(prefix, "_", coef_name, "_beta.nii.gz"))
-      se_file <- file.path(path, paste0(prefix, "_", coef_name, "_se.nii.gz"))
-      z_file <- file.path(path, paste0(prefix, "_", coef_name, "_z.nii.gz"))
-      p_file <- file.path(path, paste0(prefix, "_", coef_name, "_p.nii.gz"))
-      
-      neuroim2::write_vol(est_img, est_file)
-      neuroim2::write_vol(se_img, se_file)
-      neuroim2::write_vol(z_img, z_file)
-      neuroim2::write_vol(p_img, p_file)
-      
-      created_files[[coef_name]] <- list(
-        beta = est_file,
-        se = se_file,
-        z = z_file,
-        p = p_file
+
+  temp_dir <- .create_temp_write_dir(path)
+  finalized <- NULL
+
+  tryCatch({
+    created_files <- list()
+
+    if (strategy == "by_stat") {
+      created_files <- .save_fmri_meta_by_stat(
+        x = x,
+        path = temp_dir,
+        entities = entities,
+        desc = desc,
+        coefficient_indices = coef_idx,
+        coefficient_names = coef_names[coef_idx],
+        coefficient_stats = coefficient_stats,
+        format = format,
+        output_formats = output_formats
       )
     } else {
-      # Write HDF5 using fmristore
-      # This would use the LabeledVolumeSet format
-      # Implementation would be similar to write_results.fmri_lm
-    }
-  }
-  
-  # Write heterogeneity maps
-  if (!is.null(x$tau2)) {
-    tau2_img <- reconstruct_image(x$tau2, x)
-    I2_img <- reconstruct_image(x$I2, x)
-    
-    if (format == "nifti") {
-      tau2_file <- file.path(path, paste0(prefix, "_tau2.nii.gz"))
-      I2_file <- file.path(path, paste0(prefix, "_I2.nii.gz"))
-      
-      neuroim2::write_vol(tau2_img, tau2_file)
-      neuroim2::write_vol(I2_img, I2_file)
-      
-      created_files$heterogeneity <- list(
-        tau2 = tau2_file,
-        I2 = I2_file
+      created_files <- .save_fmri_meta_by_coefficient(
+        x = x,
+        path = temp_dir,
+        entities = entities,
+        desc = desc,
+        coefficient_indices = coef_idx,
+        coefficient_names = coef_names[coef_idx],
+        coefficient_stats = coefficient_stats,
+        format = format,
+        output_formats = output_formats
       )
     }
+
+    if (isTRUE(heterogeneity) && .fmri_meta_has_heterogeneity(x)) {
+      created_files$heterogeneity <- .save_fmri_meta_heterogeneity(
+        x = x,
+        path = temp_dir,
+        entities = entities,
+        desc = desc,
+        format = format,
+        output_formats = output_formats
+      )
+    }
+
+    finalized <- .finalize_atomic_write(temp_dir, path, created_files, overwrite = overwrite)
+    created_files <- finalized$files
+
+    .cleanup_temp_write_dir(temp_dir)
+    invisible(created_files)
+  }, error = function(e) {
+    if (!is.null(finalized)) {
+      .rollback_finalized_write(finalized$transaction)
+    }
+    .cleanup_temp_write_dir(temp_dir)
+    stop("Failed to write meta-analysis results: ", e$message, call. = FALSE)
+  })
+}
+
+.validate_fmri_meta_object <- function(x) {
+  if (!inherits(x, "fmri_meta")) {
+    stop("Input must be an 'fmri_meta' object", call. = FALSE)
   }
-  
-  invisible(created_files)
+  if (is.null(x$coefficients) || !is.matrix(x$coefficients) ||
+      nrow(x$coefficients) == 0 || ncol(x$coefficients) == 0) {
+    stop("fmri_meta object missing coefficient estimates", call. = FALSE)
+  }
+  if (is.null(x$se) || !is.matrix(x$se)) {
+    stop("fmri_meta object missing standard errors", call. = FALSE)
+  }
+  if (!identical(dim(x$coefficients), dim(x$se))) {
+    stop("fmri_meta coefficient and standard-error matrices must have matching dimensions", call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+.fmri_meta_coef_names <- function(x) {
+  coef_names <- colnames(x$coefficients)
+  if (is.null(coef_names)) {
+    coef_names <- if (ncol(x$coefficients) == 1L) "(Intercept)" else paste0("coef", seq_len(ncol(x$coefficients)))
+  }
+  coef_names
+}
+
+.normalize_fmri_meta_stats <- function(stats) {
+  stats <- match.arg(stats, c("beta", "se", "z", "pval", "p"), several.ok = TRUE)
+  stats[stats == "p"] <- "pval"
+  unique(stats)
+}
+
+.select_fmri_meta_coefficients <- function(coef_names, coefficients = NULL,
+                                           coefficient_match = c("auto", "exact", "regex")) {
+  if (is.null(coefficients)) {
+    return(seq_along(coef_names))
+  }
+
+  coefficient_match <- match.arg(coefficient_match)
+  keep <- rep(FALSE, length(coef_names))
+
+  for (selector in coefficients) {
+    exact_keep <- coef_names == selector
+
+    if (coefficient_match == "exact") {
+      keep <- keep | exact_keep
+      next
+    }
+
+    if (coefficient_match == "auto" && any(exact_keep)) {
+      keep <- keep | exact_keep
+      next
+    }
+
+    regex_keep <- tryCatch(
+      grepl(selector, coef_names, perl = TRUE),
+      error = function(e) {
+        stop("Invalid coefficient regex '", selector, "': ", e$message, call. = FALSE)
+      }
+    )
+    keep <- keep | regex_keep
+  }
+
+  if (!any(keep)) {
+    stop("No coefficients matched: ", paste(coefficients, collapse = ", "), call. = FALSE)
+  }
+
+  which(keep)
+}
+
+.fmri_meta_has_heterogeneity <- function(x) {
+  any(vapply(c("tau2", "I2", "Q", "Q_df"), function(name) {
+    !is.null(x[[name]]) && length(x[[name]]) > 0
+  }, logical(1)))
+}
+
+.fmri_meta_stat_image <- function(x, coef_index, stat) {
+  statistic <- switch(stat,
+    beta = "estimate",
+    se = "se",
+    z = "z",
+    pval = "p",
+    stop("Unsupported fmri_meta statistic: ", stat, call. = FALSE)
+  )
+  img <- coef_image(x, coef = coef_index, statistic = statistic)
+  .ensure_fmri_meta_image(img, x, stat)
+}
+
+.ensure_fmri_meta_image <- function(img, x, context) {
+  if (inherits(img, "NeuroVol") || inherits(img, "NeuroVec")) {
+    return(img)
+  }
+  stop(
+    "Cannot export ", context,
+    " as an image because this fmri_meta object has no voxel-space metadata.",
+    call. = FALSE
+  )
+}
+
+.fmri_meta_neuro_space_from_gds <- function(gds_space) {
+  spacing <- abs(c(gds_space$affine[1, 1], gds_space$affine[2, 2], gds_space$affine[3, 3]))
+  origin <- gds_space$affine[1:3, 4]
+  neuroim2::NeuroSpace(
+    dim = gds_space$dim,
+    spacing = spacing,
+    origin = origin,
+    trans = gds_space$affine
+  )
+}
+
+.fmri_meta_image_set <- function(images, labels, x = NULL) {
+  if (length(images) == 0) {
+    stop("No images to write", call. = FALSE)
+  }
+  if (length(images) != length(labels)) {
+    stop("Image and label counts do not match", call. = FALSE)
+  }
+
+  arrays <- lapply(images, as.array)
+  brain_dims <- dim(arrays[[1]])
+  if (length(brain_dims) != 3L) {
+    stop("Meta-analysis image export expects 3D statistic maps", call. = FALSE)
+  }
+  same_dims <- vapply(arrays, function(arr) identical(dim(arr), brain_dims), logical(1))
+  if (!all(same_dims)) {
+    stop("All statistic maps must have matching dimensions", call. = FALSE)
+  }
+
+  space <- neuroim2::space(images[[1]])
+  stat_array <- array(NA_real_, dim = c(brain_dims, length(images)))
+  for (i in seq_along(images)) {
+    stat_array[, , , i] <- arrays[[i]]
+  }
+
+  mask_array <- .fmri_meta_mask_array(x, images[[1]])
+  mask_vol <- neuroim2::LogicalNeuroVol(mask_array, space)
+  stat_vec <- neuroim2::NeuroVec(stat_array, neuroim2::add_dim(space, length(images)))
+
+  list(neurovec = stat_vec, mask = mask_vol, labels = labels)
+}
+
+.fmri_meta_mask_array <- function(x, reference_image) {
+  ref_array <- as.array(reference_image)
+  ref_dims <- dim(ref_array)
+  fallback <- !is.na(ref_array)
+  if (!any(fallback)) {
+    fallback[] <- TRUE
+  }
+
+  if (is.null(x) || is.null(x$data)) {
+    return(fallback)
+  }
+
+  if (inherits(x$data, "group_data_nifti")) {
+    if (!is.null(x$data$mask_data)) {
+      mask_array <- as.array(x$data$mask_data) > 0
+      if (identical(dim(mask_array), ref_dims)) {
+        return(mask_array)
+      }
+    }
+    if (!is.null(x$voxel_indices)) {
+      mask_array <- array(FALSE, dim = ref_dims)
+      mask_array[x$voxel_indices] <- TRUE
+      return(mask_array)
+    }
+    return(array(TRUE, dim = ref_dims))
+  }
+
+  if (inherits(x$data, "group_data_h5")) {
+    if (!is.null(x$data$mask)) {
+      mask_array <- as.logical(x$data$mask)
+      dim(mask_array) <- dim(x$data$mask)
+      if (identical(dim(mask_array), ref_dims)) {
+        return(mask_array)
+      }
+    }
+    return(array(TRUE, dim = ref_dims))
+  }
+
+  if (inherits(x$data, "group_data_gds") && requireNamespace("fmrigds", quietly = TRUE)) {
+    gds_space <- tryCatch(fmrigds::space(x$data), error = function(e) NULL)
+    if (inherits(gds_space, "space_voxel")) {
+      if (!is.null(gds_space$mask_bitmap) && identical(dim(gds_space$mask_bitmap), ref_dims)) {
+        return(gds_space$mask_bitmap)
+      }
+      if (!is.null(gds_space$mask_idx)) {
+        mask_array <- array(FALSE, dim = ref_dims)
+        mask_array[gds_space$mask_idx] <- TRUE
+        return(mask_array)
+      }
+      return(array(TRUE, dim = ref_dims))
+    }
+  }
+
+  fallback
+}
+
+.write_fmri_meta_map <- function(image_set, path, filename_base, json_metadata,
+                                 format, output_formats) {
+  files <- list()
+
+  if ("h5" %in% format) {
+    h5_path <- file.path(path, paste0(filename_base, ".h5"))
+    h5_handle <- fmristore::write_labeled_vec(
+      image_set$neurovec,
+      image_set$mask,
+      image_set$labels,
+      file = h5_path
+    )
+    h5_handle$close_all()
+    files$h5 <- h5_path
+  }
+
+  if ("nifti" %in% format) {
+    nifti_path <- file.path(path, paste0(filename_base, ".nii.gz"))
+    .write_nifti_volume(image_set$neurovec, nifti_path, "meta-analysis NIfTI")
+    files$nifti <- nifti_path
+  }
+
+  json_path <- file.path(path, paste0(filename_base, ".json"))
+  json_metadata$DataInfo <- .image_data_info(output_formats, json_metadata$DataInfo$Units)
+  jsonlite::write_json(json_metadata, json_path, pretty = TRUE, auto_unbox = TRUE)
+  files$json <- json_path
+
+  files
+}
+
+.save_fmri_meta_by_stat <- function(x, path, entities, desc, coefficient_indices,
+                                    coefficient_names, coefficient_stats, format,
+                                    output_formats) {
+  created_files <- list()
+
+  for (stat in coefficient_stats) {
+    images <- lapply(coefficient_indices, function(idx) .fmri_meta_stat_image(x, idx, stat))
+    image_set <- .fmri_meta_image_set(images, coefficient_names, x = x)
+    stat_desc <- .stat_desc(desc, stat)
+    filename_base <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = NULL)
+    metadata <- .fmri_meta_json_metadata(
+      x = x,
+      description = paste("Meta-analysis", stat, "maps"),
+      statistic_names = stat,
+      coefficient_names = coefficient_names,
+      output_formats = output_formats,
+      units = .get_stat_units(stat),
+      entities = entities
+    )
+    created_files[[stat]] <- .write_fmri_meta_map(
+      image_set = image_set,
+      path = path,
+      filename_base = filename_base,
+      json_metadata = metadata,
+      format = format,
+      output_formats = output_formats
+    )
+  }
+
+  created_files
+}
+
+.save_fmri_meta_by_coefficient <- function(x, path, entities, desc, coefficient_indices,
+                                           coefficient_names, coefficient_stats, format,
+                                           output_formats) {
+  created_files <- list()
+
+  for (i in seq_along(coefficient_indices)) {
+    coef_index <- coefficient_indices[[i]]
+    coef_name <- coefficient_names[[i]]
+    images <- lapply(coefficient_stats, function(stat) .fmri_meta_stat_image(x, coef_index, stat))
+    image_set <- .fmri_meta_image_set(images, coefficient_stats, x = x)
+    stat_desc <- if (length(coefficient_stats) == 1L) .stat_desc(desc, coefficient_stats[[1]]) else desc
+    filename_base <- .generate_bids_filename(
+      entities,
+      desc = stat_desc,
+      contrast = coef_name,
+      suffix = "bold",
+      extension = NULL
+    )
+    metadata <- .fmri_meta_json_metadata(
+      x = x,
+      description = paste("Meta-analysis statistic maps for coefficient", coef_name),
+      statistic_names = coefficient_stats,
+      coefficient_names = coef_name,
+      output_formats = output_formats,
+      units = "various (see StatisticOrder for mapping)",
+      entities = entities
+    )
+    created_files[[coef_name]] <- .write_fmri_meta_map(
+      image_set = image_set,
+      path = path,
+      filename_base = filename_base,
+      json_metadata = metadata,
+      format = format,
+      output_formats = output_formats
+    )
+  }
+
+  created_files
+}
+
+.save_fmri_meta_heterogeneity <- function(x, path, entities, desc, format, output_formats) {
+  stat_names <- c("tau2", "I2", "Q", "Q_df")
+  available <- stat_names[vapply(stat_names, function(name) {
+    !is.null(x[[name]]) && length(x[[name]]) > 0
+  }, logical(1))]
+
+  images <- lapply(available, function(name) {
+    .ensure_fmri_meta_image(reconstruct_image(x[[name]], x), x, name)
+  })
+  image_set <- .fmri_meta_image_set(images, available, x = x)
+  filename_base <- .generate_bids_filename(
+    entities,
+    desc = .stat_desc(desc, "heterogeneity"),
+    suffix = "bold",
+    extension = NULL
+  )
+  metadata <- .fmri_meta_json_metadata(
+    x = x,
+    description = "Meta-analysis heterogeneity maps",
+    statistic_names = available,
+    coefficient_names = NULL,
+    output_formats = output_formats,
+    units = "various (see StatisticOrder for mapping)",
+    entities = entities
+  )
+
+  .write_fmri_meta_map(
+    image_set = image_set,
+    path = path,
+    filename_base = filename_base,
+    json_metadata = metadata,
+    format = format,
+    output_formats = output_formats
+  )
+}
+
+.fmri_meta_json_metadata <- function(x, description, statistic_names, coefficient_names,
+                                     output_formats, units, entities) {
+  formula_text <- tryCatch({
+    formula_obj <- x$formula %||% x$model$formula
+    if (is.null(formula_obj)) NULL else as.character(deparse(formula_obj))
+  }, error = function(e) NULL)
+
+  metadata <- list(
+    Description = description,
+    Sources = .extract_fmri_meta_source_files(x),
+    SoftwareVersions = list(
+      R = paste(R.Version()$major, R.Version()$minor, sep = "."),
+      fmrireg = as.character(utils::packageVersion("fmrireg")),
+      fmristore = if (requireNamespace("fmristore", quietly = TRUE)) as.character(utils::packageVersion("fmristore")) else NULL,
+      neuroim2 = as.character(utils::packageVersion("neuroim2"))
+    ),
+    ModelInfo = list(
+      Type = "Meta-Analysis",
+      Formula = formula_text,
+      Method = x$method %||% NULL,
+      Robust = x$robust %||% NULL,
+      Weights = x$weights %||% NULL,
+      NumSubjects = as.integer(x$n_subjects %||% NA_integer_),
+      NumVoxels = as.integer(x$n_voxels %||% nrow(x$coefficients))
+    ),
+    StatisticOrder = as.character(statistic_names),
+    CoefficientOrder = if (!is.null(coefficient_names)) as.character(coefficient_names) else NULL,
+    DataInfo = list(Units = units),
+    GeneratedBy = list(
+      Name = "fmrireg::write_results",
+      Version = as.character(utils::packageVersion("fmrireg")),
+      CodeURL = "https://github.com/bbuchsbaum/fmrireg"
+    ),
+    CreationTime = format(Sys.time(), "%Y-%m-%dT%H:%M:%S")
+  )
+
+  if (!is.null(entities$space)) {
+    metadata$SpatialReference <- entities$space
+  }
+
+  metadata
+}
+
+.extract_fmri_meta_source_files <- function(x) {
+  data <- x$data
+  sources <- character(0)
+
+  if (inherits(data, "group_data_nifti")) {
+    sources <- c(data$beta_paths, data$se_paths, data$var_paths, data$t_paths)
+  } else if (inherits(data, "group_data_h5")) {
+    sources <- data$paths
+  } else if (inherits(data, "group_data_gds")) {
+    source_obj <- tryCatch(fmrigds::gds_source(data), error = function(e) NULL)
+    if (is.character(source_obj)) {
+      sources <- source_obj
+    }
+  }
+
+  sources <- sources[!is.na(sources) & nzchar(sources)]
+  unique(as.character(sources))
+}
+
+.predict_fmri_meta_output_files <- function(path, entities, desc, format, strategy,
+                                            coefficient_names, coefficient_stats,
+                                            heterogeneity) {
+  predicted_files <- character(0)
+
+  add_base <- function(filename_base) {
+    files <- character(0)
+    if ("h5" %in% format) {
+      files <- c(files, file.path(path, paste0(filename_base, ".h5")))
+    }
+    if ("nifti" %in% format) {
+      files <- c(files, file.path(path, paste0(filename_base, ".nii.gz")))
+    }
+    c(files, file.path(path, paste0(filename_base, ".json")))
+  }
+
+  if (strategy == "by_stat") {
+    for (stat in coefficient_stats) {
+      filename_base <- .generate_bids_filename(
+        entities,
+        desc = .stat_desc(desc, stat),
+        suffix = "bold",
+        extension = NULL
+      )
+      predicted_files <- c(predicted_files, add_base(filename_base))
+    }
+  } else {
+    stat_desc <- if (length(coefficient_stats) == 1L) .stat_desc(desc, coefficient_stats[[1]]) else desc
+    for (coef_name in coefficient_names) {
+      filename_base <- .generate_bids_filename(
+        entities,
+        desc = stat_desc,
+        contrast = coef_name,
+        suffix = "bold",
+        extension = NULL
+      )
+      predicted_files <- c(predicted_files, add_base(filename_base))
+    }
+  }
+
+  if (isTRUE(heterogeneity)) {
+    filename_base <- .generate_bids_filename(
+      entities,
+      desc = .stat_desc(desc, "heterogeneity"),
+      suffix = "bold",
+      extension = NULL
+    )
+    predicted_files <- c(predicted_files, add_base(filename_base))
+  }
+
+  unique(predicted_files)
 }
 
 #' Internal handler for spatial FDR on fmri_meta objects

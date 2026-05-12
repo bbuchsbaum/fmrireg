@@ -4,22 +4,72 @@
 \alias{write_results.fmri_meta}
 \title{Write Meta-Analysis Results}
 \usage{
-\method{write_results}{fmri_meta}(x, path = ".", prefix = "meta", format = c("nifti", "h5"), ...)
+\method{write_results}{fmri_meta}(
+  x,
+  path = NULL,
+  subject = NULL,
+  task = NULL,
+  space = NULL,
+  desc = "Meta",
+  format = c("h5"),
+  strategy = c("by_stat", "by_coefficient"),
+  coefficients = NULL,
+  coefficient_match = c("auto", "exact", "regex"),
+  coefficient_stats = c("beta", "se", "z", "pval"),
+  heterogeneity = TRUE,
+  overwrite = FALSE,
+  validate_inputs = TRUE,
+  ...
+)
 }
 \arguments{
 \item{x}{An fmri_meta object}
 
-\item{path}{Output directory}
+\item{path}{Output directory path. If NULL, uses current working directory.}
 
-\item{prefix}{File name prefix}
+\item{subject}{Optional subject or group identifier. Unlike subject-level
+GLM exports, meta-analysis outputs may omit this for group-level maps.}
 
-\item{format}{Output format ("nifti" or "h5")}
+\item{task}{Optional task identifier.}
 
-\item{...}{Additional arguments passed to write_results.fmri_lm}
+\item{space}{Optional spatial reference label.}
+
+\item{desc}{Description of the analysis (default: "Meta").}
+
+\item{format}{Output format(s). Use \code{"h5"} for HDF5 LabeledVolumeSet
+outputs, \code{"nifti"} for NIfTI outputs, or a character vector to write both.}
+
+\item{strategy}{Storage strategy. \code{"by_stat"} writes one file per statistic
+with coefficients along the 4th dimension; \code{"by_coefficient"} writes one
+file per coefficient with statistics along the 4th dimension.}
+
+\item{coefficients}{Character vector of coefficient names to save. NULL
+saves all coefficients.}
+
+\item{coefficient_match}{How to match \code{coefficients}: \code{"auto"} first matches
+exact names and treats unmatched selectors as regular expressions;
+\code{"exact"} uses literal names only; \code{"regex"} treats all selectors as
+regular expressions.}
+
+\item{coefficient_stats}{Character vector of coefficient statistics to save.
+Supported values are \code{"beta"}, \code{"se"}, \code{"z"}, and \code{"pval"}.}
+
+\item{heterogeneity}{Logical. Save heterogeneity maps (\code{tau2}, \code{I2}, \code{Q},
+\code{Q_df}) when available.}
+
+\item{overwrite}{Logical. Overwrite existing files (default: FALSE).}
+
+\item{validate_inputs}{Logical. Validate fmri_meta object structure
+(default: TRUE).}
+
+\item{...}{Additional arguments passed to internal functions.}
 }
 \value{
 Invisible list of created files
 }
 \description{
-Write Meta-Analysis Results
+Exports spatial meta-analysis maps with the same core export contract used by
+\code{\link{write_results.fmri_lm}}: BIDS-style filenames, HDF5 and NIfTI image
+outputs, JSON metadata sidecars, vectorized \code{format}, explicit overwrite
+handling, and atomic finalization.
 }
