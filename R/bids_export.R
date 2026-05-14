@@ -66,10 +66,7 @@ write_results.fmri_lm <- function(x,
   contrast_match <- match.arg(contrast_match)
   format <- match.arg(format, c("h5", "nifti", "gds"), several.ok = TRUE)
   if (length(format) == 0) format <- "h5"
-  produce_h5 <- "h5" %in% format
-  produce_nifti <- "nifti" %in% format
   produce_gds <- "gds" %in% format
-  image_formats <- .image_output_formats(format)
 
   # Input validation
   if (validate_inputs) {
@@ -124,46 +121,18 @@ write_results.fmri_lm <- function(x,
   tryCatch({
     created_files <- list()
 
-    # Save raw regressor betas
-    if (save_betas) {
-      if (produce_h5) {
-        beta_files <- .save_regressor_betas(x, temp_dir, entities, desc, overwrite,
-                                            output_formats = image_formats)
-        created_files <- .merge_created_files(created_files, list(betas = beta_files))
-      }
-      if (produce_nifti) {
-        beta_files <- .save_regressor_betas_nifti(x, temp_dir, entities, desc, overwrite,
-                                                  output_formats = image_formats)
-        created_files <- .merge_created_files(created_files, list(betas = beta_files))
-      }
-    }
+    created_files <- .merge_created_files(
+      created_files,
+      .write_beta_outputs(x, temp_dir, entities, desc, format, save_betas, overwrite)
+    )
 
-    # Save contrast results
-    if (produce_h5) {
-      if (strategy == "by_stat") {
-        contrast_files <- .save_contrasts_by_stat(x, temp_dir, entities, desc,
-                                                  contrasts, contrast_match, contrast_stats, overwrite,
-                                                  output_formats = image_formats)
-      } else {
-        contrast_files <- .save_contrasts_by_contrast(x, temp_dir, entities, desc,
-                                                      contrasts, contrast_match, contrast_stats, overwrite,
-                                                      output_formats = image_formats)
-      }
-      created_files <- .merge_created_files(created_files, contrast_files)
-    }
-
-    if (produce_nifti) {
-      if (strategy == "by_stat") {
-        contrast_files <- .save_contrasts_by_stat_nifti(x, temp_dir, entities, desc,
-                                                        contrasts, contrast_match, contrast_stats, overwrite,
-                                                        output_formats = image_formats)
-      } else {
-        contrast_files <- .save_contrasts_by_contrast_nifti(x, temp_dir, entities, desc,
-                                                            contrasts, contrast_match, contrast_stats, overwrite,
-                                                            output_formats = image_formats)
-      }
-      created_files <- .merge_created_files(created_files, contrast_files)
-    }
+    created_files <- .merge_created_files(
+      created_files,
+      .write_contrast_outputs(
+        x, temp_dir, entities, desc, format, strategy,
+        contrasts, contrast_match, contrast_stats, overwrite
+      )
+    )
 
     if (produce_gds) {
       if (!requireNamespace("fmrigds", quietly = TRUE)) {
@@ -292,6 +261,79 @@ write_results.fmri_lm <- function(x,
 #' @noRd
 .image_output_formats <- function(format) {
   intersect(c("h5", "nifti"), format)
+}
+
+#' Write Beta Outputs for Requested Image Formats
+#' @keywords internal
+#' @noRd
+.write_beta_outputs <- function(fmrilm_obj, path, entities, desc, format, save_betas, overwrite) {
+  if (!isTRUE(save_betas)) {
+    return(list())
+  }
+
+  output_formats <- .image_output_formats(format)
+  if (length(output_formats) == 0) {
+    return(list())
+  }
+
+  beta_files <- list()
+  if ("h5" %in% output_formats) {
+    beta_files <- .merge_created_files(
+      beta_files,
+      .save_regressor_betas(fmrilm_obj, path, entities, desc, overwrite,
+                            output_formats = output_formats)
+    )
+  }
+  if ("nifti" %in% output_formats) {
+    beta_files <- .merge_created_files(
+      beta_files,
+      .save_regressor_betas_nifti(fmrilm_obj, path, entities, desc, overwrite,
+                                  output_formats = output_formats)
+    )
+  }
+
+  list(betas = beta_files)
+}
+
+#' Write Contrast Outputs for Requested Image Formats
+#' @keywords internal
+#' @noRd
+.write_contrast_outputs <- function(fmrilm_obj, path, entities, desc, format, strategy,
+                                    contrasts, contrast_match, contrast_stats, overwrite) {
+  output_formats <- .image_output_formats(format)
+  if (length(output_formats) == 0) {
+    return(list())
+  }
+
+  created_files <- list()
+  for (output_format in output_formats) {
+    contrast_files <- switch(
+      paste(strategy, output_format, sep = ":"),
+      "by_stat:h5" = .save_contrasts_by_stat(
+        fmrilm_obj, path, entities, desc,
+        contrasts, contrast_match, contrast_stats, overwrite,
+        output_formats = output_formats
+      ),
+      "by_contrast:h5" = .save_contrasts_by_contrast(
+        fmrilm_obj, path, entities, desc,
+        contrasts, contrast_match, contrast_stats, overwrite,
+        output_formats = output_formats
+      ),
+      "by_stat:nifti" = .save_contrasts_by_stat_nifti(
+        fmrilm_obj, path, entities, desc,
+        contrasts, contrast_match, contrast_stats, overwrite,
+        output_formats = output_formats
+      ),
+      "by_contrast:nifti" = .save_contrasts_by_contrast_nifti(
+        fmrilm_obj, path, entities, desc,
+        contrasts, contrast_match, contrast_stats, overwrite,
+        output_formats = output_formats
+      )
+    )
+    created_files <- .merge_created_files(created_files, contrast_files)
+  }
+
+  created_files
 }
 
 #' Merge Nested Created File Lists
