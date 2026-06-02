@@ -1208,3 +1208,173 @@ test_that("write_results.fmri_lm handles fmristore write failure gracefully", {
   output_files <- list.files(temp_dir, recursive = TRUE)
   expect_length(output_files, 0)
 })
+
+# ---------------------------------------------------------------------------
+# F-contrast labeling (issue #186)
+# ---------------------------------------------------------------------------
+
+# Append a synthetic F-contrast row to a fitted model's contrast table so the
+# export labeling can be tested independently of the F-contrast estimation
+# pathway. The row mirrors the structure produced at fit time
+# (type = "Fcontrast", stat_type = "Fstat", data with estimate/se/stat/prob).
+add_synthetic_fcontrast <- function(mod, name = "condF") {
+  ct <- mod$result$contrasts
+  n_vox <- length(ct$data[[1]]$stat[[1]])
+  set.seed(7)
+  f_data <- tibble::tibble(
+    estimate = list(runif(n_vox, 0.5, 3)),   # numerator mean square
+    se       = list(rep(1, n_vox)),          # denominator mean square (sigma2)
+    stat     = list(runif(n_vox, 2, 12)),    # F statistic (non-negative)
+    prob     = list(runif(n_vox, 1e-4, 0.2)),
+    sigma    = list(rep(1, n_vox))
+  )
+  f_row <- tibble::tibble(
+    contrast_internal_name = name,
+    type        = "Fcontrast",
+    name        = name,
+    stat_type   = "Fstat",
+    df.residual = ct$df.residual[1],
+    conmat      = list(rbind(c(1, 0), c(0, 1))),
+    colind      = list(c(1L, 2L)),
+    data        = list(f_data)
+  )
+  mod$result$contrasts <- dplyr::bind_rows(ct, f_row)
+  mod
+}
+
+test_that("write_results labels F-contrasts as fstat/fpval, not tstat", {
+  skip_if_not_installed("fmristore")
+  skip_if_not_installed("jsonlite")
+
+  mod <- add_synthetic_fcontrast(create_test_fmri_lm())
+
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE), add = TRUE)
+
+  result <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    space = "MNI152",
+    format = "h5",
+    strategy = "by_stat",
+    contrast_stats = c("beta", "tstat", "pval", "se")
+  )
+
+  files <- list.files(temp_dir, recursive = TRUE)
+
+  # t-contrast (A_vs_B) keeps the t-statistic label
+  expect_true(any(grepl("_desc-[^_]*tstat_bold\\.h5$", files)))
+  # F-contrast gets its own labels
+  expect_true(any(grepl("_desc-[^_]*fstat_bold\\.h5$", files)))
+  expect_true(any(grepl("_desc-[^_]*fpval_bold\\.h5$", files)))
+
+  # The F statistic must NOT be written under a tstat label, and the t-test
+  # p-values must not collide with the F p-values.
+  fstat_file <- files[grepl("fstat_bold\\.h5$", files)]
+  tstat_file <- files[grepl("tstat_bold\\.h5$", files)]
+  expect_length(fstat_file, 1)
+  expect_length(tstat_file, 1)
+  expect_false(identical(fstat_file, tstat_file))
+
+  # Result list exposes both families under distinct keys
+  expect_true(all(c("tstat", "fstat", "fpval") %in% names(result)))
+})
+
+test_that("write_results F-contrast JSON reports F-statistic metadata", {
+  skip_if_not_installed("fmristore")
+  skip_if_not_installed("jsonlite")
+
+  mod <- add_synthetic_fcontrast(create_test_fmri_lm())
+
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE), add = TRUE)
+
+  result <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    space = "MNI152",
+    format = "h5",
+    strategy = "by_stat",
+    contrast_stats = c("tstat", "pval")
+  )
+
+  fstat_json <- jsonlite::read_json(result$fstat$json)
+  expect_match(unlist(fstat_json$DataInfo$Units), "F-statistic", all = FALSE)
+  expect_identical(fstat_json$StatisticType, "FSTAT")
+  # Authoritative contrast type recorded in metadata
+  expect_identical(fstat_json$ContrastDefinitions$condF$Type, "F-contrast")
+})
+
+test_that("write_results by_contrast keeps F-contrast sub-volume labels", {
+  skip_if_not_installed("fmristore")
+  skip_if_not_installed("jsonlite")
+
+  mod <- add_synthetic_fcontrast(create_test_fmri_lm())
+
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE), add = TRUE)
+
+  result <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    space = "MNI152",
+    format = "h5",
+    strategy = "by_contrast",
+    contrast_stats = c("tstat", "pval")
+  )
+
+  expect_true("condF" %in% names(result))
+  expect_true(file.exists(result$condF$h5))
+  con_json <- jsonlite::read_json(result$condF$json)
+  stat_order <- unlist(con_json$StatisticOrder)
+  expect_true(all(c("fstat", "fpval") %in% stat_order))
+  expect_false("tstat" %in% stat_order)
+})
+
+# ---------------------------------------------------------------------------
+# coef_images() plural exporter (issue #186)
+# ---------------------------------------------------------------------------
+
+test_that("coef_images returns one named NeuroVol per coefficient", {
+  mod <- create_test_fmri_lm()
+
+  imgs <- coef_images(mod, statistic = "estimate", type = "estimates")
+  expect_type(imgs, "list")
+  expect_identical(names(imgs), coef_names(mod, type = "estimates"))
+  expect_true(all(vapply(imgs, function(v) inherits(v, "NeuroVol"), logical(1))))
+
+  # Single-volume parity with coef_image() for the first coefficient
+  first <- names(imgs)[1]
+  expect_equal(
+    as.array(imgs[[first]]),
+    as.array(coef_image(mod, coef = first, statistic = "estimate", type = "estimates"))
+  )
+})
+
+test_that("coef_images supports contrasts and a coef subset", {
+  mod <- create_test_fmri_lm()
+
+  con_imgs <- coef_images(mod, statistic = "tstat", type = "contrasts")
+  expect_identical(names(con_imgs), coef_names(mod, type = "contrasts"))
+  expect_true(all(vapply(con_imgs, function(v) inherits(v, "NeuroVol"), logical(1))))
+
+  # Subsetting to a known coefficient
+  est_names <- coef_names(mod, type = "estimates")
+  sub <- coef_images(mod, type = "estimates", coefs = est_names[1])
+  expect_identical(names(sub), est_names[1])
+
+  # Unknown coefficient errors clearly
+  expect_error(
+    coef_images(mod, type = "estimates", coefs = "not_a_real_coef"),
+    "not found"
+  )
+})

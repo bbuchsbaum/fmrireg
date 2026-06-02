@@ -474,3 +474,59 @@ coef_image.fmri_lm <- function(object, coef = 1,
     values
   })
 }
+
+#' @rdname coef_images
+#' @param statistic For \code{fmri_lm} objects: one of \code{"estimate"},
+#'   \code{"se"}, \code{"tstat"}, or \code{"prob"}.
+#' @param type For \code{fmri_lm} objects: which coefficient set to extract:
+#'   \code{"estimates"} (default), \code{"contrasts"}, or \code{"F"}.
+#' @param coefs Optional character vector of coefficient names (a subset of
+#'   \code{coef_names(object, type = type)}) to extract. Defaults to all
+#'   coefficients of the requested \code{type}.
+#' @examples
+#' # Create a small example
+#' X <- matrix(rnorm(50 * 4), 50, 4)
+#' edata <- data.frame(
+#'   condition = factor(c("A", "B", "A", "B")),
+#'   onsets = c(1, 12, 25, 38),
+#'   run = c(1, 1, 1, 1)
+#' )
+#' dset <- fmridataset::matrix_dataset(X, TR = 2, run_length = 50,
+#'                                     event_table = edata)
+#' fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
+#' # Named list of one volume per event regressor
+#' imgs <- coef_images(fit, statistic = "estimate", type = "estimates")
+#' names(imgs)
+#' @method coef_images fmri_lm
+#' @export
+coef_images.fmri_lm <- function(object,
+                                statistic = c("estimate", "se", "tstat", "prob"),
+                                type = c("estimates", "contrasts", "F"),
+                                coefs = NULL,
+                                ...) {
+  statistic <- match.arg(statistic)
+  type <- match.arg(type)
+
+  available <- coef_names(object, type = type)
+  if (length(available) == 0) {
+    return(stats::setNames(list(), character(0)))
+  }
+
+  if (is.null(coefs)) {
+    coefs <- available
+  } else {
+    missing <- setdiff(coefs, available)
+    if (length(missing) > 0) {
+      stop("Coefficient(s) not found for type '", type, "': ",
+           paste(missing, collapse = ", "),
+           ". Available names: ", paste(available, collapse = ", "),
+           call. = FALSE)
+    }
+  }
+
+  images <- lapply(coefs, function(nm) {
+    coef_image(object, coef = nm, statistic = statistic, type = type)
+  })
+  names(images) <- coefs
+  images
+}

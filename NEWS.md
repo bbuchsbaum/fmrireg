@@ -1,3 +1,24 @@
+# fmrireg 0.2.0
+
+## New Features
+
+* `write_results()` now exports statistical maps as NIfTI volumes via
+  `format = "nifti"` (or `format = c("h5", "nifti")`), reusing the same
+  BIDS entity and filename machinery as the HDF5 backend. This removes the
+  need to hand-roll loops over `coef_image()` + `neuroim2::write_vol()`.
+* Added `coef_images()`, a plural companion to `coef_image()` that returns a
+  named list of `NeuroVol`s for every coefficient of a given `type`
+  (`"estimates"`, `"contrasts"`, or `"F"`) and `statistic`.
+
+## Bug Fixes
+
+* `write_results()` now labels F-contrast maps as `fstat`/`fpval` instead of
+  reusing the `tstat`/`pval` labels. F statistics follow an F distribution
+  (not Student's t), so mixing them under a `tstat` label produced
+  mislabeled maps and, under `strategy = "by_stat"`, could collide t- and
+  F-contrast outputs in a single file. t- and F-contrasts are now written to
+  separate, correctly labeled files.
+
 # fmrireg 0.1.2
 
 ## Changes

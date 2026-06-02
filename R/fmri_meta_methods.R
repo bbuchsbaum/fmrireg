@@ -394,6 +394,24 @@ coef_image <- function(object, coef = 1, statistic = c("estimate", "se", "z", "p
   UseMethod("coef_image")
 }
 
+#' Extract Images/Volumes for Multiple Coefficients
+#'
+#' A plural companion to \code{\link{coef_image}}. Returns a named list of
+#' volumes (or numeric vectors for non-spatial datasets), one per coefficient,
+#' so callers can iterate over or write out every coefficient without
+#' reimplementing the loop over \code{\link{coef_names}}.
+#'
+#' @param object A fitted model object.
+#' @param ... Additional arguments passed to methods (and on to
+#'   \code{\link{coef_image}}).
+#' @return A named list of \code{NeuroVol} objects (or numeric vectors when the
+#'   dataset is non-spatial), named by coefficient.
+#' @seealso \code{\link{coef_image}}, \code{\link{coef_names}}
+#' @export
+coef_images <- function(object, ...) {
+  UseMethod("coef_images")
+}
+
 #' @export
 coef_image.fmri_meta <- function(object, coef = 1, statistic = c("estimate", "se", "z", "p"), ...) {
   statistic <- match.arg(statistic)
