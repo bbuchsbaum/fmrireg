@@ -1,7 +1,7 @@
 Package: fmrireg
 Type: Package
 Title: Regression Analysis of Functional Magnetic Resonance Imaging Data
-Version: 0.1.2
+Version: 0.2.0
 LinkingTo: Rcpp,RcppArmadillo, roptim, RcppParallel
 Authors@R: person("Bradley", "Buchsbaum",, role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
 License: MIT + file LICENSE

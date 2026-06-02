@@ -192,18 +192,24 @@ write_results.fmri_lm <- function(x,
     predicted_files <- c(predicted_files, file.path(path, beta_json))
   }
 
-  # Predict contrast files
+  # Predict contrast files. Mirror .write_contrast_outputs by partitioning
+  # contrasts into t- and F-families (each with its own statistic labels) so
+  # the overwrite check matches the files actually written.
   if (produce_image && !is.null(fmrilm_obj$result$contrasts) && nrow(fmrilm_obj$result$contrasts) > 0) {
     available_contrasts <- fmrilm_obj$result$contrasts
     if (!is.null(contrasts)) {
       available_contrasts <- .select_contrasts(available_contrasts, contrasts, contrast_match)
     }
 
-    if (nrow(available_contrasts) > 0) {
+    families <- .resolve_contrast_families(available_contrasts, contrast_stats)
+    for (fam in families) {
+      fam_contrasts <- fam$contrasts
+      fam_stats <- fam$stats
+
       if (strategy == "by_stat") {
         # Files grouped by statistic
-        for (stat in contrast_stats) {
-          has_stat <- any(vapply(available_contrasts$data, function(entry) {
+        for (stat in fam_stats) {
+          has_stat <- any(vapply(fam_contrasts$data, function(entry) {
             .map_stat_name(stat) %in% names(entry)
           }, logical(1)))
 
@@ -223,14 +229,14 @@ write_results.fmri_lm <- function(x,
         }
       } else {
         # Files grouped by contrast
-        for (i in seq_len(nrow(available_contrasts))) {
-          available_stats <- vapply(contrast_stats, function(stat) {
-            .map_stat_name(stat) %in% names(available_contrasts$data[[i]])
+        for (i in seq_len(nrow(fam_contrasts))) {
+          available_stats <- vapply(fam_stats, function(stat) {
+            .map_stat_name(stat) %in% names(fam_contrasts$data[[i]])
           }, logical(1))
 
           if (any(available_stats)) {
-            contrast_name <- available_contrasts$name[i]
-            stat_desc <- if (sum(available_stats) == 1) .stat_desc(desc, contrast_stats[available_stats][1]) else desc
+            contrast_name <- fam_contrasts$name[i]
+            stat_desc <- if (sum(available_stats) == 1) .stat_desc(desc, fam_stats[available_stats][1]) else desc
             filename_json <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "json")
             if (produce_h5) {
               filename_h5 <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "h5")
@@ -295,6 +301,58 @@ write_results.fmri_lm <- function(x,
   list(betas = beta_files)
 }
 
+#' Partition Contrasts into t- and F-Families with Family-Appropriate Stats
+#'
+#' t-contrasts (\code{type == "contrast"}) and F-contrasts
+#' (\code{type == "Fcontrast"}) store their test statistic in the same
+#' \code{stat} field, but an F statistic is not a t statistic (different
+#' distribution and degrees of freedom). This helper splits a contrast table
+#' into the two families and resolves which user-facing statistics apply to
+#' each, so they are written to separate, correctly labeled files. For
+#' F-contrasts the stored \code{estimate}/\code{se} are mean-square components
+#' rather than an effect size and standard error, so only the F statistic
+#' (\code{fstat}) and its p-value (\code{fpval}) are exported.
+#'
+#' @return A list of family specs, each \code{list(contrasts = <tbl>,
+#'   stats = <character>)}, omitting families with no rows or no applicable
+#'   statistics.
+#' @keywords internal
+#' @noRd
+.resolve_contrast_families <- function(available_contrasts, contrast_stats) {
+  families <- list()
+  if (is.null(available_contrasts) || nrow(available_contrasts) == 0) {
+    return(families)
+  }
+
+  ctype <- available_contrasts$type
+  if (is.null(ctype)) ctype <- rep("contrast", nrow(available_contrasts))
+  is_f <- !is.na(ctype) & ctype == "Fcontrast"
+
+  t_rows <- available_contrasts[!is_f, , drop = FALSE]
+  if (nrow(t_rows) > 0) {
+    t_stats <- contrast_stats[contrast_stats %in% c("beta", "tstat", "se", "pval")]
+    if (length(t_stats) > 0) {
+      families[[length(families) + 1L]] <- list(contrasts = t_rows, stats = t_stats)
+    }
+  }
+
+  f_rows <- available_contrasts[is_f, , drop = FALSE]
+  if (nrow(f_rows) > 0) {
+    f_stats <- character(0)
+    # The primary test statistic for an F-contrast is the F value; treat a
+    # request for "tstat" (the generic test statistic) or explicit "fstat"
+    # as a request for the F statistic.
+    if (any(c("tstat", "fstat") %in% contrast_stats)) f_stats <- c(f_stats, "fstat")
+    if (any(c("pval", "fpval") %in% contrast_stats)) f_stats <- c(f_stats, "fpval")
+    f_stats <- unique(f_stats)
+    if (length(f_stats) > 0) {
+      families[[length(families) + 1L]] <- list(contrasts = f_rows, stats = f_stats)
+    }
+  }
+
+  families
+}
+
 #' Write Contrast Outputs for Requested Image Formats
 #' @keywords internal
 #' @noRd
@@ -305,32 +363,47 @@ write_results.fmri_lm <- function(x,
     return(list())
   }
 
+  all_contrasts <- fmrilm_obj$result$contrasts
+  if (is.null(all_contrasts) || nrow(all_contrasts) == 0) {
+    return(list())
+  }
+  if (!is.null(contrasts)) {
+    all_contrasts <- .select_contrasts(all_contrasts, contrasts, contrast_match)
+    if (nrow(all_contrasts) == 0) {
+      warning("None of the specified contrasts found in model")
+      return(list())
+    }
+  }
+
+  families <- .resolve_contrast_families(all_contrasts, contrast_stats)
+  if (length(families) == 0) {
+    return(list())
+  }
+
   created_files <- list()
-  for (output_format in output_formats) {
-    contrast_files <- switch(
-      paste(strategy, output_format, sep = ":"),
-      "by_stat:h5" = .save_contrasts_by_stat(
-        fmrilm_obj, path, entities, desc,
-        contrasts, contrast_match, contrast_stats, overwrite,
-        output_formats = output_formats
-      ),
-      "by_contrast:h5" = .save_contrasts_by_contrast(
-        fmrilm_obj, path, entities, desc,
-        contrasts, contrast_match, contrast_stats, overwrite,
-        output_formats = output_formats
-      ),
-      "by_stat:nifti" = .save_contrasts_by_stat_nifti(
-        fmrilm_obj, path, entities, desc,
-        contrasts, contrast_match, contrast_stats, overwrite,
-        output_formats = output_formats
-      ),
-      "by_contrast:nifti" = .save_contrasts_by_contrast_nifti(
-        fmrilm_obj, path, entities, desc,
-        contrasts, contrast_match, contrast_stats, overwrite,
-        output_formats = output_formats
+  for (fam in families) {
+    for (output_format in output_formats) {
+      contrast_files <- switch(
+        paste(strategy, output_format, sep = ":"),
+        "by_stat:h5" = .save_contrasts_by_stat(
+          fmrilm_obj, fam$contrasts, path, entities, desc,
+          fam$stats, overwrite, output_formats = output_formats
+        ),
+        "by_contrast:h5" = .save_contrasts_by_contrast(
+          fmrilm_obj, fam$contrasts, path, entities, desc,
+          fam$stats, overwrite, output_formats = output_formats
+        ),
+        "by_stat:nifti" = .save_contrasts_by_stat_nifti(
+          fmrilm_obj, fam$contrasts, path, entities, desc,
+          fam$stats, overwrite, output_formats = output_formats
+        ),
+        "by_contrast:nifti" = .save_contrasts_by_contrast_nifti(
+          fmrilm_obj, fam$contrasts, path, entities, desc,
+          fam$stats, overwrite, output_formats = output_formats
+        )
       )
-    )
-    created_files <- .merge_created_files(created_files, contrast_files)
+      created_files <- .merge_created_files(created_files, contrast_files)
+    }
   }
 
   created_files
@@ -627,22 +700,11 @@ write_results.fmri_lm <- function(x,
 #' Save Contrasts by Statistic Type using LabeledVolumeSet
 #' @keywords internal
 #' @noRd
-.save_contrasts_by_stat <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_match, contrast_stats, overwrite,
+.save_contrasts_by_stat <- function(fmrilm_obj, available_contrasts, path, entities, desc, contrast_stats, overwrite,
                                     output_formats = "h5") {
 
-  if (is.null(fmrilm_obj$result$contrasts) || nrow(fmrilm_obj$result$contrasts) == 0) {
-    warning("No contrasts found in fmrilm object")
+  if (is.null(available_contrasts) || nrow(available_contrasts) == 0) {
     return(list())
-  }
-
-  # Filter contrasts if specified
-  available_contrasts <- fmrilm_obj$result$contrasts
-  if (!is.null(contrasts)) {
-    available_contrasts <- .select_contrasts(available_contrasts, contrasts, contrast_match)
-    if (nrow(available_contrasts) == 0) {
-      warning("None of the specified contrasts found in model")
-      return(list())
-    }
   }
 
   # Get spatial information
@@ -689,21 +751,11 @@ write_results.fmri_lm <- function(x,
 #' Save Contrasts by Statistic Type as NIfTI
 #' @keywords internal
 #' @noRd
-.save_contrasts_by_stat_nifti <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_match,
+.save_contrasts_by_stat_nifti <- function(fmrilm_obj, available_contrasts, path, entities, desc,
                                           contrast_stats, overwrite, output_formats = "nifti") {
 
-  if (is.null(fmrilm_obj$result$contrasts) || nrow(fmrilm_obj$result$contrasts) == 0) {
-    warning("No contrasts found in fmrilm object")
+  if (is.null(available_contrasts) || nrow(available_contrasts) == 0) {
     return(list())
-  }
-
-  available_contrasts <- fmrilm_obj$result$contrasts
-  if (!is.null(contrasts)) {
-    available_contrasts <- .select_contrasts(available_contrasts, contrasts, contrast_match)
-    if (nrow(available_contrasts) == 0) {
-      warning("None of the specified contrasts found in model")
-      return(list())
-    }
   }
 
   spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "contrast NIfTI export")
@@ -743,22 +795,11 @@ write_results.fmri_lm <- function(x,
 #' Save Contrasts by Individual Contrast using LabeledVolumeSet
 #' @keywords internal
 #' @noRd
-.save_contrasts_by_contrast <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_match, contrast_stats, overwrite,
+.save_contrasts_by_contrast <- function(fmrilm_obj, available_contrasts, path, entities, desc, contrast_stats, overwrite,
                                         output_formats = "h5") {
 
-  if (is.null(fmrilm_obj$result$contrasts) || nrow(fmrilm_obj$result$contrasts) == 0) {
-    warning("No contrasts found in fmrilm object")
+  if (is.null(available_contrasts) || nrow(available_contrasts) == 0) {
     return(list())
-  }
-
-  # Filter contrasts if specified
-  available_contrasts <- fmrilm_obj$result$contrasts
-  if (!is.null(contrasts)) {
-    available_contrasts <- .select_contrasts(available_contrasts, contrasts, contrast_match)
-    if (nrow(available_contrasts) == 0) {
-      warning("None of the specified contrasts found in model")
-      return(list())
-    }
   }
 
   # Get spatial information
@@ -841,21 +882,11 @@ write_results.fmri_lm <- function(x,
 #' Save Contrasts by Individual Contrast as NIfTI
 #' @keywords internal
 #' @noRd
-.save_contrasts_by_contrast_nifti <- function(fmrilm_obj, path, entities, desc, contrasts, contrast_match,
+.save_contrasts_by_contrast_nifti <- function(fmrilm_obj, available_contrasts, path, entities, desc,
                                               contrast_stats, overwrite, output_formats = "nifti") {
 
-  if (is.null(fmrilm_obj$result$contrasts) || nrow(fmrilm_obj$result$contrasts) == 0) {
-    warning("No contrasts found in fmrilm object")
+  if (is.null(available_contrasts) || nrow(available_contrasts) == 0) {
     return(list())
-  }
-
-  available_contrasts <- fmrilm_obj$result$contrasts
-  if (!is.null(contrasts)) {
-    available_contrasts <- .select_contrasts(available_contrasts, contrasts, contrast_match)
-    if (nrow(available_contrasts) == 0) {
-      warning("None of the specified contrasts found in model")
-      return(list())
-    }
   }
 
   spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "contrast NIfTI export")
@@ -1215,9 +1246,11 @@ write_results.fmri_lm <- function(x,
     "beta" = "arbitrary (depends on input data scaling)",
     "tstat" = "t-statistic",
     "pval" = "probability",
+    "fpval" = "probability",
     "se" = "standard error",
     "z" = "z-score",
     "f" = "F-statistic",
+    "fstat" = "F-statistic",
     "arbitrary"
   )
 }
@@ -1252,7 +1285,14 @@ write_results.fmri_lm <- function(x,
 #' @keywords internal
 #' @noRd
 .extract_contrast_type <- function(contrast_row, fmrilm_obj) {
-  # Try to determine contrast type from available information
+  # Prefer the authoritative `type` column recorded at fit time.
+  ctype <- tryCatch(contrast_row[["type"]], error = function(e) NULL)
+  if (!is.null(ctype) && length(ctype) >= 1 && !is.na(ctype[[1]])) {
+    if (identical(ctype[[1]], "Fcontrast")) return("F-contrast")
+    if (identical(ctype[[1]], "contrast")) return("t-contrast")
+  }
+
+  # Otherwise fall back to inferring the type from available information
   tryCatch({
     contrast_data <- contrast_row$data[[1]]
 
@@ -1640,12 +1680,18 @@ write_results.fmri_lm <- function(x,
 #' @keywords internal
 #' @noRd
 .map_stat_name <- function(stat) {
-  # Map user-friendly names to internal contrast data field names
+  # Map user-friendly names to internal contrast data field names.
+  # Note: t- and F-contrasts both store their test statistic in the "stat"
+  # field and their p-value in "prob"; the family-specific labels ("tstat"
+  # vs "fstat", "pval" vs "fpval") only differ in the BIDS desc token and
+  # JSON metadata, never in the underlying field name.
   stat_mapping <- c(
     "beta" = "estimate",
     "tstat" = "stat",
+    "fstat" = "stat",
     "se" = "se",
     "pval" = "prob",
+    "fpval" = "prob",
     "sigma" = "sigma"
   )
 
