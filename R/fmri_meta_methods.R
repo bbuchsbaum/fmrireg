@@ -531,6 +531,11 @@ reconstruct_image <- function(values, object) {
 
 #' Write Meta-Analysis Results
 #'
+#' Exports spatial meta-analysis maps with the same core export contract used by
+#' \code{\link{write_results.fmri_lm}}: BIDS-style filenames, HDF5 and NIfTI image
+#' outputs, JSON metadata sidecars, vectorized \code{format}, explicit overwrite
+#' handling, and atomic finalization.
+#'
 #' @param x An fmri_meta object
 #' @param path Output directory path. If NULL, uses current working directory.
 #' @param subject Optional subject or group identifier. Unlike subject-level
