@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,6 +57,20 @@
       <small>Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.2.0" id="fmrireg-020">fmrireg 0.2.0<a class="anchor" aria-label="anchor" href="#fmrireg-020"></a></h2>
+<div class="section level3">
+<h3 id="new-features-0-2-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-0-2-0"></a></h3>
+<ul><li>
+<code><a href="../reference/write_results.html">write_results()</a></code> now exports statistical maps as NIfTI volumes via <code>format = "nifti"</code> (or <code>format = c("h5", "nifti")</code>), reusing the same BIDS entity and filename machinery as the HDF5 backend. This removes the need to hand-roll loops over <code><a href="../reference/coef_image.html">coef_image()</a></code> + <code><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vol-methods.html" class="external-link">neuroim2::write_vol()</a></code>.</li>
+<li>Added <code><a href="../reference/coef_images.html">coef_images()</a></code>, a plural companion to <code><a href="../reference/coef_image.html">coef_image()</a></code> that returns a named list of <code>NeuroVol</code>s for every coefficient of a given <code>type</code> (<code>"estimates"</code>, <code>"contrasts"</code>, or <code>"F"</code>) and <code>statistic</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-2-0">Bug Fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-2-0"></a></h3>
+<ul><li>
+<code><a href="../reference/write_results.html">write_results()</a></code> now labels F-contrast maps as <code>fstat</code>/<code>fpval</code> instead of reusing the <code>tstat</code>/<code>pval</code> labels. F statistics follow an F distribution (not Student’s t), so mixing them under a <code>tstat</code> label produced mislabeled maps and, under <code>strategy = "by_stat"</code>, could collide t- and F-contrast outputs in a single file. t- and F-contrasts are now written to separate, correctly labeled files.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.2" id="fmrireg-012">fmrireg 0.1.2<a class="anchor" aria-label="anchor" href="#fmrireg-012"></a></h2>
 <div class="section level3">

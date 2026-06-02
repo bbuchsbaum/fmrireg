@@ -26,6 +26,9 @@
 - [`coef_image(`*`<fmri_ttest_fit>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/coef_image.fmri_ttest_fit.md)
   : Extract Coefficient Image from fmri_ttest_fit
 
+- [`coef_images()`](https://bbuchsbaum.github.io/fmrireg/reference/coef_images.md)
+  : Extract Images/Volumes for Multiple Coefficients
+
 - [`coef_names()`](https://bbuchsbaum.github.io/fmrireg/reference/coef_names.md)
   : Get Available Coefficient Names
 
