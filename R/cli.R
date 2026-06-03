@@ -377,7 +377,7 @@ install_cli <- function(dest_dir = "~/.local/bin",
   }
 
   for (nm in names(x)) {
-    value_text <- paste(capture.output(str(x[[nm]], give.attr = FALSE)), collapse = " ")
+    value_text <- paste(utils::capture.output(str(x[[nm]], give.attr = FALSE)), collapse = " ")
     cat(nm, ": ", value_text, "\n", sep = "")
   }
 }
