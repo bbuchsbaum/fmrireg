@@ -321,18 +321,25 @@ meta_betas <- function(bstats, colind, weighting=c("inv_var", "equal")) {
 # Shared implementation used by both legacy and current call sites.
 .meta_betas_impl <- function(bstats, colind, weighting=c("inv_var", "equal")) {
   weighting <- match.arg(weighting)
-
-  len <- length(colind)
   
-  # Check the dimensions of the first beta matrix to understand the structure
-  first_beta <- bstats[[1]]$data[[1]]$estimate[[1]]
-  max_col <- ncol(first_beta)
+  beta_ncols <- vapply(bstats, function(x) {
+    ncol(x$data[[1]]$estimate[[1]])
+  }, integer(1))
+  se_ncols <- vapply(bstats, function(x) {
+    ncol(x$data[[1]]$se[[1]])
+  }, integer(1))
+  max_col <- min(beta_ncols, se_ncols)
+  if (max_col < 1L) {
+    stop("No shared coefficient columns found in meta_betas.", call. = FALSE)
+  }
   
-  # Filter colind to only include valid column indices
+  # Filter to columns available in every run. Some preprocessing paths can
+  # prune run-specific nuisance columns unequally, so the first run's width is
+  # not a safe bound for all runs.
   valid_colind <- colind[colind <= max_col]
   
   if (length(valid_colind) == 0) {
-    warning("No valid column indices found in meta_betas. Using all available columns.")
+    warning("No valid column indices found in meta_betas. Using all columns common to every run.")
     valid_colind <- 1:max_col
   }
   

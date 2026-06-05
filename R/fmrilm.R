@@ -188,7 +188,8 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #'
 #' @param formula A model formula describing the event structure or an
 #'   \code{fmri_model} object.
-#' @param ... Additional arguments passed to the chosen method.
+#' @param ... Additional method arguments. Recognized engine arguments include
+#'   `engine`, `engine_args`, and `lowrank`; see Details.
 #' @return An object of class \code{fmri_lm}.
 #' @export
 fmri_lm <- function(formula, ...) {
@@ -570,6 +571,47 @@ fmri_lm <- function(formula, ...) {
 #'   \item \code{voxelwise}: Logical. Estimate AR parameters voxel-wise (default: FALSE)
 #'   \item \code{exact_first}: Logical. Apply exact AR(1) scaling to first sample (default: FALSE)
 #' }
+#'
+#' Built-in fast engines are selected through `...`:
+#' \itemize{
+#'   \item \code{engine = "latent_sketch"} uses the sketched GLM path. Configure
+#'   it with \code{lowrank = lowrank_control(...)}. The alias
+#'   \code{engine = "sketch"} is normalized to \code{"latent_sketch"}.
+#'   \item \code{engine = "rrr_gls"} uses the reduced-rank-regression GLS path.
+#'   Configure it with \code{engine_args = list(...)}. This engine supports
+#'   shared AR whitening from \code{ar_options} and inference for event/task
+#'   parameters only; nuisance or baseline terms may be estimated, but
+#'   standard-error and contrast inference is restricted to event/task
+#'   coefficients.
+#' }
+#'
+#' For \code{engine = "rrr_gls"}, \code{engine_args} may contain:
+#' \itemize{
+#'   \item \code{rank}: Positive integer rank. If \code{NULL} and
+#'   \code{rank_mode = "fixed"}, the engine uses the full available task rank.
+#'   \item \code{rank_mode}: One of \code{"fixed"}, \code{"energy"}, or
+#'   \code{"rss_budget"} (default: \code{"fixed"}).
+#'   \item \code{energy_keep}: Fraction of task singular-value energy to retain
+#'   when \code{rank_mode = "energy"} (default: \code{0.99}).
+#'   \item \code{rss_budget}: Non-negative residual-sum-of-squares budget used
+#'   when \code{rank_mode = "rss_budget"}.
+#'   \item \code{se_mode}: Standard-error mode, either \code{"conditional"} or
+#'   \code{"bootstrap"} (default: \code{"conditional"}). Bootstrap standard
+#'   errors resample task-subspace residuals in blocks.
+#'   \item \code{bootstrap_n}: Number of bootstrap resamples when
+#'   \code{se_mode = "bootstrap"} (default: \code{200}).
+#'   \item \code{bootstrap_block_size}: Positive integer block size for
+#'   bootstrap resampling. If \code{NULL}, a block size of 1 is used.
+#'   \item \code{bootstrap_seed}: Optional integer seed for reproducible
+#'   bootstrap resampling.
+#'   \item \code{contrast_policy}: How to handle post-hoc contrasts that include
+#'   non-event coefficients: \code{"warn_drop"}, \code{"drop"}, or
+#'   \code{"error"} (default: \code{"warn_drop"}).
+#' }
+#'
+#' The aliases \code{energy} and \code{nboot} are accepted as legacy shorthand
+#' for \code{energy_keep} and \code{bootstrap_n}, respectively. Prefer the
+#' canonical names in new code.
 #' 
 #' @export
 #' @seealso \code{\link{fmri_dataset}}, \code{\link{fmri_lm_fit}}, \code{\link{fmri_lm_control}}
@@ -599,6 +641,23 @@ fmri_lm <- function(formula, ...) {
 #'                            basis=gen_hrf(fmrihrf::hrf_bspline, N=7, span=25)), 
 #'                block = ~ run, 
 #'                strategy="chunkwise", nchunks=1, dataset=dset)
+#'
+#' \dontrun{
+#' fit_rrr <- fmri_lm(
+#'   onset ~ hrf(condition), block = ~ run, dataset = dset,
+#'   ar_options = list(struct = "ar1"),
+#'   engine = "rrr_gls",
+#'   engine_args = list(
+#'     rank_mode = "energy",
+#'     energy_keep = 0.99,
+#'     se_mode = "bootstrap",
+#'     bootstrap_n = 200L,
+#'     bootstrap_block_size = 24L,
+#'     bootstrap_seed = 1L
+#'   )
+#' )
+#' standard_error(fit_rrr, type = "estimates")
+#' }
 #' 
 fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE,
                          robust = FALSE, robust_options = NULL, ar_options = NULL,

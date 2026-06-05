@@ -80,4 +80,15 @@ logical vector where TRUE = censored, or "auto" to extract from dataset)
 \item \code{lambda} (numeric, "auto", or "gcv")
 \item \code{warn_redundant} (logical, warn if baseline has nuisance terms)
 }
+
+This list controls soft subspace preprocessing. It is separate from the
+built-in fast \code{fmri_lm()} engines. To use reduced-rank-regression GLS with
+conditional or block-bootstrap standard errors, call \code{fmri_lm()} with
+\code{engine = "rrr_gls"} and pass reduced-rank options in \code{engine_args}. To use
+the sketched GLM path, call \code{fmri_lm()} with \code{engine = "latent_sketch"} and
+pass a \code{lowrank_control()} object via \code{lowrank}.
+
+When \code{fmri_lm()} is called with the convenience argument
+\code{nuisance_projection}, \code{enabled} is set automatically. When constructing a
+\code{soft_subspace_options} list directly, set \code{enabled = TRUE} yourself.
 }

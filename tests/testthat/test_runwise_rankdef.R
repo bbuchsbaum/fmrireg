@@ -101,3 +101,38 @@ test_that("lm.fit stats avoid chol2inv failure and reject aliased contrasts", {
   expect_true(all(is.na(tcon$estimate)))
   expect_true(all(is.na(tcon$se)))
 })
+
+test_that("meta_betas tolerates unequal runwise coefficient widths", {
+  make_bstats <- function(ncoef, offset = 0) {
+    estimate <- matrix(seq_len(2L * ncoef) + offset, nrow = 2L, ncol = ncoef)
+    se <- matrix(0.5, nrow = 2L, ncol = ncoef)
+    stat <- estimate / se
+
+    tibble::tibble(
+      type = "beta",
+      name = "parameter_estimates",
+      stat_type = "tstat",
+      conmat = list(NULL),
+      colind = list(seq_len(ncoef)),
+      data = list(tibble::tibble(
+        estimate = list(estimate),
+        se = list(se),
+        stat = list(stat),
+        prob = list(matrix(0.1, nrow = 2L, ncol = ncoef))
+      ))
+    )
+  }
+
+  out <- fmrireg:::.meta_betas_impl(
+    list(
+      make_bstats(3L),
+      make_bstats(2L, offset = 10L)
+    ),
+    colind = 1:3
+  )
+
+  expect_equal(out$colind[[1]], 1:2)
+  expect_equal(dim(out$data[[1]]$estimate[[1]]), c(2L, 2L))
+  expect_true(all(is.finite(out$data[[1]]$estimate[[1]])))
+  expect_true(all(is.finite(out$data[[1]]$se[[1]])))
+})

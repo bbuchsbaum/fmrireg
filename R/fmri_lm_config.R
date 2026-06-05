@@ -54,6 +54,17 @@
 #'   * `lambda` (numeric, "auto", or "gcv")
 #'   * `warn_redundant` (logical, warn if baseline has nuisance terms)
 #'
+#' This list controls soft subspace preprocessing. It is separate from the
+#' built-in fast `fmri_lm()` engines. To use reduced-rank-regression GLS with
+#' conditional or block-bootstrap standard errors, call `fmri_lm()` with
+#' `engine = "rrr_gls"` and pass reduced-rank options in `engine_args`. To use
+#' the sketched GLM path, call `fmri_lm()` with `engine = "latent_sketch"` and
+#' pass a `lowrank_control()` object via `lowrank`.
+#'
+#' When `fmri_lm()` is called with the convenience argument
+#' `nuisance_projection`, `enabled` is set automatically. When constructing a
+#' `soft_subspace_options` list directly, set `enabled = TRUE` yourself.
+#'
 #' @export
 fmri_lm_control <- function(robust_options = list(),
                             ar_options = list(),
