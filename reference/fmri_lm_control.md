@@ -114,3 +114,22 @@ Use the `*_options` lists below only when you need fine-grained control.
 - `lambda` (numeric, "auto", or "gcv")
 
 - `warn_redundant` (logical, warn if baseline has nuisance terms)
+
+This list controls soft subspace preprocessing. It is separate from the
+built-in fast
+[`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
+engines. To use reduced-rank-regression GLS with conditional or
+block-bootstrap standard errors, call
+[`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
+with `engine = "rrr_gls"` and pass reduced-rank options in
+`engine_args`. To use the sketched GLM path, call
+[`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
+with `engine = "latent_sketch"` and pass a
+[`lowrank_control()`](https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.md)
+object via `lowrank`.
+
+When
+[`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
+is called with the convenience argument `nuisance_projection`, `enabled`
+is set automatically. When constructing a `soft_subspace_options` list
+directly, set `enabled = TRUE` yourself.

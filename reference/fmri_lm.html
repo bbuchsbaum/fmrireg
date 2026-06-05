@@ -148,7 +148,8 @@ alternative method can be used with a preconstructed
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional arguments passed to the chosen method.</p></dd>
+<dd><p>Additional method arguments. Recognized engine arguments include
+<code>engine</code>, <code>engine_args</code>, and <code>lowrank</code>; see Details.</p></dd>
 
 
 <dt id="arg-block">block<a class="anchor" aria-label="anchor" href="#arg-block"></a></dt>
@@ -291,7 +292,39 @@ chunks with <code><a href="https://future.apply.futureverse.org/reference/future
 <li><p><code>global</code>: Logical. Use global AR coefficients (default: FALSE)</p></li>
 <li><p><code>voxelwise</code>: Logical. Estimate AR parameters voxel-wise (default: FALSE)</p></li>
 <li><p><code>exact_first</code>: Logical. Apply exact AR(1) scaling to first sample (default: FALSE)</p></li>
-</ul></div>
+</ul><p>Built-in fast engines are selected through <code>...</code>:</p><ul><li><p><code>engine = "latent_sketch"</code> uses the sketched GLM path. Configure
+it with <code>lowrank = lowrank_control(...)</code>. The alias
+<code>engine = "sketch"</code> is normalized to <code>"latent_sketch"</code>.</p></li>
+<li><p><code>engine = "rrr_gls"</code> uses the reduced-rank-regression GLS path.
+Configure it with <code>engine_args = list(...)</code>. This engine supports
+shared AR whitening from <code>ar_options</code> and inference for event/task
+parameters only; nuisance or baseline terms may be estimated, but
+standard-error and contrast inference is restricted to event/task
+coefficients.</p></li>
+</ul><p>For <code>engine = "rrr_gls"</code>, <code>engine_args</code> may contain:</p><ul><li><p><code>rank</code>: Positive integer rank. If <code>NULL</code> and
+<code>rank_mode = "fixed"</code>, the engine uses the full available task rank.</p></li>
+<li><p><code>rank_mode</code>: One of <code>"fixed"</code>, <code>"energy"</code>, or
+<code>"rss_budget"</code> (default: <code>"fixed"</code>).</p></li>
+<li><p><code>energy_keep</code>: Fraction of task singular-value energy to retain
+when <code>rank_mode = "energy"</code> (default: <code>0.99</code>).</p></li>
+<li><p><code>rss_budget</code>: Non-negative residual-sum-of-squares budget used
+when <code>rank_mode = "rss_budget"</code>.</p></li>
+<li><p><code>se_mode</code>: Standard-error mode, either <code>"conditional"</code> or
+<code>"bootstrap"</code> (default: <code>"conditional"</code>). Bootstrap standard
+errors resample task-subspace residuals in blocks.</p></li>
+<li><p><code>bootstrap_n</code>: Number of bootstrap resamples when
+<code>se_mode = "bootstrap"</code> (default: <code>200</code>).</p></li>
+<li><p><code>bootstrap_block_size</code>: Positive integer block size for
+bootstrap resampling. If <code>NULL</code>, a block size of 1 is used.</p></li>
+<li><p><code>bootstrap_seed</code>: Optional integer seed for reproducible
+bootstrap resampling.</p></li>
+<li><p><code>contrast_policy</code>: How to handle post-hoc contrasts that include
+non-event coefficients: <code>"warn_drop"</code>, <code>"drop"</code>, or
+<code>"error"</code> (default: <code>"warn_drop"</code>).</p></li>
+</ul><p>The aliases <code>energy</code> and <code>nboot</code> are accepted as legacy shorthand
+for <code>energy_keep</code> and <code>bootstrap_n</code>, respectively. Prefer the
+canonical names in new code.</p>
+    </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="https://bbuchsbaum.github.io/fmridataset/reference/fmri_dataset.html" class="external-link">fmri_dataset</a></code>, <code><a href="fmri_lm_fit.html">fmri_lm_fit</a></code>, <code><a href="fmri_lm_control.html">fmri_lm_control</a></code></p></div>
@@ -324,6 +357,23 @@ chunks with <code><a href="https://future.apply.futureverse.org/reference/future
 <span class="r-in"><span>                           basis<span class="op">=</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html" class="external-link">gen_hrf</a></span><span class="op">(</span><span class="fu">fmrihrf</span><span class="fu">::</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/hrf_bspline.html" class="external-link">hrf_bspline</a></span>, N<span class="op">=</span><span class="fl">7</span>, span<span class="op">=</span><span class="fl">25</span><span class="op">)</span><span class="op">)</span>, </span></span>
 <span class="r-in"><span>               block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, </span></span>
 <span class="r-in"><span>               strategy<span class="op">=</span><span class="st">"chunkwise"</span>, nchunks<span class="op">=</span><span class="fl">1</span>, dataset<span class="op">=</span><span class="va">dset</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="va">fit_rrr</span> <span class="op">&lt;-</span> <span class="fu">fmri_lm</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, dataset <span class="op">=</span> <span class="va">dset</span>,</span></span>
+<span class="r-in"><span>  ar_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>struct <span class="op">=</span> <span class="st">"ar1"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  engine <span class="op">=</span> <span class="st">"rrr_gls"</span>,</span></span>
+<span class="r-in"><span>  engine_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    rank_mode <span class="op">=</span> <span class="st">"energy"</span>,</span></span>
+<span class="r-in"><span>    energy_keep <span class="op">=</span> <span class="fl">0.99</span>,</span></span>
+<span class="r-in"><span>    se_mode <span class="op">=</span> <span class="st">"bootstrap"</span>,</span></span>
+<span class="r-in"><span>    bootstrap_n <span class="op">=</span> <span class="fl">200L</span>,</span></span>
+<span class="r-in"><span>    bootstrap_block_size <span class="op">=</span> <span class="fl">24L</span>,</span></span>
+<span class="r-in"><span>    bootstrap_seed <span class="op">=</span> <span class="fl">1L</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">fit_rrr</span>, type <span class="op">=</span> <span class="st">"estimates"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

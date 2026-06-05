@@ -91,6 +91,18 @@ dset <- fmri_mem_dataset(scans = list(vec), mask = maskVol,
                          TR = TR, event_table = events_df)
 ```
 
+### Choose the fast engine
+
+`fmrireg` has two built-in fast paths with different controls.
+`engine = "latent_sketch"` is the sketched GLM engine used in most of
+this vignette; it is configured by
+[`lowrank_control()`](https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.md).
+`engine = "rrr_gls"` is the reduced-rank-regression GLS engine; it is
+configured through `engine_args` and is the path that exposes
+block-bootstrap task standard errors. The `rrr_gls` inference surface is
+deliberately narrow: standard errors and post-hoc contrasts apply to
+event/task coefficients, not baseline or nuisance terms.
+
 ### Build parcels
 
 Parcels are used both for parcel-pooled AR whitening and for
@@ -239,6 +251,50 @@ same task effects reasonably well, but they are solving a different
 estimation problem, so their correlations to exact OLS are not expected
 to match the iid sketch baseline.
 
+## Reduced-rank GLS with bootstrap standard errors
+
+Use `rrr_gls` when you want a low-rank task fit with task-level standard
+errors from either the conditional analytic approximation or a residual
+block bootstrap. The bootstrap is useful when short-TR data leave
+temporal autocorrelation that ordinary iid standard errors do not
+represent well.
+
+``` r
+
+fit_rrr_boot <- fmri_lm(
+  onset ~ hrf(condition), block = ~ run,
+  dataset = dset,
+  ar_options = list(struct = "ar1"),
+  engine = "rrr_gls",
+  engine_args = list(
+    rank_mode = "energy",
+    energy_keep = 0.99,
+    se_mode = "bootstrap",
+    bootstrap_n = 20L,
+    bootstrap_block_size = 8L,
+    bootstrap_seed = 1L
+  )
+)
+```
+
+For a real analysis, increase `bootstrap_n` substantially; `200` is a
+reasonable starting point. The vignette uses a smaller value so the
+example remains quick.
+
+``` r
+
+rrr_se <- standard_error(fit_rrr_boot, type = "estimates")
+
+data.frame(
+  engine = attr(fit_rrr_boot, "engine"),
+  se_mode = fit_rrr_boot$rrr$se_mode,
+  rank_used = fit_rrr_boot$rrr$rank_used,
+  finite_standard_errors = all(is.finite(as.matrix(rrr_se)))
+)
+#>    engine   se_mode rank_used finite_standard_errors
+#> 1 rrr_gls bootstrap         2                   TRUE
+```
+
 ## Landmarks + Nystrom (full-voxel, global AR)
 
 Here we solve only on L landmark voxels and extend the coefficients back
@@ -265,7 +321,7 @@ fit_lm_srht <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset,
 B_exact <- t(fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)$result$betas$data[[1]]$estimate[[1]])
 cor_landmarks <- cor(as.numeric(B_exact), as.numeric(fit_lm_srht$betas_fixed))
 cor_landmarks
-#> [1] -0.006593578
+#> [1] 0.02792882
 ```
 
 Even with only 24 landmarks for 192 voxels the correlation with the

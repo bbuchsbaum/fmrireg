@@ -135,7 +135,16 @@ logical vector where TRUE = censored, or "auto" to extract from dataset)</p></li
 <li><p><code>nuisance_matrix</code> (pre-computed nuisance timeseries matrix)</p></li>
 <li><p><code>lambda</code> (numeric, "auto", or "gcv")</p></li>
 <li><p><code>warn_redundant</code> (logical, warn if baseline has nuisance terms)</p></li>
-</ul></div>
+</ul><p>This list controls soft subspace preprocessing. It is separate from the
+built-in fast <code><a href="fmri_lm.html">fmri_lm()</a></code> engines. To use reduced-rank-regression GLS with
+conditional or block-bootstrap standard errors, call <code><a href="fmri_lm.html">fmri_lm()</a></code> with
+<code>engine = "rrr_gls"</code> and pass reduced-rank options in <code>engine_args</code>. To use
+the sketched GLM path, call <code><a href="fmri_lm.html">fmri_lm()</a></code> with <code>engine = "latent_sketch"</code> and
+pass a <code><a href="lowrank_control.html">lowrank_control()</a></code> object via <code>lowrank</code>.</p>
+<p>When <code><a href="fmri_lm.html">fmri_lm()</a></code> is called with the convenience argument
+<code>nuisance_projection</code>, <code>enabled</code> is set automatically. When constructing a
+<code>soft_subspace_options</code> list directly, set <code>enabled = TRUE</code> yourself.</p>
+    </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

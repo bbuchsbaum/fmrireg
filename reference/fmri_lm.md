@@ -82,7 +82,8 @@ fmri_lm(
 
 - ...:
 
-  Additional arguments passed to the chosen method.
+  Additional method arguments. Recognized engine arguments include
+  `engine`, `engine_args`, and `lowrank`; see Details.
 
 - block:
 
@@ -270,6 +271,54 @@ A fitted linear regression model for fMRI data analysis.
 - `exact_first`: Logical. Apply exact AR(1) scaling to first sample
   (default: FALSE)
 
+Built-in fast engines are selected through `...`:
+
+- `engine = "latent_sketch"` uses the sketched GLM path. Configure it
+  with `lowrank = lowrank_control(...)`. The alias `engine = "sketch"`
+  is normalized to `"latent_sketch"`.
+
+- `engine = "rrr_gls"` uses the reduced-rank-regression GLS path.
+  Configure it with `engine_args = list(...)`. This engine supports
+  shared AR whitening from `ar_options` and inference for event/task
+  parameters only; nuisance or baseline terms may be estimated, but
+  standard-error and contrast inference is restricted to event/task
+  coefficients.
+
+For `engine = "rrr_gls"`, `engine_args` may contain:
+
+- `rank`: Positive integer rank. If `NULL` and `rank_mode = "fixed"`,
+  the engine uses the full available task rank.
+
+- `rank_mode`: One of `"fixed"`, `"energy"`, or `"rss_budget"` (default:
+  `"fixed"`).
+
+- `energy_keep`: Fraction of task singular-value energy to retain when
+  `rank_mode = "energy"` (default: `0.99`).
+
+- `rss_budget`: Non-negative residual-sum-of-squares budget used when
+  `rank_mode = "rss_budget"`.
+
+- `se_mode`: Standard-error mode, either `"conditional"` or
+  `"bootstrap"` (default: `"conditional"`). Bootstrap standard errors
+  resample task-subspace residuals in blocks.
+
+- `bootstrap_n`: Number of bootstrap resamples when
+  `se_mode = "bootstrap"` (default: `200`).
+
+- `bootstrap_block_size`: Positive integer block size for bootstrap
+  resampling. If `NULL`, a block size of 1 is used.
+
+- `bootstrap_seed`: Optional integer seed for reproducible bootstrap
+  resampling.
+
+- `contrast_policy`: How to handle post-hoc contrasts that include
+  non-event coefficients: `"warn_drop"`, `"drop"`, or `"error"`
+  (default: `"warn_drop"`).
+
+The aliases `energy` and `nboot` are accepted as legacy shorthand for
+`energy_keep` and `bootstrap_n`, respectively. Prefer the canonical
+names in new code.
+
 ## See also
 
 [`fmri_dataset`](https://bbuchsbaum.github.io/fmridataset/reference/fmri_dataset.html),
@@ -304,4 +353,21 @@ flm <- fmri_lm(onset ~ hrf(face_gen,
                            basis=gen_hrf(fmrihrf::hrf_bspline, N=7, span=25)), 
                block = ~ run, 
                strategy="chunkwise", nchunks=1, dataset=dset)
+
+if (FALSE) { # \dontrun{
+fit_rrr <- fmri_lm(
+  onset ~ hrf(condition), block = ~ run, dataset = dset,
+  ar_options = list(struct = "ar1"),
+  engine = "rrr_gls",
+  engine_args = list(
+    rank_mode = "energy",
+    energy_keep = 0.99,
+    se_mode = "bootstrap",
+    bootstrap_n = 200L,
+    bootstrap_block_size = 24L,
+    bootstrap_seed = 1L
+  )
+)
+standard_error(fit_rrr, type = "estimates")
+} # }
 ```

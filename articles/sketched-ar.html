@@ -168,6 +168,19 @@ sketched solvers something realistic to whiten against.</p>
 <span>                         TR <span class="op">=</span> <span class="va">TR</span>, event_table <span class="op">=</span> <span class="va">events_df</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="choose-the-fast-engine">Choose the fast engine<a class="anchor" aria-label="anchor" href="#choose-the-fast-engine"></a>
+</h3>
+<p><code>fmrireg</code> has two built-in fast paths with different
+controls. <code>engine = "latent_sketch"</code> is the sketched GLM
+engine used in most of this vignette; it is configured by
+<code><a href="../reference/lowrank_control.html">lowrank_control()</a></code>. <code>engine = "rrr_gls"</code> is the
+reduced-rank-regression GLS engine; it is configured through
+<code>engine_args</code> and is the path that exposes block-bootstrap
+task standard errors. The <code>rrr_gls</code> inference surface is
+deliberately narrow: standard errors and post-hoc contrasts apply to
+event/task coefficients, not baseline or nuisance terms.</p>
+</div>
+<div class="section level3">
 <h3 id="build-parcels">Build parcels<a class="anchor" aria-label="anchor" href="#build-parcels"></a>
 </h3>
 <p>Parcels are used both for parcel-pooled AR whitening and for
@@ -306,12 +319,50 @@ estimation problem, so their correlations to exact OLS are not expected
 to match the iid sketch baseline.</p>
 </div>
 <div class="section level2">
+<h2 id="reduced-rank-gls-with-bootstrap-standard-errors">Reduced-rank GLS with bootstrap standard errors<a class="anchor" aria-label="anchor" href="#reduced-rank-gls-with-bootstrap-standard-errors"></a>
+</h2>
+<p>Use <code>rrr_gls</code> when you want a low-rank task fit with
+task-level standard errors from either the conditional analytic
+approximation or a residual block bootstrap. The bootstrap is useful
+when short-TR data leave temporal autocorrelation that ordinary iid
+standard errors do not represent well.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit_rrr_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
+<span>  dataset <span class="op">=</span> <span class="va">dset</span>,</span>
+<span>  ar_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>struct <span class="op">=</span> <span class="st">"ar1"</span><span class="op">)</span>,</span>
+<span>  engine <span class="op">=</span> <span class="st">"rrr_gls"</span>,</span>
+<span>  engine_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    rank_mode <span class="op">=</span> <span class="st">"energy"</span>,</span>
+<span>    energy_keep <span class="op">=</span> <span class="fl">0.99</span>,</span>
+<span>    se_mode <span class="op">=</span> <span class="st">"bootstrap"</span>,</span>
+<span>    bootstrap_n <span class="op">=</span> <span class="fl">20L</span>,</span>
+<span>    bootstrap_block_size <span class="op">=</span> <span class="fl">8L</span>,</span>
+<span>    bootstrap_seed <span class="op">=</span> <span class="fl">1L</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>For a real analysis, increase <code>bootstrap_n</code> substantially;
+<code>200</code> is a reasonable starting point. The vignette uses a
+smaller value so the example remains quick.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">rrr_se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">fit_rrr_boot</span>, type <span class="op">=</span> <span class="st">"estimates"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  engine <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">fit_rrr_boot</span>, <span class="st">"engine"</span><span class="op">)</span>,</span>
+<span>  se_mode <span class="op">=</span> <span class="va">fit_rrr_boot</span><span class="op">$</span><span class="va">rrr</span><span class="op">$</span><span class="va">se_mode</span>,</span>
+<span>  rank_used <span class="op">=</span> <span class="va">fit_rrr_boot</span><span class="op">$</span><span class="va">rrr</span><span class="op">$</span><span class="va">rank_used</span>,</span>
+<span>  finite_standard_errors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">rrr_se</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;    engine   se_mode rank_used finite_standard_errors</span></span>
+<span><span class="co">#&gt; 1 rrr_gls bootstrap         2                   TRUE</span></span></code></pre></div>
+</div>
+<div class="section level2">
 <h2 id="landmarks-nystrom-full-voxel-global-ar">Landmarks + Nystrom (full-voxel, global AR)<a class="anchor" aria-label="anchor" href="#landmarks-nystrom-full-voxel-global-ar"></a>
 </h2>
 <p>Here we solve only on L landmark voxels and extend the coefficients
 back to all voxels using a sparse, parcel-aware heat-kernel. This can
 deliver large spatial speedups when V is large.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Choose landmarks (L) and neighbors (k)</span></span>
 <span><span class="va">L</span> <span class="op">&lt;-</span> <span class="fl">24L</span>; <span class="va">k_nn</span> <span class="op">&lt;-</span> <span class="fl">12L</span></span>
 <span><span class="va">low_lm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/lowrank_control.html">lowrank_control</a></span><span class="op">(</span></span>
@@ -330,7 +381,7 @@ deliver large spatial speedups when V is large.</p>
 <span><span class="va">B_exact</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, dataset <span class="op">=</span> <span class="va">dset</span><span class="op">)</span><span class="op">$</span><span class="va">result</span><span class="op">$</span><span class="va">betas</span><span class="op">$</span><span class="va">data</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">estimate</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="va">cor_landmarks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">B_exact</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_lm_srht</span><span class="op">$</span><span class="va">betas_fixed</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">cor_landmarks</span></span>
-<span><span class="co">#&gt; [1] -0.006593578</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.02792882</span></span></code></pre></div>
 <p>Even with only 24 landmarks for 192 voxels the correlation with the
 exact solution remains high, demonstrating that the Nystrom extension
 faithfully recovers the full spatial map.</p>
