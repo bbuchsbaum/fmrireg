@@ -5,8 +5,6 @@
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
-building event models, a rich library of hemodynamic response functions, a
-flexible contrast system, and fast C++ solvers for fitting GLMs.
 
 ## Quick start
 
