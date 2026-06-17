@@ -11,7 +11,7 @@
   task = NULL,
   space = NULL,
   desc = "GLM",
-  format = c("h5"),
+  format = c("h5", "nifti", "gds"),
   strategy = c("by_stat", "by_contrast"),
   save_betas = TRUE,
   contrasts = NULL,
@@ -35,9 +35,11 @@
 
 \item{desc}{Description of the analysis (default: "GLM")}
 
-\item{format}{Output format(s). Use \code{"h5"} for BIDS-style HDF5 outputs,
-\code{"nifti"} for BIDS-style NIfTI outputs, \code{"gds"} for fmrigds-compatible
-assays plus an \code{.rds} plan, or a character vector to write multiple formats.}
+\item{format}{Output format(s). One or more of \code{"h5"} (BIDS-style HDF5
+outputs), \code{"nifti"} (BIDS-style NIfTI outputs, written as \code{.nii.gz}), and
+\code{"gds"} (fmrigds-compatible assays plus an \code{.rds} plan). Pass a character
+vector to write multiple formats at once (e.g. \code{c("h5", "nifti")}).
+Defaults to \code{"h5"} only.}
 
 \item{strategy}{Storage strategy: "by_stat" (group contrasts by statistic) or "by_contrast" (separate files)}
 
@@ -72,8 +74,8 @@ be requested.
 # Save all results using default settings
 write_results(fitted_model, subject = "01", task = "nback")
 
-# Save only specific contrasts and statistics  
-write_results(fitted_model, 
+# Save only specific contrasts and statistics
+write_results(fitted_model,
               subject = "01", task = "nback", space = "MNI152NLin2009cAsym",
               contrasts = c("FacesVsPlaces", "GoVsNoGo"),
               contrast_stats = c("beta", "tstat"))

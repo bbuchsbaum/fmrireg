@@ -16,9 +16,11 @@ NULL
 #' @param task Task identifier (e.g., "nback", "rest"). Required for BIDS compliance.
 #' @param space Spatial reference (e.g., "MNI152NLin2009cAsym"). Optional but recommended.
 #' @param desc Description of the analysis (default: "GLM")
-#' @param format Output format(s). Use `"h5"` for BIDS-style HDF5 outputs,
-#'   `"nifti"` for BIDS-style NIfTI outputs, `"gds"` for fmrigds-compatible
-#'   assays plus an `.rds` plan, or a character vector to write multiple formats.
+#' @param format Output format(s). One or more of `"h5"` (BIDS-style HDF5
+#'   outputs), `"nifti"` (BIDS-style NIfTI outputs, written as `.nii.gz`), and
+#'   `"gds"` (fmrigds-compatible assays plus an `.rds` plan). Pass a character
+#'   vector to write multiple formats at once (e.g. `c("h5", "nifti")`).
+#'   Defaults to `"h5"` only.
 #' @param strategy Storage strategy: "by_stat" (group contrasts by statistic) or "by_contrast" (separate files)
 #' @param save_betas Logical. Save raw regressor betas (default: TRUE)
 #' @param contrasts Character vector of contrast names to save. NULL saves all contrasts
@@ -52,7 +54,7 @@ write_results.fmri_lm <- function(x,
                                   task = NULL,
                                   space = NULL,
                                   desc = "GLM",
-                                  format = c("h5"),
+                                  format = c("h5", "nifti", "gds"),
                                   strategy = c("by_stat", "by_contrast"),
                                   save_betas = TRUE,
                                   contrasts = NULL,
@@ -64,7 +66,15 @@ write_results.fmri_lm <- function(x,
 
   strategy <- match.arg(strategy)
   contrast_match <- match.arg(contrast_match)
-  format <- match.arg(format, c("h5", "nifti", "gds"), several.ok = TRUE)
+  # The full choice vector is the formal default purely so it appears in the
+  # usage/help; an unspecified `format` still defaults to "h5" alone. Because
+  # `several.ok = TRUE` disables match.arg's "arg identical to choices ->
+  # first element" shortcut, detect the default explicitly with missing().
+  if (missing(format)) {
+    format <- "h5"
+  } else {
+    format <- match.arg(format, c("h5", "nifti", "gds"), several.ok = TRUE)
+  }
   if (length(format) == 0) format <- "h5"
   produce_gds <- "gds" %in% format
 
