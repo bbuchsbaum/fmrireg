@@ -452,7 +452,9 @@ prepare_fmri_lm_contrasts <- function(fmrimod) {
     }
   }
 
-  simple_conlist <- Filter(function(x) inherits(x, "contrast"), processed_conlist)
+  # F-contrasts also inherit "contrast"; exclude them from the simple (t) list
+  # so an F-contrast is not also routed through the t-contrast engine.
+  simple_conlist <- Filter(function(x) inherits(x, "contrast") && !inherits(x, "Fcontrast"), processed_conlist)
   fconlist <- Filter(function(x) inherits(x, "Fcontrast"), processed_conlist)
 
   list(

@@ -253,6 +253,35 @@ beta_stats <- function(lmfit, varnames, se = TRUE) {
   ret
 }
 
+#' Normalise an F-contrast weight matrix to hypotheses-in-rows orientation
+#'
+#' fmrireg accepts F-contrast weights against a term with `length(colind)`
+#' coefficients in either orientation:
+#'   * hypothesis-oriented: `r x length(colind)` (each row is a linear
+#'     hypothesis), or
+#'   * coefficient/cell-oriented: `length(colind) x r` (rows index cells,
+#'     columns index hypotheses), as produced by `oneway_contrast()`.
+#' This returns the weights as `r x length(colind)`, so callers derive both the
+#' full contrast matrix and the numerator rank `r = nrow()` from one source.
+#' A square matrix (both dims `== length(colind)`) is treated as already
+#' hypothesis-oriented, preserving historical precedence.
+#' @keywords internal
+#' @noRd
+.orient_fcontrast <- function(conmat, colind) {
+  conmat <- as.matrix(conmat)
+  k <- length(colind)
+  if (ncol(conmat) == k) {
+    conmat
+  } else if (nrow(conmat) == k) {
+    t(conmat)
+  } else {
+    stop(sprintf(
+      "F contrast weight matrix dimensions %d x %d do not match length(colind) %d",
+      nrow(conmat), ncol(conmat), k
+    ), call. = FALSE)
+  }
+}
+
 #' Fit F-contrasts for Linear Model
 #'
 #' @description
@@ -282,17 +311,14 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
   cov.unscaled <- .lm_cov_unscaled(lmfit)
   aliased <- attr(cov.unscaled, "aliased", exact = TRUE) %||% integer(0)
 
-  cmat <- matrix(0, nrow(conmat), nrow(betamat))
-  if (ncol(conmat) == length(colind)) {
-    cmat[, colind] <- conmat
-  } else if (nrow(conmat) == length(colind)) {
-    cmat[, colind] <- t(conmat)
-  } else {
-    stop(sprintf(
-      "F contrast weight matrix dimensions %d x %d do not match length(colind) %d",
-      nrow(conmat), ncol(conmat), length(colind)
-    ))
-  }
+  # Orient to hypotheses-in-rows so the numerator rank `r` and the full
+  # contrast matrix `cmat` are derived from a single source. Sizing `cmat` by
+  # nrow(conmat) while leaving r = nrow(conmat) is wrong for cell-oriented
+  # weights (e.g. oneway_contrast: k x (k-1)), where r must be (k-1).
+  Cw <- .orient_fcontrast(conmat, colind)
+  r  <- nrow(Cw)
+  cmat <- matrix(0, r, nrow(betamat))
+  cmat[, colind] <- Cw
 
   if (.contrast_uses_aliased(cmat, aliased)) {
     .warn_nonestimable_contrast(NULL, aliased, rownames(betamat))
@@ -310,7 +336,6 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
     ))
   }
 
-  r  <- nrow(conmat)
   M  <- cmat %*% cov.unscaled %*% t(cmat)
   cm <- tryCatch(solve(M), error = function(e) {
     warning(paste(
@@ -320,8 +345,14 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
     matrix(NaN, nrow(M), ncol(M))
   })
 
-  estimate <- purrr::map_dbl(1:ncol(betamat), function(i) {
-    cb <- cmat %*% betamat[, i]
+  # Exclude zero-weight coefficients so NA-valued aliased betas (ruled out of
+  # this contrast by .contrast_uses_aliased() above) do not poison the
+  # estimate via 0 * NA, mirroring the t-contrast path.
+  nz <- which(colSums(abs(cmat)) > 0)
+  cmat_nz <- cmat[, nz, drop = FALSE]
+  beta_nz <- betamat[nz, , drop = FALSE]
+  estimate <- purrr::map_dbl(seq_len(ncol(betamat)), function(i) {
+    cb <- cmat_nz %*% beta_nz[, i]
     drop(t(cb) %*% cm %*% cb) / r
   })
 
@@ -567,14 +598,15 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, ...) {
     matrix(NaN, nrow = r, ncol = r)
   })
 
-  # qf = diag(t(U) %*% Cinv %*% U)
-  # Efficient computation: colSums((t(U) %*% Cinv) * t(U))
-  # Check if Cinv contains NaNs
+  # Per-voxel quadratic form qf_v = u_v' Cinv u_v = diag(t(U) %*% Cinv %*% U).
+  # With U = r x V and tmp = t(U) %*% Cinv = V x r, the v-th quadratic form is
+  # the row sum of (tmp * t(U)), so this must be rowSums (length V), not
+  # colSums (which would sum over voxels and return a length-r vector).
   if (any(is.nan(Cinv))) {
       qf <- rep(NaN, ncol(U))
   } else {
       tmp  <- t(U) %*% Cinv           # V x r
-      qf  <- colSums(tmp * t(U))      # V-vector, each element is u_v' Cinv u_v
+      qf  <- rowSums(tmp * t(U))      # V-vector, each element is u_v' Cinv u_v
   }
   
   estimate <- qf / r # Numerator mean square: (LB)' (L(X'X)^-1 L')^-1 (LB) / r
@@ -793,26 +825,23 @@ create_full_contrast_matrix <- function(contrast_matrix, colind, p) {
   if (!is.matrix(contrast_matrix)) {
     stop("F-contrast weights must be a matrix")
   }
-  
-  # Validate dimensions
-  if (ncol(contrast_matrix) != length(colind)) {
-    stop(sprintf(
-      "Dimension mismatch: contrast matrix columns (%d) != colind length (%d)",
-      ncol(contrast_matrix), length(colind)
-    ))
-  }
-  
+
+  # Accept either orientation (e.g. oneway_contrast supplies cell-oriented
+  # k x (k-1) weights); normalise to hypotheses-in-rows so the fast F engine
+  # sees an r x p matrix and derives r = nrow(L) correctly.
+  Cw <- .orient_fcontrast(contrast_matrix, colind)
+
   if (max(colind) > p) {
     stop(sprintf(
-      "Column index out of bounds: max colind (%d) > design matrix columns (%d)", 
+      "Column index out of bounds: max colind (%d) > design matrix columns (%d)",
       max(colind), p
     ))
   }
-  
+
   # Create full contrast matrix
-  full_contrast <- matrix(0, nrow = nrow(contrast_matrix), ncol = p)
-  full_contrast[, colind] <- contrast_matrix
-  
+  full_contrast <- matrix(0, nrow = nrow(Cw), ncol = p)
+  full_contrast[, colind] <- Cw
+
   return(full_contrast)
 }
 
@@ -1163,15 +1192,15 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
             colind <- seq_len(ncol(wmat))
           }
           .enforce_contrast_scope(colind, contrast_scope, con_name)
-          L <- matrix(0, nrow = nrow(wmat), ncol = p)
-          if (ncol(wmat) == length(colind)) {
-            L[, colind] <- wmat
-          } else if (nrow(wmat) == length(colind)) {
-            L[, colind] <- t(wmat)
-          } else if (ncol(wmat) == p && length(colind) == p && all(colind == seq_len(p))) {
+          if (ncol(wmat) == p && length(colind) == p && all(colind == seq_len(p))) {
             L <- wmat
           } else {
-            stop("F-contrast dimensions do not match selected coefficients")
+            # Normalise to hypotheses-in-rows so cell-oriented (e.g. oneway,
+            # k x (k-1)) weights build the correct r x p matrix and derive the
+            # numerator rank r = nrow(Cw); see .orient_fcontrast().
+            Cw <- .orient_fcontrast(wmat, colind)
+            L <- matrix(0, nrow = nrow(Cw), ncol = p)
+            L[, colind] <- Cw
           }
           stats <- .fast_F_contrast(betas, sigma2, XtXinv, L, df_residual, aliased = xtx_aliased, contrast_name = con_name)
           return(list(

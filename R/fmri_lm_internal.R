@@ -344,8 +344,11 @@ fit_lm_contrasts_voxelwise <- function(Betas, sigma2, XtXinv_list,
   for (nm in names(fconlist)) {
     L <- fconlist[[nm]]
     colind <- attr(L, "colind")
-    full_L <- matrix(0, nrow = nrow(L), ncol = p)
-    full_L[, colind] <- L
+    # Normalise to hypotheses-in-rows so cell-oriented (e.g. oneway, k x (k-1))
+    # weights build the correct r x p matrix; see .orient_fcontrast().
+    Cw <- .orient_fcontrast(L, colind)
+    full_L <- matrix(0, nrow = nrow(Cw), ncol = p)
+    full_L[, colind] <- Cw
 
     est <- se <- stat <- prob <- numeric(V)
 
@@ -456,8 +459,11 @@ fit_lm_contrasts_voxelwise_qr <- function(Betas, qr_list, sigma,
   for (nm in names(fconlist)) {
     L <- fconlist[[nm]]
     colind <- attr(L, "colind")
-    full_L <- matrix(0, nrow = nrow(L), ncol = p)
-    full_L[, colind] <- L
+    # Normalise to hypotheses-in-rows so cell-oriented (e.g. oneway, k x (k-1))
+    # weights build the correct r x p matrix; see .orient_fcontrast().
+    Cw <- .orient_fcontrast(L, colind)
+    full_L <- matrix(0, nrow = nrow(Cw), ncol = p)
+    full_L[, colind] <- Cw
 
     est <- se <- stat <- prob <- numeric(V)
 
@@ -606,8 +612,11 @@ store_voxel_contrasts <- function(storage, voxel_index, qr_or_XtXinv, beta_w,
   for (nm in names(fconlist)) {
     L <- fconlist[[nm]]
     colind <- attr(L, "colind")
-    full_L <- matrix(0, nrow = nrow(L), ncol = nrow(XtXinv))
-    full_L[, colind] <- L
+    # Normalise to hypotheses-in-rows so cell-oriented (e.g. oneway, k x (k-1))
+    # weights build the correct r x p matrix; see .orient_fcontrast().
+    Cw <- .orient_fcontrast(L, colind)
+    full_L <- matrix(0, nrow = nrow(Cw), ncol = nrow(XtXinv))
+    full_L[, colind] <- Cw
 
     res <- .fast_F_contrast(Bv, sigma_w^2, XtXinv, full_L, dfres,
                             robust_weights = robust_weights,

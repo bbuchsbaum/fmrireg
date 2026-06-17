@@ -51,8 +51,10 @@ runwise_lm_impl <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   proj_global <- .fast_preproject(modmat_global)
   Vu <- proj_global$XtXinv
   
-  # Separate contrast types
-  simple_conlist <- Filter(function(x) inherits(x, "contrast"), contrast_objects)
+  # Separate contrast types. F-contrasts also inherit "contrast", so exclude
+  # them from the simple (t) list to avoid routing an F-contrast through the
+  # t-contrast engine (which then fails on its multi-row weight matrix).
+  simple_conlist <- Filter(function(x) inherits(x, "contrast") && !inherits(x, "Fcontrast"), contrast_objects)
   fconlist <- Filter(function(x) inherits(x, "Fcontrast"), contrast_objects)
   
   # Extract weights with colind attributes

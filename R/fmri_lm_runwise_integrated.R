@@ -82,9 +82,11 @@ process_run_integrated <- function(X_run, Y_run, cfg, phi_fixed = NULL,
     sigma2_vec <- sigma_vec^2
   }
   
-  # Compute contrasts if weights provided
+  # Compute contrasts if any t- or F-contrast weights provided. Guarding on the
+  # t-list alone would silently skip all F-contrasts for an F-only model.
   contrasts_result <- NULL
-  if (!is.null(conlist_weights) && length(conlist_weights) > 0) {
+  if ((!is.null(conlist_weights) && length(conlist_weights) > 0) ||
+      (!is.null(fconlist_weights) && length(fconlist_weights) > 0)) {
     contrasts_result <- fit_lm_contrasts_fast(
       B = betas,
       sigma2 = sigma2_vec,

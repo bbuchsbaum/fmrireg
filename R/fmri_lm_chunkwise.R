@@ -151,8 +151,10 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
                               verbose = FALSE, progress = FALSE,
                               parallel_chunks = FALSE) {
   
-  # Separate contrast types
-  simple_conlist <- Filter(function(x) inherits(x, "contrast"), contrast_objects)
+  # Separate contrast types. F-contrasts also inherit "contrast", so exclude
+  # them from the simple (t) list to avoid routing an F-contrast through the
+  # t-contrast engine (which then fails on its multi-row weight matrix).
+  simple_conlist <- Filter(function(x) inherits(x, "contrast") && !inherits(x, "Fcontrast"), contrast_objects)
   fconlist <- Filter(function(x) inherits(x, "Fcontrast"), contrast_objects)
   
   # Extract weights with colind attributes
@@ -321,8 +323,9 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
   form <- get_formula(model)
   proj_modmat <- .fast_preproject(modmat)
 
-  # Prepare contrast weights for integrated solver path
-  simple_conlist <- Filter(function(x) inherits(x, "contrast"), contrast_objects)
+  # Prepare contrast weights for integrated solver path. Exclude F-contrasts,
+  # which also inherit "contrast", from the t-contrast (simple) list.
+  simple_conlist <- Filter(function(x) inherits(x, "contrast") && !inherits(x, "Fcontrast"), contrast_objects)
   simple_conlist_weights <- lapply(simple_conlist, function(x) {
     w <- x$weights
     attr(w, "colind") <- attr(x, "colind")
