@@ -420,7 +420,13 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, ...) {
   cmat  <- matrix(0, ncoef, 1)
   cmat[colind, ] <- conmat
 
-  ct <- drop(t(cmat) %*% betamat)
+  # Aliased (non-estimable) coefficients are NA in betamat. For an estimable
+  # contrast they carry zero weight, but 0 * NA = NA in R would poison the
+  # estimate, so restrict the projection to the non-zero-weight coefficients.
+  # Contrasts that genuinely load on aliased coefficients are flagged NA below
+  # via .contrast_uses_aliased().
+  nz <- which(cmat[, 1] != 0)
+  ct <- drop(t(cmat[nz, , drop = FALSE]) %*% betamat[nz, , drop = FALSE])
 
   if (se) {
     cov.unscaled <- .lm_cov_unscaled(object)
