@@ -16,8 +16,11 @@ test_that("fmri_meta.gds equals legacy NIfTI path (FE/PM)", {
   for (i in seq_len(S)) {
     beta_vol <- array(rnorm(P, mean = 0.1 * i, sd = 0.01), dim = dims)
     se_vol   <- array(0.1 + 0.01 * i, dim = dims)
-    bp <- file.path(tmpdir, sprintf("beta_s%02d.nii", i))
-    sp <- file.path(tmpdir, sprintf("se_s%02d.nii", i))
+    # fmrigds derives each subject key by stripping a TRAILING stat token, so the
+    # stat must be a suffix (s01_beta) not a prefix (beta_s01) for the beta and se
+    # file sets to map to the same subjects.
+    bp <- file.path(tmpdir, sprintf("s%02d_beta.nii", i))
+    sp <- file.path(tmpdir, sprintf("s%02d_se.nii", i))
     RNifti::writeNifti(beta_vol, bp)
     RNifti::writeNifti(se_vol, sp)
     beta_paths[i] <- bp; se_paths[i] <- sp
@@ -47,8 +50,10 @@ test_that("fmri_meta.gds equals legacy NIfTI path (FE/PM)", {
 
   expect_equal(dim(fit_new_fe$coefficients), dim(fit_old_fe$coefficients))
   expect_equal(dim(fit_new_fe$se),           dim(fit_old_fe$se))
-  expect_equal(fit_new_fe$coefficients, fit_old_fe$coefficients, tolerance = 1e-8)
-  expect_equal(fit_new_fe$se,           fit_old_fe$se,           tolerance = 1e-6)
+  # Compare values only: the gds path stamps synthetic row labels the legacy path
+  # lacks (cosmetic divergence); dims are checked above.
+  expect_equal(unname(fit_new_fe$coefficients), unname(fit_old_fe$coefficients), tolerance = 1e-8)
+  expect_equal(unname(fit_new_fe$se),           unname(fit_old_fe$se),           tolerance = 1e-6)
 
   # PM method
   fit_old_pm <- fmri_meta(gd_legacy, formula = ~ 1, method = "pm", robust = "none", verbose = FALSE)
@@ -56,8 +61,8 @@ test_that("fmri_meta.gds equals legacy NIfTI path (FE/PM)", {
 
   expect_equal(dim(fit_new_pm$coefficients), dim(fit_old_pm$coefficients))
   expect_equal(dim(fit_new_pm$se),           dim(fit_old_pm$se))
-  expect_equal(fit_new_pm$coefficients, fit_old_pm$coefficients, tolerance = 1e-8)
-  expect_equal(fit_new_pm$se,           fit_old_pm$se,           tolerance = 1e-6)
+  expect_equal(unname(fit_new_pm$coefficients), unname(fit_old_pm$coefficients), tolerance = 1e-8)
+  expect_equal(unname(fit_new_pm$se),           unname(fit_old_pm$se),           tolerance = 1e-6)
   # tau2 parity for PM
   expect_equal(fit_new_pm$tau2, fit_old_pm$tau2, tolerance = 1e-6)
 })
