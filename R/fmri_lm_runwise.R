@@ -261,13 +261,55 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     }
     data_env$.y <- preproc$Y
 
-    ret <- lmfun(form, data_env, contrast_objects, vnames, fcon = NULL)
-    
+    # AR whitening (parity with the fast path). The formula/slow path historically
+    # ignored cfg$ar entirely -- it fit plain OLS and returned ar_coef = NULL -- so
+    # requesting AR with use_fast_path = FALSE silently produced uncorrected
+    # results. Estimate phi from OLS residuals, iterate GLS exactly as
+    # process_run_standard() does, and refit on the whitened design via modmat.
+    #
+    # Gated to the non-robust path: multiresponse_rlm()'s modmat interface routes
+    # through robustbase::lmrob() (formula-only), so it cannot take a prewhitened
+    # design matrix. Robust + AR is handled correctly by the fast path
+    # (process_run_ar_robust); on the slow path robust fits remain unwhitened,
+    # as before.
+    ar_order <- switch(cfg$ar$struct, ar1 = 1L, ar2 = 2L, arp = cfg$ar$p, iid = 0L)
+    phi_hat_run <- NULL
+    modmat <- NULL
+    if (cfg$ar$struct != "iid" && isFALSE(cfg$robust$type)) {
+      Y_pre <- preproc$Y
+      censor_run <- resolve_censor(cfg, dataset, ym$chunk_num, n_time_run)
+      proj_run <- .fast_preproject(X_run)
+      init_fit <- solve_glm_core(
+        glm_context(X = X_run, Y = Y_pre, proj = proj_run), return_fitted = TRUE)
+      phi_hat_run <- .estimate_ar_parameters_routed(
+        rowMeans(Y_pre - init_fit$fitted), ar_order, censor = censor_run)
+      X_w <- X_run
+      Y_w <- Y_pre
+      for (iter in seq_len(cfg$ar$iter_gls)) {
+        tmp <- ar_whiten_transform(X_run, Y_pre, phi_hat_run, cfg$ar$exact_first,
+                                   censor = censor_run)
+        X_w <- tmp$X
+        Y_w <- tmp$Y
+        if (iter < cfg$ar$iter_gls) {
+          proj_w <- .fast_preproject(X_w)
+          gls <- solve_glm_core(
+            glm_context(X = X_w, Y = Y_w, proj = proj_w, phi_hat = phi_hat_run))
+          phi_hat_run <- .estimate_ar_parameters_routed(
+            rowMeans(Y_pre - X_run %*% gls$betas), ar_order, censor = censor_run)
+        }
+      }
+      colnames(X_w) <- colnames(X_run)
+      modmat <- X_w
+      data_env$.y <- Y_w
+    }
+
+    ret <- lmfun(form, data_env, contrast_objects, vnames, fcon = NULL, modmat = modmat)
+
     rss <- colSums(as.matrix(ret$fit$residuals^2))
     rdf <- ret$fit$df.residual
     resvar <- rss / rdf
     sigma <- sqrt(resvar)
-    
+
     cres[[i]] <- list(
       conres = ret$contrasts,
       bstats = ret$bstats,
@@ -277,7 +319,7 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
       rdf = rdf,
       resvar = resvar,
       sigma = sigma,
-      ar_coef = NULL
+      ar_coef = phi_hat_run
     )
     
     if (progress) cli::cli_progress_update()
