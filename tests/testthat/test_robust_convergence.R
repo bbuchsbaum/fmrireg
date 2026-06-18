@@ -434,10 +434,12 @@ test_that("robust fitting handles singular or near-singular designs", {
   
   Y <- rnorm(n)
   
-  # Check if preprojection handles near-singularity
+  # Rank-deficient designs are kept-but-aliased and emit a rank-deficiency
+  # warning (the policy from "Harden rank-deficient lm fitting"); the fit still
+  # proceeds gracefully below.
   expect_warning(
     proj <- fmrireg:::.fast_preproject(X),
-    regexp = NA  # May or may not warn
+    regexp = "rank deficient"
   )
   
   # If preprojection succeeds, test robust fitting

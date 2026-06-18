@@ -130,7 +130,13 @@ test_that("balanced factorial designs remain balanced after convolution", {
   )
 
   sframe <- sampling_frame(rep(100, 3), TR = 1.0)
-  emodel <- event_model(Onset ~ hrf(Factor1, Factor2, durations = 1.0),
+  # Use impulse (durations = 0) regressors for the column-sum balance check:
+  # with finite durations and summate = TRUE the convolved column sum depends
+  # on each cell's onset phase relative to the TR grid, so equal event counts
+  # do NOT imply equal column sums (that is correct behaviour, not imbalance).
+  # Under impulses the column sum is proportional to the event count, so a
+  # count-balanced factorial yields balanced column sums.
+  emodel <- event_model(Onset ~ hrf(Factor1, Factor2, durations = 0),
                         block = ~ Run,
                         sampling_frame = sframe,
                         data = test_events)

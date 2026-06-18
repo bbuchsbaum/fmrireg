@@ -269,7 +269,7 @@ test_that("end-to-end: fmri_lm with censor in ar_options", {
 
   # Fit with AR1 and censor
   cfg <- fmri_lm_control(ar_options = list(struct = "ar1", censor = censor_points))
-  result <- fmri_lm(fmod, dset, strategy = "runwise", control = cfg)
+  result <- fmri_lm(fmod, dset, strategy = "runwise", cfg = cfg)
 
   # Check that fit succeeded
   expect_s3_class(result, "fmri_lm")
@@ -313,7 +313,7 @@ test_that("censor 'auto' mode extracts from dataset$censor", {
 
   # Use "auto" to extract censor from dataset
   cfg <- fmri_lm_control(ar_options = list(struct = "ar1", censor = "auto"))
-  result <- fmri_lm(fmod, dset, strategy = "runwise", control = cfg)
+  result <- fmri_lm(fmod, dset, strategy = "runwise", cfg = cfg)
 
   expect_s3_class(result, "fmri_lm")
 })
@@ -356,7 +356,7 @@ test_that("censor works with multiple runs", {
   fmod <- fmri_model(emod, bmod, dset)
 
   cfg <- fmri_lm_control(ar_options = list(struct = "ar1", censor = "auto"))
-  result <- fmri_lm(fmod, dset, strategy = "runwise", control = cfg)
+  result <- fmri_lm(fmod, dset, strategy = "runwise", cfg = cfg)
 
   expect_s3_class(result, "fmri_lm")
 })

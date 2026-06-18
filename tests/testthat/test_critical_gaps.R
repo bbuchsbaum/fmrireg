@@ -13,12 +13,13 @@ test_that("GLM solver handles rank deficiency", {
   # Check that matrix is rank deficient
   expect_lt(qr(X)$rank, ncol(X))
   
-  # Should handle gracefully
-  expect_silent({
+  # Should handle gracefully: rank-deficient designs are kept-but-aliased and
+  # emit a rank-deficiency warning, but the solve still completes.
+  expect_warning({
     proj <- fmrireg:::.fast_preproject(X)
     ctx <- fmrireg:::glm_context(X = X, Y = Y, proj = proj)
     result <- fmrireg:::solve_glm_core(ctx)
-  })
+  }, regexp = "rank deficient")
   
   expect_equal(dim(result$betas), c(ncol(X), ncol(Y)))
 })
