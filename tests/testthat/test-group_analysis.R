@@ -11,7 +11,7 @@ test_that("group_data constructor works with different formats", {
     se = runif(6, 0.1, 0.5)
   )
   
-  gd <- group_data(csv_data, format = "csv",
+  gd <- fmrireg::group_data(csv_data, format = "csv",
                    effect_cols = c(beta = "beta", se = "se"),
                    subject_col = "subject",
                    roi_col = "roi")

@@ -36,7 +36,7 @@ test_that("fmri_meta.gds equals legacy NIfTI path (FE/PM)", {
                                      validate   = TRUE)
 
   # gds path via group_data (handles list structure)
-  gd_gds <- group_data(data = list(beta = beta_paths, se = se_paths),
+  gd_gds <- fmrireg::group_data(data = list(beta = beta_paths, se = se_paths),
                        format = "nifti",
                        subjects = subjects,
                        mask = mask_path)

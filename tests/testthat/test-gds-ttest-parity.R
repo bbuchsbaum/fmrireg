@@ -3,7 +3,7 @@ test_that("fmri_ttest.gds (meta engine) matches legacy CSV path", {
 
   gd_csv <- fmrireg:::.demo_group_data_csv()
   df <- gd_csv$data
-  gd_gds <- group_data(
+  gd_gds <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
@@ -32,7 +32,7 @@ test_that("fmri_ttest.gds BH/BY match p.adjust", {
   skip_if_not_installed("fmrigds")
   gd_csv <- fmrireg:::.demo_group_data_csv()
   df <- gd_csv$data
-  gd_gds <- group_data(
+  gd_gds <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
@@ -56,7 +56,7 @@ test_that("fmri_ttest.gds computes meta contrasts and rejects unsupported args",
 
   gd_csv <- fmrireg:::.demo_group_data_csv()
   df <- gd_csv$data
-  gd_gds <- group_data(
+  gd_gds <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",

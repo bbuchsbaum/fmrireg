@@ -186,7 +186,7 @@ test_that("coef.fmri_lm include_baseline works on pooled multi-run fits", {
     run = rep(1:2, each = 20)
   )
 
-  Xsig <- cbind(1, scale(sin(seq_len(n) / 13)))
+  Xsig <- cbind(1, base::scale(sin(seq_len(n) / 13)))
   B <- matrix(rnorm(ncol(Xsig) * v, sd = 0.35), nrow = ncol(Xsig), ncol = v)
   Y <- Xsig %*% B + matrix(rnorm(n * v, sd = 1), n, v)
 

@@ -5,7 +5,7 @@ test_that("full-rank near-collinear design matches QR reference", {
   n <- 120
   set.seed(2026)
 
-  x1 <- as.numeric(scale(rnorm(n)))
+  x1 <- as.numeric(base::scale(rnorm(n)))
   z <- rnorm(n)
   z <- z - x1 * sum(x1 * z) / sum(x1^2)
   x2 <- x1 + 3e-7 * z

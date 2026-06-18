@@ -316,7 +316,7 @@ test_that("fmri_ttest computes exact contrasts where supported", {
   age <- seq(20, 54, length.out = S)
   Y <- matrix(rnorm(S * P, sd = 0.15), nrow = S, ncol = P)
   Y[group == "B", ] <- Y[group == "B", ] + 1
-  Y <- Y + outer(as.numeric(scale(age)), rep(0.1, P))
+  Y <- Y + outer(as.numeric(base::scale(age)), rep(0.1, P))
   V <- matrix(0.3, nrow = S, ncol = P)
 
   gd <- structure(

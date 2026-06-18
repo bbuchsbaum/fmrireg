@@ -44,7 +44,7 @@ test_that("fmri_meta.gds equals legacy HDF5 path (FE/PM)", {
   )
 
   # gds path via fmrigds
-  gd_gds <- try(group_data(h5_paths, format = "h5", subjects = subjects), silent = TRUE)
+  gd_gds <- try(fmrireg::group_data(h5_paths, format = "h5", subjects = subjects), silent = TRUE)
   if (inherits(gd_gds, "try-error")) {
     # Fallback path for fmrigds versions that do not yet support vectorized
     # multi-file HDF5 sources directly.

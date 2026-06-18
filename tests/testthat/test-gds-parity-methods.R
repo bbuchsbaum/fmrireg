@@ -5,7 +5,7 @@ test_that("fmri_meta.gds equals legacy CSV path across methods", {
 
   gd_csv <- fmrireg:::.demo_group_data_csv()
   df <- gd_csv$data
-  gd_gds <- group_data(
+  gd_gds <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
@@ -43,7 +43,7 @@ test_that("fmri_meta.gds returns cov_tri with correct size for multi-coef", {
   skip_if_not_installed("fmrigds")
   gd_csv <- fmrireg:::.demo_group_data_csv()
   df <- gd_csv$data
-  gd_gds <- group_data(
+  gd_gds <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
@@ -62,7 +62,7 @@ test_that("fmri_meta.gds rejects custom weights path", {
   skip_if_not_installed("fmrigds")
   gd_csv <- fmrireg:::.demo_group_data_csv()
   df <- gd_csv$data
-  gd_gds <- group_data(
+  gd_gds <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
@@ -79,7 +79,7 @@ test_that("fmri_ttest.gds rejects custom weights path", {
   skip_if_not_installed("fmrigds")
   gd_csv <- fmrireg:::.demo_group_data_csv()
   df <- gd_csv$data
-  gd_gds <- group_data(
+  gd_gds <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",

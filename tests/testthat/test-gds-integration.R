@@ -7,7 +7,7 @@ test_that("fmri_meta.gds matches legacy CSV path on demo data", {
 
   # Build equivalent gds via group_data wrapper
   df <- gd_csv$data
-  gd_gds <- group_data(
+  gd_gds <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
@@ -32,7 +32,7 @@ test_that("fmri_meta.gds returns covariance triangles when requested", {
 
   gd_csv <- fmrireg:::.demo_group_data_csv()
   df <- gd_csv$data
-  gd_gds <- group_data(
+  gd_gds <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",

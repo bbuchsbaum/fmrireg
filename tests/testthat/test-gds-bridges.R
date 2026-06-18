@@ -2,7 +2,7 @@ test_that("group_data_gds bridges work", {
   skip_if_not_installed("fmrigds")
   gd_csv <- fmrireg:::.demo_group_data_csv()
   df <- gd_csv$data
-  gd <- group_data(
+  gd <- fmrireg::group_data(
     df, format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
     subject_col = "subject",
@@ -25,7 +25,7 @@ test_that("group_data_gds preserves sample metadata for fmrireg helpers", {
     se = rep(0.2, 12)
   )
 
-  gd <- group_data(
+  gd <- fmrireg::group_data(
     df,
     format = "csv",
     effect_cols = c(beta = "beta", se = "se"),
