@@ -69,7 +69,15 @@
 fmri_lm_control <- function(robust_options = list(),
                             ar_options = list(),
                             volume_weights_options = list(),
-                            soft_subspace_options = list()) {
+                            soft_subspace_options = list(),
+                            na_action = c("error", "propagate")) {
+  # Missing-data policy for non-finite (NA/NaN/Inf) values in the response:
+  #   "error"     - fail fast (default); scattered NA in fMRI data is usually a
+  #                 data-quality problem, not something to silently fit through.
+  #   "propagate" - fit voxels containing non-finite values as NA coefficients
+  #                 (per-voxel surfacing; realised on the fast path).
+  na_action <- match.arg(na_action)
+
   # Handle NULL inputs
   if (is.null(robust_options)) robust_options <- list()
   if (is.null(ar_options)) ar_options <- list()
@@ -180,7 +188,8 @@ fmri_lm_control <- function(robust_options = list(),
   }
 
   cfg <- list(robust = robust, ar = ar,
-              volume_weights = volume_weights, soft_subspace = soft_subspace)
+              volume_weights = volume_weights, soft_subspace = soft_subspace,
+              na_action = na_action)
   class(cfg) <- "fmri_lm_config"
   cfg
 }
@@ -189,7 +198,8 @@ fmri_lm_control <- function(robust_options = list(),
 print.fmri_lm_config <- function(x, ...) {
   cat("<fmri_lm_config>\n")
   str(list(robust = x$robust, ar = x$ar,
-           volume_weights = x$volume_weights, soft_subspace = x$soft_subspace),
+           volume_weights = x$volume_weights, soft_subspace = x$soft_subspace,
+           na_action = x$na_action),
       give.attr = FALSE)
   invisible(x)
 }

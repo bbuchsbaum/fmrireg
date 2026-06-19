@@ -128,6 +128,22 @@ resolve_censor <- function(cfg, dataset = NULL, run_num = NULL, n_time = NULL) {
 #' @keywords internal
 #' @noRd
 preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
+  # Missing-data policy (shared chokepoint for all runwise/chunkwise per-run
+  # fitting). Under the default "error" policy, fail fast on non-finite response
+  # values rather than silently fitting on complete cases (lm na.omit) or
+  # producing invalid estimates. "propagate" passes through; the fast solver then
+  # surfaces affected voxels as NA coefficients.
+  if (identical(cfg$na_action %||% "error", "error") && any(!is.finite(Y))) {
+    stop(
+      sprintf(
+        "Non-finite values (NA/NaN/Inf) in the response data for run %s. Set %s in fmri_lm_control() to fit voxels with missing data as NA, or clean/impute the data.",
+        if (is.null(run_num)) "?" else run_num,
+        'na_action = "propagate"'
+      ),
+      call. = FALSE
+    )
+  }
+
   preprocess_info <- list(
     volume_weights = NULL,
     dvars = NULL,

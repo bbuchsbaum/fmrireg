@@ -30,7 +30,8 @@ test_that("AR + Robust fitting integration works", {
     )
   )
   
-  # Fit with both AR and robust
+  # Fit with both AR and robust (robust requires the fast engine; the runwise
+  # slow path rejects robust fitting).
   result <- fmri_lm(
     onsets ~ hrf(condition),
     block = ~ run,
@@ -39,7 +40,8 @@ test_that("AR + Robust fitting integration works", {
     ar_options = list(
       cor_struct = "ar1",
       iter = 2
-    )
+    ),
+    use_fast_path = TRUE
   )
   
   expect_s3_class(result, "fmri_lm")
@@ -174,16 +176,21 @@ test_that("Missing data handling works across components", {
     event_table = event_data
   )
   
-  # Should handle missing data
-  # Surface-NA missing-data handling lives in the fast solver path: a voxel with
-  # any non-finite timepoint yields NA coefficients rather than being silently
-  # masked to 0. The legacy formula path fits on complete cases (lm na.omit), so
-  # exercise the fast path where this contract is defined.
+  # By default fmri_lm fails fast on non-finite response data.
+  expect_error(
+    fmri_lm(onsets ~ hrf(value), block = ~ run, dataset = dset, use_fast_path = TRUE),
+    "[Nn]on-finite"
+  )
+
+  # Opt into per-voxel NA propagation: a voxel with any non-finite timepoint
+  # yields NA coefficients rather than being silently masked to 0 or fit on
+  # complete cases. This surface-NA contract is realised on the fast solver path.
   result <- fmri_lm(
     onsets ~ hrf(value),
     block = ~ run,
     dataset = dset,
-    use_fast_path = TRUE
+    use_fast_path = TRUE,
+    cfg = fmri_lm_control(na_action = "propagate")
   )
 
   # Voxels containing missing data surface as NA estimates.

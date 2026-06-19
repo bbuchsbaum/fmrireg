@@ -7,17 +7,18 @@ dset <- matrix_dataset(Y, TR=1, run_length=20, event_table=etab)
 
 # accept valid robust arguments
 test_that("fmri_lm accepts robust arguments", {
+  # Robust fitting requires the fast engine (the runwise slow path rejects it).
   expect_error(
     fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
             robust = TRUE, robust_psi = "huber", robust_max_iter = 2,
-            robust_scale_scope = "run"),
+            robust_scale_scope = "run", use_fast_path = TRUE),
     NA
   )
 
   expect_error(
     fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
             robust = TRUE, robust_psi = "bisquare", robust_max_iter = 1,
-            robust_scale_scope = "global"),
+            robust_scale_scope = "global", use_fast_path = TRUE),
     NA
   )
 })
