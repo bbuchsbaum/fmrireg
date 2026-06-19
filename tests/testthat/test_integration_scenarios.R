@@ -175,13 +175,18 @@ test_that("Missing data handling works across components", {
   )
   
   # Should handle missing data
+  # Surface-NA missing-data handling lives in the fast solver path: a voxel with
+  # any non-finite timepoint yields NA coefficients rather than being silently
+  # masked to 0. The legacy formula path fits on complete cases (lm na.omit), so
+  # exercise the fast path where this contract is defined.
   result <- fmri_lm(
     onsets ~ hrf(value),
     block = ~ run,
-    dataset = dset
+    dataset = dset,
+    use_fast_path = TRUE
   )
-  
-  # Some voxels might have no valid estimates
+
+  # Voxels containing missing data surface as NA estimates.
   betas <- coef(result, type = "betas")
   expect_true(any(is.na(betas)))
 })

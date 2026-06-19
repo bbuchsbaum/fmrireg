@@ -32,6 +32,10 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
     stop("solve_glm_core: X and Y dimensions do not match")
   }
 
+  # Aliased (rank-deficient) coefficient positions: used both to zero only those
+  # coefficients below and to mark the result for downstream NA handling.
+  aliased <- as.integer(proj$aliased %||% attr(proj$XtXinv, "aliased") %||% integer(0))
+
   if (!is.null(proj$qr)) {
     # Solve from the same tolerance-aware QR used for rank diagnostics. In
     # rank-deficient designs, aliased coefficients are set to zero internally
@@ -49,7 +53,14 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
     if (is.null(dim(betas))) {
       betas <- matrix(betas, ncol = 1L)
     }
-    betas[!is.finite(betas)] <- 0
+    # Zero ONLY aliased (rank-deficient) coefficients so X %*% betas stays finite
+    # for residuals/fitted values; those positions are marked via attributes and
+    # NA'd downstream. Non-finite betas arising from NA in Y (missing-data voxels)
+    # are deliberately left as NA so such voxels surface as NA rather than being
+    # silently masked to a 0-coefficient fit.
+    if (length(aliased) > 0L) {
+      betas[aliased, ] <- 0
+    }
   } else {
     if (is.null(proj$Pinv) || ncol(X) != nrow(proj$Pinv)) {
       stop("solve_glm_core: X and projection matrix dimensions do not match")
@@ -57,7 +68,6 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
     betas <- proj$Pinv %*% Y
   }
 
-  aliased <- as.integer(proj$aliased %||% attr(proj$XtXinv, "aliased") %||% integer(0))
   if (!is.null(colnames(X)) && nrow(betas) == length(colnames(X))) {
     rownames(betas) <- colnames(X)
   }
