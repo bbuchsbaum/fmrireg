@@ -224,8 +224,23 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
                            event_indices, baseline_indices,
                            verbose = FALSE, progress = FALSE, dataset = NULL) {
 
-  # Determine fitting function
-  lmfun <- if (cfg$robust$type != FALSE) multiresponse_rlm else multiresponse_lm
+  # Robust fitting is not supported on this formula/lm() slow path: the
+  # multiresponse_rlm() modmat interface routes through robustbase::lmrob() and
+  # cannot accept a prewhitened design (so AR would be silently dropped), and it
+  # returns no `fit`, so the run-level rss/df below collapse to 0/NULL (invalid
+  # residual variance). The fast engine (process_run_robust /
+  # process_run_ar_robust) handles robust and robust+AR correctly. Fail fast
+  # rather than return a valid-looking but wrong model.
+  if (!isFALSE(cfg$robust$type)) {
+    stop(
+      "Robust fitting is not supported on the runwise slow path ",
+      "(use_fast_path = FALSE): it would ignore AR whitening and produce ",
+      "invalid residual variance. Re-run with use_fast_path = TRUE.",
+      call. = FALSE
+    )
+  }
+
+  lmfun <- multiresponse_lm
 
   cres <- vector("list", length(chunks))
   form <- get_formula(model)

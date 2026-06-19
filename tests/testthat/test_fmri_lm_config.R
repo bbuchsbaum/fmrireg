@@ -88,14 +88,16 @@ test_that("fmri_lm accepts new config API", {
     ar_options = list(struct = "ar1")
   )
   
-  # This should work with new API
+  # This should work with new API. Robust fitting requires the fast engine
+  # (the runwise slow path rejects robust), so request it explicitly.
   expect_error({
     fit <- fmri_lm(
       onset ~ hrf(onset, basis = "spmg1"),
       block = ~ block,
       dataset = dset,
       robust_options = cfg$robust,
-      ar_options = cfg$ar
+      ar_options = cfg$ar,
+      use_fast_path = TRUE
     )
   }, NA)
 })
@@ -138,13 +140,14 @@ test_that("config options propagate correctly", {
   expect_equal(attr(fit_ar, "requested_config")$ar$struct, "ar1")
   expect_equal(attr(fit_ar, "executed_config")$ar$struct, "ar1")
   
-  # Test robust options propagate
+  # Test robust options propagate (robust requires the fast engine)
   fit_robust <- fmri_lm(
     onset ~ hrf(onset, basis = "spmg1"),
     block = ~ block,
     dataset = dset,
     robust = "bisquare",
-    robust_options = list(max_iter = 10)
+    robust_options = list(max_iter = 10),
+    use_fast_path = TRUE
   )
   
   expect_equal(attr(fit_robust, "config")$robust$type, "bisquare")
@@ -152,6 +155,29 @@ test_that("config options propagate correctly", {
   expect_equal(attr(fit_robust, "requested_config")$robust$max_iter, 10)
   expect_equal(attr(fit_robust, "executed_config")$robust$max_iter, 10)
   expect_equal(attr(fit_robust, "config"), attr(fit_robust, "executed_config"))
+})
+
+test_that("robust fitting on the runwise slow path errors with guidance", {
+  skip_if_not_installed("neuroim2")
+  set.seed(7)
+  n_time <- 60
+  Y <- matrix(rnorm(n_time * 4), n_time, 4)
+  event_df <- data.frame(onset = c(10, 25, 40), block = 1)
+  dset <- matrix_dataset(Y, TR = 2, run_length = n_time, event_table = event_df)
+
+  # The formula/lm() slow path cannot do robust fitting correctly (it would drop
+  # AR and yield invalid residual variance), so it must fail fast.
+  expect_error(
+    fmri_lm(onset ~ hrf(onset, basis = "spmg1"), block = ~ block, dataset = dset,
+            robust = TRUE, use_fast_path = FALSE),
+    "runwise slow path"
+  )
+  # The fast engine supports robust fitting.
+  expect_error(
+    fmri_lm(onset ~ hrf(onset, basis = "spmg1"), block = ~ block, dataset = dset,
+            robust = TRUE, use_fast_path = TRUE),
+    NA
+  )
 })
 
 test_that("fmri_lm_control handles default values correctly", {
