@@ -75,7 +75,7 @@ splitting the dataset into chunks and running the linear model on each chunk.</p
 <span>  <span class="va">nchunks</span>,</span>
 <span>  <span class="va">cfg</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  use_fast_path <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  use_fast_path <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  parallel_chunks <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  phi_fixed <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -113,7 +113,10 @@ splitting the dataset into chunks and running the linear model on each chunk.</p
 
 
 <dt id="arg-use-fast-path">use_fast_path<a class="anchor" aria-label="anchor" href="#arg-use-fast-path"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, use matrix-based computation for speed. Default is <code>FALSE</code>.</p></dd>
+<dd><p>Logical. If <code>TRUE</code> (the default), use the fast
+matrix engine, which supports OLS, AR whitening, robust, and preprocessing.
+<code>FALSE</code> selects the formula/lm reference engine (no robust or full
+preprocessing support); it is retained mainly as a parity oracle.</p></dd>
 
 
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>

@@ -387,14 +387,13 @@ prewhitened model recovers tighter standard errors than OLS.</p>
 <span><span class="va">se_ar1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">model_ar1</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span>OLS <span class="op">=</span> <span class="va">se_ols</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, AR1 <span class="op">=</span> <span class="va">se_ar1</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;         OLS    AR1</span></span>
-<span><span class="co">#&gt; [1,] 0.1170 0.0943</span></span>
-<span><span class="co">#&gt; [2,] 0.0936 0.0604</span></span>
-<span><span class="co">#&gt; [3,] 0.0702 0.0339</span></span>
+<span><span class="co">#&gt; [1,] 0.1170 0.1436</span></span>
+<span><span class="co">#&gt; [2,] 0.0936 0.1148</span></span>
+<span><span class="co">#&gt; [3,] 0.0702 0.0861</span></span>
 <span></span>
 <span><span class="co"># Inspect the estimated AR coefficient (shared across voxels in this example)</span></span>
 <span><span class="va">model_ar1</span><span class="op">$</span><span class="va">ar_coef</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="co">#&gt; [[1]]</span></span>
-<span><span class="co">#&gt; [1] 0.7059095</span></span></code></pre></div>
+<span><span class="co">#&gt; NULL</span></span></code></pre></div>
 <p>The AR(1) model now estimates a non-zero autoregressive coefficient
 and produces notably smaller standard errors than the plain OLS fit,
 illustrating how prewhitening improves efficiency when temporal
@@ -428,9 +427,9 @@ controls the number of iterations.</p>
 <span><span class="va">se_robust</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">model_robust</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span>OLS <span class="op">=</span> <span class="va">se_ols</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, Robust <span class="op">=</span> <span class="va">se_robust</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;             OLS     Robust</span></span>
-<span><span class="co">#&gt; [1,] 0.11701370 0.06946794</span></span>
-<span><span class="co">#&gt; [2,] 0.09361096 0.06946794</span></span>
-<span><span class="co">#&gt; [3,] 0.07020822 0.06946794</span></span></code></pre></div>
+<span><span class="co">#&gt; [1,] 0.11701370 0.10962919</span></span>
+<span><span class="co">#&gt; [2,] 0.09361096 0.08770335</span></span>
+<span><span class="co">#&gt; [3,] 0.07020822 0.06577752</span></span></code></pre></div>
 <p>Robust fitting guards against outlier time points but will not
 correct voxel-specific spikes. In this simulated example the Huber
 weights inflate the standard errors slightly, reflecting the additional

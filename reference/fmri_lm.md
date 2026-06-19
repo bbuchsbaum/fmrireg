@@ -25,7 +25,7 @@ fmri_lm(
   soft_subspace_options = NULL,
   strategy = c("runwise", "chunkwise"),
   nchunks = 10,
-  use_fast_path = FALSE,
+  use_fast_path = TRUE,
   progress = FALSE,
   ar_voxelwise = FALSE,
   parallel_voxels = FALSE,
@@ -54,7 +54,7 @@ fmri_lm(
   soft_subspace_options = NULL,
   strategy = c("runwise", "chunkwise"),
   nchunks = 10,
-  use_fast_path = FALSE,
+  use_fast_path = TRUE,
   progress = FALSE,
   ar_voxelwise = FALSE,
   parallel_voxels = FALSE,
@@ -142,8 +142,10 @@ fmri_lm(
 
 - use_fast_path:
 
-  Logical. If `TRUE`, use matrix-based computation for speed. Default is
-  `FALSE`.
+  Logical. If `TRUE` (the default), use the fast matrix engine, which
+  supports OLS, AR whitening, robust, and preprocessing. `FALSE` selects
+  the formula/lm reference engine (no robust or full preprocessing
+  support); it is retained mainly as a parity oracle.
 
 - progress:
 

@@ -15,7 +15,7 @@ chunkwise_lm(
   nchunks,
   cfg,
   verbose = FALSE,
-  use_fast_path = FALSE,
+  use_fast_path = TRUE,
   progress = FALSE,
   parallel_chunks = FALSE,
   phi_fixed = NULL,

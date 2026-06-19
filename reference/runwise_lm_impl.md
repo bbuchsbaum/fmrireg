@@ -13,7 +13,7 @@ runwise_lm_impl(
   contrast_objects,
   cfg,
   verbose = FALSE,
-  use_fast_path = FALSE,
+  use_fast_path = TRUE,
   progress = FALSE,
   phi_fixed = NULL,
   sigma_fixed = NULL,

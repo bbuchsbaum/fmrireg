@@ -277,14 +277,13 @@ se_ols <- standard_error(model)
 se_ar1 <- standard_error(model_ar1)
 head(round(cbind(OLS = se_ols[[1]], AR1 = se_ar1[[1]]), 4))
 #>         OLS    AR1
-#> [1,] 0.1170 0.0943
-#> [2,] 0.0936 0.0604
-#> [3,] 0.0702 0.0339
+#> [1,] 0.1170 0.1436
+#> [2,] 0.0936 0.1148
+#> [3,] 0.0702 0.0861
 
 # Inspect the estimated AR coefficient (shared across voxels in this example)
 model_ar1$ar_coef[[1]]
-#> [[1]]
-#> [1] 0.7059095
+#> NULL
 ```
 
 The AR(1) model now estimates a non-zero autoregressive coefficient and
@@ -321,9 +320,9 @@ model_robust <- fmri_lm(
 se_robust <- standard_error(model_robust)
 head(cbind(OLS = se_ols[[1]], Robust = se_robust[[1]]))
 #>             OLS     Robust
-#> [1,] 0.11701370 0.06946794
-#> [2,] 0.09361096 0.06946794
-#> [3,] 0.07020822 0.06946794
+#> [1,] 0.11701370 0.10962919
+#> [2,] 0.09361096 0.08770335
+#> [3,] 0.07020822 0.06577752
 ```
 
 Robust fitting guards against outlier time points but will not correct

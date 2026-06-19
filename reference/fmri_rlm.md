@@ -127,7 +127,5 @@ mat <- matrix(rnorm(100*100), 100,100)
 dset <- fmridataset::matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
 dset2 <- fmridataset::matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
 lm.1 <- fmri_rlm(onset ~ hrf(fac), block= ~ run, dataset=dset)
-#> Error: Robust fitting is not supported on the runwise slow path (use_fast_path = FALSE): it would ignore AR whitening and produce invalid residual variance. Re-run with use_fast_path = TRUE.
 lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run, dataset=dset2)
-#> Error: Robust fitting is not supported on the runwise slow path (use_fast_path = FALSE): it would ignore AR whitening and produce invalid residual variance. Re-run with use_fast_path = TRUE.
 ```

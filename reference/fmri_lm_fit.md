@@ -14,7 +14,7 @@ fmri_lm_fit(
   strategy = c("runwise", "chunkwise"),
   cfg,
   nchunks = 10,
-  use_fast_path = FALSE,
+  use_fast_path = TRUE,
   progress = FALSE,
   parallel_voxels = FALSE,
   parallel_chunks = FALSE,
@@ -50,8 +50,10 @@ fmri_lm_fit(
 
 - use_fast_path:
 
-  Logical. If `TRUE`, use matrix-based computation for speed. Default is
-  `FALSE`.
+  Logical. If `TRUE` (the default), use the fast matrix engine, which
+  supports OLS, AR whitening, robust, and preprocessing. `FALSE` selects
+  the formula/lm reference engine (no robust or full preprocessing
+  support); it is retained mainly as a parity oracle.
 
 - progress:
 

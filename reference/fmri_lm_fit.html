@@ -76,7 +76,7 @@ used by the <code>fmri_lm</code> function.</p>
 <span>  strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"runwise"</span>, <span class="st">"chunkwise"</span><span class="op">)</span>,</span>
 <span>  <span class="va">cfg</span>,</span>
 <span>  nchunks <span class="op">=</span> <span class="fl">10</span>,</span>
-<span>  use_fast_path <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  use_fast_path <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  parallel_voxels <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  parallel_chunks <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -111,7 +111,10 @@ This controls memory partitioning; chunks are processed sequentially unless
 
 
 <dt id="arg-use-fast-path">use_fast_path<a class="anchor" aria-label="anchor" href="#arg-use-fast-path"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, use matrix-based computation for speed. Default is <code>FALSE</code>.</p></dd>
+<dd><p>Logical. If <code>TRUE</code> (the default), use the fast
+matrix engine, which supports OLS, AR whitening, robust, and preprocessing.
+<code>FALSE</code> selects the formula/lm reference engine (no robust or full
+preprocessing support); it is retained mainly as a parity oracle.</p></dd>
 
 
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>

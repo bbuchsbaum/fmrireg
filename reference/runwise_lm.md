@@ -13,7 +13,7 @@ runwise_lm(
   contrast_objects,
   cfg,
   verbose = FALSE,
-  use_fast_path = FALSE,
+  use_fast_path = TRUE,
   progress = FALSE,
   phi_fixed = NULL,
   sigma_fixed = NULL,
@@ -45,7 +45,7 @@ runwise_lm(
 
 - use_fast_path:
 
-  Logical. Whether to use fast path computation (default is `FALSE`).
+  Logical. Whether to use the fast matrix engine (default is `TRUE`).
 
 - progress:
 
