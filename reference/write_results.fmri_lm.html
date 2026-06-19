@@ -81,7 +81,7 @@ be requested.</p>
 <span>  task <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  space <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  desc <span class="op">=</span> <span class="st">"GLM"</span>,</span>
-<span>  format <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"h5"</span><span class="op">)</span>,</span>
+<span>  format <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"h5"</span>, <span class="st">"nifti"</span>, <span class="st">"gds"</span><span class="op">)</span>,</span>
 <span>  strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"by_stat"</span>, <span class="st">"by_contrast"</span><span class="op">)</span>,</span>
 <span>  save_betas <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  contrasts <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -122,9 +122,11 @@ be requested.</p>
 
 
 <dt id="arg-format">format<a class="anchor" aria-label="anchor" href="#arg-format"></a></dt>
-<dd><p>Output format(s). Use <code>"h5"</code> for BIDS-style HDF5 outputs,
-<code>"nifti"</code> for BIDS-style NIfTI outputs, <code>"gds"</code> for fmrigds-compatible
-assays plus an <code>.rds</code> plan, or a character vector to write multiple formats.</p></dd>
+<dd><p>Output format(s). One or more of <code>"h5"</code> (BIDS-style HDF5
+outputs), <code>"nifti"</code> (BIDS-style NIfTI outputs, written as <code>.nii.gz</code>), and
+<code>"gds"</code> (fmrigds-compatible assays plus an <code>.rds</code> plan). Pass a character
+vector to write multiple formats at once (e.g. <code>c("h5", "nifti")</code>).
+Defaults to <code>"h5"</code> only.</p></dd>
 
 
 <dt id="arg-strategy">strategy<a class="anchor" aria-label="anchor" href="#arg-strategy"></a></dt>
@@ -173,8 +175,8 @@ expressions.</p></dd>
 <span class="r-in"><span><span class="co"># Save all results using default settings</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="write_results.html">write_results</a></span><span class="op">(</span><span class="va">fitted_model</span>, subject <span class="op">=</span> <span class="st">"01"</span>, task <span class="op">=</span> <span class="st">"nback"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Save only specific contrasts and statistics  </span></span></span>
-<span class="r-in"><span><span class="fu"><a href="write_results.html">write_results</a></span><span class="op">(</span><span class="va">fitted_model</span>, </span></span>
+<span class="r-in"><span><span class="co"># Save only specific contrasts and statistics</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="write_results.html">write_results</a></span><span class="op">(</span><span class="va">fitted_model</span>,</span></span>
 <span class="r-in"><span>              subject <span class="op">=</span> <span class="st">"01"</span>, task <span class="op">=</span> <span class="st">"nback"</span>, space <span class="op">=</span> <span class="st">"MNI152NLin2009cAsym"</span>,</span></span>
 <span class="r-in"><span>              contrasts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"FacesVsPlaces"</span>, <span class="st">"GoVsNoGo"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>              contrast_stats <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"beta"</span>, <span class="st">"tstat"</span><span class="op">)</span><span class="op">)</span></span></span>

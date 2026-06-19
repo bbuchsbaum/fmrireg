@@ -16,7 +16,7 @@ write_results(
   task = NULL,
   space = NULL,
   desc = "GLM",
-  format = c("h5"),
+  format = c("h5", "nifti", "gds"),
   strategy = c("by_stat", "by_contrast"),
   save_betas = TRUE,
   contrasts = NULL,
@@ -57,9 +57,11 @@ write_results(
 
 - format:
 
-  Output format(s). Use `"h5"` for BIDS-style HDF5 outputs, `"nifti"`
-  for BIDS-style NIfTI outputs, `"gds"` for fmrigds-compatible assays
-  plus an `.rds` plan, or a character vector to write multiple formats.
+  Output format(s). One or more of `"h5"` (BIDS-style HDF5 outputs),
+  `"nifti"` (BIDS-style NIfTI outputs, written as `.nii.gz`), and
+  `"gds"` (fmrigds-compatible assays plus an `.rds` plan). Pass a
+  character vector to write multiple formats at once (e.g.
+  `c("h5", "nifti")`). Defaults to `"h5"` only.
 
 - strategy:
 
@@ -109,8 +111,8 @@ if (FALSE) { # \dontrun{
 # Save all results using default settings
 write_results(fitted_model, subject = "01", task = "nback")
 
-# Save only specific contrasts and statistics  
-write_results(fitted_model, 
+# Save only specific contrasts and statistics
+write_results(fitted_model,
               subject = "01", task = "nback", space = "MNI152NLin2009cAsym",
               contrasts = c("FacesVsPlaces", "GoVsNoGo"),
               contrast_stats = c("beta", "tstat"))
