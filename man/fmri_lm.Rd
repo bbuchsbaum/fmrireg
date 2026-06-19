@@ -22,7 +22,7 @@ fmri_lm(formula, ...)
   soft_subspace_options = NULL,
   strategy = c("runwise", "chunkwise"),
   nchunks = 10,
-  use_fast_path = FALSE,
+  use_fast_path = TRUE,
   progress = FALSE,
   ar_voxelwise = FALSE,
   parallel_voxels = FALSE,
@@ -50,7 +50,7 @@ fmri_lm(formula, ...)
   soft_subspace_options = NULL,
   strategy = c("runwise", "chunkwise"),
   nchunks = 10,
-  use_fast_path = FALSE,
+  use_fast_path = TRUE,
   progress = FALSE,
   ar_voxelwise = FALSE,
   parallel_voxels = FALSE,
@@ -102,7 +102,10 @@ fmri_lm(formula, ...)
 This controls memory partitioning; chunks are processed sequentially unless
 \code{parallel_chunks = TRUE}. Default is \code{10}.}
 
-\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
+\item{use_fast_path}{Logical. If \code{TRUE} (the default), use the fast
+matrix engine, which supports OLS, AR whitening, robust, and preprocessing.
+\code{FALSE} selects the formula/lm reference engine (no robust or full
+preprocessing support); it is retained mainly as a parity oracle.}
 
 \item{progress}{Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.}
 

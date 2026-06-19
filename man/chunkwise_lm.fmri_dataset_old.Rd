@@ -11,7 +11,7 @@
   nchunks,
   cfg,
   verbose = FALSE,
-  use_fast_path = FALSE,
+  use_fast_path = TRUE,
   progress = FALSE,
   parallel_chunks = FALSE,
   phi_fixed = NULL,
@@ -32,7 +32,10 @@
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
 
-\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
+\item{use_fast_path}{Logical. If \code{TRUE} (the default), use the fast
+matrix engine, which supports OLS, AR whitening, robust, and preprocessing.
+\code{FALSE} selects the formula/lm reference engine (no robust or full
+preprocessing support); it is retained mainly as a parity oracle.}
 
 \item{progress}{Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.}
 

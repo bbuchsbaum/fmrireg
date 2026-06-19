@@ -10,7 +10,7 @@ runwise_lm(
   contrast_objects,
   cfg,
   verbose = FALSE,
-  use_fast_path = FALSE,
+  use_fast_path = TRUE,
   progress = FALSE,
   phi_fixed = NULL,
   sigma_fixed = NULL,
@@ -28,7 +28,7 @@ runwise_lm(
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
 
-\item{use_fast_path}{Logical. Whether to use fast path computation (default is \code{FALSE}).}
+\item{use_fast_path}{Logical. Whether to use the fast matrix engine (default is \code{TRUE}).}
 
 \item{progress}{Logical. Display a progress bar for run processing. Default is \code{FALSE}.}
 

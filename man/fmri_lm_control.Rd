@@ -8,7 +8,8 @@ fmri_lm_control(
   robust_options = list(),
   ar_options = list(),
   volume_weights_options = list(),
-  soft_subspace_options = list()
+  soft_subspace_options = list(),
+  na_action = c("error", "propagate")
 )
 }
 \arguments{

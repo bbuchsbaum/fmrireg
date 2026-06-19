@@ -516,7 +516,10 @@ fmri_lm <- function(formula, ...) {
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}.
 #'   This controls memory partitioning; chunks are processed sequentially unless
 #'   \code{parallel_chunks = TRUE}. Default is \code{10}.
-#' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
+#' @param use_fast_path Logical. If \code{TRUE} (the default), use the fast
+#'   matrix engine, which supports OLS, AR whitening, robust, and preprocessing.
+#'   \code{FALSE} selects the formula/lm reference engine (no robust or full
+#'   preprocessing support); it is retained mainly as a parity oracle.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
 #' @param ar_voxelwise Logical. Estimate AR parameters voxel-wise (overrides \code{ar_options$voxelwise}).
 #' @param parallel_voxels Logical. Parallelize across voxels where supported;
@@ -662,7 +665,7 @@ fmri_lm <- function(formula, ...) {
 fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE,
                          robust = FALSE, robust_options = NULL, ar_options = NULL,
                          volume_weights_options = NULL, soft_subspace_options = NULL,
-                         strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = FALSE, progress = FALSE,
+                         strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = TRUE, progress = FALSE,
                          ar_voxelwise = FALSE,
                          parallel_voxels = FALSE,
                     # Individual AR parameters for backward compatibility
@@ -756,7 +759,7 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
                                ar_options = NULL,
                                volume_weights_options = NULL, soft_subspace_options = NULL,
                                strategy = c("runwise", "chunkwise"), nchunks = 10,
-                               use_fast_path = FALSE, progress = FALSE,
+                               use_fast_path = TRUE, progress = FALSE,
                                ar_voxelwise = FALSE, parallel_voxels = FALSE,
                                cor_struct = NULL, cor_iter = NULL,
                                cor_global = NULL, ar1_exact_first = NULL,
@@ -840,7 +843,10 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}.
 #'   This controls memory partitioning; chunks are processed sequentially unless
 #'   \code{parallel_chunks = TRUE}. Default is \code{10}.
-#' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
+#' @param use_fast_path Logical. If \code{TRUE} (the default), use the fast
+#'   matrix engine, which supports OLS, AR whitening, robust, and preprocessing.
+#'   \code{FALSE} selects the formula/lm reference engine (no robust or full
+#'   preprocessing support); it is retained mainly as a parity oracle.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
 #' @param parallel_voxels Logical. If TRUE, voxelwise AR processing within runs
 #'   is parallelised using `future.apply`. Default is \code{FALSE}.
@@ -852,7 +858,7 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
 #' @keywords internal
 #' @seealso \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{fmri_dataset}}
 fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
-                        cfg, nchunks = 10, use_fast_path = FALSE, progress = FALSE,
+                        cfg, nchunks = 10, use_fast_path = TRUE, progress = FALSE,
                         parallel_voxels = FALSE, parallel_chunks = FALSE, ...) {
   strategy <- match.arg(strategy)
   
@@ -955,6 +961,9 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                           call. = FALSE
                         )
                       }
+                      # latent_dataset has no fast matrix engine (it routes
+                      # through multiresponse_arma); force the slow path
+                      # regardless of the global default. Intentional.
                       chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                    nchunks, cfg, verbose = FALSE, use_fast_path = FALSE,
                                    progress = progress,
@@ -1554,7 +1563,10 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 #' @param nchunks The number of chunks to divide the dataset into.
 #' @param cfg An \code{fmri_lm_config} object containing all fitting options.
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
-#' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
+#' @param use_fast_path Logical. If \code{TRUE} (the default), use the fast
+#'   matrix engine, which supports OLS, AR whitening, robust, and preprocessing.
+#'   \code{FALSE} selects the formula/lm reference engine (no robust or full
+#'   preprocessing support); it is retained mainly as a parity oracle.
 #' @param progress Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.
 #' @param parallel_chunks Logical. If \code{TRUE}, process chunks with
 #'   \code{future.apply::future_lapply()} using the active future plan.
@@ -1563,7 +1575,7 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
 chunkwise_lm.fmri_dataset_old <- function(x, model, contrast_objects, nchunks, cfg,
-                                      verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
+                                      verbose = FALSE, use_fast_path = TRUE, progress = FALSE,
                                       parallel_chunks = FALSE,
                                       phi_fixed = NULL,
                                       sigma_fixed = NULL, ...) {
@@ -1596,7 +1608,7 @@ chunkwise_lm.fmri_dataset_old <- function(x, model, contrast_objects, nchunks, c
 #' @param contrast_objects The list of full contrast objects.
 #' @param cfg An \code{fmri_lm_config} object containing all fitting options.
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
-#' @param use_fast_path Logical. Whether to use fast path computation (default is \code{FALSE}).
+#' @param use_fast_path Logical. Whether to use the fast matrix engine (default is \code{TRUE}).
 #' @param progress Logical. Display a progress bar for run processing. Default is \code{FALSE}.
 #' @param phi_fixed Optional fixed AR parameters.
 #' @param sigma_fixed Optional fixed robust scale estimate.
@@ -1606,7 +1618,7 @@ chunkwise_lm.fmri_dataset_old <- function(x, model, contrast_objects, nchunks, c
 #' @keywords internal
 #' @autoglobal
 runwise_lm <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
-                       use_fast_path = FALSE, progress = FALSE,
+                       use_fast_path = TRUE, progress = FALSE,
                        phi_fixed = NULL,
                        sigma_fixed = NULL,
                        parallel_voxels = FALSE) {

@@ -22,7 +22,7 @@ NULL
 #' @return A list containing the combined results from runwise linear model analysis.
 #' @keywords internal
 runwise_lm_impl <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
-                            use_fast_path = FALSE, progress = FALSE,
+                            use_fast_path = TRUE, progress = FALSE,
                             phi_fixed = NULL,
                             sigma_fixed = NULL,
                             parallel_voxels = FALSE) {
@@ -72,8 +72,11 @@ runwise_lm_impl <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   })
   names(fconlist_weights) <- sapply(fconlist, `[[`, "name")
   
-  # Determine if we're using voxelwise AR
-  if (!use_fast_path && cfg$ar$voxelwise && cfg$ar$struct != "iid") {
+  # Determine if we're using voxelwise AR. runwise_lm_voxelwise() is fully
+  # matrix-based (.fast_preproject/solve_glm_core/ar_whiten_transform), so this
+  # dispatch is independent of use_fast_path -- gate on the AR config alone so
+  # voxelwise AR works regardless of the engine default.
+  if (cfg$ar$voxelwise && cfg$ar$struct != "iid") {
     # Voxelwise AR path
     result <- runwise_lm_voxelwise(
       chunks = chunks,

@@ -22,7 +22,7 @@
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
 chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
-                                      verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
+                                      verbose = FALSE, use_fast_path = TRUE, progress = FALSE,
                                       parallel_chunks = FALSE,
                                       phi_fixed = NULL,
                                       sigma_fixed = NULL, ...) {
