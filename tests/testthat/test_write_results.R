@@ -208,6 +208,7 @@ test_that("write_results.fmri_lm handles contrast export strategies", {
     path = temp_dir1,
     subject = "01", 
     task = "test",
+    space = "MNI152NLin2009cAsym",
     strategy = "by_stat",
     contrast_stats = c("beta", "tstat")
   )
@@ -226,6 +227,7 @@ test_that("write_results.fmri_lm handles contrast export strategies", {
     path = temp_dir2,
     subject = "01",
     task = "test", 
+    space = "MNI152NLin2009cAsym",
     strategy = "by_contrast",
     contrast_stats = c("beta", "tstat")
   )
@@ -396,6 +398,7 @@ test_that("write_results.fmri_lm creates valid JSON metadata", {
     path = temp_dir,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     save_betas = TRUE
   )
   
@@ -539,6 +542,7 @@ test_that("write_results.fmri_lm enforces overwrite for contrast-only exports", 
     path = temp_dir,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     strategy = "by_stat",
     contrast_stats = "beta",
     save_betas = FALSE,
@@ -554,6 +558,7 @@ test_that("write_results.fmri_lm enforces overwrite for contrast-only exports", 
       path = temp_dir,
       subject = "01",
       task = "test",
+      space = "MNI152NLin2009cAsym",
       strategy = "by_stat",
       contrast_stats = "beta",
       save_betas = FALSE,
@@ -578,7 +583,8 @@ test_that("write_results.fmri_lm uses atomic write pattern", {
     mod,
     path = temp_dir,
     subject = "01",
-    task = "test"
+    task = "test",
+    space = "MNI152NLin2009cAsym"
   )
   
   # Check no temporary directories remain
@@ -606,6 +612,7 @@ test_that("write_results.fmri_lm works with minimal contrast set", {
     path = temp_dir,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     contrasts = "A_vs_B",
     contrast_stats = "beta",
     save_betas = FALSE  # Skip betas to test contrast-only export
@@ -684,6 +691,7 @@ test_that("write_results.fmri_lm keeps contrast sidecar basenames aligned", {
     path = temp_dir,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     strategy = "by_stat",
     save_betas = FALSE,
     contrast_stats = c("beta", "tstat")
@@ -703,6 +711,7 @@ test_that("write_results.fmri_lm keeps contrast sidecar basenames aligned", {
     path = temp_dir2,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     strategy = "by_contrast",
     save_betas = FALSE,
     contrast_stats = c("beta", "tstat")
@@ -727,6 +736,7 @@ test_that("write_results.fmri_lm supports regex contrast selection", {
     path = temp_dir,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     strategy = "by_contrast",
     save_betas = FALSE,
     contrasts = "^A_.*_B$",
@@ -753,6 +763,7 @@ test_that("write_results.fmri_lm uses statistic descriptions for contrast files"
     path = temp_dir,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     strategy = "by_stat",
     save_betas = FALSE,
     contrast_stats = c("beta", "tstat")
@@ -771,6 +782,7 @@ test_that("write_results.fmri_lm uses statistic descriptions for contrast files"
     path = temp_dir2,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     strategy = "by_contrast",
     save_betas = FALSE,
     contrast_stats = "beta"
@@ -795,6 +807,7 @@ test_that("write_results.fmri_lm validates ModelInfo content in JSON", {
     path = temp_dir,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     save_betas = TRUE
   )
   
@@ -847,7 +860,8 @@ test_that("write_results.fmri_lm handles filesystem edge cases", {
     mod,
     path = non_existent_path,
     subject = "01",
-    task = "test"
+    task = "test",
+    space = "MNI152NLin2009cAsym"
   )
   
   expect_true(dir.exists(non_existent_path))
@@ -906,6 +920,7 @@ test_that("write_results.fmri_lm handles models without contrasts", {
     path = temp_dir,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     save_betas = TRUE
   )
   
@@ -934,6 +949,7 @@ test_that("write_results.fmri_lm validates GeneratedBy field for BIDS compliance
     path = temp_dir,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     save_betas = TRUE
   )
   
@@ -987,6 +1003,7 @@ test_that("write_results.fmri_lm validates HDF5 data types and precision", {
     path = temp_dir,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     save_betas = TRUE
   )
   
@@ -1034,6 +1051,7 @@ test_that("write_results.fmri_lm handles degenerate data gracefully", {
       path = temp_dir,
       subject = "01",
       task = "test",
+      space = "MNI152NLin2009cAsym",
       save_betas = TRUE
     )
   })
@@ -1071,6 +1089,7 @@ test_that("write_results.fmri_lm supports sparse masks", {
     path = temp_dir,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     save_betas = TRUE,
     strategy = "by_stat",
     contrast_stats = "beta"
@@ -1097,6 +1116,7 @@ test_that("write_results.fmri_lm validates CreationTime format for BIDS complian
     path = temp_dir,
     subject = "01",
     task = "test",
+    space = "MNI152NLin2009cAsym",
     save_betas = TRUE
   )
   
@@ -1199,6 +1219,7 @@ test_that("write_results.fmri_lm handles fmristore write failure gracefully", {
       path = temp_dir,
       subject = "01", 
       task = "test",
+      space = "MNI152NLin2009cAsym",
       save_betas = TRUE
     ),
     "Failed to write BIDS results"

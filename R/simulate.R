@@ -247,7 +247,7 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #' @param n_events Number of events (ignored if \code{onsets} is provided).
 #' @param onsets Optional numeric vector of event onsets. If \code{NULL}, will be generated.
 #' @param isi_dist One of \code{"even"}, \code{"uniform"}, or \code{"exponential"}.
-#'   Default is \code{"even"} so events are evenly spaced from 0..total_time.
+#'   Default is \code{"even"} so events are evenly spaced within \code{total_time - buffer}.
 #' @param isi_min,isi_max For \code{isi_dist="uniform"}.
 #' @param isi_rate For \code{isi_dist="exponential"}.
 #' @param durations Numeric, scalar or length-\code{n_events}. If \code{duration_sd>0},
@@ -349,7 +349,7 @@ simulate_fmri_matrix <- function(
   } else if (isi_dist == "exponential") {
     isi_samples <- isi_min + rexp(n_events, rate = isi_rate)
   } else if (isi_dist == "even") {
-    isi_samples <- rep(effective_time / n_events, n_events)
+    isi_samples <- rep(effective_time / (n_events + 1), n_events)
   }
   
   # Generate onsets cumulative ISIs, but ensure they fall within effective_time

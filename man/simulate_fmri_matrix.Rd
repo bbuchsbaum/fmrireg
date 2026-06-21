@@ -44,7 +44,7 @@ simulate_fmri_matrix(
 \item{onsets}{Optional numeric vector of event onsets. If \code{NULL}, will be generated.}
 
 \item{isi_dist}{One of \code{"even"}, \code{"uniform"}, or \code{"exponential"}.
-Default is \code{"even"} so events are evenly spaced from 0..total_time.}
+Default is \code{"even"} so events are evenly spaced within \code{total_time - buffer}.}
 
 \item{isi_min, isi_max}{For \code{isi_dist="uniform"}.}
 
