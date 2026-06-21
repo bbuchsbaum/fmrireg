@@ -77,7 +77,7 @@ simulate_fmri_matrix(
 - isi_dist:
 
   One of `"even"`, `"uniform"`, or `"exponential"`. Default is `"even"`
-  so events are evenly spaced from 0..total_time.
+  so events are evenly spaced within `total_time - buffer`.
 
 - isi_min, isi_max:
 

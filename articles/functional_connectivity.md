@@ -173,7 +173,7 @@ p_seed <- as.numeric(all_pvals[, seed_col_name])
 # Check the distribution of our connectivity map
 summary(t_seed)
 #>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-#> -2.6023 -0.4003  0.3842  1.2858  1.2451  9.9411
+#> -2.4538 -0.3511  0.4367  1.3222  1.2293 10.1976
 ```
 
 ## Validating the Results
@@ -213,7 +213,7 @@ c(
   top_rank_enrichment = top_rank_enrichment
 )
 #>    mean_abs_t_network mean_abs_t_background      sig_rate_network 
-#>            7.65896313            0.80911959            1.00000000 
+#>            7.63423898            0.81296704            1.00000000 
 #>   sig_rate_background   top_rank_enrichment 
 #>            0.04186047            1.00000000
 ```
