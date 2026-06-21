@@ -6,8 +6,6 @@ v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/l
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
-## Quick start
-
 ``` r
 
 library(fmrireg)

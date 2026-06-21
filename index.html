@@ -81,9 +81,6 @@
   <main id="main" class="col-md-9"><div class="section level1">
 
 <p><a href="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main" class="external-link"><img src="https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg" alt="Codecov test coverage"></a> <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html" class="external-link"><img src="https://img.shields.io/badge/License-GPL_v2-blue.svg" alt="License: GPL v2"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></p>
-<div class="section level2">
-<h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
-</h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrireg/">fmrireg</a></span><span class="op">)</span></span>
 <span></span>
@@ -102,7 +99,6 @@
 <span><span class="co"># Combine into a full fMRI model and fit</span></span>
 <span><span class="va">fmod</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fmri_model.html">fmri_model</a></span><span class="op">(</span><span class="va">emod</span>, <span class="va">bmod</span><span class="op">)</span></span>
 <span><span class="va">fit</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span><span class="va">fmod</span>, dataset <span class="op">=</span> <span class="va">dset</span><span class="op">)</span></span></code></pre></div>
-</div>
 <div class="section level2">
 <h2 id="key-features">Key features<a class="anchor" aria-label="anchor" href="#key-features"></a>
 </h2>
