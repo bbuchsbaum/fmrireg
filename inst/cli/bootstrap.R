@@ -41,10 +41,21 @@ fmrireg_cli_bootstrap <- function(command = "fmrireg") {
   )
   root <- normalizePath(file.path(dirname(script_path), ".."), winslash = "/", mustWork = FALSE)
 
-  if (file.exists(file.path(root, "DESCRIPTION")) && dir.exists(file.path(root, "R"))) {
+  # Only treat `root` as a development source checkout when R/ actually holds
+  # `.R` sources. An *installed* package also has DESCRIPTION + an R/ directory,
+  # but R/ there contains only the compiled lazy-load DB (no `.R` files), so
+  # keying on DESCRIPTION + R/ alone would mis-fire and trigger
+  # pkgload::load_all() on the installed tree, which errors. When there are no
+  # `.R` sources, return NULL so the caller falls back to the installed namespace.
+  r_dir <- file.path(root, "R")
+  is_source_checkout <-
+    file.exists(file.path(root, "DESCRIPTION")) &&
+    dir.exists(r_dir) &&
+    length(list.files(r_dir, pattern = "\\.[Rr]$")) > 0L
+
+  if (is_source_checkout) {
     return(root)
   }
 
-  message(command, ": unable to resolve source checkout root from wrapper path.")
   NULL
 }

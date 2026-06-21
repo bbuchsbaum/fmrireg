@@ -29,6 +29,14 @@ estimate_ar_parameters <- function(residuals_vec, p_order, censor = NULL) {
     stop("NA values detected in 'residuals_vec' for estimate_ar_parameters")
   }
 
+  # A constant (zero-variance) residual series has no estimable AR structure.
+  # Short-circuit before consulting fmriAR so the result is deterministic across
+  # fmriAR versions (some return phi = 0 here rather than an empty vector).
+  res_sd <- stats::sd(residuals_vec)
+  if (!is.na(res_sd) && res_sd < sqrt(.Machine$double.eps)) {
+    return(numeric(0))
+  }
+
   # Try fmriAR first (supports censor)
   residuals_mat <- matrix(residuals_vec, ncol = 1)
   plan <- tryCatch(

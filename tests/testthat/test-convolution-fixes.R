@@ -170,15 +170,18 @@ test_that("events outside sampling window are handled correctly", {
   # Create a short sampling frame (10 TRs * 2s = 20s)
   sframe <- sampling_frame(10, TR = 2.0)
   
-  expect_warning(
-    emodel <- event_model(Onset ~ hrf(Cond), 
-                          block = ~ Run, 
-                          sampling_frame = sframe, 
-                          data = test_events),
-    regexp = NA,  # No specific warning expected, but allow for any
-    info = "Model creation should handle out-of-window events"
+  # Out-of-frame onsets are legal: model creation should succeed. Newer
+  # fmridesign also emits an informative out-of-sampling-frame warning here,
+  # which we tolerate (it is intended behaviour, not a failure). The real
+  # assertion is on the resulting design matrix below.
+  emodel <- suppressWarnings(
+    event_model(Onset ~ hrf(Cond),
+                block = ~ Run,
+                sampling_frame = sframe,
+                data = test_events)
   )
-  
+  expect_s3_class(emodel, "event_model")
+
   dmat <- design_matrix(emodel)
   col_sums <- apply(dmat, 2, sum)
 
