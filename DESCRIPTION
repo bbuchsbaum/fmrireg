@@ -75,10 +75,13 @@ Suggests:
     progressr,
     pkgload,
     roxyglobals (>= 0.2.1),
-    withr
+    withr,
+    bidser,
+    jsonlite
 Remotes:
+    bbuchsbaum/bidser,
     bbuchsbaum/fmristore,
-    bbuchsbaum/fmrigds@b131500b8e91e116c76f5d0df2a91cb7ecb4de14,
+    bbuchsbaum/fmrigds@f015b7c7fa5008e2435d269aeb1882a9aa24eaf0,
     anthonynorth/roxyglobals,
     bbuchsbaum/fmridataset,
     bbuchsbaum/fmrilss,
