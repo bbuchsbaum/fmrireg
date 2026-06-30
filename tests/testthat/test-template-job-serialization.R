@@ -61,14 +61,15 @@ test_that("file-backed job serializes small and round-trips identically", {
   expect_equal(back$dataset_spec$args$run_length, c(200, 200, 200))
 })
 
-test_that("template strips formula/block env so local scope does not bloat jobs", {
+test_that("template prunes formula env so local scope does not bloat jobs", {
   build_in_scope <- function() {
     big_local <- numeric(300000)  # ~2.4 MB that must NOT ride along
     fmri_template(onset ~ hrf(condition), ~ run)
   }
   tmpl <- build_in_scope()
-  expect_identical(environment(tmpl$formula), globalenv())
-  expect_identical(environment(tmpl$block), globalenv())
+  # env is reparented to globalenv and carries no unreferenced local bindings
+  expect_identical(parent.env(environment(tmpl$formula)), globalenv())
+  expect_length(ls(environment(tmpl$formula)), 0L)
 
   ds <- dataset_spec("fmri_dataset",
                      args = list(scans = "x.nii.gz", TR = 2, run_length = 100),
@@ -77,6 +78,27 @@ test_that("template strips formula/block env so local scope does not bloat jobs"
   f <- withr::local_tempfile(fileext = ".rds")
   saveRDS(job, f)
   expect_lt(file.info(f)$size, 50 * 1024)
+})
+
+test_that("template keeps locally-referenced formula objects but drops the rest", {
+  build_in_scope <- function() {
+    big_unused <- numeric(300000)  # must NOT ride along
+    my_contrasts <- contrast_set(pair_contrast(~ condition == "A",
+                                               ~ condition == "B", name = "AvB"))
+    fmri_template(onset ~ hrf(condition, contrasts = my_contrasts), ~ run)
+  }
+  tmpl <- build_in_scope()
+  e <- environment(tmpl$formula)
+  expect_true("my_contrasts" %in% ls(e))   # referenced local object preserved
+  expect_false("big_unused" %in% ls(e))    # unreferenced local dropped
+
+  ds <- dataset_spec("fmri_dataset",
+                     args = list(scans = "x.nii.gz", TR = 2, run_length = 100),
+                     source = "file")
+  job <- fmri_job("s1", tmpl, ds)
+  f <- withr::local_tempfile(fileext = ".rds")
+  saveRDS(job, f)
+  expect_lt(file.info(f)$size, 50 * 1024)   # compact despite big_unused in scope
 })
 
 test_that("reducer capturing local state warns; top-level reducer does not", {

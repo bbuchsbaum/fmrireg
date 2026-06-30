@@ -126,14 +126,14 @@ fmri_template <- function(formula, block,
     warn_if_unserializable_fn(reducer, "reducer")
   }
 
-  # Reset the formula/block environments to the global environment so jobs stay
-  # compact and portable: a formula defined in a local scope would otherwise drag
-  # that scope's bindings into every serialized job. Design variables resolve
-  # against each subject's event table (passed as data), and term functions such
-  # as hrf() against the loaded fmrireg namespace -- neither needs the captured
-  # environment.
-  environment(formula) <- globalenv()
-  environment(block) <- globalenv()
+  # Prune the formula/block environments to only the local symbols they actually
+  # reference (e.g. an inline contrast object), reparented to the global
+  # environment. This keeps serialized jobs compact -- unrelated local bindings
+  # are dropped -- without breaking formulas that embed local objects. Event
+  # variables resolve against each subject's event table (passed as data), and
+  # term functions such as hrf() against the loaded namespace via globalenv.
+  formula <- .prune_formula_env(formula)
+  block <- .prune_formula_env(block)
 
   structure(
     list(formula = formula, block = block, baseline = baseline,
@@ -142,6 +142,37 @@ fmri_template <- function(formula, block,
          reducer = reducer),
     class = "fmri_template"
   )
+}
+
+#' @keywords internal
+#' @noRd
+# Rebuild a formula's environment to carry only the *local* symbols it
+# references, reparented to globalenv(). Local objects embedded in the formula
+# (e.g. a contrast_set) are preserved; unrelated bindings from the definition
+# scope are dropped so serialized jobs stay small. Package functions (hrf, ...)
+# and event-table columns are intentionally not copied -- they resolve via the
+# global environment / the bound data at evaluation time.
+.prune_formula_env <- function(f) {
+  orig <- environment(f)
+  if (is.null(orig) || identical(orig, globalenv()) || identical(orig, baseenv()) ||
+      identical(orig, emptyenv()) || isNamespace(orig)) {
+    environment(f) <- globalenv()
+    return(f)
+  }
+  e <- new.env(parent = globalenv())
+  for (s in all.vars(f)) {
+    env <- orig
+    while (!identical(env, globalenv()) && !identical(env, emptyenv()) &&
+           !identical(env, baseenv()) && !isNamespace(env)) {
+      if (exists(s, envir = env, inherits = FALSE)) {
+        assign(s, get(s, envir = env), envir = e)
+        break
+      }
+      env <- parent.env(env)
+    }
+  }
+  environment(f) <- e
+  f
 }
 
 #' @keywords internal

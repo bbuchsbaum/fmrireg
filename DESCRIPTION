@@ -76,7 +76,8 @@ Suggests:
     pkgload,
     roxyglobals (>= 0.2.1),
     withr,
-    bidser
+    bidser,
+    jsonlite
 Remotes:
     bbuchsbaum/bidser,
     bbuchsbaum/fmristore,

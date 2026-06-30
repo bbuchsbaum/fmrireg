@@ -51,6 +51,8 @@ navbar:
         href: articles/a_10_dataset.html
       - text: Group Analysis
         href: articles/group_analysis.html
+      - text: Multi-Subject Fan-Out
+        href: articles/multisubject_fanout.html
       - text: Functional Connectivity
         href: articles/functional_connectivity.html
       - text: '-------'
@@ -70,6 +72,7 @@ articles:
   - plugin-development
   - a_10_dataset
   - group_analysis
+  - multisubject_fanout
   - functional_connectivity
   - sketched-ar
 - title: Resources
