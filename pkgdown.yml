@@ -10,9 +10,10 @@ articles:
   fmrireg: fmrireg.html
   functional_connectivity: functional_connectivity.html
   group_analysis: group_analysis.html
+  multisubject_fanout: multisubject_fanout.html
   plugin-development: plugin-development.html
   sketched-ar: sketched-ar.html
-last_built: 2026-06-21T02:34Z
+last_built: 2026-06-30T00:49Z
 urls:
   reference: https://bbuchsbaum.github.io/fmrireg/reference
   article: https://bbuchsbaum.github.io/fmrireg/articles

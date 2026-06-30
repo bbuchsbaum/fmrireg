@@ -30,6 +30,7 @@
     <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -120,7 +121,7 @@
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="fmri_lm.html">fmri_lm</a></span><span class="op">(</span><span class="va">onsets</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span><span class="va">run</span>, dataset <span class="op">=</span> <span class="va">dset</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="co"># Get coefficient estimates as a numeric vector</span></span></span>
 <span class="r-in"><span><span class="fu">coef_image</span><span class="op">(</span><span class="va">fit</span>, coef <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1]  0.08603959 -0.05707743 -0.59749063 -0.11075571</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -0.03364236 -0.56124370  0.07527554 -0.22734020</span>
 <span class="r-in"><span><span class="va">toy_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/structure.html" class="external-link">structure</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    coefficients <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span>, <span class="fl">0.1</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">1</span>,</span></span>

@@ -30,6 +30,7 @@
     <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -89,6 +90,13 @@
 
         <dt>
 
+          <code><a href="as_manifest.html">as_manifest()</a></code>
+
+        </dt>
+        <dd>Coerce bindings to an fmri_manifest</dd>
+
+        <dt>
+
           <code><a href="autoplot.html">autoplot(<i>&lt;Reg&gt;</i>)</a></code>
 
         </dt>
@@ -96,10 +104,38 @@
 
         <dt>
 
+          <code><a href="baseline_spec.html">baseline_spec()</a></code>
+
+        </dt>
+        <dd>Baseline specification (subject-invariant)</dd>
+
+        <dt>
+
+          <code><a href="batch_errors.html">batch_errors()</a></code>
+
+        </dt>
+        <dd>Extract per-job errors from a batch result</dd>
+
+        <dt>
+
+          <code><a href="batch_values.html">batch_values()</a></code>
+
+        </dt>
+        <dd>Extract successful values from a batch result</dd>
+
+        <dt>
+
           <code><a href="blockids.event_model.html">blockids(<i>&lt;event_model&gt;</i>)</a></code>
 
         </dt>
         <dd>Block IDs for event_model</dd>
+
+        <dt>
+
+          <code><a href="build_model.html">build_model()</a></code>
+
+        </dt>
+        <dd>Assemble the full fMRI model for a job</dd>
 
         <dt>
 
@@ -135,6 +171,13 @@
 
         </dt>
         <dd>Get Available Coefficient Names</dd>
+
+        <dt>
+
+          <code><a href="collect_results.html">collect_results()</a></code>
+
+        </dt>
+        <dd>Collect per-subject result maps into a group_data object</dd>
 
         <dt>
 
@@ -219,6 +262,13 @@
 
         </dt>
         <dd>Create Design Matrix from Benchmark Dataset</dd>
+
+        <dt>
+
+          <code><a href="dataset_spec.html">dataset_spec()</a></code>
+
+        </dt>
+        <dd>Describe how to (re)construct a subject's dataset</dd>
 
         <dt>
 
@@ -341,6 +391,13 @@
 
         <dt>
 
+          <code><a href="export_jobs.html">export_jobs()</a></code>
+
+        </dt>
+        <dd>Export jobs for external / array execution</dd>
+
+        <dt>
+
           <code><a href="extract_csv_data.html">extract_csv_data()</a></code>
 
         </dt>
@@ -425,6 +482,13 @@
 
         <dt>
 
+          <code><a href="fmri_job.html">fmri_job()</a></code>
+
+        </dt>
+        <dd>Construct a per-subject job recipe</dd>
+
+        <dt>
+
           <code><a href="fmri_latent_lm.html">fmri_latent_lm()</a></code>
 
         </dt>
@@ -502,6 +566,13 @@
 
         <dt>
 
+          <code><a href="fmri_template.html">fmri_template()</a></code>
+
+        </dt>
+        <dd>Define a subject-invariant model template</dd>
+
+        <dt>
+
           <code><a href="fmri_ttest.html">fmri_ttest()</a></code>
 
         </dt>
@@ -513,6 +584,13 @@
 
         </dt>
         <dd>Run the fmrireg command line interface</dd>
+
+        <dt>
+
+          <code><a href="from_bids.html">from_bids()</a></code>
+
+        </dt>
+        <dd>Build a manifest from a BIDS project</dd>
 
         <dt>
 
@@ -621,6 +699,13 @@
 
         <dt>
 
+          <code><a href="instantiate.html">instantiate()</a></code>
+
+        </dt>
+        <dd>Instantiate a template into per-subject jobs</dd>
+
+        <dt>
+
           <code><a href="list_benchmark_datasets.html">list_benchmark_datasets()</a></code>
 
         </dt>
@@ -705,6 +790,13 @@
 
         <dt>
 
+          <code><a href="preflight.html">preflight()</a></code>
+
+        </dt>
+        <dd>Preflight-check jobs before fan-out</dd>
+
+        <dt>
+
           <code><a href="print.html">print(<i>&lt;fmri_model&gt;</i>)</a></code> <code><a href="print.html">print(<i>&lt;fmri_lm&gt;</i>)</a></code> <code><a href="print.html">print(<i>&lt;fmri_rlm&gt;</i>)</a></code>
 
         </dt>
@@ -761,10 +853,52 @@
 
         <dt>
 
+          <code><a href="read_jobs.html">read_jobs()</a></code>
+
+        </dt>
+        <dd>Read jobs exported by export_jobs()</dd>
+
+        <dt>
+
           <code><a href="read_nifti_full.html">read_nifti_full()</a></code>
 
         </dt>
         <dd>Read All Data from NIfTI Files</dd>
+
+        <dt>
+
+          <code><a href="realize_dataset.html">realize_dataset()</a></code>
+
+        </dt>
+        <dd>Realize the dataset described by a job</dd>
+
+        <dt>
+
+          <code><a href="reduce_betas.html">reduce_betas()</a></code>
+
+        </dt>
+        <dd>Reducer: tidy beta-estimate table</dd>
+
+        <dt>
+
+          <code><a href="reduce_contrasts.html">reduce_contrasts()</a></code>
+
+        </dt>
+        <dd>Reducer: tidy contrast table</dd>
+
+        <dt>
+
+          <code><a href="reduce_identity.html">reduce_identity()</a></code>
+
+        </dt>
+        <dd>Reducer: return the fitted model unchanged</dd>
+
+        <dt>
+
+          <code><a href="reduce_write_results.html">reduce_write_results()</a></code>
+
+        </dt>
+        <dd>Reducer: write per-subject results to disk (BIDS-keyed)</dd>
 
         <dt>
 
@@ -782,10 +916,38 @@
 
         <dt>
 
+          <code><a href="register_run_backend.html">register_run_backend()</a></code>
+
+        </dt>
+        <dd>Register an execution backend for run_jobs()</dd>
+
+        <dt>
+
           <code><a href="resolve_basis.html">resolve_basis()</a></code>
 
         </dt>
         <dd>Resolve a registered basis function by name</dd>
+
+        <dt>
+
+          <code><a href="run_backends.html">run_backends()</a></code>
+
+        </dt>
+        <dd>List registered execution backends</dd>
+
+        <dt>
+
+          <code><a href="run_job.html">run_job()</a></code>
+
+        </dt>
+        <dd>Run a single job</dd>
+
+        <dt>
+
+          <code><a href="run_jobs.html">run_jobs()</a></code>
+
+        </dt>
+        <dd>Run a batch of jobs</dd>
 
         <dt>
 
@@ -940,6 +1102,20 @@
 
         </dt>
         <dd>Tidy fitted HRF curves from an fmri_lm fit</dd>
+
+        <dt>
+
+          <code><a href="validate_job.html">validate_job()</a></code>
+
+        </dt>
+        <dd>Validate an fmri_job</dd>
+
+        <dt>
+
+          <code><a href="validate_template.html">validate_template()</a></code>
+
+        </dt>
+        <dd>Validate an fmri_template</dd>
 
         <dt>
 

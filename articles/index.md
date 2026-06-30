@@ -19,6 +19,8 @@
   Frames](https://bbuchsbaum.github.io/fmrireg/articles/a_10_dataset.md):
 - [Group
   Analysis](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.md):
+- [Running one model across many
+  subjects](https://bbuchsbaum.github.io/fmrireg/articles/multisubject_fanout.md):
 - [Functional Connectivity
   (Seed-Based)](https://bbuchsbaum.github.io/fmrireg/articles/functional_connectivity.md):
 - [Sketched GLM with Global vs Parcel

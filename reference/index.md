@@ -11,11 +11,26 @@
 - [`as.array(`*`<NeuroVec>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/as.array.NeuroVec.md)
   : Coerce NeuroVec to base array
 
+- [`as_manifest()`](https://bbuchsbaum.github.io/fmrireg/reference/as_manifest.md)
+  : Coerce bindings to an fmri_manifest
+
 - [`autoplot(`*`<Reg>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/autoplot.md)
   : Autoplot method for Reg objects
 
+- [`baseline_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/baseline_spec.md)
+  : Baseline specification (subject-invariant)
+
+- [`batch_errors()`](https://bbuchsbaum.github.io/fmrireg/reference/batch_errors.md)
+  : Extract per-job errors from a batch result
+
+- [`batch_values()`](https://bbuchsbaum.github.io/fmrireg/reference/batch_values.md)
+  : Extract successful values from a batch result
+
 - [`blockids(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/blockids.event_model.md)
   : Block IDs for event_model
+
+- [`build_model()`](https://bbuchsbaum.github.io/fmrireg/reference/build_model.md)
+  : Assemble the full fMRI model for a job
 
 - [`coef(`*`<fmri_meta>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/coef.fmri_meta.md)
   : Extract Coefficients from Meta-Analysis
@@ -31,6 +46,9 @@
 
 - [`coef_names()`](https://bbuchsbaum.github.io/fmrireg/reference/coef_names.md)
   : Get Available Coefficient Names
+
+- [`collect_results()`](https://bbuchsbaum.github.io/fmrireg/reference/collect_results.md)
+  : Collect per-subject result maps into a group_data object
 
 - [`columns()`](https://bbuchsbaum.github.io/fmrireg/reference/columns.md)
   : Extract Column Names or Identifiers
@@ -67,6 +85,9 @@
 
 - [`create_design_matrix_from_benchmark()`](https://bbuchsbaum.github.io/fmrireg/reference/create_design_matrix_from_benchmark.md)
   : Create Design Matrix from Benchmark Dataset
+
+- [`dataset_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/dataset_spec.md)
+  : Describe how to (re)construct a subject's dataset
 
 - [`design_map(`*`<fmri_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/design_map.fmri_model.md)
   : Heatmap visualization of the combined fmri_model design matrix
@@ -120,6 +141,9 @@
 - [`event_table(`*`<convolved_term>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/event_table.convolved_term.md)
   : Extract event table from convolved term
 
+- [`export_jobs()`](https://bbuchsbaum.github.io/fmrireg/reference/export_jobs.md)
+  : Export jobs for external / array execution
+
 - [`extract_csv_data()`](https://bbuchsbaum.github.io/fmrireg/reference/extract_csv_data.md)
   : Extract Data for Meta-Analysis from CSV
 
@@ -156,6 +180,9 @@
 - [`fmri_benchmark_datasets`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_benchmark_datasets.md)
   : Benchmark fMRI datasets
 
+- [`fmri_job()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_job.md)
+  : Construct a per-subject job recipe
+
 - [`fmri_latent_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_latent_lm.md)
   : Fast fMRI Regression Model Estimation from a Latent Component
   Dataset
@@ -190,11 +217,17 @@
 - [`fmri_rlm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_rlm.md)
   : Fit a Robust Linear Model for fMRI Data Analysis
 
+- [`fmri_template()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_template.md)
+  : Define a subject-invariant model template
+
 - [`fmri_ttest()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_ttest.md)
   : fmrireg t-tests for Group Analysis
 
 - [`fmrireg_cli()`](https://bbuchsbaum.github.io/fmrireg/reference/fmrireg_cli.md)
   : Run the fmrireg command line interface
+
+- [`from_bids()`](https://bbuchsbaum.github.io/fmrireg/reference/from_bids.md)
+  : Build a manifest from a BIDS project
 
 - [`generate_interaction_contrast()`](https://bbuchsbaum.github.io/fmrireg/reference/generate_interaction_contrast.md)
   [`generate_main_effect_contrast()`](https://bbuchsbaum.github.io/fmrireg/reference/generate_interaction_contrast.md)
@@ -242,6 +275,9 @@
 - [`install_cli()`](https://bbuchsbaum.github.io/fmrireg/reference/install_cli.md)
   : Install the fmrireg command wrapper
 
+- [`instantiate()`](https://bbuchsbaum.github.io/fmrireg/reference/instantiate.md)
+  : Instantiate a template into per-subject jobs
+
 - [`list_benchmark_datasets()`](https://bbuchsbaum.github.io/fmrireg/reference/list_benchmark_datasets.md)
   : List Available Benchmark Datasets
 
@@ -278,6 +314,9 @@
 - [`paired_diff_block()`](https://bbuchsbaum.github.io/fmrireg/reference/paired_diff_block.md)
   : Helper Functions for fmri_ttest
 
+- [`preflight()`](https://bbuchsbaum.github.io/fmrireg/reference/preflight.md)
+  : Preflight-check jobs before fan-out
+
 - [`print(`*`<fmri_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.md)
   [`print(`*`<fmri_lm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.md)
   [`print(`*`<fmri_rlm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.md)
@@ -304,8 +343,26 @@
 - [`read_h5_full()`](https://bbuchsbaum.github.io/fmrireg/reference/read_h5_full.md)
   : Read All Data from HDF5 Files
 
+- [`read_jobs()`](https://bbuchsbaum.github.io/fmrireg/reference/read_jobs.md)
+  : Read jobs exported by export_jobs()
+
 - [`read_nifti_full()`](https://bbuchsbaum.github.io/fmrireg/reference/read_nifti_full.md)
   : Read All Data from NIfTI Files
+
+- [`realize_dataset()`](https://bbuchsbaum.github.io/fmrireg/reference/realize_dataset.md)
+  : Realize the dataset described by a job
+
+- [`reduce_betas()`](https://bbuchsbaum.github.io/fmrireg/reference/reduce_betas.md)
+  : Reducer: tidy beta-estimate table
+
+- [`reduce_contrasts()`](https://bbuchsbaum.github.io/fmrireg/reference/reduce_contrasts.md)
+  : Reducer: tidy contrast table
+
+- [`reduce_identity()`](https://bbuchsbaum.github.io/fmrireg/reference/reduce_identity.md)
+  : Reducer: return the fitted model unchanged
+
+- [`reduce_write_results()`](https://bbuchsbaum.github.io/fmrireg/reference/reduce_write_results.md)
+  : Reducer: write per-subject results to disk (BIDS-keyed)
 
 - [`register_basis()`](https://bbuchsbaum.github.io/fmrireg/reference/register_basis.md)
   : Register an HRF/basis constructor
@@ -315,8 +372,20 @@
 
   Register a plugin engine for `fmri_lm`
 
+- [`register_run_backend()`](https://bbuchsbaum.github.io/fmrireg/reference/register_run_backend.md)
+  : Register an execution backend for run_jobs()
+
 - [`resolve_basis()`](https://bbuchsbaum.github.io/fmrireg/reference/resolve_basis.md)
   : Resolve a registered basis function by name
+
+- [`run_backends()`](https://bbuchsbaum.github.io/fmrireg/reference/run_backends.md)
+  : List registered execution backends
+
+- [`run_job()`](https://bbuchsbaum.github.io/fmrireg/reference/run_job.md)
+  : Run a single job
+
+- [`run_jobs()`](https://bbuchsbaum.github.io/fmrireg/reference/run_jobs.md)
+  : Run a batch of jobs
 
 - [`se()`](https://bbuchsbaum.github.io/fmrireg/reference/se.md) :
   Extract Standard Errors from Meta-Analysis
@@ -384,6 +453,12 @@
 
 - [`tidy_fitted_hrf()`](https://bbuchsbaum.github.io/fmrireg/reference/tidy_fitted_hrf.md)
   : Tidy fitted HRF curves from an fmri_lm fit
+
+- [`validate_job()`](https://bbuchsbaum.github.io/fmrireg/reference/validate_job.md)
+  : Validate an fmri_job
+
+- [`validate_template()`](https://bbuchsbaum.github.io/fmrireg/reference/validate_template.md)
+  : Validate an fmri_template
 
 - [`volume_quality`](https://bbuchsbaum.github.io/fmrireg/reference/volume_quality.md)
   : Volume Quality Metrics and Temporal Weighting
