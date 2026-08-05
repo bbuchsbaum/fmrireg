@@ -1,4 +1,4 @@
-# Define the temporal structure: 2 runs, 100 scans each, TR = 2s
+# Add a baseline model with polynomial drift
 
 [![R-CMD-check](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
@@ -7,17 +7,6 @@ coverage](https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg)]
 v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-
-library(fmrireg)
-
-# Define the temporal structure: 2 runs, 100 scans each, TR = 2s
-
-sframe \<- sampling_frame(blocklens = c(100, 100), TR = 2)
-
-# Build an event model from an experimental design table
-
-emod \<- event_model(onset ~ hrf(condition, basis = “spmg1”), data =
-design_table, block = ~ run, sampling_frame = sframe)
 
 # Add a baseline model with polynomial drift
 

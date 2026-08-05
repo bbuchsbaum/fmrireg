@@ -1,5 +1,5 @@
 pandoc: 3.8.3
-pkgdown: 2.2.0
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   a_05_contrasts: a_05_contrasts.html
@@ -13,7 +13,7 @@ articles:
   multisubject_fanout: multisubject_fanout.html
   plugin-development: plugin-development.html
   sketched-ar: sketched-ar.html
-last_built: 2026-06-30T00:49Z
+last_built: 2026-08-05T19:09Z
 urls:
   reference: https://bbuchsbaum.github.io/fmrireg/reference
   article: https://bbuchsbaum.github.io/fmrireg/articles

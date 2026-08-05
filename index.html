@@ -82,17 +82,6 @@
   <main id="main" class="col-md-9"><div class="section level1">
 
 <p><a href="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main" class="external-link"><img src="https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg" alt="Codecov test coverage"></a> <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html" class="external-link"><img src="https://img.shields.io/badge/License-GPL_v2-blue.svg" alt="License: GPL v2"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></p>
-<p>library(fmrireg)</p>
-</div>
-<div class="section level1">
-<h1 id="define-the-temporal-structure-2-runs-100-scans-each-tr--2s">Define the temporal structure: 2 runs, 100 scans each, TR = 2s<a class="anchor" aria-label="anchor" href="#define-the-temporal-structure-2-runs-100-scans-each-tr--2s"></a>
-</h1>
-<p>sframe &lt;- sampling_frame(blocklens = c(100, 100), TR = 2)</p>
-</div>
-<div class="section level1">
-<h1 id="build-an-event-model-from-an-experimental-design-table">Build an event model from an experimental design table<a class="anchor" aria-label="anchor" href="#build-an-event-model-from-an-experimental-design-table"></a>
-</h1>
-<p>emod &lt;- event_model(onset ~ hrf(condition, basis = “spmg1”), data = design_table, block = ~ run, sampling_frame = sframe)</p>
 </div>
 <div class="section level1">
 <h1 id="add-a-baseline-model-with-polynomial-drift">Add a baseline model with polynomial drift<a class="anchor" aria-label="anchor" href="#add-a-baseline-model-with-polynomial-drift"></a>
@@ -230,7 +219,7 @@ https://github.com/bbuchsbaum/fmrireg</code></pre>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
