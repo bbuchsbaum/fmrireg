@@ -1189,9 +1189,7 @@ pull_stat_revised <- function(x, type, element) {
       stop("No simple contrasts for this model.")
     }
     cnames <- ret$name
-    # Extract the specific element (e.g., estimate), which is a list(vector)
-    # Then extract the vector itself (element [[1]]) before binding
-    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]][[1]]) %>% 
+    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]]) %>%
              dplyr::bind_cols()
     names(out) <- cnames
     out
@@ -1201,9 +1199,7 @@ pull_stat_revised <- function(x, type, element) {
       stop("No F contrasts for this model.")
     }
     cnames <- ret$name
-    # Extract the specific element (e.g., estimate), which is list(vector)
-    # Then extract the vector itself (element [[1]]) before binding
-    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]][[1]]) %>% 
+    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]]) %>%
              dplyr::bind_cols()
     names(out) <- cnames
     out
@@ -1515,15 +1511,16 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
             prob_full <- dat$prob
             sigma_full <- if ("sigma" %in% names(dat)) dat$sigma else NULL
             
-            # Re-package combined data for this contrast
+            # Re-package combined data using the canonical contrast schema:
+            # one row per voxel and one atomic column per statistic.
             combined_data_tibble <- dplyr::tibble(
-                estimate = list(estimate_full), 
-                se = list(se_full),             
-                stat = list(stat_full),          
-                prob = list(prob_full)           
+                estimate = estimate_full,
+                se = se_full,
+                stat = stat_full,
+                prob = prob_full
             )
             if (!is.null(sigma_full)) {
-                combined_data_tibble$sigma = list(sigma_full)
+                combined_data_tibble$sigma = sigma_full
             }
 
             # Take metadata from the first chunk's entry for this contrast

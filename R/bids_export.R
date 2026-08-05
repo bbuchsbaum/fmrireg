@@ -854,7 +854,7 @@ write_results.fmri_lm <- function(x,
       # Vectorized assignment using mask indices
       for (j in seq_along(available_stats)) {
         internal_stat_name <- mapped_stats[j]
-        stat_values <- contrast_data[[internal_stat_name]][[1]]
+        stat_values <- as.vector(contrast_data[[internal_stat_name]])
         if (length(stat_values) != n_mask_voxels) {
           stop(
             "Statistic '", available_stats[[j]], "' for contrast '", contrast_name,
@@ -933,7 +933,7 @@ write_results.fmri_lm <- function(x,
 
       for (j in seq_along(available_stats)) {
         internal_stat_name <- mapped_stats[j]
-        stat_values <- contrast_data[[internal_stat_name]][[1]]
+        stat_values <- as.vector(contrast_data[[internal_stat_name]])
         if (length(stat_values) != n_mask_voxels) {
           stop(
             "Statistic '", available_stats[[j]], "' for contrast '", contrast_name,

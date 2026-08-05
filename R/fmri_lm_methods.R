@@ -148,11 +148,13 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
   }
 
   cols <- lapply(key_cols, function(nm) {
-    mats <- nested[[nm]]
-    if (length(mats) == 0 || is.null(mats[[1]])) {
+    values <- nested[[nm]]
+    if (length(values) == 0 || is.null(values[[1]])) {
       NULL
+    } else if (block == "betas") {
+      values[[1]]
     } else {
-      mats[[1]]
+      as.vector(values)
     }
   })
   names(cols) <- key_cols
@@ -452,12 +454,12 @@ coef_image.fmri_lm <- function(object, coef = 1,
   } else if (type == "contrasts") {
     ct <- object$result$contrasts
     simple <- ct[ct$type == "contrast", , drop = FALSE]
-    values <- simple$data[[idx]][[element]][[1]]
+    values <- as.vector(simple$data[[idx]][[element]])
   } else {
     # F-contrasts
     ct <- object$result$contrasts
     fcons <- ct[ct$type == "Fcontrast", , drop = FALSE]
-    values <- fcons$data[[idx]][[element]][[1]]
+    values <- as.vector(fcons$data[[idx]][[element]])
   }
 
   # ---- reconstruct spatial image if possible ----
