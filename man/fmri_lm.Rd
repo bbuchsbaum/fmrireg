@@ -15,7 +15,7 @@ fmri_lm(formula, ...)
   dataset,
   durations = 0,
   drop_empty = TRUE,
-  robust = FALSE,
+  robust = NULL,
   robust_options = NULL,
   ar_options = NULL,
   volume_weights_options = NULL,
@@ -24,7 +24,7 @@ fmri_lm(formula, ...)
   nchunks = 10,
   use_fast_path = TRUE,
   progress = FALSE,
-  ar_voxelwise = FALSE,
+  ar_voxelwise = NULL,
   parallel_voxels = FALSE,
   cor_struct = NULL,
   cor_iter = NULL,
@@ -43,7 +43,7 @@ fmri_lm(formula, ...)
 \method{fmri_lm}{fmri_model}(
   formula,
   dataset = NULL,
-  robust = FALSE,
+  robust = NULL,
   robust_options = NULL,
   ar_options = NULL,
   volume_weights_options = NULL,
@@ -52,7 +52,7 @@ fmri_lm(formula, ...)
   nchunks = 10,
   use_fast_path = TRUE,
   progress = FALSE,
-  ar_voxelwise = FALSE,
+  ar_voxelwise = NULL,
   parallel_voxels = FALSE,
   cor_struct = NULL,
   cor_iter = NULL,
@@ -109,7 +109,8 @@ preprocessing support); it is retained mainly as a parity oracle.}
 
 \item{progress}{Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.}
 
-\item{ar_voxelwise}{Logical. Estimate AR parameters voxel-wise (overrides \code{ar_options$voxelwise}).}
+\item{ar_voxelwise}{Logical. Estimate AR parameters voxel-wise. Shorthand for
+\code{ar_options$voxelwise}; supplying both with different values is an error.}
 
 \item{parallel_voxels}{Logical. Parallelize across voxels where supported;
 this does not control chunkwise execution.}

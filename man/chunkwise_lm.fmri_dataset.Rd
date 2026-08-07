@@ -32,7 +32,7 @@
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
 
-\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
+\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{TRUE}.}
 
 \item{progress}{Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.}
 

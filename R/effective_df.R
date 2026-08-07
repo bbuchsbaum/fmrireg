@@ -1,90 +1,135 @@
 #' Calculate Effective Degrees of Freedom
 #'
-#' Calculates effective degrees of freedom for robust regression and/or
-#' autoregressive models. This adjustment accounts for the loss of efficiency
-#' when using robust estimators or AR error structures.
+#' Residual degrees of freedom for a fit, adjusted for robust down-weighting and
+#' -- when the information is supplied -- for residual correlation that survives
+#' prewhitening.
 #'
 #' @param n Integer. Number of observations.
 #' @param p Integer. Number of parameters.
 #' @param robust_weights Numeric vector of robust weights (NULL if not robust).
-#' @param ar_order Integer. Order of AR model (0 if no AR).
-#' @param method Character. Method for DF adjustment ("satterthwaite", "simple").
+#' @param ar_order Integer. Order of the AR model, or 0. Retained for backward
+#'   compatibility and for reporting; see Details for why it does not by itself
+#'   reduce the degrees of freedom.
+#' @param method Character. `"residual"` (default) uses `n - p`.
+#'   `"satterthwaite"` computes the Satterthwaite approximation and requires
+#'   both `X` and `resid_cov`. `"simple"` is accepted as an alias for
+#'   `"residual"`.
+#' @param X Numeric matrix. The design actually fitted (already whitened, if
+#'   whitening was applied). Required for `method = "satterthwaite"`.
+#' @param resid_cov Numeric matrix. Correlation (or covariance) of the errors of
+#'   the model as fitted -- that is, *after* any whitening. Required for
+#'   `method = "satterthwaite"`. Supply the identity, or omit, when whitening is
+#'   believed exact.
 #'
-#' @return Numeric. Adjusted degrees of freedom.
+#' @return Numeric. Effective residual degrees of freedom, at least 1.
 #'
 #' @details
-#' For robust regression, the effective DF is reduced based on the 
-#' downweighting of outliers. For AR models, DF is reduced based on
-#' the autocorrelation structure.
+#' Write \eqn{R = I - X(X'X)^{-1}X'} for the residual-forming matrix of the model
+#' as fitted, and \eqn{V} for the correlation of that model's errors. Then
+#' \eqn{e'e} is a quadratic form whose Satterthwaite degrees of freedom are
+#' \deqn{\nu = \mathrm{tr}(RV)^2 / \mathrm{tr}(RVRV).}
 #'
-#' The Satterthwaite approximation provides a more accurate adjustment
-#' but requires additional computation.
+#' When whitening succeeds, \eqn{V = I} and this reduces exactly to
+#' \eqn{\mathrm{rank}(R) = n - p}. That is why `ar_order` alone does not reduce
+#' the degrees of freedom: fmrireg's AR path *whitens* the data and then fits by
+#' ordinary least squares, so if the filter is adequate the whitened residuals
+#' already carry \eqn{n - p} degrees of freedom, and reducing them again would
+#' double-count a correction that has already been applied.
+#'
+#' Any shortfall comes from the filter being imperfect, not from the AR order,
+#' and it is captured by passing the post-whitening `resid_cov` and using
+#' `method = "satterthwaite"`.
+#'
+#' Robust down-weighting is handled separately and multiplicatively, by
+#' \eqn{\sum_i w_i / n}.
+#'
+#' @section History:
+#' Before 2026-08-07 this function multiplied the residual degrees of freedom by
+#' \eqn{1 / (1 + 2\sum_k (1 - k/n))} whenever `ar_order > 0`. That factor is the
+#' variance inflation one would obtain if *every* autocorrelation equalled 1, it
+#' never depended on the fitted AR coefficients, and it was applied on top of
+#' whitening. At n = 200, p = 12, AR(1) it returned 62.9 regardless of the true
+#' autocorrelation, where a coefficient-aware calculation spans roughly 170 to 10
+#' as phi runs from 0.05 to 0.9. The result was conservative -- it cost power
+#' rather than inflating false positives -- but it had no basis, and
+#' `method = "satterthwaite"` was a verbatim duplicate of `method = "simple"`.
 #'
 #' @keywords internal
 #' @noRd
-calculate_effective_df <- function(n, p, robust_weights = NULL, 
-                                   ar_order = 0, method = c("simple", "satterthwaite")) {
+calculate_effective_df <- function(n, p, robust_weights = NULL,
+                                   ar_order = 0,
+                                   method = c("residual", "satterthwaite", "simple"),
+                                   X = NULL, resid_cov = NULL) {
   method <- match.arg(method)
-  
-  # Base degrees of freedom
-  df_base <- n - p
-  
-  # Adjustment for robust regression
+  if (identical(method, "simple")) method <- "residual"
+
+  n <- as.numeric(n)
+  p <- as.numeric(p)
+  if (!is.finite(n) || !is.finite(p) || n <= p) {
+    return(1)
+  }
+
+  df_base <- if (identical(method, "satterthwaite")) {
+    if (is.null(X) || is.null(resid_cov)) {
+      stop("method = 'satterthwaite' requires both `X` and `resid_cov`.",
+           call. = FALSE)
+    }
+    .satterthwaite_df(X, resid_cov)
+  } else {
+    n - p
+  }
+
   df_robust_adjust <- 1
   if (!is.null(robust_weights)) {
-    # Effective sample size based on weights
-    # Weights close to 0 indicate outliers that don't contribute
-    eff_n <- sum(robust_weights)
-    df_robust_adjust <- eff_n / n
-  }
-  
-  # Adjustment for AR models
-  df_ar_adjust <- 1
-  if (ar_order > 0) {
-    # With only AR order (no coefficients), use a conservative
-    # correlation-inflation approximation for effective sample size.
-    # This avoids the near-no-op behavior of (n - ar_order) / n.
-    if (method == "simple") {
-      k <- seq_len(ar_order)
-      denom <- 1 + 2 * sum(1 - k / n)
-      df_ar_adjust <- 1 / max(denom, 1)
-    } else {
-      # Satterthwaite-style adjustment would go here
-      # For now, match the conservative simple method.
-      k <- seq_len(ar_order)
-      denom <- 1 + 2 * sum(1 - k / n)
-      df_ar_adjust <- 1 / max(denom, 1)
+    w <- robust_weights[is.finite(robust_weights)]
+    if (length(w)) {
+      # Down-weighting every observation to zero leaves no effective data, so the
+      # adjustment is 0 and the floor below takes over.
+      df_robust_adjust <- sum(w) / length(w)
     }
   }
-  
-  # Combined effective DF
-  df_effective <- df_base * df_robust_adjust * df_ar_adjust
-  
-  # Ensure positive
-  max(df_effective, 1)
+
+  max(df_base * df_robust_adjust, 1)
 }
 
-#' Calculate Sandwich Variance Estimator
+#' Satterthwaite degrees of freedom for a residual sum of squares
 #'
-#' Computes the sandwich (robust) variance estimator for regression
-#' coefficients. This is useful when model assumptions are violated.
-#'
-#' @param X Design matrix.
-#' @param residuals Vector of residuals.
-#' @param XtXinv Inverse of X'X (can be weighted).
-#' @param weights Optional weights (for robust regression).
-#'
-#' @return Matrix. Sandwich variance-covariance matrix.
-#'
-#' @details
-#' The sandwich estimator is computed as:
-#' \deqn{V = (X'X)^{-1} X' diag(e^2) X (X'X)^{-1}}
-#' 
-#' where e are the residuals. This provides valid standard errors
-#' even under heteroscedasticity.
+#' `tr(RV)^2 / tr(RVRV)` with `R = I - X(X'X)^-1 X'`. Computed without forming
+#' `R` explicitly: with `H = X(X'X)^-1X'`, `tr(RV) = tr(V) - tr(HV)` and
+#' `tr(RVRV) = tr(VV) - 2 tr(HVV) + tr(HVHV)`, each of which needs only `n x p`
+#' and `p x p` products.
 #'
 #' @keywords internal
 #' @noRd
+.satterthwaite_df <- function(X, V) {
+  X <- as.matrix(X)
+  n <- nrow(X)
+  if (is.null(dim(V))) V <- diag(as.numeric(V), n)
+  V <- as.matrix(V)
+  stopifnot(nrow(V) == n, ncol(V) == n)
+
+  XtX <- crossprod(X)
+  XtXinv <- tryCatch(solve(XtX), error = function(e) {
+    sv <- svd(XtX)
+    keep <- sv$d > max(sv$d) * .Machine$double.eps^0.5
+    sv$v[, keep, drop = FALSE] %*% ((1 / sv$d[keep]) * t(sv$u[, keep, drop = FALSE]))
+  })
+
+  A  <- X %*% XtXinv          # n x p; H = A X'
+  VX <- V %*% X               # n x p
+  B  <- crossprod(X, VX)      # p x p; X' V X
+
+  # tr(RV)   = tr(V) - tr(HV)
+  # tr(RVRV) = tr(VV) - 2 tr(HVV) + tr(HVHV),  using tr(VHV) = tr(HVV)
+  tr_RV   <- sum(diag(V)) - sum(A * VX)
+  tr_HVV  <- sum(A * (V %*% VX))
+  BG      <- B %*% XtXinv
+  tr_RVRV <- sum(V * t(V)) - 2 * tr_HVV + sum(BG * t(BG))
+
+  if (!is.finite(tr_RV) || !is.finite(tr_RVRV) || tr_RVRV <= 0) return(1)
+  max(tr_RV^2 / tr_RVRV, 1)
+}
+
 calculate_sandwich_variance <- function(X, residuals, XtXinv, weights = NULL) {
   n <- nrow(X)
   p <- ncol(X)

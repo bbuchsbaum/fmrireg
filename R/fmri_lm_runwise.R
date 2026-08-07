@@ -14,7 +14,7 @@ NULL
 #' @param contrast_objects The list of full contrast objects.
 #' @param cfg An \code{fmri_lm_config} object containing all fitting options.
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
-#' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
+#' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{TRUE}.
 #' @param progress Logical. Display a progress bar for run processing. Default is \code{FALSE}.
 #' @param phi_fixed Optional fixed AR parameters.
 #' @param sigma_fixed Optional fixed robust scale estimate.
@@ -380,6 +380,12 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
     n_voxels <- ncol(Y_run)
     n_timepoints <- nrow(Y_run)
     p <- ncol(X_run)
+
+    # X_run does not vary by voxel, so its projection is computed once here
+    # rather than inside the per-voxel loops. .fast_preproject() is not cheap --
+    # besides qr(X) it forms qr.coef(qr_decomp, diag(n)), an n x n solve -- and
+    # it was previously recomputed for every voxel and discarded.
+    proj_run_unwhitened <- .fast_preproject(X_run)
     
     # Storage for voxel-wise results
     betas_voxelwise <- matrix(NA_real_, p, n_voxels)
@@ -408,8 +414,8 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
         
         # Initial OLS fit
         Y_voxel_mat <- matrix(y_voxel, ncol = 1)
-        proj_voxel <- .fast_preproject(X_run)
-        glm_ctx_voxel <- glm_context(X = X_run, Y = Y_voxel_mat, proj = proj_voxel)
+        glm_ctx_voxel <- glm_context(X = X_run, Y = Y_voxel_mat,
+                                     proj = proj_run_unwhitened)
         initial_fit <- solve_glm_core(glm_ctx_voxel)
         
         # Estimate voxel-specific AR parameters
@@ -482,8 +488,8 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
         
         # Initial OLS fit
         Y_voxel_mat <- matrix(y_voxel, ncol = 1)
-        proj_voxel <- .fast_preproject(X_run)
-        glm_ctx_voxel <- glm_context(X = X_run, Y = Y_voxel_mat, proj = proj_voxel)
+        glm_ctx_voxel <- glm_context(X = X_run, Y = Y_voxel_mat,
+                                     proj = proj_run_unwhitened)
         initial_fit <- solve_glm_core(glm_ctx_voxel)
         
         # Estimate voxel-specific AR parameters

@@ -11,23 +11,34 @@ test_that("calculate_effective_df works correctly for basic cases", {
   df_eff <- fmrireg:::calculate_effective_df(n, p)
   expect_equal(df_eff, n - p)
   
-  # AR adjustment
+  # AR order alone does not reduce the df. fmrireg whitens before fitting, so the
+  # whitened residuals already carry n - p; deflating them again would
+  # double-count. Any genuine shortfall comes from the filter being imperfect and
+  # is measured by method = "satterthwaite" with the post-whitening covariance.
+  # (Before 2026-08-07 these returned ~31.8 and ~19.1 for every autocorrelation.)
   df_ar1 <- fmrireg:::calculate_effective_df(n, p, ar_order = 1)
-  expect_lt(df_ar1, n - p)  # Should be less due to AR correction
-  expect_gt(df_ar1, 0)      # Should still be positive
-  
+  expect_equal(df_ar1, n - p)
+
   df_ar2 <- fmrireg:::calculate_effective_df(n, p, ar_order = 2)
-  expect_lt(df_ar2, df_ar1)  # Higher AR order = more df loss
-  
+  expect_equal(df_ar2, n - p)
+
+  # Residual correlation that survives whitening does reduce it
+  X <- cbind(1, matrix(rnorm(n * (p - 1)), n, p - 1))
+  V <- 0.6^abs(outer(seq_len(n), seq_len(n), "-"))
+  df_satt <- fmrireg:::calculate_effective_df(n, p, method = "satterthwaite",
+                                              X = X, resid_cov = V)
+  expect_lt(df_satt, n - p)
+  expect_gt(df_satt, 0)
+
   # Robust adjustment
   weights <- rep(0.8, n)
   df_robust <- fmrireg:::calculate_effective_df(n, p, robust_weights = weights)
   expect_lt(df_robust, n - p)  # Downweighting reduces effective df
-  
-  # Combined adjustment
+
+  # Combined adjustment: robust scaling applies on top of the residual df
   df_combined <- fmrireg:::calculate_effective_df(n, p, ar_order = 1, robust_weights = weights)
+  expect_equal(df_combined, df_robust)
   expect_lt(df_combined, df_ar1)
-  expect_lt(df_combined, df_robust)
 })
 
 test_that("calculate_effective_df handles edge cases", {

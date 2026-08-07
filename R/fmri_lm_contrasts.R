@@ -272,13 +272,11 @@ compute_sandwich_variance <- function(X, residuals, type = "HC1") {
   if (ncol(residuals) > 1) {
     meat <- matrix(0, p, p)
     for (v in 1:ncol(residuals)) {
-      Xe <- X * e2[, v]
-      meat <- meat + crossprod(Xe)
+      meat <- meat + crossprod(X, X * e2[, v])
     }
     meat <- meat / ncol(residuals)
   } else {
-    Xe <- X * as.vector(e2)
-    meat <- crossprod(Xe)
+    meat <- crossprod(X, X * as.vector(e2))
   }
   
   # Sandwich
