@@ -408,11 +408,19 @@ coefficients only (no moving-average terms).</p>
 </h3>
 <p>Real fMRI runs sometimes contain entire time points corrupted by
 motion or scanner artifacts. The <code>fmri_lm</code> function can
-mitigate their impact by enabling row-wise robust weighting. When
-<code>robust = TRUE</code>, an Iteratively Reweighted Least Squares loop
-down-weights frames with large residuals. The <code>robust_psi</code>
-argument selects the weighting function and <code>robust_max_iter</code>
-controls the number of iterations.</p>
+mitigate their impact by enabling row-wise robust weighting: an
+Iteratively Reweighted Least Squares loop down-weights frames with large
+residuals. Name the weighting function directly with
+<code>robust = "huber"</code> or <code>robust = "bisquare"</code>, and
+control the number of iterations with <code>robust_max_iter</code>.
+<code>robust = TRUE</code> is shorthand for <code>"huber"</code>.</p>
+<p>Each option has one spelling per call. <code>robust</code>,
+<code>robust_psi</code>, and <code>robust_options$type</code> all set
+the same field, so supplying two of them with <em>different</em> values
+is an error rather than a silent choice — <code>robust = TRUE</code>
+together with <code>robust_psi = "bisquare"</code> is a contradiction,
+since <code>TRUE</code> already means Huber. The same rule applies to
+the AR shorthands and their <code>ar_options</code> entries.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_robust</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span>
@@ -420,8 +428,7 @@ controls the number of iterations.</p>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
 <span>  strategy <span class="op">=</span> <span class="st">"chunkwise"</span>,</span>
 <span>  nchunks <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  robust <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  robust_psi <span class="op">=</span> <span class="st">"huber"</span>,</span>
+<span>  robust <span class="op">=</span> <span class="st">"huber"</span>,</span>
 <span>  robust_max_iter <span class="op">=</span> <span class="fl">2</span></span>
 <span><span class="op">)</span></span>
 <span></span>

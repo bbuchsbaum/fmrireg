@@ -299,10 +299,18 @@ moving-average terms).
 
 Real fMRI runs sometimes contain entire time points corrupted by motion
 or scanner artifacts. The `fmri_lm` function can mitigate their impact
-by enabling row-wise robust weighting. When `robust = TRUE`, an
-Iteratively Reweighted Least Squares loop down-weights frames with large
-residuals. The `robust_psi` argument selects the weighting function and
-`robust_max_iter` controls the number of iterations.
+by enabling row-wise robust weighting: an Iteratively Reweighted Least
+Squares loop down-weights frames with large residuals. Name the
+weighting function directly with `robust = "huber"` or
+`robust = "bisquare"`, and control the number of iterations with
+`robust_max_iter`. `robust = TRUE` is shorthand for `"huber"`.
+
+Each option has one spelling per call. `robust`, `robust_psi`, and
+`robust_options$type` all set the same field, so supplying two of them
+with *different* values is an error rather than a silent choice —
+`robust = TRUE` together with `robust_psi = "bisquare"` is a
+contradiction, since `TRUE` already means Huber. The same rule applies
+to the AR shorthands and their `ar_options` entries.
 
 ``` r
 
@@ -312,8 +320,7 @@ model_robust <- fmri_lm(
   dataset = dataset,
   strategy = "chunkwise",
   nchunks = 1,
-  robust = TRUE,
-  robust_psi = "huber",
+  robust = "huber",
   robust_max_iter = 2
 )
 
