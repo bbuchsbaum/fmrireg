@@ -339,13 +339,14 @@
       "@type": "SoftwareApplication",
       "identifier": "fmriAR",
       "name": "fmriAR",
+      "version": ">= 0.3.3",
       "provider": {
         "@id": "https://cran.r-project.org",
         "@type": "Organization",
         "name": "Comprehensive R Archive Network (CRAN)",
         "url": "https://cran.r-project.org"
       },
-      "sameAs": "https://CRAN.R-project.org/package=fmriAR"
+      "sameAs": "https://github.com/bbuchsbaum/fmriAR"
     },
     "3": {
       "@type": "SoftwareApplication",
@@ -710,7 +711,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "5078.807KB",
+  "fileSize": "5126.945KB",
   "citation": [
     {
       "@type": "SoftwareSourceCode",
