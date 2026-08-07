@@ -18,7 +18,7 @@ fmri_lm(
   dataset,
   durations = 0,
   drop_empty = TRUE,
-  robust = FALSE,
+  robust = NULL,
   robust_options = NULL,
   ar_options = NULL,
   volume_weights_options = NULL,
@@ -27,7 +27,7 @@ fmri_lm(
   nchunks = 10,
   use_fast_path = TRUE,
   progress = FALSE,
-  ar_voxelwise = FALSE,
+  ar_voxelwise = NULL,
   parallel_voxels = FALSE,
   cor_struct = NULL,
   cor_iter = NULL,
@@ -47,7 +47,7 @@ fmri_lm(
 fmri_lm(
   formula,
   dataset = NULL,
-  robust = FALSE,
+  robust = NULL,
   robust_options = NULL,
   ar_options = NULL,
   volume_weights_options = NULL,
@@ -56,7 +56,7 @@ fmri_lm(
   nchunks = 10,
   use_fast_path = TRUE,
   progress = FALSE,
-  ar_voxelwise = FALSE,
+  ar_voxelwise = NULL,
   parallel_voxels = FALSE,
   cor_struct = NULL,
   cor_iter = NULL,
@@ -154,8 +154,9 @@ fmri_lm(
 
 - ar_voxelwise:
 
-  Logical. Estimate AR parameters voxel-wise (overrides
-  `ar_options$voxelwise`).
+  Logical. Estimate AR parameters voxel-wise. Shorthand for
+  `ar_options$voxelwise`; supplying both with different values is an
+  error.
 
 - parallel_voxels:
 

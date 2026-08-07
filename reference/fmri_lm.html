@@ -84,7 +84,7 @@ alternative method can be used with a preconstructed
 <span>  <span class="va">dataset</span>,</span>
 <span>  durations <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  drop_empty <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  robust <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  robust <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  robust_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ar_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  volume_weights_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -93,7 +93,7 @@ alternative method can be used with a preconstructed
 <span>  nchunks <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  use_fast_path <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  ar_voxelwise <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  ar_voxelwise <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  parallel_voxels <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  cor_struct <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  cor_iter <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -113,7 +113,7 @@ alternative method can be used with a preconstructed
 <span><span class="fu">fmri_lm</span><span class="op">(</span></span>
 <span>  <span class="va">formula</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  robust <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  robust <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  robust_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ar_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  volume_weights_options <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -122,7 +122,7 @@ alternative method can be used with a preconstructed
 <span>  nchunks <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  use_fast_path <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  ar_voxelwise <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  ar_voxelwise <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  parallel_voxels <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  cor_struct <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  cor_iter <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -216,7 +216,8 @@ preprocessing support); it is retained mainly as a parity oracle.</p></dd>
 
 
 <dt id="arg-ar-voxelwise">ar_voxelwise<a class="anchor" aria-label="anchor" href="#arg-ar-voxelwise"></a></dt>
-<dd><p>Logical. Estimate AR parameters voxel-wise (overrides <code>ar_options$voxelwise</code>).</p></dd>
+<dd><p>Logical. Estimate AR parameters voxel-wise. Shorthand for
+<code>ar_options$voxelwise</code>; supplying both with different values is an error.</p></dd>
 
 
 <dt id="arg-parallel-voxels">parallel_voxels<a class="anchor" aria-label="anchor" href="#arg-parallel-voxels"></a></dt>

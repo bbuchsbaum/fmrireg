@@ -25,8 +25,8 @@ fmod \<- fmri_model(emod, bmod) fit \<- fmri_lm(fmod, dataset = dset)
       supports categorical events, continuous modulators, and multi-basis expansions.
     - **Contrast system** -- Flexible contrasts via formulas, including pairwise,
       polynomial, and F-contrasts.
-    - **Robust estimation** -- OLS, iteratively reweighted least squares (IWLS),
-      and sandwich variance estimators.
+    - **Robust estimation** -- OLS and iteratively reweighted least squares (IWLS)
+      with Huber and Tukey bisquare psi functions.
     - **AR correction** -- Autoregressive noise modeling via the
       [fmriAR](https://github.com/bbuchsbaum/fmriAR) package.
     - **Performance** -- C++ solvers (Rcpp/RcppArmadillo) with optional

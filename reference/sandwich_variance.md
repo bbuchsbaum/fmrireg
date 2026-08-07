@@ -23,25 +23,32 @@ version is: \$\$V\_{sandwich} = (X'WX)^{-1} X'W \Omega WX
 
 ## Usage in fmrireg
 
-Sandwich variance estimation is automatically used when:
+Sandwich variance estimation is **not** currently applied by
+[`fmri_lm`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md).
+The helpers documented here are available for direct use, but no fitting
+path calls them: the robust path reports a model-based
+weighted-least-squares variance, \\\hat\sigma^2\_{robust} \\
+\mathrm{diag}((X'WX)^{-1})\\, not a sandwich.
 
-- Robust regression is enabled (using M-estimators)
-
-- AR modeling is combined with robust regression
-
-- Heteroscedasticity is suspected in the residuals
+Applying a sandwich to the robust path correctly would require the
+M-estimator influence-function form, whose weights and influence matrix
+are voxel-dependent, rather than the ordinary-least-squares expression
+above.
 
 ## Effective Degrees of Freedom
 
-When using robust regression and/or AR models, the effective degrees of
-freedom are adjusted to account for:
+Robust down-weighting reduces the residual degrees of freedom
+multiplicatively: \$\$df\_{effective} = (n - p) \times \frac{\sum_i
+w_i}{n}.\$\$
 
-- Downweighting of outliers in robust regression
-
-- Loss of degrees of freedom due to AR parameter estimation
-
-The adjustment formula is: \$\$df\_{effective} = df\_{base} \times
-\frac{\sum w_i}{n} \times \frac{n - p\_{AR}}{n}\$\$
+AR order does **not** enter this formula. fmrireg whitens the data and
+then fits by ordinary least squares, so when the filter is adequate the
+whitened residuals already carry \\n - p\\ degrees of freedom and
+reducing them again would double-count. A filter that leaves residual
+correlation behind does cost degrees of freedom, and that shortfall is
+measured by the Satterthwaite approximation \$\$\nu = \mathrm{tr}(RV)^2
+/ \mathrm{tr}(RVRV)\$\$ applied to the post-whitening covariance \\V\\,
+which reduces exactly to \\n - p\\ when \\V = I\\.
 
 ## Implementation Notes
 

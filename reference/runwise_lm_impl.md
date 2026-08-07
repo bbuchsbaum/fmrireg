@@ -46,7 +46,7 @@ runwise_lm_impl(
 - use_fast_path:
 
   Logical. If `TRUE`, use matrix-based computation for speed. Default is
-  `FALSE`.
+  `TRUE`.
 
 - progress:
 

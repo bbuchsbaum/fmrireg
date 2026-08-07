@@ -248,6 +248,10 @@
 </ul></li>
 </ol><p>All 6 critical tests now pass: - ✓ AR whitening integration (now via fmriAR) - ✓ Robust fitting - ✓ Contrast computation - ✓ Effective df calculations - ✓ Bootstrap functionality - ✓ Sandwich variance estimator</p>
 <p>The refactored code is now ready for integration with the existing codebase.</p>
+<div class="section level3">
+<h3 id="correction-2026-08-07">Correction (2026-08-07)<a class="anchor" aria-label="anchor" href="#correction-2026-08-07"></a></h3>
+<p>The “sandwich variance estimator” item above overstated what shipped. Both sandwich helpers (<code>compute_sandwich_variance</code>, <code>calculate_sandwich_variance</code>) are reachable only by direct call — no <code><a href="reference/fmri_lm.html">fmri_lm()</a></code> path invokes them, and the robust path reports a model-based WLS variance instead. The test that covered them asserted only dimensions and positivity, which is why an arithmetic error (<code>X'diag(e^4)X</code> in place of <code>X'diag(e^2)X</code>, giving standard errors 3.5x too large) survived in <code>compute_sandwich_variance</code> until 2026-08-07. That error is now fixed and both helpers are checked against <code>sandwich::vcovHC</code> in <code>tests/testthat/test-variance-closed-form.R</code>; they remain unwired.</p>
+</div>
 </div>
 </div>
 
