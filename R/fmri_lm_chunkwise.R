@@ -13,7 +13,7 @@
 #' @param nchunks The number of chunks to divide the dataset into.
 #' @param cfg An \code{fmri_lm_config} object containing all fitting options.
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
-#' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.
+#' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{TRUE}.
 #' @param progress Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.
 #' @param parallel_chunks Logical. If \code{TRUE}, process chunks with
 #'   \code{future.apply::future_lapply()} using the active future plan.

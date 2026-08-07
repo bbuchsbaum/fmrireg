@@ -157,3 +157,15 @@ All 6 critical tests now pass:
 - ✓ Sandwich variance estimator
 
 The refactored code is now ready for integration with the existing codebase.
+
+### Correction (2026-08-07)
+
+The "sandwich variance estimator" item above overstated what shipped. Both
+sandwich helpers (`compute_sandwich_variance`, `calculate_sandwich_variance`)
+are reachable only by direct call — no `fmri_lm()` path invokes them, and the
+robust path reports a model-based WLS variance instead. The test that covered
+them asserted only dimensions and positivity, which is why an arithmetic error
+(`X'diag(e^4)X` in place of `X'diag(e^2)X`, giving standard errors 3.5x too
+large) survived in `compute_sandwich_variance` until 2026-08-07. That error is
+now fixed and both helpers are checked against `sandwich::vcovHC` in
+`tests/testthat/test-variance-closed-form.R`; they remain unwired.

@@ -14,7 +14,7 @@ LazyData: false
 Depends:
     R (>= 4.0.0)
 Imports:
-    fmriAR,
+    fmriAR (>= 0.3.3),
     fmrigds,
     fmridesign (>= 0.1.0),
     fmrihrf (>= 0.1.0),
@@ -80,6 +80,7 @@ Suggests:
     jsonlite
 Remotes:
     bbuchsbaum/bidser,
+    bbuchsbaum/fmriAR,
     bbuchsbaum/fmristore,
     bbuchsbaum/fmrigds@f015b7c7fa5008e2435d269aeb1882a9aa24eaf0,
     anthonynorth/roxyglobals,

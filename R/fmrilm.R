@@ -257,22 +257,36 @@ fmri_lm <- function(formula, ...) {
                                               robust_max_iter = NULL,
                                               robust_scale_scope = NULL,
                                               engine_robust_options = NULL) {
-  robust_type <- if (is.logical(robust)) {
-    if (robust) "huber" else FALSE
-  } else {
-    robust
-  }
-
   robust_options <- robust_options %||% list()
   if (!is.null(engine_robust_options)) {
     robust_options <- utils::modifyList(robust_options, engine_robust_options)
   }
-  if (!is.null(robust_type) && !("type" %in% names(robust_options))) {
-    robust_options$type <- robust_type
+
+  # `type` can be requested three ways. Previously the first non-NULL of
+  # (robust, robust_psi, robust_options$type) won by position, which made
+  # `robust_psi` unreachable (robust defaults to NULL only since this fix; it
+  # used to default to FALSE, so its branch always fired first) and let an
+  # explicit `robust = FALSE` be overridden by `robust_options$type`. Requests
+  # are now collected and a genuine disagreement is an error.
+  canon <- function(x) {
+    if (is.logical(x)) if (isTRUE(x)) "huber" else "none" else as.character(x)
   }
-  if (!is.null(robust_psi) && !("type" %in% names(robust_options))) {
-    robust_options$type <- robust_psi
+  requested <- c(
+    if (!is.null(robust))                  stats::setNames(canon(robust), "robust"),
+    if (!is.null(robust_psi))              stats::setNames(canon(robust_psi), "robust_psi"),
+    if ("type" %in% names(robust_options)) stats::setNames(canon(robust_options$type), "robust_options$type")
+  )
+  if (length(unique(requested)) > 1L) {
+    stop("Conflicting robust settings: ",
+         paste(sprintf("`%s` = %s", names(requested), sQuote(requested)), collapse = ", "),
+         ". Supply only one.", call. = FALSE)
   }
+  if (length(requested)) {
+    robust_options$type <- if (requested[[1L]] == "none") FALSE else requested[[1L]]
+  } else {
+    robust_options$type <- FALSE
+  }
+
   if (!is.null(robust_max_iter) && !("max_iter" %in% names(robust_options))) {
     robust_options$max_iter <- robust_max_iter
   }
@@ -286,7 +300,7 @@ fmri_lm <- function(formula, ...) {
 #' @keywords internal
 #' @noRd
 .fmri_lm_normalize_ar_options <- function(ar_options = NULL,
-                                          ar_voxelwise = FALSE,
+                                          ar_voxelwise = NULL,
                                           cor_struct = NULL,
                                           cor_iter = NULL,
                                           cor_global = NULL,
@@ -298,23 +312,35 @@ fmri_lm <- function(formula, ...) {
     ar_options <- utils::modifyList(ar_options, engine_ar_options)
   }
 
-  if (!is.null(cor_struct) && !("struct" %in% names(ar_options))) {
-    ar_options$struct <- cor_struct
-  }
-  if (!is.null(cor_iter) && !("iter_gls" %in% names(ar_options))) {
-    ar_options$iter_gls <- cor_iter
-  }
-  if (!is.null(cor_global) && !("global" %in% names(ar_options))) {
-    ar_options$global <- cor_global
-  }
-  if (!is.null(ar1_exact_first) && !("exact_first" %in% names(ar_options))) {
-    ar_options$exact_first <- ar1_exact_first
-  }
-  if (!is.null(ar_p) && !("p" %in% names(ar_options))) {
-    ar_options$p <- ar_p
+  # Each shorthand is an alias for one `ar_options` key. Previously the list won
+  # by position and the shorthand was dropped without a word -- which also made
+  # the documented precedence for `ar_voxelwise` ("overrides ar_options$voxelwise")
+  # exactly backwards. A shorthand that agrees with the list is accepted; one that
+  # disagrees is an error rather than a silent choice.
+  aliases <- list(
+    cor_struct      = list(key = "struct",      value = cor_struct),
+    cor_iter        = list(key = "iter_gls",    value = cor_iter),
+    cor_global      = list(key = "global",      value = cor_global),
+    ar1_exact_first = list(key = "exact_first", value = ar1_exact_first),
+    ar_p            = list(key = "p",           value = ar_p),
+    ar_voxelwise    = list(key = "voxelwise",   value = ar_voxelwise)
+  )
+  for (nm in names(aliases)) {
+    a <- aliases[[nm]]
+    if (is.null(a$value)) next
+    if (a$key %in% names(ar_options)) {
+      if (!isTRUE(all.equal(ar_options[[a$key]], a$value))) {
+        stop(sprintf(
+          "Conflicting AR settings: `%s` = %s and `ar_options$%s` = %s. Supply only one.",
+          nm, sQuote(format(a$value)), a$key, sQuote(format(ar_options[[a$key]]))),
+          call. = FALSE)
+      }
+    } else {
+      ar_options[[a$key]] <- a$value
+    }
   }
   if (!("voxelwise" %in% names(ar_options))) {
-    ar_options$voxelwise <- ar_voxelwise
+    ar_options$voxelwise <- FALSE
   }
 
   if (!is.null(ar_options$order) && is.null(ar_options$struct)) {
@@ -377,7 +403,7 @@ fmri_lm <- function(formula, ...) {
                                   robust_max_iter = NULL,
                                   robust_scale_scope = NULL,
                                   ar_options = NULL,
-                                  ar_voxelwise = FALSE,
+                                  ar_voxelwise = NULL,
                                   cor_struct = NULL,
                                   cor_iter = NULL,
                                   cor_global = NULL,
@@ -390,6 +416,32 @@ fmri_lm <- function(formula, ...) {
                                   engine_ar_options = NULL,
                                   engine_robust_options = NULL,
                                   engine_cfg = NULL) {
+  # A supplied `cfg` used to replace the config wholesale, silently discarding
+  # every other configuration argument -- so `cor_struct = "ar2"` alongside a cfg
+  # naming "iid" ran iid without a word. Refuse the ambiguity instead.
+  if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
+    supplied <- c(
+      robust = !is.null(robust), robust_options = !is.null(robust_options),
+      robust_psi = !is.null(robust_psi), robust_max_iter = !is.null(robust_max_iter),
+      robust_scale_scope = !is.null(robust_scale_scope),
+      ar_options = !is.null(ar_options), ar_voxelwise = !is.null(ar_voxelwise),
+      cor_struct = !is.null(cor_struct), cor_iter = !is.null(cor_iter),
+      cor_global = !is.null(cor_global), ar1_exact_first = !is.null(ar1_exact_first),
+      ar_p = !is.null(ar_p),
+      volume_weights_options = !is.null(volume_weights_options),
+      soft_subspace_options = !is.null(soft_subspace_options),
+      volume_weights = !is.null(volume_weights),
+      nuisance_projection = !is.null(nuisance_projection)
+    )
+    if (any(supplied)) {
+      stop("`cfg` cannot be combined with other configuration arguments. ",
+           "Also supplied: ", paste0("`", names(supplied)[supplied], "`", collapse = ", "),
+           ". Put every setting in `cfg`, or drop `cfg` and use the individual arguments.",
+           call. = FALSE)
+    }
+    return(engine_cfg)
+  }
+
   robust_options <- .fmri_lm_normalize_robust_options(
     robust = robust,
     robust_options = robust_options,
@@ -417,23 +469,12 @@ fmri_lm <- function(formula, ...) {
     nuisance_projection = nuisance_projection
   )
 
-  cfg <- if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
-    engine_cfg
-  } else {
-    fmri_lm_control(
-      robust_options = robust_options,
-      ar_options = ar_options,
-      volume_weights_options = preprocessing$volume_weights_options,
-      soft_subspace_options = preprocessing$soft_subspace_options
-    )
-  }
-
-  if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
-    cfg$robust <- engine_cfg$robust
-    cfg$ar <- utils::modifyList(cfg$ar, engine_cfg$ar)
-  }
-
-  cfg
+  fmri_lm_control(
+    robust_options = robust_options,
+    ar_options = ar_options,
+    volume_weights_options = preprocessing$volume_weights_options,
+    soft_subspace_options = preprocessing$soft_subspace_options
+  )
 }
 
 #' @keywords internal
@@ -467,6 +508,32 @@ fmri_lm <- function(formula, ...) {
     stop(sprintf("Unknown engine '%s'.", engine), call. = FALSE)
   }
   spec
+}
+
+#' @keywords internal
+#' @noRd
+#' Warn about execution arguments an engine silently ignores
+#'
+#' `.fmri_lm_dispatch_engine()` is called without `strategy`, `nchunks`,
+#' `use_fast_path`, `progress`, or the `parallel_*` flags, so supplying them
+#' alongside `engine` had no effect and said nothing. Detection is via
+#' `match.call()` rather than `missing()` because these arguments have non-NULL
+#' defaults and some are reassigned by `match.arg()` before dispatch.
+#'
+#' @keywords internal
+#' @noRd
+.fmri_lm_warn_engine_ignores <- function(call, engine) {
+  ignored <- c("strategy", "nchunks", "use_fast_path", "progress",
+               "parallel_voxels", "parallel_chunks")
+  supplied <- intersect(ignored, names(call)[-1L])
+  if (length(supplied)) {
+    warning(sprintf(
+      "engine = \"%s\" ignores %s; %s control the built-in fitter only.",
+      engine, paste0("`", supplied, "`", collapse = ", "),
+      if (length(supplied) == 1L) "it controls" else "they control"),
+      call. = FALSE)
+  }
+  invisible(supplied)
 }
 
 #' @keywords internal
@@ -521,7 +588,8 @@ fmri_lm <- function(formula, ...) {
 #'   \code{FALSE} selects the formula/lm reference engine (no robust or full
 #'   preprocessing support); it is retained mainly as a parity oracle.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
-#' @param ar_voxelwise Logical. Estimate AR parameters voxel-wise (overrides \code{ar_options$voxelwise}).
+#' @param ar_voxelwise Logical. Estimate AR parameters voxel-wise. Shorthand for
+#'   \code{ar_options$voxelwise}; supplying both with different values is an error.
 #' @param parallel_voxels Logical. Parallelize across voxels where supported;
 #'   this does not control chunkwise execution.
 #' @param parallel_chunks Logical. For \code{strategy = "chunkwise"}, process
@@ -663,10 +731,10 @@ fmri_lm <- function(formula, ...) {
 #' }
 #' 
 fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE,
-                         robust = FALSE, robust_options = NULL, ar_options = NULL,
+                         robust = NULL, robust_options = NULL, ar_options = NULL,
                          volume_weights_options = NULL, soft_subspace_options = NULL,
                          strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = TRUE, progress = FALSE,
-                         ar_voxelwise = FALSE,
+                         ar_voxelwise = NULL,
                          parallel_voxels = FALSE,
                     # Individual AR parameters for backward compatibility
                     cor_struct = NULL, cor_iter = NULL, cor_global = NULL,
@@ -694,10 +762,11 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
   assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset'")
   assert_that(is.numeric(durations), msg = "'durations' must be numeric")
   assert_that(is.logical(drop_empty), msg = "'drop_empty' must be logical")
-  assert_that(is.logical(robust) || robust %in% c("huber", "bisquare"), 
-              msg = "'robust' must be logical or one of 'huber', 'bisquare'")
+  assert_that(is.null(robust) || is.logical(robust) || robust %in% c("huber", "bisquare"),
+              msg = "'robust' must be NULL, logical, or one of 'huber', 'bisquare'")
   assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
-  assert_that(is.logical(ar_voxelwise), msg = "'ar_voxelwise' must be logical")
+  assert_that(is.null(ar_voxelwise) || is.logical(ar_voxelwise),
+              msg = "'ar_voxelwise' must be NULL or logical")
   assert_that(
     is.logical(parallel_chunks) && length(parallel_chunks) == 1L && !is.na(parallel_chunks),
     msg = "'parallel_chunks' must be TRUE or FALSE"
@@ -732,6 +801,7 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
   model <- create_fmri_model(formula, block, baseline_model, dataset, durations = durations, drop_empty = drop_empty)
 
   if (!is.null(engine)) {
+    .fmri_lm_warn_engine_ignores(match.call(), engine)
     return(.fmri_lm_dispatch_engine(
       model = model,
       dataset = dataset,
@@ -755,12 +825,12 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
 #' @rdname fmri_lm
 #' @export
 fmri_lm.fmri_model <- function(formula, dataset = NULL,
-                               robust = FALSE, robust_options = NULL,
+                               robust = NULL, robust_options = NULL,
                                ar_options = NULL,
                                volume_weights_options = NULL, soft_subspace_options = NULL,
                                strategy = c("runwise", "chunkwise"), nchunks = 10,
                                use_fast_path = TRUE, progress = FALSE,
-                               ar_voxelwise = FALSE, parallel_voxels = FALSE,
+                               ar_voxelwise = NULL, parallel_voxels = FALSE,
                                cor_struct = NULL, cor_iter = NULL,
                                cor_global = NULL, ar1_exact_first = NULL,
                                ar_p = NULL,
@@ -812,6 +882,7 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
   )
 
   if (!is.null(engine)) {
+    .fmri_lm_warn_engine_ignores(match.call(), engine)
     return(.fmri_lm_dispatch_engine(
       model = formula,
       dataset = dataset,

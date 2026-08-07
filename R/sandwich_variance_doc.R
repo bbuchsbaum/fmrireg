@@ -20,19 +20,29 @@
 #' \deqn{V_{sandwich} = (X'WX)^{-1} X'W \Omega WX (X'WX)^{-1}}
 #'
 #' @section Usage in fmrireg:
-#' Sandwich variance estimation is automatically used when:
-#' - Robust regression is enabled (using M-estimators)
-#' - AR modeling is combined with robust regression
-#' - Heteroscedasticity is suspected in the residuals
+#' Sandwich variance estimation is \strong{not} currently applied by
+#' \code{\link{fmri_lm}}. The helpers documented here are available for direct
+#' use, but no fitting path calls them: the robust path reports a model-based
+#' weighted-least-squares variance,
+#' \eqn{\hat\sigma^2_{robust} \, \mathrm{diag}((X'WX)^{-1})}, not a sandwich.
+#'
+#' Applying a sandwich to the robust path correctly would require the
+#' M-estimator influence-function form, whose weights and influence matrix are
+#' voxel-dependent, rather than the ordinary-least-squares expression above.
 #'
 #' @section Effective Degrees of Freedom:
-#' When using robust regression and/or AR models, the effective degrees of
-#' freedom are adjusted to account for:
-#' - Downweighting of outliers in robust regression
-#' - Loss of degrees of freedom due to AR parameter estimation
-#' 
-#' The adjustment formula is:
-#' \deqn{df_{effective} = df_{base} \times \frac{\sum w_i}{n} \times \frac{n - p_{AR}}{n}}
+#' Robust down-weighting reduces the residual degrees of freedom multiplicatively:
+#' \deqn{df_{effective} = (n - p) \times \frac{\sum_i w_i}{n}.}
+#'
+#' AR order does \strong{not} enter this formula. fmrireg whitens the data and
+#' then fits by ordinary least squares, so when the filter is adequate the
+#' whitened residuals already carry \eqn{n - p} degrees of freedom and reducing
+#' them again would double-count. A filter that leaves residual correlation
+#' behind does cost degrees of freedom, and that shortfall is measured by the
+#' Satterthwaite approximation
+#' \deqn{\nu = \mathrm{tr}(RV)^2 / \mathrm{tr}(RVRV)}
+#' applied to the post-whitening covariance \eqn{V}, which reduces exactly to
+#' \eqn{n - p} when \eqn{V = I}.
 #'
 #' @examples
 #' \dontrun{
