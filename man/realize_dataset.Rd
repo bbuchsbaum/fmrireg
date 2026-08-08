@@ -18,5 +18,5 @@ file-backed specs this is where data first becomes addressable (still lazily,
 per the dataset backend).
 }
 \seealso{
-\code{\link[=build_model]{build_model()}}, \code{\link[=run]{run()}}
+\code{\link[=build_model]{build_model()}}, \code{\link[=run_job]{run_job()}}
 }

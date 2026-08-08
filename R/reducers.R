@@ -23,7 +23,7 @@ new_reducer <- function(fn) {
 
 #' Apply a reducer to a fitted model
 #'
-#' Internal helper used by [run()]. A \code{NULL} reducer returns the fitted
+#' Internal helper used by [run_job()]. A \code{NULL} reducer returns the fitted
 #' object unchanged (equivalent to [reduce_identity()]).
 #'
 #' @param reducer A reducer function or \code{NULL}.

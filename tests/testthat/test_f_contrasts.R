@@ -33,7 +33,7 @@ create_factorial_data <- function(n_per_cell = 20, sigma = 1) {
 # Helper to fit model using integrated solver
 fit_model <- function(X, Y, config = NULL) {
   if (is.null(config)) {
-    config <- fmrireg:::fmri_lm_config(robust = FALSE)
+    config <- fmri_lm_control()
   }
   
   # Ensure Y is matrix
@@ -333,10 +333,7 @@ test_that("F-contrasts with robust fitting", {
   dat$Y[outlier_idx] <- dat$Y[outlier_idx] + 10 * c(1, -1, 1, -1)
   
   # Fit with robust estimation
-  config_robust <- fmrireg:::fmri_lm_config(
-    robust = "huber",
-    ar_options = list(cor_struct = "none")
-  )
+  config_robust <- fmri_lm_control(robust = robust_spec("huber"))
   
   fit_robust <- fit_model(dat$X, dat$Y, config_robust)
   
@@ -465,10 +462,7 @@ test_that("F-contrasts with AR corrections", {
   Y <- X %*% c(1, 3) + as.vector(e)
   
   # Fit with AR correction
-  config_ar <- fmrireg:::fmri_lm_config(
-    robust = FALSE,
-    ar_options = list(cor_struct = "ar1", iter = 2)
-  )
+  config_ar <- fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L))
   
   fit_ar <- fit_model(X, Y, config_ar)
   

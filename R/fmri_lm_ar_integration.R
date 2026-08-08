@@ -95,7 +95,9 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
     )
   } else {
     # Estimate AR using fmriAR
-    plan <- .estimate_ar_via_fmriAR(residuals, ar_opts, run_indices)
+    plan <- .estimate_ar_via_fmriAR(
+      residuals, ar_opts, run_indices, design = X
+    )
   }
 
   # Apply whitening

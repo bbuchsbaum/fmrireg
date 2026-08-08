@@ -20,5 +20,5 @@ Builds the per-subject \code{baseline_model} (from the template's
 and combines it with the event model into an \code{fmri_model}.
 }
 \seealso{
-\code{\link[=realize_dataset]{realize_dataset()}}, \code{\link[=run]{run()}}
+\code{\link[=realize_dataset]{realize_dataset()}}, \code{\link[=run_job]{run_job()}}
 }

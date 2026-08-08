@@ -23,6 +23,17 @@ test_that("unspecified robust settings default to no robust fitting", {
   expect_false(.robust_norm(robust = FALSE)$type)
 })
 
+test_that("legacy robust settings must be scalar and non-missing", {
+  expect_error(.robust_norm(robust = c(TRUE, FALSE)), "single non-missing")
+  expect_error(.robust_norm(robust = NA), "single non-missing")
+  expect_error(.robust_norm(robust = 1), "must be TRUE")
+  expect_error(.robust_norm(robust = NULL, robust_psi = c("huber", "bisquare")),
+               "single non-missing")
+  expect_error(.robust_norm(robust = NULL,
+                            robust_options = list(type = c("huber", "bisquare"))),
+               "single non-missing")
+})
+
 test_that("an explicit robust = FALSE is not silently overridden", {
   # Regression: robust = FALSE + robust_options = list(type = "huber") used to
   # return "huber", i.e. explicitly disabling robust fitting enabled it.
@@ -109,7 +120,18 @@ test_that("cfg alone is passed through unchanged", {
   cfg <- fmri_lm_control(ar_options = list(struct = "ar2"))
   out <- fmrireg:::.fmri_lm_build_config(robust = NULL, engine_cfg = cfg)
   expect_equal(out$ar$struct, "ar2")
-  expect_s3_class(out, "fmri_lm_config")
+  expect_s3_class(out, "fmri_lm_control")
+})
+
+test_that("malformed cfg is rejected instead of silently ignored", {
+  expect_error(
+    fmrireg:::.fmri_lm_build_config(robust = NULL, engine_cfg = 42),
+    "created by `fmri_lm_control\\(\\)`"
+  )
+  expect_error(
+    fmrireg:::.fmri_lm_build_config(robust = NULL, engine_cfg = list()),
+    "created by `fmri_lm_control\\(\\)`"
+  )
 })
 
 # ------------------------------------------------------------------ engine ----

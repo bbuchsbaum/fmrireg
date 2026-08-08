@@ -18,7 +18,9 @@ resource_files:
 - albers-header.html
 
 vignette: |
-  %\VignetteIndexEntry{Contrasts and Hypothesis Tests} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{Contrasts and Hypothesis Tests}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}
@@ -297,7 +299,7 @@ fmri_fit <- fmri_lm(
   formula = onset ~ hrf(category, attention, contrasts = all_contrasts),
   block = ~ block,
   dataset = dataset_sim,
-  strategy = "chunkwise" # Use chunkwise for matrix_dataset
+  compute = compute_spec(voxel_chunks = 1L)
 )
 
 # Print summary of the fitted model (shows contrasts)

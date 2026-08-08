@@ -66,7 +66,7 @@
     block = ~run,
     dataset = .demo_matrix_dataset(),
     baseline_model = base,
-    progress = FALSE
+    compute = compute_spec(progress = FALSE)
   )
 }
 

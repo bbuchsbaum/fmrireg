@@ -8,8 +8,8 @@
   if (is.null(dataset)) {
     stop("rrr_gls engine requires a dataset", call. = FALSE)
   }
-  if (!inherits(cfg, "fmri_lm_config")) {
-    stop("rrr_gls engine requires an 'fmri_lm_config' object", call. = FALSE)
+  if (!inherits(cfg, "fmri_lm_control")) {
+    stop("rrr_gls engine requires an 'fmri_lm_control' object", call. = FALSE)
   }
 
   args <- .rrr_normalize_args(args)
@@ -236,6 +236,22 @@
       reason = "rrr_gls supports inference only for event/task parameters."
     )
   )
+  result$variance_model <- .new_fmri_variance_model(
+    method = if (!is.null(boot)) "bootstrap" else "rrr_conditional",
+    covariance = if (!is.null(boot)) NULL else D_full,
+    covariance_scope = if (!is.null(boot)) "summary" else "shared",
+    scale = if (!is.null(boot)) NULL else s2_cond,
+    df_nominal = dfres,
+    df_inference = rep(df_inference, ncol(Y0)),
+    standard_errors = bstats$data[[1L]]$se[[1L]],
+    metadata = list(
+      estimator = "rrr_gls",
+      rank_mode = args$rank_mode,
+      rank_used = task_fit$rank_used,
+      se_mode = args$se_mode,
+      adaptive_rank = !identical(args$rank_mode, "fixed")
+    )
+  )
 
   ret <- list(
     result = result,
@@ -439,20 +455,23 @@
   exact_first <- isTRUE(cfg$ar$exact_first)
   censor <- cfg$ar$censor %||% NULL
 
-  estimate_phi <- function(Xm, Ym) {
-    proj <- .fast_preproject(Xm)
-    mean_y <- matrix(rowMeans(Ym), ncol = 1)
-    beta <- proj$Pinv %*% mean_y
-    resid <- rowMeans(Ym) - drop(Xm %*% beta)
-    .estimate_ar_parameters_routed(
-      residuals_vec = resid,
-      ar_order = ar_order,
+  estimate_phi <- function(resid) {
+    plan <- .estimate_ar_via_fmriAR(
+      residuals = matrix(resid, ncol = 1L),
+      cfg = cfg$ar,
       run_indices = run_indices,
-      censor = censor
+      censor = censor,
+      design = X_ref
     )
+    phi <- plan$phi %||% plan$phi_by_parcel
+    if (is.null(phi) || !length(phi)) return(rep(0, ar_order))
+    if (length(phi) == 1L) as.numeric(phi[[1L]]) else lapply(phi, as.numeric)
   }
 
-  phi <- estimate_phi(X_ref, Y)
+  proj <- .fast_preproject(X_ref)
+  mean_y <- matrix(rowMeans(Y), ncol = 1L)
+  beta <- proj$Pinv %*% mean_y
+  phi <- estimate_phi(rowMeans(Y) - drop(X_ref %*% beta))
   Xw_ref <- NULL
   Yw <- NULL
 
@@ -468,7 +487,9 @@
     Yw <- as.matrix(tmp$Y)
 
     if (it < iter_gls) {
-      phi <- estimate_phi(Xw_ref, Yw)
+      proj_w <- .fast_preproject(Xw_ref)
+      beta_w <- proj_w$Pinv %*% matrix(rowMeans(Yw), ncol = 1L)
+      phi <- estimate_phi(rowMeans(Y) - drop(X_ref %*% beta_w))
     }
   }
 
@@ -878,6 +899,9 @@
         robust = FALSE,
         preprocessing = FALSE,
         ar_voxelwise = FALSE,
+        variance_methods = "model",
+        df_methods = "residual",
+        estimation_scopes = "joint",
         requires_parcels_for_by_cluster = TRUE,
         forbid_by_cluster_dataset_classes = "latent_dataset"
       )
@@ -894,6 +918,9 @@
         preprocessing = FALSE,
         ar_voxelwise = FALSE,
         ar_by_cluster = FALSE,
+        variance_methods = "model",
+        df_methods = "residual",
+        estimation_scopes = "joint",
         requires_event_regressors = TRUE,
         rank_constrained = TRUE,
         whitening = "shared_ar",

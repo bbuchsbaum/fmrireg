@@ -18,7 +18,7 @@ fit_glm_on_transformed_series(
 
 \item{Y}{Numeric matrix with \code{nrow(Y)} time points and columns matching voxels.}
 
-\item{cfg}{Optional \code{fmri_lm_config}; defaults to \code{fmri_lm_control()}.}
+\item{cfg}{Optional \code{fmri_lm_control}; defaults to \code{fmri_lm_control()}.}
 
 \item{dataset}{Optional dataset backing the model. Defaults to \code{model$dataset} when available.}
 

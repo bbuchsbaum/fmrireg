@@ -18,7 +18,7 @@ NULL
 #' @param fit_result Result from solve_integrated_glm
 #' @param X Design matrix
 #' @param Y Response matrix
-#' @param config fmri_lm_config object
+#' @param config fmri_lm_control object
 #' @param contrasts List of contrast matrices
 #' @param nboot Number of bootstrap iterations
 #' @param block_size Block size for temporal data

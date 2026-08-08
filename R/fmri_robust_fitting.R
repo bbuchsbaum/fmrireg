@@ -6,7 +6,7 @@
 #' refines the fit using robust weights.
 #'
 #' @param initial_glm_ctx A \code{glm_context} object containing initial fit results
-#' @param cfg_robust_options List of robust fitting options from \code{fmri_lm_config$robust}
+#' @param cfg_robust_options List of robust fitting options from \code{fmri_lm_control$robust}
 #' @param X_orig_for_resid The design matrix corresponding to Y in initial_glm_ctx
 #'   before any robust weighting (needed for residual calculation)
 #' @param sigma_fixed Optional fixed sigma value (for global scale estimation)

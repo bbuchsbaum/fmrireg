@@ -18,5 +18,9 @@ make_test_matrix_dataset <- function(nvox = 4L, runs = c(40L, 40L), TR = 2) {
 
 # A minimal fitted fmri_lm on the matrix_dataset fixture.
 make_test_fit <- function(ds = make_test_matrix_dataset()) {
-  fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = ds, strategy = "runwise")
+  fmri_lm(
+    onset ~ hrf(condition), block = ~ run, dataset = ds,
+    control = fmri_lm_control(estimation = estimation_spec("runwise_meta")),
+    compute = compute_spec()
+  )
 }

@@ -31,16 +31,17 @@ run_job <- function(job, progress = FALSE) {
   dataset <- realize_dataset(job)
   model <- build_model(job, dataset)
   cfg <- tmpl$control
+  compute <- compute_spec(
+    voxel_chunks = tmpl$compute$voxel_chunks,
+    backend = tmpl$compute$backend,
+    parallel = tmpl$compute$parallel,
+    progress = isTRUE(progress) || isTRUE(tmpl$compute$progress)
+  )
 
-  fit <- if (!is.null(tmpl$engine)) {
-    .fmri_lm_dispatch_engine(
-      model = model, dataset = dataset, engine = tmpl$engine,
-      lowrank = NULL, cfg = cfg, engine_args = tmpl$engine_args
-    )
-  } else {
-    fmri_lm_fit(model, dataset, strategy = tmpl$strategy, cfg = cfg,
-                progress = progress)
-  }
+  fit <- fmri_lm(
+    model, dataset = dataset, control = cfg, compute = compute,
+    engine = tmpl$engine, engine_args = tmpl$engine_args
+  )
 
   # Apply template-level contrasts so they actually drive output (reduce_contrasts
   # and any downstream consumer read them from this attribute). Formula-embedded

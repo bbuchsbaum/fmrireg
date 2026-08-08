@@ -17,7 +17,7 @@ NULL
 #'
 #' @param X Design matrix
 #' @param Y Response matrix
-#' @param config fmri_lm_config object with all options
+#' @param config fmri_lm_control object with all options
 #' @param run_indices List of indices for each run
 #'
 #' @return List with full results including coefficients, residuals,
@@ -25,7 +25,7 @@ NULL
 #' @keywords internal
 #' @noRd
 solve_integrated_glm <- function(X, Y, config, run_indices = NULL) {
-  stopifnot(inherits(config, "fmri_lm_config"))
+  stopifnot(inherits(config, "fmri_lm_control"))
   
   # Initial projection and context
   proj <- .fast_preproject(X)
@@ -39,6 +39,7 @@ solve_integrated_glm <- function(X, Y, config, run_indices = NULL) {
     ar_struct <- config$ar$struct %||% 
                  (config$ar_options$cor_struct %||% "iid")
     robust_type <- config$robust$type %||% config$robust %||% FALSE
+    if (identical(robust_type, "none")) robust_type <- FALSE
     
     if (!isFALSE(robust_type) && ar_struct != "iid" && ar_struct != "none") {
       method <- "ar_robust"

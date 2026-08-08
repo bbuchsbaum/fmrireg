@@ -257,7 +257,7 @@ test_that("soft_subspace_options creates valid options", {
 test_that("soft_subspace_options requires nuisance source when enabled", {
   expect_error(
     soft_subspace_options(enabled = TRUE),
-    "nuisance_mask or nuisance_matrix"
+    "nuisance_mask.*nuisance_matrix"
   )
 })
 
@@ -272,7 +272,7 @@ test_that("soft_subspace_options prefers matrix over mask", {
   )
 })
 
-# --- Integration with fmri_lm_config ---
+# --- Integration with fmri_lm_control ---
 
 test_that("fmri_lm_control accepts volume_weights_options", {
   cfg <- fmri_lm_control(
@@ -308,7 +308,7 @@ test_that("fmri_lm_control validates soft_subspace when enabled", {
     fmri_lm_control(
       soft_subspace_options = list(enabled = TRUE)
     ),
-    "nuisance_mask or nuisance_matrix"
+    "nuisance_mask.*nuisance_matrix"
   )
 })
 
@@ -316,7 +316,7 @@ test_that("fmri_lm_control defaults are correct", {
   cfg <- fmri_lm_control()
 
   expect_false(cfg$volume_weights$enabled)
-  expect_equal(cfg$volume_weights$method, "inverse_squared")
+  expect_equal(cfg$volume_weights$method, "none")
   expect_equal(cfg$volume_weights$threshold, 1.5)
 
   expect_false(cfg$soft_subspace$enabled)

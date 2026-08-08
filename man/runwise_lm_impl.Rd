@@ -24,7 +24,7 @@ runwise_lm_impl(
 
 \item{contrast_objects}{The list of full contrast objects.}
 
-\item{cfg}{An \code{fmri_lm_config} object containing all fitting options.}
+\item{cfg}{An \code{fmri_lm_control} object containing all fitting options.}
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
 

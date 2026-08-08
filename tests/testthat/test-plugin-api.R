@@ -54,7 +54,7 @@ test_that("register_engine integrates with fmri_lm via fit_glm_on_transformed_se
       expect_s3_class(model, "fmri_model")
       expect_true(inherits(dataset, "matrix_dataset"))
       expect_true(is.list(args))
-      expect_s3_class(cfg, "fmri_lm_config")
+      expect_s3_class(cfg, "fmri_lm_control")
       preflight_called <<- preflight_called + 1L
     },
     fit = function(model, dataset, args, cfg) {
@@ -92,8 +92,8 @@ test_that("register_engine integrates with fmri_lm via fit_glm_on_transformed_se
   expect_identical(captured$dataset, dset)
   expect_equal(attr(fit, "engine"), engine_name)
   expect_equal(attr(fit, "strategy"), "engine")
-  expect_s3_class(attr(fit, "requested_config"), "fmri_lm_config")
-  expect_s3_class(attr(fit, "executed_config"), "fmri_lm_config")
+  expect_s3_class(attr(fit, "requested_config"), "fmri_lm_control")
+  expect_s3_class(attr(fit, "executed_config"), "fmri_lm_control")
   expect_equal(attr(fit, "config"), attr(fit, "executed_config"))
 })
 
@@ -283,8 +283,8 @@ test_that("engine dispatcher preserves requested config and passes executed conf
     )
   )
 
-  expect_s3_class(captured_cfg, "fmri_lm_config")
-  expect_identical(captured_cfg$robust$type, FALSE)
+  expect_s3_class(captured_cfg, "fmri_lm_control")
+  expect_identical(captured_cfg$robust$type, "none")
   expect_identical(captured_cfg$robust$max_iter, fmri_lm_control()$robust$max_iter)
 
   expect_identical(attr(fit, "requested_config")$robust$max_iter, 10L)

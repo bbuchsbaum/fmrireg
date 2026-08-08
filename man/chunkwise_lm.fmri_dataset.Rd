@@ -28,7 +28,7 @@
 
 \item{nchunks}{The number of chunks to divide the dataset into.}
 
-\item{cfg}{An \code{fmri_lm_config} object containing all fitting options.}
+\item{cfg}{An \code{fmri_lm_control} object containing all fitting options.}
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
 

@@ -257,12 +257,12 @@ beta_stats <- function(lmfit, varnames, se = TRUE) {
 #'
 #' fmrireg accepts F-contrast weights against a term with `length(colind)`
 #' coefficients in either orientation:
-#'   * hypothesis-oriented: `r x length(colind)` (each row is a linear
+#'   * hypothesis-oriented: `n_hypotheses x length(colind)` (each row is a linear
 #'     hypothesis), or
 #'   * coefficient/cell-oriented: `length(colind) x r` (rows index cells,
 #'     columns index hypotheses), as produced by `oneway_contrast()`.
-#' This returns the weights as `r x length(colind)`, so callers derive both the
-#' full contrast matrix and the numerator rank `r = nrow()` from one source.
+#' This returns the weights as `n_hypotheses x length(colind)`, so callers derive both the
+#' full contrast matrix and its numerator rank from `nrow(result)`.
 #' A square matrix (both dims `== length(colind)`) is treated as already
 #' hypothesis-oriented, preserving historical precedence.
 #' @keywords internal
@@ -1111,6 +1111,66 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   attr(betas, "aliased") <- as.integer(xtx_aliased)
   attr(XtXinv, "aliased") <- as.integer(xtx_aliased)
 
+  vm <- object$result$variance_model
+  structured_covariance <- NULL
+  df_inference <- rep(df_residual, V)
+  if (inherits(vm, "fmri_lm_variance_model")) {
+    if (length(vm$df_inference) == 1L) {
+      df_inference <- rep(vm$df_inference, V)
+    } else if (length(vm$df_inference) == V) {
+      df_inference <- as.numeric(vm$df_inference)
+    }
+    if (identical(vm$covariance_scope, "voxel") &&
+        is.list(vm$covariance) && length(vm$covariance) == V) {
+      event_idx <- as.integer(object$result$event_indices %||% integer(0))
+      structured_covariance <- lapply(vm$covariance, function(cv) {
+        cv <- as.matrix(cv)
+        if (nrow(cv) == p && ncol(cv) == p) return(cv)
+        if (length(event_idx) == p && max(event_idx) <= nrow(cv)) {
+          return(cv[event_idx, event_idx, drop = FALSE])
+        }
+        stop("Structured covariance dimensions do not match post-hoc coefficients.",
+             call. = FALSE)
+      })
+    }
+  }
+
+  compute_t <- function(l, name) {
+    if (is.null(structured_covariance)) {
+      return(.fast_t_contrast(
+        betas, sigma2, XtXinv, l, df_residual,
+        aliased = xtx_aliased, contrast_name = name
+      ))
+    }
+    estimate <- drop(l %*% betas)
+    se <- vapply(structured_covariance, function(cv) {
+      sqrt(pmax(drop(crossprod(l, cv %*% l)), 0))
+    }, numeric(1))
+    stat <- ifelse(se > .Machine$double.eps^0.5, estimate / se, NA_real_)
+    list(estimate = estimate, se = se, stat = stat,
+         prob = 2 * stats::pt(-abs(stat), df = df_inference),
+         stat_type = "tstat")
+  }
+
+  compute_F <- function(L, name) {
+    if (is.null(structured_covariance)) {
+      return(.fast_F_contrast(
+        betas, sigma2, XtXinv, L, df_residual,
+        aliased = xtx_aliased, contrast_name = name
+      ))
+    }
+    r <- qr(L)$rank
+    stat <- vapply(seq_len(V), function(v) {
+      u <- L %*% betas[, v]
+      M <- L %*% structured_covariance[[v]] %*% t(L)
+      tryCatch(drop(crossprod(u, solve(M, u))) / r,
+               error = function(e) NA_real_)
+    }, numeric(1))
+    list(estimate = stat, se = rep(1, V), stat = stat,
+         prob = stats::pf(stat, r, df_inference, lower.tail = FALSE),
+         stat_type = "Fstat")
+  }
+
   resolve_pair_weights <- function(con_spec) {
     event_terms <- terms(object$model$event_model)
     if (length(event_terms) == 0) {
@@ -1164,7 +1224,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
           stop("pair contrast has mismatched indices/weights lengths")
         }
         l[parsed$colind] <- parsed$weights
-        stats <- .fast_t_contrast(betas, sigma2, XtXinv, l, df_residual, aliased = xtx_aliased, contrast_name = con_name)
+        stats <- compute_t(l, con_name)
         return(list(
           name = con_name,
           type = "contrast",
@@ -1173,6 +1233,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
           stat = as.numeric(stats$stat),
           prob = as.numeric(stats$prob),
           df.residual = df_residual,
+          df.inference = as.numeric(df_inference),
           stat_type = stats$stat_type
         ))
       }
@@ -1202,7 +1263,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
             L <- matrix(0, nrow = nrow(Cw), ncol = p)
             L[, colind] <- Cw
           }
-          stats <- .fast_F_contrast(betas, sigma2, XtXinv, L, df_residual, aliased = xtx_aliased, contrast_name = con_name)
+          stats <- compute_F(L, con_name)
           return(list(
             name = con_name,
             type = "Fcontrast",
@@ -1211,6 +1272,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
             stat = as.numeric(stats$stat),
             prob = as.numeric(stats$prob),
             df.residual = df_residual,
+            df.inference = as.numeric(df_inference),
             stat_type = stats$stat_type
           ))
         }
@@ -1228,7 +1290,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
 
       l <- numeric(p)
       l[colind] <- w
-      stats <- .fast_t_contrast(betas, sigma2, XtXinv, l, df_residual, aliased = xtx_aliased, contrast_name = con_name)
+      stats <- compute_t(l, con_name)
       list(
         name = con_name,
         type = "contrast",
@@ -1237,6 +1299,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
         stat = as.numeric(stats$stat),
         prob = as.numeric(stats$prob),
         df.residual = df_residual,
+        df.inference = as.numeric(df_inference),
         stat_type = stats$stat_type
       )
     }, error = function(e) {
