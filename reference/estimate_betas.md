@@ -210,11 +210,4 @@ betas <- estimate_betas(
   block = ~run,
   method = "mixed"
 )
-#> iter   10 value 426.212585
-#> iter   20 value 426.162127
-#> iter   30 value 426.159027
-#> final  value 426.158904 
-#> converged
-#> final  value 420.227933 
-#> converged
 ```

@@ -81,100 +81,136 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
 
-<p><a href="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main" class="external-link"><img src="https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg" alt="Codecov test coverage"></a> <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html" class="external-link"><img src="https://img.shields.io/badge/License-GPL_v2-blue.svg" alt="License: GPL v2"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></p>
+<!-- badges: start -->
+
+<p><a href="https://bbuchsbaum.github.io/fmrireg/">Documentation</a> · <a href="https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html">Getting started</a> · <a href="https://bbuchsbaum.github.io/fmrireg/reference/">API reference</a> · <a href="NEWS.html">Changelog</a></p>
+<p><strong>fmrireg</strong> is an R package for specifying and fitting voxelwise fMRI regression models from event tables and preprocessed time series. It turns formulas such as <code>onset ~ hrf(condition)</code> into HRF-convolved designs, estimates condition effects across voxels, and carries named contrasts into group analysis.</p>
+<blockquote>
+<p><strong>Status:</strong> Version 0.2.0 is experimental and requires R 4.1 or later. APIs may change while the package is under active development.</p>
+</blockquote>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
+<p>Install the development version from GitHub:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"bbuchsbaum/fmrireg"</span><span class="op">)</span></span></code></pre></div>
 </div>
-<div class="section level1">
-<h1 id="add-a-baseline-model-with-polynomial-drift">Add a baseline model with polynomial drift<a class="anchor" aria-label="anchor" href="#add-a-baseline-model-with-polynomial-drift"></a>
-</h1>
-<p>bmod &lt;- baseline_model(basis = “bs”, degree = 5, sframe = sframe)</p>
-</div>
-<div class="section level1">
-<h1 id="combine-into-a-full-fmri-model-and-fit">Combine into a full fMRI model and fit<a class="anchor" aria-label="anchor" href="#combine-into-a-full-fmri-model-and-fit"></a>
-</h1>
-<p>fmod &lt;- fmri_model(emod, bmod) fit &lt;- fmri_lm(fmod, dataset = dset)</p>
-<pre><code>
-## Key features
-
-- **HRF library** -- SPM canonical, gamma, Gaussian, B-spline, and custom
-  basis sets, with decorators for lag, block, and normalization.
-- **Formula interface** -- Specify event models with `onset ~ hrf(...)` syntax;
-  supports categorical events, continuous modulators, and multi-basis expansions.
-- **Contrast system** -- Flexible contrasts via formulas, including pairwise,
-  polynomial, and F-contrasts.
-- **Robust estimation** -- OLS and iteratively reweighted least squares (IWLS)
-  with Huber and Tukey bisquare psi functions.
-- **AR correction** -- Autoregressive noise modeling via the
-  [fmriAR](https://github.com/bbuchsbaum/fmriAR) package.
-- **Performance** -- C++ solvers (Rcpp/RcppArmadillo) with optional
-  multithreading via RcppParallel.
-
-## Documentation
-
-Full documentation and tutorials are available at
-&lt;https://bbuchsbaum.github.io/fmrireg/&gt;. Vignettes include:
-
-- [Package Overview](https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html)
-- [Statistical Contrasts](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html)
-- [Simulation](https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.html)
-- [Linear Modeling](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html)
-- [Dataset Management](https://bbuchsbaum.github.io/fmrireg/articles/a_10_dataset.html)
-- [Group Analysis](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.html)
-- [Functional Connectivity](https://bbuchsbaum.github.io/fmrireg/articles/functional_connectivity.html)
-- [Sketched GLM](https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.html)
-- [Benchmark Datasets](https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.html)
-
-## Command line
-
-Install the package:
-
-```r
-remotes::install_github("bbuchsbaum/fmrireg")</code></pre>
-<p>Install the command wrapper:</p>
+<div class="section level2">
+<h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
+</h2>
+<p>This synthetic example makes one task-responsive time series and fits it without external imaging files:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">fmrireg</span><span class="fu">::</span><span class="fu"><a href="reference/install_cli.html">install_cli</a></span><span class="op">(</span><span class="st">"~/.local/bin"</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>If needed, add the directory to <code>PATH</code>:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="bu">export</span> <span class="va">PATH</span><span class="op">=</span><span class="st">"</span><span class="va">$HOME</span><span class="st">/.local/bin:</span><span class="va">$PATH</span><span class="st">"</span></span></code></pre></div>
-<p>Check the command:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="ex">fmrireg</span> <span class="at">--help</span></span></code></pre></div>
-<p>Inspect bundled benchmark datasets:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="ex">fmrireg</span> benchmark list</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="ex">fmrireg</span> benchmark summary <span class="at">--dataset</span> BM_Canonical_HighSNR <span class="at">--json</span></span></code></pre></div>
-<div class="section level2">
-<h2 id="reporting">Reporting<a class="anchor" aria-label="anchor" href="#reporting"></a>
-</h2>
-<p>PDF report generation for <code>fmri_lm</code> fits is provided by the separate <a href="https://github.com/bbuchsbaum/fmrireport" class="external-link">fmrireport</a> package:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">fmrireport</span><span class="fu">::</span><span class="fu">report</span><span class="op">(</span><span class="va">fit</span>, output_dir <span class="op">=</span> <span class="st">"results"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrireg/">fmrireg</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
+<span><span class="va">n_timepoints</span> <span class="op">&lt;-</span> <span class="fl">120</span></span>
+<span><span class="va">acquisition_time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="va">TR</span> <span class="op">/</span> <span class="fl">2</span>, by <span class="op">=</span> <span class="va">TR</span>, length.out <span class="op">=</span> <span class="va">n_timepoints</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
+<span><span class="va">events</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">8</span>, <span class="fl">10</span><span class="op">)</span>, <span class="fl">24</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  condition <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"faces"</span>, <span class="st">"scenes"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">12</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  duration <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  run <span class="op">=</span> <span class="fl">1L</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">task_regressor</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">condition</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu">fmrihrf</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/regressor.html" class="external-link">regressor</a></span><span class="op">(</span></span>
+<span>    <span class="va">events</span><span class="op">$</span><span class="va">onset</span><span class="op">[</span><span class="va">events</span><span class="op">$</span><span class="va">condition</span> <span class="op">==</span> <span class="va">condition</span><span class="op">]</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu">fmrihrf</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/evaluate.html" class="external-link">evaluate</a></span><span class="op">(</span><span class="va">acquisition_time</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">faces</span> <span class="op">&lt;-</span> <span class="fu">task_regressor</span><span class="op">(</span><span class="st">"faces"</span><span class="op">)</span></span>
+<span><span class="va">scenes</span> <span class="op">&lt;-</span> <span class="fu">task_regressor</span><span class="op">(</span><span class="st">"scenes"</span><span class="op">)</span></span>
+<span><span class="va">bold</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span></span>
+<span>  face_roi <span class="op">=</span> <span class="fl">100</span> <span class="op">+</span> <span class="fl">1.5</span> <span class="op">*</span> <span class="va">faces</span> <span class="op">+</span> <span class="fl">0.1</span> <span class="op">*</span> <span class="va">scenes</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_timepoints</span>, sd <span class="op">=</span> <span class="fl">0.04</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span></span>
+<span>  <span class="va">bold</span>, TR <span class="op">=</span> <span class="va">TR</span>, run_length <span class="op">=</span> <span class="va">n_timepoints</span>,</span>
+<span>  event_table <span class="op">=</span> <span class="va">events</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, dataset <span class="op">=</span> <span class="va">dataset</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="reference/tidy.html">tidy</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>, <span class="va">term</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels</a></span><span class="op">(</span><span class="va">events</span><span class="op">$</span><span class="va">condition</span><span class="op">)</span>,</span>
+<span>  select <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">voxel</span>, <span class="va">term</span>, <span class="va">estimate</span>, <span class="va">std_error</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">estimate</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">estimate</span>, <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">std_error</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">std_error</span>, <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">results</span></span>
+<span><span class="co">#&gt; # A tibble: 2 x 4</span></span>
+<span><span class="co">#&gt;   voxel term   estimate std_error</span></span>
+<span><span class="co">#&gt;   &lt;int&gt; &lt;chr&gt;     &lt;dbl&gt;     &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt; 1     1 faces      1.49      0.01</span></span>
+<span><span class="co">#&gt; 2     1 scenes     0.1       0.01</span></span></code></pre></div>
+<p>The recovered pattern matches the simulation: the region responds more to faces than to scenes. For real analyses, replace <code>bold</code> and <code>events</code> with time-by-voxel data and the matching event table; the modeling interface is the same.</p>
 </div>
 <div class="section level2">
-<h2 id="performance-configuration">Performance configuration<a class="anchor" aria-label="anchor" href="#performance-configuration"></a>
+<h2 id="what-it-covers">What it covers<a class="anchor" aria-label="anchor" href="#what-it-covers"></a>
 </h2>
-<p>The internal C++ routines use <a href="https://rcppcore.github.io/RcppParallel/" class="external-link">RcppParallel</a>. Control the thread count with:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>fmrireg.num_threads <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
-<p>or set the environment variable <code>FMRIREG_NUM_THREADS</code> before loading the package.</p>
+<ul>
+<li>Build task and baseline models from formulas, including canonical, flexible, and custom hemodynamic response functions.</li>
+<li>Fit matrix-backed or imaging-backed datasets with ordinary, robust, and autoregressive regression paths.</li>
+<li>Define named t- and F-contrasts and export coefficient or statistic maps.</li>
+<li>Carry subject-level betas and standard errors—or t-statistics and degrees of freedom—into group analysis.</li>
+<li>Use controlled simulations, known-truth benchmark datasets, and explicit approximation diagnostics for accelerated methods.</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="fit-and-boundaries">Fit and boundaries<a class="anchor" aria-label="anchor" href="#fit-and-boundaries"></a>
+</h2>
+<p>fmrireg is the regression layer of an fMRI workflow. It expects preprocessed time series and aligned event information; it does not perform motion correction, anatomical registration, or spatial normalization. Matrix-backed examples are useful for regions of interest and testing, while the dataset and export guides cover image- and file-backed workflows.</p>
+<p>The package is still experimental. Exact, AR-corrected, robust, and accelerated engines have different statistical contracts; use the relevant guide rather than assuming that every option is interchangeable.</p>
+</div>
+<div class="section level2">
+<h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
+</h2>
+<ul>
+<li>
+<a href="https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html">Overview and workflow</a> — start with a complete fit, then unpack datasets, designs, and contrasts.</li>
+<li>
+<a href="https://bbuchsbaum.github.io/fmrireg/articles/a_10_dataset.html">Dataset management</a>, <a href="https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.html">simulation</a>, <a href="https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html">linear modeling</a>, and <a href="https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html">contrasts</a> — the core single-subject workflow.</li>
+<li>
+<a href="https://bbuchsbaum.github.io/fmrireg/articles/multisubject_fanout.html">Multi-subject fan-out</a> and <a href="https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.html">group analysis</a> — move from subject fits to group inference.</li>
+<li>
+<a href="https://bbuchsbaum.github.io/fmrireg/articles/functional_connectivity.html">Functional connectivity</a> — seed-regressor inference with autocorrelation and multiplicity control.</li>
+<li>
+<a href="https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.html">Sketched GLM</a>, <a href="https://bbuchsbaum.github.io/fmrireg/articles/plugin-development.html">plugin development</a>, and <a href="https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.html">benchmark datasets</a> — advanced engines, extensions, and numerical oracles.</li>
+<li>
+<a href="https://bbuchsbaum.github.io/fmrireg/reference/">API reference</a> — exported functions, arguments, and return values.</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="optional-command-line-wrapper">Optional command-line wrapper<a class="anchor" aria-label="anchor" href="#optional-command-line-wrapper"></a>
+</h2>
+<p>Install the wrapper into a directory on <code>PATH</code>:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">fmrireg</span><span class="fu">::</span><span class="fu"><a href="reference/install_cli.html">install_cli</a></span><span class="op">(</span><span class="st">"~/.local/bin"</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>Then inspect available commands or bundled benchmark datasets:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="ex">fmrireg</span> <span class="at">--help</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="ex">fmrireg</span> benchmark list</span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="contributing">Contributing<a class="anchor" aria-label="anchor" href="#contributing"></a>
+</h2>
+<p>See <a href="CONTRIBUTING.html">CONTRIBUTING.md</a> for the development workflow and test commands. Please report reproducible bugs through the <a href="https://github.com/bbuchsbaum/fmrireg/issues" class="external-link">issue tracker</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
-<p>If you use fmrireg in your research, please cite:</p>
-<pre><code>Buchsbaum, B. R. (2025). fmrireg: Regression Analysis of Functional
-Magnetic Resonance Imaging Data. R package version 0.1.2.
-https://github.com/bbuchsbaum/fmrireg</code></pre>
+<p>Run <code>citation("fmrireg")</code> for the current package citation.</p>
 </div>
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
 </h2>
-<p>MIT</p>
-<!-- albersdown:theme-note:start -->
-</div>
-<div class="section level2">
-<h2 id="albers-theme">Albers theme<a class="anchor" aria-label="anchor" href="#albers-theme"></a>
-</h2>
-<p>This package uses the albersdown theme. Existing vignette theme hooks are replaced so <code>albers.css</code> and local <code>albers.js</code> render consistently on CRAN and GitHub Pages. The defaults are configured via <code>params$family</code> and <code>params$preset</code> (family = ‘red’, preset = ‘homage’). The pkgdown site uses <code>template: { package: albersdown }</code> together with generated <code>pkgdown/extra.css</code> and <code>pkgdown/extra.js</code> so the theme is linked and activated on site pages. <!-- albersdown:theme-note:end --></p>
+<p>fmrireg is licensed under the <a href="LICENSE">MIT License</a>.</p>
 </div>
 </div>
-
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
@@ -208,7 +244,15 @@ https://github.com/bbuchsbaum/fmrireg</code></pre>
 </ul>
 </div>
 
-
+<div class="dev-status">
+<h2 data-toc-skip>Dev status</h2>
+<ul class="list-unstyled">
+<li><a href="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main" class="external-link"><img src="https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg" alt="Codecov test coverage"></a></li>
+<li><a href="https://opensource.org/license/mit" class="external-link"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a></li>
+<li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
+</ul>
+</div>
 
   </aside>
 </div>
