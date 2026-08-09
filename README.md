@@ -1,119 +1,173 @@
+
 # fmrireg
 
+<!-- badges: start -->
+
 [![R-CMD-check](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml)
-[![Codecov test coverage](https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg)](https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main)
-[![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
-[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![Codecov test
+coverage](https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg)](https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main)
+[![License:
+MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/license/mit)
+[![Lifecycle:
+experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+<!-- badges: end -->
 
+[Documentation](https://bbuchsbaum.github.io/fmrireg/) · [Getting
+started](https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html) ·
+[API reference](https://bbuchsbaum.github.io/fmrireg/reference/) ·
+[Changelog](NEWS.md)
 
-# Add a baseline model with polynomial drift
-bmod <- baseline_model(basis = "bs", degree = 5, sframe = sframe)
+**fmrireg** is an R package for specifying and fitting voxelwise fMRI
+regression models from event tables and preprocessed time series. It
+turns formulas such as `onset ~ hrf(condition)` into HRF-convolved
+designs, estimates condition effects across voxels, and carries named
+contrasts into group analysis.
 
-# Combine into a full fMRI model and fit
-fmod <- fmri_model(emod, bmod)
-fit  <- fmri_lm(fmod, dataset = dset)
-```
+> **Status:** Version 0.2.0 is experimental and requires R 4.1 or later.
+> APIs may change while the package is under active development.
 
-## Key features
+## Installation
 
-- **HRF library** -- SPM canonical, gamma, Gaussian, B-spline, and custom
-  basis sets, with decorators for lag, block, and normalization.
-- **Formula interface** -- Specify event models with `onset ~ hrf(...)` syntax;
-  supports categorical events, continuous modulators, and multi-basis expansions.
-- **Contrast system** -- Flexible contrasts via formulas, including pairwise,
-  polynomial, and F-contrasts.
-- **Robust estimation** -- OLS and iteratively reweighted least squares (IWLS)
-  with Huber and Tukey bisquare psi functions.
-- **AR correction** -- Autoregressive noise modeling via the
-  [fmriAR](https://github.com/bbuchsbaum/fmriAR) package.
-- **Performance** -- C++ solvers (Rcpp/RcppArmadillo) with optional
-  multithreading via RcppParallel.
+Install the development version from GitHub:
 
-## Documentation
-
-Full documentation and tutorials are available at
-<https://bbuchsbaum.github.io/fmrireg/>. Vignettes include:
-
-- [Package Overview](https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html)
-- [Statistical Contrasts](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html)
-- [Simulation](https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.html)
-- [Linear Modeling](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html)
-- [Dataset Management](https://bbuchsbaum.github.io/fmrireg/articles/a_10_dataset.html)
-- [Group Analysis](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.html)
-- [Functional Connectivity](https://bbuchsbaum.github.io/fmrireg/articles/functional_connectivity.html)
-- [Sketched GLM](https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.html)
-- [Benchmark Datasets](https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.html)
-
-## Command line
-
-Install the package:
-
-```r
+``` r
+install.packages("remotes")
 remotes::install_github("bbuchsbaum/fmrireg")
 ```
 
-Install the command wrapper:
+## Quick start
 
-```r
+The package includes deterministic benchmark data, so a complete
+first-level fit can run without external imaging files:
+
+``` r
+library(fmrireg)
+
+benchmark <- load_benchmark_dataset("BM_Canonical_HighSNR")
+events <- data.frame(
+  onset = benchmark$event_onsets,
+  condition = factor(benchmark$condition_labels),
+  run = 1L
+)
+bold <- benchmark$Y_noisy[, 1:2]
+colnames(bold) <- c("voxel1", "voxel2")
+
+dataset <- matrix_dataset(
+  bold, TR = benchmark$TR, run_length = benchmark$run_length,
+  event_table = events
+)
+fit <- fmri_lm(
+  onset ~ hrf(condition), block = ~ run, dataset = dataset
+)
+
+results <- subset(
+  tidy(fit), term %in% levels(events$condition),
+  select = c(voxel, term, estimate, std_error)
+)
+results$estimate <- round(results$estimate, 2)
+results$std_error <- round(results$std_error, 2)
+results
+#> # A tibble: 6 x 4
+#>   voxel term  estimate std_error
+#>   <int> <chr>    <dbl>     <dbl>
+#> 1     1 Cond1     0.4       0.04
+#> 2     1 Cond2     0.57      0.05
+#> 3     1 Cond3     0.26      0.04
+#> 4     2 Cond1     0.31      0.04
+#> 5     2 Cond2     0.56      0.05
+#> 6     2 Cond3     0.28      0.04
+```
+
+This fits three condition regressors to two benchmark voxels and reports
+each effect with its standard error. For real analyses, replace `bold`
+and `events` with time-by-voxel data and the matching event table; the
+modeling interface is the same.
+
+## What it covers
+
+- Build task and baseline models from formulas, including canonical,
+  flexible, and custom hemodynamic response functions.
+- Fit matrix-backed or imaging-backed datasets with ordinary, robust,
+  and autoregressive regression paths.
+- Define named t- and F-contrasts and export coefficient or statistic
+  maps.
+- Carry subject-level betas and standard errors—or t-statistics and
+  degrees of freedom—into group analysis.
+- Use controlled simulations, known-truth benchmark datasets, and
+  explicit approximation diagnostics for accelerated methods.
+
+## Fit and boundaries
+
+fmrireg is the regression layer of an fMRI workflow. It expects
+preprocessed time series and aligned event information; it does not
+perform motion correction, anatomical registration, or spatial
+normalization. Matrix-backed examples are useful for regions of interest
+and testing, while the dataset and export guides cover image- and
+file-backed workflows.
+
+The package is still experimental. Exact, AR-corrected, robust, and
+accelerated engines have different statistical contracts; use the
+relevant guide rather than assuming that every option is
+interchangeable.
+
+## Documentation
+
+- [Overview and
+  workflow](https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html)
+  — start with a complete fit, then unpack datasets, designs, and
+  contrasts.
+- [Dataset
+  management](https://bbuchsbaum.github.io/fmrireg/articles/a_10_dataset.html),
+  [simulation](https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.html),
+  [linear
+  modeling](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html),
+  and
+  [contrasts](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html)
+  — the core single-subject workflow.
+- [Multi-subject
+  fan-out](https://bbuchsbaum.github.io/fmrireg/articles/multisubject_fanout.html)
+  and [group
+  analysis](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.html)
+  — move from subject fits to group inference.
+- [Functional
+  connectivity](https://bbuchsbaum.github.io/fmrireg/articles/functional_connectivity.html)
+  — seed-regressor inference with autocorrelation and multiplicity
+  control.
+- [Sketched
+  GLM](https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.html),
+  [plugin
+  development](https://bbuchsbaum.github.io/fmrireg/articles/plugin-development.html),
+  and [benchmark
+  datasets](https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.html)
+  — advanced engines, extensions, and numerical oracles.
+- [API reference](https://bbuchsbaum.github.io/fmrireg/reference/) —
+  exported functions, arguments, and return values.
+
+## Optional command-line wrapper
+
+Install the wrapper into a directory on `PATH`:
+
+``` r
 fmrireg::install_cli("~/.local/bin", overwrite = TRUE)
 ```
 
-If needed, add the directory to `PATH`:
+Then inspect available commands or bundled benchmark datasets:
 
-```sh
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Check the command:
-
-```sh
+``` sh
 fmrireg --help
-```
-
-Inspect bundled benchmark datasets:
-
-```sh
 fmrireg benchmark list
-fmrireg benchmark summary --dataset BM_Canonical_HighSNR --json
 ```
 
-## Reporting
+## Contributing
 
-PDF report generation for `fmri_lm` fits is provided by the separate
-[fmrireport](https://github.com/bbuchsbaum/fmrireport) package:
-
-```r
-fmrireport::report(fit, output_dir = "results")
-```
-
-## Performance configuration
-
-The internal C++ routines use
-[RcppParallel](https://rcppcore.github.io/RcppParallel/). Control the thread
-count with:
-
-```r
-options(fmrireg.num_threads = 4)
-```
-
-or set the environment variable `FMRIREG_NUM_THREADS` before loading the
-package.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and
+test commands. Please report reproducible bugs through the [issue
+tracker](https://github.com/bbuchsbaum/fmrireg/issues).
 
 ## Citation
 
-If you use fmrireg in your research, please cite:
-
-```
-Buchsbaum, B. R. (2025). fmrireg: Regression Analysis of Functional
-Magnetic Resonance Imaging Data. R package version 0.1.2.
-https://github.com/bbuchsbaum/fmrireg
-```
+Run `citation("fmrireg")` for the current package citation.
 
 ## License
 
-MIT
-
-<!-- albersdown:theme-note:start -->
-## Albers theme
-This package uses the albersdown theme. Existing vignette theme hooks are replaced so `albers.css` and local `albers.js` render consistently on CRAN and GitHub Pages. The defaults are configured via `params$family` and `params$preset` (family = 'red', preset = 'homage'). The pkgdown site uses `template: { package: albersdown }` together with generated `pkgdown/extra.css` and `pkgdown/extra.js` so the theme is linked and activated on site pages.
-<!-- albersdown:theme-note:end -->
+fmrireg is licensed under the [MIT License](LICENSE).

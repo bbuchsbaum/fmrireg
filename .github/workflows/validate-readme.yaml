@@ -1,0 +1,53 @@
+name: Validate README
+
+on:
+  pull_request:
+    paths:
+      - README.md
+      - README.rmd
+      - DESCRIPTION
+      - .github/workflows/validate-readme.yaml
+  push:
+    paths:
+      - README.md
+      - README.rmd
+      - DESCRIPTION
+      - .github/workflows/validate-readme.yaml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check README contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PACKAGE_VERSION=$(sed -n 's/^Version: //p' DESCRIPTION)
+          test -n "$PACKAGE_VERSION"
+
+          for README_FILE in README.md README.rmd; do
+            test -f "$README_FILE"
+            test "$(grep -c '<!-- badges: start -->' "$README_FILE")" -eq 1
+            test "$(grep -c '<!-- badges: end -->' "$README_FILE")" -eq 1
+            grep -Fq 'actions/workflows/R-CMD-check.yaml/badge.svg' "$README_FILE"
+            grep -Fq 'codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg' "$README_FILE"
+            grep -Fq 'License-MIT-blue.svg' "$README_FILE"
+            grep -Fq 'lifecycle-experimental-orange.svg' "$README_FILE"
+            grep -Fq 'load_benchmark_dataset("BM_Canonical_HighSNR")' "$README_FILE"
+            grep -Fq '## Quick start' "$README_FILE"
+            grep -Fq '## Fit and boundaries' "$README_FILE"
+            if grep -Fq 'GPL' "$README_FILE"; then
+              echo "Stale GPL claim in $README_FILE" >&2
+              exit 1
+            fi
+          done
+
+          grep -Fq "Status:** Version $PACKAGE_VERSION is experimental" README.md
+          grep -Fq 'package_version <- read.dcf("DESCRIPTION", fields = "Version")' README.rmd
