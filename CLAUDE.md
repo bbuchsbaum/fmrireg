@@ -176,5 +176,6 @@ variance instead. The test that covered them asserted only dimensions
 and positivity, which is why an arithmetic error (`X'diag(e^4)X` in
 place of `X'diag(e^2)X`, giving standard errors 3.5x too large) survived
 in `compute_sandwich_variance` until 2026-08-07. That error is now fixed
-and both helpers are checked against `sandwich::vcovHC` in
-`tests/testthat/test-variance-closed-form.R`; they remain unwired.
+and both helpers are checked against
+[`sandwich::vcovHC`](https://zeileis.codeberg.page/sandwich/reference/vcovHC.html)
+in `tests/testthat/test-variance-closed-form.R`; they remain unwired.

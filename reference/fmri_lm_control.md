@@ -1,136 +1,67 @@
-# Configuration for fmri_lm fitting
+# Configure an fMRI linear model
 
-`fmri_lm_control()` creates an `fmri_lm_config` object collecting all
-options for robust and autoregressive modelling. It validates inputs and
-applies defaults so downstream functions receive a single structured
-list.
+`fmri_lm_control()` is the single statistical configuration boundary for
+[`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md).
+Each section is a validated typed specification; mechanical choices such
+as chunking and parallelism belong in
+[`compute_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/compute_spec.md).
 
 ## Usage
 
 ``` r
 fmri_lm_control(
-  robust_options = list(),
-  ar_options = list(),
-  volume_weights_options = list(),
-  soft_subspace_options = list(),
-  na_action = c("error", "propagate")
+  estimation = NULL,
+  noise = NULL,
+  robust = NULL,
+  variance = NULL,
+  weights = NULL,
+  projection = NULL,
+  na_action = c("error", "propagate"),
+  ...
 )
 ```
 
 ## Arguments
 
-- robust_options:
+- estimation:
 
-  list of robust fitting options. See Details.
+  An
+  [`estimation_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/estimation_spec.md).
 
-- ar_options:
+- noise:
 
-  list of autoregressive modelling options. See Details.
+  A
+  [`noise_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/noise_spec.md).
 
-- volume_weights_options:
+- robust:
 
-  list of volume weighting options. See Details. For simple cases, use
-  the `volume_weights` parameter in
-  [`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
-  instead.
+  A
+  [`robust_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/robust_spec.md).
 
-- soft_subspace_options:
+- variance:
 
-  list of soft subspace projection options. See Details. For simple
-  cases, use the `nuisance_projection` parameter in
-  [`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
-  instead.
+  A
+  [`variance_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/variance_spec.md).
+
+- weights:
+
+  A
+  [`weights_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/weights_spec.md).
+
+- projection:
+
+  A
+  [`projection_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/projection_spec.md).
+
+- na_action:
+
+  Either `"error"` or `"propagate"`.
+
+- ...:
+
+  Transitional legacy option lists retained for one compatibility
+  window. New code should use the typed sections above.
 
 ## Value
 
-An object of class `fmri_lm_config`.
-
-## Details
-
-For common use cases,
-[`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
-provides convenience parameters that are easier to use than these
-detailed option lists:
-
-- `volume_weights = TRUE` enables volume weighting with defaults
-
-- `volume_weights = "tukey"` enables with Tukey method
-
-- `nuisance_projection = N` enables soft projection with matrix N
-
-- `nuisance_projection = "mask.nii"` enables with mask file
-
-Use the `*_options` lists below only when you need fine-grained control.
-
-`robust_options` may contain:
-
-- `type` (`FALSE`, "huber", "bisquare")
-
-- `k_huber`
-
-- `c_tukey`
-
-- `max_iter`
-
-- `scale_scope` ("run", "global", "voxel")
-
-- `reestimate_phi` (logical)
-
-`ar_options` may contain:
-
-- `struct` ("iid", "ar1", "ar2", "arp")
-
-- `p` (order for "arp")
-
-- `iter_gls` (integer number of GLS iterations)
-
-- `global` (logical, use global phi)
-
-- `voxelwise` (logical)
-
-- `exact_first` (logical)
-
-- `censor` (integer vector of timepoints to exclude from AR estimation,
-  logical vector where TRUE = censored, or "auto" to extract from
-  dataset)
-
-`volume_weights_options` may contain:
-
-- `enabled` (logical, whether to compute and apply volume weights)
-
-- `method` ("inverse_squared", "soft_threshold", "tukey")
-
-- `threshold` (numeric, DVARS threshold for weighting)
-
-- `weights` (optional pre-computed weight vector)
-
-`soft_subspace_options` may contain:
-
-- `enabled` (logical, whether to apply soft subspace projection)
-
-- `nuisance_mask` (path to NIfTI mask or logical vector)
-
-- `nuisance_matrix` (pre-computed nuisance timeseries matrix)
-
-- `lambda` (numeric, "auto", or "gcv")
-
-- `warn_redundant` (logical, warn if baseline has nuisance terms)
-
-This list controls soft subspace preprocessing. It is separate from the
-built-in fast
-[`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
-engines. To use reduced-rank-regression GLS with conditional or
-block-bootstrap standard errors, call
-[`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
-with `engine = "rrr_gls"` and pass reduced-rank options in
-`engine_args`. To use the sketched GLM path, call
-[`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
-with `engine = "latent_sketch"` and pass a
-[`lowrank_control()`](https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.md)
-object via `lowrank`.
-
-When
-[`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
-is called with the convenience argument `nuisance_projection`, `enabled`
-is set automatically. When constructing a `soft_subspace_options` list
-directly, set `enabled = TRUE` yourself.
+An object of class `fmri_lm_control`.

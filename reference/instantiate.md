@@ -5,7 +5,8 @@ Binds an
 to one or more per-subject data bindings, producing serializable
 [fmri_job](https://bbuchsbaum.github.io/fmrireg/reference/fmri_job.md)
 recipes. No data is loaded: file-backed scans are kept as paths and
-realized lazily by `run()`.
+realized lazily by
+[`run_job()`](https://bbuchsbaum.github.io/fmrireg/reference/run_job.md).
 
 ## Usage
 
@@ -40,7 +41,7 @@ if `x` is one binding, otherwise a list of
 ## See also
 
 [`fmri_job()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_job.md),
-`run()`,
+[`run_job()`](https://bbuchsbaum.github.io/fmrireg/reference/run_job.md),
 [`from_bids()`](https://bbuchsbaum.github.io/fmrireg/reference/from_bids.md)
 
 ## Examples

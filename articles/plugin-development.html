@@ -212,8 +212,7 @@ then delegates to <code><a href="../reference/fit_glm_on_transformed_series.html
 <span>  dataset <span class="op">=</span> <span class="va">dset</span>,</span>
 <span>  engine <span class="op">=</span> <span class="va">engine_name</span>,</span>
 <span>  engine_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>center <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
-<span>  robust <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  robust_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>max_iter <span class="op">=</span> <span class="fl">10L</span><span class="op">)</span></span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span>robust <span class="op">=</span> <span class="fu"><a href="../reference/robust_spec.html">robust_spec</a></span><span class="op">(</span><span class="st">"none"</span>, max_iter <span class="op">=</span> <span class="fl">10L</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">fit_plugin</span>, <span class="st">"fmri_lm"</span><span class="op">)</span><span class="op">)</span></span>
@@ -286,11 +285,10 @@ away</li>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;      config robust_type robust_max_iter normalized</span></span>
-<span><span class="co">#&gt; 1 requested       FALSE              10      FALSE</span></span>
-<span><span class="co">#&gt; 2  executed       FALSE               2       TRUE</span></span></code></pre></div>
-<p>If a caller enables an unsupported feature such as
-<code>robust = TRUE</code>, the engine is rejected before
-<code>fit()</code> is called.</p>
+<span><span class="co">#&gt; 1 requested        none              10      FALSE</span></span>
+<span><span class="co">#&gt; 2  executed        none               2       TRUE</span></span></code></pre></div>
+<p>If a caller enables an unsupported robust method, the engine is
+rejected before <code>fit()</code> is called.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">unsupported_message</span></span>
 <span><span class="co">#&gt; [1] "vignette_centered_engine does not support robust fitting; set robust = FALSE"</span></span></code></pre></div>

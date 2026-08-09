@@ -18,8 +18,8 @@ fmri_template(
   baseline = baseline_spec(),
   durations = 0,
   contrasts = NULL,
-  control = fmri_lm_control(),
-  strategy = c("runwise", "chunkwise"),
+  control = fmri_lm_control(estimation = estimation_spec("runwise_meta")),
+  compute = compute_spec(voxel_chunks = 1L),
   engine = NULL,
   engine_args = list(),
   reducer = NULL
@@ -53,13 +53,17 @@ fmri_template(
 
 - control:
 
-  An `fmri_lm_config` from
+  An `fmri_lm_control` from
   [`fmri_lm_control()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm_control.md)
   holding the robust / AR / preprocessing options for fitting.
 
-- strategy:
+- compute:
 
-  Fitting strategy: `"runwise"` or `"chunkwise"`.
+  A
+  [`compute_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/compute_spec.md)
+  describing backend, voxel partitioning, parallelization, and progress
+  reporting. Statistical runwise versus joint fitting belongs in
+  `control$estimation`.
 
 - engine:
 
@@ -113,7 +117,8 @@ tmpl
 #> <fmri_template>
 #>   formula:   onset ~ hrf(condition) 
 #>   block:     ~run 
-#>   strategy: runwise
+#>   scope:    runwise_meta
+#>   compute:   matrix backend, 1 voxel chunk(s), none parallelism 
 #>   baseline:  bs(degree=3) 
 #>   contrasts: none 
 #>   reducer:   none (returns fitted object) 

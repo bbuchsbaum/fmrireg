@@ -29,4 +29,4 @@ An `fmri_model`.
 ## See also
 
 [`realize_dataset()`](https://bbuchsbaum.github.io/fmrireg/reference/realize_dataset.md),
-`run()`
+[`run_job()`](https://bbuchsbaum.github.io/fmrireg/reference/run_job.md)

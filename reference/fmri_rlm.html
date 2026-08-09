@@ -101,27 +101,29 @@ block structure, and dataset. The model can be fit using either a runwise or chu
 
 
 <dt id="arg-block">block<a class="anchor" aria-label="anchor" href="#arg-block"></a></dt>
-<dd><p>The model formula for block structure.</p></dd>
+<dd><p>Formula describing run/block structure.</p></dd>
 
 
 <dt id="arg-baseline-model">baseline_model<a class="anchor" aria-label="anchor" href="#arg-baseline-model"></a></dt>
-<dd><p>(Optional) A <code>baseline_model</code> object. Default is <code>NULL</code>.</p></dd>
+<dd><p>Optional baseline/nuisance model.</p></dd>
 
 
 <dt id="arg-dataset">dataset<a class="anchor" aria-label="anchor" href="#arg-dataset"></a></dt>
-<dd><p>An <code>fmri_dataset</code> object containing the time-series data.</p></dd>
+<dd><p>An <code>fmri_dataset</code>. For an <code>fmri_model</code> method this may be
+omitted when the model already owns its dataset.</p></dd>
 
 
 <dt id="arg-durations">durations<a class="anchor" aria-label="anchor" href="#arg-durations"></a></dt>
-<dd><p>A vector of event durations. Default is <code>0</code>.</p></dd>
+<dd><p>Event durations passed to model construction.</p></dd>
 
 
 <dt id="arg-drop-empty">drop_empty<a class="anchor" aria-label="anchor" href="#arg-drop-empty"></a></dt>
-<dd><p>Logical. Whether to remove factor levels with zero size. Default is <code>TRUE</code>.</p></dd>
+<dd><p>Remove empty factor levels during model construction.</p></dd>
 
 
 <dt id="arg-strategy">strategy<a class="anchor" aria-label="anchor" href="#arg-strategy"></a></dt>
-<dd><p>The data splitting strategy, either <code>"runwise"</code> or <code>"chunkwise"</code>. Default is <code>"runwise"</code>.</p></dd>
+<dd><p>Fit runs separately and combine them, or fit a joint model
+partitioned into voxel chunks.</p></dd>
 
 
 <dt id="arg-nchunks">nchunks<a class="anchor" aria-label="anchor" href="#arg-nchunks"></a></dt>

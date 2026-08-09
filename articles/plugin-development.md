@@ -125,8 +125,7 @@ fit_plugin <- fmri_lm(
   dataset = dset,
   engine = engine_name,
   engine_args = list(center = TRUE),
-  robust = FALSE,
-  robust_options = list(max_iter = 10L)
+  control = fmri_lm_control(robust = robust_spec("none", max_iter = 10L))
 )
 
 stopifnot(inherits(fit_plugin, "fmri_lm"))
@@ -200,12 +199,12 @@ data.frame(
   )
 )
 #>      config robust_type robust_max_iter normalized
-#> 1 requested       FALSE              10      FALSE
-#> 2  executed       FALSE               2       TRUE
+#> 1 requested        none              10      FALSE
+#> 2  executed        none               2       TRUE
 ```
 
-If a caller enables an unsupported feature such as `robust = TRUE`, the
-engine is rejected before `fit()` is called.
+If a caller enables an unsupported robust method, the engine is rejected
+before `fit()` is called.
 
 ``` r
 

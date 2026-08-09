@@ -181,14 +181,17 @@ full_model <- fmri_model(event_mod, base_mod)
 fit <- fmri_lm(full_model, dataset = my_dataset)
 
 # Robust fit down-weighting outlier time points
-fit_robust <- fmri_lm(full_model, dataset = my_dataset, robust = TRUE)
+fit_robust <- fmri_lm(
+  full_model, dataset = my_dataset,
+  control = fmri_lm_control(robust = robust_spec("huber"))
+)
 
 # Extract contrast results (if contrasts were defined)
 # con_results <- coef(fit)  # Get coefficients
 ```
 
-Setting `robust = TRUE` invokes row-wise weighting to lessen the
-influence of motion spikes or other frame-level artifacts.
+Selecting `robust_spec("huber")` invokes row-wise weighting to lessen
+the influence of motion spikes or other frame-level artifacts.
 
 - **See Vignettes:**
   - [`vignette("a_09_linear_model", package = "fmrireg")`](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.md)

@@ -27,7 +27,7 @@ fit_glm_on_transformed_series(
 
 - cfg:
 
-  Optional `fmri_lm_config`; defaults to
+  Optional `fmri_lm_control`; defaults to
   [`fmri_lm_control()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm_control.md).
 
 - dataset:

@@ -53,7 +53,7 @@
 - `compute_sandwich_variance()` computed its meat matrix as
   `X' diag(e^4) X` instead of `X' diag(e^2) X`, giving standard errors
   about 3.5x too large. Both sandwich helpers are now checked against
-  `sandwich::vcovHC()`.
+  [`sandwich::vcovHC()`](https://zeileis.codeberg.page/sandwich/reference/vcovHC.html).
 
 ### Performance
 

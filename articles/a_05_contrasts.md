@@ -497,7 +497,7 @@ fmri_fit <- fmri_lm(
   formula = onset ~ hrf(category, attention, contrasts = all_contrasts),
   block = ~ block,
   dataset = dataset_sim,
-  strategy = "chunkwise" # Use chunkwise for matrix_dataset
+  compute = compute_spec(voxel_chunks = 1L)
 )
 
 # Print summary of the fitted model (shows contrasts)
@@ -614,9 +614,9 @@ str(wts_interaction)
 #>   .. ..$ id       : NULL
 #>   .. ..$ vars     :List of 2
 #>   .. .. ..$ : language ~category
-#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x55fa4349dfe0> 
+#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x5611877e7918> 
 #>   .. .. ..$ : language ~attention
-#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x55fa4349dfe0> 
+#>   .. .. .. ..- attr(*, ".Environment")=<environment: 0x5611877e7918> 
 #>   .. .. ..- attr(*, "class")= chr [1:2] "quosures" "list"
 #>   .. ..$ varnames : Named chr [1:2] "category" "attention"
 #>   .. .. ..- attr(*, "names")= chr [1:2] "" ""

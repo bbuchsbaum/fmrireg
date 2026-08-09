@@ -18,6 +18,7 @@ fmri_lm_fit(
   progress = FALSE,
   parallel_voxels = FALSE,
   parallel_chunks = FALSE,
+  compute = NULL,
   ...
 )
 ```
@@ -39,7 +40,7 @@ fmri_lm_fit(
 
 - cfg:
 
-  An `fmri_lm_config` object containing all fitting options. See
+  An `fmri_lm_control` object containing all fitting options. See
   [`fmri_lm_control`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm_control.md).
 
 - nchunks:

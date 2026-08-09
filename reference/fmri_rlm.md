@@ -40,29 +40,29 @@ fmri_rlm(
 
 - block:
 
-  The model formula for block structure.
+  Formula describing run/block structure.
 
 - baseline_model:
 
-  (Optional) A `baseline_model` object. Default is `NULL`.
+  Optional baseline/nuisance model.
 
 - dataset:
 
-  An `fmri_dataset` object containing the time-series data.
+  An `fmri_dataset`. For an `fmri_model` method this may be omitted when
+  the model already owns its dataset.
 
 - durations:
 
-  A vector of event durations. Default is `0`.
+  Event durations passed to model construction.
 
 - drop_empty:
 
-  Logical. Whether to remove factor levels with zero size. Default is
-  `TRUE`.
+  Remove empty factor levels during model construction.
 
 - strategy:
 
-  The data splitting strategy, either `"runwise"` or `"chunkwise"`.
-  Default is `"runwise"`.
+  Fit runs separately and combine them, or fit a joint model partitioned
+  into voxel chunks.
 
 - nchunks:
 

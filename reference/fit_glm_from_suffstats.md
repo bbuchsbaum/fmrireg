@@ -46,7 +46,7 @@ fit_glm_from_suffstats(
 
 - cfg:
 
-  Optional `fmri_lm_config`; used for metadata only.
+  Optional `fmri_lm_control`; used for metadata only.
 
 - dataset:
 

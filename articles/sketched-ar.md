@@ -137,7 +137,7 @@ fit_srht_global <- fmri_lm(
   dataset    = dset,
   engine     = "latent_sketch",
   lowrank    = low_srht,
-  ar_options = list(by_cluster = FALSE, order = 1L)
+  control    = fmri_lm_control(noise = noise_spec("ar1", pooling = "global"))
 )
 ```
 
@@ -154,7 +154,10 @@ fit_srht_group <- fmri_lm(
   dataset    = dset,
   engine     = "latent_sketch",
   lowrank    = low_srht,
-  ar_options = list(by_cluster = TRUE, order = 1L, shrink_c0 = 100)
+  control    = fmri_lm_control(
+    noise = noise_spec("ar1", pooling = "parcel", parcels = parcels,
+                       shrink_c0 = 100L)
+  )
 )
 ```
 
@@ -176,7 +179,7 @@ fit_ihs <- fmri_lm(
   dataset    = dset,
   engine     = "latent_sketch",
   lowrank    = low_ihs,
-  ar_options = list(by_cluster = FALSE, order = 1L)
+  control    = fmri_lm_control(noise = noise_spec("ar1", pooling = "global"))
 )
 ```
 
@@ -193,16 +196,14 @@ sketch is preserving the task part of the GLM solution well.
 
 fit_exact_iid <- fmri_lm(
   onset ~ hrf(condition), block = ~ run,
-  dataset = dset,
-  ar_options = list(struct = "iid")
+  dataset = dset
 )
 
 fit_srht_iid <- fmri_lm(
   onset ~ hrf(condition), block = ~ run,
   dataset = dset,
   engine = "latent_sketch",
-  lowrank = low_srht,
-  ar_options = list(struct = "iid")
+  lowrank = low_srht
 )
 
 B_exact_iid <- t(fit_exact_iid$result$betas$data[[1]]$estimate[[1]])
@@ -264,7 +265,7 @@ represent well.
 fit_rrr_boot <- fmri_lm(
   onset ~ hrf(condition), block = ~ run,
   dataset = dset,
-  ar_options = list(struct = "ar1"),
+  control = fmri_lm_control(noise = noise_spec("ar1")),
   engine = "rrr_gls",
   engine_args = list(
     rank_mode = "energy",
@@ -315,13 +316,15 @@ low_lm <- lowrank_control(
 fit_lm_srht <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset,
                        engine = "latent_sketch",
                        lowrank = low_lm,
-                       ar_options = list(by_cluster = FALSE, order = 1L))
+                       control = fmri_lm_control(
+                         noise = noise_spec("ar1", pooling = "global")
+                       ))
 
 # Compare to exact
 B_exact <- t(fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)$result$betas$data[[1]]$estimate[[1]])
 cor_landmarks <- cor(as.numeric(B_exact), as.numeric(fit_lm_srht$betas_fixed))
 cor_landmarks
-#> [1] 0.02792882
+#> [1] 0.03501604
 ```
 
 Even with only 24 landmarks for 192 voxels the correlation with the

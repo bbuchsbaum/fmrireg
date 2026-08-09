@@ -225,8 +225,7 @@ model <- fmri_lm(
   formula = onset ~ hrf(condition),  # Model experimental effects
   block = ~ run,                     # Block structure
   dataset = dataset,                 # Our simulated dataset
-  strategy = "chunkwise",            # Processing strategy
-  nchunks = 1                        # Process all voxels at once
+  compute = compute_spec(voxel_chunks = 1L)
 )
 
 # Print a summary of the model
@@ -239,7 +238,7 @@ model
 #> Model formula:
 #>   ~ onset hrf(condition) 
 #> 
-#> Fitting strategy:  chunkwise 
+#> Fitting strategy:  runwise 
 #> 
 #> Baseline parameters:  4 
 #> Design parameters:    2 
@@ -253,9 +252,9 @@ model
 ### Accounting for Temporal Autocorrelation
 
 The simulated noise contains AR(1) structure. We can ask `fmri_lm` to
-apply a fast AR(1) prewhitening step by setting `cor_struct = "ar1"`.
-This estimates the AR coefficient from an initial OLS fit, whitens the
-data and design matrix, and refits the GLM.
+apply a fast AR(1) prewhitening step with `noise_spec("ar1")`. This
+estimates the AR coefficient from an initial OLS fit, whitens the data
+and design matrix, and refits the GLM.
 
 With stronger temporal autocorrelation in the simulated noise, the
 prewhitened model recovers tighter standard errors than OLS.
@@ -266,10 +265,8 @@ model_ar1 <- fmri_lm(
   formula = onset ~ hrf(condition),
   block   = ~ run,
   dataset = dataset,
-  strategy = "chunkwise",
-  nchunks = 1,
-  cor_struct = "ar1",
-  cor_iter = 2              # Iterate to refine the AR(1) estimate
+  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  compute = compute_spec(voxel_chunks = 1L)
 )
 
 # Compare standard errors (first few voxels)
@@ -277,13 +274,13 @@ se_ols <- standard_error(model)
 se_ar1 <- standard_error(model_ar1)
 head(round(cbind(OLS = se_ols[[1]], AR1 = se_ar1[[1]]), 4))
 #>         OLS    AR1
-#> [1,] 0.1170 0.1436
-#> [2,] 0.0936 0.1148
-#> [3,] 0.0702 0.0861
+#> [1,] 0.1170 0.1472
+#> [2,] 0.0936 0.1177
+#> [3,] 0.0702 0.0883
 
 # Inspect the estimated AR coefficient (shared across voxels in this example)
 model_ar1$ar_coef[[1]]
-#> NULL
+#> [1] 0.7681123
 ```
 
 The AR(1) model now estimates a non-zero autoregressive coefficient and
@@ -291,7 +288,9 @@ produces notably smaller standard errors than the plain OLS fit,
 illustrating how prewhitening improves efficiency when temporal
 autocorrelation is present.
 
-The `cor_struct` argument also accepts `"arp"` for higher-order
+The
+[`noise_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/noise_spec.md)
+constructor also accepts `struct = "arp"` for higher-order
 autoregressive models. This setting models AR coefficients only (no
 moving-average terms).
 
@@ -300,17 +299,9 @@ moving-average terms).
 Real fMRI runs sometimes contain entire time points corrupted by motion
 or scanner artifacts. The `fmri_lm` function can mitigate their impact
 by enabling row-wise robust weighting: an Iteratively Reweighted Least
-Squares loop down-weights frames with large residuals. Name the
-weighting function directly with `robust = "huber"` or
-`robust = "bisquare"`, and control the number of iterations with
-`robust_max_iter`. `robust = TRUE` is shorthand for `"huber"`.
-
-Each option has one spelling per call. `robust`, `robust_psi`, and
-`robust_options$type` all set the same field, so supplying two of them
-with *different* values is an error rather than a silent choice —
-`robust = TRUE` together with `robust_psi = "bisquare"` is a
-contradiction, since `TRUE` already means Huber. The same rule applies
-to the AR shorthands and their `ar_options` entries.
+Squares loop down-weights frames with large residuals. Select the
+weighting function and its iteration limit once with
+[`robust_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/robust_spec.md).
 
 ``` r
 
@@ -318,10 +309,10 @@ model_robust <- fmri_lm(
   formula = onset ~ hrf(condition),
   block   = ~ run,
   dataset = dataset,
-  strategy = "chunkwise",
-  nchunks = 1,
-  robust = "huber",
-  robust_max_iter = 2
+  control = fmri_lm_control(
+    robust = robust_spec("huber", max_iter = 2L)
+  ),
+  compute = compute_spec(voxel_chunks = 1L)
 )
 
 se_robust <- standard_error(model_robust)
@@ -443,8 +434,7 @@ contrast_model <- fmri_lm(
   formula = onset ~ hrf(condition, contrasts = con_spec),
   block = ~ run,
   dataset = dataset,
-  strategy = "chunkwise",
-  nchunks = 1
+  compute = compute_spec(voxel_chunks = 1L)
 )
 
 # Extract contrast results using tidy helper
@@ -462,11 +452,11 @@ contrast_results <- tidy(contrast_model, type = "contrasts") %>%
 kable(contrast_results, caption = "Contrast results: condition2 - condition1", digits = 4)
 ```
 
-| voxel | term | estimate | std_error | statistic | p_value | df_residual | significant |
-|:---|:---|---:|---:|---:|---:|---:|:---|
-| voxel1 | cond2_minus_cond1 | 1.2398 | 0.1553 | 7.9826 | 0 | 194 | TRUE |
-| voxel2 | cond2_minus_cond1 | 0.9918 | 0.1243 | 7.9826 | 0 | 194 | TRUE |
-| voxel3 | cond2_minus_cond1 | 0.7439 | 0.0932 | 7.9826 | 0 | 194 | TRUE |
+| voxel | term | estimate | std_error | statistic | p_value | df_inference | df_residual | significant |
+|:---|:---|---:|---:|---:|---:|---:|---:|:---|
+| voxel1 | cond2_minus_cond1 | 1.2398 | 0.1553 | 7.9826 | 0 | 194 | 194 | TRUE |
+| voxel2 | cond2_minus_cond1 | 0.9918 | 0.1243 | 7.9826 | 0 | 194 | 194 | TRUE |
+| voxel3 | cond2_minus_cond1 | 0.7439 | 0.0932 | 7.9826 | 0 | 194 | 194 | TRUE |
 
 Contrast results: condition2 - condition1 {.table}
 
@@ -580,24 +570,21 @@ model_canonical <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "spmg1"),
   block = ~ run,
   dataset = dataset,
-  strategy = "chunkwise",
-  nchunks = 1
+  compute = compute_spec(voxel_chunks = 1L)
 )
 
 model_gaussian <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "gaussian"),
   block = ~ run,
   dataset = dataset,
-  strategy = "chunkwise",
-  nchunks = 1
+  compute = compute_spec(voxel_chunks = 1L)
 )
 
 model_bspline <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "bspline", nbasis = 5),
   block = ~ run,
   dataset = dataset,
-  strategy = "chunkwise",
-  nchunks = 1
+  compute = compute_spec(voxel_chunks = 1L)
 )
 ```
 

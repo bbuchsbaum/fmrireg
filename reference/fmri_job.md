@@ -5,8 +5,9 @@ Binds an
 to one subject's
 [dataset_spec](https://bbuchsbaum.github.io/fmrireg/reference/dataset_spec.md).
 The result is a fully serializable recipe (no voxel data, no captured
-environment) that `run()` turns into a fitted model and reduced output.
-Build jobs with
+environment) that
+[`run_job()`](https://bbuchsbaum.github.io/fmrireg/reference/run_job.md)
+turns into a fitted model and reduced output. Build jobs with
 [`instantiate()`](https://bbuchsbaum.github.io/fmrireg/reference/instantiate.md)
 rather than by hand in the common case.
 
@@ -43,7 +44,8 @@ fmri_job(id, template, dataset_spec, meta = list(), nuisance = NULL)
   Optional per-subject nuisance / confound regressors fed to the
   baseline model at run time: `NULL`, a numeric matrix with one row per
   scan (split across runs), or a list of per-run matrices. (A deferred
-  file-read spec is also accepted by `run()`.)
+  file-read spec is also accepted by
+  [`run_job()`](https://bbuchsbaum.github.io/fmrireg/reference/run_job.md).)
 
 ## Value
 
@@ -52,7 +54,7 @@ An object of class `fmri_job`.
 ## See also
 
 [`instantiate()`](https://bbuchsbaum.github.io/fmrireg/reference/instantiate.md),
-`run()`,
+[`run_job()`](https://bbuchsbaum.github.io/fmrireg/reference/run_job.md),
 [`export_jobs()`](https://bbuchsbaum.github.io/fmrireg/reference/export_jobs.md)
 
 ## Examples

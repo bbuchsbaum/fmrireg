@@ -62,6 +62,9 @@
 - [`compute_lm_contrasts_from_suffstats()`](https://bbuchsbaum.github.io/fmrireg/reference/compute_lm_contrasts_from_suffstats.md)
   : Compute contrast statistics from sufficient statistics (public API)
 
+- [`compute_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/compute_spec.md)
+  : Mechanical execution specification
+
 - [`conditions(`*`<convolved_term>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/conditions.md)
   : Visualize the entire design matrix as a heatmap
 
@@ -135,6 +138,9 @@
   : Estimate hemodynamic response function (HRF) using Generalized
   Additive Models (GAMs)
 
+- [`estimation_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/estimation_spec.md)
+  : Statistical fitting scope
+
 - [`evaluate_method_performance()`](https://bbuchsbaum.github.io/fmrireg/reference/evaluate_method_performance.md)
   : Evaluate Method Performance on Benchmark Dataset
 
@@ -191,7 +197,7 @@
   : Fit a Linear Regression Model for fMRI Data Analysis
 
 - [`fmri_lm_control()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm_control.md)
-  : Configuration for fmri_lm fitting
+  : Configure an fMRI linear model
 
 - [`fmri_meta()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta.md)
   : Fit Group-Level Meta-Analysis
@@ -302,6 +308,9 @@
 - [`n_subjects()`](https://bbuchsbaum.github.io/fmrireg/reference/n_subjects.md)
   : Extract Number of Subjects
 
+- [`noise_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/noise_spec.md)
+  : Temporal-noise specification
+
 - [`ols_t_cpp()`](https://bbuchsbaum.github.io/fmrireg/reference/ols_t_cpp.md)
   : OLS t-test / ANCOVA across features
 
@@ -333,6 +342,9 @@
 
 - [`print(`*`<spatial_fdr_result>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.spatial_fdr_result.md)
   : Print Spatial FDR Results
+
+- [`projection_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/projection_spec.md)
+  : Nuisance-projection specification
 
 - [`pvalues()`](https://bbuchsbaum.github.io/fmrireg/reference/pvalues.md)
   : Compute P-values from Meta-Analysis
@@ -377,6 +389,9 @@
 
 - [`resolve_basis()`](https://bbuchsbaum.github.io/fmrireg/reference/resolve_basis.md)
   : Resolve a registered basis function by name
+
+- [`robust_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/robust_spec.md)
+  : Robust-estimation specification
 
 - [`run_backends()`](https://bbuchsbaum.github.io/fmrireg/reference/run_backends.md)
   : List registered execution backends
@@ -460,11 +475,20 @@
 - [`validate_template()`](https://bbuchsbaum.github.io/fmrireg/reference/validate_template.md)
   : Validate an fmri_template
 
+- [`variance_model()`](https://bbuchsbaum.github.io/fmrireg/reference/variance_model.md)
+  : Extract the structured variance model
+
+- [`variance_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/variance_spec.md)
+  : Variance and reference-distribution specification
+
 - [`volume_quality`](https://bbuchsbaum.github.io/fmrireg/reference/volume_quality.md)
   : Volume Quality Metrics and Temporal Weighting
 
 - [`volume_weights()`](https://bbuchsbaum.github.io/fmrireg/reference/volume_weights.md)
   : Compute Volume Quality Weights from Data
+
+- [`weights_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/weights_spec.md)
+  : Volume-weight specification
 
 - [`welch_t_cpp()`](https://bbuchsbaum.github.io/fmrireg/reference/welch_t_cpp.md)
   : Welch two-sample t-test across features

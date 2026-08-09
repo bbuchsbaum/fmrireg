@@ -85,7 +85,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-08-07</h4>
+            <h4 data-toc-skip class="date">2026-08-09</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/fmrireg.Rmd" class="external-link"><code>vignettes/fmrireg.Rmd</code></a></small>
       <div class="d-none name"><code>fmrireg.Rmd</code></div>
@@ -285,12 +285,15 @@ estimates.</p>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span><span class="va">full_model</span>, dataset <span class="op">=</span> <span class="va">my_dataset</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Robust fit down-weighting outlier time points</span></span>
-<span><span class="va">fit_robust</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span><span class="va">full_model</span>, dataset <span class="op">=</span> <span class="va">my_dataset</span>, robust <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">fit_robust</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
+<span>  <span class="va">full_model</span>, dataset <span class="op">=</span> <span class="va">my_dataset</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span>robust <span class="op">=</span> <span class="fu"><a href="../reference/robust_spec.html">robust_spec</a></span><span class="op">(</span><span class="st">"huber"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Extract contrast results (if contrasts were defined)</span></span>
 <span><span class="co"># con_results &lt;- coef(fit)  # Get coefficients</span></span></code></pre></div>
-<p>Setting <code>robust = TRUE</code> invokes row-wise weighting to
-lessen the influence of motion spikes or other frame-level
+<p>Selecting <code>robust_spec("huber")</code> invokes row-wise
+weighting to lessen the influence of motion spikes or other frame-level
 artifacts.</p>
 <ul>
 <li>

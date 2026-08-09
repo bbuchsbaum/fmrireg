@@ -37,7 +37,7 @@ runwise_lm_impl(
 
 - cfg:
 
-  An `fmri_lm_config` object containing all fitting options.
+  An `fmri_lm_control` object containing all fitting options.
 
 - verbose:
 

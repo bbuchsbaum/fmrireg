@@ -78,7 +78,7 @@
 <li>
 <code>engine</code> now warns about the execution arguments it ignores (<code>strategy</code>, <code>nchunks</code>, <code>use_fast_path</code>, <code>progress</code>, <code>parallel_voxels</code>, <code>parallel_chunks</code>), which were previously accepted and silently discarded.</li>
 <li>
-<code>compute_sandwich_variance()</code> computed its meat matrix as <code>X' diag(e^4) X</code> instead of <code>X' diag(e^2) X</code>, giving standard errors about 3.5x too large. Both sandwich helpers are now checked against <code>sandwich::vcovHC()</code>.</li>
+<code>compute_sandwich_variance()</code> computed its meat matrix as <code>X' diag(e^4) X</code> instead of <code>X' diag(e^2) X</code>, giving standard errors about 3.5x too large. Both sandwich helpers are now checked against <code><a href="https://zeileis.codeberg.page/sandwich/reference/vcovHC.html" class="external-link">sandwich::vcovHC()</a></code>.</li>
 </ul></div>
 <div class="section level3">
 <h3 id="performance-0-2-0">Performance<a class="anchor" aria-label="anchor" href="#performance-0-2-0"></a></h3>
