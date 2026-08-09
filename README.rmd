@@ -1,27 +1,187 @@
 ---
-title: "fmrireg"
-output: github_document
+output:
+  github_document:
+    html_preview: false
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,
+  warning = TRUE
+)
+package_version <- read.dcf("DESCRIPTION", fields = "Version")[[1L]]
 ```
 
-# In Development
+# fmrireg
 
- <!-- badges: start -->
-  [![R-CMD-check](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml)
-  <!-- badges: end -->
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg)](https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/license/mit)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+<!-- badges: end -->
 
-```{r, echo = FALSE}                                                                                                        
-version <- as.vector(read.dcf('DESCRIPTION')[, 'Version'])                                                                 
-version <- gsub('-', '.', version)                                                                                      
-```        
+[Documentation](https://bbuchsbaum.github.io/fmrireg/) ·
+[Getting started](https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html) ·
+[API reference](https://bbuchsbaum.github.io/fmrireg/reference/) ·
+[Changelog](NEWS.md)
 
+**fmrireg** is an R package for specifying and fitting voxelwise fMRI
+regression models from event tables and preprocessed time series. It turns
+formulas such as `onset ~ hrf(condition)` into HRF-convolved designs, estimates
+condition effects across voxels, and carries named contrasts into group
+analysis.
 
-The `fmrireg` package is currently in development. The goal of the project is to provide functions for carrying out regression anaysis with *f*MRI data. It's Not Ready for Primetime, but still have a look at vignettes:
+> **Status:** Version `r package_version` is experimental and requires R 4.1 or
+> later. APIs may change while the package is under active development.
 
-## Vignettes
+## Installation
 
-See examples of use of `fmrireg` in the [vignettes](https://bbuchsbaum.github.io/fmrireg/articles/index.html).
+Install the development version from GitHub:
 
+```r
+install.packages("remotes")
+remotes::install_github("bbuchsbaum/fmrireg")
+```
+
+## Quick start
+
+This synthetic example makes one task-responsive time series and fits it
+without external imaging files:
+
+```{r quickstart}
+library(fmrireg)
+
+TR <- 2
+n_timepoints <- 120
+acquisition_time <- seq(TR / 2, by = TR, length.out = n_timepoints)
+set.seed(42)
+events <- data.frame(
+  onset = cumsum(sample(c(6, 8, 10), 24, replace = TRUE)),
+  condition = factor(sample(rep(c("faces", "scenes"), each = 12))),
+  duration = 0,
+  run = 1L
+)
+
+task_regressor <- function(condition) {
+  fmrihrf::regressor(
+    events$onset[events$condition == condition]
+  ) |>
+    fmrihrf::evaluate(acquisition_time) |>
+    as.numeric()
+}
+
+faces <- task_regressor("faces")
+scenes <- task_regressor("scenes")
+bold <- cbind(
+  face_roi = 100 + 1.5 * faces + 0.1 * scenes + rnorm(n_timepoints, sd = 0.04)
+)
+
+dataset <- matrix_dataset(
+  bold, TR = TR, run_length = n_timepoints,
+  event_table = events
+)
+fit <- fmri_lm(
+  onset ~ hrf(condition), block = ~ run, dataset = dataset
+)
+
+results <- subset(
+  tidy(fit), term %in% levels(events$condition),
+  select = c(voxel, term, estimate, std_error)
+)
+results$estimate <- round(results$estimate, 2)
+results$std_error <- round(results$std_error, 2)
+results
+```
+
+```{r quickstart-check, include=FALSE}
+stopifnot(
+  nrow(results) == 2L,
+  all(is.finite(results$estimate)),
+  all(is.finite(results$std_error)),
+  identical(sort(unique(results$term)), c("faces", "scenes")),
+  results$estimate[results$voxel == 1 & results$term == "faces"] >
+    results$estimate[results$voxel == 1 & results$term == "scenes"]
+)
+```
+
+The recovered pattern matches the simulation: the region responds more to
+faces than to scenes. For real analyses, replace `bold` and `events` with
+time-by-voxel data and the matching event table; the modeling interface is the
+same.
+
+## What it covers
+
+- Build task and baseline models from formulas, including canonical, flexible,
+  and custom hemodynamic response functions.
+- Fit matrix-backed or imaging-backed datasets with ordinary, robust, and
+  autoregressive regression paths.
+- Define named t- and F-contrasts and export coefficient or statistic maps.
+- Carry subject-level betas and standard errors—or t-statistics and degrees of
+  freedom—into group analysis.
+- Use controlled simulations, known-truth benchmark datasets, and explicit
+  approximation diagnostics for accelerated methods.
+
+## Fit and boundaries
+
+fmrireg is the regression layer of an fMRI workflow. It expects preprocessed
+time series and aligned event information; it does not perform motion
+correction, anatomical registration, or spatial normalization. Matrix-backed
+examples are useful for regions of interest and testing, while the dataset and
+export guides cover image- and file-backed workflows.
+
+The package is still experimental. Exact, AR-corrected, robust, and accelerated
+engines have different statistical contracts; use the relevant guide rather
+than assuming that every option is interchangeable.
+
+## Documentation
+
+- [Overview and workflow](https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html)
+  — start with a complete fit, then unpack datasets, designs, and contrasts.
+- [Dataset management](https://bbuchsbaum.github.io/fmrireg/articles/a_10_dataset.html),
+  [simulation](https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.html),
+  [linear modeling](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.html),
+  and [contrasts](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.html)
+  — the core single-subject workflow.
+- [Multi-subject fan-out](https://bbuchsbaum.github.io/fmrireg/articles/multisubject_fanout.html)
+  and [group analysis](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.html)
+  — move from subject fits to group inference.
+- [Functional connectivity](https://bbuchsbaum.github.io/fmrireg/articles/functional_connectivity.html)
+  — seed-regressor inference with autocorrelation and multiplicity control.
+- [Sketched GLM](https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.html),
+  [plugin development](https://bbuchsbaum.github.io/fmrireg/articles/plugin-development.html),
+  and [benchmark datasets](https://bbuchsbaum.github.io/fmrireg/articles/benchmark_datasets.html)
+  — advanced engines, extensions, and numerical oracles.
+- [API reference](https://bbuchsbaum.github.io/fmrireg/reference/) — exported
+  functions, arguments, and return values.
+
+## Optional command-line wrapper
+
+Install the wrapper into a directory on `PATH`:
+
+```r
+fmrireg::install_cli("~/.local/bin", overwrite = TRUE)
+```
+
+Then inspect available commands or bundled benchmark datasets:
+
+```sh
+fmrireg --help
+fmrireg benchmark list
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and test
+commands. Please report reproducible bugs through the
+[issue tracker](https://github.com/bbuchsbaum/fmrireg/issues).
+
+## Citation
+
+Run `citation("fmrireg")` for the current package citation.
+
+## License
+
+fmrireg is licensed under the [MIT License](LICENSE).
