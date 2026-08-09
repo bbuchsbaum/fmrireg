@@ -5,8 +5,6 @@
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
-
-# Add a baseline model with polynomial drift
 bmod <- baseline_model(basis = "bs", degree = 5, sframe = sframe)
 
 # Combine into a full fMRI model and fit
