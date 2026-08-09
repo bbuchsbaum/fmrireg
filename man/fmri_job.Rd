@@ -19,7 +19,7 @@ fmri_job(id, template, dataset_spec, meta = list(), nuisance = NULL)
 \item{nuisance}{Optional per-subject nuisance / confound regressors fed to the
 baseline model at run time: \code{NULL}, a numeric matrix with one row per
 scan (split across runs), or a list of per-run matrices. (A deferred
-file-read spec is also accepted by \code{\link[=run]{run()}}.)}
+file-read spec is also accepted by \code{\link[=run_job]{run_job()}}.)}
 }
 \value{
 An object of class \code{fmri_job}.
@@ -27,7 +27,7 @@ An object of class \code{fmri_job}.
 \description{
 Binds an \link{fmri_template} to one subject's \link{dataset_spec}. The result is a
 fully serializable recipe (no voxel data, no captured environment) that
-\code{\link[=run]{run()}} turns into a fitted model and reduced output. Build jobs with
+\code{\link[=run_job]{run_job()}} turns into a fitted model and reduced output. Build jobs with
 \code{\link[=instantiate]{instantiate()}} rather than by hand in the common case.
 }
 \examples{
@@ -38,5 +38,5 @@ ds <- dataset_spec("fmri_dataset",
 fmri_job("sub-01", tmpl, ds, meta = list(subject = "01"))
 }
 \seealso{
-\code{\link[=instantiate]{instantiate()}}, \code{\link[=run]{run()}}, \code{\link[=export_jobs]{export_jobs()}}
+\code{\link[=instantiate]{instantiate()}}, \code{\link[=run_job]{run_job()}}, \code{\link[=export_jobs]{export_jobs()}}
 }

@@ -50,7 +50,7 @@ extract_censor_from_dataset <- function(dataset, run_num = NULL, n_time = NULL) 
 #' Resolves censor specification from config and/or dataset.
 #' Handles "auto" mode which extracts from dataset$censor.
 #'
-#' @param cfg fmri_lm_config object
+#' @param cfg fmri_lm_control object
 #' @param dataset fmri_dataset object
 #' @param run_num Optional run number for run-specific extraction
 #' @param n_time Number of timepoints for this run/chunk
@@ -121,7 +121,7 @@ resolve_censor <- function(cfg, dataset = NULL, run_num = NULL, n_time = NULL) {
 #'
 #' @param X Design matrix (time x predictors)
 #' @param Y Data matrix (time x voxels)
-#' @param cfg fmri_lm_config object
+#' @param cfg fmri_lm_control object
 #' @param dataset fmri_dataset object (for extracting nuisance if using mask)
 #' @param run_num Run number (for run-specific nuisance extraction)
 #' @return List with preprocessed X, Y, and preprocessing metadata
@@ -214,7 +214,7 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
 #'
 #' @param run_chunk Run data from exec_strategy
 #' @param model The fmri_model object
-#' @param cfg fmri_lm_config object
+#' @param cfg fmri_lm_control object
 #' @param phi_fixed Optional fixed AR parameters
 #' @param contrast_weights List of contrast weight vectors/matrices
 #' @param dataset Optional fmri_dataset for nuisance extraction
@@ -260,7 +260,10 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
       glm_ctx_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
       initial_fit <- solve_glm_core(glm_ctx_orig, return_fitted = TRUE)
       resid_ols <- Y_run - initial_fit$fitted
-      .estimate_ar_parameters_routed(rowMeans(resid_ols), ar_order, censor = censor_run)
+      .estimate_ar_parameters_routed(
+        rowMeans(resid_ols), ar_order, censor = censor_run,
+        design = X_run
+      )
     }
 
     # Iterative GLS
@@ -276,7 +279,10 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
       # Update phi if needed for next iteration
       if (is.null(phi_fixed) && iter < cfg$ar$iter_gls) {
         resid_gls <- Y_run - X_run %*% gls$betas
-        phi_hat_run <- .estimate_ar_parameters_routed(rowMeans(resid_gls), ar_order, censor = censor_run)
+        phi_hat_run <- .estimate_ar_parameters_routed(
+          rowMeans(resid_gls), ar_order, censor = censor_run,
+          design = X_run
+        )
       }
     }
     
@@ -320,7 +326,7 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
 #'
 #' @param run_chunk Run data from exec_strategy
 #' @param model The fmri_model object
-#' @param cfg fmri_lm_config object
+#' @param cfg fmri_lm_control object
 #' @param sigma_fixed Optional fixed robust scale estimate
 #' @param dataset Optional fmri_dataset for nuisance extraction
 #' @return List with robust fitting results
@@ -397,7 +403,7 @@ process_run_robust <- function(run_chunk, model, cfg, sigma_fixed = NULL, datase
 #'
 #' @param run_chunk Run data from exec_strategy
 #' @param model The fmri_model object
-#' @param cfg fmri_lm_config object
+#' @param cfg fmri_lm_control object
 #' @param phi_fixed Optional fixed AR parameters
 #' @param sigma_fixed Optional fixed robust scale estimate
 #' @param dataset Optional fmri_dataset for nuisance extraction
@@ -598,7 +604,7 @@ pool_run_results <- function(run_results) {
 #'
 #' @param model The fmri_model object
 #' @param dataset The fmri_dataset object
-#' @param cfg fmri_lm_config object
+#' @param cfg fmri_lm_control object
 #' @param phi_fixed Optional fixed AR parameters
 #' @param sigma_fixed Optional fixed robust scale
 #' @return List with pre-computed matrices and metadata
@@ -645,7 +651,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
     # Resolve censor for this run
     censor_run <- resolve_censor(cfg, dataset, rch$chunk_num, n_time_run)
 
-    if (ar_modeling && cfg$robust$type != FALSE) {
+    if (ar_modeling && .fmri_lm_robust_enabled(cfg$robust)) {
       # Combined AR + Robust (censor handled inside process_run_ar_robust)
       res <- process_run_ar_robust(rch, model, cfg, phi_fixed, sigma_fixed, dataset)
       run_info[[ri]] <- list(
@@ -667,7 +673,31 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
         glm_ctx <- glm_context(X = X_run_orig, Y = Y_run_full, proj = proj_run_orig)
         ols <- solve_glm_core(glm_ctx, return_fitted = TRUE)
         resid_ols <- Y_run_full - ols$fitted
-        .estimate_ar_parameters_routed(rowMeans(resid_ols), ar_order, censor = censor_run)
+        .estimate_ar_parameters_routed(
+          rowMeans(resid_ols), ar_order, censor = censor_run,
+          design = X_run_orig
+        )
+      }
+
+      # Match the runwise GLS contract: later iterations must estimate AR
+      # parameters from residuals in the original data domain. Chunkwise fitting
+      # previously ignored iter_gls here and always used the initial OLS value.
+      if (is.null(phi_fixed) && cfg$ar$iter_gls > 1L) {
+        for (iter in seq_len(cfg$ar$iter_gls - 1L)) {
+          whitened <- ar_whiten_transform(
+            X_run_orig, Y_run_full, phi_hat_run,
+            cfg$ar$exact_first, censor = censor_run
+          )
+          proj_w <- .fast_preproject(whitened$X)
+          gls <- solve_glm_core(
+            glm_context(X = whitened$X, Y = whitened$Y, proj = proj_w)
+          )
+          resid_gls <- Y_run_full - X_run_orig %*% gls$betas
+          phi_hat_run <- .estimate_ar_parameters_routed(
+            rowMeans(resid_gls), ar_order, censor = censor_run,
+            design = X_run_orig
+          )
+        }
       }
 
       run_info[[ri]] <- list(
@@ -681,7 +711,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
         row_indices = run_row_inds[[ri]],
         censor = censor_run
       )
-    } else if (cfg$robust$type != FALSE) {
+    } else if (.fmri_lm_robust_enabled(cfg$robust)) {
       # Robust only
       res <- process_run_robust(rch, model, cfg, sigma_fixed, dataset)
       run_info[[ri]] <- list(
@@ -698,7 +728,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
   }
   
   # Build global transformed matrices
-  X_global_final <- if (ar_modeling && cfg$robust$type != FALSE) {
+  X_global_final <- if (ar_modeling && .fmri_lm_robust_enabled(cfg$robust)) {
     # AR + Robust: whiten then weight
     X_global_list <- vector("list", length(run_chunks))
     for (ri in seq_along(run_chunks)) {
@@ -726,7 +756,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
       X_w_list[[ri]] <- ar_whiten_transform(X_orig, dummyY, phi_hat, cfg$ar$exact_first, censor = censor_ri)$X
     }
     do.call(rbind, X_w_list)
-  } else if (cfg$robust$type != FALSE) {
+  } else if (.fmri_lm_robust_enabled(cfg$robust)) {
     # Robust only: just weight
     X_weighted_list <- vector("list", length(run_chunks))
     for (ri in seq_along(run_chunks)) {
@@ -758,7 +788,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
 #'
 #' @param chunk_data Matrix of voxel data for this chunk
 #' @param precomp Pre-computed matrices from prepare_chunkwise_matrices
-#' @param cfg fmri_lm_config object
+#' @param cfg fmri_lm_control object
 #' @return List with chunk results
 #' @keywords internal
 #' @noRd
@@ -766,7 +796,7 @@ process_chunk <- function(chunk_data, precomp, cfg) {
   Ymat <- as.matrix(chunk_data)
   
   # Transform Y data to match X transformations
-  if (precomp$ar_modeling || cfg$robust$type != FALSE) {
+  if (precomp$ar_modeling || .fmri_lm_robust_enabled(cfg$robust)) {
     Ymat_final <- matrix(0, nrow = nrow(Ymat), ncol = ncol(Ymat))
 
     for (ri in seq_along(precomp$run_info)) {
@@ -774,7 +804,7 @@ process_chunk <- function(chunk_data, precomp, cfg) {
       Y_chunk_segment <- Ymat[rows, , drop = FALSE]
       censor_ri <- precomp$run_info[[ri]]$censor
 
-      if (precomp$ar_modeling && cfg$robust$type != FALSE) {
+      if (precomp$ar_modeling && .fmri_lm_robust_enabled(cfg$robust)) {
         # AR + Robust: whiten then weight
         phi_hat <- precomp$run_info[[ri]]$phi_hat
         Y_whitened <- ar_whiten_transform(precomp$run_info[[ri]]$dummyX0, Y_chunk_segment, phi_hat, cfg$ar$exact_first, censor = censor_ri)$Y
@@ -783,7 +813,7 @@ process_chunk <- function(chunk_data, precomp, cfg) {
         # AR only: whiten
         phi_hat <- precomp$run_info[[ri]]$phi_hat
         Ymat_final[rows, ] <- ar_whiten_transform(precomp$run_info[[ri]]$dummyX0, Y_chunk_segment, phi_hat, cfg$ar$exact_first, censor = censor_ri)$Y
-      } else if (cfg$robust$type != FALSE) {
+      } else if (.fmri_lm_robust_enabled(cfg$robust)) {
         # Robust only: weight
         Ymat_final[rows, ] <- Y_chunk_segment * precomp$run_info[[ri]]$sqrtw
       }
@@ -799,6 +829,12 @@ process_chunk <- function(chunk_data, precomp, cfg) {
   list(
     betas = res$betas,
     sigma2 = res$sigma2,
-    rss = res$rss
+    rss = res$rss,
+    residuals = if (!identical(cfg$variance$method, "model") ||
+                    identical(cfg$variance$df, "satterthwaite")) {
+      Ymat_final - precomp$X_global %*% res$betas
+    } else {
+      NULL
+    }
   )
 }

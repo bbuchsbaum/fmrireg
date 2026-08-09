@@ -83,9 +83,11 @@ baseline_spec <- function(degree = 3,
 #' @param durations Event durations passed through to the event model.
 #' @param contrasts Optional contrast specification (e.g. from
 #'   \code{contrast_set()}).
-#' @param control An \code{fmri_lm_config} from [fmri_lm_control()] holding the
+#' @param control An \code{fmri_lm_control} from [fmri_lm_control()] holding the
 #'   robust / AR / preprocessing options for fitting.
-#' @param strategy Fitting strategy: \code{"runwise"} or \code{"chunkwise"}.
+#' @param compute A [compute_spec()] describing backend, voxel partitioning,
+#'   parallelization, and progress reporting. Statistical runwise versus joint
+#'   fitting belongs in `control$estimation`.
 #' @param engine Optional fitting engine name (see [register_engine()]).
 #' @param engine_args Optional list of engine arguments.
 #' @param reducer Optional function \code{function(fit, job)} that turns a fitted
@@ -103,19 +105,22 @@ fmri_template <- function(formula, block,
                           baseline = baseline_spec(),
                           durations = 0,
                           contrasts = NULL,
-                          control = fmri_lm_control(),
-                          strategy = c("runwise", "chunkwise"),
+                          control = fmri_lm_control(
+                            estimation = estimation_spec("runwise_meta")
+                          ),
+                          compute = compute_spec(voxel_chunks = 1L),
                           engine = NULL,
                           engine_args = list(),
                           reducer = NULL) {
-  strategy <- match.arg(strategy)
   assert_that(inherits(formula, "formula"), msg = "'formula' must be a formula")
   assert_that(inherits(block, "formula"), msg = "'block' must be a formula")
   assert_that(inherits(baseline, "baseline_spec"),
               msg = "'baseline' must come from baseline_spec()")
   assert_that(is.numeric(durations), msg = "'durations' must be numeric")
-  assert_that(inherits(control, "fmri_lm_config"),
+  assert_that(inherits(control, "fmri_lm_control"),
               msg = "'control' must come from fmri_lm_control()")
+  assert_that(inherits(compute, "fmri_lm_compute_spec"),
+              msg = "'compute' must come from compute_spec()")
   assert_that(is.list(engine_args), msg = "'engine_args' must be a list")
   if (!is.null(engine)) {
     assert_that(is.character(engine), length(engine) == 1,
@@ -138,7 +143,7 @@ fmri_template <- function(formula, block,
   structure(
     list(formula = formula, block = block, baseline = baseline,
          durations = durations, contrasts = contrasts, control = control,
-         strategy = strategy, engine = engine, engine_args = engine_args,
+         compute = compute, engine = engine, engine_args = engine_args,
          reducer = reducer),
     class = "fmri_template"
   )
@@ -165,7 +170,7 @@ fmri_template <- function(formula, block,
     while (!identical(env, globalenv()) && !identical(env, emptyenv()) &&
            !identical(env, baseenv()) && !isNamespace(env)) {
       if (exists(s, envir = env, inherits = FALSE)) {
-        assign(s, get(s, envir = env), envir = e)
+        assign(s, .prune_portable_value(get(s, envir = env)), envir = e)
         break
       }
       env <- parent.env(env)
@@ -173,6 +178,20 @@ fmri_template <- function(formula, block,
   }
   environment(f) <- e
   f
+}
+
+#' @keywords internal
+#' @noRd
+.prune_portable_value <- function(x) {
+  if (inherits(x, "formula")) {
+    return(.prune_formula_env(x))
+  }
+  if (is.list(x)) {
+    out <- x
+    for (i in seq_along(out)) out[i] <- list(.prune_portable_value(out[[i]]))
+    return(out)
+  }
+  x
 }
 
 #' @keywords internal
@@ -212,7 +231,8 @@ validate_template <- function(x) {
   assert_that(inherits(x$formula, "formula"), msg = "template formula is not a formula")
   assert_that(inherits(x$block, "formula"), msg = "template block is not a formula")
   assert_that(inherits(x$baseline, "baseline_spec"), msg = "template baseline is not a baseline_spec")
-  assert_that(inherits(x$control, "fmri_lm_config"), msg = "template control is not an fmri_lm_config")
+  assert_that(inherits(x$control, "fmri_lm_control"), msg = "template control is not an fmri_lm_control")
+  assert_that(inherits(x$compute, "fmri_lm_compute_spec"), msg = "template compute is not an fmri_lm_compute_spec")
   if (!is.null(x$reducer)) {
     assert_that(is.function(x$reducer), msg = "template reducer is not a function")
     warn_if_unserializable_fn(x$reducer, "reducer")
@@ -240,8 +260,11 @@ print.fmri_template <- function(x, ...) {
   cat("<fmri_template>\n")
   cat("  formula:  ", deparse(x$formula), "\n")
   cat("  block:    ", deparse(x$block), "\n")
-  cat("  strategy: ", x$strategy,
+  cat("  scope:    ", x$control$estimation$scope,
       if (!is.null(x$engine)) sprintf(" (engine: %s)", x$engine) else "", "\n", sep = "")
+  cat("  compute:  ", sprintf("%s backend, %d voxel chunk(s), %s parallelism",
+                              x$compute$backend, x$compute$voxel_chunks,
+                              x$compute$parallel), "\n")
   cat("  baseline: ", sprintf("%s(degree=%s)", x$baseline$basis, x$baseline$degree), "\n")
   cat("  contrasts:", if (is.null(x$contrasts)) "none" else "set", "\n")
   cat("  reducer:  ", if (is.null(x$reducer)) "none (returns fitted object)" else "set", "\n")

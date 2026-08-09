@@ -4,6 +4,8 @@
 #' block structure, and dataset. The model can be fit using either a runwise or chunkwise data splitting strategy.
 #'
 #' @inheritParams fmri_lm
+#' @param strategy Fit runs separately and combine them, or fit a joint model
+#'   partitioned into voxel chunks.
 #' @param nchunks Number of data chunks when strategy is "chunkwise". Default is 10.
 #' @param cor_struct Correlation structure: "iid", "ar1", "ar2", or "arp". Default is "iid".
 #' @param cor_iter Number of iterations for AR parameter estimation. Default is 1.
@@ -36,30 +38,31 @@ fmri_rlm <- function(formula, block, baseline_model = NULL, dataset,
                      robust_c_tukey = 4.685, robust_max_iter = 2L,
                      robust_scale_scope = c("run", "global", "voxel"), ...) {
 
-  # Create robust options
-  robust_options <- list(
+  robust_cfg <- robust_spec(
     type = match.arg(robust_psi),
     k_huber = robust_k_huber,
     c_tukey = robust_c_tukey,
     max_iter = robust_max_iter,
     scale_scope = match.arg(robust_scale_scope)
   )
-  
-  # Create AR options
-  ar_options <- list(
-    cor_struct = match.arg(cor_struct),
+
+  noise_cfg <- noise_spec(
+    struct = match.arg(cor_struct),
     p = ar_p,
-    iter = cor_iter,
-    global = cor_global,
+    iter_gls = cor_iter,
+    pooling = if (isTRUE(cor_global)) "global" else "run",
     exact_first = ar1_exact_first
+  )
+
+  scope <- if (identical(match.arg(strategy), "runwise")) "runwise_meta" else "joint"
+  control <- fmri_lm_control(
+    estimation = estimation_spec(scope), noise = noise_cfg, robust = robust_cfg
   )
 
   res <- fmri_lm(formula, block, baseline_model = baseline_model, dataset = dataset,
                  durations = durations, drop_empty = drop_empty,
-                 strategy = strategy, nchunks = nchunks,
-                 robust = TRUE,
-                 robust_options = robust_options,
-                 ar_options = ar_options,
+                 control = control,
+                 compute = compute_spec(voxel_chunks = nchunks),
                  ...)
   class(res) <- c("fmri_rlm", class(res))
   res

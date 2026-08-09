@@ -22,13 +22,7 @@ test_that("AR whitening controls false positives under AR(2) noise", {
   }
   
   # Create config with AR whitening
-  config <- fmri_lm_config(
-    ar_options = list(
-      cor_struct = "ar2",
-      iter = 1
-    ),
-    robust = FALSE
-  )
+  config <- fmri_lm_control(noise = noise_spec("ar2", iter_gls = 1L))
   
   # Fit model with AR whitening
   result <- solve_integrated_glm(X, Y, config)
@@ -69,16 +63,9 @@ test_that("Robust fitting handles outliers in whitened data", {
   Y[outlier_idx, ] <- Y[outlier_idx, ] + sample(c(-10, 10), n_outliers, replace = TRUE)
   
   # Config for AR + Robust
-  config <- fmri_lm_config(
-    ar_options = list(
-      cor_struct = "ar1",
-      iter = 1
-    ),
-    robust = list(
-      type = "bisquare",
-      c_tukey = 4.685,
-      max_iter = 5
-    )
+  config <- fmri_lm_control(
+    noise = noise_spec("ar1", iter_gls = 1L),
+    robust = robust_spec("bisquare", c_tukey = 4.685, max_iter = 5L)
   )
   
   # Fit AR + Robust model

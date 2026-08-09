@@ -212,9 +212,11 @@ test_that("fmri_lm AR fits report residual df, not a deflated one", {
                          run_length = Tr, event_table = etab)
 
   fit_iid <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
-                     ar_options = list(struct = "iid"))
+                     control = fmri_lm_control(),
+                     compute = compute_spec(voxel_chunks = 1L))
   fit_ar  <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
-                     ar_options = list(struct = "ar1"))
+                     control = fmri_lm_control(noise = noise_spec("ar1")),
+                     compute = compute_spec(voxel_chunks = 1L))
 
   se_iid <- as.matrix(standard_error(fit_iid, type = "estimates"))
   se_ar  <- as.matrix(standard_error(fit_ar,  type = "estimates"))
@@ -222,10 +224,16 @@ test_that("fmri_lm AR fits report residual df, not a deflated one", {
   expect_true(all(is.finite(se_ar)))
   expect_equal(dim(se_ar), dim(se_iid))
 
-  # The AR path used to report roughly a third of the residual df. Whichever df
-  # the contrast layer now uses, it must not be that deflated value: for this
-  # design the old formula gave about (n - p)/2.99.
+  # The AR path used to report roughly a third of the residual df. The common
+  # inference schema now reports the df that generated every p-value.
   df_resid <- .edf(n_t, ncol(as.matrix(design_matrix(fit_ar$model))))
   df_old <- df_resid / (1 + 2 * (1 - 1 / n_t))
   expect_gt(df_resid, 2 * df_old)
+  expect_equal(fit_ar$result$df$inference,
+               rep(df_resid, length(fit_ar$result$df$inference)))
+  expect_equal(
+    fit_ar$result$betas$data[[1L]]$prob[[1L]],
+    2 * pt(-abs(fit_ar$result$betas$data[[1L]]$stat[[1L]]), df = df_resid),
+    tolerance = 1e-12
+  )
 })

@@ -14,6 +14,7 @@ fmri_lm_fit(
   progress = FALSE,
   parallel_voxels = FALSE,
   parallel_chunks = FALSE,
+  compute = NULL,
   ...
 )
 }
@@ -24,7 +25,7 @@ fmri_lm_fit(
 
 \item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
 
-\item{cfg}{An \code{fmri_lm_config} object containing all fitting options. See \code{\link{fmri_lm_control}}.}
+\item{cfg}{An \code{fmri_lm_control} object containing all fitting options. See \code{\link{fmri_lm_control}}.}
 
 \item{nchunks}{Number of data chunks when strategy is \code{"chunkwise"}.
 This controls memory partitioning; chunks are processed sequentially unless

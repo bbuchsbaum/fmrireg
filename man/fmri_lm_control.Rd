@@ -2,94 +2,42 @@
 % Please edit documentation in R/fmri_lm_config.R
 \name{fmri_lm_control}
 \alias{fmri_lm_control}
-\title{Configuration for fmri_lm fitting}
+\title{Configure an fMRI linear model}
 \usage{
 fmri_lm_control(
-  robust_options = list(),
-  ar_options = list(),
-  volume_weights_options = list(),
-  soft_subspace_options = list(),
-  na_action = c("error", "propagate")
+  estimation = NULL,
+  noise = NULL,
+  robust = NULL,
+  variance = NULL,
+  weights = NULL,
+  projection = NULL,
+  na_action = c("error", "propagate"),
+  ...
 )
 }
 \arguments{
-\item{robust_options}{list of robust fitting options. See Details.}
+\item{estimation}{An \code{\link[=estimation_spec]{estimation_spec()}}.}
 
-\item{ar_options}{list of autoregressive modelling options. See Details.}
+\item{noise}{A \code{\link[=noise_spec]{noise_spec()}}.}
 
-\item{volume_weights_options}{list of volume weighting options. See Details.
-For simple cases, use the \code{volume_weights} parameter in \code{fmri_lm()} instead.}
+\item{robust}{A \code{\link[=robust_spec]{robust_spec()}}.}
 
-\item{soft_subspace_options}{list of soft subspace projection options. See Details.
-For simple cases, use the \code{nuisance_projection} parameter in \code{fmri_lm()} instead.}
+\item{variance}{A \code{\link[=variance_spec]{variance_spec()}}.}
+
+\item{weights}{A \code{\link[=weights_spec]{weights_spec()}}.}
+
+\item{projection}{A \code{\link[=projection_spec]{projection_spec()}}.}
+
+\item{na_action}{Either \code{"error"} or \code{"propagate"}.}
+
+\item{...}{Transitional legacy option lists retained for one compatibility
+window. New code should use the typed sections above.}
 }
 \value{
-An object of class \code{fmri_lm_config}.
+An object of class \code{fmri_lm_control}.
 }
 \description{
-\code{fmri_lm_control()} creates an \code{fmri_lm_config} object collecting all
-options for robust and autoregressive modelling. It validates inputs and
-applies defaults so downstream functions receive a single structured list.
-}
-\details{
-For common use cases, \code{fmri_lm()} provides convenience parameters that
-are easier to use than these detailed option lists:
-\itemize{
-\item \code{volume_weights = TRUE} enables volume weighting with defaults
-\item \code{volume_weights = "tukey"} enables with Tukey method
-\item \code{nuisance_projection = N} enables soft projection with matrix N
-\item \code{nuisance_projection = "mask.nii"} enables with mask file
-}
-
-Use the \verb{*_options} lists below only when you need fine-grained control.
-
-\code{robust_options} may contain:
-\itemize{
-\item \code{type} (\code{FALSE}, "huber", "bisquare")
-\item \code{k_huber}
-\item \code{c_tukey}
-\item \code{max_iter}
-\item \code{scale_scope} ("run", "global", "voxel")
-\item \code{reestimate_phi} (logical)
-}
-
-\code{ar_options} may contain:
-\itemize{
-\item \code{struct} ("iid", "ar1", "ar2", "arp")
-\item \code{p} (order for "arp")
-\item \code{iter_gls} (integer number of GLS iterations)
-\item \code{global} (logical, use global phi)
-\item \code{voxelwise} (logical)
-\item \code{exact_first} (logical)
-\item \code{censor} (integer vector of timepoints to exclude from AR estimation,
-logical vector where TRUE = censored, or "auto" to extract from dataset)
-}
-
-\code{volume_weights_options} may contain:
-\itemize{
-\item \code{enabled} (logical, whether to compute and apply volume weights)
-\item \code{method} ("inverse_squared", "soft_threshold", "tukey")
-\item \code{threshold} (numeric, DVARS threshold for weighting)
-\item \code{weights} (optional pre-computed weight vector)
-}
-
-\code{soft_subspace_options} may contain:
-\itemize{
-\item \code{enabled} (logical, whether to apply soft subspace projection)
-\item \code{nuisance_mask} (path to NIfTI mask or logical vector)
-\item \code{nuisance_matrix} (pre-computed nuisance timeseries matrix)
-\item \code{lambda} (numeric, "auto", or "gcv")
-\item \code{warn_redundant} (logical, warn if baseline has nuisance terms)
-}
-
-This list controls soft subspace preprocessing. It is separate from the
-built-in fast \code{fmri_lm()} engines. To use reduced-rank-regression GLS with
-conditional or block-bootstrap standard errors, call \code{fmri_lm()} with
-\code{engine = "rrr_gls"} and pass reduced-rank options in \code{engine_args}. To use
-the sketched GLM path, call \code{fmri_lm()} with \code{engine = "latent_sketch"} and
-pass a \code{lowrank_control()} object via \code{lowrank}.
-
-When \code{fmri_lm()} is called with the convenience argument
-\code{nuisance_projection}, \code{enabled} is set automatically. When constructing a
-\code{soft_subspace_options} list directly, set \code{enabled = TRUE} yourself.
+\code{fmri_lm_control()} is the single statistical configuration boundary for
+\code{\link[=fmri_lm]{fmri_lm()}}. Each section is a validated typed specification; mechanical
+choices such as chunking and parallelism belong in \code{\link[=compute_spec]{compute_spec()}}.
 }

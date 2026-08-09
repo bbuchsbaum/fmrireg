@@ -67,7 +67,9 @@ test_that("process_run_standard re-estimates AR from raw-domain residuals", {
       }
       out
     },
-    .estimate_ar_parameters_routed = function(residuals_vec, ar_order, run_indices = NULL, censor = NULL) {
+    .estimate_ar_parameters_routed = function(residuals_vec, ar_order,
+                                               run_indices = NULL,
+                                               censor = NULL, design = NULL) {
       captured[[length(captured) + 1L]] <<- as.numeric(residuals_vec)
       0.4
     },
@@ -84,6 +86,37 @@ test_that("process_run_standard re-estimates AR from raw-domain residuals", {
 
   expect_equal(unname(captured[[2]]), unname(expected_raw))
   expect_gt(max(abs(captured[[2]] - expected_white)), 1e-6)
+})
+
+test_that("chunkwise preparation honors iter_gls in the raw residual domain", {
+  dset <- .demo_matrix_dataset()
+  model <- create_fmri_model(
+    onsets ~ hrf(condition), ~run, dataset = dset
+  )
+  cfg <- fmri_lm_control(
+    estimation = estimation_spec("joint"),
+    noise = noise_spec("ar1", iter_gls = 3L)
+  )
+  captured <- list()
+
+  with_mocked_bindings(
+    {
+      out <- suppressWarnings(
+        fmrireg:::prepare_chunkwise_matrices(model, dset, cfg)
+      )
+      expect_length(out$run_info, 2L)
+    },
+    .estimate_ar_parameters_routed = function(residuals_vec, ar_order,
+                                               run_indices = NULL,
+                                               censor = NULL, design = NULL) {
+      captured[[length(captured) + 1L]] <<- as.numeric(residuals_vec)
+      0.25
+    },
+    .package = "fmrireg"
+  )
+
+  expect_length(captured, 2L * cfg$noise$iter_gls)
+  expect_true(all(vapply(captured, function(x) all(is.finite(x)), logical(1))))
 })
 
 test_that(".run_lowrank_engine re-estimates AR from raw-domain residuals", {
@@ -104,7 +137,7 @@ test_that(".run_lowrank_engine re-estimates AR from raw-domain residuals", {
     volume_weights = list(enabled = FALSE),
     soft_subspace = list(enabled = FALSE)
   )
-  class(cfg) <- "fmri_lm_config"
+  class(cfg) <- "fmri_lm_control"
 
   captured <- list()
 
@@ -132,7 +165,9 @@ test_that(".run_lowrank_engine re-estimates AR from raw-domain residuals", {
     prepare_fmri_lm_contrasts = function(fmrimod) {
       list(processed = list(), simple = list(), f = list(), standard = list())
     },
-    .estimate_ar_parameters_routed = function(residuals_vec, ar_order, run_indices = NULL, censor = NULL) {
+    .estimate_ar_parameters_routed = function(residuals_vec, ar_order,
+                                               run_indices = NULL,
+                                               censor = NULL, design = NULL) {
       captured[[length(captured) + 1L]] <<- as.numeric(residuals_vec)
       0.4
     },
@@ -171,7 +206,7 @@ test_that(".run_lowrank_engine uses design rank when computing rdf", {
     volume_weights = list(enabled = FALSE),
     soft_subspace = list(enabled = FALSE)
   )
-  class(cfg) <- "fmri_lm_config"
+  class(cfg) <- "fmri_lm_control"
   
   captured_dfres <- NULL
   

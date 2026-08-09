@@ -249,14 +249,14 @@ NULL
 
 #' Convert fmrireg AR configuration to fmriAR parameters
 #'
-#' @param cfg An fmri_lm_config object or ar_options list
+#' @param cfg An fmri_lm_control object or AR options list
 #' @param n_runs Number of runs in the data
 #' @return List of fmriAR-compatible parameters
 #' @keywords internal
 #' @noRd
 .fmrireg_to_fmriAR_config <- function(cfg, n_runs = NULL) {
   # Extract AR options from either config object or direct list
-  ar_opts <- if (inherits(cfg, "fmri_lm_config")) {
+  ar_opts <- if (inherits(cfg, "fmri_lm_control")) {
     cfg$ar
   } else if (is.list(cfg) && !is.null(cfg$ar)) {
     cfg$ar
@@ -317,7 +317,7 @@ NULL
 #' Estimate AR parameters using fmriAR
 #'
 #' @param residuals Residual matrix (time x voxels)
-#' @param cfg fmri_lm_config object or AR options list
+#' @param cfg fmri_lm_control object or AR options list
 #' @param run_indices List of indices for each run
 #' @param censor Integer vector of 1-based timepoint indices to exclude from
 #'   AR estimation, or NULL for no censoring. When provided, these timepoints
@@ -327,20 +327,51 @@ NULL
 #' @return fmriAR_plan object containing AR parameters
 #' @keywords internal
 #' @noRd
-.estimate_ar_via_fmriAR <- function(residuals, cfg, run_indices = NULL, censor = NULL) {
+.estimate_ar_via_fmriAR <- function(residuals, cfg, run_indices = NULL,
+                                    censor = NULL, design = NULL) {
   n_runs <- if (is.null(run_indices)) 1L else length(run_indices)
 
-  ar_opts <- if (inherits(cfg, "fmri_lm_config")) cfg$ar else cfg
+  ar_opts <- if (inherits(cfg, "fmri_lm_control")) cfg$ar else cfg
   ar_opts <- .normalize_ar_options(ar_opts)
 
   # Convert configuration for fmriAR operations
   ar_params <- .fmrireg_to_fmriAR_config(ar_opts, n_runs)
   runs <- .build_run_labels(nrow(residuals), run_indices)
   target_order <- .target_ar_order(ar_opts)
+  correction_max_lag <- 25L
+  if (!is.null(design)) {
+    design <- as.matrix(design)
+    slices <- if (is.null(run_indices) || !length(run_indices)) {
+      list(seq_len(nrow(design)))
+    } else {
+      lapply(run_indices, as.integer)
+    }
+    censored <- rep(FALSE, nrow(design))
+    if (!is.null(censor)) {
+      if (is.logical(censor) && length(censor) == nrow(design)) {
+        censored <- censor
+      } else if (is.numeric(censor)) {
+        idx <- as.integer(censor)
+        idx <- idx[idx >= 1L & idx <= nrow(design)]
+        censored[idx] <- TRUE
+      }
+    }
+    rdf_by_slice <- vapply(slices, function(idx) {
+      idx <- idx[!censored[idx]]
+      if (!length(idx)) return(1L)
+      max(length(idx) - qr(design[idx, , drop = FALSE])$rank, 1L)
+    }, integer(1))
+    minimum_order <- as.integer(target_order %||% ar_params$p %||% 1L)
+    desired_budget <- max(5L, 2L * minimum_order + 1L)
+    correction_max_lag <- max(
+      minimum_order,
+      min(25L, desired_budget, floor(min(rdf_by_slice) / 3L))
+    )
+  }
 
   # If explicit AR order requested (including 0), estimate via Yule-Walker
   # Note: fixed-order estimation doesn't currently support censor; use fmriAR path
-  if (!is.null(target_order) && is.null(censor)) {
+  if (!is.null(target_order) && is.null(censor) && is.null(design)) {
     phi_list <- .estimate_phi_fixed_order(residuals, target_order, ar_params$pooling, run_indices)
     theta_list <- replicate(length(phi_list), numeric(0), simplify = FALSE)
     phi_for_plan <- phi_list
@@ -365,7 +396,9 @@ NULL
     p_max = if (!is.null(target_order)) target_order else ar_params$p_max,
     exact_first = ar_params$exact_first,
     pooling = ar_params$pooling,
-    censor = censor
+    censor = censor,
+    design = design,
+    correction_max_lag = correction_max_lag
   )
 }
 
@@ -413,7 +446,7 @@ NULL
 #'
 #' @param X Design matrix
 #' @param Y Data matrix
-#' @param cfg fmri_lm_config object
+#' @param cfg fmri_lm_control object
 #' @param run_indices List of run indices
 #' @param max_iter Maximum iterations (overrides config)
 #' @param censor Integer vector of 1-based timepoint indices to exclude from
@@ -466,7 +499,9 @@ NULL
   # Iterative refinement
   for (iter in seq_len(n_iter)) {
     # Estimate AR from current residuals, excluding censored timepoints
-    plan <- .estimate_ar_via_fmriAR(residuals, cfg, run_indices, censor = censor)
+    plan <- .estimate_ar_via_fmriAR(
+      residuals, cfg, run_indices, censor = censor, design = X
+    )
     phi_now <- if (!is.null(plan) && !is.null(plan$phi) && length(plan$phi)) {
       unlist(lapply(plan$phi, as.numeric), use.names = FALSE)
     } else {
@@ -540,7 +575,7 @@ NULL
 #' Get AR order from plan or config
 #'
 #' @param plan fmriAR_plan object or NULL
-#' @param cfg fmri_lm_config object
+#' @param cfg fmri_lm_control object
 #' @return Integer AR order
 #' @keywords internal
 #' @noRd
@@ -550,7 +585,7 @@ NULL
   }
 
   if (!is.null(cfg)) {
-    ar_opts <- if (inherits(cfg, "fmri_lm_config")) cfg$ar else cfg
+    ar_opts <- if (inherits(cfg, "fmri_lm_control")) cfg$ar else cfg
     ar_opts <- .normalize_ar_options(ar_opts)
     return(switch(ar_opts$struct,
       "ar1" = 1L,

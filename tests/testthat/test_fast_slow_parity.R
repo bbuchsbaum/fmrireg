@@ -1,10 +1,8 @@
 # Certifies that the fast (matrix) and slow (formula/lm) engines agree, so the
 # fast path is a safe default. Betas and t/F statistics must match to 1e-6.
 #
-# NOTE: for AR fits the two engines intentionally differ on p-values only: the
-# fast path adjusts the residual df via calculate_effective_df() (whitening has
-# a df cost) while the slow path uses the raw residual df. So `prob` is compared
-# only for plain OLS, never for AR.
+# The common result finalizer owns covariance, degrees of freedom, and reference
+# probabilities, so parity includes p-values for both IID and AR fits.
 
 make_ds <- function(seed = 3, nvox = 4, ar_phi = NULL, n = 150, runs = 1, aliased = FALSE) {
   set.seed(seed)
@@ -81,22 +79,22 @@ test_that("oneway F-contrast: fast == slow (betas, F-stat)", {
   expect_engine_parity(fits, "cond_F", compare_prob = FALSE)
 })
 
-test_that("AR(1): fast == slow betas and t-stat (p-values differ by design)", {
+test_that("AR(1): fast == slow betas, t-stat, and p-value", {
   dset <- make_ds(ar_phi = 0.5)
   con <- contrast_set(pair_contrast(~ cond == "A", ~ cond == "B", name = "AmB"))
   fits <- fit_both(onset ~ hrf(cond, contrasts = con), dset, cor_struct = "ar1")
   expect_equal(as.numeric(ar_parameters(fits$fast)), as.numeric(ar_parameters(fits$slow)),
     tolerance = 1e-6)
-  expect_engine_parity(fits, "AmB", compare_prob = FALSE)
+  expect_engine_parity(fits, "AmB", compare_prob = TRUE)
 })
 
-test_that("AR(2): fast == slow betas and t-stat", {
+test_that("AR(2): fast == slow betas, t-stat, and p-value", {
   dset <- make_ds(ar_phi = 0.4)
   con <- contrast_set(pair_contrast(~ cond == "A", ~ cond == "B", name = "AmB"))
   fits <- fit_both(onset ~ hrf(cond, contrasts = con), dset, cor_struct = "ar2")
   expect_equal(as.numeric(ar_parameters(fits$fast)), as.numeric(ar_parameters(fits$slow)),
     tolerance = 1e-6)
-  expect_engine_parity(fits, "AmB", compare_prob = FALSE)
+  expect_engine_parity(fits, "AmB", compare_prob = TRUE)
 })
 
 test_that("multi-run pooled: fast == slow (betas, t-stat, p-value)", {

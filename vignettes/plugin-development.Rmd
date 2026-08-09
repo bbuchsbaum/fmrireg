@@ -16,7 +16,9 @@ resource_files:
 - albers-header.html
 
 vignette: |
-  %\VignetteIndexEntry{Plugin Development} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{Plugin Development}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include = FALSE}
@@ -160,8 +162,7 @@ fit_plugin <- fmri_lm(
   dataset = dset,
   engine = engine_name,
   engine_args = list(center = TRUE),
-  robust = FALSE,
-  robust_options = list(max_iter = 10L)
+  control = fmri_lm_control(robust = robust_spec("none", max_iter = 10L))
 )
 
 stopifnot(inherits(fit_plugin, "fmri_lm"))
@@ -220,7 +221,7 @@ data.frame(
 )
 ```
 
-If a caller enables an unsupported feature such as `robust = TRUE`, the engine
+If a caller enables an unsupported robust method, the engine
 is rejected before `fit()` is called.
 
 ```{r capability-error-check, include = FALSE}
@@ -231,7 +232,7 @@ tryCatch(
     block = ~run,
     dataset = dset,
     engine = engine_name,
-    robust = TRUE
+    control = fmri_lm_control(robust = robust_spec("huber"))
   ),
   error = function(e) {
     unsupported_message <<- conditionMessage(e)

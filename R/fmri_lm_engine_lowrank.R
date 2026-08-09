@@ -8,8 +8,8 @@
   if (is.null(dataset)) {
     stop("latent_sketch engine requires a dataset", call. = FALSE)
   }
-  if (!inherits(cfg, "fmri_lm_config")) {
-    stop("latent_sketch engine requires an 'fmri_lm_config' object", call. = FALSE)
+  if (!inherits(cfg, "fmri_lm_control")) {
+    stop("latent_sketch engine requires an 'fmri_lm_control' object", call. = FALSE)
   }
   
   invisible(TRUE)
@@ -43,7 +43,7 @@
 #' @noRd
 .run_lowrank_engine <- function(fm, dataset, lowrank, cfg = NULL, ar_options = NULL) {
   if (is.null(cfg)) {
-    cfg <- fmri_lm_control(ar_options = ar_options)
+    cfg <- .fmri_lm_control_legacy(ar_options = ar_options)
   }
   lowrank <- lowrank %||% list()
   .preflight_lowrank_engine(fm, dataset, lowrank, cfg)

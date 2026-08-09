@@ -12,10 +12,7 @@ test_that("AR whitening integration works", {
   Y <- X %*% c(1, 2) + as.vector(e)
   
   # Create config with AR
-  config <- fmrireg:::fmri_lm_config(
-    robust = FALSE,
-    ar_options = list(cor_struct = "ar1", iter = 2)
-  )
+  config <- fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L))
   
   # Test integrated solver
   result <- fmrireg:::solve_integrated_glm(
@@ -46,10 +43,7 @@ test_that("Robust fitting works", {
   Y[outliers] <- Y[outliers] + c(8, -8, 8)  # More extreme, deterministic outliers
   
   # Robust config
-  config <- fmrireg:::fmri_lm_config(
-    robust = "huber",
-    ar_options = list(cor_struct = "none")
-  )
+  config <- fmri_lm_control(robust = robust_spec("huber"))
   
   # Fit
   result <- fmrireg:::solve_integrated_glm(
@@ -72,7 +66,7 @@ test_that("Contrast computation works", {
   X <- cbind(1, rep(c(0, 1), each = 30), rnorm(n))
   Y <- X %*% c(1, 2, 0.5) + rnorm(n)
   
-  config <- fmrireg:::fmri_lm_config(robust = FALSE)
+  config <- fmri_lm_control()
   
   # Fit model
   fit_result <- solve_integrated_glm(X, matrix(Y, ncol = 1), config)
@@ -123,7 +117,7 @@ test_that("Bootstrap functionality works", {
   X <- cbind(1, rnorm(n))
   Y <- X %*% c(1, 2) + rnorm(n)
   
-  config <- fmrireg:::fmri_lm_config(robust = FALSE)
+  config <- fmri_lm_control()
   fit_result <- solve_integrated_glm(X, matrix(Y, ncol = 1), config)
   
   # Run bootstrap

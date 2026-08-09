@@ -97,12 +97,7 @@ test_that("effective df integrates with model fitting", {
   y <- X %*% c(2, 1) + rnorm(n)
   
   # Create config with AR
-  cfg <- fmri_lm_config(
-    ar_options = list(
-      cor_struct = "ar1",
-      iter = 1
-    )
-  )
+  cfg <- fmri_lm_control(noise = noise_spec("ar1", iter_gls = 1L))
   
   # Fit model would calculate effective df internally
   # This is a placeholder for integration test

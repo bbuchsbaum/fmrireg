@@ -11,7 +11,7 @@
 #' @param model The \code{fmri_model} used for the analysis.
 #' @param contrast_objects The list of full contrast objects.
 #' @param nchunks The number of chunks to divide the dataset into.
-#' @param cfg An \code{fmri_lm_config} object containing all fitting options.
+#' @param cfg An \code{fmri_lm_control} object containing all fitting options.
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
 #' @param use_fast_path Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{TRUE}.
 #' @param progress Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.
@@ -29,7 +29,7 @@ chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
   dset <- x
   
   # Validate config
-  assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
+  assert_that(inherits(cfg, "fmri_lm_control"), msg = "'cfg' must be an 'fmri_lm_control' object")
   assert_that(
     is.logical(parallel_chunks) && length(parallel_chunks) == 1L && !is.na(parallel_chunks),
     msg = "'parallel_chunks' must be TRUE or FALSE"
@@ -174,7 +174,7 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
   
   # Check if we need special handling
   ar_modeling <- cfg$ar$struct != "iid"
-  robust_modeling <- cfg$robust$type != FALSE
+  robust_modeling <- .fmri_lm_robust_enabled(cfg$robust)
   
   if (ar_modeling || robust_modeling) {
     # Pre-computation phase for AR and/or robust
@@ -232,7 +232,13 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
         bstats = bstats,
         contrasts = conres,
         event_indices = event_indices,
-        baseline_indices = baseline_indices
+        baseline_indices = baseline_indices,
+        inference_residuals = if (!identical(cfg$variance$method, "model") ||
+                                 identical(cfg$variance$df, "satterthwaite")) {
+          chunk_res$residuals
+        } else {
+          NULL
+        }
       )
     }, parallel_chunks = parallel_chunks, progress = progress)
     
@@ -294,7 +300,13 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
         bstats = bstats,
         contrasts = conres,
         event_indices = event_indices,
-        baseline_indices = baseline_indices
+        baseline_indices = baseline_indices,
+        inference_residuals = if (!identical(cfg$variance$method, "model") ||
+                                 identical(cfg$variance$df, "satterthwaite")) {
+          Ymat - modmat %*% res$betas
+        } else {
+          NULL
+        }
       )
     }, parallel_chunks = parallel_chunks, progress = progress)
   }
@@ -302,9 +314,62 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
   # Unpack results
   out <- unpack_chunkwise(cres, event_indices, baseline_indices)
   out$cov.unscaled <- Vu
+  out$covariance_model_basis <- if (exists("precomp", inherits = FALSE)) {
+    precomp$proj_global$XtXinv
+  } else {
+    proj$XtXinv
+  }
+  if (exists("precomp", inherits = FALSE) && .fmri_lm_robust_enabled(cfg$robust)) {
+    out$robust_weights <- unlist(
+      lapply(precomp$run_info, `[[`, "weights"), use.names = FALSE
+    )
+  }
+  inference_residuals <- lapply(cres, `[[`, "inference_residuals")
+  if (length(inference_residuals) &&
+      all(vapply(inference_residuals, Negate(is.null), logical(1)))) {
+    X_inference <- if (exists("precomp", inherits = FALSE)) precomp$X_global else modmat
+    run_chunks <- collect_chunks(exec_strategy("runwise")(dset))
+    run_rows <- lapply(run_chunks, `[[`, "row_ind")
+    censor_global <- rep(FALSE, nrow(X_inference))
+    if (exists("precomp", inherits = FALSE)) {
+      for (ri in seq_along(precomp$run_info)) {
+        local <- precomp$run_info[[ri]]$censor
+        rows <- precomp$run_row_inds[[ri]]
+        if (is.null(local)) next
+        if (is.logical(local)) {
+          censor_global[rows] <- local
+        } else {
+          local <- as.integer(local)
+          local <- local[local >= 1L & local <= length(rows)]
+          censor_global[rows[local]] <- TRUE
+        }
+      }
+    }
+    out$inference_context <- list(
+      X = X_inference,
+      residuals = do.call(cbind, inference_residuals),
+      runs = run_rows,
+      censor = censor_global,
+      robust_weights = if (exists("precomp", inherits = FALSE) &&
+                          .fmri_lm_robust_enabled(cfg$robust)) {
+        unlist(lapply(precomp$run_info, `[[`, "weights"), use.names = FALSE)
+      } else {
+        NULL
+      }
+    )
+    if (!is.null(out$inference_context$robust_weights)) {
+      out$robust_weights <- out$inference_context$robust_weights
+    }
+  }
   ar_coef_list <- lapply(cres, function(x) x$ar_coef)
   ar_coef_list <- Filter(function(x) !is.null(x) && length(unlist(x)) > 0, ar_coef_list)
-  out$ar_coef <- if (length(ar_coef_list) > 0) ar_coef_list else NULL
+  out$ar_coef <- if (exists("precomp", inherits = FALSE) && isTRUE(precomp$ar_modeling)) {
+    lapply(precomp$run_info, `[[`, "phi_hat")
+  } else if (length(ar_coef_list) > 0) {
+    ar_coef_list
+  } else {
+    NULL
+  }
   out
 }
 
@@ -318,7 +383,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
                               parallel_chunks = FALSE) {
   
   # Determine fitting function
-  lmfun <- if (cfg$robust$type != FALSE) multiresponse_rlm else multiresponse_lm
+  lmfun <- if (.fmri_lm_robust_enabled(cfg$robust)) multiresponse_rlm else multiresponse_lm
   
   form <- get_formula(model)
   proj_modmat <- .fast_preproject(modmat)
@@ -345,7 +410,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     names(fconlist_weights) <- sapply(fconlist, `[[`, "name")
   }
 
-  needs_integrated <- !(cfg$ar$struct %in% c("iid", "none")) || cfg$robust$type != FALSE
+  needs_integrated <- !(cfg$ar$struct %in% c("iid", "none")) || .fmri_lm_robust_enabled(cfg$robust)
   if (needs_integrated && is.null(run_indices)) {
     run_indices <- list(seq_len(nrow(modmat)))
   }

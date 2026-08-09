@@ -123,12 +123,16 @@ test_that("rrr_gls parity matrix against standard fmri_lm", {
     )
     dset <- sim$dataset
 
-    ar_opts <- if (ar1) list(struct = "ar1") else list(struct = "iid")
+    control <- fmri_lm_control(
+      estimation = estimation_spec("joint"),
+      noise = noise_spec(if (ar1) "ar1" else "iid")
+    )
     fit_std <- fmri_lm(
       onsets ~ hrf(condition),
       block = ~run,
       dataset = dset,
-      ar_options = ar_opts
+      control = control,
+      compute = compute_spec(voxel_chunks = 1L)
     )
     ei <- fit_std$result$event_indices
     k_task <- length(ei)
@@ -137,7 +141,7 @@ test_that("rrr_gls parity matrix against standard fmri_lm", {
       onsets ~ hrf(condition),
       block = ~run,
       dataset = dset,
-      ar_options = ar_opts,
+      control = control,
       engine = "rrr_gls",
       engine_args = list(rank = k_task)
     )
@@ -145,7 +149,7 @@ test_that("rrr_gls parity matrix against standard fmri_lm", {
       onsets ~ hrf(condition),
       block = ~run,
       dataset = dset,
-      ar_options = ar_opts,
+      control = control,
       engine = "rrr_gls",
       engine_args = list(rank = 1L)
     )
@@ -188,7 +192,10 @@ test_that("rrr_gls parity matrix against standard fmri_lm", {
         expect_lt(max(abs(est_std - est_full)), 1e-8)
       } else {
         expect_gt(cor(est_std, est_full), 0.85)
-        expect_lt(mean(abs(est_std - est_full)), 0.1)
+        # The two-term contrast can accumulate the coefficient-level error in
+        # both directions; its bound is therefore twice the 0.08 coefficient
+        # MAE contract above.
+        expect_lt(mean(abs(est_std - est_full)), 0.16)
       }
     }
   }

@@ -228,7 +228,16 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
     p_value = as.vector(as.matrix(prob_df))
   )
 
-  if (!is.null(block$df.residual)) {
+  inference_df <- model$result$df$inference %||% NULL
+  if (!is.null(inference_df)) {
+    if (length(inference_df) == 1L) inference_df <- rep(inference_df, n_vox)
+    if (length(inference_df) == n_vox) {
+      result$df_inference <- rep(as.numeric(inference_df), each = length(term_names))
+    }
+  }
+  if (!is.null(model$result$df$nominal)) {
+    result$df_residual <- rep(as.numeric(model$result$df$nominal)[1L], nrow(result))
+  } else if (!is.null(block$df.residual)) {
     result$df_residual <- rep(block$df.residual[1], nrow(result))
   }
 
@@ -258,7 +267,9 @@ print.fmri_lm <- function(x, ...) {
   cli::cli_h2("Model Information")
   cli::cli_ul()
   cli::cli_li("Dataset: {.field {class(x$dataset)[1]}}")
-  cli::cli_li("Strategy: {.field {attr(x, 'strategy')}}")
+  scope <- attr(x, "requested_control")$estimation$scope %||%
+    attr(x, "config")$estimation$scope %||% attr(x, "strategy")
+  cli::cli_li("Estimation scope: {.field {scope}}")
   
   # Design info
   n_events <- length(x$result$event_indices)
@@ -271,8 +282,18 @@ print.fmri_lm <- function(x, ...) {
   cli::cli_li("Voxels analyzed: {.val {n_voxels}}")
   
   # Degrees of freedom
-  df_resid <- x$result$betas$df.residual[1]
-  cli::cli_li("Residual df: {.val {df_resid}}")
+  df_values <- as.numeric(x$result$df$inference %||% x$result$betas$df.residual[1])
+  df_values <- df_values[is.finite(df_values)]
+  if (length(df_values)) {
+    df_label <- if (length(unique(df_values)) == 1L) {
+      format(df_values[[1L]], digits = 5L)
+    } else {
+      sprintf("%s to %s", format(min(df_values), digits = 5L),
+              format(max(df_values), digits = 5L))
+    }
+    df_method <- x$result$df$method %||% "residual"
+    cli::cli_li("Inference df ({.field {df_method}}): {.val {df_label}}")
+  }
   cli::cli_end()
   
   # Contrasts info if available
@@ -305,17 +326,20 @@ print.fmri_lm <- function(x, ...) {
     cli::cli_ul()
     
     # AR info
-    if (cfg$ar$struct != "iid") {
-      cli::cli_li("AR structure: {.field {cfg$ar$struct}}")
-      if (cfg$ar$global) cli::cli_li("AR scope: {.emph global}")
-      if (cfg$ar$voxelwise) cli::cli_li("AR estimation: {.emph voxelwise}")
+    noise <- cfg$noise %||% cfg$ar
+    if (noise$struct != "iid") {
+      cli::cli_li("AR structure: {.field {noise$struct}}")
+      cli::cli_li("Noise pooling: {.field {noise$pooling %||% 'run'}}")
+      if (noise$voxelwise) cli::cli_li("AR estimation: {.emph voxelwise}")
     }
     
     # Robust info
-    if (cfg$robust$type != FALSE) {
+    if (.fmri_lm_robust_enabled(cfg$robust)) {
       cli::cli_li("Robust method: {.field {cfg$robust$type}}")
       cli::cli_li("Robust tuning: {.val {cfg$robust$c_tukey}}")
     }
+    cli::cli_li("Variance: {.field {cfg$variance$method}}")
+    cli::cli_li("Reference df: {.field {cfg$variance$df}}")
     cli::cli_end()
   }
   

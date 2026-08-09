@@ -27,7 +27,7 @@ fit_glm_from_suffstats(
 
 \item{df}{Residual degrees of freedom.}
 
-\item{cfg}{Optional \code{fmri_lm_config}; used for metadata only.}
+\item{cfg}{Optional \code{fmri_lm_control}; used for metadata only.}
 
 \item{dataset}{Optional dataset backing the model.}
 

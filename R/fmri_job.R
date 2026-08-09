@@ -48,7 +48,7 @@ dataset_spec <- function(constructor, args = list(), source = c("file", "inline"
 #'
 #' Binds an [fmri_template] to one subject's [dataset_spec]. The result is a
 #' fully serializable recipe (no voxel data, no captured environment) that
-#' [run()] turns into a fitted model and reduced output. Build jobs with
+#' [run_job()] turns into a fitted model and reduced output. Build jobs with
 #' [instantiate()] rather than by hand in the common case.
 #'
 #' @param id A unique job identifier (e.g. a subject label).
@@ -59,9 +59,9 @@ dataset_spec <- function(constructor, args = list(), source = c("file", "inline"
 #' @param nuisance Optional per-subject nuisance / confound regressors fed to the
 #'   baseline model at run time: \code{NULL}, a numeric matrix with one row per
 #'   scan (split across runs), or a list of per-run matrices. (A deferred
-#'   file-read spec is also accepted by [run()].)
+#'   file-read spec is also accepted by [run_job()].)
 #' @return An object of class \code{fmri_job}.
-#' @seealso [instantiate()], [run()], [export_jobs()]
+#' @seealso [instantiate()], [run_job()], [export_jobs()]
 #' @export
 #' @examples
 #' tmpl <- fmri_template(onset ~ hrf(condition), ~ run)

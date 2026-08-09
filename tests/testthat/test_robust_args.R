@@ -43,12 +43,12 @@ test_that("robust argument validation works", {
   expect_error(
     fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
             robust_options = list(type = "bogus")),
-    "Invalid robust_psi|robust_psi/type"
+    "robust_options\\$type.*TRUE.*FALSE.*huber.*bisquare"
   )
 
   expect_error(
     fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
             robust = TRUE, robust_max_iter = 0),
-    "robust_max_iter"
+    "max_iter.*>= 1"
   )
 })

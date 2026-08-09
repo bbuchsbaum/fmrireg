@@ -22,7 +22,7 @@ test_that("fmri_lm_control accepts censor parameter in ar_options", {
   # Invalid censor should error
   expect_error(
     fmri_lm_control(ar_options = list(struct = "ar1", censor = "invalid")),
-    "should be"
+    "must be NULL"
   )
 })
 

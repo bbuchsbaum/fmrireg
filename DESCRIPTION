@@ -12,7 +12,7 @@ Description: Provides tools for the analysis of functional magnetic resonance
 Encoding: UTF-8
 LazyData: false
 Depends:
-    R (>= 4.0.0)
+    R (>= 4.1.0)
 Imports:
     fmriAR (>= 0.3.3),
     fmrigds,
@@ -61,6 +61,7 @@ Suggests:
     fmristore,
     knitr,
     rmarkdown,
+    albersdown,
     roxygen2,
     covr,
     gridExtra,
@@ -72,12 +73,12 @@ Suggests:
     future,
     shiny,
     mgcv,
+    sandwich,
     progressr,
     pkgload,
     roxyglobals (>= 0.2.1),
     withr,
-    bidser,
-    jsonlite
+    bidser
 Remotes:
     bbuchsbaum/bidser,
     bbuchsbaum/fmriAR,
