@@ -29,7 +29,7 @@ library(fmrireg)
 library(dplyr)
 library(knitr)
 library(ggplot2)
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=7, fig.height=6, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=7, fig.height=6, message=FALSE, warning=TRUE)
 ```
 
 ```{r albers-classes, echo=FALSE, results='asis'}
@@ -47,9 +47,15 @@ cat(sprintf(
 
 ## Introduction to Contrasts
 
-Statistical contrasts are a fundamental component of *f*MRI analyses, allowing researchers to test specific hypotheses about differences in brain activity between experimental conditions. The `fmrireg` package provides a flexible and powerful system for defining, computing, and applying contrasts to linear models fitted to fMRI data.
+Statistical contrasts turn questions about differences between experimental
+conditions into linear hypotheses about fitted coefficients. `fmrireg` provides
+constructors for defining those hypotheses, inspecting their weights, and
+fitting them with an fMRI linear model.
 
-This vignette explores the various ways to specify contrasts in `fmrireg`, from simple pairwise comparisons to more complex interactions and polynomial trends.
+This vignette shows how to turn a scientific question into weights, inspect
+those weights before fitting, and extract the resulting estimates and test
+statistics. If you have not yet fitted a model, start with
+`vignette("a_09_linear_model", package = "fmrireg")`.
 
 ## Example: A 2x2 Factorial Design
 
@@ -86,7 +92,18 @@ emodel <- event_model(onset ~ hrf(category, attention),
 # In this simple model, there's only one event term
 event_term <- terms(emodel)[[1]] 
 
-kable(cells(event_term), caption = "Cells within the 'category:attention' event term")
+cell_order <- unique(design[c("category", "attention")])
+cell_labels <- paste(cell_order$category, cell_order$attention, sep = " / ")
+label_weight_matrix <- function(x, labels = cell_labels) {
+  out <- as.matrix(x)
+  stopifnot(nrow(out) == length(labels))
+  rownames(out) <- labels
+  out
+}
+
+kable(cell_order,
+      row.names = FALSE,
+      caption = "Cells within the 'category:attention' event term")
 ```
 
 This `event_term` object encapsulates the structure of our experimental conditions and will be used to compute contrast weights.
@@ -122,32 +139,49 @@ wts_face_vs_scene <- contrast_weights(con_face_vs_scene, event_term)
 wts_attend_vs_ignore <- contrast_weights(con_attend_vs_ignore, event_term)
 
 cat("Weights for 'face_vs_scene':\n")
-kable(wts_face_vs_scene$weights, col.names = wts_face_vs_scene$name)
+kable(label_weight_matrix(wts_face_vs_scene$weights),
+      col.names = wts_face_vs_scene$name)
 
 cat("\nWeights for 'attend_vs_ignore':\n")
-kable(wts_attend_vs_ignore$weights, col.names = wts_attend_vs_ignore$name)
+kable(label_weight_matrix(wts_attend_vs_ignore$weights),
+      col.names = wts_attend_vs_ignore$name)
 ```
 
-Notice how `pair_contrast` automatically averages over the levels *not* mentioned in the formulas. For `face_vs_scene`, it averages over 'attend' and 'ignore' within each category level before contrasting. The resulting weights sum to zero (0.25 * 2 + (-0.25) * 2 = 0).
+Notice how `pair_contrast` automatically averages over the levels *not* mentioned in the formulas. For `face_vs_scene`, it averages over 'attend' and 'ignore' within each category level before contrasting. The resulting weights sum to zero (0.5 * 2 + (-0.5) * 2 = 0).
 
 ## Unit Contrasts: Comparing to Baseline
 
 Sometimes, we want to test whether activation for a condition (or set of conditions) is significantly different from the implicit baseline (often represented by the intercept in the model). `unit_contrast` is used for this purpose. It creates contrasts that sum to 1.
 
 ```{r unit_contrasts}
-con_face_vs_baseline <- unit_contrast(~ category == "face", name = "face_gt_baseline")
-con_attend_vs_baseline <- unit_contrast(~ attention == "attend", name = "attend_gt_baseline")
+con_face_vs_baseline <- unit_contrast(
+  ~ category, name = "face_gt_baseline",
+  where = ~ category == "face"
+)
+con_attend_vs_baseline <- unit_contrast(
+  ~ attention, name = "attend_gt_baseline",
+  where = ~ attention == "attend"
+)
 
 wts_face_vs_baseline <- contrast_weights(con_face_vs_baseline, event_term)
 wts_attend_vs_baseline <- contrast_weights(con_attend_vs_baseline, event_term)
 
 cat("Weights for 'face_gt_baseline':\n")
-kable(wts_face_vs_baseline$weights, col.names = wts_face_vs_baseline$name)
+kable(label_weight_matrix(wts_face_vs_baseline$weights),
+      col.names = wts_face_vs_baseline$name)
 
 cat("\nWeights for 'attend_gt_baseline':\n")
-kable(wts_attend_vs_baseline$weights, col.names = wts_attend_vs_baseline$name)
+kable(label_weight_matrix(wts_attend_vs_baseline$weights),
+      col.names = wts_attend_vs_baseline$name)
 ```
 These weights average the specified conditions and compare them against zero (the implicit baseline).
+
+```{r check-unit-weights, include=FALSE}
+stopifnot(
+  identical(as.numeric(wts_face_vs_baseline$weights), c(0.5, 0, 0.5, 0)),
+  identical(as.numeric(wts_attend_vs_baseline$weights), c(0.5, 0.5, 0, 0))
+)
+```
 
 ## General Contrasts with `contrast()`
 
@@ -165,7 +199,8 @@ con_interaction <- contrast(
 wts_interaction <- contrast_weights(con_interaction, event_term)
 
 cat("Weights for 'category_X_attention':\n")
-kable(wts_interaction$weights, col.names = wts_interaction$name)
+kable(label_weight_matrix(wts_interaction$weights),
+      col.names = wts_interaction$name)
 ```
 
 Note: In the formula for `contrast()`, condition names are formed by joining factor levels with colons (e.g., `face:attend`). When condition names contain special characters like colons, they must be enclosed in backticks. The `contrast_weights` function evaluates this formula in an environment where each condition name corresponds to a column vector (1 for that condition, 0 otherwise).
@@ -189,10 +224,10 @@ con_int_cat_att <- interaction_contrast(~ category * attention, name = "Interact
 wts_int_cat_att <- contrast_weights(con_int_cat_att, event_term)
 
 cat("Weights for 'Main_Category' (oneway_contrast):\n")
-kable(wts_main_category$weights)
+kable(label_weight_matrix(wts_main_category$weights))
 
 cat("\nWeights for 'Interaction_CatAtt' (interaction_contrast):\n")
-kable(wts_int_cat_att$weights)
+kable(label_weight_matrix(wts_int_cat_att$weights))
 ```
 Note that the weights generated by `interaction_contrast(~ category * attention)` match those we manually specified using `contrast()`. For factors with more levels, these functions would generate multiple orthogonal contrast columns.
 
@@ -224,11 +259,18 @@ Now, define a polynomial contrast to test for linear and quadratic trends of int
 ```{r poly_contrast}
 con_poly_intensity <- poly_contrast(~ intensity, degree = 2, name = "Intensity_Trend")
 wts_poly_intensity <- contrast_weights(con_poly_intensity, event_term_poly)
+poly_cell_order <- unique(design_poly[c("category", "intensity")])
+poly_labels <- paste(
+  poly_cell_order$category,
+  paste("intensity", poly_cell_order$intensity),
+  sep = " / "
+)
 
 cat("Weights for 'Intensity_Trend' (poly_contrast, degree=2):\n")
-kable(wts_poly_intensity$weights)
+kable(label_weight_matrix(wts_poly_intensity$weights, poly_labels))
 ```
-The output has two columns: `poly1` for the linear trend and `poly2` for the quadratic trend.
+The output has two columns: `Intensity_Trend_1` for the linear trend and
+`Intensity_Trend_2` for the quadratic trend.
 
 ## Helper Functions for Common Comparisons
 
@@ -257,9 +299,9 @@ wts_helpers <- contrast_weights(con_set_helpers, event_term)
 
 # Display weights for one_against_all
 cat("Weights for 'con_attend_vs_other':\n")
-kable(wts_helpers$con_attend_vs_other$weights)
+kable(label_weight_matrix(wts_helpers$con_attend_vs_other$weights))
 cat("\nWeights for 'con_ignore_vs_other':\n")
-kable(wts_helpers$con_ignore_vs_other$weights)
+kable(label_weight_matrix(wts_helpers$con_ignore_vs_other$weights))
 ```
 
 ## Grouping Contrasts: `contrast_set`
@@ -282,31 +324,40 @@ all_weights <- contrast_weights(all_contrasts, event_term)
 
 # Access weights for a specific contrast within the set
 cat("\nAccessing weights for 'face_vs_scene' from the set:\n")
-kable(all_weights$face_vs_scene$weights)
+kable(label_weight_matrix(all_weights$face_vs_scene$weights))
 ```
 
 ## Applying Contrasts in `fmri_lm`
 
 Contrasts are typically specified within the `hrf()` function in the `fmri_lm` formula. You can provide a single contrast specification or a `contrast_set`.
 
-```{r apply_contrasts_model, eval=FALSE}
-# Simulate some simple data for demonstration
-ysim <- matrix(rnorm(120 * 3), 120, 3) # 3 voxels
-dataset_sim <- matrix_dataset(ysim, TR = 2, run_length = 120, event_table = design)
-
-# Fit model with the contrast set defined earlier
-fmri_fit <- fmri_lm(
-  formula = onset ~ hrf(category, attention, contrasts = all_contrasts),
-  block = ~ block,
-  dataset = dataset_sim,
-  compute = compute_spec(voxel_chunks = 1L)
+```{r simulate-contrast-data, include=FALSE}
+signal_design <- as.matrix(design_matrix(emodel))
+true_cell_effects <- cbind(
+  voxel1 = c(1.2, 0.4, 0.8, 0.2),
+  voxel2 = c(1.0, 0.5, 0.7, 0.3),
+  voxel3 = c(0.8, 0.3, 0.6, 0.2)
 )
-
-# Print summary of the fitted model (shows contrasts)
-print(fmri_fit)
+rownames(true_cell_effects) <- colnames(signal_design)
+set.seed(99)
+ysim <- signal_design %*% true_cell_effects +
+  matrix(rnorm(120 * 3, sd = 0.15), 120, 3)
+dataset_sim <- matrix_dataset(
+  ysim, TR = 2, run_length = 120, event_table = design
+)
 ```
 
-*(Note: The above fitting code is set to `eval=FALSE` to avoid lengthy computation in the vignette build, but demonstrates the principle.)*
+```{r apply-contrasts-model}
+# Fit model with the contrast set defined earlier
+fmri_fit <- fmri_lm(
+  onset ~ hrf(category, attention, contrasts = all_contrasts),
+  block = ~ block, dataset = dataset_sim
+)
+```
+
+The simulated cell effects make the face-minus-scene contrast positive in all
+three voxels. This gives the example a known direction rather than relying on
+an arbitrary noise realization.
 
 ## Extracting Contrast Results
 
@@ -317,57 +368,162 @@ After fitting a model with contrasts, you can extract the results using standard
 *   `standard_error(fmri_fit, type = "contrasts")`: Standard errors for contrasts.
 *   `stats(fmri_fit, type = "F")`: F-statistics (if F-contrasts were defined, e.g., via `oneway_contrast`).
 
-```{r extract_results, eval=FALSE}
-# Extract estimated contrast values
+```{r extract-results}
 contrast_estimates <- coef(fmri_fit, type = "contrasts")
-kable(contrast_estimates, caption = "Estimated Contrast Values")
-
-# Extract t-statistics
 contrast_tstats <- stats(fmri_fit, type = "contrasts")
-kable(contrast_tstats, caption = "Contrast t-statistics")
-
-# Extract standard errors
 contrast_se <- standard_error(fmri_fit, type = "contrasts")
-kable(contrast_se, caption = "Contrast Standard Errors")
+contrast_p <- p_values(fmri_fit, type = "contrasts")
+
+contrast_summary_numeric <- data.frame(
+  contrast = names(contrast_estimates),
+  estimate = as.numeric(contrast_estimates[1, ]),
+  std_error = as.numeric(contrast_se[1, ]),
+  statistic = as.numeric(contrast_tstats[1, ]),
+  p_value = as.numeric(contrast_p[1, ]),
+  df = as.numeric(fmri_fit$result$df$inference)[1]
+)
+contrast_summary <- transform(
+  contrast_summary_numeric,
+  p_value = format.pval(p_value, digits = 3, eps = 1e-4)
+)
+kable(contrast_summary, digits = 3,
+      row.names = FALSE,
+      caption = "Contrast results for voxel 1")
+```
+
+```{r check-contrast-results, include=FALSE}
+stopifnot(
+  all(is.finite(as.matrix(contrast_estimates))),
+  all(is.finite(as.matrix(contrast_se))),
+  all(is.finite(as.matrix(contrast_tstats))),
+  all(is.finite(as.matrix(contrast_p))),
+  all(contrast_estimates$face_vs_scene > 0),
+  !any(contrast_summary$p_value == "0")
+)
+```
+
+The estimate is the effect size in response-data units. The standard error is
+its uncertainty, and the t statistic is their ratio; the p-value additionally
+depends on the reported inference degrees of freedom. These p-values describe
+planned tests at one voxel. A whole-brain analysis must also declare how it
+controls multiplicity across voxels and across any unplanned contrasts.
+
+## Execute an omnibus F-contrast
+
+A multi-column F-contrast asks whether any of several restrictions is nonzero.
+Here a three-level factor gives a two-degree-of-freedom omnibus test. This is
+different from choosing one signed pairwise difference.
+
+```{r execute-f-contrast}
+three_level_events <- data.frame(
+  onset = seq(5, 80, length.out = 12),
+  condition = factor(rep(c("faces", "objects", "scenes"), 4)),
+  run = 1L
+)
+three_level_frame <- sampling_frame(100, TR = 2)
+three_level_event <- event_model(
+  onset ~ hrf(condition), block = ~ run,
+  data = three_level_events, sampling_frame = three_level_frame
+)
+three_level_X <- as.matrix(design_matrix(three_level_event))
+set.seed(404)
+three_level_Y <- three_level_X %*% matrix(c(1.0, 0.4, -0.2), ncol = 1) +
+  matrix(rnorm(100, sd = 0.15), ncol = 1)
+three_level_dataset <- matrix_dataset(
+  three_level_Y, TR = 2, run_length = 100,
+  event_table = three_level_events
+)
+
+condition_omnibus <- oneway_contrast(~ condition, name = "condition_F")
+omnibus_fit <- fmri_lm(
+  onset ~ hrf(condition, contrasts = contrast_set(condition_omnibus)),
+  block = ~ run, dataset = three_level_dataset
+)
+omnibus_weights <- contrast_weights(
+  condition_omnibus, terms(three_level_event)[[1]]
+)$weights
+omnibus_F <- as.numeric(stats(omnibus_fit, type = "F")$condition_F)
+omnibus_df1 <- ncol(omnibus_weights)
+omnibus_df2 <- as.numeric(omnibus_fit$result$df$inference)[1]
+omnibus_p <- pf(omnibus_F, omnibus_df1, omnibus_df2, lower.tail = FALSE)
+
+omnibus_summary <- data.frame(
+  F = omnibus_F,
+  numerator_df = omnibus_df1,
+  denominator_df = omnibus_df2,
+  p_value = format.pval(omnibus_p, digits = 3, eps = 1e-4)
+)
+kable(
+  omnibus_summary,
+  digits = 3,
+  row.names = FALSE,
+  caption = "Omnibus test of equality across three condition effects"
+)
+```
+
+```{r check-f-contrast, include=FALSE}
+stopifnot(
+  omnibus_df1 == 2L,
+  is.finite(omnibus_F), omnibus_F > 0,
+  is.finite(omnibus_p), omnibus_p < 0.05,
+  omnibus_summary$p_value != "0"
+)
 ```
 
 ## Visualizing Contrast Weights
 
-The `plot_contrasts` function provides a heatmap visualization of the contrast weights applied across all regressors in the design matrix (including baseline terms if present).
+Before fitting, inspect the cell weights using labels that match the scientific
+conditions. This catches sign errors without exposing internal design-column
+names.
 
-```{r plot_contrasts_setup, include=FALSE}
-# Build event model with contrasts for plotting
-emodel_with_cons <- event_model(
-  onset ~ hrf(category, attention, contrasts = all_contrasts),
-  block = ~ block,
-  data = design,
-  sampling_frame = sframe
-)
-```
+```{r plot-contrasts-example, fig.alt="Heatmap of signed contrast weights for the four category-by-attention experimental cells across four planned hypotheses."}
+weight_matrix <- do.call(cbind, lapply(
+  all_weights,
+  function(weight) as.numeric(weight$weights[, 1])
+))
+cell_order <- unique(design[c("category", "attention")])
+rownames(weight_matrix) <- paste(cell_order$category, cell_order$attention,
+                                 sep = " / ")
+colnames(weight_matrix) <- names(all_weights)
+weight_long <- as.data.frame(as.table(weight_matrix), stringsAsFactors = FALSE)
+names(weight_long) <- c("condition", "contrast", "weight")
 
-```{r plot_contrasts_example, error=TRUE}
-# Plot the contrast weights across all regressors
-plot_contrasts(emodel_with_cons, rotate_x_text = TRUE, coord_fixed = FALSE)
+ggplot(weight_long, aes(contrast, condition, fill = weight)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = sprintf("%.1f", weight)), size = 3.5) +
+  scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B") +
+  labs(x = NULL, y = NULL, fill = "Weight",
+       title = "Planned contrast weights by experimental cell") +
+  theme_minimal(base_size = 12) +
+  theme(axis.text.x = element_text(angle = 25, hjust = 1))
 ```
-This plot helps verify that contrasts are specified correctly relative to the full model design matrix.
+The full-design helper `plot_contrasts()` remains useful when you also need to
+audit how these weights align with nuisance and baseline columns.
 
 ## Working with Contrast Weights
 
 The computed contrast weights can be used directly in statistical analyses or exported to other analysis packages. The weights matrix shows exactly how each experimental condition contributes to the contrast:
 
 ```{r view_weights}
-# View the structure of interaction contrast weights
-cat("Interaction contrast structure:\n")
-str(wts_interaction)
-cat("\nContrast weights matrix:\n")
-print(wts_interaction$conmat)
+interaction_weights <- data.frame(
+  condition = rownames(weight_matrix),
+  weight = as.numeric(wts_interaction$weights[, 1])
+)
+kable(interaction_weights,
+      row.names = FALSE,
+      caption = "Weights for the category-by-attention interaction")
 ```
 
 ## Conclusion
 
-The `fmrireg` package offers a comprehensive system for defining and applying statistical contrasts in fMRI analysis. From simple pairwise comparisons (`pair_contrast`) and baseline tests (`unit_contrast`) to complex formula-based definitions (`contrast`), trend analysis (`poly_contrast`), and ANOVA-style effects (`oneway_contrast`, `interaction_contrast`), researchers have fine-grained control over hypothesis testing. The integration with `fmri_lm` and visualization tools like `plot_contrasts` facilitates robust and interpretable fMRI modeling.
+This vignette showed how to define pairwise comparisons (`pair_contrast`),
+baseline tests (`unit_contrast`), formula-based contrasts (`contrast`), polynomial
+trends (`poly_contrast`), and multi-degree-of-freedom effects
+(`oneway_contrast`, `interaction_contrast`). Inspect the resulting weight matrix,
+fit the declared hypothesis with `fmri_lm`, and report the effect, uncertainty,
+degrees of freedom, and multiplicity procedure together.
 
 ## Next
 
-- `vignette("benchmark_datasets", package = "fmrireg")` — Benchmark datasets
+- `vignette("multisubject_fanout", package = "fmrireg")` — Reuse the model across subjects
 - `vignette("group_analysis", package = "fmrireg")` — Group analysis

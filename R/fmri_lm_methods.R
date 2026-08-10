@@ -138,10 +138,10 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
     return(tibble::tibble())
   }
 
-  key_cols <- switch(block,
-    betas = c("estimate", "se", "stat", "prob", "sigma"),
-    contrasts = c("estimate", "se", "stat", "prob", "sigma")
-  )
+  # sigma is solver-specific metadata, not a statistic needed by tidy().
+  # In particular, runwise meta-estimation returns the four inferential
+  # matrices below without a sigma column.
+  key_cols <- c("estimate", "se", "stat", "prob")
 
   if (!all(key_cols %in% names(nested))) {
     stop("Unexpected structure in nested statistics table", call. = FALSE)
@@ -149,12 +149,21 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
 
   cols <- lapply(key_cols, function(nm) {
     values <- nested[[nm]]
-    if (length(values) == 0 || is.null(values[[1]])) {
-      NULL
-    } else if (block == "betas") {
-      values[[1]]
+    if (length(values) == 0L) {
+      return(NULL)
+    }
+
+    # Beta statistics are normally stored as a one-element list-column of
+    # matrices. Contrast statistics are normally atomic vectors, but some
+    # backends use the same list-column representation. Normalize both forms
+    # without discarding matrix dimensions.
+    if (is.list(values)) {
+      if (length(values) != 1L || is.null(values[[1L]])) {
+        return(NULL)
+      }
+      values[[1L]]
     } else {
-      as.vector(values)
+      values
     }
   })
   names(cols) <- key_cols
@@ -180,6 +189,14 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
   stat_mat <- as.matrix(mats$stat)
   prob_mat <- as.matrix(mats$prob)
 
+  stat_dims <- lapply(
+    list(estimate = estimate_mat, se = se_mat, stat = stat_mat, prob = prob_mat),
+    dim
+  )
+  if (!all(vapply(stat_dims[-1L], identical, logical(1), stat_dims[[1L]]))) {
+    stop("Estimate, SE, statistic, and p-value layouts do not agree", call. = FALSE)
+  }
+
   add_names <- function(target, reference) {
     if (is.null(colnames(target)) && !is.null(colnames(reference))) {
       colnames(target) <- colnames(reference)
@@ -193,7 +210,20 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
   estimate_mat <- add_names(estimate_mat, stat_mat)
 
   if (is.null(colnames(estimate_mat))) {
-    colnames(estimate_mat) <- paste0("term", seq_len(ncol(estimate_mat)))
+    design_names <- tryCatch(
+      colnames(design_matrix(model$model)),
+      error = function(e) NULL
+    )
+    colind <- block$colind[[1L]] %||% NULL
+    if (!is.null(colind) && length(colind) == ncol(estimate_mat) &&
+        length(design_names) >= max(colind)) {
+      design_names <- design_names[colind]
+    }
+    if (length(design_names) == ncol(estimate_mat)) {
+      colnames(estimate_mat) <- design_names
+    } else {
+      colnames(estimate_mat) <- paste0("term", seq_len(ncol(estimate_mat)))
+    }
   }
   se_mat <- add_names(se_mat, estimate_mat)
   stat_mat <- add_names(stat_mat, estimate_mat)
@@ -222,10 +252,12 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
   result <- tibble::tibble(
     voxel = rep(seq_len(n_vox), each = length(term_names)),
     term = rep(term_names, times = n_vox),
-    estimate = as.vector(as.matrix(estimate_df)),
-    std_error = as.vector(as.matrix(se_df)),
-    statistic = as.vector(as.matrix(stat_df)),
-    p_value = as.vector(as.matrix(prob_df))
+    # Labels enumerate all terms within a voxel. R matrices flatten by column,
+    # so transpose first to preserve that row-major semantic order.
+    estimate = as.vector(t(as.matrix(estimate_df))),
+    std_error = as.vector(t(as.matrix(se_df))),
+    statistic = as.vector(t(as.matrix(stat_df))),
+    p_value = as.vector(t(as.matrix(prob_df)))
   )
 
   inference_df <- model$result$df$inference %||% NULL

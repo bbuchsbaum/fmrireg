@@ -41,7 +41,9 @@ simulate_fmri_matrix(
 
 \item{n_events}{Number of events (ignored if \code{onsets} is provided).}
 
-\item{onsets}{Optional numeric vector of event onsets. If \code{NULL}, will be generated.}
+\item{onsets}{Optional non-empty numeric vector of finite event onsets in
+\code{[0, total_time - buffer)}. Explicit values and their order are
+preserved, determine \code{n_events}, and skip ISI generation.}
 
 \item{isi_dist}{One of \code{"even"}, \code{"uniform"}, or \code{"exponential"}.
 Default is \code{"even"} so events are evenly spaced within \code{total_time - buffer}.}

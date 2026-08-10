@@ -43,7 +43,8 @@ A list with the following components:
 }
 \description{
 This function simulates an fMRI time series for multiple experimental conditions with specified parameters.
-It generates a realistic event-related design with randomized inter-stimulus intervals and condition orders.
+It generates a controlled event-related teaching design with randomized
+inter-stimulus intervals and condition orders.
 }
 \examples{
 # Simulate 3 conditions with different amplitudes

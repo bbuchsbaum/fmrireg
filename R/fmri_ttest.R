@@ -195,6 +195,8 @@ fmri_ttest <- function(gd,
   raw_contrast_weights <- NULL
   canonical_contrast_weights <- NULL
   exact_contrast <- NULL
+  analysis_method <- NULL
+  out <- NULL
   
   if (paired) {
     # Paired: assume Y contains within-subject differences
@@ -242,6 +244,7 @@ fmri_ttest <- function(gd,
     # Meta-regression using existing infrastructure
     method <- getOption("fmrireg.meta.method", "pm")
     robust <- getOption("fmrireg.meta.robust", "none")
+    analysis_method <- if (!is.null(combine)) paste0("combine:", combine) else method
     
     if (inherits(gd, "group_data") && is.null(Y)) {
       # Delegate to fmri_meta for group_data_* inputs
@@ -270,6 +273,7 @@ fmri_ttest <- function(gd,
         combine = combine,
         verbose = FALSE
       )
+      P <- nrow(meta_fit$coefficients)
       res$beta <- t(meta_fit$coefficients)
       res$se   <- t(meta_fit$se)
       res$z    <- res$beta / res$se
@@ -348,7 +352,7 @@ fmri_ttest <- function(gd,
       }
     }
     
-    if (exists("out")) {
+    if (!is.null(out)) {
       res$beta <- out$beta
       res$se <- out$se
       res$z <- out$z
@@ -421,11 +425,15 @@ fmri_ttest <- function(gd,
       
       # Convert t to z and p
       df <- rep(ols$df, P)
-      Pval <- apply(ols$t, 1, function(tt) {
-        2 * stats::pt(abs(tt), df = df, lower.tail = FALSE)
-      })
-      Pval <- t(Pval)
-      rownames(Pval) <- rownames(ols$t)
+      Pval <- matrix(
+        NA_real_, nrow = nrow(ols$t), ncol = ncol(ols$t),
+        dimnames = dimnames(ols$t)
+      )
+      for (i in seq_len(nrow(Pval))) {
+        Pval[i, ] <- 2 * stats::pt(
+          abs(ols$t[i, ]), df = df, lower.tail = FALSE
+        )
+      }
       
       Z <- matrix(NA_real_, nrow = nrow(ols$t), ncol = P,
                   dimnames = dimnames(ols$t))
@@ -486,6 +494,9 @@ fmri_ttest <- function(gd,
   res$call <- match.call()
   res$formula <- formula
   res$engine <- if (use_meta) "meta" else engine
+  res$method <- if (use_meta) analysis_method else engine
+  res$combine <- if (use_meta) combine else NULL
+  res$weights <- if (use_meta) weights else NULL
   res$n_subjects <- S
   res$n_features <- P
   res$mc <- mc

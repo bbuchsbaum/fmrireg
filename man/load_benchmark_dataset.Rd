@@ -25,13 +25,17 @@ A list containing the specified benchmark dataset(s) with the following componen
 \item \code{Y_noisy}: Matrix of noisy BOLD time series (time x voxels)
 \item \code{Y_clean}: Matrix of clean BOLD time series (when available)
 \item \code{X_list_true_hrf}: List of design matrices convolved with true HRF
-\item \code{true_hrf_parameters}: Information about the true HRF(s) used
+\item \code{true_hrf_parameters}: Reconstructed true HRF object(s) plus
+complete, versioned generation recipes
+\item \code{oracle_contract}: Scope and tolerance of the valid stored
+numerical oracle, including limitations for partial-truth datasets
 \item \code{event_onsets}: Vector of event onset times
 \item \code{condition_labels}: Vector of condition labels for each event
 \item \code{true_betas_condition}: Matrix of true condition-level beta values
 \item \code{true_amplitudes_trial}: Matrix of true trial-level amplitudes
 \item \code{TR}: Repetition time
 \item \code{total_time}: Total scan duration
+\item \code{run_length}: Number of acquired time points
 \item \code{noise_parameters}: Information about noise generation
 \item \code{simulation_seed}: Random seed used for generation
 \item \code{target_snr}: Target signal-to-noise ratio

@@ -1,6 +1,6 @@
 # tests/testthat/test-landmarks-srht.R
 
-test_that("Landmark SRHT + global AR matches exact reasonably on synthetic data", {
+test_that("landmark extension preserves a smooth task field with bounded scale error", {
   skip_on_cran()
   library(neuroim2)
 
@@ -24,14 +24,25 @@ test_that("Landmark SRHT + global AR matches exact reasonably on synthetic data"
   V <- prod(dim3)
   task_cols <- which(grepl("condition|hrf", colnames(X), ignore.case = TRUE))
   B_true <- matrix(0, p, V)
-  B_true[task_cols, ] <- matrix(rnorm(length(task_cols) * V, sd = 0.6), length(task_cols), byrow = TRUE)
+  coords_sim <- expand.grid(
+    z = seq_len(dim3[3]), y = seq_len(dim3[2]), x = seq_len(dim3[1])
+  )[, c("x", "y", "z")]
+  xyz01 <- sweep(as.matrix(coords_sim), 2, 1, "-")
+  xyz01 <- sweep(xyz01, 2, pmax(dim3 - 1, 1), "/")
+  smooth_maps <- rbind(
+    sin(pi * xyz01[, 1]) * cos(pi * xyz01[, 2]) * (0.5 + xyz01[, 3]),
+    cos(pi * xyz01[, 1]) * sin(pi * xyz01[, 2]) * (1 - 0.5 * xyz01[, 3])
+  )
+  for (j in seq_along(task_cols)) {
+    B_true[task_cols[j], ] <- smooth_maps[1L + (j - 1L) %% nrow(smooth_maps), ]
+  }
   ar1_noise <- function(T, V, rho = 0.4, sd = 0.5) {
     E <- matrix(0, T, V)
     E[1, ] <- rnorm(V, sd = sd/sqrt(1 - rho^2))
     for (t in 2:T) E[t, ] <- rho * E[t-1, ] + rnorm(V, sd = sd)
     E
   }
-  Y <- X %*% B_true + ar1_noise(Tlen, V)
+  Y <- X %*% B_true + ar1_noise(Tlen, V, sd = 0.15)
 
   arr <- array(0, dim = c(dim3, Tlen))
   v <- 0L
@@ -41,29 +52,46 @@ test_that("Landmark SRHT + global AR matches exact reasonably on synthetic data"
   vec <- NeuroVec(arr, space4d)
   dset <- fmri_mem_dataset(scans = list(vec), mask = maskVol, TR = TR, event_table = events_df)
 
-  # Exact fit for reference
-  fit_exact <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)
-  B_exact <- t(fit_exact$result$betas$data[[1]]$estimate[[1]])
-
-  # Parcels via kmeans on coords
-  # Suppress kmeans convergence warnings - non-convergence is expected with small random data
+  # Parcels via an explicitly convergent k-means route.
   coords <- expand.grid(x = seq_len(dim3[1]), y = seq_len(dim3[2]), z = seq_len(dim3[3]))
-  parcels <- suppressWarnings(ClusteredNeuroVol(maskVol, kmeans(coords, centers = 30)$cluster))
+  parcel_fit <- expect_no_warning(kmeans(
+    coords, centers = 30, iter.max = 1000L, nstart = 10L,
+    algorithm = "Lloyd"
+  ))
+  parcels <- ClusteredNeuroVol(maskVol, parcel_fit$cluster)
 
-  # Landmark SRHT + global AR
-  # Suppress kmeans convergence warnings that can occur during landmark selection
+  # Compare a full-voxel and landmark fit with the same sketch and AR model.
+  full_low <- lowrank_control(
+    parcels = parcels,
+    time_sketch = list(method = "srht", m = min(10L * p, Tlen))
+  )
+  control <- fmri_lm_control(
+    noise = noise_spec("ar1", pooling = "global")
+  )
+  set.seed(321)
+  fit_full <- expect_no_warning(fmri_lm(
+    onset ~ hrf(condition), block = ~ run, dataset = dset,
+    engine = "latent_sketch", lowrank = full_low, control = control
+  ))
+
   L <- 36L  # Increased landmarks for better coverage
-  low <- lowrank_control(parcels = parcels, landmarks = L, k_neighbors = 16L,
+  low <- lowrank_control(parcels = parcels, landmarks = L, k_neighbors = 8L,
                          time_sketch = list(method = "srht", m = min(10L * p, Tlen)))
-  fit_lm <- suppressWarnings(fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset, engine = "latent_sketch", lowrank = low,
-                    ar_options = list(by_cluster = FALSE, order = 1L)))
+  set.seed(321)
+  fit_lm <- expect_no_warning(fmri_lm(
+    onset ~ hrf(condition), block = ~ run, dataset = dset,
+    engine = "latent_sketch", lowrank = low, control = control
+  ))
 
   # Checks
-  expect_equal(dim(fit_lm$betas_fixed), dim(B_exact))
-  # Compare only task columns for better signal
-  corr <- cor(as.numeric(B_exact[task_cols, , drop = FALSE]), 
-              as.numeric(fit_lm$betas_fixed[task_cols, , drop = FALSE]))
-  expect_gt(corr, 0.01)  # Minimal threshold - ensuring it produces non-zero correlation
+  expect_equal(dim(fit_lm$betas_fixed), dim(fit_full$betas_fixed))
+  reference <- as.numeric(fit_full$betas_fixed[task_cols, , drop = FALSE])
+  landmark <- as.numeric(fit_lm$betas_fixed[task_cols, , drop = FALSE])
+  corr <- cor(reference, landmark)
+  rmse <- sqrt(mean((reference - landmark)^2))
+  nrmse <- rmse / stats::sd(reference)
+  expect_gt(corr, 0.85)
+  expect_lt(nrmse, 0.60)
   expect_true(length(fit_lm$sigma2) == V)
   expect_true(all(is.finite(fit_lm$sigma2)))
 })

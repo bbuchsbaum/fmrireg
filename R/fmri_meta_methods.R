@@ -264,14 +264,17 @@ build_contrast_from_names <- function(contrast, object) {
   coef_names <- colnames(object$coefficients)
   weights <- rep(0, length(coef_names))
   names(weights) <- coef_names
-  
-  for (name in names(contrast)) {
-    if (name %in% coef_names) {
-      weights[name] <- contrast[name]
-    } else {
-      warning("Coefficient '", name, "' not found in model", call. = FALSE)
-    }
+
+  unknown <- setdiff(names(contrast), coef_names)
+  if (length(unknown)) {
+    stop(
+      "Coefficient(s) not found in model: ", paste(unknown, collapse = ", "),
+      ". Available coefficients: ", paste(coef_names, collapse = ", "),
+      call. = FALSE
+    )
   }
+
+  weights[names(contrast)] <- contrast
   
   return(weights)
 }
@@ -1178,7 +1181,8 @@ spatial_fdr_fmri_meta <- function(object, coef = 1, group = NULL,
     } else {
       # Voxelwise - create 3D blocks
       # Prefer in-memory mask_data if available; otherwise use mask
-      mask_obj <- if (!is.null(object$data$mask_data)) object$data$mask_data else object$data$mask
+      mask_obj <- object$data$mask_data %||% object$data$mask %||%
+        attr(object$data, "fmrireg_mask", exact = TRUE)
       if (!is.null(mask_obj)) {
         blocks <- create_3d_blocks(mask_obj)
         group <- blocks$group_id
@@ -1191,7 +1195,8 @@ spatial_fdr_fmri_meta <- function(object, coef = 1, group = NULL,
     }
   } else if (is.character(group) && group == "blocks") {
     # Explicitly requested blocks
-    mask_obj <- if (!is.null(object$data$mask_data)) object$data$mask_data else object$data$mask
+    mask_obj <- object$data$mask_data %||% object$data$mask %||%
+      attr(object$data, "fmrireg_mask", exact = TRUE)
     if (!is.null(mask_obj)) {
       blocks <- create_3d_blocks(mask_obj)
       group <- blocks$group_id

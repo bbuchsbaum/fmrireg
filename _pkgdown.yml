@@ -36,25 +36,27 @@ navbar:
       - text: Package Overview
         href: articles/fmrireg.html
       - text: '-------'
-      - text: Advanced Topics
-      - text: Contrasts
-        href: articles/a_05_contrasts.html
+      - text: Core Workflow
+      - text: Dataset Management
+        href: articles/a_10_dataset.html
       - text: Simulation
         href: articles/a_08_simulation.html
       - text: Linear Modeling
         href: articles/a_09_linear_model.html
-      - text: Plugin Development
-        href: articles/plugin-development.html
-      - text: Sketched GLM (SRHT/IHS + Nyström)
-        href: articles/sketched-ar.html
-      - text: Dataset Management
-        href: articles/a_10_dataset.html
-      - text: Group Analysis
-        href: articles/group_analysis.html
+      - text: Contrasts
+        href: articles/a_05_contrasts.html
       - text: Multi-Subject Fan-Out
         href: articles/multisubject_fanout.html
+      - text: Group Analysis
+        href: articles/group_analysis.html
       - text: Functional Connectivity
         href: articles/functional_connectivity.html
+      - text: '-------'
+      - text: Advanced Topics
+      - text: Sketched GLM (SRHT/IHS + Nyström)
+        href: articles/sketched-ar.html
+      - text: Plugin Development
+        href: articles/plugin-development.html
       - text: '-------'
       - text: Resources
       - text: Benchmark Datasets
@@ -63,18 +65,18 @@ articles:
 - title: Getting Started
   navbar: ~
   contents: fmrireg
-- title: Advanced Analysis
+- title: Analysis Workflow
   navbar: ~
   contents:
-  - a_05_contrasts
+  - a_10_dataset
   - a_08_simulation
   - a_09_linear_model
-  - plugin-development
-  - a_10_dataset
-  - group_analysis
+  - a_05_contrasts
   - multisubject_fanout
+  - group_analysis
   - functional_connectivity
   - sketched-ar
+  - plugin-development
 - title: Resources
   navbar: ~
   contents: benchmark_datasets
