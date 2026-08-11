@@ -94,12 +94,26 @@ test_that("simulate_noise_vector generates noise with correct properties", {
   n <- 200
   TR <- 2
   
-  # White noise (use small AR to avoid warning)
+  # White noise with empty AR/MA specifications
   noise_white <- simulate_noise_vector(n, TR = TR, ar = numeric(0), ma = numeric(0), 
                                       drift_amplitude = 0, physio = FALSE)
   expect_length(noise_white, n)
   expect_equal(mean(noise_white), 0, tolerance = 0.2)
   expect_equal(sd(noise_white), 1, tolerance = 0.1)
+
+  expect_no_warning(
+    noise_zero <- simulate_noise_vector(
+      n, TR = TR, ar = 0, ma = 0,
+      drift_amplitude = 0, physio = FALSE, seed = 987
+    )
+  )
+  expect_no_warning(
+    noise_empty <- simulate_noise_vector(
+      n, TR = TR, ar = numeric(0), ma = numeric(0),
+      drift_amplitude = 0, physio = FALSE, seed = 987
+    )
+  )
+  expect_identical(noise_zero, noise_empty)
   
   # AR(1) noise - should have autocorrelation
   noise_ar1 <- simulate_noise_vector(n, TR = TR, ar = 0.5, ma = 0,
@@ -137,6 +151,29 @@ test_that("simulate_noise_vector handles physiological noise", {
   expect_false(all(noise_physio == noise_no_physio))
 })
 
+test_that("physiological components remain distinct after TR = 2 sampling", {
+  n <- 150
+  TR <- 2
+  time <- seq(0, by = TR, length.out = n)
+
+  observed <- simulate_noise_vector(
+    n,
+    TR = TR,
+    ar = numeric(0),
+    ma = numeric(0),
+    sd = 0,
+    drift_amplitude = 0,
+    physio = TRUE,
+    seed = 11
+  )
+  cardiac <- 0.5 * sin(2 * pi * 1.1 * time)
+  respiratory <- 0.8 * sin(2 * pi * 0.3 * time)
+
+  expect_equal(as.numeric(observed), cardiac + respiratory, tolerance = 1e-12)
+  expect_lt(abs(cor(cardiac, respiratory)), 0.1)
+  expect_gt(sd(cardiac - respiratory), 0.1)
+})
+
 test_that("simulate_noise_vector is reproducible with seed", {
   n <- 100
   
@@ -169,11 +206,51 @@ test_that("simulate_simple_dataset integrates signal and noise correctly", {
   
   expect_equal(reconstructed, noisy_signals, tolerance = 1e-10)
   
-  # Check SNR roughly matches
+  # The complete structured-noise realization is scaled to the requested SNR.
   signal_power <- var(as.vector(clean_signals))
   noise_power <- var(as.vector(data$noise))
   estimated_snr <- sqrt(signal_power / noise_power)
-  expect_equal(estimated_snr, 0.5, tolerance = 0.2)
+  expect_equal(estimated_snr, 0.5, tolerance = 1e-10)
+})
+
+test_that("same seed isolates SNR while preserving signal and base noise", {
+  snr_values <- c(1, 0.5, 0.2)
+  sims <- lapply(
+    snr_values,
+    function(snr) simulate_simple_dataset(
+      ncond = 3,
+      nreps = 12,
+      TR = 2,
+      snr = snr,
+      seed = 42
+    )
+  )
+
+  for (i in 2:length(sims)) {
+    expect_equal(sims[[i]]$onsets, sims[[1]]$onsets)
+    expect_equal(sims[[i]]$conditions, sims[[1]]$conditions)
+    expect_equal(sims[[i]]$clean$mat, sims[[1]]$clean$mat)
+    expect_equal(
+      sims[[i]]$noise / sd(as.vector(sims[[i]]$noise)),
+      sims[[1]]$noise / sd(as.vector(sims[[1]]$noise)),
+      tolerance = 1e-12
+    )
+  }
+
+  empirical_snr <- vapply(sims, function(sim) {
+    signal_sd <- sd(as.vector(sim$clean$mat[, -1]))
+    noise_sd <- sd(as.vector(sim$noise))
+    signal_sd / noise_sd
+  }, numeric(1))
+
+  expect_equal(empirical_snr, snr_values, tolerance = 1e-10)
+  expect_true(all(diff(empirical_snr) < 0))
+})
+
+test_that("simulate_simple_dataset rejects invalid SNR", {
+  expect_error(simulate_simple_dataset(2, snr = 0), "finite positive scalar")
+  expect_error(simulate_simple_dataset(2, snr = -1), "finite positive scalar")
+  expect_error(simulate_simple_dataset(2, snr = Inf), "finite positive scalar")
 })
 
 test_that("simulate_simple_dataset handles edge cases", {
@@ -215,6 +292,51 @@ test_that("simulate_fmri_matrix validates parameters", {
                "amplitudes must be length=1 or match n_events")
   expect_error(simulate_fmri_matrix(n_events = 10, durations = c(1, 2, 3)),
                "durations must be length=1 or match n_events")
+})
+
+test_that("simulate_fmri_matrix preserves explicit onsets exactly", {
+  requested_onsets <- c(0, 3.25, 17.5, 41.75)
+
+  result <- simulate_fmri_matrix(
+    n = 2,
+    total_time = 80,
+    TR = 2,
+    n_events = 0,
+    onsets = requested_onsets,
+    isi_dist = "uniform",
+    isi_min = 10,
+    isi_max = 5,
+    durations = c(0.25, 0.5, 0.75, 1),
+    amplitudes = c(1, 2, 3, 4),
+    noise_type = "none",
+    random_seed = 17,
+    buffer = 8
+  )
+
+  expect_identical(result$time_series$event_table$onset, requested_onsets)
+  expect_equal(dim(result$ampmat), c(length(requested_onsets), 2L))
+  expect_equal(dim(result$durmat), c(length(requested_onsets), 2L))
+  expect_equal(result$ampmat[, 1], c(1, 2, 3, 4))
+  expect_equal(result$durmat[, 1], c(0.25, 0.5, 0.75, 1))
+})
+
+test_that("simulate_fmri_matrix rejects invalid explicit onsets", {
+  expect_error(
+    simulate_fmri_matrix(onsets = character()),
+    "onsets must be a non-empty numeric vector"
+  )
+  expect_error(
+    simulate_fmri_matrix(onsets = c(1, NA_real_)),
+    "onsets must contain only finite values"
+  )
+  expect_error(
+    simulate_fmri_matrix(onsets = c(-1, 2)),
+    "onsets must be at least zero"
+  )
+  expect_error(
+    simulate_fmri_matrix(total_time = 40, buffer = 8, onsets = c(2, 32)),
+    "onsets must be less than total_time - buffer"
+  )
 })
 
 test_that("simulate_fmri_matrix generates correct output structure", {

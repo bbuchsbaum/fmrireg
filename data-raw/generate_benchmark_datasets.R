@@ -21,20 +21,47 @@ calculate_noise_sd <- function(signal_matrix, target_snr) {
   return(signal_sd / target_snr)
 }
 
-# Helper function to create HRF variants
-create_hrf_variants <- function() {
+# Build every HRF from the same complete, fail-closed recipe used at load time.
+# The reconstruction helper uses a warning-free wrapper around the identical
+# base evaluator, avoiding fmrihrf 0.4.0's spurious P1/P2/A1 forwarding warning.
+hrf_recipes <- fmrireg:::.benchmark_hrf_recipe_catalog()
+hrf_variants <- list(
+  canonical = fmrireg:::.reconstruct_hrf_object(hrf_recipes$HRF_SPMG1),
+  with_temporal_deriv = fmrireg:::.reconstruct_hrf_object(hrf_recipes$HRF_SPMG2),
+  with_both_derivs = fmrireg:::.reconstruct_hrf_object(hrf_recipes$HRF_SPMG3),
+  variant1 = fmrireg:::.reconstruct_hrf_object(hrf_recipes$variant1),
+  variant2 = fmrireg:::.reconstruct_hrf_object(hrf_recipes$variant2)
+)
+
+hrf_metadata <- function(recipe_name, type) {
   list(
-    canonical = HRF_SPMG1,
-    with_temporal_deriv = HRF_SPMG2,
-    with_both_derivs = HRF_SPMG3,
-    # Create a modified canonical HRF (shifted and scaled)
-    variant1 = gen_hrf(HRF_SPMG1, lag = 1, width = 1.2, normalize = TRUE),
-    variant2 = gen_hrf(HRF_SPMG1, lag = -0.5, width = 0.8, normalize = TRUE)
+    type = type,
+    hrf_object_name = recipe_name,
+    hrf_recipe = hrf_recipes[[recipe_name]]
   )
 }
 
-# Get HRF variants
-hrf_variants <- create_hrf_variants()
+complete_condition_oracle <- function() {
+  list(
+    level = "complete_condition_beta",
+    response = "Y_clean",
+    design = "X_list_true_hrf",
+    truth = "true_betas_condition",
+    tolerance = 1e-10,
+    limitation = NULL
+  )
+}
+
+partial_oracle <- function(level, limitation) {
+  list(
+    level = level,
+    response = NULL,
+    design = NULL,
+    truth = NULL,
+    tolerance = NULL,
+    limitation = limitation
+  )
+}
 
 # Initialize benchmark datasets list
 fmri_benchmark_datasets <- list()
@@ -90,7 +117,11 @@ generate_BM_Canonical_HighSNR <- function() {
   
   # Create design matrix with true HRF
   event_onsets <- final_sim$time_series$event_table$onset
-  time_grid <- seq(0, COMMON_PARAMS$total_time, by = COMMON_PARAMS$TR)
+  time_grid <- seq(
+    0,
+    by = COMMON_PARAMS$TR,
+    length.out = nrow(final_sim$time_series$datamat)
+  )
   
   # Create condition-specific regressors
   X_list_true_hrf <- list()
@@ -113,7 +144,7 @@ generate_BM_Canonical_HighSNR <- function() {
   core_data_args <- list(
     datamat = final_sim$time_series$datamat,
     TR = COMMON_PARAMS$TR,
-    run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
+    run_length = nrow(final_sim$time_series$datamat),
     event_table = benchmark_event_table
   )
   
@@ -123,14 +154,17 @@ generate_BM_Canonical_HighSNR <- function() {
     Y_noisy = final_sim$time_series$datamat, # Still available for direct access
     Y_clean = clean_sim$time_series$datamat,
     X_list_true_hrf = X_list_true_hrf,
-    true_hrf_parameters = list(type = "SPMG1", hrf_object_name = "HRF_SPMG1"),
+    true_hrf_parameters = hrf_metadata("HRF_SPMG1", "SPMG1"),
+    oracle_contract = complete_condition_oracle(),
     event_onsets = event_onsets,
+    event_durations = benchmark_event_table$duration,
     condition_labels = condition_labels,
     true_betas_condition = matrix(rep(c(1.0, 1.5, 0.8), each = COMMON_PARAMS$n_voxels), 
                                  nrow = 3, byrow = TRUE),
     true_amplitudes_trial = final_sim$ampmat,
     TR = COMMON_PARAMS$TR,
     total_time = COMMON_PARAMS$total_time,
+    run_length = core_data_args$run_length,
     noise_parameters = final_sim$noise_params,
     simulation_seed = 12345,
     target_snr = 4
@@ -185,7 +219,11 @@ generate_BM_Canonical_LowSNR <- function() {
   
   condition_labels <- rep(c("Cond1", "Cond2", "Cond3"), each = 15)
   event_onsets <- final_sim$time_series$event_table$onset
-  time_grid <- seq(0, COMMON_PARAMS$total_time, by = COMMON_PARAMS$TR)
+  time_grid <- seq(
+    0,
+    by = COMMON_PARAMS$TR,
+    length.out = nrow(final_sim$time_series$datamat)
+  )
   
   X_list_true_hrf <- list()
   for (i in 1:3) {
@@ -207,7 +245,7 @@ generate_BM_Canonical_LowSNR <- function() {
   core_data_args <- list(
     datamat = final_sim$time_series$datamat,
     TR = COMMON_PARAMS$TR,
-    run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
+    run_length = nrow(final_sim$time_series$datamat),
     event_table = benchmark_event_table
   )
   
@@ -217,14 +255,17 @@ generate_BM_Canonical_LowSNR <- function() {
     Y_noisy = final_sim$time_series$datamat,
     Y_clean = clean_sim$time_series$datamat,
     X_list_true_hrf = X_list_true_hrf,
-    true_hrf_parameters = list(type = "SPMG1", hrf_object_name = "HRF_SPMG1"),
+    true_hrf_parameters = hrf_metadata("HRF_SPMG1", "SPMG1"),
+    oracle_contract = complete_condition_oracle(),
     event_onsets = event_onsets,
+    event_durations = benchmark_event_table$duration,
     condition_labels = condition_labels,
     true_betas_condition = matrix(rep(c(1.0, 1.5, 0.8), each = COMMON_PARAMS$n_voxels), 
                                  nrow = 3, byrow = TRUE),
     true_amplitudes_trial = final_sim$ampmat,
     TR = COMMON_PARAMS$TR,
     total_time = COMMON_PARAMS$total_time,
+    run_length = core_data_args$run_length,
     noise_parameters = final_sim$noise_params,
     simulation_seed = 12346,
     target_snr = 0.5
@@ -300,7 +341,7 @@ generate_BM_HRF_Variability_AcrossVoxels <- function() {
   core_data_args <- list(
     datamat = Y_combined,
     TR = COMMON_PARAMS$TR,
-    run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
+    run_length = nrow(Y_combined),
     event_table = benchmark_event_table
   )
   
@@ -309,10 +350,18 @@ generate_BM_HRF_Variability_AcrossVoxels <- function() {
     core_data_args = core_data_args, # Encapsulated data args
     Y_noisy = Y_combined,
     true_hrf_parameters = list(
-      group1 = list(type = "SPMG1", hrf_object_name = "HRF_SPMG1"),
-      group2 = list(type = "variant1", hrf_object_name = "variant1")
+      group1 = hrf_metadata("HRF_SPMG1", "SPMG1"),
+      group2 = hrf_metadata("variant1", "variant1")
+    ),
+    oracle_contract = partial_oracle(
+      "group_hrf_and_condition_truth",
+      paste(
+        "HRF group assignments and condition-level beta targets are stored,",
+        "but no clean response/design pair is included for an exact noiseless OLS oracle."
+      )
     ),
     event_onsets = event_onsets,
+    event_durations = benchmark_event_table$duration,
     condition_labels = condition_labels,
     true_betas_condition = matrix(rep(c(1.2, 0.9), each = COMMON_PARAMS$n_voxels), 
                                  nrow = 2, byrow = TRUE),
@@ -320,6 +369,7 @@ generate_BM_HRF_Variability_AcrossVoxels <- function() {
     true_hrf_group_assignment = hrf_group_assignment,
     TR = COMMON_PARAMS$TR,
     total_time = COMMON_PARAMS$total_time,
+    run_length = core_data_args$run_length,
     noise_parameters = sim_group1$noise_params,
     simulation_seed = 12347,
     target_snr = 1.0
@@ -365,7 +415,7 @@ generate_BM_Trial_Amplitude_Variability <- function() {
   core_data_args <- list(
     datamat = final_sim$time_series$datamat,
     TR = COMMON_PARAMS$TR,
-    run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
+    run_length = nrow(final_sim$time_series$datamat),
     event_table = benchmark_event_table
   )
   
@@ -373,13 +423,22 @@ generate_BM_Trial_Amplitude_Variability <- function() {
     description = "Single condition with significant trial-to-trial amplitude variability",
     core_data_args = core_data_args, # Encapsulated data args
     Y_noisy = final_sim$time_series$datamat,
-    true_hrf_parameters = list(type = "SPMG1", hrf_object_name = "HRF_SPMG1"),
+    true_hrf_parameters = hrf_metadata("HRF_SPMG1", "SPMG1"),
+    oracle_contract = partial_oracle(
+      "trial_amplitude_truth",
+      paste(
+        "Per-trial amplitudes are stored for LSS evaluation, but the dataset",
+        "does not include a clean response/design pair for a condition-beta oracle."
+      )
+    ),
     event_onsets = event_onsets,
+    event_durations = benchmark_event_table$duration,
     condition_labels = condition_labels,
     true_betas_condition = matrix(1.0, nrow = 1, ncol = COMMON_PARAMS$n_voxels),
     true_amplitudes_trial = final_sim$ampmat,  # This is the key ground truth for LSS
     TR = COMMON_PARAMS$TR,
     total_time = COMMON_PARAMS$total_time,
+    run_length = core_data_args$run_length,
     noise_parameters = final_sim$noise_params,
     simulation_seed = 12348,
     target_snr = 1.0
@@ -391,12 +450,14 @@ generate_BM_Trial_Amplitude_Variability <- function() {
 generate_BM_Complex_Realistic <- function() {
   cat("Generating BM_Complex_Realistic...\n")
   
-  # Divide voxels into 3 groups with different HRFs
-  n_voxels_per_group <- COMMON_PARAMS$n_voxels / 3
+  # Divide voxels into 3 integer groups while preserving the requested total.
+  group_sizes <- rep(COMMON_PARAMS$n_voxels %/% 3, 3)
+  group_sizes[seq_len(COMMON_PARAMS$n_voxels %% 3)] <-
+    group_sizes[seq_len(COMMON_PARAMS$n_voxels %% 3)] + 1L
   
   # Group 1: Canonical HRF
   sim_group1 <- simulate_fmri_matrix(
-    n = n_voxels_per_group,
+    n = group_sizes[1],
     total_time = COMMON_PARAMS$total_time,
     TR = COMMON_PARAMS$TR,
     hrf = hrf_variants$canonical,
@@ -417,7 +478,7 @@ generate_BM_Complex_Realistic <- function() {
   
   # Group 2: Variant1 HRF
   sim_group2 <- simulate_fmri_matrix(
-    n = n_voxels_per_group,
+    n = group_sizes[2],
     total_time = COMMON_PARAMS$total_time,
     TR = COMMON_PARAMS$TR,
     hrf = hrf_variants$variant1,
@@ -438,7 +499,7 @@ generate_BM_Complex_Realistic <- function() {
   
   # Group 3: Variant2 HRF
   sim_group3 <- simulate_fmri_matrix(
-    n = n_voxels_per_group,
+    n = group_sizes[3],
     total_time = COMMON_PARAMS$total_time,
     TR = COMMON_PARAMS$TR,
     hrf = hrf_variants$variant2,
@@ -467,9 +528,11 @@ generate_BM_Complex_Realistic <- function() {
   condition_labels <- rep(c("Cond1", "Cond2", "Cond3"), each = 12)
   event_onsets <- sim_group1$time_series$event_table$onset
   
-  hrf_group_assignment <- c(rep("canonical", n_voxels_per_group),
-                           rep("variant1", n_voxels_per_group),
-                           rep("variant2", n_voxels_per_group))
+  hrf_group_assignment <- c(
+    rep("canonical", group_sizes[1]),
+    rep("variant1", group_sizes[2]),
+    rep("variant2", group_sizes[3])
+  )
   
   # Create event_table for matrix_dataset
   # Use actual event durations from sim_group1 (they are the same across groups for this sim)
@@ -483,7 +546,7 @@ generate_BM_Complex_Realistic <- function() {
   core_data_args <- list(
     datamat = Y_combined,
     TR = COMMON_PARAMS$TR,
-    run_length = COMMON_PARAMS$total_time / COMMON_PARAMS$TR,
+    run_length = nrow(Y_combined),
     event_table = benchmark_event_table
   )
   
@@ -492,11 +555,19 @@ generate_BM_Complex_Realistic <- function() {
     core_data_args = core_data_args, # Encapsulated data args
     Y_noisy = Y_combined,
     true_hrf_parameters = list(
-      canonical = list(type = "SPMG1", hrf_object_name = "HRF_SPMG1"),
-      variant1 = list(type = "SPMG1_modified1", hrf_object_name = "variant1"),
-      variant2 = list(type = "SPMG1_modified2", hrf_object_name = "variant2")
+      canonical = hrf_metadata("HRF_SPMG1", "SPMG1"),
+      variant1 = hrf_metadata("variant1", "SPMG1_modified1"),
+      variant2 = hrf_metadata("variant2", "SPMG1_modified2")
+    ),
+    oracle_contract = partial_oracle(
+      "variable_trial_and_hrf_truth",
+      paste(
+        "Per-trial amplitudes, durations, and HRF groups are stored, but the",
+        "condition-level beta matrix is a nominal target rather than a complete noiseless oracle."
+      )
     ),
     event_onsets = event_onsets,
+    event_durations = benchmark_event_table$duration,
     condition_labels = condition_labels,
     true_betas_condition = matrix(rep(c(1.0, 1.2, 0.9), each = COMMON_PARAMS$n_voxels), 
                                  nrow = 3, byrow = TRUE),
@@ -505,6 +576,7 @@ generate_BM_Complex_Realistic <- function() {
     true_hrf_group_assignment = hrf_group_assignment,
     TR = COMMON_PARAMS$TR,
     total_time = COMMON_PARAMS$total_time,
+    run_length = core_data_args$run_length,
     noise_parameters = sim_group1$noise_params,
     simulation_seed = 12349,
     target_snr = 0.8
@@ -527,7 +599,8 @@ fmri_benchmark_datasets$metadata <- list(
   r_version = R.version.string,
   description = "Benchmark datasets for testing HRF fitting and beta estimation methods",
   common_parameters = COMMON_PARAMS,
-  hrf_variants_used = names(hrf_variants)
+  hrf_variants_used = names(hrf_variants),
+  hrf_recipes = hrf_recipes
 )
 
 cat("Benchmark dataset generation complete!\n")
@@ -536,4 +609,4 @@ cat("Generated", length(fmri_benchmark_datasets) - 1, "benchmark datasets\n")
 # Save the datasets
 usethis::use_data(fmri_benchmark_datasets, overwrite = TRUE)
 
-cat("Datasets saved to data/fmri_benchmark_datasets.rda\n") 
+cat("Datasets saved to data/fmri_benchmark_datasets.rda\n")

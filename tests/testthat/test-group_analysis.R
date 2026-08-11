@@ -2,6 +2,7 @@
 
 test_that("group_data constructor works with different formats", {
   skip_if_not_installed("fmristore")
+  skip_if_not_installed("fmrigds")
   
   # Test CSV format detection
   csv_data <- data.frame(
@@ -16,10 +17,10 @@ test_that("group_data constructor works with different formats", {
                    subject_col = "subject",
                    roi_col = "roi")
   
-  expect_s3_class(gd, "group_data_csv")
+  expect_s3_class(gd, "group_data_gds")
   expect_s3_class(gd, "group_data")
   expect_equal(n_subjects(gd), 3)
-  expect_equal(get_rois(gd), c("roi1", "roi2"))
+  expect_equal(attr(gd, "fmrireg_sample_labels"), c("roi1", "roi2"))
 })
 
 test_that("group_data_csv handles ROI data correctly", {

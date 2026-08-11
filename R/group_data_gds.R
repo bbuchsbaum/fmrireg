@@ -12,13 +12,9 @@
 group_data <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...) {
   format <- match.arg(format)
   dots <- list(...)
+  fmrireg_mask <- dots$mask %||% NULL
   legacy_sample_labels <- NULL
   legacy_feature_group <- NULL
-  # Legacy compatibility: for CSV/tabular in-memory data, preserve group_data_csv
-  if (identical(format, "csv") && is.data.frame(data) && !("contrast" %in% names(data))) {
-    # Delegate to legacy constructor to satisfy tests expecting group_data_csv
-    return(do.call(group_data_from_csv, c(list(data), dots)))
-  }
   # Map legacy names to fmrigds adapter ids
   fformat <- switch(format,
                    csv = "tabular",
@@ -115,6 +111,14 @@ group_data <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...
     var_src  <- data$var %||% data$var_paths
     t_src    <- data$t %||% data$t_paths
     df_src   <- data$df
+    if (!is.null(t_src) || !is.null(var_src)) {
+      legacy_args <- if (!is.null(t_src)) {
+        list(t_paths = t_src, df = df_src)
+      } else {
+        list(beta_paths = beta_src, var_paths = var_src)
+      }
+      return(do.call(.group_data_from_nifti_impl, c(legacy_args, dots)))
+    }
     if (!is.null(beta_src)) {
       src <- list(beta_paths = beta_src)
       if (!is.null(se_src))  src$se_paths  <- se_src
@@ -123,6 +127,17 @@ group_data <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...
       src <- list(t_paths = t_src)
       if (!is.null(df_src)) src$df <- df_src
     }
+  }
+
+  # Translate the legacy public argument name to fmrigds metadata so formulas
+  # such as ~ 1 + group have a real subject-level design matrix.
+  if (fformat == "nifti" && !is.null(dots$covariates) && is.null(dots$col_data)) {
+    dots$col_data <- as.data.frame(dots$covariates)
+    if (!is.null(dots$subjects) &&
+        nrow(dots$col_data) == length(dots$subjects)) {
+      rownames(dots$col_data) <- as.character(dots$subjects)
+    }
+    dots$covariates <- NULL
   }
 
   # For nifti when passed a legacy group_data_nifti object, adapt its fields
@@ -143,7 +158,9 @@ group_data <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...
   }
 
   gd <- do.call(fmrigds::gds, c(list(source = src, format = fformat), dots))
-  .annotate_group_data_gds(gd, legacy_sample_labels, legacy_feature_group)
+  gd <- .annotate_group_data_gds(gd, legacy_sample_labels, legacy_feature_group)
+  if (!is.null(fmrireg_mask)) attr(gd, "fmrireg_mask") <- fmrireg_mask
+  gd
 }
 
 .annotate_group_data_gds <- function(gd, sample_labels = NULL, feature_group = NULL) {

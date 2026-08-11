@@ -39,7 +39,7 @@ simulate_noise_vector(
 A numeric vector containing the simulated fMRI noise
 }
 \description{
-This function simulates realistic fMRI noise by combining:
+This function simulates structured fMRI-like teaching noise by combining:
 \itemize{
 \item Temporal autocorrelation using an ARMA model
 \item Low-frequency drift

@@ -1,7 +1,8 @@
 #' Simulate fMRI Time Series
 #'
 #' This function simulates an fMRI time series for multiple experimental conditions with specified parameters.
-#' It generates a realistic event-related design with randomized inter-stimulus intervals and condition orders.
+#' It generates a controlled event-related teaching design with randomized
+#' inter-stimulus intervals and condition orders.
 #'
 #' @param ncond The number of conditions to simulate.
 #' @param hrf The hemodynamic response function to use (default is fmrihrf::HRF_SPMG1).
@@ -61,7 +62,7 @@ simulate_bold_signal <- function(ncond, hrf=fmrihrf::HRF_SPMG1, nreps=12, amps=r
 
 #' Simulate fMRI Noise
 #'
-#' This function simulates realistic fMRI noise by combining:
+#' This function simulates structured fMRI-like teaching noise by combining:
 #' \itemize{
 #'   \item Temporal autocorrelation using an ARMA model
 #'   \item Low-frequency drift
@@ -94,18 +95,27 @@ simulate_noise_vector <- function(n, TR = 1.5, ar = c(0.3), ma = c(0.5), sd = 1,
     set.seed(seed)
   }
   
-  # Generate ARMA noise
-  noise <- arima.sim(n = n, model = list(ar = ar, ma = ma), sd = sd)
+  # Treat all-zero coefficient vectors as the natural white-noise model while
+  # preserving internal zero lags in nonzero AR/MA specifications.
+  if (length(ar) && isTRUE(all(ar == 0))) ar <- numeric(0)
+  if (length(ma) && isTRUE(all(ma == 0))) ma <- numeric(0)
+
+  noise <- if (!length(ar) && !length(ma)) {
+    stats::rnorm(n, sd = sd)
+  } else {
+    arima.sim(n = n, model = list(ar = ar, ma = ma), sd = sd)
+  }
   
   # Add low-frequency drift
   time <- seq(0, (n-1)*TR, by = TR)
   drift <- drift_amplitude * sin(2 * pi * drift_freq * time)
   noise <- noise + drift
   
-  # Add physiological noise if requested
+  # Add physiological noise if requested. At TR = 2 s, these continuous-time
+  # frequencies alias to distinct 0.1 and 0.2 Hz components, respectively.
   if (physio) {
-    # Simulate cardiac (~1.2 Hz) and respiratory (~0.3 Hz) noise
-    cardiac <- 0.5 * sin(2 * pi * 1.2 * time)
+    # Simulate cardiac (~1.1 Hz) and respiratory (~0.3 Hz) noise
+    cardiac <- 0.5 * sin(2 * pi * 1.1 * time)
     respiratory <- 0.8 * sin(2 * pi * 0.3 * time)
     noise <- noise + cardiac + respiratory
   }
@@ -116,14 +126,19 @@ simulate_noise_vector <- function(n, TR = 1.5, ar = c(0.3), ma = c(0.5), sd = 1,
 #' Simulate Complete fMRI Dataset
 #'
 #' This function simulates a complete fMRI dataset by combining task-related signals
-#' with realistic noise. It returns both the clean signals and the noisy data.
+#' with a declared structured-noise model. It returns both the clean signals
+#' and the noisy data.
 #'
 #' @param ncond Number of conditions to simulate
 #' @param nreps Number of repetitions per condition (default is 12)
 #' @param TR Repetition time in seconds (default is 1.5)
-#' @param snr Signal-to-noise ratio (default is 0.5)
+#' @param snr Finite positive signal-to-noise ratio, defined as the empirical
+#'   standard deviation of the clean condition signals divided by the empirical
+#'   standard deviation of the complete structured-noise matrix (default is 0.5)
 #' @param hrf Hemodynamic response function to use (default is fmrihrf::HRF_SPMG1)
-#' @param seed Optional seed for reproducibility (default is NULL)
+#' @param seed Optional seed for reproducibility (default is NULL). Reusing a
+#'   seed with a different \code{snr} preserves the clean signal and standardized
+#'   noise realization while changing only the noise scale.
 #'
 #' @return A list containing:
 #'   \itemize{
@@ -148,6 +163,9 @@ simulate_noise_vector <- function(n, TR = 1.5, ar = c(0.3), ma = c(0.5), sd = 1,
 #' @export
 simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5, 
                                  hrf = fmrihrf::HRF_SPMG1, seed = NULL) {
+  assert_that(is.numeric(snr) && length(snr) == 1L && is.finite(snr) && snr > 0,
+              msg = "snr must be a finite positive scalar")
+
   if (!is.null(seed)) {
     set.seed(seed)
   }
@@ -155,15 +173,24 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
   # Generate clean signals
   clean <- simulate_bold_signal(ncond = ncond, nreps = nreps, TR = TR, hrf = hrf)
   
-  # Calculate noise level based on SNR
+  # Calculate the target empirical noise scale from the requested SNR.
   signal_sd <- sd(as.vector(clean$mat[,-1]))
-  noise_sd <- signal_sd / snr
+  target_noise_sd <- signal_sd / snr
   
-  # Generate noise for each condition
+  # Generate one unit-scale realization per condition, including temporal,
+  # drift, and physiological structure, then scale the complete realization.
+  # Scaling only the ARMA innovations would leave the fixed drift and
+  # physiological components outside the requested SNR contract.
   n_timepoints <- nrow(clean$mat)
-  noise_mat <- replicate(ncond, 
-                        simulate_noise_vector(n = n_timepoints, TR = TR, 
-                                         sd = noise_sd))
+  noise_mat <- replicate(
+    ncond,
+    simulate_noise_vector(n = n_timepoints, TR = TR, sd = 1)
+  )
+  observed_noise_sd <- sd(as.vector(noise_mat))
+  if (!is.finite(observed_noise_sd) || observed_noise_sd <= 0) {
+    stop("simulated noise has zero or non-finite variance")
+  }
+  noise_mat <- noise_mat * (target_noise_sd / observed_noise_sd)
   
   # Combine signal and noise
   noisy_mat <- cbind(clean$mat[,1], clean$mat[,-1] + noise_mat)
@@ -245,7 +272,9 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #' @param TR Numeric. Repetition time (seconds).
 #' @param hrf Hemodynamic response function, e.g. \code{fmrihrf::HRF_SPMG1}.
 #' @param n_events Number of events (ignored if \code{onsets} is provided).
-#' @param onsets Optional numeric vector of event onsets. If \code{NULL}, will be generated.
+#' @param onsets Optional non-empty numeric vector of finite event onsets in
+#'   \code{[0, total_time - buffer)}. Explicit values and their order are
+#'   preserved, determine \code{n_events}, and skip ISI generation.
 #' @param isi_dist One of \code{"even"}, \code{"uniform"}, or \code{"exponential"}.
 #'   Default is \code{"even"} so events are evenly spaced within \code{total_time - buffer}.
 #' @param isi_min,isi_max For \code{isi_dist="uniform"}.
@@ -315,14 +344,16 @@ simulate_fmri_matrix <- function(
   assert_that(n > 0, msg = "n must be positive")
   assert_that(total_time > 0, msg = "total_time must be positive")
   assert_that(TR > 0, msg = "TR must be positive")
-  assert_that(n_events > 0, msg = "n_events must be positive")
-  assert_that(isi_max > isi_min, msg = "isi_max must be greater than isi_min")
+  assert_that(
+    is.numeric(buffer) && length(buffer) == 1L && is.finite(buffer) &&
+      buffer >= 0 && buffer < total_time,
+    msg = "buffer must be finite, non-negative, and less than total_time"
+  )
   
   if (!is.null(random_seed)) {
     set.seed(random_seed)
   }
   
-  isi_dist        <- match.arg(isi_dist)
   noise_type      <- match.arg(noise_type)
   duration_dist   <- match.arg(duration_dist)
   amplitude_dist  <- match.arg(amplitude_dist)
@@ -342,24 +373,49 @@ simulate_fmri_matrix <- function(
   
   # Original time grid without buffer (for event generation)
   effective_time <- total_time - buffer
-  
-  # Sample event onsets - ensure they only occur in the effective time, not the buffer
-  if (isi_dist == "uniform") {
-    isi_samples <- runif(n_events, min = isi_min, max = isi_max)
-  } else if (isi_dist == "exponential") {
-    isi_samples <- isi_min + rexp(n_events, rate = isi_rate)
-  } else if (isi_dist == "even") {
-    isi_samples <- rep(effective_time / (n_events + 1), n_events)
-  }
-  
-  # Generate onsets cumulative ISIs, but ensure they fall within effective_time
-  onsets <- cumsum(isi_samples)
-  if (max(onsets) > effective_time) {
-    # Keep only events that fit within effective time
-    keepers <- which(onsets < effective_time)
-    onsets <- onsets[keepers]
+
+  if (is.null(onsets)) {
+    assert_that(n_events > 0, msg = "n_events must be positive")
+    assert_that(
+      isi_max > isi_min,
+      msg = "isi_max must be greater than isi_min"
+    )
+    isi_dist <- match.arg(isi_dist)
+    if (isi_dist == "uniform") {
+      isi_samples <- runif(n_events, min = isi_min, max = isi_max)
+    } else if (isi_dist == "exponential") {
+      isi_samples <- isi_min + rexp(n_events, rate = isi_rate)
+    } else {
+      isi_samples <- rep(effective_time / (n_events + 1), n_events)
+    }
+
+    # Generate onsets cumulative ISIs, but ensure they fall within effective_time.
+    onsets <- cumsum(isi_samples)
+    if (max(onsets) >= effective_time) {
+      keepers <- which(onsets < effective_time)
+      onsets <- onsets[keepers]
+      n_events <- length(onsets)
+      if (n_events == 0L) {
+        stop("No generated events fit before total_time - buffer.", call. = FALSE)
+      }
+      message(sprintf("Reduced to %d events to fit within effective time", n_events))
+    }
+  } else {
+    if (!is.numeric(onsets) || length(onsets) == 0L) {
+      stop("onsets must be a non-empty numeric vector.", call. = FALSE)
+    }
+    if (any(!is.finite(onsets))) {
+      stop("onsets must contain only finite values.", call. = FALSE)
+    }
+    if (any(onsets < 0)) {
+      stop("onsets must be at least zero.", call. = FALSE)
+    }
+    if (any(onsets >= effective_time)) {
+      stop("onsets must be less than total_time - buffer.", call. = FALSE)
+    }
+    # Explicit onsets are authoritative. Preserve their values and order, and
+    # derive all amplitude/duration dimensions from their actual length.
     n_events <- length(onsets)
-    message(sprintf("Reduced to %d events to fit within effective time", n_events))
   }
   
   # Final time grid with buffer

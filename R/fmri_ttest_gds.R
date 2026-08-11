@@ -7,7 +7,7 @@
 #' @keywords internal
 fmri_ttest.group_data_gds <- function(gd,
                            formula = ~ 1,
-                           engine = c("auto", "meta", "classic"),
+                           engine = c("auto", "meta", "classic", "welch"),
                            paired = FALSE,
                            mu0 = 0,
                            contrast = NULL,
@@ -28,6 +28,7 @@ fmri_ttest.group_data_gds <- function(gd,
   engine <- match.arg(engine)
   sign   <- match.arg(sign)
   weights <- match.arg(weights)
+  meta_method <- getOption("fmrireg.meta.method", "pm")
   if (!is.null(mc)) mc <- match.arg(mc, c("bh", "by", "spatial_fdr"))
 
   if (paired) {
@@ -47,7 +48,6 @@ fmri_ttest.group_data_gds <- function(gd,
     if (is.null(weights_custom)) {
       stop("weights='custom' requires 'weights_custom'", call. = FALSE)
     }
-    stop("weights='custom' is not yet supported for gds-backed data; use weights='ivw' or 'equal'.", call. = FALSE)
   }
 
   # Map fmrireg weight names to fmrigds names
@@ -72,14 +72,99 @@ fmri_ttest.group_data_gds <- function(gd,
     n_subjects <- tryCatch(length(fmrigds::subjects(gd)), error = function(e) 0L)
     covars <- data.frame(.row = seq_len(n_subjects))
   }
-  X <- tryCatch(fmrigds::model_matrix(gd, formula), error = function(e) NULL)
+  n_subjects_gds <- tryCatch(
+    length(fmrigds::subjects(gd)), error = function(e) NA_integer_
+  )
+  X <- .gds_safe_model_matrix(
+    gd, formula,
+    fallback_n = if (is.finite(n_subjects_gds)) n_subjects_gds else NULL
+  )
   coef_terms <- colnames(X) %||% character(0)
   group_info <- if (!is.null(X)) .fmri_ttest_group_term(X, covars) else NULL
   feature_group <- .fmri_ttest_feature_group(gd, NULL)
   sample_labels <- .fmri_ttest_sample_labels(gd, NULL)
   exact_contrast <- NULL
 
-  if (engine == "meta" && (!is.null(contrast) || !is.null(combine))) {
+  if (engine == "welch") {
+    has_group <- "group" %in% colnames(covars) &&
+      is.factor(covars$group) && nlevels(covars$group) == 2L
+    if (!has_group || is.null(X) || ncol(X) > 2L) {
+      stop("engine='welch' requires a two-level factor named 'group' and no additional covariates.",
+           call. = FALSE)
+    }
+    if (!is.null(contrast)) {
+      stop("GDS-backed Welch fits currently test the group coefficient directly; omit 'contrast'.",
+           call. = FALSE)
+    }
+    Y <- .fmri_ttest_materialize_effects(gd, "Welch engine")
+    w <- welch_t_cpp(Y, as.integer(covars$group))
+    t_value <- as.numeric(w$t)
+    df_value <- as.numeric(w$df)
+    p_value <- 2 * stats::pt(abs(t_value), df = df_value, lower.tail = FALSE)
+    z_value <- stats::qnorm(pmax(1e-300, 1 - p_value / 2)) * sign(t_value)
+    out <- list(
+      beta = rbind(
+        "(Intercept)" = (w$muA + w$muB) / 2,
+        group = w$muA - w$muB
+      ),
+      se = matrix(
+        NA_real_, nrow = 2L, ncol = ncol(Y),
+        dimnames = list(c("(Intercept)", "group"), NULL)
+      ),
+      t = rbind("(Intercept)" = NA_real_, group = t_value),
+      z = rbind("(Intercept)" = NA_real_, group = z_value),
+      p = rbind("(Intercept)" = NA_real_, group = p_value),
+      df = rbind("(Intercept)" = NA_real_, group = df_value),
+      formula = formula,
+      engine = engine,
+      n_subjects = nrow(Y),
+      n_features = ncol(Y),
+      roi_names = sample_labels
+    )
+  } else if (engine == "classic") {
+    if (is.null(X)) {
+      stop("Could not construct the GDS subject-level design matrix.", call. = FALSE)
+    }
+    Y <- .fmri_ttest_materialize_effects(gd, "classic engine")
+    ols <- ols_t_cpp(Y, X)
+    rownames(ols$beta) <- coef_terms
+    rownames(ols$se) <- coef_terms
+    rownames(ols$t) <- coef_terms
+    df_value <- rep(ols$df, ncol(Y))
+    p_value <- matrix(
+      NA_real_, nrow = nrow(ols$t), ncol = ncol(ols$t),
+      dimnames = dimnames(ols$t)
+    )
+    for (i in seq_len(nrow(p_value))) {
+      p_value[i, ] <- 2 * stats::pt(
+        abs(ols$t[i, ]), df = df_value, lower.tail = FALSE
+      )
+    }
+    z_value <- matrix(
+      NA_real_, nrow = nrow(ols$t), ncol = ncol(ols$t),
+      dimnames = dimnames(ols$t)
+    )
+    for (i in seq_len(nrow(z_value))) {
+      z_value[i, ] <- stats::qnorm(pmax(1e-300, 1 - p_value[i, ] / 2)) *
+        sign(ols$t[i, ])
+    }
+    out <- list(
+      beta = ols$beta,
+      se = ols$se,
+      t = ols$t,
+      z = z_value,
+      p = p_value,
+      df = matrix(
+        ols$df, nrow = nrow(ols$t), ncol = ncol(ols$t),
+        byrow = TRUE, dimnames = dimnames(ols$t)
+      ),
+      formula = formula,
+      engine = engine,
+      n_subjects = nrow(Y),
+      n_features = ncol(Y),
+      roi_names = sample_labels
+    )
+  } else if (engine == "meta") {
     raw_contrast_weights <- NULL
     if (!is.null(contrast)) {
       canonical_contrast_weights <- .fmri_ttest_resolve_contrast(
@@ -99,10 +184,17 @@ fmri_ttest.group_data_gds <- function(gd,
     meta_fit <- fmri_meta(
       gd,
       formula = formula,
-      method = "fe",
+      method = meta_method,
       weights = weights,
+      weights_custom = weights_custom,
       combine = combine,
-      contrasts = if (!is.null(raw_contrast_weights)) matrix(raw_contrast_weights, ncol = 1) else NULL,
+      contrasts = if (!is.null(raw_contrast_weights)) {
+        matrix(
+          raw_contrast_weights,
+          nrow = 1L,
+          dimnames = list("contrast1", coef_terms)
+        )
+      } else NULL,
       verbose = FALSE
     )
 
@@ -226,11 +318,22 @@ fmri_ttest.group_data_gds <- function(gd,
   if (!is.null(exact_contrast)) {
     out <- .fmri_ttest_store_contrast(out, exact_contrast)
   }
-  out <- .fmri_ttest_apply_group_sign(out, group_info, target_sign = sign, source_sign = "BminusA")
+  source_sign <- if (identical(engine, "welch")) "AminusB" else "BminusA"
+  out <- .fmri_ttest_apply_group_sign(
+    out, group_info, target_sign = sign, source_sign = source_sign
+  )
   out <- .fmri_ttest_apply_mc(out, mc, alpha, feature_group)
   out$mc <- mc
   out$alpha <- alpha
   out$sign <- sign
+  out$method <- if (identical(engine, "meta")) {
+    if (!is.null(combine)) paste0("combine:", combine) else
+      meta_method %||% getOption("fmrireg.meta.method", "pm")
+  } else {
+    engine
+  }
+  out$combine <- if (identical(engine, "meta")) combine else NULL
+  out$weights <- if (identical(engine, "meta")) weights else NULL
   if (!is.null(group_info)) out$group_levels <- group_info$levels
 
   class(out) <- c("fmri_ttest_fit", "list")

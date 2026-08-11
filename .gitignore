@@ -48,6 +48,12 @@ coverage/
 # OMC state (oh-my-claudecode)
 .omc/
 
+# Local agent, tracker, and documentation-backup state
+.albersdown.bak/
+.claude/
+.mote/local/
+.mote/tmp/
+
 # OS and editor files
 .DS_Store
 fmrireg.code-workspace

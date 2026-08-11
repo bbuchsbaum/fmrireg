@@ -60,6 +60,176 @@ test_that("design matrix creation works", {
   expect_false("Intercept" %in% colnames(X_no_int))
 })
 
+test_that("benchmark dimensions and scan metadata are internally consistent", {
+  datasets <- load_benchmark_dataset("all")
+
+  for (dataset in datasets) {
+    expect_equal(dataset$run_length, nrow(dataset$Y_noisy))
+    expect_equal(dataset$core_data_args$run_length, nrow(dataset$Y_noisy))
+    expect_length(dataset$event_durations, length(dataset$event_onsets))
+    expect_false(anyNA(dataset$event_durations))
+    expect_equal(ncol(dataset$true_betas_condition), ncol(dataset$Y_noisy))
+    expect_equal(ncol(dataset$true_amplitudes_trial), ncol(dataset$Y_noisy))
+
+    if (!is.null(dataset$Y_clean)) {
+      expect_equal(nrow(dataset$Y_clean), nrow(dataset$Y_noisy))
+    }
+    if (!is.null(dataset$true_durations_trial)) {
+      expect_equal(ncol(dataset$true_durations_trial), ncol(dataset$Y_noisy))
+    }
+    if (!is.null(dataset$X_list_true_hrf)) {
+      expect_true(all(vapply(
+        dataset$X_list_true_hrf,
+        NROW,
+        integer(1)
+      ) == nrow(dataset$Y_noisy)))
+    }
+  }
+})
+
+test_that("all complete canonical oracles recover their declared betas", {
+  complete_oracles <- c(
+    "BM_Canonical_HighSNR",
+    "BM_Canonical_LowSNR"
+  )
+
+  for (dataset_name in complete_oracles) {
+    dataset <- load_benchmark_dataset(dataset_name)
+    X <- create_design_matrix_from_benchmark(
+      dataset_name,
+      dataset$true_hrf_parameters$hrf_object
+    )
+    estimated <- qr.solve(X, dataset$Y_clean)[-1, , drop = FALSE]
+
+    expect_identical(dataset$oracle_contract$level, "complete_condition_beta")
+    expect_lt(
+      max(abs(estimated - dataset$true_betas_condition)),
+      dataset$oracle_contract$tolerance
+    )
+  }
+})
+
+test_that("every declared HRF recipe reconstructs exactly on a dense grid", {
+  metadata <- load_benchmark_dataset("metadata")
+  recipes <- metadata$hrf_recipes
+  expect_named(
+    recipes,
+    c("HRF_SPMG1", "HRF_SPMG2", "HRF_SPMG3", "variant1", "variant2")
+  )
+
+  clean_base <- function(hrf) {
+    fmrihrf::as_hrf(
+      function(time) hrf(time),
+      name = attr(hrf, "name"),
+      nbasis = fmrihrf::nbasis(hrf),
+      span = attr(hrf, "span")
+    )
+  }
+  expected <- list(
+    HRF_SPMG1 = fmrihrf::HRF_SPMG1,
+    HRF_SPMG2 = fmrihrf::HRF_SPMG2,
+    HRF_SPMG3 = fmrihrf::HRF_SPMG3,
+    variant1 = fmrihrf::gen_hrf(
+      clean_base(fmrihrf::HRF_SPMG1),
+      lag = 1, width = 1.2, normalize = TRUE
+    ),
+    variant2 = fmrihrf::gen_hrf(
+      clean_base(fmrihrf::HRF_SPMG1),
+      lag = -0.5, width = 0.8, normalize = TRUE
+    )
+  )
+  dense_grid <- seq(0, 40, by = 0.01)
+  required_fields <- c(
+    "schema_version", "recipe_name", "generator", "base_hrf_name",
+    "lag", "width", "precision", "half_life", "summate", "normalize",
+    "name_override", "span_override", "fmrihrf_version"
+  )
+
+  for (recipe_name in names(recipes)) {
+    recipe <- recipes[[recipe_name]]
+    expect_true(all(required_fields %in% names(recipe)), info = recipe_name)
+    expect_identical(recipe$recipe_name, recipe_name)
+    expect_identical(
+      recipe$fmrihrf_version,
+      as.character(utils::packageVersion("fmrihrf"))
+    )
+    reconstructed <- fmrireg:::.reconstruct_hrf_object(recipe)
+    expect_equal(
+      fmrihrf::evaluate(reconstructed, dense_grid),
+      fmrihrf::evaluate(expected[[recipe_name]], dense_grid),
+      tolerance = 1e-12,
+      info = recipe_name
+    )
+  }
+
+  collect_groups <- function(parameters) {
+    if (is.list(parameters) && "hrf_object_name" %in% names(parameters)) {
+      return(list(parameters))
+    }
+    unlist(lapply(parameters, collect_groups), recursive = FALSE)
+  }
+  for (dataset in load_benchmark_dataset("all")) {
+    for (group in collect_groups(dataset$true_hrf_parameters)) {
+      expect_identical(group$hrf_recipe, recipes[[group$hrf_object_name]])
+      expect_equal(
+        fmrihrf::evaluate(group$hrf_object, dense_grid),
+        fmrihrf::evaluate(expected[[group$hrf_object_name]], dense_grid),
+        tolerance = 1e-12,
+        info = group$hrf_object_name
+      )
+    }
+  }
+})
+
+test_that("unknown or inconsistent HRF recipes fail closed", {
+  recipe <- load_benchmark_dataset("metadata")$hrf_recipes$variant1
+
+  unknown_name <- recipe
+  unknown_name$recipe_name <- "unknown"
+  expect_error(
+    fmrireg:::.reconstruct_hrf_object(unknown_name),
+    "Unknown benchmark HRF recipe name"
+  )
+
+  unknown_base <- recipe
+  unknown_base$base_hrf_name <- "HRF_NOT_REAL"
+  expect_error(
+    fmrireg:::.reconstruct_hrf_object(unknown_base),
+    "Unknown base HRF"
+  )
+
+  incompatible_version <- recipe
+  incompatible_version$fmrihrf_version <- "0.0.0"
+  expect_error(
+    fmrireg:::.reconstruct_hrf_object(incompatible_version),
+    "requires fmrihrf 0.0.0"
+  )
+
+  expect_error(
+    fmrireg:::.reconstruct_hrf_object("variant1"),
+    "recipe must be a named list"
+  )
+})
+
+test_that("wrong HRF is worse by a scale-sensitive metric", {
+  dataset <- load_benchmark_dataset("BM_Canonical_HighSNR")
+  X_correct <- create_design_matrix_from_benchmark(
+    "BM_Canonical_HighSNR",
+    fmrihrf::HRF_SPMG1
+  )
+  X_wrong <- create_design_matrix_from_benchmark(
+    "BM_Canonical_HighSNR",
+    fmrihrf::HRF_GAUSSIAN
+  )
+
+  beta_correct <- qr.solve(X_correct, dataset$Y_noisy)[-1, , drop = FALSE]
+  beta_wrong <- qr.solve(X_wrong, dataset$Y_noisy)[-1, , drop = FALSE]
+  rmse_correct <- sqrt(mean((beta_correct - dataset$true_betas_condition)^2))
+  rmse_wrong <- sqrt(mean((beta_wrong - dataset$true_betas_condition)^2))
+
+  expect_lt(rmse_correct, rmse_wrong)
+})
+
 test_that("performance evaluation works", {
   skip_if_not_installed("fmrireg")
   

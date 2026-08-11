@@ -313,7 +313,10 @@
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
         km_iter <- as.integer(lowrank$kmeans_iter_max %||% 1000L)
         km_nstart <- as.integer(lowrank$kmeans_nstart %||% 10L)
-        km <- stats::kmeans(coords, centers = L, iter.max = km_iter, nstart = km_nstart)
+        km <- stats::kmeans(
+          coords, centers = L, iter.max = km_iter, nstart = km_nstart,
+          algorithm = "Lloyd"
+        )
         idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
         lcoords <- coords[idx_lm, , drop = FALSE]
         # Solve only on landmarks
@@ -353,7 +356,10 @@
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
         km_iter <- as.integer(lowrank$kmeans_iter_max %||% 1000L)
         km_nstart <- as.integer(lowrank$kmeans_nstart %||% 10L)
-        km <- stats::kmeans(coords, centers = L, iter.max = km_iter, nstart = km_nstart)
+        km <- stats::kmeans(
+          coords, centers = L, iter.max = km_iter, nstart = km_nstart,
+          algorithm = "Lloyd"
+        )
         idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
         lcoords <- coords[idx_lm, , drop = FALSE]
         Zs_L <- srht_apply(Zw[, idx_lm, drop = FALSE], plan)
@@ -395,7 +401,10 @@
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
         km_iter <- as.integer(lowrank$kmeans_iter_max %||% 1000L)
         km_nstart <- as.integer(lowrank$kmeans_nstart %||% 10L)
-        km <- stats::kmeans(coords, centers = L, iter.max = km_iter, nstart = km_nstart)
+        km <- stats::kmeans(
+          coords, centers = L, iter.max = km_iter, nstart = km_nstart,
+          algorithm = "Lloyd"
+        )
         idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
         lcoords <- coords[idx_lm, , drop = FALSE]
         Zs_L <- S %*% Zw[, idx_lm, drop = FALSE]
@@ -437,7 +446,10 @@
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
         km_iter <- as.integer(lowrank$kmeans_iter_max %||% 1000L)
         km_nstart <- as.integer(lowrank$kmeans_nstart %||% 10L)
-        km <- stats::kmeans(coords, centers = L, iter.max = km_iter, nstart = km_nstart)
+        km <- stats::kmeans(
+          coords, centers = L, iter.max = km_iter, nstart = km_nstart,
+          algorithm = "Lloyd"
+        )
         idx_lm <- as.integer(RANN::nn2(coords, km$centers, k = 1)$nn.idx[, 1])
         lcoords <- coords[idx_lm, , drop = FALSE]
         Zs_L <- as.matrix(S %*% Zw[, idx_lm, drop = FALSE])

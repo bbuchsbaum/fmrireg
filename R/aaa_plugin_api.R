@@ -472,6 +472,23 @@ prepare_fmri_lm_contrasts <- function(fmrimod) {
 
       colind <- col_indices[[term_name]]
       if (is.null(colind)) {
+        # `contrast_weights()` keeps the formula-facing interaction spelling
+        # (for example `category:attention`), whereas fmridesign stores the
+        # corresponding design term under a syntactic tag such as
+        # `category_attention`. Match those two representations explicitly,
+        # but fail closed if normalization would be ambiguous.
+        normalize_term_tag <- function(x) {
+          x <- gsub("[^[:alnum:]_]+", "_", x)
+          gsub("_+", "_", x)
+        }
+        candidates <- names(col_indices)[
+          normalize_term_tag(names(col_indices)) == normalize_term_tag(term_name)
+        ]
+        if (length(candidates) == 1L) {
+          colind <- col_indices[[candidates]]
+        }
+      }
+      if (is.null(colind)) {
         warning(sprintf("Contrast '%s' refers to term '%s' but col_indices are missing.", contrast_name, term_name))
         next
       }

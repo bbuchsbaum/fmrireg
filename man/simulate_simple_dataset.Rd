@@ -20,11 +20,15 @@ simulate_simple_dataset(
 
 \item{TR}{Repetition time in seconds (default is 1.5)}
 
-\item{snr}{Signal-to-noise ratio (default is 0.5)}
+\item{snr}{Finite positive signal-to-noise ratio, defined as the empirical
+standard deviation of the clean condition signals divided by the empirical
+standard deviation of the complete structured-noise matrix (default is 0.5)}
 
 \item{hrf}{Hemodynamic response function to use (default is fmrihrf::HRF_SPMG1)}
 
-\item{seed}{Optional seed for reproducibility (default is NULL)}
+\item{seed}{Optional seed for reproducibility (default is NULL). Reusing a
+seed with a different \code{snr} preserves the clean signal and standardized
+noise realization while changing only the noise scale.}
 }
 \value{
 A list containing:
@@ -38,7 +42,8 @@ A list containing:
 }
 \description{
 This function simulates a complete fMRI dataset by combining task-related signals
-with realistic noise. It returns both the clean signals and the noisy data.
+with a declared structured-noise model. It returns both the clean signals
+and the noisy data.
 }
 \examples{
 # Simulate a dataset with 3 conditions

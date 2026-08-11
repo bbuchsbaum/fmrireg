@@ -35,9 +35,10 @@
 #'
 #' @param combine For t-statistic-only data, combination method ("stouffer",
 #'   "fisher", or "lancaster"). Stouffer combines z-scores and supports
-#'   equal, inverse-variance, or custom weighting (via `weights`). Fisher uses
-#'   equal weights. Lancaster implements a weighted Fisher method by mapping
-#'   weights to per-subject degrees of freedom.
+#'   equal or custom weighting (via `weights`); inverse-variance weights are
+#'   unavailable without effect standard errors. Fisher uses equal weights.
+#'   Lancaster implements a weighted Fisher method by mapping weights to
+#'   per-subject degrees of freedom.
 #' @param contrasts Optional numeric vector or matrix specifying fit-time exact contrasts. If a
 #'   vector is provided, its names must match the column names of the design matrix X. A matrix
 #'   should have columns corresponding to predictors and rows corresponding to contrasts.
@@ -76,11 +77,11 @@
 #'
 #' # Exact post-hoc contrasts by storing covariance
 #' fit_cov <- fmri_meta(gd, formula = ~ 1 + group, method = "pm", return_cov = "tri")
-#' con <- contrast(fit_cov, c("(Intercept)" = 0, group = 1))
+#' con <- contrast(fit_cov, c("(Intercept)" = 0, groupB = 1))
 #'
 #' # Exact fit-time contrast without storing covariance
 #' fit_con <- fmri_meta(gd, formula = ~ 1 + group, method = "pm",
-#'                      contrasts = c("(Intercept)" = 0, group = 1))
+#'                      contrasts = c("(Intercept)" = 0, groupB = 1))
 #' }
 fmri_meta <- function(data,
                       formula = ~ 1,
@@ -334,10 +335,6 @@ fmri_meta.group_data_nifti <- function(data,
                                        chunk_size = 10000,
                                        n_threads = getOption("fmrireg.num_threads", 0),
                                        verbose = TRUE) {
-  if (!isTRUE(getOption("fmrireg.suppress_deprecation", FALSE))) {
-    .Deprecated("fmri_meta", msg = "fmri_meta.group_data_nifti() is deprecated. Use fmri_meta() with a GDS-backed group_data() object.")
-  }
-
   # Similar to group_data_h5 but using read_nifti_chunk
   method <- match.arg(method)
   robust <- match.arg(robust)
@@ -470,7 +467,7 @@ fmri_meta.group_data_nifti <- function(data,
       Q = results$Q,
       Q_df = results$Q_df,
       model = model_info,
-      method = method,
+      method = if (!is.null(combine)) paste0("combine:", combine) else method,
       robust = robust,
       weights = weights,
       data = data,
@@ -617,7 +614,7 @@ fmri_meta.group_data_csv <- function(data,
       Q = results$Q,
       Q_df = results$Q_df,
       model = model_info,
-      method = method,
+      method = if (!is.null(combine)) paste0("combine:", combine) else method,
       robust = robust,
       weights = weights,
       data = data,

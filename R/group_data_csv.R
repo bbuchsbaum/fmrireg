@@ -59,7 +59,25 @@ group_data_from_csv <- function(data,
   if (!isTRUE(getOption("fmrireg.suppress_deprecation", FALSE))) {
     .Deprecated("group_data", msg = "group_data_from_csv() is deprecated. Use group_data(data, format='csv', ...) instead.")
   }
-  
+
+  .group_data_from_csv_impl(
+    data = data,
+    effect_cols = effect_cols,
+    subject_col = subject_col,
+    roi_col = roi_col,
+    contrast_col = contrast_col,
+    covariate_cols = covariate_cols,
+    wide_format = wide_format
+  )
+}
+
+.group_data_from_csv_impl <- function(data,
+                                      effect_cols,
+                                      subject_col = "subject",
+                                      roi_col = NULL,
+                                      contrast_col = NULL,
+                                      covariate_cols = NULL,
+                                      wide_format = FALSE) {
   # Read data if it's a file path
   if (is.character(data) && length(data) == 1) {
     if (!file.exists(data)) {

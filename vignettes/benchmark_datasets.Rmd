@@ -31,8 +31,7 @@ knitr::opts_chunk$set(
   fig.width = 7,
   fig.height = 5,
   message = FALSE,
-  warning = FALSE,
-  fig.alt = "Figure illustrating dataset structure or evaluation results; see caption and text for details."
+  warning = TRUE
 )
 ```
 
@@ -53,12 +52,28 @@ cat(sprintf(
 
 How do you know whether your HRF fitting or beta estimation method actually works? You need data where the ground truth is known — specific effect sizes, noise levels, and HRF shapes — so you can measure how well your method recovers them.
 
-The `fmrireg` package ships a set of benchmark datasets designed for exactly this purpose. Each dataset provides controlled signal, noise, and experimental parameters so you can rigorously evaluate and compare analysis methods.
+The `fmrireg` package ships a set of benchmark datasets designed for exactly
+this purpose. The canonical high- and low-SNR datasets include complete
+noiseless condition-beta oracles. The remaining datasets expose narrower
+truths---such as HRF-group membership or trial amplitudes---and record their
+limits in `oracle_contract` rather than pretending every scenario supports the
+same exact check.
 
-```{r load_library}
-library(fmrireg)
-library(ggplot2)
-library(dplyr)
+```{r load_library, echo=FALSE}
+withCallingHandlers(
+  {
+    library(fmrireg)
+    library(ggplot2)
+  },
+  warning = function(condition) {
+    if (grepl(
+      "^package '[^']+' was built under R version ",
+      conditionMessage(condition)
+    )) {
+      invokeRestart("muffleWarning")
+    }
+  }
+)
 ```
 
 ## Available Benchmark Datasets
@@ -85,6 +100,16 @@ print(summary_info$dimensions)
 print(summary_info$experimental_design)
 ```
 
+```{r validate-dataset-contract, include=FALSE}
+stopifnot(
+  nrow(data$Y_clean) == nrow(data$Y_noisy),
+  data$run_length == nrow(data$Y_noisy),
+  data$core_data_args$run_length == nrow(data$Y_noisy),
+  length(data$event_durations) == length(data$event_onsets),
+  all(vapply(data$X_list_true_hrf, NROW, integer(1)) == nrow(data$Y_noisy))
+)
+```
+
 ## Examining the Data Structure
 
 Each benchmark dataset is a list. Key components include:
@@ -96,7 +121,10 @@ Each benchmark dataset is a list. Key components include:
 - `condition_labels`: Vector of condition names for each event.
 - `event_durations`: Vector of event durations.
 - `true_betas_condition`: Ground truth beta values for each condition.
-- `true_hrf_parameters`: Information about the HRF used in simulation.
+- `true_hrf_parameters`: The reconstructed HRF and its complete generation
+  recipe (base HRF, lag, width, normalization, and `fmrihrf` version).
+- `oracle_contract`: Which stored objects form a valid numerical oracle, or why
+  only partial ground truth is available.
 - `TR`, `total_time`, `run_length`: Scan parameters.
 
 ```{r examine_structure}
@@ -113,7 +141,7 @@ cat("Run length:", data$run_length, "\n")
 
 Let's visualize some aspects of the benchmark dataset:
 
-```{r visualize_data, fig.width=10, fig.height=6}
+```{r visualize_data, fig.width=10, fig.height=7, fig.alt="Three representative BOLD traces aligned above an event carpet whose colored rows identify Cond1, Cond2, and Cond3 onsets across the run."}
 # Plot the first few voxels' time series
 n_timepoints <- nrow(data$Y_noisy)
 time_points <- seq(0, by = data$TR, length.out = n_timepoints)
@@ -125,20 +153,28 @@ plot_data <- data.frame(
   Voxel = rep(paste("Voxel", 1:3), each = n_timepoints)
 )
 
-# Add event markers
+# Build a separate event carpet so dense event markers do not obscure the
+# response traces.
 event_data <- data.frame(
   Time = data$event_onsets,
   Condition = data$condition_labels
 )
 
-ggplot(plot_data, aes(x = Time, y = BOLD)) +
-  geom_line() +
-  geom_vline(data = event_data, aes(xintercept = Time, color = Condition), 
-             alpha = 0.7, linetype = "dashed") +
+p_signal <- ggplot(plot_data, aes(x = Time, y = BOLD)) +
+  geom_line(linewidth = 0.35) +
   facet_wrap(~Voxel, scales = "free_y") +
-  labs(title = "BOLD Time Series with Event Markers",
+  labs(title = "BOLD Time Series",
        x = "Time (seconds)", y = "BOLD Signal") +
   theme_minimal()
+
+p_events <- ggplot(event_data, aes(x = Time, y = Condition, color = Condition)) +
+  geom_point(shape = "|", size = 7, stroke = 1.1) +
+  scale_x_continuous(limits = range(time_points), expand = c(0, 0)) +
+  labs(title = "Event carpet", x = "Time (seconds)", y = NULL) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+gridExtra::grid.arrange(p_signal, p_events, ncol = 1, heights = c(4, 1.3))
 ```
 
 ## Creating Design Matrices
@@ -146,8 +182,9 @@ ggplot(plot_data, aes(x = Time, y = BOLD)) +
 One of the key features is the ability to create design matrices with different HRF assumptions:
 
 ```{r design_matrices}
-# Create design matrix with the true HRF (canonical)
-X_true <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", fmrihrf::HRF_SPMG1)
+# Reconstruct the exact generating HRF from the stored recipe.
+true_hrf <- data$true_hrf_parameters$hrf_object
+X_true <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", true_hrf)
 
 # Create design matrix with a different HRF (e.g., a Gaussian HRF instead of canonical)
 X_wrong <- create_design_matrix_from_benchmark("BM_Canonical_HighSNR", fmrihrf::HRF_GAUSSIAN)
@@ -156,37 +193,92 @@ cat("True HRF design matrix dimensions:", dim(X_true), "\n")
 cat("Alternative HRF design matrix dimensions:", dim(X_wrong), "\n")
 ```
 
-## Method Evaluation Example
+```{r show-hrf-recipe}
+recipe <- data$true_hrf_parameters$hrf_recipe
+knitr::kable(data.frame(
+  Base_HRF = recipe$base_hrf_name,
+  Lag = recipe$lag,
+  Width = recipe$width,
+  Normalize = recipe$normalize,
+  fmrihrf_version = recipe$fmrihrf_version
+), caption = "Reconstructable HRF provenance for this benchmark")
+```
 
-Let's demonstrate how to evaluate a simple method (OLS) on the benchmark dataset:
+## Does the Benchmark Recover Its Own Ground Truth?
+
+A benchmark should first pass an exact oracle: with no noise and the HRF used to
+generate the signal, ordinary least squares should recover the declared betas.
+This check catches design scaling, time-grid, and ground-truth errors before the
+dataset is used to compare methods.
 
 ```{r method_evaluation}
+# Exact noiseless oracle
+betas_oracle <- qr.solve(X_true, data$Y_clean)
+oracle_max_error <- max(abs(betas_oracle[-1, ] - data$true_betas_condition))
+
 # Fit ordinary least squares with the correct HRF
-betas_correct <- solve(t(X_true) %*% X_true) %*% t(X_true) %*% data$Y_noisy
+betas_correct <- qr.solve(X_true, data$Y_noisy)
 
 # Fit OLS with the wrong HRF assumption
-betas_wrong <- solve(t(X_wrong) %*% X_wrong) %*% t(X_wrong) %*% data$Y_noisy
+betas_wrong <- qr.solve(X_wrong, data$Y_noisy)
 
 # Evaluate performance (remove intercept for comparison)
 performance_correct <- evaluate_method_performance("BM_Canonical_HighSNR", 
                                                    betas_correct[-1, ], 
                                                    "OLS_Correct_HRF")
 
-performance_wrong <- evaluate_method_performance("BM_Canonical_HighSNR", 
+performance_wrong <- evaluate_method_performance("BM_Canonical_HighSNR",
                                                  betas_wrong[-1, ], 
                                                  "OLS_Wrong_HRF")
 
-# Compare results
-cat("Correct HRF - Overall correlation:", round(performance_correct$overall_metrics$correlation, 3), "\n")
-cat("Wrong HRF - Overall correlation:", round(performance_wrong$overall_metrics$correlation, 3), "\n")
-
-cat("Correct HRF - RMSE:", round(performance_correct$overall_metrics$rmse, 3), "\n")
-cat("Wrong HRF - RMSE:", round(performance_wrong$overall_metrics$rmse, 3), "\n")
+performance_table <- data.frame(
+  HRF = c("Correct (SPMG1)", "Wrong (Gaussian)"),
+  Correlation = c(
+    performance_correct$overall_metrics$correlation,
+    performance_wrong$overall_metrics$correlation
+  ),
+  RMSE = c(
+    performance_correct$overall_metrics$rmse,
+    performance_wrong$overall_metrics$rmse
+  ),
+  MAE = c(
+    performance_correct$overall_metrics$mae,
+    performance_wrong$overall_metrics$mae
+  )
+)
 ```
+
+```{r validate-beta-recovery, include=FALSE}
+stopifnot(
+  is.finite(oracle_max_error),
+  oracle_max_error < 1e-10,
+  performance_wrong$overall_metrics$rmse >
+    performance_correct$overall_metrics$rmse,
+  performance_wrong$overall_metrics$mae >
+    performance_correct$overall_metrics$mae
+)
+```
+
+```{r display-performance}
+cat("Noiseless oracle maximum absolute beta error:",
+    format(oracle_max_error, scientific = TRUE, digits = 3), "\n")
+
+knitr::kable(
+  performance_table,
+  digits = 3,
+  caption = "Noisy-data beta recovery under correct and misspecified HRFs"
+)
+```
+
+The noiseless error is at floating-point precision, establishing that the
+stored design, response, and beta truth use the same scale. On noisy data, the
+Gaussian HRF can retain a high correlation while producing much larger RMSE
+and MAE. Correlation preserves ordering but is insensitive to absolute scale;
+the scale-sensitive errors reveal the misspecification.
 
 ## Comparing True vs Estimated Betas
 
-```{r compare_betas, fig.width=10, fig.height=4}
+```{r compare_betas, fig.width=10, fig.height=4, fig.alt="Side-by-side true-versus-estimated beta plots: correct-HRF estimates lie near the identity line, whereas Gaussian-HRF estimates are severely inflated in scale."}
 # Get true betas
 true_betas <- data$true_betas_condition
 
@@ -229,11 +321,16 @@ results <- list()
 
 for (dataset_name in datasets_to_test) {
   # Load dataset and create design matrix
-  X <- create_design_matrix_from_benchmark(dataset_name, fmrihrf::HRF_SPMG1)
   data_test <- load_benchmark_dataset(dataset_name)
+  X <- create_design_matrix_from_benchmark(
+    dataset_name,
+    data_test$true_hrf_parameters$hrf_object
+  )
   
   # Fit model
-  betas <- solve(t(X) %*% X) %*% t(X) %*% data_test$Y_noisy
+  betas <- qr.solve(X, data_test$Y_noisy)
+  oracle_betas <- qr.solve(X, data_test$Y_clean)[-1, , drop = FALSE]
+  oracle_error <- max(abs(oracle_betas - data_test$true_betas_condition))
   
   # Evaluate performance
   perf <- evaluate_method_performance(dataset_name, betas[-1, ], "OLS")
@@ -241,6 +338,7 @@ for (dataset_name in datasets_to_test) {
   results[[dataset_name]] <- list(
     correlation = perf$overall_metrics$correlation,
     rmse = perf$overall_metrics$rmse,
+    oracle_error = oracle_error,
     target_snr = data_test$target_snr
   )
 }
@@ -250,6 +348,7 @@ results_df <- data.frame(
   Dataset = names(results),
   Correlation = sapply(results, function(x) round(x$correlation, 3)),
   RMSE = sapply(results, function(x) round(x$rmse, 3)),
+  Noiseless_Max_Error = sapply(results, function(x) x$oracle_error),
   Target_SNR = sapply(results, function(x) x$target_snr)
 )
 
@@ -267,16 +366,32 @@ hrf_data <- load_benchmark_dataset("BM_HRF_Variability_AcrossVoxels")
 # Examine the HRF group assignments
 cat("HRF group assignments:", table(hrf_data$true_hrf_group_assignment), "\n")
 
-# Note: The actual HRF objects used vary by voxel
-# The benchmark dataset contains voxels with different HRF shapes to test
-# methods that can handle HRF variability across the brain
+hrf_group_recipes <- do.call(rbind, lapply(
+  names(hrf_data$true_hrf_parameters),
+  function(group_name) {
+    group_recipe <- hrf_data$true_hrf_parameters[[group_name]]$hrf_recipe
+    data.frame(
+      Group = group_name,
+      Recipe = group_recipe$recipe_name,
+      Base_HRF = group_recipe$base_hrf_name,
+      Lag = group_recipe$lag,
+      Width = group_recipe$width,
+      Normalize = group_recipe$normalize
+    )
+  }
+))
+knitr::kable(hrf_group_recipes, caption = "Exact HRF recipe by voxel group")
 ```
+
+This dataset records exact HRF recipes, group assignments, and nominal
+condition effects, but it does not ship a clean response/design pair. Its
+`oracle_contract` therefore does not claim exact noiseless OLS recovery.
 
 ## Trial Amplitude Variability
 
 Let's examine the trial-to-trial variability dataset:
 
-```{r trial_variability, fig.width=8, fig.height=5}
+```{r trial_variability, fig.width=8, fig.height=5, fig.alt="Three voxel facets showing that the stored true amplitude fluctuates from trial to trial around one."}
 # Load the trial variability dataset
 trial_data <- load_benchmark_dataset("BM_Trial_Amplitude_Variability")
 
@@ -301,23 +416,30 @@ ggplot(amp_plot_data, aes(x = Trial, y = Amplitude)) +
 
 ## Summary
 
-The fMRI benchmark datasets provide a comprehensive testing framework for:
+The package currently ships five synthetic cases with different truth levels:
 
-1. **Basic validation**: Use `BM_Canonical_HighSNR` for initial method testing
-2. **Noise robustness**: Compare performance between high and low SNR datasets
-3. **HRF estimation**: Test methods on `BM_HRF_Variability_AcrossVoxels`
-4. **Single-trial analysis**: Evaluate LSS methods on `BM_Trial_Amplitude_Variability`
-5. **Complex scenarios**: Challenge methods with `BM_Complex_Realistic`
+1. **Canonical high and low SNR**: complete clean-response, design, and
+   condition-beta oracles
+2. **HRF variability**: HRF recipes and voxel-group assignments, without a
+   complete clean-response/design oracle
+3. **Trial-amplitude variability**: per-trial amplitude truth for LSS checks
+4. **Complex scenario**: HRF-group, duration, and amplitude metadata under AR(2)
+   noise, with the limitations stated in its contract
 
-Key advantages:
+The exercised contracts are concrete:
 
-- **Known ground truth**: All parameters are precisely controlled and recorded
-- **Realistic noise models**: AR(1) and AR(2) noise with physiologically plausible parameters
-- **Comprehensive evaluation**: Built-in performance metrics and comparison tools
-- **Reproducible**: Fixed random seeds ensure consistent results
-- **Extensible**: Framework allows easy addition of new benchmark scenarios
+- **Explicit oracle scope**: Complete condition-beta recovery is available for
+  the two canonical datasets; other datasets state which partial truths are valid
+- **Exact HRF provenance**: Every declared HRF group has a fail-closed,
+  reconstructable recipe
+- **Declared noise models**: AR(1) and AR(2) parameters are stored with the data
+- **Checked dimensions**: responses, stored designs, and declared truth matrices
+  agree on time-point and voxel dimensions
+- **Deterministic generation**: fixed seeds reproduce the packaged artifact
 
-These datasets enable rigorous, standardized evaluation of fMRI analysis methods and facilitate fair comparisons between different approaches.
+Use only the truth level declared by each dataset's `oracle_contract`. That
+distinction is what makes comparisons reproducible without overstating what a
+particular synthetic scenario can prove.
 
 ## Next
 

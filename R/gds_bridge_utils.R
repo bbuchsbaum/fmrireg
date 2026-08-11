@@ -5,7 +5,7 @@
 
 .gds_safe_assay_names <- function(x) {
   if (is.null(x)) return(character(0))
-  tryCatch(fmrigds::assay_names(x), error = function(e) character(0))
+  tryCatch(names(fmrigds::assays(x)), error = function(e) character(0))
 }
 
 .gds_coerce_matrix <- function(a) {
