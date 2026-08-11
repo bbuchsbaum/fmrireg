@@ -551,6 +551,202 @@ The fitted HRF curves show the temporal profile of the BOLD response for each co
 2. The stronger response for Condition2 compared to Condition1
 3. The decreasing response amplitude across voxels
 
+## Estimating the HRF Shape from Data
+
+The curves above inherit the canonical HRF chosen for the GLM. When the shape
+itself is the target, `estimate_hrf()` instead fits smooth condition-level
+curves without assuming a canonical response. The example below uses white
+noise because its reported intervals currently assume independent,
+homoscedastic time-point errors; they are not autocorrelation-robust.
+
+To make success visible, we simulate two known responses: Condition A uses the
+canonical SPM shape, while Condition B is 1.5 seconds later and slightly taller.
+Two ROIs have different amplitudes, and a linear drift is removed as a nuisance
+term. The simulation mechanics are hidden so the teaching path stays focused on
+the estimator.
+
+```{r simulate-empirical-hrf, include=FALSE}
+set.seed(731)
+hrf_n <- 300L
+hrf_onsets <- 8 + c(0, cumsum(sample(c(6, 7, 9, 10), 31L, replace = TRUE)))
+hrf_events <- data.frame(
+  onset = hrf_onsets,
+  condition = factor(sample(rep(c("A", "B"), 16L))),
+  run = 1L
+)
+hrf_sframe <- sampling_frame(blocklens = hrf_n, TR = 1)
+hrf_acquisition_time <- samples(hrf_sframe, global = TRUE)
+hrf_truth_a <- function(time) as.numeric(fmrihrf::HRF_SPMG1(time))
+hrf_truth_b <- function(time) {
+  ifelse(
+    time >= 1.5,
+    1.25 * as.numeric(fmrihrf::HRF_SPMG1(time - 1.5)),
+    0
+  )
+}
+hrf_signal_a <- evaluate(
+  regressor(
+    hrf_events$onset[hrf_events$condition == "A"],
+    hrf = hrf_truth_a,
+    span = 24
+  ),
+  hrf_acquisition_time
+)
+hrf_signal_b <- evaluate(
+  regressor(
+    hrf_events$onset[hrf_events$condition == "B"],
+    hrf = hrf_truth_b,
+    span = 24
+  ),
+  hrf_acquisition_time
+)
+hrf_amplitudes <- rbind(A = c(1, 0.65), B = c(0.8, 1.1))
+hrf_drift <- outer(seq(-0.15, 0.15, length.out = hrf_n), rep(1, 2L))
+hrf_response <- hrf_signal_a %o% hrf_amplitudes["A", ] +
+  hrf_signal_b %o% hrf_amplitudes["B", ] + hrf_drift +
+  matrix(rnorm(hrf_n * 2L, sd = 0.025), nrow = hrf_n)
+colnames(hrf_response) <- c("visual_ROI", "motor_ROI")
+hrf_dataset <- matrix_dataset(
+  hrf_response,
+  TR = 1,
+  run_length = hrf_n,
+  event_table = hrf_events
+)
+hrf_baseline <- baseline_model(
+  "poly", degree = 1, sframe = hrf_dataset$sampling_frame
+)
+```
+
+The public call is short. GCV chooses one smoothing strength shared across the
+ROIs, preventing high-variance columns from dominating the choice.
+
+```{r estimate-empirical-hrf}
+empirical_hrf <- estimate_hrf(
+  onset ~ hrf(condition),
+  block = ~run,
+  dataset = hrf_dataset,
+  basemod = hrf_baseline,
+  rsam = seq(0, 24, by = 0.5),
+  k = 8,
+  lambda = "gcv"
+)
+empirical_hrf
+```
+
+```{r prepare-empirical-hrf-results, include=FALSE}
+hrf_recovery <- tidy(empirical_hrf) %>%
+  mutate(
+    condition = sub("^.*[.]", "", condition),
+    amplitude = ifelse(
+      condition == "A",
+      hrf_amplitudes["A", match(voxel, colnames(hrf_response))],
+      hrf_amplitudes["B", match(voxel, colnames(hrf_response))]
+    ),
+    truth = ifelse(
+      condition == "A",
+      hrf_truth_a(time) * amplitude,
+      hrf_truth_b(time) * amplitude
+    )
+  )
+
+hrf_recovery_metrics <- hrf_recovery %>%
+  group_by(condition, voxel) %>%
+  summarise(
+    correlation = cor(estimate, truth),
+    normalized_rmse = sqrt(mean((estimate - truth)^2)) / max(abs(truth)),
+    .groups = "drop"
+  )
+
+hrf_peak_times <- hrf_recovery %>%
+  group_by(condition, voxel) %>%
+  slice_max(estimate, n = 1L, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(condition, voxel, peak_time = time) %>%
+  pivot_wider(names_from = condition, values_from = peak_time)
+
+stopifnot(
+  all(is.finite(empirical_hrf$estimate)),
+  all(is.finite(empirical_hrf$std.error)),
+  empirical_hrf$lambda %in% empirical_hrf$gcv$lambda,
+  all(is.finite(empirical_hrf$gcv$score)),
+  all(hrf_recovery_metrics$correlation > 0.97),
+  all(hrf_recovery_metrics$normalized_rmse < 0.08),
+  all(hrf_peak_times$B - hrf_peak_times$A >= 1.5)
+)
+```
+
+```{r empirical-hrf-metrics, echo=FALSE}
+kable(
+  hrf_recovery_metrics,
+  digits = 3,
+  row.names = FALSE,
+  caption = "Recovery against the known synthetic HRFs"
+)
+```
+
+```{r plot-empirical-hrf, echo=FALSE, fig.width=8, fig.height=6, fig.alt="Known and estimated hemodynamic response curves agree closely in two synthetic ROIs; Condition B peaks later than Condition A, and shaded confidence intervals surround each estimate."}
+ggplot(
+  hrf_recovery,
+  aes(x = time, color = condition, fill = condition)
+) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.14, color = NA) +
+  geom_line(aes(y = estimate, linetype = "Estimated"), linewidth = 0.9) +
+  geom_line(
+    aes(y = truth, linetype = "Known truth"),
+    color = "#333333",
+    linewidth = 0.75
+  ) +
+  facet_grid(voxel ~ condition) +
+  scale_linetype_manual(values = c("Estimated" = "solid", "Known truth" = "dashed")) +
+  scale_color_brewer(palette = "Set1") +
+  scale_fill_brewer(palette = "Set1") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "top") +
+  labs(
+    title = "Flexible HRF estimation recovers two response shapes",
+    subtitle = "Shading is the model-based 95% confidence interval",
+    x = "Seconds after onset",
+    y = "BOLD response",
+    color = "Condition",
+    fill = "Condition",
+    linetype = NULL
+  )
+```
+
+Across the four condition-by-ROI curves, correlation with the known response is
+between `r sprintf("%.3f", min(hrf_recovery_metrics$correlation))` and
+`r sprintf("%.3f", max(hrf_recovery_metrics$correlation))`; the largest
+normalized RMSE is
+`r sprintf("%.3f", max(hrf_recovery_metrics$normalized_rmse))`. More
+importantly, the estimates recover the later Condition B peak in both ROIs.
+These are executable checks for this controlled example, not an accuracy
+guarantee for arbitrary event schedules or real fMRI noise.
+
+The complete GCV path remains available for diagnosis rather than returning
+only the winning value. Here the minimum is interior to the candidate grid.
+
+```{r plot-empirical-hrf-gcv, echo=FALSE, fig.width=7, fig.height=4.5, fig.alt="Scale-normalized generalized cross-validation score across smoothing strengths, with the selected minimum marked by a vertical line."}
+hrf_positive_lambda <- min(empirical_hrf$gcv$lambda[empirical_hrf$gcv$lambda > 0])
+hrf_gcv_plot <- empirical_hrf$gcv %>%
+  mutate(lambda_axis = ifelse(lambda == 0, hrf_positive_lambda / 10, lambda))
+hrf_selected_axis <- if (
+  empirical_hrf$lambda == 0
+) hrf_positive_lambda / 10 else empirical_hrf$lambda
+
+ggplot(hrf_gcv_plot, aes(x = lambda_axis, y = score)) +
+  geom_line(color = "#7F0000", linewidth = 0.8) +
+  geom_point(color = "#B2182B", size = 2) +
+  geom_vline(xintercept = hrf_selected_axis, linetype = "dashed") +
+  scale_x_log10() +
+  theme_minimal(base_size = 13) +
+  labs(
+    title = "Shared smoothing selected by GCV",
+    subtitle = "The zero-penalty candidate is shown one step left of the positive grid",
+    x = "Smoothing strength (log scale)",
+    y = "Scale-normalized GCV score"
+  )
+```
+
 
 ## Comparing Models with Different HRF Bases
 
@@ -712,7 +908,7 @@ This vignette demonstrated the complete workflow for fMRI linear model analysis 
 3. **Extracting and visualizing model coefficients** and statistics
 4. **Computing and testing contrasts** between conditions
 5. **Comparing model performance** using goodness-of-fit metrics
-6. **Inspecting fitted hemodynamic response curves**
+6. **Inspecting fitted and directly estimated hemodynamic response curves**
 
 The `fmri_lm` workflow shown here supports declared temporal covariance,
 alternative HRF bases, coefficient extraction, and planned contrasts. Real-data

@@ -1,5 +1,17 @@
 # fmrireg 0.2.0
 
+## HRF Estimation
+
+* `estimate_hrf()` is now a vectorized, condition-level smooth FIR estimator.
+  It constructs an explicit event-aligned spline basis, removes baseline and
+  fixed nuisance designs once, fits all voxels with one penalized
+  multiresponse solve, and can choose a shared smoothing strength by
+  scale-normalized GCV. The new `fmri_hrf_estimate` result preserves curve and
+  voxel labels and provides standard errors, confidence intervals, `tidy()`,
+  `predict()`, `coef()`, and `as.matrix()` methods. This replaces a
+  voxel-by-voxel GAM path that treated convolved design values as if they were
+  post-stimulus time and failed before prediction.
+
 ## Statistical Corrections
 
 * **AR degrees of freedom.** `fmri_lm()` no longer deflates the residual
@@ -24,6 +36,11 @@
   freedom; AR order by itself does not.
 
 ## Bug Fixes
+
+* Oversized residual-bootstrap blocks now remain one contiguous temporal block
+  instead of silently becoming interleaved odd/even samples.
+* Mixed-model solver failures now warn and return `NA` coefficients rather than
+  plausible zeros; malformed response dimensions fail before solver dispatch.
 
 * `robust_psi` now has an effect. It was previously unreachable: `robust`
   defaulted to `FALSE` rather than `NULL`, so `robust_options$type` was always

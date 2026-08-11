@@ -106,6 +106,13 @@ test_that("multiresponse_bootstrap_lm handles edge cases", {
   )
   
   expect_true(result$bootstrap)
+  expect_identical(result$nblocks, 1L)
+  expect_identical(result$block_size, 30L)
+
+  blocks <- fmrireg:::create_bootstrap_blocks(n, block_size = 30)
+  expect_length(blocks, 1L)
+  expect_identical(unname(blocks[[1L]]), seq_len(n))
+  expect_true(all(diff(blocks[[1L]]) == 1L))
   
   # Single response
   Y_single <- matrix(rnorm(n), n, 1)

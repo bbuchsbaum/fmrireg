@@ -256,18 +256,6 @@
     },
     {
       "@type": "SoftwareApplication",
-      "identifier": "mgcv",
-      "name": "mgcv",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=mgcv"
-    },
-    {
-      "@type": "SoftwareApplication",
       "identifier": "sandwich",
       "name": "sandwich",
       "provider": {
@@ -504,18 +492,6 @@
         "url": "https://cran.r-project.org"
       },
       "sameAs": "https://CRAN.R-project.org/package=ggplot2"
-    },
-    "17": {
-      "@type": "SoftwareApplication",
-      "identifier": "lazyeval",
-      "name": "lazyeval",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=lazyeval"
     },
     "18": {
       "@type": "SoftwareApplication",
