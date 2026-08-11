@@ -8,7 +8,7 @@ ols_betas <- function(X, Y) {
 
 #' @keywords internal
 #' @noRd
-mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
+mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL) {
   # Ensure X is a matrix
   X <- as.matrix(X)
   
@@ -27,8 +27,14 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
     fixed_ind <- integer(0)  # Empty integer vector
   }
   
+  all_indices <- c(ran_ind, fixed_ind)
+  if (anyNA(all_indices) || any(all_indices < 1L) ||
+      any(all_indices != as.integer(all_indices))) {
+    stop("Random and fixed effect indices must be positive integers", call. = FALSE)
+  }
+
   # Check if indices are out of bounds
-  if (max(c(ran_ind, fixed_ind)) > ncol(X)) {
+  if (max(all_indices) > ncol(X)) {
     stop("Index out of bounds: indices exceed number of columns in X")
   }
   
@@ -36,12 +42,28 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
   if (!is.vector(Y)) {
     Y <- as.vector(Y)
   }
+
+  if (length(Y) != nrow(X)) {
+    stop("Y must have the same number of rows as X", call. = FALSE)
+  }
+  if (any(!is.finite(X)) || any(!is.finite(Y))) {
+    stop("X and Y must contain only finite values", call. = FALSE)
+  }
+
+  failure_value <- function() {
+    rep(NA_real_, length(ran_ind) + length(fixed_ind))
+  }
+
+  if (!is.null(solver) && !is.function(solver)) {
+    stop("solver must be NULL or a function", call. = FALSE)
+  }
   
   # Try C++ mixed model implementation
   tryCatch({
     
-    if (requireNamespace("Rcpp", quietly = TRUE) && 
-        requireNamespace("fmrilss", quietly = TRUE)) {
+    if (!is.null(solver) ||
+        (requireNamespace("Rcpp", quietly = TRUE) &&
+         requireNamespace("fmrilss", quietly = TRUE))) {
       
       # Use the C++ implementation with proper input validation
       X_fixed <- if (length(fixed_ind) == 0) {
@@ -50,22 +72,21 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
         X[, fixed_ind, drop = FALSE]
       }
       
+      solve_fun <- if (is.null(solver)) fmrilss::mixed_solve else solver
       fit <- tryCatch({
-        fmrilss::mixed_solve(Y = Y, 
-                            Z = X[, ran_ind, drop = FALSE], 
-                            X = X_fixed)
+        solve_fun(Y = Y,
+                  Z = X[, ran_ind, drop = FALSE],
+                  X = X_fixed)
       }, error = function(e2) {
-        # If even that fails, use a fallback
-        message("C++ mixed model solver also failed: ", e2$message)
-        if (length(fixed_ind) == 0) {
-          return(list(u = rep(0, length(ran_ind))))
-        } else {
-          return(list(
-            u = rep(0, length(ran_ind)),
-            beta = rep(0, length(fixed_ind))
-          ))
-        }
+        warning(
+          "Mixed model solver failed: ", conditionMessage(e2),
+          "; returning NA coefficients for this response.",
+          call. = FALSE
+        )
+        NULL
       })
+
+      if (is.null(fit)) return(failure_value())
       
       # Return results based on whether fixed_ind is empty
       if (length(fixed_ind) == 0) {
@@ -74,13 +95,11 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind) {
         return(c(fit$u, fit$beta))
       }
     } else {
-      # Last resort - return zeros
-      message("No alternative mixed model solver available")
-      if (length(fixed_ind) == 0) {
-        return(rep(0, length(ran_ind)))
-      } else {
-        return(rep(0, length(c(ran_ind, fixed_ind))))
-      }
+      warning(
+        "No mixed model solver is available; returning NA coefficients for this response.",
+        call. = FALSE
+      )
+      return(failure_value())
     }
   })
 }
@@ -466,88 +485,6 @@ estimate_betas.latent_dataset <- function(x, fixed = NULL, ran, block,
   class(ret) <-  c("fmri_latent_betas", "fmri_betas")
   ret
 }
-
-
-#' Estimate hemodynamic response function (HRF) using Generalized Additive Models (GAMs)
-#'
-#' This function estimates the HRF using GAMs from the `mgcv` package.
-#' The HRF can be estimated with or without fixed effects.
-#'
-#' @param form A formula specifying the event model for the conditions of interest
-#' @param fixed A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials); default is NULL
-#' @param block A formula specifying the block factor
-#' @param dataset An object representing the fMRI dataset
-#' @param bs Basis function for the smooth term in the GAM; one of "tp" (default), "ts", "cr", or "ps"
-#' @param rsam A sequence of time points at which the HRF is estimated (default: seq(0, 20, by = 1))
-#' @param basemod A `baseline_model` instance to regress out of data before HRF estimation (default: NULL)
-#' @param k the dimension of the basis, default is 8
-#' @param fx indicates whether the term is a fixed d.f. regression spline (TRUE) or a penalized regression spline (FALSE); default is TRUE.
-#' @param progress Logical; display progress during estimation.
-#'
-#' @return A matrix with the estimated HRF values for each voxel
-#'
-#' @importFrom neuroim2 vectors
-#' @importFrom furrr future_map
-#' @seealso \code{\link{baseline_model}}, \code{\link{event_model}}, \code{\link{design_matrix}}
-#' @examples 
-#' 
-#' # To be added
-#'
-#' @export 
-#' @autoglobal
-estimate_hrf <- function(form, fixed = NULL, block, dataset,
-                           bs = c("tp", "ts", "cr", "ps"),
-                           rsam = seq(0, 20, by = 1),
-                           basemod = NULL,
-                           k = 8,
-                           fx = TRUE,
-                           progress = TRUE) {
-  with_package("mgcv")
-  dset <- dataset
-  
-  onset_var <- lazyeval::f_lhs(form)
-  dvars <- lazyeval::f_rhs(form)
-  
-  bmod <- if (is.null(basemod)) {
-    baseline_model("constant", sframe=dset$sampling_frame)
-  } else {
-    basemod
-  }
-  
-  if (!is.null(fixed)) {
-    emod_fixed <- event_model(fixed, data=dset$event_table, block=block, sampling_frame=dset$sampling_frame)
-    X_fixed <- as.matrix(design_matrix(emod_fixed))
-    has_fixed=TRUE
-  } else {
-    has_fixed=FALSE
-  }
-  
-  emat_cond <- event_model(form, data=dset$event_table, block=block, 
-                           sampling_frame=dset$sampling_frame)
-  
-
-  X_base <- as.matrix(design_matrix(bmod))
-  X_cond <- as.matrix(design_matrix(emat_cond))
-  #browser()
-  
-  vecs <- masked_vectors(dset)
-  res <- map_voxels(vecs, function(v) {
-    gam.1 <- if (has_fixed) {
-      mgcv::gam(v ~ mgcv::s(X_cond, bs=bs, fx=TRUE, k=8) + X_fixed + X_base)
-    } else {
-      mgcv::gam(v ~ mgcv::s(X_cond, bs=bs, fx=TRUE, k=8) + X_base)
-    }
-    
-    time <- rsam
-    xb <- matrix(colMeans(X_base), length(time),ncol(X_base), byrow=TRUE)
-    ##xf <- matrix(colMeans(X_fixed), length(time),ncol(X_fixed), byrow=TRUE)
-    predict(gam.1, list(X_cond = time, X_base = xb, X_fixed = xf))
-  }, .progress = progress)
-  
-  res
-  
-}
-
 
 
 #' @noRd 
