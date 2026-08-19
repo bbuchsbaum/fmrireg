@@ -1101,6 +1101,67 @@ test_that("write_results.fmri_lm supports sparse masks", {
   expect_true(file.exists(result$beta$json))
 })
 
+test_that(".compute_statistical_volumes places values on a sparse array mask", {
+  brain_dims <- c(3L, 3L, 2L)
+  mask <- array(FALSE, brain_dims)
+  mask[1, 1, 1] <- TRUE
+  mask[3, 1, 2] <- TRUE
+  mask[2, 3, 2] <- TRUE
+  space <- neuroim2::NeuroSpace(dim = brain_dims)
+  vals <- c(10, 20, 30)
+
+  contrast_data <- data.frame(name = "A_vs_B", stringsAsFactors = FALSE)
+  contrast_data$data <- list(list(estimate = vals))
+
+  result <- fmrireg:::.compute_statistical_volumes(
+    contrast_data, "beta", brain_dims, mask, space
+  )
+
+  vol <- as.array(result$neurovec)[, , , 1]
+  expect_equal(vol[mask], vals)
+  expect_true(all(vol[!mask] == 0))
+
+  mask_vol <- neuroim2::LogicalNeuroVol(mask, space)
+  result_vol <- fmrireg:::.compute_statistical_volumes(
+    contrast_data, "beta", brain_dims, mask_vol, space
+  )
+  expect_equal(as.array(result_vol$neurovec)[, , , 1][mask], vals)
+})
+
+test_that("write_results by_stat keeps sparse-mask contrast voxels in place", {
+  skip_if_not_installed("RNifti")
+  skip_if_not_installed("jsonlite")
+
+  mod <- create_test_fmri_lm(sparse_mask = TRUE)
+  mask <- fmrireg:::.fmri_dataset_mask_space(mod$dataset, "test")$mask_array
+
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE))
+
+  result <- write_results(
+    mod,
+    path = temp_dir,
+    subject = "01",
+    task = "test",
+    space = "MNI152NLin2009cAsym",
+    format = "nifti",
+    save_betas = FALSE,
+    strategy = "by_stat",
+    contrast_stats = "beta"
+  )
+
+  img <- RNifti::readNifti(result$beta$nifti, internal = FALSE)
+  img_arr <- as.array(img)
+  actual <- if (length(dim(img_arr)) == 3L) img_arr[mask] else img_arr[, , , 1][mask]
+
+  estimate <- mod$result$contrasts$data[[1]]$estimate
+  if (is.list(estimate) && length(estimate) > 0) {
+    estimate <- estimate[[1]]
+  }
+  expect_equal(as.numeric(actual), as.numeric(estimate), tolerance = 1e-8)
+})
+
 test_that("write_results.fmri_lm validates CreationTime format for BIDS compliance", {
   skip_if_not_installed("fmristore")
   skip_if_not_installed("jsonlite")
