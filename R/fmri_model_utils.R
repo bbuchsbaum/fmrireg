@@ -34,7 +34,11 @@ term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
   assert_that(inherits(x, "fmri_model"), msg = "'x' must be an 'fmri_model' object")
   
   if (is.null(blocknum)) {
-    blocknum <- sort(unique(x$event_model$blockids))
+    bids <- x$event_model$blockids
+    if (length(bids) == 0L) {
+      bids <- fmrihrf::blockids(x$event_model$sampling_frame)
+    }
+    blocknum <- sort(unique(bids))
   }
   
   # Get the full convolved design matrix from the event model

@@ -1173,6 +1173,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
 
   resolve_pair_weights <- function(con_spec) {
     event_terms <- terms(object$model$event_model)
+    event_terms <- Filter(function(t) !inherits(t, "feature_term"), event_terms)
     if (length(event_terms) == 0) {
       stop("No event terms available for pair_contrast_spec")
     }

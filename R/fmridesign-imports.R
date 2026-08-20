@@ -1,7 +1,7 @@
 # Re-exports from fmridesign for backward compatibility
 
 #' @importFrom fmridesign event_model baseline_model event_factor event_variable event_matrix event_basis condition_basis_list
-#' @importFrom fmridesign covariate nuisance hrf design_matrix conditions cells convolve onsets durations
+#' @importFrom fmridesign covariate nuisance hrf feature design_matrix conditions cells convolve onsets durations
 #' @importFrom fmridesign elements event_terms baseline_terms term_matrices is_categorical is_continuous
 #' @importFrom fmridesign longnames shortnames columns term_indices event_table event_term construct
 #' @importFrom fmridesign convolve_design sub_basis trialwise
@@ -41,6 +41,9 @@ fmridesign::nuisance
 
 #' @export
 fmridesign::hrf
+
+#' @export
+fmridesign::feature
 
 #' @export
 fmridesign::design_matrix

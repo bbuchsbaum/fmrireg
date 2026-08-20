@@ -1353,6 +1353,14 @@ fitted_hrf.fmri_lm <- function(x, sample_at = seq(0, 24, by = 1), ...) {
     return(list())
   }
 
+  # Feature terms are sampled series, not trial HRFs. Reconstructing a
+  # canonical HRF shape from their coefficients is the wrong object.
+  keep <- !vapply(eterms, function(t) inherits(t, "feature_term"), logical(1))
+  eterms <- eterms[keep]
+  if (length(eterms) == 0L) {
+    return(list())
+  }
+
   # Pull coefficients directly from model results (voxels x coefficients)
   betas <- x$result$betas$data[[1]]$estimate[[1]]
   if (!is.matrix(betas)) {
@@ -1400,6 +1408,9 @@ fitted_hrf.fmri_lm <- function(x, sample_at = seq(0, 24, by = 1), ...) {
     if (is.null(hrf_spec) && !is.null(eterm$hrfspec)) {
       # Backward-compatibility: some versions may store as a list element
       hrf_spec <- eterm$hrfspec
+    }
+    if (is.null(hrf_spec) && !is.null(eterm$hrf) && is.function(eterm$hrf)) {
+      hrf_spec <- list(hrf = eterm$hrf)
     }
     
     # Fallback HRF if spec is missing

@@ -90,8 +90,27 @@ design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
   df_time <- sframe$time
   df_block<- sframe$blockids
 
-  longify <- function(term){
-    dm   <- tibble::as_tibble(design_matrix(term), .name_repair = "unique")
+  longify <- function(term, name){
+    if (inherits(term, "feature_term")) {
+      col_indices <- attr(fmrimod$event_model$design_matrix, "col_indices")
+      idx <- col_indices[[name]]
+      if (is.null(idx) || length(idx) == 0L) {
+        ev_terms <- terms(fmrimod$event_model)
+        hit <- names(ev_terms)[
+          vapply(ev_terms, function(t) identical(t$varname, name), logical(1))
+        ]
+        if (length(hit) == 1L) idx <- col_indices[[hit]]
+      }
+      if (is.null(idx) || length(idx) == 0L) {
+        stop("No design-matrix columns found for feature term: ", name, call. = FALSE)
+      }
+      dm <- tibble::as_tibble(
+        as.data.frame(design_matrix(fmrimod$event_model)[, idx, drop = FALSE]),
+        .name_repair = "unique"
+      )
+    } else {
+      dm <- tibble::as_tibble(design_matrix(term), .name_repair = "unique")
+    }
     dm$.block <- df_block
     dm$.time  <- df_time
 
@@ -102,7 +121,7 @@ design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
     tidyr::pivot_longer(dm, -c(.time,.block),
                         names_to = "condition", values_to = "value")
   }
-  df_long <- lapply(terms_all, longify)
+  df_long <- Map(longify, terms_all, term_names)
   names(df_long) <- term_names
 
   # -- shiny UI --------------------------------------------------------------

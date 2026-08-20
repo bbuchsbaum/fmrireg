@@ -1079,6 +1079,18 @@ shortnames.event_term <- function(x, ...) {
 
 #' @export
 #' @rdname shortnames
+shortnames.feature_term <- function(x, ...) {
+  as.character(conditions(x, ...))
+}
+
+#' @export
+#' @rdname longnames
+longnames.feature_term <- function(x, ...) {
+  as.character(conditions(x, ...))
+}
+
+#' @export
+#' @rdname shortnames
 shortnames.event_model <- function(x, ...) {
   unlist(lapply(terms(x), shortnames))
 }

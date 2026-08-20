@@ -30,8 +30,11 @@
     registerS3method("correlation_map", "event_model",
                      utils::getFromNamespace("correlation_map.event_model", "fmridesign"))
 
-    # Register our columns() method for event_model objects with the fmridesign generic
+    # Register our columns() / cells() methods for event_model with the
+    # fmridesign generics (the event_model methods live here).
     registerS3method("columns", "event_model", columns.event_model,
+                     envir = asNamespace("fmridesign"))
+    registerS3method("cells", "event_model", cells.event_model,
                      envir = asNamespace("fmridesign"))
     # Note: correlation_map.baseline_model is defined locally in correlation_map_methods.R
     # because it needs access to fmrireg's internal .correlation_map_common function

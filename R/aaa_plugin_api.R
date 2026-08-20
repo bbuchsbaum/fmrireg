@@ -389,7 +389,7 @@ resolve_basis <- function(name, ...) {
     }
   }
   call_name <- as.character(parts[[1L]])[1L]
-  if (!nzchar(call_name) || !(call_name %in% c("hrf", "trialwise"))) {
+  if (!nzchar(call_name) || !(call_name %in% c("hrf", "trialwise", "feature"))) {
     return(as.call(parts))
   }
   arg_names <- names(parts)

@@ -89,6 +89,14 @@
 
 ## New Features
 
+* Reexported `feature()` (from fmridesign) and `feature_regressor()` (from
+  fmrihrf) so mixed event formulas such as
+  `onset ~ hrf(condition) + feature(rms, dt = 0.1)` work after
+  `library(fmrireg)`. Feature terms are sampled series, not trials; helpers
+  that assume `hrfspec` trial structure skip or unwrap them instead of
+  erroring (`fitted_hrf()`, `shortnames()`, `design_plot()`, `preflight()`,
+  pair-contrast resolution).
+
 * `write_results()` now exports statistical maps as NIfTI volumes via
   `format = "nifti"` (or `format = c("h5", "nifti")`), reusing the same
   BIDS entity and filename machinery as the HDF5 backend. This removes the
