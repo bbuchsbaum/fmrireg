@@ -1774,7 +1774,16 @@ write_results.fmri_lm <- function(x,
   # Create 4D array [X, Y, Z, #contrasts] - optimized version
   n_contrasts <- length(stat_matrices)
   stat_array <- array(0, dim = c(brain_dims, n_contrasts))
-  mask_array <- as.logical(mask)
+  if (length(mask) != prod(brain_dims)) {
+    stop(
+      "Mask length (", length(mask),
+      ") does not match product of space dims (", prod(brain_dims), ").",
+      call. = FALSE
+    )
+  }
+  # as.logical() on a plain array drops dim; restore it so which(arr.ind=TRUE)
+  # returns 3D coordinates rather than linear indices.
+  mask_array <- array(as.logical(mask), dim = brain_dims)
   mask_indices <- which(mask_array, arr.ind = TRUE)
   n_mask_voxels <- sum(mask_array)
 

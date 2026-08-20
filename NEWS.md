@@ -37,6 +37,11 @@
 
 ## Bug Fixes
 
+* `write_results(strategy = "by_stat")` no longer scatters contrast maps onto
+  the wrong voxels. `.compute_statistical_volumes()` called `as.logical()` on
+  the mask, which drops `dim` for plain arrays (the type
+  `.fmri_dataset_mask_space()` always supplies), so `which(..., arr.ind = TRUE)`
+  returned linear indices instead of 3D coordinates.
 * Oversized residual-bootstrap blocks now remain one contiguous temporal block
   instead of silently becoming interleaved odd/even samples.
 * Mixed-model solver failures now warn and return `NA` coefficients rather than
