@@ -16,7 +16,7 @@ Depends:
 Imports:
     fmriAR,
     fmrigds,
-    fmridesign (>= 0.1.0),
+    fmridesign (>= 0.6.0),
     fmrihrf (>= 0.1.0),
     fmrilss (>= 0.1.0),
     stats,
@@ -85,7 +85,7 @@ Remotes:
     anthonynorth/roxyglobals,
     bbuchsbaum/fmridataset,
     bbuchsbaum/fmrilss,
-    bbuchsbaum/fmridesign,
+    bbuchsbaum/fmridesign@e627d4d1861e5cc4aea5a5668d6052e394429b92,
     bbuchsbaum/neuroatlas,
     bbuchsbaum/delarr,
     bbuchsbaum/fmrilatent

@@ -553,7 +553,7 @@ estimate_hrf <- function(form, fixed = NULL, block, dataset,
 #' @noRd 
 #' @keywords internal
 #' @importFrom rlang new_formula f_lhs f_rhs f_env is_call call_name
-inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise")) {
+inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise", "feature")) {
   stopifnot(is.formula(oldform))
   
   # A recursive helper that descends through an expression
@@ -577,7 +577,7 @@ inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise")) 
       call_rebuilt$basis <- new_basis
       return(call_rebuilt)
     } else {
-      # Not hrf() or trialwise(), so keep walking
+      # Not hrf() / trialwise() / feature(), so keep walking
       expr_args <- as.list(expr)
       for (i in seq_along(expr_args)[-1]) {
         expr_args[[i]] <- recfun(expr_args[[i]])

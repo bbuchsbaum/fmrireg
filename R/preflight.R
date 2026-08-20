@@ -27,7 +27,9 @@
 #' The design-column check uses \code{all.vars()} on the formula, so it is
 #' deliberately conservative: a formula with a variable-valued HRF argument
 #' (e.g. \code{hrf(x, basis = my_basis)}) may flag \code{my_basis} as a missing
-#' column. Event tables supplied as file paths are not yet validated here.
+#' column. Arguments of \code{feature()} are excluded, because those series live
+#' in the formula environment rather than the event table. Event tables supplied
+#' as file paths are not yet validated here.
 #'
 #' @param x A single [fmri_job] or a list of them.
 #' @param check_files Logical; for file-backed jobs, verify scan paths exist.
@@ -97,8 +99,10 @@ preflight <- function(x, check_files = FALSE, on_issue = c("warn", "error", "col
   args <- spec$args
 
   # Design contract: formula/block variables must be present as event columns.
+  # feature() series live in the formula environment, not the event table.
   et <- args$event_table
   req <- unique(c(all.vars(tmpl$formula), all.vars(tmpl$block)))
+  req <- setdiff(req, .formula_feature_vars(tmpl$formula))
   have <- if (is.data.frame(et)) names(et) else character(0)
   miss <- setdiff(req, have)
   if (length(miss) > 0) {
@@ -179,4 +183,33 @@ print.fmri_preflight <- function(x, ...) {
     }
   }
   invisible(x)
+}
+
+#' Collect symbols that appear only inside feature() calls.
+#'
+#' These are sampled series (or feature options), not event-table columns.
+#'
+#' @keywords internal
+#' @noRd
+.formula_feature_vars <- function(expr) {
+  if (inherits(expr, "formula")) {
+    expr <- expr[[length(expr)]]
+  }
+  vars <- character(0)
+  rec <- function(e) {
+    if (!is.call(e)) {
+      return(invisible())
+    }
+    fname <- as.character(e[[1L]])[1L]
+    if (identical(fname, "feature")) {
+      vars <<- c(vars, all.vars(e))
+      return(invisible())
+    }
+    if (length(e) > 1L) {
+      lapply(as.list(e)[-1L], rec)
+    }
+    invisible()
+  }
+  rec(expr)
+  unique(vars)
 }

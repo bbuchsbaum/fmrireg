@@ -2,8 +2,6 @@
 
 utils::globalVariables(c(
   "xf", # <estimate_hrf>
-  "index", # <cells.fmri_model>
-  "type", # <cells.fmri_model>
   ".", # <reshape_coef>
   "row_id", # <reshape_coef>
   "name", # <meta_contrasts>

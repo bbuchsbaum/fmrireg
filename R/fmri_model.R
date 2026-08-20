@@ -165,10 +165,28 @@ terms.fmri_model <- function(x, ...) {
 
 #' @export
 #' @autoglobal
+cells.event_model <- function(x, ...) {
+  eterms <- terms(x)
+  if (length(eterms) == 0L) {
+    return(tibble::tibble())
+  }
+  parts <- lapply(eterms, function(term) tibble::as_tibble(cells(term, ...)))
+  dplyr::bind_rows(parts)
+}
+
+#' @export
+#' @autoglobal
 cells.fmri_model <- function(x, ...) {
-  c1 <- cells(x$event_model) %>% dplyr::mutate(type = "event")
-  c2 <- cells(x$baseline_model) %>% dplyr::mutate(type = "baseline")
-  rbind(c1, c2) %>% dplyr::relocate(index, type)
+  c1 <- tibble::as_tibble(cells(x$event_model, ...))
+  if (nrow(c1) > 0L) c1$type <- "event"
+  c2 <- tibble::as_tibble(cells(x$baseline_model, ...))
+  if (nrow(c2) > 0L) c2$type <- "baseline"
+  out <- dplyr::bind_rows(c1, c2)
+  cols <- intersect(c("index", "type"), names(out))
+  if (length(cols) > 0L) {
+    out <- dplyr::relocate(out, dplyr::all_of(cols))
+  }
+  out
 }
 
 #' @export

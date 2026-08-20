@@ -35,7 +35,9 @@ that file-backed scans exist on disk.
 The design-column check uses \code{all.vars()} on the formula, so it is
 deliberately conservative: a formula with a variable-valued HRF argument
 (e.g. \code{hrf(x, basis = my_basis)}) may flag \code{my_basis} as a missing
-column. Event tables supplied as file paths are not yet validated here.
+column. Arguments of \code{feature()} are excluded, because those series live
+in the formula environment rather than the event table. Event tables supplied
+as file paths are not yet validated here.
 }
 \examples{
 tmpl <- fmri_template(onset ~ hrf(condition), ~ run)
