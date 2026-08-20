@@ -39,13 +39,23 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
   
   autocor <- match.arg(autocor)
   assert_that(inherits(dataset, "latent_dataset"))
-  
-  model <- create_fmri_model(formula, block, baseline_model,dataset, drop_empty=drop_empty)
-  # The new fmri_lm function handles all these options
+  if (autocor %in% c("auto", "arma")) {
+    stop("`fmri_latent_lm()` does not implement autocor = '", autocor,
+         "'; choose 'none', 'ar1', or 'ar2'.", call. = FALSE)
+  }
+  robust_type <- if (isTRUE(robust)) "huber" else if (identical(robust, FALSE)) {
+    "none"
+  } else {
+    .fmri_lm_normalize_robust_options(robust = robust)$type
+  }
+  control <- fmri_lm_control(
+    estimation = estimation_spec("joint"),
+    noise = noise_spec(if (autocor == "none") "iid" else autocor),
+    robust = robust_spec(if (identical(robust_type, FALSE)) "none" else robust_type)
+  )
   ret <- fmri_lm(formula, block, baseline_model=baseline_model, dataset=dataset,
-                 durations=durations, drop_empty=drop_empty, 
-                 strategy="chunkwise", nchunks=1,
-                 robust=robust)
+                 durations=durations, drop_empty=drop_empty,
+                 control = control, compute = compute_spec(voxel_chunks = 1L))
 
   ret$dataset <- dataset
   class(ret) <- c("fmri_latent_lm", class(ret))

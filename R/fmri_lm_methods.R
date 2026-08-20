@@ -138,21 +138,32 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
     return(tibble::tibble())
   }
 
-  key_cols <- switch(block,
-    betas = c("estimate", "se", "stat", "prob", "sigma"),
-    contrasts = c("estimate", "se", "stat", "prob", "sigma")
-  )
+  # sigma is solver-specific metadata, not a statistic needed by tidy().
+  # In particular, runwise meta-estimation returns the four inferential
+  # matrices below without a sigma column.
+  key_cols <- c("estimate", "se", "stat", "prob")
 
   if (!all(key_cols %in% names(nested))) {
     stop("Unexpected structure in nested statistics table", call. = FALSE)
   }
 
   cols <- lapply(key_cols, function(nm) {
-    mats <- nested[[nm]]
-    if (length(mats) == 0 || is.null(mats[[1]])) {
-      NULL
+    values <- nested[[nm]]
+    if (length(values) == 0L) {
+      return(NULL)
+    }
+
+    # Beta statistics are normally stored as a one-element list-column of
+    # matrices. Contrast statistics are normally atomic vectors, but some
+    # backends use the same list-column representation. Normalize both forms
+    # without discarding matrix dimensions.
+    if (is.list(values)) {
+      if (length(values) != 1L || is.null(values[[1L]])) {
+        return(NULL)
+      }
+      values[[1L]]
     } else {
-      mats[[1]]
+      values
     }
   })
   names(cols) <- key_cols
@@ -178,6 +189,14 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
   stat_mat <- as.matrix(mats$stat)
   prob_mat <- as.matrix(mats$prob)
 
+  stat_dims <- lapply(
+    list(estimate = estimate_mat, se = se_mat, stat = stat_mat, prob = prob_mat),
+    dim
+  )
+  if (!all(vapply(stat_dims[-1L], identical, logical(1), stat_dims[[1L]]))) {
+    stop("Estimate, SE, statistic, and p-value layouts do not agree", call. = FALSE)
+  }
+
   add_names <- function(target, reference) {
     if (is.null(colnames(target)) && !is.null(colnames(reference))) {
       colnames(target) <- colnames(reference)
@@ -191,7 +210,20 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
   estimate_mat <- add_names(estimate_mat, stat_mat)
 
   if (is.null(colnames(estimate_mat))) {
-    colnames(estimate_mat) <- paste0("term", seq_len(ncol(estimate_mat)))
+    design_names <- tryCatch(
+      colnames(design_matrix(model$model)),
+      error = function(e) NULL
+    )
+    colind <- block$colind[[1L]] %||% NULL
+    if (!is.null(colind) && length(colind) == ncol(estimate_mat) &&
+        length(design_names) >= max(colind)) {
+      design_names <- design_names[colind]
+    }
+    if (length(design_names) == ncol(estimate_mat)) {
+      colnames(estimate_mat) <- design_names
+    } else {
+      colnames(estimate_mat) <- paste0("term", seq_len(ncol(estimate_mat)))
+    }
   }
   se_mat <- add_names(se_mat, estimate_mat)
   stat_mat <- add_names(stat_mat, estimate_mat)
@@ -220,13 +252,24 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
   result <- tibble::tibble(
     voxel = rep(seq_len(n_vox), each = length(term_names)),
     term = rep(term_names, times = n_vox),
-    estimate = as.vector(as.matrix(estimate_df)),
-    std_error = as.vector(as.matrix(se_df)),
-    statistic = as.vector(as.matrix(stat_df)),
-    p_value = as.vector(as.matrix(prob_df))
+    # Labels enumerate all terms within a voxel. R matrices flatten by column,
+    # so transpose first to preserve that row-major semantic order.
+    estimate = as.vector(t(as.matrix(estimate_df))),
+    std_error = as.vector(t(as.matrix(se_df))),
+    statistic = as.vector(t(as.matrix(stat_df))),
+    p_value = as.vector(t(as.matrix(prob_df)))
   )
 
-  if (!is.null(block$df.residual)) {
+  inference_df <- model$result$df$inference %||% NULL
+  if (!is.null(inference_df)) {
+    if (length(inference_df) == 1L) inference_df <- rep(inference_df, n_vox)
+    if (length(inference_df) == n_vox) {
+      result$df_inference <- rep(as.numeric(inference_df), each = length(term_names))
+    }
+  }
+  if (!is.null(model$result$df$nominal)) {
+    result$df_residual <- rep(as.numeric(model$result$df$nominal)[1L], nrow(result))
+  } else if (!is.null(block$df.residual)) {
     result$df_residual <- rep(block$df.residual[1], nrow(result))
   }
 
@@ -256,7 +299,9 @@ print.fmri_lm <- function(x, ...) {
   cli::cli_h2("Model Information")
   cli::cli_ul()
   cli::cli_li("Dataset: {.field {class(x$dataset)[1]}}")
-  cli::cli_li("Strategy: {.field {attr(x, 'strategy')}}")
+  scope <- attr(x, "requested_control")$estimation$scope %||%
+    attr(x, "config")$estimation$scope %||% attr(x, "strategy")
+  cli::cli_li("Estimation scope: {.field {scope}}")
   
   # Design info
   n_events <- length(x$result$event_indices)
@@ -269,8 +314,18 @@ print.fmri_lm <- function(x, ...) {
   cli::cli_li("Voxels analyzed: {.val {n_voxels}}")
   
   # Degrees of freedom
-  df_resid <- x$result$betas$df.residual[1]
-  cli::cli_li("Residual df: {.val {df_resid}}")
+  df_values <- as.numeric(x$result$df$inference %||% x$result$betas$df.residual[1])
+  df_values <- df_values[is.finite(df_values)]
+  if (length(df_values)) {
+    df_label <- if (length(unique(df_values)) == 1L) {
+      format(df_values[[1L]], digits = 5L)
+    } else {
+      sprintf("%s to %s", format(min(df_values), digits = 5L),
+              format(max(df_values), digits = 5L))
+    }
+    df_method <- x$result$df$method %||% "residual"
+    cli::cli_li("Inference df ({.field {df_method}}): {.val {df_label}}")
+  }
   cli::cli_end()
   
   # Contrasts info if available
@@ -303,17 +358,20 @@ print.fmri_lm <- function(x, ...) {
     cli::cli_ul()
     
     # AR info
-    if (cfg$ar$struct != "iid") {
-      cli::cli_li("AR structure: {.field {cfg$ar$struct}}")
-      if (cfg$ar$global) cli::cli_li("AR scope: {.emph global}")
-      if (cfg$ar$voxelwise) cli::cli_li("AR estimation: {.emph voxelwise}")
+    noise <- cfg$noise %||% cfg$ar
+    if (noise$struct != "iid") {
+      cli::cli_li("AR structure: {.field {noise$struct}}")
+      cli::cli_li("Noise pooling: {.field {noise$pooling %||% 'run'}}")
+      if (noise$voxelwise) cli::cli_li("AR estimation: {.emph voxelwise}")
     }
     
     # Robust info
-    if (cfg$robust$type != FALSE) {
+    if (.fmri_lm_robust_enabled(cfg$robust)) {
       cli::cli_li("Robust method: {.field {cfg$robust$type}}")
       cli::cli_li("Robust tuning: {.val {cfg$robust$c_tukey}}")
     }
+    cli::cli_li("Variance: {.field {cfg$variance$method}}")
+    cli::cli_li("Reference df: {.field {cfg$variance$df}}")
     cli::cli_end()
   }
   
@@ -452,12 +510,12 @@ coef_image.fmri_lm <- function(object, coef = 1,
   } else if (type == "contrasts") {
     ct <- object$result$contrasts
     simple <- ct[ct$type == "contrast", , drop = FALSE]
-    values <- simple$data[[idx]][[element]][[1]]
+    values <- as.vector(simple$data[[idx]][[element]])
   } else {
     # F-contrasts
     ct <- object$result$contrasts
     fcons <- ct[ct$type == "Fcontrast", , drop = FALSE]
-    values <- fcons$data[[idx]][[element]][[1]]
+    values <- as.vector(fcons$data[[idx]][[element]])
   }
 
   # ---- reconstruct spatial image if possible ----

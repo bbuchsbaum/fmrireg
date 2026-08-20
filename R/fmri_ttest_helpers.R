@@ -88,6 +88,28 @@ paired_diff_block <- function(blkA, blkB, rho = 0) {
 }
 
 .fmri_ttest_materialize_effects <- function(gd, context = "analysis") {
+  if (inherits(gd, c("gds", "gds_plan", "group_data_gds"))) {
+    resolved <- if (inherits(gd, "gds_plan")) fmrigds::compute(gd) else gd
+    beta <- .gds_safe_assay(resolved, "beta")
+    if (is.null(beta)) {
+      stop(
+        sprintf("gds-backed group data are missing beta values for %s", context),
+        call. = FALSE
+      )
+    }
+    beta_first <- if (length(dim(beta)) == 3L) {
+      matrix(
+        beta[, , 1L],
+        nrow = dim(beta)[1L],
+        ncol = dim(beta)[2L],
+        dimnames = dimnames(beta)[1:2]
+      )
+    } else {
+      as.matrix(beta)
+    }
+    return(t(beta_first))
+  }
+
   if (inherits(gd, "group_data_nifti")) {
     dat_full <- read_nifti_full(gd)
     if (is.null(dat_full$beta)) {

@@ -1,6 +1,100 @@
+.fmri_lm_noise_from_legacy <- function(ar_options) {
+  if (inherits(ar_options, "fmri_lm_noise_spec")) return(ar_options)
+  ar_options <- ar_options %||% list()
+  .fmri_lm_check_keys(
+    ar_options,
+    c("struct", "p", "q", "iter_gls", "global", "voxelwise", "exact_first",
+      "censor", "by_cluster", "order", "shrink_c0", "cor_struct", "iter"),
+    "ar_options"
+  )
+  struct <- ar_options$struct %||% ar_options$cor_struct
+  order <- ar_options$order
+  if (is.null(struct) && !is.null(order)) {
+    order <- .fmri_lm_number(order, "ar_options$order", lower = 0, integer = TRUE)
+    struct <- if (order == 0L) "iid" else if (order == 1L) "ar1" else if (order == 2L) "ar2" else "arp"
+  }
+  struct <- struct %||% "iid"
+  if (identical(struct, "none")) struct <- "iid"
+  p <- ar_options$p
+  if (is.null(p) && identical(struct, "arp")) p <- order
+  global <- ar_options$global %||% FALSE
+  by_cluster <- ar_options$by_cluster %||% FALSE
+  global <- .fmri_lm_flag(global, "ar_options$global")
+  by_cluster <- .fmri_lm_flag(by_cluster, "ar_options$by_cluster")
+  if (global && by_cluster) {
+    stop("`ar_options$global` and `ar_options$by_cluster` cannot both be TRUE.",
+         call. = FALSE)
+  }
+  noise_spec(
+    struct = struct,
+    p = p,
+    q = ar_options$q %||% 0L,
+    iter_gls = ar_options$iter_gls %||% ar_options$iter %||% 1L,
+    pooling = if (by_cluster) "parcel" else if (global) "global" else "run",
+    voxelwise = ar_options$voxelwise %||% FALSE,
+    exact_first = ar_options$exact_first %||% FALSE,
+    censor = ar_options$censor,
+    shrink_c0 = ar_options$shrink_c0 %||% 100L
+  )
+}
+
+.fmri_lm_robust_from_legacy <- function(robust_options) {
+  if (inherits(robust_options, "fmri_lm_robust_spec")) return(robust_options)
+  robust_options <- robust_options %||% list()
+  .fmri_lm_check_keys(
+    robust_options,
+    c("type", "k_huber", "c_tukey", "max_iter", "scale_scope", "reestimate_phi"),
+    "robust_options"
+  )
+  type <- robust_options$type %||% "none"
+  if (identical(type, FALSE) || identical(type, "FALSE")) type <- "none"
+  if (identical(type, TRUE)) type <- "huber"
+  scale_scope <- robust_options$scale_scope %||% "run"
+  if (identical(scale_scope, "local")) scale_scope <- "voxel"
+  robust_spec(
+    type = type,
+    k_huber = robust_options$k_huber %||% 1.345,
+    c_tukey = robust_options$c_tukey %||% 4.685,
+    max_iter = robust_options$max_iter %||% 2L,
+    scale_scope = scale_scope,
+    reestimate_phi = robust_options$reestimate_phi %||% FALSE
+  )
+}
+
+.fmri_lm_weights_from_legacy <- function(options) {
+  if (inherits(options, "fmri_lm_weights_spec")) return(options)
+  options <- options %||% list()
+  .fmri_lm_check_keys(options, c("enabled", "method", "threshold", "weights"),
+                      "volume_weights_options")
+  enabled <- options$enabled %||% FALSE
+  enabled <- .fmri_lm_flag(enabled, "volume_weights_options$enabled")
+  method <- if (enabled) options$method %||% "inverse_squared" else "none"
+  weights_spec(method = method, threshold = options$threshold %||% 1.5,
+               values = options$weights)
+}
+
+.fmri_lm_projection_from_legacy <- function(options) {
+  if (inherits(options, "fmri_lm_projection_spec")) return(options)
+  options <- options %||% list()
+  .fmri_lm_check_keys(
+    options,
+    c("enabled", "nuisance_mask", "nuisance_matrix", "lambda", "warn_redundant"),
+    "soft_subspace_options"
+  )
+  enabled <- options$enabled %||% FALSE
+  enabled <- .fmri_lm_flag(enabled, "soft_subspace_options$enabled")
+  projection_spec(
+    method = if (enabled) "soft_subspace" else "none",
+    nuisance_mask = options$nuisance_mask,
+    nuisance_matrix = options$nuisance_matrix,
+    lambda = options$lambda %||% "auto",
+    warn_redundant = options$warn_redundant %||% TRUE
+  )
+}
+
 #' Configuration for fmri_lm fitting
 #'
-#' `fmri_lm_control()` creates an `fmri_lm_config` object collecting all
+#' `fmri_lm_control()` creates an `fmri_lm_control` object collecting all
 #' options for robust and autoregressive modelling. It validates inputs and
 #' applies defaults so downstream functions receive a single structured list.
 #'
@@ -21,7 +115,7 @@
 #'   For simple cases, use the \code{volume_weights} parameter in \code{fmri_lm()} instead.
 #' @param soft_subspace_options list of soft subspace projection options. See Details.
 #'   For simple cases, use the \code{nuisance_projection} parameter in \code{fmri_lm()} instead.
-#' @return An object of class `fmri_lm_config`.
+#' @return An object of class `fmri_lm_control`.
 #' @details
 #' `robust_options` may contain:
 #'   * `type` (`FALSE`, "huber", "bisquare")
@@ -65,140 +159,109 @@
 #' `nuisance_projection`, `enabled` is set automatically. When constructing a
 #' `soft_subspace_options` list directly, set `enabled = TRUE` yourself.
 #'
-#' @export
-fmri_lm_control <- function(robust_options = list(),
-                            ar_options = list(),
-                            volume_weights_options = list(),
-                            soft_subspace_options = list(),
+#' @noRd
+.fmri_lm_control_legacy <- function(estimation = NULL,
+                            noise = NULL,
+                            robust = NULL,
+                            variance = NULL,
+                            weights = NULL,
+                            projection = NULL,
+                            robust_options = NULL,
+                            ar_options = NULL,
+                            volume_weights_options = NULL,
+                            soft_subspace_options = NULL,
                             na_action = c("error", "propagate")) {
-  # Missing-data policy for non-finite (NA/NaN/Inf) values in the response:
-  #   "error"     - fail fast (default); scattered NA in fMRI data is usually a
-  #                 data-quality problem, not something to silently fit through.
-  #   "propagate" - fit voxels containing non-finite values as NA coefficients
-  #                 (per-voxel surfacing; realised on the fast path).
   na_action <- match.arg(na_action)
 
-  # Handle NULL inputs
-  if (is.null(robust_options)) robust_options <- list()
-  if (is.null(ar_options)) ar_options <- list()
-  if (is.null(volume_weights_options)) volume_weights_options <- list()
-  if (is.null(soft_subspace_options)) soft_subspace_options <- list()
-  
-  # defaults for robust fitting
-  default_robust <- list(
-    type = FALSE,
-    k_huber = 1.345,
-    c_tukey = 4.685,
-    max_iter = 2L,
-    scale_scope = "run",
-    reestimate_phi = FALSE
+  conflicts <- c(
+    noise = !is.null(noise) && !is.null(ar_options),
+    robust = !is.null(robust) && !is.null(robust_options),
+    weights = !is.null(weights) && !is.null(volume_weights_options),
+    projection = !is.null(projection) && !is.null(soft_subspace_options)
   )
-  robust <- utils::modifyList(default_robust, robust_options)
-
-  tryCatch({
-    robust$type <- match.arg(as.character(robust$type),
-                             choices = c("FALSE", "huber", "bisquare"))
-  }, error = function(e) {
-    stop("Invalid robust_psi/type. Must be one of: FALSE, 'huber', 'bisquare'")
-  })
-  if (identical(robust$type, "FALSE")) robust$type <- FALSE
-  robust$scale_scope <- match.arg(robust$scale_scope, c("run", "global", "voxel", "local"))
-  if (identical(robust$scale_scope, "local")) robust$scale_scope <- "voxel"
-  stopifnot(is.numeric(robust$k_huber), is.numeric(robust$c_tukey))
-  stopifnot(is.numeric(robust$max_iter))
-  # Check max_iter even if robust is FALSE - parameter validation should always occur
-  if (robust$max_iter < 1) {
-    stop("robust_max_iter must be at least 1")
+  if (any(conflicts)) {
+    stop("Canonical specs cannot be combined with their legacy option lists: ",
+         paste(names(conflicts)[conflicts], collapse = ", "), ".", call. = FALSE)
   }
-  stopifnot(is.logical(robust$reestimate_phi), length(robust$reestimate_phi) == 1)
 
-  # defaults for autoregressive modelling
-  default_ar <- list(
-    struct = "iid",
-    p = NULL,
-    iter_gls = 1L,
-    global = FALSE,
-    voxelwise = FALSE,
-    exact_first = FALSE,
-    censor = NULL
+  estimation <- estimation %||% estimation_spec()
+  noise <- noise %||% .fmri_lm_noise_from_legacy(ar_options)
+  robust <- robust %||% .fmri_lm_robust_from_legacy(robust_options)
+  variance <- variance %||% variance_spec()
+  weights <- weights %||% .fmri_lm_weights_from_legacy(volume_weights_options)
+  projection <- projection %||% .fmri_lm_projection_from_legacy(soft_subspace_options)
+
+  expected <- list(
+    estimation = "fmri_lm_estimation_spec", noise = "fmri_lm_noise_spec",
+    robust = "fmri_lm_robust_spec", variance = "fmri_lm_variance_spec",
+    weights = "fmri_lm_weights_spec", projection = "fmri_lm_projection_spec"
   )
-  ar <- utils::modifyList(default_ar, ar_options)
-
-  ar$struct <- match.arg(ar$struct, c("iid", "ar1", "ar2", "arp"))
-  if (!is.null(ar$p)) stopifnot(is.numeric(ar$p), ar$p >= 1)
-  # Validate that p is provided when struct is "arp"
-  if (ar$struct == "arp" && is.null(ar$p)) {
-    stop("p must be specified in ar_options when struct is 'arp'")
-  }
-  stopifnot(is.numeric(ar$iter_gls), ar$iter_gls >= 0)
-  stopifnot(is.logical(ar$global), length(ar$global) == 1)
-  stopifnot(is.logical(ar$voxelwise), length(ar$voxelwise) == 1)
-  stopifnot(is.logical(ar$exact_first), length(ar$exact_first) == 1)
-  # Validate censor: NULL, "auto", integer vector, or logical vector
-
-  if (!is.null(ar$censor)) {
-    if (is.character(ar$censor)) {
-      ar$censor <- match.arg(ar$censor, "auto")
-    } else if (!is.numeric(ar$censor) && !is.logical(ar$censor)) {
-      stop("ar_options$censor must be NULL, 'auto', an integer vector, or a logical vector")
+  values <- list(estimation = estimation, noise = noise, robust = robust,
+                 variance = variance, weights = weights, projection = projection)
+  for (nm in names(expected)) {
+    if (!inherits(values[[nm]], expected[[nm]])) {
+      stop(sprintf("`%s` must be created by `%s_spec()`.", nm,
+                   sub("fmri_lm_", "", sub("_spec$", "", expected[[nm]]))),
+           call. = FALSE)
     }
   }
 
-  # defaults for volume weighting
-  default_volume_weights <- list(
-    enabled = FALSE,
-    method = "inverse_squared",
-    threshold = 1.5,
-    weights = NULL
+  structure(
+    c(values, list(
+      # Temporary compatibility aliases used by the existing fitting kernels.
+      ar = noise,
+      volume_weights = weights,
+      soft_subspace = projection,
+      na_action = na_action,
+      schema_version = 2L
+    )),
+    class = "fmri_lm_control"
   )
-  volume_weights <- utils::modifyList(default_volume_weights, volume_weights_options)
+}
 
-  stopifnot(is.logical(volume_weights$enabled), length(volume_weights$enabled) == 1)
-  volume_weights$method <- match.arg(volume_weights$method,
-                                      c("inverse_squared", "soft_threshold", "tukey"))
-  stopifnot(is.numeric(volume_weights$threshold), volume_weights$threshold > 0)
-  if (!is.null(volume_weights$weights)) {
-    stopifnot(is.numeric(volume_weights$weights))
+#' Configure an fMRI linear model
+#'
+#' `fmri_lm_control()` is the single statistical configuration boundary for
+#' [fmri_lm()]. Each section is a validated typed specification; mechanical
+#' choices such as chunking and parallelism belong in [compute_spec()].
+#'
+#' @param estimation An [estimation_spec()].
+#' @param noise A [noise_spec()].
+#' @param robust A [robust_spec()].
+#' @param variance A [variance_spec()].
+#' @param weights A [weights_spec()].
+#' @param projection A [projection_spec()].
+#' @param na_action Either `"error"` or `"propagate"`.
+#' @param ... Transitional legacy option lists retained for one compatibility
+#'   window. New code should use the typed sections above.
+#' @return An object of class `fmri_lm_control`.
+#' @export
+fmri_lm_control <- function(estimation = NULL,
+                            noise = NULL,
+                            robust = NULL,
+                            variance = NULL,
+                            weights = NULL,
+                            projection = NULL,
+                            na_action = c("error", "propagate"), ...) {
+  legacy_dots <- list(...)
+  if (length(legacy_dots) &&
+      (is.null(names(legacy_dots)) || any(!nzchar(names(legacy_dots))))) {
+    stop("Every legacy control argument must be named.", call. = FALSE)
   }
-
-  # defaults for soft subspace projection
-  default_soft_subspace <- list(
-    enabled = FALSE,
-    nuisance_mask = NULL,
-    nuisance_matrix = NULL,
-    lambda = "auto",
-    warn_redundant = TRUE
+  do.call(
+    .fmri_lm_control_legacy,
+    c(list(estimation = estimation, noise = noise, robust = robust,
+           variance = variance, weights = weights, projection = projection,
+           na_action = na_action), legacy_dots)
   )
-  soft_subspace <- utils::modifyList(default_soft_subspace, soft_subspace_options)
-
-  stopifnot(is.logical(soft_subspace$enabled), length(soft_subspace$enabled) == 1)
-  stopifnot(is.logical(soft_subspace$warn_redundant), length(soft_subspace$warn_redundant) == 1)
-  if (soft_subspace$enabled) {
-    if (is.null(soft_subspace$nuisance_mask) && is.null(soft_subspace$nuisance_matrix)) {
-      stop("soft_subspace requires either nuisance_mask or nuisance_matrix when enabled")
-    }
-  }
-  # Validate lambda
-  if (!is.null(soft_subspace$lambda)) {
-    if (is.character(soft_subspace$lambda)) {
-      soft_subspace$lambda <- match.arg(soft_subspace$lambda, c("auto", "gcv"))
-    } else {
-      stopifnot(is.numeric(soft_subspace$lambda), soft_subspace$lambda >= 0)
-    }
-  }
-
-  cfg <- list(robust = robust, ar = ar,
-              volume_weights = volume_weights, soft_subspace = soft_subspace,
-              na_action = na_action)
-  class(cfg) <- "fmri_lm_config"
-  cfg
 }
 
 #' @export
-print.fmri_lm_config <- function(x, ...) {
-  cat("<fmri_lm_config>\n")
-  str(list(robust = x$robust, ar = x$ar,
-           volume_weights = x$volume_weights, soft_subspace = x$soft_subspace,
+print.fmri_lm_control <- function(x, ...) {
+  cat("<fmri_lm_control>\n")
+  str(list(estimation = x$estimation, noise = x$noise,
+           robust = x$robust, variance = x$variance,
+           weights = x$weights, projection = x$projection,
            na_action = x$na_action),
       give.attr = FALSE)
   invisible(x)

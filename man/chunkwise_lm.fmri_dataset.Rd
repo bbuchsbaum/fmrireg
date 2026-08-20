@@ -28,11 +28,11 @@
 
 \item{nchunks}{The number of chunks to divide the dataset into.}
 
-\item{cfg}{An \code{fmri_lm_config} object containing all fitting options.}
+\item{cfg}{An \code{fmri_lm_control} object containing all fitting options.}
 
 \item{verbose}{Logical. Whether to display progress messages (default is \code{FALSE}).}
 
-\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{FALSE}.}
+\item{use_fast_path}{Logical. If \code{TRUE}, use matrix-based computation for speed. Default is \code{TRUE}.}
 
 \item{progress}{Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.}
 

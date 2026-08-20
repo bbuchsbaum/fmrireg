@@ -30,17 +30,19 @@ fmri_rlm(
 \item{formula}{A model formula describing the event structure or an
 \code{fmri_model} object.}
 
-\item{block}{The model formula for block structure.}
+\item{block}{Formula describing run/block structure.}
 
-\item{baseline_model}{(Optional) A \code{baseline_model} object. Default is \code{NULL}.}
+\item{baseline_model}{Optional baseline/nuisance model.}
 
-\item{dataset}{An \code{fmri_dataset} object containing the time-series data.}
+\item{dataset}{An \code{fmri_dataset}. For an \code{fmri_model} method this may be
+omitted when the model already owns its dataset.}
 
-\item{durations}{A vector of event durations. Default is \code{0}.}
+\item{durations}{Event durations passed to model construction.}
 
-\item{drop_empty}{Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.}
+\item{drop_empty}{Remove empty factor levels during model construction.}
 
-\item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
+\item{strategy}{Fit runs separately and combine them, or fit a joint model
+partitioned into voxel chunks.}
 
 \item{nchunks}{Number of data chunks when strategy is "chunkwise". Default is 10.}
 

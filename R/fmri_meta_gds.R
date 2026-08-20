@@ -20,11 +20,8 @@
   weights <- match.arg(weights)
   if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
 
-  if (weights == "custom") {
-    if (is.null(weights_custom)) {
-      stop("weights='custom' requires 'weights_custom'", call. = FALSE)
-    }
-    stop("weights='custom' is not yet supported for gds-backed data; use weights='ivw' or 'equal'.", call. = FALSE)
+  if (weights == "custom" && is.null(weights_custom)) {
+    stop("weights='custom' requires 'weights_custom'", call. = FALSE)
   }
 
   # Map fmrireg weight names to fmrigds names
@@ -36,6 +33,18 @@
 
   # Keep fmrigds weighting semantics; custom weights are passed via options when supported
   gd <- data
+  first_contrast_matrix <- function(a) {
+    if (length(dim(a)) == 3L) {
+      matrix(
+        a[, , 1L],
+        nrow = dim(a)[1L],
+        ncol = dim(a)[2L],
+        dimnames = dimnames(a)[1:2]
+      )
+    } else {
+      as.matrix(a)
+    }
+  }
 
   reducer <- switch(method,
     fe   = "meta:fe_reg",
@@ -59,10 +68,71 @@
   beta_local <- se_local <- z_local <- p_local <- NULL
   tau2_local <- I2_local <- Q_local <- df_local <- NULL
 
-  if (length(an_try) > 0 && ("beta" %in% an_try) && ("se" %in% an_try) && !("var" %in% an_try)) {
+  if (!is.null(combine) && "t" %in% an_try) {
+    if (!identical(formula, ~ 1)) {
+      formula_terms <- stats::terms(formula)
+      if (length(attr(formula_terms, "term.labels")) > 0L ||
+          !isTRUE(attr(formula_terms, "intercept") == 1L)) {
+        stop("combine methods with t-statistics require intercept-only model (~ 1)",
+             call. = FALSE)
+      }
+    }
+    if (identical(weights, "ivw")) {
+      stop("Inverse-variance weighting is unavailable for t-only combination models; use equal or custom weights.",
+           call. = FALSE)
+    }
+    if (identical(tolower(combine), "fisher") && !identical(weights, "equal")) {
+      stop("Fisher combination supports equal weights only; use Lancaster for weighted p-value combination.",
+           call. = FALSE)
+    }
+
+    t_assay <- .gds_safe_assay(gcomp, "t")
+    df_assay <- .gds_safe_assay(gcomp, "df")
+    if (is.null(df_assay)) {
+      stop("t-statistics provided without 'df'; cannot combine", call. = FALSE)
+    }
+    t_mat <- t(first_contrast_matrix(t_assay))
+    df_mat <- t(first_contrast_matrix(df_assay))
+    if (!identical(dim(t_mat), dim(df_mat))) {
+      stop("t-statistic and df assays must have identical subject-by-feature dimensions.",
+           call. = FALSE)
+    }
+    custom <- if (identical(weights, "custom")) {
+      .fmri_ttest_validate_weights_custom(
+        weights_custom, nrow(t_mat), ncol(t_mat)
+      )
+    } else {
+      NULL
+    }
+    z_combined <- vapply(seq_len(ncol(t_mat)), function(j) {
+      feature_weights <- if (is.null(custom)) {
+        NULL
+      } else if (is.vector(custom)) {
+        custom
+      } else {
+        custom[, j]
+      }
+      combine_t_statistics(
+        matrix(t_mat[, j], ncol = 1L),
+        df = df_mat[, j],
+        method = tolower(combine),
+        weights = weights,
+        weights_custom = feature_weights
+      )[[1L]]
+    }, numeric(1))
+    beta_local <- matrix(z_combined, nrow = 1L)
+    se_local <- matrix(1, nrow = 1L, ncol = length(z_combined))
+    z_local <- beta_local
+    p_local <- 2 * stats::pnorm(abs(z_local), lower.tail = FALSE)
+    tau2_local <- I2_local <- Q_local <- df_local <-
+      rep(NA_real_, length(z_combined))
+    res <- NULL
+  } else if (length(an_try) > 0 && ("beta" %in% an_try) &&
+      (("se" %in% an_try) || ("var" %in% an_try))) {
     if (is.null(gcomp)) gcomp <- fmrigds::compute(gd)
     B <- fmrigds::assay(gcomp, "beta")
-    SE <- fmrigds::assay(gcomp, "se")
+    SE <- .gds_safe_assay(gcomp, "se")
+    VAR <- .gds_safe_assay(gcomp, "var")
     X <- .gds_safe_model_matrix(gd, formula, fallback_n = dim(B)[2])
     # Assume single contrast or loop across contrasts if present
     if (length(dim(B)) == 3L) {
@@ -71,8 +141,24 @@
       Kc <- 1L
     }
     # Fit per-contrast and then verify consistency; for Kc==1, just use directly
-    Y <- if (Kc == 1L) t(B[, , 1, drop = TRUE]) else t(B[, , 1])
-    V <- if (Kc == 1L) t((SE[, , 1, drop = TRUE])^2) else t((SE[, , 1])^2)
+    Y <- t(first_contrast_matrix(B))
+    V <- if (!is.null(VAR)) {
+      t(first_contrast_matrix(VAR))
+    } else {
+      t(first_contrast_matrix(SE)^2)
+    }
+    if (identical(weights, "equal")) {
+      V[] <- 1
+    } else if (identical(weights, "custom")) {
+      custom <- .fmri_ttest_validate_weights_custom(
+        weights_custom, nrow(V), ncol(V)
+      )
+      V <- if (is.vector(custom)) {
+        matrix(1 / custom, nrow = nrow(V), ncol = ncol(V))
+      } else {
+        1 / custom
+      }
+    }
     if (identical(return_cov, "tri") && method %in% c("pm","reml")) {
       res_fit <- fmrireg::fmri_meta_fit_cov(Y = Y, V = V, X = X, method = method, robust = robust,
                                             n_threads = getOption("fmrireg.num_threads", 0))
@@ -104,8 +190,12 @@
       Varr <- .gds_safe_assay(gcomp, 'var')
       SEa  <- .gds_safe_assay(gcomp, 'se')
       X <- .gds_safe_model_matrix(gd, formula, fallback_n = dim(B)[2])
-      Y <- t(B[, , 1, drop = TRUE])
-      V <- if (!is.null(Varr)) t(Varr[, , 1, drop = TRUE]) else t((SEa[, , 1, drop = TRUE])^2)
+      Y <- t(first_contrast_matrix(B))
+      V <- if (!is.null(Varr)) {
+        t(first_contrast_matrix(Varr))
+      } else {
+        t(first_contrast_matrix(SEa)^2)
+      }
       if (identical(return_cov, "tri") && method %in% c("pm","reml")) {
         rf <- fmrireg::fmri_meta_fit_cov(Y = Y, V = V, X = X, method = method, robust = robust,
                                           n_threads = getOption("fmrireg.num_threads", 0))
@@ -186,8 +276,12 @@
     SEa  <- .gds_safe_assay(gcomp_local, "se")
     n_subj <- dim(B)[2]
     X <- .gds_safe_model_matrix(gd, formula, fallback_n = n_subj)
-    Y <- t(B[, , 1, drop = TRUE])
-    V <- if (!is.null(Varr)) t(Varr[, , 1, drop = TRUE]) else t((SEa[, , 1, drop = TRUE])^2)
+    Y <- t(first_contrast_matrix(B))
+    V <- if (!is.null(Varr)) {
+      t(first_contrast_matrix(Varr))
+    } else {
+      t(first_contrast_matrix(SEa)^2)
+    }
     mf <- if (require_cov && method %in% c("pm","reml")) {
       fmrireg::fmri_meta_fit_cov(Y = Y, V = V, X = X, method = method, robust = robust,
                                  n_threads = getOption("fmrireg.num_threads", 0))
@@ -198,8 +292,10 @@
     manual_fit <<- mf
     mf
   }
-  diag_missing <- (method %in% c("dl","pm","reml") && is.null(tau2)) ||
-    is.null(I2) || is.null(Q) || is.null(Q_df)
+  diag_missing <- is.null(combine) && (
+    (method %in% c("dl", "pm", "reml") && is.null(tau2)) ||
+      is.null(I2) || is.null(Q) || is.null(Q_df)
+  )
   cov_manual <- NULL
   if (diag_missing || (identical(return_cov, "tri") && is.null(res))) {
     mf <- compute_manual_fit(require_cov = identical(return_cov, "tri"))
@@ -380,6 +476,104 @@
       estimate = t(con_est),
       se       = t(con_se),
       z        = if (!is.null(con_z)) t(con_z) else t(con_est / pmax(con_se, .Machine$double.eps))
+    )
+  }
+
+  # Reducer support for fit-time contrasts is backend-dependent. Compute the
+  # declared contrast directly from the same subject-level beta/variance data
+  # so the public fmri_meta(..., contrasts=) contract never silently degrades.
+  if (!is.null(contrasts)) {
+    if (!identical(combine, NULL)) {
+      stop("Fit-time coefficient contrasts are unavailable for t-only combination models.",
+           call. = FALSE)
+    }
+    if (identical(robust, "t")) {
+      stop("GDS-backed fit-time contrasts do not support robust = 't'.",
+           call. = FALSE)
+    }
+
+    gcomp_con <- gcomp %||% fmrigds::compute(gd)
+    beta_con <- .gds_safe_assay(gcomp_con, "beta")
+    var_con <- .gds_safe_assay(gcomp_con, "var")
+    se_con <- .gds_safe_assay(gcomp_con, "se")
+    if (is.null(beta_con) || (is.null(var_con) && is.null(se_con))) {
+      stop("Fit-time contrasts require beta plus variance or standard-error assays.",
+           call. = FALSE)
+    }
+    first_contrast <- function(a) {
+      if (length(dim(a)) == 3L) {
+        matrix(
+          a[, , 1L],
+          nrow = dim(a)[1L],
+          ncol = dim(a)[2L],
+          dimnames = dimnames(a)[1:2]
+        )
+      } else {
+        as.matrix(a)
+      }
+    }
+    Y_con <- t(first_contrast(beta_con))
+    V_con <- if (!is.null(var_con)) {
+      t(first_contrast(var_con))
+    } else {
+      t(first_contrast(se_con)^2)
+    }
+    if (identical(weights, "equal")) V_con[] <- 1
+
+    X_con <- .gds_safe_model_matrix(gd, formula, fallback_n = nrow(Y_con))
+    design_names <- colnames(X_con)
+    if (is.null(design_names) && ncol(X_con) == 1L) {
+      design_names <- "(Intercept)"
+      colnames(X_con) <- design_names
+    }
+    if (is.matrix(contrasts)) {
+      if (ncol(contrasts) != ncol(X_con)) {
+        stop("contrasts columns must match predictors", call. = FALSE)
+      }
+      if (!is.null(colnames(contrasts)) &&
+          !identical(colnames(contrasts), design_names)) {
+        stop("contrast matrix columns must exactly match design-matrix columns",
+             call. = FALSE)
+      }
+      Cmat <- t(contrasts)
+      contrast_names <- rownames(contrasts) %||%
+        paste0("contrast", seq_len(nrow(contrasts)))
+    } else if (is.numeric(contrasts)) {
+      if (!is.null(names(contrasts))) {
+        unknown <- setdiff(names(contrasts), design_names)
+        if (length(unknown)) {
+          stop("Unknown contrast coefficient(s): ", paste(unknown, collapse = ", "),
+               call. = FALSE)
+        }
+        weights_con <- setNames(numeric(ncol(X_con)), design_names)
+        weights_con[names(contrasts)] <- contrasts
+      } else if (length(contrasts) == ncol(X_con)) {
+        weights_con <- contrasts
+      } else {
+        stop("Unnamed contrast vector must have length equal to number of predictors",
+             call. = FALSE)
+      }
+      Cmat <- matrix(weights_con, ncol = 1L)
+      contrast_names <- "contrast1"
+    } else {
+      stop("Unsupported 'contrasts' type; provide a matrix or numeric vector",
+           call. = FALSE)
+    }
+
+    contrast_fit <- fmri_meta_fit_contrasts(
+      Y = Y_con,
+      V = V_con,
+      X = X_con,
+      Cmat = Cmat,
+      method = method,
+      robust = robust,
+      n_threads = n_threads
+    )
+    out$contrasts <- list(
+      names = contrast_names,
+      estimate = t(contrast_fit$c_beta),
+      se = t(contrast_fit$c_se),
+      z = t(contrast_fit$c_z)
     )
   }
 

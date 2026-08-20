@@ -12,14 +12,15 @@ Description: Provides tools for the analysis of functional magnetic resonance
 Encoding: UTF-8
 LazyData: false
 Depends:
-    R (>= 4.0.0)
+    R (>= 4.1.0)
 Imports:
-    fmriAR,
+    fmriAR (>= 0.3.3),
     fmrigds,
     fmridesign (>= 0.6.0),
     fmrihrf (>= 0.1.0),
     fmrilss (>= 0.1.0),
     stats,
+    splines,
     Matrix,
     MASS,
     RANN,
@@ -29,7 +30,6 @@ Imports:
     foreach,
     dplyr,
     ggplot2,
-    lazyeval,
     tidyr,
     robustbase,
     matrixStats,
@@ -61,6 +61,7 @@ Suggests:
     fmristore,
     knitr,
     rmarkdown,
+    albersdown,
     roxygen2,
     covr,
     gridExtra,
@@ -71,15 +72,15 @@ Suggests:
     forecast,
     future,
     shiny,
-    mgcv,
+    sandwich,
     progressr,
     pkgload,
     roxyglobals (>= 0.2.1),
     withr,
-    bidser,
-    jsonlite
+    bidser
 Remotes:
     bbuchsbaum/bidser,
+    bbuchsbaum/fmriAR,
     bbuchsbaum/fmristore,
     bbuchsbaum/fmrigds@f015b7c7fa5008e2435d269aeb1882a9aa24eaf0,
     anthonynorth/roxyglobals,

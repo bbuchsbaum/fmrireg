@@ -224,6 +224,28 @@ meta_contrasts <- function(conres_list) {
   .meta_contrasts_impl(conres_list, weighting = "inv_var")
 }
 
+#' Classify a response vector before voxelwise fitting
+#'
+#' Degenerate and non-finite responses are retained in their original voxel
+#' positions, but they do not enter covariance or test-statistic calculations.
+#' Keeping this classification in one helper makes the sequential and future
+#' execution paths obey the same contract.
+#'
+#' @keywords internal
+#' @noRd
+.fmri_lm_voxel_status <- function(y) {
+  if (any(!is.finite(y))) {
+    return("nonfinite")
+  }
+  if (all(y == 0)) {
+    return("all_zero")
+  }
+  if (length(y) < 2L || stats::var(y) <= .Machine$double.eps) {
+    return("constant")
+  }
+  "ok"
+}
+
 #' Beta statistics when each voxel has its own projection matrix
 #'
 #' Helper for voxelwise AR fitting where every voxel yields a distinct
@@ -246,6 +268,12 @@ beta_stats_matrix_voxelwise <- function(Betas, XtXinv_list, sigma, dfres,
 
   for (v in seq_len(V)) {
     XtXinv <- XtXinv_list[[v]]
+    if (is.null(XtXinv) ||
+        !is.matrix(XtXinv) ||
+        any(dim(XtXinv) != c(p, p)) ||
+        !is.finite(sigma[v])) {
+      next
+    }
     se_scal <- sqrt(diag(XtXinv))
 
     rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
@@ -311,9 +339,12 @@ fit_lm_contrasts_voxelwise <- function(Betas, sigma2, XtXinv_list,
     full_l <- matrix(0, nrow = 1, ncol = p)
     full_l[, colind] <- l
 
-    est <- se <- stat <- prob <- sigma_out <- numeric(V)
+    est <- se <- stat <- prob <- sigma_out <- rep(NA_real_, V)
 
     for (v in seq_len(V)) {
+      if (is.null(XtXinv_list[[v]]) || !is.finite(sigma2[v])) {
+        next
+      }
       rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
       res <- .fast_t_contrast(Betas[, v, drop = FALSE], sigma2[v],
                               XtXinv_list[[v]], full_l, dfres, rw, ar_order)
@@ -350,9 +381,12 @@ fit_lm_contrasts_voxelwise <- function(Betas, sigma2, XtXinv_list,
     full_L <- matrix(0, nrow = nrow(Cw), ncol = p)
     full_L[, colind] <- Cw
 
-    est <- se <- stat <- prob <- numeric(V)
+    est <- se <- stat <- prob <- rep(NA_real_, V)
 
     for (v in seq_len(V)) {
+      if (is.null(XtXinv_list[[v]]) || !is.finite(sigma2[v])) {
+        next
+      }
       rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
       res <- .fast_F_contrast(Betas[, v, drop = FALSE], sigma2[v],
                               XtXinv_list[[v]], full_L, dfres, rw, ar_order)

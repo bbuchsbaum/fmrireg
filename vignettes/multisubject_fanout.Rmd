@@ -18,12 +18,14 @@ resource_files:
 - albers-header.html
 
 vignette: |
-  %\VignetteIndexEntry{Running one model across many subjects} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{Running one model across many subjects}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}
 if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(family = params$family, preset = params$preset))
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", message = FALSE, warning = TRUE)
 ```
 
 ```{r albers-classes, echo=FALSE, results='asis'}
@@ -52,9 +54,10 @@ itself to parallel or cluster execution.
 
 `fmrireg` separates the part that is **invariant** (an `fmri_template`) from the
 part that **varies per subject** (a *binding*: that subject's data). Combining
-the two produces a small, serializable `fmri_job` -- a recipe that holds no voxel
-data and can be shipped to a worker (a `future`, or a node in an array job) that
-reconstructs the dataset, fits, and reduces.
+the two produces a serializable `fmri_job`. With file-backed bindings, the job
+stores paths rather than voxel data and is small enough to ship to a worker. An
+inline matrix binding embeds that matrix in the job; this is convenient for the
+runnable example below but is not the memory-efficient choice for a real study.
 
 The four pieces:
 
@@ -70,9 +73,10 @@ out (`write_results`) → group level (`collect_results` → `fmri_meta`).
 
 ## A minimal, runnable example
 
-Define the template once, describe two subjects as in-memory bindings, then fan
-the model out. (Real studies use file paths; in-memory `matrix_dataset` bindings
-keep this example fast.)
+Define the template once, describe two subjects as inline bindings, then fan
+the model out. The resulting jobs contain these small matrices. Real studies
+normally use file paths so jobs remain lightweight and workers open the imaging
+data lazily.
 
 ```{r minimal}
 # one subject's data as a binding
@@ -95,12 +99,20 @@ tmpl <- fmri_template(
   reducer  = reduce_betas()        # each subject -> a tidy beta table
 )
 
-# bind data -> jobs -> run
+# Bind data to jobs, validate locally, and only then fan out.
 jobs <- instantiate(tmpl, subjects)
+flight <- preflight(jobs)
+stopifnot(flight$ok, flight$n_jobs == 2L)
+
 res  <- run_jobs(jobs)
 res
 
 values <- batch_values(res)        # named by job id
+stopifnot(
+  length(batch_errors(res)) == 0L,
+  identical(names(values), c("sub-01", "sub-02")),
+  all(vapply(values, nrow, integer(1)) == 10L)
+)
 head(values[["sub-01"]])
 ```
 
@@ -147,10 +159,8 @@ structure.
 `preflight()` validates jobs on the driver -- design columns present, TR and run
 lengths consistent, confound dimensions correct -- so problems surface in
 seconds rather than on a compute node after the queue drains.
-
-```{r preflight}
-preflight(jobs)
-```
+The runnable workflow called it immediately after `instantiate()` and asserted
+`flight$ok` before `run_jobs()`. Keep that order in production code.
 
 ## Running: locally, in parallel, or on a cluster
 
@@ -176,10 +186,50 @@ export_jobs(jobs, "study/jobs")
 ```
 
 `run_one.R` reads the manifest, reconstructs job `i`, fits, and writes its
-reduced output. The job is a portable recipe, so the worker need only have
-`fmrireg` installed.
+reduced output. Each worker needs `fmrireg`, packages referenced by the template
+or custom reducer, access to every file-backed input path, and write access to
+the chosen output location. A serialized recipe does not make local paths or
+package dependencies portable by itself.
 
 ## Closing the loop: the group level
+
+The inline example can close the statistical loop immediately. Here we collect
+the condition-B estimate and SE for teaching voxel 1 from each completed job,
+then compute their inverse-variance fixed-effect mean. With only two simulated
+subjects this is a pipeline check, not a scientifically powered group study.
+
+```{r executable-group-handoff}
+reduced <- do.call(rbind, values)
+teaching_effects <- subset(
+  reduced,
+  term == "condition_condition.B" & voxel == 1L,
+  select = c(job_id, estimate, se)
+)
+teaching_effects$roi <- "teaching_voxel_1"
+teaching_effects$contrast <- "condition_B"
+
+gd_inline <- fmrireg::group_data(
+  teaching_effects,
+  format = "csv",
+  effect_cols = c(beta = "estimate", se = "se"),
+  subject_col = "job_id",
+  roi_col = "roi",
+  contrast_col = "contrast"
+)
+fm_inline <- fmri_meta(gd_inline, ~ 1, method = "fe", verbose = FALSE)
+group_summary <- data.frame(
+  target = "Condition B at teaching voxel 1",
+  subjects = nrow(teaching_effects),
+  estimate = as.numeric(fm_inline$coefficients[1, "(Intercept)"]),
+  std_error = as.numeric(fm_inline$se[1, "(Intercept)"])
+)
+stopifnot(
+  group_summary$subjects == 2L,
+  all(is.finite(as.matrix(group_summary[c("estimate", "std_error")])))
+)
+knitr::kable(group_summary, digits = 3,
+             caption = "Executable subject-to-group handoff")
+```
 
 With `reduce_write_results()`, each worker writes BIDS-keyed statistical maps.
 `collect_results()` gathers them back into a `group_data` object that
@@ -212,3 +262,8 @@ fm <- fmri_meta(gd, ~ 1, method = "fe")
   backend; `export_jobs()` emits a scheduler-agnostic runner for array jobs.
 - Reducers keep per-subject output compact; `collect_results()` →
   `fmri_meta()` close the loop at the group level.
+
+## Next
+
+- `vignette("group_analysis", package = "fmrireg")` — Combine subject-level estimates
+- `vignette("functional_connectivity", package = "fmrireg")` — Use a time series as a regressor

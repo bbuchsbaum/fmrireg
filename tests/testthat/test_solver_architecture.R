@@ -264,19 +264,19 @@ test_that("configuration validation catches errors", {
   # Invalid robust method
   expect_error(
     fmri_lm_control(robust_options = list(type = "invalid_method")),
-    "Invalid robust_psi|Invalid robust type"
+    "arg.*none.*huber.*bisquare"
   )
   
   # Basic configuration should work  
   config <- fmri_lm_control(ar_options = list(struct = "ar1"))
-  expect_true(inherits(config, "fmri_lm_config"))
+  expect_true(inherits(config, "fmri_lm_control"))
   
   # Another basic configuration should work
   config2 <- fmri_lm_control(
     robust_options = list(type = "huber"),
     ar_options = list(struct = "iid")
   )
-  expect_true(inherits(config2, "fmri_lm_config"))
+  expect_true(inherits(config2, "fmri_lm_control"))
 })
 
 test_that("solver preserves context structure", {

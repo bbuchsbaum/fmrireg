@@ -854,7 +854,7 @@ write_results.fmri_lm <- function(x,
       # Vectorized assignment using mask indices
       for (j in seq_along(available_stats)) {
         internal_stat_name <- mapped_stats[j]
-        stat_values <- contrast_data[[internal_stat_name]][[1]]
+        stat_values <- as.vector(contrast_data[[internal_stat_name]])
         if (length(stat_values) != n_mask_voxels) {
           stop(
             "Statistic '", available_stats[[j]], "' for contrast '", contrast_name,
@@ -933,7 +933,7 @@ write_results.fmri_lm <- function(x,
 
       for (j in seq_along(available_stats)) {
         internal_stat_name <- mapped_stats[j]
-        stat_values <- contrast_data[[internal_stat_name]][[1]]
+        stat_values <- as.vector(contrast_data[[internal_stat_name]])
         if (length(stat_values) != n_mask_voxels) {
           stop(
             "Statistic '", available_stats[[j]], "' for contrast '", contrast_name,
@@ -1077,6 +1077,28 @@ write_results.fmri_lm <- function(x,
 }
 
 
+.fmri_lm_bids_inference_metadata <- function(fit) {
+  vm <- fit$result$variance_model
+  if (!inherits(vm, "fmri_lm_variance_model")) return(NULL)
+  df <- as.numeric(vm$df_inference)
+  finite_df <- df[is.finite(df)]
+  list(
+    VarianceMethod = vm$method,
+    CovarianceScope = vm$covariance_scope,
+    DegreesOfFreedomMethod = vm$metadata$df_method %||% fit$result$df$method,
+    NominalDegreesOfFreedom = as.numeric(vm$df_nominal)[1L],
+    InferenceDegreesOfFreedom = list(
+      Min = if (length(finite_df)) min(finite_df) else NULL,
+      Max = if (length(finite_df)) max(finite_df) else NULL
+    ),
+    EstimationScope = vm$metadata$estimation_scope %||% NULL,
+    NoiseStructure = vm$metadata$noise$struct %||% NULL,
+    RobustMethod = vm$metadata$robust$type %||% NULL,
+    MaxLag = vm$metadata$selected_max_lag %||% NULL,
+    Taper = vm$metadata$taper %||% NULL
+  )
+}
+
 #' Save JSON Metadata for Betas
 #' @keywords internal
 #' @noRd
@@ -1105,6 +1127,7 @@ write_results.fmri_lm <- function(x,
       Formula = as.character(deparse(fmrilm_obj$model$event_model$model_spec$formula_or_list)),
       NumRegressors = as.integer(length(regressor_names))
     ),
+    Inference = .fmri_lm_bids_inference_metadata(fmrilm_obj),
     RegressorOrder = as.character(regressor_names),
     DataInfo = .image_data_info(output_formats, "arbitrary (depends on input data scaling)"),
     GeneratedBy = list(
@@ -1170,6 +1193,7 @@ write_results.fmri_lm <- function(x,
       Type = "General Linear Model",
       Formula = as.character(deparse(get_formula(fmrilm_obj$model)))
     ),
+    Inference = .fmri_lm_bids_inference_metadata(fmrilm_obj),
     ContrastOrder = contrast_names,
     ContrastDefinitions = contrast_definitions,
     DataInfo = .image_data_info(output_formats, .get_stat_units(stat)),
@@ -1223,6 +1247,7 @@ write_results.fmri_lm <- function(x,
       Type = "General Linear Model",
       Formula = as.character(deparse(get_formula(fmrilm_obj$model)))
     ),
+    Inference = .fmri_lm_bids_inference_metadata(fmrilm_obj),
     ContrastInfo = list(
       Name = contrast_name,
       Type = .extract_contrast_type(contrast_row, fmrilm_obj)
@@ -1356,18 +1381,19 @@ write_results.fmri_lm <- function(x,
 #' @keywords internal
 #' @noRd
 .extract_degrees_of_freedom <- function(fmrilm_obj) {
-  # Extract residual degrees of freedom
+  # Prefer the inference df actually used to compute the reported p-values.
+  # This may be voxel-specific and non-integer under Satterthwaite inference.
   df_resid <- NULL
 
   tryCatch({
-    # Check if df.residual is directly in the result structure
-    if (!is.null(fmrilm_obj$result$df.residual)) {
-      df_resid <- as.integer(fmrilm_obj$result$df.residual)
+    if (!is.null(fmrilm_obj$result$df$inference)) {
+      df_resid <- as.numeric(fmrilm_obj$result$df$inference)
+    } else if (!is.null(fmrilm_obj$result$df.residual)) {
+      df_resid <- as.numeric(fmrilm_obj$result$df.residual)
     } else if (!is.null(fmrilm_obj$result$betas) && "df.residual" %in% names(fmrilm_obj$result$betas)) {
-      # Check if it's in the betas data frame
-      df_resid <- as.integer(fmrilm_obj$result$betas$df.residual[1])
+      df_resid <- as.numeric(fmrilm_obj$result$betas$df.residual[1])
     } else if (!is.null(fmrilm_obj$result$contrasts) && "df.residual" %in% names(fmrilm_obj$result$contrasts)) {
-      df_resid <- as.integer(fmrilm_obj$result$contrasts$df.residual[1])
+      df_resid <- as.numeric(fmrilm_obj$result$contrasts$df.residual[1])
     }
   }, error = function(e) {
     # If extraction fails, leave NULL

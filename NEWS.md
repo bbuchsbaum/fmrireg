@@ -1,5 +1,92 @@
 # fmrireg 0.2.0
 
+## HRF Estimation
+
+* `estimate_hrf()` is now a vectorized, condition-level smooth FIR estimator.
+  It constructs an explicit event-aligned spline basis, removes baseline and
+  fixed nuisance designs once, fits all voxels with one penalized
+  multiresponse solve, and can choose a shared smoothing strength by
+  scale-normalized GCV. The new `fmri_hrf_estimate` result preserves curve and
+  voxel labels and provides standard errors, confidence intervals, `tidy()`,
+  `predict()`, `coef()`, and `as.matrix()` methods. This replaces a
+  voxel-by-voxel GAM path that treated convolved design values as if they were
+  post-stimulus time and failed before prediction.
+
+## Statistical Corrections
+
+* **AR degrees of freedom.** `fmri_lm()` no longer deflates the residual
+  degrees of freedom when an AR structure is used. The previous adjustment
+  multiplied `n - p` by `1 / (1 + 2 * sum(1 - k/n))`, which is the variance
+  inflation one would obtain if *every* autocorrelation equalled 1. It never
+  depended on the fitted AR coefficients — at `n = 200`, `p = 12`, AR(1) it
+  returned 62.9 whether the true autocorrelation was 0.05 or 0.9 — and it was
+  applied on top of prewhitening, double-counting a correction already made.
+
+  **This changes reported AR p-values.** They become less conservative;
+  degrees of freedom roughly triple for AR(1). The previous behaviour cost
+  statistical power rather than inflating false positives, so results that
+  were significant before remain significant, but p-values and any
+  power-sensitive analyses will differ from earlier versions.
+
+  `calculate_effective_df()` gains a working `method = "satterthwaite"`
+  (previously a verbatim duplicate of `method = "simple"`) that computes
+  `tr(RV)^2 / tr(RVRV)` from a supplied design and post-whitening covariance,
+  reducing exactly to `n - p` when the errors are uncorrelated. Residual
+  correlation surviving the filter is what legitimately costs degrees of
+  freedom; AR order by itself does not.
+
+## Bug Fixes
+
+* Oversized residual-bootstrap blocks now remain one contiguous temporal block
+  instead of silently becoming interleaved odd/even samples.
+* Mixed-model solver failures now warn and return `NA` coefficients rather than
+  plausible zeros; malformed response dimensions fail before solver dispatch.
+
+* `robust_psi` now has an effect. It was previously unreachable: `robust`
+  defaulted to `FALSE` rather than `NULL`, so `robust_options$type` was always
+  claimed before `robust_psi` was consulted. `robust`'s default is now `NULL`,
+  which also makes "unspecified" distinguishable from "explicitly off".
+* An explicit `robust = FALSE` is no longer silently overridden by
+  `robust_options = list(type = "huber")`; the combination is now an error.
+* Supplying `cfg` alongside other configuration arguments is now an error
+  instead of silently discarding them. Previously `cor_struct = "ar2"` with a
+  `cfg` naming `"iid"` ran IID without warning.
+* AR shorthands (`cor_struct`, `cor_iter`, `cor_global`, `ar1_exact_first`,
+  `ar_p`, `ar_voxelwise`) that disagree with the corresponding `ar_options`
+  entry now error rather than being silently dropped. Shorthands that agree
+  are still accepted.
+* `engine` now warns about the execution arguments it ignores (`strategy`,
+  `nchunks`, `use_fast_path`, `progress`, `parallel_voxels`,
+  `parallel_chunks`), which were previously accepted and silently discarded.
+* `compute_sandwich_variance()` computed its meat matrix as
+  `X' diag(e^4) X` instead of `X' diag(e^2) X`, giving standard errors about
+  3.5x too large. Both sandwich helpers are now checked against
+  `sandwich::vcovHC()`.
+
+## Performance
+
+* Voxelwise AR fitting no longer recomputes the run-level design projection
+  for every voxel. `.fast_preproject()` performs an `n x n` solve and was
+  being called once per voxel on a design that does not vary by voxel;
+  hoisting it gives roughly a 1.7x speedup on the voxelwise AR path
+  (4.95s to 2.98s for 2000 voxels at 300 timepoints).
+
+## Documentation
+
+* `ar_voxelwise` was documented as overriding `ar_options$voxelwise`. It never
+  did — the options list took precedence — and disagreement is now an error.
+* `use_fast_path` was documented as defaulting to `FALSE` in the runwise and
+  chunkwise fitters; it defaults to `TRUE`.
+* Corrected claims that sandwich variance estimation is applied automatically.
+  It is not used by any `fmri_lm()` fitting path; the robust path reports a
+  model-based weighted-least-squares variance. The accompanying degrees-of-
+  freedom formula was also wrong and has been rewritten.
+
+## Changes
+
+* `fmriAR` is now declared with a minimum version (`>= 0.3.3`) and listed in
+  `Remotes:`; it previously had neither.
+
 ## New Features
 
 * Reexported `feature()` (from fmridesign) and `feature_regressor()` (from

@@ -104,6 +104,21 @@ test_that("Fisher's method handles degrees of freedom and directional effects co
   expect_true(all(is.finite(z_extreme)), info = "Should handle extreme t-values without overflow")
   expect_true(all(z_extreme > 0), info = "Extreme positive t-values should give positive z")
   expect_true(z_extreme[2] > z_extreme[1], info = "Larger t-value should give larger combined z")
+
+  # Tail probabilities can underflow to exactly zero at the signal scale used
+  # by the group vignette.  Every combination method must saturate at a large,
+  # finite z-score rather than returning Inf through `qnorm(1 - p/2)`.
+  tmat_underflow <- matrix(1e6, nrow = 4, ncol = 2)
+  for (combination in c("stouffer", "fisher", "lancaster")) {
+    z_underflow <- combine_t_statistics(
+      tmat_underflow, df = rep(30, 4), method = combination
+    )
+    expect_true(
+      all(is.finite(z_underflow)),
+      info = paste(combination, "must remain finite when p-values underflow")
+    )
+    expect_true(all(z_underflow > 0))
+  }
   
   # Test another edge case: Equal opposing effects
   # This tests the tie-breaking logic when mean direction is exactly zero

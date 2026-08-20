@@ -204,7 +204,9 @@ combine_t_statistics <- function(tmat, df, method = c("stouffer", "fisher", "lan
     p_two[i, ] <- 2 * stats::pt(abs(ti), df = df[i], lower.tail = FALSE)
   }
   if (method == "stouffer") {
-    z_i <- stats::qnorm(pmax(1e-300, 1 - p_two/2)) * sign(tmat)
+    # Work in the upper tail directly.  Computing `1 - p/2` rounds to one
+    # for sufficiently small p-values and would turn a finite result into Inf.
+    z_i <- stats::qnorm(pmax(1e-300, p_two/2), lower.tail = FALSE) * sign(tmat)
     W <- matrix(1, nrow = nrow(tmat), ncol = ncol(tmat))
     if (weights == "ivw") {
       if (!is.null(se_mat)) {
@@ -244,7 +246,7 @@ combine_t_statistics <- function(tmat, df, method = c("stouffer", "fisher", "lan
     m <- colSums(is.finite(p_two))
     X2 <- -2 * colSums(log(p_two), na.rm = TRUE)
     p_comb <- stats::pchisq(X2, df = 2 * pmax(1L, m), lower.tail = FALSE)
-    zmag <- stats::qnorm(pmax(1e-300, 1 - p_comb/2))
+    zmag <- stats::qnorm(pmax(1e-300, p_comb/2), lower.tail = FALSE)
     sgn <- sign(colMeans(tmat, na.rm = TRUE))
     z_comb <- zmag * ifelse(sgn == 0, 1, sgn)
     return(z_comb)
@@ -298,12 +300,14 @@ combine_t_statistics <- function(tmat, df, method = c("stouffer", "fisher", "lan
     # Compute chi-square quantiles per subject/voxel
     Xj <- matrix(NA_real_, nrow = nrow(tmat), ncol = ncol(tmat))
     for (i in seq_len(nrow(tmat))) {
-      Xj[i, ] <- stats::qchisq(pmax(1e-300, 1 - p_two[i, ]), df = nu[i, ])
+      Xj[i, ] <- stats::qchisq(
+        pmax(1e-300, p_two[i, ]), df = nu[i, ], lower.tail = FALSE
+      )
     }
     Xsum <- colSums(Xj, na.rm = TRUE)
     nu_sum <- colSums(nu, na.rm = TRUE)
     p_comb <- stats::pchisq(Xsum, df = nu_sum, lower.tail = FALSE)
-    zmag <- stats::qnorm(pmax(1e-300, 1 - p_comb/2))
+    zmag <- stats::qnorm(pmax(1e-300, p_comb/2), lower.tail = FALSE)
     sgn <- sign(colMeans(tmat, na.rm = TRUE))
     z_comb <- zmag * ifelse(sgn == 0, 1, sgn)
     return(z_comb)

@@ -58,7 +58,7 @@ test_that("fmri_meta.gds returns cov_tri with correct size for multi-coef", {
   expect_equal(nrow(fit$cov$tri), tsize)
 })
 
-test_that("fmri_meta.gds rejects custom weights path", {
+test_that("fmri_meta.gds custom unit weights match equal weights", {
   skip_if_not_installed("fmrigds")
   gd_csv <- fmrireg:::.demo_group_data_csv()
   df <- gd_csv$data
@@ -68,14 +68,24 @@ test_that("fmri_meta.gds rejects custom weights path", {
     subject_col = "subject",
     roi_col = "roi"
   )
+  n_subjects <- length(unique(df$subject))
+  fit_equal <- fmri_meta(
+    gd_gds, weights = "equal", method = "fe", verbose = FALSE
+  )
+  fit_custom <- fmri_meta(
+    gd_gds, weights = "custom", weights_custom = rep(1, n_subjects),
+    method = "fe", verbose = FALSE
+  )
+  expect_identical(fit_custom$weights, "custom")
+  expect_equal(fit_custom$coefficients, fit_equal$coefficients, tolerance = 1e-10)
+  expect_equal(fit_custom$se, fit_equal$se, tolerance = 1e-10)
   expect_error(
-    fmri_meta(gd_gds, weights = "custom", weights_custom = rep(1, 5)),
-    "weights='custom' is not yet supported",
-    fixed = TRUE
+    fmri_meta(gd_gds, weights = "custom", weights_custom = rep(1, n_subjects + 1L)),
+    "weights_custom must be length S or SxP"
   )
 })
 
-test_that("fmri_ttest.gds rejects custom weights path", {
+test_that("fmri_ttest.gds custom weights match the declared meta estimator", {
   skip_if_not_installed("fmrigds")
   gd_csv <- fmrireg:::.demo_group_data_csv()
   df <- gd_csv$data
@@ -85,9 +95,25 @@ test_that("fmri_ttest.gds rejects custom weights path", {
     subject_col = "subject",
     roi_col = "roi"
   )
-  expect_error(
-    fmri_ttest(gd_gds, weights = "custom", weights_custom = rep(1, 5)),
-    "weights='custom' is not yet supported",
-    fixed = TRUE
+  n_subjects <- length(unique(df$subject))
+  fit_meta <- fmri_meta(
+    gd_gds, method = getOption("fmrireg.meta.method", "pm"),
+    weights = "custom", weights_custom = rep(1, n_subjects),
+    verbose = FALSE
+  )
+  fit_custom <- fmri_ttest(
+    gd_gds, engine = "meta", weights = "custom",
+    weights_custom = rep(1, n_subjects)
+  )
+  expect_identical(fit_custom$weights, "custom")
+  expect_identical(
+    fit_custom$method, getOption("fmrireg.meta.method", "pm")
+  )
+  expect_equal(fit_custom$beta, t(fit_meta$coefficients), tolerance = 1e-10)
+  expect_equal(fit_custom$se, t(fit_meta$se), tolerance = 1e-10)
+  expect_equal(
+    fit_custom$z,
+    t(fit_meta$coefficients / fit_meta$se),
+    tolerance = 1e-10
   )
 })

@@ -15,7 +15,8 @@ test_that("fmri_template constructs and validates", {
                         baseline = baseline_spec(degree = 3))
   expect_s3_class(tmpl, "fmri_template")
   expect_s3_class(tmpl$baseline, "baseline_spec")
-  expect_s3_class(tmpl$control, "fmri_lm_config")
+  expect_s3_class(tmpl$control, "fmri_lm_control")
+  expect_s3_class(tmpl$compute, "fmri_lm_compute_spec")
   expect_true(validate_template(tmpl))
   expect_error(fmri_template("not a formula", ~ run), "formula")
   expect_error(fmri_template(onset ~ hrf(condition), ~ run, baseline = list()),

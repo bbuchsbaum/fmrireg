@@ -1,10 +1,10 @@
-# Test fmri_lm_config and fmri_lm_control
+# Test fmri_lm_control and its transitional legacy adapter
 
 test_that("fmri_lm_control creates valid config objects", {
   # Default config
   cfg1 <- fmri_lm_control()
-  expect_s3_class(cfg1, "fmri_lm_config")
-  expect_equal(cfg1$robust$type, FALSE)
+  expect_s3_class(cfg1, "fmri_lm_control")
+  expect_equal(cfg1$robust$type, "none")
   expect_equal(cfg1$ar$struct, "iid")
   
   # Robust config
@@ -46,7 +46,7 @@ test_that("fmri_lm_control validates inputs", {
   # Invalid robust type
   expect_error(
     fmri_lm_control(robust_options = list(type = "invalid")),
-    "Must be one of"
+    "one of"
   )
   
   # Invalid AR struct
@@ -185,7 +185,7 @@ test_that("fmri_lm_control handles default values correctly", {
   cfg <- fmri_lm_control()
   
   # Robust defaults
-  expect_equal(cfg$robust$type, FALSE)
+  expect_equal(cfg$robust$type, "none")
   expect_true(is.list(cfg$robust))
   
   # AR defaults
@@ -205,7 +205,7 @@ test_that("fmri_lm_control merges options correctly", {
   
   cfg2 <- fmri_lm_control(ar_options = list(struct = "ar1"))
   expect_equal(cfg2$ar$struct, "ar1")
-  expect_equal(cfg2$robust$type, FALSE)  # Should keep default
+  expect_equal(cfg2$robust$type, "none")  # Should keep default
   
   # Test that explicitly provided options override defaults
   cfg3 <- fmri_lm_control(
@@ -221,12 +221,12 @@ test_that("fmri_lm_control merges options correctly", {
 test_that("fmri_lm_control handles edge cases", {
   # Empty lists should work (use defaults)
   cfg1 <- fmri_lm_control(robust_options = list(), ar_options = list())
-  expect_equal(cfg1$robust$type, FALSE)
+  expect_equal(cfg1$robust$type, "none")
   expect_equal(cfg1$ar$struct, "iid")
   
   # NULL options should work (use defaults)
   cfg2 <- fmri_lm_control(robust_options = NULL, ar_options = NULL)
-  expect_equal(cfg2$robust$type, FALSE)
+  expect_equal(cfg2$robust$type, "none")
   expect_equal(cfg2$ar$struct, "iid")
   
   # Mixed valid and invalid - valid should work
@@ -246,7 +246,7 @@ test_that("config object structure is consistent", {
   )
   
   # Should be proper S3 class
-  expect_s3_class(cfg, "fmri_lm_config")
+  expect_s3_class(cfg, "fmri_lm_control")
   
   # Should have expected structure
   expect_true(is.list(cfg))
@@ -291,7 +291,7 @@ test_that("robust estimator parameters are handled correctly", {
   
   # Test that non-robust estimation works
   cfg_no_robust <- fmri_lm_control(robust_options = list(type = FALSE))
-  expect_equal(cfg_no_robust$robust$type, FALSE)
+  expect_equal(cfg_no_robust$robust$type, "none")
 })
 
 test_that("AR model parameters are configured correctly", {

@@ -10,8 +10,8 @@ fmri_template(
   baseline = baseline_spec(),
   durations = 0,
   contrasts = NULL,
-  control = fmri_lm_control(),
-  strategy = c("runwise", "chunkwise"),
+  control = fmri_lm_control(estimation = estimation_spec("runwise_meta")),
+  compute = compute_spec(voxel_chunks = 1L),
   engine = NULL,
   engine_args = list(),
   reducer = NULL
@@ -29,10 +29,12 @@ fmri_template(
 \item{contrasts}{Optional contrast specification (e.g. from
 \code{contrast_set()}).}
 
-\item{control}{An \code{fmri_lm_config} from \code{\link[=fmri_lm_control]{fmri_lm_control()}} holding the
+\item{control}{An \code{fmri_lm_control} from \code{\link[=fmri_lm_control]{fmri_lm_control()}} holding the
 robust / AR / preprocessing options for fitting.}
 
-\item{strategy}{Fitting strategy: \code{"runwise"} or \code{"chunkwise"}.}
+\item{compute}{A \code{\link[=compute_spec]{compute_spec()}} describing backend, voxel partitioning,
+parallelization, and progress reporting. Statistical runwise versus joint
+fitting belongs in \code{control$estimation}.}
 
 \item{engine}{Optional fitting engine name (see \code{\link[=register_engine]{register_engine()}}).}
 

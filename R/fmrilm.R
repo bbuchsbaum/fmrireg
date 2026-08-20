@@ -1,6 +1,6 @@
 #' @method get_formula fmri_model
 #' @rdname get_formula
-#' @export
+#' @keywords internal
 get_formula.fmri_model <- function(x,...) {
   assert_that(inherits(x, "fmri_model"), msg = "'x' must be an 'fmri_model' object")
   term_names <- names(terms(x))
@@ -10,7 +10,9 @@ get_formula.fmri_model <- function(x,...) {
 #' Estimate fixed-order AR coefficients via fmriAR adapter with legacy fallback
 #' @keywords internal
 #' @noRd
-.estimate_ar_parameters_routed <- function(residuals_vec, ar_order, run_indices = NULL, censor = NULL) {
+.estimate_ar_parameters_routed <- function(residuals_vec, ar_order,
+                                           run_indices = NULL, censor = NULL,
+                                           design = NULL) {
   if (is.null(ar_order) || ar_order <= 0L) {
     return(numeric(0))
   }
@@ -31,7 +33,8 @@ get_formula.fmri_model <- function(x,...) {
       residuals = resid_mat,
       cfg = ar_cfg,
       run_indices = run_indices,
-      censor = censor
+      censor = censor,
+      design = design
     ),
     error = function(e) NULL
   )
@@ -257,22 +260,52 @@ fmri_lm <- function(formula, ...) {
                                               robust_max_iter = NULL,
                                               robust_scale_scope = NULL,
                                               engine_robust_options = NULL) {
-  robust_type <- if (is.logical(robust)) {
-    if (robust) "huber" else FALSE
-  } else {
-    robust
-  }
-
   robust_options <- robust_options %||% list()
   if (!is.null(engine_robust_options)) {
     robust_options <- utils::modifyList(robust_options, engine_robust_options)
   }
-  if (!is.null(robust_type) && !("type" %in% names(robust_options))) {
-    robust_options$type <- robust_type
+
+  # `type` can be requested three ways. Previously the first non-NULL of
+  # (robust, robust_psi, robust_options$type) won by position, which made
+  # `robust_psi` unreachable (robust defaults to NULL only since this fix; it
+  # used to default to FALSE, so its branch always fired first) and let an
+  # explicit `robust = FALSE` be overridden by `robust_options$type`. Requests
+  # are now collected and a genuine disagreement is an error.
+  canon <- function(x, name) {
+    if (length(x) != 1L || is.na(x)) {
+      stop(sprintf("`%s` must be a single non-missing robust setting.", name),
+           call. = FALSE)
+    }
+    if (is.logical(x)) {
+      return(if (isTRUE(x)) "huber" else "none")
+    }
+    if (!is.character(x)) {
+      stop(sprintf("`%s` must be TRUE, FALSE, 'huber', or 'bisquare'.", name),
+           call. = FALSE)
+    }
+    value <- tolower(x)
+    if (!value %in% c("none", "false", "huber", "bisquare")) {
+      stop(sprintf("`%s` must be TRUE, FALSE, 'huber', or 'bisquare'.", name),
+           call. = FALSE)
+    }
+    if (value == "false") "none" else value
   }
-  if (!is.null(robust_psi) && !("type" %in% names(robust_options))) {
-    robust_options$type <- robust_psi
+  requested <- c(
+    if (!is.null(robust))                  stats::setNames(canon(robust, "robust"), "robust"),
+    if (!is.null(robust_psi))              stats::setNames(canon(robust_psi, "robust_psi"), "robust_psi"),
+    if ("type" %in% names(robust_options)) stats::setNames(canon(robust_options$type, "robust_options$type"), "robust_options$type")
+  )
+  if (length(unique(requested)) > 1L) {
+    stop("Conflicting robust settings: ",
+         paste(sprintf("`%s` = %s", names(requested), sQuote(requested)), collapse = ", "),
+         ". Supply only one.", call. = FALSE)
   }
+  if (length(requested)) {
+    robust_options$type <- if (requested[[1L]] == "none") FALSE else requested[[1L]]
+  } else {
+    robust_options$type <- FALSE
+  }
+
   if (!is.null(robust_max_iter) && !("max_iter" %in% names(robust_options))) {
     robust_options$max_iter <- robust_max_iter
   }
@@ -286,7 +319,7 @@ fmri_lm <- function(formula, ...) {
 #' @keywords internal
 #' @noRd
 .fmri_lm_normalize_ar_options <- function(ar_options = NULL,
-                                          ar_voxelwise = FALSE,
+                                          ar_voxelwise = NULL,
                                           cor_struct = NULL,
                                           cor_iter = NULL,
                                           cor_global = NULL,
@@ -298,23 +331,35 @@ fmri_lm <- function(formula, ...) {
     ar_options <- utils::modifyList(ar_options, engine_ar_options)
   }
 
-  if (!is.null(cor_struct) && !("struct" %in% names(ar_options))) {
-    ar_options$struct <- cor_struct
-  }
-  if (!is.null(cor_iter) && !("iter_gls" %in% names(ar_options))) {
-    ar_options$iter_gls <- cor_iter
-  }
-  if (!is.null(cor_global) && !("global" %in% names(ar_options))) {
-    ar_options$global <- cor_global
-  }
-  if (!is.null(ar1_exact_first) && !("exact_first" %in% names(ar_options))) {
-    ar_options$exact_first <- ar1_exact_first
-  }
-  if (!is.null(ar_p) && !("p" %in% names(ar_options))) {
-    ar_options$p <- ar_p
+  # Each shorthand is an alias for one `ar_options` key. Previously the list won
+  # by position and the shorthand was dropped without a word -- which also made
+  # the documented precedence for `ar_voxelwise` ("overrides ar_options$voxelwise")
+  # exactly backwards. A shorthand that agrees with the list is accepted; one that
+  # disagrees is an error rather than a silent choice.
+  aliases <- list(
+    cor_struct      = list(key = "struct",      value = cor_struct),
+    cor_iter        = list(key = "iter_gls",    value = cor_iter),
+    cor_global      = list(key = "global",      value = cor_global),
+    ar1_exact_first = list(key = "exact_first", value = ar1_exact_first),
+    ar_p            = list(key = "p",           value = ar_p),
+    ar_voxelwise    = list(key = "voxelwise",   value = ar_voxelwise)
+  )
+  for (nm in names(aliases)) {
+    a <- aliases[[nm]]
+    if (is.null(a$value)) next
+    if (a$key %in% names(ar_options)) {
+      if (!isTRUE(all.equal(ar_options[[a$key]], a$value))) {
+        stop(sprintf(
+          "Conflicting AR settings: `%s` = %s and `ar_options$%s` = %s. Supply only one.",
+          nm, sQuote(format(a$value)), a$key, sQuote(format(ar_options[[a$key]]))),
+          call. = FALSE)
+      }
+    } else {
+      ar_options[[a$key]] <- a$value
+    }
   }
   if (!("voxelwise" %in% names(ar_options))) {
-    ar_options$voxelwise <- ar_voxelwise
+    ar_options$voxelwise <- FALSE
   }
 
   if (!is.null(ar_options$order) && is.null(ar_options$struct)) {
@@ -372,12 +417,13 @@ fmri_lm <- function(formula, ...) {
 #' @keywords internal
 #' @noRd
 .fmri_lm_build_config <- function(robust,
+                                  control = NULL,
                                   robust_options = NULL,
                                   robust_psi = NULL,
                                   robust_max_iter = NULL,
                                   robust_scale_scope = NULL,
                                   ar_options = NULL,
-                                  ar_voxelwise = FALSE,
+                                  ar_voxelwise = NULL,
                                   cor_struct = NULL,
                                   cor_iter = NULL,
                                   cor_global = NULL,
@@ -390,6 +436,64 @@ fmri_lm <- function(formula, ...) {
                                   engine_ar_options = NULL,
                                   engine_robust_options = NULL,
                                   engine_cfg = NULL) {
+  if (!is.null(control)) {
+    if (!inherits(control, "fmri_lm_control")) {
+      stop("`control` must be an object created by `fmri_lm_control()`.", call. = FALSE)
+    }
+    if (!is.null(engine_cfg)) {
+      stop("`control` and deprecated `cfg` cannot both be supplied.", call. = FALSE)
+    }
+    supplied <- c(
+      robust = !is.null(robust), robust_options = !is.null(robust_options),
+      robust_psi = !is.null(robust_psi), robust_max_iter = !is.null(robust_max_iter),
+      robust_scale_scope = !is.null(robust_scale_scope),
+      ar_options = !is.null(ar_options), ar_voxelwise = !is.null(ar_voxelwise),
+      cor_struct = !is.null(cor_struct), cor_iter = !is.null(cor_iter),
+      cor_global = !is.null(cor_global), ar1_exact_first = !is.null(ar1_exact_first),
+      ar_p = !is.null(ar_p),
+      volume_weights_options = !is.null(volume_weights_options),
+      soft_subspace_options = !is.null(soft_subspace_options),
+      volume_weights = !is.null(volume_weights),
+      nuisance_projection = !is.null(nuisance_projection),
+      engine_ar_options = !is.null(engine_ar_options),
+      engine_robust_options = !is.null(engine_robust_options)
+    )
+    if (any(supplied)) {
+      stop("`control` cannot be combined with legacy configuration arguments. Also supplied: ",
+           paste0("`", names(supplied)[supplied], "`", collapse = ", "), ".",
+           call. = FALSE)
+    }
+    return(control)
+  }
+  # A supplied `cfg` used to replace the config wholesale, silently discarding
+  # every other configuration argument -- so `cor_struct = "ar2"` alongside a cfg
+  # naming "iid" ran iid without a word. Refuse the ambiguity instead.
+  if (!is.null(engine_cfg)) {
+    if (!inherits(engine_cfg, "fmri_lm_control")) {
+      stop("`cfg` must be an object created by `fmri_lm_control()`.", call. = FALSE)
+    }
+    supplied <- c(
+      robust = !is.null(robust), robust_options = !is.null(robust_options),
+      robust_psi = !is.null(robust_psi), robust_max_iter = !is.null(robust_max_iter),
+      robust_scale_scope = !is.null(robust_scale_scope),
+      ar_options = !is.null(ar_options), ar_voxelwise = !is.null(ar_voxelwise),
+      cor_struct = !is.null(cor_struct), cor_iter = !is.null(cor_iter),
+      cor_global = !is.null(cor_global), ar1_exact_first = !is.null(ar1_exact_first),
+      ar_p = !is.null(ar_p),
+      volume_weights_options = !is.null(volume_weights_options),
+      soft_subspace_options = !is.null(soft_subspace_options),
+      volume_weights = !is.null(volume_weights),
+      nuisance_projection = !is.null(nuisance_projection)
+    )
+    if (any(supplied)) {
+      stop("`cfg` cannot be combined with other configuration arguments. ",
+           "Also supplied: ", paste0("`", names(supplied)[supplied], "`", collapse = ", "),
+           ". Put every setting in `cfg`, or drop `cfg` and use the individual arguments.",
+           call. = FALSE)
+    }
+    return(engine_cfg)
+  }
+
   robust_options <- .fmri_lm_normalize_robust_options(
     robust = robust,
     robust_options = robust_options,
@@ -417,34 +521,69 @@ fmri_lm <- function(formula, ...) {
     nuisance_projection = nuisance_projection
   )
 
-  cfg <- if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
-    engine_cfg
+  .fmri_lm_control_legacy(
+    robust_options = robust_options,
+    ar_options = ar_options,
+    volume_weights_options = preprocessing$volume_weights_options,
+    soft_subspace_options = preprocessing$soft_subspace_options
+  )
+}
+
+#' Resolve the statistical-scope/execution boundary
+#' @keywords internal
+#' @noRd
+.fmri_lm_resolve_execution <- function(cfg, compute = NULL,
+                                       strategy, nchunks, use_fast_path,
+                                       progress, parallel_voxels,
+                                       parallel_chunks,
+                                       legacy_supplied = logical()) {
+  canonical <- !is.null(compute)
+  if (!is.null(compute) && !inherits(compute, "fmri_lm_compute_spec")) {
+    stop("`compute` must be an object created by `compute_spec()`.", call. = FALSE)
+  }
+  if (canonical && any(legacy_supplied)) {
+    stop("`compute` cannot be combined with legacy execution arguments: ",
+         paste0("`", names(legacy_supplied)[legacy_supplied], "`", collapse = ", "),
+         ".", call. = FALSE)
+  }
+
+  if (canonical) {
+    strategy <- if (identical(cfg$estimation$scope, "runwise_meta")) "runwise" else "chunkwise"
+    nchunks <- compute$voxel_chunks
+    use_fast_path <- identical(compute$backend, "matrix")
+    progress <- compute$progress
+    parallel_voxels <- identical(compute$parallel, "voxels")
+    parallel_chunks <- identical(compute$parallel, "chunks")
   } else {
-    fmri_lm_control(
-      robust_options = robust_options,
-      ar_options = ar_options,
-      volume_weights_options = preprocessing$volume_weights_options,
-      soft_subspace_options = preprocessing$soft_subspace_options
+    strategy <- match.arg(strategy, c("runwise", "chunkwise"))
+    cfg$estimation <- estimation_spec(
+      if (identical(strategy, "runwise")) "runwise_meta" else "joint"
+    )
+    compute <- compute_spec(
+      voxel_chunks = as.integer(nchunks),
+      backend = if (isTRUE(use_fast_path)) "matrix" else "reference",
+      parallel = if (isTRUE(parallel_voxels)) "voxels" else if (isTRUE(parallel_chunks)) "chunks" else "none",
+      progress = progress
     )
   }
 
-  if (!is.null(engine_cfg) && inherits(engine_cfg, "fmri_lm_config")) {
-    cfg$robust <- engine_cfg$robust
-    cfg$ar <- utils::modifyList(cfg$ar, engine_cfg$ar)
-  }
-
-  cfg
+  list(cfg = cfg, compute = compute, strategy = strategy,
+       nchunks = nchunks, use_fast_path = use_fast_path,
+       progress = progress, parallel_voxels = parallel_voxels,
+       parallel_chunks = parallel_chunks)
 }
 
 #' @keywords internal
 #' @noRd
 .fmri_lm_attach_config_metadata <- function(fit, requested_cfg, executed_cfg = requested_cfg) {
-  stopifnot(inherits(requested_cfg, "fmri_lm_config"))
-  stopifnot(inherits(executed_cfg, "fmri_lm_config"))
+  stopifnot(inherits(requested_cfg, "fmri_lm_control"))
+  stopifnot(inherits(executed_cfg, "fmri_lm_control"))
 
   attr(fit, "requested_config") <- requested_cfg
   attr(fit, "executed_config") <- executed_cfg
   attr(fit, "config") <- executed_cfg
+  attr(fit, "requested_control") <- requested_cfg
+  attr(fit, "executed_control") <- executed_cfg
   fit
 }
 
@@ -469,6 +608,30 @@ fmri_lm <- function(formula, ...) {
   spec
 }
 
+#' Warn about execution arguments an engine silently ignores
+#'
+#' `.fmri_lm_dispatch_engine()` is called without `strategy`, `nchunks`,
+#' `use_fast_path`, `progress`, or the `parallel_*` flags, so supplying them
+#' alongside `engine` had no effect and said nothing. Detection is via
+#' `match.call()` rather than `missing()` because these arguments have non-NULL
+#' defaults and some are reassigned by `match.arg()` before dispatch.
+#'
+#' @keywords internal
+#' @noRd
+.fmri_lm_warn_engine_ignores <- function(call, engine) {
+  ignored <- c("strategy", "nchunks", "use_fast_path", "progress",
+               "parallel_voxels", "parallel_chunks")
+  supplied <- intersect(ignored, names(call)[-1L])
+  if (length(supplied)) {
+    warning(sprintf(
+      "engine = \"%s\" ignores %s; %s control the built-in fitter only.",
+      engine, paste0("`", supplied, "`", collapse = ", "),
+      if (length(supplied) == 1L) "it controls" else "they control"),
+      call. = FALSE)
+  }
+  invisible(supplied)
+}
+
 #' @keywords internal
 #' @noRd
 .fmri_lm_dispatch_engine <- function(model, dataset, engine, lowrank = NULL, cfg, engine_args = list()) {
@@ -490,6 +653,12 @@ fmri_lm <- function(formula, ...) {
     stop(sprintf("Engine '%s' must return an object of class 'fmri_lm'", spec$name), call. = FALSE)
   }
 
+  fit$result <- .fmri_lm_finalize_result(
+    result = fit$result, cfg = executed_cfg,
+    compute = attr(fit, "compute"), model = model, dataset = dataset,
+    strategy = spec$strategy, engine = spec$name
+  )
+
   fit <- .fmri_lm_attach_config_metadata(fit, requested_cfg = cfg, executed_cfg = executed_cfg)
   if (is.null(attr(fit, "strategy"))) {
     attr(fit, "strategy") <- spec$strategy
@@ -501,8 +670,7 @@ fmri_lm <- function(formula, ...) {
   fit
 }
 
-#' @rdname fmri_lm
-#' @export
+#' @noRd
 #' @param block The model formula for block structure.
 #' @param baseline_model (Optional) A \code{baseline_model} object. Default is \code{NULL}.
 #' @param dataset An \code{fmri_dataset} object containing the time-series data.
@@ -521,7 +689,8 @@ fmri_lm <- function(formula, ...) {
 #'   \code{FALSE} selects the formula/lm reference engine (no robust or full
 #'   preprocessing support); it is retained mainly as a parity oracle.
 #' @param progress Logical. Whether to display a progress bar during model fitting. Default is \code{FALSE}.
-#' @param ar_voxelwise Logical. Estimate AR parameters voxel-wise (overrides \code{ar_options$voxelwise}).
+#' @param ar_voxelwise Logical. Estimate AR parameters voxel-wise. Shorthand for
+#'   \code{ar_options$voxelwise}; supplying both with different values is an error.
 #' @param parallel_voxels Logical. Parallelize across voxels where supported;
 #'   this does not control chunkwise execution.
 #' @param parallel_chunks Logical. For \code{strategy = "chunkwise"}, process
@@ -662,11 +831,12 @@ fmri_lm <- function(formula, ...) {
 #' standard_error(fit_rrr, type = "estimates")
 #' }
 #' 
-fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE,
-                         robust = FALSE, robust_options = NULL, ar_options = NULL,
+.fmri_lm_formula_legacy <- function(formula, block, baseline_model = NULL, dataset, durations = 0, drop_empty = TRUE,
+                         control = NULL, compute = NULL,
+                         robust = NULL, robust_options = NULL, ar_options = NULL,
                          volume_weights_options = NULL, soft_subspace_options = NULL,
                          strategy = c("runwise", "chunkwise"), nchunks = 10, use_fast_path = TRUE, progress = FALSE,
-                         ar_voxelwise = FALSE,
+                         ar_voxelwise = NULL,
                          parallel_voxels = FALSE,
                     # Individual AR parameters for backward compatibility
                     cor_struct = NULL, cor_iter = NULL, cor_global = NULL,
@@ -677,6 +847,13 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
                     volume_weights = NULL, nuisance_projection = NULL,
                     parallel_chunks = FALSE,
                     ...) {
+  canonical_control_supplied <- !is.null(control)
+  legacy_execution_supplied <- c(
+    strategy = !missing(strategy), nchunks = !missing(nchunks),
+    use_fast_path = !missing(use_fast_path), progress = !missing(progress),
+    parallel_voxels = !missing(parallel_voxels),
+    parallel_chunks = !missing(parallel_chunks)
+  )
   engine_ctx <- .fmri_lm_extract_engine_context(list(...))
   engine <- engine_ctx$engine
   lowrank <- engine_ctx$lowrank
@@ -685,7 +862,6 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
   engine_cfg <- engine_ctx$engine_cfg
   engine_args <- engine_ctx$engine_args
 
-  strategy <- match.arg(strategy)
   formula <- .fmrireg_inject_registered_bases(formula)
   
   # Error checking
@@ -694,21 +870,17 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
   assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset'")
   assert_that(is.numeric(durations), msg = "'durations' must be numeric")
   assert_that(is.logical(drop_empty), msg = "'drop_empty' must be logical")
-  assert_that(is.logical(robust) || robust %in% c("huber", "bisquare"), 
-              msg = "'robust' must be logical or one of 'huber', 'bisquare'")
-  assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
-  assert_that(is.logical(ar_voxelwise), msg = "'ar_voxelwise' must be logical")
+  if (!is.null(robust)) {
+    .fmri_lm_normalize_robust_options(robust = robust)
+  }
   assert_that(
     is.logical(parallel_chunks) && length(parallel_chunks) == 1L && !is.na(parallel_chunks),
     msg = "'parallel_chunks' must be TRUE or FALSE"
   )
-  if (strategy == "chunkwise") {
-    assert_that(is.numeric(nchunks) && nchunks > 0, msg = "'nchunks' must be a positive number")
-  }
-
   # Create configuration object
   cfg <- .fmri_lm_build_config(
     robust = robust,
+    control = control,
     robust_options = robust_options,
     robust_psi = robust_psi,
     robust_max_iter = robust_max_iter,
@@ -728,18 +900,38 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
     engine_robust_options = engine_robust_options,
     engine_cfg = engine_cfg
   )
+
+  if (!is.null(control) && is.null(compute)) compute <- compute_spec()
+  execution <- .fmri_lm_resolve_execution(
+    cfg = cfg, compute = compute, strategy = strategy, nchunks = nchunks,
+    use_fast_path = use_fast_path, progress = progress,
+    parallel_voxels = parallel_voxels, parallel_chunks = parallel_chunks,
+    legacy_supplied = legacy_execution_supplied
+  )
+  cfg <- execution$cfg
+  compute <- execution$compute
+  strategy <- execution$strategy
+  nchunks <- execution$nchunks
+  use_fast_path <- execution$use_fast_path
+  progress <- execution$progress
+  parallel_voxels <- execution$parallel_voxels
+  parallel_chunks <- execution$parallel_chunks
   
   model <- create_fmri_model(formula, block, baseline_model, dataset, durations = durations, drop_empty = drop_empty)
 
   if (!is.null(engine)) {
-    return(.fmri_lm_dispatch_engine(
+    if (!canonical_control_supplied) cfg$estimation <- estimation_spec("joint")
+    .fmri_lm_warn_engine_ignores(match.call(), engine)
+    fit <- .fmri_lm_dispatch_engine(
       model = model,
       dataset = dataset,
       engine = engine,
       lowrank = lowrank,
       cfg = cfg,
       engine_args = engine_args
-    ))
+    )
+    attr(fit, "compute") <- compute
+    return(fit)
   }
   
   # Pass configuration object down
@@ -748,19 +940,20 @@ fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset, dura
   ret <- fmri_lm_fit(model, dataset, strategy, cfg, nchunks,
                      use_fast_path = use_fast_path, progress = progress,
                      parallel_voxels = parallel_voxels,
-                     parallel_chunks = parallel_chunks)
+                     parallel_chunks = parallel_chunks,
+                     compute = compute)
   return(ret)
 }
 
-#' @rdname fmri_lm
-#' @export
-fmri_lm.fmri_model <- function(formula, dataset = NULL,
-                               robust = FALSE, robust_options = NULL,
+#' @keywords internal
+.fmri_lm_model_legacy <- function(formula, dataset = NULL,
+                               control = NULL, compute = NULL,
+                               robust = NULL, robust_options = NULL,
                                ar_options = NULL,
                                volume_weights_options = NULL, soft_subspace_options = NULL,
                                strategy = c("runwise", "chunkwise"), nchunks = 10,
                                use_fast_path = TRUE, progress = FALSE,
-                               ar_voxelwise = FALSE, parallel_voxels = FALSE,
+                               ar_voxelwise = NULL, parallel_voxels = FALSE,
                                cor_struct = NULL, cor_iter = NULL,
                                cor_global = NULL, ar1_exact_first = NULL,
                                ar_p = NULL,
@@ -769,6 +962,13 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
                                volume_weights = NULL, nuisance_projection = NULL,
                                parallel_chunks = FALSE,
                                ...) {
+  canonical_control_supplied <- !is.null(control)
+  legacy_execution_supplied <- c(
+    strategy = !missing(strategy), nchunks = !missing(nchunks),
+    use_fast_path = !missing(use_fast_path), progress = !missing(progress),
+    parallel_voxels = !missing(parallel_voxels),
+    parallel_chunks = !missing(parallel_chunks)
+  )
   engine_ctx <- .fmri_lm_extract_engine_context(list(...))
   engine <- engine_ctx$engine
   lowrank <- engine_ctx$lowrank
@@ -776,7 +976,6 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
   engine_robust_options <- engine_ctx$engine_robust_options
   engine_cfg <- engine_ctx$engine_cfg
   engine_args <- engine_ctx$engine_args
-  strategy <- match.arg(strategy)
   assert_that(inherits(formula, "fmri_model"))
   assert_that(
     is.logical(parallel_chunks) && length(parallel_chunks) == 1L && !is.na(parallel_chunks),
@@ -791,6 +990,7 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
 
   cfg <- .fmri_lm_build_config(
     robust = robust,
+    control = control,
     robust_options = robust_options,
     robust_psi = robust_psi,
     robust_max_iter = robust_max_iter,
@@ -811,22 +1011,130 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
     engine_cfg = engine_cfg
   )
 
+  if (!is.null(control) && is.null(compute)) compute <- compute_spec()
+  execution <- .fmri_lm_resolve_execution(
+    cfg = cfg, compute = compute, strategy = strategy, nchunks = nchunks,
+    use_fast_path = use_fast_path, progress = progress,
+    parallel_voxels = parallel_voxels, parallel_chunks = parallel_chunks,
+    legacy_supplied = legacy_execution_supplied
+  )
+  cfg <- execution$cfg
+  compute <- execution$compute
+  strategy <- execution$strategy
+  nchunks <- execution$nchunks
+  use_fast_path <- execution$use_fast_path
+  progress <- execution$progress
+  parallel_voxels <- execution$parallel_voxels
+  parallel_chunks <- execution$parallel_chunks
+
   if (!is.null(engine)) {
-    return(.fmri_lm_dispatch_engine(
+    if (!canonical_control_supplied) cfg$estimation <- estimation_spec("joint")
+    .fmri_lm_warn_engine_ignores(match.call(), engine)
+    fit <- .fmri_lm_dispatch_engine(
       model = formula,
       dataset = dataset,
       engine = engine,
       lowrank = lowrank,
       cfg = cfg,
       engine_args = engine_args
-    ))
+    )
+    attr(fit, "compute") <- compute
+    return(fit)
   }
 
   ret <- fmri_lm_fit(formula, dataset, strategy, cfg, nchunks,
                      use_fast_path = use_fast_path, progress = progress,
                      parallel_voxels = parallel_voxels,
-                     parallel_chunks = parallel_chunks)
+                     parallel_chunks = parallel_chunks,
+                     compute = compute)
   return(ret)
+}
+
+#' Fit an fMRI linear model from a formula
+#'
+#' The public fitting boundary separates statistical choices in [fmri_lm_control()]
+#' from mechanical execution choices in [compute_spec()]. Optional engines use
+#' the same control object and receive their private arguments through
+#' `engine_args`.
+#'
+#' @param control A validated [fmri_lm_control()].
+#' @param compute A validated [compute_spec()].
+#' @param block Formula describing run/block structure.
+#' @param baseline_model Optional baseline/nuisance model.
+#' @param dataset An `fmri_dataset`. For an `fmri_model` method this may be
+#'   omitted when the model already owns its dataset.
+#' @param durations Event durations passed to model construction.
+#' @param drop_empty Remove empty factor levels during model construction.
+#' @param engine Optional registered engine name.
+#' @param engine_args Named list passed only to `engine`.
+#' @param lowrank Optional [lowrank_control()] for the latent-sketch engine.
+#' @param ... Transitional legacy arguments retained for one compatibility
+#'   window. New code must express statistical choices in `control` and
+#'   execution choices in `compute`; unknown arguments are rejected.
+#' @rdname fmri_lm
+#' @export
+fmri_lm.formula <- function(formula, block, baseline_model = NULL, dataset,
+                            durations = 0, drop_empty = TRUE,
+                            control = fmri_lm_control(
+                              estimation = estimation_spec("runwise_meta")
+                            ),
+                            compute = compute_spec(),
+                            engine = NULL, engine_args = list(),
+                            lowrank = NULL, ...) {
+  control_missing <- missing(control)
+  legacy_dots <- list(...)
+  if (!is.list(engine_args)) {
+    stop("`engine_args` must be a named list.", call. = FALSE)
+  }
+  if (length(engine_args) && (is.null(names(engine_args)) || any(!nzchar(names(engine_args))))) {
+    stop("Every element of `engine_args` must be named.", call. = FALSE)
+  }
+
+  # Keep the migration adapter isolated behind the canonical public formals.
+  # It can be deleted as one unit after the deprecation window; all new package
+  # code and documentation use only control/compute/engine arguments.
+  if (control_missing && !is.null(engine) && !length(legacy_dots)) {
+    control <- fmri_lm_control(estimation = estimation_spec("joint"))
+  }
+  call_args <- c(
+    list(formula = formula, block = block, baseline_model = baseline_model,
+         dataset = dataset, durations = durations, drop_empty = drop_empty,
+         control = if (control_missing && length(legacy_dots)) NULL else control,
+         compute = if (missing(compute) && length(legacy_dots)) NULL else compute),
+    legacy_dots,
+    list(engine = engine, engine_args = engine_args, lowrank = lowrank)
+  )
+  do.call(.fmri_lm_formula_legacy, call_args)
+}
+
+#' @rdname fmri_lm
+#' @export
+fmri_lm.fmri_model <- function(formula, dataset = NULL,
+                               control = fmri_lm_control(
+                                 estimation = estimation_spec("runwise_meta")
+                               ),
+                               compute = compute_spec(),
+                               engine = NULL, engine_args = list(),
+                               lowrank = NULL, ...) {
+  control_missing <- missing(control)
+  legacy_dots <- list(...)
+  if (!is.list(engine_args)) {
+    stop("`engine_args` must be a named list.", call. = FALSE)
+  }
+  if (length(engine_args) && (is.null(names(engine_args)) || any(!nzchar(names(engine_args))))) {
+    stop("Every element of `engine_args` must be named.", call. = FALSE)
+  }
+  if (control_missing && !is.null(engine) && !length(legacy_dots)) {
+    control <- fmri_lm_control(estimation = estimation_spec("joint"))
+  }
+  call_args <- c(
+    list(formula = formula, dataset = dataset,
+         control = if (control_missing && length(legacy_dots)) NULL else control,
+         compute = if (missing(compute) && length(legacy_dots)) NULL else compute),
+    legacy_dots,
+    list(engine = engine, engine_args = engine_args, lowrank = lowrank)
+  )
+  do.call(.fmri_lm_model_legacy, call_args)
 }
 
 
@@ -839,7 +1147,7 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
 #' @param fmrimod An \code{fmri_model} object.
 #' @param dataset An \code{fmri_dataset} object containing the time-series data.
 #' @param strategy The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.
-#' @param cfg An \code{fmri_lm_config} object containing all fitting options. See \code{\link{fmri_lm_control}}.
+#' @param cfg An \code{fmri_lm_control} object containing all fitting options. See \code{\link{fmri_lm_control}}.
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}.
 #'   This controls memory partitioning; chunks are processed sequentially unless
 #'   \code{parallel_chunks = TRUE}. Default is \code{10}.
@@ -859,11 +1167,20 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
 #' @seealso \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{fmri_dataset}}
 fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                         cfg, nchunks = 10, use_fast_path = TRUE, progress = FALSE,
-                        parallel_voxels = FALSE, parallel_chunks = FALSE, ...) {
+                        parallel_voxels = FALSE, parallel_chunks = FALSE,
+                        compute = NULL, ...) {
   strategy <- match.arg(strategy)
+
+  if (!identical(cfg$estimation$scope, "joint") &&
+      (!identical(cfg$variance$method, "model") ||
+       identical(cfg$variance$df, "satterthwaite"))) {
+    stop("HAC, sandwich, and Satterthwaite inference currently require ",
+         "`estimation_spec(scope = 'joint')`; runwise meta-estimation must ",
+         "combine run-level covariance explicitly.", call. = FALSE)
+  }
   
   # Validate config
-  assert_that(inherits(cfg, "fmri_lm_config"), msg = "'cfg' must be an 'fmri_lm_config' object")
+  assert_that(inherits(cfg, "fmri_lm_control"), msg = "'cfg' must be an 'fmri_lm_control' object")
   
   # Error checking
   assert_that(inherits(fmrimod, "fmri_model"), msg = "'fmrimod' must be an 'fmri_model' object")
@@ -922,7 +1239,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
     cfg$ar$iter_gls <- 1L
   }
 
-  if (cfg$robust$type != FALSE && cfg$robust$scale_scope == "global") {
+  if (.fmri_lm_robust_enabled(cfg$robust) && cfg$robust$scale_scope == "global") {
     chunk_iter <- exec_strategy("runwise")(dataset)
     run_chunks <- collect_chunks(chunk_iter)
     form <- get_formula(fmrimod)
@@ -980,6 +1297,11 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                    )
                     }
                   })
+
+  result <- .fmri_lm_finalize_result(
+    result = result, cfg = cfg, compute = compute,
+    model = fmrimod, dataset = dataset, strategy = strategy, engine = "builtin"
+  )
   
   ret <- list(
     result = result,
@@ -994,6 +1316,12 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   
   ret <- .fmri_lm_attach_config_metadata(ret, requested_cfg = cfg, executed_cfg = cfg)
   attr(ret, "strategy") <- strategy
+  attr(ret, "compute") <- compute %||% compute_spec(
+    voxel_chunks = as.integer(nchunks),
+    backend = if (isTRUE(use_fast_path)) "matrix" else "reference",
+    parallel = if (isTRUE(parallel_voxels)) "voxels" else if (isTRUE(parallel_chunks)) "chunks" else "none",
+    progress = progress
+  )
   
   return(ret)
 }
@@ -1200,9 +1528,7 @@ pull_stat_revised <- function(x, type, element) {
       stop("No simple contrasts for this model.")
     }
     cnames <- ret$name
-    # Extract the specific element (e.g., estimate), which is a list(vector)
-    # Then extract the vector itself (element [[1]]) before binding
-    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]][[1]]) %>% 
+    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]]) %>%
              dplyr::bind_cols()
     names(out) <- cnames
     out
@@ -1212,9 +1538,7 @@ pull_stat_revised <- function(x, type, element) {
       stop("No F contrasts for this model.")
     }
     cnames <- ret$name
-    # Extract the specific element (e.g., estimate), which is list(vector)
-    # Then extract the vector itself (element [[1]]) before binding
-    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]][[1]]) %>% 
+    out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]]) %>%
              dplyr::bind_cols()
     names(out) <- cnames
     out
@@ -1526,15 +1850,16 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
             prob_full <- dat$prob
             sigma_full <- if ("sigma" %in% names(dat)) dat$sigma else NULL
             
-            # Re-package combined data for this contrast
+            # Re-package combined data using the canonical contrast schema:
+            # one row per voxel and one atomic column per statistic.
             combined_data_tibble <- dplyr::tibble(
-                estimate = list(estimate_full), 
-                se = list(se_full),             
-                stat = list(stat_full),          
-                prob = list(prob_full)           
+                estimate = estimate_full,
+                se = se_full,
+                stat = stat_full,
+                prob = prob_full
             )
             if (!is.null(sigma_full)) {
-                combined_data_tibble$sigma = list(sigma_full)
+                combined_data_tibble$sigma = sigma_full
             }
 
             # Take metadata from the first chunk's entry for this contrast
@@ -1572,7 +1897,7 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 #' @param model The \code{fmri_model} used for the analysis.
 #' @param contrast_objects The list of full contrast objects.
 #' @param nchunks The number of chunks to divide the dataset into.
-#' @param cfg An \code{fmri_lm_config} object containing all fitting options.
+#' @param cfg An \code{fmri_lm_control} object containing all fitting options.
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
 #' @param use_fast_path Logical. If \code{TRUE} (the default), use the fast
 #'   matrix engine, which supports OLS, AR whitening, robust, and preprocessing.
@@ -1617,7 +1942,7 @@ chunkwise_lm.fmri_dataset_old <- function(x, model, contrast_objects, nchunks, c
 #' @param dset An \code{fmri_dataset} object.
 #' @param model The \code{fmri_model} used for the analysis.
 #' @param contrast_objects The list of full contrast objects.
-#' @param cfg An \code{fmri_lm_config} object containing all fitting options.
+#' @param cfg An \code{fmri_lm_control} object containing all fitting options.
 #' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
 #' @param use_fast_path Logical. Whether to use the fast matrix engine (default is \code{TRUE}).
 #' @param progress Logical. Display a progress bar for run processing. Default is \code{FALSE}.

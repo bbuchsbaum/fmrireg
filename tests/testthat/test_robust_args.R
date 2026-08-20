@@ -8,18 +8,32 @@ dset <- matrix_dataset(Y, TR=1, run_length=20, event_table=etab)
 # accept valid robust arguments
 test_that("fmri_lm accepts robust arguments", {
   # Robust fitting requires the fast engine (the runwise slow path rejects it).
-  expect_error(
-    fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
-            robust = TRUE, robust_psi = "huber", robust_max_iter = 2,
-            robust_scale_scope = "run", use_fast_path = TRUE),
-    NA
-  )
+  fit <- fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
+                 robust = TRUE, robust_psi = "huber", robust_max_iter = 2,
+                 robust_scale_scope = "run", use_fast_path = TRUE)
+  cfg <- attr(fit, "executed_config")
+  expect_equal(cfg$robust$type, "huber")
+  expect_equal(cfg$robust$max_iter, 2)
+  expect_equal(cfg$robust$scale_scope, "run")
 
+  # robust_psi selects the psi function on its own. This previously had no
+  # effect at all -- `robust` defaulted to FALSE and always claimed `type`
+  # first -- so the argument was silently dead.
+  fit2 <- fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
+                  robust_psi = "bisquare", robust_max_iter = 1,
+                  robust_scale_scope = "global", use_fast_path = TRUE)
+  cfg2 <- attr(fit2, "executed_config")
+  expect_equal(cfg2$robust$type, "bisquare")
+  expect_equal(cfg2$robust$scale_scope, "global")
+})
+
+test_that("robust = TRUE and robust_psi = 'bisquare' is a conflict, not a silent win", {
+  # This combination used to be accepted and quietly fit Huber. It is a genuine
+  # contradiction: TRUE canonicalises to huber.
   expect_error(
     fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
-            robust = TRUE, robust_psi = "bisquare", robust_max_iter = 1,
-            robust_scale_scope = "global", use_fast_path = TRUE),
-    NA
+            robust = TRUE, robust_psi = "bisquare", use_fast_path = TRUE),
+    "Conflicting robust settings"
   )
 })
 
@@ -29,12 +43,12 @@ test_that("robust argument validation works", {
   expect_error(
     fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
             robust_options = list(type = "bogus")),
-    "Invalid robust_psi|robust_psi/type"
+    "robust_options\\$type.*TRUE.*FALSE.*huber.*bisquare"
   )
 
   expect_error(
     fmri_lm(onset ~ hrf(repnum), block = ~ run, dataset = dset,
             robust = TRUE, robust_max_iter = 0),
-    "robust_max_iter"
+    "max_iter.*>= 1"
   )
 })

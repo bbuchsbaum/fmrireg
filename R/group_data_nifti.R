@@ -59,7 +59,31 @@ group_data_from_nifti <- function(beta_paths = NULL,
   if (!isTRUE(getOption("fmrireg.suppress_deprecation", FALSE))) {
     .Deprecated("group_data", msg = "group_data_from_nifti() is deprecated. Use group_data(list(beta=..., se=...) | list(t=..., df=...), format='nifti', ...) instead.")
   }
-  
+
+  .group_data_from_nifti_impl(
+    beta_paths = beta_paths,
+    se_paths = se_paths,
+    var_paths = var_paths,
+    t_paths = t_paths,
+    df = df,
+    subjects = subjects,
+    covariates = covariates,
+    mask = mask,
+    target_space = target_space,
+    validate = validate
+  )
+}
+
+.group_data_from_nifti_impl <- function(beta_paths = NULL,
+                                         se_paths = NULL,
+                                         var_paths = NULL,
+                                         t_paths = NULL,
+                                         df = NULL,
+                                         subjects = NULL,
+                                         covariates = NULL,
+                                         mask = NULL,
+                                         target_space = NULL,
+                                         validate = TRUE) {
   # Validate input combinations
   has_beta <- !is.null(beta_paths)
   has_se <- !is.null(se_paths)

@@ -18,30 +18,34 @@ resource_files:
 - albers-header.html
 
 vignette: |
-  %\VignetteIndexEntry{fMRI Linear Model (GLM)} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{fMRI Linear Model (GLM)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+```{r setup, echo=FALSE, message=FALSE, warning=TRUE}
 if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(family = params$family, preset = params$preset))
-library(fmrireg)
-library(fmrihrf)
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(knitr)
-library(foreach)
-library(doParallel)
-
-# Set up parallel processing with 1 core
-registerDoParallel(cores = 1)
-
-# Limit RcppParallel threads
-options(fmrireg.num_threads = 2)
+load_vignette_package <- function(package) {
+  withCallingHandlers(
+    suppressPackageStartupMessages(
+      library(package, character.only = TRUE)
+    ),
+    warning = function(w) {
+      if (grepl("^package '.+' was built under R version", conditionMessage(w))) {
+        message("Qualified host note: ", conditionMessage(w))
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
+}
+invisible(lapply(
+  c("fmrireg", "fmrihrf", "ggplot2", "dplyr", "tidyr", "knitr"),
+  load_vignette_package
+))
 
 set.seed(42)  # For reproducible examples
 
-# Accessibility: provide default alt-text for figures
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.alt = "Figure illustrating model, design, or results; see caption and text for details.")
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
 ```{r albers-classes, echo=FALSE, results='asis'}
@@ -73,9 +77,9 @@ This vignette demonstrates how to conduct a complete linear model analysis using
 
 ## Simulating a Dataset for Analysis
 
-First, let's create a realistic fMRI dataset with known parameters. We'll simulate a simple experiment with two conditions that have different amplitudes.
+First, let's create a controlled fMRI teaching dataset with known parameters. We'll simulate a simple experiment with two conditions that have different amplitudes.
 
-```{r create-event-table, message=FALSE, fig.width=7, fig.height=5}
+```{r create-event-table, message=FALSE, fig.width=7, fig.height=5, fig.alt="Event onsets for condition 1 and condition 2 across the 400-second simulated run."}
 # Create an experimental design with two conditions
 # Condition 1: 10 events with amplitude 1.0
 # Condition 2: 10 events with amplitude 2.0
@@ -102,30 +106,9 @@ kable(head(event_table), caption = "First few rows of the experimental design")
 # Create a sampling frame
 sframe <- sampling_frame(blocklens = run_length, TR = TR)
 
-# Visualize the experimental design
-event_df <- data.frame(
-  time = seq(0, (run_length-1) * TR, by = TR),
-  condition1 = rep(0, run_length),
-  condition2 = rep(0, run_length)
-)
-
-# Mark event onsets in the timeline
-for (i in 1:nrow(event_table)) {
-  timepoint <- which.min(abs(event_df$time - event_table$onset[i]))
-  if (event_table$condition[i] == "condition1") {
-    event_df$condition1[timepoint] <- 1
-  } else {
-    event_df$condition2[timepoint] <- 1
-  }
-}
-
-# Convert to long format for plotting
-event_long <- event_df %>%
-  pivot_longer(cols = -time, names_to = "condition", values_to = "onset")
-
-# Plot the experimental design
-ggplot(event_long, aes(x = time, y = onset, color = condition)) +
-  geom_segment(aes(xend = time, yend = 0), linewidth = 1) +
+# Plot event onsets without drawing a dense row of zero-valued samples.
+ggplot(event_table, aes(x = onset, y = 1, color = condition)) +
+  geom_segment(aes(xend = onset, y = 0, yend = 1), linewidth = 1) +
   geom_point(size = 3) +
   theme_minimal(base_size = 14) +
   theme(legend.position = "top",
@@ -134,13 +117,14 @@ ggplot(event_long, aes(x = time, y = onset, color = condition)) +
         plot.title = element_text(size = 16)) +
   labs(title = "Experimental Design with Event Onsets",
        x = "Time (seconds)",
-       y = "Event") +
+       y = NULL) +
+  scale_y_continuous(breaks = 1, labels = "onset", limits = c(0, 1.1)) +
   scale_color_brewer(palette = "Set1")
 ```
 
 Now that we have our experimental design, let's simulate the fMRI time series. We'll create signals for each condition with different amplitudes, add noise, and combine them into a dataset.
 
-```{r simulate-signals, message=FALSE, fig.width=7, fig.height=8}
+```{r simulate-signals, message=FALSE, fig.width=7, fig.height=8, fig.alt="Faceted time series showing both condition responses, their combined signal, structured noise, and the observed signal."}
 # Simulate the true BOLD signals for each condition
 # First, convert our events to global indices
 global_onsets <- global_onsets(sframe, event_table$onset, blockids(sframe)[event_table$run])
@@ -187,10 +171,16 @@ signal_df <- data.frame(
   condition2 = signal2
 )
 
-# Create a matrix dataset for the model fitting
-simulated_data <- matrix(observed_signal, ncol = 1)
+# Create a matrix dataset for the model fitting. A shared noise realization
+# keeps the example focused on the known change in signal amplitude.
+voxel_scales <- c(1.0, 0.8, 0.6)
+simulated_data <- vapply(
+  voxel_scales,
+  function(scale) scale * true_signal + noise,
+  numeric(length(true_signal))
+)
 dataset <- fmridataset::matrix_dataset(
-  datamat = cbind(simulated_data, simulated_data * 0.8, simulated_data * 0.6), # Three "voxels" with varied signal strength
+  datamat = simulated_data,
   TR = TR,
   run_length = run_length,
   event_table = event_table
@@ -223,8 +213,8 @@ ggplot(signal_long, aes(x = time, y = signal, color = component)) +
 Our simulated dataset now contains:
 
 1. **Condition-specific signals** with known amplitudes (1.0 and 2.0)
-2. **Realistic noise** with temporal autocorrelation, drift, and physiological components
-3. **Multiple "voxels"** with varying signal strengths
+2. **Structured teaching noise** with temporal autocorrelation, drift, and physiological components
+3. **Three teaching voxels** with known signal scales and a shared noise realization
 4. **A complete event table** with condition labels and onset times
 
 ## Fitting a Linear Model
@@ -236,80 +226,135 @@ Now we can fit a linear model to our simulated data using the `fmri_lm` function
 3. The dataset
 
 ```{r fit-linear-model, message=FALSE, fig.width=7, fig.height=6}
-# Fit a linear model
+# Fit the central model with the AR(1) structure used by the generator.
 model <- fmri_lm(
   formula = onset ~ hrf(condition),  # Model experimental effects
   block = ~ run,                     # Block structure
   dataset = dataset,                 # Our simulated dataset
-  strategy = "chunkwise",            # Processing strategy
-  nchunks = 1                        # Process all voxels at once
+  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  compute = compute_spec(voxel_chunks = 1L)
 )
 
 # Print a summary of the model
 model
 ```
 
+The onset plot above shows the schedule; the matrix actually fitted by the GLM
+also includes the sampled HRF regressors and baseline columns. Inspect that
+matrix before interpreting coefficients, especially when designs are larger or
+contain nuisance regressors.
+
+```{r inspect-design-matrix, fig.width=8, fig.height=4.5, fig.alt="Column-scaled fitted design matrix across the 200 samples, including both condition regressors and baseline terms."}
+fitted_design <- as.matrix(design_matrix(model$model))
+design_denom <- pmax(apply(abs(fitted_design), 2, max), .Machine$double.eps)
+design_scaled <- sweep(fitted_design, 2, design_denom, "/")
+design_labels <- colnames(design_scaled)
+design_labels <- sub("^condition_condition\\.", "condition: ", design_labels)
+design_labels <- gsub("_", " ", design_labels, fixed = TRUE)
+colnames(design_scaled) <- design_labels
+
+design_plot_data <- as.data.frame(design_scaled, check.names = FALSE) %>%
+  mutate(sample = row_number()) %>%
+  pivot_longer(-sample, names_to = "regressor", values_to = "scaled_value") %>%
+  mutate(regressor = factor(regressor, levels = rev(design_labels)))
+
+ggplot(design_plot_data, aes(sample, regressor, fill = scaled_value)) +
+  geom_tile() +
+  scale_fill_gradient2(
+    low = "#2166AC", mid = "white", high = "#B2182B",
+    limits = c(-1, 1), name = "Column-scaled\nvalue"
+  ) +
+  labs(title = "Fitted GLM design matrix", x = "Sample", y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid = element_blank())
+```
+
 ### Accounting for Temporal Autocorrelation
 
-The simulated noise contains AR(1) structure. We can ask `fmri_lm` to apply a
-fast AR(1) prewhitening step by setting `cor_struct = "ar1"`. This estimates the
+The simulated noise contains AR(1) structure, so the central model above uses
+AR(1) prewhitening with `noise_spec("ar1")`. This estimates the
 AR coefficient from an initial OLS fit, whitens the data and design matrix, and
 refits the GLM.
 
-With stronger temporal autocorrelation in the simulated noise, the
-prewhitened model recovers tighter standard errors than OLS.
+Prewhitening changes both the coefficient covariance and the effective
+information in the time series. It is therefore important to inspect the
+result rather than assume that correction must make standard errors smaller.
 
 ```{r fit-ar1-model, message=FALSE}
-model_ar1 <- fmri_lm(
+model_ols <- fmri_lm(
   formula = onset ~ hrf(condition),
   block   = ~ run,
   dataset = dataset,
-  strategy = "chunkwise",
-  nchunks = 1,
-  cor_struct = "ar1",
-  cor_iter = 2              # Iterate to refine the AR(1) estimate
+  compute = compute_spec(voxel_chunks = 1L)
 )
+model_ar1 <- model
 
-# Compare standard errors (first few voxels)
-se_ols <- standard_error(model)
+se_ols <- standard_error(model_ols)
 se_ar1 <- standard_error(model_ar1)
-head(round(cbind(OLS = se_ols[[1]], AR1 = se_ar1[[1]]), 4))
+se_comparison <- data.frame(
+  model = c("OLS", "AR(1) prewhitened"),
+  median_event_se = c(median(as.matrix(se_ols)), median(as.matrix(se_ar1)))
+)
+kable(se_comparison, digits = 4, caption = "Median standard error across event coefficients")
 
 # Inspect the estimated AR coefficient (shared across voxels in this example)
 model_ar1$ar_coef[[1]]
 ```
 
-The AR(1) model now estimates a non-zero autoregressive coefficient and produces
-notably smaller standard errors than the plain OLS fit, illustrating how
-prewhitening improves efficiency when temporal autocorrelation is present.
+```{r validate-ar1-result, include=FALSE}
+stopifnot(
+  all(is.finite(se_comparison$median_event_se)),
+  se_comparison$median_event_se[2] > se_comparison$median_event_se[1],
+  any(abs(model_ar1$ar_coef[[1]]) > 0.05)
+)
+```
 
-The `cor_struct` argument also accepts `"arp"` for higher-order autoregressive
+Here the AR(1) fit estimates non-zero serial dependence and produces larger
+standard errors than plain OLS. The practical lesson is not that prewhitening
+always increases uncertainty, but that OLS can be overconfident when residuals
+are serially correlated.
+
+The `noise_spec()` constructor also accepts `struct = "arp"` for higher-order autoregressive
 models. This setting models AR coefficients only (no moving-average terms).
 
 ### Handling Outliers with Row-Wise Robust Fitting
 
 Real fMRI runs sometimes contain entire time points corrupted by motion or scanner artifacts. The `fmri_lm`
-function can mitigate their impact by enabling row-wise robust weighting. When `robust = TRUE`, an
-Iteratively Reweighted Least Squares loop down-weights frames with large residuals. The `robust_psi`
-argument selects the weighting function and `robust_max_iter` controls the number of iterations.
+function can mitigate their impact by enabling row-wise robust weighting: an Iteratively Reweighted Least
+Squares loop down-weights frames with large residuals. Select the weighting
+function and its iteration limit once with `robust_spec()`.
 
 ```{r fit-robust-model, message=FALSE}
 model_robust <- fmri_lm(
   formula = onset ~ hrf(condition),
   block   = ~ run,
   dataset = dataset,
-  strategy = "chunkwise",
-  nchunks = 1,
-  robust = TRUE,
-  robust_psi = "huber",
-  robust_max_iter = 2
+  control = fmri_lm_control(
+    robust = robust_spec("huber", max_iter = 2L)
+  ),
+  compute = compute_spec(voxel_chunks = 1L)
 )
 
 se_robust <- standard_error(model_robust)
-head(cbind(OLS = se_ols[[1]], Robust = se_robust[[1]]))
+robust_comparison <- data.frame(
+  model = c("OLS", "Huber"),
+  median_event_se = c(median(as.matrix(se_ols)), median(as.matrix(se_robust)))
+)
+kable(robust_comparison, digits = 4, caption = "Median event-coefficient standard error")
 ```
 
-Robust fitting guards against outlier time points but will not correct voxel-specific spikes. In this simulated example the Huber weights inflate the standard errors slightly, reflecting the additional uncertainty introduced by potential outliers. P-values rely on a robust residual scale and should be interpreted as approximate.
+```{r validate-robust-result, include=FALSE}
+stopifnot(
+  all(is.finite(robust_comparison$median_event_se)),
+  robust_comparison$median_event_se[2] < robust_comparison$median_event_se[1]
+)
+```
+
+Robust fitting guards against frames with multivariate residual excursions; it
+does not specifically target a spike confined to one voxel. In this realization
+Huber fitting modestly decreases the reported standard errors. That direction
+is data-dependent, not a general guarantee. Robust p-values use a robust
+residual scale and should be interpreted as approximate.
 
 
 
@@ -336,7 +381,7 @@ clean_condition_label <- function(x) {
 }
 ```
 
-```{r plot-coefficients, message=FALSE, fig.width=7, fig.height=7}
+```{r plot-coefficients, message=FALSE, fig.width=7, fig.height=7, fig.alt="Condition 1 and condition 2 coefficient estimates for each of the three simulated voxels."}
 # Reshape for plotting (works with both approaches)
 beta_long <- as.data.frame(t(beta_estimates)) %>%
   mutate(voxel_index = row_number()) %>%
@@ -362,10 +407,12 @@ ggplot(beta_long, aes(x = condition, y = estimate, fill = condition)) +
        y = "Coefficient Estimate")
 ```
 
-The bar plot shows the estimated coefficients for each condition across the three simulated voxels. Note that:
-
-- Condition2 has approximately twice the amplitude of Condition1, which matches our simulation parameters
-- The coefficient magnitude decreases across voxels, consistent with our multiplication factors (1.0, 0.8, 0.6)
+The generator assigns Condition2 twice the underlying amplitude of Condition1
+and scales the three voxels by 1.0, 0.8, and 0.6. Finite noisy estimates need
+not preserve either ratio exactly. The plot should therefore be read together
+with the uncertainty table below; the scientifically relevant checks are the
+direction and uncertainty of the planned contrast, not visual agreement with
+an exact 2:1 ratio.
 
 ### 2. T-Statistics and P-Values
 
@@ -376,11 +423,28 @@ estimate_stats <- tidy(model, type = "estimates") %>%
          voxel = paste0("voxel", voxel)) %>%
   select(voxel, condition, estimate, std_error, statistic, p_value)
 
-kable(estimate_stats, digits = 4,
+estimate_stats_display <- estimate_stats %>%
+  mutate(p_value = format.pval(p_value, digits = 4, eps = 1e-4))
+
+kable(estimate_stats_display, digits = 4, row.names = FALSE,
       caption = "Coefficient estimates with associated statistics by voxel and condition")
 ```
 
-The t-statistics quantify the reliability of the estimated effects. Higher absolute t-values indicate more reliable estimates. In our simulation, all conditions in all voxels show significant activity (p < 0.05).
+```{r validate-estimate-statistics, include=FALSE}
+stopifnot(
+  nrow(estimate_stats) == 6L,
+  all(is.finite(as.matrix(estimate_stats[c("estimate", "std_error", "statistic", "p_value")]))),
+  any(estimate_stats$p_value < 0.05),
+  any(estimate_stats$p_value >= 0.05)
+)
+```
+
+The t-statistics quantify the reliability of the estimated effects. Higher
+absolute t-values indicate more precise estimates relative to their standard
+errors. Here `r sum(estimate_stats$p_value < 0.05)` of the six condition-by-voxel
+tests are below 0.05. The weakest simulated signal is correspondingly the least
+certain; this is why the table reports both effect size and uncertainty rather
+than reducing the result to a binary label.
 
 ### 3. Contrasts Between Conditions
 
@@ -395,8 +459,8 @@ contrast_model <- fmri_lm(
   formula = onset ~ hrf(condition, contrasts = con_spec),
   block = ~ run,
   dataset = dataset,
-  strategy = "chunkwise",
-  nchunks = 1
+  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  compute = compute_spec(voxel_chunks = 1L)
 )
 
 # Extract contrast results using tidy helper
@@ -408,9 +472,22 @@ contrast_results <- tidy(contrast_model, type = "contrasts") %>%
   )
 ```
 
-```{r plot-contrast-results, message=FALSE, fig.width=7, fig.height=6}
+```{r validate-contrast-statistics, include=FALSE}
+stopifnot(
+  nrow(contrast_results) == 3L,
+  all(is.finite(contrast_results$estimate)),
+  all(contrast_results$estimate > 0),
+  all(contrast_results$significant)
+)
+```
+
+```{r plot-contrast-results, message=FALSE, fig.width=7, fig.height=6, fig.alt="Positive condition 2 minus condition 1 contrast estimates for all three simulated voxels."}
 # Display contrast results
-kable(contrast_results, caption = "Contrast results: condition2 - condition1", digits = 4)
+contrast_results_display <- contrast_results %>%
+  mutate(p_value = format.pval(p_value, digits = 4, eps = 1e-4))
+kable(contrast_results_display,
+      caption = "Contrast results: condition2 - condition1",
+      digits = 4, row.names = FALSE)
 
 # Visualize the contrast
 ggplot(contrast_results, aes(x = as.factor(voxel), y = estimate, fill = significant)) +
@@ -433,47 +510,20 @@ The contrast results show that Condition2 consistently elicits significantly str
 
 Another useful visualization is the fitted hemodynamic response for each condition. This shows the estimated BOLD response over time.
 
-```{r extract-fitted-hrf, message=FALSE, fig.width=7, fig.height=8}
-# Extract fitted HRF curves from the fitted model
-fitted_hrfs <- fitted_hrf(model, sample_at = seq(0, 20, by = 0.5))
-
-# Extract the design info and reorganize for plotting
-hrf_data <- lapply(names(fitted_hrfs), function(term) {
-  hrf_info <- fitted_hrfs[[term]]
-  design_info <- hrf_info$design
-  pred_values <- hrf_info$pred
-  
-  # Combine with design info
-  result <- cbind(design_info, pred_values)
-  result$term <- term
-  return(result)
-})
-
-# Combine all HRF data
-hrf_df <- do.call(rbind, hrf_data)
-
-# Identify predicted-value columns by excluding known design columns
-design_cols <- union(colnames(fitted_hrfs[[1]]$design), c("term"))
-pred_cols <- setdiff(colnames(hrf_df), design_cols)
-if (length(pred_cols) == 0) {
-  # Fallback: match common default names for matrix columns
-  pred_cols <- grep("^(V|X)?[0-9]+$|^pred.*$", colnames(hrf_df), value = TRUE)
-}
-
-# Create a data frame in long format for plotting
-hrf_long <- hrf_df %>%
-  tidyr::pivot_longer(
-    cols = all_of(pred_cols),
-    names_to = "voxel_id",
-    values_to = "response"
-  ) %>%
-  mutate(
-    voxel_index = suppressWarnings(as.integer(gsub("^[^0-9]*", "", voxel_id))),
-    voxel = paste0("voxel", voxel_index)
+```{r extract-fitted-hrf, message=FALSE, fig.width=7, fig.height=8, fig.alt="Fitted hemodynamic response curves for both conditions in each simulated voxel."}
+hrf_long <- dplyr::bind_rows(lapply(
+  seq_len(ncol(get_data_matrix(dataset))),
+  function(voxel_index) tidy_fitted_hrf(
+    model,
+    sample_at = seq(0, 20, by = 0.5),
+    term = "condition",
+    term_match = "contains",
+    voxel = voxel_index
   )
+))
 
 # Plot the fitted HRF curves for each condition and voxel
-ggplot(hrf_long, aes(x = time, y = response, color = condition)) +
+ggplot(hrf_long, aes(x = time, y = estimate, color = condition)) +
   geom_line() +
   facet_grid(voxel ~ term) +
   theme_minimal(base_size = 14) +
@@ -487,11 +537,215 @@ ggplot(hrf_long, aes(x = time, y = response, color = condition)) +
        color = "Condition")
 ```
 
+```{r validate-fitted-hrf, include=FALSE}
+stopifnot(
+  nrow(hrf_long) > 0L,
+  all(is.finite(hrf_long$estimate)),
+  length(unique(hrf_long$voxel)) == 3L
+)
+```
+
 The fitted HRF curves show the temporal profile of the BOLD response for each condition. We can observe:
 
 1. The peak response around 5-6 seconds post-stimulus
 2. The stronger response for Condition2 compared to Condition1
 3. The decreasing response amplitude across voxels
+
+## Estimating the HRF Shape from Data
+
+The curves above inherit the canonical HRF chosen for the GLM. When the shape
+itself is the target, `estimate_hrf()` instead fits smooth condition-level
+curves without assuming a canonical response. The example below uses white
+noise because its reported intervals currently assume independent,
+homoscedastic time-point errors; they are not autocorrelation-robust.
+
+To make success visible, we simulate two known responses: Condition A uses the
+canonical SPM shape, while Condition B is 1.5 seconds later and slightly taller.
+Two ROIs have different amplitudes, and a linear drift is removed as a nuisance
+term. The simulation mechanics are hidden so the teaching path stays focused on
+the estimator.
+
+```{r simulate-empirical-hrf, include=FALSE}
+set.seed(731)
+hrf_n <- 300L
+hrf_onsets <- 8 + c(0, cumsum(sample(c(6, 7, 9, 10), 31L, replace = TRUE)))
+hrf_events <- data.frame(
+  onset = hrf_onsets,
+  condition = factor(sample(rep(c("A", "B"), 16L))),
+  run = 1L
+)
+hrf_sframe <- sampling_frame(blocklens = hrf_n, TR = 1)
+hrf_acquisition_time <- samples(hrf_sframe, global = TRUE)
+hrf_truth_a <- function(time) as.numeric(fmrihrf::HRF_SPMG1(time))
+hrf_truth_b <- function(time) {
+  ifelse(
+    time >= 1.5,
+    1.25 * as.numeric(fmrihrf::HRF_SPMG1(time - 1.5)),
+    0
+  )
+}
+hrf_signal_a <- evaluate(
+  regressor(
+    hrf_events$onset[hrf_events$condition == "A"],
+    hrf = hrf_truth_a,
+    span = 24
+  ),
+  hrf_acquisition_time
+)
+hrf_signal_b <- evaluate(
+  regressor(
+    hrf_events$onset[hrf_events$condition == "B"],
+    hrf = hrf_truth_b,
+    span = 24
+  ),
+  hrf_acquisition_time
+)
+hrf_amplitudes <- rbind(A = c(1, 0.65), B = c(0.8, 1.1))
+hrf_drift <- outer(seq(-0.15, 0.15, length.out = hrf_n), rep(1, 2L))
+hrf_response <- hrf_signal_a %o% hrf_amplitudes["A", ] +
+  hrf_signal_b %o% hrf_amplitudes["B", ] + hrf_drift +
+  matrix(rnorm(hrf_n * 2L, sd = 0.025), nrow = hrf_n)
+colnames(hrf_response) <- c("visual_ROI", "motor_ROI")
+hrf_dataset <- matrix_dataset(
+  hrf_response,
+  TR = 1,
+  run_length = hrf_n,
+  event_table = hrf_events
+)
+hrf_baseline <- baseline_model(
+  "poly", degree = 1, sframe = hrf_dataset$sampling_frame
+)
+```
+
+The public call is short. GCV chooses one smoothing strength shared across the
+ROIs, preventing high-variance columns from dominating the choice.
+
+```{r estimate-empirical-hrf}
+empirical_hrf <- estimate_hrf(
+  onset ~ hrf(condition),
+  block = ~run,
+  dataset = hrf_dataset,
+  basemod = hrf_baseline,
+  rsam = seq(0, 24, by = 0.5),
+  k = 8,
+  lambda = "gcv"
+)
+empirical_hrf
+```
+
+```{r prepare-empirical-hrf-results, include=FALSE}
+hrf_recovery <- tidy(empirical_hrf) %>%
+  mutate(
+    condition = sub("^.*[.]", "", condition),
+    amplitude = ifelse(
+      condition == "A",
+      hrf_amplitudes["A", match(voxel, colnames(hrf_response))],
+      hrf_amplitudes["B", match(voxel, colnames(hrf_response))]
+    ),
+    truth = ifelse(
+      condition == "A",
+      hrf_truth_a(time) * amplitude,
+      hrf_truth_b(time) * amplitude
+    )
+  )
+
+hrf_recovery_metrics <- hrf_recovery %>%
+  group_by(condition, voxel) %>%
+  summarise(
+    correlation = cor(estimate, truth),
+    normalized_rmse = sqrt(mean((estimate - truth)^2)) / max(abs(truth)),
+    .groups = "drop"
+  )
+
+hrf_peak_times <- hrf_recovery %>%
+  group_by(condition, voxel) %>%
+  slice_max(estimate, n = 1L, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(condition, voxel, peak_time = time) %>%
+  pivot_wider(names_from = condition, values_from = peak_time)
+
+stopifnot(
+  all(is.finite(empirical_hrf$estimate)),
+  all(is.finite(empirical_hrf$std.error)),
+  empirical_hrf$lambda %in% empirical_hrf$gcv$lambda,
+  all(is.finite(empirical_hrf$gcv$score)),
+  all(hrf_recovery_metrics$correlation > 0.97),
+  all(hrf_recovery_metrics$normalized_rmse < 0.08),
+  all(hrf_peak_times$B - hrf_peak_times$A >= 1.5)
+)
+```
+
+```{r empirical-hrf-metrics, echo=FALSE}
+kable(
+  hrf_recovery_metrics,
+  digits = 3,
+  row.names = FALSE,
+  caption = "Recovery against the known synthetic HRFs"
+)
+```
+
+```{r plot-empirical-hrf, echo=FALSE, fig.width=8, fig.height=6, fig.alt="Known and estimated hemodynamic response curves agree closely in two synthetic ROIs; Condition B peaks later than Condition A, and shaded confidence intervals surround each estimate."}
+ggplot(
+  hrf_recovery,
+  aes(x = time, color = condition, fill = condition)
+) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.14, color = NA) +
+  geom_line(aes(y = estimate, linetype = "Estimated"), linewidth = 0.9) +
+  geom_line(
+    aes(y = truth, linetype = "Known truth"),
+    color = "#333333",
+    linewidth = 0.75
+  ) +
+  facet_grid(voxel ~ condition) +
+  scale_linetype_manual(values = c("Estimated" = "solid", "Known truth" = "dashed")) +
+  scale_color_brewer(palette = "Set1") +
+  scale_fill_brewer(palette = "Set1") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "top") +
+  labs(
+    title = "Flexible HRF estimation recovers two response shapes",
+    subtitle = "Shading is the model-based 95% confidence interval",
+    x = "Seconds after onset",
+    y = "BOLD response",
+    color = "Condition",
+    fill = "Condition",
+    linetype = NULL
+  )
+```
+
+Across the four condition-by-ROI curves, correlation with the known response is
+between `r sprintf("%.3f", min(hrf_recovery_metrics$correlation))` and
+`r sprintf("%.3f", max(hrf_recovery_metrics$correlation))`; the largest
+normalized RMSE is
+`r sprintf("%.3f", max(hrf_recovery_metrics$normalized_rmse))`. More
+importantly, the estimates recover the later Condition B peak in both ROIs.
+These are executable checks for this controlled example, not an accuracy
+guarantee for arbitrary event schedules or real fMRI noise.
+
+The complete GCV path remains available for diagnosis rather than returning
+only the winning value. Here the minimum is interior to the candidate grid.
+
+```{r plot-empirical-hrf-gcv, echo=FALSE, fig.width=7, fig.height=4.5, fig.alt="Scale-normalized generalized cross-validation score across smoothing strengths, with the selected minimum marked by a vertical line."}
+hrf_positive_lambda <- min(empirical_hrf$gcv$lambda[empirical_hrf$gcv$lambda > 0])
+hrf_gcv_plot <- empirical_hrf$gcv %>%
+  mutate(lambda_axis = ifelse(lambda == 0, hrf_positive_lambda / 10, lambda))
+hrf_selected_axis <- if (
+  empirical_hrf$lambda == 0
+) hrf_positive_lambda / 10 else empirical_hrf$lambda
+
+ggplot(hrf_gcv_plot, aes(x = lambda_axis, y = score)) +
+  geom_line(color = "#7F0000", linewidth = 0.8) +
+  geom_point(color = "#B2182B", size = 2) +
+  geom_vline(xintercept = hrf_selected_axis, linetype = "dashed") +
+  scale_x_log10() +
+  theme_minimal(base_size = 13) +
+  labs(
+    title = "Shared smoothing selected by GCV",
+    subtitle = "The zero-penalty candidate is shown one step left of the positive grid",
+    x = "Smoothing strength (log scale)",
+    y = "Scale-normalized GCV score"
+  )
+```
 
 
 ## Comparing Models with Different HRF Bases
@@ -504,24 +758,24 @@ model_canonical <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "spmg1"),
   block = ~ run,
   dataset = dataset,
-  strategy = "chunkwise",
-  nchunks = 1
+  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  compute = compute_spec(voxel_chunks = 1L)
 )
 
 model_gaussian <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "gaussian"),
   block = ~ run,
   dataset = dataset,
-  strategy = "chunkwise",
-  nchunks = 1
+  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  compute = compute_spec(voxel_chunks = 1L)
 )
 
 model_bspline <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "bspline", nbasis = 5),
   block = ~ run,
   dataset = dataset,
-  strategy = "chunkwise",
-  nchunks = 1
+  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  compute = compute_spec(voxel_chunks = 1L)
 )
 ```
 
@@ -567,7 +821,7 @@ extract_model_stats <- function(model, model_name, dataset) {
 }
 ```
 
-```{r plot-r-squared, message=FALSE, fig.width=7, fig.height=5}
+```{r plot-r-squared, message=FALSE, fig.width=7, fig.height=5, fig.alt="R-squared values for canonical, Gaussian, and B-spline HRF models in each simulated voxel."}
 # Extract statistics for each model
 stats_canonical <- extract_model_stats(model_canonical, "canonical_spm", dataset)
 stats_gaussian <- extract_model_stats(model_gaussian, "gaussian", dataset)
@@ -578,6 +832,13 @@ model_comparison <- rbind(stats_canonical, stats_gaussian, stats_bspline)
 
 # Display model comparison
 kable(model_comparison, caption = "Model comparison statistics", digits = 4)
+
+aic_winners <- model_comparison %>%
+  group_by(voxel) %>%
+  slice_min(aic, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(voxel, selected_model = model, aic)
+kable(aic_winners, caption = "Lowest-AIC model in each voxel", digits = 4)
 
 # Reshape for plotting
 model_comparison_long <- model_comparison %>%
@@ -600,7 +861,16 @@ ggplot(subset(model_comparison_long, metric == "r_squared"),
        y = "R-Squared")
 ```
 
-```{r plot-aic, message=FALSE, fig.width=7, fig.height=7}
+```{r validate-model-comparison, include=FALSE}
+stopifnot(
+  nrow(aic_winners) == 3L,
+  all(is.finite(model_comparison$aic)),
+  sum(aic_winners$selected_model == "canonical_spm") == 2L,
+  sum(aic_winners$selected_model == "bspline_n5") == 1L
+)
+```
+
+```{r plot-aic, message=FALSE, fig.width=7, fig.height=7, fig.alt="AIC values for canonical, Gaussian, and B-spline HRF models in each simulated voxel; lower values are preferred."}
 ggplot(subset(model_comparison_long, metric == "aic"),
        aes(x = model, y = value, fill = model)) +
   geom_bar(stat = "identity") +
@@ -622,28 +892,29 @@ The model comparison shows:
 1. **R-Squared**: The proportion of variance explained by each model. Higher values indicate better fit.
 2. **AIC (Akaike Information Criterion)**: A measure of model quality that balances goodness of fit with model complexity. Lower values indicate better models.
 
-In this case, the canonical (SPM) model actually provides the best fit according to AIC, showing the lowest AIC values across voxels. This is an interesting result since we used the same HRF (SPMG1) to generate our data, confirming that the model selection correctly identifies the true underlying signal generator. The B-spline model, despite having more flexibility to capture variations in the signal, is penalized by AIC for its additional complexity. This demonstrates how model selection criteria like AIC can help identify the most parsimonious model that explains the data.
-
-The canonical SPM model performs well due to its accurate representation of the hemodynamic response shape in our simulated data, making it the optimal choice for this particular dataset. This highlights the importance of selecting an appropriate HRF basis function when analyzing fMRI data.
+The canonical SPM model has the lowest AIC in two voxels, consistent with the
+HRF used to generate the signal. In the weakest-signal voxel, however, the
+B-spline model wins despite its larger penalty. This is a useful caution:
+finite noisy data need not select the generating model in every voxel. AIC
+balances fit and complexity; it is evidence for a model in a particular sample,
+not proof that the selected basis is the true physiological response.
 
 ## Summary
 
 This vignette demonstrated the complete workflow for fMRI linear model analysis using the `fmrireg` package:
 
-1. **Creating/simulating a dataset** with realistic signal and noise properties
+1. **Creating/simulating a dataset** with controlled signal and structured noise
 2. **Fitting linear models** with different HRF options
 3. **Extracting and visualizing model coefficients** and statistics
 4. **Computing and testing contrasts** between conditions
 5. **Comparing model performance** using goodness-of-fit metrics
-6. **Diagnosing model quality** through residual analysis
+6. **Inspecting fitted and directly estimated hemodynamic response curves**
 
-The `fmri_lm` function provides a powerful and flexible framework for analyzing fMRI data, with features for handling temporal autocorrelation, modeling different HRF shapes, and computing contrasts between conditions.
-
-For more advanced analyses, you might consider:
-- Adding nuisance regressors to model physiological noise, motion, or other confounds
-- Using more complex experimental designs with multiple factors
-- Implementing spatial smoothing or other preprocessing steps
-- Extending the GLM with methods like psychophysiological interactions (PPI) or finite impulse response (FIR) models 
+The `fmri_lm` workflow shown here supports declared temporal covariance,
+alternative HRF bases, coefficient extraction, and planned contrasts. Real-data
+analyses additionally require prespecified nuisance regressors, preprocessing,
+quality control, and a multiplicity strategy appropriate to the scientific
+question.
 
 ## From first‑level to group analysis (GDS)
 

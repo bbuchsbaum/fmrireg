@@ -16,7 +16,9 @@ resource_files:
 - albers-header.html
 
 vignette: |
-  %\VignetteIndexEntry{Plugin Development} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{Plugin Development}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include = FALSE}
@@ -25,7 +27,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   message = FALSE,
-  warning = FALSE
+  warning = TRUE
 )
 
 library(fmrireg)
@@ -97,7 +99,7 @@ basis_name <- "vignette_bspline_basis"
 register_basis(
   basis_name,
   function(span = 18, ...) {
-    fmrihrf::gen_hrf(fmrihrf::hrf_bspline, N = 5, span = span)
+    fmrihrf::gen_hrf(fmrihrf::hrf_bspline, N = 4, span = span)
   }
 )
 
@@ -108,7 +110,9 @@ model_with_basis <- create_fmri_model(
 )
 
 stopifnot(inherits(model_with_basis, "fmri_model"))
-head(colnames(design_matrix(model_with_basis)))
+plugin_design <- design_matrix(model_with_basis)
+stopifnot(qr(plugin_design)$rank == ncol(plugin_design))
+head(colnames(plugin_design))
 ```
 
 The important rule is that the constructor must return an object that
@@ -160,8 +164,7 @@ fit_plugin <- fmri_lm(
   dataset = dset,
   engine = engine_name,
   engine_args = list(center = TRUE),
-  robust = FALSE,
-  robust_options = list(max_iter = 10L)
+  control = fmri_lm_control(robust = robust_spec("none", max_iter = 10L))
 )
 
 stopifnot(inherits(fit_plugin, "fmri_lm"))
@@ -220,7 +223,7 @@ data.frame(
 )
 ```
 
-If a caller enables an unsupported feature such as `robust = TRUE`, the engine
+If a caller enables an unsupported robust method, the engine
 is rejected before `fit()` is called.
 
 ```{r capability-error-check, include = FALSE}
@@ -231,7 +234,7 @@ tryCatch(
     block = ~run,
     dataset = dset,
     engine = engine_name,
-    robust = TRUE
+    control = fmri_lm_control(robust = robust_spec("huber"))
   ),
   error = function(e) {
     unsupported_message <<- conditionMessage(e)

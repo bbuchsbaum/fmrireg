@@ -14,7 +14,7 @@
     "name": "R",
     "url": "https://r-project.org"
   },
-  "runtimePlatform": "R version 4.6.0 (2026-04-24)",
+  "runtimePlatform": "R version 4.6.1 (2026-06-24)",
   "author": [
     {
       "@type": "Person",
@@ -121,6 +121,18 @@
         "url": "https://cran.r-project.org"
       },
       "sameAs": "https://CRAN.R-project.org/package=rmarkdown"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "albersdown",
+      "name": "albersdown",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=albersdown"
     },
     {
       "@type": "SoftwareApplication",
@@ -244,15 +256,15 @@
     },
     {
       "@type": "SoftwareApplication",
-      "identifier": "mgcv",
-      "name": "mgcv",
+      "identifier": "sandwich",
+      "name": "sandwich",
       "provider": {
         "@id": "https://cran.r-project.org",
         "@type": "Organization",
         "name": "Comprehensive R Archive Network (CRAN)",
         "url": "https://cran.r-project.org"
       },
-      "sameAs": "https://CRAN.R-project.org/package=mgcv"
+      "sameAs": "https://CRAN.R-project.org/package=sandwich"
     },
     {
       "@type": "SoftwareApplication",
@@ -302,6 +314,18 @@
         "url": "https://cran.r-project.org"
       },
       "sameAs": "https://CRAN.R-project.org/package=withr"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "bidser",
+      "name": "bidser",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://github.com/bbuchsbaum/bidser"
     }
   ],
   "softwareRequirements": {
@@ -309,19 +333,20 @@
       "@type": "SoftwareApplication",
       "identifier": "R",
       "name": "R",
-      "version": ">= 4.0.0"
+      "version": ">= 4.1.0"
     },
     "2": {
       "@type": "SoftwareApplication",
       "identifier": "fmriAR",
       "name": "fmriAR",
+      "version": ">= 0.3.3",
       "provider": {
         "@id": "https://cran.r-project.org",
         "@type": "Organization",
         "name": "Comprehensive R Archive Network (CRAN)",
         "url": "https://cran.r-project.org"
       },
-      "sameAs": "https://CRAN.R-project.org/package=fmriAR"
+      "sameAs": "https://github.com/bbuchsbaum/fmriAR"
     },
     "3": {
       "@type": "SoftwareApplication",
@@ -362,6 +387,11 @@
     },
     "8": {
       "@type": "SoftwareApplication",
+      "identifier": "splines",
+      "name": "splines"
+    },
+    "9": {
+      "@type": "SoftwareApplication",
       "identifier": "Matrix",
       "name": "Matrix",
       "provider": {
@@ -372,7 +402,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=Matrix"
     },
-    "9": {
+    "10": {
       "@type": "SoftwareApplication",
       "identifier": "MASS",
       "name": "MASS",
@@ -384,7 +414,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=MASS"
     },
-    "10": {
+    "11": {
       "@type": "SoftwareApplication",
       "identifier": "RANN",
       "name": "RANN",
@@ -396,7 +426,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=RANN"
     },
-    "11": {
+    "12": {
       "@type": "SoftwareApplication",
       "identifier": "assertthat",
       "name": "assertthat",
@@ -408,7 +438,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=assertthat"
     },
-    "12": {
+    "13": {
       "@type": "SoftwareApplication",
       "identifier": "tibble",
       "name": "tibble",
@@ -420,7 +450,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=tibble"
     },
-    "13": {
+    "14": {
       "@type": "SoftwareApplication",
       "identifier": "purrr",
       "name": "purrr",
@@ -432,7 +462,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=purrr"
     },
-    "14": {
+    "15": {
       "@type": "SoftwareApplication",
       "identifier": "foreach",
       "name": "foreach",
@@ -444,7 +474,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=foreach"
     },
-    "15": {
+    "16": {
       "@type": "SoftwareApplication",
       "identifier": "dplyr",
       "name": "dplyr",
@@ -456,7 +486,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=dplyr"
     },
-    "16": {
+    "17": {
       "@type": "SoftwareApplication",
       "identifier": "ggplot2",
       "name": "ggplot2",
@@ -467,18 +497,6 @@
         "url": "https://cran.r-project.org"
       },
       "sameAs": "https://CRAN.R-project.org/package=ggplot2"
-    },
-    "17": {
-      "@type": "SoftwareApplication",
-      "identifier": "lazyeval",
-      "name": "lazyeval",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=lazyeval"
     },
     "18": {
       "@type": "SoftwareApplication",
@@ -686,7 +704,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "4897.052KB",
+  "fileSize": "5359.425KB",
   "citation": [
     {
       "@type": "SoftwareSourceCode",
@@ -701,10 +719,11 @@
       ],
       "name": "fmrireg: Regression Analysis of Functional Magnetic Resonance Imaging Data",
       "url": "https://bbuchsbaum.github.io/fmrireg/",
-      "description": "R package version 0.1.2"
+      "description": "R package version 0.2.0"
     }
   ],
   "releaseNotes": "https://github.com/bbuchsbaum/fmrireg/blob/main/NEWS.md",
   "readme": "https://github.com/bbuchsbaum/fmrireg/blob/master/README.md",
-  "contIntegration": "https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml"
+  "contIntegration": ["https://github.com/bbuchsbaum/fmrireg/actions/workflows/R-CMD-check.yaml", "https://app.codecov.io/gh/bbuchsbaum/fmrireg?branch=main"],
+  "developmentStatus": "https://lifecycle.r-lib.org/articles/stages.html#experimental"
 }

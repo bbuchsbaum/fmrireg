@@ -22,7 +22,7 @@ A single \link{fmri_job} if \code{x} is one binding, otherwise a list of
 \description{
 Binds an \link{fmri_template} to one or more per-subject data bindings, producing
 serializable \link{fmri_job} recipes. No data is loaded: file-backed scans are kept
-as paths and realized lazily by \code{\link[=run]{run()}}.
+as paths and realized lazily by \code{\link[=run_job]{run_job()}}.
 }
 \examples{
 tmpl <- fmri_template(onset ~ hrf(condition), ~ run)
@@ -34,5 +34,5 @@ b <- list(id = "sub-01", scans = matrix(rnorm(80 * 3), 80, 3),
 job <- instantiate(tmpl, b)
 }
 \seealso{
-\code{\link[=fmri_job]{fmri_job()}}, \code{\link[=run]{run()}}, \code{\link[=from_bids]{from_bids()}}
+\code{\link[=fmri_job]{fmri_job()}}, \code{\link[=run_job]{run_job()}}, \code{\link[=from_bids]{from_bids()}}
 }

@@ -23,7 +23,7 @@
 #'
 #' Binds an [fmri_template] to one or more per-subject data bindings, producing
 #' serializable [fmri_job] recipes. No data is loaded: file-backed scans are kept
-#' as paths and realized lazily by [run()].
+#' as paths and realized lazily by [run_job()].
 #'
 #' @param template An [fmri_template].
 #' @param x A single binding (a named list with at least \code{id}), a list of
@@ -32,7 +32,7 @@
 #' @param ... Unused.
 #' @return A single [fmri_job] if \code{x} is one binding, otherwise a list of
 #'   [fmri_job]s.
-#' @seealso [fmri_job()], [run()], [from_bids()]
+#' @seealso [fmri_job()], [run_job()], [from_bids()]
 #' @export
 #' @examples
 #' tmpl <- fmri_template(onset ~ hrf(condition), ~ run)
@@ -115,7 +115,7 @@ instantiate <- function(template, x, ...) {
 #'
 #' @param job An [fmri_job].
 #' @return An \code{fmri_dataset}.
-#' @seealso [build_model()], [run()]
+#' @seealso [build_model()], [run_job()]
 #' @export
 realize_dataset <- function(job) {
   assert_that(inherits(job, "fmri_job"), msg = "'job' must be an 'fmri_job'")
@@ -187,7 +187,7 @@ realize_dataset <- function(job) {
 #' @param job An [fmri_job].
 #' @param dataset The realized dataset (defaults to \code{realize_dataset(job)}).
 #' @return An \code{fmri_model}.
-#' @seealso [realize_dataset()], [run()]
+#' @seealso [realize_dataset()], [run_job()]
 #' @export
 build_model <- function(job, dataset = realize_dataset(job)) {
   assert_that(inherits(job, "fmri_job"), msg = "'job' must be an 'fmri_job'")

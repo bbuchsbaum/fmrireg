@@ -1240,14 +1240,14 @@ test_that("write_results.fmri_lm handles fmristore write failure gracefully", {
 # (type = "Fcontrast", stat_type = "Fstat", data with estimate/se/stat/prob).
 add_synthetic_fcontrast <- function(mod, name = "condF") {
   ct <- mod$result$contrasts
-  n_vox <- length(ct$data[[1]]$stat[[1]])
+  n_vox <- length(ct$data[[1]]$stat)
   set.seed(7)
   f_data <- tibble::tibble(
-    estimate = list(runif(n_vox, 0.5, 3)),   # numerator mean square
-    se       = list(rep(1, n_vox)),          # denominator mean square (sigma2)
-    stat     = list(runif(n_vox, 2, 12)),    # F statistic (non-negative)
-    prob     = list(runif(n_vox, 1e-4, 0.2)),
-    sigma    = list(rep(1, n_vox))
+    estimate = runif(n_vox, 0.5, 3),   # numerator mean square
+    se       = rep(1, n_vox),          # denominator mean square (sigma2)
+    stat     = runif(n_vox, 2, 12),    # F statistic (non-negative)
+    prob     = runif(n_vox, 1e-4, 0.2),
+    sigma    = rep(1, n_vox)
   )
   f_row <- tibble::tibble(
     contrast_internal_name = name,
@@ -1398,4 +1398,46 @@ test_that("coef_images supports contrasts and a coef subset", {
     coef_images(mod, type = "estimates", coefs = "not_a_real_coef"),
     "not found"
   )
+})
+
+test_that("coef_image preserves voxelwise simple-contrast statistics", {
+  mod <- create_test_fmri_lm()
+  ct <- mod$result$contrasts
+  simple_idx <- which(ct$type == "contrast")[1]
+  contrast_name <- ct$name[[simple_idx]]
+  elements <- c(estimate = "estimate", se = "se", tstat = "stat", prob = "prob")
+
+  for (statistic in names(elements)) {
+    stored <- ct$data[[simple_idx]][[elements[[statistic]]]]
+    expected <- as.numeric(unlist(stored, recursive = TRUE, use.names = FALSE))
+    img <- coef_image(mod, coef = contrast_name, statistic = statistic,
+                      type = "contrasts")
+    actual <- as.numeric(as.array(img))
+
+    expect_length(actual, length(expected))
+    expect_equal(actual, expected, info = statistic)
+    expect_gt(length(unique(actual)), 1)
+  }
+})
+
+test_that("coef_image preserves voxelwise F-contrast statistics", {
+  mod <- add_synthetic_fcontrast(create_test_fmri_lm())
+  ct <- mod$result$contrasts
+  f_idx <- which(ct$type == "Fcontrast")[1]
+  f_name <- ct$name[[f_idx]]
+  elements <- c(estimate = "estimate", se = "se", tstat = "stat", prob = "prob")
+
+  mod$result$contrasts$data[[f_idx]]$se <-
+    seq_along(mod$result$contrasts$data[[f_idx]]$se) / 10
+
+  for (statistic in names(elements)) {
+    stored <- mod$result$contrasts$data[[f_idx]][[elements[[statistic]]]]
+    expected <- as.numeric(stored)
+    img <- coef_image(mod, coef = f_name, statistic = statistic, type = "F")
+    actual <- as.numeric(as.array(img))
+
+    expect_length(actual, length(expected))
+    expect_equal(actual, expected, info = statistic)
+    expect_gt(length(unique(actual)), 1)
+  }
 })

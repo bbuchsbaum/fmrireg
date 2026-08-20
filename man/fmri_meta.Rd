@@ -53,9 +53,10 @@ If a matrix, it must be subjects x features.}
 
 \item{combine}{For t-statistic-only data, combination method ("stouffer",
 "fisher", or "lancaster"). Stouffer combines z-scores and supports
-equal, inverse-variance, or custom weighting (via \code{weights}). Fisher uses
-equal weights. Lancaster implements a weighted Fisher method by mapping
-weights to per-subject degrees of freedom.}
+equal or custom weighting (via \code{weights}); inverse-variance weights are
+unavailable without effect standard errors. Fisher uses equal weights.
+Lancaster implements a weighted Fisher method by mapping weights to
+per-subject degrees of freedom.}
 
 \item{contrasts}{Optional numeric vector or matrix specifying fit-time exact contrasts. If a
 vector is provided, its names must match the column names of the design matrix X. A matrix
@@ -103,10 +104,10 @@ fit <- fmri_meta(gd_tstat, combine = "stouffer")
 
 # Exact post-hoc contrasts by storing covariance
 fit_cov <- fmri_meta(gd, formula = ~ 1 + group, method = "pm", return_cov = "tri")
-con <- contrast(fit_cov, c("(Intercept)" = 0, group = 1))
+con <- contrast(fit_cov, c("(Intercept)" = 0, groupB = 1))
 
 # Exact fit-time contrast without storing covariance
 fit_con <- fmri_meta(gd, formula = ~ 1 + group, method = "pm",
-                     contrasts = c("(Intercept)" = 0, group = 1))
+                     contrasts = c("(Intercept)" = 0, groupB = 1))
 }
 }

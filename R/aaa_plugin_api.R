@@ -144,7 +144,10 @@ print.fmrireg_engine_spec <- function(x, ...) {
     paste0("robust=", caps$robust),
     paste0("preprocessing=", caps$preprocessing),
     paste0("ar_voxelwise=", caps$ar_voxelwise),
-    paste0("ar_by_cluster=", caps$ar_by_cluster)
+    paste0("ar_by_cluster=", caps$ar_by_cluster),
+    paste0("variance=", paste(caps$variance_methods, collapse = "/")),
+    paste0("df=", paste(caps$df_methods, collapse = "/")),
+    paste0("scope=", paste(caps$estimation_scopes, collapse = "/"))
   )
 
   cat("<fmrireg_engine_spec>\n", sep = "")
@@ -178,6 +181,9 @@ print.fmrireg_engine_spec <- function(x, ...) {
     preprocessing = TRUE,
     ar_voxelwise = TRUE,
     ar_by_cluster = TRUE,
+    variance_methods = "model",
+    df_methods = "residual",
+    estimation_scopes = c("joint", "runwise_meta"),
     requires_event_regressors = FALSE,
     requires_parcels_for_by_cluster = FALSE,
     forbid_by_cluster_dataset_classes = character()
@@ -190,11 +196,11 @@ print.fmrireg_engine_spec <- function(x, ...) {
 #' @keywords internal
 .validate_engine_capabilities <- function(engine, cfg, capabilities = NULL) {
   stopifnot(is.character(engine), length(engine) == 1L, nzchar(engine))
-  stopifnot(inherits(cfg, "fmri_lm_config"))
+  stopifnot(inherits(cfg, "fmri_lm_control"))
 
   caps <- .normalize_engine_capabilities(capabilities)
 
-  if (identical(caps$robust, FALSE) && !identical(cfg$robust$type %||% FALSE, FALSE)) {
+  if (identical(caps$robust, FALSE) && .fmri_lm_robust_enabled(cfg$robust)) {
     stop(sprintf("%s does not support robust fitting; set robust = FALSE", engine), call. = FALSE)
   }
 
@@ -211,6 +217,24 @@ print.fmrireg_engine_spec <- function(x, ...) {
     stop(sprintf("%s does not support parcel-specific AR whitening", engine), call. = FALSE)
   }
 
+  if (!cfg$variance$method %in% caps$variance_methods) {
+    stop(sprintf("%s does not support variance method '%s'; supported: %s",
+                 engine, cfg$variance$method,
+                 paste(caps$variance_methods, collapse = ", ")), call. = FALSE)
+  }
+
+  if (!cfg$variance$df %in% caps$df_methods) {
+    stop(sprintf("%s does not support df method '%s'; supported: %s",
+                 engine, cfg$variance$df,
+                 paste(caps$df_methods, collapse = ", ")), call. = FALSE)
+  }
+
+  if (!cfg$estimation$scope %in% caps$estimation_scopes) {
+    stop(sprintf("%s does not support estimation scope '%s'; supported: %s",
+                 engine, cfg$estimation$scope,
+                 paste(caps$estimation_scopes, collapse = ", ")), call. = FALSE)
+  }
+
   invisible(caps)
 }
 
@@ -218,7 +242,7 @@ print.fmrireg_engine_spec <- function(x, ...) {
 .validate_engine_context <- function(engine, model, dataset, args, cfg, capabilities = NULL) {
   stopifnot(is.character(engine), length(engine) == 1L, nzchar(engine))
   stopifnot(inherits(model, "fmri_model"))
-  stopifnot(inherits(cfg, "fmri_lm_config"))
+  stopifnot(inherits(cfg, "fmri_lm_control"))
 
   caps <- .normalize_engine_capabilities(capabilities)
   args <- args %||% list()
@@ -255,7 +279,7 @@ print.fmrireg_engine_spec <- function(x, ...) {
 
 #' @keywords internal
 .derive_engine_execution_config <- function(cfg, capabilities = NULL) {
-  stopifnot(inherits(cfg, "fmri_lm_config"))
+  stopifnot(inherits(cfg, "fmri_lm_control"))
   caps <- .normalize_engine_capabilities(capabilities)
 
   executed <- unserialize(serialize(cfg, NULL))
@@ -266,17 +290,31 @@ print.fmrireg_engine_spec <- function(x, ...) {
 
   if (identical(caps$preprocessing, FALSE)) {
     defaults <- fmri_lm_control()
+    executed$weights <- defaults$weights
+    executed$projection <- defaults$projection
     executed$volume_weights <- defaults$volume_weights
     executed$soft_subspace <- defaults$soft_subspace
   }
 
   if (identical(caps$ar_voxelwise, FALSE)) {
-    executed$ar$voxelwise <- FALSE
+    executed$noise$voxelwise <- FALSE
   }
 
-  if (identical(caps$ar_by_cluster, FALSE) && "by_cluster" %in% names(executed$ar)) {
-    executed$ar$by_cluster <- FALSE
+  if (identical(caps$ar_by_cluster, FALSE)) {
+    executed$noise$pooling <- if (identical(executed$noise$pooling, "parcel")) {
+      "run"
+    } else {
+      executed$noise$pooling
+    }
+    executed$noise$by_cluster <- FALSE
   }
+
+  # The fitting kernels still read these compatibility aliases during the
+  # transition. Recreate them from the canonical specs after every capability
+  # adjustment so requested and executed controls cannot disagree internally.
+  executed$ar <- executed$noise
+  executed$volume_weights <- executed$weights
+  executed$soft_subspace <- executed$projection
 
   class(executed) <- class(cfg)
   executed
@@ -434,6 +472,23 @@ prepare_fmri_lm_contrasts <- function(fmrimod) {
 
       colind <- col_indices[[term_name]]
       if (is.null(colind)) {
+        # `contrast_weights()` keeps the formula-facing interaction spelling
+        # (for example `category:attention`), whereas fmridesign stores the
+        # corresponding design term under a syntactic tag such as
+        # `category_attention`. Match those two representations explicitly,
+        # but fail closed if normalization would be ambiguous.
+        normalize_term_tag <- function(x) {
+          x <- gsub("[^[:alnum:]_]+", "_", x)
+          gsub("_+", "_", x)
+        }
+        candidates <- names(col_indices)[
+          normalize_term_tag(names(col_indices)) == normalize_term_tag(term_name)
+        ]
+        if (length(candidates) == 1L) {
+          colind <- col_indices[[candidates]]
+        }
+      }
+      if (is.null(colind)) {
         warning(sprintf("Contrast '%s' refers to term '%s' but col_indices are missing.", contrast_name, term_name))
         next
       }
@@ -469,7 +524,7 @@ prepare_fmri_lm_contrasts <- function(fmrimod) {
 #'
 #' @param model An `fmri_model` describing the design.
 #' @param Y Numeric matrix with `nrow(Y)` time points and columns matching voxels.
-#' @param cfg Optional `fmri_lm_config`; defaults to `fmri_lm_control()`.
+#' @param cfg Optional `fmri_lm_control`; defaults to `fmri_lm_control()`.
 #' @param dataset Optional dataset backing the model. Defaults to `model$dataset` when available.
 #' @param strategy Character label recorded on the returned object. Defaults to "external".
 #' @param engine Character label indicating the engine that produced the fit. Defaults to "external".
@@ -482,8 +537,8 @@ fit_glm_on_transformed_series <- function(model, Y, cfg = NULL, dataset = NULL,
   }
   if (is.null(cfg)) {
     cfg <- fmri_lm_control()
-  } else if (!inherits(cfg, "fmri_lm_config")) {
-    stop("`cfg` must inherit from 'fmri_lm_config'", call. = FALSE)
+  } else if (!inherits(cfg, "fmri_lm_control")) {
+    stop("`cfg` must inherit from 'fmri_lm_control'", call. = FALSE)
   }
   if (!is.matrix(Y)) {
     Y <- as.matrix(Y)
@@ -576,7 +631,7 @@ fit_glm_on_transformed_series <- function(model, Y, cfg = NULL, dataset = NULL,
 #'
 #' @param model An `fmri_model` describing the design.
 #' @param Y Numeric matrix with `nrow(Y)` time points and columns matching voxels.
-#' @param cfg Optional `fmri_lm_config`; defaults to `fmri_lm_control()`.
+#' @param cfg Optional `fmri_lm_control`; defaults to `fmri_lm_control()`.
 #' @param dataset Optional dataset backing the model. Defaults to `model$dataset` when available.
 #' @param strategy Character label recorded on the returned object. Defaults to "external".
 #' @param engine Character label indicating the engine that produced the fit. Defaults to "external".
@@ -586,7 +641,7 @@ fit_glm_with_config <- function(model, Y, cfg = NULL, dataset = NULL,
                                 strategy = "external", engine = "external") {
   if (!inherits(model, "fmri_model")) stop("`model` must be an 'fmri_model'", call. = FALSE)
   if (is.null(cfg)) cfg <- fmri_lm_control()
-  if (!inherits(cfg, "fmri_lm_config")) stop("`cfg` must inherit from 'fmri_lm_config'", call. = FALSE)
+  if (!inherits(cfg, "fmri_lm_control")) stop("`cfg` must inherit from 'fmri_lm_control'", call. = FALSE)
   if (!is.matrix(Y)) Y <- as.matrix(Y)
   mode(Y) <- "numeric"
 
@@ -679,7 +734,7 @@ fit_glm_with_config <- function(model, Y, cfg = NULL, dataset = NULL,
 #' @param XtS p×V cross-product of design with data.
 #' @param StS length-V vector of sum of squares per voxel.
 #' @param df Residual degrees of freedom.
-#' @param cfg Optional `fmri_lm_config`; used for metadata only.
+#' @param cfg Optional `fmri_lm_control`; used for metadata only.
 #' @param dataset Optional dataset backing the model.
 #' @param strategy Character label for the returned object.
 #' @param engine Character label for the returned object.
@@ -690,7 +745,7 @@ fit_glm_from_suffstats <- function(model, XtX, XtS, StS, df,
                                    strategy = "external", engine = "external") {
   if (!inherits(model, "fmri_model")) stop("`model` must be an 'fmri_model'", call. = FALSE)
   if (is.null(cfg)) cfg <- fmri_lm_control()
-  if (!inherits(cfg, "fmri_lm_config")) stop("`cfg` must inherit from 'fmri_lm_config'", call. = FALSE)
+  if (!inherits(cfg, "fmri_lm_control")) stop("`cfg` must inherit from 'fmri_lm_control'", call. = FALSE)
 
   XtX <- as.matrix(XtX); XtS <- as.matrix(XtS); StS <- as.numeric(StS)
   p <- nrow(XtX); V <- ncol(XtS)

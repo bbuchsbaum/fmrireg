@@ -20,13 +20,17 @@
 #'     \item \code{Y_noisy}: Matrix of noisy BOLD time series (time x voxels)
 #'     \item \code{Y_clean}: Matrix of clean BOLD time series (when available)
 #'     \item \code{X_list_true_hrf}: List of design matrices convolved with true HRF
-#'     \item \code{true_hrf_parameters}: Information about the true HRF(s) used
+#'     \item \code{true_hrf_parameters}: Reconstructed true HRF object(s) plus
+#'       complete, versioned generation recipes
+#'     \item \code{oracle_contract}: Scope and tolerance of the valid stored
+#'       numerical oracle, including limitations for partial-truth datasets
 #'     \item \code{event_onsets}: Vector of event onset times
 #'     \item \code{condition_labels}: Vector of condition labels for each event
 #'     \item \code{true_betas_condition}: Matrix of true condition-level beta values
 #'     \item \code{true_amplitudes_trial}: Matrix of true trial-level amplitudes
 #'     \item \code{TR}: Repetition time
 #'     \item \code{total_time}: Total scan duration
+#'     \item \code{run_length}: Number of acquired time points
 #'     \item \code{noise_parameters}: Information about noise generation
 #'     \item \code{simulation_seed}: Random seed used for generation
 #'     \item \code{target_snr}: Target signal-to-noise ratio
@@ -153,6 +157,7 @@ get_benchmark_summary <- function(dataset_name) {
       events_per_condition = as.list(condition_counts),
       TR = dataset$TR,
       total_time = dataset$total_time,
+      run_length = dataset$run_length,
       target_snr = dataset$target_snr %||% "Not specified"
     ),
     hrf_information = hrf_info,
@@ -340,30 +345,181 @@ evaluate_method_performance <- function(dataset_name, estimated_betas, method_na
 # Environment to store the loaded and processed benchmark datasets
 .benchmark_data_env <- new.env(parent = emptyenv())
 
-# Helper function to reconstruct HRF objects
-.reconstruct_hrf_object <- function(name) {
-  # Map stored HRF names to actual HRF objects
-  hrf_map <- list(
-    "HRF_SPMG1" = fmrihrf::HRF_SPMG1,
-    "HRF_SPMG2" = fmrihrf::HRF_SPMG2,
-    "HRF_SPMG3" = fmrihrf::HRF_SPMG3
-  )
-  
-  if (name %in% names(hrf_map)) {
-    return(hrf_map[[name]])
-  } else {
-    # For variant HRFs, we'll just return canonical for now
-    # since we don't have the exact reconstructed variants
-    # Use suppressWarnings to avoid cluttering output during normal use
-    return(fmrihrf::HRF_SPMG1)
+# Complete recipes for every HRF used by the packaged benchmark artifact.
+.benchmark_hrf_recipe_catalog <- function() {
+  make_recipe <- function(recipe_name, base_hrf_name, lag = 0, width = 0,
+                          normalize = FALSE) {
+    list(
+      schema_version = 1L,
+      recipe_name = recipe_name,
+      generator = "fmrihrf::gen_hrf",
+      base_hrf_name = base_hrf_name,
+      lag = as.numeric(lag),
+      width = as.numeric(width),
+      precision = 0.1,
+      half_life = Inf,
+      summate = TRUE,
+      normalize = isTRUE(normalize),
+      name_override = NULL,
+      span_override = NULL,
+      fmrihrf_version = as.character(utils::packageVersion("fmrihrf"))
+    )
   }
+
+  list(
+    HRF_SPMG1 = make_recipe("HRF_SPMG1", "HRF_SPMG1"),
+    HRF_SPMG2 = make_recipe("HRF_SPMG2", "HRF_SPMG2"),
+    HRF_SPMG3 = make_recipe("HRF_SPMG3", "HRF_SPMG3"),
+    variant1 = make_recipe(
+      "variant1", "HRF_SPMG1", lag = 1, width = 1.2, normalize = TRUE
+    ),
+    variant2 = make_recipe(
+      "variant2", "HRF_SPMG1", lag = -0.5, width = 0.8, normalize = TRUE
+    )
+  )
+}
+
+.benchmark_base_hrfs <- function() {
+  list(
+    HRF_SPMG1 = fmrihrf::HRF_SPMG1,
+    HRF_SPMG2 = fmrihrf::HRF_SPMG2,
+    HRF_SPMG3 = fmrihrf::HRF_SPMG3
+  )
+}
+
+.same_recipe_value <- function(x, y) {
+  isTRUE(all.equal(x, y, tolerance = 0, check.attributes = TRUE))
+}
+
+# Helper function to reconstruct HRF objects from a fail-closed recipe.
+.reconstruct_hrf_object <- function(recipe) {
+  if (!is.list(recipe) || is.null(names(recipe))) {
+    stop("HRF recipe must be a named list.", call. = FALSE)
+  }
+
+  required <- c(
+    "schema_version", "recipe_name", "generator", "base_hrf_name",
+    "lag", "width", "precision", "half_life", "summate", "normalize",
+    "name_override", "span_override", "fmrihrf_version"
+  )
+  missing_fields <- setdiff(required, names(recipe))
+  if (length(missing_fields)) {
+    stop(
+      "HRF recipe is missing required fields: ",
+      paste(missing_fields, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  if (!identical(recipe$schema_version, 1L)) {
+    stop("Unknown benchmark HRF recipe schema version.", call. = FALSE)
+  }
+  if (!identical(recipe$generator, "fmrihrf::gen_hrf")) {
+    stop("Unknown benchmark HRF recipe generator.", call. = FALSE)
+  }
+
+  catalog <- .benchmark_hrf_recipe_catalog()
+  if (!is.character(recipe$recipe_name) || length(recipe$recipe_name) != 1L ||
+      !recipe$recipe_name %in% names(catalog)) {
+    stop("Unknown benchmark HRF recipe name.", call. = FALSE)
+  }
+
+  base_hrfs <- .benchmark_base_hrfs()
+  if (!is.character(recipe$base_hrf_name) ||
+      length(recipe$base_hrf_name) != 1L ||
+      !recipe$base_hrf_name %in% names(base_hrfs)) {
+    stop("Unknown base HRF in benchmark recipe.", call. = FALSE)
+  }
+
+  expected <- catalog[[recipe$recipe_name]]
+  semantic_fields <- setdiff(required, "fmrihrf_version")
+  mismatched <- semantic_fields[!vapply(
+    semantic_fields,
+    function(field) .same_recipe_value(recipe[[field]], expected[[field]]),
+    logical(1)
+  )]
+  if (length(mismatched)) {
+    stop(
+      "Benchmark HRF recipe '", recipe$recipe_name,
+      "' has inconsistent fields: ", paste(mismatched, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  if (!is.character(recipe$fmrihrf_version) ||
+      length(recipe$fmrihrf_version) != 1L ||
+      !nzchar(recipe$fmrihrf_version)) {
+    stop("Benchmark HRF recipe has an invalid fmrihrf version.", call. = FALSE)
+  }
+  current_fmrihrf_version <- as.character(utils::packageVersion("fmrihrf"))
+  if (!identical(recipe$fmrihrf_version, current_fmrihrf_version)) {
+    stop(
+      "Benchmark HRF recipe requires fmrihrf ", recipe$fmrihrf_version,
+      "; installed version is ", current_fmrihrf_version, ".",
+      call. = FALSE
+    )
+  }
+
+  base_hrf <- base_hrfs[[recipe$base_hrf_name]]
+  no_decoration <- recipe$lag == 0 && recipe$width == 0 &&
+    !recipe$normalize && is.null(recipe$name_override) &&
+    is.null(recipe$span_override)
+  if (no_decoration) {
+    return(base_hrf)
+  }
+
+  # fmrihrf 0.4.0's block decorator forwards the base HRF's P1/P2/A1
+  # metadata to a wrapper that accepts only `t`, producing a misleading warning.
+  # Rewrap the identical evaluator without those stale parameter attributes;
+  # dense-grid tests verify that this warning-free route is numerically exact.
+  clean_base <- fmrihrf::as_hrf(
+    function(time) base_hrf(time),
+    name = attr(base_hrf, "name"),
+    nbasis = fmrihrf::nbasis(base_hrf),
+    span = attr(base_hrf, "span")
+  )
+
+  withCallingHandlers(
+    fmrihrf::gen_hrf(
+      clean_base,
+      lag = recipe$lag,
+      width = recipe$width,
+      precision = recipe$precision,
+      half_life = recipe$half_life,
+      summate = recipe$summate,
+      normalize = recipe$normalize,
+      name = recipe$name_override,
+      span = recipe$span_override
+    ),
+    warning = function(condition) {
+      stop(
+        "Unexpected warning while reconstructing benchmark HRF recipe '",
+        recipe$recipe_name, "': ", conditionMessage(condition),
+        call. = FALSE
+      )
+    }
+  )
 }
 
 # Recursive helper to process true_hrf_parameters
 .process_hrf_params <- function(params_list) {
   if (is.list(params_list) && "hrf_object_name" %in% names(params_list)) {
     # Single HRF parameter set
-    params_list$hrf_object <- .reconstruct_hrf_object(params_list$hrf_object_name)
+    if (is.null(params_list$hrf_recipe)) {
+      stop(
+        "Missing reconstructable HRF recipe for '",
+        params_list$hrf_object_name, "'.",
+        call. = FALSE
+      )
+    }
+    if (!identical(
+      params_list$hrf_object_name,
+      params_list$hrf_recipe$recipe_name
+    )) {
+      stop(
+        "HRF object name does not match its stored recipe name.",
+        call. = FALSE
+      )
+    }
+    params_list$hrf_object <- .reconstruct_hrf_object(params_list$hrf_recipe)
     return(params_list)
   } else if (is.list(params_list)) {
     # Multiple HRF parameter sets (e.g., for different voxel groups)
