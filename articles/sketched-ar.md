@@ -1,4 +1,4 @@
-# Sketched GLM with Global vs Parcel AR
+# Sketched GLM: Temporal Sketches, Pooled AR, and Landmarks
 
 ``` r
 
@@ -8,37 +8,46 @@ library(fmrihrf)
 set.seed(1)
 ```
 
-This vignette introduces a fast “sketched GLM” path with shared
-autoregressive (AR) whitening and optional Nystrom landmarking. It is
-designed to be a drop-in alternative to voxelwise GLM when you want
-substantial speedups with high fidelity.
+This vignette introduces the `latent_sketch` GLM path: shared
+autoregressive (AR) whitening, temporal sketching, and an optional
+landmark-based spatial approximation. These are approximation controls,
+not universal accelerators. Their accuracy depends on the design, noise,
+and—for landmarks—the spatial smoothness of the coefficient maps.
 
-What you’ll see below - A quick overview of the approach and when to use
-it - Global vs parcel-pooled AR whitening (stabilizes noise, boosts
-generalization) - Time sketches that preserve GLM geometry at much
-smaller m ~ 6-8*p - SRHT (Subsampled Randomized Hadamard Transform): a
-fast Johnson-Lindenstrauss embedding built from random signs, a
-Walsh-Hadamard transform, and row sampling. It acts as an (approximate)
-isometry on the column space of X, so least-squares geometry is well
-preserved at reduced cost. - IHS (Iterative Hessian Sketch): an
-iterative sketch-and-solve method. Each iteration solves a small
-sketched normal-equation system to refine the coefficients; 2-3
-iterations with m ~ 6*p are typically indistinguishable from exact
-least-squares. - Optional Nystrom spatial extension (solve on L
-landmarks, extend to all voxels)
+What you’ll see below
 
-At a glance - Typical fidelity: correlations \> .9 vs exact voxelwise
-GLM on synthetic and real designs, with large runtime savings. - Knobs:
-m (sketch rows), iters (IHS iterations), by_cluster (parcel AR),
-landmarks (Nystrom), k_neighbors (Nystrom weights).
+- A quick overview of the approach and when to use it
+- Global vs parcel-pooled AR whitening
+- Time sketches that preserve GLM geometry at much smaller m ~ 6-8\*p
+  - SRHT (Subsampled Randomized Hadamard Transform): a structured
+    Johnson-Lindenstrauss embedding built from random signs, a
+    Walsh-Hadamard transform, and row sampling. It approximately
+    preserves least-squares geometry on the design column space; the
+    example below checks the resulting coefficients directly.
+  - IHS (Iterative Hessian Sketch): an iterative sketch-and-solve
+    method. Each iteration solves a small sketched normal-equation
+    system to refine the coefficients.
+- Optional Nyström-style spatial extension (solve on L landmarks, extend
+  to all voxels)
 
-Approach in one paragraph - We first prewhiten in time (globally or per
-parcel, with light shrinkage across parcels). Then we replace the tall
-time dimension T with a much smaller sketch m using SRHT or IHS so that
-the normal equations are nearly identical at a fraction of the cost. If
-desired, we also replace the large spatial dimension V by solving only
-on L landmark voxels and extending coefficients back to all voxels via a
-sparse, parcel-aware heat-kernel (Nystrom).
+At a glance
+
+- Evidence shown here: a like-for-like coefficient comparison using both
+  correlation and normalized root-mean-square error (NRMSE).
+- Public controls: `noise_spec(..., pooling = "global" | "parcel")` for
+  AR pooling and
+  [`lowrank_control()`](https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.md)
+  for sketch rows, iterations, landmarks, and neighbors.
+
+Approach in one paragraph
+
+- We first prewhiten in time, either globally or with coefficients
+  pooled by parcel. A temporal sketch then replaces the time dimension
+  `T` with `m` rows. The optional landmark path solves only at `L` voxel
+  locations and interpolates coefficients to the remaining voxels with
+  sparse heat-kernel weights. This vignette measures approximation
+  error; it does not benchmark runtime, because its deliberately small
+  dataset is not representative of a production performance regime.
 
 ### Set up a synthetic dataset
 
@@ -66,17 +75,30 @@ p <- ncol(X); V <- prod(dim3)
 ### Simulate data with AR(1) noise
 
 The observed data is `Y = X B + noise` where the noise follows an AR(1)
-process with `rho = 0.3`. This gives the sketched solvers something
-realistic to whiten against.
+process with `rho = 0.3`. This gives the sketched solvers declared
+temporal dependence to estimate and whiten.
 
 ``` r
 
 task_cols <- which(grepl("condition|hrf", colnames(X), ignore.case = TRUE))
 B_true <- matrix(0, p, V)
-B_true[task_cols, ] <- matrix(rnorm(length(task_cols) * V, sd = 1.0),
-                              length(task_cols), byrow = TRUE)
 
-Y <- X %*% B_true + ar1_noise(Tlen, V, sd = 0.3)
+# Landmark interpolation assumes spatial structure. Construct smooth task
+# maps in the same voxel order used by the array-packing loop below.
+coords_sim <- expand.grid(
+  z = seq_len(dim3[3]), y = seq_len(dim3[2]), x = seq_len(dim3[1])
+)[, c("x", "y", "z")]
+xyz01 <- sweep(as.matrix(coords_sim), 2, 1, "-")
+xyz01 <- sweep(xyz01, 2, pmax(dim3 - 1, 1), "/")
+smooth_maps <- rbind(
+  sin(pi * xyz01[, 1]) * cos(pi * xyz01[, 2]) * (0.5 + xyz01[, 3]),
+  cos(pi * xyz01[, 1]) * sin(pi * xyz01[, 2]) * (1.0 - 0.5 * xyz01[, 3])
+)
+for (j in seq_along(task_cols)) {
+  B_true[task_cols[j], ] <- smooth_maps[1L + (j - 1L) %% nrow(smooth_maps), ]
+}
+
+Y <- X %*% B_true + ar1_noise(Tlen, V, sd = 0.15)
 ```
 
 ### Pack into an fmri dataset
@@ -91,9 +113,9 @@ dset <- fmri_mem_dataset(scans = list(vec), mask = maskVol,
                          TR = TR, event_table = events_df)
 ```
 
-### Choose the fast engine
+### Choose the approximation engine
 
-`fmrireg` has two built-in fast paths with different controls.
+`fmrireg` has two built-in approximation paths with different controls.
 `engine = "latent_sketch"` is the sketched GLM engine used in most of
 this vignette; it is configured by
 [`lowrank_control()`](https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.md).
@@ -105,16 +127,21 @@ event/task coefficients, not baseline or nuisance terms.
 
 ### Build parcels
 
-Parcels are used both for parcel-pooled AR whitening and for
-parcel-aware Nystrom extension later. Here we simply k-means cluster on
-voxel coordinates.
+Parcels are used for parcel-pooled AR whitening. The landmark extension
+below is coordinate-based and does **not** enforce parcel boundaries.
+Here we k-means cluster voxel coordinates solely to demonstrate AR
+pooling.
 
 ``` r
 
 coords  <- expand.grid(x = seq_len(dim3[1]),
                        y = seq_len(dim3[2]),
                        z = seq_len(dim3[3]))
-parcels <- ClusteredNeuroVol(maskVol, kmeans(coords, centers = 40)$cluster)
+parcel_fit <- kmeans(
+  coords, centers = 40, iter.max = 1000L, nstart = 10L,
+  algorithm = "Lloyd"
+)
+parcels <- ClusteredNeuroVol(maskVol, parcel_fit$cluster)
 ```
 
 ### Fit with Global AR + SRHT sketch
@@ -122,8 +149,8 @@ parcels <- ClusteredNeuroVol(maskVol, kmeans(coords, centers = 40)$cluster)
 `engine = "latent_sketch"` activates the sketched path.
 [`lowrank_control()`](https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.md)
 sets the sketch method and size; here we use SRHT with `m = 8p` rows.
-Setting `by_cluster = FALSE` pools a single AR(1) coefficient across the
-whole brain.
+`pooling = "global"` estimates one shared AR(1) coefficient across the
+mask.
 
 ``` r
 
@@ -143,9 +170,10 @@ fit_srht_global <- fmri_lm(
 
 ### Fit with Parcel AR + SRHT sketch
 
-Switching `by_cluster = TRUE` estimates a separate AR coefficient per
-parcel, then shrinks them toward the global mean (`shrink_c0 = 100`).
-This stabilizes whitening in small or noisy parcels.
+Switching to `pooling = "parcel"` estimates a separate AR coefficient
+per parcel, then shrinks them toward the global mean
+(`shrink_c0 = 100`). This stabilizes whitening in small or noisy
+parcels.
 
 ``` r
 
@@ -164,8 +192,9 @@ fit_srht_group <- fmri_lm(
 ### Fit with IHS sketch
 
 IHS (Iterative Hessian Sketch) is an alternative to SRHT. It refines its
-solution over a few iterations; 2-3 iterations with `m ~ 6p` are
-typically sufficient for near-exact results.
+solution over multiple iterations. Treat `m` and `iters` as accuracy
+controls and validate them against an unsketched fit for the target
+design.
 
 ``` r
 
@@ -234,16 +263,16 @@ list(
   cor_ihs_task = cor_ihs_task
 )
 #> $cor_srht_iid_task
-#> [1] 0.9469891
+#> [1] 0.9661459
 #> 
 #> $cor_srht_global_task
-#> [1] 0.9555532
+#> [1] 0.9739018
 #> 
 #> $cor_srht_group_task
-#> [1] 0.9616085
+#> [1] 0.9645555
 #> 
 #> $cor_ihs_task
-#> [1] 0.9303343
+#> [1] 0.9446414
 ```
 
 The exact iid-versus-sketch comparison is the meaningful fidelity check
@@ -296,16 +325,19 @@ data.frame(
 #> 1 rrr_gls bootstrap         2                   TRUE
 ```
 
-## Landmarks + Nystrom (full-voxel, global AR)
+## Landmark extension (full-voxel, global AR)
 
-Here we solve only on L landmark voxels and extend the coefficients back
-to all voxels using a sparse, parcel-aware heat-kernel. This can deliver
-large spatial speedups when V is large.
+Here we isolate the spatial approximation: both reference and landmark
+fits use the same SRHT plan size and global AR specification. The only
+difference is that the landmark fit solves at 48 of 192 voxels and
+interpolates the rest. The simulated task maps are spatially smooth
+because interpolating independent voxel effects would be an ill-posed
+target.
 
 ``` r
 
 # Choose landmarks (L) and neighbors (k)
-L <- 24L; k_nn <- 12L
+L <- 48L; k_nn <- 8L
 low_lm <- lowrank_control(
   parcels = parcels,
   landmarks = L,
@@ -320,40 +352,112 @@ fit_lm_srht <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset,
                          noise = noise_spec("ar1", pooling = "global")
                        ))
 
-# Compare to exact
-B_exact <- t(fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)$result$betas$data[[1]]$estimate[[1]])
-cor_landmarks <- cor(as.numeric(B_exact), as.numeric(fit_lm_srht$betas_fixed))
-cor_landmarks
-#> [1] 0.03501604
+# Compare task coefficients to the like-for-like full-voxel sketch.
+task_reference <- as.numeric(
+  fit_srht_global$betas_fixed[task_cols, , drop = FALSE]
+)
+task_landmarks <- as.numeric(
+  fit_lm_srht$betas_fixed[task_cols, , drop = FALSE]
+)
+cor_landmarks <- cor(task_reference, task_landmarks)
+rmse_landmarks <- sqrt(mean((task_reference - task_landmarks)^2))
+nrmse_landmarks <- rmse_landmarks / stats::sd(task_reference)
+
+stopifnot(cor_landmarks > 0.85, nrmse_landmarks < 0.60)
+
+c(
+  correlation = cor_landmarks,
+  RMSE = rmse_landmarks,
+  NRMSE = nrmse_landmarks
+)
+#> correlation        RMSE       NRMSE 
+#>   0.8955085   0.2233649   0.4624006
 ```
 
-Even with only 24 landmarks for 192 voxels the correlation with the
-exact solution remains high, demonstrating that the Nystrom extension
-faithfully recovers the full spatial map.
+The correlation checks spatial ordering, while NRMSE detects scale
+errors that correlation alone would miss. The thresholds above are an
+explicit contract for this smooth synthetic field, not a general
+guarantee for real images. Validate both metrics on representative pilot
+data before adopting landmarks in an analysis.
 
-Notes: - Landmarks are selected by k-means over voxel coordinates and
-mapped to nearest mask voxels. - The extension uses k-NN heat-kernel
-weights with row-normalization; weights respect parcel geometry via the
-`parcels` mask. - Residual variance is propagated from landmarks via
-squared weights; you may add a small nugget term near boundaries if
-needed.
+``` r
+
+# Compare one task-effect slice on a common scale, then show signed error.
+task_index <- task_cols[1]
+slice_index <- ceiling(dim3[3] / 2)
+reference_volume <- array(
+  fit_srht_global$betas_fixed[task_index, ], dim = dim3
+)
+landmark_volume <- array(
+  fit_lm_srht$betas_fixed[task_index, ], dim = dim3
+)
+reference_slice <- reference_volume[, , slice_index]
+landmark_slice <- landmark_volume[, , slice_index]
+error_slice <- landmark_slice - reference_slice
+
+effect_limit <- max(abs(c(reference_slice, landmark_slice)))
+error_limit <- max(abs(error_slice))
+effect_palette <- hcl.colors(64, "Blue-Red 3")
+error_palette <- hcl.colors(64, "Blue-Red 3")
+
+old_par <- par(mfrow = c(1, 3), mar = c(3, 3, 3, 1))
+image(
+  reference_slice, zlim = c(-effect_limit, effect_limit),
+  col = effect_palette, asp = 1, axes = FALSE,
+  main = "Full-voxel reference"
+)
+image(
+  landmark_slice, zlim = c(-effect_limit, effect_limit),
+  col = effect_palette, asp = 1, axes = FALSE,
+  main = "Landmark extension"
+)
+image(
+  error_slice, zlim = c(-error_limit, error_limit),
+  col = error_palette, asp = 1, axes = FALSE,
+  main = "Error: landmark - reference"
+)
+```
+
+![Three matched spatial slices showing the full-voxel task estimate, its
+landmark extension, and signed landmark-minus-reference
+error.](sketched-ar_files/figure-html/plot-landmark-error-1.png)
+
+``` r
+
+par(old_par)
+```
+
+The common color scale in the first two panels makes attenuation
+visible; the third panel localizes signed interpolation error. Smooth
+regions are recovered most closely, while gradients and boundaries show
+the largest departures. This is why a whole-map correlation alone is
+insufficient.
+
+Notes:
+
+- Landmarks are selected by k-means over voxel coordinates and mapped to
+  nearest mask voxels.
+- The extension uses coordinate k-NN heat-kernel weights with
+  row-normalization. It can smooth across anatomical or parcel
+  boundaries.
+- Residual variance is propagated from landmark residuals through
+  squared interpolation weights; this is an approximation, not a
+  calibrated voxelwise-inference guarantee.
 
 ### Choosing landmarks: practical guidance
 
 - How many (L)?
-  - Start with L ~ V/50 (e.g., 3k landmarks for 150k voxels) and adjust
-    based on speed vs. fidelity.
-  - If memory is tight or V is very large, you can go down to V/100; for
-    near-voxel fidelity, increase to V/20.
+  - There is no universal ratio. Start conservatively, validate
+    correlation and NRMSE on representative regions, then reduce `L`
+    only while those predeclared tolerances continue to hold.
 - Where to place them?
-  - k-means centers on voxel coordinates (as above) are a solid, fast
-    default. Seed the RNG for reproducibility.
+  - k-means centers on voxel coordinates (as above) are a reproducible
+    default when the RNG is seeded.
   - Farthest-point (a.k.a. max-min) sampling gives more uniform coverage
     than k-means; prefer it if you have irregular masks.
-  - Parcel-aware: sample landmarks within each parcel proportional to
-    size so every region is represented.
-  - Boundaries: include a small fraction of landmarks near parcel or
-    anatomical borders to better preserve edges.
+  - Boundaries: include landmarks near anatomical borders and inspect
+    those regions explicitly; the current interpolator does not honor
+    boundaries.
 - Neighborhood size (k_neighbors) and bandwidth (h)
   - Use k_neighbors in \[8, 32\]; 16 is a good default. Larger k smooths
     more but risks crossing boundaries.
@@ -364,41 +468,49 @@ needed.
     full-voxel solve on an ROI.
   - Visualize a few beta maps near sharp boundaries (sulci, ROI borders)
     to check that edges are preserved.
-  - Compare histogram of t-values in null tissue; Nystrom should not
-    inflate tails.
+  - Do not use interpolated standard errors or test statistics for
+    strict voxelwise inference without a separate calibration study.
 
-## Fidelity vs. exact voxelwise GLM
+## What the comparisons establish
 
-- With m ~ 6-8\*p for SRHT and 2-3 IHS iterations, fixed-effects betas
-  typically correlate \> .9 with the exact voxelwise solution while
-  running far faster.
-- Parcel-pooled AR stabilizes whitening and often improves out-of-sample
-  behavior vs per-voxel AR, especially on short runs.
-- Landmark Nystrom trades a small amount of spatial detail for large
-  speed gains; boundaries are respected via parcel-aware distances,
-  helping preserve sulcal/ROI edges.
+- The iid SRHT comparison isolates temporal-sketch error from AR-model
+  changes.
+- The landmark comparison isolates spatial interpolation while holding
+  the temporal sketch and AR specification fixed.
+- Results on smooth synthetic fields do not establish accuracy at sharp
+  boundaries or for spatially irregular effects.
+- No runtime claim is made here. Benchmark the exact workload, including
+  data access and preprocessing, before choosing an approximation for
+  speed.
 
 ## When to use which knob
 
-- Short runs (small T): favor landmarks first, then sketch if needed.
-- Long runs (large T): sketch in time dominates the speedup; landmarks
-  optional.
-- Memory-constrained: use landmarks to shrink V; SRHT/IHS keep temporal
-  memory bounded.
+- Reduce `T` with a temporal sketch only after validating
+  task-coefficient error against the unsketched estimator.
+- Reduce `V` with landmarks only when coefficient fields are spatially
+  smooth enough to satisfy a declared map-error tolerance.
+- Omit landmarks when voxelwise detail or sharp boundaries are central
+  to the scientific question.
 
 ## Pros and cons
 
-Pros - Large speedups with minimal code changes:
-`engine = "latent_sketch"` and a small
-[`lowrank_control()`](https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.md)
-list. - Shared AR (global/parcel) reduces variance and improves
-stability. - SRHT/IHS preserve GLM geometry; Nystrom respects spatial
-structure.
+Pros
 
-Cons - Landmark extension introduces controlled spatial shrinkage; if
-you need strict voxelwise inference, omit landmarks. - Sketching
-slightly perturbs degrees of freedom (uses m - p); choose m
-conservatively if p is large or X is ill-conditioned.
+- Temporal and spatial approximation controls are explicit in
+  [`lowrank_control()`](https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.md).
+- Global and parcel-pooled AR models are expressed through the same
+  public
+  [`noise_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/noise_spec.md)
+  interface.
+- Correlation and scale-sensitive error can be validated separately.
+
+Cons
+
+- Landmark extension introduces spatial shrinkage that is data-dependent
+  and can cross boundaries; if you need strict voxelwise inference, omit
+  landmarks.
+- Sketching slightly perturbs degrees of freedom (uses m - p); choose m
+  conservatively if p is large or X is ill-conditioned.
 
 ## Practical defaults
 
@@ -406,9 +518,12 @@ conservatively if p is large or X is ill-conditioned.
   `m ~ 6*p`, `iters = 2-3`.
 - AR order: 1 is a solid default; use 2 if residuals show lag-2
   structure.
-- Parcel AR: enable with `by_cluster = TRUE`; shrinkage
-  `shrink_c0 = 100` works well.
-- Landmarks: start with `L ~ V/50`, `k_neighbors in [8, 32]`.
+- Parcel AR: use
+  `noise_spec("ar1", pooling = "parcel", parcels = parcels)`; tune
+  shrinkage for the target data rather than assuming one universal
+  value.
+- Landmarks: choose `L` and `k_neighbors` by a declared correlation and
+  NRMSE contract on representative data.
 
 ## Reproducibility tips
 

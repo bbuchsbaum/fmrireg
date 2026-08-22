@@ -23,6 +23,9 @@ longnames(x, ...)
 
 # S3 method for class 'event_model'
 longnames(x, ...)
+
+# S3 method for class 'feature_term'
+longnames(x, ...)
 ```
 
 ## Arguments

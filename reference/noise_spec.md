@@ -31,8 +31,11 @@ noise_spec(
 
 - q:
 
-  Reserved MA order. Nonzero MA order is rejected until the fitter
-  exposes an MA-capable inference path.
+  Nonnegative moving-average order. Positive values request an
+  ARMA(p, q) model, with the AR order determined by `struct` and `p`.
+  The current MA-capable path supports runwise meta-estimation with run
+  pooling, without censoring, parcel pooling, or voxelwise covariance
+  estimation.
 
 - iter_gls:
 
@@ -40,7 +43,10 @@ noise_spec(
 
 - pooling:
 
-  Temporal covariance pooling scope.
+  Temporal covariance pooling scope. With built-in shared AR estimation,
+  `"run"` estimates one coefficient vector per run from the cross-voxel
+  mean residual series; `"global"` concatenates those runwise mean
+  series before estimation.
 
 - parcels:
 
@@ -48,7 +54,12 @@ noise_spec(
 
 - voxelwise:
 
-  Estimate temporal covariance separately by voxel.
+  Estimate temporal covariance separately by voxel. In the built-in
+  fitter this currently requires AR-only runwise meta-estimation,
+  `pooling = "run"`, `iter_gls = 1`, no censoring, and no volume
+  weighting or soft-subspace projection. Robust fitting is supported,
+  but robust AR re-estimation is not. Registered engines may define
+  broader capabilities.
 
 - exact_first:
 

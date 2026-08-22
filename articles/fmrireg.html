@@ -38,16 +38,18 @@
 <li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -85,7 +87,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-08-09</h4>
+            <h4 data-toc-skip class="date">2026-08-22</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/fmrireg.Rmd" class="external-link"><code>vignettes/fmrireg.Rmd</code></a></small>
       <div class="d-none name"><code>fmrireg.Rmd</code></div>
@@ -105,8 +107,141 @@ interface for these tasks, inspired by <code><a href="https://rdrr.io/r/stats/lm
 <code><a href="https://rdrr.io/r/stats/glm.html" class="external-link">glm()</a></code>. You describe your experimental design and HRF
 choices in a formula, and fmrireg handles convolution, baseline
 modeling, contrast computation, and model fitting.</p>
-<p>This vignette provides a high-level overview of the key steps and
-components involved in using <code>fmrireg</code>.</p>
+<p>This vignette starts with a complete, small fit and then unpacks the
+objects behind it. You begin with a time-by-voxel matrix and an event
+table; you finish with one coefficient estimate per condition and
+voxel.</p>
+</div>
+<div class="section level2">
+<h2 id="a-complete-fit-first">A complete fit first<a class="anchor" aria-label="anchor" href="#a-complete-fit-first"></a>
+</h2>
+<p>For a compact example, we create two voxels with different known
+responses to faces and scenes. In your own analysis, <code>bold</code>
+would be the matrix extracted from preprocessed images or regions of
+interest.</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">quick_events</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">80</span>, by <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>,</span>
+<span>  condition <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"face"</span>, <span class="st">"scene"</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  run <span class="op">=</span> <span class="fl">1L</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">quick_frame</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">80</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">quick_event_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">quick_events</span>, sampling_frame <span class="op">=</span> <span class="va">quick_frame</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">quick_design</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html" class="external-link">design_matrix</a></span><span class="op">(</span><span class="va">quick_event_model</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">quick_truth</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.0</span>, <span class="fl">0.6</span>, <span class="fl">0.7</span>, <span class="fl">1.1</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">quick_design</span><span class="op">)</span>,</span>
+<span>  dimnames <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">quick_design</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"voxel1"</span>, <span class="st">"voxel2"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">2026</span><span class="op">)</span></span>
+<span><span class="va">bold</span> <span class="op">&lt;-</span> <span class="va">quick_design</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">quick_truth</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">80</span> <span class="op">*</span> <span class="fl">2</span>, sd <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span>, <span class="fl">80</span>, <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">quick_dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span></span>
+<span>  <span class="va">bold</span>, TR <span class="op">=</span> <span class="fl">2</span>, run_length <span class="op">=</span> <span class="fl">80</span>, event_table <span class="op">=</span> <span class="va">quick_events</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">face_vs_scene</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.html" class="external-link">pair_contrast</a></span><span class="op">(</span></span>
+<span>  <span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"scene"</span>,</span>
+<span>  name <span class="op">=</span> <span class="st">"face_vs_scene"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, contrasts <span class="op">=</span> <span class="va">face_vs_scene</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
+<span>  dataset <span class="op">=</span> <span class="va">quick_dataset</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">coefficient_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  condition <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels</a></span><span class="op">(</span><span class="va">quick_events</span><span class="op">$</span><span class="va">condition</span><span class="op">)</span>,</span>
+<span>  truth_voxel1 <span class="op">=</span> <span class="va">quick_truth</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>,</span>
+<span>  estimate_voxel1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span><span class="op">)</span>,</span>
+<span>  truth_voxel2 <span class="op">=</span> <span class="va">quick_truth</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span>,</span>
+<span>  estimate_voxel2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">[</span><span class="fl">2</span>, <span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">coefficient_table</span>, digits <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>             row.names <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>             caption <span class="op">=</span> <span class="st">"Known and recovered condition effects"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Known and recovered condition effects</caption>
+<colgroup>
+<col width="14%">
+<col width="19%">
+<col width="23%">
+<col width="19%">
+<col width="23%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">condition</th>
+<th align="right">truth_voxel1</th>
+<th align="right">estimate_voxel1</th>
+<th align="right">truth_voxel2</th>
+<th align="right">estimate_voxel2</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">face</td>
+<td align="right">1.0</td>
+<td align="right">0.95</td>
+<td align="right">0.7</td>
+<td align="right">0.51</td>
+</tr>
+<tr class="even">
+<td align="left">scene</td>
+<td align="right">0.6</td>
+<td align="right">0.76</td>
+<td align="right">1.1</td>
+<td align="right">1.14</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="va">quick_contrast_numeric</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  voxel <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">quick_truth</span><span class="op">)</span>,</span>
+<span>  estimate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"contrasts"</span><span class="op">)</span><span class="op">$</span><span class="va">face_vs_scene</span><span class="op">)</span>,</span>
+<span>  std_error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"contrasts"</span><span class="op">)</span><span class="op">$</span><span class="va">face_vs_scene</span><span class="op">)</span>,</span>
+<span>  statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="../reference/stats.html">stats</a></span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"contrasts"</span><span class="op">)</span><span class="op">$</span><span class="va">face_vs_scene</span><span class="op">)</span>,</span>
+<span>  p_value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="../reference/p_values.html">p_values</a></span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"contrasts"</span><span class="op">)</span><span class="op">$</span><span class="va">face_vs_scene</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">quick_contrast</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/transform.html" class="external-link">transform</a></span><span class="op">(</span></span>
+<span>  <span class="va">quick_contrast_numeric</span>,</span>
+<span>  p_value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/format.pval.html" class="external-link">format.pval</a></span><span class="op">(</span><span class="va">p_value</span>, digits <span class="op">=</span> <span class="fl">3</span>, eps <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">quick_contrast</span>, digits <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>             row.names <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>             caption <span class="op">=</span> <span class="st">"Face-minus-scene contrast with uncertainty"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Face-minus-scene contrast with uncertainty</caption>
+<thead><tr class="header">
+<th align="left">voxel</th>
+<th align="right">estimate</th>
+<th align="right">std_error</th>
+<th align="right">statistic</th>
+<th align="left">p_value</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">voxel1</td>
+<td align="right">0.440</td>
+<td align="right">0.053</td>
+<td align="right">8.319</td>
+<td align="left">&lt;1e-04</td>
+</tr>
+<tr class="even">
+<td align="left">voxel2</td>
+<td align="right">-0.379</td>
+<td align="right">0.062</td>
+<td align="right">-6.116</td>
+<td align="left">&lt;1e-04</td>
+</tr>
+</tbody>
+</table>
+<p>The first table separates the known effect sizes from their
+estimates. The second table asks a scientific question—face minus
+scene—and reports its estimate, standard error, test statistic, and
+p-value for each voxel. Here the first voxel favors faces while the
+second favors scenes, recovering the pattern used to generate the data.
+The next sections unpack the dataset, event, baseline, and contrast
+objects used for larger analyses.</p>
 </div>
 <div class="section level2">
 <h2 id="key-components-and-workflow">Key Components and Workflow<a class="anchor" aria-label="anchor" href="#key-components-and-workflow"></a>
@@ -133,7 +268,7 @@ using formulas, including:
 the data (e.g., using <code>fmri_lm</code>).</li>
 <li>
 <strong>Advanced Topics:</strong> Exploring single-trial estimation,
-simulation, or translation to other packages.</li>
+simulation, group analysis, or accelerated engines.</li>
 </ol>
 <div class="section level3">
 <h3 id="data-representation">1. Data Representation<a class="anchor" aria-label="anchor" href="#data-representation"></a>
@@ -151,15 +286,15 @@ table.</li>
 number of scans per run (<code>blocklens</code>) and the repetition time
 (<code>TR</code>).</li>
 </ul>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Example: 5 runs, 200 scans/run, TR=2s</span></span>
-<span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">200</span>, <span class="fl">5</span><span class="op">)</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Example: one run, 120 scans, TR=2s</span></span>
+<span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">120</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="va">sframe</span></span>
 <span><span class="co">#&gt; Sampling frame</span></span>
-<span><span class="co">#&gt; - Blocks: 5 </span></span>
-<span><span class="co">#&gt; - Scans: 1000 (per block: 200, 200, 200, 200, 200 )</span></span>
+<span><span class="co">#&gt; - Blocks: 1 </span></span>
+<span><span class="co">#&gt; - Scans: 120 (per block: 120 )</span></span>
 <span><span class="co">#&gt; - TR: 2 s</span></span>
-<span><span class="co">#&gt; - Duration: 1999 s</span></span></code></pre></div>
+<span><span class="co">#&gt; - Duration: 239 s</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="model-building">2. Model Building<a class="anchor" aria-label="anchor" href="#model-building"></a>
@@ -172,7 +307,7 @@ number of scans per run (<code>blocklens</code>) and the repetition time
 <code>HRF_SPMG1</code>, <code>HRF_GAUSSIAN</code>) and functions to
 create or modify them (<code>gen_hrf</code>, <code>hrf_blocked</code>,
 <code>hrf_lagged</code>).</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Plot the SPM canonical HRF</span></span>
 <span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">24</span>, by <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">time</span>, <span class="fu">HRF_SPMG1</span><span class="op">(</span><span class="va">time</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">'l'</span>, xlab <span class="op">=</span> <span class="st">"Time (s)"</span>, ylab <span class="op">=</span> <span class="st">"BOLD Response"</span>,</span>
@@ -191,14 +326,14 @@ experimental events (onsets, conditions, durations) map to regressors
 using a formula syntax. The <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf()</a></code> or
 <code>afni_hrf()</code> functions within the formula link event
 variables to specific HRF shapes.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># A simple design table with two stimulus types</span></span>
 <span><span class="va">design_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">40</span>, <span class="fl">70</span>, <span class="fl">100</span>, <span class="fl">130</span>, <span class="fl">160</span>, <span class="fl">190</span>, <span class="fl">220</span><span class="op">)</span>,</span>
 <span>  stim_type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"face"</span>, <span class="st">"scene"</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  run_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">8</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Model the effect of stim_type, convolved with the SPM canonical HRF</span></span>
 <span><span class="va">event_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">stim_type</span><span class="op">)</span>,</span>
 <span>                         data <span class="op">=</span> <span class="va">design_table</span>,</span>
@@ -215,7 +350,7 @@ variables to specific HRF shapes.</p>
 </h4>
 <p>This models non-task-related components like scanner drift, run
 intercepts, and other nuisance factors (e.g., motion parameters).</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Example: Cubic B-spline drift model + run intercepts</span></span>
 <span><span class="co"># (Requires 'sframe' defined earlier)</span></span>
 <span><span class="va">base_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"bs"</span>, degree <span class="op">=</span> <span class="fl">3</span>, sframe <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span>
@@ -227,19 +362,19 @@ intercepts, and other nuisance factors (e.g., motion parameters).</p>
 <span><span class="co">#&gt;     * Name: baseline_bs_3                </span></span>
 <span><span class="co">#&gt;     * Basis type: bs                     </span></span>
 <span><span class="co">#&gt;     * Degree: 3                          </span></span>
-<span><span class="co">#&gt;     * Drift columns: 15                  </span></span>
+<span><span class="co">#&gt;     * Drift columns: 3                   </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   Additional Components                    </span></span>
-<span><span class="co">#&gt;     * Constant columns: 5                </span></span>
+<span><span class="co">#&gt;     * Constant columns: 1                </span></span>
 <span><span class="co">#&gt;     * Nuisance columns: 0                </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   Model Summary                            </span></span>
-<span><span class="co">#&gt;     * Total columns: 20                  </span></span>
+<span><span class="co">#&gt;     * Total columns: 4                   </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   Design Matrix Preview                    </span></span>
-<span><span class="co">#&gt;      0.000  0.000  0.000  0.000 ...      </span></span>
-<span><span class="co">#&gt;      0.015  0.000  0.000  0.000 ...      </span></span>
-<span><span class="co">#&gt;      0.030  0.000  0.000  0.000 ...      </span></span>
+<span><span class="co">#&gt;      0.000  0.000  0.000  1.000          </span></span>
+<span><span class="co">#&gt;      0.025  0.000  0.000  1.000          </span></span>
+<span><span class="co">#&gt;      0.049  0.001  0.000  1.000          </span></span>
 <span><span class="co">#&gt; ================================================</span></span></code></pre></div>
 <ul>
 <li>
@@ -252,7 +387,7 @@ intercepts, and other nuisance factors (e.g., motion parameters).</p>
 </h4>
 <p>Contrasts define specific comparisons between condition
 estimates.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Example: Contrast comparing 'face' vs 'scene' levels of 'stim_type'</span></span>
 <span><span class="va">face_vs_scene</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.html" class="external-link">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">stim_type</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span> <span class="va">stim_type</span> <span class="op">==</span> <span class="st">"scene"</span>, name <span class="op">=</span> <span class="st">"FvS"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">face_vs_scene</span><span class="op">)</span></span>
@@ -276,25 +411,56 @@ estimates.</p>
 <code>fmri_dataset</code> using estimation functions like
 <code>fmri_lm</code> (for standard GLM) or <code>estimate_betas</code>
 (for single-trial betas).</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Combine event and baseline models</span></span>
-<span><span class="va">full_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_model.html">fmri_model</a></span><span class="op">(</span><span class="va">event_mod</span>, <span class="va">base_mod</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Fit the GLM</span></span>
-<span><span class="co"># (Requires 'my_dataset' of class fmri_dataset)</span></span>
-<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span><span class="va">full_model</span>, dataset <span class="op">=</span> <span class="va">my_dataset</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Robust fit down-weighting outlier time points</span></span>
-<span><span class="va">fit_robust</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
-<span>  <span class="va">full_model</span>, dataset <span class="op">=</span> <span class="va">my_dataset</span>,</span>
-<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span>robust <span class="op">=</span> <span class="fu"><a href="../reference/robust_spec.html">robust_spec</a></span><span class="op">(</span><span class="st">"huber"</span><span class="op">)</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create three example voxel series over the same one-run design</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
+<span><span class="va">overview_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">120</span> <span class="op">*</span> <span class="fl">3</span><span class="op">)</span>, <span class="fl">120</span>, <span class="fl">3</span><span class="op">)</span>,</span>
+<span>  TR <span class="op">=</span> <span class="fl">2</span>, run_length <span class="op">=</span> <span class="fl">120</span>, event_table <span class="op">=</span> <span class="va">design_table</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Extract contrast results (if contrasts were defined)</span></span>
-<span><span class="co"># con_results &lt;- coef(fit)  # Get coefficients</span></span></code></pre></div>
-<p>Selecting <code>robust_spec("huber")</code> invokes row-wise
-weighting to lessen the influence of motion spikes or other frame-level
-artifacts.</p>
+<span><span class="co"># Combine the design with its dataset, then fit it</span></span>
+<span><span class="va">full_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_model.html">fmri_model</a></span><span class="op">(</span><span class="va">event_mod</span>, <span class="va">base_mod</span>, dataset <span class="op">=</span> <span class="va">overview_data</span><span class="op">)</span></span>
+<span><span class="va">overview_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span><span class="va">full_model</span><span class="op">)</span></span>
+<span><span class="va">overview_coef_matrix</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">overview_fit</span><span class="op">)</span></span>
+<span><span class="va">overview_coef_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  condition <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels</a></span><span class="op">(</span><span class="va">design_table</span><span class="op">$</span><span class="va">stim_type</span><span class="op">)</span>,</span>
+<span>  voxel_1 <span class="op">=</span> <span class="va">overview_coef_matrix</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>,</span>
+<span>  voxel_2 <span class="op">=</span> <span class="va">overview_coef_matrix</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span>,</span>
+<span>  voxel_3 <span class="op">=</span> <span class="va">overview_coef_matrix</span><span class="op">[</span>, <span class="fl">3</span><span class="op">]</span>,</span>
+<span>  check.names <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>  <span class="va">overview_coef_table</span>, digits <span class="op">=</span> <span class="fl">2</span>, row.names <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  caption <span class="op">=</span> <span class="st">"Condition coefficients from the object-building route"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Condition coefficients from the object-building route</caption>
+<thead><tr class="header">
+<th align="left">condition</th>
+<th align="right">voxel_1</th>
+<th align="right">voxel_2</th>
+<th align="right">voxel_3</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">face</td>
+<td align="right">-0.09</td>
+<td align="right">-0.14</td>
+<td align="right">-0.11</td>
+</tr>
+<tr class="even">
+<td align="left">scene</td>
+<td align="right">0.05</td>
+<td align="right">0.06</td>
+<td align="right">0.10</td>
+</tr>
+</tbody>
+</table>
+<p>This second fit uses the object-building route rather than the
+compact formula route shown first. See the linear-model vignette for AR
+prewhitening, robust row weighting, uncertainty estimates, and model
+diagnostics.</p>
 <ul>
 <li>
 <strong>See Vignettes:</strong>
@@ -317,9 +483,6 @@ artifacts.</p>
 <li><code><a href="../articles/a_08_simulation.html">vignette("a_08_simulation", package = "fmrireg")</a></code></li>
 </ul>
 </li>
-<li>
-<strong>AFNI Translation:</strong> Generating scripts for AFNI’s
-<code>3dDeconvolve</code> (<code>afni_lm</code>).</li>
 <li>
 <strong>Low-level Regressors:</strong> Manually creating and
 manipulating regressors (<code>regressor</code>).</li>
@@ -366,13 +529,13 @@ vignettes linked above.</p>
 management</li>
 <li>
 <code><a href="../articles/a_08_simulation.html">vignette("a_08_simulation", package = "fmrireg")</a></code> —
-Simulating fMRI data</li>
+Build controlled examples</li>
 <li>
-<code><a href="../articles/group_analysis.html">vignette("group_analysis", package = "fmrireg")</a></code> — Group
-analysis</li>
+<code><a href="../articles/a_09_linear_model.html">vignette("a_09_linear_model", package = "fmrireg")</a></code> —
+Fit and diagnose a GLM</li>
 <li>
-<code><a href="../articles/sketched-ar.html">vignette("sketched-ar", package = "fmrireg")</a></code> —
-Sketched/Nyström acceleration</li>
+<code><a href="../articles/a_05_contrasts.html">vignette("a_05_contrasts", package = "fmrireg")</a></code> — Test
+planned hypotheses</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

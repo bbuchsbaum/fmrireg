@@ -10,6 +10,9 @@ shortnames(x, ...)
 # S3 method for class 'event_term'
 shortnames(x, ...)
 
+# S3 method for class 'feature_term'
+shortnames(x, ...)
+
 # S3 method for class 'event_model'
 shortnames(x, ...)
 ```

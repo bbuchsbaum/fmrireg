@@ -63,6 +63,9 @@ print(summary_info)
 #> $experimental_design$total_time
 #> [1] 300
 #> 
+#> $experimental_design$run_length
+#> [1] 150
+#> 
 #> $experimental_design$target_snr
 #> [1] 4
 #> 
@@ -73,6 +76,47 @@ print(summary_info)
 #> 
 #> $hrf_information$hrf_object_name
 #> [1] "HRF_SPMG1"
+#> 
+#> $hrf_information$hrf_recipe
+#> $hrf_information$hrf_recipe$schema_version
+#> [1] 1
+#> 
+#> $hrf_information$hrf_recipe$recipe_name
+#> [1] "HRF_SPMG1"
+#> 
+#> $hrf_information$hrf_recipe$generator
+#> [1] "fmrihrf::gen_hrf"
+#> 
+#> $hrf_information$hrf_recipe$base_hrf_name
+#> [1] "HRF_SPMG1"
+#> 
+#> $hrf_information$hrf_recipe$lag
+#> [1] 0
+#> 
+#> $hrf_information$hrf_recipe$width
+#> [1] 0
+#> 
+#> $hrf_information$hrf_recipe$precision
+#> [1] 0.1
+#> 
+#> $hrf_information$hrf_recipe$half_life
+#> [1] Inf
+#> 
+#> $hrf_information$hrf_recipe$summate
+#> [1] TRUE
+#> 
+#> $hrf_information$hrf_recipe$normalize
+#> [1] FALSE
+#> 
+#> $hrf_information$hrf_recipe$name_override
+#> NULL
+#> 
+#> $hrf_information$hrf_recipe$span_override
+#> NULL
+#> 
+#> $hrf_information$hrf_recipe$fmrihrf_version
+#> [1] "0.4.0"
+#> 
 #> 
 #> $hrf_information$hrf_object
 #> -- HRF: SPMG1 --------------------------------------------- 
@@ -89,7 +133,7 @@ print(summary_info)
 #> [1] 0.4
 #> 
 #> $noise_information$noise_sd
-#> [1] 0.5217219
+#> [1] 0.09832377
 #> 
 #> 
 ```

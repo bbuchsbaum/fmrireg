@@ -38,16 +38,18 @@
 <li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -85,7 +87,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-08-09</h4>
+            <h4 data-toc-skip class="date">2026-08-22</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_05_contrasts.Rmd" class="external-link"><code>vignettes/a_05_contrasts.Rmd</code></a></small>
       <div class="d-none name"><code>a_05_contrasts.Rmd</code></div>
@@ -96,15 +98,16 @@ Buchsbaum</h4>
 <script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.remove("palette-red","palette-lapis","palette-ochre","palette-teal","palette-green","palette-violet","preset-homage","preset-study","preset-structural","preset-adobe","preset-midnight");document.body.classList.add("palette-red","preset-homage");});</script><div class="section level2">
 <h2 id="introduction-to-contrasts">Introduction to Contrasts<a class="anchor" aria-label="anchor" href="#introduction-to-contrasts"></a>
 </h2>
-<p>Statistical contrasts are a fundamental component of <em>f</em>MRI
-analyses, allowing researchers to test specific hypotheses about
-differences in brain activity between experimental conditions. The
-<code>fmrireg</code> package provides a flexible and powerful system for
-defining, computing, and applying contrasts to linear models fitted to
-fMRI data.</p>
-<p>This vignette explores the various ways to specify contrasts in
-<code>fmrireg</code>, from simple pairwise comparisons to more complex
-interactions and polynomial trends.</p>
+<p>Statistical contrasts turn questions about differences between
+experimental conditions into linear hypotheses about fitted
+coefficients. <code>fmrireg</code> provides constructors for defining
+those hypotheses, inspecting their weights, and fitting them with an
+fMRI linear model.</p>
+<p>This vignette shows how to turn a scientific question into weights,
+inspect those weights before fitting, and extract the resulting
+estimates and test statistics. If you have not yet fitted a model, start
+with
+<code><a href="../articles/a_09_linear_model.html">vignette("a_09_linear_model", package = "fmrireg")</a></code>.</p>
 </div>
 <div class="section level2">
 <h2 id="example-a-2x2-factorial-design">Example: A 2x2 Factorial Design<a class="anchor" aria-label="anchor" href="#example-a-2x2-factorial-design"></a>
@@ -213,7 +216,18 @@ run.</p>
 <span><span class="co"># In this simple model, there's only one event term</span></span>
 <span><span class="va">event_term</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">emodel</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span> </span>
 <span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/cells.html" class="external-link">cells</a></span><span class="op">(</span><span class="va">event_term</span><span class="op">)</span>, caption <span class="op">=</span> <span class="st">"Cells within the 'category:attention' event term"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">cell_order</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">design</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"category"</span>, <span class="st">"attention"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">cell_labels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">cell_order</span><span class="op">$</span><span class="va">category</span>, <span class="va">cell_order</span><span class="op">$</span><span class="va">attention</span>, sep <span class="op">=</span> <span class="st">" / "</span><span class="op">)</span></span>
+<span><span class="va">label_weight_matrix</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">labels</span> <span class="op">=</span> <span class="va">cell_labels</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">out</span><span class="op">)</span> <span class="op">==</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">labels</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">out</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">labels</span></span>
+<span>  <span class="va">out</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">cell_order</span>,</span>
+<span>      row.names <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>      caption <span class="op">=</span> <span class="st">"Cells within the 'category:attention' event term"</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <caption>Cells within the ‘category:attention’ event term</caption>
 <thead><tr class="header">
@@ -281,7 +295,8 @@ computes the numerical weights based on the levels within the term.</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'face_vs_scene':\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Weights for 'face_vs_scene':</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_face_vs_scene</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_face_vs_scene</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">kable</span><span class="op">(</span><span class="fu">label_weight_matrix</span><span class="op">(</span><span class="va">wts_face_vs_scene</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span>,</span>
+<span>      col.names <span class="op">=</span> <span class="va">wts_face_vs_scene</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -289,19 +304,19 @@ computes the numerical weights based on the levels within the term.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">category.face_attention.attend</td>
+<td align="left">face / attend</td>
 <td align="right">0.5</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.attend</td>
+<td align="left">scene / attend</td>
 <td align="right">-0.5</td>
 </tr>
 <tr class="odd">
-<td align="left">category.face_attention.ignore</td>
+<td align="left">face / ignore</td>
 <td align="right">0.5</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.ignore</td>
+<td align="left">scene / ignore</td>
 <td align="right">-0.5</td>
 </tr>
 </tbody>
@@ -311,7 +326,8 @@ computes the numerical weights based on the levels within the term.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nWeights for 'attend_vs_ignore':\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Weights for 'attend_vs_ignore':</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_attend_vs_ignore</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_attend_vs_ignore</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">kable</span><span class="op">(</span><span class="fu">label_weight_matrix</span><span class="op">(</span><span class="va">wts_attend_vs_ignore</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span>,</span>
+<span>      col.names <span class="op">=</span> <span class="va">wts_attend_vs_ignore</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -319,19 +335,19 @@ computes the numerical weights based on the levels within the term.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">category.face_attention.attend</td>
+<td align="left">face / attend</td>
 <td align="right">0.5</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.attend</td>
+<td align="left">scene / attend</td>
 <td align="right">0.5</td>
 </tr>
 <tr class="odd">
-<td align="left">category.face_attention.ignore</td>
+<td align="left">face / ignore</td>
 <td align="right">-0.5</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.ignore</td>
+<td align="left">scene / ignore</td>
 <td align="right">-0.5</td>
 </tr>
 </tbody>
@@ -340,7 +356,7 @@ computes the numerical weights based on the levels within the term.</p>
 levels <em>not</em> mentioned in the formulas. For
 <code>face_vs_scene</code>, it averages over ‘attend’ and ‘ignore’
 within each category level before contrasting. The resulting weights sum
-to zero (0.25 * 2 + (-0.25) * 2 = 0).</p>
+to zero (0.5 * 2 + (-0.5) * 2 = 0).</p>
 </div>
 </div>
 <div class="section level2">
@@ -352,15 +368,22 @@ of conditions) is significantly different from the implicit baseline
 <code>unit_contrast</code> is used for this purpose. It creates
 contrasts that sum to 1.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">con_face_vs_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.html" class="external-link">unit_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">category</span> <span class="op">==</span> <span class="st">"face"</span>, name <span class="op">=</span> <span class="st">"face_gt_baseline"</span><span class="op">)</span></span>
-<span><span class="va">con_attend_vs_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.html" class="external-link">unit_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">attention</span> <span class="op">==</span> <span class="st">"attend"</span>, name <span class="op">=</span> <span class="st">"attend_gt_baseline"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">con_face_vs_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.html" class="external-link">unit_contrast</a></span><span class="op">(</span></span>
+<span>  <span class="op">~</span> <span class="va">category</span>, name <span class="op">=</span> <span class="st">"face_gt_baseline"</span>,</span>
+<span>  where <span class="op">=</span> <span class="op">~</span> <span class="va">category</span> <span class="op">==</span> <span class="st">"face"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">con_attend_vs_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.html" class="external-link">unit_contrast</a></span><span class="op">(</span></span>
+<span>  <span class="op">~</span> <span class="va">attention</span>, name <span class="op">=</span> <span class="st">"attend_gt_baseline"</span>,</span>
+<span>  where <span class="op">=</span> <span class="op">~</span> <span class="va">attention</span> <span class="op">==</span> <span class="st">"attend"</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">wts_face_vs_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">con_face_vs_baseline</span>, <span class="va">event_term</span><span class="op">)</span></span>
 <span><span class="va">wts_attend_vs_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">con_attend_vs_baseline</span>, <span class="va">event_term</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'face_gt_baseline':\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Weights for 'face_gt_baseline':</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_face_vs_baseline</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_face_vs_baseline</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">kable</span><span class="op">(</span><span class="fu">label_weight_matrix</span><span class="op">(</span><span class="va">wts_face_vs_baseline</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span>,</span>
+<span>      col.names <span class="op">=</span> <span class="va">wts_face_vs_baseline</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -368,20 +391,20 @@ contrasts that sum to 1.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">category.face_attention.attend</td>
-<td align="right">0.25</td>
+<td align="left">face / attend</td>
+<td align="right">0.5</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.attend</td>
-<td align="right">0.25</td>
+<td align="left">scene / attend</td>
+<td align="right">0.0</td>
 </tr>
 <tr class="odd">
-<td align="left">category.face_attention.ignore</td>
-<td align="right">0.25</td>
+<td align="left">face / ignore</td>
+<td align="right">0.5</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.ignore</td>
-<td align="right">0.25</td>
+<td align="left">scene / ignore</td>
+<td align="right">0.0</td>
 </tr>
 </tbody>
 </table>
@@ -390,7 +413,8 @@ contrasts that sum to 1.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nWeights for 'attend_gt_baseline':\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Weights for 'attend_gt_baseline':</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_attend_vs_baseline</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_attend_vs_baseline</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">kable</span><span class="op">(</span><span class="fu">label_weight_matrix</span><span class="op">(</span><span class="va">wts_attend_vs_baseline</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span>,</span>
+<span>      col.names <span class="op">=</span> <span class="va">wts_attend_vs_baseline</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -398,20 +422,20 @@ contrasts that sum to 1.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">category.face_attention.attend</td>
-<td align="right">0.25</td>
+<td align="left">face / attend</td>
+<td align="right">0.5</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.attend</td>
-<td align="right">0.25</td>
+<td align="left">scene / attend</td>
+<td align="right">0.5</td>
 </tr>
 <tr class="odd">
-<td align="left">category.face_attention.ignore</td>
-<td align="right">0.25</td>
+<td align="left">face / ignore</td>
+<td align="right">0.0</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.ignore</td>
-<td align="right">0.25</td>
+<td align="left">scene / ignore</td>
+<td align="right">0.0</td>
 </tr>
 </tbody>
 </table>
@@ -438,7 +462,8 @@ differs between categories.</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'category_X_attention':\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Weights for 'category_X_attention':</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_interaction</span><span class="op">$</span><span class="va">weights</span>, col.names <span class="op">=</span> <span class="va">wts_interaction</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">kable</span><span class="op">(</span><span class="fu">label_weight_matrix</span><span class="op">(</span><span class="va">wts_interaction</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span>,</span>
+<span>      col.names <span class="op">=</span> <span class="va">wts_interaction</span><span class="op">$</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -446,19 +471,19 @@ differs between categories.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">category.face_attention.attend</td>
+<td align="left">face / attend</td>
 <td align="right">1</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.attend</td>
+<td align="left">scene / attend</td>
 <td align="right">-1</td>
 </tr>
 <tr class="odd">
-<td align="left">category.face_attention.ignore</td>
+<td align="left">face / ignore</td>
 <td align="right">-1</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.ignore</td>
+<td align="left">scene / ignore</td>
 <td align="right">1</td>
 </tr>
 </tbody>
@@ -498,7 +523,7 @@ the overall effect.</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'Main_Category' (oneway_contrast):\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Weights for 'Main_Category' (oneway_contrast):</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_main_category</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">kable</span><span class="op">(</span><span class="fu">label_weight_matrix</span><span class="op">(</span><span class="va">wts_main_category</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -506,19 +531,19 @@ the overall effect.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">category.face_attention.attend</td>
+<td align="left">face / attend</td>
 <td align="right">-1</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.attend</td>
+<td align="left">scene / attend</td>
 <td align="right">1</td>
 </tr>
 <tr class="odd">
-<td align="left">category.face_attention.ignore</td>
+<td align="left">face / ignore</td>
 <td align="right">-1</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.ignore</td>
+<td align="left">scene / ignore</td>
 <td align="right">1</td>
 </tr>
 </tbody>
@@ -528,7 +553,7 @@ the overall effect.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nWeights for 'Interaction_CatAtt' (interaction_contrast):\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Weights for 'Interaction_CatAtt' (interaction_contrast):</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_int_cat_att</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">kable</span><span class="op">(</span><span class="fu">label_weight_matrix</span><span class="op">(</span><span class="va">wts_int_cat_att</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -536,19 +561,19 @@ the overall effect.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">face_attend</td>
+<td align="left">face / attend</td>
 <td align="right">1</td>
 </tr>
 <tr class="even">
-<td align="left">scene_attend</td>
+<td align="left">scene / attend</td>
 <td align="right">-1</td>
 </tr>
 <tr class="odd">
-<td align="left">face_ignore</td>
+<td align="left">face / ignore</td>
 <td align="right">-1</td>
 </tr>
 <tr class="even">
-<td align="left">scene_ignore</td>
+<td align="left">scene / ignore</td>
 <td align="right">1</td>
 </tr>
 </tbody>
@@ -641,10 +666,16 @@ trends of intensity:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">con_poly_intensity</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/poly_contrast.html" class="external-link">poly_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">intensity</span>, degree <span class="op">=</span> <span class="fl">2</span>, name <span class="op">=</span> <span class="st">"Intensity_Trend"</span><span class="op">)</span></span>
 <span><span class="va">wts_poly_intensity</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">con_poly_intensity</span>, <span class="va">event_term_poly</span><span class="op">)</span></span>
+<span><span class="va">poly_cell_order</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">design_poly</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"category"</span>, <span class="st">"intensity"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">poly_labels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>  <span class="va">poly_cell_order</span><span class="op">$</span><span class="va">category</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"intensity"</span>, <span class="va">poly_cell_order</span><span class="op">$</span><span class="va">intensity</span><span class="op">)</span>,</span>
+<span>  sep <span class="op">=</span> <span class="st">" / "</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'Intensity_Trend' (poly_contrast, degree=2):\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Weights for 'Intensity_Trend' (poly_contrast, degree=2):</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_poly_intensity</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">kable</span><span class="op">(</span><span class="fu">label_weight_matrix</span><span class="op">(</span><span class="va">wts_poly_intensity</span><span class="op">$</span><span class="va">weights</span>, <span class="va">poly_labels</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -653,39 +684,40 @@ trends of intensity:</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">category.face_intensity.1</td>
+<td align="left">face / intensity 1</td>
 <td align="right">-0.5</td>
 <td align="right">0.2886751</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_intensity.1</td>
+<td align="left">scene / intensity 1</td>
 <td align="right">-0.5</td>
 <td align="right">0.2886751</td>
 </tr>
 <tr class="odd">
-<td align="left">category.face_intensity.2</td>
+<td align="left">face / intensity 2</td>
 <td align="right">0.0</td>
 <td align="right">-0.5773503</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_intensity.2</td>
+<td align="left">scene / intensity 2</td>
 <td align="right">0.0</td>
 <td align="right">-0.5773503</td>
 </tr>
 <tr class="odd">
-<td align="left">category.face_intensity.3</td>
+<td align="left">face / intensity 3</td>
 <td align="right">0.5</td>
 <td align="right">0.2886751</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_intensity.3</td>
+<td align="left">scene / intensity 3</td>
 <td align="right">0.5</td>
 <td align="right">0.2886751</td>
 </tr>
 </tbody>
 </table>
-<p>The output has two columns: <code>poly1</code> for the linear trend
-and <code>poly2</code> for the quadratic trend.</p>
+<p>The output has two columns: <code>Intensity_Trend_1</code> for the
+linear trend and <code>Intensity_Trend_2</code> for the quadratic
+trend.</p>
 </div>
 <div class="section level2">
 <h2 id="helper-functions-for-common-comparisons">Helper Functions for Common Comparisons<a class="anchor" aria-label="anchor" href="#helper-functions-for-common-comparisons"></a>
@@ -720,7 +752,7 @@ the average of all other levels.</li>
 <span><span class="co"># Display weights for one_against_all</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Weights for 'con_attend_vs_other':\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Weights for 'con_attend_vs_other':</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_helpers</span><span class="op">$</span><span class="va">con_attend_vs_other</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">kable</span><span class="op">(</span><span class="fu">label_weight_matrix</span><span class="op">(</span><span class="va">wts_helpers</span><span class="op">$</span><span class="va">con_attend_vs_other</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -728,19 +760,19 @@ the average of all other levels.</li>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">category.face_attention.attend</td>
+<td align="left">face / attend</td>
 <td align="right">0.5</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.attend</td>
+<td align="left">scene / attend</td>
 <td align="right">0.5</td>
 </tr>
 <tr class="odd">
-<td align="left">category.face_attention.ignore</td>
+<td align="left">face / ignore</td>
 <td align="right">-0.5</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.ignore</td>
+<td align="left">scene / ignore</td>
 <td align="right">-0.5</td>
 </tr>
 </tbody>
@@ -749,7 +781,7 @@ the average of all other levels.</li>
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nWeights for 'con_ignore_vs_other':\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Weights for 'con_ignore_vs_other':</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">wts_helpers</span><span class="op">$</span><span class="va">con_ignore_vs_other</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">kable</span><span class="op">(</span><span class="fu">label_weight_matrix</span><span class="op">(</span><span class="va">wts_helpers</span><span class="op">$</span><span class="va">con_ignore_vs_other</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -757,19 +789,19 @@ the average of all other levels.</li>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">category.face_attention.attend</td>
+<td align="left">face / attend</td>
 <td align="right">-0.5</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.attend</td>
+<td align="left">scene / attend</td>
 <td align="right">-0.5</td>
 </tr>
 <tr class="odd">
-<td align="left">category.face_attention.ignore</td>
+<td align="left">face / ignore</td>
 <td align="right">0.5</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.ignore</td>
+<td align="left">scene / ignore</td>
 <td align="right">0.5</td>
 </tr>
 </tbody>
@@ -814,7 +846,8 @@ contrast weight objects.</p>
 <span><span class="co">#&gt;     Formula: ~(`face:attend` - `face:ignore`) - (`scene:attend` - `scene:ignore`)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; [4] face_gt_baseline (unit_contrast_spec)</span></span>
-<span><span class="co">#&gt;     Formula: ~category == "face"</span></span>
+<span><span class="co">#&gt;     Formula: ~category</span></span>
+<span><span class="co">#&gt;     Subset:  ~category == "face"</span></span>
 <span></span>
 <span><span class="co"># Compute weights for the entire set</span></span>
 <span><span class="va">all_weights</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span><span class="va">all_contrasts</span>, <span class="va">event_term</span><span class="op">)</span></span>
@@ -823,7 +856,7 @@ contrast weight objects.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nAccessing weights for 'face_vs_scene' from the set:\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Accessing weights for 'face_vs_scene' from the set:</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">all_weights</span><span class="op">$</span><span class="va">face_vs_scene</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">kable</span><span class="op">(</span><span class="fu">label_weight_matrix</span><span class="op">(</span><span class="va">all_weights</span><span class="op">$</span><span class="va">face_vs_scene</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left"></th>
@@ -831,19 +864,19 @@ contrast weight objects.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">category.face_attention.attend</td>
+<td align="left">face / attend</td>
 <td align="right">0.5</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.attend</td>
+<td align="left">scene / attend</td>
 <td align="right">-0.5</td>
 </tr>
 <tr class="odd">
-<td align="left">category.face_attention.ignore</td>
+<td align="left">face / ignore</td>
 <td align="right">0.5</td>
 </tr>
 <tr class="even">
-<td align="left">category.scene_attention.ignore</td>
+<td align="left">scene / ignore</td>
 <td align="right">-0.5</td>
 </tr>
 </tbody>
@@ -856,23 +889,14 @@ contrast weight objects.</p>
 function in the <code>fmri_lm</code> formula. You can provide a single
 contrast specification or a <code>contrast_set</code>.</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Simulate some simple data for demonstration</span></span>
-<span><span class="va">ysim</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">120</span> <span class="op">*</span> <span class="fl">3</span><span class="op">)</span>, <span class="fl">120</span>, <span class="fl">3</span><span class="op">)</span> <span class="co"># 3 voxels</span></span>
-<span><span class="va">dataset_sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span><span class="va">ysim</span>, TR <span class="op">=</span> <span class="fl">2</span>, run_length <span class="op">=</span> <span class="fl">120</span>, event_table <span class="op">=</span> <span class="va">design</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Fit model with the contrast set defined earlier</span></span>
+<code class="sourceCode R"><span><span class="co"># Fit model with the contrast set defined earlier</span></span>
 <span><span class="va">fmri_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
-<span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">category</span>, <span class="va">attention</span>, contrasts <span class="op">=</span> <span class="va">all_contrasts</span><span class="op">)</span>,</span>
-<span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">block</span>,</span>
-<span>  dataset <span class="op">=</span> <span class="va">dataset_sim</span>,</span>
-<span>  compute <span class="op">=</span> <span class="fu"><a href="../reference/compute_spec.html">compute_spec</a></span><span class="op">(</span>voxel_chunks <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Print summary of the fitted model (shows contrasts)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">fmri_fit</span><span class="op">)</span></span></code></pre></div>
-<p><em>(Note: The above fitting code is set to <code>eval=FALSE</code>
-to avoid lengthy computation in the vignette build, but demonstrates the
-principle.)</em></p>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">category</span>, <span class="va">attention</span>, contrasts <span class="op">=</span> <span class="va">all_contrasts</span><span class="op">)</span>,</span>
+<span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">block</span>, dataset <span class="op">=</span> <span class="va">dataset_sim</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The simulated cell effects make the face-minus-scene contrast
+positive in all three voxels. This gives the example a known direction
+rather than relying on an arbitrary noise realization.</p>
 </div>
 <div class="section level2">
 <h2 id="extracting-contrast-results">Extracting Contrast Results<a class="anchor" aria-label="anchor" href="#extracting-contrast-results"></a>
@@ -895,30 +919,177 @@ errors for contrasts.</li>
 F-contrasts were defined, e.g., via <code>oneway_contrast</code>).</li>
 </ul>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Extract estimated contrast values</span></span>
-<span><span class="va">contrast_estimates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fmri_fit</span>, type <span class="op">=</span> <span class="st">"contrasts"</span><span class="op">)</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">contrast_estimates</span>, caption <span class="op">=</span> <span class="st">"Estimated Contrast Values"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Extract t-statistics</span></span>
+<code class="sourceCode R"><span><span class="va">contrast_estimates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fmri_fit</span>, type <span class="op">=</span> <span class="st">"contrasts"</span><span class="op">)</span></span>
 <span><span class="va">contrast_tstats</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/stats.html">stats</a></span><span class="op">(</span><span class="va">fmri_fit</span>, type <span class="op">=</span> <span class="st">"contrasts"</span><span class="op">)</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">contrast_tstats</span>, caption <span class="op">=</span> <span class="st">"Contrast t-statistics"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Extract standard errors</span></span>
 <span><span class="va">contrast_se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">fmri_fit</span>, type <span class="op">=</span> <span class="st">"contrasts"</span><span class="op">)</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">contrast_se</span>, caption <span class="op">=</span> <span class="st">"Contrast Standard Errors"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">contrast_p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/p_values.html">p_values</a></span><span class="op">(</span><span class="va">fmri_fit</span>, type <span class="op">=</span> <span class="st">"contrasts"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">contrast_summary_numeric</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  contrast <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">contrast_estimates</span><span class="op">)</span>,</span>
+<span>  estimate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">contrast_estimates</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span><span class="op">)</span>,</span>
+<span>  std_error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">contrast_se</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span><span class="op">)</span>,</span>
+<span>  statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">contrast_tstats</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span><span class="op">)</span>,</span>
+<span>  p_value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">contrast_p</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span><span class="op">)</span>,</span>
+<span>  df <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fmri_fit</span><span class="op">$</span><span class="va">result</span><span class="op">$</span><span class="va">df</span><span class="op">$</span><span class="va">inference</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">contrast_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/transform.html" class="external-link">transform</a></span><span class="op">(</span></span>
+<span>  <span class="va">contrast_summary_numeric</span>,</span>
+<span>  p_value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/format.pval.html" class="external-link">format.pval</a></span><span class="op">(</span><span class="va">p_value</span>, digits <span class="op">=</span> <span class="fl">3</span>, eps <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">contrast_summary</span>, digits <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>      row.names <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>      caption <span class="op">=</span> <span class="st">"Contrast results for voxel 1"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Contrast results for voxel 1</caption>
+<thead><tr class="header">
+<th align="left">contrast</th>
+<th align="right">estimate</th>
+<th align="right">std_error</th>
+<th align="right">statistic</th>
+<th align="left">p_value</th>
+<th align="right">df</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">face_vs_scene</td>
+<td align="right">0.675</td>
+<td align="right">0.040</td>
+<td align="right">16.767</td>
+<td align="left">&lt;1e-04</td>
+<td align="right">112</td>
+</tr>
+<tr class="even">
+<td align="left">attend_vs_ignore</td>
+<td align="right">0.345</td>
+<td align="right">0.042</td>
+<td align="right">8.224</td>
+<td align="left">&lt;1e-04</td>
+<td align="right">112</td>
+</tr>
+<tr class="odd">
+<td align="left">category_X_attention</td>
+<td align="right">0.352</td>
+<td align="right">0.080</td>
+<td align="right">4.386</td>
+<td align="left">&lt;1e-04</td>
+<td align="right">112</td>
+</tr>
+<tr class="even">
+<td align="left">face_gt_baseline</td>
+<td align="right">1.015</td>
+<td align="right">0.036</td>
+<td align="right">28.396</td>
+<td align="left">&lt;1e-04</td>
+<td align="right">112</td>
+</tr>
+</tbody>
+</table>
+<p>The estimate is the effect size in response-data units. The standard
+error is its uncertainty, and the t statistic is their ratio; the
+p-value additionally depends on the reported inference degrees of
+freedom. These p-values describe planned tests at one voxel. A
+whole-brain analysis must also declare how it controls multiplicity
+across voxels and across any unplanned contrasts.</p>
+</div>
+<div class="section level2">
+<h2 id="execute-an-omnibus-f-contrast">Execute an omnibus F-contrast<a class="anchor" aria-label="anchor" href="#execute-an-omnibus-f-contrast"></a>
+</h2>
+<p>A multi-column F-contrast asks whether any of several restrictions is
+nonzero. Here a three-level factor gives a two-degree-of-freedom omnibus
+test. This is different from choosing one signed pairwise
+difference.</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">three_level_events</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">80</span>, length.out <span class="op">=</span> <span class="fl">12</span><span class="op">)</span>,</span>
+<span>  condition <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"faces"</span>, <span class="st">"objects"</span>, <span class="st">"scenes"</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  run <span class="op">=</span> <span class="fl">1L</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">three_level_frame</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span><span class="fl">100</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">three_level_event</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">three_level_events</span>, sampling_frame <span class="op">=</span> <span class="va">three_level_frame</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">three_level_X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html" class="external-link">design_matrix</a></span><span class="op">(</span><span class="va">three_level_event</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">404</span><span class="op">)</span></span>
+<span><span class="va">three_level_Y</span> <span class="op">&lt;-</span> <span class="va">three_level_X</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.0</span>, <span class="fl">0.4</span>, <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span>, sd <span class="op">=</span> <span class="fl">0.15</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">three_level_dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span></span>
+<span>  <span class="va">three_level_Y</span>, TR <span class="op">=</span> <span class="fl">2</span>, run_length <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  event_table <span class="op">=</span> <span class="va">three_level_events</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">condition_omnibus</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/oneway_contrast.html" class="external-link">oneway_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">condition</span>, name <span class="op">=</span> <span class="st">"condition_F"</span><span class="op">)</span></span>
+<span><span class="va">omnibus_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, contrasts <span class="op">=</span> <span class="fu"><a href="../reference/contrast_set.html">contrast_set</a></span><span class="op">(</span><span class="va">condition_omnibus</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, dataset <span class="op">=</span> <span class="va">three_level_dataset</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">omnibus_weights</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html" class="external-link">contrast_weights</a></span><span class="op">(</span></span>
+<span>  <span class="va">condition_omnibus</span>, <span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">three_level_event</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="op">)</span><span class="op">$</span><span class="va">weights</span></span>
+<span><span class="va">omnibus_F</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="../reference/stats.html">stats</a></span><span class="op">(</span><span class="va">omnibus_fit</span>, type <span class="op">=</span> <span class="st">"F"</span><span class="op">)</span><span class="op">$</span><span class="va">condition_F</span><span class="op">)</span></span>
+<span><span class="va">omnibus_df1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">omnibus_weights</span><span class="op">)</span></span>
+<span><span class="va">omnibus_df2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">omnibus_fit</span><span class="op">$</span><span class="va">result</span><span class="op">$</span><span class="va">df</span><span class="op">$</span><span class="va">inference</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
+<span><span class="va">omnibus_p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Fdist.html" class="external-link">pf</a></span><span class="op">(</span><span class="va">omnibus_F</span>, <span class="va">omnibus_df1</span>, <span class="va">omnibus_df2</span>, lower.tail <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">omnibus_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  F <span class="op">=</span> <span class="va">omnibus_F</span>,</span>
+<span>  numerator_df <span class="op">=</span> <span class="va">omnibus_df1</span>,</span>
+<span>  denominator_df <span class="op">=</span> <span class="va">omnibus_df2</span>,</span>
+<span>  p_value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/format.pval.html" class="external-link">format.pval</a></span><span class="op">(</span><span class="va">omnibus_p</span>, digits <span class="op">=</span> <span class="fl">3</span>, eps <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">kable</span><span class="op">(</span></span>
+<span>  <span class="va">omnibus_summary</span>,</span>
+<span>  digits <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  row.names <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  caption <span class="op">=</span> <span class="st">"Omnibus test of equality across three condition effects"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Omnibus test of equality across three condition
+effects</caption>
+<thead><tr class="header">
+<th align="right">F</th>
+<th align="right">numerator_df</th>
+<th align="right">denominator_df</th>
+<th align="left">p_value</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td align="right">407.144</td>
+<td align="right">2</td>
+<td align="right">93</td>
+<td align="left">&lt;1e-04</td>
+</tr></tbody>
+</table>
 </div>
 <div class="section level2">
 <h2 id="visualizing-contrast-weights">Visualizing Contrast Weights<a class="anchor" aria-label="anchor" href="#visualizing-contrast-weights"></a>
 </h2>
-<p>The <code>plot_contrasts</code> function provides a heatmap
-visualization of the contrast weights applied across all regressors in
-the design matrix (including baseline terms if present).</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Plot the contrast weights across all regressors</span></span>
-<span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/plot_contrasts.html" class="external-link">plot_contrasts</a></span><span class="op">(</span><span class="va">emodel_with_cons</span>, rotate_x_text <span class="op">=</span> <span class="cn">TRUE</span>, coord_fixed <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_05_contrasts_files/figure-html/plot_contrasts_example-1.png" class="r-plt" alt="" width="672">
-This plot helps verify that contrasts are specified correctly relative
-to the full model design matrix.</p>
+<p>Before fitting, inspect the cell weights using labels that match the
+scientific conditions. This catches sign errors without exposing
+internal design-column names.</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">weight_matrix</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">cbind</span>, <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span></span>
+<span>  <span class="va">all_weights</span>,</span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">weight</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">weight</span><span class="op">$</span><span class="va">weights</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">cell_order</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">design</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"category"</span>, <span class="st">"attention"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">weight_matrix</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">cell_order</span><span class="op">$</span><span class="va">category</span>, <span class="va">cell_order</span><span class="op">$</span><span class="va">attention</span>,</span>
+<span>                                 sep <span class="op">=</span> <span class="st">" / "</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">weight_matrix</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">all_weights</span><span class="op">)</span></span>
+<span><span class="va">weight_long</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">as.table</a></span><span class="op">(</span><span class="va">weight_matrix</span><span class="op">)</span>, stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">weight_long</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"condition"</span>, <span class="st">"contrast"</span>, <span class="st">"weight"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">ggplot</span><span class="op">(</span><span class="va">weight_long</span>, <span class="fu">aes</span><span class="op">(</span><span class="va">contrast</span>, <span class="va">condition</span>, fill <span class="op">=</span> <span class="va">weight</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_tile</span><span class="op">(</span>color <span class="op">=</span> <span class="st">"white"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_text</span><span class="op">(</span><span class="fu">aes</span><span class="op">(</span>label <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%.1f"</span>, <span class="va">weight</span><span class="op">)</span><span class="op">)</span>, size <span class="op">=</span> <span class="fl">3.5</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">scale_fill_gradient2</span><span class="op">(</span>low <span class="op">=</span> <span class="st">"#2166AC"</span>, mid <span class="op">=</span> <span class="st">"white"</span>, high <span class="op">=</span> <span class="st">"#B2182B"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>x <span class="op">=</span> <span class="cn">NULL</span>, y <span class="op">=</span> <span class="cn">NULL</span>, fill <span class="op">=</span> <span class="st">"Weight"</span>,</span>
+<span>       title <span class="op">=</span> <span class="st">"Planned contrast weights by experimental cell"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">12</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme</span><span class="op">(</span>axis.text.x <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">25</span>, hjust <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_05_contrasts_files/figure-html/plot-contrasts-example-1.png" class="r-plt" alt="Heatmap of signed contrast weights for the four category-by-attention experimental cells across four planned hypotheses." width="672">
+The full-design helper <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/plot_contrasts.html" class="external-link">plot_contrasts()</a></code> remains useful when
+you also need to audit how these weights align with nuisance and
+baseline columns.</p>
 </div>
 <div class="section level2">
 <h2 id="working-with-contrast-weights">Working with Contrast Weights<a class="anchor" aria-label="anchor" href="#working-with-contrast-weights"></a>
@@ -927,133 +1098,60 @@ to the full model design matrix.</p>
 analyses or exported to other analysis packages. The weights matrix
 shows exactly how each experimental condition contributes to the
 contrast:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># View the structure of interaction contrast weights</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Interaction contrast structure:\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Interaction contrast structure:</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">wts_interaction</span><span class="op">)</span></span>
-<span><span class="co">#&gt; List of 5</span></span>
-<span><span class="co">#&gt;  $ term         :List of 9</span></span>
-<span><span class="co">#&gt;   ..$ varname         : chr "category:attention"</span></span>
-<span><span class="co">#&gt;   ..$ events          :List of 2</span></span>
-<span><span class="co">#&gt;   .. ..$ category :List of 7</span></span>
-<span><span class="co">#&gt;   .. .. ..$ varname   : chr "category"</span></span>
-<span><span class="co">#&gt;   .. .. .. ..- attr(*, "orig_names")= chr "category"</span></span>
-<span><span class="co">#&gt;   .. .. ..$ onsets    : num [1:8] 1 15.1 29.3 43.4 57.6 ...</span></span>
-<span><span class="co">#&gt;   .. .. ..$ durations : num [1:8] 0 0 0 0 0 0 0 0</span></span>
-<span><span class="co">#&gt;   .. .. ..$ blockids  : int [1:8] 1 1 1 1 1 1 1 1</span></span>
-<span><span class="co">#&gt;   .. .. ..$ value     : int [1:8, 1] 1 2 1 2 1 2 1 2</span></span>
-<span><span class="co">#&gt;   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
-<span><span class="co">#&gt;   .. .. .. .. ..$ : NULL</span></span>
-<span><span class="co">#&gt;   .. .. .. .. ..$ : chr "category"</span></span>
-<span><span class="co">#&gt;   .. .. .. .. .. ..- attr(*, "orig_names")= chr "category"</span></span>
-<span><span class="co">#&gt;   .. .. ..$ continuous: logi FALSE</span></span>
-<span><span class="co">#&gt;   .. .. ..$ meta      :List of 1</span></span>
-<span><span class="co">#&gt;   .. .. .. ..$ levels: chr [1:2] "face" "scene"</span></span>
-<span><span class="co">#&gt;   .. .. ..- attr(*, "class")= chr [1:2] "event" "event_seq"</span></span>
-<span><span class="co">#&gt;   .. ..$ attention:List of 7</span></span>
-<span><span class="co">#&gt;   .. .. ..$ varname   : chr "attention"</span></span>
-<span><span class="co">#&gt;   .. .. .. ..- attr(*, "orig_names")= chr "attention"</span></span>
-<span><span class="co">#&gt;   .. .. ..$ onsets    : num [1:8] 1 15.1 29.3 43.4 57.6 ...</span></span>
-<span><span class="co">#&gt;   .. .. ..$ durations : num [1:8] 0 0 0 0 0 0 0 0</span></span>
-<span><span class="co">#&gt;   .. .. ..$ blockids  : int [1:8] 1 1 1 1 1 1 1 1</span></span>
-<span><span class="co">#&gt;   .. .. ..$ value     : int [1:8, 1] 1 1 2 2 1 1 2 2</span></span>
-<span><span class="co">#&gt;   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
-<span><span class="co">#&gt;   .. .. .. .. ..$ : NULL</span></span>
-<span><span class="co">#&gt;   .. .. .. .. ..$ : chr "attention"</span></span>
-<span><span class="co">#&gt;   .. .. .. .. .. ..- attr(*, "orig_names")= chr "attention"</span></span>
-<span><span class="co">#&gt;   .. .. ..$ continuous: logi FALSE</span></span>
-<span><span class="co">#&gt;   .. .. ..$ meta      :List of 1</span></span>
-<span><span class="co">#&gt;   .. .. .. ..$ levels: chr [1:2] "attend" "ignore"</span></span>
-<span><span class="co">#&gt;   .. .. ..- attr(*, "class")= chr [1:2] "event" "event_seq"</span></span>
-<span><span class="co">#&gt;   ..$ subset          : logi [1:8] TRUE TRUE TRUE TRUE TRUE TRUE ...</span></span>
-<span><span class="co">#&gt;   ..$ event_table     : tibble [8 × 2] (S3: tbl_df/tbl/data.frame)</span></span>
-<span><span class="co">#&gt;   .. ..$ category : Factor w/ 2 levels "face","scene": 1 2 1 2 1 2 1 2</span></span>
-<span><span class="co">#&gt;   .. ..$ attention: Factor w/ 2 levels "attend","ignore": 1 1 2 2 1 1 2 2</span></span>
-<span><span class="co">#&gt;   ..$ onsets          : num [1:8] 1 15.1 29.3 43.4 57.6 ...</span></span>
-<span><span class="co">#&gt;   ..$ blockids        : int [1:8] 1 1 1 1 1 1 1 1</span></span>
-<span><span class="co">#&gt;   ..$ durations       : num [1:8] 0 0 0 0 0 0 0 0</span></span>
-<span><span class="co">#&gt;   ..$ condition_levels: chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"</span></span>
-<span><span class="co">#&gt;   ..$ condition_ids   : int [1:8] 1 2 3 4 1 2 3 4</span></span>
-<span><span class="co">#&gt;   ..- attr(*, "class")= chr [1:2] "event_term" "event_seq"</span></span>
-<span><span class="co">#&gt;   ..- attr(*, "hrfspec")=List of 17</span></span>
-<span><span class="co">#&gt;   .. ..$ name     : chr "category:attention"</span></span>
-<span><span class="co">#&gt;   .. ..$ label    : chr "hrf(category,attention)"</span></span>
-<span><span class="co">#&gt;   .. ..$ id       : NULL</span></span>
-<span><span class="co">#&gt;   .. ..$ vars     :List of 2</span></span>
-<span><span class="co">#&gt;   .. .. ..$ : language ~category</span></span>
-<span><span class="co">#&gt;   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x55aaebc0d1e8&gt; </span></span>
-<span><span class="co">#&gt;   .. .. ..$ : language ~attention</span></span>
-<span><span class="co">#&gt;   .. .. .. ..- attr(*, ".Environment")=&lt;environment: 0x55aaebc0d1e8&gt; </span></span>
-<span><span class="co">#&gt;   .. .. ..- attr(*, "class")= chr [1:2] "quosures" "list"</span></span>
-<span><span class="co">#&gt;   .. ..$ varnames : Named chr [1:2] "category" "attention"</span></span>
-<span><span class="co">#&gt;   .. .. ..- attr(*, "names")= chr [1:2] "" ""</span></span>
-<span><span class="co">#&gt;   .. ..$ hrf      :function (t)  </span></span>
-<span><span class="co">#&gt;   .. .. ..- attr(*, "class")= chr [1:2] "HRF" "function"</span></span>
-<span><span class="co">#&gt;   .. .. ..- attr(*, "name")= chr "SPMG1"</span></span>
-<span><span class="co">#&gt;   .. .. ..- attr(*, "nbasis")= int 1</span></span>
-<span><span class="co">#&gt;   .. .. ..- attr(*, "span")= num 24</span></span>
-<span><span class="co">#&gt;   .. .. ..- attr(*, "param_names")= chr [1:3] "P1" "P2" "A1"</span></span>
-<span><span class="co">#&gt;   .. .. ..- attr(*, "params")=List of 3</span></span>
-<span><span class="co">#&gt;   .. .. .. ..$ P1: num 5</span></span>
-<span><span class="co">#&gt;   .. .. .. ..$ P2: num 15</span></span>
-<span><span class="co">#&gt;   .. .. .. ..$ A1: num 0.0833</span></span>
-<span><span class="co">#&gt;   .. ..$ hrf_fun  : NULL</span></span>
-<span><span class="co">#&gt;   .. ..$ onsets   : NULL</span></span>
-<span><span class="co">#&gt;   .. ..$ durations: NULL</span></span>
-<span><span class="co">#&gt;   .. ..$ prefix   : NULL</span></span>
-<span><span class="co">#&gt;   .. ..$ subset   : NULL</span></span>
-<span><span class="co">#&gt;   .. ..$ precision: num 0.3</span></span>
-<span><span class="co">#&gt;   .. ..$ contrasts: NULL</span></span>
-<span><span class="co">#&gt;   .. ..$ summate  : logi TRUE</span></span>
-<span><span class="co">#&gt;   .. ..$ normalize: logi FALSE</span></span>
-<span><span class="co">#&gt;   .. ..$ uid      : chr "t01"</span></span>
-<span><span class="co">#&gt;   .. ..$ term_tag : chr "category_attention"</span></span>
-<span><span class="co">#&gt;   .. ..- attr(*, "class")= chr [1:2] "hrfspec" "list"</span></span>
-<span><span class="co">#&gt;   ..- attr(*, "term_tag")= chr "category_attention"</span></span>
-<span><span class="co">#&gt;   ..- attr(*, "uid")= chr "t01"</span></span>
-<span><span class="co">#&gt;  $ name         : chr "category_X_attention"</span></span>
-<span><span class="co">#&gt;  $ weights      : num [1:4, 1] 1 -1 -1 1</span></span>
-<span><span class="co">#&gt;   ..- attr(*, "dimnames")=List of 2</span></span>
-<span><span class="co">#&gt;   .. ..$ : chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"</span></span>
-<span><span class="co">#&gt;   .. ..$ : NULL</span></span>
-<span><span class="co">#&gt;  $ condnames    : chr [1:4] "category.face_attention.attend" "category.scene_attention.attend" "category.face_attention.ignore" "category.scene_attention.ignore"</span></span>
-<span><span class="co">#&gt;  $ contrast_spec:List of 4</span></span>
-<span><span class="co">#&gt;   ..$ A    :Class 'formula'  language ~(`face:attend` - `face:ignore`) - (`scene:attend` - `scene:ignore`)</span></span>
-<span><span class="co">#&gt;   .. .. ..- attr(*, ".Environment")=&lt;environment: R_GlobalEnv&gt; </span></span>
-<span><span class="co">#&gt;   ..$ B    : NULL</span></span>
-<span><span class="co">#&gt;   ..$ where: NULL</span></span>
-<span><span class="co">#&gt;   ..$ name : chr "category_X_attention"</span></span>
-<span><span class="co">#&gt;   ..- attr(*, "class")= chr [1:3] "contrast_formula_spec" "contrast_spec" "list"</span></span>
-<span><span class="co">#&gt;  - attr(*, "class")= chr [1:2] "contrast" "list"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nContrast weights matrix:\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Contrast weights matrix:</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">wts_interaction</span><span class="op">$</span><span class="va">conmat</span><span class="op">)</span></span>
-<span><span class="co">#&gt; NULL</span></span></code></pre></div>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">interaction_weights</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  condition <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">weight_matrix</span><span class="op">)</span>,</span>
+<span>  weight <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">wts_interaction</span><span class="op">$</span><span class="va">weights</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">interaction_weights</span>,</span>
+<span>      row.names <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>      caption <span class="op">=</span> <span class="st">"Weights for the category-by-attention interaction"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Weights for the category-by-attention interaction</caption>
+<thead><tr class="header">
+<th align="left">condition</th>
+<th align="right">weight</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">face / attend</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="left">scene / attend</td>
+<td align="right">-1</td>
+</tr>
+<tr class="odd">
+<td align="left">face / ignore</td>
+<td align="right">-1</td>
+</tr>
+<tr class="even">
+<td align="left">scene / ignore</td>
+<td align="right">1</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level2">
 <h2 id="conclusion">Conclusion<a class="anchor" aria-label="anchor" href="#conclusion"></a>
 </h2>
-<p>The <code>fmrireg</code> package offers a comprehensive system for
-defining and applying statistical contrasts in fMRI analysis. From
-simple pairwise comparisons (<code>pair_contrast</code>) and baseline
-tests (<code>unit_contrast</code>) to complex formula-based definitions
-(<code>contrast</code>), trend analysis (<code>poly_contrast</code>),
-and ANOVA-style effects (<code>oneway_contrast</code>,
-<code>interaction_contrast</code>), researchers have fine-grained
-control over hypothesis testing. The integration with
-<code>fmri_lm</code> and visualization tools like
-<code>plot_contrasts</code> facilitates robust and interpretable fMRI
-modeling.</p>
+<p>This vignette showed how to define pairwise comparisons
+(<code>pair_contrast</code>), baseline tests
+(<code>unit_contrast</code>), formula-based contrasts
+(<code>contrast</code>), polynomial trends (<code>poly_contrast</code>),
+and multi-degree-of-freedom effects (<code>oneway_contrast</code>,
+<code>interaction_contrast</code>). Inspect the resulting weight matrix,
+fit the declared hypothesis with <code>fmri_lm</code>, and report the
+effect, uncertainty, degrees of freedom, and multiplicity procedure
+together.</p>
 </div>
 <div class="section level2">
 <h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
 </h2>
 <ul>
 <li>
-<code><a href="../articles/benchmark_datasets.html">vignette("benchmark_datasets", package = "fmrireg")</a></code> —
-Benchmark datasets</li>
+<code><a href="../articles/multisubject_fanout.html">vignette("multisubject_fanout", package = "fmrireg")</a></code> —
+Reuse the model across subjects</li>
 <li>
 <code><a href="../articles/group_analysis.html">vignette("group_analysis", package = "fmrireg")</a></code> — Group
 analysis</li>

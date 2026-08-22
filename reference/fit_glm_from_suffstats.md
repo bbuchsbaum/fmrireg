@@ -50,7 +50,8 @@ fit_glm_from_suffstats(
 
 - dataset:
 
-  Optional dataset backing the model.
+  Optional dataset whose feature axis describes the columns of `XtS`. It
+  is never inferred from `model$dataset`.
 
 - strategy:
 

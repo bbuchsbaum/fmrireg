@@ -54,17 +54,33 @@ fmrireg_cli(c(
 #>     },
 #>     "TR": 2,
 #>     "total_time": 300,
+#>     "run_length": 150,
 #>     "target_snr": 4
 #>   },
 #>   "hrf_information": {
 #>     "type": "SPMG1",
 #>     "hrf_object_name": "HRF_SPMG1",
+#>     "hrf_recipe": {
+#>       "schema_version": 1,
+#>       "recipe_name": "HRF_SPMG1",
+#>       "generator": "fmrihrf::gen_hrf",
+#>       "base_hrf_name": "HRF_SPMG1",
+#>       "lag": 0,
+#>       "width": 0,
+#>       "precision": 0.1,
+#>       "half_life": "Inf",
+#>       "summate": true,
+#>       "normalize": false,
+#>       "name_override": null,
+#>       "span_override": null,
+#>       "fmrihrf_version": "0.4.0"
+#>     },
 #>     "hrf_object": ["structure(function (t) ", "{", "    do.call(orig_f, c(list(t = t), callable_params_list))", "}, class = \"function\", name = \"SPMG1\", nbasis = 1L, span = 24, param_names = c(\"P1\", ", "\"P2\", \"A1\"), params = list(P1 = 5, P2 = 15, A1 = 0.0833))"]
 #>   },
 #>   "noise_information": {
 #>     "noise_type": "ar1",
 #>     "noise_ar": 0.4,
-#>     "noise_sd": 0.5217
+#>     "noise_sd": 0.0983
 #>   }
 #> }
 #> [1] 0

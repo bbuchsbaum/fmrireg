@@ -135,8 +135,7 @@
   : Estimate betas for a matrix dataset
 
 - [`estimate_hrf()`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_hrf.md)
-  : Estimate hemodynamic response function (HRF) using Generalized
-  Additive Models (GAMs)
+  : Estimate smooth condition-level hemodynamic response functions
 
 - [`estimation_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/estimation_spec.md)
   : Statistical fitting scope
@@ -185,6 +184,12 @@
 
 - [`fmri_benchmark_datasets`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_benchmark_datasets.md)
   : Benchmark fMRI datasets
+
+- [`print(`*`<fmri_hrf_estimate>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_hrf_estimate-methods.md)
+  [`coef(`*`<fmri_hrf_estimate>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_hrf_estimate-methods.md)
+  [`as.matrix(`*`<fmri_hrf_estimate>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_hrf_estimate-methods.md)
+  [`predict(`*`<fmri_hrf_estimate>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_hrf_estimate-methods.md)
+  : Methods for smooth HRF estimates
 
 - [`fmri_job()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_job.md)
   : Construct a per-subject job recipe
@@ -295,6 +300,9 @@
 
 - [`lowrank_control()`](https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.md)
   : Low-rank / sketch controls for fast GLM
+
+- [`ma_parameters()`](https://bbuchsbaum.github.io/fmrireg/reference/ma_parameters.md)
+  : Extract Estimated MA Parameters from fmri_lm Fit
 
 - [`meta_effective_n()`](https://bbuchsbaum.github.io/fmrireg/reference/meta_effective_n.md)
   : Compute Effective Sample Size for Meta-Analysis
@@ -462,6 +470,9 @@
 
 - [`tidy()`](https://bbuchsbaum.github.io/fmrireg/reference/tidy.md) :
   Tidy generic
+
+- [`tidy(`*`<fmri_hrf_estimate>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/tidy.fmri_hrf_estimate.md)
+  : Tidy a smooth HRF estimate
 
 - [`tidy(`*`<fmri_meta>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/tidy.fmri_meta.md)
   : Tidy Meta-Analysis Results

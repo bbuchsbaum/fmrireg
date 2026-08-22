@@ -1,6 +1,7 @@
 # Simulate fMRI Noise
 
-This function simulates realistic fMRI noise by combining:
+This function simulates structured fMRI-like teaching noise by
+combining:
 
 - Temporal autocorrelation using an ARMA model
 

@@ -17,10 +17,11 @@ execution.
 
 `fmrireg` separates the part that is **invariant** (an `fmri_template`)
 from the part that **varies per subject** (a *binding*: that subject’s
-data). Combining the two produces a small, serializable `fmri_job` – a
-recipe that holds no voxel data and can be shipped to a worker (a
-`future`, or a node in an array job) that reconstructs the dataset,
-fits, and reduces.
+data). Combining the two produces a serializable `fmri_job`. With
+file-backed bindings, the job stores paths rather than voxel data and is
+small enough to ship to a worker. An inline matrix binding embeds that
+matrix in the job; this is convenient for the runnable example below but
+is not the memory-efficient choice for a real study.
 
 The four pieces:
 
@@ -37,9 +38,10 @@ BIDS-keyed maps out (`write_results`) → group level (`collect_results` →
 
 ## A minimal, runnable example
 
-Define the template once, describe two subjects as in-memory bindings,
-then fan the model out. (Real studies use file paths; in-memory
-`matrix_dataset` bindings keep this example fast.)
+Define the template once, describe two subjects as inline bindings, then
+fan the model out. The resulting jobs contain these small matrices. Real
+studies normally use file paths so jobs remain lightweight and workers
+open the imaging data lazily.
 
 ``` r
 
@@ -63,21 +65,29 @@ tmpl <- fmri_template(
   reducer  = reduce_betas()        # each subject -> a tidy beta table
 )
 
-# bind data -> jobs -> run
+# Bind data to jobs, validate locally, and only then fan out.
 jobs <- instantiate(tmpl, subjects)
+flight <- preflight(jobs)
+stopifnot(flight$ok, flight$n_jobs == 2L)
+
 res  <- run_jobs(jobs)
 res
 #> <fmri_batch_result> 2 job(s): 2 ok, 0 failed
 
 values <- batch_values(res)        # named by job id
+stopifnot(
+  length(batch_errors(res)) == 0L,
+  identical(names(values), c("sub-01", "sub-02")),
+  all(vapply(values, nrow, integer(1)) == 10L)
+)
 head(values[["sub-01"]])
-#>   job_id                  term voxel    estimate        se        stat
-#> 1 sub-01 condition_condition.A     1 -0.01645972 0.2494796 -0.06597621
-#> 2 sub-01 condition_condition.B     1 -0.16257429 0.2485769 -0.65402017
-#> 3 sub-01 condition_condition.A     2  0.02754297 0.2478427  0.11113087
-#> 4 sub-01 condition_condition.B     2 -0.15066662 0.2469459 -0.61011997
-#> 5 sub-01 condition_condition.A     3 -0.72182835 0.2720789 -2.65301068
-#> 6 sub-01 condition_condition.B     3 -0.47638960 0.2710944 -1.75728281
+#>   job_id                  term voxel    estimate        se       stat
+#> 1 sub-01 condition_condition.A     1 -0.03204400 0.2513233 -0.1275011
+#> 2 sub-01 condition_condition.B     1 -0.18137031 0.2506274 -0.7236650
+#> 3 sub-01 condition_condition.A     2  0.03081246 0.2495617  0.1234663
+#> 4 sub-01 condition_condition.B     2 -0.14713614 0.2488707 -0.5912151
+#> 5 sub-01 condition_condition.A     3 -0.70766166 0.2750774 -2.5725913
+#> 6 sub-01 condition_condition.B     3 -0.43742239 0.2743158 -1.5945943
 ```
 
 [`run_jobs()`](https://bbuchsbaum.github.io/fmrireg/reference/run_jobs.md)
@@ -129,12 +139,12 @@ structure.
 [`preflight()`](https://bbuchsbaum.github.io/fmrireg/reference/preflight.md)
 validates jobs on the driver – design columns present, TR and run
 lengths consistent, confound dimensions correct – so problems surface in
-seconds rather than on a compute node after the queue drains.
-
-``` r
-
-preflight(jobs)
-```
+seconds rather than on a compute node after the queue drains. The
+runnable workflow called it immediately after
+[`instantiate()`](https://bbuchsbaum.github.io/fmrireg/reference/instantiate.md)
+and asserted `flight$ok` before
+[`run_jobs()`](https://bbuchsbaum.github.io/fmrireg/reference/run_jobs.md).
+Keep that order in production code.
 
 ## Running: locally, in parallel, or on a cluster
 
@@ -163,10 +173,58 @@ export_jobs(jobs, "study/jobs")
 ```
 
 `run_one.R` reads the manifest, reconstructs job `i`, fits, and writes
-its reduced output. The job is a portable recipe, so the worker need
-only have `fmrireg` installed.
+its reduced output. Each worker needs `fmrireg`, packages referenced by
+the template or custom reducer, access to every file-backed input path,
+and write access to the chosen output location. A serialized recipe does
+not make local paths or package dependencies portable by itself.
 
 ## Closing the loop: the group level
+
+The inline example can close the statistical loop immediately. Here we
+collect the condition-B estimate and SE for teaching voxel 1 from each
+completed job, then compute their inverse-variance fixed-effect mean.
+With only two simulated subjects this is a pipeline check, not a
+scientifically powered group study.
+
+``` r
+
+reduced <- do.call(rbind, values)
+teaching_effects <- subset(
+  reduced,
+  term == "condition_condition.B" & voxel == 1L,
+  select = c(job_id, estimate, se)
+)
+teaching_effects$roi <- "teaching_voxel_1"
+teaching_effects$contrast <- "condition_B"
+
+gd_inline <- fmrireg::group_data(
+  teaching_effects,
+  format = "csv",
+  effect_cols = c(beta = "estimate", se = "se"),
+  subject_col = "job_id",
+  roi_col = "roi",
+  contrast_col = "contrast"
+)
+fm_inline <- fmri_meta(gd_inline, ~ 1, method = "fe", verbose = FALSE)
+group_summary <- data.frame(
+  target = "Condition B at teaching voxel 1",
+  subjects = nrow(teaching_effects),
+  estimate = as.numeric(fm_inline$coefficients[1, "(Intercept)"]),
+  std_error = as.numeric(fm_inline$se[1, "(Intercept)"])
+)
+stopifnot(
+  group_summary$subjects == 2L,
+  all(is.finite(as.matrix(group_summary[c("estimate", "std_error")])))
+)
+knitr::kable(group_summary, digits = 3,
+             caption = "Executable subject-to-group handoff")
+```
+
+| target                          | subjects | estimate | std_error |
+|:--------------------------------|---------:|---------:|----------:|
+| Condition B at teaching voxel 1 |        2 |    -0.06 |     0.195 |
+
+Executable subject-to-group handoff {.table}
 
 With
 [`reduce_write_results()`](https://bbuchsbaum.github.io/fmrireg/reference/reduce_write_results.md),
@@ -215,3 +273,10 @@ fm <- fmri_meta(gd, ~ 1, method = "fe")
   →
   [`fmri_meta()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta.md)
   close the loop at the group level.
+
+## Next
+
+- [`vignette("group_analysis", package = "fmrireg")`](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.md)
+  — Combine subject-level estimates
+- [`vignette("functional_connectivity", package = "fmrireg")`](https://bbuchsbaum.github.io/fmrireg/articles/functional_connectivity.md)
+  — Use a time series as a regressor

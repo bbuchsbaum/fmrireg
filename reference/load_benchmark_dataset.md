@@ -46,7 +46,11 @@ components:
 
 - `X_list_true_hrf`: List of design matrices convolved with true HRF
 
-- `true_hrf_parameters`: Information about the true HRF(s) used
+- `true_hrf_parameters`: Reconstructed true HRF object(s) plus complete,
+  versioned generation recipes
+
+- `oracle_contract`: Scope and tolerance of the valid stored numerical
+  oracle, including limitations for partial-truth datasets
 
 - `event_onsets`: Vector of event onset times
 
@@ -59,6 +63,8 @@ components:
 - `TR`: Repetition time
 
 - `total_time`: Total scan duration
+
+- `run_length`: Number of acquired time points
 
 - `noise_parameters`: Information about noise generation
 

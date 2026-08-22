@@ -1,34 +1,26 @@
 # Simulating fMRI Data
 
-``` r
-
-library(fmrireg)
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(stats)
-set.seed(123)
-```
-
 ## Introduction to fMRI Data Simulation
 
-When developing or validating an fMRI analysis pipeline, you need data
-where the ground truth is known – real fMRI data doesn’t come with known
-effect sizes or noise parameters. Simulation fills this gap. The
-`fmrireg` package offers several functions to simulate fMRI data with
-varying levels of complexity:
+When checking an fMRI analysis pipeline, it is useful to have data where
+the ground truth is known – real fMRI data do not come with known effect
+sizes or noise parameters. Simulation supplies controlled examples. The
+`fmrireg` package offers several functions with varying levels of
+complexity:
 
 1.  **`simulate_bold_signal`**: Simulates clean BOLD responses for
     multiple experimental conditions
-2.  **`simulate_noise_vector`**: Generates realistic fMRI noise with
-    temporal autocorrelation, drift, and physiological components
+2.  **`simulate_noise_vector`**: Generates structured, fMRI-like noise
+    with temporal autocorrelation, drift, and simplified physiological
+    components
 3.  **`simulate_simple_dataset`**: Combines signal and noise for a
     complete dataset based on SNR
 4.  **`simulate_fmri_matrix`**: Creates multiple time series with shared
     event timing but column-specific variation in parameters
 
-This vignette demonstrates how to use these functions to create
-realistic fMRI simulations for various purposes.
+This vignette demonstrates their contracts and assumptions. The outputs
+are teaching simulations, not empirically validated generative models of
+scanner data.
 
 ## Simulating Clean BOLD Signals
 
@@ -74,7 +66,9 @@ ggplot(df_long, aes(x = Time, y = Response, color = Condition)) +
   scale_color_brewer(palette = "Set1")
 ```
 
-![](a_08_simulation_files/figure-html/plot-bold-signals-1.png)
+![Three colored clean BOLD-response curves with distinct condition
+amplitudes and event timings over a 180-second
+run.](a_08_simulation_files/figure-html/plot-bold-signals-1.png)
 
 Adding dashed vertical lines at each event onset makes the relationship
 between stimulus timing and the hemodynamic response easier to see.
@@ -92,23 +86,32 @@ ggplot(df_long, aes(x = Time, y = Response, color = Condition)) +
   scale_color_brewer(palette = "Set1")
 ```
 
-![](a_08_simulation_files/figure-html/plot-bold-with-onsets-1.png)
+![The three clean BOLD-response curves with dashed vertical markers
+showing every event
+onset.](a_08_simulation_files/figure-html/plot-bold-with-onsets-1.png)
 
-The function returns a list containing: - **`onset`**: Event onset
-times - **`condition`**: Condition labels for each event - **`mat`**:
-Matrix with time points and BOLD responses for each condition
+The function returns a list containing:
 
-You can control: - Number of conditions (`ncond`) - Number of
-repetitions per condition (`nreps`) - HRF shape (`hrf`) - Amplitudes for
-each condition (`amps`) - Inter-stimulus interval range (`isi`) -
-Amplitude variability (`ampsd`)
+- **`onset`**: Event onset times
+- **`condition`**: Condition labels for each event
+- **`mat`**: Matrix with time points and BOLD responses for each
+  condition
 
-## Simulating Realistic fMRI Noise
+You can control:
 
-The `simulate_noise_vector` function generates realistic fMRI noise by
-combining various noise sources common in real fMRI data. To understand
-its components, let’s simulate and visualize them separately and
-combined.
+- Number of conditions (`ncond`)
+- Number of repetitions per condition (`nreps`)
+- HRF shape (`hrf`)
+- Amplitudes for each condition (`amps`)
+- Inter-stimulus interval range (`isi`)
+- Amplitude variability (`ampsd`)
+
+## Simulating Structured fMRI-like Noise
+
+The `simulate_noise_vector` function combines stylized components
+motivated by common fMRI noise sources. To understand exactly what it
+generates, we simulate and visualize each component separately and then
+combine them.
 
 ``` r
 
@@ -124,7 +127,7 @@ structure.
 ``` r
 
 noise_white <- simulate_noise_vector(n_timepoints, TR = TR,
-                                  ar = 0, ma = 0,
+                                  ar = numeric(0), ma = numeric(0),
                                   drift_amplitude = 0, physio = FALSE, sd = 1)
 ```
 
@@ -148,18 +151,28 @@ drift_amplitude <- 2
 noise_drift <- drift_amplitude * sin(2 * pi * drift_freq * time)
 ```
 
-Physiological noise adds quasi-periodic fluctuations at respiratory and
-cardiac-like frequencies.
+Physiological noise originates in continuous time, while an fMRI scanner
+records only one sample every TR. Here respiration is 0.3 Hz and cardiac
+activity is 1.1 Hz. Both exceed the 0.25 Hz Nyquist frequency at TR = 2
+seconds, so they appear at lower frequencies after sampling: 0.2 Hz and
+0.1 Hz, respectively. Generating the continuous signals first makes that
+aliasing explicit.
 
 ``` r
 
-noise_cardiac <- 1.5 * sin(2 * pi * 0.3 * time)
-noise_respiratory <- 1.0 * sin(2 * pi * 0.8 * time)
+physio_time <- seq(0, max(time), by = 0.05)
+cardiac_continuous <- 0.5 * sin(2 * pi * 1.1 * physio_time)
+respiratory_continuous <- 0.8 * sin(2 * pi * 0.3 * physio_time)
+
+noise_cardiac <- approx(physio_time, cardiac_continuous, xout = time)$y
+noise_respiratory <- approx(physio_time, respiratory_continuous, xout = time)$y
 noise_physio <- noise_cardiac + noise_respiratory
 ```
 
-Finally, we combine the ARMA, drift, and physiological components to
-mimic what a real scanner would produce.
+Finally, we combine the ARMA, drift, and sinusoidal physiological
+components into the declared structured teaching model. This sum
+illustrates separable noise sources; it is not an empirically validated
+scanner-noise distribution.
 
 ``` r
 
@@ -203,7 +216,9 @@ ggplot(noise_long, aes(x = Time, y = Signal, color = NoiseType)) +
        y = "Signal Amplitude")
 ```
 
-![](a_08_simulation_files/figure-html/plot-noise-timecourses-1.png)
+![Five stacked time-course panels showing white, ARMA, sinusoidal drift,
+sampled physiological, and combined structured-noise
+components.](a_08_simulation_files/figure-html/plot-noise-timecourses-1.png)
 
 ### Power Spectrum Analysis
 
@@ -245,7 +260,10 @@ n_long <- 1024
 time_long <- seq(0, (n_long - 1) * TR, by = TR)
 drift_long <- drift_amplitude * sin(2 * pi * drift_freq * time_long)
 spec_drift_long <- calculate_spectrum(drift_long, TR)
-spec_drift_long$NoiseType <- "Drift Component (High Resolution)"
+spec_drift_long$NoiseType <- factor(
+  "Drift Component",
+  levels = levels(spec_df$NoiseType)
+)
 ```
 
 Each panel below shows the power spectrum of a different noise
@@ -268,7 +286,10 @@ ggplot() +
   coord_cartesian(xlim = c(0, 0.25))
 ```
 
-![](a_08_simulation_files/figure-html/plot-spectra-faceted-1.png)
+![Five stacked power spectra: white noise is broad, ARMA power favors
+low frequencies, drift peaks near 0.008 hertz, and physiological aliases
+peak near 0.1 and 0.2
+hertz.](a_08_simulation_files/figure-html/plot-spectra-faceted-1.png)
 
 Plotting all spectra on a single log-scaled axis makes it easy to
 compare their relative magnitudes.
@@ -283,11 +304,18 @@ ggplot(spec_df, aes(x = Frequency, y = Power, color = NoiseType)) +
        y = "Power (log scale)") +
   scale_y_log10() +
   scale_color_brewer(palette = "Set1") +
-  theme(legend.position = "top") +
+  guides(color = guide_legend(nrow = 2, byrow = TRUE)) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    legend.text = element_text(size = 8)
+  ) +
   coord_cartesian(xlim = c(0, 0.25))
 ```
 
-![](a_08_simulation_files/figure-html/plot-spectra-log-1.png)
+![Overlaid log-scale power spectra for all five noise components, with
+the physiological alias peaks visible near 0.1 and 0.2
+hertz.](a_08_simulation_files/figure-html/plot-spectra-log-1.png)
 
 Zooming in on the very low-frequency region confirms the drift component
 peaks at the expected frequency (marked by the red dotted line).
@@ -310,7 +338,9 @@ ggplot() +
   coord_cartesian(xlim = c(0, 0.05))
 ```
 
-![](a_08_simulation_files/figure-html/plot-drift-zoom-1.png)
+![A low-frequency zoom of the drift spectrum, with the resolved dashed
+curve peaking beside the expected 0.0078125-hertz
+marker.](a_08_simulation_files/figure-html/plot-drift-zoom-1.png)
 
 The simulation shows five distinct types of noise components:
 
@@ -325,17 +355,18 @@ The simulation shows five distinct types of noise components:
     drift or physiological trends. The power spectrum shows a dominant
     peak at a very low frequency.
 
-4.  **Physiological Noise**: Regular oscillations at frequencies
-    corresponding to respiration (~0.3 Hz) and cardiac-like activity
-    (~0.8 Hz). In real fMRI data with TR=2s, cardiac frequencies (~1.2
-    Hz) would be aliased.
+4.  **Physiological Noise**: Simplified respiratory and cardiac
+    sinusoids at 0.3 Hz and 1.1 Hz are above the 0.25 Hz Nyquist limit.
+    At TR = 2 seconds they appear at distinct aliases of 0.2 Hz and 0.1
+    Hz. These components demonstrate sampling and aliasing; they are not
+    a validated physiological-noise model, nor evidence that the
+    underlying physiology occurs at the aliased frequencies.
 
-5.  **Combined Noise**: All components together, creating a complex
-    noise structure typical of real fMRI data. The power spectrum shows
-    features from all contributing components.
+5.  **Combined Noise**: The sum of the stylized components. Its power
+    spectrum shows features from each contributor.
 
-These components, when added to task-related signals, create realistic
-fMRI time series.
+Adding these components to task-related signals creates controlled,
+structured time series for demonstrations and numerical checks.
 
 ## Creating a Complete Dataset with Signal and Noise
 
@@ -345,12 +376,21 @@ to create a complete fMRI dataset with a specified signal-to-noise ratio
 
 ``` r
 
-set.seed(42)
+snr_values <- c(1.0, 0.5, 0.2)
+snr_datasets <- lapply(snr_values, function(snr) {
+  simulate_simple_dataset(ncond = 3, TR = 2, snr = snr, seed = 42)
+})
+names(snr_datasets) <- paste0("SNR = ", snr_values)
 
-data_snr_1.0 <- simulate_simple_dataset(ncond = 3, TR = 2, snr = 1.0)
-data_snr_0.5 <- simulate_simple_dataset(ncond = 3, TR = 2, snr = 0.5)
-data_snr_0.2 <- simulate_simple_dataset(ncond = 3, TR = 2, snr = 0.2)
+data_snr_1.0 <- snr_datasets[["SNR = 1"]]
+data_snr_0.5 <- snr_datasets[["SNR = 0.5"]]
+data_snr_0.2 <- snr_datasets[["SNR = 0.2"]]
 ```
+
+The same seed deliberately preserves the event schedule, clean signal,
+and standardized noise realization. Only the scale of that noise
+changes, so the panels isolate SNR rather than comparing three unrelated
+simulations.
 
 ``` r
 
@@ -385,7 +425,9 @@ ggplot(plot_df_long, aes(x = Time, y = Signal, color = Type)) +
   theme(legend.position = "top")
 ```
 
-![](a_08_simulation_files/figure-html/plot-snr-overlay-1.png)
+![Three stacked overlays compare one shared clean signal with noisy
+observations at SNR 0.2, 0.5, and 1.0; masking decreases as SNR
+rises.](a_08_simulation_files/figure-html/plot-snr-overlay-1.png)
 
 The decomposition plots below separate each SNR level into its signal,
 noise, and combined components. At SNR = 1.0 the signal is clearly
@@ -396,55 +438,59 @@ visible; by SNR = 0.2 the noise dominates.
 plot_faceted(plot_df, "SNR = 1.0")
 ```
 
-![](a_08_simulation_files/figure-html/plot-decomposition-snr1-1.png)
+![Three stacked panels decompose the SNR 1.0 simulation into signal plus
+noise, clean signal, and
+noise.](a_08_simulation_files/figure-html/plot-decomposition-snr1-1.png)
 
 ``` r
 
 plot_faceted(plot_df, "SNR = 0.5")
 ```
 
-![](a_08_simulation_files/figure-html/plot-decomposition-snr05-1.png)
+![Three stacked panels decompose the SNR 0.5 simulation into signal plus
+noise, clean signal, and
+noise.](a_08_simulation_files/figure-html/plot-decomposition-snr05-1.png)
 
 ``` r
 
 plot_faceted(plot_df, "SNR = 0.2")
 ```
 
-![](a_08_simulation_files/figure-html/plot-decomposition-snr02-1.png)
+![Three stacked panels decompose the SNR 0.2 simulation into signal plus
+noise, clean signal, and dominant
+noise.](a_08_simulation_files/figure-html/plot-decomposition-snr02-1.png)
 
 ``` r
 
-snr_stats_list <- list()
-for (snr_val in unique(plot_df_long$SNR)) {
-  for (type_val in unique(plot_df_long$Type)) {
-    subset_data <- plot_df_long[plot_df_long$SNR == snr_val & plot_df_long$Type == type_val, ]
-    snr_stats_list[[length(snr_stats_list) + 1]] <- data.frame(
-      SNR = snr_val,
-      Type = type_val,
-      Mean = mean(subset_data$Signal),
-      SD = sd(subset_data$Signal),
-      Range = max(subset_data$Signal) - min(subset_data$Signal)
-    )
-  }
-}
-snr_stats <- do.call(rbind, snr_stats_list)
+snr_stats <- data.frame(
+  Requested_SNR = snr_values,
+  Empirical_SNR = unname(empirical_snr),
+  Signal_SD = vapply(snr_datasets, function(dataset) {
+    sd(as.vector(dataset$clean$mat[, -1]))
+  }, numeric(1)),
+  Noise_SD = vapply(snr_datasets, function(dataset) {
+    sd(as.vector(dataset$noise))
+  }, numeric(1))
+)
 ```
 
 ``` r
 
-knitr::kable(snr_stats, caption = "Statistics of clean and noisy signals at different SNR levels")
+knitr::kable(
+  snr_stats,
+  digits = 3,
+  caption = "Requested and empirically realized SNR from a controlled simulation"
+)
 ```
 
-| SNR       | Type  |      Mean |        SD |     Range |
-|:----------|:------|----------:|----------:|----------:|
-| SNR = 1.0 | Clean | 0.6484660 | 0.9154157 |  3.005768 |
-| SNR = 1.0 | Noisy | 1.0555953 | 1.5153738 |  8.541682 |
-| SNR = 0.5 | Clean | 0.6082536 | 0.7916189 |  2.760946 |
-| SNR = 0.5 | Noisy | 0.7358011 | 2.4147113 | 13.835178 |
-| SNR = 0.2 | Clean | 0.6342752 | 0.8631817 |  2.804079 |
-| SNR = 0.2 | Noisy | 1.2170041 | 5.2307652 | 25.249274 |
+|           | Requested_SNR | Empirical_SNR | Signal_SD | Noise_SD |
+|:----------|--------------:|--------------:|----------:|---------:|
+| SNR = 1   |           1.0 |           1.0 |     0.861 |    0.861 |
+| SNR = 0.5 |           0.5 |           0.5 |     0.861 |    1.722 |
+| SNR = 0.2 |           0.2 |           0.2 |     0.861 |    4.306 |
 
-Statistics of clean and noisy signals at different SNR levels {.table}
+Requested and empirically realized SNR from a controlled simulation
+{.table}
 
 This visualization shows how different SNR levels affect the fMRI time
 series. The lower the SNR, the more the noise dominates the signal. For
@@ -452,20 +498,22 @@ each SNR level, we show:
 
 1.  **The original clean signal** (red line): The true underlying BOLD
     response
-2.  **The noisy signal** (blue line): What would actually be measured by
-    the scanner
+2.  **The noisy signal** (blue line): The synthetic observation produced
+    by this model
 3.  **Signal decomposition**: Visualization of how the signal, noise,
     and combined signal relate at each SNR level
 
-With SNR = 1.0, the signal pattern remains clearly visible despite the
-noise. At SNR = 0.5, some features of the signal are obscured, while at
-SNR = 0.2, the noise substantially masks the underlying signal, making
-accurate detection more challenging without proper statistical methods.
+With SNR = 1.0, the signal pattern remains visible despite the noise. At
+SNR = 0.5, some features are obscured; at SNR = 0.2, the noise
+substantially masks the signal in this controlled example.
 
-The function returns: - **`clean`**: The simulated signals without
-noise - **`noisy`**: The signals with added noise - **`noise`**: The
-simulated noise component - **`onsets`**: Trial onset times -
-**`conditions`**: Condition labels for each trial
+The function returns:
+
+- **`clean`**: The simulated signals without noise
+- **`noisy`**: The signals with added noise
+- **`noise`**: The simulated noise component
+- **`onsets`**: Trial onset times
+- **`conditions`**: Condition labels for each trial
 
 ## Simulating Matrix Time Series with Column-Specific Variation
 
@@ -477,11 +525,12 @@ related but slightly different response profiles.
 
 ``` r
 
+requested_onsets <- seq(12, 156, length.out = 10)
 sim_matrix <- simulate_fmri_matrix(
   n = 5,                  # 5 voxels/regions
   total_time = 200,       # 200 seconds of scan time
   TR = 2,                 # TR = 2 seconds
-  n_events = 10,          # 10 events
+  onsets = requested_onsets,
   amplitudes = 1,         # Base amplitude = 1
   amplitude_sd = 0.3,     # Amplitude variability
   durations = 2,          # Base duration = 2 seconds
@@ -490,6 +539,9 @@ sim_matrix <- simulate_fmri_matrix(
   noise_sd = 0.5          # Noise standard deviation
 )
 ```
+
+When you supply `onsets`, those values are authoritative: the function
+skips ISI generation and derives the event count from their length.
 
 ``` r
 
@@ -526,7 +578,9 @@ ggplot(plot_data_long, aes(x = Time, y = Signal, color = Voxel)) +
   scale_color_brewer(palette = "Set2")
 ```
 
-![](a_08_simulation_files/figure-html/plot-matrix-timeseries-1.png)
+![Five colored simulated voxel time series share event timing but differ
+in response amplitude, duration, and independent
+noise.](a_08_simulation_files/figure-html/plot-matrix-timeseries-1.png)
 
 ``` r
 
@@ -569,7 +623,9 @@ ggplot(amp_long, aes(x = Event, y = Amplitude, color = Voxel, group = Voxel)) +
   scale_color_brewer(palette = "Set2")
 ```
 
-![](a_08_simulation_files/figure-html/plot-amplitude-variation-1.png)
+![Five colored lines show independently sampled response amplitudes
+across ten events for five
+voxels.](a_08_simulation_files/figure-html/plot-amplitude-variation-1.png)
 
 Duration variation follows the same pattern – each voxel draws its event
 durations independently around the base of 2 seconds.
@@ -587,14 +643,21 @@ ggplot(dur_long, aes(x = Event, y = Duration, color = Voxel, group = Voxel)) +
   scale_color_brewer(palette = "Set2")
 ```
 
-![](a_08_simulation_files/figure-html/plot-duration-variation-1.png)
+![Five colored lines show independently sampled response durations
+across ten events for five
+voxels.](a_08_simulation_files/figure-html/plot-duration-variation-1.png)
 
-This function is particularly powerful for simulating multiple related
-time series with: - **Shared event timing** but individual variation
-in: - **Amplitude** (per event, per column) - **Duration** (per event,
-per column) - **Independent noise** generation for each column -
-**Complex output** including: - Time series matrix - Amplitude and
-duration matrices - HRF and noise parameter information
+This function exposes the following controls for multiple related time
+series:
+
+- **Shared event timing** but individual variation in:
+  - **Amplitude** (per event, per column)
+  - **Duration** (per event, per column)
+- **Independent noise** generation for each column
+- **Complex output** including:
+  - Time series matrix
+  - Amplitude and duration matrices
+  - HRF and noise parameter information
 
 ## Summary and Comparison
 
@@ -603,24 +666,27 @@ offer increasing levels of complexity:
 
 1.  **`simulate_bold_signal`**: Generate clean BOLD signals for multiple
     conditions
-2.  **`simulate_noise_vector`**: Create realistic fMRI noise with
+2.  **`simulate_noise_vector`**: Create structured, fMRI-like noise with
     temporal structure
 3.  **`simulate_simple_dataset`**: Combine signal and noise with a
     specific SNR
 4.  **`simulate_fmri_matrix`**: Create multiple time series with
     trial-by-trial, column-specific parameter variation
 
-Choose the appropriate function based on your simulation needs: - For
-basic signal generation: use `simulate_bold_signal` - For realistic
-noise: use `simulate_noise_vector` - For a complete dataset with
-controlled SNR: use `simulate_simple_dataset` - For simulating multiple
-voxels/regions with shared timing but response variation: use
-`simulate_fmri_matrix`
+Choose the appropriate function based on your simulation needs:
 
-These functions provide a powerful toolkit for method development,
-validation, or teaching fMRI analysis concepts through realistic
-simulations.
+- For basic signal generation: use `simulate_bold_signal`
+- For structured teaching noise: use `simulate_noise_vector`
+- For a complete dataset with controlled SNR: use
+  `simulate_simple_dataset`
+- For simulating multiple voxels/regions with shared timing but response
+  variation: use `simulate_fmri_matrix`
+
+These functions provide controlled inputs for implementation checks and
+teaching. Their explicit stochastic and signal assumptions should be
+inspected before using them as a benchmark for a scientific method.
 
 ## Next
 
-- 04 fMRI Linear Model (GLM)
+- [`vignette("a_09_linear_model", package = "fmrireg")`](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.md)
+  — Fit and interpret an fMRI linear model

@@ -22,16 +22,18 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-vignettes"><li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -61,6 +63,11 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="fmrireg-020">fmrireg 0.2.0<a class="anchor" aria-label="anchor" href="#fmrireg-020"></a></h2>
 <div class="section level3">
+<h3 id="hrf-estimation-0-2-0">HRF Estimation<a class="anchor" aria-label="anchor" href="#hrf-estimation-0-2-0"></a></h3>
+<ul><li>
+<code><a href="../reference/estimate_hrf.html">estimate_hrf()</a></code> is now a vectorized, condition-level smooth FIR estimator. It constructs an explicit event-aligned spline basis, removes baseline and fixed nuisance designs once, fits all voxels with one penalized multiresponse solve, and can choose a shared smoothing strength by scale-normalized GCV. The new <code>fmri_hrf_estimate</code> result preserves curve and voxel labels and provides standard errors, confidence intervals, <code><a href="../reference/tidy.html">tidy()</a></code>, <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>, <code><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef()</a></code>, and <code><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix()</a></code> methods. This replaces a voxel-by-voxel GAM path that treated convolved design values as if they were post-stimulus time and failed before prediction.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="statistical-corrections-0-2-0">Statistical Corrections<a class="anchor" aria-label="anchor" href="#statistical-corrections-0-2-0"></a></h3>
 <ul><li>
 <p><strong>AR degrees of freedom.</strong> <code><a href="../reference/fmri_lm.html">fmri_lm()</a></code> no longer deflates the residual degrees of freedom when an AR structure is used. The previous adjustment multiplied <code>n - p</code> by <code>1 / (1 + 2 * sum(1 - k/n))</code>, which is the variance inflation one would obtain if <em>every</em> autocorrelation equalled 1. It never depended on the fitted AR coefficients — at <code>n = 200</code>, <code>p = 12</code>, AR(1) it returned 62.9 whether the true autocorrelation was 0.05 or 0.9 — and it was applied on top of prewhitening, double-counting a correction already made.</p>
@@ -70,15 +77,15 @@
 </ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-0-2-0">Bug Fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-2-0"></a></h3>
-<ul><li>
-<code>robust_psi</code> now has an effect. It was previously unreachable: <code>robust</code> defaulted to <code>FALSE</code> rather than <code>NULL</code>, so <code>robust_options$type</code> was always claimed before <code>robust_psi</code> was consulted. <code>robust</code>’s default is now <code>NULL</code>, which also makes “unspecified” distinguishable from “explicitly off”.</li>
-<li>An explicit <code>robust = FALSE</code> is no longer silently overridden by <code>robust_options = list(type = "huber")</code>; the combination is now an error.</li>
-<li>Supplying <code>cfg</code> alongside other configuration arguments is now an error instead of silently discarding them. Previously <code>cor_struct = "ar2"</code> with a <code>cfg</code> naming <code>"iid"</code> ran IID without warning.</li>
-<li>AR shorthands (<code>cor_struct</code>, <code>cor_iter</code>, <code>cor_global</code>, <code>ar1_exact_first</code>, <code>ar_p</code>, <code>ar_voxelwise</code>) that disagree with the corresponding <code>ar_options</code> entry now error rather than being silently dropped. Shorthands that agree are still accepted.</li>
-<li>
-<code>engine</code> now warns about the execution arguments it ignores (<code>strategy</code>, <code>nchunks</code>, <code>use_fast_path</code>, <code>progress</code>, <code>parallel_voxels</code>, <code>parallel_chunks</code>), which were previously accepted and silently discarded.</li>
-<li>
-<code>compute_sandwich_variance()</code> computed its meat matrix as <code>X' diag(e^4) X</code> instead of <code>X' diag(e^2) X</code>, giving standard errors about 3.5x too large. Both sandwich helpers are now checked against <code><a href="https://zeileis.codeberg.page/sandwich/reference/vcovHC.html" class="external-link">sandwich::vcovHC()</a></code>.</li>
+<ul><li><p><code>write_results(strategy = "by_stat")</code> no longer scatters contrast maps onto the wrong voxels. <code>.compute_statistical_volumes()</code> called <code><a href="https://rdrr.io/r/base/logical.html" class="external-link">as.logical()</a></code> on the mask, which drops <code>dim</code> for plain arrays (the type <code>.fmri_dataset_mask_space()</code> always supplies), so <code>which(..., arr.ind = TRUE)</code> returned linear indices instead of 3D coordinates.</p></li>
+<li><p>Oversized residual-bootstrap blocks now remain one contiguous temporal block instead of silently becoming interleaved odd/even samples.</p></li>
+<li><p>Mixed-model solver failures now warn and return <code>NA</code> coefficients rather than plausible zeros; malformed response dimensions fail before solver dispatch.</p></li>
+<li><p><code>robust_psi</code> now has an effect. It was previously unreachable: <code>robust</code> defaulted to <code>FALSE</code> rather than <code>NULL</code>, so <code>robust_options$type</code> was always claimed before <code>robust_psi</code> was consulted. <code>robust</code>’s default is now <code>NULL</code>, which also makes “unspecified” distinguishable from “explicitly off”.</p></li>
+<li><p>An explicit <code>robust = FALSE</code> is no longer silently overridden by <code>robust_options = list(type = "huber")</code>; the combination is now an error.</p></li>
+<li><p>Supplying <code>cfg</code> alongside other configuration arguments is now an error instead of silently discarding them. Previously <code>cor_struct = "ar2"</code> with a <code>cfg</code> naming <code>"iid"</code> ran IID without warning.</p></li>
+<li><p>AR shorthands (<code>cor_struct</code>, <code>cor_iter</code>, <code>cor_global</code>, <code>ar1_exact_first</code>, <code>ar_p</code>, <code>ar_voxelwise</code>) that disagree with the corresponding <code>ar_options</code> entry now error rather than being silently dropped. Shorthands that agree are still accepted.</p></li>
+<li><p><code>engine</code> now warns about the execution arguments it ignores (<code>strategy</code>, <code>nchunks</code>, <code>use_fast_path</code>, <code>progress</code>, <code>parallel_voxels</code>, <code>parallel_chunks</code>), which were previously accepted and silently discarded.</p></li>
+<li><p><code>compute_sandwich_variance()</code> computed its meat matrix as <code>X' diag(e^4) X</code> instead of <code>X' diag(e^2) X</code>, giving standard errors about 3.5x too large. Both sandwich helpers are now checked against <code><a href="https://zeileis.codeberg.page/sandwich/reference/vcovHC.html" class="external-link">sandwich::vcovHC()</a></code>.</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="performance-0-2-0">Performance<a class="anchor" aria-label="anchor" href="#performance-0-2-0"></a></h3>
@@ -99,9 +106,9 @@
 </ul></div>
 <div class="section level3">
 <h3 id="new-features-0-2-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-0-2-0"></a></h3>
-<ul><li>
-<code><a href="../reference/write_results.html">write_results()</a></code> now exports statistical maps as NIfTI volumes via <code>format = "nifti"</code> (or <code>format = c("h5", "nifti")</code>), reusing the same BIDS entity and filename machinery as the HDF5 backend. This removes the need to hand-roll loops over <code><a href="../reference/coef_image.html">coef_image()</a></code> + <code><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vol-methods.html" class="external-link">neuroim2::write_vol()</a></code>.</li>
-<li>Added <code><a href="../reference/coef_images.html">coef_images()</a></code>, a plural companion to <code><a href="../reference/coef_image.html">coef_image()</a></code> that returns a named list of <code>NeuroVol</code>s for every coefficient of a given <code>type</code> (<code>"estimates"</code>, <code>"contrasts"</code>, or <code>"F"</code>) and <code>statistic</code>.</li>
+<ul><li><p>Reexported <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/feature.html" class="external-link">feature()</a></code> (from fmridesign) and <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html" class="external-link">feature_regressor()</a></code> (from fmrihrf) so mixed event formulas such as <code>onset ~ hrf(condition) + feature(rms, dt = 0.1)</code> work after <code><a href="https://bbuchsbaum.github.io/fmrireg/">library(fmrireg)</a></code>. Feature terms are sampled series, not trials; helpers that assume <code>hrfspec</code> trial structure skip or unwrap them instead of erroring (<code><a href="../reference/fitted_hrf.html">fitted_hrf()</a></code>, <code><a href="../reference/shortnames.html">shortnames()</a></code>, <code><a href="../reference/design_plot.html">design_plot()</a></code>, <code><a href="../reference/preflight.html">preflight()</a></code>, pair-contrast resolution).</p></li>
+<li><p><code><a href="../reference/write_results.html">write_results()</a></code> now exports statistical maps as NIfTI volumes via <code>format = "nifti"</code> (or <code>format = c("h5", "nifti")</code>), reusing the same BIDS entity and filename machinery as the HDF5 backend. This removes the need to hand-roll loops over <code><a href="../reference/coef_image.html">coef_image()</a></code> + <code><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vol-methods.html" class="external-link">neuroim2::write_vol()</a></code>.</p></li>
+<li><p>Added <code><a href="../reference/coef_images.html">coef_images()</a></code>, a plural companion to <code><a href="../reference/coef_image.html">coef_image()</a></code> that returns a named list of <code>NeuroVol</code>s for every coefficient of a given <code>type</code> (<code>"estimates"</code>, <code>"contrasts"</code>, or <code>"F"</code>) and <code>statistic</code>.</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-0-2-0-1">Bug Fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-2-0-1"></a></h3>

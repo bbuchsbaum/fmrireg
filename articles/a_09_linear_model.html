@@ -38,16 +38,18 @@
 <li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -85,7 +87,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-08-09</h4>
+            <h4 data-toc-skip class="date">2026-08-22</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_09_linear_model.Rmd" class="external-link"><code>vignettes/a_09_linear_model.Rmd</code></a></small>
       <div class="d-none name"><code>a_09_linear_model.Rmd</code></div>
@@ -119,9 +121,9 @@ statistical inference.</p>
 <div class="section level2">
 <h2 id="simulating-a-dataset-for-analysis">Simulating a Dataset for Analysis<a class="anchor" aria-label="anchor" href="#simulating-a-dataset-for-analysis"></a>
 </h2>
-<p>First, let’s create a realistic fMRI dataset with known parameters.
-We’ll simulate a simple experiment with two conditions that have
-different amplitudes.</p>
+<p>First, let’s create a controlled fMRI teaching dataset with known
+parameters. We’ll simulate a simple experiment with two conditions that
+have different amplitudes.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create an experimental design with two conditions</span></span>
 <span><span class="co"># Condition 1: 10 events with amplitude 1.0</span></span>
@@ -190,41 +192,21 @@ different amplitudes.</p>
 <span><span class="co"># Create a sampling frame</span></span>
 <span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="va">run_length</span>, TR <span class="op">=</span> <span class="va">TR</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Visualize the experimental design</span></span>
-<span><span class="va">event_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="op">(</span><span class="va">run_length</span><span class="op">-</span><span class="fl">1</span><span class="op">)</span> <span class="op">*</span> <span class="va">TR</span>, by <span class="op">=</span> <span class="va">TR</span><span class="op">)</span>,</span>
-<span>  condition1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">run_length</span><span class="op">)</span>,</span>
-<span>  condition2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">run_length</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Mark event onsets in the timeline</span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">event_table</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">timepoint</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.min</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">event_df</span><span class="op">$</span><span class="va">time</span> <span class="op">-</span> <span class="va">event_table</span><span class="op">$</span><span class="va">onset</span><span class="op">[</span><span class="va">i</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="va">event_table</span><span class="op">$</span><span class="va">condition</span><span class="op">[</span><span class="va">i</span><span class="op">]</span> <span class="op">==</span> <span class="st">"condition1"</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">event_df</span><span class="op">$</span><span class="va">condition1</span><span class="op">[</span><span class="va">timepoint</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">1</span></span>
-<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="va">event_df</span><span class="op">$</span><span class="va">condition2</span><span class="op">[</span><span class="va">timepoint</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">1</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="co"># Convert to long format for plotting</span></span>
-<span><span class="va">event_long</span> <span class="op">&lt;-</span> <span class="va">event_df</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span>cols <span class="op">=</span> <span class="op">-</span><span class="va">time</span>, names_to <span class="op">=</span> <span class="st">"condition"</span>, values_to <span class="op">=</span> <span class="st">"onset"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Plot the experimental design</span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">event_long</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">time</span>, y <span class="op">=</span> <span class="va">onset</span>, color <span class="op">=</span> <span class="va">condition</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_segment.html" class="external-link">geom_segment</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>xend <span class="op">=</span> <span class="va">time</span>, yend <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, linewidth <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"top"</span>,</span>
-<span>        text <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
-<span>        axis.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
-<span>        plot.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Experimental Design with Event Onsets"</span>,</span>
+<span><span class="co"># Plot event onsets without drawing a dense row of zero-valued samples.</span></span>
+<span><span class="fu">ggplot</span><span class="op">(</span><span class="va">event_table</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">onset</span>, y <span class="op">=</span> <span class="fl">1</span>, color <span class="op">=</span> <span class="va">condition</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_segment</span><span class="op">(</span><span class="fu">aes</span><span class="op">(</span>xend <span class="op">=</span> <span class="va">onset</span>, y <span class="op">=</span> <span class="fl">0</span>, yend <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>, linewidth <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_point</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme</span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"top"</span>,</span>
+<span>        text <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
+<span>        axis.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
+<span>        plot.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Experimental Design with Event Onsets"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>,</span>
-<span>       y <span class="op">=</span> <span class="st">"Event"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_brewer.html" class="external-link">scale_color_brewer</a></span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/create-event-table-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<span>       y <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">scale_y_continuous</span><span class="op">(</span>breaks <span class="op">=</span> <span class="fl">1</span>, labels <span class="op">=</span> <span class="st">"onset"</span>, limits <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1.1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_09_linear_model_files/figure-html/create-event-table-1.png" class="r-plt" alt="Event onsets for condition 1 and condition 2 across the 400-second simulated run." width="672"></p>
 <p>Now that we have our experimental design, let’s simulate the fMRI
 time series. We’ll create signals for each condition with different
 amplitudes, add noise, and combine them into a dataset.</p>
@@ -275,49 +257,55 @@ amplitudes, add noise, and combine them into a dataset.</p>
 <span>  condition2 <span class="op">=</span> <span class="va">signal2</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Create a matrix dataset for the model fitting</span></span>
-<span><span class="va">simulated_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="va">observed_signal</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="co"># Create a matrix dataset for the model fitting. A shared noise realization</span></span>
+<span><span class="co"># keeps the example focused on the known change in signal amplitude.</span></span>
+<span><span class="va">voxel_scales</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.0</span>, <span class="fl">0.8</span>, <span class="fl">0.6</span><span class="op">)</span></span>
+<span><span class="va">simulated_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>  <span class="va">voxel_scales</span>,</span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">scale</span><span class="op">)</span> <span class="va">scale</span> <span class="op">*</span> <span class="va">true_signal</span> <span class="op">+</span> <span class="va">noise</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">true_signal</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu">fmridataset</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span></span>
-<span>  datamat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">simulated_data</span>, <span class="va">simulated_data</span> <span class="op">*</span> <span class="fl">0.8</span>, <span class="va">simulated_data</span> <span class="op">*</span> <span class="fl">0.6</span><span class="op">)</span>, <span class="co"># Three "voxels" with varied signal strength</span></span>
+<span>  datamat <span class="op">=</span> <span class="va">simulated_data</span>,</span>
 <span>  TR <span class="op">=</span> <span class="va">TR</span>,</span>
 <span>  run_length <span class="op">=</span> <span class="va">run_length</span>,</span>
 <span>  event_table <span class="op">=</span> <span class="va">event_table</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Visualize the signals</span></span>
-<span><span class="va">signal_long</span> <span class="op">&lt;-</span> <span class="va">signal_df</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">condition1</span>, <span class="va">condition2</span>, <span class="va">true_signal</span>, <span class="va">noise</span>, <span class="va">observed_signal</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span>cols <span class="op">=</span> <span class="op">-</span><span class="va">time</span>, names_to <span class="op">=</span> <span class="st">"component"</span>, values_to <span class="op">=</span> <span class="st">"signal"</span><span class="op">)</span></span>
+<span><span class="va">signal_long</span> <span class="op">&lt;-</span> <span class="va">signal_df</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">select</span><span class="op">(</span><span class="va">time</span>, <span class="va">condition1</span>, <span class="va">condition2</span>, <span class="va">true_signal</span>, <span class="va">noise</span>, <span class="va">observed_signal</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">pivot_longer</span><span class="op">(</span>cols <span class="op">=</span> <span class="op">-</span><span class="va">time</span>, names_to <span class="op">=</span> <span class="st">"component"</span>, values_to <span class="op">=</span> <span class="st">"signal"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Set the factor levels for better plotting order</span></span>
 <span><span class="va">signal_long</span><span class="op">$</span><span class="va">component</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">signal_long</span><span class="op">$</span><span class="va">component</span>, </span>
 <span>                               levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"condition1"</span>, <span class="st">"condition2"</span>, <span class="st">"true_signal"</span>, <span class="st">"noise"</span>, <span class="st">"observed_signal"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Plot signals</span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">signal_long</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">time</span>, y <span class="op">=</span> <span class="va">signal</span>, color <span class="op">=</span> <span class="va">component</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span><span class="va">component</span>, ncol <span class="op">=</span> <span class="fl">1</span>, scales <span class="op">=</span> <span class="st">"free_y"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"none"</span>,</span>
-<span>        text <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
-<span>        axis.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
-<span>        plot.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
-<span>        strip.text <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Simulated fMRI Time Series Components"</span>,</span>
+<span><span class="fu">ggplot</span><span class="op">(</span><span class="va">signal_long</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">time</span>, y <span class="op">=</span> <span class="va">signal</span>, color <span class="op">=</span> <span class="va">component</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span><span class="va">component</span>, ncol <span class="op">=</span> <span class="fl">1</span>, scales <span class="op">=</span> <span class="st">"free_y"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme</span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"none"</span>,</span>
+<span>        text <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
+<span>        axis.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
+<span>        plot.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
+<span>        strip.text <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Simulated fMRI Time Series Components"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Signal Amplitude"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/simulate-signals-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<p><img src="a_09_linear_model_files/figure-html/simulate-signals-1.png" class="r-plt" alt="Faceted time series showing both condition responses, their combined signal, structured noise, and the observed signal." width="672"></p>
 <p>Our simulated dataset now contains:</p>
 <ol style="list-style-type: decimal">
 <li>
 <strong>Condition-specific signals</strong> with known amplitudes
 (1.0 and 2.0)</li>
 <li>
-<strong>Realistic noise</strong> with temporal autocorrelation,
-drift, and physiological components</li>
+<strong>Structured teaching noise</strong> with temporal
+autocorrelation, drift, and physiological components</li>
 <li>
-<strong>Multiple “voxels”</strong> with varying signal
-strengths</li>
+<strong>Three teaching voxels</strong> with known signal scales and
+a shared noise realization</li>
 <li>
 <strong>A complete event table</strong> with condition labels and
 onset times</li>
@@ -334,11 +322,12 @@ onset times</li>
 <li>The dataset</li>
 </ol>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Fit a linear model</span></span>
+<code class="sourceCode R"><span><span class="co"># Fit the central model with the AR(1) structure used by the generator.</span></span>
 <span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,  <span class="co"># Model experimental effects</span></span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,                     <span class="co"># Block structure</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,                 <span class="co"># Our simulated dataset</span></span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span>noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span>, iter_gls <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  compute <span class="op">=</span> <span class="fu"><a href="../reference/compute_spec.html">compute_spec</a></span><span class="op">(</span>voxel_chunks <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -352,7 +341,7 @@ onset times</li>
 <span><span class="co"><span style="color: #0000BB; font-weight: bold;">#&gt; </span><span style="color: #00BB00;">Model formula:</span></span></span>
 <span><span class="co"><span style="color: #00BB00;">#&gt;   </span><span style="color: #555555;">~</span> <span style="color: #555555;">onset</span> <span style="color: #555555;">hrf(condition)</span> </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">Fitting strategy:  </span><span style="color: #555555;">runwise</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">Fitting strategy:  </span><span style="color: #555555;">chunkwise</span> </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">Baseline parameters: </span> <span style="color: #555555;">4</span> </span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">Design parameters:   </span> <span style="color: #555555;">2</span> </span></span>
@@ -361,41 +350,103 @@ onset times</li>
 <span><span class="co"><span style="color: #555555;">#&gt; </span><span style="color: #BBBB00;">Use coef(...), stats(...), etc. to extract results.</span></span></span>
 <span><span class="co"><span style="color: #BBBB00;">#&gt; </span></span></span>
 <span><span class="co"><span style="color: #BBBB00;">#&gt; </span></span></span></code></pre></div>
+<p>The onset plot above shows the schedule; the matrix actually fitted
+by the GLM also includes the sampled HRF regressors and baseline
+columns. Inspect that matrix before interpreting coefficients,
+especially when designs are larger or contain nuisance regressors.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fitted_design</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html" class="external-link">design_matrix</a></span><span class="op">(</span><span class="va">model</span><span class="op">$</span><span class="va">model</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">design_denom</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">pmax</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fitted_design</span><span class="op">)</span>, <span class="fl">2</span>, <span class="va">max</span><span class="op">)</span>, <span class="va">.Machine</span><span class="op">$</span><span class="va">double.eps</span><span class="op">)</span></span>
+<span><span class="va">design_scaled</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sweep.html" class="external-link">sweep</a></span><span class="op">(</span><span class="va">fitted_design</span>, <span class="fl">2</span>, <span class="va">design_denom</span>, <span class="st">"/"</span><span class="op">)</span></span>
+<span><span class="va">design_labels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">design_scaled</span><span class="op">)</span></span>
+<span><span class="va">design_labels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">"^condition_condition\\."</span>, <span class="st">"condition: "</span>, <span class="va">design_labels</span><span class="op">)</span></span>
+<span><span class="va">design_labels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gsub</a></span><span class="op">(</span><span class="st">"_"</span>, <span class="st">" "</span>, <span class="va">design_labels</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">design_scaled</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">design_labels</span></span>
+<span></span>
+<span><span class="va">design_plot_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">design_scaled</span>, check.names <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>sample <span class="op">=</span> <span class="fu">row_number</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">pivot_longer</span><span class="op">(</span><span class="op">-</span><span class="va">sample</span>, names_to <span class="op">=</span> <span class="st">"regressor"</span>, values_to <span class="op">=</span> <span class="st">"scaled_value"</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>regressor <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">regressor</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rev.html" class="external-link">rev</a></span><span class="op">(</span><span class="va">design_labels</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">ggplot</span><span class="op">(</span><span class="va">design_plot_data</span>, <span class="fu">aes</span><span class="op">(</span><span class="va">sample</span>, <span class="va">regressor</span>, fill <span class="op">=</span> <span class="va">scaled_value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_tile</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">scale_fill_gradient2</span><span class="op">(</span></span>
+<span>    low <span class="op">=</span> <span class="st">"#2166AC"</span>, mid <span class="op">=</span> <span class="st">"white"</span>, high <span class="op">=</span> <span class="st">"#B2182B"</span>,</span>
+<span>    limits <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>, name <span class="op">=</span> <span class="st">"Column-scaled\nvalue"</span></span>
+<span>  <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Fitted GLM design matrix"</span>, x <span class="op">=</span> <span class="st">"Sample"</span>, y <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">12</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme</span><span class="op">(</span>panel.grid <span class="op">=</span> <span class="fu">element_blank</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_09_linear_model_files/figure-html/inspect-design-matrix-1.png" class="r-plt" alt="Column-scaled fitted design matrix across the 200 samples, including both condition regressors and baseline terms." width="768"></p>
 <div class="section level3">
 <h3 id="accounting-for-temporal-autocorrelation">Accounting for Temporal Autocorrelation<a class="anchor" aria-label="anchor" href="#accounting-for-temporal-autocorrelation"></a>
 </h3>
-<p>The simulated noise contains AR(1) structure. We can ask
-<code>fmri_lm</code> to apply a fast AR(1) prewhitening step with
-<code>noise_spec("ar1")</code>. This estimates the AR coefficient from
-an initial OLS fit, whitens the data and design matrix, and refits the
-GLM.</p>
-<p>With stronger temporal autocorrelation in the simulated noise, the
-prewhitened model recovers tighter standard errors than OLS.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">model_ar1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
+<p>The simulated noise contains AR(1) structure, so the central model
+above uses AR(1) prewhitening with <code>noise_spec("ar1")</code>. By
+default, the built-in shared path averages the voxel residuals at each
+time point, estimates one AR coefficient vector from that mean residual
+series for each run, whitens the data and design matrix, and refits the
+GLM. A spatially coherent residual component can therefore make this
+shared estimate larger than the median of separately estimated voxel
+coefficients.</p>
+<p>To estimate a separate AR model for every voxel, request the
+supported runwise-meta path explicitly:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">voxelwise_control</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span></span>
+<span>  estimation <span class="op">=</span> <span class="fu"><a href="../reference/estimation_spec.html">estimation_spec</a></span><span class="op">(</span><span class="st">"runwise_meta"</span><span class="op">)</span>,</span>
+<span>  noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span>, voxelwise <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Built-in voxelwise estimation currently supports AR-only models with
+run pooling, one GLS iteration, no censoring, and no volume weighting or
+soft-subspace projection. Robust fitting is supported, but robust AR
+re-estimation is not. Unsupported combinations fail at the fitting
+boundary instead of silently using the shared estimator.</p>
+<p>Prewhitening changes both the coefficient covariance and the
+effective information in the time series. It is therefore important to
+inspect the result rather than assume that correction must make standard
+errors smaller.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">model_ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span>
 <span>  block   <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
-<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span>noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span>, iter_gls <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  compute <span class="op">=</span> <span class="fu"><a href="../reference/compute_spec.html">compute_spec</a></span><span class="op">(</span>voxel_chunks <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
+<span><span class="va">model_ar1</span> <span class="op">&lt;-</span> <span class="va">model</span></span>
 <span></span>
-<span><span class="co"># Compare standard errors (first few voxels)</span></span>
-<span><span class="va">se_ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span>
+<span><span class="va">se_ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">model_ols</span><span class="op">)</span></span>
 <span><span class="va">se_ar1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">model_ar1</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span>OLS <span class="op">=</span> <span class="va">se_ols</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, AR1 <span class="op">=</span> <span class="va">se_ar1</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;         OLS    AR1</span></span>
-<span><span class="co">#&gt; [1,] 0.1170 0.1472</span></span>
-<span><span class="co">#&gt; [2,] 0.0936 0.1177</span></span>
-<span><span class="co">#&gt; [3,] 0.0702 0.0883</span></span>
-<span></span>
+<span><span class="va">se_comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  model <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"OLS"</span>, <span class="st">"AR(1) prewhitened"</span><span class="op">)</span>,</span>
+<span>  median_event_se <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">se_ols</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">se_ar1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">se_comparison</span>, digits <span class="op">=</span> <span class="fl">4</span>, caption <span class="op">=</span> <span class="st">"Median standard error across event coefficients"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Median standard error across event coefficients</caption>
+<thead><tr class="header">
+<th align="left">model</th>
+<th align="right">median_event_se</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">OLS</td>
+<td align="right">0.1377</td>
+</tr>
+<tr class="even">
+<td align="left">AR(1) prewhitened</td>
+<td align="right">0.1830</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
 <span><span class="co"># Inspect the estimated AR coefficient (shared across voxels in this example)</span></span>
 <span><span class="va">model_ar1</span><span class="op">$</span><span class="va">ar_coef</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="co">#&gt; [1] 0.7681123</span></span></code></pre></div>
-<p>The AR(1) model now estimates a non-zero autoregressive coefficient
-and produces notably smaller standard errors than the plain OLS fit,
-illustrating how prewhitening improves efficiency when temporal
-autocorrelation is present.</p>
+<span><span class="co">#&gt; [1] 0.3780502</span></span></code></pre></div>
+<p>Here the AR(1) fit estimates non-zero serial dependence and produces
+larger standard errors than plain OLS. The practical lesson is not that
+prewhitening always increases uncertainty, but that OLS can be
+overconfident when residuals are serially correlated.</p>
 <p>The <code><a href="../reference/noise_spec.html">noise_spec()</a></code> constructor also accepts
 <code>struct = "arp"</code> for higher-order autoregressive models. This
 setting models AR coefficients only (no moving-average terms).</p>
@@ -409,7 +460,7 @@ mitigate their impact by enabling row-wise robust weighting: an
 Iteratively Reweighted Least Squares loop down-weights frames with large
 residuals. Select the weighting function and its iteration limit once
 with <code><a href="../reference/robust_spec.html">robust_spec()</a></code>.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_robust</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span>
 <span>  block   <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
@@ -421,16 +472,34 @@ with <code><a href="../reference/robust_spec.html">robust_spec()</a></code>.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">se_robust</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">model_robust</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span>OLS <span class="op">=</span> <span class="va">se_ols</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, Robust <span class="op">=</span> <span class="va">se_robust</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;             OLS     Robust</span></span>
-<span><span class="co">#&gt; [1,] 0.11701370 0.10962919</span></span>
-<span><span class="co">#&gt; [2,] 0.09361096 0.08770335</span></span>
-<span><span class="co">#&gt; [3,] 0.07020822 0.06577752</span></span></code></pre></div>
-<p>Robust fitting guards against outlier time points but will not
-correct voxel-specific spikes. In this simulated example the Huber
-weights inflate the standard errors slightly, reflecting the additional
-uncertainty introduced by potential outliers. P-values rely on a robust
-residual scale and should be interpreted as approximate.</p>
+<span><span class="va">robust_comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  model <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"OLS"</span>, <span class="st">"Huber"</span><span class="op">)</span>,</span>
+<span>  median_event_se <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">se_ols</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">se_robust</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">robust_comparison</span>, digits <span class="op">=</span> <span class="fl">4</span>, caption <span class="op">=</span> <span class="st">"Median event-coefficient standard error"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Median event-coefficient standard error</caption>
+<thead><tr class="header">
+<th align="left">model</th>
+<th align="right">median_event_se</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">OLS</td>
+<td align="right">0.1377</td>
+</tr>
+<tr class="even">
+<td align="left">Huber</td>
+<td align="right">0.1297</td>
+</tr>
+</tbody>
+</table>
+<p>Robust fitting guards against frames with multivariate residual
+excursions; it does not specifically target a spike confined to one
+voxel. In this realization Huber fitting modestly decreases the reported
+standard errors. That direction is data-dependent, not a general
+guarantee. Robust p-values use a robust residual scale and should be
+interpreted as approximate.</p>
 </div>
 </div>
 <div class="section level2">
@@ -440,7 +509,7 @@ residual scale and should be interpreted as approximate.</p>
 <div class="section level3">
 <h3 id="coefficient-estimates">1. Coefficient Estimates<a class="anchor" aria-label="anchor" href="#coefficient-estimates"></a>
 </h3>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Extract coefficient estimates</span></span>
 <span><span class="va">beta_estimates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span>
 <span><span class="fu">kable</span><span class="op">(</span><span class="va">beta_estimates</span>, caption <span class="op">=</span> <span class="st">"Coefficient estimates for each condition and voxel"</span><span class="op">)</span></span></code></pre></div>
@@ -449,63 +518,64 @@ residual scale and should be interpreted as approximate.</p>
 <tbody>
 <tr class="odd">
 <td align="left">condition_condition.condition1</td>
-<td align="right">0.6482899</td>
-<td align="right">0.5186319</td>
-<td align="right">0.3889739</td>
+<td align="right">0.7502877</td>
+<td align="right">0.5504911</td>
+<td align="right">0.3506944</td>
 </tr>
 <tr class="even">
 <td align="left">condition_condition.condition2</td>
-<td align="right">1.8880917</td>
-<td align="right">1.5104734</td>
-<td align="right">1.1328550</td>
+<td align="right">1.8920548</td>
+<td align="right">1.4923287</td>
+<td align="right">1.0926026</td>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Reshape for plotting (works with both approaches)</span></span>
-<span><span class="va">beta_long</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">beta_estimates</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>voxel_index <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/row_number.html" class="external-link">row_number</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span>cols <span class="op">=</span> <span class="op">-</span><span class="va">voxel_index</span>, names_to <span class="op">=</span> <span class="st">"condition"</span>, values_to <span class="op">=</span> <span class="st">"estimate"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
+<span><span class="va">beta_long</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">beta_estimates</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>voxel_index <span class="op">=</span> <span class="fu">row_number</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">pivot_longer</span><span class="op">(</span>cols <span class="op">=</span> <span class="op">-</span><span class="va">voxel_index</span>, names_to <span class="op">=</span> <span class="st">"condition"</span>, values_to <span class="op">=</span> <span class="st">"estimate"</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span></span>
 <span>    condition <span class="op">=</span> <span class="fu">clean_condition_label</span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span>
 <span>    voxel <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"voxel"</span>, <span class="va">voxel_index</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Plot coefficient estimates</span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">beta_long</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">condition</span>, y <span class="op">=</span> <span class="va">estimate</span>, fill <span class="op">=</span> <span class="va">condition</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_bar.html" class="external-link">geom_bar</a></span><span class="op">(</span>stat <span class="op">=</span> <span class="st">"identity"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span><span class="va">voxel</span>, ncol <span class="op">=</span> <span class="fl">3</span>, scales <span class="op">=</span> <span class="st">"free_y"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"top"</span>,</span>
-<span>        text <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
-<span>        axis.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
-<span>        plot.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
-<span>        strip.text <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
-<span>        axis.text.x <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">45</span>, hjust <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Estimated Coefficients by Condition and Voxel"</span>,</span>
+<span><span class="fu">ggplot</span><span class="op">(</span><span class="va">beta_long</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">condition</span>, y <span class="op">=</span> <span class="va">estimate</span>, fill <span class="op">=</span> <span class="va">condition</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_bar</span><span class="op">(</span>stat <span class="op">=</span> <span class="st">"identity"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span><span class="va">voxel</span>, ncol <span class="op">=</span> <span class="fl">3</span>, scales <span class="op">=</span> <span class="st">"free_y"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme</span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"top"</span>,</span>
+<span>        text <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
+<span>        axis.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
+<span>        plot.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
+<span>        strip.text <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
+<span>        axis.text.x <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">45</span>, hjust <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Estimated Coefficients by Condition and Voxel"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Condition"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Coefficient Estimate"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/plot-coefficients-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
-<p>The bar plot shows the estimated coefficients for each condition
-across the three simulated voxels. Note that:</p>
-<ul>
-<li>Condition2 has approximately twice the amplitude of Condition1,
-which matches our simulation parameters</li>
-<li>The coefficient magnitude decreases across voxels, consistent with
-our multiplication factors (1.0, 0.8, 0.6)</li>
-</ul>
+<p><img src="a_09_linear_model_files/figure-html/plot-coefficients-1.png" class="r-plt" alt="Condition 1 and condition 2 coefficient estimates for each of the three simulated voxels." width="672"></p>
+<p>The generator assigns Condition2 twice the underlying amplitude of
+Condition1 and scales the three voxels by 1.0, 0.8, and 0.6. Finite
+noisy estimates need not preserve either ratio exactly. The plot should
+therefore be read together with the uncertainty table below; the
+scientifically relevant checks are the direction and uncertainty of the
+planned contrast, not visual agreement with an exact 2:1 ratio.</p>
 </div>
 <div class="section level3">
 <h3 id="t-statistics-and-p-values">2. T-Statistics and P-Values<a class="anchor" aria-label="anchor" href="#t-statistics-and-p-values"></a>
 </h3>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">estimate_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tidy.html">tidy</a></span><span class="op">(</span><span class="va">model</span>, type <span class="op">=</span> <span class="st">"estimates"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"condition"</span>, <span class="va">term</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>condition <span class="op">=</span> <span class="fu">clean_condition_label</span><span class="op">(</span><span class="va">term</span><span class="op">)</span>,</span>
-<span>         voxel <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"voxel"</span>, <span class="va">voxel</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">voxel</span>, <span class="va">condition</span>, <span class="va">estimate</span>, <span class="va">std_error</span>, <span class="va">statistic</span>, <span class="va">p_value</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">estimate_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tidy.html">tidy</a></span><span class="op">(</span><span class="va">model</span>, type <span class="op">=</span> <span class="st">"estimates"</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"condition"</span>, <span class="va">term</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>condition <span class="op">=</span> <span class="fu">clean_condition_label</span><span class="op">(</span><span class="va">term</span><span class="op">)</span>,</span>
+<span>         voxel <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"voxel"</span>, <span class="va">voxel</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">select</span><span class="op">(</span><span class="va">voxel</span>, <span class="va">condition</span>, <span class="va">estimate</span>, <span class="va">std_error</span>, <span class="va">statistic</span>, <span class="va">p_value</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">estimate_stats</span>, digits <span class="op">=</span> <span class="fl">4</span>,</span>
+<span><span class="va">estimate_stats_display</span> <span class="op">&lt;-</span> <span class="va">estimate_stats</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>p_value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/format.pval.html" class="external-link">format.pval</a></span><span class="op">(</span><span class="va">p_value</span>, digits <span class="op">=</span> <span class="fl">4</span>, eps <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">estimate_stats_display</span>, digits <span class="op">=</span> <span class="fl">4</span>, row.names <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>      caption <span class="op">=</span> <span class="st">"Coefficient estimates with associated statistics by voxel and condition"</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <caption>Coefficient estimates with associated statistics by voxel and
@@ -516,70 +586,72 @@ condition</caption>
 <th align="right">estimate</th>
 <th align="right">std_error</th>
 <th align="right">statistic</th>
-<th align="right">p_value</th>
+<th align="left">p_value</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td align="left">voxel1</td>
 <td align="left">condition1</td>
-<td align="right">0.6483</td>
-<td align="right">0.1170</td>
-<td align="right">5.5403</td>
-<td align="right">0.0000</td>
+<td align="right">0.7503</td>
+<td align="right">0.1922</td>
+<td align="right">3.9030</td>
+<td align="left">0.000131</td>
 </tr>
 <tr class="even">
 <td align="left">voxel1</td>
 <td align="left">condition2</td>
-<td align="right">0.5186</td>
-<td align="right">0.0936</td>
-<td align="right">5.5403</td>
-<td align="right">0.0000</td>
+<td align="right">1.8921</td>
+<td align="right">0.1737</td>
+<td align="right">10.8916</td>
+<td align="left">&lt; 1e-04</td>
 </tr>
 <tr class="odd">
 <td align="left">voxel2</td>
 <td align="left">condition1</td>
-<td align="right">-0.5550</td>
-<td align="right">0.7480</td>
-<td align="right">-0.7420</td>
-<td align="right">0.4590</td>
+<td align="right">0.5505</td>
+<td align="right">0.1922</td>
+<td align="right">2.8637</td>
+<td align="left">0.004648</td>
 </tr>
 <tr class="even">
 <td align="left">voxel2</td>
 <td align="left">condition2</td>
-<td align="right">-0.4440</td>
-<td align="right">0.5984</td>
-<td align="right">-0.7420</td>
-<td align="right">0.4590</td>
+<td align="right">1.4923</td>
+<td align="right">0.1737</td>
+<td align="right">8.5907</td>
+<td align="left">&lt; 1e-04</td>
 </tr>
 <tr class="odd">
 <td align="left">voxel3</td>
 <td align="left">condition1</td>
-<td align="right">-0.7525</td>
-<td align="right">0.3992</td>
-<td align="right">-1.8851</td>
-<td align="right">0.0609</td>
+<td align="right">0.3507</td>
+<td align="right">0.1922</td>
+<td align="right">1.8243</td>
+<td align="left">0.069638</td>
 </tr>
 <tr class="even">
 <td align="left">voxel3</td>
 <td align="left">condition2</td>
-<td align="right">-0.6020</td>
-<td align="right">0.3193</td>
-<td align="right">-1.8851</td>
-<td align="right">0.0609</td>
+<td align="right">1.0926</td>
+<td align="right">0.1737</td>
+<td align="right">6.2897</td>
+<td align="left">&lt; 1e-04</td>
 </tr>
 </tbody>
 </table>
 <p>The t-statistics quantify the reliability of the estimated effects.
-Higher absolute t-values indicate more reliable estimates. In our
-simulation, all conditions in all voxels show significant activity (p
-&lt; 0.05).</p>
+Higher absolute t-values indicate more precise estimates relative to
+their standard errors. Here 5 of the six condition-by-voxel tests are
+below 0.05. The weakest simulated signal is correspondingly the least
+certain; this is why the table reports both effect size and uncertainty
+rather than reducing the result to a binary label.</p>
 </div>
 <div class="section level3">
 <h3 id="contrasts-between-conditions">3. Contrasts Between Conditions<a class="anchor" aria-label="anchor" href="#contrasts-between-conditions"></a>
 </h3>
 <p>A key advantage of the GLM approach is the ability to directly
 compare conditions using contrasts.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Define a contrast specification for comparing condition2 vs condition1</span></span>
 <span><span class="va">con_spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.html" class="external-link">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"condition2"</span>, <span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"condition1"</span>, name <span class="op">=</span> <span class="st">"cond2_minus_cond1"</span><span class="op">)</span></span>
 <span></span>
@@ -588,20 +660,25 @@ compare conditions using contrasts.</p>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, contrasts <span class="op">=</span> <span class="va">con_spec</span><span class="op">)</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span>noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span>, iter_gls <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  compute <span class="op">=</span> <span class="fu"><a href="../reference/compute_spec.html">compute_spec</a></span><span class="op">(</span>voxel_chunks <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Extract contrast results using tidy helper</span></span>
-<span><span class="va">contrast_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tidy.html">tidy</a></span><span class="op">(</span><span class="va">contrast_model</span>, type <span class="op">=</span> <span class="st">"contrasts"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">term</span> <span class="op">==</span> <span class="st">"cond2_minus_cond1"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
+<span><span class="va">contrast_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tidy.html">tidy</a></span><span class="op">(</span><span class="va">contrast_model</span>, type <span class="op">=</span> <span class="st">"contrasts"</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">term</span> <span class="op">==</span> <span class="st">"cond2_minus_cond1"</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span></span>
 <span>    voxel <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"voxel"</span>, <span class="va">voxel</span><span class="op">)</span>,</span>
 <span>    significant <span class="op">=</span> <span class="va">p_value</span> <span class="op">&lt;</span> <span class="fl">0.05</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Display contrast results</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">contrast_results</span>, caption <span class="op">=</span> <span class="st">"Contrast results: condition2 - condition1"</span>, digits <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
-<table class="table">
+<span><span class="va">contrast_results_display</span> <span class="op">&lt;-</span> <span class="va">contrast_results</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>p_value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/format.pval.html" class="external-link">format.pval</a></span><span class="op">(</span><span class="va">p_value</span>, digits <span class="op">=</span> <span class="fl">4</span>, eps <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">contrast_results_display</span>,</span>
+<span>      caption <span class="op">=</span> <span class="st">"Contrast results: condition2 - condition1"</span>,</span>
+<span>      digits <span class="op">=</span> <span class="fl">4</span>, row.names <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<table style="width:100%;" class="table">
 <caption>Contrast results: condition2 - condition1</caption>
 <colgroup>
 <col width="7%">
@@ -609,7 +686,7 @@ compare conditions using contrasts.</p>
 <col width="9%">
 <col width="10%">
 <col width="10%">
-<col width="8%">
+<col width="9%">
 <col width="13%">
 <col width="12%">
 <col width="12%">
@@ -620,7 +697,7 @@ compare conditions using contrasts.</p>
 <th align="right">estimate</th>
 <th align="right">std_error</th>
 <th align="right">statistic</th>
-<th align="right">p_value</th>
+<th align="left">p_value</th>
 <th align="right">df_inference</th>
 <th align="right">df_residual</th>
 <th align="left">significant</th>
@@ -629,10 +706,10 @@ compare conditions using contrasts.</p>
 <tr class="odd">
 <td align="left">voxel1</td>
 <td align="left">cond2_minus_cond1</td>
-<td align="right">1.2398</td>
-<td align="right">0.1553</td>
-<td align="right">7.9826</td>
-<td align="right">0</td>
+<td align="right">1.1418</td>
+<td align="right">0.2541</td>
+<td align="right">4.4934</td>
+<td align="left">&lt; 1e-04</td>
 <td align="right">194</td>
 <td align="right">194</td>
 <td align="left">TRUE</td>
@@ -640,10 +717,10 @@ compare conditions using contrasts.</p>
 <tr class="even">
 <td align="left">voxel2</td>
 <td align="left">cond2_minus_cond1</td>
-<td align="right">0.9918</td>
-<td align="right">0.1243</td>
-<td align="right">7.9826</td>
-<td align="right">0</td>
+<td align="right">0.9418</td>
+<td align="right">0.2541</td>
+<td align="right">3.7066</td>
+<td align="left">0.000274</td>
 <td align="right">194</td>
 <td align="right">194</td>
 <td align="left">TRUE</td>
@@ -651,32 +728,32 @@ compare conditions using contrasts.</p>
 <tr class="odd">
 <td align="left">voxel3</td>
 <td align="left">cond2_minus_cond1</td>
-<td align="right">0.7439</td>
-<td align="right">0.0932</td>
-<td align="right">7.9826</td>
-<td align="right">0</td>
+<td align="right">0.7419</td>
+<td align="right">0.2541</td>
+<td align="right">2.9198</td>
+<td align="left">0.003917</td>
 <td align="right">194</td>
 <td align="right">194</td>
 <td align="left">TRUE</td>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Visualize the contrast</span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">contrast_results</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">as.factor</a></span><span class="op">(</span><span class="va">voxel</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">estimate</span>, fill <span class="op">=</span> <span class="va">significant</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_bar.html" class="external-link">geom_bar</a></span><span class="op">(</span>stat <span class="op">=</span> <span class="st">"identity"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
-<span>        axis.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
-<span>        plot.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
-<span>        plot.subtitle <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Condition2 - Condition1 Contrast"</span>,</span>
+<span><span class="fu">ggplot</span><span class="op">(</span><span class="va">contrast_results</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">as.factor</a></span><span class="op">(</span><span class="va">voxel</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">estimate</span>, fill <span class="op">=</span> <span class="va">significant</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_bar</span><span class="op">(</span>stat <span class="op">=</span> <span class="st">"identity"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme</span><span class="op">(</span>text <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
+<span>        axis.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
+<span>        plot.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
+<span>        plot.subtitle <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Condition2 - Condition1 Contrast"</span>,</span>
 <span>       subtitle <span class="op">=</span> <span class="st">"Positive values indicate stronger activation for Condition2"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Voxel"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Contrast Estimate"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html" class="external-link">scale_fill_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"FALSE"</span> <span class="op">=</span> <span class="st">"gray"</span>, <span class="st">"TRUE"</span> <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/plot-contrast-results-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<span>  <span class="fu">scale_fill_manual</span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"FALSE"</span> <span class="op">=</span> <span class="st">"gray"</span>, <span class="st">"TRUE"</span> <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_09_linear_model_files/figure-html/plot-contrast-results-1.png" class="r-plt" alt="Positive condition 2 minus condition 1 contrast estimates for all three simulated voxels." width="672"></p>
 <p>The contrast results show that Condition2 consistently elicits
 significantly stronger activation than Condition1 across all voxels,
 which matches our simulation parameters (where Condition2 had twice the
@@ -688,59 +765,32 @@ amplitude of Condition1).</p>
 </h2>
 <p>Another useful visualization is the fitted hemodynamic response for
 each condition. This shows the estimated BOLD response over time.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Extract fitted HRF curves from the fitted model</span></span>
-<span><span class="va">fitted_hrfs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fitted_hrf.html">fitted_hrf</a></span><span class="op">(</span><span class="va">model</span>, sample_at <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">20</span>, by <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Extract the design info and reorganize for plotting</span></span>
-<span><span class="va">hrf_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">fitted_hrfs</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">term</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">hrf_info</span> <span class="op">&lt;-</span> <span class="va">fitted_hrfs</span><span class="op">[[</span><span class="va">term</span><span class="op">]</span><span class="op">]</span></span>
-<span>  <span class="va">design_info</span> <span class="op">&lt;-</span> <span class="va">hrf_info</span><span class="op">$</span><span class="va">design</span></span>
-<span>  <span class="va">pred_values</span> <span class="op">&lt;-</span> <span class="va">hrf_info</span><span class="op">$</span><span class="va">pred</span></span>
-<span>  </span>
-<span>  <span class="co"># Combine with design info</span></span>
-<span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">design_info</span>, <span class="va">pred_values</span><span class="op">)</span></span>
-<span>  <span class="va">result</span><span class="op">$</span><span class="va">term</span> <span class="op">&lt;-</span> <span class="va">term</span></span>
-<span>  <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Combine all HRF data</span></span>
-<span><span class="va">hrf_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">hrf_data</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Identify predicted-value columns by excluding known design columns</span></span>
-<span><span class="va">design_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">union</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">fitted_hrfs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">design</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"term"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">pred_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">hrf_df</span><span class="op">)</span>, <span class="va">design_cols</span><span class="op">)</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">pred_cols</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="co"># Fallback: match common default names for matrix columns</span></span>
-<span>  <span class="va">pred_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"^(V|X)?[0-9]+$|^pred.*$"</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">hrf_df</span><span class="op">)</span>, value <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="co"># Create a data frame in long format for plotting</span></span>
-<span><span class="va">hrf_long</span> <span class="op">&lt;-</span> <span class="va">hrf_df</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu">tidyr</span><span class="fu">::</span><span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span></span>
-<span>    cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/all_of.html" class="external-link">all_of</a></span><span class="op">(</span><span class="va">pred_cols</span><span class="op">)</span>,</span>
-<span>    names_to <span class="op">=</span> <span class="st">"voxel_id"</span>,</span>
-<span>    values_to <span class="op">=</span> <span class="st">"response"</span></span>
-<span>  <span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
-<span>    voxel_index <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gsub</a></span><span class="op">(</span><span class="st">"^[^0-9]*"</span>, <span class="st">""</span>, <span class="va">voxel_id</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    voxel <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"voxel"</span>, <span class="va">voxel_index</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">hrf_long</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/get_data_matrix.html" class="external-link">get_data_matrix</a></span><span class="op">(</span><span class="va">dataset</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">voxel_index</span><span class="op">)</span> <span class="fu"><a href="../reference/tidy_fitted_hrf.html">tidy_fitted_hrf</a></span><span class="op">(</span></span>
+<span>    <span class="va">model</span>,</span>
+<span>    sample_at <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">20</span>, by <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span>
+<span>    term <span class="op">=</span> <span class="st">"condition"</span>,</span>
+<span>    term_match <span class="op">=</span> <span class="st">"contains"</span>,</span>
+<span>    voxel <span class="op">=</span> <span class="va">voxel_index</span></span>
 <span>  <span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Plot the fitted HRF curves for each condition and voxel</span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">hrf_long</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">time</span>, y <span class="op">=</span> <span class="va">response</span>, color <span class="op">=</span> <span class="va">condition</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_grid.html" class="external-link">facet_grid</a></span><span class="op">(</span><span class="va">voxel</span> <span class="op">~</span> <span class="va">term</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
-<span>        axis.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
-<span>        plot.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
-<span>        strip.text <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Fitted Hemodynamic Response Functions"</span>,</span>
+<span><span class="fu">ggplot</span><span class="op">(</span><span class="va">hrf_long</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">time</span>, y <span class="op">=</span> <span class="va">estimate</span>, color <span class="op">=</span> <span class="va">condition</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">facet_grid</span><span class="op">(</span><span class="va">voxel</span> <span class="op">~</span> <span class="va">term</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme</span><span class="op">(</span>text <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
+<span>        axis.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
+<span>        plot.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
+<span>        strip.text <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Fitted Hemodynamic Response Functions"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"BOLD Response"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Condition"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/extract-fitted-hrf-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<p><img src="a_09_linear_model_files/figure-html/extract-fitted-hrf-1.png" class="r-plt" alt="Fitted hemodynamic response curves for both conditions in each simulated voxel." width="672"></p>
 <p>The fitted HRF curves show the temporal profile of the BOLD response
 for each condition. We can observe:</p>
 <ol style="list-style-type: decimal">
@@ -750,16 +800,96 @@ for each condition. We can observe:</p>
 </ol>
 </div>
 <div class="section level2">
+<h2 id="estimating-the-hrf-shape-from-data">Estimating the HRF Shape from Data<a class="anchor" aria-label="anchor" href="#estimating-the-hrf-shape-from-data"></a>
+</h2>
+<p>The curves above inherit the canonical HRF chosen for the GLM. When
+the shape itself is the target, <code><a href="../reference/estimate_hrf.html">estimate_hrf()</a></code> instead fits
+smooth condition-level curves without assuming a canonical response. The
+example below uses white noise because its reported intervals currently
+assume independent, homoscedastic time-point errors; they are not
+autocorrelation-robust.</p>
+<p>To make success visible, we simulate two known responses: Condition A
+uses the canonical SPM shape, while Condition B is 1.5 seconds later and
+slightly taller. Two ROIs have different amplitudes, and a linear drift
+is removed as a nuisance term. The simulation mechanics are hidden so
+the teaching path stays focused on the estimator.</p>
+<p>The public call is short. GCV chooses one smoothing strength shared
+across the ROIs, preventing high-variance columns from dominating the
+choice.</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">empirical_hrf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate_hrf.html">estimate_hrf</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>,</span>
+<span>  block <span class="op">=</span> <span class="op">~</span><span class="va">run</span>,</span>
+<span>  dataset <span class="op">=</span> <span class="va">hrf_dataset</span>,</span>
+<span>  basemod <span class="op">=</span> <span class="va">hrf_baseline</span>,</span>
+<span>  rsam <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">24</span>, by <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span>
+<span>  k <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  lambda <span class="op">=</span> <span class="st">"gcv"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">empirical_hrf</span></span>
+<span><span class="co">#&gt; &lt;fmri_hrf_estimate&gt;</span></span>
+<span><span class="co">#&gt;   2 curves x 2 voxels at 49 time points</span></span>
+<span><span class="co">#&gt;   basis: bspline (8 functions per curve)</span></span>
+<span><span class="co">#&gt;   lambda: 0.000464159; effective df: 15.990; residual df: 282.010</span></span></code></pre></div>
+<table class="table">
+<caption>Recovery against the known synthetic HRFs</caption>
+<thead><tr class="header">
+<th align="left">condition</th>
+<th align="left">voxel</th>
+<th align="right">correlation</th>
+<th align="right">normalized_rmse</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">A</td>
+<td align="left">motor_ROI</td>
+<td align="right">0.995</td>
+<td align="right">0.032</td>
+</tr>
+<tr class="even">
+<td align="left">A</td>
+<td align="left">visual_ROI</td>
+<td align="right">0.997</td>
+<td align="right">0.025</td>
+</tr>
+<tr class="odd">
+<td align="left">B</td>
+<td align="left">motor_ROI</td>
+<td align="right">0.995</td>
+<td align="right">0.033</td>
+</tr>
+<tr class="even">
+<td align="left">B</td>
+<td align="left">visual_ROI</td>
+<td align="right">0.995</td>
+<td align="right">0.034</td>
+</tr>
+</tbody>
+</table>
+<p><img src="a_09_linear_model_files/figure-html/plot-empirical-hrf-1.png" class="r-plt" alt="Known and estimated hemodynamic response curves agree closely in two synthetic ROIs; Condition B peaks later than Condition A, and shaded confidence intervals surround each estimate." width="768"></p>
+<p>Across the four condition-by-ROI curves, correlation with the known
+response is between 0.995 and 0.997; the largest normalized RMSE is
+0.034. More importantly, the estimates recover the later Condition B
+peak in both ROIs. These are executable checks for this controlled
+example, not an accuracy guarantee for arbitrary event schedules or real
+fMRI noise.</p>
+<p>The complete GCV path remains available for diagnosis rather than
+returning only the winning value. Here the minimum is interior to the
+candidate grid.</p>
+<p><img src="a_09_linear_model_files/figure-html/plot-empirical-hrf-gcv-1.png" class="r-plt" alt="Scale-normalized generalized cross-validation score across smoothing strengths, with the selected minimum marked by a vertical line." width="672"></p>
+</div>
+<div class="section level2">
 <h2 id="comparing-models-with-different-hrf-bases">Comparing Models with Different HRF Bases<a class="anchor" aria-label="anchor" href="#comparing-models-with-different-hrf-bases"></a>
 </h2>
 <p>The choice of hemodynamic response function can impact model fit.
 Let’s compare different HRF options.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Fit models with different HRF bases</span></span>
 <span><span class="va">model_canonical</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"spmg1"</span><span class="op">)</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span>noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span>, iter_gls <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  compute <span class="op">=</span> <span class="fu"><a href="../reference/compute_spec.html">compute_spec</a></span><span class="op">(</span>voxel_chunks <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -767,6 +897,7 @@ Let’s compare different HRF options.</p>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"gaussian"</span><span class="op">)</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span>noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span>, iter_gls <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  compute <span class="op">=</span> <span class="fu"><a href="../reference/compute_spec.html">compute_spec</a></span><span class="op">(</span>voxel_chunks <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -774,9 +905,10 @@ Let’s compare different HRF options.</p>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"bspline"</span>, nbasis <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span>noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span>, iter_gls <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  compute <span class="op">=</span> <span class="fu"><a href="../reference/compute_spec.html">compute_spec</a></span><span class="op">(</span>voxel_chunks <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Extract statistics for each model</span></span>
 <span><span class="va">stats_canonical</span> <span class="op">&lt;-</span> <span class="fu">extract_model_stats</span><span class="op">(</span><span class="va">model_canonical</span>, <span class="st">"canonical_spm"</span>, <span class="va">dataset</span><span class="op">)</span></span>
 <span><span class="va">stats_gaussian</span> <span class="op">&lt;-</span> <span class="fu">extract_model_stats</span><span class="op">(</span><span class="va">model_gaussian</span>, <span class="st">"gaussian"</span>, <span class="va">dataset</span><span class="op">)</span></span>
@@ -800,106 +932,139 @@ Let’s compare different HRF options.</p>
 <tr class="odd">
 <td align="left">canonical_spm</td>
 <td align="right">1</td>
-<td align="right">0.6500</td>
-<td align="right">-34.1792</td>
-<td align="right">158.7644</td>
+<td align="right">0.5521</td>
+<td align="right">49.1341</td>
+<td align="right">240.8052</td>
 </tr>
 <tr class="even">
 <td align="left">canonical_spm</td>
 <td align="right">2</td>
-<td align="right">0.6500</td>
-<td align="right">-123.4367</td>
-<td align="right">101.6092</td>
+<td align="right">0.4274</td>
+<td align="right">49.1252</td>
+<td align="right">240.7944</td>
 </tr>
 <tr class="odd">
 <td align="left">canonical_spm</td>
 <td align="right">3</td>
-<td align="right">0.6500</td>
-<td align="right">-238.5095</td>
-<td align="right">57.1552</td>
+<td align="right">0.2786</td>
+<td align="right">49.1164</td>
+<td align="right">240.7837</td>
 </tr>
 <tr class="even">
 <td align="left">gaussian</td>
 <td align="right">1</td>
-<td align="right">0.5950</td>
-<td align="right">-4.9647</td>
-<td align="right">183.7349</td>
+<td align="right">0.5153</td>
+<td align="right">64.9523</td>
+<td align="right">260.6240</td>
 </tr>
 <tr class="odd">
 <td align="left">gaussian</td>
 <td align="right">2</td>
-<td align="right">0.5950</td>
-<td align="right">-94.2221</td>
-<td align="right">117.5903</td>
+<td align="right">0.3979</td>
+<td align="right">59.1908</td>
+<td align="right">253.2232</td>
 </tr>
 <tr class="even">
 <td align="left">gaussian</td>
 <td align="right">3</td>
-<td align="right">0.5950</td>
-<td align="right">-209.2949</td>
-<td align="right">66.1446</td>
+<td align="right">0.2586</td>
+<td align="right">54.5849</td>
+<td align="right">247.4582</td>
 </tr>
 <tr class="odd">
 <td align="left">bspline_n5</td>
 <td align="right">1</td>
-<td align="right">0.6533</td>
-<td align="right">-20.0520</td>
-<td align="right">157.2847</td>
+<td align="right">0.5526</td>
+<td align="right">64.9398</td>
+<td align="right">240.5713</td>
 </tr>
 <tr class="even">
 <td align="left">bspline_n5</td>
 <td align="right">2</td>
-<td align="right">0.6533</td>
-<td align="right">-109.3094</td>
-<td align="right">100.6622</td>
+<td align="right">0.4554</td>
+<td align="right">55.1202</td>
+<td align="right">229.0450</td>
 </tr>
 <tr class="odd">
 <td align="left">bspline_n5</td>
 <td align="right">3</td>
-<td align="right">0.6533</td>
-<td align="right">-224.3822</td>
-<td align="right">56.6225</td>
+<td align="right">0.3403</td>
+<td align="right">47.2235</td>
+<td align="right">220.1777</td>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="va">aic_winners</span> <span class="op">&lt;-</span> <span class="va">model_comparison</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">group_by</span><span class="op">(</span><span class="va">voxel</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">slice_min</span><span class="op">(</span><span class="va">aic</span>, n <span class="op">=</span> <span class="fl">1</span>, with_ties <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">ungroup</span><span class="op">(</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">select</span><span class="op">(</span><span class="va">voxel</span>, selected_model <span class="op">=</span> <span class="va">model</span>, <span class="va">aic</span><span class="op">)</span></span>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">aic_winners</span>, caption <span class="op">=</span> <span class="st">"Lowest-AIC model in each voxel"</span>, digits <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Lowest-AIC model in each voxel</caption>
+<thead><tr class="header">
+<th align="right">voxel</th>
+<th align="left">selected_model</th>
+<th align="right">aic</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="left">canonical_spm</td>
+<td align="right">49.1341</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="left">canonical_spm</td>
+<td align="right">49.1252</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="left">bspline_n5</td>
+<td align="right">47.2235</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Reshape for plotting</span></span>
-<span><span class="va">model_comparison_long</span> <span class="op">&lt;-</span> <span class="va">model_comparison</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span>cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">r_squared</span>, <span class="va">aic</span>, <span class="va">ssr</span><span class="op">)</span>, names_to <span class="op">=</span> <span class="st">"metric"</span>, values_to <span class="op">=</span> <span class="st">"value"</span><span class="op">)</span></span>
+<span><span class="va">model_comparison_long</span> <span class="op">&lt;-</span> <span class="va">model_comparison</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">pivot_longer</span><span class="op">(</span>cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">r_squared</span>, <span class="va">aic</span>, <span class="va">ssr</span><span class="op">)</span>, names_to <span class="op">=</span> <span class="st">"metric"</span>, values_to <span class="op">=</span> <span class="st">"value"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Plot comparison (separate plots for different metrics)</span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">model_comparison_long</span>, <span class="va">metric</span> <span class="op">==</span> <span class="st">"r_squared"</span><span class="op">)</span>, </span>
-<span>       <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">model</span>, y <span class="op">=</span> <span class="va">value</span>, fill <span class="op">=</span> <span class="va">model</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_bar.html" class="external-link">geom_bar</a></span><span class="op">(</span>stat <span class="op">=</span> <span class="st">"identity"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span><span class="va">voxel</span>, ncol <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
-<span>        axis.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
-<span>        plot.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
-<span>        strip.text <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
-<span>        axis.text.x <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">45</span>, hjust <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
+<span><span class="fu">ggplot</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">model_comparison_long</span>, <span class="va">metric</span> <span class="op">==</span> <span class="st">"r_squared"</span><span class="op">)</span>, </span>
+<span>       <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">model</span>, y <span class="op">=</span> <span class="va">value</span>, fill <span class="op">=</span> <span class="va">model</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_bar</span><span class="op">(</span>stat <span class="op">=</span> <span class="st">"identity"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span><span class="va">voxel</span>, ncol <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme</span><span class="op">(</span>text <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
+<span>        axis.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
+<span>        plot.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
+<span>        strip.text <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
+<span>        axis.text.x <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">45</span>, hjust <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
 <span>        legend.position <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Model Comparison: R-Squared"</span>,</span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Model Comparison: R-Squared"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"HRF Model"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"R-Squared"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/plot-r-squared-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">model_comparison_long</span>, <span class="va">metric</span> <span class="op">==</span> <span class="st">"aic"</span><span class="op">)</span>,</span>
-<span>       <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">model</span>, y <span class="op">=</span> <span class="va">value</span>, fill <span class="op">=</span> <span class="va">model</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_bar.html" class="external-link">geom_bar</a></span><span class="op">(</span>stat <span class="op">=</span> <span class="st">"identity"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span><span class="va">voxel</span>, ncol <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
-<span>        axis.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
-<span>        plot.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
-<span>        strip.text <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
-<span>        axis.text.x <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">45</span>, hjust <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
+<p><img src="a_09_linear_model_files/figure-html/plot-r-squared-1.png" class="r-plt" alt="R-squared values for canonical, Gaussian, and B-spline HRF models in each simulated voxel." width="672"></p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ggplot</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">model_comparison_long</span>, <span class="va">metric</span> <span class="op">==</span> <span class="st">"aic"</span><span class="op">)</span>,</span>
+<span>       <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">model</span>, y <span class="op">=</span> <span class="va">value</span>, fill <span class="op">=</span> <span class="va">model</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_bar</span><span class="op">(</span>stat <span class="op">=</span> <span class="st">"identity"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span><span class="va">voxel</span>, ncol <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme</span><span class="op">(</span>text <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
+<span>        axis.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
+<span>        plot.title <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
+<span>        strip.text <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
+<span>        axis.text.x <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">45</span>, hjust <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
 <span>        legend.position <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Model Comparison: AIC (Lower is Better)"</span>,</span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Model Comparison: AIC (Lower is Better)"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"HRF Model"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"AIC"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_09_linear_model_files/figure-html/plot-aic-1.png" class="r-plt" alt="Figure illustrating model, design, or results; see caption and text for details." width="672"></p>
+<p><img src="a_09_linear_model_files/figure-html/plot-aic-1.png" class="r-plt" alt="AIC values for canonical, Gaussian, and B-spline HRF models in each simulated voxel; lower values are preferred." width="672"></p>
 <p>The model comparison shows:</p>
 <ol style="list-style-type: decimal">
 <li>
@@ -910,20 +1075,13 @@ each model. Higher values indicate better fit.</li>
 model quality that balances goodness of fit with model complexity. Lower
 values indicate better models.</li>
 </ol>
-<p>In this case, the canonical (SPM) model actually provides the best
-fit according to AIC, showing the lowest AIC values across voxels. This
-is an interesting result since we used the same HRF (SPMG1) to generate
-our data, confirming that the model selection correctly identifies the
-true underlying signal generator. The B-spline model, despite having
-more flexibility to capture variations in the signal, is penalized by
-AIC for its additional complexity. This demonstrates how model selection
-criteria like AIC can help identify the most parsimonious model that
-explains the data.</p>
-<p>The canonical SPM model performs well due to its accurate
-representation of the hemodynamic response shape in our simulated data,
-making it the optimal choice for this particular dataset. This
-highlights the importance of selecting an appropriate HRF basis function
-when analyzing fMRI data.</p>
+<p>The canonical SPM model has the lowest AIC in two voxels, consistent
+with the HRF used to generate the signal. In the weakest-signal voxel,
+however, the B-spline model wins despite its larger penalty. This is a
+useful caution: finite noisy data need not select the generating model
+in every voxel. AIC balances fit and complexity; it is evidence for a
+model in a particular sample, not proof that the selected basis is the
+true physiological response.</p>
 </div>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
@@ -932,8 +1090,8 @@ when analyzing fMRI data.</p>
 model analysis using the <code>fmrireg</code> package:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>Creating/simulating a dataset</strong> with realistic signal
-and noise properties</li>
+<strong>Creating/simulating a dataset</strong> with controlled
+signal and structured noise</li>
 <li>
 <strong>Fitting linear models</strong> with different HRF
 options</li>
@@ -946,20 +1104,14 @@ conditions</li>
 <li>
 <strong>Comparing model performance</strong> using goodness-of-fit
 metrics</li>
-<li>
-<strong>Diagnosing model quality</strong> through residual
-analysis</li>
+<li><strong>Inspecting fitted and directly estimated hemodynamic
+response curves</strong></li>
 </ol>
-<p>The <code>fmri_lm</code> function provides a powerful and flexible
-framework for analyzing fMRI data, with features for handling temporal
-autocorrelation, modeling different HRF shapes, and computing contrasts
-between conditions.</p>
-<p>For more advanced analyses, you might consider: - Adding nuisance
-regressors to model physiological noise, motion, or other confounds -
-Using more complex experimental designs with multiple factors -
-Implementing spatial smoothing or other preprocessing steps - Extending
-the GLM with methods like psychophysiological interactions (PPI) or
-finite impulse response (FIR) models</p>
+<p>The <code>fmri_lm</code> workflow shown here supports declared
+temporal covariance, alternative HRF bases, coefficient extraction, and
+planned contrasts. Real-data analyses additionally require prespecified
+nuisance regressors, preprocessing, quality control, and a multiplicity
+strategy appropriate to the scientific question.</p>
 </div>
 <div class="section level2">
 <h2 id="from-firstlevel-to-group-analysis-gds">From first‑level to group analysis (GDS)<a class="anchor" aria-label="anchor" href="#from-firstlevel-to-group-analysis-gds"></a>
@@ -968,7 +1120,7 @@ finite impulse response (FIR) models</p>
 <code><a href="../reference/write_results.html">write_results()</a></code> and then load them for group analysis via
 <code><a href="../reference/group_data.html">group_data()</a></code> (which returns a GDS object backed by
 fmrigds):</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># HDF5 written by write_results.fmri_lm</span></span>
 <span><span class="va">h5_paths</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.glob.html" class="external-link">Sys.glob</a></span><span class="op">(</span><span class="st">"derivatives/sub-*/task-*_desc-GLMstatmap_bold.h5"</span><span class="op">)</span></span>
 <span><span class="va">gd</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/group_data.html">group_data</a></span><span class="op">(</span><span class="va">h5_paths</span>, format <span class="op">=</span> <span class="st">"h5"</span>, subjects <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">basename</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">dirname</a></span><span class="op">(</span><span class="va">h5_paths</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>

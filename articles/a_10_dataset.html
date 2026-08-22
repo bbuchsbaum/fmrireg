@@ -38,16 +38,18 @@
 <li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -85,7 +87,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-08-09</h4>
+            <h4 data-toc-skip class="date">2026-08-22</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_10_dataset.Rmd" class="external-link"><code>vignettes/a_10_dataset.Rmd</code></a></small>
       <div class="d-none name"><code>a_10_dataset.Rmd</code></div>
@@ -114,8 +116,50 @@ objects</strong> to encapsulate this information, providing a consistent
 input format for modeling functions like <code>event_model</code>,
 <code>baseline_model</code>, <code>fmri_lm</code>, and
 <code>estimate_betas</code>.</p>
-<p>This vignette describes the main dataset classes and how to create
-them.</p>
+<p>This vignette describes the main dataset classes and how to choose
+among them. For a first complete fit, read
+<code><a href="../articles/fmrireg.html">vignette("fmrireg", package = "fmrireg")</a></code>; return here when
+you need to change how scans are stored or divided into runs.</p>
+<p>The dataset classes and constructors are implemented by the companion
+<code>fmridataset</code> package and re-exported by
+<code>fmrireg</code>, so the calls below are the supported
+<code>fmrireg</code> user surface.</p>
+<table class="table">
+<caption>Choose a dataset representation from the storage you already
+have</caption>
+<colgroup>
+<col width="32%">
+<col width="28%">
+<col width="39%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">data_you_have</th>
+<th align="left">constructor</th>
+<th align="left">choose_it_when</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">NeuroVec runs already in memory</td>
+<td align="left">fmri_mem_dataset()</td>
+<td align="left">The full volumes comfortably fit in memory</td>
+</tr>
+<tr class="even">
+<td align="left">NIfTI runs and a mask on disk</td>
+<td align="left">fmri_dataset() -&gt; fmri_file_dataset</td>
+<td align="left">Runs are large and should be opened lazily</td>
+</tr>
+<tr class="odd">
+<td align="left">Time-by-feature matrix</td>
+<td align="left">matrix_dataset()</td>
+<td align="left">Data are ROI, surface, or already tabular</td>
+</tr>
+<tr class="even">
+<td align="left">Latent components plus spatial loadings</td>
+<td align="left">latent_dataset()</td>
+<td align="left">A fitted fmristore representation already exists</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level2">
 <h2 id="the-sampling_frame">The <code>sampling_frame</code><a class="anchor" aria-label="anchor" href="#the-sampling_frame"></a>
@@ -278,34 +322,12 @@ when accessed.</li>
 <code>mode</code> (Optional): Storage mode for <code>neuroim2</code>
 when reading data (e.g., “normal”, “mmap”).</li>
 </ul>
+<p>The hidden fixture above creates tiny valid NIfTI files so the
+constructor below genuinely executes. In a study, start with your
+existing run and mask paths; the important teaching code is the
+constructor itself.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># --- Create Dummy Files (for illustration only) ---</span></span>
-<span><span class="co"># In a real analysis, these files would already exist.</span></span>
-<span><span class="va">tmp_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">mask_filename</span> <span class="op">&lt;-</span> <span class="st">"mask.nii.gz"</span></span>
-<span><span class="va">scan1_filename</span> <span class="op">&lt;-</span> <span class="st">"run1.nii.gz"</span></span>
-<span><span class="va">scan2_filename</span> <span class="op">&lt;-</span> <span class="st">"run2.nii.gz"</span></span>
-<span></span>
-<span><span class="va">mask_file_full_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">tmp_dir</span>, <span class="va">mask_filename</span><span class="op">)</span></span>
-<span><span class="va">scan1_file_full_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">tmp_dir</span>, <span class="va">scan1_filename</span><span class="op">)</span></span>
-<span><span class="va">scan2_file_full_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">tmp_dir</span>, <span class="va">scan2_filename</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Create small dummy mask and scans using neuroim2 functionality</span></span>
-<span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">5</span>, <span class="fl">5</span><span class="op">)</span> <span class="co"># Mask dimensions</span></span>
-<span><span class="va">d_run1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">d</span>, <span class="fl">20</span><span class="op">)</span> <span class="co"># Run 1 dimensions (time=20)</span></span>
-<span><span class="va">d_run2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">d</span>, <span class="fl">25</span><span class="op">)</span> <span class="co"># Run 2 dimensions (time=25)</span></span>
-<span></span>
-<span><span class="va">mask_vol_dummy</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">d</span><span class="op">)</span>, <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroSpace.html" class="external-link">NeuroSpace</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">scan1_dummy</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVec-class.html" class="external-link">NeuroVec</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/prod.html" class="external-link">prod</a></span><span class="op">(</span><span class="va">d_run1</span><span class="op">)</span><span class="op">)</span>, <span class="va">d_run1</span><span class="op">)</span>, <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroSpace.html" class="external-link">NeuroSpace</a></span><span class="op">(</span><span class="va">d_run1</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">scan2_dummy</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVec-class.html" class="external-link">NeuroVec</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/prod.html" class="external-link">prod</a></span><span class="op">(</span><span class="va">d_run2</span><span class="op">)</span><span class="op">)</span>, <span class="va">d_run2</span><span class="op">)</span>, <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroSpace.html" class="external-link">NeuroSpace</a></span><span class="op">(</span><span class="va">d_run2</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Ensure dummy files are written using their full paths</span></span>
-<span><span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vol-methods.html" class="external-link">write_vol</a></span><span class="op">(</span><span class="va">mask_vol_dummy</span>, <span class="va">mask_file_full_path</span><span class="op">)</span></span>
-<span><span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vec-methods.html" class="external-link">write_vec</a></span><span class="op">(</span><span class="va">scan1_dummy</span>, <span class="va">scan1_file_full_path</span><span class="op">)</span></span>
-<span><span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vec-methods.html" class="external-link">write_vec</a></span><span class="op">(</span><span class="va">scan2_dummy</span>, <span class="va">scan2_file_full_path</span><span class="op">)</span></span>
-<span><span class="co"># --- End Dummy File Creation ---</span></span>
-<span></span>
-<span><span class="co"># Create the file-based dataset object</span></span>
+<code class="sourceCode R"><span><span class="co"># Create the file-based dataset object</span></span>
 <span><span class="co"># Pass only filenames to 'scans' and 'mask', and specify the directory in 'base_path'</span></span>
 <span><span class="va">file_dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/fmri_dataset.html" class="external-link">fmri_dataset</a></span><span class="op">(</span>scans <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">scan1_filename</span>, <span class="va">scan2_filename</span><span class="op">)</span>, </span>
 <span>                            mask <span class="op">=</span> <span class="va">mask_filename</span>, </span>
@@ -364,9 +386,10 @@ after surface projection or ROI averaging).</p>
 <code>run_length</code>: Vector specifying the number of rows (time
 points) belonging to each run.</li>
 <li>
-<code>event_table</code> (Optional): A <code>data.frame</code> with
-design info (must have same total number of rows as
-<code>datamat</code>).</li>
+<code>event_table</code> (Optional): One row per experimental event,
+with onset, condition, run, and any modulators used by the model. Its
+row count usually differs from the number of scans; onsets and run
+labels must instead be valid for the declared run lengths.</li>
 </ul>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Example matrix (100 time points, 50 features/voxels)</span></span>
@@ -447,12 +470,13 @@ the time dimension of <code>lvec</code>).</li>
 <span><span class="co"># Assuming 'my_latent_neuro_vec' is a LatentNeuroVec object representing</span></span>
 <span><span class="co"># 20 components over 300 time points (2 runs of 150)</span></span>
 <span></span>
-<span><span class="co"># latent_dset &lt;- latent_dataset(lvec = my_latent_neuro_vec, </span></span>
-<span><span class="co">#                              TR = 2.0, </span></span>
-<span><span class="co">#                              run_length = c(150, 150),</span></span>
-<span><span class="co">#                              event_table = some_event_df)</span></span>
-<span><span class="co"># </span></span>
-<span><span class="co"># print(latent_dset)</span></span></code></pre></div>
+<span><span class="va">latent_dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/latent_dataset.html" class="external-link">latent_dataset</a></span><span class="op">(</span></span>
+<span>  lvec <span class="op">=</span> <span class="va">my_latent_neuro_vec</span>,</span>
+<span>  TR <span class="op">=</span> <span class="fl">2.0</span>,</span>
+<span>  run_length <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">150</span>, <span class="fl">150</span><span class="op">)</span>,</span>
+<span>  event_table <span class="op">=</span> <span class="va">some_event_df</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">latent_dset</span><span class="op">)</span></span></code></pre></div>
 <p>This dataset type essentially behaves like a
 <code>matrix_dataset</code> where the matrix columns are the latent
 component time series.</p>
@@ -469,10 +493,11 @@ for <code>fmrireg</code>’s modeling functions:</p>
 <li><code>estimate_betas(..., dataset = dset)</code></li>
 </ul>
 <p>They provide a standardized way to access data
-(<code>get_data(dset)</code>), masks (<code>get_mask(dset)</code>), and
-timing information (<code>blocklens(dset)</code>,
-<code>blockids(dset)</code>), regardless of the underlying storage
-format.</p>
+(<code>get_data(dset)</code>) and masks (<code>get_mask(dset)</code>).
+Timing belongs to the dataset’s sampling frame, so inspect it with
+<code>blocklens(dset$sampling_frame)</code> and
+<code>blockids(dset$sampling_frame)</code>, regardless of the underlying
+storage format.</p>
 <p>Choosing the appropriate dataset class depends on where your data
 resides (memory, files) and its format (volumetric, matrix, latent).</p>
 </div>

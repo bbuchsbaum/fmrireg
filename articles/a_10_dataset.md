@@ -17,7 +17,25 @@ this information, providing a consistent input format for modeling
 functions like `event_model`, `baseline_model`, `fmri_lm`, and
 `estimate_betas`.
 
-This vignette describes the main dataset classes and how to create them.
+This vignette describes the main dataset classes and how to choose among
+them. For a first complete fit, read
+[`vignette("fmrireg", package = "fmrireg")`](https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.md);
+return here when you need to change how scans are stored or divided into
+runs.
+
+The dataset classes and constructors are implemented by the companion
+`fmridataset` package and re-exported by `fmrireg`, so the calls below
+are the supported `fmrireg` user surface.
+
+| data_you_have | constructor | choose_it_when |
+|:---|:---|:---|
+| NeuroVec runs already in memory | fmri_mem_dataset() | The full volumes comfortably fit in memory |
+| NIfTI runs and a mask on disk | fmri_dataset() -\> fmri_file_dataset | Runs are large and should be opened lazily |
+| Time-by-feature matrix | matrix_dataset() | Data are ROI, surface, or already tabular |
+| Latent components plus spatial loadings | latent_dataset() | A fitted fmristore representation already exists |
+
+Choose a dataset representation from the storage you already have
+{.table}
 
 ## The `sampling_frame`
 
@@ -157,33 +175,12 @@ data resides in files.
 - `mode` (Optional): Storage mode for `neuroim2` when reading data
   (e.g., “normal”, “mmap”).
 
+The hidden fixture above creates tiny valid NIfTI files so the
+constructor below genuinely executes. In a study, start with your
+existing run and mask paths; the important teaching code is the
+constructor itself.
+
 ``` r
-
-# --- Create Dummy Files (for illustration only) ---
-# In a real analysis, these files would already exist.
-tmp_dir <- tempdir()
-mask_filename <- "mask.nii.gz"
-scan1_filename <- "run1.nii.gz"
-scan2_filename <- "run2.nii.gz"
-
-mask_file_full_path <- file.path(tmp_dir, mask_filename)
-scan1_file_full_path <- file.path(tmp_dir, scan1_filename)
-scan2_file_full_path <- file.path(tmp_dir, scan2_filename)
-
-# Create small dummy mask and scans using neuroim2 functionality
-d <- c(5, 5, 5) # Mask dimensions
-d_run1 <- c(d, 20) # Run 1 dimensions (time=20)
-d_run2 <- c(d, 25) # Run 2 dimensions (time=25)
-
-mask_vol_dummy <- neuroim2::NeuroVol(array(1, d), neuroim2::NeuroSpace(d))
-scan1_dummy <- neuroim2::NeuroVec(array(rnorm(prod(d_run1)), d_run1), neuroim2::NeuroSpace(d_run1))
-scan2_dummy <- neuroim2::NeuroVec(array(rnorm(prod(d_run2)), d_run2), neuroim2::NeuroSpace(d_run2))
-
-# Ensure dummy files are written using their full paths
-neuroim2::write_vol(mask_vol_dummy, mask_file_full_path)
-neuroim2::write_vec(scan1_dummy, scan1_file_full_path)
-neuroim2::write_vec(scan2_dummy, scan2_file_full_path)
-# --- End Dummy File Creation ---
 
 # Create the file-based dataset object
 # Pass only filenames to 'scans' and 'mask', and specify the directory in 'base_path'
@@ -241,8 +238,10 @@ surface projection or ROI averaging).
 - `TR`: Repetition time (seconds).
 - `run_length`: Vector specifying the number of rows (time points)
   belonging to each run.
-- `event_table` (Optional): A `data.frame` with design info (must have
-  same total number of rows as `datamat`).
+- `event_table` (Optional): One row per experimental event, with onset,
+  condition, run, and any modulators used by the model. Its row count
+  usually differs from the number of scans; onsets and run labels must
+  instead be valid for the declared run lengths.
 
 ``` r
 
@@ -320,12 +319,13 @@ objects typically requires the `fmristore` package.
 # Assuming 'my_latent_neuro_vec' is a LatentNeuroVec object representing
 # 20 components over 300 time points (2 runs of 150)
 
-# latent_dset <- latent_dataset(lvec = my_latent_neuro_vec, 
-#                              TR = 2.0, 
-#                              run_length = c(150, 150),
-#                              event_table = some_event_df)
-# 
-# print(latent_dset)
+latent_dset <- latent_dataset(
+  lvec = my_latent_neuro_vec,
+  TR = 2.0,
+  run_length = c(150, 150),
+  event_table = some_event_df
+)
+print(latent_dset)
 ```
 
 This dataset type essentially behaves like a `matrix_dataset` where the
@@ -341,9 +341,11 @@ Once created, these dataset objects serve as the primary data input for
 - `fmri_lm(model, dataset = dset)`
 - `estimate_betas(..., dataset = dset)`
 
-They provide a standardized way to access data (`get_data(dset)`), masks
-(`get_mask(dset)`), and timing information (`blocklens(dset)`,
-`blockids(dset)`), regardless of the underlying storage format.
+They provide a standardized way to access data (`get_data(dset)`) and
+masks (`get_mask(dset)`). Timing belongs to the dataset’s sampling
+frame, so inspect it with `blocklens(dset$sampling_frame)` and
+`blockids(dset$sampling_frame)`, regardless of the underlying storage
+format.
 
 Choosing the appropriate dataset class depends on where your data
 resides (memory, files) and its format (volumetric, matrix, latent).

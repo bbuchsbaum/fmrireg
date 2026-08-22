@@ -72,7 +72,9 @@ simulate_fmri_matrix(
 
 - onsets:
 
-  Optional numeric vector of event onsets. If `NULL`, will be generated.
+  Optional non-empty numeric vector of finite event onsets in
+  `[0, total_time - buffer)`. Explicit values and their order are
+  preserved, determine `n_events`, and skip ISI generation.
 
 - isi_dist:
 

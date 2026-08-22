@@ -38,16 +38,18 @@
 <li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -85,7 +87,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-08-09</h4>
+            <h4 data-toc-skip class="date">2026-08-22</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_08_simulation.Rmd" class="external-link"><code>vignettes/a_08_simulation.Rmd</code></a></small>
       <div class="d-none name"><code>a_08_simulation.Rmd</code></div>
@@ -93,29 +95,22 @@ Buchsbaum</h4>
 
     
     
-<script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.remove("palette-red","palette-lapis","palette-ochre","palette-teal","palette-green","palette-violet","preset-homage","preset-study","preset-structural","preset-adobe","preset-midnight");document.body.classList.add("palette-red","preset-homage");});</script><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrireg/">fmrireg</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyr.tidyverse.org" class="external-link">tidyr</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">stats</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span></code></pre></div>
-<div class="section level2">
+<script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.remove("palette-red","palette-lapis","palette-ochre","palette-teal","palette-green","palette-violet","preset-homage","preset-study","preset-structural","preset-adobe","preset-midnight");document.body.classList.add("palette-red","preset-homage");});</script><div class="section level2">
 <h2 id="introduction-to-fmri-data-simulation">Introduction to fMRI Data Simulation<a class="anchor" aria-label="anchor" href="#introduction-to-fmri-data-simulation"></a>
 </h2>
-<p>When developing or validating an fMRI analysis pipeline, you need
-data where the ground truth is known – real fMRI data doesn’t come with
-known effect sizes or noise parameters. Simulation fills this gap. The
-<code>fmrireg</code> package offers several functions to simulate fMRI
-data with varying levels of complexity:</p>
+<p>When checking an fMRI analysis pipeline, it is useful to have data
+where the ground truth is known – real fMRI data do not come with known
+effect sizes or noise parameters. Simulation supplies controlled
+examples. The <code>fmrireg</code> package offers several functions with
+varying levels of complexity:</p>
 <ol style="list-style-type: decimal">
 <li>
 <strong><code>simulate_bold_signal</code></strong>: Simulates clean
 BOLD responses for multiple experimental conditions</li>
 <li>
 <strong><code>simulate_noise_vector</code></strong>: Generates
-realistic fMRI noise with temporal autocorrelation, drift, and
-physiological components</li>
+structured, fMRI-like noise with temporal autocorrelation, drift, and
+simplified physiological components</li>
 <li>
 <strong><code>simulate_simple_dataset</code></strong>: Combines
 signal and noise for a complete dataset based on SNR</li>
@@ -124,8 +119,9 @@ signal and noise for a complete dataset based on SNR</li>
 time series with shared event timing but column-specific variation in
 parameters</li>
 </ol>
-<p>This vignette demonstrates how to use these functions to create
-realistic fMRI simulations for various purposes.</p>
+<p>This vignette demonstrates their contracts and assumptions. The
+outputs are teaching simulations, not empirically validated generative
+models of scanner data.</p>
 </div>
 <div class="section level2">
 <h2 id="simulating-clean-bold-signals">Simulating Clean BOLD Signals<a class="anchor" aria-label="anchor" href="#simulating-clean-bold-signals"></a>
@@ -133,7 +129,7 @@ realistic fMRI simulations for various purposes.</p>
 <p>Let’s start with <code>simulate_bold_signal</code>, which generates a
 clean hemodynamic response signal for multiple experimental
 conditions.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Simulate 3 conditions with different amplitudes</span></span>
 <span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_bold_signal.html">simulate_bold_signal</a></span><span class="op">(</span>ncond <span class="op">=</span> <span class="fl">3</span>, amps <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.0</span>, <span class="fl">1.5</span>, <span class="fl">2.0</span><span class="op">)</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span></span>
@@ -142,7 +138,7 @@ conditions.</p>
 <span><span class="va">signals</span> <span class="op">&lt;-</span> <span class="va">sim</span><span class="op">$</span><span class="va">mat</span><span class="op">[</span>,<span class="op">-</span><span class="fl">1</span><span class="op">]</span>  <span class="co"># Other columns contain condition signals</span></span></code></pre></div>
 <p>We reshape the data into long format so ggplot2 can map each
 condition to a separate color.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  Time <span class="op">=</span> <span class="va">time</span>,</span>
 <span>  Cond1 <span class="op">=</span> <span class="va">signals</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span>,</span>
@@ -153,82 +149,102 @@ condition to a separate color.</p>
 <span><span class="va">df_long</span> <span class="op">&lt;-</span> <span class="fu">tidyr</span><span class="fu">::</span><span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span><span class="va">df</span>, cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">Cond1</span>, <span class="va">Cond2</span>, <span class="va">Cond3</span><span class="op">)</span>,</span>
 <span>                        names_to <span class="op">=</span> <span class="st">"Condition"</span>,</span>
 <span>                        values_to <span class="op">=</span> <span class="st">"Response"</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_long</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Time</span>, y <span class="op">=</span> <span class="va">Response</span>, color <span class="op">=</span> <span class="va">Condition</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Simulated BOLD Signals for Three Conditions"</span>,</span>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ggplot</span><span class="op">(</span><span class="va">df_long</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Time</span>, y <span class="op">=</span> <span class="va">Response</span>, color <span class="op">=</span> <span class="va">Condition</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Simulated BOLD Signals for Three Conditions"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"BOLD Response"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Condition"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_brewer.html" class="external-link">scale_color_brewer</a></span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/plot-bold-signals-1.png" class="r-plt" alt="" width="672"></p>
+<span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_08_simulation_files/figure-html/plot-bold-signals-1.png" class="r-plt" alt="Three colored clean BOLD-response curves with distinct condition amplitudes and event timings over a 180-second run." width="672"></p>
 <p>Adding dashed vertical lines at each event onset makes the
 relationship between stimulus timing and the hemodynamic response easier
 to see.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_long</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Time</span>, y <span class="op">=</span> <span class="va">Response</span>, color <span class="op">=</span> <span class="va">Condition</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_vline</a></span><span class="op">(</span>xintercept <span class="op">=</span> <span class="va">sim</span><span class="op">$</span><span class="va">onset</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, alpha <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Simulated BOLD Signals with Event Onsets"</span>,</span>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ggplot</span><span class="op">(</span><span class="va">df_long</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Time</span>, y <span class="op">=</span> <span class="va">Response</span>, color <span class="op">=</span> <span class="va">Condition</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_vline</span><span class="op">(</span>xintercept <span class="op">=</span> <span class="va">sim</span><span class="op">$</span><span class="va">onset</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, alpha <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Simulated BOLD Signals with Event Onsets"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"BOLD Response"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Condition"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_brewer.html" class="external-link">scale_color_brewer</a></span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/plot-bold-with-onsets-1.png" class="r-plt" alt="" width="672"></p>
-<p>The function returns a list containing: -
-<strong><code>onset</code></strong>: Event onset times -
-<strong><code>condition</code></strong>: Condition labels for each event
-- <strong><code>mat</code></strong>: Matrix with time points and BOLD
-responses for each condition</p>
-<p>You can control: - Number of conditions (<code>ncond</code>) - Number
-of repetitions per condition (<code>nreps</code>) - HRF shape
-(<code>hrf</code>) - Amplitudes for each condition (<code>amps</code>) -
-Inter-stimulus interval range (<code>isi</code>) - Amplitude variability
-(<code>ampsd</code>)</p>
+<span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_08_simulation_files/figure-html/plot-bold-with-onsets-1.png" class="r-plt" alt="The three clean BOLD-response curves with dashed vertical markers showing every event onset." width="672"></p>
+<p>The function returns a list containing:</p>
+<ul>
+<li>
+<strong><code>onset</code></strong>: Event onset times</li>
+<li>
+<strong><code>condition</code></strong>: Condition labels for each
+event</li>
+<li>
+<strong><code>mat</code></strong>: Matrix with time points and BOLD
+responses for each condition</li>
+</ul>
+<p>You can control:</p>
+<ul>
+<li>Number of conditions (<code>ncond</code>)</li>
+<li>Number of repetitions per condition (<code>nreps</code>)</li>
+<li>HRF shape (<code>hrf</code>)</li>
+<li>Amplitudes for each condition (<code>amps</code>)</li>
+<li>Inter-stimulus interval range (<code>isi</code>)</li>
+<li>Amplitude variability (<code>ampsd</code>)</li>
+</ul>
 </div>
 <div class="section level2">
-<h2 id="simulating-realistic-fmri-noise">Simulating Realistic fMRI Noise<a class="anchor" aria-label="anchor" href="#simulating-realistic-fmri-noise"></a>
+<h2 id="simulating-structured-fmri-like-noise">Simulating Structured fMRI-like Noise<a class="anchor" aria-label="anchor" href="#simulating-structured-fmri-like-noise"></a>
 </h2>
-<p>The <code>simulate_noise_vector</code> function generates realistic
-fMRI noise by combining various noise sources common in real fMRI data.
-To understand its components, let’s simulate and visualize them
-separately and combined.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<p>The <code>simulate_noise_vector</code> function combines stylized
+components motivated by common fMRI noise sources. To understand exactly
+what it generates, we simulate and visualize each component separately
+and then combine them.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">n_timepoints</span> <span class="op">&lt;-</span> <span class="fl">200</span></span>
 <span><span class="va">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
 <span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="op">(</span><span class="va">n_timepoints</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span> <span class="op">*</span> <span class="va">TR</span>, by <span class="op">=</span> <span class="va">TR</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span></code></pre></div>
 <p>First, pure white noise – random fluctuations with no temporal
 structure.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">noise_white</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_noise_vector.html">simulate_noise_vector</a></span><span class="op">(</span><span class="va">n_timepoints</span>, TR <span class="op">=</span> <span class="va">TR</span>,</span>
-<span>                                  ar <span class="op">=</span> <span class="fl">0</span>, ma <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>                                  ar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span>, ma <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span>,</span>
 <span>                                  drift_amplitude <span class="op">=</span> <span class="fl">0</span>, physio <span class="op">=</span> <span class="cn">FALSE</span>, sd <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
 <p>Next, ARMA noise introduces temporal autocorrelation, which makes the
 signal “smoother” than white noise.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">noise_arma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_noise_vector.html">simulate_noise_vector</a></span><span class="op">(</span><span class="va">n_timepoints</span>, TR <span class="op">=</span> <span class="va">TR</span>,</span>
 <span>                                 ar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.6</span><span class="op">)</span>, ma <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span><span class="op">)</span>,</span>
 <span>                                 drift_amplitude <span class="op">=</span> <span class="fl">0</span>, physio <span class="op">=</span> <span class="cn">FALSE</span>, sd <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
 <p>Scanner drift is a slow oscillation that shifts the baseline over the
 course of a run.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">drift_freq</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">/</span><span class="fl">128</span></span>
 <span><span class="va">drift_amplitude</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
 <span><span class="va">noise_drift</span> <span class="op">&lt;-</span> <span class="va">drift_amplitude</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="fl">2</span> <span class="op">*</span> <span class="va">pi</span> <span class="op">*</span> <span class="va">drift_freq</span> <span class="op">*</span> <span class="va">time</span><span class="op">)</span></span></code></pre></div>
-<p>Physiological noise adds quasi-periodic fluctuations at respiratory
-and cardiac-like frequencies.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">noise_cardiac</span> <span class="op">&lt;-</span> <span class="fl">1.5</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="fl">2</span> <span class="op">*</span> <span class="va">pi</span> <span class="op">*</span> <span class="fl">0.3</span> <span class="op">*</span> <span class="va">time</span><span class="op">)</span></span>
-<span><span class="va">noise_respiratory</span> <span class="op">&lt;-</span> <span class="fl">1.0</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="fl">2</span> <span class="op">*</span> <span class="va">pi</span> <span class="op">*</span> <span class="fl">0.8</span> <span class="op">*</span> <span class="va">time</span><span class="op">)</span></span>
+<p>Physiological noise originates in continuous time, while an fMRI
+scanner records only one sample every TR. Here respiration is 0.3 Hz and
+cardiac activity is 1.1 Hz. Both exceed the 0.25 Hz Nyquist frequency at
+TR = 2 seconds, so they appear at lower frequencies after sampling: 0.2
+Hz and 0.1 Hz, respectively. Generating the continuous signals first
+makes that aliasing explicit.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">physio_time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">time</span><span class="op">)</span>, by <span class="op">=</span> <span class="fl">0.05</span><span class="op">)</span></span>
+<span><span class="va">cardiac_continuous</span> <span class="op">&lt;-</span> <span class="fl">0.5</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="fl">2</span> <span class="op">*</span> <span class="va">pi</span> <span class="op">*</span> <span class="fl">1.1</span> <span class="op">*</span> <span class="va">physio_time</span><span class="op">)</span></span>
+<span><span class="va">respiratory_continuous</span> <span class="op">&lt;-</span> <span class="fl">0.8</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="fl">2</span> <span class="op">*</span> <span class="va">pi</span> <span class="op">*</span> <span class="fl">0.3</span> <span class="op">*</span> <span class="va">physio_time</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">noise_cardiac</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/approxfun.html" class="external-link">approx</a></span><span class="op">(</span><span class="va">physio_time</span>, <span class="va">cardiac_continuous</span>, xout <span class="op">=</span> <span class="va">time</span><span class="op">)</span><span class="op">$</span><span class="va">y</span></span>
+<span><span class="va">noise_respiratory</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/approxfun.html" class="external-link">approx</a></span><span class="op">(</span><span class="va">physio_time</span>, <span class="va">respiratory_continuous</span>, xout <span class="op">=</span> <span class="va">time</span><span class="op">)</span><span class="op">$</span><span class="va">y</span></span>
 <span><span class="va">noise_physio</span> <span class="op">&lt;-</span> <span class="va">noise_cardiac</span> <span class="op">+</span> <span class="va">noise_respiratory</span></span></code></pre></div>
-<p>Finally, we combine the ARMA, drift, and physiological components to
-mimic what a real scanner would produce.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<p>Finally, we combine the ARMA, drift, and sinusoidal physiological
+components into the declared structured teaching model. This sum
+illustrates separable noise sources; it is not an empirically validated
+scanner-noise distribution.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">noise_combined</span> <span class="op">&lt;-</span> <span class="va">noise_arma</span> <span class="op">+</span> <span class="va">noise_drift</span> <span class="op">+</span> <span class="va">noise_physio</span></span></code></pre></div>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">noise_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  Time <span class="op">=</span> <span class="va">time</span>,</span>
 <span>  White_Noise <span class="op">=</span> <span class="va">noise_white</span>,</span>
@@ -250,29 +266,29 @@ mimic what a real scanner would produce.</p>
 <span>                              labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"White Noise"</span>, <span class="st">"ARMA Noise"</span>,</span>
 <span>                                        <span class="st">"Drift Component"</span>, <span class="st">"Physiological Noise"</span>,</span>
 <span>                                        <span class="st">"Combined Noise"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">noise_long</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Time</span>, y <span class="op">=</span> <span class="va">Signal</span>, color <span class="op">=</span> <span class="va">NoiseType</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span><span class="va">NoiseType</span>, ncol <span class="op">=</span> <span class="fl">1</span>, scales <span class="op">=</span> <span class="st">"free_y"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Simulated fMRI Noise Components: Time Courses"</span>,</span>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ggplot</span><span class="op">(</span><span class="va">noise_long</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Time</span>, y <span class="op">=</span> <span class="va">Signal</span>, color <span class="op">=</span> <span class="va">NoiseType</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span><span class="va">NoiseType</span>, ncol <span class="op">=</span> <span class="fl">1</span>, scales <span class="op">=</span> <span class="st">"free_y"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme</span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Simulated fMRI Noise Components: Time Courses"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Signal Amplitude"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/plot-noise-timecourses-1.png" class="r-plt" alt="" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/plot-noise-timecourses-1.png" class="r-plt" alt="Five stacked time-course panels showing white, ARMA, sinusoidal drift, sampled physiological, and combined structured-noise components." width="672"></p>
 <div class="section level3">
 <h3 id="power-spectrum-analysis">Power Spectrum Analysis<a class="anchor" aria-label="anchor" href="#power-spectrum-analysis"></a>
 </h3>
 <p>Power spectra reveal the frequency content of each noise type. White
 noise has a flat spectrum, while ARMA noise concentrates power at lower
 frequencies.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">spec_white</span> <span class="op">&lt;-</span> <span class="fu">calculate_spectrum</span><span class="op">(</span><span class="va">noise_white</span>, <span class="va">TR</span><span class="op">)</span></span>
 <span><span class="va">spec_arma</span> <span class="op">&lt;-</span> <span class="fu">calculate_spectrum</span><span class="op">(</span><span class="va">noise_arma</span>, <span class="va">TR</span><span class="op">)</span></span>
 <span><span class="va">spec_drift</span> <span class="op">&lt;-</span> <span class="fu">calculate_spectrum</span><span class="op">(</span><span class="va">noise_drift</span>, <span class="va">TR</span><span class="op">)</span></span>
 <span><span class="va">spec_physio</span> <span class="op">&lt;-</span> <span class="fu">calculate_spectrum</span><span class="op">(</span><span class="va">noise_physio</span>, <span class="va">TR</span><span class="op">)</span></span>
 <span><span class="va">spec_combined</span> <span class="op">&lt;-</span> <span class="fu">calculate_spectrum</span><span class="op">(</span><span class="va">noise_combined</span>, <span class="va">TR</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">spec_white</span><span class="op">$</span><span class="va">NoiseType</span> <span class="op">&lt;-</span> <span class="st">"White Noise"</span></span>
 <span><span class="va">spec_arma</span><span class="op">$</span><span class="va">NoiseType</span> <span class="op">&lt;-</span> <span class="st">"ARMA Noise"</span></span>
 <span><span class="va">spec_drift</span><span class="op">$</span><span class="va">NoiseType</span> <span class="op">&lt;-</span> <span class="st">"Drift Component"</span></span>
@@ -287,62 +303,70 @@ frequencies.</p>
 <span>                                     <span class="st">"Combined Noise"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>We also compute a high-resolution drift spectrum from a longer signal
 to better resolve the low-frequency peak.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">n_long</span> <span class="op">&lt;-</span> <span class="fl">1024</span></span>
 <span><span class="va">time_long</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="op">(</span><span class="va">n_long</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span> <span class="op">*</span> <span class="va">TR</span>, by <span class="op">=</span> <span class="va">TR</span><span class="op">)</span></span>
 <span><span class="va">drift_long</span> <span class="op">&lt;-</span> <span class="va">drift_amplitude</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="fl">2</span> <span class="op">*</span> <span class="va">pi</span> <span class="op">*</span> <span class="va">drift_freq</span> <span class="op">*</span> <span class="va">time_long</span><span class="op">)</span></span>
 <span><span class="va">spec_drift_long</span> <span class="op">&lt;-</span> <span class="fu">calculate_spectrum</span><span class="op">(</span><span class="va">drift_long</span>, <span class="va">TR</span><span class="op">)</span></span>
-<span><span class="va">spec_drift_long</span><span class="op">$</span><span class="va">NoiseType</span> <span class="op">&lt;-</span> <span class="st">"Drift Component (High Resolution)"</span></span></code></pre></div>
+<span><span class="va">spec_drift_long</span><span class="op">$</span><span class="va">NoiseType</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span></span>
+<span>  <span class="st">"Drift Component"</span>,</span>
+<span>  levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels</a></span><span class="op">(</span><span class="va">spec_df</span><span class="op">$</span><span class="va">NoiseType</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <p>Each panel below shows the power spectrum of a different noise
 component. The dashed green line in the drift panel shows the
 high-resolution version.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">spec_df</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Frequency</span>, y <span class="op">=</span> <span class="va">Power</span>, color <span class="op">=</span> <span class="va">NoiseType</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">spec_drift_long</span>, <span class="va">Frequency</span> <span class="op">&lt;=</span> <span class="fl">0.05</span><span class="op">)</span>,</span>
-<span>           <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Frequency</span>, y <span class="op">=</span> <span class="va">Power</span><span class="op">)</span>, color <span class="op">=</span> <span class="st">"darkgreen"</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span><span class="va">NoiseType</span>, ncol <span class="op">=</span> <span class="fl">1</span>, scales <span class="op">=</span> <span class="st">"free_y"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Power Spectra of Different Noise Components"</span>,</span>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ggplot</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span>data <span class="op">=</span> <span class="va">spec_df</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Frequency</span>, y <span class="op">=</span> <span class="va">Power</span>, color <span class="op">=</span> <span class="va">NoiseType</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span>data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">spec_drift_long</span>, <span class="va">Frequency</span> <span class="op">&lt;=</span> <span class="fl">0.05</span><span class="op">)</span>,</span>
+<span>           <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Frequency</span>, y <span class="op">=</span> <span class="va">Power</span><span class="op">)</span>, color <span class="op">=</span> <span class="st">"darkgreen"</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span><span class="va">NoiseType</span>, ncol <span class="op">=</span> <span class="fl">1</span>, scales <span class="op">=</span> <span class="st">"free_y"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme</span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Power Spectra of Different Noise Components"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Frequency (Hz)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Power"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_brewer.html" class="external-link">scale_color_brewer</a></span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/coord_cartesian.html" class="external-link">coord_cartesian</a></span><span class="op">(</span>xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.25</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/plot-spectra-faceted-1.png" class="r-plt" alt="" width="672"></p>
+<span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">coord_cartesian</span><span class="op">(</span>xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.25</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_08_simulation_files/figure-html/plot-spectra-faceted-1.png" class="r-plt" alt="Five stacked power spectra: white noise is broad, ARMA power favors low frequencies, drift peaks near 0.008 hertz, and physiological aliases peak near 0.1 and 0.2 hertz." width="672"></p>
 <p>Plotting all spectra on a single log-scaled axis makes it easy to
 compare their relative magnitudes.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">spec_df</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Frequency</span>, y <span class="op">=</span> <span class="va">Power</span>, color <span class="op">=</span> <span class="va">NoiseType</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Power Spectra of Different Noise Components (Log Scale)"</span>,</span>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ggplot</span><span class="op">(</span><span class="va">spec_df</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Frequency</span>, y <span class="op">=</span> <span class="va">Power</span>, color <span class="op">=</span> <span class="va">NoiseType</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Power Spectra of Different Noise Components (Log Scale)"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Frequency (Hz)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Power (log scale)"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_y_log10</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_brewer.html" class="external-link">scale_color_brewer</a></span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/coord_cartesian.html" class="external-link">coord_cartesian</a></span><span class="op">(</span>xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.25</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/plot-spectra-log-1.png" class="r-plt" alt="" width="672"></p>
+<span>  <span class="fu">scale_y_log10</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set1"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">guides</span><span class="op">(</span>color <span class="op">=</span> <span class="fu">guide_legend</span><span class="op">(</span>nrow <span class="op">=</span> <span class="fl">2</span>, byrow <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme</span><span class="op">(</span></span>
+<span>    legend.position <span class="op">=</span> <span class="st">"bottom"</span>,</span>
+<span>    legend.title <span class="op">=</span> <span class="fu">element_blank</span><span class="op">(</span><span class="op">)</span>,</span>
+<span>    legend.text <span class="op">=</span> <span class="fu">element_text</span><span class="op">(</span>size <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span>
+<span>  <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">coord_cartesian</span><span class="op">(</span>xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.25</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_08_simulation_files/figure-html/plot-spectra-log-1.png" class="r-plt" alt="Overlaid log-scale power spectra for all five noise components, with the physiological alias peaks visible near 0.1 and 0.2 hertz." width="672"></p>
 <p>Zooming in on the very low-frequency region confirms the drift
 component peaks at the expected frequency (marked by the red dotted
 line).</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">drift_freq_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.min</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">spec_df</span><span class="op">$</span><span class="va">Frequency</span> <span class="op">-</span> <span class="va">drift_freq</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">spec_df</span>, <span class="va">NoiseType</span> <span class="op">==</span> <span class="st">"Drift Component"</span><span class="op">)</span>,</span>
-<span>           <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Frequency</span>, y <span class="op">=</span> <span class="va">Power</span><span class="op">)</span>, color <span class="op">=</span> <span class="st">"darkgreen"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">spec_drift_long</span>, <span class="va">Frequency</span> <span class="op">&lt;=</span> <span class="fl">0.05</span><span class="op">)</span>,</span>
-<span>           <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Frequency</span>, y <span class="op">=</span> <span class="va">Power</span><span class="op">)</span>, color <span class="op">=</span> <span class="st">"darkgreen"</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_vline</a></span><span class="op">(</span>xintercept <span class="op">=</span> <span class="va">drift_freq</span>, linetype <span class="op">=</span> <span class="st">"dotted"</span>, color <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Zoomed Power Spectrum of Drift Component"</span>,</span>
+<span><span class="fu">ggplot</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span>data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">spec_df</span>, <span class="va">NoiseType</span> <span class="op">==</span> <span class="st">"Drift Component"</span><span class="op">)</span>,</span>
+<span>           <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Frequency</span>, y <span class="op">=</span> <span class="va">Power</span><span class="op">)</span>, color <span class="op">=</span> <span class="st">"darkgreen"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span>data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">spec_drift_long</span>, <span class="va">Frequency</span> <span class="op">&lt;=</span> <span class="fl">0.05</span><span class="op">)</span>,</span>
+<span>           <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Frequency</span>, y <span class="op">=</span> <span class="va">Power</span><span class="op">)</span>, color <span class="op">=</span> <span class="st">"darkgreen"</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_vline</span><span class="op">(</span>xintercept <span class="op">=</span> <span class="va">drift_freq</span>, linetype <span class="op">=</span> <span class="st">"dotted"</span>, color <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Zoomed Power Spectrum of Drift Component"</span>,</span>
 <span>       subtitle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Expected peak at"</span>, <span class="va">drift_freq</span>, <span class="st">"Hz"</span><span class="op">)</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Frequency (Hz)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Power"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/coord_cartesian.html" class="external-link">coord_cartesian</a></span><span class="op">(</span>xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.05</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/plot-drift-zoom-1.png" class="r-plt" alt="" width="672"></p>
+<span>  <span class="fu">coord_cartesian</span><span class="op">(</span>xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.05</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_08_simulation_files/figure-html/plot-drift-zoom-1.png" class="r-plt" alt="A low-frequency zoom of the drift spectrum, with the resolved dashed curve peaking beside the expected 0.0078125-hertz marker." width="672"></p>
 <p>The simulation shows five distinct types of noise components:</p>
 <ol style="list-style-type: decimal">
 <li><p><strong>White Noise</strong>: Random fluctuations with equal
@@ -353,16 +377,18 @@ power at lower frequencies.</p></li>
 <li><p><strong>Drift Component</strong>: A very slow oscillation typical
 of scanner drift or physiological trends. The power spectrum shows a
 dominant peak at a very low frequency.</p></li>
-<li><p><strong>Physiological Noise</strong>: Regular oscillations at
-frequencies corresponding to respiration (~0.3 Hz) and cardiac-like
-activity (~0.8 Hz). In real fMRI data with TR=2s, cardiac frequencies
-(~1.2 Hz) would be aliased.</p></li>
-<li><p><strong>Combined Noise</strong>: All components together,
-creating a complex noise structure typical of real fMRI data. The power
-spectrum shows features from all contributing components.</p></li>
+<li><p><strong>Physiological Noise</strong>: Simplified respiratory and
+cardiac sinusoids at 0.3 Hz and 1.1 Hz are above the 0.25 Hz Nyquist
+limit. At TR = 2 seconds they appear at distinct aliases of 0.2 Hz and
+0.1 Hz. These components demonstrate sampling and aliasing; they are not
+a validated physiological-noise model, nor evidence that the underlying
+physiology occurs at the aliased frequencies.</p></li>
+<li><p><strong>Combined Noise</strong>: The sum of the stylized
+components. Its power spectrum shows features from each
+contributor.</p></li>
 </ol>
-<p>These components, when added to task-related signals, create
-realistic fMRI time series.</p>
+<p>Adding these components to task-related signals creates controlled,
+structured time series for demonstrations and numerical checks.</p>
 </div>
 </div>
 <div class="section level2">
@@ -371,13 +397,21 @@ realistic fMRI time series.</p>
 <p>The <code>simulate_simple_dataset</code> function combines clean
 signals and noise to create a complete fMRI dataset with a specified
 signal-to-noise ratio (SNR).</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">snr_values</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.0</span>, <span class="fl">0.5</span>, <span class="fl">0.2</span><span class="op">)</span></span>
+<span><span class="va">snr_datasets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">snr_values</span>, <span class="kw">function</span><span class="op">(</span><span class="va">snr</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="../reference/simulate_simple_dataset.html">simulate_simple_dataset</a></span><span class="op">(</span>ncond <span class="op">=</span> <span class="fl">3</span>, TR <span class="op">=</span> <span class="fl">2</span>, snr <span class="op">=</span> <span class="va">snr</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">snr_datasets</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"SNR = "</span>, <span class="va">snr_values</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">data_snr_1.0</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_simple_dataset.html">simulate_simple_dataset</a></span><span class="op">(</span>ncond <span class="op">=</span> <span class="fl">3</span>, TR <span class="op">=</span> <span class="fl">2</span>, snr <span class="op">=</span> <span class="fl">1.0</span><span class="op">)</span></span>
-<span><span class="va">data_snr_0.5</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_simple_dataset.html">simulate_simple_dataset</a></span><span class="op">(</span>ncond <span class="op">=</span> <span class="fl">3</span>, TR <span class="op">=</span> <span class="fl">2</span>, snr <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span>
-<span><span class="va">data_snr_0.2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_simple_dataset.html">simulate_simple_dataset</a></span><span class="op">(</span>ncond <span class="op">=</span> <span class="fl">3</span>, TR <span class="op">=</span> <span class="fl">2</span>, snr <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<span><span class="va">data_snr_1.0</span> <span class="op">&lt;-</span> <span class="va">snr_datasets</span><span class="op">[[</span><span class="st">"SNR = 1"</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">data_snr_0.5</span> <span class="op">&lt;-</span> <span class="va">snr_datasets</span><span class="op">[[</span><span class="st">"SNR = 0.5"</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">data_snr_0.2</span> <span class="op">&lt;-</span> <span class="va">snr_datasets</span><span class="op">[[</span><span class="st">"SNR = 0.2"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
+<p>The same seed deliberately preserves the event schedule, clean
+signal, and standardized noise realization. Only the scale of that noise
+changes, so the panels isolate SNR rather than comparing three unrelated
+simulations.</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">plot_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
 <span>  <span class="fu">create_plot_df</span><span class="op">(</span><span class="va">data_snr_1.0</span>, <span class="st">"SNR = 1.0"</span><span class="op">)</span>,</span>
 <span>  <span class="fu">create_plot_df</span><span class="op">(</span><span class="va">data_snr_0.5</span>, <span class="st">"SNR = 0.5"</span><span class="op">)</span>,</span>
@@ -391,100 +425,79 @@ signal-to-noise ratio (SNR).</p>
 <p>The overlay plot shows the clean signal (red) against the noisy
 measurement (blue) at each SNR level. As SNR decreases, the noise
 increasingly obscures the true signal.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">plot_df_long</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Time</span>, y <span class="op">=</span> <span class="va">Signal</span>, color <span class="op">=</span> <span class="va">Type</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span><span class="va">SNR</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Clean vs. Noisy Signals at Different SNR Levels"</span>,</span>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ggplot</span><span class="op">(</span><span class="va">plot_df_long</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Time</span>, y <span class="op">=</span> <span class="va">Signal</span>, color <span class="op">=</span> <span class="va">Type</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span><span class="va">SNR</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Clean vs. Noisy Signals at Different SNR Levels"</span>,</span>
 <span>       subtitle <span class="op">=</span> <span class="st">"Single condition shown for clarity"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Signal"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Signal Type"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html" class="external-link">scale_color_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Clean"</span> <span class="op">=</span> <span class="st">"darkred"</span>, <span class="st">"Noisy"</span> <span class="op">=</span> <span class="st">"steelblue"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/plot-snr-overlay-1.png" class="r-plt" alt="" width="672"></p>
+<span>  <span class="fu">scale_color_manual</span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Clean"</span> <span class="op">=</span> <span class="st">"darkred"</span>, <span class="st">"Noisy"</span> <span class="op">=</span> <span class="st">"steelblue"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme</span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"top"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_08_simulation_files/figure-html/plot-snr-overlay-1.png" class="r-plt" alt="Three stacked overlays compare one shared clean signal with noisy observations at SNR 0.2, 0.5, and 1.0; masking decreases as SNR rises." width="672"></p>
 <p>The decomposition plots below separate each SNR level into its
 signal, noise, and combined components. At SNR = 1.0 the signal is
 clearly visible; by SNR = 0.2 the noise dominates.</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">plot_faceted</span><span class="op">(</span><span class="va">plot_df</span>, <span class="st">"SNR = 1.0"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/plot-decomposition-snr1-1.png" class="r-plt" alt="" width="672"></p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<p><img src="a_08_simulation_files/figure-html/plot-decomposition-snr1-1.png" class="r-plt" alt="Three stacked panels decompose the SNR 1.0 simulation into signal plus noise, clean signal, and noise." width="672"></p>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">plot_faceted</span><span class="op">(</span><span class="va">plot_df</span>, <span class="st">"SNR = 0.5"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/plot-decomposition-snr05-1.png" class="r-plt" alt="" width="672"></p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<p><img src="a_08_simulation_files/figure-html/plot-decomposition-snr05-1.png" class="r-plt" alt="Three stacked panels decompose the SNR 0.5 simulation into signal plus noise, clean signal, and noise." width="672"></p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">plot_faceted</span><span class="op">(</span><span class="va">plot_df</span>, <span class="st">"SNR = 0.2"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/plot-decomposition-snr02-1.png" class="r-plt" alt="" width="672"></p>
+<p><img src="a_08_simulation_files/figure-html/plot-decomposition-snr02-1.png" class="r-plt" alt="Three stacked panels decompose the SNR 0.2 simulation into signal plus noise, clean signal, and dominant noise." width="672"></p>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">snr_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  Requested_SNR <span class="op">=</span> <span class="va">snr_values</span>,</span>
+<span>  Empirical_SNR <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">empirical_snr</span><span class="op">)</span>,</span>
+<span>  Signal_SD <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">snr_datasets</span>, <span class="kw">function</span><span class="op">(</span><span class="va">dataset</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/stats/sd.html" class="external-link">sd</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="va">dataset</span><span class="op">$</span><span class="va">clean</span><span class="op">$</span><span class="va">mat</span><span class="op">[</span>, <span class="op">-</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">}</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  Noise_SD <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">snr_datasets</span>, <span class="kw">function</span><span class="op">(</span><span class="va">dataset</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/stats/sd.html" class="external-link">sd</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="va">dataset</span><span class="op">$</span><span class="va">noise</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">}</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">snr_stats_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">snr_val</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">plot_df_long</span><span class="op">$</span><span class="va">SNR</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw">for</span> <span class="op">(</span><span class="va">type_val</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">plot_df_long</span><span class="op">$</span><span class="va">Type</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">subset_data</span> <span class="op">&lt;-</span> <span class="va">plot_df_long</span><span class="op">[</span><span class="va">plot_df_long</span><span class="op">$</span><span class="va">SNR</span> <span class="op">==</span> <span class="va">snr_val</span> <span class="op">&amp;</span> <span class="va">plot_df_long</span><span class="op">$</span><span class="va">Type</span> <span class="op">==</span> <span class="va">type_val</span>, <span class="op">]</span></span>
-<span>    <span class="va">snr_stats_list</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">snr_stats_list</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>      SNR <span class="op">=</span> <span class="va">snr_val</span>,</span>
-<span>      Type <span class="op">=</span> <span class="va">type_val</span>,</span>
-<span>      Mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">subset_data</span><span class="op">$</span><span class="va">Signal</span><span class="op">)</span>,</span>
-<span>      SD <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/sd.html" class="external-link">sd</a></span><span class="op">(</span><span class="va">subset_data</span><span class="op">$</span><span class="va">Signal</span><span class="op">)</span>,</span>
-<span>      Range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">subset_data</span><span class="op">$</span><span class="va">Signal</span><span class="op">)</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">subset_data</span><span class="op">$</span><span class="va">Signal</span><span class="op">)</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">}</span></span>
-<span><span class="va">snr_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">snr_stats_list</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">snr_stats</span>, caption <span class="op">=</span> <span class="st">"Statistics of clean and noisy signals at different SNR levels"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>  <span class="va">snr_stats</span>,</span>
+<span>  digits <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  caption <span class="op">=</span> <span class="st">"Requested and empirically realized SNR from a controlled simulation"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <table class="table">
-<caption>Statistics of clean and noisy signals at different SNR
-levels</caption>
+<caption>Requested and empirically realized SNR from a controlled
+simulation</caption>
 <thead><tr class="header">
-<th align="left">SNR</th>
-<th align="left">Type</th>
-<th align="right">Mean</th>
-<th align="right">SD</th>
-<th align="right">Range</th>
+<th align="left"></th>
+<th align="right">Requested_SNR</th>
+<th align="right">Empirical_SNR</th>
+<th align="right">Signal_SD</th>
+<th align="right">Noise_SD</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">SNR = 1.0</td>
-<td align="left">Clean</td>
-<td align="right">0.6484660</td>
-<td align="right">0.9154157</td>
-<td align="right">3.005768</td>
-</tr>
-<tr class="even">
-<td align="left">SNR = 1.0</td>
-<td align="left">Noisy</td>
-<td align="right">1.0555953</td>
-<td align="right">1.5153738</td>
-<td align="right">8.541682</td>
-</tr>
-<tr class="odd">
-<td align="left">SNR = 0.5</td>
-<td align="left">Clean</td>
-<td align="right">0.6082536</td>
-<td align="right">0.7916189</td>
-<td align="right">2.760946</td>
+<td align="left">SNR = 1</td>
+<td align="right">1.0</td>
+<td align="right">1.0</td>
+<td align="right">0.861</td>
+<td align="right">0.861</td>
 </tr>
 <tr class="even">
 <td align="left">SNR = 0.5</td>
-<td align="left">Noisy</td>
-<td align="right">0.7358011</td>
-<td align="right">2.4147113</td>
-<td align="right">13.835178</td>
+<td align="right">0.5</td>
+<td align="right">0.5</td>
+<td align="right">0.861</td>
+<td align="right">1.722</td>
 </tr>
 <tr class="odd">
 <td align="left">SNR = 0.2</td>
-<td align="left">Clean</td>
-<td align="right">0.6342752</td>
-<td align="right">0.8631817</td>
-<td align="right">2.804079</td>
-</tr>
-<tr class="even">
-<td align="left">SNR = 0.2</td>
-<td align="left">Noisy</td>
-<td align="right">1.2170041</td>
-<td align="right">5.2307652</td>
-<td align="right">25.249274</td>
+<td align="right">0.2</td>
+<td align="right">0.2</td>
+<td align="right">0.861</td>
+<td align="right">4.306</td>
 </tr>
 </tbody>
 </table>
@@ -496,23 +509,32 @@ For each SNR level, we show:</p>
 <strong>The original clean signal</strong> (red line): The true
 underlying BOLD response</li>
 <li>
-<strong>The noisy signal</strong> (blue line): What would actually
-be measured by the scanner</li>
+<strong>The noisy signal</strong> (blue line): The synthetic
+observation produced by this model</li>
 <li>
 <strong>Signal decomposition</strong>: Visualization of how the
 signal, noise, and combined signal relate at each SNR level</li>
 </ol>
-<p>With SNR = 1.0, the signal pattern remains clearly visible despite
-the noise. At SNR = 0.5, some features of the signal are obscured, while
-at SNR = 0.2, the noise substantially masks the underlying signal,
-making accurate detection more challenging without proper statistical
-methods.</p>
-<p>The function returns: - <strong><code>clean</code></strong>: The
-simulated signals without noise - <strong><code>noisy</code></strong>:
-The signals with added noise - <strong><code>noise</code></strong>: The
-simulated noise component - <strong><code>onsets</code></strong>: Trial
-onset times - <strong><code>conditions</code></strong>: Condition labels
-for each trial</p>
+<p>With SNR = 1.0, the signal pattern remains visible despite the noise.
+At SNR = 0.5, some features are obscured; at SNR = 0.2, the noise
+substantially masks the signal in this controlled example.</p>
+<p>The function returns:</p>
+<ul>
+<li>
+<strong><code>clean</code></strong>: The simulated signals without
+noise</li>
+<li>
+<strong><code>noisy</code></strong>: The signals with added
+noise</li>
+<li>
+<strong><code>noise</code></strong>: The simulated noise
+component</li>
+<li>
+<strong><code>onsets</code></strong>: Trial onset times</li>
+<li>
+<strong><code>conditions</code></strong>: Condition labels for each
+trial</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="simulating-matrix-time-series-with-column-specific-variation">Simulating Matrix Time Series with Column-Specific Variation<a class="anchor" aria-label="anchor" href="#simulating-matrix-time-series-with-column-specific-variation"></a>
@@ -523,12 +545,13 @@ for each trial</p>
 variations in amplitudes and durations. This is particularly useful for
 simulating multiple voxels or regions with related but slightly
 different response profiles.</p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">sim_matrix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_fmri_matrix.html">simulate_fmri_matrix</a></span><span class="op">(</span></span>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">requested_onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">12</span>, <span class="fl">156</span>, length.out <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
+<span><span class="va">sim_matrix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_fmri_matrix.html">simulate_fmri_matrix</a></span><span class="op">(</span></span>
 <span>  n <span class="op">=</span> <span class="fl">5</span>,                  <span class="co"># 5 voxels/regions</span></span>
 <span>  total_time <span class="op">=</span> <span class="fl">200</span>,       <span class="co"># 200 seconds of scan time</span></span>
 <span>  TR <span class="op">=</span> <span class="fl">2</span>,                 <span class="co"># TR = 2 seconds</span></span>
-<span>  n_events <span class="op">=</span> <span class="fl">10</span>,          <span class="co"># 10 events</span></span>
+<span>  onsets <span class="op">=</span> <span class="va">requested_onsets</span>,</span>
 <span>  amplitudes <span class="op">=</span> <span class="fl">1</span>,         <span class="co"># Base amplitude = 1</span></span>
 <span>  amplitude_sd <span class="op">=</span> <span class="fl">0.3</span>,     <span class="co"># Amplitude variability</span></span>
 <span>  durations <span class="op">=</span> <span class="fl">2</span>,          <span class="co"># Base duration = 2 seconds</span></span>
@@ -536,7 +559,10 @@ different response profiles.</p>
 <span>  noise_type <span class="op">=</span> <span class="st">"ar1"</span>,     <span class="co"># AR(1) noise</span></span>
 <span>  noise_sd <span class="op">=</span> <span class="fl">0.5</span>          <span class="co"># Noise standard deviation</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<p>When you supply <code>onsets</code>, those values are authoritative:
+the function skips ISI generation and derives the event count from their
+length.</p>
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ts_data</span> <span class="op">&lt;-</span> <span class="va">sim_matrix</span><span class="op">$</span><span class="va">time_series</span></span>
 <span><span class="va">matrix_data</span> <span class="op">&lt;-</span> <span class="va">ts_data</span><span class="op">$</span><span class="va">datamat</span></span>
 <span></span>
@@ -549,23 +575,23 @@ different response profiles.</p>
 <span></span>
 <span><span class="va">plot_data_long</span> <span class="op">&lt;-</span> <span class="fu">tidyr</span><span class="fu">::</span><span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span></span>
 <span>  <span class="va">plot_data</span>,</span>
-<span>  cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"Voxel"</span><span class="op">)</span>,</span>
+<span>  cols <span class="op">=</span> <span class="fu">starts_with</span><span class="op">(</span><span class="st">"Voxel"</span><span class="op">)</span>,</span>
 <span>  names_to <span class="op">=</span> <span class="st">"Voxel"</span>,</span>
 <span>  values_to <span class="op">=</span> <span class="st">"Signal"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>All five simulated voxels share the same event timing, but their
 response amplitudes and durations vary independently.</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">plot_data_long</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Time</span>, y <span class="op">=</span> <span class="va">Signal</span>, color <span class="op">=</span> <span class="va">Voxel</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>alpha <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Multiple Simulated Time Series with Column-Specific Variation"</span>,</span>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ggplot</span><span class="op">(</span><span class="va">plot_data_long</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Time</span>, y <span class="op">=</span> <span class="va">Signal</span>, color <span class="op">=</span> <span class="va">Voxel</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span>alpha <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Multiple Simulated Time Series with Column-Specific Variation"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Time (seconds)"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Signal"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Voxel"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_brewer.html" class="external-link">scale_color_brewer</a></span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set2"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/plot-matrix-timeseries-1.png" class="r-plt" alt="" width="672"></p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set2"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_08_simulation_files/figure-html/plot-matrix-timeseries-1.png" class="r-plt" alt="Five colored simulated voxel time series share event timing but differ in response amplitude, duration, and independent noise." width="672"></p>
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">amp_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">sim_matrix</span><span class="op">$</span><span class="va">ampmat</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">amp_df</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"Voxel"</span>, <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">amp_df</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">amp_df</span><span class="op">$</span><span class="va">Event</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">amp_df</span><span class="op">)</span></span>
@@ -576,51 +602,66 @@ response amplitudes and durations vary independently.</p>
 <span></span>
 <span><span class="va">amp_long</span> <span class="op">&lt;-</span> <span class="fu">tidyr</span><span class="fu">::</span><span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span></span>
 <span>  <span class="va">amp_df</span>,</span>
-<span>  cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"Voxel"</span><span class="op">)</span>,</span>
+<span>  cols <span class="op">=</span> <span class="fu">starts_with</span><span class="op">(</span><span class="st">"Voxel"</span><span class="op">)</span>,</span>
 <span>  names_to <span class="op">=</span> <span class="st">"Voxel"</span>,</span>
 <span>  values_to <span class="op">=</span> <span class="st">"Amplitude"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">dur_long</span> <span class="op">&lt;-</span> <span class="fu">tidyr</span><span class="fu">::</span><span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span></span>
 <span>  <span class="va">dur_df</span>,</span>
-<span>  cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"Voxel"</span><span class="op">)</span>,</span>
+<span>  cols <span class="op">=</span> <span class="fu">starts_with</span><span class="op">(</span><span class="st">"Voxel"</span><span class="op">)</span>,</span>
 <span>  names_to <span class="op">=</span> <span class="st">"Voxel"</span>,</span>
 <span>  values_to <span class="op">=</span> <span class="st">"Duration"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>The amplitude plot shows how each voxel’s response magnitude varies
 from event to event around the base amplitude of 1.</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">amp_long</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Event</span>, y <span class="op">=</span> <span class="va">Amplitude</span>, color <span class="op">=</span> <span class="va">Voxel</span>, group <span class="op">=</span> <span class="va">Voxel</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Amplitude Variation Across Events and Voxels"</span>,</span>
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ggplot</span><span class="op">(</span><span class="va">amp_long</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Event</span>, y <span class="op">=</span> <span class="va">Amplitude</span>, color <span class="op">=</span> <span class="va">Voxel</span>, group <span class="op">=</span> <span class="va">Voxel</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_point</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Amplitude Variation Across Events and Voxels"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Event Number"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Amplitude"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Voxel"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_brewer.html" class="external-link">scale_color_brewer</a></span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set2"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/plot-amplitude-variation-1.png" class="r-plt" alt="" width="672"></p>
+<span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set2"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_08_simulation_files/figure-html/plot-amplitude-variation-1.png" class="r-plt" alt="Five colored lines show independently sampled response amplitudes across ten events for five voxels." width="672"></p>
 <p>Duration variation follows the same pattern – each voxel draws its
 event durations independently around the base of 2 seconds.</p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">dur_long</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Event</span>, y <span class="op">=</span> <span class="va">Duration</span>, color <span class="op">=</span> <span class="va">Voxel</span>, group <span class="op">=</span> <span class="va">Voxel</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Duration Variation Across Events and Voxels"</span>,</span>
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ggplot</span><span class="op">(</span><span class="va">dur_long</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">Event</span>, y <span class="op">=</span> <span class="va">Duration</span>, color <span class="op">=</span> <span class="va">Voxel</span>, group <span class="op">=</span> <span class="va">Voxel</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_line</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_point</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Duration Variation Across Events and Voxels"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Event Number"</span>,</span>
 <span>       y <span class="op">=</span> <span class="st">"Duration (seconds)"</span>,</span>
 <span>       color <span class="op">=</span> <span class="st">"Voxel"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_brewer.html" class="external-link">scale_color_brewer</a></span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set2"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_08_simulation_files/figure-html/plot-duration-variation-1.png" class="r-plt" alt="" width="672"></p>
-<p>This function is particularly powerful for simulating multiple
-related time series with: - <strong>Shared event timing</strong> but
-individual variation in: - <strong>Amplitude</strong> (per event, per
-column) - <strong>Duration</strong> (per event, per column) -
-<strong>Independent noise</strong> generation for each column -
-<strong>Complex output</strong> including: - Time series matrix -
-Amplitude and duration matrices - HRF and noise parameter
-information</p>
+<span>  <span class="fu">scale_color_brewer</span><span class="op">(</span>palette <span class="op">=</span> <span class="st">"Set2"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_08_simulation_files/figure-html/plot-duration-variation-1.png" class="r-plt" alt="Five colored lines show independently sampled response durations across ten events for five voxels." width="672"></p>
+<p>This function exposes the following controls for multiple related
+time series:</p>
+<ul>
+<li>
+<strong>Shared event timing</strong> but individual variation in:
+<ul>
+<li>
+<strong>Amplitude</strong> (per event, per column)</li>
+<li>
+<strong>Duration</strong> (per event, per column)</li>
+</ul>
+</li>
+<li>
+<strong>Independent noise</strong> generation for each column</li>
+<li>
+<strong>Complex output</strong> including:
+<ul>
+<li>Time series matrix</li>
+<li>Amplitude and duration matrices</li>
+<li>HRF and noise parameter information</li>
+</ul>
+</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="summary-and-comparison">Summary and Comparison<a class="anchor" aria-label="anchor" href="#summary-and-comparison"></a>
@@ -633,7 +674,7 @@ purposes and offer increasing levels of complexity:</p>
 BOLD signals for multiple conditions</li>
 <li>
 <strong><code>simulate_noise_vector</code></strong>: Create
-realistic fMRI noise with temporal structure</li>
+structured, fMRI-like noise with temporal structure</li>
 <li>
 <strong><code>simulate_simple_dataset</code></strong>: Combine
 signal and noise with a specific SNR</li>
@@ -642,21 +683,32 @@ signal and noise with a specific SNR</li>
 time series with trial-by-trial, column-specific parameter
 variation</li>
 </ol>
-<p>Choose the appropriate function based on your simulation needs: - For
-basic signal generation: use <code>simulate_bold_signal</code> - For
-realistic noise: use <code>simulate_noise_vector</code> - For a complete
-dataset with controlled SNR: use <code>simulate_simple_dataset</code> -
-For simulating multiple voxels/regions with shared timing but response
-variation: use <code>simulate_fmri_matrix</code></p>
-<p>These functions provide a powerful toolkit for method development,
-validation, or teaching fMRI analysis concepts through realistic
-simulations.</p>
+<p>Choose the appropriate function based on your simulation needs:</p>
+<ul>
+<li>For basic signal generation: use
+<code>simulate_bold_signal</code>
+</li>
+<li>For structured teaching noise: use
+<code>simulate_noise_vector</code>
+</li>
+<li>For a complete dataset with controlled SNR: use
+<code>simulate_simple_dataset</code>
+</li>
+<li>For simulating multiple voxels/regions with shared timing but
+response variation: use <code>simulate_fmri_matrix</code>
+</li>
+</ul>
+<p>These functions provide controlled inputs for implementation checks
+and teaching. Their explicit stochastic and signal assumptions should be
+inspected before using them as a benchmark for a scientific method.</p>
 </div>
 <div class="section level2">
 <h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
 </h2>
 <ul>
-<li>04 fMRI Linear Model (GLM)</li>
+<li>
+<code><a href="../articles/a_09_linear_model.html">vignette("a_09_linear_model", package = "fmrireg")</a></code> —
+Fit and interpret an fMRI linear model</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

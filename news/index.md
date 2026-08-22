@@ -2,6 +2,24 @@
 
 ## fmrireg 0.2.0
 
+### HRF Estimation
+
+- [`estimate_hrf()`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_hrf.md)
+  is now a vectorized, condition-level smooth FIR estimator. It
+  constructs an explicit event-aligned spline basis, removes baseline
+  and fixed nuisance designs once, fits all voxels with one penalized
+  multiresponse solve, and can choose a shared smoothing strength by
+  scale-normalized GCV. The new `fmri_hrf_estimate` result preserves
+  curve and voxel labels and provides standard errors, confidence
+  intervals,
+  [`tidy()`](https://bbuchsbaum.github.io/fmrireg/reference/tidy.md),
+  [`predict()`](https://rdrr.io/r/stats/predict.html),
+  [`coef()`](https://rdrr.io/r/stats/coef.html), and
+  [`as.matrix()`](https://rdrr.io/r/base/matrix.html) methods. This
+  replaces a voxel-by-voxel GAM path that treated convolved design
+  values as if they were post-stimulus time and failed before
+  prediction.
+
 ### Statistical Corrections
 
 - **AR degrees of freedom.**
@@ -30,26 +48,46 @@
 
 ### Bug Fixes
 
+- `write_results(strategy = "by_stat")` no longer scatters contrast maps
+  onto the wrong voxels. `.compute_statistical_volumes()` called
+  [`as.logical()`](https://rdrr.io/r/base/logical.html) on the mask,
+  which drops `dim` for plain arrays (the type
+  `.fmri_dataset_mask_space()` always supplies), so
+  `which(..., arr.ind = TRUE)` returned linear indices instead of 3D
+  coordinates.
+
+- Oversized residual-bootstrap blocks now remain one contiguous temporal
+  block instead of silently becoming interleaved odd/even samples.
+
+- Mixed-model solver failures now warn and return `NA` coefficients
+  rather than plausible zeros; malformed response dimensions fail before
+  solver dispatch.
+
 - `robust_psi` now has an effect. It was previously unreachable:
   `robust` defaulted to `FALSE` rather than `NULL`, so
   `robust_options$type` was always claimed before `robust_psi` was
   consulted. `robust`’s default is now `NULL`, which also makes
   “unspecified” distinguishable from “explicitly off”.
+
 - An explicit `robust = FALSE` is no longer silently overridden by
   `robust_options = list(type = "huber")`; the combination is now an
   error.
+
 - Supplying `cfg` alongside other configuration arguments is now an
   error instead of silently discarding them. Previously
   `cor_struct = "ar2"` with a `cfg` naming `"iid"` ran IID without
   warning.
+
 - AR shorthands (`cor_struct`, `cor_iter`, `cor_global`,
   `ar1_exact_first`, `ar_p`, `ar_voxelwise`) that disagree with the
   corresponding `ar_options` entry now error rather than being silently
   dropped. Shorthands that agree are still accepted.
+
 - `engine` now warns about the execution arguments it ignores
   (`strategy`, `nchunks`, `use_fast_path`, `progress`,
   `parallel_voxels`, `parallel_chunks`), which were previously accepted
   and silently discarded.
+
 - `compute_sandwich_variance()` computed its meat matrix as
   `X' diag(e^4) X` instead of `X' diag(e^2) X`, giving standard errors
   about 3.5x too large. Both sandwich helpers are now checked against
@@ -84,6 +122,21 @@
 
 ### New Features
 
+- Reexported
+  [`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.html)
+  (from fmridesign) and
+  [`feature_regressor()`](https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html)
+  (from fmrihrf) so mixed event formulas such as
+  `onset ~ hrf(condition) + feature(rms, dt = 0.1)` work after
+  [`library(fmrireg)`](https://bbuchsbaum.github.io/fmrireg/). Feature
+  terms are sampled series, not trials; helpers that assume `hrfspec`
+  trial structure skip or unwrap them instead of erroring
+  ([`fitted_hrf()`](https://bbuchsbaum.github.io/fmrireg/reference/fitted_hrf.md),
+  [`shortnames()`](https://bbuchsbaum.github.io/fmrireg/reference/shortnames.md),
+  [`design_plot()`](https://bbuchsbaum.github.io/fmrireg/reference/design_plot.md),
+  [`preflight()`](https://bbuchsbaum.github.io/fmrireg/reference/preflight.md),
+  pair-contrast resolution).
+
 - [`write_results()`](https://bbuchsbaum.github.io/fmrireg/reference/write_results.md)
   now exports statistical maps as NIfTI volumes via `format = "nifti"`
   (or `format = c("h5", "nifti")`), reusing the same BIDS entity and
@@ -91,6 +144,7 @@
   hand-roll loops over
   [`coef_image()`](https://bbuchsbaum.github.io/fmrireg/reference/coef_image.md) +
   [`neuroim2::write_vol()`](https://bbuchsbaum.github.io/neuroim2/reference/write_vol-methods.html).
+
 - Added
   [`coef_images()`](https://bbuchsbaum.github.io/fmrireg/reference/coef_images.md),
   a plural companion to

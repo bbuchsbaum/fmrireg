@@ -57,7 +57,7 @@ basis_name <- "vignette_bspline_basis"
 register_basis(
   basis_name,
   function(span = 18, ...) {
-    fmrihrf::gen_hrf(fmrihrf::hrf_bspline, N = 5, span = span)
+    fmrihrf::gen_hrf(fmrihrf::hrf_bspline, N = 4, span = span)
   }
 )
 
@@ -68,7 +68,9 @@ model_with_basis <- create_fmri_model(
 )
 
 stopifnot(inherits(model_with_basis, "fmri_model"))
-head(colnames(design_matrix(model_with_basis)))
+plugin_design <- design_matrix(model_with_basis)
+stopifnot(qr(plugin_design)$rank == ncol(plugin_design))
+head(colnames(plugin_design))
 #> [1] "condition_condition.A_b01" "condition_condition.B_b01"
 #> [3] "condition_condition.A_b02" "condition_condition.B_b02"
 #> [5] "condition_condition.A_b03" "condition_condition.B_b03"

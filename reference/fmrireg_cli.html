@@ -26,16 +26,18 @@ the benchmark subcommands."></head><body>
   <ul class="dropdown-menu" aria-labelledby="dropdown-vignettes"><li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -120,17 +122,33 @@ command-level validation failures, and <code>2</code> for usage or runtime error
 <span class="r-out co"><span class="r-pr">#&gt;</span>     },</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     "TR": 2,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     "total_time": 300,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     "run_length": 150,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     "target_snr": 4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   },</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   "hrf_information": {</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     "type": "SPMG1",</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     "hrf_object_name": "HRF_SPMG1",</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     "hrf_recipe": {</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       "schema_version": 1,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       "recipe_name": "HRF_SPMG1",</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       "generator": "fmrihrf::gen_hrf",</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       "base_hrf_name": "HRF_SPMG1",</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       "lag": 0,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       "width": 0,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       "precision": 0.1,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       "half_life": "Inf",</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       "summate": true,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       "normalize": false,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       "name_override": null,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       "span_override": null,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       "fmrihrf_version": "0.4.0"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     },</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     "hrf_object": ["structure(function (t) ", "{", "    do.call(orig_f, c(list(t = t), callable_params_list))", "}, class = \"function\", name = \"SPMG1\", nbasis = 1L, span = 24, param_names = c(\"P1\", ", "\"P2\", \"A1\"), params = list(P1 = 5, P2 = 15, A1 = 0.0833))"]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   },</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   "noise_information": {</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     "noise_type": "ar1",</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     "noise_ar": 0.4,</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     "noise_sd": 0.5217</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     "noise_sd": 0.0983</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   }</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> }</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0</span>

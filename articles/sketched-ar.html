@@ -5,13 +5,13 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Sketched GLM with Global vs Parcel AR • fmrireg</title>
+<title>Sketched GLM: Temporal Sketches, Pooled AR, and Landmarks • fmrireg</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
-<script src="../extra.js"></script><meta property="og:title" content="Sketched GLM with Global vs Parcel AR">
+<script src="../extra.js"></script><meta property="og:title" content="Sketched GLM: Temporal Sketches, Pooled AR, and Landmarks">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -38,16 +38,18 @@
 <li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -81,7 +83,7 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Sketched GLM with Global vs Parcel AR</h1>
+      <h1>Sketched GLM: Temporal Sketches, Pooled AR, and Landmarks</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/sketched-ar.Rmd" class="external-link"><code>vignettes/sketched-ar.Rmd</code></a></small>
@@ -95,34 +97,51 @@
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/neuroim2" class="external-link">neuroim2</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrihrf/" class="external-link">fmrihrf</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span></code></pre></div>
-<p>This vignette introduces a fast “sketched GLM” path with shared
-autoregressive (AR) whitening and optional Nystrom landmarking. It is
-designed to be a drop-in alternative to voxelwise GLM when you want
-substantial speedups with high fidelity.</p>
-<p>What you’ll see below - A quick overview of the approach and when to
-use it - Global vs parcel-pooled AR whitening (stabilizes noise, boosts
-generalization) - Time sketches that preserve GLM geometry at much
-smaller m ~ 6-8<em>p - SRHT (Subsampled Randomized Hadamard Transform):
-a fast Johnson-Lindenstrauss embedding built from random signs, a
-Walsh-Hadamard transform, and row sampling. It acts as an (approximate)
-isometry on the column space of X, so least-squares geometry is well
-preserved at reduced cost. - IHS (Iterative Hessian Sketch): an
-iterative sketch-and-solve method. Each iteration solves a small
-sketched normal-equation system to refine the coefficients; 2-3
-iterations with m ~ 6</em>p are typically indistinguishable from exact
-least-squares. - Optional Nystrom spatial extension (solve on L
-landmarks, extend to all voxels)</p>
-<p>At a glance - Typical fidelity: correlations &gt; .9 vs exact
-voxelwise GLM on synthetic and real designs, with large runtime savings.
-- Knobs: m (sketch rows), iters (IHS iterations), by_cluster (parcel
-AR), landmarks (Nystrom), k_neighbors (Nystrom weights).</p>
-<p>Approach in one paragraph - We first prewhiten in time (globally or
-per parcel, with light shrinkage across parcels). Then we replace the
-tall time dimension T with a much smaller sketch m using SRHT or IHS so
-that the normal equations are nearly identical at a fraction of the
-cost. If desired, we also replace the large spatial dimension V by
-solving only on L landmark voxels and extending coefficients back to all
-voxels via a sparse, parcel-aware heat-kernel (Nystrom).</p>
+<p>This vignette introduces the <code>latent_sketch</code> GLM path:
+shared autoregressive (AR) whitening, temporal sketching, and an
+optional landmark-based spatial approximation. These are approximation
+controls, not universal accelerators. Their accuracy depends on the
+design, noise, and—for landmarks—the spatial smoothness of the
+coefficient maps.</p>
+<p>What you’ll see below</p>
+<ul>
+<li>A quick overview of the approach and when to use it</li>
+<li>Global vs parcel-pooled AR whitening</li>
+<li>Time sketches that preserve GLM geometry at much smaller m ~ 6-8*p
+<ul>
+<li>SRHT (Subsampled Randomized Hadamard Transform): a structured
+Johnson-Lindenstrauss embedding built from random signs, a
+Walsh-Hadamard transform, and row sampling. It approximately preserves
+least-squares geometry on the design column space; the example below
+checks the resulting coefficients directly.</li>
+<li>IHS (Iterative Hessian Sketch): an iterative sketch-and-solve
+method. Each iteration solves a small sketched normal-equation system to
+refine the coefficients.</li>
+</ul>
+</li>
+<li>Optional Nyström-style spatial extension (solve on L landmarks,
+extend to all voxels)</li>
+</ul>
+<p>At a glance</p>
+<ul>
+<li>Evidence shown here: a like-for-like coefficient comparison using
+both correlation and normalized root-mean-square error (NRMSE).</li>
+<li>Public controls:
+<code>noise_spec(..., pooling = "global" | "parcel")</code> for AR
+pooling and <code><a href="../reference/lowrank_control.html">lowrank_control()</a></code> for sketch rows, iterations,
+landmarks, and neighbors.</li>
+</ul>
+<p>Approach in one paragraph</p>
+<ul>
+<li>We first prewhiten in time, either globally or with coefficients
+pooled by parcel. A temporal sketch then replaces the time dimension
+<code>T</code> with <code>m</code> rows. The optional landmark path
+solves only at <code>L</code> voxel locations and interpolates
+coefficients to the remaining voxels with sparse heat-kernel weights.
+This vignette measures approximation error; it does not benchmark
+runtime, because its deliberately small dataset is not representative of
+a production performance regime.</li>
+</ul>
 <div class="section level3">
 <h3 id="set-up-a-synthetic-dataset">Set up a synthetic dataset<a class="anchor" aria-label="anchor" href="#set-up-a-synthetic-dataset"></a>
 </h3>
@@ -149,14 +168,28 @@ canonical HRF to produce the design matrix.</p>
 </h3>
 <p>The observed data is <code>Y = X B + noise</code> where the noise
 follows an AR(1) process with <code>rho = 0.3</code>. This gives the
-sketched solvers something realistic to whiten against.</p>
+sketched solvers declared temporal dependence to estimate and
+whiten.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">task_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"condition|hrf"</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">X</span><span class="op">)</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">B_true</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">p</span>, <span class="va">V</span><span class="op">)</span></span>
-<span><span class="va">B_true</span><span class="op">[</span><span class="va">task_cols</span>, <span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">task_cols</span><span class="op">)</span> <span class="op">*</span> <span class="va">V</span>, sd <span class="op">=</span> <span class="fl">1.0</span><span class="op">)</span>,</span>
-<span>                              <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">task_cols</span><span class="op">)</span>, byrow <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">Y</span> <span class="op">&lt;-</span> <span class="va">X</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">B_true</span> <span class="op">+</span> <span class="fu">ar1_noise</span><span class="op">(</span><span class="va">Tlen</span>, <span class="va">V</span>, sd <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># Landmark interpolation assumes spatial structure. Construct smooth task</span></span>
+<span><span class="co"># maps in the same voxel order used by the array-packing loop below.</span></span>
+<span><span class="va">coords_sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span></span>
+<span>  z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">dim3</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span><span class="op">)</span>, y <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">dim3</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">dim3</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="st">"y"</span>, <span class="st">"z"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">xyz01</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sweep.html" class="external-link">sweep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">coords_sim</span><span class="op">)</span>, <span class="fl">2</span>, <span class="fl">1</span>, <span class="st">"-"</span><span class="op">)</span></span>
+<span><span class="va">xyz01</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sweep.html" class="external-link">sweep</a></span><span class="op">(</span><span class="va">xyz01</span>, <span class="fl">2</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">pmax</a></span><span class="op">(</span><span class="va">dim3</span> <span class="op">-</span> <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>, <span class="st">"/"</span><span class="op">)</span></span>
+<span><span class="va">smooth_maps</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="va">pi</span> <span class="op">*</span> <span class="va">xyz01</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">cos</a></span><span class="op">(</span><span class="va">pi</span> <span class="op">*</span> <span class="va">xyz01</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span> <span class="op">*</span> <span class="op">(</span><span class="fl">0.5</span> <span class="op">+</span> <span class="va">xyz01</span><span class="op">[</span>, <span class="fl">3</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">cos</a></span><span class="op">(</span><span class="va">pi</span> <span class="op">*</span> <span class="va">xyz01</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="va">pi</span> <span class="op">*</span> <span class="va">xyz01</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span> <span class="op">*</span> <span class="op">(</span><span class="fl">1.0</span> <span class="op">-</span> <span class="fl">0.5</span> <span class="op">*</span> <span class="va">xyz01</span><span class="op">[</span>, <span class="fl">3</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="kw">for</span> <span class="op">(</span><span class="va">j</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">task_cols</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">B_true</span><span class="op">[</span><span class="va">task_cols</span><span class="op">[</span><span class="va">j</span><span class="op">]</span>, <span class="op">]</span> <span class="op">&lt;-</span> <span class="va">smooth_maps</span><span class="op">[</span><span class="fl">1L</span> <span class="op">+</span> <span class="op">(</span><span class="va">j</span> <span class="op">-</span> <span class="fl">1L</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/Arithmetic.html" class="external-link">%%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">smooth_maps</span><span class="op">)</span>, <span class="op">]</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">Y</span> <span class="op">&lt;-</span> <span class="va">X</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">B_true</span> <span class="op">+</span> <span class="fu">ar1_noise</span><span class="op">(</span><span class="va">Tlen</span>, <span class="va">V</span>, sd <span class="op">=</span> <span class="fl">0.15</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="pack-into-an-fmri-dataset">Pack into an fmri dataset<a class="anchor" aria-label="anchor" href="#pack-into-an-fmri-dataset"></a>
@@ -169,11 +202,11 @@ sketched solvers something realistic to whiten against.</p>
 <span>                         TR <span class="op">=</span> <span class="va">TR</span>, event_table <span class="op">=</span> <span class="va">events_df</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="choose-the-fast-engine">Choose the fast engine<a class="anchor" aria-label="anchor" href="#choose-the-fast-engine"></a>
+<h3 id="choose-the-approximation-engine">Choose the approximation engine<a class="anchor" aria-label="anchor" href="#choose-the-approximation-engine"></a>
 </h3>
-<p><code>fmrireg</code> has two built-in fast paths with different
-controls. <code>engine = "latent_sketch"</code> is the sketched GLM
-engine used in most of this vignette; it is configured by
+<p><code>fmrireg</code> has two built-in approximation paths with
+different controls. <code>engine = "latent_sketch"</code> is the
+sketched GLM engine used in most of this vignette; it is configured by
 <code><a href="../reference/lowrank_control.html">lowrank_control()</a></code>. <code>engine = "rrr_gls"</code> is the
 reduced-rank-regression GLS engine; it is configured through
 <code>engine_args</code> and is the path that exposes block-bootstrap
@@ -184,23 +217,27 @@ event/task coefficients, not baseline or nuisance terms.</p>
 <div class="section level3">
 <h3 id="build-parcels">Build parcels<a class="anchor" aria-label="anchor" href="#build-parcels"></a>
 </h3>
-<p>Parcels are used both for parcel-pooled AR whitening and for
-parcel-aware Nystrom extension later. Here we simply k-means cluster on
-voxel coordinates.</p>
+<p>Parcels are used for parcel-pooled AR whitening. The landmark
+extension below is coordinate-based and does <strong>not</strong>
+enforce parcel boundaries. Here we k-means cluster voxel coordinates
+solely to demonstrate AR pooling.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">coords</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">dim3</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span>,</span>
 <span>                       y <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">dim3</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span>,</span>
 <span>                       z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">dim3</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">parcels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/ClusteredNeuroVol-class.html" class="external-link">ClusteredNeuroVol</a></span><span class="op">(</span><span class="va">maskVol</span>, <span class="fu"><a href="https://rdrr.io/r/stats/kmeans.html" class="external-link">kmeans</a></span><span class="op">(</span><span class="va">coords</span>, centers <span class="op">=</span> <span class="fl">40</span><span class="op">)</span><span class="op">$</span><span class="va">cluster</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">parcel_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/kmeans.html" class="external-link">kmeans</a></span><span class="op">(</span></span>
+<span>  <span class="va">coords</span>, centers <span class="op">=</span> <span class="fl">40</span>, iter.max <span class="op">=</span> <span class="fl">1000L</span>, nstart <span class="op">=</span> <span class="fl">10L</span>,</span>
+<span>  algorithm <span class="op">=</span> <span class="st">"Lloyd"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">parcels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/ClusteredNeuroVol-class.html" class="external-link">ClusteredNeuroVol</a></span><span class="op">(</span><span class="va">maskVol</span>, <span class="va">parcel_fit</span><span class="op">$</span><span class="va">cluster</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="fit-with-global-ar-srht-sketch">Fit with Global AR + SRHT sketch<a class="anchor" aria-label="anchor" href="#fit-with-global-ar-srht-sketch"></a>
 </h3>
 <p><code>engine = "latent_sketch"</code> activates the sketched path.
 <code><a href="../reference/lowrank_control.html">lowrank_control()</a></code> sets the sketch method and size; here we
-use SRHT with <code>m = 8p</code> rows. Setting
-<code>by_cluster = FALSE</code> pools a single AR(1) coefficient across
-the whole brain.</p>
+use SRHT with <code>m = 8p</code> rows. <code>pooling = "global"</code>
+estimates one shared AR(1) coefficient across the mask.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">low_srht</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/lowrank_control.html">lowrank_control</a></span><span class="op">(</span></span>
 <span>  parcels     <span class="op">=</span> <span class="va">parcels</span>,</span>
@@ -218,7 +255,7 @@ the whole brain.</p>
 <div class="section level3">
 <h3 id="fit-with-parcel-ar-srht-sketch">Fit with Parcel AR + SRHT sketch<a class="anchor" aria-label="anchor" href="#fit-with-parcel-ar-srht-sketch"></a>
 </h3>
-<p>Switching <code>by_cluster = TRUE</code> estimates a separate AR
+<p>Switching to <code>pooling = "parcel"</code> estimates a separate AR
 coefficient per parcel, then shrinks them toward the global mean
 (<code>shrink_c0 = 100</code>). This stabilizes whitening in small or
 noisy parcels.</p>
@@ -238,8 +275,9 @@ noisy parcels.</p>
 <h3 id="fit-with-ihs-sketch">Fit with IHS sketch<a class="anchor" aria-label="anchor" href="#fit-with-ihs-sketch"></a>
 </h3>
 <p>IHS (Iterative Hessian Sketch) is an alternative to SRHT. It refines
-its solution over a few iterations; 2-3 iterations with
-<code>m ~ 6p</code> are typically sufficient for near-exact results.</p>
+its solution over multiple iterations. Treat <code>m</code> and
+<code>iters</code> as accuracy controls and validate them against an
+unsketched fit for the target design.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">low_ihs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/lowrank_control.html">lowrank_control</a></span><span class="op">(</span></span>
 <span>  parcels     <span class="op">=</span> <span class="va">parcels</span>,</span>
@@ -304,16 +342,16 @@ the sketch is preserving the task part of the GLM solution well.</p>
 <span>  cor_ihs_task <span class="op">=</span> <span class="va">cor_ihs_task</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; $cor_srht_iid_task</span></span>
-<span><span class="co">#&gt; [1] 0.9469891</span></span>
+<span><span class="co">#&gt; [1] 0.9661459</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $cor_srht_global_task</span></span>
-<span><span class="co">#&gt; [1] 0.9555532</span></span>
+<span><span class="co">#&gt; [1] 0.9739018</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $cor_srht_group_task</span></span>
-<span><span class="co">#&gt; [1] 0.9616085</span></span>
+<span><span class="co">#&gt; [1] 0.9645555</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $cor_ihs_task</span></span>
-<span><span class="co">#&gt; [1] 0.9303343</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.9446414</span></span></code></pre></div>
 <p>The exact iid-versus-sketch comparison is the meaningful fidelity
 check here, and it should stay high. The AR-whitened fits usually track
 the same task effects reasonably well, but they are solving a different
@@ -359,14 +397,17 @@ smaller value so the example remains quick.</p>
 <span><span class="co">#&gt; 1 rrr_gls bootstrap         2                   TRUE</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="landmarks-nystrom-full-voxel-global-ar">Landmarks + Nystrom (full-voxel, global AR)<a class="anchor" aria-label="anchor" href="#landmarks-nystrom-full-voxel-global-ar"></a>
+<h2 id="landmark-extension-full-voxel-global-ar">Landmark extension (full-voxel, global AR)<a class="anchor" aria-label="anchor" href="#landmark-extension-full-voxel-global-ar"></a>
 </h2>
-<p>Here we solve only on L landmark voxels and extend the coefficients
-back to all voxels using a sparse, parcel-aware heat-kernel. This can
-deliver large spatial speedups when V is large.</p>
+<p>Here we isolate the spatial approximation: both reference and
+landmark fits use the same SRHT plan size and global AR specification.
+The only difference is that the landmark fit solves at 48 of 192 voxels
+and interpolates the rest. The simulated task maps are spatially smooth
+because interpolating independent voxel effects would be an ill-posed
+target.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Choose landmarks (L) and neighbors (k)</span></span>
-<span><span class="va">L</span> <span class="op">&lt;-</span> <span class="fl">24L</span>; <span class="va">k_nn</span> <span class="op">&lt;-</span> <span class="fl">12L</span></span>
+<span><span class="va">L</span> <span class="op">&lt;-</span> <span class="fl">48L</span>; <span class="va">k_nn</span> <span class="op">&lt;-</span> <span class="fl">8L</span></span>
 <span><span class="va">low_lm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/lowrank_control.html">lowrank_control</a></span><span class="op">(</span></span>
 <span>  parcels <span class="op">=</span> <span class="va">parcels</span>,</span>
 <span>  landmarks <span class="op">=</span> <span class="va">L</span>,</span>
@@ -381,42 +422,106 @@ deliver large spatial speedups when V is large.</p>
 <span>                         noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span>, pooling <span class="op">=</span> <span class="st">"global"</span><span class="op">)</span></span>
 <span>                       <span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Compare to exact</span></span>
-<span><span class="va">B_exact</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, dataset <span class="op">=</span> <span class="va">dset</span><span class="op">)</span><span class="op">$</span><span class="va">result</span><span class="op">$</span><span class="va">betas</span><span class="op">$</span><span class="va">data</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">estimate</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="va">cor_landmarks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">B_exact</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_lm_srht</span><span class="op">$</span><span class="va">betas_fixed</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">cor_landmarks</span></span>
-<span><span class="co">#&gt; [1] 0.03501604</span></span></code></pre></div>
-<p>Even with only 24 landmarks for 192 voxels the correlation with the
-exact solution remains high, demonstrating that the Nystrom extension
-faithfully recovers the full spatial map.</p>
-<p>Notes: - Landmarks are selected by k-means over voxel coordinates and
-mapped to nearest mask voxels. - The extension uses k-NN heat-kernel
-weights with row-normalization; weights respect parcel geometry via the
-<code>parcels</code> mask. - Residual variance is propagated from
-landmarks via squared weights; you may add a small nugget term near
-boundaries if needed.</p>
+<span><span class="co"># Compare task coefficients to the like-for-like full-voxel sketch.</span></span>
+<span><span class="va">task_reference</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span></span>
+<span>  <span class="va">fit_srht_global</span><span class="op">$</span><span class="va">betas_fixed</span><span class="op">[</span><span class="va">task_cols</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">task_landmarks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span></span>
+<span>  <span class="va">fit_lm_srht</span><span class="op">$</span><span class="va">betas_fixed</span><span class="op">[</span><span class="va">task_cols</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">cor_landmarks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cor</a></span><span class="op">(</span><span class="va">task_reference</span>, <span class="va">task_landmarks</span><span class="op">)</span></span>
+<span><span class="va">rmse_landmarks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="op">(</span><span class="va">task_reference</span> <span class="op">-</span> <span class="va">task_landmarks</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">nrmse_landmarks</span> <span class="op">&lt;-</span> <span class="va">rmse_landmarks</span> <span class="op">/</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/sd.html" class="external-link">sd</a></span><span class="op">(</span><span class="va">task_reference</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">cor_landmarks</span> <span class="op">&gt;</span> <span class="fl">0.85</span>, <span class="va">nrmse_landmarks</span> <span class="op">&lt;</span> <span class="fl">0.60</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>  correlation <span class="op">=</span> <span class="va">cor_landmarks</span>,</span>
+<span>  RMSE <span class="op">=</span> <span class="va">rmse_landmarks</span>,</span>
+<span>  NRMSE <span class="op">=</span> <span class="va">nrmse_landmarks</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; correlation        RMSE       NRMSE </span></span>
+<span><span class="co">#&gt;   0.8955085   0.2233649   0.4624006</span></span></code></pre></div>
+<p>The correlation checks spatial ordering, while NRMSE detects scale
+errors that correlation alone would miss. The thresholds above are an
+explicit contract for this smooth synthetic field, not a general
+guarantee for real images. Validate both metrics on representative pilot
+data before adopting landmarks in an analysis.</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Compare one task-effect slice on a common scale, then show signed error.</span></span>
+<span><span class="va">task_index</span> <span class="op">&lt;-</span> <span class="va">task_cols</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
+<span><span class="va">slice_index</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">ceiling</a></span><span class="op">(</span><span class="va">dim3</span><span class="op">[</span><span class="fl">3</span><span class="op">]</span> <span class="op">/</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">reference_volume</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span></span>
+<span>  <span class="va">fit_srht_global</span><span class="op">$</span><span class="va">betas_fixed</span><span class="op">[</span><span class="va">task_index</span>, <span class="op">]</span>, dim <span class="op">=</span> <span class="va">dim3</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">landmark_volume</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span></span>
+<span>  <span class="va">fit_lm_srht</span><span class="op">$</span><span class="va">betas_fixed</span><span class="op">[</span><span class="va">task_index</span>, <span class="op">]</span>, dim <span class="op">=</span> <span class="va">dim3</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">reference_slice</span> <span class="op">&lt;-</span> <span class="va">reference_volume</span><span class="op">[</span>, , <span class="va">slice_index</span><span class="op">]</span></span>
+<span><span class="va">landmark_slice</span> <span class="op">&lt;-</span> <span class="va">landmark_volume</span><span class="op">[</span>, , <span class="va">slice_index</span><span class="op">]</span></span>
+<span><span class="va">error_slice</span> <span class="op">&lt;-</span> <span class="va">landmark_slice</span> <span class="op">-</span> <span class="va">reference_slice</span></span>
+<span></span>
+<span><span class="va">effect_limit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">reference_slice</span>, <span class="va">landmark_slice</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">error_limit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">error_slice</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">effect_palette</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/grDevices/palettes.html" class="external-link">hcl.colors</a></span><span class="op">(</span><span class="fl">64</span>, <span class="st">"Blue-Red 3"</span><span class="op">)</span></span>
+<span><span class="va">error_palette</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/grDevices/palettes.html" class="external-link">hcl.colors</a></span><span class="op">(</span><span class="fl">64</span>, <span class="st">"Blue-Red 3"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">old_par</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mfrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">3</span><span class="op">)</span>, mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/image.html" class="external-link">image</a></span><span class="op">(</span></span>
+<span>  <span class="va">reference_slice</span>, zlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="va">effect_limit</span>, <span class="va">effect_limit</span><span class="op">)</span>,</span>
+<span>  col <span class="op">=</span> <span class="va">effect_palette</span>, asp <span class="op">=</span> <span class="fl">1</span>, axes <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  main <span class="op">=</span> <span class="st">"Full-voxel reference"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/image.html" class="external-link">image</a></span><span class="op">(</span></span>
+<span>  <span class="va">landmark_slice</span>, zlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="va">effect_limit</span>, <span class="va">effect_limit</span><span class="op">)</span>,</span>
+<span>  col <span class="op">=</span> <span class="va">effect_palette</span>, asp <span class="op">=</span> <span class="fl">1</span>, axes <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  main <span class="op">=</span> <span class="st">"Landmark extension"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/image.html" class="external-link">image</a></span><span class="op">(</span></span>
+<span>  <span class="va">error_slice</span>, zlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="va">error_limit</span>, <span class="va">error_limit</span><span class="op">)</span>,</span>
+<span>  col <span class="op">=</span> <span class="va">error_palette</span>, asp <span class="op">=</span> <span class="fl">1</span>, axes <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  main <span class="op">=</span> <span class="st">"Error: landmark - reference"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="sketched-ar_files/figure-html/plot-landmark-error-1.png" class="r-plt" alt="Three matched spatial slices showing the full-voxel task estimate, its landmark extension, and signed landmark-minus-reference error." width="864"></p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span><span class="va">old_par</span><span class="op">)</span></span></code></pre></div>
+<p>The common color scale in the first two panels makes attenuation
+visible; the third panel localizes signed interpolation error. Smooth
+regions are recovered most closely, while gradients and boundaries show
+the largest departures. This is why a whole-map correlation alone is
+insufficient.</p>
+<p>Notes:</p>
+<ul>
+<li>Landmarks are selected by k-means over voxel coordinates and mapped
+to nearest mask voxels.</li>
+<li>The extension uses coordinate k-NN heat-kernel weights with
+row-normalization. It can smooth across anatomical or parcel
+boundaries.</li>
+<li>Residual variance is propagated from landmark residuals through
+squared interpolation weights; this is an approximation, not a
+calibrated voxelwise-inference guarantee.</li>
+</ul>
 <div class="section level3">
 <h3 id="choosing-landmarks-practical-guidance">Choosing landmarks: practical guidance<a class="anchor" aria-label="anchor" href="#choosing-landmarks-practical-guidance"></a>
 </h3>
 <ul>
 <li>How many (L)?
 <ul>
-<li>Start with L ~ V/50 (e.g., 3k landmarks for 150k voxels) and adjust
-based on speed vs. fidelity.</li>
-<li>If memory is tight or V is very large, you can go down to V/100; for
-near-voxel fidelity, increase to V/20.</li>
+<li>There is no universal ratio. Start conservatively, validate
+correlation and NRMSE on representative regions, then reduce
+<code>L</code> only while those predeclared tolerances continue to
+hold.</li>
 </ul>
 </li>
 <li>Where to place them?
 <ul>
-<li>k-means centers on voxel coordinates (as above) are a solid, fast
-default. Seed the RNG for reproducibility.</li>
+<li>k-means centers on voxel coordinates (as above) are a reproducible
+default when the RNG is seeded.</li>
 <li>Farthest-point (a.k.a. max-min) sampling gives more uniform coverage
 than k-means; prefer it if you have irregular masks.</li>
-<li>Parcel-aware: sample landmarks within each parcel proportional to
-size so every region is represented.</li>
-<li>Boundaries: include a small fraction of landmarks near parcel or
-anatomical borders to better preserve edges.</li>
+<li>Boundaries: include landmarks near anatomical borders and inspect
+those regions explicitly; the current interpolator does not honor
+boundaries.</li>
 </ul>
 </li>
 <li>Neighborhood size (k_neighbors) and bandwidth (h)
@@ -433,51 +538,61 @@ adjust up to smooth more, down to sharpen.</li>
 full-voxel solve on an ROI.</li>
 <li>Visualize a few beta maps near sharp boundaries (sulci, ROI borders)
 to check that edges are preserved.</li>
-<li>Compare histogram of t-values in null tissue; Nystrom should not
-inflate tails.</li>
+<li>Do not use interpolated standard errors or test statistics for
+strict voxelwise inference without a separate calibration study.</li>
 </ul>
 </li>
 </ul>
 </div>
 </div>
 <div class="section level2">
-<h2 id="fidelity-vs--exact-voxelwise-glm">Fidelity vs. exact voxelwise GLM<a class="anchor" aria-label="anchor" href="#fidelity-vs--exact-voxelwise-glm"></a>
+<h2 id="what-the-comparisons-establish">What the comparisons establish<a class="anchor" aria-label="anchor" href="#what-the-comparisons-establish"></a>
 </h2>
 <ul>
-<li>With m ~ 6-8*p for SRHT and 2-3 IHS iterations, fixed-effects betas
-typically correlate &gt; .9 with the exact voxelwise solution while
-running far faster.</li>
-<li>Parcel-pooled AR stabilizes whitening and often improves
-out-of-sample behavior vs per-voxel AR, especially on short runs.</li>
-<li>Landmark Nystrom trades a small amount of spatial detail for large
-speed gains; boundaries are respected via parcel-aware distances,
-helping preserve sulcal/ROI edges.</li>
+<li>The iid SRHT comparison isolates temporal-sketch error from AR-model
+changes.</li>
+<li>The landmark comparison isolates spatial interpolation while holding
+the temporal sketch and AR specification fixed.</li>
+<li>Results on smooth synthetic fields do not establish accuracy at
+sharp boundaries or for spatially irregular effects.</li>
+<li>No runtime claim is made here. Benchmark the exact workload,
+including data access and preprocessing, before choosing an
+approximation for speed.</li>
 </ul>
 </div>
 <div class="section level2">
 <h2 id="when-to-use-which-knob">When to use which knob<a class="anchor" aria-label="anchor" href="#when-to-use-which-knob"></a>
 </h2>
 <ul>
-<li>Short runs (small T): favor landmarks first, then sketch if
-needed.</li>
-<li>Long runs (large T): sketch in time dominates the speedup; landmarks
-optional.</li>
-<li>Memory-constrained: use landmarks to shrink V; SRHT/IHS keep
-temporal memory bounded.</li>
+<li>Reduce <code>T</code> with a temporal sketch only after validating
+task-coefficient error against the unsketched estimator.</li>
+<li>Reduce <code>V</code> with landmarks only when coefficient fields
+are spatially smooth enough to satisfy a declared map-error
+tolerance.</li>
+<li>Omit landmarks when voxelwise detail or sharp boundaries are central
+to the scientific question.</li>
 </ul>
 </div>
 <div class="section level2">
 <h2 id="pros-and-cons">Pros and cons<a class="anchor" aria-label="anchor" href="#pros-and-cons"></a>
 </h2>
-<p>Pros - Large speedups with minimal code changes:
-<code>engine = "latent_sketch"</code> and a small
-<code><a href="../reference/lowrank_control.html">lowrank_control()</a></code> list. - Shared AR (global/parcel) reduces
-variance and improves stability. - SRHT/IHS preserve GLM geometry;
-Nystrom respects spatial structure.</p>
-<p>Cons - Landmark extension introduces controlled spatial shrinkage; if
-you need strict voxelwise inference, omit landmarks. - Sketching
-slightly perturbs degrees of freedom (uses m - p); choose m
-conservatively if p is large or X is ill-conditioned.</p>
+<p>Pros</p>
+<ul>
+<li>Temporal and spatial approximation controls are explicit in
+<code><a href="../reference/lowrank_control.html">lowrank_control()</a></code>.</li>
+<li>Global and parcel-pooled AR models are expressed through the same
+public <code><a href="../reference/noise_spec.html">noise_spec()</a></code> interface.</li>
+<li>Correlation and scale-sensitive error can be validated
+separately.</li>
+</ul>
+<p>Cons</p>
+<ul>
+<li>Landmark extension introduces spatial shrinkage that is
+data-dependent and can cross boundaries; if you need strict voxelwise
+inference, omit landmarks.</li>
+<li>Sketching slightly perturbs degrees of freedom (uses m - p); choose
+m conservatively if p is large or X is ill-conditioned.</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="practical-defaults">Practical defaults<a class="anchor" aria-label="anchor" href="#practical-defaults"></a>
@@ -487,10 +602,12 @@ conservatively if p is large or X is ill-conditioned.</p>
 IHS with <code>m ~ 6*p</code>, <code>iters = 2-3</code>.</li>
 <li>AR order: 1 is a solid default; use 2 if residuals show lag-2
 structure.</li>
-<li>Parcel AR: enable with <code>by_cluster = TRUE</code>; shrinkage
-<code>shrink_c0 = 100</code> works well.</li>
-<li>Landmarks: start with <code>L ~ V/50</code>,
-<code>k_neighbors in [8, 32]</code>.</li>
+<li>Parcel AR: use
+<code>noise_spec("ar1", pooling = "parcel", parcels = parcels)</code>;
+tune shrinkage for the target data rather than assuming one universal
+value.</li>
+<li>Landmarks: choose <code>L</code> and <code>k_neighbors</code> by a
+declared correlation and NRMSE contract on representative data.</li>
 </ul>
 </div>
 <div class="section level2">

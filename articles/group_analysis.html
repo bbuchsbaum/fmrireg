@@ -38,16 +38,18 @@
 <li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -85,7 +87,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-08-09</h4>
+            <h4 data-toc-skip class="date">2026-08-22</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/group_analysis.Rmd" class="external-link"><code>vignettes/group_analysis.Rmd</code></a></small>
       <div class="d-none name"><code>group_analysis.Rmd</code></div>
@@ -93,11 +95,7 @@ Buchsbaum</h4>
 
     
     
-<script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.remove("palette-red","palette-lapis","palette-ochre","palette-teal","palette-green","palette-violet","preset-homage","preset-study","preset-structural","preset-adobe","preset-midnight");document.body.classList.add("palette-red","preset-homage");});</script><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrireg/">fmrireg</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span></code></pre></div>
-<div class="section level2">
+<script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.remove("palette-red","palette-lapis","palette-ochre","palette-teal","palette-green","palette-violet","preset-homage","preset-study","preset-structural","preset-adobe","preset-midnight");document.body.classList.add("palette-red","preset-homage");});</script><div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
 <p>This vignette walks through a compact, end-to-end example of group
@@ -115,7 +113,7 @@ Stouffer, Fisher, or Lancaster combinations.</p>
 <p>We simulate 10 subjects across two groups (A/B) for a single ROI.
 Group B has an effect that is 1 unit larger than group A. All subjects
 have the same SE for clarity.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">n_per_group</span> <span class="op">&lt;-</span> <span class="fl">5</span></span>
 <span><span class="va">subjects</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"s%02d"</span>, <span class="fl">1</span><span class="op">:</span><span class="op">(</span><span class="fl">2</span> <span class="op">*</span> <span class="va">n_per_group</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">group</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span><span class="op">)</span>, each <span class="op">=</span> <span class="va">n_per_group</span><span class="op">)</span><span class="op">)</span></span>
@@ -132,8 +130,9 @@ have the same SE for clarity.</p>
 <span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">gd</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/group_data_from_csv.html">group_data_from_csv</a></span><span class="op">(</span></span>
+<span><span class="va">gd</span> <span class="op">&lt;-</span> <span class="fu">fmrireg</span><span class="fu">::</span><span class="fu"><a href="../reference/group_data.html">group_data</a></span><span class="op">(</span></span>
 <span>  <span class="va">roi_df</span>,</span>
+<span>  format <span class="op">=</span> <span class="st">"csv"</span>,</span>
 <span>  effect_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>beta <span class="op">=</span> <span class="st">"beta"</span>, se <span class="op">=</span> <span class="st">"se"</span><span class="op">)</span>,</span>
 <span>  subject_col <span class="op">=</span> <span class="st">"subject"</span>,</span>
 <span>  roi_col <span class="op">=</span> <span class="st">"roi"</span>,</span>
@@ -141,17 +140,20 @@ have the same SE for clarity.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">gd</span></span>
-<span><span class="co">#&gt; Group Data Object</span></span>
-<span><span class="co">#&gt; Format: csv </span></span>
-<span><span class="co">#&gt; Subjects: 10 </span></span>
-<span><span class="co">#&gt; Covariates: group</span></span></code></pre></div>
+<span><span class="co">#&gt; group_data (backed by gds)</span></span>
+<span><span class="co">#&gt; GDS plan</span></span>
+<span><span class="co">#&gt;   adapter: tabular</span></span>
+<span><span class="co">#&gt;   source dims: 1 x 10 x 1 [sample x subject x contrast]</span></span>
+<span><span class="co">#&gt;   space: sample_labels n=1</span></span>
+<span><span class="co">#&gt;   assays: beta, se</span></span>
+<span><span class="co">#&gt;   nodes: 0</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="fit-group-meta-analysis">Fit group meta-analysis<a class="anchor" aria-label="anchor" href="#fit-group-meta-analysis"></a>
 </h2>
 <p>We first fit an intercept-only model, then a model including a group
 term.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_fe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, method <span class="op">=</span> <span class="st">"fe"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">fit_cov</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, method <span class="op">=</span> <span class="st">"fe"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
@@ -164,11 +166,11 @@ term.</p>
 <span><span class="co">#&gt; Robust: none </span></span>
 <span><span class="co">#&gt; Formula: ~1 + group </span></span>
 <span><span class="co">#&gt; Subjects: 10 </span></span>
-<span><span class="co">#&gt; ROIs analyzed: 1 </span></span>
+<span><span class="co">#&gt; Voxels analyzed: 1 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Heterogeneity:</span></span>
 <span><span class="co">#&gt;   Mean tau^2: 0 </span></span>
-<span><span class="co">#&gt;   Mean I^2: NaN %</span></span>
+<span><span class="co">#&gt;   Mean I^2: 0 %</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_cov</span><span class="op">)</span></span>
 <span><span class="co">#&gt; fMRI Meta-Analysis Summary</span></span>
 <span><span class="co">#&gt; ==========================</span></span>
@@ -180,11 +182,11 @@ term.</p>
 <span><span class="co">#&gt; Robust: none </span></span>
 <span><span class="co">#&gt; Formula: ~1 + group </span></span>
 <span><span class="co">#&gt; Subjects: 10 </span></span>
-<span><span class="co">#&gt; ROIs analyzed: 1 </span></span>
+<span><span class="co">#&gt; Voxels analyzed: 1 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Heterogeneity:</span></span>
 <span><span class="co">#&gt;   Mean tau^2: 0 </span></span>
-<span><span class="co">#&gt;   Mean I^2: NaN %</span></span>
+<span><span class="co">#&gt;   Mean I^2: 0 %</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Coefficients:</span></span>
 <span><span class="co">#&gt;   (Intercept):</span></span>
@@ -199,7 +201,7 @@ term.</p>
 will yield similar point estimates. Random-effects
 (<code>method = "pm"</code>) will estimate between- subject
 heterogeneity (<code>tau2</code>) when present.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_pm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, method <span class="op">=</span> <span class="st">"pm"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_pm</span><span class="op">)</span></span>
 <span><span class="co">#&gt; fMRI Meta-Analysis Summary</span></span>
@@ -212,11 +214,11 @@ heterogeneity (<code>tau2</code>) when present.</p>
 <span><span class="co">#&gt; Robust: none </span></span>
 <span><span class="co">#&gt; Formula: ~1 + group </span></span>
 <span><span class="co">#&gt; Subjects: 10 </span></span>
-<span><span class="co">#&gt; ROIs analyzed: 1 </span></span>
+<span><span class="co">#&gt; Voxels analyzed: 1 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Heterogeneity:</span></span>
 <span><span class="co">#&gt;   Mean tau^2: 0 </span></span>
-<span><span class="co">#&gt;   Mean I^2: NaN %</span></span>
+<span><span class="co">#&gt;   Mean I^2: 0 %</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Coefficients:</span></span>
 <span><span class="co">#&gt;   (Intercept):</span></span>
@@ -231,89 +233,53 @@ heterogeneity (<code>tau2</code>) when present.</p>
 <div class="section level2">
 <h2 id="extract-coefficients-and-a-contrast">Extract coefficients and a contrast<a class="anchor" aria-label="anchor" href="#extract-coefficients-and-a-contrast"></a>
 </h2>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">coef_names</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">fit_cov</span><span class="op">$</span><span class="va">coefficients</span><span class="op">)</span></span>
-<span><span class="va">coef_names</span></span>
-<span><span class="co">#&gt; [1] "(Intercept)" "groupB"</span></span>
+<span><span class="va">group_term_roi</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"^group"</span>, <span class="va">coef_names</span>, value <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">group_weights_roi</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">coef_names</span> <span class="op">==</span> <span class="va">group_term_roi</span><span class="op">)</span>, <span class="va">coef_names</span><span class="op">)</span></span>
+<span><span class="va">con_roi</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast.html">contrast</a></span><span class="op">(</span><span class="va">fit_cov</span>, <span class="va">group_weights_roi</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">coef_est</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_cov</span><span class="op">$</span><span class="va">coefficients</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">coef_est</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">coef_names</span></span>
-<span><span class="va">coef_est</span></span>
-<span><span class="co">#&gt; (Intercept)      groupB </span></span>
-<span><span class="co">#&gt;         0.5         1.0</span></span>
-<span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"group"</span>, <span class="va">coef_names</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">w</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">coef_names</span><span class="op">)</span><span class="op">)</span>; <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">w</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">coef_names</span></span>
-<span>  <span class="va">w</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"group"</span>, <span class="va">coef_names</span><span class="op">)</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">1</span></span>
-<span>  <span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast.html">contrast</a></span><span class="op">(</span><span class="va">fit_cov</span>, <span class="va">w</span><span class="op">)</span></span>
-<span>  <span class="va">con</span></span>
-<span><span class="op">}</span></span>
-<span><span class="co">#&gt; $estimate</span></span>
-<span><span class="co">#&gt; [1] 1</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $se</span></span>
-<span><span class="co">#&gt; [1] 0.1581139</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $z</span></span>
-<span><span class="co">#&gt; [1] 6.324555</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $p</span></span>
-<span><span class="co">#&gt;                    [,1]</span></span>
-<span><span class="co">#&gt; ExampleROI 2.539629e-10</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $weights</span></span>
-<span><span class="co">#&gt; (Intercept)      groupB </span></span>
-<span><span class="co">#&gt;           0           1 </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $name</span></span>
-<span><span class="co">#&gt; [1] "groupB"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $parent</span></span>
-<span><span class="co">#&gt; fMRI Meta-Analysis Results</span></span>
-<span><span class="co">#&gt; ==========================</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Method: fe </span></span>
-<span><span class="co">#&gt; Robust: none </span></span>
-<span><span class="co">#&gt; Formula: ~1 + group </span></span>
-<span><span class="co">#&gt; Subjects: 10 </span></span>
-<span><span class="co">#&gt; ROIs analyzed: 1 </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Heterogeneity:</span></span>
-<span><span class="co">#&gt;   Mean tau^2: 0 </span></span>
-<span><span class="co">#&gt;   Mean I^2: NaN %</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; attr(,"class")</span></span>
-<span><span class="co">#&gt; [1] "fmri_meta_contrast"</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  term <span class="op">=</span> <span class="va">coef_names</span>,</span>
+<span>  estimate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_cov</span><span class="op">$</span><span class="va">coefficients</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span><span class="op">)</span>,</span>
+<span>  standard_error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_cov</span><span class="op">$</span><span class="va">se</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;          term estimate standard_error</span></span>
+<span><span class="co">#&gt; 1 (Intercept)      0.5      0.1118034</span></span>
+<span><span class="co">#&gt; 2      groupB      1.0      0.1581139</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="a-quick-visualization">A quick visualization<a class="anchor" aria-label="anchor" href="#a-quick-visualization"></a>
 </h2>
 <p>We can visualize the group effects and their 95% CIs for the
 ROI-level fit.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">df_tidy</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tidy.html">tidy</a></span><span class="op">(</span><span class="va">fit_cov</span>, conf.int <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">df_tidy</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  term <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">fit_cov</span><span class="op">$</span><span class="va">coefficients</span><span class="op">)</span>,</span>
+<span>  estimate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_cov</span><span class="op">$</span><span class="va">coefficients</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span><span class="op">)</span>,</span>
+<span>  std_error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_cov</span><span class="op">$</span><span class="va">se</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">df_tidy</span><span class="op">$</span><span class="va">conf.low</span> <span class="op">&lt;-</span> <span class="va">df_tidy</span><span class="op">$</span><span class="va">estimate</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">qnorm</a></span><span class="op">(</span><span class="fl">0.975</span><span class="op">)</span> <span class="op">*</span> <span class="va">df_tidy</span><span class="op">$</span><span class="va">std_error</span></span>
+<span><span class="va">df_tidy</span><span class="op">$</span><span class="va">conf.high</span> <span class="op">&lt;-</span> <span class="va">df_tidy</span><span class="op">$</span><span class="va">estimate</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">qnorm</a></span><span class="op">(</span><span class="fl">0.975</span><span class="op">)</span> <span class="op">*</span> <span class="va">df_tidy</span><span class="op">$</span><span class="va">std_error</span></span>
 <span><span class="va">df_tidy</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 10</span></span></span>
-<span><span class="co">#&gt;   roi        term     estimate std.error statistic  p.value  tau2    I2 conf.low</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> ExampleROI (Interc…      0.5     0.112      4.47 7.74<span style="color: #949494;">e</span><span style="color: #BB0000;">- 6</span>     0    <span style="color: #BB0000;">NA</span>    0.281</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> ExampleROI groupB        1       0.158      6.32 2.54<span style="color: #949494;">e</span><span style="color: #BB0000;">-10</span>     0    <span style="color: #BB0000;">NA</span>    0.690</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 1 more variable: conf.high &lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt;          term estimate std_error  conf.low conf.high</span></span>
+<span><span class="co">#&gt; 1 (Intercept)      0.5 0.1118034 0.2808694 0.7191306</span></span>
+<span><span class="co">#&gt; 2      groupB      1.0 0.1581139 0.6901025 1.3098975</span></span>
 <span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df_tidy</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">term</span>, y <span class="op">=</span> <span class="va">estimate</span>, ymin <span class="op">=</span> <span class="va">conf.low</span>, ymax <span class="op">=</span> <span class="va">conf.high</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_linerange.html" class="external-link">geom_pointrange</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_hline</a></span><span class="op">(</span>yintercept <span class="op">=</span> <span class="fl">0</span>, linetype <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"ROI-level group meta-analysis"</span>,</span>
+<span><span class="fu">ggplot</span><span class="op">(</span><span class="va">df_tidy</span>, <span class="fu">aes</span><span class="op">(</span>x <span class="op">=</span> <span class="va">term</span>, y <span class="op">=</span> <span class="va">estimate</span>, ymin <span class="op">=</span> <span class="va">conf.low</span>, ymax <span class="op">=</span> <span class="va">conf.high</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_pointrange</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_hline</span><span class="op">(</span>yintercept <span class="op">=</span> <span class="fl">0</span>, linetype <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"ROI-level group meta-analysis"</span>,</span>
 <span>       x <span class="op">=</span> <span class="st">"Term"</span>, y <span class="op">=</span> <span class="st">"Estimate +/- 95% CI"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="group_analysis_files/figure-html/plot-group-effects-1.png" class="r-plt" alt="" width="672"></p>
+<span>  <span class="fu">theme_minimal</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><img src="group_analysis_files/figure-html/plot-group-effects-1.png" class="r-plt" alt="ROI meta-regression coefficients with 95 percent confidence intervals for the intercept and group B effect." width="672"></p>
 </div>
 <div class="section level2">
 <h2 id="notes-on-voxelwise-analysis">Notes on voxelwise analysis<a class="anchor" aria-label="anchor" href="#notes-on-voxelwise-analysis"></a>
 </h2>
 <p>For voxelwise analysis, construct <code>group_data</code> with format
 <code>"nifti"</code> or <code>"h5"</code>:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># HDF5 (produced via write_results.fmri_lm)</span></span>
 <span><span class="co"># gd_h5 &lt;- fmrireg::group_data(h5_paths, format = "h5",</span></span>
 <span><span class="co">#                     subjects = subject_ids,</span></span>
@@ -336,7 +302,7 @@ see <code><a href="../reference/spatial_fdr.html">spatial_fdr()</a></code> and <
 <p>This chunk creates tiny synthetic NIfTI volumes on disk (in a temp
 dir) for a voxelwise demonstration. Group B has a higher effect in a
 small cube.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/neuroim2" class="external-link">neuroim2</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
@@ -371,9 +337,9 @@ small cube.</p>
 <span><span class="va">mask_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">tmpdir</span>, <span class="st">"mask.nii.gz"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vol-methods.html" class="external-link">write_vol</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fl">1</span>, dim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">8</span>, <span class="fl">8</span>, <span class="fl">8</span><span class="op">)</span><span class="op">)</span>, <span class="va">space</span><span class="op">)</span>, <span class="va">mask_path</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">gd_nii</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/group_data_from_nifti.html">group_data_from_nifti</a></span><span class="op">(</span></span>
-<span>  beta_paths <span class="op">=</span> <span class="va">beta_paths</span>,</span>
-<span>  se_paths   <span class="op">=</span> <span class="va">se_paths</span>,</span>
+<span><span class="va">gd_nii</span> <span class="op">&lt;-</span> <span class="fu">fmrireg</span><span class="fu">::</span><span class="fu"><a href="../reference/group_data.html">group_data</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>beta <span class="op">=</span> <span class="va">beta_paths</span>, se <span class="op">=</span> <span class="va">se_paths</span><span class="op">)</span>,</span>
+<span>  format <span class="op">=</span> <span class="st">"nifti"</span>,</span>
 <span>  subjects   <span class="op">=</span> <span class="va">ids</span>,</span>
 <span>  covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>group <span class="op">=</span> <span class="va">grp</span><span class="op">)</span>,</span>
 <span>  mask       <span class="op">=</span> <span class="va">mask_path</span></span>
@@ -395,52 +361,191 @@ small cube.</p>
 <span><span class="co">#&gt;   Mean I^2: 0 %</span></span>
 <span></span>
 <span><span class="va">group_col</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"group"</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">fit_nii</span><span class="op">$</span><span class="va">coefficients</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">group_term_nii</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">fit_nii</span><span class="op">$</span><span class="va">coefficients</span><span class="op">)</span><span class="op">[</span><span class="va">group_col</span><span class="op">]</span></span>
 <span><span class="va">pvals</span> <span class="op">&lt;-</span> <span class="fl">2</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">pnorm</a></span><span class="op">(</span><span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fit_nii</span><span class="op">$</span><span class="va">coefficients</span><span class="op">[</span>, <span class="va">group_col</span><span class="op">]</span> <span class="op">/</span> <span class="va">fit_nii</span><span class="op">$</span><span class="va">se</span><span class="op">[</span>, <span class="va">group_col</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">pvals</span> <span class="op">&lt;</span> <span class="fl">0.05</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 27</span></span>
+<span><span class="va">sfr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/spatial_fdr.html">spatial_fdr</a></span><span class="op">(</span></span>
+<span>  <span class="va">fit_nii</span>,</span>
+<span>  p <span class="op">=</span> <span class="va">group_term_nii</span>,</span>
+<span>  group <span class="op">=</span> <span class="st">"blocks"</span>,</span>
+<span>  empirical_null <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">sfr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/spatial_fdr.html">spatial_fdr</a></span><span class="op">(</span><span class="va">fit_nii</span>, p <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">fit_nii</span><span class="op">$</span><span class="va">coefficients</span><span class="op">)</span><span class="op">[</span><span class="va">group_col</span><span class="op">]</span>, group <span class="op">=</span> <span class="st">"blocks"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">sfr</span><span class="op">$</span><span class="va">reject</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 75</span></span>
-<span></span>
-<span><span class="va">img_group_est</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/coef_image.html">coef_image</a></span><span class="op">(</span><span class="va">fit_nii</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">fit_nii</span><span class="op">$</span><span class="va">coefficients</span><span class="op">)</span><span class="op">[</span><span class="va">group_col</span><span class="op">]</span>, statistic <span class="op">=</span> <span class="st">"estimate"</span><span class="op">)</span></span>
+<span><span class="va">active_voxels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="va">active</span><span class="op">)</span></span>
+<span><span class="va">discovery_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Uncorrected p &lt; 0.05"</span>, <span class="st">"Spatial FDR, q &lt; 0.05"</span><span class="op">)</span>,</span>
+<span>  discoveries <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">pvals</span> <span class="op">&lt;</span> <span class="fl">0.05</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">sfr</span><span class="op">$</span><span class="va">reject</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  true_positives <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">pvals</span> <span class="op">&lt;</span> <span class="fl">0.05</span> <span class="op">&amp;</span> <span class="va">active_voxels</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">sfr</span><span class="op">$</span><span class="va">reject</span> <span class="op">&amp;</span> <span class="va">active_voxels</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  false_positives <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">pvals</span> <span class="op">&lt;</span> <span class="fl">0.05</span> <span class="op">&amp;</span> <span class="op">!</span><span class="va">active_voxels</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">sfr</span><span class="op">$</span><span class="va">reject</span> <span class="op">&amp;</span> <span class="op">!</span><span class="va">active_voxels</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">discovery_summary</span>, caption <span class="op">=</span> <span class="st">"Discoveries against the known active cube"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Discoveries against the known active cube</caption>
+<thead><tr class="header">
+<th align="left">method</th>
+<th align="right">discoveries</th>
+<th align="right">true_positives</th>
+<th align="right">false_positives</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Uncorrected p &lt; 0.05</td>
+<td align="right">27</td>
+<td align="right">27</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">Spatial FDR, q &lt; 0.05</td>
+<td align="right">27</td>
+<td align="right">27</td>
+<td align="right">0</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="va">img_group_est</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/coef_image.html">coef_image</a></span><span class="op">(</span><span class="va">fit_nii</span>, <span class="va">group_term_nii</span>, statistic <span class="op">=</span> <span class="st">"estimate"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">as.array</a></span><span class="op">(</span><span class="va">img_group_est</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] -0.09585902  1.08515382</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">group_estimate_array</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span></span>
+<span>  <span class="va">fit_nii</span><span class="op">$</span><span class="va">coefficients</span><span class="op">[</span>, <span class="va">group_col</span><span class="op">]</span>, dim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">8</span>, <span class="fl">8</span>, <span class="fl">8</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">decision_class</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span></span>
+<span>  <span class="va">sfr</span><span class="op">$</span><span class="va">reject</span> <span class="op">&amp;</span> <span class="va">active_voxels</span>, <span class="fl">2L</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">sfr</span><span class="op">$</span><span class="va">reject</span> <span class="op">&amp;</span> <span class="op">!</span><span class="va">active_voxels</span>, <span class="fl">3L</span>,</span>
+<span>         <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">active_voxels</span>, <span class="fl">1L</span>, <span class="fl">0L</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">decision_array</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="va">decision_class</span>, dim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">8</span>, <span class="fl">8</span>, <span class="fl">8</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">slice_index</span> <span class="op">&lt;-</span> <span class="fl">4L</span></span>
+<span></span>
+<span><span class="va">effect_limit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">group_estimate_array</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">old_par</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>no.readonly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/layout.html" class="external-link">layout</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>, widths <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">0.18</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/image.html" class="external-link">image</a></span><span class="op">(</span></span>
+<span>  <span class="va">group_estimate_array</span><span class="op">[</span>, , <span class="va">slice_index</span><span class="op">]</span>,</span>
+<span>  zlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="va">effect_limit</span>, <span class="va">effect_limit</span><span class="op">)</span>,</span>
+<span>  col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grDevices/palettes.html" class="external-link">hcl.colors</a></span><span class="op">(</span><span class="fl">64</span>, <span class="st">"Blue-Red 3"</span><span class="op">)</span>, axes <span class="op">=</span> <span class="cn">FALSE</span>, asp <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  main <span class="op">=</span> <span class="st">"Estimated B - A effect"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/contour.html" class="external-link">contour</a></span><span class="op">(</span><span class="va">active</span><span class="op">[</span>, , <span class="va">slice_index</span><span class="op">]</span>, levels <span class="op">=</span> <span class="fl">0.5</span>, add <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>        drawlabels <span class="op">=</span> <span class="cn">FALSE</span>, lwd <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/image.html" class="external-link">image</a></span><span class="op">(</span></span>
+<span>  <span class="va">decision_array</span><span class="op">[</span>, , <span class="va">slice_index</span><span class="op">]</span>,</span>
+<span>  breaks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.5</span>, <span class="fl">0.5</span>, <span class="fl">1.5</span>, <span class="fl">2.5</span>, <span class="fl">3.5</span><span class="op">)</span>,</span>
+<span>  col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gray90"</span>, <span class="st">"#0072B2"</span>, <span class="st">"#009E73"</span>, <span class="st">"#E69F00"</span><span class="op">)</span>,</span>
+<span>  axes <span class="op">=</span> <span class="cn">FALSE</span>, asp <span class="op">=</span> <span class="fl">1</span>, main <span class="op">=</span> <span class="st">"Spatial-FDR decision vs truth"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/legend.html" class="external-link">legend</a></span><span class="op">(</span></span>
+<span>  <span class="st">"bottomright"</span>,</span>
+<span>  legend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"correct null"</span>, <span class="st">"missed active"</span>, <span class="st">"true discovery"</span>, <span class="st">"false discovery"</span><span class="op">)</span>,</span>
+<span>  fill <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gray90"</span>, <span class="st">"#0072B2"</span>, <span class="st">"#009E73"</span>, <span class="st">"#E69F00"</span><span class="op">)</span>,</span>
+<span>  cex <span class="op">=</span> <span class="fl">0.8</span>, bty <span class="op">=</span> <span class="st">"n"</span>, inset <span class="op">=</span> <span class="fl">0.02</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">0.5</span>, <span class="fl">3</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">scale_values</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="op">-</span><span class="va">effect_limit</span>, <span class="va">effect_limit</span>, length.out <span class="op">=</span> <span class="fl">64</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/image.html" class="external-link">image</a></span><span class="op">(</span></span>
+<span>  x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">scale_values</span>,</span>
+<span>  z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">scale_values</span>, each <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>,</span>
+<span>  col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grDevices/palettes.html" class="external-link">hcl.colors</a></span><span class="op">(</span><span class="fl">64</span>, <span class="st">"Blue-Red 3"</span><span class="op">)</span>, axes <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  xlab <span class="op">=</span> <span class="st">""</span>, ylab <span class="op">=</span> <span class="st">""</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/axis.html" class="external-link">axis</a></span><span class="op">(</span><span class="fl">4</span>, at <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/pretty.html" class="external-link">pretty</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="va">effect_limit</span>, <span class="va">effect_limit</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>, las <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/mtext.html" class="external-link">mtext</a></span><span class="op">(</span><span class="st">"B - A"</span>, side <span class="op">=</span> <span class="fl">4</span>, line <span class="op">=</span> <span class="fl">2.2</span><span class="op">)</span></span></code></pre></div>
+<p><img src="group_analysis_files/figure-html/plot-spatial-fdr-truth-1.png" class="r-plt" alt="Side-by-side slice maps of the estimated group B minus A effect with a numeric color scale and spatial-FDR decisions classified against the known active cube." width="864"></p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span><span class="va">old_par</span><span class="op">)</span></span></code></pre></div>
+<p>The black outline marks the known active cube. The decision panel
+distinguishes true discoveries from both missed active voxels and false
+discoveries rather than presenting a thresholded map without its
+simulation truth.</p>
+<p>Because the subject-level SE maps define the reference variance in
+this toy example, we use the theoretical null
+(<code>empirical_null = FALSE</code>). Estimating an empirical null from
+this deliberately under-dispersed background would rescale tiny null
+fluctuations upward and obscure the intended multiple-testing
+lesson.</p>
 </div>
 <div class="section level2">
 <h2 id="exact-contrasts-and-stored-covariance">Exact contrasts and stored covariance<a class="anchor" aria-label="anchor" href="#exact-contrasts-and-stored-covariance"></a>
 </h2>
 <p>You can request exact contrasts at fit-time or store per-voxel
 covariance for exact post-hoc contrasts.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_nii_pm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span></span>
 <span>  <span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, method <span class="op">=</span> <span class="st">"pm"</span>,</span>
 <span>  return_cov <span class="op">=</span> <span class="st">"tri"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast.html">contrast</a></span><span class="op">(</span><span class="va">fit_nii_pm</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"(Intercept)"</span> <span class="op">=</span> <span class="fl">0</span>, group <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">con</span><span class="op">)</span></span>
-<span><span class="co">#&gt;          Length Class     Mode     </span></span>
-<span><span class="co">#&gt; estimate 512    -none-    numeric  </span></span>
-<span><span class="co">#&gt; se       512    -none-    numeric  </span></span>
-<span><span class="co">#&gt; z        512    -none-    numeric  </span></span>
-<span><span class="co">#&gt; p        512    -none-    numeric  </span></span>
-<span><span class="co">#&gt; weights    2    -none-    numeric  </span></span>
-<span><span class="co">#&gt; name       1    -none-    character</span></span>
-<span><span class="co">#&gt; parent    17    fmri_meta list</span></span>
+<span><span class="va">group_term_pm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">fit_nii_pm</span><span class="op">$</span><span class="va">coefficients</span><span class="op">)</span>, <span class="st">"(Intercept)"</span><span class="op">)</span></span>
+<span><span class="va">group_weights_pm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">fit_nii_pm</span><span class="op">$</span><span class="va">coefficients</span><span class="op">)</span> <span class="op">==</span> <span class="va">group_term_pm</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">fit_nii_pm</span><span class="op">$</span><span class="va">coefficients</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast.html">contrast</a></span><span class="op">(</span><span class="va">fit_nii_pm</span>, <span class="va">group_weights_pm</span><span class="op">)</span></span>
 <span></span>
+<span><span class="va">contrast_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  region <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Active cube"</span>, <span class="st">"Background"</span><span class="op">)</span>,</span>
+<span>  mean_estimate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">con</span><span class="op">$</span><span class="va">estimate</span><span class="op">[</span><span class="va">active_voxels</span><span class="op">]</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">con</span><span class="op">$</span><span class="va">estimate</span><span class="op">[</span><span class="op">!</span><span class="va">active_voxels</span><span class="op">]</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  mean_standard_error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">con</span><span class="op">$</span><span class="va">se</span><span class="op">[</span><span class="va">active_voxels</span><span class="op">]</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">con</span><span class="op">$</span><span class="va">se</span><span class="op">[</span><span class="op">!</span><span class="va">active_voxels</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">contrast_summary</span>, digits <span class="op">=</span> <span class="fl">4</span>, caption <span class="op">=</span> <span class="st">"Exact post-hoc B - A contrast"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Exact post-hoc B - A contrast</caption>
+<thead><tr class="header">
+<th align="left">region</th>
+<th align="right">mean_estimate</th>
+<th align="right">mean_standard_error</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Active cube</td>
+<td align="right">1.0108</td>
+<td align="right">0.2041</td>
+</tr>
+<tr class="even">
+<td align="left">Background</td>
+<td align="right">0.0014</td>
+<td align="right">0.2041</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
 <span><span class="va">fit_nii_con</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span></span>
 <span>  <span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, method <span class="op">=</span> <span class="st">"pm"</span>,</span>
-<span>  contrasts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>                     dimnames <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"group"</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">fit_nii_pm</span><span class="op">$</span><span class="va">model</span><span class="op">$</span><span class="va">X</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  contrasts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="va">group_weights_pm</span>, nrow <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>                     dimnames <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"B_minus_A"</span>, <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">group_weights_pm</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">fit_nii_con</span><span class="op">$</span><span class="va">contrasts</span><span class="op">)</span></span>
-<span><span class="co">#&gt; List of 4</span></span>
-<span><span class="co">#&gt;  $ names   : chr "group"</span></span>
-<span><span class="co">#&gt;  $ estimate: num [1:512, 1] 2.05e-02 1.79e-02 -3.49e-03 -5.51e-02 3.53e-05 ...</span></span>
-<span><span class="co">#&gt;  $ se      : num [1:512, 1] 0.204 0.204 0.204 0.204 0.204 ...</span></span>
-<span><span class="co">#&gt;  $ z       : num [1:512, 1] 0.100565 0.0878 -0.017112 -0.269929 0.000173 ...</span></span></code></pre></div>
+<span><span class="va">fit_time_estimate</span> <span class="op">&lt;-</span> <span class="va">fit_nii_con</span><span class="op">$</span><span class="va">contrasts</span><span class="op">$</span><span class="va">estimate</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span></span>
+<span><span class="va">fit_time_se</span> <span class="op">&lt;-</span> <span class="va">fit_nii_con</span><span class="op">$</span><span class="va">contrasts</span><span class="op">$</span><span class="va">se</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span></span>
+<span><span class="va">fit_time_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  region <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Active cube"</span>, <span class="st">"Background"</span><span class="op">)</span>,</span>
+<span>  mean_estimate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">fit_time_estimate</span><span class="op">[</span><span class="va">active_voxels</span><span class="op">]</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">fit_time_estimate</span><span class="op">[</span><span class="op">!</span><span class="va">active_voxels</span><span class="op">]</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  mean_standard_error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">fit_time_se</span><span class="op">[</span><span class="va">active_voxels</span><span class="op">]</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">fit_time_se</span><span class="op">[</span><span class="op">!</span><span class="va">active_voxels</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">fit_time_summary</span>, digits <span class="op">=</span> <span class="fl">4</span>, caption <span class="op">=</span> <span class="st">"Exact fit-time B - A contrast"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Exact fit-time B - A contrast</caption>
+<thead><tr class="header">
+<th align="left">region</th>
+<th align="right">mean_estimate</th>
+<th align="right">mean_standard_error</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Active cube</td>
+<td align="right">1.0108</td>
+<td align="right">0.2041</td>
+</tr>
+<tr class="even">
+<td align="left">Background</td>
+<td align="right">0.0014</td>
+<td align="right">0.2041</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level2">
 <h2 id="two-sample-t-test-welch-and-ols-on-nifti">Two-sample t-test (Welch and OLS) on NIfTI<a class="anchor" aria-label="anchor" href="#two-sample-t-test-welch-and-ols-on-nifti"></a>
@@ -449,33 +554,74 @@ covariance for exact post-hoc contrasts.</p>
 t-tests directly on the per-subject beta maps, using either Welch’s
 unequal-variance test or a standard OLS/Student t-test via a simple
 design matrix.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_welch</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span><span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, engine <span class="op">=</span> <span class="st">"welch"</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit_welch</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span></span>
+<span>  <span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, engine <span class="op">=</span> <span class="st">"welch"</span>, sign <span class="op">=</span> <span class="st">"BminusA"</span></span>
+<span><span class="op">)</span></span>
 <span><span class="va">t_welch</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_welch</span><span class="op">$</span><span class="va">t</span><span class="op">[</span><span class="st">"group"</span>, <span class="op">]</span><span class="op">)</span></span>
 <span><span class="va">df_welch</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_welch</span><span class="op">$</span><span class="va">df</span><span class="op">[</span><span class="st">"group"</span>, <span class="op">]</span><span class="op">)</span></span>
 <span><span class="va">p_welch</span>   <span class="op">&lt;-</span> <span class="fl">2</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">pt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">t_welch</span><span class="op">)</span>, df <span class="op">=</span> <span class="va">df_welch</span>, lower.tail <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">fit_ols</span>   <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span><span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, engine <span class="op">=</span> <span class="st">"classic"</span><span class="op">)</span></span>
-<span><span class="va">rn_t</span>      <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">fit_ols</span><span class="op">$</span><span class="va">t</span><span class="op">)</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">rn_t</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="va">rn_t</span> <span class="op">==</span> <span class="st">"group"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">t_ols</span> <span class="op">&lt;-</span> <span class="va">fit_ols</span><span class="op">$</span><span class="va">t</span><span class="op">[</span><span class="st">"group"</span>, <span class="op">]</span></span>
-<span>  <span class="va">df_ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_ols</span><span class="op">$</span><span class="va">df</span><span class="op">[</span><span class="st">"group"</span>, <span class="op">]</span><span class="op">)</span></span>
-<span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>  <span class="va">t_ols</span> <span class="op">&lt;-</span> <span class="va">fit_ols</span><span class="op">$</span><span class="va">t</span><span class="op">[</span><span class="fl">2</span>, <span class="op">]</span></span>
-<span>  <span class="va">df_ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">fit_ols</span><span class="op">$</span><span class="va">df</span><span class="op">[</span><span class="fl">2</span>, <span class="fl">1</span><span class="op">]</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">t_ols</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
+<span><span class="va">fit_ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span></span>
+<span>  <span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, engine <span class="op">=</span> <span class="st">"classic"</span>, sign <span class="op">=</span> <span class="st">"BminusA"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">t_ols</span> <span class="op">&lt;-</span> <span class="va">fit_ols</span><span class="op">$</span><span class="va">t</span><span class="op">[</span><span class="st">"group"</span>, <span class="op">]</span></span>
+<span><span class="va">df_ols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_ols</span><span class="op">$</span><span class="va">df</span><span class="op">[</span><span class="st">"group"</span>, <span class="op">]</span><span class="op">)</span></span>
 <span><span class="va">p_ols</span>    <span class="op">&lt;-</span> <span class="fl">2</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">pt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">t_ols</span><span class="op">)</span>, df <span class="op">=</span> <span class="va">df_ols</span>, lower.tail <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">timg_welch</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="cn">NA_real_</span>, dim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">8</span>, <span class="fl">8</span>, <span class="fl">8</span><span class="op">)</span><span class="op">)</span>, <span class="va">space</span><span class="op">)</span></span>
 <span><span class="va">mask_img</span>   <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">gd_nii</span><span class="op">$</span><span class="va">mask_data</span><span class="op">)</span><span class="op">)</span> <span class="va">gd_nii</span><span class="op">$</span><span class="va">mask_data</span> <span class="kw">else</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/read_vol.html" class="external-link">read_vol</a></span><span class="op">(</span><span class="va">mask_path</span><span class="op">)</span></span>
 <span><span class="va">timg_welch</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">as.array</a></span><span class="op">(</span><span class="va">mask_img</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">t_welch</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">as.array</a></span><span class="op">(</span><span class="va">timg_welch</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] -81.539233   4.582865</span></span>
+<span><span class="co">#&gt; [1] -4.582865 81.539233</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">p_welch</span> <span class="op">&lt;</span> <span class="fl">0.05</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 46</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">p_ols</span>   <span class="op">&lt;</span> <span class="fl">0.05</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 51</span></span></code></pre></div>
+<span><span class="va">welch_called</span> <span class="op">&lt;-</span> <span class="va">p_welch</span> <span class="op">&lt;</span> <span class="fl">0.05</span></span>
+<span><span class="va">ols_called</span> <span class="op">&lt;-</span> <span class="va">p_ols</span> <span class="op">&lt;</span> <span class="fl">0.05</span></span>
+<span><span class="va">ttest_discovery_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Welch"</span>, <span class="st">"OLS / Student"</span><span class="op">)</span>,</span>
+<span>  discoveries <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">welch_called</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">ols_called</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  true_positives <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">welch_called</span> <span class="op">&amp;</span> <span class="va">active_voxels</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">ols_called</span> <span class="op">&amp;</span> <span class="va">active_voxels</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  false_positives <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">welch_called</span> <span class="op">&amp;</span> <span class="op">!</span><span class="va">active_voxels</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">ols_called</span> <span class="op">&amp;</span> <span class="op">!</span><span class="va">active_voxels</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>  <span class="va">ttest_discovery_summary</span>,</span>
+<span>  caption <span class="op">=</span> <span class="st">"Uncorrected p &lt; 0.05 calls against known voxel truth"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Uncorrected p &lt; 0.05 calls against known voxel
+truth</caption>
+<thead><tr class="header">
+<th align="left">method</th>
+<th align="right">discoveries</th>
+<th align="right">true_positives</th>
+<th align="right">false_positives</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Welch</td>
+<td align="right">46</td>
+<td align="right">27</td>
+<td align="right">19</td>
+</tr>
+<tr class="even">
+<td align="left">OLS / Student</td>
+<td align="right">51</td>
+<td align="right">27</td>
+<td align="right">24</td>
+</tr>
+</tbody>
+</table>
+<p>These are deliberately labelled uncorrected calls. Both methods
+recover the active cube, but their extra background calls show why an
+uncorrected discovery count is not a whole-brain inferential result. Use
+the spatial-FDR workflow above (or another declared multiplicity
+procedure) for corrected decisions.</p>
 </div>
 <div class="section level2">
 <h2 id="combining-t-statistics-only-stoufferfisherlancaster">Combining t-statistics only (Stouffer/Fisher/Lancaster)<a class="anchor" aria-label="anchor" href="#combining-t-statistics-only-stoufferfisherlancaster"></a>
@@ -484,12 +630,16 @@ design matrix.</p>
 available, you can still carry out group inference without betas/SEs by
 setting <code>combine =</code> in <code><a href="../reference/fmri_meta.html">fmri_meta()</a></code> (or in
 <code>fmri_ttest(..., engine = "meta")</code>). Stouffer combines signed
-z-scores and supports equal, inverse-variance or custom weights; Fisher
-combines p-values with equal weights; and Lancaster provides a weighted
-Fisher variant by mapping weights to per-subject degrees-of-freedom.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dat_full</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_nifti_full.html">read_nifti_full</a></span><span class="op">(</span><span class="va">gd_nii</span><span class="op">)</span></span>
-<span><span class="va">tmat</span> <span class="op">&lt;-</span> <span class="va">dat_full</span><span class="op">$</span><span class="va">beta</span> <span class="op">/</span> <span class="va">dat_full</span><span class="op">$</span><span class="va">se</span></span>
+z-scores and supports equal or explicitly supplied custom weights;
+inverse-variance weighting is unavailable without SEs. Fisher combines
+p-values with equal weights, and Lancaster provides a weighted Fisher
+variant by mapping its supplied weights to combination degrees of
+freedom.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tmat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">ids</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">as.array</a></span><span class="op">(</span><span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/read_vol.html" class="external-link">read_vol</a></span><span class="op">(</span><span class="va">beta_paths</span><span class="op">[</span><span class="va">i</span><span class="op">]</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">/</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">as.array</a></span><span class="op">(</span><span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/read_vol.html" class="external-link">read_vol</a></span><span class="op">(</span><span class="va">se_paths</span><span class="op">[</span><span class="va">i</span><span class="op">]</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">}</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/prod.html" class="external-link">prod</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">space</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">t_paths</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">ids</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">ids</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
@@ -500,22 +650,24 @@ Fisher variant by mapping weights to per-subject degrees-of-freedom.</p>
 <span>  <span class="va">t_paths</span><span class="op">[</span><span class="va">i</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">pth</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">gd_t</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/group_data_from_nifti.html">group_data_from_nifti</a></span><span class="op">(</span></span>
-<span>  t_paths  <span class="op">=</span> <span class="va">t_paths</span>,</span>
-<span>  df       <span class="op">=</span> <span class="fl">60</span>,</span>
+<span><span class="va">gd_t</span> <span class="op">&lt;-</span> <span class="fu">fmrireg</span><span class="fu">::</span><span class="fu"><a href="../reference/group_data.html">group_data</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>t <span class="op">=</span> <span class="va">t_paths</span>, df <span class="op">=</span> <span class="fl">60</span><span class="op">)</span>,</span>
+<span>  format <span class="op">=</span> <span class="st">"nifti"</span>,</span>
 <span>  subjects <span class="op">=</span> <span class="va">ids</span>,</span>
 <span>  covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>group <span class="op">=</span> <span class="va">grp</span><span class="op">)</span>,</span>
 <span>  mask     <span class="op">=</span> <span class="va">mask_path</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_st</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"stouffer"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit_st</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"stouffer"</span>,</span>
+<span>                    weights <span class="op">=</span> <span class="st">"equal"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">w_subj</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">ids</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fit_st_w</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"stouffer"</span>,</span>
 <span>                      weights <span class="op">=</span> <span class="st">"custom"</span>, weights_custom <span class="op">=</span> <span class="va">w_subj</span>,</span>
 <span>                      verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">fit_fi</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"fisher"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="va">fit_fi</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"fisher"</span>,</span>
+<span>                     weights <span class="op">=</span> <span class="st">"equal"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="va">fit_la</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"lancaster"</span>,</span>
 <span>                     weights <span class="op">=</span> <span class="st">"custom"</span>, weights_custom <span class="op">=</span> <span class="va">w_subj</span>,</span>
 <span>                     verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
@@ -525,24 +677,97 @@ Fisher variant by mapping weights to per-subject degrees-of-freedom.</p>
 </h2>
 <p>The t-test interface supports the meta engine with equal/custom
 weighting.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_tt_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span><span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, engine <span class="op">=</span> <span class="st">"meta"</span>,</span>
-<span>                          weights <span class="op">=</span> <span class="st">"equal"</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit_tt_meta</span> <span class="op">&lt;-</span> <span class="fu">fmrireg</span><span class="fu">::</span><span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span></span>
+<span>  <span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, engine <span class="op">=</span> <span class="st">"meta"</span>, weights <span class="op">=</span> <span class="st">"equal"</span>,</span>
+<span>  sign <span class="op">=</span> <span class="st">"BminusA"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">w_subj</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">ids</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">fit_tt_meta_w</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span><span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, engine <span class="op">=</span> <span class="st">"meta"</span>,</span>
-<span>                            weights <span class="op">=</span> <span class="st">"custom"</span>, weights_custom <span class="op">=</span> <span class="va">w_subj</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_tt_la</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span><span class="va">gd_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, engine <span class="op">=</span> <span class="st">"meta"</span>,</span>
-<span>                        combine <span class="op">=</span> <span class="st">"lancaster"</span>, weights <span class="op">=</span> <span class="st">"custom"</span>,</span>
-<span>                        weights_custom <span class="op">=</span> <span class="va">w_subj</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">fit_tt_meta_w</span> <span class="op">&lt;-</span> <span class="fu">fmrireg</span><span class="fu">::</span><span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span></span>
+<span>  <span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, engine <span class="op">=</span> <span class="st">"meta"</span>,</span>
+<span>  weights <span class="op">=</span> <span class="st">"custom"</span>, weights_custom <span class="op">=</span> <span class="va">w_subj</span>, sign <span class="op">=</span> <span class="st">"BminusA"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit_tt_la</span> <span class="op">&lt;-</span> <span class="fu">fmrireg</span><span class="fu">::</span><span class="fu"><a href="../reference/fmri_ttest.html">fmri_ttest</a></span><span class="op">(</span></span>
+<span>  <span class="va">gd_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, engine <span class="op">=</span> <span class="st">"meta"</span>,</span>
+<span>  combine <span class="op">=</span> <span class="st">"lancaster"</span>, weights <span class="op">=</span> <span class="st">"custom"</span>,</span>
+<span>  weights_custom <span class="op">=</span> <span class="va">w_subj</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">meta_engine_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  fit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"beta/SE, equal"</span>, <span class="st">"beta/SE, custom"</span>, <span class="st">"t-only Lancaster"</span><span class="op">)</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">fit_tt_meta</span><span class="op">$</span><span class="va">method</span>, <span class="va">fit_tt_meta_w</span><span class="op">$</span><span class="va">method</span>, <span class="va">fit_tt_la</span><span class="op">$</span><span class="va">method</span><span class="op">)</span>,</span>
+<span>  weights <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">fit_tt_meta</span><span class="op">$</span><span class="va">weights</span>, <span class="va">fit_tt_meta_w</span><span class="op">$</span><span class="va">weights</span>, <span class="va">fit_tt_la</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span>,</span>
+<span>  maximum_abs_z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fit_tt_meta</span><span class="op">$</span><span class="va">z</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fit_tt_meta_w</span><span class="op">$</span><span class="va">z</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fit_tt_la</span><span class="op">$</span><span class="va">z</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  minimum_p <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">fit_tt_meta</span><span class="op">$</span><span class="va">p</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">fit_tt_meta_w</span><span class="op">$</span><span class="va">p</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">fit_tt_la</span><span class="op">$</span><span class="va">p</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">meta_engine_display</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/transform.html" class="external-link">transform</a></span><span class="op">(</span></span>
+<span>  <span class="va">meta_engine_summary</span>,</span>
+<span>  maximum_abs_z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/formatc.html" class="external-link">formatC</a></span><span class="op">(</span><span class="va">maximum_abs_z</span>, digits <span class="op">=</span> <span class="fl">3</span>, format <span class="op">=</span> <span class="st">"f"</span><span class="op">)</span>,</span>
+<span>  minimum_p <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/format.pval.html" class="external-link">format.pval</a></span><span class="op">(</span><span class="va">minimum_p</span>, digits <span class="op">=</span> <span class="fl">3</span>, eps <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>  <span class="va">meta_engine_display</span>,</span>
+<span>  row.names <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  caption <span class="op">=</span> <span class="st">"Requested meta engine and its resulting evidence summary"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Requested meta engine and its resulting evidence
+summary</caption>
+<colgroup>
+<col width="25%">
+<col width="26%">
+<col width="11%">
+<col width="20%">
+<col width="14%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">fit</th>
+<th align="left">method</th>
+<th align="left">weights</th>
+<th align="left">maximum_abs_z</th>
+<th align="left">minimum_p</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">beta/SE, equal</td>
+<td align="left">pm</td>
+<td align="left">equal</td>
+<td align="left">1.329</td>
+<td align="left">0.184</td>
+</tr>
+<tr class="even">
+<td align="left">beta/SE, custom</td>
+<td align="left">pm</td>
+<td align="left">custom</td>
+<td align="left">1.329</td>
+<td align="left">0.184</td>
+</tr>
+<tr class="odd">
+<td align="left">t-only Lancaster</td>
+<td align="left">combine:lancaster</td>
+<td align="left">custom</td>
+<td align="left">9.108</td>
+<td align="left">&lt;1e-04</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level2">
 <h2 id="roi-t-only-example-stouffer-and-lancaster">ROI t-only example (Stouffer and Lancaster)<a class="anchor" aria-label="anchor" href="#roi-t-only-example-stouffer-and-lancaster"></a>
 </h2>
 <p>You can also combine t-statistics at the ROI level from a tabular
 CSV. Provide per-subject t and df, then choose a combine method.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">roi_t_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  subject <span class="op">=</span> <span class="va">subjects</span>,</span>
 <span>  roi <span class="op">=</span> <span class="st">"ExampleROI"</span>,</span>
@@ -551,22 +776,67 @@ CSV. Provide per-subject t and df, then choose a combine method.</p>
 <span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">gd_roi_t</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/group_data_from_csv.html">group_data_from_csv</a></span><span class="op">(</span></span>
+<span><span class="va">gd_roi_t</span> <span class="op">&lt;-</span> <span class="fu">fmrireg</span><span class="fu">::</span><span class="fu"><a href="../reference/group_data.html">group_data</a></span><span class="op">(</span></span>
 <span>  <span class="va">roi_t_df</span>,</span>
+<span>  format <span class="op">=</span> <span class="st">"csv"</span>,</span>
 <span>  effect_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>t <span class="op">=</span> <span class="st">"t"</span>, df <span class="op">=</span> <span class="st">"df"</span><span class="op">)</span>,</span>
 <span>  subject_col <span class="op">=</span> <span class="st">"subject"</span>,</span>
 <span>  roi_col <span class="op">=</span> <span class="st">"roi"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">fit_roi_st</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_roi_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"stouffer"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="va">fit_roi_st</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_roi_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"stouffer"</span>,</span>
+<span>                        weights <span class="op">=</span> <span class="st">"equal"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">w_roi</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">subjects</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fit_roi_la</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_roi_t</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, combine <span class="op">=</span> <span class="st">"lancaster"</span>,</span>
 <span>                        weights <span class="op">=</span> <span class="st">"custom"</span>, weights_custom <span class="op">=</span> <span class="va">w_roi</span>,</span>
 <span>                        verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">fit_roi_st</span><span class="op">$</span><span class="va">method</span>, <span class="va">fit_roi_la</span><span class="op">$</span><span class="va">method</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "pm" "pm"</span></span></code></pre></div>
+<span><span class="va">roi_combination_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  combination <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Stouffer"</span>, <span class="st">"Lancaster"</span><span class="op">)</span>,</span>
+<span>  method_metadata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">fit_roi_st</span><span class="op">$</span><span class="va">method</span>, <span class="va">fit_roi_la</span><span class="op">$</span><span class="va">method</span><span class="op">)</span>,</span>
+<span>  weights <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">fit_roi_st</span><span class="op">$</span><span class="va">weights</span>, <span class="va">fit_roi_la</span><span class="op">$</span><span class="va">weights</span><span class="op">)</span>,</span>
+<span>  combined_z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">fit_roi_st</span><span class="op">$</span><span class="va">coefficients</span><span class="op">[</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">]</span>, <span class="va">fit_roi_la</span><span class="op">$</span><span class="va">coefficients</span><span class="op">[</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">roi_combination_p</span> <span class="op">&lt;-</span> <span class="fl">2</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">pnorm</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">roi_combination_summary</span><span class="op">$</span><span class="va">combined_z</span><span class="op">)</span>, lower.tail <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">roi_combination_display</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/transform.html" class="external-link">transform</a></span><span class="op">(</span></span>
+<span>  <span class="va">roi_combination_summary</span>,</span>
+<span>  combined_z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/formatc.html" class="external-link">formatC</a></span><span class="op">(</span><span class="va">combined_z</span>, digits <span class="op">=</span> <span class="fl">3</span>, format <span class="op">=</span> <span class="st">"f"</span><span class="op">)</span>,</span>
+<span>  two_sided_p <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/format.pval.html" class="external-link">format.pval</a></span><span class="op">(</span><span class="va">roi_combination_p</span>, digits <span class="op">=</span> <span class="fl">3</span>, eps <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>  <span class="va">roi_combination_display</span>,</span>
+<span>  row.names <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  caption <span class="op">=</span> <span class="st">"T-only ROI combination results"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>T-only ROI combination results</caption>
+<thead><tr class="header">
+<th align="left">combination</th>
+<th align="left">method_metadata</th>
+<th align="left">weights</th>
+<th align="left">combined_z</th>
+<th align="left">two_sided_p</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Stouffer</td>
+<td align="left">combine:stouffer</td>
+<td align="left">equal</td>
+<td align="left">6.625</td>
+<td align="left">&lt;1e-04</td>
+</tr>
+<tr class="even">
+<td align="left">Lancaster</td>
+<td align="left">combine:lancaster</td>
+<td align="left">custom</td>
+<td align="left">4.998</td>
+<td align="left">&lt;1e-04</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level2">
 <h2 id="a-brief-recap">A brief recap<a class="anchor" aria-label="anchor" href="#a-brief-recap"></a>
@@ -579,12 +849,11 @@ covariates for group comparisons and, when working from t-maps only, set
 contrasts are available either at fit-time (via <code>contrasts=</code>)
 or post-hoc by saving packed covariance with
 <code>return_cov = "tri"</code> and then calling
-<code><a href="../reference/contrast.html">contrast()</a></code>. Weighting applies to both meta-regression and
-t-only combinations (<code>weights = "ivw"|"equal"|"custom"</code>, with
-<code>weights_custom</code> as a vector of length subjects or an S x P
-matrix). The examples above show ROI-based meta-regression, voxelwise
-fits from NIfTI, and t-only combinations via both
-<code><a href="../reference/fmri_meta.html">fmri_meta()</a></code> and
+<code><a href="../reference/contrast.html">contrast()</a></code>. Stouffer accepts equal or custom weights here;
+Fisher is equal-weighted; Lancaster uses its supplied weights as
+combination degrees of freedom. The examples above show ROI-based
+meta-regression, voxelwise fits from NIfTI, and t-only combinations
+through both <code><a href="../reference/fmri_meta.html">fmri_meta()</a></code> and
 <code>fmri_ttest(..., engine = "meta")</code>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

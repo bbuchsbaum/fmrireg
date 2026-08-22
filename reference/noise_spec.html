@@ -22,16 +22,18 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-vignettes"><li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -92,8 +94,11 @@
 
 
 <dt id="arg-q">q<a class="anchor" aria-label="anchor" href="#arg-q"></a></dt>
-<dd><p>Reserved MA order. Nonzero MA order is rejected until the fitter
-exposes an MA-capable inference path.</p></dd>
+<dd><p>Nonnegative moving-average order. Positive values request an
+ARMA(p, q) model, with the AR order determined by <code>struct</code> and <code>p</code>.
+The current MA-capable path supports runwise meta-estimation with run
+pooling, without censoring, parcel pooling, or voxelwise covariance
+estimation.</p></dd>
 
 
 <dt id="arg-iter-gls">iter_gls<a class="anchor" aria-label="anchor" href="#arg-iter-gls"></a></dt>
@@ -101,7 +106,10 @@ exposes an MA-capable inference path.</p></dd>
 
 
 <dt id="arg-pooling">pooling<a class="anchor" aria-label="anchor" href="#arg-pooling"></a></dt>
-<dd><p>Temporal covariance pooling scope.</p></dd>
+<dd><p>Temporal covariance pooling scope. With built-in shared AR
+estimation, <code>"run"</code> estimates one coefficient vector per run from the
+cross-voxel mean residual series; <code>"global"</code> concatenates those runwise
+mean series before estimation.</p></dd>
 
 
 <dt id="arg-parcels">parcels<a class="anchor" aria-label="anchor" href="#arg-parcels"></a></dt>
@@ -109,7 +117,11 @@ exposes an MA-capable inference path.</p></dd>
 
 
 <dt id="arg-voxelwise">voxelwise<a class="anchor" aria-label="anchor" href="#arg-voxelwise"></a></dt>
-<dd><p>Estimate temporal covariance separately by voxel.</p></dd>
+<dd><p>Estimate temporal covariance separately by voxel. In the
+built-in fitter this currently requires AR-only runwise meta-estimation,
+<code>pooling = "run"</code>, <code>iter_gls = 1</code>, no censoring, and no volume weighting
+or soft-subspace projection. Robust fitting is supported, but robust AR
+re-estimation is not. Registered engines may define broader capabilities.</p></dd>
 
 
 <dt id="arg-exact-first">exact_first<a class="anchor" aria-label="anchor" href="#arg-exact-first"></a></dt>

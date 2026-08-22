@@ -24,16 +24,18 @@ These datasets are designed for testing HRF fitting, beta estimation, and other 
   <ul class="dropdown-menu" aria-labelledby="dropdown-vignettes"><li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -92,13 +94,17 @@ These datasets are designed for testing HRF fitting, beta estimation, and other 
 <li><p><code>Y_noisy</code>: Matrix of noisy BOLD time series (time x voxels)</p></li>
 <li><p><code>Y_clean</code>: Matrix of clean BOLD time series (when available)</p></li>
 <li><p><code>X_list_true_hrf</code>: List of design matrices convolved with true HRF</p></li>
-<li><p><code>true_hrf_parameters</code>: Information about the true HRF(s) used</p></li>
+<li><p><code>true_hrf_parameters</code>: Reconstructed true HRF object(s) plus
+complete, versioned generation recipes</p></li>
+<li><p><code>oracle_contract</code>: Scope and tolerance of the valid stored
+numerical oracle, including limitations for partial-truth datasets</p></li>
 <li><p><code>event_onsets</code>: Vector of event onset times</p></li>
 <li><p><code>condition_labels</code>: Vector of condition labels for each event</p></li>
 <li><p><code>true_betas_condition</code>: Matrix of true condition-level beta values</p></li>
 <li><p><code>true_amplitudes_trial</code>: Matrix of true trial-level amplitudes</p></li>
 <li><p><code>TR</code>: Repetition time</p></li>
 <li><p><code>total_time</code>: Total scan duration</p></li>
+<li><p><code>run_length</code>: Number of acquired time points</p></li>
 <li><p><code>noise_parameters</code>: Information about noise generation</p></li>
 <li><p><code>simulation_seed</code>: Random seed used for generation</p></li>
 <li><p><code>target_snr</code>: Target signal-to-noise ratio</p></li>

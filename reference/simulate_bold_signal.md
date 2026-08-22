@@ -1,9 +1,9 @@
 # Simulate fMRI Time Series
 
 This function simulates an fMRI time series for multiple experimental
-conditions with specified parameters. It generates a realistic
-event-related design with randomized inter-stimulus intervals and
-condition orders.
+conditions with specified parameters. It generates a controlled
+event-related teaching design with randomized inter-stimulus intervals
+and condition orders.
 
 ## Usage
 

@@ -1,6 +1,9 @@
 # Fit the core GLM on a transformed time-series matrix
 
-Fit the core GLM on a transformed time-series matrix
+This helper performs IID, non-robust OLS inference. It rejects controls
+that request AR or robust fitting; use
+[`fit_glm_with_config()`](https://bbuchsbaum.github.io/fmrireg/reference/fit_glm_with_config.md)
+for those models.
 
 ## Usage
 
@@ -28,12 +31,14 @@ fit_glm_on_transformed_series(
 - cfg:
 
   Optional `fmri_lm_control`; defaults to
-  [`fmri_lm_control()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm_control.md).
+  [`fmri_lm_control()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm_control.md)
+  and must request IID noise and no robust fitting.
 
 - dataset:
 
-  Optional dataset backing the model. Defaults to `model$dataset` when
-  available.
+  Optional dataset whose feature axis describes the columns of `Y`. It
+  is never inferred from `model$dataset`, because a transformed response
+  can have a different feature space.
 
 - strategy:
 

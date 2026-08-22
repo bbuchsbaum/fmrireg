@@ -24,16 +24,18 @@ dimensions, experimental design, and ground truth information."></head><body>
   <ul class="dropdown-menu" aria-labelledby="dropdown-vignettes"><li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -127,6 +129,9 @@ dimensions, experimental design, and ground truth information.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $experimental_design$total_time</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 300</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $experimental_design$run_length</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 150</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $experimental_design$target_snr</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -137,6 +142,47 @@ dimensions, experimental design, and ground truth information.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_object_name</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "HRF_SPMG1"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe$schema_version</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe$recipe_name</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "HRF_SPMG1"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe$generator</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "fmrihrf::gen_hrf"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe$base_hrf_name</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "HRF_SPMG1"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe$lag</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe$width</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe$precision</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe$half_life</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] Inf</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe$summate</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe$normalize</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe$name_override</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe$span_override</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_recipe$fmrihrf_version</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "0.4.0"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $hrf_information$hrf_object</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -- HRF: SPMG1 --------------------------------------------- </span>
@@ -153,7 +199,7 @@ dimensions, experimental design, and ground truth information.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $noise_information$noise_sd</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.5217219</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.09832377</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>

@@ -38,16 +38,18 @@
 <li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -85,7 +87,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-08-09</h4>
+            <h4 data-toc-skip class="date">2026-08-22</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/functional_connectivity.Rmd" class="external-link"><code>vignettes/functional_connectivity.Rmd</code></a></small>
       <div class="d-none name"><code>functional_connectivity.Rmd</code></div>
@@ -101,13 +103,13 @@ technique in fMRI research for identifying brain regions that show
 correlated activity with a specific region of interest (the “seed”).
 This vignette demonstrates how to perform seed-based connectivity
 analysis using fmrireg’s flexible design matrix and GLM framework.</p>
-<p>The approach we’ll take treats the seed time series as an
-experimental regressor rather than computing simple correlations. This
-allows us to control for nuisance variables like scanner drift and
-motion parameters while estimating connectivity strength. The resulting
-t-statistics provide a connectivity map showing which voxels have
-activity significantly related to the seed region after accounting for
-confounds.</p>
+<p>The approach treats the seed time series as a covariate rather than
+computing simple correlations. This lets the model adjust for scanner
+drift and other nuisance variables while estimating seed coupling.
+Because the simulated noise is autocorrelated, we use an AR(1) temporal
+model. Because we test the seed coefficient at every voxel, discoveries
+are defined by Benjamini–Hochberg (BH) false-discovery-rate correction
+rather than uncorrected voxelwise p-values.</p>
 <p>To illustrate the method clearly, we’ll work with simulated data
 where we know the ground truth. We’ll create a dataset with a hidden
 network of voxels that share a common signal with our seed region, then
@@ -116,49 +118,56 @@ recover this network using our connectivity analysis.</p>
 <div class="section level2">
 <h2 id="creating-a-test-dataset-with-known-connectivity">Creating a Test Dataset with Known Connectivity<a class="anchor" aria-label="anchor" href="#creating-a-test-dataset-with-known-connectivity"></a>
 </h2>
-<p>First, we’ll generate a simulated fMRI dataset where we control which
-voxels are functionally connected. This allows us to validate our
-analysis method since we know the true connectivity pattern.</p>
+<p>First, we generate the data directly from the model we intend to fit.
+Every voxel has independent AR(1) errors with the same
+<code>rho = 0.3</code>; there is no unmodeled task signal. This matters:
+calibration cannot be assessed when the generator contains mean
+structure that the fitted model silently omits.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Set up the temporal parameters for our scan</span></span>
-<span><span class="va">Tlen</span> <span class="op">&lt;-</span> <span class="fl">180</span>  <span class="co"># 180 time points</span></span>
-<span><span class="va">TR</span>   <span class="op">&lt;-</span> <span class="fl">2</span>    <span class="co"># 2-second repetition time</span></span>
+<span><span class="va">Tlen</span> <span class="op">&lt;-</span> <span class="fl">180L</span></span>
+<span><span class="va">TR</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
+<span><span class="va">V</span> <span class="op">&lt;-</span> <span class="fl">256L</span></span>
+<span><span class="va">true_rho</span> <span class="op">&lt;-</span> <span class="fl">0.3</span></span>
 <span></span>
-<span><span class="co"># Generate baseline fMRI data with realistic noise properties</span></span>
-<span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_fmri_matrix.html">simulate_fmri_matrix</a></span><span class="op">(</span></span>
-<span>  n <span class="op">=</span> <span class="fl">256</span>,                  <span class="co"># number of voxels</span></span>
-<span>  total_time <span class="op">=</span> <span class="va">Tlen</span> <span class="op">*</span> <span class="va">TR</span>,</span>
-<span>  TR <span class="op">=</span> <span class="va">TR</span>,</span>
-<span>  n_events <span class="op">=</span> <span class="fl">5</span>,             <span class="co"># events are not used here; we ignore the event_table</span></span>
-<span>  durations <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  noise_type <span class="op">=</span> <span class="st">"ar1"</span>,       <span class="co"># autoregressive noise typical of fMRI</span></span>
-<span>  noise_ar <span class="op">=</span> <span class="fl">0.3</span>,</span>
-<span>  noise_sd <span class="op">=</span> <span class="fl">1.0</span>,</span>
-<span>  random_seed <span class="op">=</span> <span class="fl">123</span></span>
-<span><span class="op">)</span></span>
+<span><span class="va">simulate_ar1_errors</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n_time</span>, <span class="va">n_voxels</span>, <span class="va">rho</span>,</span>
+<span>                                <span class="va">innovation_sd</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">innovations</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_time</span> <span class="op">*</span> <span class="va">n_voxels</span>, sd <span class="op">=</span> <span class="va">innovation_sd</span><span class="op">)</span>,</span>
+<span>    nrow <span class="op">=</span> <span class="va">n_time</span>, ncol <span class="op">=</span> <span class="va">n_voxels</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="va">errors</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">0</span>, nrow <span class="op">=</span> <span class="va">n_time</span>, ncol <span class="op">=</span> <span class="va">n_voxels</span><span class="op">)</span></span>
+<span>  <span class="va">errors</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span> <span class="op">&lt;-</span> <span class="va">innovations</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="va">rho</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
+<span>  <span class="kw">for</span> <span class="op">(</span><span class="va">time_index</span> <span class="kw">in</span> <span class="fl">2</span><span class="op">:</span><span class="va">n_time</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">errors</span><span class="op">[</span><span class="va">time_index</span>, <span class="op">]</span> <span class="op">&lt;-</span></span>
+<span>      <span class="va">rho</span> <span class="op">*</span> <span class="va">errors</span><span class="op">[</span><span class="va">time_index</span> <span class="op">-</span> <span class="fl">1L</span>, <span class="op">]</span> <span class="op">+</span> <span class="va">innovations</span><span class="op">[</span><span class="va">time_index</span>, <span class="op">]</span></span>
+<span>  <span class="op">}</span></span>
+<span>  <span class="va">errors</span></span>
+<span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="va">sim</span><span class="op">$</span><span class="va">time_series</span>  </span>
-<span><span class="va">Y</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/get_data_matrix.html" class="external-link">get_data_matrix</a></span><span class="op">(</span><span class="va">dset</span><span class="op">)</span>  <span class="co"># Extract the T x V data matrix</span></span>
+<span><span class="va">Y</span> <span class="op">&lt;-</span> <span class="fu">simulate_ar1_errors</span><span class="op">(</span><span class="va">Tlen</span>, <span class="va">V</span>, rho <span class="op">=</span> <span class="va">true_rho</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">Y</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 180 256</span></span></code></pre></div>
-<p>Now we’ll create our ground truth connectivity pattern. We generate a
-seed time series with temporal autocorrelation (mimicking real neural
-activity) and inject this signal into a subset of voxels to create a
-“network” that’s functionally connected to our seed.</p>
+<p>Now we’ll create our ground-truth connectivity pattern. We generate
+an external seed time series and inject it into a known subset of
+voxels. The series is deliberately external: this simulation tests
+recovery against known truth and is not pretending to perform seed
+extraction. A real analysis would extract a summary series from a
+prespecified ROI.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Generate a seed signal with realistic temporal properties</span></span>
+<code class="sourceCode R"><span><span class="co"># Generate the signal of interest and an independent negative-control probe.</span></span>
 <span><span class="va">seed_ts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/arima.sim.html" class="external-link">arima.sim</a></span><span class="op">(</span>model <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>ar <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>, n <span class="op">=</span> <span class="va">Tlen</span><span class="op">)</span></span>
 <span><span class="va">seed_ts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu">base</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">seed_ts</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">null_probe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/arima.sim.html" class="external-link">arima.sim</a></span><span class="op">(</span>model <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>ar <span class="op">=</span> <span class="fl">0.4</span><span class="op">)</span>, n <span class="op">=</span> <span class="va">Tlen</span><span class="op">)</span></span>
+<span><span class="va">null_probe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu">base</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">null_probe</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Define which voxels belong to our network</span></span>
-<span><span class="va">V</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">Y</span><span class="op">)</span></span>
-<span><span class="va">seed_voxel</span> <span class="op">&lt;-</span> <span class="fl">10</span>  <span class="co"># Our seed is voxel 10</span></span>
-<span><span class="va">net_idx</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">seed_voxel</span>, <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://generics.r-lib.org/reference/setops.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="va">V</span>, <span class="va">seed_voxel</span><span class="op">)</span>, <span class="fl">40</span><span class="op">)</span><span class="op">)</span>  <span class="co"># 41 connected voxels</span></span>
+<span><span class="co"># Define which voxels belong to our injected network</span></span>
+<span><span class="va">anchor_voxel</span> <span class="op">&lt;-</span> <span class="fl">10</span></span>
+<span><span class="va">net_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">anchor_voxel</span>, <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">V</span><span class="op">)</span>, <span class="va">anchor_voxel</span><span class="op">)</span>, <span class="fl">40</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Add the seed signal to network voxels (creating functional connectivity)</span></span>
-<span><span class="va">Y</span><span class="op">[</span>, <span class="va">net_idx</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">Y</span><span class="op">[</span>, <span class="va">net_idx</span><span class="op">]</span> <span class="op">+</span> <span class="fl">0.6</span> <span class="op">*</span> <span class="va">seed_ts</span></span>
+<span><span class="co"># Add the external seed signal to the network voxels</span></span>
+<span><span class="va">Y</span><span class="op">[</span>, <span class="va">net_idx</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">Y</span><span class="op">[</span>, <span class="va">net_idx</span><span class="op">]</span> <span class="op">+</span> <span class="fl">0.7</span> <span class="op">*</span> <span class="va">seed_ts</span></span>
 <span></span>
 <span><span class="co"># Rebuild the dataset from the modified matrix so the injected network signal</span></span>
 <span><span class="co"># is the data used by downstream model fitting.</span></span>
@@ -180,21 +189,17 @@ these nuisance signals using basis functions.</p>
 <code class="sourceCode R"><span><span class="co"># Create a sampling frame for our single run</span></span>
 <span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">Tlen</span>, <span class="fl">1</span><span class="op">)</span>, TR <span class="op">=</span> <span class="va">TR</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Model drift using B-splines</span></span>
-<span><span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"bs"</span>, degree <span class="op">=</span> <span class="fl">3</span>, sframe <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span>
-<span><span class="va">X_drift</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html" class="external-link">design_matrix</a></span><span class="op">(</span><span class="va">bmodel</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">q</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">X_drift</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># Model drift using B-splines. This object enters the fitted model below.</span></span>
+<span><span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"bs"</span>, degree <span class="op">=</span> <span class="fl">3</span>, sframe <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="connectivity-analysis-using-fmriregs-glm-framework">Connectivity Analysis Using fmrireg’s GLM Framework<a class="anchor" aria-label="anchor" href="#connectivity-analysis-using-fmriregs-glm-framework"></a>
 </h2>
-<p>Now comes the key insight of our approach: instead of computing
-simple correlations, we’ll treat the seed time series as an experimental
-regressor in a GLM. This allows us to estimate connectivity while
-simultaneously controlling for confounds. The <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/covariate.html" class="external-link">covariate()</a></code>
-function in fmridesign is perfect for this, as it adds regressors
-without HRF convolution (since the seed signal is already a BOLD time
-series).</p>
+<p>Instead of computing simple correlations, we treat the seed time
+series as a GLM covariate. This estimates connectivity while
+simultaneously controlling for confounds. <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/covariate.html" class="external-link">covariate()</a></code> adds
+a regressor without HRF convolution because the seed signal is already
+sampled as a BOLD time series.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Set up the event model structure</span></span>
 <span><span class="co"># We need a minimal event_data frame to define the model structure</span></span>
@@ -203,38 +208,39 @@ series).</p>
 <span>  run <span class="op">=</span> <span class="fl">1</span>                       <span class="co"># Single run indicator</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># The seed time series is provided as covariate data</span></span>
+<span><span class="co"># The null probe is included as a negative-control coefficient family: it is</span></span>
+<span><span class="co"># fitted at every voxel but was injected nowhere.</span></span>
 <span><span class="va">cov_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  seed <span class="op">=</span> <span class="va">seed_ts</span>  <span class="co"># Our seed signal for each time point</span></span>
+<span>  seed <span class="op">=</span> <span class="va">seed_ts</span>,</span>
+<span>  null_probe <span class="op">=</span> <span class="va">null_probe</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Build the event model with seed as a covariate</span></span>
+<span><span class="co"># Build the event model with both sampled time series as covariates.</span></span>
 <span><span class="va">emodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/event_model.html" class="external-link">event_model</a></span><span class="op">(</span></span>
-<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/covariate.html" class="external-link">covariate</a></span><span class="op">(</span><span class="va">seed</span>, data <span class="op">=</span> <span class="va">cov_data</span>, prefix <span class="op">=</span> <span class="st">"seed"</span><span class="op">)</span>,</span>
+<span>  <span class="va">onset</span> <span class="op">~</span></span>
+<span>    <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/covariate.html" class="external-link">covariate</a></span><span class="op">(</span><span class="va">seed</span>, data <span class="op">=</span> <span class="va">cov_data</span>, prefix <span class="op">=</span> <span class="st">"seed"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/covariate.html" class="external-link">covariate</a></span><span class="op">(</span><span class="va">null_probe</span>, data <span class="op">=</span> <span class="va">cov_data</span>, prefix <span class="op">=</span> <span class="st">"null"</span><span class="op">)</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">event_data</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  sampling_frame <span class="op">=</span> <span class="va">sframe</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Reuse our baseline model from above</span></span>
-<span><span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model</a></span><span class="op">(</span></span>
-<span>  basis <span class="op">=</span> <span class="st">"bs"</span>, </span>
-<span>  degree <span class="op">=</span> <span class="fl">3</span>, </span>
-<span>  sframe <span class="op">=</span> <span class="va">sframe</span></span>
-<span><span class="op">)</span></span>
-<span></span>
 <span><span class="co"># Combine event and baseline models with the dataset</span></span>
 <span><span class="va">fmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_model.html">fmri_model</a></span><span class="op">(</span><span class="va">emodel</span>, <span class="va">bmodel</span>, <span class="va">dset_modified</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Fit the connectivity GLM across all voxels</span></span>
+<span><span class="co"># Fit the connectivity GLM across all voxels. The simulated errors are AR(1),</span></span>
+<span><span class="co"># so inference uses the corresponding global temporal-noise model.</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
 <span>  <span class="va">fmodel</span>,</span>
-<span>  dataset <span class="op">=</span> <span class="va">dset_modified</span></span>
+<span>  dataset <span class="op">=</span> <span class="va">dset_modified</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span></span>
+<span>    noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span>, pooling <span class="op">=</span> <span class="st">"global"</span>, iter_gls <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>With the model fitted, we can now extract the connectivity
-statistics. The t-statistic for the seed regressor at each voxel tells
-us how strongly that voxel’s activity relates to the seed after
-accounting for drift.</p>
+<p>The seed-regressor statistic describes coupling after accounting for
+the baseline model and the fitted AR(1) covariance. It is not yet a
+whole-brain discovery decision; that requires multiplicity
+correction.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Extract connectivity statistics using the estimate output itself</span></span>
 <span><span class="va">all_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="../reference/stats.html">stats</a></span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"estimates"</span><span class="op">)</span><span class="op">)</span></span>
@@ -245,27 +251,44 @@ accounting for drift.</p>
 <span><span class="va">seed_col_name</span> <span class="op">&lt;-</span> <span class="va">seed_cols</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
 <span><span class="va">t_seed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">all_stats</span><span class="op">[</span>, <span class="va">seed_col_name</span><span class="op">]</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Also get p-values for significance testing</span></span>
+<span><span class="co"># Correct the seed-coefficient p-values across all fitted voxels.</span></span>
 <span><span class="va">all_pvals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="../reference/p_values.html">p_values</a></span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"estimates"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">p_seed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">all_pvals</span><span class="op">[</span>, <span class="va">seed_col_name</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">q_seed</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/p.adjust.html" class="external-link">p.adjust</a></span><span class="op">(</span><span class="va">p_seed</span>, method <span class="op">=</span> <span class="st">"BH"</span><span class="op">)</span></span>
+<span><span class="va">discovered</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">q_seed</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">q_seed</span> <span class="op">&lt;</span> <span class="fl">0.05</span></span>
+<span></span>
+<span><span class="co"># The negative-control coefficient is null at every voxel.</span></span>
+<span><span class="va">null_col_name</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"^null"</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">all_pvals</span><span class="op">)</span>, value <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">null_col_name</span><span class="op">)</span> <span class="op">==</span> <span class="fl">1L</span><span class="op">)</span></span>
+<span><span class="va">q_null</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/p.adjust.html" class="external-link">p.adjust</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">all_pvals</span><span class="op">[</span>, <span class="va">null_col_name</span><span class="op">]</span><span class="op">)</span>, method <span class="op">=</span> <span class="st">"BH"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">null_discovered</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">q_null</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">q_null</span> <span class="op">&lt;</span> <span class="fl">0.05</span></span>
+<span><span class="va">fitted_rho</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="../reference/ar_parameters.html">ar_parameters</a></span><span class="op">(</span><span class="va">fit</span>, scope <span class="op">=</span> <span class="st">"raw"</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Check the distribution of our connectivity map</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. </span></span>
-<span><span class="co">#&gt; -2.4538 -0.3511  0.4367  1.3222  1.2293 10.1976</span></span></code></pre></div>
+<span><span class="co">#&gt; -2.5723 -0.6527  0.2077  1.2351  1.1139 10.7536</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="validating-the-results">Validating the Results<a class="anchor" aria-label="anchor" href="#validating-the-results"></a>
 </h2>
-<p>Since we know which voxels belong to our simulated network, we can
-check whether our connectivity analysis successfully recovered them.
-Voxels in the network should have much larger t-statistics than
-background voxels and should dominate the top-ranked discoveries.</p>
+<p>Since the network membership is known, we can report both recovery
+and error. Sensitivity is the fraction of injected network voxels
+discovered after BH correction. Background false-positive rate (FPR) is
+the fraction of null voxels called significant. False-discovery
+proportion (FDP) is the fraction of all discoveries that are background
+voxels. A single FDP is a diagnostic, not an estimate of FDR; aggregate
+calibration is assessed in the next section.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mean_abs_t_network</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">[</span><span class="va">net_idx</span><span class="op">]</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">mean_abs_t_background</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">[</span><span class="op">-</span><span class="va">net_idx</span><span class="op">]</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">sig_rate_network</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">p_seed</span><span class="op">[</span><span class="va">net_idx</span><span class="op">]</span> <span class="op">&lt;</span> <span class="fl">0.05</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">sig_rate_background</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">p_seed</span><span class="op">[</span><span class="op">-</span><span class="va">net_idx</span><span class="op">]</span> <span class="op">&lt;</span> <span class="fl">0.05</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">sensitivity</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">discovered</span><span class="op">[</span><span class="va">net_idx</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">background_fpr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">discovered</span><span class="op">[</span><span class="op">-</span><span class="va">net_idx</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">n_discoveries</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">discovered</span><span class="op">)</span></span>
+<span><span class="va">n_false_discoveries</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">discovered</span><span class="op">[</span><span class="op">-</span><span class="va">net_idx</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">false_discovery_proportion</span> <span class="op">&lt;-</span> <span class="va">n_false_discoveries</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="va">n_discoveries</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">top_ranked</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">t_seed</span>, decreasing <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">net_idx</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="va">top_rank_enrichment</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">top_ranked</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">net_idx</span><span class="op">)</span></span>
@@ -273,94 +296,256 @@ background voxels and should dominate the top-ranked discoveries.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">mean_abs_t_network</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">mean_abs_t_background</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">sig_rate_network</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">sig_rate_background</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">sensitivity</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">background_fpr</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">false_discovery_proportion</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">top_rank_enrichment</span><span class="op">)</span>,</span>
 <span>  <span class="va">mean_abs_t_network</span> <span class="op">&gt;</span> <span class="fl">5</span> <span class="op">*</span> <span class="va">mean_abs_t_background</span>,</span>
-<span>  <span class="va">sig_rate_network</span> <span class="op">&gt;</span> <span class="fl">0.9</span>,</span>
-<span>  <span class="va">sig_rate_background</span> <span class="op">&lt;</span> <span class="fl">0.1</span>,</span>
+<span>  <span class="va">sensitivity</span> <span class="op">&gt;=</span> <span class="fl">0.9</span>,</span>
+<span>  <span class="va">background_fpr</span> <span class="op">&lt;=</span> <span class="fl">0.02</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fitted_rho</span> <span class="op">-</span> <span class="va">true_rho</span><span class="op">)</span> <span class="op">&lt;</span> <span class="fl">0.12</span>,</span>
 <span>  <span class="va">top_rank_enrichment</span> <span class="op">&gt;</span> <span class="fl">0.9</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  mean_abs_t_network <span class="op">=</span> <span class="va">mean_abs_t_network</span>,</span>
 <span>  mean_abs_t_background <span class="op">=</span> <span class="va">mean_abs_t_background</span>,</span>
-<span>  sig_rate_network <span class="op">=</span> <span class="va">sig_rate_network</span>,</span>
-<span>  sig_rate_background <span class="op">=</span> <span class="va">sig_rate_background</span>,</span>
+<span>  BH_discoveries <span class="op">=</span> <span class="va">n_discoveries</span>,</span>
+<span>  sensitivity <span class="op">=</span> <span class="va">sensitivity</span>,</span>
+<span>  background_FPR <span class="op">=</span> <span class="va">background_fpr</span>,</span>
+<span>  false_discovery_proportion <span class="op">=</span> <span class="va">false_discovery_proportion</span>,</span>
+<span>  complete_null_discoveries <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">null_discovered</span><span class="op">)</span>,</span>
+<span>  fitted_rho <span class="op">=</span> <span class="va">fitted_rho</span>,</span>
 <span>  top_rank_enrichment <span class="op">=</span> <span class="va">top_rank_enrichment</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt;    mean_abs_t_network mean_abs_t_background      sig_rate_network </span></span>
-<span><span class="co">#&gt;            7.63423898            0.81296704            1.00000000 </span></span>
-<span><span class="co">#&gt;   sig_rate_background   top_rank_enrichment </span></span>
-<span><span class="co">#&gt;            0.04186047            1.00000000</span></span></code></pre></div>
-<p>The network voxels dominate the top-ranked statistics and are
-significant far more often than background voxels, confirming that the
-fitted model recovers the injected connectivity pattern rather than a
-diffuse background effect.</p>
+<span><span class="co">#&gt;         mean_abs_t_network      mean_abs_t_background </span></span>
+<span><span class="co">#&gt;                8.278613860                0.814407744 </span></span>
+<span><span class="co">#&gt;             BH_discoveries                sensitivity </span></span>
+<span><span class="co">#&gt;               42.000000000                1.000000000 </span></span>
+<span><span class="co">#&gt;             background_FPR false_discovery_proportion </span></span>
+<span><span class="co">#&gt;                0.004651163                0.023809524 </span></span>
+<span><span class="co">#&gt;  complete_null_discoveries                 fitted_rho </span></span>
+<span><span class="co">#&gt;                0.000000000                0.294192014 </span></span>
+<span><span class="co">#&gt;        top_rank_enrichment </span></span>
+<span><span class="co">#&gt;                1.000000000</span></span></code></pre></div>
+<p>The effect-size separation, BH discoveries, sensitivity, FPR, and FDP
+answer different questions. Reporting them together prevents a strong
+ranking result from concealing null discoveries. The fitted AR
+coefficient also checks that the temporal model is recovering the
+generator’s <code>rho = 0.3</code>. None of these single-run quantities,
+by itself, establishes repeated-sampling calibration.</p>
+</div>
+<div class="section level2">
+<h2 id="repeated-sampling-calibration">Repeated-sampling calibration<a class="anchor" aria-label="anchor" href="#repeated-sampling-calibration"></a>
+</h2>
+<p>We therefore repeat a smaller, correctly specified simulation 100
+times. Each fit contains two coefficient families: the seed coefficient
+has a known 12-voxel network, while the independent negative-control
+coefficient is null at all 64 voxels. BH correction is applied
+separately to each family.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">n_calibration</span> <span class="op">&lt;-</span> <span class="fl">100L</span></span>
+<span><span class="va">calibration</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>  <span class="fl">1000L</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n_calibration</span><span class="op">)</span>,</span>
+<span>  <span class="va">run_connectivity_fixture</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">fdp_bound</span> <span class="op">&lt;-</span> <span class="fu">one_sided_mean_bounds</span><span class="op">(</span><span class="va">calibration</span><span class="op">[</span><span class="st">"fdp"</span>, <span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">sensitivity_bound</span> <span class="op">&lt;-</span> <span class="fu">one_sided_mean_bounds</span><span class="op">(</span></span>
+<span>  <span class="va">calibration</span><span class="op">[</span><span class="st">"sensitivity"</span>, <span class="op">]</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">background_fpr_bound</span> <span class="op">&lt;-</span> <span class="fu">one_sided_mean_bounds</span><span class="op">(</span></span>
+<span>  <span class="va">calibration</span><span class="op">[</span><span class="st">"background_fpr"</span>, <span class="op">]</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">n_null_rejections</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">calibration</span><span class="op">[</span><span class="st">"complete_null_rejection"</span>, <span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">complete_null_upper</span> <span class="op">&lt;-</span> <span class="fu">one_sided_binomial_upper</span><span class="op">(</span></span>
+<span>  <span class="va">n_null_rejections</span>, <span class="va">n_calibration</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">calibration_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  metric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Mixed-family FDP"</span>,</span>
+<span>    <span class="st">"Network sensitivity"</span>,</span>
+<span>    <span class="st">"Background FPR"</span>,</span>
+<span>    <span class="st">"Complete-null family rejection rate"</span>,</span>
+<span>    <span class="st">"Fitted AR(1) coefficient (truth 0.3)"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  estimate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">calibration</span><span class="op">[</span><span class="st">"fdp"</span>, <span class="op">]</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">calibration</span><span class="op">[</span><span class="st">"sensitivity"</span>, <span class="op">]</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">calibration</span><span class="op">[</span><span class="st">"background_fpr"</span>, <span class="op">]</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">calibration</span><span class="op">[</span><span class="st">"complete_null_rejection"</span>, <span class="op">]</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">calibration</span><span class="op">[</span><span class="st">"fitted_rho"</span>, <span class="op">]</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  one_sided_95_bound <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="va">fdp_bound</span><span class="op">[[</span><span class="st">"upper"</span><span class="op">]</span><span class="op">]</span>,</span>
+<span>    <span class="va">sensitivity_bound</span><span class="op">[[</span><span class="st">"lower"</span><span class="op">]</span><span class="op">]</span>,</span>
+<span>    <span class="va">background_fpr_bound</span><span class="op">[[</span><span class="st">"upper"</span><span class="op">]</span><span class="op">]</span>,</span>
+<span>    <span class="va">complete_null_upper</span>,</span>
+<span>    <span class="cn">NA_real_</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  bound_direction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"upper"</span>, <span class="st">"lower"</span>, <span class="st">"upper"</span>, <span class="st">"upper"</span>, <span class="st">"-"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="va">fdp_bound</span><span class="op">[[</span><span class="st">"upper"</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;=</span> <span class="fl">0.08</span>,</span>
+<span>  <span class="va">sensitivity_bound</span><span class="op">[[</span><span class="st">"lower"</span><span class="op">]</span><span class="op">]</span> <span class="op">&gt;=</span> <span class="fl">0.8</span>,</span>
+<span>  <span class="va">background_fpr_bound</span><span class="op">[[</span><span class="st">"upper"</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;=</span> <span class="fl">0.025</span>,</span>
+<span>  <span class="va">complete_null_upper</span> <span class="op">&lt;=</span> <span class="fl">0.15</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">calibration</span><span class="op">[</span><span class="st">"fitted_rho"</span>, <span class="op">]</span><span class="op">)</span> <span class="op">-</span> <span class="va">true_rho</span><span class="op">)</span> <span class="op">&lt;</span> <span class="fl">0.08</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">calibration_summary</span>, digits <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<colgroup>
+<col width="45%">
+<col width="11%">
+<col width="23%">
+<col width="19%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">metric</th>
+<th align="right">estimate</th>
+<th align="right">one_sided_95_bound</th>
+<th align="left">bound_direction</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Mixed-family FDP</td>
+<td align="right">0.053</td>
+<td align="right">0.065</td>
+<td align="left">upper</td>
+</tr>
+<tr class="even">
+<td align="left">Network sensitivity</td>
+<td align="right">1.000</td>
+<td align="right">1.000</td>
+<td align="left">lower</td>
+</tr>
+<tr class="odd">
+<td align="left">Background FPR</td>
+<td align="right">0.015</td>
+<td align="right">0.018</td>
+<td align="left">upper</td>
+</tr>
+<tr class="even">
+<td align="left">Complete-null family rejection rate</td>
+<td align="right">0.070</td>
+<td align="right">0.127</td>
+<td align="left">upper</td>
+</tr>
+<tr class="odd">
+<td align="left">Fitted AR(1) coefficient (truth 0.3)</td>
+<td align="right">0.249</td>
+<td align="right">NA</td>
+<td align="left">-</td>
+</tr>
+</tbody>
+</table>
+<p>The first three bounds use one-sided 95% t bounds for Monte Carlo
+means across independent fixtures. For the complete-null family, any BH
+discovery makes that replicate’s FDP equal to one, so the table reports
+the exact one-sided 95% Clopper–Pearson upper bound on its rejection
+probability. This finite simulation is a regression stress test, not a
+proof of universal FDR control. The package test repeats the same
+contract over 200 fixtures.</p>
 </div>
 <div class="section level2">
 <h2 id="visualizing-the-connectivity-map">Visualizing the Connectivity Map<a class="anchor" aria-label="anchor" href="#visualizing-the-connectivity-map"></a>
 </h2>
-<p>A rank-ordered view makes the signal easier to read than a gray
-histogram. The connected voxels are highlighted in red, so you can see
-where the injected network separates from the background.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<p>A rank-ordered view shows both ground truth and the corrected
+decision. Red circles are true discoveries, amber triangles are false
+discoveries, blue open circles would mark missed network voxels, and
+gray open circles are correctly rejected background voxels.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">keep</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">ord</span> <span class="op">&lt;-</span> <span class="va">keep</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">[</span><span class="va">keep</span><span class="op">]</span>, decreasing <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="va">is_network</span> <span class="op">&lt;-</span> <span class="va">ord</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">net_idx</span></span>
+<span><span class="va">is_discovered</span> <span class="op">&lt;-</span> <span class="va">discovered</span><span class="op">[</span><span class="va">ord</span><span class="op">]</span></span>
+<span><span class="va">point_class</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span></span>
+<span>  <span class="va">is_network</span> <span class="op">&amp;</span> <span class="va">is_discovered</span>, <span class="st">"true discovery"</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span></span>
+<span>    <span class="op">!</span><span class="va">is_network</span> <span class="op">&amp;</span> <span class="va">is_discovered</span>, <span class="st">"false discovery"</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">is_network</span>, <span class="st">"missed network voxel"</span>, <span class="st">"correct rejection"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">point_col</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>  <span class="st">"true discovery"</span> <span class="op">=</span> <span class="st">"firebrick"</span>,</span>
+<span>  <span class="st">"false discovery"</span> <span class="op">=</span> <span class="st">"#E69F00"</span>,</span>
+<span>  <span class="st">"missed network voxel"</span> <span class="op">=</span> <span class="st">"#0072B2"</span>,</span>
+<span>  <span class="st">"correct rejection"</span> <span class="op">=</span> <span class="st">"gray70"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">point_pch</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>  <span class="st">"true discovery"</span> <span class="op">=</span> <span class="fl">16</span>,</span>
+<span>  <span class="st">"false discovery"</span> <span class="op">=</span> <span class="fl">17</span>,</span>
+<span>  <span class="st">"missed network voxel"</span> <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  <span class="st">"correct rejection"</span> <span class="op">=</span> <span class="fl">1</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">ord</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">ord</span><span class="op">)</span>,</span>
 <span>  <span class="va">t_seed</span><span class="op">[</span><span class="va">ord</span><span class="op">]</span>,</span>
-<span>  pch <span class="op">=</span> <span class="fl">16</span>,</span>
-<span>  col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">is_network</span>, <span class="st">"firebrick"</span>, <span class="st">"gray70"</span><span class="op">)</span>,</span>
-<span>  main <span class="op">=</span> <span class="st">"Seed-Based Connectivity Map"</span>,</span>
+<span>  pch <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">point_pch</span><span class="op">[</span><span class="va">point_class</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>  col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">point_col</span><span class="op">[</span><span class="va">point_class</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>  main <span class="op">=</span> <span class="st">"Known-Truth Recovery after AR(1) GLS and BH-FDR"</span>,</span>
 <span>  xlab <span class="op">=</span> <span class="st">"Voxel rank"</span>,</span>
-<span>  ylab <span class="op">=</span> <span class="st">"Seed regressor t-statistic"</span></span>
+<span>  ylab <span class="op">=</span> <span class="st">"AR(1) GLS seed-regressor t-statistic"</span></span>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/abline.html" class="external-link">abline</a></span><span class="op">(</span>h <span class="op">=</span> <span class="fl">0</span>, lty <span class="op">=</span> <span class="fl">2</span>, col <span class="op">=</span> <span class="st">"gray40"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/legend.html" class="external-link">legend</a></span><span class="op">(</span></span>
 <span>  <span class="st">"topright"</span>,</span>
-<span>  legend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Connected voxels"</span>, <span class="st">"Background voxels"</span><span class="op">)</span>,</span>
-<span>  col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"firebrick"</span>, <span class="st">"gray70"</span><span class="op">)</span>,</span>
-<span>  pch <span class="op">=</span> <span class="fl">16</span>,</span>
+<span>  legend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"True discovery"</span>,</span>
+<span>    <span class="st">"False discovery"</span>,</span>
+<span>    <span class="st">"Missed network voxel"</span>,</span>
+<span>    <span class="st">"Correct rejection"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">point_col</span><span class="op">)</span>,</span>
+<span>  pch <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">point_pch</span><span class="op">)</span>,</span>
+<span>  cex <span class="op">=</span> <span class="fl">0.8</span>,</span>
 <span>  bty <span class="op">=</span> <span class="st">"n"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/mtext.html" class="external-link">mtext</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Single simulation: sensitivity %.2f | background FPR %.3f | FDP %.3f"</span>,</span>
+<span>    <span class="va">sensitivity</span>, <span class="va">background_fpr</span>, <span class="va">false_discovery_proportion</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  side <span class="op">=</span> <span class="fl">3</span>, line <span class="op">=</span> <span class="fl">0.25</span>, cex <span class="op">=</span> <span class="fl">0.75</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="functional_connectivity_files/figure-html/plot-connectivity-map-1.png" class="r-plt" alt="" width="672"></p>
+<p><img src="functional_connectivity_files/figure-html/plot-connectivity-map-1.png" class="r-plt" alt="Ranked seed-regressor t-statistics classified as true discoveries, false discoveries, missed network voxels, or correct background rejections." width="672"></p>
 </div>
 <div class="section level2">
 <h2 id="extending-to-real-data">Extending to Real Data<a class="anchor" aria-label="anchor" href="#extending-to-real-data"></a>
 </h2>
-<p>The approach demonstrated here with simulated data translates
-directly to real fMRI analyses. When working with actual data, you would
-start by extracting the seed time series from your region of interest,
-perhaps averaging across voxels within an anatomically or functionally
-defined ROI.</p>
-<p>For a more complete analysis, you might include additional nuisance
-regressors such as motion parameters, physiological signals, or global
-signal regression. The fmrireg framework makes it straightforward to add
-these through the <code>nuisance_list</code> parameter in
-<code><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model()</a></code>. You might also apply temporal filtering
-to focus on specific frequency bands of interest.</p>
-<p>For whole-brain connectivity mapping, this voxelwise approach
-efficiently identifies all regions showing significant functional
-coupling with your seed. Alternatively, you could perform ROI-to-ROI
-connectivity by repeating the analysis with multiple seed regions and
-assembling the results into a connectivity matrix.</p>
+<p>With real data, define the seed independently of the tested effect,
+then extract a prespecified summary such as the mean time series across
+an ROI. Avoid selecting the seed from the same connectivity statistic
+being tested; that circular choice invalidates the inferential
+interpretation.</p>
+<p>For a more complete analysis, prespecify nuisance regressors such as
+motion or physiological signals; <code><a href="https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.html" class="external-link">baseline_model()</a></code> accepts
+them through <code>nuisance_list</code>. If global signal regression or
+temporal filtering is used, declare it explicitly because either choice
+changes the estimand and its interpretation.</p>
+<p>For whole-brain connectivity mapping, declare the temporal covariance
+model, nuisance strategy, multiplicity procedure, and voxel inclusion
+mask before interpreting discoveries. ROI-to-ROI analysis requires its
+own correction across tested edges.</p>
 </div>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
 </h2>
-<p>This vignette has demonstrated how fmrireg’s flexible GLM framework
-extends naturally to functional connectivity analysis. By treating the
-seed time series as an experimental regressor rather than computing
-simple correlations, we gain the ability to control for confounds and
-obtain proper statistical inference. The same design matrix and model
-fitting infrastructure used for task-based fMRI analysis seamlessly
-handles connectivity studies, highlighting the versatility of the
-fmrireg package.</p>
+<p>This vignette used a seed covariate, a spline baseline, AR(1) GLS,
+and BH-FDR correction to recover a known injected network. A
+negative-control coefficient family and repeated simulations distinguish
+an appealing single map from calibration evidence. The figure displays
+the corrected decision, while the stress table reports sensitivity, null
+errors, and fitted AR behavior with Monte Carlo bounds. Real-data
+validity still depends on defensible seed definition, nuisance modeling,
+temporal covariance, and multiplicity control.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

@@ -95,6 +95,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fitted_hrf.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/flip_sign.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_benchmark_datasets.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_hrf_estimate-methods.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_job.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_latent_lm.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.html</loc></url>
@@ -109,6 +110,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_ols_fit.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_rlm.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_template.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_ttest.group_data_gds.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmri_ttest.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmrireg-package.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/fmrireg_cli.html</loc></url>
@@ -136,6 +138,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/load_benchmark_dataset.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/longnames.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/ma_parameters.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/make_srht_plan.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/make_time_sketch.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/meta_effective_n.html</loc></url>
@@ -209,6 +212,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/t_to_beta_se.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/t_to_d.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/term_matrices.fmri_model.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/tidy.fmri_hrf_estimate.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/tidy.fmri_meta.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/tidy.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/tidy_fitted_hrf.html</loc></url>

@@ -1,8 +1,8 @@
 # Simulate Complete fMRI Dataset
 
 This function simulates a complete fMRI dataset by combining
-task-related signals with realistic noise. It returns both the clean
-signals and the noisy data.
+task-related signals with a declared structured-noise model. It returns
+both the clean signals and the noisy data.
 
 ## Usage
 
@@ -33,7 +33,10 @@ simulate_simple_dataset(
 
 - snr:
 
-  Signal-to-noise ratio (default is 0.5)
+  Finite positive signal-to-noise ratio, defined as the empirical
+  standard deviation of the clean condition signals divided by the
+  empirical standard deviation of the complete structured-noise matrix
+  (default is 0.5)
 
 - hrf:
 
@@ -41,7 +44,9 @@ simulate_simple_dataset(
 
 - seed:
 
-  Optional seed for reproducibility (default is NULL)
+  Optional seed for reproducibility (default is NULL). Reusing a seed
+  with a different `snr` preserves the clean signal and standardized
+  noise realization while changing only the noise scale.
 
 ## Value
 
@@ -64,10 +69,12 @@ A list containing:
 data <- simulate_simple_dataset(ncond = 3, TR = 2, snr = 0.5)
 
 # Plot clean and noisy data
+old_par <- par(no.readonly = TRUE)
 par(mfrow = c(2,1))
 matplot(data$clean$mat[,1], data$clean$mat[,-1], type = "l",
         main = "Clean Signal", xlab = "Time (s)", ylab = "BOLD")
 matplot(data$noisy[,1], data$noisy[,-1], type = "l",
         main = "Noisy Signal", xlab = "Time (s)", ylab = "BOLD")
 
+par(old_par)
 ```

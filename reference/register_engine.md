@@ -29,8 +29,8 @@ register_engine(name, fit, preflight = NULL, capabilities = list())
   Optional named list describing engine support for global
   [`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
   options. Recognized fields currently include `robust`,
-  `preprocessing`, `ar_voxelwise`, `ar_by_cluster`, plus contextual
-  rules such as `requires_event_regressors`,
+  `preprocessing`, `ma`, `ar_voxelwise`, `ar_by_cluster`, plus
+  contextual rules such as `requires_event_regressors`,
   `requires_parcels_for_by_cluster`, and
   `forbid_by_cluster_dataset_classes`.
 

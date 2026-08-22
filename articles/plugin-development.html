@@ -38,16 +38,18 @@
 <li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -147,7 +149,7 @@ built-in bases.</p>
 <span><span class="fu"><a href="../reference/register_basis.html">register_basis</a></span><span class="op">(</span></span>
 <span>  <span class="va">basis_name</span>,</span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">span</span> <span class="op">=</span> <span class="fl">18</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu">fmrihrf</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html" class="external-link">gen_hrf</a></span><span class="op">(</span><span class="fu">fmrihrf</span><span class="fu">::</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/hrf_bspline.html" class="external-link">hrf_bspline</a></span>, N <span class="op">=</span> <span class="fl">5</span>, span <span class="op">=</span> <span class="va">span</span><span class="op">)</span></span>
+<span>    <span class="fu">fmrihrf</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html" class="external-link">gen_hrf</a></span><span class="op">(</span><span class="fu">fmrihrf</span><span class="fu">::</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/hrf_bspline.html" class="external-link">hrf_bspline</a></span>, N <span class="op">=</span> <span class="fl">4</span>, span <span class="op">=</span> <span class="va">span</span><span class="op">)</span></span>
 <span>  <span class="op">}</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -158,7 +160,9 @@ built-in bases.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">model_with_basis</span>, <span class="st">"fmri_model"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html" class="external-link">design_matrix</a></span><span class="op">(</span><span class="va">model_with_basis</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">plugin_design</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html" class="external-link">design_matrix</a></span><span class="op">(</span><span class="va">model_with_basis</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/Matrix/man/qr-methods.html" class="external-link">qr</a></span><span class="op">(</span><span class="va">plugin_design</span><span class="op">)</span><span class="op">$</span><span class="va">rank</span> <span class="op">==</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">plugin_design</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">plugin_design</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "condition_condition.A_b01" "condition_condition.B_b01"</span></span>
 <span><span class="co">#&gt; [3] "condition_condition.A_b02" "condition_condition.B_b02"</span></span>
 <span><span class="co">#&gt; [5] "condition_condition.A_b03" "condition_condition.B_b03"</span></span></code></pre></div>

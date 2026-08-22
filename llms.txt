@@ -313,8 +313,7 @@ License](https://bbuchsbaum.github.io/fmrireg/LICENSE).
   : Estimate betas for a matrix dataset
 
 - [`estimate_hrf()`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_hrf.md)
-  : Estimate hemodynamic response function (HRF) using Generalized
-  Additive Models (GAMs)
+  : Estimate smooth condition-level hemodynamic response functions
 
 - [`estimation_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/estimation_spec.md)
   : Statistical fitting scope
@@ -363,6 +362,12 @@ License](https://bbuchsbaum.github.io/fmrireg/LICENSE).
 
 - [`fmri_benchmark_datasets`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_benchmark_datasets.md)
   : Benchmark fMRI datasets
+
+- [`print(`*`<fmri_hrf_estimate>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_hrf_estimate-methods.md)
+  [`coef(`*`<fmri_hrf_estimate>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_hrf_estimate-methods.md)
+  [`as.matrix(`*`<fmri_hrf_estimate>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_hrf_estimate-methods.md)
+  [`predict(`*`<fmri_hrf_estimate>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_hrf_estimate-methods.md)
+  : Methods for smooth HRF estimates
 
 - [`fmri_job()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_job.md)
   : Construct a per-subject job recipe
@@ -473,6 +478,9 @@ License](https://bbuchsbaum.github.io/fmrireg/LICENSE).
 
 - [`lowrank_control()`](https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.md)
   : Low-rank / sketch controls for fast GLM
+
+- [`ma_parameters()`](https://bbuchsbaum.github.io/fmrireg/reference/ma_parameters.md)
+  : Extract Estimated MA Parameters from fmri_lm Fit
 
 - [`meta_effective_n()`](https://bbuchsbaum.github.io/fmrireg/reference/meta_effective_n.md)
   : Compute Effective Sample Size for Meta-Analysis
@@ -641,6 +649,9 @@ License](https://bbuchsbaum.github.io/fmrireg/LICENSE).
 - [`tidy()`](https://bbuchsbaum.github.io/fmrireg/reference/tidy.md) :
   Tidy generic
 
+- [`tidy(`*`<fmri_hrf_estimate>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/tidy.fmri_hrf_estimate.md)
+  : Tidy a smooth HRF estimate
+
 - [`tidy(`*`<fmri_meta>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/tidy.fmri_meta.md)
   : Tidy Meta-Analysis Results
 
@@ -693,26 +704,26 @@ License](https://bbuchsbaum.github.io/fmrireg/LICENSE).
 - [Overview and
   Workflow](https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.md):
 
-### Advanced Analysis
+### Analysis Workflow
 
-- [Contrasts and Hypothesis
-  Tests](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.md):
+- [Data Structures and Sampling
+  Frames](https://bbuchsbaum.github.io/fmrireg/articles/a_10_dataset.md):
 - [Simulating fMRI
   Data](https://bbuchsbaum.github.io/fmrireg/articles/a_08_simulation.md):
 - [fMRI Linear Model
   (GLM)](https://bbuchsbaum.github.io/fmrireg/articles/a_09_linear_model.md):
-- [Plugin
-  Development](https://bbuchsbaum.github.io/fmrireg/articles/plugin-development.md):
-- [Data Structures and Sampling
-  Frames](https://bbuchsbaum.github.io/fmrireg/articles/a_10_dataset.md):
-- [Group
-  Analysis](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.md):
+- [Contrasts and Hypothesis
+  Tests](https://bbuchsbaum.github.io/fmrireg/articles/a_05_contrasts.md):
 - [Running one model across many
   subjects](https://bbuchsbaum.github.io/fmrireg/articles/multisubject_fanout.md):
+- [Group
+  Analysis](https://bbuchsbaum.github.io/fmrireg/articles/group_analysis.md):
 - [Functional Connectivity
   (Seed-Based)](https://bbuchsbaum.github.io/fmrireg/articles/functional_connectivity.md):
-- [Sketched GLM with Global vs Parcel
-  AR](https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.md):
+- [Sketched GLM: Temporal Sketches, Pooled AR, and
+  Landmarks](https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.md):
+- [Plugin
+  Development](https://bbuchsbaum.github.io/fmrireg/articles/plugin-development.md):
 
 ### Resources
 

@@ -38,16 +38,18 @@
 <li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -85,7 +87,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-08-09</h4>
+            <h4 data-toc-skip class="date">2026-08-22</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/multisubject_fanout.Rmd" class="external-link"><code>vignettes/multisubject_fanout.Rmd</code></a></small>
       <div class="d-none name"><code>multisubject_fanout.Rmd</code></div>
@@ -107,10 +109,12 @@ parallel or cluster execution.</p>
 <p><code>fmrireg</code> separates the part that is
 <strong>invariant</strong> (an <code>fmri_template</code>) from the part
 that <strong>varies per subject</strong> (a <em>binding</em>: that
-subject’s data). Combining the two produces a small, serializable
-<code>fmri_job</code> – a recipe that holds no voxel data and can be
-shipped to a worker (a <code>future</code>, or a node in an array job)
-that reconstructs the dataset, fits, and reduces.</p>
+subject’s data). Combining the two produces a serializable
+<code>fmri_job</code>. With file-backed bindings, the job stores paths
+rather than voxel data and is small enough to ship to a worker. An
+inline matrix binding embeds that matrix in the job; this is convenient
+for the runnable example below but is not the memory-efficient choice
+for a real study.</p>
 <p>The four pieces:</p>
 <table class="table">
 <colgroup>
@@ -152,10 +156,10 @@ fit → BIDS-keyed maps out (<code>write_results</code>) → group level
 <div class="section level2">
 <h2 id="a-minimal-runnable-example">A minimal, runnable example<a class="anchor" aria-label="anchor" href="#a-minimal-runnable-example"></a>
 </h2>
-<p>Define the template once, describe two subjects as in-memory
-bindings, then fan the model out. (Real studies use file paths;
-in-memory <code>matrix_dataset</code> bindings keep this example
-fast.)</p>
+<p>Define the template once, describe two subjects as inline bindings,
+then fan the model out. The resulting jobs contain these small matrices.
+Real studies normally use file paths so jobs remain lightweight and
+workers open the imaging data lazily.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># one subject's data as a binding</span></span>
 <span><span class="va">make_subject</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">id</span>, <span class="va">seed</span><span class="op">)</span> <span class="op">{</span></span>
@@ -177,21 +181,29 @@ fast.)</p>
 <span>  reducer  <span class="op">=</span> <span class="fu"><a href="../reference/reduce_betas.html">reduce_betas</a></span><span class="op">(</span><span class="op">)</span>        <span class="co"># each subject -&gt; a tidy beta table</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># bind data -&gt; jobs -&gt; run</span></span>
+<span><span class="co"># Bind data to jobs, validate locally, and only then fan out.</span></span>
 <span><span class="va">jobs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/instantiate.html">instantiate</a></span><span class="op">(</span><span class="va">tmpl</span>, <span class="va">subjects</span><span class="op">)</span></span>
+<span><span class="va">flight</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/preflight.html">preflight</a></span><span class="op">(</span><span class="va">jobs</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">flight</span><span class="op">$</span><span class="va">ok</span>, <span class="va">flight</span><span class="op">$</span><span class="va">n_jobs</span> <span class="op">==</span> <span class="fl">2L</span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">res</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_jobs.html">run_jobs</a></span><span class="op">(</span><span class="va">jobs</span><span class="op">)</span></span>
 <span><span class="va">res</span></span>
 <span><span class="co">#&gt; &lt;fmri_batch_result&gt; 2 job(s): 2 ok, 0 failed</span></span>
 <span></span>
 <span><span class="va">values</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/batch_values.html">batch_values</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span>        <span class="co"># named by job id</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="../reference/batch_errors.html">batch_errors</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0L</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">values</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sub-01"</span>, <span class="st">"sub-02"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">values</span>, <span class="va">nrow</span>, <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">10L</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">values</span><span class="op">[[</span><span class="st">"sub-01"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   job_id                  term voxel    estimate        se        stat</span></span>
-<span><span class="co">#&gt; 1 sub-01 condition_condition.A     1 -0.01645972 0.2494796 -0.06597621</span></span>
-<span><span class="co">#&gt; 2 sub-01 condition_condition.B     1 -0.16257429 0.2485769 -0.65402017</span></span>
-<span><span class="co">#&gt; 3 sub-01 condition_condition.A     2  0.02754297 0.2478427  0.11113087</span></span>
-<span><span class="co">#&gt; 4 sub-01 condition_condition.B     2 -0.15066662 0.2469459 -0.61011997</span></span>
-<span><span class="co">#&gt; 5 sub-01 condition_condition.A     3 -0.72182835 0.2720789 -2.65301068</span></span>
-<span><span class="co">#&gt; 6 sub-01 condition_condition.B     3 -0.47638960 0.2710944 -1.75728281</span></span></code></pre></div>
+<span><span class="co">#&gt;   job_id                  term voxel    estimate        se       stat</span></span>
+<span><span class="co">#&gt; 1 sub-01 condition_condition.A     1 -0.03204400 0.2513233 -0.1275011</span></span>
+<span><span class="co">#&gt; 2 sub-01 condition_condition.B     1 -0.18137031 0.2506274 -0.7236650</span></span>
+<span><span class="co">#&gt; 3 sub-01 condition_condition.A     2  0.03081246 0.2495617  0.1234663</span></span>
+<span><span class="co">#&gt; 4 sub-01 condition_condition.B     2 -0.14713614 0.2488707 -0.5912151</span></span>
+<span><span class="co">#&gt; 5 sub-01 condition_condition.A     3 -0.70766166 0.2750774 -2.5725913</span></span>
+<span><span class="co">#&gt; 6 sub-01 condition_condition.B     3 -0.43742239 0.2743158 -1.5945943</span></span></code></pre></div>
 <p><code><a href="../reference/run_jobs.html">run_jobs()</a></code> isolates per-job failures: a subject that
 errors is recorded in the result rather than aborting the batch (see
 <code><a href="../reference/batch_errors.html">batch_errors()</a></code>).</p>
@@ -260,9 +272,9 @@ hand.</p>
 <p><code><a href="../reference/preflight.html">preflight()</a></code> validates jobs on the driver – design
 columns present, TR and run lengths consistent, confound dimensions
 correct – so problems surface in seconds rather than on a compute node
-after the queue drains.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/preflight.html">preflight</a></span><span class="op">(</span><span class="va">jobs</span><span class="op">)</span></span></code></pre></div>
+after the queue drains. The runnable workflow called it immediately
+after <code><a href="../reference/instantiate.html">instantiate()</a></code> and asserted <code>flight$ok</code>
+before <code><a href="../reference/run_jobs.html">run_jobs()</a></code>. Keep that order in production code.</p>
 </div>
 <div class="section level2">
 <h2 id="running-locally-in-parallel-or-on-a-cluster">Running: locally, in parallel, or on a cluster<a class="anchor" aria-label="anchor" href="#running-locally-in-parallel-or-on-a-cluster"></a>
@@ -271,26 +283,79 @@ after the queue drains.</p>
 plan; <code><a href="../reference/run_jobs.html">run_jobs()</a></code> dispatches through it – including
 <code>future.batchtools</code> cluster plans – with <strong>no
 scheduler-specific code</strong> in <code>fmrireg</code>.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://future.futureverse.org" class="external-link">future</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://future.futureverse.org/reference/plan.html" class="external-link">plan</a></span><span class="op">(</span><span class="va">multisession</span>, workers <span class="op">=</span> <span class="fl">4</span><span class="op">)</span>        <span class="co"># or future.batchtools::batchtools_slurm</span></span>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_jobs.html">run_jobs</a></span><span class="op">(</span><span class="va">jobs</span>, parallel <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>For an array scheduler, export the jobs to disk and drive them with
 whatever system you have:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_jobs.html">export_jobs</a></span><span class="op">(</span><span class="va">jobs</span>, <span class="st">"study/jobs"</span><span class="op">)</span></span>
 <span><span class="co"># study/jobs/manifest.rds + a backend-agnostic run_one.R</span></span>
 <span><span class="co"># then, per array task:</span></span>
 <span><span class="co">#   SLURM: Rscript study/jobs/run_one.R $SLURM_ARRAY_TASK_ID</span></span>
 <span><span class="co">#   local: for i in $(seq 1 N); do Rscript study/jobs/run_one.R $i; done</span></span></code></pre></div>
 <p><code>run_one.R</code> reads the manifest, reconstructs job
-<code>i</code>, fits, and writes its reduced output. The job is a
-portable recipe, so the worker need only have <code>fmrireg</code>
-installed.</p>
+<code>i</code>, fits, and writes its reduced output. Each worker needs
+<code>fmrireg</code>, packages referenced by the template or custom
+reducer, access to every file-backed input path, and write access to the
+chosen output location. A serialized recipe does not make local paths or
+package dependencies portable by itself.</p>
 </div>
 <div class="section level2">
 <h2 id="closing-the-loop-the-group-level">Closing the loop: the group level<a class="anchor" aria-label="anchor" href="#closing-the-loop-the-group-level"></a>
 </h2>
+<p>The inline example can close the statistical loop immediately. Here
+we collect the condition-B estimate and SE for teaching voxel 1 from
+each completed job, then compute their inverse-variance fixed-effect
+mean. With only two simulated subjects this is a pipeline check, not a
+scientifically powered group study.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">reduced</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">values</span><span class="op">)</span></span>
+<span><span class="va">teaching_effects</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span></span>
+<span>  <span class="va">reduced</span>,</span>
+<span>  <span class="va">term</span> <span class="op">==</span> <span class="st">"condition_condition.B"</span> <span class="op">&amp;</span> <span class="va">voxel</span> <span class="op">==</span> <span class="fl">1L</span>,</span>
+<span>  select <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">job_id</span>, <span class="va">estimate</span>, <span class="va">se</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">teaching_effects</span><span class="op">$</span><span class="va">roi</span> <span class="op">&lt;-</span> <span class="st">"teaching_voxel_1"</span></span>
+<span><span class="va">teaching_effects</span><span class="op">$</span><span class="va">contrast</span> <span class="op">&lt;-</span> <span class="st">"condition_B"</span></span>
+<span></span>
+<span><span class="va">gd_inline</span> <span class="op">&lt;-</span> <span class="fu">fmrireg</span><span class="fu">::</span><span class="fu"><a href="../reference/group_data.html">group_data</a></span><span class="op">(</span></span>
+<span>  <span class="va">teaching_effects</span>,</span>
+<span>  format <span class="op">=</span> <span class="st">"csv"</span>,</span>
+<span>  effect_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>beta <span class="op">=</span> <span class="st">"estimate"</span>, se <span class="op">=</span> <span class="st">"se"</span><span class="op">)</span>,</span>
+<span>  subject_col <span class="op">=</span> <span class="st">"job_id"</span>,</span>
+<span>  roi_col <span class="op">=</span> <span class="st">"roi"</span>,</span>
+<span>  contrast_col <span class="op">=</span> <span class="st">"contrast"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">fm_inline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_inline</span>, <span class="op">~</span> <span class="fl">1</span>, method <span class="op">=</span> <span class="st">"fe"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="va">group_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  target <span class="op">=</span> <span class="st">"Condition B at teaching voxel 1"</span>,</span>
+<span>  subjects <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">teaching_effects</span><span class="op">)</span>,</span>
+<span>  estimate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fm_inline</span><span class="op">$</span><span class="va">coefficients</span><span class="op">[</span><span class="fl">1</span>, <span class="st">"(Intercept)"</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>  std_error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fm_inline</span><span class="op">$</span><span class="va">se</span><span class="op">[</span><span class="fl">1</span>, <span class="st">"(Intercept)"</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="va">group_summary</span><span class="op">$</span><span class="va">subjects</span> <span class="op">==</span> <span class="fl">2L</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">group_summary</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"estimate"</span>, <span class="st">"std_error"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">group_summary</span>, digits <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>             caption <span class="op">=</span> <span class="st">"Executable subject-to-group handoff"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Executable subject-to-group handoff</caption>
+<thead><tr class="header">
+<th align="left">target</th>
+<th align="right">subjects</th>
+<th align="right">estimate</th>
+<th align="right">std_error</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td align="left">Condition B at teaching voxel 1</td>
+<td align="right">2</td>
+<td align="right">-0.06</td>
+<td align="right">0.195</td>
+</tr></tbody>
+</table>
 <p>With <code><a href="../reference/reduce_write_results.html">reduce_write_results()</a></code>, each worker writes
 BIDS-keyed statistical maps. <code><a href="../reference/collect_results.html">collect_results()</a></code> gathers them
 back into a <code>group_data</code> object that <code><a href="../reference/fmri_meta.html">fmri_meta()</a></code>
@@ -332,6 +397,18 @@ jobs.</li>
 <li>Reducers keep per-subject output compact;
 <code><a href="../reference/collect_results.html">collect_results()</a></code> → <code><a href="../reference/fmri_meta.html">fmri_meta()</a></code> close the loop
 at the group level.</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
+</h2>
+<ul>
+<li>
+<code><a href="../articles/group_analysis.html">vignette("group_analysis", package = "fmrireg")</a></code> —
+Combine subject-level estimates</li>
+<li>
+<code><a href="../articles/functional_connectivity.html">vignette("functional_connectivity", package = "fmrireg")</a></code>
+— Use a time series as a regressor</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

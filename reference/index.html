@@ -22,16 +22,18 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-vignettes"><li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
     <li><a class="dropdown-item" href="../articles/fmrireg.html">Package Overview</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Workflow</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
     <li><a class="dropdown-item" href="../articles/a_08_simulation.html">Simulation</a></li>
     <li><a class="dropdown-item" href="../articles/a_09_linear_model.html">Linear Modeling</a></li>
-    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
-    <li><a class="dropdown-item" href="../articles/a_10_dataset.html">Dataset Management</a></li>
-    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
     <li><a class="dropdown-item" href="../articles/multisubject_fanout.html">Multi-Subject Fan-Out</a></li>
+    <li><a class="dropdown-item" href="../articles/group_analysis.html">Group Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
     <li><a class="dropdown-item" href="../articles/benchmark_datasets.html">Benchmark Datasets</a></li>
@@ -380,7 +382,7 @@
           <code><a href="estimate_hrf.html">estimate_hrf()</a></code>
 
         </dt>
-        <dd>Estimate hemodynamic response function (HRF) using Generalized Additive Models (GAMs)</dd>
+        <dd>Estimate smooth condition-level hemodynamic response functions</dd>
 
         <dt>
 
@@ -493,6 +495,13 @@
 
         </dt>
         <dd>Benchmark fMRI datasets</dd>
+
+        <dt>
+
+          <code><a href="fmri_hrf_estimate-methods.html">print(<i>&lt;fmri_hrf_estimate&gt;</i>)</a></code> <code><a href="fmri_hrf_estimate-methods.html">coef(<i>&lt;fmri_hrf_estimate&gt;</i>)</a></code> <code><a href="fmri_hrf_estimate-methods.html">as.matrix(<i>&lt;fmri_hrf_estimate&gt;</i>)</a></code> <code><a href="fmri_hrf_estimate-methods.html">predict(<i>&lt;fmri_hrf_estimate&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Methods for smooth HRF estimates</dd>
 
         <dt>
 
@@ -745,6 +754,13 @@
 
         </dt>
         <dd>Low-rank / sketch controls for fast GLM</dd>
+
+        <dt>
+
+          <code><a href="ma_parameters.html">ma_parameters()</a></code>
+
+        </dt>
+        <dd>Extract Estimated MA Parameters from fmri_lm Fit</dd>
 
         <dt>
 
@@ -1123,6 +1139,13 @@
 
         </dt>
         <dd>Tidy generic</dd>
+
+        <dt>
+
+          <code><a href="tidy.fmri_hrf_estimate.html">tidy(<i>&lt;fmri_hrf_estimate&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Tidy a smooth HRF estimate</dd>
 
         <dt>
 

@@ -50,8 +50,11 @@ The design-column check uses
 [`all.vars()`](https://rdrr.io/r/base/allnames.html) on the formula, so
 it is deliberately conservative: a formula with a variable-valued HRF
 argument (e.g. `hrf(x, basis = my_basis)`) may flag `my_basis` as a
-missing column. Event tables supplied as file paths are not yet
-validated here.
+missing column. Arguments of
+[`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.html)
+are excluded, because those series live in the formula environment
+rather than the event table. Event tables supplied as file paths are not
+yet validated here.
 
 ## See also
 
