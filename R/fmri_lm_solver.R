@@ -91,7 +91,15 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
     fitted <- NULL
   }
 
-  sigma2 <- rss / proj$dfres
+  has_residual_df <- length(proj$dfres) == 1L &&
+    is.finite(proj$dfres) && proj$dfres > 0
+  sigma2 <- if (has_residual_df) {
+    rss / proj$dfres
+  } else {
+    # Residual variance is undefined for saturated designs. Returning NA
+    # explicitly avoids platform-dependent NaN/Inf results from 0/0 or x/0.
+    rep(NA_real_, ncol(Y))
+  }
   
   # Add rank information to output if available
   result <- list(

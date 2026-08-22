@@ -102,6 +102,23 @@ test_that("fmrireg:::.fast_preproject handles edge cases", {
   expect_equal(proj$aliased, 5)
 })
 
+test_that("solve_glm_core reports undefined variance for saturated designs", {
+  X <- diag(4)
+  Y <- matrix(seq_len(8), nrow = 4, ncol = 2)
+  proj <- fmrireg:::.fast_preproject(X)
+
+  lean <- solve_glm_core(glm_context(X = X, Y = Y, proj = proj))
+  full <- solve_glm_core(
+    glm_context(X = X, Y = Y, proj = proj),
+    return_fitted = TRUE
+  )
+
+  expect_identical(lean$dfres, 0L)
+  expect_true(all(is.finite(lean$betas)))
+  expect_true(all(is.na(lean$sigma2)))
+  expect_true(all(is.na(full$sigma2)))
+})
+
 test_that("solve_glm_core with weights works correctly", {
   # Test weighted least squares
   n <- 50

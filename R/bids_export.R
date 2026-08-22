@@ -1448,12 +1448,32 @@ write_results.fmri_lm <- function(x,
   backup_file
 }
 
+#' Resolve paths relative to an atomic-write staging directory
+#' @keywords internal
+#' @noRd
+.relative_staged_paths <- function(paths, root) {
+  normalized_paths <- chartr("\\", "/", paths)
+  normalized_root <- sub("/+$", "", chartr("\\", "/", root))
+  root_prefix <- paste0(normalized_root, "/")
+  is_descendant <- !is.na(normalized_paths) & startsWith(normalized_paths, root_prefix)
+
+  if (any(!is_descendant)) {
+    stop(
+      "Refusing to finalize a file outside the staged write directory: ",
+      paste(paths[!is_descendant], collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  substring(normalized_paths, nchar(root_prefix) + 1L)
+}
+
 #' Finalize Atomic Write by Moving Files
 #' @keywords internal
 .finalize_atomic_write <- function(temp_dir, final_path, created_files, overwrite = FALSE) {
   # Move all files from temp_dir to final_path
   temp_files <- list.files(temp_dir, full.names = TRUE, recursive = TRUE)
-  rel_paths <- sub(paste0("^", temp_dir, "/"), "", temp_files)
+  rel_paths <- .relative_staged_paths(temp_files, temp_dir)
   final_files <- file.path(final_path, rel_paths)
   existing_targets <- final_files[file.exists(final_files)]
 
@@ -1535,8 +1555,12 @@ write_results.fmri_lm <- function(x,
     if (is.list(created_files[[i]])) {
       created_files[[i]] <- .update_file_paths_in_results(created_files[[i]], temp_dir, final_path)
     } else if (is.character(created_files[[i]]) && length(created_files[[i]]) == 1) {
-      # Replace temp_dir with final_path in file paths
-      created_files[[i]] <- gsub(paste0("^", temp_dir), final_path, created_files[[i]])
+      normalized_path <- chartr("\\", "/", created_files[[i]])
+      normalized_root <- sub("/+$", "", chartr("\\", "/", temp_dir))
+      if (startsWith(normalized_path, paste0(normalized_root, "/"))) {
+        relative_path <- .relative_staged_paths(created_files[[i]], temp_dir)
+        created_files[[i]] <- file.path(final_path, relative_path)
+      }
     }
   }
   return(created_files)
