@@ -234,7 +234,7 @@ sampled as a BOLD time series.</p>
 <span>  <span class="va">fmodel</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dset_modified</span>,</span>
 <span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span></span>
-<span>    noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span>, pooling <span class="op">=</span> <span class="st">"global"</span>, iter_gls <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span></span>
+<span>    noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span>, pooling <span class="op">=</span> <span class="st">"global"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>The seed-regressor statistic describes coupling after accounting for
@@ -269,7 +269,7 @@ correction.</p>
 <span><span class="co"># Check the distribution of our connectivity map</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">t_seed</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. </span></span>
-<span><span class="co">#&gt; -2.5723 -0.6527  0.2077  1.2351  1.1139 10.7536</span></span></code></pre></div>
+<span><span class="co">#&gt; -2.5693 -0.6539  0.2129  1.2361  1.1158 10.7542</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="validating-the-results">Validating the Results<a class="anchor" aria-label="anchor" href="#validating-the-results"></a>
@@ -319,13 +319,13 @@ calibration is assessed in the next section.</p>
 <span>  top_rank_enrichment <span class="op">=</span> <span class="va">top_rank_enrichment</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;         mean_abs_t_network      mean_abs_t_background </span></span>
-<span><span class="co">#&gt;                8.278613860                0.814407744 </span></span>
+<span><span class="co">#&gt;                8.284247789                0.815073477 </span></span>
 <span><span class="co">#&gt;             BH_discoveries                sensitivity </span></span>
 <span><span class="co">#&gt;               42.000000000                1.000000000 </span></span>
 <span><span class="co">#&gt;             background_FPR false_discovery_proportion </span></span>
 <span><span class="co">#&gt;                0.004651163                0.023809524 </span></span>
 <span><span class="co">#&gt;  complete_null_discoveries                 fitted_rho </span></span>
-<span><span class="co">#&gt;                0.000000000                0.294192014 </span></span>
+<span><span class="co">#&gt;                0.000000000                0.291413551 </span></span>
 <span><span class="co">#&gt;        top_rank_enrichment </span></span>
 <span><span class="co">#&gt;                1.000000000</span></span></code></pre></div>
 <p>The effect-size separation, BH discoveries, sensitivity, FPR, and FDP
@@ -413,8 +413,8 @@ separately to each family.</p>
 <tbody>
 <tr class="odd">
 <td align="left">Mixed-family FDP</td>
-<td align="right">0.053</td>
-<td align="right">0.065</td>
+<td align="right">0.046</td>
+<td align="right">0.057</td>
 <td align="left">upper</td>
 </tr>
 <tr class="even">
@@ -425,19 +425,19 @@ separately to each family.</p>
 </tr>
 <tr class="odd">
 <td align="left">Background FPR</td>
+<td align="right">0.012</td>
 <td align="right">0.015</td>
-<td align="right">0.018</td>
 <td align="left">upper</td>
 </tr>
 <tr class="even">
 <td align="left">Complete-null family rejection rate</td>
-<td align="right">0.070</td>
-<td align="right">0.127</td>
+<td align="right">0.080</td>
+<td align="right">0.140</td>
 <td align="left">upper</td>
 </tr>
 <tr class="odd">
 <td align="left">Fitted AR(1) coefficient (truth 0.3)</td>
-<td align="right">0.249</td>
+<td align="right">0.295</td>
 <td align="right">NA</td>
 <td align="left">-</td>
 </tr>

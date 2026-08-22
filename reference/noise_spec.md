@@ -11,6 +11,7 @@ noise_spec(
   q = 0L,
   iter_gls = 1L,
   pooling = c("run", "global", "parcel"),
+  shared_estimator = c("pooled_acvf", "mean_series"),
   parcels = NULL,
   voxelwise = FALSE,
   exact_first = FALSE,
@@ -39,14 +40,27 @@ noise_spec(
 
 - iter_gls:
 
-  Number of GLS refinement iterations.
+  Maximum number of GLS refinement iterations. Standard design-corrected
+  AR fitting uses the initial OLS residuals once and holds that estimate
+  fixed for the GLS solve. Iterative refinement remains available to
+  uncorrected specialized engines and ARMA models (`q > 0`).
 
 - pooling:
 
   Temporal covariance pooling scope. With built-in shared AR estimation,
-  `"run"` estimates one coefficient vector per run from the cross-voxel
-  mean residual series; `"global"` concatenates those runwise mean
-  series before estimation.
+  `"run"` estimates one coefficient vector per run and `"global"` pools
+  across runs.
+
+- shared_estimator:
+
+  Spatial estimator for a shared temporal covariance. `"pooled_acvf"`
+  (the default) pools residual autocovariances across voxels and
+  therefore targets a typical voxel covariance. `"mean_series"` first
+  averages residual values across voxels and targets the coherent
+  spatial component; it is experimental, can be much more autocorrelated
+  than an individual voxel, and omits the OLS design correction because
+  averaging removes the voxel-level noise scale for which that
+  correction is calibrated.
 
 - parcels:
 

@@ -212,7 +212,7 @@ model <- fmri_lm(
   formula = onset ~ hrf(condition),  # Model experimental effects
   block = ~ run,                     # Block structure
   dataset = dataset,                 # Our simulated dataset
-  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  control = fmri_lm_control(noise = noise_spec("ar1")),
   compute = compute_spec(voxel_chunks = 1L)
 )
 
@@ -276,12 +276,13 @@ terms.](a_09_linear_model_files/figure-html/inspect-design-matrix-1.png)
 
 The simulated noise contains AR(1) structure, so the central model above
 uses AR(1) prewhitening with `noise_spec("ar1")`. By default, the
-built-in shared path averages the voxel residuals at each time point,
-estimates one AR coefficient vector from that mean residual series for
-each run, whitens the data and design matrix, and refits the GLM. A
-spatially coherent residual component can therefore make this shared
-estimate larger than the median of separately estimated voxel
-coefficients.
+built-in shared path pools residual autocovariances across voxels,
+estimates one AR coefficient vector for each run, whitens the data and
+design matrix, and refits the GLM. This targets a typical voxel
+covariance. The experimental `shared_estimator = "mean_series"` option
+instead averages voxel residuals at each time point and targets the
+spatially coherent component, which can be much more autocorrelated than
+an individual voxel.
 
 To estimate a separate AR model for every voxel, request the supported
 runwise-meta path explicitly:
@@ -327,7 +328,7 @@ kable(se_comparison, digits = 4, caption = "Median standard error across event c
 | model             | median_event_se |
 |:------------------|----------------:|
 | OLS               |          0.1377 |
-| AR(1) prewhitened |          0.1830 |
+| AR(1) prewhitened |          0.1719 |
 
 Median standard error across event coefficients {.table}
 
@@ -336,7 +337,7 @@ Median standard error across event coefficients {.table}
 
 # Inspect the estimated AR coefficient (shared across voxels in this example)
 model_ar1$ar_coef[[1]]
-#> [1] 0.3780502
+#> [1] 0.3089859
 ```
 
 Here the AR(1) fit estimates non-zero serial dependence and produces
@@ -347,8 +348,10 @@ overconfident when residuals are serially correlated.
 The
 [`noise_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/noise_spec.md)
 constructor also accepts `struct = "arp"` for higher-order
-autoregressive models. This setting models AR coefficients only (no
-moving-average terms).
+autoregressive models. A positive `q` requests ARMA(p, q) inference on
+the supported runwise-meta path; see
+[`?noise_spec`](https://bbuchsbaum.github.io/fmrireg/reference/noise_spec.md)
+for the current restrictions.
 
 ### Handling Outliers with Row-Wise Robust Fitting
 
@@ -408,8 +411,8 @@ kable(beta_estimates, caption = "Coefficient estimates for each condition and vo
 
 |                                |           |           |           |
 |:-------------------------------|----------:|----------:|----------:|
-| condition_condition.condition1 | 0.7502877 | 0.5504911 | 0.3506944 |
-| condition_condition.condition2 | 1.8920548 | 1.4923287 | 1.0926026 |
+| condition_condition.condition1 | 0.7220765 | 0.5222495 | 0.3224225 |
+| condition_condition.condition2 | 1.8931877 | 1.4934382 | 1.0936888 |
 
 Coefficient estimates for each condition and voxel {.table}
 
@@ -470,12 +473,12 @@ kable(estimate_stats_display, digits = 4, row.names = FALSE,
 
 | voxel  | condition  | estimate | std_error | statistic | p_value  |
 |:-------|:-----------|---------:|----------:|----------:|:---------|
-| voxel1 | condition1 |   0.7503 |    0.1922 |    3.9030 | 0.000131 |
-| voxel1 | condition2 |   1.8921 |    0.1737 |   10.8916 | \< 1e-04 |
-| voxel2 | condition1 |   0.5505 |    0.1922 |    2.8637 | 0.004648 |
-| voxel2 | condition2 |   1.4923 |    0.1737 |    8.5907 | \< 1e-04 |
-| voxel3 | condition1 |   0.3507 |    0.1922 |    1.8243 | 0.069638 |
-| voxel3 | condition2 |   1.0926 |    0.1737 |    6.2897 | \< 1e-04 |
+| voxel1 | condition1 |   0.7221 |    0.1804 |    4.0037 | \< 1e-04 |
+| voxel1 | condition2 |   1.8932 |    0.1634 |   11.5885 | \< 1e-04 |
+| voxel2 | condition1 |   0.5222 |    0.1803 |    2.8958 | 0.004216 |
+| voxel2 | condition2 |   1.4934 |    0.1634 |    9.1417 | \< 1e-04 |
+| voxel3 | condition1 |   0.3224 |    0.1803 |    1.7878 | 0.075369 |
+| voxel3 | condition2 |   1.0937 |    0.1634 |    6.6948 | \< 1e-04 |
 
 Coefficient estimates with associated statistics by voxel and condition
 {.table}
@@ -502,7 +505,7 @@ contrast_model <- fmri_lm(
   formula = onset ~ hrf(condition, contrasts = con_spec),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  control = fmri_lm_control(noise = noise_spec("ar1")),
   compute = compute_spec(voxel_chunks = 1L)
 )
 
@@ -527,9 +530,9 @@ kable(contrast_results_display,
 
 | voxel | term | estimate | std_error | statistic | p_value | df_inference | df_residual | significant |
 |:---|:---|---:|---:|---:|:---|---:|---:|:---|
-| voxel1 | cond2_minus_cond1 | 1.1418 | 0.2541 | 4.4934 | \< 1e-04 | 194 | 194 | TRUE |
-| voxel2 | cond2_minus_cond1 | 0.9418 | 0.2541 | 3.7066 | 0.000274 | 194 | 194 | TRUE |
-| voxel3 | cond2_minus_cond1 | 0.7419 | 0.2541 | 2.9198 | 0.003917 | 194 | 194 | TRUE |
+| voxel1 | cond2_minus_cond1 | 1.1711 | 0.2386 | 4.9077 | \< 1e-04 | 194 | 194 | TRUE |
+| voxel2 | cond2_minus_cond1 | 0.9712 | 0.2386 | 4.0700 | \< 1e-04 | 194 | 194 | TRUE |
+| voxel3 | cond2_minus_cond1 | 0.7713 | 0.2386 | 3.2322 | 0.001443 | 194 | 194 | TRUE |
 
 Contrast results: condition2 - condition1 {.table style="width:100%;"}
 
@@ -683,7 +686,7 @@ model_canonical <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "spmg1"),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  control = fmri_lm_control(noise = noise_spec("ar1")),
   compute = compute_spec(voxel_chunks = 1L)
 )
 
@@ -691,7 +694,7 @@ model_gaussian <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "gaussian"),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  control = fmri_lm_control(noise = noise_spec("ar1")),
   compute = compute_spec(voxel_chunks = 1L)
 )
 
@@ -699,7 +702,7 @@ model_bspline <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "bspline", nbasis = 5),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  control = fmri_lm_control(noise = noise_spec("ar1")),
   compute = compute_spec(voxel_chunks = 1L)
 )
 ```
@@ -720,15 +723,15 @@ kable(model_comparison, caption = "Model comparison statistics", digits = 4)
 
 | model         | voxel | r_squared |     aic |      ssr |
 |:--------------|------:|----------:|--------:|---------:|
-| canonical_spm |     1 |    0.5521 | 49.1341 | 240.8052 |
-| canonical_spm |     2 |    0.4274 | 49.1252 | 240.7944 |
-| canonical_spm |     3 |    0.2786 | 49.1164 | 240.7837 |
-| gaussian      |     1 |    0.5153 | 64.9523 | 260.6240 |
-| gaussian      |     2 |    0.3979 | 59.1908 | 253.2232 |
-| gaussian      |     3 |    0.2586 | 54.5849 | 247.4582 |
-| bspline_n5    |     1 |    0.5526 | 64.9398 | 240.5713 |
-| bspline_n5    |     2 |    0.4554 | 55.1202 | 229.0450 |
-| bspline_n5    |     3 |    0.3403 | 47.2235 | 220.1777 |
+| canonical_spm |     1 |    0.5527 | 48.8511 | 240.4646 |
+| canonical_spm |     2 |    0.4283 | 48.8417 | 240.4533 |
+| canonical_spm |     3 |    0.2796 | 48.8323 | 240.4420 |
+| gaussian      |     1 |    0.5160 | 64.6241 | 260.1967 |
+| gaussian      |     2 |    0.3986 | 58.9412 | 252.9074 |
+| gaussian      |     3 |    0.2593 | 54.3961 | 247.2248 |
+| bspline_n5    |     1 |    0.5530 | 64.7474 | 240.3400 |
+| bspline_n5    |     2 |    0.4559 | 54.9259 | 228.8225 |
+| bspline_n5    |     3 |    0.3410 | 47.0254 | 219.9597 |
 
 Model comparison statistics {.table}
 
@@ -745,9 +748,9 @@ kable(aic_winners, caption = "Lowest-AIC model in each voxel", digits = 4)
 
 | voxel | selected_model |     aic |
 |------:|:---------------|--------:|
-|     1 | canonical_spm  | 49.1341 |
-|     2 | canonical_spm  | 49.1252 |
-|     3 | bspline_n5     | 47.2235 |
+|     1 | canonical_spm  | 48.8511 |
+|     2 | canonical_spm  | 48.8417 |
+|     3 | bspline_n5     | 47.0254 |
 
 Lowest-AIC model in each voxel {.table}
 

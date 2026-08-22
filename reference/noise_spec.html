@@ -73,6 +73,7 @@
 <span>  q <span class="op">=</span> <span class="fl">0L</span>,</span>
 <span>  iter_gls <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  pooling <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"run"</span>, <span class="st">"global"</span>, <span class="st">"parcel"</span><span class="op">)</span>,</span>
+<span>  shared_estimator <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pooled_acvf"</span>, <span class="st">"mean_series"</span><span class="op">)</span>,</span>
 <span>  parcels <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  voxelwise <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  exact_first <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -102,14 +103,26 @@ estimation.</p></dd>
 
 
 <dt id="arg-iter-gls">iter_gls<a class="anchor" aria-label="anchor" href="#arg-iter-gls"></a></dt>
-<dd><p>Number of GLS refinement iterations.</p></dd>
+<dd><p>Maximum number of GLS refinement iterations. Standard
+design-corrected AR fitting uses the initial OLS residuals once and holds
+that estimate fixed for the GLS solve. Iterative refinement remains
+available to uncorrected specialized engines and ARMA models (<code>q &gt; 0</code>).</p></dd>
 
 
 <dt id="arg-pooling">pooling<a class="anchor" aria-label="anchor" href="#arg-pooling"></a></dt>
 <dd><p>Temporal covariance pooling scope. With built-in shared AR
-estimation, <code>"run"</code> estimates one coefficient vector per run from the
-cross-voxel mean residual series; <code>"global"</code> concatenates those runwise
-mean series before estimation.</p></dd>
+estimation, <code>"run"</code> estimates one coefficient vector per run and
+<code>"global"</code> pools across runs.</p></dd>
+
+
+<dt id="arg-shared-estimator">shared_estimator<a class="anchor" aria-label="anchor" href="#arg-shared-estimator"></a></dt>
+<dd><p>Spatial estimator for a shared temporal covariance.
+<code>"pooled_acvf"</code> (the default) pools residual autocovariances across voxels
+and therefore targets a typical voxel covariance. <code>"mean_series"</code> first
+averages residual values across voxels and targets the coherent spatial
+component; it is experimental, can be much more autocorrelated than an
+individual voxel, and omits the OLS design correction because averaging
+removes the voxel-level noise scale for which that correction is calibrated.</p></dd>
 
 
 <dt id="arg-parcels">parcels<a class="anchor" aria-label="anchor" href="#arg-parcels"></a></dt>

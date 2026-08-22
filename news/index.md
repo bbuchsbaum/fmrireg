@@ -48,6 +48,20 @@
 
 ### Bug Fixes
 
+- Shared AR estimation now pools voxel residual autocovariances by
+  default instead of fitting the cross-voxel mean residual series. The
+  former targets a typical voxel covariance; the latter suppresses
+  voxel-specific noise and targets a different, often more
+  autocorrelated coherent component. The old behavior remains available
+  explicitly as `noise_spec(..., shared_estimator = "mean_series")`;
+  this collapsed-series mode omits the OLS design correction because its
+  voxel-level noise scale is no longer identifiable after averaging.
+
+- Design-corrected AR coefficients are estimated once from initial OLS
+  residuals and held fixed for the GLS solve. Later GLS residuals have a
+  different residual-forming operator and no longer reuse the OLS
+  `design=` correction.
+
 - `write_results(strategy = "by_stat")` no longer scatters contrast maps
   onto the wrong voxels. `.compute_statistical_volumes()` called
   [`as.logical()`](https://rdrr.io/r/base/logical.html) on the mask,
