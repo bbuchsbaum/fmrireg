@@ -38,6 +38,88 @@
   as.matrix(x %*% A)
 }
 
+#' Internal: blend fixed-order AR estimates, including run-specific lists
+#' @keywords internal
+#' @noRd
+.lowrank_blend_ar <- function(local_phi, global_phi, alpha) {
+  if (!is.list(local_phi) && !is.list(global_phi)) {
+    return(alpha * local_phi + (1 - alpha) * global_phi)
+  }
+
+  if (!is.list(local_phi)) local_phi <- rep(list(local_phi), length(global_phi))
+  if (!is.list(global_phi)) global_phi <- rep(list(global_phi), length(local_phi))
+  if (length(local_phi) != length(global_phi)) {
+    stop("run-specific local and global AR estimates have different lengths",
+         call. = FALSE)
+  }
+  out <- Map(
+    function(local, global) alpha * local + (1 - alpha) * global,
+    local_phi, global_phi
+  )
+  names(out) <- names(local_phi) %||% names(global_phi)
+  out
+}
+
+#' Internal: estimate low-rank AR once from initial OLS and whiten
+#' @keywords internal
+#' @noRd
+.lowrank_whiten_initial_ols <- function(X, Z, ar_order, ar_opts,
+                                       run_indices = NULL, censor = NULL) {
+  proj <- .fast_preproject(X)
+  residuals <- Z - X %*% (proj$Pinv %*% Z)
+  phi <- .estimate_shared_ar_parameters(
+    residuals = residuals,
+    ar_order = ar_order,
+    ar_opts = ar_opts,
+    run_indices = run_indices,
+    censor = censor,
+    design = X
+  )
+  whitened <- ar_whiten_transform(
+    X = X,
+    Y = Z,
+    phi = phi,
+    exact_first = isTRUE(ar_opts$exact_first),
+    censor = censor,
+    run_indices = run_indices
+  )
+  list(phi = phi, X = whitened$X, Y = whitened$Y,
+       residuals = residuals)
+}
+
+#' Internal: estimate and shrink parcel AR from OLS residual columns
+#' @keywords internal
+#' @noRd
+.lowrank_group_ar_estimates <- function(residuals, sizes, ar_order, ar_opts,
+                                        shrink_c0, design,
+                                        run_indices = NULL, censor = NULL) {
+  if (!is.list(residuals) || !length(residuals)) {
+    stop("'residuals' must be a non-empty list of parcel residuals",
+         call. = FALSE)
+  }
+  group_names <- names(residuals)
+  if (is.null(group_names)) group_names <- as.character(seq_along(residuals))
+  residual_matrix <- do.call(cbind, lapply(residuals, as.numeric))
+  colnames(residual_matrix) <- group_names
+
+  global_phi <- .estimate_shared_ar_parameters(
+    residual_matrix, ar_order, ar_opts,
+    run_indices = run_indices, censor = censor, design = design
+  )
+  phi_groups <- setNames(vector("list", length(residuals)), group_names)
+  for (i in seq_along(residuals)) {
+    local_phi <- .estimate_shared_ar_parameters(
+      matrix(residuals[[i]], ncol = 1L), ar_order, ar_opts,
+      run_indices = run_indices, censor = censor, design = design
+    )
+    group_size <- as.numeric(sizes[[group_names[[i]]]] %||% sizes[[i]])
+    alpha <- group_size / (group_size + shrink_c0)
+    phi_groups[[i]] <- .lowrank_blend_ar(local_phi, global_phi, alpha)
+  }
+
+  list(phi_groups = phi_groups, global_phi = global_phi)
+}
+
 #' Internal: run low-rank/sketched engine under fmri_lm
 #' @keywords internal
 #' @noRd
@@ -52,6 +134,8 @@
   # Design (T x p)
   X <- as.matrix(design_matrix(fm))
   Tlen <- nrow(X); p <- ncol(X)
+  run_indices <- .model_run_indices(fm, Tlen)
+  censor <- resolve_censor(cfg, dataset = dataset, n_time = Tlen)
   rank_x_full <- as.integer(Matrix::rankMatrix(X)[1])
   # Residual df should reflect original time samples and effective design rank, not sketch rows.
   dfres_full <- max(1L, Tlen - rank_x_full)
@@ -95,7 +179,6 @@
                      "arp" = as.integer(ar_opts$p %||% 0L),
                      0L)
   ar_order <- if (is.finite(ar_order)) ar_order else 0L
-  iter_gls <- as.integer(ar_opts$iter_gls %||% 1L)
   exact_first <- isTRUE(ar_opts$exact_first)
   shrink_c0 <- as.integer(ar_opts$shrink_c0 %||% 100L)
   no_whiten <- ar_order <= 0L
@@ -199,22 +282,30 @@
       res_per_group[[as.character(g)]] <- resid_g
       sizes[as.character(g)] <- length(Jg)
     }
-    # Global phi for shrinkage
-    phi_global <- .estimate_ar_parameters_routed(unlist(res_per_group, use.names = FALSE), ar_order)
+    group_ar <- .lowrank_group_ar_estimates(
+      residuals = res_per_group,
+      sizes = sizes,
+      ar_order = ar_order,
+      ar_opts = ar_opts,
+      shrink_c0 = shrink_c0,
+      design = X,
+      run_indices = run_indices,
+      censor = censor
+    )
+    phi_global <- group_ar$global_phi
+    phi_groups <- group_ar$phi_groups
     # Second pass: whiten, sketch, accumulate
     plan <- if (identical(sk$method, "srht") || identical(sk$method, "ihs")) make_srht_plan(Tlen, sk$m) else NULL
-    phi_groups <- vector("list", length(ug))
-    names(phi_groups) <- as.character(ug)
     for (g in ug) {
       Jg <- which(gids == g)
       if (length(Jg) == 0) next
-      resid_g <- res_per_group[[as.character(g)]]
-      alpha_g <- sizes[as.character(g)]/(sizes[as.character(g)] + shrink_c0)
-      phi_g_raw <- .estimate_ar_parameters_routed(resid_g, ar_order)
-      phi_g <- alpha_g * phi_g_raw + (1 - alpha_g) * phi_global
-      phi_groups[[as.character(g)]] <- phi_g
+      phi_g <- phi_groups[[as.character(g)]]
       # Whiten group
-      tmp <- ar_whiten_transform(X, Z[, Jg, drop = FALSE], phi_g, exact_first = exact_first)
+      tmp <- ar_whiten_transform(
+        X, Z[, Jg, drop = FALSE], phi_g,
+        exact_first = exact_first, censor = censor,
+        run_indices = run_indices
+      )
       Xw_g <- tmp$X; Zw_g <- tmp$Y
       # Sketch
       if (identical(sk$method, "srht") || identical(sk$method, "ihs")) {
@@ -249,9 +340,16 @@
         ybar_g <- rowMeans(Z[, Jg, drop = FALSE])
         beta_g <- Pinv %*% ybar_g
         resid_g <- ybar_g - drop(X %*% beta_g)
-        phi_g <- .estimate_ar_parameters_routed(resid_g, ar_order)
+        phi_g <- .estimate_shared_ar_parameters(
+          matrix(resid_g, ncol = 1L), ar_order, ar_opts,
+          run_indices = run_indices, censor = censor, design = X
+        )
       }
-      tmp <- ar_whiten_transform(X, Z[, Jg, drop = FALSE], phi_g, exact_first = exact_first)
+      tmp <- ar_whiten_transform(
+        X, Z[, Jg, drop = FALSE], phi_g,
+        exact_first = exact_first, censor = censor,
+        run_indices = run_indices
+      )
       Xw_g <- tmp$X; Zw_g <- tmp$Y
       if (identical(sk$method, "srht") || identical(sk$method, "ihs")) {
         Xs_g <- srht_apply(Xw_g, plan)
@@ -276,37 +374,17 @@
     # Estimate the configured shared covariance from the full OLS residual
     # matrix. pooled_acvf targets a typical column; mean_series explicitly
     # targets the coherent spatial component.
-    XtX <- crossprod(X)
-    Pinv <- tryCatch(chol2inv(chol(XtX)) %*% t(X), error = function(e) MASS::ginv(XtX) %*% t(X))
-    beta <- Pinv %*% Z
-    resid <- Z - X %*% beta
-    phi <- .estimate_shared_ar_parameters(resid, ar_order, ar_opts)
-
-    if (iter_gls > 1L) {
-      phi_current <- phi
-      for (it in seq_len(iter_gls)) {
-        tmp_iter <- ar_whiten_transform(X, Z, phi_current, exact_first = exact_first)
-        Xw <- tmp_iter$X
-        Zw <- tmp_iter$Y
-        if (it < iter_gls) {
-          XtX_iter <- crossprod(Xw)
-          XtXinv_iter <- tryCatch(chol2inv(chol(XtX_iter)),
-                                  error = function(e) MASS::ginv(XtX_iter))
-          beta_iter <- XtXinv_iter %*% crossprod(Xw, Zw)
-          resid_iter <- Z - X %*% beta_iter
-          phi_current <- .estimate_shared_ar_parameters(
-            resid_iter, ar_order, ar_opts
-          )
-        }
-      }
-      phi <- phi_current
-    }
-
-    if (!exists("Xw", inherits = FALSE) || !exists("Zw", inherits = FALSE)) {
-      tmp <- ar_whiten_transform(X, Z, phi, exact_first = exact_first)
-      Xw <- tmp$X
-      Zw <- tmp$Y
-    }
+    initial_ar <- .lowrank_whiten_initial_ols(
+      X = X,
+      Z = Z,
+      ar_order = ar_order,
+      ar_opts = ar_opts,
+      run_indices = run_indices,
+      censor = censor
+    )
+    phi <- initial_ar$phi
+    Xw <- initial_ar$X
+    Zw <- initial_ar$Y
     # Sketch and solve
     if (identical(sk$method, "ihs")) {
       if (A_is_I && !is.null(lowrank$landmarks)) {
@@ -487,7 +565,7 @@
         sigma2 <- colSums(RA * RA) / dfres
       }
     }
-    ar_coef_store <- list(phi)
+    ar_coef_store <- if (is.list(phi)) phi else list(phi)
   }
 
   # Build fmri_lm-like result structure compatible with downstream code

@@ -148,7 +148,7 @@ test_that("shared and voxelwise runwise estimators match their stated oracles", 
     residuals, 1L, design = X
   )
   mean_series_oracle <- fmrireg:::.estimate_ar_parameters_routed(
-    rowMeans(residuals), 1L
+    rowMeans(residuals), 1L, design = X
   )
   voxelwise_oracle <- vapply(
     seq_len(ncol(Y)),

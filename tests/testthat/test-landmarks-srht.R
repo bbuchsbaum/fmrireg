@@ -74,7 +74,10 @@ test_that("landmark extension preserves a smooth task field with bounded scale e
     engine = "latent_sketch", lowrank = full_low, control = control
   ))
 
-  L <- 36L  # Increased landmarks for better coverage
+  # Design-corrected pooled AR preserves more of the voxel-specific temporal
+  # structure than the former mean-series shortcut. Use enough spatial support
+  # that this remains a test of landmark extension, not an undersampling edge.
+  L <- 40L
   low <- lowrank_control(parcels = parcels, landmarks = L, k_neighbors = 8L,
                          time_sketch = list(method = "srht", m = min(10L * p, Tlen)))
   set.seed(321)

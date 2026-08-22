@@ -389,18 +389,7 @@
 #' @keywords internal
 #' @noRd
 .rrr_derive_run_indices <- function(model, n) {
-  sframe <- tryCatch(model$event_model$sampling_frame, error = function(e) NULL)
-  if (is.null(sframe)) {
-    return(NULL)
-  }
-
-  runs <- tryCatch(fmrihrf::blockids(sframe), error = function(e) NULL)
-  if (!is.numeric(runs) || length(runs) != n) {
-    return(NULL)
-  }
-
-  split_idx <- split(seq_len(n), runs)
-  lapply(split_idx, as.integer)
+  .model_run_indices(model, n)
 }
 
 
@@ -476,7 +465,8 @@
     Y = Y,
     phi = phi,
     exact_first = exact_first,
-    censor = censor
+    censor = censor,
+    run_indices = run_indices
   )
   Xw_ref <- as.matrix(tmp$X)
   Yw <- as.matrix(tmp$Y)

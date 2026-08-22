@@ -118,7 +118,7 @@ test_that("chunkwise preparation estimates shared AR once per run", {
   expect_true(all(vapply(captured, function(x) all(is.finite(x)), logical(1))))
 })
 
-test_that(".run_lowrank_engine re-estimates AR from raw-domain residuals", {
+test_that(".run_lowrank_engine freezes AR from initial OLS residuals", {
   n <- 8L
   v <- 3L
   X <- cbind("(Intercept)" = 1, x = seq_len(n))
@@ -175,17 +175,11 @@ test_that(".run_lowrank_engine re-estimates AR from raw-domain residuals", {
     .package = "fmrireg"
   )
 
-  expect_gte(length(captured), 2L)
+  expect_length(captured, 1L)
 
-  Xw <- 2 * X
-  Zw <- 3 * Z
-  beta_iter <- solve(crossprod(Xw), crossprod(Xw, Zw))
-
-  expected_raw <- as.numeric(Z - X %*% beta_iter)
-  expected_white <- as.numeric(Zw - Xw %*% beta_iter)
-
-  expect_equal(unname(captured[[2]]), unname(expected_raw))
-  expect_gt(max(abs(captured[[2]] - expected_white)), 1e-6)
+  beta_ols <- solve(crossprod(X), crossprod(X, Z))
+  expected_ols <- as.numeric(Z - X %*% beta_ols)
+  expect_equal(unname(captured[[1L]]), unname(expected_ols), tolerance = 1e-12)
 })
 
 test_that(".run_lowrank_engine uses design rank when computing rdf", {

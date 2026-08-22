@@ -64,7 +64,7 @@ test_that("fmriAR integration produces numerically similar results", {
   }
 })
 
-test_that("fixed-order design correction stops at the fitted AR order", {
+test_that("fixed-order design correction uses a separate covariance-tail budget", {
   skip_if_not_installed("fmriAR", minimum_version = "0.3.3")
 
   set.seed(124)
@@ -75,6 +75,8 @@ test_that("fixed-order design correction stops at the fitted AR order", {
   for (order in 1:2) {
     cfg <- list(struct = if (order == 1L) "ar1" else "ar2")
     actual <- .estimate_ar_via_fmriAR(residuals, cfg, design = X)
+    budget <- .ar_correction_lag_budget(X, target_order = order)
+    expect_gt(budget, order)
     oracle <- fmriAR::fit_noise(
       resid = residuals,
       method = "ar",
@@ -83,7 +85,7 @@ test_that("fixed-order design correction stops at the fitted AR order", {
       pooling = "global",
       exact_first = "ar1",
       design = X,
-      correction_max_lag = order
+      correction_max_lag = budget
     )
     expect_equal(actual$phi, oracle$phi, tolerance = 1e-12)
   }
@@ -165,9 +167,9 @@ test_that("iterative and integrated solvers honor the shared AR estimand", {
 
   residuals <- Y - X %*% base::qr.solve(X, Y)
   expect_identical(.shared_ar_correction_design(residuals, pooled_cfg, X), X)
-  expect_null(.shared_ar_correction_design(residuals, mean_cfg, X))
+  expect_identical(.shared_ar_correction_design(residuals, mean_cfg, X), X)
   mean_oracle <- .estimate_ar_via_fmriAR(
-    matrix(rowMeans(residuals), ncol = 1L), mean_cfg
+    matrix(rowMeans(residuals), ncol = 1L), mean_cfg, design = X
   )
   expect_equal(mean_fit$plan$phi, mean_oracle$phi, tolerance = 1e-12)
   expect_gt(

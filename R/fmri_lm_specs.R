@@ -88,7 +88,7 @@ estimation_spec <- function(scope = c("joint", "runwise_meta"),
 #' @param iter_gls Maximum number of GLS refinement iterations. Standard
 #'   design-corrected AR fitting uses the initial OLS residuals once and holds
 #'   that estimate fixed for the GLS solve. Iterative refinement remains
-#'   available to uncorrected specialized engines and ARMA models (`q > 0`).
+#'   available to ARMA models (`q > 0`).
 #' @param pooling Temporal covariance pooling scope. With built-in shared AR
 #'   estimation, `"run"` estimates one coefficient vector per run and
 #'   `"global"` pools across runs.
@@ -97,8 +97,8 @@ estimation_spec <- function(scope = c("joint", "runwise_meta"),
 #'   and therefore targets a typical voxel covariance. `"mean_series"` first
 #'   averages residual values across voxels and targets the coherent spatial
 #'   component; it is experimental, can be much more autocorrelated than an
-#'   individual voxel, and omits the OLS design correction because averaging
-#'   removes the voxel-level noise scale for which that correction is calibrated.
+#'   individual voxel. Because OLS projection is linear across response
+#'   columns, the matching design correction remains valid after averaging.
 #' @param parcels Optional parcel labels for parcel pooling.
 #' @param voxelwise Estimate temporal covariance separately by voxel. In the
 #'   built-in fitter this currently requires AR-only runwise meta-estimation,

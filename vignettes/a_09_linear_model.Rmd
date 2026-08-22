@@ -278,7 +278,8 @@ vector for each run, whitens the data and design matrix, and refits the GLM.
 This targets a typical voxel covariance. The experimental
 `shared_estimator = "mean_series"` option instead averages voxel residuals at
 each time point and targets the spatially coherent component, which can be much
-more autocorrelated than an individual voxel.
+more autocorrelated than an individual voxel. In either case, the matching OLS
+design correction is valid: projection and cross-voxel averaging commute.
 
 To estimate a separate AR model for every voxel, request the supported
 runwise-meta path explicitly:

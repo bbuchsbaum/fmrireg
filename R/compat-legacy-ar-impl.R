@@ -82,11 +82,14 @@ estimate_ar_parameters <- function(residuals_vec, p_order, censor = NULL) {
 #' @param exact_first Logical for exact first sample scaling
 #' @param censor Integer vector of 1-based indices that were censored during
 #'   AR estimation. Passed to whiten_apply for consistent segment handling.
+#' @param run_indices Optional list of timepoint indices for each run. Whitening
+#'   is reset at every run boundary.
 #' @param ... Additional arguments (ignored)
 #' @return List with whitened X and Y
 #' @keywords internal
 #' @noRd
-ar_whiten_transform <- function(X, Y, phi, exact_first = FALSE, censor = NULL, ...) {
+ar_whiten_transform <- function(X, Y, phi, exact_first = FALSE, censor = NULL,
+                                run_indices = NULL, ...) {
   if (anyNA(X) || anyNA(Y)) {
     stop("NA values detected in 'X' or 'Y' for ar_whiten_transform")
   }
@@ -107,11 +110,13 @@ ar_whiten_transform <- function(X, Y, phi, exact_first = FALSE, censor = NULL, .
   theta_list <- replicate(length(phi_list), numeric(0), simplify = FALSE)
   pooling_mode <- if (length(phi_list) > 1L) "run" else "global"
   phi_arg <- if (identical(pooling_mode, "global")) phi_list[[1]] else phi_list
+  runs <- .build_run_labels(nrow(X), run_indices)
 
   # Use fmriAR (ensure theta provided to avoid empty list issues)
   plan <- fmriAR::compat$plan_from_phi(
     phi = phi_arg,
     theta = theta_list,
+    runs = runs,
     pooling = pooling_mode,
     exact_first = exact_first
   )
@@ -124,6 +129,7 @@ ar_whiten_transform <- function(X, Y, phi, exact_first = FALSE, censor = NULL, .
     plan = plan,
     X = X,
     Y = Y,
+    runs = runs,
     parallel = TRUE,
     censor = censor
   )

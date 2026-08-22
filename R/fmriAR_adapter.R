@@ -110,14 +110,9 @@ NULL
 #' @noRd
 .shared_ar_correction_design <- function(residuals, ar_opts, design) {
   if (is.null(design)) return(NULL)
-  resid_mat <- as.matrix(residuals)
-  estimator <- .normalize_ar_options(ar_opts)$shared_estimator
-  if (identical(estimator, "mean_series") && ncol(resid_mat) > 1L) {
-    # Averaging suppresses the voxel-specific white-noise floor. The fmriAR
-    # design correction is calibrated for the uncollapsed residual channels,
-    # and its scale cannot be recovered from the mean series alone.
-    return(NULL)
-  }
+  # OLS residualization is linear across response columns:
+  # rowMeans((I - P_X)Y) = (I - P_X)rowMeans(Y).  Consequently the matching
+  # design remains the exact residual-forming operator for mean_series too.
   design
 }
 
@@ -180,17 +175,77 @@ NULL
     return(NULL)
   }
 
+  flat <- unlist(run_indices, use.names = FALSE)
+  if (!is.numeric(flat) || anyNA(flat) || any(!is.finite(flat)) ||
+      any(flat != as.integer(flat)) || length(flat) != n ||
+      any(flat < 1L | flat > n) || anyDuplicated(flat) ||
+      !setequal(as.integer(flat), seq_len(n)) ||
+      any(vapply(run_indices, function(idx) {
+        idx <- as.integer(idx)
+        length(idx) > 1L && any(diff(idx) != 1L)
+      }, logical(1L)))) {
+    stop("'run_indices' must partition every timepoint exactly once into contiguous runs",
+         call. = FALSE)
+  }
+
   runs <- integer(n)
   for (i in seq_along(run_indices)) {
     idx <- as.integer(run_indices[[i]])
     runs[idx] <- i
   }
 
-  if (any(runs == 0L)) {
-    runs[runs == 0L] <- 1L
+  as.integer(runs)
+}
+
+#' Derive run indices from a model sampling frame
+#' @keywords internal
+#' @noRd
+.model_run_indices <- function(model, n) {
+  sframe <- tryCatch(model$event_model$sampling_frame, error = function(e) NULL)
+  if (is.null(sframe)) {
+    return(NULL)
   }
 
-  as.integer(runs)
+  runs <- tryCatch(fmrihrf::blockids(sframe), error = function(e) NULL)
+  if (!is.numeric(runs) || length(runs) != n || anyNA(runs)) {
+    return(NULL)
+  }
+
+  split_idx <- split(seq_len(n), runs)
+  lapply(split_idx, as.integer)
+}
+
+#' Construct the residual-forming design for separately fitted runs
+#' @keywords internal
+#' @noRd
+.block_diagonal_design <- function(designs) {
+  if (!is.list(designs) || !length(designs)) {
+    stop("'designs' must be a non-empty list of matrices", call. = FALSE)
+  }
+  designs <- lapply(designs, function(x) {
+    x <- as.matrix(x)
+    storage.mode(x) <- "double"
+    x
+  })
+  nr <- vapply(designs, nrow, integer(1L))
+  nc <- vapply(designs, ncol, integer(1L))
+  out <- matrix(0, sum(nr), sum(nc))
+  row_offset <- 0L
+  col_offset <- 0L
+  out_names <- character(0L)
+
+  for (i in seq_along(designs)) {
+    rows <- row_offset + seq_len(nr[[i]])
+    cols <- col_offset + seq_len(nc[[i]])
+    out[rows, cols] <- designs[[i]]
+    block_names <- colnames(designs[[i]])
+    if (is.null(block_names)) block_names <- paste0("x", seq_len(nc[[i]]))
+    out_names <- c(out_names, paste0("run", i, "::", block_names))
+    row_offset <- row_offset + nr[[i]]
+    col_offset <- col_offset + nc[[i]]
+  }
+  colnames(out) <- out_names
+  out
 }
 
 #' Split residuals according to pooling strategy
@@ -241,19 +296,17 @@ NULL
       return(rep(0, order))
     }
 
-    # Prefer a single fmriAR estimation pass per block to avoid per-voxel loops.
-    # Use ARMA(p,0) to force fixed-order coefficients (fit_noise(method="ar")
-    # performs order selection and may return order 0 even when p_max is fixed).
+    # One pooled fmriAR pass per block avoids a per-voxel loop. Explicit numeric
+    # p is a fixed-order AR fit; importantly, this path pools autocovariances
+    # across columns instead of fitting the spatial mean series used by ARMA.
     plan <- tryCatch(
       fmriAR::fit_noise(
         resid = block,
-        method = "arma",
+        method = "ar",
         p = order,
-        q = 0L,
+        p_max = order,
         pooling = "global",
-        exact_first = "ar1",
-        hr_iter = 0L,
-        step1 = "yw"
+        exact_first = "ar1"
       ),
       error = function(e) NULL
     )
@@ -304,6 +357,41 @@ NULL
 
     accum / used
   })
+}
+
+#' Choose a stable covariance-tail budget for OLS residual correction
+#' @keywords internal
+#' @noRd
+.ar_correction_lag_budget <- function(design, target_order,
+                                      run_indices = NULL, censor = NULL,
+                                      max_lag = 25L) {
+  design <- as.matrix(design)
+  n <- nrow(design)
+  order <- suppressWarnings(as.integer(target_order %||% 1L))
+  if (!is.finite(order) || order < 1L) order <- 1L
+  max_lag <- suppressWarnings(as.integer(max_lag))
+  if (!is.finite(max_lag) || max_lag < 1L) max_lag <- 25L
+
+  slices <- if (is.null(run_indices) || !length(run_indices)) {
+    list(seq_len(n))
+  } else {
+    lapply(run_indices, as.integer)
+  }
+  if (is.logical(censor)) censor <- which(censor)
+  censor <- as.integer(censor %||% integer(0L))
+
+  rdf <- vapply(slices, function(idx) {
+    keep <- setdiff(idx, censor)
+    if (!length(keep)) return(0L)
+    as.integer(length(keep) - qr(design[keep, , drop = FALSE])$rank)
+  }, integer(1L))
+
+  # Projection mixes the entire covariance tail into lags 0:p. Five lags is a
+  # useful floor for low-order AR, while 2p+1 grows with the target. Reserve
+  # roughly three residual df per corrected lag and cap the quadratic solve.
+  desired <- max(5L, 2L * order + 1L)
+  supported <- max(0L, floor(min(rdf) / 3L))
+  as.integer(max(order, min(max_lag, desired, supported)))
 }
 
 #' Convert fmrireg AR configuration to fmriAR parameters
@@ -405,10 +493,12 @@ NULL
   correction_max_lag <- 25L
   if (!is.null(design)) {
     design <- as.matrix(design)
-    # Fixed-order Yule-Walker uses autocovariances only through lag p.
-    # Estimating a larger design correction adds variance without supplying
-    # information to the requested AR(p) fit; fmriAR applies its own df cap.
-    correction_max_lag <- as.integer(target_order %||% ar_params$p %||% 1L)
+    correction_max_lag <- .ar_correction_lag_budget(
+      design = design,
+      target_order = target_order %||% ar_params$p %||% 1L,
+      run_indices = run_indices,
+      censor = censor
+    )
   }
 
   # If explicit AR order requested (including 0), estimate via Yule-Walker

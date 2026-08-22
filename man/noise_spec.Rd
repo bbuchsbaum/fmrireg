@@ -32,7 +32,7 @@ estimation.}
 \item{iter_gls}{Maximum number of GLS refinement iterations. Standard
 design-corrected AR fitting uses the initial OLS residuals once and holds
 that estimate fixed for the GLS solve. Iterative refinement remains
-available to uncorrected specialized engines and ARMA models (\code{q > 0}).}
+available to ARMA models (\code{q > 0}).}
 
 \item{pooling}{Temporal covariance pooling scope. With built-in shared AR
 estimation, \code{"run"} estimates one coefficient vector per run and
@@ -43,8 +43,8 @@ estimation, \code{"run"} estimates one coefficient vector per run and
 and therefore targets a typical voxel covariance. \code{"mean_series"} first
 averages residual values across voxels and targets the coherent spatial
 component; it is experimental, can be much more autocorrelated than an
-individual voxel, and omits the OLS design correction because averaging
-removes the voxel-level noise scale for which that correction is calibrated.}
+individual voxel. Because OLS projection is linear across response
+columns, the matching design correction remains valid after averaging.}
 
 \item{parcels}{Optional parcel labels for parcel pooling.}
 

@@ -27,12 +27,16 @@ simulate_ar_dataset <- function(ar_coeff = numeric(), n_runs = 2, n_time = 30, n
 
 test_that("iid and ar1 give similar results on white noise", {
   set.seed(1)
-  dset <- simulate_ar_dataset(n_runs = 2, ar_coeff = numeric())
+  # Give the null enough independent information that a chance sample
+  # autocorrelation is not the test's dominant signal.
+  dset <- simulate_ar_dataset(
+    n_runs = 2, n_time = 90, n_vox = 8, ar_coeff = numeric()
+  )
   mod_iid <- fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
                      use_fast_path = TRUE, ar_options = list(struct = "iid"))
   mod_ar1 <- fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
                      use_fast_path = TRUE, ar_options = list(struct = "ar1"))
-  expect_equal(coef(mod_iid), coef(mod_ar1), tolerance = 0.05)
+  expect_lt(max(abs(coef(mod_iid) - coef(mod_ar1))), 0.03)
 
   # Skip the direct residual AR test - it's not meaningful when HRF regressors
   # absorb temporal structure. The GLM fit comparison below is sufficient.

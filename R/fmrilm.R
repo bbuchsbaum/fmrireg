@@ -50,9 +50,17 @@ get_formula.fmri_model <- function(x,...) {
   phi <- NULL
   if (!is.null(plan)) {
     if (!is.null(plan$phi) && length(plan$phi) > 0L) {
-      phi <- as.numeric(plan$phi[[1]])
+      phi <- if (length(plan$phi) == 1L) {
+        as.numeric(plan$phi[[1L]])
+      } else {
+        lapply(plan$phi, as.numeric)
+      }
     } else if (!is.null(plan$phi_by_parcel) && length(plan$phi_by_parcel) > 0L) {
-      phi <- as.numeric(plan$phi_by_parcel[[1]])
+      phi <- if (length(plan$phi_by_parcel) == 1L) {
+        as.numeric(plan$phi_by_parcel[[1L]])
+      } else {
+        lapply(plan$phi_by_parcel, as.numeric)
+      }
     }
   }
 
@@ -64,14 +72,21 @@ get_formula.fmri_model <- function(x,...) {
     }
   }
 
-  phi <- as.numeric(phi)
-  if (length(phi) < ar_order) {
-    phi <- c(phi, rep(0, ar_order - length(phi)))
-  } else if (length(phi) > ar_order) {
-    phi <- phi[seq_len(ar_order)]
+  normalize_phi <- function(value) {
+    value <- as.numeric(value)
+    if (length(value) < ar_order) {
+      value <- c(value, rep(0, ar_order - length(value)))
+    } else if (length(value) > ar_order) {
+      value <- value[seq_len(ar_order)]
+    }
+    value[!is.finite(value)] <- 0
+    value
   }
-  phi[!is.finite(phi)] <- 0
-  phi
+
+  if (is.list(phi)) {
+    return(lapply(phi, normalize_phi))
+  }
+  normalize_phi(phi)
 }
 
 #' Fast row-wise robust regression for a single run
@@ -767,11 +782,11 @@ fmri_lm <- function(formula, ...) {
 #' voxel covariance. The experimental `shared_estimator = "mean_series"`
 #' instead estimates from the cross-voxel mean OLS residual series and targets
 #' the coherent spatial component, which can be substantially more
-#' autocorrelated than an individual voxel. Because averaging removes the
-#' voxel-level noise scale, `mean_series` omits the OLS design correction.
-#' Pooled design-corrected AR estimates are formed once from initial OLS
-#' residuals and held fixed for the GLS solve; later GLS residuals do not share
-#' the OLS residual operator.
+#' autocorrelated than an individual voxel. OLS projection commutes with this
+#' averaging, so both shared estimators retain the matching design correction.
+#' Design-corrected AR estimates are formed once from initial OLS residuals and
+#' held fixed for the GLS solve; later GLS residuals do not share the OLS
+#' residual operator.
 #'
 #' Built-in fast engines are selected through `...`:
 #' \itemize{
@@ -1267,7 +1282,10 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
       design_chunks[[ri]] <- X_run
     }
     resid_mat <- do.call(rbind, resid_chunks)
-    design_mat <- do.call(rbind, design_chunks)
+    # Each run was fitted with its own coefficient vector. The exact combined
+    # residual operator is therefore block diagonal; row-binding the designs
+    # would instead describe one coefficient vector shared across runs.
+    design_mat <- .block_diagonal_design(design_chunks)
     run_lengths <- vapply(resid_chunks, nrow, integer(1))
     run_indices <- split(
       seq_len(sum(run_lengths)),
