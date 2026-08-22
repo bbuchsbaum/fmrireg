@@ -17,7 +17,7 @@ Imports:
     fmriAR (>= 0.3.3),
     fmrigds,
     fmridesign (>= 0.6.0),
-    fmrihrf (>= 0.1.0),
+    fmrihrf (>= 0.4.0),
     fmrilss (>= 0.1.0),
     stats,
     splines,
@@ -81,6 +81,7 @@ Suggests:
 Remotes:
     bbuchsbaum/bidser,
     bbuchsbaum/fmriAR,
+    bbuchsbaum/fmrihrf@d366e79fce8db7c5c46e883291e73732b20c545c,
     bbuchsbaum/fmristore,
     bbuchsbaum/fmrigds@f015b7c7fa5008e2435d269aeb1882a9aa24eaf0,
     anthonynorth/roxyglobals,
