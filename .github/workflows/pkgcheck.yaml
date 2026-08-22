@@ -28,9 +28,10 @@ jobs:
       # The pkgcheck action runs libgit2 inside Docker. Trust the container's
       # mount path in the GitHub Actions home that is shared with that container.
       - name: Trust workspace inside pkgcheck container
-        run: >-
+        run: |
+          mkdir -p "${RUNNER_TEMP}/_github_home"
           git config --file "${RUNNER_TEMP}/_github_home/.gitconfig"
-          --add safe.directory /github/workspace
+            --add safe.directory /github/workspace
 
       - uses: ropensci-review-tools/pkgcheck-action@main
         with:
