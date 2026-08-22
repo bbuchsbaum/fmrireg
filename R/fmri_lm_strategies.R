@@ -300,31 +300,25 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
       glm_ctx_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
       initial_fit <- solve_glm_core(glm_ctx_orig, return_fitted = TRUE)
       resid_ols <- Y_run - initial_fit$fitted
-      .estimate_ar_parameters_routed(
-        rowMeans(resid_ols), ar_order, censor = censor_run,
+      .estimate_shared_ar_parameters(
+        resid_ols, ar_order, cfg$ar, censor = censor_run,
         design = X_run
       )
     }
 
-    # Iterative GLS
-    for (iter in seq_len(cfg$ar$iter_gls)) {
-      tmp <- ar_whiten_transform(X_run, Y_run, phi_hat_run, cfg$ar$exact_first, censor = censor_run)
-      X_w <- tmp$X
-      Y_w <- tmp$Y
-      proj_w <- .fast_preproject(X_w)
+    # Any design correction is derived for the initial OLS residual operator.
+    # Hold that estimate fixed for the final GLS solve; applying it to later
+    # GLS residuals would undo the wrong projection.
+    tmp <- ar_whiten_transform(X_run, Y_run, phi_hat_run, cfg$ar$exact_first,
+                               censor = censor_run)
+    X_w <- tmp$X
+    Y_w <- tmp$Y
+    proj_w <- .fast_preproject(X_w)
 
-      glm_ctx_whitened <- glm_context(X = X_w, Y = Y_w, proj = proj_w, phi_hat = phi_hat_run)
-      gls <- solve_glm_core(glm_ctx_whitened)
-
-      # Update phi if needed for next iteration
-      if (is.null(phi_fixed) && iter < cfg$ar$iter_gls) {
-        resid_gls <- Y_run - X_run %*% gls$betas
-        phi_hat_run <- .estimate_ar_parameters_routed(
-          rowMeans(resid_gls), ar_order, censor = censor_run,
-          design = X_run
-        )
-      }
-    }
+    glm_ctx_whitened <- glm_context(
+      X = X_w, Y = Y_w, proj = proj_w, phi_hat = phi_hat_run
+    )
+    gls <- solve_glm_core(glm_ctx_whitened)
     
     # Return whitened results
     list(
@@ -508,7 +502,9 @@ process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma
   } else {
     initial_fit <- solve_glm_core(glm_ctx_orig, return_fitted = TRUE)
     resid_ols <- Y_run - initial_fit$fitted
-    pad_phi(.estimate_ar_parameters_routed(rowMeans(resid_ols), ar_order, censor = censor_run), ar_order)
+    pad_phi(.estimate_shared_ar_parameters(
+      resid_ols, ar_order, cfg$ar, censor = censor_run, design = X_run
+    ), ar_order)
   }
 
   # Step 2: AR whitening
@@ -551,7 +547,9 @@ process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma
     resid_robust_w <- Y_run_w - X_run_w %*% robust_fit_run$betas_robust
 
     # De-whiten residuals (approximate)
-    phi_hat_run_updated <- pad_phi(.estimate_ar_parameters_routed(rowMeans(resid_robust_w), ar_order, censor = censor_run), ar_order)
+    phi_hat_run_updated <- pad_phi(.estimate_shared_ar_parameters(
+      resid_robust_w, ar_order, cfg$ar, censor = censor_run
+    ), ar_order)
 
     # Re-whiten with updated phi
     tmp2 <- ar_whiten_transform(X_run, Y_run, phi_hat_run_updated, cfg$ar$exact_first, censor = censor_run)
@@ -717,32 +715,14 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
         glm_ctx <- glm_context(X = X_run_orig, Y = Y_run_full, proj = proj_run_orig)
         ols <- solve_glm_core(glm_ctx, return_fitted = TRUE)
         resid_ols <- Y_run_full - ols$fitted
-        .estimate_ar_parameters_routed(
-          rowMeans(resid_ols), ar_order, censor = censor_run,
+        .estimate_shared_ar_parameters(
+          resid_ols, ar_order, cfg$ar, censor = censor_run,
           design = X_run_orig
         )
       }
 
-      # Match the runwise GLS contract: later iterations must estimate AR
-      # parameters from residuals in the original data domain. Chunkwise fitting
-      # previously ignored iter_gls here and always used the initial OLS value.
-      if (is.null(phi_fixed) && cfg$ar$iter_gls > 1L) {
-        for (iter in seq_len(cfg$ar$iter_gls - 1L)) {
-          whitened <- ar_whiten_transform(
-            X_run_orig, Y_run_full, phi_hat_run,
-            cfg$ar$exact_first, censor = censor_run
-          )
-          proj_w <- .fast_preproject(whitened$X)
-          gls <- solve_glm_core(
-            glm_context(X = whitened$X, Y = whitened$Y, proj = proj_w)
-          )
-          resid_gls <- Y_run_full - X_run_orig %*% gls$betas
-          phi_hat_run <- .estimate_ar_parameters_routed(
-            rowMeans(resid_gls), ar_order, censor = censor_run,
-            design = X_run_orig
-          )
-        }
-      }
+      # Keep the OLS-design-corrected estimate fixed. A GLS residual update has
+      # a different residual-forming operator and cannot reuse design = X.
 
       run_info[[ri]] <- list(
         phi_hat = phi_hat_run,

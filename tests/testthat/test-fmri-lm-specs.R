@@ -14,6 +14,19 @@ test_that("typed specs expose strict schemas", {
   expect_error(projection_spec(method = "soft_subspace"), "requires")
   expect_error(noise_spec(struct = "arp"), "must be supplied")
   expect_identical(noise_spec(q = 1L)$q, 1L)
+  expect_identical(noise_spec()$shared_estimator, "pooled_acvf")
+  expect_identical(
+    noise_spec(shared_estimator = "mean_series")$shared_estimator,
+    "mean_series"
+  )
+  expect_error(noise_spec(shared_estimator = "unknown"), "arg")
+})
+
+test_that("legacy AR options preserve the shared estimator", {
+  control <- fmri_lm_control(
+    ar_options = list(struct = "ar1", shared_estimator = "mean_series")
+  )
+  expect_identical(control$noise$shared_estimator, "mean_series")
 })
 
 test_that("control rejects unknown legacy keys and canonical conflicts", {

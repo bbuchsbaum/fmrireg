@@ -44,7 +44,7 @@
   fit <- fmri_lm(
     model, dataset = dataset,
     control = fmri_lm_control(
-      noise = noise_spec("ar1", pooling = "global", iter_gls = 2L)
+      noise = noise_spec("ar1", pooling = "global")
     )
   )
 

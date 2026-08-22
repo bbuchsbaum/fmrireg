@@ -293,8 +293,8 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     # AR whitening (parity with the fast path). The formula/slow path historically
     # ignored cfg$ar entirely -- it fit plain OLS and returned ar_coef = NULL -- so
     # requesting AR with use_fast_path = FALSE silently produced uncorrected
-    # results. Estimate phi from OLS residuals, iterate GLS exactly as
-    # process_run_standard() does, and refit on the whitened design via modmat.
+    # results. Estimate phi from the configured shared residual representation
+    # and refit on the whitened design via modmat.
     #
     # Gated to the non-robust path: multiresponse_rlm()'s modmat interface routes
     # through robustbase::lmrob() (formula-only), so it cannot take a prewhitened
@@ -310,25 +310,16 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
       proj_run <- .fast_preproject(X_run)
       init_fit <- solve_glm_core(
         glm_context(X = X_run, Y = Y_pre, proj = proj_run), return_fitted = TRUE)
-      phi_hat_run <- .estimate_ar_parameters_routed(
-        rowMeans(Y_pre - init_fit$fitted), ar_order, censor = censor_run,
-        design = X_run)
-      X_w <- X_run
-      Y_w <- Y_pre
-      for (iter in seq_len(cfg$ar$iter_gls)) {
-        tmp <- ar_whiten_transform(X_run, Y_pre, phi_hat_run, cfg$ar$exact_first,
-                                   censor = censor_run)
-        X_w <- tmp$X
-        Y_w <- tmp$Y
-        if (iter < cfg$ar$iter_gls) {
-          proj_w <- .fast_preproject(X_w)
-          gls <- solve_glm_core(
-            glm_context(X = X_w, Y = Y_w, proj = proj_w, phi_hat = phi_hat_run))
-          phi_hat_run <- .estimate_ar_parameters_routed(
-            rowMeans(Y_pre - X_run %*% gls$betas), ar_order,
-            censor = censor_run, design = X_run)
-        }
-      }
+      phi_hat_run <- .estimate_shared_ar_parameters(
+        Y_pre - init_fit$fitted, ar_order, cfg$ar, censor = censor_run,
+        design = X_run
+      )
+      # Any fmriAR design correction is specific to the initial OLS residual
+      # operator, so keep this estimate fixed for the GLS solve.
+      tmp <- ar_whiten_transform(X_run, Y_pre, phi_hat_run, cfg$ar$exact_first,
+                                 censor = censor_run)
+      X_w <- tmp$X
+      Y_w <- tmp$Y
       colnames(X_w) <- colnames(X_run)
       modmat <- X_w
       data_env$.y <- Y_w

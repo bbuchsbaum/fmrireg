@@ -273,13 +273,14 @@
 
   } else {
     # --- Global AR path ---
-    # Estimate global AR from mean residuals over columns
-    ybar <- rowMeans(Z)
+    # Estimate the configured shared covariance from the full OLS residual
+    # matrix. pooled_acvf targets a typical column; mean_series explicitly
+    # targets the coherent spatial component.
     XtX <- crossprod(X)
     Pinv <- tryCatch(chol2inv(chol(XtX)) %*% t(X), error = function(e) MASS::ginv(XtX) %*% t(X))
-    beta <- Pinv %*% ybar
-    resid <- ybar - drop(X %*% beta)
-    phi <- .estimate_ar_parameters_routed(resid, ar_order)
+    beta <- Pinv %*% Z
+    resid <- Z - X %*% beta
+    phi <- .estimate_shared_ar_parameters(resid, ar_order, ar_opts)
 
     if (iter_gls > 1L) {
       phi_current <- phi
@@ -292,8 +293,10 @@
           XtXinv_iter <- tryCatch(chol2inv(chol(XtX_iter)),
                                   error = function(e) MASS::ginv(XtX_iter))
           beta_iter <- XtXinv_iter %*% crossprod(Xw, Zw)
-          resid_iter <- rowMeans(Z - X %*% beta_iter)
-          phi_current <- .estimate_ar_parameters_routed(resid_iter, ar_order)
+          resid_iter <- Z - X %*% beta_iter
+          phi_current <- .estimate_shared_ar_parameters(
+            resid_iter, ar_order, ar_opts
+          )
         }
       }
       phi <- phi_current

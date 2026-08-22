@@ -109,10 +109,13 @@ test_that("shared and voxelwise runwise estimators match their stated oracles", 
   dset <- fmridataset::matrix_dataset(
     Y, TR = 1, run_length = n, event_table = events
   )
-  control_for <- function(voxelwise) {
+  control_for <- function(voxelwise, shared_estimator = "pooled_acvf") {
     fmri_lm_control(
       estimation = estimation_spec("runwise_meta"),
-      noise = noise_spec("ar1", voxelwise = voxelwise),
+      noise = noise_spec(
+        "ar1", voxelwise = voxelwise,
+        shared_estimator = shared_estimator
+      ),
       variance = variance_spec("model")
     )
   }
@@ -120,6 +123,11 @@ test_that("shared and voxelwise runwise estimators match their stated oracles", 
   shared_fit <- fmri_lm(
     onset ~ hrf(condition), block = ~run, dataset = dset,
     control = control_for(FALSE), compute = compute_spec(backend = "matrix")
+  )
+  mean_series_fit <- fmri_lm(
+    onset ~ hrf(condition), block = ~run, dataset = dset,
+    control = control_for(FALSE, "mean_series"),
+    compute = compute_spec(backend = "matrix")
   )
   voxelwise_fit <- fmri_lm(
     onset ~ hrf(condition), block = ~run, dataset = dset,
@@ -137,7 +145,10 @@ test_that("shared and voxelwise runwise estimators match their stated oracles", 
   )
   residuals <- Y - ols$fitted
   shared_oracle <- fmrireg:::.estimate_ar_parameters_routed(
-    rowMeans(residuals), 1L, design = X
+    residuals, 1L, design = X
+  )
+  mean_series_oracle <- fmrireg:::.estimate_ar_parameters_routed(
+    rowMeans(residuals), 1L
   )
   voxelwise_oracle <- vapply(
     seq_len(ncol(Y)),
@@ -146,10 +157,19 @@ test_that("shared and voxelwise runwise estimators match their stated oracles", 
   )
 
   shared <- unlist(ar_parameters(shared_fit, scope = "raw"), use.names = FALSE)
+  mean_series <- unlist(
+    ar_parameters(mean_series_fit, scope = "raw"), use.names = FALSE
+  )
   voxelwise <- unlist(ar_parameters(voxelwise_fit, scope = "raw"), use.names = FALSE)
   expect_length(shared, 1L)
+  expect_length(mean_series, 1L)
   expect_length(voxelwise, ncol(Y))
   expect_equal(shared, shared_oracle, tolerance = 1e-12)
+  expect_equal(mean_series, mean_series_oracle, tolerance = 1e-12)
   expect_equal(voxelwise, voxelwise_oracle, tolerance = 1e-12)
   expect_true(attr(voxelwise_fit, "executed_config")$noise$voxelwise)
+  expect_identical(
+    attr(shared_fit, "executed_config")$noise$shared_estimator,
+    "pooled_acvf"
+  )
 })

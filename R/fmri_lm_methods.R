@@ -362,7 +362,11 @@ print.fmri_lm <- function(x, ...) {
     if (noise$struct != "iid") {
       cli::cli_li("AR structure: {.field {noise$struct}}")
       cli::cli_li("Noise pooling: {.field {noise$pooling %||% 'run'}}")
-      if (noise$voxelwise) cli::cli_li("AR estimation: {.emph voxelwise}")
+      if (noise$voxelwise) {
+        cli::cli_li("AR estimation: {.emph voxelwise}")
+      } else {
+        cli::cli_li("Shared AR estimator: {.field {noise$shared_estimator %||% 'pooled_acvf'}}")
+      }
     }
     
     # Robust info

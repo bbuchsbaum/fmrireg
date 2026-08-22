@@ -448,20 +448,17 @@
     ))
   }
 
-  iter_gls <- as.integer(cfg$ar$iter_gls %||% 1L)
-  if (!is.finite(iter_gls) || iter_gls < 1L) {
-    iter_gls <- 1L
-  }
   exact_first <- isTRUE(cfg$ar$exact_first)
   censor <- cfg$ar$censor %||% NULL
 
   estimate_phi <- function(resid) {
+    correction_design <- .shared_ar_correction_design(resid, cfg$ar, X_ref)
     plan <- .estimate_ar_via_fmriAR(
-      residuals = matrix(resid, ncol = 1L),
+      residuals = .shared_ar_residual_input(resid, cfg$ar),
       cfg = cfg$ar,
       run_indices = run_indices,
       censor = censor,
-      design = X_ref
+      design = correction_design
     )
     phi <- plan$phi %||% plan$phi_by_parcel
     if (is.null(phi) || !length(phi)) return(rep(0, ar_order))
@@ -469,29 +466,20 @@
   }
 
   proj <- .fast_preproject(X_ref)
-  mean_y <- matrix(rowMeans(Y), ncol = 1L)
-  beta <- proj$Pinv %*% mean_y
-  phi <- estimate_phi(rowMeans(Y) - drop(X_ref %*% beta))
-  Xw_ref <- NULL
-  Yw <- NULL
+  beta <- proj$Pinv %*% Y
+  phi <- estimate_phi(Y - X_ref %*% beta)
 
-  for (it in seq_len(iter_gls)) {
-    tmp <- ar_whiten_transform(
-      X = X_ref,
-      Y = Y,
-      phi = phi,
-      exact_first = exact_first,
-      censor = censor
-    )
-    Xw_ref <- as.matrix(tmp$X)
-    Yw <- as.matrix(tmp$Y)
-
-    if (it < iter_gls) {
-      proj_w <- .fast_preproject(Xw_ref)
-      beta_w <- proj_w$Pinv %*% matrix(rowMeans(Yw), ncol = 1L)
-      phi <- estimate_phi(rowMeans(Y) - drop(X_ref %*% beta_w))
-    }
-  }
+  # Hold the initial OLS estimate fixed. Any design correction is specific to
+  # that operator; a later RRR/GLS residual cannot reuse design = X_ref alone.
+  tmp <- ar_whiten_transform(
+    X = X_ref,
+    Y = Y,
+    phi = phi,
+    exact_first = exact_first,
+    censor = censor
+  )
+  Xw_ref <- as.matrix(tmp$X)
+  Yw <- as.matrix(tmp$Y)
 
   p_task <- ncol(X_task)
   Xw_task <- Xw_ref[, seq_len(p_task), drop = FALSE]

@@ -64,6 +64,31 @@ test_that("fmriAR integration produces numerically similar results", {
   }
 })
 
+test_that("fixed-order design correction stops at the fitted AR order", {
+  skip_if_not_installed("fmriAR", minimum_version = "0.3.3")
+
+  set.seed(124)
+  n <- 80L
+  X <- cbind(1, rnorm(n), as.numeric(scale(seq_len(n))))
+  residuals <- qr.resid(qr(X), matrix(rnorm(n * 5L), nrow = n))
+
+  for (order in 1:2) {
+    cfg <- list(struct = if (order == 1L) "ar1" else "ar2")
+    actual <- .estimate_ar_via_fmriAR(residuals, cfg, design = X)
+    oracle <- fmriAR::fit_noise(
+      resid = residuals,
+      method = "ar",
+      p = order,
+      p_max = order,
+      pooling = "global",
+      exact_first = "ar1",
+      design = X,
+      correction_max_lag = order
+    )
+    expect_equal(actual$phi, oracle$phi, tolerance = 1e-12)
+  }
+})
+
 test_that("whitening via fmriAR works correctly", {
   skip_if_not_installed("fmriAR")
 
@@ -116,6 +141,72 @@ test_that("iterative AR-GLS via fmriAR converges", {
     phi_est <- result$ar_coef[[1]][1]
     expect_true(abs(phi_est - true_phi) < 0.3)
   }
+})
+
+test_that("iterative and integrated solvers honor the shared AR estimand", {
+  skip_if_not_installed("fmriAR", minimum_version = "0.3.3")
+
+  set.seed(790)
+  n <- 300L
+  X <- cbind(1, as.numeric(scale(seq_len(n))))
+  common <- as.numeric(arima.sim(list(ar = 0.75), n = n))
+  opposing <- 3 * as.numeric(arima.sim(list(ar = 0.05), n = n))
+  Y <- cbind(common + opposing, common - opposing)
+
+  pooled_cfg <- list(
+    struct = "ar1", iter_gls = 1L, exact_first = FALSE,
+    shared_estimator = "pooled_acvf"
+  )
+  mean_cfg <- pooled_cfg
+  mean_cfg$shared_estimator <- "mean_series"
+
+  pooled <- .iterative_ar_gls_via_fmriAR(X, Y, pooled_cfg, max_iter = 1L)
+  mean_fit <- .iterative_ar_gls_via_fmriAR(X, Y, mean_cfg, max_iter = 1L)
+
+  residuals <- Y - X %*% base::qr.solve(X, Y)
+  expect_identical(.shared_ar_correction_design(residuals, pooled_cfg, X), X)
+  expect_null(.shared_ar_correction_design(residuals, mean_cfg, X))
+  mean_oracle <- .estimate_ar_via_fmriAR(
+    matrix(rowMeans(residuals), ncol = 1L), mean_cfg
+  )
+  expect_equal(mean_fit$plan$phi, mean_oracle$phi, tolerance = 1e-12)
+  expect_gt(
+    abs(as.numeric(mean_fit$plan$phi[[1]]) -
+          as.numeric(pooled$plan$phi[[1]])),
+    0.2
+  )
+
+  control <- fmri_lm_control(
+    noise = noise_spec("ar1", shared_estimator = "mean_series")
+  )
+  integrated <- solve_integrated_glm(X, Y, control)
+  expect_equal(integrated$ar_coef, mean_fit$ar_coef, tolerance = 1e-12)
+})
+
+test_that("global shared AR preserves run boundaries and design correction", {
+  skip_if_not_installed("fmriAR", minimum_version = "0.3.3")
+
+  set.seed(791)
+  run_length <- 80L
+  run_indices <- list(seq_len(run_length), run_length + seq_len(run_length))
+  X <- cbind(
+    intercept = 1,
+    trend = rep(as.numeric(scale(seq_len(run_length))), 2L)
+  )
+  residuals <- qr.resid(qr(X), matrix(rnorm(160L * 4L), nrow = 160L))
+  cfg <- list(
+    struct = "ar1", global = TRUE, exact_first = FALSE,
+    shared_estimator = "pooled_acvf"
+  )
+
+  expected <- .estimate_ar_via_fmriAR(
+    residuals, cfg, run_indices = run_indices, design = X
+  )
+  actual <- .estimate_shared_ar_parameters(
+    residuals, 1L, cfg, run_indices = run_indices, design = X
+  )
+
+  expect_equal(actual, as.numeric(expected$phi[[1]]), tolerance = 1e-12)
 })
 
 test_that("effective df calculation with fmriAR plan", {

@@ -442,7 +442,7 @@ test_that("non-voxelwise AR router can opt in to legacy fallback", {
   expect_gt(.GlobalEnv$.legacy_ar_calls, 0L)
 })
 
-test_that("iterative AR fmriAR path uses subset whitening before final full pass", {
+test_that("iterative ARMA fmriAR path uses subset whitening before final full pass", {
   skip_if_not_installed("fmriAR")
 
   set.seed(1015)
@@ -455,6 +455,7 @@ test_that("iterative AR fmriAR path uses subset whitening before final full pass
 
   cfg <- list(
     struct = "ar1",
+    q = 1L,
     iter_gls = 3L,
     min_iter = 99L,
     exact_first = FALSE,

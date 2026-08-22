@@ -1,4 +1,4 @@
-test_that("process_run_standard re-estimates AR from raw-domain residuals", {
+test_that("process_run_standard freezes the initial OLS AR estimate", {
   n <- 6L
   v <- 2L
   Y <- matrix(seq_len(n * v), nrow = n, ncol = v)
@@ -69,26 +69,24 @@ test_that("process_run_standard re-estimates AR from raw-domain residuals", {
     },
     .estimate_ar_parameters_routed = function(residuals_vec, ar_order,
                                                run_indices = NULL,
-                                               censor = NULL, design = NULL) {
+                                               censor = NULL, design = NULL,
+                                               ar_options = NULL) {
       captured[[length(captured) + 1L]] <<- as.numeric(residuals_vec)
       0.4
     },
     .package = "fmrireg"
   )
 
-  expect_gte(length(captured), 2L)
+  expect_length(captured, 1L)
 
   X_raw <- model.matrix(.y ~ 1, data.frame(.y = rep(0, n)))
   betas <- matrix(rep(c(0.5, -0.25), length.out = ncol(X_raw) * v), nrow = ncol(X_raw), ncol = v)
 
-  expected_raw <- rowMeans(Y - X_raw %*% betas)
-  expected_white <- rowMeans((3 * Y) - (2 * X_raw) %*% betas)
-
-  expect_equal(unname(captured[[2]]), unname(expected_raw))
-  expect_gt(max(abs(captured[[2]] - expected_white)), 1e-6)
+  expected_ols <- as.numeric(Y - X_raw %*% betas)
+  expect_equal(unname(captured[[1]]), unname(expected_ols))
 })
 
-test_that("chunkwise preparation honors iter_gls in the raw residual domain", {
+test_that("chunkwise preparation estimates shared AR once per run", {
   dset <- .demo_matrix_dataset()
   model <- create_fmri_model(
     onsets ~ hrf(condition), ~run, dataset = dset
@@ -108,14 +106,15 @@ test_that("chunkwise preparation honors iter_gls in the raw residual domain", {
     },
     .estimate_ar_parameters_routed = function(residuals_vec, ar_order,
                                                run_indices = NULL,
-                                               censor = NULL, design = NULL) {
+                                               censor = NULL, design = NULL,
+                                               ar_options = NULL) {
       captured[[length(captured) + 1L]] <<- as.numeric(residuals_vec)
       0.25
     },
     .package = "fmrireg"
   )
 
-  expect_length(captured, 2L * cfg$noise$iter_gls)
+  expect_length(captured, 2L)
   expect_true(all(vapply(captured, function(x) all(is.finite(x)), logical(1))))
 })
 
@@ -167,7 +166,8 @@ test_that(".run_lowrank_engine re-estimates AR from raw-domain residuals", {
     },
     .estimate_ar_parameters_routed = function(residuals_vec, ar_order,
                                                run_indices = NULL,
-                                               censor = NULL, design = NULL) {
+                                               censor = NULL, design = NULL,
+                                               ar_options = NULL) {
       captured[[length(captured) + 1L]] <<- as.numeric(residuals_vec)
       0.4
     },
@@ -181,8 +181,8 @@ test_that(".run_lowrank_engine re-estimates AR from raw-domain residuals", {
   Zw <- 3 * Z
   beta_iter <- solve(crossprod(Xw), crossprod(Xw, Zw))
 
-  expected_raw <- rowMeans(Z - X %*% beta_iter)
-  expected_white <- rowMeans(Zw - Xw %*% beta_iter)
+  expected_raw <- as.numeric(Z - X %*% beta_iter)
+  expected_white <- as.numeric(Zw - Xw %*% beta_iter)
 
   expect_equal(unname(captured[[2]]), unname(expected_raw))
   expect_gt(max(abs(captured[[2]] - expected_white)), 1e-6)

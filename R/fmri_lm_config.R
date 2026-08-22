@@ -4,6 +4,7 @@
   .fmri_lm_check_keys(
     ar_options,
     c("struct", "p", "q", "iter_gls", "global", "voxelwise", "exact_first",
+      "shared_estimator",
       "censor", "by_cluster", "order", "shrink_c0", "cor_struct", "iter"),
     "ar_options"
   )
@@ -31,6 +32,7 @@
     q = ar_options$q %||% 0L,
     iter_gls = ar_options$iter_gls %||% ar_options$iter %||% 1L,
     pooling = if (by_cluster) "parcel" else if (global) "global" else "run",
+    shared_estimator = ar_options$shared_estimator %||% "pooled_acvf",
     voxelwise = ar_options$voxelwise %||% FALSE,
     exact_first = ar_options$exact_first %||% FALSE,
     censor = ar_options$censor,
@@ -129,8 +131,9 @@
 #'   * `struct` ("iid", "ar1", "ar2", "arp")
 #'   * `p` (order for "arp")
 #'   * `q` (moving-average order; positive values request ARMA inference)
-#'   * `iter_gls` (integer number of GLS iterations)
+#'   * `iter_gls` (maximum GLS iterations; pure design-corrected AR uses one)
 #'   * `global` (logical, use global phi)
+#'   * `shared_estimator` ("pooled_acvf" or experimental "mean_series")
 #'   * `voxelwise` (logical)
 #'   * `exact_first` (logical)
 #'   * `censor` (integer vector of timepoints to exclude from AR estimation,
@@ -282,7 +285,7 @@ fmri_lm_control <- function(estimation = NULL,
     stop(
       "Built-in voxelwise temporal covariance currently requires ",
       "`estimation_spec('runwise_meta')`; joint fitting estimates one shared ",
-      "AR model from the cross-voxel mean residual series.",
+      "AR model.",
       call. = FALSE
     )
   }

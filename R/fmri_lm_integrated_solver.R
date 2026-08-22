@@ -63,6 +63,8 @@ solve_integrated_glm <- function(X, Y, config, run_indices = NULL) {
       exact_first = config$ar$exact_first,
       p = config$ar$p,
       q = config$ar$q %||% 0L,
+      global = config$ar$global %||% FALSE,
+      shared_estimator = config$ar$shared_estimator %||% "pooled_acvf",
       phi = config$ar$phi %||% config$ar$phi_fixed,
       theta = config$ar$theta %||% config$ar$theta_fixed
     )
@@ -180,6 +182,8 @@ solve_ar_robust_pipeline <- function(glm_ctx, config, run_indices) {
       exact_first = config$ar$exact_first,
       p = config$ar$p,
       q = config$ar$q %||% 0L,
+      global = config$ar$global %||% FALSE,
+      shared_estimator = config$ar$shared_estimator %||% "pooled_acvf",
       phi = config$ar$phi %||% config$ar$phi_fixed,
       theta = config$ar$theta %||% config$ar$theta_fixed
     )

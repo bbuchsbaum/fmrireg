@@ -19,7 +19,8 @@ NULL
 #' @noRd
 .normalize_ar_options <- function(ar_opts) {
   if (is.null(ar_opts)) {
-    return(list(struct = "iid", cor_struct = "none"))
+    return(list(struct = "iid", cor_struct = "none",
+                shared_estimator = "pooled_acvf"))
   }
 
   # Work on a copy to avoid side effects
@@ -81,10 +82,60 @@ NULL
     ar_opts$iter_gls <- ar_opts$iter
   }
 
+  ar_opts$shared_estimator <- ar_opts$shared_estimator %||% "pooled_acvf"
+  if (!ar_opts$shared_estimator %in% c("pooled_acvf", "mean_series")) {
+    stop("shared_estimator must be 'pooled_acvf' or 'mean_series'", call. = FALSE)
+  }
+
   ar_opts$struct <- struct
   ar_opts$cor_struct <- cor_struct
 
   ar_opts
+}
+
+#' Select the residual representation for a shared temporal covariance
+#' @keywords internal
+#' @noRd
+.shared_ar_residual_input <- function(residuals, ar_opts) {
+  resid_mat <- as.matrix(residuals)
+  estimator <- .normalize_ar_options(ar_opts)$shared_estimator
+  if (identical(estimator, "mean_series") && ncol(resid_mat) > 1L) {
+    return(matrix(rowMeans(resid_mat), ncol = 1L))
+  }
+  resid_mat
+}
+
+#' Select whether the OLS design correction is valid for a shared estimator
+#' @keywords internal
+#' @noRd
+.shared_ar_correction_design <- function(residuals, ar_opts, design) {
+  if (is.null(design)) return(NULL)
+  resid_mat <- as.matrix(residuals)
+  estimator <- .normalize_ar_options(ar_opts)$shared_estimator
+  if (identical(estimator, "mean_series") && ncol(resid_mat) > 1L) {
+    # Averaging suppresses the voxel-specific white-noise floor. The fmriAR
+    # design correction is calibrated for the uncollapsed residual channels,
+    # and its scale cannot be recovered from the mean series alone.
+    return(NULL)
+  }
+  design
+}
+
+#' Estimate shared AR parameters under the configured spatial estimand
+#' @keywords internal
+#' @noRd
+.estimate_shared_ar_parameters <- function(residuals, ar_order, ar_opts,
+                                           run_indices = NULL, censor = NULL,
+                                           design = NULL) {
+  correction_design <- .shared_ar_correction_design(residuals, ar_opts, design)
+  .estimate_ar_parameters_routed(
+    .shared_ar_residual_input(residuals, ar_opts),
+    ar_order = ar_order,
+    run_indices = run_indices,
+    censor = censor,
+    design = correction_design,
+    ar_options = ar_opts
+  )
 }
 
 #' Determine whether temporal whitening is requested
@@ -354,38 +405,17 @@ NULL
   correction_max_lag <- 25L
   if (!is.null(design)) {
     design <- as.matrix(design)
-    slices <- if (is.null(run_indices) || !length(run_indices)) {
-      list(seq_len(nrow(design)))
-    } else {
-      lapply(run_indices, as.integer)
-    }
-    censored <- rep(FALSE, nrow(design))
-    if (!is.null(censor)) {
-      if (is.logical(censor) && length(censor) == nrow(design)) {
-        censored <- censor
-      } else if (is.numeric(censor)) {
-        idx <- as.integer(censor)
-        idx <- idx[idx >= 1L & idx <= nrow(design)]
-        censored[idx] <- TRUE
-      }
-    }
-    rdf_by_slice <- vapply(slices, function(idx) {
-      idx <- idx[!censored[idx]]
-      if (!length(idx)) return(1L)
-      max(length(idx) - qr(design[idx, , drop = FALSE])$rank, 1L)
-    }, integer(1))
-    minimum_order <- as.integer(target_order %||% ar_params$p %||% 1L)
-    desired_budget <- max(5L, 2L * minimum_order + 1L)
-    correction_max_lag <- max(
-      minimum_order,
-      min(25L, desired_budget, floor(min(rdf_by_slice) / 3L))
-    )
+    # Fixed-order Yule-Walker uses autocovariances only through lag p.
+    # Estimating a larger design correction adds variance without supplying
+    # information to the requested AR(p) fit; fmriAR applies its own df cap.
+    correction_max_lag <- as.integer(target_order %||% ar_params$p %||% 1L)
   }
 
   # If explicit AR order requested (including 0), estimate via Yule-Walker
   # Note: fixed-order estimation doesn't currently support censor; use fmriAR path
   if (ar_params$q == 0L && !is.null(target_order) &&
-      is.null(censor) && is.null(design)) {
+      is.null(censor) && is.null(design) &&
+      (is.null(run_indices) || length(run_indices) <= 1L)) {
     phi_list <- .estimate_phi_fixed_order(residuals, target_order, ar_params$pooling, run_indices)
     theta_list <- replicate(length(phi_list), numeric(0), simplify = FALSE)
     phi_for_plan <- phi_list
@@ -476,6 +506,9 @@ NULL
                                          censor = NULL, tol = 5e-3) {
   ar_params <- .fmrireg_to_fmriAR_config(cfg, length(run_indices))
   n_iter <- max_iter %||% ar_params$iter %||% 1L
+  # AR residual-bias correction is tied to the initial OLS residual operator.
+  # ARMA has no such correction and may continue iterative refinement.
+  if (identical(ar_params$method, "ar") && n_iter > 0L) n_iter <- 1L
   min_iter <- as.integer(cfg$min_iter %||% 1L)
   if (!is.finite(min_iter) || min_iter < 1L) min_iter <- 1L
 
@@ -519,8 +552,10 @@ NULL
   # Iterative refinement
   for (iter in seq_len(n_iter)) {
     # Estimate AR from current residuals, excluding censored timepoints
+    correction_design <- .shared_ar_correction_design(residuals, cfg, X)
     plan <- .estimate_ar_via_fmriAR(
-      residuals, cfg, run_indices, censor = censor, design = X
+      .shared_ar_residual_input(residuals, cfg),
+      cfg, run_indices, censor = censor, design = correction_design
     )
     phi_now <- if (!is.null(plan) && !is.null(plan$phi) && length(plan$phi)) {
       unlist(lapply(plan$phi, as.numeric), use.names = FALSE)
@@ -552,7 +587,8 @@ NULL
     }
     prev_parameters <- parameters_now
 
-    # Update residuals if more iterations (use original scale residuals)
+    # Update residuals only for uncorrected ARMA refinement. Corrected AR has
+    # n_iter = 1 because later GLS residuals use a different operator.
     if (iter < n_iter) {
       coef <- tryCatch(
         base::qr.solve(whitened_est$X, whitened_est$Y),

@@ -12,7 +12,7 @@ get_formula.fmri_model <- function(x,...) {
 #' @noRd
 .estimate_ar_parameters_routed <- function(residuals_vec, ar_order,
                                            run_indices = NULL, censor = NULL,
-                                           design = NULL) {
+                                           design = NULL, ar_options = NULL) {
   if (is.null(ar_order) || ar_order <= 0L) {
     return(numeric(0))
   }
@@ -27,6 +27,11 @@ get_formula.fmri_model <- function(x,...) {
     `2` = list(struct = "ar2"),
     list(struct = "arp", p = as.integer(ar_order))
   )
+  if (!is.null(ar_options)) {
+    normalized_options <- .normalize_ar_options(ar_options)
+    ar_cfg$global <- isTRUE(normalized_options$global)
+    ar_cfg$exact_first <- isTRUE(normalized_options$exact_first)
+  }
 
   plan <- tryCatch(
     .estimate_ar_via_fmriAR(
@@ -36,7 +41,10 @@ get_formula.fmri_model <- function(x,...) {
       censor = censor,
       design = design
     ),
-    error = function(e) NULL
+    error = function(e) {
+      if (inherits(e, "fmriAR_design_residual_mismatch")) stop(e)
+      NULL
+    }
   )
 
   phi <- NULL
@@ -742,8 +750,11 @@ fmri_lm <- function(formula, ...) {
 #'   through the built-in matrix backend and currently require runwise
 #'   meta-estimation, run pooling, model-based variance, no censoring, and no
 #'   robust or voxelwise fitting.
-#'   \item \code{iter_gls}: Integer. Number of GLS iterations (default: 1)
+#'   \item \code{iter_gls}: Integer. Maximum GLS iterations (default: 1).
+#'   Pure AR uses one initial OLS estimate; iterative refinement applies to ARMA.
 #'   \item \code{global}: Logical. Use global AR coefficients (default: FALSE)
+#'   \item \code{shared_estimator}: Spatial estimator for shared AR:
+#'   \code{"pooled_acvf"} (default) or experimental \code{"mean_series"}
 #'   \item \code{voxelwise}: Logical. Estimate AR parameters voxel-wise
 #'   (default: FALSE). The built-in path currently requires runwise
 #'   meta-estimation, run pooling, one GLS iteration, no censoring, and no
@@ -751,10 +762,16 @@ fmri_lm <- function(formula, ...) {
 #'   \item \code{exact_first}: Logical. Apply exact AR(1) scaling to first sample (default: FALSE)
 #' }
 #'
-#' With shared built-in AR estimation (the default), each run's coefficient
-#' vector is estimated from the cross-voxel mean OLS or GLS residual series.
-#' A coherent spatial component can therefore yield a larger shared estimate
-#' than the median of estimates obtained separately for each voxel.
+#' With shared built-in AR estimation, the default `shared_estimator =
+#' "pooled_acvf"` pools voxel residual autocovariances and targets a typical
+#' voxel covariance. The experimental `shared_estimator = "mean_series"`
+#' instead estimates from the cross-voxel mean OLS residual series and targets
+#' the coherent spatial component, which can be substantially more
+#' autocorrelated than an individual voxel. Because averaging removes the
+#' voxel-level noise scale, `mean_series` omits the OLS design correction.
+#' Pooled design-corrected AR estimates are formed once from initial OLS
+#' residuals and held fixed for the GLS solve; later GLS residuals do not share
+#' the OLS residual operator.
 #'
 #' Built-in fast engines are selected through `...`:
 #' \itemize{
@@ -1235,6 +1252,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
     
     form <- get_formula(fmrimod)
     resid_chunks <- vector("list", length(run_chunks))
+    design_chunks <- vector("list", length(run_chunks))
     for (ri in seq_along(run_chunks)) {
       rch <- run_chunks[[ri]]
       tmats_run <- term_matrices(fmrimod, rch$chunk_num)
@@ -1245,10 +1263,21 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
       proj_run <- .fast_preproject(X_run)
       Y_run <- as.matrix(rch$data)
       ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
-      resid_chunks[[ri]] <- rowMeans(Y_run - ols$fitted)
+      resid_chunks[[ri]] <- Y_run - ols$fitted
+      design_chunks[[ri]] <- X_run
     }
-    resid_vec <- unlist(resid_chunks, use.names = FALSE)
-    phi_global <- .estimate_ar_parameters_routed(resid_vec, ar_order)
+    resid_mat <- do.call(rbind, resid_chunks)
+    design_mat <- do.call(rbind, design_chunks)
+    run_lengths <- vapply(resid_chunks, nrow, integer(1))
+    run_indices <- split(
+      seq_len(sum(run_lengths)),
+      rep(seq_along(run_lengths), run_lengths)
+    )
+    phi_global <- .estimate_shared_ar_parameters(
+      resid_mat, ar_order, cfg$ar,
+      run_indices = run_indices,
+      design = design_mat
+    )
     cfg$ar$iter_gls <- 1L
   }
 

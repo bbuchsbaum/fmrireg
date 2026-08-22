@@ -85,11 +85,20 @@ estimation_spec <- function(scope = c("joint", "runwise_meta"),
 #'   The current MA-capable path supports runwise meta-estimation with run
 #'   pooling, without censoring, parcel pooling, or voxelwise covariance
 #'   estimation.
-#' @param iter_gls Number of GLS refinement iterations.
+#' @param iter_gls Maximum number of GLS refinement iterations. Standard
+#'   design-corrected AR fitting uses the initial OLS residuals once and holds
+#'   that estimate fixed for the GLS solve. Iterative refinement remains
+#'   available to uncorrected specialized engines and ARMA models (`q > 0`).
 #' @param pooling Temporal covariance pooling scope. With built-in shared AR
-#'   estimation, `"run"` estimates one coefficient vector per run from the
-#'   cross-voxel mean residual series; `"global"` concatenates those runwise
-#'   mean series before estimation.
+#'   estimation, `"run"` estimates one coefficient vector per run and
+#'   `"global"` pools across runs.
+#' @param shared_estimator Spatial estimator for a shared temporal covariance.
+#'   `"pooled_acvf"` (the default) pools residual autocovariances across voxels
+#'   and therefore targets a typical voxel covariance. `"mean_series"` first
+#'   averages residual values across voxels and targets the coherent spatial
+#'   component; it is experimental, can be much more autocorrelated than an
+#'   individual voxel, and omits the OLS design correction because averaging
+#'   removes the voxel-level noise scale for which that correction is calibrated.
 #' @param parcels Optional parcel labels for parcel pooling.
 #' @param voxelwise Estimate temporal covariance separately by voxel. In the
 #'   built-in fitter this currently requires AR-only runwise meta-estimation,
@@ -103,11 +112,13 @@ estimation_spec <- function(scope = c("joint", "runwise_meta"),
 noise_spec <- function(struct = c("iid", "ar1", "ar2", "arp"),
                        p = NULL, q = 0L, iter_gls = 1L,
                        pooling = c("run", "global", "parcel"),
+                       shared_estimator = c("pooled_acvf", "mean_series"),
                        parcels = NULL, voxelwise = FALSE,
                        exact_first = FALSE, censor = NULL,
                        shrink_c0 = 100L) {
   struct <- match.arg(struct)
   pooling <- match.arg(pooling)
+  shared_estimator <- match.arg(shared_estimator)
   q <- .fmri_lm_number(q, "q", lower = 0, integer = TRUE)
   if (is.null(p)) {
     p <- switch(struct, iid = NULL, ar1 = 1L, ar2 = 2L, arp = NULL)
@@ -148,7 +159,8 @@ noise_spec <- function(struct = c("iid", "ar1", "ar2", "arp"),
   }
   .new_fmri_lm_spec(list(
     struct = struct, p = p, q = q, iter_gls = iter_gls,
-    pooling = pooling, parcels = parcels, voxelwise = voxelwise,
+    pooling = pooling, shared_estimator = shared_estimator,
+    parcels = parcels, voxelwise = voxelwise,
     exact_first = exact_first, censor = censor, shrink_c0 = shrink_c0,
     global = identical(pooling, "global"),
     by_cluster = identical(pooling, "parcel")

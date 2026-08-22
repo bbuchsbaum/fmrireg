@@ -173,7 +173,7 @@ fit <- fmri_lm(
   fmodel,
   dataset = dset_modified,
   control = fmri_lm_control(
-    noise = noise_spec("ar1", pooling = "global", iter_gls = 2L)
+    noise = noise_spec("ar1", pooling = "global")
   )
 )
 ```
@@ -311,7 +311,7 @@ run_connectivity_fixture <- function(simulation_seed, n_time = 96L,
   fixture_fit <- fmri_lm(
     fixture_model, dataset = fixture_dataset,
     control = fmri_lm_control(
-      noise = noise_spec("ar1", pooling = "global", iter_gls = 2L)
+      noise = noise_spec("ar1", pooling = "global")
     )
   )
 

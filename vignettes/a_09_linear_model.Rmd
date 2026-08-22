@@ -231,7 +231,7 @@ model <- fmri_lm(
   formula = onset ~ hrf(condition),  # Model experimental effects
   block = ~ run,                     # Block structure
   dataset = dataset,                 # Our simulated dataset
-  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  control = fmri_lm_control(noise = noise_spec("ar1")),
   compute = compute_spec(voxel_chunks = 1L)
 )
 
@@ -273,11 +273,12 @@ ggplot(design_plot_data, aes(sample, regressor, fill = scaled_value)) +
 
 The simulated noise contains AR(1) structure, so the central model above uses
 AR(1) prewhitening with `noise_spec("ar1")`. By default, the built-in shared
-path averages the voxel residuals at each time point, estimates one AR
-coefficient vector from that mean residual series for each run, whitens the
-data and design matrix, and refits the GLM. A spatially coherent residual
-component can therefore make this shared estimate larger than the median of
-separately estimated voxel coefficients.
+path pools residual autocovariances across voxels, estimates one AR coefficient
+vector for each run, whitens the data and design matrix, and refits the GLM.
+This targets a typical voxel covariance. The experimental
+`shared_estimator = "mean_series"` option instead averages voxel residuals at
+each time point and targets the spatially coherent component, which can be much
+more autocorrelated than an individual voxel.
 
 To estimate a separate AR model for every voxel, request the supported
 runwise-meta path explicitly:
@@ -333,8 +334,9 @@ standard errors than plain OLS. The practical lesson is not that prewhitening
 always increases uncertainty, but that OLS can be overconfident when residuals
 are serially correlated.
 
-The `noise_spec()` constructor also accepts `struct = "arp"` for higher-order autoregressive
-models. This setting models AR coefficients only (no moving-average terms).
+The `noise_spec()` constructor also accepts `struct = "arp"` for higher-order
+autoregressive models. A positive `q` requests ARMA(p, q) inference on the
+supported runwise-meta path; see `?noise_spec` for the current restrictions.
 
 ### Handling Outliers with Row-Wise Robust Fitting
 
@@ -478,7 +480,7 @@ contrast_model <- fmri_lm(
   formula = onset ~ hrf(condition, contrasts = con_spec),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  control = fmri_lm_control(noise = noise_spec("ar1")),
   compute = compute_spec(voxel_chunks = 1L)
 )
 
@@ -777,7 +779,7 @@ model_canonical <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "spmg1"),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  control = fmri_lm_control(noise = noise_spec("ar1")),
   compute = compute_spec(voxel_chunks = 1L)
 )
 
@@ -785,7 +787,7 @@ model_gaussian <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "gaussian"),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  control = fmri_lm_control(noise = noise_spec("ar1")),
   compute = compute_spec(voxel_chunks = 1L)
 )
 
@@ -793,7 +795,7 @@ model_bspline <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "bspline", nbasis = 5),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+  control = fmri_lm_control(noise = noise_spec("ar1")),
   compute = compute_spec(voxel_chunks = 1L)
 )
 ```

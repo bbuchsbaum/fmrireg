@@ -97,6 +97,21 @@ test_that("AR(2): fast == slow betas, t-stat, and p-value", {
   expect_engine_parity(fits, "AmB", compare_prob = TRUE)
 })
 
+test_that("explicit mean-series AR: fast == slow", {
+  dset <- make_ds(ar_phi = 0.5)
+  con <- contrast_set(pair_contrast(~ cond == "A", ~ cond == "B", name = "AmB"))
+  fits <- fit_both(
+    onset ~ hrf(cond, contrasts = con), dset,
+    ar_options = list(struct = "ar1", shared_estimator = "mean_series")
+  )
+  expect_equal(
+    as.numeric(ar_parameters(fits$fast)),
+    as.numeric(ar_parameters(fits$slow)),
+    tolerance = 1e-6
+  )
+  expect_engine_parity(fits, "AmB", compare_prob = TRUE)
+})
+
 test_that("multi-run pooled: fast == slow (betas, t-stat, p-value)", {
   dset <- make_ds(runs = 2, n = 200)
   con <- contrast_set(pair_contrast(~ cond == "A", ~ cond == "B", name = "AmB"))
