@@ -154,11 +154,13 @@ simulate_noise_vector <- function(n, TR = 1.5, ar = c(0.3), ma = c(0.5), sd = 1,
 #' data <- simulate_simple_dataset(ncond = 3, TR = 2, snr = 0.5)
 #' 
 #' # Plot clean and noisy data
+#' old_par <- par(no.readonly = TRUE)
 #' par(mfrow = c(2,1))
 #' matplot(data$clean$mat[,1], data$clean$mat[,-1], type = "l",
 #'         main = "Clean Signal", xlab = "Time (s)", ylab = "BOLD")
 #' matplot(data$noisy[,1], data$noisy[,-1], type = "l",
 #'         main = "Noisy Signal", xlab = "Time (s)", ylab = "BOLD")
+#' par(old_par)
 #'
 #' @export
 simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5, 

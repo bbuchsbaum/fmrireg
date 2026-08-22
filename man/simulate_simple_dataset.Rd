@@ -50,10 +50,12 @@ and the noisy data.
 data <- simulate_simple_dataset(ncond = 3, TR = 2, snr = 0.5)
 
 # Plot clean and noisy data
+old_par <- par(no.readonly = TRUE)
 par(mfrow = c(2,1))
 matplot(data$clean$mat[,1], data$clean$mat[,-1], type = "l",
         main = "Clean Signal", xlab = "Time (s)", ylab = "BOLD")
 matplot(data$noisy[,1], data$noisy[,-1], type = "l",
         main = "Noisy Signal", xlab = "Time (s)", ylab = "BOLD")
+par(old_par)
 
 }
