@@ -187,7 +187,7 @@ fitted_rho <- as.numeric(ar_parameters(fit, scope = "raw")[[1]])
 # Check the distribution of our connectivity map
 summary(t_seed)
 #>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-#> -2.5693 -0.6539  0.2129  1.2361  1.1158 10.7542
+#> -2.5745 -0.6514  0.2034  1.2344  1.1124 10.7532
 ```
 
 ## Validating the Results
@@ -239,13 +239,13 @@ c(
   top_rank_enrichment = top_rank_enrichment
 )
 #>         mean_abs_t_network      mean_abs_t_background 
-#>                8.284247789                0.815073477 
+#>                8.274400750                0.813910255 
 #>             BH_discoveries                sensitivity 
 #>               42.000000000                1.000000000 
 #>             background_FPR false_discovery_proportion 
 #>                0.004651163                0.023809524 
 #>  complete_null_discoveries                 fitted_rho 
-#>                0.000000000                0.291413551 
+#>                0.000000000                0.296271918 
 #>        top_rank_enrichment 
 #>                1.000000000
 ```
@@ -324,11 +324,11 @@ knitr::kable(calibration_summary, digits = 3)
 
 | metric | estimate | one_sided_95_bound | bound_direction |
 |:---|---:|---:|:---|
-| Mixed-family FDP | 0.046 | 0.057 | upper |
+| Mixed-family FDP | 0.045 | 0.055 | upper |
 | Network sensitivity | 1.000 | 1.000 | lower |
 | Background FPR | 0.012 | 0.015 | upper |
 | Complete-null family rejection rate | 0.080 | 0.140 | upper |
-| Fitted AR(1) coefficient (truth 0.3) | 0.295 | NA | \- |
+| Fitted AR(1) coefficient (truth 0.3) | 0.299 | NA | \- |
 
 The first three bounds use one-sided 95% t bounds for Monte Carlo means
 across independent fixtures. For the complete-null family, any BH

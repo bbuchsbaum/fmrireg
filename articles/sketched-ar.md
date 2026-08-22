@@ -266,13 +266,13 @@ list(
 #> [1] 0.9661459
 #> 
 #> $cor_srht_global_task
-#> [1] 0.9739018
+#> [1] 0.9737966
 #> 
 #> $cor_srht_group_task
-#> [1] 0.9645555
+#> [1] 0.9627205
 #> 
 #> $cor_ihs_task
-#> [1] 0.9446414
+#> [1] 0.9444965
 ```
 
 The exact iid-versus-sketch comparison is the meaningful fidelity check
@@ -371,7 +371,7 @@ c(
   NRMSE = nrmse_landmarks
 )
 #> correlation        RMSE       NRMSE 
-#>   0.8955085   0.2233649   0.4624006
+#>   0.8953875   0.2235083   0.4626188
 ```
 
 The correlation checks spatial ordering, while NRMSE detects scale

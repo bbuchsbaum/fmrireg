@@ -43,7 +43,7 @@ noise_spec(
   Maximum number of GLS refinement iterations. Standard design-corrected
   AR fitting uses the initial OLS residuals once and holds that estimate
   fixed for the GLS solve. Iterative refinement remains available to
-  uncorrected specialized engines and ARMA models (`q > 0`).
+  ARMA models (`q > 0`).
 
 - pooling:
 
@@ -58,9 +58,9 @@ noise_spec(
   therefore targets a typical voxel covariance. `"mean_series"` first
   averages residual values across voxels and targets the coherent
   spatial component; it is experimental, can be much more autocorrelated
-  than an individual voxel, and omits the OLS design correction because
-  averaging removes the voxel-level noise scale for which that
-  correction is calibrated.
+  than an individual voxel. Because OLS projection is linear across
+  response columns, the matching design correction remains valid after
+  averaging.
 
 - parcels:
 

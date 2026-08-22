@@ -53,14 +53,31 @@
   former targets a typical voxel covariance; the latter suppresses
   voxel-specific noise and targets a different, often more
   autocorrelated coherent component. The old behavior remains available
-  explicitly as `noise_spec(..., shared_estimator = "mean_series")`;
-  this collapsed-series mode omits the OLS design correction because its
-  voxel-level noise scale is no longer identifiable after averaging.
+  explicitly as `noise_spec(..., shared_estimator = "mean_series")`.
+  Fixed-order fits now use fmriAR’s pooled AR autocovariance path as
+  well; the previous ARMA(p, 0) shortcut accidentally collapsed both
+  choices to the mean series.
+
+- `shared_estimator = "mean_series"` now retains the matching OLS
+  design-bias correction. OLS projection is linear across response
+  columns, so averaging residuals after projection is exactly the same
+  as projecting the mean series.
+
+- The OLS residual-bias correction now uses a separate covariance-tail
+  lag budget rather than stopping at the fitted AR order. Projection
+  mixes tail autocovariances into lags 0:p, so a p-lag correction left
+  avoidable bias.
+
+- Global AR estimation over separately fitted runs now supplies the
+  exact block-diagonal residual-forming design. Row-binding the per-run
+  designs incorrectly described a single coefficient vector shared
+  across runs.
 
 - Design-corrected AR coefficients are estimated once from initial OLS
   residuals and held fixed for the GLS solve. Later GLS residuals have a
   different residual-forming operator and no longer reuse the OLS
-  `design=` correction.
+  `design=` correction. The low-rank engine now follows this contract
+  too, and the low-rank and RRR whitening paths reset at run boundaries.
 
 - GDS exports now release unreachable HDF5 handles before atomic
   finalization, allowing Windows to move and immediately reopen the

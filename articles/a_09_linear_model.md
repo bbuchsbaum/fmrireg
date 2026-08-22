@@ -282,7 +282,8 @@ design matrix, and refits the GLM. This targets a typical voxel
 covariance. The experimental `shared_estimator = "mean_series"` option
 instead averages voxel residuals at each time point and targets the
 spatially coherent component, which can be much more autocorrelated than
-an individual voxel.
+an individual voxel. In either case, the matching OLS design correction
+is valid: projection and cross-voxel averaging commute.
 
 To estimate a separate AR model for every voxel, request the supported
 runwise-meta path explicitly:
@@ -328,7 +329,7 @@ kable(se_comparison, digits = 4, caption = "Median standard error across event c
 | model             | median_event_se |
 |:------------------|----------------:|
 | OLS               |          0.1377 |
-| AR(1) prewhitened |          0.1719 |
+| AR(1) prewhitened |          0.1818 |
 
 Median standard error across event coefficients {.table}
 
@@ -337,7 +338,7 @@ Median standard error across event coefficients {.table}
 
 # Inspect the estimated AR coefficient (shared across voxels in this example)
 model_ar1$ar_coef[[1]]
-#> [1] 0.3089859
+#> [1] 0.3713454
 ```
 
 Here the AR(1) fit estimates non-zero serial dependence and produces
@@ -411,8 +412,8 @@ kable(beta_estimates, caption = "Coefficient estimates for each condition and vo
 
 |                                |           |           |           |
 |:-------------------------------|----------:|----------:|----------:|
-| condition_condition.condition1 | 0.7220765 | 0.5222495 | 0.3224225 |
-| condition_condition.condition2 | 1.8931877 | 1.4934382 | 1.0936888 |
+| condition_condition.condition1 | 0.7473208 | 0.5475209 | 0.3477211 |
+| condition_condition.condition2 | 1.8921665 | 1.4924380 | 1.0927094 |
 
 Coefficient estimates for each condition and voxel {.table}
 
@@ -471,14 +472,14 @@ kable(estimate_stats_display, digits = 4, row.names = FALSE,
       caption = "Coefficient estimates with associated statistics by voxel and condition")
 ```
 
-| voxel  | condition  | estimate | std_error | statistic | p_value  |
-|:-------|:-----------|---------:|----------:|----------:|:---------|
-| voxel1 | condition1 |   0.7221 |    0.1804 |    4.0037 | \< 1e-04 |
-| voxel1 | condition2 |   1.8932 |    0.1634 |   11.5885 | \< 1e-04 |
-| voxel2 | condition1 |   0.5222 |    0.1803 |    2.8958 | 0.004216 |
-| voxel2 | condition2 |   1.4934 |    0.1634 |    9.1417 | \< 1e-04 |
-| voxel3 | condition1 |   0.3224 |    0.1803 |    1.7878 | 0.075369 |
-| voxel3 | condition2 |   1.0937 |    0.1634 |    6.6948 | \< 1e-04 |
+| voxel  | condition  | estimate | std_error | statistic | p_value   |
+|:-------|:-----------|---------:|----------:|----------:|:----------|
+| voxel1 | condition1 |   0.7473 |    0.1910 |    3.9123 | 0.0001264 |
+| voxel1 | condition2 |   1.8922 |    0.1727 |   10.9587 | \< 1e-04  |
+| voxel2 | condition1 |   0.5475 |    0.1910 |    2.8663 | 0.0046111 |
+| voxel2 | condition2 |   1.4924 |    0.1727 |    8.6437 | \< 1e-04  |
+| voxel3 | condition1 |   0.3477 |    0.1910 |    1.8204 | 0.0702430 |
+| voxel3 | condition2 |   1.0927 |    0.1727 |    6.3287 | \< 1e-04  |
 
 Coefficient estimates with associated statistics by voxel and condition
 {.table}
@@ -530,9 +531,9 @@ kable(contrast_results_display,
 
 | voxel | term | estimate | std_error | statistic | p_value | df_inference | df_residual | significant |
 |:---|:---|---:|---:|---:|:---|---:|---:|:---|
-| voxel1 | cond2_minus_cond1 | 1.1711 | 0.2386 | 4.9077 | \< 1e-04 | 194 | 194 | TRUE |
-| voxel2 | cond2_minus_cond1 | 0.9712 | 0.2386 | 4.0700 | \< 1e-04 | 194 | 194 | TRUE |
-| voxel3 | cond2_minus_cond1 | 0.7713 | 0.2386 | 3.2322 | 0.001443 | 194 | 194 | TRUE |
+| voxel1 | cond2_minus_cond1 | 1.1448 | 0.2525 | 4.5337 | \< 1e-04 | 194 | 194 | TRUE |
+| voxel2 | cond2_minus_cond1 | 0.9449 | 0.2525 | 3.7420 | 0.0002404 | 194 | 194 | TRUE |
+| voxel3 | cond2_minus_cond1 | 0.7450 | 0.2525 | 2.9503 | 0.0035656 | 194 | 194 | TRUE |
 
 Contrast results: condition2 - condition1 {.table style="width:100%;"}
 
@@ -723,15 +724,15 @@ kable(model_comparison, caption = "Model comparison statistics", digits = 4)
 
 | model         | voxel | r_squared |     aic |      ssr |
 |:--------------|------:|----------:|--------:|---------:|
-| canonical_spm |     1 |    0.5527 | 48.8511 | 240.4646 |
-| canonical_spm |     2 |    0.4283 | 48.8417 | 240.4533 |
-| canonical_spm |     3 |    0.2796 | 48.8323 | 240.4420 |
-| gaussian      |     1 |    0.5160 | 64.6241 | 260.1967 |
-| gaussian      |     2 |    0.3986 | 58.9412 | 252.9074 |
-| gaussian      |     3 |    0.2593 | 54.3961 | 247.2248 |
-| bspline_n5    |     1 |    0.5530 | 64.7474 | 240.3400 |
-| bspline_n5    |     2 |    0.4559 | 54.9259 | 228.8225 |
-| bspline_n5    |     3 |    0.3410 | 47.0254 | 219.9597 |
+| canonical_spm |     1 |    0.5522 | 49.1000 | 240.7640 |
+| canonical_spm |     2 |    0.4275 | 49.0910 | 240.7532 |
+| canonical_spm |     3 |    0.2787 | 49.0821 | 240.7425 |
+| gaussian      |     1 |    0.5154 | 64.9107 | 260.5698 |
+| gaussian      |     2 |    0.3980 | 59.1591 | 253.1830 |
+| gaussian      |     3 |    0.2587 | 54.5608 | 247.4285 |
+| bspline_n5    |     1 |    0.5526 | 64.9091 | 240.5343 |
+| bspline_n5    |     2 |    0.4555 | 55.0891 | 229.0094 |
+| bspline_n5    |     3 |    0.3404 | 47.1918 | 220.1428 |
 
 Model comparison statistics {.table}
 
@@ -748,9 +749,9 @@ kable(aic_winners, caption = "Lowest-AIC model in each voxel", digits = 4)
 
 | voxel | selected_model |     aic |
 |------:|:---------------|--------:|
-|     1 | canonical_spm  | 48.8511 |
-|     2 | canonical_spm  | 48.8417 |
-|     3 | bspline_n5     | 47.0254 |
+|     1 | canonical_spm  | 49.1000 |
+|     2 | canonical_spm  | 49.0910 |
+|     3 | bspline_n5     | 47.1918 |
 
 Lowest-AIC model in each voxel {.table}
 

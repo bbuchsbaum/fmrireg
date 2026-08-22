@@ -390,7 +390,8 @@ covariance. The experimental
 <code>shared_estimator = "mean_series"</code> option instead averages
 voxel residuals at each time point and targets the spatially coherent
 component, which can be much more autocorrelated than an individual
-voxel.</p>
+voxel. In either case, the matching OLS design correction is valid:
+projection and cross-voxel averaging commute.</p>
 <p>To estimate a separate AR model for every voxel, request the
 supported runwise-meta path explicitly:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
@@ -436,7 +437,7 @@ errors smaller.</p>
 </tr>
 <tr class="even">
 <td align="left">AR(1) prewhitened</td>
-<td align="right">0.1719</td>
+<td align="right">0.1818</td>
 </tr>
 </tbody>
 </table>
@@ -444,7 +445,7 @@ errors smaller.</p>
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Inspect the estimated AR coefficient (shared across voxels in this example)</span></span>
 <span><span class="va">model_ar1</span><span class="op">$</span><span class="va">ar_coef</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="co">#&gt; [1] 0.3089859</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.3713454</span></span></code></pre></div>
 <p>Here the AR(1) fit estimates non-zero serial dependence and produces
 larger standard errors than plain OLS. The practical lesson is not that
 prewhitening always increases uncertainty, but that OLS can be
@@ -522,15 +523,15 @@ interpreted as approximate.</p>
 <tbody>
 <tr class="odd">
 <td align="left">condition_condition.condition1</td>
-<td align="right">0.7220765</td>
-<td align="right">0.5222495</td>
-<td align="right">0.3224225</td>
+<td align="right">0.7473208</td>
+<td align="right">0.5475209</td>
+<td align="right">0.3477211</td>
 </tr>
 <tr class="even">
 <td align="left">condition_condition.condition2</td>
-<td align="right">1.8931877</td>
-<td align="right">1.4934382</td>
-<td align="right">1.0936888</td>
+<td align="right">1.8921665</td>
+<td align="right">1.4924380</td>
+<td align="right">1.0927094</td>
 </tr>
 </tbody>
 </table>
@@ -596,49 +597,49 @@ condition</caption>
 <tr class="odd">
 <td align="left">voxel1</td>
 <td align="left">condition1</td>
-<td align="right">0.7221</td>
-<td align="right">0.1804</td>
-<td align="right">4.0037</td>
-<td align="left">&lt; 1e-04</td>
+<td align="right">0.7473</td>
+<td align="right">0.1910</td>
+<td align="right">3.9123</td>
+<td align="left">0.0001264</td>
 </tr>
 <tr class="even">
 <td align="left">voxel1</td>
 <td align="left">condition2</td>
-<td align="right">1.8932</td>
-<td align="right">0.1634</td>
-<td align="right">11.5885</td>
+<td align="right">1.8922</td>
+<td align="right">0.1727</td>
+<td align="right">10.9587</td>
 <td align="left">&lt; 1e-04</td>
 </tr>
 <tr class="odd">
 <td align="left">voxel2</td>
 <td align="left">condition1</td>
-<td align="right">0.5222</td>
-<td align="right">0.1803</td>
-<td align="right">2.8958</td>
-<td align="left">0.004216</td>
+<td align="right">0.5475</td>
+<td align="right">0.1910</td>
+<td align="right">2.8663</td>
+<td align="left">0.0046111</td>
 </tr>
 <tr class="even">
 <td align="left">voxel2</td>
 <td align="left">condition2</td>
-<td align="right">1.4934</td>
-<td align="right">0.1634</td>
-<td align="right">9.1417</td>
+<td align="right">1.4924</td>
+<td align="right">0.1727</td>
+<td align="right">8.6437</td>
 <td align="left">&lt; 1e-04</td>
 </tr>
 <tr class="odd">
 <td align="left">voxel3</td>
 <td align="left">condition1</td>
-<td align="right">0.3224</td>
-<td align="right">0.1803</td>
-<td align="right">1.7878</td>
-<td align="left">0.075369</td>
+<td align="right">0.3477</td>
+<td align="right">0.1910</td>
+<td align="right">1.8204</td>
+<td align="left">0.0702430</td>
 </tr>
 <tr class="even">
 <td align="left">voxel3</td>
 <td align="left">condition2</td>
-<td align="right">1.0937</td>
-<td align="right">0.1634</td>
-<td align="right">6.6948</td>
+<td align="right">1.0927</td>
+<td align="right">0.1727</td>
+<td align="right">6.3287</td>
 <td align="left">&lt; 1e-04</td>
 </tr>
 </tbody>
@@ -685,15 +686,15 @@ compare conditions using contrasts.</p>
 <table style="width:100%;" class="table">
 <caption>Contrast results: condition2 - condition1</caption>
 <colgroup>
-<col width="7%">
-<col width="18%">
+<col width="6%">
+<col width="17%">
+<col width="8%">
 <col width="9%">
-<col width="10%">
-<col width="10%">
 <col width="9%">
-<col width="13%">
+<col width="9%">
 <col width="12%">
-<col width="12%">
+<col width="11%">
+<col width="11%">
 </colgroup>
 <thead><tr class="header">
 <th align="left">voxel</th>
@@ -710,9 +711,9 @@ compare conditions using contrasts.</p>
 <tr class="odd">
 <td align="left">voxel1</td>
 <td align="left">cond2_minus_cond1</td>
-<td align="right">1.1711</td>
-<td align="right">0.2386</td>
-<td align="right">4.9077</td>
+<td align="right">1.1448</td>
+<td align="right">0.2525</td>
+<td align="right">4.5337</td>
 <td align="left">&lt; 1e-04</td>
 <td align="right">194</td>
 <td align="right">194</td>
@@ -721,10 +722,10 @@ compare conditions using contrasts.</p>
 <tr class="even">
 <td align="left">voxel2</td>
 <td align="left">cond2_minus_cond1</td>
-<td align="right">0.9712</td>
-<td align="right">0.2386</td>
-<td align="right">4.0700</td>
-<td align="left">&lt; 1e-04</td>
+<td align="right">0.9449</td>
+<td align="right">0.2525</td>
+<td align="right">3.7420</td>
+<td align="left">0.0002404</td>
 <td align="right">194</td>
 <td align="right">194</td>
 <td align="left">TRUE</td>
@@ -732,10 +733,10 @@ compare conditions using contrasts.</p>
 <tr class="odd">
 <td align="left">voxel3</td>
 <td align="left">cond2_minus_cond1</td>
-<td align="right">0.7713</td>
-<td align="right">0.2386</td>
-<td align="right">3.2322</td>
-<td align="left">0.001443</td>
+<td align="right">0.7450</td>
+<td align="right">0.2525</td>
+<td align="right">2.9503</td>
+<td align="left">0.0035656</td>
 <td align="right">194</td>
 <td align="right">194</td>
 <td align="left">TRUE</td>
@@ -936,65 +937,65 @@ Let’s compare different HRF options.</p>
 <tr class="odd">
 <td align="left">canonical_spm</td>
 <td align="right">1</td>
-<td align="right">0.5527</td>
-<td align="right">48.8511</td>
-<td align="right">240.4646</td>
+<td align="right">0.5522</td>
+<td align="right">49.1000</td>
+<td align="right">240.7640</td>
 </tr>
 <tr class="even">
 <td align="left">canonical_spm</td>
 <td align="right">2</td>
-<td align="right">0.4283</td>
-<td align="right">48.8417</td>
-<td align="right">240.4533</td>
+<td align="right">0.4275</td>
+<td align="right">49.0910</td>
+<td align="right">240.7532</td>
 </tr>
 <tr class="odd">
 <td align="left">canonical_spm</td>
 <td align="right">3</td>
-<td align="right">0.2796</td>
-<td align="right">48.8323</td>
-<td align="right">240.4420</td>
+<td align="right">0.2787</td>
+<td align="right">49.0821</td>
+<td align="right">240.7425</td>
 </tr>
 <tr class="even">
 <td align="left">gaussian</td>
 <td align="right">1</td>
-<td align="right">0.5160</td>
-<td align="right">64.6241</td>
-<td align="right">260.1967</td>
+<td align="right">0.5154</td>
+<td align="right">64.9107</td>
+<td align="right">260.5698</td>
 </tr>
 <tr class="odd">
 <td align="left">gaussian</td>
 <td align="right">2</td>
-<td align="right">0.3986</td>
-<td align="right">58.9412</td>
-<td align="right">252.9074</td>
+<td align="right">0.3980</td>
+<td align="right">59.1591</td>
+<td align="right">253.1830</td>
 </tr>
 <tr class="even">
 <td align="left">gaussian</td>
 <td align="right">3</td>
-<td align="right">0.2593</td>
-<td align="right">54.3961</td>
-<td align="right">247.2248</td>
+<td align="right">0.2587</td>
+<td align="right">54.5608</td>
+<td align="right">247.4285</td>
 </tr>
 <tr class="odd">
 <td align="left">bspline_n5</td>
 <td align="right">1</td>
-<td align="right">0.5530</td>
-<td align="right">64.7474</td>
-<td align="right">240.3400</td>
+<td align="right">0.5526</td>
+<td align="right">64.9091</td>
+<td align="right">240.5343</td>
 </tr>
 <tr class="even">
 <td align="left">bspline_n5</td>
 <td align="right">2</td>
-<td align="right">0.4559</td>
-<td align="right">54.9259</td>
-<td align="right">228.8225</td>
+<td align="right">0.4555</td>
+<td align="right">55.0891</td>
+<td align="right">229.0094</td>
 </tr>
 <tr class="odd">
 <td align="left">bspline_n5</td>
 <td align="right">3</td>
-<td align="right">0.3410</td>
-<td align="right">47.0254</td>
-<td align="right">219.9597</td>
+<td align="right">0.3404</td>
+<td align="right">47.1918</td>
+<td align="right">220.1428</td>
 </tr>
 </tbody>
 </table>
@@ -1017,17 +1018,17 @@ Let’s compare different HRF options.</p>
 <tr class="odd">
 <td align="right">1</td>
 <td align="left">canonical_spm</td>
-<td align="right">48.8511</td>
+<td align="right">49.1000</td>
 </tr>
 <tr class="even">
 <td align="right">2</td>
 <td align="left">canonical_spm</td>
-<td align="right">48.8417</td>
+<td align="right">49.0910</td>
 </tr>
 <tr class="odd">
 <td align="right">3</td>
 <td align="left">bspline_n5</td>
-<td align="right">47.0254</td>
+<td align="right">47.1918</td>
 </tr>
 </tbody>
 </table>
