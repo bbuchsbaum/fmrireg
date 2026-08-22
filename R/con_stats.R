@@ -707,13 +707,14 @@ process_t_contrasts <- function(B, sigma2, XtXinv, conlist, df,
       )
       
     }, error = function(e) {
-      warning(sprintf("Failed to compute t-contrast '%s': %s", con_name, e$message))
-      results[[i]] <- NULL
+      stop(sprintf(
+        "Failed to compute t-contrast '%s': %s",
+        con_name, e$message
+      ), call. = FALSE)
     })
   }
   
-  # Filter out failed contrasts
-  Filter(Negate(is.null), results)
+  results
 }
 
 #' Process F-contrasts for fast linear model fitting  
@@ -749,13 +750,14 @@ process_f_contrasts <- function(B, sigma2, XtXinv, fconlist, df,
       )
       
     }, error = function(e) {
-      warning(sprintf("Failed to compute F-contrast '%s': %s", con_name, e$message))
-      results[[i]] <- NULL  
+      stop(sprintf(
+        "Failed to compute F-contrast '%s': %s",
+        con_name, e$message
+      ), call. = FALSE)
     })
   }
   
-  # Filter out failed contrasts
-  Filter(Negate(is.null), results)
+  results
 }
 
 #' Extract column indices from contrast object

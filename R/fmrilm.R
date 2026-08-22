@@ -1715,14 +1715,14 @@ fit_lm_contrasts <- function(fit, conlist, fcon, vnames, se = TRUE) {
       # Extract colind from the contrast object's attributes
       colind <- attr(con, "colind")
       if (is.null(colind)) {
-        warning(paste("Missing colind attribute for contrast:", con$name %||% "unnamed"))
-        return(NULL) # Skip this contrast
+        stop(sprintf(
+          "Missing colind attribute for requested contrast '%s'.",
+          con$name %||% "unnamed"
+        ), call. = FALSE)
       }
       estimate_contrast(con, fit, colind)
     })
-    # Filter out NULL results
-    ret <- ret[!sapply(ret, is.null)]
-    names(ret) <- sapply(conlist[!sapply(ret, is.null)], function(x) x$name %||% "unnamed")
+    names(ret) <- sapply(conlist, function(x) x$name %||% "unnamed")
     ret
   } else {
     list()

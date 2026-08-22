@@ -318,3 +318,79 @@ test_that("shared engine dispatcher enforces built-in engine capabilities", {
     "rrr_gls supports only shared \\(non-voxelwise\\) temporal covariance"
   )
 })
+
+test_that("transformed-series OLS helper rejects AR and robust controls", {
+  dset <- .demo_matrix_dataset()
+  model <- create_fmri_model(
+    formula = onsets ~ hrf(condition),
+    block = ~run,
+    dataset = dset
+  )
+  Y <- as.matrix(fmridataset::get_data_matrix(dset))
+
+  expect_error(
+    fit_glm_on_transformed_series(
+      model,
+      Y,
+      cfg = fmri_lm_control(noise = noise_spec("ar1")),
+      dataset = dset
+    ),
+    "supports IID OLS only"
+  )
+  expect_error(
+    fit_glm_on_transformed_series(
+      model,
+      Y,
+      cfg = fmri_lm_control(robust = robust_spec("huber")),
+      dataset = dset
+    ),
+    "supports IID OLS only"
+  )
+})
+
+test_that("full-config transformed-series helper executes AR and robust fits", {
+  dset <- make_test_matrix_dataset(nvox = 3L)
+  model <- create_fmri_model(
+    formula = onset ~ hrf(condition),
+    block = ~run,
+    dataset = dset
+  )
+  Y <- as.matrix(fmridataset::get_data_matrix(dset))
+
+  ar_fit <- fit_glm_with_config(
+    model,
+    Y,
+    cfg = fmri_lm_control(noise = noise_spec("ar1", iter_gls = 2L)),
+    dataset = dset
+  )
+
+  expect_identical(attr(ar_fit, "executed_config")$noise$struct, "ar1")
+  expect_false(is.null(ar_fit$result$ar_coef))
+
+  Y_outlier <- Y
+  Y_outlier[c(10L, 30L, 55L), 1L] <-
+    Y_outlier[c(10L, 30L, 55L), 1L] + c(40, -35, 50)
+  iid_fit <- fit_glm_on_transformed_series(
+    model,
+    Y_outlier,
+    cfg = fmri_lm_control(),
+    dataset = dset
+  )
+  robust_fit <- fit_glm_with_config(
+    model,
+    Y_outlier,
+    cfg = fmri_lm_control(
+      robust = robust_spec("huber", max_iter = 4L)
+    ),
+    dataset = dset
+  )
+
+  expect_identical(attr(robust_fit, "executed_config")$robust$type, "huber")
+  expect_gt(
+    max(abs(
+      coef(robust_fit, include_baseline = TRUE) -
+        coef(iid_fit, include_baseline = TRUE)
+    )),
+    1e-6
+  )
+})

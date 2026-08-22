@@ -454,14 +454,91 @@ resolve_basis <- function(name, ...) {
 }
 
 #' @keywords internal
+.resolve_contrast_fit_weights <- function(con_spec, event_design, full_design) {
+  offset_weights <- con_spec$offset_weights
+  if (is.null(offset_weights)) {
+    return(NULL)
+  }
+
+  n_event <- ncol(event_design)
+  event_names <- colnames(event_design)
+  full_names <- colnames(full_design)
+
+  if (is.null(dim(offset_weights))) {
+    if (length(offset_weights) != n_event) {
+      stop(sprintf(
+        "Contrast '%s' has offset_weights length %d, but the event design has %d columns.",
+        con_spec$name %||% "unnamed", length(offset_weights), n_event
+      ), call. = FALSE)
+    }
+    offset_names <- names(offset_weights)
+    if (!is.null(offset_names) && !is.null(event_names)) {
+      row_order <- match(event_names, offset_names)
+      if (anyNA(row_order)) {
+        stop(sprintf(
+          "Contrast '%s' offset_weights do not cover every event-design column.",
+          con_spec$name %||% "unnamed"
+        ), call. = FALSE)
+      }
+      offset_weights <- offset_weights[row_order]
+    }
+  } else {
+    offset_weights <- as.matrix(offset_weights)
+    if (nrow(offset_weights) != n_event) {
+      stop(sprintf(
+        "Contrast '%s' has %d offset_weights rows, but the event design has %d columns.",
+        con_spec$name %||% "unnamed", nrow(offset_weights), n_event
+      ), call. = FALSE)
+    }
+    offset_names <- rownames(offset_weights)
+    if (!is.null(offset_names) && !is.null(event_names)) {
+      row_order <- match(event_names, offset_names)
+      if (anyNA(row_order)) {
+        stop(sprintf(
+          "Contrast '%s' offset_weights do not cover every event-design column.",
+          con_spec$name %||% "unnamed"
+        ), call. = FALSE)
+      }
+      offset_weights <- offset_weights[row_order, , drop = FALSE]
+    }
+  }
+
+  if (is.null(event_names) || is.null(full_names)) {
+    event_colind <- seq_len(n_event)
+  } else {
+    event_colind <- match(event_names, full_names)
+    if (anyNA(event_colind) || anyDuplicated(event_colind)) {
+      stop(sprintf(
+        "Contrast '%s' event-design columns cannot be mapped uniquely into the fitted design.",
+        con_spec$name %||% "unnamed"
+      ), call. = FALSE)
+    }
+  }
+
+  list(weights = offset_weights, colind = as.integer(event_colind))
+}
+
+#' @keywords internal
 prepare_fmri_lm_contrasts <- function(fmrimod) {
   processed_conlist <- list()
   contrast_info <- contrast_weights(fmrimod$event_model)
+  event_design <- fmrimod$event_model$design_matrix
+  full_design <- NULL
   col_indices <- attr(fmrimod$event_model$design_matrix, "col_indices")
 
-  if (length(contrast_info) > 0 && !is.null(col_indices)) {
+  if (length(contrast_info) > 0 && is.null(col_indices)) {
+    stop(
+      "Contrasts were requested, but the event design has no column-index metadata.",
+      call. = FALSE
+    )
+  }
+
+  if (length(contrast_info) > 0) {
     for (contrast_name in names(contrast_info)) {
       con_spec <- contrast_info[[contrast_name]]
+      if (is.null(con_spec)) {
+        next
+      }
 
       term_name <- trimws(contrast_name)
       if (grepl("#", term_name, fixed = TRUE)) {
@@ -489,20 +566,39 @@ prepare_fmri_lm_contrasts <- function(fmrimod) {
         }
       }
       if (is.null(colind)) {
-        warning(sprintf("Contrast '%s' refers to term '%s' but col_indices are missing.", contrast_name, term_name))
-        next
+        stop(sprintf(
+          "Contrast '%s' refers to term '%s' but col_indices are missing.",
+          contrast_name, term_name
+        ), call. = FALSE)
       }
       if (length(colind) == 0L) {
-        warning(sprintf("No column indices found for term '%s'.", term_name))
-        next
+        stop(sprintf(
+          "No column indices found for requested contrast term '%s'.",
+          term_name
+        ), call. = FALSE)
       }
 
       if (inherits(con_spec, "contrast") || inherits(con_spec, "Fcontrast")) {
-        attr(con_spec$weights, "colind") <- colind
-        attr(con_spec, "colind") <- colind
+        if (!is.null(con_spec$offset_weights) && is.null(full_design)) {
+          full_design <- design_matrix(fmrimod)
+        }
+        resolved <- .resolve_contrast_fit_weights(
+          con_spec = con_spec,
+          event_design = event_design,
+          full_design = full_design
+        )
+        if (!is.null(resolved)) {
+          con_spec$weights <- resolved$weights
+          colind <- resolved$colind
+        }
+        attr(con_spec$weights, "colind") <- as.integer(colind)
+        attr(con_spec, "colind") <- as.integer(colind)
         processed_conlist[[contrast_name]] <- con_spec
       } else {
-        warning(sprintf("Item '%s' is not a contrast or Fcontrast object.", contrast_name))
+        stop(sprintf(
+          "Requested contrast '%s' is not a contrast or Fcontrast object.",
+          contrast_name
+        ), call. = FALSE)
       }
     }
   }
@@ -522,9 +618,13 @@ prepare_fmri_lm_contrasts <- function(fmrimod) {
 
 #' Fit the core GLM on a transformed time-series matrix
 #'
+#' This helper performs IID, non-robust OLS inference. It rejects controls that
+#' request AR or robust fitting; use [fit_glm_with_config()] for those models.
+#'
 #' @param model An `fmri_model` describing the design.
 #' @param Y Numeric matrix with `nrow(Y)` time points and columns matching voxels.
-#' @param cfg Optional `fmri_lm_control`; defaults to `fmri_lm_control()`.
+#' @param cfg Optional `fmri_lm_control`; defaults to `fmri_lm_control()` and
+#'   must request IID noise and no robust fitting.
 #' @param dataset Optional dataset backing the model. Defaults to `model$dataset` when available.
 #' @param strategy Character label recorded on the returned object. Defaults to "external".
 #' @param engine Character label indicating the engine that produced the fit. Defaults to "external".
@@ -539,6 +639,14 @@ fit_glm_on_transformed_series <- function(model, Y, cfg = NULL, dataset = NULL,
     cfg <- fmri_lm_control()
   } else if (!inherits(cfg, "fmri_lm_control")) {
     stop("`cfg` must inherit from 'fmri_lm_control'", call. = FALSE)
+  }
+  if (!identical(cfg$noise$struct, "iid") ||
+      !identical(cfg$robust$type, "none")) {
+    stop(
+      "fit_glm_on_transformed_series() supports IID OLS only; ",
+      "use fit_glm_with_config() for AR or robust fitting.",
+      call. = FALSE
+    )
   }
   if (!is.matrix(Y)) {
     Y <- as.matrix(Y)
