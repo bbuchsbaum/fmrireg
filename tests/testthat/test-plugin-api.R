@@ -394,3 +394,48 @@ test_that("full-config transformed-series helper executes AR and robust fits", {
     1e-6
   )
 })
+
+test_that("external-response helpers never inherit the model dataset", {
+  dset <- make_test_matrix_dataset(nvox = 3L)
+  model <- create_fmri_model(
+    formula = onset ~ hrf(condition),
+    block = ~run,
+    dataset = dset
+  )
+  Y <- as.matrix(fmridataset::get_data_matrix(dset))[, 1:2, drop = FALSE]
+
+  iid <- fit_glm_on_transformed_series(model, Y)
+  full <- fit_glm_with_config(model, Y, cfg = fmri_lm_control())
+  expect_null(iid$dataset)
+  expect_null(full$dataset)
+
+  X <- as.matrix(design_matrix(model))
+  suff <- fit_glm_from_suffstats(
+    model,
+    XtX = crossprod(X),
+    XtS = crossprod(X, Y),
+    StS = colSums(Y * Y),
+    df = nrow(X) - qr(X)$rank
+  )
+  expect_null(suff$dataset)
+
+  expect_error(
+    fit_glm_on_transformed_series(model, Y, dataset = dset),
+    "explicit dataset dimensions are"
+  )
+  expect_error(
+    fit_glm_with_config(model, Y, dataset = dset),
+    "explicit dataset dimensions are"
+  )
+  expect_error(
+    fit_glm_from_suffstats(
+      model,
+      XtX = crossprod(X),
+      XtS = crossprod(X, Y),
+      StS = colSums(Y * Y),
+      df = nrow(X) - qr(X)$rank,
+      dataset = dset
+    ),
+    "explicit dataset dimensions are"
+  )
+})

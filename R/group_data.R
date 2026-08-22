@@ -41,33 +41,7 @@
 #' )
 #' }
 group_data <- function(data, format = c("auto", "h5", "nifti", "csv", "fmrilm"), ...) {
-  format <- match.arg(format)
-  
-  if (format == "auto") {
-    format <- detect_group_data_format(data)
-  }
-  
-  switch(format,
-    h5 = group_data_from_h5(data, ...),
-    nifti = {
-      if (is.list(data) && !is.null(names(data))) {
-        args <- list(
-          beta_paths = data$beta,
-          se_paths = data$se,
-          var_paths = data$var,
-          t_paths = data$t,
-          df = data$df
-        )
-        args <- args[!vapply(args, is.null, logical(1))]
-        do.call(group_data_from_nifti, c(args, list(...)))
-      } else {
-        group_data_from_nifti(data, ...)
-      }
-    },
-    csv = group_data_from_csv(data, ...),
-    fmrilm = group_data_from_fmrilm(data, ...),
-    stop("Unsupported format: ", format, call. = FALSE)
-  )
+  .group_data_gds(data, format = match.arg(format), ...)
 }
 
 #' Detect Input Format for Group Data

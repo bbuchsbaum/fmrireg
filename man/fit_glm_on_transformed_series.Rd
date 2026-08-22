@@ -21,7 +21,9 @@ fit_glm_on_transformed_series(
 \item{cfg}{Optional \code{fmri_lm_control}; defaults to \code{fmri_lm_control()} and
 must request IID noise and no robust fitting.}
 
-\item{dataset}{Optional dataset backing the model. Defaults to \code{model$dataset} when available.}
+\item{dataset}{Optional dataset whose feature axis describes the columns of
+\code{Y}. It is never inferred from \code{model$dataset}, because a transformed
+response can have a different feature space.}
 
 \item{strategy}{Character label recorded on the returned object. Defaults to "external".}
 

@@ -625,6 +625,24 @@ fmri_ols_fit <- function(Y, X,
   if (nrow(Y) != nrow(X)) {
     stop("Y and X must have same number of rows", call. = FALSE)
   }
+
+  if (any(!is.finite(X))) {
+    stop("X must contain only finite values", call. = FALSE)
+  }
+  rank_x <- qr(X)$rank
+  if (rank_x < ncol(X)) {
+    stop(
+      sprintf(
+        "X must have full column rank; got rank %d for %d columns",
+        rank_x, ncol(X)
+      ),
+      call. = FALSE
+    )
+  }
+  extra_parameter <- as.integer(!is.null(voxelwise))
+  if (nrow(X) - ncol(X) - extra_parameter <= 0L) {
+    stop("Non-positive residual degrees of freedom", call. = FALSE)
+  }
   
   if (is.null(voxelwise)) {
     # Standard OLS
@@ -642,6 +660,28 @@ fmri_ols_fit <- function(Y, X,
     
     if (isTRUE(center_voxelwise)) {
       C <- sweep(C, 2L, colMeans(C, na.rm = TRUE), FUN = "-")
+    }
+
+    if (any(!is.finite(C))) {
+      stop("Voxelwise covariate must contain only finite values", call. = FALSE)
+    }
+
+    C_resid <- qr.resid(qr(X), C)
+    resid_norm <- sqrt(colSums(C_resid * C_resid))
+    covariate_norm <- sqrt(colSums(C * C))
+    unidentified <- which(
+      resid_norm <= sqrt(.Machine$double.eps) * pmax(covariate_norm, 1)
+    )
+    if (length(unidentified) > 0L) {
+      shown <- utils::head(unidentified, 5L)
+      suffix <- if (length(unidentified) > length(shown)) ", ..." else ""
+      stop(
+        sprintf(
+          "Voxelwise covariate is linearly dependent on X for feature(s): %s%s",
+          paste(shown, collapse = ", "), suffix
+        ),
+        call. = FALSE
+      )
     }
     
     ols <- ols_t_vcov_cpp(Y, X, C)

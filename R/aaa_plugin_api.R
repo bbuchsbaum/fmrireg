@@ -625,7 +625,9 @@ prepare_fmri_lm_contrasts <- function(fmrimod) {
 #' @param Y Numeric matrix with `nrow(Y)` time points and columns matching voxels.
 #' @param cfg Optional `fmri_lm_control`; defaults to `fmri_lm_control()` and
 #'   must request IID noise and no robust fitting.
-#' @param dataset Optional dataset backing the model. Defaults to `model$dataset` when available.
+#' @param dataset Optional dataset whose feature axis describes the columns of
+#'   `Y`. It is never inferred from `model$dataset`, because a transformed
+#'   response can have a different feature space.
 #' @param strategy Character label recorded on the returned object. Defaults to "external".
 #' @param engine Character label indicating the engine that produced the fit. Defaults to "external".
 #' @return An object of class `fmri_lm`.
@@ -658,7 +660,11 @@ fit_glm_on_transformed_series <- function(model, Y, cfg = NULL, dataset = NULL,
     stop("Row mismatch between design matrix and response matrix", call. = FALSE)
   }
 
-  dataset <- dataset %||% model$dataset
+  .validate_external_response_dataset(
+    dataset,
+    expected = dim(Y),
+    context = "fit_glm_on_transformed_series()"
+  )
 
   contrast_prep <- prepare_fmri_lm_contrasts(model)
   processed_conlist <- contrast_prep$processed
@@ -740,7 +746,9 @@ fit_glm_on_transformed_series <- function(model, Y, cfg = NULL, dataset = NULL,
 #' @param model An `fmri_model` describing the design.
 #' @param Y Numeric matrix with `nrow(Y)` time points and columns matching voxels.
 #' @param cfg Optional `fmri_lm_control`; defaults to `fmri_lm_control()`.
-#' @param dataset Optional dataset backing the model. Defaults to `model$dataset` when available.
+#' @param dataset Optional dataset whose feature axis describes the columns of
+#'   `Y`. It is never inferred from `model$dataset`, because a transformed
+#'   response can have a different feature space.
 #' @param strategy Character label recorded on the returned object. Defaults to "external".
 #' @param engine Character label indicating the engine that produced the fit. Defaults to "external".
 #' @return An object of class `fmri_lm`.
@@ -755,7 +763,11 @@ fit_glm_with_config <- function(model, Y, cfg = NULL, dataset = NULL,
 
   X <- as.matrix(design_matrix(model))
   if (nrow(X) != nrow(Y)) stop("Row mismatch between design matrix and response matrix", call. = FALSE)
-  dataset <- dataset %||% model$dataset
+  .validate_external_response_dataset(
+    dataset,
+    expected = dim(Y),
+    context = "fit_glm_with_config()"
+  )
 
   contrast_prep <- prepare_fmri_lm_contrasts(model)
   processed_conlist <- contrast_prep$processed
@@ -843,7 +855,8 @@ fit_glm_with_config <- function(model, Y, cfg = NULL, dataset = NULL,
 #' @param StS length-V vector of sum of squares per voxel.
 #' @param df Residual degrees of freedom.
 #' @param cfg Optional `fmri_lm_control`; used for metadata only.
-#' @param dataset Optional dataset backing the model.
+#' @param dataset Optional dataset whose feature axis describes the columns of
+#'   `XtS`. It is never inferred from `model$dataset`.
 #' @param strategy Character label for the returned object.
 #' @param engine Character label for the returned object.
 #' @return An object of class `fmri_lm`.
@@ -893,11 +906,55 @@ fit_glm_from_suffstats <- function(model, XtX, XtS, StS, df,
     resvar = SSE / df,
     ar_coef = NULL
   )
-  dataset <- dataset %||% model$dataset
+  .validate_external_response_dataset(
+    dataset,
+    expected = c(nrow(design_matrix(model)), V),
+    context = "fit_glm_from_suffstats()"
+  )
   ret <- list(result = result, model = model, strategy = strategy, bcons = processed_conlist, dataset = dataset, ar_coef = result$ar_coef)
   class(ret) <- "fmri_lm"
   ret <- .fmri_lm_attach_config_metadata(ret, requested_cfg = cfg, executed_cfg = cfg)
   attr(ret, "strategy") <- strategy
   attr(ret, "engine") <- engine
   ret
+}
+
+.external_response_dataset_dims <- function(dataset) {
+  if (is.null(dataset)) {
+    return(NULL)
+  }
+
+  values <- if (inherits(dataset, "latent_dataset")) {
+    tryCatch(fmridataset::get_latent_scores(dataset), error = function(e) NULL)
+  } else if (inherits(dataset, "matrix_dataset")) {
+    tryCatch(fmridataset::get_data_matrix(dataset), error = function(e) NULL)
+  } else {
+    NULL
+  }
+
+  dims <- dim(values)
+  if (length(dims) != 2L || anyNA(dims)) {
+    return(NULL)
+  }
+  as.integer(dims)
+}
+
+.validate_external_response_dataset <- function(dataset, expected, context) {
+  if (is.null(dataset)) {
+    return(invisible(TRUE))
+  }
+
+  observed <- .external_response_dataset_dims(dataset)
+  if (!is.null(observed) && !identical(observed, as.integer(expected))) {
+    stop(
+      sprintf(
+        "%s: explicit dataset dimensions are %d x %d, but the external response is %d x %d",
+        context,
+        observed[[1L]], observed[[2L]],
+        as.integer(expected[[1L]]), as.integer(expected[[2L]])
+      ),
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
 }
