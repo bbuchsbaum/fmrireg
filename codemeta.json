@@ -357,14 +357,13 @@
       "@type": "SoftwareApplication",
       "identifier": "fmridesign",
       "name": "fmridesign",
-      "version": ">= 0.1.0",
-      "sameAs": "https://github.com/bbuchsbaum/fmridesign"
+      "version": ">= 0.6.0"
     },
     "5": {
       "@type": "SoftwareApplication",
       "identifier": "fmrihrf",
       "name": "fmrihrf",
-      "version": ">= 0.1.0",
+      "version": ">= 0.4.0",
       "provider": {
         "@id": "https://cran.r-project.org",
         "@type": "Organization",
@@ -704,7 +703,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "5359.425KB",
+  "fileSize": "5483.733KB",
   "citation": [
     {
       "@type": "SoftwareSourceCode",
