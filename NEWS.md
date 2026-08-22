@@ -49,6 +49,8 @@
   residuals and held fixed for the GLS solve. Later GLS residuals have a
   different residual-forming operator and no longer reuse the OLS `design=`
   correction.
+* GDS exports now release unreachable HDF5 handles before atomic finalization,
+  allowing Windows to move and immediately reopen the completed file.
 
 * `write_results(strategy = "by_stat")` no longer scatters contrast maps onto
   the wrong voxels. `.compute_statistical_volumes()` called `as.logical()` on

@@ -49,3 +49,14 @@ test_that("result paths are updated without regular-expression matching", {
   )
   expect_identical(updated$external, files$external)
 })
+
+test_that("optional HDF5 cleanup invokes the supplied collector", {
+  calls <- 0L
+  result <- fmrireg:::.release_unused_hdf5_handles(function() {
+    calls <<- calls + 1L
+    invisible(NULL)
+  })
+
+  expect_true(result)
+  expect_identical(calls, 1L)
+})

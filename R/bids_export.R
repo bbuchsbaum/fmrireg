@@ -1068,12 +1068,33 @@ write_results.fmri_lm <- function(x,
   gds_h5_path <- file.path(path, gds_h5_filename)
 
   write_plan <- fmrigds::write_out(gds_obj, path = gds_h5_path, format = "h5")
-  fmrigds::compute(write_plan)
+  written_gds <- fmrigds::compute(write_plan)
+  rm(written_gds, write_plan)
+  .release_unused_hdf5_handles()
 
   plan_filename <- .generate_bids_filename(entities, desc = desc, suffix = "gds", extension = "rds")
   plan_path <- file.path(path, plan_filename)
 
   list(h5 = gds_h5_path, plan = plan_path)
+}
+
+#' Release HDF5 handles left for finalization by an optional writer
+#' @keywords internal
+#' @noRd
+.release_unused_hdf5_handles <- function(collector = NULL) {
+  # fmrigds' HDF5 writer closes its file, but hdf5r dataset objects created
+  # without explicit bindings can remain pending R finalization. POSIX permits
+  # renaming such a file; Windows does not. Finalize unreachable R objects and
+  # then trigger HDF5's own garbage collector before the atomic move.
+  invisible(gc(verbose = FALSE))
+  if (is.null(collector)) {
+    if (!requireNamespace("hdf5r", quietly = TRUE)) {
+      return(invisible(FALSE))
+    }
+    collector <- hdf5r::h5garbage_collect
+  }
+  collector()
+  invisible(TRUE)
 }
 
 

@@ -59,6 +59,7 @@ Suggests:
     pls,
     doParallel,
     fmristore,
+    hdf5r,
     knitr,
     rmarkdown,
     albersdown,
