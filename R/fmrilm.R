@@ -738,11 +738,23 @@ fmri_lm <- function(formula, ...) {
 #' \itemize{
 #'   \item \code{struct}: Character. Correlation structure (\code{"iid"}, \code{"ar1"}, \code{"ar2"}, \code{"arp"})
 #'   \item \code{p}: Integer. AR order when \code{struct = "arp"}
+#'   \item \code{q}: Nonnegative MA order. Positive values fit ARMA(p, q)
+#'   through the built-in matrix backend and currently require runwise
+#'   meta-estimation, run pooling, model-based variance, no censoring, and no
+#'   robust or voxelwise fitting.
 #'   \item \code{iter_gls}: Integer. Number of GLS iterations (default: 1)
 #'   \item \code{global}: Logical. Use global AR coefficients (default: FALSE)
-#'   \item \code{voxelwise}: Logical. Estimate AR parameters voxel-wise (default: FALSE)
+#'   \item \code{voxelwise}: Logical. Estimate AR parameters voxel-wise
+#'   (default: FALSE). The built-in path currently requires runwise
+#'   meta-estimation, run pooling, one GLS iteration, no censoring, and no
+#'   volume weighting, soft-subspace projection, or robust AR re-estimation.
 #'   \item \code{exact_first}: Logical. Apply exact AR(1) scaling to first sample (default: FALSE)
 #' }
+#'
+#' With shared built-in AR estimation (the default), each run's coefficient
+#' vector is estimated from the cross-voxel mean OLS or GLS residual series.
+#' A coherent spatial component can therefore yield a larger shared estimate
+#' than the median of estimates obtained separately for each voxel.
 #'
 #' Built-in fast engines are selected through `...`:
 #' \itemize{
@@ -1171,6 +1183,10 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                         compute = NULL, ...) {
   strategy <- match.arg(strategy)
 
+  # Validate config before inspecting path-dependent combinations.
+  assert_that(inherits(cfg, "fmri_lm_control"), msg = "'cfg' must be an 'fmri_lm_control' object")
+  .validate_builtin_voxelwise_noise(cfg)
+
   if (!identical(cfg$estimation$scope, "joint") &&
       (!identical(cfg$variance$method, "model") ||
        identical(cfg$variance$df, "satterthwaite"))) {
@@ -1178,9 +1194,6 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
          "`estimation_spec(scope = 'joint')`; runwise meta-estimation must ",
          "combine run-level covariance explicitly.", call. = FALSE)
   }
-  
-  # Validate config
-  assert_that(inherits(cfg, "fmri_lm_control"), msg = "'cfg' must be an 'fmri_lm_control' object")
   
   # Error checking
   assert_that(inherits(fmrimod, "fmri_model"), msg = "'fmrimod' must be an 'fmri_model' object")
@@ -1309,7 +1322,8 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
     strategy = strategy,
     bcons = processed_conlist,
     dataset = dataset,
-    ar_coef = result$ar_coef
+    ar_coef = result$ar_coef,
+    ma_coef = result$ma_coef
   )
   
   class(ret) <- "fmri_lm"

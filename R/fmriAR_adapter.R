@@ -87,6 +87,14 @@ NULL
   ar_opts
 }
 
+#' Determine whether temporal whitening is requested
+#' @keywords internal
+#' @noRd
+.temporal_noise_enabled <- function(ar_opts) {
+  ar_opts <- .normalize_ar_options(ar_opts)
+  !identical(ar_opts$struct, "iid") || as.integer(ar_opts$q %||% 0L) > 0L
+}
+
 #' Determine AR order implied by configuration
 #'
 #' @param ar_opts Normalized AR options list
@@ -272,8 +280,13 @@ NULL
     n_runs <- 1L
   }
 
-  # Map correlation structure to fmriAR parameters
-  method <- "ar"  # Default to AR (not ARMA)
+  # Map correlation structure to fmriAR parameters. A positive q selects the
+  # ARMA estimator; q = 0 retains the segmented/design-corrected AR path.
+  q <- as.integer(ar_opts$q %||% 0L)
+  if (!is.finite(q) || q < 0L) {
+    stop("q must be a nonnegative integer", call. = FALSE)
+  }
+  method <- if (q > 0L) "arma" else "ar"
   p <- switch(as.character(ar_opts$struct),
     "iid" = 0L,
     "ar1" = 1L,
@@ -306,7 +319,7 @@ NULL
     method = method,
     p = p,
     p_max = if (p == 0L) 0L else max(6L, p),  # Allow auto-selection up to 6
-    q = 0L,  # No MA terms for now
+    q = q,
     pooling = pooling,
     exact_first = if (isFALSE(ar_opts$exact_first)) "none" else "ar1",
     # Number of iterations handled externally
@@ -371,7 +384,8 @@ NULL
 
   # If explicit AR order requested (including 0), estimate via Yule-Walker
   # Note: fixed-order estimation doesn't currently support censor; use fmriAR path
-  if (!is.null(target_order) && is.null(censor) && is.null(design)) {
+  if (ar_params$q == 0L && !is.null(target_order) &&
+      is.null(censor) && is.null(design)) {
     phi_list <- .estimate_phi_fixed_order(residuals, target_order, ar_params$pooling, run_indices)
     theta_list <- replicate(length(phi_list), numeric(0), simplify = FALSE)
     phi_for_plan <- phi_list
@@ -397,7 +411,10 @@ NULL
     exact_first = ar_params$exact_first,
     pooling = ar_params$pooling,
     censor = censor,
-    design = design,
+    # fmriAR's residual-bias correction is currently AR-only. MA support is
+    # therefore restricted at the public boundary to uncensored run pooling,
+    # and the ARMA estimator receives the OLS/GLS residuals directly.
+    design = if (identical(ar_params$method, "ar")) design else NULL,
     correction_max_lag = correction_max_lag
   )
 }
@@ -476,12 +493,15 @@ NULL
   Y_est <- Y[, est_cols, drop = FALSE]
 
   # Handle no AR case
-  if (ar_params$p == 0 || ar_params$p_max == 0 || n_iter == 0) {
+  if ((ar_params$p == 0L && ar_params$q == 0L) || n_iter == 0L) {
     return(list(
       plan = NULL,
       X_white = X,
       Y_white = Y,
       ar_coef = NULL,
+      ma_coef = NULL,
+      iterations = 0L,
+      converged = NA,
       censor = censor
     ))
   }
@@ -493,7 +513,7 @@ NULL
   residuals <- Y_est - X %*% coef
 
   plan <- NULL
-  prev_phi <- NULL
+  prev_parameters <- NULL
   converged <- FALSE
 
   # Iterative refinement
@@ -507,6 +527,12 @@ NULL
     } else {
       numeric(0)
     }
+    theta_now <- if (!is.null(plan) && !is.null(plan$theta) && length(plan$theta)) {
+      unlist(lapply(plan$theta, as.numeric), use.names = FALSE)
+    } else {
+      numeric(0)
+    }
+    parameters_now <- c(phi_now, theta_now)
 
     # For intermediate iterations, whiten only a representative voxel subset to
     # update AR coefficients. Apply full whitening once at the end.
@@ -516,15 +542,15 @@ NULL
 
     # Stop early when AR coefficients stabilize.
     if (iter >= min_iter &&
-        !is.null(prev_phi) &&
-        length(phi_now) > 0L &&
-        length(prev_phi) == length(phi_now) &&
+        !is.null(prev_parameters) &&
+        length(parameters_now) > 0L &&
+        length(prev_parameters) == length(parameters_now) &&
         is.finite(tol) &&
-        max(abs(phi_now - prev_phi)) <= tol) {
+        max(abs(parameters_now - prev_parameters)) <= tol) {
       converged <- TRUE
       break
     }
-    prev_phi <- phi_now
+    prev_parameters <- parameters_now
 
     # Update residuals if more iterations (use original scale residuals)
     if (iter < n_iter) {
@@ -562,12 +588,30 @@ NULL
   } else {
     NULL
   }
+  ma_coef <- if (!is.null(plan)) {
+    if (!is.null(plan$theta)) {
+      plan$theta
+    } else if (!is.null(plan$theta_by_parcel)) {
+      theta_list <- plan$theta_by_parcel
+      list(rowMeans(sapply(
+        theta_list,
+        function(x) c(x, rep(0, max(lengths(theta_list)) - length(x)))
+      )))
+    } else {
+      NULL
+    }
+  } else {
+    NULL
+  }
 
   list(
     plan = plan,
     X_white = X_white,
     Y_white = Y_white,
     ar_coef = ar_coef,
+    ma_coef = ma_coef,
+    iterations = as.integer(iter),
+    converged = if (n_iter <= 1L) NA else converged,
     censor = censor
   )
 }
@@ -611,9 +655,32 @@ NULL
 #' @return Effective degrees of freedom
 #' @keywords internal
 #' @noRd
-.compute_ar_effective_df_compat <- function(n, p, plan = NULL, ar_coef = NULL) {
+.compute_ar_effective_df_compat <- function(n, p, plan = NULL, ar_coef = NULL,
+                                            ma_coef = NULL) {
+  average_coefficients <- function(values) {
+    if (is.numeric(values)) {
+      return(as.numeric(values))
+    }
+    values <- lapply(values, as.numeric)
+    if (!length(values)) {
+      return(numeric(0))
+    }
+    max_len <- max(lengths(values))
+    if (max_len == 0L) {
+      return(numeric(0))
+    }
+    coef_mat <- vapply(values, function(x) {
+      c(x, rep(0, max_len - length(x)))
+    }, numeric(max_len))
+    if (is.null(dim(coef_mat))) {
+      coef_mat <- matrix(coef_mat, nrow = max_len, ncol = length(values))
+    }
+    rowMeans(coef_mat)
+  }
+
   # Extract phi coefficients
   phi <- NULL
+  theta <- NULL
 
   if (!is.null(plan)) {
     if (!is.null(plan$phi) && length(plan$phi) > 0) {
@@ -623,22 +690,35 @@ NULL
         phi <- phi_list[[1]]
       } else {
         # Pool across runs
-        max_len <- max(lengths(phi_list))
-        phi_mat <- sapply(phi_list, function(x) c(x, rep(0, max_len - length(x))))
-        phi <- rowMeans(phi_mat)
+        phi <- average_coefficients(phi_list)
       }
     }
-  } else if (!is.null(ar_coef)) {
-    if (is.list(ar_coef)) {
-      max_len <- max(lengths(ar_coef))
-      phi_mat <- sapply(ar_coef, function(x) c(x, rep(0, max_len - length(x))))
-      phi <- rowMeans(phi_mat)
-    } else {
+    if (!is.null(plan$theta) && length(plan$theta) > 0) {
+      theta_list <- plan$theta
+      if (length(theta_list) == 1L) {
+        theta <- theta_list[[1L]]
+      } else {
+        theta <- average_coefficients(theta_list)
+      }
+    }
+  } else if (!is.null(ar_coef) || !is.null(ma_coef)) {
+    if (is.list(ar_coef) && length(ar_coef)) {
+      phi <- average_coefficients(ar_coef)
+    } else if (!is.null(ar_coef)) {
       phi <- ar_coef
+    }
+    if (!is.null(ma_coef)) {
+      if (is.list(ma_coef)) {
+        theta <- average_coefficients(ma_coef)
+      } else {
+        theta <- ma_coef
+      }
     }
   }
 
-  if (is.null(phi) || length(phi) == 0) {
+  phi <- as.numeric(phi %||% numeric(0))
+  theta <- as.numeric(theta %||% numeric(0))
+  if (length(phi) == 0L && length(theta) == 0L) {
     return(n - p)
   }
 
@@ -646,10 +726,10 @@ NULL
   # n_eff = n / (1 + 2 * sum_{k>=1} (1-k/n) rho_k)
   rho <- tryCatch(
     {
-      if (length(phi) == 1L) {
+      if (length(phi) == 1L && length(theta) == 0L) {
         phi[1]^(seq_len(n - 1L))
       } else {
-        stats::ARMAacf(ar = phi, ma = numeric(0), lag.max = n - 1L)[-1]
+        stats::ARMAacf(ar = phi, ma = theta, lag.max = n - 1L)[-1]
       }
     },
     error = function(e) NULL

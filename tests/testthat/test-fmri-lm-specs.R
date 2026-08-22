@@ -13,7 +13,7 @@ test_that("typed specs expose strict schemas", {
   expect_error(compute_spec(voxel_chunks = 1.5), "must be an integer")
   expect_error(projection_spec(method = "soft_subspace"), "requires")
   expect_error(noise_spec(struct = "arp"), "must be supplied")
-  expect_error(noise_spec(q = 1L), "not yet supported")
+  expect_identical(noise_spec(q = 1L)$q, 1L)
 })
 
 test_that("control rejects unknown legacy keys and canonical conflicts", {

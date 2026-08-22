@@ -272,9 +272,28 @@ ggplot(design_plot_data, aes(sample, regressor, fill = scaled_value)) +
 ### Accounting for Temporal Autocorrelation
 
 The simulated noise contains AR(1) structure, so the central model above uses
-AR(1) prewhitening with `noise_spec("ar1")`. This estimates the
-AR coefficient from an initial OLS fit, whitens the data and design matrix, and
-refits the GLM.
+AR(1) prewhitening with `noise_spec("ar1")`. By default, the built-in shared
+path averages the voxel residuals at each time point, estimates one AR
+coefficient vector from that mean residual series for each run, whitens the
+data and design matrix, and refits the GLM. A spatially coherent residual
+component can therefore make this shared estimate larger than the median of
+separately estimated voxel coefficients.
+
+To estimate a separate AR model for every voxel, request the supported
+runwise-meta path explicitly:
+
+```r
+voxelwise_control <- fmri_lm_control(
+  estimation = estimation_spec("runwise_meta"),
+  noise = noise_spec("ar1", voxelwise = TRUE)
+)
+```
+
+Built-in voxelwise estimation currently supports AR-only models with run
+pooling, one GLS iteration, no censoring, and no volume weighting or
+soft-subspace projection. Robust fitting is supported, but robust AR
+re-estimation is not. Unsupported combinations fail at the fitting boundary
+instead of silently using the shared estimator.
 
 Prewhitening changes both the coefficient covariance and the effective
 information in the time series. It is therefore important to inspect the

@@ -41,11 +41,13 @@ solve_integrated_glm <- function(X, Y, config, run_indices = NULL) {
     robust_type <- config$robust$type %||% config$robust %||% FALSE
     if (identical(robust_type, "none")) robust_type <- FALSE
     
-    if (!isFALSE(robust_type) && ar_struct != "iid" && ar_struct != "none") {
+    temporal_noise <- (ar_struct != "iid" && ar_struct != "none") ||
+      as.integer(config$ar$q %||% 0L) > 0L
+    if (!isFALSE(robust_type) && temporal_noise) {
       method <- "ar_robust"
     } else if (!isFALSE(robust_type)) {
       method <- "robust"
-    } else if (ar_struct != "iid" && ar_struct != "none") {
+    } else if (temporal_noise) {
       method <- "ar"
     } else {
       method <- "ols"
@@ -60,7 +62,9 @@ solve_integrated_glm <- function(X, Y, config, run_indices = NULL) {
       iter = config$ar$iter_gls,
       exact_first = config$ar$exact_first,
       p = config$ar$p,
-      phi = config$ar$phi %||% config$ar$phi_fixed
+      q = config$ar$q %||% 0L,
+      phi = config$ar$phi %||% config$ar$phi_fixed,
+      theta = config$ar$theta %||% config$ar$theta_fixed
     )
   } else {
     config$ar_options
@@ -102,11 +106,12 @@ solve_ar_pipeline <- function(glm_ctx, ar_options, run_indices) {
   result <- iterative_ar_solve(glm_ctx, ar_options, run_indices)
   
   # Compute effective df
-  if (!is.null(result$ar_coef)) {
+  if (!is.null(result$ar_plan) || !is.null(result$ar_coef) || !is.null(result$ma_coef)) {
     n <- nrow(glm_ctx$X)
     p <- ncol(glm_ctx$X)
-    phi_pooled <- mean(unlist(result$ar_coef))
-    result$effective_df <- compute_ar_effective_df(n, p, phi_pooled)
+    result$effective_df <- compute_ar_effective_df(
+      n, p, phi = result$ar_coef, plan = result$ar_plan
+    )
   }
   
   # Add XtXinv if not present
@@ -174,7 +179,9 @@ solve_ar_robust_pipeline <- function(glm_ctx, config, run_indices) {
       iter = config$ar$iter_gls,
       exact_first = config$ar$exact_first,
       p = config$ar$p,
-      phi = config$ar$phi %||% config$ar$phi_fixed
+      q = config$ar$q %||% 0L,
+      phi = config$ar$phi %||% config$ar$phi_fixed,
+      theta = config$ar$theta %||% config$ar$theta_fixed
     )
   } else {
     config$ar_options
@@ -227,6 +234,8 @@ solve_ar_robust_pipeline <- function(glm_ctx, config, run_indices) {
     sigma2 = sigma2,
     robust_weights = robust_result$robust_weights_final,
     ar_coef = ar_result$ar_coef,
+    ma_coef = ar_result$ma_coef,
+    ar_plan = ar_result$ar_plan,
     XtXinv = robust_result$XtWXi_final,
     dfres = robust_result$dfres,
     fitted = glm_ctx_white$X %*% robust_result$betas_robust,
@@ -234,7 +243,8 @@ solve_ar_robust_pipeline <- function(glm_ctx, config, run_indices) {
     effective_df = compute_ar_effective_df(
       nrow(glm_ctx$X), 
       ncol(glm_ctx$X),
-      mean(unlist(ar_result$ar_coef)),
+      phi = ar_result$ar_coef,
+      plan = ar_result$ar_plan,
       n_runs = length(ar_result$ar_coef)
     )
   )

@@ -17,7 +17,7 @@ arguments as \code{fit} and can signal errors early.}
 
 \item{capabilities}{Optional named list describing engine support for global
 \code{fmri_lm()} options. Recognized fields currently include \code{robust},
-\code{preprocessing}, \code{ar_voxelwise}, \code{ar_by_cluster}, plus contextual rules
+\code{preprocessing}, \code{ma}, \code{ar_voxelwise}, \code{ar_by_cluster}, plus contextual rules
 such as \code{requires_event_regressors}, \code{requires_parcels_for_by_cluster},
 and \code{forbid_by_cluster_dataset_classes}.}
 }

@@ -22,16 +22,26 @@ noise_spec(
 
 \item{p}{AR order for \code{struct = "arp"}.}
 
-\item{q}{Reserved MA order. Nonzero MA order is rejected until the fitter
-exposes an MA-capable inference path.}
+\item{q}{Nonnegative moving-average order. Positive values request an
+ARMA(p, q) model, with the AR order determined by \code{struct} and \code{p}.
+The current MA-capable path supports runwise meta-estimation with run
+pooling, without censoring, parcel pooling, or voxelwise covariance
+estimation.}
 
 \item{iter_gls}{Number of GLS refinement iterations.}
 
-\item{pooling}{Temporal covariance pooling scope.}
+\item{pooling}{Temporal covariance pooling scope. With built-in shared AR
+estimation, \code{"run"} estimates one coefficient vector per run from the
+cross-voxel mean residual series; \code{"global"} concatenates those runwise
+mean series before estimation.}
 
 \item{parcels}{Optional parcel labels for parcel pooling.}
 
-\item{voxelwise}{Estimate temporal covariance separately by voxel.}
+\item{voxelwise}{Estimate temporal covariance separately by voxel. In the
+built-in fitter this currently requires AR-only runwise meta-estimation,
+\code{pooling = "run"}, \code{iter_gls = 1}, no censoring, and no volume weighting
+or soft-subspace projection. Robust fitting is supported, but robust AR
+re-estimation is not. Registered engines may define broader capabilities.}
 
 \item{exact_first}{Use exact first-observation AR scaling.}
 

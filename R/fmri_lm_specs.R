@@ -80,12 +80,22 @@ estimation_spec <- function(scope = c("joint", "runwise_meta"),
 #'
 #' @param struct One of iid, ar1, ar2, or arp.
 #' @param p AR order for `struct = "arp"`.
-#' @param q Reserved MA order. Nonzero MA order is rejected until the fitter
-#'   exposes an MA-capable inference path.
+#' @param q Nonnegative moving-average order. Positive values request an
+#'   ARMA(p, q) model, with the AR order determined by `struct` and `p`.
+#'   The current MA-capable path supports runwise meta-estimation with run
+#'   pooling, without censoring, parcel pooling, or voxelwise covariance
+#'   estimation.
 #' @param iter_gls Number of GLS refinement iterations.
-#' @param pooling Temporal covariance pooling scope.
+#' @param pooling Temporal covariance pooling scope. With built-in shared AR
+#'   estimation, `"run"` estimates one coefficient vector per run from the
+#'   cross-voxel mean residual series; `"global"` concatenates those runwise
+#'   mean series before estimation.
 #' @param parcels Optional parcel labels for parcel pooling.
-#' @param voxelwise Estimate temporal covariance separately by voxel.
+#' @param voxelwise Estimate temporal covariance separately by voxel. In the
+#'   built-in fitter this currently requires AR-only runwise meta-estimation,
+#'   `pooling = "run"`, `iter_gls = 1`, no censoring, and no volume weighting
+#'   or soft-subspace projection. Robust fitting is supported, but robust AR
+#'   re-estimation is not. Registered engines may define broader capabilities.
 #' @param exact_first Use exact first-observation AR scaling.
 #' @param censor Optional censor indices, logical mask, or `"auto"`.
 #' @param shrink_c0 Parcel shrinkage constant used by supporting engines.
@@ -99,9 +109,6 @@ noise_spec <- function(struct = c("iid", "ar1", "ar2", "arp"),
   struct <- match.arg(struct)
   pooling <- match.arg(pooling)
   q <- .fmri_lm_number(q, "q", lower = 0, integer = TRUE)
-  if (q != 0L) {
-    stop("Nonzero MA order is not yet supported by `fmri_lm()`.", call. = FALSE)
-  }
   if (is.null(p)) {
     p <- switch(struct, iid = NULL, ar1 = 1L, ar2 = 2L, arp = NULL)
   } else {
@@ -121,6 +128,22 @@ noise_spec <- function(struct = c("iid", "ar1", "ar2", "arp"),
     if (!valid || anyNA(censor)) {
       stop("`censor` must be NULL, 'auto', integer indices, or a logical mask.",
            call. = FALSE)
+    }
+  }
+  if (q > 0L) {
+    if (!identical(pooling, "run")) {
+      stop("MA terms currently require `pooling = 'run'`.", call. = FALSE)
+    }
+    if (voxelwise) {
+      stop("MA terms do not yet support voxelwise temporal covariance.",
+           call. = FALSE)
+    }
+    if (!is.null(censor)) {
+      stop("MA terms do not yet support censoring because estimation across gaps is biased.",
+           call. = FALSE)
+    }
+    if (iter_gls < 1L) {
+      stop("MA terms require `iter_gls >= 1`.", call. = FALSE)
     }
   }
   .new_fmri_lm_spec(list(

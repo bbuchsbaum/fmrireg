@@ -76,7 +76,7 @@ runwise_lm_impl <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   # matrix-based (.fast_preproject/solve_glm_core/ar_whiten_transform), so this
   # dispatch is independent of use_fast_path -- gate on the AR config alone so
   # voxelwise AR works regardless of the engine default.
-  if (cfg$ar$voxelwise && cfg$ar$struct != "iid") {
+  if (cfg$ar$voxelwise && .temporal_noise_enabled(cfg$ar)) {
     # Voxelwise AR path
     result <- runwise_lm_voxelwise(
       chunks = chunks,
@@ -154,7 +154,7 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
     }
     
     # Determine which processing function to use
-    if (.fmri_lm_robust_enabled(cfg$robust) && cfg$ar$struct != "iid") {
+    if (.fmri_lm_robust_enabled(cfg$robust) && .temporal_noise_enabled(cfg$ar)) {
       # Combined AR + Robust
       res <- process_run_ar_robust(ym, model, cfg, phi_fixed, sigma_fixed, dataset = dataset)
     } else if (.fmri_lm_robust_enabled(cfg$robust)) {
@@ -211,6 +211,8 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
       resvar = res$sigma2,
       sigma = sigma_vec,
       ar_coef = res$phi_hat %||% NULL,
+      ma_coef = res$ma_hat %||% NULL,
+      temporal_diagnostics = res$temporal_diagnostics %||% NULL,
       robust_weights = res$robust_weights %||% NULL,
       covariance_model_basis = res$XtXinv
     )
@@ -241,6 +243,13 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
       "Robust fitting is not supported on the runwise slow path ",
       "(use_fast_path = FALSE): it would ignore AR whitening and produce ",
       "invalid residual variance. Re-run with use_fast_path = TRUE.",
+      call. = FALSE
+    )
+  }
+  if (as.integer(cfg$ar$q %||% 0L) > 0L) {
+    stop(
+      "MA terms are not supported by the reference fitting backend; ",
+      "use `compute_spec(backend = 'matrix')`.",
       call. = FALSE
     )
   }
@@ -342,6 +351,8 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
       resvar = resvar,
       sigma = sigma,
       ar_coef = phi_hat_run,
+      ma_coef = NULL,
+      temporal_diagnostics = NULL,
       robust_weights = NULL,
       covariance_model_basis = .fast_preproject(modmat %||% X_run)$XtXinv
     )
@@ -619,6 +630,10 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu) {
   # Pool over runs
   ar_coef_list <- lapply(cres, `[[`, "ar_coef")
   ar_coef_list <- Filter(function(x) !is.null(x) && length(unlist(x)) > 0, ar_coef_list)
+  ma_coef_list <- lapply(cres, `[[`, "ma_coef")
+  ma_coef_list <- Filter(function(x) !is.null(x) && length(unlist(x)) > 0, ma_coef_list)
+  temporal_diagnostics <- lapply(cres, `[[`, "temporal_diagnostics")
+  temporal_diagnostics <- Filter(Negate(is.null), temporal_diagnostics)
   robust_weights <- lapply(cres, `[[`, "robust_weights")
   if (!any(vapply(robust_weights, Negate(is.null), logical(1)))) {
     robust_weights <- NULL
@@ -658,6 +673,8 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu) {
       rdf = rdf,
       resvar = resvar,
       ar_coef = if (length(ar_coef_list) > 0) ar_coef_list else NULL,
+      ma_coef = if (length(ma_coef_list) > 0) ma_coef_list else NULL,
+      temporal_diagnostics = if (length(temporal_diagnostics)) temporal_diagnostics else NULL,
       robust_weights = robust_weights,
       voxel_status = voxel_status,
       covariance_by_run = covariance_by_run
@@ -686,6 +703,8 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu) {
       rdf = cres[[1]]$rdf,
       resvar = cres[[1]]$resvar,
       ar_coef = if (length(ar_coef_list) > 0) ar_coef_list[[1]] else NULL,
+      ma_coef = if (length(ma_coef_list) > 0) ma_coef_list[[1]] else NULL,
+      temporal_diagnostics = if (length(temporal_diagnostics)) temporal_diagnostics[[1L]] else NULL,
       robust_weights = robust_weights,
       voxel_status = voxel_status,
       covariance_by_voxel = cres[[1]]$covariance_by_voxel,

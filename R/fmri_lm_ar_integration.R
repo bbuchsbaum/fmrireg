@@ -159,7 +159,7 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
 
   ar_struct <- if (is.null(ar_opts)) "iid" else ar_opts$struct
 
-  if (is.null(ar_opts) || identical(ar_struct, "iid") || max_iter == 0) {
+  if (is.null(ar_opts) || !.temporal_noise_enabled(ar_opts) || max_iter == 0) {
     return(solve_glm_core(glm_ctx, return_fitted = TRUE))
   }
 
@@ -172,6 +172,7 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
         Y_white = glm_ctx_white$Y,
         XtXinv = glm_ctx_white$proj$XtXinv,
         ar_coef = glm_ctx_white$phi_hat,
+        ma_coef = ar_opts$theta %||% NULL,
         phi_hat = glm_ctx_white$phi_hat,
         ar_order = .get_ar_order(plan = NULL, cfg = ar_opts),
         ar_plan = NULL
@@ -182,6 +183,7 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
     result$X_white <- glm_ctx_white$X
     result$Y_white <- glm_ctx_white$Y
     result$ar_coef <- glm_ctx_white$phi_hat
+    result$ma_coef <- ar_opts$theta %||% NULL
     result$phi_hat <- glm_ctx_white$phi_hat
     result$ar_order <- .get_ar_order(plan = NULL, cfg = ar_opts)
     return(result)
@@ -205,6 +207,7 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
       Y_white = ar_result$Y_white,
       XtXinv = proj_white$XtXinv,
       ar_coef = ar_result$ar_coef,
+      ma_coef = ar_result$ma_coef,
       phi_hat = ar_result$ar_coef,
       ar_order = .get_ar_order(ar_result$plan, ar_opts),
       ar_plan = ar_result$plan
@@ -225,6 +228,7 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
 
   # Add AR info
   result$ar_coef <- ar_result$ar_coef
+  result$ma_coef <- ar_result$ma_coef
   result$phi_hat <- ar_result$ar_coef
   result$ar_order <- .get_ar_order(ar_result$plan, ar_opts)
   result$ar_plan <- ar_result$plan  # Store for downstream use

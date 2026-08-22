@@ -252,7 +252,47 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
                      arp = cfg$ar$p,
                      iid = 0L)
 
-  if (cfg$ar$struct != "iid") {
+  if (.temporal_noise_enabled(cfg$ar)) {
+    if (as.integer(cfg$ar$q %||% 0L) > 0L) {
+      if (!is.null(phi_fixed)) {
+        stop("Fixed global AR parameters are not supported for MA models.",
+             call. = FALSE)
+      }
+      temporal_fit <- .iterative_ar_gls_via_fmriAR(
+        X = X_run,
+        Y = Y_run,
+        cfg = cfg$ar,
+        max_iter = cfg$ar$iter_gls,
+        censor = censor_run
+      )
+      X_w <- temporal_fit$X_white
+      Y_w <- temporal_fit$Y_white
+      proj_w <- .fast_preproject(X_w)
+      gls <- solve_glm_core(
+        glm_context(X = X_w, Y = Y_w, proj = proj_w),
+        return_fitted = TRUE
+      )
+
+      return(list(
+        betas = gls$betas,
+        sigma2 = gls$sigma2,
+        XtXinv = proj_w$XtXinv,
+        dfres = proj_w$dfres,
+        rss = gls$rss,
+        phi_hat = temporal_fit$ar_coef,
+        ma_hat = temporal_fit$ma_coef,
+        ar_plan = temporal_fit$plan,
+        temporal_diagnostics = list(
+          iterations = temporal_fit$iterations,
+          converged = temporal_fit$converged
+        ),
+        X_final = X_w,
+        Y_final = Y_w,
+        proj_final = proj_w,
+        ar_order = ar_order
+      ))
+    }
+
     # Estimate AR parameters (excluding censored timepoints)
     phi_hat_run <- if (!is.null(phi_fixed)) {
       phi_fixed
@@ -294,6 +334,8 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
       dfres = proj_w$dfres,
       rss = gls$rss,
       phi_hat = phi_hat_run,
+      ma_hat = NULL,
+      temporal_diagnostics = NULL,
       X_final = X_w,
       Y_final = Y_w,
       proj_final = proj_w,
@@ -311,6 +353,8 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
       dfres = proj_run$dfres,
       rss = ols$rss,
       phi_hat = NULL,
+      ma_hat = NULL,
+      temporal_diagnostics = NULL,
       X_final = X_run,
       Y_final = Y_run,
       proj_final = proj_run,
