@@ -8,7 +8,9 @@ on:
 
 name: test-coverage
 
-permissions: read-all
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   test-coverage:
@@ -52,7 +54,7 @@ jobs:
           file: ./cobertura.xml
           plugin: noop
           disable_search: true
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
 
       - name: Show testthat output
         if: always()
