@@ -383,7 +383,9 @@ meta_betas <- function(bstats, colind, weighting=c("inv_var", "equal")) {
     ))
   }
 
-  gsplit <- ctab %>% dplyr::group_by(name, type) %>% dplyr::group_split()
+  gsplit <- ctab %>%
+    dplyr::group_by(.data$name, .data$type) %>%
+    dplyr::group_split()
   lapply(gsplit, function(tab) {
     type <- tab$type[1]
     if (type == "Fcontrast") {

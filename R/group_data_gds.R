@@ -8,8 +8,8 @@
 #' @param format One of "auto","h5","nifti","csv","fmrilm".
 #' @param ... Passed to the underlying constructor.
 #' @return A gds-backed group-level data object (class includes 'group_data_gds').
-#' @keywords internal
-group_data <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...) {
+#' @noRd
+.group_data_gds <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...) {
   format <- match.arg(format)
   dots <- list(...)
   fmrireg_mask <- dots$mask %||% NULL

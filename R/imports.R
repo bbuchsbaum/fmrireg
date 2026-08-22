@@ -5,7 +5,7 @@
 #' @importFrom stats arima.sim as.formula coef coefficients cor cov df.residual
 #' @importFrom stats fitted lm lm.fit lsfit mad median model.matrix pchisq pf
 #' @importFrom stats pnorm predict pt qnorm quantile resid rexp rgamma rlnorm
-#' @importFrom stats rnorm runif sd terms toeplitz var
+#' @importFrom stats rnorm runif sd setNames terms toeplitz var
 #' @importFrom utils data head read.csv setTxtProgressBar str txtProgressBar
 #' @importFrom methods as
 #' @importFrom magrittr %>%
