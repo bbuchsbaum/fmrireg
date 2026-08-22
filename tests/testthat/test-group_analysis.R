@@ -1,5 +1,30 @@
 # Tests for Group Analysis Framework
 
+test_that("fmri_ols_fit fails closed for unidentified designs", {
+  set.seed(20260822)
+  Y <- matrix(rnorm(12 * 4), 12, 4)
+  x <- seq_len(12)
+  X <- cbind(intercept = 1, x = x, duplicate = x)
+
+  expect_error(
+    fmri_ols_fit(Y, X),
+    "X must have full column rank"
+  )
+})
+
+test_that("fmri_ols_fit rejects unidentified voxelwise coefficients", {
+  set.seed(20260822)
+  Y <- matrix(rnorm(12 * 3), 12, 3)
+  x <- seq_len(12)
+  X <- cbind(intercept = 1, x = x)
+  C <- matrix(rep(x, 3), nrow = 12)
+
+  expect_error(
+    fmri_ols_fit(Y, X, voxelwise = C, center_voxelwise = FALSE),
+    "linearly dependent on X"
+  )
+})
+
 test_that("group_data constructor works with different formats", {
   skip_if_not_installed("fmristore")
   skip_if_not_installed("fmrigds")

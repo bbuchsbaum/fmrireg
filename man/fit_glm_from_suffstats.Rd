@@ -29,7 +29,8 @@ fit_glm_from_suffstats(
 
 \item{cfg}{Optional \code{fmri_lm_control}; used for metadata only.}
 
-\item{dataset}{Optional dataset backing the model.}
+\item{dataset}{Optional dataset whose feature axis describes the columns of
+\code{XtS}. It is never inferred from \code{model$dataset}.}
 
 \item{strategy}{Character label for the returned object.}
 
