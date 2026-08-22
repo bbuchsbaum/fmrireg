@@ -100,6 +100,18 @@
     },
     {
       "@type": "SoftwareApplication",
+      "identifier": "hdf5r",
+      "name": "hdf5r",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=hdf5r"
+    },
+    {
+      "@type": "SoftwareApplication",
       "identifier": "knitr",
       "name": "knitr",
       "provider": {
@@ -703,7 +715,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "5483.733KB",
+  "fileSize": "5496.564KB",
   "citation": [
     {
       "@type": "SoftwareSourceCode",
