@@ -165,6 +165,8 @@
   result$fit_state <- list(
     robust_weights = result$robust_weights,
     ar_parameters = result$ar_coef,
+    ma_parameters = result$ma_coef,
+    temporal_diagnostics = result$temporal_diagnostics,
     voxel_status = status
   )
   if (is.null(result$variance_model)) {

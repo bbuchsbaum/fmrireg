@@ -12,7 +12,7 @@
 #'   arguments as `fit` and can signal errors early.
 #' @param capabilities Optional named list describing engine support for global
 #'   `fmri_lm()` options. Recognized fields currently include `robust`,
-#'   `preprocessing`, `ar_voxelwise`, `ar_by_cluster`, plus contextual rules
+#'   `preprocessing`, `ma`, `ar_voxelwise`, `ar_by_cluster`, plus contextual rules
 #'   such as `requires_event_regressors`, `requires_parcels_for_by_cluster`,
 #'   and `forbid_by_cluster_dataset_classes`.
 #' @return Invisibly, `TRUE`.
@@ -143,6 +143,7 @@ print.fmrireg_engine_spec <- function(x, ...) {
   capability_summary <- c(
     paste0("robust=", caps$robust),
     paste0("preprocessing=", caps$preprocessing),
+    paste0("ma=", caps$ma),
     paste0("ar_voxelwise=", caps$ar_voxelwise),
     paste0("ar_by_cluster=", caps$ar_by_cluster),
     paste0("variance=", paste(caps$variance_methods, collapse = "/")),
@@ -179,6 +180,7 @@ print.fmrireg_engine_spec <- function(x, ...) {
   defaults <- list(
     robust = TRUE,
     preprocessing = TRUE,
+    ma = FALSE,
     ar_voxelwise = TRUE,
     ar_by_cluster = TRUE,
     variance_methods = "model",
@@ -207,6 +209,10 @@ print.fmrireg_engine_spec <- function(x, ...) {
   preprocessing_enabled <- isTRUE(cfg$volume_weights$enabled) || isTRUE(cfg$soft_subspace$enabled)
   if (identical(caps$preprocessing, FALSE) && preprocessing_enabled) {
     stop(sprintf("%s does not support volume_weights or soft_subspace preprocessing", engine), call. = FALSE)
+  }
+
+  if (as.integer(cfg$ar$q %||% 0L) > 0L && !isTRUE(caps$ma)) {
+    stop(sprintf("%s does not support MA terms", engine), call. = FALSE)
   }
 
   if (identical(caps$ar_voxelwise, FALSE) && isTRUE(cfg$ar$voxelwise)) {

@@ -128,6 +128,7 @@
 #' `ar_options` may contain:
 #'   * `struct` ("iid", "ar1", "ar2", "arp")
 #'   * `p` (order for "arp")
+#'   * `q` (moving-average order; positive values request ARMA inference)
 #'   * `iter_gls` (integer number of GLS iterations)
 #'   * `global` (logical, use global phi)
 #'   * `voxelwise` (logical)
@@ -206,6 +207,14 @@
     }
   }
 
+  if (noise$q > 0L && .fmri_lm_robust_enabled(robust)) {
+    stop("MA terms cannot yet be combined with robust fitting.", call. = FALSE)
+  }
+  if (noise$q > 0L && !identical(estimation$scope, "runwise_meta")) {
+    stop("MA terms currently require `estimation_spec('runwise_meta')`.",
+         call. = FALSE)
+  }
+
   structure(
     c(values, list(
       # Temporary compatibility aliases used by the existing fitting kernels.
@@ -254,6 +263,57 @@ fmri_lm_control <- function(estimation = NULL,
            variance = variance, weights = weights, projection = projection,
            na_action = na_action), legacy_dots)
   )
+}
+
+# Validate combinations whose support depends on the built-in fitting path.
+# Keep these checks out of fmri_lm_control(): registered engines receive the
+# same lossless typed specification and may support a broader combination.
+.validate_builtin_voxelwise_noise <- function(cfg) {
+  noise <- cfg$noise %||% cfg$ar
+  if (!isTRUE(noise$voxelwise)) {
+    return(invisible(cfg))
+  }
+
+  if (identical(noise$struct, "iid")) {
+    stop("Built-in voxelwise temporal covariance requires an AR structure.",
+         call. = FALSE)
+  }
+  if (!identical(cfg$estimation$scope, "runwise_meta")) {
+    stop(
+      "Built-in voxelwise temporal covariance currently requires ",
+      "`estimation_spec('runwise_meta')`; joint fitting estimates one shared ",
+      "AR model from the cross-voxel mean residual series.",
+      call. = FALSE
+    )
+  }
+  if (!identical(noise$pooling, "run")) {
+    stop("Built-in voxelwise temporal covariance currently requires `pooling = 'run'`.",
+         call. = FALSE)
+  }
+  if (!is.null(noise$censor)) {
+    stop("Built-in voxelwise temporal covariance does not yet support censoring.",
+         call. = FALSE)
+  }
+  if (!identical(noise$iter_gls, 1L)) {
+    stop("Built-in voxelwise temporal covariance currently requires `iter_gls = 1`.",
+         call. = FALSE)
+  }
+  if (isTRUE(cfg$robust$reestimate_phi)) {
+    stop(
+      "Built-in voxelwise temporal covariance does not yet support robust ",
+      "AR re-estimation (`reestimate_phi = TRUE`).",
+      call. = FALSE
+    )
+  }
+  if (isTRUE(cfg$weights$enabled) || isTRUE(cfg$projection$enabled)) {
+    stop(
+      "Built-in voxelwise temporal covariance does not yet support volume ",
+      "weighting or soft-subspace projection.",
+      call. = FALSE
+    )
+  }
+
+  invisible(cfg)
 }
 
 #' @export

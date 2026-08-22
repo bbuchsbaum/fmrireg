@@ -93,3 +93,55 @@ ar_parameters.fmri_lm <- function(object, scope = c("average", "per_run", "raw")
   recurse(x)
   out
 }
+
+#' Extract Estimated MA Parameters from fmri_lm Fit
+#'
+#' Retrieves the estimated moving-average parameters from a fitted fMRI linear
+#' model that used ARMA or MA temporal-noise modeling.
+#'
+#' @param object An object of class \code{fmri_lm}.
+#' @param scope Character; \code{"average"} (default) returns coefficients
+#'   averaged across runs, \code{"per_run"} returns the run-level estimates,
+#'   and \code{"raw"} returns the stored structure without post-processing.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return Depending on \code{scope}, either a numeric vector of averaged MA
+#'   coefficients, a list of per-run coefficient vectors, or the raw stored
+#'   structure. Returns \code{NULL} when no MA modeling was performed.
+#' @export
+ma_parameters <- function(object, ...) {
+  UseMethod("ma_parameters")
+}
+
+#' @rdname ma_parameters
+#' @export
+ma_parameters.fmri_lm <- function(object,
+                                  scope = c("average", "per_run", "raw"), ...) {
+  scope <- match.arg(scope)
+  ma_data <- object$ma_coef %||% object$result$ma_coef %||% attr(object, "ma_coef")
+
+  if (is.null(ma_data)) {
+    return(NULL)
+  }
+  if (scope == "raw") {
+    return(ma_data)
+  }
+
+  theta_vecs <- .collect_ar_vectors(ma_data)
+  theta_vecs <- Filter(function(x) length(x) > 0L, theta_vecs)
+  if (!length(theta_vecs)) {
+    return(NULL)
+  }
+  if (scope == "per_run") {
+    return(theta_vecs)
+  }
+
+  max_len <- max(lengths(theta_vecs))
+  theta_mat <- vapply(theta_vecs, function(theta) {
+    c(theta, rep(NA_real_, max_len - length(theta)))
+  }, numeric(max_len))
+  if (is.null(dim(theta_mat))) {
+    theta_mat <- matrix(theta_mat, nrow = max_len, ncol = length(theta_vecs))
+  }
+  rowMeans(theta_mat, na.rm = TRUE)
+}
