@@ -618,9 +618,13 @@ prepare_fmri_lm_contrasts <- function(fmrimod) {
 
 #' Fit the core GLM on a transformed time-series matrix
 #'
+#' This helper performs IID, non-robust OLS inference. It rejects controls that
+#' request AR or robust fitting; use [fit_glm_with_config()] for those models.
+#'
 #' @param model An `fmri_model` describing the design.
 #' @param Y Numeric matrix with `nrow(Y)` time points and columns matching voxels.
-#' @param cfg Optional `fmri_lm_control`; defaults to `fmri_lm_control()`.
+#' @param cfg Optional `fmri_lm_control`; defaults to `fmri_lm_control()` and
+#'   must request IID noise and no robust fitting.
 #' @param dataset Optional dataset backing the model. Defaults to `model$dataset` when available.
 #' @param strategy Character label recorded on the returned object. Defaults to "external".
 #' @param engine Character label indicating the engine that produced the fit. Defaults to "external".
@@ -635,6 +639,14 @@ fit_glm_on_transformed_series <- function(model, Y, cfg = NULL, dataset = NULL,
     cfg <- fmri_lm_control()
   } else if (!inherits(cfg, "fmri_lm_control")) {
     stop("`cfg` must inherit from 'fmri_lm_control'", call. = FALSE)
+  }
+  if (!identical(cfg$noise$struct, "iid") ||
+      !identical(cfg$robust$type, "none")) {
+    stop(
+      "fit_glm_on_transformed_series() supports IID OLS only; ",
+      "use fit_glm_with_config() for AR or robust fitting.",
+      call. = FALSE
+    )
   }
   if (!is.matrix(Y)) {
     Y <- as.matrix(Y)

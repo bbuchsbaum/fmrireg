@@ -18,7 +18,8 @@ fit_glm_on_transformed_series(
 
 \item{Y}{Numeric matrix with \code{nrow(Y)} time points and columns matching voxels.}
 
-\item{cfg}{Optional \code{fmri_lm_control}; defaults to \code{fmri_lm_control()}.}
+\item{cfg}{Optional \code{fmri_lm_control}; defaults to \code{fmri_lm_control()} and
+must request IID noise and no robust fitting.}
 
 \item{dataset}{Optional dataset backing the model. Defaults to \code{model$dataset} when available.}
 
@@ -30,5 +31,6 @@ fit_glm_on_transformed_series(
 An object of class \code{fmri_lm}.
 }
 \description{
-Fit the core GLM on a transformed time-series matrix
+This helper performs IID, non-robust OLS inference. It rejects controls that
+request AR or robust fitting; use \code{\link[=fit_glm_with_config]{fit_glm_with_config()}} for those models.
 }
