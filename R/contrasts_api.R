@@ -197,18 +197,46 @@ compute_lm_contrasts_from_suffstats <- function(
 .normalize_contrasts_for_engine <- function(p, contrasts, t_contrasts, f_contrasts,
                                             columns, drop_failed = TRUE) {
   build_t <- function(w, nm) {
+    colind <- attr(w, "colind", exact = TRUE)
+    w_names <- names(w)
     if (is.matrix(w)) {
       if (nrow(w) == 1L) w <- as.vector(w)
       else if (ncol(w) == 1L) w <- as.vector(w)
       else stop(sprintf("t-contrast '%s' must be a vector or 1xP / Px1 matrix", nm))
     }
     w <- as.numeric(w)
-    colind <- attr(w, "colind", exact = TRUE)
-    if (is.null(colind)) {
-      if (!is.null(names(w)) && !is.null(columns)) {
-        idx <- match(names(w), columns)
+    if (!is.null(colind)) {
+      if (length(colind) != length(w)) {
+        stop(sprintf(
+          "`colind` for t-contrast '%s' must have one index per weight",
+          nm
+        ))
+      }
+      if (!is.numeric(colind) || anyNA(colind) || any(!is.finite(colind)) ||
+          any(colind != floor(colind))) {
+        stop(sprintf(
+          "`colind` for t-contrast '%s' must contain finite integer indices",
+          nm
+        ))
+      }
+      if (any(colind < 1L | colind > p)) {
+        stop(sprintf(
+          "`colind` for t-contrast '%s' must contain indices between 1 and p (%d)",
+          nm, p
+        ))
+      }
+      if (anyDuplicated(colind)) {
+        stop(sprintf("`colind` for t-contrast '%s' must not contain duplicates", nm))
+      }
+      colind <- as.integer(colind)
+    } else {
+      if (!is.null(w_names) && !is.null(columns)) {
+        idx <- match(w_names, columns)
         if (anyNA(idx)) {
           stop(sprintf("Names in t-contrast '%s' not found in `columns`", nm))
+        }
+        if (anyDuplicated(idx)) {
+          stop(sprintf("Names in t-contrast '%s' must identify distinct columns", nm))
         }
         colind <- as.integer(idx)
         ord <- order(colind)
@@ -293,4 +321,3 @@ compute_lm_contrasts_from_suffstats <- function(
   list(t_list = Filter(Negate(is.null), t_list),
        f_list = Filter(Negate(is.null), f_list))
 }
-
