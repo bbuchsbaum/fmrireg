@@ -384,7 +384,7 @@ The current voxelwise AR implementation in the slow path (SPRINT3-05R) does not 
     *   **Depends on:** SPRINT4-02R
     *   **Acceptance:** Voxelwise AR returns valid contrasts
 
-*   **Ticket SPRINT4-05R: Add Voxelwise AR + Robust Support**
+*   **Ticket SPRINT4-05R: Add Voxelwise AR + Robust Support** *(implemented)*
     *   **Task:** Implement full IRLS for voxelwise AR + robust combination.
     *   **Details:**
         1. For each voxel:
