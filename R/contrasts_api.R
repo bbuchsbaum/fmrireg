@@ -96,7 +96,7 @@ compute_lm_contrasts <- function(
   if (output == "list") {
     return(res)
   }
-  if (length(res)) dplyr::bind_rows(res) else tibble::tibble()
+  if (length(res)) dplyr::bind_rows(res) else empty_contrast_table()
 }
 
 
@@ -186,7 +186,7 @@ compute_lm_contrasts_from_suffstats <- function(
   if (output == "list") {
     return(res)
   }
-  if (length(res)) dplyr::bind_rows(res) else tibble::tibble()
+  if (length(res)) dplyr::bind_rows(res) else empty_contrast_table()
 }
 
 

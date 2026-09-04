@@ -8,7 +8,13 @@
 #' accessors ([coef()], [tidy()], `coef_names()`) and to [write_results()],
 #' which already short-circuits correctly on an empty table.
 #'
-#' Columns match those produced by `meta_fixef()` and `meta_Fcontrasts()`.
+#' The columns are the ones every contrast table carries, so `filter(ct, type
+#' == "contrast")`, `ct$name` and `bind_rows()` work on an empty table -- a
+#' zero-column `tibble()` fails those with "object 'type' not found". It is
+#' deliberately not a full schema: `package_tcontrast_result()` adds
+#' `df.residual` and `unpack_chunkwise()` adds `contrast_internal_name`, so a
+#' populated table from those paths is wider. Consumers must therefore still
+#' branch on `nrow()`, never on `names()`.
 #'
 #' @keywords internal
 #' @noRd

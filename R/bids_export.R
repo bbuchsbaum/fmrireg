@@ -131,7 +131,9 @@ write_results.fmri_lm <- function(x,
   # A contrast that cannot be written must not destroy outputs that were
   # written successfully. Betas are staged first and are frequently the
   # expensive deliverable, so a contrast failure is recorded here and re-raised
-  # only after everything that did succeed has been moved into place.
+  # only after everything that did succeed has been moved into place. This
+  # applies only when writing into a clean destination; see the handler below
+  # for why `overwrite = TRUE` keeps the all-or-nothing behaviour.
   contrast_error <- NULL
 
   created_files <- tryCatch({
@@ -153,10 +155,17 @@ write_results.fmri_lm <- function(x,
           contrasts, contrast_match, contrast_stats, overwrite
         ),
         error = function(e) {
-          contrast_error <<- conditionMessage(e)
+          # When overwriting, `path` already holds a self-consistent set of
+          # outputs from an earlier run. Keeping only the new betas would leave
+          # betas and contrasts from different fits side by side, which is a
+          # worse failure than losing the write, so let the error propagate and
+          # take the full rollback below.
+          if (isTRUE(overwrite)) stop(e)
+
           # A half-written file must never be promoted, so discard whatever the
           # failed stage staged while keeping the completed outputs.
           .discard_staged_since(temp_dir, staged_before_contrasts)
+          contrast_error <<- conditionMessage(e)
           list()
         }
       )
@@ -202,12 +211,6 @@ write_results.fmri_lm <- function(x,
     stop(
       "Failed to write BIDS contrast results: ", contrast_error,
       .describe_written_outputs(created_files),
-      if (isTRUE(overwrite)) {
-        paste0(
-          " No contrast outputs were written, so any contrast files already in '",
-          path, "' are left over from a previous run and are now stale."
-        )
-      },
       call. = FALSE
     )
   }
@@ -223,12 +226,32 @@ write_results.fmri_lm <- function(x,
 }
 
 #' Remove files staged since a snapshot, keeping the completed ones
+#'
+#' Uses `file.remove()` rather than `unlink()`: `unlink()` glob-expands its
+#' argument, and `desc` reaches the staged filenames unsanitized, so a `desc`
+#' containing `*`, `?` or `[` would let a stale path match completed outputs.
+#'
+#' Signals an error if any file survives. The caller's invariant is that a
+#' partially written file is never promoted to the output directory, and
+#' `.finalize_atomic_write()` moves whatever is left in the staging directory.
+#' If the invariant cannot be met -- a file held open by a failed HDF5 write on
+#' a platform that refuses to unlink open files, say -- the write must fail
+#' whole rather than publish a truncated file.
+#'
 #' @keywords internal
 #' @noRd
 .discard_staged_since <- function(temp_dir, keep) {
   stale <- setdiff(.list_staged_files(temp_dir), keep)
-  if (length(stale) > 0) {
-    unlink(stale, force = TRUE)
+  if (length(stale) == 0) {
+    return(invisible(character(0)))
+  }
+  removed <- suppressWarnings(file.remove(stale))
+  if (!all(removed)) {
+    stop(
+      "Could not discard partially written file(s): ",
+      paste(stale[!removed], collapse = ", "),
+      call. = FALSE
+    )
   }
   invisible(stale)
 }
