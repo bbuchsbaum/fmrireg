@@ -75,7 +75,7 @@ design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
                                         ggplot2::theme(panel.spacing = ggplot2::unit(1, "lines")),
                          legend_threshold = 30, ...){
 
-  with_package(c("shiny", "plotly", "bslib", "thematic"))
+  with_package(c("shiny", "plotly", "bslib"))
   stopifnot(inherits(fmrimod, "fmri_model"))
 
   # -- prep ------------------------------------------------------------------

@@ -162,7 +162,7 @@ test_that("autoplot.Reg and correlation_map cover plotting helpers", {
   expect_s3_class(cm2, "ggplot")
 
   expect_error(
-    fmrireg:::.correlation_map_common(matrix(1:4, 2, 1)),
+    fmrireg:::.correlation_map_common(matrix(1:2, nrow = 2, ncol = 1)),
     "ncol\\(DM\\) >= 2"
   )
 })
@@ -171,7 +171,6 @@ test_that("design_plot builds shiny app and validates term_name", {
   skip_if_not_installed("shiny")
   skip_if_not_installed("plotly")
   skip_if_not_installed("bslib")
-  skip_if_not_installed("thematic")
 
   fx <- tiny_matrix_dataset()
   emod <- event_model(
