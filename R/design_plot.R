@@ -118,8 +118,14 @@ design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
     dm$.block <- df_block
     dm$.time  <- df_time
 
-    # pretty column names
-    cn <- if (longnames) conditions(term) else shortnames(term)
+    # pretty column names (baseline terms may lack shortnames/conditions methods)
+    cn <- if (longnames) {
+      tryCatch(conditions(term), error = function(e) NULL)
+    } else {
+      tryCatch(shortnames(term), error = function(e) {
+        tryCatch(conditions(term), error = function(e2) NULL)
+      })
+    }
     if (!is.null(cn) && length(cn)==ncol(dm)-2) names(dm)[1:(ncol(dm)-2)] <- cn
 
     tidyr::pivot_longer(
