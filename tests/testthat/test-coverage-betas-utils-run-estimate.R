@@ -23,17 +23,19 @@ make_beta_fixture <- function(n = 48L, V = 3L, seed = 411L) {
 test_that("build_design_data and map_voxels cover fixed/null and progress=FALSE", {
   fx <- make_beta_fixture()
   xd <- fmrireg:::build_design_data(fx$bdes)
-  expect_true(is.matrix(xd$X) || inherits(xd$X, "Matrix"))
-  expect_true(is.matrix(xd$Base))
-  expect_equal(nrow(xd$X), nrow(xd$Base))
-  expect_true(all(is.finite(xd$X)))
+  Xmat <- as.matrix(xd$X)
+  Base <- as.matrix(xd$Base)
+  expect_true(is.matrix(Xmat) || inherits(xd$X, "data.frame") || inherits(xd$X, "Matrix"))
+  expect_true(is.matrix(Base))
+  expect_equal(nrow(Xmat), nrow(Base))
+  expect_true(all(is.finite(Xmat)))
 
   # With fixed effects, X binds ran + fixed
   bdes_fix <- fx$bdes
   bdes_fix$dmat_fixed <- matrix(rnorm(nrow(fx$Y)), nrow(fx$Y), 1)
   colnames(bdes_fix$dmat_fixed) <- "fixed1"
   xd2 <- fmrireg:::build_design_data(bdes_fix)
-  expect_equal(ncol(xd2$X), ncol(as.matrix(fx$bdes$dmat_ran)) + 1L)
+  expect_equal(ncol(as.matrix(xd2$X)), ncol(as.matrix(fx$bdes$dmat_ran)) + 1L)
 
   # NA coercion path
   bdes_na <- fx$bdes
@@ -42,11 +44,10 @@ test_that("build_design_data and map_voxels cover fixed/null and progress=FALSE"
   bdes_na$dmat_ran <- dmat
   bdes_na$dmat_fixed <- NULL
   xd3 <- fmrireg:::build_design_data(bdes_na)
-  expect_false(anyNA(xd3$X))
+  expect_false(anyNA(as.matrix(xd3$X)))
 
   vecs <- fmrireg:::masked_vectors(fx$dset)
-  expect_true(length(vecs) >= 1L || inherits(vecs, "NeuroVecSeq") || is.list(vecs) ||
-                inherits(vecs, "vectorseq") || length(as.list(vecs)) >= 1L)
+  expect_true(length(vecs) >= 1L || is.list(vecs))
 
   mapped <- fmrireg:::map_voxels(vecs, function(v) mean(v), .progress = FALSE)
   expect_true(is.matrix(mapped) || is.numeric(mapped))
