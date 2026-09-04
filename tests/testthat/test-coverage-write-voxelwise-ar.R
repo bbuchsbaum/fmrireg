@@ -134,13 +134,9 @@ test_that("process_run_ar_robust covers AR+robust run fitting", {
     chunk_num = 1L,
     row_ind = seq_len(n)
   )
-  out <- tryCatch(
-    fmrireg:::process_run_ar_robust(
-      chunk, model, cfg,
-      simple_conlist_weights = list(),
-      fconlist_weights = list()
-    ),
-    error = function(e) e
-  )
-  expect_true(inherits(out, "error") || is.list(out))
+  out <- fmrireg:::process_run_ar_robust(chunk, model, cfg)
+  expect_true(is.list(out))
+  expect_true(all(c("betas", "sigma2", "XtXinv", "robust_weights",
+                    "phi_hat", "ar_order") %in% names(out)))
+  expect_equal(out$ar_order, 1L)
 })

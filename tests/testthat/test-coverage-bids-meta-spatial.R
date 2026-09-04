@@ -2,55 +2,50 @@
 
 test_that(".save_contrasts_by_contrast_nifti writes per-contrast volumes", {
   skip_if_not_installed("neuroim2")
+  skip_if_not_installed("fmridataset")
   skip_if_not_installed("RNifti")
 
-  fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
-  # Ensure contrasts table exists with estimable stats
-  est <- as.numeric(coef(fit)[, 1])
-  n_vox <- length(est)
-  fit$result$contrasts <- tibble::tibble(
-    type = "contrast",
-    name = "A_vs_B",
-    data = list(list(
-      estimate = list(est),
-      se = abs(est) + 0.1,
-      stat = est / (abs(est) + 0.1),
-      prob = rep(0.05, n_vox)
-    ))
+  set.seed(34)
+  dims <- c(2L, 2L, 1L)
+  n_time <- 36L
+  scans <- lapply(1:2, function(run) {
+    arr <- array(rnorm(prod(dims) * n_time), c(dims, n_time))
+    neuroim2::NeuroVec(arr, neuroim2::NeuroSpace(dim = c(dims, n_time)))
+  })
+  mask <- neuroim2::LogicalNeuroVol(
+    array(TRUE, dims),
+    neuroim2::NeuroSpace(dim = dims)
   )
+  event_table <- data.frame(
+    onset = c(5, 15, 25, 35, 5, 15, 25, 35),
+    condition = factor(rep(c("A", "B"), 4)),
+    run = rep(1:2, each = 4)
+  )
+  dset <- fmridataset::fmri_mem_dataset(
+    scans = scans, mask = mask, TR = 1, event_table = event_table
+  )
+  con <- contrast_set(pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"))
+  fit <- fmri_lm(
+    onset ~ hrf(condition, contrasts = con),
+    block = ~ run, dataset = dset, durations = 0
+  )
+
+  cons <- fit$result$contrasts
+  expect_true(nrow(cons) >= 1L)
 
   tmp <- tempfile("bids_con_")
   dir.create(tmp)
   on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
 
-  # Build minimal spatial context
-  dims <- c(2L, 2L, 1L)
-  if (prod(dims) != n_vox) {
-    # reshape to match voxel count for demo (usually 2)
-    dims <- c(n_vox, 1L, 1L)
-  }
-  mask <- array(TRUE, dim = dims)
-  space <- neuroim2::NeuroSpace(dims)
-
-  out <- tryCatch(
-    fmrireg:::.save_contrasts_by_contrast_nifti(
-      fit,
-      path = tmp,
-      subject = "01",
-      task = "test",
-      space_label = "T1w",
-      contrast_names = "A_vs_B",
-      brain_dims = dims,
-      mask = mask,
-      space = space
-    ),
-    error = function(e) e
+  entities <- list(sub = "01", task = "test", space = "T1w")
+  created <- fmrireg:::.save_contrasts_by_contrast_nifti(
+    fit, cons, tmp, entities, desc = "statmap",
+    contrast_stats = c("estimate", "se", "stat"),
+    overwrite = TRUE, output_formats = "nifti"
   )
-  if (inherits(out, "error")) {
-    expect_match(conditionMessage(out), ".")
-  } else {
-    expect_true(is.list(out) || is.character(out) || is.null(out) || isTRUE(out) || isFALSE(out))
-  }
+  expect_true(is.list(created))
+  expect_true(length(created) >= 1L)
+  expect_true(length(list.files(tmp, recursive = TRUE)) >= 1L)
 })
 
 test_that(".fmri_meta_mask_array and reconstruct_image cover array/list branches", {

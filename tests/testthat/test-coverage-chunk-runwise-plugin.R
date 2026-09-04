@@ -80,31 +80,31 @@ test_that("runwise_lm_impl fast/slow and progress bar branches", {
 })
 
 test_that("prepare_fmri_lm_contrasts processes model contrasts and missing metadata", {
-  fx <- make_two_run_fx(seed = 19L)
-  # No contrasts on demo model -> empty processed list
-  out <- fmrireg:::prepare_fmri_lm_contrasts(fx$model)
-  expect_true(is.list(out))
+  set.seed(19L)
+  etab <- data.frame(
+    onset = c(5, 15, 25, 35, 5, 15, 25, 35),
+    condition = factor(rep(c("A", "B"), 4)),
+    run = rep(1:2, each = 4)
+  )
+  Y <- matrix(rnorm((2 * 40L) * 4L), 2 * 40L, 4L)
+  dset <- matrix_dataset(Y, TR = 1, run_length = c(40L, 40L), event_table = etab)
+  con <- contrast_set(pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"))
+  emod <- event_model(
+    onset ~ hrf(condition, contrasts = con),
+    data = etab, block = ~ run, sampling_frame = dset$sampling_frame
+  )
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  fmod <- fmri_model(emod, bmod, dset)
 
-  # Inject contrast_weights on event model and strip col_indices to hit error
-  emod <- fx$model$event_model
-  dm <- emod$design_matrix
+  out <- fmrireg:::prepare_fmri_lm_contrasts(fmod)
+  expect_true(is.list(out))
+  expect_true(length(out$standard) >= 1L)
+
+  dm <- fmod$event_model$design_matrix
   attr(dm, "col_indices") <- NULL
-  emod$design_matrix <- dm
-  # Fake contrast_weights method via attribute if present
-  cw <- tryCatch(contrast_weights(fx$model$event_model), error = function(e) list())
-  if (length(cw) == 0L) {
-    # Manually attach a contrast_weights-like list through a stub model
-    fmod <- fx$model
-    fmod$event_model$contrast_weights <- list(
-      A_vs_B = list(name = "A_vs_B", term = "condition", weights = c(1, -1))
-    )
-    # prepare uses contrast_weights() S3; skip if we can't inject
-    expect_true(is.list(fmrireg:::prepare_fmri_lm_contrasts(fx$model)))
-  } else {
-    fmod <- fx$model
-    fmod$event_model$design_matrix <- dm
-    expect_error(fmrireg:::prepare_fmri_lm_contrasts(fmod), "column-index metadata")
-  }
+  fmod2 <- fmod
+  fmod2$event_model$design_matrix <- dm
+  expect_error(fmrireg:::prepare_fmri_lm_contrasts(fmod2), "column-index metadata")
 })
 
 test_that("coef_names.fmri_lm and tidy-ish methods cover remaining branches", {
