@@ -18,7 +18,7 @@ test_that("coef/stats/standard_error/print.fmri_lm cover type branches", {
   st_con <- tryCatch(stats(fit, type = "contrasts"), error = function(e) e)
   expect_true(inherits(st_con, "error") || !is.null(st_con))
   st_f <- tryCatch(stats(fit, type = "F"), error = function(e) e)
-  expect_true(inherits(st_f, "error") || !is.null(st_f) || is.null(st_f))
+  expect_true(inherits(st_f, "error") || !is.null(st_f))
 
   se_est <- standard_error(fit, type = "estimates")
   expect_true(!is.null(se_est))

@@ -93,13 +93,16 @@ test_that(".rrr_filter_task_contrasts keeps in-task weights", {
   fcon <- list(
     omnibus = structure(diag(2), colind = c(1L, 2L))
   )
-  filtered <- fmrireg:::.rrr_filter_task_contrasts(
-    simple_weights = simple,
-    f_weights = fcon,
-    event_indices = 1:2,
-    policy = "warn_drop"
+  expect_warning(
+    filtered <- fmrireg:::.rrr_filter_task_contrasts(
+      simple_weights = simple,
+      f_weights = fcon,
+      event_indices = 1:2,
+      policy = "warn_drop"
+    ),
+    "dropped contrasts: B"
   )
-  expect_true(is.list(filtered))
-  expect_true(!is.null(filtered$simple) || !is.null(filtered$f) ||
-                !is.null(filtered$simple_weights) || length(filtered) >= 1L)
+  expect_equal(names(filtered$simple), "A")
+  expect_true("B" %in% filtered$dropped)
+  expect_equal(names(filtered$f), "omnibus")
 })

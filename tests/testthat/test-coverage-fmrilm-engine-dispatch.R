@@ -58,12 +58,8 @@ test_that(".fmri_lm_attach_config_metadata stores cfg on fit objects", {
   fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
   cfg <- fmri_lm_control(ar_options = list(struct = "ar1"))
   attached <- fmrireg:::.fmri_lm_attach_config_metadata(fit, cfg)
-  expect_true(!is.null(attached$config) || !is.null(attr(attached, "config")) ||
-                identical(attached$ar$struct, "ar1") ||
-                !is.null(attached$fmri_lm_config) ||
-                is.list(attached))
-  # Prefer explicit slot if present
-  if (!is.null(attached$config)) {
-    expect_equal(attached$config$ar$struct, "ar1")
-  }
+  expect_s3_class(attr(attached, "requested_config"), "fmri_lm_control")
+  expect_s3_class(attr(attached, "executed_config"), "fmri_lm_control")
+  expect_identical(attr(attached, "config"), cfg)
+  expect_equal(attr(attached, "config")$ar$struct, "ar1")
 })
