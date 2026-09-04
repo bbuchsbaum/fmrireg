@@ -189,20 +189,21 @@ coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts", "betas"
       stop("Cannot find LatentNeuroVec in latent_dataset")
     }
     lds <- lvec@loadings
+    n_loadings <- ncol(lds)
     comp <- if (length(comp) == 1 && comp == 0) {
-      seq(1, ncol(lds)) 
+      seq(1, n_loadings) 
     } else {
-      assertthat::assert_that(all(comp > 0) && all(comp <= ncol(lds)))
+      assertthat::assert_that(all(comp > 0) && all(comp <= n_loadings))
       comp
     }
     
     lds <- lds[,comp,drop=FALSE]
     bmat <- as.matrix(bvals)
 
-    # coef.fmri_lm returns conditions x parameters. Latent fits store one
-    # parameter column per latent component for event regressors; select those
-    # columns when possible, otherwise fall back to legacy component-as-row.
-    if (ncol(bmat) >= max(comp) && nrow(bmat) != ncol(lds)) {
+    # coef.fmri_lm returns conditions x components. Compare against the original
+    # loading count — after subset ncol(lds) is length(comp), so using that
+    # would mis-detect the common n_conditions == length(comp) case as legacy.
+    if (ncol(bmat) >= max(comp) && ncol(bmat) == n_loadings) {
       b_comp <- bmat[, comp, drop = FALSE]
       out <- as.matrix(lds %*% t(b_comp))
     } else if (nrow(bmat) >= max(comp)) {
