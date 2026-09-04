@@ -27,9 +27,9 @@ test_that("read_h5_metadata covers list and S4 mocked handles", {
   methods::setClass(
     "CovFakeLabeledVol",
     slots = c(labels = "character", mask = "ANY", dim = "integer"),
-    where = topenv()
+    where = .GlobalEnv
   )
-  on.exit(methods::removeClass("CovFakeLabeledVol", where = topenv()), add = TRUE)
+  on.exit(methods::removeClass("CovFakeLabeledVol", where = .GlobalEnv), add = TRUE)
 
   fake_s4 <- methods::new(
     "CovFakeLabeledVol",

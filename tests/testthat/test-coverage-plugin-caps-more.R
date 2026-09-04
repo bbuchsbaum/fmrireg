@@ -8,13 +8,15 @@ test_that("register_engine capabilities NULL and print forbid/require lines", {
     preflight = NULL,
     capabilities = NULL
   )
+  on.exit(rm(list = eng, envir = fmrireg:::.fmrireg_engine_registry), add = TRUE)
   spec <- fmrireg:::get_engine_spec(eng, include_functions = FALSE)
   expect_s3_class(spec, "fmrireg_engine_spec")
   expect_true(is.list(spec$capabilities))
 
   # Print paths for requires/forbids
+  eng_rules <- paste0(eng, "_rules")
   register_engine(
-    paste0(eng, "_rules"),
+    eng_rules,
     fit = function(...) NULL,
     capabilities = list(
       requires_event_regressors = TRUE,
@@ -25,7 +27,8 @@ test_that("register_engine capabilities NULL and print forbid/require lines", {
       preprocessing = FALSE
     )
   )
-  out <- capture.output(print(fmrireg:::engine_spec(paste0(eng, "_rules"))))
+  on.exit(rm(list = eng_rules, envir = fmrireg:::.fmrireg_engine_registry), add = TRUE)
+  out <- capture.output(print(fmrireg:::engine_spec(eng_rules)))
   txt <- paste(out, collapse = "\n")
   expect_true(grepl("requires|forbids|capabilities", txt, ignore.case = TRUE))
 })
