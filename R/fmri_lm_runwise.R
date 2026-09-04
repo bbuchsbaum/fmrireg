@@ -679,8 +679,7 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu) {
       # Combine the list of contrast tibbles into a single tibble
       combined_contrasts <- dplyr::bind_rows(single_contrasts)
     } else {
-      # Empty contrasts
-      combined_contrasts <- tibble::tibble()
+      combined_contrasts <- empty_contrast_table()
     }
     
     list(

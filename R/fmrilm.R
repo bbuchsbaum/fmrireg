@@ -1890,7 +1890,7 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 
     # Check if contab is empty after binding
     if (nrow(contab) == 0) {
-        con <- dplyr::tibble()
+        con <- empty_contrast_table()
     } else {
         # Group by original contrast name and type
         # Use 'name' column if it exists, otherwise fallback might be needed
@@ -1930,7 +1930,7 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
         }) %>% dplyr::bind_rows() 
     }
   } else {
-    con <- dplyr::tibble() # Return empty tibble if no contrasts
+    con <- empty_contrast_table()
   }
 
   # --- DEBUG FINAL CONTRAST TIBBLE ---

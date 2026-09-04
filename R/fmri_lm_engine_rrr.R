@@ -212,7 +212,7 @@
   combined_contrasts <- if (length(contrast_results) > 0L) {
     dplyr::bind_rows(contrast_results)
   } else {
-    tibble::tibble()
+    empty_contrast_table()
   }
 
   D_full <- matrix(0, nrow = ncol(X_full), ncol = ncol(X_full))
