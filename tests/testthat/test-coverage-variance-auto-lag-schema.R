@@ -21,7 +21,9 @@ test_that(".fmri_lm_auto_max_lag covers run-list/null/censor and short-series ed
 
   # Short series forces zero lag (longest segment - 1 < 1 after cap)
   expect_equal(
-    fmrireg:::.fmri_lm_auto_max_lag(X[1:2, , drop = FALSE], runs = NULL, cap = 60L),
+    suppressWarnings(
+      fmrireg:::.fmri_lm_auto_max_lag(X[1:2, , drop = FALSE], runs = NULL, cap = 60L)
+    ),
     0L
   )
 })
