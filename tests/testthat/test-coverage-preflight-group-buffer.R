@@ -1,30 +1,29 @@
 # Extra buffer past 90%: preflight, effective_df, meta_gds edges, group_data print.
 
 test_that("preflight and effective_df helpers cover remaining branches", {
-  fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
-  pf <- tryCatch(preflight(fit$model, fit$dataset), error = function(e) e)
-  if (inherits(pf, "error")) {
-    # Alternative signature
-    pf <- tryCatch(preflight(fit), error = function(e) e)
-  }
-  if (!inherits(pf, "error")) {
-    expect_true(inherits(pf, "fmri_preflight") || is.list(pf))
-    expect_output(print(pf), regexp = ".")
-  }
+  tmpl <- fmri_template(onset ~ hrf(condition), ~ run)
+  ev <- data.frame(
+    onset = c(5, 15, 25),
+    condition = factor(c("A", "B", "A")),
+    run = 1L
+  )
+  Y <- matrix(rnorm(40 * 3), 40, 3)
+  job <- instantiate(tmpl, list(
+    id = "s1", scans = Y, TR = 1, run_length = 40L, events = ev
+  ))
+  pf <- preflight(job, on_issue = "collect")
+  expect_s3_class(pf, "fmri_preflight")
+  expect_output(print(pf), regexp = ".")
 
-  if (exists("calculate_effective_df", mode = "function")) {
-    X <- cbind(1, rnorm(30), rnorm(30))
-    edf <- calculate_effective_df(30, 3, method = "residual")
-    expect_true(is.finite(edf))
-    edf2 <- tryCatch(
-      calculate_effective_df(30, 3, method = "satterthwaite",
-                             X = X, resid_cov = diag(30)),
-      error = function(e) e
-    )
-    if (!inherits(edf2, "error")) expect_true(is.finite(edf2))
-    edf3 <- calculate_effective_df(30, 3, method = "simple")
-    expect_true(is.finite(edf3))
-  }
+  X <- cbind(1, rnorm(30), rnorm(30))
+  edf <- fmrireg:::calculate_effective_df(30, 3, method = "residual")
+  expect_true(is.finite(edf))
+  edf2 <- fmrireg:::calculate_effective_df(
+    30, 3, method = "satterthwaite", X = X, resid_cov = diag(30)
+  )
+  expect_true(is.finite(edf2))
+  edf3 <- fmrireg:::calculate_effective_df(30, 3, method = "simple")
+  expect_true(is.finite(edf3))
 })
 
 test_that("group_data print/summary and detect format cover remaining lines", {

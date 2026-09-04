@@ -113,17 +113,12 @@ test_that("instantiate / realize_dataset cover inline matrix_dataset jobs", {
   )
   job <- fmri_job("s1", tmpl, ds)
 
-  realized <- tryCatch(realize_dataset(job$dataset_spec), error = function(e) e)
-  if (inherits(realized, "error")) {
-    expect_match(conditionMessage(realized), ".")
-  } else {
-    expect_s3_class(realized, "matrix_dataset")
-  }
+  realized <- realize_dataset(job)
+  expect_s3_class(realized, "matrix_dataset")
 
-  jobs <- tryCatch(instantiate(tmpl, list(s1 = ds)), error = function(e) e)
-  if (inherits(jobs, "error")) {
-    expect_match(conditionMessage(jobs), ".")
-  } else {
-    expect_true(length(jobs) >= 1L || inherits(jobs, "fmri_job") || is.list(jobs))
-  }
+  jobs <- instantiate(tmpl, list(
+    id = "s1", scans = Y, TR = 1, run_length = 40L, events = ev
+  ))
+  expect_s3_class(jobs, "fmri_job")
+  expect_equal(jobs$id, "s1")
 })
