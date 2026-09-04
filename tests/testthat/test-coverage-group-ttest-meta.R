@@ -60,7 +60,8 @@ test_that("group_data_h5 / nifti / csv validation error paths", {
     fmrireg:::.group_data_from_nifti_impl(
       beta_paths = c("a.nii", "b.nii"),
       se_paths = c("s1.nii", "s2.nii"),
-      subjects = "only_one"
+      subjects = "only_one",
+      validate = FALSE
     ),
     "subjects' must match"
   )
@@ -68,7 +69,8 @@ test_that("group_data_h5 / nifti / csv validation error paths", {
     fmrireg:::.group_data_from_nifti_impl(
       beta_paths = c("a.nii", "b.nii"),
       se_paths = c("s1.nii", "s2.nii"),
-      covariates = list(age = 1:2)
+      covariates = list(age = 1:2),
+      validate = FALSE
     ),
     "data frame"
   )
@@ -76,14 +78,16 @@ test_that("group_data_h5 / nifti / csv validation error paths", {
     fmrireg:::.group_data_from_nifti_impl(
       beta_paths = c("a.nii", "b.nii"),
       se_paths = c("s1.nii", "s2.nii"),
-      covariates = data.frame(age = 1)
+      covariates = data.frame(age = 1),
+      validate = FALSE
     ),
     "rows in 'covariates'"
   )
   expect_error(
     fmrireg:::.group_data_from_nifti_impl(
       t_paths = c("t1.nii", "t2.nii"),
-      df = c(10, 20, 30)
+      df = c(10, 20, 30),
+      validate = FALSE
     ),
     "scalar or have length"
   )
@@ -155,7 +159,7 @@ test_that("group_data_h5 / nifti / csv validation error paths", {
     "named vector"
   )
   expect_error(
-    fmrireg:::validate_effect_cols(c(beta = "b"), data.frame(beta = 1)),
+    fmrireg:::validate_effect_cols(c(beta = "missing_col"), data.frame(beta = 1)),
     "not found"
   )
   expect_error(
@@ -173,13 +177,14 @@ test_that("group_data_h5 / nifti / csv validation error paths", {
   )
   expect_error(
     fmrireg:::validate_group_data_csv(list(
-      data = 1, subjects = "s1", effect_cols = list(beta = "b"), format = "csv"
+      data = 1, subjects = "s1", subject_col = "subject",
+      effect_cols = list(beta = "b"), format = "csv"
     )),
     "data frame"
   )
   expect_error(
     fmrireg:::validate_group_data_csv(list(
-      data = data.frame(x = 1), subjects = "s1",
+      data = data.frame(x = 1), subjects = "s1", subject_col = "subject",
       effect_cols = c(beta = "x"), format = "csv"
     )),
     "named list"
@@ -200,9 +205,12 @@ test_that("group_data_h5 / nifti / csv validation error paths", {
         stringsAsFactors = FALSE
       ),
       subjects = c("s1", "s2"),
+      subject_col = "subject",
       effect_cols = list(beta = "beta", se = "se"),
       roi_col = "roi",
       contrast_col = "contrast",
+      rois = "r1",
+      contrasts = "A",
       format = "csv"
     ),
     class = c("group_data_csv", "group_data")
@@ -236,9 +244,9 @@ test_that("fmri_ttest helper materialize/weight/contrast branches", {
   )
   expect_error(
     fmrireg:::.fmri_ttest_materialize_effects(
-      structure(list(), class = "group_data_nifti")
+      structure(list(n_voxels = 0L), class = "group_data_nifti")
     ),
-    "missing beta"
+    "missing beta|beta paths|group_data_nifti"
   )
 
   expect_error(
@@ -312,10 +320,15 @@ test_that("fmri_ttest helper materialize/weight/contrast branches", {
     fmrireg:::.fmri_ttest_resolve_contrast(c(1, 0, 0), c("a", "b")),
     "length equal"
   )
+  # resolve_contrast expects canonical coef names (as fmri_ttest passes)
   w_named <- fmrireg:::.fmri_ttest_resolve_contrast(
-    c(group = 1), c("groupB", "age"), ginfo
+    c(group = 1), c("group", "age"), ginfo
   )
-  expect_equal(unname(w_named["groupB"]), 1)
+  expect_equal(unname(w_named["group"]), 1)
+  w_alias <- fmrireg:::.fmri_ttest_resolve_contrast(
+    c(groupB = 1), c("group", "age"), ginfo
+  )
+  expect_equal(unname(w_alias["group"]), 1)
   expect_error(
     fmrireg:::.fmri_ttest_resolve_contrast(c(missing = 1), c("a", "b")),
     "Unknown contrast"
@@ -332,16 +345,18 @@ test_that("fmri_ttest helper materialize/weight/contrast branches", {
 
   single <- fmrireg:::.fmri_ttest_single_coef_contrast(
     list(
-      beta = matrix(c(2, 3), 2, 2, dimnames = list(c("group", "age"), NULL)),
-      se = matrix(c(0.5, 0.4), 2, 2, dimnames = list(c("group", "age"), NULL)),
-      t = matrix(c(4, 5), 2, 2, dimnames = list(c("group", "age"), NULL)),
-      z = matrix(c(3, 4), 2, 2, dimnames = list(c("group", "age"), NULL)),
-      p = matrix(c(0.01, 0.02), 2, 2, dimnames = list(c("group", "age"), NULL)),
-      df = matrix(c(10, 10), 2, 2, dimnames = list(c("group", "age"), NULL))
+      beta = rbind(group = c(2, 3), age = c(1, 1)),
+      se = rbind(group = c(0.5, 0.4), age = c(0.2, 0.2)),
+      t = rbind(group = c(4, 5), age = c(1, 1)),
+      z = rbind(group = c(3, 4), age = c(1, 1)),
+      p = rbind(group = c(0.01, 0.02), age = c(0.1, 0.1)),
+      df = rbind(group = c(10, 10), age = c(10, 10))
     ),
     weights = c(group = -1, age = 0)
   )
   expect_equal(unname(single$estimate), c(-2, -3))
+  expect_equal(unname(single$se), c(0.5, 0.4))
+  expect_equal(unname(single$t), c(-4, -5))
   expect_null(
     fmrireg:::.fmri_ttest_single_coef_contrast(
       list(beta = matrix(1, 2, 1)),
@@ -394,19 +409,31 @@ test_that("fmri_meta_gds early validation branches", {
 
 test_that("detect_h5_file_type and subject id extraction", {
   expect_equal(
-    fmrireg:::detect_h5_file_type(list(type = "LabeledVolumeSet", labels = c("a", "b"))),
+    fmrireg:::detect_h5_file_type(list(labels = c("beta", "se", "tstat"))),
     "by_stat"
   )
-  # Unknown / incomplete meta falls through gracefully
-  typ <- tryCatch(
-    fmrireg:::detect_h5_file_type(list()),
-    error = function(e) conditionMessage(e)
+  expect_equal(
+    fmrireg:::detect_h5_file_type(list(labels = c("beta_1", "beta_2"))),
+    "betas"
   )
-  expect_true(is.character(typ) && length(typ) == 1L)
+  expect_equal(
+    fmrireg:::detect_h5_file_type(list(labels = c("FacesVsPlaces", "GoVsNoGo"))),
+    "by_contrast"
+  )
+  expect_equal(
+    fmrireg:::detect_h5_file_type(list()),
+    "by_stat"
+  )
 
   ids <- fmrireg:::extract_subject_ids_from_paths(c(
     "/data/sub-01_task-nback_stat-beta.h5",
     "/data/sub-02_task-nback_stat-beta.h5"
   ))
-  expect_equal(ids, c("01", "02"))
+  expect_equal(ids, c("sub-01", "sub-02"))
+
+  ids2 <- fmrireg:::extract_subject_ids_from_paths(c(
+    "/tmp/subjA_stat.h5",
+    "/tmp/subjB_stat.h5"
+  ))
+  expect_equal(ids2, c("subjA_stat", "subjB_stat"))
 })

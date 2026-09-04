@@ -2,16 +2,20 @@
 
 tiny_design_fixture <- function(n_time = 60L, n_vox = 8L, n_events = 6L) {
   set.seed(17)
-  onsets <- seq(5, n_time - 8, length.out = n_events)
+  run_len <- n_time / 2
+  onsets <- c(
+    seq(5, run_len - 8, length.out = n_events / 2),
+    seq(5, run_len - 8, length.out = n_events / 2)
+  )
   etab <- data.frame(
     onset = onsets,
     condition = factor(rep(c("A", "B"), length.out = n_events)),
-    run = rep(1:2, length.out = n_events)
+    run = rep(1:2, each = n_events / 2)
   )
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
   dset <- matrix_dataset(
     Y, TR = 1,
-    run_length = c(n_time / 2, n_time / 2),
+    run_length = c(run_len, run_len),
     event_table = etab
   )
   emod <- event_model(
@@ -282,8 +286,9 @@ test_that("fmriAR adapter config normalization and run helpers", {
 
   block <- fmrireg:::.block_diagonal_design(list(matrix(1:4, 2), matrix(5:8, 2)))
   expect_equal(dim(block), c(4L, 4L))
-  expect_equal(block[1:2, 1:2], matrix(1:4, 2))
-  expect_equal(block[3:4, 3:4], matrix(5:8, 2))
+  expect_equal(unname(block[1:2, 1:2]), matrix(1:4, 2))
+  expect_equal(unname(block[3:4, 3:4]), matrix(5:8, 2))
+  expect_equal(unname(block[1:2, 3:4]), matrix(0, 2, 2))
 
   cfg <- fmrireg:::.fmrireg_to_fmriAR_config(list(struct = "ar1", global = TRUE))
   expect_equal(cfg$method, "ar")

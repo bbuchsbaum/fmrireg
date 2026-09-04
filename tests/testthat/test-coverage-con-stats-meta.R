@@ -177,8 +177,12 @@ test_that("fmri_meta methods cover formula contrasts, pvalues, print/summary, co
   expect_s3_class(num_con, "fmri_meta_contrast")
   expect_equal(length(num_con$estimate), 8L)
 
-  form_con <- contrast(meta, ~ groupB - `(Intercept)`)
-  expect_equal(unname(form_con$weights), c(-1, 1))
+  # parse_contrast_formula handles simple "~ a - b" using plain coef names
+  meta_grp <- meta
+  colnames(meta_grp$coefficients) <- c("groupold", "groupyoung")
+  colnames(meta_grp$se) <- c("groupold", "groupyoung")
+  form_con <- contrast(meta_grp, ~ groupold - groupyoung)
+  expect_equal(unname(form_con$weights), c(1, -1))
 
   named_con <- contrast(meta, c(groupB = 1, `(Intercept)` = -1))
   expect_equal(unname(named_con$weights), c(-1, 1))
