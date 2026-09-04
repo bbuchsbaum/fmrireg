@@ -57,7 +57,7 @@ test_that(".fit_rrr_gls_engine rss_budget / energy rank + AR whitening", {
   )
   expect_s3_class(fit_rss, "fmri_lm")
   expect_true(fit_rss$rrr$rank_used >= 0L)
-  expect_true(!is.null(fit_rss$ar_coef) || is.null(fit_rss$ar_coef))
+  expect_true(!is.null(fit_rss$ar_coef) || !is.null(fit_rss$result$ar_coef))
 
   fit_en <- fmrireg:::.fit_rrr_gls_engine(
     fx$model, fx$dataset,
@@ -118,23 +118,9 @@ test_that(".rrr_filter_task_contrasts policies and restore metadata", {
 
 test_that(".preflight_rrr_gls_engine and extract/whiten helpers", {
   fx <- tiny_rrr(n = 40L, V = 4L, seed = 53L, with_contrast = FALSE)
-  expect_true(
-    isTRUE(fmrireg:::.preflight_rrr_gls_engine(
-      fx$model, fx$dataset, list(rank = 1L), fmri_lm_control()
-    )) ||
-      is.null(fmrireg:::.preflight_rrr_gls_engine(
-        fx$model, fx$dataset, list(rank = 1L), fmri_lm_control()
-      )) ||
-      inherits(
-        tryCatch(
-          fmrireg:::.preflight_rrr_gls_engine(
-            fx$model, fx$dataset, list(rank = 1L), fmri_lm_control()
-          ),
-          error = function(e) e
-        ),
-        c("error", "logical", "NULL", "list")
-      )
-  )
+  expect_true(fmrireg:::.preflight_rrr_gls_engine(
+    fx$model, fx$dataset, list(rank = 1L), fmri_lm_control()
+  ))
 
   Y <- fmrireg:::.rrr_extract_response_matrix(fx$dataset)
   expect_equal(dim(Y), c(40L, 4L))

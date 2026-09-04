@@ -131,11 +131,9 @@ test_that("meta_betas / meta_contrasts and store/format with matrix XtXinv", {
 })
 
 test_that(".fmri_lm_voxel_status classifies finite / NA / Inf series", {
-  expect_true(!is.null(fmrireg:::.fmri_lm_voxel_status(rnorm(8))))
-  st_na <- fmrireg:::.fmri_lm_voxel_status(c(1, NA, 2))
-  st_inf <- fmrireg:::.fmri_lm_voxel_status(c(1, Inf, 2))
-  st_const <- fmrireg:::.fmri_lm_voxel_status(rep(3, 10))
-  expect_true(!is.null(st_na))
-  expect_true(!is.null(st_inf))
-  expect_true(!is.null(st_const))
+  expect_equal(fmrireg:::.fmri_lm_voxel_status(rnorm(8)), "ok")
+  expect_equal(fmrireg:::.fmri_lm_voxel_status(c(1, NA, 2)), "nonfinite")
+  expect_equal(fmrireg:::.fmri_lm_voxel_status(c(1, Inf, 2)), "nonfinite")
+  expect_equal(fmrireg:::.fmri_lm_voxel_status(rep(3, 10)), "constant")
+  expect_equal(fmrireg:::.fmri_lm_voxel_status(rep(0, 10)), "all_zero")
 })

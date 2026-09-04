@@ -89,8 +89,8 @@ test_that("fit_contrasts.default covers se=TRUE/FALSE and aliased path", {
     out_alias <- fit_contrasts(fit_sing, conmat = c(0, 1, -1), colind = 1:3, se = TRUE),
     "non-estimable|aliased|rank|collinear"
   )
-  expect_true(all(is.na(out_alias$estimate)) || all(is.na(out_alias$stat)) ||
-                inherits(out_alias, "result_stat"))
+  expect_true(all(is.na(out_alias$estimate)))
+  expect_true(all(is.na(out_alias$stat)))
 })
 
 test_that("beta_stats and .contrast_uses_aliased / warn helpers", {
