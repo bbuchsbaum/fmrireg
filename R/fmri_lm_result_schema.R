@@ -1,5 +1,28 @@
 # Versioned result and inference schema for fmri_lm().
 
+#' The canonical empty contrast table
+#'
+#' Single source of truth for "this fit has no contrasts". Every estimation
+#' path must use it so that zero requested contrasts stays zero rows: a
+#' synthesised placeholder row is indistinguishable from a real contrast to
+#' accessors ([coef()], [tidy()], `coef_names()`) and to [write_results()],
+#' which already short-circuits correctly on an empty table.
+#'
+#' Columns match those produced by `meta_fixef()` and `meta_Fcontrasts()`.
+#'
+#' @keywords internal
+#' @noRd
+empty_contrast_table <- function() {
+  dplyr::tibble(
+    type = character(0),
+    name = character(0),
+    stat_type = character(0),
+    conmat = list(),
+    colind = list(),
+    data = list()
+  )
+}
+
 .fmri_lm_beta_payload <- function(result) {
   if (is.null(result$betas) || !nrow(result$betas)) return(NULL)
   data <- result$betas$data[[1L]]

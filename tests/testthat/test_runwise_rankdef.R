@@ -123,7 +123,7 @@ test_that("meta_betas tolerates unequal runwise coefficient widths", {
     )
   }
 
-  out <- fmrireg:::.meta_betas_impl(
+  out <- fmrireg:::meta_betas(
     list(
       make_bstats(3L),
       make_bstats(2L, offset = 10L)

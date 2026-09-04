@@ -128,7 +128,13 @@ write_results.fmri_lm <- function(x,
   temp_dir <- .create_temp_write_dir(path)
   finalized <- NULL
 
-  tryCatch({
+  # A contrast that cannot be written must not destroy outputs that were
+  # written successfully. Betas are staged first and are frequently the
+  # expensive deliverable, so a contrast failure is recorded here and re-raised
+  # only after everything that did succeed has been moved into place.
+  contrast_error <- NULL
+
+  created_files <- tryCatch({
     created_files <- list()
 
     created_files <- .merge_created_files(
@@ -136,11 +142,23 @@ write_results.fmri_lm <- function(x,
       .write_beta_outputs(x, temp_dir, entities, desc, format, save_betas, overwrite)
     )
 
+    # Everything staged up to this point is complete and safe to finalize.
+    staged_before_contrasts <- .list_staged_files(temp_dir)
+
     created_files <- .merge_created_files(
       created_files,
-      .write_contrast_outputs(
-        x, temp_dir, entities, desc, format, strategy,
-        contrasts, contrast_match, contrast_stats, overwrite
+      tryCatch(
+        .write_contrast_outputs(
+          x, temp_dir, entities, desc, format, strategy,
+          contrasts, contrast_match, contrast_stats, overwrite
+        ),
+        error = function(e) {
+          contrast_error <<- conditionMessage(e)
+          # A half-written file must never be promoted, so discard whatever the
+          # failed stage staged while keeping the completed outputs.
+          .discard_staged_since(temp_dir, staged_before_contrasts)
+          list()
+        }
       )
     )
 
@@ -167,7 +185,7 @@ write_results.fmri_lm <- function(x,
 
     .cleanup_temp_write_dir(temp_dir)
 
-    invisible(created_files)
+    created_files
 
   }, error = function(e) {
     if (!is.null(finalized)) {
@@ -176,6 +194,58 @@ write_results.fmri_lm <- function(x,
     .cleanup_temp_write_dir(temp_dir)
     stop("Failed to write BIDS results: ", e$message, call. = FALSE)
   })
+
+  # Raised here, not at the point of failure, so that the outputs that did
+  # succeed are already committed to `path`. The call still fails loudly: the
+  # requested set of results is incomplete.
+  if (!is.null(contrast_error)) {
+    stop(
+      "Failed to write BIDS contrast results: ", contrast_error,
+      .describe_written_outputs(created_files),
+      if (isTRUE(overwrite)) {
+        paste0(
+          " No contrast outputs were written, so any contrast files already in '",
+          path, "' are left over from a previous run and are now stale."
+        )
+      },
+      call. = FALSE
+    )
+  }
+
+  invisible(created_files)
+}
+
+#' Files currently staged in an atomic-write directory
+#' @keywords internal
+#' @noRd
+.list_staged_files <- function(temp_dir) {
+  list.files(temp_dir, full.names = TRUE, recursive = TRUE)
+}
+
+#' Remove files staged since a snapshot, keeping the completed ones
+#' @keywords internal
+#' @noRd
+.discard_staged_since <- function(temp_dir, keep) {
+  stale <- setdiff(.list_staged_files(temp_dir), keep)
+  if (length(stale) > 0) {
+    unlink(stale, force = TRUE)
+  }
+  invisible(stale)
+}
+
+#' Describe outputs that survived a partial write, for error messages
+#' @keywords internal
+#' @noRd
+.describe_written_outputs <- function(created_files) {
+  paths <- unique(as.character(unlist(created_files, use.names = FALSE)))
+  paths <- paths[!is.na(paths) & nzchar(paths)]
+  if (length(paths) == 0) {
+    return(" No output files were written.")
+  }
+  paste0(
+    " The other requested outputs were written and retained: ",
+    paste(basename(paths), collapse = ", "), "."
+  )
 }
 
 #' Predict Output Files for Overwrite Check

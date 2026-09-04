@@ -712,7 +712,7 @@ fit_glm_on_transformed_series <- function(model, Y, cfg = NULL, dataset = NULL,
   combined_contrasts <- if (length(contrast_results) > 0L) {
     dplyr::bind_rows(contrast_results)
   } else {
-    tibble::tibble()
+    empty_contrast_table()
   }
 
   result <- list(
@@ -818,7 +818,7 @@ fit_glm_with_config <- function(model, Y, cfg = NULL, dataset = NULL,
     dfres
   )
 
-  combined_contrasts <- if (length(contrast_results) > 0L) dplyr::bind_rows(contrast_results) else tibble::tibble()
+  combined_contrasts <- if (length(contrast_results) > 0L) dplyr::bind_rows(contrast_results) else empty_contrast_table()
 
   result <- list(
     contrasts = combined_contrasts,
@@ -898,7 +898,7 @@ fit_glm_from_suffstats <- function(model, XtX, XtS, StS, df,
   simple_weights <- lapply(simple_conlist, `[[`, "weights"); if (length(simple_weights)) names(simple_weights) <- names(simple_conlist)
   fcon_weights <- lapply(fconlist, `[[`, "weights"); if (length(fcon_weights)) names(fcon_weights) <- names(fconlist)
   contrast_results <- fit_lm_contrasts_fast(betas, sigma2, XtXinv, simple_weights, fcon_weights, df)
-  combined_contrasts <- if (length(contrast_results) > 0L) dplyr::bind_rows(contrast_results) else tibble::tibble()
+  combined_contrasts <- if (length(contrast_results) > 0L) dplyr::bind_rows(contrast_results) else empty_contrast_table()
 
   result <- list(
     contrasts = combined_contrasts,

@@ -197,33 +197,6 @@ is.formula <- function(x) {
   res
 }
 
-#' Meta-analysis of Beta Statistics Across Runs
-#'
-#' @description
-#' Combines beta statistics from multiple runs using fixed-effects meta-analysis.
-#'
-#' @param bstats_list List of beta statistics tibbles from each run
-#' @param event_indices Indices of event-related parameters
-#' @return Combined beta statistics tibble
-#' @keywords internal
-#' @noRd
-meta_betas <- function(bstats_list, event_indices) {
-  .meta_betas_impl(bstats_list, event_indices, weighting = "inv_var")
-}
-
-#' Meta-analysis of Contrasts Across Runs
-#'
-#' @description
-#' Combines contrast results from multiple runs using fixed-effects meta-analysis.
-#'
-#' @param conres_list List of contrast result lists from each run
-#' @return Combined contrast results
-#' @keywords internal
-#' @noRd
-meta_contrasts <- function(conres_list) {
-  .meta_contrasts_impl(conres_list, weighting = "inv_var")
-}
-
 #' Classify a response vector before voxelwise fitting
 #'
 #' Degenerate and non-finite responses are retained in their original voxel
