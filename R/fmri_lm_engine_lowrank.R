@@ -598,7 +598,7 @@
       )
     )
   } else {
-    dplyr::tibble()
+    empty_contrast_table()
   }
   rss <- sigma2 * dfres
 
