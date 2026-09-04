@@ -45,6 +45,8 @@ jobs:
             clean = FALSE,
             install_path = file.path(normalizePath(Sys.getenv("RUNNER_TEMP"), winslash = "/"), "package")
           )
+          print(cov)
+          cat(sprintf("COVERAGE_TOTAL: %.4f%%\n", covr::percent_coverage(cov)))
           covr::to_cobertura(cov)
         shell: Rscript {0}
 

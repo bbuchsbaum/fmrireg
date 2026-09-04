@@ -174,8 +174,11 @@ tibble_to_neurovec <- function(dset, tab, mask) {
 }
 
 #' @export
-coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts"), recon=FALSE, comp=0, ...) {
-  bvals <- coef.fmri_lm(object, type=type)
+coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts", "betas"), recon=FALSE, comp=0, ...) {
+  type <- match.arg(type)
+  # coef.fmri_lm uses "betas"; accept the latent-friendly alias "estimates".
+  coef_type <- if (identical(type, "estimates")) "betas" else type
+  bvals <- coef.fmri_lm(object, type = coef_type)
   if (recon) {
     # Extract LatentNeuroVec from dataset
     lvec <- if (!is.null(object$dataset$lvec)) {
@@ -194,9 +197,21 @@ coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts"), recon=
     }
     
     lds <- lds[,comp,drop=FALSE]
-    
-    out <- t(as.matrix(bvals)[comp,]) %*% t(lds)
-    out <- as.matrix(t(out))
+    bmat <- as.matrix(bvals)
+
+    # coef.fmri_lm returns conditions x parameters. Latent fits store one
+    # parameter column per latent component for event regressors; select those
+    # columns when possible, otherwise fall back to legacy component-as-row.
+    if (ncol(bmat) >= max(comp) && nrow(bmat) != ncol(lds)) {
+      b_comp <- bmat[, comp, drop = FALSE]
+      out <- as.matrix(lds %*% t(b_comp))
+    } else if (nrow(bmat) >= max(comp)) {
+      out <- as.matrix(t(bmat[comp, , drop = FALSE]) %*% t(lds))
+      out <- as.matrix(t(out))
+    } else {
+      stop("Cannot align latent coefficients with component loadings for reconstruction",
+           call. = FALSE)
+    }
     tibble::as_tibble(out)
   } else {
     bvals

@@ -75,7 +75,7 @@ design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
                                         ggplot2::theme(panel.spacing = ggplot2::unit(1, "lines")),
                          legend_threshold = 30, ...){
 
-  with_package(c("shiny", "plotly", "bslib", "thematic"))
+  with_package(c("shiny", "plotly", "bslib"))
   stopifnot(inherits(fmrimod, "fmri_model"))
 
   # -- prep ------------------------------------------------------------------
@@ -87,11 +87,15 @@ design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
       stop("term_name not found in model: ", term_name)
 
   sframe <- fmrimod$event_model$sampling_frame
-  df_time <- sframe$time
-  df_block<- sframe$blockids
+  # sampling_frame is a compact object; time/block ids come from accessors
+  df_time <- fmrihrf::samples(sframe)
+  df_block <- fmrihrf::blockids(sframe)
 
   longify <- function(term, name){
-    if (inherits(term, "feature_term")) {
+    # Event / feature terms must use the convolved event-model design matrix
+    # (design_matrix(event_term) returns an event-level matrix, not time x regressors).
+    if (inherits(term, "event_term") || inherits(term, "feature_term") ||
+        inherits(term, "convolved_term")) {
       col_indices <- attr(fmrimod$event_model$design_matrix, "col_indices")
       idx <- col_indices[[name]]
       if (is.null(idx) || length(idx) == 0L) {
@@ -114,12 +118,22 @@ design_plot <- function(fmrimod, term_name = NULL, longnames = FALSE,
     dm$.block <- df_block
     dm$.time  <- df_time
 
-    # pretty column names
-    cn <- if (longnames) conditions(term) else shortnames(term)
+    # pretty column names (baseline terms may lack shortnames/conditions methods)
+    cn <- if (longnames) {
+      tryCatch(conditions(term), error = function(e) NULL)
+    } else {
+      tryCatch(shortnames(term), error = function(e) {
+        tryCatch(conditions(term), error = function(e2) NULL)
+      })
+    }
     if (!is.null(cn) && length(cn)==ncol(dm)-2) names(dm)[1:(ncol(dm)-2)] <- cn
 
-    tidyr::pivot_longer(dm, -c(.time,.block),
-                        names_to = "condition", values_to = "value")
+    tidyr::pivot_longer(
+      dm,
+      cols = -c(".time", ".block"),
+      names_to = "condition",
+      values_to = "value"
+    )
   }
   df_long <- Map(longify, terms_all, term_names)
   names(df_long) <- term_names

@@ -50,7 +50,10 @@ group_data <- function(data, format = c("auto", "h5", "nifti", "csv", "fmrilm"),
 #' @return Character string indicating detected format
 #' @keywords internal
 detect_group_data_format <- function(data) {
-  if (is.character(data)) {
+  # data.frame is also a list in R — check it before the generic list branch
+  if (is.data.frame(data)) {
+    return("csv")
+  } else if (is.character(data)) {
     # Check file extensions
     if (length(data) > 0) {
       first_file <- data[1]
@@ -71,8 +74,6 @@ detect_group_data_format <- function(data) {
     if (all(c("beta", "se") %in% names(data)) || all(c("beta", "var") %in% names(data))) {
       return("nifti")
     }
-  } else if (is.data.frame(data)) {
-    return("csv")
   }
   
   stop("Could not automatically detect data format. Please specify 'format' argument.", 
