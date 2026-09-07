@@ -1,0 +1,1 @@
+{"actor":"codex-fmrireg-contrasts","entity":"bd-01M0TM0264WKP5Z2D7PQ6GGTZZ","kind":"note","note_kind":"progress","op":"20260824T195450.206775Z-p18371-c0003-r749b-h5b43c1","text":"Reproduced named and colind metadata loss; implementing narrow normalizer fix with API and suffstats oracle regressions.","ts":"2026-08-24T19:54:50.206775Z","v":1}

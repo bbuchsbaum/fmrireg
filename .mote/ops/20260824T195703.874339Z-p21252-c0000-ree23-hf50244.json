@@ -1,0 +1,1 @@
+{"actor":"codex-fmrireg-contrasts","entity":"bd-01M0TM0264WKP5Z2D7PQ6GGTZZ","kind":"note","note_kind":"progress","op":"20260824T195703.874339Z-p21252-c0000-ree23-hf50244","text":"Implemented metadata-first t-contrast normalization and explicit colind validation. Focused API/suffstats equivalence and pivoted-QR oracle tests pass.","ts":"2026-08-24T19:57:03.874339Z","v":1}

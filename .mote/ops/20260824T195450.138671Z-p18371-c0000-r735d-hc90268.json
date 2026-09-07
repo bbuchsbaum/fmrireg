@@ -1,0 +1,1 @@
+{"actor":"codex-fmrireg-contrasts","entity":"bd-01M0TM0264WKP5Z2D7PQ6GGTZZ","kind":"reserve_open","mode":"exclusive","op":"20260824T195450.138671Z-p18371-c0000-r735d-hc90268","paths":["R/contrasts_api.R","tests/testthat/test-contrasts-api.R"],"reservation_id":"rv-01M0TNE0WTG3PHAR03SD8JWRP7","ts":"2026-08-24T19:54:50.138671Z","ttl_s":3600,"v":1}
