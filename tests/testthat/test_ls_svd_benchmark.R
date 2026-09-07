@@ -10,7 +10,9 @@ test_that("benchmark data can be used with event_model infrastructure", {
   skip_if_not_installed("fmrireg")
 
   bm <- load_benchmark_dataset("BM_Canonical_HighSNR")
-  dset <- bm$core_data
+  # The benchmark stores the raw constructor arguments (matrix, TR,
+  # run_length, event_table), not a frame.
+  dset <- bm$core_data_args
 
   # Use only the first 5 voxels for speed
   Y <- dset$datamat[, 1:5]

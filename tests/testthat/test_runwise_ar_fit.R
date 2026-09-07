@@ -4,7 +4,7 @@ options(mc.cores=1)
 
 etab <- data.frame(onset=c(1,10), repnum=factor(c("A","B")), run=c(1,1))
 Y <- matrix(rnorm(20*3), 20, 3)
-dset <- matrix_dataset(Y, TR=1, run_length=20, event_table=etab)
+dset <- matrix_frame(Y, TR=1, run_length=20, event_table=etab)
 
 test_that("fmri_lm runwise AR1 fits without error", {
   # Use ar_options parameter

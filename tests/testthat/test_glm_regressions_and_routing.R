@@ -194,7 +194,7 @@ test_that("coef.fmri_lm include_baseline works on pooled multi-run fits", {
   spike_rows <- sample((run_len + 1):n, 6)
   Y[spike_rows, ] <- Y[spike_rows, ] + matrix(rnorm(length(spike_rows) * v, sd = 8), length(spike_rows), v)
 
-  dset <- fmridataset::matrix_dataset(
+  dset <- matrix_frame(
     Y,
     TR = 1,
     run_length = rep(run_len, n_run),
@@ -234,7 +234,7 @@ test_that("AR processing routes through fmriAR in production runwise path", {
     run = 1
   )
   Y <- matrix(rnorm(n * v), n, v)
-  dset <- fmridataset::matrix_dataset(Y, TR = 1, run_length = n, event_table = event_table)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = event_table)
   sframe <- fmrihrf::sampling_frame(n, TR = 1)
   base <- baseline_model(basis = "poly", degree = 1, sframe = sframe)
 
@@ -282,7 +282,7 @@ test_that("AR processing routes through fmriAR in production chunkwise path", {
     run = 1
   )
   Y <- matrix(rnorm(n * v), n, v)
-  dset <- fmridataset::matrix_dataset(Y, TR = 1, run_length = n, event_table = event_table)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = event_table)
   sframe <- fmrihrf::sampling_frame(n, TR = 1)
   base <- baseline_model(basis = "poly", degree = 1, sframe = sframe)
 

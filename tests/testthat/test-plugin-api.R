@@ -52,14 +52,14 @@ test_that("register_engine integrates with fmri_lm via fit_glm_on_transformed_se
     engine_name,
     preflight = function(model, dataset, args, cfg) {
       expect_s3_class(model, "fmri_model")
-      expect_true(inherits(dataset, "matrix_dataset"))
+      expect_true(inherits(dataset, "fmri_frame"))
       expect_true(is.list(args))
       expect_s3_class(cfg, "fmri_lm_control")
       preflight_called <<- preflight_called + 1L
     },
     fit = function(model, dataset, args, cfg) {
       captured <<- list(model = model, dataset = dataset, args = args)
-      Y <- as.matrix(fmridataset::get_data_matrix(dataset))
+      Y <- as.matrix(fmridataset::collect_assay(dataset))
       suppressWarnings(
         fit_glm_on_transformed_series(
           model,
@@ -139,7 +139,7 @@ test_that("fmri_model method preserves engine-specific args for plugins", {
     engine_name,
     fit = function(model, dataset, args, cfg) {
       captured <<- list(model = model, dataset = dataset, args = args, cfg = cfg)
-      Y <- as.matrix(fmridataset::get_data_matrix(dataset))
+      Y <- as.matrix(fmridataset::collect_assay(dataset))
       suppressWarnings(
         fit_glm_on_transformed_series(
           model,
@@ -205,7 +205,7 @@ test_that("engine capabilities reject unsupported global options before plugin f
       fit_called <<- fit_called + 1L
       fit_glm_on_transformed_series(
         model,
-        as.matrix(fmridataset::get_data_matrix(dataset)),
+        as.matrix(fmridataset::collect_assay(dataset)),
         cfg = cfg,
         dataset = dataset,
         engine = engine_name,
@@ -258,7 +258,7 @@ test_that("engine dispatcher preserves requested config and passes executed conf
       captured_cfg <<- cfg
       fit_glm_on_transformed_series(
         model,
-        as.matrix(fmridataset::get_data_matrix(dataset)),
+        as.matrix(fmridataset::collect_assay(dataset)),
         cfg = cfg,
         dataset = dataset,
         engine = engine_name,
@@ -326,7 +326,7 @@ test_that("transformed-series OLS helper rejects AR and robust controls", {
     block = ~run,
     dataset = dset
   )
-  Y <- as.matrix(fmridataset::get_data_matrix(dset))
+  Y <- as.matrix(fmridataset::collect_assay(dset))
 
   expect_error(
     fit_glm_on_transformed_series(
@@ -355,7 +355,7 @@ test_that("full-config transformed-series helper executes AR and robust fits", {
     block = ~run,
     dataset = dset
   )
-  Y <- as.matrix(fmridataset::get_data_matrix(dset))
+  Y <- as.matrix(fmridataset::collect_assay(dset))
 
   ar_fit <- fit_glm_with_config(
     model,
@@ -402,7 +402,7 @@ test_that("external-response helpers never inherit the model dataset", {
     block = ~run,
     dataset = dset
   )
-  Y <- as.matrix(fmridataset::get_data_matrix(dset))[, 1:2, drop = FALSE]
+  Y <- as.matrix(fmridataset::collect_assay(dset))[, 1:2, drop = FALSE]
 
   iid <- fit_glm_on_transformed_series(model, Y)
   full <- fit_glm_with_config(model, Y, cfg = fmri_lm_control())

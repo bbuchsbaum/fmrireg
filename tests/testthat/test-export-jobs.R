@@ -6,8 +6,8 @@ find_pkg_root <- function() {
 
 make_inline_job2 <- function(id, template) {
   ds <- make_test_matrix_dataset()
-  instantiate(template, list(id = id, scans = ds$datamat, TR = 2,
-                             run_length = c(40L, 40L), events = ds$event_table))
+  instantiate(template, list(id = id, scans = frame_data(ds), TR = 2,
+                             run_length = c(40L, 40L), events = frame_events(ds)))
 }
 
 test_that("export_jobs writes a manifest, ids, and a runner; read_jobs round-trips", {

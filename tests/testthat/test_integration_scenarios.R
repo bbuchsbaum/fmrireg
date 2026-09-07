@@ -19,7 +19,7 @@ test_that("AR + Robust fitting integration works", {
   Y <- X %*% c(2, 1) + as.vector(errors)
   
   # Create dataset
-  dset <- matrix_dataset(
+  dset <- matrix_frame(
     matrix(Y, ncol = 1),
     TR = 2,
     run_length = n,
@@ -75,7 +75,7 @@ test_that("Multi-run with different strategies produces consistent results", {
   all_events <- do.call(rbind, event_list)
   all_data <- do.call(rbind, data_list)
   
-  dset <- matrix_dataset(
+  dset <- matrix_frame(
     all_data,
     TR = 2,
     run_length = rep(n_per_run, n_runs),
@@ -130,7 +130,7 @@ test_that("Complex contrast specifications work with all model types", {
     }
   }
   
-  dset <- matrix_dataset(
+  dset <- matrix_frame(
     data_mat,
     TR = 2,  # Longer TR for stability
     run_length = c(50, 50),
@@ -169,7 +169,7 @@ test_that("Missing data handling works across components", {
     run = rep(1, 8)
   )
   
-  dset <- matrix_dataset(
+  dset <- matrix_frame(
     data_mat,
     TR = 2,
     run_length = n,
@@ -222,7 +222,7 @@ test_that("Large dataset chunking maintains accuracy", {
     run = rep(1, 5)
   )
   
-  dset <- matrix_dataset(
+  dset <- matrix_frame(
     data_mat,
     TR = 1,
     run_length = n_time,

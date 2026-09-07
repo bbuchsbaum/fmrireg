@@ -87,10 +87,10 @@ instantiate <- function(template, x, ...) {
                  run_length = b[["run_length"]], event_table = events)
     if (!is.null(b[["mask"]])) args$mask <- b[["mask"]]
     if (!is.null(b[["base_path"]])) args$base_path <- b[["base_path"]]
-    spec <- dataset_spec("fmri_dataset", args = args, source = "file")
+    spec <- dataset_spec("nifti_frame", args = args, source = "file")
   } else if (is.matrix(scans) || is.numeric(scans)) {
     spec <- dataset_spec(
-      "matrix_dataset",
+      "matrix_frame",
       args = list(datamat = as.matrix(scans), TR = b[["TR"]],
                   run_length = b[["run_length"]], event_table = events),
       source = "inline"
@@ -109,12 +109,12 @@ instantiate <- function(template, x, ...) {
 
 #' Realize the dataset described by a job
 #'
-#' Reconstructs the \code{fmri_dataset} from the job's [dataset_spec]. For
+#' Reconstructs the \code{fmri_frame} from the job's [dataset_spec]. For
 #' file-backed specs this is where data first becomes addressable (still lazily,
-#' per the dataset backend).
+#' through the frame's NIfTI array source).
 #'
 #' @param job An [fmri_job].
-#' @return An \code{fmri_dataset}.
+#' @return An \code{fmri_frame}.
 #' @seealso [build_model()], [run_job()]
 #' @export
 realize_dataset <- function(job) {
@@ -135,7 +135,7 @@ realize_dataset <- function(job) {
 #' @keywords internal
 #' @noRd
 .allowed_dataset_constructors <- c(
-  "matrix_dataset", "fmri_dataset", "fmri_mem_dataset", "latent_dataset"
+  "matrix_frame", "nifti_frame", "neurovec_frame", "latent_frame"
 )
 
 #' @keywords internal
@@ -192,10 +192,10 @@ realize_dataset <- function(job) {
 build_model <- function(job, dataset = realize_dataset(job)) {
   assert_that(inherits(job, "fmri_job"), msg = "'job' must be an 'fmri_job'")
   tmpl <- job$template
-  sf <- dataset$sampling_frame
+  sf <- .dset_sampling_frame(dataset)
   bs <- tmpl$baseline
   nz <- .select_confounds(job$nuisance, bs$confounds)
-  nl <- .resolve_nuisance(nz, fmrihrf::blocklens(sf))
+  nl <- .resolve_nuisance(nz, .dset_run_lengths(dataset))
   bmodel <- baseline_model(
     basis = bs$basis, degree = bs$degree, sframe = sf,
     intercept = bs$intercept, nuisance_list = nl,

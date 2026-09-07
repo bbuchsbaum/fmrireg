@@ -208,7 +208,7 @@ test_that("fmri_lm AR fits report residual df, not a deflated one", {
   onsets <- sort(runif(24, 0, Tr * TR - 20))
   cond <- factor(rep(c("a", "b"), length.out = 24))
   etab <- data.frame(onset = onsets, cond = cond, run = rep(1L, 24))
-  dset <- matrix_dataset(matrix(rnorm(n_t * 3), n_t, 3), TR = TR,
+  dset <- matrix_frame(matrix(rnorm(n_t * 3), n_t, 3), TR = TR,
                          run_length = Tr, event_table = etab)
 
   fit_iid <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,

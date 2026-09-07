@@ -32,12 +32,12 @@
   )
 }
 
-#' Internal: demo matrix_dataset with two voxels
+#' Internal: demo fmri_frame with two voxels
 #' @keywords internal
 #' @noRd
 .demo_matrix_dataset <- function() {
   signals <- matrix(seq_len(16), nrow = 8, ncol = 2)
-  fmridataset::matrix_dataset(
+  matrix_frame(
     signals,
     TR = 2,
     run_length = c(4, 4),

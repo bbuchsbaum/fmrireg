@@ -1391,12 +1391,17 @@ write_results.fmri_lm <- function(x,
     # Check if dataset has source information
     if (!is.null(fmrilm_obj$dataset) && !is.null(attr(fmrilm_obj$dataset, "source_files"))) {
       sources <- attr(fmrilm_obj$dataset, "source_files")
-    } else if (!is.null(fmrilm_obj$dataset) && inherits(fmrilm_obj$dataset, "fmri_dataset")) {
-      # Try to get file path if available
-      dataset_path <- attr(fmrilm_obj$dataset, "file_path")
-      if (!is.null(dataset_path)) {
-        # Convert to relative BIDS URI if possible
-        sources <- paste0("bids::", basename(dataset_path))
+    } else if (!is.null(fmrilm_obj$dataset) && inherits(fmrilm_obj$dataset, "fmri_frame")) {
+      # A file-backed frame knows its NIfTI paths through its array source
+      descriptor <- fmridataset::assay(.dset_root(fmrilm_obj$dataset))$source
+      if (inherits(descriptor, "nifti_array_source") && !is.null(descriptor$uri)) {
+        sources <- paste0("bids::", basename(descriptor$uri))
+      } else {
+        dataset_path <- attr(fmrilm_obj$dataset, "file_path")
+        if (!is.null(dataset_path)) {
+          # Convert to relative BIDS URI if possible
+          sources <- paste0("bids::", basename(dataset_path))
+        }
       }
     }
   }, error = function(e) {

@@ -11,7 +11,7 @@ test_that("parallel_chunks routes chunkwise fitting through future-compatible pa
     amp = c(1, 0, 1, 0, 1, 0),
     run = rep(1:2, each = 3)
   )
-  dset <- fmridataset::matrix_dataset(
+  dset <- matrix_frame(
     matrix(rnorm(120 * 4), nrow = 120, ncol = 4),
     TR = 1,
     run_length = c(60, 60),

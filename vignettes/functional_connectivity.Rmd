@@ -112,7 +112,7 @@ Y[, net_idx] <- Y[, net_idx] + 0.7 * seed_ts
 
 # Rebuild the dataset from the modified matrix so the injected network signal
 # is the data used by downstream model fitting.
-dset_modified <- fmridataset::matrix_dataset(
+dset_modified <- matrix_frame(
   Y,
   TR = TR,
   run_length = Tlen,
@@ -287,7 +287,7 @@ run_connectivity_fixture <- function(simulation_seed, n_time = 96L,
   fixture_data <- simulate_ar1_errors(n_time, n_voxels, rho)
   fixture_data[, network] <- fixture_data[, network] + effect * signal
 
-  fixture_dataset <- fmridataset::matrix_dataset(
+  fixture_dataset <- matrix_frame(
     fixture_data, TR = 2, run_length = n_time,
     event_table = data.frame(onset = 0, run = 1L)
   )

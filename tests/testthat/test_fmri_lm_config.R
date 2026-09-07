@@ -80,7 +80,7 @@ test_that("fmri_lm accepts new config API", {
   n_vox <- 10
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
   event_df <- data.frame(onset = c(10, 20, 30), block = 1)
-  dset <- matrix_dataset(Y, TR = 2, run_length = n_time, event_table = event_df)
+  dset <- matrix_frame(Y, TR = 2, run_length = n_time, event_table = event_df)
   
   # Test with config object
   cfg <- fmri_lm_control(
@@ -121,11 +121,11 @@ test_that("config options propagate correctly", {
     Y[, v] <- noise
   }
   
-  dset <- matrix_dataset(Y, TR = 1, run_length = n_time)
+  dset <- matrix_frame(Y, TR = 1, run_length = n_time)
   
   # Create dataset with events
   event_df <- data.frame(onset = onsets, block = 1)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n_time, event_table = event_df)
+  dset <- matrix_frame(Y, TR = 1, run_length = n_time, event_table = event_df)
   
   # Test AR options propagate
   fit_ar <- fmri_lm(
@@ -163,7 +163,7 @@ test_that("robust fitting on the runwise slow path errors with guidance", {
   n_time <- 60
   Y <- matrix(rnorm(n_time * 4), n_time, 4)
   event_df <- data.frame(onset = c(10, 25, 40), block = 1)
-  dset <- matrix_dataset(Y, TR = 2, run_length = n_time, event_table = event_df)
+  dset <- matrix_frame(Y, TR = 2, run_length = n_time, event_table = event_df)
 
   # The formula/lm() slow path cannot do robust fitting correctly (it would drop
   # AR and yield invalid residual variance), so it must fail fast.

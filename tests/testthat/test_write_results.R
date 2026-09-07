@@ -37,8 +37,8 @@ create_test_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50, sparse_mas
     run = rep(1:2, each = 5)
   )
   
-  # Create fmri_mem_dataset
-  dset <- fmridataset::fmri_mem_dataset(
+  # Create an in-memory volumetric frame
+  dset <- neurovec_frame(
     scans = scans,
     mask = mask,
     TR = 1.5,
@@ -62,11 +62,17 @@ create_test_file_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50) {
     neuroim2::NeuroSpace(dim = dims)
   )
 
-  backend <- fmridataset::nifti_backend(
-    source = scans,
-    mask_source = mask,
-    mode = "normal"
-  )
+  # Write the runs and mask to NIfTI files so the frame is file-backed
+  # (lazy nifti_array_source) rather than in-memory.
+  nii_dir <- tempfile("nifti-frame-")
+  dir.create(nii_dir)
+  scan_files <- vapply(seq_along(scans), function(i) {
+    f <- file.path(nii_dir, sprintf("run-%d_bold.nii", i))
+    neuroim2::write_vec(scans[[i]], f)
+    f
+  }, character(1))
+  mask_file <- file.path(nii_dir, "mask.nii")
+  neuroim2::write_vol(mask, mask_file)
 
   event_table <- data.frame(
     onset = c(5, 15, 25, 35, 45,
@@ -75,8 +81,9 @@ create_test_file_dataset <- function(dims = c(3, 3, 2), n_timepoints = 50) {
     run = rep(1:2, each = 5)
   )
 
-  fmridataset::fmri_dataset(
-    scans = backend,
+  nifti_frame(
+    scans = scan_files,
+    mask = mask_file,
     TR = 1.5,
     run_length = rep(n_timepoints, 2),
     event_table = event_table
@@ -163,8 +170,10 @@ test_that("write_results.fmri_lm recovers space for file-backed array masks", {
   skip_if_not_installed("jsonlite")
 
   mod <- create_test_file_fmri_lm()
-  expect_type(fmridataset::get_mask(mod$dataset), "logical")
-  expect_true(is.array(fmridataset::get_mask(mod$dataset)))
+  expect_s3_class(fmridataset::space(mod$dataset), "volume_space")
+  spatial <- fmrireg:::.fmri_dataset_mask_space(mod$dataset, "test")
+  expect_type(spatial$mask_array, "logical")
+  expect_true(is.array(spatial$mask_array))
 
   temp_dir <- tempfile()
   dir.create(temp_dir)

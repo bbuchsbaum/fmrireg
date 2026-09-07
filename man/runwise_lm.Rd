@@ -18,7 +18,7 @@ runwise_lm(
 )
 }
 \arguments{
-\item{dset}{An \code{fmri_dataset} object.}
+\item{dset}{An \code{fmri_frame} object.}
 
 \item{model}{The \code{fmri_model} used for the analysis.}
 

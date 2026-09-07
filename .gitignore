@@ -75,3 +75,7 @@ gds.txt
 
 # Obsolete CI configuration
 .travis.yml
+
+# testthat failure artifacts (check reporter)
+tests/testthat/_problems/
+tests/testthat/testthat-problems.rds

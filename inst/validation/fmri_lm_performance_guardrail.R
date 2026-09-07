@@ -26,7 +26,7 @@ run_fmri_lm_performance_guardrail <- function(
     run = 1L
   )
   Y <- matrix(stats::rnorm(n * nvox), nrow = n, ncol = nvox)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = events)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = events)
   control <- fmri_lm_control(
     estimation = estimation_spec("joint"),
     noise = noise_spec("ar1", iter_gls = 2L),

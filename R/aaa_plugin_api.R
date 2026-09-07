@@ -14,7 +14,9 @@
 #'   `fmri_lm()` options. Recognized fields currently include `robust`,
 #'   `preprocessing`, `ma`, `ar_voxelwise`, `ar_by_cluster`, plus contextual rules
 #'   such as `requires_event_regressors`, `requires_parcels_for_by_cluster`,
-#'   and `forbid_by_cluster_dataset_classes`.
+#'   and `forbid_by_cluster_dataset_classes` (class names matched against the
+#'   dataset or against its `fmridataset::space()`, e.g. `"basis_space"` for
+#'   latent frames).
 #' @return Invisibly, `TRUE`.
 #' @export
 register_engine <- function(name, fit, preflight = NULL, capabilities = list()) {
@@ -270,7 +272,7 @@ print.fmrireg_engine_spec <- function(x, ...) {
 
   if (isTRUE(cfg$ar$by_cluster) && length(caps$forbid_by_cluster_dataset_classes) > 0L) {
     matches <- caps$forbid_by_cluster_dataset_classes[
-      vapply(caps$forbid_by_cluster_dataset_classes, function(cls) inherits(dataset, cls), logical(1))
+      vapply(caps$forbid_by_cluster_dataset_classes, function(cls) .dataset_has_class(dataset, cls), logical(1))
     ]
     if (length(matches) > 0L) {
       stop(
@@ -930,15 +932,12 @@ fit_glm_from_suffstats <- function(model, XtX, XtS, StS, df,
     return(NULL)
   }
 
-  values <- if (inherits(dataset, "latent_dataset")) {
-    tryCatch(fmridataset::get_latent_scores(dataset), error = function(e) NULL)
-  } else if (inherits(dataset, "matrix_dataset")) {
-    tryCatch(fmridataset::get_data_matrix(dataset), error = function(e) NULL)
+  dims <- if (.is_fmri_frame(dataset)) {
+    tryCatch(dim(dataset), error = function(e) NULL)
   } else {
     NULL
   }
 
-  dims <- dim(values)
   if (length(dims) != 2L || anyNA(dims)) {
     return(NULL)
   }
@@ -963,4 +962,17 @@ fit_glm_from_suffstats <- function(model, XtX, XtS, StS, df,
     )
   }
   invisible(TRUE)
+}
+
+
+#' Does a dataset, or its feature space, inherit from a class?
+#' @keywords internal
+#' @noRd
+.dataset_has_class <- function(dataset, cls) {
+  if (inherits(dataset, cls)) return(TRUE)
+  if (.is_fmri_frame(dataset)) {
+    sp <- tryCatch(fmridataset::space(dataset), error = function(e) NULL)
+    return(!is.null(sp) && inherits(sp, cls))
+  }
+  FALSE
 }

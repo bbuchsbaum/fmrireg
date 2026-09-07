@@ -24,7 +24,7 @@ test_that("fmri_template constructs and validates", {
 })
 
 test_that("dataset_spec and fmri_job construct and validate", {
-  ds <- dataset_spec("fmri_dataset",
+  ds <- dataset_spec("nifti_frame",
                      args = list(scans = c("a.nii.gz", "b.nii.gz"),
                                  TR = 2, run_length = c(200, 200)),
                      source = "file")
@@ -41,7 +41,7 @@ test_that("file-backed job serializes small and round-trips identically", {
   tmpl <- fmri_template(onset ~ hrf(condition) + hrf(modulation), ~ run,
                         baseline = baseline_spec(degree = 3,
                                                  confounds = c("trans_x", "rot_y")))
-  ds <- dataset_spec("fmri_dataset",
+  ds <- dataset_spec("nifti_frame",
                      args = list(scans = sprintf("sub-01/run-%d_bold.nii.gz", 1:3),
                                  TR = 2, run_length = c(200, 200, 200),
                                  base_path = "/study/derivatives"),
@@ -72,7 +72,7 @@ test_that("template prunes formula env so local scope does not bloat jobs", {
   expect_identical(parent.env(environment(tmpl$formula)), globalenv())
   expect_length(ls(environment(tmpl$formula)), 0L)
 
-  ds <- dataset_spec("fmri_dataset",
+  ds <- dataset_spec("nifti_frame",
                      args = list(scans = "x.nii.gz", TR = 2, run_length = 100),
                      source = "file")
   job <- fmri_job("s1", tmpl, ds)
@@ -93,7 +93,7 @@ test_that("template keeps locally-referenced formula objects but drops the rest"
   expect_true("my_contrasts" %in% ls(e))   # referenced local object preserved
   expect_false("big_unused" %in% ls(e))    # unreferenced local dropped
 
-  ds <- dataset_spec("fmri_dataset",
+  ds <- dataset_spec("nifti_frame",
                      args = list(scans = "x.nii.gz", TR = 2, run_length = 100),
                      source = "file")
   job <- fmri_job("s1", tmpl, ds)

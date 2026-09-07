@@ -56,7 +56,7 @@ test_that("rrr_gls supports shared AR whitening", {
   )
 
   Y <- matrix(rnorm(Tlen * V), nrow = Tlen, ncol = V)
-  dset <- fmridataset::matrix_dataset(
+  dset <- matrix_frame(
     Y,
     TR = 2,
     run_length = Tlen,

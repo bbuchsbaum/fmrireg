@@ -48,7 +48,7 @@ run_fmri_lm_inference_calibration <- function(
                   dimnames = list(NULL, c("estimate", "se", "p", "df")))
   for (i in seq_len(nsim)) {
     y <- as.numeric(stats::arima.sim(model = list(ar = phi), n = n))
-    dset <- matrix_dataset(
+    dset <- matrix_frame(
       matrix(y, ncol = 1L), TR = 1, run_length = n,
       event_table = events
     )

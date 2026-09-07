@@ -27,7 +27,7 @@ vignette: |
 if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(family = params$family, preset = params$preset))
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=7, fig.height=5, message=FALSE, warning=TRUE)
 library(fmrireg)
-library(fmridataset) # Dataset functionality refactored from fmrireg
+library(fmridataset) # The fmri_frame container and its accessors
 library(neuroim2) # For creating example NeuroVec/NeuroVol
 ```
 
@@ -52,15 +52,20 @@ Effective fMRI analysis requires associating the measured brain activity (the im
 *   **Spatial Structure:** Which brain locations (voxels) are included in the analysis (mask).
 *   **Experimental Design:** Timing and properties of experimental events or conditions.
 
-The `fmrireg` package uses several **dataset objects** to encapsulate this information, providing a consistent input format for modeling functions like `event_model`, `baseline_model`, `fmri_lm`, and `estimate_betas`.
+`fmrireg` represents all of this with one container, the `fmri_frame` from the
+companion `fmridataset` package. A frame is an *observations by features*
+matrix (scans by voxels, vertices, parcels, or components) whose acquisition
+timing lives in the observation metadata, whose spatial identity lives in a
+typed *feature space*, and whose experimental events live in a keyed event
+table. Every modeling function in `fmrireg` (`fmri_lm`, `estimate_betas`,
+`estimate_hrf`, `fmri_latent_lm`, ...) takes an `fmri_frame` as its dataset.
 
-This vignette describes the main dataset classes and how to choose among them.
-For a first complete fit, read `vignette("fmrireg", package = "fmrireg")`;
-return here when you need to change how scans are stored or divided into runs.
-
-The dataset classes and constructors are implemented by the companion
-`fmridataset` package and re-exported by `fmrireg`, so the calls below are the
-supported `fmrireg` user surface.
+This vignette describes how to build a frame from the data you already have and
+how to read its timing, events, and spatial layout back. For a first complete
+fit, read `vignette("fmrireg", package = "fmrireg")`; return here when you need
+to change how scans are stored or divided into runs. For the frame model
+itself (views, laziness, persistence) see `vignette("fmridataset", package =
+"fmridataset")`.
 
 ```{r dataset-decision-table, echo=FALSE}
 knitr::kable(data.frame(
@@ -68,26 +73,34 @@ knitr::kable(data.frame(
     "NeuroVec runs already in memory",
     "NIfTI runs and a mask on disk",
     "Time-by-feature matrix",
-    "Latent components plus spatial loadings"
+    "Latent components plus spatial loadings",
+    "fMRIPrep derivatives (BIDS)"
   ),
   constructor = c(
-    "fmri_mem_dataset()",
-    "fmri_dataset() -> fmri_file_dataset",
-    "matrix_dataset()",
-    "latent_dataset()"
+    "neurovec_frame()",
+    "nifti_frame()",
+    "matrix_frame()",
+    "latent_frame()",
+    "fmridataset::read_bids_bold()"
+  ),
+  feature_space = c(
+    "volume_space", "volume_space", "index_space", "basis_space", "volume_space"
   ),
   choose_it_when = c(
     "The full volumes comfortably fit in memory",
-    "Runs are large and should be opened lazily",
+    "Runs are large and should be read lazily",
     "Data are ROI, surface, or already tabular",
-    "A fitted fmristore representation already exists"
+    "A fmristore LatentNeuroVec already exists",
+    "One subject's preprocessed BOLD runs are on disk"
   )
-), caption = "Choose a dataset representation from the storage you already have")
+), caption = "Choose a frame constructor from the storage you already have")
 ```
 
 ## The `sampling_frame`
 
-Before diving into datasets, recall the `sampling_frame` object (introduced in the Overview and detailed in other vignettes). It defines the fundamental temporal structure shared by all dataset types:
+Recall the `sampling_frame` object (introduced in the Overview and detailed in
+other vignettes). It defines the temporal structure that the design machinery
+expects:
 
 *   `blocklens`: A vector specifying the number of scans (time points) in each run.
 *   `TR`: The repetition time (time between scans) in seconds.
@@ -97,30 +110,24 @@ sframe_example <- sampling_frame(blocklens = c(150, 160), TR = 2.0)
 print(sframe_example)
 ```
 
-Dataset objects internally create or utilize a `sampling_frame` based on the provided run lengths and TR.
+A frame does not store a `sampling_frame`. It stores the same facts as two
+observation columns, `run_id` and `TR`, and `fmridataset::as_sampling_frame()`
+rebuilds the `sampling_frame` from them whenever the design code needs one.
+Because the columns are the truth, the timing follows subsetting and
+reordering of the frame for free.
 
-## Overview of Dataset Classes
-
-`fmrireg` offers different dataset classes depending on how your data is stored:
-
-*   **`fmri_mem_dataset`:** For volumetric fMRI data already loaded into R memory (as `NeuroVec` objects).
-*   **`fmri_file_dataset`:** For volumetric fMRI data stored in image files (e.g., NIfTI) on disk.
-*   **`matrix_dataset`:** For fMRI data represented as a standard R matrix (time points x voxels/components).
-*   **`latent_dataset`:** For dimension-reduced data (e.g., PCA/ICA components), typically requiring the `fmristore` package.
-
-All these inherit from a base `fmri_dataset` class.
-
-## In-Memory Volumetric Data (`fmri_mem_dataset`)
+## In-Memory Volumetric Data (`neurovec_frame`)
 
 Use this when your fMRI runs are loaded as `neuroim2::NeuroVec` objects in your R session.
 
 **Key Arguments:**
 
-*   `scans`: A *list* of `NeuroVec` objects, one for each run.
-*   `mask`: A `neuroim2::NeuroVol` or `neuroim2::LogicalNeuroVol` object representing the brain mask.
-*   `TR`: Repetition time (seconds).
-*   `run_length` (Optional): Vector of run lengths; if omitted, inferred from the dimensions of the `NeuroVec` objects in `scans`.
+*   `scans`: A `NeuroVec`, or a *list* of them, one for each run.
+*   `mask`: A `neuroim2::LogicalNeuroVol` (or a `NeuroVol` whose non-zero voxels form the mask).
+*   `TR`: Repetition time (seconds), one value or one per run.
+*   `run_length` (Optional): Vector of run lengths; if omitted, inferred from the fourth dimension of each scan.
 *   `event_table` (Optional): A `data.frame` containing experimental design information.
+*   `censor` (Optional): One entry per scan marking volumes to exclude (logical, 0/1, or 1-based indices).
 
 ```{r mem_dataset_example}
 # Create minimal example data (2 runs)
@@ -132,37 +139,38 @@ scan2 <- neuroim2::NeuroVec(array(rnorm(prod(d)), d), neuroim2::NeuroSpace(d))
 
 # Example event table
 events_df <- data.frame(
-  onset = c(5, 15, 5, 15), 
+  onset = c(5, 15, 5, 15),
   condition = factor(c("A", "B", "A", "B")),
   run = c(1, 1, 2, 2)
 )
 
-# Create the dataset object
-mem_dset <- fmri_mem_dataset(scans = list(scan1, scan2), 
-                             mask = mask_vol, 
-                             TR = 2.0, 
-                             # run_length automatically inferred as c(20, 20)
-                             event_table = events_df)
+# Create the frame
+mem_frame <- neurovec_frame(scans = list(scan1, scan2),
+                            mask = mask_vol,
+                            TR = 2.0,
+                            # run_length automatically inferred as c(20, 20)
+                            event_table = events_df)
 
-print(mem_dset)
-# Access components
-print(mem_dset$sampling_frame)
+dim(mem_frame)              # scans by masked voxels
+class(fmridataset::space(mem_frame))     # a volume_space on the mask's grid
+as_sampling_frame(mem_frame)
 ```
 
-## File-Based Volumetric Data (`fmri_file_dataset`)
+The masked voxel series are extracted once, with `neuroim2::series()`, so a
+`SparseNeuroVec` does not need to be densified.
+
+## File-Based Volumetric Data (`nifti_frame`)
 
 This is often the most practical option for typical fMRI analyses where data resides in files.
 
 **Key Arguments:**
 
 *   `scans`: A character vector of file paths to the 4D fMRI image files (e.g., `.nii.gz`), one path per run.
-*   `mask`: A character string giving the file path to the 3D mask image file.
+*   `mask`: The path to a 3D mask image (or a `LogicalNeuroVol`, or a `fmridataset::volume_space`).
 *   `TR`: Repetition time (seconds).
-*   `run_length`: A numeric vector specifying the number of volumes (time points) in each run file listed in `scans`.
+*   `run_length` (Optional): Volumes per run; if omitted, read from each file's header.
 *   `event_table` (Optional): A `data.frame` with experimental design info.
 *   `base_path` (Optional): A path to prepend to relative file paths in `scans` and `mask`.
-*   `preload` (Optional, Default: `FALSE`): If `TRUE`, load the mask and scan data into memory immediately. If `FALSE` (recommended for large data), data is read only when accessed.
-*   `mode` (Optional): Storage mode for `neuroim2` when reading data (e.g., "normal", "mmap").
 
 ```{r file-dataset-fixture, include=FALSE}
 # --- Create Dummy Files (for illustration only) ---
@@ -197,26 +205,29 @@ below genuinely executes. In a study, start with your existing run and mask
 paths; the important teaching code is the constructor itself.
 
 ```{r file-dataset-example}
-# Create the file-based dataset object
 # Pass only filenames to 'scans' and 'mask', and specify the directory in 'base_path'
-file_dset <- fmri_dataset(scans = c(scan1_filename, scan2_filename), 
-                            mask = mask_filename, 
-                            TR = 1.5, 
-                            run_length = c(20, 25), # Must match time dim of files
-                            event_table = events_df, 
-                            base_path = tmp_dir,    # Set base_path to the temp directory
-                            preload = FALSE) # Keep data on disk
+file_frame <- nifti_frame(scans = c(scan1_filename, scan2_filename),
+                          mask = mask_filename,
+                          TR = 1.5,
+                          run_length = c(20, 25), # Must match time dim of files
+                          event_table = events_df,
+                          base_path = tmp_dir)    # Set base_path to the temp directory
 
-# This print statement should now work
-print(file_dset)
-
-# Clean up dummy files (optional, commented out for vignette)
-# file.remove(mask_file_full_path, scan1_file_full_path, scan2_file_full_path)
+dim(file_frame)
+temporal_schema(file_frame)$run_lengths
 ```
 
-Using `preload=FALSE` is memory-efficient as only the required data segments are read when needed (e.g., during model fitting).
+The frame wraps a `fmridataset::nifti_array_source()`: headers and the mask are
+read at construction, but no BOLD volumes are read until a fit needs them, and
+reads are pushed down per file and per masked voxel. If the files change on
+disk after construction, the next read fails with a structured stale-source
+error rather than silently returning different values.
 
-## Matrix Data (`matrix_dataset`)
+```{r file-dataset-cleanup, include=FALSE}
+file.remove(mask_file_full_path, scan1_file_full_path, scan2_file_full_path)
+```
+
+## Matrix Data (`matrix_frame`)
 
 Use this if your fMRI data is already represented as a 2D matrix where rows are time points and columns are voxels or components (e.g., after surface projection or ROI averaging).
 
@@ -229,6 +240,7 @@ Use this if your fMRI data is already represented as a 2D matrix where rows are 
     condition, run, and any modulators used by the model. Its row count usually
     differs from the number of scans; onsets and run labels must instead be
     valid for the declared run lengths.
+*   `feature_ids` (Optional): Stable feature IDs; unique column names are used when present.
 
 ```{r matrix_dataset_example}
 # Example matrix (100 time points, 50 features/voxels)
@@ -240,31 +252,34 @@ example_matrix <- matrix(rnorm(time_points * features), time_points, features)
 
 # Example event table for matrix data
 events_mat_df <- data.frame(
-  onset = c(seq(5, 45, by=10), seq(5, 45, by=10)), 
+  onset = c(seq(5, 45, by=10), seq(5, 45, by=10)),
   condition = factor(rep(c("C", "D"), 10)),
   run = rep(1:2, each = 5)
 )
 
-mat_dset <- matrix_dataset(datamat = example_matrix, 
-                           TR = 2.5, 
-                           run_length = run_len,
-                           event_table = events_mat_df)
+mat_frame <- matrix_frame(datamat = example_matrix,
+                          TR = 2.5,
+                          run_length = run_len,
+                          event_table = events_mat_df)
 
-print(mat_dset)
-print(mat_dset$sampling_frame)
+dim(mat_frame)
+class(fmridataset::space(mat_frame))   # an index_space: no spatial geometry
+as_sampling_frame(mat_frame)
 ```
 
-For `matrix_dataset`, the concept of a spatial mask is implicit; all columns provided in `datamat` are included.
+For `matrix_frame`, the concept of a spatial mask is implicit; all columns
+provided in `datamat` are included, and the feature space is a plain
+`index_space`.
 
-## Latent Data (`latent_dataset`)
+## Latent Data (`latent_frame`)
 
-This class is designed for data that has undergone dimensionality reduction (e.g., PCA, ICA). It wraps a `LatentNeuroVec` object, which stores the basis vectors (latent components over time) and loadings (spatial maps of components). Creating and using `LatentNeuroVec` objects typically requires the `fmristore` package.
+This constructor is for data that has undergone dimensionality reduction (e.g., PCA, ICA). It takes a `fmristore::LatentNeuroVec`, which stores the basis (latent components over time) and loadings (spatial maps of components), and builds a frame whose assay holds the component scores and whose feature space is a `fmridataset::basis_space` carrying the loadings as its synthesis operator.
 
 **Key Arguments:**
 
-*   `lvec`: A `LatentNeuroVec` object from the `fmristore` package.
+*   `x`: A `LatentNeuroVec` object from the `fmristore` package.
 *   `TR`: Repetition time (seconds).
-*   `run_length`: Vector specifying run lengths (must sum to the time dimension of `lvec`).
+*   `run_length`: Vector specifying run lengths (must sum to the time dimension of `x`).
 *   `event_table` (Optional): Experimental design `data.frame`.
 
 ```{r latent_dataset_example, eval=FALSE}
@@ -272,34 +287,57 @@ This class is designed for data that has undergone dimensionality reduction (e.g
 # Assuming 'my_latent_neuro_vec' is a LatentNeuroVec object representing
 # 20 components over 300 time points (2 runs of 150)
 
-latent_dset <- latent_dataset(
-  lvec = my_latent_neuro_vec,
+latent_frame_obj <- latent_frame(
+  my_latent_neuro_vec,
   TR = 2.0,
   run_length = c(150, 150),
   event_table = some_event_df
 )
-print(latent_dset)
+collect_assay(latent_frame_obj)              # scores: time x components
+basis_synthesis(fmridataset::space(latent_frame_obj))     # loadings: voxels x components
 ```
 
-This dataset type essentially behaves like a `matrix_dataset` where the matrix columns are the latent component time series.
+Model fitting happens in component space; `fmri_latent_lm()` and the
+`latent_sketch` engine reconstruct voxel-wise coefficients through the loadings
+when you ask for them.
 
-## Using Dataset Objects
+## Reading a frame back
 
-Once created, these dataset objects serve as the primary data input for `fmrireg`'s modeling functions:
+Once created, a frame is the primary data input for `fmrireg`'s modeling
+functions, and the same public accessors work whatever the storage:
 
-*   `event_model(..., sampling_frame = dset$sampling_frame)`
-*   `baseline_model(..., sframe = dset$sampling_frame)`
-*   `fmri_lm(model, dataset = dset)`
-*   `estimate_betas(..., dataset = dset)`
+```{r accessors}
+# Timing: derived from the run_id / TR observation columns
+schema <- temporal_schema(mem_frame)
+schema$run_lengths
+schema$TR
+blocklens(as_sampling_frame(mem_frame))
 
-They provide a standardized way to access data (`get_data(dset)`) and masks
-(`get_mask(dset)`). Timing belongs to the dataset's sampling frame, so inspect
-it with `blocklens(dset$sampling_frame)` and
-`blockids(dset$sampling_frame)`, regardless of the underlying storage format.
+# Events: the keyed event table (an event_id column is added when absent)
+head(event_data(mem_frame$tables$events))
 
-Choosing the appropriate dataset class depends on where your data resides (memory, files) and its format (volumetric, matrix, latent).
+# Data: the dense scans-by-features matrix, read under a memory budget
+dim(collect_assay(mem_frame))
+
+# Space: the typed feature space and, for volumes, a map back to the grid
+n_features(fmridataset::space(mem_frame))
+first_volume <- spatial_map(mem_frame, 1)
+class(first_volume)
+```
+
+Modeling functions take the frame directly:
+
+*   `event_model(..., sampling_frame = as_sampling_frame(frame))`
+*   `baseline_model(..., sframe = as_sampling_frame(frame))`
+*   `fmri_lm(formula, block, dataset = frame)`
+*   `estimate_betas(frame, fixed = ..., ran = ..., block = ...)`
+
+Frames are lazy where they can be. `filter_obs(frame, run_id == "run-2")`
+and `frame[, 1:100]` return views that share the source and read nothing
+until `collect_assay()` or a fit asks for values.
 
 ## Next
 
 - `vignette("a_08_simulation", package = "fmrireg")` — Simulating fMRI data
 - `vignette("a_09_linear_model", package = "fmrireg")` — fMRI Linear Model (GLM)
+- `vignette("fmridataset", package = "fmridataset")` — Frames, views, and the temporal contract

@@ -25,7 +25,7 @@ fmri_latent_lm(
 
 \item{baseline_model}{An optional baseline model.}
 
-\item{dataset}{A dataset of class 'latent_dataset'.}
+\item{dataset}{A latent \code{fmri_frame} (see \code{\link[=latent_frame]{latent_frame()}}).}
 
 \item{durations}{The duration of events in the dataset.}
 
@@ -47,7 +47,9 @@ An object of class 'fmri_latent_lm' containing the regression model and dataset.
 }
 \description{
 This function estimates a regression model for fMRI data using a latent component dataset.
-The dataset must be of type \code{latent_dataset}, which itself requires a \code{LatentNeuroVec} input.
+The dataset must be an \code{fmri_frame} whose feature space is a
+\code{fmridataset::basis_space} (see \code{\link[=latent_frame]{latent_frame()}}), so that the assay holds
+component scores and the space carries the spatial loadings.
 }
 \note{
 This method is currently experimental.

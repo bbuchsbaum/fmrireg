@@ -16,7 +16,7 @@ glm_lss(
 )
 }
 \arguments{
-\item{dataset}{A \code{matrix_dataset} object containing the fMRI time series data}
+\item{dataset}{An \code{fmri_frame} containing the fMRI time series data (see \code{\link[=matrix_frame]{matrix_frame()}})}
 
 \item{model_obj}{An \code{event_model} object specifying the experimental design}
 
@@ -74,8 +74,8 @@ model_obj <- event_model(onset ~ hrf(condition),
 # Create data matrix (100 timepoints, 10 voxels)
 Y <- matrix(rnorm(1000), 100, 10)
 
-# Create matrix_dataset with event table
-dset <- matrix_dataset(Y, TR = 2, run_length = 100, event_table = event_data)
+# Create an fmri_frame with event table
+dset <- matrix_frame(Y, TR = 2, run_length = 100, event_table = event_data)
 
 # Fit with LSS - estimates separate beta for each individual trial
 fit <- glm_lss(dset, model_obj, fmrihrf::HRF_SPMG1)

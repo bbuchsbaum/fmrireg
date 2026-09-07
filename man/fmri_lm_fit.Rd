@@ -21,7 +21,7 @@ fmri_lm_fit(
 \arguments{
 \item{fmrimod}{An \code{fmri_model} object.}
 
-\item{dataset}{An \code{fmri_dataset} object containing the time-series data.}
+\item{dataset}{An \code{fmri_frame} object containing the time-series data.}
 
 \item{strategy}{The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.}
 
@@ -56,6 +56,6 @@ and data splitting strategy (either \code{"runwise"} or \code{"chunkwise"}). It 
 used by the \code{fmri_lm} function.
 }
 \seealso{
-\code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{fmri_dataset}}
+\code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{matrix_frame}}
 }
 \keyword{internal}

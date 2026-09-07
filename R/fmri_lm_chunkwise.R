@@ -7,7 +7,7 @@
 #' This function performs a chunkwise linear model analysis on an fMRI dataset,
 #' splitting the dataset into chunks and running the linear model on each chunk.
 #'
-#' @param x An \code{fmri_dataset} object.
+#' @param x An \code{fmri_frame} object.
 #' @param model The \code{fmri_model} used for the analysis.
 #' @param contrast_objects The list of full contrast objects.
 #' @param nchunks The number of chunks to divide the dataset into.
@@ -21,7 +21,7 @@
 #' @param sigma_fixed Optional fixed robust scale estimate.
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
-chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
+chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
                                       verbose = FALSE, use_fast_path = TRUE, progress = FALSE,
                                       parallel_chunks = FALSE,
                                       phi_fixed = NULL,
@@ -36,8 +36,7 @@ chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
   )
   
   # Get chunks
-  chunk_iter <- exec_strategy("chunkwise", nchunks = nchunks)(dset)
-  chunks <- collect_chunks(chunk_iter)
+  chunks <- .dset_chunks(dset, nchunks)
   
   # Progress bar setup
   if (progress && !parallel_chunks) {
@@ -63,7 +62,7 @@ chunkwise_lm.fmri_dataset <- function(x, model, contrast_objects, nchunks, cfg,
   run_indices <- NULL
   if (cfg$ar$struct != "iid") {
     run_indices <- lapply(
-      collect_chunks(exec_strategy("runwise")(dset)),
+      .dset_run_chunks(dset),
       `[[`,
       "row_ind"
     )
@@ -328,7 +327,7 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
   if (length(inference_residuals) &&
       all(vapply(inference_residuals, Negate(is.null), logical(1)))) {
     X_inference <- if (exists("precomp", inherits = FALSE)) precomp$X_global else modmat
-    run_chunks <- collect_chunks(exec_strategy("runwise")(dset))
+    run_chunks <- .dset_run_chunks(dset)
     run_rows <- lapply(run_chunks, `[[`, "row_ind")
     censor_global <- rep(FALSE, nrow(X_inference))
     if (exists("precomp", inherits = FALSE)) {

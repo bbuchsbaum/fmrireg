@@ -7,7 +7,7 @@
 extract_nuisance_timeseries(dataset, mask, run = NULL)
 }
 \arguments{
-\item{dataset}{An fmri_dataset object.}
+\item{dataset}{An fmri_frame object.}
 
 \item{mask}{A binary mask (logical vector or 3D array) indicating nuisance voxels,
 or a file path to a NIfTI mask.}

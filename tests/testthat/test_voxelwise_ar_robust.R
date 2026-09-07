@@ -4,7 +4,7 @@ options(mc.cores=1)
 
 etab <- data.frame(onset = c(1,10), repnum = factor(c("A","B")), run = c(1,1))
 Y <- matrix(rnorm(20*4), 20, 4)
-dset <- matrix_dataset(Y, TR=1, run_length=20, event_table=etab)
+dset <- matrix_frame(Y, TR=1, run_length=20, event_table=etab)
 
 con <- contrast_set(pair_contrast(~ repnum == "A", ~ repnum == "B", name="AvB"))
 

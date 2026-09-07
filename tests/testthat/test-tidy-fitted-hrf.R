@@ -12,7 +12,7 @@ test_that("tidy_fitted_hrf returns plottable long table", {
     condition = factor(c("A", "B", "A", "B"))
   )
 
-  dset <- fmridataset::matrix_dataset(
+  dset <- matrix_frame(
     datamat = Y,
     TR = 1,
     run_length = n,

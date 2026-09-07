@@ -46,7 +46,7 @@ test_that("Parcel AR (by_cluster) reduces residual variance vs global AR", {
     v <- v + 1L; arr[ix, iy, iz, ] <- as.numeric(Y[, v])
   }
   vec <- NeuroVec(arr, space4d)
-  dset <- fmri_mem_dataset(scans = list(vec), mask = maskVol, TR = TR, event_table = events_df)
+  dset <- neurovec_frame(scans = list(vec), mask = maskVol, TR = TR, event_table = events_df)
 
   # Parcels + SRHT sketch setup
   low <- lowrank_control(parcels = parcels, time_sketch = list(method = "srht", m = min(8L * p, Tlen)))

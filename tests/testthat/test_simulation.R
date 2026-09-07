@@ -313,7 +313,7 @@ test_that("simulate_fmri_matrix preserves explicit onsets exactly", {
     buffer = 8
   )
 
-  expect_identical(result$time_series$event_table$onset, requested_onsets)
+  expect_identical(frame_events(result$time_series)$onset, requested_onsets)
   expect_equal(dim(result$ampmat), c(length(requested_onsets), 2L))
   expect_equal(dim(result$durmat), c(length(requested_onsets), 2L))
   expect_equal(result$ampmat[, 1], c(1, 2, 3, 4))
@@ -354,22 +354,22 @@ test_that("simulate_fmri_matrix generates correct output structure", {
   expect_type(result, "list")
   expect_named(result, c("time_series", "ampmat", "durmat", "hrf_info", "noise_params"))
   
-  # Check time_series is a matrix_dataset
-  expect_s3_class(result$time_series, "matrix_dataset")
+  # Check time_series is an fmri_frame
+  expect_s3_class(result$time_series, "fmri_frame")
   
   # Check dimensions
-  expect_equal(ncol(result$time_series$data), 5)  # n = 5
-  expect_equal(nrow(result$time_series$data), 60)  # 120s / 2s TR
+  expect_equal(ncol(frame_data(result$time_series)), 5)  # n = 5
+  expect_equal(nrow(frame_data(result$time_series)), 60)  # 120s / 2s TR
   
   # Check amplitude and duration matrices - events may be reduced to fit
-  actual_events <- nrow(result$time_series$event_table)
+  actual_events <- nrow(frame_events(result$time_series))
   expect_equal(dim(result$ampmat), c(actual_events, 5))  # n_events x n
   expect_equal(dim(result$durmat), c(actual_events, 5))
   
   # Check event table has at least some events
   expect_true(actual_events > 0)
   expect_true(actual_events <= 10)  # May be reduced
-  expect_true(all(result$time_series$event_table$onset < 104))  # 120 - 16 buffer
+  expect_true(all(frame_events(result$time_series)$onset < 104))  # 120 - 16 buffer
 })
 
 test_that("simulate_fmri_matrix handles different ISI distributions", {
@@ -382,7 +382,7 @@ test_that("simulate_fmri_matrix handles different ISI distributions", {
     n_events = 10,
     isi_dist = "even"
   )
-  onsets_even <- result_even$time_series$event_table$onset
+  onsets_even <- frame_events(result_even$time_series)$onset
   isis_even <- diff(onsets_even)
   expect_true(sd(isis_even) < 0.1)  # Should be nearly constant
   
@@ -395,7 +395,7 @@ test_that("simulate_fmri_matrix handles different ISI distributions", {
     isi_min = 2,
     isi_max = 6
   )
-  onsets_unif <- result_unif$time_series$event_table$onset
+  onsets_unif <- frame_events(result_unif$time_series)$onset
   isis_unif <- diff(onsets_unif)
   expect_true(all(isis_unif >= 2))
   expect_true(all(isis_unif <= 6))
@@ -409,7 +409,7 @@ test_that("simulate_fmri_matrix handles different ISI distributions", {
     isi_rate = 0.5
   )
   # Just check it runs without error
-  expect_s3_class(result_exp$time_series, "matrix_dataset")
+  expect_s3_class(result_exp$time_series, "fmri_frame")
 })
 
 test_that("simulate_fmri_matrix handles amplitude and duration variability", {
@@ -482,8 +482,8 @@ test_that("simulate_fmri_matrix handles different noise types", {
   expect_equal(result_ar2$noise_params$noise_ar, c(0.4, 0.3))
   
   # Check that noise was actually added
-  data_none <- result_none$time_series$data
-  data_white <- result_white$time_series$data
+  data_none <- frame_data(result_none$time_series)
+  data_white <- frame_data(result_white$time_series)
   expect_false(all(data_none == data_white))
 })
 
@@ -509,13 +509,13 @@ test_that("simulate_fmri_matrix handles single trial mode", {
   )
   
   # Both should produce valid datasets
-  expect_s3_class(result_regular$time_series, "matrix_dataset")
-  expect_s3_class(result_single$time_series, "matrix_dataset")
+  expect_s3_class(result_regular$time_series, "fmri_frame")
+  expect_s3_class(result_single$time_series, "fmri_frame")
   
   # Results should differ due to different processing modes
   # Check clean signals (before noise) by comparing column means
-  col1_regular <- mean(result_regular$time_series$data[,1])
-  col1_single <- mean(result_single$time_series$data[,1])
+  col1_regular <- mean(frame_data(result_regular$time_series)[,1])
+  col1_single <- mean(frame_data(result_single$time_series)[,1])
   # They should be different if the modes work differently
   expect_true(abs(col1_regular - col1_single) > 0 || 
               !identical(result_regular$ampmat, result_single$ampmat))
@@ -530,12 +530,12 @@ test_that("simulate_fmri_matrix is reproducible with seed", {
                                   noise_type = "white", noise_sd = 1.0)
   
   # Same seed should give identical results
-  expect_equal(result1$time_series$data, result2$time_series$data)
+  expect_equal(frame_data(result1$time_series), frame_data(result2$time_series))
   expect_equal(result1$ampmat, result2$ampmat)
   expect_equal(result1$durmat, result2$durmat)
   
   # Different seed should give different results
-  expect_false(identical(result1$time_series$data, result3$time_series$data))
+  expect_false(identical(frame_data(result1$time_series), frame_data(result3$time_series)))
 })
 
 test_that("simulate_fmri_matrix handles buffer correctly", {
@@ -550,11 +550,11 @@ test_that("simulate_fmri_matrix handles buffer correctly", {
   )
   
   # All onsets should be within effective time (total_time - buffer)
-  onsets <- result$time_series$event_table$onset
+  onsets <- frame_events(result$time_series)$onset
   expect_true(all(onsets <= 90))  # 100 - 10 (allow equality)
   
   # Time series should still be full length
-  expect_equal(nrow(result$time_series$data), 50)  # 100 / 2
+  expect_equal(nrow(frame_data(result$time_series)), 50)  # 100 / 2
 })
 
 test_that("simulate_fmri_matrix handles extreme parameters gracefully", {
@@ -566,7 +566,7 @@ test_that("simulate_fmri_matrix handles extreme parameters gracefully", {
     total_time = 20,
     n_events = 2
   )
-  expect_equal(nrow(result1$time_series$event_table), 2)
+  expect_equal(nrow(frame_events(result1$time_series)), 2)
   
   # Many events in short time - should reduce events
   expect_message(
@@ -580,11 +580,11 @@ test_that("simulate_fmri_matrix handles extreme parameters gracefully", {
     ),
     "Reduced to"
   )
-  expect_true(nrow(result2$time_series$event_table) < 100)
+  expect_true(nrow(frame_events(result2$time_series)) < 100)
   
   # Single time series
   result3 <- simulate_fmri_matrix(n = 1, n_events = 5)
-  expect_equal(ncol(result3$time_series$data), 1)
+  expect_equal(ncol(frame_data(result3$time_series)), 1)
   expect_equal(ncol(result3$ampmat), 1)
 })
 
@@ -608,7 +608,7 @@ test_that("simulated data can be used with fmri_model construction", {
   
   # Extract dataset and event table
   dset <- sim_result$time_series
-  etab <- dset$event_table
+  etab <- frame_events(dset)
   
   # Create a simple event model
   etab$condition <- factor(rep(c("A", "B"), length.out = nrow(etab)))
@@ -618,10 +618,10 @@ test_that("simulated data can be used with fmri_model construction", {
     emodel <- event_model(onset ~ hrf(condition), 
                          data = etab,
                          block = ~ run,
-                         sampling_frame = dset$sampling_frame)
+                         sampling_frame = frame_sframe(dset))
     
     bmodel <- baseline_model(basis = "poly", degree = 2, 
-                           sframe = dset$sampling_frame)
+                           sframe = frame_sframe(dset))
     
     fmod <- fmri_model(emodel, bmodel, dset)
   })
@@ -634,7 +634,7 @@ test_that("simulated data can be used with fmri_model construction", {
   
   # Check design matrix can be extracted
   dm <- design_matrix(fmod)
-  expect_equal(nrow(dm), nrow(dset$data))
+  expect_equal(nrow(dm), nrow(frame_data(dset)))
   expect_true(ncol(dm) > 0)
 })
 
@@ -677,7 +677,7 @@ test_that("memory efficiency for large simulations", {
   
   # Check that object size is reasonable
   # Expected: ~300 timepoints x 1000 voxels x 8 bytes ≈ 2.4 MB for data alone
-  obj_size <- object.size(result$time_series$data)
+  obj_size <- object.size(frame_data(result$time_series))
   expect_true(as.numeric(obj_size) < 10e6)  # Less than 10 MB
   
   # Clean up

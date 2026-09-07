@@ -46,7 +46,7 @@ execution choices in \code{compute}; unknown arguments are rejected.}
 
 \item{baseline_model}{Optional baseline/nuisance model.}
 
-\item{dataset}{An \code{fmri_dataset}. For an \code{fmri_model} method this may be
+\item{dataset}{An \code{fmri_frame}. For an \code{fmri_model} method this may be
 omitted when the model already owns its dataset.}
 
 \item{durations}{Event durations passed to model construction.}

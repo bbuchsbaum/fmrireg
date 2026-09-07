@@ -1,70 +1,41 @@
 #' Resolve Dataset Mask and Spatial Metadata
+#'
+#' Recovers the neuroim2 spatial reference of an `fmri_frame` whose feature
+#' space is a `volume_space` (directly, or as the parent of a `basis_space`).
+#' The reconstruction goes through `fmridataset::reconstruct_space()`, so the
+#' mask and `NeuroSpace` agree exactly with what fmridataset itself would use
+#' for `spatial_map()`.
+#'
+#' @return A list with `mask` (a `LogicalNeuroVol`), `mask_array` (3D logical
+#'   array), and `space` (a 3D `NeuroSpace`).
 #' @keywords internal
 #' @noRd
 .fmri_dataset_mask_space <- function(dataset, context = "spatial reconstruction") {
-  if (!inherits(dataset, "fmri_dataset")) {
-    stop("Expected an 'fmri_dataset' object for ", context, ".", call. = FALSE)
+  if (!.is_fmri_frame(dataset)) {
+    stop("Expected an 'fmri_frame' object for ", context, ".", call. = FALSE)
   }
 
-  mask <- fmridataset::get_mask(dataset)
-  mask_raw <- as.array(mask)
-  space <- .fmri_mask_space_from_sources(mask, dataset)
-  if (is.null(space)) {
+  vspace <- .dset_volume_space(dataset)
+  if (is.null(vspace)) {
     stop(
       "Spatial metadata is required for ", context,
-      ", but the dataset mask does not carry a neuroim2::NeuroSpace and ",
-      "no recoverable backend spatial metadata was found.",
+      ", but the dataset's feature space is not a volume_space ",
+      "(build the frame with neurovec_frame(), nifti_frame(), or a volume_space).",
       call. = FALSE
     )
   }
 
-  mask_dim <- dim(mask_raw)
-  if (is.null(mask_dim)) {
-    mask_dim <- dim(.fmri_normalize_mask_space(space, NULL, context))[1:3]
-  }
+  n_feat <- fmridataset::n_features(vspace)
+  vol <- fmridataset::reconstruct_space(vspace, rep(1, n_feat))
+  space <- neuroim2::space(vol)
+  mask_array <- !is.na(as.array(vol))
+  mask_dim <- dim(mask_array)
   if (length(mask_dim) != 3L) {
     stop("Dataset mask must be a 3D array for ", context, ".", call. = FALSE)
   }
-
-  mask_array <- array(as.logical(mask_raw), dim = mask_dim)
-  space <- .fmri_normalize_mask_space(space, dim(mask_array), context)
+  space <- .fmri_normalize_mask_space(space, mask_dim, context)
+  mask <- neuroim2::LogicalNeuroVol(mask_array, space)
   list(mask = mask, mask_array = mask_array, space = space)
-}
-
-#' @keywords internal
-#' @noRd
-.fmri_mask_space_from_sources <- function(mask, dataset) {
-  space <- .fmri_try_space(mask)
-  if (!is.null(space)) return(space)
-
-  backend <- dataset$backend
-  if (!is.null(backend)) {
-    metadata <- tryCatch(fmridataset::backend_get_metadata(backend), error = function(e) NULL)
-    if (!is.null(metadata$space)) return(metadata$space)
-
-    for (field in c("mask", "mask_source", "data")) {
-      obj <- backend[[field]]
-      space <- .fmri_try_space(obj)
-      if (!is.null(space)) return(space)
-    }
-
-    source <- backend$source
-    if (is.list(source) && length(source) > 0L) {
-      space <- .fmri_try_space(source[[1]])
-      if (!is.null(space)) return(space)
-    } else {
-      space <- .fmri_try_space(source)
-      if (!is.null(space)) return(space)
-    }
-  }
-
-  for (field in c("mask", "mask_source", "data")) {
-    obj <- dataset[[field]]
-    space <- .fmri_try_space(obj)
-    if (!is.null(space)) return(space)
-  }
-
-  NULL
 }
 
 #' @keywords internal

@@ -39,7 +39,7 @@ Imports:
     Rcpp,
     RcppParallel,
     methods,
-    fmridataset (>= 0.1.0),
+    fmridataset (>= 0.10.0.9000),
     crayon,
     plotly,
     cli,

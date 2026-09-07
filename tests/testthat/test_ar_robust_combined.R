@@ -41,7 +41,7 @@ test_that("AR + Robust combination works in runwise", {
     run = rep(1:n_runs, each = length(onsets))
   )
   
-  dset <- matrix_dataset(Y, TR = 1, run_length = rep(n_time/n_runs, n_runs), event_table = ev_df)
+  dset <- matrix_frame(Y, TR = 1, run_length = rep(n_time/n_runs, n_runs), event_table = ev_df)
   
   # Fit with AR + Robust  
   fit <- fmri_lm(
@@ -87,7 +87,7 @@ test_that("AR + Robust with re-estimation works", {
   # Add outliers that might affect AR estimation
   Y[c(10, 20, 30), 1] <- Y[c(10, 20, 30), 1] + 10
   
-  dset <- matrix_dataset(Y, TR = 1, run_length = n_time, event_table = data.frame(onset = c(15, 35, 55), run = 1))
+  dset <- matrix_frame(Y, TR = 1, run_length = n_time, event_table = data.frame(onset = c(15, 35, 55), run = 1))
   
   # Fit with re-estimation
   fit_reest <- fmri_lm(
@@ -128,7 +128,7 @@ test_that("process_run_ar_robust handles edge cases", {
   n_vox <- 2
   
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
-  dset <- matrix_dataset(Y, TR = 2, run_length = n_time, event_table = data.frame(onset = c(5, 15), run = 1))
+  dset <- matrix_frame(Y, TR = 2, run_length = n_time, event_table = data.frame(onset = c(5, 15), run = 1))
   
   # Create minimal model
   sframe <- fmrihrf::sampling_frame(n_time, TR = 2)
@@ -146,8 +146,7 @@ test_that("process_run_ar_robust handles edge cases", {
   )
   
   # Get run chunk
-  chunk_iter <- exec_strategy("runwise")(dset)
-  chunks <- collect_chunks(chunk_iter)
+  chunks <- fmrireg:::.dset_run_chunks(dset)
   
   # Process with AR + Robust
   result <- fmrireg:::process_run_ar_robust(
@@ -197,7 +196,7 @@ test_that("Chunkwise AR + Robust works", {
     }
   }
   
-  dset <- matrix_dataset(Y, TR = 1, run_length = rep(n_time/n_runs, n_runs), 
+  dset <- matrix_frame(Y, TR = 1, run_length = rep(n_time/n_runs, n_runs), 
                          event_table = data.frame(
                            onset = rep(c(10, 20), n_runs),
                            run = rep(1:n_runs, each = 2)

@@ -1,6 +1,6 @@
 # Shared fixtures for the model-template / fan-out tests (M2, M3, M5, ...).
 
-# A small in-memory matrix_dataset with a 2-run, 2-condition design.
+# A small in-memory fmri_frame (via matrix_frame()) with a 2-run, 2-condition design.
 make_test_matrix_dataset <- function(nvox = 4L, runs = c(40L, 40L), TR = 2) {
   set.seed(42)
   total <- sum(runs)
@@ -13,10 +13,10 @@ make_test_matrix_dataset <- function(nvox = 4L, runs = c(40L, 40L), TR = 2) {
       run = r
     )
   }))
-  matrix_dataset(datamat, TR = TR, run_length = runs, event_table = ev)
+  matrix_frame(datamat, TR = TR, run_length = runs, event_table = ev)
 }
 
-# A minimal fitted fmri_lm on the matrix_dataset fixture.
+# A minimal fitted fmri_lm on the matrix_frame fixture.
 make_test_fit <- function(ds = make_test_matrix_dataset()) {
   fmri_lm(
     onset ~ hrf(condition), block = ~ run, dataset = ds,

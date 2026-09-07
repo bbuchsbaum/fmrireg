@@ -20,7 +20,7 @@ gen_dset <- function(D=5, des=facedes) {
   
   
   #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
-  fmridataset::fmri_mem_dataset(scans=scans, 
+  neurovec_frame(scans=scans, 
                    mask=mask, 
                    TR=1.5, 
                    event_table=des)
@@ -62,7 +62,7 @@ test_that("can run a beta estimation", {
 #   ret <- sim_ts(ncond=1, hrf,nreps=20, amps=amps,isi=c(8,16))
 #   
 #   etab <- data.frame(onset=ret$onset, fac=rep("a", length(ret$onset)), run=factor(rep(1, length(ret$onset))))
-#   matrix_dataset(as.matrix(ret$mat[,2]), TR=1.5, run_length=143, event_table=etab)
+#   matrix_frame(as.matrix(ret$mat[,2]), TR=1.5, run_length=143, event_table=etab)
 #   
 # })
 
@@ -147,12 +147,6 @@ test_that("can run a beta estimation with fixed duration", {
   facedes$constant <- factor(rep(1, nrow(facedes)))
   
   dset <- gen_dset(5,facedes)
-  #scans <- list.files("test_data/images_study/epi/", "rscan0.*nii", full.names=TRUE)
-  
-  dset <- fmridataset::fmri_mem_dataset(scans=dset$scans, 
-                           mask=dset$mask, 
-                           TR=1.5, 
-                           event_table=facedes)
   
   b1 <- fmrihrf::gen_hrf(fmrihrf::hrf_spmg1, lag=1, width=3, normalize=TRUE)
   

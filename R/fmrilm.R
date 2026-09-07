@@ -168,7 +168,7 @@ fast_rlm_run <- function(X, Y, proj,
 #' @param formula The model formula for experimental events.
 #' @param block The model formula for block structure.
 #' @param baseline_model (Optional) A \code{baseline_model} object. If \code{NULL}, a default baseline model is created.
-#' @param dataset An \code{fmri_dataset} containing the event table and sampling frame.
+#' @param dataset An \code{fmri_frame} containing the event table and sampling frame.
 #' @param drop_empty Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.
 #' @param durations A vector of event durations. Default is \code{0}.
 #' @return An \code{fmri_model} object.
@@ -177,14 +177,14 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
   assert_that(is.formula(formula), msg = "'formula' must be a formula")
   formula <- .fmrireg_inject_registered_bases(formula)
   assert_that(is.formula(block), msg = "'block' must be a formula")
-  assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset'")
+  assert_that(inherits(dataset, "fmri_frame"), msg = "'dataset' must be an 'fmri_frame'")
   assert_that(is.numeric(durations), msg = "'durations' must be numeric")
   
   if (is.null(baseline_model)) {
     baseline_model <- baseline_model(
       basis = "bs",
-      degree = max(ceiling(median(fmrihrf::blocklens(dataset$sampling_frame)) / 100), 3),
-      sframe = dataset$sampling_frame
+      degree = max(ceiling(median(.dset_run_lengths(dataset)) / 100), 3),
+      sframe = .dset_sampling_frame(dataset)
     )
   } else {
     assert_that(inherits(baseline_model, "baseline_model"),
@@ -194,8 +194,8 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
   ev_model <- event_model(
     formula_or_list = formula,
     block = block,
-    data = dataset$event_table,
-    sampling_frame = dataset$sampling_frame,
+    data = .dset_event_table(dataset),
+    sampling_frame = .dset_sampling_frame(dataset),
     drop_empty = drop_empty,
     durations = durations
   )
@@ -696,7 +696,7 @@ fmri_lm <- function(formula, ...) {
 #' @noRd
 #' @param block The model formula for block structure.
 #' @param baseline_model (Optional) A \code{baseline_model} object. Default is \code{NULL}.
-#' @param dataset An \code{fmri_dataset} object containing the time-series data.
+#' @param dataset An \code{fmri_frame} object containing the time-series data.
 #' @param durations A vector of event durations. Default is \code{0}.
 #' @param drop_empty Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.
 #' @param robust Logical or character. Either \code{FALSE} (no robust fitting), 
@@ -830,7 +830,7 @@ fmri_lm <- function(formula, ...) {
 #' canonical names in new code.
 #' 
 #' @export
-#' @seealso \code{\link{fmri_dataset}}, \code{\link{fmri_lm_fit}}, \code{\link{fmri_lm_control}}
+#' @seealso \code{\link{matrix_frame}}, \code{\link{fmri_lm_fit}}, \code{\link{fmri_lm_control}}
 #' @examples
 #' 
 #' facedes <- subset(read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), 
@@ -850,7 +850,7 @@ fmri_lm <- function(formula, ...) {
 #' ys2 <- y + rnorm(length(y), sd=.02)
 #' 
 #' h <<- gen_hrf(fmrihrf::hrf_bspline, N=7, span=25)
-#' dset <- matrix_dataset(cbind(ys1,ys2), TR=2, 
+#' dset <- matrix_frame(cbind(ys1,ys2), TR=2, 
 #'                        run_length=fmrihrf::blocklens(sframe), 
 #'                        event_table=facedes)
 #' flm <- fmri_lm(onset ~ hrf(face_gen, 
@@ -911,7 +911,7 @@ fmri_lm <- function(formula, ...) {
   # Error checking
   assert_that(is.formula(formula), msg = "'formula' must be a formula")
   assert_that(is.formula(block), msg = "'block' must be a formula")
-  assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset'")
+  assert_that(inherits(dataset, "fmri_frame"), msg = "'dataset' must be an 'fmri_frame'")
   assert_that(is.numeric(durations), msg = "'durations' must be numeric")
   assert_that(is.logical(drop_empty), msg = "'drop_empty' must be logical")
   if (!is.null(robust)) {
@@ -1030,7 +1030,7 @@ fmri_lm <- function(formula, ...) {
   if (is.null(dataset)) {
     stop("No dataset found in 'formula' and none supplied.")
   }
-  assert_that(inherits(dataset, "fmri_dataset"))
+  assert_that(inherits(dataset, "fmri_frame"))
 
   cfg <- .fmri_lm_build_config(
     robust = robust,
@@ -1105,7 +1105,7 @@ fmri_lm <- function(formula, ...) {
 #' @param compute A validated [compute_spec()].
 #' @param block Formula describing run/block structure.
 #' @param baseline_model Optional baseline/nuisance model.
-#' @param dataset An `fmri_dataset`. For an `fmri_model` method this may be
+#' @param dataset An `fmri_frame`. For an `fmri_model` method this may be
 #'   omitted when the model already owns its dataset.
 #' @param durations Event durations passed to model construction.
 #' @param drop_empty Remove empty factor levels during model construction.
@@ -1189,7 +1189,7 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
 #' used by the \code{fmri_lm} function.
 #'
 #' @param fmrimod An \code{fmri_model} object.
-#' @param dataset An \code{fmri_dataset} object containing the time-series data.
+#' @param dataset An \code{fmri_frame} object containing the time-series data.
 #' @param strategy The data splitting strategy, either \code{"runwise"} or \code{"chunkwise"}. Default is \code{"runwise"}.
 #' @param cfg An \code{fmri_lm_control} object containing all fitting options. See \code{\link{fmri_lm_control}}.
 #' @param nchunks Number of data chunks when strategy is \code{"chunkwise"}.
@@ -1208,7 +1208,7 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
 #' @param ... Additional arguments.
 #' @return A fitted fMRI linear regression model with the specified fitting strategy.
 #' @keywords internal
-#' @seealso \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{fmri_dataset}}
+#' @seealso \code{\link{fmri_lm}}, \code{\link{fmri_model}}, \code{\link{matrix_frame}}
 fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                         cfg, nchunks = 10, use_fast_path = TRUE, progress = FALSE,
                         parallel_voxels = FALSE, parallel_chunks = FALSE,
@@ -1229,7 +1229,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   
   # Error checking
   assert_that(inherits(fmrimod, "fmri_model"), msg = "'fmrimod' must be an 'fmri_model' object")
-  assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset' object")
+  assert_that(inherits(dataset, "fmri_frame"), msg = "'dataset' must be an 'fmri_frame' object")
   assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
   assert_that(
     is.logical(parallel_chunks) && length(parallel_chunks) == 1L && !is.na(parallel_chunks),
@@ -1262,8 +1262,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                        ar2 = 2L,
                        arp = cfg$ar$p)
 
-    chunk_iter <- exec_strategy("runwise")(dataset)
-    run_chunks <- collect_chunks(chunk_iter)
+    run_chunks <- .dset_run_chunks(dataset)
     
     form <- get_formula(fmrimod)
     resid_chunks <- vector("list", length(run_chunks))
@@ -1300,8 +1299,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   }
 
   if (.fmri_lm_robust_enabled(cfg$robust) && cfg$robust$scale_scope == "global") {
-    chunk_iter <- exec_strategy("runwise")(dataset)
-    run_chunks <- collect_chunks(chunk_iter)
+    run_chunks <- .dset_run_chunks(dataset)
     form <- get_formula(fmrimod)
     row_med_chunks <- vector("list", length(run_chunks))
     for (ri in seq_along(run_chunks)) {
@@ -1330,18 +1328,18 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
                                          parallel_voxels = parallel_voxels
                                          ),
                    "chunkwise" = {
-                    if (inherits(dataset, "latent_dataset")) {
+                    if (.dset_is_latent(dataset)) {
                       if (isTRUE(parallel_chunks)) {
                         warning(
-                          "'parallel_chunks' is not currently supported for latent_dataset; ",
+                          "'parallel_chunks' is not currently supported for latent frames; ",
                           "using sequential chunkwise fitting.",
                           call. = FALSE
                         )
                       }
-                      # latent_dataset has no fast matrix engine (it routes
+                      # latent frames have no fast matrix engine (they route
                       # through multiresponse_arma); force the slow path
                       # regardless of the global default. Intentional.
-                      chunkwise_lm(dataset, fmrimod, standard_path_conlist, # Pass full objects
+                      chunkwise_lm_latent(dataset, fmrimod, standard_path_conlist, # Pass full objects
                                    nchunks, cfg, verbose = FALSE, use_fast_path = FALSE,
                                    progress = progress,
                                    phi_fixed = phi_global,
@@ -1726,7 +1724,7 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
   }
   
   # Reconstruction functionality can be added here if necessary (applies to the 'res' matrix/tibble)
-  # if (recon && inherits(object$dataset, "fmri_dataset")) { ... }
+  # if (recon && inherits(object$dataset, "fmri_frame")) { ... }
   
   return(res)
 }
@@ -1949,58 +1947,12 @@ unpack_chunkwise <- function(cres, event_indices, baseline_indices) {
 
 
 
-#' Perform Chunkwise Linear Modeling on fMRI Dataset
-#'
-#' This function performs a chunkwise linear model analysis on an fMRI dataset,
-#' splitting the dataset into chunks and running the linear model on each chunk.
-#'
-#' @param x An \code{fmri_dataset} object.
-#' @param model The \code{fmri_model} used for the analysis.
-#' @param contrast_objects The list of full contrast objects.
-#' @param nchunks The number of chunks to divide the dataset into.
-#' @param cfg An \code{fmri_lm_control} object containing all fitting options.
-#' @param verbose Logical. Whether to display progress messages (default is \code{FALSE}).
-#' @param use_fast_path Logical. If \code{TRUE} (the default), use the fast
-#'   matrix engine, which supports OLS, AR whitening, robust, and preprocessing.
-#'   \code{FALSE} selects the formula/lm reference engine (no robust or full
-#'   preprocessing support); it is retained mainly as a parity oracle.
-#' @param progress Logical. Display a progress bar for chunk processing. Default is \code{FALSE}.
-#' @param parallel_chunks Logical. If \code{TRUE}, process chunks with
-#'   \code{future.apply::future_lapply()} using the active future plan.
-#' @param phi_fixed Optional fixed AR parameters.
-#' @param sigma_fixed Optional fixed robust scale estimate.
-#' @return A list containing the unpacked chunkwise results.
-#' @keywords internal
-chunkwise_lm.fmri_dataset_old <- function(x, model, contrast_objects, nchunks, cfg,
-                                      verbose = FALSE, use_fast_path = TRUE, progress = FALSE,
-                                      parallel_chunks = FALSE,
-                                      phi_fixed = NULL,
-                                      sigma_fixed = NULL, ...) {
-  # Legacy shim retained for callers that still reference the historical helper.
-  chunkwise_lm.fmri_dataset(
-    x = x,
-    model = model,
-    contrast_objects = contrast_objects,
-    nchunks = nchunks,
-    cfg = cfg,
-    verbose = verbose,
-    use_fast_path = use_fast_path,
-    progress = progress,
-    parallel_chunks = parallel_chunks,
-    phi_fixed = phi_fixed,
-    sigma_fixed = sigma_fixed,
-    ...
-  )
-}
-
-
-
 #' Perform Runwise Linear Modeling on fMRI Dataset
 #'
 #' This function performs a runwise linear model analysis on an fMRI dataset by
 #' running the linear model for each data run and combining the results.
 #'
-#' @param dset An \code{fmri_dataset} object.
+#' @param dset An \code{fmri_frame} object.
 #' @param model The \code{fmri_model} used for the analysis.
 #' @param contrast_objects The list of full contrast objects.
 #' @param cfg An \code{fmri_lm_control} object containing all fitting options.

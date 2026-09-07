@@ -58,7 +58,7 @@ make_subset_contrast_model <- function(fixture, workaround = FALSE) {
     )
   }
 
-  dataset <- matrix_dataset(
+  dataset <- matrix_frame(
     fixture$response,
     TR = 2, run_length = 250, event_table = events
   )

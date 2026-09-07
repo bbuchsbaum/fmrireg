@@ -1,8 +1,8 @@
 test_that("preflight passes a well-formed job", {
   tmpl <- fmri_template(onset ~ hrf(condition), ~ run)
   ds <- make_test_matrix_dataset()
-  job <- instantiate(tmpl, list(id = "sub-01", scans = ds$datamat, TR = 2,
-                                run_length = c(40L, 40L), events = ds$event_table))
+  job <- instantiate(tmpl, list(id = "sub-01", scans = frame_data(ds), TR = 2,
+                                run_length = c(40L, 40L), events = frame_events(ds)))
   rep <- preflight(job)
   expect_s3_class(rep, "fmri_preflight")
   expect_true(rep$ok)
@@ -12,8 +12,8 @@ test_that("preflight passes a well-formed job", {
 test_that("preflight flags missing design columns", {
   tmpl <- fmri_template(onset ~ hrf(condition) + hrf(modulation), ~ run)
   ds <- make_test_matrix_dataset()  # has condition + run, but no 'modulation'
-  job <- instantiate(tmpl, list(id = "sub-02", scans = ds$datamat, TR = 2,
-                                run_length = c(40L, 40L), events = ds$event_table))
+  job <- instantiate(tmpl, list(id = "sub-02", scans = frame_data(ds), TR = 2,
+                                run_length = c(40L, 40L), events = frame_events(ds)))
   expect_warning(rep <- preflight(job), "modulation")
   expect_false(rep$ok)
   expect_true(any(grepl("modulation", rep$issues$message)))
@@ -22,8 +22,8 @@ test_that("preflight flags missing design columns", {
 test_that("preflight flags run_length / data mismatch and errors on demand", {
   tmpl <- fmri_template(onset ~ hrf(condition), ~ run)
   ds <- make_test_matrix_dataset()
-  job <- instantiate(tmpl, list(id = "sub-03", scans = ds$datamat, TR = 2,
-                                run_length = c(40L, 50L), events = ds$event_table))
+  job <- instantiate(tmpl, list(id = "sub-03", scans = frame_data(ds), TR = 2,
+                                run_length = c(40L, 50L), events = frame_events(ds)))
   expect_error(preflight(job, on_issue = "error"), "run_length")
 })
 
@@ -44,10 +44,10 @@ test_that("preflight checks file existence for file-backed jobs when asked", {
 test_that("preflight aggregates issues across a list of jobs", {
   tmpl <- fmri_template(onset ~ hrf(condition), ~ run)
   ds <- make_test_matrix_dataset()
-  good <- instantiate(tmpl, list(id = "ok", scans = ds$datamat, TR = 2,
-                                 run_length = c(40L, 40L), events = ds$event_table))
-  bad <- instantiate(tmpl, list(id = "bad", scans = ds$datamat, TR = -1,
-                                run_length = c(40L, 40L), events = ds$event_table))
+  good <- instantiate(tmpl, list(id = "ok", scans = frame_data(ds), TR = 2,
+                                 run_length = c(40L, 40L), events = frame_events(ds)))
+  bad <- instantiate(tmpl, list(id = "bad", scans = frame_data(ds), TR = -1,
+                                run_length = c(40L, 40L), events = frame_events(ds)))
   rep <- preflight(list(good, bad), on_issue = "collect")
   expect_false(rep$ok)
   expect_equal(sort(unique(rep$issues$job_id)), "bad")

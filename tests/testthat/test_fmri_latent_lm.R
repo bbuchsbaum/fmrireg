@@ -25,21 +25,15 @@ test_that("fmri_latent_lm works with basic latent dataset", {
     offset = rep(0, n_voxels)
   )
   
-  # Create dataset
-  dset <- fmridataset::latent_dataset(
-    source = list(lvec),
-    TR = 2,
-    run_length = n_time
-  )
-  
   # Create a simple event table
   event_table <- data.frame(
     onset = c(10, 30, 50, 70, 90),
     block = factor(rep(1, 5)),
     X1 = rep(1, 5)  # Add matching variable for the formula
   )
-  
-  dset$event_table <- event_table
+
+  # Create the latent frame
+  dset <- latent_frame(lvec, TR = 2, run_length = n_time, event_table = event_table)
   
   # Create a simple formula with LHS and HRF
   result <- fmri_latent_lm(
@@ -74,20 +68,13 @@ test_that("fmri_latent_lm handles different options", {
     offset = rep(0, n_voxels)
   )
   
-  dset <- fmridataset::latent_dataset(
-    source = list(lvec),
-    TR = 2,
-    run_length = n_time
-  )
-  
-  # Add event table to dataset
   event_table <- data.frame(
     onset = c(10, 30),
     block = factor(c(1, 1)),
     X1 = c(1, 1)  # Add matching variable for the formula
   )
-  
-  dset$event_table <- event_table
+
+  dset <- latent_frame(lvec, TR = 2, run_length = n_time, event_table = event_table)
   
   # Test with robust option
   result_robust <- fmri_latent_lm(
@@ -115,7 +102,7 @@ test_that("fmri_latent_lm handles different options", {
 test_that("fmri_latent_lm validates inputs", {
   # Non-latent dataset should error
   regular_data <- matrix(rnorm(100 * 10), 100, 10)
-  regular_dset <- fmridataset::matrix_dataset(
+  regular_dset <- matrix_frame(
     datamat = regular_data,
     TR = 2,
     run_length = 100
@@ -128,11 +115,11 @@ test_that("fmri_latent_lm validates inputs", {
       dataset = regular_dset,
       durations = 0
     ),
-    "latent_dataset"
+    "basis_space"
   )
 })
 
-test_that("latent_dataset creation works correctly", {
+test_that("latent_frame creation works correctly", {
   skip_if_not_installed("fmristore")
   skip_if_not_installed("neuroim2")
   
@@ -156,24 +143,21 @@ test_that("latent_dataset creation works correctly", {
     offset = rep(0, n_voxels)
   )
   
-  # latent_dataset expects a list of LatentNeuroVec objects or file paths
-  dset <- fmridataset::latent_dataset(
-    source = list(lvec),  # Must be wrapped in a list
-    TR = 2,
-    run_length = c(50, 50)
-  )
-  
-  expect_s3_class(dset, "latent_dataset")
-  # Skip TR check - may not be properly set by latent_dataset
-  # expect_equal(dset$TR, 2)
-  
-  # Test data access using get_latent_scores (correct API for latent datasets)
-  data <- fmridataset::get_latent_scores(dset)
+  dset <- latent_frame(lvec, TR = 2, run_length = c(50, 50))
+
+  expect_s3_class(dset, "fmri_frame")
+  expect_s3_class(fmridataset::space(dset), "basis_space")
+  expect_equal(unname(fmridataset::temporal_schema(dset)$TR), c(2, 2))
+  expect_equal(unname(fmridataset::temporal_schema(dset)$run_lengths), c(50L, 50L))
+
+  # Component scores are the assay; loadings live on the basis space
+  data <- fmridataset::collect_assay(dset)
   expect_equal(ncol(data), n_comp)
   expect_equal(nrow(data), n_time)
+  expect_equal(dim(fmrireg:::.dset_loadings(dset)), c(n_voxels, n_comp))
 })
 
-test_that("chunkwise_lm.latent_dataset processes correctly", {
+test_that("chunkwise_lm_latent processes correctly", {
   skip_if_not_installed("fmristore")
   skip_if_not_installed("neuroim2")
   
@@ -193,12 +177,6 @@ test_that("chunkwise_lm.latent_dataset processes correctly", {
     offset = rep(0, n_voxels)
   )
   
-  dset <- fmridataset::latent_dataset(
-    source = list(lvec),
-    TR = 2,
-    run_length = n_time
-  )
-  
   # Create a simple model with proper formula (needs LHS for event_model)
   # For testing, create a simple event table
   event_table <- data.frame(
@@ -206,9 +184,8 @@ test_that("chunkwise_lm.latent_dataset processes correctly", {
     block = factor(c(1, 1, 1)),
     X1 = c(1, 1, 1)  # Add matching variable for the formula
   )
-  
-  # Update dataset with event_table
-  dset$event_table <- event_table
+
+  dset <- latent_frame(lvec, TR = 2, run_length = n_time, event_table = event_table)
   
   model <- fmrireg:::create_fmri_model(
     formula = onset ~ hrf(X1),  # Proper formula with LHS and HRF
@@ -227,7 +204,7 @@ test_that("chunkwise_lm.latent_dataset processes correctly", {
   expect_true(TRUE)  # Placeholder to keep test structure
   
   # Old direct test removed as signature is not stable
-  # result <- fmrireg:::chunkwise_lm.latent_dataset(...)
+  # result <- fmrireg:::chunkwise_lm_latent(...)
   result <- list(event_indices = 1:2, baseline_indices = 3:4)
   
   expect_type(result, "list")

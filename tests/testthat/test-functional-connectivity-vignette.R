@@ -26,7 +26,7 @@
   data <- .simulate_ar1_errors(n_time, n_voxels, rho)
   data[, network] <- data[, network] + effect * seed_ts
 
-  dataset <- fmridataset::matrix_dataset(
+  dataset <- matrix_frame(
     data, TR = 2, run_length = n_time,
     event_table = data.frame(onset = 0, run = 1L)
   )

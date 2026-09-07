@@ -1,7 +1,7 @@
 make_inline_job <- function(id, template) {
   ds <- make_test_matrix_dataset()
-  instantiate(template, list(id = id, scans = ds$datamat, TR = 2,
-                             run_length = c(40L, 40L), events = ds$event_table))
+  instantiate(template, list(id = id, scans = frame_data(ds), TR = 2,
+                             run_length = c(40L, 40L), events = frame_events(ds)))
 }
 
 test_that("run_job with no reducer returns a fitted fmri_lm", {
@@ -33,9 +33,9 @@ test_that("run_jobs isolates a failing job", {
   good <- make_inline_job("sub-ok", tmpl)
   # A deliberately broken job: run_length inconsistent with the data matrix.
   ds <- make_test_matrix_dataset()
-  bad <- instantiate(tmpl, list(id = "sub-bad", scans = ds$datamat, TR = 2,
+  bad <- instantiate(tmpl, list(id = "sub-bad", scans = frame_data(ds), TR = 2,
                                 run_length = c(40L, 999L),
-                                events = ds$event_table))
+                                events = frame_events(ds)))
   res <- run_jobs(list(good, bad))
   expect_equal(sum(res$ok), 1L)
   expect_true("sub-bad" %in% names(batch_errors(res)))

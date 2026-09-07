@@ -74,7 +74,7 @@ make_oneway_dataset <- function(seed = 7, aliased = FALSE) {
     ev$m <- rnorm(30)
     ev$m2 <- ev$m # exact duplicate -> rank-deficient nuisance
   }
-  fmridataset::matrix_dataset(
+  matrix_frame(
     matrix(rnorm(150 * 4), 150, 4),
     TR = 2, run_length = 150, event_table = ev
   )

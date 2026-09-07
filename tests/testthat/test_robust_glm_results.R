@@ -4,7 +4,7 @@ simulate_spike_dataset <- function(n_time = 40, n_vox = 3, spike = FALSE, seed =
   set.seed(seed)
   onsets <- c(5, 15, 25, 35)
   event_tab <- data.frame(onset = onsets, cond = factor("A"), run = 1)
-  base <- matrix_dataset(matrix(rnorm(n_time * n_vox, sd = 0.1), n_time, n_vox),
+  base <- matrix_frame(matrix(rnorm(n_time * n_vox, sd = 0.1), n_time, n_vox),
                          TR = 1, run_length = n_time, event_table = event_tab)
   model <- create_fmri_model(onset ~ hrf(cond), block = ~ run,
                              dataset = base, durations = 0)
@@ -28,7 +28,7 @@ simulate_spike_dataset <- function(n_time = 40, n_vox = 3, spike = FALSE, seed =
   if (spike) {
     Y[10, ] <- Y[10, ] + 10
   }
-  dset <- matrix_dataset(Y, TR = 1, run_length = n_time, event_table = event_tab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n_time, event_table = event_tab)
   list(dset = dset, beta_true = 1, ev_cols = ev_cols)
 }
 

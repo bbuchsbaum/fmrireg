@@ -368,20 +368,13 @@
 #' @keywords internal
 #' @noRd
 .rrr_extract_response_matrix <- function(dataset) {
-  if (inherits(dataset, "latent_dataset")) {
-    Z <- as.matrix(fmridataset::get_latent_scores(dataset))
-    lvec <- if (!is.null(dataset$lvec)) {
-      dataset$lvec
-    } else if (!is.null(dataset$backend) && !is.null(dataset$backend$data)) {
-      dataset$backend$data[[1]]
-    } else {
-      stop("rrr_gls: cannot find latent loadings in latent_dataset", call. = FALSE)
-    }
-    L <- lvec@loadings
+  if (.dset_is_latent(dataset)) {
+    Z <- as.matrix(.dset_data_matrix(dataset))
+    L <- .dset_loadings(dataset)
     return(as.matrix(Z %*% Matrix::t(L)))
   }
 
-  as.matrix(fmridataset::get_data_matrix(dataset))
+  as.matrix(.dset_data_matrix(dataset))
 }
 
 
@@ -881,7 +874,7 @@
         df_methods = "residual",
         estimation_scopes = "joint",
         requires_parcels_for_by_cluster = TRUE,
-        forbid_by_cluster_dataset_classes = "latent_dataset"
+        forbid_by_cluster_dataset_classes = "basis_space"
       )
     )
   }

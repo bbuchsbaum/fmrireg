@@ -7,16 +7,18 @@
 dataset_spec(constructor, args = list(), source = c("file", "inline"))
 }
 \arguments{
-\item{constructor}{Name of a dataset constructor (a string), e.g.
-\code{"fmri_dataset"} or \code{"matrix_dataset"}. Resolved at run time, so
-the data is not loaded when the spec is built.}
+\item{constructor}{Name of a frame constructor (a string): one of
+\code{"nifti_frame"}, \code{"matrix_frame"}, \code{"neurovec_frame"}, or
+\code{"latent_frame"}. Resolved at run time, so the data is not loaded
+when the spec is built.}
 
 \item{args}{A named list of arguments passed to \code{constructor} (for
-\code{"fmri_dataset"}: \code{scans}, \code{TR}, \code{run_length},
+\code{"nifti_frame"}: \code{scans}, \code{TR}, \code{run_length},
 \code{event_table}, \code{mask}, \code{base_path}, ...).}
 
 \item{source}{Either \code{"file"} (paths; nothing loaded until run) or
-\code{"inline"} (data already in \code{args}, e.g. a \code{matrix_dataset}).}
+\code{"inline"} (data already in \code{args}, e.g. a matrix for
+\code{matrix_frame}).}
 }
 \value{
 An object of class \code{dataset_spec}.
@@ -28,11 +30,11 @@ paths and run lengths (no voxel data), which keeps the enclosing \link{fmri_job}
 tiny and portable. The dataset is realized lazily on the worker.
 }
 \examples{
-dataset_spec("fmri_dataset",
+dataset_spec("nifti_frame",
              args = list(scans = c("run-1_bold.nii.gz", "run-2_bold.nii.gz"),
                          TR = 2, run_length = c(200, 200)),
              source = "file")
 }
 \seealso{
-\code{\link[=fmri_job]{fmri_job()}}, \code{\link[=fmri_dataset]{fmri_dataset()}}, \code{\link[=matrix_dataset]{matrix_dataset()}}
+\code{\link[=fmri_job]{fmri_job()}}, \code{\link[=nifti_frame]{nifti_frame()}}, \code{\link[=matrix_frame]{matrix_frame()}}
 }

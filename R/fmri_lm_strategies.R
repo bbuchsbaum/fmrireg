@@ -7,23 +7,23 @@
 #' Extracts and formats censor information from a dataset object.
 #' Handles both binary (0/1) vectors and integer index vectors.
 #'
-#' @param dataset fmri_dataset object (may contain $censor field)
+#' @param dataset fmri_frame object (may carry a censor column)
 #' @param run_num Optional run number for run-specific extraction
 #' @param n_time Optional total number of timepoints (for validation)
 #' @return Integer vector of 1-based timepoint indices to censor, or NULL if no censoring
 #' @keywords internal
 #' @noRd
 extract_censor_from_dataset <- function(dataset, run_num = NULL, n_time = NULL) {
-  if (is.null(dataset) || is.null(dataset$censor)) {
+  if (is.null(dataset) || is.null(.dset_censor(dataset))) {
     return(NULL)
   }
 
-  censor <- dataset$censor
+  censor <- .dset_censor(dataset)
 
   # Subset to run if needed
 
-  if (!is.null(run_num) && !is.null(dataset$sampling_frame)) {
-    blocklens <- fmrihrf::blocklens(dataset$sampling_frame)
+  if (!is.null(run_num) && .is_fmri_frame(dataset)) {
+    blocklens <- .dset_run_lengths(dataset)
     run_start <- if (run_num == 1) 1 else sum(blocklens[1:(run_num - 1)]) + 1
     run_end <- sum(blocklens[1:run_num])
     censor <- censor[run_start:run_end]
@@ -48,10 +48,10 @@ extract_censor_from_dataset <- function(dataset, run_num = NULL, n_time = NULL) 
 #'
 #' @description
 #' Resolves censor specification from config and/or dataset.
-#' Handles "auto" mode which extracts from dataset$censor.
+#' Handles "auto" mode which extracts from .dset_censor(dataset).
 #'
 #' @param cfg fmri_lm_control object
-#' @param dataset fmri_dataset object
+#' @param dataset fmri_frame object
 #' @param run_num Optional run number for run-specific extraction
 #' @param n_time Number of timepoints for this run/chunk
 #' @return Integer vector of 1-based timepoint indices to censor, or NULL
@@ -73,8 +73,8 @@ resolve_censor <- function(cfg, dataset = NULL, run_num = NULL, n_time = NULL) {
   censor <- censor_spec
 
   # Subset to run if needed and we have global censor vector
-  if (!is.null(run_num) && !is.null(dataset) && !is.null(dataset$sampling_frame)) {
-    blocklens <- fmrihrf::blocklens(dataset$sampling_frame)
+  if (!is.null(run_num) && !is.null(dataset) && .is_fmri_frame(dataset)) {
+    blocklens <- .dset_run_lengths(dataset)
     total_time <- sum(blocklens)
 
     # Check if censor is global (covers all runs)
@@ -122,7 +122,7 @@ resolve_censor <- function(cfg, dataset = NULL, run_num = NULL, n_time = NULL) {
 #' @param X Design matrix (time x predictors)
 #' @param Y Data matrix (time x voxels)
 #' @param cfg fmri_lm_control object
-#' @param dataset fmri_dataset object (for extracting nuisance if using mask)
+#' @param dataset fmri_frame object (for extracting nuisance if using mask)
 #' @param run_num Run number (for run-specific nuisance extraction)
 #' @return List with preprocessed X, Y, and preprocessing metadata
 #' @keywords internal
@@ -183,7 +183,7 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
       N <- cfg$soft_subspace$nuisance_matrix
       # Subset to run if needed
       if (!is.null(run_num) && !is.null(dataset)) {
-        sframe <- dataset$sampling_frame
+        sframe <- .dset_sampling_frame(dataset)
         blocklens <- fmrihrf::blocklens(sframe)
         run_start <- if (run_num == 1) 1 else sum(blocklens[1:(run_num - 1)]) + 1
         run_end <- sum(blocklens[1:run_num])
@@ -217,7 +217,7 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
 #' @param cfg fmri_lm_control object
 #' @param phi_fixed Optional fixed AR parameters
 #' @param contrast_weights List of contrast weight vectors/matrices
-#' @param dataset Optional fmri_dataset for nuisance extraction
+#' @param dataset Optional fmri_frame for nuisance extraction
 #' @return List with fitting results
 #' @keywords internal
 #' @noRd
@@ -366,7 +366,7 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
 #' @param model The fmri_model object
 #' @param cfg fmri_lm_control object
 #' @param sigma_fixed Optional fixed robust scale estimate
-#' @param dataset Optional fmri_dataset for nuisance extraction
+#' @param dataset Optional fmri_frame for nuisance extraction
 #' @return List with robust fitting results
 #' @keywords internal
 #' @noRd
@@ -444,7 +444,7 @@ process_run_robust <- function(run_chunk, model, cfg, sigma_fixed = NULL, datase
 #' @param cfg fmri_lm_control object
 #' @param phi_fixed Optional fixed AR parameters
 #' @param sigma_fixed Optional fixed robust scale estimate
-#' @param dataset Optional fmri_dataset for nuisance extraction
+#' @param dataset Optional fmri_frame for nuisance extraction
 #' @return List with combined fitting results
 #' @keywords internal
 #' @noRd
@@ -645,7 +645,7 @@ pool_run_results <- function(run_results) {
 #' This includes AR whitening and/or robust weighting of the global design matrix.
 #'
 #' @param model The fmri_model object
-#' @param dataset The fmri_dataset object
+#' @param dataset The fmri_frame object
 #' @param cfg fmri_lm_control object
 #' @param phi_fixed Optional fixed AR parameters
 #' @param sigma_fixed Optional fixed robust scale
@@ -661,8 +661,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
   modmat_orig <- model.matrix(as.formula(form), data_env)
   
   # Get run structure
-  chunk_iter <- exec_strategy("runwise")(dataset)
-  run_chunks <- collect_chunks(chunk_iter)
+  run_chunks <- .dset_run_chunks(dataset)
   
   run_row_inds <- lapply(run_chunks, `[[`, "row_ind")
   

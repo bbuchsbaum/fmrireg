@@ -9,8 +9,8 @@ skip_if_not(
 
 .local_feature_dataset <- function() {
   ds <- make_test_matrix_dataset()
-  tr <- ds$sampling_frame$TR
-  bl <- fmrihrf::blocklens(ds$sampling_frame)
+  tr <- frame_sframe(ds)$TR
+  bl <- fmrihrf::blocklens(frame_sframe(ds))
   dt <- 0.5
   per_run <- lapply(bl, function(n) {
     tvec <- seq(0, by = dt, length.out = max(1L, floor(n * tr / dt)))
@@ -39,7 +39,7 @@ test_that("mixed hrf + feature formula fits through fmri_lm", {
 
   tm <- term_matrices(fit$model)
   expect_gt(length(attr(tm, "event_term_indices")), 0L)
-  expect_equal(ncol(as.matrix(coef(fit))), ncol(fx$ds$datamat))
+  expect_equal(ncol(as.matrix(coef(fit))), ncol(frame_data(fx$ds)))
 })
 
 test_that("fitted_hrf skips feature terms instead of erroring", {
@@ -93,10 +93,10 @@ test_that("preflight does not require feature series as event columns", {
   )
   job <- instantiate(tmpl, list(
     id = "sub-01",
-    scans = ds$datamat,
+    scans = frame_data(ds),
     TR = 2,
     run_length = c(40L, 40L),
-    events = ds$event_table
+    events = frame_events(ds)
   ))
   expect_silent(rep <- preflight(job, on_issue = "collect"))
   expect_true(rep$ok)

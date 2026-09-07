@@ -162,7 +162,7 @@ for (ix in seq_len(dim3[1]))
 
 ```{r create-dataset}
 vec  <- NeuroVec(arr, space4d)
-dset <- fmri_mem_dataset(scans = list(vec), mask = maskVol,
+dset <- neurovec_frame(scans = list(vec), mask = maskVol,
                          TR = TR, event_table = events_df)
 ```
 

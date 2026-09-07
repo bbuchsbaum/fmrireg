@@ -75,7 +75,7 @@ test_that("end-to-end HAC regenerates statistics with voxelwise df", {
     run = 1L
   )
   Y <- replicate(3, as.numeric(arima.sim(list(ar = 0.45), n = n)))
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = events)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = events)
   control <- fmri_lm_control(
     estimation = estimation_spec("joint"),
     variance = variance_spec("hac", max_lag = 4L, taper = "tukey",
@@ -135,7 +135,7 @@ test_that("robust sandwich retains weights and uses their df adjustment", {
   )
   Y <- matrix(rnorm(n * 2), n, 2)
   Y[c(12, 39, 61), ] <- Y[c(12, 39, 61), ] + 15
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = events)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = events)
   control <- fmri_lm_control(
     estimation = estimation_spec("joint"),
     robust = robust_spec("huber", max_iter = 5L),
@@ -161,7 +161,7 @@ test_that("AR fitting feeds post-whitening residuals into Satterthwaite inferenc
     run = 1L
   )
   Y <- replicate(2, as.numeric(arima.sim(list(ar = 0.6), n = n)))
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = events)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = events)
   control <- fmri_lm_control(
     estimation = estimation_spec("joint"),
     noise = noise_spec("ar1", iter_gls = 2L),

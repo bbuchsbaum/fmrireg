@@ -57,7 +57,7 @@ test_that("SRHT/IHS + AR(global/cluster) match exact on synthetic data", {
   vec     <- NeuroVec(data = arr, space = space4d)
   maskVol <- LogicalNeuroVol(array(TRUE, dim3), NeuroSpace(dim3))
 
-  dset <- fmri_mem_dataset(scans = list(vec), mask = maskVol, TR = TR, event_table = events_df)
+  dset <- neurovec_frame(scans = list(vec), mask = maskVol, TR = TR, event_table = events_df)
 
   ## ---- Exact fit (reference) ----
   fit_exact <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)

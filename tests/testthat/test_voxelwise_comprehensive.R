@@ -9,7 +9,7 @@ con <- contrast_set(pair_contrast(~ cond == "A", ~ cond == "B", name = "AvB"))
 
 test_that("single voxel voxelwise matches global AR", {
   y <- as.numeric(arima.sim(model = list(ar = 0.4), n = 20))
-  dset <- matrix_dataset(matrix(y, ncol = 1), TR = 1, run_length = 20,
+  dset <- matrix_frame(matrix(y, ncol = 1), TR = 1, run_length = 20,
                          event_table = etab)
 
   mod_global <- fmri_lm(onset ~ hrf(cond, contrasts = con), block = ~ run,

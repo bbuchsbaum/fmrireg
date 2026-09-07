@@ -38,7 +38,7 @@ create_fmri_model(
 
 \item{baseline_model}{(Optional) A \code{baseline_model} object. If \code{NULL}, a default baseline model is created.}
 
-\item{dataset}{An \code{fmri_dataset} containing the event table and sampling frame.}
+\item{dataset}{An \code{fmri_frame} containing the event table and sampling frame.}
 
 \item{drop_empty}{Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.}
 
@@ -62,7 +62,7 @@ If a baseline model is not provided, a default one is created based on the datas
 }
 \examples{
 \dontrun{
-# Assuming you have an fmri_dataset object named ds and a formula for events:
+# Assuming you have an fmri_frame object named ds and a formula for events:
 fmri_mod <- create_fmri_model(formula = onset ~ hrf(x) + hrf(y),
                               block = ~ run,
                               dataset = ds,

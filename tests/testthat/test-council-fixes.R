@@ -6,14 +6,14 @@ test_that("template-level contrasts actually drive reduce_contrasts output (A)",
   tmpl <- fmri_template(onset ~ hrf(condition), ~ run,
                         contrasts = cs, reducer = reduce_contrasts())
   ds <- make_test_matrix_dataset()
-  job <- instantiate(tmpl, list(id = "sub-c", scans = ds$datamat, TR = 2,
-                                run_length = c(40L, 40L), events = ds$event_table))
+  job <- instantiate(tmpl, list(id = "sub-c", scans = frame_data(ds), TR = 2,
+                                run_length = c(40L, 40L), events = frame_events(ds)))
   out <- run_job(job)
   expect_s3_class(out, "data.frame")
   expect_gt(nrow(out), 0)                     # was 0 before the fix (dead field)
   expect_true(all(c("job_id", "term", "voxel", "estimate") %in% names(out)))
   expect_true(all(out$job_id == "sub-c"))
-  expect_equal(nrow(out), ncol(ds$datamat))   # one row per voxel for the single contrast
+  expect_equal(nrow(out), ncol(frame_data(ds)))   # one row per voxel for the single contrast
 })
 
 test_that("baseline_spec(confounds=) selects only the named columns (B)", {
@@ -23,8 +23,8 @@ test_that("baseline_spec(confounds=) selects only the named columns (B)", {
 
   tmpl <- fmri_template(onset ~ hrf(condition), ~ run,
                         baseline = baseline_spec(degree = 3, confounds = "trans_x"))
-  job <- instantiate(tmpl, list(id = "s1", scans = ds$datamat, TR = 2,
-                                run_length = c(40L, 40L), events = ds$event_table,
+  job <- instantiate(tmpl, list(id = "s1", scans = frame_data(ds), TR = 2,
+                                run_length = c(40L, 40L), events = frame_events(ds),
                                 confounds = conf))
   sel <- fmrireg:::.select_confounds(job$nuisance, "trans_x")
   expect_equal(colnames(sel), "trans_x")
@@ -35,15 +35,15 @@ test_that("baseline_spec(confounds=) selects only the named columns (B)", {
   # missing selector column is an error (not silently dropped)
   tmpl2 <- fmri_template(onset ~ hrf(condition), ~ run,
                          baseline = baseline_spec(degree = 3, confounds = "nope"))
-  job2 <- instantiate(tmpl2, list(id = "s2", scans = ds$datamat, TR = 2,
-                                  run_length = c(40L, 40L), events = ds$event_table,
+  job2 <- instantiate(tmpl2, list(id = "s2", scans = frame_data(ds), TR = 2,
+                                  run_length = c(40L, 40L), events = frame_events(ds),
                                   confounds = conf))
   expect_error(build_model(job2), "not found")
 })
 
 test_that("job ids must be path-safe (C)", {
   tmpl <- fmri_template(onset ~ hrf(condition), ~ run)
-  ds <- dataset_spec("matrix_dataset", source = "inline")
+  ds <- dataset_spec("matrix_frame", source = "inline")
   expect_error(fmri_job("a/b", tmpl, ds), "path separator")
   expect_error(fmri_job("..", tmpl, ds), "'\\.'")
   expect_silent(fmri_job("sub-01", tmpl, ds))
@@ -54,16 +54,16 @@ test_that("preflight validates per-run (list) nuisance (D)", {
   ds <- make_test_matrix_dataset()
 
   # too few run-matrices
-  job1 <- instantiate(tmpl, list(id = "s1", scans = ds$datamat, TR = 2,
-                                 run_length = c(40L, 40L), events = ds$event_table,
+  job1 <- instantiate(tmpl, list(id = "s1", scans = frame_data(ds), TR = 2,
+                                 run_length = c(40L, 40L), events = frame_events(ds),
                                  confounds = list(matrix(rnorm(40 * 2), 40, 2))))
   rep1 <- preflight(job1, on_issue = "collect")
   expect_false(rep1$ok)
   expect_true(any(grepl("nuisance list length", rep1$issues$message)))
 
   # right count, wrong rows in run 2
-  job2 <- instantiate(tmpl, list(id = "s2", scans = ds$datamat, TR = 2,
-                                 run_length = c(40L, 40L), events = ds$event_table,
+  job2 <- instantiate(tmpl, list(id = "s2", scans = frame_data(ds), TR = 2,
+                                 run_length = c(40L, 40L), events = frame_events(ds),
                                  confounds = list(matrix(0, 40, 2), matrix(0, 30, 2))))
   rep2 <- preflight(job2, on_issue = "collect")
   expect_false(rep2$ok)
@@ -73,8 +73,8 @@ test_that("preflight validates per-run (list) nuisance (D)", {
 test_that("realize_dataset only allows known constructors (F)", {
   tmpl <- fmri_template(onset ~ hrf(condition), ~ run)
   ds <- make_test_matrix_dataset()
-  job <- instantiate(tmpl, list(id = "s1", scans = ds$datamat, TR = 2,
-                                run_length = c(40L, 40L), events = ds$event_table))
+  job <- instantiate(tmpl, list(id = "s1", scans = frame_data(ds), TR = 2,
+                                run_length = c(40L, 40L), events = frame_events(ds)))
   job$dataset_spec$constructor <- "Sys.setenv"  # tamper with a non-dataset fn
   expect_error(realize_dataset(job), "not allowed")
 })

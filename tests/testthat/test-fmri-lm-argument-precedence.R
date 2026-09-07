@@ -158,7 +158,7 @@ test_that("fmri_lm honours each configuration route and rejects conflicts", {
   cond <- factor(rep(c("a", "b"), length.out = 24))
   etab <- data.frame(onset = rep(onsets, n_run), cond = rep(cond, n_run),
                      run = rep(seq_len(n_run), each = 24))
-  dset <- matrix_dataset(matrix(rnorm(n_t * 4), n_t, 4), TR = TR,
+  dset <- matrix_frame(matrix(rnorm(n_t * 4), n_t, 4), TR = TR,
                          run_length = rep(Tr, n_run), event_table = etab)
   f <- onset ~ hrf(cond)
 

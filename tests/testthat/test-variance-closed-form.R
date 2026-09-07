@@ -128,7 +128,7 @@ test_that("fmri_lm reports OLS standard errors that match lm()", {
                      cond = rep(cond, n_run),
                      run = rep(seq_len(n_run), each = 30))
   Y <- matrix(rnorm(n_t * 3), n_t, 3)
-  dset <- matrix_dataset(Y, TR = TR, run_length = rep(Tr, n_run), event_table = etab)
+  dset <- matrix_frame(Y, TR = TR, run_length = rep(Tr, n_run), event_table = etab)
 
   fit <- fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
                  strategy = "runwise", ar_options = list(struct = "iid"))

@@ -54,7 +54,7 @@ test_that("modular components produce same results as original", {
   
   # Create temporary dummy data for model construction
   dummy_Y <- matrix(0, n_timepoints, 10)  # Just need something with right number of rows
-  temp_dset <- fmridataset::matrix_dataset(dummy_Y, TR = 2, run_length = rep(n_timepoints/n_runs, n_runs), 
+  temp_dset <- matrix_frame(dummy_Y, TR = 2, run_length = rep(n_timepoints/n_runs, n_runs), 
                         event_table = event_data)
   
   # Combine into fmri_model
@@ -66,7 +66,7 @@ test_that("modular components produce same results as original", {
   Y <- X %*% betas + matrix(rnorm(n_timepoints * n_voxels, sd = 0.5), ncol = n_voxels)
   
   # Create actual dataset
-  dset <- fmridataset::matrix_dataset(Y, TR = 2, run_length = rep(n_timepoints/n_runs, n_runs), 
+  dset <- matrix_frame(Y, TR = 2, run_length = rep(n_timepoints/n_runs, n_runs), 
                         event_table = event_data)
   
   # Test basic fitting
@@ -106,7 +106,7 @@ test_that("voxelwise AR with contrasts works", {
     block = 1
   )
   
-  dset <- fmridataset::matrix_dataset(Y, TR = 2, run_length = n_timepoints,
+  dset <- matrix_frame(Y, TR = 2, run_length = n_timepoints,
                                       event_table = event_data)
   
   # Fit with voxelwise AR

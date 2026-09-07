@@ -15,15 +15,15 @@ test_that("can construct and run an fmri_model with matrix data", {
   datamat <- matrix(rnorm(n_timepoints * n_voxels), n_timepoints, n_voxels)
   
   # Create matrix dataset
-  dset <- matrix_dataset(datamat, 
+  dset <- matrix_frame(datamat, 
                         TR = 1.5,
                         run_length = rep(436, 2),
                         event_table = facedes_subset)
 
   # Create event and baseline models
   espec <- event_model(onset ~ hrf(repnum), data = facedes_subset, 
-                      block = ~run, sampling_frame = dset$sampling_frame)
-  bspec <- baseline_model(basis = "bs", degree = 5, sframe = dset$sampling_frame)
+                      block = ~run, sampling_frame = frame_sframe(dset))
+  bspec <- baseline_model(basis = "bs", degree = 5, sframe = frame_sframe(dset))
   
   # Create fmri_model
   fmod <- fmri_model(espec, bspec, dset)
@@ -56,15 +56,15 @@ test_that("fmri_model handles edge cases correctly", {
   n_timepoints <- 100
   datamat <- matrix(rnorm(n_timepoints * 50), n_timepoints, 50)
   
-  dset <- matrix_dataset(datamat, 
+  dset <- matrix_frame(datamat, 
                         TR = 2.0,
                         run_length = n_timepoints,
                         event_table = mini_design)
   
   # Test with minimal baseline model  
   espec <- event_model(onset ~ hrf(condition), data = mini_design,
-                      block = ~run, sampling_frame = dset$sampling_frame)
-  bspec <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+                      block = ~run, sampling_frame = frame_sframe(dset))
+  bspec <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   
   fmod <- fmri_model(espec, bspec, dset)
   

@@ -1,12 +1,14 @@
 #' Fast fMRI Regression Model Estimation from a Latent Component Dataset
 #'
 #' This function estimates a regression model for fMRI data using a latent component dataset.
-#' The dataset must be of type `latent_dataset`, which itself requires a `LatentNeuroVec` input.
+#' The dataset must be an `fmri_frame` whose feature space is a
+#' `fmridataset::basis_space` (see [latent_frame()]), so that the assay holds
+#' component scores and the space carries the spatial loadings.
 #'
 #' @param formula A formula specifying the regression model.
 #' @param block A factor indicating the block structure of the data.
 #' @param baseline_model An optional baseline model.
-#' @param dataset A dataset of class 'latent_dataset'.
+#' @param dataset A latent `fmri_frame` (see [latent_frame()]).
 #' @param durations The duration of events in the dataset.
 #' @param drop_empty Whether to drop empty events from the model. Default is TRUE.
 #' @param robust Whether to use robust regression methods. Default is FALSE.
@@ -38,7 +40,8 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
                     ...) {
   
   autocor <- match.arg(autocor)
-  assert_that(inherits(dataset, "latent_dataset"))
+  assert_that(.dset_is_latent(dataset),
+              msg = "'dataset' must be an fmri_frame over a basis_space (see latent_frame())")
   if (autocor %in% c("auto", "arma")) {
     stop("`fmri_latent_lm()` does not implement autocor = '", autocor,
          "'; choose 'none', 'ar1', or 'ar2'.", call. = FALSE)
@@ -70,7 +73,7 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
 #'          chunkwise linear regression on latent datasets. The function handles different
 #'          autocorrelation options, as well as robust regression and bootstrapping.
 #'
-#' @param x A latent dataset object.
+#' @param x An `fmri_frame` whose feature space is a `basis_space`.
 #' @param model The fmri model object.
 #' @param contrast_objects A list of contrast objects.
 #' @param nchunks The number of chunks to use for the regression.
@@ -83,7 +86,7 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
 #' @return A list containing the results of the chunkwise linear regression.
 #' @seealso fmri_latent_lm
 #' @noRd
-chunkwise_lm.latent_dataset <- function(x, model, contrast_objects, nchunks, cfg,
+chunkwise_lm_latent <- function(x, model, contrast_objects, nchunks, cfg,
                                         verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
                                         phi_fixed = NULL,
                                         sigma_fixed = NULL, ...) {
@@ -112,7 +115,7 @@ chunkwise_lm.latent_dataset <- function(x, model, contrast_objects, nchunks, cfg
   data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
   modmat <- model.matrix(as.formula(form), data_env)
   
-  basismat <- fmridataset::get_latent_scores(dset)
+  basismat <- .dset_data_matrix(dset)
 
   #wmat <- if (autocor != "none") {
   #  message("whitening components")
@@ -177,15 +180,7 @@ tibble_to_neurovec <- function(dset, tab, mask) {
 coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts"), recon=FALSE, comp=0, ...) {
   bvals <- coef.fmri_lm(object, type=type)
   if (recon) {
-    # Extract LatentNeuroVec from dataset
-    lvec <- if (!is.null(object$dataset$lvec)) {
-      object$dataset$lvec
-    } else if (!is.null(object$dataset$backend) && !is.null(object$dataset$backend$data)) {
-      object$dataset$backend$data[[1]]
-    } else {
-      stop("Cannot find LatentNeuroVec in latent_dataset")
-    }
-    lds <- lvec@loadings
+    lds <- .dset_loadings(object$dataset)
     comp <- if (length(comp) == 1 && comp == 0) {
       seq(1, ncol(lds)) 
     } else {
@@ -218,15 +213,7 @@ standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), r
     
     Qr <- x$result$qr
     cov.unscaled <- chol2inv(Qr$qr)
-    # Extract LatentNeuroVec from dataset
-    lvec <- if (!is.null(x$dataset$lvec)) {
-      x$dataset$lvec
-    } else if (!is.null(x$dataset$backend) && !is.null(x$dataset$backend$data)) {
-      x$dataset$backend$data[[1]]
-    } else {
-      stop("Cannot find LatentNeuroVec in latent_dataset")
-    }
-    lds <- lvec@loadings
+    lds <- .dset_loadings(x$dataset)
   
     if (type == "estimates") {
       ret <- do.call(cbind, lapply(x$result$event_indices, function(i) {

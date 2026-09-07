@@ -19,7 +19,9 @@ arguments as \code{fit} and can signal errors early.}
 \code{fmri_lm()} options. Recognized fields currently include \code{robust},
 \code{preprocessing}, \code{ma}, \code{ar_voxelwise}, \code{ar_by_cluster}, plus contextual rules
 such as \code{requires_event_regressors}, \code{requires_parcels_for_by_cluster},
-and \code{forbid_by_cluster_dataset_classes}.}
+and \code{forbid_by_cluster_dataset_classes} (class names matched against the
+dataset or against its \code{fmridataset::space()}, e.g. \code{"basis_space"} for
+latent frames).}
 }
 \value{
 Invisibly, \code{TRUE}.
