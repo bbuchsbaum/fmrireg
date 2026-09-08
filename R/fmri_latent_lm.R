@@ -199,18 +199,29 @@ coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts", "betas"
     lds <- lds[,comp,drop=FALSE]
     bmat <- as.matrix(bvals)
 
-    # coef.fmri_lm returns conditions x parameters. Latent fits store one
-    # parameter column per latent component for event regressors; select those
-    # columns when possible, otherwise fall back to legacy component-as-row.
-    if (ncol(bmat) >= max(comp) && nrow(bmat) != ncol(lds)) {
+    # coef.fmri_lm(type = "betas") is event coefficients × components after the
+    # conditions-x-voxels transpose. Contrasts stay components × contrasts.
+    # Choose orientation from `type`, not from whether n_comp happens to equal
+    # n_coefficients after subsetting `comp` (that equality takes the wrong branch).
+    if (identical(coef_type, "betas")) {
+      if (ncol(bmat) < max(comp)) {
+        stop("Cannot align latent coefficients with component loadings for reconstruction",
+             call. = FALSE)
+      }
       b_comp <- bmat[, comp, drop = FALSE]
       out <- as.matrix(lds %*% t(b_comp))
-    } else if (nrow(bmat) >= max(comp)) {
-      out <- as.matrix(t(bmat[comp, , drop = FALSE]) %*% t(lds))
-      out <- as.matrix(t(out))
+      if (!is.null(rownames(bmat))) {
+        colnames(out) <- rownames(bmat)
+      }
     } else {
-      stop("Cannot align latent coefficients with component loadings for reconstruction",
-           call. = FALSE)
+      if (nrow(bmat) < max(comp)) {
+        stop("Cannot align latent coefficients with component loadings for reconstruction",
+             call. = FALSE)
+      }
+      out <- as.matrix(lds %*% bmat[comp, , drop = FALSE])
+      if (!is.null(colnames(bmat))) {
+        colnames(out) <- colnames(bmat)
+      }
     }
     tibble::as_tibble(out)
   } else {
