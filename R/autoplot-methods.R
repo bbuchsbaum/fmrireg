@@ -20,11 +20,14 @@
 #' @rdname autoplot
 autoplot.Reg <- function(object, grid = NULL, precision = 0.1, method = "conv", ...) {
   
-  # Determine evaluation grid if not provided
+  # Determine evaluation grid if not provided.
+  # Use fmrihrf::onsets — Reg methods live on the fmrihrf generic, while the
+  # package-level `onsets` import is from fmridesign and does not dispatch for Reg.
   if (is.null(grid)) {
-    if (length(onsets(object)) > 0) {
-        min_onset <- min(onsets(object), na.rm = TRUE)
-        max_onset <- max(onsets(object), na.rm = TRUE)
+    ons <- fmrihrf::onsets(object)
+    if (length(ons) > 0) {
+        min_onset <- min(ons, na.rm = TRUE)
+        max_onset <- max(ons, na.rm = TRUE)
         # Extend grid by HRF span, ensure start isn't negative if possible
         grid_start <- max(0, min_onset - 5) 
         grid_end <- max_onset + attr(object$hrf, "span") + 5

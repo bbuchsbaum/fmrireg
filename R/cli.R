@@ -358,7 +358,18 @@ install_cli <- function(dest_dir = "~/.local/bin",
 }
 
 .write_json <- function(x) {
-  cat(jsonlite::toJSON(x, auto_unbox = TRUE, pretty = TRUE, null = "null"), "\n", sep = "")
+  # force=TRUE converts exotic classes (e.g. numeric_version in metadata) to JSON
+  cat(
+    jsonlite::toJSON(
+      x,
+      auto_unbox = TRUE,
+      pretty = TRUE,
+      null = "null",
+      force = TRUE
+    ),
+    "\n",
+    sep = ""
+  )
 }
 
 .write_table <- function(x) {
