@@ -103,6 +103,15 @@
 
 ## Bug Fixes
 
+* The `fmridataset` requirement is now `(>= 0.11.0.9000)`. The pre-frame API
+  was removed upstream without a version change, so both sides of the break
+  reported `0.10.0.9000` and the previous constraint could not tell them
+  apart: a stale install resolved cleanly and then failed at lazy loading with
+  `object 'as.matrix_dataset' is not exported by 'namespace:fmridataset'`.
+  fmridataset bumped to `0.11.0.9000` for this purpose
+  (bbuchsbaum/fmridataset#92), so the mismatch is now caught at dependency
+  resolution with a message that names the real problem.
+
 * The test suite has been ported to the frame API. The frame migration and a
   parallel test-coverage branch were developed against the same base and
   merged independently, so the merged tree combined frame-only package code
