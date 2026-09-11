@@ -40,7 +40,7 @@ jobs:
             grep -Fq 'codecov.io/gh/bbuchsbaum/fmrireg/branch/main/graph/badge.svg' "$README_FILE"
             grep -Fq 'License-MIT-blue.svg' "$README_FILE"
             grep -Fq 'lifecycle-experimental-orange.svg' "$README_FILE"
-            grep -Fq 'dataset <- matrix_dataset(' "$README_FILE"
+            grep -Fq 'dataset <- matrix_frame(' "$README_FILE"
             grep -Fq 'fit <- fmri_lm(' "$README_FILE"
             grep -Fq '## Quick start' "$README_FILE"
             grep -Fq '## Fit and boundaries' "$README_FILE"

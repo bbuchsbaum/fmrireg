@@ -87,7 +87,7 @@ bmodel <- baseline_model(
 correlation_map(bmodel)
 
 # Note: To create a full fmri_model and plot combined correlations,
-# you would need an fmri_dataset object:
+# you would need an fmri_frame object:
 # fmodel <- fmri_model(evmodel, bmodel, dataset)
 # correlation_map(fmodel, method = "pearson", half_matrix = TRUE)
 }

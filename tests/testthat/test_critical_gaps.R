@@ -103,14 +103,14 @@ test_that("Data chunking works correctly", {
   n_voxels <- 10
   data_mat <- matrix(rnorm(n_time * n_voxels), n_time, n_voxels)
   
-  dset <- matrix_dataset(
+  dset <- matrix_frame(
     data_mat,
     TR = 2,
     run_length = c(100, 100)
   )
   
   # Test chunking - may return fewer chunks than requested
-  chunks <- data_chunks(dset, nchunks = 4, runwise = FALSE)
+  chunks <- fmrireg:::.dset_chunks(dset, nchunks = 4)
   
   expect_true(length(chunks) > 0)
   expect_true(is.list(chunks))
@@ -174,7 +174,7 @@ test_that("fmri_lm basic functionality works", {
   # Simple data
   Y <- matrix(rnorm(n * 5), n, 5)
   
-  dset <- matrix_dataset(
+  dset <- matrix_frame(
     Y,
     TR = 1,
     run_length = n,

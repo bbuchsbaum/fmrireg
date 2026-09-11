@@ -9,7 +9,7 @@ NULL
 #' This function performs a runwise linear model analysis on an fMRI dataset,
 #' running the linear model on each run separately and then pooling results.
 #'
-#' @param dset An \code{fmri_dataset} object.
+#' @param dset An \code{fmri_frame} object.
 #' @param model The \code{fmri_model} used for the analysis.
 #' @param contrast_objects The list of full contrast objects.
 #' @param cfg An \code{fmri_lm_control} object containing all fitting options.
@@ -31,8 +31,7 @@ runwise_lm_impl <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   assert_that(inherits(cfg, "fmri_lm_control"), msg = "'cfg' must be an 'fmri_lm_control' object")
   
   # Get run chunks
-  chunk_iter <- exec_strategy("runwise")(dset)
-  chunks <- collect_chunks(chunk_iter)
+  chunks <- .dset_run_chunks(dset)
   
   # Progress bar setup
   if (progress) {

@@ -10,12 +10,12 @@ realize_dataset(job)
 \item{job}{An \link{fmri_job}.}
 }
 \value{
-An \code{fmri_dataset}.
+An \code{fmri_frame}.
 }
 \description{
-Reconstructs the \code{fmri_dataset} from the job's \link{dataset_spec}. For
+Reconstructs the \code{fmri_frame} from the job's \link{dataset_spec}. For
 file-backed specs this is where data first becomes addressable (still lazily,
-per the dataset backend).
+through the frame's NIfTI array source).
 }
 \seealso{
 \code{\link[=build_model]{build_model()}}, \code{\link[=run_job]{run_job()}}

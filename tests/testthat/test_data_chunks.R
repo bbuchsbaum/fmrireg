@@ -1,112 +1,106 @@
-# Test data chunking functionality
+# Chunk iteration over frames: fmrireg's runwise and chunkwise engines consume
+# data_chunk objects (data, voxel_ind, row_ind, chunk_num) produced lazily
+# from an fmri_frame.
 
-library(fmrireg)
-
-test_that("matrix_dataset chunking works correctly", {
-  # Create test data
+test_that("runwise chunks cover each run in acquisition order", {
   n_time <- 100
   n_vox <- 10
   n_runs <- 2
-  
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
-  run_length <- rep(n_time/n_runs, n_runs)
-  
-  dset <- matrix_dataset(Y, TR = 1, run_length = run_length)
-  
-  # Test runwise chunking
-  chunks <- data_chunks(dset, runwise = TRUE)
-  expect_s3_class(chunks, "chunkiter")
-  
-  # Should have 2 chunks (one per run)
-  expect_equal(chunks$nchunks, 2)
-  
-  # Collect all chunks
-  chunk_list <- list()
-  for (i in 1:chunks$nchunks) {
-    chunk_list[[i]] <- chunks$nextElem()
-  }
-  
-  expect_equal(length(chunk_list), n_runs)
-  
-  # Check first chunk structure
-  chunk1 <- chunk_list[[1]]
+  run_length <- rep(n_time / n_runs, n_runs)
+  dset <- matrix_frame(Y, TR = 1, run_length = run_length)
+
+  chunks <- fmrireg:::.dset_run_chunks(dset)
+  expect_length(chunks, n_runs)
+
+  chunk1 <- chunks[[1]]
   expect_s3_class(chunk1, "data_chunk")
   expect_true(all(c("data", "voxel_ind", "row_ind", "chunk_num") %in% names(chunk1)))
-  
-  # Check dimensions
-  expect_equal(nrow(chunk1$data), n_time/n_runs)
+  expect_equal(nrow(chunk1$data), n_time / n_runs)
   expect_equal(ncol(chunk1$data), n_vox)
   expect_equal(chunk1$chunk_num, 1)
-  expect_equal(chunk1$row_ind, 1:(n_time/n_runs))
+  expect_equal(chunk1$row_ind, 1:(n_time / n_runs))
+  expect_equal(chunk1$voxel_ind, seq_len(n_vox))
+  expect_equal(unname(chunk1$data), Y[1:50, ])
+  expect_equal(unname(chunks[[2]]$data), Y[51:100, ])
+  expect_equal(chunks[[2]]$row_ind, 51:100)
 })
 
-test_that("matrix_dataset single chunk works", {
+test_that("a single chunk holds the whole matrix", {
   n_time <- 50
   n_vox <- 5
-  
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n_time)
-  
-  chunks <- data_chunks(dset, nchunks = 1)
-  chunk <- chunks$nextElem()
-  
+  dset <- matrix_frame(Y, TR = 1, run_length = n_time)
+
+  chunks <- fmrireg:::.dset_chunks(dset, nchunks = 1)
+  expect_length(chunks, 1)
+  chunk <- chunks[[1]]
   expect_s3_class(chunk, "data_chunk")
   expect_equal(dim(chunk$data), dim(Y))
+  expect_equal(unname(chunk$data), Y)
   expect_equal(chunk$chunk_num, 1)
   expect_equal(chunk$voxel_ind, 1:n_vox)
+  expect_equal(chunk$row_ind, 1:n_time)
 })
 
-test_that("matrix_dataset voxel chunking works", {
+test_that("feature-wise chunks partition the voxels", {
   n_time <- 50
-  n_vox = 20
-  
+  n_vox <- 20
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n_time)
-  
-  # Split into 4 chunks
-  chunks <- data_chunks(dset, nchunks = 4)
-  expect_equal(chunks$nchunks, 4)
-  
-  chunk_list <- list()
-  for (i in 1:chunks$nchunks) {
-    chunk_list[[i]] <- chunks$nextElem()
-  }
-  
-  expect_equal(length(chunk_list), 4)
-  
-  # Check that all voxels are covered
-  all_vox_ind <- unlist(lapply(chunk_list, function(ch) ch$voxel_ind))
+  dset <- matrix_frame(Y, TR = 1, run_length = n_time)
+
+  chunks <- fmrireg:::.dset_chunks(dset, nchunks = 4)
+  expect_length(chunks, 4)
+  all_vox_ind <- unlist(lapply(chunks, function(ch) ch$voxel_ind))
   expect_equal(sort(all_vox_ind), 1:n_vox)
-  
-  # Check chunk dimensions
   for (i in 1:4) {
-    expect_equal(nrow(chunk_list[[i]]$data), n_time)
-    expect_true(ncol(chunk_list[[i]]$data) > 0)
-    expect_equal(chunk_list[[i]]$chunk_num, i)
+    expect_equal(nrow(chunks[[i]]$data), n_time)
+    expect_true(ncol(chunks[[i]]$data) > 0)
+    expect_equal(chunks[[i]]$chunk_num, i)
+    expect_equal(unname(chunks[[i]]$data), Y[, chunks[[i]]$voxel_ind, drop = FALSE])
   }
 })
 
-test_that("data_chunk object has correct structure", {
-  # data_chunk is now exported in fmridataset
-  
-  # Create a simple test matrix
+test_that("requesting more chunks than voxels warns and caps the count", {
+  Y <- matrix(rnorm(30), 10, 3)
+  dset <- matrix_frame(Y, TR = 1, run_length = 10)
+  expect_warning(chunks <- fmrireg:::.dset_chunks(dset, nchunks = 10),
+                 "greater than number of voxels")
+  expect_length(chunks, 3)
+})
+
+test_that("chunks read lazily from a volumetric frame and honour a feature view", {
+  mask <- neuroim2::LogicalNeuroVol(array(TRUE, c(5, 5, 4)), neuroim2::NeuroSpace(c(5, 5, 4)))
+  ntp <- 30
+  scans <- replicate(3, {
+    neuroim2::SparseNeuroVec(matrix(rnorm(ntp * 100), ntp, 100),
+                             space = neuroim2::NeuroSpace(c(5, 5, 4, ntp)), mask = mask)
+  }, simplify = FALSE)
+  dset <- neurovec_frame(scans, mask, TR = 2)
+
+  rchunks <- fmrireg:::.dset_run_chunks(dset)
+  expect_length(rchunks, 3)
+  expect_equal(vapply(rchunks, function(ch) nrow(ch$data), integer(1)), rep(ntp, 3))
+  expect_equal(range(unlist(lapply(rchunks, `[[`, "row_ind"))), c(1, 3 * ntp))
+  expect_equal(unname(rchunks[[2]]$data), neuroim2::series(scans[[2]], 1:100))
+
+  # the same iteration on a feature view only touches the selected voxels
+  view <- dset[, 1:10]
+  vchunks <- fmrireg:::.dset_run_chunks(view)
+  expect_equal(ncol(vchunks[[1]]$data), 10)
+  expect_equal(unname(vchunks[[3]]$data), neuroim2::series(scans[[3]], 1:10))
+
+  fchunks <- fmrireg:::.dset_chunks(dset, nchunks = 7)
+  expect_length(fchunks, 7)
+  expect_equal(sort(unlist(lapply(fchunks, `[[`, "voxel_ind"))), 1:100)
+})
+
+test_that("data_chunk objects have the expected structure", {
   test_mat <- matrix(rnorm(100), nrow = 10, ncol = 10)
-  voxel_ind <- 1:10
-  row_ind <- 1:10
-  chunk_num <- 1
-  
-  # Create a data_chunk
-  chunk <- fmridataset::data_chunk(
-    mat = test_mat,
-    voxel_ind = voxel_ind, 
-    row_ind = row_ind,
-    chunk_num = chunk_num
-  )
-  
-  # Test structure
+  chunk <- fmrireg:::.data_chunk(test_mat, voxel_ind = 1:10, row_ind = 1:10, chunk_num = 1)
   expect_s3_class(chunk, "data_chunk")
   expect_equal(chunk$data, test_mat)
-  expect_equal(chunk$voxel_ind, voxel_ind)
-  expect_equal(chunk$row_ind, row_ind)
-  expect_equal(chunk$chunk_num, chunk_num)
+  expect_equal(chunk$voxel_ind, 1:10)
+  expect_equal(chunk$row_ind, 1:10)
+  expect_equal(chunk$chunk_num, 1)
 })

@@ -75,7 +75,7 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
   }
   
   # Reconstruction functionality can be added here if necessary (applies to the 'res' matrix/tibble)
-  # if (recon && inherits(object$dataset, "fmri_dataset")) { ... }
+  # if (recon && inherits(object$dataset, "fmri_frame")) { ... }
   
   return(res)
 }
@@ -398,7 +398,7 @@ print.fmri_lm <- function(x, ...) {
 #'   onsets = c(1, 12, 25, 38),
 #'   run = c(1, 1, 1, 1)
 #' )
-#' dset <- fmridataset::matrix_dataset(X, TR = 2, run_length = 50,
+#' dset <- matrix_frame(X, TR = 2, run_length = 50,
 #'                                     event_table = edata)
 #' fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
 #' coef_names(fit)
@@ -462,7 +462,7 @@ coef_names.fmri_lm <- function(x, type = c("estimates", "contrasts", "F", "all")
 #'   onsets = c(1, 12, 25, 38),
 #'   run = c(1, 1, 1, 1)
 #' )
-#' dset <- fmridataset::matrix_dataset(X, TR = 2, run_length = 50,
+#' dset <- matrix_frame(X, TR = 2, run_length = 50,
 #'                                     event_table = edata)
 #' fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
 #' # Get coefficient estimates as a numeric vector
@@ -553,7 +553,7 @@ coef_image.fmri_lm <- function(object, coef = 1,
 #'   onsets = c(1, 12, 25, 38),
 #'   run = c(1, 1, 1, 1)
 #' )
-#' dset <- fmridataset::matrix_dataset(X, TR = 2, run_length = 50,
+#' dset <- matrix_frame(X, TR = 2, run_length = 50,
 #'                                     event_table = edata)
 #' fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
 #' # Named list of one volume per event regressor

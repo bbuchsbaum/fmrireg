@@ -429,7 +429,7 @@ columns.event_model <- function(x, ...) {
 #' correlation_map(bmodel)
 #' 
 #' # Note: To create a full fmri_model and plot combined correlations,
-#' # you would need an fmri_dataset object:
+#' # you would need an fmri_frame object:
 #' # fmodel <- fmri_model(evmodel, bmodel, dataset)
 #' # correlation_map(fmodel, method = "pearson", half_matrix = TRUE)
 #' @export
@@ -468,7 +468,7 @@ correlation_map <- function(x, ...) {
 #' )
 #' 
 #' # Create dataset and sampling frame
-#' dset <- fmridataset::matrix_dataset(X, TR = 2, run_length = 100, event_table = event_data)
+#' dset <- matrix_frame(X, TR = 2, run_length = 100, event_table = event_data)
 #' sframe <- sampling_frame(blocklens = 100, TR = 2)
 #' 
 #' # Create event model with canonical HRF
@@ -718,7 +718,7 @@ coef_names <- function(x, ...) UseMethod("coef_names")
 #' 
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 50, TR = 2)
-#' dset <- fmridataset::matrix_dataset(
+#' dset <- matrix_frame(
 #'   matrix(rnorm(50 * 2), 50, 2),
 #'   TR = 2,
 #'   run_length = 50,
@@ -757,7 +757,7 @@ standard_error <- function(x, ...) UseMethod("standard_error")
 #' 
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 50, TR = 2)
-#' dset <- fmridataset::matrix_dataset(
+#' dset <- matrix_frame(
 #'   matrix(rnorm(50 * 2), 50, 2),
 #'   TR = 2,
 #'   run_length = 50,
@@ -798,7 +798,7 @@ stats <- function(x, ...) UseMethod("stats")
 #' 
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 50, TR = 2)
-#' dset <- fmridataset::matrix_dataset(
+#' dset <- matrix_frame(
 #'   matrix(rnorm(50 * 2), 50, 2),
 #'   TR = 2,
 #'   run_length = 50,
@@ -925,7 +925,8 @@ longnames.event_model <- function(x, ...) {
 #'   \item{hrf}{Optional HRF estimation}
 #' }
 #'
-#' @param x The dataset object (fmri_dataset, matrix_dataset, or latent_dataset)
+#' @param x The dataset: an `fmri_frame` (see [matrix_frame()], [neurovec_frame()],
+#'   [nifti_frame()], [latent_frame()])
 #' @param progress Logical; show progress bar.
 #' @param ... Additional arguments passed to specific methods. Common arguments include:
 #' \describe{
@@ -949,12 +950,10 @@ longnames.event_model <- function(x, ...) {
 #' }
 #'
 #' @details
-#' This is a generic function with methods for different dataset types:
-#' \describe{
-#'   \item{fmri_dataset}{For volumetric fMRI data}
-#'   \item{matrix_dataset}{For matrix-format data}
-#'   \item{latent_dataset}{For dimensionality-reduced data}
-#' }
+#' This is a generic function whose `fmri_frame` method adapts to the frame's
+#' feature space: volumetric frames (`volume_space`) return `NeuroVec` betas,
+#' while matrix-format (`index_space`) and latent (`basis_space`) frames return
+#' coefficient matrices.
 #'
 #' Available estimation methods include:
 #' \describe{
@@ -975,7 +974,7 @@ longnames.event_model <- function(x, ...) {
 #' 
 #' # Create sampling frame and dataset
 #' sframe <- sampling_frame(blocklens = 100, TR = 2)
-#' dset <- fmridataset::matrix_dataset(
+#' dset <- matrix_frame(
 #'   matrix(rnorm(100 * 2), 100, 2),
 #'   TR = 2,
 #'   run_length = 100,
@@ -996,8 +995,8 @@ longnames.event_model <- function(x, ...) {
 #'
 #' Pedregosa, F., et al. (2015). Data-driven HRF estimation for encoding and decoding models. NeuroImage, 104, 209-220.
 #'
-#' @seealso 
-#' \code{\link{fmri_dataset}}, \code{\link{matrix_dataset}}, \code{\link{latent_dataset}}
+#' @seealso
+#' \code{\link{matrix_frame}}, \code{\link{neurovec_frame}}, \code{\link{latent_frame}}
 #' @family model_estimation
 #' @export
 estimate_betas <- function(x, ...) UseMethod("estimate_betas")

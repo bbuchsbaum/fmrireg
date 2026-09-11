@@ -50,7 +50,7 @@ test_that("landmark extension preserves a smooth task field with bounded scale e
     v <- v + 1L; arr[ix, iy, iz, ] <- as.numeric(Y[, v])
   }
   vec <- NeuroVec(arr, space4d)
-  dset <- fmri_mem_dataset(scans = list(vec), mask = maskVol, TR = TR, event_table = events_df)
+  dset <- neurovec_frame(scans = list(vec), mask = maskVol, TR = TR, event_table = events_df)
 
   # Parcels via an explicitly convergent k-means route.
   coords <- expand.grid(x = seq_len(dim3[1]), y = seq_len(dim3[2]), z = seq_len(dim3[3]))

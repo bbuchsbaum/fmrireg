@@ -41,7 +41,7 @@
   )
 
   Y_tmp <- matrix(rnorm(Ttot * V, sd = 0.1), nrow = Ttot, ncol = V)
-  dtmp <- fmridataset::matrix_dataset(
+  dtmp <- matrix_frame(
     Y_tmp,
     TR = 2,
     run_length = run_length,
@@ -85,7 +85,7 @@
   }
 
   Y <- signal + noise
-  dset <- fmridataset::matrix_dataset(
+  dset <- matrix_frame(
     Y,
     TR = 2,
     run_length = run_length,
@@ -225,7 +225,7 @@ test_that("latent_sketch shows weak parity to exact task effects", {
   ei <- fit_std$result$event_indices
 
   p <- ncol(B_exact)
-  Tlen <- nrow(fmridataset::get_data_matrix(dset))
+  Tlen <- nrow(fmridataset::collect_assay(dset))
   low <- lowrank_control(
     time_sketch = list(method = "srht", m = min(8L * p, Tlen))
   )

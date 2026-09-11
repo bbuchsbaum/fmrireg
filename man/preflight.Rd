@@ -27,8 +27,8 @@ before \code{\link[=run_jobs]{run_jobs()}} / \code{\link[=export_jobs]{export_jo
 Checks performed per job: template validity; every variable referenced by the
 design \code{formula} and \code{block} is a column of that job's event table;
 \code{TR} is positive; run lengths are consistent with the data
-(\code{matrix_dataset}: rows match \code{sum(run_length)};
-\code{fmri_dataset}: one \code{run_length} per scan file); nuisance regressor
+(\code{matrix_frame}: rows match \code{sum(run_length)};
+\code{nifti_frame}: one \code{run_length} per scan file); nuisance regressor
 rows match the total number of scans; and, when \code{check_files = TRUE},
 that file-backed scans exist on disk.
 

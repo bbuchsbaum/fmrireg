@@ -41,7 +41,7 @@
   colnames(Y) <- paste0("voxel_", seq_len(n_voxels))
 
   list(
-    dataset = fmridataset::matrix_dataset(
+    dataset = matrix_frame(
       datamat = Y,
       TR = 1,
       run_length = n,
@@ -90,14 +90,14 @@
     signal_b %o% amplitudes["B", ] + drift +
     matrix(rnorm(n * 2L, sd = 0.025), nrow = n)
   colnames(response) <- c("visual_ROI", "motor_ROI")
-  dataset <- fmridataset::matrix_dataset(
+  dataset <- matrix_frame(
     response, TR = 1, run_length = n, event_table = events
   )
 
   list(
     dataset = dataset,
     baseline = fmridesign::baseline_model(
-      "poly", degree = 1, sframe = dataset$sampling_frame
+      "poly", degree = 1, sframe = frame_sframe(dataset)
     ),
     amplitudes = amplitudes,
     truth = list(A = truth_a, B = truth_b)
@@ -183,7 +183,7 @@ test_that("estimate_hrf distinguishes canonical and delayed response shapes", {
 
 test_that("estimate_hrf is linear in the response for fixed smoothing", {
   fixture <- .make_estimate_hrf_fixture(n_voxels = 2L, include_fixed = FALSE)
-  scaled_dataset <- fmridataset::matrix_dataset(
+  scaled_dataset <- matrix_frame(
     datamat = 3.5 * fixture$Y,
     TR = 1,
     run_length = nrow(fixture$Y),
@@ -362,7 +362,7 @@ test_that("GCV and fitted curves respect scale and ordering invariants", {
 
   scales <- c(0.1, 4, 25)
   scaled_data <- sweep(fixture$Y, 2L, scales, "*")
-  scaled_dataset <- fmridataset::matrix_dataset(
+  scaled_dataset <- matrix_frame(
     scaled_data,
     TR = 1,
     run_length = nrow(scaled_data),
@@ -382,7 +382,7 @@ test_that("GCV and fitted curves respect scale and ordering invariants", {
   )
 
   permutation <- c(3L, 1L, 2L)
-  permuted_dataset <- fmridataset::matrix_dataset(
+  permuted_dataset <- matrix_frame(
     fixture$Y[, permutation, drop = FALSE],
     TR = 1,
     run_length = nrow(fixture$Y),
@@ -426,7 +426,7 @@ test_that("estimate_hrf handles runwise baselines and condition labels", {
     rep(c(-0.4, 0.6), times = run_length) +
     matrix(rnorm(sum(run_length) * 2L, sd = 0.025), ncol = 2L)
   colnames(Y) <- c("left_ROI", "right_ROI")
-  dataset <- fmridataset::matrix_dataset(
+  dataset <- matrix_frame(
     Y, TR = 1, run_length = run_length, event_table = events
   )
 
@@ -467,7 +467,7 @@ test_that("estimate_hrf fails clearly on invalid numerical contracts", {
 
   nonfinite_data <- fixture$Y
   nonfinite_data[3, 1] <- NA_real_
-  nonfinite_dataset <- fmridataset::matrix_dataset(
+  nonfinite_dataset <- matrix_frame(
     nonfinite_data,
     TR = 1,
     run_length = nrow(nonfinite_data),
@@ -486,7 +486,7 @@ test_that("estimate_hrf fails clearly on invalid numerical contracts", {
     condition_copy = factor(rep(c("A", "B"), 4L)),
     run = 1L
   )
-  aliased_dataset <- fmridataset::matrix_dataset(
+  aliased_dataset <- matrix_frame(
     matrix(rnorm(120), ncol = 1L),
     TR = 1,
     run_length = 120L,

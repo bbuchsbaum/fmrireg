@@ -109,7 +109,11 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL) {
 #' This function estimates betas (regression coefficients) for fixed and random effects
 #' using various regression methods including mixed models, least squares, and PLS.
 #'
-#' @param x An object of class `fmri_dataset` representing the fMRI dataset.
+#' @param x An `fmri_frame` (see [matrix_frame()], [neurovec_frame()],
+#'   [nifti_frame()], and [latent_frame()]). When the frame's feature space is a
+#'   `volume_space`, the fixed and random betas are returned as `NeuroVec`
+#'   objects on that grid; otherwise (index or basis spaces) they are returned
+#'   as coefficient-by-feature matrices.
 #' @param fixed A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials).
 #' @param ran A formula specifying the random (trialwise) regressors that model single trial effects.
 #' @param block A formula specifying the block factor.
@@ -121,8 +125,8 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL) {
 #' @param ... Additional arguments passed to the estimation method.
 #'
 #' @return A list of class "fmri_betas" containing the following components:
-#'   * betas_fixed: NeuroVec object representing the fixed effect betas.
-#'   * betas_ran: NeuroVec object representing the random effect betas.
+#'   * betas_fixed: fixed effect betas (NeuroVec for volumetric frames, matrix otherwise).
+#'   * betas_ran: random effect betas (NeuroVec for volumetric frames, matrix otherwise).
 #'   * design_ran: Design matrix for random effects.
 #'   * design_fixed: Design matrix for fixed effects.
 #'   * design_base: Design matrix for baseline model.
@@ -131,7 +135,7 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL) {
 #'   * ran_model: Random effect model object.
 #'   * estimated_hrf: The estimated HRF vector (NULL for most methods).
 #'
-#' @seealso \code{\link{fmri_dataset}}, \code{\link{baseline_model}}, \code{\link{event_model}}
+#' @seealso \code{\link{matrix_frame}}, \code{\link{baseline_model}}, \code{\link{event_model}}
 #'
 #' @examples
 #' \dontrun{
@@ -139,7 +143,7 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL) {
 #' facedes$frun <- factor(facedes$run)
 #' scans <- paste0("rscan0", 1:6, ".nii")
 #'
-#' dset <- fmri_dataset(scans=scans, mask="mask.nii", TR=1.5, 
+#' dset <- nifti_frame(scans=scans, mask="mask.nii", TR=1.5,
 #'         run_length=rep(436,6), event_table=facedes)
 #' fixed = onset ~ hrf(run)
 #' ran = onset ~ trialwise()
@@ -147,49 +151,56 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL) {
 #'
 #' betas <- estimate_betas(dset, fixed=fixed, ran=ran, block=block, method="mixed")
 #' }
+#' @family estimate_betas
+#' @rdname estimate_betas
 #' @export
-estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
-                                        method = c("mixed", "lss", "ols"),
-                                        basemod = NULL,
-                                        maxit = 1000,
-                                        fracs = 0.5,
-                                        progress = TRUE,
-                                        ...) {
+estimate_betas.fmri_frame <- function(x, fixed = NULL, ran, block,
+                                      method = c("mixed", "lss", "ols"),
+                                      basemod = NULL,
+                                      maxit = 1000,
+                                      fracs = 0.5,
+                                      progress = TRUE,
+                                      ...) {
   method <- match.arg(method)
   dset <- x
-  bvec <- fmridataset::get_data(dset)
-  spatial <- .fmri_dataset_mask_space(dset, "beta image reconstruction")
-  mask <- neuroim2::LogicalNeuroVol(spatial$mask_array, spatial$space)
-  
+  volumetric <- inherits(.dset_space(dset), "volume_space")
+  spatial <- if (volumetric) .fmri_dataset_mask_space(dset, "beta image reconstruction") else NULL
+
   bmod <- if (is.null(basemod)) {
-    baseline_model("constant", sframe = dset$sampling_frame)
+    baseline_model("constant", sframe = .dset_sampling_frame(dset))
   } else {
     basemod
   }
-  
+
   bdes <- gen_beta_design(fixed, ran, block, bmod, dset, method = method)
   betas <- run_estimate_betas(bdes, dset, method, block = block,
                               maxit = maxit, fracs = fracs,
                               progress = progress, ...)
-  
-  # Check dimensions before indexing
-  message(sprintf("beta_matrix dimensions: %d x %d", 
-                  nrow(betas$beta_matrix), ncol(betas$beta_matrix)))
-  message(sprintf("ran_ind length: %d", length(bdes$ran_ind)))
-  
-  
-  nbetas <- nrow(betas$beta_matrix)
-  ospace_ran <- neuroim2::add_dim(spatial$space, length(bdes$ran_ind))
-  
-  if (!is.null(bdes$fixed_ind)) {
-    ospace_fixed <- neuroim2::add_dim(spatial$space, length(bdes$fixed_ind))
-    fixed <- neuroim2::NeuroVec(as.matrix(betas$beta_matrix[bdes$fixed_ind, , drop = FALSE]), ospace_fixed, mask = mask)
+  beta_matrix <- betas$beta_matrix
+
+  if (volumetric) {
+    mask <- spatial$mask
+    ospace_ran <- neuroim2::add_dim(spatial$space, length(bdes$ran_ind))
+    if (!is.null(bdes$fixed_ind)) {
+      ospace_fixed <- neuroim2::add_dim(spatial$space, length(bdes$fixed_ind))
+      fixed <- neuroim2::NeuroVec(as.matrix(beta_matrix[bdes$fixed_ind, , drop = FALSE]), ospace_fixed, mask = mask)
+    } else {
+      fixed <- NULL
+    }
+    ran <- neuroim2::NeuroVec(as.matrix(beta_matrix[bdes$ran_ind, , drop = FALSE]), ospace_ran, mask = mask)
   } else {
-    fixed <- NULL
+    ran <- if (length(bdes$ran_ind) > 0) {
+      as.matrix(beta_matrix[bdes$ran_ind, , drop = FALSE])
+    } else {
+      NULL
+    }
+    fixed <- if (length(bdes$fixed_ind) > 0) {
+      as.matrix(beta_matrix[bdes$fixed_ind, , drop = FALSE])
+    } else {
+      NULL
+    }
   }
-  
-  ran <- neuroim2::NeuroVec(as.matrix(betas$beta_matrix[bdes$ran_ind, , drop = FALSE]), ospace_ran, mask = mask)
-  
+
   ret <- list(betas_fixed = fixed,
               betas_ran = ran,
               design_ran = bdes$dmat_ran,
@@ -199,7 +210,7 @@ estimate_betas.fmri_dataset <- function(x, fixed = NULL, ran, block,
               fixed_model = bdes$emod_fixed,
               ran_model = bdes$emod_ran,
               estimated_hrf = betas$estimated_hrf)
-  
+
   class(ret) <- "fmri_betas"
   ret
 }
@@ -234,7 +245,7 @@ run_estimate_betas <- function(bdes, dset, method,
   }
 
   if (method == "lss") {
-    data_matrix <- get_data_matrix(dset)
+    data_matrix <- .dset_data_matrix(dset)
     dmat_base <- as.matrix(bdes$dmat_base)
     dmat_fixed <- if (!is.null(bdes$fixed_ind)) as.matrix(bdes$dmat_fixed) else NULL
     dmat_ran <- as.matrix(bdes$dmat_ran)
@@ -254,8 +265,7 @@ run_estimate_betas <- function(bdes, dset, method,
     )
 
     if (!is.null(bdes$fixed_ind) && length(bdes$fixed_ind) > 0) {
-      mask_idx <- which(fmridataset::get_mask(dset) > 0)
-      vecs <- neuroim2::vectors(data_matrix, subset = mask_idx)
+      vecs <- neuroim2::vectors(data_matrix, subset = seq_len(ncol(data_matrix)))
       X_base_fixed <- cbind(as.matrix(bdes$dmat_base), as.matrix(bdes$dmat_fixed))
 
       beta_matrix_fixed <- map_voxels(vecs, function(v) {
@@ -283,14 +293,14 @@ run_estimate_betas <- function(bdes, dset, method,
 gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL) {
   # Get the base design matrices
   if (!is.null(fixed)) {
-    emod_fixed <- event_model(fixed, data = dset$event_table, block = block, sampling_frame = dset$sampling_frame)
+    emod_fixed <- event_model(fixed, data = .dset_event_table(dset), block = block, sampling_frame = .dset_sampling_frame(dset))
     dmat_fixed <- design_matrix(emod_fixed)
   } else {
     emod_fixed <- NULL
     dmat_fixed <- NULL
   }
   
-  emod_ran <- event_model(ran, data = dset$event_table, block = block, sampling_frame = dset$sampling_frame)
+  emod_ran <- event_model(ran, data = .dset_event_table(dset), block = block, sampling_frame = .dset_sampling_frame(dset))
   dmat_ran <- design_matrix(emod_ran)
   dmat_base <- design_matrix(bmod)
   
@@ -330,162 +340,6 @@ gen_beta_design <- function(fixed = NULL, ran, block, bmod, dset, method = NULL)
     base_ind = base_ind
   )
 }
-
-#' Estimate betas for a matrix dataset
-#'
-#' This function estimates betas (regression coefficients) for fixed and random effects
-#' in a matrix dataset using various methods.
-#'
-#' @param x An object of class `matrix_dataset` representing the matrix dataset
-#' @param fixed A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials)
-#' @param ran A formula specifying the random (trialwise) regressors that model single trial effects
-#' @param block A formula specifying the block factor
-#' @param method The regression method for estimating trialwise betas; one of "mixed", "lss", or "ols" (default: "mixed")
-#' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
-#' @param fracs Fraction of voxels used for prewhitening.
-#' @param progress Logical; show progress bar.
-#' @param ... Additional arguments passed to the estimation method
-#' 
-#' @family estimate_betas
-#'
-#' @return A list of class "fmri_betas" containing the following components:
-#'   * betas_fixed: Matrix representing the fixed effect betas
-#'   * betas_ran: Matrix representing the random effect betas
-#'   * design_ran: Design matrix for random effects
-#'   * design_fixed: Design matrix for fixed effects
-#'   * design_base: Design matrix for baseline model
-#'
-#' @seealso \code{\link{matrix_dataset}}, \code{\link{baseline_model}}
-#'
-#' @export
-estimate_betas.matrix_dataset <- function(x, fixed = NULL, ran, block,
-                                         method = c("mixed", "lss", "ols"),
-                                         basemod = NULL,
-                                         fracs = .5, progress = TRUE, ...) {
-  
-  method <- match.arg(method)
-  dset <- x
-  mask <- fmridataset::get_mask(dset)
- 
-  bmod <- if (is.null(basemod)) {
-    baseline_model("constant", sframe=dset$sampling_frame)
-  } else {
-    basemod
-  }
-
-
-  bdes <- gen_beta_design(fixed, ran, block, bmod, dset)
-  betas <- run_estimate_betas(bdes, dset, method,
-                              fracs = fracs, progress = progress)
-  
-  # Access beta_matrix from the list returned by run_estimate_betas
-  beta_matrix <- betas$beta_matrix
-  
-  # Extract random and fixed effects from the beta matrix
-  if (length(bdes$ran_ind) > 0) {
-    ran <- as.matrix(beta_matrix[bdes$ran_ind,,drop=FALSE])
-  } else {
-    ran <- NULL
-  }
-  
-  if (length(bdes$fixed_ind) > 0) {
-    fixed <- as.matrix(beta_matrix[bdes$fixed_ind,,drop=FALSE])
-  } else {
-    fixed <- NULL
-  }
-  
-  ret <- list(betas_fixed=fixed,
-              betas_ran=ran,
-              design_ran=bdes$dmat_ran,
-              design_fixed=bdes$dmat_fixed,
-              design_base=bdes$dmat_base)
-  
-  class(ret) <-  c("fmri_betas")
-  ret
-}
-
-#' Estimate betas for a latent dataset
-#'
-#' This function estimates betas (regression coefficients) for fixed and random effects
-#' in a matrix dataset using various methods.
-#'
-#' @param x An object of class `matrix_dataset` representing the matrix dataset
-#' @param fixed A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials)
-#' @param ran A formula specifying the random (trialwise) regressors that model single trial effects
-#' @param block A formula specifying the block factor
-#' @param method The regression method for estimating trialwise betas; one of "mixed", "lss", or "ols" (default: "mixed")
-#' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
-#' @param prewhiten currently experimental, default to \code{FALSE}.
-#' @param ... Additional arguments passed to the estimation method
-#'
-#' @return A list of class "fmri_betas" containing the following components:
-#'   * betas_fixed: Matrix representing the fixed effect betas
-#'   * betas_ran: Matrix representing the random effect betas
-#'   * design_ran: Design matrix for random effects
-#'   * design_fixed: Design matrix for fixed effects
-#'   * design_base: Design matrix for baseline model
-#'
-#' @seealso \code{\link{matrix_dataset}}, \code{\link{baseline_model}}
-#'
-#' @family estimate_betas
-#'
-#' @export
-#' @rdname estimate_betas
-estimate_betas.latent_dataset <- function(x, fixed = NULL, ran, block,
-                                         method = c("mixed", "lss", "ols"),
-                                         basemod = NULL,
-                                         prewhiten = FALSE, progress = TRUE, ...) {
-  
-  method <- match.arg(method)
-  dset <- x
-  mask <- fmridataset::get_mask(dset)
-  
-  bmod <- if (is.null(basemod)) {
-    baseline_model("constant", sframe=dset$sampling_frame)
-  } else {
-    basemod
-  }
-  
-  bdes <- gen_beta_design(fixed, ran, block, bmod, dset)
-  
-  if (prewhiten) {
-    wmat <- auto_whiten(dset@basis, fixed)
-    ## hack
-    ## swap in whitened matrix
-    dset@basis <- wmat
-    ###
-  }
-  
-  betas <- run_estimate_betas(bdes, dset, method,
-                              progress = progress)
-  
-  # Access beta_matrix from the list returned by run_estimate_betas
-  beta_matrix <- betas$beta_matrix
-  
-  # Extract random and fixed effects from the beta matrix
-  if (length(bdes$ran_ind) > 0) {
-    ran <- as.matrix(beta_matrix[bdes$ran_ind,,drop=FALSE])
-  } else {
-    ran <- NULL
-  }
-  
-  if (length(bdes$fixed_ind) > 0) {
-    fixed <- as.matrix(beta_matrix[bdes$fixed_ind,,drop=FALSE])
-  } else {
-    fixed <- NULL
-  }
-  
-  ret <- list(betas_fixed=fixed,
-              betas_ran=ran,
-              design_ran=bdes$dmat_ran,
-              design_fixed=bdes$dmat_fixed,
-              design_base=bdes$dmat_base,
-              prewhiten=prewhiten)
-  
-  class(ret) <-  c("fmri_latent_betas", "fmri_betas")
-  ret
-}
-
 
 #' @noRd 
 #' @keywords internal
@@ -548,7 +402,7 @@ inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise", "
 #' 
 #' For single-trial estimation where each trial gets its own beta estimate, use `glm_lss()` instead.
 #'
-#' @param dataset A `matrix_dataset` object containing the fMRI time series data
+#' @param dataset An `fmri_frame` containing the fMRI time series data (see [matrix_frame()])
 #' @param model_obj An `event_model` object specifying the experimental design
 #' @param basis_obj An HRF basis object (e.g., from `fmrihrf::HRF_SPMG1`, `HRF_FIR`, etc.)
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
@@ -575,8 +429,8 @@ inject_basis <- function(oldform, new_basis, fun_names = c("hrf", "trialwise", "
 #' # Create data matrix (100 timepoints, 10 voxels)
 #' Y <- matrix(rnorm(1000), 100, 10)
 #' 
-#' # Create matrix_dataset with event table
-#' dset <- matrix_dataset(Y, TR = 2, run_length = 100, event_table = event_data)
+#' # Create an fmri_frame with event table
+#' dset <- matrix_frame(Y, TR = 2, run_length = 100, event_table = event_data)
 #' 
 #' # Fit with OLS - estimates average response for each condition
 #' fit <- glm_ols(dset, model_obj, fmrihrf::HRF_SPMG1)
@@ -590,8 +444,8 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
                     block = ~ 1, progress = TRUE, ...) {
   
   # Validate inputs
-  if (!inherits(dataset, "matrix_dataset")) {
-    stop("dataset must be a matrix_dataset object. Use matrix_dataset() to create one from your data matrix.")
+  if (!.is_fmri_frame(dataset)) {
+    stop("dataset must be an fmri_frame. Use matrix_frame() to create one from your data matrix.")
   }
   
   if (!inherits(model_obj, "event_model")) {
@@ -652,7 +506,7 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
 #' 
 #' For standard condition-level estimation (averaging trials within conditions), use `glm_ols()` instead.
 #'
-#' @param dataset A `matrix_dataset` object containing the fMRI time series data
+#' @param dataset An `fmri_frame` containing the fMRI time series data (see [matrix_frame()])
 #' @param model_obj An `event_model` object specifying the experimental design
 #' @param basis_obj An HRF basis object (e.g., from `fmrihrf::HRF_SPMG1`, `HRF_FIR`, etc.)
 #' @param basemod A `baseline_model` instance to regress out of data before beta estimation (default: NULL)
@@ -680,8 +534,8 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
 #' # Create data matrix (100 timepoints, 10 voxels)
 #' Y <- matrix(rnorm(1000), 100, 10)
 #' 
-#' # Create matrix_dataset with event table
-#' dset <- matrix_dataset(Y, TR = 2, run_length = 100, event_table = event_data)
+#' # Create an fmri_frame with event table
+#' dset <- matrix_frame(Y, TR = 2, run_length = 100, event_table = event_data)
 #' 
 #' # Fit with LSS - estimates separate beta for each individual trial
 #' fit <- glm_lss(dset, model_obj, fmrihrf::HRF_SPMG1)
@@ -700,8 +554,8 @@ glm_lss <- function(dataset, model_obj, basis_obj, basemod = NULL,
                     block = ~ 1, use_cpp = FALSE, progress = TRUE, ...) {
   
   # Validate inputs
-  if (!inherits(dataset, "matrix_dataset")) {
-    stop("dataset must be a matrix_dataset object. Use matrix_dataset() to create one from your data matrix.")
+  if (!.is_fmri_frame(dataset)) {
+    stop("dataset must be an fmri_frame. Use matrix_frame() to create one from your data matrix.")
   }
   
   if (!inherits(model_obj, "event_model")) {

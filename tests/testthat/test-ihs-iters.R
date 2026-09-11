@@ -33,7 +33,7 @@ test_that("IHS with more iterations improves or matches correlation vs exact", {
   v <- 0L
   for (ix in seq_len(dim3[1])) for (iy in seq_len(dim3[2])) for (iz in seq_len(dim3[3])) { v <- v+1L; arr[ix,iy,iz,] <- as.numeric(Y[,v]) }
   vec <- NeuroVec(arr, space4d)
-  dset <- fmri_mem_dataset(scans = list(vec), mask = maskVol, TR = TR, event_table = events_df)
+  dset <- neurovec_frame(scans = list(vec), mask = maskVol, TR = TR, event_table = events_df)
 
   # Exact
   fit_exact <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)

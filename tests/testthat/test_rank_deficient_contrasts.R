@@ -12,7 +12,7 @@ make_rank_deficient_dataset <- function() {
     cond = factor(rep(c("A", "B"), 12)), m = rnorm(24)
   )
   ev$m2 <- ev$m # exact duplicate modulator -> aliased / rank-deficient design
-  fmridataset::matrix_dataset(
+  matrix_frame(
     matrix(rnorm(120 * 5), 120, 5),
     TR = 2, run_length = 120, event_table = ev
   )

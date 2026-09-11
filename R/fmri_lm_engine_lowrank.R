@@ -142,17 +142,9 @@
   varnames <- colnames(X)
 
   # Latent basis and loadings or full data path
-  if (inherits(dataset, "latent_dataset")) {
-    Z <- as.matrix(fmridataset::get_latent_scores(dataset))   # T x r
-    # Extract LatentNeuroVec from backend
-    lvec <- if (!is.null(dataset$lvec)) {
-      dataset$lvec
-    } else if (!is.null(dataset$backend) && !is.null(dataset$backend$data)) {
-      dataset$backend$data[[1]]
-    } else {
-      stop("Cannot find LatentNeuroVec in latent_dataset")
-    }
-    lds <- lvec@loadings                             # V x r (dgCMatrix or matrix)
+  if (.dset_is_latent(dataset)) {
+    Z <- as.matrix(.dset_data_matrix(dataset))       # T x r component scores
+    lds <- .dset_loadings(dataset)                   # V x r (dgCMatrix or matrix)
     if (inherits(lds, "Matrix")) {
       A <- Matrix::t(lds)                            # r x V (sparse)
     } else {
@@ -161,7 +153,7 @@
     A_is_I <- FALSE
   } else {
     # Fallback: treat Z as full voxel data (T x V) and A as identity (V x V)
-    Zfull <- as.matrix(fmridataset::get_data_matrix(dataset))
+    Zfull <- as.matrix(.dset_data_matrix(dataset))
     Z <- Zfull
     A <- NULL
     A_is_I <- TRUE
@@ -248,7 +240,7 @@
       dfres <- dfres_full
       sigma2 <- colSums(RA * RA) / dfres
     }
-  } else if (by_cluster && !inherits(dataset, "latent_dataset") && !is.null(lowrank$parcels)) {
+  } else if (by_cluster && !.dset_is_latent(dataset) && !is.null(lowrank$parcels)) {
     # --- Grouped (by parcel) whitening path, full-voxel dataset only ---
     # Extract group ids per voxel
     gids <- if (inherits(lowrank$parcels, "ClusteredNeuroVol")) {
@@ -390,7 +382,7 @@
       if (A_is_I && !is.null(lowrank$landmarks)) {
         # Landmark solve + Nyström extension
         L <- as.integer(lowrank$landmarks)
-        mask <- fmridataset::get_mask(dataset)
+        mask <- .fmri_dataset_mask_space(dataset, "landmark selection")$mask
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
         km_iter <- as.integer(lowrank$kmeans_iter_max %||% 1000L)
         km_nstart <- as.integer(lowrank$kmeans_nstart %||% 10L)
@@ -433,7 +425,7 @@
       Xs <- srht_apply(Xw, plan)
       if (A_is_I && !is.null(lowrank$landmarks)) {
         L <- as.integer(lowrank$landmarks)
-        mask <- fmridataset::get_mask(dataset)
+        mask <- .fmri_dataset_mask_space(dataset, "landmark selection")$mask
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
         km_iter <- as.integer(lowrank$kmeans_iter_max %||% 1000L)
         km_nstart <- as.integer(lowrank$kmeans_nstart %||% 10L)
@@ -478,7 +470,7 @@
       Xs <- S %*% Xw
       if (A_is_I && !is.null(lowrank$landmarks)) {
         L <- as.integer(lowrank$landmarks)
-        mask <- fmridataset::get_mask(dataset)
+        mask <- .fmri_dataset_mask_space(dataset, "landmark selection")$mask
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
         km_iter <- as.integer(lowrank$kmeans_iter_max %||% 1000L)
         km_nstart <- as.integer(lowrank$kmeans_nstart %||% 10L)
@@ -523,7 +515,7 @@
       Xs <- as.matrix(S %*% Xw)
       if (A_is_I && !is.null(lowrank$landmarks)) {
         L <- as.integer(lowrank$landmarks)
-        mask <- fmridataset::get_mask(dataset)
+        mask <- .fmri_dataset_mask_space(dataset, "landmark selection")$mask
         coords <- neuroim2::index_to_coord(mask, which(as.vector(mask)))
         km_iter <- as.integer(lowrank$kmeans_iter_max %||% 1000L)
         km_nstart <- as.integer(lowrank$kmeans_nstart %||% 10L)

@@ -176,18 +176,18 @@
 .prepare_hrf_estimation <- function(form, fixed, block, dataset, basemod, basis_spec) {
   hrf_basis <- .as_estimation_hrf_basis(basis_spec)
   estimation_formula <- inject_basis(form, hrf_basis, fun_names = "hrf")
-  event_data <- .order_hrf_event_data(dataset$event_table, form, block)
+  event_data <- .order_hrf_event_data(.dset_event_table(dataset), form, block)
   event_mod <- event_model(
     estimation_formula,
     data = event_data,
     block = block,
-    sampling_frame = dataset$sampling_frame
+    sampling_frame = .dset_sampling_frame(dataset)
   )
   event_design_raw <- as.matrix(design_matrix(event_mod))
   curve_map <- .hrf_curve_map(event_mod, event_design_raw, basis_spec$k)
 
   baseline_mod <- if (is.null(basemod)) {
-    baseline_model("constant", sframe = dataset$sampling_frame)
+    baseline_model("constant", sframe = .dset_sampling_frame(dataset))
   } else {
     basemod
   }
@@ -199,12 +199,12 @@
     if (!inherits(fixed, "formula")) {
       stop("fixed must be NULL or an event-model formula", call. = FALSE)
     }
-    fixed_data <- .order_hrf_event_data(dataset$event_table, fixed, block)
+    fixed_data <- .order_hrf_event_data(.dset_event_table(dataset), fixed, block)
     fixed_mod <- event_model(
       fixed,
       data = fixed_data,
       block = block,
-      sampling_frame = dataset$sampling_frame
+      sampling_frame = .dset_sampling_frame(dataset)
     )
     fixed_design <- as.matrix(design_matrix(fixed_mod))
   }
@@ -365,7 +365,7 @@
 #'   condition-level curves.
 #' @param fixed Optional event-model formula whose design is treated as nuisance.
 #' @param block Formula identifying acquisition runs or blocks.
-#' @param dataset An `fmri_dataset`.
+#' @param dataset An `fmri_frame`.
 #' @param bs Deprecated legacy basis selector. Values from the former GAM API are
 #'   mapped to `basis = "bspline"`.
 #' @param rsam Strictly increasing, finite post-stimulus times beginning at zero.
@@ -396,7 +396,7 @@
 #'   condition = factor(rep(c("A", "B"), 4)),
 #'   run = 1L
 #' )
-#' dataset <- fmridataset::matrix_dataset(
+#' dataset <- matrix_frame(
 #'   matrix(rnorm(n * 2), nrow = n),
 #'   TR = 1,
 #'   run_length = n,
@@ -429,8 +429,8 @@ estimate_hrf <- function(
     ci_level = 0.95) {
   lambda_missing <- missing(lambda)
   .validate_estimate_hrf_formula(form)
-  if (!inherits(dataset, "fmri_dataset")) {
-    stop("dataset must inherit from 'fmri_dataset'", call. = FALSE)
+  if (!inherits(dataset, "fmri_frame")) {
+    stop("dataset must inherit from 'fmri_frame'", call. = FALSE)
   }
 
   if (!is.null(bs)) {
@@ -477,7 +477,7 @@ estimate_hrf <- function(
   basis_spec <- .new_hrf_basis_spec(basis, k, span)
   prepared <- .prepare_hrf_estimation(form, fixed, block, dataset, basemod, basis_spec)
 
-  response <- as.matrix(fmridataset::get_data_matrix(dataset))
+  response <- as.matrix(.dset_data_matrix(dataset))
   if (nrow(response) != nrow(prepared$event_design)) {
     stop("Dataset and HRF event design have different numbers of time points", call. = FALSE)
   }
@@ -532,8 +532,16 @@ estimate_hrf <- function(
 
   coefficients <- solved$coefficients
   rownames(coefficients) <- colnames(prepared$event_design)
-  voxel_names <- colnames(response)
-  if (is.null(voxel_names) || any(!nzchar(voxel_names))) {
+  # Feature identity belongs to the frame's feature axis, not to whatever
+  # dimnames the collected matrix happens to carry: the axis IDs are what
+  # survive subsetting, reordering, and storage round trips, so a caller who
+  # permutes voxels can map results back through them.
+  voxel_names <- tryCatch(
+    as.character(fmridataset::feature_ids(dataset)),
+    error = function(e) NULL
+  )
+  if (length(voxel_names) != ncol(response) || anyNA(voxel_names) ||
+    any(!nzchar(voxel_names))) {
     voxel_names <- paste0("voxel_", seq_len(ncol(response)))
   }
   colnames(coefficients) <- voxel_names

@@ -154,7 +154,7 @@ test_that("public runwise ARMA fitting returns per-run parameters and inference"
       as.numeric(stats::arima.sim(list(ar = 0.4, ma = 0.3), n = n))
     )
   }))
-  dset <- fmridataset::matrix_dataset(
+  dset <- matrix_frame(
     Y, TR = 1, run_length = rep(n, n_run), event_table = events
   )
   control <- fmri_lm_control(

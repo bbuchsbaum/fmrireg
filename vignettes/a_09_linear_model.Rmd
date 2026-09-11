@@ -179,7 +179,7 @@ simulated_data <- vapply(
   function(scale) scale * true_signal + noise,
   numeric(length(true_signal))
 )
-dataset <- fmridataset::matrix_dataset(
+dataset <- matrix_frame(
   datamat = simulated_data,
   TR = TR,
   run_length = run_length,
@@ -534,7 +534,7 @@ Another useful visualization is the fitted hemodynamic response for each conditi
 
 ```{r extract-fitted-hrf, message=FALSE, fig.width=7, fig.height=8, fig.alt="Fitted hemodynamic response curves for both conditions in each simulated voxel."}
 hrf_long <- dplyr::bind_rows(lapply(
-  seq_len(ncol(get_data_matrix(dataset))),
+  seq_len(ncol(fmridataset::collect_assay(dataset))),
   function(voxel_index) tidy_fitted_hrf(
     model,
     sample_at = seq(0, 20, by = 0.5),
@@ -628,14 +628,14 @@ hrf_response <- hrf_signal_a %o% hrf_amplitudes["A", ] +
   hrf_signal_b %o% hrf_amplitudes["B", ] + hrf_drift +
   matrix(rnorm(hrf_n * 2L, sd = 0.025), nrow = hrf_n)
 colnames(hrf_response) <- c("visual_ROI", "motor_ROI")
-hrf_dataset <- matrix_dataset(
+hrf_dataset <- matrix_frame(
   hrf_response,
   TR = 1,
   run_length = hrf_n,
   event_table = hrf_events
 )
 hrf_baseline <- baseline_model(
-  "poly", degree = 1, sframe = hrf_dataset$sampling_frame
+  "poly", degree = 1, sframe = fmridataset::as_sampling_frame(hrf_dataset)
 )
 ```
 
@@ -805,7 +805,7 @@ model_bspline <- fmri_lm(
 # Function to extract model fit statistics
 extract_model_stats <- function(model, model_name, dataset) {
   # Get observed data
-  observed_data <- get_data_matrix(dataset)
+  observed_data <- fmridataset::collect_assay(dataset)
 
   # Get design matrix (ensure it's a numeric matrix)
   design_mat <- as.matrix(design_matrix(model$model))

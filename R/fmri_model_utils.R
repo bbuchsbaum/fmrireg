@@ -95,7 +95,7 @@ term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
 #' @param formula A formula specifying the event model
 #' @param block A factor vector indicating the block structure
 #' @param baseline_model An optional baseline model. If NULL, a default polynomial baseline is created
-#' @param dataset The fmri_dataset object
+#' @param dataset The fmri_frame object
 #' @param drop_empty Logical, whether to drop empty blocks
 #' @param durations Duration of events (default 0 for instantaneous events)
 #' @return An fmri_model object that also stores the \code{dataset}
@@ -109,10 +109,10 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
     if (length(block_var) != 1) {
       stop("Block formula must specify exactly one variable")
     }
-    if (!block_var %in% names(dataset$event_table)) {
+    if (!block_var %in% names(.dset_event_table(dataset))) {
       stop(sprintf("Block variable '%s' not found in event_table", block_var))
     }
-    block <- dataset$event_table[[block_var]]
+    block <- .dset_event_table(dataset)[[block_var]]
   }
   
   if (is.character(block)) {
@@ -128,17 +128,12 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
     block <- droplevels(block)
   }
   
-  # Create sampling frame using run_length from dataset
-  if (!is.null(dataset$sampling_frame)) {
-    sframe <- dataset$sampling_frame
-  } else {
-    # Fallback to using run_length if available
-    if (!is.null(dataset$run_length)) {
-      sframe <- sampling_frame(dataset$run_length, dataset$TR)
-    } else {
-      stop("Dataset must have either sampling_frame or run_length")
-    }
+  # Sampling frame derived from the frame's run_id / TR observation columns
+  if (!.is_fmri_frame(dataset)) {
+    stop("'dataset' must be an 'fmri_frame' (see matrix_frame(), neurovec_frame(), nifti_frame())",
+         call. = FALSE)
   }
+  sframe <- .dset_sampling_frame(dataset)
   
   # Create baseline model if not provided
   if (is.null(baseline_model)) {
@@ -147,7 +142,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
   
   # Create event model
   # For event_model, we need to pass the event table data along with block assignments
-  event_data <- dataset$event_table
+  event_data <- .dset_event_table(dataset)
   event_model <- event_model(formula, data = event_data, block = block, 
                            sampling_frame = sframe, durations = durations)
   

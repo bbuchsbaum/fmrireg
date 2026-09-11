@@ -30,7 +30,7 @@ condition-level curves.}
 
 \item{block}{Formula identifying acquisition runs or blocks.}
 
-\item{dataset}{An \code{fmri_dataset}.}
+\item{dataset}{An \code{fmri_frame}.}
 
 \item{bs}{Deprecated legacy basis selector. Values from the former GAM API are
 mapped to \code{basis = "bspline"}.}
@@ -86,7 +86,7 @@ events <- data.frame(
   condition = factor(rep(c("A", "B"), 4)),
   run = 1L
 )
-dataset <- fmridataset::matrix_dataset(
+dataset <- matrix_frame(
   matrix(rnorm(n * 2), nrow = n),
   TR = 1,
   run_length = n,

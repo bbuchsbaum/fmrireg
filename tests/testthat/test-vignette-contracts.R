@@ -35,7 +35,7 @@ test_that("factorial vignette contrasts resolve sanitized design term tags", {
       name = "category_X_attention"
     )
   )
-  dataset <- matrix_dataset(
+  dataset <- matrix_frame(
     Y, TR = 2, run_length = 120, event_table = design
   )
 
@@ -70,7 +70,7 @@ test_that("vignette omnibus contrast executes as a two-df F test", {
   set.seed(404)
   Y <- X %*% matrix(c(1.0, 0.4, -0.2), ncol = 1) +
     matrix(rnorm(100, sd = 0.15), ncol = 1)
-  dataset <- matrix_dataset(
+  dataset <- matrix_frame(
     Y, TR = 2, run_length = 100, event_table = events
   )
   omnibus <- oneway_contrast(~ condition, name = "condition_F")

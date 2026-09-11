@@ -3,7 +3,7 @@
 lss_fast <- function(dset, bdes, Y=NULL, use_cpp = TRUE) {
   # Data preparation
   if (is.null(Y)) {
-    data_matrix <- get_data_matrix(dset)
+    data_matrix <- .dset_data_matrix(dset)
   } else {
     data_matrix <- Y
   }

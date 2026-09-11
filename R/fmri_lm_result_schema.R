@@ -153,9 +153,9 @@ empty_contrast_table <- function() {
              call. = FALSE)
       }
       X <- design_matrix(model)
-      Y <- as.matrix(fmridataset::get_data_matrix(dataset))
+      Y <- as.matrix(.dset_data_matrix(dataset))
       estimate <- as.matrix(payload$estimate[[1L]])
-      run_chunks <- collect_chunks(exec_strategy("runwise")(dataset))
+      run_chunks <- .dset_run_chunks(dataset)
       context <- list(
         X = X,
         residuals = Y - X %*% t(estimate),

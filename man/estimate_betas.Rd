@@ -2,39 +2,46 @@
 % Please edit documentation in R/all_generic.R, R/fmri_betas.R
 \name{estimate_betas}
 \alias{estimate_betas}
-\alias{estimate_betas.latent_dataset}
+\alias{estimate_betas.fmri_frame}
 \title{Estimate Beta Coefficients for fMRI Data}
 \usage{
 estimate_betas(x, ...)
 
-\method{estimate_betas}{latent_dataset}(
+\method{estimate_betas}{fmri_frame}(
   x,
   fixed = NULL,
   ran,
   block,
   method = c("mixed", "lss", "ols"),
   basemod = NULL,
-  prewhiten = FALSE,
+  maxit = 1000,
+  fracs = 0.5,
   progress = TRUE,
   ...
 )
 }
 \arguments{
-\item{x}{An object of class \code{matrix_dataset} representing the matrix dataset}
+\item{x}{An \code{fmri_frame} (see \code{\link[=matrix_frame]{matrix_frame()}}, \code{\link[=neurovec_frame]{neurovec_frame()}},
+\code{\link[=nifti_frame]{nifti_frame()}}, and \code{\link[=latent_frame]{latent_frame()}}). When the frame's feature space is a
+\code{volume_space}, the fixed and random betas are returned as \code{NeuroVec}
+objects on that grid; otherwise (index or basis spaces) they are returned
+as coefficient-by-feature matrices.}
 
-\item{...}{Additional arguments passed to the estimation method}
+\item{...}{Additional arguments passed to the estimation method.}
 
-\item{fixed}{A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials)}
+\item{fixed}{A formula specifying the fixed regressors that model constant effects (i.e., non-varying over trials).}
 
-\item{ran}{A formula specifying the random (trialwise) regressors that model single trial effects}
+\item{ran}{A formula specifying the random (trialwise) regressors that model single trial effects.}
 
-\item{block}{A formula specifying the block factor}
+\item{block}{A formula specifying the block factor.}
 
-\item{method}{The regression method for estimating trialwise betas; one of "mixed", "lss", or "ols" (default: "mixed")}
+\item{method}{The regression method for estimating trialwise betas; one of "mixed", "lss", or "ols".}
 
-\item{basemod}{A \code{baseline_model} instance to regress out of data before beta estimation (default: NULL)}
+\item{basemod}{A \code{baseline_model} instance to regress out of data before beta estimation (default: NULL).}
 
-\item{prewhiten}{currently experimental, default to \code{FALSE}.}
+\item{maxit}{Maximum number of iterations for optimization methods (default: 1000).}
+
+\item{fracs}{Fraction of voxels used for prewhitening.}
 
 \item{progress}{Logical; show progress bar.}
 }
@@ -51,11 +58,15 @@ A list of class "fmri_betas" containing:
 
 A list of class "fmri_betas" containing the following components:
 \itemize{
-\item betas_fixed: Matrix representing the fixed effect betas
-\item betas_ran: Matrix representing the random effect betas
-\item design_ran: Design matrix for random effects
-\item design_fixed: Design matrix for fixed effects
-\item design_base: Design matrix for baseline model
+\item betas_fixed: fixed effect betas (NeuroVec for volumetric frames, matrix otherwise).
+\item betas_ran: random effect betas (NeuroVec for volumetric frames, matrix otherwise).
+\item design_ran: Design matrix for random effects.
+\item design_fixed: Design matrix for fixed effects.
+\item design_base: Design matrix for baseline model.
+\item basemod: Baseline model object.
+\item fixed_model: Fixed effect model object.
+\item ran_model: Random effect model object.
+\item estimated_hrf: The estimated HRF vector (NULL for most methods).
 }
 }
 \description{
@@ -69,15 +80,13 @@ This function supports different estimation approaches for:
 }
 
 This function estimates betas (regression coefficients) for fixed and random effects
-in a matrix dataset using various methods.
+using various regression methods including mixed models, least squares, and PLS.
 }
 \details{
-This is a generic function with methods for different dataset types:
-\describe{
-\item{fmri_dataset}{For volumetric fMRI data}
-\item{matrix_dataset}{For matrix-format data}
-\item{latent_dataset}{For dimensionality-reduced data}
-}
+This is a generic function whose \code{fmri_frame} method adapts to the frame's
+feature space: volumetric frames (\code{volume_space}) return \code{NeuroVec} betas,
+while matrix-format (\code{index_space}) and latent (\code{basis_space}) frames return
+coefficient matrices.
 
 Available estimation methods include:
 \describe{
@@ -98,7 +107,7 @@ event_data <- data.frame(
 
 # Create sampling frame and dataset
 sframe <- sampling_frame(blocklens = 100, TR = 2)
-dset <- fmridataset::matrix_dataset(
+dset <- matrix_frame(
   matrix(rnorm(100 * 2), 100, 2),
   TR = 2,
   run_length = 100,
@@ -114,6 +123,19 @@ betas <- estimate_betas(
   method = "mixed"
 )
 
+\dontrun{
+facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
+facedes$frun <- factor(facedes$run)
+scans <- paste0("rscan0", 1:6, ".nii")
+
+dset <- nifti_frame(scans=scans, mask="mask.nii", TR=1.5,
+        run_length=rep(436,6), event_table=facedes)
+fixed = onset ~ hrf(run)
+ran = onset ~ trialwise()
+block = ~ run
+
+betas <- estimate_betas(dset, fixed=fixed, ran=ran, block=block, method="mixed")
+}
 }
 \references{
 Mumford, J. A., et al. (2012). Deconvolving BOLD activation in event-related designs for multivoxel pattern classification analyses. NeuroImage, 59(3), 2636-2643.
@@ -121,12 +143,9 @@ Mumford, J. A., et al. (2012). Deconvolving BOLD activation in event-related des
 Pedregosa, F., et al. (2015). Data-driven HRF estimation for encoding and decoding models. NeuroImage, 104, 209-220.
 }
 \seealso{
-\code{\link{fmri_dataset}}, \code{\link{matrix_dataset}}, \code{\link{latent_dataset}}
+\code{\link{matrix_frame}}, \code{\link{neurovec_frame}}, \code{\link{latent_frame}}
 
-\code{\link{matrix_dataset}}, \code{\link{baseline_model}}
-
-Other estimate_betas: 
-\code{\link{estimate_betas.matrix_dataset}()}
+\code{\link{matrix_frame}}, \code{\link{baseline_model}}, \code{\link{event_model}}
 }
 \concept{estimate_betas}
 \concept{model_estimation}

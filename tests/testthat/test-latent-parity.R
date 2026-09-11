@@ -38,12 +38,12 @@ test_that("Latent dataset + SRHT (global AR) matches exact reasonably", {
   v <- 0L
   for (ix in seq_len(dim3[1])) for (iy in seq_len(dim3[2])) for (iz in seq_len(dim3[3])) { v <- v+1L; arr[ix,iy,iz,] <- as.numeric(Y[,v]) }
   vec <- NeuroVec(arr, space4d)
-  dset_full <- fmri_mem_dataset(scans = list(vec), mask = maskVol, TR = TR, event_table = events_df)
+  dset_full <- neurovec_frame(scans = list(vec), mask = maskVol, TR = TR, event_table = events_df)
   fit_exact <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset_full)
   B_exact <- t(fit_exact$result$betas$data[[1]]$estimate[[1]])
 
   # Build latent dataset via PCA (scores Z: T x r, loadings L: V x r)
-  # Construct LatentNeuroVec and wrap into fmridataset::latent_dataset
+  # Construct LatentNeuroVec and wrap it into a latent fmri_frame
   r <- 15L
   pr <- tryCatch({
     prcomp(Y, center = TRUE, scale. = FALSE, rank. = r)
@@ -59,13 +59,7 @@ test_that("Latent dataset + SRHT (global AR) matches exact reasonably", {
   }, error = function(e) NULL)
   if (is.null(lvec)) skip("Cannot construct LatentNeuroVec; skipping")
 
-  dset_lat <- tryCatch({
-    fmridataset::latent_dataset(source = list(lvec), 
-                                event_table = events_df, 
-                                TR = TR,
-                                run_length = Tlen)
-  }, error = function(e) NULL)
-  if (is.null(dset_lat)) skip("Cannot construct latent_dataset; skipping")
+  dset_lat <- latent_frame(lvec, TR = TR, run_length = Tlen, event_table = events_df)
 
   # Engine on latent dataset: SRHT + global AR
   low <- lowrank_control(parcels = NULL, time_sketch = list(method = "srht", m = min(8L * p, Tlen)))

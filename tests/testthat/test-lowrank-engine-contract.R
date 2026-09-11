@@ -1,6 +1,6 @@
 test_that("latent_sketch rejects unsupported robust and preprocessing modes", {
   dset <- .demo_matrix_dataset()
-  Tlen <- nrow(fmridataset::get_data_matrix(dset))
+  Tlen <- nrow(fmridataset::collect_assay(dset))
   low <- lowrank_control(time_sketch = list(method = "gaussian", m = min(16L, Tlen)))
   
   expect_error(
@@ -30,7 +30,7 @@ test_that("latent_sketch rejects unsupported robust and preprocessing modes", {
 
 test_that("latent_sketch validates by_cluster requirements", {
   dset <- .demo_matrix_dataset()
-  Tlen <- nrow(fmridataset::get_data_matrix(dset))
+  Tlen <- nrow(fmridataset::collect_assay(dset))
   low <- lowrank_control(time_sketch = list(method = "gaussian", m = min(16L, Tlen)))
   
   expect_error(
@@ -61,13 +61,12 @@ test_that("latent_sketch validates by_cluster requirements", {
       mask = rep(TRUE, n_voxels),
       offset = rep(0, n_voxels)
     )
-    ds <- fmridataset::latent_dataset(
-      source = list(lvec),
+    latent_frame(
+      lvec,
       TR = 1,
-      run_length = Tlen
+      run_length = Tlen,
+      event_table = data.frame(onsets = 1, condition = factor("A"), run = 1L)
     )
-    ds$event_table <- data.frame(onsets = 1, condition = factor("A"), run = 1L)
-    ds
   })
 
   expect_error(
@@ -77,18 +76,18 @@ test_that("latent_sketch validates by_cluster requirements", {
       dataset = latent_fixture,
       engine = "latent_sketch",
       lowrank = lowrank_control(
-        parcels = seq_len(ncol(fmridataset::get_data_matrix(dset))),
+        parcels = seq_len(ncol(fmridataset::collect_assay(dset))),
         time_sketch = list(method = "gaussian", m = min(16L, Tlen))
       ),
       ar_options = list(by_cluster = TRUE, order = 1L)
     ),
-    "does not support by_cluster AR whitening for latent_dataset inputs"
+    "does not support by_cluster AR whitening for basis_space inputs"
   )
 })
 
 test_that("latent_sketch preserves model-defined contrasts and covariance", {
   dset <- .demo_matrix_dataset()
-  Tlen <- nrow(fmridataset::get_data_matrix(dset))
+  Tlen <- nrow(fmridataset::collect_assay(dset))
   con <- contrast_set(pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"))
   
   fit <- fmri_lm(

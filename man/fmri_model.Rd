@@ -11,7 +11,7 @@ fmri_model(event_model, baseline_model, dataset)
 
 \item{baseline_model}{An object of class "baseline_model" representing the baseline-related part of the fMRI regression model.}
 
-\item{dataset}{An \code{fmri_dataset} used to build the model.}
+\item{dataset}{An \code{fmri_frame} used to build the model.}
 }
 \value{
 An object of class \code{fmri_model} containing the event and baseline models along with the dataset.

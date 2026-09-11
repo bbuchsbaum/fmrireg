@@ -19,8 +19,8 @@
 #' Checks performed per job: template validity; every variable referenced by the
 #' design \code{formula} and \code{block} is a column of that job's event table;
 #' \code{TR} is positive; run lengths are consistent with the data
-#' (\code{matrix_dataset}: rows match \code{sum(run_length)};
-#' \code{fmri_dataset}: one \code{run_length} per scan file); nuisance regressor
+#' (\code{matrix_frame}: rows match \code{sum(run_length)};
+#' \code{nifti_frame}: one \code{run_length} per scan file); nuisance regressor
 #' rows match the total number of scans; and, when \code{check_files = TRUE},
 #' that file-backed scans exist on disk.
 #'
@@ -120,12 +120,12 @@ preflight <- function(x, check_files = FALSE, on_issue = c("warn", "error", "col
   rl <- args$run_length
   if (is.null(rl) || !is.numeric(rl) || any(rl <= 0)) {
     add("run_length is missing or non-positive")
-  } else if (identical(spec$constructor, "matrix_dataset") && !is.null(args$datamat)) {
+  } else if (identical(spec$constructor, "matrix_frame") && !is.null(args$datamat)) {
     n <- nrow(args$datamat)
     if (sum(rl) != n) {
       add(sprintf("sum(run_length)=%d does not match data rows=%d", sum(rl), n))
     }
-  } else if (identical(spec$constructor, "fmri_dataset") && !is.null(args$scans)) {
+  } else if (identical(spec$constructor, "nifti_frame") && !is.null(args$scans)) {
     if (length(args$scans) != length(rl)) {
       add(sprintf("number of scans (%d) does not match run_length entries (%d)",
                   length(args$scans), length(rl)))
@@ -157,7 +157,7 @@ preflight <- function(x, check_files = FALSE, on_issue = c("warn", "error", "col
   }
 
   # File existence (opt-in)
-  if (isTRUE(check_files) && identical(spec$constructor, "fmri_dataset") &&
+  if (isTRUE(check_files) && identical(spec$constructor, "nifti_frame") &&
       !is.null(args$scans)) {
     base <- args$base_path %||% "."
     paths <- ifelse(grepl("^(/|[A-Za-z]:)", args$scans),

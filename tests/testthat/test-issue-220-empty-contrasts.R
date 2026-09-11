@@ -35,7 +35,7 @@ make_runwise_fit <- function(with_contrast = FALSE, n_vox = 8L) {
   }
 
   Y <- matrix(rnorm(2 * nvols * n_vox), 2 * nvols, n_vox)
-  dset <- fmridataset::matrix_dataset(
+  dset <- matrix_frame(
     Y, TR = tr, run_length = c(nvols, nvols), event_table = ev
   )
   fmod <- fmri_model(
@@ -95,7 +95,7 @@ test_that("single-run and multi-run runwise agree on the empty contrast table", 
     data = ev, block = ~ run, sampling_frame = sframe
   )
   Y <- matrix(rnorm(nvols * 8L), nvols, 8L)
-  dset <- fmridataset::matrix_dataset(Y, TR = tr, run_length = nvols, event_table = ev)
+  dset <- matrix_frame(Y, TR = tr, run_length = nvols, event_table = ev)
   fit1 <- fmri_lm(
     fmri_model(emod, fmridesign::baseline_model(basis = "bs", degree = 3, sframe = sframe), dset),
     control = fmri_lm_control(estimation = estimation_spec("runwise_meta")),
@@ -154,7 +154,7 @@ make_image_fit <- function(n_contrasts = 1L) {
     condition = factor(rep(c("A", "B", "A", "B", "A"), 2)),
     run = rep(1:2, each = 5)
   )
-  dset <- fmridataset::fmri_mem_dataset(
+  dset <- neurovec_frame(
     scans = scans, mask = mask, TR = 1.5, event_table = event_table
   )
   con <- if (n_contrasts >= 2L) {

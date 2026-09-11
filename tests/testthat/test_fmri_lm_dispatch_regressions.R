@@ -39,7 +39,7 @@ test_that("runwise_lm wrapper matches modular implementation", {
   expect_equal(res_wrapper$baseline_indices, res_impl$baseline_indices)
 })
 
-test_that("legacy chunkwise alias dispatches to active implementation", {
+test_that("chunkwise_lm generic dispatches fmri_frame inputs to the frame method", {
   dset <- .demo_matrix_dataset()
   model <- create_fmri_model(
     formula = onsets ~ hrf(condition),
@@ -49,8 +49,8 @@ test_that("legacy chunkwise alias dispatches to active implementation", {
   contrast_objects <- prepare_fmri_lm_contrasts(model)$standard
   cfg <- fmri_lm_control()
 
-  res_active <- suppressWarnings(
-    fmrireg:::chunkwise_lm.fmri_dataset(
+  res_method <- suppressWarnings(
+    fmrireg:::chunkwise_lm.fmri_frame(
       x = dset,
       model = model,
       contrast_objects = contrast_objects,
@@ -60,9 +60,9 @@ test_that("legacy chunkwise alias dispatches to active implementation", {
       progress = FALSE
     )
   )
-  res_legacy <- suppressWarnings(
-    fmrireg:::chunkwise_lm.fmri_dataset_old(
-      x = dset,
+  res_generic <- suppressWarnings(
+    fmrireg:::chunkwise_lm(
+      dset,
       model = model,
       contrast_objects = contrast_objects,
       nchunks = 1,
@@ -73,11 +73,9 @@ test_that("legacy chunkwise alias dispatches to active implementation", {
   )
 
   expect_equal(
-    res_legacy$betas$data[[1]]$estimate[[1]],
-    res_active$betas$data[[1]]$estimate[[1]],
+    res_generic$betas$data[[1]]$estimate[[1]],
+    res_method$betas$data[[1]]$estimate[[1]],
     tolerance = 1e-10
   )
-  expect_equal(res_legacy$cov.unscaled, res_active$cov.unscaled, tolerance = 1e-10)
-  expect_equal(res_legacy$event_indices, res_active$event_indices)
-  expect_equal(res_legacy$baseline_indices, res_active$baseline_indices)
+  expect_equal(res_generic$cov.unscaled, res_method$cov.unscaled, tolerance = 1e-10)
 })

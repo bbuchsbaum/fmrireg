@@ -126,7 +126,7 @@ test_that(".run_lowrank_engine freezes AR from initial OLS residuals", {
   Z <- matrix(rnorm(n * v), nrow = n, ncol = v)
 
   etab <- data.frame(onset = 1, run = 1)
-  dataset <- fmridataset::matrix_dataset(Z, TR = 1, run_length = n, event_table = etab)
+  dataset <- matrix_frame(Z, TR = 1, run_length = n, event_table = etab)
   fm_dummy <- structure(list(), class = "fmri_model")
 
   lowrank <- list(time_sketch = list(method = "gaussian", m = n))
@@ -190,7 +190,7 @@ test_that(".run_lowrank_engine uses design rank when computing rdf", {
   Z <- matrix(rnorm(n * v), nrow = n, ncol = v)
   
   etab <- data.frame(onset = 1, run = 1)
-  dataset <- fmridataset::matrix_dataset(Z, TR = 1, run_length = n, event_table = etab)
+  dataset <- matrix_frame(Z, TR = 1, run_length = n, event_table = etab)
   fm_dummy <- structure(list(), class = "fmri_model")
   
   lowrank <- list(time_sketch = list(method = "gaussian", m = n))

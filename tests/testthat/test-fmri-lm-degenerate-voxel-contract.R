@@ -10,7 +10,7 @@ test_that("voxelwise AR preserves degenerate voxels as explicit NA results", {
   )
   signal <- as.numeric(arima.sim(model = list(ar = 0.25), n = n))
   Y <- cbind(constant = rep(1, n), signal = signal)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = events)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = events)
 
   fit <- fmri_lm(
     onset ~ hrf(condition),
@@ -46,7 +46,7 @@ test_that("future voxel collection preserves status and robust weights", {
     run = 1L
   )
   Y <- cbind(zero = numeric(n), signal = rnorm(n))
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = events)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = events)
   args <- list(
     formula = onset ~ hrf(condition),
     block = ~run,

@@ -284,7 +284,7 @@ apply_soft_projection <- function(proj, Y, X) {
 #' Extracts voxel timeseries from regions defined by a mask (e.g., WM/CSF).
 #' This is the typical input for soft subspace projection.
 #'
-#' @param dataset An fmri_dataset object.
+#' @param dataset An fmri_frame object.
 #' @param mask A binary mask (logical vector or 3D array) indicating nuisance voxels,
 #'   or a file path to a NIfTI mask.
 #' @param run Optional run index to extract data from a specific run.
@@ -306,11 +306,11 @@ extract_nuisance_timeseries <- function(dataset, mask, run = NULL) {
   }
 
   # Get data
-  Y <- get_data_matrix(dataset)
+  Y <- .dset_data_matrix(dataset)
 
   if (!is.null(run)) {
     # Extract run-specific data
-    sframe <- dataset$sampling_frame
+    sframe <- .dset_sampling_frame(dataset)
     blocklens <- fmrihrf::blocklens(sframe)
     run_start <- if (run == 1) 1 else sum(blocklens[1:(run - 1)]) + 1
     run_end <- sum(blocklens[1:run])
@@ -416,7 +416,7 @@ soft_subspace_options <- function(enabled = FALSE,
 #'
 #' @param Y Data matrix.
 #' @param X Design matrix.
-#' @param dataset fmri_dataset for extracting nuisance (if using mask).
+#' @param dataset fmri_frame for extracting nuisance (if using mask).
 #' @param soft_opts Soft subspace options.
 #' @param run Optional run index.
 #' @return List with projected Y, X, and projection details.
@@ -432,7 +432,7 @@ soft_subspace_options <- function(enabled = FALSE,
     N <- soft_opts$nuisance_matrix
     if (!is.null(run)) {
       # Need to subset to run
-      sframe <- dataset$sampling_frame
+      sframe <- .dset_sampling_frame(dataset)
       blocklens <- fmrihrf::blocklens(sframe)
       run_start <- if (run == 1) 1 else sum(blocklens[1:(run - 1)]) + 1
       run_end <- sum(blocklens[1:run])

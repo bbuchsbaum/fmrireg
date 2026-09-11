@@ -22,7 +22,7 @@ test_that("tidy fmri_lm produces expected estimate statistics", {
   base_series <- signal + noise
   datamat <- sapply(seq_len(n_vox), function(v) base_series * (1 - (v - 1) * 0.1))
 
-  dset <- fmridataset::matrix_dataset(datamat = datamat, TR = TR,
+  dset <- matrix_frame(datamat = datamat, TR = TR,
                                       run_length = run_length, event_table = event_table)
 
   fit <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset,

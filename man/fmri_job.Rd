@@ -32,7 +32,7 @@ fully serializable recipe (no voxel data, no captured environment) that
 }
 \examples{
 tmpl <- fmri_template(onset ~ hrf(condition), ~ run)
-ds <- dataset_spec("fmri_dataset",
+ds <- dataset_spec("nifti_frame",
                    args = list(scans = "run-1_bold.nii.gz", TR = 2,
                                run_length = 200), source = "file")
 fmri_job("sub-01", tmpl, ds, meta = list(subject = "01"))

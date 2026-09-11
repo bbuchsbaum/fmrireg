@@ -19,7 +19,7 @@ simulate_ar_dataset <- function(ar_coeff = numeric(), n_runs = 2, n_time = 30, n
     onset = rep(c(5, 15), n_runs),
     cond = factor("A")
   )
-  fmridataset::matrix_dataset(datamat, TR = 1, run_length = rep(n_time, n_runs), event_table = event_tab)
+  matrix_frame(datamat, TR = 1, run_length = rep(n_time, n_runs), event_table = event_tab)
 }
 
 
@@ -50,7 +50,7 @@ test_that("ar1 recovers phi and adjusts standard errors", {
   dset <- simulate_ar_dataset(ar_coeff = phi, n_runs = 2)
 
   # Test pure AR recovery on raw data (before GLM)
-  Y <- fmridataset::get_data_matrix(dset)
+  Y <- fmridataset::collect_assay(dset)
   phi_raw <- fmrireg:::.estimate_ar(rowMeans(Y), 1)
   # Raw data should show AR structure, though maybe not exactly phi due to simulation
   expect_equal(as.numeric(phi_raw), phi, tolerance = 0.15)
@@ -72,7 +72,7 @@ test_that("ar2 recovers coefficients", {
   dset <- simulate_ar_dataset(ar_coeff = phi, n_runs = 2)
 
   # Test on raw data instead of residuals
-  Y <- fmridataset::get_data_matrix(dset)
+  Y <- fmridataset::collect_assay(dset)
   phi_hat <- fmrireg:::.estimate_ar(rowMeans(Y), 2)
   # More tolerance for AR(2) as it's harder to estimate
   expect_equal(as.numeric(phi_hat), phi, tolerance = 0.3)
@@ -131,7 +131,7 @@ test_that("arp recovers coefficients", {
   dset <- simulate_ar_dataset(ar_coeff = phi, n_runs = 2)
 
   # Test on raw data - AR(3) is very difficult to estimate accurately
-  Y <- fmridataset::get_data_matrix(dset)
+  Y <- fmridataset::collect_assay(dset)
   phi_hat <- fmrireg:::.estimate_ar(rowMeans(Y), length(phi))
   # Very relaxed tolerance for AR(3)
   expect_equal(length(phi_hat), length(phi))

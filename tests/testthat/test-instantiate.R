@@ -2,18 +2,18 @@ test_that("instantiate binds a single inline binding into a realizable job", {
   tmpl <- fmri_template(onset ~ hrf(condition), ~ run,
                         baseline = baseline_spec(degree = 3))
   ds <- make_test_matrix_dataset()
-  b <- list(id = "sub-01", scans = ds$datamat, TR = 2,
-            run_length = c(40L, 40L), events = ds$event_table)
+  b <- list(id = "sub-01", scans = frame_data(ds), TR = 2,
+            run_length = c(40L, 40L), events = frame_events(ds))
 
   job <- instantiate(tmpl, b)
   expect_s3_class(job, "fmri_job")
   expect_equal(job$id, "sub-01")
-  expect_equal(job$dataset_spec$constructor, "matrix_dataset")
+  expect_equal(job$dataset_spec$constructor, "matrix_frame")
   expect_equal(job$dataset_spec$source, "inline")
 
   # Realize the dataset and assemble the model.
   rds <- realize_dataset(job)
-  expect_s3_class(rds, "fmri_dataset")
+  expect_s3_class(rds, "fmri_frame")
   model <- build_model(job, rds)
   expect_s3_class(model, "fmri_model")
 })
@@ -22,8 +22,8 @@ test_that("instantiate over a list of bindings returns one job each", {
   tmpl <- fmri_template(onset ~ hrf(condition), ~ run)
   mk <- function(id) {
     ds <- make_test_matrix_dataset()
-    list(id = id, scans = ds$datamat, TR = 2, run_length = c(40L, 40L),
-         events = ds$event_table)
+    list(id = id, scans = frame_data(ds), TR = 2, run_length = c(40L, 40L),
+         events = frame_events(ds))
   }
   jobs <- instantiate(tmpl, list(mk("sub-01"), mk("sub-02"), mk("sub-03")))
   expect_length(jobs, 3)
@@ -40,7 +40,7 @@ test_that("file-backed binding yields a tiny, path-only serializable job", {
             base_path = "/study/derivatives",
             meta = list(subject = "09", task = "stroop", space = "MNI152"))
   job <- instantiate(tmpl, b)
-  expect_equal(job$dataset_spec$constructor, "fmri_dataset")
+  expect_equal(job$dataset_spec$constructor, "nifti_frame")
   expect_equal(job$dataset_spec$source, "file")
   expect_equal(job$meta$task, "stroop")
 
@@ -56,8 +56,8 @@ test_that("confounds are resolved into per-run nuisance regressors in the model"
   ds <- make_test_matrix_dataset()
   conf <- matrix(rnorm(80 * 2), 80, 2,
                  dimnames = list(NULL, c("trans_x", "rot_z")))
-  b <- list(id = "sub-05", scans = ds$datamat, TR = 2,
-            run_length = c(40L, 40L), events = ds$event_table, confounds = conf)
+  b <- list(id = "sub-05", scans = frame_data(ds), TR = 2,
+            run_length = c(40L, 40L), events = frame_events(ds), confounds = conf)
   job <- instantiate(tmpl, b)
 
   nl <- fmrireg:::.resolve_nuisance(job$nuisance, c(40L, 40L))
@@ -74,9 +74,9 @@ test_that("instantiate over a manifest data.frame works", {
   ds <- make_test_matrix_dataset()
   mani <- data.frame(id = c("sub-01", "sub-02"), TR = c(2, 2),
                      stringsAsFactors = FALSE)
-  mani$scans <- list(ds$datamat, ds$datamat)
+  mani$scans <- list(frame_data(ds), frame_data(ds))
   mani$run_length <- list(c(40L, 40L), c(40L, 40L))
-  mani$events <- list(ds$event_table, ds$event_table)
+  mani$events <- list(frame_events(ds), frame_events(ds))
 
   jobs <- instantiate(tmpl, mani)
   expect_length(jobs, 2)

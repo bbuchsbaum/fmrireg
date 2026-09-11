@@ -9,7 +9,7 @@ create_test_data <- function() {
     condition = factor(c('A', 'B', 'A', 'B')),
     run = rep(1, 4)
   )
-  dataset <- matrix_dataset(Y, TR = 2, run_length = 100, event_table = event_data)
+  dataset <- matrix_frame(Y, TR = 2, run_length = 100, event_table = event_data)
   sframe <- fmrihrf::sampling_frame(blocklens = 100, TR = 2)
   model <- event_model(onset ~ hrf(condition), data = event_data, block = ~ run, sampling_frame = sframe)
   
@@ -85,7 +85,7 @@ test_that("glm_ols works with single voxel", {
   test_data <- create_test_data()
   Y_single <- matrix(rnorm(100), 100, 1)  # Single voxel
   
-  dset_single <- matrix_dataset(Y_single, TR = 2, run_length = 100, event_table = test_data$event_data)
+  dset_single <- matrix_frame(Y_single, TR = 2, run_length = 100, event_table = test_data$event_data)
   
   result <- glm_ols(dset_single, test_data$model, fmrihrf::HRF_SPMG1)
   
@@ -96,7 +96,7 @@ test_that("glm_ols works with single voxel", {
 test_that("glm_ols works with many voxels", {
   test_data <- create_test_data()
   Y_many <- matrix(rnorm(10000), 100, 100)
-  dset_many <- matrix_dataset(Y_many, TR = 2, run_length = 100, event_table = test_data$event_data)
+  dset_many <- matrix_frame(Y_many, TR = 2, run_length = 100, event_table = test_data$event_data)
   
   result <- glm_ols(dset_many, test_data$model, fmrihrf::HRF_SPMG1)
   
@@ -122,7 +122,7 @@ test_that("glm_ols handles different TR values", {
     condition = factor(c('A', 'B', 'A')),
     run = rep(1, 3)
   )
-     dset_tr3 <- matrix_dataset(Y_tr3, TR = 3, run_length = 100, event_table = event_data_tr3)
+     dset_tr3 <- matrix_frame(Y_tr3, TR = 3, run_length = 100, event_table = event_data_tr3)
    sframe_tr3 <- fmrihrf::sampling_frame(blocklens = 100, TR = 3)
    model_tr3 <- event_model(onset ~ hrf(condition), data = event_data_tr3, block = ~ run, sampling_frame = sframe_tr3)
   
@@ -138,7 +138,7 @@ test_that("glm_ols handles missing data appropriately", {
   Y_with_na <- matrix(rnorm(1000), 100, 10)
   Y_with_na[1:5, 1] <- NA
   
-  dset_na <- matrix_dataset(Y_with_na, TR = 2, run_length = 100, event_table = test_data$event_data)
+  dset_na <- matrix_frame(Y_with_na, TR = 2, run_length = 100, event_table = test_data$event_data)
   
   # Should produce error due to missing values
   expect_error({
@@ -221,7 +221,7 @@ test_that("glm_lss might work with different data structures", {
     condition = factor(c('A', 'B')),
     run = rep(1, 2)
   )
-     dset_simple <- matrix_dataset(Y_simple, TR = 2, run_length = 50, event_table = event_data_simple)
+     dset_simple <- matrix_frame(Y_simple, TR = 2, run_length = 50, event_table = event_data_simple)
    sframe_simple <- fmrihrf::sampling_frame(blocklens = 50, TR = 2)
    model_simple <- event_model(onset ~ hrf(condition), data = event_data_simple, block = ~ run, sampling_frame = sframe_simple)
   

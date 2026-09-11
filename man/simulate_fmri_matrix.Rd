@@ -84,7 +84,7 @@ defaults are used (0.3 for AR(1); c(0.3,0.2) for AR(2)).}
 \value{
 A list containing:
 \describe{
-\item{\code{time_series}}{A \code{matrix_dataset} with \eqn{T \times n} data
+\item{\code{time_series}}{A \code{fmri_frame} with \eqn{T \times n} data
 and \code{event_table} for the \emph{first} column's random draws.}
 \item{\code{ampmat}}{An \eqn{n\_events \times n} numeric matrix of amplitudes.}
 \item{\code{durmat}}{An \eqn{n\_events \times n} numeric matrix of durations.}
@@ -98,7 +98,7 @@ Generates \eqn{n} time-series (columns) with a single set of onsets, but
 or \code{duration_sd>0}. Each column also gets independent noise. The result
 is a list containing:
 \itemize{
-\item \code{time_series}: a \code{matrix_dataset} with \eqn{T \times n}.
+\item \code{time_series}: a \code{fmri_frame} with \eqn{T \times n}.
 The \code{event_table} uses the first column's amplitude/duration draws.
 \item \code{ampmat}: an \eqn{n\_events \times n} matrix of per-column amplitudes.
 \item \code{durmat}: an \eqn{n\_events \times n} matrix of per-column durations.
@@ -116,7 +116,7 @@ we default to \code{c(0.3, 0.2)}.
 \item \strong{Amplitudes/durations} are re-sampled \emph{inside the loop} so each
 column can differ randomly. The final arrays \code{ampmat} and \code{durmat}
 each have one column per time-series.
-\item The \code{matrix_dataset}'s \code{event_table} records the first column's
+\item The \code{fmri_frame}'s \code{event_table} records the first column's
 amplitudes/durations. If you need each column's, see \code{ampmat} and
 \code{durmat}.
 }

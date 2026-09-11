@@ -7,7 +7,7 @@
 ##
 ## The file provides two main functions:
 ##   - create_fmri_model(): Creates an fMRI model from a formula, block formula,
-##     (optionally) a baseline_model, and an fmri_dataset.
+##     (optionally) a baseline_model, and an fmri_frame.
 ##   - fmri_model(): Combines an event_model and a baseline_model into an fmri_model.
 ##
 ## Additional functions build design matrices, compute contrasts, print, and plot
@@ -25,14 +25,14 @@
 #' @param formula The model formula for experimental events.
 #' @param block The model formula for block structure.
 #' @param baseline_model (Optional) A \code{baseline_model} object. Default is \code{NULL}.
-#' @param dataset An \code{fmri_dataset} object containing the time-series data.
+#' @param dataset An \code{fmri_frame} object containing the time-series data.
 #' @param drop_empty Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.
 #' @param durations A vector of event durations. Default is \code{0}.
 #' @return An \code{fmri_model} object.
 #' @export
 #' @examples
 #' \dontrun{
-#' # Assuming you have an fmri_dataset object named ds and a formula for events:
+#' # Assuming you have an fmri_frame object named ds and a formula for events:
 #' fmri_mod <- create_fmri_model(formula = onset ~ hrf(x) + hrf(y),
 #'                               block = ~ run,
 #'                               dataset = ds,
@@ -42,21 +42,21 @@
 create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, drop_empty = TRUE, durations = 0) {
   assert_that(is.formula(formula), msg = "'formula' must be a formula")
   assert_that(is.formula(block), msg = "'block' must be a formula")
-  assert_that(inherits(dataset, "fmri_dataset"), msg = "'dataset' must be an 'fmri_dataset'")
+  assert_that(inherits(dataset, "fmri_frame"), msg = "'dataset' must be an 'fmri_frame'")
   assert_that(is.numeric(durations), msg = "'durations' must be numeric")
   formula <- .fmrireg_inject_registered_bases(formula)
   
   # Replicate durations if a single value is provided.
   if (length(durations) == 1) {
-    durations <- rep(durations, nrow(dataset$event_table))
+    durations <- rep(durations, nrow(.dset_event_table(dataset)))
   }
   
   # Resolve conflict: use a temporary variable to hold the baseline model.
   if (is.null(baseline_model)) {
     base_model_obj <- baseline_model(
       basis = "bs",
-      degree = max(ceiling(median(fmrihrf::blocklens(dataset$sampling_frame)) / 100), 3),
-      sframe = dataset$sampling_frame
+      degree = max(ceiling(median(.dset_run_lengths(dataset)) / 100), 3),
+      sframe = .dset_sampling_frame(dataset)
     )
   } else {
     assert_that(inherits(baseline_model, "baseline_model"),
@@ -67,8 +67,8 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
   ev_model <- event_model(
     x = formula,
     block = block,
-    data = dataset$event_table,
-    sampling_frame = dataset$sampling_frame,
+    data = .dset_event_table(dataset),
+    sampling_frame = .dset_sampling_frame(dataset),
     drop_empty = drop_empty,
     durations = durations
   )
@@ -84,14 +84,14 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
 #'
 #' @param event_model An object of class "event_model" representing the event-related part of the fMRI regression model.
 #' @param baseline_model An object of class "baseline_model" representing the baseline-related part of the fMRI regression model.
-#' @param dataset An \code{fmri_dataset} used to build the model.
+#' @param dataset An \code{fmri_frame} used to build the model.
 #' @return An object of class \code{fmri_model} containing the event and baseline models along with the dataset.
 #' @export
 #' @seealso event_model, baseline_model
 fmri_model <- function(event_model, baseline_model, dataset) {
   assert_that(inherits(event_model, "event_model"))
   assert_that(inherits(baseline_model, "baseline_model"))
-  assert_that(inherits(dataset, "fmri_dataset"))
+  assert_that(inherits(dataset, "fmri_frame"))
 
   fmodel <- list(event_model = event_model,
                  baseline_model = baseline_model,

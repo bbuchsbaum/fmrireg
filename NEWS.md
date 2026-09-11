@@ -1,5 +1,71 @@
 # fmrireg 0.2.0
 
+## Datasets are now `fmri_frame` objects
+
+* `fmrireg` has moved from the removed legacy dataset API of `fmridataset`
+  (`matrix_dataset()`, `fmri_mem_dataset()`, `fmri_dataset()`,
+  `latent_dataset()`, `get_data_matrix()`, `get_mask()`, `data_chunks()`,
+  `read_fmri_config()`, ...) to its canonical frame API. Every function that
+  takes a `dataset` (`fmri_lm()`, `fmri_rlm()`, `fmri_model()`,
+  `create_fmri_model()`, `estimate_betas()`, `estimate_hrf()`,
+  `fmri_latent_lm()`, `glm_ols()`, `glm_lss()`, `extract_nuisance_timeseries()`,
+  `build_model()`, and the engine plugin API) now requires a
+  `fmridataset::fmri_frame` (or a lazy `fmri_view` of one). The old dataset
+  classes are no longer accepted, and `fmridataset (>= 0.10.0.9000)` is
+  required.
+
+* Four thin constructors build a frame from the inputs `fmrireg` users
+  typically hold; each stores the run structure as `run_id` / `TR`
+  observation columns, an optional logical `censor` column, and the event
+  table as a keyed `fmridataset::event_table()`:
+  - `matrix_frame(datamat, TR, run_length, event_table, censor)` for a
+    time-by-feature matrix (an `index_space`; replaces `matrix_dataset()`).
+  - `neurovec_frame(scans, mask, TR, ...)` for in-memory `NeuroVec` runs
+    (a `volume_space` on the mask; replaces `fmri_mem_dataset()`).
+  - `nifti_frame(scans, mask, TR, ...)` for NIfTI files, lazily read through
+    `fmridataset::nifti_array_source()` (replaces `fmri_dataset()`).
+  - `latent_frame(x, TR, run_length, ...)` for a `fmristore::LatentNeuroVec`:
+    component scores become the assay and the loadings a synthesis-only
+    `basis_space` (replaces `latent_dataset()`).
+  For fMRIPrep derivatives use `fmridataset::read_bids_bold()` directly.
+
+* Reading a frame back uses the `fmridataset` API instead of list fields:
+  `fmridataset::as_sampling_frame(x)` replaces `x$sampling_frame`,
+  `fmridataset::temporal_schema(x)` exposes run lengths, TR, and censoring,
+  `fmridataset::collect_assay(x)` replaces `get_data_matrix()`, the event
+  table is `fmridataset::event_data(x$tables$events)`, and the spatial
+  reference is recovered from `fmridataset::space(x)`. Censoring for
+  `ar_options = list(censor = "auto")` is read from the frame's `censor`
+  column.
+
+* `estimate_betas()` has a single `fmri_frame` method. Frames on a
+  `volume_space` return `NeuroVec` betas as the volumetric method did; frames
+  on an `index_space` or `basis_space` return coefficient matrices as the
+  matrix and latent methods did. The experimental `prewhiten` argument of the
+  latent method, which never ran, has been dropped.
+
+* `dataset_spec()` / `instantiate()` / `realize_dataset()` name the new
+  constructors: file-backed bindings produce `"nifti_frame"` specs and inline
+  matrices produce `"matrix_frame"` specs; the constructor allowlist is
+  `matrix_frame`, `nifti_frame`, `neurovec_frame`, and `latent_frame`.
+
+* `simulate_fmri_matrix()$time_series` is now an `fmri_frame`.
+
+* Engine capability `forbid_by_cluster_dataset_classes` is matched against the
+  dataset's class or its feature-space class (`"basis_space"` marks latent
+  frames).
+
+* `read_fmri_config()` is gone with the legacy API; nothing in `fmrireg`
+  used it outside commented-out tests, so it was not ported.
+
+* Fixed the `unused variable 'P'` compiler warning in `ols_t_cpp()`
+  (`src/ols_t.cpp`).
+
+* Internally, chunkwise and runwise fitting iterate over lazy frame views
+  (`x[rows, ]`, `x[, cols]` + `collect_assay()`) instead of
+  `data_chunks()` / `exec_strategy()`, with the same chunk partition, so
+  fitted numbers are unchanged.
+
 ## HRF Estimation
 
 * `estimate_hrf()` is now a vectorized, condition-level smooth FIR estimator.

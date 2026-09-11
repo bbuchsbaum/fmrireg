@@ -45,7 +45,7 @@ test_that("from_bids manifest instantiates, preflights, and runs end-to-end", {
                         reducer = reduce_betas())
   jobs <- instantiate(tmpl, mani)
   expect_length(jobs, 2)
-  expect_equal(jobs[[1]]$dataset_spec$constructor, "fmri_dataset")
+  expect_equal(jobs[[1]]$dataset_spec$constructor, "nifti_frame")
   expect_equal(jobs[[1]]$dataset_spec$source, "file")
 
   expect_true(preflight(jobs, on_issue = "collect")$ok)
@@ -67,8 +67,8 @@ test_that("space filter that matches nothing yields no usable subjects", {
 test_that("as_manifest coerces a plain binding list", {
   ds <- make_test_matrix_dataset()
   m <- as_manifest(list(
-    list(id = "sub-01", scans = ds$datamat, TR = 2, run_length = c(40L, 40L),
-         events = ds$event_table)))
+    list(id = "sub-01", scans = frame_data(ds), TR = 2, run_length = c(40L, 40L),
+         events = frame_events(ds))))
   expect_s3_class(m, "fmri_manifest")
   expect_length(m, 1)
   expect_error(as_manifest(list(list(scans = 1))), "no 'id'")

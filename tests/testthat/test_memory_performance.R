@@ -22,7 +22,7 @@ test_that("chunked processing maintains constant memory usage", {
   test_voxels <- 100
   test_data <- matrix(rnorm(n_time * test_voxels), n_time, test_voxels)
   
-  dset <- fmridataset::matrix_dataset(
+  dset <- matrix_frame(
     test_data,
     TR = 2,
     run_length = c(150, 150),
@@ -60,22 +60,22 @@ test_that("iterator pattern efficiently processes data", {
   
   data_mat <- matrix(rnorm(n_time * n_voxels), n_time, n_voxels)
   
-  dset <- fmridataset::matrix_dataset(
+  dset <- matrix_frame(
     data_mat,
     TR = 1,
     run_length = n_time
   )
   
-  # Create iterator using correct function
-  chunk_iter <- fmridataset::data_chunks(dset, nchunks = 5)
-  
-  # Check iterator properties
-  expect_equal(chunk_iter$nchunks, 5)
-  
+  # Feature-wise chunks, one lazy read per chunk
+  chunks <- fmrireg:::.dset_chunks(dset, nchunks = 5)
+
+  # Check chunk count
+  expect_equal(length(chunks), 5)
+
   # Process chunks
   chunk_voxels <- numeric(5)
   for (i in 1:5) {
-    chunk <- chunk_iter$nextElem()
+    chunk <- chunks[[i]]
     chunk_voxels[i] <- ncol(chunk$data)
   }
   
@@ -100,7 +100,7 @@ test_that("parallel processing maintains result consistency", {
     run = rep(1, 10)
   )
   
-  dset <- fmridataset::matrix_dataset(Y, TR = 1, run_length = n, event_table = event_data)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = event_data)
   
   # Run with different thread counts
   old_threads <- getOption("fmrireg.num_threads", 1)

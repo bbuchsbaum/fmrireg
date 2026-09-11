@@ -7,8 +7,8 @@ test_that("run_jobs dispatches to a named backend; unknown errors", {
   tmpl <- fmri_template(onset ~ hrf(condition), ~ run, reducer = reduce_betas())
   ds <- make_test_matrix_dataset()
   jobs <- lapply(c("s1", "s2"), function(id)
-    instantiate(tmpl, list(id = id, scans = ds$datamat, TR = 2,
-                           run_length = c(40L, 40L), events = ds$event_table)))
+    instantiate(tmpl, list(id = id, scans = frame_data(ds), TR = 2,
+                           run_length = c(40L, 40L), events = frame_events(ds))))
 
   res_seq <- run_jobs(jobs, backend = "sequential")
   expect_true(all(res_seq$ok))
@@ -26,8 +26,8 @@ test_that("custom backends can be registered and used", {
   tmpl <- fmri_template(onset ~ hrf(condition), ~ run, reducer = reduce_betas())
   ds <- make_test_matrix_dataset()
   jobs <- lapply(c("s1", "s2"), function(id)
-    instantiate(tmpl, list(id = id, scans = ds$datamat, TR = 2,
-                           run_length = c(40L, 40L), events = ds$event_table)))
+    instantiate(tmpl, list(id = id, scans = frame_data(ds), TR = 2,
+                           run_length = c(40L, 40L), events = frame_events(ds))))
   res <- run_jobs(jobs, backend = "rev_order")
   # order preserved by the backend wrapper
   expect_equal(res$ids, c("s1", "s2"))

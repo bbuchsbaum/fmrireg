@@ -29,7 +29,7 @@ static inline bool inv_sympd_safe(mat& out, const mat& A) {
 //' @export
 // [[Rcpp::export]]
 List ols_t_cpp(const arma::mat& Y, const arma::mat& X) {
-  const uword S = Y.n_rows, P = Y.n_cols, K = X.n_cols;
+  const uword S = Y.n_rows, K = X.n_cols;
   
   if (X.n_rows != S) {
     stop("ols_t_cpp: nrow(X) must equal nrow(Y).");

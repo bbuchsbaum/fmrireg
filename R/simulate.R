@@ -248,7 +248,7 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #' or \code{duration_sd>0}. Each column also gets independent noise. The result
 #' is a list containing:
 #' \itemize{
-#'   \item \code{time_series}: a \code{matrix_dataset} with \eqn{T \times n}.
+#'   \item \code{time_series}: a \code{fmri_frame} with \eqn{T \times n}.
 #'         The \code{event_table} uses the first column's amplitude/duration draws.
 #'   \item \code{ampmat}: an \eqn{n\_events \times n} matrix of per-column amplitudes.
 #'   \item \code{durmat}: an \eqn{n\_events \times n} matrix of per-column durations.
@@ -265,7 +265,7 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #' - **Amplitudes/durations** are re-sampled \emph{inside the loop} so each
 #'   column can differ randomly. The final arrays \code{ampmat} and \code{durmat}
 #'   each have one column per time-series.
-#' - The \code{matrix_dataset}'s \code{event_table} records the first column's
+#' - The \code{fmri_frame}'s \code{event_table} records the first column's
 #'   amplitudes/durations. If you need each column's, see \code{ampmat} and
 #'   \code{durmat}.
 #'
@@ -300,7 +300,7 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #'
 #' @return A list containing:
 #' \describe{
-#'   \item{\code{time_series}}{A \code{matrix_dataset} with \eqn{T \times n} data
+#'   \item{\code{time_series}}{A \code{fmri_frame} with \eqn{T \times n} data
 #'         and \code{event_table} for the *first* column's random draws.}
 #'   \item{\code{ampmat}}{An \eqn{n\_events \times n} numeric matrix of amplitudes.}
 #'   \item{\code{durmat}}{An \eqn{n\_events \times n} numeric matrix of durations.}
@@ -509,7 +509,7 @@ simulate_fmri_matrix <- function(
   sim_matrix <- do.call(cbind, signal_list)
   
   # ---------------------------
-  # 3) matrix_dataset
+  # 3) fmri_frame (via matrix_frame)
   #    event_table = first column's durations/amplitudes
   # ---------------------------
   event_tab <- data.frame(
@@ -519,7 +519,7 @@ simulate_fmri_matrix <- function(
     amplitude = ampmat[,1]
   )
   
-  ds <- fmridataset::matrix_dataset(
+  ds <- matrix_frame(
     datamat     = sim_matrix,
     TR          = TR,
     run_length  = n_time_points,
@@ -530,7 +530,7 @@ simulate_fmri_matrix <- function(
   # 4) Return
   # ---------------------------
   out <- list(
-    time_series  = ds,         # matrix_dataset T x n
+    time_series  = ds,         # fmri_frame T x n
     ampmat       = ampmat,     # n_events x n
     durmat       = durmat,     # n_events x n
     hrf_info     = list(

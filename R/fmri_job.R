@@ -17,19 +17,21 @@
 #' paths and run lengths (no voxel data), which keeps the enclosing [fmri_job]
 #' tiny and portable. The dataset is realized lazily on the worker.
 #'
-#' @param constructor Name of a dataset constructor (a string), e.g.
-#'   \code{"fmri_dataset"} or \code{"matrix_dataset"}. Resolved at run time, so
-#'   the data is not loaded when the spec is built.
+#' @param constructor Name of a frame constructor (a string): one of
+#'   \code{"nifti_frame"}, \code{"matrix_frame"}, \code{"neurovec_frame"}, or
+#'   \code{"latent_frame"}. Resolved at run time, so the data is not loaded
+#'   when the spec is built.
 #' @param args A named list of arguments passed to \code{constructor} (for
-#'   \code{"fmri_dataset"}: \code{scans}, \code{TR}, \code{run_length},
+#'   \code{"nifti_frame"}: \code{scans}, \code{TR}, \code{run_length},
 #'   \code{event_table}, \code{mask}, \code{base_path}, ...).
 #' @param source Either \code{"file"} (paths; nothing loaded until run) or
-#'   \code{"inline"} (data already in \code{args}, e.g. a \code{matrix_dataset}).
+#'   \code{"inline"} (data already in \code{args}, e.g. a matrix for
+#'   \code{matrix_frame}).
 #' @return An object of class \code{dataset_spec}.
-#' @seealso [fmri_job()], [fmri_dataset()], [matrix_dataset()]
+#' @seealso [fmri_job()], [nifti_frame()], [matrix_frame()]
 #' @export
 #' @examples
-#' dataset_spec("fmri_dataset",
+#' dataset_spec("nifti_frame",
 #'              args = list(scans = c("run-1_bold.nii.gz", "run-2_bold.nii.gz"),
 #'                          TR = 2, run_length = c(200, 200)),
 #'              source = "file")
@@ -65,7 +67,7 @@ dataset_spec <- function(constructor, args = list(), source = c("file", "inline"
 #' @export
 #' @examples
 #' tmpl <- fmri_template(onset ~ hrf(condition), ~ run)
-#' ds <- dataset_spec("fmri_dataset",
+#' ds <- dataset_spec("nifti_frame",
 #'                    args = list(scans = "run-1_bold.nii.gz", TR = 2,
 #'                                run_length = 200), source = "file")
 #' fmri_job("sub-01", tmpl, ds, meta = list(subject = "01"))

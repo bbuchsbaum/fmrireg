@@ -32,17 +32,15 @@ test_that("extract_censor_from_dataset handles NULL dataset gracefully", {
 })
 
 test_that("extract_censor_from_dataset handles dataset without censor", {
-  # Create a mock dataset without censor field
-  mock_dataset <- list(
-    sampling_frame = fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
-  )
+  # A frame without a censor column
+  mock_dataset <- matrix_frame(matrix(0, 100, 1), TR = 2, run_length = c(50, 50))
   result <- fmrireg:::extract_censor_from_dataset(mock_dataset)
   expect_null(result)
 })
 
 test_that("extract_censor_from_dataset converts binary censor to indices", {
-  mock_dataset <- list(
-    sampling_frame = fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2),
+  mock_dataset <- matrix_frame(
+    matrix(0, 20, 1), TR = 2, run_length = c(10, 10),
     censor = c(rep(0, 4), 1, rep(0, 4), 1, rep(0, 10))  # censor timepoints 5 and 10
   )
 
@@ -51,8 +49,8 @@ test_that("extract_censor_from_dataset converts binary censor to indices", {
 })
 
 test_that("extract_censor_from_dataset handles logical vector", {
-  mock_dataset <- list(
-    sampling_frame = fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2),
+  mock_dataset <- matrix_frame(
+    matrix(0, 20, 1), TR = 2, run_length = c(10, 10),
     censor = c(rep(FALSE, 4), TRUE, rep(FALSE, 4), TRUE, rep(FALSE, 10))
   )
 
@@ -61,8 +59,8 @@ test_that("extract_censor_from_dataset handles logical vector", {
 })
 
 test_that("extract_censor_from_dataset subsets by run", {
-  mock_dataset <- list(
-    sampling_frame = fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2),
+  mock_dataset <- matrix_frame(
+    matrix(0, 20, 1), TR = 2, run_length = c(10, 10),
     censor = c(rep(0, 4), 1, rep(0, 5),  # Run 1: censor point 5
                rep(0, 2), 1, rep(0, 7))   # Run 2: censor point 3 (global 13)
   )
@@ -85,8 +83,8 @@ test_that("resolve_censor returns NULL when cfg$ar$censor is NULL", {
 test_that("resolve_censor extracts from dataset when 'auto'", {
   cfg <- fmri_lm_control(ar_options = list(struct = "ar1", censor = "auto"))
 
-  mock_dataset <- list(
-    sampling_frame = fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2),
+  mock_dataset <- matrix_frame(
+    matrix(0, 20, 1), TR = 2, run_length = c(10, 10),
     censor = c(rep(0, 4), 1, rep(0, 15))
   )
 
@@ -251,7 +249,7 @@ test_that("end-to-end: fmri_lm with censor in ar_options", {
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
 
   # Create simple dataset
-  dset <- fmridataset::matrix_dataset(
+  dset <- matrix_frame(
     datamat = Y,
     TR = TR,
     run_length = n_time,
@@ -260,8 +258,8 @@ test_that("end-to-end: fmri_lm with censor in ar_options", {
 
   # Build model
   emod <- event_model(onset ~ hrf(condition), data = event_table,
-                      block = ~run, sampling_frame = dset$sampling_frame)
-  bmod <- baseline_model("poly", degree = 2, sframe = dset$sampling_frame)
+                      block = ~run, sampling_frame = frame_sframe(dset))
+  bmod <- baseline_model("poly", degree = 2, sframe = frame_sframe(dset))
   fmod <- fmri_model(emod, bmod, dset)
 
   # Censor timepoints to exclude from AR estimation
@@ -276,7 +274,7 @@ test_that("end-to-end: fmri_lm with censor in ar_options", {
   expect_true(!is.null(result$result))
 })
 
-test_that("censor 'auto' mode extracts from dataset$censor", {
+test_that("censor 'auto' mode extracts the frame's censor column", {
   skip_if_not_installed("fmriAR")
   skip_if_not_installed("fmridataset")
   skip_if_not_installed("fmridesign")
@@ -296,19 +294,18 @@ test_that("censor 'auto' mode extracts from dataset$censor", {
 
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
 
-  # Create dataset WITH censor field
-  dset <- fmridataset::matrix_dataset(
+  # Create dataset WITH a censor column (censor points 10, 20)
+  dset <- matrix_frame(
     datamat = Y,
     TR = TR,
     run_length = n_time,
-    event_table = event_table
+    event_table = event_table,
+    censor = c(rep(0, 9), 1, rep(0, 9), 1, rep(0, 30))
   )
-  # Manually add censor (simulating what fmri_dataset would do)
-  dset$censor <- c(rep(0, 9), 1, rep(0, 9), 1, rep(0, 30))  # Censor points 10, 20
 
   emod <- event_model(onset ~ hrf(condition), data = event_table,
-                      block = ~run, sampling_frame = dset$sampling_frame)
-  bmod <- baseline_model("constant", sframe = dset$sampling_frame)
+                      block = ~run, sampling_frame = frame_sframe(dset))
+  bmod <- baseline_model("constant", sframe = frame_sframe(dset))
   fmod <- fmri_model(emod, bmod, dset)
 
   # Use "auto" to extract censor from dataset
@@ -340,19 +337,19 @@ test_that("censor works with multiple runs", {
 
   Y <- matrix(rnorm(n_time_total * n_vox), n_time_total, n_vox)
 
-  dset <- fmridataset::matrix_dataset(
+  # Censor: run 1 point 10, run 2 point 5 (global 35)
+  dset <- matrix_frame(
     datamat = Y,
     TR = TR,
     run_length = c(n_time_per_run, n_time_per_run),
-    event_table = event_table
+    event_table = event_table,
+    censor = c(rep(0, 9), 1, rep(0, 20),   # Run 1
+               rep(0, 4), 1, rep(0, 25))   # Run 2
   )
-  # Censor: run 1 point 10, run 2 point 5 (global 35)
-  dset$censor <- c(rep(0, 9), 1, rep(0, 20),   # Run 1
-                   rep(0, 4), 1, rep(0, 25))   # Run 2
 
   emod <- event_model(onset ~ hrf(condition), data = event_table,
-                      block = ~run, sampling_frame = dset$sampling_frame)
-  bmod <- baseline_model("constant", sframe = dset$sampling_frame)
+                      block = ~run, sampling_frame = frame_sframe(dset))
+  bmod <- baseline_model("constant", sframe = frame_sframe(dset))
   fmod <- fmri_model(emod, bmod, dset)
 
   cfg <- fmri_lm_control(ar_options = list(struct = "ar1", censor = "auto"))
