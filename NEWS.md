@@ -121,6 +121,27 @@
   argument fell through to `collect_assay()` and failed inside `fmridataset`
   with a message naming neither the argument nor the caller.
 
+* `extract_censor_from_dataset()` no longer errors on a non-frame dataset.
+  It now reports "no censoring" instead, which matters because censoring is
+  consulted on every fit under the default change below.
+
+* A censor column carried by a dataset is now used by default. `fmri_lm()`
+  previously consulted it only when `ar_options = list(censor = "auto")` was
+  passed as well, so a `matrix_frame(censor = )` (and, before it,
+  `fmri_dataset(censor = )`) was silently discarded: fits on a censored frame
+  were bit-identical to fits on an uncensored one, with no warning. An unset
+  `censor` now resolves against the dataset, which is what `"auto"` asked for
+  explicitly; pass `censor = "none"` to ignore a censor column deliberately.
+  **This changes results** for anyone who set censoring on a dataset and did
+  not opt in, since those fits were not censored at all. An explicit `censor`
+  vector in `ar_options` still overrides the dataset.
+
+* `fmri_lm()` now warns when censoring cannot affect the fit. Censoring feeds
+  AR estimation and whitening only and never drops volumes from the
+  regression, so under the default iid noise model it does nothing at all.
+  That was previously silent, and indistinguishable from censoring having
+  been applied.
+
 * Shared AR estimation now pools voxel residual autocovariances by default
   instead of fitting the cross-voxel mean residual series. The former targets
   a typical voxel covariance; the latter suppresses voxel-specific noise and

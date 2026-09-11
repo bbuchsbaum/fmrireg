@@ -42,7 +42,9 @@ NULL
 #' @param censor Optional censoring indicator with one entry per volume: a
 #'   logical vector, a 0/1 vector, or a vector of 1-based volume indices.
 #'   Stored as the logical `censor` observation column that
-#'   [fmridataset::temporal_schema()] recognises.
+#'   [fmridataset::temporal_schema()] recognises. [fmri_lm()] uses it without
+#'   further configuration; it feeds AR estimation and whitening, and does not
+#'   drop the censored volumes from the regression.
 #' @param feature_ids Optional stable feature IDs (one per column).
 #' @param assay Name of the assay holding `datamat`.
 #' @return An `fmri_frame` whose feature space is an

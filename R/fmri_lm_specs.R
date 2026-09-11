@@ -106,7 +106,12 @@ estimation_spec <- function(scope = c("joint", "runwise_meta"),
 #'   or soft-subspace projection. Robust fitting is supported, but robust AR
 #'   re-estimation is not. Registered engines may define broader capabilities.
 #' @param exact_first Use exact first-observation AR scaling.
-#' @param censor Optional censor indices, logical mask, or `"auto"`.
+#' @param censor Optional censor indices, logical mask, `"auto"`, or `"none"`.
+#'   When left `NULL` a censor column carried by the dataset (as written by
+#'   [matrix_frame()]) is used, which is what `"auto"` requests explicitly;
+#'   `"none"` ignores such a column. Censoring feeds AR estimation and
+#'   whitening only and does not drop volumes from the regression, so it has
+#'   no effect when `struct = "iid"`.
 #' @param shrink_c0 Parcel shrinkage constant used by supporting engines.
 #' @export
 noise_spec <- function(struct = c("iid", "ar1", "ar2", "arp"),
@@ -134,10 +139,11 @@ noise_spec <- function(struct = c("iid", "ar1", "ar2", "arp"),
   shrink_c0 <- .fmri_lm_number(shrink_c0, "shrink_c0", lower = 0,
                                strictly = TRUE, integer = TRUE)
   if (!is.null(censor)) {
-    valid <- (is.character(censor) && length(censor) == 1L && identical(censor, "auto")) ||
+    valid <- (is.character(censor) && length(censor) == 1L &&
+                censor %in% c("auto", "none")) ||
       is.numeric(censor) || is.logical(censor)
     if (!valid || anyNA(censor)) {
-      stop("`censor` must be NULL, 'auto', integer indices, or a logical mask.",
+      stop("`censor` must be NULL, 'auto', 'none', integer indices, or a logical mask.",
            call. = FALSE)
     }
   }

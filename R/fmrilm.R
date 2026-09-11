@@ -1182,6 +1182,39 @@ fmri_lm.fmri_model <- function(formula, dataset = NULL,
 }
 
 
+#' Warn when a dataset's censor column cannot influence the fit
+#'
+#' Censoring only ever feeds AR estimation and whitening; it never drops
+#' volumes from the regression itself. Under an iid noise model it therefore
+#' has no effect at all, which is silent and easy to mistake for censoring
+#' having been applied.
+#'
+#' @keywords internal
+#' @noRd
+.warn_if_censor_inert <- function(dataset, cfg) {
+  spec <- cfg$ar$censor
+  if (is.character(spec) && identical(spec, "none")) {
+    return(invisible(NULL))
+  }
+  has_censor <- !is.null(spec) && !identical(spec, "auto")
+  if (!has_censor) {
+    has_censor <- !is.null(tryCatch(.dset_censor(dataset), error = function(e) NULL))
+  }
+  if (!has_censor) {
+    return(invisible(NULL))
+  }
+  if (identical(cfg$ar$struct %||% "iid", "iid")) {
+    warning(
+      "Censoring was supplied but has no effect under an iid noise model: ",
+      "censored volumes feed AR estimation only, they are not dropped from ",
+      "the regression. Set `ar_options = list(struct = \"ar1\")` (or another ",
+      "AR structure) to use it, or `censor = \"none\"` to silence this.",
+      call. = FALSE
+    )
+  }
+  invisible(NULL)
+}
+
 #' Fit an fMRI Linear Regression Model with a Specified Fitting Strategy
 #'
 #' This function fits an fMRI linear regression model using the specified \code{fmri_model} object, dataset,
@@ -1230,6 +1263,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   # Error checking
   assert_that(inherits(fmrimod, "fmri_model"), msg = "'fmrimod' must be an 'fmri_model' object")
   assert_that(inherits(dataset, "fmri_frame"), msg = "'dataset' must be an 'fmri_frame' object")
+  .warn_if_censor_inert(dataset, cfg)
   assert_that(is.logical(use_fast_path), msg = "'use_fast_path' must be logical")
   assert_that(
     is.logical(parallel_chunks) && length(parallel_chunks) == 1L && !is.na(parallel_chunks),

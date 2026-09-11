@@ -14,11 +14,18 @@
 #' @keywords internal
 #' @noRd
 extract_censor_from_dataset <- function(dataset, run_num = NULL, n_time = NULL) {
-  if (is.null(dataset) || is.null(.dset_censor(dataset))) {
+  # Only a frame can carry a censor column. Anything else has no censoring to
+  # report rather than being an error: this is consulted on every fit now that
+  # an unset censor resolves against the dataset, so a non-frame must not blow
+  # up inside fmridataset's accessors.
+  if (is.null(dataset) || !.is_fmri_frame(dataset)) {
     return(NULL)
   }
 
   censor <- .dset_censor(dataset)
+  if (is.null(censor)) {
+    return(NULL)
+  }
 
   # Subset to run if needed
 
@@ -48,7 +55,12 @@ extract_censor_from_dataset <- function(dataset, run_num = NULL, n_time = NULL) 
 #'
 #' @description
 #' Resolves censor specification from config and/or dataset.
-#' Handles "auto" mode which extracts from .dset_censor(dataset).
+#'
+#' An unset `censor` is not a decision to ignore censoring. When the dataset
+#' carries a censor column the frame is the single source of truth, so an
+#' unset spec resolves against it. Requiring `ar_options$censor = "auto"` to
+#' activate the frame's own censoring meant a `matrix_frame(censor = )` was
+#' silently discarded by every fit. Pass `censor = "none"` to opt out.
 #'
 #' @param cfg fmri_lm_control object
 #' @param dataset fmri_frame object
@@ -60,8 +72,14 @@ extract_censor_from_dataset <- function(dataset, run_num = NULL, n_time = NULL) 
 resolve_censor <- function(cfg, dataset = NULL, run_num = NULL, n_time = NULL) {
   censor_spec <- cfg$ar$censor
 
-  if (is.null(censor_spec)) {
+  # Explicit opt-out: ignore any censor column the dataset carries.
+  if (is.character(censor_spec) && identical(censor_spec, "none")) {
     return(NULL)
+  }
+
+  # Unset falls back to the dataset, which is what "auto" asks for explicitly.
+  if (is.null(censor_spec)) {
+    return(extract_censor_from_dataset(dataset, run_num, n_time))
   }
 
   # "auto" means extract from dataset

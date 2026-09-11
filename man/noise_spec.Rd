@@ -56,7 +56,12 @@ re-estimation is not. Registered engines may define broader capabilities.}
 
 \item{exact_first}{Use exact first-observation AR scaling.}
 
-\item{censor}{Optional censor indices, logical mask, or \code{"auto"}.}
+\item{censor}{Optional censor indices, logical mask, \code{"auto"}, or \code{"none"}.
+When left \code{NULL} a censor column carried by the dataset (as written by
+\code{\link[=matrix_frame]{matrix_frame()}}) is used, which is what \code{"auto"} requests explicitly;
+\code{"none"} ignores such a column. Censoring feeds AR estimation and
+whitening only and does not drop volumes from the regression, so it has
+no effect when \code{struct = "iid"}.}
 
 \item{shrink_c0}{Parcel shrinkage constant used by supporting engines.}
 }
