@@ -13,12 +13,12 @@ test_that("design_plot longify covers event and baseline terms", {
     run = rep(1:2, each = 3)
   )
   Y <- matrix(rnorm(80 * 4), 80, 4)
-  dset <- matrix_dataset(Y, TR = 1, run_length = c(40, 40), event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = c(40, 40), event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   fmod <- fmri_model(emod, bmod, dset)
 
   # Bad term name

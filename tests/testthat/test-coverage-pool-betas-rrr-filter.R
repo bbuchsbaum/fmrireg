@@ -70,7 +70,7 @@ test_that("estimate_betas.fmri_dataset OLS on spatial mem dataset", {
     condition = factor(rep(c("A", "B"), 3)),
     run = 1L
   )
-  dset <- fmridataset::fmri_mem_dataset(
+  dset <- neurovec_frame(
     scans = list(scan), mask = mask, TR = 1, event_table = etab
   )
   out <- estimate_betas(

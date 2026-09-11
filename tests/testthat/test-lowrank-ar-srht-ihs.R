@@ -43,7 +43,7 @@ test_that("SRHT/IHS + AR(global/cluster) match exact on synthetic data", {
   # Compose Y = X %*% B + AR(1) noise
   Y <- X %*% B_true + ar1_noise(Tlen, V, rho = 0.3, sd = 0.5)   # T x V
 
-  # Convert to 4D array (x,y,z,t) and wrap in NeuroVec + fmri_mem_dataset
+  # Convert to 4D array (x,y,z,t) and wrap in NeuroVec + neurovec_frame
   arr <- array(0, dim = c(dim3, Tlen))
   v <- 0L
   for (ix in seq_len(dim3[1]))

@@ -8,12 +8,12 @@ make_matrix_fx <- function(n = 72L, V = 12L, seed = 11L) {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   list(
     model = fmri_model(emod, bmod, dset),
     dataset = dset,
@@ -39,17 +39,19 @@ test_that(".run_lowrank_engine latent_dataset path covers loadings Matrix/dense"
     mask = rep(TRUE, n_vox),
     offset = rep(0, n_vox)
   )
-  lds <- fmridataset::latent_dataset(source = list(lvec), TR = 1, run_length = n_time)
-  lds$event_table <- data.frame(
-    onset = c(8, 20, 32, 44),
-    condition = factor(c("A", "B", "A", "B")),
-    run = 1L
+  lds <- latent_frame(
+    lvec, TR = 1, run_length = n_time,
+    event_table = data.frame(
+      onset = c(8, 20, 32, 44),
+      condition = factor(c("A", "B", "A", "B")),
+      run = 1L
+    )
   )
   emod <- event_model(
-    onset ~ hrf(condition), data = lds$event_table, block = ~ run,
-    sampling_frame = lds$sampling_frame
+    onset ~ hrf(condition), data = frame_events(lds), block = ~ run,
+    sampling_frame = frame_sframe(lds)
   )
-  bmod <- baseline_model(basis = "constant", sframe = lds$sampling_frame)
+  bmod <- baseline_model(basis = "constant", sframe = frame_sframe(lds))
   fm <- fmri_model(emod, bmod, lds)
 
   fit <- fmrireg:::.run_lowrank_engine(
@@ -60,18 +62,12 @@ test_that(".run_lowrank_engine latent_dataset path covers loadings Matrix/dense"
   expect_s3_class(fit, "fmri_lm")
   expect_true(!is.null(fit$result$betas) || !is.null(fit$betas))
 
-  # Missing LatentNeuroVec errors
-  lds2 <- lds
-  lds2$lvec <- NULL
-  if (!is.null(lds2$backend)) lds2$backend$data <- NULL
-  expect_error(
-    fmrireg:::.run_lowrank_engine(
-      fm, lds2,
-      lowrank = list(time_sketch = list(method = "srht", m = 16L)),
-      cfg = fmri_lm_control()
-    ),
-    "Cannot find LatentNeuroVec"
-  )
+  # The old "missing LatentNeuroVec errors" case is unreachable on frames:
+  # .run_lowrank_engine() gates on .dset_is_latent(), so a frame without a
+  # basis_space takes the dense path instead of erroring, and latent_frame()
+  # cannot build a basis_space without a decoder. The surviving analogue --
+  # .dset_loadings() rejecting a non-basis_space -- is covered in
+  # test-coverage-latent-recon.R.
 })
 
 test_that(".run_lowrank_engine by_cluster parcels AR path succeeds", {

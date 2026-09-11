@@ -9,12 +9,12 @@ make_run_fx <- function(n = 48L, V = 4L, seed = 201L) {
   )
   Y <- matrix(rnorm(n * V), n, V)
   Y[1:2, 1] <- Y[1:2, 1] + 12
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   list(
     model = fmri_model(emod, bmod, dset),
     dataset = dset,

@@ -103,6 +103,24 @@
 
 ## Bug Fixes
 
+* The test suite has been ported to the frame API. The frame migration and a
+  parallel test-coverage branch were developed against the same base and
+  merged independently, so the merged tree combined frame-only package code
+  with ~50 test files still building legacy `matrix_dataset()`,
+  `fmri_mem_dataset()`, and `latent_dataset()` fixtures. `R CMD check` failed
+  on every platform with 106 test failures that neither branch saw on its own.
+  Fixtures now use `matrix_frame()`, `neurovec_frame()`, and `latent_frame()`;
+  no assertion was relaxed to accommodate the port.
+
+* `chunkwise_lm()` dispatches on `fmri_frame` from outside the package.
+  `chunkwise_lm.fmri_frame()` was never registered as an S3 method, so
+  dispatch from outside the namespace failed with "no applicable method"
+  even though internal calls resolved.
+
+* `.rrr_extract_response_matrix()` validates its input again. A non-frame
+  argument fell through to `collect_assay()` and failed inside `fmridataset`
+  with a message naming neither the argument nor the caller.
+
 * Shared AR estimation now pools voxel residual autocovariances by default
   instead of fitting the cross-voxel mean residual series. The former targets
   a typical voxel covariance; the latter suppresses voxel-specific noise and

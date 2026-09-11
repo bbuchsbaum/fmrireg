@@ -13,7 +13,7 @@ tiny_design_fixture <- function(n_time = 60L, n_vox = 8L, n_events = 6L) {
     run = rep(1:2, each = n_events / 2)
   )
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
-  dset <- matrix_dataset(
+  dset <- matrix_frame(
     Y, TR = 1,
     run_length = c(run_len, run_len),
     event_table = etab
@@ -22,9 +22,9 @@ tiny_design_fixture <- function(n_time = 60L, n_vox = 8L, n_events = 6L) {
     onset ~ hrf(condition),
     data = etab,
     block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   list(
     model = fmri_model(emod, bmod, dset),
     dataset = dset,

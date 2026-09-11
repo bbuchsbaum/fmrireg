@@ -8,12 +8,12 @@ make_lowrank_fixture <- function(n = 80L, V = 10L, seed = 19) {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   list(
     model = fmri_model(emod, bmod, dset),
     dataset = dset,
@@ -98,7 +98,7 @@ test_that(".fit_lowrank_engine_plugin and fmri_lm_lowrank_dispatch work", {
   expect_lowrank_fit(fit_disp)
 
   # Formula path through dispatch
-  etab <- fx$dataset$event_table
+  etab <- frame_events(fx$dataset)
   fit_form <- fmrireg:::fmri_lm_lowrank_dispatch(
     onset ~ hrf(condition),
     dataset = fx$dataset,

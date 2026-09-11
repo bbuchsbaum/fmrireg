@@ -56,12 +56,12 @@ test_that("run_lowrank_engine works on matrix_dataset sketch path", {
     run = 1L
   )
   Y <- matrix(rnorm(80 * 12), 80, 12)
-  dset <- matrix_dataset(Y, TR = 1, run_length = 80, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = 80, event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   fmod <- fmri_model(emod, bmod, dset)
 
   low <- lowrank_control(
@@ -89,13 +89,13 @@ test_that("fmri_latent_lm rejects unsupported autocor and non-latent datasets", 
     run = 1L
   )
   Y <- matrix(rnorm(50 * 4), 50, 4)
-  dset <- matrix_dataset(Y, TR = 1, run_length = 50, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = 50, event_table = etab)
 
   expect_error(
     fmri_latent_lm(
       onset ~ hrf(condition), block = ~ run, dataset = dset, durations = 0
     ),
-    "latent_dataset"
+    "latent_frame"
   )
 
   skip_if_not_installed("fmristore")
@@ -113,13 +113,13 @@ test_that("fmri_latent_lm rejects unsupported autocor and non-latent datasets", 
     mask = rep(TRUE, n_voxels),
     offset = rep(0, n_voxels)
   )
-  lds <- fmridataset::latent_dataset(
-    source = list(lvec), TR = 1, run_length = n_time
-  )
-  lds$event_table <- data.frame(
-    onset = c(8, 20, 32, 44),
-    condition = factor(c("A", "B", "A", "B")),
-    run = 1L
+  lds <- latent_frame(
+    lvec, TR = 1, run_length = n_time,
+    event_table = data.frame(
+      onset = c(8, 20, 32, 44),
+      condition = factor(c("A", "B", "A", "B")),
+      run = 1L
+    )
   )
 
   expect_error(
@@ -161,7 +161,7 @@ test_that("rrr normalize args and extract response helpers", {
   if (exists(".rrr_extract_response_matrix", envir = ns, inherits = FALSE)) {
     etab <- data.frame(onset = 5, condition = factor("A"), run = 1L)
     Y <- matrix(rnorm(30 * 3), 30, 3)
-    dset <- matrix_dataset(Y, TR = 1, run_length = 30, event_table = etab)
+    dset <- matrix_frame(Y, TR = 1, run_length = 30, event_table = etab)
     M <- fmrireg:::.rrr_extract_response_matrix(dset)
     expect_equal(dim(M), dim(Y))
   }

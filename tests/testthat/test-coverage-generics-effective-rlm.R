@@ -115,7 +115,7 @@ test_that("fmri_rlm chunkwise strategy and bisquare psi", {
     run = 1L
   )
   Y <- matrix(rnorm(70 * 3), 70, 3)
-  dset <- matrix_dataset(Y, TR = 1, run_length = 70, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = 70, event_table = etab)
   fit <- fmri_rlm(
     onset ~ hrf(condition), block = ~ run, dataset = dset,
     strategy = "chunkwise", nchunks = 2L, robust_psi = "bisquare"

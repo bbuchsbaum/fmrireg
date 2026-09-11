@@ -13,14 +13,14 @@ tiny_fmri_model <- function(n_time = 80L, n_vox = 6L, n_events = 8L) {
     run = rep(1:2, each = n_events / 2)
   )
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
-  dset <- matrix_dataset(Y, TR = 1, run_length = c(n_time / 2, n_time / 2), event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = c(n_time / 2, n_time / 2), event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition),
     data = etab,
     block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 2, sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 2, sframe = frame_sframe(dset))
   list(model = fmri_model(emod, bmod, dset), dataset = dset, events = etab)
 }
 
@@ -72,7 +72,7 @@ test_that("fmri_model accessors, print, plot, design_map, correlation_map", {
   created2 <- create_fmri_model(
     onset ~ hrf(condition),
     block = ~ run,
-    baseline_model = baseline_model(basis = "constant", sframe = fx$dataset$sampling_frame),
+    baseline_model = baseline_model(basis = "constant", sframe = frame_sframe(fx$dataset)),
     dataset = fx$dataset
   )
   expect_s3_class(created2, "fmri_model")
@@ -201,9 +201,12 @@ test_that("metafuns stouffer/fixef/lancaster and meta_contrasts wiring", {
     "Length of 'df'"
   )
 
-  # Empty meta_contrasts
-  empty <- fmrireg:::.meta_contrasts_impl(list(), weighting = "inv_var")
-  expect_equal(nrow(empty), 1L)
+  # Empty meta_contrasts. The helper is `meta_contrasts()`; there is no
+  # `.meta_contrasts_impl`. #220 made this return a zero-row table rather than
+  # a synthesised placeholder row, because a contrast with a NULL estimate is
+  # indistinguishable downstream from a real one.
+  empty <- fmrireg:::meta_contrasts(list(), weighting = "inv_var")
+  expect_equal(nrow(empty), 0L)
 })
 
 test_that("effective df helpers cover AR/robust branches", {
@@ -288,7 +291,7 @@ test_that("group_data_from_fmrilm validates inputs", {
   etab <- data.frame(onset = c(5, 25), condition = factor(c("A", "B")), run = 1L)
   # matrix_dataset lacks NeuroSpace mask — expect spatial reconstruction error
   Y <- matrix(rnorm(50 * 4), 50, 4)
-  dset <- matrix_dataset(Y, TR = 1, run_length = 50, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = 50, event_table = etab)
   fit <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)
 
   expect_error(group_data_from_fmrilm("not-a-list"), "must be a list")
@@ -304,7 +307,7 @@ test_that("group_data_from_fmrilm validates inputs", {
 test_that("spatial mask helpers reject non-dataset inputs", {
   expect_error(
     fmrireg:::.fmri_dataset_mask_space(list(), "test"),
-    "fmri_dataset"
+    "fmri_frame"
   )
   expect_null(fmrireg:::.fmri_try_space(NULL))
   expect_null(fmrireg:::.fmri_try_space("path.nii"))

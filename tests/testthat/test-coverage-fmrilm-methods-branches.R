@@ -37,7 +37,7 @@ test_that("fitted_hrf.fmri_lm returns term predictions for sample grid", {
     run = 1L
   )
   Y <- matrix(rnorm(n * 3), n, 3)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
   fit <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)
 
   hrf_list <- fitted_hrf(fit, sample_at = seq(0, 12, by = 2))
@@ -56,12 +56,12 @@ test_that("fmri_lm_fit and engine resolve helpers accept matrix models", {
     run = 1L
   )
   Y <- matrix(rnorm(n * 2), n, 2)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "constant", sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "constant", sframe = frame_sframe(dset))
   fmod <- fmri_model(emod, bmod, dset)
   cfg <- fmri_lm_control()
 

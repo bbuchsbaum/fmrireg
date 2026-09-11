@@ -8,12 +8,12 @@ make_plugin_model <- function(n = 50L, V = 4L, seed = 31) {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "constant", sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "constant", sframe = frame_sframe(dset))
   list(
     model = fmri_model(emod, bmod, dset),
     dataset = dset,
@@ -68,7 +68,7 @@ test_that(".validate_engine_context covers parcels and forbid-class rules", {
   caps <- list(
     requires_event_regressors = TRUE,
     requires_parcels_for_by_cluster = TRUE,
-    forbid_by_cluster_dataset_classes = "matrix_dataset"
+    forbid_by_cluster_dataset_classes = "index_space"
   )
   cfg <- fx$cfg
   cfg$ar$by_cluster <- TRUE
@@ -87,7 +87,7 @@ test_that(".validate_engine_context covers parcels and forbid-class rules", {
       args = list(lowrank = list(parcels = 1:4)),
       cfg = cfg, capabilities = caps
     ),
-    "by_cluster|matrix_dataset"
+    "by_cluster|index_space"
   )
 
   # Happy path without by_cluster

@@ -7,14 +7,14 @@ test_that("lowrank engine helpers cover preflight, projection, and AR blend", {
     run = 1L
   )
   Y <- matrix(rnorm(50 * 4), 50, 4)
-  dset <- matrix_dataset(Y, TR = 1, run_length = 50, event_table = fx_etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = 50, event_table = fx_etab)
   emod <- event_model(
     onset ~ hrf(condition),
     data = fx_etab,
     block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   fmod <- fmri_model(emod, bmod, dset)
   cfg <- fmri_lm_control()
 
@@ -87,12 +87,12 @@ test_that("bootstrap_glm_inference residual path returns CIs", {
 test_that("rrr/lowrank engine registration preflight hooks exist", {
   fx_etab <- data.frame(onset = c(5, 20), condition = factor(c("A", "B")), run = 1L)
   Y <- matrix(rnorm(40 * 3), 40, 3)
-  dset <- matrix_dataset(Y, TR = 1, run_length = 40, event_table = fx_etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = 40, event_table = fx_etab)
   emod <- event_model(
     onset ~ hrf(condition), data = fx_etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "constant", sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "constant", sframe = frame_sframe(dset))
   fmod <- fmri_model(emod, bmod, dset)
   cfg <- fmri_lm_control()
 

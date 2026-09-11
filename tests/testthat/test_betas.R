@@ -3,7 +3,9 @@ options(mc.cores=1)
 
 library(testthat)
 library(fmrireg)
-library(dplyr)
+# Deliberately NOT library(dplyr): attaching it here masks fmrireg's
+# group_data() with dplyr's for every later file in the suite. The two
+# dplyr calls below are namespace-qualified instead.
 
 facedes <- read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE)
 facedes$repnum <- factor(facedes$rep_num)
@@ -35,7 +37,7 @@ test_that("can run a beta estimation", {
   facedes$constant <- factor(rep(1, nrow(facedes)))
   
 
-  facedes <- facedes %>% dplyr::filter(run==1)
+  facedes <- dplyr::filter(facedes, run == 1)
   
   dset <- gen_dset(5, facedes)
   
@@ -71,7 +73,7 @@ test_that("can run a beta estimation with different durations", {
   facedes$frun <- factor(facedes$run)
   facedes$constant <- factor(rep(1, nrow(facedes)))
 
-  facedes <- facedes %>% dplyr::filter(run==1)
+  facedes <- dplyr::filter(facedes, run == 1)
   dset <- gen_dset(5, facedes)
 
   hf <- fmrihrf::gen_hrf(fmrihrf::hrf_spmg1, width=2, lag=5)

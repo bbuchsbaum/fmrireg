@@ -19,7 +19,7 @@ test_that("register_engine capabilities NULL and print forbid/require lines", {
     capabilities = list(
       requires_event_regressors = TRUE,
       requires_parcels_for_by_cluster = TRUE,
-      forbid_by_cluster_dataset_classes = c("matrix_dataset", "latent_dataset"),
+      forbid_by_cluster_dataset_classes = c("index_space", "basis_space"),
       robust = FALSE,
       ma = FALSE,
       preprocessing = FALSE

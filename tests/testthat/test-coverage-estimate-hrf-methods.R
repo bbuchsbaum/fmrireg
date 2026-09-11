@@ -11,7 +11,7 @@ make_hrf_fit <- function() {
   )
   Y <- matrix(rnorm(n * 2), n, 2)
   colnames(Y) <- c("v1", "v2")
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = events)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = events)
   estimate_hrf(
     onset ~ hrf(condition),
     block = ~ run,

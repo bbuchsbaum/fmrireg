@@ -134,11 +134,13 @@ test_that("estimate_betas.latent_dataset OLS and glm_* validation", {
     space = neuroim2::NeuroSpace(c(4, 3, 1, n_time)),
     mask = rep(TRUE, n_voxels), offset = rep(0, n_voxels)
   )
-  lds <- fmridataset::latent_dataset(source = list(lvec), TR = 1, run_length = n_time)
-  lds$event_table <- data.frame(
-    onset = c(5, 15, 25, 35),
-    condition = factor(c("A", "B", "A", "B")),
-    run = 1L
+  lds <- latent_frame(
+    lvec, TR = 1, run_length = n_time,
+    event_table = data.frame(
+      onset = c(5, 15, 25, 35),
+      condition = factor(c("A", "B", "A", "B")),
+      run = 1L
+    )
   )
 
   betas <- tryCatch(
@@ -157,9 +159,9 @@ test_that("estimate_betas.latent_dataset OLS and glm_* validation", {
   # glm_ols / glm_lss validation
   etab <- data.frame(onset = 5, condition = factor("A"), run = 1L)
   Y <- matrix(rnorm(30 * 3), 30, 3)
-  dset <- matrix_dataset(Y, TR = 1, run_length = 30, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = 30, event_table = etab)
   emod <- event_model(onset ~ hrf(condition), data = etab, block = ~ run,
-                      sampling_frame = dset$sampling_frame)
+                      sampling_frame = frame_sframe(dset))
 
   expect_error(glm_ols(list(), emod), regexp = ".")
   expect_error(glm_ols(dset, list()), regexp = ".")

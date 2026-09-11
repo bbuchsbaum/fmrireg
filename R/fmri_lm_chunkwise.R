@@ -21,6 +21,7 @@
 #' @param sigma_fixed Optional fixed robust scale estimate.
 #' @return A list containing the unpacked chunkwise results.
 #' @keywords internal
+#' @export
 chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
                                       verbose = FALSE, use_fast_path = TRUE, progress = FALSE,
                                       parallel_chunks = FALSE,

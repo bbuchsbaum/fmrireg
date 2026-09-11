@@ -134,7 +134,7 @@ test_that("tidy_fitted_hrf covers average/exact/regex and error branches", {
     run = 1,
     condition = factor(c("A", "B", "A", "B"))
   )
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = ev)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = ev)
   fit <- fmri_lm(
     onsets ~ hrf(condition), block = ~ run, dataset = dset,
     strategy = "runwise", nchunks = 1

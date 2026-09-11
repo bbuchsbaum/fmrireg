@@ -80,7 +80,7 @@ test_that("spatial mask helpers normalize dims and recover space from backend", 
   set.seed(21)
   Y <- matrix(rnorm(20 * 4), 20, 4)
   etab <- data.frame(onset = c(3, 8, 13, 18), condition = factor(c("A", "B", "A", "B")), run = 1L)
-  dset <- matrix_dataset(Y, TR = 1, run_length = 20, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = 20, event_table = etab)
 
   # matrix_dataset often lacks NeuroSpace; expect clear error
   expect_error(
@@ -115,7 +115,8 @@ test_that("spatial mask helpers normalize dims and recover space from backend", 
 
   expect_null(fmrireg:::.fmri_try_space(NULL))
   expect_null(fmrireg:::.fmri_try_space("path.nii"))
-  expect_null(fmrireg:::.fmri_mask_space_from_sources(list(), list()))
+  # .fmri_mask_space_from_sources() walked dataset$backend/$mask/$source and
+  # was deleted with the legacy dataset layer; it has no frame analogue.
 })
 
 test_that("tidy_fitted_hrf empty-list and condition fallback branches", {

@@ -10,12 +10,12 @@ test_that(".preflight_rrr_gls_engine and .fit_rrr_gls_engine happy path", {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   model <- fmri_model(emod, bmod, dset)
   cfg <- fmri_lm_control()
 
@@ -52,12 +52,12 @@ test_that(".fit_lowrank_engine_plugin landmarks path with tiny sketch", {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "constant", sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "constant", sframe = frame_sframe(dset))
   model <- fmri_model(emod, bmod, dset)
   cfg <- fmri_lm_control()
 
@@ -99,12 +99,12 @@ test_that("runwise_lm_fast and chunkwise_lm_fast return pooled structures", {
     run = rep(1:2, each = 3)
   )
   Y <- matrix(rnorm((2 * n_per) * V), 2 * n_per, V)
-  dset <- matrix_dataset(Y, TR = 1, run_length = c(n_per, n_per), event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = c(n_per, n_per), event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   model <- fmri_model(emod, bmod, dset)
   cfg <- fmri_lm_control()
 
@@ -116,7 +116,7 @@ test_that("runwise_lm_fast and chunkwise_lm_fast return pooled structures", {
   expect_true(is.list(fast_run))
   expect_true(!is.null(fast_run$betas) || !is.null(fast_run$event_indices))
 
-  fast_chunk <- fmrireg:::chunkwise_lm.fmri_dataset(
+  fast_chunk <- fmrireg:::chunkwise_lm.fmri_frame(
     dset, model, contrast_objects = list(), nchunks = 2L, cfg = cfg,
     use_fast_path = TRUE, progress = FALSE
   )

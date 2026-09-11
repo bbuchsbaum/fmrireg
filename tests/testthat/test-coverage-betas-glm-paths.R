@@ -11,7 +11,7 @@ make_beta_fixture <- function(n_time = 80L, n_vox = 4L, n_events = 8L, seed = 42
   )
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
   list(
-    dataset = matrix_dataset(Y, TR = 1, run_length = n_time, event_table = etab),
+    dataset = matrix_frame(Y, TR = 1, run_length = n_time, event_table = etab),
     events = etab,
     Y = Y
   )
@@ -19,7 +19,7 @@ make_beta_fixture <- function(n_time = 80L, n_vox = 4L, n_events = 8L, seed = 42
 
 test_that("estimate_betas.matrix_dataset covers ols/lss/mixed and fixed effects", {
   fx <- make_beta_fixture()
-  bmod <- baseline_model(basis = "constant", sframe = fx$dataset$sampling_frame)
+  bmod <- baseline_model(basis = "constant", sframe = frame_sframe(fx$dataset))
 
   ols <- estimate_betas(
     fx$dataset,
@@ -66,9 +66,9 @@ test_that("glm_ols and glm_lss happy paths plus validation branches", {
     onset ~ hrf(condition),
     data = fx$events,
     block = ~ run,
-    sampling_frame = fx$dataset$sampling_frame
+    sampling_frame = frame_sframe(fx$dataset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = fx$dataset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(fx$dataset))
 
   ols_obj <- glm_ols(
     fx$dataset, emod, fmrihrf::HRF_SPMG1,
@@ -83,7 +83,7 @@ test_that("glm_ols and glm_lss happy paths plus validation branches", {
   )
   expect_equal(dim(ols_str$betas_ran), dim(ols_obj$betas_ran))
 
-  expect_error(glm_ols(list(), emod, fmrihrf::HRF_SPMG1), "matrix_dataset")
+  expect_error(glm_ols(list(), emod, fmrihrf::HRF_SPMG1), "matrix_frame")
   expect_error(glm_ols(fx$dataset, list(), fmrihrf::HRF_SPMG1), "event_model")
   expect_error(glm_ols(fx$dataset, emod, "not_a_basis"), "Unknown HRF")
   expect_error(glm_ols(fx$dataset, emod, 123), "HRF object")
@@ -103,7 +103,7 @@ test_that("glm_ols and glm_lss happy paths plus validation branches", {
     "C\\+\\+-optimized LSS|retired"
   )
 
-  expect_error(glm_lss(list(), emod, fmrihrf::HRF_SPMG1), "matrix_dataset")
+  expect_error(glm_lss(list(), emod, fmrihrf::HRF_SPMG1), "matrix_frame")
   expect_error(glm_lss(fx$dataset, list(), fmrihrf::HRF_SPMG1), "event_model")
   expect_error(glm_lss(fx$dataset, emod, "bad_basis"), "Unknown HRF")
   expect_error(glm_lss(fx$dataset, emod, TRUE), "HRF object")

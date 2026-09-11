@@ -14,14 +14,14 @@ make_mem_lowrank_fx <- function(dims = c(4L, 4L, 1L), n_time = 60L, seed = 41L) 
     condition = factor(rep(c("A", "B"), 3)),
     run = 1L
   )
-  dset <- fmridataset::fmri_mem_dataset(
+  dset <- neurovec_frame(
     scans = list(scan), mask = mask, TR = 1, event_table = etab
   )
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "constant", sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "constant", sframe = frame_sframe(dset))
   list(
     model = fmri_model(emod, bmod, dset),
     dataset = dset,
@@ -83,12 +83,12 @@ test_that(".run_lowrank_engine parcels by_cluster with srht/ihs succeed", {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   fm <- fmri_model(emod, bmod, dset)
   parcels <- rep(1:3, length.out = V)
   cfg <- fmri_lm_control(ar_options = list(struct = "ar1", by_cluster = TRUE))
@@ -125,17 +125,19 @@ test_that(".run_lowrank_engine latent dense loadings + cfg=NULL ar_options path"
     mask = rep(TRUE, n_vox),
     offset = rep(0, n_vox)
   ))
-  lds <- fmridataset::latent_dataset(source = list(lvec), TR = 1, run_length = n_time)
-  lds$event_table <- data.frame(
-    onset = c(6, 16, 26, 36),
-    condition = factor(c("A", "B", "A", "B")),
-    run = 1L
+  lds <- latent_frame(
+    lvec, TR = 1, run_length = n_time,
+    event_table = data.frame(
+      onset = c(6, 16, 26, 36),
+      condition = factor(c("A", "B", "A", "B")),
+      run = 1L
+    )
   )
   emod <- event_model(
-    onset ~ hrf(condition), data = lds$event_table, block = ~ run,
-    sampling_frame = lds$sampling_frame
+    onset ~ hrf(condition), data = frame_events(lds), block = ~ run,
+    sampling_frame = frame_sframe(lds)
   )
-  bmod <- baseline_model(basis = "constant", sframe = lds$sampling_frame)
+  bmod <- baseline_model(basis = "constant", sframe = frame_sframe(lds))
   fm <- fmri_model(emod, bmod, lds)
 
   fit <- fmrireg:::.run_lowrank_engine(

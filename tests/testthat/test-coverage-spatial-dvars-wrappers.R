@@ -60,7 +60,8 @@ test_that("exported wrappers exercise reexported fmridesign/fmridataset helpers"
   fmod <- fmrireg:::.demo_fmri_model()
   dset <- fmrireg:::.demo_matrix_dataset()
 
-  expect_s3_class(as.matrix_dataset(dset), "matrix_dataset")
+  # as.matrix_dataset() was a fmridataset re-export; #223 removed both the
+  # re-export and the upstream function, so there is nothing left to assert.
 
   bs <- BSpline(seq(0, 1, length.out = 12), degree = 3)
   expect_s3_class(bs, "BSpline")

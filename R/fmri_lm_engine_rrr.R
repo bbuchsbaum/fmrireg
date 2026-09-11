@@ -368,6 +368,14 @@
 #' @keywords internal
 #' @noRd
 .rrr_extract_response_matrix <- function(dataset) {
+  # Without this guard a non-frame input falls through to collect_assay() and
+  # dies inside fmridataset with a message that names neither the argument nor
+  # the caller.
+  if (!.is_fmri_frame(dataset)) {
+    stop("'dataset' must be an 'fmri_frame'; cannot extract a response matrix ",
+         "from an object of class ", paste(class(dataset), collapse = "/"), ".",
+         call. = FALSE)
+  }
   if (.dset_is_latent(dataset)) {
     Z <- as.matrix(.dset_data_matrix(dataset))
     L <- .dset_loadings(dataset)

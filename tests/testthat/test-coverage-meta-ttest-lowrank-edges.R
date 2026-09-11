@@ -65,7 +65,7 @@ test_that("engine context check rejects by_cluster without parcels", {
     "latent_sketch", fx_model, fx_dset,
     args = list(lowrank = list(
       time_sketch = list(method = "gaussian", m = 8L),
-      parcels = rep(1:2, length.out = ncol(fx_dset$datamat))
+      parcels = rep(1:2, length.out = ncol(fx_dset))
     )),
     cfg = cfg,
     capabilities = caps

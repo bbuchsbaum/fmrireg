@@ -8,42 +8,42 @@ make_two_run_fx <- function(n_per = 40L, V = 4L, seed = 17L) {
     run = rep(1:2, each = 4)
   )
   Y <- matrix(rnorm((2 * n_per) * V), 2 * n_per, V)
-  dset <- matrix_dataset(Y, TR = 1, run_length = c(n_per, n_per), event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = c(n_per, n_per), event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   list(model = fmri_model(emod, bmod, dset), dataset = dset)
 }
 
-test_that("chunkwise_lm.fmri_dataset fast and slow paths with progress", {
+test_that("chunkwise_lm.fmri_frame fast and slow paths with progress", {
   fx <- make_two_run_fx()
   cfg <- fmri_lm_control()
   cons <- list()
 
-  fast <- fmrireg:::chunkwise_lm.fmri_dataset(
+  fast <- fmrireg:::chunkwise_lm.fmri_frame(
     fx$dataset, fx$model, cons, nchunks = 2L, cfg = cfg,
     use_fast_path = TRUE, progress = FALSE, verbose = FALSE
   )
   expect_true(is.list(fast))
   expect_true(!is.null(fast$betas) || !is.null(fast$event_indices) || !is.null(fast$rss))
 
-  slow <- fmrireg:::chunkwise_lm.fmri_dataset(
+  slow <- fmrireg:::chunkwise_lm.fmri_frame(
     fx$dataset, fx$model, cons, nchunks = 2L, cfg = cfg,
     use_fast_path = FALSE, progress = FALSE, verbose = TRUE
   )
   expect_true(is.list(slow))
 
   expect_error(
-    fmrireg:::chunkwise_lm.fmri_dataset(
+    fmrireg:::chunkwise_lm.fmri_frame(
       fx$dataset, fx$model, cons, nchunks = 2L, cfg = list(),
       use_fast_path = TRUE
     ),
     "fmri_lm_control"
   )
   expect_error(
-    fmrireg:::chunkwise_lm.fmri_dataset(
+    fmrireg:::chunkwise_lm.fmri_frame(
       fx$dataset, fx$model, cons, nchunks = 2L, cfg = cfg,
       parallel_chunks = NA
     ),

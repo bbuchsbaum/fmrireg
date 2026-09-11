@@ -66,7 +66,7 @@ test_that(".fmri_lm_formula_legacy and .fmri_lm_model_legacy fit matrix data", {
     run = 1L
   )
   Y <- matrix(rnorm(n * 3), n, 3)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
 
   fit <- fmrireg:::.fmri_lm_formula_legacy(
     onset ~ hrf(condition),
@@ -80,9 +80,9 @@ test_that(".fmri_lm_formula_legacy and .fmri_lm_model_legacy fit matrix data", {
 
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "constant", sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "constant", sframe = frame_sframe(dset))
   model <- fmri_model(emod, bmod, dset)
 
   fit2 <- fmrireg:::.fmri_lm_model_legacy(

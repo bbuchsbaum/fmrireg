@@ -18,13 +18,13 @@
     mask = rep(TRUE, n_voxels),
     offset = rep(0, n_voxels)
   )
-  lds <- fmridataset::latent_dataset(
-    source = list(lvec), TR = 1, run_length = n_time
-  )
-  lds$event_table <- data.frame(
-    onset = c(8, 20, 32, 44),
-    condition = factor(c("A", "B", "A", "B")),
-    run = 1L
+  lds <- latent_frame(
+    lvec, TR = 1, run_length = n_time,
+    event_table = data.frame(
+      onset = c(8, 20, 32, 44),
+      condition = factor(c("A", "B", "A", "B")),
+      run = 1L
+    )
   )
 
   fit <- fmri_latent_lm(
@@ -53,12 +53,7 @@ test_that("fmri_latent_lm reconstructs coef/se/stats into voxel space", {
   expect_equal(nrow(b_latent), 2L)
   expect_equal(ncol(b_latent), fx$n_comp)
 
-  lvec <- if (!is.null(fit$dataset$lvec)) {
-    fit$dataset$lvec
-  } else {
-    fit$dataset$backend$data[[1]]
-  }
-  lds <- lvec@loadings
+  lds <- as.matrix(fmrireg:::.dset_loadings(fit$dataset))
   expect_equal(as.matrix(cf), lds %*% t(b_latent), tolerance = 1e-8)
   expect_equal(ncol(cf), 2L)
 
@@ -122,13 +117,13 @@ test_that("latent recon keeps type-based orientation when n_comp equals n_condit
     mask = rep(TRUE, n_voxels),
     offset = rep(0, n_voxels)
   )
-  lds <- fmridataset::latent_dataset(
-    source = list(lvec), TR = 1, run_length = n_time
-  )
-  lds$event_table <- data.frame(
-    onset = c(8, 20, 32, 44, 56, 68),
-    condition = factor(c("A", "B", "C", "D", "A", "B")),
-    run = 1L
+  lds <- latent_frame(
+    lvec, TR = 1, run_length = n_time,
+    event_table = data.frame(
+      onset = c(8, 20, 32, 44, 56, 68),
+      condition = factor(c("A", "B", "C", "D", "A", "B")),
+      run = 1L
+    )
   )
   con <- contrast_set(pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"))
   fit <- fmri_latent_lm(
@@ -149,15 +144,19 @@ test_that("latent recon keeps type-based orientation when n_comp equals n_condit
   expect_equal(as.matrix(cf_c), loadings %*% c_latent, tolerance = 1e-8)
 })
 
-test_that("coef.fmri_latent_lm errors when LatentNeuroVec is missing", {
+test_that("coef.fmri_latent_lm errors when loadings are unavailable", {
+  # Same intent as before the frame migration: reconstruction into voxel space
+  # must fail loudly when the latent loadings cannot be recovered. The loadings
+  # now live on the feature space rather than a $lvec slot, so the way to remove
+  # them is to swap in a frame whose space is not a basis_space.
   fx <- .make_latent_fit()
   fit <- fx$fit
-  fit$dataset$lvec <- NULL
-  if (!is.null(fit$dataset$backend)) {
-    fit$dataset$backend$data <- NULL
-  }
+  scores <- frame_data(fit$dataset)
+  fit$dataset <- matrix_frame(as.matrix(scores), TR = 1,
+                              run_length = nrow(scores))
+
   expect_error(
     coef(fit, type = "estimates", recon = TRUE),
-    "Cannot find LatentNeuroVec"
+    "not a basis_space"
   )
 })

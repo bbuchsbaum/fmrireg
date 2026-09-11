@@ -11,15 +11,15 @@ tiny_rrr <- function(n = 64L, V = 6L, seed = 51L, with_contrast = TRUE) {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
   form <- if (with_contrast) {
     con <- pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B")
     onset ~ hrf(condition, contrasts = list(con))
   } else {
     onset ~ hrf(condition)
   }
-  emod <- event_model(form, data = etab, block = ~ run, sampling_frame = dset$sampling_frame)
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  emod <- event_model(form, data = etab, block = ~ run, sampling_frame = frame_sframe(dset))
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   list(model = fmri_model(emod, bmod, dset), dataset = dset)
 }
 

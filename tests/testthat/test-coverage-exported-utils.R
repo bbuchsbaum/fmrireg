@@ -11,7 +11,7 @@ tiny_matrix_dataset <- function(n_time = 60L, n_vox = 8L, n_events = 6L, TR = 1)
   )
   Y <- matrix(rnorm(n_time * n_vox), n_time, n_vox)
   list(
-    dataset = matrix_dataset(Y, TR = TR, run_length = n_time, event_table = etab),
+    dataset = matrix_frame(Y, TR = TR, run_length = n_time, event_table = etab),
     events = etab
   )
 }
@@ -154,7 +154,7 @@ test_that("autoplot.Reg and correlation_map cover plotting helpers", {
   expect_s3_class(p3, "ggplot")
 
   fx <- tiny_matrix_dataset()
-  bmod <- baseline_model(basis = "poly", degree = 2, sframe = fx$dataset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 2, sframe = frame_sframe(fx$dataset))
   cm <- correlation_map(bmod, half_matrix = TRUE, method = "pearson")
   expect_s3_class(cm, "ggplot")
   cm2 <- correlation_map(bmod, half_matrix = FALSE, method = "spearman",
@@ -177,9 +177,9 @@ test_that("design_plot builds shiny app and validates term_name", {
     onset ~ hrf(condition),
     data = fx$events,
     block = ~ run,
-    sampling_frame = fx$dataset$sampling_frame
+    sampling_frame = frame_sframe(fx$dataset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = fx$dataset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(fx$dataset))
   fmod <- fmri_model(emod, bmod, fx$dataset)
 
   app <- design_plot(fmod, longnames = TRUE, plot_title = "Design")
@@ -225,13 +225,13 @@ test_that("lss_fast internal helper and deprecated lss_compute_r error", {
     method = "ols"
   )
   # Direct unit exercise of internal LSS helper via a small synthetic bdes
-  Y <- as.matrix(fx$dataset$datamat)
+  Y <- frame_data(fx$dataset)
   dmat <- as.matrix(design_matrix(
     event_model(
       onset ~ hrf(condition),
       data = fx$events,
       block = ~ run,
-      sampling_frame = fx$dataset$sampling_frame
+      sampling_frame = frame_sframe(fx$dataset)
     )
   ))
   bdes <- list(

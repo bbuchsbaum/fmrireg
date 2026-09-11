@@ -29,7 +29,7 @@ test_that("write_results.fmri_lm nifti spatial export covers beta/contrast write
     condition = factor(c("A", "B", "A", "B")),
     run = 1L
   )
-  dset <- fmridataset::fmri_mem_dataset(
+  dset <- neurovec_frame(
     scans = list(scan), mask = mask, TR = 1, event_table = etab
   )
   con <- contrast_set(pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"))
@@ -67,12 +67,12 @@ test_that("runwise_lm_slow and chunkwise_lm_slow paths via use_fast_path=FALSE",
     run = 1L
   )
   Y <- matrix(rnorm(n * 3), n, 3)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "constant", sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "constant", sframe = frame_sframe(dset))
   model <- fmri_model(emod, bmod, dset)
   cfg <- fmri_lm_control()
 
@@ -82,7 +82,7 @@ test_that("runwise_lm_slow and chunkwise_lm_slow paths via use_fast_path=FALSE",
   )
   expect_true(is.list(slow_run))
 
-  slow_chunk <- fmrireg:::chunkwise_lm.fmri_dataset(
+  slow_chunk <- fmrireg:::chunkwise_lm.fmri_frame(
     dset, model, contrast_objects = list(), nchunks = 2L, cfg = cfg,
     use_fast_path = FALSE, progress = FALSE, verbose = TRUE
   )

@@ -20,7 +20,7 @@ test_that("fmri_lm with robust + AR1 covers combined strategy routing", {
   )
   Y <- matrix(rnorm(n * 3), n, 3)
   Y[1, 1] <- Y[1, 1] + 20
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
   fit <- fmri_lm(
     onset ~ hrf(condition),
     block = ~ run,
@@ -44,7 +44,7 @@ test_that("fmri_lm chunkwise with AR2 and progress=FALSE", {
     run = rep(1:2, each = 3)
   )
   Y <- matrix(rnorm((2 * n_per) * 3), 2 * n_per, 3)
-  dset <- matrix_dataset(Y, TR = 1, run_length = c(n_per, n_per), event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = c(n_per, n_per), event_table = etab)
   fit <- fmri_lm(
     onset ~ hrf(condition),
     block = ~ run,
@@ -66,7 +66,7 @@ test_that(".rrr_normalize_args and extract response matrix edges", {
 
   set.seed(323)
   Y <- matrix(rnorm(40 * 4), 40, 4)
-  dset <- matrix_dataset(
+  dset <- matrix_frame(
     Y, TR = 1, run_length = 40L,
     event_table = data.frame(onset = 5, condition = "A", run = 1L)
   )

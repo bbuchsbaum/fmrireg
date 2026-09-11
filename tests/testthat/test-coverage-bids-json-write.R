@@ -87,10 +87,15 @@ test_that(".write_beta_outputs and .write_contrast_outputs cover empty/gds/no-ma
     list()
   )
 
-  # Requested contrast not present
+  # Requested contrast not present. This needs a fit that actually HAS
+  # contrasts: since #220 a fit with none returns an empty list before the
+  # name check is reached, which is what the fit0 case above covers. The demo
+  # fit requests no contrasts, so give it a real table here.
+  fitc <- fit
+  fitc$result$contrasts <- make_contrast_tbl_bids()
   expect_warning(
     out_none <- fmrireg:::.write_contrast_outputs(
-      fit, td, ent, "GLM", "h5", "by_stat",
+      fitc, td, ent, "GLM", "h5", "by_stat",
       contrasts = "DOES_NOT_EXIST", contrast_match = "exact",
       contrast_stats = c("beta", "tstat"), overwrite = TRUE
     ),
@@ -136,7 +141,7 @@ test_that(".save_gds_outputs builds assays when spatial mask available", {
     condition = factor(c("A", "B", "A", "B")),
     run = 1L
   )
-  dset <- fmridataset::fmri_mem_dataset(
+  dset <- neurovec_frame(
     scans = list(scan), mask = mask, TR = 1, event_table = etab
   )
   fit <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)

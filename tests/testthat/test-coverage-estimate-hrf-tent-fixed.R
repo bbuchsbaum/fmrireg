@@ -12,7 +12,7 @@ make_hrf_cov_fixture <- function(n = 140L, n_voxels = 3L, seed = 181L) {
   Y <- matrix(rnorm(n * n_voxels), n, n_voxels)
   colnames(Y) <- paste0("vox", seq_len(n_voxels))
   list(
-    dataset = matrix_dataset(Y, TR = 1, run_length = n, event_table = events),
+    dataset = matrix_frame(Y, TR = 1, run_length = n, event_table = events),
     events = events
   )
 }
@@ -94,7 +94,7 @@ test_that("estimate_hrf validation and helper boundary errors", {
   )
   expect_error(
     estimate_hrf(onset ~ hrf(condition), block = ~ run, dataset = list(), progress = FALSE),
-    "fmri_dataset"
+    "fmri_frame"
   )
   expect_error(
     estimate_hrf(

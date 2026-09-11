@@ -1,31 +1,26 @@
 # fmri_lm_strategies.R: censor edge cases and pool_run_results.
 
 test_that("extract_censor_from_dataset covers empty and index vectors", {
-  # Already-integer indices, empty after subset => NULL
-  ds <- list(
-    censor = integer(0),
-    sampling_frame = list(blocklens = c(10L, 10L))
-  )
-  # blocklens via fmrihrf::blocklens needs a real sampling_frame; use demo
-  sframe <- fmrireg:::.demo_sampling_frame()
-  ds2 <- list(censor = c(2L, 5L), sampling_frame = sframe)
+  # Censored volume indices carried by the frame's censor column
+  ds2 <- matrix_frame(matrix(0, 8, 2), TR = 2, run_length = c(4L, 4L),
+                      censor = c(2L, 5L))
   idx <- fmrireg:::extract_censor_from_dataset(ds2)
   expect_equal(idx, c(2L, 5L))
 
   # Binary numeric vector all zeros => NULL
-  ds3 <- list(censor = c(0, 0, 0, 0))
+  ds3 <- matrix_frame(matrix(0, 4, 2), TR = 1, run_length = 4L,
+                      censor = c(0, 0, 0, 0))
   expect_null(fmrireg:::extract_censor_from_dataset(ds3))
 
   # Logical all FALSE => NULL
-  expect_null(fmrireg:::extract_censor_from_dataset(list(censor = c(FALSE, FALSE))))
+  ds4 <- matrix_frame(matrix(0, 2, 2), TR = 1, run_length = 2L,
+                      censor = c(FALSE, FALSE))
+  expect_null(fmrireg:::extract_censor_from_dataset(ds4))
 })
 
 test_that("resolve_censor subsets global explicit censor by run", {
-  sframe <- fmrihrf::sampling_frame(c(8L, 8L), TR = 1)
-  dset <- list(
-    censor = c(1L, 3L, 10L, 15L),
-    sampling_frame = sframe
-  )
+  dset <- matrix_frame(matrix(0, 16, 2), TR = 1, run_length = c(8L, 8L),
+                       censor = c(1L, 3L, 10L, 15L))
   cfg <- fmri_lm_control()
   cfg$ar$censor <- c(1L, 3L, 10L, 15L)
 
@@ -38,7 +33,8 @@ test_that("resolve_censor subsets global explicit censor by run", {
   # auto with no dataset censor
   cfg_auto <- fmri_lm_control()
   cfg_auto$ar$censor <- "auto"
-  expect_null(fmrireg:::resolve_censor(cfg_auto, dataset = list(), n_time = 8L))
+  no_censor <- matrix_frame(matrix(0, 8, 2), TR = 1, run_length = 8L)
+  expect_null(fmrireg:::resolve_censor(cfg_auto, dataset = no_censor, n_time = 8L))
 })
 
 test_that("pool_run_results pools sigma/rss/df across runs", {

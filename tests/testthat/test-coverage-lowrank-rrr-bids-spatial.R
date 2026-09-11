@@ -83,7 +83,7 @@ test_that(".write_beta_outputs and .write_contrast_outputs succeed on spatial ni
     condition = factor(c("A", "B", "A", "B")),
     run = 1L
   )
-  dset <- fmridataset::fmri_mem_dataset(
+  dset <- neurovec_frame(
     scans = list(scan), mask = mask, TR = 1, event_table = etab
   )
   con <- contrast_set(pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"))

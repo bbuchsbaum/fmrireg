@@ -104,12 +104,12 @@ test_that(".run_lowrank_engine global AR srht/gaussian/countsketch succeed", {
     run = 1L
   )
   Y <- matrix(rnorm(n * V), n, V)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = etab)
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "poly", degree = 1, sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = frame_sframe(dset))
   fm <- fmri_model(emod, bmod, dset)
   cfg <- fmri_lm_control(ar_options = list(struct = "ar1"))
 
@@ -150,14 +150,14 @@ test_that(".run_lowrank_engine landmarks with spatial mem dataset", {
     condition = factor(rep(c("A", "B"), 3)),
     run = 1L
   )
-  dset <- fmridataset::fmri_mem_dataset(
+  dset <- neurovec_frame(
     scans = list(scan), mask = mask, TR = 1, event_table = etab
   )
   emod <- event_model(
     onset ~ hrf(condition), data = etab, block = ~ run,
-    sampling_frame = dset$sampling_frame
+    sampling_frame = frame_sframe(dset)
   )
-  bmod <- baseline_model(basis = "constant", sframe = dset$sampling_frame)
+  bmod <- baseline_model(basis = "constant", sframe = frame_sframe(dset))
   fm <- fmri_model(emod, bmod, dset)
   cfg <- fmri_lm_control(ar_options = list(struct = "ar1"))
 

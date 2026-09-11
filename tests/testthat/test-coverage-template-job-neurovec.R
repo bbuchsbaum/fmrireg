@@ -23,7 +23,7 @@ test_that("baseline_spec / fmri_template / fmri_job cover construction and valid
   )
 
   ds <- dataset_spec(
-    "matrix_dataset",
+    "matrix_frame",
     args = list(
       datamat = matrix(rnorm(40), 20, 2),
       TR = 1, run_length = 20,
@@ -66,7 +66,7 @@ test_that("as.array.NeuroVec and spatial mask helpers cover remaining branches",
 
   expect_error(
     fmrireg:::.fmri_dataset_mask_space(list(), "test"),
-    "fmri_dataset"
+    "fmri_frame"
   )
   expect_null(fmrireg:::.fmri_try_space(NULL))
   expect_null(fmrireg:::.fmri_try_space("path.nii"))
@@ -84,10 +84,10 @@ test_that("design_plot legend_threshold and color palette branches", {
     run = 1L
   )
   Y <- matrix(rnorm(50 * 3), 50, 3)
-  dset <- matrix_dataset(Y, TR = 1, run_length = 50, event_table = etab)
+  dset <- matrix_frame(Y, TR = 1, run_length = 50, event_table = etab)
   emod <- event_model(onset ~ hrf(condition), data = etab, block = ~ run,
-                      sampling_frame = dset$sampling_frame)
-  bmod <- baseline_model(basis = "constant", sframe = dset$sampling_frame)
+                      sampling_frame = frame_sframe(dset))
+  bmod <- baseline_model(basis = "constant", sframe = frame_sframe(dset))
   fmod <- fmri_model(emod, bmod, dset)
 
   app <- design_plot(
@@ -97,7 +97,7 @@ test_that("design_plot legend_threshold and color palette branches", {
   expect_true(inherits(app, "shiny.appobj") || is.list(app))
 })
 
-test_that("instantiate / realize_dataset cover inline matrix_dataset jobs", {
+test_that("instantiate / realize_dataset cover inline matrix_frame jobs", {
   bs <- baseline_spec(degree = 1, basis = "poly")
   tmpl <- fmri_template(onset ~ hrf(condition), ~ run, baseline = bs)
   ev <- data.frame(
@@ -107,7 +107,7 @@ test_that("instantiate / realize_dataset cover inline matrix_dataset jobs", {
   )
   Y <- matrix(rnorm(40 * 3), 40, 3)
   ds <- dataset_spec(
-    "matrix_dataset",
+    "matrix_frame",
     args = list(datamat = Y, TR = 1, run_length = 40, event_table = ev),
     source = "inline"
   )
@@ -117,7 +117,7 @@ test_that("instantiate / realize_dataset cover inline matrix_dataset jobs", {
   if (inherits(realized, "error")) {
     expect_match(conditionMessage(realized), ".")
   } else {
-    expect_s3_class(realized, "matrix_dataset")
+    expect_s3_class(realized, "fmri_frame")
   }
 
   jobs <- tryCatch(instantiate(tmpl, list(s1 = ds)), error = function(e) e)

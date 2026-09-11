@@ -68,7 +68,7 @@ test_that("fmri_hrf_estimate print/coef/as.matrix/predict/tidy cover branches", 
   )
   Y <- matrix(rnorm(n * 3), n, 3)
   colnames(Y) <- paste0("v", 1:3)
-  dset <- matrix_dataset(Y, TR = 1, run_length = n, event_table = events)
+  dset <- matrix_frame(Y, TR = 1, run_length = n, event_table = events)
 
   fit <- estimate_hrf(
     onset ~ hrf(condition),
