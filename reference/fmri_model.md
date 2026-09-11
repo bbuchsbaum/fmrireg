@@ -24,7 +24,7 @@ fmri_model(event_model, baseline_model, dataset)
 
 - dataset:
 
-  An `fmri_dataset` used to build the model.
+  An `fmri_frame` used to build the model.
 
 ## Value
 

@@ -130,7 +130,7 @@
 <span>  face_roi <span class="op">=</span> <span class="fl">100</span> <span class="op">+</span> <span class="fl">1.5</span> <span class="op">*</span> <span class="va">faces</span> <span class="op">+</span> <span class="fl">0.1</span> <span class="op">*</span> <span class="va">scenes</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_timepoints</span>, sd <span class="op">=</span> <span class="fl">0.04</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span></span>
+<span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/matrix_frame.html">matrix_frame</a></span><span class="op">(</span></span>
 <span>  <span class="va">bold</span>, TR <span class="op">=</span> <span class="va">TR</span>, run_length <span class="op">=</span> <span class="va">n_timepoints</span>,</span>
 <span>  event_table <span class="op">=</span> <span class="va">events</span></span>
 <span><span class="op">)</span></span>

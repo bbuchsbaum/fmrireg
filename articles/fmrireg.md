@@ -42,7 +42,7 @@ quick_truth <- matrix(
 )
 set.seed(2026)
 bold <- quick_design %*% quick_truth + matrix(rnorm(80 * 2, sd = 0.2), 80, 2)
-quick_dataset <- matrix_dataset(
+quick_dataset <- matrix_frame(
   bold, TR = 2, run_length = 80, event_table = quick_events
 )
 ```
@@ -135,9 +135,16 @@ stages:
 Before modeling, you need to represent your fMRI data and its structure.
 `fmrireg` uses objects like:
 
-- `fmri_dataset` / `fmri_mem_dataset`: Encapsulates the 4D fMRI data
-  (potentially file-backed or in-memory), mask information, TR, run
-  structure, and the experimental design table.
+- `fmri_frame` (from the `fmridataset` package): an
+  observations-by-features container that carries the data (in memory or
+  file-backed), its feature space (voxel grid, parcels, or latent
+  components), the TR and run structure as observation metadata, and the
+  experimental event table. Build one with
+  [`matrix_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/matrix_frame.md),
+  [`neurovec_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/neurovec_frame.md),
+  [`nifti_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/nifti_frame.md),
+  or
+  [`latent_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/latent_frame.md).
 - `sampling_frame`: Defines the temporal structure – the number of scans
   per run (`blocklens`) and the repetition time (`TR`).
 
@@ -262,7 +269,7 @@ print(face_vs_scene)
 ### 3. Model Estimation (`fmri_model`, `fmri_lm`)
 
 You combine the event and baseline models into a full `fmri_model` and
-then fit it to your `fmri_dataset` using estimation functions like
+then fit it to your `fmri_frame` using estimation functions like
 `fmri_lm` (for standard GLM) or `estimate_betas` (for single-trial
 betas).
 
@@ -270,7 +277,7 @@ betas).
 
 # Create three example voxel series over the same one-run design
 set.seed(42)
-overview_data <- matrix_dataset(
+overview_data <- matrix_frame(
   matrix(rnorm(120 * 3), 120, 3),
   TR = 2, run_length = 120, event_table = design_table
 )

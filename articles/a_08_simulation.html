@@ -87,7 +87,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-09-04</h4>
+            <h4 data-toc-skip class="date">2026-09-11</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_08_simulation.Rmd" class="external-link"><code>vignettes/a_08_simulation.Rmd</code></a></small>
       <div class="d-none name"><code>a_08_simulation.Rmd</code></div>
@@ -564,7 +564,7 @@ the function skips ISI generation and derives the event count from their
 length.</p>
 <div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ts_data</span> <span class="op">&lt;-</span> <span class="va">sim_matrix</span><span class="op">$</span><span class="va">time_series</span></span>
-<span><span class="va">matrix_data</span> <span class="op">&lt;-</span> <span class="va">ts_data</span><span class="op">$</span><span class="va">datamat</span></span>
+<span><span class="va">matrix_data</span> <span class="op">&lt;-</span> <span class="fu">fmridataset</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/collect_assay.html" class="external-link">collect_assay</a></span><span class="op">(</span><span class="va">ts_data</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">time_points</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, by <span class="op">=</span> <span class="fl">2</span>, length.out <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">matrix_data</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">plot_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>Time <span class="op">=</span> <span class="va">time_points</span><span class="op">)</span></span>

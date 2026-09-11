@@ -87,7 +87,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-09-04</h4>
+            <h4 data-toc-skip class="date">2026-09-11</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/fmrireg.Rmd" class="external-link"><code>vignettes/fmrireg.Rmd</code></a></small>
       <div class="d-none name"><code>fmrireg.Rmd</code></div>
@@ -137,7 +137,7 @@ interest.</p>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">2026</span><span class="op">)</span></span>
 <span><span class="va">bold</span> <span class="op">&lt;-</span> <span class="va">quick_design</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">quick_truth</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">80</span> <span class="op">*</span> <span class="fl">2</span>, sd <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span>, <span class="fl">80</span>, <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="va">quick_dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span></span>
+<span><span class="va">quick_dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/matrix_frame.html">matrix_frame</a></span><span class="op">(</span></span>
 <span>  <span class="va">bold</span>, TR <span class="op">=</span> <span class="fl">2</span>, run_length <span class="op">=</span> <span class="fl">80</span>, event_table <span class="op">=</span> <span class="va">quick_events</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
@@ -277,10 +277,13 @@ simulation, group analysis, or accelerated engines.</li>
 structure. <code>fmrireg</code> uses objects like:</p>
 <ul>
 <li>
-<code>fmri_dataset</code> / <code>fmri_mem_dataset</code>:
-Encapsulates the 4D fMRI data (potentially file-backed or in-memory),
-mask information, TR, run structure, and the experimental design
-table.</li>
+<code>fmri_frame</code> (from the <code>fmridataset</code> package):
+an observations-by-features container that carries the data (in memory
+or file-backed), its feature space (voxel grid, parcels, or latent
+components), the TR and run structure as observation metadata, and the
+experimental event table. Build one with <code><a href="../reference/matrix_frame.html">matrix_frame()</a></code>,
+<code><a href="../reference/neurovec_frame.html">neurovec_frame()</a></code>, <code><a href="../reference/nifti_frame.html">nifti_frame()</a></code>, or
+<code><a href="../reference/latent_frame.html">latent_frame()</a></code>.</li>
 <li>
 <code>sampling_frame</code>: Defines the temporal structure – the
 number of scans per run (<code>blocklens</code>) and the repetition time
@@ -407,14 +410,13 @@ estimates.</p>
 <code>fmri_lm</code>)<a class="anchor" aria-label="anchor" href="#model-estimation-fmri_model-fmri_lm"></a>
 </h3>
 <p>You combine the event and baseline models into a full
-<code>fmri_model</code> and then fit it to your
-<code>fmri_dataset</code> using estimation functions like
-<code>fmri_lm</code> (for standard GLM) or <code>estimate_betas</code>
-(for single-trial betas).</p>
+<code>fmri_model</code> and then fit it to your <code>fmri_frame</code>
+using estimation functions like <code>fmri_lm</code> (for standard GLM)
+or <code>estimate_betas</code> (for single-trial betas).</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create three example voxel series over the same one-run design</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
-<span><span class="va">overview_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span></span>
+<span><span class="va">overview_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/matrix_frame.html">matrix_frame</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">120</span> <span class="op">*</span> <span class="fl">3</span><span class="op">)</span>, <span class="fl">120</span>, <span class="fl">3</span><span class="op">)</span>,</span>
 <span>  TR <span class="op">=</span> <span class="fl">2</span>, run_length <span class="op">=</span> <span class="fl">120</span>, event_table <span class="op">=</span> <span class="va">design_table</span></span>
 <span><span class="op">)</span></span>

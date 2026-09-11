@@ -109,7 +109,7 @@ We reshape the simulated matrix into a 4D NeuroVec for
 ``` r
 
 vec  <- NeuroVec(arr, space4d)
-dset <- fmri_mem_dataset(scans = list(vec), mask = maskVol,
+dset <- neurovec_frame(scans = list(vec), mask = maskVol,
                          TR = TR, event_table = events_df)
 ```
 

@@ -546,7 +546,7 @@ skips ISI generation and derives the event count from their length.
 ``` r
 
 ts_data <- sim_matrix$time_series
-matrix_data <- ts_data$datamat
+matrix_data <- fmridataset::collect_assay(ts_data)
 
 time_points <- seq(0, by = 2, length.out = nrow(matrix_data))
 plot_data <- data.frame(Time = time_points)

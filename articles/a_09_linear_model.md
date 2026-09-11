@@ -152,7 +152,7 @@ simulated_data <- vapply(
   function(scale) scale * true_signal + noise,
   numeric(length(true_signal))
 )
-dataset <- fmridataset::matrix_dataset(
+dataset <- matrix_frame(
   datamat = simulated_data,
   TR = TR,
   run_length = run_length,
@@ -572,7 +572,7 @@ condition. This shows the estimated BOLD response over time.
 ``` r
 
 hrf_long <- dplyr::bind_rows(lapply(
-  seq_len(ncol(get_data_matrix(dataset))),
+  seq_len(ncol(fmridataset::collect_assay(dataset))),
   function(voxel_index) tidy_fitted_hrf(
     model,
     sample_at = seq(0, 20, by = 0.5),

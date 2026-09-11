@@ -41,7 +41,7 @@ frame (`job_id`, `message`) and `$ok`.
 Checks performed per job: template validity; every variable referenced
 by the design `formula` and `block` is a column of that job's event
 table; `TR` is positive; run lengths are consistent with the data
-(`matrix_dataset`: rows match `sum(run_length)`; `fmri_dataset`: one
+(`matrix_frame`: rows match `sum(run_length)`; `nifti_frame`: one
 `run_length` per scan file); nuisance regressor rows match the total
 number of scans; and, when `check_files = TRUE`, that file-backed scans
 exist on disk.

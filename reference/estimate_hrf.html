@@ -116,7 +116,7 @@ condition-level curves.</p></dd>
 
 
 <dt id="arg-dataset">dataset<a class="anchor" aria-label="anchor" href="#arg-dataset"></a></dt>
-<dd><p>An <code>fmri_dataset</code>.</p></dd>
+<dd><p>An <code>fmri_frame</code>.</p></dd>
 
 
 <dt id="arg-bs">bs<a class="anchor" aria-label="anchor" href="#arg-bs"></a></dt>
@@ -194,7 +194,7 @@ time-point errors; they are not autocorrelation-robust.</p>
 <span class="r-in"><span>  condition <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  run <span class="op">=</span> <span class="fl">1L</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu">fmridataset</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="matrix_frame.html">matrix_frame</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span> <span class="op">*</span> <span class="fl">2</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="va">n</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  TR <span class="op">=</span> <span class="fl">1</span>,</span></span>
 <span class="r-in"><span>  run_length <span class="op">=</span> <span class="va">n</span>,</span></span>
@@ -212,16 +212,16 @@ time-point errors; they are not autocorrelation-robust.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 26 × 9</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     time curve       term      condition   voxel estimate std.error  lower upper</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span>     0 condition.A condition condition.A voxe…   0          0      0     0    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span>     1 condition.A condition condition.A voxe…   0.407      0.454 -<span style="color: #BB0000;">0.499</span> 1.31 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span>     2 condition.A condition condition.A voxe…   0.487      0.445 -<span style="color: #BB0000;">0.401</span> 1.37 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span>     3 condition.A condition condition.A voxe…   0.409      0.371 -<span style="color: #BB0000;">0.331</span> 1.15 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span>     4 condition.A condition condition.A voxe…   0.265      0.351 -<span style="color: #BB0000;">0.434</span> 0.964</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span>     5 condition.A condition condition.A voxe…   0.084<span style="text-decoration: underline;">7</span>     0.345 -<span style="color: #BB0000;">0.603</span> 0.772</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span>     6 condition.A condition condition.A voxe…  -<span style="color: #BB0000;">0.101</span>      0.347 -<span style="color: #BB0000;">0.793</span> 0.590</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span>     7 condition.A condition condition.A voxe…  -<span style="color: #BB0000;">0.258</span>      0.369 -<span style="color: #BB0000;">0.993</span> 0.477</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span>     8 condition.A condition condition.A voxe…  -<span style="color: #BB0000;">0.353</span>      0.415 -<span style="color: #BB0000;">1.18</span>  0.475</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span>     9 condition.A condition condition.A voxe…  -<span style="color: #BB0000;">0.378</span>      0.506 -<span style="color: #BB0000;">1.39</span>  0.630</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span>     0 condition.A condition condition.A feat…   0          0      0     0    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span>     1 condition.A condition condition.A feat…   0.407      0.454 -<span style="color: #BB0000;">0.499</span> 1.31 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span>     2 condition.A condition condition.A feat…   0.487      0.445 -<span style="color: #BB0000;">0.401</span> 1.37 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span>     3 condition.A condition condition.A feat…   0.409      0.371 -<span style="color: #BB0000;">0.331</span> 1.15 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span>     4 condition.A condition condition.A feat…   0.265      0.351 -<span style="color: #BB0000;">0.434</span> 0.964</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span>     5 condition.A condition condition.A feat…   0.084<span style="text-decoration: underline;">7</span>     0.345 -<span style="color: #BB0000;">0.603</span> 0.772</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span>     6 condition.A condition condition.A feat…  -<span style="color: #BB0000;">0.101</span>      0.347 -<span style="color: #BB0000;">0.793</span> 0.590</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span>     7 condition.A condition condition.A feat…  -<span style="color: #BB0000;">0.258</span>      0.369 -<span style="color: #BB0000;">0.993</span> 0.477</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span>     8 condition.A condition condition.A feat…  -<span style="color: #BB0000;">0.353</span>      0.415 -<span style="color: #BB0000;">1.18</span>  0.475</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span>     9 condition.A condition condition.A feat…  -<span style="color: #BB0000;">0.378</span>      0.506 -<span style="color: #BB0000;">1.39</span>  0.630</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 16 more rows</span></span>
 </code></pre></div>
     </div>

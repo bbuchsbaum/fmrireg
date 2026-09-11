@@ -3,7 +3,7 @@
 resampled amplitudes/durations for each column if amplitude_sd&amp;gt;0
 or duration_sd&amp;gt;0. Each column also gets independent noise. The result
 is a list containing:
-time_series: a matrix_dataset with \(T \times n\).
+time_series: a fmri_frame with \(T \times n\).
 The event_table uses the first column's amplitude/duration draws.
 ampmat: an \(n\_events \times n\) matrix of per-column amplitudes.
 durmat: an \(n\_events \times n\) matrix of per-column durations.
@@ -14,7 +14,7 @@ noise_params: info about noise generation (type + AR coefficients + SD).
 resampled amplitudes/durations for each column if amplitude_sd&amp;gt;0
 or duration_sd&amp;gt;0. Each column also gets independent noise. The result
 is a list containing:
-time_series: a matrix_dataset with \(T \times n\).
+time_series: a fmri_frame with \(T \times n\).
 The event_table uses the first column's amplitude/duration draws.
 ampmat: an \(n\_events \times n\) matrix of per-column amplitudes.
 durmat: an \(n\_events \times n\) matrix of per-column durations.
@@ -87,7 +87,7 @@ noise_params: info about noise generation (type + AR coefficients + SD).
     <p>Generates \(n\) time-series (columns) with a single set of onsets, but
 <em>resampled</em> amplitudes/durations for each column if <code>amplitude_sd&gt;0</code>
 or <code>duration_sd&gt;0</code>. Each column also gets independent noise. The result
-is a list containing:</p><ul><li><p><code>time_series</code>: a <code>matrix_dataset</code> with \(T \times n\).
+is a list containing:</p><ul><li><p><code>time_series</code>: a <code>fmri_frame</code> with \(T \times n\).
 The <code>event_table</code> uses the first column's amplitude/duration draws.</p></li>
 <li><p><code>ampmat</code>: an \(n\_events \times n\) matrix of per-column amplitudes.</p></li>
 <li><p><code>durmat</code>: an \(n\_events \times n\) matrix of per-column durations.</p></li>
@@ -225,7 +225,7 @@ defaults are used (0.3 for AR(1); c(0.3,0.2) for AR(2)).</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A list containing:</p><dl><dt><code>time_series</code></dt>
-<dd><p>A <code>matrix_dataset</code> with \(T \times n\) data
+<dd><p>A <code>fmri_frame</code> with \(T \times n\) data
 and <code>event_table</code> for the <em>first</em> column's random draws.</p></dd>
 
 <dt><code>ampmat</code></dt>
@@ -253,7 +253,7 @@ we default to <code>c(0.3, 0.2)</code>.</p></li>
 <li><p><strong>Amplitudes/durations</strong> are re-sampled <em>inside the loop</em> so each
 column can differ randomly. The final arrays <code>ampmat</code> and <code>durmat</code>
 each have one column per time-series.</p></li>
-<li><p>The <code>matrix_dataset</code>'s <code>event_table</code> records the first column's
+<li><p>The <code>fmri_frame</code>'s <code>event_table</code> records the first column's
 amplitudes/durations. If you need each column's, see <code>ampmat</code> and
 <code>durmat</code>.</p></li>
 </ul></div>

@@ -128,12 +128,6 @@
 - [`estimate_betas()`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_betas.md)
   : Estimate Beta Coefficients for fMRI Data
 
-- [`estimate_betas(`*`<fmri_dataset>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_betas.fmri_dataset.md)
-  : Estimate betas using various regression methods
-
-- [`estimate_betas(`*`<matrix_dataset>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_betas.matrix_dataset.md)
-  : Estimate betas for a matrix dataset
-
 - [`estimate_hrf()`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_hrf.md)
   : Estimate smooth condition-level hemodynamic response functions
 
@@ -289,6 +283,9 @@
 - [`instantiate()`](https://bbuchsbaum.github.io/fmrireg/reference/instantiate.md)
   : Instantiate a template into per-subject jobs
 
+- [`latent_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/latent_frame.md)
+  : Build an fmri_frame from a latent (basis) decomposition
+
 - [`list_benchmark_datasets()`](https://bbuchsbaum.github.io/fmrireg/reference/list_benchmark_datasets.md)
   : List Available Benchmark Datasets
 
@@ -304,6 +301,9 @@
 - [`ma_parameters()`](https://bbuchsbaum.github.io/fmrireg/reference/ma_parameters.md)
   : Extract Estimated MA Parameters from fmri_lm Fit
 
+- [`matrix_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/matrix_frame.md)
+  : Build an fmri_frame from an in-memory matrix
+
 - [`meta_effective_n()`](https://bbuchsbaum.github.io/fmrireg/reference/meta_effective_n.md)
   : Compute Effective Sample Size for Meta-Analysis
 
@@ -315,6 +315,12 @@
 
 - [`n_subjects()`](https://bbuchsbaum.github.io/fmrireg/reference/n_subjects.md)
   : Extract Number of Subjects
+
+- [`neurovec_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/neurovec_frame.md)
+  : Build an fmri_frame from in-memory NeuroVec objects
+
+- [`nifti_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/nifti_frame.md)
+  : Build a lazy fmri_frame from NIfTI files
 
 - [`noise_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/noise_spec.md)
   : Temporal-noise specification

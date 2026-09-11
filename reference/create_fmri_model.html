@@ -124,7 +124,7 @@ If a baseline model is not provided, a default one is created based on the datas
 
 
 <dt id="arg-dataset">dataset<a class="anchor" aria-label="anchor" href="#arg-dataset"></a></dt>
-<dd><p>An <code>fmri_dataset</code> containing the event table and sampling frame.</p></dd>
+<dd><p>An <code>fmri_frame</code> containing the event table and sampling frame.</p></dd>
 
 
 <dt id="arg-drop-empty">drop_empty<a class="anchor" aria-label="anchor" href="#arg-drop-empty"></a></dt>
@@ -145,7 +145,7 @@ If a baseline model is not provided, a default one is created based on the datas
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="co"># Assuming you have an fmri_dataset object named ds and a formula for events:</span></span></span>
+<span class="r-in"><span><span class="co"># Assuming you have an fmri_frame object named ds and a formula for events:</span></span></span>
 <span class="r-in"><span><span class="va">fmri_mod</span> <span class="op">&lt;-</span> <span class="fu">create_fmri_model</span><span class="op">(</span>formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">y</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                              block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span></span>
 <span class="r-in"><span>                              dataset <span class="op">=</span> <span class="va">ds</span>,</span></span>

@@ -103,8 +103,8 @@ issue), or <code>"collect"</code> (return silently).</p></dd>
     <p>Checks performed per job: template validity; every variable referenced by the
 design <code>formula</code> and <code>block</code> is a column of that job's event table;
 <code>TR</code> is positive; run lengths are consistent with the data
-(<code>matrix_dataset</code>: rows match <code>sum(run_length)</code>;
-<code>fmri_dataset</code>: one <code>run_length</code> per scan file); nuisance regressor
+(<code>matrix_frame</code>: rows match <code>sum(run_length)</code>;
+<code>nifti_frame</code>: one <code>run_length</code> per scan file); nuisance regressor
 rows match the total number of scans; and, when <code>check_files = TRUE</code>,
 that file-backed scans exist on disk.</p>
 <p>The design-column check uses <code><a href="https://rdrr.io/r/base/allnames.html" class="external-link">all.vars()</a></code> on the formula, so it is

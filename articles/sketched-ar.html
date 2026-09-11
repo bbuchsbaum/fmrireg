@@ -198,7 +198,7 @@ whiten.</p>
 <code><a href="../reference/fmri_lm.html">fmri_lm()</a></code>.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">vec</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVec-class.html" class="external-link">NeuroVec</a></span><span class="op">(</span><span class="va">arr</span>, <span class="va">space4d</span><span class="op">)</span></span>
-<span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/fmri_mem_dataset.html" class="external-link">fmri_mem_dataset</a></span><span class="op">(</span>scans <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">vec</span><span class="op">)</span>, mask <span class="op">=</span> <span class="va">maskVol</span>,</span>
+<span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/neurovec_frame.html">neurovec_frame</a></span><span class="op">(</span>scans <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">vec</span><span class="op">)</span>, mask <span class="op">=</span> <span class="va">maskVol</span>,</span>
 <span>                         TR <span class="op">=</span> <span class="va">TR</span>, event_table <span class="op">=</span> <span class="va">events_df</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">

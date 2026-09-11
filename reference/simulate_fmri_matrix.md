@@ -5,8 +5,8 @@ Generates \\n\\ time-series (columns) with a single set of onsets, but
 `duration_sd>0`. Each column also gets independent noise. The result is
 a list containing:
 
-- `time_series`: a `matrix_dataset` with \\T \times n\\. The
-  `event_table` uses the first column's amplitude/duration draws.
+- `time_series`: a `fmri_frame` with \\T \times n\\. The `event_table`
+  uses the first column's amplitude/duration draws.
 
 - `ampmat`: an \\n\\events \times n\\ matrix of per-column amplitudes.
 
@@ -152,7 +152,7 @@ A list containing:
 
 - `time_series`:
 
-  A `matrix_dataset` with \\T \times n\\ data and `event_table` for the
+  A `fmri_frame` with \\T \times n\\ data and `event_table` for the
   *first* column's random draws.
 
 - `ampmat`:
@@ -185,6 +185,6 @@ A list containing:
   column can differ randomly. The final arrays `ampmat` and `durmat`
   each have one column per time-series.
 
-- The `matrix_dataset`'s `event_table` records the first column's
+- The `fmri_frame`'s `event_table` records the first column's
   amplitudes/durations. If you need each column's, see `ampmat` and
   `durmat`.

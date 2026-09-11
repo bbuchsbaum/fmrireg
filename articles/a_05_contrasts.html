@@ -87,7 +87,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-09-04</h4>
+            <h4 data-toc-skip class="date">2026-09-11</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_05_contrasts.Rmd" class="external-link"><code>vignettes/a_05_contrasts.Rmd</code></a></small>
       <div class="d-none name"><code>a_05_contrasts.Rmd</code></div>
@@ -1013,7 +1013,7 @@ difference.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">404</span><span class="op">)</span></span>
 <span><span class="va">three_level_Y</span> <span class="op">&lt;-</span> <span class="va">three_level_X</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.0</span>, <span class="fl">0.4</span>, <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span>, sd <span class="op">=</span> <span class="fl">0.15</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">three_level_dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span></span>
+<span><span class="va">three_level_dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/matrix_frame.html">matrix_frame</a></span><span class="op">(</span></span>
 <span>  <span class="va">three_level_Y</span>, TR <span class="op">=</span> <span class="fl">2</span>, run_length <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>  event_table <span class="op">=</span> <span class="va">three_level_events</span></span>
 <span><span class="op">)</span></span>

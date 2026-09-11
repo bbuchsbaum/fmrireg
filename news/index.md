@@ -2,6 +2,97 @@
 
 ## fmrireg 0.2.0
 
+### Datasets are now `fmri_frame` objects
+
+- `fmrireg` has moved from the removed legacy dataset API of
+  `fmridataset` (`matrix_dataset()`, `fmri_mem_dataset()`,
+  `fmri_dataset()`, `latent_dataset()`, `get_data_matrix()`,
+  `get_mask()`, `data_chunks()`, `read_fmri_config()`, …) to its
+  canonical frame API. Every function that takes a `dataset`
+  ([`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md),
+  [`fmri_rlm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_rlm.md),
+  [`fmri_model()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_model.md),
+  [`create_fmri_model()`](https://bbuchsbaum.github.io/fmrireg/reference/create_fmri_model.md),
+  [`estimate_betas()`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_betas.md),
+  [`estimate_hrf()`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_hrf.md),
+  [`fmri_latent_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_latent_lm.md),
+  [`glm_ols()`](https://bbuchsbaum.github.io/fmrireg/reference/glm_ols.md),
+  [`glm_lss()`](https://bbuchsbaum.github.io/fmrireg/reference/glm_lss.md),
+  [`extract_nuisance_timeseries()`](https://bbuchsbaum.github.io/fmrireg/reference/extract_nuisance_timeseries.md),
+  [`build_model()`](https://bbuchsbaum.github.io/fmrireg/reference/build_model.md),
+  and the engine plugin API) now requires a
+  [`fmridataset::fmri_frame`](https://bbuchsbaum.github.io/fmridataset/reference/fmri_frame.html)
+  (or a lazy `fmri_view` of one). The old dataset classes are no longer
+  accepted, and `fmridataset (>= 0.10.0.9000)` is required.
+
+- Four thin constructors build a frame from the inputs `fmrireg` users
+  typically hold; each stores the run structure as `run_id` / `TR`
+  observation columns, an optional logical `censor` column, and the
+  event table as a keyed
+  [`fmridataset::event_table()`](https://bbuchsbaum.github.io/fmridataset/reference/event_table.html):
+
+  - `matrix_frame(datamat, TR, run_length, event_table, censor)` for a
+    time-by-feature matrix (an `index_space`; replaces
+    `matrix_dataset()`).
+  - `neurovec_frame(scans, mask, TR, ...)` for in-memory `NeuroVec` runs
+    (a `volume_space` on the mask; replaces `fmri_mem_dataset()`).
+  - `nifti_frame(scans, mask, TR, ...)` for NIfTI files, lazily read
+    through
+    [`fmridataset::nifti_array_source()`](https://bbuchsbaum.github.io/fmridataset/reference/nifti_array_source.html)
+    (replaces `fmri_dataset()`).
+  - `latent_frame(x, TR, run_length, ...)` for a
+    [`fmristore::LatentNeuroVec`](https://rdrr.io/pkg/fmrilatent/man/LatentNeuroVec.html):
+    component scores become the assay and the loadings a synthesis-only
+    `basis_space` (replaces `latent_dataset()`). For fMRIPrep
+    derivatives use
+    [`fmridataset::read_bids_bold()`](https://bbuchsbaum.github.io/fmridataset/reference/read_bids_bold.html)
+    directly.
+
+- Reading a frame back uses the `fmridataset` API instead of list
+  fields: `fmridataset::as_sampling_frame(x)` replaces
+  `x$sampling_frame`, `fmridataset::temporal_schema(x)` exposes run
+  lengths, TR, and censoring, `fmridataset::collect_assay(x)` replaces
+  `get_data_matrix()`, the event table is
+  `fmridataset::event_data(x$tables$events)`, and the spatial reference
+  is recovered from `fmridataset::space(x)`. Censoring for
+  `ar_options = list(censor = "auto")` is read from the frame’s `censor`
+  column.
+
+- [`estimate_betas()`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_betas.md)
+  has a single `fmri_frame` method. Frames on a `volume_space` return
+  `NeuroVec` betas as the volumetric method did; frames on an
+  `index_space` or `basis_space` return coefficient matrices as the
+  matrix and latent methods did. The experimental `prewhiten` argument
+  of the latent method, which never ran, has been dropped.
+
+- [`dataset_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/dataset_spec.md)
+  /
+  [`instantiate()`](https://bbuchsbaum.github.io/fmrireg/reference/instantiate.md)
+  /
+  [`realize_dataset()`](https://bbuchsbaum.github.io/fmrireg/reference/realize_dataset.md)
+  name the new constructors: file-backed bindings produce
+  `"nifti_frame"` specs and inline matrices produce `"matrix_frame"`
+  specs; the constructor allowlist is `matrix_frame`, `nifti_frame`,
+  `neurovec_frame`, and `latent_frame`.
+
+- `simulate_fmri_matrix()$time_series` is now an `fmri_frame`.
+
+- Engine capability `forbid_by_cluster_dataset_classes` is matched
+  against the dataset’s class or its feature-space class
+  (`"basis_space"` marks latent frames).
+
+- `read_fmri_config()` is gone with the legacy API; nothing in `fmrireg`
+  used it outside commented-out tests, so it was not ported.
+
+- Fixed the `unused variable 'P'` compiler warning in
+  [`ols_t_cpp()`](https://bbuchsbaum.github.io/fmrireg/reference/ols_t_cpp.md)
+  (`src/ols_t.cpp`).
+
+- Internally, chunkwise and runwise fitting iterate over lazy frame
+  views (`x[rows, ]`, `x[, cols]` + `collect_assay()`) instead of
+  `data_chunks()` / `exec_strategy()`, with the same chunk partition, so
+  fitted numbers are unchanged.
+
 ### HRF Estimation
 
 - [`estimate_hrf()`](https://bbuchsbaum.github.io/fmrireg/reference/estimate_hrf.md)
@@ -126,7 +217,7 @@
 - `compute_sandwich_variance()` computed its meat matrix as
   `X' diag(e^4) X` instead of `X' diag(e^2) X`, giving standard errors
   about 3.5x too large. Both sandwich helpers are now checked against
-  [`sandwich::vcovHC()`](https://zeileis.codeberg.page/sandwich/reference/vcovHC.html).
+  [`sandwich::vcovHC()`](https://rdrr.io/pkg/sandwich/man/vcovHC.html).
 
 ### Performance
 
@@ -242,8 +333,7 @@
 - Fixed testthat API usage (`expect_lt`/`expect_gt` no longer use
   deprecated `info` argument).
 - Fixed `latent_dataset` API usage: now uses `get_latent_scores()`
-  instead of deprecated
-  [`get_data()`](https://bbuchsbaum.github.io/fmridataset/reference/get_data.html).
+  instead of deprecated `get_data()`.
 - Changed
   [`glm_lss()`](https://bbuchsbaum.github.io/fmrireg/reference/glm_lss.md)
   `use_cpp` parameter default from `TRUE` to `FALSE` (C++ implementation

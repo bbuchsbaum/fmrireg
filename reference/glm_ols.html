@@ -86,7 +86,7 @@ This function provides a simplified interface for fitting GLMs using OLS on matr
 
 
 <dl><dt id="arg-dataset">dataset<a class="anchor" aria-label="anchor" href="#arg-dataset"></a></dt>
-<dd><p>A <code>matrix_dataset</code> object containing the fMRI time series data</p></dd>
+<dd><p>An <code>fmri_frame</code> containing the fMRI time series data (see <code><a href="matrix_frame.html">matrix_frame()</a></code>)</p></dd>
 
 
 <dt id="arg-model-obj">model_obj<a class="anchor" aria-label="anchor" href="#arg-model-obj"></a></dt>
@@ -148,8 +148,8 @@ This function provides a simplified interface for fitting GLMs using OLS on matr
 <span class="r-in"><span><span class="co"># Create data matrix (100 timepoints, 10 voxels)</span></span></span>
 <span class="r-in"><span><span class="va">Y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">1000</span><span class="op">)</span>, <span class="fl">100</span>, <span class="fl">10</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Create matrix_dataset with event table</span></span></span>
-<span class="r-in"><span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span><span class="va">Y</span>, TR <span class="op">=</span> <span class="fl">2</span>, run_length <span class="op">=</span> <span class="fl">100</span>, event_table <span class="op">=</span> <span class="va">event_data</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Create an fmri_frame with event table</span></span></span>
+<span class="r-in"><span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="matrix_frame.html">matrix_frame</a></span><span class="op">(</span><span class="va">Y</span>, TR <span class="op">=</span> <span class="fl">2</span>, run_length <span class="op">=</span> <span class="fl">100</span>, event_table <span class="op">=</span> <span class="va">event_data</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Fit with OLS - estimates average response for each condition</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">glm_ols</span><span class="op">(</span><span class="va">dset</span>, <span class="va">model_obj</span>, <span class="fu">fmrihrf</span><span class="fu">::</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html" class="external-link">HRF_SPMG1</a></span><span class="op">)</span></span></span>

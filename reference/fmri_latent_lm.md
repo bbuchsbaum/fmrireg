@@ -1,8 +1,13 @@
 # Fast fMRI Regression Model Estimation from a Latent Component Dataset
 
 This function estimates a regression model for fMRI data using a latent
-component dataset. The dataset must be of type `latent_dataset`, which
-itself requires a `LatentNeuroVec` input.
+component dataset. The dataset must be an `fmri_frame` whose feature
+space is a
+[`fmridataset::basis_space`](https://bbuchsbaum.github.io/fmridataset/reference/basis_space.html)
+(see
+[`latent_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/latent_frame.md)),
+so that the assay holds component scores and the space carries the
+spatial loadings.
 
 ## Usage
 
@@ -38,7 +43,8 @@ fmri_latent_lm(
 
 - dataset:
 
-  A dataset of class 'latent_dataset'.
+  A latent `fmri_frame` (see
+  [`latent_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/latent_frame.md)).
 
 - durations:
 

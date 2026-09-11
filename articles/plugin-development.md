@@ -32,15 +32,15 @@ events <- data.frame(
 )
 
 Y <- matrix(rnorm(n_time * n_voxels), nrow = n_time, ncol = n_voxels)
-dset <- fmridataset::matrix_dataset(
+dset <- matrix_frame(
   Y,
   TR = 2,
   run_length = n_time,
   event_table = events
 )
 
-stopifnot(inherits(dset, "matrix_dataset"))
-dim(fmridataset::get_data_matrix(dset))
+stopifnot(inherits(dset, "fmri_frame"))
+dim(fmridataset::collect_assay(dset))
 #> [1] 80 24
 ```
 
@@ -103,7 +103,7 @@ register_engine(
     preprocessing = FALSE
   ),
   fit = function(model, dataset, args, cfg) {
-    Y_raw <- as.matrix(fmridataset::get_data_matrix(dataset))
+    Y_raw <- as.matrix(fmridataset::collect_assay(dataset))
     Y_centered <- if (isTRUE(args$center)) {
       sweep(Y_raw, 2, colMeans(Y_raw), FUN = "-")
     } else {

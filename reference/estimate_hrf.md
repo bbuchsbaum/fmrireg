@@ -49,7 +49,7 @@ estimate_hrf(
 
 - dataset:
 
-  An `fmri_dataset`.
+  An `fmri_frame`.
 
 - bs:
 
@@ -133,7 +133,7 @@ events <- data.frame(
   condition = factor(rep(c("A", "B"), 4)),
   run = 1L
 )
-dataset <- fmridataset::matrix_dataset(
+dataset <- matrix_frame(
   matrix(rnorm(n * 2), nrow = n),
   TR = 1,
   run_length = n,
@@ -151,15 +151,15 @@ tidy(fit, voxel = 1)
 #> # A tibble: 26 × 9
 #>     time curve       term      condition   voxel estimate std.error  lower upper
 #>    <dbl> <chr>       <chr>     <chr>       <chr>    <dbl>     <dbl>  <dbl> <dbl>
-#>  1     0 condition.A condition condition.A voxe…   0          0      0     0    
-#>  2     1 condition.A condition condition.A voxe…   0.407      0.454 -0.499 1.31 
-#>  3     2 condition.A condition condition.A voxe…   0.487      0.445 -0.401 1.37 
-#>  4     3 condition.A condition condition.A voxe…   0.409      0.371 -0.331 1.15 
-#>  5     4 condition.A condition condition.A voxe…   0.265      0.351 -0.434 0.964
-#>  6     5 condition.A condition condition.A voxe…   0.0847     0.345 -0.603 0.772
-#>  7     6 condition.A condition condition.A voxe…  -0.101      0.347 -0.793 0.590
-#>  8     7 condition.A condition condition.A voxe…  -0.258      0.369 -0.993 0.477
-#>  9     8 condition.A condition condition.A voxe…  -0.353      0.415 -1.18  0.475
-#> 10     9 condition.A condition condition.A voxe…  -0.378      0.506 -1.39  0.630
+#>  1     0 condition.A condition condition.A feat…   0          0      0     0    
+#>  2     1 condition.A condition condition.A feat…   0.407      0.454 -0.499 1.31 
+#>  3     2 condition.A condition condition.A feat…   0.487      0.445 -0.401 1.37 
+#>  4     3 condition.A condition condition.A feat…   0.409      0.371 -0.331 1.15 
+#>  5     4 condition.A condition condition.A feat…   0.265      0.351 -0.434 0.964
+#>  6     5 condition.A condition condition.A feat…   0.0847     0.345 -0.603 0.772
+#>  7     6 condition.A condition condition.A feat…  -0.101      0.347 -0.793 0.590
+#>  8     7 condition.A condition condition.A feat…  -0.258      0.369 -0.993 0.477
+#>  9     8 condition.A condition condition.A feat…  -0.353      0.415 -1.18  0.475
+#> 10     9 condition.A condition condition.A feat…  -0.378      0.506 -1.39  0.630
 #> # ℹ 16 more rows
 ```

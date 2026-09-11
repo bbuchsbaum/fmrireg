@@ -61,12 +61,12 @@ An object of class `fmri_job`.
 
 ``` r
 tmpl <- fmri_template(onset ~ hrf(condition), ~ run)
-ds <- dataset_spec("fmri_dataset",
+ds <- dataset_spec("nifti_frame",
                    args = list(scans = "run-1_bold.nii.gz", TR = 2,
                                run_length = 200), source = "file")
 fmri_job("sub-01", tmpl, ds, meta = list(subject = "01"))
 #> <fmri_job> sub-01
-#>   dataset: fmri_dataset() [file]
+#>   dataset: nifti_frame() [file]
 #>   meta:    subject=01 
 #>   formula: onset ~ hrf(condition) 
 ```

@@ -13,7 +13,7 @@ extract_nuisance_timeseries(dataset, mask, run = NULL)
 
 - dataset:
 
-  An fmri_dataset object.
+  An fmri_frame object.
 
 - mask:
 

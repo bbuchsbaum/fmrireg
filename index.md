@@ -56,7 +56,7 @@ bold <- cbind(
   face_roi = 100 + 1.5 * faces + 0.1 * scenes + rnorm(n_timepoints, sd = 0.04)
 )
 
-dataset <- matrix_dataset(
+dataset <- matrix_frame(
   bold, TR = TR, run_length = n_timepoints,
   event_table = events
 )

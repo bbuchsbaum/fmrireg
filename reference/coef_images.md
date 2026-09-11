@@ -69,7 +69,7 @@ edata <- data.frame(
   onsets = c(1, 12, 25, 38),
   run = c(1, 1, 1, 1)
 )
-dset <- fmridataset::matrix_dataset(X, TR = 2, run_length = 50,
+dset <- matrix_frame(X, TR = 2, run_length = 50,
                                     event_table = edata)
 fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
 # Named list of one volume per event regressor

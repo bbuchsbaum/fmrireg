@@ -31,8 +31,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/build_contrast_from_names.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/build_landmark_weights.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/build_model.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/chunkwise_lm.fmri_dataset.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/chunkwise_lm.fmri_dataset_old.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/chunkwise_lm.fmri_frame.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/coef.fmri_meta.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/coef_image.fmri_ttest_fit.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/coef_image.html</loc></url>
@@ -69,9 +68,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/engine_spec.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/engine_specs.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/estimate.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/estimate_betas.fmri_dataset.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/estimate_betas.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/estimate_betas.matrix_dataset.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/estimate_hrf.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/estimate_tau2.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/estimation_spec.html</loc></url>
@@ -134,6 +131,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/index.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/install_cli.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/instantiate.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/latent_frame.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/list_benchmark_datasets.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/load_benchmark_dataset.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/longnames.html</loc></url>
@@ -141,12 +139,15 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/ma_parameters.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/make_srht_plan.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/make_time_sketch.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/matrix_frame.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/meta_effective_n.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/meta_fit_vcov_cpp.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/mixed_solve_cpp.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/multiresponse_bootstrap_lm.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/multiresponse_lm.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/n_subjects.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/neurovec_frame.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/nifti_frame.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/noise_spec.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/ols_t_cpp.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/ols_t_vcov_cpp.html</loc></url>

@@ -32,7 +32,10 @@ register_engine(name, fit, preflight = NULL, capabilities = list())
   `preprocessing`, `ma`, `ar_voxelwise`, `ar_by_cluster`, plus
   contextual rules such as `requires_event_regressors`,
   `requires_parcels_for_by_cluster`, and
-  `forbid_by_cluster_dataset_classes`.
+  `forbid_by_cluster_dataset_classes` (class names matched against the
+  dataset or against its
+  [`fmridataset::space()`](https://bbuchsbaum.github.io/fmridataset/reference/space.html),
+  e.g. `"basis_space"` for latent frames).
 
 ## Value
 

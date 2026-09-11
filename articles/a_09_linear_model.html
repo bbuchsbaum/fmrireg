@@ -87,7 +87,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-09-04</h4>
+            <h4 data-toc-skip class="date">2026-09-11</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_09_linear_model.Rmd" class="external-link"><code>vignettes/a_09_linear_model.Rmd</code></a></small>
       <div class="d-none name"><code>a_09_linear_model.Rmd</code></div>
@@ -265,7 +265,7 @@ amplitudes, add noise, and combine them into a dataset.</p>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">scale</span><span class="op">)</span> <span class="va">scale</span> <span class="op">*</span> <span class="va">true_signal</span> <span class="op">+</span> <span class="va">noise</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">true_signal</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu">fmridataset</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset</a></span><span class="op">(</span></span>
+<span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/matrix_frame.html">matrix_frame</a></span><span class="op">(</span></span>
 <span>  datamat <span class="op">=</span> <span class="va">simulated_data</span>,</span>
 <span>  TR <span class="op">=</span> <span class="va">TR</span>,</span>
 <span>  run_length <span class="op">=</span> <span class="va">run_length</span>,</span>
@@ -772,7 +772,7 @@ amplitude of Condition1).</p>
 each condition. This shows the estimated BOLD response over time.</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">hrf_long</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/get_data_matrix.html" class="external-link">get_data_matrix</a></span><span class="op">(</span><span class="va">dataset</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="fu">fmridataset</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/collect_assay.html" class="external-link">collect_assay</a></span><span class="op">(</span><span class="va">dataset</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">voxel_index</span><span class="op">)</span> <span class="fu"><a href="../reference/tidy_fitted_hrf.html">tidy_fitted_hrf</a></span><span class="op">(</span></span>
 <span>    <span class="va">model</span>,</span>
 <span>    sample_at <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">20</span>, by <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span>

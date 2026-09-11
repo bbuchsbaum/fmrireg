@@ -81,7 +81,7 @@ Y[, net_idx] <- Y[, net_idx] + 0.7 * seed_ts
 
 # Rebuild the dataset from the modified matrix so the injected network signal
 # is the data used by downstream model fitting.
-dset_modified <- fmridataset::matrix_dataset(
+dset_modified <- matrix_frame(
   Y,
   TR = TR,
   run_length = Tlen,

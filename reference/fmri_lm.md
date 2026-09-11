@@ -69,7 +69,7 @@ fmri_lm(
 
 - dataset:
 
-  An `fmri_dataset`. For an `fmri_model` method this may be omitted when
+  An `fmri_frame`. For an `fmri_model` method this may be omitted when
   the model already owns its dataset.
 
 - durations:

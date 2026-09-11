@@ -48,7 +48,7 @@ fmri_rlm(
 
 - dataset:
 
-  An `fmri_dataset`. For an `fmri_model` method this may be omitted when
+  An `fmri_frame`. For an `fmri_model` method this may be omitted when
   the model already owns its dataset.
 
 - durations:
@@ -124,8 +124,8 @@ A fitted robust linear regression model for fMRI data analysis.
 etab <- data.frame(onset=c(1,30,15,25), fac=factor(c("A", "B", "A", "B")), run=c(1,1,2,2))
 etab2 <- data.frame(onset=c(1,30,65,75), fac=factor(c("A", "B", "A", "B")), run=c(1,1,1,1))
 mat <- matrix(rnorm(100*100), 100,100)
-dset <- fmridataset::matrix_dataset(mat, TR=1, run_length=c(50,50),event_table=etab)
-dset2 <- fmridataset::matrix_dataset(mat, TR=1, run_length=c(100),event_table=etab2)
+dset <- matrix_frame(mat, TR=1, run_length=c(50,50),event_table=etab)
+dset2 <- matrix_frame(mat, TR=1, run_length=c(100),event_table=etab2)
 lm.1 <- fmri_rlm(onset ~ hrf(fac), block= ~ run, dataset=dset)
 lm.2 <- fmri_rlm(onset ~ hrf(fac), block= ~ run, dataset=dset2)
 ```

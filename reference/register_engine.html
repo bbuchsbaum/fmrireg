@@ -93,7 +93,9 @@ arguments as <code>fit</code> and can signal errors early.</p></dd>
 <code><a href="fmri_lm.html">fmri_lm()</a></code> options. Recognized fields currently include <code>robust</code>,
 <code>preprocessing</code>, <code>ma</code>, <code>ar_voxelwise</code>, <code>ar_by_cluster</code>, plus contextual rules
 such as <code>requires_event_regressors</code>, <code>requires_parcels_for_by_cluster</code>,
-and <code>forbid_by_cluster_dataset_classes</code>.</p></dd>
+and <code>forbid_by_cluster_dataset_classes</code> (class names matched against the
+dataset or against its <code><a href="https://bbuchsbaum.github.io/fmridataset/reference/space.html" class="external-link">fmridataset::space()</a></code>, e.g. <code>"basis_space"</code> for
+latent frames).</p></dd>
 
 </dl></div>
     <div class="section level2">

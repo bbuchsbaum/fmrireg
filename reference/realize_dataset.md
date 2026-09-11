@@ -1,9 +1,9 @@
 # Realize the dataset described by a job
 
-Reconstructs the `fmri_dataset` from the job's
+Reconstructs the `fmri_frame` from the job's
 [dataset_spec](https://bbuchsbaum.github.io/fmrireg/reference/dataset_spec.md).
 For file-backed specs this is where data first becomes addressable
-(still lazily, per the dataset backend).
+(still lazily, through the frame's NIfTI array source).
 
 ## Usage
 
@@ -20,7 +20,7 @@ realize_dataset(job)
 
 ## Value
 
-An `fmri_dataset`.
+An `fmri_frame`.
 
 ## See also
 

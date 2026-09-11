@@ -31,7 +31,7 @@ fmri_lm_fit(
 
 - dataset:
 
-  An `fmri_dataset` object containing the time-series data.
+  An `fmri_frame` object containing the time-series data.
 
 - strategy:
 
@@ -85,4 +85,4 @@ strategy.
 
 [`fmri_lm`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md),
 [`fmri_model`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_model.md),
-[`fmri_dataset`](https://bbuchsbaum.github.io/fmridataset/reference/fmri_dataset.html)
+[`matrix_frame`](https://bbuchsbaum.github.io/fmrireg/reference/matrix_frame.md)

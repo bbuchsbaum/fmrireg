@@ -59,7 +59,7 @@ create_fmri_model(
 
 - dataset:
 
-  An `fmri_dataset` containing the event table and sampling frame.
+  An `fmri_frame` containing the event table and sampling frame.
 
 - drop_empty:
 
@@ -82,7 +82,7 @@ An `fmri_model` object.
 
 ``` r
 if (FALSE) { # \dontrun{
-# Assuming you have an fmri_dataset object named ds and a formula for events:
+# Assuming you have an fmri_frame object named ds and a formula for events:
 fmri_mod <- create_fmri_model(formula = onset ~ hrf(x) + hrf(y),
                               block = ~ run,
                               dataset = ds,

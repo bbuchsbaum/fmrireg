@@ -25,7 +25,7 @@ runwise_lm(
 
 - dset:
 
-  An `fmri_dataset` object.
+  An `fmri_frame` object.
 
 - model:
 

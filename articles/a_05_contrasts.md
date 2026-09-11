@@ -605,7 +605,7 @@ three_level_X <- as.matrix(design_matrix(three_level_event))
 set.seed(404)
 three_level_Y <- three_level_X %*% matrix(c(1.0, 0.4, -0.2), ncol = 1) +
   matrix(rnorm(100, sd = 0.15), ncol = 1)
-three_level_dataset <- matrix_dataset(
+three_level_dataset <- matrix_frame(
   three_level_Y, TR = 2, run_length = 100,
   event_table = three_level_events
 )

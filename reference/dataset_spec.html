@@ -84,20 +84,22 @@ tiny and portable. The dataset is realized lazily on the worker.</p>
 
 
 <dl><dt id="arg-constructor">constructor<a class="anchor" aria-label="anchor" href="#arg-constructor"></a></dt>
-<dd><p>Name of a dataset constructor (a string), e.g.
-<code>"fmri_dataset"</code> or <code>"matrix_dataset"</code>. Resolved at run time, so
-the data is not loaded when the spec is built.</p></dd>
+<dd><p>Name of a frame constructor (a string): one of
+<code>"nifti_frame"</code>, <code>"matrix_frame"</code>, <code>"neurovec_frame"</code>, or
+<code>"latent_frame"</code>. Resolved at run time, so the data is not loaded
+when the spec is built.</p></dd>
 
 
 <dt id="arg-args">args<a class="anchor" aria-label="anchor" href="#arg-args"></a></dt>
 <dd><p>A named list of arguments passed to <code>constructor</code> (for
-<code>"fmri_dataset"</code>: <code>scans</code>, <code>TR</code>, <code>run_length</code>,
+<code>"nifti_frame"</code>: <code>scans</code>, <code>TR</code>, <code>run_length</code>,
 <code>event_table</code>, <code>mask</code>, <code>base_path</code>, ...).</p></dd>
 
 
 <dt id="arg-source">source<a class="anchor" aria-label="anchor" href="#arg-source"></a></dt>
 <dd><p>Either <code>"file"</code> (paths; nothing loaded until run) or
-<code>"inline"</code> (data already in <code>args</code>, e.g. a <code>matrix_dataset</code>).</p></dd>
+<code>"inline"</code> (data already in <code>args</code>, e.g. a matrix for
+<code>matrix_frame</code>).</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -106,17 +108,17 @@ the data is not loaded when the spec is built.</p></dd>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="fmri_job.html">fmri_job()</a></code>, <code><a href="https://bbuchsbaum.github.io/fmridataset/reference/fmri_dataset.html" class="external-link">fmri_dataset()</a></code>, <code><a href="https://bbuchsbaum.github.io/fmridataset/reference/matrix_dataset.html" class="external-link">matrix_dataset()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="fmri_job.html">fmri_job()</a></code>, <code><a href="nifti_frame.html">nifti_frame()</a></code>, <code><a href="matrix_frame.html">matrix_frame()</a></code></p></div>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">dataset_spec</span><span class="op">(</span><span class="st">"fmri_dataset"</span>,</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">dataset_spec</span><span class="op">(</span><span class="st">"nifti_frame"</span>,</span></span>
 <span class="r-in"><span>             args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>scans <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"run-1_bold.nii.gz"</span>, <span class="st">"run-2_bold.nii.gz"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                         TR <span class="op">=</span> <span class="fl">2</span>, run_length <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">200</span>, <span class="fl">200</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>             source <span class="op">=</span> <span class="st">"file"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;dataset_spec&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   constructor: fmri_dataset()  source: file</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   constructor: nifti_frame()  source: file</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   args: scans, TR, run_length</span>
 </code></pre></div>
     </div>
