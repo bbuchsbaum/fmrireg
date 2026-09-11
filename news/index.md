@@ -139,6 +139,54 @@
 
 ### Bug Fixes
 
+- The test suite has been ported to the frame API. The frame migration
+  and a parallel test-coverage branch were developed against the same
+  base and merged independently, so the merged tree combined frame-only
+  package code with ~50 test files still building legacy
+  `matrix_dataset()`, `fmri_mem_dataset()`, and `latent_dataset()`
+  fixtures. `R CMD check` failed on every platform with 106 test
+  failures that neither branch saw on its own. Fixtures now use
+  [`matrix_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/matrix_frame.md),
+  [`neurovec_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/neurovec_frame.md),
+  and
+  [`latent_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/latent_frame.md);
+  no assertion was relaxed to accommodate the port.
+
+- `chunkwise_lm()` dispatches on `fmri_frame` from outside the package.
+  [`chunkwise_lm.fmri_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/chunkwise_lm.fmri_frame.md)
+  was never registered as an S3 method, so dispatch from outside the
+  namespace failed with “no applicable method” even though internal
+  calls resolved.
+
+- `.rrr_extract_response_matrix()` validates its input again. A
+  non-frame argument fell through to `collect_assay()` and failed inside
+  `fmridataset` with a message naming neither the argument nor the
+  caller.
+
+- `extract_censor_from_dataset()` no longer errors on a non-frame
+  dataset. It now reports “no censoring” instead, which matters because
+  censoring is consulted on every fit under the default change below.
+
+- A censor column carried by a dataset is now used by default.
+  [`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
+  previously consulted it only when `ar_options = list(censor = "auto")`
+  was passed as well, so a `matrix_frame(censor = )` (and, before it,
+  `fmri_dataset(censor = )`) was silently discarded: fits on a censored
+  frame were bit-identical to fits on an uncensored one, with no
+  warning. An unset `censor` now resolves against the dataset, which is
+  what `"auto"` asked for explicitly; pass `censor = "none"` to ignore a
+  censor column deliberately. **This changes results** for anyone who
+  set censoring on a dataset and did not opt in, since those fits were
+  not censored at all. An explicit `censor` vector in `ar_options` still
+  overrides the dataset.
+
+- [`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
+  now warns when censoring cannot affect the fit. Censoring feeds AR
+  estimation and whitening only and never drops volumes from the
+  regression, so under the default iid noise model it does nothing at
+  all. That was previously silent, and indistinguishable from censoring
+  having been applied.
+
 - Shared AR estimation now pools voxel residual autocovariances by
   default instead of fitting the cross-voxel mean residual series. The
   former targets a typical voxel covariance; the latter suppresses
@@ -217,7 +265,7 @@
 - `compute_sandwich_variance()` computed its meat matrix as
   `X' diag(e^4) X` instead of `X' diag(e^2) X`, giving standard errors
   about 3.5x too large. Both sandwich helpers are now checked against
-  [`sandwich::vcovHC()`](https://rdrr.io/pkg/sandwich/man/vcovHC.html).
+  [`sandwich::vcovHC()`](https://zeileis.codeberg.page/sandwich/reference/vcovHC.html).
 
 ### Performance
 

@@ -142,7 +142,12 @@ re-estimation is not. Registered engines may define broader capabilities.</p></d
 
 
 <dt id="arg-censor">censor<a class="anchor" aria-label="anchor" href="#arg-censor"></a></dt>
-<dd><p>Optional censor indices, logical mask, or <code>"auto"</code>.</p></dd>
+<dd><p>Optional censor indices, logical mask, <code>"auto"</code>, or <code>"none"</code>.
+When left <code>NULL</code> a censor column carried by the dataset (as written by
+<code><a href="matrix_frame.html">matrix_frame()</a></code>) is used, which is what <code>"auto"</code> requests explicitly;
+<code>"none"</code> ignores such a column. Censoring feeds AR estimation and
+whitening only and does not drop volumes from the regression, so it has
+no effect when <code>struct = "iid"</code>.</p></dd>
 
 
 <dt id="arg-shrink-c-">shrink_c0<a class="anchor" aria-label="anchor" href="#arg-shrink-c-"></a></dt>

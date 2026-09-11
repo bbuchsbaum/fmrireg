@@ -81,7 +81,13 @@ noise_spec(
 
 - censor:
 
-  Optional censor indices, logical mask, or `"auto"`.
+  Optional censor indices, logical mask, `"auto"`, or `"none"`. When
+  left `NULL` a censor column carried by the dataset (as written by
+  [`matrix_frame()`](https://bbuchsbaum.github.io/fmrireg/reference/matrix_frame.md))
+  is used, which is what `"auto"` requests explicitly; `"none"` ignores
+  such a column. Censoring feeds AR estimation and whitening only and
+  does not drop volumes from the regression, so it has no effect when
+  `struct = "iid"`.
 
 - shrink_c0:
 

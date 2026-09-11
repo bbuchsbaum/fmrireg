@@ -52,6 +52,9 @@ matrix_frame(
   the logical `censor` observation column that
   [`fmridataset::temporal_schema()`](https://bbuchsbaum.github.io/fmridataset/reference/temporal-schema.html)
   recognises.
+  [`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
+  uses it without further configuration; it feeds AR estimation and
+  whitening, and does not drop the censored volumes from the regression.
 
 - feature_ids:
 

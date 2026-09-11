@@ -359,7 +359,7 @@ ground-truth errors before the dataset is used to compare methods.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Noiseless oracle maximum absolute beta error:"</span>,</span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/format.html" class="external-link">format</a></span><span class="op">(</span><span class="va">oracle_max_error</span>, scientific <span class="op">=</span> <span class="cn">TRUE</span>, digits <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Noiseless oracle maximum absolute beta error: 3.55e-15</span></span>
+<span><span class="co">#&gt; Noiseless oracle maximum absolute beta error: 3.33e-15</span></span>
 <span></span>
 <span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
 <span>  <span class="va">performance_table</span>,</span>
@@ -476,7 +476,7 @@ misspecification.</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results_df</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                                   Dataset Correlation  RMSE Noiseless_Max_Error</span></span>
-<span><span class="co">#&gt; BM_Canonical_HighSNR BM_Canonical_HighSNR       0.990 0.042        3.552714e-15</span></span>
+<span><span class="co">#&gt; BM_Canonical_HighSNR BM_Canonical_HighSNR       0.990 0.042        3.330669e-15</span></span>
 <span><span class="co">#&gt; BM_Canonical_LowSNR   BM_Canonical_LowSNR       0.617 0.383        7.549517e-15</span></span>
 <span><span class="co">#&gt;                      Target_SNR</span></span>
 <span><span class="co">#&gt; BM_Canonical_HighSNR        4.0</span></span>
