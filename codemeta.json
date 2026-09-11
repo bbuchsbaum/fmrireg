@@ -614,7 +614,7 @@
       "@type": "SoftwareApplication",
       "identifier": "fmridataset",
       "name": "fmridataset",
-      "version": ">= 0.10.0.9000",
+      "version": ">= 0.11.0.9000",
       "sameAs": "https://github.com/bbuchsbaum/fmridataset"
     },
     "28": {
@@ -715,7 +715,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "5979.536KB",
+  "fileSize": "5988.843KB",
   "citation": [
     {
       "@type": "SoftwareSourceCode",
