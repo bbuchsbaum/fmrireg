@@ -1,5 +1,20 @@
 # fmrireg 0.2.0
 
+## `coef.fmri_lm()` orientation is always voxels × terms
+
+* `coef.fmri_lm()` now returns **voxels × terms** for every mode:
+  event-only betas (`coef(fit)`), full-design betas
+  (`include_baseline = TRUE`), and contrasts (`type = "contrasts"`).
+  Term names are always column names. Previously the default event-only path
+  returned terms × voxels (condition names as rownames) while the other modes
+  already used voxels × terms, which forced callers to transpose conditionally
+  and made square matrices (equal voxel and term counts) silently ambiguous.
+
+* **Migration:** if you relied on the old event-only layout, transpose once
+  (`t(coef(fit))`) or switch to `coef(fit, include_baseline = TRUE)` (already
+  voxels × terms) and subset event columns. Values are unchanged; only the
+  matrix orientation of the default path changed.
+
 ## Datasets are now `fmri_frame` objects
 
 * `fmrireg` has moved from the removed legacy dataset API of `fmridataset`

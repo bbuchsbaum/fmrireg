@@ -6,6 +6,7 @@ test_that(".save_contrasts_by_contrast_nifti writes per-contrast volumes", {
 
   fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
   # Ensure contrasts table exists with estimable stats
+  # coef() is voxels × terms; use the first term across voxels as a length-n_vox vector
   est <- as.numeric(coef(fit)[, 1])
   n_vox <- length(est)
   fit$result$contrasts <- tibble::tibble(

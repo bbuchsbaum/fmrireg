@@ -1692,16 +1692,45 @@ pull_stat <- function(x, type, element) {
   }
 }
 
+#' Extract Coefficients from an fmri_lm Fit
+#'
+#' Returns regression coefficients (or contrasts) with a consistent orientation:
+#' **voxels × terms**. Term names are always on the column margin.
+#'
+#' @param object An \code{fmri_lm} object.
+#' @param type \code{"betas"} for regression coefficients or \code{"contrasts"}
+#'   for contrast estimates.
+#' @param include_baseline Logical; if \code{TRUE} and \code{type = "betas"},
+#'   include baseline/nuisance regressors as well as event regressors.
+#'   Default is \code{FALSE} (event regressors only).
+#' @param recon Reserved for future use.
+#' @param ... Unused.
+#'
+#' @return A matrix (or tibble for contrasts) with one row per voxel/feature and
+#'   one column per term. For \code{type = "betas"}, column names come from the
+#'   design matrix; for \code{type = "contrasts"}, column names are contrast names.
+#'
+#' @section Orientation contract:
+#' Every \code{coef.fmri_lm()} mode returns **voxels × terms**:
+#' \itemize{
+#'   \item \code{coef(fit)} — event betas only
+#'   \item \code{coef(fit, include_baseline = TRUE)} — full design betas
+#'   \item \code{coef(fit, type = "contrasts")} — contrast estimates
+#' }
+#' Before 0.2.0, the default event-only path returned terms × voxels. Code that
+#' assumed that older layout should transpose once, or prefer
+#' \code{include_baseline = TRUE} (already voxels × terms).
+#'
 #' @method coef fmri_lm
 #' @export
 coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baseline = FALSE, recon = FALSE, ...) {
   type <- match.arg(type)
   
   if (type == "contrasts") {
-    # Contrast handling remains the same
+    # Contrasts are already voxels × contrasts from pull_stat()
     res <- pull_stat(object, "contrasts", "estimate")
   } else if (type == "betas") {
-    # Get all beta estimates first
+    # Stored beta estimates are voxels × predictors
     all_betas <- object$result$betas$data[[1]]$estimate[[1]]
     
     if (include_baseline) {
@@ -1722,11 +1751,8 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
           }
         }
       }
-      # Convert back to tibble for consistency if needed, though matrix might be better here
-      # res <- as_tibble(res)
     } else {
-      # Default: return only event betas
-      # Check bounds and filter valid indices
+      # Default: return only event betas (same voxels × terms orientation)
       max_col <- ncol(all_betas)
       valid_event_indices <- object$result$event_indices[object$result$event_indices <= max_col]
       
@@ -1748,9 +1774,6 @@ coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baselin
         condition_names <- conditions(object$model$event_model)[1:length(valid_event_indices)]
         colnames(res) <- make.names(condition_names, unique = TRUE)
       }
-      
-      # Return as matrix - transpose to get conditions x voxels
-      res <- t(res)
     }
   } else {
     # Should not happen due to match.arg, but defensive coding
@@ -1786,6 +1809,18 @@ standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
     pull_stat(x, "betas", "se")
   } else if (type == "contrasts") {
     pull_stat(x, "contrasts", "se")
+  }
+}
+
+#' @method p_values fmri_lm
+#' @rdname p_values
+#' @export
+p_values.fmri_lm <- function(x, type = c("estimates", "contrasts"), ...) {
+  type <- match.arg(type)
+  if (type == "estimates") {
+    pull_stat(x, "betas", "prob")
+  } else if (type == "contrasts") {
+    pull_stat(x, "contrasts", "prob")
   }
 }
 

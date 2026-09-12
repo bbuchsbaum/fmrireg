@@ -41,7 +41,7 @@ test_that("tidy fmri_lm produces expected estimate statistics", {
     x <- gsub("^condition_condition\\.", "", x)
     gsub("\\.", " ", x)
   }
-  betas <- t(coef(fit))
+  betas <- as.matrix(coef(fit))
   ses <- as.matrix(standard_error(fit))
   tstats <- as.matrix(stats(fit))
   pvals <- as.matrix(p_values(fit))

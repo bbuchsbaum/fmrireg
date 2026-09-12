@@ -133,11 +133,9 @@ reduce_betas <- function(add_id = TRUE, include_baseline = FALSE) {
   force(add_id); force(include_baseline)
   new_reducer(function(fit, job) {
     est <- as.matrix(coef(fit, type = "betas", include_baseline = include_baseline))
-    # Normalize to terms x voxels: terms are the *named* dimension. coef() returns
-    # terms x voxels (rownames = terms) without baseline, but voxels x terms
-    # (colnames = terms) with baseline -- transpose the latter.
-    if (is.null(rownames(est)) && !is.null(colnames(est))) est <- t(est)
-    out <- .coef_to_long(est, "estimate")
+    # coef.fmri_lm always returns voxels × terms (colnames = terms). Convert to
+    # terms × voxels for the long-form helper.
+    out <- .coef_to_long(t(est), "estimate")
     se <- tryCatch(standard_error(fit, type = "estimates"), error = function(e) NULL)
     # standard_error() is voxels x terms; attach only when every estimate term is
     # present (so the baseline-included case, whose SE is unavailable, is skipped

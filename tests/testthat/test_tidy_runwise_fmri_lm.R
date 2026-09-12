@@ -32,7 +32,7 @@ test_that("tidy fmri_lm normalizes runwise estimate and contrast layouts", {
   expect_equal(nrow(dplyr::filter(estimates, term %in% c("A", "B"))), 2L * n_vox)
   expect_equal(nrow(contrasts), n_vox)
 
-  beta <- t(coef(fit))
+  beta <- as.matrix(coef(fit))
   colnames(beta) <- c("A", "B")
   se_beta <- as.matrix(standard_error(fit))
   stat_beta <- as.matrix(stats(fit))

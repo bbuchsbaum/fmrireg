@@ -194,29 +194,18 @@ coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts", "betas"
     lds <- lds[,comp,drop=FALSE]
     bmat <- as.matrix(bvals)
 
-    # coef.fmri_lm(type = "betas") is event coefficients × components after the
-    # conditions-x-voxels transpose. Contrasts stay components × contrasts.
-    # Choose orientation from `type`, not from whether n_comp happens to equal
-    # n_coefficients after subsetting `comp` (that equality takes the wrong branch).
-    if (identical(coef_type, "betas")) {
-      if (ncol(bmat) < max(comp)) {
-        stop("Cannot align latent coefficients with component loadings for reconstruction",
-             call. = FALSE)
-      }
-      b_comp <- bmat[, comp, drop = FALSE]
-      out <- as.matrix(lds %*% t(b_comp))
-      if (!is.null(rownames(bmat))) {
-        colnames(out) <- rownames(bmat)
-      }
-    } else {
-      if (nrow(bmat) < max(comp)) {
-        stop("Cannot align latent coefficients with component loadings for reconstruction",
-             call. = FALSE)
-      }
-      out <- as.matrix(lds %*% bmat[comp, , drop = FALSE])
-      if (!is.null(colnames(bmat))) {
-        colnames(out) <- colnames(bmat)
-      }
+    # coef.fmri_lm always returns components/voxels × terms. Contrasts and
+    # betas share that orientation, so reconstruction is lds %*% bmat[comp, ].
+    # Choose orientation from `type` only for the subset check message path;
+    # do not infer from whether n_comp equals n_coefficients after subsetting
+    # `comp` (that equality takes the wrong branch).
+    if (nrow(bmat) < max(comp)) {
+      stop("Cannot align latent coefficients with component loadings for reconstruction",
+           call. = FALSE)
+    }
+    out <- as.matrix(lds %*% bmat[comp, , drop = FALSE])
+    if (!is.null(colnames(bmat))) {
+      colnames(out) <- colnames(bmat)
     }
     tibble::as_tibble(out)
   } else {

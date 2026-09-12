@@ -12,7 +12,7 @@ test_that("built-in fits expose the versioned result and variance contract", {
   expect_identical(variance_model(fit)$metadata$estimation_scope, "joint")
   expect_identical(fit$result$fit_state$voxel_status,
                    fit$result$voxel_status)
-  expect_length(fit$result$df$inference, ncol(coef(fit)))
+  expect_length(fit$result$df$inference, nrow(coef(fit)))
   expect_s3_class(attr(fit, "compute"), "fmri_lm_compute_spec")
   expect_identical(attr(fit, "requested_control"), control)
   expect_s3_class(attr(fit, "executed_control"), "fmri_lm_control")
