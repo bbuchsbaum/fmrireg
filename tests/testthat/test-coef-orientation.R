@@ -27,7 +27,8 @@
     fml,
     block = ~ run,
     dataset = dset,
-    control = fmri_lm_control(estimation = estimation_spec("joint"))
+    control = fmri_lm_control(estimation = estimation_spec("joint")),
+    compute = compute_spec(voxel_chunks = 1L)
   )
 }
 
