@@ -113,6 +113,14 @@
 
 ### Statistical Corrections
 
+- **Explicit volume weights.** `weights_spec(values = )` now enables
+  weighting without requiring a construction method, and joint IID OLS
+  applies the same weights to its shared design and every response
+  chunk. Zero-weight volumes are excluded from residual degrees of
+  freedom. Reference backends and joint AR/robust combinations that
+  cannot apply requested volume weights now fail instead of fitting an
+  unweighted model.
+
 - **AR degrees of freedom.**
   [`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)
   no longer deflates the residual degrees of freedom when an AR

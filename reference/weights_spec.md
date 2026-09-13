@@ -24,4 +24,5 @@ weights_spec(
 
 - values:
 
-  Optional explicit finite volume weights.
+  Optional explicit finite, nonnegative volume weights. Supplying
+  `values` enables volume weighting even when `method = "none"`.
