@@ -232,17 +232,21 @@ variance_spec <- function(method = c("model", "hac", "sandwich"),
 #'
 #' @param method Volume-weight construction rule.
 #' @param threshold Positive threshold or tuning constant for the selected rule.
-#' @param values Optional explicit finite volume weights.
+#' @param values Optional explicit finite, nonnegative volume weights. Supplying
+#'   `values` enables volume weighting even when `method = "none"`.
 #' @export
 weights_spec <- function(method = c("none", "inverse_squared", "soft_threshold", "tukey"),
                          threshold = 1.5, values = NULL) {
   method <- match.arg(method)
   threshold <- .fmri_lm_number(threshold, "threshold", lower = 0, strictly = TRUE)
-  if (!is.null(values) && (!is.numeric(values) || any(!is.finite(values)))) {
-    stop("`values` must be NULL or a finite numeric vector.", call. = FALSE)
+  if (!is.null(values) &&
+      (!is.numeric(values) || any(!is.finite(values)) || any(values < 0))) {
+    stop("`values` must be NULL or a finite, nonnegative numeric vector.",
+         call. = FALSE)
   }
   .new_fmri_lm_spec(list(method = method, threshold = threshold, values = values,
-                         enabled = method != "none", weights = values),
+                         enabled = method != "none" || !is.null(values),
+                         weights = values),
                     "fmri_lm_weights_spec")
 }
 

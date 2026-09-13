@@ -15,7 +15,8 @@ weights_spec(
 
 \item{threshold}{Positive threshold or tuning constant for the selected rule.}
 
-\item{values}{Optional explicit finite volume weights.}
+\item{values}{Optional explicit finite, nonnegative volume weights. Supplying
+\code{values} enables volume weighting even when \code{method = "none"}.}
 }
 \description{
 Volume-weight specification

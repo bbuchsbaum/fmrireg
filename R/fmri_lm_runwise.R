@@ -230,6 +230,14 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
                            event_indices, baseline_indices,
                            verbose = FALSE, progress = FALSE, dataset = NULL) {
 
+  if (isTRUE(cfg$volume_weights$enabled)) {
+    stop(
+      "Volume weighting is not supported by the reference fitting backend; ",
+      "use `compute_spec(backend = 'matrix')`.",
+      call. = FALSE
+    )
+  }
+
   # Robust fitting is not supported on this formula/lm() slow path: the
   # multiresponse_rlm() modmat interface routes through robustbase::lmrob() and
   # cannot accept a prewhitened design (so AR would be silently dropped), and it

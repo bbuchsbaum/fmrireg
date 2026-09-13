@@ -175,6 +175,15 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
   # Check if we need special handling
   ar_modeling <- cfg$ar$struct != "iid"
   robust_modeling <- .fmri_lm_robust_enabled(cfg$robust)
+
+  if (isTRUE(cfg$volume_weights$enabled) &&
+      (ar_modeling || robust_modeling)) {
+    stop(
+      "Volume weighting is not supported by joint AR or robust fitting; ",
+      "use `estimation_spec('runwise_meta')` with the matrix backend.",
+      call. = FALSE
+    )
+  }
   
   if (ar_modeling || robust_modeling) {
     # Pre-computation phase for AR and/or robust
@@ -243,34 +252,65 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
     }, parallel_chunks = parallel_chunks, progress = progress)
     
   } else {
-    # Simple OLS case - no pre-computation needed
+    # Simple IID OLS. Explicit volume weights are shared across voxel chunks,
+    # so transform the design once and each response chunk with the same
+    # square-root weights.
     ar_order <- 0L
     form <- get_formula(model)
     tmats <- term_matrices(model)
     data_env <- list2env(tmats)
     data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
     modmat <- model.matrix(as.formula(form), data_env)
+    explicit_weights <- cfg$volume_weights$weights
+    has_explicit_weights <- isTRUE(cfg$volume_weights$enabled) &&
+      !is.null(explicit_weights)
 
-    # Check if preprocessing is requested but strategy may not fully support it
-    if (cfg$volume_weights$enabled || cfg$soft_subspace$enabled) {
-      warning("Preprocessing (volume_weights/soft_subspace) with chunkwise OLS ",
-              "requires use of runwise strategy or AR/robust options for full support.",
-              " Consider using strategy='runwise' with use_fast_path=TRUE.", call. = FALSE)
+    if (isTRUE(cfg$volume_weights$enabled) && is.null(explicit_weights)) {
+      stop(
+        "Computed volume weights are not supported by joint IID OLS. ",
+        "Supply explicit weights with `weights_spec(values = ...)` or use ",
+        "`estimation_spec('runwise_meta')`.",
+        call. = FALSE
+      )
+    }
+    if (has_explicit_weights && length(explicit_weights) != nrow(modmat)) {
+      stop("Length of explicit volume weights must equal the number of timepoints.",
+           call. = FALSE)
+    }
+    if (isTRUE(cfg$soft_subspace$enabled)) {
+      warning("Soft-subspace preprocessing with chunkwise OLS requires the ",
+              "runwise matrix backend for full support.", call. = FALSE)
     }
 
-    proj <- .fast_preproject(modmat)
+    sqrt_volume_weights <- if (has_explicit_weights) sqrt(explicit_weights) else NULL
+    fit_modmat <- if (has_explicit_weights) {
+      modmat * sqrt_volume_weights
+    } else {
+      modmat
+    }
+    proj <- .fast_preproject(fit_modmat)
+    if (has_explicit_weights) {
+      # Zero-weight observations are omitted by WLS and therefore do not
+      # contribute residual degrees of freedom (matching stats::lm.wfit()).
+      proj$dfres <- as.integer(sum(explicit_weights > 0) - proj$rank)
+    }
 
     cres <- .chunkwise_apply(chunks, function(i, ym) {
       if (verbose) message("Processing chunk (fast path) ", ym$chunk_num)
 
       Ymat <- as.matrix(ym$data)
+      fit_Ymat <- if (has_explicit_weights) {
+        sweep(Ymat, 1L, sqrt_volume_weights, `*`)
+      } else {
+        Ymat
+      }
       
       # Create GLM context and solve
-      glm_ctx_chunk <- glm_context(X = modmat, Y = Ymat, proj = proj)
+      glm_ctx_chunk <- glm_context(X = fit_modmat, Y = fit_Ymat, proj = proj)
       res <- solve_glm_core(glm_ctx_chunk)
       
       # Calculate statistics
-      actual_vnames <- colnames(modmat)
+      actual_vnames <- colnames(fit_modmat)
       sigma_vec <- sqrt(res$sigma2)
       
       # Beta statistics
@@ -303,7 +343,7 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
         baseline_indices = baseline_indices,
         inference_residuals = if (!identical(cfg$variance$method, "model") ||
                                  identical(cfg$variance$df, "satterthwaite")) {
-          Ymat - modmat %*% res$betas
+          fit_Ymat - fit_modmat %*% res$betas
         } else {
           NULL
         }
@@ -313,7 +353,11 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
   
   # Unpack results
   out <- unpack_chunkwise(cres, event_indices, baseline_indices)
-  out$cov.unscaled <- Vu
+  out$cov.unscaled <- if (exists("precomp", inherits = FALSE)) {
+    Vu
+  } else {
+    proj$XtXinv
+  }
   out$covariance_model_basis <- if (exists("precomp", inherits = FALSE)) {
     precomp$proj_global$XtXinv
   } else {
@@ -327,7 +371,11 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
   inference_residuals <- lapply(cres, `[[`, "inference_residuals")
   if (length(inference_residuals) &&
       all(vapply(inference_residuals, Negate(is.null), logical(1)))) {
-    X_inference <- if (exists("precomp", inherits = FALSE)) precomp$X_global else modmat
+    X_inference <- if (exists("precomp", inherits = FALSE)) {
+      precomp$X_global
+    } else {
+      fit_modmat
+    }
     run_chunks <- .dset_run_chunks(dset)
     run_rows <- lapply(run_chunks, `[[`, "row_ind")
     censor_global <- rep(FALSE, nrow(X_inference))
@@ -381,6 +429,14 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
                               Vu, modmat, run_indices = NULL,
                               verbose = FALSE, progress = FALSE,
                               parallel_chunks = FALSE) {
+
+  if (isTRUE(cfg$volume_weights$enabled)) {
+    stop(
+      "Volume weighting is not supported by the reference fitting backend; ",
+      "use `compute_spec(backend = 'matrix')`.",
+      call. = FALSE
+    )
+  }
   
   # Determine fitting function
   lmfun <- if (.fmri_lm_robust_enabled(cfg$robust)) multiresponse_rlm else multiresponse_lm
