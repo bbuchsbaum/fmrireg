@@ -354,7 +354,7 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
   # Unpack results
   out <- unpack_chunkwise(cres, event_indices, baseline_indices)
   out$cov.unscaled <- if (exists("precomp", inherits = FALSE)) {
-    Vu
+    precomp$proj_global$XtXinv
   } else {
     proj$XtXinv
   }

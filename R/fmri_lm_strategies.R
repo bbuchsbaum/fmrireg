@@ -704,6 +704,9 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
     n_time_run <- nrow(tmats_run[[1]])
     data_env_run[[".y"]] <- rep(0, n_time_run)
     X_run_orig <- model.matrix(form, data_env_run)
+    # Fit noise locally, but transform rows of the joint design so nuisance
+    # coefficients remain run-specific, including unequal nuisance widths.
+    X_run_joint <- modmat_orig[run_row_inds[[ri]], , drop = FALSE]
     Y_run_full <- as.matrix(rch$data)
     proj_run_orig <- .fast_preproject(X_run_orig)
     
@@ -718,7 +721,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
         weights = res$robust_weights,
         sqrtw = sqrt(res$robust_weights),
         sigma = res$sigma_robust,
-        X_orig = X_run_orig,
+        X_orig = X_run_joint,
         Y_orig = Y_run_full,
         dummyX0 = matrix(0, nrow(X_run_orig), 0),
         row_indices = run_row_inds[[ri]],
@@ -746,7 +749,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
         weights = NULL,
         sqrtw = NULL,
         sigma = NULL,
-        X_orig = X_run_orig,
+        X_orig = X_run_joint,
         Y_orig = Y_run_full,
         dummyX0 = matrix(0, nrow(X_run_orig), 0),
         row_indices = run_row_inds[[ri]],
@@ -760,7 +763,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
         weights = res$robust_weights,
         sqrtw = sqrt(res$robust_weights),
         sigma = res$sigma_robust,
-        X_orig = X_run_orig,
+        X_orig = X_run_joint,
         Y_orig = Y_run_full,
         dummyX0 = matrix(0, nrow(X_run_orig), 0),
         row_indices = run_row_inds[[ri]]
