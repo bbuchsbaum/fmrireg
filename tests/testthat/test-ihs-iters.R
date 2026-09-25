@@ -85,3 +85,46 @@ test_that("IHS kernel converges to the exact least-squares solution", {
   expect_true(all(diff(rss_path) <= 1e-10 * rss_path[-1]))
   expect_lt(rss_path[6], rss_path[1])
 })
+
+test_that("IHS is accurate at the default iterations on baseline-dominated data", {
+  # fMRI series carry a large baseline. IHS contracts the error relative to
+  # its starting point, so it must start from the sketch-and-solve solution:
+  # from zero, three iterations leave most of a baseline of 1000 unfitted.
+  set.seed(91)
+  Tlen <- 200L
+  X <- cbind(1, rnorm(Tlen), sin(seq_len(Tlen) / 7))
+  Z <- 1000 + X[, -1] %*% matrix(rnorm(2 * 20), 2) + matrix(rnorm(Tlen * 20), Tlen)
+  B_ols <- qr.solve(X, Z)
+  se_ols <- sqrt(diag(solve(crossprod(X))))
+  set.seed(92)
+  M <- ihs_latent_solve(X, Z, m = 24L, iters = 3L)$M
+  # This guards the start, not full convergence: a zero start leaves an error
+  # of about 390 OLS standard errors here, while the warm start gives 0.36
+  # (over 200 sketch seeds: median 0.53, max 5.8 at m = 24, iters = 3).
+  expect_lt(max(abs(M - B_ols) / se_ols), 10)
+  # Further iterations still converge to OLS from the warm start.
+  set.seed(92)
+  M10 <- ihs_latent_solve(X, Z, m = 24L, iters = 10L)$M
+  expect_lt(max(abs(M10 - B_ols) / se_ols), 0.01)
+})
+
+test_that("IHS Ginv carries the documented factor-T scale exactly", {
+  # With T a power of two and m = T the SRHT is an exact isometry up to its
+  # unnormalised Hadamard factor, so T * Ginv must equal (X'X)^{-1}. This pins
+  # the normalisation that the exact-gradient step and sigma2 pairing rely on.
+  set.seed(93)
+  Tlen <- 128L
+  X <- cbind(1, rnorm(Tlen), cos(seq_len(Tlen) / 4))
+  Z <- matrix(rnorm(Tlen * 3), Tlen)
+  sol <- ihs_latent_solve(X, Z, m = Tlen, iters = 1L)
+  expect_equal(Tlen * sol$Ginv, solve(crossprod(X)), tolerance = 1e-10)
+  expect_equal(sol$M, qr.solve(X, Z), tolerance = 1e-10)
+})
+
+test_that("IHS rejects zero iterations and non-finite data", {
+  X <- cbind(1, seq_len(20))
+  Z <- matrix(rnorm(40), 20)
+  expect_error(ihs_latent_solve(X, Z, m = 10L, iters = 0L), "iters must be >= 1")
+  Z[3, 1] <- NA
+  expect_error(ihs_latent_solve(X, Z, m = 10L, iters = 1L), "must be finite")
+})

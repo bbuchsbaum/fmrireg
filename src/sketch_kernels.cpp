@@ -115,8 +115,34 @@ static void ihs_iter(const mat& X, const mat& Z, int m, mat& M, mat& Ginv_out) {
 // [[Rcpp::export]]
 Rcpp::List cpp_ihs_latent(const arma::mat& X, const arma::mat& Z,
                           const int m, const int iters) {
-  int p = X.n_cols, r = Z.n_cols;
-  mat M(p, r, fill::zeros), Ginv(p, p, fill::eye);
+  int T = X.n_rows, p = X.n_cols;
+  if (iters < 1) {
+    Rcpp::stop("cpp_ihs_latent: iters must be >= 1.");
+  }
+  if (m <= 0 || m > T) {
+    Rcpp::stop("cpp_ihs_latent: sketch size m must satisfy 0 < m <= nrow(X).");
+  }
+  if (!X.is_finite() || !Z.is_finite()) {
+    Rcpp::stop("cpp_ihs_latent: X and Z must be finite.");
+  }
+  // Warm start from the classical sketch-and-solve solution. IHS contracts
+  // the error relative to its starting point, and fMRI data carry a large
+  // baseline that a zero start would leave almost entirely unfitted after the
+  // default few iterations; sketch-and-solve fits any part of Z in span(X)
+  // exactly, so iterations only refine the noise-driven error.
+  arma::vec signs = 2.0 * randu<vec>(T) - 1.0;
+  signs.transform( [](double v){ return v>=0 ? 1.0 : -1.0; } );
+  arma::uvec perm = randperm(T);
+  arma::uvec order = sort_index(randu<vec>(T));
+  arma::uvec rows = order.subvec(0, m - 1);
+  double scale = std::sqrt( (double)T / (double)m );
+  mat Xs = cpp_srht_apply(X, rows, signs, perm, scale);
+  mat Zs = cpp_srht_apply(Z, rows, signs, perm, scale);
+  mat Ginv;
+  if (!inv_sympd_safe(Ginv, Xs.t() * Xs)) {
+    Rcpp::stop("cpp_ihs_latent: unable to invert sketched Gram matrix.");
+  }
+  mat M = Ginv * (Xs.t() * Zs);
   for (int t = 0; t < iters; ++t) {
     ihs_iter(X, Z, m, M, Ginv);
   }

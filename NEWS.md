@@ -189,7 +189,9 @@
   sketched problem and never converged to the least-squares solution; more
   iterations did not help. The gradient now uses the full data, and a step
   halving keeps the residual sum of squares non-increasing, so `iters`
-  controls accuracy as documented.
+  controls accuracy as documented. Iterations start from the sketch-and-solve
+  solution, so the baseline is fitted from the first step. `iters < 1` and
+  non-finite inputs are now errors.
 * The `fmridataset` requirement is now `(>= 0.11.0.9000)`. The pre-frame API
   was removed upstream without a version change, so both sides of the break
   reported `0.10.0.9000` and the previous constraint could not tell them
