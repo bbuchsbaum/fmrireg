@@ -110,6 +110,15 @@
 
 ## Bug Fixes
 
+* Fits with a global intercept (`baseline_model(intercept = "global")`) across
+  several runs no longer duplicate the intercept. `term_matrices()` requested
+  every run by id, and the design came back with the global intercept once
+  per run: the fit carried aliased copies (a rank-deficiency warning and
+  "New names" messages) and `result$baseline_indices` ran past the end of the
+  design. The full design is now built without `blockid`, and the term
+  matrices are checked against the design width. Empty baselines also no
+  longer produce two spurious baseline indices.
+
 * The `fmridataset` requirement is now `(>= 0.11.0.9000)`. The pre-frame API
   was removed upstream without a version change, so both sides of the break
   reported `0.10.0.9000` and the previous constraint could not tell them

@@ -33,19 +33,30 @@ get_formula.fmri_model <- function(x,...) {
 term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
   assert_that(inherits(x, "fmri_model"), msg = "'x' must be an 'fmri_model' object")
   
-  if (is.null(blocknum)) {
-    bids <- x$event_model$blockids
-    if (length(bids) == 0L) {
-      bids <- fmrihrf::blockids(x$event_model$sampling_frame)
-    }
-    blocknum <- sort(unique(bids))
+  # Runs are taken from the sampling frame (one id per scan); the event
+  # model's blockids are per event and can miss runs without events.
+  all_blocks <- sort(unique(fmrihrf::blockids(x$event_model$sampling_frame)))
+  if (length(all_blocks) == 0L) {
+    all_blocks <- sort(unique(x$event_model$blockids))
   }
-  
+  if (is.null(blocknum)) {
+    blocknum <- all_blocks
+  }
+
+  # When every run is requested, build the full design without `blockid`.
+  # Asking fmridesign for all runs by id returns a global (single-column)
+  # intercept once per run, which duplicated it in the fit and shifted
+  # `baseline_term_indices` past the end of the design.
+  whole_design <- setequal(blocknum, all_blocks)
+  dm_for_blocks <- function(obj) {
+    if (whole_design) design_matrix(obj) else design_matrix(obj, blockid = blocknum)
+  }
+
   # Get the full convolved design matrix from the event model
-  event_dm <- design_matrix(x$event_model, blockid = blocknum)
-  
+  event_dm <- dm_for_blocks(x$event_model)
+
   # Get the baseline design matrix
-  baseline_dm <- design_matrix(x$baseline_model, blockid = blocknum)
+  baseline_dm <- dm_for_blocks(x$baseline_model)
   
   # Extract individual term matrices using the col_indices attribute
   col_indices <- attr(x$event_model$design_matrix, "col_indices")
@@ -61,14 +72,24 @@ term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
   names(eterms) <- names(col_indices)
   
   # Extract baseline term matrices (baseline terms are simpler, one per term)
-  bterms <- lapply(baseline_terms(x), function(term) as.matrix(design_matrix(term, blockid = blocknum)))
-  
+  bterms <- lapply(baseline_terms(x), function(term) as.matrix(dm_for_blocks(term)))
+
   # Compute indices for event and baseline terms
   num_event_cols <- ncol(event_dm)
   num_baseline_cols <- ncol(baseline_dm)
-  
-  eterm_indices <- 1:num_event_cols
-  bterm_indices <- (num_event_cols + 1):(num_event_cols + num_baseline_cols)
+
+  # The term matrices are what the solvers stack, so they must account for
+  # exactly the columns of the design they index.
+  bterm_width <- sum(vapply(bterms, ncol, integer(1)))
+  if (bterm_width != num_baseline_cols) {
+    stop(sprintf(
+      "Baseline term matrices have %d columns but the baseline design has %d; cannot index the design consistently.",
+      bterm_width, num_baseline_cols
+    ), call. = FALSE)
+  }
+
+  eterm_indices <- seq_len(num_event_cols)
+  bterm_indices <- num_event_cols + seq_len(num_baseline_cols)
   
   # Combine term matrices
   term_matrices <- c(eterms, bterms)
