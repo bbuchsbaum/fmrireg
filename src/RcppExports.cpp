@@ -154,9 +154,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_srht_adjoint
+arma::mat cpp_srht_adjoint(const arma::mat& B, const arma::uvec& rows, const arma::vec& signs, const arma::uvec& perm, const double scale);
+RcppExport SEXP _fmrireg_cpp_srht_adjoint(SEXP BSEXP, SEXP rowsSEXP, SEXP signsSEXP, SEXP permSEXP, SEXP scaleSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type B(BSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type rows(rowsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type signs(signsSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type perm(permSEXP);
+    Rcpp::traits::input_parameter< const double >::type scale(scaleSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_srht_adjoint(B, rows, signs, perm, scale));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cpp_ihs_latent
-Rcpp::List cpp_ihs_latent(const arma::mat& X, const arma::mat& Z, const int m, const int iters);
-RcppExport SEXP _fmrireg_cpp_ihs_latent(SEXP XSEXP, SEXP ZSEXP, SEXP mSEXP, SEXP itersSEXP) {
+Rcpp::List cpp_ihs_latent(const arma::mat& X, const arma::mat& Z, const int m, const int iters, const double tol);
+RcppExport SEXP _fmrireg_cpp_ihs_latent(SEXP XSEXP, SEXP ZSEXP, SEXP mSEXP, SEXP itersSEXP, SEXP tolSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -164,7 +179,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type Z(ZSEXP);
     Rcpp::traits::input_parameter< const int >::type m(mSEXP);
     Rcpp::traits::input_parameter< const int >::type iters(itersSEXP);
-    rcpp_result_gen = Rcpp::wrap(cpp_ihs_latent(X, Z, m, iters));
+    Rcpp::traits::input_parameter< const double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_ihs_latent(X, Z, m, iters, tol));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -230,7 +246,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fmrireg_welch_t_cpp", (DL_FUNC) &_fmrireg_welch_t_cpp, 2},
     {"_fmrireg_ols_t_vcov_cpp", (DL_FUNC) &_fmrireg_ols_t_vcov_cpp, 3},
     {"_fmrireg_cpp_srht_apply", (DL_FUNC) &_fmrireg_cpp_srht_apply, 5},
-    {"_fmrireg_cpp_ihs_latent", (DL_FUNC) &_fmrireg_cpp_ihs_latent, 4},
+    {"_fmrireg_cpp_srht_adjoint", (DL_FUNC) &_fmrireg_cpp_srht_adjoint, 5},
+    {"_fmrireg_cpp_ihs_latent", (DL_FUNC) &_fmrireg_cpp_ihs_latent, 5},
     {"_fmrireg_group_pi0_counts_cpp", (DL_FUNC) &_fmrireg_group_pi0_counts_cpp, 3},
     {"_fmrireg_pi0_smooth_cpp", (DL_FUNC) &_fmrireg_pi0_smooth_cpp, 4},
     {"_fmrireg_weighted_bh_cpp", (DL_FUNC) &_fmrireg_weighted_bh_cpp, 3},

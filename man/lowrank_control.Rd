@@ -8,7 +8,7 @@ lowrank_control(
   parcels = NULL,
   landmarks = NULL,
   k_neighbors = 16L,
-  time_sketch = list(method = "gaussian", m = NULL, iters = 0L),
+  time_sketch = list(method = "gaussian", m = NULL),
   ncomp = NULL,
   noise_pcs = 0L
 )
@@ -22,7 +22,30 @@ Nyström extension (NULL = off).}
 
 \item{k_neighbors}{Integer; k for k-NN in Nyström extension.}
 
-\item{time_sketch}{List(method = "gaussian" | "countsketch", m = NULL, iters = 0L).}
+\item{time_sketch}{List controlling the temporal sketch, with elements
+\describe{
+\item{\code{method}}{\code{"gaussian"} (default), \code{"countsketch"}, \code{"srht"}
+(subsampled randomized Hadamard transform) or \code{"ihs"} (iterative
+Hessian sketch).}
+\item{\code{m}}{Number of sketch rows; \code{NULL} uses \code{min(8 * p, T)} for a
+design with \code{p} columns and \code{T} scans. The sketch-and-solve methods
+require \code{m > p}.}
+\item{\code{iters}}{\code{"ihs"} only: maximum number of iterations (default
+100). Must be at least 1.}
+\item{\code{tol}}{\code{"ihs"} only: stop once every coefficient moves by less
+than \code{tol} OLS standard errors (default \code{1e-3}); \code{0} runs exactly
+\code{iters} iterations. A fit that stops at \code{iters} before reaching
+\code{tol} warns.}
+}
+All sketches are normalised (\eqn{E\|Sr\|^2 = \|r\|^2}), so residual
+variances, \code{rss} and covariances are reported on the data scale.
+\code{"gaussian"}, \code{"countsketch"} and \code{"srht"} are sketch-and-solve
+estimators: they fit the model to \code{m} sketched rows, and their standard
+errors are the conditional-on-sketch standard errors of that estimator
+(roughly \code{sqrt(T / m)} times the full-data OLS ones), with Satterthwaite
+residual degrees of freedom (about \code{m - p}). \code{"ihs"} iterates to the
+full-data least-squares solution and reports exact OLS covariance,
+residual variance and \code{T - p} degrees of freedom.}
 
 \item{ncomp}{Optional integer; number of latent components within parcels (PCA).}
 

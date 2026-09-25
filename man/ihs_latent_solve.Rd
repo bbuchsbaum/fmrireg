@@ -2,11 +2,29 @@
 % Please edit documentation in R/sketch_time.R
 \name{ihs_latent_solve}
 \alias{ihs_latent_solve}
-\title{Iterative Hessian Sketch (multi-RHS), returning M and Ginv}
+\title{Iterative Hessian Sketch (multi-RHS)}
 \usage{
-ihs_latent_solve(X, Z, m, iters = 3L)
+ihs_latent_solve(X, Z, m, iters = 3L, tol = 0)
+}
+\arguments{
+\item{X}{Numeric design matrix (T x p).}
+
+\item{Z}{Numeric response matrix (T x k).}
+
+\item{m}{Integer number of sketch rows per Hessian sketch.}
+
+\item{iters}{Maximum number of iterations (at least 1).}
+
+\item{tol}{Non-negative stopping tolerance in OLS standard errors.}
+}
+\value{
+A list with \code{M}, \code{Ginv}, \code{residuals}, \code{iters} and \code{converged}.
 }
 \description{
-Iterative Hessian Sketch (multi-RHS), returning M and Ginv
+Returns the coefficients \code{M}, the exact \eqn{(X'X)^{-1}} as \code{Ginv}, the
+exact full-data \code{residuals}, the number of iterations used and whether the
+tolerance was met. With \code{tol = 0} exactly \code{iters} iterations are run;
+otherwise iteration stops once every coefficient moves by less than \code{tol}
+OLS standard errors.
 }
 \keyword{internal}

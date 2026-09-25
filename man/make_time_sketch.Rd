@@ -16,6 +16,6 @@ A dense or sparse sketch matrix for Gaussian/CountSketch methods;
 \code{NULL} for \code{"srht"} and \code{"ihs"} because those methods are applied via plans/operators.
 }
 \description{
-Build a time sketch matrix S (m x T)
+All sketches are normalised so that \eqn{E\|S r\|^2 = \|r\|^2}.
 }
 \keyword{internal}

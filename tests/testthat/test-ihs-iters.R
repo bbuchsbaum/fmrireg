@@ -46,11 +46,11 @@ test_that("IHS with more iterations improves or matches correlation vs exact", {
   B_exact <- t(fit_exact$result$betas$data[[1]]$estimate[[1]])
 
   # IHS iters 1 vs 3
-  low1 <- lowrank_control(parcels = NULL, time_sketch = list(method = "ihs", m = max(8L * p, p + 10L), iters = 1L))
+  low1 <- lowrank_control(parcels = NULL, time_sketch = list(method = "ihs", m = max(8L * p, p + 10L), iters = 1L, tol = 0))
   fit1 <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset, engine = "latent_sketch", lowrank = low1,
                   ar_options = list(by_cluster = FALSE, order = 1L))
 
-  low3 <- lowrank_control(parcels = NULL, time_sketch = list(method = "ihs", m = max(8L * p, p + 10L), iters = 3L))
+  low3 <- lowrank_control(parcels = NULL, time_sketch = list(method = "ihs", m = max(8L * p, p + 10L), iters = 3L, tol = 0))
   fit3 <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset, engine = "latent_sketch", lowrank = low3,
                   ar_options = list(by_cluster = FALSE, order = 1L))
 
@@ -86,7 +86,7 @@ test_that("IHS kernel converges to the exact least-squares solution", {
   expect_lt(rss_path[6], rss_path[1])
 })
 
-test_that("IHS is accurate at the default iterations on baseline-dominated data", {
+test_that("IHS warm start is accurate after three fixed iterations on baseline-dominated data", {
   # fMRI series carry a large baseline. IHS contracts the error relative to
   # its starting point, so it must start from the sketch-and-solve solution:
   # from zero, three iterations leave most of a baseline of 1000 unfitted.
@@ -108,17 +108,48 @@ test_that("IHS is accurate at the default iterations on baseline-dominated data"
   expect_lt(max(abs(M10 - B_ols) / se_ols), 0.01)
 })
 
-test_that("IHS Ginv carries the documented factor-T scale exactly", {
-  # With T a power of two and m = T the SRHT is an exact isometry up to its
-  # unnormalised Hadamard factor, so T * Ginv must equal (X'X)^{-1}. This pins
-  # the normalisation that the exact-gradient step and sigma2 pairing rely on.
+test_that("IHS returns the exact (X'X)^{-1} and full-data residuals", {
+  # IHS uses the exact full-data gradient, so the exact (X'X)^{-1} and the
+  # exact residuals come at no extra cost and are what it returns: fits
+  # report OLS covariance and residual variance on the data scale. (This
+  # replaces a check that T * Ginv = (X'X)^{-1}, which pinned the former
+  # unnormalised-SRHT scale under which Ginv, sigma2 and rss were T-fold off.)
   set.seed(93)
   Tlen <- 128L
   X <- cbind(1, rnorm(Tlen), cos(seq_len(Tlen) / 4))
   Z <- matrix(rnorm(Tlen * 3), Tlen)
+  # With T a power of two and m = T the SRHT is an exact isometry, so the
+  # warm start and every iterate are the least-squares solution.
   sol <- ihs_latent_solve(X, Z, m = Tlen, iters = 1L)
-  expect_equal(Tlen * sol$Ginv, solve(crossprod(X)), tolerance = 1e-10)
+  expect_equal(sol$Ginv, solve(crossprod(X)), tolerance = 1e-10)
   expect_equal(sol$M, qr.solve(X, Z), tolerance = 1e-10)
+  # A proper sketch (m < T) still returns the exact inverse and residuals.
+  sol24 <- ihs_latent_solve(X, Z, m = 24L, iters = 2L)
+  expect_equal(sol24$Ginv, solve(crossprod(X)), tolerance = 1e-10)
+  expect_equal(sol24$residuals, Z - X %*% sol24$M, tolerance = 1e-10)
+})
+
+test_that("IHS tolerance stopping reaches OLS accuracy at the default sketch size", {
+  # Over 200 sketch seeds on a T = 200, p = 6 fMRI design with m = 8p, tol =
+  # 1e-3 stops after a median of 11 (max 16) iterations with the coefficients
+  # within 6e-4 OLS standard errors of OLS; the former fixed 3 iterations
+  # left a median of 0.5 and a max of 1.9 standard errors.
+  set.seed(94)
+  Tlen <- 200L
+  X <- cbind(1, rnorm(Tlen), sin(seq_len(Tlen) / 7), cos(seq_len(Tlen) / 11))
+  Z <- 100 + matrix(rnorm(Tlen * 20), Tlen)
+  XtXinv <- solve(crossprod(X))
+  B_ols <- XtXinv %*% crossprod(X, Z)
+  rss <- colSums((Z - X %*% B_ols)^2)
+  se <- sqrt(diag(XtXinv)) %o% sqrt(rss / (Tlen - ncol(X)))
+  for (seed in 1:5) {
+    set.seed(seed)
+    sol <- ihs_latent_solve(X, Z, m = 8L * ncol(X), iters = 100L, tol = 1e-3)
+    expect_true(sol$converged)
+    expect_lt(sol$iters, 100L)
+    expect_lt(max(abs(sol$M - B_ols) / se), 5e-3)
+    expect_equal(colSums(sol$residuals^2), rss, tolerance = 1e-6)
+  }
 })
 
 test_that("IHS rejects zero iterations and non-finite data", {
