@@ -75,6 +75,12 @@
   `type` documentation of `stats()` now says it returns t-statistics and
   links to `coef()`.
 
+* The coefficient view of `autoplot()` / `plot()` for `fmri_lm` is named
+  `type = "betas"` to match. `type = "estimates"` stays a silent synonym,
+  because the plot is labelled and cannot be mistaken for the estimates
+  themselves. The plots now read coefficient values from `coef()` instead of
+  rebuilding them as t x SE, which gave 0 where the SE was numerically zero.
+
 * Duplicate definitions of `coef()`, `stats()` and `standard_error()` for
   `fmri_lm` in `R/fmrilm.R` and `R/fmri_lm_methods.R` have been merged
   into one. Which copy ran used to depend on file collation order.
@@ -83,7 +89,7 @@
 
 * New `autoplot()` / `plot()` methods for `fmri_lm` fits, with five views
   selected by `type`:
-  - `"estimates"` / `"contrasts"`: t-statistics across voxels as a sina plot
+  - `"betas"` / `"contrasts"`: t-statistics across voxels as a sina plot
     with p < .001 reference lines and the share of voxels beyond each tail;
     with `voxel =`, a coefficient plot with confidence intervals, one panel
     per event term.

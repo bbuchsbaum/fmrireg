@@ -7,7 +7,7 @@
 \usage{
 \method{autoplot}{fmri_lm}(
   object,
-  type = c("estimates", "contrasts", "hrf", "timecourse", "residuals"),
+  type = c("betas", "contrasts", "hrf", "timecourse", "residuals"),
   voxel = NULL,
   level = 0.95,
   sample_at = seq(0, 20, by = 0.25),
@@ -17,7 +17,7 @@
 
 \method{plot}{fmri_lm}(
   x,
-  type = c("estimates", "contrasts", "hrf", "timecourse", "residuals"),
+  type = c("betas", "contrasts", "hrf", "timecourse", "residuals"),
   voxel = NULL,
   ...
 )
@@ -25,11 +25,14 @@
 \arguments{
 \item{object, x}{An \code{fmri_lm} object.}
 
-\item{type}{One of \code{"estimates"}, \code{"contrasts"}, \code{"hrf"},
-\code{"timecourse"}, \code{"residuals"}.}
+\item{type}{One of \code{"betas"} (default), \code{"contrasts"},
+\code{"hrf"}, \code{"timecourse"}, \code{"residuals"}. The first two
+name the parameter family, as in \code{\link{stats}()} and
+\code{\link[=coef.fmri_lm]{coef()}}. \code{"estimates"} is accepted
+as a synonym of \code{"betas"}.}
 
 \item{voxel}{Optional integer voxel index (or indices, for
-\code{"estimates"}, \code{"contrasts"}, \code{"hrf"} and
+\code{"betas"}, \code{"contrasts"}, \code{"hrf"} and
 \code{"residuals"}).}
 
 \item{level}{Confidence level for intervals and bands.}
@@ -51,7 +54,7 @@ Visual summaries of an \code{fmri_lm} fit. Five views are available:
 }
 \details{
 \describe{
-\item{\code{"estimates"}}{With no \code{voxel}, the distribution of
+\item{\code{"betas"}}{With no \code{voxel}, the distribution of
 t-statistics across voxels for each event regressor, drawn as a sina
 plot (points spread in proportion to their density), with reference
 lines at the two-sided p < .001 (uncorrected) critical value and the
@@ -59,7 +62,7 @@ share of voxels beyond it in each tail. With \code{voxel}, a coefficient
 plot of estimates with confidence intervals, one panel per event term
 so that regressors in different units (a condition and a parametric
 modulator) do not share an axis.}
-\item{\code{"contrasts"}}{As \code{"estimates"}, for the fitted contrasts.}
+\item{\code{"contrasts"}}{As \code{"betas"}, for the fitted contrasts.}
 \item{\code{"hrf"}}{The estimated hemodynamic response for each condition:
 the term's HRF basis weighted by the fitted coefficients. For one voxel,
 the band is a pointwise confidence interval from the coefficient
