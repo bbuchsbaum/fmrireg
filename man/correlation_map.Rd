@@ -10,8 +10,10 @@ correlation_map(x, ...)
 \method{correlation_map}{baseline_model}(
   x,
   method = c("pearson", "spearman"),
-  half_matrix = FALSE,
+  half_matrix = TRUE,
   absolute_limits = TRUE,
+  within_run = TRUE,
+  label_values = NULL,
   ...
 )
 }
@@ -27,9 +29,15 @@ correlation_map(x, ...)
 
 \item{method}{Correlation method: "pearson" (default) or "spearman"}
 
-\item{half_matrix}{Logical; if TRUE, show only lower triangle (default: FALSE)}
+\item{half_matrix}{Logical; if TRUE (default), show only the lower triangle}
 
 \item{absolute_limits}{Logical; if TRUE, set color limits to [-1,1] (default: TRUE)}
+
+\item{within_run}{Logical; centre columns within runs and drop run
+intercepts before correlating (default: TRUE)}
+
+\item{label_values}{Logical or NULL; print correlations in the cells
+(NULL: all cells when there are at most 12 columns)}
 }
 \value{
 A ggplot2 object containing the correlation heatmap, where:
@@ -48,7 +56,6 @@ in the model. For event models, it shows correlations between different conditio
 For baseline models, it shows correlations between drift and nuisance terms.
 
 These methods provide correlation heatmap visualizations for various model objects.
-They are thin wrappers around methods from fmridesign when appropriate.
 }
 \details{
 Create a correlation heatmap for an fMRI design matrix.
