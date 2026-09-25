@@ -162,6 +162,14 @@
 
 ## Bug Fixes
 
+* Multi-run fits with `baseline_model(intercept = "global")` no longer
+  duplicate the global intercept. `term_matrices()` and
+  `design_matrix(<fmri_model>, blockid =)` now build the whole design without
+  a run filter when every run is selected, so the design holds one
+  `constant_global` column instead of one per run, `baseline_term_indices`
+  stays within the design, and joint fits no longer alias the duplicate
+  columns to `NA`. Selections of a subset of runs are unchanged.
+
 * The `fmridataset` requirement is now `(>= 0.11.0.9000)`. The pre-frame API
   was removed upstream without a version change, so both sides of the break
   reported `0.10.0.9000` and the previous constraint could not tell them

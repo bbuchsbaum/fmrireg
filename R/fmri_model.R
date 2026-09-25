@@ -134,6 +134,7 @@ prediction_matrix <- function(x) {
 #' @export
 #' @importFrom tibble as_tibble
 design_matrix.fmri_model <- function(x, blockid = NULL, ...) {
+  blockid <- .full_design_blockid(blockid, .fmri_model_run_ids(x))
   suppressMessages(
     tibble::as_tibble(
       cbind(
