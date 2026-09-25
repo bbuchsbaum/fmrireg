@@ -1692,6 +1692,12 @@ pull_stat <- function(x, type, element) {
   }
 }
 
+# Orientation (relied on by reduce_betas(), write_results() and con_stats):
+#   * type = "betas", include_baseline = FALSE: event terms x voxels, term
+#     names as row names.
+#   * type = "betas", include_baseline = TRUE: voxels x design columns,
+#     column names from the design.
+# stats() and standard_error() return voxels x terms.
 #' @method coef fmri_lm
 #' @export
 coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baseline = FALSE, recon = FALSE, ...) {
