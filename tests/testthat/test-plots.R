@@ -27,7 +27,11 @@ make_plot_fixture <- function(nvox = 12L, basis = "spmg1", extra_factor = FALSE,
                                   data = events, block = ~ run, sampling_frame = sframe)
   X <- as.matrix(fmridesign::design_matrix(emod))
   B <- matrix(0, ncol(X), nvox)
-  B[1, ] <- 1.5
+  # Fix the true response by its peak height relative to the unit-SD noise,
+  # not by a raw coefficient: the HRF's raw scale belongs to fmrihrf (it
+  # changed ~10x when the SPMG undershoot was corrected), and a raw beta of
+  # 1.5 would leave the effect's detectability hostage to that scale.
+  B[1, ] <- 2.5 / max(abs(X[, 1]))
   E <- matrix(rnorm(nrow(X) * nvox), nrow(X))
   if (ar != 0) E <- apply(E, 2, function(e) as.numeric(stats::filter(e, ar, method = "recursive")))
   Y <- X %*% B + E + 100
@@ -187,6 +191,9 @@ test_that("single-basis HRF labels do not claim an estimated latency", {
   fx <- make_plot_fixture()
   p <- ggplot2::autoplot(fx$fit, type = "hrf", voxel = 1)
   txt <- layer_by_geom(p, "GeomText")$label
+  # the simulated effect must be significant, or the check below is vacuous
+  # (n.s. labels never carry a latency)
+  expect_true("faces" %in% txt)
   expect_false(any(grepl("[0-9] s$", txt)))
   fx3 <- make_plot_fixture(basis = "spmg3")
   p3 <- ggplot2::autoplot(fx3$fit, type = "hrf", voxel = 1)

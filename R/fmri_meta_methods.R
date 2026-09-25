@@ -548,6 +548,7 @@ reconstruct_image <- function(values, object) {
 #' @param desc Description of the analysis (default: "Meta").
 #' @param format Output format(s). Use `"h5"` for HDF5 LabeledVolumeSet
 #'   outputs, `"nifti"` for NIfTI outputs, or a character vector to write both.
+#'   NIfTI maps are stored as 32-bit floats (datatype FLOAT32).
 #' @param strategy Storage strategy. `"by_stat"` writes one file per statistic
 #'   with coefficients along the 4th dimension; `"by_coefficient"` writes one
 #'   file per coefficient with statistics along the 4th dimension.
