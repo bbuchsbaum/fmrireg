@@ -66,7 +66,7 @@ What you'll see below
 - Global vs parcel-pooled AR whitening
 - Time sketches that preserve GLM geometry at much smaller m ~ 6-8*p
   - SRHT (Subsampled Randomized Hadamard Transform): a structured Johnson-Lindenstrauss embedding built from random signs, a Walsh-Hadamard transform, and row sampling. It approximately preserves least-squares geometry on the design column space; the example below checks the resulting coefficients directly.
-  - IHS (Iterative Hessian Sketch): an iterative sketch-and-solve method. Each iteration solves a small sketched normal-equation system to refine the coefficients.
+  - IHS (Iterative Hessian Sketch): each iteration sketches only the normal-equation (Hessian) matrix and uses the exact full-data gradient, so the iterates converge to the full-data least-squares solution. Iteration stops once no coefficient moves by more than `tol` (default `1e-3`) OLS standard errors.
 - Optional Nyström-style spatial extension (solve on L landmarks, extend to all voxels)
 
 At a glance
@@ -76,6 +76,11 @@ At a glance
 - Public controls: `noise_spec(..., pooling = "global" | "parcel")` for AR
   pooling and `lowrank_control()` for sketch rows, iterations, landmarks,
   and neighbors.
+- Inference follows the estimator. SRHT, Gaussian and CountSketch are
+  sketch-and-solve estimators: they fit `m` sketched rows, so their standard
+  errors are about `sqrt(T / m)` times the full-data ones and their residual
+  degrees of freedom are about `m - p`. IHS converges to the full-data
+  least-squares fit and reports its exact standard errors.
 
 Approach in one paragraph
 
@@ -241,14 +246,17 @@ fit_srht_group <- fmri_lm(
 
 ### Fit with IHS sketch
 
-IHS (Iterative Hessian Sketch) is an alternative to SRHT. It refines
-its solution over multiple iterations. Treat `m` and `iters` as accuracy
-controls and validate them against an unsketched fit for the target design.
+IHS (Iterative Hessian Sketch) is an alternative to SRHT. Rather than
+solving one sketched problem, it iterates to the full-data least-squares
+solution: `iters` caps the number of iterations (default 100) and `tol`
+(default `1e-3` OLS standard errors) decides when to stop. A fit that hits
+the cap first warns. Because it converges to the full-data fit, IHS reports
+the exact least-squares covariance and residual variance.
 
 ```{r fit-ihs}
 low_ihs <- lowrank_control(
   parcels     = parcels,
-  time_sketch = list(method = "ihs", m = max(6L * p, p + 4L), iters = 3L)
+  time_sketch = list(method = "ihs", m = max(6L * p, p + 4L))
 )
 
 fit_ihs <- fmri_lm(
@@ -316,6 +324,48 @@ here, and it should stay high. The AR-whitened fits usually track the
 same task effects reasonably well, but they are solving a different
 estimation problem, so their correlations to exact OLS are not expected
 to match the iid sketch baseline.
+
+### Standard errors follow the estimator
+
+A sketch-and-solve fit uses only `m` of the information in `T` scans, so
+its coefficients vary more than the full-data ones: by about
+`sqrt(T / m)` in standard deviation. Its reported standard errors are the
+conditional-on-sketch standard errors of that estimator, and its residual
+degrees of freedom are those of the sketched residual (about `m - p`), so
+t-statistics and p-values stay calibrated. IHS, in contrast, reproduces the
+full-data least-squares fit and its standard errors.
+
+```{r compare-standard-errors}
+se_task <- function(fit) {
+  as.matrix(standard_error(fit, type = "estimates"))[, seq_along(task_cols)]
+}
+fit_ihs_iid <- fmri_lm(
+  onset ~ hrf(condition), block = ~ run,
+  dataset = dset,
+  engine = "latent_sketch",
+  lowrank = lowrank_control(time_sketch = list(method = "ihs"))
+)
+se_ratio_srht <- mean(se_task(fit_srht_iid) / se_task(fit_exact_iid))
+se_ratio_ihs <- mean(se_task(fit_ihs_iid) / se_task(fit_exact_iid))
+max_beta_gap_ihs <- max(abs(
+  fit_ihs_iid$betas_fixed[task_cols, , drop = FALSE] -
+    B_exact_iid[task_cols, , drop = FALSE]
+) / t(se_task(fit_exact_iid)))
+
+stopifnot(
+  abs(se_ratio_ihs - 1) < 1e-3,
+  max_beta_gap_ihs < 0.01,
+  se_ratio_srht > 1
+)
+
+data.frame(
+  method = c("srht", "ihs"),
+  sketch_rows = c(fit_srht_iid$sketch$m, fit_ihs_iid$sketch$m),
+  residual_df = c(fit_srht_iid$result$rdf, fit_ihs_iid$result$rdf),
+  se_ratio_to_exact = c(se_ratio_srht, se_ratio_ihs),
+  sqrt_T_over_m = c(sqrt(Tlen / fit_srht_iid$sketch$m), 1)
+)
+```
 
 ## Reduced-rank GLS with bootstrap standard errors
 
@@ -516,11 +566,16 @@ Cons
 
 - Landmark extension introduces spatial shrinkage that is data-dependent and
   can cross boundaries; if you need strict voxelwise inference, omit landmarks.
-- Sketching slightly perturbs degrees of freedom (uses m - p); choose m conservatively if p is large or X is ill-conditioned.
+- Sketch-and-solve (SRHT, Gaussian, CountSketch) trades precision for data
+  touched: standard errors grow by about `sqrt(T / m)` and residual degrees
+  of freedom shrink to about `m - p`. Choose `m` for the precision you need,
+  or use IHS when full-data precision matters.
 
 ## Practical defaults
 
-- Time sketch: `list(method = "srht", m = min(8*p, T))` or IHS with `m ~ 6*p`, `iters = 2-3`.
+- Time sketch: `list(method = "srht", m = min(8*p, T))` for sketch-and-solve,
+  or `list(method = "ihs")` (default `m = min(8*p, T)`, iterating to
+  `tol = 1e-3` standard errors) for the full-data fit.
 - AR order: 1 is a solid default; use 2 if residuals show lag-2 structure.
 - Parcel AR: use `noise_spec("ar1", pooling = "parcel", parcels = parcels)`;
   tune shrinkage for the target data rather than assuming one universal value.
@@ -530,7 +585,7 @@ Cons
 ## Reproducibility tips
 
 - Set a seed before building SRHT plans or k-means landmarks (`set.seed(...)`).
-- Keep m and iters fixed across runs to compare apples-to-apples.
+- Keep m, iters and tol fixed across runs to compare apples-to-apples.
 - Validate on a small ROI first: check correlations vs exact, and histogram of t-maps in null tissue.
 
 ## Next

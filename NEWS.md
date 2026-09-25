@@ -181,7 +181,66 @@
   correlation surviving the filter is what legitimately costs degrees of
   freedom; AR order by itself does not.
 
+* **Time-sketched GLM inference (`engine = "latent_sketch"`).** Reported
+  statistics now describe the estimator that is actually returned.
+
+  - *Sketch-and-solve standard errors are now honest.* `"srht"`,
+    `"gaussian"` and `"countsketch"` fit the model to `m` sketched rows, so
+    their coefficients vary about `sqrt(T / m)` times more than full-data
+    OLS, but they reported OLS-sized standard errors with `T - p` degrees of
+    freedom. Under the null the type-I rate at nominal 0.05 was 0.42 (SRHT),
+    0.45 (Gaussian) and 0.45 (CountSketch) at `m = 40`, `T = 200`, and
+    0.16-0.23 at `m = 120`. The fits now report the conditional-on-sketch
+    covariance `(Xs'Xs)^-1 Xs'SS'Xs (Xs'Xs)^-1`, an unbiased residual
+    variance `||r_s||^2 / tr(P SS')` and Satterthwaite residual degrees of
+    freedom (about `m - p`), which restores type-I rates of 0.047-0.051 for
+    every sketch-and-solve method, with and without AR prewhitening (OLS on
+    the same data: 0.052). **Standard errors,
+    t-statistics, p-values and `df.residual` from these methods change**:
+    standard errors grow by about `sqrt(T / m)`.
+  - *Fields are on the data scale.* The SRHT used an unnormalised Hadamard
+    transform, so for `"srht"` and `"ihs"` `sigma2`, `result$sigma`,
+    `resvar` and `rss` were about `T` times too large and `cov.unscaled`
+    about `T` times too small (the two cancelled in standard errors). All
+    sketches are now normalised (`E||Sr||^2 = ||r||^2`), and `sigma2` is on
+    the scale of the noise variance for every method. For sketch-and-solve
+    fits `cov.unscaled` is the conditional covariance above; with landmarks,
+    `sigma2` remains the interpolated variance `sum_l w_l^2 sigma2_l`.
+  - *IHS is OLS-exact.* `"ihs"` now returns the exact `(X'X)^-1`, the exact
+    full-data residual variance and `T - p` degrees of freedom; previously
+    its covariance came from one random sketch (scaling the whole SE map by
+    a random factor of 0.98-1.56 at `m = 40`) and its variance from a second,
+    independent sketch. By default it iterates until no coefficient moves by
+    more than `tol = 1e-3` OLS standard errors, up to `iters = 100`
+    iterations (median 11, max 16 at `m = 8p` over 200 sketch seeds, leaving
+    at most 6e-4 standard errors of error; the former fixed 3 iterations left
+    a median of 0.5 and a maximum of 1.9). `time_sketch$tol = 0` runs exactly
+    `iters` iterations, and a fit that stops at `iters` before reaching `tol`
+    warns. Its standard errors, t-statistics and p-values now match OLS.
+  - Fits carry `$sketch` (method, `m`, residual df, IHS iterations and
+    convergence). Sketch-and-solve now requires `m > p` and errors
+    otherwise.
+  - `lowrank_control()` documents all four methods and the `iters` and
+    `tol` controls, validates `time_sketch$method`, and no longer carries an
+    `iters = 0L` default that was invalid for `"ihs"`.
+
 ## Bug Fixes
+
+* Parcel-pooled AR (`noise_spec(pooling = "parcel")`, `by_cluster`) in
+  `engine = "latent_sketch"` summed the sketched Gram matrices of all
+  parcels and solved each parcel's cross-products against that sum,
+  shrinking every coefficient by about the number of parcels (with 10
+  parcels the reported residual variance was 10^4-10^6 times too large and
+  no null test ever rejected). Each parcel is now solved with its own whitened design and
+  covariance, and `method = "ihs"`, which previously ran plain SRHT here, is
+  now honoured. Because the coefficient covariance differs between parcels,
+  post-hoc `fit_contrasts()` on such fits errors; declare contrasts in the
+  model instead. Parcel labels containing `NA` now error instead of leaving voxels
+  without a cluster.
+* `time_sketch` lists without an `m` element (for example
+  `list(method = "ihs")`) failed with "m <= Tlen is not TRUE", because
+  `sk$m` partially matched `sk$method`. The default `m = min(8p, T)` now
+  applies.
 
 * The `"ihs"` time sketch in `engine = "latent_sketch"` now performs an
   actual iterative Hessian sketch. Each iteration previously used a sketched
