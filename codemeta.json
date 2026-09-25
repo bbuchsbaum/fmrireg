@@ -220,18 +220,6 @@
     },
     {
       "@type": "SoftwareApplication",
-      "identifier": "cowplot",
-      "name": "cowplot",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=cowplot"
-    },
-    {
-      "@type": "SoftwareApplication",
       "identifier": "forecast",
       "name": "forecast",
       "provider": {
@@ -501,6 +489,7 @@
       "@type": "SoftwareApplication",
       "identifier": "ggplot2",
       "name": "ggplot2",
+      "version": ">= 3.4.0",
       "provider": {
         "@id": "https://cran.r-project.org",
         "@type": "Organization",
@@ -715,7 +704,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "5988.843KB",
+  "fileSize": "6108.335KB",
   "citation": [
     {
       "@type": "SoftwareSourceCode",
