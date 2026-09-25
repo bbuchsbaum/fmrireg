@@ -21,6 +21,17 @@ calculate_noise_sd <- function(signal_matrix, target_snr) {
   return(signal_sd / target_snr)
 }
 
+# simulate_fmri_matrix() returns an fmridataset::fmri_frame in $time_series.
+# Read the time-by-voxel matrix and event table back through the frame API.
+# Dimnames are dropped so the stored matrices keep their historical plain form.
+sim_data <- function(sim) {
+  unname(as.matrix(fmridataset::collect_assay(sim$time_series)))
+}
+
+sim_events <- function(sim) {
+  fmrireg:::.dset_event_table(sim$time_series)
+}
+
 # Build every HRF from the same complete, fail-closed recipe used at load time.
 # The reconstruction helper uses a warning-free wrapper around the identical
 # base evaluator, avoiding fmrihrf 0.4.0's spurious P1/P2/A1 forwarding warning.
@@ -90,7 +101,7 @@ generate_BM_Canonical_HighSNR <- function() {
   )
   
   # Calculate noise for high SNR (signal/noise ratio = 4)
-  noise_sd <- calculate_noise_sd(clean_sim$time_series$datamat, target_snr = 4)
+  noise_sd <- calculate_noise_sd(sim_data(clean_sim), target_snr = 4)
   
   # Generate final dataset with noise
   final_sim <- simulate_fmri_matrix(
@@ -116,11 +127,11 @@ generate_BM_Canonical_HighSNR <- function() {
   condition_labels <- rep(c("Cond1", "Cond2", "Cond3"), each = 15)
   
   # Create design matrix with true HRF
-  event_onsets <- final_sim$time_series$event_table$onset
+  event_onsets <- sim_events(final_sim)$onset
   time_grid <- seq(
     0,
     by = COMMON_PARAMS$TR,
-    length.out = nrow(final_sim$time_series$datamat)
+    length.out = nrow(sim_data(final_sim))
   )
   
   # Create condition-specific regressors
@@ -142,17 +153,17 @@ generate_BM_Canonical_HighSNR <- function() {
   
   # Create matrix_dataset
   core_data_args <- list(
-    datamat = final_sim$time_series$datamat,
+    datamat = sim_data(final_sim),
     TR = COMMON_PARAMS$TR,
-    run_length = nrow(final_sim$time_series$datamat),
+    run_length = nrow(sim_data(final_sim)),
     event_table = benchmark_event_table
   )
   
   list(
     description = "Canonical HRF (SPMG1), high SNR, 3 conditions, fixed amplitudes per condition",
     core_data_args = core_data_args, # Encapsulated data args
-    Y_noisy = final_sim$time_series$datamat, # Still available for direct access
-    Y_clean = clean_sim$time_series$datamat,
+    Y_noisy = sim_data(final_sim), # Still available for direct access
+    Y_clean = sim_data(clean_sim),
     X_list_true_hrf = X_list_true_hrf,
     true_hrf_parameters = hrf_metadata("HRF_SPMG1", "SPMG1"),
     oracle_contract = complete_condition_oracle(),
@@ -195,7 +206,7 @@ generate_BM_Canonical_LowSNR <- function() {
   )
   
   # Calculate noise for low SNR (signal/noise ratio = 0.5)
-  noise_sd <- calculate_noise_sd(clean_sim$time_series$datamat, target_snr = 0.5)
+  noise_sd <- calculate_noise_sd(sim_data(clean_sim), target_snr = 0.5)
   
   # Generate final dataset with noise
   final_sim <- simulate_fmri_matrix(
@@ -218,11 +229,11 @@ generate_BM_Canonical_LowSNR <- function() {
   )
   
   condition_labels <- rep(c("Cond1", "Cond2", "Cond3"), each = 15)
-  event_onsets <- final_sim$time_series$event_table$onset
+  event_onsets <- sim_events(final_sim)$onset
   time_grid <- seq(
     0,
     by = COMMON_PARAMS$TR,
-    length.out = nrow(final_sim$time_series$datamat)
+    length.out = nrow(sim_data(final_sim))
   )
   
   X_list_true_hrf <- list()
@@ -243,17 +254,17 @@ generate_BM_Canonical_LowSNR <- function() {
   
   # Create matrix_dataset
   core_data_args <- list(
-    datamat = final_sim$time_series$datamat,
+    datamat = sim_data(final_sim),
     TR = COMMON_PARAMS$TR,
-    run_length = nrow(final_sim$time_series$datamat),
+    run_length = nrow(sim_data(final_sim)),
     event_table = benchmark_event_table
   )
   
   list(
     description = "Canonical HRF (SPMG1), low SNR, 3 conditions, fixed amplitudes per condition",
     core_data_args = core_data_args, # Encapsulated data args
-    Y_noisy = final_sim$time_series$datamat,
-    Y_clean = clean_sim$time_series$datamat,
+    Y_noisy = sim_data(final_sim),
+    Y_clean = sim_data(clean_sim),
     X_list_true_hrf = X_list_true_hrf,
     true_hrf_parameters = hrf_metadata("HRF_SPMG1", "SPMG1"),
     oracle_contract = complete_condition_oracle(),
@@ -320,11 +331,11 @@ generate_BM_HRF_Variability_AcrossVoxels <- function() {
   )
   
   # Combine the data
-  Y_combined <- cbind(sim_group1$time_series$datamat, sim_group2$time_series$datamat)
+  Y_combined <- cbind(sim_data(sim_group1), sim_data(sim_group2))
   ampmat_combined <- cbind(sim_group1$ampmat, sim_group2$ampmat)
   
   condition_labels <- rep(c("Cond1", "Cond2"), each = 15)
-  event_onsets <- sim_group1$time_series$event_table$onset
+  event_onsets <- sim_events(sim_group1)$onset
   
   # Create HRF group assignment
   hrf_group_assignment <- c(rep("canonical", n_voxels_per_group), 
@@ -402,7 +413,7 @@ generate_BM_Trial_Amplitude_Variability <- function() {
   )
   
   condition_labels <- rep("Cond1", 20)
-  event_onsets <- final_sim$time_series$event_table$onset
+  event_onsets <- sim_events(final_sim)$onset
   
   # Create event_table for matrix_dataset
   benchmark_event_table <- data.frame(
@@ -413,16 +424,16 @@ generate_BM_Trial_Amplitude_Variability <- function() {
   
   # Create matrix_dataset
   core_data_args <- list(
-    datamat = final_sim$time_series$datamat,
+    datamat = sim_data(final_sim),
     TR = COMMON_PARAMS$TR,
-    run_length = nrow(final_sim$time_series$datamat),
+    run_length = nrow(sim_data(final_sim)),
     event_table = benchmark_event_table
   )
   
   list(
     description = "Single condition with significant trial-to-trial amplitude variability",
     core_data_args = core_data_args, # Encapsulated data args
-    Y_noisy = final_sim$time_series$datamat,
+    Y_noisy = sim_data(final_sim),
     true_hrf_parameters = hrf_metadata("HRF_SPMG1", "SPMG1"),
     oracle_contract = partial_oracle(
       "trial_amplitude_truth",
@@ -519,14 +530,14 @@ generate_BM_Complex_Realistic <- function() {
   )
   
   # Combine all groups
-  Y_combined <- cbind(sim_group1$time_series$datamat, 
-                     sim_group2$time_series$datamat,
-                     sim_group3$time_series$datamat)
+  Y_combined <- cbind(sim_data(sim_group1), 
+                     sim_data(sim_group2),
+                     sim_data(sim_group3))
   ampmat_combined <- cbind(sim_group1$ampmat, sim_group2$ampmat, sim_group3$ampmat)
   durmat_combined <- cbind(sim_group1$durmat, sim_group2$durmat, sim_group3$durmat)
   
   condition_labels <- rep(c("Cond1", "Cond2", "Cond3"), each = 12)
-  event_onsets <- sim_group1$time_series$event_table$onset
+  event_onsets <- sim_events(sim_group1)$onset
   
   hrf_group_assignment <- c(
     rep("canonical", group_sizes[1]),
@@ -539,7 +550,7 @@ generate_BM_Complex_Realistic <- function() {
   benchmark_event_table <- data.frame(
     onset = event_onsets,
     condition = condition_labels,
-    duration = sim_group1$time_series$event_table$duration 
+    duration = sim_events(sim_group1)$duration 
   )
   
   # Create matrix_dataset
