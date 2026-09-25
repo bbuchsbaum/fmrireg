@@ -34,6 +34,32 @@
   `coef(<fmri_latent_lm>, recon = TRUE)` also compensated for the old
   orientation. They now use the single one, and their output is unchanged.
 
+## Runwise fits: correct baseline columns and near-exact fits
+
+* Multi-run runwise fits pooled betas by run-local column position. Each
+  run's design has the event columns plus only that run's baseline columns,
+  so the stored betas were too narrow (6 of 10 columns for two runs with
+  default drift). They mixed different runs' drift and intercept terms, and
+  `coef(fit, include_baseline = TRUE)` gave them the wrong global names, for
+  example run 1's intercept labelled `base_bs1_block_2`. Betas are now pooled
+  by global design column. A run-specific baseline column keeps its own
+  run's estimate. A column shared by all runs (event regressors, a global
+  intercept) is pooled by inverse-variance weighting. The stored betas now
+  have one column per design-matrix column. Event-column estimates are
+  unchanged.
+
+* Runwise pooling returned `NaN` for every coefficient when a run's
+  standard error was exactly zero. With inverse-variance weighting, a
+  near-exact fit made 0/0. Pooling now takes the zero-variance limit.
+
+* The memory-lean residual-sum-of-squares computation (`y'y - b'X'y`)
+  cancelled to zero for near-exact fits, which reported `se = 0`. Voxels
+  whose RSS falls below the precision of `y'y` are now recomputed from
+  explicit residuals.
+
+* The internal demo fit used in examples and tests now has 3 voxels instead
+  of 2, so its voxels x terms results are not square.
+
 ## `stats(fit, "estimates")` renamed to `stats(fit, "betas")`
 
 * `stats(fit, type = "estimates")` returned t-statistics, and the name
