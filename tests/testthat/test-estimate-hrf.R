@@ -37,7 +37,12 @@
   }
 
   Y <- sweep(Y, 2L, seq(-0.3, 0.3, length.out = n_voxels), "+")
-  Y <- Y + matrix(rnorm(n * n_voxels, sd = noise_sd), nrow = n)
+  # noise_sd is stated per 1.75 units of regressor peak (the scale these
+  # fixtures were calibrated against); rescaling by the design's actual peak
+  # keeps the SNR independent of the HRF's raw amplitude, which fmrihrf
+  # changed ~10x when the SPMG undershoot was corrected.
+  noise_scale <- max(abs(X_event)) / 1.75
+  Y <- Y + matrix(rnorm(n * n_voxels, sd = noise_sd * noise_scale), nrow = n)
   colnames(Y) <- paste0("voxel_", seq_len(n_voxels))
 
   list(
@@ -85,10 +90,14 @@
     acquisition_time
   )
   amplitudes <- rbind(A = c(1, 0.65), B = c(0.8, 1.1))
-  drift <- outer(seq(-0.15, 0.15, length.out = n), rep(1, 2L))
+  # Mirrors vignettes/a_09_linear_model.Rmd: drift and noise are set relative
+  # to the canonical peak so the SNR does not depend on the HRF's raw
+  # amplitude (fmrihrf changed it ~10x when the SPMG undershoot was corrected).
+  hrf_scale <- max(truth_a(seq(0, 24, by = 0.1)))
+  drift <- outer(seq(-0.085, 0.085, length.out = n) * hrf_scale, rep(1, 2L))
   response <- signal_a %o% amplitudes["A", ] +
     signal_b %o% amplitudes["B", ] + drift +
-    matrix(rnorm(n * 2L, sd = 0.025), nrow = n)
+    matrix(rnorm(n * 2L, sd = 0.014 * hrf_scale), nrow = n)
   colnames(response) <- c("visual_ROI", "motor_ROI")
   dataset <- matrix_frame(
     response, TR = 1, run_length = n, event_table = events
@@ -422,9 +431,12 @@ test_that("estimate_hrf handles runwise baselines and condition labels", {
   )
   X_event <- as.matrix(fmridesign::design_matrix(event_model))
   amplitudes <- rbind(A = c(1, 0.7), B = c(1.6, -0.8))
+  # Noise is stated per 1.75 units of regressor peak; rescaling by the
+  # design's actual peak keeps the SNR independent of the HRF's raw amplitude.
+  noise_sd <- 0.025 * max(abs(X_event)) / 1.75
   Y <- X_event %*% amplitudes +
     rep(c(-0.4, 0.6), times = run_length) +
-    matrix(rnorm(sum(run_length) * 2L, sd = 0.025), ncol = 2L)
+    matrix(rnorm(sum(run_length) * 2L, sd = noise_sd), ncol = 2L)
   colnames(Y) <- c("left_ROI", "right_ROI")
   dataset <- matrix_frame(
     Y, TR = 1, run_length = run_length, event_table = events

@@ -31,6 +31,12 @@ test_that("SRHT/IHS + AR(global/cluster) match exact on synthetic data", {
   if (length(task_cols) == 0L) task_cols <- 2:min(3, p)  # fallback
   B_true[task_cols, ] <- matrix(rnorm(length(task_cols) * V, sd = 0.5),
                                 nrow = length(task_cols), byrow = TRUE)
+  # Express the effect by its peak height relative to noise, not as a raw
+  # coefficient: the HRF's raw scale belongs to fmrihrf (it changed ~10x when
+  # the SPMG undershoot was corrected). A peak of 1.75 per unit beta is the
+  # scale this fixture's SNR was calibrated against.
+  B_true[task_cols, ] <- sweep(B_true[task_cols, , drop = FALSE], 1,
+                               1.75 / apply(abs(X[, task_cols, drop = FALSE]), 2, max), `*`)
 
   # AR(1) noise generator (time x V)
   ar1_noise <- function(T, V, rho = 0.3, sd = 1.0) {

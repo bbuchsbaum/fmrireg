@@ -15,7 +15,10 @@ simulate_spike_dataset <- function(n_time = 40, n_vox = 3, spike = FALSE, seed =
   
   ev_cols <- unlist(attr(model$event_model$design_matrix, "col_indices"))
   beta <- rep(0, ncol(X_matrix))
-  beta[ev_cols] <- 1
+  # Set the effect by its peak height (1.75, the scale this fixture was
+  # calibrated against) rather than a raw coefficient: the HRF's raw scale
+  # belongs to fmrihrf and changed ~10x when the SPMG undershoot was corrected.
+  beta[ev_cols] <- 1.75 / max(abs(X_matrix[, ev_cols]))
   
   # Create signal and replicate across voxels
   beta_matrix <- matrix(beta, ncol = 1)
@@ -29,7 +32,7 @@ simulate_spike_dataset <- function(n_time = 40, n_vox = 3, spike = FALSE, seed =
     Y[10, ] <- Y[10, ] + 10
   }
   dset <- matrix_frame(Y, TR = 1, run_length = n_time, event_table = event_tab)
-  list(dset = dset, beta_true = 1, ev_cols = ev_cols)
+  list(dset = dset, beta_true = beta[ev_cols], ev_cols = ev_cols)
 }
 
 # No outlier: robust vs OLS should match

@@ -33,8 +33,13 @@ test_that("landmark extension preserves a smooth task field with bounded scale e
     sin(pi * xyz01[, 1]) * cos(pi * xyz01[, 2]) * (0.5 + xyz01[, 3]),
     cos(pi * xyz01[, 1]) * sin(pi * xyz01[, 2]) * (1 - 0.5 * xyz01[, 3])
   )
+  # Scale each task map by its regressor's peak height rather than using a raw
+  # coefficient: the HRF's raw scale belongs to fmrihrf (it changed ~10x when
+  # the SPMG undershoot was corrected). A peak of 1.75 is the effect size this
+  # fixture's SNR was calibrated against.
   for (j in seq_along(task_cols)) {
-    B_true[task_cols[j], ] <- smooth_maps[1L + (j - 1L) %% nrow(smooth_maps), ]
+    B_true[task_cols[j], ] <- smooth_maps[1L + (j - 1L) %% nrow(smooth_maps), ] *
+      (1.75 / max(abs(X[, task_cols[j]])))
   }
   ar1_noise <- function(T, V, rho = 0.4, sd = 0.5) {
     E <- matrix(0, T, V)
