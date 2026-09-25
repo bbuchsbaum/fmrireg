@@ -183,6 +183,13 @@
 
 ## Bug Fixes
 
+* The `"ihs"` time sketch in `engine = "latent_sketch"` now performs an
+  actual iterative Hessian sketch. Each iteration previously used a sketched
+  gradient as well as a sketched Hessian, so it re-solved an independent
+  sketched problem and never converged to the least-squares solution; more
+  iterations did not help. The gradient now uses the full data, and a step
+  halving keeps the residual sum of squares non-increasing, so `iters`
+  controls accuracy as documented.
 * The `fmridataset` requirement is now `(>= 0.11.0.9000)`. The pre-frame API
   was removed upstream without a version change, so both sides of the break
   reported `0.10.0.9000` and the previous constraint could not tell them

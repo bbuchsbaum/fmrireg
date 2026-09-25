@@ -81,15 +81,33 @@ static void ihs_iter(const mat& X, const mat& Z, int m, mat& M, mat& Ginv_out) {
   arma::uvec rows = order.subvec(0, m - 1);
   double scale = std::sqrt( (double)T / (double)m );
   mat Xs = cpp_srht_apply(X, rows, signs, perm, scale);
-  mat Zs = cpp_srht_apply(Z, rows, signs, perm, scale);
+  // cpp_srht_apply uses an unnormalised Hadamard transform, so
+  // G = Xs' Xs estimates T * X' X. The returned Ginv keeps that sketched
+  // scale because callers pair it with residual variances computed from
+  // SRHT-sketched residuals (which carry the same factor T).
   mat G = Xs.t() * Xs;
   mat Ginv;
   if (!inv_sympd_safe(Ginv, G)) {
     Rcpp::stop("ihs_iter: unable to invert sketched Gram matrix.");
   }
-  mat R = Xs.t() * (Zs - Xs * M);
-  mat dM = Ginv * R;
-  M += dM;
+  // Iterative Hessian sketch (Pilanci & Wainwright, 2016): only the Hessian
+  // is sketched; the gradient X'(Z - XM) uses the full data. Sketching the
+  // gradient as well makes every iteration re-solve an independent sketched
+  // problem, so the iterates never converge to the least-squares solution.
+  mat E = Z - X * M;
+  mat dM = ((double)T * Ginv) * (X.t() * E);
+  // dM is a descent direction for ||Z - XM||_F^2 (Ginv is positive
+  // definite), but a poorly conditioned sketch can overshoot. Halve the step
+  // until the full-data residual sum of squares does not increase, so the
+  // iterates are monotone and more iterations never move away from the
+  // least-squares solution.
+  const double rss0 = accu(square(E));
+  double step = 1.0;
+  for (int k = 0; k < 30; ++k) {
+    if (accu(square(Z - X * (M + step * dM))) <= rss0) break;
+    step *= 0.5;
+  }
+  M += step * dM;
   Ginv_out = Ginv;
 }
 

@@ -21,6 +21,12 @@ test_that("IHS with more iterations improves or matches correlation vs exact", {
   task_cols <- which(grepl("condition|hrf", colnames(X), ignore.case = TRUE))
   B_true <- matrix(0, p, V)
   B_true[task_cols, ] <- matrix(rnorm(length(task_cols) * V, sd = 0.5), length(task_cols), byrow = TRUE)
+  # Express the effect by its peak height relative to noise, not as a raw
+  # coefficient: the HRF's raw scale belongs to fmrihrf (it changed ~10x when
+  # the SPMG undershoot was corrected). A peak of 1.75 per unit beta is the
+  # scale this fixture's SNR was calibrated against.
+  B_true[task_cols, ] <- sweep(B_true[task_cols, , drop = FALSE], 1,
+                               1.75 / apply(abs(X[, task_cols, drop = FALSE]), 2, max), `*`)
   ar1_noise <- function(T, V, rho = 0.35, sd = 0.5) {
     E <- matrix(0, T, V)
     E[1, ] <- rnorm(V, sd = sd/sqrt(1 - rho^2))
@@ -52,4 +58,30 @@ test_that("IHS with more iterations improves or matches correlation vs exact", {
   corr3 <- cor(as.numeric(B_exact), as.numeric(fit3$betas_fixed))
   expect_true(corr1 > 0.40)  # Realistic threshold for single IHS iteration
   expect_gte(corr3, corr1)  # no worse, typically better
+})
+
+test_that("IHS kernel converges to the exact least-squares solution", {
+  # Iterative Hessian sketching sketches only the Hessian; the gradient uses
+  # the full data, so iterates converge to the exact OLS solution rather than
+  # to (or around) the solution of one sketched problem.
+  set.seed(77)
+  Tlen <- 120L
+  X <- cbind(1, rnorm(Tlen), sin(seq_len(Tlen) / 5))
+  Z <- X %*% matrix(rnorm(3 * 5), 3) + matrix(rnorm(Tlen * 5), Tlen)
+  B_ols <- qr.solve(X, Z)
+  rss <- function(M) sum((Z - X %*% M)^2)
+
+  errs <- vapply(c(1L, 3L, 25L), function(it) {
+    set.seed(78)
+    max(abs(ihs_latent_solve(X, Z, m = 24L, iters = it)$M - B_ols))
+  }, numeric(1))
+  expect_lt(errs[3], 1e-6)
+  expect_true(all(diff(errs) < 0))
+
+  rss_path <- vapply(1:6, function(it) {
+    set.seed(78)
+    rss(ihs_latent_solve(X, Z, m = 24L, iters = it)$M)
+  }, numeric(1))
+  expect_true(all(diff(rss_path) <= 1e-10 * rss_path[-1]))
+  expect_lt(rss_path[6], rss_path[1])
 })
