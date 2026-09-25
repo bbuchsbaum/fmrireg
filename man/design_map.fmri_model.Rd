@@ -10,31 +10,45 @@
   rotate_x_text = TRUE,
   fill_midpoint = NULL,
   fill_limits = NULL,
+  scale_columns = TRUE,
   ...
 )
 }
 \arguments{
 \item{x}{An \code{fmri_model} object.}
 
-\item{block_separators}{Logical; if \code{TRUE}, draw white horizontal lines between blocks.}
+\item{block_separators}{Logical; if \code{TRUE}, draw rules between runs.}
 
-\item{rotate_x_text}{Logical; if \code{TRUE}, rotate x-axis labels by 45 degrees.}
+\item{rotate_x_text}{Logical; if \code{TRUE}, rotate x-axis labels to vertical.}
 
-\item{fill_midpoint}{Numeric or \code{NULL}; if not \code{NULL}, passed to
-\code{\link[ggplot2]{scale_fill_gradient2}} to center the color scale (e.g. \code{fill_midpoint=0}).}
+\item{fill_midpoint}{Numeric or \code{NULL}; centre of the diverging colour
+scale. Defaults to 0.}
 
 \item{fill_limits}{Numeric vector of length 2 or \code{NULL}; passed to the fill scale
 \code{limits=} argument. This can clip or expand the color range.}
 
-\item{...}{Additional arguments passed to \code{\link[ggplot2]{geom_tile}}.}
+\item{scale_columns}{Logical; if \code{TRUE} (default), scale each column to
+a maximum absolute value of 1.}
+
+\item{...}{Additional arguments passed to \code{\link[ggplot2]{geom_raster}}.}
 }
 \value{
 A ggplot2 plot object.
 }
 \description{
-Produces a single heatmap of \emph{all} columns in the design matrix from an
-\code{fmri_model} object, which merges both the event_model and baseline_model
-regressors. Rows are scans; columns are regressors.
-Optionally draws horizontal lines between blocks (runs), and rotates x-axis
-labels diagonally for readability.
+Produces a single heatmap of all columns in the design matrix of an
+\code{fmri_model}, which merges the event_model and baseline_model
+regressors. Rows are scans (time runs downward); columns are regressors,
+kept in model order and grouped into panels by term (event terms, drift,
+intercept, nuisance). Run boundaries are marked with horizontal rules, and
+the subtitle reports the rank and condition number of the design.
+
+By default each column is divided by its maximum absolute value, so
+regressors on very different scales (an intercept, a motion trace, a
+convolved event train) are all legible on one colour scale. Set
+\code{scale_columns = FALSE} to show raw values. Run-intercept columns
+are drawn in grey, since they carry no information beyond run membership.
+
+The condition number is computed after scaling every column to unit
+length, so it reflects collinearity rather than the units of the columns.
 }

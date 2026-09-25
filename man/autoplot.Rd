@@ -4,18 +4,28 @@
 \alias{autoplot.Reg}
 \title{Autoplot method for Reg objects}
 \usage{
-\method{autoplot}{Reg}(object, grid = NULL, precision = 0.1, method = "conv", ...)
+\method{autoplot}{Reg}(
+  object,
+  grid = NULL,
+  precision = 0.1,
+  method = "conv",
+  title = NULL,
+  ...
+)
 }
 \arguments{
 \item{object}{A \code{Reg} object (or one inheriting from it, like \code{regressor}).}
 
 \item{grid}{Optional numeric vector specifying time points (seconds) for evaluation.
-If NULL, a default grid is generated based on the object's onsets and span.}
+If NULL, a default grid spans the first onset to the end of the last
+event's response (including its duration).}
 
 \item{precision}{Numeric precision for HRF evaluation if \code{grid} needs generation or
 if internal evaluation requires it (passed to \code{evaluate}).}
 
 \item{method}{Evaluation method passed to \code{evaluate}.}
+
+\item{title}{Optional plot title, e.g. the condition this regressor models.}
 
 \item{...}{Additional arguments (currently unused).}
 }
@@ -23,5 +33,10 @@ if internal evaluation requires it (passed to \code{evaluate}).}
 A ggplot object.
 }
 \description{
-Creates a ggplot visualization of an fMRI regressor object.
+Plots the predicted BOLD time course of an fMRI regressor: the event train
+convolved with its HRF. Event onsets are marked as ticks beneath the curve,
+so the hemodynamic lag is visible. When responses to nearby events overlap,
+each event's own response is drawn faintly under the summed curve.
+Multi-basis HRFs are drawn as stacked panels that share the time axis, each
+with its own vertical scale.
 }

@@ -7,8 +7,10 @@
 \method{correlation_map}{fmri_model}(
   x,
   method = c("pearson", "spearman"),
-  half_matrix = FALSE,
+  half_matrix = TRUE,
   absolute_limits = TRUE,
+  within_run = TRUE,
+  label_values = NULL,
   ...
 )
 }
@@ -17,13 +19,33 @@
 
 \item{method}{Correlation method (e.g., "pearson", "spearman").}
 
-\item{half_matrix}{Logical; if TRUE, display only the lower triangle of the matrix.}
+\item{half_matrix}{Logical; if TRUE (default), display only the lower triangle.}
 
-\item{absolute_limits}{Logical; if TRUE, set color scale limits from -1 to 1.}
+\item{absolute_limits}{Logical; if TRUE, the colour scale spans -1 to 1;
+otherwise it spans plus or minus the largest absolute correlation shown.}
 
-\item{...}{Additional arguments passed to internal plotting functions.}
+\item{within_run}{Logical; centre columns within runs and drop run
+intercepts before correlating (default \code{TRUE}). \code{FALSE}
+correlates the raw columns.}
+
+\item{label_values}{Logical or \code{NULL}; print correlations in the cells.
+\code{NULL} (default) labels every cell when there are at most 12 columns,
+and otherwise only cells with |r| >= 0.3 that involve an event regressor.}
+
+\item{...}{Additional arguments passed to \code{\link[ggplot2]{geom_tile}}.}
+}
+\value{
+A ggplot2 object.
 }
 \description{
-Generates a correlation heatmap of the columns in an \code{fmri_model}'s combined
-event+baseline design matrix.
+Heatmap of pairwise correlations between the columns of an \code{fmri_model}'s
+combined event + baseline design matrix, grouped into panels by model term
+(event terms, drift, nuisance).
+
+By default (\code{within_run = TRUE}) each column is centred within each
+run and the run-intercept columns are dropped before correlating. This
+shows the collinearity that matters for estimation once run means are
+modelled, and removes spurious correlations that zero-padding creates
+between columns belonging to different runs. Cells for pairs of columns
+that live in different runs are left blank.
 }

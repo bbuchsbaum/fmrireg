@@ -45,7 +45,6 @@ test_that("fmri_model accessors, print, plot, design_map, correlation_map", {
   out <- capture.output(print(fmod))
   expect_true(any(grepl("fMRI Model", out)))
 
-  skip_if_not_installed("cowplot")
   p <- plot(fmod)
   expect_true(!is.null(p))
 
