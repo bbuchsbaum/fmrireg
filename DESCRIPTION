@@ -81,7 +81,7 @@ Suggests:
 Remotes:
     bbuchsbaum/bidser,
     bbuchsbaum/fmriAR,
-    bbuchsbaum/fmrihrf@d366e79fce8db7c5c46e883291e73732b20c545c,
+    bbuchsbaum/fmrihrf@b9f6a90b05bdf3673ed43414eb06ec6c74200d43,
     bbuchsbaum/fmristore,
     bbuchsbaum/fmrigds@f015b7c7fa5008e2435d269aeb1882a9aa24eaf0,
     anthonynorth/roxyglobals,

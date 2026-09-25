@@ -1,5 +1,26 @@
 # fmrireg 0.2.0
 
+## Breaking: corrected SPMG kernel (fmrihrf >= 0.4.0)
+
+* fmrireg now builds against fmrihrf 0.4.0, which corrects the SPM canonical
+  HRF used by `HRF_SPMG1`, `HRF_SPMG2`, and `HRF_SPMG3`. The kernel now has the
+  SPM double-gamma shape (about 9% undershoot rather than 0.6%), and its raw
+  peak is about ten times lower (0.175 rather than 1.75). For the same data,
+  betas and standard errors for the canonical and temporal-derivative columns
+  are therefore about ten times larger; t and F statistics change only through
+  the corrected shape. The third `HRF_SPMG3` column is now a dispersion
+  derivative, not a second time derivative, so its coefficients are not
+  comparable across versions at all. Because `hrf()` defaults to an
+  unnormalized SPMG1 basis, this affects default models. Refit existing
+  analyses rather than comparing raw coefficients across versions.
+* The bundled `fmri_benchmark_datasets` were regenerated with the corrected
+  kernel (same seeds), and the data-raw generator was updated for the
+  `fmri_frame` dataset API.
+* NIfTI maps written by `write_results()` are now explicitly FLOAT32 (NIfTI
+  datatype 16), as documented. This was already the neuroim2 default for
+  in-memory volumes; it now also holds for volumes whose source file was
+  stored as DOUBLE.
+
 ## Plotting
 
 * New `autoplot()` / `plot()` methods for `fmri_lm` fits, with five views
