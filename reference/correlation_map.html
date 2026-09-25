@@ -3,13 +3,11 @@
 matrix. This visualization helps identify potential collinearity between regressors
 in the model. For event models, it shows correlations between different conditions.
 For baseline models, it shows correlations between drift and nuisance terms.
-These methods provide correlation heatmap visualizations for various model objects.
-They are thin wrappers around methods from fmridesign when appropriate."><meta property="og:description" content="Generate a correlation heatmap showing the relationships between columns in a design
+These methods provide correlation heatmap visualizations for various model objects."><meta property="og:description" content="Generate a correlation heatmap showing the relationships between columns in a design
 matrix. This visualization helps identify potential collinearity between regressors
 in the model. For event models, it shows correlations between different conditions.
 For baseline models, it shows correlations between drift and nuisance terms.
-These methods provide correlation heatmap visualizations for various model objects.
-They are thin wrappers around methods from fmridesign when appropriate."></head><body>
+These methods provide correlation heatmap visualizations for various model objects."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -76,8 +74,7 @@ They are thin wrappers around methods from fmridesign when appropriate."></head>
 matrix. This visualization helps identify potential collinearity between regressors
 in the model. For event models, it shows correlations between different conditions.
 For baseline models, it shows correlations between drift and nuisance terms.</p>
-<p>These methods provide correlation heatmap visualizations for various model objects.
-They are thin wrappers around methods from fmridesign when appropriate.</p>
+<p>These methods provide correlation heatmap visualizations for various model objects.</p>
     </div>
 
     <div class="section level2">
@@ -88,8 +85,10 @@ They are thin wrappers around methods from fmridesign when appropriate.</p>
 <span><span class="fu">correlation_map</span><span class="op">(</span></span>
 <span>  <span class="va">x</span>,</span>
 <span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pearson"</span>, <span class="st">"spearman"</span><span class="op">)</span>,</span>
-<span>  half_matrix <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  half_matrix <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  absolute_limits <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  within_run <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  label_values <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -121,11 +120,21 @@ They are thin wrappers around methods from fmridesign when appropriate.</p>
 
 
 <dt id="arg-half-matrix">half_matrix<a class="anchor" aria-label="anchor" href="#arg-half-matrix"></a></dt>
-<dd><p>Logical; if TRUE, show only lower triangle (default: FALSE)</p></dd>
+<dd><p>Logical; if TRUE (default), show only the lower triangle</p></dd>
 
 
 <dt id="arg-absolute-limits">absolute_limits<a class="anchor" aria-label="anchor" href="#arg-absolute-limits"></a></dt>
 <dd><p>Logical; if TRUE, set color limits to [-1,1] (default: TRUE)</p></dd>
+
+
+<dt id="arg-within-run">within_run<a class="anchor" aria-label="anchor" href="#arg-within-run"></a></dt>
+<dd><p>Logical; centre columns within runs and drop run
+intercepts before correlating (default: TRUE)</p></dd>
+
+
+<dt id="arg-label-values">label_values<a class="anchor" aria-label="anchor" href="#arg-label-values"></a></dt>
+<dd><p>Logical or NULL; print correlations in the cells
+(NULL: all cells when there are at most 12 columns)</p></dd>
 
 </dl></div>
     <div class="section level2">

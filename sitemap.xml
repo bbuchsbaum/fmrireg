@@ -22,6 +22,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/ar_parameters.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/as.array.NeuroVec.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/as_manifest.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/autoplot.fmri_lm.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/autoplot.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/baseline_spec.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/batch_errors.html</loc></url>
@@ -155,6 +156,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/paired_diff_block.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/parse_contrast_formula.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/parse_meta_formula.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/plot.fmri_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/preflight.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/print.fmri_meta.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/print.fmri_ttest_fit.html</loc></url>
@@ -213,6 +215,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/t_to_beta_se.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/t_to_d.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/term_matrices.fmri_model.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/theme_fmrireg.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/tidy.fmri_hrf_estimate.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/tidy.fmri_meta.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/tidy.html</loc></url>

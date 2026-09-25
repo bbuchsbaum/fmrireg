@@ -7,8 +7,7 @@ correlations between different conditions. For baseline models, it shows
 correlations between drift and nuisance terms.
 
 These methods provide correlation heatmap visualizations for various
-model objects. They are thin wrappers around methods from fmridesign
-when appropriate.
+model objects.
 
 ## Usage
 
@@ -19,8 +18,10 @@ correlation_map(x, ...)
 correlation_map(
   x,
   method = c("pearson", "spearman"),
-  half_matrix = FALSE,
+  half_matrix = TRUE,
   absolute_limits = TRUE,
+  within_run = TRUE,
+  label_values = NULL,
   ...
 )
 ```
@@ -53,11 +54,21 @@ correlation_map(
 
 - half_matrix:
 
-  Logical; if TRUE, show only lower triangle (default: FALSE)
+  Logical; if TRUE (default), show only the lower triangle
 
 - absolute_limits:
 
   Logical; if TRUE, set color limits to \[-1,1\] (default: TRUE)
+
+- within_run:
+
+  Logical; centre columns within runs and drop run intercepts before
+  correlating (default: TRUE)
+
+- label_values:
+
+  Logical or NULL; print correlations in the cells (NULL: all cells when
+  there are at most 12 columns)
 
 ## Value
 

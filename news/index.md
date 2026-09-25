@@ -2,6 +2,69 @@
 
 ## fmrireg 0.2.0
 
+### Plotting
+
+- New
+  [`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html)
+  / [`plot()`](https://rdrr.io/r/graphics/plot.default.html) methods for
+  `fmri_lm` fits, with five views selected by `type`:
+  - `"estimates"` / `"contrasts"`: t-statistics across voxels as a sina
+    plot with p \< .001 reference lines and the share of voxels beyond
+    each tail; with `voxel =`, a coefficient plot with confidence
+    intervals, one panel per event term.
+  - `"hrf"`: estimated responses with pointwise confidence bands from
+    the coefficient covariance (one voxel) or a t-based interval of the
+    mean (several voxels). Peak latency is labelled only when the basis
+    has more than one function.
+  - `"timecourse"`: observed and fitted signal for one voxel, onset
+    lanes per condition, and residuals on the same scale, with the
+    partial R-squared of the event regressors.
+  - `"residuals"`: residual autocorrelation at lags 1-10, by default the
+    median and 10th-90th percentile over up to 200 voxels. The
+    white-noise range is centred on the (negative) autocorrelation that
+    least-squares residuals have under the design and uses the exact
+    null covariance, and the subtitle counts voxels failing a
+    portmanteau test. For AR fits the prewhitened (GLS) residuals are
+    shown alongside, which checks that the noise model removed the
+    serial correlation.
+- New
+  [`theme_fmrireg()`](https://bbuchsbaum.github.io/fmrireg/reference/theme_fmrireg.md),
+  used by every fmrireg plot. Set
+  `options(fmrireg.plot_theme = <theme>)` to substitute your own.
+- All plots share one colour-blind-safe condition palette and readable
+  regressor labels (`condition_condition.faces` is shown as `faces`),
+  built from term metadata.
+- [`design_map()`](https://bbuchsbaum.github.io/fmridesign/reference/design_map.html)
+  draws the run boundary at the correct scan (it was placed using
+  per-event block ids), keeps columns in model order grouped by term,
+  scales each column to its maximum absolute value by default
+  (`scale_columns = TRUE`), draws run intercepts in grey, and reports
+  the rank and condition number of the design. Extra arguments now go to
+  [`geom_raster()`](https://ggplot2.tidyverse.org/reference/geom_tile.html),
+  so
+  [`geom_tile()`](https://ggplot2.tidyverse.org/reference/geom_tile.html)
+  arguments such as `colour =` are ignored with a warning.
+- [`correlation_map()`](https://bbuchsbaum.github.io/fmrireg/reference/correlation_map.md)
+  now defaults to `half_matrix = TRUE` and a new `within_run = TRUE`,
+  which centres columns within runs and drops run intercepts before
+  correlating, blanks pairs of columns from different runs, and
+  correlates pairs involving a run-specific column over that run’s
+  scans. The diagonal is left blank, constant columns are shown in grey,
+  event regressors’ VIFs are given in the caption, and
+  `absolute_limits = FALSE` now spans plus or minus the largest absolute
+  correlation. `within_run = FALSE, half_matrix = FALSE` is closest to
+  the previous behaviour.
+- [`plot.fmri_model()`](https://bbuchsbaum.github.io/fmrireg/reference/plot.fmri_model.md)
+  is now implemented in fmrireg (it no longer delegates to fmridesign or
+  needs cowplot): small multiples of every regressor on one time axis,
+  with nuisance regressors included, run-specific columns drawn only in
+  their run, and no lines joined across runs.
+- [`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html)
+  for regressors marks event onsets, draws single-event responses under
+  the summed curve when they overlap, extends the time axis to cover
+  event durations, and names SPMG2/SPMG3 basis functions.
+- `cowplot` is no longer a suggested package.
+
 ### Datasets are now `fmri_frame` objects
 
 - `fmrireg` has moved from the removed legacy dataset API of

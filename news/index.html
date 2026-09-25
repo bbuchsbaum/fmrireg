@@ -63,6 +63,31 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="fmrireg-020">fmrireg 0.2.0<a class="anchor" aria-label="anchor" href="#fmrireg-020"></a></h2>
 <div class="section level3">
+<h3 id="plotting-0-2-0">Plotting<a class="anchor" aria-label="anchor" href="#plotting-0-2-0"></a></h3>
+<ul><li>New <code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code> / <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> methods for <code>fmri_lm</code> fits, with five views selected by <code>type</code>:
+<ul><li>
+<code>"estimates"</code> / <code>"contrasts"</code>: t-statistics across voxels as a sina plot with p &lt; .001 reference lines and the share of voxels beyond each tail; with <code>voxel =</code>, a coefficient plot with confidence intervals, one panel per event term.</li>
+<li>
+<code>"hrf"</code>: estimated responses with pointwise confidence bands from the coefficient covariance (one voxel) or a t-based interval of the mean (several voxels). Peak latency is labelled only when the basis has more than one function.</li>
+<li>
+<code>"timecourse"</code>: observed and fitted signal for one voxel, onset lanes per condition, and residuals on the same scale, with the partial R-squared of the event regressors.</li>
+<li>
+<code>"residuals"</code>: residual autocorrelation at lags 1-10, by default the median and 10th-90th percentile over up to 200 voxels. The white-noise range is centred on the (negative) autocorrelation that least-squares residuals have under the design and uses the exact null covariance, and the subtitle counts voxels failing a portmanteau test. For AR fits the prewhitened (GLS) residuals are shown alongside, which checks that the noise model removed the serial correlation.</li>
+</ul></li>
+<li>New <code><a href="../reference/theme_fmrireg.html">theme_fmrireg()</a></code>, used by every fmrireg plot. Set <code>options(fmrireg.plot_theme = &lt;theme&gt;)</code> to substitute your own.</li>
+<li>All plots share one colour-blind-safe condition palette and readable regressor labels (<code>condition_condition.faces</code> is shown as <code>faces</code>), built from term metadata.</li>
+<li>
+<code><a href="https://bbuchsbaum.github.io/fmridesign/reference/design_map.html" class="external-link">design_map()</a></code> draws the run boundary at the correct scan (it was placed using per-event block ids), keeps columns in model order grouped by term, scales each column to its maximum absolute value by default (<code>scale_columns = TRUE</code>), draws run intercepts in grey, and reports the rank and condition number of the design. Extra arguments now go to <code><a href="https://ggplot2.tidyverse.org/reference/geom_tile.html" class="external-link">geom_raster()</a></code>, so <code><a href="https://ggplot2.tidyverse.org/reference/geom_tile.html" class="external-link">geom_tile()</a></code> arguments such as <code>colour =</code> are ignored with a warning.</li>
+<li>
+<code><a href="../reference/correlation_map.html">correlation_map()</a></code> now defaults to <code>half_matrix = TRUE</code> and a new <code>within_run = TRUE</code>, which centres columns within runs and drops run intercepts before correlating, blanks pairs of columns from different runs, and correlates pairs involving a run-specific column over that run’s scans. The diagonal is left blank, constant columns are shown in grey, event regressors’ VIFs are given in the caption, and <code>absolute_limits = FALSE</code> now spans plus or minus the largest absolute correlation. <code>within_run = FALSE, half_matrix = FALSE</code> is closest to the previous behaviour.</li>
+<li>
+<code><a href="../reference/plot.fmri_model.html">plot.fmri_model()</a></code> is now implemented in fmrireg (it no longer delegates to fmridesign or needs cowplot): small multiples of every regressor on one time axis, with nuisance regressors included, run-specific columns drawn only in their run, and no lines joined across runs.</li>
+<li>
+<code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code> for regressors marks event onsets, draws single-event responses under the summed curve when they overlap, extends the time axis to cover event durations, and names SPMG2/SPMG3 basis functions.</li>
+<li>
+<code>cowplot</code> is no longer a suggested package.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="datasets-are-now-fmri_frame-objects-0-2-0">Datasets are now <code>fmri_frame</code> objects<a class="anchor" aria-label="anchor" href="#datasets-are-now-fmri_frame-objects-0-2-0"></a></h3>
 <ul><li><p><code>fmrireg</code> has moved from the removed legacy dataset API of <code>fmridataset</code> (<code>matrix_dataset()</code>, <code>fmri_mem_dataset()</code>, <code>fmri_dataset()</code>, <code>latent_dataset()</code>, <code>get_data_matrix()</code>, <code>get_mask()</code>, <code>data_chunks()</code>, <code>read_fmri_config()</code>, …) to its canonical frame API. Every function that takes a <code>dataset</code> (<code><a href="../reference/fmri_lm.html">fmri_lm()</a></code>, <code><a href="../reference/fmri_rlm.html">fmri_rlm()</a></code>, <code><a href="../reference/fmri_model.html">fmri_model()</a></code>, <code><a href="../reference/create_fmri_model.html">create_fmri_model()</a></code>, <code><a href="../reference/estimate_betas.html">estimate_betas()</a></code>, <code><a href="../reference/estimate_hrf.html">estimate_hrf()</a></code>, <code><a href="../reference/fmri_latent_lm.html">fmri_latent_lm()</a></code>, <code><a href="../reference/glm_ols.html">glm_ols()</a></code>, <code><a href="../reference/glm_lss.html">glm_lss()</a></code>, <code><a href="../reference/extract_nuisance_timeseries.html">extract_nuisance_timeseries()</a></code>, <code><a href="../reference/build_model.html">build_model()</a></code>, and the engine plugin API) now requires a <code><a href="https://bbuchsbaum.github.io/fmridataset/reference/fmri_frame.html" class="external-link">fmridataset::fmri_frame</a></code> (or a lazy <code>fmri_view</code> of one). The old dataset classes are no longer accepted, and <code>fmridataset (&gt;= 0.10.0.9000)</code> is required.</p></li>
 <li>

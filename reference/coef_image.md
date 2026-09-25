@@ -59,7 +59,7 @@ dset <- matrix_frame(X, TR = 2, run_length = 50,
 fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
 # Get coefficient estimates as a numeric vector
 coef_image(fit, coef = 1)
-#> [1] -0.03646305 -0.53922599  0.06969749 -0.23362368
+#> [1]  0.2024057  0.1162944  0.6521588 -0.2549112
 toy_meta <- structure(
   list(
     coefficients = matrix(c(0.3, 0.1), nrow = 1,

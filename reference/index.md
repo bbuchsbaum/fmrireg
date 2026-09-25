@@ -17,6 +17,10 @@
 - [`autoplot(`*`<Reg>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/autoplot.md)
   : Autoplot method for Reg objects
 
+- [`autoplot(`*`<fmri_lm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/autoplot.fmri_lm.md)
+  [`plot(`*`<fmri_lm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/autoplot.fmri_lm.md)
+  : Plot a fitted fMRI linear model
+
 - [`baseline_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/baseline_spec.md)
   : Baseline specification (subject-invariant)
 
@@ -337,6 +341,9 @@
 - [`paired_diff_block()`](https://bbuchsbaum.github.io/fmrireg/reference/paired_diff_block.md)
   : Helper Functions for fmri_ttest
 
+- [`plot(`*`<fmri_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/plot.fmri_model.md)
+  : Plot the regressors of an fmri_model over time
+
 - [`preflight()`](https://bbuchsbaum.github.io/fmrireg/reference/preflight.md)
   : Preflight-check jobs before fan-out
 
@@ -473,6 +480,9 @@
 
 - [`term_matrices(`*`<fmri_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/term_matrices.fmri_model.md)
   : Extract term matrices from fmri_model
+
+- [`theme_fmrireg()`](https://bbuchsbaum.github.io/fmrireg/reference/theme_fmrireg.md)
+  : The fmrireg ggplot2 theme
 
 - [`tidy()`](https://bbuchsbaum.github.io/fmrireg/reference/tidy.md) :
   Tidy generic
