@@ -48,19 +48,19 @@ test_that("fmri_latent_lm reconstructs coef/se/stats into voxel space", {
 
   # Two conditions and four components: subsetting to two components used
   # to match n_coefficients == n_selected and take the legacy row branch,
-  # yielding voxels × 4 instead of voxels × 2.
+  # yielding voxels × 4 instead of voxels × 2. coef() is components × terms.
   b_latent <- as.matrix(coef(fit, type = "estimates", recon = FALSE))
-  expect_equal(nrow(b_latent), 2L)
-  expect_equal(ncol(b_latent), fx$n_comp)
+  expect_equal(nrow(b_latent), fx$n_comp)
+  expect_equal(ncol(b_latent), 2L)
 
   lds <- as.matrix(fmrireg:::.dset_loadings(fit$dataset))
-  expect_equal(as.matrix(cf), lds %*% t(b_latent), tolerance = 1e-8)
+  expect_equal(as.matrix(cf), lds %*% b_latent, tolerance = 1e-8)
   expect_equal(ncol(cf), 2L)
 
   cf_sub <- coef(fit, type = "estimates", recon = TRUE, comp = 1:2)
   expect_equal(nrow(cf_sub), fx$n_voxels)
   expect_equal(ncol(cf_sub), 2L)
-  expect_equal(as.matrix(cf_sub), lds[, 1:2, drop = FALSE] %*% t(b_latent[, 1:2, drop = FALSE]),
+  expect_equal(as.matrix(cf_sub), lds[, 1:2, drop = FALSE] %*% b_latent[1:2, , drop = FALSE],
                tolerance = 1e-8)
 
   expect_error(
@@ -73,7 +73,7 @@ test_that("fmri_latent_lm reconstructs coef/se/stats into voxel space", {
   expect_equal(nrow(se), fx$n_voxels)
   expect_true(all(as.matrix(se) > 0, na.rm = TRUE))
 
-  st <- stats(fit, type = "estimates", recon = TRUE)
+  st <- stats(fit, type = "betas", recon = TRUE)
   expect_s3_class(st, "tbl_df")
   expect_equal(dim(st), dim(cf))
   expect_equal(as.matrix(st), as.matrix(cf) / as.matrix(se), tolerance = 1e-8)
@@ -132,10 +132,10 @@ test_that("latent recon keeps type-based orientation when n_comp equals n_condit
   )
 
   b_latent <- as.matrix(coef(fit, type = "estimates", recon = FALSE))
-  expect_equal(dim(b_latent), c(4L, n_comp))
+  expect_equal(dim(b_latent), c(n_comp, 4L))
   cf <- coef(fit, type = "estimates", recon = TRUE)
   expect_equal(dim(as.matrix(cf)), c(n_voxels, 4L))
-  expect_equal(as.matrix(cf), loadings %*% t(b_latent), tolerance = 1e-8)
+  expect_equal(as.matrix(cf), loadings %*% b_latent, tolerance = 1e-8)
 
   c_latent <- as.matrix(coef(fit, type = "contrasts", recon = FALSE))
   expect_equal(nrow(c_latent), n_comp)

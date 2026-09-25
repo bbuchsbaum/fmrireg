@@ -1,5 +1,58 @@
 # fmrireg 0.2.0
 
+## Breaking change: `coef()` on `fmri_lm` fits is now voxels x terms
+
+* `coef.fmri_lm()` now returns one orientation for every argument
+  combination: **one row per voxel, one column per coefficient**, with term
+  names on the column margin (#227). Previously the default call
+  (`type = "betas"`, `include_baseline = FALSE`) returned the transpose,
+  terms x voxels with term names as row names, while
+  `include_baseline = TRUE` and `type = "contrasts"` were already
+  voxels x terms. `coef()` now also agrees with `stats()`,
+  `standard_error()` and `p_values()`, so `coef(fit) / standard_error(fit)`
+  lines up element-wise.
+
+  **Update code that indexed the old default by row:** `coef(fit)[term, ]`
+  becomes `coef(fit)[, term]`, `rownames(coef(fit))` becomes
+  `colnames(coef(fit))` (or `coef_names(fit)`), and a `t(coef(fit))` added
+  to reach voxels x terms must be dropped. When the number of voxels equals
+  the number of event coefficients the old and new results have the same
+  `dim()`, so such code does not error: check it by hand. The orientation
+  flip has no deprecation period, since an orientation cannot warn only
+  the callers who depend on it. `coef()` now has its own help page,
+  `?coef.fmri_lm`.
+
+* The old orientation caused two silent transpositions, both now fixed:
+  - `fit_contrasts()` on an `fmri_lm` fit guessed the orientation of `coef()`
+    from its dimensions. When the voxel count equalled the number of event
+    coefficients, it computed the contrast from the transposed betas.
+  - The "known vs recovered" table in the Package Overview vignette (two
+    voxels, two conditions) showed each condition's estimates across voxels
+    next to each voxel's true values.
+
+* `reduce_betas()` and latent-space reconstruction in
+  `coef(<fmri_latent_lm>, recon = TRUE)` also compensated for the old
+  orientation. They now use the single one, and their output is unchanged.
+
+## `stats(fit, "estimates")` renamed to `stats(fit, "betas")`
+
+* `stats(fit, type = "estimates")` returned t-statistics, and the name
+  invited reading them as estimates (#217). The parameter family is now
+  called `"betas"`, matching `coef(type = "betas")`, and that is the default
+  for `stats()`, `standard_error()` and `p_values()` on `fmri_lm` and
+  `fmri_latent_lm` fits. `stats(fit, type = "estimates")` still works but
+  raises a deprecation warning (class
+  `fmrireg_deprecated_estimates_type`) that points to `coef()`; set
+  `options(fmrireg.suppress_deprecation = TRUE)` to silence it.
+  `standard_error()` and `p_values()` accept `"estimates"` as a silent
+  synonym, because their function names already say what they return. The
+  `type` documentation of `stats()` now says it returns t-statistics and
+  links to `coef()`.
+
+* Duplicate definitions of `coef()`, `stats()` and `standard_error()` for
+  `fmri_lm` in `R/fmrilm.R` and `R/fmri_lm_methods.R` have been merged
+  into one. Which copy ran used to depend on file collation order.
+
 ## Plotting
 
 * New `autoplot()` / `plot()` methods for `fmri_lm` fits, with five views

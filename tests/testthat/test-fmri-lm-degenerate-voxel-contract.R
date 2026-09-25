@@ -23,8 +23,8 @@ test_that("voxelwise AR preserves degenerate voxels as explicit NA results", {
   )
 
   expect_identical(fit$result$voxel_status, c("constant", "ok"))
-  expect_true(all(is.na(coef(fit)[, 1L])))
-  expect_true(any(is.finite(coef(fit)[, 2L])))
+  expect_true(all(is.na(coef(fit)[1L, ])))
+  expect_true(any(is.finite(coef(fit)[2L, ])))
   expect_true(is.list(fit$result$robust_weights))
   expect_null(fit$result$robust_weights[[1L]])
   expect_length(fit$result$robust_weights[[2L]], n)

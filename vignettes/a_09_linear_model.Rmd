@@ -388,8 +388,9 @@ Let's extract and visualize the results from our linear model.
 
 ```{r extract-coefficients, message=FALSE, fig.width=7, fig.height=5}
 # Extract coefficient estimates
+# One row per voxel, one column per event regressor
 beta_estimates <- coef(model)
-kable(beta_estimates, caption = "Coefficient estimates for each condition and voxel")
+kable(beta_estimates, caption = "Coefficient estimates for each voxel (rows) and condition (columns)")
 ```
 
 
@@ -405,7 +406,7 @@ clean_condition_label <- function(x) {
 
 ```{r plot-coefficients, message=FALSE, fig.width=7, fig.height=7, fig.alt="Condition 1 and condition 2 coefficient estimates for each of the three simulated voxels."}
 # Reshape for plotting (works with both approaches)
-beta_long <- as.data.frame(t(beta_estimates)) %>%
+beta_long <- as.data.frame(beta_estimates) %>%
   mutate(voxel_index = row_number()) %>%
   pivot_longer(cols = -voxel_index, names_to = "condition", values_to = "estimate") %>%
   mutate(

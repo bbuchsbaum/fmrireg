@@ -668,7 +668,7 @@ test_that("write_results.fmri_lm correctly writes numerical data to HDF5", {
   
   # Get original beta data from model for comparison
   original_betas <- coef(mod, type = "betas", include_baseline = FALSE)
-  original_regressor_names <- rownames(original_betas)
+  original_regressor_names <- colnames(original_betas)
   
   # Basic validation that data was written and can be read
   expect_true(length(original_regressor_names) > 0)
