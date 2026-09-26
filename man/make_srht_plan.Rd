@@ -6,7 +6,18 @@
 \usage{
 make_srht_plan(Tlen, m)
 }
+\arguments{
+\item{Tlen}{Integer series length.}
+
+\item{m}{Integer number of sketch rows.}
+}
+\value{
+A list with the sign, permutation, row-selection and scale
+components used by \code{\link[=srht_apply]{srht_apply()}}.
+}
 \description{
-Build SRHT plan
+The plan's \code{scale} is \code{1 / sqrt(m)}, which makes the sketch normalised
+(\eqn{E\|S r\|^2 = \|r\|^2}) because the Walsh-Hadamard transform is
+applied unnormalised.
 }
 \keyword{internal}

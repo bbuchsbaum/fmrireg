@@ -103,7 +103,7 @@ test_that("SRHT/IHS + AR(global/cluster) match exact on synthetic data", {
   ## ---- IHS(3 iters) + global AR(1) ----
   low_ihs <- lowrank_control(
     parcels     = parcels,
-    time_sketch = list(method = "ihs", m = max(8L * p, p + 10L), iters = 3L)  # Increased sketch size
+    time_sketch = list(method = "ihs", m = max(8L * p, p + 10L), iters = 3L, tol = 0)  # fixed 3 iterations
   )
 
   fit_ihs <- fmri_lm(

@@ -42,7 +42,7 @@ test_that(".run_lowrank_engine landmarks succeed for ihs/srht/gaussian/countsket
 
   for (method in c("ihs", "srht", "gaussian", "countsketch")) {
     sk <- list(method = method, m = 18L)
-    if (identical(method, "ihs")) sk$iters <- 2L
+    if (identical(method, "ihs")) { sk$iters <- 2L; sk$tol <- 0 }
     fit <- fmrireg:::.run_lowrank_engine(
       fx$model, fx$dataset,
       lowrank = c(low_base, list(time_sketch = sk)),
@@ -95,7 +95,7 @@ test_that(".run_lowrank_engine parcels by_cluster with srht/ihs succeed", {
 
   for (method in c("srht", "ihs", "gaussian")) {
     sk <- list(method = method, m = 20L)
-    if (identical(method, "ihs")) sk$iters <- 2L
+    if (identical(method, "ihs")) { sk$iters <- 2L; sk$tol <- 0 }
     fit <- fmrireg:::.run_lowrank_engine(
       fm, dset,
       lowrank = list(time_sketch = sk, parcels = parcels),
