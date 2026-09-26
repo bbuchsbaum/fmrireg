@@ -48,7 +48,7 @@
     )
   )
 
-  pvals <- as.matrix(p_values(fit, type = "estimates"))
+  pvals <- as.matrix(p_values(fit, type = "betas"))
   seed_col <- grep("^seed", colnames(pvals), value = TRUE)
   null_col <- grep("^null", colnames(pvals), value = TRUE)
   stopifnot(length(seed_col) == 1L, length(null_col) == 1L)

@@ -13,7 +13,7 @@ test_that("fmri_lm voxelwise AR1 fits and computes contrast", {
                  dataset = dset, use_fast_path = FALSE,
                  ar_voxelwise = TRUE,
                  cor_struct = "ar1")
-  expect_equal(dim(coef(mod)), c(2, 3))
+  expect_equal(dim(coef(mod)), c(3, 2))
   ctab <- stats(mod, "contrasts")
   expect_equal(ncol(ctab), 1)
 })

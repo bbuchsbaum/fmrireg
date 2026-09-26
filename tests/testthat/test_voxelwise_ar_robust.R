@@ -19,7 +19,7 @@ test_that("fmri_lm voxelwise AR1 robust fits", {
                  cor_struct = "ar1",
                  robust = "huber",
                  robust_options = rob_opts)
-  expect_equal(dim(coef(mod)), c(2, 4))
+  expect_equal(dim(coef(mod)), c(4, 2))
   ctab <- stats(mod, "contrasts")
   expect_equal(ncol(ctab), 1)
 })

@@ -7,7 +7,7 @@
 #' Visual summaries of an \code{fmri_lm} fit. Five views are available:
 #'
 #' \describe{
-#'   \item{\code{"estimates"}}{With no \code{voxel}, the distribution of
+#'   \item{\code{"betas"}}{With no \code{voxel}, the distribution of
 #'     t-statistics across voxels for each event regressor, drawn as a sina
 #'     plot (points spread in proportion to their density), with reference
 #'     lines at the two-sided p < .001 (uncorrected) critical value and the
@@ -15,7 +15,7 @@
 #'     plot of estimates with confidence intervals, one panel per event term
 #'     so that regressors in different units (a condition and a parametric
 #'     modulator) do not share an axis.}
-#'   \item{\code{"contrasts"}}{As \code{"estimates"}, for the fitted contrasts.}
+#'   \item{\code{"contrasts"}}{As \code{"betas"}, for the fitted contrasts.}
 #'   \item{\code{"hrf"}}{The estimated hemodynamic response for each condition:
 #'     the term's HRF basis weighted by the fitted coefficients. For one voxel,
 #'     the band is a pointwise confidence interval from the coefficient
@@ -62,10 +62,13 @@
 #' the baseline model that the event regressors explain.
 #'
 #' @param object,x An \code{fmri_lm} object.
-#' @param type One of \code{"estimates"}, \code{"contrasts"}, \code{"hrf"},
-#'   \code{"timecourse"}, \code{"residuals"}.
+#' @param type One of \code{"betas"} (default), \code{"contrasts"},
+#'   \code{"hrf"}, \code{"timecourse"}, \code{"residuals"}. The first two
+#'   name the parameter family, as in \code{\link{stats}()} and
+#'   \code{\link[=coef.fmri_lm]{coef()}}. \code{"estimates"} is accepted
+#'   as a synonym of \code{"betas"}.
 #' @param voxel Optional integer voxel index (or indices, for
-#'   \code{"estimates"}, \code{"contrasts"}, \code{"hrf"} and
+#'   \code{"betas"}, \code{"contrasts"}, \code{"hrf"} and
 #'   \code{"residuals"}).
 #' @param level Confidence level for intervals and bands.
 #' @param sample_at Time points (s) at which to evaluate the HRF, for
@@ -90,12 +93,17 @@
 #' @method autoplot fmri_lm
 #' @rdname autoplot.fmri_lm
 autoplot.fmri_lm <- function(object,
-                             type = c("estimates", "contrasts", "hrf", "timecourse",
+                             type = c("betas", "contrasts", "hrf", "timecourse",
                                       "residuals"),
                              voxel = NULL, level = 0.95,
                              sample_at = seq(0, 20, by = 0.25),
                              direct_labels = TRUE, ...) {
-  type <- match.arg(type)
+  # "estimates" was this view's name before the accessor family was renamed
+  # (#217); it stays a silent synonym, since a plot is labelled and cannot be
+  # mistaken for the estimates themselves.
+  type <- match.arg(type[1], c("betas", "contrasts", "hrf", "timecourse",
+                               "residuals", "estimates"))
+  if (identical(type, "estimates")) type <- "betas"
   if (!is.numeric(level) || length(level) != 1L || !is.finite(level) ||
       level <= 0 || level >= 1) {
     stop("`level` must be a single number between 0 and 1.", call. = FALSE)
@@ -104,7 +112,7 @@ autoplot.fmri_lm <- function(object,
     stop("`direct_labels` must be TRUE or FALSE.", call. = FALSE)
   }
   switch(type,
-    estimates  = .plot_fit_stats(object, "estimates", voxel, level),
+    betas      = .plot_fit_stats(object, "betas", voxel, level),
     contrasts  = .plot_fit_stats(object, "contrasts", voxel, level),
     hrf        = .plot_fit_hrf(object, voxel, sample_at, level, direct_labels),
     timecourse = .plot_fit_timecourse(object, voxel),
@@ -114,7 +122,7 @@ autoplot.fmri_lm <- function(object,
 
 #' @export
 #' @rdname autoplot.fmri_lm
-plot.fmri_lm <- function(x, type = c("estimates", "contrasts", "hrf", "timecourse",
+plot.fmri_lm <- function(x, type = c("betas", "contrasts", "hrf", "timecourse",
                                      "residuals"),
                          voxel = NULL, ...) {
   p <- autoplot.fmri_lm(x, type = type, voxel = voxel, ...)
@@ -128,7 +136,7 @@ plot.fmri_lm <- function(x, type = c("estimates", "contrasts", "hrf", "timecours
 #' @keywords internal
 #' @noRd
 .peak_voxel <- function(fit) {
-  tt <- as.matrix(stats(fit, type = "estimates"))
+  tt <- as.matrix(stats(fit, type = "betas"))
   score <- suppressWarnings(apply(abs(tt), 1, max, na.rm = TRUE))
   score[!is.finite(score)] <- -Inf
   which.max(score)
@@ -137,7 +145,7 @@ plot.fmri_lm <- function(x, type = c("estimates", "contrasts", "hrf", "timecours
 #' @keywords internal
 #' @noRd
 .check_voxels <- function(fit, voxel, single = FALSE) {
-  nvox <- nrow(as.matrix(stats(fit, type = "estimates")))
+  nvox <- nrow(coef(fit))
   ok <- is.numeric(voxel) && length(voxel) >= 1L && !anyNA(voxel) &&
     all(voxel >= 1) && all(voxel <= nvox) && all(voxel == round(voxel))
   if (!ok) {
@@ -222,12 +230,16 @@ plot.fmri_lm <- function(x, type = c("estimates", "contrasts", "hrf", "timecours
     stop(sprintf("This fit has no %s to plot.", type), call. = FALSE)
   }
   se <- as.matrix(standard_error(fit, type = type))
-  est <- tt * se
+  # Take the estimates from coef(), which shares the voxels x terms layout of
+  # stats() and standard_error(), rather than rebuilding them as t * se (t is
+  # set to 0 where se is numerically zero).
+  est <- as.matrix(coef(fit, type = type))
+  stopifnot(identical(dim(est), dim(tt)), identical(colnames(est), colnames(tt)))
   nvox <- nrow(tt)
   dfs <- .fit_inference_df(fit, nvox)
-  what <- if (type == "estimates") "Regressor" else "Contrast"
+  what <- if (type == "betas") "Regressor" else "Contrast"
 
-  if (type == "estimates") {
+  if (type == "betas") {
     info <- .column_info(fit$model)
     info <- info[match(colnames(tt), info$column), ]
     labels <- ifelse(is.na(info$label), .pretty_regressor_names(colnames(tt)), info$label)
@@ -399,10 +411,11 @@ plot.fmri_lm <- function(x, type = c("estimates", "contrasts", "hrf", "timecours
   if (!length(terms_h)) {
     stop("This fit has no event terms with an HRF to plot.", call. = FALSE)
   }
-  tt <- as.matrix(stats(fit, type = "estimates"))
-  se <- as.matrix(standard_error(fit, type = "estimates"))
-  beta <- tt * se
-  nvox <- nrow(tt)
+  # coef() and standard_error() are both voxels x terms.
+  beta <- coef(fit)
+  se <- as.matrix(standard_error(fit, type = "betas"))
+  stopifnot(identical(dim(beta), dim(se)))
+  nvox <- nrow(beta)
   dfs <- .fit_inference_df(fit, nvox)
   cu <- fit$result$cov.unscaled
   single <- length(voxel) == 1L
@@ -987,7 +1000,7 @@ plot.fmri_lm <- function(x, type = c("estimates", "contrasts", "hrf", "timecours
 #' @keywords internal
 #' @noRd
 .plot_fit_residual_acf <- function(fit, voxel, max_lag = 10L) {
-  nvox <- nrow(as.matrix(stats(fit, type = "estimates")))
+  nvox <- nrow(coef(fit))
   chosen <- if (is.null(voxel)) "default" else "user"
   voxel <- if (is.null(voxel)) {
     unique(round(seq(1, nvox, length.out = min(nvox, 200L))))

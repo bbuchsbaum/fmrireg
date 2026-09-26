@@ -132,13 +132,11 @@ reduce_contrasts <- function(add_id = TRUE) {
 reduce_betas <- function(add_id = TRUE, include_baseline = FALSE) {
   force(add_id); force(include_baseline)
   new_reducer(function(fit, job) {
-    est <- as.matrix(coef(fit, type = "betas", include_baseline = include_baseline))
-    # Normalize to terms x voxels: terms are the *named* dimension. coef() returns
-    # terms x voxels (rownames = terms) without baseline, but voxels x terms
-    # (colnames = terms) with baseline -- transpose the latter.
-    if (is.null(rownames(est)) && !is.null(colnames(est))) est <- t(est)
+    # coef() is voxels x terms for every argument combination (#227);
+    # .coef_to_long() wants terms x voxels.
+    est <- t(as.matrix(coef(fit, type = "betas", include_baseline = include_baseline)))
     out <- .coef_to_long(est, "estimate")
-    se <- tryCatch(standard_error(fit, type = "estimates"), error = function(e) NULL)
+    se <- tryCatch(standard_error(fit, type = "betas"), error = function(e) NULL)
     # standard_error() is voxels x terms; attach only when every estimate term is
     # present (so the baseline-included case, whose SE is unavailable, is skipped
     # rather than mis-aligned).

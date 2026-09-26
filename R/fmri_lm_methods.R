@@ -16,114 +16,162 @@ reshape_coef <- function(df, des, measure = "value") {
 ## pull_stat_revised/pull_stat are defined in R/fmrilm.R
 ## Remove duplicate definitions here to ensure a single source of truth.
 
+#' Extract Coefficients from an fmri_lm Fit
+#'
+#' Returns estimated coefficients from a fitted \code{fmri_lm} model. Every
+#' form of the result has one orientation: \strong{voxels x terms}, with one
+#' row per voxel (or latent component) and one column per coefficient or
+#' contrast, and the term names on the column margin. This matches
+#' \code{\link{stats}()}, \code{\link{standard_error}()} and
+#' \code{\link{p_values}()}, so results from the accessor family line up
+#' element-wise (for example \code{coef(fit) / standard_error(fit)}).
+#'
+#' @param object A fitted \code{fmri_lm} object.
+#' @param type \code{"betas"} (default) for regression coefficients, or
+#'   \code{"contrasts"} for the estimates of the simple contrasts defined in
+#'   the model.
+#' @param include_baseline Logical. For \code{type = "betas"}, also return the
+#'   baseline (drift, block intercept and nuisance) coefficients, in design
+#'   matrix column order. The default, \code{FALSE}, returns event
+#'   coefficients only.
+#' @param recon Logical; used by latent-space fits to reconstruct voxel-space
+#'   coefficients. Ignored for ordinary fits.
+#' @param ... Unused.
+#' @return For \code{type = "betas"}, a numeric matrix with one row per voxel
+#'   and one column per coefficient, columns named after the design matrix
+#'   (see \code{\link{coef_names}()}). For \code{type = "contrasts"}, a tibble
+#'   with one row per voxel and one column per contrast.
+#' @section Orientation change in fmrireg 0.2.0:
+#'   Before 0.2.0 the default call (\code{type = "betas"},
+#'   \code{include_baseline = FALSE}) returned the transpose, terms x voxels,
+#'   while the other forms were voxels x terms. Code written for the old
+#'   default that indexed \code{coef(fit)[term, ]} must now use
+#'   \code{coef(fit)[, term]}.
+#' @seealso \code{\link{coef_names}()}, \code{\link{stats}()} (t-statistics),
+#'   \code{\link{standard_error}()}, \code{\link{p_values}()},
+#'   \code{\link{coef_image}()}.
+#' @examples
+#' X <- matrix(rnorm(50 * 3), 50, 3)
+#' edata <- data.frame(
+#'   condition = factor(c("A", "B", "A", "B")),
+#'   onsets = c(1, 12, 25, 38),
+#'   run = 1
+#' )
+#' dset <- matrix_frame(X, TR = 2, run_length = 50, event_table = edata)
+#' fit <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
+#' b <- coef(fit) # 3 voxels x 2 event coefficients
+#' dim(b)
+#' colnames(b)
+#' dim(coef(fit, include_baseline = TRUE))
 #' @method coef fmri_lm
 #' @export
 coef.fmri_lm <- function(object, type = c("betas", "contrasts"), include_baseline = FALSE, recon = FALSE, ...) {
   type <- match.arg(type)
-  
+
   if (type == "contrasts") {
-    # Contrast handling remains the same
-    res <- pull_stat(object, "contrasts", "estimate")
-  } else if (type == "betas") {
-    # Get all beta estimates first
-    all_betas <- object$result$betas$data[[1]]$estimate[[1]]
-    
-    if (include_baseline) {
-      # Return all betas, ensure correct names from the full design matrix
-      res <- all_betas
-      # Only assign column names up to the number of columns in the beta matrix
-      dm_colnames <- colnames(design_matrix(object$model))
-      if (ncol(res) <= length(dm_colnames)) {
-        colnames(res) <- dm_colnames[1:ncol(res)]
+    return(pull_stat(object, "contrasts", "estimate"))
+  }
+
+  all_betas <- as.matrix(object$result$betas$data[[1]]$estimate[[1]])
+  dm_colnames <- tryCatch(colnames(design_matrix(object$model)), error = function(e) NULL)
+
+  if (include_baseline) {
+    res <- all_betas
+    if (!is.null(dm_colnames)) {
+      if (length(dm_colnames) == ncol(res)) {
+        colnames(res) <- dm_colnames
       } else {
-        # This shouldn't happen, but be defensive
-        colnames(res) <- paste0("beta_", 1:ncol(res))
+        beta_colind <- tryCatch(object$result$betas$colind[[1]], error = function(e) NULL)
+        if (!is.null(beta_colind) &&
+            length(beta_colind) == ncol(res) &&
+            max(beta_colind) <= length(dm_colnames)) {
+          colnames(res) <- dm_colnames[beta_colind]
+        } else {
+          colnames(res) <- make.names(paste0("beta_", seq_len(ncol(res))), unique = TRUE)
+        }
       }
-      # Return as matrix - voxels x predictors
-      # res <- t(res)  # Removed transpose to maintain standard orientation
-    } else {
-      # Default: return only event betas
-      # Check bounds and filter valid indices
-      max_col <- ncol(all_betas)
-      valid_event_indices <- object$result$event_indices[object$result$event_indices <= max_col]
-      
-      if (length(valid_event_indices) == 0) {
-        warning("No valid event indices found in coef.fmri_lm. Using all available columns.")
-        valid_event_indices <- 1:max_col
-      }
-      
-      res <- all_betas[, valid_event_indices, drop = FALSE]
-      
-      # Use the actual column names from the design matrix instead of conditions()
-      # This avoids duplicate names when multiple terms have the same variables
-      dm <- design_matrix(object$model)
-      if (!is.null(dm) && ncol(dm) >= max(valid_event_indices)) {
-        actual_colnames <- colnames(dm)[valid_event_indices]
-        colnames(res) <- actual_colnames
-      } else {
-        # Fallback: use conditions but make them unique
-        condition_names <- conditions(object$model$event_model)[1:length(valid_event_indices)]
-        colnames(res) <- make.names(condition_names, unique = TRUE)
-      }
-      
-      # Return as matrix - voxels x predictors
-      # res <- t(res)  # Removed transpose to maintain standard orientation
     }
   } else {
-    # Should not happen due to match.arg, but defensive coding
-    stop("Invalid type specified.")
+    max_col <- ncol(all_betas)
+    valid_event_indices <- object$result$event_indices[object$result$event_indices <= max_col]
+
+    if (length(valid_event_indices) == 0) {
+      warning("No valid event indices found in coef.fmri_lm. Using all available columns.")
+      valid_event_indices <- seq_len(max_col)
+    }
+
+    res <- all_betas[, valid_event_indices, drop = FALSE]
+
+    # Use the design-matrix column names rather than conditions(): they are
+    # unique even when several terms share variables.
+    if (!is.null(dm_colnames) && length(dm_colnames) >= max(valid_event_indices)) {
+      colnames(res) <- dm_colnames[valid_event_indices]
+    } else {
+      condition_names <- conditions(object$model$event_model)[seq_along(valid_event_indices)]
+      colnames(res) <- make.names(condition_names, unique = TRUE)
+    }
   }
-  
-  # Reconstruction functionality can be added here if necessary (applies to the 'res' matrix/tibble)
-  # if (recon && inherits(object$dataset, "fmri_frame")) { ... }
-  
-  return(res)
+
+  # Voxels x terms (#227); rows are unnamed voxels, columns are terms.
+  rownames(res) <- NULL
+  res
+}
+
+#' Resolve the parameter-family selector of the fmri_lm accessors
+#'
+#' \code{"betas"} is the canonical name of the event-coefficient family; it
+#' matches \code{coef(type = "betas")}. \code{"estimates"} is accepted as a
+#' legacy synonym. In \code{stats()} it is deprecated, because
+#' \code{stats(fit, "estimates")} reads as "the estimates" but returns
+#' t-statistics (bbuchsbaum/fmrireg#217).
+#' @keywords internal
+#' @noRd
+.accessor_family <- function(type, allowed, caller, deprecate_estimates = FALSE) {
+  type <- match.arg(type, c(allowed, "estimates"))
+  if (identical(type, "estimates")) {
+    if (deprecate_estimates &&
+        !isTRUE(getOption("fmrireg.suppress_deprecation", FALSE))) {
+      rlang::warn(
+        c(
+          sprintf("`%s(type = \"estimates\")` is deprecated; use `type = \"betas\"`.", caller),
+          i = sprintf(
+            "`%s()` returns t-statistics for the betas, not the estimates. Use `coef()` for the estimates.",
+            caller
+          )
+        ),
+        class = c("fmrireg_deprecated_estimates_type", "deprecatedWarning")
+      )
+    }
+    type <- "betas"
+  }
+  type
 }
 
 #' @method stats fmri_lm
 #' @rdname stats
 #' @export
-stats.fmri_lm <- function(x, type = c("estimates", "contrasts", "F"), ...) {
-  type <- match.arg(type)
-  
-  element <- "stat"
-  
-  if (type == "estimates") {
-    pull_stat(x, "betas", element)
-  } else {
-    pull_stat(x, type, element)
-  }
+stats.fmri_lm <- function(x, type = c("betas", "contrasts", "F"), ...) {
+  type <- .accessor_family(type[1], c("betas", "contrasts", "F"), "stats",
+                           deprecate_estimates = TRUE)
+  pull_stat(x, type, "stat")
 }
 
 #' @method p_values fmri_lm
 #' @rdname p_values
 #' @export
-p_values.fmri_lm <- function(x, type = c("estimates", "contrasts"), ...) {
-  type <- match.arg(type)
-  
-  element <- "prob"
-  
-  if (type == "estimates") {
-    pull_stat(x, "betas", element)
-  } else {
-    pull_stat(x, type, element)
-  }
+p_values.fmri_lm <- function(x, type = c("betas", "contrasts"), ...) {
+  type <- .accessor_family(type[1], c("betas", "contrasts"), "p_values")
+  pull_stat(x, type, "prob")
 }
 
 #' @method standard_error fmri_lm
 #' @rdname standard_error
 #' @export
-standard_error.fmri_lm <- function(x, type = c("estimates", "contrasts"),...) {
-  type <- match.arg(type)
-  
-  element <- "se"
-  
-  if (type == "estimates") {
-    pull_stat(x, "betas", element)
-  } else {
-    pull_stat(x, type, element)
-  }
+standard_error.fmri_lm <- function(x, type = c("betas", "contrasts"), ...) {
+  type <- .accessor_family(type[1], c("betas", "contrasts"), "standard_error")
+  pull_stat(x, type, "se")
 }
+
 
 #' @noRd
 #' @keywords internal

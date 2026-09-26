@@ -704,10 +704,15 @@ coef_names <- function(x, ...) UseMethod("coef_names")
 #' This is part of a family of functions for extracting statistical measures.
 #'
 #' @param x The fitted model object
-#' @param type The type of standard errors to extract: "estimates" or "contrasts" (default: "estimates")
+#' @param type For \code{fmri_lm} fits, the parameter family: \code{"betas"}
+#'   (default) for the event coefficients returned by \code{coef()}, or
+#'   \code{"contrasts"}. \code{"estimates"} is accepted as a synonym of
+#'   \code{"betas"}.
 #' @param recon Logical; whether to reconstruct the full matrix representation (default: FALSE)
 #' @param ... Additional arguments passed to methods
-#' @return A tibble or matrix containing standard errors of parameter estimates
+#' @return A tibble or matrix containing standard errors of parameter
+#'   estimates. For \code{fmri_lm} fits, one row per voxel and one column per
+#'   term, in the same orientation as \code{coef()}.
 #' @examples
 #' # Create example data
 #' event_data <- data.frame(
@@ -744,9 +749,20 @@ standard_error <- function(x, ...) UseMethod("standard_error")
 #' This is part of a family of functions for extracting statistical measures.
 #'
 #' @param x The fitted model object
-#' @param type The type of statistics to extract: "estimates", "contrasts", or "F" (default: "estimates")
+#' @param type For \code{fmri_lm} fits, the parameter family whose test
+#'   statistics are returned: \code{"betas"} (default) gives the
+#'   \strong{t-statistics} of the event coefficients, \code{"contrasts"} the
+#'   t-statistics of the simple contrasts, and \code{"F"} the F-statistics of
+#'   the F-contrasts. \code{stats()} never returns the estimates themselves;
+#'   use \code{coef()} for those. \code{"estimates"} is a deprecated synonym
+#'   of \code{"betas"} (it reads as "the estimates" but returns
+#'   t-statistics) and warns; set
+#'   \code{options(fmrireg.suppress_deprecation = TRUE)} to silence it.
 #' @param ... Additional arguments passed to methods
-#' @return A tibble or matrix containing test statistics
+#' @return A tibble or matrix containing test statistics. For \code{fmri_lm}
+#'   fits, a tibble with one row per voxel and one column per term, in the
+#'   same orientation as \code{coef()}.
+#' @seealso \code{\link[=coef.fmri_lm]{coef()}} for the estimates.
 #' @examples
 #' # Create example data
 #' event_data <- data.frame(
@@ -783,9 +799,10 @@ stats <- function(x, ...) UseMethod("stats")
 #' This is part of a family of functions for extracting statistical measures.
 #'
 #' @param x The fitted model object
-#' @param type Character string specifying the type of p-values to extract. 
-#'   Options typically include "estimates" for parameter estimates and "contrasts" 
-#'   for contrast tests. Defaults to "estimates" in most methods.
+#' @param type For \code{fmri_lm} fits, the parameter family: \code{"betas"}
+#'   (default) for the event coefficients returned by \code{coef()}, or
+#'   \code{"contrasts"}. \code{"estimates"} is accepted as a synonym of
+#'   \code{"betas"}.
 #' @param ... Additional arguments passed to methods
 #' @return A tibble or matrix containing p-values
 #' @examples

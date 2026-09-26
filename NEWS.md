@@ -21,11 +21,96 @@
   in-memory volumes; it now also holds for volumes whose source file was
   stored as DOUBLE.
 
+## Breaking change: `coef()` on `fmri_lm` fits is now voxels x terms
+
+* `coef.fmri_lm()` now returns one orientation for every argument
+  combination: **one row per voxel, one column per coefficient**, with term
+  names on the column margin (#227). Previously the default call
+  (`type = "betas"`, `include_baseline = FALSE`) returned the transpose,
+  terms x voxels with term names as row names, while
+  `include_baseline = TRUE` and `type = "contrasts"` were already
+  voxels x terms. `coef()` now also agrees with `stats()`,
+  `standard_error()` and `p_values()`, so `coef(fit) / standard_error(fit)`
+  lines up element-wise.
+
+  **Update code that indexed the old default by row:** `coef(fit)[term, ]`
+  becomes `coef(fit)[, term]`, `rownames(coef(fit))` becomes
+  `colnames(coef(fit))` (or `coef_names(fit)`), and a `t(coef(fit))` added
+  to reach voxels x terms must be dropped. When the number of voxels equals
+  the number of event coefficients the old and new results have the same
+  `dim()`, so such code does not error: check it by hand. The orientation
+  flip has no deprecation period, since an orientation cannot warn only
+  the callers who depend on it. `coef()` now has its own help page,
+  `?coef.fmri_lm`.
+
+* The old orientation caused two silent transpositions, both now fixed:
+  - `fit_contrasts()` on an `fmri_lm` fit guessed the orientation of `coef()`
+    from its dimensions. When the voxel count equalled the number of event
+    coefficients, it computed the contrast from the transposed betas.
+  - The "known vs recovered" table in the Package Overview vignette (two
+    voxels, two conditions) showed each condition's estimates across voxels
+    next to each voxel's true values.
+
+* `reduce_betas()` and latent-space reconstruction in
+  `coef(<fmri_latent_lm>, recon = TRUE)` also compensated for the old
+  orientation. They now use the single one, and their output is unchanged.
+
+## Runwise fits: correct baseline columns and near-exact fits
+
+* Multi-run runwise fits pooled betas by run-local column position. Each
+  run's design has the event columns plus only that run's baseline columns,
+  so the stored betas were too narrow (6 of 10 columns for two runs with
+  default drift). They mixed different runs' drift and intercept terms, and
+  `coef(fit, include_baseline = TRUE)` gave them the wrong global names, for
+  example run 1's intercept labelled `base_bs1_block_2`. Betas are now pooled
+  by global design column. A run-specific baseline column keeps its own
+  run's estimate. A column shared by all runs (event regressors, a global
+  intercept) is pooled by inverse-variance weighting. The stored betas now
+  have one column per design-matrix column. Event-column estimates are
+  unchanged.
+
+* Runwise pooling returned `NaN` for every coefficient when a run's
+  standard error was exactly zero. With inverse-variance weighting, a
+  near-exact fit made 0/0. Pooling now takes the zero-variance limit.
+
+* The memory-lean residual-sum-of-squares computation (`y'y - b'X'y`)
+  cancelled to zero for near-exact fits, which reported `se = 0`. Voxels
+  whose RSS falls below the precision of `y'y` are now recomputed from
+  explicit residuals.
+
+* The internal demo fit used in examples and tests now has 3 voxels instead
+  of 2, so its voxels x terms results are not square.
+
+## `stats(fit, "estimates")` renamed to `stats(fit, "betas")`
+
+* `stats(fit, type = "estimates")` returned t-statistics, and the name
+  invited reading them as estimates (#217). The parameter family is now
+  called `"betas"`, matching `coef(type = "betas")`, and that is the default
+  for `stats()`, `standard_error()` and `p_values()` on `fmri_lm` and
+  `fmri_latent_lm` fits. `stats(fit, type = "estimates")` still works but
+  raises a deprecation warning (class
+  `fmrireg_deprecated_estimates_type`) that points to `coef()`; set
+  `options(fmrireg.suppress_deprecation = TRUE)` to silence it.
+  `standard_error()` and `p_values()` accept `"estimates"` as a silent
+  synonym, because their function names already say what they return. The
+  `type` documentation of `stats()` now says it returns t-statistics and
+  links to `coef()`.
+
+* The coefficient view of `autoplot()` / `plot()` for `fmri_lm` is named
+  `type = "betas"` to match. `type = "estimates"` stays a silent synonym,
+  because the plot is labelled and cannot be mistaken for the estimates
+  themselves. The plots now read coefficient values from `coef()` instead of
+  rebuilding them as t x SE, which gave 0 where the SE was numerically zero.
+
+* Duplicate definitions of `coef()`, `stats()` and `standard_error()` for
+  `fmri_lm` in `R/fmrilm.R` and `R/fmri_lm_methods.R` have been merged
+  into one. Which copy ran used to depend on file collation order.
+
 ## Plotting
 
 * New `autoplot()` / `plot()` methods for `fmri_lm` fits, with five views
   selected by `type`:
-  - `"estimates"` / `"contrasts"`: t-statistics across voxels as a sina plot
+  - `"betas"` / `"contrasts"`: t-statistics across voxels as a sina plot
     with p < .001 reference lines and the share of voxels beyond each tail;
     with `voxel =`, a coefficient plot with confidence intervals, one panel
     per event term.
