@@ -231,7 +231,8 @@ standard_error.fmri_latent_lm <- function(x, type = c("betas", "contrasts"), rec
       ret <- do.call(cbind, lapply(x$result$event_indices, function(i) {
         sqrt(rowSums((lds %*% (CR * cov.unscaled[i,i])) * lds))
       }))
-      colnames(ret) <- conditions(x$model$event_model)
+      # one name per design column (conditions() is per condition, not per basis)
+      colnames(ret) <- colnames(design_matrix(x$model))[unlist(x$result$event_indices)]
       tibble::as_tibble(ret, .name_repair="check_unique")
     } else {
       # Handle contrasts case

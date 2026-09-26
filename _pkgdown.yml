@@ -53,7 +53,7 @@ navbar:
         href: articles/functional_connectivity.html
       - text: '-------'
       - text: Advanced Topics
-      - text: Sketched GLM (SRHT/IHS + Nyström)
+      - text: Sketched GLM (temporal sketches + Nyström)
         href: articles/sketched-ar.html
       - text: Plugin Development
         href: articles/plugin-development.html

@@ -125,7 +125,7 @@ test_that(".run_lowrank_engine landmarks path with ihs/srht AR", {
     fmrireg:::.run_lowrank_engine(
       fx$model, fx$dataset,
       lowrank = list(
-        time_sketch = list(method = "ihs", m = 18L, iters = 2L),
+        time_sketch = list(method = "ihs", m = 18L, iters = 2L, tol = 0),
         landmarks = 4L,
         k_neighbors = 4L,
         kmeans_iter_max = 20L,

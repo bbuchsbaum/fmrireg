@@ -65,12 +65,12 @@ ols_t_vcov_cpp <- function(Y, X, C) {
     .Call('_fmrireg_ols_t_vcov_cpp', PACKAGE = 'fmrireg', Y, X, C)
 }
 
-cpp_srht_apply <- function(M, rows, signs, perm, scale) {
-    .Call('_fmrireg_cpp_srht_apply', PACKAGE = 'fmrireg', M, rows, signs, perm, scale)
+cpp_srht_apply <- function(M, rows, signs, perm, scale, n_threads = 0L) {
+    .Call('_fmrireg_cpp_srht_apply', PACKAGE = 'fmrireg', M, rows, signs, perm, scale, n_threads)
 }
 
-cpp_ihs_latent <- function(X, Z, m, iters) {
-    .Call('_fmrireg_cpp_ihs_latent', PACKAGE = 'fmrireg', X, Z, m, iters)
+cpp_srht_adjoint <- function(B, rows, signs, perm, scale, n_threads = 0L) {
+    .Call('_fmrireg_cpp_srht_adjoint', PACKAGE = 'fmrireg', B, rows, signs, perm, scale, n_threads)
 }
 
 group_pi0_counts_cpp <- function(p, group, tau) {
