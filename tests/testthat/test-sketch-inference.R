@@ -139,7 +139,7 @@ test_that("IHS fits reproduce OLS coefficients, standard errors and df", {
   expect_true(attr(cu, "is_full_rank"))
   expect_length(attr(cu, "aliased"), 0L)
   expect_equal(unname(matrix(cu, nrow(cu))), unname(XtXinv), tolerance = 1e-8)
-  expect_true(all(fit$sketch$converged))
+  expect_identical(fit$sketch$inference, "ols")
 })
 
 test_that("by_cluster fits solve each cluster with its own whitened design", {
@@ -312,8 +312,8 @@ test_that("by_cluster HRF band uses the voxel's cluster covariance", {
 test_that("sketch-and-solve requires more sketch rows than design columns", {
   dset <- sketch_matrix_dataset()
   expect_error(.sketch_fit(dset, "srht", m = 8L), "must exceed the number of design columns")
-  expect_error(lowrank_control(time_sketch = list(method = "ihs", iters = 0L)),
-               "must be >= 1")
+  # The former "ihs" controls are accepted and ignored (deprecated).
+  expect_no_error(lowrank_control(time_sketch = list(method = "ihs", iters = 0L)))
   expect_error(lowrank_control(time_sketch = list(method = "qr")),
                "must be one of")
 })

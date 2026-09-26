@@ -189,35 +189,23 @@ test_that("a sketch too small for the estimable design is an error naming m", {
   expect_length(attr(sol$cov_unscaled, "aliased"), 0L)
 })
 
-test_that("IHS with fewer sketch rows than estimable columns is an error naming m", {
-  # Every IHS Hessian sketch is then singular. The kernel used to fall back
-  # to pinv() and returned coefficients hundreds of OLS SEs off while
-  # reporting the exact OLS covariance.
-  dset <- sketch_matrix_dataset(run_length = 60L, nvox = 10L, seed = 3L)
-  for (m in c(3L, 6L)) {
-    expect_error(
-      suppressWarnings(fmri_lm(
-        onsets ~ hrf(condition), block = ~run, dataset = dset,
-        engine = "latent_sketch",
-        lowrank = lowrank_control(time_sketch = list(method = "ihs", m = m,
-                                                     iters = 4L, tol = 0))
-      )),
-      sprintf("time_sketch\\$m = %d is too small", m)
-    )
-  }
-  # Aliased columns do not count towards the m requirement, and the fit
-  # reproduces OLS on the reduced design.
+test_that("the exact (\"ihs\") solve aliases like exact OLS and ignores m", {
+  # "ihs" is exact OLS, so no sketch size can be too small (the former IHS
+  # kernel needed m >= the estimable columns and, before that, fell back to
+  # pinv() with coefficients hundreds of OLS SEs off).
   Tlen <- 80L
   X <- cbind(1, sin(seq_len(Tlen) / 5), cos(seq_len(Tlen) / 9))
   X <- cbind(X, X[, 2])
   Z <- withr::with_seed(4, matrix(stats::rnorm(Tlen * 4), Tlen))
-  expect_no_error(withr::with_seed(5, fmrireg:::.lowrank_time_solve(
-    X, Z, list(method = "ihs", m = 3L, iters = 2L, tol = 0), NULL)))
-  sol <- withr::with_seed(5, fmrireg:::.lowrank_time_solve(
-    X, Z, list(method = "ihs", m = 20L, iters = 100L, tol = 1e-8), NULL))
+  sol <- fmrireg:::.lowrank_time_solve(X, Z, list(method = "ihs", m = 3L), NULL)
   expect_identical(as.integer(attr(sol$cov_unscaled, "aliased")), 4L)
-  expect_equal(sol$M[1:3, ], qr.solve(X[, 1:3], Z), tolerance = 1e-6,
+  expect_identical(sol$M[4, ], rep(0, 4))
+  expect_equal(sol$M[1:3, ], qr.solve(X[, 1:3], Z), tolerance = 1e-10,
                ignore_attr = TRUE)
   expect_equal(sol$cov_unscaled[1:3, 1:3], solve(crossprod(X[, 1:3])),
                tolerance = 1e-10, ignore_attr = TRUE)
+  expect_equal(sol$df, Tlen - 3)
+  expect_equal(fmrireg:::.lowrank_sigma2(sol, NULL, TRUE),
+               colSums(qr.resid(qr(X[, 1:3]), Z)^2) / (Tlen - 3),
+               tolerance = 1e-10)
 })

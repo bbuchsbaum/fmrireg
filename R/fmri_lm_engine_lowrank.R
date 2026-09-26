@@ -126,37 +126,52 @@
 .lowrank_resolve_time_sketch <- function(sk, p, Tlen) {
   sk <- sk %||% list()
   if (!is.list(sk)) stop("`time_sketch` must be a list", call. = FALSE)
-  # Exact-name extraction: `sk$m` would partially match `sk$method`.
-  sk <- list(method = sk[["method"]] %||% "gaussian", m = sk[["m"]],
-             iters = sk[["iters"]], tol = sk[["tol"]])
+  # Exact-name extraction: `sk$m` would partially match `sk$method`. The
+  # former "ihs" controls `iters` and `tol` are accepted and ignored for one
+  # release (see .lowrank_ihs_deprecated()).
+  sk <- list(method = sk[["method"]] %||% "gaussian", m = sk[["m"]])
   method <- sk$method
   if (!is.character(method) || length(method) != 1L ||
       !method %in% c("gaussian", "countsketch", "srht", "ihs")) {
     stop("`time_sketch$method` must be one of \"gaussian\", \"countsketch\", ",
          "\"srht\" or \"ihs\"", call. = FALSE)
   }
+  if (identical(method, "ihs")) {
+    # "ihs" is exact OLS: the sketch size is irrelevant and is not validated.
+    .lowrank_ihs_deprecated()
+    return(list(method = "ihs", m = Tlen))
+  }
   sk$m <- as.integer(sk$m %||% min(8L * p, Tlen))
   if (length(sk$m) != 1L || is.na(sk$m) || sk$m < 1L || sk$m > Tlen) {
     stop(sprintf("`time_sketch$m` must be an integer in [1, %d]", Tlen),
          call. = FALSE)
   }
-  if (sk$m <= p && !identical(method, "ihs")) {
+  if (sk$m <= p) {
     stop(sprintf(paste0(
       "`time_sketch$m` (%d) must exceed the number of design columns (%d): ",
       "sketch-and-solve needs residual degrees of freedom"), sk$m, p),
       call. = FALSE)
   }
-  if (identical(method, "ihs")) {
-    if (!is.null(sk$iters) && (length(sk$iters) != 1L || is.na(sk$iters) ||
-                               sk$iters < 1L)) {
-      stop("`time_sketch$iters` must be >= 1 for method = \"ihs\"", call. = FALSE)
-    }
-    if (!is.null(sk$tol) && (length(sk$tol) != 1L || !is.finite(sk$tol) ||
-                             sk$tol < 0)) {
-      stop("`time_sketch$tol` must be a non-negative number", call. = FALSE)
-    }
-  }
   sk
+}
+
+#' Internal: once-per-session deprecation message for `method = "ihs"`
+#' @keywords internal
+#' @noRd
+.lowrank_ihs_deprecated <- function() {
+  rlang::inform(
+    paste0(
+      "`time_sketch$method = \"ihs\"` is deprecated and now computes the ",
+      "exact OLS fit: in this multi-response setting an iterative Hessian ",
+      "sketch repeats the full X'Z pass every iteration and cannot beat ",
+      "one-step least squares. Use method \"countsketch\" or \"gaussian\" ",
+      "for speed, or omit `engine = \"latent_sketch\"` for exact OLS. ",
+      "`time_sketch$iters` and `time_sketch$tol` are ignored."
+    ),
+    class = "fmrireg_deprecated_ihs",
+    .frequency = "once",
+    .frequency_id = "fmrireg_time_sketch_ihs"
+  )
 }
 
 #' Internal: select landmark voxels and interpolation weights
@@ -180,14 +195,18 @@
 
 #' Internal: residual variance from a time-sketched solve
 #'
-#' `sol$residuals` are sketched (sketch-and-solve) or full-data (IHS)
+#' `sol$residuals` are sketched (sketch-and-solve) or full-data (exact, "ihs")
 #' residuals of the latent/voxel columns; `sol$kappa` is their expected sum
 #' of squares per unit noise variance, so the result is on the data scale.
 #' @keywords internal
 #' @noRd
 .lowrank_sigma2 <- function(sol, A, A_is_I) {
   R <- sol$residuals
-  if (A_is_I) return(colSums(R * R) / sol$kappa)
+  if (A_is_I) {
+    # The exact solve carries the exact path's own residual sums of squares.
+    rss <- sol$rss %||% colSums(R * R)
+    return(rss / sol$kappa)
+  }
   # Voxel residual sums of squares diag(A' R'R A) via an r x r intermediate
   # rather than the dense (rows x V) projected residual matrix.
   RtR <- crossprod(R)
@@ -262,8 +281,8 @@
 #' Inference follows the estimator that is returned. Sketch-and-solve
 #' methods ("gaussian", "countsketch", "srht") report the conditional-on-sketch
 #' covariance and an unbiased sketched residual variance with Satterthwaite
-#' degrees of freedom (see `.lowrank_sketch_solve()`); "ihs" converges to the
-#' full-data least-squares solution and reports exact OLS quantities.
+#' degrees of freedom (see `.lowrank_sketch_solve()`); the deprecated "ihs" is
+#' computed as exact OLS (`.lowrank_exact_solve()`) and reports exact OLS quantities.
 #' @keywords internal
 #' @noRd
 .run_lowrank_engine <- function(fm, dataset, lowrank, cfg = NULL, ar_options = NULL) {
@@ -475,8 +494,8 @@
   baseline_indices <- attr(tmats, "baseline_term_indices")
   # `rss` is the residual sum of squares of the rows actually fitted: the
   # sketched residuals ||r_s||^2 for sketch-and-solve, the full-data RSS for
-  # IHS. Its expectation is sigma^2 * kappa with kappa = tr(PK) (the residual
-  # count T - p for IHS), so resvar = rss / kappa; kappa is not the
+  # the exact solve ("ihs"). Its expectation is sigma^2 * kappa with kappa = tr(PK) (the residual
+  # count T - rank for "ihs"), so resvar = rss / kappa; kappa is not the
   # Satterthwaite rdf. sigma2 = ||r_s||^2 / kappa exactly, so this recovers
   # the fitted RSS without re-forming the residuals (for landmark fits it is
   # the landmark RSS interpolated like sigma2).
@@ -502,21 +521,8 @@
     m = sk$m,
     df = dfres,
     kappa = kappa,
-    inference = if (identical(sk$method, "ihs")) "ols" else "sketch_conditional",
-    iters = vapply(solve_info, function(s) as.integer(s$iters), integer(1)),
-    converged = vapply(solve_info, function(s) as.logical(s$converged), logical(1))
+    inference = if (identical(sk$method, "ihs")) "ols" else "sketch_conditional"
   )
-
-  if (identical(sk$method, "ihs") && any(!sketch_info$converged, na.rm = TRUE)) {
-    warning(sprintf(paste0(
-      "IHS did not reach tol = %g OLS standard errors within %d iterations ",
-      "in %d of %d solve(s); coefficients are not at the least-squares ",
-      "solution. Increase `time_sketch$iters` or `time_sketch$m`."),
-      sk$tol %||% .lowrank_ihs_default_tol,
-      as.integer(sk$iters %||% .lowrank_ihs_default_iters),
-      sum(!sketch_info$converged, na.rm = TRUE), length(sketch_info$converged)),
-      call. = FALSE)
-  }
 
   result <- list(
     betas = bstats,
@@ -531,7 +537,7 @@
     ar_coef = ar_coef_store,
     sketch = sketch_info,
     # Sketch-and-solve rdf is a Satterthwaite df (see .lowrank_sketch_solve());
-    # IHS reports exact OLS df.
+    # the exact solve ("ihs") reports exact OLS df.
     df_method = if (identical(sk$method, "ihs")) "residual" else "satterthwaite"
   )
   if (!is.null(grouped)) {
