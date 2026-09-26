@@ -69,8 +69,18 @@ term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
   num_event_cols <- ncol(event_dm)
   num_baseline_cols <- ncol(baseline_dm)
   
-  eterm_indices <- 1:num_event_cols
-  bterm_indices <- (num_event_cols + 1):(num_event_cols + num_baseline_cols)
+  # The term matrices are what the solvers stack, so they must account for
+  # exactly the columns of the design they index.
+  bterm_width <- sum(vapply(bterms, ncol, integer(1)))
+  if (bterm_width != num_baseline_cols) {
+    stop(sprintf(
+      "Baseline term matrices have %d columns but the baseline design has %d; cannot index the design consistently.",
+      bterm_width, num_baseline_cols
+    ), call. = FALSE)
+  }
+
+  eterm_indices <- seq_len(num_event_cols)
+  bterm_indices <- num_event_cols + seq_len(num_baseline_cols)
   
   # Combine term matrices
   term_matrices <- c(eterms, bterms)
@@ -92,9 +102,12 @@ term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
 #' @keywords internal
 #' @noRd
 .fmri_model_run_ids <- function(x) {
-  bids <- x$event_model$blockids
+  # Runs come from the sampling frame (one id per scan). The event model's
+  # blockids are per event and omit runs without events, so "every run"
+  # judged from them would miss those runs and re-request the design by id.
+  bids <- fmrihrf::blockids(x$event_model$sampling_frame)
   if (length(bids) == 0L) {
-    bids <- fmrihrf::blockids(x$event_model$sampling_frame)
+    bids <- x$event_model$blockids
   }
   sort(unique(bids))
 }

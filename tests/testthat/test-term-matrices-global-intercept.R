@@ -130,3 +130,36 @@ test_that("runwise-intercept multi-run and single-run fits are unchanged", {
   b1 <- .as_pred_by_vox(coef(fit1, include_baseline = TRUE), ncol(fx1$X), 7L)
   expect_equal(unname(b1), unname(fx1$beta), tolerance = 1e-3)
 })
+
+test_that("a run without events still counts as a run when all are requested", {
+  # Run ids come from the sampling frame. The event model's per-event ids
+  # omit a run with no events (run 3 here), so requesting every run
+  # explicitly would not be recognised as the whole design and, with an
+  # fmridesign that replicates a global intercept per requested run, the
+  # intercept would be duplicated again. Current fmridesign no longer
+  # replicates it (fmridesign#39), so this guards the invariant rather than
+  # reproducing the old failure.
+  set.seed(5)
+  runs <- c(60L, 60L, 60L)
+  ev <- do.call(rbind, lapply(c(1L, 2L), function(r) {
+    data.frame(onset = seq(6, 100, by = 12),
+               condition = factor(rep(c("A", "B"), length.out = 8)), run = r)
+  }))
+  sf <- fmrihrf::sampling_frame(blocklens = runs, TR = 2)
+  emod <- fmridesign::event_model(onset ~ hrf(condition), data = ev,
+                                  block = ~run, sampling_frame = sf)
+  bmod <- fmridesign::baseline_model(basis = "poly", degree = 1, sframe = sf,
+                                     intercept = "global")
+  Y <- matrix(rnorm(sum(runs) * 3), sum(runs), 3)
+  ds <- matrix_frame(Y, TR = 2, run_length = runs, event_table = ev)
+  fm <- fmri_model(emod, bmod, dataset = ds)
+  n_design <- ncol(as.matrix(design_matrix(fm)))
+
+  for (bn in list(NULL, 1:3)) {
+    tm <- term_matrices(fm, blocknum = bn)
+    expect_equal(sum(vapply(tm, ncol, integer(1))), n_design)
+    expect_equal(max(attr(tm, "baseline_term_indices")), n_design)
+    expect_false(anyDuplicated(attr(tm, "varnames")) > 0)
+  }
+  expect_equal(ncol(as.matrix(design_matrix(fm, blockid = 1:3))), n_design)
+})
