@@ -112,6 +112,16 @@ meta_fixef <- function(ctab, weighting=c("inv_var", "equal")) {
 do_fixef <- function(se, beta, weighting) {
   if (weighting == "inv_var") {
     inv_var <- 1/(se^2)
+    # A run with se == 0 (an exact fit, or residuals below the precision of
+    # the residual sum of squares) has infinite precision, and Inf/Inf would
+    # turn the pooled estimate into NaN. Take the limit of inverse-variance
+    # weighting instead: equal weight on the zero-variance runs, none on the
+    # others.
+    zero_se <- !is.na(se) & se == 0
+    exact_rows <- rowSums(zero_se) > 0
+    if (any(exact_rows)) {
+      inv_var[exact_rows, ] <- ifelse(zero_se[exact_rows, , drop = FALSE], 1, 0)
+    }
     wts <- inv_var/rowSums(inv_var)
     wbeta <- beta * wts
     wbeta <- rowSums(wbeta)
@@ -382,4 +392,51 @@ meta_betas <- function(bstats, colind, weighting=c("inv_var", "equal")) {
            stat=list(stat),
            prob=list(prob))))
 
+}
+
+#' Pool runwise beta statistics by global design column
+#'
+#' Unlike \code{meta_betas()}, which assumes run-local column \code{j} is the
+#' same coefficient in every run, this pools each global column over exactly
+#' the runs whose design contains it. Event columns are shared by all runs and
+#' are pooled by inverse-variance weighting; a run-specific baseline column
+#' (drift, block intercept) appears in one run and keeps that run's estimate.
+#'
+#' @param bstats List of per-run beta-statistic tibbles.
+#' @param colmaps List of integer vectors: \code{colmaps[[r]][j]} is the global
+#'   column of run \code{r}'s local column \code{j}.
+#' @param colind Global columns to report, in output order.
+#' @return A beta-statistics tibble whose matrices have one column per
+#'   \code{colind}, and \code{colind} recorded as those global indices.
+#' @keywords internal
+#' @noRd
+meta_betas_mapped <- function(bstats, colmaps, colind, weighting = c("inv_var", "equal")) {
+  weighting <- match.arg(weighting)
+  stopifnot(length(bstats) == length(colmaps))
+  n_vox <- nrow(as.matrix(bstats[[1]]$data[[1]]$estimate[[1]]))
+  pieces <- lapply(colind, function(g) {
+    runs <- which(vapply(colmaps, function(m) g %in% m, logical(1)))
+    if (length(runs) == 0L) {
+      na <- rep(NA_real_, n_vox)
+      return(list(estimate = na, se = na, stat = na, prob = na))
+    }
+    beta <- do.call(cbind, lapply(runs, function(r) {
+      as.matrix(bstats[[r]]$data[[1]]$estimate[[1]])[, match(g, colmaps[[r]])]
+    }))
+    se <- do.call(cbind, lapply(runs, function(r) {
+      as.matrix(bstats[[r]]$data[[1]]$se[[1]])[, match(g, colmaps[[r]])]
+    }))
+    do_fixef(se, beta, weighting)
+  })
+  collect <- function(field) {
+    do.call(cbind, lapply(pieces, function(x) as.numeric(x[[field]])))
+  }
+
+  dplyr::tibble(type = "beta", name = "parameter_estimates", stat_type = "meta_zstat",
+                conmat = list(NULL), colind = list(colind),
+                data = list(tibble(
+                  estimate = list(collect("estimate")),
+                  se = list(collect("se")),
+                  stat = list(collect("stat")),
+                  prob = list(collect("prob")))))
 }

@@ -12,7 +12,10 @@ test_that("built-in fits expose the versioned result and variance contract", {
   expect_identical(variance_model(fit)$metadata$estimation_scope, "joint")
   expect_identical(fit$result$fit_state$voxel_status,
                    fit$result$voxel_status)
-  expect_length(fit$result$df$inference, ncol(coef(fit)))
+  n_vox <- ncol(fmridataset::collect_assay(dset))
+  expect_identical(n_vox, 3L)
+  expect_identical(dim(coef(fit)), c(n_vox, 2L))
+  expect_length(fit$result$df$inference, n_vox)
   expect_s3_class(attr(fit, "compute"), "fmri_lm_compute_spec")
   expect_identical(attr(fit, "requested_control"), control)
   expect_s3_class(attr(fit, "executed_control"), "fmri_lm_control")
@@ -52,10 +55,10 @@ test_that("joint results are invariant to voxel partitioning and chunk paralleli
   future_chunks <- suppressWarnings(fit(2L, "chunks"))
 
   expect_equal(coef(two), coef(one), tolerance = 1e-10)
-  expect_equal(stats(two, "estimates"), stats(one, "estimates"), tolerance = 1e-10)
+  expect_equal(stats(two, "betas"), stats(one, "betas"), tolerance = 1e-10)
   expect_equal(coef(future_chunks), coef(two), tolerance = 1e-10)
-  expect_equal(stats(future_chunks, "estimates"),
-               stats(two, "estimates"), tolerance = 1e-10)
+  expect_equal(stats(future_chunks, "betas"),
+               stats(two, "betas"), tolerance = 1e-10)
 })
 
 test_that("runwise backend is compute-only for supported model fits", {
@@ -72,6 +75,6 @@ test_that("runwise backend is compute-only for supported model fits", {
   ))
 
   expect_equal(coef(reference_fit), coef(matrix_fit), tolerance = 1e-8)
-  expect_equal(stats(reference_fit, "estimates"),
-               stats(matrix_fit, "estimates"), tolerance = 1e-8)
+  expect_equal(stats(reference_fit, "betas"),
+               stats(matrix_fit, "betas"), tolerance = 1e-8)
 })

@@ -168,7 +168,7 @@ test_that("fit_glm_on_transformed_series / from_suffstats / external dims", {
   fx <- make_plugin_model(n = 40L, V = 3L)
   fit <- fit_glm_on_transformed_series(fx$model, fx$Y, cfg = fx$cfg)
   expect_s3_class(fit, "fmri_lm")
-  expect_equal(ncol(coef(fit, type = "betas")), 3L)
+  expect_equal(nrow(coef(fit, type = "betas")), 3L)
 
   expect_error(
     fit_glm_on_transformed_series(list(), fx$Y),

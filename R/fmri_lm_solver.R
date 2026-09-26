@@ -87,6 +87,14 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
     XtY <- crossprod(X, Y)
     yTy <- colSums(Y * Y)
     rss <- yTy - colSums(betas * XtY)
+    # yTy - b'X'y loses all precision when the fit is nearly exact: the RSS is
+    # then below the rounding error of yTy and can come out as 0 or negative,
+    # giving se = 0. Recompute those voxels from explicit residuals.
+    inexact <- which(is.finite(rss) & rss <= yTy * 1e-8)
+    if (length(inexact) > 0L) {
+      resid <- Y[, inexact, drop = FALSE] - X %*% betas[, inexact, drop = FALSE]
+      rss[inexact] <- colSums(resid^2)
+    }
     rss <- pmax(rss, 0)
     fitted <- NULL
   }

@@ -37,7 +37,7 @@ test_that(".demo_* helpers construct coherent tiny objects", {
 
   dset <- fmrireg:::.demo_matrix_dataset()
   expect_s3_class(dset, "fmri_frame")
-  expect_equal(dim(frame_data(dset)), c(8L, 2L))
+  expect_equal(dim(frame_data(dset)), c(8L, 3L))
 
   fmod <- fmrireg:::.demo_fmri_model()
   expect_s3_class(fmod, "fmri_model")
