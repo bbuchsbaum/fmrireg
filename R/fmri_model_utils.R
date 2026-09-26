@@ -33,19 +33,21 @@ get_formula.fmri_model <- function(x,...) {
 term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
   assert_that(inherits(x, "fmri_model"), msg = "'x' must be an 'fmri_model' object")
   
+  all_runs <- .fmri_model_run_ids(x)
   if (is.null(blocknum)) {
-    bids <- x$event_model$blockids
-    if (length(bids) == 0L) {
-      bids <- fmrihrf::blockids(x$event_model$sampling_frame)
-    }
-    blocknum <- sort(unique(bids))
+    blocknum <- all_runs
   }
+  # Request the whole design without `blockid` when every run is selected:
+  # subsetting by all runs is not equivalent to the full design for terms
+  # that span runs (e.g. a global intercept), which some fmridesign versions
+  # replicate once per requested run.
+  dm_blockid <- .full_design_blockid(blocknum, all_runs)
   
   # Get the full convolved design matrix from the event model
-  event_dm <- design_matrix(x$event_model, blockid = blocknum)
+  event_dm <- design_matrix(x$event_model, blockid = dm_blockid)
   
   # Get the baseline design matrix
-  baseline_dm <- design_matrix(x$baseline_model, blockid = blocknum)
+  baseline_dm <- design_matrix(x$baseline_model, blockid = dm_blockid)
   
   # Extract individual term matrices using the col_indices attribute
   col_indices <- attr(x$event_model$design_matrix, "col_indices")
@@ -61,14 +63,24 @@ term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
   names(eterms) <- names(col_indices)
   
   # Extract baseline term matrices (baseline terms are simpler, one per term)
-  bterms <- lapply(baseline_terms(x), function(term) as.matrix(design_matrix(term, blockid = blocknum)))
+  bterms <- lapply(baseline_terms(x), function(term) as.matrix(design_matrix(term, blockid = dm_blockid)))
   
   # Compute indices for event and baseline terms
   num_event_cols <- ncol(event_dm)
   num_baseline_cols <- ncol(baseline_dm)
   
-  eterm_indices <- 1:num_event_cols
-  bterm_indices <- (num_event_cols + 1):(num_event_cols + num_baseline_cols)
+  # The term matrices are what the solvers stack, so they must account for
+  # exactly the columns of the design they index.
+  bterm_width <- sum(vapply(bterms, ncol, integer(1)))
+  if (bterm_width != num_baseline_cols) {
+    stop(sprintf(
+      "Baseline term matrices have %d columns but the baseline design has %d; cannot index the design consistently.",
+      bterm_width, num_baseline_cols
+    ), call. = FALSE)
+  }
+
+  eterm_indices <- seq_len(num_event_cols)
+  bterm_indices <- num_event_cols + seq_len(num_baseline_cols)
   
   # Combine term matrices
   term_matrices <- c(eterms, bterms)
@@ -84,6 +96,33 @@ term_matrices.fmri_model <- function(x, blocknum = NULL,...) {
   attr(term_matrices, "varnames") <- vnames
   
   return(term_matrices)
+}
+
+#' Sorted unique run identifiers of an fmri_model
+#' @keywords internal
+#' @noRd
+.fmri_model_run_ids <- function(x) {
+  # Runs come from the sampling frame (one id per scan). The event model's
+  # blockids are per event and omit runs without events, so "every run"
+  # judged from them would miss those runs and re-request the design by id.
+  bids <- fmrihrf::blockids(x$event_model$sampling_frame)
+  if (length(bids) == 0L) {
+    bids <- x$event_model$blockids
+  }
+  sort(unique(bids))
+}
+
+#' Normalise a run selection for fmridesign's design_matrix()
+#'
+#' Returns `NULL` (meaning "the whole design") when `blockid` selects every
+#' run, and `blockid` unchanged otherwise.
+#' @keywords internal
+#' @noRd
+.full_design_blockid <- function(blockid, all_runs) {
+  if (is.null(blockid)) {
+    return(NULL)
+  }
+  if (setequal(blockid, all_runs)) NULL else blockid
 }
 
 #' Create an fmri_model from a Formula

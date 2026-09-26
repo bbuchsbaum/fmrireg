@@ -388,6 +388,17 @@ column names do not change. What does change:
 
 ## Bug Fixes
 
+* Multi-run fits with `baseline_model(intercept = "global")` no longer
+  duplicate the global intercept. `term_matrices()` and
+  `design_matrix(<fmri_model>, blockid =)` now build the whole design without
+  a run filter when every run is selected, so the design holds one
+  `constant_global` column instead of one per run, `baseline_term_indices`
+  stays within the design, and joint fits no longer alias the duplicate
+  columns to `NA`. Selections of a subset of runs are unchanged. Runs are
+  identified from the sampling frame, so a run without events still counts
+  when every run is requested, and `term_matrices()` now errors if its
+  baseline term matrices do not span exactly the baseline design.
+
 * Parcel-pooled AR (`noise_spec(pooling = "parcel")`, `by_cluster`) in
   `engine = "latent_sketch"` summed the sketched Gram matrices of all
   parcels and solved each parcel's cross-products against that sum,
