@@ -47,7 +47,26 @@ test_that("sketched fits report residual variance and covariance on the data sca
     expect_lt(abs(mean(fit$sigma2) - 1), 0.1, label = method)
     expect_equal(fit$result$resvar, fit$sigma2, label = method)
     expect_equal(fit$result$sigma, sqrt(fit$sigma2), label = method)
-    expect_equal(fit$result$rss, fit$sigma2 * fit$result$rdf, label = method)
+    # rss is the residual sum of squares of the fitted rows, whose
+    # expectation is sigma^2 * kappa (kappa = tr(PSS'), the residual count
+    # for IHS); it is not sigma2 * rdf, since rdf is a Satterthwaite df.
+    expect_equal(fit$result$rss, fit$sigma2 * fit$sketch$kappa, label = method)
+    if (identical(method, "ihs")) {
+      expect_equal(fit$sketch$kappa, fit$result$rdf, label = method)
+    }
+  }
+  # Direct check against the residuals of the sketched regression.
+  Tlen <- 90L
+  X <- cbind(1, rnorm(Tlen), cos(seq_len(Tlen) / 5))
+  Z <- matrix(rnorm(Tlen * 5), Tlen)
+  for (method in c("gaussian", "countsketch", "srht")) {
+    set.seed(13)
+    op <- fmrireg:::.lowrank_sketch_operator(Tlen, list(method = method, m = 30L))
+    sol <- fmrireg:::.lowrank_time_solve(X, Z, list(method = method, m = 30L), op)
+    Xs <- op$apply(X); Zs <- op$apply(Z)
+    rs <- Zs - Xs %*% qr.solve(Xs, Zs)
+    s2 <- fmrireg:::.lowrank_sigma2(sol, NULL, TRUE)
+    expect_equal(s2 * sol$kappa, colSums(rs^2), tolerance = 1e-10, label = method)
   }
 })
 
@@ -223,6 +242,71 @@ test_that("by_cluster statistics stay aligned for unsorted labels and reject NA"
                                       time_sketch = list(method = "srht", m = 60L))),
     "must not contain NA"
   )
+})
+
+test_that("sketch fits report Satterthwaite df and cluster covariance scope", {
+  nvox <- 60L
+  dset <- sketch_matrix_dataset(run_length = 60L, nvox = nvox, seed = 71L)
+  parcels <- rep(1:3, length.out = nvox)
+  meta <- function(fit) fmrireg:::.fmri_lm_bids_inference_metadata(fit)
+
+  set.seed(72)
+  fit_g <- .sketch_fit(dset, "srht", m = 40L)
+  expect_identical(fit_g$result$df$method, "satterthwaite")
+  expect_identical(meta(fit_g)$DegreesOfFreedomMethod, "satterthwaite")
+  expect_identical(meta(fit_g)$CovarianceScope, "shared")
+
+  set.seed(72)
+  fit_ihs <- .sketch_fit(dset, "ihs", m = 40L)
+  expect_identical(meta(fit_ihs)$DegreesOfFreedomMethod, "residual")
+
+  exact <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset)
+  expect_identical(meta(exact)$DegreesOfFreedomMethod, "residual")
+
+  ctl <- fmri_lm_control(noise = noise_spec("ar1", pooling = "parcel",
+                                            parcels = parcels))
+  set.seed(73)
+  fit_c <- fmri_lm(onsets ~ hrf(condition), block = ~run, dataset = dset,
+                   engine = "latent_sketch", control = ctl,
+                   lowrank = lowrank_control(parcels = parcels,
+                                             time_sketch = list(method = "gaussian", m = 60L)))
+  vm <- variance_model(fit_c)
+  expect_identical(vm$covariance_scope, "cluster")
+  expect_identical(vm$covariance, fit_c$result$covariance_by_cluster)
+  expect_identical(meta(fit_c)$CovarianceScope, "cluster")
+  expect_identical(meta(fit_c)$DegreesOfFreedomMethod, "satterthwaite")
+  # One df for the map: the smallest cluster Satterthwaite df.
+  expect_equal(meta(fit_c)$InferenceDegreesOfFreedom$Min, fit_c$result$rdf)
+  expect_equal(meta(fit_c)$InferenceDegreesOfFreedom$Max, fit_c$result$rdf)
+})
+
+test_that("by_cluster HRF band uses the voxel's cluster covariance", {
+  # by_cluster fits have no shared cov.unscaled; the band used to vanish
+  # silently (and the curve was always drawn as significant).
+  nvox <- 40L
+  dset <- sketch_matrix_dataset(run_length = 60L, nvox = nvox, signal = 1,
+                                seed = 81L)
+  parcels <- rep(1:2, length.out = nvox)
+  ctl <- fmri_lm_control(noise = noise_spec("ar1", pooling = "parcel",
+                                            parcels = parcels))
+  set.seed(82)
+  fit <- fmri_lm(onsets ~ hrf(condition, basis = "spmg3"), block = ~run,
+                 dataset = dset, engine = "latent_sketch", control = ctl,
+                 lowrank = lowrank_control(parcels = parcels,
+                                           time_sketch = list(method = "srht", m = 60L)))
+  expect_null(fit$result$cov.unscaled)
+  sa <- seq(0, 20, by = 0.5)
+  G <- as.matrix(fmrihrf::HRF_SPMG3(sa))
+  for (v in c(3L, 4L)) {  # one voxel in each cluster
+    p <- ggplot2::autoplot(fit, type = "hrf", voxel = v, sample_at = sa)
+    d <- p$data[p$data$condition == levels(p$data$condition)[1], ]
+    expect_true(all(is.finite(d$lo)) && all(is.finite(d$hi)))
+    k <- which(vapply(fit$result$cluster_voxels, function(g) v %in% g, logical(1)))
+    V <- fit$result$covariance_by_cluster[[k]][1:3, 1:3] * fit$sigma2[v]
+    half <- stats::qt(0.975, fit$result$rdf) * sqrt(rowSums((G %*% V) * G))
+    expect_equal(drop(G %*% fit$betas_fixed[1:3, v]), d$mean, tolerance = 1e-8)
+    expect_equal((d$hi - d$lo) / 2, half, tolerance = 1e-8)
+  }
 })
 
 test_that("sketch-and-solve requires more sketch rows than design columns", {

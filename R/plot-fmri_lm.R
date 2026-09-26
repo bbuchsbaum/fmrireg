@@ -390,6 +390,25 @@ plot.fmri_lm <- function(x, type = c("estimates", "contrasts", "hrf", "timecours
   out
 }
 
+#' Unscaled coefficient covariance that applies to one voxel
+#'
+#' A shared `cov.unscaled` when the fit has one; otherwise the covariance of
+#' the voxel's cluster for fits that carry one per cluster
+#' (`covariance_by_cluster` indexed by `cluster_voxels`, e.g. by_cluster
+#' sketch fits). `NULL` when neither is available.
+#' @keywords internal
+#' @noRd
+.voxel_cov_unscaled <- function(fit, voxel) {
+  cu <- fit$result$cov.unscaled
+  if (is.matrix(cu)) return(cu)
+  covs <- fit$result$covariance_by_cluster
+  groups <- fit$result$cluster_voxels
+  if (is.null(covs) || is.null(groups)) return(NULL)
+  hit <- which(vapply(groups, function(g) voxel %in% g, logical(1)))
+  if (length(hit) != 1L) return(NULL)
+  as.matrix(covs[[hit]])
+}
+
 #' @keywords internal
 #' @noRd
 .plot_fit_hrf <- function(fit, voxel, sample_at, level, direct_labels = TRUE) {
@@ -404,8 +423,8 @@ plot.fmri_lm <- function(x, type = c("estimates", "contrasts", "hrf", "timecours
   beta <- tt * se
   nvox <- nrow(tt)
   dfs <- .fit_inference_df(fit, nvox)
-  cu <- fit$result$cov.unscaled
   single <- length(voxel) == 1L
+  cu <- if (single) .voxel_cov_unscaled(fit, voxel) else NULL
   ink <- .fmrireg_ink
   max_lines <- 200L
   line_vox <- if (length(voxel) > max_lines) {

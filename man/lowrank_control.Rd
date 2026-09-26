@@ -47,6 +47,12 @@ residual degrees of freedom (about \code{m - p}). \code{"ihs"} iterates to the
 full-data least-squares solution and reports exact OLS covariance,
 residual variance and \code{T - p} degrees of freedom.
 
+For sketch-and-solve fits, \code{result$rss} is the residual sum of squares
+of the \code{m} sketched rows. Its expectation is \eqn{\sigma^2 \kappa}, with
+\eqn{\kappa = tr(PSS')} stored in \code{result$sketch$kappa}, so the residual
+variance is \code{rss / kappa}, not \code{rss / rdf}. For \code{"ihs"}, \code{kappa} equals
+the residual degrees of freedom.
+
 Estimability is judged on the full (whitened) design with the same
 pivoted-QR rule that exact fits use. Aliased coefficients are reported
 as \code{NA}, and contrasts that load on them are \code{NA} with a warning. If the

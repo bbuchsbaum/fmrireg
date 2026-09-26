@@ -32,6 +32,12 @@
 #'   full-data least-squares solution and reports exact OLS covariance,
 #'   residual variance and `T - p` degrees of freedom.
 #'
+#'   For sketch-and-solve fits, `result$rss` is the residual sum of squares
+#'   of the `m` sketched rows. Its expectation is \eqn{\sigma^2 \kappa}, with
+#'   \eqn{\kappa = tr(PSS')} stored in `result$sketch$kappa`, so the residual
+#'   variance is `rss / kappa`, not `rss / rdf`. For `"ihs"`, `kappa` equals
+#'   the residual degrees of freedom.
+#'
 #'   Estimability is judged on the full (whitened) design with the same
 #'   pivoted-QR rule that exact fits use. Aliased coefficients are reported
 #'   as `NA`, and contrasts that load on them are `NA` with a warning. If the

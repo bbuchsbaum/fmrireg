@@ -256,6 +256,22 @@
   sketched design restricted to the estimable columns is rank deficient,
   `m` is too small for the design and the fit stops with an error naming
   `time_sketch$m`. The ridge fallback is gone.
+* Reporting for `engine = "latent_sketch"` fits:
+  - `write_results()` metadata and `result$df$method` now record
+    `DegreesOfFreedomMethod = "satterthwaite"` for sketch-and-solve fits.
+    `"ihs"` and exact fits keep `"residual"`.
+  - `by_cluster` fits now report covariance scope `"cluster"` (with the
+    per-cluster covariances) instead of `"summary"`.
+  - `result$rss` is now the residual sum of squares of the fitted
+    (sketched) rows. It was `sigma2 * rdf`, which is not a residual sum of
+    squares because `rdf` is a Satterthwaite df. Its expectation is
+    `sigma2 * kappa`, where `kappa = tr(P SS')` is stored in
+    `result$sketch$kappa`. For `"ihs"`, `rss` is unchanged (the full-data
+    RSS).
+* The single-voxel HRF plot (`autoplot(fit, type = "hrf", voxel = v)`)
+  of a `by_cluster` sketch fit drew no confidence band and always marked the
+  curve as significant, because it read the shared `cov.unscaled`, which
+  such fits do not have. It now uses the covariance of the voxel's cluster.
 * `time_sketch` lists without an `m` element (for example
   `list(method = "ihs")`) failed with "m <= Tlen is not TRUE", because
   `sk$m` partially matched `sk$method`. The default `m = min(8p, T)` now

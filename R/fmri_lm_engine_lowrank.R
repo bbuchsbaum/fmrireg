@@ -378,7 +378,7 @@
       sol_g <- .lowrank_time_solve(tmp$X, tmp$Y, sk, op)
       M[, Jg] <- sol_g$M
       sigma2[Jg] <- .lowrank_sigma2(sol_g, NULL, TRUE)
-      rss_cluster[Jg] <- sigma2[Jg] * sol_g$df
+      rss_cluster[Jg] <- sigma2[Jg] * sol_g$kappa
       cov_list[[i]] <- sol_g$cov_unscaled
       solve_info[[i]] <- sol_g
     }
@@ -466,8 +466,15 @@
   tmats <- term_matrices(fm)
   event_indices <- attr(tmats, "event_term_indices")
   baseline_indices <- attr(tmats, "baseline_term_indices")
-  # rss on each fit's own residual df (clusters can differ in df).
-  rss <- if (is.null(grouped)) sigma2 * dfres else rss_cluster
+  # `rss` is the residual sum of squares of the rows actually fitted: the
+  # sketched residuals ||r_s||^2 for sketch-and-solve, the full-data RSS for
+  # IHS. Its expectation is sigma^2 * kappa with kappa = tr(PK) (the residual
+  # count T - p for IHS), so resvar = rss / kappa; kappa is not the
+  # Satterthwaite rdf. sigma2 = ||r_s||^2 / kappa exactly, so this recovers
+  # the fitted RSS without re-forming the residuals (for landmark fits it is
+  # the landmark RSS interpolated like sigma2).
+  kappa <- vapply(solve_info, function(s) as.numeric(s$kappa), numeric(1))
+  rss <- if (is.null(grouped)) sigma2 * kappa else rss_cluster
 
   # Keep-but-aliased: the reported coefficients of aliased columns are NA
   # (the stats above already are); B itself keeps zeros there so that
@@ -487,6 +494,7 @@
     method = sk$method,
     m = sk$m,
     df = dfres,
+    kappa = kappa,
     inference = if (identical(sk$method, "ihs")) "ols" else "sketch_conditional",
     iters = vapply(solve_info, function(s) as.integer(s$iters), integer(1)),
     converged = vapply(solve_info, function(s) as.logical(s$converged), logical(1))
@@ -514,7 +522,10 @@
     rss = rss,
     resvar = sigma2,
     ar_coef = ar_coef_store,
-    sketch = sketch_info
+    sketch = sketch_info,
+    # Sketch-and-solve rdf is a Satterthwaite df (see .lowrank_sketch_solve());
+    # IHS reports exact OLS df.
+    df_method = if (identical(sk$method, "ihs")) "residual" else "satterthwaite"
   )
   if (!is.null(grouped)) {
     result$covariance_by_cluster <- grouped$cov_list
