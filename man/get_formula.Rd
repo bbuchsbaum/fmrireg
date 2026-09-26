@@ -3,7 +3,7 @@
 \name{get_formula}
 \alias{get_formula}
 \alias{get_formula.fmri_model}
-\title{get_data}
+\title{Retrieve the formula underlying a model object}
 \usage{
 get_formula(x, ...)
 
@@ -20,26 +20,12 @@ get_formula(x, ...)
 A formula.
 }
 \description{
+Generic used to expose the original modelling formula for fitted objects.
+
 Functions for creating and manipulating fmri_model objects
 }
 \examples{
 fm <- fmrireg:::.demo_fmri_model()
 get_formula(fm)
 }
-\keyword{Generic}
-\keyword{Retrieve}
-\keyword{a}
-\keyword{expose}
-\keyword{fitted}
-\keyword{for}
-\keyword{formula}
 \keyword{internal}
-\keyword{model}
-\keyword{modelling}
-\keyword{object}
-\keyword{objects.}
-\keyword{original}
-\keyword{the}
-\keyword{to}
-\keyword{underlying}
-\keyword{used}
