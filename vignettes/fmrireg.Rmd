@@ -286,7 +286,7 @@ row weighting, uncertainty estimates, and model diagnostics.
 #### Acceleration: Sketched / Nyström Analysis
 
 For large problems, you can accelerate voxelwise GLM estimation with:
-- SRHT/IHS temporal sketching to reduce timepoints while preserving LS geometry.
+- Temporal sketching (CountSketch, Gaussian or SRHT) to reduce timepoints, with standard errors that account for the sketch.
 - Nyström/landmark spatial extension to solve on a subset of voxels and extend with parcel‑aware kernels.
 
 See `vignette("sketched-ar", package = "fmrireg")` for guidance, tradeoffs, and practical defaults.

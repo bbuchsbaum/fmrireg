@@ -1,13 +1,9 @@
 # Fifteenth wave: IHS/sketch engines, chunkwise_apply, fmri_lm legacy + config.
 
-test_that("make_time_sketch and ihs_latent_solve cover sketch methods", {
+test_that("make_time_sketch covers sketch methods", {
   set.seed(431)
   Tlen <- 64L
-  p <- 4L
-  k <- 3L
   m <- 16L
-  X <- matrix(rnorm(Tlen * p), Tlen, p)
-  Z <- matrix(rnorm(Tlen * k), Tlen, k)
 
   Sg <- fmrireg:::make_time_sketch(Tlen, list(method = "gaussian", m = m))
   expect_equal(dim(Sg), c(m, Tlen))
@@ -17,19 +13,11 @@ test_that("make_time_sketch and ihs_latent_solve cover sketch methods", {
   expect_true(inherits(Sc, "Matrix") || inherits(Sc, "sparseMatrix") || is.matrix(Sc))
 
   expect_null(fmrireg:::make_time_sketch(Tlen, list(method = "srht", m = m)))
-  expect_null(fmrireg:::make_time_sketch(Tlen, list(method = "ihs", m = m)))
 
   expect_error(
     fmrireg:::make_time_sketch(Tlen, list(method = "gaussian", m = Tlen + 1L)),
     regexp = "."
   )
-
-  sol <- fmrireg:::ihs_latent_solve(X, Z, m = m, iters = 2L)
-  expect_true(is.list(sol))
-  expect_true(all(c("M", "Ginv") %in% names(sol)) || length(sol) >= 1L)
-  if (!is.null(sol$M)) {
-    expect_true(is.matrix(sol$M) || inherits(sol$M, "Matrix"))
-  }
 })
 
 test_that(".chunkwise_apply sequential and parallel paths", {
