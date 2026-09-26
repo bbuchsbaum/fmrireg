@@ -7,16 +7,17 @@
 \usage{
 p_values(x, ...)
 
-\method{p_values}{fmri_lm}(x, type = c("estimates", "contrasts"), ...)
+\method{p_values}{fmri_lm}(x, type = c("betas", "contrasts"), ...)
 }
 \arguments{
 \item{x}{The fitted model object}
 
 \item{...}{Additional arguments passed to methods}
 
-\item{type}{Character string specifying the type of p-values to extract.
-Options typically include "estimates" for parameter estimates and "contrasts"
-for contrast tests. Defaults to "estimates" in most methods.}
+\item{type}{For \code{fmri_lm} fits, the parameter family: \code{"betas"}
+(default) for the event coefficients returned by \code{coef()}, or
+\code{"contrasts"}. \code{"estimates"} is accepted as a synonym of
+\code{"betas"}.}
 }
 \value{
 A tibble or matrix containing p-values

@@ -84,7 +84,7 @@ test_that("modular components produce same results as original", {
   # Test that coefficients can be extracted
   coefs <- coef(fit1)
   expect_true(is.data.frame(coefs) || is.matrix(coefs))
-  expect_equal(ncol(coefs), n_voxels)
+  expect_equal(nrow(coefs), n_voxels)
 })
 
 test_that("voxelwise AR with contrasts works", {
