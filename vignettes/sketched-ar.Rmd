@@ -347,7 +347,7 @@ reasonable starting point. The vignette uses a smaller value so the
 example remains quick.
 
 ```{r summarize-rrr-bootstrap}
-rrr_se <- standard_error(fit_rrr_boot, type = "estimates")
+rrr_se <- standard_error(fit_rrr_boot, type = "betas")
 
 data.frame(
   engine = attr(fit_rrr_boot, "engine"),
