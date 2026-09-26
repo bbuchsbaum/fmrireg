@@ -397,8 +397,45 @@
   3.5x too large. Both sandwich helpers are now checked against
   `sandwich::vcovHC()`.
 
+## Deprecated
+
+* `lowrank_control(time_sketch = list(method = "ihs"))` is deprecated. In
+  `engine = "latent_sketch"` the design is narrow (p of about 10-30) and the
+  response wide (1e4-1e5 columns), so least squares costs one `X'Z` pass,
+  and every iterative-Hessian-sketch iteration repeats that pass to form the
+  exact gradient: IHS could never beat one exact solve (9.35 s against
+  0.12-0.23 s for OLS). `"ihs"` now computes the exact OLS fit through the
+  solver of the exact joint path, so coefficients, standard errors,
+  contrasts, rank handling (aliased columns `NA`) and the `T - rank`
+  residual df are those of exact OLS; without AR it is identical to
+  `fmri_lm(..., strategy = "chunkwise")`. It emits a once-per-session
+  message pointing to `"countsketch"`/`"gaussian"` for speed or exact OLS
+  for accuracy. This supersedes the IHS iteration and `tol` entries under
+  Statistical Corrections and Bug Fixes. The controls `time_sketch$iters`
+  and `time_sketch$tol` are accepted and ignored for one release, `m` is
+  ignored for `"ihs"` (it no longer has to reach the number of estimable
+  columns), and `result$sketch` no longer carries `iters` or `converged`.
+  The internal IHS kernel (`cpp_ihs_latent()`, `ihs_latent_solve()`) is
+  removed.
+
 ## Performance
 
+* The SRHT sketched solve in `engine = "latent_sketch"` is 17-83x faster
+  (`T` from 200 to 1000, 1e4-5e4 response columns, 2 threads). Its
+  Walsh-Hadamard transform walked the column-major data row by row with a
+  temporary vector per butterfly; it now transforms each response column in
+  place in a contiguous buffer and, when built with OpenMP, runs in parallel
+  over columns (`options(fmrireg.num_threads)`). Output is bit-identical to
+  the previous kernel. The sketched solve now forms coefficients and
+  residuals with two BLAS products through the explicit `Q` factor instead
+  of `qr.coef()`/`qr.resid()`, which applied Householder reflections one
+  response column at a time, and the sketch Gram matrix `SS'` is computed
+  once per fit instead of once per cluster. At `T = 400`, `p = 20`,
+  `m = 8p` and 5e4 response columns the SRHT solve fell from 3.5 s to
+  0.07 s, and the Gaussian and CountSketch solves from about 0.3 s to
+  0.04 s (exact OLS: 0.05 s). SRHT still trails CountSketch and Gaussian
+  at realistic sizes, so `?lowrank_control` now recommends those two for
+  speed.
 * Voxelwise AR fitting no longer recomputes the run-level design projection
   for every voxel. `.fast_preproject()` performs an `n x n` solve and was
   being called once per voxel on a design that does not vary by voxel;

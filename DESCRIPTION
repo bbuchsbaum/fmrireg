@@ -34,7 +34,7 @@ Imports:
     robustbase,
     matrixStats,
     furrr,
-    rlang,
+    rlang (>= 1.0.3),
     neuroim2,
     Rcpp,
     RcppParallel,

@@ -24,29 +24,40 @@ Nyström extension (NULL = off).}
 
 \item{time_sketch}{List controlling the temporal sketch, with elements
 \describe{
-\item{\code{method}}{\code{"gaussian"} (default), \code{"countsketch"}, \code{"srht"}
-(subsampled randomized Hadamard transform) or \code{"ihs"} (iterative
-Hessian sketch).}
+\item{\code{method}}{\code{"gaussian"} (default), \code{"countsketch"} or \code{"srht"}
+(subsampled randomized Hadamard transform). \code{"ihs"} (iterative
+Hessian sketch) is deprecated: it now computes the exact OLS fit
+and emits a once-per-session message.}
 \item{\code{m}}{Number of sketch rows; \code{NULL} uses \code{min(8 * p, T)} for a
 design with \code{p} columns and \code{T} scans. The sketch-and-solve methods
-require \code{m > p}; \code{"ihs"} requires \code{m} at least the number of
-estimable design columns.}
-\item{\code{iters}}{\code{"ihs"} only: maximum number of iterations (default
-100). Must be at least 1.}
-\item{\code{tol}}{\code{"ihs"} only: stop once every coefficient moves by less
-than \code{tol} OLS standard errors (default \code{1e-3}); \code{0} runs exactly
-\code{iters} iterations. A fit that stops at \code{iters} before reaching
-\code{tol} warns.}
+require \code{m > p}; \code{"ihs"} ignores \code{m}.}
 }
+The former \code{"ihs"} controls \code{iters} and \code{tol} are accepted and ignored.
+
 All sketches are normalised (\eqn{E\|Sr\|^2 = \|r\|^2}), so residual
 variances, \code{rss} and covariances are reported on the data scale.
 \code{"gaussian"}, \code{"countsketch"} and \code{"srht"} are sketch-and-solve
 estimators: they fit the model to \code{m} sketched rows, and their standard
 errors are the conditional-on-sketch standard errors of that estimator
 (roughly \code{sqrt(T / m)} times the full-data OLS ones), with Satterthwaite
-residual degrees of freedom (about \code{m - p}). \code{"ihs"} iterates to the
-full-data least-squares solution and reports exact OLS covariance,
-residual variance and \code{T - p} degrees of freedom.
+residual degrees of freedom (about \code{m - p}). \code{"ihs"} returns exact OLS
+coefficients, covariance, residual variance and \code{T - rank} degrees of
+freedom. With many response columns and few design columns, one exact
+least-squares pass costs a single \eqn{X'Z} product, which no iterative
+sketch can undercut; \code{"ihs"} was never faster than exact OLS here.
+
+For speed, prefer \code{"countsketch"} or \code{"gaussian"}. With \code{p = 20},
+\verb{m = 8p} and \code{r = 5e4} response columns, a sketch-and-solve fit took
+0.04-0.06 s for \code{T} from 400 to 1000 scans, against 0.05-0.14 s for
+exact OLS (Apple M3 Max, Accelerate BLAS). \code{"srht"} took 0.07-0.09 s:
+its fast Walsh-Hadamard transform costs \eqn{O(T \log T)} per response
+column, CountSketch touches each scan once (\eqn{O(T)}), and the
+Gaussian sketch's \eqn{O(mT)} dense product runs at BLAS speed, so
+\code{"srht"} loses to both at these sizes and overtakes exact OLS only for
+longer series. Its advantage is an orthonormal-row sketch (\eqn{SS' = (T/m)I}
+when \code{T} is a power of two). The SRHT kernel runs in parallel over
+response columns with \code{getOption("fmrireg.num_threads")} threads when
+the package is built with OpenMP.
 
 For sketch-and-solve fits, \code{result$rss} is the residual sum of squares
 of the \code{m} sketched rows. Its expectation is \eqn{\sigma^2 \kappa}, with

@@ -9,11 +9,11 @@ make_time_sketch(Tlen, ctrl)
 \arguments{
 \item{Tlen}{Integer time length}
 
-\item{ctrl}{List(method = "gaussian"|"countsketch"|"srht"|"ihs", m, iters)}
+\item{ctrl}{List(method = "gaussian"|"countsketch"|"srht", m)}
 }
 \value{
 A dense or sparse sketch matrix for Gaussian/CountSketch methods;
-\code{NULL} for \code{"srht"} and \code{"ihs"} because those methods are applied via plans/operators.
+\code{NULL} for \code{"srht"}, which is applied through a plan (\code{\link[=srht_apply]{srht_apply()}}).
 }
 \description{
 All sketches are normalised so that \eqn{E\|S r\|^2 = \|r\|^2}.
