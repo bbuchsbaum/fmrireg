@@ -112,11 +112,15 @@ empty_contrast_table <- function() {
   covariance <- result$covariance_model_basis %||%
     result$covariance_by_voxel %||%
     result$covariance_by_run %||%
+    result$covariance_by_cluster %||%
     result$cov.unscaled
   covariance_scope <- if (!is.null(result$covariance_by_voxel)) {
     "voxel"
   } else if (!is.null(result$covariance_by_run)) {
     "run"
+  } else if (!is.null(result$covariance_by_cluster)) {
+    # One unscaled covariance per voxel cluster (`result$cluster_voxels`).
+    "cluster"
   } else if (!is.null(covariance)) {
     "shared"
   } else {
@@ -189,8 +193,12 @@ empty_contrast_table <- function() {
 
   result$schema_version <- 2L
   result$voxel_status <- status
+  # An engine whose residual df is not the residual count (e.g. the
+  # Satterthwaite df of a sketch-and-solve fit) declares it in `df_method`.
+  df_method <- result$df_method %||% cfg$variance$df
+  result$df_method <- NULL
   result$df <- list(nominal = nominal, inference = df_inference,
-                    method = cfg$variance$df)
+                    method = df_method)
   result$fit_state <- list(
     robust_weights = result$robust_weights,
     ar_parameters = result$ar_coef,
@@ -212,12 +220,12 @@ empty_contrast_table <- function() {
         estimation_scope = cfg$estimation$scope,
         noise = cfg$noise,
         robust = cfg$robust,
-        df_method = cfg$variance$df,
+        df_method = df_method,
         taper = cfg$variance$taper,
         compute = compute,
         strategy = strategy,
         model_based_factorization = identical(cfg$variance$method, "model") &&
-          covariance_scope %in% c("shared", "voxel"),
+          covariance_scope %in% c("shared", "voxel", "cluster"),
         selected_max_lag = variance_fit$max_lag %||% NULL
       )
     )

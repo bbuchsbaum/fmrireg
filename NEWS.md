@@ -1,10 +1,193 @@
 # fmrireg 0.2.0
 
+## Breaking: design generics now come from fmridesign (fmridesign >= 0.6.1.9000)
+
+fmrireg no longer defines its own copies of `longnames()`, `shortnames()`,
+`construct()` and `correlation_map()`, and no longer registers methods for
+classes that fmridesign owns (`event_model`, `event_term`, `convolved_term`,
+`feature_term`, `baseline_model`, ...). It re-exports fmridesign's generics,
+so `fmrireg::longnames` and `fmridesign::longnames` are the same function and
+a method registered by either package is reached from both. `.onLoad` no
+longer reaches into fmridesign's namespace. Coefficient and design-matrix
+column names do not change. What does change:
+
+* **`blockids(<event_model>)` now returns one run id per event, not one per
+  scan.** fmrireg used to override fmridesign's method with per-scan ids
+  whenever it was loaded, so the result depended on whether fmrireg was
+  attached. Code that indexes scans with it must change:
+
+  ```r
+  blockids(em)                  # per event (fmridesign's method)
+  blockids(em$sampling_frame)   # per scan: what blockids(em) used to return
+  blocklens(em)                 # scans per run (unchanged)
+  ```
+
+  fmridesign prints a one-time message the first time `blockids()` is called
+  on an `event_model` in a session.
+
+* **`longnames()` uses fmridesign's `.` format instead of `#`.**
+
+  | design | before | now |
+  |---|---|---|
+  | `hrf(cond)` | `cond#A` | `cond.A` |
+  | `hrf(rt)` | `rt#rt` | `rt` |
+  | `hrf(cond, rt)` | `cond#A` | `cond.A_rt` |
+  | `hrf(cond, attn)` | `cond#A:attn#x` | `cond.A_attn.x` |
+  | `trialwise()` | `.trial_factor...#01` | `.trial_factor....01` |
+
+  A long name is the design-matrix column name without its `<term>_` prefix
+  (and without the `_bNN` basis suffix unless `expand_basis = TRUE`): column
+  `cond_cond.A` has long name `cond.A`. See `?fmridesign::longnames`.
+  `shortnames()` is unchanged for factor terms, but parametric modulators now
+  keep the modulator (`hrf(cond, rt)` gives `A:rt`, formerly `A`), and the
+  result for an `event_model` is an unnamed vector (formerly named).
+
+* **Empty interaction cells** are still left out of `longnames()` and
+  `shortnames()` (the default, `drop.empty = TRUE`), so names line up with
+  columns. `drop.empty = FALSE` lists the full factor grid. `conditions()`
+  always returns the full grid, including empty cells.
+
+* **`correlation_map(<baseline_model>)`** is fmridesign's method. It keeps
+  fmrireg's former behaviour: `within_run = TRUE` by default (run intercepts
+  dropped, columns centred within runs, run-specific columns correlated on
+  their own run), with identical cells and values. `label_values` is accepted
+  as an alias for `annotate`, and cells are labelled by default at 12 or
+  fewer columns, as before. The drawing (VIF diagonal, outlined high
+  correlations) follows fmridesign's style. Arguments that are not
+  `geom_tile()` arguments now raise an error instead of being ignored.
+
+* `design_matrix(<convolved_term>, blockid = )` keeps a one-column result as a
+  matrix.
+
+## Other fixes in this change
+
+* `standard_error(<fmri_latent_lm>)` (including `recon = TRUE`) and the
+  internal `pull_stat_revised()` name their columns with the design-matrix
+  column names, matching `coef()` and `stats(recon = TRUE)`. For simple
+  designs the names change from the condition name to the column name (for
+  example `a.1` becomes `a_a.1`). Multi-basis HRFs and designs with an empty
+  interaction cell, where the number of conditions differs from the number of
+  columns, used to fail with an error and now work.
+* `glm_ols()` and `glm_lss()`, which accept an HRF basis by name
+  (`"HRF_SPMG1"` etc.), now resolve it with `getExportedValue()` and accept
+  any `HRF_*` object that fmrihrf exports. The names `"HRF_AFNI"`,
+  `"HRF_GAM"`, `"HRF_IL"` and `"HRF_DD"` were listed as valid but never
+  existed in fmrihrf; they now give "Unknown HRF basis name" instead of an
+  "object not found" error.
+* The fmrigds reducer check calls `fmrigds::get_reducer()` directly instead
+  of looking it up in fmrigds's namespace.
+
+## Breaking: corrected SPMG kernel (fmrihrf >= 0.4.0)
+
+* fmrireg now builds against fmrihrf 0.4.0, which corrects the SPM canonical
+  HRF used by `HRF_SPMG1`, `HRF_SPMG2`, and `HRF_SPMG3`. The kernel now has the
+  SPM double-gamma shape (about 9% undershoot rather than 0.6%), and its raw
+  peak is about ten times lower (0.175 rather than 1.75). For the same data,
+  betas and standard errors for the canonical and temporal-derivative columns
+  are therefore about ten times larger; t and F statistics change only through
+  the corrected shape. The third `HRF_SPMG3` column is now a dispersion
+  derivative, not a second time derivative, so its coefficients are not
+  comparable across versions at all. Because `hrf()` defaults to an
+  unnormalized SPMG1 basis, this affects default models. Refit existing
+  analyses rather than comparing raw coefficients across versions.
+* The bundled `fmri_benchmark_datasets` were regenerated with the corrected
+  kernel (same seeds), and the data-raw generator was updated for the
+  `fmri_frame` dataset API.
+* NIfTI maps written by `write_results()` are now explicitly FLOAT32 (NIfTI
+  datatype 16), as documented. This was already the neuroim2 default for
+  in-memory volumes; it now also holds for volumes whose source file was
+  stored as DOUBLE.
+
+## Breaking change: `coef()` on `fmri_lm` fits is now voxels x terms
+
+* `coef.fmri_lm()` now returns one orientation for every argument
+  combination: **one row per voxel, one column per coefficient**, with term
+  names on the column margin (#227). Previously the default call
+  (`type = "betas"`, `include_baseline = FALSE`) returned the transpose,
+  terms x voxels with term names as row names, while
+  `include_baseline = TRUE` and `type = "contrasts"` were already
+  voxels x terms. `coef()` now also agrees with `stats()`,
+  `standard_error()` and `p_values()`, so `coef(fit) / standard_error(fit)`
+  lines up element-wise.
+
+  **Update code that indexed the old default by row:** `coef(fit)[term, ]`
+  becomes `coef(fit)[, term]`, `rownames(coef(fit))` becomes
+  `colnames(coef(fit))` (or `coef_names(fit)`), and a `t(coef(fit))` added
+  to reach voxels x terms must be dropped. When the number of voxels equals
+  the number of event coefficients the old and new results have the same
+  `dim()`, so such code does not error: check it by hand. The orientation
+  flip has no deprecation period, since an orientation cannot warn only
+  the callers who depend on it. `coef()` now has its own help page,
+  `?coef.fmri_lm`.
+
+* The old orientation caused two silent transpositions, both now fixed:
+  - `fit_contrasts()` on an `fmri_lm` fit guessed the orientation of `coef()`
+    from its dimensions. When the voxel count equalled the number of event
+    coefficients, it computed the contrast from the transposed betas.
+  - The "known vs recovered" table in the Package Overview vignette (two
+    voxels, two conditions) showed each condition's estimates across voxels
+    next to each voxel's true values.
+
+* `reduce_betas()` and latent-space reconstruction in
+  `coef(<fmri_latent_lm>, recon = TRUE)` also compensated for the old
+  orientation. They now use the single one, and their output is unchanged.
+
+## Runwise fits: correct baseline columns and near-exact fits
+
+* Multi-run runwise fits pooled betas by run-local column position. Each
+  run's design has the event columns plus only that run's baseline columns,
+  so the stored betas were too narrow (6 of 10 columns for two runs with
+  default drift). They mixed different runs' drift and intercept terms, and
+  `coef(fit, include_baseline = TRUE)` gave them the wrong global names, for
+  example run 1's intercept labelled `base_bs1_block_2`. Betas are now pooled
+  by global design column. A run-specific baseline column keeps its own
+  run's estimate. A column shared by all runs (event regressors, a global
+  intercept) is pooled by inverse-variance weighting. The stored betas now
+  have one column per design-matrix column. Event-column estimates are
+  unchanged.
+
+* Runwise pooling returned `NaN` for every coefficient when a run's
+  standard error was exactly zero. With inverse-variance weighting, a
+  near-exact fit made 0/0. Pooling now takes the zero-variance limit.
+
+* The memory-lean residual-sum-of-squares computation (`y'y - b'X'y`)
+  cancelled to zero for near-exact fits, which reported `se = 0`. Voxels
+  whose RSS falls below the precision of `y'y` are now recomputed from
+  explicit residuals.
+
+* The internal demo fit used in examples and tests now has 3 voxels instead
+  of 2, so its voxels x terms results are not square.
+
+## `stats(fit, "estimates")` renamed to `stats(fit, "betas")`
+
+* `stats(fit, type = "estimates")` returned t-statistics, and the name
+  invited reading them as estimates (#217). The parameter family is now
+  called `"betas"`, matching `coef(type = "betas")`, and that is the default
+  for `stats()`, `standard_error()` and `p_values()` on `fmri_lm` and
+  `fmri_latent_lm` fits. `stats(fit, type = "estimates")` still works but
+  raises a deprecation warning (class
+  `fmrireg_deprecated_estimates_type`) that points to `coef()`; set
+  `options(fmrireg.suppress_deprecation = TRUE)` to silence it.
+  `standard_error()` and `p_values()` accept `"estimates"` as a silent
+  synonym, because their function names already say what they return. The
+  `type` documentation of `stats()` now says it returns t-statistics and
+  links to `coef()`.
+
+* The coefficient view of `autoplot()` / `plot()` for `fmri_lm` is named
+  `type = "betas"` to match. `type = "estimates"` stays a silent synonym,
+  because the plot is labelled and cannot be mistaken for the estimates
+  themselves. The plots now read coefficient values from `coef()` instead of
+  rebuilding them as t x SE, which gave 0 where the SE was numerically zero.
+
+* Duplicate definitions of `coef()`, `stats()` and `standard_error()` for
+  `fmri_lm` in `R/fmrilm.R` and `R/fmri_lm_methods.R` have been merged
+  into one. Which copy ran used to depend on file collation order.
+
 ## Plotting
 
 * New `autoplot()` / `plot()` methods for `fmri_lm` fits, with five views
   selected by `type`:
-  - `"estimates"` / `"contrasts"`: t-statistics across voxels as a sina plot
+  - `"betas"` / `"contrasts"`: t-statistics across voxels as a sina plot
     with p < .001 reference lines and the share of voxels beyond each tail;
     with `voxel =`, a coefficient plot with confidence intervals, one panel
     per event term.
@@ -160,6 +343,49 @@
   correlation surviving the filter is what legitimately costs degrees of
   freedom; AR order by itself does not.
 
+* **Time-sketched GLM inference (`engine = "latent_sketch"`).** Reported
+  statistics now describe the estimator that is actually returned.
+
+  - *Sketch-and-solve standard errors are now honest.* `"srht"`,
+    `"gaussian"` and `"countsketch"` fit the model to `m` sketched rows, so
+    their coefficients vary about `sqrt(T / m)` times more than full-data
+    OLS, but they reported OLS-sized standard errors with `T - p` degrees of
+    freedom. Under the null the type-I rate at nominal 0.05 was 0.42 (SRHT),
+    0.45 (Gaussian) and 0.45 (CountSketch) at `m = 40`, `T = 200`, and
+    0.16-0.23 at `m = 120`. The fits now report the conditional-on-sketch
+    covariance `(Xs'Xs)^-1 Xs'SS'Xs (Xs'Xs)^-1`, an unbiased residual
+    variance `||r_s||^2 / tr(P SS')` and Satterthwaite residual degrees of
+    freedom (about `m - p`), which restores type-I rates of 0.047-0.051 for
+    every sketch-and-solve method, with and without AR prewhitening (OLS on
+    the same data: 0.052). **Standard errors,
+    t-statistics, p-values and `df.residual` from these methods change**:
+    standard errors grow by about `sqrt(T / m)`.
+  - *Fields are on the data scale.* The SRHT used an unnormalised Hadamard
+    transform, so for `"srht"` and `"ihs"` `sigma2`, `result$sigma`,
+    `resvar` and `rss` were about `T` times too large and `cov.unscaled`
+    about `T` times too small (the two cancelled in standard errors). All
+    sketches are now normalised (`E||Sr||^2 = ||r||^2`), and `sigma2` is on
+    the scale of the noise variance for every method. For sketch-and-solve
+    fits `cov.unscaled` is the conditional covariance above; with landmarks,
+    `sigma2` remains the interpolated variance `sum_l w_l^2 sigma2_l`.
+  - *IHS is OLS-exact.* `"ihs"` now returns the exact `(X'X)^-1`, the exact
+    full-data residual variance and `T - p` degrees of freedom; previously
+    its covariance came from one random sketch (scaling the whole SE map by
+    a random factor of 0.98-1.56 at `m = 40`) and its variance from a second,
+    independent sketch. By default it iterates until no coefficient moves by
+    more than `tol = 1e-3` OLS standard errors, up to `iters = 100`
+    iterations (median 11, max 16 at `m = 8p` over 200 sketch seeds, leaving
+    at most 6e-4 standard errors of error; the former fixed 3 iterations left
+    a median of 0.5 and a maximum of 1.9). `time_sketch$tol = 0` runs exactly
+    `iters` iterations, and a fit that stops at `iters` before reaching `tol`
+    warns. Its standard errors, t-statistics and p-values now match OLS.
+  - Fits carry `$sketch` (method, `m`, residual df, IHS iterations and
+    convergence). Sketch-and-solve now requires `m > p` and errors
+    otherwise.
+  - `lowrank_control()` documents all four methods and the `iters` and
+    `tol` controls, validates `time_sketch$method`, and no longer carries an
+    `iters = 0L` default that was invalid for `"ihs"`.
+
 ## Bug Fixes
 
 * Multi-run fits with `baseline_model(intercept = "global")` no longer
@@ -170,6 +396,73 @@
   stays within the design, and joint fits no longer alias the duplicate
   columns to `NA`. Selections of a subset of runs are unchanged.
 
+* Parcel-pooled AR (`noise_spec(pooling = "parcel")`, `by_cluster`) in
+  `engine = "latent_sketch"` summed the sketched Gram matrices of all
+  parcels and solved each parcel's cross-products against that sum,
+  shrinking every coefficient by about the number of parcels (with 10
+  parcels the reported residual variance was 10^4-10^6 times too large and
+  no null test ever rejected). Each parcel is now solved with its own whitened design and
+  covariance, and `method = "ihs"`, which previously ran plain SRHT here, is
+  now honoured. Because the coefficient covariance differs between parcels,
+  post-hoc `fit_contrasts()` on such fits errors; declare contrasts in the
+  model instead. Parcel labels containing `NA` now error instead of leaving voxels
+  without a cluster.
+* `engine = "latent_sketch"` is now rank safe. Its solver inverted the
+  sketched Gram matrix with `chol()` plus a silent ridge fallback, and
+  `chol()` often succeeds on a numerically singular matrix. With one
+  aliased nuisance column (`T = 200`, `m = 40`), `"countsketch"` reported
+  a mean `sigma2` of 221 against a true 1 and event standard errors of
+  38-166 against about 3.6. `"srht"` and `"gaussian"` gave aliased
+  coefficients small finite standard errors, and `"ihs"` reported aliased
+  variances of about 2e13. Estimability is now judged on the full
+  (whitened, per parcel for `by_cluster`) design with the pivoted-QR rule
+  that exact fits use. The sketch is solved on the estimable columns only,
+  through a QR of the sketched design. As in exact fits, aliased
+  coefficients and their standard errors are `NA`, `cov.unscaled` and
+  `covariance_by_cluster` carry the `aliased` attribute, and contrasts that
+  load on an aliased column are `NA` with a warning naming it. The
+  estimable coefficients, standard errors, `sigma2` and Satterthwaite df
+  equal those of the same sketch applied to the reduced design. If the
+  sketched design restricted to the estimable columns is rank deficient,
+  `m` is too small for the design and the fit stops with an error naming
+  `time_sketch$m`. The ridge fallback is gone. `"ihs"` likewise no longer
+  falls back to a pseudo-inverse of a singular sketched Hessian (with `m`
+  below the number of columns it returned coefficients 10-800 OLS
+  standard errors off while reporting the exact OLS covariance); it
+  requires `m` at least the number of estimable columns and errors
+  otherwise. For `by_cluster` fits the non-estimable-contrast warning is
+  issued once, not once per cluster.
+* Reporting for `engine = "latent_sketch"` fits:
+  - `write_results()` metadata and `result$df$method` now record
+    `DegreesOfFreedomMethod = "satterthwaite"` for sketch-and-solve fits.
+    `"ihs"` and exact fits keep `"residual"`.
+  - `by_cluster` fits now report covariance scope `"cluster"` (with the
+    per-cluster covariances) instead of `"summary"`.
+  - `result$rss` is now the residual sum of squares of the fitted
+    (sketched) rows. It was `sigma2 * rdf`, which is not a residual sum of
+    squares because `rdf` is a Satterthwaite df. Its expectation is
+    `sigma2 * kappa`, where `kappa = tr(P SS')` is stored in
+    `result$sketch$kappa`. For `"ihs"`, `rss` is unchanged (the full-data
+    RSS). For landmark fits it is interpolated from the landmarks, like
+    `sigma2`.
+* The single-voxel HRF plot (`autoplot(fit, type = "hrf", voxel = v)`)
+  of a `by_cluster` sketch fit drew no confidence band and always marked the
+  curve as significant, because it read the shared `cov.unscaled`, which
+  such fits do not have. It now uses the covariance of the voxel's cluster.
+* `time_sketch` lists without an `m` element (for example
+  `list(method = "ihs")`) failed with "m <= Tlen is not TRUE", because
+  `sk$m` partially matched `sk$method`. The default `m = min(8p, T)` now
+  applies.
+
+* The `"ihs"` time sketch in `engine = "latent_sketch"` now performs an
+  actual iterative Hessian sketch. Each iteration previously used a sketched
+  gradient as well as a sketched Hessian, so it re-solved an independent
+  sketched problem and never converged to the least-squares solution; more
+  iterations did not help. The gradient now uses the full data, and a step
+  halving keeps the residual sum of squares non-increasing, so `iters`
+  controls accuracy as documented. Iterations start from the sketch-and-solve
+  solution, so the baseline is fitted from the first step. `iters < 1` and
+  non-finite inputs are now errors.
 * The `fmridataset` requirement is now `(>= 0.11.0.9000)`. The pre-frame API
   was removed upstream without a version change, so both sides of the break
   reported `0.10.0.9000` and the previous constraint could not tell them
@@ -274,8 +567,45 @@
   3.5x too large. Both sandwich helpers are now checked against
   `sandwich::vcovHC()`.
 
+## Deprecated
+
+* `lowrank_control(time_sketch = list(method = "ihs"))` is deprecated. In
+  `engine = "latent_sketch"` the design is narrow (p of about 10-30) and the
+  response wide (1e4-1e5 columns), so least squares costs one `X'Z` pass,
+  and every iterative-Hessian-sketch iteration repeats that pass to form the
+  exact gradient: IHS could never beat one exact solve (9.35 s against
+  0.12-0.23 s for OLS). `"ihs"` now computes the exact OLS fit through the
+  solver of the exact joint path, so coefficients, standard errors,
+  contrasts, rank handling (aliased columns `NA`) and the `T - rank`
+  residual df are those of exact OLS; without AR it is identical to
+  `fmri_lm(..., strategy = "chunkwise")`. It emits a once-per-session
+  message pointing to `"countsketch"`/`"gaussian"` for speed or exact OLS
+  for accuracy. This supersedes the IHS iteration and `tol` entries under
+  Statistical Corrections and Bug Fixes. The controls `time_sketch$iters`
+  and `time_sketch$tol` are accepted and ignored for one release, `m` is
+  ignored for `"ihs"` (it no longer has to reach the number of estimable
+  columns), and `result$sketch` no longer carries `iters` or `converged`.
+  The internal IHS kernel (`cpp_ihs_latent()`, `ihs_latent_solve()`) is
+  removed.
+
 ## Performance
 
+* The SRHT sketched solve in `engine = "latent_sketch"` is 17-83x faster
+  (`T` from 200 to 1000, 1e4-5e4 response columns, 2 threads). Its
+  Walsh-Hadamard transform walked the column-major data row by row with a
+  temporary vector per butterfly; it now transforms each response column in
+  place in a contiguous buffer and, when built with OpenMP, runs in parallel
+  over columns (`options(fmrireg.num_threads)`). Output is bit-identical to
+  the previous kernel. The sketched solve now forms coefficients and
+  residuals with two BLAS products through the explicit `Q` factor instead
+  of `qr.coef()`/`qr.resid()`, which applied Householder reflections one
+  response column at a time, and the sketch Gram matrix `SS'` is computed
+  once per fit instead of once per cluster. At `T = 400`, `p = 20`,
+  `m = 8p` and 5e4 response columns the SRHT solve fell from 3.5 s to
+  0.07 s, and the Gaussian and CountSketch solves from about 0.3 s to
+  0.04 s (exact OLS: 0.05 s). SRHT still trails CountSketch and Gaussian
+  at realistic sizes, so `?lowrank_control` now recommends those two for
+  speed.
 * Voxelwise AR fitting no longer recomputes the run-level design projection
   for every voxel. `.fast_preproject()` performs an `n x n` solve and was
   being called once per voxel on a design that does not vary by voxel;

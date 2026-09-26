@@ -40,13 +40,14 @@ test_that("longnames/shortnames/columns/nbasis/design_matrix.convolved_term", {
     }
   }
 
-  expect_equal(blockids(emod), fmrihrf::blockids(sframe))
+  # blockids(<event_model>) is fmridesign's method: one run id per event
+  expect_equal(blockids(emod), emod$blockids)
 })
 
 test_that("with_package errors when dependency missing; construct/design_env generics exist", {
   expect_error(fmrireg:::with_package("definitely_not_a_real_pkg_zzz"), "install")
   expect_true(is.function(fmrireg:::design_env))
-  expect_true(is.function(fmrireg:::construct))
+  expect_identical(fmrireg::construct, fmridesign::construct)
   expect_true(is.function(estimate_contrast))
   expect_true(is.function(chunkwise_lm))
 })

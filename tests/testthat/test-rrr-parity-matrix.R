@@ -62,6 +62,14 @@
     rnorm(length(event_indices) * V, sd = signal_sd),
     nrow = length(event_indices)
   )
+  # Express signal_sd by the effect's peak height relative to noise, not as a
+  # raw coefficient: the HRF's raw scale belongs to fmrihrf (it changed ~10x
+  # when the SPMG undershoot was corrected). A peak of 1.75 per unit beta is
+  # the scale these fixtures' SNR was calibrated against.
+  B_true[event_indices, ] <- sweep(
+    B_true[event_indices, , drop = FALSE], 1,
+    1.75 / apply(abs(X[, event_indices, drop = FALSE]), 2, max), `*`
+  )
   signal <- X %*% B_true
 
   noise <- matrix(0, nrow = Ttot, ncol = V)

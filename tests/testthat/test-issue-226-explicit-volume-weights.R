@@ -108,7 +108,7 @@ test_that("joint IID weighted estimates are invariant to voxel chunking", {
     chunks = 3L
   )
 
-  expected <- as.matrix(oracle$coefficients)[fixture$event_columns, , drop = FALSE]
+  expected <- t(as.matrix(oracle$coefficients)[fixture$event_columns, , drop = FALSE])
   expect_equal(unname(as.matrix(coef(one))), unname(expected), tolerance = 1e-10)
   expect_equal(unname(as.matrix(coef(three))), unname(expected), tolerance = 1e-10)
   expect_equal(coef(three), coef(one), tolerance = 1e-12)

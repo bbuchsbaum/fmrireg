@@ -6,6 +6,14 @@
 \usage{
 srht_apply(M, plan)
 }
+\arguments{
+\item{M}{Numeric matrix with \code{plan$T} rows.}
+
+\item{plan}{A plan from \code{\link[=make_srht_plan]{make_srht_plan()}}.}
+}
+\value{
+The \code{plan$m} x \code{ncol(M)} sketched matrix.
+}
 \description{
 Apply SRHT to a T x k matrix using a plan
 }

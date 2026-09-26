@@ -86,7 +86,8 @@ test_that("latent_sketch validates by_cluster requirements", {
 })
 
 test_that("latent_sketch preserves model-defined contrasts and covariance", {
-  dset <- .demo_matrix_dataset()
+  # Sketch-and-solve needs m > p; the 8-scan demo has 10 design columns.
+  dset <- sketch_matrix_dataset()
   Tlen <- nrow(fmridataset::collect_assay(dset))
   con <- contrast_set(pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B"))
   

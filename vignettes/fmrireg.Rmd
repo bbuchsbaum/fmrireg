@@ -75,8 +75,12 @@ quick_truth <- matrix(
   c(1.0, 0.6, 0.7, 1.1), nrow = ncol(quick_design),
   dimnames = list(colnames(quick_design), c("voxel1", "voxel2"))
 )
+# Set the noise level relative to the regressors' peak height, so the
+# signal-to-noise ratio does not depend on the HRF's raw amplitude.
+noise_sd <- 0.11 * max(abs(quick_design))
 set.seed(2026)
-bold <- quick_design %*% quick_truth + matrix(rnorm(80 * 2, sd = 0.2), 80, 2)
+bold <- quick_design %*% quick_truth +
+  matrix(rnorm(80 * 2, sd = noise_sd), 80, 2)
 quick_dataset <- matrix_frame(
   bold, TR = 2, run_length = 80, event_table = quick_events
 )
@@ -240,12 +244,12 @@ overview_data <- matrix_frame(
 # Combine the design with its dataset, then fit it
 full_model <- fmri_model(event_mod, base_mod, dataset = overview_data)
 overview_fit <- fmri_lm(full_model)
-overview_coef_matrix <- coef(overview_fit)
+overview_coef_matrix <- coef(overview_fit) # voxels x conditions
 overview_coef_table <- data.frame(
   condition = levels(design_table$stim_type),
-  voxel_1 = overview_coef_matrix[, 1],
-  voxel_2 = overview_coef_matrix[, 2],
-  voxel_3 = overview_coef_matrix[, 3],
+  voxel_1 = overview_coef_matrix[1, ],
+  voxel_2 = overview_coef_matrix[2, ],
+  voxel_3 = overview_coef_matrix[3, ],
   check.names = FALSE
 )
 knitr::kable(
@@ -258,7 +262,8 @@ knitr::kable(
 stopifnot(
   all(is.finite(coef(overview_fit))),
   identical(overview_coef_table$condition, c("face", "scene")),
-  nrow(overview_coef_matrix) == length(levels(design_table$stim_type))
+  ncol(overview_coef_matrix) == length(levels(design_table$stim_type)),
+  nrow(overview_coef_matrix) == 3L
 )
 ```
 
@@ -281,7 +286,7 @@ row weighting, uncertainty estimates, and model diagnostics.
 #### Acceleration: Sketched / Nyström Analysis
 
 For large problems, you can accelerate voxelwise GLM estimation with:
-- SRHT/IHS temporal sketching to reduce timepoints while preserving LS geometry.
+- Temporal sketching (CountSketch, Gaussian or SRHT) to reduce timepoints, with standard errors that account for the sketch.
 - Nyström/landmark spatial extension to solve on a subset of voxels and extend with parcel‑aware kernels.
 
 See `vignette("sketched-ar", package = "fmrireg")` for guidance, tradeoffs, and practical defaults.

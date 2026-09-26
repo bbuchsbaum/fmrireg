@@ -16,7 +16,7 @@ Depends:
 Imports:
     fmriAR (>= 0.3.3),
     fmrigds,
-    fmridesign (>= 0.6.0),
+    fmridesign (>= 0.6.1.9000),
     fmrihrf (>= 0.4.0),
     fmrilss (>= 0.1.0),
     stats,
@@ -34,7 +34,7 @@ Imports:
     robustbase,
     matrixStats,
     furrr,
-    rlang,
+    rlang (>= 1.0.3),
     neuroim2,
     Rcpp,
     RcppParallel,
@@ -81,13 +81,13 @@ Suggests:
 Remotes:
     bbuchsbaum/bidser,
     bbuchsbaum/fmriAR,
-    bbuchsbaum/fmrihrf@d366e79fce8db7c5c46e883291e73732b20c545c,
+    bbuchsbaum/fmrihrf@b9f6a90b05bdf3673ed43414eb06ec6c74200d43,
     bbuchsbaum/fmristore,
     bbuchsbaum/fmrigds@f015b7c7fa5008e2435d269aeb1882a9aa24eaf0,
     anthonynorth/roxyglobals,
     bbuchsbaum/fmridataset,
     bbuchsbaum/fmrilss,
-    bbuchsbaum/fmridesign@e627d4d1861e5cc4aea5a5668d6052e394429b92,
+    bbuchsbaum/fmridesign@236856452c9fecd131ea751d0e970b542cf16f64,
     bbuchsbaum/neuroatlas,
     bbuchsbaum/delarr
 VignetteBuilder: knitr

@@ -57,7 +57,7 @@ test_that(".run_lowrank_engine ihs sketch path succeeds without landmarks", {
   fx <- make_lowrank_fixture(n = 70L, V = 8L, seed = 21)
   fit <- fmrireg:::.run_lowrank_engine(
     fx$model, fx$dataset,
-    lowrank = list(time_sketch = list(method = "ihs", m = 20L, iters = 2L)),
+    lowrank = list(time_sketch = list(method = "ihs", m = 20L, iters = 2L, tol = 0)),
     cfg = fx$cfg
   )
   expect_lowrank_fit(fit)

@@ -455,13 +455,12 @@ glm_ols <- function(dataset, model_obj, basis_obj, basemod = NULL,
   # Validate basis_obj
   if (is.character(basis_obj)) {
     # Check if it's a valid HRF basis name
-    valid_basis_names <- c("HRF_SPMG1", "HRF_SPMG2", "HRF_SPMG3", "HRF_FIR", 
-                          "HRF_AFNI", "HRF_GAM", "HRF_IL", "HRF_DD")
+    # HRF_* basis objects exported by fmrihrf (HRF_SPMG1, HRF_FIR, ...)
+    valid_basis_names <- grep("^HRF_", getNamespaceExports("fmrihrf"), value = TRUE)
     if (!basis_obj %in% valid_basis_names) {
       stop(paste0("Unknown HRF basis name: ", basis_obj))
     }
-    # Convert string to actual basis object from fmrihrf package
-    basis_obj <- get(basis_obj, envir = asNamespace("fmrihrf"))
+    basis_obj <- getExportedValue("fmrihrf", basis_obj)
   } else if (!inherits(basis_obj, "HRF")) {
     stop("basis_obj must be an HRF object or a valid HRF basis name")
   }
@@ -565,13 +564,12 @@ glm_lss <- function(dataset, model_obj, basis_obj, basemod = NULL,
   # Validate basis_obj
   if (is.character(basis_obj)) {
     # Check if it's a valid HRF basis name
-    valid_basis_names <- c("HRF_SPMG1", "HRF_SPMG2", "HRF_SPMG3", "HRF_FIR", 
-                          "HRF_AFNI", "HRF_GAM", "HRF_IL", "HRF_DD")
+    # HRF_* basis objects exported by fmrihrf (HRF_SPMG1, HRF_FIR, ...)
+    valid_basis_names <- grep("^HRF_", getNamespaceExports("fmrihrf"), value = TRUE)
     if (!basis_obj %in% valid_basis_names) {
       stop(paste0("Unknown HRF basis name: ", basis_obj))
     }
-    # Convert string to actual basis object from fmrihrf package
-    basis_obj <- get(basis_obj, envir = asNamespace("fmrihrf"))
+    basis_obj <- getExportedValue("fmrihrf", basis_obj)
   } else if (!inherits(basis_obj, "HRF")) {
     stop("basis_obj must be an HRF object or a valid HRF basis name")
   }

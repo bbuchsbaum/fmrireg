@@ -1,109 +1,159 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
+#include <vector>
+#ifdef _OPENMP
+  #include <omp.h>
+#endif
 using namespace arma;
 
-static inline bool inv_sympd_safe(mat& out, const mat& A) {
-  try {
-    out = inv_sympd(A);
-    return true;
-  } catch (...) {
-    try {
-      out = pinv(A);
-      return true;
-    } catch (...) {
-      return false;
-    }
-  }
-}
-
-// In-place Walsh-Hadamard transform on each column; n must be power of 2
-static void fwht_cols(mat& X) {
-  int n = X.n_rows;
+// In-place unnormalised Walsh-Hadamard transform of one contiguous vector of
+// length n (a power of two). H has entries +-1, H H' = n I and H = H'.
+// The butterflies run in the classic stage order, so every output is formed
+// by the same sequence of additions as a row-wise transform of a matrix.
+static inline void fwht_inplace(double* x, const int n) {
   for (int len = 1; len < n; len <<= 1) {
-    int step = len << 1;
+    const int step = len << 1;
     for (int i = 0; i < n; i += step) {
+      double* a = x + i;
+      double* b = a + len;
       for (int j = 0; j < len; ++j) {
-        rowvec a = X.row(i + j);
-        rowvec b = X.row(i + j + len);
-        X.row(i + j)        = a + b;
-        X.row(i + j + len)  = a - b;
+        const double u = a[j];
+        const double v = b[j];
+        a[j] = u + v;
+        b[j] = u - v;
       }
     }
   }
 }
 
-// SRHT apply: M (T x k), rows (m), signs (T), perm (T), scale scalar
+static int next_pow2(int T) {
+  int T2 = 1;
+  while (T2 < T) T2 <<= 1;
+  return T2;
+}
+
+// Threads for a column-parallel loop: n_threads <= 0 means the OpenMP
+// default (itself capped by OMP_THREAD_LIMIT / OMP_NUM_THREADS); never more
+// threads than columns.
+static int sketch_threads(const int n_threads, const int ncol) {
+#ifdef _OPENMP
+  int nth = n_threads > 0 ? n_threads : omp_get_max_threads();
+  if (nth > ncol) nth = ncol;
+  return nth < 1 ? 1 : nth;
+#else
+  (void)n_threads;
+  (void)ncol;
+  return 1;
+#endif
+}
+
+static void srht_check_plan(int T, const uvec& rows, const vec& signs,
+                            const uvec& perm, const char* who) {
+  if ((int)signs.n_elem != T) {
+    Rcpp::stop("%s: length(signs) must equal the series length.", who);
+  }
+  if ((int)perm.n_elem != T) {
+    Rcpp::stop("%s: length(perm) must equal the series length.", who);
+  }
+  if (perm.n_elem > 0 && perm.max() >= (uword)T) {
+    Rcpp::stop("%s: perm contains out-of-bounds indices.", who);
+  }
+  if (rows.n_elem > 0 && rows.max() >= (uword)T) {
+    Rcpp::stop("%s: rows contains out-of-bounds indices.", who);
+  }
+}
+
+// SRHT apply: S M for M (T x k), with S = scale * R P H D (m x T).
+//   D: random signs (T), H: unnormalised Walsh-Hadamard transform on the
+//   zero-padded power-of-two length, P: permutation of the first T outputs,
+//   R: selection of m of them.
+// Every row of H D has squared norm T over the unpadded coordinates and
+// E_D |(H D r)_i|^2 = ||r||^2, so scale = 1 / sqrt(m) gives the normalised
+// sketch E ||S r||^2 = ||r||^2 (make_srht_plan() uses that scale). When T is
+// a power of two, S S' = (T / m) I_m exactly.
+//
+// Each column is transformed independently in a thread-private contiguous
+// buffer of the padded length (sign flip on load, row selection on store),
+// in parallel over columns.
 // [[Rcpp::export]]
 arma::mat cpp_srht_apply(const arma::mat& M,
                          const arma::uvec& rows,
                          const arma::vec& signs,
                          const arma::uvec& perm,
-                         const double scale) {
-  int T = M.n_rows, K = M.n_cols;
-  if ((int)signs.n_elem != T) {
-    Rcpp::stop("cpp_srht_apply: length(signs) must equal nrow(M).");
+                         const double scale,
+                         const int n_threads = 0) {
+  const int T = M.n_rows, K = M.n_cols;
+  srht_check_plan(T, rows, signs, perm, "cpp_srht_apply");
+  const int T2 = next_pow2(T);
+  const int m = rows.n_elem;
+  // Output row i reads transformed coordinate perm(rows(i)).
+  std::vector<uword> src(m);
+  for (int i = 0; i < m; ++i) src[i] = perm(rows(i));
+  mat out(m, K);
+  const double* sg = signs.memptr();
+  const int nth = sketch_threads(n_threads, K);
+#ifdef _OPENMP
+#pragma omp parallel num_threads(nth)
+#endif
+  {
+    std::vector<double> buf(T2);
+#ifdef _OPENMP
+#pragma omp for schedule(static)
+#endif
+    for (int k = 0; k < K; ++k) {
+      const double* x = M.colptr(k);
+      for (int t = 0; t < T; ++t) buf[t] = x[t] * sg[t];
+      for (int t = T; t < T2; ++t) buf[t] = 0.0;
+      fwht_inplace(buf.data(), T2);
+      double* o = out.colptr(k);
+      for (int i = 0; i < m; ++i) o[i] = buf[src[i]] * scale;
+    }
   }
-  if ((int)perm.n_elem != T) {
-    Rcpp::stop("cpp_srht_apply: length(perm) must equal nrow(M).");
-  }
-  // 1) D (random signs)
-  mat X = M.each_col() % signs;
-  // 2) H (Hadamard) on power-of-two padded length
-  int T2 = 1; while (T2 < T) T2 <<= 1;
-  if (perm.n_elem > 0 && perm.max() >= (uword)T2) {
-    Rcpp::stop("cpp_srht_apply: perm contains out-of-bounds indices.");
-  }
-  if (rows.n_elem > 0 && rows.max() >= (uword)T) {
-    Rcpp::stop("cpp_srht_apply: rows contains out-of-bounds indices.");
-  }
-  mat Xpad(T2, K, fill::zeros);
-  Xpad.rows(0, T-1) = X;
-  fwht_cols(Xpad);
-  // 3) P (permute)
-  mat XP(T, K);
-  for (int i = 0; i < T; ++i) XP.row(i) = Xpad.row(perm(i));
-  // 4) R (row sample) + scale
-  mat out(rows.n_elem, K);
-  for (uword i = 0; i < rows.n_elem; ++i) out.row(i) = XP.row(rows(i)) * scale;
+  (void)nth;
   return out;
 }
 
-// One IHS iteration helper
-static void ihs_iter(const mat& X, const mat& Z, int m, mat& M, mat& Ginv_out) {
-  int T = X.n_rows;
-  if (m <= 0 || m > T) {
-    Rcpp::stop("ihs_iter: sketch size m must satisfy 0 < m <= nrow(X).");
-  }
-  // Build SRHT plan
-  arma::vec signs = 2.0 * randu<vec>(T) - 1.0; signs.transform( [](double v){ return v>=0 ? 1.0 : -1.0; } );
-  arma::uvec perm = randperm(T);
-  arma::uvec order = sort_index(randu<vec>(T));
-  arma::uvec rows = order.subvec(0, m - 1);
-  double scale = std::sqrt( (double)T / (double)m );
-  mat Xs = cpp_srht_apply(X, rows, signs, perm, scale);
-  mat Zs = cpp_srht_apply(Z, rows, signs, perm, scale);
-  mat G = Xs.t() * Xs;
-  mat Ginv;
-  if (!inv_sympd_safe(Ginv, G)) {
-    Rcpp::stop("ihs_iter: unable to invert sketched Gram matrix.");
-  }
-  mat R = Xs.t() * (Zs - Xs * M);
-  mat dM = Ginv * R;
-  M += dM;
-  Ginv_out = Ginv;
-}
-
-// IHS latent solve: returns M and Ginv after iters
+// Adjoint of cpp_srht_apply: S' B for B (m x k), returning T x k. With
+// cpp_srht_apply it gives S S' = S (S' I_m), the Gram matrix of the sketch
+// rows needed for the conditional variance of sketch-and-solve estimates.
+// perm and rows are injective, so each sketch row scatters to a distinct
+// coordinate of the padded buffer; H is symmetric.
 // [[Rcpp::export]]
-Rcpp::List cpp_ihs_latent(const arma::mat& X, const arma::mat& Z,
-                          const int m, const int iters) {
-  int p = X.n_cols, r = Z.n_cols;
-  mat M(p, r, fill::zeros), Ginv(p, p, fill::eye);
-  for (int t = 0; t < iters; ++t) {
-    ihs_iter(X, Z, m, M, Ginv);
+arma::mat cpp_srht_adjoint(const arma::mat& B,
+                           const arma::uvec& rows,
+                           const arma::vec& signs,
+                           const arma::uvec& perm,
+                           const double scale,
+                           const int n_threads = 0) {
+  const int T = signs.n_elem, K = B.n_cols;
+  srht_check_plan(T, rows, signs, perm, "cpp_srht_adjoint");
+  if (B.n_rows != rows.n_elem) {
+    Rcpp::stop("cpp_srht_adjoint: nrow(B) must equal length(rows).");
   }
-  return Rcpp::List::create(
-    Rcpp::Named("M")    = M,
-    Rcpp::Named("Ginv") = Ginv
-  );
+  const int T2 = next_pow2(T);
+  const int m = rows.n_elem;
+  std::vector<uword> dst(m);
+  for (int i = 0; i < m; ++i) dst[i] = perm(rows(i));
+  mat out(T, K);
+  const double* sg = signs.memptr();
+  const int nth = sketch_threads(n_threads, K);
+#ifdef _OPENMP
+#pragma omp parallel num_threads(nth)
+#endif
+  {
+    std::vector<double> buf(T2);
+#ifdef _OPENMP
+#pragma omp for schedule(static)
+#endif
+    for (int k = 0; k < K; ++k) {
+      std::fill(buf.begin(), buf.end(), 0.0);
+      const double* b = B.colptr(k);
+      for (int i = 0; i < m; ++i) buf[dst[i]] += b[i] * scale;
+      fwht_inplace(buf.data(), T2);
+      double* o = out.colptr(k);
+      for (int t = 0; t < T; ++t) o[t] = buf[t] * sg[t];
+    }
+  }
+  (void)nth;
+  return out;
 }

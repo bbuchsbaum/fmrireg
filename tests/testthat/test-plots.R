@@ -27,7 +27,11 @@ make_plot_fixture <- function(nvox = 12L, basis = "spmg1", extra_factor = FALSE,
                                   data = events, block = ~ run, sampling_frame = sframe)
   X <- as.matrix(fmridesign::design_matrix(emod))
   B <- matrix(0, ncol(X), nvox)
-  B[1, ] <- 1.5
+  # Fix the true response by its peak height relative to the unit-SD noise,
+  # not by a raw coefficient: the HRF's raw scale belongs to fmrihrf (it
+  # changed ~10x when the SPMG undershoot was corrected), and a raw beta of
+  # 1.5 would leave the effect's detectability hostage to that scale.
+  B[1, ] <- 2.5 / max(abs(X[, 1]))
   E <- matrix(rnorm(nrow(X) * nvox), nrow(X))
   if (ar != 0) E <- apply(E, 2, function(e) as.numeric(stats::filter(e, ar, method = "recursive")))
   Y <- X %*% B + E + 100
@@ -187,6 +191,9 @@ test_that("single-basis HRF labels do not claim an estimated latency", {
   fx <- make_plot_fixture()
   p <- ggplot2::autoplot(fx$fit, type = "hrf", voxel = 1)
   txt <- layer_by_geom(p, "GeomText")$label
+  # the simulated effect must be significant, or the check below is vacuous
+  # (n.s. labels never carry a latency)
+  expect_true("faces" %in% txt)
   expect_false(any(grepl("[0-9] s$", txt)))
   fx3 <- make_plot_fixture(basis = "spmg3")
   p3 <- ggplot2::autoplot(fx3$fit, type = "hrf", voxel = 1)
@@ -322,4 +329,58 @@ test_that("residual autocorrelation band is centred on the design-induced bias",
   # the exact null variance matches the spread of white-noise autocorrelations
   ratio <- apply(sr$acf - sr$expect, 1, stats::var) / diag(sr$cov)
   expect_true(all(ratio > 0.6 & ratio < 1.5))
+})
+
+test_that("every fmri_lm view uses the current accessor API without warnings", {
+  # Deprecation warnings must be visible for this test to mean anything.
+  withr::local_options(fmrireg.suppress_deprecation = FALSE)
+  # 5 voxels x 2 event regressors: non-square, so a transposed voxels x terms
+  # matrix would change dimensions or index the wrong cells.
+  withr::local_seed(21)
+  ev <- data.frame(onset = seq(10, 180, by = 12), run = 1,
+                   condition = factor(rep(c("a", "b"), length.out = 15)))
+  dset <- matrix_frame(matrix(rnorm(100 * 5), 100, 5), TR = 2, run_length = 100,
+                       event_table = ev)
+  con <- pair_contrast(~ condition == "a", ~ condition == "b", name = "a_vs_b")
+  fit <- fmri_lm(onset ~ hrf(condition, contrasts = con), block = ~ run, dataset = dset)
+  expect_identical(dim(coef(fit)), c(5L, 2L))
+
+  views <- list(
+    list(), list(voxel = 2), list(type = "betas", voxel = 1:3),
+    list(type = "contrasts"), list(type = "contrasts", voxel = 4),
+    list(type = "hrf"), list(type = "hrf", voxel = 5),
+    list(type = "timecourse", voxel = 3), list(type = "residuals"),
+    list(type = "residuals", voxel = 1:2)
+  )
+  for (args in views) {
+    expect_no_warning(p <- do.call(ggplot2::autoplot, c(list(fit), args)))
+    expect_no_warning(ggplot2::ggplot_build(p))
+  }
+  pdf_file <- withr::local_tempfile(fileext = ".pdf")
+  grDevices::pdf(pdf_file)
+  expect_no_warning(plot(fit, type = "betas"))
+  grDevices::dev.off()
+
+  # The coefficient plot shows coef() for the chosen voxel, in coef()'s order.
+  d <- ggplot2::autoplot(fit, voxel = 4)$data
+  expect_equal(d$est, unname(coef(fit)[4, ]), tolerance = 1e-12)
+  expect_equal(d$se, unname(as.matrix(standard_error(fit))[4, ]), tolerance = 1e-12)
+  dc <- ggplot2::autoplot(fit, type = "contrasts", voxel = 4)$data
+  expect_equal(dc$est, unname(as.matrix(coef(fit, type = "contrasts"))[4, "a_vs_b"]),
+               tolerance = 1e-12)
+
+  # "estimates" is kept as a silent synonym of "betas" for the plot type.
+  expect_no_warning(old <- ggplot2::autoplot(fit, type = "estimates", voxel = 4))
+  expect_equal(old$data, d)
+})
+
+test_that("coefficient plots index the non-square demo fit by voxel", {
+  withr::local_options(fmrireg.suppress_deprecation = FALSE)
+  fit <- suppressWarnings(.demo_fmri_lm())
+  expect_identical(dim(coef(fit)), c(3L, 2L))
+  for (v in 1:3) {
+    expect_no_warning(d <- ggplot2::autoplot(fit, voxel = v)$data)
+    expect_equal(d$est, unname(coef(fit)[v, ]), tolerance = 1e-12)
+  }
+  expect_no_warning(ggplot2::ggplot_build(ggplot2::autoplot(fit)))
 })

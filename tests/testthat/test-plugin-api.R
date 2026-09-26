@@ -98,7 +98,8 @@ test_that("register_engine integrates with fmri_lm via fit_glm_on_transformed_se
 })
 
 test_that("sketch engine alias dispatches to latent sketch path", {
-  dset <- .demo_matrix_dataset()
+  # Sketch-and-solve needs m > p; the 8-scan demo has 10 design columns.
+  dset <- sketch_matrix_dataset()
 
   fit <- fmri_lm(
     onsets ~ hrf(condition),
@@ -113,7 +114,8 @@ test_that("sketch engine alias dispatches to latent sketch path", {
 })
 
 test_that("sketch engine alias dispatches for fmri_model method", {
-  dset <- .demo_matrix_dataset()
+  # Sketch-and-solve needs m > p; the 8-scan demo has 10 design columns.
+  dset <- sketch_matrix_dataset()
   model <- create_fmri_model(
     formula = onsets ~ hrf(condition),
     block = ~run,

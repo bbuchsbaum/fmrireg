@@ -668,7 +668,7 @@ test_that("write_results.fmri_lm correctly writes numerical data to HDF5", {
   
   # Get original beta data from model for comparison
   original_betas <- coef(mod, type = "betas", include_baseline = FALSE)
-  original_regressor_names <- rownames(original_betas)
+  original_regressor_names <- colnames(original_betas)
   
   # Basic validation that data was written and can be read
   expect_true(length(original_regressor_names) > 0)
@@ -1160,6 +1160,9 @@ test_that("write_results by_stat keeps sparse-mask contrast voxels in place", {
     contrast_stats = "beta"
   )
 
+  # write_results() documents NIfTI maps as FLOAT32 (NIfTI datatype 16)
+  expect_identical(RNifti::niftiHeader(result$beta$nifti)$datatype, 16L)
+
   img <- RNifti::readNifti(result$beta$nifti, internal = FALSE)
   img_arr <- as.array(img)
   actual <- if (length(dim(img_arr)) == 3L) img_arr[mask] else img_arr[, , , 1][mask]
@@ -1168,7 +1171,15 @@ test_that("write_results by_stat keeps sparse-mask contrast voxels in place", {
   if (is.list(estimate) && length(estimate) > 0) {
     estimate <- estimate[[1]]
   }
-  expect_equal(as.numeric(actual), as.numeric(estimate), tolerance = 1e-8)
+  # Each voxel must hold exactly its own estimate rounded to single precision.
+  # (A double-precision tolerance only passed while the betas were small: the
+  # edition-2 fallback compares element-wise in absolute units, and float32
+  # rounding error grows with the value.)
+  as_float32 <- function(x) {
+    readBin(writeBin(as.numeric(x), raw(), size = 4), "double",
+            n = length(x), size = 4)
+  }
+  expect_identical(as.numeric(actual), as_float32(estimate))
 })
 
 test_that("write_results.fmri_lm validates CreationTime format for BIDS compliance", {
