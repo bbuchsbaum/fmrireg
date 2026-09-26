@@ -267,7 +267,7 @@ more time relative to exact OLS as `T` grows.
 The former `method = "ihs"` (iterative Hessian sketch) is deprecated. Each
 IHS iteration needs the exact gradient `X'(Z - XM)`, a full `X'Z` pass, so
 in this regime it can never beat one exact solve. It now computes the exact
-OLS fit of the (whitened) data, with `T - p` residual degrees of freedom;
+OLS fit of the (whitened) data, with `T - rank(X)` residual degrees of freedom;
 without AR it reproduces the joint exact fit
 `fmri_lm(..., strategy = "chunkwise")`. It ignores `iters` and `tol` and
 says so once per session. For exact results, omit

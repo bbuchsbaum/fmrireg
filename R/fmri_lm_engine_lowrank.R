@@ -136,18 +136,22 @@
     stop("`time_sketch$method` must be one of \"gaussian\", \"countsketch\", ",
          "\"srht\" or \"ihs\"", call. = FALSE)
   }
+  if (identical(method, "ihs")) {
+    # "ihs" is exact OLS: the sketch size is irrelevant and is not validated.
+    .lowrank_ihs_deprecated()
+    return(list(method = "ihs", m = Tlen))
+  }
   sk$m <- as.integer(sk$m %||% min(8L * p, Tlen))
   if (length(sk$m) != 1L || is.na(sk$m) || sk$m < 1L || sk$m > Tlen) {
     stop(sprintf("`time_sketch$m` must be an integer in [1, %d]", Tlen),
          call. = FALSE)
   }
-  if (sk$m <= p && !identical(method, "ihs")) {
+  if (sk$m <= p) {
     stop(sprintf(paste0(
       "`time_sketch$m` (%d) must exceed the number of design columns (%d): ",
       "sketch-and-solve needs residual degrees of freedom"), sk$m, p),
       call. = FALSE)
   }
-  if (identical(method, "ihs")) .lowrank_ihs_deprecated()
   sk
 }
 
