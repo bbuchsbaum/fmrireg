@@ -32,11 +32,14 @@
   )
 }
 
-#' Internal: demo fmri_frame with two voxels
+#' Internal: demo fmri_frame with three voxels
+#'
+#' Three voxels against two event regressors keeps voxels x terms results
+#' non-square, so tests built on the demo fit can detect a transposition.
 #' @keywords internal
 #' @noRd
 .demo_matrix_dataset <- function() {
-  signals <- matrix(seq_len(16), nrow = 8, ncol = 2)
+  signals <- matrix(seq_len(24), nrow = 8, ncol = 3)
   matrix_frame(
     signals,
     TR = 2,

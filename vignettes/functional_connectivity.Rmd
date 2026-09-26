@@ -183,8 +183,8 @@ baseline model and the fitted AR(1) covariance. It is not yet a whole-brain
 discovery decision; that requires multiplicity correction.
 
 ```{r extract-connectivity-stats}
-# Extract connectivity statistics using the estimate output itself
-all_stats <- as.matrix(stats(fit, type = "estimates"))
+# t-statistics of the model coefficients (coef() gives the estimates)
+all_stats <- as.matrix(stats(fit, type = "betas"))
 seed_cols <- grep("seed", colnames(all_stats), value = TRUE)
 if (length(seed_cols) == 0) {
   stop("No seed estimate found in fitted model output")
@@ -193,7 +193,7 @@ seed_col_name <- seed_cols[1]
 t_seed <- as.numeric(all_stats[, seed_col_name])
 
 # Correct the seed-coefficient p-values across all fitted voxels.
-all_pvals <- as.matrix(p_values(fit, type = "estimates"))
+all_pvals <- as.matrix(p_values(fit, type = "betas"))
 p_seed <- as.numeric(all_pvals[, seed_col_name])
 q_seed <- stats::p.adjust(p_seed, method = "BH")
 discovered <- is.finite(q_seed) & q_seed < 0.05
@@ -315,7 +315,7 @@ run_connectivity_fixture <- function(simulation_seed, n_time = 96L,
     )
   )
 
-  fixture_p <- as.matrix(p_values(fixture_fit, type = "estimates"))
+  fixture_p <- as.matrix(p_values(fixture_fit, type = "betas"))
   fixture_seed_col <- grep("^seed", colnames(fixture_p), value = TRUE)
   fixture_null_col <- grep("^null", colnames(fixture_p), value = TRUE)
   seed_discovery <- p.adjust(

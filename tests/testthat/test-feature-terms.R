@@ -39,7 +39,7 @@ test_that("mixed hrf + feature formula fits through fmri_lm", {
 
   tm <- term_matrices(fit$model)
   expect_gt(length(attr(tm, "event_term_indices")), 0L)
-  expect_equal(ncol(as.matrix(coef(fit))), ncol(frame_data(fx$ds)))
+  expect_equal(nrow(as.matrix(coef(fit))), ncol(frame_data(fx$ds)))
 })
 
 test_that("fitted_hrf skips feature terms instead of erroring", {

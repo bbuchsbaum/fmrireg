@@ -124,7 +124,8 @@ runwise_lm_impl <- function(dset, model, contrast_objects, cfg, verbose = FALSE,
   }
   
   # Pool results across runs
-  pool_runwise_results(cres, event_indices, baseline_indices, Vu)
+  pool_runwise_results(cres, event_indices, baseline_indices, Vu,
+                       colmaps = .runwise_colmaps(model, cres))
 }
 
 #' Runwise LM Fast Path
@@ -201,6 +202,7 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
     )
     
     cres[[i]] <- list(
+      chunk_num = ym$chunk_num,
       conres = conres,
       bstats = bstats,
       event_indices = event_indices,
@@ -340,6 +342,7 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     sigma <- sqrt(resvar)
 
     cres[[i]] <- list(
+      chunk_num = ym$chunk_num,
       conres = ret$contrasts,
       bstats = ret$bstats,
       event_indices = event_indices,
@@ -586,6 +589,7 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
     )
     
     cres[[i]] <- list(
+      chunk_num = ym$chunk_num,
       conres = conres,
       bstats = bstats,
       event_indices = event_indices,
@@ -604,13 +608,49 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
   }
   
   # Pool results
-  pool_runwise_results(cres, event_indices, baseline_indices, Vu)
+  pool_runwise_results(cres, event_indices, baseline_indices, Vu,
+                       colmaps = .runwise_colmaps(model, cres))
+}
+
+#' Map each run's local design columns to global design columns
+#'
+#' A runwise fit builds each run's design from \code{term_matrices(model, run)},
+#' which carries the event columns plus only that run's baseline columns. The
+#' \code{varnames} attribute names those columns in global terms, so matching
+#' them against the global \code{varnames} gives the global column index of
+#' every run-local coefficient.
+#'
+#' @return A list with one integer vector per element of \code{cres} and a
+#'   \code{"global_colind"} attribute listing every global column, or
+#'   \code{NULL} when any run cannot be mapped unambiguously (the caller then
+#'   falls back to positional pooling).
+#' @keywords internal
+#' @noRd
+.runwise_colmaps <- function(model, cres) {
+  if (length(cres) < 2L) return(NULL)
+  # Global names come from the assembled design matrix, not from
+  # term_matrices(model): for a global intercept the latter repeats
+  # `constant_global` once per run.
+  global_names <- colnames(design_matrix(model))
+  if (is.null(global_names) || anyDuplicated(global_names)) return(NULL)
+  maps <- lapply(cres, function(run) {
+    if (is.null(run$chunk_num)) return(NULL)
+    local_names <- attr(term_matrices(model, run$chunk_num), "varnames")
+    n_local <- ncol(run$bstats$data[[1]]$estimate[[1]])
+    idx <- match(local_names, global_names)
+    if (anyNA(idx) || length(idx) != n_local) return(NULL)
+    idx
+  })
+  if (any(vapply(maps, is.null, logical(1)))) return(NULL)
+  attr(maps, "global_colind") <- seq_along(global_names)
+  maps
 }
 
 #' Pool Runwise Results
 #' @keywords internal
 #' @noRd
-pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu) {
+pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu,
+                                 colmaps = NULL) {
   # Extract components for pooling
   bstats_list <- lapply(cres, `[[`, "bstats")
   conres_list <- lapply(cres, `[[`, "conres")
@@ -658,7 +698,15 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu) {
     meta_con <- meta_contrasts(conres_list)
     # Include all beta indices (event + baseline)
     all_indices <- c(event_indices, baseline_indices)
-    meta_beta <- meta_betas(bstats_list, all_indices)
+    meta_beta <- if (!is.null(colmaps)) {
+      # Each run's design holds only its own baseline columns, so run-local
+      # column j is not global column j. Pool each global column over the runs
+      # that estimate it (#227 follow-up).
+      meta_betas_mapped(bstats_list, colmaps, attr(colmaps, "global_colind") %||%
+                          sort(unique(all_indices)))
+    } else {
+      meta_betas(bstats_list, all_indices)
+    }
     
     list(
       contrasts = meta_con,
