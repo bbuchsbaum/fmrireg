@@ -228,7 +228,10 @@
   bstats$data <- list(bdata)
 
   contrasts <- if (length(contrast_prep$standard) > 0L) {
-    cpieces <- lapply(seq_along(groups), function(i) {
+    # Every cluster raises the same non-estimable-contrast warning; emit each
+    # distinct message once rather than once per cluster.
+    seen <- character(0)
+    cpieces <- withCallingHandlers(lapply(seq_along(groups), function(i) {
       J <- groups[[i]]
       fit_lm_contrasts_fast(
         B = B[, J, drop = FALSE], sigma2 = sigma2[J], XtXinv = cov_list[[i]],
@@ -236,8 +239,12 @@
         fconlist = lapply(contrast_prep$f, `[[`, "weights"),
         df = dfres, ar_order = ar_order
       )
+    }), warning = function(w) {
+      msg <- conditionMessage(w)
+      if (msg %in% seen) invokeRestart("muffleWarning")
+      seen <<- c(seen, msg)
     })
-    stitched <- lapply(names(cpieces[[1L]]), function(nm) {
+    stitched <-lapply(names(cpieces[[1L]]), function(nm) {
       out <- cpieces[[1L]][[nm]]
       data <- dplyr::bind_rows(lapply(cpieces, function(cp) cp[[nm]]$data[[1L]]))
       out$data <- list(data[ord, , drop = FALSE])

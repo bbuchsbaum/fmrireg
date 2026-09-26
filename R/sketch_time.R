@@ -208,7 +208,12 @@ ihs_latent_solve <- function(X, Z, m, iters = 3L, tol = 0) {
     stop(sprintf(paste0(
       "time_sketch$m = %d is too small for this design: the sketched design ",
       "(%d rows x %d estimable columns) has numerical rank %d. Increase ",
-      "`time_sketch$m`."), as.integer(op$m), nrow(Xs), k, qx$rank),
+      "`time_sketch$m`%s."), as.integer(op$m), nrow(Xs), k, qx$rank,
+      if (identical(op$method, "countsketch")) {
+        paste0(", or use method \"srht\" or \"gaussian\": CountSketch maps ",
+               "each scan to one row, so sparse regressors such as spike ",
+               "(scrubbing) columns collide")
+      } else ""),
       call. = FALSE)
   }
   Rinv <- backsolve(qr.R(qx), diag(k))
@@ -242,15 +247,41 @@ ihs_latent_solve <- function(X, Z, m, iters = 3L, tol = 0) {
 #' Internal: IHS solve with exact OLS inference quantities
 #'
 #' `X` must have full column rank (see `.lowrank_time_solve()`), so the
-#' residual df is `nrow(X) - ncol(X)`.
+#' residual df is `nrow(X) - ncol(X)`. Each IHS step inverts an m x p
+#' sketched Hessian, which is singular when `m < p`; the kernel no longer
+#' falls back to a pseudo-inverse there (that returned coefficients hundreds
+#' of OLS standard errors off with no warning), so both cases stop with an
+#' error naming `m`. The reported covariance is `(X'X)^{-1}` from the QR of
+#' `X`, the same factorisation exact fits use.
 #' @keywords internal
 #' @noRd
-.lowrank_ihs_solve <- function(X, Z, sk) {
+.lowrank_ihs_solve <- function(X, Z, sk, tol_qr = 1e-7) {
+  k <- ncol(X)
+  too_small <- function(detail) {
+    stop(sprintf(paste0(
+      "time_sketch$m = %d is too small for this design: %s. Increase ",
+      "`time_sketch$m`."), as.integer(sk$m), detail), call. = FALSE)
+  }
+  if (sk$m < k) {
+    too_small(sprintf("IHS needs at least as many sketch rows as the %d estimable columns", k))
+  }
   iters <- as.integer(sk$iters %||% .lowrank_ihs_default_iters)
   tol <- as.numeric(sk$tol %||% .lowrank_ihs_default_tol)
-  sol <- ihs_latent_solve(X, Z, m = sk$m, iters = iters, tol = tol)
-  df <- max(1L, nrow(X) - ncol(X))
-  list(M = sol$M, cov_unscaled = sol$Ginv, residuals = sol$residuals,
+  sol <- tryCatch(
+    ihs_latent_solve(X, Z, m = sk$m, iters = iters, tol = tol),
+    error = function(e) {
+      if (grepl("sketched Gram", conditionMessage(e), fixed = TRUE)) {
+        too_small("a sketched Hessian of the estimable design is singular")
+      }
+      stop(e)
+    }
+  )
+  qx <- qr(X, tol = tol_qr, LAPACK = FALSE)
+  Rinv <- backsolve(qr.R(qx), diag(k))
+  XtXinv <- matrix(0, k, k)
+  XtXinv[qx$pivot, qx$pivot] <- tcrossprod(Rinv)
+  df <- max(1L, nrow(X) - k)
+  list(M = sol$M, cov_unscaled = XtXinv, residuals = sol$residuals,
        kappa = df, df = df, iters = as.integer(sol$iters),
        converged = if (tol > 0) isTRUE(sol$converged) else NA)
 }
@@ -271,7 +302,7 @@ ihs_latent_solve <- function(X, Z, m, iters = 3L, tol = 0) {
   est <- sort(info$estimable)
   Xe <- X[, est, drop = FALSE]
   sol <- if (identical(sk$method, "ihs")) {
-    .lowrank_ihs_solve(Xe, Z, sk)
+    .lowrank_ihs_solve(Xe, Z, sk, tol_qr = info$tol)
   } else {
     .lowrank_sketch_solve(Xe, Z, op, tol = info$tol)
   }

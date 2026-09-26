@@ -255,7 +255,13 @@
   equal those of the same sketch applied to the reduced design. If the
   sketched design restricted to the estimable columns is rank deficient,
   `m` is too small for the design and the fit stops with an error naming
-  `time_sketch$m`. The ridge fallback is gone.
+  `time_sketch$m`. The ridge fallback is gone. `"ihs"` likewise no longer
+  falls back to a pseudo-inverse of a singular sketched Hessian (with `m`
+  below the number of columns it returned coefficients 10-800 OLS
+  standard errors off while reporting the exact OLS covariance); it
+  requires `m` at least the number of estimable columns and errors
+  otherwise. For `by_cluster` fits the non-estimable-contrast warning is
+  issued once, not once per cluster.
 * Reporting for `engine = "latent_sketch"` fits:
   - `write_results()` metadata and `result$df$method` now record
     `DegreesOfFreedomMethod = "satterthwaite"` for sketch-and-solve fits.
@@ -267,7 +273,8 @@
     squares because `rdf` is a Satterthwaite df. Its expectation is
     `sigma2 * kappa`, where `kappa = tr(P SS')` is stored in
     `result$sketch$kappa`. For `"ihs"`, `rss` is unchanged (the full-data
-    RSS).
+    RSS). For landmark fits it is interpolated from the landmarks, like
+    `sigma2`.
 * The single-voxel HRF plot (`autoplot(fit, type = "hrf", voxel = v)`)
   of a `by_cluster` sketch fit drew no confidence band and always marked the
   curve as significant, because it read the shared `cov.unscaled`, which

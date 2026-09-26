@@ -29,7 +29,8 @@ Nyström extension (NULL = off).}
 Hessian sketch).}
 \item{\code{m}}{Number of sketch rows; \code{NULL} uses \code{min(8 * p, T)} for a
 design with \code{p} columns and \code{T} scans. The sketch-and-solve methods
-require \code{m > p}.}
+require \code{m > p}; \code{"ihs"} requires \code{m} at least the number of
+estimable design columns.}
 \item{\code{iters}}{\code{"ihs"} only: maximum number of iterations (default
 100). Must be at least 1.}
 \item{\code{tol}}{\code{"ihs"} only: stop once every coefficient moves by less
@@ -51,7 +52,8 @@ For sketch-and-solve fits, \code{result$rss} is the residual sum of squares
 of the \code{m} sketched rows. Its expectation is \eqn{\sigma^2 \kappa}, with
 \eqn{\kappa = tr(PSS')} stored in \code{result$sketch$kappa}, so the residual
 variance is \code{rss / kappa}, not \code{rss / rdf}. For \code{"ihs"}, \code{kappa} equals
-the residual degrees of freedom.
+the residual degrees of freedom. With \code{landmarks}, \code{rss} is interpolated
+from the landmark voxels, like the residual variance.
 
 Estimability is judged on the full (whitened) design with the same
 pivoted-QR rule that exact fits use. Aliased coefficients are reported

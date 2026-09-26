@@ -14,7 +14,8 @@
 #'       Hessian sketch).}
 #'     \item{`m`}{Number of sketch rows; `NULL` uses `min(8 * p, T)` for a
 #'       design with `p` columns and `T` scans. The sketch-and-solve methods
-#'       require `m > p`.}
+#'       require `m > p`; `"ihs"` requires `m` at least the number of
+#'       estimable design columns.}
 #'     \item{`iters`}{`"ihs"` only: maximum number of iterations (default
 #'       100). Must be at least 1.}
 #'     \item{`tol`}{`"ihs"` only: stop once every coefficient moves by less
@@ -36,7 +37,8 @@
 #'   of the `m` sketched rows. Its expectation is \eqn{\sigma^2 \kappa}, with
 #'   \eqn{\kappa = tr(PSS')} stored in `result$sketch$kappa`, so the residual
 #'   variance is `rss / kappa`, not `rss / rdf`. For `"ihs"`, `kappa` equals
-#'   the residual degrees of freedom.
+#'   the residual degrees of freedom. With `landmarks`, `rss` is interpolated
+#'   from the landmark voxels, like the residual variance.
 #'
 #'   Estimability is judged on the full (whitened) design with the same
 #'   pivoted-QR rule that exact fits use. Aliased coefficients are reported

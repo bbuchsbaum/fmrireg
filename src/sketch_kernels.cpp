@@ -2,17 +2,15 @@
 #include <RcppArmadillo.h>
 using namespace arma;
 
+// No pseudo-inverse fallback: a singular (sketched) Gram matrix means the
+// sketch is too small for the design, and a pinv() step would silently
+// return wrong coefficients. Callers stop with an error instead.
 static inline bool inv_sympd_safe(mat& out, const mat& A) {
   try {
     out = inv_sympd(A);
     return true;
   } catch (...) {
-    try {
-      out = pinv(A);
-      return true;
-    } catch (...) {
-      return false;
-    }
+    return false;
   }
 }
 
