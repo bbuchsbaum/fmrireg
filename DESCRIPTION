@@ -79,17 +79,15 @@ Suggests:
     withr,
     bidser
 Remotes:
-    bbuchsbaum/bidser,
-    bbuchsbaum/fmriAR,
+    bbuchsbaum/bidser@e6d09f85a206dc59db23a086c875b869b5d51891,
+    bbuchsbaum/fmriAR@ca27f2772bb4675573fae717a992c993c2f986c8,
     bbuchsbaum/fmrihrf@b9f6a90b05bdf3673ed43414eb06ec6c74200d43,
-    bbuchsbaum/fmristore,
+    bbuchsbaum/fmristore@e7fbbfca181ebd118acee150774a4f58640e039d,
     bbuchsbaum/fmrigds@f015b7c7fa5008e2435d269aeb1882a9aa24eaf0,
-    anthonynorth/roxyglobals,
-    bbuchsbaum/fmridataset,
-    bbuchsbaum/fmrilss,
-    bbuchsbaum/fmridesign@236856452c9fecd131ea751d0e970b542cf16f64,
-    bbuchsbaum/neuroatlas,
-    bbuchsbaum/delarr
+    anthonynorth/roxyglobals@ab29bdcd2e618fbfd91356fc22095e961b48333d,
+    bbuchsbaum/fmridataset@419d9eae1704d839e0152ec77957c2fc69ea0b5b,
+    bbuchsbaum/fmrilss@f851fb0632f90da12512212af5b80c9623c93fde,
+    bbuchsbaum/fmridesign@005606d72d1a5492292d51d3d7b755b3434e2f1c
 VignetteBuilder: knitr
 URL: https://bbuchsbaum.github.io/fmrireg/, https://github.com/bbuchsbaum/fmrireg
 BugReports: https://github.com/bbuchsbaum/fmrireg/issues
