@@ -194,29 +194,15 @@ coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts", "betas"
     lds <- lds[,comp,drop=FALSE]
     bmat <- as.matrix(bvals)
 
-    # coef.fmri_lm(type = "betas") is event coefficients × components after the
-    # conditions-x-voxels transpose. Contrasts stay components × contrasts.
-    # Choose orientation from `type`, not from whether n_comp happens to equal
-    # n_coefficients after subsetting `comp` (that equality takes the wrong branch).
-    if (identical(coef_type, "betas")) {
-      if (ncol(bmat) < max(comp)) {
-        stop("Cannot align latent coefficients with component loadings for reconstruction",
-             call. = FALSE)
-      }
-      b_comp <- bmat[, comp, drop = FALSE]
-      out <- as.matrix(lds %*% t(b_comp))
-      if (!is.null(rownames(bmat))) {
-        colnames(out) <- rownames(bmat)
-      }
-    } else {
-      if (nrow(bmat) < max(comp)) {
-        stop("Cannot align latent coefficients with component loadings for reconstruction",
-             call. = FALSE)
-      }
-      out <- as.matrix(lds %*% bmat[comp, , drop = FALSE])
-      if (!is.null(colnames(bmat))) {
-        colnames(out) <- colnames(bmat)
-      }
+    # coef.fmri_lm() is components x terms for every `type` (#227), so the
+    # reconstruction is loadings (voxels x comp) %*% coefficients (comp x terms).
+    if (nrow(bmat) < max(comp)) {
+      stop("Cannot align latent coefficients with component loadings for reconstruction",
+           call. = FALSE)
+    }
+    out <- as.matrix(lds %*% bmat[comp, , drop = FALSE])
+    if (!is.null(colnames(bmat))) {
+      colnames(out) <- colnames(bmat)
     }
     tibble::as_tibble(out)
   } else {
@@ -228,9 +214,9 @@ coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts", "betas"
 #' @rdname standard_error
 #' @export
 #' @importFrom Matrix rowSums t
-standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), recon=FALSE,...) {
-  type <- match.arg(type)
- 
+standard_error.fmri_latent_lm <- function(x, type = c("betas", "contrasts"), recon = FALSE, ...) {
+  type <- .accessor_family(type[1], c("betas", "contrasts"), "standard_error")
+
   if (!recon) {
     standard_error.fmri_lm(x, type)
   } else {
@@ -241,7 +227,7 @@ standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), r
     cov.unscaled <- chol2inv(Qr$qr)
     lds <- .dset_loadings(x$dataset)
   
-    if (type == "estimates") {
+    if (type == "betas") {
       ret <- do.call(cbind, lapply(x$result$event_indices, function(i) {
         sqrt(rowSums((lds %*% (CR * cov.unscaled[i,i])) * lds))
       }))
@@ -271,13 +257,15 @@ standard_error.fmri_latent_lm <- function(x, type=c("estimates", "contrasts"), r
 }
 
 #' @export
-stats.fmri_latent_lm <- function(x,type = c("estimates", "contrasts"), recon = FALSE, ...) {
+stats.fmri_latent_lm <- function(x, type = c("betas", "contrasts"), recon = FALSE, ...) {
+    type <- .accessor_family(type[1], c("betas", "contrasts"), "stats",
+                             deprecate_estimates = TRUE)
     if (!recon) {
-      stats.fmri_lm(x,type)
+      stats.fmri_lm(x, type)
     } else {
-      if (type == "estimates") {
-        bvals <- coef(x, type = "estimates", recon=TRUE)
-        errs <- standard_error(x, type = "estimates", recon=TRUE)
+      if (type == "betas") {
+        bvals <- coef(x, type = "betas", recon = TRUE)
+        errs <- standard_error(x, type = "betas", recon = TRUE)
         tibble::as_tibble(bvals/errs)
       } else {
         cvals <- coef(x, type="contrasts", recon=TRUE)

@@ -330,3 +330,57 @@ test_that("residual autocorrelation band is centred on the design-induced bias",
   ratio <- apply(sr$acf - sr$expect, 1, stats::var) / diag(sr$cov)
   expect_true(all(ratio > 0.6 & ratio < 1.5))
 })
+
+test_that("every fmri_lm view uses the current accessor API without warnings", {
+  # Deprecation warnings must be visible for this test to mean anything.
+  withr::local_options(fmrireg.suppress_deprecation = FALSE)
+  # 5 voxels x 2 event regressors: non-square, so a transposed voxels x terms
+  # matrix would change dimensions or index the wrong cells.
+  withr::local_seed(21)
+  ev <- data.frame(onset = seq(10, 180, by = 12), run = 1,
+                   condition = factor(rep(c("a", "b"), length.out = 15)))
+  dset <- matrix_frame(matrix(rnorm(100 * 5), 100, 5), TR = 2, run_length = 100,
+                       event_table = ev)
+  con <- pair_contrast(~ condition == "a", ~ condition == "b", name = "a_vs_b")
+  fit <- fmri_lm(onset ~ hrf(condition, contrasts = con), block = ~ run, dataset = dset)
+  expect_identical(dim(coef(fit)), c(5L, 2L))
+
+  views <- list(
+    list(), list(voxel = 2), list(type = "betas", voxel = 1:3),
+    list(type = "contrasts"), list(type = "contrasts", voxel = 4),
+    list(type = "hrf"), list(type = "hrf", voxel = 5),
+    list(type = "timecourse", voxel = 3), list(type = "residuals"),
+    list(type = "residuals", voxel = 1:2)
+  )
+  for (args in views) {
+    expect_no_warning(p <- do.call(ggplot2::autoplot, c(list(fit), args)))
+    expect_no_warning(ggplot2::ggplot_build(p))
+  }
+  pdf_file <- withr::local_tempfile(fileext = ".pdf")
+  grDevices::pdf(pdf_file)
+  expect_no_warning(plot(fit, type = "betas"))
+  grDevices::dev.off()
+
+  # The coefficient plot shows coef() for the chosen voxel, in coef()'s order.
+  d <- ggplot2::autoplot(fit, voxel = 4)$data
+  expect_equal(d$est, unname(coef(fit)[4, ]), tolerance = 1e-12)
+  expect_equal(d$se, unname(as.matrix(standard_error(fit))[4, ]), tolerance = 1e-12)
+  dc <- ggplot2::autoplot(fit, type = "contrasts", voxel = 4)$data
+  expect_equal(dc$est, unname(as.matrix(coef(fit, type = "contrasts"))[4, "a_vs_b"]),
+               tolerance = 1e-12)
+
+  # "estimates" is kept as a silent synonym of "betas" for the plot type.
+  expect_no_warning(old <- ggplot2::autoplot(fit, type = "estimates", voxel = 4))
+  expect_equal(old$data, d)
+})
+
+test_that("coefficient plots index the non-square demo fit by voxel", {
+  withr::local_options(fmrireg.suppress_deprecation = FALSE)
+  fit <- suppressWarnings(.demo_fmri_lm())
+  expect_identical(dim(coef(fit)), c(3L, 2L))
+  for (v in 1:3) {
+    expect_no_warning(d <- ggplot2::autoplot(fit, voxel = v)$data)
+    expect_equal(d$est, unname(coef(fit)[v, ]), tolerance = 1e-12)
+  }
+  expect_no_warning(ggplot2::ggplot_build(ggplot2::autoplot(fit)))
+})
