@@ -357,7 +357,7 @@
       "@type": "SoftwareApplication",
       "identifier": "fmridesign",
       "name": "fmridesign",
-      "version": ">= 0.6.0"
+      "version": ">= 0.6.1.9000"
     },
     "5": {
       "@type": "SoftwareApplication",
@@ -550,6 +550,7 @@
       "@type": "SoftwareApplication",
       "identifier": "rlang",
       "name": "rlang",
+      "version": ">= 1.0.3",
       "provider": {
         "@id": "https://cran.r-project.org",
         "@type": "Organization",
@@ -704,7 +705,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "6148.265KB",
+  "fileSize": "6164.728KB",
   "citation": [
     {
       "@type": "SoftwareSourceCode",
