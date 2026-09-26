@@ -87,7 +87,7 @@ Remotes:
     anthonynorth/roxyglobals,
     bbuchsbaum/fmridataset,
     bbuchsbaum/fmrilss,
-    bbuchsbaum/fmridesign@277ea716e28c6fe23e63b272d9560349314cf7a9,
+    bbuchsbaum/fmridesign@236856452c9fecd131ea751d0e970b542cf16f64,
     bbuchsbaum/neuroatlas,
     bbuchsbaum/delarr
 VignetteBuilder: knitr

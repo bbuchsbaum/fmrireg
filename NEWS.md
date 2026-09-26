@@ -51,7 +51,8 @@ column names do not change. What does change:
   fmrireg's former behaviour: `within_run = TRUE` by default (run intercepts
   dropped, columns centred within runs, run-specific columns correlated on
   their own run), with identical cells and values. `label_values` is accepted
-  as an alias for `annotate`. The drawing (VIF diagonal, outlined high
+  as an alias for `annotate`, and cells are labelled by default at 12 or
+  fewer columns, as before. The drawing (VIF diagonal, outlined high
   correlations) follows fmridesign's style. Arguments that are not
   `geom_tile()` arguments now raise an error instead of being ignored.
 
@@ -60,11 +61,13 @@ column names do not change. What does change:
 
 ## Other fixes in this change
 
-* `standard_error(<fmri_latent_lm>)` and the internal `pull_stat_revised()`
-  name their columns with the design-matrix column names. Naming them with
-  `conditions()` failed for multi-basis HRFs and for designs with an empty
+* `standard_error(<fmri_latent_lm>)` (including `recon = TRUE`) and the
+  internal `pull_stat_revised()` name their columns with the design-matrix
+  column names, matching `coef()` and `stats(recon = TRUE)`. For simple
+  designs the names change from the condition name to the column name (for
+  example `a.1` becomes `a_a.1`). Multi-basis HRFs and designs with an empty
   interaction cell, where the number of conditions differs from the number of
-  columns.
+  columns, used to fail with an error and now work.
 * `glm_ols()` and `glm_lss()`, which accept an HRF basis by name
   (`"HRF_SPMG1"` etc.), now resolve it with `getExportedValue()` and accept
   any `HRF_*` object that fmrihrf exports. The names `"HRF_AFNI"`,
