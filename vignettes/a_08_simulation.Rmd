@@ -581,6 +581,9 @@ The most advanced simulation function, `simulate_fmri_matrix`, generates multipl
 
 ```{r simulate-fmri-matrix}
 requested_onsets <- seq(12, 156, length.out = 10)
+# Set the noise relative to the canonical HRF's peak so the responses stay
+# visible whatever the HRF's raw amplitude.
+hrf_peak <- max(fmrihrf::evaluate(fmrihrf::HRF_SPMG1, seq(0, 30, by = 0.1)))
 sim_matrix <- simulate_fmri_matrix(
   n = 5,                  # 5 voxels/regions
   total_time = 200,       # 200 seconds of scan time
@@ -591,7 +594,7 @@ sim_matrix <- simulate_fmri_matrix(
   durations = 2,          # Base duration = 2 seconds
   duration_sd = 0.5,      # Duration variability
   noise_type = "ar1",     # AR(1) noise
-  noise_sd = 0.5          # Noise standard deviation
+  noise_sd = 0.29 * hrf_peak  # Noise SD: 29% of the HRF's peak
 )
 ```
 

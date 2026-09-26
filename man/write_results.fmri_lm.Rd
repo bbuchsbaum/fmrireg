@@ -39,7 +39,9 @@
 outputs), \code{"nifti"} (BIDS-style NIfTI outputs, written as \code{.nii.gz}), and
 \code{"gds"} (fmrigds-compatible assays plus an \code{.rds} plan). Pass a character
 vector to write multiple formats at once (e.g. \code{c("h5", "nifti")}).
-Defaults to \code{"h5"} only.}
+Defaults to \code{"h5"} only. NIfTI maps are stored as 32-bit floats
+(datatype FLOAT32), so their values are the fitted values rounded to
+single precision.}
 
 \item{strategy}{Storage strategy: "by_stat" (group contrasts by statistic) or "by_contrast" (separate files)}
 

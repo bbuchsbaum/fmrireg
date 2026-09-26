@@ -75,8 +75,12 @@ quick_truth <- matrix(
   c(1.0, 0.6, 0.7, 1.1), nrow = ncol(quick_design),
   dimnames = list(colnames(quick_design), c("voxel1", "voxel2"))
 )
+# Set the noise level relative to the regressors' peak height, so the
+# signal-to-noise ratio does not depend on the HRF's raw amplitude.
+noise_sd <- 0.11 * max(abs(quick_design))
 set.seed(2026)
-bold <- quick_design %*% quick_truth + matrix(rnorm(80 * 2, sd = 0.2), 80, 2)
+bold <- quick_design %*% quick_truth +
+  matrix(rnorm(80 * 2, sd = noise_sd), 80, 2)
 quick_dataset <- matrix_frame(
   bold, TR = 2, run_length = 80, event_table = quick_events
 )

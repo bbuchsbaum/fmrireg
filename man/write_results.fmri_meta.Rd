@@ -37,7 +37,8 @@ GLM exports, meta-analysis outputs may omit this for group-level maps.}
 \item{desc}{Description of the analysis (default: "Meta").}
 
 \item{format}{Output format(s). Use \code{"h5"} for HDF5 LabeledVolumeSet
-outputs, \code{"nifti"} for NIfTI outputs, or a character vector to write both.}
+outputs, \code{"nifti"} for NIfTI outputs, or a character vector to write both.
+NIfTI maps are stored as 32-bit floats (datatype FLOAT32).}
 
 \item{strategy}{Storage strategy. \code{"by_stat"} writes one file per statistic
 with coefficients along the 4th dimension; \code{"by_coefficient"} writes one

@@ -20,7 +20,9 @@ NULL
 #'   outputs), `"nifti"` (BIDS-style NIfTI outputs, written as `.nii.gz`), and
 #'   `"gds"` (fmrigds-compatible assays plus an `.rds` plan). Pass a character
 #'   vector to write multiple formats at once (e.g. `c("h5", "nifti")`).
-#'   Defaults to `"h5"` only.
+#'   Defaults to `"h5"` only. NIfTI maps are stored as 32-bit floats
+#'   (datatype FLOAT32), so their values are the fitted values rounded to
+#'   single precision.
 #' @param strategy Storage strategy: "by_stat" (group contrasts by statistic) or "by_contrast" (separate files)
 #' @param save_betas Logical. Save raw regressor betas (default: TRUE)
 #' @param contrasts Character vector of contrast names to save. NULL saves all contrasts
@@ -1758,14 +1760,17 @@ write_results.fmri_lm <- function(x,
 }
 
 #' Write a NIfTI Volume
+#'
+#' Statistical maps are always stored as 32-bit floats (NIfTI datatype
+#' FLOAT32), so values are rounded to single precision on disk.
 #' @keywords internal
 #' @noRd
 .write_nifti_volume <- function(volume, filepath, context) {
   tryCatch({
     if (inherits(volume, "NeuroVec")) {
-      neuroim2::write_vec(volume, filepath)
+      neuroim2::write_vec(volume, filepath, data_type = "FLOAT")
     } else {
-      neuroim2::write_vol(volume, filepath)
+      neuroim2::write_vol(volume, filepath, data_type = "FLOAT")
     }
   }, error = function(e) {
     stop("Failed to write ", context, ": ", e$message, call. = FALSE)

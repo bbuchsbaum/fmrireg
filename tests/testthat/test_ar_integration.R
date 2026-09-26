@@ -36,7 +36,15 @@ test_that("iid and ar1 give similar results on white noise", {
                      use_fast_path = TRUE, ar_options = list(struct = "iid"))
   mod_ar1 <- fmrireg::fmri_lm(onset ~ hrf(cond), block = ~ run, dataset = dset,
                      use_fast_path = TRUE, ar_options = list(struct = "ar1"))
-  expect_lt(max(abs(coef(mod_iid) - coef(mod_ar1))), 0.03)
+  # Measure the disagreement in units of the coefficient's standard error.
+  # A raw-beta bound (formerly 0.03) is tied to the HRF's raw scale, which
+  # fmrihrf 0.4.0 shrank ~10x when it corrected the SPMG kernel; that
+  # inflated every beta and its SE ~10x for identical data. 0.13 SE is
+  # stricter than the old bound was for every voxel (old SEs were
+  # 0.19-0.22, so 0.03 allowed 0.14-0.16 SE); observed is ~0.06 SE.
+  se_iid <- as.matrix(fmrireg::standard_error(mod_iid))[, 1]
+  d <- abs(as.numeric(coef(mod_iid)) - as.numeric(coef(mod_ar1)))
+  expect_lt(max(d / se_iid), 0.13)
 
   # Skip the direct residual AR test - it's not meaningful when HRF regressors
   # absorb temporal structure. The GLM fit comparison below is sufficient.
@@ -94,7 +102,12 @@ test_that("global and runwise AR pooling both produce stable fits", {
   expect_true(all(is.finite(beta_global)))
   # These are distinct estimators, especially with only 30 observations per
   # run. Guard against numerical instability without requiring equivalence.
-  expect_lt(mean(abs(beta_run - beta_global)), 0.25)
+  # The gap is expressed in coefficient standard errors so it does not depend
+  # on the HRF's raw scale (see above). 0.5 SE is stricter than the former
+  # raw bound of 0.25 was under the old kernel (SEs 0.38-0.47, so 0.25
+  # allowed a mean gap of 0.53-0.66 SE); observed is ~0.07 SE.
+  se_run <- as.matrix(fmrireg::standard_error(mod_run))[, 1]
+  expect_lt(mean(abs(beta_run - beta_global) / se_run), 0.5)
 })
 
 # Test ar1_exact_first option

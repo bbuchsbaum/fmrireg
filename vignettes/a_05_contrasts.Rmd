@@ -339,9 +339,12 @@ true_cell_effects <- cbind(
   voxel3 = c(0.8, 0.3, 0.6, 0.2)
 )
 rownames(true_cell_effects) <- colnames(signal_design)
+# Noise is set relative to the regressors' peak height, so the example's
+# signal-to-noise ratio does not depend on the HRF's raw amplitude.
+noise_sd <- 0.085 * max(abs(signal_design))
 set.seed(99)
 ysim <- signal_design %*% true_cell_effects +
-  matrix(rnorm(120 * 3, sd = 0.15), 120, 3)
+  matrix(rnorm(120 * 3, sd = noise_sd), 120, 3)
 dataset_sim <- matrix_frame(
   ysim, TR = 2, run_length = 120, event_table = design
 )
@@ -426,9 +429,10 @@ three_level_event <- event_model(
   data = three_level_events, sampling_frame = three_level_frame
 )
 three_level_X <- as.matrix(design_matrix(three_level_event))
+# As above, noise is scaled to the regressors' peak height.
 set.seed(404)
 three_level_Y <- three_level_X %*% matrix(c(1.0, 0.4, -0.2), ncol = 1) +
-  matrix(rnorm(100, sd = 0.15), ncol = 1)
+  matrix(rnorm(100, sd = 0.085 * max(abs(three_level_X))), ncol = 1)
 three_level_dataset <- matrix_frame(
   three_level_Y, TR = 2, run_length = 100,
   event_table = three_level_events

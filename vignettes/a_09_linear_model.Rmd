@@ -146,8 +146,12 @@ signal2 <- evaluate(reg2, time_points)
 # Combine signals (this is the "true" signal without noise)
 true_signal <- signal1 + signal2
 
-# Create noise with temporal autocorrelation and drift
-noise <- simulate_noise_vector(
+# Create noise with temporal autocorrelation and drift. Its parameters are
+# stated for a response peak of 1.75 signal units; rescaling by the canonical
+# HRF's actual peak keeps the signal-to-noise ratio independent of the HRF's
+# raw amplitude.
+hrf_peak <- max(evaluate(fmrihrf::HRF_SPMG1, seq(0, 30, by = 0.1)))
+noise <- (hrf_peak / 1.75) * simulate_noise_vector(
   n = length(time_points),
   TR = TR,
   ar = c(0.7),         # Stronger AR(1) coefficient to accentuate autocorrelation
@@ -454,20 +458,27 @@ kable(estimate_stats_display, digits = 4, row.names = FALSE,
 ```
 
 ```{r validate-estimate-statistics, include=FALSE}
+weakest_row <- which(
+  estimate_stats$voxel == "voxel3" & estimate_stats$condition == "condition1"
+)
 stopifnot(
+  length(weakest_row) == 1L,
   nrow(estimate_stats) == 6L,
   all(is.finite(as.matrix(estimate_stats[c("estimate", "std_error", "statistic", "p_value")]))),
   any(estimate_stats$p_value < 0.05),
-  any(estimate_stats$p_value >= 0.05)
+  # The weakest simulated signal (condition 1 at 0.6x scale) is the least certain.
+  which.min(abs(estimate_stats$statistic)) == weakest_row
 )
 ```
 
 The t-statistics quantify the reliability of the estimated effects. Higher
 absolute t-values indicate more precise estimates relative to their standard
 errors. Here `r sum(estimate_stats$p_value < 0.05)` of the six condition-by-voxel
-tests are below 0.05. The weakest simulated signal is correspondingly the least
-certain; this is why the table reports both effect size and uncertainty rather
-than reducing the result to a binary label.
+tests are below 0.05. The weakest simulated signal, condition 1 in voxel 3, is
+correspondingly the least certain (t = `r sprintf("%.2f", estimate_stats$statistic[weakest_row])`,
+p = `r sprintf("%.3f", estimate_stats$p_value[weakest_row])`); this is why the
+table reports both effect size and uncertainty rather than reducing the result
+to a binary label.
 
 ### 3. Contrasts Between Conditions
 
@@ -624,10 +635,15 @@ hrf_signal_b <- evaluate(
   hrf_acquisition_time
 )
 hrf_amplitudes <- rbind(A = c(1, 0.65), B = c(0.8, 1.1))
-hrf_drift <- outer(seq(-0.15, 0.15, length.out = hrf_n), rep(1, 2L))
+# Drift and noise are set relative to the canonical peak so the example's
+# signal-to-noise ratio does not depend on the HRF's raw amplitude.
+hrf_scale <- max(hrf_truth_a(seq(0, 24, by = 0.1)))
+hrf_drift <- outer(
+  seq(-0.085, 0.085, length.out = hrf_n) * hrf_scale, rep(1, 2L)
+)
 hrf_response <- hrf_signal_a %o% hrf_amplitudes["A", ] +
   hrf_signal_b %o% hrf_amplitudes["B", ] + hrf_drift +
-  matrix(rnorm(hrf_n * 2L, sd = 0.025), nrow = hrf_n)
+  matrix(rnorm(hrf_n * 2L, sd = 0.014 * hrf_scale), nrow = hrf_n)
 colnames(hrf_response) <- c("visual_ROI", "motor_ROI")
 hrf_dataset <- matrix_frame(
   hrf_response,

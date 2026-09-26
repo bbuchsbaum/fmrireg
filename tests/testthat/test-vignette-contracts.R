@@ -67,9 +67,11 @@ test_that("vignette omnibus contrast executes as a two-df F test", {
     data = events, sampling_frame = sframe
   )
   X <- as.matrix(design_matrix(event))
+  # Mirrors vignettes/a_05_contrasts.Rmd: noise is scaled to the regressors'
+  # peak height so the SNR does not depend on the HRF's raw amplitude.
   set.seed(404)
   Y <- X %*% matrix(c(1.0, 0.4, -0.2), ncol = 1) +
-    matrix(rnorm(100, sd = 0.15), ncol = 1)
+    matrix(rnorm(100, sd = 0.085 * max(abs(X))), ncol = 1)
   dataset <- matrix_frame(
     Y, TR = 2, run_length = 100, event_table = events
   )
@@ -81,9 +83,13 @@ test_that("vignette omnibus contrast executes as a two-df F test", {
     block = ~ run, dataset = dataset
   )
   f_stat <- as.numeric(stats(fit, type = "F")$condition_F)
+  df2 <- as.numeric(fit$result$df$inference)[1]
+  p_value <- pf(f_stat, ncol(weights), df2, lower.tail = FALSE)
 
   expect_equal(ncol(weights), 2L)
   expect_true(is.finite(f_stat) && f_stat > 0)
+  expect_true(is.finite(p_value))
+  expect_lt(p_value, 0.05)
 })
 
 test_that("vignette tables preserve scientific labels and nonzero p-value text", {
@@ -93,7 +99,7 @@ test_that("vignette tables preserve scientific labels and nonzero p-value text",
   )
   cell_labels <- paste(cell_order$category, cell_order$attention, sep = " / ")
   displayed_p <- format.pval(
-    c(2.57e-32, 3.92e-13, 2.62e-5, 5.39e-53, 9.98e-47),
+    c(1.52e-34, 3.72e-14, 3.59e-5, 6.68e-55, 2.63e-49),
     digits = 3,
     eps = 1e-4
   )

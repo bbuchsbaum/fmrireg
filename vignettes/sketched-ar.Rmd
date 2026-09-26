@@ -139,8 +139,12 @@ smooth_maps <- rbind(
   sin(pi * xyz01[, 1]) * cos(pi * xyz01[, 2]) * (0.5 + xyz01[, 3]),
   cos(pi * xyz01[, 1]) * sin(pi * xyz01[, 2]) * (1.0 - 0.5 * xyz01[, 3])
 )
+# Scale each map by its regressor's peak height so that the response peaks
+# at 1.75 signal units per unit of map value, whatever the HRF's raw
+# amplitude; the noise level below is chosen relative to that peak.
 for (j in seq_along(task_cols)) {
-  B_true[task_cols[j], ] <- smooth_maps[1L + (j - 1L) %% nrow(smooth_maps), ]
+  B_true[task_cols[j], ] <- smooth_maps[1L + (j - 1L) %% nrow(smooth_maps), ] *
+    (1.75 / max(abs(X[, task_cols[j]])))
 }
 
 Y <- X %*% B_true + ar1_noise(Tlen, V, sd = 0.15)
