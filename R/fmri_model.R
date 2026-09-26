@@ -165,17 +165,6 @@ terms.fmri_model <- function(x, ...) {
 
 #' @export
 #' @autoglobal
-cells.event_model <- function(x, ...) {
-  eterms <- terms(x)
-  if (length(eterms) == 0L) {
-    return(tibble::tibble())
-  }
-  parts <- lapply(eterms, function(term) tibble::as_tibble(cells(term, ...)))
-  dplyr::bind_rows(parts)
-}
-
-#' @export
-#' @autoglobal
 cells.fmri_model <- function(x, ...) {
   c1 <- tibble::as_tibble(cells(x$event_model, ...))
   if (nrow(c1) > 0L) c1$type <- "event"
@@ -214,10 +203,6 @@ conditions.fmri_model <- function(x, ...) {
   unlist(lapply(terms(x), function(t) conditions(t)), use.names = FALSE)
 }
 
-#' @export
-conditions.baseline_model <- function(x, ...) {
-  unlist(lapply(terms(x), function(t) conditions(t)), use.names = FALSE)
-}
 
 
 ## ============================================================================

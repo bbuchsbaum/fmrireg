@@ -1,5 +1,82 @@
 # fmrireg 0.2.0
 
+## Breaking: design generics now come from fmridesign (fmridesign >= 0.6.1.9000)
+
+fmrireg no longer defines its own copies of `longnames()`, `shortnames()`,
+`construct()` and `correlation_map()`, and no longer registers methods for
+classes that fmridesign owns (`event_model`, `event_term`, `convolved_term`,
+`feature_term`, `baseline_model`, ...). It re-exports fmridesign's generics,
+so `fmrireg::longnames` and `fmridesign::longnames` are the same function and
+a method registered by either package is reached from both. `.onLoad` no
+longer reaches into fmridesign's namespace. Coefficient and design-matrix
+column names do not change. What does change:
+
+* **`blockids(<event_model>)` now returns one run id per event, not one per
+  scan.** fmrireg used to override fmridesign's method with per-scan ids
+  whenever it was loaded, so the result depended on whether fmrireg was
+  attached. Code that indexes scans with it must change:
+
+  ```r
+  blockids(em)                  # per event (fmridesign's method)
+  blockids(em$sampling_frame)   # per scan: what blockids(em) used to return
+  blocklens(em)                 # scans per run (unchanged)
+  ```
+
+  fmridesign prints a one-time message the first time `blockids()` is called
+  on an `event_model` in a session.
+
+* **`longnames()` uses fmridesign's `.` format instead of `#`.**
+
+  | design | before | now |
+  |---|---|---|
+  | `hrf(cond)` | `cond#A` | `cond.A` |
+  | `hrf(rt)` | `rt#rt` | `rt` |
+  | `hrf(cond, rt)` | `cond#A` | `cond.A_rt` |
+  | `hrf(cond, attn)` | `cond#A:attn#x` | `cond.A_attn.x` |
+  | `trialwise()` | `.trial_factor...#01` | `.trial_factor....01` |
+
+  A long name is the design-matrix column name without its `<term>_` prefix
+  (and without the `_bNN` basis suffix unless `expand_basis = TRUE`): column
+  `cond_cond.A` has long name `cond.A`. See `?fmridesign::longnames`.
+  `shortnames()` is unchanged for factor terms, but parametric modulators now
+  keep the modulator (`hrf(cond, rt)` gives `A:rt`, formerly `A`), and the
+  result for an `event_model` is an unnamed vector (formerly named).
+
+* **Empty interaction cells** are still left out of `longnames()` and
+  `shortnames()` (the default, `drop.empty = TRUE`), so names line up with
+  columns. `drop.empty = FALSE` lists the full factor grid. `conditions()`
+  always returns the full grid, including empty cells.
+
+* **`correlation_map(<baseline_model>)`** is fmridesign's method. It keeps
+  fmrireg's former behaviour: `within_run = TRUE` by default (run intercepts
+  dropped, columns centred within runs, run-specific columns correlated on
+  their own run), with identical cells and values. `label_values` is accepted
+  as an alias for `annotate`, and cells are labelled by default at 12 or
+  fewer columns, as before. The drawing (VIF diagonal, outlined high
+  correlations) follows fmridesign's style. Arguments that are not
+  `geom_tile()` arguments now raise an error instead of being ignored.
+
+* `design_matrix(<convolved_term>, blockid = )` keeps a one-column result as a
+  matrix.
+
+## Other fixes in this change
+
+* `standard_error(<fmri_latent_lm>)` (including `recon = TRUE`) and the
+  internal `pull_stat_revised()` name their columns with the design-matrix
+  column names, matching `coef()` and `stats(recon = TRUE)`. For simple
+  designs the names change from the condition name to the column name (for
+  example `a.1` becomes `a_a.1`). Multi-basis HRFs and designs with an empty
+  interaction cell, where the number of conditions differs from the number of
+  columns, used to fail with an error and now work.
+* `glm_ols()` and `glm_lss()`, which accept an HRF basis by name
+  (`"HRF_SPMG1"` etc.), now resolve it with `getExportedValue()` and accept
+  any `HRF_*` object that fmrihrf exports. The names `"HRF_AFNI"`,
+  `"HRF_GAM"`, `"HRF_IL"` and `"HRF_DD"` were listed as valid but never
+  existed in fmrihrf; they now give "Unknown HRF basis name" instead of an
+  "object not found" error.
+* The fmrigds reducer check calls `fmrigds::get_reducer()` directly instead
+  of looking it up in fmrigds's namespace.
+
 ## Breaking: corrected SPMG kernel (fmrihrf >= 0.4.0)
 
 * fmrireg now builds against fmrihrf 0.4.0, which corrects the SPM canonical

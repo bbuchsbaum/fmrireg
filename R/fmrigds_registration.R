@@ -170,9 +170,7 @@
 )
 
 .fmrigds_check_reducer <- function(name, expected) {
-  ns <- asNamespace("fmrigds")
-  get_reducer <- get("get_reducer", envir = ns)
-  r <- try(get_reducer(name), silent = TRUE)
+  r <- try(fmrigds::get_reducer(name), silent = TRUE)
   if (inherits(r, "try-error") || is.null(r) || is.null(r$provides)) return(FALSE)
   setequal(sort(r$provides), sort(expected))
 }

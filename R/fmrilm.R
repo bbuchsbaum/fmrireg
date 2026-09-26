@@ -1613,7 +1613,9 @@ pull_stat_revised <- function(x, type, element) {
     # Ensure we access the matrix correctly from the list structure
     beta_matrix <- x$result$betas$data[[1]]$estimate[[1]]
     ret <- beta_matrix[, x$result$event_indices, drop = FALSE]
-    colnames(ret) <- conditions(x$model$event_model)
+    # design-matrix column names: one per column, unlike conditions(), which
+    # has one name per condition (not per basis) and lists empty cells
+    colnames(ret) <- colnames(design_matrix(x$model))[x$result$event_indices]
     suppressMessages(tibble::as_tibble(ret, .name_repair = "check_unique"))
   } else if (type == "contrasts") {
     ret <- x$result$contrasts %>% dplyr::filter(type == "contrast")
