@@ -314,7 +314,9 @@
 
   grouped <- NULL
   if (no_whiten) {
-    sol <- .lowrank_time_solve(X, Z, sk, op)
+    # The AR paths below warn about a rank-deficient X through
+    # .fast_preproject(); this path has no preliminary OLS, so warn here.
+    sol <- .lowrank_time_solve(X, Z, sk, op, warn = TRUE)
     B <- .lowrank_project_voxels(sol$M, A, A_is_I)
     sigma2 <- .lowrank_sigma2(sol, A, A_is_I)
     cov_unscaled <- sol$cov_unscaled
@@ -362,6 +364,8 @@
     M <- matrix(0, p, ncol(Z))
     sigma2 <- numeric(ncol(Z))
     rss_cluster <- numeric(ncol(Z))
+    # Estimability is judged per cluster on that cluster's whitened design;
+    # each covariance carries its own rank attributes.
     cov_list <- vector("list", length(groups))
     solve_info <- vector("list", length(groups))
     for (i in seq_along(groups)) {
@@ -465,6 +469,20 @@
   # rss on each fit's own residual df (clusters can differ in df).
   rss <- if (is.null(grouped)) sigma2 * dfres else rss_cluster
 
+  # Keep-but-aliased: the reported coefficients of aliased columns are NA
+  # (the stats above already are); B itself keeps zeros there so that
+  # estimable contrasts are not poisoned by 0 * NA.
+  betas_report <- B
+  if (is.null(grouped)) {
+    al <- attr(cov_unscaled, "aliased", exact = TRUE)
+    if (length(al)) betas_report[al, ] <- NA_real_
+  } else {
+    for (i in seq_along(grouped$groups)) {
+      al <- attr(grouped$cov_list[[i]], "aliased", exact = TRUE)
+      if (length(al)) betas_report[al, grouped$groups[[i]]] <- NA_real_
+    }
+  }
+
   sketch_info <- list(
     method = sk$method,
     m = sk$m,
@@ -518,7 +536,7 @@
     strategy = "sketch",
     bcons = contrast_prep$processed,
     dataset = dataset,
-    betas_fixed = B,
+    betas_fixed = betas_report,
     sigma2 = sigma2,
     vcov_inv = cov_unscaled,
     ar_coef = ar_coef_store,

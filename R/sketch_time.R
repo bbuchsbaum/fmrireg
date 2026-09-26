@@ -119,20 +119,60 @@ ihs_latent_solve <- function(X, Z, m, iters = 3L, tol = 0) {
        gram = gram_fn)
 }
 
-#' Internal: inverse of a small SPD matrix with a ridge fallback
+#' Internal: estimability of a (whitened) design for the sketch engine
+#'
+#' Judges estimability on the full design with the same tolerance-aware
+#' pivoted QR (`.design_rank_info()`, default tolerance) that the exact OLS
+#' fast path uses in `.fast_preproject()`, so sketched and exact fits alias
+#' the same columns. A sketch is never used to decide estimability: with
+#' `m` close to `p` it can create spurious rank loss, and it cannot remove
+#' a genuine one.
 #' @keywords internal
 #' @noRd
-.lowrank_spd_inverse <- function(G) {
-  tryCatch(chol2inv(chol(G)), error = function(e) {
-    ridge <- 1e-6 * sum(diag(G)) / max(1L, ncol(G))
-    chol2inv(chol(G + diag(ridge, ncol(G))))
-  })
+.lowrank_rank_info <- function(X, warn = FALSE) {
+  info <- .design_rank_info(X)
+  if (info$rank == 0L) {
+    stop("latent_sketch engine: the design matrix has no estimable column.",
+         call. = FALSE)
+  }
+  if (warn && length(info$aliased) > 0L) {
+    warning(.rank_deficiency_message(info$rank, ncol(X), info$aliased,
+                                     colnames(X)), call. = FALSE)
+  }
+  info
+}
+
+#' Internal: embed an estimable-columns solve in the full coefficient space
+#'
+#' Keep-but-aliased: every declared column keeps its position. Aliased
+#' coefficients and their covariance rows/columns are held at zero internally
+#' and marked through the rank attributes on `cov_unscaled`, exactly as
+#' `.fast_preproject()` marks `XtXinv` for exact fits; the statistics and
+#' contrast code report them as NA (contrasts with a named warning).
+#' @keywords internal
+#' @noRd
+.lowrank_expand_solution <- function(sol, info, est, varnames, p) {
+  M <- matrix(0, p, ncol(sol$M))
+  M[est, ] <- sol$M
+  cov_unscaled <- matrix(0, p, p)
+  cov_unscaled[est, est] <- sol$cov_unscaled
+  if (!is.null(varnames)) {
+    rownames(M) <- varnames
+    dimnames(cov_unscaled) <- list(varnames, varnames)
+  }
+  sol$M <- M
+  sol$cov_unscaled <- .attach_rank_attrs(cov_unscaled, info)
+  sol$rank <- info$rank
+  sol$aliased <- info$aliased
+  sol
 }
 
 #' Internal: sketch-and-solve with its conditional-on-S inference
 #'
 #' Solves \eqn{b_s = (X'S'SX)^{-1} X'S'S z} and returns what honest inference
-#' for that estimator needs. With \eqn{z = Xb + e}, \eqn{e \sim (0, \sigma^2 I)}
+#' for that estimator needs. `X` must have full column rank: the caller,
+#' `.lowrank_time_solve()`, passes only the estimable columns. With
+#' \eqn{z = Xb + e}, \eqn{e \sim (0, \sigma^2 I)}
 #' and \eqn{X_s = SX}, \eqn{G = X_s'X_s}, \eqn{K = SS'}:
 #'
 #' * \eqn{b_s - b = G^{-1} X_s' S e}, so
@@ -148,16 +188,36 @@ ihs_latent_solve <- function(X, Z, m, iters = 3L, tol = 0) {
 #'   of freedom are \eqn{tr(PK)^2 / tr(PKPK)} (`df`), which equals \eqn{m - p}
 #'   when \eqn{K} is a multiple of the identity.
 #'
+#' \eqn{G} is inverted through the pivoted QR of \eqn{X_s}, never through a
+#' Cholesky factor of \eqn{G}, which can succeed on a numerically singular
+#' \eqn{G} and return garbage. If \eqn{X_s} is numerically rank deficient
+#' under the QR tolerance used for the full design, the sketch has too few
+#' rows for this design and the solve stops. There is no ridge or
+#' pseudo-inverse fallback: either would silently change the estimator that
+#' the reported inference describes.
+#'
 #' All traces use only m x p and p x p products besides \eqn{K} itself.
 #' @keywords internal
 #' @noRd
-.lowrank_sketch_solve <- function(X, Z, op) {
+.lowrank_sketch_solve <- function(X, Z, op, tol = 1e-7) {
   Xs <- op$apply(X)
   Zs <- op$apply(Z)
-  G <- crossprod(Xs)
-  Ginv <- .lowrank_spd_inverse(G)
-  M <- Ginv %*% crossprod(Xs, Zs)
-  resid <- Zs - Xs %*% M
+  k <- ncol(Xs)
+  qx <- qr(Xs, tol = tol, LAPACK = FALSE)
+  if (qx$rank < k) {
+    stop(sprintf(paste0(
+      "time_sketch$m = %d is too small for this design: the sketched design ",
+      "(%d rows x %d estimable columns) has numerical rank %d. Increase ",
+      "`time_sketch$m`."), as.integer(op$m), nrow(Xs), k, qx$rank),
+      call. = FALSE)
+  }
+  Rinv <- backsolve(qr.R(qx), diag(k))
+  Ginv <- matrix(0, k, k)
+  Ginv[qx$pivot, qx$pivot] <- tcrossprod(Rinv)
+  M <- qr.coef(qx, Zs)
+  if (is.null(dim(M))) M <- matrix(M, nrow = k)
+  resid <- qr.resid(qx, Zs)
+  if (is.null(dim(resid))) resid <- matrix(resid, ncol = ncol(M))
 
   K <- op$gram()
   U <- K %*% Xs                        # m x p
@@ -166,11 +226,10 @@ ihs_latent_solve <- function(X, Z, m, iters = 3L, tol = 0) {
   cov_unscaled <- GW %*% Ginv
   cov_unscaled <- (cov_unscaled + t(cov_unscaled)) / 2
 
-  # Residual traces through an orthonormal basis Q of col(X_s), so H = QQ'
-  # respects the design rank even when G needed a ridge:
+  # Residual traces through the orthonormal basis Q of col(X_s) (full column
+  # rank, checked above), so H = QQ' has the estimable rank:
   # tr(PK) = tr(K) - tr(Q'KQ), tr(PKPK) = tr(KK) - 2||KQ||^2 + ||Q'KQ||^2.
-  qx <- qr(Xs)
-  Q <- qr.Q(qx)[, seq_len(qx$rank), drop = FALSE]
+  Q <- qr.Q(qx)
   KQ <- K %*% Q
   QKQ <- crossprod(Q, KQ)
   kappa <- sum(diag(K)) - sum(diag(QKQ))                    # tr(PK)
@@ -181,14 +240,16 @@ ihs_latent_solve <- function(X, Z, m, iters = 3L, tol = 0) {
 }
 
 #' Internal: IHS solve with exact OLS inference quantities
+#'
+#' `X` must have full column rank (see `.lowrank_time_solve()`), so the
+#' residual df is `nrow(X) - ncol(X)`.
 #' @keywords internal
 #' @noRd
 .lowrank_ihs_solve <- function(X, Z, sk) {
   iters <- as.integer(sk$iters %||% .lowrank_ihs_default_iters)
   tol <- as.numeric(sk$tol %||% .lowrank_ihs_default_tol)
   sol <- ihs_latent_solve(X, Z, m = sk$m, iters = iters, tol = tol)
-  rank_x <- as.integer(Matrix::rankMatrix(X)[1])
-  df <- max(1L, nrow(X) - rank_x)
+  df <- max(1L, nrow(X) - ncol(X))
   list(M = sol$M, cov_unscaled = sol$Ginv, residuals = sol$residuals,
        kappa = df, df = df, iters = as.integer(sol$iters),
        converged = if (tol > 0) isTRUE(sol$converged) else NA)
@@ -197,13 +258,22 @@ ihs_latent_solve <- function(X, Z, m, iters = 3L, tol = 0) {
 .lowrank_ihs_default_iters <- 100L
 .lowrank_ihs_default_tol <- 1e-3
 
-#' Internal: dispatch a time-sketched solve
+#' Internal: dispatch a time-sketched solve on the estimable columns
+#'
+#' Estimability is judged on the full (whitened) `X`; the solver sees only
+#' the estimable columns, and its solution is embedded back into the declared
+#' coefficient space by `.lowrank_expand_solution()`.
 #' @keywords internal
 #' @noRd
-.lowrank_time_solve <- function(X, Z, sk, op) {
-  if (identical(sk$method, "ihs")) {
-    .lowrank_ihs_solve(X, Z, sk)
+.lowrank_time_solve <- function(X, Z, sk, op, warn = FALSE) {
+  X <- as.matrix(X)
+  info <- .lowrank_rank_info(X, warn = warn)
+  est <- sort(info$estimable)
+  Xe <- X[, est, drop = FALSE]
+  sol <- if (identical(sk$method, "ihs")) {
+    .lowrank_ihs_solve(Xe, Z, sk)
   } else {
-    .lowrank_sketch_solve(X, Z, op)
+    .lowrank_sketch_solve(Xe, Z, op, tol = info$tol)
   }
+  .lowrank_expand_solution(sol, info, est, colnames(X), ncol(X))
 }

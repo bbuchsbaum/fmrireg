@@ -115,7 +115,11 @@ test_that("IHS fits reproduce OLS coefficients, standard errors and df", {
   expect_equal(unname(t(b$se)), unname(SE_ols), tolerance = 1e-4)
   expect_equal(fit$sigma2, s2, tolerance = 1e-6)
   expect_equal(fit$result$rdf, df)
-  expect_equal(unname(fit$result$cov.unscaled), unname(XtXinv), tolerance = 1e-8)
+  # cov.unscaled carries the same rank attributes as exact fits' XtXinv.
+  cu <- fit$result$cov.unscaled
+  expect_true(attr(cu, "is_full_rank"))
+  expect_length(attr(cu, "aliased"), 0L)
+  expect_equal(unname(matrix(cu, nrow(cu))), unname(XtXinv), tolerance = 1e-8)
   expect_true(all(fit$sketch$converged))
 })
 

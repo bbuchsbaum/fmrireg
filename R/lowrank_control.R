@@ -31,6 +31,13 @@
 #'   residual degrees of freedom (about `m - p`). `"ihs"` iterates to the
 #'   full-data least-squares solution and reports exact OLS covariance,
 #'   residual variance and `T - p` degrees of freedom.
+#'
+#'   Estimability is judged on the full (whitened) design with the same
+#'   pivoted-QR rule that exact fits use. Aliased coefficients are reported
+#'   as `NA`, and contrasts that load on them are `NA` with a warning. If the
+#'   sketched design restricted to the estimable columns is numerically rank
+#'   deficient, `m` is too small for the design and the fit stops with an
+#'   error rather than regularising.
 #' @param ncomp Optional integer; number of latent components within parcels (PCA).
 #' @param noise_pcs Integer; optional GLMdenoise-style PCs from low-R2 parcels.
 #' @return A list with class "lowrank_control".

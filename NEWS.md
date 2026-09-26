@@ -237,6 +237,25 @@
   post-hoc `fit_contrasts()` on such fits errors; declare contrasts in the
   model instead. Parcel labels containing `NA` now error instead of leaving voxels
   without a cluster.
+* `engine = "latent_sketch"` is now rank safe. Its solver inverted the
+  sketched Gram matrix with `chol()` plus a silent ridge fallback, and
+  `chol()` often succeeds on a numerically singular matrix. With one
+  aliased nuisance column (`T = 200`, `m = 40`), `"countsketch"` reported
+  a mean `sigma2` of 221 against a true 1 and event standard errors of
+  38-166 against about 3.6. `"srht"` and `"gaussian"` gave aliased
+  coefficients small finite standard errors, and `"ihs"` reported aliased
+  variances of about 2e13. Estimability is now judged on the full
+  (whitened, per parcel for `by_cluster`) design with the pivoted-QR rule
+  that exact fits use. The sketch is solved on the estimable columns only,
+  through a QR of the sketched design. As in exact fits, aliased
+  coefficients and their standard errors are `NA`, `cov.unscaled` and
+  `covariance_by_cluster` carry the `aliased` attribute, and contrasts that
+  load on an aliased column are `NA` with a warning naming it. The
+  estimable coefficients, standard errors, `sigma2` and Satterthwaite df
+  equal those of the same sketch applied to the reduced design. If the
+  sketched design restricted to the estimable columns is rank deficient,
+  `m` is too small for the design and the fit stops with an error naming
+  `time_sketch$m`. The ridge fallback is gone.
 * `time_sketch` lists without an `m` element (for example
   `list(method = "ihs")`) failed with "m <= Tlen is not TRUE", because
   `sk$m` partially matched `sk$method`. The default `m = min(8p, T)` now

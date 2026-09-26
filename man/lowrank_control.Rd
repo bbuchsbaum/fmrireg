@@ -45,7 +45,14 @@ errors are the conditional-on-sketch standard errors of that estimator
 (roughly \code{sqrt(T / m)} times the full-data OLS ones), with Satterthwaite
 residual degrees of freedom (about \code{m - p}). \code{"ihs"} iterates to the
 full-data least-squares solution and reports exact OLS covariance,
-residual variance and \code{T - p} degrees of freedom.}
+residual variance and \code{T - p} degrees of freedom.
+
+Estimability is judged on the full (whitened) design with the same
+pivoted-QR rule that exact fits use. Aliased coefficients are reported
+as \code{NA}, and contrasts that load on them are \code{NA} with a warning. If the
+sketched design restricted to the estimable columns is numerically rank
+deficient, \code{m} is too small for the design and the fit stops with an
+error rather than regularising.}
 
 \item{ncomp}{Optional integer; number of latent components within parcels (PCA).}
 
