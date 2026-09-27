@@ -8,7 +8,7 @@
   "codeRepository": "https://github.com/bbuchsbaum/fmrireg",
   "issueTracker": "https://github.com/bbuchsbaum/fmrireg/issues",
   "license": "https://spdx.org/licenses/MIT",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "programmingLanguage": {
     "@type": "ComputerLanguage",
     "name": "R",
@@ -717,7 +717,7 @@
       ],
       "name": "fmrireg: Regression Analysis of Functional Magnetic Resonance Imaging Data",
       "url": "https://bbuchsbaum.github.io/fmrireg/",
-      "description": "R package version 0.2.0"
+      "description": "R package version 0.3.0"
     }
   ],
   "releaseNotes": "https://github.com/bbuchsbaum/fmrireg/blob/main/NEWS.md",
