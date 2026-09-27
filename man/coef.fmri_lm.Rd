@@ -44,9 +44,9 @@ contrast, and the term names on the column margin. This matches
 \code{\link{p_values}()}, so results from the accessor family line up
 element-wise (for example \code{coef(fit) / standard_error(fit)}).
 }
-\section{Orientation change in fmrireg 0.2.0}{
+\section{Orientation change in fmrireg 0.3.0}{
 
-Before 0.2.0 the default call (\code{type = "betas"},
+Before 0.3.0 the default call (\code{type = "betas"},
 \code{include_baseline = FALSE}) returned the transpose, terms x voxels,
 while the other forms were voxels x terms. Code written for the old
 default that indexed \code{coef(fit)[term, ]} must now use

@@ -1,4 +1,4 @@
-# fmrireg 0.2.0
+# fmrireg 0.3.0
 
 ## Breaking: design generics now come from fmridesign (fmridesign >= 0.6.1.9000)
 

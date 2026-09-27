@@ -41,8 +41,8 @@ reshape_coef <- function(df, des, measure = "value") {
 #'   and one column per coefficient, columns named after the design matrix
 #'   (see \code{\link{coef_names}()}). For \code{type = "contrasts"}, a tibble
 #'   with one row per voxel and one column per contrast.
-#' @section Orientation change in fmrireg 0.2.0:
-#'   Before 0.2.0 the default call (\code{type = "betas"},
+#' @section Orientation change in fmrireg 0.3.0:
+#'   Before 0.3.0 the default call (\code{type = "betas"},
 #'   \code{include_baseline = FALSE}) returned the transpose, terms x voxels,
 #'   while the other forms were voxels x terms. Code written for the old
 #'   default that indexed \code{coef(fit)[term, ]} must now use

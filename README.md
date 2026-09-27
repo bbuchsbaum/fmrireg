@@ -23,7 +23,7 @@ turns formulas such as `onset ~ hrf(condition)` into HRF-convolved
 designs, estimates condition effects across voxels, and carries named
 contrasts into group analysis.
 
-> **Status:** Version 0.2.0 is experimental and requires R 4.1 or later.
+> **Status:** Version 0.3.0 is experimental and requires R 4.1 or later.
 > APIs may change while the package is under active development.
 
 ## Installation
