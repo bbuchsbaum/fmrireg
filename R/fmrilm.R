@@ -1623,8 +1623,9 @@ pull_stat_revised <- function(x, type, element) {
       stop("No simple contrasts for this model.")
     }
     cnames <- ret$name
+    # Name inputs before binding to avoid temporary name-repair messages.
     out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]]) %>%
-             dplyr::bind_cols()
+             stats::setNames(cnames) %>% dplyr::bind_cols()
     names(out) <- cnames
     out
   } else if (type == "F") {
@@ -1633,8 +1634,9 @@ pull_stat_revised <- function(x, type, element) {
       stop("No F contrasts for this model.")
     }
     cnames <- ret$name
+    # Name inputs before binding to avoid temporary name-repair messages.
     out <- lapply(ret$data, function(inner_tibble) inner_tibble[[element]]) %>%
-             dplyr::bind_cols()
+             stats::setNames(cnames) %>% dplyr::bind_cols()
     names(out) <- cnames
     out
   } else {
@@ -1677,7 +1679,8 @@ pull_stat <- function(x, type, element) {
       stop("No simple contrasts for this model.")
     }
     cnames <- ret$name
-    out <- lapply(ret$data, function(x) x[[element]]) %>% dplyr::bind_cols()
+    # Name inputs before binding to avoid temporary name-repair messages.
+    out <- lapply(ret$data, function(x) x[[element]]) %>% stats::setNames(cnames) %>% dplyr::bind_cols()
     names(out) <- cnames
     out
   } else if (type == "F") {
@@ -1686,7 +1689,8 @@ pull_stat <- function(x, type, element) {
       stop("No F contrasts for this model.")
     }
     cnames <- ret$name
-    out <- lapply(ret$data, function(x) x[[element]]) %>% dplyr::bind_cols()
+    # Name inputs before binding to avoid temporary name-repair messages.
+    out <- lapply(ret$data, function(x) x[[element]]) %>% stats::setNames(cnames) %>% dplyr::bind_cols()
     names(out) <- cnames
     out
   } else {
