@@ -9,19 +9,25 @@
 #'
 #' @param z Numeric vector of Z-values (one per feature). Provide either z or p, not both.
 #' @param p Numeric vector of p-values (two-sided). Provide either z or p, not both.
-#' @param group Integer or factor vector of group IDs for each feature (e.g., parcel IDs, 
-#'   block IDs). Must have same length as z or p.
+#' @param group Integer, character or factor vector of group IDs for each feature
+#'   (e.g., parcel IDs, block IDs). Must have same length as z or p. Groups are
+#'   numbered 1..G by sorted unique value, or by factor level (unused levels
+#'   included) when \code{group} is a factor. This numbering indexes
+#'   \code{neighbors}, \code{pi0_raw}, \code{pi0_smooth} and \code{m_g}.
+#'   Features with \code{NA} group are excluded from \eqn{\pi_0} estimation and
+#'   receive weight 1 before normalisation.
 #' @param alpha Numeric scalar; FDR level to control (default: 0.05)
 #' @param tau Numeric scalar; Storey threshold in (0,1) for \eqn{\pi_0} estimation (default: 0.5). 
 #'   Higher values are more conservative.
 #' @param lambda Numeric scalar; smoothing strength for groupwise \eqn{\pi_0} across neighbors (default: 1.0).
 #'   Set to 0 for no smoothing, higher values for more smoothing.
-#' @param neighbors Optional list of length G (number of groups) where each element 
-#'   is an integer vector of 1-based neighbor IDs. Used for spatial smoothing of \eqn{\pi_0}.
+#' @param neighbors Optional list of length G (number of groups) where element g
+#'   is an integer vector of 1-based neighbor IDs of group g, both in the group
+#'   numbering described under \code{group}. Used for spatial smoothing of \eqn{\pi_0}.
 #' @param min_pi0 Numeric scalar; lower bound for \eqn{\pi_0} to stabilize weights (default: 0.05).
 #'   Prevents infinite weights.
-#' @param empirical_null Logical; if TRUE, estimate null distribution parameters (\eqn{\mu_0}, \eqn{\sigma_0}) 
-#'   from central z-values using robust estimators (default: TRUE).
+#' @param empirical_null Logical; if TRUE, estimate null distribution parameters
+#'   (\eqn{\mu_0}, \eqn{\sigma_0}) from the z-values (default: TRUE). See Details.
 #' @param verbose Logical; print progress messages (default: FALSE)
 #'
 #' @return Object of class "spatial_fdr_result" containing:
@@ -35,9 +41,10 @@
 #'   \item{k}{Integer scalar; number of rejections}
 #'   \item{mu0}{Numeric scalar; estimated null mean (if empirical_null = TRUE)}
 #'   \item{sigma0}{Numeric scalar; estimated null SD (if empirical_null = TRUE)}
-#'   \item{groups}{Integer vector of compressed group IDs (1..G)}
-#'   \item{group}{Factor or integer vector of original group IDs}
+#'   \item{groups}{Integer vector of group IDs (1..G) in the numbering described
+#'     under \code{group}}
 #'   \item{G}{Integer scalar; number of groups}
+#'   \item{m_g}{Integer vector; number of features per group}
 #'   \item{alpha}{Numeric scalar; FDR level used}
 #'   \item{coef_name}{Character scalar; name of coefficient (for S3 method)}
 #'
@@ -47,6 +54,21 @@
 #' 2. Optionally smooths these estimates across neighboring groups
 #' 3. Uses the pi0 estimates to weight the Benjamini-Hochberg procedure
 #' 4. Provides more power in regions with true signal while maintaining FDR control
+#'
+#' Weights are \eqn{1/\pi_0} of each feature's group, normalised to sum to the
+#' number of finite p-values, and the weighted BH procedure of Genovese,
+#' Roeder & Wasserman (2006) is applied: reject \eqn{p_i \le w_i \alpha k / n}.
+#'
+#' \strong{Empirical null.} When \code{z} is supplied with
+#' \code{empirical_null = TRUE}, \eqn{\mu_0} and \eqn{\sigma_0} are estimated by
+#' Efron's (2004) central matching: a quadratic is fitted by Poisson regression
+#' to the log histogram counts of z within \eqn{\pm 1.5} robust SDs of the
+#' median. Because a minority of non-null features only changes the intercept
+#' of the log density near the centre and not its curvature, this estimate is
+#' consistent under \eqn{N(0,1)} and stays close to it when, for example, 10\%
+#' of features are true signals. With fewer than 500 finite z-values (or if the
+#' fit fails) the median and normal-consistent MAD of all finite z-values are
+#' used instead; with fewer than 10 the theoretical null is used.
 #'
 #' The method is particularly effective for:
 #' - Voxelwise analyses with spatial clustering of signal
@@ -58,6 +80,10 @@
 #'   \item Benjamini & Hochberg (1995). Controlling the false discovery rate.
 #'   \item Storey (2002). A direct approach to false discovery rates.
 #'   \item Hu et al. (2010). False discovery rate control with groups (SABHA).
+#'   \item Genovese, Roeder & Wasserman (2006). False discovery control with
+#'     p-value weighting.
+#'   \item Efron (2004). Large-scale simultaneous hypothesis testing: the choice
+#'     of a null hypothesis.
 #' }
 #'
 #' @examples
@@ -142,16 +168,18 @@ spatial_fdr <- function(z = NULL,
     stop("min_pi0 must be in [0, 1]", call. = FALSE)
   }
   
-  # Compress group IDs to 1..G
-  if (is.factor(group)) {
-    group <- as.integer(group)
-  } else {
-    group <- as.integer(factor(group))
+  # Authoritative group numbering 1..G: factor levels (unused levels kept, so
+  # a neighbors list indexed by level stays aligned), otherwise sorted unique
+  # values. Every later step (pi0, smoothing, weights, `groups`) uses it.
+  gfac <- if (is.factor(group)) group else factor(group)
+  G <- nlevels(gfac)
+  group <- as.integer(gfac)
+  if (G == 0L) {
+    stop("No valid groups found", call. = FALSE)
   }
-  
+
   if (verbose) {
-    cat("Spatial FDR: Processing", m, "features in", 
-        length(unique(group)), "groups\n")
+    cat("Spatial FDR: Processing", m, "features in", G, "groups\n")
   }
   
   # Step 1: Convert to p-values with optional empirical null
@@ -164,37 +192,15 @@ spatial_fdr <- function(z = NULL,
     if (empirical_null) {
       if (verbose) cat("  Estimating empirical null...\n")
       
-      # Robust center/scale from central 60% (trim on |z|)
-      valid_z <- zz[is.finite(zz)]
-      
-      if (length(valid_z) < 10) {
-        if (isTRUE(verbose)) {
-          message("Too few valid z-values for empirical null; using theoretical null")
-        }
-      } else {
-        o <- order(abs(valid_z))
-        k0 <- floor(0.6 * length(valid_z))
-        core <- valid_z[o[seq_len(k0)]]
-        
-        mu0 <- median(core, na.rm = TRUE)
-        sigma0 <- mad(core, constant = 1.4826, na.rm = TRUE)
-        
-        if (!is.finite(sigma0) || sigma0 <= 0) {
-          sigma0 <- sd(core, na.rm = TRUE)
-        }
-        
-        if (!is.finite(sigma0) || sigma0 <= 0) {
-          sigma0 <- 1
-          warning("Could not estimate sigma0; using 1", call. = FALSE)
-        }
-        
-        if (!is.finite(mu0)) {
-          mu0 <- 0
-          warning("Could not estimate mu0; using 0", call. = FALSE)
-        }
+      en <- .spatial_fdr_empirical_null(zz)
+      mu0 <- en$mu0
+      sigma0 <- en$sigma0
+      if (verbose) {
+        cat("  Empirical null (", en$method, "): mu0 = ", round(mu0, 3),
+            ", sigma0 = ", round(sigma0, 3), "\n", sep = "")
       }
     }
-    
+
     # Standardize and convert to p-values
     z0 <- (zz - mu0) / sigma0
     p <- 2 * pnorm(abs(z0), lower.tail = FALSE)
@@ -206,8 +212,7 @@ spatial_fdr <- function(z = NULL,
   # Step 2-3: Groupwise pi0 estimation
   if (verbose) cat("  Estimating groupwise pi0...\n")
   
-  gstats <- group_pi0_counts_cpp(p, group, tau)
-  G <- gstats$G
+  gstats <- group_pi0_counts_cpp(p, group, tau, G)
   m_g <- as.integer(gstats$m_g)
   pi0_raw <- as.numeric(gstats$pi0_raw)
   
@@ -237,15 +242,9 @@ spatial_fdr <- function(z = NULL,
   # Group weights proportional to 1/pi0
   a_g <- 1 / pi0_sm
   
-  # Expand to feature-level weights
-  w <- numeric(m)
-  for (i in seq_len(m)) {
-    if (!is.na(group[i]) && group[i] >= 1 && group[i] <= G) {
-      w[i] <- a_g[group[i]]
-    } else {
-      w[i] <- 1  # Default weight for invalid groups
-    }
-  }
+  # Expand to feature-level weights (NA group -> weight 1)
+  w <- a_g[group]
+  w[is.na(w)] <- 1
   
   # Step 6: Weighted BH procedure
   if (verbose) cat("  Applying weighted BH procedure...\n")
@@ -277,7 +276,7 @@ spatial_fdr <- function(z = NULL,
       k = k,
       mu0 = mu0,
       sigma0 = sigma0,
-      groups = gstats$groups,
+      groups = group,
       G = G,
       m_g = m_g,
       alpha = alpha,
@@ -286,6 +285,68 @@ spatial_fdr <- function(z = NULL,
     ),
     class = "spatial_fdr_result"
   )
+}
+
+#' Empirical null for spatial_fdr
+#'
+#' Central matching (Efron 2004): fit log f(z) = b0 + b1 z + b2 z^2 by Poisson
+#' regression on histogram counts within +/- 1.5 robust SDs of the median, so
+#' sigma0 = sqrt(-1 / (2 b2)) and mu0 = b1 sigma0^2. Non-null features mostly
+#' fall outside the window and, inside it, mainly shift b0, so the estimate is
+#' robust to a minority of signals. Falls back to median / normal-consistent
+#' MAD of all finite z when there are fewer than `min_cm` values or the fit is
+#' not usable, and to the theoretical null with fewer than 10 values.
+#'
+#' @param z Numeric vector of z-values.
+#' @param half_width Window half-width in robust SD units.
+#' @param nbins Number of histogram bins in the window.
+#' @param min_cm Minimum number of finite z for central matching.
+#' @return list(mu0, sigma0, method)
+#' @keywords internal
+#' @noRd
+.spatial_fdr_empirical_null <- function(z, half_width = 1.5, nbins = 40L,
+                                        min_cm = 500L) {
+  z <- z[is.finite(z)]
+  n <- length(z)
+  if (n < 10L) {
+    return(list(mu0 = 0, sigma0 = 1, method = "theoretical"))
+  }
+
+  mu_r <- stats::median(z)
+  s_r <- stats::mad(z, center = mu_r)          # consistent for N(0, 1)
+  if (!is.finite(s_r) || s_r <= 0) s_r <- stats::sd(z)
+  if (!is.finite(s_r) || s_r <= 0) {
+    warning("Could not estimate sigma0; using 1", call. = FALSE)
+    return(list(mu0 = mu_r, sigma0 = 1, method = "median"))
+  }
+
+  if (n >= min_cm) {
+    lo <- mu_r - half_width * s_r
+    hi <- mu_r + half_width * s_r
+    br <- seq(lo, hi, length.out = nbins + 1L)
+    mids <- (br[-1L] + br[-length(br)]) / 2
+    inwin <- z >= lo & z < hi
+    y <- tabulate(findInterval(z[inwin], br), nbins)
+    fit <- tryCatch(
+      suppressWarnings(stats::glm.fit(cbind(1, mids, mids^2), y,
+                                      family = stats::poisson())),
+      error = function(e) NULL
+    )
+    if (!is.null(fit) && isTRUE(fit$converged)) {
+      b <- unname(stats::coef(fit))
+      if (all(is.finite(b)) && b[3] < 0) {
+        s_cm <- sqrt(-1 / (2 * b[3]))
+        mu_cm <- b[2] * s_cm^2
+        # Accept only a sane fit; otherwise use the robust fallback
+        if (is.finite(s_cm) && s_cm > 0.5 * s_r && s_cm < 2 * s_r &&
+            abs(mu_cm - mu_r) < half_width * s_r) {
+          return(list(mu0 = mu_cm, sigma0 = s_cm, method = "central matching"))
+        }
+      }
+    }
+  }
+
+  list(mu0 = mu_r, sigma0 = s_r, method = "median/MAD")
 }
 
 #' Print Spatial FDR Results
