@@ -144,14 +144,73 @@ files, 0 failures, 2 skips (R 4.3.3, dependencies at the commits pinned in
 
 ## Final pass
 
-- [ ] F1. Merge streams; full test suite green.
-- [ ] F2. Remove dead code proven unreachable (list in commit), keeping tests
+- [x] F1. Merge streams; full test suite green.
+- [x] F2. Remove dead code proven unreachable (list in commit), keeping tests
       that exercised live behaviour.
-- [ ] F3. `R CMD build` + `R CMD check --no-manual` with no new warnings.
-- [ ] F4. Update CLAUDE.md with what changed and the new reference tests.
-- [ ] F5. Results table below: test counts before/after, timings of the
+- [x] F3. `R CMD build` + `R CMD check --no-manual` with no new warnings.
+- [x] F4. Update CLAUDE.md with what changed and the new reference tests.
+- [x] F5. Results table below: test counts before/after, timings of the
       performance items.
 
 ## Results
 
-(filled in at the end)
+### Test suite (R 4.3.3, `NOT_CRAN=true`)
+
+| | Files | Expectations | Failures | Errors | Skips |
+|---|---|---|---|---|---|
+| Before (5bd3ad1) | 239 | 6,897 | 0 | 0 | 2 |
+| After (all files but `test_betas.R`) | 262 | 8,089 | 0 | 0 | 2 |
+| After, `test_betas.R` alone | 1 | 9 | 0 | 0 | 0 |
+
+Every new `test-review-*` file was run against the pre-fix code and failed
+there (except pure equivalence guards, which pass on both sides by design
+and are paired with a call-count or allocation assertion that fails before).
+
+`R CMD check --no-manual --no-tests --ignore-vignettes`: examples, Rd,
+code/documentation, R code and compiled-code checks all OK. Remaining
+1 WARNING / 2 NOTEs are environmental (missing `en_US.UTF-8` locale,
+Suggests not installable offline, installed size).
+
+### Defects found during the merge (final pass, `test-review-F-integration.R`)
+
+- Reference backend read `result$sigma`, which partially matched `sigma2`:
+  AR standard errors ~3x too large.
+- Multi-run runwise fits stored one scalar sigma/rss/resvar for all voxels
+  (`as.matrix()` on per-voxel vectors before `colSums`); pre-dates the review.
+  Post-hoc contrast SEs on those fits were ~3x too large.
+- `fmri_ttest` group contrasts: t/z flipped twice (meta, classic) or the
+  estimate not flipped (Welch, voxelwise covariate, GDS); 11 failing checks.
+- Soft subspace projection: residual df now tr((I-H)P^2) on runwise iid fits.
+- `fit_contrasts()` refuses multi-run runwise fits that whiten/weight per run.
+
+### Performance (stream reports; elapsed seconds, noisy shared machine)
+
+| Item | Before | After |
+|---|---|---|
+| P-D1 `.fast_preproject`, n=1200, x50 | 4.66 s | 0.05 s |
+| P-D2 joint AR1, data passes | 3 | 2 |
+| P-D2 joint AR1 + HAC, data passes | 4 | 2 |
+| P-D3 HAC Parzen lag 4 (200 x 400) | 0.83 s | 0.70 s |
+| P-E1 `rrr_gls` bootstrap, 100 resamples | 5.75 s | 1.74 s |
+| P-B1 NIfTI group reads, S subjects, k chunks | 2·S·k | 2·S |
+| P-C2 `(X'X)^-1` per model, 3 contrasts | 4 | 1 |
+| `test_betas.R` (mixed-model betas) | 30.0 min | 34.6 min |
+
+`test_betas.R` was already slow (each mixed-model test ~10 min); the mixed
+path now carries the baseline as fixed effects (C1), and the after-run
+overlapped other test runs.
+
+### Not done / known limitations
+
+- Satterthwaite df still forms an n x n residual covariance and its
+  eigendecomposition per voxel (O(n^3)); P-D3 removed only the redundant work.
+- Reference chunkwise backend still estimates AR per voxel chunk, so its
+  results depend on `nchunks` (documented in stream D; pre-existing).
+- Soft-projection df correction covers runwise iid fits only.
+- `ols_t_vcov_cpp` (voxelwise covariate OLS) has no missing-data handling;
+  `robust = "t"` is treated as none by the C++ meta kernels; the meta writer's
+  `.stat_desc()` still drops `desc`.
+- `create_fmri_model()` is still defined in three files (the `fmrilm.R`
+  definition wins by collation order); consolidating it changes documented
+  defaults and is left for a deliberate decision.
+- `test_betas.R` runtime (mixed model per voxel) is unchanged in kind.
