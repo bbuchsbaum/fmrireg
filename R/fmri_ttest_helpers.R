@@ -239,15 +239,28 @@ paired_diff_block <- function(blkA, blkB, rho = 0) {
     }
   }
 
-  if (!is.null(res$z_contrast)) {
-    res$z_contrast <- -res$z_contrast
-  }
-
-  if (!is.null(res$t_contrast)) {
-    res$t_contrast <- -res$t_contrast
-  }
-
+  # Contrast fields are already computed in the target convention (see
+  # .fmri_ttest_target_single_coef_contrast and the raw contrast weights), so
+  # they are not flipped here.
   res
+}
+
+# Single-coefficient contrast read from coefficient rows that are still in the
+# engine's own (source) sign convention, returned in the target convention.
+.fmri_ttest_target_single_coef_contrast <- function(res, weights, group_info,
+                                                    target_sign, source_sign) {
+  out <- .fmri_ttest_single_coef_contrast(res, weights)
+  if (is.null(out) || is.null(group_info) || identical(target_sign, source_sign)) {
+    return(out)
+  }
+  nz <- names(weights)[abs(weights) > 0]
+  if (!identical(nz, group_info$canonical_name) && !identical(nz, group_info$raw_name)) {
+    return(out)
+  }
+  for (nm in c("estimate", "t", "z")) {
+    if (!is.null(out[[nm]])) out[[nm]] <- -out[[nm]]
+  }
+  out
 }
 
 .fmri_ttest_resolve_contrast <- function(contrast, coef_names, group_info = NULL) {

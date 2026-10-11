@@ -194,7 +194,10 @@ fmri_ttest <- function(gd,
   } else {
     engine == "meta"
   }
-  
+  # Sign convention of the group coefficient as each engine estimates it;
+  # results are reported in `sign`.
+  source_sign <- if (use_meta || (!paired && engine != "welch")) "BminusA" else "AminusB"
+
   res <- list()
   raw_contrast_weights <- NULL
   canonical_contrast_weights <- NULL
@@ -243,7 +246,7 @@ fmri_ttest <- function(gd,
           coef_names = colnames(X),
           group_info = group_info,
           target_sign = sign,
-          source_sign = "BminusA"
+          source_sign = source_sign
         )
       }
       meta_fit <- fmri_meta(
@@ -315,7 +318,7 @@ fmri_ttest <- function(gd,
           coef_names = colnames(X),
           group_info = group_info,
           target_sign = sign,
-          source_sign = "BminusA"
+          source_sign = source_sign
         )
         cs <- .meta_contrasts_from_tri(out$beta, out$cov_tri,
                                        matrix(raw_contrast_weights, ncol = 1))
@@ -384,7 +387,11 @@ fmri_ttest <- function(gd,
         if (length(nz) > 1L || !identical(names(canonical_contrast_weights)[nz], "group")) {
           stop("Welch contrasts currently support only the group coefficient", call. = FALSE)
         }
-        exact_contrast <- .fmri_ttest_single_coef_contrast(res, canonical_contrast_weights)
+        exact_contrast <- .fmri_ttest_target_single_coef_contrast(
+          res, canonical_contrast_weights,
+          group_info = list(raw_name = "group", canonical_name = "group"),
+          target_sign = sign, source_sign = source_sign
+        )
       }
       
     } else {
@@ -421,13 +428,14 @@ fmri_ttest <- function(gd,
             coef_names = rownames(ols$beta),
             group_info = group_info,
             target_sign = sign,
-            source_sign = "BminusA"
+            source_sign = source_sign
           )
           exact_contrast <- .fmri_ttest_exact_ols_contrast(ols, X, raw_contrast_weights, Y = Y)
         } else {
-          exact_contrast <- .fmri_ttest_single_coef_contrast(
+          exact_contrast <- .fmri_ttest_target_single_coef_contrast(
             res,
-            stats::setNames(canonical_contrast_weights, canonical_coef_names)
+            stats::setNames(canonical_contrast_weights, canonical_coef_names),
+            group_info = group_info, target_sign = sign, source_sign = source_sign
           )
         }
       }
@@ -438,7 +446,6 @@ fmri_ttest <- function(gd,
   if (!is.null(exact_contrast)) {
     res <- .fmri_ttest_store_contrast(res, exact_contrast)
   }
-  source_sign <- if (use_meta || (!paired && engine != "welch")) "BminusA" else "AminusB"
   res <- .fmri_ttest_apply_group_sign(res, group_info, target_sign = sign, source_sign = source_sign)
 
   res <- .fmri_ttest_apply_mc(res, mc, alpha, feature_group)

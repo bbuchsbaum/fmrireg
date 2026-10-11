@@ -289,7 +289,10 @@ fmri_ttest.group_data_gds <- function(gd,
       coef_names = rownames(out$beta),
       group_info = group_info
     )
-    exact_contrast <- .fmri_ttest_single_coef_contrast(out, weights)
+    exact_contrast <- .fmri_ttest_target_single_coef_contrast(
+      out, weights, group_info = group_info, target_sign = sign,
+      source_sign = if (identical(engine, "welch")) "AminusB" else "BminusA"
+    )
     if (is.null(exact_contrast)) {
       stop("gds-backed contrasts currently support only single coefficients", call. = FALSE)
     }

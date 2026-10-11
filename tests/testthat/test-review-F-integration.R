@@ -70,3 +70,61 @@ test_that("soft projection: residual df is tr((I-H)P^2), so sigma^2 is unbiased"
   s2 <- as.numeric(fit$result$sigma)^2
   expect_equal(mean(s2), 1, tolerance = 0.02)   # unbiased under the null
 })
+
+test_that("fmri_ttest: a contrast on the group coefficient equals that coefficient", {
+  # The contrast was computed in the requested sign convention and then had
+  # its t and z flipped a second time, leaving t_contrast opposite to
+  # beta_contrast whenever the requested sign differed from the engine's.
+  set.seed(131)
+  S <- 24; P <- 10
+  group <- factor(rep(c("A", "B"), each = S / 2))
+  Y <- matrix(rnorm(S * P, sd = 0.5), S, P)
+  Y[group == "B", ] <- Y[group == "B", ] + 1
+  V <- matrix(0.2, S, P)
+  gd <- structure(list(blocks = list(list(Y = Y, V = V,
+                                          covars = data.frame(group = group),
+                                          feature = NULL))),
+                  class = "group_data")
+  for (engine in c("classic", "welch", "meta")) {
+    for (sg in c("AminusB", "BminusA")) {
+      fit <- fmri_ttest(gd, formula = ~ 1 + group, engine = engine, sign = sg,
+                        contrast = c(group = 1))
+      lab <- paste(engine, sg)
+      expect_equal(as.numeric(fit$beta_contrast), as.numeric(fit$beta["group", ]),
+                   tolerance = 1e-8, info = lab)
+      expect_equal(as.numeric(fit$t_contrast), as.numeric(fit$t["group", ]),
+                   tolerance = 1e-6, info = lab)
+      expect_equal(sign(as.numeric(fit$z_contrast)),
+                   sign(as.numeric(fit$beta_contrast)), info = lab)
+      truth <- if (sg == "BminusA") 1 else -1
+      expect_equal(sign(mean(fit$beta_contrast)), truth, info = lab)
+    }
+  }
+})
+
+test_that("fmri_ttest (GDS input): group contrast equals the group coefficient", {
+  skip_if_not_installed("fmrigds")
+  set.seed(132)
+  S <- 20; R <- 4
+  df <- expand.grid(subject = sprintf("s%02d", seq_len(S)), roi = sprintf("r%d", seq_len(R)),
+                    stringsAsFactors = FALSE)
+  df$group <- factor(ifelse(as.integer(sub("s", "", df$subject)) <= S / 2, "A", "B"))
+  df$beta <- rnorm(nrow(df), sd = 0.5) + ifelse(df$group == "B", 1, 0)
+  df$se <- 0.4
+  df$contrast <- "c1"
+  gd <- group_data(df, format = "csv", effect_cols = c(beta = "beta", se = "se"),
+                   subject_col = "subject", roi_col = "roi", contrast_col = "contrast",
+                   covariate_cols = "group")
+  for (engine in c("classic", "meta")) {
+    for (sg in c("AminusB", "BminusA")) {
+      fit <- fmri_ttest(gd, formula = ~ 1 + group, engine = engine, sign = sg,
+                        contrast = c(group = 1))
+      lab <- paste("gds", engine, sg)
+      expect_equal(as.numeric(fit$beta_contrast), as.numeric(fit$beta["group", ]),
+                   tolerance = 1e-8, info = lab)
+      expect_equal(sign(as.numeric(fit$z_contrast)), sign(as.numeric(fit$beta_contrast)),
+                   info = lab)
+      expect_equal(sign(mean(fit$beta_contrast)), if (sg == "BminusA") 1 else -1, info = lab)
+    }
+  }
+})
