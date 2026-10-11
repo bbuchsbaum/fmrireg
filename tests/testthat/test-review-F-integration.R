@@ -200,3 +200,33 @@ test_that("meta_betas pools runs by inverse-variance fixed effects (closed form)
   expect_equal(unname(got$prob[[1]]),
                unname(2 * pnorm(abs(est / se), lower.tail = FALSE)), tolerance = 1e-10)
 })
+
+test_that("fit_lm_contrasts forms (X'X)^-1 once per model, not once per contrast", {
+  set.seed(5)
+  n <- 80; X <- cbind(1, matrix(rnorm(n * 3), n, 3)); Y <- matrix(rnorm(n * 5), n, 5)
+  colnames(X) <- c("(Intercept)", "a", "b", "c")
+  fit <- lm(Y ~ X - 1)
+  mk_t <- function(w, nm) structure(list(weights = matrix(w, ncol = 1), name = nm),
+                                    class = c("contrast", "list"), colind = 2:4)
+  mk_f <- function(w, nm) structure(list(weights = w, name = nm),
+                                    class = c("Fcontrast", "list"), colind = 2:4)
+  cons <- list(mk_t(c(1, -1, 0), "ab"), mk_t(c(0, 1, -1), "bc"),
+               mk_f(cbind(c(1, -1, 0), c(0, 1, -1)), "F"))
+  calls <- 0L
+  real <- fmrireg:::.lm_cov_unscaled
+  testthat::local_mocked_bindings(
+    .lm_cov_unscaled = function(...) { calls <<- calls + 1L; real(...) },
+    .package = "fmrireg")
+  res <- fmrireg:::fit_lm_contrasts(fit, cons, NULL, colnames(X))
+  expect_equal(calls, 1L)
+  # Values are the textbook ones.
+  b <- coef(fit); V1 <- vcov(lm(Y[, 1] ~ X - 1))
+  w <- c(0, 1, -1, 0)
+  expect_equal(as.numeric(res$contrasts$ab$data[[1]]$estimate[1]), sum(w * b[, 1]),
+               tolerance = 1e-10)
+  expect_equal(as.numeric(res$contrasts$ab$data[[1]]$se[1]),
+               sqrt(drop(t(w) %*% V1 %*% w)), tolerance = 1e-10)
+  full <- lm(Y[, 1] ~ X - 1); red <- lm(Y[, 1] ~ X[, 1] + I(X[, 2] + X[, 3] + X[, 4]) - 1)
+  expect_equal(as.numeric(res$contrasts$F$data[[1]]$stat[1]),
+               anova(red, full)$F[2], tolerance = 1e-8)
+})

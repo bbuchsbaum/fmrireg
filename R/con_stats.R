@@ -169,7 +169,7 @@ fit_contrasts <- function(object, ...) UseMethod("fit_contrasts")
 #' beta_stats(lm_fit, c("Intercept", "wt", "qsec", "am"))
 #' @noRd
 #' @autoglobal
-beta_stats <- function(lmfit, varnames, se = TRUE) {
+beta_stats <- function(lmfit, varnames, se = TRUE, cov.unscaled = NULL) {
   basics  <- .lm_basic_stats(lmfit)
   betamat <- t(basics$betamat)
   sigma   <- basics$sigma
@@ -177,7 +177,9 @@ beta_stats <- function(lmfit, varnames, se = TRUE) {
   colnames(betamat) <- varnames
 
   if (se) {
-    cov.unscaled <- .lm_cov_unscaled(lmfit, varnames = varnames)
+    if (is.null(cov.unscaled)) {
+      cov.unscaled <- .lm_cov_unscaled(lmfit, varnames = varnames)
+    }
     aliased <- attr(cov.unscaled, "aliased", exact = TRUE) %||% integer(0)
     coef_se      <- sqrt(diag(cov.unscaled))
     if (length(aliased) > 0L) {
