@@ -127,11 +127,10 @@ soft_projection <- function(N, lambda = "auto", Y = NULL) {
   n <- nrow(N)
   p <- ncol(N)
 
-  # Compute SVD of N for efficient operations
-  svd_N <- svd(N, nu = min(n, p), nv = min(n, p))
+  # Compute SVD of N for efficient operations (only U and d are used)
+  svd_N <- svd(N, nu = min(n, p), nv = 0)
   d <- svd_N$d
   U <- svd_N$u
-  V <- svd_N$v
 
   # Select lambda
   if (is.character(lambda)) {
@@ -216,37 +215,49 @@ print.soft_projection <- function(x, ...) {
   U <- svd_N$u
   n <- nrow(N)
 
-  # Project Y onto U space
-  UY <- crossprod(U, Y)  # k x nvox
-
-  # GCV score for a given lambda:
-  # GCV(lambda) = ||Y - Y_hat||^2 / (1 - df/n)^2
-  # where df = sum(d^2/(d^2+lambda))
-
-  gcv_score <- function(log_lambda) {
-    lam <- exp(log_lambda)
-    shrink <- d^2 / (d^2 + lam)
-    df <- sum(shrink)
-
-    # Predicted: U %*% diag(shrink) %*% UY
-    Y_hat_proj <- U %*% (shrink * UY)
-
-    # Residual sum of squares (on projected part only for efficiency)
-    # Full RSS would require Y, but relative ranking is preserved
-    rss <- sum((Y - Y_hat_proj)^2)
-
-    denom <- (1 - df / n)^2
-    if (denom < 1e-10) return(Inf)
-
-    rss / denom
-  }
+  # GCV(lambda) = ||Y - Y_hat||^2 / (1 - df/n)^2, df = sum(d^2/(d^2+lambda)),
+  # Y_hat = U diag(s) U'Y. Y enters only through ||Y||^2 and ||u_k'Y||^2,
+  # computed once here; each evaluation is then O(k).
+  summ <- .gcv_summaries(U, Y)
 
   # Search over reasonable range of lambda
   # From very small (near full projection) to very large (minimal projection)
   log_lambda_range <- log(c(min(d^2) / 100, max(d^2) * 100))
 
-  opt <- stats::optimize(gcv_score, interval = log_lambda_range)
+  opt <- stats::optimize(.gcv_score_closed_form, interval = log_lambda_range,
+                         d = d, summ = summ, n = n)
   exp(opt$minimum)
+}
+
+#' GCV sufficient statistics of Y for the soft projection
+#'
+#' @param U Orthonormal left singular vectors of N (n x k).
+#' @param Y Data matrix (n x V).
+#' @return list(yy = ||Y||_F^2, uy2 = ||u_k'Y||^2 for each k).
+#' @keywords internal
+#' @noRd
+.gcv_summaries <- function(U, Y) {
+  Y <- as.matrix(Y)
+  UY <- crossprod(U, Y)  # k x nvox
+  list(yy = sum(Y^2), uy2 = rowSums(UY^2))
+}
+
+#' Closed-form GCV score at log(lambda)
+#'
+#' RSS(lambda) = ||Y||^2 - sum_k (2 s_k - s_k^2) ||u_k'Y||^2 with
+#' s_k = d_k^2 / (d_k^2 + lambda), since U has orthonormal columns.
+#' @keywords internal
+#' @noRd
+.gcv_score_closed_form <- function(log_lambda, d, summ, n) {
+  lam <- exp(log_lambda)
+  shrink <- d^2 / (d^2 + lam)
+  df <- sum(shrink)
+  rss <- summ$yy - sum((2 * shrink - shrink^2) * summ$uy2)
+
+  denom <- (1 - df / n)^2
+  if (denom < 1e-10) return(Inf)
+
+  rss / denom
 }
 
 #' Apply Soft Projection to Data and Design
