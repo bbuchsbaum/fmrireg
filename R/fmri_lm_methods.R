@@ -228,7 +228,11 @@ standard_error.fmri_lm <- function(x, type = c("betas", "contrasts"), ...) {
     return(tibble::tibble())
   }
 
-  mats <- .tidy_stat_block(block, block = if (type == "estimates") "betas" else "contrasts")
+  if (type == "contrasts") {
+    return(.tidy_contrast_rows(model, block))
+  }
+
+  mats <- .tidy_stat_block(block, block = "betas")
   if (length(mats) == 0 || any(vapply(mats, is.null, logical(1)))) {
     return(tibble::tibble())
   }
@@ -278,12 +282,6 @@ standard_error.fmri_lm <- function(x, type = c("betas", "contrasts"), ...) {
   prob_mat <- add_names(prob_mat, estimate_mat)
 
   term_names <- colnames(estimate_mat)
-  if (type == "contrasts" && !is.null(block$conmat) && length(block$conmat) > 0) {
-    cm <- block$conmat[[1]]
-    if (!is.null(colnames(cm))) {
-      term_names <- colnames(cm)
-    }
-  }
 
   estimate_df <- as.data.frame(estimate_mat)
   se_df <- as.data.frame(se_mat)
@@ -322,6 +320,67 @@ standard_error.fmri_lm <- function(x, type = c("betas", "contrasts"), ...) {
   }
 
   result
+}
+
+#' One tidy row per (contrast, voxel) for every t- and F-contrast
+#'
+#' Each row of `block` (the `result$contrasts` table) is one contrast; its
+#' `data` holds one value per voxel for estimate, se, stat and prob. Values are
+#' taken as stored, so they agree with `coef()`, `standard_error()`, `stats()`
+#' and `p_values()` for the same contrast.
+#' @keywords internal
+#' @noRd
+.tidy_contrast_rows <- function(model, block) {
+  as_values <- function(x) {
+    if (is.null(x)) return(NULL)
+    if (is.list(x)) {
+      if (length(x) != 1L || is.null(x[[1L]])) return(NULL)
+      x <- x[[1L]]
+    }
+    as.numeric(x)
+  }
+  inference_df <- model$result$df$inference %||% NULL
+  nominal_df <- model$result$df$nominal %||% NULL
+
+  rows <- lapply(seq_len(nrow(block)), function(i) {
+    dat <- block$data[[i]]
+    est <- as_values(dat$estimate)
+    if (is.null(est) || length(est) == 0L) {
+      return(NULL)
+    }
+    n_vox <- length(est)
+    pick <- function(nm) {
+      v <- as_values(dat[[nm]])
+      if (is.null(v) || length(v) != n_vox) rep(NA_real_, n_vox) else v
+    }
+    out <- tibble::tibble(
+      voxel = seq_len(n_vox),
+      term = as.character(block$name[i]),
+      type = as.character(block$type[i] %||% NA_character_),
+      estimate = est,
+      std_error = pick("se"),
+      statistic = pick("stat"),
+      p_value = pick("prob")
+    )
+    if (!is.null(inference_df)) {
+      if (length(inference_df) == 1L) {
+        out$df_inference <- rep(as.numeric(inference_df), n_vox)
+      } else if (length(inference_df) == n_vox) {
+        out$df_inference <- as.numeric(inference_df)
+      }
+    }
+    if (!is.null(nominal_df)) {
+      out$df_residual <- rep(as.numeric(nominal_df)[1L], n_vox)
+    } else if (!is.null(block$df.residual)) {
+      out$df_residual <- rep(as.numeric(block$df.residual[i]), n_vox)
+    }
+    out
+  })
+  rows <- rows[!vapply(rows, is.null, logical(1))]
+  if (length(rows) == 0L) {
+    return(tibble::tibble())
+  }
+  dplyr::bind_rows(rows)
 }
 
 #' @export

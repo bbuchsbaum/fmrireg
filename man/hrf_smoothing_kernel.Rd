@@ -24,7 +24,9 @@ hrf_smoothing_kernel(
 
 \item{normalise}{Whether to normalise the kernel.}
 
-\item{method}{The method to use for computing the kernel.}
+\item{method}{"gram" (inner products of the design rows) or "cosine"
+(the same, scaled to unit diagonal). With \code{normalise = TRUE} both give
+\code{K[i, j] / sqrt(K[i, i] * K[j, j])}, a symmetric matrix with unit diagonal.}
 }
 \value{
 a smoothing matrix
