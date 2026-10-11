@@ -34,6 +34,14 @@ meta_fit_vcov_cpp <- function(Y, V, X, C, method, robust, huber_c = 1.345, robus
     .Call('_fmrireg_meta_fit_vcov_cpp', PACKAGE = 'fmrireg', Y, V, X, C, method, robust, huber_c, robust_iter, n_threads)
 }
 
+mixed_reml_spectral_cpp <- function(X, Z) {
+    .Call('_fmrireg_mixed_reml_spectral_cpp', PACKAGE = 'fmrireg', X, Z)
+}
+
+mixed_reml_blup_cpp <- function(Y, Q, theta, lower, upper, d, UtX, G, C, B, Vz) {
+    .Call('_fmrireg_mixed_reml_blup_cpp', PACKAGE = 'fmrireg', Y, Q, theta, lower, upper, d, UtX, G, C, B, Vz)
+}
+
 #' OLS t-test / ANCOVA across features
 #'
 #' Subjects with a non-finite outcome for a feature are dropped from that
