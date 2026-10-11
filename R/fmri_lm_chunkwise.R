@@ -530,7 +530,9 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
         contrasts = conres,
         event_indices = event_indices,
         baseline_indices = baseline_indices,
-        ar_coef = result$ar_coef %||% result$phi_hat
+        ar_coef = result$ar_coef %||% result$phi_hat,
+        XtXinv = XtXinv,
+        nvox = ncol(betas)
       )
     } else {
       chunk_data_env <- list2env(tmats)
@@ -551,6 +553,27 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
   # Unpack results
   out <- unpack_chunkwise(cres, event_indices, baseline_indices)
   out$cov.unscaled <- Vu
+  if (needs_integrated) {
+    # Each chunk was solved on its own whitened and/or robustly weighted
+    # design, and its scale (sigma) is on that scale. The covariance stored
+    # for post-hoc inference must be that chunk's (X'X)^-1, not the
+    # unwhitened design's.
+    chunk_cov <- lapply(cres, `[[`, "XtXinv")
+    shared <- all(vapply(chunk_cov, function(m) {
+      isTRUE(all.equal(m, chunk_cov[[1L]], tolerance = 1e-12,
+                       check.attributes = FALSE))
+    }, logical(1)))
+    if (shared) {
+      out$cov.unscaled <- chunk_cov[[1L]]
+      out$covariance_model_basis <- chunk_cov[[1L]]
+    } else {
+      # One basis per chunk: record it per voxel (list elements share the
+      # chunk's matrix, so this costs one pointer per voxel).
+      nvox_chunk <- vapply(cres, `[[`, integer(1), "nvox")
+      out$covariance_by_voxel <- rep(chunk_cov, times = nvox_chunk)
+      out$cov.unscaled <- chunk_cov[[1L]]
+    }
+  }
   ar_coef_list <- lapply(cres, function(x) x$ar_coef)
   ar_coef_list <- Filter(function(x) !is.null(x) && length(unlist(x)) > 0, ar_coef_list)
   out$ar_coef <- if (length(ar_coef_list) > 0) ar_coef_list else NULL

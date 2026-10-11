@@ -746,7 +746,9 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu,
       betas = bstats_list[[1]],
       event_indices = event_indices,
       baseline_indices = baseline_indices,
-      cov.unscaled = Vu,
+      # One run: the stored covariance is that run's fitted-domain (whitened
+      # and/or weighted) (X'X)^-1, matching the stored sigma.
+      cov.unscaled = cres[[1]]$covariance_model_basis %||% Vu,
       sigma = cres[[1]]$sigma,
       rss = cres[[1]]$rss,
       rdf = cres[[1]]$rdf,

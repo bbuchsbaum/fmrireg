@@ -141,6 +141,18 @@ empty_contrast_table <- function() {
   if (is.null(scale) && !is.null(payload) && length(payload$sigma)) {
     scale <- as.numeric(payload$sigma[[1L]])^2
   }
+  if (identical(covariance_scope, "voxel") && is.list(covariance) &&
+      identical(cfg$variance$method, "model") && !is.null(scale) &&
+      length(covariance) == nvox) {
+    # Per-voxel model covariances are reported on the data scale (as the HAC
+    # and sandwich paths report theirs): each voxel's unscaled (X'X)^-1 times
+    # its residual variance.
+    scale_v <- if (length(scale) == 1L) rep(scale, nvox) else as.numeric(scale)
+    covariance <- lapply(seq_len(nvox), function(v) {
+      cv <- covariance[[v]]
+      if (is.null(cv)) NULL else cv * scale_v[v]
+    })
+  }
   if (is.null(result$rdf)) result$rdf <- nominal
   if (is.null(result$resvar) && !is.null(scale)) result$resvar <- scale
   if (is.null(result$sigma) && !is.null(scale)) result$sigma <- sqrt(pmax(scale, 0))
