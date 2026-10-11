@@ -96,9 +96,12 @@ robust_iterative_fitter <- function(initial_glm_ctx,
   XtWXi_final <- initial_glm_ctx$proj$XtXinv
   dfres <- initial_glm_ctx$proj$dfres
 
-  compute_scale <- function(resid_mat, scope, sigma_fixed_value = NULL) {
+  # Robust scale and per-observation scaled residual u (row median over
+  # response columns of |r| / sigma). Takes |r| directly so the caller can
+  # build it without intermediate copies; the division is by a per-column
+  # vector expanded once (sweep() allocated three T x V blocks).
+  compute_scale <- function(abs_resid, scope, sigma_fixed_value = NULL) {
     eps <- .Machine$double.eps
-    abs_resid <- abs(resid_mat)
 
     if (!is.null(sigma_fixed_value)) {
       sigma_vec <- as.numeric(sigma_fixed_value)
@@ -120,7 +123,11 @@ robust_iterative_fitter <- function(initial_glm_ctx,
       sigma_vec <- rep(sigma_scalar, ncol(abs_resid))
     }
 
-    u <- matrixStats::rowMedians(sweep(abs_resid, 2, sigma_vec, "/"))
+    u <- if (length(unique(sigma_vec)) == 1L) {
+      matrixStats::rowMedians(abs_resid / sigma_vec[1L])
+    } else {
+      matrixStats::rowMedians(abs_resid / rep(sigma_vec, each = nrow(abs_resid)))
+    }
     sigma_scalar <- stats::median(sigma_vec)
     if (!is.finite(sigma_scalar) || sigma_scalar <= eps) {
       sigma_scalar <- eps
@@ -128,7 +135,7 @@ robust_iterative_fitter <- function(initial_glm_ctx,
 
     list(u = u, sigma_scalar = sigma_scalar, sigma_components = sigma_vec)
   }
-  
+
   psi_weights <- function(u) {
     switch(psi_type,
            huber = pmin(1, k_huber / abs(u)),
@@ -144,33 +151,31 @@ robust_iterative_fitter <- function(initial_glm_ctx,
 
   # IRLS iterations. Everything returned below comes from the last weighted
   # solve: the weights it used, its betas, its (X'WX)^-1 and its residuals.
+  #
+  # The weights are one per observation (shared by all response columns), so
+  # the WLS solve needs only the p x n pseudo-inverse of Xw = sqrt(W) X:
+  # betas = Pinv(Xw) sqrt(W) Y = (Pinv(Xw) diag(sqrt(w))) Y. Scaling the
+  # columns of that p x n matrix replaces the T x V weighted response
+  # sqrt(W) Y and its QR projection.
   w <- rep(1, n_obs)
   scale_info <- NULL
   proj_w <- initial_glm_ctx$proj
-  rss_w <- initial_fit$rss
+  weighted_fit <- FALSE
   for (it in seq_len(max_iter)) {
     betas_prev <- betas
 
-    # Calculate residuals using original (unweighted) X
-    resid <- Y - X_orig_for_resid %*% betas
-
-    scale_info <- compute_scale(resid, scale_scope, sigma_fixed)
+    # |residuals| using the original (unweighted) X, in one expression so R
+    # reuses the temporaries instead of allocating new T x V blocks.
+    scale_info <- compute_scale(abs(Y - X_orig_for_resid %*% betas),
+                                scale_scope, sigma_fixed)
     w <- psi_weights(scale_info$u)
 
-    # Apply sqrt of weights for weighted least squares
     sqrtw <- sqrt(w)
     Xw <- X_orig_for_resid * sqrtw
-    Yw <- Y * sqrtw
-
     proj_w <- .fast_preproject(Xw)
-    fit_w <- solve_glm_core(
-      glm_context(X = Xw, Y = Yw, proj = proj_w, robust_weights = w),
-      return_fitted = FALSE
-    )
-
-    betas <- fit_w$betas
+    betas <- .robust_wls_betas(proj_w, sqrtw, Y, colnames(Xw))
     XtWXi_final <- proj_w$XtXinv
-    rss_w <- fit_w$rss
+    weighted_fit <- TRUE
 
     # Convergence check on coefficient updates.
     if (it >= min_iter) {
@@ -180,6 +185,13 @@ robust_iterative_fitter <- function(initial_glm_ctx,
         break
       }
     }
+  }
+
+  # Weighted RSS of the final solve, sum_i w_i r_i^2 per column.
+  rss_w <- if (weighted_fit) {
+    colSums(w * (Y - X_orig_for_resid %*% betas)^2)
+  } else {
+    initial_fit$rss
   }
 
   # Residual df of the WLS fit: a zero-weight row carries no information, as
@@ -199,4 +211,30 @@ robust_iterative_fitter <- function(initial_glm_ctx,
     rank = proj_w$rank,
     scale_scope = scale_scope
   )
+}
+
+#' WLS coefficients for observation weights shared by all response columns
+#'
+#' With `Xw = sqrt(W) X` and `proj_w = .fast_preproject(Xw)`, returns
+#' `Pinv(Xw) sqrt(W) Y` -- the coefficients `solve_glm_core()` gives for the
+#' weighted response `sqrt(W) Y` -- without forming that n x V matrix: the
+#' square-root weights scale the columns of the p x n pseudo-inverse instead.
+#' Row names and rank attributes follow `solve_glm_core()`.
+#' @keywords internal
+#' @noRd
+.robust_wls_betas <- function(proj_w, sqrtw, Y, varnames = NULL) {
+  Pw <- .preproject_pinv(proj_w)
+  betas <- (Pw * rep(sqrtw, each = nrow(Pw))) %*% Y
+  attributes(betas) <- list(dim = dim(betas))
+  aliased <- as.integer(proj_w$aliased %||% integer(0))
+  if (length(aliased) > 0L) betas[aliased, ] <- 0
+  if (!is.null(varnames) && nrow(betas) == length(varnames)) {
+    rownames(betas) <- varnames
+  }
+  if (length(aliased) > 0L) {
+    attr(betas, "rank_deficient") <- TRUE
+    attr(betas, "aliased") <- aliased
+    attr(betas, "estimable") <- as.integer(proj_w$estimable %||% integer(0))
+  }
+  betas
 }
