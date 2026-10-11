@@ -53,18 +53,10 @@ compute_contrast <- function(fit_result, contrast_matrix, contrast_names = NULL)
   nvoxels <- ncol(fit_result$betas)
   ncontrasts <- nrow(contrast_matrix)
   
-  # Standard errors
-  if (length(fit_result$sigma2) == 1) {
-    # Single sigma2
-    stderr <- sqrt(diag(contrast_var) * fit_result$sigma2)
-    stderr <- matrix(stderr, ncontrasts, nvoxels)
-  } else {
-    # Different sigma2 per voxel
-    stderr <- matrix(NA, ncontrasts, nvoxels)
-    for (v in 1:nvoxels) {
-      stderr[, v] <- sqrt(diag(contrast_var) * fit_result$sigma2[v])
-    }
-  }
+  # Standard errors: se[c, v] = sqrt(Var_c * sigma2_v), for all voxels at once
+  sigma2 <- rep_len(as.numeric(fit_result$sigma2), nvoxels)
+  stderr <- sqrt(outer(diag(contrast_var), sigma2))
+  dim(stderr) <- c(ncontrasts, nvoxels)
   
   # T-statistics
   tstat <- estimates / stderr
@@ -134,20 +126,10 @@ compute_f_statistic <- function(fit_result, contrast_matrix) {
   )
   
   nvoxels <- ncol(fit_result$betas)
-  fstat <- numeric(nvoxels)
-  
-  # Compute F-statistic for each voxel
-  for (v in 1:nvoxels) {
-    cb_v <- Cb[, v, drop = FALSE]
-    sigma2_v <- if (length(fit_result$sigma2) == 1) {
-      fit_result$sigma2
-    } else {
-      fit_result$sigma2[v]
-    }
-    
-    # F = (Cb)' (C vcov C')^-1 (Cb) / (q * sigma2)
-    fstat[v] <- as.numeric(t(cb_v) %*% CVC_inv %*% cb_v) / (q * sigma2_v)
-  }
+  sigma2 <- rep_len(as.numeric(fit_result$sigma2), nvoxels)
+
+  # F_v = (Cb_v)' (C vcov C')^-1 (Cb_v) / (q * sigma2_v), all voxels at once
+  fstat <- colSums(Cb * (CVC_inv %*% Cb)) / (q * sigma2)
   
   # Degrees of freedom
   df1 <- q
