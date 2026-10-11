@@ -279,6 +279,48 @@ apply_soft_projection <- function(proj, Y, X) {
   )
 }
 
+#' Residual degrees of freedom of an OLS fit after soft projection
+#'
+#' After \code{Y <- P Y}, \code{X <- P X} with
+#' \eqn{P = I - U S U'} (\eqn{S = diag(d^2/(d^2+\lambda))}), the OLS residual
+#' is \eqn{(I - H) P \epsilon}, where \eqn{H} is the hat matrix of
+#' \eqn{PX}. With iid noise \eqn{E[RSS] = \sigma^2 tr((I - H) P^2)}, so the
+#' unbiased residual df is
+#' \deqn{n - \sum_j g_j - rank(PX) + \sum_j g_j \|Q' u_j\|^2,\quad g_j = 2 s_j - s_j^2,}
+#' with \eqn{Q} an orthonormal basis of \eqn{PX}. It reduces to
+#' \eqn{n - p} when \eqn{\lambda \to \infty} and to \eqn{n - k - p} for a hard
+#' projection onto the complement of a \eqn{k}-dimensional nuisance space
+#' that \eqn{X} avoids. The usual \code{n - rank(PX)} ignores the projection
+#' and overstates the df, so \eqn{\hat\sigma^2} is biased low.
+#'
+#' @param proj A \code{soft_projection} object.
+#' @param X_proj The projected design \code{proj$P_lambda(X)}.
+#' @param tol Rank tolerance for \code{qr()}.
+#' @return Scalar residual degrees of freedom (not necessarily an integer).
+#' @keywords internal
+#' @noRd
+.soft_projection_residual_df <- function(proj, X_proj, tol = 1e-7) {
+  if (!inherits(proj, "soft_projection")) {
+    stop("proj must be a soft_projection object", call. = FALSE)
+  }
+  X_proj <- as.matrix(X_proj)
+  n <- nrow(X_proj)
+  d <- proj$svd$d
+  U <- proj$svd$u[, seq_along(d), drop = FALSE]
+  s <- d^2 / (d^2 + proj$lambda)
+  g <- 2 * s - s^2
+
+  qx <- qr(X_proj, tol = tol)
+  r <- qx$rank
+  if (r > 0L) {
+    Q <- qr.Q(qx)[, seq_len(r), drop = FALSE]
+    leverage_u <- colSums(crossprod(Q, U)^2)   # ||Q' u_j||^2
+  } else {
+    leverage_u <- numeric(length(g))
+  }
+  n - sum(g) - r + sum(g * leverage_u)
+}
+
 #' Extract Nuisance Timeseries from Mask
 #'
 #' Extracts voxel timeseries from regions defined by a mask (e.g., WM/CSF).

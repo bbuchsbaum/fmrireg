@@ -15,12 +15,17 @@ NULL
 #' @param subject Subject identifier (e.g., "01", "1001"). Required.
 #' @param task Task identifier (e.g., "nback", "rest"). Required for BIDS compliance.
 #' @param space Spatial reference (e.g., "MNI152NLin2009cAsym"). Optional but recommended.
-#' @param desc Description of the analysis (default: "GLM")
+#' @param desc BIDS \code{desc-} label of the analysis (default: "GLM"),
+#'   sanitised to letters and digits. Beta files are labelled
+#'   \code{desc-<desc>}; statistic maps \code{desc-<desc><stat>} (e.g.
+#'   \code{desc-run1tstat}), except that the default \code{"GLM"} is omitted
+#'   (\code{desc-tstat}), the naming [collect_results()] reads by default.
 #' @param format Output format(s). One or more of `"h5"` (BIDS-style HDF5
 #'   outputs), `"nifti"` (BIDS-style NIfTI outputs, written as `.nii.gz`), and
 #'   `"gds"` (fmrigds-compatible assays plus an `.rds` plan). Pass a character
 #'   vector to write multiple formats at once (e.g. `c("h5", "nifti")`).
-#'   Defaults to `"h5"` only. NIfTI maps are stored as 32-bit floats
+#'   Defaults to `"h5"` only; `"h5"` requires the suggested package fmristore,
+#'   `"nifti"` does not. NIfTI maps are stored as 32-bit floats
 #'   (datatype FLOAT32), so their values are the fitted values rounded to
 #'   single precision.
 #' @param strategy Storage strategy: "by_stat" (group contrasts by statistic) or "by_contrast" (separate files)
@@ -79,6 +84,8 @@ write_results.fmri_lm <- function(x,
   }
   if (length(format) == 0) format <- "h5"
   produce_gds <- "gds" %in% format
+  # fmristore (Suggests) is only needed for HDF5 output; check before staging.
+  if ("h5" %in% format) .require_fmristore()
 
   # Input validation
   if (validate_inputs) {
@@ -306,6 +313,10 @@ write_results.fmri_lm <- function(x,
       available_contrasts <- .select_contrasts(available_contrasts, contrasts, contrast_match)
     }
 
+    if (strategy == "by_contrast") {
+      .check_contrast_label_collisions(available_contrasts$name)
+    }
+
     families <- .resolve_contrast_families(available_contrasts, contrast_stats)
     for (fam in families) {
       fam_contrasts <- fam$contrasts
@@ -319,7 +330,7 @@ write_results.fmri_lm <- function(x,
           }, logical(1)))
 
           if (has_stat) {
-            stat_desc <- .stat_desc(desc, stat)
+            stat_desc <- .glm_stat_desc(desc, stat)
             filename_json <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = "json")
             if (produce_h5) {
               filename_h5 <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = "h5")
@@ -341,7 +352,7 @@ write_results.fmri_lm <- function(x,
 
           if (any(available_stats)) {
             contrast_name <- fam_contrasts$name[i]
-            stat_desc <- if (sum(available_stats) == 1) .stat_desc(desc, fam_stats[available_stats][1]) else desc
+            stat_desc <- if (sum(available_stats) == 1) .glm_stat_desc(desc, fam_stats[available_stats][1]) else desc
             filename_json <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "json")
             if (produce_h5) {
               filename_h5 <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "h5")
@@ -577,6 +588,111 @@ write_results.fmri_lm <- function(x,
   .sanitize_label(stat)
 }
 
+#' Build the desc- label of an fmri_lm statistic map
+#'
+#' The analysis label is kept so that results written with different `desc`
+#' values into one directory do not overwrite each other: `desc-<desc><stat>`,
+#' both sanitised to BIDS alphanumerics (e.g. `desc = "run-A"`, `"tstat"` ->
+#' `runAtstat`). The default analysis label `"GLM"` (or `NULL`) is omitted,
+#' giving `desc-<stat>`: the naming [collect_results()] reads by default.
+#' @keywords internal
+#' @noRd
+.glm_stat_desc <- function(desc, stat, default_desc = "GLM") {
+  stat_label <- .sanitize_label(stat)
+  if (is.null(desc) || identical(desc, default_desc)) {
+    return(stat_label)
+  }
+  desc_label <- suppressWarnings(.sanitize_label(desc))
+  paste0(desc_label %||% "", stat_label)
+}
+
+#' Detect contrast names that map to the same BIDS label
+#'
+#' `contrast-` labels are sanitised to alphanumerics, so distinct names such
+#' as `"A_vs_B"` and `"A-vs-B"` would be written to the same file, the second
+#' silently replacing the first. Called before anything is written.
+#' @keywords internal
+#' @noRd
+.check_contrast_label_collisions <- function(contrast_names) {
+  contrast_names <- unique(as.character(contrast_names))
+  if (length(contrast_names) == 0L) return(invisible(TRUE))
+  labels <- vapply(contrast_names, function(nm) {
+    suppressWarnings(.sanitize_label(nm)) %||% ""
+  }, character(1))
+  empty <- contrast_names[labels == ""]
+  if (length(empty)) {
+    stop("Contrast name(s) ", paste0("'", empty, "'", collapse = ", "),
+         " contain no letters or digits and cannot form a BIDS 'contrast-' label. ",
+         "Rename the contrast(s).", call. = FALSE)
+  }
+  dup_labels <- unique(labels[duplicated(labels)])
+  if (length(dup_labels)) {
+    groups <- vapply(dup_labels, function(lab) {
+      paste0("'", contrast_names[labels == lab], "'", collapse = " and ")
+    }, character(1))
+    stop("Contrast names ", paste(groups, collapse = "; "),
+         " map to the same BIDS 'contrast-' label (",
+         paste(dup_labels, collapse = ", "),
+         ") and would overwrite each other with strategy = 'by_contrast'. ",
+         "Rename the contrasts or use strategy = 'by_stat'.", call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+#' Summarise (possibly voxel-specific) degrees of freedom for a JSON sidecar
+#'
+#' A scalar when every finite value is the same (to rounding), otherwise
+#' `list(Min = , Max = )`; `NULL` when nothing finite is available. Writing
+#' the full per-voxel vector into a sidecar bloats it without being usable.
+#' @keywords internal
+#' @noRd
+.summarize_df <- function(df) {
+  if (is.null(df)) return(NULL)
+  df <- as.numeric(df)
+  df <- df[is.finite(df)]
+  if (!length(df)) return(NULL)
+  rng <- range(df)
+  if (isTRUE(all.equal(rng[1], rng[2]))) {
+    return(rng[1])
+  }
+  list(Min = rng[1], Max = rng[2])
+}
+
+#' Whether the optional fmristore package (HDF5 writer) is available
+#'
+#' A thin wrapper so the dependency check can be mocked in tests.
+#' @keywords internal
+#' @noRd
+.has_fmristore <- function() {
+  requireNamespace("fmristore", quietly = TRUE)
+}
+
+#' Fail with a clear message when fmristore is required but missing
+#' @keywords internal
+#' @noRd
+.require_fmristore <- function() {
+  if (!.has_fmristore()) {
+    stop("format = 'h5' requires the 'fmristore' package, which is not installed. ",
+         "Install fmristore or use format = 'nifti'.", call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+#' Software versions recorded in JSON sidecars
+#' @keywords internal
+#' @noRd
+.bids_software_versions <- function() {
+  out <- list(
+    R = paste(R.Version()$major, R.Version()$minor, sep = "."),
+    fmrireg = as.character(utils::packageVersion("fmrireg"))
+  )
+  if (.has_fmristore()) {
+    out$fmristore <- as.character(utils::packageVersion("fmristore"))
+  }
+  out$neuroim2 <- as.character(utils::packageVersion("neuroim2"))
+  out
+}
+
 #' Validate fmri_lm Object Structure
 #' @keywords internal
 #' @noRd
@@ -696,7 +812,9 @@ write_results.fmri_lm <- function(x,
   }
 
   if (!is.null(desc)) {
-    parts <- c(parts, paste0("desc-", desc))
+    # desc is a BIDS label: alphanumerics only (e.g. "my_model" -> "mymodel").
+    desc <- .sanitize_label(desc)
+    if (!is.null(desc)) parts <- c(parts, paste0("desc-", desc))
   }
 
   # Add suffix
@@ -757,6 +875,7 @@ write_results.fmri_lm <- function(x,
   tryCatch({
     # Create 3D mask volume for fmristore
     mask_vol <- neuroim2::LogicalNeuroVol(mask_array, space)
+    .require_fmristore()
     h5_handle <- fmristore::write_labeled_vec(beta_data, mask_vol, regressor_names, file = filepath)
     h5_handle$close_all()
   }, error = function(e) {
@@ -834,10 +953,11 @@ write_results.fmri_lm <- function(x,
     stat_data <- .compute_statistical_volumes(available_contrasts, stat, brain_dims, mask_array, space)
 
     if (!is.null(stat_data)) {
-      stat_desc <- .stat_desc(desc, stat)
+      stat_desc <- .glm_stat_desc(desc, stat)
       filename <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold")
       filepath <- file.path(path, filename)
 
+      .require_fmristore()
       h5_handle <- fmristore::write_labeled_vec(stat_data$neurovec, mask_vol, stat_data$contrast_names, file = filepath)
       h5_handle$close_all()
 
@@ -880,7 +1000,7 @@ write_results.fmri_lm <- function(x,
     stat_data <- .compute_statistical_volumes(available_contrasts, stat, brain_dims, mask_array, space)
 
     if (!is.null(stat_data)) {
-      stat_desc <- .stat_desc(desc, stat)
+      stat_desc <- .glm_stat_desc(desc, stat)
       filename <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = "nii.gz")
       filepath <- file.path(path, filename)
 
@@ -965,10 +1085,11 @@ write_results.fmri_lm <- function(x,
       ospace_stat <- neuroim2::add_dim(space, length(available_stats))
       stat_vec <- neuroim2::NeuroVec(stat_array, ospace_stat)
 
-      stat_desc <- if (length(available_stats) == 1) .stat_desc(desc, available_stats[[1]]) else desc
+      stat_desc <- if (length(available_stats) == 1) .glm_stat_desc(desc, available_stats[[1]]) else desc
       filename <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold")
       filepath <- file.path(path, filename)
 
+      .require_fmristore()
       h5_handle <- fmristore::write_labeled_vec(stat_vec, mask_vol, available_stats, file = filepath)
       h5_handle$close_all()
 
@@ -1043,7 +1164,7 @@ write_results.fmri_lm <- function(x,
       ospace_stat <- neuroim2::add_dim(space, length(available_stats))
       stat_vec <- neuroim2::NeuroVec(stat_array, ospace_stat)
 
-      stat_desc <- if (length(available_stats) == 1) .stat_desc(desc, available_stats[[1]]) else desc
+      stat_desc <- if (length(available_stats) == 1) .glm_stat_desc(desc, available_stats[[1]]) else desc
       filename <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "nii.gz")
       filepath <- file.path(path, filename)
 
@@ -1115,7 +1236,7 @@ write_results.fmri_lm <- function(x,
                      dimnames = list(sample_labels, subject_dimnames, contrast_names))
     assays$p <- p_array
   }
-  df_resid <- .extract_degrees_of_freedom(fmrilm_obj)
+  df_resid <- .summarize_df(.extract_degrees_of_freedom(fmrilm_obj))
 
   # Build spatial description from mask
   spatial <- .fmri_dataset_mask_space(fmrilm_obj$dataset, "GDS export")
@@ -1232,12 +1353,7 @@ write_results.fmri_lm <- function(x,
   metadata <- list(
     Description = "Raw regressor beta coefficients from GLM analysis",
     Sources = sources,
-    SoftwareVersions = list(
-      R = paste(R.Version()$major, R.Version()$minor, sep = "."),
-      fmrireg = as.character(utils::packageVersion("fmrireg")),
-      fmristore = as.character(utils::packageVersion("fmristore")),
-      neuroim2 = as.character(utils::packageVersion("neuroim2"))
-    ),
+    SoftwareVersions = .bids_software_versions(),
     ModelInfo = list(
       Type = "General Linear Model",
       Formula = as.character(deparse(fmrilm_obj$model$event_model$model_spec$formula_or_list)),
@@ -1272,7 +1388,7 @@ write_results.fmri_lm <- function(x,
                                           output_formats = "h5") {
 
   # Generate JSON filename
-  stat_desc <- .stat_desc(desc, stat)
+  stat_desc <- .glm_stat_desc(desc, stat)
   filename <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = "json")
   filepath <- file.path(path, filename)
 
@@ -1291,7 +1407,7 @@ write_results.fmri_lm <- function(x,
 
   # Extract source information and degrees of freedom
   sources <- .extract_source_files(fmrilm_obj)
-  df_resid <- .extract_degrees_of_freedom(fmrilm_obj)
+  df_resid <- .summarize_df(.extract_degrees_of_freedom(fmrilm_obj))
 
   # Create metadata structure
   metadata <- list(
@@ -1299,12 +1415,7 @@ write_results.fmri_lm <- function(x,
     StatisticType = toupper(stat),
     DegreesOfFreedom = df_resid,
     Sources = sources,
-    SoftwareVersions = list(
-      R = paste(R.Version()$major, R.Version()$minor, sep = "."),
-      fmrireg = as.character(utils::packageVersion("fmrireg")),
-      fmristore = as.character(utils::packageVersion("fmristore")),
-      neuroim2 = as.character(utils::packageVersion("neuroim2"))
-    ),
+    SoftwareVersions = .bids_software_versions(),
     ModelInfo = list(
       Type = "General Linear Model",
       Formula = as.character(deparse(get_formula(fmrilm_obj$model)))
@@ -1339,13 +1450,13 @@ write_results.fmri_lm <- function(x,
                                                 output_formats = "h5") {
 
   # Generate JSON filename
-  stat_desc <- if (length(stat_names) == 1) .stat_desc(desc, stat_names[[1]]) else desc
+  stat_desc <- if (length(stat_names) == 1) .glm_stat_desc(desc, stat_names[[1]]) else desc
   filename <- .generate_bids_filename(entities, desc = stat_desc, contrast = contrast_name, suffix = "bold", extension = "json")
   filepath <- file.path(path, filename)
 
   # Extract source information and degrees of freedom
   sources <- .extract_source_files(fmrilm_obj)
-  df_resid <- .extract_degrees_of_freedom(fmrilm_obj)
+  df_resid <- .summarize_df(.extract_degrees_of_freedom(fmrilm_obj))
 
   # Create metadata structure
   metadata <- list(
@@ -1353,12 +1464,7 @@ write_results.fmri_lm <- function(x,
     ContrastName = contrast_name,
     DegreesOfFreedom = df_resid,
     Sources = sources,
-    SoftwareVersions = list(
-      R = paste(R.Version()$major, R.Version()$minor, sep = "."),
-      fmrireg = as.character(utils::packageVersion("fmrireg")),
-      fmristore = as.character(utils::packageVersion("fmristore")),
-      neuroim2 = as.character(utils::packageVersion("neuroim2"))
-    ),
+    SoftwareVersions = .bids_software_versions(),
     ModelInfo = list(
       Type = "General Linear Model",
       Formula = as.character(deparse(get_formula(fmrilm_obj$model)))
@@ -1528,10 +1634,13 @@ write_results.fmri_lm <- function(x,
 #' @keywords internal
 #' @noRd
 .create_temp_write_dir <- function(base_path) {
-  # Create unique temporary directory name
-  temp_name <- paste0(".tmp_write_", format(Sys.time(), "%Y%m%d_%H%M%S"), "_",
-                      sample(10000:99999, 1))
-  temp_dir <- file.path(base_path, temp_name)
+  # Unique staging directory inside the destination (same filesystem, so the
+  # final move is a rename). tempfile() does not consume the user's RNG
+  # stream, unlike the former sample()-based suffix.
+  temp_dir <- tempfile(
+    pattern = paste0(".tmp_write_", format(Sys.time(), "%Y%m%d_%H%M%S"), "_"),
+    tmpdir = base_path
+  )
 
   # Create temporary directory
   if (!dir.create(temp_dir, recursive = TRUE)) {
