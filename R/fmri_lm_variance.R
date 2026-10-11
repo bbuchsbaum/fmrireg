@@ -137,6 +137,219 @@
   .fmri_lm_psd(V)
 }
 
+#' Lag-window autocovariances of each voxel's residuals, per segment
+#'
+#' Row `offsets[s] + h + 1` of `gamma` holds, for every voxel, the tapered
+#' lag-`h` autocovariance of segment `s`: the entries of the block-Toeplitz
+#' matrix `.fmri_lm_residual_covariance()` builds.
+#' @keywords internal
+#' @noRd
+.fmri_lm_segment_gammas <- function(E, segments, max_lag, taper) {
+  lags <- lapply(segments, function(idx) {
+    0:min(as.integer(max_lag), length(idx) - 1L)
+  })
+  Gamma <- matrix(0, sum(lengths(lags)), ncol(E))
+  row <- 0L
+  for (s in seq_along(segments)) {
+    idx <- segments[[s]]
+    m <- length(idx)
+    Es <- E[idx, , drop = FALSE]
+    for (h in lags[[s]]) {
+      row <- row + 1L
+      prod <- Es[(h + 1L):m, , drop = FALSE] * Es[seq_len(m - h), , drop = FALSE]
+      Gamma[row, ] <- colSums(prod) / (m - h) *
+        .fmri_lm_hac_weight(h, max_lag, taper)
+    }
+  }
+  list(gamma = Gamma, lags = lags, offsets = cumsum(c(0L, lengths(lags))))
+}
+
+#' Symmetric lag-h shift of the rows of a matrix
+#'
+#' `T_0 = I`; for `h > 0`, `(T_h M)[i, ] = M[i + h, ] + M[i - h, ]`, terms
+#' outside the segment omitted. A segment's banded Toeplitz covariance is
+#' `sum_h gamma_h T_h`.
+#' @keywords internal
+#' @noRd
+.fmri_lm_lag_shift <- function(M, h) {
+  if (h == 0L) return(M)
+  m <- nrow(M)
+  out <- matrix(0, m, ncol(M))
+  if (h < m) {
+    out[seq_len(m - h), ] <- M[(h + 1L):m, , drop = FALSE]
+    out[(h + 1L):m, ] <- out[(h + 1L):m, , drop = FALSE] +
+      M[seq_len(m - h), , drop = FALSE]
+  }
+  out
+}
+
+#' Model-based Satterthwaite df for every voxel, from lag sums
+#'
+#' Equals, voxel by voxel, `calculate_effective_df(method = "satterthwaite")`
+#' applied to `.fmri_lm_residual_covariance()` (the dense formula used before
+#' performance pass 2), without forming an n x n matrix.
+#'
+#' A voxel's residual covariance is block diagonal over segments, each block
+#' the banded Toeplitz matrix `V_s = sum_h g_{s,h} T_h`. Every trace in
+#' `tr(RV)^2 / tr(RVRV)` is linear or quadratic in the stacked lag
+#' autocovariances `g`: `tr(RV) = l'g` and `tr(RVRV) = g'Mg`, where `l` and
+#' `M` (K x K, `K = sum_s (L_s + 1)`) depend only on the design and the
+#' segments. They are built once, in O(n p L^2); each voxel then costs O(K^2)
+#' (one matrix product over all voxels) instead of an O(n^3) eigen().
+#'
+#' The dense formula projects V onto the PSD cone (`.fmri_lm_psd()`), and that
+#' projection does change V for some voxels: the truncated window
+#' (`taper = "none"`) at moderate or long lags, or residuals so small that the
+#' projection's absolute tolerance exceeds their variance. Each voxel is
+#' therefore certified first (`.fmri_lm_toeplitz_needs_projection()`); voxels
+#' that cannot be certified are projected exactly as before, but one segment
+#' block at a time (`.fmri_lm_projected_traces()`), so that path costs
+#' O(sum_s m_s^3) rather than O(n^3) and still never forms an n x n matrix.
+#' @keywords internal
+#' @noRd
+.fmri_lm_satterthwaite_banded <- function(X, E, segments, max_lag, taper,
+                                          XtXinv = NULL) {
+  X <- as.matrix(X)
+  E <- as.matrix(E)
+  nvox <- ncol(E)
+  # calculate_effective_df() returns 1 when n <= p.
+  if (nrow(X) <= ncol(X)) return(rep(1, nvox))
+  if (is.null(XtXinv)) XtXinv <- .satterthwaite_xtxinv(X)
+  A <- X %*% XtXinv
+  p <- ncol(X)
+
+  gl <- .fmri_lm_segment_gammas(E, segments, max_lag, taper)
+  Gamma <- gl$gamma
+  lags <- gl$lags
+  offsets <- gl$offsets
+  K <- nrow(Gamma)
+
+  # Design-only terms. With H = A X' and G = (X'X)^-1:
+  #   tr(V)    = sum_s m_s g_{s,0}
+  #   tr(HV)   = sum g_{s,h} sum(A_s * T_h X_s)
+  #   tr(VV)   = sum_s [m_s g_{s,0}^2 + sum_h 2 (m_s - h) g_{s,h}^2]
+  #   tr(HVV)  = sum g_{s,h} g_{s,k} sum((T_h A_s) * (T_k X_s))
+  #   tr(HVHV) = sum g g' tr(C_{s,h} C_{s',k}),  C_{s,h} = X_s' T_h X_s G
+  l <- numeric(K)
+  M <- matrix(0, K, K)
+  Cvec <- matrix(0, p * p, K)
+  Ctvec <- matrix(0, p * p, K)
+  for (s in seq_along(segments)) {
+    idx <- segments[[s]]
+    m <- length(idx)
+    hs <- lags[[s]]
+    rows <- offsets[s] + seq_along(hs)
+    Xs <- X[idx, , drop = FALSE]
+    As <- A[idx, , drop = FALSE]
+    TX <- matrix(vapply(hs, function(h) as.numeric(.fmri_lm_lag_shift(Xs, h)),
+                        numeric(m * p)), ncol = length(hs))
+    TA <- matrix(vapply(hs, function(h) as.numeric(.fmri_lm_lag_shift(As, h)),
+                        numeric(m * p)), ncol = length(hs))
+    Q <- crossprod(TA, TX)
+    Q <- (Q + t(Q)) / 2
+    trTT <- ifelse(hs == 0L, m, 2 * (m - hs))
+    M[rows, rows] <- diag(trTT, nrow = length(hs)) - 2 * Q
+    l[rows] <- ifelse(hs == 0L, m, 0) - as.numeric(crossprod(as.numeric(As), TX))
+    for (j in seq_along(hs)) {
+      C <- crossprod(Xs, matrix(TX[, j], m, p)) %*% XtXinv
+      Cvec[, rows[j]] <- as.numeric(C)
+      Ctvec[, rows[j]] <- as.numeric(t(C))
+    }
+  }
+  P <- crossprod(Cvec, Ctvec)
+  M <- M + (P + t(P)) / 2
+
+  tr_RV <- as.numeric(crossprod(l, Gamma))
+  tr_RVRV <- colSums(Gamma * (M %*% Gamma))
+
+  for (v in which(.fmri_lm_toeplitz_needs_projection(Gamma, lags, offsets))) {
+    tr <- .fmri_lm_projected_traces(X, A, XtXinv, Gamma[, v], segments,
+                                    lags, offsets)
+    tr_RV[v] <- tr[[1L]]
+    tr_RVRV[v] <- tr[[2L]]
+  }
+
+  ok <- is.finite(tr_RV) & is.finite(tr_RVRV) & tr_RVRV > 0
+  out <- rep(1, nvox)
+  out[ok] <- pmax(tr_RV[ok]^2 / tr_RVRV[ok], 1)
+  out
+}
+
+#' Voxels whose PSD projection cannot be certified to be the identity
+#'
+#' `.fmri_lm_psd()` zeroes eigenvalues below `max(max|lambda|, 1) sqrt(eps)`.
+#' Every eigenvalue of a finite section of a symmetric Toeplitz matrix lies in
+#' the range of its symbol `f(w) = g_0 + 2 sum_h g_h cos(h w)`. `f` is
+#' evaluated on a grid of `[0, pi]` and lowered by its Lipschitz constant
+#' (`2 sum h |g_h|`) times the grid half-spacing, a rigorous lower bound;
+#' `|g_0| + 2 sum |g_h|` bounds `|lambda|`, hence the tolerance, from above. A
+#' voxel is certified when every segment's lower bound exceeds the upper
+#' tolerance; otherwise (`TRUE`) it needs the exact projection.
+#' @keywords internal
+#' @noRd
+.fmri_lm_toeplitz_needs_projection <- function(Gamma, lags, offsets) {
+  nvox <- ncol(Gamma)
+  lower <- rep(Inf, nvox)
+  upper <- rep(1, nvox)
+  for (s in seq_along(lags)) {
+    hs <- lags[[s]]
+    G <- Gamma[offsets[s] + seq_along(hs), , drop = FALSE]
+    G_lag <- G[-1L, , drop = FALSE]
+    upper <- pmax(upper, abs(G[1L, ]) + 2 * colSums(abs(G_lag)))
+    if (length(hs) == 1L) {
+      lower <- pmin(lower, G[1L, ])
+      next
+    }
+    N <- max(64L, 8L * length(hs))
+    w <- pi * (0:N) / N
+    Cos <- cos(outer(w, hs)) * rep(c(1, rep(2, length(hs) - 1L)), each = N + 1L)
+    f_min <- matrixStats::colMins(Cos %*% G)
+    lipschitz <- 2 * colSums(abs(G_lag) * hs[-1L])
+    lower <- pmin(lower, f_min - lipschitz * pi / (2 * N))
+  }
+  !(lower > upper * .Machine$double.eps^0.5)
+}
+
+#' tr(RV) and tr(RVRV) with V projected onto the PSD cone, block by block
+#'
+#' The dense computation (`.fmri_lm_residual_covariance()`, then
+#' `.satterthwaite_df()`) for one voxel, using that the eigenvalues of a
+#' block-diagonal matrix are those of its blocks: only segment-sized blocks
+#' are decomposed, with the tolerance taken over all blocks as before.
+#' @keywords internal
+#' @noRd
+.fmri_lm_projected_traces <- function(X, A, XtXinv, gamma, segments, lags,
+                                      offsets) {
+  eig <- vector("list", length(segments))
+  max_abs <- 0
+  for (s in seq_along(segments)) {
+    m <- length(segments[[s]])
+    g <- gamma[offsets[s] + seq_along(lags[[s]])]
+    block <- stats::toeplitz(c(g, rep(0, m - length(g))))
+    eig[[s]] <- eigen(block, symmetric = TRUE)
+    max_abs <- max(max_abs, abs(eig[[s]]$values))
+  }
+  tol <- max(max_abs, 1) * .Machine$double.eps^0.5
+  tr_V <- tr_VV <- tr_HV <- tr_HVV <- 0
+  B <- matrix(0, ncol(X), ncol(X))
+  for (s in seq_along(segments)) {
+    idx <- segments[[s]]
+    ev <- eig[[s]]
+    ev$values[ev$values < tol] <- 0
+    Vs <- tcrossprod(sweep(ev$vectors, 2L, sqrt(ev$values), `*`))
+    Xs <- X[idx, , drop = FALSE]
+    As <- A[idx, , drop = FALSE]
+    VX <- Vs %*% Xs
+    tr_V <- tr_V + sum(diag(Vs))
+    tr_VV <- tr_VV + sum(Vs * t(Vs))
+    tr_HV <- tr_HV + sum(As * VX)
+    tr_HVV <- tr_HVV + sum(As * (Vs %*% VX))
+    B <- B + crossprod(Xs, VX)
+  }
+  BG <- B %*% XtXinv
+  list(tr_V - tr_HV, tr_VV - 2 * tr_HVV + sum(BG * t(BG)))
+}
+
 .fmri_lm_hac_df <- function(X, residual, segments, max_lag,
                             taper = "none", nominal = NULL) {
   X <- as.matrix(X)
@@ -198,21 +411,11 @@
   df <- rep(nrow(X) - rank_X, ncol(E))
   if (identical(spec$df, "satterthwaite")) {
     if (model_based) {
-      distances <- lapply(segments, function(idx) {
-        m <- length(idx)
-        abs(outer(seq_len(m), seq_len(m), "-"))
-      })
-      XtXinv <- .satterthwaite_xtxinv(X)
-      df <- vapply(seq_len(ncol(E)), function(v) {
-        resid_cov <- .fmri_lm_residual_covariance(
-          E[, v], segments, max_lag = max_lag, taper = spec$taper,
-          distances = distances
-        )
-        calculate_effective_df(
-          nrow(X), ncol(X), method = "satterthwaite",
-          X = X, resid_cov = resid_cov, XtXinv = XtXinv
-        )
-      }, numeric(1))
+      # Banded/Toeplitz algebra; no per-voxel n x n covariance or eigen().
+      df <- .fmri_lm_satterthwaite_banded(
+        X, E, segments, max_lag = max_lag, taper = spec$taper,
+        XtXinv = .satterthwaite_xtxinv(X)
+      )
     } else {
       nominal <- sum(vapply(segments, length, integer(1))) -
         qr(X[unlist(segments), , drop = FALSE])$rank
