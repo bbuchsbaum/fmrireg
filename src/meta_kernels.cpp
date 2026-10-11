@@ -53,8 +53,12 @@ inline double huber_weight(double rstd, double c) {
 // Also returns beta and (optionally) XtWX^{-1} for reuse.
 // X (m×k), y (m), v (m)
 // returns Q, fills beta_hat, invXtWX (if non-null)
+struct SolveCount { int fe = 0; int total = 0; };
+inline void count_solve(SolveCount* c, bool fe) { if (c) { c->total++; if (fe) c->fe++; } }
+
 inline double Q_tau2(const mat& X, const vec& y, const vec& v, double tau2,
-                     vec& beta_hat, mat* invXtWX_ptr = nullptr) {
+                     vec& beta_hat, mat* invXtWX_ptr = nullptr, SolveCount* cnt = nullptr) {
+  count_solve(cnt, tau2 == 0.0);
   vec w = 1.0 / (v + tau2);
   // Weighted LS
   mat Xw = X; Xw.each_col() %= sqrt(w);
@@ -76,34 +80,13 @@ inline double Q_tau2(const mat& X, const vec& y, const vec& v, double tau2,
 }
 
 // DL estimator for tau^2, generalized to meta-regression.
-// Uses weights w0 = 1/v, FE fit (tau2 = 0), Q0 = sum w0 r^2, df = m - p,
-// denominator C = sum(w0) - sum(w0^2 * t_i), where t_i = x_i' (X'W0X)^{-1} x_i
-inline double tau2_DL(const mat& X, const vec& y, const vec& v) {
-  const uword m = y.n_elem;
-  const uword p = X.n_cols;
-  vec w0 = 1.0 / v;
-
-  // FE (tau2 = 0)
-  mat Xw = X; Xw.each_col() %= sqrt(w0);
-  mat XtWX = Xw.t() * Xw;
-  vec Xty = X.t() * (w0 % y);
-
-  mat invXtWX;
-  if (!inv_sympd_safe(invXtWX, XtWX)) return 0.0;
-
-  vec beta_fe = invXtWX * Xty;
-  vec r = y - X * beta_fe;
-
-  double Q0 = as_scalar( (w0 % r).t() * r );
-  double df = (double)m - (double)p;
-
-  // Compute t_i = x_i' invXtWX x_i; then denom C = sum(w0) - sum(w0^2 * t_i)
-  vec ti(m, fill::zeros);
-  for (uword i = 0; i < m; ++i) {
-    rowvec xi = X.row(i);
-    double ti_i = as_scalar( xi * invXtWX * xi.t() );
-    ti(i) = ti_i;
-  }
+// Takes the fixed-effects fit (weights w0 = 1/v, tau2 = 0) computed once by
+// the caller: Q0 = sum w0 r^2, invXtWX0 = (X'W0X)^{-1}, df = m - p.
+// Denominator C = sum(w0) - sum(w0^2 * t_i), t_i = x_i' (X'W0X)^{-1} x_i,
+// with the leverages t_i computed for all rows at once.
+inline double tau2_DL(const mat& X, const vec& w0, const mat& invXtWX0,
+                      double Q0, double df) {
+  vec ti = sum((X * invXtWX0) % X, 1);
   double sumw = sum(w0);
   double denom = sumw - sum( (w0 % w0) % ti );
 
@@ -115,21 +98,22 @@ inline double tau2_DL(const mat& X, const vec& y, const vec& v) {
 
 // Paule–Mandel via simple bisection on f(tau2) = Q(tau2) - df.
 // Monotone decreasing in tau2, bracket [0, tau_hi] until sign change.
-inline double tau2_PM(const mat& X, const vec& y, const vec& v,
+// Q0 is Q(0) from the caller's fixed-effects fit.
+inline double tau2_PM(const mat& X, const vec& y, const vec& v, double Q0,
                       double tol = 1e-6, int max_iter = 50,
-                      bool* warned_nonconverged = nullptr) {
+                      bool* warned_nonconverged = nullptr, SolveCount* cnt = nullptr) {
   const uword m = y.n_elem;
   const uword p = X.n_cols;
   const double df = (double)m - (double)p;
 
   vec beta_hat;
-  double f0 = Q_tau2(X, y, v, 0.0, beta_hat) - df;
+  double f0 = Q0 - df;
   if (!std::isfinite(f0) || f0 <= 0.0) return 0.0;
 
   // Find upper bound
   double tau_lo = 0.0, tau_hi = std::max(1.0, 1000.0 * median(v));
   for (int k = 0; k < 20; ++k) {
-    double fhi = Q_tau2(X, y, v, tau_hi, beta_hat) - df;
+    double fhi = Q_tau2(X, y, v, tau_hi, beta_hat, nullptr, cnt) - df;
     if (!std::isfinite(fhi)) tau_hi *= 2.0; // try larger
     else if (fhi <= 0.0) break;
     else tau_hi *= 2.0;
@@ -137,13 +121,13 @@ inline double tau2_PM(const mat& X, const vec& y, const vec& v,
   }
 
   // Bisection
-  double a = tau_lo, b = tau_hi, fb = Q_tau2(X, y, v, b, beta_hat) - df;
+  double a = tau_lo, b = tau_hi, fb = Q_tau2(X, y, v, b, beta_hat, nullptr, cnt) - df;
   if (!std::isfinite(fb)) fb = -1.0; // force progress
   double mid = a;
   bool converged = false;
   for (int it = 0; it < max_iter; ++it) {
     mid = 0.5 * (a + b);
-    double fm = Q_tau2(X, y, v, mid, beta_hat) - df;
+    double fm = Q_tau2(X, y, v, mid, beta_hat, nullptr, cnt) - df;
     if (!std::isfinite(fm)) { a = mid; continue; }
     if (std::fabs(fm) < tol) { converged = true; break; }
     if (fm > 0.0) { a = mid; } else { b = mid; fb = fm; }
@@ -173,7 +157,8 @@ struct MetaResult {
 enum Method { FE=0, DL=1, PM=2, REML_ALIAS=3 };
 
 MetaResult fit_one(const mat& Xfull, const vec& yfull, const vec& vfull,
-                   int method_code, bool robust, double huber_c, int robust_iter) {
+                   int method_code, bool robust, double huber_c, int robust_iter,
+                   SolveCount* cnt = nullptr) {
 
   MetaResult out;
   // Filter finite rows - find indices where all conditions are true
@@ -200,6 +185,7 @@ MetaResult fit_one(const mat& Xfull, const vec& yfull, const vec& vfull,
   vec Xty0 = X.t() * (w0 % y);
 
   mat invXtWX0;
+  count_solve(cnt, true);
   if (!inv_sympd_safe(invXtWX0, XtWX0)) return out;
   vec beta_fe = invXtWX0 * Xty0;
   vec r0 = y - X * beta_fe;
@@ -220,10 +206,10 @@ MetaResult fit_one(const mat& Xfull, const vec& yfull, const vec& vfull,
   if (M == FE) {
     tau2 = 0.0;
   } else if (M == DL) {
-    tau2 = tau2_DL(X, y, v);
+    tau2 = tau2_DL(X, w0, invXtWX0, Q0, df);
   } else { // PM; "reml" is not implemented and runs PM (the R wrappers say so)
     bool pm_warn = false;
-    tau2 = tau2_PM(X, y, v, 1e-6, 50, &pm_warn);
+    tau2 = tau2_PM(X, y, v, Q0, 1e-6, 50, &pm_warn, cnt);
     out.pm_nonconverged = pm_warn;
   }
   if (!std::isfinite(tau2) || tau2 < 0.0) tau2 = 0.0;
@@ -236,12 +222,19 @@ MetaResult fit_one(const mat& Xfull, const vec& yfull, const vec& vfull,
   vec beta_hat(p, fill::zeros);
   mat invXtWX;
   for (int it = 0; it < (robust ? robust_iter : 1); ++it) {
-    vec weff = w % aw;
-    mat XwE = X; XwE.each_col() %= sqrt(weff);
-    mat XtWX = XwE.t() * XwE;
-    vec Xty  = X.t() * (weff % y);
-    if (!inv_sympd_safe(invXtWX, XtWX)) { out.ok = false; return out; }
-    beta_hat = invXtWX * Xty;
+    if (it == 0 && tau2 == 0.0) {
+      // weights are exactly w0 (unit robust weights): this is the FE fit
+      beta_hat = beta_fe;
+      invXtWX = invXtWX0;
+    } else {
+      vec weff = w % aw;
+      count_solve(cnt, false);
+      mat XwE = X; XwE.each_col() %= sqrt(weff);
+      mat XtWX = XwE.t() * XwE;
+      vec Xty  = X.t() * (weff % y);
+      if (!inv_sympd_safe(invXtWX, XtWX)) { out.ok = false; return out; }
+      beta_hat = invXtWX * Xty;
+    }
     if (!robust) break;
     // Update robust weights
     vec r = y - X * beta_hat;
@@ -620,4 +613,32 @@ Rcpp::List meta_fit_vcov_cpp(const arma::mat& Y,  // S x P betas
     Rcpp::Named("method") = method,
     Rcpp::Named("robust") = robust
   );
+}
+
+
+// Internal, for tests only: number of weighted least-squares solves per
+// feature, split into fixed-effects solves (weights 1/v) and all solves.
+// Runs the same fit_one() as the exported kernels, serially.
+// [[Rcpp::export]]
+Rcpp::List meta_fit_diag_cpp(const arma::mat& Y, const arma::mat& V,
+                             const arma::mat& X, const std::string method,
+                             const std::string robust,
+                             const double huber_c = 1.345,
+                             const int robust_iter = 2) {
+  int mcode = 0;
+  if (method == "fe") mcode = 0; else if (method == "dl") mcode = 1;
+  else if (method == "pm") mcode = 2; else if (method == "reml") mcode = 3;
+  else Rcpp::stop("Unknown method: %s", method.c_str());
+  const uword P = Y.n_cols;
+  Rcpp::IntegerVector n_fe(P), n_all(P);
+  for (uword j = 0; j < P; ++j) {
+    SolveCount cnt;
+    vec y = Y.col(j);
+    vec v = V.col(j);
+    fit_one(X, y, v, mcode, robust == "huber", huber_c, robust_iter, &cnt);
+    n_fe[j] = cnt.fe;
+    n_all[j] = cnt.total;
+  }
+  return Rcpp::List::create(Rcpp::Named("n_fe_solves") = n_fe,
+                            Rcpp::Named("n_solves") = n_all);
 }

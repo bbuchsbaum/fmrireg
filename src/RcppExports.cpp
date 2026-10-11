@@ -102,6 +102,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// meta_fit_diag_cpp
+Rcpp::List meta_fit_diag_cpp(const arma::mat& Y, const arma::mat& V, const arma::mat& X, const std::string method, const std::string robust, const double huber_c, const int robust_iter);
+RcppExport SEXP _fmrireg_meta_fit_diag_cpp(SEXP YSEXP, SEXP VSEXP, SEXP XSEXP, SEXP methodSEXP, SEXP robustSEXP, SEXP huber_cSEXP, SEXP robust_iterSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type V(VSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type robust(robustSEXP);
+    Rcpp::traits::input_parameter< const double >::type huber_c(huber_cSEXP);
+    Rcpp::traits::input_parameter< const int >::type robust_iter(robust_iterSEXP);
+    rcpp_result_gen = Rcpp::wrap(meta_fit_diag_cpp(Y, V, X, method, robust, huber_c, robust_iter));
+    return rcpp_result_gen;
+END_RCPP
+}
 // ols_t_cpp
 List ols_t_cpp(const arma::mat& Y, const arma::mat& X);
 RcppExport SEXP _fmrireg_ols_t_cpp(SEXP YSEXP, SEXP XSEXP) {
@@ -230,6 +247,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fmrireg_meta_fit_contrasts_cpp", (DL_FUNC) &_fmrireg_meta_fit_contrasts_cpp, 9},
     {"_fmrireg_meta_fit_cov_cpp", (DL_FUNC) &_fmrireg_meta_fit_cov_cpp, 8},
     {"_fmrireg_meta_fit_vcov_cpp", (DL_FUNC) &_fmrireg_meta_fit_vcov_cpp, 9},
+    {"_fmrireg_meta_fit_diag_cpp", (DL_FUNC) &_fmrireg_meta_fit_diag_cpp, 7},
     {"_fmrireg_ols_t_cpp", (DL_FUNC) &_fmrireg_ols_t_cpp, 2},
     {"_fmrireg_welch_t_cpp", (DL_FUNC) &_fmrireg_welch_t_cpp, 2},
     {"_fmrireg_ols_t_vcov_cpp", (DL_FUNC) &_fmrireg_ols_t_vcov_cpp, 3},

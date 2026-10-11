@@ -34,6 +34,10 @@ meta_fit_vcov_cpp <- function(Y, V, X, C, method, robust, huber_c = 1.345, robus
     .Call('_fmrireg_meta_fit_vcov_cpp', PACKAGE = 'fmrireg', Y, V, X, C, method, robust, huber_c, robust_iter, n_threads)
 }
 
+meta_fit_diag_cpp <- function(Y, V, X, method, robust, huber_c = 1.345, robust_iter = 2L) {
+    .Call('_fmrireg_meta_fit_diag_cpp', PACKAGE = 'fmrireg', Y, V, X, method, robust, huber_c, robust_iter)
+}
+
 #' OLS t-test / ANCOVA across features
 #'
 #' Subjects with a non-finite outcome for a feature are dropped from that
