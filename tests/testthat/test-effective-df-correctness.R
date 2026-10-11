@@ -111,14 +111,21 @@ test_that("Satterthwaite handles a rank-deficient design without erroring", {
 
 # -------------------------------------------------------------------- robust --
 
-test_that("robust weights scale the df by their mean", {
+test_that("robust weights give df = sum(w) - p", {
+  # Review 2026-10 (D4): this test previously pinned (n - p) * mean(w) =
+  # 95 * 0.9 = 85.5. With 0/1 weights the WLS residual df is exactly
+  # sum(w) - p = 85 (lm.wfit drops zero-weight rows), the formula CLAUDE.md
+  # documents; the old value was wrong.
   w <- c(rep(1, 90), rep(0, 10))
-  expect_equal(.edf(100, 5, robust_weights = w), 95 * 0.9, tolerance = 1e-10)
+  expect_equal(.edf(100, 5, robust_weights = w), 90 - 5, tolerance = 1e-10)
   # all-ones weights must be a no-op
   expect_equal(.edf(100, 5, robust_weights = rep(1, 100)), 95, tolerance = 1e-10)
 })
 
 test_that("robust and Satterthwaite adjustments compose multiplicatively", {
+  # Review 2026-10 (D4): the robust factor is (sum(w) - p) / (n - p) (it was
+  # mean(w)), so that the composition reduces to sum(w) - p when the base df
+  # is n - p.
   set.seed(15)
   n <- 120L
   X <- .vt_design(n, "er")
@@ -127,7 +134,7 @@ test_that("robust and Satterthwaite adjustments compose multiplicatively", {
   base <- .edf(n, ncol(X), method = "satterthwaite", X = X, resid_cov = V)
   both <- .edf(n, ncol(X), robust_weights = w, method = "satterthwaite",
                X = X, resid_cov = V)
-  expect_equal(both, base * mean(w), tolerance = 1e-10)
+  expect_equal(both, base * (sum(w) - ncol(X)) / (n - ncol(X)), tolerance = 1e-10)
 })
 
 # ------------------------------------------------- calibration (the real gate) --

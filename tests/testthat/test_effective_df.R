@@ -59,7 +59,11 @@ test_that("calculate_effective_df handles edge cases", {
   weights_partial <- c(rep(1, 25), rep(0, 25))
   df_partial <- fmrireg:::calculate_effective_df(50, 5, robust_weights = weights_partial)
   expect_lt(df_partial, 45)  # Less than full df
-  expect_gt(df_partial, 20)  # But accounts for non-zero weights
+  # Review 2026-10 (D4): robust df is sum(w) - p. With 25 unit weights and
+  # 25 zero weights that is 25 - 5 = 20, exactly lm(weights = w)'s residual
+  # df. This previously asserted > 20, encoding the (n - p) * mean(w) = 22.5
+  # formula, which counted half of every zero-weight row.
+  expect_equal(df_partial, 20)
 })
 
 test_that("calculate_sandwich_variance works correctly", {

@@ -215,7 +215,8 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
       ma_coef = res$ma_hat %||% NULL,
       temporal_diagnostics = res$temporal_diagnostics %||% NULL,
       robust_weights = res$robust_weights %||% NULL,
-      covariance_model_basis = res$XtXinv
+      covariance_model_basis = res$XtXinv,
+      rank = res$rank %||% res$proj_final$rank
     )
     
     if (progress) cli::cli_progress_update()
@@ -603,7 +604,8 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
       ar_coef = lapply(seq_len(n_voxels), function(v) as.numeric(phi_voxelwise[, v])),
       robust_weights = if (.fmri_lm_robust_enabled(cfg$robust)) robust_weights_list else NULL,
       voxel_status = voxel_status,
-      covariance_by_voxel = XtXinv_list
+      covariance_by_voxel = XtXinv_list,
+      rank = proj_run_unwhitened$rank
     )
     
     if (progress) cli::cli_progress_update()
@@ -755,7 +757,8 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu,
       robust_weights = robust_weights,
       voxel_status = voxel_status,
       covariance_by_voxel = cres[[1]]$covariance_by_voxel,
-      covariance_model_basis = cres[[1]]$covariance_model_basis
+      covariance_model_basis = cres[[1]]$covariance_model_basis,
+      rank = cres[[1]]$rank
     )
   }
 }

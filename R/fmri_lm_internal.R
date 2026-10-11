@@ -266,6 +266,19 @@ is.formula <- function(x) {
   "ok"
 }
 
+#' Inference df for one voxel
+#'
+#' Without robust weights this is the residual df (whitening already accounts
+#' for AR structure, see `calculate_effective_df()`). With robust weights it is
+#' the single robust formula `.robust_effective_df()`: sum(w) - rank, with the
+#' design rank (not its width) so aliased columns are not subtracted.
+#' @keywords internal
+#' @noRd
+.voxel_inference_df <- function(dfres, rank, robust_weights = NULL) {
+  if (is.null(robust_weights)) return(dfres)
+  .robust_effective_df(robust_weights, rank)
+}
+
 #' Beta statistics when each voxel has its own projection matrix
 #'
 #' Helper for voxelwise AR fitting where every voxel yields a distinct
@@ -298,12 +311,7 @@ beta_stats_matrix_voxelwise <- function(Betas, XtXinv_list, sigma, dfres,
 
     rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
 
-    df_eff <- if (!is.null(rw) || ar_order > 0) {
-      n <- dfres + p
-      calculate_effective_df(n, p, rw, ar_order, method = "simple")
-    } else {
-      dfres
-    }
+    df_eff <- .voxel_inference_df(dfres, attr(XtXinv, "rank") %||% p, rw)
 
     se_vec <- se_scal * sigma[v]
     est_vec <- Betas[, v]
@@ -481,12 +489,7 @@ fit_lm_contrasts_voxelwise_qr <- function(Betas, qr_list, sigma,
       est[v] <- sum(full_l * Betas[, v])
       se[v]  <- sqrt(var_con)
 
-      df_eff <- if (!is.null(rw) || ar_order > 0) {
-        n <- dfres + p
-        calculate_effective_df(n, p, rw, ar_order, method = "simple")
-      } else {
-        dfres
-      }
+      df_eff <- .voxel_inference_df(dfres, qr_v$rank %||% p, rw)
 
       stat[v] <- ifelse(se[v] < .Machine$double.eps^0.5, 0, est[v] / se[v])
       prob[v] <- 2 * pt(-abs(stat[v]), df_eff)
@@ -543,12 +546,7 @@ fit_lm_contrasts_voxelwise_qr <- function(Betas, qr_list, sigma,
       est[v] <- qf / nrow(full_L)
       se[v]  <- sigma[v]^2
 
-      df_eff <- if (!is.null(rw) || ar_order > 0) {
-        n <- dfres + p
-        calculate_effective_df(n, p, rw, ar_order, method = "simple")
-      } else {
-        dfres
-      }
+      df_eff <- .voxel_inference_df(dfres, qr_v$rank %||% p, rw)
 
       Fval <- ifelse(abs(se[v]) < .Machine$double.eps^0.5 || is.nan(qf),
                       NaN, est[v] / se[v])

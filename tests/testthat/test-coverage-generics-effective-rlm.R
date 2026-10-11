@@ -52,34 +52,22 @@ test_that("with_package errors when dependency missing; construct/design_env gen
   expect_true(is.function(chunkwise_lm))
 })
 
-test_that("satterthwaite_df / kenward_roger_df / residual_effective_df", {
-  df_s <- fmrireg:::satterthwaite_df(c(2, 3, 4), c(10, 20, 30))
-  expect_true(is.finite(df_s) && df_s > 0)
-
-  expect_warning(kr <- fmrireg:::kenward_roger_df(list()), "not implemented")
-  expect_true(is.na(kr))
-
-  expect_equal(
-    fmrireg:::residual_effective_df(list(effective_df = 42), "ols"),
-    42
-  )
-  expect_equal(
-    fmrireg:::residual_effective_df(list(dfres = 30, rank = 3), "ar"),
-    30
-  )
-  expect_equal(
-    fmrireg:::residual_effective_df(list(dfres = 25), "ols"),
-    25
-  )
-  expect_warning(
-    na_df <- fmrireg:::residual_effective_df(list(), "ols"),
-    "No df information"
-  )
-  expect_true(is.na(na_df))
-
-  # Default method branch in compute_effective_df
+test_that("effective df: the live implementation covers the residual cases", {
+  # Review 2026-10 (D4): satterthwaite_df(), kenward_roger_df(),
+  # residual_effective_df() and compute_effective_df() were unreachable
+  # duplicates (R/fmri_lm_effective_df.R, deleted). Their cases are covered
+  # by the live calculate_effective_df() / .robust_effective_df().
   X <- cbind(1, rnorm(20))
-  expect_equal(fmrireg:::compute_effective_df(list(), X, method = "unknown"), 18)
+  expect_equal(fmrireg:::calculate_effective_df(20, 2), 18)
+  expect_equal(fmrireg:::calculate_effective_df(20, 2, ar_order = 1), 18)
+  expect_equal(fmrireg:::calculate_effective_df(20, 2,
+                                                robust_weights = rep(1, 20)), 18)
+  expect_equal(fmrireg:::.robust_effective_df(rep(0.5, 20), rank = 2), 8)
+  df_s <- fmrireg:::calculate_effective_df(
+    20, 2, method = "satterthwaite", X = X,
+    resid_cov = 0.5^abs(outer(1:20, 1:20, "-"))
+  )
+  expect_true(is.finite(df_s) && df_s > 0 && df_s < 18)
 })
 
 test_that("multiresponse_rlm fits per-response robust models", {

@@ -280,30 +280,3 @@ compute_standard_errors <- function(result, glm_ctx) {
   
   result
 }
-
-#' Compute effective degrees of freedom for robust models
-#'
-#' @description
-#' Adjusts degrees of freedom based on robust weights using
-#' the trace of the hat matrix.
-#'
-#' @param X Design matrix
-#' @param weights Robust weights
-#' @param XtXinv Weighted (X'WX)^-1 matrix
-#'
-#' @return Effective degrees of freedom
-#' @keywords internal
-#' @noRd
-compute_robust_effective_df <- function(X, weights, XtXinv) {
-  # Hat matrix trace for weighted regression
-  # tr(H) = tr(X(X'WX)^-1 X'W)
-  # Efficient computation without forming diagonal matrix
-  sqrt_w <- sqrt(weights)
-  Xw <- X * sqrt_w
-  XtWX <- crossprod(Xw)
-  XtWX_inv <- chol2inv(chol(XtWX))
-  # Compute trace without forming full hat matrix
-  # tr(H) = tr(X (X'WX)^-1 X'W) = sum of diagonal elements
-  edf <- sum((Xw %*% XtWX_inv) * Xw)
-  as.numeric(edf)
-}

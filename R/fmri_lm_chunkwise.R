@@ -360,6 +360,11 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
   } else {
     proj$XtXinv
   }
+  out$rank <- if (exists("precomp", inherits = FALSE)) {
+    precomp$proj_global$rank
+  } else {
+    proj$rank
+  }
   if (exists("precomp", inherits = FALSE) && .fmri_lm_robust_enabled(cfg$robust)) {
     out$robust_weights <- unlist(
       lapply(precomp$run_info, `[[`, "weights"), use.names = FALSE
