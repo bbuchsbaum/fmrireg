@@ -81,8 +81,8 @@ cpp_srht_adjoint <- function(B, rows, signs, perm, scale, n_threads = 0L) {
     .Call('_fmrireg_cpp_srht_adjoint', PACKAGE = 'fmrireg', B, rows, signs, perm, scale, n_threads)
 }
 
-group_pi0_counts_cpp <- function(p, group, tau) {
-    .Call('_fmrireg_group_pi0_counts_cpp', PACKAGE = 'fmrireg', p, group, tau)
+group_pi0_counts_cpp <- function(p, group, tau, G) {
+    .Call('_fmrireg_group_pi0_counts_cpp', PACKAGE = 'fmrireg', p, group, tau, G)
 }
 
 pi0_smooth_cpp <- function(pi0_raw, neighbors, lambda, iters) {

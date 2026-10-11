@@ -4,44 +4,17 @@
 
 #include <RcppArmadillo.h>
 #include <algorithm>
-#include <unordered_map>
 
 using namespace Rcpp;
 using namespace arma;
 
-// Ensure groups are 1..G (compress factor/integers) ---------------------------
-static inline IntegerVector compress_groups(const IntegerVector& g, int& G) {
-  int n = g.size();
-  std::vector<int> uniq;
-  uniq.reserve(n);
-  std::unordered_map<int,int> map;
-  IntegerVector out(n);
-  int next = 1;
-  
-  for (int i = 0; i < n; ++i) {
-    // Handle NA values
-    if (IntegerVector::is_na(g[i])) {
-      out[i] = NA_INTEGER;
-      continue;
-    }
-    
-    int gi = g[i];
-    auto it = map.find(gi);
-    if (it == map.end()) {
-      map.emplace(gi, next);
-      out[i] = next;
-      ++next;
-    } else {
-      out[i] = it->second;
-    }
-  }
-  G = next - 1;
-  return out;
-}
-
 // Groupwise pi0 counts (#p>tau) and sizes ------------------------------------
+// `group` must already hold the authoritative 1..G numbering (assigned in R
+// from sorted labels / factor levels) and `G` is the number of groups, so
+// that pi0, neighbor smoothing and feature weights all share one indexing.
+// NA groups are skipped.
 // [[Rcpp::export]]
-List group_pi0_counts_cpp(NumericVector p, IntegerVector group, double tau) {
+List group_pi0_counts_cpp(NumericVector p, IntegerVector group, double tau, int G) {
   int n = p.size();
   if (group.size() != n) {
     stop("group length must match p length.");
@@ -52,10 +25,7 @@ List group_pi0_counts_cpp(NumericVector p, IntegerVector group, double tau) {
     stop("tau must be in (0, 1)");
   }
   
-  int G;
-  IntegerVector g = compress_groups(group, G);
-  
-  if (G == 0) {
+  if (G < 1) {
     stop("No valid groups found");
   }
   
@@ -63,10 +33,12 @@ List group_pi0_counts_cpp(NumericVector p, IntegerVector group, double tau) {
   IntegerVector tail_g(G);    // # p > tau
   
   for (int i = 0; i < n; ++i) {
-    if (IntegerVector::is_na(g[i])) continue;
+    if (IntegerVector::is_na(group[i])) continue;
     
-    int idx = g[i] - 1;
-    if (idx < 0 || idx >= G) continue;
+    int idx = group[i] - 1;
+    if (idx < 0 || idx >= G) {
+      stop("group ids must lie in 1..G");
+    }
     
     ++m_g[idx];
     if (R_finite(p[i]) && p[i] > tau) {
@@ -94,8 +66,7 @@ List group_pi0_counts_cpp(NumericVector p, IntegerVector group, double tau) {
     _["G"] = G,
     _["m_g"] = m_g,
     _["tail_g"] = tail_g,
-    _["pi0_raw"] = pi0_raw,
-    _["groups"] = g
+    _["pi0_raw"] = pi0_raw
   );
 }
 
