@@ -45,42 +45,6 @@ test_that("fit_Fcontrasts covers happy and aliased non-estimable paths", {
   expect_true(inherits(out_d, "error") || is.list(out_d))
 })
 
-test_that("store_voxel_contrasts writes t and F into initialized storage", {
-  set.seed(103)
-  n <- 36L
-  p <- 3L
-  X <- cbind(1, rnorm(n), rnorm(n))
-  colnames(X) <- c("(Intercept)", "A", "B")
-  beta <- c(0.2, 1.0, -0.5)
-  qr_x <- qr(X)
-  XtXinv <- chol2inv(qr.R(qr_x))
-  sigma_w <- 0.4
-
-  conlist <- list(A_vs_B = structure(c(1, -1), colind = c(2L, 3L)))
-  fconlist <- list(main = structure(diag(2), colind = c(2L, 3L)))
-  storage <- fmrireg:::initialize_contrast_storage(conlist, fconlist, n_voxels = 3L)
-
-  stored <- fmrireg:::store_voxel_contrasts(
-    storage, voxel_index = 2L, qr_or_XtXinv = XtXinv,
-    beta_w = beta, sigma_w = sigma_w, conlist = conlist, fconlist = fconlist,
-    dfres = n - p
-  )
-  expect_true(is.finite(stored$A_vs_B$estimate[2]) || is.na(stored$A_vs_B$estimate[2]))
-  expect_true(!is.null(stored$main$stat[2]))
-
-  # QR object path
-  stored2 <- fmrireg:::store_voxel_contrasts(
-    storage, voxel_index = 1L, qr_or_XtXinv = qr_x,
-    beta_w = beta, sigma_w = sigma_w, conlist = conlist, fconlist = fconlist,
-    dfres = n - p
-  )
-  expect_true(is.list(stored2))
-
-  formatted <- fmrireg:::format_contrast_results(stored2, dfres = n - p)
-  expect_true(is.list(formatted))
-  expect_true(length(formatted) >= 1L)
-})
-
 test_that("spatial_fdr_fmri_meta covers coef name lookup and per-voxel groups", {
   skip_if_not_installed("neuroim2")
   set.seed(104)

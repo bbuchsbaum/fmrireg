@@ -1309,7 +1309,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
       data_env_run[[".y"]] <- rep(0, n_time_run)
       X_run <- model.matrix(form, data_env_run)
       proj_run <- .fast_preproject(X_run)
-      Y_run <- as.matrix(rch$data)
+      Y_run <- as.matrix(.chunk_data(rch))
       ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
       resid_chunks[[ri]] <- Y_run - ols$fitted
       design_chunks[[ri]] <- X_run
@@ -1344,7 +1344,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
       data_env_run[[".y"]] <- rep(0, n_time_run)
       X_run <- model.matrix(form, data_env_run)
       proj_run <- .fast_preproject(X_run)
-      Y_run <- as.matrix(rch$data)
+      Y_run <- as.matrix(.chunk_data(rch))
       ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
       row_med_chunks[[ri]] <- matrixStats::rowMedians(abs(Y_run - ols$fitted))
     }
@@ -1713,6 +1713,8 @@ pull_stat <- function(x, type, element) {
 #' @return A list containing contrasts, beta statistics, and the fitted model.
 #' @keywords internal
 fit_lm_contrasts <- function(fit, conlist, fcon, vnames, se = TRUE) {
+  # One (X'X)^-1 for the model, shared by every contrast and the beta table.
+  cov.unscaled <- .lm_cov_unscaled(fit, varnames = vnames)
   conres <- if (!is.null(conlist)) {
     ret <- lapply(conlist, function(con) {
       # Extract colind from the contrast object's attributes
@@ -1723,7 +1725,7 @@ fit_lm_contrasts <- function(fit, conlist, fcon, vnames, se = TRUE) {
           con$name %||% "unnamed"
         ), call. = FALSE)
       }
-      estimate_contrast(con, fit, colind)
+      estimate_contrast(con, fit, colind, cov.unscaled = cov.unscaled)
     })
     names(ret) <- sapply(conlist, function(x) x$name %||% "unnamed")
     ret
@@ -1731,7 +1733,7 @@ fit_lm_contrasts <- function(fit, conlist, fcon, vnames, se = TRUE) {
     list()
   }
   
-  bstats <- beta_stats(fit, vnames, se = se)
+  bstats <- beta_stats(fit, vnames, se = se, cov.unscaled = cov.unscaled)
   list(contrasts = conres, bstats = bstats, fit = fit)
 }
 

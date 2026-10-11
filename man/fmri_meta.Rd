@@ -30,7 +30,9 @@ Use ~ 1 + group for group comparisons, or include continuous covariates.}
 \item "fe": Fixed-effects (inverse variance weighted)
 \item "pm": Paule-Mandel random-effects (default, good for whole-brain)
 \item "dl": DerSimonian-Laird random-effects
-\item "reml": Restricted maximum likelihood random-effects
+\item "reml": Not implemented. Accepted for backward compatibility; it
+runs the Paule-Mandel estimator, says so with a message, and the fit
+records \code{method = "pm"}.
 }}
 
 \item{robust}{Character string specifying robust estimation:
@@ -42,14 +44,23 @@ Use ~ 1 + group for group comparisons, or include continuous covariates.}
 
 \item{weights}{Character string specifying weighting scheme:
 \itemize{
-\item "ivw": Inverse variance weighting (default)
+\item "ivw": Inverse variance weighting (default). The subject-level
+variances are taken as known and \code{method} chooses the
+between-subject variance estimator.
 \item "equal": Equal weights for all subjects
 \item "custom": User-provided weights (must supply weights argument)
-}}
+}
+"equal" and "custom" weights are \emph{relative}: the model is weighted
+least squares, \eqn{Var(y_i) = \sigma^2 / w_i}, with the residual scale
+\eqn{\sigma^2} estimated per feature (as \code{lm(weights = w)} does; equal
+weights give the one-sample / OLS group t-statistic). The subject-level
+standard errors and \code{method} are then not used, and \code{tau2},
+\code{Q} and \code{I2} are \code{NA}.}
 
-\item{weights_custom}{Numeric vector or matrix of custom weights (required if
-\code{weights = "custom"}). If a vector, length must equal the number of subjects.
-If a matrix, it must be subjects x features.}
+\item{weights_custom}{Numeric vector or matrix of positive custom weights
+(required if \code{weights = "custom"}). If a vector, length must equal the
+number of subjects. If a matrix, it must be subjects x features (analysed
+voxels or ROIs).}
 
 \item{combine}{For t-statistic-only data, combination method ("stouffer",
 "fisher", or "lancaster"). Stouffer combines z-scores and supports
@@ -62,8 +73,10 @@ per-subject degrees of freedom.}
 vector is provided, its names must match the column names of the design matrix X. A matrix
 should have columns corresponding to predictors and rows corresponding to contrasts.}
 
-\item{return_cov}{Optional. If set to "tri", returns the packed upper-triangular Var(beta)
-per feature under \verb{$cov} to enable exact post-hoc contrasts via \code{contrast()}.}
+\item{return_cov}{Optional; kept for backward compatibility. The packed
+upper-triangular Var(beta) per feature is now always returned under
+\verb{$cov} (for subject-level effect data) so that \code{contrast()} gives exact
+standard errors.}
 
 \item{chunk_size}{Number of voxels to process at once (default: 10000)}
 

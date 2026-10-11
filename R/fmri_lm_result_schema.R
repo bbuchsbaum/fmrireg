@@ -42,7 +42,7 @@ empty_contrast_table <- function() {
     estimate <- payload$estimate[[1L]]
     return(if (is.matrix(estimate)) nrow(estimate) else length(estimate))
   }
-  length(result$sigma %||% result$resvar %||% result$rss)
+  length(result[["sigma"]] %||% result[["resvar"]] %||% result[["rss"]])
 }
 
 .fmri_lm_nominal_df <- function(result) {
@@ -53,14 +53,23 @@ empty_contrast_table <- function() {
   as.numeric(df %||% NA_real_)
 }
 
-.fmri_lm_df_from_weights <- function(weights, nominal, nvox) {
+#' Inference df of a robust fit
+#'
+#' Uses the single robust formula `.robust_effective_df()`: sum(w) - rank.
+#' `rank` is the fitted design's rank as reported by the engine; when it is
+#' absent it is recovered from the residual df, which every robust path
+#' reports as (number of non-zero weights) - rank.
+#' @keywords internal
+#' @noRd
+.fmri_lm_df_from_weights <- function(weights, nominal, nvox, rank = NULL) {
   if (is.null(weights) || !is.finite(nominal)) return(rep(nominal, nvox))
   adjust <- function(w) {
     if (is.null(w)) return(nominal)
     w <- as.numeric(w)
     w <- w[is.finite(w)]
     if (!length(w)) return(1)
-    max(nominal * sum(w) / length(w), 1)
+    r <- rank %||% (sum(w > 0) - nominal)
+    .robust_effective_df(w, r)
   }
   if (is.numeric(weights)) return(rep(adjust(weights), nvox))
   if (is.list(weights) && length(weights) == nvox &&
@@ -100,7 +109,7 @@ empty_contrast_table <- function() {
   nvox <- .fmri_lm_result_nvox(result)
   nominal <- .fmri_lm_nominal_df(result)
   df_inference <- .fmri_lm_df_from_weights(
-    result$robust_weights, nominal = nominal, nvox = nvox
+    result$robust_weights, nominal = nominal, nvox = nvox, rank = result$rank
   )
   if (inherits(result$variance_model, "fmri_lm_variance_model") &&
       length(result$variance_model$df_inference)) {
@@ -132,6 +141,18 @@ empty_contrast_table <- function() {
   if (is.null(scale) && !is.null(payload) && length(payload$sigma)) {
     scale <- as.numeric(payload$sigma[[1L]])^2
   }
+  if (identical(covariance_scope, "voxel") && is.list(covariance) &&
+      identical(cfg$variance$method, "model") && !is.null(scale) &&
+      length(covariance) == nvox) {
+    # Per-voxel model covariances are reported on the data scale (as the HAC
+    # and sandwich paths report theirs): each voxel's unscaled (X'X)^-1 times
+    # its residual variance.
+    scale_v <- if (length(scale) == 1L) rep(scale, nvox) else as.numeric(scale)
+    covariance <- lapply(seq_len(nvox), function(v) {
+      cv <- covariance[[v]]
+      if (is.null(cv)) NULL else cv * scale_v[v]
+    })
+  }
   if (is.null(result$rdf)) result$rdf <- nominal
   if (is.null(result$resvar) && !is.null(scale)) result$resvar <- scale
   if (is.null(result$sigma) && !is.null(scale)) result$sigma <- sqrt(pmax(scale, 0))
@@ -157,13 +178,12 @@ empty_contrast_table <- function() {
              call. = FALSE)
       }
       X <- design_matrix(model)
-      Y <- as.matrix(.dset_data_matrix(dataset))
+      Y <- as.matrix(.dset_read(dataset))
       estimate <- as.matrix(payload$estimate[[1L]])
-      run_chunks <- .dset_run_chunks(dataset)
       context <- list(
         X = X,
         residuals = Y - X %*% t(estimate),
-        runs = lapply(run_chunks, `[[`, "row_ind"),
+        runs = .dset_run_rows(dataset),
         censor = NULL
       )
     }

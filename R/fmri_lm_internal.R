@@ -68,14 +68,23 @@ is.formula <- function(x) {
 #' Fast Pre-projection of Design Matrix
 #'
 #' @description
-#' Computes the projection matrix components needed for fast least squares.
-#' This includes the QR decomposition and (X'X)^-1.
+#' Computes the projection components needed for fast least squares: the
+#' tolerance-aware QR decomposition, (X'X)^-1 and the residual df.
+#'
+#' The p x n pseudo-inverse is *not* formed here: building it costs an n x n
+#' solve, and the solver never needs it (betas and RSS come from one
+#' `qr.qty()` pass in `solve_glm_core()`). Callers that do need it read
+#' `proj$Pinv`, which the `$` method for `fmri_preproject` computes on demand
+#' from the stored QR (`.preproject_pinv()`). Only `$` is lazy:
+#' `proj[["Pinv"]]` is `NULL` unless the SVD fallback stored it eagerly.
 #'
 #' @param X Design matrix
-#' @return List containing:
+#' @param tol Rank tolerance for the LINPACK QR.
+#' @return An `fmri_preproject` list containing:
 #'   - qr: QR decomposition of X
-#'   - XtXinv: (X'X)^-1 matrix
-#'   - dfres: Residual degrees of freedom
+#'   - XtXinv: (X'X)^-1 matrix (zero rows/columns for aliased coefficients)
+#'   - dfres: Residual degrees of freedom (n - rank)
+#'   - Pinv: pseudo-inverse, computed on `$` access
 #' @keywords internal
 #' @noRd
 .fast_preproject <- function(X, tol = 1e-7) {
@@ -110,34 +119,19 @@ is.formula <- function(x) {
     warning(.rank_deficiency_message(rank, p, aliased, colnames(X)), call. = FALSE)
   }
   
-  # Use numerically stable decompositions
+  # Pinv stays NULL (computed lazily from the QR) unless the SVD fallback
+  # below has to produce it.
+  Pinv <- NULL
   if (rank > 0L) {
-    qr_based <- tryCatch({
+    XtXinv <- tryCatch({
       R <- qr.R(qr_decomp)[seq_len(rank), seq_len(rank), drop = FALSE]
       Rinv <- backsolve(R, diag(rank))
-      XtXinv_pivot <- tcrossprod(Rinv)
-      XtXinv <- matrix(0, nrow = p, ncol = p)
-      XtXinv[estimable, estimable] <- XtXinv_pivot
-
-      Pinv <- qr.coef(qr_decomp, diag(n))
-      if (is.null(dim(Pinv))) {
-        Pinv <- matrix(Pinv, nrow = p)
-      }
-      Pinv[!is.finite(Pinv)] <- 0
-      if (length(aliased) > 0L) {
-        Pinv[aliased, ] <- 0
-      }
-
-      list(
-        XtXinv = XtXinv,
-        Pinv = Pinv
-      )
+      out <- matrix(0, nrow = p, ncol = p)
+      out[estimable, estimable] <- tcrossprod(Rinv)
+      out
     }, error = function(e) NULL)
 
-    if (!is.null(qr_based)) {
-      XtXinv <- qr_based$XtXinv
-      Pinv <- qr_based$Pinv
-    } else {
+    if (is.null(XtXinv)) {
       X_est <- X[, estimable, drop = FALSE]
       svd_result <- svd(X_est)
       d <- svd_result$d
@@ -160,21 +154,74 @@ is.formula <- function(x) {
 
   if (!is.null(colnames(X))) {
     dimnames(XtXinv) <- list(colnames(X), colnames(X))
-    rownames(Pinv) <- colnames(X)
+    if (!is.null(Pinv)) rownames(Pinv) <- colnames(X)
   }
 
   # Return everything needed for fast operations
-  list(
-    qr = qr_decomp,
-    Pinv = .attach_rank_attrs(Pinv, rank_info),
-    XtXinv = .attach_rank_attrs(XtXinv, rank_info),
-    dfres = n - rank,
-    rank = rank,
-    is_full_rank = (rank == p),
-    estimable = estimable,
-    aliased = aliased,
-    rank_tolerance = tol
+  structure(
+    list(
+      qr = qr_decomp,
+      Pinv = if (is.null(Pinv)) NULL else .attach_rank_attrs(Pinv, rank_info),
+      XtXinv = .attach_rank_attrs(XtXinv, rank_info),
+      dfres = n - rank,
+      rank = rank,
+      is_full_rank = (rank == p),
+      estimable = estimable,
+      aliased = aliased,
+      rank_tolerance = tol,
+      varnames = colnames(X)
+    ),
+    class = c("fmri_preproject", "list")
   )
+}
+
+#' Pseudo-inverse of a pre-projected design
+#'
+#' Computes the p x n matrix P with P %*% Y equal to the least-squares
+#' coefficients, as R^-1 Q1' from the stored QR (rows of aliased
+#' coefficients are zero). This avoids the n x n identity solve that
+#' `qr.coef(qr, diag(n))` performs.
+#' @keywords internal
+#' @noRd
+.preproject_pinv <- function(proj) {
+  eager <- .subset2(proj, "Pinv")
+  if (!is.null(eager)) return(eager)
+  qrx <- .subset2(proj, "qr")
+  rank <- .subset2(proj, "rank")
+  estimable <- .subset2(proj, "estimable")
+  n <- nrow(qrx$qr)
+  p <- ncol(qrx$qr)
+  Pinv <- matrix(0, nrow = p, ncol = n)
+  if (rank > 0L) {
+    keep <- seq_len(rank)
+    Q1 <- qr.Q(qrx)[, keep, drop = FALSE]
+    R <- qr.R(qrx)[keep, keep, drop = FALSE]
+    Pinv[estimable, ] <- backsolve(R, t(Q1))
+  }
+  varnames <- .subset2(proj, "varnames")
+  if (!is.null(varnames)) rownames(Pinv) <- varnames
+  attr(Pinv, "rank") <- rank
+  attr(Pinv, "is_full_rank") <- .subset2(proj, "is_full_rank")
+  attr(Pinv, "estimable") <- estimable
+  attr(Pinv, "aliased") <- .subset2(proj, "aliased")
+  attr(Pinv, "rank_tolerance") <- .subset2(proj, "rank_tolerance")
+  Pinv
+}
+
+#' Lazy field access for pre-projected designs
+#'
+#' `proj$Pinv` computes the pseudo-inverse on demand; every other field is
+#' returned as stored (exact matching).
+#' @param x An `fmri_preproject` object.
+#' @param name Field name.
+#' @keywords internal
+#' @noRd
+#' @exportS3Method base::`$`
+`$.fmri_preproject` <- function(x, name) {
+  if (identical(name, "Pinv")) {
+    return(.preproject_pinv(x))
+  }
+  .subset2(x, name)
 }
 
 #' Fast Matrix-based Linear Model
@@ -219,6 +266,19 @@ is.formula <- function(x) {
   "ok"
 }
 
+#' Inference df for one voxel
+#'
+#' Without robust weights this is the residual df (whitening already accounts
+#' for AR structure, see `calculate_effective_df()`). With robust weights it is
+#' the single robust formula `.robust_effective_df()`: sum(w) - rank, with the
+#' design rank (not its width) so aliased columns are not subtracted.
+#' @keywords internal
+#' @noRd
+.voxel_inference_df <- function(dfres, rank, robust_weights = NULL) {
+  if (is.null(robust_weights)) return(dfres)
+  .robust_effective_df(robust_weights, rank)
+}
+
 #' Beta statistics when each voxel has its own projection matrix
 #'
 #' Helper for voxelwise AR fitting where every voxel yields a distinct
@@ -251,12 +311,7 @@ beta_stats_matrix_voxelwise <- function(Betas, XtXinv_list, sigma, dfres,
 
     rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
 
-    df_eff <- if (!is.null(rw) || ar_order > 0) {
-      n <- dfres + p
-      calculate_effective_df(n, p, rw, ar_order, method = "simple")
-    } else {
-      dfres
-    }
+    df_eff <- .voxel_inference_df(dfres, attr(XtXinv, "rank") %||% p, rw)
 
     se_vec <- se_scal * sigma[v]
     est_vec <- Betas[, v]
@@ -386,367 +441,4 @@ fit_lm_contrasts_voxelwise <- function(Betas, sigma2, XtXinv_list,
   }
 
   results
-}
-
-#' Contrast statistics using stored QR decompositions
-#'
-#' Computes voxelwise t and F contrasts when each voxel stores only the
-#' QR decomposition of its design matrix. This avoids keeping full
-#' \code{XtXinv} matrices in memory.
-#'
-#' @param Betas p x V matrix of regression coefficients.
-#' @param qr_list List of QR objects, one per voxel.
-#' @param sigma Numeric vector of residual standard deviations per voxel.
-#' @param conlist Named list of t contrast vectors (with \code{colind} attribute).
-#' @param fconlist Named list of F contrast matrices (with \code{colind} attribute).
-#' @param dfres Residual degrees of freedom.
-#' @param robust_weights_list Optional list of robust weights per voxel.
-#' @param ar_order AR model order used for effective df calculation.
-#' @return List of tibbles, one per contrast.
-#' @keywords internal
-#' @noRd
-fit_lm_contrasts_voxelwise_qr <- function(Betas, qr_list, sigma,
-                                          conlist, fconlist, dfres,
-                                          robust_weights_list = NULL,
-                                          ar_order = 0) {
-  p <- nrow(Betas)
-  V <- ncol(Betas)
-
-  results <- list()
-
-  for (nm in names(conlist)) {
-    l <- conlist[[nm]]
-    colind <- attr(l, "colind")
-    full_l <- numeric(p)
-    full_l[colind] <- l
-
-    est <- se <- stat <- prob <- sigma_out <- numeric(V)
-
-    for (v in seq_len(V)) {
-      qr_v <- qr_list[[v]]
-      rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
-
-      # For contrast variance: Var(c'β) = c' (X'X)^{-1} c σ² = ||R^{-1} c||² σ²
-      # where R is the upper triangular matrix from QR decomposition
-      Rinv_c <- backsolve(qr.R(qr_v), full_l, upper.tri = TRUE)
-      var_con <- sum(Rinv_c^2) * sigma[v]^2
-
-      est[v] <- sum(full_l * Betas[, v])
-      se[v]  <- sqrt(var_con)
-
-      df_eff <- if (!is.null(rw) || ar_order > 0) {
-        n <- dfres + p
-        calculate_effective_df(n, p, rw, ar_order, method = "simple")
-      } else {
-        dfres
-      }
-
-      stat[v] <- ifelse(se[v] < .Machine$double.eps^0.5, 0, est[v] / se[v])
-      prob[v] <- 2 * pt(-abs(stat[v]), df_eff)
-      sigma_out[v] <- sigma[v]
-    }
-
-    results[[nm]] <- tibble::tibble(
-      type = "contrast",
-      name = nm,
-      stat_type = "tstat",
-      df.residual = dfres,
-      conmat = list(l),
-      colind = list(colind),
-      data = list(tibble::tibble(
-        estimate = est,
-        se = se,
-        stat = stat,
-        prob = prob,
-        sigma = sigma_out
-      ))
-    )
-  }
-
-  for (nm in names(fconlist)) {
-    L <- fconlist[[nm]]
-    colind <- attr(L, "colind")
-    # Normalise to hypotheses-in-rows so cell-oriented (e.g. oneway, k x (k-1))
-    # weights build the correct r x p matrix; see .orient_fcontrast().
-    Cw <- .orient_fcontrast(L, colind)
-    full_L <- matrix(0, nrow = nrow(Cw), ncol = p)
-    full_L[, colind] <- Cw
-
-    est <- se <- stat <- prob <- numeric(V)
-
-    for (v in seq_len(V)) {
-      qr_v <- qr_list[[v]]
-      rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
-
-      RinvLt <- backsolve(qr.R(qr_v), t(full_L), upper.tri = TRUE)
-      M <- crossprod(RinvLt)
-      Cinv <- tryCatch(solve(M), error = function(e) {
-        warning("Singular matrix in F contrast computation")
-        matrix(NaN, nrow(M), ncol(M))
-      })
-
-      LB <- full_L %*% Betas[, v]
-
-      qf <- if (any(is.nan(Cinv))) {
-        NaN
-      } else {
-        drop(t(LB) %*% Cinv %*% LB)
-      }
-
-      est[v] <- qf / nrow(full_L)
-      se[v]  <- sigma[v]^2
-
-      df_eff <- if (!is.null(rw) || ar_order > 0) {
-        n <- dfres + p
-        calculate_effective_df(n, p, rw, ar_order, method = "simple")
-      } else {
-        dfres
-      }
-
-      Fval <- ifelse(abs(se[v]) < .Machine$double.eps^0.5 || is.nan(qf),
-                      NaN, est[v] / se[v])
-      stat[v] <- Fval
-      prob[v] <- pf(Fval, nrow(full_L), df_eff, lower.tail = FALSE)
-    }
-
-    results[[nm]] <- tibble::tibble(
-      type = "Fcontrast",
-      name = nm,
-      stat_type = "Fstat",
-      df.residual = dfres,
-      conmat = list(L),
-      colind = list(colind),
-      data = list(tibble::tibble(
-        estimate = est,
-        se = se,
-        stat = stat,
-        prob = prob
-      ))
-    )
-  }
-
-  results
-}
-
-#' Initialize storage for voxelwise contrast results
-#'
-#' Creates pre-allocated numeric vectors for each contrast so that results can
-#' be filled in incrementally while processing voxels in chunks.
-#'
-#' @param conlist Named list of t-contrast vectors.
-#' @param fconlist Named list of F-contrast matrices.
-#' @param n_voxels Number of voxels to allocate storage for.
-#' @keywords internal
-#' @noRd
-initialize_contrast_storage <- function(conlist, fconlist, n_voxels) {
-  storage <- list()
-
-  for (nm in names(conlist)) {
-    l <- conlist[[nm]]
-    storage[[nm]] <- list(
-      type = "contrast",
-      stat_type = "tstat",
-      conmat = l,
-      colind = attr(l, "colind"),
-      estimate = numeric(n_voxels),
-      se = numeric(n_voxels),
-      stat = numeric(n_voxels),
-      prob = numeric(n_voxels),
-      sigma = numeric(n_voxels)
-    )
-  }
-
-  for (nm in names(fconlist)) {
-    L <- fconlist[[nm]]
-    storage[[nm]] <- list(
-      type = "Fcontrast",
-      stat_type = "Fstat",
-      conmat = L,
-      colind = attr(L, "colind"),
-      estimate = numeric(n_voxels),
-      se = numeric(n_voxels),
-      stat = numeric(n_voxels),
-      prob = numeric(n_voxels)
-    )
-  }
-
-  storage
-}
-
-#' Store contrast results for a single voxel
-#'
-#' Helper used by `fit_lm_contrasts_voxelwise_chunked()` to compute and store
-#' contrast statistics for one voxel using its QR decomposition.
-#'
-#' @param storage Contrast storage list from `initialize_contrast_storage()`.
-#' @param voxel_index Integer voxel index being processed.
-#' @param qr_or_XtXinv QR decomposition or precomputed XtX inverse for this voxel.
-#' @param beta_w Regression coefficients for this voxel.
-#' @param sigma_w Residual standard deviation for this voxel.
-#' @param conlist Named list of t-contrasts.
-#' @param fconlist Named list of F-contrasts.
-#' @param dfres Residual degrees of freedom.
-#' @param ar_order AR model order.
-#' @keywords internal
-#' @noRd
-store_voxel_contrasts <- function(storage, voxel_index, qr_or_XtXinv, beta_w,
-                                  sigma_w, conlist, fconlist, dfres,
-                                  ar_order = 0, robust_weights = NULL) {
-  XtXinv <- if (is.matrix(qr_or_XtXinv)) {
-    qr_or_XtXinv
-  } else {
-    chol2inv(qr.R(qr_or_XtXinv))
-  }
-  Bv <- matrix(beta_w, ncol = 1)
-
-  for (nm in names(conlist)) {
-    l <- conlist[[nm]]
-    colind <- attr(l, "colind")
-    full_l <- matrix(0, nrow = 1, ncol = nrow(XtXinv))
-    full_l[, colind] <- l
-
-    res <- .fast_t_contrast(Bv, sigma_w^2, XtXinv, full_l, dfres,
-                            robust_weights = robust_weights,
-                            ar_order = ar_order)
-
-    storage[[nm]]$estimate[voxel_index] <- res$estimate
-    storage[[nm]]$se[voxel_index] <- res$se
-    storage[[nm]]$stat[voxel_index] <- res$stat
-    storage[[nm]]$prob[voxel_index] <- res$prob
-    storage[[nm]]$sigma[voxel_index] <- res$sigma
-  }
-
-  for (nm in names(fconlist)) {
-    L <- fconlist[[nm]]
-    colind <- attr(L, "colind")
-    # Normalise to hypotheses-in-rows so cell-oriented (e.g. oneway, k x (k-1))
-    # weights build the correct r x p matrix; see .orient_fcontrast().
-    Cw <- .orient_fcontrast(L, colind)
-    full_L <- matrix(0, nrow = nrow(Cw), ncol = nrow(XtXinv))
-    full_L[, colind] <- Cw
-
-    res <- .fast_F_contrast(Bv, sigma_w^2, XtXinv, full_L, dfres,
-                            robust_weights = robust_weights,
-                            ar_order = ar_order)
-
-    storage[[nm]]$estimate[voxel_index] <- res$estimate
-    storage[[nm]]$se[voxel_index] <- res$se
-    storage[[nm]]$stat[voxel_index] <- res$stat
-    storage[[nm]]$prob[voxel_index] <- res$prob
-  }
-
-  storage
-}
-
-#' Format contrast storage into result tibbles
-#'
-#' Converts the contrast storage structure returned by
-#' `initialize_contrast_storage()` into the list-of-tibbles format used by other
-#' contrast functions.
-#'
-#' @param storage List returned by `initialize_contrast_storage()`.
-#' @param dfres Residual degrees of freedom.
-#' @keywords internal
-#' @noRd
-format_contrast_results <- function(storage, dfres) {
-  results <- vector("list", length(storage))
-  names(results) <- names(storage)
-
-  for (nm in names(storage)) {
-    s <- storage[[nm]]
-    dat <- tibble::tibble(
-      estimate = s$estimate,
-      se = s$se,
-      stat = s$stat,
-      prob = s$prob,
-      sigma = s$sigma %||% NULL
-    )
-
-    if (all(is.na(s$sigma))) {
-      dat$sigma <- NULL
-    }
-
-    results[[nm]] <- tibble::tibble(
-      type = s$type,
-      name = nm,
-      stat_type = s$stat_type,
-      df.residual = dfres,
-      conmat = list(s$conmat),
-      colind = list(s$colind),
-      data = list(dat)
-    )
-  }
-
-  results
-}
-
-#' Chunked voxelwise contrast computation
-#'
-#' Implements a memory-efficient voxelwise contrast engine by processing voxels
-#' in small chunks. Each voxel is whitened and analysed independently, and only
-#' temporary matrices for the current chunk are kept in memory.
-#'
-#' @param X_run Design matrix for the current run.
-#' @param Y_run Data matrix (time points \eqn{\times} voxels) for the run.
-#' @param phi_matrix AR coefficients matrix (order \eqn{\times} voxels).
-#' @param conlist Named list of t-contrast vectors.
-#' @param fconlist Named list of F-contrast matrices.
-#' @param chunk_size Number of voxels to process per chunk.
-#' @keywords internal
-#' @noRd
-fit_lm_contrasts_voxelwise_chunked <- function(X_run, Y_run, phi_matrix,
-                                               conlist, fconlist,
-                                               robust_options = NULL,
-                                               chunk_size = 100) {
-  if (!is.matrix(X_run)) X_run <- as.matrix(X_run)
-  if (!is.matrix(Y_run)) Y_run <- as.matrix(Y_run)
-
-  n_voxels <- ncol(Y_run)
-  if (is.null(dim(phi_matrix))) {
-    phi_matrix <- matrix(phi_matrix, ncol = n_voxels)
-  }
-  if (ncol(phi_matrix) != n_voxels) {
-    stop("phi_matrix columns must equal number of voxels")
-  }
-
-  ar_order <- nrow(phi_matrix)
-  dfres <- nrow(X_run) - qr(X_run)$rank
-  n_chunks <- ceiling(n_voxels / chunk_size)
-
-  storage <- initialize_contrast_storage(conlist, fconlist, n_voxels)
-
-  for (chunk_idx in seq_len(n_chunks)) {
-    idx <- ((chunk_idx - 1) * chunk_size + 1):min(chunk_idx * chunk_size,
-                                                n_voxels)
-
-    for (v in idx) {
-      phi_v <- phi_matrix[, v]
-      tmp <- ar_whiten_transform(X_run, Y_run[, v, drop = FALSE],
-                                 phi_v, exact_first = TRUE)
-      X_w <- tmp$X
-      Y_w <- tmp$Y
-
-      if (!is.null(robust_options) && robust_options$type != FALSE) {
-        proj_w <- .fast_preproject(X_w)
-        ctx_w <- glm_context(X = X_w, Y = Y_w, proj = proj_w, phi_hat = phi_v)
-        rfit <- robust_iterative_fitter(ctx_w, robust_options, X_w)
-        beta_w <- rfit$betas_robust
-        XtXinv <- rfit$XtWXi_final
-        sigma_w <- rfit$sigma_robust_scale_final
-        rw <- rfit$robust_weights_final
-      } else {
-        qr_w <- qr(X_w)
-        beta_w <- qr.coef(qr_w, Y_w)
-        XtXinv <- chol2inv(qr.R(qr_w))
-        sigma_w <- sqrt(sum(qr.resid(qr_w, Y_w)^2) /
-                        max(1, nrow(X_w) - qr_w$rank))
-        rw <- NULL
-      }
-
-      storage <- store_voxel_contrasts(storage, v, XtXinv, beta_w, sigma_w,
-                                       conlist, fconlist, dfres, ar_order, rw)
-    }
-  }
-
-  format_contrast_results(storage, dfres)
 }

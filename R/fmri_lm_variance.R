@@ -76,12 +76,20 @@
   tcrossprod(scaled)
 }
 
+#' Bread of the sandwich estimator, computed once per design
+#' @keywords internal
+#' @noRd
+.fmri_lm_bread <- function(X) {
+  XtX <- crossprod(X)
+  tryCatch(solve(XtX), error = function(e) qr.solve(XtX))
+}
+
 .fmri_lm_score_covariance <- function(X, residual, segments,
                                       max_lag = 0L, taper = "none",
-                                      debias = TRUE) {
+                                      debias = TRUE, bread = NULL) {
   n <- nrow(X)
   p <- ncol(X)
-  bread <- tryCatch(solve(crossprod(X)), error = function(e) qr.solve(crossprod(X)))
+  if (is.null(bread)) bread <- .fmri_lm_bread(X)
   score <- X * as.numeric(residual)
   meat <- matrix(0, p, p)
   for (idx in segments) {
@@ -103,10 +111,11 @@
 }
 
 .fmri_lm_residual_covariance <- function(residual, segments, max_lag,
-                                         taper = "none") {
+                                         taper = "none", distances = NULL) {
   n <- length(residual)
   V <- matrix(0, n, n)
-  for (idx in segments) {
+  for (k in seq_along(segments)) {
+    idx <- segments[[k]]
     e <- residual[idx]
     m <- length(e)
     H <- min(as.integer(max_lag), m - 1L)
@@ -115,7 +124,11 @@
       gamma[h + 1L] <- sum(e[(h + 1L):m] * e[seq_len(m - h)]) / (m - h)
       gamma[h + 1L] <- gamma[h + 1L] * .fmri_lm_hac_weight(h, max_lag, taper)
     }
-    distance <- abs(row(diag(m)) - col(diag(m)))
+    distance <- if (!is.null(distances)) {
+      distances[[k]]
+    } else {
+      abs(outer(seq_len(m), seq_len(m), "-"))
+    }
     block <- matrix(0, m, m)
     inside <- distance <= H
     block[inside] <- gamma[distance[inside] + 1L]
@@ -125,10 +138,12 @@
 }
 
 .fmri_lm_hac_df <- function(X, residual, segments, max_lag,
-                            taper = "none") {
+                            taper = "none", nominal = NULL) {
   X <- as.matrix(X)
   n_valid <- sum(vapply(segments, length, integer(1)))
-  nominal <- n_valid - qr(X[unlist(segments), , drop = FALSE])$rank
+  if (is.null(nominal)) {
+    nominal <- n_valid - qr(X[unlist(segments), , drop = FALSE])$rank
+  }
   if (n_valid <= 1L || max_lag <= 0L) return(max(nominal, 1))
 
   # A lag-window variance estimate averages fewer effectively independent
@@ -147,6 +162,15 @@
   max(min(n_valid / energy, nominal), 1)
 }
 
+#' Covariance and df for the joint-fit inference context
+#'
+#' Everything that depends only on the design (the sandwich bread, the rank,
+#' the valid-segment rank and the lag-distance matrices) is computed once,
+#' outside the voxel loop. The per-voxel sandwich covariance is computed only
+#' when it is used, i.e. when `spec$method` is not `"model"`; model-based
+#' Satterthwaite inference needs only the df.
+#' @keywords internal
+#' @noRd
 .fmri_lm_variance_from_context <- function(context, spec) {
   X <- as.matrix(context$X)
   E <- as.matrix(context$residuals)
@@ -158,36 +182,54 @@
     as.integer(spec$max_lag)
   }
   if (identical(spec$method, "sandwich")) max_lag <- 0L
+  model_based <- identical(spec$method, "model")
+  rank_X <- qr(X)$rank
 
-  covariance <- lapply(seq_len(ncol(E)), function(v) {
-    .fmri_lm_score_covariance(
-      X, E[, v], segments, max_lag = max_lag,
-      taper = spec$taper, debias = spec$debias
-    )
-  })
-  df <- rep(nrow(X) - qr(X)$rank, ncol(E))
+  covariance <- NULL
+  if (!model_based) {
+    bread <- .fmri_lm_bread(X)
+    covariance <- lapply(seq_len(ncol(E)), function(v) {
+      .fmri_lm_score_covariance(
+        X, E[, v], segments, max_lag = max_lag,
+        taper = spec$taper, debias = spec$debias, bread = bread
+      )
+    })
+  }
+  df <- rep(nrow(X) - rank_X, ncol(E))
   if (identical(spec$df, "satterthwaite")) {
-    df <- vapply(seq_len(ncol(E)), function(v) {
-      if (identical(spec$method, "model")) {
+    if (model_based) {
+      distances <- lapply(segments, function(idx) {
+        m <- length(idx)
+        abs(outer(seq_len(m), seq_len(m), "-"))
+      })
+      XtXinv <- .satterthwaite_xtxinv(X)
+      df <- vapply(seq_len(ncol(E)), function(v) {
         resid_cov <- .fmri_lm_residual_covariance(
-          E[, v], segments, max_lag = max_lag, taper = spec$taper
+          E[, v], segments, max_lag = max_lag, taper = spec$taper,
+          distances = distances
         )
         calculate_effective_df(
           nrow(X), ncol(X), method = "satterthwaite",
-          X = X, resid_cov = resid_cov
+          X = X, resid_cov = resid_cov, XtXinv = XtXinv
         )
-      } else {
+      }, numeric(1))
+    } else {
+      nominal <- sum(vapply(segments, length, integer(1))) -
+        qr(X[unlist(segments), , drop = FALSE])$rank
+      df <- vapply(seq_len(ncol(E)), function(v) {
         .fmri_lm_hac_df(
           X, E[, v], segments, max_lag = max_lag,
-          taper = spec$taper
+          taper = spec$taper, nominal = nominal
         )
-      }
-    }, numeric(1))
+      }, numeric(1))
+    }
   }
   if (!is.null(context$robust_weights)) {
-    w <- context$robust_weights[is.finite(context$robust_weights)]
-    adjustment <- if (length(w)) sum(w) / length(w) else 0
-    df <- pmax(df * adjustment, 1)
+    # The single robust formula (.robust_effective_df): scale the df by
+    # (sum(w) - rank) / (n - rank).
+    df <- vapply(df, function(d) {
+      .robust_effective_df(context$robust_weights, rank_X, df_base = d)
+    }, numeric(1))
   }
   list(covariance = covariance, df = df, max_lag = max_lag,
        segments = segments)

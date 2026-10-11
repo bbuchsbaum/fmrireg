@@ -90,16 +90,30 @@
     method = "simple"
   )
 
-  if (task_fit$rank_used > 0L && ncol(V_r) > 0L) {
-    Y_r <- Y0 %*% V_r
-    E_r <- Y_r - X0 %*% C_task
-    Sigma_r <- crossprod(E_r) / dfres
-    s2_cond <- rowSums((V_r %*% Sigma_r) * V_r)
-    s2_cond <- pmax(as.numeric(s2_cond), .Machine$double.eps)
-  } else {
-    Sigma_r <- matrix(0, nrow = 0L, ncol = 0L)
-    s2_cond <- rep(.Machine$double.eps, ncol(Y0))
+  B_full <- matrix(0, nrow = ncol(X_full), ncol = ncol(Y0))
+  B_full[event_indices, ] <- B_task
+
+  if (!is.null(white$Zw) && ncol(white$Zw) > 0L && length(baseline_indices) > 0L) {
+    proj_z <- .fast_preproject(white$Zw)
+    gamma_hat <- proj_z$Pinv %*% (white$Yw - white$Xw_task %*% B_task)
+    B_full[baseline_indices, ] <- gamma_hat
   }
+
+  fitted_w <- white$Xw_task %*% B_task
+  if (!is.null(white$Zw) && ncol(white$Zw) > 0L && length(baseline_indices) > 0L) {
+    fitted_w <- fitted_w + white$Zw %*% B_full[baseline_indices, , drop = FALSE]
+  }
+  resid_w <- white$Yw - fitted_w
+  rss <- colSums(resid_w^2)
+  resvar <- pmax(rss / dfres, .Machine$double.eps)
+
+  # Conditional (fixed-subspace) variance: Var(b_j) = sigma_j^2 (X0'X0)^-1,
+  # with sigma_j^2 the voxel's own whitened residual variance. At full rank
+  # this is exactly the OLS/GLS covariance. (The former projection-based
+  # V_r Sigma_r V_r' scale measured noise only inside the retained response
+  # subspace -- roughly sigma^2 * r / V -- and produced t-statistics tens of
+  # times too large on pure noise.)
+  s2_cond <- resvar
 
   se_event_cond <- outer(
     sqrt(s2_cond),
@@ -138,23 +152,6 @@
   }
 
   se_event <- if (!is.null(boot)) t(boot$se_beta) else se_event_cond
-
-  B_full <- matrix(0, nrow = ncol(X_full), ncol = ncol(Y0))
-  B_full[event_indices, ] <- B_task
-
-  if (!is.null(white$Zw) && ncol(white$Zw) > 0L && length(baseline_indices) > 0L) {
-    proj_z <- .fast_preproject(white$Zw)
-    gamma_hat <- proj_z$Pinv %*% (white$Yw - white$Xw_task %*% B_task)
-    B_full[baseline_indices, ] <- gamma_hat
-  }
-
-  fitted_w <- white$Xw_task %*% B_task
-  if (!is.null(white$Zw) && ncol(white$Zw) > 0L && length(baseline_indices) > 0L) {
-    fitted_w <- fitted_w + white$Zw %*% B_full[baseline_indices, , drop = FALSE]
-  }
-  resid_w <- white$Yw - fitted_w
-  rss <- colSums(resid_w^2)
-  resvar <- pmax(rss / dfres, .Machine$double.eps)
 
   sigma <- sqrt(s2_cond)
 
@@ -562,35 +559,68 @@
 #' Internal: fit reduced-rank task model in residualized space
 #' @keywords internal
 #' @noRd
-.rrr_fit_task_subspace <- function(X0, Y0, rank_control) {
+.rrr_fit_task_subspace <- function(X0, Y0, rank_control, design = NULL) {
   X0 <- as.matrix(X0)
   Y0 <- as.matrix(Y0)
-  k <- ncol(X0)
-  V <- ncol(Y0)
+  design <- design %||% .rrr_prepare_task_design(X0)
+  G <- if (design$rank_x > 0L) crossprod(design$Qx, Y0) else NULL
+  .rrr_fit_task_subspace_from_G(G, design, rank_control, V = ncol(Y0))
+}
 
+
+#' Internal: decompose the (fixed) residualized task design once
+#'
+#' Everything about the reduced-rank fit that depends only on the design --
+#' its QR factorization, rank, pivot and unscaled covariance -- is computed
+#' here so callers that refit many responses against the same design (the
+#' bootstrap) do not repeat it.
+#' @keywords internal
+#' @noRd
+.rrr_prepare_task_design <- function(X0) {
+  X0 <- as.matrix(X0)
+  k <- ncol(X0)
   rank_x_info <- .design_rank_info(X0)
   qr_x <- rank_x_info$qr
   rank_x <- rank_x_info$rank
+  XtXinv <- .fast_preproject(X0)$XtXinv
   if (rank_x <= 0L) {
-    return(list(
+    return(list(k = k, rank_x = 0L, Qx = NULL, R = NULL, piv = integer(0),
+                XtXinv = XtXinv))
+  }
+  Qx <- qr.Q(qr_x, complete = FALSE)[, seq_len(rank_x), drop = FALSE]
+  R <- qr.R(qr_x, complete = FALSE)[seq_len(rank_x), seq_len(rank_x), drop = FALSE]
+  list(
+    k = k,
+    rank_x = rank_x,
+    Qx = Qx,
+    R = R,
+    piv = qr_x$pivot[seq_len(rank_x)],
+    XtXinv = XtXinv
+  )
+}
+
+
+#' Internal: reduced-rank fit given G = Qx' Y0
+#' @keywords internal
+#' @noRd
+.rrr_fit_task_subspace_from_G <- function(G, design, rank_control, V) {
+  k <- design$k
+  empty <- function(sing) {
+    list(
       B_task = matrix(0, nrow = k, ncol = V),
       C_task = matrix(0, nrow = k, ncol = 0L),
       V_r = matrix(0, nrow = V, ncol = 0L),
-      XtXinv_task = .fast_preproject(X0)$XtXinv,
-      singular_values = numeric(0),
+      XtXinv_task = design$XtXinv,
+      singular_values = sing,
       rank_used = 0L,
       energy_retained = 0,
       delta_rss = 0
-    ))
+    )
+  }
+  if (design$rank_x <= 0L) {
+    return(empty(numeric(0)))
   }
 
-  Qx_full <- qr.Q(qr_x, complete = FALSE)
-  Qx <- Qx_full[, seq_len(rank_x), drop = FALSE]
-  R_full <- qr.R(qr_x, complete = FALSE)
-  R <- R_full[seq_len(rank_x), seq_len(rank_x), drop = FALSE]
-  piv <- qr_x$pivot[seq_len(rank_x)]
-
-  G <- crossprod(Qx, Y0)
   S <- tcrossprod(G)
   eig <- eigen(S, symmetric = TRUE)
   sing <- sqrt(pmax(eig$values, 0))
@@ -598,16 +628,7 @@
   tol <- max(dim(G)) * .Machine$double.eps * max(c(sing, 1))
   keep <- sing > tol
   if (!any(keep)) {
-    return(list(
-      B_task = matrix(0, nrow = k, ncol = V),
-      C_task = matrix(0, nrow = k, ncol = 0L),
-      V_r = matrix(0, nrow = V, ncol = 0L),
-      XtXinv_task = .fast_preproject(X0)$XtXinv,
-      singular_values = sing,
-      rank_used = 0L,
-      energy_retained = 0,
-      delta_rss = 0
-    ))
+    return(empty(sing))
   }
 
   U <- eig$vectors[, keep, drop = FALSE]
@@ -621,9 +642,9 @@
   V_r <- sweep(V_r, 2L, d_r, `/`)
 
   UDr <- sweep(U_r, 2L, d_r, `*`)
-  C_pivot <- backsolve(R, UDr)
+  C_pivot <- backsolve(design$R, UDr)
   C_task <- matrix(0, nrow = k, ncol = rank_used)
-  C_task[piv, ] <- C_pivot
+  C_task[design$piv, ] <- C_pivot
   B_task <- C_task %*% t(V_r)
 
   ss <- d^2
@@ -636,7 +657,7 @@
     B_task = B_task,
     C_task = C_task,
     V_r = V_r,
-    XtXinv_task = .fast_preproject(X0)$XtXinv,
+    XtXinv_task = design$XtXinv,
     singular_values = sing,
     rank_used = rank_used,
     energy_retained = energy,
@@ -795,11 +816,22 @@
   nboot <- as.integer(nboot)
   block_size <- as.integer(block_size %||% 1L)
   if (!is.null(seed)) {
+    # Seed locally: the caller's RNG stream is restored on exit.
+    restore_rng <- .rng_snapshot()
+    on.exit(restore_rng(), add = TRUE)
     set.seed(as.integer(seed))
   }
 
   fitted <- X0 %*% B_task_hat
   resid <- Y0 - fitted
+
+  # The design is fixed across resamples: decompose it once. Each refit only
+  # needs G_b = Qx' Y_b = Qx' fitted + Qx' resid[idx, ], and the second term
+  # equals M' resid with M[j, ] = sum of Qx[i, ] over the draws i with
+  # idx[i] == j, so the n x V resampled response is never materialized.
+  design <- .rrr_prepare_task_design(X0)
+  rank_x <- design$rank_x
+  G_fitted <- if (rank_x > 0L) crossprod(design$Qx, fitted) else NULL
 
   mean_beta <- matrix(0, nrow = k, ncol = V)
   m2_beta <- matrix(0, nrow = k, ncol = V)
@@ -837,8 +869,15 @@
 
   for (b in seq_len(nboot)) {
     idx <- sample_idx()
-    Yb <- fitted + resid[idx, , drop = FALSE]
-    fit_b <- .rrr_fit_task_subspace(X0, Yb, rank_control)
+    G_b <- if (rank_x > 0L) {
+      M <- matrix(0, nrow = n, ncol = rank_x)
+      agg <- rowsum(design$Qx, idx, reorder = FALSE)
+      M[as.integer(rownames(agg)), ] <- agg
+      G_fitted + crossprod(M, resid)
+    } else {
+      NULL
+    }
+    fit_b <- .rrr_fit_task_subspace_from_G(G_b, design, rank_control, V = V)
     B_b <- fit_b$B_task
 
     delta_b <- B_b - mean_beta

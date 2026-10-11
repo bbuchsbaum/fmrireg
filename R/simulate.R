@@ -92,6 +92,8 @@ simulate_noise_vector <- function(n, TR = 1.5, ar = c(0.3), ma = c(0.5), sd = 1,
                                drift_freq = 1/128, drift_amplitude = 2,
                                physio = TRUE, seed = NULL) {
   if (!is.null(seed)) {
+    restore_rng <- .rng_snapshot()
+    on.exit(restore_rng(), add = TRUE)
     set.seed(seed)
   }
   
@@ -169,6 +171,8 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
               msg = "snr must be a finite positive scalar")
 
   if (!is.null(seed)) {
+    restore_rng <- .rng_snapshot()
+    on.exit(restore_rng(), add = TRUE)
     set.seed(seed)
   }
   
@@ -353,6 +357,8 @@ simulate_fmri_matrix <- function(
   )
   
   if (!is.null(random_seed)) {
+    restore_rng <- .rng_snapshot()
+    on.exit(restore_rng(), add = TRUE)
     set.seed(random_seed)
   }
   
@@ -547,4 +553,27 @@ simulate_fmri_matrix <- function(
   )
   
   return(out)
+}
+
+
+#' Internal: snapshot the global RNG state and return a restorer
+#'
+#' Used wherever a function accepts a `seed` argument: the caller registers
+#' `on.exit(restore(), add = TRUE)` before calling `set.seed()`, so seeding
+#' is local to the call and the user's random stream is left untouched.
+#' (withr is only in Suggests, so `withr::with_seed()` is not used.)
+#' @keywords internal
+#' @noRd
+.rng_snapshot <- function() {
+  genv <- globalenv()
+  had_seed <- exists(".Random.seed", envir = genv, inherits = FALSE)
+  old_seed <- if (had_seed) get(".Random.seed", envir = genv, inherits = FALSE) else NULL
+  function() {
+    if (had_seed) {
+      assign(".Random.seed", old_seed, envir = genv)
+    } else if (exists(".Random.seed", envir = genv, inherits = FALSE)) {
+      rm(".Random.seed", envir = genv)
+    }
+    invisible(NULL)
+  }
 }

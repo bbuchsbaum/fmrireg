@@ -148,7 +148,7 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
     if (verbose) message("Processing run (fast path) ", ym$chunk_num)
     
     # Skip empty runs
-    if (ncol(ym$data) == 0 || nrow(ym$data) == 0) {
+    if (length(ym$voxel_ind) == 0 || length(ym$row_ind) == 0) {
       warning(paste("Skipping empty run", ym$chunk_num))
       next
     }
@@ -215,7 +215,8 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
       ma_coef = res$ma_hat %||% NULL,
       temporal_diagnostics = res$temporal_diagnostics %||% NULL,
       robust_weights = res$robust_weights %||% NULL,
-      covariance_model_basis = res$XtXinv
+      covariance_model_basis = res$XtXinv,
+      rank = res$rank %||% res$proj_final$rank
     )
     
     if (progress) cli::cli_progress_update()
@@ -276,7 +277,7 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     vnames <- attr(tmats, "varnames")
 
     data_env <- list2env(tmats)
-    Y_run <- as.matrix(ym$data)
+    Y_run <- as.matrix(.chunk_data(ym))
 
     # Build design matrix for preprocessing
     n_time_run <- nrow(tmats[[1]])
@@ -390,7 +391,7 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
     vnames <- attr(tmats, "varnames")
     
     data_env <- list2env(tmats)
-    Y_run <- as.matrix(ym$data)
+    Y_run <- as.matrix(.chunk_data(ym))
     data_env$.y <- Y_run
     form <- get_formula(model)
     X_run <- model.matrix(form, data_env)
@@ -461,8 +462,8 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
           
           list(
             betas = robust_fit$betas_robust[, 1],
-            rss = sum((Y_voxel_w - X_voxel_w %*% robust_fit$betas_robust)^2),
-            sigma = robust_fit$sigma_robust_scale_final,
+            rss = robust_fit$rss[1],
+            sigma = sqrt(robust_fit$sigma2[1]),
             phi = phi_voxel,
             XtXinv = robust_fit$XtWXi_final,
             robust_weights = robust_fit$robust_weights_final,
@@ -539,8 +540,8 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
           )
           
           betas_voxelwise[, v] <- robust_fit$betas_robust[, 1]
-          rss_voxelwise[v] <- sum((Y_voxel_w - X_voxel_w %*% robust_fit$betas_robust)^2)
-          sigma_voxelwise[v] <- robust_fit$sigma_robust_scale_final
+          rss_voxelwise[v] <- robust_fit$rss[1]
+          sigma_voxelwise[v] <- sqrt(robust_fit$sigma2[1])
           XtXinv_list[[v]] <- robust_fit$XtWXi_final
           robust_weights_list[[v]] <- robust_fit$robust_weights_final
         } else {
@@ -563,7 +564,9 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
     }
     
     # Calculate statistics and contrasts
-    rdf <- n_timepoints - p
+    # Residual df uses the design rank: aliased columns carry no information.
+    # Whitening is an invertible row transform, so it preserves the rank.
+    rdf <- n_timepoints - proj_run_unwhitened$rank
     
     # Beta statistics with voxelwise XtXinv
     bstats <- beta_stats_matrix_voxelwise(
@@ -601,7 +604,8 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
       ar_coef = lapply(seq_len(n_voxels), function(v) as.numeric(phi_voxelwise[, v])),
       robust_weights = if (.fmri_lm_robust_enabled(cfg$robust)) robust_weights_list else NULL,
       voxel_status = voxel_status,
-      covariance_by_voxel = XtXinv_list
+      covariance_by_voxel = XtXinv_list,
+      rank = proj_run_unwhitened$rank
     )
     
     if (progress) cli::cli_progress_update()
@@ -657,11 +661,12 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu,
   
   # Compute overall statistics
   rdf_vals <- unlist(lapply(cres, `[[`, "rdf"))
+  # One row per run, one column per voxel: pool each voxel across runs.
   sigma_mat <- do.call(rbind, lapply(seq_along(cres), function(i) {
-    as.matrix(cres[[i]]$sigma^2) * rdf_vals[i]
+    as.numeric(cres[[i]]$sigma)^2 * rdf_vals[i]
   }))
   sigma <- sqrt(colSums(sigma_mat) / sum(rdf_vals))
-  rss <- colSums(do.call(rbind, lapply(cres, function(x) as.matrix(x$rss))))
+  rss <- colSums(do.call(rbind, lapply(cres, function(x) as.numeric(x$rss))))
   rdf <- sum(rdf_vals)
   resvar <- rss / rdf
   
@@ -742,7 +747,9 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu,
       betas = bstats_list[[1]],
       event_indices = event_indices,
       baseline_indices = baseline_indices,
-      cov.unscaled = Vu,
+      # One run: the stored covariance is that run's fitted-domain (whitened
+      # and/or weighted) (X'X)^-1, matching the stored sigma.
+      cov.unscaled = cres[[1]]$covariance_model_basis %||% Vu,
       sigma = cres[[1]]$sigma,
       rss = cres[[1]]$rss,
       rdf = cres[[1]]$rdf,
@@ -753,7 +760,8 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu,
       robust_weights = robust_weights,
       voxel_status = voxel_status,
       covariance_by_voxel = cres[[1]]$covariance_by_voxel,
-      covariance_model_basis = cres[[1]]$covariance_model_basis
+      covariance_model_basis = cres[[1]]$covariance_model_basis,
+      rank = cres[[1]]$rank
     )
   }
 }

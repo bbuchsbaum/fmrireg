@@ -200,9 +200,11 @@ test_that("unknown or inconsistent HRF recipes fail closed", {
 
   incompatible_version <- recipe
   incompatible_version$fmrihrf_version <- "0.0.0"
-  expect_error(
+  # A recorded fmrihrf version that differs from the installed one warns
+  # rather than refusing to load (review 2026-10, E5).
+  expect_warning(
     fmrireg:::.reconstruct_hrf_object(incompatible_version),
-    "requires fmrihrf 0.0.0"
+    "recorded with fmrihrf 0.0.0"
   )
 
   expect_error(

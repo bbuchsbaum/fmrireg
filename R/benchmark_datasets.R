@@ -387,6 +387,11 @@ evaluate_method_performance <- function(dataset_name, estimated_betas, method_na
   )
 }
 
+# Installed fmrihrf version (a seam so tests can simulate a mismatch).
+.installed_fmrihrf_version <- function() {
+  as.character(utils::packageVersion("fmrihrf"))
+}
+
 .same_recipe_value <- function(x, y) {
   isTRUE(all.equal(x, y, tolerance = 0, check.attributes = TRUE))
 }
@@ -449,11 +454,17 @@ evaluate_method_performance <- function(dataset_name, estimated_betas, method_na
       !nzchar(recipe$fmrihrf_version)) {
     stop("Benchmark HRF recipe has an invalid fmrihrf version.", call. = FALSE)
   }
-  current_fmrihrf_version <- as.character(utils::packageVersion("fmrihrf"))
+  # A different fmrihrf release is not by itself an error: the recipe's
+  # semantic fields were validated above, and refusing to load would make the
+  # benchmark data unusable after any fmrihrf update. Warn instead, since the
+  # base HRF shape could have changed between releases.
+  current_fmrihrf_version <- .installed_fmrihrf_version()
   if (!identical(recipe$fmrihrf_version, current_fmrihrf_version)) {
-    stop(
-      "Benchmark HRF recipe requires fmrihrf ", recipe$fmrihrf_version,
-      "; installed version is ", current_fmrihrf_version, ".",
+    warning(
+      "Benchmark HRF recipe '", recipe$recipe_name, "' was recorded with fmrihrf ",
+      recipe$fmrihrf_version, "; installed version is ", current_fmrihrf_version,
+      ". The HRF is rebuilt with the installed fmrihrf and may differ from the ",
+      "one used to simulate the data.",
       call. = FALSE
     )
   }

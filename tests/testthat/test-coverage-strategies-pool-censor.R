@@ -1,4 +1,4 @@
-# fmri_lm_strategies.R: censor edge cases and pool_run_results.
+# fmri_lm_strategies.R: censor edge cases.
 
 test_that("extract_censor_from_dataset covers empty and index vectors", {
   # Censored volume indices carried by the frame's censor column
@@ -37,32 +37,3 @@ test_that("resolve_censor subsets global explicit censor by run", {
   expect_null(fmrireg:::resolve_censor(cfg_auto, dataset = no_censor, n_time = 8L))
 })
 
-test_that("pool_run_results pools sigma/rss/df across runs", {
-  runs <- list(
-    list(
-      dfres = 10,
-      sigma2 = matrix(c(1.0, 4.0), 1, 2),
-      rss = matrix(c(10, 40), 1, 2)
-    ),
-    list(
-      dfres = 5,
-      sigma2 = matrix(c(1.0, 1.0), 1, 2),
-      rss = matrix(c(5, 5), 1, 2)
-    )
-  )
-  pooled <- fmrireg:::pool_run_results(runs)
-  expect_equal(pooled$rdf, 15)
-  expect_equal(as.numeric(pooled$rss), c(15, 45))
-  expect_equal(length(pooled$sigma), 2L)
-  expect_true(all(pooled$sigma > 0))
-  expect_equal(as.numeric(pooled$resvar), as.numeric(pooled$rss) / pooled$rdf)
-
-  # Single-voxel path
-  runs2 <- list(
-    list(dfres = 4, sigma2 = 1, rss = 4),
-    list(dfres = 6, sigma2 = 1, rss = 6)
-  )
-  pooled2 <- fmrireg:::pool_run_results(runs2)
-  expect_equal(pooled2$rdf, 10)
-  expect_equal(length(pooled2$sigma), 1L)
-})

@@ -36,15 +36,41 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
   # coefficients below and to mark the result for downstream NA handling.
   aliased <- as.integer(proj$aliased %||% attr(proj$XtXinv, "aliased") %||% integer(0))
 
+  # Exact RSS from the QR, when available (set below).
+  rss_qr <- NULL
   if (!is.null(proj$qr)) {
-    # Solve from the same tolerance-aware QR used for rank diagnostics. In
-    # rank-deficient designs, aliased coefficients are set to zero internally
-    # for fitted values and marked via attributes for downstream inference.
-    betas <- tryCatch(
-      qr.coef(proj$qr, Y),
-      error = function(e) NULL
-    )
-    if (is.null(betas)) {
+    # Solve from the same tolerance-aware QR used for rank diagnostics, in one
+    # pass: Q'Y gives the coefficients (R^-1 of its first `rank` rows) and the
+    # exact residual sum of squares (squared norm of its remaining rows). This
+    # replaces qr.coef() plus the normal-equation identity yTy - b'X'y, which
+    # loses precision on near-collinear designs with a large response offset.
+    # Aliased (rank-deficient) coefficients are zero, so X %*% betas stays
+    # finite; they are marked via attributes and NA'd downstream. Non-finite
+    # betas arising from NA in Y (missing-data voxels) are left as NA so such
+    # voxels surface as NA rather than as a 0-coefficient fit.
+    qr_fit <- tryCatch({
+      qrx <- proj$qr
+      rnk <- as.integer(proj$rank %||% qrx$rank)
+      n_obs <- nrow(qrx$qr)
+      qty <- qr.qty(qrx, Y)
+      if (is.null(dim(qty))) qty <- matrix(qty, ncol = ncol(Y))
+      b <- matrix(0, nrow = ncol(qrx$qr), ncol = ncol(Y))
+      if (rnk > 0L) {
+        keep <- seq_len(rnk)
+        R <- qr.R(qrx)[keep, keep, drop = FALSE]
+        b[qrx$pivot[keep], ] <- backsolve(R, qty[keep, , drop = FALSE])
+      }
+      r_ss <- if (n_obs > rnk) {
+        colSums(qty[seq.int(rnk + 1L, n_obs), , drop = FALSE]^2)
+      } else {
+        rep(0, ncol(Y))
+      }
+      list(betas = b, rss = r_ss)
+    }, error = function(e) NULL)
+    if (!is.null(qr_fit)) {
+      betas <- qr_fit$betas
+      rss_qr <- qr_fit$rss
+    } else {
       if (is.null(proj$Pinv) || ncol(X) != nrow(proj$Pinv)) {
         stop("solve_glm_core: QR solve failed and projection matrix dimensions do not match")
       }
@@ -53,11 +79,6 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
     if (is.null(dim(betas))) {
       betas <- matrix(betas, ncol = 1L)
     }
-    # Zero ONLY aliased (rank-deficient) coefficients so X %*% betas stays finite
-    # for residuals/fitted values; those positions are marked via attributes and
-    # NA'd downstream. Non-finite betas arising from NA in Y (missing-data voxels)
-    # are deliberately left as NA so such voxels surface as NA rather than being
-    # silently masked to a 0-coefficient fit.
     if (length(aliased) > 0L) {
       betas[aliased, ] <- 0
     }
@@ -79,8 +100,10 @@ solve_glm_core <- function(glm_ctx, return_fitted = FALSE) {
 
   if (return_fitted) {
     fitted <- X %*% betas
-    residuals <- Y - fitted
-    rss <- colSums(residuals^2)
+    rss <- rss_qr %||% colSums((Y - fitted)^2)
+  } else if (!is.null(rss_qr)) {
+    rss <- rss_qr
+    fitted <- NULL
   } else {
     # Memory-lean path: avoid allocating n x V fitted/residual matrices when
     # only RSS/sigma2 are needed.

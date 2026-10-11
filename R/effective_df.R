@@ -20,6 +20,8 @@
 #'   the model as fitted -- that is, *after* any whitening. Required for
 #'   `method = "satterthwaite"`. Supply the identity, or omit, when whitening is
 #'   believed exact.
+#' @param XtXinv Optional precomputed `(X'X)^-1` for `method = "satterthwaite"`
+#'   (lets callers hoist it out of a voxel loop).
 #'
 #' @return Numeric. Effective residual degrees of freedom, at least 1.
 #'
@@ -40,8 +42,14 @@
 #' and it is captured by passing the post-whitening `resid_cov` and using
 #' `method = "satterthwaite"`.
 #'
-#' Robust down-weighting is handled separately and multiplicatively, by
-#' \eqn{\sum_i w_i / n}.
+#' Robust down-weighting is handled by [.robust_effective_df()], the single
+#' implementation used by every fitting path: an observation with weight
+#' \eqn{w_i} counts as \eqn{w_i} of an observation, so the residual df is
+#' \eqn{\sum_i w_i - p}. Zero weights contribute nothing, and 0/1 weights give
+#' exactly the residual df of `stats::lm(weights = w)`. With
+#' `method = "residual"` the weights alone fix the effective sample (`n` is
+#' not used); with `method = "satterthwaite"` the Satterthwaite df is scaled by
+#' \eqn{(\sum_i w_i - p) / (n_w - p)}, with \eqn{n_w} the number of weights.
 #'
 #' @section History:
 #' Before 2026-08-07 this function multiplied the residual degrees of freedom by
@@ -59,7 +67,7 @@
 calculate_effective_df <- function(n, p, robust_weights = NULL,
                                    ar_order = 0,
                                    method = c("residual", "satterthwaite", "simple"),
-                                   X = NULL, resid_cov = NULL) {
+                                   X = NULL, resid_cov = NULL, XtXinv = NULL) {
   method <- match.arg(method)
   if (identical(method, "simple")) method <- "residual"
 
@@ -69,27 +77,49 @@ calculate_effective_df <- function(n, p, robust_weights = NULL,
     return(1)
   }
 
-  df_base <- if (identical(method, "satterthwaite")) {
+  if (identical(method, "satterthwaite")) {
     if (is.null(X) || is.null(resid_cov)) {
       stop("method = 'satterthwaite' requires both `X` and `resid_cov`.",
            call. = FALSE)
     }
-    .satterthwaite_df(X, resid_cov)
-  } else {
-    n - p
+    df_base <- .satterthwaite_df(X, resid_cov, XtXinv = XtXinv)
+    if (is.null(robust_weights)) return(max(df_base, 1))
+    return(.robust_effective_df(robust_weights, p, df_base = df_base))
   }
 
-  df_robust_adjust <- 1
-  if (!is.null(robust_weights)) {
-    w <- robust_weights[is.finite(robust_weights)]
-    if (length(w)) {
-      # Down-weighting every observation to zero leaves no effective data, so the
-      # adjustment is 0 and the floor below takes over.
-      df_robust_adjust <- sum(w) / length(w)
-    }
-  }
+  if (is.null(robust_weights)) return(max(n - p, 1))
+  .robust_effective_df(robust_weights, p)
+}
 
-  max(df_base * df_robust_adjust, 1)
+#' Effective residual df under robust (observation) weights
+#'
+#' The one robust effective-df formula used by every fitting path:
+#' \deqn{\nu = \sum_i w_i - r,}
+#' where \eqn{r} is the rank of the fitted design. A weight-\eqn{w} observation
+#' counts as \eqn{w} of an observation; zero weights contribute nothing, so 0/1
+#' weights reproduce the residual df of `stats::lm(weights = w)`.
+#'
+#' When another df (`df_base`, e.g. a Satterthwaite or HAC df computed for the
+#' unweighted residual count) is to be adjusted, it is scaled by the same
+#' ratio, \eqn{\nu_{base} (\sum_i w_i - r) / (n_w - r)}, which reduces to the
+#' formula above when \eqn{\nu_{base} = n_w - r}.
+#'
+#' @param weights Observation weights (non-finite entries are ignored).
+#' @param rank Rank of the fitted design.
+#' @param df_base Optional df to scale; `NULL` returns \eqn{\sum w - r}.
+#' @return Effective df, at least 1.
+#' @keywords internal
+#' @noRd
+.robust_effective_df <- function(weights, rank, df_base = NULL) {
+  w <- as.numeric(weights)
+  w <- w[is.finite(w)]
+  rank <- as.numeric(rank)
+  if (!length(w) || !is.finite(rank)) return(1)
+  df_w <- sum(w) - rank
+  if (is.null(df_base)) return(max(df_w, 1))
+  denom <- length(w) - rank
+  if (denom <= 0) return(1)
+  max(df_base * df_w / denom, 1)
 }
 
 #' Satterthwaite degrees of freedom for a residual sum of squares
@@ -101,19 +131,23 @@ calculate_effective_df <- function(n, p, robust_weights = NULL,
 #'
 #' @keywords internal
 #' @noRd
-.satterthwaite_df <- function(X, V) {
+.satterthwaite_xtxinv <- function(X) {
+  XtX <- crossprod(X)
+  tryCatch(solve(XtX), error = function(e) {
+    sv <- svd(XtX)
+    keep <- sv$d > max(sv$d) * .Machine$double.eps^0.5
+    sv$v[, keep, drop = FALSE] %*% ((1 / sv$d[keep]) * t(sv$u[, keep, drop = FALSE]))
+  })
+}
+
+.satterthwaite_df <- function(X, V, XtXinv = NULL) {
   X <- as.matrix(X)
   n <- nrow(X)
   if (is.null(dim(V))) V <- diag(as.numeric(V), n)
   V <- as.matrix(V)
   stopifnot(nrow(V) == n, ncol(V) == n)
 
-  XtX <- crossprod(X)
-  XtXinv <- tryCatch(solve(XtX), error = function(e) {
-    sv <- svd(XtX)
-    keep <- sv$d > max(sv$d) * .Machine$double.eps^0.5
-    sv$v[, keep, drop = FALSE] %*% ((1 / sv$d[keep]) * t(sv$u[, keep, drop = FALSE]))
-  })
+  if (is.null(XtXinv)) XtXinv <- .satterthwaite_xtxinv(X)
 
   A  <- X %*% XtXinv          # n x p; H = A X'
   VX <- V %*% X               # n x p
@@ -160,35 +194,4 @@ calculate_sandwich_variance <- function(X, residuals, XtXinv, weights = NULL) {
   correction <- n / (n - p)
   
   sandwich * correction
-}
-
-#' Adjust Statistics for Effective Degrees of Freedom
-#'
-#' Updates t-statistics and p-values using effective degrees of freedom
-#' rather than nominal degrees of freedom.
-#'
-#' @param t_stats Vector of t-statistics.
-#' @param df_nominal Nominal degrees of freedom.
-#' @param df_effective Effective degrees of freedom.
-#'
-#' @return List with adjusted t-statistics and p-values.
-#'
-#' @keywords internal
-#' @noRd
-adjust_stats_for_effective_df <- function(t_stats, df_nominal, df_effective) {
-  # Adjustment factor for t-statistics
-  # Based on the relationship between t-distributions with different df
-  adjust_factor <- sqrt(df_effective / df_nominal)
-  
-  # Adjusted t-statistics
-  t_adj <- t_stats * adjust_factor
-  
-  # P-values using effective df
-  p_values <- 2 * pt(abs(t_adj), df = df_effective, lower.tail = FALSE)
-  
-  list(
-    t_stats = t_adj,
-    p_values = p_values,
-    df = df_effective
-  )
 }

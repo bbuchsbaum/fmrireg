@@ -91,7 +91,9 @@ test_that("Effective df calculations work", {
   p <- 3
   
   # Test AR adjustment
-  df_ar <- fmrireg:::compute_effective_df_ar(n, p, ar_coef = 0.6)
+  # Review 2026-10 (D4): ported from the deleted compute_effective_df_ar() /
+  # compute_effective_df_robust() to the live implementations.
+  df_ar <- fmrireg:::compute_ar_effective_df(n, p, phi = 0.6)
   expect_true(df_ar < n - p)  # Should be reduced
   expect_true(df_ar > 0)
   
@@ -106,7 +108,8 @@ test_that("Effective df calculations work", {
   XtWX <- t(X) %*% W %*% X
   XtWXinv <- solve(XtWX)
   
-  df_robust <- fmrireg:::compute_effective_df_robust(X, weights, XtWXinv)
+  df_robust <- fmrireg:::calculate_effective_df(n, p, robust_weights = weights)
+  expect_equal(df_robust, sum(weights) - p)
   expect_true(df_robust < n - p)  # Should be reduced due to downweighting
   expect_true(df_robust > 0)
 })

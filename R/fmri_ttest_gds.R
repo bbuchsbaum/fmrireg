@@ -101,7 +101,7 @@ fmri_ttest.group_data_gds <- function(gd,
     t_value <- as.numeric(w$t)
     df_value <- as.numeric(w$df)
     p_value <- 2 * stats::pt(abs(t_value), df = df_value, lower.tail = FALSE)
-    z_value <- stats::qnorm(pmax(1e-300, 1 - p_value / 2)) * sign(t_value)
+    z_value <- .t_to_z(t_value, df_value)
     out <- list(
       beta = rbind(
         "(Intercept)" = (w$muA + w$muB) / 2,
@@ -130,34 +130,14 @@ fmri_ttest.group_data_gds <- function(gd,
     rownames(ols$beta) <- coef_terms
     rownames(ols$se) <- coef_terms
     rownames(ols$t) <- coef_terms
-    df_value <- rep(ols$df, ncol(Y))
-    p_value <- matrix(
-      NA_real_, nrow = nrow(ols$t), ncol = ncol(ols$t),
-      dimnames = dimnames(ols$t)
-    )
-    for (i in seq_len(nrow(p_value))) {
-      p_value[i, ] <- 2 * stats::pt(
-        abs(ols$t[i, ]), df = df_value, lower.tail = FALSE
-      )
-    }
-    z_value <- matrix(
-      NA_real_, nrow = nrow(ols$t), ncol = ncol(ols$t),
-      dimnames = dimnames(ols$t)
-    )
-    for (i in seq_len(nrow(z_value))) {
-      z_value[i, ] <- stats::qnorm(pmax(1e-300, 1 - p_value[i, ] / 2)) *
-        sign(ols$t[i, ])
-    }
+    st <- .fmri_ttest_ols_stats(ols, ncol(Y))
     out <- list(
-      beta = ols$beta,
-      se = ols$se,
-      t = ols$t,
-      z = z_value,
-      p = p_value,
-      df = matrix(
-        ols$df, nrow = nrow(ols$t), ncol = ncol(ols$t),
-        byrow = TRUE, dimnames = dimnames(ols$t)
-      ),
+      beta = st$beta,
+      se = st$se,
+      t = st$t,
+      z = st$z,
+      p = st$p,
+      df = st$df,
       formula = formula,
       engine = engine,
       n_subjects = nrow(Y),
@@ -309,7 +289,10 @@ fmri_ttest.group_data_gds <- function(gd,
       coef_names = rownames(out$beta),
       group_info = group_info
     )
-    exact_contrast <- .fmri_ttest_single_coef_contrast(out, weights)
+    exact_contrast <- .fmri_ttest_target_single_coef_contrast(
+      out, weights, group_info = group_info, target_sign = sign,
+      source_sign = if (identical(engine, "welch")) "AminusB" else "BminusA"
+    )
     if (is.null(exact_contrast)) {
       stop("gds-backed contrasts currently support only single coefficients", call. = FALSE)
     }

@@ -154,9 +154,9 @@ solve_robust_pipeline <- function(glm_ctx, robust_options) {
     sigma_fixed = robust_config$sigma_fixed %||% NULL
   )
 
-  sigma_scale <- robust_result$sigma_robust_scale_components %||%
-    robust_result$sigma_robust_scale_final
-  sigma2 <- as.numeric(sigma_scale)^2
+  # WLS scale of the final weighted solve (the one robust scale estimator;
+  # see robust_iterative_fitter()).
+  sigma2 <- as.numeric(robust_result$sigma2)
   
   # Format output
   list(
@@ -228,9 +228,9 @@ solve_ar_robust_pipeline <- function(glm_ctx, config, run_indices) {
     sigma_fixed = robust_config$sigma_fixed %||% NULL
   )
 
-  sigma_scale <- robust_result$sigma_robust_scale_components %||%
-    robust_result$sigma_robust_scale_final
-  sigma2 <- as.numeric(sigma_scale)^2
+  # WLS scale of the final weighted solve (the one robust scale estimator;
+  # see robust_iterative_fitter()).
+  sigma2 <- as.numeric(robust_result$sigma2)
   
   # Combine results
   list(
@@ -279,31 +279,4 @@ compute_standard_errors <- function(result, glm_ctx) {
   }
   
   result
-}
-
-#' Compute effective degrees of freedom for robust models
-#'
-#' @description
-#' Adjusts degrees of freedom based on robust weights using
-#' the trace of the hat matrix.
-#'
-#' @param X Design matrix
-#' @param weights Robust weights
-#' @param XtXinv Weighted (X'WX)^-1 matrix
-#'
-#' @return Effective degrees of freedom
-#' @keywords internal
-#' @noRd
-compute_robust_effective_df <- function(X, weights, XtXinv) {
-  # Hat matrix trace for weighted regression
-  # tr(H) = tr(X(X'WX)^-1 X'W)
-  # Efficient computation without forming diagonal matrix
-  sqrt_w <- sqrt(weights)
-  Xw <- X * sqrt_w
-  XtWX <- crossprod(Xw)
-  XtWX_inv <- chol2inv(chol(XtWX))
-  # Compute trace without forming full hat matrix
-  # tr(H) = tr(X (X'WX)^-1 X'W) = sum of diagonal elements
-  edf <- sum((Xw %*% XtWX_inv) * Xw)
-  as.numeric(edf)
 }

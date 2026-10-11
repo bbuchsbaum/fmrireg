@@ -6,9 +6,32 @@ ols_betas <- function(X, Y) {
 }
 
 
+#' Fixed-effect design for the mixed path
+#'
+#' Columns of interest first, then the nuisance (baseline) columns that are
+#' not linearly dependent on them. With neither, an intercept.
 #' @keywords internal
 #' @noRd
-mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL) {
+.mixed_fixed_design <- function(X_fixed, nuisance = NULL) {
+  X_fixed <- as.matrix(X_fixed)
+  if (!is.null(nuisance) && ncol(as.matrix(nuisance)) > 0L) {
+    nuisance <- as.matrix(nuisance)
+    k <- ncol(X_fixed)
+    full <- cbind(X_fixed, nuisance)
+    qrf <- qr(full)
+    keep <- sort(qrf$pivot[seq_len(qrf$rank)])
+    keep <- union(seq_len(k), keep[keep > k])
+    return(full[, keep, drop = FALSE])
+  }
+  if (ncol(X_fixed) == 0L) {
+    return(matrix(1, nrow = nrow(X_fixed), ncol = 1))
+  }
+  X_fixed
+}
+
+#' @keywords internal
+#' @noRd
+mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL, nuisance = NULL) {
   # Ensure X is a matrix
   X <- as.matrix(X)
   
@@ -49,6 +72,13 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL) {
   if (any(!is.finite(X)) || any(!is.finite(Y))) {
     stop("X and Y must contain only finite values", call. = FALSE)
   }
+  if (!is.null(nuisance)) {
+    nuisance <- as.matrix(nuisance)
+    if (nrow(nuisance) != nrow(X) || any(!is.finite(nuisance))) {
+      stop("nuisance must be a finite matrix with the same number of rows as X",
+           call. = FALSE)
+    }
+  }
 
   failure_value <- function() {
     rep(NA_real_, length(ran_ind) + length(fixed_ind))
@@ -66,11 +96,7 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL) {
          requireNamespace("fmrilss", quietly = TRUE))) {
       
       # Use the C++ implementation with proper input validation
-      X_fixed <- if (length(fixed_ind) == 0) {
-        matrix(1, nrow = nrow(X), ncol = 1)
-      } else {
-        X[, fixed_ind, drop = FALSE]
-      }
+      X_fixed <- .mixed_fixed_design(X[, fixed_ind, drop = FALSE], nuisance)
       
       solve_fun <- if (is.null(solver)) fmrilss::mixed_solve else solver
       fit <- tryCatch({
@@ -89,10 +115,12 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL) {
       if (is.null(fit)) return(failure_value())
       
       # Return results based on whether fixed_ind is empty
+      # Fixed-effect coefficients of interest come first; nuisance
+      # (baseline) coefficients are not returned.
       if (length(fixed_ind) == 0) {
-        return(fit$u)
+        return(as.numeric(fit$u))
       } else {
-        return(c(fit$u, fit$beta))
+        return(c(as.numeric(fit$u), as.numeric(fit$beta)[seq_along(fixed_ind)]))
       }
     } else {
       warning(
@@ -227,19 +255,22 @@ run_estimate_betas <- function(bdes, dset, method,
   xdat <- build_design_data(bdes)
 
   if (method == "mixed") {
+    # The baseline enters the mixed model as additional fixed effects. Removing
+    # it from Y alone (the former behaviour) leaves it in the random-effect
+    # design and biases the trial estimates; removing it from both Y and Z
+    # would still misstate the REML likelihood (the projected data have a
+    # singular covariance). Fixed effects are the exact treatment.
     vecs <- masked_vectors(dset)
+    X <- as.matrix(xdat$X)
+    ran_ind <- seq_len(ncol(bdes$dmat_ran))
+    fixed_ind <- if (!is.null(bdes$dmat_fixed)) {
+      (ncol(bdes$dmat_ran) + 1):(ncol(bdes$dmat_ran) + ncol(bdes$dmat_fixed))
+    } else {
+      NULL
+    }
     res <- map_voxels(vecs, function(v) {
-      v0 <- resid(lsfit(xdat$Base, v, intercept = FALSE))
-      mixed_betas(
-        xdat$X,
-        v0,
-        ran_ind = seq_len(ncol(bdes$dmat_ran)),
-        fixed_ind = if (!is.null(bdes$dmat_fixed)) {
-          (ncol(bdes$dmat_ran) + 1):(ncol(bdes$dmat_ran) + ncol(bdes$dmat_fixed))
-        } else {
-          NULL
-        }
-      )
+      mixed_betas(X, v, ran_ind = ran_ind, fixed_ind = fixed_ind,
+                  nuisance = xdat$Base)
     }, .progress = progress)
     return(list(beta_matrix = as.matrix(res), estimated_hrf = NULL))
   }
@@ -265,13 +296,10 @@ run_estimate_betas <- function(bdes, dset, method,
     )
 
     if (!is.null(bdes$fixed_ind) && length(bdes$fixed_ind) > 0) {
-      vecs <- neuroim2::vectors(data_matrix, subset = seq_len(ncol(data_matrix)))
       X_base_fixed <- cbind(as.matrix(bdes$dmat_base), as.matrix(bdes$dmat_fixed))
-
-      beta_matrix_fixed <- map_voxels(vecs, function(v) {
-        fit <- lm.fit(X_base_fixed, v)
-        coef(fit)[(ncol(bdes$dmat_base) + 1):length(coef(fit))]
-      }, .progress = progress)
+      # Every voxel shares the design: one multi-response least-squares solve.
+      cf <- as.matrix(coef(lm.fit(X_base_fixed, as.matrix(data_matrix))))
+      beta_matrix_fixed <- cf[(ncol(bdes$dmat_base) + 1):nrow(cf), , drop = FALSE]
 
       beta_matrix <- rbind(beta_matrix_ran, beta_matrix_fixed)
     } else {
@@ -281,11 +309,13 @@ run_estimate_betas <- function(bdes, dset, method,
     return(list(beta_matrix = beta_matrix, estimated_hrf = NULL))
   }
 
-  vecs <- masked_vectors(dset)
-  Y <- map_voxels(vecs, function(v) v, .progress = progress)
-  Y0 <- resid(lsfit(xdat$Base, Y, intercept = FALSE))
-  beta_matrix <- ols_betas(xdat$X, Y0)
-  list(beta_matrix = as.matrix(beta_matrix), estimated_hrf = NULL)
+  # OLS: fit events and baseline jointly (equivalently, by Frisch-Waugh-Lovell,
+  # residualise both Y and X on the baseline) and keep the event rows.
+  Y <- as.matrix(.dset_data_matrix(dset))
+  X <- as.matrix(xdat$X)
+  coefs <- as.matrix(ols_betas(cbind(X, xdat$Base), Y))
+  beta_matrix <- coefs[seq_len(ncol(X)), , drop = FALSE]
+  list(beta_matrix = beta_matrix, estimated_hrf = NULL)
 }
 
 

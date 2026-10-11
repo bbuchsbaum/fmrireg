@@ -47,13 +47,17 @@ test_that("fmri_meta ROI CSV with group covariate fits FE correctly", {
   expect_equal(fit$tau2[1], 0)
 })
 
-test_that("equal weights inflate SE relative to IVW in ROI CSV", {
+test_that("equal weights in ROI CSV give the OLS group fit (relative weights)", {
   skip_on_cran()
 
+  # Equal weights are relative weights with an estimated residual scale, so
+  # the fit is ordinary least squares on the subject effects. (This test used
+  # to assert that the equal-weights SE exceeds the IVW SE, which only held
+  # because equal weights were treated as unit sampling variances.)
   n_per_group <- 4
   subjects <- sprintf("s%02d", 1:(2 * n_per_group))
   group <- factor(rep(c("A", "B"), each = n_per_group))
-  beta <- ifelse(group == "A", 0.5, 1.5)
+  beta <- ifelse(group == "A", 0.5, 1.5) + c(0.1, -0.2, 0.05, 0.05, -0.1, 0.3, -0.15, -0.05)
   se <- rep(0.2, length(beta))
   df <- data.frame(subject = subjects, beta = beta, se = se, group = group,
                    stringsAsFactors = FALSE)
@@ -71,9 +75,9 @@ test_that("equal weights inflate SE relative to IVW in ROI CSV", {
   # Coefficients match (all SE equal so weighting doesn't change beta)
   expect_equal(as.numeric(fit_eq$coefficients), as.numeric(fit_ivw$coefficients), tolerance = 1e-10)
 
-  # But SE under equal weights is larger than IVW
-  expect_gt(as.numeric(fit_eq$se[1,1]), as.numeric(fit_ivw$se[1,1]))
-  expect_gt(as.numeric(fit_eq$se[1,2]), as.numeric(fit_ivw$se[1,2]))
+  # Equal-weights SE is the OLS standard error
+  ols <- summary(stats::lm(beta ~ group, data = df))$coefficients
+  expect_equal(as.numeric(fit_eq$se[1, ]), unname(ols[, "Std. Error"]), tolerance = 1e-10)
 })
 
 test_that("fmri_meta intercept-only matches grand mean in ROI CSV (PM)", {

@@ -209,23 +209,22 @@ test_that("metafuns stouffer/fixef/lancaster and meta_contrasts wiring", {
 })
 
 test_that("effective df helpers cover AR/robust branches", {
-  X <- cbind(1, rnorm(40), rnorm(40))
-  fit_ols <- list()
-  expect_equal(fmrireg:::compute_effective_df(fit_ols, X, "ols"), 40 - 3)
+  # Review 2026-10 (D4): ported from the deleted, unreachable
+  # compute_effective_df*() family to the live implementations.
+  expect_equal(fmrireg:::calculate_effective_df(40, 3), 40 - 3)
 
-  fit_ar <- list(ar_coef = 0.4)
-  df_ar <- fmrireg:::compute_effective_df(fit_ar, X, "ar")
-  expect_true(df_ar < 40 - 3 || is.finite(df_ar))
-
-  expect_equal(fmrireg:::compute_effective_df_ar(40, 3, NULL), 37)
+  df_ar <- fmrireg:::compute_ar_effective_df(40, 3, phi = 0.4)
+  expect_true(is.finite(df_ar) && df_ar <= 40 - 3)
+  expect_equal(fmrireg:::compute_ar_effective_df(40, 3, NULL), 37)
 
   w <- runif(40, 0.4, 1)
-  df_r <- fmrireg:::compute_effective_df_robust(X, w, solve(crossprod(X)))
+  df_r <- fmrireg:::calculate_effective_df(40, 3, robust_weights = w)
   expect_true(df_r < 37)
-  expect_equal(fmrireg:::compute_effective_df_robust(X, rep(1, 40), NULL), 37)
+  expect_equal(df_r, sum(w) - 3)
+  expect_equal(fmrireg:::calculate_effective_df(40, 3, robust_weights = rep(1, 40)), 37)
 
-  fit_ar_r <- list(ar_coef = 0.3, robust_weights = w, XtXinv = solve(crossprod(X)))
-  df_ar_r <- fmrireg:::compute_effective_df(fit_ar_r, X, "ar_robust")
+  df_ar_r <- fmrireg:::calculate_effective_df(40, 3, robust_weights = w,
+                                              ar_order = 1)
   expect_true(is.finite(df_ar_r))
 })
 

@@ -3,10 +3,12 @@
 \alias{install_cli}
 \title{Install the fmrireg command wrapper}
 \usage{
-install_cli(dest_dir = "~/.local/bin", overwrite = FALSE, commands = NULL)
+install_cli(dest_dir, overwrite = FALSE, commands = NULL)
 }
 \arguments{
-\item{dest_dir}{Destination directory for installed command wrappers.}
+\item{dest_dir}{Destination directory for installed command wrappers.
+Required: there is no default, so nothing is written to the home
+directory unless asked (e.g. \code{install_cli("~/.local/bin")}).}
 
 \item{overwrite}{Logical; overwrite an existing installed wrapper.}
 

@@ -215,38 +215,3 @@ test_that("mixed_solve_cpp and instantaneous_correlation_rcpp cover thin wrapper
   expect_error(instantaneous_correlation_rcpp(x, y2))
   expect_error(instantaneous_correlation_rcpp(x, y2, eta = -1))
 })
-
-test_that("lss_fast internal helper and deprecated lss_compute_r error", {
-  fx <- tiny_matrix_dataset(n_time = 80, n_vox = 4, n_events = 8)
-  fit_prep <- estimate_betas(
-    fx$dataset,
-    ran = onset ~ hrf(condition),
-    block = ~ run,
-    method = "ols"
-  )
-  # Direct unit exercise of internal LSS helper via a small synthetic bdes
-  Y <- frame_data(fx$dataset)
-  dmat <- as.matrix(design_matrix(
-    event_model(
-      onset ~ hrf(condition),
-      data = fx$events,
-      block = ~ run,
-      sampling_frame = frame_sframe(fx$dataset)
-    )
-  ))
-  bdes <- list(
-    dmat_ran = dmat,
-    dmat_base = matrix(1, nrow(dmat), 1),
-    dmat_fixed = NULL,
-    fixed_ind = NULL
-  )
-  betas <- fmrireg:::lss_fast(fx$dataset, bdes, Y = Y, use_cpp = TRUE)
-  expect_true(is.matrix(betas))
-  expect_equal(nrow(betas), ncol(dmat))
-
-  expect_error(
-    fmrireg:::lss_fast(fx$dataset, bdes, Y = Y[1:10, , drop = FALSE]),
-    "must have"
-  )
-  expect_error(fmrireg:::lss_compute_r(NULL, NULL), "deprecated")
-})

@@ -172,15 +172,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // group_pi0_counts_cpp
-List group_pi0_counts_cpp(NumericVector p, IntegerVector group, double tau);
-RcppExport SEXP _fmrireg_group_pi0_counts_cpp(SEXP pSEXP, SEXP groupSEXP, SEXP tauSEXP) {
+List group_pi0_counts_cpp(NumericVector p, IntegerVector group, double tau, int G);
+RcppExport SEXP _fmrireg_group_pi0_counts_cpp(SEXP pSEXP, SEXP groupSEXP, SEXP tauSEXP, SEXP GSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericVector >::type p(pSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type group(groupSEXP);
     Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
-    rcpp_result_gen = Rcpp::wrap(group_pi0_counts_cpp(p, group, tau));
+    Rcpp::traits::input_parameter< int >::type G(GSEXP);
+    rcpp_result_gen = Rcpp::wrap(group_pi0_counts_cpp(p, group, tau, G));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -234,7 +235,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fmrireg_ols_t_vcov_cpp", (DL_FUNC) &_fmrireg_ols_t_vcov_cpp, 3},
     {"_fmrireg_cpp_srht_apply", (DL_FUNC) &_fmrireg_cpp_srht_apply, 6},
     {"_fmrireg_cpp_srht_adjoint", (DL_FUNC) &_fmrireg_cpp_srht_adjoint, 6},
-    {"_fmrireg_group_pi0_counts_cpp", (DL_FUNC) &_fmrireg_group_pi0_counts_cpp, 3},
+    {"_fmrireg_group_pi0_counts_cpp", (DL_FUNC) &_fmrireg_group_pi0_counts_cpp, 4},
     {"_fmrireg_pi0_smooth_cpp", (DL_FUNC) &_fmrireg_pi0_smooth_cpp, 4},
     {"_fmrireg_weighted_bh_cpp", (DL_FUNC) &_fmrireg_weighted_bh_cpp, 3},
     {"_fmrireg_bh_qvalues_scaled_cpp", (DL_FUNC) &_fmrireg_bh_qvalues_scaled_cpp, 1},

@@ -1,19 +1,4 @@
-# Thirteenth wave: fit_Ftests, reconstruct_image edges, write_results.fmri_lm nifti.
-
-test_that("fit_Ftests returns per-response term F statistics", {
-  set.seed(311)
-  d <- data.frame(
-    y1 = rnorm(50), y2 = rnorm(50),
-    a = rnorm(50), b = factor(rep(c("x", "y"), 25))
-  )
-  fit <- lm(cbind(y1, y2) ~ a + b, data = d)
-  ft <- fmrireg:::fit_Ftests(fit)
-  expect_true(is.list(ft) || inherits(ft, "tbl_df") || is.data.frame(ft))
-  # Weighted path
-  fit_w <- lm(cbind(y1, y2) ~ a + b, data = d, weights = runif(50, 0.5, 1.5))
-  ft_w <- fmrireg:::fit_Ftests(fit_w)
-  expect_true(is.list(ft_w) || inherits(ft_w, "tbl_df") || is.data.frame(ft_w))
-})
+# Thirteenth wave: reconstruct_image edges, write_results.fmri_lm nifti.
 
 test_that("write_results.fmri_lm nifti spatial export covers beta/contrast writers", {
   skip_if_not_installed("neuroim2")

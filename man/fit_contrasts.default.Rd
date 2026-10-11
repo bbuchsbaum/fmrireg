@@ -4,7 +4,7 @@
 \alias{fit_contrasts.default}
 \title{Fit Contrasts for Linear Model (Default Method)}
 \usage{
-\method{fit_contrasts}{default}(object, conmat, colind, se = TRUE, ...)
+\method{fit_contrasts}{default}(object, conmat, colind, se = TRUE, cov.unscaled = NULL, ...)
 }
 \arguments{
 \item{object}{The fitted linear model object.}
@@ -14,6 +14,10 @@
 \item{colind}{The subset column indices in the design associated with the contrast.}
 
 \item{se}{Whether to compute standard errors, t-statistics, and p-values (default: TRUE).}
+
+\item{cov.unscaled}{Optional unscaled coefficient covariance \eqn{(X'X)^{-1}}
+of \code{object}, to reuse across several contrasts on the same fit
+(default: computed from \code{object}).}
 
 \item{...}{Additional arguments (unused)}
 }

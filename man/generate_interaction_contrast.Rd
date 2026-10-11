@@ -25,7 +25,10 @@ numeric matrix \strong{nrow = prod levels(f) , ncol = prod (Li - 1)} for
 chosen factors.
 }
 \description{
-Returns a matrix \strong{N_cells x N_contrasts} - \emph{each row is a design cell},
+Returns a matrix \strong{N_cells x N_contrasts} - \emph{row r is the design cell in
+row r of \code{des}} (for \code{expand.grid()} input, the first factor varies fastest,
+which is also the column order of fmridesign crossed terms such as
+\code{hrf(A, B)}),
 columns are independent contrasts (difference-coded for the factors you ask
 for, grand-mean for the rest).  Suitable for \code{tcrossprod(dm, C)} or
 \code{lm.fit(design, y)} followed by \verb{\%*\% coef} in the usual way.

@@ -22,8 +22,13 @@ spatial_fdr(
 
 \item{p}{Numeric vector of p-values (two-sided). Provide either z or p, not both.}
 
-\item{group}{Integer or factor vector of group IDs for each feature (e.g., parcel IDs,
-block IDs). Must have same length as z or p.}
+\item{group}{Integer, character or factor vector of group IDs for each feature
+(e.g., parcel IDs, block IDs). Must have same length as z or p. Groups are
+numbered 1..G by sorted unique value, or by factor level (unused levels
+included) when \code{group} is a factor. This numbering indexes
+\code{neighbors}, \code{pi0_raw}, \code{pi0_smooth} and \code{m_g}.
+Features with \code{NA} group are excluded from \eqn{\pi_0} estimation and
+receive weight 1 before normalisation.}
 
 \item{alpha}{Numeric scalar; FDR level to control (default: 0.05)}
 
@@ -33,14 +38,15 @@ Higher values are more conservative.}
 \item{lambda}{Numeric scalar; smoothing strength for groupwise \eqn{\pi_0} across neighbors (default: 1.0).
 Set to 0 for no smoothing, higher values for more smoothing.}
 
-\item{neighbors}{Optional list of length G (number of groups) where each element
-is an integer vector of 1-based neighbor IDs. Used for spatial smoothing of \eqn{\pi_0}.}
+\item{neighbors}{Optional list of length G (number of groups) where element g
+is an integer vector of 1-based neighbor IDs of group g, both in the group
+numbering described under \code{group}. Used for spatial smoothing of \eqn{\pi_0}.}
 
 \item{min_pi0}{Numeric scalar; lower bound for \eqn{\pi_0} to stabilize weights (default: 0.05).
 Prevents infinite weights.}
 
-\item{empirical_null}{Logical; if TRUE, estimate null distribution parameters (\eqn{\mu_0}, \eqn{\sigma_0})
-from central z-values using robust estimators (default: TRUE).}
+\item{empirical_null}{Logical; if TRUE, estimate null distribution parameters
+(\eqn{\mu_0}, \eqn{\sigma_0}) from the z-values (default: TRUE). See Details.}
 
 \item{verbose}{Logical; print progress messages (default: FALSE)}
 }
@@ -56,9 +62,10 @@ Object of class "spatial_fdr_result" containing:
 \item{k}{Integer scalar; number of rejections}
 \item{mu0}{Numeric scalar; estimated null mean (if empirical_null = TRUE)}
 \item{sigma0}{Numeric scalar; estimated null SD (if empirical_null = TRUE)}
-\item{groups}{Integer vector of compressed group IDs (1..G)}
-\item{group}{Factor or integer vector of original group IDs}
+\item{groups}{Integer vector of group IDs (1..G) in the numbering described
+under \code{group}}
 \item{G}{Integer scalar; number of groups}
+\item{m_g}{Integer vector; number of features per group}
 \item{alpha}{Numeric scalar; FDR level used}
 \item{coef_name}{Character scalar; name of coefficient (for S3 method)}
 }
@@ -75,6 +82,21 @@ This function implements a spatially-aware multiple testing procedure that:
 \item Uses the pi0 estimates to weight the Benjamini-Hochberg procedure
 \item Provides more power in regions with true signal while maintaining FDR control
 }
+
+Weights are \eqn{1/\pi_0} of each feature's group, normalised to sum to the
+number of finite p-values, and the weighted BH procedure of Genovese,
+Roeder & Wasserman (2006) is applied: reject \eqn{p_i \le w_i \alpha k / n}.
+
+\strong{Empirical null.} When \code{z} is supplied with
+\code{empirical_null = TRUE}, \eqn{\mu_0} and \eqn{\sigma_0} are estimated by
+Efron's (2004) central matching: a quadratic is fitted by Poisson regression
+to the log histogram counts of z within \eqn{\pm 1.5} robust SDs of the
+median. Because a minority of non-null features only changes the intercept
+of the log density near the centre and not its curvature, this estimate is
+consistent under \eqn{N(0,1)} and stays close to it when, for example, 10\\%
+of features are true signals. With fewer than 500 finite z-values (or if the
+fit fails) the median and normal-consistent MAD of all finite z-values are
+used instead; with fewer than 10 the theoretical null is used.
 
 The method is particularly effective for:
 \itemize{
@@ -110,6 +132,10 @@ print(result_smooth)
 \item Benjamini & Hochberg (1995). Controlling the false discovery rate.
 \item Storey (2002). A direct approach to false discovery rates.
 \item Hu et al. (2010). False discovery rate control with groups (SABHA).
+\item Genovese, Roeder & Wasserman (2006). False discovery control with
+p-value weighting.
+\item Efron (2004). Large-scale simultaneous hypothesis testing: the choice
+of a null hypothesis.
 }
 }
 \seealso{

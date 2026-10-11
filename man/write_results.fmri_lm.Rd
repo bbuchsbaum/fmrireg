@@ -33,13 +33,18 @@
 
 \item{space}{Spatial reference (e.g., "MNI152NLin2009cAsym"). Optional but recommended.}
 
-\item{desc}{Description of the analysis (default: "GLM")}
+\item{desc}{BIDS \code{desc-} label of the analysis (default: "GLM"),
+sanitised to letters and digits. Beta files are labelled
+\code{desc-<desc>}; statistic maps \code{desc-<desc><stat>} (e.g.
+\code{desc-run1tstat}), except that the default \code{"GLM"} is omitted
+(\code{desc-tstat}), the naming \code{\link[=collect_results]{collect_results()}} reads by default.}
 
 \item{format}{Output format(s). One or more of \code{"h5"} (BIDS-style HDF5
 outputs), \code{"nifti"} (BIDS-style NIfTI outputs, written as \code{.nii.gz}), and
 \code{"gds"} (fmrigds-compatible assays plus an \code{.rds} plan). Pass a character
 vector to write multiple formats at once (e.g. \code{c("h5", "nifti")}).
-Defaults to \code{"h5"} only. NIfTI maps are stored as 32-bit floats
+Defaults to \code{"h5"} only; \code{"h5"} requires the suggested package fmristore,
+\code{"nifti"} does not. NIfTI maps are stored as 32-bit floats
 (datatype FLOAT32), so their values are the fitted values rounded to
 single precision.}
 

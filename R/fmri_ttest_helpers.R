@@ -239,15 +239,28 @@ paired_diff_block <- function(blkA, blkB, rho = 0) {
     }
   }
 
-  if (!is.null(res$z_contrast)) {
-    res$z_contrast <- -res$z_contrast
-  }
-
-  if (!is.null(res$t_contrast)) {
-    res$t_contrast <- -res$t_contrast
-  }
-
+  # Contrast fields are already computed in the target convention (see
+  # .fmri_ttest_target_single_coef_contrast and the raw contrast weights), so
+  # they are not flipped here.
   res
+}
+
+# Single-coefficient contrast read from coefficient rows that are still in the
+# engine's own (source) sign convention, returned in the target convention.
+.fmri_ttest_target_single_coef_contrast <- function(res, weights, group_info,
+                                                    target_sign, source_sign) {
+  out <- .fmri_ttest_single_coef_contrast(res, weights)
+  if (is.null(out) || is.null(group_info) || identical(target_sign, source_sign)) {
+    return(out)
+  }
+  nz <- names(weights)[abs(weights) > 0]
+  if (!identical(nz, group_info$canonical_name) && !identical(nz, group_info$raw_name)) {
+    return(out)
+  }
+  for (nm in c("estimate", "t", "z")) {
+    if (!is.null(out[[nm]])) out[[nm]] <- -out[[nm]]
+  }
+  out
 }
 
 .fmri_ttest_resolve_contrast <- function(contrast, coef_names, group_info = NULL) {
@@ -331,18 +344,53 @@ paired_diff_block <- function(blkA, blkB, rho = 0) {
   )
 }
 
-.fmri_ttest_exact_ols_contrast <- function(ols, X, raw_weights) {
+# Turn an OLS fit (beta/se/t with rownames, df scalar or per feature) into the
+# beta/se/t/df/z/p matrices stored on an fmri_ttest_fit.
+.fmri_ttest_ols_stats <- function(ols, P) {
+  dn <- dimnames(ols$t)
+  K <- nrow(ols$t)
+  df_row <- rep_len(as.numeric(ols$df), P)
+  df <- matrix(df_row, nrow = K, ncol = P, byrow = TRUE, dimnames = dn)
+  p <- 2 * stats::pt(abs(ols$t), df = df, lower.tail = FALSE)
+  z <- .t_to_z(ols$t, df)
+  dimnames(p) <- dimnames(z) <- dn
+  list(beta = ols$beta, se = ols$se, t = ols$t, df = df, z = z, p = p)
+}
+
+.fmri_ttest_exact_ols_contrast <- function(ols, X, raw_weights, Y = NULL) {
+  P <- ncol(ols$beta)
   XtX_inv <- solve(crossprod(X))
-  scale <- as.numeric(crossprod(raw_weights, XtX_inv %*% raw_weights))
+  scale <- rep(as.numeric(crossprod(raw_weights, XtX_inv %*% raw_weights)), P)
   diag_inv <- diag(XtX_inv)
   ref_idx <- which(is.finite(diag_inv) & diag_inv > 0)[1]
   sigma2 <- (ols$se[ref_idx, ]^2) / diag_inv[[ref_idx]]
+  df <- rep_len(as.numeric(ols$df), P)
+  # Features fitted on a subset of subjects (non-finite outcomes dropped)
+  # need the contrast variance of their own design.
+  n_obs <- ols$n_obs
+  partial <- if (is.null(n_obs)) integer(0) else which(n_obs < nrow(X))
+  if (length(partial) > 0L) {
+    if (is.null(Y)) {
+      stop("Y is required for contrasts on features with missing subjects", call. = FALSE)
+    }
+    for (j in partial) {
+      keep <- is.finite(Y[, j])
+      Xs <- X[keep, , drop = FALSE]
+      inv_j <- tryCatch(solve(crossprod(Xs)), error = function(e) NULL)
+      if (is.null(inv_j) || !is.finite(df[j]) || df[j] <= 0) {
+        scale[j] <- NA_real_
+        next
+      }
+      r <- Y[keep, j] - drop(Xs %*% ols$beta[, j])
+      scale[j] <- as.numeric(crossprod(raw_weights, inv_j %*% raw_weights))
+      sigma2[j] <- sum(r^2) / df[j]
+    }
+  }
   estimate <- colSums(ols$beta * raw_weights)
   se <- sqrt(scale * sigma2)
   t_stat <- estimate / se
-  df <- rep(ols$df, length(estimate))
   p_val <- 2 * stats::pt(abs(t_stat), df = df, lower.tail = FALSE)
-  z_stat <- stats::qnorm(pmax(1e-300, 1 - p_val / 2)) * sign(t_stat)
+  z_stat <- .t_to_z(t_stat, df)
 
   list(
     estimate = estimate,
@@ -545,7 +593,7 @@ fmri_meta_fit_extended <- function(Y, V, X,
                                   voxel_name = "voxel_cov",
                                   n_threads = getOption("fmrireg.num_threads", 0)) {
   
-  method <- match.arg(method)
+  method <- .meta_resolve_method(match.arg(method))
   robust <- match.arg(robust)
   
   if (!is.matrix(Y)) Y <- as.matrix(Y)
@@ -770,8 +818,7 @@ coef_image.fmri_ttest_fit <- function(object, coef = 1,
           df <- df[coef, ]
         }
       }
-      p_two_sided <- 2 * stats::pt(abs(values), df = df, lower.tail = FALSE)
-      values <- stats::qnorm(pmax(1e-300, 1 - p_two_sided / 2)) * sign(values)
+      values <- .t_to_z(values, df)
     } else {
       warning("No df available, treating t as z", call. = FALSE)
     }

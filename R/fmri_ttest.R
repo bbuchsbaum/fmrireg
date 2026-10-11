@@ -15,7 +15,9 @@
 #'   \itemize{
 #'     \item "auto": Automatically select based on data (default)
 #'     \item "meta": Use inverse-variance meta-analysis (requires SE)
-#'     \item "classic": Use OLS/Student t-test
+#'     \item "classic": Use OLS/Student t-test. A subject with a non-finite
+#'       value for a feature is dropped from that feature only, so degrees of
+#'       freedom can differ between features.
 #'     \item "welch": Use Welch t-test for unequal variances
 #'   }
 #' @param paired Logical; if TRUE, perform paired t-test on differences (default: FALSE)
@@ -40,7 +42,9 @@
 #' @param voxel_name Character string; name for voxelwise coefficient (default: "voxel_cov")
 #' @param weights Character string for meta-engine weighting: "ivw" (default,
 #'   uses provided SE), "equal" (equal weights), or "custom" (supply
-#'   `weights_custom`). Ignored for classic/welch engines.
+#'   `weights_custom`). "equal"/"custom" are relative weights with an estimated
+#'   residual scale (weighted least squares; see \code{\link{fmri_meta}}).
+#'   Ignored for classic/welch engines.
 #' @param weights_custom Numeric vector (length S) or matrix (S x P) of custom
 #'   weights when `weights = "custom"`.
 #' @param combine Optional. When using the meta engine with t-only inputs
@@ -190,7 +194,10 @@ fmri_ttest <- function(gd,
   } else {
     engine == "meta"
   }
-  
+  # Sign convention of the group coefficient as each engine estimates it;
+  # results are reported in `sign`.
+  source_sign <- if (use_meta || (!paired && engine != "welch")) "BminusA" else "AminusB"
+
   res <- list()
   raw_contrast_weights <- NULL
   canonical_contrast_weights <- NULL
@@ -210,39 +217,16 @@ fmri_ttest <- function(gd,
     # One-sample test (intercept only)
     Xp <- matrix(1, nrow = nrow(Y), ncol = 1, dimnames = list(NULL, "(Intercept)"))
     
-    if (!is.null(voxelwise_cov)) {
-      ols <- fmri_ols_fit(Y, Xp, voxelwise = voxelwise_cov,
-                          center_voxelwise = center_voxelwise,
-                          voxel_name = voxel_name)
-    } else {
-      ols <- ols_t_cpp(Y, Xp)
-      rownames(ols$beta) <- "(Intercept)"
-      rownames(ols$se) <- "(Intercept)"
-      rownames(ols$t) <- "(Intercept)"
-    }
-    
-    T <- ols$t[1, , drop = FALSE]
-    df <- rep(ols$df, P)
-    Pval <- 2 * stats::pt(abs(as.numeric(T)), df = df, lower.tail = FALSE)
-    Z <- stats::qnorm(pmax(1e-300, 1 - Pval/2)) * sign(as.numeric(T))
-    
-    res$beta <- ols$beta
-    res$se <- ols$se
-    res$t <- T
-    res$df <- matrix(df, nrow = 1, ncol = P)
-    res$z <- matrix(Z, nrow = 1, ncol = P)
-    res$p <- matrix(Pval, nrow = 1, ncol = P)
-    
-    rownames(res$beta) <- "(Intercept)"
-    rownames(res$se) <- "(Intercept)"
-    rownames(res$t) <- "(Intercept)"
-    rownames(res$df) <- "(Intercept)"
-    rownames(res$z) <- "(Intercept)"
-    rownames(res$p) <- "(Intercept)"
-    
+    # fmri_ols_fit names the rows: "(Intercept)" plus, with a voxelwise
+    # covariate, `voxel_name`.
+    ols <- fmri_ols_fit(Y, Xp, voxelwise = voxelwise_cov,
+                        center_voxelwise = center_voxelwise,
+                        voxel_name = voxel_name)
+    res <- c(res, .fmri_ttest_ols_stats(ols, P))
+
   } else if (use_meta) {
     # Meta-regression using existing infrastructure
-    method <- getOption("fmrireg.meta.method", "pm")
+    method <- .meta_resolve_method(getOption("fmrireg.meta.method", "pm"))
     robust <- getOption("fmrireg.meta.robust", "none")
     analysis_method <- if (!is.null(combine)) paste0("combine:", combine) else method
     
@@ -262,7 +246,7 @@ fmri_ttest <- function(gd,
           coef_names = colnames(X),
           group_info = group_info,
           target_sign = sign,
-          source_sign = "BminusA"
+          source_sign = source_sign
         )
       }
       meta_fit <- fmri_meta(
@@ -296,6 +280,10 @@ fmri_ttest <- function(gd,
       if (!is.null(contrast)) {
         stop("contrast is not supported with voxelwise_cov in meta analyses", call. = FALSE)
       }
+      if (!identical(weights, "ivw")) {
+        stop("weights = '", weights, "' is not supported with voxelwise_cov in meta analyses",
+             call. = FALSE)
+      }
       # Update meta_fit wrapper to handle voxelwise
       out <- fmri_meta_fit_extended(
         Y = Y, V = V, X = X,
@@ -306,18 +294,19 @@ fmri_ttest <- function(gd,
         n_threads = getOption("fmrireg.num_threads", 0)
       )
     } else {
-      # Apply weighting variants for meta
-      V_eff <- V
-      if (weights == "equal") {
-        V_eff[] <- 1
-      } else if (weights == "custom") {
-        weights_custom <- .fmri_ttest_validate_weights_custom(weights_custom, nrow(V_eff), ncol(V_eff))
-        if (is.vector(weights_custom)) {
-          V_eff <- matrix(1 / weights_custom, nrow = nrow(V_eff), ncol = ncol(V_eff))
-        } else {
-          V_eff <- 1 / weights_custom
-        }
+      # One fitter for every weighting scheme: "ivw" uses V as absolute
+      # sampling variances; "equal"/"custom" are relative weights with an
+      # estimated residual scale (weighted least squares).
+      if (is.null(V) && identical(weights, "ivw")) {
+        stop("engine = 'meta' with weights = 'ivw' requires sampling variances", call. = FALSE)
       }
+      out <- .meta_fit_core(
+        Y = Y, V = if (is.null(V)) matrix(1, nrow(Y), ncol(Y)) else V, X = X,
+        method = method, robust = robust,
+        weights = weights, weights_custom = weights_custom,
+        n_threads = getOption("fmrireg.num_threads", 0)
+      )
+      rownames(out$beta) <- rownames(out$se) <- rownames(out$z) <- colnames(X)
       if (!is.null(contrast)) {
         canonical_contrast_weights <- .fmri_ttest_resolve_contrast(
           contrast,
@@ -329,25 +318,16 @@ fmri_ttest <- function(gd,
           coef_names = colnames(X),
           group_info = group_info,
           target_sign = sign,
-          source_sign = "BminusA"
+          source_sign = source_sign
         )
-        out <- fmri_meta_fit_contrasts(
-          Y = Y, V = V_eff, X = X, Cmat = matrix(raw_contrast_weights, ncol = 1),
-          method = method, robust = robust,
-          n_threads = getOption("fmrireg.num_threads", 0)
-        )
+        cs <- .meta_contrasts_from_tri(out$beta, out$cov_tri,
+                                       matrix(raw_contrast_weights, ncol = 1))
         exact_contrast <- list(
-          estimate = as.numeric(out$c_beta[1, ]),
-          se = as.numeric(out$c_se[1, ]),
-          z = as.numeric(out$c_z[1, ]),
-          p = 2 * stats::pnorm(abs(out$c_z[1, ]), lower.tail = FALSE),
-          df = rep(Inf, ncol(out$c_beta))
-        )
-      } else {
-        out <- fmri_meta_fit(
-          Y = Y, V = V_eff, X = X,
-          method = method, robust = robust,
-          n_threads = getOption("fmrireg.num_threads", 0)
+          estimate = as.numeric(cs$estimate[1, ]),
+          se = as.numeric(cs$se[1, ]),
+          z = as.numeric(cs$z[1, ]),
+          p = 2 * stats::pnorm(abs(cs$z[1, ]), lower.tail = FALSE),
+          df = rep(Inf, ncol(cs$estimate))
         )
       }
     }
@@ -384,7 +364,7 @@ fmri_ttest <- function(gd,
       T <- as.numeric(w$t)
       df <- as.numeric(w$df)
       Pval <- 2 * stats::pt(abs(T), df = df, lower.tail = FALSE)
-      Z <- stats::qnorm(pmax(1e-300, 1 - Pval/2)) * sign(T)
+      Z <- .t_to_z(T, df)
       
       res$beta <- rbind(
         "(Intercept)" = (w$muA + w$muB) / 2,
@@ -407,7 +387,11 @@ fmri_ttest <- function(gd,
         if (length(nz) > 1L || !identical(names(canonical_contrast_weights)[nz], "group")) {
           stop("Welch contrasts currently support only the group coefficient", call. = FALSE)
         }
-        exact_contrast <- .fmri_ttest_single_coef_contrast(res, canonical_contrast_weights)
+        exact_contrast <- .fmri_ttest_target_single_coef_contrast(
+          res, canonical_contrast_weights,
+          group_info = list(raw_name = "group", canonical_name = "group"),
+          target_sign = sign, source_sign = source_sign
+        )
       }
       
     } else {
@@ -422,33 +406,9 @@ fmri_ttest <- function(gd,
         rownames(ols$se) <- colnames(X)
         rownames(ols$t) <- colnames(X)
       }
-      
-      # Convert t to z and p
-      df <- rep(ols$df, P)
-      Pval <- matrix(
-        NA_real_, nrow = nrow(ols$t), ncol = ncol(ols$t),
-        dimnames = dimnames(ols$t)
-      )
-      for (i in seq_len(nrow(Pval))) {
-        Pval[i, ] <- 2 * stats::pt(
-          abs(ols$t[i, ]), df = df, lower.tail = FALSE
-        )
-      }
-      
-      Z <- matrix(NA_real_, nrow = nrow(ols$t), ncol = P,
-                  dimnames = dimnames(ols$t))
-      for (i in seq_len(nrow(Z))) {
-        Zi <- stats::qnorm(pmax(1e-300, 1 - Pval[i,]/2)) * sign(ols$t[i,])
-        Z[i,] <- Zi
-      }
-      
-      res$beta <- ols$beta
-      res$se <- ols$se
-      res$t <- ols$t
-      res$df <- matrix(ols$df, nrow = nrow(ols$t), ncol = ncol(ols$t),
-                       byrow = TRUE, dimnames = dimnames(ols$t))
-      res$z <- Z
-      res$p <- Pval
+
+      # Convert t to z and p (df may differ per voxel when subjects are missing)
+      res <- c(res, .fmri_ttest_ols_stats(ols, P))
       if (!is.null(contrast)) {
         canonical_coef_names <- rownames(res$beta)
         if (!is.null(group_info)) {
@@ -468,13 +428,14 @@ fmri_ttest <- function(gd,
             coef_names = rownames(ols$beta),
             group_info = group_info,
             target_sign = sign,
-            source_sign = "BminusA"
+            source_sign = source_sign
           )
-          exact_contrast <- .fmri_ttest_exact_ols_contrast(ols, X, raw_contrast_weights)
+          exact_contrast <- .fmri_ttest_exact_ols_contrast(ols, X, raw_contrast_weights, Y = Y)
         } else {
-          exact_contrast <- .fmri_ttest_single_coef_contrast(
+          exact_contrast <- .fmri_ttest_target_single_coef_contrast(
             res,
-            stats::setNames(canonical_contrast_weights, canonical_coef_names)
+            stats::setNames(canonical_contrast_weights, canonical_coef_names),
+            group_info = group_info, target_sign = sign, source_sign = source_sign
           )
         }
       }
@@ -485,7 +446,6 @@ fmri_ttest <- function(gd,
   if (!is.null(exact_contrast)) {
     res <- .fmri_ttest_store_contrast(res, exact_contrast)
   }
-  source_sign <- if (use_meta || (!paired && engine != "welch")) "BminusA" else "AminusB"
   res <- .fmri_ttest_apply_group_sign(res, group_info, target_sign = sign, source_sign = source_sign)
 
   res <- .fmri_ttest_apply_mc(res, mc, alpha, feature_group)

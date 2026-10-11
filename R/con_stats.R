@@ -29,6 +29,35 @@ fit_contrasts <- function(object, ...) UseMethod("fit_contrasts")
   list(betamat = betamat, sigma = sigma, dfres = dfres)
 }
 
+#' t statistic with a scale-free degenerate case
+#'
+#' `est / se`, except that an exactly zero standard error (a perfect fit) gives
+#' 0. There is deliberately no absolute tolerance on `se`: a threshold such as
+#' `sqrt(.Machine$double.eps)` silently zeroes valid statistics whenever the
+#' data are on a small scale.
+#' @keywords internal
+#' @noRd
+.safe_tstat <- function(est, se) {
+  out <- est / se
+  zero <- !is.na(se) & se == 0
+  out[zero] <- 0
+  out
+}
+
+#' Effective-df inputs for a possibly rank-deficient design
+#'
+#' The residual df is `n - rank`, so `n = df + rank` and the parameter count
+#' that `calculate_effective_df()` must subtract is the rank, not `ncol(X)`.
+#' @keywords internal
+#' @noRd
+.effective_df_from_rank <- function(df, p, aliased, robust_weights, ar_order) {
+  if (is.null(robust_weights) && !(ar_order > 0)) {
+    return(df)
+  }
+  rank <- p - length(aliased)
+  calculate_effective_df(df + rank, rank, robust_weights, ar_order, method = "simple")
+}
+
 .lm_cov_unscaled <- function(lmfit, varnames = NULL, warn = TRUE) {
   qrx <- qr.lm(lmfit)
   coefs <- as.matrix(coef(lmfit))
@@ -115,63 +144,6 @@ fit_contrasts <- function(object, ...) UseMethod("fit_contrasts")
   )
 }
 
-#' @keywords internal
-#' @noRd
-fit_Ftests <- function(object) {
-  w <- object$weights
-  ssr <- if (is.null(w)) {
-    apply(object$residuals, 2, function(vals) sum(vals^2))
-  } else {
-    apply(object$residuals, 2, function(vals) sum((vals^2 *w)))
-  }
-  
-  mss <- if (is.null(w)) {
-    apply(object$fitted.values, 2, function(vals) sum(vals^2))
-  } else {
-    apply(object$fitted.values, 2, function(vals) sum(vals^2 * w))
-  }
-  
-  #if (ssr < 1e-10 * mss) 
-  #  warning("ANOVA F-tests on an essentially perfect fit are unreliable")
-  
-  dfr <- df.residual(object)
-  p <- object$rank
-  
-  p1 <- 1L:p
-  #comp <- object$effects[p1]
-  asgn <- object$assign[qr.lm(object)$pivot][p1]
-  
-  
-  #nmeffects <- c("(Intercept)", attr(object$terms, "term.labels"))
-  #tlabels <- nmeffects[1 + unique(asgn)]
-  
-  df <- c(lengths(split(asgn, asgn)), dfr)
-  
-  I.p <- diag(nrow(coefficients(object)))
-  nterms <- length(unique(asgn))
-  hmat <- lapply(1:nterms, function(i) {
-    subs <- which(asgn == i)
-    hyp.matrix <- I.p[subs, , drop=FALSE]
-    hyp.matrix[!apply(hyp.matrix, 1, function(x) all(x == 0)), , drop = FALSE]
-  })
-  
-  ret <- lapply(seq_along(ssr), function(i) {
-    comp <- object$effects[,i]
-    ss <- c(unlist(lapply(split(comp^2, asgn), sum)), ssr[i])
-    ms <- ss/df
-    f <- ms/(ssr[i]/dfr)
-    
-    P <- pf(f, df, dfr, lower.tail = FALSE)
-    list(F = f, P = P)
-  })
-  
-  FMat <- do.call(rbind, lapply(ret, "[[", "F"))
-  PMat <- do.call(rbind, lapply(ret, "[[", "P"))
-  
-  list(F=FMat, P=PMat)
-  
-}
-
 
 
 #' Beta Statistics for Linear Model
@@ -197,7 +169,7 @@ fit_Ftests <- function(object) {
 #' beta_stats(lm_fit, c("Intercept", "wt", "qsec", "am"))
 #' @noRd
 #' @autoglobal
-beta_stats <- function(lmfit, varnames, se = TRUE) {
+beta_stats <- function(lmfit, varnames, se = TRUE, cov.unscaled = NULL) {
   basics  <- .lm_basic_stats(lmfit)
   betamat <- t(basics$betamat)
   sigma   <- basics$sigma
@@ -205,7 +177,9 @@ beta_stats <- function(lmfit, varnames, se = TRUE) {
   colnames(betamat) <- varnames
 
   if (se) {
-    cov.unscaled <- .lm_cov_unscaled(lmfit, varnames = varnames)
+    if (is.null(cov.unscaled)) {
+      cov.unscaled <- .lm_cov_unscaled(lmfit, varnames = varnames)
+    }
     aliased <- attr(cov.unscaled, "aliased", exact = TRUE) %||% integer(0)
     coef_se      <- sqrt(diag(cov.unscaled))
     if (length(aliased) > 0L) {
@@ -214,7 +188,7 @@ beta_stats <- function(lmfit, varnames, se = TRUE) {
     }
     vc           <- outer(sigma, coef_se)
     colnames(vc) <- varnames
-    tstat        <- ifelse(abs(vc) < .Machine$double.eps^0.5, 0, betamat / vc)
+    tstat        <- .safe_tstat(betamat, vc)
     prob         <- 2 * pt(-abs(tstat), rdf)
 
     ret <- dplyr::tibble(
@@ -302,13 +276,16 @@ beta_stats <- function(lmfit, varnames, se = TRUE) {
 #' @noRd
 #' @keywords internal
 
-fit_Fcontrasts <- function(lmfit, conmat, colind) {
+fit_Fcontrasts <- function(lmfit, conmat, colind, cov.unscaled = NULL) {
   basics  <- .lm_basic_stats(lmfit)
   betamat <- basics$betamat
   sigma2  <- basics$sigma^2
   rdf     <- basics$dfres
 
-  cov.unscaled <- .lm_cov_unscaled(lmfit)
+  # Callers fitting several contrasts on one model can compute this once.
+  if (is.null(cov.unscaled)) {
+    cov.unscaled <- .lm_cov_unscaled(lmfit)
+  }
   aliased <- attr(cov.unscaled, "aliased", exact = TRUE) %||% integer(0)
 
   # Orient to hypotheses-in-rows so the numerator rank `r` and the full
@@ -351,10 +328,9 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
   nz <- which(colSums(abs(cmat)) > 0)
   cmat_nz <- cmat[, nz, drop = FALSE]
   beta_nz <- betamat[nz, , drop = FALSE]
-  estimate <- purrr::map_dbl(seq_len(ncol(betamat)), function(i) {
-    cb <- cmat_nz %*% beta_nz[, i]
-    drop(t(cb) %*% cm %*% cb) / r
-  })
+  # Per-voxel quadratic forms u_v' cm u_v for all voxels at once (U is r x V).
+  U <- cmat_nz %*% beta_nz
+  estimate <- colSums(U * (cm %*% U)) / r
 
   Fstat <- estimate / sigma2
 
@@ -364,7 +340,7 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
     se          = sigma2,
     df.residual = rdf,
     stat        = Fstat,
-    prob        = 1 - pf(Fstat, r, rdf),
+    prob        = pf(Fstat, r, rdf, lower.tail = FALSE),
     stat_type   = "Fstat"),
     class = c("Fstat", "result_stat")
   )
@@ -374,7 +350,7 @@ fit_Fcontrasts <- function(lmfit, conmat, colind) {
 #' @noRd
 #' @autoglobal
 estimate_contrast.contrast <- function(x, fit, colind, ...) {
-  ret <- fit_contrasts(fit, x$weights, colind, se=TRUE)
+  ret <- fit_contrasts(fit, x$weights, colind, se = TRUE, cov.unscaled = list(...)$cov.unscaled)
   
   ## assumes se computed
   tibble(
@@ -399,7 +375,7 @@ estimate_contrast.contrast <- function(x, fit, colind, ...) {
 #' @keywords internal
 #' @noRd
 estimate_contrast.Fcontrast <- function(x, fit, colind, ...) {
-  ret <- fit_Fcontrasts(fit, x$weights, colind)
+  ret <- fit_Fcontrasts(fit, x$weights, colind, cov.unscaled = list(...)$cov.unscaled)
   tibble(
     type="Fcontrast",
     name=x$name,
@@ -423,6 +399,9 @@ estimate_contrast.Fcontrast <- function(x, fit, colind, ...) {
 #' @param conmat The contrast matrix or contrast vector.
 #' @param colind The subset column indices in the design associated with the contrast.
 #' @param se Whether to compute standard errors, t-statistics, and p-values (default: TRUE).
+#' @param cov.unscaled Optional unscaled coefficient covariance \eqn{(X'X)^{-1}}
+#'   of \code{object}, to reuse across several contrasts on the same fit
+#'   (default: computed from \code{object}).
 #' @param ... Additional arguments (unused)
 #'
 #' @return A list containing the following elements:
@@ -438,7 +417,7 @@ estimate_contrast.Fcontrast <- function(x, fit, colind, ...) {
 #' }
 #' @method fit_contrasts default
 #' @export
-fit_contrasts.default <- function(object, conmat, colind, se = TRUE, ...) {
+fit_contrasts.default <- function(object, conmat, colind, se = TRUE, cov.unscaled = NULL, ...) {
 
   conmat <- as.matrix(conmat)
 
@@ -460,7 +439,7 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, ...) {
   ct <- drop(t(cmat[nz, , drop = FALSE]) %*% betamat[nz, , drop = FALSE])
 
   if (se) {
-    cov.unscaled <- .lm_cov_unscaled(object)
+    if (is.null(cov.unscaled)) cov.unscaled <- .lm_cov_unscaled(object)
     aliased <- attr(cov.unscaled, "aliased", exact = TRUE) %||% integer(0)
 
     if (.contrast_uses_aliased(t(cmat), aliased)) {
@@ -537,16 +516,9 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, ...) {
   # Avoid division by zero or NaNs if s2 or sigma2 are zero/negative
   se   <- sqrt(pmax(0, s2 * sigma2))            # 1 × V
   
-  # Calculate effective df if needed
-  if (!is.null(robust_weights) || ar_order > 0) {
-    p <- nrow(B)
-    n <- df + p  # Total observations
-    df_effective <- calculate_effective_df(n, p, robust_weights, ar_order, method = "simple")
-  } else {
-    df_effective <- df
-  }
-  
-  tval <- ifelse(se < .Machine$double.eps^0.5, 0, est / se)
+  df_effective <- .effective_df_from_rank(df, nrow(B), aliased, robust_weights, ar_order)
+
+  tval <- .safe_tstat(est, se)
   pval <- 2 * pt(-abs(tval), df_effective)
 
   list(estimate = est,
@@ -612,19 +584,11 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, ...) {
   estimate <- qf / r # Numerator mean square: (LB)' (L(X'X)^-1 L')^-1 (LB) / r
   se <- sigma2 # Denominator mean square (residual variance)
   
-  # Avoid division by zero/NaNs
-  # Calculate effective df if needed
-  if (!is.null(robust_weights) || ar_order > 0) {
-    p <- nrow(B)
-    n <- df + p  # Total observations
-    df_effective <- calculate_effective_df(n, p, robust_weights, ar_order, method = "simple")
-  } else {
-    df_effective <- df
-  }
-  
-  Fval <- ifelse(abs(se) < .Machine$double.eps^0.5 | is.nan(qf), 
-                 NaN, 
-                 estimate / se)
+  df_effective <- .effective_df_from_rank(df, nrow(B), aliased, robust_weights, ar_order)
+
+  # A zero residual variance (perfect fit) has no F; no absolute tolerance,
+  # which would discard small-scale data.
+  Fval <- ifelse(!(se > 0) | is.nan(qf), NaN, estimate / se)
                  
   pval <- pf(Fval, r, df_effective, lower.tail = FALSE)
 
@@ -906,13 +870,7 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames,
   sigma2 <- sigma^2 # V-vector
   aliased <- .aliased_indices(Betas, XtXinv)
   
-  # Calculate effective degrees of freedom if needed
-  if (!is.null(robust_weights) || ar_order > 0) {
-    n <- dfres + p  # Total observations
-    df_effective <- calculate_effective_df(n, p, robust_weights, ar_order, method = "simple")
-  } else {
-    df_effective <- dfres
-  }
+  df_effective <- .effective_df_from_rank(dfres, p, aliased, robust_weights, ar_order)
   
   # Compute SE for each beta, each voxel
   # se(beta_i) = sqrt( [XtXinv]_ii * sigma2 )
@@ -940,7 +898,7 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames,
   
   # Compute t-stats: element-wise division
   # Avoid division by zero
-  tstat <- ifelse(abs(vc) < .Machine$double.eps^0.5, 0, betamat / vc)
+  tstat <- .safe_tstat(betamat, vc)
   
   # Compute p-values using effective df
   prob <- 2 * pt(-abs(tstat), df_effective)
@@ -990,6 +948,30 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames,
 
   stop(msg, call. = FALSE)
 }
+# Post-hoc contrasts need one coefficient covariance that matches the stored
+# scale. Run-by-run fits that whiten or weight each run separately pool their
+# betas across runs without such a covariance.
+.posthoc_check_supported <- function(object) {
+  strategy <- attr(object, "strategy", exact = TRUE) %||% object$strategy
+  if (!identical(strategy, "runwise")) return(invisible(TRUE))
+  cfg <- attr(object, "executed_control", exact = TRUE) %||%
+    attr(object, "executed_config", exact = TRUE)
+  if (!inherits(cfg, "fmri_lm_control")) return(invisible(TRUE))
+  n_runs <- length(fmrihrf::blocklens(object$model))
+  if (n_runs < 2L) return(invisible(TRUE))
+  per_run <- .temporal_noise_enabled(cfg$noise %||% cfg$ar) ||
+    .fmri_lm_robust_enabled(cfg$robust) ||
+    isTRUE((cfg$weights %||% cfg$volume_weights)$enabled) ||
+    isTRUE((cfg$projection %||% cfg$soft_subspace)$enabled)
+  if (per_run) {
+    stop("Post-hoc contrasts are not available for multi-run runwise fits with ",
+         "temporal noise models, robust weighting, volume weights or projection: ",
+         "each run is whitened/weighted separately and the pooled betas have no ",
+         "single covariance. Specify the contrasts in the model formula, or fit ",
+         "with estimation_spec(scope = \"joint\").", call. = FALSE)
+  }
+  invisible(TRUE)
+}
 
 #' Fit Contrasts for fMRI Linear Model Objects
 #'
@@ -1001,12 +983,19 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames,
 #' @param ... Additional arguments (unused)
 #'
 #' @return A list of contrast results
+#' @details Multi-run fits estimated run by run (`runwise_meta`) with temporal
+#'   noise models, robust weighting, volume weights or projection whiten or
+#'   weight each run differently, so their pooled betas have no single stored
+#'   covariance; post-hoc contrasts are refused for them. Specify such
+#'   contrasts in the model formula, or fit with
+#'   `estimation_spec(scope = "joint")`.
 #' @export
 #' @method fit_contrasts fmri_lm
 fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   if (is.null(contrasts) || length(contrasts) == 0) {
     return(list())
   }
+  .posthoc_check_supported(object)
 
   sigma <- object$result$sigma
   if (is.null(sigma)) {
@@ -1148,7 +1137,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
     se <- vapply(structured_covariance, function(cv) {
       sqrt(pmax(drop(crossprod(l, cv %*% l)), 0))
     }, numeric(1))
-    stat <- ifelse(se > .Machine$double.eps^0.5, estimate / se, NA_real_)
+    stat <- ifelse(se > 0, estimate / se, NA_real_)
     list(estimate = estimate, se = se, stat = stat,
          prob = 2 * stats::pt(-abs(stat), df = df_inference),
          stat_type = "tstat")
@@ -1173,148 +1162,255 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
          stat_type = "Fstat")
   }
 
-  resolve_pair_weights <- function(con_spec) {
-    event_terms <- terms(object$model$event_model)
-    event_terms <- Filter(function(t) !inherits(t, "feature_term"), event_terms)
-    if (length(event_terms) == 0) {
-      stop("No event terms available for pair_contrast_spec")
-    }
-    term <- event_terms[[1]]
-    cweights <- contrast_weights(con_spec, term)$weights
-    con_weights <- as.vector(cweights)
-    w_names <- rownames(cweights)
-
-    colind <- integer(0)
-    if (!is.null(w_names) && !is.null(beta_names)) {
-      colind <- match(w_names, beta_names)
-      if (anyNA(colind)) {
-        colind <- vapply(w_names, function(nm) {
-          exact <- which(beta_names == nm)
-          if (length(exact) == 1L) return(exact)
-          suffix <- which(endsWith(beta_names, nm))
-          if (length(suffix) == 1L) return(suffix)
-          NA_integer_
-        }, integer(1))
-      }
-      if (anyNA(colind)) {
-        colind <- integer(0)
-      }
-    }
-
-    if (length(colind) == 0L) {
-      if (length(con_weights) > p) {
-        stop("pair contrast has more weights than available coefficients")
-      }
-      colind <- seq_len(length(con_weights))
-    }
-
-    list(type = "t", weights = con_weights, colind = colind)
+  package <- function(con_name, type, stats) {
+    list(
+      name = con_name,
+      type = type,
+      estimate = as.numeric(stats$estimate),
+      se = as.numeric(stats$se),
+      stat = as.numeric(stats$stat),
+      prob = as.numeric(stats$prob),
+      df.residual = df_residual,
+      df.inference = as.numeric(df_inference),
+      stat_type = stats$stat_type
+    )
   }
 
   contrast_results <- lapply(seq_along(contrasts), function(i) {
     con_spec <- contrasts[[i]]
     con_name <- names(contrasts)[i]
     if (is.null(con_name) || !nzchar(con_name)) {
-      con_name <- paste0("contrast_", i)
+      con_name <- if (is.list(con_spec) && is.character(con_spec$name) &&
+                      length(con_spec$name) == 1L && nzchar(con_spec$name)) {
+        con_spec$name
+      } else {
+        paste0("contrast_", i)
+      }
     }
 
-    tryCatch({
-      if (inherits(con_spec, "pair_contrast_spec")) {
-        parsed <- resolve_pair_weights(con_spec)
-        .enforce_contrast_scope(parsed$colind, contrast_scope, con_name)
-        l <- numeric(p)
-        if (length(parsed$colind) != length(parsed$weights)) {
-          stop("pair contrast has mismatched indices/weights lengths")
-        }
-        l[parsed$colind] <- parsed$weights
-        stats <- compute_t(l, con_name)
-        return(list(
-          name = con_name,
-          type = "contrast",
-          estimate = as.numeric(stats$estimate),
-          se = as.numeric(stats$se),
-          stat = as.numeric(stats$stat),
-          prob = as.numeric(stats$prob),
-          df.residual = df_residual,
-          df.inference = as.numeric(df_inference),
-          stat_type = stats$stat_type
-        ))
+    resolved <- tryCatch(
+      .posthoc_contrast_matrix(con_spec, object, beta_names, p,
+                               scope_check = function(ci) {
+                                 .enforce_contrast_scope(ci, contrast_scope, con_name)
+                               }),
+      error = function(e) {
+        stop(sprintf("Cannot compute post-hoc contrast '%s': %s",
+                     con_name, conditionMessage(e)), call. = FALSE)
       }
+    )
+    .enforce_contrast_scope(resolved$colind, contrast_scope, con_name)
 
-      is_f <- inherits(con_spec, "Fcontrast")
-      has_weights <- is.list(con_spec) && !is.null(con_spec$weights)
-      weights <- if (has_weights) con_spec$weights else con_spec
-      colind <- attr(weights, "colind")
-      if (is.null(colind) && is.list(con_spec) && !is.null(con_spec$colind)) {
-        colind <- con_spec$colind
-      }
-
-      if (is.matrix(weights)) {
-        wmat <- as.matrix(weights)
-        if (is_f || nrow(wmat) > 1L) {
-          if (is.null(colind)) {
-            colind <- seq_len(ncol(wmat))
-          }
-          .enforce_contrast_scope(colind, contrast_scope, con_name)
-          if (ncol(wmat) == p && length(colind) == p && all(colind == seq_len(p))) {
-            L <- wmat
-          } else {
-            # Normalise to hypotheses-in-rows so cell-oriented (e.g. oneway,
-            # k x (k-1)) weights build the correct r x p matrix and derive the
-            # numerator rank r = nrow(Cw); see .orient_fcontrast().
-            Cw <- .orient_fcontrast(wmat, colind)
-            L <- matrix(0, nrow = nrow(Cw), ncol = p)
-            L[, colind] <- Cw
-          }
-          stats <- compute_F(L, con_name)
-          return(list(
-            name = con_name,
-            type = "Fcontrast",
-            estimate = as.numeric(stats$estimate),
-            se = as.numeric(stats$se),
-            stat = as.numeric(stats$stat),
-            prob = as.numeric(stats$prob),
-            df.residual = df_residual,
-            df.inference = as.numeric(df_inference),
-            stat_type = stats$stat_type
-          ))
-        }
-        weights <- as.numeric(wmat)
-      }
-
-      w <- as.numeric(weights)
-      if (is.null(colind)) {
-        colind <- seq_len(length(w))
-      }
-      .enforce_contrast_scope(colind, contrast_scope, con_name)
-      if (length(colind) != length(w)) {
-        stop("Contrast dimensions do not match selected coefficients")
-      }
-
-      l <- numeric(p)
-      l[colind] <- w
-      stats <- compute_t(l, con_name)
-      list(
-        name = con_name,
-        type = "contrast",
-        estimate = as.numeric(stats$estimate),
-        se = as.numeric(stats$se),
-        stat = as.numeric(stats$stat),
-        prob = as.numeric(stats$prob),
-        df.residual = df_residual,
-        df.inference = as.numeric(df_inference),
-        stat_type = stats$stat_type
-      )
-    }, error = function(e) {
-      if (grepl("unsupported coefficient indices", conditionMessage(e), fixed = TRUE)) {
-        stop(conditionMessage(e), call. = FALSE)
-      }
-      warning(paste("Error processing contrast", con_name, ":", e$message))
-      NULL
-    })
+    if (identical(resolved$type, "F")) {
+      package(con_name, "Fcontrast", compute_F(resolved$L, con_name))
+    } else {
+      package(con_name, "contrast", compute_t(drop(resolved$L), con_name))
+    }
   })
 
   contrast_results <- contrast_results[!vapply(contrast_results, is.null, logical(1))]
   names(contrast_results) <- vapply(contrast_results, `[[`, character(1), "name")
   contrast_results
+}
+
+#' Map names to post-hoc coefficient positions
+#'
+#' Exact match against the event design column names first; otherwise a name
+#' matches a column whose name ends in `_<name>` (the term-tag prefix that
+#' fmridesign adds), provided that match is unique. Anything else is an error.
+#' @keywords internal
+#' @noRd
+.posthoc_match_names <- function(nms, beta_names) {
+  if (is.null(beta_names)) {
+    stop("the fit has no coefficient names to match contrast weights against",
+         call. = FALSE)
+  }
+  idx <- match(nms, beta_names)
+  for (j in which(is.na(idx))) {
+    hit <- which(endsWith(beta_names, paste0("_", nms[j])))
+    if (length(hit) == 1L) idx[j] <- hit
+  }
+  if (anyNA(idx)) {
+    stop(sprintf(
+      "weight names do not match any event coefficient: %s (available: %s)",
+      paste(nms[is.na(idx)], collapse = ", "),
+      paste(beta_names, collapse = ", ")
+    ), call. = FALSE)
+  }
+  if (anyDuplicated(idx)) {
+    stop("weight names map to the same coefficient more than once", call. = FALSE)
+  }
+  idx
+}
+
+#' Resolve a contrast_spec against the fitted event terms
+#'
+#' Tries every (non-feature) event term with `contrast_weights()`; the spec
+#' must resolve against exactly one of them, with every weight row naming one
+#' of that term's design columns (the same mapping `contrast_weights()` uses
+#' for an event model during the fit).
+#' @return list(W = cells x r weights with design-column rownames, term, is_f)
+#' @keywords internal
+#' @noRd
+.posthoc_resolve_spec <- function(con_spec, object) {
+  emod <- object$model$event_model
+  event_terms <- terms(emod)
+  dm <- design_matrix(emod)
+  col_indices <- attr(dm, "col_indices")
+  ev_names <- colnames(dm)
+  tnames <- names(event_terms)
+  if (is.null(col_indices) || is.null(tnames)) {
+    stop("the event design has no column-index metadata", call. = FALSE)
+  }
+
+  # Variables the specification refers to (e.g. `cond` in ~ cond == "A").
+  spec_vars <- unique(unlist(lapply(con_spec, function(el) {
+    if (inherits(el, "formula")) all.vars(el) else NULL
+  })))
+
+  hits <- list()
+  for (k in seq_along(event_terms)) {
+    term <- event_terms[[k]]
+    if (inherits(term, "feature_term")) next
+    term_vars <- unique(c(names(term$event_table), names(term$events), term$varname))
+    if (length(spec_vars) > 0L && !all(spec_vars %in% term_vars)) next
+    warns <- character(0)
+    cw <- tryCatch(
+      withCallingHandlers(
+        contrast_weights(con_spec, term),
+        warning = function(w) {
+          warns <<- c(warns, conditionMessage(w))
+          invokeRestart("muffleWarning")
+        }
+      ),
+      error = function(e) NULL
+    )
+    if (is.null(cw) || is.null(cw$weights)) next
+    W <- as.matrix(cw$weights)
+    rn <- rownames(W)
+    term_cols <- ev_names[col_indices[[tnames[k]]]]
+    if (is.null(rn) || length(term_cols) == 0L) next
+    m <- match(rn, term_cols)
+    if (anyNA(m)) {
+      prefix <- paste0(tnames[k], "_")
+      if (all(startsWith(term_cols, prefix))) {
+        m <- match(rn, substring(term_cols, nchar(prefix) + 1L))
+      }
+    }
+    if (anyNA(m)) next
+    rownames(W) <- term_cols[m]
+    hits[[length(hits) + 1L]] <- list(W = W, term = tnames[k],
+                                      is_f = inherits(cw, "Fcontrast"),
+                                      warnings = warns)
+  }
+
+  if (length(hits) == 0L) {
+    stop("the contrast specification does not resolve against any event term ",
+         "of the fitted model", call. = FALSE)
+  }
+  if (length(hits) > 1L) {
+    stop(sprintf("the contrast specification is ambiguous: it resolves against terms %s",
+                 paste(vapply(hits, `[[`, character(1), "term"), collapse = ", ")),
+         call. = FALSE)
+  }
+  # Warnings from the term the spec resolved against are the user's to see
+  # (as they would be for the same contrast declared in the model formula).
+  for (msg in hits[[1L]]$warnings) warning(msg, call. = FALSE)
+  hits[[1L]]
+}
+
+#' Build the r x p post-hoc contrast matrix for one specification
+#'
+#' Accepts a `contrast_spec` (any type that `contrast_weights()` understands),
+#' a computed contrast object (with `weights`/`offset_weights`), a named
+#' weight vector, or a weight matrix (hypotheses in rows, or cells in rows as
+#' produced by `oneway_contrast()`). Weights are placed by design column name,
+#' or by an explicit `colind` attribute; unnamed weights without `colind` are
+#' accepted only when they cover every event coefficient. There is no
+#' positional fallback.
+#' @return list(type = "t" | "F", L = r x p matrix, colind)
+#' @keywords internal
+#' @noRd
+.posthoc_contrast_matrix <- function(con_spec, object, beta_names, p,
+                                     scope_check = NULL) {
+  try_names <- function(nms) {
+    if (is.null(nms)) return(NULL)
+    tryCatch(.posthoc_match_names(nms, beta_names), error = function(e) NULL)
+  }
+  # W: cells in rows (length(colind) x r)
+  build <- function(W, colind, is_f) {
+    colind <- as.integer(colind)
+    # Scope (e.g. event-only coefficients) is reported before generic bounds.
+    if (!is.null(scope_check)) scope_check(colind)
+    if (length(colind) != nrow(W)) {
+      stop("contrast dimensions do not match the selected coefficients", call. = FALSE)
+    }
+    if (anyNA(colind) || any(colind < 1L) || any(colind > p)) {
+      stop(sprintf("contrast column indices must lie in 1..%d", p), call. = FALSE)
+    }
+    is_f <- is_f || ncol(W) > 1L
+    L <- matrix(0, nrow = ncol(W), ncol = p)
+    L[, colind] <- t(W)
+    list(type = if (is_f) "F" else "t", L = L, colind = colind)
+  }
+
+  if (inherits(con_spec, "contrast_spec")) {
+    hit <- .posthoc_resolve_spec(con_spec, object)
+    return(build(hit$W, .posthoc_match_names(rownames(hit$W), beta_names), hit$is_f))
+  }
+
+  is_f <- inherits(con_spec, "Fcontrast")
+  weights <- con_spec
+  if (is.list(con_spec) && !is.null(con_spec$weights)) {
+    # A computed contrast object: offset_weights are named by event design
+    # column; plain weights by the term's columns.
+    weights <- con_spec$offset_weights %||% con_spec$weights
+    if (is.null(con_spec$offset_weights)) {
+      attr(weights, "colind") <- attr(con_spec$weights, "colind") %||%
+        attr(con_spec, "colind") %||% con_spec$colind
+    }
+  }
+  if (is.list(weights) || !is.numeric(weights)) {
+    stop("unsupported contrast specification of class ",
+         paste(class(con_spec), collapse = "/"), call. = FALSE)
+  }
+  colind <- attr(weights, "colind")
+
+  if (!is.matrix(weights)) {
+    w <- as.numeric(weights)
+    if (is.null(colind)) {
+      colind <- if (!is.null(names(weights))) {
+        .posthoc_match_names(names(weights), beta_names)
+      } else if (length(w) == p) {
+        seq_len(p)
+      } else {
+        stop(sprintf(paste(
+          "%d unnamed weights cannot be placed among %d event coefficients:",
+          "name them by design column or attach a 'colind' attribute"
+        ), length(w), p), call. = FALSE)
+      }
+    }
+    return(build(matrix(w, ncol = 1L), colind, is_f))
+  }
+
+  W <- matrix(as.numeric(weights), nrow(weights), ncol(weights),
+              dimnames = dimnames(weights))
+  if (!is.null(colind)) {
+    return(build(t(.orient_fcontrast(W, colind)), colind, is_f))
+  }
+  if (!is.null(idx <- try_names(colnames(W)))) {
+    return(build(t(W), idx, is_f))           # hypotheses in rows
+  }
+  if (!is.null(idx <- try_names(rownames(W)))) {
+    return(build(W, idx, is_f))              # cells in rows
+  }
+  if (ncol(W) == p) {
+    return(build(t(W), seq_len(p), is_f))
+  }
+  if (nrow(W) == p) {
+    return(build(W, seq_len(p), is_f))
+  }
+  stop(sprintf(paste(
+    "cannot place a %d x %d weight matrix among %d event coefficients:",
+    "give it design column names or a 'colind' attribute"
+  ), nrow(W), ncol(W), p), call. = FALSE)
 }

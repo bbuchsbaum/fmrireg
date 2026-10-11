@@ -2,7 +2,10 @@
 
 #' Fast factorial contrast generators
 #'
-#' Returns a matrix **N_cells x N_contrasts** - *each row is a design cell*,
+#' Returns a matrix **N_cells x N_contrasts** - *row r is the design cell in
+#' row r of `des`* (for `expand.grid()` input, the first factor varies fastest,
+#' which is also the column order of fmridesign crossed terms such as
+#' `hrf(A, B)`),
 #' columns are independent contrasts (difference-coded for the factors you ask
 #' for, grand-mean for the rest).  Suitable for `tcrossprod(dm, C)` or
 #' `lm.fit(design, y)` followed by `%*% coef` in the usual way.
@@ -41,12 +44,28 @@ generate_interaction_contrast <- function(des, factors) {
       matrix(1, nrow = L, ncol = 1)
   }
 
-  blocks   <- Map(build_block, des, fac_names %in% factors)
-  C_matrix <- Reduce(kronecker, blocks)
-
-  # Assert rows = design cells
+  if (!all(vapply(des, is.factor, logical(1)))) {
+    stop("every column of 'des' must be a factor", call. = FALSE)
+  }
   n_cells <- prod(vapply(des, nlevels, 1L))
-  stopifnot(nrow(C_matrix) == n_cells)
+  if (nrow(des) != n_cells || anyDuplicated(des)) {
+    stop("'des' must list every combination of factor levels exactly once ",
+         "(e.g. expand.grid() of the levels)", call. = FALSE)
+  }
+
+  blocks <- Map(build_block, des, fac_names %in% factors)
+
+  # Row r of the result is the contrast weight of the cell in row r of `des`:
+  # a row-wise Kronecker product of the per-factor blocks, indexed by each
+  # factor's level in that row. (A plain Reduce(kronecker, blocks) produces
+  # rows with the FIRST factor varying slowest, the opposite of expand.grid()
+  # and of fmridesign's crossed-term columns.) Columns are ordered with the
+  # first factor's contrast index varying fastest.
+  C_matrix <- matrix(1, nrow = nrow(des), ncol = 1)
+  for (k in seq_along(blocks)) {
+    Rk <- blocks[[k]][as.integer(des[[k]]), , drop = FALSE]
+    C_matrix <- do.call(cbind, lapply(seq_len(ncol(Rk)), function(j) C_matrix * Rk[, j]))
+  }
 
   C_matrix
 }

@@ -11,11 +11,15 @@
 #' @param dataset A latent `fmri_frame` (see [latent_frame()]).
 #' @param durations The duration of events in the dataset.
 #' @param drop_empty Whether to drop empty events from the model. Default is TRUE.
-#' @param robust Whether to use robust regression methods. Default is FALSE.
-#' @param autocor The autocorrelation correction method to use on components.
-#'   One of 'none', 'auto', 'ar1', 'ar2', or 'arma'. Default is 'none'.
-#' @param bootstrap Whether to compute bootstrapped parameter estimates. Default is FALSE.
-#' @param nboot The number of bootstrap iterations. Default is 1000.
+#' @param robust Must be FALSE. Robust weights are voxel-specific and cannot be
+#'   computed on component scores, so any robust request is an error.
+#' @param autocor The autocorrelation model. 'none' (OLS), 'ar1' or 'ar2'. AR
+#'   models use one set of AR coefficients per run shared across voxels,
+#'   estimated so that the fit equals a dense fit of the reconstructed voxel
+#'   data. 'auto' and 'arma' are not implemented and are an error.
+#' @param bootstrap Must be FALSE; bootstrapping is not implemented for latent
+#'   datasets and TRUE is an error.
+#' @param nboot Unused (see `bootstrap`).
 #' @param ... Additional arguments.
 #'
 #' @return An object of class 'fmri_latent_lm' containing the regression model and dataset.
@@ -46,15 +50,17 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
     stop("`fmri_latent_lm()` does not implement autocor = '", autocor,
          "'; choose 'none', 'ar1', or 'ar2'.", call. = FALSE)
   }
-  robust_type <- if (isTRUE(robust)) "huber" else if (identical(robust, FALSE)) {
-    "none"
-  } else {
-    .fmri_lm_normalize_robust_options(robust = robust)$type
+  if (!identical(robust, FALSE) && !identical(robust, "none")) {
+    stop("Robust fitting is not supported for latent datasets: robust weights ",
+         "are voxel-specific and cannot be computed on component scores. ",
+         "Fit the reconstructed voxel data instead.", call. = FALSE)
+  }
+  if (!isFALSE(bootstrap)) {
+    stop("`bootstrap` is not supported for latent datasets.", call. = FALSE)
   }
   control <- fmri_lm_control(
     estimation = estimation_spec("joint"),
-    noise = noise_spec(if (autocor == "none") "iid" else autocor),
-    robust = robust_spec(if (identical(robust_type, FALSE)) "none" else robust_type)
+    noise = noise_spec(if (autocor == "none") "iid" else autocor)
   )
   ret <- fmri_lm(formula, block, baseline_model=baseline_model, dataset=dataset,
                  durations=durations, drop_empty=drop_empty,
@@ -66,109 +72,182 @@ fmri_latent_lm <- function(formula, block, baseline_model=NULL, dataset,
 }
 
 
-#' Internal function for performing chunkwise linear regression on latent datasets
+#' Internal function for performing linear regression on latent datasets
 #'
 #' @keywords internal
-#' @details This function is an internal helper function for fmri_latent_lm, which performs
-#'          chunkwise linear regression on latent datasets. The function handles different
-#'          autocorrelation options, as well as robust regression and bootstrapping.
+#' @details This function is an internal helper function for fmri_latent_lm,
+#'   which fits the model to the component scores of a latent dataset.
+#'
+#'   Because voxel data are \eqn{Y = Z L'} (scores \eqn{Z}, loadings \eqn{L}),
+#'   any fit that is linear in \eqn{Y} can be done on \eqn{Z} and mapped back
+#'   by \eqn{L}. That covers OLS and GLS with a temporal covariance shared
+#'   across voxels (\code{noise_spec(pooling = "run")} or \code{"global"}). The
+#'   shared AR parameters are estimated on \eqn{Z Q \Lambda^{1/2}}, where
+#'   \eqn{L'L = Q \Lambda Q'}: those columns have the same time-by-time
+#'   cross-product as the voxel residuals, so the pooled autocovariance -- and
+#'   therefore phi -- equals the one a dense fit of the reconstructed data
+#'   would estimate. Robust (voxel-specific, nonlinear) weights, voxelwise or
+#'   parcel AR, and MA terms have no such reduction and are rejected.
 #'
 #' @param x An `fmri_frame` whose feature space is a `basis_space`.
 #' @param model The fmri model object.
 #' @param contrast_objects A list of contrast objects.
-#' @param nchunks The number of chunks to use for the regression.
-#' @param cfg Configuration object containing robust and AR options.
-#' @param progress Logical, if TRUE, show progress bar.
-#' @param phi_fixed Fixed AR coefficients (optional).
-#' @param sigma_fixed Fixed sigma values (optional).
-#' @param verbose Logical, if TRUE, additional output will be printed.
+#' @param nchunks Ignored (components are fitted in one block).
+#' @param cfg An `fmri_lm_control` object.
+#' @param phi_fixed Ignored: a shared phi passed down by `fmri_lm_fit()` is
+#'   estimated from component scores, not voxel residuals, so it is re-estimated
+#'   here on the voxel-equivalent residuals.
+#' @param sigma_fixed Ignored (robust fitting is unsupported).
 #' @param ... Additional arguments (for compatibility).
-#' @return A list containing the results of the chunkwise linear regression.
+#' @return A list containing the unpacked regression results.
 #' @seealso fmri_latent_lm
 #' @noRd
 chunkwise_lm_latent <- function(x, model, contrast_objects, nchunks, cfg,
-                                        verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
-                                        phi_fixed = NULL,
-                                        sigma_fixed = NULL, ...) {
+                                verbose = FALSE, use_fast_path = FALSE, progress = FALSE,
+                                phi_fixed = NULL,
+                                sigma_fixed = NULL, ...) {
   dset <- x
-  # Extract options from cfg if provided
-  robust <- if (!is.null(cfg) && !is.null(cfg$robust)) {
-    r <- as.logical(cfg$robust)[1]
-    if (is.na(r)) FALSE else r
-  } else {
-    FALSE
-  }
-  autocor <- if (!is.null(cfg) && !is.null(cfg$ar$cor_struct)) {
-    cfg$ar$cor_struct
-  } else {
-    "none"
-  }
-  bootstrap <- FALSE  # Not currently supported through cfg
-  nboot <- 1000
-  boot_rows <- FALSE
-  
-  # Map conlist to maintain backward compatibility
-  conlist <- contrast_objects
+  .latent_check_supported_config(cfg)
+
   form <- get_formula(model)
   tmats <- term_matrices(model)
   data_env <- list2env(tmats)
   data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
   modmat <- model.matrix(as.formula(form), data_env)
-  
-  basismat <- .dset_data_matrix(dset)
 
-  #wmat <- if (autocor != "none") {
-  #  message("whitening components")
-  #  auto_whiten(basismat, modmat, autocor)
-  #} else {
-  #  basismat
-  #}
-  
-  #data_env[[".y"]] <- as.matrix(wmat)
-  data_env[[".y"]] <- as.matrix(basismat)
-  
-  event_indices=attr(tmats, "event_term_indices")
-  baseline_indices=attr(tmats, "baseline_term_indices")
-  
-  if (bootstrap) {
-    lmfun <- multiresponse_bootstrap_lm
-    ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon=NULL, 
-                 modmat=modmat, 
-                 nboot=nboot, 
-                 boot_rows=boot_rows,
-                 event_indices=event_indices)
-  } else if (autocor != "none") {
-    
-    ## need to split by run
-    lmfun <- multiresponse_arma
-   
-    ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon=NULL, 
-                 modmat=modmat, blockids=model$event_model$sampling_frame$blockids, autocor=autocor)
-    unpack_chunkwise(ret, event_indices, baseline_indices) %>% purrr::list_modify(event_indices=event_indices,
-                                                                                  baseline_indices=baseline_indices)
-    
-  } else {
-    lmfun <- if (robust) multiresponse_rlm else multiresponse_lm
-    ret <- lmfun(form, data_env, conlist, attr(tmats,"varnames"), fcon=NULL, 
-                 modmat=modmat)
-    
-    rss <- colSums(as.matrix(ret$fit$residuals^2))
-    rdf <- ret$fit$df.residual
-    resvar <- rss/rdf
-    sigma <- sqrt(resvar)
-    
-    unpack_chunkwise(list(ret), event_indices, baseline_indices) %>% purrr::list_modify(event_indices=event_indices,
-                                                                                        baseline_indices=baseline_indices,
-                                                                                        sigma=sigma,
-                                                                                        residuals=resid(ret$fit),
-                                                                                        df.residual=ret$fit$df.residual,
-                                                                                        qr=qr.lm(ret$fit))
-    
+  basismat <- as.matrix(.dset_data_matrix(dset))
+  data_env[[".y"]] <- basismat
+
+  event_indices <- attr(tmats, "event_term_indices")
+  baseline_indices <- attr(tmats, "baseline_term_indices")
+
+  if (!is.null(cfg) && .temporal_noise_enabled(cfg$ar)) {
+    return(.latent_ar_fit(
+      dset = dset, modmat = modmat, basismat = basismat, cfg = cfg,
+      contrast_objects = contrast_objects,
+      event_indices = event_indices, baseline_indices = baseline_indices
+    ))
   }
 
+  ret <- multiresponse_lm(form, data_env, contrast_objects, attr(tmats, "varnames"),
+                          fcon = NULL, modmat = modmat)
+
+  rss <- colSums(as.matrix(ret$fit$residuals^2))
+  rdf <- ret$fit$df.residual
+  resvar <- rss / rdf
+  sigma <- sqrt(resvar)
+
+  unpack_chunkwise(list(ret), event_indices, baseline_indices) %>%
+    purrr::list_modify(event_indices = event_indices,
+                       baseline_indices = baseline_indices,
+                       sigma = sigma,
+                       residuals = resid(ret$fit),
+                       df.residual = ret$fit$df.residual,
+                       qr = qr.lm(ret$fit))
 }
 
-  
+
+#' Internal: reject fitting options with no exact latent-space reduction
+#' @keywords internal
+#' @noRd
+.latent_check_supported_config <- function(cfg) {
+  if (is.null(cfg)) return(invisible(TRUE))
+  if (.fmri_lm_robust_enabled(cfg$robust)) {
+    stop("Robust fitting is not supported for latent datasets: robust weights ",
+         "are voxel-specific and cannot be computed on component scores. ",
+         "Fit the reconstructed voxel data instead.", call. = FALSE)
+  }
+  ar <- cfg$ar
+  if (!is.null(ar) && .temporal_noise_enabled(ar)) {
+    if (as.integer(ar$q %||% 0L) > 0L) {
+      stop("MA (ARMA) noise models are not supported for latent datasets; ",
+           "use an AR structure ('ar1', 'ar2', 'arp').", call. = FALSE)
+    }
+    if (isTRUE(ar$voxelwise) || isTRUE(ar$by_cluster) ||
+        identical(ar$pooling, "parcel")) {
+      stop("Voxelwise or parcel-wise AR models are not supported for latent ",
+           "datasets; use noise_spec(pooling = 'run') or 'global' (one AR ",
+           "model shared across voxels).", call. = FALSE)
+    }
+  }
+  if (isTRUE(cfg$volume_weights$enabled)) {
+    stop("Volume weighting is not supported for latent datasets.", call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+
+#' Internal: shared-AR GLS fit on latent component scores
+#' @keywords internal
+#' @noRd
+.latent_ar_fit <- function(dset, modmat, basismat, cfg, contrast_objects,
+                           event_indices, baseline_indices) {
+  run_indices <- lapply(.dset_run_chunks(dset), `[[`, "row_ind")
+
+  # Voxel-equivalent columns for AR estimation (see chunkwise_lm_latent).
+  L <- as.matrix(.dset_loadings(dset))
+  eg <- eigen(crossprod(L), symmetric = TRUE)
+  root <- eg$vectors %*% diag(sqrt(pmax(eg$values, 0)), nrow = length(eg$values))
+  Y_equiv <- basismat %*% root
+
+  cfg_est <- cfg
+  cfg_est$ar$phi <- NULL
+  cfg_est$ar$phi_fixed <- NULL
+  est <- solve_integrated_glm(X = modmat, Y = Y_equiv, config = cfg_est,
+                              run_indices = run_indices)
+  phi <- est$ar_coef %||% est$phi_hat
+  if (is.null(phi) || !length(unlist(phi))) {
+    stop("Failed to estimate AR parameters for the latent dataset.", call. = FALSE)
+  }
+
+  # GLS is linear in the response once phi is fixed: fit the scores directly.
+  cfg_fit <- cfg
+  cfg_fit$ar$phi_fixed <- phi
+  result <- solve_integrated_glm(X = modmat, Y = basismat, config = cfg_fit,
+                                 run_indices = run_indices)
+
+  betas <- as.matrix(result$betas %||% result$coefficients)
+  XtXinv <- result$XtXinv
+  # [[ ]] not $: `result$sigma` partial-matches `sigma2` (a variance).
+  sigma_vec <- as.numeric(result[["sigma"]] %||% sqrt(result[["sigma2"]]))
+  if (length(sigma_vec) == 1L) sigma_vec <- rep(sigma_vec, ncol(betas))
+  dfres <- result[["dfres"]] %||% result[["df_residual"]]
+  ar_order <- result$ar_order %||% .target_ar_order(.normalize_ar_options(cfg$ar)) %||% 0L
+
+  simple_con <- Filter(function(x) inherits(x, "contrast") && !inherits(x, "Fcontrast"),
+                       contrast_objects)
+  f_con <- Filter(function(x) inherits(x, "Fcontrast"), contrast_objects)
+  weights_of <- function(cons) {
+    w <- lapply(cons, function(x) {
+      ww <- x$weights
+      attr(ww, "colind") <- attr(x, "colind")
+      ww
+    })
+    if (length(cons)) names(w) <- vapply(cons, `[[`, character(1), "name")
+    w
+  }
+
+  bstats <- beta_stats_matrix(betas, XtXinv, sigma_vec, dfres, colnames(modmat),
+                              ar_order = ar_order)
+  conres <- fit_lm_contrasts_fast(betas, sigma_vec^2, XtXinv,
+                                  weights_of(simple_con), weights_of(f_con),
+                                  dfres, ar_order = ar_order)
+
+  out <- unpack_chunkwise(
+    list(list(bstats = bstats, contrasts = conres,
+              event_indices = event_indices, baseline_indices = baseline_indices)),
+    event_indices, baseline_indices
+  )
+  out$event_indices <- event_indices
+  out$baseline_indices <- baseline_indices
+  out$sigma <- sigma_vec
+  out$df.residual <- dfres
+  out$cov.unscaled <- XtXinv
+  out$ar_coef <- phi
+  out
+}
+
+
 #' @keywords internal
 #' @noRd
 tibble_to_neurovec <- function(dset, tab, mask) {

@@ -53,18 +53,10 @@ compute_contrast <- function(fit_result, contrast_matrix, contrast_names = NULL)
   nvoxels <- ncol(fit_result$betas)
   ncontrasts <- nrow(contrast_matrix)
   
-  # Standard errors
-  if (length(fit_result$sigma2) == 1) {
-    # Single sigma2
-    stderr <- sqrt(diag(contrast_var) * fit_result$sigma2)
-    stderr <- matrix(stderr, ncontrasts, nvoxels)
-  } else {
-    # Different sigma2 per voxel
-    stderr <- matrix(NA, ncontrasts, nvoxels)
-    for (v in 1:nvoxels) {
-      stderr[, v] <- sqrt(diag(contrast_var) * fit_result$sigma2[v])
-    }
-  }
+  # Standard errors: se[c, v] = sqrt(Var_c * sigma2_v), for all voxels at once
+  sigma2 <- rep_len(as.numeric(fit_result$sigma2), nvoxels)
+  stderr <- sqrt(outer(diag(contrast_var), sigma2))
+  dim(stderr) <- c(ncontrasts, nvoxels)
   
   # T-statistics
   tstat <- estimates / stderr
@@ -91,143 +83,6 @@ compute_contrast <- function(fit_result, contrast_matrix, contrast_names = NULL)
     df = df,
     contrast_matrix = contrast_matrix
   )
-}
-
-#' Compute F-statistic for multi-row contrasts
-#'
-#' @description
-#' Computes F-statistics and p-values for contrasts with multiple rows
-#' (testing multiple linear combinations simultaneously).
-#'
-#' @param fit_result GLM fit results
-#' @param contrast_matrix Contrast matrix (can have multiple rows)
-#'
-#' @return List with:
-#'   - fstat: F-statistics (1 x nvoxels)
-#'   - pvalue: p-values
-#'   - df1: Numerator degrees of freedom
-#'   - df2: Denominator degrees of freedom
-#' @keywords internal
-#' @noRd
-compute_f_statistic <- function(fit_result, contrast_matrix) {
-  if (!is.matrix(contrast_matrix)) {
-    contrast_matrix <- matrix(contrast_matrix, nrow = 1)
-  }
-  
-  # Number of contrasts (restrictions)
-  q <- nrow(contrast_matrix)
-  
-  # Contrast estimates
-  Cb <- contrast_matrix %*% fit_result$betas
-  
-  # Variance of contrasts
-  vcov <- fit_result$XtXinv
-  CVC <- contrast_matrix %*% vcov %*% t(contrast_matrix)
-  
-  # Check if CVC is invertible
-  CVC_inv <- tryCatch(
-    solve(CVC),
-    error = function(e) {
-      warning("Contrast variance matrix is singular")
-      MASS::ginv(CVC)  # Use generalized inverse
-    }
-  )
-  
-  nvoxels <- ncol(fit_result$betas)
-  fstat <- numeric(nvoxels)
-  
-  # Compute F-statistic for each voxel
-  for (v in 1:nvoxels) {
-    cb_v <- Cb[, v, drop = FALSE]
-    sigma2_v <- if (length(fit_result$sigma2) == 1) {
-      fit_result$sigma2
-    } else {
-      fit_result$sigma2[v]
-    }
-    
-    # F = (Cb)' (C vcov C')^-1 (Cb) / (q * sigma2)
-    fstat[v] <- as.numeric(t(cb_v) %*% CVC_inv %*% cb_v) / (q * sigma2_v)
-  }
-  
-  # Degrees of freedom
-  df1 <- q
-  df2 <- fit_result$effective_df %||% fit_result$dfres
-  
-  # P-values
-  pvalue <- pf(fstat, df1, df2, lower.tail = FALSE)
-  
-  list(
-    fstat = matrix(fstat, nrow = 1),
-    pvalue = matrix(pvalue, nrow = 1),
-    df1 = df1,
-    df2 = df2,
-    contrast_matrix = contrast_matrix
-  )
-}
-
-#' Apply contrast weights to fMRI model terms
-#'
-#' @description
-#' Helper function to construct contrast matrices from contrast
-#' specifications and term information.
-#'
-#' @param contrast_spec Contrast specification object
-#' @param term_info Term information from fMRI model
-#' @param beta_names Names of all parameters
-#'
-#' @return Numeric contrast matrix
-#' @keywords internal
-#' @noRd
-construct_contrast_matrix <- function(contrast_spec, term_info, beta_names) {
-  # This would interface with the existing contrast system
-  # For now, return a placeholder
-  
-  if (is.matrix(contrast_spec)) {
-    return(contrast_spec)
-  }
-  
-  if (is.numeric(contrast_spec)) {
-    return(matrix(contrast_spec, nrow = 1))
-  }
-  
-  # Would handle contrast objects here
-  stop("Complex contrast specifications not yet implemented")
-}
-
-#' Compute voxelwise contrasts efficiently
-#'
-#' @description
-#' Optimized function for computing many contrasts across many voxels.
-#' Uses matrix operations to avoid loops where possible.
-#'
-#' @param fit_result GLM fit results
-#' @param contrast_list List of contrast matrices
-#' @param parallel Whether to use parallel processing
-#'
-#' @return List of contrast results
-#' @keywords internal
-#' @noRd
-compute_voxelwise_contrasts <- function(fit_result, contrast_list, parallel = FALSE) {
-  if (parallel && getOption("fmrireg.num_threads", 1) > 1) {
-    # Parallel version would go here
-    message("Parallel contrast computation not yet implemented")
-  }
-  
-  # Sequential version
-  results <- vector("list", length(contrast_list))
-  
-  for (i in seq_along(contrast_list)) {
-    contrast <- contrast_list[[i]]
-    
-    # Determine if F-test needed
-    if (is.matrix(contrast) && nrow(contrast) > 1) {
-      results[[i]] <- compute_f_statistic(fit_result, contrast)
-    } else {
-      results[[i]] <- compute_contrast(fit_result, contrast)
-    }
-  }
-  
-  results
 }
 
 #' Sandwich variance estimator for heteroscedasticity-robust inference

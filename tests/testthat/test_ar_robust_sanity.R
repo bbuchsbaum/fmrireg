@@ -149,31 +149,26 @@ test_that("Sandwich variance is computed correctly without diag matrices", {
   expect_true(all(se > 0), "Standard errors should be positive")
 })
 
-test_that("Robust effective df uses weighted hat trace efficiently", {
+test_that("Robust effective df is sum(w) - rank", {
+  # Review 2026-10 (D4): compute_robust_effective_df() (unreachable; it
+  # returned the weighted hat trace, which is always p) was deleted. The live
+  # robust df is .robust_effective_df(): sum(w) - rank.
   set.seed(654)
   n <- 30
   p <- 2
-  
+
   X <- cbind(1, rnorm(n))
   weights <- runif(n, 0.1, 1)  # Random weights
-  
-  # Should not create diag(weights) internally
-  # This tests the new efficient implementation
-  sqrt_w <- sqrt(weights)
-  Xw <- X * sqrt_w
-  XtWX <- crossprod(Xw)
-  XtWX_inv <- solve(XtWX)
-  
-  # Compute effective df efficiently
-  edf <- fmrireg:::compute_robust_effective_df(X, weights, XtWX_inv)
-  
-  # Should be positive and less than n
+
+  edf <- fmrireg:::.robust_effective_df(weights, rank = qr(X)$rank)
   expect_gt(edf, 0, "Effective df should be positive")
-  expect_lt(edf, n, "Effective df should be less than n")
-  
-  # For uniform weights = 1, should equal p (trace of projection)
-  weights_uniform <- rep(1, n)
-  XtX_inv <- solve(crossprod(X))
-  edf_uniform <- fmrireg:::compute_robust_effective_df(X, weights_uniform, XtX_inv)
-  expect_equal(edf_uniform, p, tolerance = 1e-10)
+  expect_lt(edf, n - p, "Effective df should be less than n - p")
+  expect_equal(edf, sum(weights) - p)
+
+  # The weighted hat trace is still the rank, for any weights.
+  Xw <- X * sqrt(weights)
+  expect_equal(sum((Xw %*% solve(crossprod(Xw))) * Xw), p, tolerance = 1e-10)
+
+  # Uniform weights recover the OLS residual df.
+  expect_equal(fmrireg:::.robust_effective_df(rep(1, n), rank = p), n - p)
 })

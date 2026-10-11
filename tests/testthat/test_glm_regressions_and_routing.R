@@ -1,23 +1,3 @@
-test_that("process_run_integrated honors sigma_fixed in robust pipeline", {
-  set.seed(1001)
-  n <- 120
-  p <- 4
-  v <- 20
-  X <- cbind(1, matrix(rnorm(n * (p - 1)), n, p - 1))
-  B <- matrix(rnorm(p * v), nrow = p, ncol = v)
-  Y <- X %*% B + matrix(rt(n * v, df = 3), n, v)
-
-  cfg <- fmri_lm_control(
-    robust_options = list(type = "huber", max_iter = 3, scale_scope = "global"),
-    ar_options = list(struct = "iid")
-  )
-
-  small <- process_run_integrated(X, Y, cfg, sigma_fixed = 0.2)
-  big <- process_run_integrated(X, Y, cfg, sigma_fixed = 10)
-
-  expect_false(isTRUE(all.equal(small$betas, big$betas, tolerance = 1e-8)))
-})
-
 test_that("solve_glm_core RSS-only path matches fitted-path results", {
   set.seed(1011)
   n <- 140
@@ -49,127 +29,6 @@ test_that("fmri_lm_control accepts voxel and local robust scale scopes", {
     ar_options = list(struct = "iid")
   )
   expect_equal(cfg_local$robust$scale_scope, "voxel")
-})
-
-test_that("process_run_integrated reports fixed sigma when sigma_fixed is supplied", {
-  set.seed(1010)
-  n <- 100
-  p <- 4
-  v <- 16
-  X <- cbind(1, matrix(rnorm(n * (p - 1)), n, p - 1))
-  B <- matrix(rnorm(p * v), nrow = p, ncol = v)
-  Y <- X %*% B + matrix(rt(n * v, df = 4), n, v)
-
-  cfg <- fmri_lm_control(
-    robust_options = list(type = "huber", max_iter = 4, scale_scope = "global"),
-    ar_options = list(struct = "iid")
-  )
-
-  out <- process_run_integrated(X, Y, cfg, sigma_fixed = 2.5)
-  expect_equal(out$sigma, rep(2.5, v), tolerance = 1e-12)
-})
-
-test_that("voxel robust scale scope produces voxel-specific sigma", {
-  set.seed(1012)
-  n <- 120
-  p <- 4
-  v <- 12
-  X <- cbind(1, matrix(rnorm(n * (p - 1)), n, p - 1))
-  B <- matrix(rnorm(p * v), nrow = p, ncol = v)
-  scales <- seq(0.5, 3.0, length.out = v)
-  E <- sweep(matrix(rt(n * v, df = 4), n, v), 2, scales, `*`)
-  Y <- X %*% B + E
-
-  cfg_voxel <- fmri_lm_control(
-    robust_options = list(type = "huber", max_iter = 4, scale_scope = "voxel"),
-    ar_options = list(struct = "iid")
-  )
-  cfg_global <- fmri_lm_control(
-    robust_options = list(type = "huber", max_iter = 4, scale_scope = "global"),
-    ar_options = list(struct = "iid")
-  )
-
-  out_voxel <- process_run_integrated(X, Y, cfg_voxel)
-  out_global <- process_run_integrated(X, Y, cfg_global)
-
-  expect_gt(stats::sd(out_voxel$sigma), 0)
-  expect_equal(stats::sd(out_global$sigma), 0, tolerance = 1e-12)
-})
-
-test_that("process_run_integrated honors phi_fixed in AR pipeline", {
-  skip_if_not_installed("fmriAR")
-
-  set.seed(1002)
-  n <- 160
-  p <- 3
-  v <- 12
-  X <- cbind(1, matrix(rnorm(n * (p - 1)), n, p - 1))
-  B <- matrix(rnorm(p * v), nrow = p, ncol = v)
-
-  # Add AR(1)-like noise with strong autocorrelation.
-  noise <- replicate(v, as.numeric(arima.sim(model = list(ar = 0.7), n = n)))
-  Y <- X %*% B + noise
-
-  cfg <- fmri_lm_control(
-    robust_options = list(type = FALSE),
-    ar_options = list(struct = "ar1", iter_gls = 2, exact_first = FALSE)
-  )
-
-  phi0 <- process_run_integrated(X, Y, cfg, phi_fixed = 0)
-  phi8 <- process_run_integrated(X, Y, cfg, phi_fixed = 0.8)
-
-  expect_false(isTRUE(all.equal(phi0$betas, phi8$betas, tolerance = 1e-8)))
-})
-
-test_that("integrated solver dfres field is consumed consistently", {
-  set.seed(1003)
-  n <- 90
-  p <- 3
-  v <- 7
-  X <- cbind(1, matrix(rnorm(n * (p - 1)), n, p - 1))
-  B <- matrix(rnorm(p * v), nrow = p, ncol = v)
-  Y <- X %*% B + matrix(rnorm(n * v), n, v)
-
-  cfg <- fmri_lm_control(
-    robust_options = list(type = FALSE),
-    ar_options = list(struct = "iid")
-  )
-
-  raw <- solve_integrated_glm(X, Y, cfg)
-  out <- process_run_integrated(X, Y, cfg)
-
-  expect_true("dfres" %in% names(raw))
-  expect_equal(out$dfres, raw$dfres)
-})
-
-test_that("process_run_integrated contrasts use voxelwise sigma2", {
-  set.seed(1004)
-  n <- 100
-  p <- 3
-  v <- 10
-  X <- cbind(1, matrix(rnorm(n * (p - 1)), n, p - 1))
-  B <- matrix(rnorm(p * v), nrow = p, ncol = v)
-
-  # Strongly heteroskedastic columns to ensure sigma differs by voxel.
-  col_scales <- seq(0.5, 3, length.out = v)
-  E <- matrix(rnorm(n * v), n, v)
-  E <- sweep(E, 2, col_scales, `*`)
-  Y <- X %*% B + E
-
-  cfg <- fmri_lm_control(
-    robust_options = list(type = FALSE),
-    ar_options = list(struct = "iid")
-  )
-
-  w <- 1
-  attr(w, "colind") <- 2L
-  conlist <- list(beta2 = w)
-
-  out <- process_run_integrated(X, Y, cfg, conlist_weights = conlist, fconlist_weights = list())
-  sigma_out <- out$contrasts[[1]]$data[[1]]$sigma
-
-  expect_length(sigma_out, v)
-  expect_gt(stats::sd(sigma_out), 0)
 })
 
 test_that("coef.fmri_lm include_baseline works on pooled multi-run fits", {
@@ -317,39 +176,6 @@ test_that("AR processing routes through fmriAR in production chunkwise path", {
 
   expect_gt(.GlobalEnv$.fit_noise_calls, 0L)
   expect_gt(.GlobalEnv$.whiten_calls, 0L)
-})
-
-test_that("integrated AR+robust pipeline avoids redundant whitening passes", {
-  skip_if_not_installed("fmriAR")
-
-  set.seed(1014)
-  n <- 120
-  p <- 4
-  v <- 12
-  X <- cbind(1, matrix(rnorm(n * (p - 1)), n, p - 1))
-  B <- matrix(rnorm(p * v), nrow = p, ncol = v)
-  Y <- X %*% B + matrix(rnorm(n * v), n, v)
-
-  cfg <- fmri_lm_control(
-    robust_options = list(type = "huber", max_iter = 3, scale_scope = "run"),
-    ar_options = list(struct = "ar1", iter_gls = 2, exact_first = FALSE)
-  )
-
-  .GlobalEnv$.whiten_calls <- 0L
-  trace("whiten_apply",
-        where = asNamespace("fmriAR"),
-        tracer = quote(.GlobalEnv$.whiten_calls <- .GlobalEnv$.whiten_calls + 1L),
-        print = FALSE)
-  on.exit({
-    untrace("whiten_apply", where = asNamespace("fmriAR"))
-    rm(.whiten_calls, envir = .GlobalEnv)
-  }, add = TRUE)
-
-  out <- process_run_integrated(X, Y, cfg)
-
-  expect_true(is.list(out))
-  expect_gte(.GlobalEnv$.whiten_calls, 1L)
-  expect_lte(.GlobalEnv$.whiten_calls, cfg$ar$iter_gls)
 })
 
 test_that("fixed-order AR estimation avoids legacy per-voxel fallback by default", {
@@ -528,4 +354,40 @@ test_that("process_chunk robust-only path preserves run row mapping after in-pla
   expect_equal(got$betas, expected$betas, tolerance = 1e-10)
   expect_equal(got$rss, expected$rss, tolerance = 1e-10)
   expect_equal(got$sigma2, expected$sigma2, tolerance = 1e-10)
+})
+
+test_that("voxel robust scale scope produces voxel-specific sigma", {
+  # Review 2026-10 (D2): see above. The reported sigma is the per-voxel WLS
+  # scale under either scope; the scope changes the weights. This test
+  # previously asserted that the global scope reported one shared sigma.
+  set.seed(1012)
+  n <- 120
+  p <- 4
+  v <- 12
+  X <- cbind(1, matrix(rnorm(n * (p - 1)), n, p - 1))
+  B <- matrix(rnorm(p * v), nrow = p, ncol = v)
+  scales <- seq(0.5, 3.0, length.out = v)
+  E <- sweep(matrix(rt(n * v, df = 4), n, v), 2, scales, `*`)
+  Y <- X %*% B + E
+
+  cfg_voxel <- fmri_lm_control(
+    robust_options = list(type = "huber", max_iter = 4, scale_scope = "voxel"),
+    ar_options = list(struct = "iid")
+  )
+  cfg_global <- fmri_lm_control(
+    robust_options = list(type = "huber", max_iter = 4, scale_scope = "global"),
+    ar_options = list(struct = "iid")
+  )
+
+  # Ported from the removed single-run wrapper to the solver it called
+  # (review 2026-10, F2).
+  out_voxel <- fmrireg:::solve_integrated_glm(X, Y, cfg_voxel)
+  out_global <- fmrireg:::solve_integrated_glm(X, Y, cfg_global)
+  out_voxel$sigma <- as.numeric(out_voxel[["sigma"]] %||% sqrt(out_voxel[["sigma2"]]))
+
+  expect_gt(stats::sd(out_voxel$sigma), 0)
+  # The voxel scales track the simulated noise scales.
+  expect_gt(stats::cor(out_voxel$sigma, scales), 0.8)
+  expect_false(isTRUE(all.equal(out_voxel$robust_weights,
+                                out_global$robust_weights)))
 })
