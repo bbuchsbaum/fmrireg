@@ -279,11 +279,38 @@ is.formula <- function(x) {
   .robust_effective_df(robust_weights, rank)
 }
 
+#' Stack per-voxel covariance matrices
+#'
+#' Returns the columns `vec(XtXinv_v)` (p^2 x V; NA for voxels that are
+#' skipped) and the mask of usable voxels: a p x p matrix and a finite scale.
+#' @keywords internal
+#' @noRd
+.voxelwise_cov_stack <- function(XtXinv_list, scale, p, check_dim = TRUE) {
+  V <- length(XtXinv_list)
+  ok <- vapply(seq_len(V), function(v) {
+    M <- XtXinv_list[[v]]
+    !is.null(M) && is.finite(scale[v]) &&
+      (!check_dim || (is.matrix(M) && all(dim(M) == c(p, p))))
+  }, logical(1))
+  S <- matrix(NA_real_, p * p, V)
+  if (any(ok)) {
+    S[, ok] <- vapply(XtXinv_list[ok], function(M) as.numeric(M), numeric(p * p))
+  }
+  list(S = S, ok = ok)
+}
+
+#' Per-voxel quadratic forms l' M_v k for stacked M_v
+#' @keywords internal
+#' @noRd
+.voxelwise_bilinear <- function(S, l, k = l) {
+  as.numeric(crossprod(as.numeric(outer(l, k)), S))
+}
+
 #' Beta statistics when each voxel has its own projection matrix
 #'
 #' Helper for voxelwise AR fitting where every voxel yields a distinct
 #' whitened design matrix.  Computes standard errors and t statistics using
-#' the per-voxel \code{XtXinv} matrices.
+#' the per-voxel \code{XtXinv} matrices, for all voxels at once.
 #'
 #' @keywords internal
 #' @noRd
@@ -299,29 +326,26 @@ beta_stats_matrix_voxelwise <- function(Betas, XtXinv_list, sigma, dfres,
   t_mat    <- matrix(NA_real_, V, p)
   prob_mat <- matrix(NA_real_, V, p)
 
-  for (v in seq_len(V)) {
-    XtXinv <- XtXinv_list[[v]]
-    if (is.null(XtXinv) ||
-        !is.matrix(XtXinv) ||
-        any(dim(XtXinv) != c(p, p)) ||
-        !is.finite(sigma[v])) {
-      next
+  stack <- .voxelwise_cov_stack(XtXinv_list, sigma, p)
+  ok <- stack$ok
+  if (any(ok)) {
+    diag_idx <- (seq_len(p) - 1L) * p + seq_len(p)
+    se_scal <- t(sqrt(stack$S[diag_idx, ok, drop = FALSE]))   # n_ok x p
+    df_eff <- if (is.null(robust_weights_list)) {
+      rep(dfres, sum(ok))
+    } else {
+      vapply(which(ok), function(v) {
+        .voxel_inference_df(dfres, attr(XtXinv_list[[v]], "rank") %||% p,
+                            robust_weights_list[[v]])
+      }, numeric(1))
     }
-    se_scal <- sqrt(diag(XtXinv))
-
-    rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
-
-    df_eff <- .voxel_inference_df(dfres, attr(XtXinv, "rank") %||% p, rw)
-
-    se_vec <- se_scal * sigma[v]
-    est_vec <- Betas[, v]
-    t_vec <- ifelse(abs(se_vec) < .Machine$double.eps^0.5, 0, est_vec / se_vec)
-    p_vec <- 2 * pt(-abs(t_vec), df_eff)
-
-    est_mat[v, ]  <- est_vec
-    se_mat[v, ]   <- se_vec
-    t_mat[v, ]    <- t_vec
-    prob_mat[v, ] <- p_vec
+    se_ok <- se_scal * sigma[ok]
+    est_ok <- t(Betas[, ok, drop = FALSE])
+    t_ok <- ifelse(abs(se_ok) < .Machine$double.eps^0.5, 0, est_ok / se_ok)
+    est_mat[ok, ] <- est_ok
+    se_mat[ok, ] <- se_ok
+    t_mat[ok, ] <- t_ok
+    prob_mat[ok, ] <- 2 * pt(-abs(t_ok), df_eff)
   }
 
   colnames(est_mat)  <- varnames
@@ -346,9 +370,73 @@ beta_stats_matrix_voxelwise <- function(Betas, XtXinv_list, sigma, dfres,
   )
 }
 
+#' Per-voxel F quadratic forms u_v' (L M_v L')^-1 u_v
+#'
+#' Batched Cholesky across voxels (loops run over the r x r entries, not over
+#' voxels). Voxels whose factorisation is not clearly well conditioned fall
+#' back to the per-voxel `solve()` used by `.fast_F_contrast()`, including its
+#' warning for a singular hypothesis matrix.
+#' @keywords internal
+#' @noRd
+.voxelwise_F_quadform <- function(S, L, U) {
+  r <- nrow(L)
+  nv <- ncol(U)
+  # Mv[[i]][[j]][v] = (L M_v L')_{ij}
+  Mv <- lapply(seq_len(r), function(i) {
+    lapply(seq_len(r), function(j) .voxelwise_bilinear(S, L[i, ], L[j, ]))
+  })
+  if (r == 1L) {
+    m <- Mv[[1L]][[1L]]
+    qf <- (U[1L, ] * (1 / m)) * U[1L, ]
+    bad <- !is.finite(m) | m == 0
+  } else {
+    Lc <- vector("list", r)
+    for (i in seq_len(r)) Lc[[i]] <- vector("list", r)
+    scale <- do.call(pmax, lapply(seq_len(r), function(i) abs(Mv[[i]][[i]])))
+    bad <- !is.finite(scale) | scale <= 0
+    z <- vector("list", r)
+    qf <- numeric(nv)
+    for (j in seq_len(r)) {
+      d <- Mv[[j]][[j]]
+      if (j > 1L) for (k in seq_len(j - 1L)) d <- d - Lc[[j]][[k]]^2
+      bad <- bad | !is.finite(d) | d <= scale * 1e-6
+      Lc[[j]][[j]] <- sqrt(pmax(d, 0))
+      if (j < r) {
+        for (i in (j + 1L):r) {
+          a <- Mv[[i]][[j]]
+          if (j > 1L) for (k in seq_len(j - 1L)) a <- a - Lc[[i]][[k]] * Lc[[j]][[k]]
+          Lc[[i]][[j]] <- a / Lc[[j]][[j]]
+        }
+      }
+      zj <- U[j, ]
+      if (j > 1L) for (k in seq_len(j - 1L)) zj <- zj - Lc[[j]][[k]] * z[[k]]
+      z[[j]] <- zj / Lc[[j]][[j]]
+      qf <- qf + z[[j]]^2
+    }
+  }
+  for (v in which(bad)) {
+    M <- matrix(vapply(seq_len(r * r), function(ij) {
+      Mv[[(ij - 1L) %% r + 1L]][[(ij - 1L) %/% r + 1L]][v]
+    }, numeric(1)), r, r)
+    Cinv <- tryCatch(solve(M), error = function(e) {
+      warning(paste("Singular matrix in F-contrast computation (L(X'X)^-1 L'). Details:", e$message))
+      matrix(NaN, nrow = r, ncol = r)
+    })
+    qf[v] <- if (any(is.nan(Cinv))) NaN else {
+      tmp <- crossprod(U[, v], Cinv)
+      sum(tmp * U[, v])
+    }
+  }
+  qf
+}
+
 #' Contrast statistics with voxelwise projection matrices
 #'
-#' Computes t and F contrasts when each voxel has a distinct \code{XtXinv}.
+#' Computes t and F contrasts when each voxel has a distinct \code{XtXinv},
+#' for all voxels at once: the per-voxel variances \eqn{l' M_v l} (and the
+#' r x r matrices \eqn{L M_v L'}) are read off the stacked \eqn{M_v} with one
+#' matrix product per contrast. Values equal those of calling
+#' `.fast_t_contrast()` / `.fast_F_contrast()` voxel by voxel.
 #'
 #' @keywords internal
 #' @noRd
@@ -360,6 +448,19 @@ fit_lm_contrasts_voxelwise <- function(Betas, sigma2, XtXinv_list,
   V <- ncol(Betas)
 
   results <- list()
+  stack <- .voxelwise_cov_stack(XtXinv_list, sigma2, p, check_dim = FALSE)
+  ok <- stack$ok
+  S_ok <- stack$S[, ok, drop = FALSE]
+  B_ok <- Betas[, ok, drop = FALSE]
+  # Inference df exactly as .fast_t_contrast()/.fast_F_contrast() derive it.
+  df_ok <- if (is.null(robust_weights_list)) {
+    rep(.effective_df_from_rank(dfres, p, integer(0), NULL, ar_order), sum(ok))
+  } else {
+    vapply(which(ok), function(v) {
+      .effective_df_from_rank(dfres, p, integer(0), robust_weights_list[[v]],
+                              ar_order)
+    }, numeric(1))
+  }
 
   for (nm in names(conlist)) {
     l <- conlist[[nm]]
@@ -368,19 +469,16 @@ fit_lm_contrasts_voxelwise <- function(Betas, sigma2, XtXinv_list,
     full_l[, colind] <- l
 
     est <- se <- stat <- prob <- sigma_out <- rep(NA_real_, V)
-
-    for (v in seq_len(V)) {
-      if (is.null(XtXinv_list[[v]]) || !is.finite(sigma2[v])) {
-        next
-      }
-      rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
-      res <- .fast_t_contrast(Betas[, v, drop = FALSE], sigma2[v],
-                              XtXinv_list[[v]], full_l, dfres, rw, ar_order)
-      est[v] <- res$estimate
-      se[v]  <- res$se
-      stat[v] <- res$stat
-      prob[v] <- res$prob
-      sigma_out[v] <- res$sigma
+    if (any(ok)) {
+      e <- drop(full_l %*% B_ok)
+      s2 <- .voxelwise_bilinear(S_ok, full_l[1L, ])
+      se_ok <- sqrt(pmax(0, s2 * sigma2[ok]))
+      tval <- .safe_tstat(e, se_ok)
+      est[ok] <- e
+      se[ok] <- se_ok
+      stat[ok] <- tval
+      prob[ok] <- 2 * pt(-abs(tval), df_ok)
+      sigma_out[ok] <- sqrt(pmax(0, sigma2[ok]))
     }
 
     results[[nm]] <- tibble::tibble(
@@ -408,20 +506,19 @@ fit_lm_contrasts_voxelwise <- function(Betas, sigma2, XtXinv_list,
     Cw <- .orient_fcontrast(L, colind)
     full_L <- matrix(0, nrow = nrow(Cw), ncol = p)
     full_L[, colind] <- Cw
+    r <- nrow(full_L)
 
     est <- se <- stat <- prob <- rep(NA_real_, V)
-
-    for (v in seq_len(V)) {
-      if (is.null(XtXinv_list[[v]]) || !is.finite(sigma2[v])) {
-        next
-      }
-      rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
-      res <- .fast_F_contrast(Betas[, v, drop = FALSE], sigma2[v],
-                              XtXinv_list[[v]], full_L, dfres, rw, ar_order)
-      est[v]  <- res$estimate
-      se[v]   <- res$se
-      stat[v] <- res$stat
-      prob[v] <- res$prob
+    if (any(ok)) {
+      U <- full_L %*% B_ok
+      qf <- .voxelwise_F_quadform(S_ok, full_L, U)
+      estimate <- qf / r
+      s2 <- sigma2[ok]
+      Fval <- ifelse(!(s2 > 0) | is.nan(qf), NaN, estimate / s2)
+      est[ok] <- estimate
+      se[ok] <- s2
+      stat[ok] <- Fval
+      prob[ok] <- pf(Fval, r, df_ok, lower.tail = FALSE)
     }
 
     results[[nm]] <- tibble::tibble(
