@@ -62,11 +62,8 @@ chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
   # Build run indices for AR-aware slow path
   run_indices <- NULL
   if (cfg$ar$struct != "iid") {
-    run_indices <- lapply(
-      .dset_run_chunks(dset),
-      `[[`,
-      "row_ind"
-    )
+    # Run rows come from the temporal schema; no data is read.
+    run_indices <- .dset_run_rows(dset)
   }
 
   # Process chunks
@@ -196,7 +193,7 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
       if (verbose) message("Processing chunk (fast path) ", ym$chunk_num)
       
       # Process chunk using pre-computed matrices
-      chunk_res <- process_chunk(ym$data, precomp, cfg)
+      chunk_res <- process_chunk(.chunk_data(ym), precomp, cfg)
       
       # Calculate statistics
       actual_vnames <- colnames(precomp$X_global)
@@ -298,7 +295,7 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
     cres <- .chunkwise_apply(chunks, function(i, ym) {
       if (verbose) message("Processing chunk (fast path) ", ym$chunk_num)
 
-      Ymat <- as.matrix(ym$data)
+      Ymat <- as.matrix(.chunk_data(ym))
       fit_Ymat <- if (has_explicit_weights) {
         sweep(Ymat, 1L, sqrt_volume_weights, `*`)
       } else {
@@ -376,8 +373,7 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
     } else {
       fit_modmat
     }
-    run_chunks <- .dset_run_chunks(dset)
-    run_rows <- lapply(run_chunks, `[[`, "row_ind")
+    run_rows <- .dset_run_rows(dset)
     censor_global <- rep(FALSE, nrow(X_inference))
     if (exists("precomp", inherits = FALSE)) {
       for (ri in seq_along(precomp$run_info)) {
@@ -474,7 +470,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
   cres <- .chunkwise_apply(chunks, function(i, ym) {
     if (verbose) message("Processing chunk ", ym$chunk_num)
 
-    Y_chunk <- as.matrix(ym$data)
+    Y_chunk <- as.matrix(.chunk_data(ym))
 
     if (needs_integrated) {
       result <- solve_integrated_glm(

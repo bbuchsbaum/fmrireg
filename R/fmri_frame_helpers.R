@@ -464,39 +464,108 @@ latent_frame <- function(x, TR, run_length = NULL, event_table = NULL,
   if (inherits(sp, "volume_space")) sp else NULL
 }
 
-#' A chunk of data: the shape fmrireg's chunkwise and runwise engines consume
+#' Read a block of the active assay
+#'
+#' The single data-access point of the fitting engines: every read of voxel
+#' data goes through here, one (rows x cols) block at a time.
+#' @param x An `fmri_frame`.
+#' @param rows,cols Integer row / feature positions, or `NULL` for all.
 #' @keywords internal
 #' @noRd
-.data_chunk <- function(mat, voxel_ind, row_ind, chunk_num) {
+.dset_read <- function(x, rows = NULL, cols = NULL) {
+  view <- if (is.null(rows) && is.null(cols)) {
+    x
+  } else if (is.null(rows)) {
+    x[, cols]
+  } else if (is.null(cols)) {
+    x[rows, ]
+  } else {
+    x[rows, cols]
+  }
+  fmridataset::collect_assay(view)
+}
+
+#' A chunk of data: the shape fmrireg's chunkwise and runwise engines consume
+#'
+#' A chunk is either eager (it carries `mat`) or a lazy descriptor that holds
+#' a source and the row / feature positions and reads them only when its data
+#' is requested. The source is an environment holding the frame, shared by all
+#' chunks of one split, so serialising the chunk list (e.g. to future workers)
+#' carries one reference to the frame rather than one copy per chunk.
+#' `chunk$data` reads a lazy chunk on every access, so engines read it once
+#' with `.chunk_data()` and keep the matrix for as long as they need it.
+#' @keywords internal
+#' @noRd
+.data_chunk <- function(mat, voxel_ind, row_ind, chunk_num, source = NULL,
+                        rows = NULL, cols = NULL) {
   structure(
-    list(data = mat, voxel_ind = voxel_ind, row_ind = row_ind, chunk_num = chunk_num),
+    list(data = mat, voxel_ind = voxel_ind, row_ind = row_ind,
+         chunk_num = chunk_num, source = source, rows = rows, cols = cols),
     class = c("data_chunk", "list")
   )
 }
 
-#' One data chunk per run, in acquisition order
-#'
-#' Each chunk carries the run's observation-by-feature matrix, the global row
-#' indices it occupies, the feature positions, and the run number. Reads are
-#' performed one run at a time through a lazy frame view.
 #' @keywords internal
 #' @noRd
-.dset_run_chunks <- function(x) {
+.chunk_source <- function(x) {
+  src <- new.env(parent = emptyenv())
+  src$frame <- x
+  src
+}
+
+#' Data of a (possibly lazy) chunk
+#' @keywords internal
+#' @noRd
+.chunk_data <- function(chunk) {
+  mat <- .subset2(chunk, "data")
+  if (!is.null(mat)) return(mat)
+  src <- .subset2(chunk, "source")
+  if (is.null(src)) return(NULL)
+  .dset_read(src$frame, .subset2(chunk, "rows"), .subset2(chunk, "cols"))
+}
+
+#' @keywords internal
+#' @noRd
+#' @exportS3Method base::`$`
+`$.data_chunk` <- function(x, name) {
+  if (identical(name, "data")) return(.chunk_data(x))
+  .subset2(x, name)
+}
+
+#' Global row indices of each run, from the temporal schema (no data read)
+#' @keywords internal
+#' @noRd
+.dset_run_rows <- function(x) {
   schema <- fmridataset::temporal_schema(x)
   if (!isTRUE(schema$contiguous)) {
     stop("runwise processing requires a frame whose runs occupy contiguous ",
          "observation ranges", call. = FALSE)
   }
-  rows <- split(seq_len(nrow(x)), schema$block_ids)
+  unname(split(seq_len(nrow(x)), schema$block_ids))
+}
+
+#' One data chunk per run, in acquisition order
+#'
+#' Each chunk carries the global row indices the run occupies, the feature
+#' positions and the run number. The run's observation-by-feature matrix is
+#' read lazily (`.chunk_data()`), one run at a time.
+#' @keywords internal
+#' @noRd
+.dset_run_chunks <- function(x) {
+  rows <- .dset_run_rows(x)
   nvox <- ncol(x)
+  src <- .chunk_source(x)
   lapply(seq_along(rows), function(i) {
     ind <- rows[[i]]
-    mat <- fmridataset::collect_assay(x[ind, ])
-    .data_chunk(mat, voxel_ind = seq_len(nvox), row_ind = ind, chunk_num = i)
+    .data_chunk(NULL, voxel_ind = seq_len(nvox), row_ind = ind, chunk_num = i,
+                source = src, rows = ind, cols = NULL)
   })
 }
 
 #' Feature-wise data chunks covering all observations
+#'
+#' Lazy descriptors: each chunk's data is read only when an engine asks for it,
+#' so at most one chunk is resident at a time.
 #' @keywords internal
 #' @noRd
 .dset_chunks <- function(x, nchunks = 1) {
@@ -510,13 +579,15 @@ latent_frame <- function(x, TR, run_length = NULL, event_table = NULL,
     nchunks <- nvox
   }
   if (nchunks == 1) {
-    return(list(.data_chunk(fmridataset::collect_assay(x), voxel_ind = seq_len(nvox),
-                            row_ind = seq_len(nobs), chunk_num = 1L)))
+    return(list(.data_chunk(NULL, voxel_ind = seq_len(nvox),
+                            row_ind = seq_len(nobs), chunk_num = 1L,
+                            source = .chunk_source(x), rows = NULL, cols = NULL)))
   }
   sidx <- split(seq_len(nvox), sort(rep(seq_len(nchunks), length.out = nvox)))
+  src <- .chunk_source(x)
   lapply(seq_along(sidx), function(i) {
     cols <- sidx[[i]]
-    mat <- fmridataset::collect_assay(x[, cols])
-    .data_chunk(mat, voxel_ind = cols, row_ind = seq_len(nobs), chunk_num = i)
+    .data_chunk(NULL, voxel_ind = cols, row_ind = seq_len(nobs), chunk_num = i,
+                source = src, rows = NULL, cols = cols)
   })
 }

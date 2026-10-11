@@ -157,13 +157,12 @@ empty_contrast_table <- function() {
              call. = FALSE)
       }
       X <- design_matrix(model)
-      Y <- as.matrix(.dset_data_matrix(dataset))
+      Y <- as.matrix(.dset_read(dataset))
       estimate <- as.matrix(payload$estimate[[1L]])
-      run_chunks <- .dset_run_chunks(dataset)
       context <- list(
         X = X,
         residuals = Y - X %*% t(estimate),
-        runs = lapply(run_chunks, `[[`, "row_ind"),
+        runs = .dset_run_rows(dataset),
         censor = NULL
       )
     }

@@ -10,14 +10,26 @@
 #' @param X_orig_for_resid The design matrix corresponding to Y in initial_glm_ctx
 #'   before any robust weighting (needed for residual calculation)
 #' @param sigma_fixed Optional fixed sigma value (for global scale estimation)
+#' @param obs_weights Optional prior observation weights already applied to the
+#'   rows of `X`/`Y` (e.g. volume weights). Used only to count the
+#'   observations that take part in the fit: a row with zero prior weight is
+#'   not an observation.
 #'
 #' @return A list containing:
 #' \describe{
-#'   \item{betas_robust}{Final robust coefficient estimates}
-#'   \item{XtWXi_final}{(X'WX)^-1 from the final weighted iteration}
-#'   \item{sigma_robust_scale_final}{Final robust scale estimate}
-#'   \item{robust_weights_final}{Final robust weights}
-#'   \item{dfres}{Residual degrees of freedom}
+#'   \item{betas_robust}{Final robust coefficient estimates: exactly the
+#'     weighted least-squares fit with `robust_weights_final`.}
+#'   \item{XtWXi_final}{(X'WX)^-1 for those weights}
+#'   \item{sigma2}{Residual variance of that WLS fit, per response column:
+#'     \eqn{\sum_i w_i r_i^2 / (n_{w>0} - \mathrm{rank})}, as
+#'     `stats::lm(weights = w)` reports it. This is the scale used for
+#'     inference by every robust path.}
+#'   \item{rss}{Weighted residual sum of squares \eqn{\sum_i w_i r_i^2}.}
+#'   \item{sigma_robust_scale_final}{The MAD scale that produced the final
+#'     weights (diagnostic; not used for standard errors).}
+#'   \item{robust_weights_final}{The weights used for the final solve.}
+#'   \item{dfres}{Residual df of the WLS fit: observations with non-zero
+#'     weight minus the rank of the weighted design.}
 #' }
 #'
 #' @details
@@ -26,15 +38,19 @@
 #' 2. Estimate robust scale (MAD) unless sigma_fixed is provided
 #' 3. Calculate robust weights based on scaled residuals
 #' 4. Create weighted GLM context and solve
-#' 5. Iterate until max_iter reached
+#' 5. Iterate until convergence or max_iter
+#'
+#' The returned weights, betas, \eqn{(X'WX)^{-1}} and scale all belong to the
+#' same (last) weighted solve, so the fit is reproducible as a WLS fit.
 #'
 #' @keywords internal
 #' @importFrom matrixStats rowMedians
 #' @noRd
-robust_iterative_fitter <- function(initial_glm_ctx, 
+robust_iterative_fitter <- function(initial_glm_ctx,
                                     cfg_robust_options,
                                     X_orig_for_resid,
-                                    sigma_fixed = NULL) {
+                                    sigma_fixed = NULL,
+                                    obs_weights = NULL) {
   
   # Validate inputs
   stopifnot(is.glm_context(initial_glm_ctx))
@@ -49,7 +65,7 @@ robust_iterative_fitter <- function(initial_glm_ctx,
   
   k_huber <- cfg_robust_options$k_huber
   c_tukey <- cfg_robust_options$c_tukey
-  max_iter <- cfg_robust_options$max_iter
+  max_iter <- max(1L, as.integer(cfg_robust_options$max_iter %||% 2L))
   tol <- as.numeric(cfg_robust_options$tol %||% 1e-4)
   min_iter <- as.integer(cfg_robust_options$min_iter %||% 1L)
   if (!is.finite(tol) || tol < 0) tol <- 1e-4
@@ -113,7 +129,25 @@ robust_iterative_fitter <- function(initial_glm_ctx,
     list(u = u, sigma_scalar = sigma_scalar, sigma_components = sigma_vec)
   }
   
-  # IRLS iterations
+  psi_weights <- function(u) {
+    switch(psi_type,
+           huber = pmin(1, k_huber / abs(u)),
+           bisquare = ifelse(abs(u) <= c_tukey, (1 - (u / c_tukey)^2)^2, 0))
+  }
+
+  n_obs <- nrow(Y)
+  active_prior <- if (is.null(obs_weights)) {
+    rep(TRUE, n_obs)
+  } else {
+    as.numeric(obs_weights) > 0
+  }
+
+  # IRLS iterations. Everything returned below comes from the last weighted
+  # solve: the weights it used, its betas, its (X'WX)^-1 and its residuals.
+  w <- rep(1, n_obs)
+  scale_info <- NULL
+  proj_w <- initial_glm_ctx$proj
+  rss_w <- initial_fit$rss
   for (it in seq_len(max_iter)) {
     betas_prev <- betas
 
@@ -121,37 +155,22 @@ robust_iterative_fitter <- function(initial_glm_ctx,
     resid <- Y - X_orig_for_resid %*% betas
 
     scale_info <- compute_scale(resid, scale_scope, sigma_fixed)
-    u <- scale_info$u
-    
-    # Calculate weights based on psi function
-    w <- switch(psi_type,
-                huber = pmin(1, k_huber / abs(u)),
-                bisquare = ifelse(abs(u) <= c_tukey,
-                                  (1 - (u / c_tukey)^2)^2,
-                                  0))
-    
+    w <- psi_weights(scale_info$u)
+
     # Apply sqrt of weights for weighted least squares
     sqrtw <- sqrt(w)
     Xw <- X_orig_for_resid * sqrtw
     Yw <- Y * sqrtw
-    
-    # Create weighted projection
-    proj_w <- .fast_preproject(Xw)
-    
-    # Create weighted GLM context
-    glm_ctx_weighted <- glm_context(
-      X = Xw,
-      Y = Yw,
-      proj = proj_w,
-      robust_weights = w  # Store weights in context
-    )
-    
-    # Solve weighted least squares
-    fit_w <- solve_glm_core(glm_ctx_weighted, return_fitted = FALSE)
 
-    # Update betas and XtWXi
+    proj_w <- .fast_preproject(Xw)
+    fit_w <- solve_glm_core(
+      glm_context(X = Xw, Y = Yw, proj = proj_w, robust_weights = w),
+      return_fitted = FALSE
+    )
+
     betas <- fit_w$betas
     XtWXi_final <- proj_w$XtXinv
+    rss_w <- fit_w$rss
 
     # Convergence check on coefficient updates.
     if (it >= min_iter) {
@@ -162,28 +181,22 @@ robust_iterative_fitter <- function(initial_glm_ctx,
       }
     }
   }
-  
-  # Final scale estimation/reporting under configured scope.
-  resid_final <- Y - X_orig_for_resid %*% betas
-  scale_final <- compute_scale(resid_final, scale_scope, sigma_fixed)
-  sigma_robust <- scale_final$sigma_scalar
-  
-  # Final weights for output
-  u_final <- scale_final$u
-  w_final <- switch(psi_type,
-                    huber = pmin(1, k_huber / abs(u_final)),
-                    bisquare = ifelse(abs(u_final) <= c_tukey,
-                                      (1 - (u_final / c_tukey)^2)^2,
-                                      0))
-  
-  # Return results
+
+  # Residual df of the WLS fit: a zero-weight row carries no information, as
+  # in stats::lm.wfit().
+  dfres <- sum(w > 0 & active_prior) - proj_w$rank
+  sigma2 <- if (dfres > 0) rss_w / dfres else rep(NA_real_, ncol(Y))
+
   list(
     betas_robust = betas,
     XtWXi_final = XtWXi_final,
-    sigma_robust_scale_final = sigma_robust,
-    sigma_robust_scale_components = scale_final$sigma_components,
-    robust_weights_final = w_final,
+    sigma2 = sigma2,
+    rss = rss_w,
+    sigma_robust_scale_final = scale_info$sigma_scalar,
+    sigma_robust_scale_components = scale_info$sigma_components,
+    robust_weights_final = w,
     dfres = dfres,
+    rank = proj_w$rank,
     scale_scope = scale_scope
   )
 }

@@ -779,7 +779,7 @@ fit_lm_contrasts_voxelwise_chunked <- function(X_run, Y_run, phi_matrix,
         rfit <- robust_iterative_fitter(ctx_w, robust_options, X_w)
         beta_w <- rfit$betas_robust
         XtXinv <- rfit$XtWXi_final
-        sigma_w <- rfit$sigma_robust_scale_final
+        sigma_w <- sqrt(rfit$sigma2[1])
         rw <- rfit$robust_weights_final
       } else {
         qr_w <- qr(X_w)

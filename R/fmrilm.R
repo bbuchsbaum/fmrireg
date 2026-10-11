@@ -1309,7 +1309,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
       data_env_run[[".y"]] <- rep(0, n_time_run)
       X_run <- model.matrix(form, data_env_run)
       proj_run <- .fast_preproject(X_run)
-      Y_run <- as.matrix(rch$data)
+      Y_run <- as.matrix(.chunk_data(rch))
       ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
       resid_chunks[[ri]] <- Y_run - ols$fitted
       design_chunks[[ri]] <- X_run
@@ -1344,7 +1344,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
       data_env_run[[".y"]] <- rep(0, n_time_run)
       X_run <- model.matrix(form, data_env_run)
       proj_run <- .fast_preproject(X_run)
-      Y_run <- as.matrix(rch$data)
+      Y_run <- as.matrix(.chunk_data(rch))
       ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
       row_med_chunks[[ri]] <- matrixStats::rowMedians(abs(Y_run - ols$fitted))
     }

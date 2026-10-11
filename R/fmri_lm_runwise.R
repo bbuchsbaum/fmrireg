@@ -148,7 +148,7 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
     if (verbose) message("Processing run (fast path) ", ym$chunk_num)
     
     # Skip empty runs
-    if (ncol(ym$data) == 0 || nrow(ym$data) == 0) {
+    if (length(ym$voxel_ind) == 0 || length(ym$row_ind) == 0) {
       warning(paste("Skipping empty run", ym$chunk_num))
       next
     }
@@ -276,7 +276,7 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     vnames <- attr(tmats, "varnames")
 
     data_env <- list2env(tmats)
-    Y_run <- as.matrix(ym$data)
+    Y_run <- as.matrix(.chunk_data(ym))
 
     # Build design matrix for preprocessing
     n_time_run <- nrow(tmats[[1]])
@@ -390,7 +390,7 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
     vnames <- attr(tmats, "varnames")
     
     data_env <- list2env(tmats)
-    Y_run <- as.matrix(ym$data)
+    Y_run <- as.matrix(.chunk_data(ym))
     data_env$.y <- Y_run
     form <- get_formula(model)
     X_run <- model.matrix(form, data_env)
@@ -461,8 +461,8 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
           
           list(
             betas = robust_fit$betas_robust[, 1],
-            rss = sum((Y_voxel_w - X_voxel_w %*% robust_fit$betas_robust)^2),
-            sigma = robust_fit$sigma_robust_scale_final,
+            rss = robust_fit$rss[1],
+            sigma = sqrt(robust_fit$sigma2[1]),
             phi = phi_voxel,
             XtXinv = robust_fit$XtWXi_final,
             robust_weights = robust_fit$robust_weights_final,
@@ -539,8 +539,8 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
           )
           
           betas_voxelwise[, v] <- robust_fit$betas_robust[, 1]
-          rss_voxelwise[v] <- sum((Y_voxel_w - X_voxel_w %*% robust_fit$betas_robust)^2)
-          sigma_voxelwise[v] <- robust_fit$sigma_robust_scale_final
+          rss_voxelwise[v] <- robust_fit$rss[1]
+          sigma_voxelwise[v] <- sqrt(robust_fit$sigma2[1])
           XtXinv_list[[v]] <- robust_fit$XtWXi_final
           robust_weights_list[[v]] <- robust_fit$robust_weights_final
         } else {

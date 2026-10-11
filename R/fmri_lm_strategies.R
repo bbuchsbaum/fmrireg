@@ -142,10 +142,14 @@ resolve_censor <- function(cfg, dataset = NULL, run_num = NULL, n_time = NULL) {
 #' @param cfg fmri_lm_control object
 #' @param dataset fmri_frame object (for extracting nuisance if using mask)
 #' @param run_num Run number (for run-specific nuisance extraction)
+#' @param row_ind Optional global row indices of this run. Used to slice a
+#'   full-length (all runs) volume-weight vector; derived from the dataset's
+#'   run lengths when omitted.
 #' @return List with preprocessed X, Y, and preprocessing metadata
 #' @keywords internal
 #' @noRd
-preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
+preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL,
+                                row_ind = NULL) {
   # Missing-data policy (shared chokepoint for all runwise/chunkwise per-run
   # fitting). Under the default "error" policy, fail fast on non-finite response
   # values rather than silently fitting on complete cases (lm na.omit) or
@@ -176,6 +180,15 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
       if (!is.null(run_num) && is.matrix(vol_weights)) {
         # If weights is a matrix with run-specific weights, extract this run
         vol_weights <- vol_weights[, run_num]
+      } else if (length(vol_weights) != nrow(X) && !is.null(run_num)) {
+        # A full-length vector covers every run: take this run's rows.
+        if (is.null(row_ind) && !is.null(dataset) && .is_fmri_frame(dataset)) {
+          row_ind <- .dset_run_rows(dataset)[[run_num]]
+        }
+        if (!is.null(row_ind) && length(row_ind) == nrow(X) &&
+            max(row_ind) <= length(vol_weights)) {
+          vol_weights <- vol_weights[row_ind]
+        }
       }
     } else {
       # Compute DVARS-based weights
@@ -224,6 +237,34 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
   list(X = X, Y = Y, preprocess_info = preprocess_info)
 }
 
+#' Run-level design and (preprocessed) data
+#'
+#' Reads the run's data once, builds the run design from
+#' `term_matrices(model, run)`, and applies volume weighting / soft
+#' projection. `active` marks the observations that take part in the fit
+#' (volume weight > 0).
+#' @keywords internal
+#' @noRd
+.prepare_run_inputs <- function(run_chunk, model, cfg, dataset = NULL) {
+  Y_run <- as.matrix(.chunk_data(run_chunk))
+  tmats_run <- term_matrices(model, run_chunk$chunk_num)
+  data_env_run <- list2env(tmats_run)
+  n_time_run <- nrow(tmats_run[[1]])
+  data_env_run[[".y"]] <- rep(0, n_time_run)
+  X_run <- model.matrix(get_formula(model), data_env_run)
+
+  preproc <- preprocess_run_data(X_run, Y_run, cfg, dataset, run_chunk$chunk_num,
+                                 row_ind = run_chunk$row_ind)
+  vw <- preproc$preprocess_info$volume_weights
+  list(
+    X = preproc$X,
+    Y = preproc$Y,
+    n_time = n_time_run,
+    volume_weights = vw,
+    active = if (is.null(vw)) NULL else as.numeric(vw) > 0
+  )
+}
+
 #' Process a Single Run with Standard OLS/GLS
 #'
 #' @description
@@ -242,21 +283,10 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
 process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
                                  simple_conlist_weights, fconlist_weights,
                                  dataset = NULL) {
-  # Extract data
-  Y_run <- as.matrix(run_chunk$data)
-  tmats_run <- term_matrices(model, run_chunk$chunk_num)
-
-  # Build design matrix
-  data_env_run <- list2env(tmats_run)
-  n_time_run <- nrow(tmats_run[[1]])
-  data_env_run[[".y"]] <- rep(0, n_time_run)
-  form <- get_formula(model)
-  X_run <- model.matrix(form, data_env_run)
-
-  # Apply preprocessing (volume weights and/or soft subspace projection)
-  preproc <- preprocess_run_data(X_run, Y_run, cfg, dataset, run_chunk$chunk_num)
-  X_run <- preproc$X
-  Y_run <- preproc$Y
+  inputs <- .prepare_run_inputs(run_chunk, model, cfg, dataset)
+  X_run <- inputs$X
+  Y_run <- inputs$Y
+  n_time_run <- inputs$n_time
 
   proj_run <- .fast_preproject(X_run)
 
@@ -354,7 +384,11 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
       ar_order = ar_order
     )
   } else {
-    # IID case
+    # IID case. Zero-weight volumes are omitted by WLS and carry no residual
+    # degrees of freedom (as in stats::lm.wfit()).
+    if (!is.null(inputs$active)) {
+      proj_run$dfres <- as.integer(sum(inputs$active) - proj_run$rank)
+    }
     glm_ctx_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
     ols <- solve_glm_core(glm_ctx_orig)
     
@@ -389,66 +423,69 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
 #' @keywords internal
 #' @noRd
 process_run_robust <- function(run_chunk, model, cfg, sigma_fixed = NULL, dataset = NULL) {
-  # Extract data
-  Y_run <- as.matrix(run_chunk$data)
-  tmats_run <- term_matrices(model, run_chunk$chunk_num)
-
-  # Build design matrix
-  data_env_run <- list2env(tmats_run)
-  n_time_run <- nrow(tmats_run[[1]])
-  data_env_run[[".y"]] <- rep(0, n_time_run)
-  form <- get_formula(model)
-  X_run <- model.matrix(form, data_env_run)
-
-  # Apply preprocessing (volume weights and/or soft subspace projection)
-  preproc <- preprocess_run_data(X_run, Y_run, cfg, dataset, run_chunk$chunk_num)
-  X_run <- preproc$X
-  Y_run <- preproc$Y
+  inputs <- .prepare_run_inputs(run_chunk, model, cfg, dataset)
+  X_run <- inputs$X
+  Y_run <- inputs$Y
 
   proj_run <- .fast_preproject(X_run)
-  
-  # Create GLM context
   glm_ctx_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
-  
+
   # Determine sigma_fixed based on scope
   sigma_fixed_for_run <- if (cfg$robust$scale_scope == "global" && !is.null(sigma_fixed)) {
     sigma_fixed
   } else {
     NULL
   }
-  
-  # Robust fitting
+
   robust_fit <- robust_iterative_fitter(
     initial_glm_ctx = glm_ctx_orig,
     cfg_robust_options = cfg$robust,
     X_orig_for_resid = X_run,
-    sigma_fixed = sigma_fixed_for_run
+    sigma_fixed = sigma_fixed_for_run,
+    obs_weights = inputs$volume_weights
   )
 
+  .robust_run_result(robust_fit, X_run, Y_run, proj_run, ncol(Y_run),
+                     ar_order = 0L)
+}
+
+#' Package a robust run fit
+#'
+#' Every robust path reports the WLS scale of the final weighted solve
+#' (`robust_fit$sigma2`, residual df = non-zero weights minus rank), so
+#' runwise and chunkwise fits agree and the fit is reproducible with
+#' `stats::lm(weights = robust_weights)` on the (whitened) data. The MAD scale
+#' that produced the weights is kept as `sigma_robust` for diagnostics.
+#' @keywords internal
+#' @noRd
+.robust_run_result <- function(robust_fit, X_final, Y_final, proj_final, nvox,
+                               ar_order = 0L, phi_hat = NULL) {
   sigma_components <- robust_fit$sigma_robust_scale_components
   if (is.null(sigma_components)) {
-    sigma_components <- rep(robust_fit$sigma_robust_scale_final, ncol(Y_run))
+    sigma_components <- rep(robust_fit$sigma_robust_scale_final, nvox)
   } else {
     sigma_components <- as.numeric(sigma_components)
     if (length(sigma_components) == 1L) {
-      sigma_components <- rep(sigma_components, ncol(Y_run))
+      sigma_components <- rep(sigma_components, nvox)
     }
   }
-  
-  list(
+  out <- list(
     betas = robust_fit$betas_robust,
-    sigma2 = sigma_components^2,
+    sigma2 = robust_fit$sigma2,
     XtXinv = robust_fit$XtWXi_final,
     dfres = robust_fit$dfres,
-    rss = colSums((Y_run - X_run %*% robust_fit$betas_robust)^2),
+    rank = robust_fit$rank,
+    rss = robust_fit$rss,
     robust_weights = robust_fit$robust_weights_final,
     sigma_robust = robust_fit$sigma_robust_scale_final,
     sigma_robust_components = sigma_components,
-    X_final = X_run,
-    Y_final = Y_run,
-    proj_final = proj_run,
-    ar_order = 0L
+    X_final = X_final,
+    Y_final = Y_final,
+    proj_final = proj_final,
+    ar_order = ar_order
   )
+  if (!is.null(phi_hat)) out$phi_hat <- phi_hat
+  out
 }
 
 #' Process a Single Run with Combined AR + Robust
@@ -456,6 +493,13 @@ process_run_robust <- function(run_chunk, model, cfg, sigma_fixed = NULL, datase
 #' @description
 #' Common logic for processing a single run with both AR and robust fitting.
 #' Implements the "whiten then robustly weight" pipeline.
+#'
+#' With `cfg$robust$reestimate_phi = TRUE` the AR parameters are re-estimated
+#' from the *unwhitened* residuals of the robust fit (`Y - X beta_robust`):
+#' the whitened residuals carry (approximately) no autocorrelation, so
+#' estimating from them would return phi ~ 0 and undo the whitening. The data
+#' are then re-whitened, the robust weights re-derived on the re-whitened data
+#' and the final betas, weights and scale all come from that last fit.
 #'
 #' @param run_chunk Run data from exec_strategy
 #' @param model The fmri_model object
@@ -484,21 +528,10 @@ process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma
     }
     phi_vec[seq_len(order)]
   }
-  # Extract data
-  Y_run <- as.matrix(run_chunk$data)
-  tmats_run <- term_matrices(model, run_chunk$chunk_num)
-
-  # Build design matrix
-  data_env_run <- list2env(tmats_run)
-  n_time_run <- nrow(tmats_run[[1]])
-  data_env_run[[".y"]] <- rep(0, n_time_run)
-  form <- get_formula(model)
-  X_run <- model.matrix(form, data_env_run)
-
-  # Apply preprocessing (volume weights and/or soft subspace projection)
-  preproc <- preprocess_run_data(X_run, Y_run, cfg, dataset, run_chunk$chunk_num)
-  X_run <- preproc$X
-  Y_run <- preproc$Y
+  inputs <- .prepare_run_inputs(run_chunk, model, cfg, dataset)
+  X_run <- inputs$X
+  Y_run <- inputs$Y
+  n_time_run <- inputs$n_time
 
   proj_run <- .fast_preproject(X_run)
 
@@ -525,98 +558,42 @@ process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma
     ), ar_order)
   }
 
-  # Step 2: AR whitening
-  tmp <- ar_whiten_transform(X_run, Y_run, phi_hat_run, cfg$ar$exact_first, censor = censor_run)
-  X_run_w <- tmp$X
-  Y_run_w <- tmp$Y
-  proj_run_w <- .fast_preproject(X_run_w)
-  
-  # Step 3: Create whitened GLM context
-  glm_ctx_whitened <- glm_context(X = X_run_w, Y = Y_run_w, proj = proj_run_w, phi_hat = phi_hat_run)
-  
-  # Determine sigma_fixed
   sigma_fixed_for_run <- if (cfg$robust$scale_scope == "global" && !is.null(sigma_fixed)) {
     sigma_fixed
   } else {
     NULL
   }
-  
-  # Step 4: Robust fitting on whitened data
-  robust_fit_run <- robust_iterative_fitter(
-    initial_glm_ctx = glm_ctx_whitened,
-    cfg_robust_options = cfg$robust,
-    X_orig_for_resid = X_run_w,
-    sigma_fixed = sigma_fixed_for_run
-  )
 
-  sigma_components <- robust_fit_run$sigma_robust_scale_components
-  if (is.null(sigma_components)) {
-    sigma_components <- rep(robust_fit_run$sigma_robust_scale_final, ncol(Y_run))
-  } else {
-    sigma_components <- as.numeric(sigma_components)
-    if (length(sigma_components) == 1L) {
-      sigma_components <- rep(sigma_components, ncol(Y_run))
-    }
+  # Steps 2-4: whiten, then robust IRLS on the whitened data.
+  whiten_and_fit <- function(phi) {
+    tmp <- ar_whiten_transform(X_run, Y_run, phi, cfg$ar$exact_first,
+                               censor = censor_run)
+    proj_w <- .fast_preproject(tmp$X)
+    fit <- robust_iterative_fitter(
+      initial_glm_ctx = glm_context(X = tmp$X, Y = tmp$Y, proj = proj_w,
+                                    phi_hat = phi),
+      cfg_robust_options = cfg$robust,
+      X_orig_for_resid = tmp$X,
+      sigma_fixed = sigma_fixed_for_run,
+      obs_weights = inputs$volume_weights
+    )
+    list(X = tmp$X, Y = tmp$Y, proj = proj_w, fit = fit)
   }
-  
-  # Step 5: Optional re-estimation of AR parameters
-  if (!is.null(cfg$robust$reestimate_phi) && cfg$robust$reestimate_phi && is.null(phi_fixed)) {
-    # Calculate robust residuals on whitened data
-    resid_robust_w <- Y_run_w - X_run_w %*% robust_fit_run$betas_robust
 
-    # De-whiten residuals (approximate)
-    phi_hat_run_updated <- pad_phi(.estimate_shared_ar_parameters(
-      resid_robust_w, ar_order, cfg$ar, censor = censor_run
+  stage <- whiten_and_fit(phi_hat_run)
+
+  # Step 5: Optional re-estimation of AR parameters from the unwhitened
+  # residuals of the robust fit, then a full refit on the re-whitened data.
+  if (isTRUE(cfg$robust$reestimate_phi) && is.null(phi_fixed) && ar_order > 0L) {
+    resid_robust <- Y_run - X_run %*% stage$fit$betas_robust
+    phi_hat_run <- pad_phi(.estimate_shared_ar_parameters(
+      resid_robust, ar_order, cfg$ar, censor = censor_run
     ), ar_order)
-
-    # Re-whiten with updated phi
-    tmp2 <- ar_whiten_transform(X_run, Y_run, phi_hat_run_updated, cfg$ar$exact_first, censor = censor_run)
-    X_run_w2 <- tmp2$X
-    Y_run_w2 <- tmp2$Y
-    
-    # Apply robust weights to re-whitened data
-    sqrtw <- sqrt(robust_fit_run$robust_weights_final)
-    X_run_wr <- X_run_w2 * sqrtw
-    Y_run_wr <- sweep(Y_run_w2, 1, sqrtw, `*`)
-    proj_run_wr <- .fast_preproject(X_run_wr)
-    
-    # Final WLS fit
-    glm_ctx_final_wls <- glm_context(X = X_run_wr, Y = Y_run_wr, proj = proj_run_wr)
-    final_fit <- solve_glm_core(glm_ctx_final_wls)
-    
-    list(
-      betas = final_fit$betas,
-      sigma2 = sigma_components^2,
-      XtXinv = proj_run_wr$XtXinv,
-      dfres = proj_run_wr$dfres,
-      rss = final_fit$rss,
-      robust_weights = robust_fit_run$robust_weights_final,
-      sigma_robust = robust_fit_run$sigma_robust_scale_final,
-      sigma_robust_components = sigma_components,
-      phi_hat = phi_hat_run_updated,
-      X_final = X_run_w2,
-      Y_final = Y_run_w2,
-      proj_final = .fast_preproject(X_run_w2),
-      ar_order = ar_order
-    )
-  } else {
-    # Use robust fit results directly
-    list(
-      betas = robust_fit_run$betas_robust,
-      sigma2 = sigma_components^2,
-      XtXinv = robust_fit_run$XtWXi_final,
-      dfres = robust_fit_run$dfres,
-      rss = colSums((Y_run_w - X_run_w %*% robust_fit_run$betas_robust)^2),
-      robust_weights = robust_fit_run$robust_weights_final,
-      sigma_robust = robust_fit_run$sigma_robust_scale_final,
-      sigma_robust_components = sigma_components,
-      phi_hat = phi_hat_run,
-      X_final = X_run_w,
-      Y_final = Y_run_w,
-      proj_final = proj_run_w,
-      ar_order = ar_order
-    )
+    stage <- whiten_and_fit(phi_hat_run)
   }
+
+  .robust_run_result(stage$fit, stage$X, stage$Y, stage$proj, ncol(Y_run),
+                     ar_order = ar_order, phi_hat = phi_hat_run)
 }
 
 #' Pool Results Across Runs
@@ -677,144 +654,111 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
   data_env <- list2env(tmats)
   data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
   modmat_orig <- model.matrix(as.formula(form), data_env)
-  
-  # Get run structure
+
+  # Run structure. Chunks are lazy: each run's data is read once, inside the
+  # per-run fit below, and never retained.
   run_chunks <- .dset_run_chunks(dataset)
-  
   run_row_inds <- lapply(run_chunks, `[[`, "row_ind")
-  
+
   # AR order
   ar_order <- switch(cfg$ar$struct,
                      ar1 = 1L,
                      ar2 = 2L,
                      arp = cfg$ar$p,
                      iid = 0L)
-  
+
   ar_modeling <- cfg$ar$struct != "iid"
-  
+  robust_modeling <- .fmri_lm_robust_enabled(cfg$robust)
+
   # Pre-compute per-run information
   run_info <- vector("list", length(run_chunks))
-  
+
   for (ri in seq_along(run_chunks)) {
     rch <- run_chunks[[ri]]
-    
-    # Get run-specific matrices
-    tmats_run <- term_matrices(model, rch$chunk_num)
-    data_env_run <- list2env(tmats_run)
-    n_time_run <- nrow(tmats_run[[1]])
-    data_env_run[[".y"]] <- rep(0, n_time_run)
-    X_run_orig <- model.matrix(form, data_env_run)
+
     # Fit noise locally, but transform rows of the joint design so nuisance
     # coefficients remain run-specific, including unequal nuisance widths.
     X_run_joint <- modmat_orig[run_row_inds[[ri]], , drop = FALSE]
-    Y_run_full <- as.matrix(rch$data)
-    proj_run_orig <- .fast_preproject(X_run_orig)
-    
-    # Resolve censor for this run
-    censor_run <- resolve_censor(cfg, dataset, rch$chunk_num, n_time_run)
+    n_time_run <- length(run_row_inds[[ri]])
 
-    if (ar_modeling && .fmri_lm_robust_enabled(cfg$robust)) {
+    # Resolve censor for this run (it feeds AR estimation and whitening)
+    censor_run <- if (ar_modeling) {
+      resolve_censor(cfg, dataset, rch$chunk_num, n_time_run)
+    } else {
+      NULL
+    }
+
+    info <- list(
+      phi_hat = NULL,
+      weights = NULL,
+      sqrtw = NULL,
+      sigma = NULL,
+      X_orig = X_run_joint,
+      dummyX0 = matrix(0, n_time_run, 0),
+      row_indices = run_row_inds[[ri]],
+      censor = censor_run
+    )
+
+    if (ar_modeling && robust_modeling) {
       # Combined AR + Robust (censor handled inside process_run_ar_robust)
       res <- process_run_ar_robust(rch, model, cfg, phi_fixed, sigma_fixed, dataset)
-      run_info[[ri]] <- list(
-        phi_hat = res$phi_hat,
-        weights = res$robust_weights,
-        sqrtw = sqrt(res$robust_weights),
-        sigma = res$sigma_robust,
-        X_orig = X_run_joint,
-        Y_orig = Y_run_full,
-        dummyX0 = matrix(0, nrow(X_run_orig), 0),
-        row_indices = run_row_inds[[ri]],
-        censor = censor_run
-      )
+      info$phi_hat <- res$phi_hat
+      info$weights <- res$robust_weights
+      info$sigma <- res$sigma_robust
     } else if (ar_modeling) {
-      # AR only
-      phi_hat_run <- if (!is.null(phi_fixed)) {
+      info$phi_hat <- if (!is.null(phi_fixed)) {
         phi_fixed
       } else {
-        glm_ctx <- glm_context(X = X_run_orig, Y = Y_run_full, proj = proj_run_orig)
-        ols <- solve_glm_core(glm_ctx, return_fitted = TRUE)
-        resid_ols <- Y_run_full - ols$fitted
+        tmats_run <- term_matrices(model, rch$chunk_num)
+        data_env_run <- list2env(tmats_run)
+        data_env_run[[".y"]] <- rep(0, n_time_run)
+        X_run_orig <- model.matrix(form, data_env_run)
+        Y_run_full <- as.matrix(.chunk_data(rch))
+        ols <- solve_glm_core(
+          glm_context(X = X_run_orig, Y = Y_run_full,
+                      proj = .fast_preproject(X_run_orig)),
+          return_fitted = TRUE
+        )
+        # Keep the OLS-design-corrected estimate fixed. A GLS residual update
+        # has a different residual-forming operator and cannot reuse design = X.
         .estimate_shared_ar_parameters(
-          resid_ols, ar_order, cfg$ar, censor = censor_run,
+          Y_run_full - ols$fitted, ar_order, cfg$ar, censor = censor_run,
           design = X_run_orig
         )
       }
-
-      # Keep the OLS-design-corrected estimate fixed. A GLS residual update has
-      # a different residual-forming operator and cannot reuse design = X.
-
-      run_info[[ri]] <- list(
-        phi_hat = phi_hat_run,
-        weights = NULL,
-        sqrtw = NULL,
-        sigma = NULL,
-        X_orig = X_run_joint,
-        Y_orig = Y_run_full,
-        dummyX0 = matrix(0, nrow(X_run_orig), 0),
-        row_indices = run_row_inds[[ri]],
-        censor = censor_run
-      )
-    } else if (.fmri_lm_robust_enabled(cfg$robust)) {
-      # Robust only
+    } else if (robust_modeling) {
       res <- process_run_robust(rch, model, cfg, sigma_fixed, dataset)
-      run_info[[ri]] <- list(
-        phi_hat = NULL,
-        weights = res$robust_weights,
-        sqrtw = sqrt(res$robust_weights),
-        sigma = res$sigma_robust,
-        X_orig = X_run_joint,
-        Y_orig = Y_run_full,
-        dummyX0 = matrix(0, nrow(X_run_orig), 0),
-        row_indices = run_row_inds[[ri]]
-      )
+      info$weights <- res$robust_weights
+      info$sigma <- res$sigma_robust
     }
+    if (!is.null(info$weights)) info$sqrtw <- sqrt(info$weights)
+    run_info[[ri]] <- info
   }
-  
-  # Build global transformed matrices
-  X_global_final <- if (ar_modeling && .fmri_lm_robust_enabled(cfg$robust)) {
-    # AR + Robust: whiten then weight
-    X_global_list <- vector("list", length(run_chunks))
-    for (ri in seq_along(run_chunks)) {
-      X_orig <- run_info[[ri]]$X_orig
-      phi_hat <- run_info[[ri]]$phi_hat
-      censor_ri <- run_info[[ri]]$censor
 
-      # Whiten
-      dummyY <- matrix(0, nrow(X_orig), 0)
-      X_whitened <- ar_whiten_transform(X_orig, dummyY, phi_hat, cfg$ar$exact_first, censor = censor_ri)$X
-
-      # Weight
-      X_whitened_weighted <- X_whitened * run_info[[ri]]$sqrtw
-      X_global_list[[ri]] <- X_whitened_weighted
-    }
-    do.call(rbind, X_global_list)
-  } else if (ar_modeling) {
-    # AR only: just whiten
-    X_w_list <- vector("list", length(run_chunks))
-    for (ri in seq_along(run_chunks)) {
-      X_orig <- run_info[[ri]]$X_orig
-      phi_hat <- run_info[[ri]]$phi_hat
-      censor_ri <- run_info[[ri]]$censor
-      dummyY <- matrix(0, nrow(X_orig), 0)
-      X_w_list[[ri]] <- ar_whiten_transform(X_orig, dummyY, phi_hat, cfg$ar$exact_first, censor = censor_ri)$X
-    }
-    do.call(rbind, X_w_list)
-  } else if (.fmri_lm_robust_enabled(cfg$robust)) {
-    # Robust only: just weight
-    X_weighted_list <- vector("list", length(run_chunks))
-    for (ri in seq_along(run_chunks)) {
-      X_weighted_list[[ri]] <- run_info[[ri]]$X_orig * run_info[[ri]]$sqrtw
-    }
-    do.call(rbind, X_weighted_list)
+  # Build global transformed matrices: whiten (AR) then weight (robust).
+  X_global_final <- if (ar_modeling || robust_modeling) {
+    do.call(rbind, lapply(run_info, function(info) {
+      X_t <- info$X_orig
+      if (ar_modeling) {
+        X_t <- ar_whiten_transform(X_t, matrix(0, nrow(X_t), 0), info$phi_hat,
+                                   cfg$ar$exact_first, censor = info$censor)$X
+      }
+      if (robust_modeling) X_t <- X_t * info$sqrtw
+      X_t
+    }))
   } else {
-    # No transformation
     modmat_orig
   }
-  
+
   # Pre-compute projection
   proj_global_final <- .fast_preproject(X_global_final)
-  
+  if (robust_modeling) {
+    # Same residual df as the per-run robust fits: zero-weight observations
+    # carry no information (stats::lm.wfit()).
+    w_all <- unlist(lapply(run_info, `[[`, "weights"), use.names = FALSE)
+    proj_global_final$dfres <- as.integer(sum(w_all > 0) - proj_global_final$rank)
+  }
+
   list(
     X_global = X_global_final,
     proj_global = proj_global_final,

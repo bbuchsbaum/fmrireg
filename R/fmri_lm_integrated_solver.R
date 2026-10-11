@@ -154,9 +154,9 @@ solve_robust_pipeline <- function(glm_ctx, robust_options) {
     sigma_fixed = robust_config$sigma_fixed %||% NULL
   )
 
-  sigma_scale <- robust_result$sigma_robust_scale_components %||%
-    robust_result$sigma_robust_scale_final
-  sigma2 <- as.numeric(sigma_scale)^2
+  # WLS scale of the final weighted solve (the one robust scale estimator;
+  # see robust_iterative_fitter()).
+  sigma2 <- as.numeric(robust_result$sigma2)
   
   # Format output
   list(
@@ -228,9 +228,9 @@ solve_ar_robust_pipeline <- function(glm_ctx, config, run_indices) {
     sigma_fixed = robust_config$sigma_fixed %||% NULL
   )
 
-  sigma_scale <- robust_result$sigma_robust_scale_components %||%
-    robust_result$sigma_robust_scale_final
-  sigma2 <- as.numeric(sigma_scale)^2
+  # WLS scale of the final weighted solve (the one robust scale estimator;
+  # see robust_iterative_fitter()).
+  sigma2 <- as.numeric(robust_result$sigma2)
   
   # Combine results
   list(

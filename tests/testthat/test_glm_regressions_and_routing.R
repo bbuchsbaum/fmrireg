@@ -52,6 +52,13 @@ test_that("fmri_lm_control accepts voxel and local robust scale scopes", {
 })
 
 test_that("process_run_integrated reports fixed sigma when sigma_fixed is supplied", {
+  # Review 2026-10 (D2): robust fits report one scale estimator, the WLS
+  # residual scale of the final weighted solve (what lm(weights = w) reports).
+  # This test previously asserted out$sigma == sigma_fixed, i.e. that the
+  # fixed MAD scale used to *compute the weights* was also reported as the
+  # residual scale for inference; runwise and chunkwise paths disagreed on
+  # that. sigma_fixed now drives the weights, and the reported sigma is the
+  # WLS scale for those weights.
   set.seed(1010)
   n <- 100
   p <- 4
@@ -66,10 +73,25 @@ test_that("process_run_integrated reports fixed sigma when sigma_fixed is suppli
   )
 
   out <- process_run_integrated(X, Y, cfg, sigma_fixed = 2.5)
-  expect_equal(out$sigma, rep(2.5, v), tolerance = 1e-12)
+  direct <- robust_iterative_fitter(
+    glm_context(X = X, Y = Y, proj = .fast_preproject(X)),
+    list(type = "huber", k_huber = 1.345, c_tukey = 4.685, max_iter = 4,
+         scale_scope = "global"),
+    X, sigma_fixed = 2.5
+  )
+  expect_equal(direct$sigma_robust_scale_final, 2.5)
+  expect_equal(out$robust_weights, direct$robust_weights_final, tolerance = 1e-12)
+  w <- out$robust_weights
+  for (j in c(1, v)) {
+    ref <- summary(lm(Y[, j] ~ X - 1, weights = w))
+    expect_equal(out$sigma[j], ref$sigma, tolerance = 1e-10)
+  }
 })
 
 test_that("voxel robust scale scope produces voxel-specific sigma", {
+  # Review 2026-10 (D2): see above. The reported sigma is the per-voxel WLS
+  # scale under either scope; the scope changes the weights. This test
+  # previously asserted that the global scope reported one shared sigma.
   set.seed(1012)
   n <- 120
   p <- 4
@@ -93,9 +115,11 @@ test_that("voxel robust scale scope produces voxel-specific sigma", {
   out_global <- process_run_integrated(X, Y, cfg_global)
 
   expect_gt(stats::sd(out_voxel$sigma), 0)
-  expect_equal(stats::sd(out_global$sigma), 0, tolerance = 1e-12)
+  # The voxel scales track the simulated noise scales.
+  expect_gt(stats::cor(out_voxel$sigma, scales), 0.8)
+  expect_false(isTRUE(all.equal(out_voxel$robust_weights,
+                                out_global$robust_weights)))
 })
-
 test_that("process_run_integrated honors phi_fixed in AR pipeline", {
   skip_if_not_installed("fmriAR")
 
