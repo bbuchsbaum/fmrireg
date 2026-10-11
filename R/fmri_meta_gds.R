@@ -15,7 +15,7 @@
   # Ensure our fmrigds registrations are available at first use
   try(.ensure_fmrigds_registered(), silent = TRUE)
 
-  method  <- match.arg(method)
+  method  <- .meta_resolve_method(match.arg(method))
   robust  <- match.arg(robust)
   weights <- match.arg(weights)
   if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
@@ -64,6 +64,15 @@
   gcomp <- try(fmrigds::compute(gd), silent = TRUE)
   if (inherits(gcomp, "try-error")) gcomp <- NULL
   an_try <- .gds_safe_assay_names(gcomp %||% gd)
+  # Every subject-level fit goes through the same fitter, which applies the
+  # weighting scheme and returns the coefficient covariance.
+  fit_direct <- function(Y, V, X) {
+    .meta_fit_core(Y = Y, V = V, X = X, method = method, robust = robust,
+                   weights = weights, weights_custom = weights_custom,
+                   n_threads = getOption("fmrireg.num_threads", 0))
+  }
+  cov_direct <- NULL
+
   # Pre-alloc locals for direct path
   beta_local <- se_local <- z_local <- p_local <- NULL
   tau2_local <- I2_local <- Q_local <- df_local <- NULL
@@ -147,25 +156,8 @@
     } else {
       t(first_contrast_matrix(SE)^2)
     }
-    if (identical(weights, "equal")) {
-      V[] <- 1
-    } else if (identical(weights, "custom")) {
-      custom <- .fmri_ttest_validate_weights_custom(
-        weights_custom, nrow(V), ncol(V)
-      )
-      V <- if (is.vector(custom)) {
-        matrix(1 / custom, nrow = nrow(V), ncol = ncol(V))
-      } else {
-        1 / custom
-      }
-    }
-    if (identical(return_cov, "tri") && method %in% c("pm","reml")) {
-      res_fit <- fmrireg::fmri_meta_fit_cov(Y = Y, V = V, X = X, method = method, robust = robust,
-                                            n_threads = getOption("fmrireg.num_threads", 0))
-    } else {
-      res_fit <- fmrireg::fmri_meta_fit(Y = Y, V = V, X = X, method = method, robust = robust,
-                                        n_threads = getOption("fmrireg.num_threads", 0))
-    }
+    res_fit <- fit_direct(Y, V, X)
+    cov_direct <- res_fit$cov_tri
     beta_local <- res_fit$beta
     se_local   <- res_fit$se
     z_local    <- res_fit$z
@@ -196,13 +188,8 @@
       } else {
         t(first_contrast_matrix(SEa)^2)
       }
-      if (identical(return_cov, "tri") && method %in% c("pm","reml")) {
-        rf <- fmrireg::fmri_meta_fit_cov(Y = Y, V = V, X = X, method = method, robust = robust,
-                                          n_threads = getOption("fmrireg.num_threads", 0))
-      } else {
-        rf <- fmrireg::fmri_meta_fit(Y = Y, V = V, X = X, method = method, robust = robust,
-                                      n_threads = getOption("fmrireg.num_threads", 0))
-      }
+      rf <- fit_direct(Y, V, X)
+      cov_direct <- rf$cov_tri
       beta_local <- rf$beta
       se_local   <- rf$se
       z_local    <- rf$z
@@ -282,13 +269,7 @@
     } else {
       t(first_contrast_matrix(SEa)^2)
     }
-    mf <- if (require_cov && method %in% c("pm","reml")) {
-      fmrireg::fmri_meta_fit_cov(Y = Y, V = V, X = X, method = method, robust = robust,
-                                 n_threads = getOption("fmrireg.num_threads", 0))
-    } else {
-      fmrireg::fmri_meta_fit(Y = Y, V = V, X = X, method = method, robust = robust,
-                             n_threads = getOption("fmrireg.num_threads", 0))
-    }
+    mf <- fit_direct(Y, V, X)
     manual_fit <<- mf
     mf
   }
@@ -296,14 +277,14 @@
     (method %in% c("dl", "pm", "reml") && is.null(tau2)) ||
       is.null(I2) || is.null(Q) || is.null(Q_df)
   )
-  cov_manual <- NULL
-  if (diag_missing || (identical(return_cov, "tri") && is.null(res))) {
-    mf <- compute_manual_fit(require_cov = identical(return_cov, "tri"))
+  cov_manual <- cov_direct
+  if (diag_missing) {
+    mf <- compute_manual_fit(require_cov = TRUE)
     if (method %in% c("dl","pm","reml") && is.null(tau2)) tau2 <- mf$tau2
     if (is.null(I2) && !is.null(mf$I2_fe)) I2 <- mf$I2_fe
     if (is.null(Q) && !is.null(mf$Q_fe)) Q <- mf$Q_fe
     if (is.null(Q_df) && !is.null(mf$df)) Q_df <- mf$df
-    if (identical(return_cov, "tri") && !is.null(mf$cov_tri)) cov_manual <- mf$cov_tri
+    if (is.null(cov_manual) && !is.null(mf$cov_tri)) cov_manual <- mf$cov_tri
   }
   to_num <- function(a) if (is.null(a)) NULL else as.numeric(a)
 
@@ -419,50 +400,43 @@
     colnames(out$se) <- design_names
   }
 
-  # Optional covariance triangle
-  if (identical(return_cov, "tri")) {
-    # Try to reconstruct from param-array cov:<term_i>:<term_j>
-    terms <- colnames(out$coefficients) %||% coef_terms
-    if (!is.null(terms) && length(terms) > 0) {
-      K <- length(terms)
-      tsize <- K*(K+1)/2
-      # Store as [tsize x P] so downstream matches legacy
-      cov_tri <- matrix(NA_real_, nrow = tsize, ncol = nrow(out$coefficients))
-      t_idx <- 1L
-      for (i in seq_len(K)) {
-        for (j in i:K) {
-          nm <- paste0("cov:", terms[i], ":", terms[j])
-          A <- .gds_safe_assay(res, nm)
-          if (!is.null(A)) {
-            v <- if (is.array(A)) as.numeric(A[,1,1, drop = TRUE]) else as.numeric(A)
-            cov_tri[t_idx, ] <- v
+  # Coefficient covariance (packed upper triangle per feature). It is always
+  # attached when available so that contrast() can use exact standard errors.
+  if (is.null(combine)) {
+    cov_tri <- cov_manual
+    if (is.null(cov_tri) && !is.null(res)) {
+      # Reducer output: cov:<term_i>:<term_j> param arrays or a cov_tri assay
+      terms <- colnames(out$coefficients) %||% coef_terms
+      if (!is.null(terms) && length(terms) > 0) {
+        K <- length(terms)
+        tri_try <- matrix(NA_real_, nrow = K * (K + 1) / 2, ncol = nrow(out$coefficients))
+        t_idx <- 1L
+        for (i in seq_len(K)) {
+          for (j in i:K) {
+            A <- .gds_safe_assay(res, paste0("cov:", terms[i], ":", terms[j]))
+            if (!is.null(A)) {
+              tri_try[t_idx, ] <- if (is.array(A)) as.numeric(A[, 1, 1, drop = TRUE]) else as.numeric(A)
+            }
+            t_idx <- t_idx + 1L
           }
-          t_idx <- t_idx + 1L
         }
+        if (all(is.finite(tri_try[, 1]))) cov_tri <- tri_try
       }
-      if (all(is.finite(cov_tri[1:min(3, nrow(cov_tri)), 1]))) {
-        out$cov <- list(type = "tri", tri = cov_tri, coef_names = colnames(out$coefficients))
-      } else {
-        # Fallback: attempt legacy assay
+      if (is.null(cov_tri)) {
         cov_assay <- .gds_safe_assay(res, "cov_tri")
         if (!is.null(cov_assay)) {
-          cov_assay <- if (is.array(cov_assay)) {
-            d <- dim(cov_assay)
+          cov_tri <- if (is.array(cov_assay)) {
             t(cov_assay[, 1, , drop = TRUE])
           } else t(as.matrix(cov_assay))
-          out$cov <- list(type = "tri", tri = cov_assay, coef_names = colnames(out$coefficients))
-        } else if (!is.null(cov_manual)) {
-          out$cov <- list(type = "tri", tri = cov_manual, coef_names = colnames(out$coefficients))
         }
       }
-    } else if (!is.null(cov_manual)) {
-      out$cov <- list(type = "tri", tri = cov_manual, coef_names = colnames(out$coefficients))
-    } else {
-      # As a final fallback, compute covariance directly if still missing
-      mf <- compute_manual_fit(require_cov = TRUE)
-      if (!is.null(mf$cov_tri)) {
-        out$cov <- list(type = "tri", tri = mf$cov_tri, coef_names = colnames(out$coefficients))
-      }
+    }
+    if (is.null(cov_tri)) {
+      mf <- tryCatch(compute_manual_fit(require_cov = TRUE), error = function(e) NULL)
+      cov_tri <- mf$cov_tri
+    }
+    if (!is.null(cov_tri)) {
+      out$cov <- list(type = "tri", tri = cov_tri, coef_names = colnames(out$coefficients))
     }
   }
 
@@ -518,7 +492,6 @@
     } else {
       t(first_contrast(se_con)^2)
     }
-    if (identical(weights, "equal")) V_con[] <- 1
 
     X_con <- .gds_safe_model_matrix(gd, formula, fallback_n = nrow(Y_con))
     design_names <- colnames(X_con)
@@ -560,20 +533,16 @@
            call. = FALSE)
     }
 
-    contrast_fit <- fmri_meta_fit_contrasts(
-      Y = Y_con,
-      V = V_con,
-      X = X_con,
-      Cmat = Cmat,
-      method = method,
-      robust = robust,
-      n_threads = n_threads
+    contrast_core <- .meta_fit_core(
+      Y = Y_con, V = V_con, X = X_con, method = method, robust = robust,
+      weights = weights, weights_custom = weights_custom, n_threads = n_threads
     )
+    contrast_fit <- .meta_contrasts_from_tri(contrast_core$beta, contrast_core$cov_tri, Cmat)
     out$contrasts <- list(
       names = contrast_names,
-      estimate = t(contrast_fit$c_beta),
-      se = t(contrast_fit$c_se),
-      z = t(contrast_fit$c_z)
+      estimate = t(contrast_fit$estimate),
+      se = t(contrast_fit$se),
+      z = t(contrast_fit$z)
     )
   }
 

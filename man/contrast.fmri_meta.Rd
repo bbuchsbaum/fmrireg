@@ -22,9 +22,10 @@
 An fmri_meta_contrast object with contrast results
 }
 \description{
-Note: Uses exact standard errors when covariance is available (return_cov="tri")
-or for ROI CSV fits with non-robust estimation; otherwise uses a diagonal
-variance approximation.
+The contrast standard error is \eqn{\sqrt{c' Var(\hat\beta) c}}, using the
+coefficient covariance that \code{fmri_meta()} stores with every fit. For
+objects without a stored covariance only single-coefficient contrasts are
+exact; other contrasts fall back to a diagonal approximation with a warning.
 }
 \examples{
 toy_meta <- structure(

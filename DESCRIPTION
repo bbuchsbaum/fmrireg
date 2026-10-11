@@ -73,6 +73,7 @@ Suggests:
     future,
     shiny,
     sandwich,
+    metafor,
     progressr,
     pkgload,
     roxyglobals (>= 0.2.1),

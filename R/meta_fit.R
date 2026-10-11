@@ -1,5 +1,92 @@
 # Thin R Wrappers for C++ Meta-Analysis Functions
 
+# Internal: "reml" has never had its own estimator; it is accepted for
+# backward compatibility and runs the Paule-Mandel estimator. Say so and
+# record the estimator that actually ran.
+.meta_resolve_method <- function(method) {
+  if (identical(method, "reml")) {
+    message("method = 'reml' is not implemented; using the Paule-Mandel ",
+            "estimator (method = 'pm') instead.")
+    method <- "pm"
+  }
+  method
+}
+
+# Internal: relative weights (S x P) for weights = "equal" / "custom".
+.meta_relative_weights <- function(weights, weights_custom, S, P) {
+  if (identical(weights, "equal")) {
+    return(matrix(1, nrow = S, ncol = P))
+  }
+  w <- .fmri_ttest_validate_weights_custom(weights_custom, S, P)
+  if (is.matrix(w)) w else matrix(w, nrow = S, ncol = P)
+}
+
+# Internal: the single meta-regression fitter used by every fmri_meta /
+# fmri_ttest path that has subject-level effects.
+#
+# weights = "ivw": the given sampling variances V are absolute; `method`
+#   chooses the between-subject variance estimator (fe, dl, pm).
+# weights = "equal" / "custom": the weights are *relative*. The model is the
+#   weighted least-squares model Var(y_i) = sigma^2 / w_i with the residual
+#   scale sigma^2 estimated per feature (as lm(weights = w) does), so `method`
+#   and the supplied variances are not used and tau2 / Q / I2 are NA.
+#
+# Always returns the packed covariance of the coefficients (cov_tri).
+.meta_fit_core <- function(Y, V, X, method = "pm", robust = "none",
+                           weights = "ivw", weights_custom = NULL,
+                           huber_c = 1.345, robust_iter = 2,
+                           n_threads = getOption("fmrireg.num_threads", 0)) {
+  Y <- as.matrix(Y)
+  X <- as.matrix(X)
+  storage.mode(X) <- "double"
+  S <- nrow(Y)
+  P <- ncol(Y)
+  if (identical(weights, "ivw")) {
+    V <- as.matrix(V)
+    res <- meta_fit_cov_cpp(Y, V, X, method, robust, huber_c, robust_iter, n_threads)
+    res$ok <- as.logical(res$ok)
+    return(res)
+  }
+
+  W <- .meta_relative_weights(weights, weights_custom, S, P)
+  V_rel <- 1 / W
+  # Weighted least squares with unit scale: Q_fe is the weighted residual
+  # sum of squares, so sigma^2 = Q_fe / df.
+  res <- meta_fit_cov_cpp(Y, V_rel, X, "fe", "none", huber_c, robust_iter, n_threads)
+  sigma2 <- as.numeric(res$Q_fe) / as.numeric(res$df)
+  if (identical(robust, "huber")) {
+    V_s <- sweep(V_rel, 2L, sigma2, "*")
+    res <- meta_fit_cov_cpp(Y, V_s, X, "fe", robust, huber_c, robust_iter, n_threads)
+  } else {
+    scale <- sqrt(sigma2)
+    res$se <- sweep(res$se, 2L, scale, "*")
+    res$z <- sweep(res$z, 2L, scale, "/")
+    res$cov_tri <- sweep(res$cov_tri, 2L, sigma2, "*")
+  }
+  res$sigma2 <- sigma2
+  res$tau2[] <- NA_real_
+  res$Q_fe[] <- NA_real_
+  res$I2_fe[] <- NA_real_
+  res$ok <- as.logical(res$ok)
+  res
+}
+
+# Internal: contrasts c' beta with SE sqrt(c' Var(beta) c) from packed
+# covariance triangles. C is K x J, beta is K x P, cov_tri is tsize x P.
+.meta_contrasts_from_tri <- function(beta, cov_tri, C) {
+  C <- as.matrix(C)
+  K <- nrow(C)
+  idx <- which(upper.tri(diag(K), diag = TRUE), arr.ind = TRUE)
+  # packed order is row-major over the upper triangle (a <= b)
+  idx <- idx[order(idx[, "row"], idx[, "col"]), , drop = FALSE]
+  mult <- ifelse(idx[, "row"] == idx[, "col"], 1, 2)
+  est <- crossprod(C, beta)                                   # J x P
+  coef_w <- (C[idx[, "row"], , drop = FALSE] * C[idx[, "col"], , drop = FALSE]) * mult
+  vv <- crossprod(coef_w, cov_tri)                             # J x P
+  se <- sqrt(ifelse(is.finite(vv) & vv >= 0, vv, NA_real_))
+  list(estimate = est, se = se, z = est / se)
+}
+
 #' Fit Meta-Analysis Models
 #'
 #' Low-level function that calls the C++ meta-analysis implementation.
@@ -9,7 +96,9 @@
 #' @param V Numeric matrix of variances (subjects x features)
 #' @param X Numeric matrix; design matrix (subjects x predictors), including intercept
 #' @param method Character scalar; meta-analysis method: "pm" (Paule-Mandel), "dl" (DerSimonian-Laird),
-#'   "fe" (fixed-effects), or "reml" (REML, uses PM solver)
+#'   "fe" (fixed-effects). "reml" is not implemented: it is accepted for
+#'   backward compatibility, runs Paule-Mandel with a message, and the result
+#'   records \code{method = "pm"}.
 #' @param robust Character scalar; robust estimation method: "none" or "huber"
 #' @param huber_c Numeric scalar; tuning constant for Huber M-estimator (default: 1.345).
 #'   Smaller values provide more robust estimates but may reduce efficiency.
@@ -35,7 +124,7 @@ fmri_meta_fit <- function(Y, V, X,
                          robust_iter = 2,
                          n_threads = getOption("fmrireg.num_threads", 0)) {
   
-  method <- match.arg(method)
+  method <- .meta_resolve_method(match.arg(method))
   robust <- match.arg(robust)
   
   # Validate inputs
@@ -92,7 +181,7 @@ fmri_meta_fit_contrasts <- function(Y, V, X, Cmat,
                                    huber_c = 1.345,
                                    robust_iter = 2,
                                    n_threads = getOption("fmrireg.num_threads", 0)) {
-  method <- match.arg(method)
+  method <- .meta_resolve_method(match.arg(method))
   robust <- match.arg(robust)
   if (!is.matrix(Y)) Y <- as.matrix(Y)
   if (!is.matrix(V)) V <- as.matrix(V)
@@ -117,7 +206,7 @@ fmri_meta_fit_cov <- function(Y, V, X,
                              huber_c = 1.345,
                              robust_iter = 2,
                              n_threads = getOption("fmrireg.num_threads", 0)) {
-  method <- match.arg(method)
+  method <- .meta_resolve_method(match.arg(method))
   robust <- match.arg(robust)
   if (!is.matrix(Y)) Y <- as.matrix(Y)
   if (!is.matrix(V)) V <- as.matrix(V)
