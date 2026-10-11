@@ -214,3 +214,69 @@ overlapped other test runs.
   definition wins by collation order); consolidating it changes documented
   defaults and is left for a deliberate decision.
 - `test_betas.R` runtime (mixed model per voxel) is unchanged in kind.
+
+---
+
+# Performance pass 2 (remaining hotspots)
+
+Same ground rules as above, plus:
+
+- Each change is result-preserving and gets an **equivalence test against an
+  independent reference** (`lm`, `sandwich`, `fmrilss::mixed_solve`,
+  `metafor`, a direct dense computation) at a stated tolerance.
+- Each change also gets a **deterministic guard that fails on the old code**:
+  a call count, a "never forms an n x n / T x V matrix" assertion, or a read
+  count. No wall-clock assertions in tests.
+- Timings are measured back to back (old vs new in the same R process, one
+  thread) and recorded in `bench/review-2026-10-perf2.R` and the results
+  table below; the bench script is build-ignored.
+- Streams run targeted test files only; the full suite runs once after merge.
+
+## Stream P1: fitting core
+
+- [ ] P1-1. Satterthwaite df: no per-voxel n x n residual covariance or
+      `eigen()`; use the banded/Toeplitz structure (traces from lag sums).
+      Reference: the current dense formula on small n.
+- [ ] P1-2. Voxelwise AR statistics: vectorise `beta_stats_matrix_voxelwise` /
+      `fit_lm_contrasts_voxelwise` (`R/fmri_lm_internal.R`) over voxels;
+      `future_lapply` in `R/fmri_lm_runwise.R` must not ship the full run
+      matrix to every worker.
+- [ ] P1-3. Reference chunkwise backend: estimate AR once per run over all
+      voxels and pass it to every chunk (results independent of `nchunks`).
+- [ ] P1-4. Robust IRLS: avoid the T x V copies per iteration
+      (`crossprod(X * w, Y)` instead of forming `Y * sqrt(w)`).
+- [ ] P1-5. AR integration: `whiten_glm_context` stops computing unused OLS
+      residuals; legacy whitening honours `fmrireg.ar.parallel_whiten` instead
+      of `parallel = TRUE` per voxel.
+
+## Stream P2: trial betas and outputs
+
+- [ ] P2-1. Mixed-model betas (`estimate_betas(method = "mixed")`): one
+      spectral decomposition per design, then a 1-D REML search per voxel,
+      instead of a full `mixed_solve` per voxel. Reference:
+      `fmrilss::mixed_solve` per voxel. Target: `test_betas.R` from ~30 min to
+      well under a minute.
+- [ ] P2-2. `coef_images()`: build the design names / mask space once, not per
+      coefficient.
+- [ ] P2-3. `write_results(format = c("h5", "nifti"))`: compute each volume
+      and sidecar once and hand it to every writer.
+- [ ] P2-4. Plot helpers: no silent fallback to loading the whole dataset to
+      plot one voxel.
+
+## Stream P3: group analysis and engines
+
+- [ ] P3-1. Meta kernels: compute the fixed-effects fit once per voxel and
+      reuse it for DL / PM / Q (currently up to three times); vectorise the
+      per-row DL loop.
+- [ ] P3-2. GDS meta path: one fit per call (no repeated `compute()` /
+      manual refit / contrast refit); chunked.
+- [ ] P3-3. GDS t-combination: one vectorised call instead of a per-feature
+      `vapply`.
+- [ ] P3-4. `rrr_gls` on latent data: stay in latent space instead of forming
+      the dense T x V `Z %*% t(L)`.
+- [ ] P3-5. Soft projection: closed-form GCV (O(k) per lambda) and no unused
+      right singular vectors.
+
+## Performance pass 2 results
+
+(filled in at the end)
