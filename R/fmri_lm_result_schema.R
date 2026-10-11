@@ -42,7 +42,7 @@ empty_contrast_table <- function() {
     estimate <- payload$estimate[[1L]]
     return(if (is.matrix(estimate)) nrow(estimate) else length(estimate))
   }
-  length(result$sigma %||% result$resvar %||% result$rss)
+  length(result[["sigma"]] %||% result[["resvar"]] %||% result[["rss"]])
 }
 
 .fmri_lm_nominal_df <- function(result) {

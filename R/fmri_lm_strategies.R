@@ -258,7 +258,8 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
     Y = preproc$Y,
     n_time = n_time_run,
     volume_weights = vw,
-    active = if (is.null(vw)) NULL else as.numeric(vw) > 0
+    active = if (is.null(vw)) NULL else as.numeric(vw) > 0,
+    soft_projection = preproc$preprocess_info$soft_projection
   )
 }
 
@@ -385,6 +386,11 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
     # degrees of freedom (as in stats::lm.wfit()).
     if (!is.null(inputs$active)) {
       proj_run$dfres <- as.integer(sum(inputs$active) - proj_run$rank)
+    }
+    # Soft projection shrinks the nuisance subspace of both X and Y, so the
+    # residual df is tr((I - H) P^2) rather than n - rank.
+    if (!is.null(inputs$soft_projection)) {
+      proj_run$dfres <- .soft_projection_residual_df(inputs$soft_projection, X_run)
     }
     glm_ctx_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
     ols <- solve_glm_core(glm_ctx_orig)

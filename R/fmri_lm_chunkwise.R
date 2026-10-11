@@ -491,7 +491,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
       }
 
       XtXinv <- result$XtXinv %||% proj_modmat$XtXinv
-      sigma_vec <- result$sigma %||% sqrt(result$sigma2)
+      sigma_vec <- result[["sigma"]] %||% sqrt(result[["sigma2"]])
       sigma_vec <- as.numeric(sigma_vec)
       if (length(sigma_vec) == 1L) {
         sigma_vec <- rep(sigma_vec, ncol(betas))
