@@ -1,40 +1,45 @@
 #' Meta-analysis using Stouffer's method
 #'
-#' This function performs a meta-analysis on input p-values and standard errors using Stouffer's method.
-#' Stouffer's method combines z-scores by weighting them by their inverse variance.
-#' 
-#' @param pval A numeric vector of p-values from multiple studies or tests.
-#' @param se A numeric vector of standard errors corresponding to the p-values.
-#' 
+#' Combines one-sided (upper-tail) p-values from several runs into a single
+#' weighted Stouffer z-score, \eqn{Z = \sum_i w_i z_i / \sqrt{\sum_i w_i^2}}
+#' with \eqn{z_i = \Phi^{-1}(1 - p_i)} and \eqn{w_i = 1/se_i}. Under the null
+#' hypothesis \eqn{Z} is standard normal whatever the number of runs.
+#'
+#' @param pval A numeric matrix of upper-tail p-values (voxels x runs).
+#' @param se A numeric matrix of standard errors used to form the weights
+#'   \eqn{1/se}; a matrix of ones gives the unweighted Stouffer z.
+#'
 #' @return A list containing the following elements:
 #' \itemize{
-#'   \item{estimate}{A numeric vector of the weighted z-scores obtained using Stouffer's method.}
-#'   \item{se}{A numeric vector of the combined standard errors.}
-#'   \item{stat}{Same as the estimate, the weighted z-scores.}
-#'   \item{prob}{A numeric vector of the combined p-values.}
-#'   \item{stat_type}{A character string indicating the type of statistic used, in this case "zfstat".}
+#'   \item{estimate}{The combined Stouffer z-scores.}
+#'   \item{se}{The standard error of the combined z-score (one).}
+#'   \item{stat}{Same as the estimate.}
+#'   \item{prob}{The combined upper-tail p-values.}
+#'   \item{stat_type}{"zfstat".}
 #' }
-#' 
+#'
 #' @keywords internal
 #' @noRd
 meta_stouffer <- function(pval, se) {
-  if (any(pval == 0)) {
-    pval[pval == 0] <- .Machine$double.eps
-  }
-  inv_var <- 1/(se^2)
-  wts <- inv_var/rowSums(inv_var)
-  zscore <- qnorm(1-pval)
-  wzscore <- zscore * wts
-  wzscore <- rowSums(wzscore)
-  
-  return(
-    list(
-      estimate=wzscore,
-      se=sqrt(rowSums(wts*wts*(se^2))),
-      stat=wzscore,
-      prob=1-pnorm(wzscore),
-      stat_type="zfstat"
-    )
+  pval <- as.matrix(pval)
+  se <- matrix(as.numeric(se), nrow = nrow(pval), ncol = ncol(pval))
+  # Work in the upper tail and keep the z-scores finite: an exact 0 or 1
+  # p-value would map to +/-Inf.
+  pval <- pmin(pmax(pval, .Machine$double.xmin), 1 - .Machine$double.eps / 2)
+  z <- stats::qnorm(pval, lower.tail = FALSE)
+  w <- 1 / se
+  ok <- is.finite(z) & is.finite(w)
+  w[!ok] <- 0
+  z[!ok] <- 0
+  den <- sqrt(rowSums(w^2))
+  zcomb <- ifelse(den > 0, rowSums(w * z) / den, NA_real_)
+
+  list(
+    estimate = zcomb,
+    se = rep(1, length(zcomb)),
+    stat = zcomb,
+    prob = stats::pnorm(zcomb, lower.tail = FALSE),
+    stat_type = "zfstat"
   )
 }
 
@@ -134,7 +139,7 @@ do_fixef <- function(se, beta, weighting) {
   tibble(estimate=wbeta,
          se=pooledse,
          stat=wbeta/pooledse,
-         prob=1-pchisq((wbeta/pooledse)^2,1),
+         prob=stats::pchisq((wbeta/pooledse)^2, 1, lower.tail = FALSE),
          stat_type="zstat")
 }
   
@@ -216,135 +221,126 @@ meta_contrasts <- function(cres, weighting=c("inv_var", "equal")) {
   }) %>% dplyr::bind_rows()
 }
 
+# Internal: convert t-statistics to z-scores with matching tail probability.
+# Works on the log scale so that very large |t| (two-sided p below ~1e-16)
+# gives a finite z instead of overflowing to Inf. Keeps the shape of `t`.
+.t_to_z <- function(t, df) {
+  lp <- stats::pt(-abs(t), df = df, log.p = TRUE)
+  -stats::qnorm(lp, log.p = TRUE) * sign(t)
+}
+
+# Internal: build the S x P weight matrix for combine_t_statistics.
+.combine_weight_matrix <- function(tmat, weights, weights_custom, se_mat, context) {
+  S <- nrow(tmat)
+  P <- ncol(tmat)
+  from_custom <- function(msg) {
+    if (is.vector(weights_custom) && length(weights_custom) == S) {
+      matrix(as.numeric(weights_custom), nrow = S, ncol = P)
+    } else if (is.matrix(weights_custom) && all(dim(weights_custom) == dim(tmat))) {
+      weights_custom
+    } else {
+      warning(msg, call. = FALSE)
+      NULL
+    }
+  }
+  W <- NULL
+  if (weights == "ivw") {
+    if (!is.null(se_mat)) {
+      W <- 1 / (se_mat^2)
+    } else if (!is.null(weights_custom)) {
+      W <- from_custom("weights_custom shape does not match; falling back to equal weights")
+    } else {
+      warning(sprintf("IVW requested for %s but no SE available; using equal weights", context),
+              call. = FALSE)
+    }
+  } else if (weights == "custom") {
+    if (is.null(weights_custom)) {
+      warning("weights='custom' but 'weights_custom' not provided; using equal weights", call. = FALSE)
+    } else {
+      W <- from_custom("weights_custom must be length S or SxP; using equal weights")
+    }
+  }
+  if (is.null(W)) W <- matrix(1, nrow = S, ncol = P)
+  matrix(as.numeric(W), nrow = S, ncol = P)
+}
+
 # Internal: Combine t-statistics across subjects per feature
 # Supports equal, inverse-variance (if SE provided), or custom weights.
+# A subject whose t-statistic (or weight) is missing for a feature is dropped
+# from that feature: the result equals the combination over the remaining
+# subjects.
 combine_t_statistics <- function(tmat, df, method = c("stouffer", "fisher", "lancaster"),
                                  weights = c("equal", "ivw", "custom"),
                                  weights_custom = NULL, se_mat = NULL) {
   method <- match.arg(method)
   weights <- match.arg(weights)
+  tmat <- as.matrix(tmat)
+  S <- nrow(tmat)
   # Ensure df length matches subjects
-  if (length(df) == 1L) df <- rep(df, nrow(tmat))
-  if (length(df) != nrow(tmat)) {
+  if (length(df) == 1L) df <- rep(df, S)
+  if (length(df) != S) {
     stop("Length of 'df' must be 1 or equal to number of subjects", call. = FALSE)
   }
-  # Two-tailed p-values per subject/voxel
-  p_two <- matrix(NA_real_, nrow = nrow(tmat), ncol = ncol(tmat))
-  for (i in seq_len(nrow(tmat))) {
-    ti <- tmat[i, ]
-    p_two[i, ] <- 2 * stats::pt(abs(ti), df = df[i], lower.tail = FALSE)
+  dfm <- matrix(as.numeric(df), nrow = S, ncol = ncol(tmat))
+  # Log of the one-sided tail of |t| per subject/feature
+  log_p_half <- stats::pt(-abs(tmat), df = dfm, log.p = TRUE)
+  has_t <- is.finite(tmat) & is.finite(dfm) & dfm > 0
+
+  sign_of_mean <- function() {
+    tt <- tmat
+    tt[!has_t] <- NA_real_
+    sgn <- sign(colMeans(tt, na.rm = TRUE))
+    ifelse(is.na(sgn) | sgn == 0, 1, sgn)
   }
+  finish <- function(log_p_comb, m) {
+    # two-sided combined p -> |z|; the log scale keeps tiny p finite
+    zmag <- -stats::qnorm(log_p_comb - log(2), log.p = TRUE)
+    z <- zmag * sign_of_mean()
+    z[m == 0] <- NA_real_
+    z
+  }
+
   if (method == "stouffer") {
-    # Work in the upper tail directly.  Computing `1 - p/2` rounds to one
-    # for sufficiently small p-values and would turn a finite result into Inf.
-    z_i <- stats::qnorm(pmax(1e-300, p_two/2), lower.tail = FALSE) * sign(tmat)
-    W <- matrix(1, nrow = nrow(tmat), ncol = ncol(tmat))
-    if (weights == "ivw") {
-      if (!is.null(se_mat)) {
-        W <- 1/(se_mat^2)
-      } else if (!is.null(weights_custom)) {
-        if (is.vector(weights_custom) && length(weights_custom) == nrow(tmat)) {
-          W <- matrix(weights_custom, nrow = nrow(tmat), ncol = ncol(tmat))
-        } else if (is.matrix(weights_custom) && all(dim(weights_custom) == dim(tmat))) {
-          W <- weights_custom
-        } else {
-          warning("weights_custom shape does not match; falling back to equal weights", call. = FALSE)
-        }
-      } else {
-        warning("IVW requested for combine but no SE available; using equal weights", call. = FALSE)
-      }
-    } else if (weights == "custom") {
-      if (is.null(weights_custom)) {
-        warning("weights='custom' but 'weights_custom' not provided; using equal weights", call. = FALSE)
-      } else if (is.vector(weights_custom) && length(weights_custom) == nrow(tmat)) {
-        W <- matrix(weights_custom, nrow = nrow(tmat), ncol = ncol(tmat))
-      } else if (is.matrix(weights_custom) && all(dim(weights_custom) == dim(tmat))) {
-        W <- weights_custom
-      } else {
-        warning("weights_custom must be length S or SxP; using equal weights", call. = FALSE)
-      }
-    }
-    # Ensure matrix shape
-    W <- matrix(as.numeric(W), nrow = nrow(tmat), ncol = ncol(tmat))
-    num <- colSums(W * z_i, na.rm = TRUE)
-    den <- sqrt(colSums(W^2, na.rm = TRUE))
-    z_comb <- ifelse(den > 0, num/den, NA_real_)
-    return(z_comb)
-  } else if (method == "fisher") {
+    W <- .combine_weight_matrix(tmat, weights, weights_custom, se_mat, "combine")
+    z_i <- -stats::qnorm(log_p_half, log.p = TRUE) * sign(tmat)
+    use <- has_t & is.finite(W)
+    W[!use] <- 0
+    z_i[!use] <- 0
+    num <- colSums(W * z_i)
+    den <- sqrt(colSums(W^2))
+    return(ifelse(den > 0, num / den, NA_real_))
+  }
+
+  if (method == "fisher") {
     if (weights != "equal") {
       warning("Weighted Fisher is not supported; using equal weights", call. = FALSE)
     }
-    m <- colSums(is.finite(p_two))
-    X2 <- -2 * colSums(log(p_two), na.rm = TRUE)
-    p_comb <- stats::pchisq(X2, df = 2 * pmax(1L, m), lower.tail = FALSE)
-    zmag <- stats::qnorm(pmax(1e-300, p_comb/2), lower.tail = FALSE)
-    sgn <- sign(colMeans(tmat, na.rm = TRUE))
-    z_comb <- zmag * ifelse(sgn == 0, 1, sgn)
-    return(z_comb)
-  } else { # lancaster (weighted Fisher via df weights)
-    # Build weights per subject/voxel
-    if (weights == "equal") {
-      W <- matrix(1, nrow = nrow(tmat), ncol = ncol(tmat))
-    } else if (weights == "ivw") {
-      if (!is.null(se_mat)) {
-        W <- 1/(se_mat^2)
-      } else if (!is.null(weights_custom)) {
-        if (is.vector(weights_custom) && length(weights_custom) == nrow(tmat)) {
-          W <- matrix(weights_custom, nrow = nrow(tmat), ncol = ncol(tmat))
-        } else if (is.matrix(weights_custom) && all(dim(weights_custom) == dim(tmat))) {
-          W <- weights_custom
-        } else {
-          warning("weights_custom shape does not match; falling back to equal weights", call. = FALSE)
-          W <- matrix(1, nrow = nrow(tmat), ncol = ncol(tmat))
-        }
-      } else {
-        warning("IVW requested for lancaster but no SE available; using equal weights", call. = FALSE)
-        W <- matrix(1, nrow = nrow(tmat), ncol = ncol(tmat))
-      }
-    } else { # custom
-      if (is.null(weights_custom)) {
-        warning("weights='custom' but 'weights_custom' not provided; using equal weights", call. = FALSE)
-        W <- matrix(1, nrow = nrow(tmat), ncol = ncol(tmat))
-      } else if (is.vector(weights_custom) && length(weights_custom) == nrow(tmat)) {
-        W <- matrix(weights_custom, nrow = nrow(tmat), ncol = ncol(tmat))
-      } else if (is.matrix(weights_custom) && all(dim(weights_custom) == dim(tmat))) {
-        W <- weights_custom
-      } else {
-        warning("weights_custom must be length S or SxP; using equal weights", call. = FALSE)
-        W <- matrix(1, nrow = nrow(tmat), ncol = ncol(tmat))
-      }
-    }
-    # Lancaster: df_j = 2 * normalized weights so sum df ≈ 2m
-    # Normalize weights per voxel by mean of finite weights
-    Wn <- W
-    for (j in seq_len(ncol(W))) {
-      ww <- W[, j]
-      ok <- is.finite(ww) & apply(!is.na(p_two[, j, drop = FALSE]), 1, all)
-      mu <- mean(ww[ok], na.rm = TRUE)
-      if (!is.finite(mu) || mu <= 0) mu <- 1
-      Wn[, j] <- ww / mu
-    }
-    # Degrees per subject/voxel; coerce back to matrix to avoid dim drop
-    nu <- 2 * pmax(1e-8, Wn)
-    nu <- matrix(as.numeric(nu), nrow = nrow(Wn), ncol = ncol(Wn))
-    # Combine via chi-square with df per subject
-    # Compute chi-square quantiles per subject/voxel
-    Xj <- matrix(NA_real_, nrow = nrow(tmat), ncol = ncol(tmat))
-    for (i in seq_len(nrow(tmat))) {
-      Xj[i, ] <- stats::qchisq(
-        pmax(1e-300, p_two[i, ]), df = nu[i, ], lower.tail = FALSE
-      )
-    }
-    Xsum <- colSums(Xj, na.rm = TRUE)
-    nu_sum <- colSums(nu, na.rm = TRUE)
-    p_comb <- stats::pchisq(Xsum, df = nu_sum, lower.tail = FALSE)
-    zmag <- stats::qnorm(pmax(1e-300, p_comb/2), lower.tail = FALSE)
-    sgn <- sign(colMeans(tmat, na.rm = TRUE))
-    z_comb <- zmag * ifelse(sgn == 0, 1, sgn)
-    return(z_comb)
+    log_p_two <- log_p_half + log(2)
+    log_p_two[!has_t] <- 0
+    m <- colSums(has_t)
+    X2 <- -2 * colSums(log_p_two)
+    log_p_comb <- stats::pchisq(X2, df = 2 * pmax(1L, m), lower.tail = FALSE, log.p = TRUE)
+    return(finish(log_p_comb, m))
   }
-}
 
+  # lancaster (weighted Fisher via df weights)
+  W <- .combine_weight_matrix(tmat, weights, weights_custom, se_mat, "lancaster")
+  use <- has_t & is.finite(W) & W > 0
+  W[!use] <- NA_real_
+  # Normalise weights per feature by the mean of the weights in use so that
+  # the total degrees of freedom equal 2 * (number of subjects used).
+  mu <- colMeans(W, na.rm = TRUE)
+  mu[!is.finite(mu) | mu <= 0] <- 1
+  nu <- 2 * pmax(sweep(W, 2L, mu, "/"), 1e-8)
+  nu[!use] <- 0
+  log_p_two <- log_p_half + log(2)
+  Xj <- matrix(0, nrow = S, ncol = ncol(tmat))
+  Xj[use] <- stats::qchisq(log_p_two[use], df = nu[use], lower.tail = FALSE, log.p = TRUE)
+  m <- colSums(use)
+  log_p_comb <- stats::pchisq(colSums(Xj), df = pmax(colSums(nu), 1e-8),
+                              lower.tail = FALSE, log.p = TRUE)
+  finish(log_p_comb, m)
+}
 
 #' @keywords internal
 #' @noRd
