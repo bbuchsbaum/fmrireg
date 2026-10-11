@@ -27,7 +27,6 @@ Imports:
     assertthat,
     tibble,
     purrr,
-    foreach,
     dplyr,
     ggplot2 (>= 3.4.0),
     tidyr,

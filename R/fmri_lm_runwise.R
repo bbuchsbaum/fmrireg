@@ -661,11 +661,12 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu,
   
   # Compute overall statistics
   rdf_vals <- unlist(lapply(cres, `[[`, "rdf"))
+  # One row per run, one column per voxel: pool each voxel across runs.
   sigma_mat <- do.call(rbind, lapply(seq_along(cres), function(i) {
-    as.matrix(cres[[i]]$sigma^2) * rdf_vals[i]
+    as.numeric(cres[[i]]$sigma)^2 * rdf_vals[i]
   }))
   sigma <- sqrt(colSums(sigma_mat) / sum(rdf_vals))
-  rss <- colSums(do.call(rbind, lapply(cres, function(x) as.matrix(x$rss))))
+  rss <- colSums(do.call(rbind, lapply(cres, function(x) as.numeric(x$rss))))
   rdf <- sum(rdf_vals)
   resvar <- rss / rdf
   

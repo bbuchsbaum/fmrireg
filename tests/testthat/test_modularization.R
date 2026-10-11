@@ -134,37 +134,3 @@ test_that("voxelwise AR with contrasts works", {
     expect_true(length(fit$result$contrasts) >= 0)
   }
 })
-
-test_that("memory-efficient contrast engine works", {
-  # Test the chunked voxelwise contrast computation using internal function
-  n_voxels <- 1000
-  p <- 20
-  n_timepoints <- 200
-  
-  # Create test data
-  X <- matrix(rnorm(n_timepoints * p), n_timepoints, p)
-  Y <- matrix(rnorm(n_timepoints * n_voxels), n_timepoints, n_voxels)
-  
-  # Create phi matrix (AR coefficients per voxel)
-  phi_matrix <- matrix(runif(n_voxels, 0.1, 0.5), nrow = 1)
-  
-  # Create contrast specifications
-  conlist <- list(
-    c1 = c(1, -1)
-  )
-  attr(conlist$c1, "colind") <- 1:2
-  
-  # Test chunked processing using ::: operator for internal function
-  result <- fmrireg:::fit_lm_contrasts_voxelwise_chunked(
-    X_run = X,
-    Y_run = Y,
-    phi_matrix = phi_matrix,
-    conlist = conlist,
-    fconlist = list(),
-    chunk_size = 100
-  )
-  
-  expect_equal(length(result), 1)
-  expect_equal(result[[1]]$name, "c1")
-  expect_equal(length(result[[1]]$data[[1]]$estimate), n_voxels)
-})

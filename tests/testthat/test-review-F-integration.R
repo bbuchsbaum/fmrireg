@@ -128,3 +128,75 @@ test_that("fmri_ttest (GDS input): group contrast equals the group coefficient",
     }
   }
 })
+
+test_that("runwise multi-run fits store per-voxel sigma, rss and resvar", {
+  # pool_runwise_results stacked as.matrix(<V-vector>) columns, so colSums
+  # summed over voxels *and* runs: sigma/rss/resvar became one scalar.
+  dset <- .fi_fixture(nrun = 2L, V = 6L)
+  fit <- fmri_lm(onset ~ hrf(condition), block = ~run, dataset = dset,
+                 control = fmri_lm_control(estimation = estimation_spec("runwise_meta")))
+  r <- fit$result
+  Y <- as.matrix(.dset_data_matrix(dset))
+  rows <- .dset_run_rows(dset)
+  rss_ref <- numeric(ncol(Y)); rdf_ref <- 0
+  for (k in seq_along(rows)) {
+    tm <- term_matrices(fit$model, k)
+    env <- list2env(tm); env[[".y"]] <- rep(0, nrow(tm[[1]]))
+    Xk <- model.matrix(get_formula(fit$model), env)
+    m <- lm.fit(Xk, Y[rows[[k]], , drop = FALSE])
+    rss_ref <- rss_ref + colSums(m$residuals^2)
+    rdf_ref <- rdf_ref + (nrow(Xk) - m$rank)
+  }
+  expect_length(as.numeric(r$sigma), ncol(Y))
+  expect_equal(as.numeric(r$rss), rss_ref, tolerance = 1e-8)
+  expect_equal(as.numeric(r$sigma), sqrt(rss_ref / rdf_ref), tolerance = 1e-8)
+  expect_equal(as.numeric(r$resvar), rss_ref / rdf_ref, tolerance = 1e-8)
+})
+
+test_that("post-hoc contrasts on multi-run runwise fits: exact for OLS, refused when runs are whitened", {
+  dset <- .fi_fixture(nrun = 2L, V = 6L)
+  pc <- pair_contrast(~condition == "A", ~condition == "B", name = "AvB")
+  fit_rw <- function(noise) {
+    fmri_lm(onset ~ hrf(condition, contrasts = pc), block = ~run, dataset = dset,
+            control = fmri_lm_control(estimation = estimation_spec("runwise_meta"),
+                                      noise = noise_spec(noise)))
+  }
+  ols <- fit_rw("iid")
+  ph <- fit_contrasts(ols, list(AvB = pc))[[1]]
+  infit <- ols$result$contrasts$data[[1]]
+  expect_equal(ph$estimate, infit$estimate, tolerance = 1e-8)
+  # Pooled-run OLS: global (X'X)^-1 with the pooled per-voxel sigma; the in-fit
+  # value pools run-level contrasts by inverse variance. They agree closely
+  # (the scalar-sigma bug made this ratio ~3).
+  expect_equal(ph$se, infit$se, tolerance = 0.03)
+
+  ar <- fit_rw("ar1")
+  expect_error(fit_contrasts(ar, list(AvB = pc)), "multi-run runwise")
+  # Joint AR fits remain supported and exact.
+  joint <- .fi_fit(dset, "matrix")
+  ph_j <- fit_contrasts(joint, list(AvB = pc))[[1]]
+  expect_equal(ph_j$se, joint$result$contrasts$data[[1]]$se, tolerance = 1e-8)
+})
+
+test_that("meta_betas pools runs by inverse-variance fixed effects (closed form)", {
+  # Replaces a coverage test that accepted any return value, including an error.
+  set.seed(82)
+  V <- 4L; p <- 3L
+  mk <- function(b, s) tibble::tibble(
+    type = "beta", name = "parameter_estimates",
+    data = list(tibble::tibble(estimate = list(b), se = list(s),
+                               stat = list(b / s), prob = list(b * 0),
+                               sigma = list(rep(1, V)))))
+  e1 <- matrix(rnorm(V * p), V, p); s1 <- matrix(runif(V * p, 0.2, 1), V, p)
+  e2 <- matrix(rnorm(V * p), V, p); s2 <- matrix(runif(V * p, 0.2, 1), V, p)
+  mb <- fmrireg:::meta_betas(list(mk(e1, s1), mk(e2, s2)), colind = 1:p)
+  w1 <- 1 / s1^2; w2 <- 1 / s2^2
+  est <- (w1 * e1 + w2 * e2) / (w1 + w2)
+  se <- sqrt(1 / (w1 + w2))
+  got <- mb$data[[1]]
+  expect_equal(unname(got$estimate[[1]]), unname(est), tolerance = 1e-12)
+  expect_equal(unname(got$se[[1]]), unname(se), tolerance = 1e-12)
+  expect_equal(unname(got$stat[[1]]), unname(est / se), tolerance = 1e-12)
+  expect_equal(unname(got$prob[[1]]),
+               unname(2 * pnorm(abs(est / se), lower.tail = FALSE)), tolerance = 1e-10)
+})

@@ -56,21 +56,3 @@ hrf_smoothing_kernel <- function(len, TR = 2,
   diag(K) <- 1
   K
 }
-
-#' Design kernel for a given design matrix
-#'
-#' This internal function calculates a design kernel for the given design matrix (`dmat`). It can also compute the derivative of the design kernel if the `deriv` parameter is set to TRUE.
-#' @noRd
-#' @param dmat A design matrix.
-#' @param deriv A logical value indicating whether to compute the derivative (default is FALSE).
-#' @keywords internal
-#' @examples
-#' onsets <- sort(runif(25, 0, 200))
-#' fac <- factor(sample(letters[1:4], length(onsets), replace=TRUE))
-#' sframe <- sampling_frame(200, TR=1)
-#' des <- data.frame(onsets=onsets, fac=fac, constant = factor(rep(1, length(fac))), block=rep(1, length(fac)))
-#' emod <- event_model(onsets ~ hrf(constant) + hrf(fac), data=des, sampling_frame=sframe, block = ~ block)
-#' dmat <- design_matrix(emod)
-design_kernel <- function(dmat, deriv=FALSE) {
-  dd <- rbind(rep(0, ncol(dmat)), apply(dmat, 2, diff))
-}

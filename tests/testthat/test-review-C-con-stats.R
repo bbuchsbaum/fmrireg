@@ -208,7 +208,4 @@ test_that("P-C3: compute_contrast standard errors equal the per-voxel formula", 
                           sqrt(drop(c(1, -1) %*% vcov(m)[2:3, 2:3] %*% c(1, -1)))),
                  tolerance = 1e-8)
   }
-  F1 <- fmrireg:::compute_f_statistic(fr, C)
-  Ff <- fmrireg:::.fast_F_contrast(f$B, f$sigma2, f$XtXinv, C, f$df)
-  expect_equal(as.numeric(F1$fstat), Ff$stat, tolerance = 1e-10)
 })

@@ -1,4 +1,4 @@
-# meta_gds robust/reml leftovers + correctly-signed estimate_tau2/huber helpers.
+# meta_gds robust/reml leftovers.
 
 test_that(".fmri_meta_group_data_gds_impl robust and reml branches", {
   skip_if_not_installed("fmrigds")
@@ -45,30 +45,6 @@ test_that(".fmri_meta_group_data_gds_impl robust and reml branches", {
     ),
     "weights_custom"
   )
-})
-
-test_that("estimate_tau2 pm path and apply_huber_weights update", {
-  set.seed(42)
-  y <- rnorm(12, 0.3, 0.4)
-  se <- runif(12, 0.05, 0.2)
-  X <- cbind(1, rep(0:1, each = 6))
-
-  tau_pm <- fmrireg:::estimate_tau2(y, se, X, method = "pm")
-  expect_true(is.finite(tau_pm) && tau_pm >= 0)
-
-  # Singular design returns 0 (det path)
-  X_sing <- cbind(rep(1, 12), rep(1, 12))
-  expect_equal(fmrireg:::estimate_tau2(y, se, X_sing, method = "dl"), 0)
-
-  w0 <- 1 / se^2
-  w1 <- fmrireg:::apply_huber_weights(y, se, X, w0)
-  expect_equal(length(w1), length(w0))
-  expect_true(all(is.finite(w1)))
-  # Contaminated observation should typically downweight
-  y2 <- y
-  y2[1] <- y2[1] + 20
-  w2 <- fmrireg:::apply_huber_weights(y2, se, X, w0)
-  expect_true(w2[1] <= w0[1] + 1e-8)
 })
 
 test_that("fit_meta_single and fmri_meta.group_data_csv edges", {

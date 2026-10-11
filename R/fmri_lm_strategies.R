@@ -599,43 +599,6 @@ process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma
                      ar_order = ar_order, phi_hat = phi_hat_run)
 }
 
-#' Pool Results Across Runs
-#'
-#' @description
-#' Combines results from multiple runs into overall statistics.
-#'
-#' @param run_results List of results from process_run_* functions
-#' @return List with pooled statistics
-#' @keywords internal
-#' @noRd
-pool_run_results <- function(run_results) {
-  # Extract components
-  rdf_vals <- sapply(run_results, `[[`, "dfres")
-  sigma_mats <- lapply(seq_along(run_results), function(i) {
-    as.matrix(run_results[[i]]$sigma2) * rdf_vals[i]
-  })
-  
-  # Pool sigma
-  sigma_mat <- do.call(rbind, sigma_mats)
-  sigma <- sqrt(colSums(sigma_mat) / sum(rdf_vals))
-  
-  # Pool RSS
-  rss <- colSums(do.call(rbind, lapply(run_results, function(x) as.matrix(x$rss))))
-  
-  # Overall degrees of freedom
-  rdf <- sum(rdf_vals)
-  
-  # Overall residual variance
-  resvar <- rss / rdf
-  
-  list(
-    sigma = sigma,
-    rss = rss,
-    rdf = rdf,
-    resvar = resvar
-  )
-}
-
 #' Prepare Chunkwise Pre-computation
 #'
 #' @description

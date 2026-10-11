@@ -144,63 +144,6 @@ fit_contrasts <- function(object, ...) UseMethod("fit_contrasts")
   )
 }
 
-#' @keywords internal
-#' @noRd
-fit_Ftests <- function(object) {
-  w <- object$weights
-  ssr <- if (is.null(w)) {
-    apply(object$residuals, 2, function(vals) sum(vals^2))
-  } else {
-    apply(object$residuals, 2, function(vals) sum((vals^2 *w)))
-  }
-  
-  mss <- if (is.null(w)) {
-    apply(object$fitted.values, 2, function(vals) sum(vals^2))
-  } else {
-    apply(object$fitted.values, 2, function(vals) sum(vals^2 * w))
-  }
-  
-  #if (ssr < 1e-10 * mss) 
-  #  warning("ANOVA F-tests on an essentially perfect fit are unreliable")
-  
-  dfr <- df.residual(object)
-  p <- object$rank
-  
-  p1 <- 1L:p
-  #comp <- object$effects[p1]
-  asgn <- object$assign[qr.lm(object)$pivot][p1]
-  
-  
-  #nmeffects <- c("(Intercept)", attr(object$terms, "term.labels"))
-  #tlabels <- nmeffects[1 + unique(asgn)]
-  
-  df <- c(lengths(split(asgn, asgn)), dfr)
-  
-  I.p <- diag(nrow(coefficients(object)))
-  nterms <- length(unique(asgn))
-  hmat <- lapply(1:nterms, function(i) {
-    subs <- which(asgn == i)
-    hyp.matrix <- I.p[subs, , drop=FALSE]
-    hyp.matrix[!apply(hyp.matrix, 1, function(x) all(x == 0)), , drop = FALSE]
-  })
-  
-  ret <- lapply(seq_along(ssr), function(i) {
-    comp <- object$effects[,i]
-    ss <- c(unlist(lapply(split(comp^2, asgn), sum)), ssr[i])
-    ms <- ss/df
-    f <- ms/(ssr[i]/dfr)
-    
-    P <- pf(f, df, dfr, lower.tail = FALSE)
-    list(F = f, P = P)
-  })
-  
-  FMat <- do.call(rbind, lapply(ret, "[[", "F"))
-  PMat <- do.call(rbind, lapply(ret, "[[", "P"))
-  
-  list(F=FMat, P=PMat)
-  
-}
-
 
 
 #' Beta Statistics for Linear Model
@@ -1003,6 +946,30 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames,
 
   stop(msg, call. = FALSE)
 }
+# Post-hoc contrasts need one coefficient covariance that matches the stored
+# scale. Run-by-run fits that whiten or weight each run separately pool their
+# betas across runs without such a covariance.
+.posthoc_check_supported <- function(object) {
+  strategy <- attr(object, "strategy", exact = TRUE) %||% object$strategy
+  if (!identical(strategy, "runwise")) return(invisible(TRUE))
+  cfg <- attr(object, "executed_control", exact = TRUE) %||%
+    attr(object, "executed_config", exact = TRUE)
+  if (!inherits(cfg, "fmri_lm_control")) return(invisible(TRUE))
+  n_runs <- length(fmrihrf::blocklens(object$model))
+  if (n_runs < 2L) return(invisible(TRUE))
+  per_run <- .temporal_noise_enabled(cfg$noise %||% cfg$ar) ||
+    .fmri_lm_robust_enabled(cfg$robust) ||
+    isTRUE((cfg$weights %||% cfg$volume_weights)$enabled) ||
+    isTRUE((cfg$projection %||% cfg$soft_subspace)$enabled)
+  if (per_run) {
+    stop("Post-hoc contrasts are not available for multi-run runwise fits with ",
+         "temporal noise models, robust weighting, volume weights or projection: ",
+         "each run is whitened/weighted separately and the pooled betas have no ",
+         "single covariance. Specify the contrasts in the model formula, or fit ",
+         "with estimation_spec(scope = \"joint\").", call. = FALSE)
+  }
+  invisible(TRUE)
+}
 
 #' Fit Contrasts for fMRI Linear Model Objects
 #'
@@ -1014,12 +981,19 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames,
 #' @param ... Additional arguments (unused)
 #'
 #' @return A list of contrast results
+#' @details Multi-run fits estimated run by run (`runwise_meta`) with temporal
+#'   noise models, robust weighting, volume weights or projection whiten or
+#'   weight each run differently, so their pooled betas have no single stored
+#'   covariance; post-hoc contrasts are refused for them. Specify such
+#'   contrasts in the model formula, or fit with
+#'   `estimation_spec(scope = "joint")`.
 #' @export
 #' @method fit_contrasts fmri_lm
 fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   if (is.null(contrasts) || length(contrasts) == 0) {
     return(list())
   }
+  .posthoc_check_supported(object)
 
   sigma <- object$result$sigma
   if (is.null(sigma)) {

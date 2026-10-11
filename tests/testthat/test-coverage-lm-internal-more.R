@@ -88,48 +88,6 @@ test_that("beta_stats_matrix_voxelwise and fit_lm_contrasts_voxelwise", {
   expect_equal(nrow(cres$A$data[[1]]), V)
 })
 
-test_that("meta_betas / meta_contrasts and store/format with matrix XtXinv", {
-  set.seed(82)
-  V <- 3L
-  p <- 2L
-  b1 <- tibble::tibble(
-    type = "beta",
-    name = "parameter_estimates",
-    data = list(tibble::tibble(
-      estimate = list(matrix(rnorm(V * p), V, p)),
-      se = list(matrix(runif(V * p), V, p)),
-      stat = list(matrix(rnorm(V * p), V, p)),
-      prob = list(matrix(runif(V * p), V, p)),
-      sigma = list(runif(V))
-    ))
-  )
-  b2 <- b1
-  b2$data[[1]]$estimate[[1]] <- b2$data[[1]]$estimate[[1]] + 0.1
-  mb <- tryCatch(
-    fmrireg:::meta_betas(list(b1, b2), event_indices = 1:2),
-    error = function(e) e
-  )
-  expect_true(inherits(mb, "error") || inherits(mb, "tbl_df") || is.list(mb))
-
-  conlist <- list(c1 = structure(1, colind = 2L))
-  fconlist <- list(F1 = structure(matrix(1, 1, 1), colind = 2L))
-  storage <- fmrireg:::initialize_contrast_storage(conlist, fconlist, n_voxels = 2L)
-  XtXinv <- diag(2)
-  stored <- fmrireg:::store_voxel_contrasts(
-    storage, voxel_index = 1L, qr_or_XtXinv = XtXinv,
-    beta_w = c(0.2, 0.5), sigma_w = 0.3,
-    conlist = conlist, fconlist = fconlist, dfres = 20
-  )
-  expect_true(is.list(stored))
-  stored2 <- fmrireg:::store_voxel_contrasts(
-    stored, voxel_index = 2L, qr_or_XtXinv = qr(cbind(1, rnorm(20))),
-    beta_w = c(0.1, 0.4), sigma_w = 0.25,
-    conlist = conlist, fconlist = fconlist, dfres = 20, ar_order = 1L
-  )
-  formatted <- fmrireg:::format_contrast_results(stored2, dfres = 20)
-  expect_true(is.list(formatted) || inherits(formatted, "tbl_df"))
-})
-
 test_that(".fmri_lm_voxel_status classifies finite / NA / Inf series", {
   expect_true(!is.null(fmrireg:::.fmri_lm_voxel_status(rnorm(8))))
   st_na <- fmrireg:::.fmri_lm_voxel_status(c(1, NA, 2))

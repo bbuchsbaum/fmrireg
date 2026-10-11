@@ -47,24 +47,3 @@ test_that("preprocess_run_data errors on non-finite Y and missing soft nuisance"
   )
   expect_equal(length(out_w$preprocess_info$volume_weights), 20L)
 })
-
-test_that("estimate_tau2 returns 0 for singular designs and covers reml", {
-  # Singular design (duplicate columns)
-  y <- rnorm(6)
-  se <- rep(0.2, 6)
-  X_sing <- cbind(rep(1, 6), rep(1, 6))
-  expect_equal(fmrireg:::estimate_tau2(y, se, X_sing, method = "dl"), 0)
-
-  set.seed(32)
-  y2 <- rnorm(12, 0.3, 0.5)
-  se2 <- runif(12, 0.1, 0.3)
-  X2 <- cbind(1, rep(0:1, each = 6))
-  tau_reml <- fmrireg:::estimate_tau2(y2, se2, X2, method = "reml")
-  expect_true(is.finite(tau_reml) && tau_reml >= 0)
-
-  # Homogeneous -> dl zero branch
-  y0 <- rep(0.1, 8)
-  se0 <- rep(0.2, 8)
-  X0 <- cbind(1, rep(0:1, each = 4))
-  expect_equal(fmrireg:::estimate_tau2(y0, se0, X0, method = "dl"), 0)
-})

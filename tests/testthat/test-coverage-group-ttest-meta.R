@@ -312,7 +312,10 @@ test_that("fmri_ttest helper materialize/weight/contrast branches", {
     source_sign = 1
   )
   expect_equal(unname(signed$beta["group", 1]), -2)
-  expect_equal(signed$z_contrast, -1.5)
+  # Contrast fields are computed in the target sign before this step, so they
+  # pass through unchanged (flipping them here double-flipped t/z).
+  expect_equal(signed$z_contrast, 1.5)
+  expect_equal(signed$t_contrast, 2)
 
   w_unnamed <- fmrireg:::.fmri_ttest_resolve_contrast(c(0, 1), c("a", "b"))
   expect_equal(as.numeric(w_unnamed), c(0, 1))

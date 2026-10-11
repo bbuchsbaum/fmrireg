@@ -19,3 +19,11 @@ A list of contrast results
 \description{
 S3 method for computing contrasts on fitted fmri_lm objects.
 }
+\details{
+Multi-run fits estimated run by run (\code{runwise_meta}) with temporal
+noise models, robust weighting, volume weights or projection whiten or
+weight each run differently, so their pooled betas have no single stored
+covariance; post-hoc contrasts are refused for them. Specify such
+contrasts in the model formula, or fit with
+\code{estimation_spec(scope = "joint")}.
+}
