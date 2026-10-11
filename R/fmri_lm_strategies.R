@@ -142,14 +142,12 @@ resolve_censor <- function(cfg, dataset = NULL, run_num = NULL, n_time = NULL) {
 #' @param cfg fmri_lm_control object
 #' @param dataset fmri_frame object (for extracting nuisance if using mask)
 #' @param run_num Run number (for run-specific nuisance extraction)
-#' @param row_ind Optional global row indices of this run. Used to slice a
-#'   full-length (all runs) volume-weight vector; derived from the dataset's
-#'   run lengths when omitted.
 #' @return List with preprocessed X, Y, and preprocessing metadata
+#' @details A volume-weight vector covering all runs is sliced to this run's
+#'   rows, taken from the dataset's temporal schema.
 #' @keywords internal
 #' @noRd
-preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL,
-                                row_ind = NULL) {
+preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL) {
   # Missing-data policy (shared chokepoint for all runwise/chunkwise per-run
   # fitting). Under the default "error" policy, fail fast on non-finite response
   # values rather than silently fitting on complete cases (lm na.omit) or
@@ -182,8 +180,8 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL,
         vol_weights <- vol_weights[, run_num]
       } else if (length(vol_weights) != nrow(X) && !is.null(run_num)) {
         # A full-length vector covers every run: take this run's rows.
-        if (is.null(row_ind) && !is.null(dataset) && .is_fmri_frame(dataset)) {
-          row_ind <- .dset_run_rows(dataset)[[run_num]]
+        row_ind <- if (!is.null(dataset) && .is_fmri_frame(dataset)) {
+          .dset_run_rows(dataset)[[run_num]]
         }
         if (!is.null(row_ind) && length(row_ind) == nrow(X) &&
             max(row_ind) <= length(vol_weights)) {
@@ -253,8 +251,7 @@ preprocess_run_data <- function(X, Y, cfg, dataset = NULL, run_num = NULL,
   data_env_run[[".y"]] <- rep(0, n_time_run)
   X_run <- model.matrix(get_formula(model), data_env_run)
 
-  preproc <- preprocess_run_data(X_run, Y_run, cfg, dataset, run_chunk$chunk_num,
-                                 row_ind = run_chunk$row_ind)
+  preproc <- preprocess_run_data(X_run, Y_run, cfg, dataset, run_chunk$chunk_num)
   vw <- preproc$preprocess_info$volume_weights
   list(
     X = preproc$X,
