@@ -35,7 +35,11 @@ NumericVector instantaneous_correlation_rcpp(NumericVector  x,
   if (eta <= 0.0)
     stop("eta must be > 0");
 
+
   const int    N   = x.size();
+  if (N == 0)                          // nothing to do; y[0] / y[N-1] would be out of bounds
+    return NumericVector(0);
+
   const double a   = std::exp(-eta);
   const double eps = std::numeric_limits<double>::epsilon();
 
@@ -43,37 +47,40 @@ NumericVector instantaneous_correlation_rcpp(NumericVector  x,
     warmup = std::ceil(4.0 / eta);
   warmup = std::min(warmup, N);
 
-  NumericVector mu_x(N), mu_y(N),
-                s_xy(N), s_xx(N), s_yy(N),
-                rho (N);
+  NumericVector rho(N, NA_REAL);
 
-  // ---- initial point -----------------------------------------------------
-  double y0 = y_at(y, -offset, N, fill, y[0], y[N-1]);
+  // EWM state. A sample whose x or y is missing (fill = "na" outside the
+  // series, or NA in the data) leaves the state unchanged and gets rho = NA;
+  // the recursion starts at the first complete pair. Without this, one NA
+  // propagates through the recursion into every later value.
+  bool   started = false;
+  double mu_x = 0.0, mu_y = 0.0, s_xy = 0.0, s_xx = 0.0, s_yy = 0.0;
 
-  mu_x[0] = x[0];
-  mu_y[0] = y0;
-  s_xy[0] = x[0] * y0;
-  s_xx[0] = x[0] * x[0];
-  s_yy[0] = y0   * y0;
-  rho [0] = NA_REAL;                         // undefined at first sample
-
-  // ---- recursion ---------------------------------------------------------
-  for (int k = 1; k < N; ++k) {
+  for (int k = 0; k < N; ++k) {
     const double xk = x[k];
     const double yk = y_at(y, k - offset, N, fill, y[0], y[N-1]);
+    if (ISNAN(xk) || ISNAN(yk))
+      continue;
+
+    if (!started) {                    // initial point: rho undefined
+      mu_x = xk;      mu_y = yk;
+      s_xy = xk * yk; s_xx = xk * xk; s_yy = yk * yk;
+      started = true;
+      continue;
+    }
 
     // EWM means
-    mu_x[k] = a * mu_x[k-1] + (1.0 - a) * xk;
-    mu_y[k] = a * mu_y[k-1] + (1.0 - a) * yk;
+    mu_x = a * mu_x + (1.0 - a) * xk;
+    mu_y = a * mu_y + (1.0 - a) * yk;
 
     // EWM second‑order moments
-    s_xy[k] = a * s_xy[k-1] + (1.0 - a) * xk * yk;
-    s_xx[k] = a * s_xx[k-1] + (1.0 - a) * xk * xk;
-    s_yy[k] = a * s_yy[k-1] + (1.0 - a) * yk * yk;
+    s_xy = a * s_xy + (1.0 - a) * xk * yk;
+    s_xx = a * s_xx + (1.0 - a) * xk * xk;
+    s_yy = a * s_yy + (1.0 - a) * yk * yk;
 
-    const double cov = s_xy[k] - mu_x[k] * mu_y[k];
-    const double varx = s_xx[k] - mu_x[k] * mu_x[k];
-    const double vary = s_yy[k] - mu_y[k] * mu_y[k];
+    const double cov  = s_xy - mu_x * mu_y;
+    const double varx = s_xx - mu_x * mu_x;
+    const double vary = s_yy - mu_y * mu_y;
     const double denom = std::sqrt(std::max(varx * vary, eps));
 
     rho[k] = (denom > 0.0) ? cov / denom : NA_REAL;
