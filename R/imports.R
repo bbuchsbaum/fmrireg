@@ -31,8 +31,6 @@ utils::globalVariables(c(
   "n_significant",
   # Variables from chunkwise processing
   "data",
-  # Variables from robust fitting
-  "proj_global_robustly_weighted", "multiresponse_arma", "auto_whiten",
   # Package data
   "fmri_benchmark_datasets",
   # GDS bridge helpers (registered dynamically by fmrigds)

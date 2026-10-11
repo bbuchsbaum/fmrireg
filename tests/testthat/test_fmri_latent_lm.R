@@ -76,16 +76,18 @@ test_that("fmri_latent_lm handles different options", {
 
   dset <- latent_frame(lvec, TR = 2, run_length = n_time, event_table = event_table)
   
-  # Test with robust option
-  result_robust <- fmri_latent_lm(
-    formula = onset ~ hrf(X1),
-    block = ~ block,
-    dataset = dset,
-    durations = 0,
-    robust = TRUE
+  # Robust fitting has no latent-space reduction. It used to be accepted and
+  # silently fitted by OLS; it is now an explicit error (review 2026-10, E2).
+  expect_error(
+    fmri_latent_lm(
+      formula = onset ~ hrf(X1),
+      block = ~ block,
+      dataset = dset,
+      durations = 0,
+      robust = TRUE
+    ),
+    "not supported for latent"
   )
-  
-  expect_s3_class(result_robust, "fmri_latent_lm")
   
   # Test with autocorrelation
   result_ar <- fmri_latent_lm(
