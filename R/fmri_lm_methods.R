@@ -583,6 +583,32 @@ coef_image.fmri_lm <- function(object, coef = 1,
   statistic <- match.arg(statistic)
   type <- match.arg(type)
 
+  available <- coef_names(object, type = type)
+  if (length(available) == 0) {
+    stop("No coefficients of type '", type, "' available in this model.",
+         call. = FALSE)
+  }
+  .coef_image_build(object, coef, statistic, type, available,
+                    .coef_image_spatial(object))
+}
+
+#' Mask space for coefficient images, or NULL for a non-spatial dataset
+#' @keywords internal
+#' @noRd
+.coef_image_spatial <- function(object) {
+  tryCatch(
+    .fmri_dataset_mask_space(object$dataset, "coefficient image reconstruction"),
+    error = function(e) NULL
+  )
+}
+
+#' One coefficient image from pre-resolved names and mask space
+#'
+#' Shared by coef_image() and coef_images(), so that coef_images() resolves
+#' the coefficient names (design_matrix()) and the mask space once.
+#' @keywords internal
+#' @noRd
+.coef_image_build <- function(object, coef, statistic, type, available, spatial) {
   # Map statistic to the internal element names used by pull_stat
   element <- switch(statistic,
     estimate = "estimate",
@@ -592,12 +618,6 @@ coef_image.fmri_lm <- function(object, coef = 1,
   )
 
   # ---- resolve coef to a column index ----
-  available <- coef_names(object, type = type)
-  if (length(available) == 0) {
-    stop("No coefficients of type '", type, "' available in this model.",
-         call. = FALSE)
-  }
-
   if (is.character(coef)) {
     idx <- match(coef, available)
     if (is.na(idx)) {
@@ -630,18 +650,21 @@ coef_image.fmri_lm <- function(object, coef = 1,
   }
 
   # ---- reconstruct spatial image if possible ----
+  raw_values <- function() {
+    # Non-spatial dataset: return raw vector with informative name
+    names(values) <- NULL
+    values
+  }
+  if (is.null(spatial)) {
+    return(raw_values())
+  }
   tryCatch({
-    spatial <- .fmri_dataset_mask_space(object$dataset, "coefficient image reconstruction")
     sp <- spatial$space
     mask_idx <- which(spatial$mask_array)
     vol_array <- array(NA_real_, dim(sp))
     vol_array[mask_idx] <- values
     neuroim2::NeuroVol(vol_array, sp)
-  }, error = function(e) {
-    # Non-spatial dataset: return raw vector with informative name
-    names(values) <- NULL
-    values
-  })
+  }, error = function(e) raw_values())
 }
 
 #' @rdname coef_images
@@ -693,8 +716,10 @@ coef_images.fmri_lm <- function(object,
     }
   }
 
+  # Names (design_matrix()) and mask space are resolved once for all images.
+  spatial <- .coef_image_spatial(object)
   images <- lapply(coefs, function(nm) {
-    coef_image(object, coef = nm, statistic = statistic, type = type)
+    .coef_image_build(object, nm, statistic, type, available, spatial)
   })
   names(images) <- coefs
   images
