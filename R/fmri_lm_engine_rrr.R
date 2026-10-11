@@ -26,8 +26,21 @@
   args <- .rrr_normalize_args(args)
 
   dataset <- dataset %||% model$dataset
-  Y <- .rrr_extract_response_matrix(dataset)
+  # Latent data with iid noise: every step below is linear in the response,
+  # so the fit runs on the T x k scores Z and maps results through the
+  # V x k loadings L at the end (never forming the dense T x V Z L').
+  latent <- .rrr_latent_response(dataset, cfg)
+  if (is.null(latent)) {
+    Y <- .rrr_extract_response_matrix(dataset)
+    loadings <- NULL
+    gram <- NULL
+  } else {
+    Y <- latent$Z
+    loadings <- latent$L
+    gram <- crossprod(loadings)
+  }
   mode(Y) <- "numeric"
+  n_vox <- if (is.null(loadings)) ncol(Y) else nrow(loadings)
 
   X_full <- as.matrix(design_matrix(model))
   mode(X_full) <- "numeric"
@@ -74,7 +87,7 @@
     energy_keep = args$energy_keep,
     rss_budget = args$rss_budget
   )
-  task_fit <- .rrr_fit_task_subspace(X0, Y0, rank_control)
+  task_fit <- .rrr_fit_task_subspace(X0, Y0, rank_control, gram = gram)
   B_task <- task_fit$B_task
   C_task <- task_fit$C_task
   V_r <- task_fit$V_r
@@ -104,7 +117,15 @@
     fitted_w <- fitted_w + white$Zw %*% B_full[baseline_indices, , drop = FALSE]
   }
   resid_w <- white$Yw - fitted_w
-  rss <- colSums(resid_w^2)
+  if (is.null(loadings)) {
+    rss <- colSums(resid_w^2)
+  } else {
+    # Voxel v's residual is resid_w %*% L[v, ]: rss_v = L[v, ] M L[v, ]'
+    # with M = resid_w' resid_w (k x k), computed row-wise.
+    rss <- pmax(rowSums((loadings %*% crossprod(resid_w)) * loadings), 0)
+    B_full <- B_full %*% t(loadings)
+    B_task <- B_full[event_indices, , drop = FALSE]
+  }
   resvar <- pmax(rss / dfres, .Machine$double.eps)
 
   # Conditional (fixed-subspace) variance: Var(b_j) = sigma_j^2 (X0'X0)^-1,
@@ -142,7 +163,8 @@
     boot <- .rrr_bootstrap_task_se(
       X0 = X0,
       Y0 = Y0,
-      B_task_hat = B_task,
+      B_task_hat = if (is.null(loadings)) B_task else task_fit$B_task,
+      loadings = loadings,
       rank_control = rank_control,
       t_contrasts_remapped = scoped_contrasts$simple,
       nboot = args$bootstrap_n,
@@ -239,7 +261,7 @@
     covariance_scope = if (!is.null(boot)) "summary" else "shared",
     scale = if (!is.null(boot)) NULL else s2_cond,
     df_nominal = dfres,
-    df_inference = rep(df_inference, ncol(Y0)),
+    df_inference = rep(df_inference, n_vox),
     standard_errors = bstats$data[[1L]]$se[[1L]],
     metadata = list(
       estimator = "rrr_gls",
@@ -380,6 +402,24 @@
   }
 
   as.matrix(.dset_data_matrix(dataset))
+}
+
+
+#' Internal: latent scores and loadings for a latent-space rrr_gls fit
+#'
+#' Returns list(Z = T x k scores, L = V x k loadings) when the dataset is
+#' latent and the fit is iid (no AR whitening), otherwise NULL. The AR path
+#' estimates its coefficients from voxel residuals and uses the dense
+#' response.
+#' @keywords internal
+#' @noRd
+.rrr_latent_response <- function(dataset, cfg) {
+  if (!.is_fmri_frame(dataset) || !.dset_is_latent(dataset)) return(NULL)
+  if (.rrr_ar_order_from_cfg(cfg) > 0L) return(NULL)
+  list(
+    Z = as.matrix(.dset_data_matrix(dataset)),
+    L = as.matrix(.dset_loadings(dataset))
+  )
 }
 
 
@@ -559,12 +599,12 @@
 #' Internal: fit reduced-rank task model in residualized space
 #' @keywords internal
 #' @noRd
-.rrr_fit_task_subspace <- function(X0, Y0, rank_control, design = NULL) {
+.rrr_fit_task_subspace <- function(X0, Y0, rank_control, design = NULL, gram = NULL) {
   X0 <- as.matrix(X0)
   Y0 <- as.matrix(Y0)
   design <- design %||% .rrr_prepare_task_design(X0)
   G <- if (design$rank_x > 0L) crossprod(design$Qx, Y0) else NULL
-  .rrr_fit_task_subspace_from_G(G, design, rank_control, V = ncol(Y0))
+  .rrr_fit_task_subspace_from_G(G, design, rank_control, V = ncol(Y0), gram = gram)
 }
 
 
@@ -601,9 +641,14 @@
 
 
 #' Internal: reduced-rank fit given G = Qx' Y0
+#'
+#' With `gram = L'L`, Y0 is given in latent coordinates (the response is
+#' Y0 L'): G is then Qx' Z0, the response-space Gram is G gram G', and the
+#' returned B_task is in latent coordinates (the voxel betas are B_task L').
+#' V_r is then NULL (its latent coordinates W_r satisfy V_r = L W_r).
 #' @keywords internal
 #' @noRd
-.rrr_fit_task_subspace_from_G <- function(G, design, rank_control, V) {
+.rrr_fit_task_subspace_from_G <- function(G, design, rank_control, V, gram = NULL) {
   k <- design$k
   empty <- function(sing) {
     list(
@@ -621,7 +666,7 @@
     return(empty(numeric(0)))
   }
 
-  S <- tcrossprod(G)
+  S <- if (is.null(gram)) tcrossprod(G) else G %*% gram %*% t(G)
   eig <- eigen(S, symmetric = TRUE)
   sing <- sqrt(pmax(eig$values, 0))
 
@@ -646,6 +691,7 @@
   C_task <- matrix(0, nrow = k, ncol = rank_used)
   C_task[design$piv, ] <- C_pivot
   B_task <- C_task %*% t(V_r)
+  if (!is.null(gram)) V_r <- NULL
 
   ss <- d^2
   total_ss <- sum(ss)
@@ -805,14 +851,19 @@
 #' @noRd
 .rrr_bootstrap_task_se <- function(X0, Y0, B_task_hat, rank_control,
                                    t_contrasts_remapped, nboot,
-                                   block_size = 1L, seed = NULL) {
+                                   block_size = 1L, seed = NULL,
+                                   loadings = NULL) {
+  # With `loadings`, Y0 and B_task_hat are in latent coordinates (response
+  # Y0 L', betas B_task_hat L'); each resample is refit in latent space and
+  # only its k x V betas are formed.
   X0 <- as.matrix(X0)
   Y0 <- as.matrix(Y0)
   B_task_hat <- as.matrix(B_task_hat)
+  gram <- if (is.null(loadings)) NULL else crossprod(loadings)
 
   n <- nrow(X0)
   k <- ncol(X0)
-  V <- ncol(Y0)
+  V <- if (is.null(loadings)) ncol(Y0) else nrow(loadings)
   nboot <- as.integer(nboot)
   block_size <- as.integer(block_size %||% 1L)
   if (!is.null(seed)) {
@@ -877,8 +928,10 @@
     } else {
       NULL
     }
-    fit_b <- .rrr_fit_task_subspace_from_G(G_b, design, rank_control, V = V)
+    fit_b <- .rrr_fit_task_subspace_from_G(G_b, design, rank_control, V = ncol(Y0),
+                                           gram = gram)
     B_b <- fit_b$B_task
+    if (!is.null(loadings)) B_b <- B_b %*% t(loadings)
 
     delta_b <- B_b - mean_beta
     mean_beta <- mean_beta + delta_b / b
