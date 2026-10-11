@@ -1,4 +1,32 @@
 # Implementation for fmri_meta.group_data_gds (wrapper lives in fmri_meta.R)
+
+# Internal: .meta_fit_core over feature chunks of at most chunk_size columns
+# (custom S x P weights are sliced per chunk). Features are independent, so
+# the result does not depend on chunk_size.
+.gds_meta_fit_chunked <- function(Y, V, X, method, robust, weights, weights_custom,
+                                  chunk_size, n_threads) {
+  P <- ncol(Y)
+  chunk_size <- suppressWarnings(as.integer(chunk_size))
+  if (length(chunk_size) != 1L || is.na(chunk_size) || chunk_size < 1L) chunk_size <- P
+  if (P <= chunk_size) {
+    return(.meta_fit_core(Y = Y, V = V, X = X, method = method, robust = robust,
+                          weights = weights, weights_custom = weights_custom,
+                          n_threads = n_threads))
+  }
+  starts <- seq.int(1L, P, by = chunk_size)
+  parts <- lapply(starts, function(st) {
+    idx <- st:min(P, st + chunk_size - 1L)
+    wc <- if (is.matrix(weights_custom)) weights_custom[, idx, drop = FALSE] else weights_custom
+    .meta_fit_core(Y = Y[, idx, drop = FALSE], V = V[, idx, drop = FALSE], X = X,
+                   method = method, robust = robust, weights = weights,
+                   weights_custom = wc, n_threads = n_threads)
+  })
+  out <- lapply(stats::setNames(nm = names(parts[[1L]])), function(nm) {
+    vals <- lapply(parts, `[[`, nm)
+    if (is.matrix(vals[[1L]])) do.call(cbind, vals) else do.call(c, vals)
+  })
+  out
+}
 .fmri_meta_group_data_gds_impl <- function(data,
                           formula = ~ 1,
                           method = c("pm", "fe", "dl", "reml"),
@@ -60,22 +88,63 @@
   if (!is.null(contrasts)) opts$contrasts <- contrasts
   if (method %in% c("dl","pm","reml")) opts$method <- method
 
-  # Fallback: if var is absent but se present, compute meta directly
+  # The group dataset is computed at most once per call; every subject-level
+  # fit (coefficients, diagnostics, covariance, fit-time contrasts) reuses
+  # one fit of the same Y / V / X.
   gcomp <- try(fmrigds::compute(gd), silent = TRUE)
-  if (inherits(gcomp, "try-error")) gcomp <- NULL
+  gcomp_error <- NULL
+  if (inherits(gcomp, "try-error")) {
+    gcomp_error <- attr(gcomp, "condition")
+    gcomp <- NULL
+  }
+  require_gcomp <- function() {
+    if (is.null(gcomp)) {
+      stop(gcomp_error %||% simpleError("could not compute the group dataset"))
+    }
+    gcomp
+  }
   an_try <- .gds_safe_assay_names(gcomp %||% gd)
-  # Every subject-level fit goes through the same fitter, which applies the
-  # weighting scheme and returns the coefficient covariance.
-  fit_direct <- function(Y, V, X) {
-    .meta_fit_core(Y = Y, V = V, X = X, method = method, robust = robust,
-                   weights = weights, weights_custom = weights_custom,
-                   n_threads = getOption("fmrireg.num_threads", 0))
+  X_model <- tryCatch(fmrigds::model_matrix(data, formula), error = function(e) NULL)
+  design_matrix <- function(n) {
+    if (!is.null(X_model)) X_model else .gds_safe_model_matrix(gd, formula, fallback_n = n)
+  }
+
+  manual_fit <- NULL
+  compute_manual_fit <- function() {
+    if (!is.null(manual_fit)) return(manual_fit)
+    g <- require_gcomp()
+    B <- fmrigds::assay(g, "beta")
+    Varr <- .gds_safe_assay(g, "var")
+    SEa  <- .gds_safe_assay(g, "se")
+    X <- design_matrix(dim(B)[2])
+    Y <- t(first_contrast_matrix(B))
+    V <- if (!is.null(Varr)) {
+      t(first_contrast_matrix(Varr))
+    } else {
+      t(first_contrast_matrix(SEa)^2)
+    }
+    manual_fit <<- .gds_meta_fit_chunked(
+      Y, V, X, method = method, robust = robust, weights = weights,
+      weights_custom = weights_custom, chunk_size = chunk_size, n_threads = n_threads
+    )
+    manual_fit
   }
   cov_direct <- NULL
 
   # Pre-alloc locals for direct path
   beta_local <- se_local <- z_local <- p_local <- NULL
   tau2_local <- I2_local <- Q_local <- df_local <- NULL
+  use_manual_fit <- function(rf) {
+    cov_direct <<- rf$cov_tri
+    beta_local <<- rf$beta
+    se_local   <<- rf$se
+    z_local    <<- rf$z
+    p_local    <<- 2 * stats::pnorm(abs(rf$z), lower.tail = FALSE)
+    tau2_local <<- rf$tau2
+    I2_local   <<- rf$I2_fe
+    Q_local    <<- rf$Q_fe
+    df_local   <<- rf$df
+  }
 
   if (!is.null(combine) && "t" %in% an_try) {
     if (!identical(formula, ~ 1)) {
@@ -113,22 +182,15 @@
     } else {
       NULL
     }
-    z_combined <- vapply(seq_len(ncol(t_mat)), function(j) {
-      feature_weights <- if (is.null(custom)) {
-        NULL
-      } else if (is.vector(custom)) {
-        custom
-      } else {
-        custom[, j]
-      }
-      combine_t_statistics(
-        matrix(t_mat[, j], ncol = 1L),
-        df = df_mat[, j],
-        method = tolower(combine),
-        weights = weights,
-        weights_custom = feature_weights
-      )[[1L]]
-    }, numeric(1))
+    # One vectorised call over all features (subject df may differ per
+    # feature; missing subjects are dropped per feature).
+    z_combined <- as.numeric(combine_t_statistics(
+      t_mat,
+      df = df_mat,
+      method = tolower(combine),
+      weights = weights,
+      weights_custom = custom
+    ))
     beta_local <- matrix(z_combined, nrow = 1L)
     se_local <- matrix(1, nrow = 1L, ncol = length(z_combined))
     z_local <- beta_local
@@ -138,34 +200,7 @@
     res <- NULL
   } else if (length(an_try) > 0 && ("beta" %in% an_try) &&
       (("se" %in% an_try) || ("var" %in% an_try))) {
-    if (is.null(gcomp)) gcomp <- fmrigds::compute(gd)
-    B <- fmrigds::assay(gcomp, "beta")
-    SE <- .gds_safe_assay(gcomp, "se")
-    VAR <- .gds_safe_assay(gcomp, "var")
-    X <- .gds_safe_model_matrix(gd, formula, fallback_n = dim(B)[2])
-    # Assume single contrast or loop across contrasts if present
-    if (length(dim(B)) == 3L) {
-      Kc <- dim(B)[3]
-    } else {
-      Kc <- 1L
-    }
-    # Fit per-contrast and then verify consistency; for Kc==1, just use directly
-    Y <- t(first_contrast_matrix(B))
-    V <- if (!is.null(VAR)) {
-      t(first_contrast_matrix(VAR))
-    } else {
-      t(first_contrast_matrix(SE)^2)
-    }
-    res_fit <- fit_direct(Y, V, X)
-    cov_direct <- res_fit$cov_tri
-    beta_local <- res_fit$beta
-    se_local   <- res_fit$se
-    z_local    <- res_fit$z
-    p_local    <- 2 * stats::pnorm(abs(res_fit$z), lower.tail = FALSE)
-    tau2_local <- res_fit$tau2
-    I2_local   <- res_fit$I2_fe
-    Q_local    <- res_fit$Q_fe
-    df_local   <- res_fit$df
+    use_manual_fit(compute_manual_fit())
     res <- NULL
   } else {
     pl <- fmrigds::as_plan(gd)
@@ -176,28 +211,8 @@
                           options   = opts)
     res_try <- try(fmrigds::compute(pl), silent = TRUE)
     if (inherits(res_try, 'try-error') || isTRUE(is.null(res_try))) {
-      # Fallback: manual compute using available assays
-      gcomp <- fmrigds::compute(gd)
-      B <- fmrigds::assay(gcomp, 'beta')
-      Varr <- .gds_safe_assay(gcomp, 'var')
-      SEa  <- .gds_safe_assay(gcomp, 'se')
-      X <- .gds_safe_model_matrix(gd, formula, fallback_n = dim(B)[2])
-      Y <- t(first_contrast_matrix(B))
-      V <- if (!is.null(Varr)) {
-        t(first_contrast_matrix(Varr))
-      } else {
-        t(first_contrast_matrix(SEa)^2)
-      }
-      rf <- fit_direct(Y, V, X)
-      cov_direct <- rf$cov_tri
-      beta_local <- rf$beta
-      se_local   <- rf$se
-      z_local    <- rf$z
-      p_local    <- 2 * stats::pnorm(abs(rf$z), lower.tail = FALSE)
-      tau2_local <- rf$tau2
-      I2_local   <- rf$I2_fe
-      Q_local    <- rf$Q_fe
-      df_local   <- rf$df
+      # Fallback: manual fit from the subject-level assays
+      use_manual_fit(compute_manual_fit())
       res <- NULL
     } else {
       res <- res_try
@@ -209,7 +224,7 @@
   tau2 <- NULL; I2 <- NULL; Q <- NULL; Q_df <- NULL
 
   # Prefer regression-style param arrays when available
-  X_cols <- tryCatch(colnames(fmrigds::model_matrix(data, formula)), error = function(e) NULL)
+  X_cols <- colnames(X_model)
   term_info <- tryCatch(stats::terms(formula), error = function(e) NULL)
   intercept_formula <- !is.null(term_info) &&
     length(attr(term_info, "term.labels")) == 0 &&
@@ -249,37 +264,13 @@
       } else NULL
     }
   }
-  manual_fit <- NULL
-  compute_manual_fit <- function(require_cov = FALSE) {
-    if (!require_cov && !is.null(manual_fit)) return(manual_fit)
-    if (require_cov && !is.null(manual_fit) && !is.null(manual_fit$cov_tri)) return(manual_fit)
-    gcomp_local <- gcomp
-    if (is.null(gcomp_local)) {
-      gcomp_local <- fmrigds::compute(gd)
-      gcomp <<- gcomp_local
-    }
-    B <- fmrigds::assay(gcomp_local, "beta")
-    Varr <- .gds_safe_assay(gcomp_local, "var")
-    SEa  <- .gds_safe_assay(gcomp_local, "se")
-    n_subj <- dim(B)[2]
-    X <- .gds_safe_model_matrix(gd, formula, fallback_n = n_subj)
-    Y <- t(first_contrast_matrix(B))
-    V <- if (!is.null(Varr)) {
-      t(first_contrast_matrix(Varr))
-    } else {
-      t(first_contrast_matrix(SEa)^2)
-    }
-    mf <- fit_direct(Y, V, X)
-    manual_fit <<- mf
-    mf
-  }
   diag_missing <- is.null(combine) && (
     (method %in% c("dl", "pm", "reml") && is.null(tau2)) ||
       is.null(I2) || is.null(Q) || is.null(Q_df)
   )
   cov_manual <- cov_direct
   if (diag_missing) {
-    mf <- compute_manual_fit(require_cov = TRUE)
+    mf <- compute_manual_fit()
     if (method %in% c("dl","pm","reml") && is.null(tau2)) tau2 <- mf$tau2
     if (is.null(I2) && !is.null(mf$I2_fe)) I2 <- mf$I2_fe
     if (is.null(Q) && !is.null(mf$Q_fe)) Q <- mf$Q_fe
@@ -300,7 +291,11 @@
   coef_mat <- if (!is.null(beta)) t(beta) else NULL
   se_mat   <- if (!is.null(se))   t(se)   else NULL
   # Apply dimnames to match legacy (rows = features/ROI, cols = term names)
-  sample_labels <- .fmri_ttest_sample_labels(data, NULL)
+  # Use the computed dataset for row labels (a gds_plan would be recomputed)
+  sample_labels <- .fmri_ttest_sample_labels(
+    if (is.null(gcomp) || !is.null(attr(data, "fmrireg_sample_labels", exact = TRUE))) data else gcomp,
+    NULL
+  )
 
   if (!is.null(coef_mat)) {
     dimnames(coef_mat) <- list(sample_labels, coef_terms %||% colnames(coef_mat))
@@ -337,8 +332,7 @@
     I2           = I2,
     Q            = Q,
     Q_df         = Q_df,
-    model        = list(X = tryCatch(fmrigds::model_matrix(data, formula), error = function(e) NULL),
-                        formula = formula),
+    model        = list(X = X_model, formula = formula),
     method       = if (!is.null(combine)) paste0("combine:", tolower(combine)) else method,
     robust       = robust,
     weights      = weights,
@@ -432,7 +426,7 @@
       }
     }
     if (is.null(cov_tri)) {
-      mf <- tryCatch(compute_manual_fit(require_cov = TRUE), error = function(e) NULL)
+      mf <- tryCatch(compute_manual_fit(), error = function(e) NULL)
       cov_tri <- mf$cov_tri
     }
     if (!is.null(cov_tri)) {
@@ -466,7 +460,7 @@
            call. = FALSE)
     }
 
-    gcomp_con <- gcomp %||% fmrigds::compute(gd)
+    gcomp_con <- require_gcomp()
     beta_con <- .gds_safe_assay(gcomp_con, "beta")
     var_con <- .gds_safe_assay(gcomp_con, "var")
     se_con <- .gds_safe_assay(gcomp_con, "se")
@@ -474,26 +468,8 @@
       stop("Fit-time contrasts require beta plus variance or standard-error assays.",
            call. = FALSE)
     }
-    first_contrast <- function(a) {
-      if (length(dim(a)) == 3L) {
-        matrix(
-          a[, , 1L],
-          nrow = dim(a)[1L],
-          ncol = dim(a)[2L],
-          dimnames = dimnames(a)[1:2]
-        )
-      } else {
-        as.matrix(a)
-      }
-    }
-    Y_con <- t(first_contrast(beta_con))
-    V_con <- if (!is.null(var_con)) {
-      t(first_contrast(var_con))
-    } else {
-      t(first_contrast(se_con)^2)
-    }
 
-    X_con <- .gds_safe_model_matrix(gd, formula, fallback_n = nrow(Y_con))
+    X_con <- design_matrix(dim(beta_con)[2])
     design_names <- colnames(X_con)
     if (is.null(design_names) && ncol(X_con) == 1L) {
       design_names <- "(Intercept)"
@@ -533,10 +509,8 @@
            call. = FALSE)
     }
 
-    contrast_core <- .meta_fit_core(
-      Y = Y_con, V = V_con, X = X_con, method = method, robust = robust,
-      weights = weights, weights_custom = weights_custom, n_threads = n_threads
-    )
+    # Same subject-level data and model as the coefficient fit: reuse it.
+    contrast_core <- compute_manual_fit()
     contrast_fit <- .meta_contrasts_from_tri(contrast_core$beta, contrast_core$cov_tri, Cmat)
     out$contrasts <- list(
       names = contrast_names,

@@ -268,7 +268,7 @@ meta_contrasts <- function(cres, weighting=c("inv_var", "equal")) {
 # Supports equal, inverse-variance (if SE provided), or custom weights.
 # A subject whose t-statistic (or weight) is missing for a feature is dropped
 # from that feature: the result equals the combination over the remaining
-# subjects.
+# subjects. `df` is a scalar, a length-S vector, or an S x P matrix.
 combine_t_statistics <- function(tmat, df, method = c("stouffer", "fisher", "lancaster"),
                                  weights = c("equal", "ivw", "custom"),
                                  weights_custom = NULL, se_mat = NULL) {
@@ -276,12 +276,18 @@ combine_t_statistics <- function(tmat, df, method = c("stouffer", "fisher", "lan
   weights <- match.arg(weights)
   tmat <- as.matrix(tmat)
   S <- nrow(tmat)
-  # Ensure df length matches subjects
-  if (length(df) == 1L) df <- rep(df, S)
-  if (length(df) != S) {
-    stop("Length of 'df' must be 1 or equal to number of subjects", call. = FALSE)
+  if (is.matrix(df) && identical(dim(df), dim(tmat))) {
+    # per-subject, per-feature degrees of freedom
+    dfm <- matrix(as.numeric(df), nrow = S, ncol = ncol(tmat))
+  } else {
+    # Ensure df length matches subjects
+    if (length(df) == 1L) df <- rep(df, S)
+    if (length(df) != S) {
+      stop("Length of 'df' must be 1 or equal to number of subjects, ",
+           "or 'df' must be a matrix with the dimensions of 'tmat'", call. = FALSE)
+    }
+    dfm <- matrix(as.numeric(df), nrow = S, ncol = ncol(tmat))
   }
-  dfm <- matrix(as.numeric(df), nrow = S, ncol = ncol(tmat))
   # Log of the one-sided tail of |t| per subject/feature
   log_p_half <- stats::pt(-abs(tmat), df = dfm, log.p = TRUE)
   has_t <- is.finite(tmat) & is.finite(dfm) & dfm > 0
