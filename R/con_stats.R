@@ -1213,7 +1213,10 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
     }
 
     resolved <- tryCatch(
-      .posthoc_contrast_matrix(con_spec, object, beta_names, p),
+      .posthoc_contrast_matrix(con_spec, object, beta_names, p,
+                               scope_check = function(ci) {
+                                 .enforce_contrast_scope(ci, contrast_scope, con_name)
+                               }),
       error = function(e) {
         stop(sprintf("Cannot compute post-hoc contrast '%s': %s",
                      con_name, conditionMessage(e)), call. = FALSE)
@@ -1351,7 +1354,8 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
 #' @return list(type = "t" | "F", L = r x p matrix, colind)
 #' @keywords internal
 #' @noRd
-.posthoc_contrast_matrix <- function(con_spec, object, beta_names, p) {
+.posthoc_contrast_matrix <- function(con_spec, object, beta_names, p,
+                                     scope_check = NULL) {
   try_names <- function(nms) {
     if (is.null(nms)) return(NULL)
     tryCatch(.posthoc_match_names(nms, beta_names), error = function(e) NULL)
@@ -1359,6 +1363,8 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
   # W: cells in rows (length(colind) x r)
   build <- function(W, colind, is_f) {
     colind <- as.integer(colind)
+    # Scope (e.g. event-only coefficients) is reported before generic bounds.
+    if (!is.null(scope_check)) scope_check(colind)
     if (length(colind) != nrow(W)) {
       stop("contrast dimensions do not match the selected coefficients", call. = FALSE)
     }
