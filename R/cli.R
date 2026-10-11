@@ -26,15 +26,22 @@ fmrireg_cli <- function(args = commandArgs(trailingOnly = TRUE)) {
 #' Install the fmrireg command wrapper
 #'
 #' @param dest_dir Destination directory for installed command wrappers.
+#'   Required: there is no default, so nothing is written to the home
+#'   directory unless asked (e.g. \code{install_cli("~/.local/bin")}).
 #' @param overwrite Logical; overwrite an existing installed wrapper.
 #' @param commands Character vector of command names to install. Defaults to all
 #'   available commands.
 #'
 #' @return Character vector of installed paths, returned invisibly.
 #' @export
-install_cli <- function(dest_dir = "~/.local/bin",
+install_cli <- function(dest_dir,
                         overwrite = FALSE,
                         commands = NULL) {
+  if (missing(dest_dir) || is.null(dest_dir) || !is.character(dest_dir) ||
+      length(dest_dir) != 1L || is.na(dest_dir) || !nzchar(dest_dir)) {
+    stop("`dest_dir` must be supplied as a single directory path, ",
+         "e.g. install_cli(\"~/.local/bin\").", call. = FALSE)
+  }
   exec_dir <- .fmrireg_exec_dir()
   command_map <- c(fmrireg = file.path(exec_dir, "fmrireg"))
 
