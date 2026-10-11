@@ -221,7 +221,7 @@ MetaResult fit_one(const mat& Xfull, const vec& yfull, const vec& vfull,
     tau2 = 0.0;
   } else if (M == DL) {
     tau2 = tau2_DL(X, y, v);
-  } else { // PM or REML_ALIAS -> use PM solver (robust & fast)
+  } else { // PM; "reml" is not implemented and runs PM (the R wrappers say so)
     bool pm_warn = false;
     tau2 = tau2_PM(X, y, v, 1e-6, 50, &pm_warn);
     out.pm_nonconverged = pm_warn;
@@ -305,7 +305,7 @@ Rcpp::List meta_fit_cpp(const arma::mat& Y,      // subjects x features
   if (nthreads <= 0) {
     nthreads = omp_get_max_threads();
   }
-#pragma omp parallel for num_threads(nthreads) schedule(static)
+#pragma omp parallel for num_threads(nthreads) schedule(dynamic, 256)
 #else
   (void)n_threads; // Suppress unused parameter warning
 #endif
@@ -384,7 +384,7 @@ Rcpp::List meta_fit_contrasts_cpp(const arma::mat& Y,      // S x P
 #ifdef _OPENMP
   int nthreads = n_threads;
   if (nthreads <= 0) nthreads = omp_get_max_threads();
-#pragma omp parallel for num_threads(nthreads) schedule(static)
+#pragma omp parallel for num_threads(nthreads) schedule(dynamic, 256)
 #endif
   for (int j = 0; j < (int)P; ++j) {
     vec y = Y.col(j);
@@ -474,7 +474,7 @@ Rcpp::List meta_fit_cov_cpp(const arma::mat& Y,      // S x P betas
 #ifdef _OPENMP
   int nthreads = n_threads;
   if (nthreads <= 0) nthreads = omp_get_max_threads();
-#pragma omp parallel for num_threads(nthreads) schedule(static)
+#pragma omp parallel for num_threads(nthreads) schedule(dynamic, 256)
 #endif
   for (int j = 0; j < (int)P; ++j) {
     vec y = Y.col(j);
@@ -577,7 +577,7 @@ Rcpp::List meta_fit_vcov_cpp(const arma::mat& Y,  // S x P betas
   int nth = n_threads;
 #ifdef _OPENMP
   if (nth <= 0) nth = omp_get_max_threads();
-#pragma omp parallel for num_threads(nth) schedule(static)
+#pragma omp parallel for num_threads(nth) schedule(dynamic, 256)
 #endif
   for (int j = 0; j < (int)P; ++j) {
     // Build augmented design matrix for feature j

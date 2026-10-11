@@ -91,9 +91,10 @@ pvalues.fmri_meta <- function(object, two_tailed = TRUE) {
 
 #' Apply Contrast to Meta-Analysis Results
 #'
-#' Note: Uses exact standard errors when covariance is available (return_cov="tri")
-#' or for ROI CSV fits with non-robust estimation; otherwise uses a diagonal
-#' variance approximation.
+#' The contrast standard error is \eqn{\sqrt{c' Var(\hat\beta) c}}, using the
+#' coefficient covariance that \code{fmri_meta()} stores with every fit. For
+#' objects without a stored covariance only single-coefficient contrasts are
+#' exact; other contrasts fall back to a diagonal approximation with a warning.
 #'
 #' @param x An fmri_meta object
 #' @param contrast Contrast specification. Can be:
@@ -140,10 +141,27 @@ contrast.fmri_meta <- function(x, contrast, ...) {
   # Apply contrast estimate
   contrast_est <- x$coefficients %*% contrast_weights
   
-  # Compute standard error of contrast
-  # Prefer exact SE when available
-  use_exact_roi <- inherits(x, "fmri_meta_roi") && inherits(x$data, "group_data_csv") && identical(x$robust, "none")
-  if (use_exact_roi) {
+  # Compute standard error of contrast: sqrt(c' Var(beta) c). fmri_meta fits
+  # store Var(beta) per feature (packed upper triangle); fall back to the
+  # per-ROI recomputation for legacy CSV fits, and to the standard errors
+  # alone only when no covariance is available (exact for single-coefficient
+  # contrasts, an approximation otherwise).
+  has_tri <- !is.null(x$cov) && is.list(x$cov) && identical(x$cov$type, "tri") &&
+    !is.null(x$cov$tri)
+  use_exact_roi <- !has_tri && inherits(x, "fmri_meta_roi") &&
+    inherits(x$data, "group_data_csv") && identical(x$robust, "none") &&
+    (is.null(x$weights) || identical(x$weights, "ivw"))
+  if (has_tri) {
+    tri <- as.matrix(x$cov$tri)
+    K <- length(contrast_weights)
+    tsize <- K * (K + 1) / 2
+    if (nrow(tri) != tsize) {
+      stop("Packed covariance size does not match number of predictors", call. = FALSE)
+    }
+    contrast_se <- as.numeric(
+      .meta_contrasts_from_tri(t(x$coefficients), tri, matrix(contrast_weights, ncol = 1))$se
+    )
+  } else if (use_exact_roi) {
     # Build X once
     X <- x$model$X
     n_rois <- nrow(x$coefficients)
@@ -167,42 +185,19 @@ contrast.fmri_meta <- function(x, contrast, ...) {
       cv <- as.numeric(t(contrast_weights) %*% Vbeta %*% contrast_weights)
       contrast_se[i] <- if (is.finite(cv) && cv >= 0) sqrt(cv) else NA_real_
     }
-  } else if (!is.null(x$cov) && is.list(x$cov) && identical(x$cov$type, "tri") && !is.null(x$cov$tri)) {
-    # Exact voxelwise using packed upper-tri covariance
-    tri <- x$cov$tri
-    K <- length(contrast_weights)
-    tsize <- K * (K + 1) / 2
-    if (nrow(tri) != tsize) {
-      stop("Packed covariance size does not match number of predictors", call. = FALSE)
-    }
-    n_feat <- nrow(x$coefficients)
-    contrast_se <- rep(NA_real_, n_feat)
-    for (p in seq_len(n_feat)) {
-      idx <- 1L
-      varp <- 0.0
-      for (a in seq_len(K)) {
-        for (b in a:K) {
-          cab <- tri[idx, p]
-          w <- contrast_weights[a] * contrast_weights[b]
-          if (b > a) {
-            varp <- varp + 2.0 * cab * w
-          } else {
-            varp <- varp + cab * w
-          }
-          idx <- idx + 1L
-        }
-      }
-      contrast_se[p] <- if (is.finite(varp) && varp >= 0) sqrt(varp) else NA_real_
-    }
   } else {
-    # Approximate SE using only diagonal of Var(beta)
+    if (sum(contrast_weights != 0) > 1L) {
+      warning("Coefficient covariance is not available for this fmri_meta object; ",
+              "the contrast standard error ignores covariances between ",
+              "coefficients and is approximate.", call. = FALSE)
+    }
     contrast_var <- rowSums((x$se^2) * matrix(contrast_weights^2,
                                               nrow = nrow(x$se),
                                               ncol = length(contrast_weights),
                                               byrow = TRUE))
     contrast_se <- sqrt(contrast_var)
   }
-  
+
   # Compute z-scores and p-values
   contrast_z <- contrast_est / contrast_se
   contrast_p <- 2 * pnorm(-abs(contrast_z))
