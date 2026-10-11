@@ -68,14 +68,23 @@ is.formula <- function(x) {
 #' Fast Pre-projection of Design Matrix
 #'
 #' @description
-#' Computes the projection matrix components needed for fast least squares.
-#' This includes the QR decomposition and (X'X)^-1.
+#' Computes the projection components needed for fast least squares: the
+#' tolerance-aware QR decomposition, (X'X)^-1 and the residual df.
+#'
+#' The p x n pseudo-inverse is *not* formed here: building it costs an n x n
+#' solve, and the solver never needs it (betas and RSS come from one
+#' `qr.qty()` pass in `solve_glm_core()`). Callers that do need it read
+#' `proj$Pinv`, which the `$` method for `fmri_preproject` computes on demand
+#' from the stored QR (`.preproject_pinv()`). Only `$` is lazy:
+#' `proj[["Pinv"]]` is `NULL` unless the SVD fallback stored it eagerly.
 #'
 #' @param X Design matrix
-#' @return List containing:
+#' @param tol Rank tolerance for the LINPACK QR.
+#' @return An `fmri_preproject` list containing:
 #'   - qr: QR decomposition of X
-#'   - XtXinv: (X'X)^-1 matrix
-#'   - dfres: Residual degrees of freedom
+#'   - XtXinv: (X'X)^-1 matrix (zero rows/columns for aliased coefficients)
+#'   - dfres: Residual degrees of freedom (n - rank)
+#'   - Pinv: pseudo-inverse, computed on `$` access
 #' @keywords internal
 #' @noRd
 .fast_preproject <- function(X, tol = 1e-7) {
@@ -110,34 +119,19 @@ is.formula <- function(x) {
     warning(.rank_deficiency_message(rank, p, aliased, colnames(X)), call. = FALSE)
   }
   
-  # Use numerically stable decompositions
+  # Pinv stays NULL (computed lazily from the QR) unless the SVD fallback
+  # below has to produce it.
+  Pinv <- NULL
   if (rank > 0L) {
-    qr_based <- tryCatch({
+    XtXinv <- tryCatch({
       R <- qr.R(qr_decomp)[seq_len(rank), seq_len(rank), drop = FALSE]
       Rinv <- backsolve(R, diag(rank))
-      XtXinv_pivot <- tcrossprod(Rinv)
-      XtXinv <- matrix(0, nrow = p, ncol = p)
-      XtXinv[estimable, estimable] <- XtXinv_pivot
-
-      Pinv <- qr.coef(qr_decomp, diag(n))
-      if (is.null(dim(Pinv))) {
-        Pinv <- matrix(Pinv, nrow = p)
-      }
-      Pinv[!is.finite(Pinv)] <- 0
-      if (length(aliased) > 0L) {
-        Pinv[aliased, ] <- 0
-      }
-
-      list(
-        XtXinv = XtXinv,
-        Pinv = Pinv
-      )
+      out <- matrix(0, nrow = p, ncol = p)
+      out[estimable, estimable] <- tcrossprod(Rinv)
+      out
     }, error = function(e) NULL)
 
-    if (!is.null(qr_based)) {
-      XtXinv <- qr_based$XtXinv
-      Pinv <- qr_based$Pinv
-    } else {
+    if (is.null(XtXinv)) {
       X_est <- X[, estimable, drop = FALSE]
       svd_result <- svd(X_est)
       d <- svd_result$d
@@ -160,21 +154,74 @@ is.formula <- function(x) {
 
   if (!is.null(colnames(X))) {
     dimnames(XtXinv) <- list(colnames(X), colnames(X))
-    rownames(Pinv) <- colnames(X)
+    if (!is.null(Pinv)) rownames(Pinv) <- colnames(X)
   }
 
   # Return everything needed for fast operations
-  list(
-    qr = qr_decomp,
-    Pinv = .attach_rank_attrs(Pinv, rank_info),
-    XtXinv = .attach_rank_attrs(XtXinv, rank_info),
-    dfres = n - rank,
-    rank = rank,
-    is_full_rank = (rank == p),
-    estimable = estimable,
-    aliased = aliased,
-    rank_tolerance = tol
+  structure(
+    list(
+      qr = qr_decomp,
+      Pinv = if (is.null(Pinv)) NULL else .attach_rank_attrs(Pinv, rank_info),
+      XtXinv = .attach_rank_attrs(XtXinv, rank_info),
+      dfres = n - rank,
+      rank = rank,
+      is_full_rank = (rank == p),
+      estimable = estimable,
+      aliased = aliased,
+      rank_tolerance = tol,
+      varnames = colnames(X)
+    ),
+    class = c("fmri_preproject", "list")
   )
+}
+
+#' Pseudo-inverse of a pre-projected design
+#'
+#' Computes the p x n matrix P with P %*% Y equal to the least-squares
+#' coefficients, as R^-1 Q1' from the stored QR (rows of aliased
+#' coefficients are zero). This avoids the n x n identity solve that
+#' `qr.coef(qr, diag(n))` performs.
+#' @keywords internal
+#' @noRd
+.preproject_pinv <- function(proj) {
+  eager <- .subset2(proj, "Pinv")
+  if (!is.null(eager)) return(eager)
+  qrx <- .subset2(proj, "qr")
+  rank <- .subset2(proj, "rank")
+  estimable <- .subset2(proj, "estimable")
+  n <- nrow(qrx$qr)
+  p <- ncol(qrx$qr)
+  Pinv <- matrix(0, nrow = p, ncol = n)
+  if (rank > 0L) {
+    keep <- seq_len(rank)
+    Q1 <- qr.Q(qrx)[, keep, drop = FALSE]
+    R <- qr.R(qrx)[keep, keep, drop = FALSE]
+    Pinv[estimable, ] <- backsolve(R, t(Q1))
+  }
+  varnames <- .subset2(proj, "varnames")
+  if (!is.null(varnames)) rownames(Pinv) <- varnames
+  attr(Pinv, "rank") <- rank
+  attr(Pinv, "is_full_rank") <- .subset2(proj, "is_full_rank")
+  attr(Pinv, "estimable") <- estimable
+  attr(Pinv, "aliased") <- .subset2(proj, "aliased")
+  attr(Pinv, "rank_tolerance") <- .subset2(proj, "rank_tolerance")
+  Pinv
+}
+
+#' Lazy field access for pre-projected designs
+#'
+#' `proj$Pinv` computes the pseudo-inverse on demand; every other field is
+#' returned as stored (exact matching).
+#' @param x An `fmri_preproject` object.
+#' @param name Field name.
+#' @keywords internal
+#' @noRd
+#' @exportS3Method base::`$`
+`$.fmri_preproject` <- function(x, name) {
+  if (identical(name, "Pinv")) {
+    return(.preproject_pinv(x))
+  }
+  .subset2(x, name)
 }
 
 #' Fast Matrix-based Linear Model

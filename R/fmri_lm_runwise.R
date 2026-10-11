@@ -563,7 +563,9 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
     }
     
     # Calculate statistics and contrasts
-    rdf <- n_timepoints - p
+    # Residual df uses the design rank: aliased columns carry no information.
+    # Whitening is an invertible row transform, so it preserves the rank.
+    rdf <- n_timepoints - proj_run_unwhitened$rank
     
     # Beta statistics with voxelwise XtXinv
     bstats <- beta_stats_matrix_voxelwise(
