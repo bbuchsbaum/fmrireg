@@ -22,59 +22,109 @@ static inline bool inv_sympd_safe(mat& out, const mat& A) {
 }
 
 //' OLS t-test / ANCOVA across features
-//' 
+//'
+//' Subjects with a non-finite outcome for a feature are dropped from that
+//' feature only (complete-case analysis per feature); a feature with no more
+//' usable subjects than predictors, or whose remaining design is rank
+//' deficient, returns NaN.
+//'
 //' @param Y S x P matrix (subjects x features)
 //' @param X S x K design matrix with intercept if desired
-//' @return List with beta (K x P), se (K x P), t (K x P), df (scalar), ok (P)
+//' @return List with beta (K x P), se (K x P), t (K x P), df (the residual
+//'   degrees of freedom: a scalar when every feature uses all S subjects,
+//'   otherwise a length-P vector), n_obs (length P, subjects used per
+//'   feature), ok (P)
 //' @export
 // [[Rcpp::export]]
 List ols_t_cpp(const arma::mat& Y, const arma::mat& X) {
-  const uword S = Y.n_rows, K = X.n_cols;
-  
+  const uword S = Y.n_rows, K = X.n_cols, P = Y.n_cols;
+
   if (X.n_rows != S) {
     stop("ols_t_cpp: nrow(X) must equal nrow(Y).");
   }
-  
+
   mat XtX = X.t() * X;
   mat invXtX;
-  
+
   if (!inv_sympd_safe(invXtX, XtX)) {
     stop("ols_t_cpp: design matrix not invertible.");
   }
-  
-  // Compute coefficients
-  mat B = invXtX * (X.t() * Y);  // K x P
-  
-  // Compute residuals
-  mat R = Y - X * B;  // S x P
-  
-  // Residual sum of squares
-  rowvec RSS = sum(square(R), 0);  // 1 x P
-  
+
   // Degrees of freedom
   double df = (double)S - (double)K;
   if (df <= 0) {
     stop("ols_t_cpp: non-positive residual degrees of freedom.");
   }
-  
-  // Residual variance
-  rowvec s2 = RSS / df;  // 1 x P
-  
-  // Standard errors: SE_kj = sqrt(s2_j * invXtX_kk)
+
+  mat B(K, P, fill::value(datum::nan));
+  mat SE(K, P, fill::value(datum::nan));
+  mat T(K, P, fill::value(datum::nan));
+  vec DF(P); DF.fill(df);
+  vec NOBS(P); NOBS.fill((double)S);
+
+  // Split features into complete and incomplete columns
+  std::vector<uword> complete_idx, incomplete_idx;
+  complete_idx.reserve(P);
+  for (uword j = 0; j < P; ++j) {
+    if (Y.col(j).is_finite()) complete_idx.push_back(j);
+    else incomplete_idx.push_back(j);
+  }
+
   vec diagInv = invXtX.diag();  // K
-  mat SE = sqrt(diagInv * s2);  // K x P (outer product)
-  
-  // T-statistics
-  mat T = B / SE;  // K x P
-  
+
+  // Fast path: all subjects available
+  if (!complete_idx.empty()) {
+    uvec cidx = conv_to<uvec>::from(complete_idx);
+    mat Yc = Y.cols(cidx);
+    mat Bc = invXtX * (X.t() * Yc);           // K x Pc
+    mat Rc = Yc - X * Bc;                     // S x Pc
+    rowvec s2 = sum(square(Rc), 0) / df;      // 1 x Pc
+    mat SEc = sqrt(diagInv * s2);             // K x Pc
+    B.cols(cidx) = Bc;
+    SE.cols(cidx) = SEc;
+    T.cols(cidx) = Bc / SEc;
+  }
+
+  // Per-feature complete-case fits
+  for (uword idx = 0; idx < incomplete_idx.size(); ++idx) {
+    const uword j = incomplete_idx[idx];
+    vec yj = Y.col(j);
+    uvec keep = find_finite(yj);
+    const uword m = keep.n_elem;
+    NOBS(j) = (double)m;
+    if (m <= K) { DF(j) = datum::nan; continue; }
+    mat Xs = X.rows(keep);
+    if (arma::rank(Xs) < K) { DF(j) = datum::nan; continue; }
+    mat invs;
+    if (!inv_sympd_safe(invs, Xs.t() * Xs)) { DF(j) = datum::nan; continue; }
+    vec ys = yj.elem(keep);
+    vec bj = invs * (Xs.t() * ys);
+    vec r = ys - Xs * bj;
+    double dfj = (double)m - (double)K;
+    double s2j = dot(r, r) / dfj;
+    vec sej = sqrt(s2j * invs.diag());
+    B.col(j) = bj;
+    SE.col(j) = sej;
+    T.col(j) = bj / sej;
+    DF(j) = dfj;
+  }
+
   // Identify valid columns (finite t-values)
   uvec ok = conv_to<uvec>::from(find_finite(T.row(0).t()));
-  
+
+  SEXP df_out;
+  if (incomplete_idx.empty()) {
+    df_out = Rcpp::wrap(df);
+  } else {
+    df_out = Rcpp::NumericVector(DF.begin(), DF.end());
+  }
+
   return List::create(
     Named("beta") = B,
     Named("se") = SE,
     Named("t") = T,
-    Named("df") = df,
+    Named("df") = df_out,
+    Named("n_obs") = Rcpp::NumericVector(NOBS.begin(), NOBS.end()),
     Named("ok") = ok
   );
 }

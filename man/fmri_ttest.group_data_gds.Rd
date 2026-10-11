@@ -37,7 +37,9 @@ fmri_ttest.group_data_gds(
 \itemize{
 \item "auto": Automatically select based on data (default)
 \item "meta": Use inverse-variance meta-analysis (requires SE)
-\item "classic": Use OLS/Student t-test
+\item "classic": Use OLS/Student t-test. A subject with a non-finite
+value for a feature is dropped from that feature only, so degrees of
+freedom can differ between features.
 \item "welch": Use Welch t-test for unequal variances
 }}
 
@@ -73,7 +75,9 @@ fmri_ttest.group_data_gds(
 
 \item{weights}{Character string for meta-engine weighting: "ivw" (default,
 uses provided SE), "equal" (equal weights), or "custom" (supply
-\code{weights_custom}). Ignored for classic/welch engines.}
+\code{weights_custom}). "equal"/"custom" are relative weights with an estimated
+residual scale (weighted least squares; see \code{\link{fmri_meta}}).
+Ignored for classic/welch engines.}
 
 \item{weights_custom}{Numeric vector (length S) or matrix (S x P) of custom
 weights when \code{weights = "custom"}.}
