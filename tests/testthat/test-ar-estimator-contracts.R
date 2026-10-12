@@ -199,7 +199,7 @@ test_that("production global AR routes the block residual operator", {
   local_mocked_bindings(
     .estimate_shared_ar_parameters = function(residuals, ar_order, ar_opts,
                                               run_indices = NULL, censor = NULL,
-                                              design = NULL) {
+                                              design = NULL, ...) {
       captured$residuals <- residuals
       captured$design <- design
       captured$run_indices <- run_indices
@@ -279,7 +279,7 @@ test_that("low-rank global AR uses initial OLS once with full provenance", {
   local_mocked_bindings(
     .estimate_shared_ar_parameters = function(residuals, ar_order, ar_opts,
                                               run_indices = NULL, censor = NULL,
-                                              design = NULL) {
+                                              design = NULL, ...) {
       captured$calls <- captured$calls + 1L
       captured$residuals <- residuals
       captured$design <- design
@@ -322,7 +322,7 @@ test_that("low-rank parcel AR pools groups as columns, not fake time", {
   local_mocked_bindings(
     .estimate_shared_ar_parameters = function(residuals, ar_order, ar_opts,
                                               run_indices = NULL, censor = NULL,
-                                              design = NULL) {
+                                              design = NULL, ...) {
       i <- length(captured$calls) + 1L
       captured$calls[[i]] <- list(
         residuals = as.matrix(residuals), design = design,

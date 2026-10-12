@@ -70,7 +70,7 @@ test_that("process_run_standard freezes the initial OLS AR estimate", {
     .estimate_ar_parameters_routed = function(residuals_vec, ar_order,
                                                run_indices = NULL,
                                                censor = NULL, design = NULL,
-                                               ar_options = NULL) {
+                                               ar_options = NULL, ...) {
       captured[[length(captured) + 1L]] <<- as.numeric(residuals_vec)
       0.4
     },
@@ -107,7 +107,7 @@ test_that("chunkwise preparation estimates shared AR once per run", {
     .estimate_ar_parameters_routed = function(residuals_vec, ar_order,
                                                run_indices = NULL,
                                                censor = NULL, design = NULL,
-                                               ar_options = NULL) {
+                                               ar_options = NULL, ...) {
       captured[[length(captured) + 1L]] <<- as.numeric(residuals_vec)
       0.25
     },
@@ -167,7 +167,7 @@ test_that(".run_lowrank_engine freezes AR from initial OLS residuals", {
     .estimate_ar_parameters_routed = function(residuals_vec, ar_order,
                                                run_indices = NULL,
                                                censor = NULL, design = NULL,
-                                               ar_options = NULL) {
+                                               ar_options = NULL, ...) {
       captured[[length(captured) + 1L]] <<- as.numeric(residuals_vec)
       0.4
     },
