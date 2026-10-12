@@ -351,13 +351,34 @@
   sk <- .lowrank_resolve_time_sketch(lowrank$time_sketch, p, Tlen)
   op <- .lowrank_sketch_operator(Tlen, sk)
 
+  use_landmarks <- A_is_I && !is.null(lowrank$landmarks)
+  if (use_landmarks && by_cluster && !no_whiten && !is.null(lowrank$parcels)) {
+    stop("`landmarks` are not supported with by-cluster (parcel) AR whitening; ",
+         "drop `landmarks` or use run/global AR pooling.", call. = FALSE)
+  }
+  # Landmark solve + Nystrom extension of the betas. Each voxel's residual
+  # variance comes from its own data with the same (sketched) estimator a
+  # dense fit uses: propagating the landmark variances through squared
+  # weights (W^2 sigma2_L) understated it, since rows of W sum to 1.
+  .solve_with_landmarks <- function(Xs, Zs, warn = FALSE) {
+    lm <- .lowrank_landmarks(dataset, lowrank)
+    sol <- .lowrank_time_solve(Xs, Zs[, lm$idx, drop = FALSE], sk, op, warn = warn)
+    list(sol = sol, B = extend_betas_landmarks(sol$M, lm$W),
+         sigma2 = .lowrank_voxel_sigma2(Xs, Zs, sk, op))
+  }
+
   grouped <- NULL
   if (no_whiten) {
     # The AR paths below warn about a rank-deficient X through
     # .fast_preproject(); this path has no preliminary OLS, so warn here.
-    sol <- .lowrank_time_solve(X, Z, sk, op, warn = TRUE)
-    B <- .lowrank_project_voxels(sol$M, A, A_is_I)
-    sigma2 <- .lowrank_sigma2(sol, A, A_is_I)
+    if (use_landmarks) {
+      lsol <- .solve_with_landmarks(X, Z, warn = TRUE)
+      sol <- lsol$sol; B <- lsol$B; sigma2 <- lsol$sigma2
+    } else {
+      sol <- .lowrank_time_solve(X, Z, sk, op, warn = TRUE)
+      B <- .lowrank_project_voxels(sol$M, A, A_is_I)
+      sigma2 <- .lowrank_sigma2(sol, A, A_is_I)
+    }
     cov_unscaled <- sol$cov_unscaled
     dfres <- sol$df
     solve_info <- list(sol)
@@ -444,16 +465,9 @@
     phi <- initial_ar$phi
     Xw <- initial_ar$X
     Zw <- initial_ar$Y
-    if (A_is_I && !is.null(lowrank$landmarks)) {
-      # Landmark solve + Nystrom extension
-      lm <- .lowrank_landmarks(dataset, lowrank)
-      sol <- .lowrank_time_solve(Xw, Zw[, lm$idx, drop = FALSE], sk, op)
-      B <- extend_betas_landmarks(sol$M, lm$W)
-      # Each voxel's residual variance from its own data, with the same
-      # (sketched) estimator a dense fit uses. Propagating the landmark
-      # variances through squared weights (W^2 sigma2_L) understated it:
-      # rows of W sum to 1, so sum_l W_vl^2 < 1.
-      sigma2 <- .lowrank_voxel_sigma2(Xw, Zw, sk, op)
+    if (use_landmarks) {
+      lsol <- .solve_with_landmarks(Xw, Zw)
+      sol <- lsol$sol; B <- lsol$B; sigma2 <- lsol$sigma2
     } else {
       sol <- .lowrank_time_solve(Xw, Zw, sk, op)
       B <- .lowrank_project_voxels(sol$M, A, A_is_I)

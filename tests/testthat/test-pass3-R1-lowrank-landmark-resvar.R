@@ -72,3 +72,33 @@ test_that("landmark exact (ihs) residual variance equals the exact voxelwise OLS
   # the propagated W^2 sigma^2 averaged well below that.
   expect_equal(mean(lmk$result$resvar), 1, tolerance = 0.1)
 })
+
+test_that("landmarks are honoured for iid noise, not silently ignored", {
+  # The landmark extension used to run only on the AR (whitened) branch; with
+  # iid noise `landmarks` was ignored and every voxel was solved densely.
+  fx <- .p3l_fixture()
+  cfg <- fmri_lm_control()            # iid
+  for (method in c("ihs", "gaussian")) {
+    den <- .p3l_fit(fx, method, cfg = cfg)
+    lmk <- .p3l_fit(fx, method, landmarks = 6L, cfg = cfg)
+    expect_false(isTRUE(all.equal(lmk$betas_fixed, den$betas_fixed)),
+                 info = method)
+    expect_equal(ncol(lmk$betas_fixed), fx$V)
+    # The noise scale is each voxel's own (= dense fit).
+    expect_equal(lmk$result$resvar, den$result$resvar, tolerance = 1e-8, info = method)
+    expect_equal(as.matrix(standard_error(lmk)), as.matrix(standard_error(den)),
+                 tolerance = 1e-8, info = method)
+  }
+})
+
+test_that("landmarks with by-cluster AR are refused rather than ignored", {
+  fx <- .p3l_fixture()
+  cfg <- fmri_lm_control(noise = noise_spec("ar1"))
+  cfg$ar$by_cluster <- TRUE
+  low <- list(time_sketch = list(method = "ihs", m = 40L), landmarks = 6L,
+              k_neighbors = 4L, parcels = rep(1:2, length.out = fx$V))
+  expect_error(
+    suppressMessages(fmrireg:::.run_lowrank_engine(fx$model, fx$dataset,
+                                                   lowrank = low, cfg = cfg)),
+    "landmarks")
+})
