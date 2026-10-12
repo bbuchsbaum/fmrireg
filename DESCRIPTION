@@ -15,7 +15,6 @@ Depends:
     R (>= 4.1.0)
 Imports:
     fmriAR (>= 0.3.3),
-    fmrigds,
     fmridesign (>= 0.6.1.9000),
     fmrihrf (>= 0.4.0),
     fmrilss (>= 0.1.0),
@@ -40,9 +39,7 @@ Imports:
     methods,
     fmridataset (>= 0.11.0.9000),
     crayon,
-    plotly,
     cli,
-    bslib,
     future.apply,
     jsonlite,
     progress,
@@ -71,6 +68,9 @@ Suggests:
     forecast,
     future,
     shiny,
+    plotly,
+    bslib,
+    fmrigds,
     sandwich,
     metafor,
     progressr,

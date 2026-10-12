@@ -1,10 +1,32 @@
 
+#' Is an optional package installed? (single mockable wrapper)
 #' @noRd
 #' @keywords internal
-with_package <- function(name) {
-  if (!requireNamespace(name, quietly=TRUE)) {
-    stop(paste("Please install the", name, "package to use this functionality"))
+.pkg_available <- function(pkg) {
+  requireNamespace(pkg, quietly = TRUE)
+}
+
+#' Require one or more optional (Suggests) packages
+#'
+#' Checks every package in `name` and fails with one error naming all the
+#' missing ones.
+#' @param name Character vector of package names.
+#' @param what Optional description of the feature that needs them.
+#' @noRd
+#' @keywords internal
+with_package <- function(name, what = NULL) {
+  missing <- name[!vapply(name, .pkg_available, logical(1), USE.NAMES = FALSE)]
+  if (length(missing) > 0L) {
+    pkgs <- paste0("'", missing, "'", collapse = ", ")
+    stop(sprintf(
+      "%s requires the %s package%s. Please install %s.",
+      what %||% "This functionality",
+      pkgs,
+      if (length(missing) > 1L) "s" else "",
+      if (length(missing) > 1L) "them" else "it"
+    ), call. = FALSE)
   }
+  invisible(TRUE)
 }
   
 
@@ -67,7 +89,7 @@ contrast <- function(x, ...) UseMethod("contrast")
 contrast.default <- function(x, ...) fmridesign::contrast(x, ...)
 
 #' Tidy generic
-#' 
+#'
 #' Minimal tidy generic to support fmri_meta tidy() without requiring broom.
 #' @param x object
 #' @param ... passed to methods

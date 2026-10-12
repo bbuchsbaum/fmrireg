@@ -10,6 +10,7 @@
 #' @return A gds-backed group-level data object (class includes 'group_data_gds').
 #' @noRd
 .group_data_gds <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...) {
+  with_package("fmrigds", what = "group_data()")
   format <- match.arg(format)
   dots <- list(...)
   fmrireg_mask <- dots$mask %||% NULL
