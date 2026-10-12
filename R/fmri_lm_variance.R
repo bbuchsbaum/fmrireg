@@ -202,9 +202,10 @@
 #' (`taper = "none"`) at moderate or long lags, or residuals so small that the
 #' projection's absolute tolerance exceeds their variance. Each voxel is
 #' therefore certified first (`.fmri_lm_toeplitz_needs_projection()`); voxels
-#' that cannot be certified are projected exactly as before, but one segment
-#' block at a time (`.fmri_lm_projected_traces()`), so that path costs
-#' O(sum_s m_s^3) rather than O(n^3) and still never forms an n x n matrix.
+#' that cannot be certified get the exact projection from
+#' `.fmri_lm_projected_traces()`: a banded eigensolver for the clipped
+#' eigenpairs only and a low-rank correction of the traces above, O(sum_s
+#' m_s^2 L) per voxel, never an n x n or m_s x m_s matrix.
 #' @keywords internal
 #' @noRd
 .fmri_lm_satterthwaite_banded <- function(X, E, segments, max_lag, taper,
@@ -262,11 +263,13 @@
   tr_RV <- as.numeric(crossprod(l, Gamma))
   tr_RVRV <- colSums(Gamma * (M %*% Gamma))
 
-  for (v in which(.fmri_lm_toeplitz_needs_projection(Gamma, lags, offsets))) {
-    tr <- .fmri_lm_projected_traces(X, A, XtXinv, Gamma[, v], segments,
-                                    lags, offsets)
-    tr_RV[v] <- tr[[1L]]
-    tr_RVRV[v] <- tr[[2L]]
+  need <- which(.fmri_lm_toeplitz_needs_projection(Gamma, lags, offsets))
+  if (length(need)) {
+    tr <- .fmri_lm_projected_traces(X, A, XtXinv, Gamma[, need, drop = FALSE],
+                                    segments, lags, offsets,
+                                    tr_RV[need], tr_RVRV[need])
+    tr_RV[need] <- tr$tr_RV
+    tr_RVRV[need] <- tr$tr_RVRV
   }
 
   ok <- is.finite(tr_RV) & is.finite(tr_RVRV) & tr_RVRV > 0
@@ -310,16 +313,62 @@
   !(lower > upper * .Machine$double.eps^0.5)
 }
 
-#' tr(RV) and tr(RVRV) with V projected onto the PSD cone, block by block
+#' tr(RV) and tr(RVRV) with V projected onto the PSD cone, banded
+#'
+#' For the voxels (columns of `Gamma`) whose projection could not be
+#' certified to be the identity; `tr_RV`, `tr_RVRV` are their unprojected
+#' traces. `satterthwaite_psd_traces_cpp()` (src/satterthwaite_psd.cpp)
+#' first tries a banded Cholesky certificate that nothing is clipped
+#' (O(m L^2)); otherwise it splits each segment's banded Toeplitz block into
+#' its centrosymmetric halves, reduces them to tridiagonal form by Givens
+#' rotations (O(m^2 L)), finds the extreme eigenvalues of every block (hence
+#' the reference tolerance `max(max|lambda|, 1) sqrt(eps)` over all of V) and
+#' the eigenpairs on the clipped side of it by bisection and inverse
+#' iteration, and corrects the traces by the clipped part `V - V+ = U D U'`
+#' (or, when most of the spectrum is clipped, rebuilds them from the kept
+#' eigenpairs). No n x n or segment-sized square matrix is formed.
+#'
+#' Fallback: a voxel whose LAPACK bisection or inverse iteration reports
+#' failure (`info != 0`), whose clipped count differs between the Sturm count
+#' and the bisection, or whose autocovariances are not finite (C++
+#' `status != 0`) is recomputed with the dense per-block reference
+#' `.fmri_lm_projected_traces_dense()`.
+#' @keywords internal
+#' @noRd
+.fmri_lm_projected_traces <- function(X, A, XtXinv, Gamma, segments, lags,
+                                      offsets, tr_RV, tr_RVRV) {
+  Gamma <- as.matrix(Gamma)
+  seg_len <- lengths(segments)
+  res <- satterthwaite_psd_traces_cpp(
+    Gamma, as.matrix(X), as.matrix(XtXinv),
+    rows = as.integer(unlist(segments)) - 1L,
+    seg_off = as.integer(cumsum(c(0L, seg_len))[seq_along(segments)]),
+    seg_len = as.integer(seg_len),
+    nlag = as.integer(lengths(lags)),
+    goff = as.integer(offsets[seq_along(segments)]),
+    tr_RV = as.numeric(tr_RV), tr_RVRV = as.numeric(tr_RVRV),
+    n_threads = as.integer(getOption("fmrireg.num_threads", 0L))
+  )
+  for (v in which(res$status != 0L)) {
+    tr <- .fmri_lm_projected_traces_dense(X, A, XtXinv, Gamma[, v], segments,
+                                          lags, offsets)
+    res$tr_RV[v] <- tr[[1L]]
+    res$tr_RVRV[v] <- tr[[2L]]
+  }
+  res
+}
+
+#' tr(RV) and tr(RVRV) with V projected onto the PSD cone, dense per block
 #'
 #' The dense computation (`.fmri_lm_residual_covariance()`, then
 #' `.satterthwaite_df()`) for one voxel, using that the eigenvalues of a
 #' block-diagonal matrix are those of its blocks: only segment-sized blocks
 #' are decomposed, with the tolerance taken over all blocks as before.
+#' O(sum_s m_s^3); used only as the fallback of `.fmri_lm_projected_traces()`.
 #' @keywords internal
 #' @noRd
-.fmri_lm_projected_traces <- function(X, A, XtXinv, gamma, segments, lags,
-                                      offsets) {
+.fmri_lm_projected_traces_dense <- function(X, A, XtXinv, gamma, segments,
+                                            lags, offsets) {
   eig <- vector("list", length(segments))
   max_abs <- 0
   for (s in seq_along(segments)) {
