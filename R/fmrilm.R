@@ -828,8 +828,7 @@ fmri_lm <- function(formula, ...) {
 #' The aliases \code{energy} and \code{nboot} are accepted as legacy shorthand
 #' for \code{energy_keep} and \code{bootstrap_n}, respectively. Prefer the
 #' canonical names in new code.
-#' 
-#' @export
+#'
 #' @seealso \code{\link{matrix_frame}}, \code{\link{fmri_lm_fit}}, \code{\link{fmri_lm_control}}
 #' @examples
 #' 

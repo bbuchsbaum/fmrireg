@@ -28,22 +28,25 @@ the first term is used.}
 
 \item{longnames}{Logical; if TRUE, use long condition names in the legend. Default is FALSE.}
 
-\item{plot_title}{Optional plot title. If \code{NULL}, a default title is generated.}
+\item{plot_title}{Optional plot title. If \code{NULL} (the default), the
+title is \code{"Design: <term>"}.}
 
-\item{x_label}{Label for the x-axis. Default is "Time".}
+\item{x_label}{Label for the x-axis. Default is \code{"Time (s)"}.}
 
-\item{y_label}{Label for the y-axis. Default is "Value".}
+\item{y_label}{Label for the y-axis. Default is \code{"Amplitude"}.}
 
-\item{line_size}{Numeric; line thickness for the plot. Default is 1.}
+\item{line_size}{Numeric; line width (ggplot2 \code{linewidth}). Default is 1.}
 
-\item{color_palette}{Character; name of a ColorBrewer palette to use (e.g., "Set1"). Default is "Set1".}
+\item{color_palette}{Character; \code{"viridis"} (the default, colour-blind
+safe) or the name of a ColorBrewer palette (e.g., \code{"Set1"}).}
 
-\item{facet_ncol}{Number of columns for facet_wrap. Default is 1.}
+\item{facet_ncol}{Number of columns for facet_wrap. Default is 2.}
 
-\item{theme_custom}{A ggplot2 theme to apply. Default is \code{theme_bw(base_size = 14)}.}
+\item{theme_custom}{A ggplot2 theme to apply. Default is
+\code{theme_minimal(base_size = 15)} with a one-line \code{panel.spacing}.}
 
 \item{legend_threshold}{Numeric; if the number of unique conditions exceeds this value,
-the legend is hidden. Default is 25.}
+the legend is hidden. Default is 30.}
 
 \item{...}{Additional arguments passed to ggplot2::geom_line().}
 }
@@ -55,9 +58,15 @@ Generates an interactive Shiny app that plots the design matrix for a given
 fMRI model. The design matrix is first converted into a long-format tibble and
 then plotted over time, faceted by block. Several customization options allow
 you to adjust the title, axis labels, line thickness, color palette, and more.
+
+The app needs the suggested packages \pkg{shiny}, \pkg{plotly} and
+\pkg{bslib}; \code{design_plot()} stops with an error naming any that are
+not installed.
 }
 \examples{
-if (interactive()) {
+if (interactive() && requireNamespace("shiny", quietly = TRUE) &&
+    requireNamespace("plotly", quietly = TRUE) &&
+    requireNamespace("bslib", quietly = TRUE)) {
   ## --- Construct a sampling frame ---
   sframe <- fmrihrf::sampling_frame(blocklens = c(100, 100), TR = 2, precision = 0.5)
 
@@ -92,5 +101,4 @@ if (interactive()) {
               color_palette = "Set2",
               facet_ncol = 1)
 }
-
 }

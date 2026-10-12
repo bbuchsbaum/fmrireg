@@ -107,10 +107,14 @@ test_that("compute_lm_contrasts_from_suffstats and normalize error paths", {
     ),
     regexp = "."
   )
-  dropped <- compute_lm_contrasts(
-    B = betas, XtXinv = XtXinv, sigma2 = sigma2, df = n - p,
-    contrasts = list(bad = "not-a-contrast"),
-    drop_failed = TRUE
+  # pass 3 (R3-4): the drop is reported, naming the contrast
+  expect_warning(
+    dropped <- compute_lm_contrasts(
+      B = betas, XtXinv = XtXinv, sigma2 = sigma2, df = n - p,
+      contrasts = list(bad = "not-a-contrast"),
+      drop_failed = TRUE
+    ),
+    "'bad'"
   )
   expect_true(is.data.frame(dropped) || inherits(dropped, "tbl_df") || is.list(dropped))
 

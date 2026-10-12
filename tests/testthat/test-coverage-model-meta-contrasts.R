@@ -92,22 +92,30 @@ test_that("compute_lm_contrasts covers name-based t/F and validation errors", {
   colnames(XtXinv) <- rownames(XtXinv) <- rownames(B)
   sigma <- rep(1, V)
 
-  stacked <- compute_lm_contrasts(
-    B, XtXinv, df = 50,
-    sigma = sigma,
-    t_contrasts = list(A_vs_B = c(b1 = 1, b2 = -1)),
-    f_contrasts = list(main = diag(2)),
-    columns = rownames(B),
-    output = "stacked"
+  # pass 3 (R3-4): an unnamed 2-column F matrix cannot be placed in a
+  # 4-coefficient model; the drop is now reported, naming the contrast.
+  expect_warning(
+    stacked <- compute_lm_contrasts(
+      B, XtXinv, df = 50,
+      sigma = sigma,
+      t_contrasts = list(A_vs_B = c(b1 = 1, b2 = -1)),
+      f_contrasts = list(main = diag(2)),
+      columns = rownames(B),
+      output = "stacked"
+    ),
+    "'main'"
   )
   expect_s3_class(stacked, "tbl_df")
   expect_true(nrow(stacked) >= 1)
 
-  listed <- compute_lm_contrasts(
-    B, XtXinv, df = 50,
-    sigma2 = sigma^2,
-    contrasts = list(t1 = c(1, -1, 0, 0), F1 = diag(2)),
-    output = "list"
+  expect_warning(
+    listed <- compute_lm_contrasts(
+      B, XtXinv, df = 50,
+      sigma2 = sigma^2,
+      contrasts = list(t1 = c(1, -1, 0, 0), F1 = diag(2)),
+      output = "list"
+    ),
+    "'F1'"
   )
   expect_true(is.list(listed))
 

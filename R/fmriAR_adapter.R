@@ -8,9 +8,6 @@
 #' @noRd
 NULL
 
-# Internal operator
-`%||%` <- function(x, y) if (!is.null(x)) x else y
-
 #' Normalize AR options to ensure struct/cor_struct coherence
 #'
 #' @param ar_opts List with AR configuration

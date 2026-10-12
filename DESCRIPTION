@@ -15,7 +15,6 @@ Depends:
     R (>= 4.1.0)
 Imports:
     fmriAR (>= 0.3.3),
-    fmrigds,
     fmridesign (>= 0.6.1.9000),
     fmrihrf (>= 0.4.0),
     fmrilss (>= 0.1.0),
@@ -40,12 +39,10 @@ Imports:
     methods,
     fmridataset (>= 0.11.0.9000),
     crayon,
-    plotly,
     cli,
-    bslib,
+    generics,
     future.apply,
     jsonlite,
-    progress,
     magrittr
 RoxygenNote: 7.3.3
 Roxygen: list(
@@ -71,6 +68,10 @@ Suggests:
     forecast,
     future,
     shiny,
+    plotly,
+    bslib,
+    fmrigds,
+    broom,
     sandwich,
     metafor,
     progressr,

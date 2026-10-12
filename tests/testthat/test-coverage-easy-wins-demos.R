@@ -1,9 +1,6 @@
 # Easy coverage wins: zero-hit exports/aliases, demo helpers, rank utilities.
 
-test_that("estimate() deprecation and fast_preproject alias behave", {
-  expect_error(estimate(), "deprecated")
-  expect_error(estimate(1, 2, a = 3), "estimate_betas")
-
+test_that("fast_preproject alias behaves", {
   set.seed(1)
   X <- cbind(1, rnorm(20), rnorm(20))
   alias_proj <- fmrireg:::fast_preproject(X)

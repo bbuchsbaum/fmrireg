@@ -13,7 +13,11 @@ export_jobs(
 )
 }
 \arguments{
-\item{jobs}{A single \link{fmri_job} or a list of them (e.g. from \code{\link[=instantiate]{instantiate()}}).}
+\item{jobs}{A single \link{fmri_job} or a list of them (e.g. from \code{\link[=instantiate]{instantiate()}}).
+\code{run_one.R} writes each result to \verb{<id>.rds} after replacing characters
+outside \verb{[A-Za-z0-9._-]} with \code{"_"}; ids must stay unique after that
+replacement (e.g. \code{"sub 01"} and \code{"sub_01"} collide), otherwise
+\code{export_jobs()} stops and names the colliding ids.}
 
 \item{dir}{Output directory (created if needed).}
 

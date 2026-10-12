@@ -24,7 +24,9 @@
 #' @param output Either "stacked" (default; tibble) or "list" (raw list of tibbles).
 #' @param robust_weights Optional numeric vector of robust weights or NULL. Used only for df adjustments.
 #' @param ar_order Integer AR order; used only for effective df adjustments.
-#' @param drop_failed Logical; drop contrasts that fail validation (default TRUE).
+#' @param drop_failed Logical; drop contrasts that fail validation (e.g. a
+#'   misspelled coefficient name) with a warning naming each dropped contrast
+#'   (default TRUE). If FALSE, the first failure is an error.
 #'
 #' @return A tibble with rows per contrast (default) or a named list if `output = "list"`.
 #' @export
@@ -278,6 +280,17 @@ compute_lm_contrasts_from_suffstats <- function(
   }
 
   t_list <- list(); f_list <- list()
+  failed <- character(0)
+
+  # Build one contrast; on failure either stop (drop_failed = FALSE) or record
+  # the name and reason so that the drop is reported, never silent.
+  attempt <- function(nm, build) {
+    tryCatch(build(), error = function(e) {
+      if (!drop_failed) stop(conditionMessage(e), call. = FALSE)
+      failed[[nm]] <<- conditionMessage(e)
+      NULL
+    })
+  }
 
   if (!is.null(contrasts)) {
     if (!is.list(contrasts)) stop("`contrasts` must be a named list")
@@ -286,15 +299,11 @@ compute_lm_contrasts_from_suffstats <- function(
     }
     for (nm in names(contrasts)) {
       obj <- contrasts[[nm]]
-      ok <- try({
-        if (is.matrix(obj) && nrow(obj) > 1L) {
-          f_list[[nm]] <- build_f(obj, nm)
-        } else {
-          t_list[[nm]] <- build_t(obj, nm)
-        }
-        TRUE
-      }, silent = TRUE)
-      if (inherits(ok, "try-error") && !drop_failed) stop(attr(ok, "condition")$message)
+      if (is.matrix(obj) && nrow(obj) > 1L) {
+        f_list[[nm]] <- attempt(nm, function() build_f(obj, nm))
+      } else {
+        t_list[[nm]] <- attempt(nm, function() build_t(obj, nm))
+      }
     }
   }
 
@@ -303,8 +312,7 @@ compute_lm_contrasts_from_suffstats <- function(
       names(t_contrasts) <- sprintf("t%02d", seq_along(t_contrasts))
     }
     for (nm in names(t_contrasts)) {
-      ok <- try({ t_list[[nm]] <- build_t(t_contrasts[[nm]], nm); TRUE }, silent = TRUE)
-      if (inherits(ok, "try-error") && !drop_failed) stop(attr(ok, "condition")$message)
+      t_list[[nm]] <- attempt(nm, function() build_t(t_contrasts[[nm]], nm))
     }
   }
 
@@ -313,9 +321,19 @@ compute_lm_contrasts_from_suffstats <- function(
       names(f_contrasts) <- sprintf("F%02d", seq_along(f_contrasts))
     }
     for (nm in names(f_contrasts)) {
-      ok <- try({ f_list[[nm]] <- build_f(f_contrasts[[nm]], nm); TRUE }, silent = TRUE)
-      if (inherits(ok, "try-error") && !drop_failed) stop(attr(ok, "condition")$message)
+      f_list[[nm]] <- attempt(nm, function() build_f(f_contrasts[[nm]], nm))
     }
+  }
+
+  if (length(failed) > 0L) {
+    warning(
+      sprintf(
+        "Dropped %d contrast%s that failed validation (drop_failed = TRUE): %s",
+        length(failed), if (length(failed) > 1L) "s" else "",
+        paste(sprintf("'%s' (%s)", names(failed), failed), collapse = "; ")
+      ),
+      call. = FALSE
+    )
   }
 
   list(t_list = Filter(Negate(is.null), t_list),

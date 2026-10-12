@@ -321,7 +321,9 @@ mixed_betas_matrix <- function(X, Y, ran_ind, fixed_ind, nuisance = NULL) {
 #'   * design_ran: Design matrix for random effects.
 #'   * design_fixed: Design matrix for fixed effects.
 #'   * design_base: Design matrix for baseline model.
-#'   * basemod: Baseline model object.
+#'   * basemod: The baseline model that was regressed out (the supplied
+#'     `basemod`, or the default `baseline_model("constant")` on the frame's
+#'     sampling frame when `basemod = NULL`).
 #'   * fixed_model: Fixed effect model object.
 #'   * ran_model: Random effect model object.
 #'   * estimated_hrf: The estimated HRF vector (NULL for most methods).
@@ -397,7 +399,7 @@ estimate_betas.fmri_frame <- function(x, fixed = NULL, ran, block,
               design_ran = bdes$dmat_ran,
               design_fixed = bdes$dmat_fixed,
               design_base = bdes$dmat_base,
-              basemod = basemod,
+              basemod = bmod,
               fixed_model = bdes$emod_fixed,
               ran_model = bdes$emod_ran,
               estimated_hrf = betas$estimated_hrf)
@@ -798,8 +800,17 @@ glm_lss <- function(dataset, model_obj, basis_obj, basemod = NULL,
   betas_ran <- res$betas_ran
   if (!is.null(betas_ran)) {
     betas_mat <- as.matrix(betas_ran)
-    if (all(!is.finite(betas_mat)) || any(!is.finite(betas_mat))) {
-      stop("Cholesky factorization failed: design matrix not positive definite", call. = FALSE)
+    n_bad <- sum(!is.finite(betas_mat))
+    if (n_bad > 0L) {
+      bad_vox <- which(colSums(!is.finite(betas_mat)) > 0L)
+      stop(sprintf(paste0(
+        "LSS produced non-finite trial betas (%d of %d values; %d of %d ",
+        "voxels/columns affected, first: %s). Check the trial design for ",
+        "trials with no or collinear signal (e.g. onsets outside the run) and ",
+        "the data for constant or non-finite voxels."),
+        n_bad, length(betas_mat), length(bad_vox), ncol(betas_mat),
+        paste(utils::head(bad_vox, 5L), collapse = ", ")
+      ), call. = FALSE)
     }
   }
 
