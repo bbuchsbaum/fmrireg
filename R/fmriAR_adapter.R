@@ -121,15 +121,23 @@ NULL
 #' @noRd
 .estimate_shared_ar_parameters <- function(residuals, ar_order, ar_opts,
                                            run_indices = NULL, censor = NULL,
-                                           design = NULL) {
-  correction_design <- .shared_ar_correction_design(residuals, ar_opts, design)
+                                           design = NULL,
+                                           acvf_correction = NULL) {
+  # `acvf_correction` (a matrix, or one per run) replaces the design-based
+  # correction when the residual-forming operator is not I - H_X, e.g. after
+  # a soft projection (.soft_projection_acvf_correction()). It is linear in
+  # the response, so it also holds for the mean_series input.
+  correction_design <- if (is.null(acvf_correction)) {
+    .shared_ar_correction_design(residuals, ar_opts, design)
+  }
   .estimate_ar_parameters_routed(
     .shared_ar_residual_input(residuals, ar_opts),
     ar_order = ar_order,
     run_indices = run_indices,
     censor = censor,
     design = correction_design,
-    ar_options = ar_opts
+    ar_options = ar_opts,
+    acvf_correction = acvf_correction
   )
 }
 
@@ -503,7 +511,8 @@ NULL
 #' @keywords internal
 #' @noRd
 .estimate_ar_via_fmriAR <- function(residuals, cfg, run_indices = NULL,
-                                    censor = NULL, design = NULL) {
+                                    censor = NULL, design = NULL,
+                                    acvf_correction = NULL) {
   n_runs <- if (is.null(run_indices)) 1L else length(run_indices)
 
   ar_opts <- if (inherits(cfg, "fmri_lm_control")) cfg$ar else cfg
@@ -527,7 +536,7 @@ NULL
   # If explicit AR order requested (including 0), estimate via Yule-Walker
   # Note: fixed-order estimation doesn't currently support censor; use fmriAR path
   if (ar_params$q == 0L && !is.null(target_order) &&
-      is.null(censor) && is.null(design) &&
+      is.null(censor) && is.null(design) && is.null(acvf_correction) &&
       (is.null(run_indices) || length(run_indices) <= 1L)) {
     phi_list <- .estimate_phi_fixed_order(residuals, target_order, ar_params$pooling, run_indices)
     theta_list <- replicate(length(phi_list), numeric(0), simplify = FALSE)
@@ -558,6 +567,7 @@ NULL
     # therefore restricted at the public boundary to uncensored run pooling,
     # and the ARMA estimator receives the OLS/GLS residuals directly.
     design = if (identical(ar_params$method, "ar")) design else NULL,
+    acvf_correction = if (identical(ar_params$method, "ar")) acvf_correction else NULL,
     correction_max_lag = correction_max_lag
   )
 }

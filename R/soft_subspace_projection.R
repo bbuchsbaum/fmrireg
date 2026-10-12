@@ -304,13 +304,23 @@ apply_soft_projection <- function(proj, Y, X) {
 #' that \eqn{X} avoids. The usual \code{n - rank(PX)} ignores the projection
 #' and overstates the df, so \eqn{\hat\sigma^2} is biased low.
 #'
+#' With volume weights applied before the projection (\code{Y <- P D Y},
+#' \eqn{D = diag(\sqrt{w})}), the WLS noise model gives
+#' \eqn{Var(D\epsilon) = \sigma^2 A}, \eqn{A = diag(w > 0)}, so
+#' \eqn{E[RSS] = \sigma^2 tr((I - H) P A P)}: the iid value minus
+#' \eqn{\sum_{i: w_i = 0} \|(I - H) P e_i\|^2}. With every weight positive
+#' this is the iid value; with no projection it is \code{sum(w > 0) - rank},
+#' the volume-weighted df used without projection.
+#'
 #' @param proj A \code{soft_projection} object.
 #' @param X_proj The projected design \code{proj$P_lambda(X)}.
 #' @param tol Rank tolerance for \code{qr()}.
+#' @param active Optional logical vector, \code{FALSE} for zero-weight volumes.
 #' @return Scalar residual degrees of freedom (not necessarily an integer).
 #' @keywords internal
 #' @noRd
-.soft_projection_residual_df <- function(proj, X_proj, tol = 1e-7) {
+.soft_projection_residual_df <- function(proj, X_proj, tol = 1e-7,
+                                         active = NULL) {
   if (!inherits(proj, "soft_projection")) {
     stop("proj must be a soft_projection object", call. = FALSE)
   }
@@ -323,13 +333,206 @@ apply_soft_projection <- function(proj, Y, X) {
 
   qx <- qr(X_proj, tol = tol)
   r <- qx$rank
+  Q <- if (r > 0L) qr.Q(qx)[, seq_len(r), drop = FALSE] else matrix(0, n, 0L)
+  leverage_u <- if (r > 0L) {
+    colSums(crossprod(Q, U)^2)                  # ||Q' u_j||^2
+  } else {
+    numeric(length(g))
+  }
+  df <- n - sum(g) - r + sum(g * leverage_u)
+
+  zero <- if (is.null(active)) integer(0) else which(!as.logical(active))
+  if (length(zero)) {
+    # Columns P e_i of the zero-weight volumes, then (I - H) P e_i.
+    E0 <- matrix(0, n, length(zero))
+    E0[cbind(zero, seq_along(zero))] <- 1
+    PE <- proj$P_lambda(E0)
+    if (r > 0L) PE <- PE - Q %*% crossprod(Q, PE)
+    df <- df - sum(PE * PE)
+  }
+  df
+}
+
+#' Residual degrees of freedom after soft projection and AR whitening
+#'
+#' The runwise AR path projects (\eqn{PY}, \eqn{PX}), estimates the AR model
+#' from the projected OLS residuals and fits by OLS on the whitened data
+#' \eqn{WPY}, \eqn{WPX}. With noise \eqn{\epsilon \sim (0, \sigma^2\Sigma)}
+#' and \eqn{\Sigma = (W'W)^{-1}} -- the covariance the whitening filter
+#' assumes, so that \eqn{W\epsilon} is white -- the whitened residual is
+#' \eqn{R W P \epsilon} with \eqn{R = I - H_w} the residual projector of
+#' \eqn{WPX}, hence
+#' \deqn{E[RSS] = \sigma^2 tr(R M M'),\quad M = W P W^{-1} = I - A S B',}
+#' with \eqn{A = WU}, \eqn{B = W^{-T}U} (\eqn{P = I - USU'}). Expanding,
+#' \deqn{tr(RMM') = (n - r) - 2 tr(S B'RA) + tr(S B'B S A'RA),}
+#' which needs only \eqn{n \times k} and \eqn{k \times k} products besides
+#' one triangular solve with \eqn{W}. Without projection (\eqn{S = 0}) it is
+#' \eqn{n - r}, the df the AR path uses; with \eqn{W = I} it is
+#' \code{.soft_projection_residual_df()}.
+#'
+#' @param proj A \code{soft_projection} object.
+#' @param X_white The whitened projected design \eqn{WPX}.
+#' @param W The \eqn{n \times n} whitening matrix (the whitening transform
+#'   applied to the identity).
+#' @param tol Rank tolerance for \code{qr()}.
+#' @return Scalar residual degrees of freedom.
+#' @keywords internal
+#' @noRd
+.soft_projection_ar_residual_df <- function(proj, X_white, W, tol = 1e-7) {
+  if (!inherits(proj, "soft_projection")) {
+    stop("proj must be a soft_projection object", call. = FALSE)
+  }
+  X_white <- as.matrix(X_white)
+  W <- as.matrix(W)
+  n <- nrow(X_white)
+  if (!identical(dim(W), c(n, n))) {
+    stop("W must be an n x n whitening matrix", call. = FALSE)
+  }
+  d <- proj$svd$d
+  U <- proj$svd$u[, seq_along(d), drop = FALSE]
+  s <- d^2 / (d^2 + proj$lambda)
+
+  A <- W %*% U
+  B <- if (all(W[upper.tri(W)] == 0)) {
+    forwardsolve(W, U, transpose = TRUE)        # W' B = U, W lower triangular
+  } else {
+    solve(t(W), U)
+  }
+
+  qx <- qr(X_white, tol = tol)
+  r <- qx$rank
   if (r > 0L) {
     Q <- qr.Q(qx)[, seq_len(r), drop = FALSE]
-    leverage_u <- colSums(crossprod(Q, U)^2)   # ||Q' u_j||^2
+    QA <- crossprod(Q, A)
+    QB <- crossprod(Q, B)
+    BRA <- crossprod(B, A) - crossprod(QB, QA)
+    ARA <- crossprod(A) - crossprod(QA)
   } else {
-    leverage_u <- numeric(length(g))
+    BRA <- crossprod(B, A)
+    ARA <- crossprod(A)
   }
-  n - sum(g) - r + sum(g * leverage_u)
+  G <- crossprod(B)
+  SGS <- (s * G) * rep(s, each = length(s))     # S G S
+  (n - r) - 2 * sum(s * diag(BRA)) + sum(SGS * ARA)
+}
+
+#' Residual-ACVF bias correction for AR estimation after soft projection
+#'
+#' AR coefficients are estimated from the OLS residuals of the projected run,
+#' \eqn{r = G\epsilon} with \eqn{G = (I - H_{PX})P}. Their expected
+#' autocovariance at lag \eqn{h} is linear in the true autocovariances,
+#' \eqn{E\hat\gamma_r(h) = \sum_k A_{hk}\gamma(k)}; fmriAR's design-based
+#' correction builds \eqn{A} for \eqn{G = I - H_X} only, so a projected fit
+#' would be corrected for the wrong operator and the AR coefficients biased
+#' (towards zero for AR(1) noise). This builds \eqn{A} for the projected
+#' operator with the same convention as fmriAR (residuals demeaned over the
+#' kept volumes, lag pairs within censoring segments), for
+#' `fmriAR::fit_noise(acvf_correction = )`.
+#'
+#' @param proj A \code{soft_projection} object.
+#' @param X_proj The projected run design.
+#' @param max_lag Correction lag budget.
+#' @param censor Optional censored volume indices (or logical mask).
+#' @param tol Rank tolerance for \code{qr()}.
+#' @return A \code{(max_lag + 1)} square matrix.
+#' @keywords internal
+#' @noRd
+.soft_projection_acvf_correction <- function(proj, X_proj, max_lag,
+                                             censor = NULL, tol = 1e-7) {
+  X_proj <- as.matrix(X_proj)
+  n <- nrow(X_proj)
+  max_lag <- max(0L, as.integer(max_lag))
+  G <- proj$P_lambda(diag(n))
+  qx <- qr(X_proj, tol = tol)
+  if (qx$rank > 0L) {
+    Q <- qr.Q(qx)[, seq_len(qx$rank), drop = FALSE]
+    G <- G - Q %*% crossprod(Q, G)
+  }
+  if (is.logical(censor)) censor <- which(censor)
+  keep <- setdiff(seq_len(n), as.integer(censor %||% integer(0)))
+  nv <- length(keep)
+  if (nv < 2L) return(diag(max_lag + 1L))
+  seg_id <- cumsum(c(1L, as.integer(diff(keep) > 1L)))
+  R <- G[keep, , drop = FALSE]
+  R <- R - rep(colMeans(R), each = nv)
+
+  # R T_k with T_k the symmetric lag-k shift (T_0 = I).
+  lag_apply <- function(B, k) {
+    if (k == 0L) return(B)
+    out <- matrix(0, nrow(B), n)
+    if (k >= n) return(out)
+    hi <- seq.int(k + 1L, n)
+    lo <- seq.int(1L, n - k)
+    out[, hi] <- out[, hi] + B[, lo, drop = FALSE]
+    out[, lo] <- out[, lo] + B[, hi, drop = FALSE]
+    out
+  }
+  pairs <- lapply(0:max_lag, function(h) {
+    if (h == 0L) return(list(a = seq_len(nv), b = seq_len(nv)))
+    if (nv <= h) return(NULL)
+    hi <- seq.int(h + 1L, nv)
+    lo <- seq.int(1L, nv - h)
+    ok <- seg_id[hi] == seg_id[lo]
+    list(a = hi[ok], b = lo[ok])
+  })
+  A <- diag(max_lag + 1L)
+  for (k in 0:max_lag) {
+    SkR <- lag_apply(R, k)
+    for (h in 0:max_lag) {
+      pr <- pairs[[h + 1L]]
+      if (is.null(pr) || !length(pr$a)) next
+      A[h + 1L, k + 1L] <- sum(R[pr$a, , drop = FALSE] *
+                                 SkR[pr$b, , drop = FALSE]) / length(pr$a)
+    }
+  }
+  A
+}
+
+#' Unscaled coefficient covariance of a fit after soft projection
+#'
+#' The projected (and possibly whitened) noise is not white, so the model
+#' covariance \eqn{(X_f'X_f)^{-1}} of the fitted design \eqn{X_f} is not the
+#' covariance of the estimate. With fitted noise \eqn{T\epsilon},
+#' \eqn{Var(\epsilon) = \sigma^2\Sigma}, the estimate has
+#' \deqn{Var(\hat\beta) = \sigma^2 C X_f' T\Sigma T' X_f C,\quad C = (X_f'X_f)^{-1}.}
+#' `Z` is a factor with \eqn{Z'Z = X_f'T\Sigma T'X_f}: \eqn{Z = A^{1/2}PX_f}
+#' for iid noise (\eqn{T = PD}, \eqn{A} the non-zero volume weights) and
+#' \eqn{Z = W^{-T}PW'X_f} for AR noise (\eqn{T = WP}, \eqn{\Sigma = (W'W)^{-1}}).
+#' Together with the expectation-matched residual df this makes
+#' \eqn{\hat\sigma^2 c'C_s c} unbiased for the contrast variance. The rank
+#' attributes of `XtXinv` (aliased columns) are kept.
+#'
+#' @param XtXinv \eqn{(X_f'X_f)^{-1}} from `.fast_preproject()`.
+#' @param Z Factor described above (\eqn{n \times p}).
+#' @return Unscaled covariance with the attributes of `XtXinv`.
+#' @keywords internal
+#' @noRd
+.soft_projection_coef_cov <- function(XtXinv, Z) {
+  C <- as.matrix(XtXinv)
+  Z <- as.matrix(Z)
+  Z[!is.finite(Z)] <- 0
+  C0 <- C
+  C0[!is.finite(C0)] <- 0
+  out <- C0 %*% crossprod(Z) %*% C0
+  out <- (out + t(out)) / 2
+  out[!is.finite(C)] <- C[!is.finite(C)]
+  attributes(out) <- attributes(XtXinv)
+  out
+}
+
+#' ACVF correction for one projected run, or NULL without projection
+#'
+#' The lag budget is fmriAR's design-based budget, capped so that about three
+#' residual df (after projection) back each corrected lag.
+#' @keywords internal
+#' @noRd
+.soft_run_acvf_correction <- function(proj, X_proj, ar_order, censor = NULL) {
+  if (is.null(proj)) return(NULL)
+  budget <- .ar_correction_lag_budget(X_proj, target_order = ar_order,
+                                      censor = censor)
+  df_soft <- .soft_projection_residual_df(proj, X_proj)
+  budget <- as.integer(max(ar_order, min(budget, floor(df_soft / 3))))
+  .soft_projection_acvf_correction(proj, X_proj, budget, censor = censor)
 }
 
 #' Extract Nuisance Timeseries from Mask

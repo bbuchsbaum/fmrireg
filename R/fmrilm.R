@@ -12,7 +12,8 @@ get_formula.fmri_model <- function(x,...) {
 #' @noRd
 .estimate_ar_parameters_routed <- function(residuals_vec, ar_order,
                                            run_indices = NULL, censor = NULL,
-                                           design = NULL, ar_options = NULL) {
+                                           design = NULL, ar_options = NULL,
+                                          acvf_correction = NULL) {
   if (is.null(ar_order) || ar_order <= 0L) {
     return(numeric(0))
   }
@@ -39,7 +40,8 @@ get_formula.fmri_model <- function(x,...) {
       cfg = ar_cfg,
       run_indices = run_indices,
       censor = censor,
-      design = design
+      design = design,
+      acvf_correction = acvf_correction
     ),
     error = function(e) {
       if (inherits(e, "fmriAR_design_residual_mismatch")) stop(e)
@@ -697,6 +699,12 @@ fmri_lm <- function(formula, ...) {
 #'     \item \code{NULL}: Disable (default)
 #'   }
 #'   For fine-grained control (lambda selection, warnings), use \code{soft_subspace_options}.
+#'   Soft projection requires runwise estimation (\code{strategy = "runwise"})
+#'   on the matrix backend with iid noise (optionally with volume weights) or
+#'   shared AR(p) noise; residual df and coefficient covariance then account
+#'   for the projection (and the AR whitening that follows it). Robust
+#'   fitting, joint/chunkwise estimation, the reference backend, MA terms and
+#'   AR combined with volume weights are refused with an error.
 #' @return A fitted linear regression model for fMRI data analysis.
 #' 
 #' @details
@@ -1227,6 +1235,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   } else if (isTRUE(parallel_chunks)) {
     warning("'parallel_chunks' only applies when strategy = 'chunkwise'.", call. = FALSE)
   }
+  .validate_soft_projection_support(cfg, strategy, use_fast_path)
 
   # Check for redundant nuisance regressors when soft subspace projection is enabled
   if (cfg$soft_subspace$enabled && cfg$soft_subspace$warn_redundant) {
@@ -1251,6 +1260,8 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
     form <- get_formula(fmrimod)
     resid_chunks <- vector("list", length(run_chunks))
     design_chunks <- vector("list", length(run_chunks))
+    soft <- isTRUE(cfg$soft_subspace$enabled)
+    acvf_corrections <- if (soft) vector("list", length(run_chunks))
     for (ri in seq_along(run_chunks)) {
       rch <- run_chunks[[ri]]
       tmats_run <- term_matrices(fmrimod, rch$chunk_num)
@@ -1258,8 +1269,18 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
       n_time_run <- nrow(tmats_run[[1]])
       data_env_run[[".y"]] <- rep(0, n_time_run)
       X_run <- model.matrix(form, data_env_run)
-      proj_run <- .fast_preproject(X_run)
       Y_run <- as.matrix(.chunk_data(rch))
+      if (soft) {
+        # Estimate from the projected runs the fit will use, correcting the
+        # residual ACVF for the projected operator (I - H) P.
+        pre <- preprocess_run_data(X_run, Y_run, cfg, dataset, rch$chunk_num)
+        X_run <- pre$X
+        Y_run <- pre$Y
+        acvf_corrections[[ri]] <- .soft_run_acvf_correction(
+          pre$preprocess_info$soft_projection, X_run, ar_order
+        )
+      }
+      proj_run <- .fast_preproject(X_run)
       ols <- .fast_lm_matrix(X_run, Y_run, proj_run, return_fitted = TRUE)
       resid_chunks[[ri]] <- Y_run - ols$fitted
       design_chunks[[ri]] <- X_run
@@ -1277,7 +1298,8 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
     phi_global <- .estimate_shared_ar_parameters(
       resid_mat, ar_order, cfg$ar,
       run_indices = run_indices,
-      design = design_mat
+      design = if (soft) NULL else design_mat,
+      acvf_correction = acvf_corrections
     )
     cfg$ar$iter_gls <- 1L
   }

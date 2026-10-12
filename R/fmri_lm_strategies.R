@@ -342,9 +342,14 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
       glm_ctx_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
       initial_fit <- solve_glm_core(glm_ctx_orig, return_fitted = TRUE)
       resid_ols <- Y_run - initial_fit$fitted
+      # After a soft projection the residual-forming operator is
+      # (I - H) P, not I - H: correct the residual ACVF for that operator.
+      acvf_corr <- .soft_run_acvf_correction(inputs$soft_projection, X_run,
+                                             ar_order, censor_run)
       .estimate_shared_ar_parameters(
         resid_ols, ar_order, cfg$ar, censor = censor_run,
-        design = X_run
+        design = if (is.null(acvf_corr)) X_run else NULL,
+        acvf_correction = acvf_corr
       )
     }
 
@@ -356,6 +361,20 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
     X_w <- tmp$X
     Y_w <- tmp$Y
     proj_w <- .fast_preproject(X_w)
+    cov_w <- proj_w$XtXinv
+    # Whitening after a soft projection: the whitened noise W P e is not
+    # white, so E[RSS] = sigma^2 tr(R M M') with M = W P W^-1 (not
+    # sigma^2 (n - rank)) and Var(beta) = sigma^2 C X_w'MM'X_w C.
+    if (!is.null(inputs$soft_projection)) {
+      sp <- inputs$soft_projection
+      W_run <- ar_whiten_transform(matrix(0, n_time_run, 0), diag(n_time_run),
+                                   phi_hat_run, cfg$ar$exact_first,
+                                   censor = censor_run)$Y
+      proj_w$dfres <- .soft_projection_ar_residual_df(sp, X_w, W_run)
+      Z <- forwardsolve(W_run, sp$P_lambda(crossprod(W_run, X_w)),
+                        transpose = TRUE)
+      cov_w <- .soft_projection_coef_cov(proj_w$XtXinv, Z)
+    }
 
     glm_ctx_whitened <- glm_context(
       X = X_w, Y = Y_w, proj = proj_w, phi_hat = phi_hat_run
@@ -366,7 +385,7 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
     list(
       betas = gls$betas,
       sigma2 = gls$sigma2,
-      XtXinv = proj_w$XtXinv,
+      XtXinv = cov_w,
       dfres = proj_w$dfres,
       rss = gls$rss,
       phi_hat = phi_hat_run,
@@ -384,9 +403,19 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
       proj_run$dfres <- as.integer(sum(inputs$active) - proj_run$rank)
     }
     # Soft projection shrinks the nuisance subspace of both X and Y, so the
-    # residual df is tr((I - H) P^2) rather than n - rank.
+    # residual df is tr((I - H) P A P) (A = non-zero volume weights) rather
+    # than n - rank.
+    # The projected noise P D e is not white either: Var(beta) =
+    # sigma^2 C X'PAPX C (.soft_projection_coef_cov()).
+    cov_run <- proj_run$XtXinv
     if (!is.null(inputs$soft_projection)) {
-      proj_run$dfres <- .soft_projection_residual_df(inputs$soft_projection, X_run)
+      sp <- inputs$soft_projection
+      proj_run$dfres <- .soft_projection_residual_df(
+        sp, X_run, active = inputs$active
+      )
+      Z <- sp$P_lambda(X_run)
+      if (!is.null(inputs$active)) Z <- Z * as.numeric(inputs$active)
+      cov_run <- .soft_projection_coef_cov(proj_run$XtXinv, Z)
     }
     glm_ctx_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
     ols <- solve_glm_core(glm_ctx_orig)
@@ -394,7 +423,7 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
     list(
       betas = ols$betas,
       sigma2 = ols$sigma2,
-      XtXinv = proj_run$XtXinv,
+      XtXinv = cov_run,
       dfres = proj_run$dfres,
       rss = ols$rss,
       phi_hat = NULL,
