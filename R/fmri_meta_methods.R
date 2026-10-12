@@ -579,7 +579,12 @@ reconstruct_image <- function(values, object) {
 #'   GLM exports, meta-analysis outputs may omit this for group-level maps.
 #' @param task Optional task identifier.
 #' @param space Optional spatial reference label.
-#' @param desc Description of the analysis (default: "Meta").
+#' @param desc Analysis label (default: "Meta"). Single-statistic files are
+#'   named `desc-<desc><stat>` (e.g. `desc = "run-A"` gives `desc-runAbeta`;
+#'   labels are sanitised to letters and digits) so that analyses written to
+#'   one directory with different labels do not overwrite each other. The
+#'   default label is omitted (`desc-beta`, `desc-heterogeneity`, ...).
+#'   Multi-statistic `"by_coefficient"` files use `desc-<desc>`.
 #' @param format Output format(s). Use `"h5"` for HDF5 LabeledVolumeSet
 #'   outputs, `"nifti"` for NIfTI outputs, or a character vector to write both.
 #'   NIfTI maps are stored as 32-bit floats (datatype FLOAT32).
@@ -955,6 +960,21 @@ write_results.fmri_meta <- function(x,
   files
 }
 
+# Internal: desc- label of an fmri_meta statistic map. The analysis label is
+# kept so that results written with different `desc` values into one
+# directory do not overwrite each other: desc-<desc><stat>, both sanitised to
+# BIDS alphanumerics (desc = "run-A", "beta" -> "runAbeta"). The default
+# label "Meta" (or NULL) is omitted, giving the historical desc-<stat> names.
+# Same convention as the fmri_lm writer (.glm_stat_desc()).
+.meta_stat_desc <- function(desc, stat, default_desc = "Meta") {
+  stat_label <- .sanitize_label(stat)
+  if (is.null(desc) || identical(desc, default_desc)) {
+    return(stat_label)
+  }
+  desc_label <- suppressWarnings(.sanitize_label(desc))
+  paste0(desc_label %||% "", stat_label)
+}
+
 .save_fmri_meta_by_stat <- function(x, path, entities, desc, coefficient_indices,
                                     coefficient_names, coefficient_stats, format,
                                     output_formats) {
@@ -963,7 +983,7 @@ write_results.fmri_meta <- function(x,
   for (stat in coefficient_stats) {
     images <- lapply(coefficient_indices, function(idx) .fmri_meta_stat_image(x, idx, stat))
     image_set <- .fmri_meta_image_set(images, coefficient_names, x = x)
-    stat_desc <- .stat_desc(desc, stat)
+    stat_desc <- .meta_stat_desc(desc, stat)
     filename_base <- .generate_bids_filename(entities, desc = stat_desc, suffix = "bold", extension = NULL)
     metadata <- .fmri_meta_json_metadata(
       x = x,
@@ -997,7 +1017,7 @@ write_results.fmri_meta <- function(x,
     coef_name <- coefficient_names[[i]]
     images <- lapply(coefficient_stats, function(stat) .fmri_meta_stat_image(x, coef_index, stat))
     image_set <- .fmri_meta_image_set(images, coefficient_stats, x = x)
-    stat_desc <- if (length(coefficient_stats) == 1L) .stat_desc(desc, coefficient_stats[[1]]) else desc
+    stat_desc <- if (length(coefficient_stats) == 1L) .meta_stat_desc(desc, coefficient_stats[[1]]) else desc
     filename_base <- .generate_bids_filename(
       entities,
       desc = stat_desc,
@@ -1039,7 +1059,7 @@ write_results.fmri_meta <- function(x,
   image_set <- .fmri_meta_image_set(images, available, x = x)
   filename_base <- .generate_bids_filename(
     entities,
-    desc = .stat_desc(desc, "heterogeneity"),
+    desc = .meta_stat_desc(desc, "heterogeneity"),
     suffix = "bold",
     extension = NULL
   )
@@ -1145,14 +1165,14 @@ write_results.fmri_meta <- function(x,
     for (stat in coefficient_stats) {
       filename_base <- .generate_bids_filename(
         entities,
-        desc = .stat_desc(desc, stat),
+        desc = .meta_stat_desc(desc, stat),
         suffix = "bold",
         extension = NULL
       )
       predicted_files <- c(predicted_files, add_base(filename_base))
     }
   } else {
-    stat_desc <- if (length(coefficient_stats) == 1L) .stat_desc(desc, coefficient_stats[[1]]) else desc
+    stat_desc <- if (length(coefficient_stats) == 1L) .meta_stat_desc(desc, coefficient_stats[[1]]) else desc
     for (coef_name in coefficient_names) {
       filename_base <- .generate_bids_filename(
         entities,
@@ -1168,7 +1188,7 @@ write_results.fmri_meta <- function(x,
   if (isTRUE(heterogeneity)) {
     filename_base <- .generate_bids_filename(
       entities,
-      desc = .stat_desc(desc, "heterogeneity"),
+      desc = .meta_stat_desc(desc, "heterogeneity"),
       suffix = "bold",
       extension = NULL
     )

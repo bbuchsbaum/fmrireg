@@ -34,7 +34,12 @@ GLM exports, meta-analysis outputs may omit this for group-level maps.}
 
 \item{space}{Optional spatial reference label.}
 
-\item{desc}{Description of the analysis (default: "Meta").}
+\item{desc}{Analysis label (default: "Meta"). Single-statistic files are
+named \verb{desc-<desc><stat>} (e.g. \code{desc = "run-A"} gives \code{desc-runAbeta};
+labels are sanitised to letters and digits) so that analyses written to
+one directory with different labels do not overwrite each other. The
+default label is omitted (\code{desc-beta}, \code{desc-heterogeneity}, ...).
+Multi-statistic \code{"by_coefficient"} files use \verb{desc-<desc>}.}
 
 \item{format}{Output format(s). Use \code{"h5"} for HDF5 LabeledVolumeSet
 outputs, \code{"nifti"} for NIfTI outputs, or a character vector to write both.

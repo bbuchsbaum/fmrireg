@@ -74,8 +74,9 @@ test_that(".save_fmri_meta_by_stat writes nifti+json per statistic", {
   expect_true(file.exists(created$beta$json))
   expect_true(file.exists(created$se$nifti))
   expect_true(file.exists(created$se$json))
-  expect_match(basename(created$beta$nifti), "desc-beta")
-  expect_match(basename(created$se$nifti), "desc-se")
+  # a non-default desc is kept in the label (R2-4)
+  expect_match(basename(created$beta$nifti), "desc-METAbeta_")
+  expect_match(basename(created$se$nifti), "desc-METAse_")
 })
 
 test_that(".save_fmri_meta_by_coefficient writes nifti+json per coefficient", {
