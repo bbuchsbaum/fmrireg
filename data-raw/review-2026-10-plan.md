@@ -279,6 +279,12 @@ Same ground rules as above, plus:
 
 ## Performance pass 2 results
 
+Test suite after pass 2 (`NOT_CRAN=true`, all files including
+`test_betas.R`): 276 files, 10,047 expectations, 0 failures, 0 errors,
+2 skips (same skips as the baseline); whole suite 5.5 min (`test_betas.R`
+alone was 30 min). `R CMD check`: unchanged (same environmental 1 WARNING /
+2 NOTEs; examples, Rd, code and compiled-code checks OK).
+
 Timings: `bench/perf2-P{1,2,3}.R`, one thread, old and new back to back in
 one process (old code copied in or sourced from 206600c); shared machine,
 so treat small ratios as noise. "Max diff" is old vs new output.
