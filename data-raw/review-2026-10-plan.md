@@ -234,49 +234,101 @@ Same ground rules as above, plus:
 
 ## Stream P1: fitting core
 
-- [ ] P1-1. Satterthwaite df: no per-voxel n x n residual covariance or
+- [x] P1-1. Satterthwaite df: no per-voxel n x n residual covariance or
       `eigen()`; use the banded/Toeplitz structure (traces from lag sums).
       Reference: the current dense formula on small n.
-- [ ] P1-2. Voxelwise AR statistics: vectorise `beta_stats_matrix_voxelwise` /
+- [x] P1-2. Voxelwise AR statistics: vectorise `beta_stats_matrix_voxelwise` /
       `fit_lm_contrasts_voxelwise` (`R/fmri_lm_internal.R`) over voxels;
       `future_lapply` in `R/fmri_lm_runwise.R` must not ship the full run
       matrix to every worker.
-- [ ] P1-3. Reference chunkwise backend: estimate AR once per run over all
+- [x] P1-3. Reference chunkwise backend: estimate AR once per run over all
       voxels and pass it to every chunk (results independent of `nchunks`).
-- [ ] P1-4. Robust IRLS: avoid the T x V copies per iteration
+- [x] P1-4. Robust IRLS: avoid the T x V copies per iteration
       (`crossprod(X * w, Y)` instead of forming `Y * sqrt(w)`).
-- [ ] P1-5. AR integration: `whiten_glm_context` stops computing unused OLS
+- [x] P1-5. AR integration: `whiten_glm_context` stops computing unused OLS
       residuals; legacy whitening honours `fmrireg.ar.parallel_whiten` instead
       of `parallel = TRUE` per voxel.
 
 ## Stream P2: trial betas and outputs
 
-- [ ] P2-1. Mixed-model betas (`estimate_betas(method = "mixed")`): one
+- [x] P2-1. Mixed-model betas (`estimate_betas(method = "mixed")`): one
       spectral decomposition per design, then a 1-D REML search per voxel,
       instead of a full `mixed_solve` per voxel. Reference:
       `fmrilss::mixed_solve` per voxel. Target: `test_betas.R` from ~30 min to
       well under a minute.
-- [ ] P2-2. `coef_images()`: build the design names / mask space once, not per
+- [x] P2-2. `coef_images()`: build the design names / mask space once, not per
       coefficient.
-- [ ] P2-3. `write_results(format = c("h5", "nifti"))`: compute each volume
+- [x] P2-3. `write_results(format = c("h5", "nifti"))`: compute each volume
       and sidecar once and hand it to every writer.
-- [ ] P2-4. Plot helpers: no silent fallback to loading the whole dataset to
+- [x] P2-4. Plot helpers: no silent fallback to loading the whole dataset to
       plot one voxel.
 
 ## Stream P3: group analysis and engines
 
-- [ ] P3-1. Meta kernels: compute the fixed-effects fit once per voxel and
+- [x] P3-1. Meta kernels: compute the fixed-effects fit once per voxel and
       reuse it for DL / PM / Q (currently up to three times); vectorise the
       per-row DL loop.
-- [ ] P3-2. GDS meta path: one fit per call (no repeated `compute()` /
+- [x] P3-2. GDS meta path: one fit per call (no repeated `compute()` /
       manual refit / contrast refit); chunked.
-- [ ] P3-3. GDS t-combination: one vectorised call instead of a per-feature
+- [x] P3-3. GDS t-combination: one vectorised call instead of a per-feature
       `vapply`.
-- [ ] P3-4. `rrr_gls` on latent data: stay in latent space instead of forming
+- [x] P3-4. `rrr_gls` on latent data: stay in latent space instead of forming
       the dense T x V `Z %*% t(L)`.
-- [ ] P3-5. Soft projection: closed-form GCV (O(k) per lambda) and no unused
+- [x] P3-5. Soft projection: closed-form GCV (O(k) per lambda) and no unused
       right singular vectors.
 
 ## Performance pass 2 results
 
-(filled in at the end)
+Timings: `bench/perf2-P{1,2,3}.R`, one thread, old and new back to back in
+one process (old code copied in or sourced from 206600c); shared machine,
+so treat small ratios as noise. "Max diff" is old vs new output.
+
+| Item | Case | Old (s) | New (s) | Speed-up | Max diff |
+|---|---|---|---|---|---|
+| P1-1 Satterthwaite df | n=400, p=12, V=60, Parzen lag 8 | 5.42 | 0.006 | ~900x | ≤1e-10 |
+| P1-1 | truncated window lag 8 (12/60 voxels need PSD clipping) | 5.45 | 0.44 | 12x | ≤1e-10 |
+| P1-1 | truncated window lag 30 (all clipped) | 5.59 | 2.05 | 2.7x | ≤1e-10 |
+| P1-2 voxelwise AR stats | 3 t + 2 F contrasts, V=5000 | 1.51 | 0.039 | 39x | ≤1e-13 |
+| P1-3 reference backend | AR1, T=300, V=2000, 10 chunks | 0.40 | 0.08 | 5x | (now chunk-invariant) |
+| P1-4 robust IRLS | Huber, T=400, V=5000 | 1.05-1.31 | 0.77-0.79 | 1.3-1.7x | ≤1e-13 |
+| P1-5 AR integration | `whiten_glm_context`, fixed phi, V=20000 | 0.24 | 0.093 | 2.6x | ≤1e-13 |
+| P2-1 mixed betas | n=300, 40 trials, 200 voxels | 11.80 | 0.122 | 97x | 7e-15 rel |
+| P2-1 | n=900, 90 trials, 30 voxels | 45.87 | 0.965 | 48x | 2e-14 rel |
+| P2-1 | `test_betas.R` | 1705 | 25 | 68x | 9/9 pass |
+| P2-2 `coef_images` | 4 coefficients, 6,436 voxels | 0.019 | 0.006 | 3x | identical |
+| P2-3 `write_results` h5+nifti | by_stat | 4.41 | 4.41 | 1x (I/O bound) | identical files |
+| P3-1 meta kernels | DL, regression, P=20k | 0.180 | 0.120 | 1.5x | 0 |
+| P3-2 GDS meta | PM ~group + contrast, P=3000 | 0.646 | 0.329 | 2x | 0 |
+| P3-3 GDS t-combination | Lancaster, P=3000 | 0.571 | 0.084 | 6.8x | 0 |
+| P3-4 `rrr_gls` latent | T=400, k=20, V=60k | 3.954 | 0.114 | 35x | 9e-14 |
+| P3-4 | bootstrap(20) | 5.745 | 0.369 | 16x | 2e-13 |
+| P3-5 soft projection GCV | n=300, p=400, V=20k | 42.8 | 1.28 | 33x | lambda 1e-9 |
+
+Deterministic guards added (all failed on the old code): no dense n x n
+covariance or `eigen()` on the Satterthwaite fast path; contrast functions
+called once per contrast, not per voxel; `future_lapply` never ships the
+run matrix; AR and IRLS estimated once per fit on the reference backend;
+one `solve_glm_core` per IRLS fit and <= 3 T x V allocations per iteration
+(Rprofmem); no pseudo-inverse for fixed phi; mixed-model design decomposed
+once and `mixed_solve` never called per voxel; `coef_images` resolves names
+and mask space once; `write_results` builds each volume/sidecar once; plot
+readers never load the full dataset; one FE solve per voxel in the meta
+kernel (test-only counter `meta_fit_diag_cpp`); one GDS fit per call,
+`ceiling(P / chunk_size)` chunks; one t-combination call; latent `rrr_gls`
+never forms T x V; GCV touches Y once and calls `svd(nv = 0)`.
+
+Behaviour changes:
+- Reference backend (`backend = "reference"`) results no longer depend on
+  `voxel_chunks` (AR plan and robust weights are estimated once per fit). A
+  robust model reads the full dataset once to form its weights.
+- Mixed betas: a design-level failure warns once (not once per voxel);
+  `progress` has no effect on the mixed path.
+
+Not done:
+- `rrr_gls` on latent data with AR noise still forms the dense response (AR
+  is estimated from voxel residuals, a non-linear step).
+- `write_results` time is dominated by fmristore's `gc()` on every H5 close
+  (outside this package).
+- Satterthwaite with a truncated (non-tapered) HAC window still needs an
+  exact PSD projection, per run block, for voxels whose Toeplitz symbol is
+  not provably positive; Parzen/Bartlett/Tukey stay on the fast path.

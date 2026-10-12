@@ -204,6 +204,16 @@ Conventions established by this pass (rely on them, keep them true):
   the worker via `.chunk_data()`; run rows come from `.dset_run_rows()`.
 - **`.fast_preproject()` never forms an n x n matrix**; `proj$Pinv` is computed
   on demand.
+- **Performance guards are tests.** `tests/testthat/test-perf2-*.R` assert
+  call counts / "never forms an n x n or T x V matrix" for the hot paths
+  (Satterthwaite df, voxelwise AR stats, IRLS, mixed betas, meta kernels,
+  GDS meta, latent rrr, soft-projection GCV). Timings live in
+  `bench/perf2-P*.R`, not in tests.
+- **Mixed-model trial betas** decompose the design once
+  (`mixed_reml_spectral_cpp`) and run fmrilss's REML objective per voxel; do
+  not reintroduce a per-voxel `fmrilss::mixed_solve` loop.
+- **Reference backend** estimates the AR plan and robust weights once per fit,
+  so results do not depend on `voxel_chunks`.
 
 Corrections to the 2025 notes above: the robust effective df is
 sum(w) - rank (the "sum(weights) - p" fix lived in an unreachable file until
