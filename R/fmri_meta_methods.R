@@ -942,7 +942,7 @@ write_results.fmri_meta <- function(x,
       image_set$labels,
       file = h5_path
     )
-    h5_handle$close_all()
+    .h5_close(h5_handle)
     files$h5 <- h5_path
   }
 

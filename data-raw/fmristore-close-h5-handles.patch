@@ -1,0 +1,229 @@
+From f267c01361027cfc07564e250cfd25987758d958 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 12 Oct 2026 02:01:05 +0000
+Subject: [PATCH] Close every HDF5 handle writers create; create nested groups
+ level by level
+
+h5_write() returned its dataset handle open and no caller closed it, and
+create_group() results were discarded unclosed. Those handles keep the file
+open until R's garbage collector finalises them, which is why hdf5r's
+H5File$close_all() starts with a full gc(); for writers such as
+write_labeled_vec() that gc() dominated the cost of writing a small file.
+
+- h5_write() closes the dataset by default (close = FALSE keeps it open and
+  returns it, as before).
+- Every create_group() whose handle was discarded now closes it.
+- ensure_h5_groups() no longer calls h5$exists() on the full path first:
+  H5Lexists() errors when an intermediate group is missing, so writing
+  '/a/b/x' into a file without '/a' failed.
+
+After write_labeled_vec() only the file handle is open, so callers can
+close it with $close() instead of $close_all().
+
+Test: tests/testthat/test-h5-handles-closed.R (fails before this change).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01AAa4DkLdNNRJxg4kNBsa7M
+---
+ R/frame_h5.R                            |  4 +--
+ R/h5_utils.R                            | 19 +++++++++++---
+ R/labeled_vec.R                         |  4 +--
+ R/latent_vec.R                          |  8 +++---
+ R/zzz_example_helpers.R                 |  6 ++---
+ tests/testthat/test-h5-handles-closed.R | 35 +++++++++++++++++++++++++
+ 6 files changed, 61 insertions(+), 15 deletions(-)
+ create mode 100644 tests/testthat/test-h5-handles-closed.R
+
+diff --git a/R/frame_h5.R b/R/frame_h5.R
+index c33fecf..5b2f2c7 100644
+--- a/R/frame_h5.R
++++ b/R/frame_h5.R
+@@ -242,8 +242,8 @@ write_frame_h5 <- function(
+   hdf5r::h5attr(h5, "fds_schema_version") <- .frame_schema_version
+   hdf5r::h5attr(h5, "fds_object_type") <- "fmri_frame"
+   hdf5r::h5attr(h5, "fds_commit_state") <- "writing"
+-  h5$create_group("arrays")
+-  h5$create_group("manifest")
++  h5$create_group("arrays")$close()
++  h5$create_group("manifest")$close()
+ 
+   storage_arrays <- vector("list", length(semantic$arrays))
+   names(storage_arrays) <- names(semantic$arrays)
+diff --git a/R/h5_utils.R b/R/h5_utils.R
+index 4d25d0c..4dc8da4 100644
+--- a/R/h5_utils.R
++++ b/R/h5_utils.R
+@@ -365,7 +365,10 @@ h5_read_subset <- function(h5, path, index = NULL, warn_memory = TRUE) {
+ 
+ # Recursively create missing groups, preserving the leading "/"
+ ensure_h5_groups <- function(h5, group_path) {
+-  if (group_path == "/" || h5$exists(group_path)) {
++  # Do not ask HDF5 whether the full path exists up front: H5Lexists() errors
++  # when an intermediate group is missing (e.g. "/a/b" before "/a" exists).
++  # Walk the path one level at a time instead.
++  if (group_path == "/") {
+     return(invisible(TRUE))
+   }
+ 
+@@ -373,7 +376,7 @@ ensure_h5_groups <- function(h5, group_path) {
+   cur <- "" # we build "/a", "/a/b", ...
+   for (p in parts) {
+     cur <- paste0(cur, "/", p)
+-    if (!h5$exists(cur)) h5$create_group(cur)
++    if (!h5$exists(cur)) h5$create_group(cur)$close()
+   }
+   invisible(TRUE)
+ }
+@@ -394,7 +397,8 @@ h5_write <- function(h5, path, data,
+                      overwrite = FALSE,
+                      create_parent = TRUE,
+                      write_args = list(),
+-                     verbose = getOption("h5.write.verbose", FALSE)) {
++                     verbose = getOption("h5.write.verbose", FALSE),
++                     close = TRUE) {
+   # -- 1. Validate --------------------------------------------------------
+   if (!inherits(h5, "H5File")) {
+     stop(sprintf("h5_write: 'h5' must be an H5File object, got class: %s", paste(class(h5), collapse = ", ")))
+@@ -457,7 +461,14 @@ h5_write <- function(h5, path, data,
+   }
+ 
+   if (verbose) message("h5_write: wrote ", path)
+-  invisible(dset) # leave open; caller may close
++  if (isTRUE(close)) {
++    # Close the dataset handle now: an open handle keeps the file open until
++    # R's garbage collector finalises it (hdf5r's close_all() runs gc() for
++    # exactly this reason).
++    dset$close()
++    return(invisible(TRUE))
++  }
++  invisible(dset) # caller closes
+ }
+ 
+ # Internal helper to guess the HDF5 type from an R vector
+diff --git a/R/labeled_vec.R b/R/labeled_vec.R
+index 074d899..829732f 100644
+--- a/R/labeled_vec.R
++++ b/R/labeled_vec.R
+@@ -218,7 +218,7 @@ write_labeled_vec <- function(vec,
+ 
+   # 1) Write header fields into /header group
+   # Create group first, checking existence
+-  if (!h5obj$exists("/header")) h5obj$create_group("/header")
++  if (!h5obj$exists("/header")) h5obj$create_group("/header")$close()
+   # Write each header field using h5_write
+   for (nm in names(hdr_default)) {
+     h5_write(h5obj, file.path("/header", nm), hdr_default[[nm]], overwrite = TRUE)
+@@ -234,7 +234,7 @@ write_labeled_vec <- function(vec,
+ 
+   # 4) /data => subdatasets for each volume, storing masked data
+   # Create parent group /data, checking existence
+-  if (!h5obj$exists("/data")) h5obj$create_group("/data")
++  if (!h5obj$exists("/data")) h5obj$create_group("/data")$close()
+   # idx_nonzero and n_nonzero already calculated above
+ 
+   # Set valid chunk dimensions for 1D data
+diff --git a/R/latent_vec.R b/R/latent_vec.R
+index 4779019..04355a3 100644
+--- a/R/latent_vec.R
++++ b/R/latent_vec.R
+@@ -264,7 +264,7 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
+ .write_basis <- function(h5, loadings, h5dtype, compression, offset, nvox_mask,
+                          verbose = FALSE) {
+   if (verbose) message("[to_h5_latentvec] Writing Basis Group (spatial components)...")
+-  h5$create_group("/basis")
++  h5$create_group("/basis")$close()
+   t_loadings <- Matrix::t(loadings)
+   k <- nrow(t_loadings)
+   nvox <- ncol(t_loadings)
+@@ -337,13 +337,13 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
+ .write_scans <- function(h5, embedding_matrix, scan_name, TR, k, T_vec,
+                          h5dtype, compression, verbose = FALSE) {
+   if (verbose) message("[to_h5_latentvec] Writing Scans Group...")
+-  h5$create_group("/scans")
++  h5$create_group("/scans")$close()
+   scan_name <- gsub("[^a-zA-Z0-9_.-]", "_", scan_name)
+   if (!nzchar(scan_name)) scan_name <- "scan_1"
+ 
+   meta_path <- file.path("/scans", scan_name, "metadata")
+-  h5$create_group(file.path("/scans", scan_name))
+-  h5$create_group(meta_path)
++  h5$create_group(file.path("/scans", scan_name))$close()
++  h5$create_group(meta_path)$close()
+   run_length <- nrow(embedding_matrix)
+   h5_write(h5, file.path(meta_path, "run_length"), as.integer(run_length), overwrite = TRUE)
+   if (TR > 0) h5_write(h5, file.path(meta_path, "TR"), as.double(TR), overwrite = TRUE)
+diff --git a/R/zzz_example_helpers.R b/R/zzz_example_helpers.R
+index a8e48cb..44fe72e 100644
+--- a/R/zzz_example_helpers.R
++++ b/R/zzz_example_helpers.R
+@@ -456,7 +456,7 @@ populate_H5ParcellatedScan_in_h5file <- function(h5obj,
+   tryCatch(
+     {
+       if (!h5obj$exists("scans")) {
+-        h5obj$create_group("scans")
++        h5obj$create_group("scans")$close()
+       }
+       scans_grp <- h5obj[["scans"]]
+ 
+@@ -492,7 +492,7 @@ populate_H5ParcellatedScan_in_h5file <- function(h5obj,
+         run_grp$create_dataset("cluster_map", robj = integer(0), dtype = hdf5r::h5types$H5T_NATIVE_INT)
+         run_grp$create_dataset("cluster_ids", robj = integer(0), dtype = hdf5r::h5types$H5T_NATIVE_INT)
+         run_grp$create_dataset("cluster_names", robj = character(0), dtype = hdf5r::H5T_STRING$new(type = "c"))
+-        run_grp$create_group("clusters") # Empty group
++        run_grp$create_group("clusters")$close() # Empty group
+       } else {
+         # Write cluster_map (dense vector for voxels within the mask)
+         run_grp$create_dataset("cluster_map",
+@@ -602,7 +602,7 @@ populate_H5ParcellatedScanSummary_in_h5file <- function(h5obj,
+   tryCatch(
+     {
+       if (!h5obj$exists("scans")) {
+-        h5obj$create_group("scans")
++        h5obj$create_group("scans")$close()
+       }
+       scans_grp <- h5obj[["scans"]]
+ 
+diff --git a/tests/testthat/test-h5-handles-closed.R b/tests/testthat/test-h5-handles-closed.R
+new file mode 100644
+index 0000000..e192c0f
+--- /dev/null
++++ b/tests/testthat/test-h5-handles-closed.R
+@@ -0,0 +1,35 @@
++# Writers must close every HDF5 object they create. hdf5r's H5File$close_all()
++# starts with a full gc() to finalise forgotten handles; when nothing but the
++# file itself is open, callers can close the file directly and skip that cost.
++
++test_that("write_labeled_vec leaves only the file handle open", {
++  skip_if_not_installed("neuroim2")
++  sp <- neuroim2::NeuroSpace(c(6, 6, 4))
++  mask <- neuroim2::LogicalNeuroVol(array(TRUE, c(6, 6, 4)), sp)
++  vec <- neuroim2::NeuroVec(array(rnorm(6 * 6 * 4 * 3), c(6, 6, 4, 3)),
++                            neuroim2::add_dim(sp, 3))
++  f <- tempfile(fileext = ".h5")
++  on.exit(unlink(f), add = TRUE)
++  h <- write_labeled_vec(vec, mask, c("a", "b", "c"), file = f)
++  ids <- h$get_obj_ids()
++  expect_identical(length(ids), 1L)
++  expect_identical(ids, h$id)
++  h$close()
++  back <- read_labeled_vec(f)
++  expect_equal(as.numeric(back[["b"]][mask]), as.numeric(vec[[2]][mask]),
++               tolerance = 1e-6)
++  try(close(back), silent = TRUE)
++})
++
++test_that("h5_write creates missing nested groups and closes what it creates", {
++  f <- tempfile(fileext = ".h5")
++  on.exit(unlink(f), add = TRUE)
++  h5 <- hdf5r::H5File$new(f, mode = "w")
++  fmristore:::h5_write(h5, "/a/b/x", 1:5)
++  expect_identical(length(h5$get_obj_ids()), 1L)
++  d <- fmristore:::h5_write(h5, "/a/y", 1:3, close = FALSE)
++  expect_true(d$is_valid)
++  d$close()
++  expect_identical(length(h5$get_obj_ids()), 1L)
++  h5$close()
++})
+-- 
+2.43.0
+

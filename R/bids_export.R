@@ -831,6 +831,26 @@ write_results.fmri_lm <- function(x,
   requireNamespace("fmristore", quietly = TRUE)
 }
 
+# Close an hdf5r H5File. H5File$close_all() starts with a full gc() to
+# finalise object handles R code forgot to close; when the file is the only
+# object still open (writers that close what they create), close the file
+# directly and skip that collection. Anything else still open: close_all().
+.h5_close <- function(h5) {
+  if (is.null(h5) || !isTRUE(tryCatch(h5$is_valid, error = function(e) FALSE))) {
+    return(invisible(NULL))
+  }
+  ids <- tryCatch(h5$get_obj_ids(), error = function(e) NULL)
+  # hdf5r ids are bit64::integer64; compare them as such (no double coercion).
+  only_file <- length(ids) == 1L && isTRUE(ids == h5$id)
+  if (only_file) {
+    h5$flush()
+    h5$close()
+  } else {
+    h5$close_all()
+  }
+  invisible(NULL)
+}
+
 #' Fail with a clear message when fmristore is required but missing
 #' @keywords internal
 #' @noRd
@@ -1024,7 +1044,7 @@ write_results.fmri_lm <- function(x,
     mask_vol <- neuroim2::LogicalNeuroVol(mask_array, space)
     .require_fmristore()
     h5_handle <- fmristore::write_labeled_vec(beta_data, mask_vol, regressor_names, file = filepath)
-    h5_handle$close_all()
+    .h5_close(h5_handle)
   }, error = function(e) {
     stop("Failed to write LabeledVolumeSet: ", e$message, call. = FALSE)
   })
@@ -1104,7 +1124,7 @@ write_results.fmri_lm <- function(x,
 
       .require_fmristore()
       h5_handle <- fmristore::write_labeled_vec(stat_data$neurovec, mask_vol, stat_data$contrast_names, file = filepath)
-      h5_handle$close_all()
+      .h5_close(h5_handle)
 
       # Save JSON metadata
       json_filepath <- if (isTRUE(write_json)) {
@@ -1203,7 +1223,7 @@ write_results.fmri_lm <- function(x,
 
     .require_fmristore()
     h5_handle <- fmristore::write_labeled_vec(entry$volume, mask_vol, available_stats, file = filepath)
-    h5_handle$close_all()
+    .h5_close(h5_handle)
 
     # Save JSON metadata
     json_filepath <- if (isTRUE(write_json)) {
