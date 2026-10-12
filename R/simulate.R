@@ -221,7 +221,8 @@ simulate_simple_dataset <- function(ncond, nreps = 12, TR = 1.5, snr = 0.5,
 #' @return A numeric vector of resampled values with the same length as base
 #' @importFrom stats rnorm rexp runif rgamma rlnorm arima.sim
 #' @importFrom assertthat assert_that
-#' @export
+#' @keywords internal
+#' @noRd
 .resample_param <- function(base, sd, dist = c("lognormal", "gamma", "gaussian"),
                             allow_negative = FALSE) {
   dist <- match.arg(dist)

@@ -88,14 +88,11 @@ contrast <- function(x, ...) UseMethod("contrast")
 #' @export
 contrast.default <- function(x, ...) fmridesign::contrast(x, ...)
 
-#' Tidy generic
-#'
-#' Minimal tidy generic to support fmri_meta tidy() without requiring broom.
-#' @param x object
-#' @param ... passed to methods
-#' @return A tidy data frame with model coefficients and statistics
+# `tidy` is the generics::tidy generic (re-exported), so broom::tidy() and
+# generics::tidy() dispatch to fmrireg's tidy methods.
+#' @importFrom generics tidy
 #' @export
-tidy <- function(x, ...) UseMethod("tidy")
+generics::tidy
 
 
 # contrast_weights generic is now imported from fmridesign

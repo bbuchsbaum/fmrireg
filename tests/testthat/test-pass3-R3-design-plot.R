@@ -90,6 +90,7 @@ test_that("R3-1: optional packages are Suggests, not Imports", {
     expect_false(p %in% imports, info = p)
     expect_true(p %in% suggests, info = p)
   }
+  expect_true("generics" %in% imports)
   # nothing imported from the moved packages, nor the unused aes_string
   ns_imports <- getNamespaceImports("fmrireg")
   expect_false(any(c("plotly", "bslib", "fmrigds") %in% names(ns_imports)))
