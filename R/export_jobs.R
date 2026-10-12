@@ -18,6 +18,10 @@
 #' as the first argument, e.g. \code{Rscript run_one.R $SLURM_ARRAY_TASK_ID}.
 #'
 #' @param jobs A single [fmri_job] or a list of them (e.g. from [instantiate()]).
+#'   `run_one.R` writes each result to `<id>.rds` after replacing characters
+#'   outside `[A-Za-z0-9._-]` with `"_"`; ids must stay unique after that
+#'   replacement (e.g. `"sub 01"` and `"sub_01"` collide), otherwise
+#'   `export_jobs()` stops and names the colliding ids.
 #' @param dir Output directory (created if needed).
 #' @param overwrite Overwrite an existing manifest. Default \code{FALSE}.
 #' @param setup Character vector of R lines run at the top of \code{run_one.R}
@@ -44,15 +48,18 @@ export_jobs <- function(jobs, dir, overwrite = FALSE,
               msg = "every element of 'jobs' must be an 'fmri_job'")
   assert_that(is.character(setup), msg = "'setup' must be a character vector")
 
+  ids <- vapply(jobs, `[[`, character(1), "id")
+  assert_that(!anyDuplicated(ids), msg = "job ids must be unique")
+  # run_one.R names each result file after the sanitised id, so distinct raw
+  # ids that sanitise to the same name would overwrite each other's output.
+  .check_job_file_ids(ids)
+
   if (!dir.exists(dir)) dir.create(dir, recursive = TRUE)
   manifest_path <- file.path(dir, "manifest.rds")
   if (file.exists(manifest_path) && !isTRUE(overwrite)) {
     stop(sprintf("manifest already exists at %s (use overwrite = TRUE)", manifest_path),
          call. = FALSE)
   }
-
-  ids <- vapply(jobs, `[[`, character(1), "id")
-  assert_that(!anyDuplicated(ids), msg = "job ids must be unique")
 
   saveRDS(jobs, manifest_path)
   writeLines(ids, file.path(dir, "job_ids.txt"))
@@ -75,6 +82,37 @@ read_jobs <- function(dir) {
   } else dir
   assert_that(file.exists(manifest_path), msg = "no manifest.rds found")
   readRDS(manifest_path)
+}
+
+# Characters run_one.R replaces with "_" when it names a job's result file.
+# One definition, used both by the runner script and by the uniqueness check.
+.job_file_id_pattern <- "[^A-Za-z0-9._-]"
+
+#' File-name form of a job id (what run_one.R writes as <id>.rds)
+#' @keywords internal
+#' @noRd
+.job_file_id <- function(id) {
+  gsub(.job_file_id_pattern, "_", id)
+}
+
+#' Fail if two job ids would write the same result file
+#' @keywords internal
+#' @noRd
+.check_job_file_ids <- function(ids) {
+  file_ids <- .job_file_id(ids)
+  dup <- unique(file_ids[duplicated(file_ids)])
+  if (length(dup) == 0L) return(invisible(TRUE))
+  groups <- vapply(dup, function(f) {
+    sprintf("%s -> '%s.rds'",
+            paste0("'", ids[file_ids == f], "'", collapse = ", "), f)
+  }, character(1))
+  stop(
+    "job ids must stay unique after run_one.R sanitises them for file names ",
+    sprintf("(characters matching %s become '_'); colliding ids: ",
+            .job_file_id_pattern),
+    paste(groups, collapse = "; "),
+    call. = FALSE
+  )
 }
 
 #' @keywords internal
@@ -111,7 +149,7 @@ read_jobs <- function(dir) {
     "value <- fmrireg::run_job(job)",
     "if (!dir.exists(results_dir)) dir.create(results_dir, recursive = TRUE)",
     "## defense-in-depth: keep the output filename inside results_dir",
-    "safe_id <- gsub('[^A-Za-z0-9._-]', '_', job$id)",
+    sprintf("safe_id <- gsub('%s', '_', job$id)", .job_file_id_pattern),
     "out <- file.path(results_dir, paste0(safe_id, '.rds'))",
     "saveRDS(value, out)",
     "message(sprintf('[run_one] job %s -> %s', job$id, out))"
