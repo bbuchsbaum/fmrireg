@@ -26,18 +26,22 @@
   args <- .rrr_normalize_args(args)
 
   dataset <- dataset %||% model$dataset
-  # Latent data with iid noise: every step below is linear in the response,
-  # so the fit runs on the T x k scores Z and maps results through the
-  # V x k loadings L at the end (never forming the dense T x V Z L').
+  # Latent data: every step below is linear in the response, so the fit runs
+  # on the T x k scores Z and maps results through the V x k loadings L at
+  # the end (never forming the dense T x V Z L'). A pooled AR model is
+  # estimated from latent residuals that reproduce the voxel residual
+  # cross-products (see .rrr_latent_ar_residuals()).
   latent <- .rrr_latent_response(dataset, cfg)
   if (is.null(latent)) {
     Y <- .rrr_extract_response_matrix(dataset)
     loadings <- NULL
     gram <- NULL
+    ar_resid_map <- NULL
   } else {
     Y <- latent$Z
     loadings <- latent$L
     gram <- crossprod(loadings)
+    ar_resid_map <- .rrr_latent_ar_residuals(loadings, gram, cfg$ar)
   }
   mode(Y) <- "numeric"
   n_vox <- if (is.null(loadings)) ncol(Y) else nrow(loadings)
@@ -69,7 +73,8 @@
     Z_nuisance = Z_nuisance,
     Y = Y,
     cfg = cfg,
-    run_indices = run_indices
+    run_indices = run_indices,
+    ar_resid_map = ar_resid_map
   )
 
   resid <- .rrr_residualize_against_nuisance(
@@ -408,18 +413,51 @@
 #' Internal: latent scores and loadings for a latent-space rrr_gls fit
 #'
 #' Returns list(Z = T x k scores, L = V x k loadings) when the dataset is
-#' latent and the fit is iid (no AR whitening), otherwise NULL. The AR path
-#' estimates its coefficients from voxel residuals and uses the dense
-#' response.
+#' latent and the noise model is iid or one AR model pooled over voxels
+#' (run or global pooling), otherwise NULL (dense response). Voxelwise and
+#' parcel AR are not supported by this engine; an MA part keeps the dense
+#' path.
 #' @keywords internal
 #' @noRd
 .rrr_latent_response <- function(dataset, cfg) {
   if (!.is_fmri_frame(dataset) || !.dset_is_latent(dataset)) return(NULL)
-  if (.rrr_ar_order_from_cfg(cfg) > 0L) return(NULL)
+  ar <- cfg$ar
+  if (.rrr_ar_order_from_cfg(cfg) > 0L &&
+      (isTRUE(ar$voxelwise) || isTRUE(ar$by_cluster) ||
+       identical(ar$pooling, "parcel") || as.integer(ar$q %||% 0L) > 0L)) {
+    return(NULL)
+  }
   list(
     Z = as.matrix(.dset_data_matrix(dataset)),
     L = as.matrix(.dset_loadings(dataset))
   )
+}
+
+
+#' Internal: latent residual representation for pooled AR estimation
+#'
+#' Voxel residuals are \eqn{R = Z_{res} L'}. The pooled-ACVF estimator sums
+#' lagged products over voxel columns, i.e. it depends on the residuals only
+#' through \eqn{RR' = Z_{res} (L'L) Z_{res}'}; with \eqn{L'L = Q\Lambda Q'}
+#' the k columns \eqn{Z_{res} Q \Lambda^{1/2}} have the same cross-products
+#' (the device of `fmri_latent_lm`). The mean-series estimator uses
+#' \eqn{rowMeans(R) = Z_{res}\,colMeans(L)} exactly. Both maps are linear,
+#' so fmriAR's OLS design correction still applies.
+#' @param loadings V x k loadings.
+#' @param gram `crossprod(loadings)`.
+#' @param ar_opts AR options.
+#' @return Function mapping a T x k latent residual matrix to the AR
+#'   estimation input.
+#' @keywords internal
+#' @noRd
+.rrr_latent_ar_residuals <- function(loadings, gram, ar_opts) {
+  if (identical(.normalize_ar_options(ar_opts)$shared_estimator, "mean_series")) {
+    w <- colMeans(as.matrix(loadings))
+    return(function(resid) as.matrix(resid) %*% w)
+  }
+  eg <- eigen(gram, symmetric = TRUE)
+  root <- eg$vectors %*% diag(sqrt(pmax(eg$values, 0)), nrow = length(eg$values))
+  function(resid) as.matrix(resid) %*% root
 }
 
 
@@ -442,7 +480,8 @@
 #' Internal: apply global AR whitening to design and data
 #' @keywords internal
 #' @noRd
-.rrr_whiten_data <- function(X_task, Z_nuisance, Y, cfg, run_indices = NULL) {
+.rrr_whiten_data <- function(X_task, Z_nuisance, Y, cfg, run_indices = NULL,
+                             ar_resid_map = NULL) {
   X_ref <- if (!is.null(Z_nuisance) && ncol(Z_nuisance) > 0L) {
     cbind(X_task, Z_nuisance)
   } else {
@@ -479,7 +518,10 @@
 
   proj <- .fast_preproject(X_ref)
   beta <- proj$Pinv %*% Y
-  phi <- estimate_phi(Y - X_ref %*% beta)
+  resid <- Y - X_ref %*% beta
+  # Latent response: estimate from residuals with the voxel cross-products.
+  if (!is.null(ar_resid_map)) resid <- ar_resid_map(resid)
+  phi <- estimate_phi(resid)
 
   # Hold the initial OLS estimate fixed. Any design correction is specific to
   # that operator; a later RRR/GLS residual cannot reuse design = X_ref alone.
