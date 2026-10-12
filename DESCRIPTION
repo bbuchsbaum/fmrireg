@@ -43,7 +43,6 @@ Imports:
     generics,
     future.apply,
     jsonlite,
-    progress,
     magrittr
 RoxygenNote: 7.3.3
 Roxygen: list(

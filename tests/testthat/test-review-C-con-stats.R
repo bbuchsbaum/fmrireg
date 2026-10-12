@@ -6,7 +6,9 @@
 # D5 (contrast part): effective df built from n <- dfres + ncol(X), which is
 #     wrong when the design is rank deficient (dfres = n - rank).
 # P-C2: reference F path looped over voxels and recomputed cov.unscaled.
-# P-C3: compute_contrast() filled standard errors with a voxel loop.
+# P-C3: compute_contrast() filled standard errors with a voxel loop. (Its test
+#       was removed with compute_contrast() in pass 3, R3-5: the only callers
+#       were the deleted bootstrap_glm_inference().)
 
 .cs_design <- function(n = 60L, seed = 5L) {
   set.seed(seed)
@@ -190,22 +192,4 @@ test_that("P-C2: reference F path equals .fast_F_contrast and anova(lm)", {
   cu <- fmrireg:::.lm_cov_unscaled(fit)
   Fc2 <- fmrireg:::fit_Fcontrasts(fit, W, colind = 2:4, cov.unscaled = cu)
   expect_identical(Fc2$stat, Fc$stat)
-})
-
-test_that("P-C3: compute_contrast standard errors equal the per-voxel formula", {
-  d <- .cs_design(seed = 8L)
-  f <- .cs_fast(d$X, d$Y)
-  fr <- list(betas = f$B, XtXinv = f$XtXinv, sigma2 = f$sigma2, dfres = f$df)
-  C <- rbind(c(0, 1, -1, 0), c(0, 0, 0, 1))
-  out <- fmrireg:::compute_contrast(fr, C)
-  cv <- C %*% f$XtXinv %*% t(C)
-  ref <- sapply(seq_along(f$sigma2), function(v) sqrt(diag(cv) * f$sigma2[v]))
-  expect_equal(unname(out$stderr), unname(ref), tolerance = 1e-12)
-  for (v in seq_len(ncol(d$Y))) {
-    m <- lm(d$Y[, v] ~ 0 + d$X)
-    expect_equal(out$tstat[1, v],
-                 unname((coef(m)[2] - coef(m)[3]) /
-                          sqrt(drop(c(1, -1) %*% vcov(m)[2:3, 2:3] %*% c(1, -1)))),
-                 tolerance = 1e-8)
-  }
 })
