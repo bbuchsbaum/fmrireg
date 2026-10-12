@@ -223,6 +223,11 @@ Conventions established by this pass (rely on them, keep them true):
   `with_package()` at the point of use (not at the top of a function with
   non-gds routes); tests that need them call `skip_if_not_installed()`.
   Check by running the suite against a library without fmrigds.
+- **Satterthwaite PSD projection** is exact and banded
+  (`satterthwaite_psd_traces_cpp`); keep `.fmri_lm_projected_traces_dense()`
+  only as its fallback and the equivalence tests at 1e-10.
+- **Close H5 files with `.h5_close()`**, not `$close_all()` (which always runs
+  `gc()`); writers should close every handle they open.
 - **roxygen2 7.3.1 vs 7.3.3:** if `devtools::document()` drops
   `S3method("$",data_chunk)`/`S3method("$",fmri_preproject)` from NAMESPACE
   or reorders `man/reexports.Rd`/`man/fitted_hrf.Rd`, revert that noise.

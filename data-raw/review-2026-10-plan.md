@@ -467,3 +467,53 @@ Still open (inherent or upstream): Satterthwaite with an untapered HAC
 window keeps the exact PSD projection for voxels whose Toeplitz symbol is
 not provably positive; `write_results` time is dominated by fmristore's
 `gc()` on H5 close.
+
+---
+
+# Pass 4: the two remaining limitations
+
+## Satterthwaite df with an untapered HAC window — resolved
+
+Voxels whose PSD projection cannot be certified no longer take a dense
+eigendecomposition per run block. `src/satterthwaite_psd.cpp`
+(`satterthwaite_psd_traces_cpp`, called once per fit for all such voxels):
+banded Cholesky certificate that nothing is clipped; otherwise exact
+centrosymmetric split, banded-to-tridiagonal reduction (dsbtrd-style Givens),
+`dstebz` bisection for the extreme eigenvalues (tolerance over the whole V,
+as the dense rule) and for every eigenvalue below it, `dstein` eigenvectors,
+and low-rank corrections of tr(RV) and tr(RVRV). Never forms an n x n or
+m x m matrix. Dense helper kept only as a per-voxel fallback on a LAPACK
+failure (never triggered in tests or bench; tested by forcing it).
+
+- Equivalence (`test-satterthwaite-psd-equivalence.R`): df within 1e-10
+  relative of the dense reference across tapers x lags 0-40 x one/two runs/
+  censoring, 0 / few / >= 20 clipped eigenvalues, tiny scales, and
+  eigenvalues placed ~200 eps ||V|| either side of the tolerance; max
+  observed difference 3.3e-15.
+- Guard (`test-satterthwaite-psd-guard.R`): no `eigen()` calls (old: 12).
+- Timing (`bench/satterthwaite-psd.R`, one thread, n = 400, p = 12): per
+  projected voxel 110 ms -> 0.8-6.3 ms (one run), 34 ms -> 0.4-4.8 ms (two
+  runs); 7-138x.
+
+## H5 output closing — fmrireg side done, fmristore side pending
+
+`.h5_close()` closes a result file directly when it is the only open HDF5
+object, else falls back to `close_all()` (whose full `gc()` was ~half of
+`write_results()` time). Tests: `test-h5-close.R`. With the pinned fmristore
+the fallback is taken (no change). The upstream fix, which makes fmristore
+writers close every handle they create and fixes nested-group creation, is
+in `data-raw/fmristore-close-h5-handles.patch` (with its own failing-first
+test). With it installed, `write_results(format = "h5")` on a 40x40x20 two-run
+fit drops from 2.6-2.9 s to 1.0-1.3 s with identical voxel values
+(`bench/h5-close.R`).
+
+To finish: open the fmristore PR with that patch, then bump the fmristore pin
+in DESCRIPTION `Remotes:` to the merged commit.
+
+## Pass 4 results
+
+Full suite (`NOT_CRAN=true`): with fmrigds 294 files, 11,298 expectations,
+0 failures, 0 errors, 2 skips; without fmrigds 294 files, 10,024
+expectations, 0 failures, 0 errors, 46 skips. `R CMD check`: examples, Rd,
+code and compiled-code checks OK; only the known environmental
+WARNING/NOTEs.
