@@ -124,14 +124,17 @@ test_that(".normalize_contrasts_for_engine errors and drop_failed branches", {
     "colnames|ncol"
   )
 
-  # drop_failed swallows bad contrasts
-  dropped <- fmrireg:::.normalize_contrasts_for_engine(
-    p,
-    contrasts = list(ok = c(0, 1, 0), bad = c(missing = 1)),
-    t_contrasts = NULL,
-    f_contrasts = NULL,
-    columns = cols,
-    drop_failed = TRUE
+  # drop_failed drops bad contrasts, with a warning naming them (pass 3, R3-4)
+  expect_warning(
+    dropped <- fmrireg:::.normalize_contrasts_for_engine(
+      p,
+      contrasts = list(ok = c(0, 1, 0), bad = c(missing = 1)),
+      t_contrasts = NULL,
+      f_contrasts = NULL,
+      columns = cols,
+      drop_failed = TRUE
+    ),
+    "'bad'"
   )
   expect_true("ok" %in% names(dropped$t_list))
   expect_false("bad" %in% names(dropped$t_list))

@@ -45,7 +45,9 @@ compute_lm_contrasts(
 
 \item{ar_order}{Integer AR order; used only for effective df adjustments.}
 
-\item{drop_failed}{Logical; drop contrasts that fail validation (default TRUE).}
+\item{drop_failed}{Logical; drop contrasts that fail validation (e.g. a
+misspelled coefficient name) with a warning naming each dropped contrast
+(default TRUE). If FALSE, the first failure is an error.}
 }
 \value{
 A tibble with rows per contrast (default) or a named list if \code{output = "list"}.

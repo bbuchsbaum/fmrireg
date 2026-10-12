@@ -63,7 +63,9 @@ A list of class "fmri_betas" containing the following components:
 \item design_ran: Design matrix for random effects.
 \item design_fixed: Design matrix for fixed effects.
 \item design_base: Design matrix for baseline model.
-\item basemod: Baseline model object.
+\item basemod: The baseline model that was regressed out (the supplied
+\code{basemod}, or the default \code{baseline_model("constant")} on the frame's
+sampling frame when \code{basemod = NULL}).
 \item fixed_model: Fixed effect model object.
 \item ran_model: Random effect model object.
 \item estimated_hrf: The estimated HRF vector (NULL for most methods).
