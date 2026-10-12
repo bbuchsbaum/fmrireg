@@ -75,11 +75,19 @@ welch_t_cpp <- function(Y, g_in) {
 }
 
 #' OLS with ONE voxelwise covariate
-#' 
+#'
+#' Subjects whose outcome or voxelwise covariate is non-finite for a feature
+#' are dropped from that feature only (complete-case analysis per feature,
+#' as in \code{ols_t_cpp}); a feature with no more usable subjects than
+#' parameters (K + 1), or whose remaining augmented design is rank deficient,
+#' returns NaN.
+#'
 #' @param Y S x P matrix of outcomes
 #' @param X S x K design matrix
 #' @param C S x P matrix of voxelwise covariates
-#' @return List with beta ((K+1) x P), se, t, df
+#' @return List with beta ((K+1) x P), se, t, df (the residual degrees of
+#'   freedom: a scalar when every feature uses all S subjects, otherwise a
+#'   length-P vector), n_obs (length P, subjects used per feature)
 #' @export
 ols_t_vcov_cpp <- function(Y, X, C) {
     .Call('_fmrireg_ols_t_vcov_cpp', PACKAGE = 'fmrireg', Y, X, C)

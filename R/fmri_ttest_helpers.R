@@ -652,11 +652,15 @@ fmri_meta_fit_extended <- function(Y, V, X,
 #' OLS Fit with Optional Voxelwise Covariate
 #'
 #' Wrapper for OLS t-tests that supports an optional voxelwise covariate.
+#' Subjects with a non-finite outcome (or, with \code{voxelwise}, a
+#' non-finite covariate value) are dropped per feature; \code{df} and
+#' \code{n_obs} then vary by feature.
 #'
 #' @param Y Outcome matrix (S x P)
 #' @param X Design matrix (S x K)
 #' @param voxelwise Optional voxelwise covariate matrix (S x P)
-#' @param center_voxelwise Logical; center voxelwise covariate per feature
+#' @param center_voxelwise Logical; center voxelwise covariate per feature,
+#'   over the subjects used for that feature
 #' @param voxel_name Name for voxelwise coefficient
 #'
 #' @return List with OLS results
@@ -706,20 +710,27 @@ fmri_ols_fit <- function(Y, X,
       stop("Voxelwise covariate must match Y dimensions", call. = FALSE)
     }
     
+    # Subjects with a non-finite outcome or covariate are dropped per feature
+    # (complete cases); centring uses the same subjects the fit uses.
+    used <- is.finite(Y) & is.finite(C)
     if (isTRUE(center_voxelwise)) {
-      C <- sweep(C, 2L, colMeans(C, na.rm = TRUE), FUN = "-")
+      n_used <- colSums(used)
+      centre <- colSums(ifelse(used, C, 0)) / n_used
+      centre[n_used == 0] <- 0
+      C <- sweep(C, 2L, centre, FUN = "-")
     }
 
-    if (any(!is.finite(C))) {
-      stop("Voxelwise covariate must contain only finite values", call. = FALSE)
-    }
-
-    C_resid <- qr.resid(qr(X), C)
+    # Identifiability is checked here for features that use every subject; a
+    # feature that loses subjects and becomes unidentified returns NaN (as
+    # ols_t_cpp does for rank-deficient subsets).
+    complete_cols <- which(colSums(!used) == 0L)
+    Cc <- C[, complete_cols, drop = FALSE]
+    C_resid <- qr.resid(qr(X), Cc)
     resid_norm <- sqrt(colSums(C_resid * C_resid))
-    covariate_norm <- sqrt(colSums(C * C))
-    unidentified <- which(
+    covariate_norm <- sqrt(colSums(Cc * Cc))
+    unidentified <- complete_cols[
       resid_norm <= sqrt(.Machine$double.eps) * pmax(covariate_norm, 1)
-    )
+    ]
     if (length(unidentified) > 0L) {
       shown <- utils::head(unidentified, 5L)
       suffix <- if (length(unidentified) > length(shown)) ", ..." else ""

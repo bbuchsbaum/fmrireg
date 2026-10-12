@@ -217,11 +217,19 @@ List welch_t_cpp(const arma::mat& Y, const IntegerVector& g_in) {
 }
 
 //' OLS with ONE voxelwise covariate
-//' 
+//'
+//' Subjects whose outcome or voxelwise covariate is non-finite for a feature
+//' are dropped from that feature only (complete-case analysis per feature,
+//' as in \code{ols_t_cpp}); a feature with no more usable subjects than
+//' parameters (K + 1), or whose remaining augmented design is rank deficient,
+//' returns NaN.
+//'
 //' @param Y S x P matrix of outcomes
 //' @param X S x K design matrix
 //' @param C S x P matrix of voxelwise covariates
-//' @return List with beta ((K+1) x P), se, t, df
+//' @return List with beta ((K+1) x P), se, t, df (the residual degrees of
+//'   freedom: a scalar when every feature uses all S subjects, otherwise a
+//'   length-P vector), n_obs (length P, subjects used per feature)
 //' @export
 // [[Rcpp::export]]
 List ols_t_vcov_cpp(const arma::mat& Y, const arma::mat& X, const arma::mat& C) {
@@ -238,8 +246,9 @@ List ols_t_vcov_cpp(const arma::mat& Y, const arma::mat& X, const arma::mat& C) 
   // Precompute X'X and its inverse
   mat Xt = X.t();
   mat XtX = Xt * X;
+  XtX = 0.5 * (XtX + XtX.t());
   mat Ainv;
-  
+
   if (!inv_sympd_safe(Ainv, XtX)) {
     stop("ols_t_vcov_cpp: X'X not invertible.");
   }
@@ -248,12 +257,48 @@ List ols_t_vcov_cpp(const arma::mat& Y, const arma::mat& X, const arma::mat& C) 
   mat B(K + 1, P, fill::value(datum::nan));
   mat SE(K + 1, P, fill::value(datum::nan));
   mat T(K + 1, P, fill::value(datum::nan));
-  
+  vec DF(P); DF.fill(df);
+  vec NOBS(P); NOBS.fill((double)S);
+  bool any_incomplete = false;
+
   // Process each feature
   for (uword j = 0; j < P; ++j) {
     vec c = C.col(j);
     vec y = Y.col(j);
-    
+
+    if (!y.is_finite() || !c.is_finite()) {
+      // Complete-case fit on subjects with finite outcome and covariate
+      any_incomplete = true;
+      std::vector<uword> keep_v;
+      keep_v.reserve(S);
+      for (uword i = 0; i < S; ++i) {
+        if (std::isfinite(y(i)) && std::isfinite(c(i))) keep_v.push_back(i);
+      }
+      const uword m = keep_v.size();
+      NOBS(j) = (double)m;
+      if (m <= K + 1) { DF(j) = datum::nan; continue; }
+      uvec keep = conv_to<uvec>::from(keep_v);
+      mat Ms(m, K + 1);
+      Ms.cols(0, K - 1) = X.rows(keep);
+      Ms.col(K) = c.elem(keep);
+      if (arma::rank(Ms) < K + 1) { DF(j) = datum::nan; continue; }
+      mat MtM = Ms.t() * Ms;
+      MtM = 0.5 * (MtM + MtM.t());
+      mat invs;
+      if (!inv_sympd_safe(invs, MtM)) { DF(j) = datum::nan; continue; }
+      vec ys = y.elem(keep);
+      vec bj = invs * (Ms.t() * ys);
+      vec r = ys - Ms * bj;
+      double dfj = (double)m - (double)(K + 1);
+      double s2j = dot(r, r) / dfj;
+      vec sej = sqrt(s2j * invs.diag());
+      B.col(j) = bj;
+      SE.col(j) = sej;
+      T.col(j) = bj / sej;
+      DF(j) = dfj;
+      continue;
+    }
+
     // Build augmented inverse via block inversion
     vec Xtc = Xt * c;  // K x 1
     double ssc = dot(c, c);  // scalar
@@ -307,10 +352,18 @@ List ols_t_vcov_cpp(const arma::mat& Y, const arma::mat& X, const arma::mat& C) 
     T.col(j) = tj;
   }
   
+  SEXP df_out;
+  if (!any_incomplete) {
+    df_out = Rcpp::wrap(df);
+  } else {
+    df_out = Rcpp::NumericVector(DF.begin(), DF.end());
+  }
+
   return List::create(
     Named("beta") = B,
     Named("se") = SE,
     Named("t") = T,
-    Named("df") = df
+    Named("df") = df_out,
+    Named("n_obs") = Rcpp::NumericVector(NOBS.begin(), NOBS.end())
   );
 }

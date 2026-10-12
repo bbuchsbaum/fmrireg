@@ -14,8 +14,14 @@ ols_t_vcov_cpp(Y, X, C)
 \item{C}{S x P matrix of voxelwise covariates}
 }
 \value{
-List with beta ((K+1) x P), se, t, df
+List with beta ((K+1) x P), se, t, df (the residual degrees of
+freedom: a scalar when every feature uses all S subjects, otherwise a
+length-P vector), n_obs (length P, subjects used per feature)
 }
 \description{
-OLS with ONE voxelwise covariate
+Subjects whose outcome or voxelwise covariate is non-finite for a feature
+are dropped from that feature only (complete-case analysis per feature,
+as in \code{ols_t_cpp}); a feature with no more usable subjects than
+parameters (K + 1), or whose remaining augmented design is rank deficient,
+returns NaN.
 }

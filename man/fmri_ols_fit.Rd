@@ -19,7 +19,8 @@ fmri_ols_fit(
 
 \item{voxelwise}{Optional voxelwise covariate matrix (S x P)}
 
-\item{center_voxelwise}{Logical; center voxelwise covariate per feature}
+\item{center_voxelwise}{Logical; center voxelwise covariate per feature,
+over the subjects used for that feature}
 
 \item{voxel_name}{Name for voxelwise coefficient}
 }
@@ -28,4 +29,7 @@ List with OLS results
 }
 \description{
 Wrapper for OLS t-tests that supports an optional voxelwise covariate.
+Subjects with a non-finite outcome (or, with \code{voxelwise}, a
+non-finite covariate value) are dropped per feature; \code{df} and
+\code{n_obs} then vary by feature.
 }
