@@ -39,3 +39,13 @@ test_that("R3-3: distinct sanitised ids still export", {
   info <- export_jobs(jobs, withr::local_tempdir())
   expect_identical(info$ids, c("sub 01", "sub-01"))
 })
+
+test_that("export_jobs rejects ids that differ only in case (case-insensitive file systems)", {
+  # On macOS and Windows "SUB_01.rds" and "sub_01.rds" are the same file.
+  err <- tryCatch(fmrireg:::.check_job_file_ids(c("SUB_01", "sub_01", "sub_02")),
+                  error = conditionMessage)
+  expect_true(is.character(err))
+  expect_match(err, "'SUB_01', 'sub_01'", fixed = TRUE)
+  expect_no_match(err, "sub_02", fixed = TRUE)
+  expect_true(fmrireg:::.check_job_file_ids(c("sub_01", "sub_02")))
+})

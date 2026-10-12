@@ -100,15 +100,19 @@ read_jobs <- function(dir) {
 #' @noRd
 .check_job_file_ids <- function(ids) {
   file_ids <- .job_file_id(ids)
-  dup <- unique(file_ids[duplicated(file_ids)])
+  # Compare case-insensitively: on macOS/Windows file systems "SUB_01.rds"
+  # and "sub_01.rds" are the same file.
+  keys <- tolower(file_ids)
+  dup <- unique(keys[duplicated(keys)])
   if (length(dup) == 0L) return(invisible(TRUE))
-  groups <- vapply(dup, function(f) {
+  groups <- vapply(dup, function(k) {
     sprintf("%s -> '%s.rds'",
-            paste0("'", ids[file_ids == f], "'", collapse = ", "), f)
+            paste0("'", ids[keys == k], "'", collapse = ", "),
+            file_ids[keys == k][1L])
   }, character(1))
   stop(
-    "job ids must stay unique after run_one.R sanitises them for file names ",
-    sprintf("(characters matching %s become '_'); colliding ids: ",
+    "job ids must stay unique (ignoring case) after run_one.R sanitises them ",
+    sprintf("for file names (characters matching %s become '_'); colliding ids: ",
             .job_file_id_pattern),
     paste(groups, collapse = "; "),
     call. = FALSE
