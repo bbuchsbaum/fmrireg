@@ -50,7 +50,9 @@
 #'   equal or custom weighting (via `weights`); inverse-variance weights are
 #'   unavailable without effect standard errors. Fisher uses equal weights.
 #'   Lancaster implements a weighted Fisher method by mapping weights to
-#'   per-subject degrees of freedom.
+#'   per-subject degrees of freedom. Combination needs t-statistic (and df)
+#'   input; requesting it for data with only effect sizes and standard errors
+#'   is an error (omit \code{combine} to meta-analyse those).
 #' @param contrasts Optional numeric vector or matrix specifying fit-time exact contrasts. If a
 #'   vector is provided, its names must match the column names of the design matrix X. A matrix
 #'   should have columns corresponding to predictors and rows corresponding to contrasts.
@@ -59,7 +61,9 @@
 #'   `$cov` (for subject-level effect data) so that `contrast()` gives exact
 #'   standard errors.
 #' @param chunk_size Number of voxels to process at once (default: 10000)
-#' @param n_threads Number of parallel threads to use. Defaults to fmrireg.num_threads option.
+#' @param n_threads Number of parallel threads to use. Defaults to the
+#'   \code{fmrireg.num_threads} option; 0 (the option's default) means
+#'   \code{parallel::detectCores() - 1} (at least 1).
 #' @param verbose Logical. Print progress messages (default: TRUE)
 #'
 #' @return An fmri_meta object containing:
@@ -126,13 +130,8 @@ fmri_meta <- function(data,
     stop("Must provide 'weights_custom' when weights = 'custom'", call. = FALSE)
   }
   
-  # Set up parallel processing
-  if (n_threads == 0) {
-    n_threads <- parallel::detectCores() - 1
-  }
-  n_threads <- max(1, n_threads)
-  
-  # Dispatch based on data type
+  # Dispatch based on data type. Methods are re-matched from the call, so
+  # each method resolves n_threads itself (.meta_resolve_threads()).
   UseMethod("fmri_meta")
 }
 
@@ -157,6 +156,7 @@ fmri_meta.group_data_h5 <- function(data,
   robust <- .meta_match_robust(robust)
   weights <- match.arg(weights)
   if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
+  n_threads <- .meta_resolve_threads(n_threads)
   
   # Parse formula and create design matrix
   model_info <- parse_meta_formula(formula, data)
@@ -354,6 +354,7 @@ fmri_meta.group_data_nifti <- function(data,
   robust <- .meta_match_robust(robust)
   weights <- match.arg(weights)
   if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
+  n_threads <- .meta_resolve_threads(n_threads)
   
   # Parse formula and create design matrix
   model_info <- parse_meta_formula(formula, data)
@@ -817,6 +818,17 @@ fit_meta_single <- function(y, se, X, method, robust, weights, weights_custom) {
     Q_df = result$df[1],
     cov_tri = as.vector(result$cov_tri)
   )
+}
+
+# Internal: thread count for the meta kernels. 0 (or NULL/NA) means
+# parallel::detectCores() - 1; the result is always at least 1.
+.meta_resolve_threads <- function(n_threads) {
+  n <- suppressWarnings(as.integer(n_threads %||% 0L)[1L])
+  if (is.na(n) || n <= 0L) {
+    n <- suppressWarnings(as.integer(parallel::detectCores())[1L] - 1L)
+  }
+  if (is.na(n)) n <- 1L
+  max(1L, n)
 }
 
 # Internal: restrict custom weights to a subset of features (chunk).

@@ -68,7 +68,9 @@ voxels or ROIs).}
 equal or custom weighting (via \code{weights}); inverse-variance weights are
 unavailable without effect standard errors. Fisher uses equal weights.
 Lancaster implements a weighted Fisher method by mapping weights to
-per-subject degrees of freedom.}
+per-subject degrees of freedom. Combination needs t-statistic (and df)
+input; requesting it for data with only effect sizes and standard errors
+is an error (omit \code{combine} to meta-analyse those).}
 
 \item{contrasts}{Optional numeric vector or matrix specifying fit-time exact contrasts. If a
 vector is provided, its names must match the column names of the design matrix X. A matrix
@@ -81,7 +83,9 @@ standard errors.}
 
 \item{chunk_size}{Number of voxels to process at once (default: 10000)}
 
-\item{n_threads}{Number of parallel threads to use. Defaults to fmrireg.num_threads option.}
+\item{n_threads}{Number of parallel threads to use. Defaults to the
+\code{fmrireg.num_threads} option; 0 (the option's default) means
+\code{parallel::detectCores() - 1} (at least 1).}
 
 \item{verbose}{Logical. Print progress messages (default: TRUE)}
 }

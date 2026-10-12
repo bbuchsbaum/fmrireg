@@ -46,6 +46,7 @@
   method  <- .meta_resolve_method(match.arg(method))
   robust  <- .meta_match_robust(robust)
   weights <- match.arg(weights)
+  n_threads <- .meta_resolve_threads(n_threads)
   if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
 
   if (weights == "custom" && is.null(weights_custom)) {

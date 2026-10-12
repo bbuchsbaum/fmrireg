@@ -15,6 +15,9 @@ parse_contrast_formula(formula, object)
 Numeric vector of contrast weights
 }
 \description{
-Parse Contrast Formula
+Turns a one-sided formula that is a linear combination of coefficient
+names (e.g. \code{~ groupB - groupA}, \code{~ 0.5 * (a + b)}) into
+contrast weights. Names that are not coefficients of the model are an
+error.
 }
 \keyword{internal}

@@ -219,34 +219,70 @@ contrast.fmri_meta <- function(x, contrast, ...) {
 
 #' Parse Contrast Formula
 #'
+#' Turns a one-sided formula that is a linear combination of coefficient
+#' names (e.g. \code{~ groupB - groupA}, \code{~ 0.5 * (a + b)}) into
+#' contrast weights. Names that are not coefficients of the model are an
+#' error.
+#'
 #' @param formula Contrast formula
 #' @param object fmri_meta object
 #' @return Numeric vector of contrast weights
 #' @keywords internal
 parse_contrast_formula <- function(formula, object) {
-  # Get coefficient names
   coef_names <- colnames(object$coefficients)
-  
-  # Simple implementation - would expand for complex formulas
-  formula_str <- deparse(formula)
-  
-  # Initialize weights
-  weights <- rep(0, length(coef_names))
-  names(weights) <- coef_names
-  
-  # Parse simple contrasts like ~ groupold - groupyoung
-  # This is a placeholder - full implementation would use proper formula parsing
-  if (grepl("-", formula_str)) {
-    parts <- strsplit(formula_str, "-")[[1]]
-    parts <- trimws(gsub("~", "", parts))
-    
-    if (length(parts) == 2) {
-      if (parts[1] %in% coef_names) weights[parts[1]] <- 1
-      if (parts[2] %in% coef_names) weights[parts[2]] <- -1
-    }
+  if (!inherits(formula, "formula") || length(formula) != 2L) {
+    stop("Contrast formula must be one-sided, e.g. ~ groupB - groupA", call. = FALSE)
   }
-  
-  return(weights)
+
+  weights <- stats::setNames(numeric(length(coef_names)), coef_names)
+  unknown <- character(0)
+
+  # Linear combination of coefficient names: +, -, (), and multiplication or
+  # division by numeric constants, e.g. ~ groupB - groupA or ~ 0.5 * (a + b).
+  walk <- function(e, s) {
+    if (is.name(e)) {
+      nm <- as.character(e)
+      if (nm %in% coef_names) {
+        weights[nm] <<- weights[nm] + s
+      } else {
+        unknown <<- c(unknown, nm)
+      }
+      return(invisible(NULL))
+    }
+    if (is.call(e)) {
+      op <- as.character(e[[1L]])
+      if (op == "(" && length(e) == 2L) return(walk(e[[2L]], s))
+      if (op %in% c("+", "-")) {
+        sgn <- if (op == "-") -1 else 1
+        if (length(e) == 2L) return(walk(e[[2L]], sgn * s))
+        walk(e[[2L]], s)
+        return(walk(e[[3L]], sgn * s))
+      }
+      if (op == "*" && length(e) == 3L) {
+        if (is.numeric(e[[2L]])) return(walk(e[[3L]], s * e[[2L]]))
+        if (is.numeric(e[[3L]])) return(walk(e[[2L]], s * e[[3L]]))
+      }
+      if (op == "/" && length(e) == 3L && is.numeric(e[[3L]])) {
+        return(walk(e[[2L]], s / e[[3L]]))
+      }
+    }
+    stop("Unsupported term in contrast formula: ", deparse(e),
+         ". Use a linear combination of coefficient names, e.g. ~ groupB - groupA",
+         call. = FALSE)
+  }
+  walk(formula[[2L]], 1)
+
+  if (length(unknown)) {
+    stop(
+      "Coefficient(s) not found in model: ", paste(unique(unknown), collapse = ", "),
+      ". Available coefficients: ", paste(coef_names, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  if (all(weights == 0)) {
+    stop("Contrast formula gives all-zero weights", call. = FALSE)
+  }
+  weights
 }
 
 #' Build Contrast from Named Vector
@@ -312,7 +348,10 @@ print.fmri_meta <- function(x, ...) {
   if (!is.null(x$tau2)) {
     cat("\nHeterogeneity:\n")
     cat("  Mean tau^2:", mean(x$tau2, na.rm = TRUE), "\n")
-    cat("  Mean I^2:", mean(x$I2, na.rm = TRUE), "%\n")
+    # I2 is stored as a fraction in [0, 1]
+    mean_I2 <- if (is.null(x$I2)) NA_real_ else mean(x$I2, na.rm = TRUE)
+    cat("  Mean I^2:",
+        if (is.finite(mean_I2)) sprintf("%.1f%%", 100 * mean_I2) else "NA", "\n")
   }
   
   invisible(x)
