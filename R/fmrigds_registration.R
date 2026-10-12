@@ -1,5 +1,7 @@
+# robust = "t" used to be mapped silently to "huber"; it is now refused
+# (see .meta_match_robust()).
 .fmrigds_map_robust <- function(r) {
-  if (identical(r, "t")) "huber" else r %||% "none"
+  .meta_match_robust(r)
 }
 
 .fmrigds_coerce_var <- function(var, se) {

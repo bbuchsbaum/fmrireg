@@ -227,7 +227,7 @@ fmri_ttest <- function(gd,
   } else if (use_meta) {
     # Meta-regression using existing infrastructure
     method <- .meta_resolve_method(getOption("fmrireg.meta.method", "pm"))
-    robust <- getOption("fmrireg.meta.robust", "none")
+    robust <- .meta_match_robust(getOption("fmrireg.meta.robust", "none"))
     analysis_method <- if (!is.null(combine)) paste0("combine:", combine) else method
     
     if (inherits(gd, "group_data") && is.null(Y)) {

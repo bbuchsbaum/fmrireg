@@ -12,6 +12,28 @@
   method
 }
 
+# Internal: validate `robust`. Only "none" and "huber" are implemented; a
+# Student-t meta-regression has never existed (the kernels used to treat "t"
+# as "none" and the GDS reducers as "huber"), so "t" is refused explicitly.
+.meta_match_robust <- function(robust) {
+  if (is.null(robust)) return("none")
+  if (is.character(robust) && length(robust) == 1L && identical(tolower(robust), "t")) {
+    stop("robust = \"t\" (Student-t meta-regression) is not implemented; ",
+         "use robust = \"huber\" or robust = \"none\".", call. = FALSE)
+  }
+  match.arg(robust, c("none", "huber"))
+}
+
+# Internal: combine = "stouffer"/"fisher"/"lancaster" combines subject-level
+# t-statistics (with df). Effect + standard-error inputs are analysed by
+# meta-regression instead; combining them is refused rather than silently
+# running a meta-regression (or failing inside the fitter).
+.meta_stop_combine_needs_t <- function() {
+  stop("combine = ... combines subject-level t-statistics and requires t-statistic ",
+       "(and df) input; this data has effect sizes and standard errors only. ",
+       "Omit 'combine' to run a meta-regression on them.", call. = FALSE)
+}
+
 # Internal: relative weights (S x P) for weights = "equal" / "custom".
 .meta_relative_weights <- function(weights, weights_custom, S, P) {
   if (identical(weights, "equal")) {
@@ -36,6 +58,7 @@
                            weights = "ivw", weights_custom = NULL,
                            huber_c = 1.345, robust_iter = 2,
                            n_threads = getOption("fmrireg.num_threads", 0)) {
+  robust <- .meta_match_robust(robust)
   Y <- as.matrix(Y)
   X <- as.matrix(X)
   storage.mode(X) <- "double"
@@ -125,7 +148,7 @@ fmri_meta_fit <- function(Y, V, X,
                          n_threads = getOption("fmrireg.num_threads", 0)) {
   
   method <- .meta_resolve_method(match.arg(method))
-  robust <- match.arg(robust)
+  robust <- .meta_match_robust(robust)
   
   # Validate inputs
   if (!is.matrix(Y)) Y <- as.matrix(Y)
@@ -182,7 +205,7 @@ fmri_meta_fit_contrasts <- function(Y, V, X, Cmat,
                                    robust_iter = 2,
                                    n_threads = getOption("fmrireg.num_threads", 0)) {
   method <- .meta_resolve_method(match.arg(method))
-  robust <- match.arg(robust)
+  robust <- .meta_match_robust(robust)
   if (!is.matrix(Y)) Y <- as.matrix(Y)
   if (!is.matrix(V)) V <- as.matrix(V)
   if (!is.matrix(X)) X <- as.matrix(X)
@@ -207,7 +230,7 @@ fmri_meta_fit_cov <- function(Y, V, X,
                              robust_iter = 2,
                              n_threads = getOption("fmrireg.num_threads", 0)) {
   method <- .meta_resolve_method(match.arg(method))
-  robust <- match.arg(robust)
+  robust <- .meta_match_robust(robust)
   if (!is.matrix(Y)) Y <- as.matrix(Y)
   if (!is.matrix(V)) V <- as.matrix(V)
   if (!is.matrix(X)) X <- as.matrix(X)

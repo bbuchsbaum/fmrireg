@@ -23,8 +23,9 @@
 #'   \itemize{
 #'     \item "none": No robust estimation (default)
 #'     \item "huber": Huber M-estimator with IRLS
-#'     \item "t": Student-t mixture model (for heavy-tailed distributions)
 #'   }
+#'   A Student-t robust meta-regression is not implemented; \code{robust = "t"}
+#'   is an error.
 #' @param weights Character string specifying weighting scheme:
 #'   \itemize{
 #'     \item "ivw": Inverse variance weighting (default). The subject-level
@@ -99,7 +100,7 @@
 fmri_meta <- function(data,
                       formula = ~ 1,
                       method = c("pm", "fe", "dl", "reml"),
-                      robust = c("none", "huber", "t"),
+                      robust = c("none", "huber"),
                       weights = c("ivw", "equal", "custom"),
                       weights_custom = NULL,
                       combine = NULL,
@@ -116,7 +117,7 @@ fmri_meta <- function(data,
   
   # Match arguments
   method <- match.arg(method)
-  robust <- match.arg(robust)
+  robust <- .meta_match_robust(robust)
   weights <- match.arg(weights)
   if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
   
@@ -139,7 +140,7 @@ fmri_meta <- function(data,
 fmri_meta.group_data_h5 <- function(data,
                                     formula = ~ 1,
                                     method = c("pm", "fe", "dl", "reml"),
-                                    robust = c("none", "huber", "t"),
+                                    robust = c("none", "huber"),
                                     weights = c("ivw", "equal", "custom"),
                                     weights_custom = NULL,
                                     combine = NULL,
@@ -153,7 +154,7 @@ fmri_meta.group_data_h5 <- function(data,
   }
 
   method <- .meta_resolve_method(match.arg(method))
-  robust <- match.arg(robust)
+  robust <- .meta_match_robust(robust)
   weights <- match.arg(weights)
   if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
   
@@ -310,7 +311,7 @@ fmri_meta.group_data_h5 <- function(data,
 fmri_meta.group_data_gds <- function(data,
                                      formula = ~ 1,
                                      method = c("pm", "fe", "dl", "reml"),
-                                     robust = c("none", "huber", "t"),
+                                     robust = c("none", "huber"),
                                      weights = c("ivw", "equal", "custom"),
                                      weights_custom = NULL,
                                      combine = NULL,
@@ -339,7 +340,7 @@ fmri_meta.group_data_gds <- function(data,
 fmri_meta.group_data_nifti <- function(data,
                                        formula = ~ 1,
                                        method = c("pm", "fe", "dl", "reml"),
-                                       robust = c("none", "huber", "t"),
+                                       robust = c("none", "huber"),
                                        weights = c("ivw", "equal", "custom"),
                                        weights_custom = NULL,
                                        combine = NULL,
@@ -350,7 +351,7 @@ fmri_meta.group_data_nifti <- function(data,
                                        verbose = TRUE) {
   # Similar to group_data_h5 but using read_nifti_chunk
   method <- .meta_resolve_method(match.arg(method))
-  robust <- match.arg(robust)
+  robust <- .meta_match_robust(robust)
   weights <- match.arg(weights)
   if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
   
@@ -518,7 +519,7 @@ fmri_meta.group_data_nifti <- function(data,
 fmri_meta.group_data_csv <- function(data,
                                      formula = ~ 1,
                                      method = c("pm", "fe", "dl", "reml"),
-                                     robust = c("none", "huber", "t"),
+                                     robust = c("none", "huber"),
                                      weights = c("ivw", "equal", "custom"),
                                      weights_custom = NULL,
                                      combine = NULL,
@@ -532,7 +533,7 @@ fmri_meta.group_data_csv <- function(data,
   }
   
   method <- .meta_resolve_method(match.arg(method))
-  robust <- match.arg(robust)
+  robust <- .meta_match_robust(robust)
   weights <- match.arg(weights)
   
   # Parse formula and create design matrix
@@ -570,8 +571,12 @@ fmri_meta.group_data_csv <- function(data,
     # Extract data for this ROI
     roi_data <- extract_csv_data(data, roi = if (roi != "overall") roi else NULL)
     
+    if (!is.null(combine) && is.null(roi_data$t)) {
+      .meta_stop_combine_needs_t()
+    }
+
     # Fit meta-analysis
-    if (!is.null(roi_data$beta) && !is.null(roi_data$se)) {
+    if (is.null(combine) && !is.null(roi_data$beta) && !is.null(roi_data$se)) {
       roi_result <- fit_meta_single(
         y = roi_data$beta,
         se = roi_data$se,
@@ -701,8 +706,15 @@ parse_meta_formula <- function(formula, data) {
 fit_meta_chunk <- function(chunk_data, X, method, robust, weights, weights_custom, n_threads, combine = NULL, contrasts = NULL, return_cov = NULL) {
   if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
 
-  # 1) If we have beta/SE, use standard meta-regression
-  if (!is.null(chunk_data$beta) && !is.null(chunk_data$se)) {
+  # combine = ... combines subject t-statistics; it needs t + df and never
+  # falls through to the meta-regression on beta/SE.
+  if (!is.null(combine) && is.null(chunk_data$t)) {
+    .meta_stop_combine_needs_t()
+  }
+
+  # 1) If we have beta/SE (and no combination was requested), use standard
+  #    meta-regression
+  if (is.null(combine) && !is.null(chunk_data$beta) && !is.null(chunk_data$se)) {
     # weights_custom must already be restricted to the voxels of this chunk
     # (see .meta_slice_weights()).
     result <- .meta_fit_core(

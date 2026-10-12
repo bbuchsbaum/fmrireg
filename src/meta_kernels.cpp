@@ -10,6 +10,16 @@
 using namespace Rcpp;
 using namespace arma;
 
+// Only "none" and "huber" are implemented; anything else (notably "t",
+// which used to be treated silently as "none") is an error.
+inline bool parse_robust(const std::string& robust) {
+  if (robust == "huber") return true;
+  if (robust == "none") return false;
+  Rcpp::stop("Unknown robust method '%s': only 'none' and 'huber' are implemented.",
+             robust.c_str());
+  return false;
+}
+
 inline bool solve_sympd_safe(mat& out, const mat& A, const vec& b) {
   // solve A * x = b, with A symmetric PD if possible; fall back to pinv
   bool ok = false;
@@ -280,7 +290,7 @@ Rcpp::List meta_fit_cpp(const arma::mat& Y,      // subjects x features
   else if (method=="pm") mcode = 2; else if (method=="reml") mcode = 3;
   else stop("Unknown method: ", method);
 
-  bool do_robust = (robust == "huber");
+  bool do_robust = parse_robust(robust);
 
   arma::mat B(X.n_cols, P); B.fill(datum::nan);
   arma::mat SE(X.n_cols, P); SE.fill(datum::nan);
@@ -355,7 +365,7 @@ Rcpp::List meta_fit_contrasts_cpp(const arma::mat& Y,      // S x P
 
   int mcode = 0;
   if (method == "fe") mcode = 0; else if (method=="dl") mcode = 1; else if (method=="pm") mcode = 2; else if (method=="reml") mcode = 3; else stop("Unknown method");
-  bool do_robust = (robust == "huber");
+  bool do_robust = parse_robust(robust);
 
   const uword K = X.n_cols;
   const uword J = Cmat.n_cols;
@@ -449,7 +459,7 @@ Rcpp::List meta_fit_cov_cpp(const arma::mat& Y,      // S x P betas
   else if (method == "reml") mcode = 3;
   else Rcpp::stop("Unknown method: %s", method.c_str());
 
-  bool do_robust = (robust == "huber");
+  bool do_robust = parse_robust(robust);
 
   const uword K = X.n_cols;
   const uword TSZ = K * (K + 1) / 2;
@@ -554,7 +564,7 @@ Rcpp::List meta_fit_vcov_cpp(const arma::mat& Y,  // S x P betas
   else if (method == "reml") mcode = 3;
   else Rcpp::stop("Unknown method: %s", method.c_str());
   
-  bool do_robust = (robust == "huber");
+  bool do_robust = parse_robust(robust);
   
   const uword K = X.n_cols + 1;  // augmented dimension
   mat B(K, P); B.fill(datum::nan);
@@ -629,13 +639,14 @@ Rcpp::List meta_fit_diag_cpp(const arma::mat& Y, const arma::mat& V,
   if (method == "fe") mcode = 0; else if (method == "dl") mcode = 1;
   else if (method == "pm") mcode = 2; else if (method == "reml") mcode = 3;
   else Rcpp::stop("Unknown method: %s", method.c_str());
+  const bool do_robust = parse_robust(robust);
   const uword P = Y.n_cols;
   Rcpp::IntegerVector n_fe(P), n_all(P);
   for (uword j = 0; j < P; ++j) {
     SolveCount cnt;
     vec y = Y.col(j);
     vec v = V.col(j);
-    fit_one(X, y, v, mcode, robust == "huber", huber_c, robust_iter, &cnt);
+    fit_one(X, y, v, mcode, do_robust, huber_c, robust_iter, &cnt);
     n_fe[j] = cnt.fe;
     n_all[j] = cnt.total;
   }

@@ -30,7 +30,7 @@
 .fmri_meta_group_data_gds_impl <- function(data,
                           formula = ~ 1,
                           method = c("pm", "fe", "dl", "reml"),
-                          robust = c("none", "huber", "t"),
+                          robust = c("none", "huber"),
                           weights = c("ivw", "equal", "custom"),
                           weights_custom = NULL,
                           combine = NULL,
@@ -44,7 +44,7 @@
   try(.ensure_fmrigds_registered(), silent = TRUE)
 
   method  <- .meta_resolve_method(match.arg(method))
-  robust  <- match.arg(robust)
+  robust  <- .meta_match_robust(robust)
   weights <- match.arg(weights)
   if (!is.null(return_cov)) return_cov <- match.arg(return_cov, c("tri"))
 
@@ -144,6 +144,10 @@
     I2_local   <<- rf$I2_fe
     Q_local    <<- rf$Q_fe
     df_local   <<- rf$df
+  }
+
+  if (!is.null(combine) && length(an_try) > 0L && !("t" %in% an_try)) {
+    .meta_stop_combine_needs_t()
   }
 
   if (!is.null(combine) && "t" %in% an_try) {
@@ -453,10 +457,6 @@
   if (!is.null(contrasts)) {
     if (!identical(combine, NULL)) {
       stop("Fit-time coefficient contrasts are unavailable for t-only combination models.",
-           call. = FALSE)
-    }
-    if (identical(robust, "t")) {
-      stop("GDS-backed fit-time contrasts do not support robust = 't'.",
            call. = FALSE)
     }
 

@@ -8,7 +8,8 @@ test_that("fmrigds meta reducer helpers cover FE/DL/contrast/cov branches", {
   se <- matrix(runif(n * p, 0.1, 0.3), n, p)
   X <- cbind(1, rnorm(n))
 
-  expect_equal(fmrireg:::.fmrigds_map_robust("t"), "huber")
+  expect_error(fmrireg:::.fmrigds_map_robust("t"), "not implemented")
+  expect_equal(fmrireg:::.fmrigds_map_robust("huber"), "huber")
   expect_equal(fmrireg:::.fmrigds_map_robust("none"), "none")
   expect_equal(fmrireg:::.fmrigds_map_robust(NULL), "none")
 
@@ -28,7 +29,7 @@ test_that("fmrigds meta reducer helpers cover FE/DL/contrast/cov branches", {
   Cmat <- matrix(c(0, 1), nrow = 2)
   out_c <- reducer(
     beta, var = se^2, X = X, z = NULL, p = NULL, df = NULL, df1 = NULL, df2 = NULL,
-    opts = list(contrasts = Cmat, robust = "t")
+    opts = list(contrasts = Cmat, robust = "huber")
   )
   expect_true(all(c("con_est", "con_se", "con_z") %in% names(out_c)))
 

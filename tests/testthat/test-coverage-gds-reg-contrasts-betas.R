@@ -14,7 +14,8 @@ test_that(".fmrigds_make_meta_reg and method mapping cover FE/PM paths", {
   expect_equal(fmrireg:::.fmrigds_meta_method("pm"), "pm")
   expect_equal(fmrireg:::.fmrigds_meta_method("reml"), "reml")
   expect_equal(fmrireg:::.fmrigds_meta_method("fe", "pm"), "pm")
-  expect_equal(fmrireg:::.fmrigds_map_robust("t"), "huber")
+  expect_error(fmrireg:::.fmrigds_map_robust("t"), "not implemented")
+  expect_equal(fmrireg:::.fmrigds_map_robust("huber"), "huber")
   expect_equal(fmrireg:::.fmrigds_map_robust(NULL), "none")
 
   expect_error(fmrireg:::.fmrigds_coerce_var(NULL, NULL), "var' or 'se'")

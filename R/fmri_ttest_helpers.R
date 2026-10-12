@@ -594,7 +594,7 @@ fmri_meta_fit_extended <- function(Y, V, X,
                                   n_threads = getOption("fmrireg.num_threads", 0)) {
   
   method <- .meta_resolve_method(match.arg(method))
-  robust <- match.arg(robust)
+  robust <- .meta_match_robust(robust)
   
   if (!is.matrix(Y)) Y <- as.matrix(Y)
   if (!is.matrix(V)) V <- as.matrix(V)

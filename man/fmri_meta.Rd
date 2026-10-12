@@ -8,7 +8,7 @@ fmri_meta(
   data,
   formula = ~1,
   method = c("pm", "fe", "dl", "reml"),
-  robust = c("none", "huber", "t"),
+  robust = c("none", "huber"),
   weights = c("ivw", "equal", "custom"),
   weights_custom = NULL,
   combine = NULL,
@@ -39,8 +39,9 @@ records \code{method = "pm"}.
 \itemize{
 \item "none": No robust estimation (default)
 \item "huber": Huber M-estimator with IRLS
-\item "t": Student-t mixture model (for heavy-tailed distributions)
-}}
+}
+A Student-t robust meta-regression is not implemented; \code{robust = "t"}
+is an error.}
 
 \item{weights}{Character string specifying weighting scheme:
 \itemize{
