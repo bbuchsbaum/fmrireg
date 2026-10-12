@@ -5,10 +5,9 @@
 ## (describing experimental events) and a baseline model (modeling drift, 
 ## nuisance, and block effects).
 ##
-## The file provides two main functions:
-##   - create_fmri_model(): Creates an fMRI model from a formula, block formula,
-##     (optionally) a baseline_model, and an fmri_frame.
-##   - fmri_model(): Combines an event_model and a baseline_model into an fmri_model.
+## The main constructor is fmri_model(), which combines an event_model and a
+## baseline_model into an fmri_model. (create_fmri_model(), the formula-based
+## convenience constructor, lives in fmrilm.R.)
 ##
 ## Additional functions build design matrices, compute contrasts, print, and plot
 ## the overall fMRI model.
@@ -17,65 +16,6 @@
 ## ============================================================================
 ## Section 1: fMRI Model Construction Functions
 ## ============================================================================
-
-#' Create an fMRI Model
-#'
-#' This function creates an fMRI model consisting of an event model and a baseline model.
-#'
-#' @param formula The model formula for experimental events.
-#' @param block The model formula for block structure.
-#' @param baseline_model (Optional) A \code{baseline_model} object. Default is \code{NULL}.
-#' @param dataset An \code{fmri_frame} object containing the time-series data.
-#' @param drop_empty Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.
-#' @param durations A vector of event durations. Default is \code{0}.
-#' @return An \code{fmri_model} object.
-#' @export
-#' @examples
-#' \dontrun{
-#' # Assuming you have an fmri_frame object named ds and a formula for events:
-#' fmri_mod <- create_fmri_model(formula = onset ~ hrf(x) + hrf(y),
-#'                               block = ~ run,
-#'                               dataset = ds,
-#'                               drop_empty = TRUE,
-#'                               durations = rep(0, nrow(ds$event_table)))
-#' }
-create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, drop_empty = TRUE, durations = 0) {
-  assert_that(is.formula(formula), msg = "'formula' must be a formula")
-  assert_that(is.formula(block), msg = "'block' must be a formula")
-  assert_that(inherits(dataset, "fmri_frame"), msg = "'dataset' must be an 'fmri_frame'")
-  assert_that(is.numeric(durations), msg = "'durations' must be numeric")
-  formula <- .fmrireg_inject_registered_bases(formula)
-  
-  # Replicate durations if a single value is provided.
-  if (length(durations) == 1) {
-    durations <- rep(durations, nrow(.dset_event_table(dataset)))
-  }
-  
-  # Resolve conflict: use a temporary variable to hold the baseline model.
-  if (is.null(baseline_model)) {
-    base_model_obj <- baseline_model(
-      basis = "bs",
-      degree = max(ceiling(median(.dset_run_lengths(dataset)) / 100), 3),
-      sframe = .dset_sampling_frame(dataset)
-    )
-  } else {
-    assert_that(inherits(baseline_model, "baseline_model"),
-                msg = "'baseline_model' must have class 'baseline_model'")
-    base_model_obj <- baseline_model
-  }
-  
-  ev_model <- event_model(
-    x = formula,
-    block = block,
-    data = .dset_event_table(dataset),
-    sampling_frame = .dset_sampling_frame(dataset),
-    drop_empty = drop_empty,
-    durations = durations
-  )
-  
-  fmri_model(ev_model, base_model_obj, dataset)
-}
-
 
 #' Construct an fMRI Regression Model
 #'

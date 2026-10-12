@@ -118,15 +118,23 @@ NULL
 #' @noRd
 .estimate_shared_ar_parameters <- function(residuals, ar_order, ar_opts,
                                            run_indices = NULL, censor = NULL,
-                                           design = NULL) {
-  correction_design <- .shared_ar_correction_design(residuals, ar_opts, design)
+                                           design = NULL,
+                                           acvf_correction = NULL) {
+  # `acvf_correction` (a matrix, or one per run) replaces the design-based
+  # correction when the residual-forming operator is not I - H_X, e.g. after
+  # a soft projection (.soft_projection_acvf_correction()). It is linear in
+  # the response, so it also holds for the mean_series input.
+  correction_design <- if (is.null(acvf_correction)) {
+    .shared_ar_correction_design(residuals, ar_opts, design)
+  }
   .estimate_ar_parameters_routed(
     .shared_ar_residual_input(residuals, ar_opts),
     ar_order = ar_order,
     run_indices = run_indices,
     censor = censor,
     design = correction_design,
-    ar_options = ar_opts
+    ar_options = ar_opts,
+    acvf_correction = acvf_correction
   )
 }
 
@@ -138,26 +146,61 @@ NULL
   !identical(ar_opts$struct, "iid") || as.integer(ar_opts$q %||% 0L) > 0L
 }
 
-#' Determine AR order implied by configuration
+#' AR order of a noise configuration
 #'
-#' @param ar_opts Normalized AR options list
-#' @return Integer AR order (>=0) or NULL if unspecified
+#' The one mapping from an AR structure to its order, used by every fitting
+#' path. Accepts an `fmri_lm_control` object or an AR options list (with
+#' `struct` or legacy `cor_struct`). An unknown structure is an error: the
+#' former per-file `switch()` copies silently returned order 0 (no whitening)
+#' or `NULL` for it.
+#'
+#' @param ar_opts `fmri_lm_control` object or AR options list.
+#' @return Integer AR order (0 for iid).
 #' @keywords internal
 #' @noRd
-.target_ar_order <- function(ar_opts) {
-  ord <- switch(ar_opts$struct,
+.ar_order <- function(ar_opts) {
+  if (inherits(ar_opts, "fmri_lm_control")) ar_opts <- ar_opts$ar
+  ar_opts <- .normalize_ar_options(ar_opts)
+  struct <- as.character(ar_opts$struct)
+  ord <- switch(struct,
     "iid" = 0L,
     "ar1" = 1L,
     "ar2" = 2L,
     "ar3" = 3L,
     "ar4" = 4L,
-    "arp" = as.integer(ar_opts$p %||% NA_integer_),
+    "arp" = suppressWarnings(as.integer(ar_opts$p)),
     NULL
   )
-  if (!is.null(ord) && !is.na(ord)) {
-    return(as.integer(ord))
+  if (is.null(ord)) {
+    stop(sprintf(paste0("Unknown AR structure '%s'; expected one of 'iid', ",
+                        "'ar1', 'ar2', 'ar3', 'ar4' or 'arp'."), struct),
+         call. = FALSE)
   }
-  NULL
+  if (length(ord) != 1L || is.na(ord) || ord < 0L ||
+      (identical(struct, "arp") && ord < 1L)) {
+    stop("struct = 'arp' requires `p` to be a positive integer.", call. = FALSE)
+  }
+  ord
+}
+
+#' Determine AR order implied by configuration
+#'
+#' @param ar_opts Normalized AR options list
+#' @return Integer AR order (>= 0); see `.ar_order()`.
+#' @keywords internal
+#' @noRd
+.target_ar_order <- function(ar_opts) {
+  .ar_order(ar_opts)
+}
+
+#' Whether the first observation gets exact AR scaling
+#'
+#' The documented default (noise_spec(), fmri_lm_control()) is `FALSE`; a
+#' missing value means `FALSE` on every path.
+#' @keywords internal
+#' @noRd
+.ar_exact_first <- function(ar_opts) {
+  isTRUE(ar_opts$exact_first)
 }
 
 #' Build per-timepoint run labels from run index list
@@ -423,19 +466,7 @@ NULL
     stop("q must be a nonnegative integer", call. = FALSE)
   }
   method <- if (q > 0L) "arma" else "ar"
-  p <- switch(as.character(ar_opts$struct),
-    "iid" = 0L,
-    "ar1" = 1L,
-    "ar2" = 2L,
-    "ar3" = 3L,
-    "ar4" = 4L,
-    "arp" = as.integer(ar_opts$p %||% stop("p must be specified for struct='arp'")),
-    0L  # Default to no AR
-  )
-  p <- as.integer(p)
-  if (!is.finite(p) || p < 0L) {
-    p <- 0L
-  }
+  p <- .ar_order(ar_opts)
 
   # Determine pooling mode
   pooling <- if (isTRUE(ar_opts$global) || n_runs <= 1) {
@@ -457,7 +488,7 @@ NULL
     p_max = if (p == 0L) 0L else max(6L, p),  # Allow auto-selection up to 6
     q = q,
     pooling = pooling,
-    exact_first = if (isFALSE(ar_opts$exact_first)) "none" else "ar1",
+    exact_first = if (.ar_exact_first(ar_opts)) "ar1" else "none",
     # Number of iterations handled externally
     iter = as.integer(ar_opts$iter_gls %||% ar_opts$iter %||% 1L)
   )
@@ -477,7 +508,8 @@ NULL
 #' @keywords internal
 #' @noRd
 .estimate_ar_via_fmriAR <- function(residuals, cfg, run_indices = NULL,
-                                    censor = NULL, design = NULL) {
+                                    censor = NULL, design = NULL,
+                                    acvf_correction = NULL) {
   n_runs <- if (is.null(run_indices)) 1L else length(run_indices)
 
   ar_opts <- if (inherits(cfg, "fmri_lm_control")) cfg$ar else cfg
@@ -501,7 +533,7 @@ NULL
   # If explicit AR order requested (including 0), estimate via Yule-Walker
   # Note: fixed-order estimation doesn't currently support censor; use fmriAR path
   if (ar_params$q == 0L && !is.null(target_order) &&
-      is.null(censor) && is.null(design) &&
+      is.null(censor) && is.null(design) && is.null(acvf_correction) &&
       (is.null(run_indices) || length(run_indices) <= 1L)) {
     phi_list <- .estimate_phi_fixed_order(residuals, target_order, ar_params$pooling, run_indices)
     theta_list <- replicate(length(phi_list), numeric(0), simplify = FALSE)
@@ -532,6 +564,7 @@ NULL
     # therefore restricted at the public boundary to uncensored run pooling,
     # and the ARMA estimator receives the OLS/GLS residuals directly.
     design = if (identical(ar_params$method, "ar")) design else NULL,
+    acvf_correction = if (identical(ar_params$method, "ar")) acvf_correction else NULL,
     correction_max_lag = correction_max_lag
   )
 }
@@ -792,121 +825,8 @@ NULL
   }
 
   if (!is.null(cfg)) {
-    ar_opts <- if (inherits(cfg, "fmri_lm_control")) cfg$ar else cfg
-    ar_opts <- .normalize_ar_options(ar_opts)
-    return(switch(ar_opts$struct,
-      "ar1" = 1L,
-      "ar2" = 2L,
-      "ar3" = 3L,
-      "ar4" = 4L,
-      "arp" = as.integer(ar_opts$p %||% 0L),
-      0L
-    ))
+    return(.ar_order(cfg))
   }
 
   0L
-}
-
-#' Compute effective degrees of freedom for AR models
-#'
-#' Maintains compatibility with existing fmrireg approach
-#'
-#' @param n Sample size
-#' @param p Number of parameters
-#' @param plan fmriAR_plan object or NULL
-#' @param ar_coef Alternative AR coefficients if plan not available
-#' @return Effective degrees of freedom
-#' @keywords internal
-#' @noRd
-.compute_ar_effective_df_compat <- function(n, p, plan = NULL, ar_coef = NULL,
-                                            ma_coef = NULL) {
-  average_coefficients <- function(values) {
-    if (is.numeric(values)) {
-      return(as.numeric(values))
-    }
-    values <- lapply(values, as.numeric)
-    if (!length(values)) {
-      return(numeric(0))
-    }
-    max_len <- max(lengths(values))
-    if (max_len == 0L) {
-      return(numeric(0))
-    }
-    coef_mat <- vapply(values, function(x) {
-      c(x, rep(0, max_len - length(x)))
-    }, numeric(max_len))
-    if (is.null(dim(coef_mat))) {
-      coef_mat <- matrix(coef_mat, nrow = max_len, ncol = length(values))
-    }
-    rowMeans(coef_mat)
-  }
-
-  # Extract phi coefficients
-  phi <- NULL
-  theta <- NULL
-
-  if (!is.null(plan)) {
-    if (!is.null(plan$phi) && length(plan$phi) > 0) {
-      # Average across runs if multiple
-      phi_list <- plan$phi
-      if (length(phi_list) == 1) {
-        phi <- phi_list[[1]]
-      } else {
-        # Pool across runs
-        phi <- average_coefficients(phi_list)
-      }
-    }
-    if (!is.null(plan$theta) && length(plan$theta) > 0) {
-      theta_list <- plan$theta
-      if (length(theta_list) == 1L) {
-        theta <- theta_list[[1L]]
-      } else {
-        theta <- average_coefficients(theta_list)
-      }
-    }
-  } else if (!is.null(ar_coef) || !is.null(ma_coef)) {
-    if (is.list(ar_coef) && length(ar_coef)) {
-      phi <- average_coefficients(ar_coef)
-    } else if (!is.null(ar_coef)) {
-      phi <- ar_coef
-    }
-    if (!is.null(ma_coef)) {
-      if (is.list(ma_coef)) {
-        theta <- average_coefficients(ma_coef)
-      } else {
-        theta <- ma_coef
-      }
-    }
-  }
-
-  phi <- as.numeric(phi %||% numeric(0))
-  theta <- as.numeric(theta %||% numeric(0))
-  if (length(phi) == 0L && length(theta) == 0L) {
-    return(n - p)
-  }
-
-  # Effective sample size via lag-correlation inflation:
-  # n_eff = n / (1 + 2 * sum_{k>=1} (1-k/n) rho_k)
-  rho <- tryCatch(
-    {
-      if (length(phi) == 1L && length(theta) == 0L) {
-        phi[1]^(seq_len(n - 1L))
-      } else {
-        stats::ARMAacf(ar = phi, ma = theta, lag.max = n - 1L)[-1]
-      }
-    },
-    error = function(e) NULL
-  )
-  if (is.null(rho) || length(rho) == 0) {
-    return(n - p)
-  }
-  k <- seq_along(rho)
-  denom <- 1 + 2 * sum((1 - k / n) * rho)
-  if (!is.finite(denom) || denom <= 0) {
-    return(n - p)
-  }
-  effective_n <- n / denom
-  effective_n <- min(max(effective_n, p + 1), n)
-
-  max(effective_n - p, 1)
 }

@@ -203,12 +203,17 @@ solve_ar_pipeline <- function(glm_ctx, ar_options, run_indices,
   result <- iterative_ar_solve(glm_ctx, ar_options, run_indices,
                                ar_plan = ar_plan)
 
-  # Compute effective df
+  # Effective df: the data were whitened, so the whitened residuals carry
+  # n - rank df (calculate_effective_df(); reducing them again for the AR
+  # coefficients would count the correction twice).
   if (!is.null(result$ar_plan) || !is.null(result$ar_coef) || !is.null(result$ma_coef)) {
-    n <- nrow(glm_ctx$X)
-    p <- ncol(glm_ctx$X)
-    result$effective_df <- compute_ar_effective_df(
-      n, p, phi = result$ar_coef, plan = result$ar_plan
+    rank_w <- if (!is.null(result$X_white)) {
+      .fast_preproject(result$X_white)$rank
+    } else {
+      glm_ctx$proj$rank
+    }
+    result$effective_df <- calculate_effective_df(
+      nrow(glm_ctx$X), rank_w, method = "residual"
     )
   }
 
@@ -309,12 +314,12 @@ solve_ar_robust_pipeline <- function(glm_ctx, config, run_indices,
     dfres = robust_result$dfres,
     fitted = glm_ctx_white$X %*% robust_result$betas_robust,
     residuals = glm_ctx_white$Y - glm_ctx_white$X %*% robust_result$betas_robust,
-    effective_df = compute_ar_effective_df(
-      nrow(glm_ctx$X),
-      ncol(glm_ctx$X),
-      phi = ar_result$ar_coef,
-      plan = ar_result$ar_plan,
-      n_runs = length(ar_result$ar_coef)
+    # Whitened, then robustly weighted: the one robust effective df,
+    # sum(w) - rank (calculate_effective_df() -> .robust_effective_df()).
+    effective_df = calculate_effective_df(
+      nrow(glm_ctx$X), robust_result$rank,
+      robust_weights = robust_result$robust_weights_final,
+      method = "residual"
     )
   )
 }

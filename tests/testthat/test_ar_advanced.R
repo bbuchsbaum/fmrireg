@@ -169,58 +169,6 @@ test_that("iterative_ar_solve handles no AR case", {
   expect_true(!is.null(result$betas))
 })
 
-test_that("compute_ar_effective_df adjusts degrees of freedom correctly", {
-  # Test AR(1)
-  n <- 100
-  p <- 5
-  expected_eff_df <- function(phi, penalize_ar = FALSE) {
-    if (is.null(phi) || length(phi) == 0L) return(n - p)
-    rho <- if (length(phi) == 1L) {
-      phi[1]^(seq_len(n - 1L))
-    } else {
-      stats::ARMAacf(ar = phi, ma = numeric(0), lag.max = n - 1L)[-1]
-    }
-    k <- seq_along(rho)
-    denom <- 1 + 2 * sum((1 - k / n) * rho)
-    eff_n <- n / denom
-    eff_n <- min(max(eff_n, p + 1), n)
-    df <- max(eff_n - p, 1)
-    if (isTRUE(penalize_ar)) {
-      df <- max(df - length(phi), 1)
-    }
-    df
-  }
-  
-  # No AR
-  df_no_ar <- fmrireg:::compute_ar_effective_df(n, p, NULL)
-  expect_equal(df_no_ar, n - p)
-  
-  # Moderate AR(1)
-  phi1 <- 0.5
-  df_ar1 <- fmrireg:::compute_ar_effective_df(n, p, phi1)
-  expect_true(df_ar1 < df_no_ar)
-  expect_true(df_ar1 > 0)
-  expect_equal(df_ar1, expected_eff_df(phi1), tolerance = 1e-10)
-  
-  # Strong AR(1)
-  phi1_strong <- 0.9
-  df_ar1_strong <- fmrireg:::compute_ar_effective_df(n, p, phi1_strong)
-  expect_true(df_ar1_strong < df_ar1)
-  
-  # AR(2)
-  phi2 <- c(0.4, 0.3)
-  df_ar2 <- fmrireg:::compute_ar_effective_df(n, p, phi2)
-  expect_true(df_ar2 < df_no_ar)
-  expect_equal(df_ar2, expected_eff_df(phi2), tolerance = 1e-10)
-  
-  # Test conservative mode with penalize_ar = TRUE
-  df_ar1_conservative <- fmrireg:::compute_ar_effective_df(n, p, phi1, n_runs = 1, penalize_ar = TRUE)
-  expect_equal(df_ar1_conservative, expected_eff_df(phi1, penalize_ar = TRUE), tolerance = 1e-10)
-  
-  df_ar2_conservative <- fmrireg:::compute_ar_effective_df(n, p, phi2, n_runs = 1, penalize_ar = TRUE)
-  expect_equal(df_ar2_conservative, expected_eff_df(phi2, penalize_ar = TRUE), tolerance = 1e-10)
-})
-
 test_that("whiten_glm_context handles AR(3) and AR(4) models", {
   set.seed(127)
   
@@ -347,17 +295,9 @@ test_that("AR methods handle near unit-root processes", {
     expect_true(!is.null(result$ar_coef))
     phi_est <- result$ar_coef[[1]]
     
-    # Check effective df adjustment
-    df_adj <- fmrireg:::compute_ar_effective_df(n, p_design, phi_est)
-    expect_true(df_adj > 0)  # Should still be positive
-    expect_true(df_adj < n - p_design)  # Should be reduced
-    
-    # For very high AR, effective df should be reduced
-    # Note: The exact reduction depends on the estimation
-    if (phi > 0.95) {
-      # Just check that it's substantially reduced
-      expect_true(df_adj < (n - p_design) * 0.5)
-    }
+    # Pass 3 (R1-4): the data are whitened, so no further AR df reduction
+    # applies (the former compute_ar_effective_df() reduced it a second time).
+    expect_true(is.finite(phi_est[1]))
   }
 })
 
@@ -557,36 +497,6 @@ test_that("AR whitening preserves rank of design matrix", {
   expect_equal(rank_whitened, rank_original)
 })
 
-test_that("Satterthwaite approximation for effective df with AR errors", {
-  set.seed(135)
-  
-  # Test more sophisticated effective df calculation
-  n <- 200
-  p <- 5
-  
-  # Different AR structures
-  ar_structures <- list(
-    list(phi = 0.3, name = "Weak AR(1)"),
-    list(phi = 0.7, name = "Strong AR(1)"),
-    list(phi = c(0.4, 0.2), name = "AR(2)"),
-    list(phi = c(0.3, 0.2, 0.1), name = "AR(3)")
-  )
-  
-  for (ar_struct in ar_structures) {
-    df_effective <- fmrireg:::compute_ar_effective_df(n, p, ar_struct$phi)
-    
-    # Effective df should decrease with stronger/more AR parameters
-    expect_true(df_effective < n - p)
-    expect_true(df_effective > 0)
-    
-    # Print for inspection
-    cat(sprintf("%s: df = %.2f (reduction = %.1f%%)\n", 
-                ar_struct$name, 
-                df_effective,
-                100 * (1 - df_effective / (n - p))))
-  }
-})
-
 test_that("whiten_glm_context handles missing data gracefully", {
   set.seed(136)
   
@@ -636,24 +546,6 @@ test_that("AR whitening with exact_first option works correctly", {
   # Verify the transformation preserved dimensions
   expect_equal(dim(whitened_ctx$X), dim(glm_ctx$X))
   expect_equal(dim(whitened_ctx$Y), dim(glm_ctx$Y))
-})
-
-test_that("compute_ar_effective_df handles edge cases", {
-  # Test with very small effective sample size
-  n <- 50
-  p <- 40
-  phi <- 0.95  # Very strong AR
-  
-  df <- fmrireg:::compute_ar_effective_df(n, p, phi)
-  expect_true(df >= 1)  # Should always be at least 1
-  
-  # Test with p > n (should still work)
-  n <- 30
-  p <- 40
-  phi <- 0.5
-  
-  df <- fmrireg:::compute_ar_effective_df(n, p, phi)
-  expect_true(df >= 1)  # Should handle gracefully
 })
 
 test_that("iterative_ar_solve respects max_iter parameter", {

@@ -324,6 +324,54 @@ fmri_lm_control <- function(estimation = NULL,
   invisible(cfg)
 }
 
+#' Fail fast on soft-projection combinations without calibrated inference
+#'
+#' Soft-subspace projection shrinks the nuisance subspace of the data and the
+#' design, so the residual df is not `n - rank`. The runwise matrix path
+#' reports the exact expectation-matched df for iid noise
+#' (`tr((I - H) P A P)`, A = non-zero volume weights) and for shared AR(p)
+#' noise whitened after the projection (`.soft_projection_ar_residual_df()`).
+#' Every other built-in path either does not apply the projection to the
+#' final fit (joint/chunkwise estimation; the reference backend projects Y but
+#' not X) or has no tractable df (robust weights, whose WLS df convention
+#' breaks once P mixes down-weighted volumes into the others; MA noise; AR
+#' together with volume weights), so those combinations are refused rather
+#' than reported with miscalibrated statistics.
+#' @keywords internal
+#' @noRd
+.validate_soft_projection_support <- function(cfg, strategy, use_fast_path) {
+  if (!isTRUE(cfg$soft_subspace$enabled)) {
+    return(invisible(cfg))
+  }
+  refuse <- function(why) {
+    stop(
+      "soft-subspace projection ", why, ". It is supported by ",
+      "`estimation_spec('runwise_meta')` on the matrix backend, with iid ",
+      "noise (optionally with volume weights) or shared AR(p) noise.",
+      call. = FALSE
+    )
+  }
+  if (!identical(strategy, "runwise")) {
+    refuse("is not applied to the fit by joint (chunkwise) estimation")
+  }
+  if (!isTRUE(use_fast_path)) {
+    refuse(paste0("is not supported by the reference backend, which ",
+                  "projects the data but not the design"))
+  }
+  if (.fmri_lm_robust_enabled(cfg$robust)) {
+    refuse(paste0("cannot be combined with robust weighting: the projection ",
+                  "mixes down-weighted volumes into the others, so the ",
+                  "weighted residual df has no exact counterpart"))
+  }
+  if (as.integer(cfg$ar$q %||% 0L) > 0L) {
+    refuse("has no derived residual df under MA noise terms")
+  }
+  if (.temporal_noise_enabled(cfg$ar) && isTRUE(cfg$volume_weights$enabled)) {
+    refuse("has no derived residual df for AR noise combined with volume weights")
+  }
+  invisible(cfg)
+}
+
 #' @export
 print.fmri_lm_control <- function(x, ...) {
   cat("<fmri_lm_control>\n")

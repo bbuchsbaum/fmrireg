@@ -213,6 +213,28 @@
   as.numeric(Matrix::colSums(as.matrix(RtR %*% A) * A)) / sol$kappa
 }
 
+#' Internal: voxel residual variances for a landmark (Nystrom) fit
+#'
+#' The landmark path solves only the landmark columns and interpolates their
+#' coefficients, but the (whitened) voxel data are at hand, so each voxel's
+#' residual variance is computed from its own data with the estimator of the
+#' dense path (`.lowrank_sigma2()` of the voxel's own time solve; the sketch
+#' operator is shared, so the result equals the dense fit's). Columns are
+#' processed in blocks to bound the memory of the sketched residuals.
+#' @keywords internal
+#' @noRd
+.lowrank_voxel_sigma2 <- function(Xw, Zw, sk, op, block = 4096L) {
+  V <- ncol(Zw)
+  out <- numeric(V)
+  starts <- seq.int(1L, max(V, 1L), by = block)
+  for (s0 in starts) {
+    J <- seq.int(s0, min(V, s0 + block - 1L))
+    sol_j <- .lowrank_time_solve(Xw, Zw[, J, drop = FALSE], sk, op)
+    out[J] <- .lowrank_sigma2(sol_j, NULL, TRUE)
+  }
+  out
+}
+
 #' Internal: beta and contrast statistics for cluster-specific covariances
 #'
 #' Each cluster has its own whitened design and therefore its own coefficient
@@ -319,16 +341,7 @@
 
   # --- AR prewhitening options ---
   by_cluster <- isTRUE(ar_opts$by_cluster)
-  ar_struct <- ar_opts$struct %||% "iid"
-  ar_order <- switch(as.character(ar_struct),
-                     "iid" = 0L,
-                     "ar1" = 1L,
-                     "ar2" = 2L,
-                     "ar3" = 3L,
-                     "ar4" = 4L,
-                     "arp" = as.integer(ar_opts$p %||% 0L),
-                     0L)
-  ar_order <- if (is.finite(ar_order)) ar_order else 0L
+  ar_order <- .ar_order(ar_opts)
   exact_first <- isTRUE(ar_opts$exact_first)
   shrink_c0 <- as.integer(ar_opts$shrink_c0 %||% 100L)
   no_whiten <- ar_order <= 0L
@@ -436,10 +449,11 @@
       lm <- .lowrank_landmarks(dataset, lowrank)
       sol <- .lowrank_time_solve(Xw, Zw[, lm$idx, drop = FALSE], sk, op)
       B <- extend_betas_landmarks(sol$M, lm$W)
-      # Propagate landmark residual variances through squared weights
-      sigma2_L <- .lowrank_sigma2(sol, NULL, TRUE)
-      W2 <- lm$W; W2@x <- W2@x * W2@x
-      sigma2 <- as.numeric(W2 %*% sigma2_L)
+      # Each voxel's residual variance from its own data, with the same
+      # (sketched) estimator a dense fit uses. Propagating the landmark
+      # variances through squared weights (W^2 sigma2_L) understated it:
+      # rows of W sum to 1, so sum_l W_vl^2 < 1.
+      sigma2 <- .lowrank_voxel_sigma2(Xw, Zw, sk, op)
     } else {
       sol <- .lowrank_time_solve(Xw, Zw, sk, op)
       B <- .lowrank_project_voxels(sol$M, A, A_is_I)
@@ -498,7 +512,7 @@
   # count T - rank for "ihs"), so resvar = rss / kappa; kappa is not the
   # Satterthwaite rdf. sigma2 = ||r_s||^2 / kappa exactly, so this recovers
   # the fitted RSS without re-forming the residuals (for landmark fits it is
-  # the landmark RSS interpolated like sigma2).
+  # the RSS of each voxel's own solve, the same as the dense fit's).
   kappa <- vapply(solve_info, function(s) as.numeric(s$kappa), numeric(1))
   rss <- if (is.null(grouped)) sigma2 * kappa else rss_cluster
 

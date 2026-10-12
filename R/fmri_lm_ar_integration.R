@@ -79,7 +79,7 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
       theta = theta_input,
       runs = runs,
       pooling = pooling_mode,
-      exact_first = ar_opts$exact_first %||% TRUE
+      exact_first = .ar_exact_first(ar_opts)
     )
   } else {
     # OLS residuals for AR estimation, formed only on this path
@@ -238,41 +238,4 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
   result$ar_plan <- ar_result$plan  # Store for downstream use
 
   result
-}
-
-#' Compute effective degrees of freedom for AR models
-#'
-#' @description
-#' Adjusts degrees of freedom to account for autocorrelation
-#' in the residuals. Uses Satterthwaite-type approximation.
-#' Now delegates to fmriAR adapter for consistency.
-#'
-#' @param n Sample size
-#' @param p Number of parameters
-#' @param phi AR coefficients (can be list or vector)
-#' @param plan Optional fmriAR_plan object
-#' @param n_runs Number of runs (for compatibility)
-#' @param penalize_ar Whether to penalize for AR estimation
-#'
-#' @return Effective degrees of freedom
-#' @keywords internal
-#' @noRd
-compute_ar_effective_df <- function(n, p, phi = NULL, plan = NULL,
-                                   n_runs = 1, penalize_ar = FALSE) {
-  # Delegate to adapter for consistency
-  df <- .compute_ar_effective_df_compat(n, p, plan, phi)
-
-  # Optional penalty for AR estimation (not standard)
-  if (penalize_ar && (!is.null(phi) || !is.null(plan))) {
-    ar_order <- if (!is.null(plan)) {
-      .get_ar_order(plan)
-    } else if (is.list(phi)) {
-      length(phi[[1]])
-    } else {
-      length(phi)
-    }
-    df <- df - ar_order
-  }
-
-  max(df, 1)
 }

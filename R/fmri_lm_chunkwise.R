@@ -35,7 +35,10 @@ chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
     is.logical(parallel_chunks) && length(parallel_chunks) == 1L && !is.na(parallel_chunks),
     msg = "'parallel_chunks' must be TRUE or FALSE"
   )
-  
+  # Soft projection is a per-run transform this strategy never applies to
+  # the fit; refuse it here too, for direct callers.
+  .validate_soft_projection_support(cfg, "chunkwise", use_fast_path)
+
   # Get chunks
   chunks <- .dset_chunks(dset, nchunks)
   
@@ -275,11 +278,6 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
       stop("Length of explicit volume weights must equal the number of timepoints.",
            call. = FALSE)
     }
-    if (isTRUE(cfg$soft_subspace$enabled)) {
-      warning("Soft-subspace preprocessing with chunkwise OLS requires the ",
-              "runwise matrix backend for full support.", call. = FALSE)
-    }
-
     sqrt_volume_weights <- if (has_explicit_weights) sqrt(explicit_weights) else NULL
     fit_modmat <- if (has_explicit_weights) {
       modmat * sqrt_volume_weights
@@ -522,12 +520,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
         sigma_vec <- rep(sigma_vec, ncol(betas))
       }
       dfres <- result$dfres %||% result$df_residual %||% proj_modmat$dfres
-      ar_order <- result$ar_order %||% switch(cfg$ar$struct,
-        ar1 = 1L,
-        ar2 = 2L,
-        arp = cfg$ar$p,
-        0L
-      )
+      ar_order <- result$ar_order %||% .ar_order(cfg$ar)
 
       bstats <- beta_stats_matrix(
         betas,

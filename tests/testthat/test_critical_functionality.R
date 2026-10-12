@@ -67,9 +67,9 @@ test_that("Effective df calculations work", {
   # Test AR adjustment
   # Review 2026-10 (D4): ported from the deleted compute_effective_df_ar() /
   # compute_effective_df_robust() to the live implementations.
-  df_ar <- fmrireg:::compute_ar_effective_df(n, p, phi = 0.6)
-  expect_true(df_ar < n - p)  # Should be reduced
-  expect_true(df_ar > 0)
+  # Pass 3 (R1-4): after whitening the AR df is n - p; the former
+  # compute_ar_effective_df() reduced it a second time.
+  expect_equal(fmrireg:::calculate_effective_df(n, p, ar_order = 1), n - p)
   
   # Test robust adjustment with downweighting
   X <- cbind(1, matrix(rnorm(n * (p-1)), n, p-1))

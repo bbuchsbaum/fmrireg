@@ -137,11 +137,7 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
                            dataset = NULL) {
   
   cres <- vector("list", length(chunks))
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
+  ar_order <- .ar_order(cfg$ar)
   
   for (i in seq_along(chunks)) {
     ym <- chunks[[i]]
@@ -263,6 +259,9 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
       call. = FALSE
     )
   }
+  # The formula fit below would use the projected data with the unprojected
+  # design.
+  .validate_soft_projection_support(cfg, "runwise", use_fast_path = FALSE)
 
   lmfun <- multiresponse_lm
 
@@ -287,17 +286,8 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     # Apply preprocessing (volume weights and/or soft subspace projection)
     preproc <- preprocess_run_data(X_run, Y_run, cfg, dataset, ym$chunk_num)
 
-    # Update design matrix terms and data in data_env
-    # Note: preprocessing may have transformed X, so we need to update tmats
-    if (cfg$volume_weights$enabled || cfg$soft_subspace$enabled) {
-      # For slow path with preprocessing, we need to use pre-transformed matrices
-      # This is a limitation - slow path doesn't fully support preprocessing
-      # Issue warning and use original data
-      if (cfg$volume_weights$enabled || cfg$soft_subspace$enabled) {
-        warning("Preprocessing (volume_weights/soft_subspace) with slow path is experimental.",
-                " Consider using use_fast_path=TRUE for full support.", call. = FALSE)
-      }
-    }
+    # Volume weights and soft projection are refused above, so preproc$Y is
+    # the run's data (after the missing-data check).
     data_env$.y <- preproc$Y
 
     # AR whitening (parity with the fast path). The formula/slow path historically
@@ -311,7 +301,7 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     # design matrix. Robust + AR is handled correctly by the fast path
     # (process_run_ar_robust); on the slow path robust fits remain unwhitened,
     # as before.
-    ar_order <- switch(cfg$ar$struct, ar1 = 1L, ar2 = 2L, arp = cfg$ar$p, iid = 0L)
+    ar_order <- .ar_order(cfg$ar)
     phi_hat_run <- NULL
     modmat <- NULL
     if (cfg$ar$struct != "iid" && !.fmri_lm_robust_enabled(cfg$robust)) {
@@ -441,11 +431,7 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
                                 verbose = FALSE, progress = FALSE, 
                                 parallel_voxels = FALSE) {
   
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
+  ar_order <- .ar_order(cfg$ar)
   
   if (verbose) message("Using voxelwise AR(", ar_order, ") modeling...")
   

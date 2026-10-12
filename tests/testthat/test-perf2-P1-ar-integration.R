@@ -19,9 +19,11 @@
 test_that("whiten_glm_context with fixed phi equals direct fmriAR whitening", {
   d <- .p15_data()
   out <- fmrireg:::whiten_glm_context(.p15_ctx(d), list(cor_struct = "ar1", phi = 0.4))
+  # Pass 3 (R1-4): exact_first defaults to FALSE (the documented default);
+  # this path alone used to default it to TRUE.
   plan <- fmriAR::compat$plan_from_phi(phi = list(0.4), theta = list(numeric(0)),
                                        runs = NULL, pooling = "global",
-                                       exact_first = TRUE)
+                                       exact_first = FALSE)
   ref <- fmriAR::whiten_apply(plan, X = d$X, Y = d$Y, parallel = FALSE)
   expect_equal(out$X, ref$X, tolerance = 1e-12, ignore_attr = TRUE)
   expect_equal(out$Y, ref$Y, tolerance = 1e-12, ignore_attr = TRUE)
