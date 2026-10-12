@@ -27,3 +27,15 @@ features.}
 \description{
 Nuisance-projection specification
 }
+\details{
+Soft-subspace projection shrinks the nuisance subspace of both the
+data and the design, so the residuals are no longer white even when the
+noise is. Inference accounts for this exactly (residual df
+\eqn{tr((I-H)P^2)}, AR estimation corrected for the projection, and the
+coefficient covariance of the projected fit) for \strong{runwise} fits with
+iid noise (optionally with volume weights) or with run- or
+global-pooled AR(p) noise. Other combinations are refused with an error
+rather than reported with miscalibrated statistics: robust weighting,
+joint/chunkwise estimation, the reference backend, MA terms, and AR
+combined with volume weights.
+}

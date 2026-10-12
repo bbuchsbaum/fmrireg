@@ -258,6 +258,16 @@ weights_spec <- function(method = c("none", "inverse_squared", "soft_threshold",
 #' @param nuisance_matrix Optional explicit nuisance-feature matrix.
 #' @param lambda Nonnegative regularization strength, `"auto"`, or `"gcv"`.
 #' @param warn_redundant Warn when projection overlaps modeled nuisance terms.
+#' @details Soft-subspace projection shrinks the nuisance subspace of both the
+#'   data and the design, so the residuals are no longer white even when the
+#'   noise is. Inference accounts for this exactly (residual df
+#'   \eqn{tr((I-H)P^2)}, AR estimation corrected for the projection, and the
+#'   coefficient covariance of the projected fit) for **runwise** fits with
+#'   iid noise (optionally with volume weights) or with run- or
+#'   global-pooled AR(p) noise. Other combinations are refused with an error
+#'   rather than reported with miscalibrated statistics: robust weighting,
+#'   joint/chunkwise estimation, the reference backend, MA terms, and AR
+#'   combined with volume weights.
 #' @export
 projection_spec <- function(method = c("none", "soft_subspace"),
                             nuisance_mask = NULL, nuisance_matrix = NULL,
