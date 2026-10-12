@@ -414,7 +414,18 @@ Toeplitz symbol is not positive (dropping it changes results);
 ## Pass 3 results
 
 Every item has a test in `tests/testthat/test-pass3-*.R` that fails on the
-pre-pass-3 code. Full-suite numbers are recorded below the follow-ups.
+pre-pass-3 code.
+
+Full suite after pass 3 (`NOT_CRAN=true`, all files incl. `test_betas.R`):
+
+| Library | Files | Expectations | Failures | Errors | Skips |
+|---|---|---|---|---|---|
+| with fmrigds | 291 | 11,150 | 0 | 0 | 2 |
+| without fmrigds | 291 | 9,876 | 0 | 0 | 46 |
+
+`R CMD check --no-manual --no-tests --ignore-vignettes`: examples, Rd,
+code/documentation, R code and compiled-code checks OK; only the known
+environmental WARNING/NOTEs (locale, unavailable Suggests, installed size).
 
 Follow-ups found while merging (each with a failing-first test):
 - R3's fmrigds guard sat at the top of `group_data()` and also blocked the
