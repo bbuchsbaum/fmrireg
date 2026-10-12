@@ -10,7 +10,6 @@
 #' @return A gds-backed group-level data object (class includes 'group_data_gds').
 #' @noRd
 .group_data_gds <- function(data, format = c("auto","h5","nifti","csv","fmrilm"), ...) {
-  with_package("fmrigds", what = "group_data()")
   format <- match.arg(format)
   dots <- list(...)
   fmrireg_mask <- dots$mask %||% NULL
@@ -89,6 +88,7 @@
       dots$contrast_col <- "contrast"
     }
 
+    with_package("fmrigds", what = "group_data()")
     # Try direct data.frame first
     gd_try <- try(do.call(fmrigds::gds, c(list(source = data_local, format = fformat), dots)), silent = TRUE)
     if (!inherits(gd_try, "try-error")) {
@@ -158,6 +158,7 @@
     }
   }
 
+  with_package("fmrigds", what = "group_data()")
   gd <- do.call(fmrigds::gds, c(list(source = src, format = fformat), dots))
   gd <- .annotate_group_data_gds(gd, legacy_sample_labels, legacy_feature_group)
   if (!is.null(fmrireg_mask)) attr(gd, "fmrireg_mask") <- fmrireg_mask

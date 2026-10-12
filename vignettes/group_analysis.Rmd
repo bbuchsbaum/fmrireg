@@ -26,6 +26,9 @@ vignette: |
 ```{r setup, include=FALSE}
 if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(family = params$family, preset = params$preset))
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width=7, fig.height=5, message=FALSE, warning=TRUE)
+# group_data() builds its objects with fmrigds (a suggested package); without
+# it the analysis chunks are shown but not run.
+knitr::opts_chunk$set(eval = requireNamespace("fmrigds", quietly = TRUE))
 load_vignette_package <- function(package) {
   withCallingHandlers(
     suppressPackageStartupMessages(library(package, character.only = TRUE)),

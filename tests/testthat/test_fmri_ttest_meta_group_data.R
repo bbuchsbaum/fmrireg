@@ -115,6 +115,7 @@ test_that("fmri_ttest(meta) works with group_data_nifti and weights", {
 })
 
 test_that("public ROI t-only fits return the requested inferential result", {
+  skip_if_not_installed("fmrigds")  # tabular group_data() is built by fmrigds
   ids <- sprintf("s%02d", 1:8)
   roi_t <- data.frame(
     subject = ids,

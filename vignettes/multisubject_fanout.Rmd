@@ -26,6 +26,8 @@ vignette: |
 ```{r setup, include=FALSE}
 if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(family = params$family, preset = params$preset))
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", message = FALSE, warning = TRUE)
+# The group-level handoff uses group_data(), which needs fmrigds (suggested).
+has_fmrigds <- requireNamespace("fmrigds", quietly = TRUE)
 ```
 
 ```{r albers-classes, echo=FALSE, results='asis'}
@@ -198,7 +200,7 @@ the condition-B estimate and SE for teaching voxel 1 from each completed job,
 then compute their inverse-variance fixed-effect mean. With only two simulated
 subjects this is a pipeline check, not a scientifically powered group study.
 
-```{r executable-group-handoff}
+```{r executable-group-handoff, eval=has_fmrigds}
 reduced <- do.call(rbind, values)
 teaching_effects <- subset(
   reduced,
