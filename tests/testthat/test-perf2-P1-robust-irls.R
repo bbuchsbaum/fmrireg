@@ -271,3 +271,25 @@ test_that("robust IRLS never forms the weighted response", {
   unlink(logfile)
   expect_lte(n_big / cfg$max_iter, 3)
 })
+
+test_that("robust IRLS with unit weights reproduces the OLS fit and stops", {
+  # Row medians over many clean voxels give u < k for every volume, so all
+  # Huber weights are 1: the first weighted solve is the OLS fit itself.
+  set.seed(12)
+  n <- 60L
+  X <- cbind(1, rnorm(n))
+  Y <- X %*% matrix(rnorm(2 * 300), 2, 300) + matrix(rnorm(n * 300), n, 300)
+  cfg <- .p14_configs[[1]]
+  solves <- 0L
+  orig <- fmrireg:::.robust_wls_betas
+  testthat::local_mocked_bindings(
+    .robust_wls_betas = function(...) { solves <<- solves + 1L; orig(...) }
+  )
+  new <- fmrireg:::robust_iterative_fitter(.p14_ctx(X, Y), cfg, X)
+  old <- .p14_old_fitter(.p14_ctx(X, Y), cfg, X)
+  expect_true(all(new$robust_weights_final == 1))
+  expect_equal(solves, 0L)
+  expect_equal(new$betas_robust, old$betas_robust, tolerance = 1e-12)
+  expect_equal(new$sigma2, old$sigma2, tolerance = 1e-12)
+  expect_equal(new$XtWXi_final, old$XtWXi_final, tolerance = 1e-12)
+})

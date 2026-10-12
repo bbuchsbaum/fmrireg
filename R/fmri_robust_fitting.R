@@ -188,6 +188,14 @@ robust_iterative_fitter <- function(initial_glm_ctx,
     betas <- sol$betas
     XtWXi_final <- proj_w$XtXinv
   }
+  # Weights of the current solution: unit weights for the initial fit when it
+  # is the OLS fit of Y on X_orig_for_resid itself.
+  w_current <- if (is.null(weights_fixed) &&
+                   identical(initial_glm_ctx$X, X_orig_for_resid)) {
+    rep(1, n_obs)
+  } else {
+    NULL
+  }
   for (it in seq_len(if (is.null(weights_fixed)) max_iter else 0L)) {
     betas_prev <- betas
 
@@ -197,10 +205,16 @@ robust_iterative_fitter <- function(initial_glm_ctx,
                                 scale_scope, sigma_fixed)
     w <- psi_weights(scale_info$u)
 
-    sol <- wls_solve(w)
-    proj_w <- sol$proj
-    betas <- sol$betas
-    XtWXi_final <- proj_w$XtXinv
+    if (!is.null(w_current) && identical(w, w_current)) {
+      # The weights did not change, so the WLS solve would return the current
+      # solution again; keep it (the convergence check then stops the loop).
+    } else {
+      sol <- wls_solve(w)
+      proj_w <- sol$proj
+      betas <- sol$betas
+      XtWXi_final <- proj_w$XtXinv
+      w_current <- w
+    }
 
     # Convergence check on coefficient updates.
     if (it >= min_iter) {
