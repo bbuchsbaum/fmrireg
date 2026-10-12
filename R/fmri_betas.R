@@ -132,6 +132,169 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL, nuisance = NULL
   })
 }
 
+#' Spectral quantities of a mixed-model design (computed once per design)
+#'
+#' For y = X b + Z u + e with u ~ N(0, Vu I), e ~ N(0, Ve I) (the model
+#' `fmrilss::mixed_solve()` fits with `K = NULL`), this returns everything the
+#' per-voxel REML search and BLUPs need, so that the decomposition is not
+#' repeated for every voxel (EMMA / rrBLUP):
+#'
+#' * REML: `theta` (the n - p eigenvalues of S Z Z' S on col(S),
+#'   S = I - X (X'X)^-1 X') and the matching rotation `Q` (n x (n - p)),
+#'   computed by `mixed_reml_spectral_cpp()` with the same arithmetic as
+#'   `fmrilss::mixed_solve()`.
+#' * BLUP: the thin SVD Z = U D V', A = U'X and G = X'(I - U U')X.
+#'
+#' Errors mirror `fmrilss::mixed_solve()` ("X not full rank", too few rows).
+#' @keywords internal
+#' @noRd
+.mixed_spectral_design <- function(X, Z) {
+  X <- as.matrix(X)
+  Z <- as.matrix(Z)
+  storage.mode(X) <- "double"
+  storage.mode(Z) <- "double"
+  n <- nrow(X)
+  if (ncol(X) == 0L) X <- matrix(1, n, 1L)
+  if (ncol(Z) == 0L) Z <- matrix(1, n, 1L)
+  p <- ncol(X)
+  m <- ncol(Z)
+  if (nrow(Z) != n) {
+    stop("Z must have the same number of rows as X", call. = FALSE)
+  }
+  if (n <= p) {
+    stop("Need more non-NA observations than columns in X", call. = FALSE)
+  }
+  reml <- mixed_reml_spectral_cpp(X, Z)
+
+  sz <- svd(Z)
+  U <- sz$u
+  A <- crossprod(U, X)
+  PX <- if (ncol(U) >= n) matrix(0, n, p) else X - U %*% A
+  list(
+    n = n, p = p, m = m,
+    theta = reml$theta, Q = reml$Q, spectral_method = reml$method,
+    U = U, d = sz$d, Vz = sz$v, A = A, PX = PX, G = crossprod(PX)
+  )
+}
+
+#' Mixed-model trial betas for many responses sharing one design
+#'
+#' Equivalent to calling `fmrilss::mixed_solve(Y = Y[, j], Z = Z, X = X)` for
+#' every column j (REML, default bounds): same REML objective, optimiser,
+#' start value and bounds, but the design is decomposed once
+#' (`.mixed_spectral_design()`) and each voxel costs a rotation Q'y, a 1-D
+#' REML search and O((m + p)^2) work for the BLUPs.
+#'
+#' @return list with `u` (m x V random effects), `beta` (p x V fixed effects),
+#'   `Vu`, `Ve`, `lambda` (length V) and `ok`.
+#' @keywords internal
+#' @noRd
+.mixed_solve_batch <- function(Y, X, Z, bounds = c(1e-9, 1e9),
+                               chunk_size = 4096L) {
+  Y <- as.matrix(Y)
+  storage.mode(Y) <- "double"
+  sd <- .mixed_spectral_design(X, Z)
+  if (nrow(Y) != sd$n) {
+    stop("Y must have the same number of rows as X", call. = FALSE)
+  }
+  V <- ncol(Y)
+  out <- list(
+    u = matrix(NA_real_, sd$m, V), beta = matrix(NA_real_, sd$p, V),
+    Vu = rep(NA_real_, V), Ve = rep(NA_real_, V),
+    lambda = rep(NA_real_, V), ok = rep(FALSE, V)
+  )
+  for (s in seq.int(1L, max(V, 1L), by = chunk_size)) {
+    idx <- s:min(V, s + chunk_size - 1L)
+    Yc <- Y[, idx, drop = FALSE]
+    res <- mixed_reml_blup_cpp(
+      Y = Yc, Q = sd$Q, theta = sd$theta,
+      lower = bounds[1], upper = bounds[2],
+      d = sd$d, UtX = sd$A, G = sd$G,
+      C = crossprod(sd$PX, Yc), B = crossprod(sd$U, Yc), Vz = sd$Vz
+    )
+    out$u[, idx] <- res$u
+    out$beta[, idx] <- res$beta
+    out$Vu[idx] <- res$Vu
+    out$Ve[idx] <- res$Ve
+    out$lambda[idx] <- res$lambda
+    out$ok[idx] <- res$ok
+  }
+  out
+}
+
+#' Mixed-model betas for a voxel matrix (batched `mixed_betas()`)
+#'
+#' Same inputs, validation and output layout as `mixed_betas()` applied to each
+#' column of `Y` (random-effect rows first, then the fixed effects of
+#' interest), with one design decomposition for all columns.
+#' @keywords internal
+#' @noRd
+mixed_betas_matrix <- function(X, Y, ran_ind, fixed_ind, nuisance = NULL) {
+  X <- as.matrix(X)
+  Y <- as.matrix(Y)
+  if (ncol(X) == 0 || nrow(X) == 0) {
+    stop("Design matrix X has zero rows or columns")
+  }
+  if (length(ran_ind) == 0) {
+    stop("No random effect indices specified")
+  }
+  if (is.null(fixed_ind)) {
+    fixed_ind <- integer(0)
+  }
+  all_indices <- c(ran_ind, fixed_ind)
+  if (anyNA(all_indices) || any(all_indices < 1L) ||
+      any(all_indices != as.integer(all_indices))) {
+    stop("Random and fixed effect indices must be positive integers", call. = FALSE)
+  }
+  if (max(all_indices) > ncol(X)) {
+    stop("Index out of bounds: indices exceed number of columns in X")
+  }
+  if (nrow(Y) != nrow(X)) {
+    stop("Y must have the same number of rows as X", call. = FALSE)
+  }
+  if (any(!is.finite(X)) || any(!is.finite(Y))) {
+    stop("X and Y must contain only finite values", call. = FALSE)
+  }
+  if (!is.null(nuisance)) {
+    nuisance <- as.matrix(nuisance)
+    if (nrow(nuisance) != nrow(X) || any(!is.finite(nuisance))) {
+      stop("nuisance must be a finite matrix with the same number of rows as X",
+           call. = FALSE)
+    }
+  }
+
+  nout <- length(ran_ind) + length(fixed_ind)
+  X_fixed <- .mixed_fixed_design(X[, fixed_ind, drop = FALSE], nuisance)
+  fit <- tryCatch(
+    .mixed_solve_batch(Y, X = X_fixed, Z = X[, ran_ind, drop = FALSE]),
+    error = function(e) {
+      warning(
+        "Mixed model solver failed: ", conditionMessage(e),
+        "; returning NA coefficients for all ", ncol(Y), " responses.",
+        call. = FALSE
+      )
+      NULL
+    }
+  )
+  if (is.null(fit)) {
+    return(matrix(NA_real_, nout, ncol(Y)))
+  }
+  if (!all(fit$ok)) {
+    warning(
+      "Mixed model solver failed for ", sum(!fit$ok),
+      " response(s); returning NA coefficients for them.",
+      call. = FALSE
+    )
+  }
+  # Fixed-effect coefficients of interest come first; nuisance (baseline)
+  # coefficients are not returned.
+  if (length(fixed_ind) == 0) {
+    fit$u
+  } else {
+    rbind(fit$u, fit$beta[seq_along(fixed_ind), , drop = FALSE])
+  }
+}
+
 #' Estimate betas using various regression methods
 #'
 #' This function estimates betas (regression coefficients) for fixed and random effects
@@ -260,7 +423,10 @@ run_estimate_betas <- function(bdes, dset, method,
     # design and biases the trial estimates; removing it from both Y and Z
     # would still misstate the REML likelihood (the projected data have a
     # singular covariance). Fixed effects are the exact treatment.
-    vecs <- masked_vectors(dset)
+    #
+    # Every voxel shares the design, so it is decomposed once and each voxel
+    # costs a 1-D REML search (mixed_betas_matrix), with the same results as
+    # fmrilss::mixed_solve() per voxel.
     X <- as.matrix(xdat$X)
     ran_ind <- seq_len(ncol(bdes$dmat_ran))
     fixed_ind <- if (!is.null(bdes$dmat_fixed)) {
@@ -268,10 +434,9 @@ run_estimate_betas <- function(bdes, dset, method,
     } else {
       NULL
     }
-    res <- map_voxels(vecs, function(v) {
-      mixed_betas(X, v, ran_ind = ran_ind, fixed_ind = fixed_ind,
-                  nuisance = xdat$Base)
-    }, .progress = progress)
+    res <- mixed_betas_matrix(X, as.matrix(.dset_data_matrix(dset)),
+                              ran_ind = ran_ind, fixed_ind = fixed_ind,
+                              nuisance = xdat$Base)
     return(list(beta_matrix = as.matrix(res), estimated_hrf = NULL))
   }
 

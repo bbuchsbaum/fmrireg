@@ -713,12 +713,7 @@ plot.fmri_lm <- function(x, type = c("betas", "contrasts", "hrf", "timecourse",
 #' @keywords internal
 #' @noRd
 .voxel_series <- function(dataset, voxel) {
-  one <- tryCatch(dataset[, voxel], error = function(e) NULL)
-  if (!is.null(one)) {
-    y <- tryCatch(as.matrix(.dset_data_matrix(one)), error = function(e) NULL)
-    if (!is.null(y) && ncol(y) == 1L) return(as.numeric(y[, 1]))
-  }
-  as.numeric(as.matrix(.dset_data_matrix(dataset))[, voxel])
+  as.numeric(.voxel_matrix(dataset, voxel)[, 1])
 }
 
 #' Observed series, refit, and time axis for one voxel
@@ -871,15 +866,24 @@ plot.fmri_lm <- function(x, type = c("betas", "contrasts", "hrf", "timecourse",
 }
 
 #' Data for a set of voxels (time x voxels), reading only those columns
+#'
+#' A failed read is an error: plotting a few voxels must never fall back to
+#' loading the whole dataset.
 #' @keywords internal
 #' @noRd
 .voxel_matrix <- function(dataset, voxels) {
-  sub <- tryCatch(dataset[, voxels], error = function(e) NULL)
-  if (!is.null(sub)) {
-    y <- tryCatch(as.matrix(.dset_data_matrix(sub)), error = function(e) NULL)
-    if (!is.null(y) && ncol(y) == length(voxels)) return(y)
+  y <- tryCatch(
+    as.matrix(.dset_read(dataset, cols = voxels)),
+    error = function(e) {
+      stop("Could not read voxel(s) ", paste(voxels, collapse = ", "),
+           " from the dataset: ", conditionMessage(e), call. = FALSE)
+    }
+  )
+  if (ncol(y) != length(voxels)) {
+    stop("Reading voxel(s) ", paste(voxels, collapse = ", "), " returned ",
+         ncol(y), " column(s), expected ", length(voxels), ".", call. = FALSE)
   }
-  as.matrix(.dset_data_matrix(dataset))[, voxels, drop = FALSE]
+  y
 }
 
 #' Residual autocorrelation of several voxels, with its white-noise expectation

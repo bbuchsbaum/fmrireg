@@ -119,6 +119,39 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// mixed_reml_spectral_cpp
+List mixed_reml_spectral_cpp(const arma::mat& X, const arma::mat& Z);
+RcppExport SEXP _fmrireg_mixed_reml_spectral_cpp(SEXP XSEXP, SEXP ZSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Z(ZSEXP);
+    rcpp_result_gen = Rcpp::wrap(mixed_reml_spectral_cpp(X, Z));
+    return rcpp_result_gen;
+END_RCPP
+}
+// mixed_reml_blup_cpp
+List mixed_reml_blup_cpp(const arma::mat& Y, const arma::mat& Q, const arma::vec& theta, double lower, double upper, const arma::vec& d, const arma::mat& UtX, const arma::mat& G, const arma::mat& C, const arma::mat& B, const arma::mat& Vz);
+RcppExport SEXP _fmrireg_mixed_reml_blup_cpp(SEXP YSEXP, SEXP QSEXP, SEXP thetaSEXP, SEXP lowerSEXP, SEXP upperSEXP, SEXP dSEXP, SEXP UtXSEXP, SEXP GSEXP, SEXP CSEXP, SEXP BSEXP, SEXP VzSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Q(QSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< double >::type lower(lowerSEXP);
+    Rcpp::traits::input_parameter< double >::type upper(upperSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type d(dSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type UtX(UtXSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type G(GSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type C(CSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type B(BSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Vz(VzSEXP);
+    rcpp_result_gen = Rcpp::wrap(mixed_reml_blup_cpp(Y, Q, theta, lower, upper, d, UtX, G, C, B, Vz));
+    return rcpp_result_gen;
+END_RCPP
+}
 // ols_t_cpp
 List ols_t_cpp(const arma::mat& Y, const arma::mat& X);
 RcppExport SEXP _fmrireg_ols_t_cpp(SEXP YSEXP, SEXP XSEXP) {
@@ -248,6 +281,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fmrireg_meta_fit_cov_cpp", (DL_FUNC) &_fmrireg_meta_fit_cov_cpp, 8},
     {"_fmrireg_meta_fit_vcov_cpp", (DL_FUNC) &_fmrireg_meta_fit_vcov_cpp, 9},
     {"_fmrireg_meta_fit_diag_cpp", (DL_FUNC) &_fmrireg_meta_fit_diag_cpp, 7},
+    {"_fmrireg_mixed_reml_spectral_cpp", (DL_FUNC) &_fmrireg_mixed_reml_spectral_cpp, 2},
+    {"_fmrireg_mixed_reml_blup_cpp", (DL_FUNC) &_fmrireg_mixed_reml_blup_cpp, 11},
     {"_fmrireg_ols_t_cpp", (DL_FUNC) &_fmrireg_ols_t_cpp, 2},
     {"_fmrireg_welch_t_cpp", (DL_FUNC) &_fmrireg_welch_t_cpp, 2},
     {"_fmrireg_ols_t_vcov_cpp", (DL_FUNC) &_fmrireg_ols_t_vcov_cpp, 3},
