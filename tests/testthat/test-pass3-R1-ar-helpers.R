@@ -16,7 +16,8 @@ test_that("fast_rlm_run (a MAD-scale robust fitter with no caller) is gone", {
 test_that("AR effective df is not reduced a second time after whitening", {
   # .compute_ar_effective_df_compat shrank n by 1 + 2 sum rho_k although the
   # data had already been whitened; the integrated solver then reported that
-  # df as `effective_df` and compute_contrast() used it for p-values.
+  # df as `effective_df`. (compute_contrast(), which used it for p-values,
+  # was removed with the unwired bootstrap in pass 3, R3-5.)
   ns <- asNamespace("fmrireg")
   expect_false(exists(".compute_ar_effective_df_compat", envir = ns, inherits = FALSE))
   expect_false(exists("compute_ar_effective_df", envir = ns, inherits = FALSE))
@@ -30,10 +31,6 @@ test_that("AR effective df is not reduced a second time after whitening", {
   expect_equal(fit$effective_df, n - p)
   expect_equal(fit$effective_df,
                fmrireg:::calculate_effective_df(n, p, method = "residual"))
-  con <- fmrireg:::compute_contrast(fit, c(0, 1, 0))
-  expect_equal(con$df, n - p)
-  expect_equal(as.numeric(con$pvalue),
-               as.numeric(2 * pt(-abs(con$tstat), n - p)))
 
   # Whitened then robustly weighted: the one robust effective df, sum(w) - rank.
   cfg_r <- fmri_lm_control(estimation = estimation_spec("joint"),
