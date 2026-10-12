@@ -356,61 +356,103 @@ Toeplitz symbol is not positive (dropping it changes results);
 
 ## Stream R1: fitting and engines
 
-- [ ] R1-1. Soft-projection residual df beyond runwise iid: AR, robust and
+- [x] R1-1. Soft-projection residual df beyond runwise iid: AR, robust and
       chunkwise paths use tr((I-H)P^2)-consistent df, or refuse the
       combination clearly. Test vs Monte Carlo E[RSS] / null calibration.
-- [ ] R1-2. `rrr_gls` on latent data with run/global-pooled AR: estimate phi
+- [x] R1-2. `rrr_gls` on latent data with run/global-pooled AR: estimate phi
       from latent scores using the loadings Gram (as `fmri_latent_lm` does)
       and stay in latent space; voxelwise AR keeps the dense path or errors.
       Test vs dense fit; guard no T x V.
-- [ ] R1-3. `create_fmri_model()` defined in three files: keep the definition
+- [x] R1-3. `create_fmri_model()` defined in three files: keep the definition
       that runs today (collation winner), delete the others, make the docs
       match the real defaults. Test pins the defaults.
-- [ ] R1-4. Dead/inconsistent AR helpers: `fast_rlm_run` (MAD-scale, one
+- [x] R1-4. Dead/inconsistent AR helpers: `fast_rlm_run` (MAD-scale, one
       caller), `.compute_ar_effective_df_compat` (double counts AR df),
       `exact_first %||% TRUE` vs FALSE elsewhere, repeated `ar_order`
       switch blocks -> one helper.
-- [ ] R1-5. Landmark extension (`fmri_lm_engine_lowrank`): stored
+- [x] R1-5. Landmark extension (`fmri_lm_engine_lowrank`): stored
       `resvar`/`sigma` understate voxel residual variance; compute the real
       residual variance or store it under an honest name. Test vs dense.
 
 ## Stream R2: group analysis
 
-- [ ] R2-1. `ols_t_vcov_cpp` (voxelwise covariate OLS): drop non-finite
+- [x] R2-1. `ols_t_vcov_cpp` (voxelwise covariate OLS): drop non-finite
       subjects per voxel like `ols_t_cpp`. Test vs `lm` on complete cases.
-- [ ] R2-2. `robust = "t"`: accepted by `fmri_meta` and silently treated as
+- [x] R2-2. `robust = "t"`: accepted by `fmri_meta` and silently treated as
       none by the C++ kernels. Implement or reject everywhere with a clear
       error. `combine` with beta+SE input passes `method = "combine:..."`
       into the fitter and fails.
-- [ ] R2-3. `fmri_meta`: `n_threads` default in the generic not forwarded;
+- [x] R2-3. `fmri_meta`: `n_threads` default in the generic not forwarded;
       `print.fmri_meta` labels I^2 (a fraction) as %; `parse_contrast_formula`
       silently returns all-zero weights for unmatched names (error instead).
-- [ ] R2-4. Meta writer `.stat_desc()` drops `desc` (same fix as E6 for
+- [x] R2-4. Meta writer `.stat_desc()` drops `desc` (same fix as E6 for
       fmri_lm outputs).
-- [ ] R2-5. GDS reducers declare `provides` fields some branches never
+- [x] R2-5. GDS reducers declare `provides` fields some branches never
       return; registration errors are swallowed; registration is re-run on
       every call. Return what is declared; register once; surface failures.
 
 ## Stream R3: package hygiene and API
 
-- [ ] R3-1. DESCRIPTION: fmrigds -> Suggests (all uses already guarded);
+- [x] R3-1. DESCRIPTION: fmrigds -> Suggests (all uses already guarded);
       plotly/bslib -> Suggests with `design_plot()` guarded; drop unused
       `aes_string` import; `geom_line(size=)` -> `linewidth`; `design_plot`
       docs match its defaults.
-- [ ] R3-2. Exports: `.resample_param`, `.fmri_lm_formula_legacy` and the
+- [x] R3-2. Exports: `.resample_param`, `.fmri_lm_formula_legacy` and the
       placeholder `estimate()` stub; `tidy` should be `generics::tidy` so
       `broom::tidy()` dispatches to fmrireg methods; one `%||%`.
-- [ ] R3-3. `export_jobs`: job-id uniqueness checked after sanitising (two ids
+- [x] R3-3. `export_jobs`: job-id uniqueness checked after sanitising (two ids
       mapping to one result file).
-- [ ] R3-4. `contrasts_api` `drop_failed = TRUE` drops misspelled contrasts
+- [x] R3-4. `contrasts_api` `drop_failed = TRUE` drops misspelled contrasts
       silently (warn); `fmri_betas` stores the user's `basemod` (often NULL)
       instead of the baseline used; misleading "Cholesky failed" error on
       non-finite betas.
-- [ ] R3-5. `bootstrap_glm_inference` (internal, unwired, test-only; block
+- [x] R3-5. `bootstrap_glm_inference` (internal, unwired, test-only; block
       bootstrap ignores runs, wild bootstrap destroys autocorrelation, BCa
       NaN): remove with its tests, or fix and test; prefer removal (one way
       to do one thing).
 
 ## Pass 3 results
 
-(filled in at the end)
+Every item has a test in `tests/testthat/test-pass3-*.R` that fails on the
+pre-pass-3 code. Full-suite numbers are recorded below the follow-ups.
+
+Follow-ups found while merging (each with a failing-first test):
+- R3's fmrigds guard sat at the top of `group_data()` and also blocked the
+  legacy NIfTI routes; it now guards only the gds routes. Found by running
+  the whole suite against a library *without* fmrigds
+  (`test-pass3-fmrigds-optional.R` mocks it unavailable). One test that
+  silently needed fmrigds now skips; the `group_analysis` and
+  `multisubject_fanout` vignettes skip their gds chunks without it (both
+  knit with and without fmrigds).
+- `export_jobs` ids that differ only in case collide on macOS/Windows file
+  systems; now rejected.
+- `latent_sketch` ignored `landmarks` for iid noise and for by-cluster AR;
+  now applied for iid, refused for by-cluster.
+- `projection_spec()` documents which fits support soft projection.
+- Six mocks in two AR routing tests had fixed formals and rejected R1's new
+  `acvf_correction` argument; they now take `...` (no assertion changed).
+
+User-visible behaviour changes in pass 3:
+- Soft projection: exact df/covariance and projection-corrected AR for
+  runwise iid (incl. volume weights) and run/global-pooled AR; robust,
+  joint/chunkwise, reference backend, MA, and AR + volume weights now error.
+- Integrated-solver AR `effective_df` is n - rank (was reduced a second time
+  for autocorrelation after whitening); missing `exact_first` means FALSE
+  everywhere; an unknown AR structure errors.
+- Landmark fits report each voxel's own residual variance (larger sigma/SE).
+- `create_fmri_model()` has one definition; its docs describe the real
+  defaults.
+- `robust = "t"` errors; `combine` on beta+SE-only data errors; formula
+  contrasts with unknown names error; voxelwise-covariate t-tests accept
+  missing data (per-voxel df); a non-default `desc` appears in meta
+  filenames; GDS reducers return exactly what they declare and register once.
+- fmrigds, plotly and bslib are Suggests; `design_plot()`/`group_data()`
+  error clearly without them. `tidy` is `generics::tidy`. `estimate()`,
+  `.resample_param` and `.fmri_lm_formula_legacy` are no longer exported.
+  `bootstrap_glm_inference` and `compute_contrast` are removed (unwired).
+  Contrasts dropped by `drop_failed = TRUE` now warn.
+
+Still open (inherent or upstream): Satterthwaite with an untapered HAC
+window keeps the exact PSD projection for voxels whose Toeplitz symbol is
+not provably positive; `write_results` time is dominated by fmristore's
+`gc()` on H5 close.

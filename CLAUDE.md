@@ -214,6 +214,18 @@ Conventions established by this pass (rely on them, keep them true):
   not reintroduce a per-voxel `fmrilss::mixed_solve` loop.
 - **Reference backend** estimates the AR plan and robust weights once per fit,
   so results do not depend on `voxel_chunks`.
+- **Soft projection** has exact inference only for runwise iid (incl. volume
+  weights) and run/global-pooled AR; every other combination errors
+  (`.validate_soft_projection_support`). Don't add a path without its df.
+- **One AR order helper** (`.ar_order()`, errors on unknown structures) and
+  one `exact_first` default (FALSE, `.ar_exact_first()`).
+- **fmrigds, plotly, bslib are Suggests.** Guard every use with
+  `with_package()` at the point of use (not at the top of a function with
+  non-gds routes); tests that need them call `skip_if_not_installed()`.
+  Check by running the suite against a library without fmrigds.
+- **roxygen2 7.3.1 vs 7.3.3:** if `devtools::document()` drops
+  `S3method("$",data_chunk)`/`S3method("$",fmri_preproject)` from NAMESPACE
+  or reorders `man/reexports.Rd`/`man/fitted_hrf.Rd`, revert that noise.
 
 Corrections to the 2025 notes above: the robust effective df is
 sum(w) - rank (the "sum(weights) - p" fix lived in an unreachable file until
