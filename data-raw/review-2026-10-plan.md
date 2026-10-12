@@ -338,3 +338,79 @@ Not done:
 - Satterthwaite with a truncated (non-tapered) HAC window still needs an
   exact PSD projection, per run block, for voxels whose Toeplitz symbol is
   not provably positive; Parzen/Bartlett/Tukey stay on the fast path.
+
+---
+
+# Pass 3: remaining issues
+
+Everything still open from the review, pass 1 "Not done" and pass 2 "Not
+done". Same ground rules: a regression test that fails on the old code for
+every behaviour change; reference-based tests for numerics; guards for
+performance; no loosened tests; streams run targeted tests only.
+
+Not addressed here (documented as inherent): Satterthwaite with an
+untapered HAC window must keep the exact PSD projection for voxels whose
+Toeplitz symbol is not positive (dropping it changes results);
+`write_results` spends ~half its time in fmristore's `gc()` on H5 close
+(upstream package).
+
+## Stream R1: fitting and engines
+
+- [ ] R1-1. Soft-projection residual df beyond runwise iid: AR, robust and
+      chunkwise paths use tr((I-H)P^2)-consistent df, or refuse the
+      combination clearly. Test vs Monte Carlo E[RSS] / null calibration.
+- [ ] R1-2. `rrr_gls` on latent data with run/global-pooled AR: estimate phi
+      from latent scores using the loadings Gram (as `fmri_latent_lm` does)
+      and stay in latent space; voxelwise AR keeps the dense path or errors.
+      Test vs dense fit; guard no T x V.
+- [ ] R1-3. `create_fmri_model()` defined in three files: keep the definition
+      that runs today (collation winner), delete the others, make the docs
+      match the real defaults. Test pins the defaults.
+- [ ] R1-4. Dead/inconsistent AR helpers: `fast_rlm_run` (MAD-scale, one
+      caller), `.compute_ar_effective_df_compat` (double counts AR df),
+      `exact_first %||% TRUE` vs FALSE elsewhere, repeated `ar_order`
+      switch blocks -> one helper.
+- [ ] R1-5. Landmark extension (`fmri_lm_engine_lowrank`): stored
+      `resvar`/`sigma` understate voxel residual variance; compute the real
+      residual variance or store it under an honest name. Test vs dense.
+
+## Stream R2: group analysis
+
+- [ ] R2-1. `ols_t_vcov_cpp` (voxelwise covariate OLS): drop non-finite
+      subjects per voxel like `ols_t_cpp`. Test vs `lm` on complete cases.
+- [ ] R2-2. `robust = "t"`: accepted by `fmri_meta` and silently treated as
+      none by the C++ kernels. Implement or reject everywhere with a clear
+      error. `combine` with beta+SE input passes `method = "combine:..."`
+      into the fitter and fails.
+- [ ] R2-3. `fmri_meta`: `n_threads` default in the generic not forwarded;
+      `print.fmri_meta` labels I^2 (a fraction) as %; `parse_contrast_formula`
+      silently returns all-zero weights for unmatched names (error instead).
+- [ ] R2-4. Meta writer `.stat_desc()` drops `desc` (same fix as E6 for
+      fmri_lm outputs).
+- [ ] R2-5. GDS reducers declare `provides` fields some branches never
+      return; registration errors are swallowed; registration is re-run on
+      every call. Return what is declared; register once; surface failures.
+
+## Stream R3: package hygiene and API
+
+- [ ] R3-1. DESCRIPTION: fmrigds -> Suggests (all uses already guarded);
+      plotly/bslib -> Suggests with `design_plot()` guarded; drop unused
+      `aes_string` import; `geom_line(size=)` -> `linewidth`; `design_plot`
+      docs match its defaults.
+- [ ] R3-2. Exports: `.resample_param`, `.fmri_lm_formula_legacy` and the
+      placeholder `estimate()` stub; `tidy` should be `generics::tidy` so
+      `broom::tidy()` dispatches to fmrireg methods; one `%||%`.
+- [ ] R3-3. `export_jobs`: job-id uniqueness checked after sanitising (two ids
+      mapping to one result file).
+- [ ] R3-4. `contrasts_api` `drop_failed = TRUE` drops misspelled contrasts
+      silently (warn); `fmri_betas` stores the user's `basemod` (often NULL)
+      instead of the baseline used; misleading "Cholesky failed" error on
+      non-finite betas.
+- [ ] R3-5. `bootstrap_glm_inference` (internal, unwired, test-only; block
+      bootstrap ignores runs, wild bootstrap destroys autocorrelation, BCa
+      NaN): remove with its tests, or fix and test; prefer removal (one way
+      to do one thing).
+
+## Pass 3 results
+
+(filled in at the end)
