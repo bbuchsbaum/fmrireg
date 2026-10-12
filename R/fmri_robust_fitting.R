@@ -14,6 +14,12 @@
 #'   rows of `X`/`Y` (e.g. volume weights). Used only to count the
 #'   observations that take part in the fit: a row with zero prior weight is
 #'   not an observation.
+#' @param weights_fixed Optional robust weights estimated beforehand (one per
+#'   observation). The IRLS loop is skipped and the result is the WLS fit with
+#'   these weights -- the same final solve the loop would end with had it
+#'   produced them. Used to fit voxel chunks with weights estimated once over
+#'   all voxels (`.integrated_noise_estimate()`); the MAD scale fields are
+#'   then `NULL`.
 #'
 #' @return A list containing:
 #' \describe{
@@ -50,7 +56,8 @@ robust_iterative_fitter <- function(initial_glm_ctx,
                                     cfg_robust_options,
                                     X_orig_for_resid,
                                     sigma_fixed = NULL,
-                                    obs_weights = NULL) {
+                                    obs_weights = NULL,
+                                    weights_fixed = NULL) {
   
   # Validate inputs
   stopifnot(is.glm_context(initial_glm_ctx))
@@ -88,10 +95,16 @@ robust_iterative_fitter <- function(initial_glm_ctx,
     stop("NA values detected in 'X_orig_for_resid' or 'Y' for robust_iterative_fitter")
   }
   
-  # Initial fit from context (could be OLS or whitened OLS)
-  initial_fit <- solve_glm_core(initial_glm_ctx, return_fitted = FALSE)
-  betas <- initial_fit$betas
-  
+  if (!is.null(weights_fixed)) {
+    weights_fixed <- as.numeric(weights_fixed)
+    if (length(weights_fixed) != nrow(Y) || anyNA(weights_fixed)) {
+      stop("weights_fixed must hold one finite weight per observation")
+    }
+  } else {
+    # Initial fit from context (could be OLS or whitened OLS)
+    betas <- solve_glm_core(initial_glm_ctx, return_fitted = FALSE)$betas
+  }
+
   # Initialize final values
   XtWXi_final <- initial_glm_ctx$proj$XtXinv
   dfres <- initial_glm_ctx$proj$dfres
@@ -160,8 +173,22 @@ robust_iterative_fitter <- function(initial_glm_ctx,
   w <- rep(1, n_obs)
   scale_info <- NULL
   proj_w <- initial_glm_ctx$proj
-  weighted_fit <- FALSE
-  for (it in seq_len(max_iter)) {
+  wls_solve <- function(w) {
+    sqrtw <- sqrt(w)
+    Xw <- X_orig_for_resid * sqrtw
+    proj <- .fast_preproject(Xw)
+    list(proj = proj, betas = .robust_wls_betas(proj, sqrtw, Y, colnames(Xw)))
+  }
+  if (!is.null(weights_fixed)) {
+    # Weights estimated beforehand (e.g. once over all voxels): the fit is
+    # the WLS solve the IRLS loop would end with for these weights.
+    w <- weights_fixed
+    sol <- wls_solve(w)
+    proj_w <- sol$proj
+    betas <- sol$betas
+    XtWXi_final <- proj_w$XtXinv
+  }
+  for (it in seq_len(if (is.null(weights_fixed)) max_iter else 0L)) {
     betas_prev <- betas
 
     # |residuals| using the original (unweighted) X, in one expression so R
@@ -170,12 +197,10 @@ robust_iterative_fitter <- function(initial_glm_ctx,
                                 scale_scope, sigma_fixed)
     w <- psi_weights(scale_info$u)
 
-    sqrtw <- sqrt(w)
-    Xw <- X_orig_for_resid * sqrtw
-    proj_w <- .fast_preproject(Xw)
-    betas <- .robust_wls_betas(proj_w, sqrtw, Y, colnames(Xw))
+    sol <- wls_solve(w)
+    proj_w <- sol$proj
+    betas <- sol$betas
     XtWXi_final <- proj_w$XtXinv
-    weighted_fit <- TRUE
 
     # Convergence check on coefficient updates.
     if (it >= min_iter) {
@@ -187,12 +212,9 @@ robust_iterative_fitter <- function(initial_glm_ctx,
     }
   }
 
-  # Weighted RSS of the final solve, sum_i w_i r_i^2 per column.
-  rss_w <- if (weighted_fit) {
-    colSums(w * (Y - X_orig_for_resid %*% betas)^2)
-  } else {
-    initial_fit$rss
-  }
+  # Weighted RSS of the final solve, sum_i w_i r_i^2 per column (max_iter is
+  # at least 1, so a weighted solve always took place).
+  rss_w <- colSums(w * (Y - X_orig_for_resid %*% betas)^2)
 
   # Residual df of the WLS fit: a zero-weight row carries no information, as
   # in stats::lm.wfit().

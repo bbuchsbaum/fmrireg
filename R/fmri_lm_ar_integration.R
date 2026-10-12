@@ -142,13 +142,16 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
 #' @param tol Convergence tolerance for AR parameters
 #' @param return_solution Logical; if FALSE, skip final GLS solve and return
 #'   whitened matrices and AR metadata only.
+#' @param ar_plan Optional AR plan estimated beforehand (once over all voxels,
+#'   see `.integrated_noise_estimate()`); the data are whitened with it and no
+#'   AR estimation is done.
 #'
 #' @return List with final results including AR coefficients
 #' @keywords internal
 #' @noRd
 iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
                                max_iter = NULL, tol = 5e-3,
-                               return_solution = TRUE) {
+                               return_solution = TRUE, ar_plan = NULL) {
 
   ar_opts <- if (is.null(ar_options)) NULL else .normalize_ar_options(ar_options)
   tol <- ar_opts$tol %||% tol
@@ -196,7 +199,8 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
     cfg = ar_opts,
     run_indices = run_indices,
     max_iter = max_iter,
-    tol = tol
+    tol = tol,
+    plan = ar_plan
   )
 
   # Solve final whitened system
