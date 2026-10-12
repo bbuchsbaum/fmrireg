@@ -213,9 +213,8 @@ test_that("effective df helpers cover AR/robust branches", {
   # compute_effective_df*() family to the live implementations.
   expect_equal(fmrireg:::calculate_effective_df(40, 3), 40 - 3)
 
-  df_ar <- fmrireg:::compute_ar_effective_df(40, 3, phi = 0.4)
-  expect_true(is.finite(df_ar) && df_ar <= 40 - 3)
-  expect_equal(fmrireg:::compute_ar_effective_df(40, 3, NULL), 37)
+  # Pass 3 (R1-4): whitened AR fits keep n - p (no second AR reduction).
+  expect_equal(fmrireg:::calculate_effective_df(40, 3, ar_order = 1), 37)
 
   w <- runif(40, 0.4, 1)
   df_r <- fmrireg:::calculate_effective_df(40, 3, robust_weights = w)

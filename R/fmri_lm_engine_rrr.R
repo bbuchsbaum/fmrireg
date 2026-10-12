@@ -435,22 +435,7 @@
 #' @keywords internal
 #' @noRd
 .rrr_ar_order_from_cfg <- function(cfg) {
-  ar_struct <- as.character(cfg$ar$struct %||% "iid")
-  order <- switch(
-    ar_struct,
-    iid = 0L,
-    ar1 = 1L,
-    ar2 = 2L,
-    ar3 = 3L,
-    ar4 = 4L,
-    arp = as.integer(cfg$ar$p %||% 0L),
-    0L
-  )
-  if (!is.finite(order)) {
-    0L
-  } else {
-    as.integer(order)
-  }
+  .ar_order(cfg$ar)
 }
 
 

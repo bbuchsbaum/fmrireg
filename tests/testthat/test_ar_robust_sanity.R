@@ -31,9 +31,10 @@ test_that("AR whitening controls false positives under AR(2) noise", {
   expect_true(all(abs(result$betas[2, ]) < 0.5), 
               "AR whitening should control false positives")
   
-  # Check effective df is reduced appropriately
-  expect_lt(result$effective_df, n_time - p, 
-            "Effective df should be reduced for AR models")
+  # Pass 3 (R1-4): the data were whitened, so the residual df is n - p. The
+  # former expectation (df < n - p) encoded a second AR reduction applied on
+  # top of whitening.
+  expect_equal(result$effective_df, n_time - p)
 })
 
 test_that("Robust fitting handles outliers in whitened data", {
@@ -87,32 +88,17 @@ test_that("Robust fitting handles outliers in whitened data", {
 })
 
 test_that("Effective df computation follows standard formula", {
-  set.seed(789)
-  n_per_run <- 60
-  n_runs <- 3
-  n_time <- n_per_run * n_runs
+  # Pass 3 (R1-4): the AR path whitens, so the residual df is n - p whatever
+  # the AR order or number of runs (SPM/FSL/AFNI practice). The former
+  # compute_ar_effective_df() reduced it again by 1 + 2 sum rho_k.
+  n_time <- 180
   p <- 2
-  
-  # Simple case with known AR parameters
-  phi <- c(0.5, 0.2)  # AR(2)
-  ar_order <- length(phi)
-  
-  # Test the standard compute_ar_effective_df function
-  # Following SPM/FSL/AFNI practice: no penalty for AR estimation
-  df_single_run <- fmrireg:::compute_ar_effective_df(n_time, p, phi, n_runs = 1)
-  df_multi_run <- fmrireg:::compute_ar_effective_df(n_time, p, phi, n_runs = n_runs)
-  
-  # Without penalty, df should be the same regardless of n_runs
-  expect_equal(df_single_run, df_multi_run, tolerance = 1e-10)
-  
-  # Current implementation uses lag-correlation inflation and should return a
-  # sensible df in bounds.
-  expect_gte(df_multi_run, 1)
-  expect_lte(df_multi_run, n_time - p)
-  
-  # Test conservative mode with penalize_ar = TRUE
-  df_conservative <- fmrireg:::compute_ar_effective_df(n_time, p, phi, n_runs = n_runs, penalize_ar = TRUE)
-  expect_equal(df_conservative, max(df_multi_run - ar_order, 1), tolerance = 1e-10)
+  expect_equal(fmrireg:::calculate_effective_df(n_time, p, ar_order = 2), n_time - p)
+  expect_equal(fmrireg:::calculate_effective_df(n_time, p, ar_order = 0), n_time - p)
+  w <- c(rep(1, 170), rep(0.5, 10))
+  expect_equal(fmrireg:::calculate_effective_df(n_time, p, robust_weights = w,
+                                                ar_order = 2),
+               sum(w) - p)
 })
 
 test_that("Sandwich variance is computed correctly without diag matrices", {

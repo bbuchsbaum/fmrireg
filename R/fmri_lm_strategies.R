@@ -292,11 +292,7 @@ process_run_standard <- function(run_chunk, model, cfg, phi_fixed = NULL,
   censor_run <- resolve_censor(cfg, dataset, run_chunk$chunk_num, n_time_run)
 
   # AR modeling if needed
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
+  ar_order <- .ar_order(cfg$ar)
 
   if (.temporal_noise_enabled(cfg$ar)) {
     if (as.integer(cfg$ar$q %||% 0L) > 0L) {
@@ -542,11 +538,7 @@ process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma
   censor_run <- resolve_censor(cfg, dataset, run_chunk$chunk_num, n_time_run)
 
   # AR order
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
+  ar_order <- .ar_order(cfg$ar)
 
   # Step 1: Initial OLS for AR parameter estimation
   glm_ctx_orig <- glm_context(X = X_run, Y = Y_run, proj = proj_run)
@@ -627,11 +619,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
   run_row_inds <- lapply(run_chunks, `[[`, "row_ind")
 
   # AR order
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
+  ar_order <- .ar_order(cfg$ar)
 
   ar_modeling <- cfg$ar$struct != "iid"
   robust_modeling <- .fmri_lm_robust_enabled(cfg$robust)

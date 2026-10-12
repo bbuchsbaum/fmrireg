@@ -137,11 +137,7 @@ runwise_lm_fast <- function(chunks, model, cfg, simple_conlist_weights, fconlist
                            dataset = NULL) {
   
   cres <- vector("list", length(chunks))
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
+  ar_order <- .ar_order(cfg$ar)
   
   for (i in seq_along(chunks)) {
     ym <- chunks[[i]]
@@ -311,7 +307,7 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     # design matrix. Robust + AR is handled correctly by the fast path
     # (process_run_ar_robust); on the slow path robust fits remain unwhitened,
     # as before.
-    ar_order <- switch(cfg$ar$struct, ar1 = 1L, ar2 = 2L, arp = cfg$ar$p, iid = 0L)
+    ar_order <- .ar_order(cfg$ar)
     phi_hat_run <- NULL
     modmat <- NULL
     if (cfg$ar$struct != "iid" && !.fmri_lm_robust_enabled(cfg$robust)) {
@@ -441,11 +437,7 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
                                 verbose = FALSE, progress = FALSE, 
                                 parallel_voxels = FALSE) {
   
-  ar_order <- switch(cfg$ar$struct,
-                     ar1 = 1L,
-                     ar2 = 2L,
-                     arp = cfg$ar$p,
-                     iid = 0L)
+  ar_order <- .ar_order(cfg$ar)
   
   if (verbose) message("Using voxelwise AR(", ar_order, ") modeling...")
   

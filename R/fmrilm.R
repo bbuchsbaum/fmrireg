@@ -89,77 +89,6 @@ get_formula.fmri_model <- function(x,...) {
   normalize_phi(phi)
 }
 
-#' Fast row-wise robust regression for a single run
-#'
-#' Wrapper around robust_iterative_fitter for backward compatibility.
-#' This function implements an IRLS algorithm using Huber or Tukey bisquare 
-#' weights on the time-point residuals.
-#'
-#' @param X Design matrix (time points \eqn{\times} predictors)
-#' @param Y Data matrix (time points \eqn{\times} voxels)
-#' @param proj Preprojection list from \code{.fast_preproject(X)}
-#' @param psi Psi function for weighting, either \code{"huber"} or
-#'   \code{"bisquare"}
-#' @param k_huber Tuning constant for Huber weights
-#' @param c_tukey Tuning constant for Tukey bisquare weights
-#' @param max_it Maximum number of IRLS iterations
-#' @param sigma_fixed Optional fixed sigma value (for global scale estimation)
-#' @keywords internal
-#' @noRd
-fast_rlm_run <- function(X, Y, proj,
-                         psi = c("huber", "bisquare"),
-                         k_huber = 1.345,
-                         c_tukey = 4.685,
-                         max_it = 2L,
-                         sigma_fixed = NULL) {
-
-  psi <- match.arg(psi)
-
-  # Validate inputs: robust path should not accept NA/Inf
-  if (anyNA(X) || any(!is.finite(X)) || anyNA(Y) || any(!is.finite(Y))) {
-    stop("fast_rlm_run: X/Y contain NA/Inf values", call. = FALSE)
-  }
-
-
-  
-  # Create initial GLM context
-  if (missing(proj) || is.null(proj)) {
-    proj <- .fast_preproject(X)
-  }
-  
-  initial_ctx <- glm_context(X = X, Y = Y, proj = proj)
-  
-  # Create robust options
-  cfg_robust_options <- list(
-    type = psi,
-    k_huber = k_huber,
-    c_tukey = c_tukey,
-    max_iter = max_it,
-    scale_scope = if (is.null(sigma_fixed)) "run" else "global"
-  )
-  
-  # Call robust_iterative_fitter
-  result <- robust_iterative_fitter(
-    initial_glm_ctx = initial_ctx,
-    cfg_robust_options = cfg_robust_options,
-    X_orig_for_resid = X,
-    sigma_fixed = sigma_fixed
-  )
-  
-  # Calculate standard errors
-  se_beta <- sqrt(diag(result$XtWXi_final)) * result$sigma_robust_scale_final
-  
-  # Return in the expected format
-  list(
-    betas = result$betas_robust,
-    se = se_beta,
-    sigma = result$sigma_robust_scale_final,
-    dfres = result$dfres,
-    XtXinv = result$XtWXi_final,
-    weights = result$robust_weights_final
-  )
-}
-
 #' Create an fMRI Model
 #'
 #' Builds an \code{fmri_model} from an event formula and an \code{fmri_frame}:
@@ -1315,10 +1244,7 @@ fmri_lm_fit <- function(fmrimod, dataset, strategy = c("runwise", "chunkwise"),
   phi_global <- NULL
   sigma_global <- NULL
   if (cfg$ar$global && cfg$ar$struct != "iid") {
-    ar_order <- switch(cfg$ar$struct,
-                       ar1 = 1L,
-                       ar2 = 2L,
-                       arp = cfg$ar$p)
+    ar_order <- .ar_order(cfg$ar)
 
     run_chunks <- .dset_run_chunks(dataset)
     
