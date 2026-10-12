@@ -23,7 +23,7 @@ fmri_ttest.group_data_gds <- function(gd,
                            combine = NULL) {
 
   # Ensure our fmrigds registrations are available at first use
-  try(.ensure_fmrigds_registered(), silent = TRUE)
+  .ensure_fmrigds_registered()
 
   engine <- match.arg(engine)
   sign   <- match.arg(sign)

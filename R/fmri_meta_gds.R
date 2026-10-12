@@ -41,7 +41,7 @@
                           verbose = TRUE) {
 
   # Ensure our fmrigds registrations are available at first use
-  try(.ensure_fmrigds_registered(), silent = TRUE)
+  .ensure_fmrigds_registered()
 
   method  <- .meta_resolve_method(match.arg(method))
   robust  <- .meta_match_robust(robust)
@@ -86,7 +86,8 @@
   opts <- list()
   if (!is.null(return_cov)) opts$return_cov <- return_cov
   if (!identical(robust, "none")) opts$robust <- robust
-  if (!is.null(contrasts)) opts$contrasts <- contrasts
+  # Fit-time contrasts are computed below from the subject-level fit; the
+  # reducers cannot return them.
   if (method %in% c("dl","pm","reml")) opts$method <- method
 
   # The group dataset is computed at most once per call; every subject-level

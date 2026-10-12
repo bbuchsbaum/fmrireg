@@ -27,11 +27,15 @@ test_that("fmrigds meta reducer helpers cover FE/DL/contrast/cov branches", {
 
   # Contrast path
   Cmat <- matrix(c(0, 1), nrow = 2)
-  out_c <- reducer(
-    beta, var = se^2, X = X, z = NULL, p = NULL, df = NULL, df1 = NULL, df2 = NULL,
-    opts = list(contrasts = Cmat, robust = "huber")
+  # fmrigds drops undeclared reducer fields, so fit-time contrasts are
+  # refused by the reducers (R2-5) rather than silently lost.
+  expect_error(
+    reducer(
+      beta, var = se^2, X = X, z = NULL, p = NULL, df = NULL, df1 = NULL, df2 = NULL,
+      opts = list(contrasts = Cmat, robust = "huber")
+    ),
+    "contrasts"
   )
-  expect_true(all(c("con_est", "con_se", "con_z") %in% names(out_c)))
 
   # Covariance return path for pm/reml
   reducer_pm <- fmrireg:::.fmrigds_make_meta_reducer("pm")

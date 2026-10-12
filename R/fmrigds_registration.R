@@ -20,97 +20,88 @@
          method_id)
 }
 
-.fmrigds_make_meta_reducer <- function(method_id) {
+# The assay fields each fmrireg reducer declares (`provides`) and returns.
+# fmrigds pre-allocates one array per declared non-regression field and fills
+# it from the reducer output, and silently ignores undeclared fields, so the
+# declaration and the output must agree exactly. The packed coefficient
+# covariance of the regression reducers is not an assay: fmrigds carries a
+# reducer's `cov_tri` element (K(K+1)/2 x features) as cov:<a>:<b> parameter
+# arrays plus an attachment. Declaring it as an assay made fmrigds recycle the
+# packed matrix into a meaningless "cov_tri" assay.
+.fmrigds_reducer_provides <- function(name) {
+  is_reg <- grepl("_reg$", name)
+  is_fe <- grepl("(^|:)fe(_reg)?$", name)
+  base <- if (is_reg) c("coef", "se_coef", "t_coef", "p_coef") else c("beta", "se", "z", "p")
+  het <- if (is_fe) c("I2", "Q", "df") else c("tau2", "I2", "Q", "df")
+  c(base, het)
+}
+
+.fmrigds_stop_reducer_contrasts <- function() {
+  stop("fmrireg's fmrigds meta reducers do not compute fit-time contrasts ",
+       "(fmrigds cannot carry them as reducer outputs); use ",
+       "fmri_meta(..., contrasts = ) or contrast() on the fitted model.",
+       call. = FALSE)
+}
+
+.fmrigds_make_meta_reducer <- function(method_id,
+                                       name = if (identical(method_id, "fe")) "meta:fe" else paste0("meta:re:", method_id)) {
   force(method_id)
+  provides <- .fmrigds_reducer_provides(name)
   function(beta, var, X, z, p, df, df1, df2, opts) {
     opts <- opts %||% list()
+    if (!is.null(opts$contrasts)) .fmrigds_stop_reducer_contrasts()
     V <- .fmrigds_coerce_var(var, opts$se_override %||% NULL)
     robust <- .fmrigds_map_robust(opts$robust)
     method <- .fmrigds_meta_method(method_id, opts$method)
-    if (!is.null(opts$contrasts)) {
-      Cmat <- opts$contrasts
-      res <- fmrireg::fmri_meta_fit_contrasts(
-        Y = beta, V = V, X = X, Cmat = Cmat,
-        method = method,
-        robust = robust,
-        n_threads = getOption("fmrireg.num_threads", 0)
-      )
-      out <- list(
-        beta = t(res$beta),
-        se   = t(res$se),
-        z    = t(res$z),
-        p    = 2 * stats::pnorm(abs(t(res$z)), lower.tail = FALSE),
-        con_est = t(res$c_beta),
-        con_se  = t(res$c_se),
-        con_z   = t(res$c_z)
-      )
-    } else {
-      return_cov <- isTRUE(identical(opts$return_cov, "tri")) && method %in% c("pm", "reml")
-      if (return_cov) {
-        res <- fmrireg::fmri_meta_fit_cov(
-          Y = beta, V = V, X = X,
-          method = method,
-          robust = robust,
-          n_threads = getOption("fmrireg.num_threads", 0)
-        )
-      } else {
-        res <- fmrireg::fmri_meta_fit(
-          Y = beta, V = V, X = X,
-          method = method,
-          robust = robust,
-          n_threads = getOption("fmrireg.num_threads", 0)
-        )
-      }
-
-      out <- list(
-        beta = t(res$beta),
-        se   = t(res$se),
-        z    = t(res$z),
-        p    = 2 * stats::pnorm(abs(t(res$z)), lower.tail = FALSE)
-      )
-      if (!is.null(res$tau2)) out$tau2 <- as.numeric(res$tau2)
-      if (!is.null(res$I2_fe)) out$I2   <- as.numeric(res$I2_fe)
-      if (!is.null(res$Q_fe)) out$Q     <- as.numeric(res$Q_fe)
-      if (!is.null(res$df))   out$df    <- as.numeric(res$df)
-      if (return_cov && !is.null(res$cov_tri)) out$cov_tri <- t(res$cov_tri)
-    }
-    out
+    res <- fmrireg::fmri_meta_fit(
+      Y = beta, V = V, X = X,
+      method = method,
+      robust = robust,
+      n_threads = getOption("fmrireg.num_threads", 0)
+    )
+    out <- list(
+      beta = t(res$beta),
+      se   = t(res$se),
+      z    = t(res$z),
+      p    = 2 * stats::pnorm(abs(t(res$z)), lower.tail = FALSE),
+      tau2 = as.numeric(res$tau2),
+      I2   = as.numeric(res$I2_fe),
+      Q    = as.numeric(res$Q_fe),
+      df   = as.numeric(res$df)
+    )
+    out[provides]
   }
 }
 
-.fmrigds_make_meta_reg <- function(method_default) {
+.fmrigds_make_meta_reg <- function(method_default,
+                                   name = if (identical(method_default, "fe")) "meta:fe_reg" else "meta:re_reg") {
   force(method_default)
+  provides <- .fmrigds_reducer_provides(name)
   function(beta, var, X, z, p, df, df1, df2, opts) {
     opts <- opts %||% list()
+    if (!is.null(opts$contrasts)) .fmrigds_stop_reducer_contrasts()
     method <- .fmrigds_meta_method(method_default, opts$method)
     robust <- .fmrigds_map_robust(opts$robust)
-    return_cov <- isTRUE(identical(opts$return_cov, "tri")) && method %in% c("pm", "reml")
-    if (return_cov) {
-      res <- fmrireg::fmri_meta_fit_cov(
-        Y = beta, V = var, X = X,
-        method = method,
-        robust = robust,
-        n_threads = getOption("fmrireg.num_threads", 0)
-      )
-    } else {
-      res <- fmrireg::fmri_meta_fit(
-        Y = beta, V = var, X = X,
-        method = method,
-        robust = robust,
-        n_threads = getOption("fmrireg.num_threads", 0)
-      )
-    }
-    out <- list(
-      coef   = res$beta,
-      se_coef= res$se,
-      t_coef = res$z,
-      p_coef = 2 * stats::pnorm(abs(res$z), lower.tail = FALSE),
-      tau2   = if (!is.null(res$tau2)) as.numeric(res$tau2) else NULL,
-      I2     = if (!is.null(res$I2_fe)) as.numeric(res$I2_fe) else NULL,
-      Q      = if (!is.null(res$Q_fe))  as.numeric(res$Q_fe)  else NULL,
-      df     = if (!is.null(res$df))    as.numeric(res$df)    else NULL
+    # The covariance is always returned (whatever opts$return_cov says), so
+    # contrast() on the result is exact for every method.
+    res <- fmrireg::fmri_meta_fit_cov(
+      Y = beta, V = var, X = X,
+      method = method,
+      robust = robust,
+      n_threads = getOption("fmrireg.num_threads", 0)
     )
-    if (return_cov && !is.null(res$cov_tri)) out$cov_tri <- res$cov_tri
+    out <- list(
+      coef    = res$beta,
+      se_coef = res$se,
+      t_coef  = res$z,
+      p_coef  = 2 * stats::pnorm(abs(res$z), lower.tail = FALSE),
+      tau2    = as.numeric(res$tau2),
+      I2      = as.numeric(res$I2_fe),
+      Q       = as.numeric(res$Q_fe),
+      df      = as.numeric(res$df)
+    )
+    out <- out[provides]
+    out$cov_tri <- res$cov_tri
     out
   }
 }
@@ -165,89 +156,44 @@
   list(q = q)
 }
 
-.fmrigds_required_reducers <- c(
+
+.fmrigds_meta_reducer_names <- c(
   "meta:fe", "meta:re:dl", "meta:re:pm", "meta:re:reml",
-  "frg:meta:fe", "frg:meta:re:dl", "frg:meta:re:pm", "frg:meta:re:reml",
-  "meta:fe_reg", "meta:re_reg"
+  "frg:meta:fe", "frg:meta:re:dl", "frg:meta:re:pm", "frg:meta:re:reml"
 )
+.fmrigds_meta_reg_names <- c("meta:fe_reg", "meta:re_reg")
+.fmrigds_required_reducers <- c(.fmrigds_meta_reducer_names, .fmrigds_meta_reg_names)
 
-.fmrigds_check_reducer <- function(name, expected) {
-  r <- try(fmrigds::get_reducer(name), silent = TRUE)
-  if (inherits(r, "try-error") || is.null(r) || is.null(r$provides)) return(FALSE)
-  setequal(sort(r$provides), sort(expected))
-}
-
-.register_fmrireg_bindings <- function(force = FALSE) {
+# Register fmrireg's reducers and the fdr:spatial posthoc with fmrigds
+# (overwriting any existing registrations of these names). Errors propagate;
+# .ensure_fmrigds_registered() reports them.
+.register_fmrireg_bindings <- function() {
   if (!requireNamespace("fmrigds", quietly = TRUE)) return(invisible(FALSE))
 
-  reducers <- try(fmrigds::list_reducers(), silent = TRUE)
-  need_reducers <- force || inherits(reducers, "try-error") ||
-    !all(.fmrigds_required_reducers %in% reducers) ||
-    !all(c(
-      .fmrigds_check_reducer("meta:fe_reg", c("coef","se_coef","t_coef","p_coef","I2","Q","df")),
-      .fmrigds_check_reducer("meta:re_reg", c("coef","se_coef","t_coef","p_coef","tau2","I2","Q","df","cov_tri"))
-    ))
-
-  # Always ensure our posthoc is registered; reducers only when needed
-
-  meta_reducers <- list(
-    "meta:fe"        = .fmrigds_make_meta_reducer("fe"),
-    "meta:re:dl"     = .fmrigds_make_meta_reducer("dl"),
-    "meta:re:pm"     = .fmrigds_make_meta_reducer("pm"),
-    "meta:re:reml"   = .fmrigds_make_meta_reducer("reml"),
-    "frg:meta:fe"    = .fmrigds_make_meta_reducer("fe"),
-    "frg:meta:re:dl" = .fmrigds_make_meta_reducer("dl"),
-    "frg:meta:re:pm" = .fmrigds_make_meta_reducer("pm"),
-    "frg:meta:re:reml" = .fmrigds_make_meta_reducer("reml")
-  )
-
-  meta_reg_reducers <- list(
-    "meta:fe_reg" = .fmrigds_make_meta_reg("fe"),
-    "meta:re_reg" = .fmrigds_make_meta_reg("pm")
-  )
-
-  if (need_reducers) {
-    for (nm in names(meta_reducers)) {
-      provides <- if (grepl("re:(pm|reml)", nm)) {
-        c("beta","se","z","p","tau2","I2","Q","df","cov_tri")
-      } else if (grepl("re:dl", nm, fixed = TRUE)) {
-        c("beta","se","z","p","tau2","I2","Q","df")
-      } else {
-        c("beta","se","z","p","I2","Q","df")
-      }
-      try(
-        fmrigds::register_reducer(
-          name = nm,
-          fun = meta_reducers[[nm]],
-          requires = c("beta", "var"),
-          provides = provides
-        ),
-        silent = TRUE
-      )
-    }
-    for (nm in names(meta_reg_reducers)) {
-      provides <- if (nm == "meta:re_reg") c("coef","se_coef","t_coef","p_coef","tau2","I2","Q","df","cov_tri") else c("coef","se_coef","t_coef","p_coef","I2","Q","df")
-      try(
-        fmrigds::register_reducer(
-          name = nm,
-          fun = meta_reg_reducers[[nm]],
-          requires = c("beta", "var", "X"),
-          provides = provides
-        ),
-        silent = TRUE
-      )
-    }
+  for (nm in .fmrigds_meta_reducer_names) {
+    method_id <- sub("^.*:", "", nm)
+    fmrigds::register_reducer(
+      name = nm,
+      fun = .fmrigds_make_meta_reducer(method_id, name = nm),
+      requires = c("beta", "var"),
+      provides = .fmrigds_reducer_provides(nm)
+    )
   }
-
-  try(
-    fmrigds::register_posthoc(
-      name = "fdr:spatial",
-      fun = .fmrigds_spatial_posthoc,
-      requires = c("p"),
-      provides = c("q"),
-      overwrite = TRUE
-    ),
-    silent = TRUE
+  for (nm in .fmrigds_meta_reg_names) {
+    method_default <- if (nm == "meta:re_reg") "pm" else "fe"
+    fmrigds::register_reducer(
+      name = nm,
+      fun = .fmrigds_make_meta_reg(method_default, name = nm),
+      requires = c("beta", "var", "X"),
+      provides = .fmrigds_reducer_provides(nm)
+    )
+  }
+  fmrigds::register_posthoc(
+    name = "fdr:spatial",
+    fun = .fmrigds_spatial_posthoc,
+    requires = c("p"),
+    provides = c("q"),
+    overwrite = TRUE
   )
 
   invisible(TRUE)

@@ -45,10 +45,14 @@ test_that(".fmrigds_make_meta_reg and method mapping cover FE/PM paths", {
 
   # Contrast path: Cmat is p x n_contrasts
   Cmat <- matrix(c(1, 0, 0), ncol = 1)
-  out_c <- red_fe(beta = beta, var = se^2, X = X, z = NULL, p = NULL,
-                  df = NULL, df1 = NULL, df2 = NULL,
-                  opts = list(contrasts = Cmat))
-  expect_true(!is.null(out_c$con_est) || !is.null(out_c$beta))
+  # fmrigds drops undeclared reducer fields, so fit-time contrasts are
+  # refused by the reducers (R2-5) rather than silently lost.
+  expect_error(
+    red_fe(beta = beta, var = se^2, X = X, z = NULL, p = NULL,
+           df = NULL, df1 = NULL, df2 = NULL,
+           opts = list(contrasts = Cmat)),
+    "contrasts"
+  )
 
   if (exists(".fmrigds_check_reducer", envir = asNamespace("fmrireg"), inherits = FALSE)) {
     ok <- tryCatch(
