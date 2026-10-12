@@ -560,18 +560,13 @@ NULL
     plan$theta <- replicate(n_blocks, numeric(0), simplify = FALSE)
   }
 
-  parallel_whiten <- getOption("fmrireg.ar.parallel_whiten", TRUE)
-  if (!is.logical(parallel_whiten) || length(parallel_whiten) != 1L || is.na(parallel_whiten)) {
-    parallel_whiten <- TRUE
-  }
-
   # Apply whitening (censor is passed for consistent segment handling)
   result <- fmriAR::whiten_apply(
     plan = plan,
     X = X,
     Y = Y,
     runs = runs,
-    parallel = isTRUE(parallel_whiten),
+    parallel = .ar_parallel_whiten(Y),
     censor = censor
   )
 
@@ -579,21 +574,40 @@ NULL
   list(X = result$X, Y = result$Y)
 }
 
-#' Iterative AR-GLS estimation using fmriAR
+#' Columns used to estimate a shared AR model
 #'
-#' @param X Design matrix
-#' @param Y Data matrix
-#' @param cfg fmri_lm_control object
-#' @param run_indices List of run indices
-#' @param max_iter Maximum iterations (overrides config)
-#' @param censor Integer vector of 1-based timepoint indices to exclude from
-#'   AR estimation. These points are excluded when computing autocorrelations
-#'   but are still whitened and included in the final matrices.
-#' @return List with AR plan and whitened matrices
+#' At most `estimation_max_vox` (option `fmrireg.ar.estimation_max_vox`,
+#' default 64) evenly spaced response columns.
+#' @param n_vox Number of response columns.
+#' @param cfg AR options.
 #' @keywords internal
 #' @noRd
-.iterative_ar_gls_via_fmriAR <- function(X, Y, cfg, run_indices = NULL, max_iter = NULL,
-                                         censor = NULL, tol = 5e-3) {
+.ar_estimation_columns <- function(n_vox, cfg) {
+  est_max_vox <- cfg$estimation_max_vox %||% getOption("fmrireg.ar.estimation_max_vox", 64L)
+  est_max_vox <- suppressWarnings(as.integer(est_max_vox))
+  if (!is.finite(est_max_vox) || est_max_vox <= 0L) est_max_vox <- n_vox
+  if (is.na(est_max_vox)) est_max_vox <- n_vox
+  est_n <- min(n_vox, est_max_vox)
+  if (est_n >= n_vox) {
+    seq_len(n_vox)
+  } else {
+    unique(as.integer(round(seq(1, n_vox, length.out = est_n))))
+  }
+}
+
+#' Iterative AR-GLS estimation of a shared AR plan
+#'
+#' The estimation half of `.iterative_ar_gls_via_fmriAR()`: OLS residuals of
+#' the estimation columns, AR estimation, and (ARMA only) GLS refinement.
+#' @param X Design matrix.
+#' @param Y_est The estimation columns of the data
+#'   (`Y[, .ar_estimation_columns(ncol(Y), cfg)]`).
+#' @return List with `plan` (`NULL` when no AR model is fitted),
+#'   `iterations` and `converged`.
+#' @keywords internal
+#' @noRd
+.estimate_ar_gls_plan <- function(X, Y_est, cfg, run_indices = NULL,
+                                  max_iter = NULL, censor = NULL, tol = 5e-3) {
   ar_params <- .fmrireg_to_fmriAR_config(cfg, length(run_indices))
   n_iter <- max_iter %||% ar_params$iter %||% 1L
   # AR residual-bias correction is tied to the initial OLS residual operator.
@@ -602,31 +616,9 @@ NULL
   min_iter <- as.integer(cfg$min_iter %||% 1L)
   if (!is.finite(min_iter) || min_iter < 1L) min_iter <- 1L
 
-  n_vox <- ncol(Y)
-  est_max_vox <- cfg$estimation_max_vox %||% getOption("fmrireg.ar.estimation_max_vox", 64L)
-  est_max_vox <- suppressWarnings(as.integer(est_max_vox))
-  if (!is.finite(est_max_vox) || est_max_vox <= 0L) est_max_vox <- n_vox
-  if (is.na(est_max_vox)) est_max_vox <- n_vox
-  est_n <- min(n_vox, est_max_vox)
-  est_cols <- if (est_n >= n_vox) {
-    seq_len(n_vox)
-  } else {
-    unique(as.integer(round(seq(1, n_vox, length.out = est_n))))
-  }
-  Y_est <- Y[, est_cols, drop = FALSE]
-
   # Handle no AR case
   if ((ar_params$p == 0L && ar_params$q == 0L) || n_iter == 0L) {
-    return(list(
-      plan = NULL,
-      X_white = X,
-      Y_white = Y,
-      ar_coef = NULL,
-      ma_coef = NULL,
-      iterations = 0L,
-      converged = NA,
-      censor = censor
-    ))
+    return(list(plan = NULL, iterations = 0L, converged = NA))
   }
 
   # Initial residuals
@@ -688,8 +680,86 @@ NULL
     }
   }
 
+  list(plan = plan, iterations = as.integer(iter),
+       converged = if (n_iter <= 1L) NA else converged)
+}
+
+#' AR and MA coefficient lists of an fmriAR plan
+#' @keywords internal
+#' @noRd
+.ar_plan_coefficients <- function(plan) {
+  if (is.null(plan)) return(list(ar_coef = NULL, ma_coef = NULL))
+  ar_coef <- if (!is.null(plan$phi)) {
+    plan$phi  # List of AR coefficients
+  } else if (!is.null(plan$phi_by_parcel)) {
+    # Average across parcels if parcel-based
+    phi_list <- plan$phi_by_parcel
+    list(rowMeans(sapply(phi_list, function(x) c(x, rep(0, max(lengths(phi_list)) - length(x))))))
+  } else {
+    NULL
+  }
+  ma_coef <- if (!is.null(plan$theta)) {
+    plan$theta
+  } else if (!is.null(plan$theta_by_parcel)) {
+    theta_list <- plan$theta_by_parcel
+    list(rowMeans(sapply(
+      theta_list,
+      function(x) c(x, rep(0, max(lengths(theta_list)) - length(x)))
+    )))
+  } else {
+    NULL
+  }
+  list(ar_coef = ar_coef, ma_coef = ma_coef)
+}
+
+#' Whether fmriAR::whiten_apply() should use threads
+#'
+#' `getOption("fmrireg.ar.parallel_whiten", TRUE)` (an invalid value counts
+#' as `TRUE`), and never for a response with at most one column: spinning up
+#' threads for one series (e.g. per-voxel whitening) costs more than it saves.
+#' @param Y The response being whitened.
+#' @keywords internal
+#' @noRd
+.ar_parallel_whiten <- function(Y) {
+  parallel_whiten <- getOption("fmrireg.ar.parallel_whiten", TRUE)
+  if (!is.logical(parallel_whiten) || length(parallel_whiten) != 1L ||
+      is.na(parallel_whiten)) {
+    parallel_whiten <- TRUE
+  }
+  n_cols <- if (is.null(dim(Y))) 1L else ncol(Y)
+  isTRUE(parallel_whiten) && n_cols > 1L
+}
+
+#' Iterative AR-GLS estimation using fmriAR
+#'
+#' @param X Design matrix
+#' @param Y Data matrix
+#' @param cfg fmri_lm_control object
+#' @param run_indices List of run indices
+#' @param max_iter Maximum iterations (overrides config)
+#' @param censor Integer vector of 1-based timepoint indices to exclude from
+#'   AR estimation. These points are excluded when computing autocorrelations
+#'   but are still whitened and included in the final matrices.
+#' @param plan Optional AR plan estimated beforehand (e.g. once over all
+#'   voxels by `.estimate_ar_gls_plan()`); when supplied, no estimation is done
+#'   and the data are whitened with it.
+#' @return List with AR plan and whitened matrices
+#' @keywords internal
+#' @noRd
+.iterative_ar_gls_via_fmriAR <- function(X, Y, cfg, run_indices = NULL, max_iter = NULL,
+                                         censor = NULL, tol = 5e-3, plan = NULL) {
+  if (is.null(plan)) {
+    est <- .estimate_ar_gls_plan(
+      X, Y[, .ar_estimation_columns(ncol(Y), cfg), drop = FALSE], cfg,
+      run_indices = run_indices, max_iter = max_iter, censor = censor, tol = tol
+    )
+    plan <- est$plan
+  } else {
+    est <- list(iterations = 0L, converged = NA)
+  }
+
   # Final whitening on full data using the last AR plan.
-  # If no plan was estimated (edge case), passthrough original matrices.
+  # If no plan was estimated (no AR model), passthrough original matrices.
   if (is.null(plan)) {
     X_white <- X
     Y_white <- Y
@@ -698,46 +768,16 @@ NULL
     X_white <- whitened_full$X
     Y_white <- whitened_full$Y
   }
-
-  # Extract AR coefficients for compatibility
-  ar_coef <- if (!is.null(plan)) {
-    # Extract phi from plan
-    if (!is.null(plan$phi)) {
-      plan$phi  # List of AR coefficients
-    } else if (!is.null(plan$phi_by_parcel)) {
-      # Average across parcels if parcel-based
-      phi_list <- plan$phi_by_parcel
-      list(rowMeans(sapply(phi_list, function(x) c(x, rep(0, max(lengths(phi_list)) - length(x))))))
-    } else {
-      NULL
-    }
-  } else {
-    NULL
-  }
-  ma_coef <- if (!is.null(plan)) {
-    if (!is.null(plan$theta)) {
-      plan$theta
-    } else if (!is.null(plan$theta_by_parcel)) {
-      theta_list <- plan$theta_by_parcel
-      list(rowMeans(sapply(
-        theta_list,
-        function(x) c(x, rep(0, max(lengths(theta_list)) - length(x)))
-      )))
-    } else {
-      NULL
-    }
-  } else {
-    NULL
-  }
+  coefs <- .ar_plan_coefficients(plan)
 
   list(
     plan = plan,
     X_white = X_white,
     Y_white = Y_white,
-    ar_coef = ar_coef,
-    ma_coef = ma_coef,
-    iterations = as.integer(iter),
-    converged = if (n_iter <= 1L) NA else converged,
+    ar_coef = coefs$ar_coef,
+    ma_coef = coefs$ma_coef,
+    iterations = est$iterations,
+    converged = est$converged,
     censor = censor
   )
 }

@@ -130,7 +130,7 @@ ar_whiten_transform <- function(X, Y, phi, exact_first = FALSE, censor = NULL,
     X = X,
     Y = Y,
     runs = runs,
-    parallel = TRUE,
+    parallel = .ar_parallel_whiten(Y),
     censor = censor
   )
 
@@ -209,7 +209,7 @@ ar_whiten_inplace <- function(Y, X, phi = NULL, exact_first_ar1 = FALSE, ...) {
     plan = plan,
     X = X,
     Y = Y,
-    parallel = TRUE
+    parallel = .ar_parallel_whiten(Y)
   )
 
   # Return in expected order (Y, X)

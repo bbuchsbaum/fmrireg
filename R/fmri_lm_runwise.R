@@ -365,6 +365,74 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
   cres
 }
 
+#' Fit one voxel of a run with its own AR model
+#'
+#' OLS fit, AR estimation from its residuals, whitening, then OLS (or robust
+#' IRLS) on the whitened data. Package-level, so that future workers receive
+#' only the voxel's series and the shared design objects (a closure defined
+#' inside `runwise_lm_voxelwise()` would serialise that function's frame,
+#' including the whole run matrix, to every worker).
+#' @param y_voxel Numeric time series of one voxel.
+#' @param X_run Run design matrix.
+#' @param proj `.fast_preproject(X_run)`.
+#' @param ar_order AR order.
+#' @param exact_first Exact first-observation AR scaling.
+#' @param robust Robust options, or `NULL` for OLS.
+#' @keywords internal
+#' @noRd
+.runwise_ar_voxel_fit <- function(y_voxel, X_run, proj, ar_order, exact_first,
+                                  robust = NULL) {
+  status <- .fmri_lm_voxel_status(y_voxel)
+  if (!identical(status, "ok")) {
+    return(list(status = status))
+  }
+
+  # Initial OLS fit
+  Y_voxel_mat <- matrix(y_voxel, ncol = 1)
+  initial_fit <- solve_glm_core(glm_context(X = X_run, Y = Y_voxel_mat,
+                                            proj = proj))
+
+  # Voxel-specific AR parameters
+  resid_ols <- Y_voxel_mat - X_run %*% initial_fit$betas
+  phi_voxel <- estimate_ar_parameters(resid_ols[, 1], ar_order)
+
+  # AR whitening for this voxel
+  tmp <- ar_whiten_transform(X_run, Y_voxel_mat, phi_voxel, exact_first)
+  X_voxel_w <- tmp$X
+  Y_voxel_w <- tmp$Y
+  proj_voxel_w <- .fast_preproject(X_voxel_w)
+  glm_ctx_voxel_w <- glm_context(X = X_voxel_w, Y = Y_voxel_w,
+                                 proj = proj_voxel_w, phi_hat = phi_voxel)
+
+  if (!is.null(robust)) {
+    robust_fit <- robust_iterative_fitter(
+      initial_glm_ctx = glm_ctx_voxel_w,
+      cfg_robust_options = robust,
+      X_orig_for_resid = X_voxel_w
+    )
+    list(
+      betas = robust_fit$betas_robust[, 1],
+      rss = robust_fit$rss[1],
+      sigma = sqrt(robust_fit$sigma2[1]),
+      phi = phi_voxel,
+      XtXinv = robust_fit$XtWXi_final,
+      robust_weights = robust_fit$robust_weights_final,
+      status = "ok"
+    )
+  } else {
+    fit_w <- solve_glm_core(glm_ctx_voxel_w)
+    list(
+      betas = fit_w$betas[, 1],
+      rss = fit_w$rss,
+      sigma = sqrt(fit_w$sigma2),
+      phi = phi_voxel,
+      XtXinv = proj_voxel_w$XtXinv,
+      robust_weights = NULL,
+      status = "ok"
+    )
+  }
+}
+
 #' Runwise LM with Voxelwise AR
 #' @keywords internal
 #' @noRd
@@ -415,154 +483,49 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
     robust_weights_list <- vector("list", n_voxels)
     voxel_status <- rep("ok", n_voxels)
     
-    # Setup for parallel processing if requested
+    # Each voxel is fitted by .runwise_ar_voxel_fit(), a package-level
+    # function, so future workers receive only their own voxels' series plus
+    # the small shared design objects -- never the full run matrix.
+    robust_opts <- if (.fmri_lm_robust_enabled(cfg$robust)) cfg$robust else NULL
     if (parallel_voxels && requireNamespace("future.apply", quietly = TRUE)) {
       if (verbose) message("Processing voxels in parallel...")
-      
-      # Use progressr for parallel progress
-      if (progress && requireNamespace("progressr", quietly = TRUE)) {
-        p_prog <- progressr::progressor(steps = n_voxels)
-      }
-      
-      # Process voxels in parallel
-      voxel_results <- future.apply::future_lapply(seq_len(n_voxels), function(v) {
-        y_voxel <- Y_run[, v]
-        
-        status <- .fmri_lm_voxel_status(y_voxel)
-        if (!identical(status, "ok")) {
-          return(list(status = status))
-        }
-        
-        # Initial OLS fit
-        Y_voxel_mat <- matrix(y_voxel, ncol = 1)
-        glm_ctx_voxel <- glm_context(X = X_run, Y = Y_voxel_mat,
-                                     proj = proj_run_unwhitened)
-        initial_fit <- solve_glm_core(glm_ctx_voxel)
-        
-        # Estimate voxel-specific AR parameters
-        resid_ols <- Y_voxel_mat - X_run %*% initial_fit$betas
-        phi_voxel <- estimate_ar_parameters(resid_ols[, 1], ar_order)
-        
-        # AR whitening for this voxel
-        tmp <- ar_whiten_transform(X_run, Y_voxel_mat, phi_voxel, cfg$ar$exact_first)
-        X_voxel_w <- tmp$X
-        Y_voxel_w <- tmp$Y
-        
-        # Fit on whitened data
-        if (.fmri_lm_robust_enabled(cfg$robust)) {
-          # Robust fit on whitened data
-          proj_voxel_w <- .fast_preproject(X_voxel_w)
-          glm_ctx_voxel_w <- glm_context(X = X_voxel_w, Y = Y_voxel_w, 
-                                         proj = proj_voxel_w, phi_hat = phi_voxel)
-          robust_fit <- robust_iterative_fitter(
-            initial_glm_ctx = glm_ctx_voxel_w,
-            cfg_robust_options = cfg$robust,
-            X_orig_for_resid = X_voxel_w
-          )
-          
-          list(
-            betas = robust_fit$betas_robust[, 1],
-            rss = robust_fit$rss[1],
-            sigma = sqrt(robust_fit$sigma2[1]),
-            phi = phi_voxel,
-            XtXinv = robust_fit$XtWXi_final,
-            robust_weights = robust_fit$robust_weights_final,
-            status = "ok"
-          )
-        } else {
-          # OLS on whitened data
-          proj_voxel_w <- .fast_preproject(X_voxel_w)
-          glm_ctx_voxel_w <- glm_context(X = X_voxel_w, Y = Y_voxel_w, 
-                                         proj = proj_voxel_w, phi_hat = phi_voxel)
-          fit_w <- solve_glm_core(glm_ctx_voxel_w)
-          
-          list(
-            betas = fit_w$betas[, 1],
-            rss = fit_w$rss,
-            sigma = sqrt(fit_w$sigma2),
-            phi = phi_voxel,
-            XtXinv = proj_voxel_w$XtXinv,
-            robust_weights = NULL,
-            status = "ok"
-          )
-        }
-      }, future.seed = TRUE)
-      
-      # Collect results
-      for (v in seq_len(n_voxels)) {
-        voxel_status[v] <- voxel_results[[v]]$status
-        if (identical(voxel_status[v], "ok")) {
-          betas_voxelwise[, v] <- voxel_results[[v]]$betas
-          rss_voxelwise[v] <- voxel_results[[v]]$rss
-          sigma_voxelwise[v] <- voxel_results[[v]]$sigma
-          phi_voxelwise[, v] <- voxel_results[[v]]$phi
-          XtXinv_list[[v]] <- voxel_results[[v]]$XtXinv
-          robust_weights_list[[v]] <- voxel_results[[v]]$robust_weights
-        }
-      }
-      
+      voxel_series <- lapply(seq_len(n_voxels), function(v) Y_run[, v])
+      voxel_results <- future.apply::future_lapply(
+        voxel_series, .runwise_ar_voxel_fit,
+        X_run = X_run, proj = proj_run_unwhitened, ar_order = ar_order,
+        exact_first = cfg$ar$exact_first, robust = robust_opts,
+        future.seed = TRUE
+      )
+      rm(voxel_series)
     } else {
-      # Sequential processing
+      voxel_results <- vector("list", n_voxels)
       for (v in seq_len(n_voxels)) {
-        y_voxel <- Y_run[, v]
-        
-        voxel_status[v] <- .fmri_lm_voxel_status(y_voxel)
-        if (!identical(voxel_status[v], "ok")) {
-          next
-        }
-        
-        # Initial OLS fit
-        Y_voxel_mat <- matrix(y_voxel, ncol = 1)
-        glm_ctx_voxel <- glm_context(X = X_run, Y = Y_voxel_mat,
-                                     proj = proj_run_unwhitened)
-        initial_fit <- solve_glm_core(glm_ctx_voxel)
-        
-        # Estimate voxel-specific AR parameters
-        resid_ols <- Y_voxel_mat - X_run %*% initial_fit$betas
-        phi_voxel <- estimate_ar_parameters(resid_ols[, 1], ar_order)
-        phi_voxelwise[, v] <- phi_voxel
-        
-        # AR whitening for this voxel
-        tmp <- ar_whiten_transform(X_run, Y_voxel_mat, phi_voxel, cfg$ar$exact_first)
-        X_voxel_w <- tmp$X
-        Y_voxel_w <- tmp$Y
-        
-        # Fit on whitened data
-        if (.fmri_lm_robust_enabled(cfg$robust)) {
-          # Robust fit on whitened data
-          proj_voxel_w <- .fast_preproject(X_voxel_w)
-          glm_ctx_voxel_w <- glm_context(X = X_voxel_w, Y = Y_voxel_w, 
-                                         proj = proj_voxel_w, phi_hat = phi_voxel)
-          robust_fit <- robust_iterative_fitter(
-            initial_glm_ctx = glm_ctx_voxel_w,
-            cfg_robust_options = cfg$robust,
-            X_orig_for_resid = X_voxel_w
-          )
-          
-          betas_voxelwise[, v] <- robust_fit$betas_robust[, 1]
-          rss_voxelwise[v] <- robust_fit$rss[1]
-          sigma_voxelwise[v] <- sqrt(robust_fit$sigma2[1])
-          XtXinv_list[[v]] <- robust_fit$XtWXi_final
-          robust_weights_list[[v]] <- robust_fit$robust_weights_final
-        } else {
-          # OLS on whitened data
-          proj_voxel_w <- .fast_preproject(X_voxel_w)
-          glm_ctx_voxel_w <- glm_context(X = X_voxel_w, Y = Y_voxel_w, 
-                                         proj = proj_voxel_w, phi_hat = phi_voxel)
-          fit_w <- solve_glm_core(glm_ctx_voxel_w)
-          
-          betas_voxelwise[, v] <- fit_w$betas[, 1]
-          rss_voxelwise[v] <- fit_w$rss
-          sigma_voxelwise[v] <- sqrt(fit_w$sigma2)
-          XtXinv_list[[v]] <- proj_voxel_w$XtXinv
-        }
-        
+        voxel_results[[v]] <- .runwise_ar_voxel_fit(
+          Y_run[, v], X_run = X_run, proj = proj_run_unwhitened,
+          ar_order = ar_order, exact_first = cfg$ar$exact_first,
+          robust = robust_opts
+        )
         if (progress && v %% 100 == 0) {
           message("  Processed ", v, " / ", n_voxels, " voxels")
         }
       }
     }
-    
+
+    # Collect results
+    for (v in seq_len(n_voxels)) {
+      res_v <- voxel_results[[v]]
+      voxel_status[v] <- res_v$status
+      if (identical(voxel_status[v], "ok")) {
+        phi_voxelwise[, v] <- res_v$phi
+        betas_voxelwise[, v] <- res_v$betas
+        rss_voxelwise[v] <- res_v$rss
+        sigma_voxelwise[v] <- res_v$sigma
+        XtXinv_list[v] <- list(res_v$XtXinv)
+        robust_weights_list[v] <- list(res_v$robust_weights)
+      }
+    }
+    rm(voxel_results)
+
     # Calculate statistics and contrasts
     # Residual df uses the design rank: aliased columns carry no information.
     # Whitening is an invertible row transform, so it preserves the rank.

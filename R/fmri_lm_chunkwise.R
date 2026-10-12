@@ -88,6 +88,7 @@ chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
     # Slow path implementation
     result <- chunkwise_lm_slow(
       chunks = chunks,
+      dset = dset,
       model = model,
       cfg = cfg,
       contrast_objects = contrast_objects,
@@ -429,7 +430,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
                               tmats, vnames, event_indices, baseline_indices,
                               Vu, modmat, run_indices = NULL,
                               verbose = FALSE, progress = FALSE,
-                              parallel_chunks = FALSE) {
+                              parallel_chunks = FALSE, dset = NULL) {
 
   if (isTRUE(cfg$volume_weights$enabled)) {
     stop(
@@ -472,6 +473,29 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     run_indices <- list(seq_len(nrow(modmat)))
   }
 
+  # The noise model (AR plan, robust weights) is shared by all voxels and its
+  # estimate pools over voxels, so it is estimated once over the whole
+  # dataset and handed to every chunk: results do not depend on the chunking
+  # and the estimation is not repeated per chunk.
+  fixed_noise <- NULL
+  if (needs_integrated) {
+    read_columns <- if (!is.null(dset)) {
+      function(cols) as.matrix(.dset_read(dset, cols = cols))
+    } else {
+      function(cols) {
+        Y <- do.call(cbind, lapply(chunks, function(ch) as.matrix(.chunk_data(ch))))
+        Y <- Y[, order(unlist(lapply(chunks, `[[`, "voxel_ind"))), drop = FALSE]
+        if (is.null(cols)) Y else Y[, cols, drop = FALSE]
+      }
+    }
+    n_vox <- if (!is.null(dset)) ncol(dset) else {
+      sum(vapply(chunks, function(ch) length(ch$voxel_ind), integer(1)))
+    }
+    fixed_noise <- .integrated_noise_estimate(
+      modmat, cfg, run_indices, n_vox = n_vox, read_columns = read_columns
+    )
+  }
+
   cres <- .chunkwise_apply(chunks, function(i, ym) {
     if (verbose) message("Processing chunk ", ym$chunk_num)
 
@@ -482,7 +506,8 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
         X = modmat,
         Y = Y_chunk,
         config = cfg,
-        run_indices = run_indices
+        run_indices = run_indices,
+        fixed = fixed_noise
       )
 
       betas <- result$betas %||% result$coefficients

@@ -41,19 +41,7 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
     stop("NA values detected in X or Y", call. = FALSE)
   }
 
-  # Get residuals for AR estimation
-  if (is.null(glm_ctx$residuals)) {
-    if (!is.null(glm_ctx$proj) && !is.null(glm_ctx$proj$Pinv)) {
-      coef <- glm_ctx$proj$Pinv %*% Y
-    } else {
-      coef <- .fast_preproject(X)$Pinv %*% Y
-    }
-    residuals <- Y - X %*% coef
-  } else {
-    residuals <- glm_ctx$residuals
-  }
-
-  # If phi provided, use it directly
+  # If phi provided, use it directly (no residuals are needed)
   if (!is.null(ar_opts$phi)) {
     phi_input <- ar_opts$phi
     if (!is.list(phi_input)) {
@@ -94,6 +82,18 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
       exact_first = ar_opts$exact_first %||% TRUE
     )
   } else {
+    # OLS residuals for AR estimation, formed only on this path
+    if (is.null(glm_ctx$residuals)) {
+      if (!is.null(glm_ctx$proj) && !is.null(glm_ctx$proj$Pinv)) {
+        coef <- glm_ctx$proj$Pinv %*% Y
+      } else {
+        coef <- .fast_preproject(X)$Pinv %*% Y
+      }
+      residuals <- Y - X %*% coef
+    } else {
+      residuals <- glm_ctx$residuals
+    }
+
     # Estimate AR using fmriAR
     plan <- .estimate_ar_via_fmriAR(
       residuals, ar_opts, run_indices, design = X
@@ -142,13 +142,16 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
 #' @param tol Convergence tolerance for AR parameters
 #' @param return_solution Logical; if FALSE, skip final GLS solve and return
 #'   whitened matrices and AR metadata only.
+#' @param ar_plan Optional AR plan estimated beforehand (once over all voxels,
+#'   see `.integrated_noise_estimate()`); the data are whitened with it and no
+#'   AR estimation is done.
 #'
 #' @return List with final results including AR coefficients
 #' @keywords internal
 #' @noRd
 iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
                                max_iter = NULL, tol = 5e-3,
-                               return_solution = TRUE) {
+                               return_solution = TRUE, ar_plan = NULL) {
 
   ar_opts <- if (is.null(ar_options)) NULL else .normalize_ar_options(ar_options)
   tol <- ar_opts$tol %||% tol
@@ -196,7 +199,8 @@ iterative_ar_solve <- function(glm_ctx, ar_options, run_indices = NULL,
     cfg = ar_opts,
     run_indices = run_indices,
     max_iter = max_iter,
-    tol = tol
+    tol = tol,
+    plan = ar_plan
   )
 
   # Solve final whitened system
