@@ -189,6 +189,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// satterthwaite_psd_traces_cpp
+Rcpp::List satterthwaite_psd_traces_cpp(Rcpp::NumericMatrix Gamma, Rcpp::NumericMatrix X, Rcpp::NumericMatrix G, Rcpp::IntegerVector rows, Rcpp::IntegerVector seg_off, Rcpp::IntegerVector seg_len, Rcpp::IntegerVector nlag, Rcpp::IntegerVector goff, Rcpp::NumericVector tr_RV, Rcpp::NumericVector tr_RVRV, int n_threads);
+RcppExport SEXP _fmrireg_satterthwaite_psd_traces_cpp(SEXP GammaSEXP, SEXP XSEXP, SEXP GSEXP, SEXP rowsSEXP, SEXP seg_offSEXP, SEXP seg_lenSEXP, SEXP nlagSEXP, SEXP goffSEXP, SEXP tr_RVSEXP, SEXP tr_RVRVSEXP, SEXP n_threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type Gamma(GammaSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type G(GSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type rows(rowsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type seg_off(seg_offSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type seg_len(seg_lenSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type nlag(nlagSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type goff(goffSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type tr_RV(tr_RVSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type tr_RVRV(tr_RVRVSEXP);
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(satterthwaite_psd_traces_cpp(Gamma, X, G, rows, seg_off, seg_len, nlag, goff, tr_RV, tr_RVRV, n_threads));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cpp_srht_apply
 arma::mat cpp_srht_apply(const arma::mat& M, const arma::uvec& rows, const arma::vec& signs, const arma::uvec& perm, const double scale, const int n_threads);
 RcppExport SEXP _fmrireg_cpp_srht_apply(SEXP MSEXP, SEXP rowsSEXP, SEXP signsSEXP, SEXP permSEXP, SEXP scaleSEXP, SEXP n_threadsSEXP) {
@@ -286,6 +307,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fmrireg_ols_t_cpp", (DL_FUNC) &_fmrireg_ols_t_cpp, 2},
     {"_fmrireg_welch_t_cpp", (DL_FUNC) &_fmrireg_welch_t_cpp, 2},
     {"_fmrireg_ols_t_vcov_cpp", (DL_FUNC) &_fmrireg_ols_t_vcov_cpp, 3},
+    {"_fmrireg_satterthwaite_psd_traces_cpp", (DL_FUNC) &_fmrireg_satterthwaite_psd_traces_cpp, 11},
     {"_fmrireg_cpp_srht_apply", (DL_FUNC) &_fmrireg_cpp_srht_apply, 6},
     {"_fmrireg_cpp_srht_adjoint", (DL_FUNC) &_fmrireg_cpp_srht_adjoint, 6},
     {"_fmrireg_group_pi0_counts_cpp", (DL_FUNC) &_fmrireg_group_pi0_counts_cpp, 4},

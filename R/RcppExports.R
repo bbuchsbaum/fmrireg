@@ -93,6 +93,22 @@ ols_t_vcov_cpp <- function(Y, X, C) {
     .Call('_fmrireg_ols_t_vcov_cpp', PACKAGE = 'fmrireg', Y, X, C)
 }
 
+#' PSD-projected Satterthwaite traces for voxels whose projection is active
+#'
+#' @param Gamma K x V tapered lag autocovariances (rows: segment s, lag h at
+#'   goff[s] + h).
+#' @param rows Concatenated 0-based rows of all segments; seg_off/seg_len
+#'   locate segment s within them.
+#' @param nlag L_s + 1 per segment; goff its first row in Gamma.
+#' @param tr_RV,tr_RVRV Unprojected traces per voxel.
+#' @return list(tr_RV, tr_RVRV, status, n_clipped, path); status 0 = exact
+#'   result; path as documented at voxel_traces().
+#' @keywords internal
+#' @noRd
+satterthwaite_psd_traces_cpp <- function(Gamma, X, G, rows, seg_off, seg_len, nlag, goff, tr_RV, tr_RVRV, n_threads = 1L) {
+    .Call('_fmrireg_satterthwaite_psd_traces_cpp', PACKAGE = 'fmrireg', Gamma, X, G, rows, seg_off, seg_len, nlag, goff, tr_RV, tr_RVRV, n_threads)
+}
+
 cpp_srht_apply <- function(M, rows, signs, perm, scale, n_threads = 0L) {
     .Call('_fmrireg_cpp_srht_apply', PACKAGE = 'fmrireg', M, rows, signs, perm, scale, n_threads)
 }
