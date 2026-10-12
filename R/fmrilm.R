@@ -162,17 +162,41 @@ fast_rlm_run <- function(X, Y, proj,
 
 #' Create an fMRI Model
 #'
-#' This function creates an \code{fmri_model} by combining an event model and a baseline model.
-#' If a baseline model is not provided, a default one is created based on the dataset.
+#' Builds an \code{fmri_model} from an event formula and an \code{fmri_frame}:
+#' the event model is constructed from the dataset's event table and sampling
+#' frame and combined with a baseline (drift and intercept) model. This is the
+#' constructor \code{fmri_lm()} uses for its formula interface.
 #'
-#' @param formula The model formula for experimental events.
-#' @param block The model formula for block structure.
-#' @param baseline_model (Optional) A \code{baseline_model} object. If \code{NULL}, a default baseline model is created.
-#' @param dataset An \code{fmri_frame} containing the event table and sampling frame.
-#' @param drop_empty Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.
-#' @param durations A vector of event durations. Default is \code{0}.
+#' When \code{baseline_model} is \code{NULL} the default baseline is
+#' \code{baseline_model(basis = "bs", degree = max(ceiling(median(run_lengths) / 100), 3),
+#' sframe = <dataset sampling frame>)}: a B-spline drift basis whose degree grows
+#' by one per 100 scans of the median run length (at least 3), fitted
+#' separately within each run, plus one intercept per run (the
+#' \code{intercept = "runwise"} default of \code{baseline_model()}).
+#'
+#' @param formula The model formula for experimental events, e.g.
+#'   \code{onset ~ hrf(condition)}.
+#' @param block A one-sided formula naming the run (block) variable of the
+#'   event table, e.g. \code{~ run}. It must be a formula.
+#' @param baseline_model Optional \code{baseline_model} object. If \code{NULL}
+#'   (default), the B-spline baseline described in Details is used.
+#' @param dataset An \code{fmri_frame} supplying the event table and sampling
+#'   frame.
+#' @param drop_empty Logical. Whether to drop factor levels with no events
+#'   when building the event model. Default \code{TRUE}.
+#' @param durations Event durations in seconds: a single value applied to every
+#'   event, or one value per event-table row. Default \code{0}.
 #' @return An \code{fmri_model} object.
-#' @keywords internal
+#' @seealso \code{\link{fmri_model}}, \code{\link{fmri_lm}}
+#' @export
+#' @examples
+#' ev <- data.frame(onset = c(10, 30, 50, 10, 30, 50),
+#'                  condition = factor(c("a", "b", "a", "b", "a", "b")),
+#'                  run = rep(1:2, each = 3))
+#' dset <- matrix_frame(matrix(rnorm(160 * 2), 160, 2), TR = 1,
+#'                      run_length = c(80, 80), event_table = ev)
+#' mod <- create_fmri_model(onset ~ hrf(condition), block = ~ run, dataset = dset)
+#' mod$baseline_model$drift_spec$basis   # "bs"
 create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, drop_empty = TRUE, durations = 0) {
   assert_that(is.formula(formula), msg = "'formula' must be a formula")
   formula <- .fmrireg_inject_registered_bases(formula)
