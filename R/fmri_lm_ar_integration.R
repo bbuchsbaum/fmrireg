@@ -41,19 +41,7 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
     stop("NA values detected in X or Y", call. = FALSE)
   }
 
-  # Get residuals for AR estimation
-  if (is.null(glm_ctx$residuals)) {
-    if (!is.null(glm_ctx$proj) && !is.null(glm_ctx$proj$Pinv)) {
-      coef <- glm_ctx$proj$Pinv %*% Y
-    } else {
-      coef <- .fast_preproject(X)$Pinv %*% Y
-    }
-    residuals <- Y - X %*% coef
-  } else {
-    residuals <- glm_ctx$residuals
-  }
-
-  # If phi provided, use it directly
+  # If phi provided, use it directly (no residuals are needed)
   if (!is.null(ar_opts$phi)) {
     phi_input <- ar_opts$phi
     if (!is.list(phi_input)) {
@@ -94,6 +82,18 @@ whiten_glm_context <- function(glm_ctx, ar_options, run_indices = NULL) {
       exact_first = ar_opts$exact_first %||% TRUE
     )
   } else {
+    # OLS residuals for AR estimation, formed only on this path
+    if (is.null(glm_ctx$residuals)) {
+      if (!is.null(glm_ctx$proj) && !is.null(glm_ctx$proj$Pinv)) {
+        coef <- glm_ctx$proj$Pinv %*% Y
+      } else {
+        coef <- .fast_preproject(X)$Pinv %*% Y
+      }
+      residuals <- Y - X %*% coef
+    } else {
+      residuals <- glm_ctx$residuals
+    }
+
     # Estimate AR using fmriAR
     plan <- .estimate_ar_via_fmriAR(
       residuals, ar_opts, run_indices, design = X

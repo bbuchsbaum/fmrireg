@@ -560,18 +560,13 @@ NULL
     plan$theta <- replicate(n_blocks, numeric(0), simplify = FALSE)
   }
 
-  parallel_whiten <- getOption("fmrireg.ar.parallel_whiten", TRUE)
-  if (!is.logical(parallel_whiten) || length(parallel_whiten) != 1L || is.na(parallel_whiten)) {
-    parallel_whiten <- TRUE
-  }
-
   # Apply whitening (censor is passed for consistent segment handling)
   result <- fmriAR::whiten_apply(
     plan = plan,
     X = X,
     Y = Y,
     runs = runs,
-    parallel = isTRUE(parallel_whiten),
+    parallel = .ar_parallel_whiten(Y),
     censor = censor
   )
 
@@ -715,6 +710,24 @@ NULL
     NULL
   }
   list(ar_coef = ar_coef, ma_coef = ma_coef)
+}
+
+#' Whether fmriAR::whiten_apply() should use threads
+#'
+#' `getOption("fmrireg.ar.parallel_whiten", TRUE)` (an invalid value counts
+#' as `TRUE`), and never for a response with at most one column: spinning up
+#' threads for one series (e.g. per-voxel whitening) costs more than it saves.
+#' @param Y The response being whitened.
+#' @keywords internal
+#' @noRd
+.ar_parallel_whiten <- function(Y) {
+  parallel_whiten <- getOption("fmrireg.ar.parallel_whiten", TRUE)
+  if (!is.logical(parallel_whiten) || length(parallel_whiten) != 1L ||
+      is.na(parallel_whiten)) {
+    parallel_whiten <- TRUE
+  }
+  n_cols <- if (is.null(dim(Y))) 1L else ncol(Y)
+  isTRUE(parallel_whiten) && n_cols > 1L
 }
 
 #' Iterative AR-GLS estimation using fmriAR
