@@ -16,22 +16,36 @@
 coef_image(object, coef = 1, statistic = c("estimate", "se", "z", "p"), ...)
 }
 \arguments{
-\item{object}{An fmri_meta object}
+\item{object}{A fitted model: an \code{fmri_lm} object (from
+\code{\link{fmri_lm}}) or an \code{fmri_meta} object (from
+\code{\link{fmri_meta}}). Group t-test fits have their own method,
+documented in \code{\link{coef_image.fmri_ttest_fit}}.}
 
-\item{coef}{Coefficient name or index}
+\item{coef}{Coefficient name or index.}
 
-\item{statistic}{Type of statistic to extract ("estimate", "se", "z", "p")}
+\item{statistic}{Statistic to extract. The vocabulary depends on the class
+of \code{object}:
+\describe{
+\item{\code{fmri_lm}}{One of \code{"estimate"} (default), \code{"se"},
+\code{"tstat"}, or \code{"prob"}.}
+\item{\code{fmri_meta}}{One of \code{"estimate"} (default),
+\code{"se"}, \code{"z"} (estimate / se), or \code{"p"} (two-sided
+normal p-value).}
+}}
 
-\item{type}{For \code{fmri_lm} objects: which coefficient set to index into:
-\code{"estimates"} (default), \code{"contrasts"}, or \code{"F"}.}
+\item{type}{For \code{fmri_lm} objects only: which coefficient set to index
+into: \code{"estimates"} (default), \code{"contrasts"}, or \code{"F"}.}
 
-\item{...}{Additional arguments (currently unused).}
+\item{...}{Additional arguments passed to methods (currently unused).}
 }
 \value{
-NeuroVol object or matrix
+A \code{NeuroVol} for volumetric data, otherwise a numeric vector
+with one value per voxel or feature.
 }
 \description{
-Extract Image/Volume for Coefficient
+Extract one coefficient's statistic map from a fitted model, as a
+\code{NeuroVol} when the underlying data are volumetric and as a numeric
+vector otherwise.
 }
 \examples{
 # Create a small example

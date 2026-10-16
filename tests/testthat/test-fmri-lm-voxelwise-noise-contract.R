@@ -7,7 +7,10 @@ test_that("built-in joint fitting rejects voxelwise temporal covariance", {
     matrix(rnorm(2L * n), nrow = n),
     TR = 1, run_length = n, event_table = events
   )
-  control <- fmri_lm_control(noise = noise_spec("ar1", voxelwise = TRUE))
+  control <- fmri_lm_control(
+    estimation = estimation_spec("joint"),
+    noise = noise_spec("ar1", voxelwise = TRUE)
+  )
 
   expect_true(control$noise$voxelwise)
   expect_identical(control$estimation$scope, "joint")

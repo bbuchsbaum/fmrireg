@@ -53,7 +53,17 @@ omitted when the model already owns its dataset.}
 
 \item{drop_empty}{Remove empty factor levels during model construction.}
 
-\item{control}{A validated \code{\link[=fmri_lm_control]{fmri_lm_control()}}.}
+\item{control}{A validated \code{\link[=fmri_lm_control]{fmri_lm_control()}}. The default fits runs
+separately and pools them by fixed-effect meta-analysis
+(\code{estimation_spec("runwise_meta")}). A control object built without an
+\code{estimation} argument keeps this runwise default for the built-in fitter;
+pass \code{fmri_lm_control(estimation = estimation_spec("joint"))} to fit one
+joint model across runs. HAC, sandwich, and Satterthwaite inference
+(see \code{\link[=variance_spec]{variance_spec()}}) are implemented only for a joint fit; when such a
+\code{variance} is requested without an \code{estimation}, \code{\link[=fmri_lm_control]{fmri_lm_control()}}
+selects the joint scope and says so in a message. When \code{engine} is
+supplied and \code{control} does not specify \code{estimation} (or is omitted), the
+engine receives \code{estimation_spec("joint")}.}
 
 \item{compute}{A validated \code{\link[=compute_spec]{compute_spec()}}.}
 

@@ -18,7 +18,8 @@ fit_glm_with_config(
 
 \item{Y}{Numeric matrix with \code{nrow(Y)} time points and columns matching voxels.}
 
-\item{cfg}{Optional \code{fmri_lm_control}; defaults to \code{fmri_lm_control()}.}
+\item{cfg}{Optional \code{fmri_lm_control}; defaults to
+\code{fmri_lm_control(estimation = estimation_spec("joint"))}.}
 
 \item{dataset}{Optional dataset whose feature axis describes the columns of
 \code{Y}. It is never inferred from \code{model$dataset}, because a transformed

@@ -556,11 +556,6 @@ coef_names.fmri_lm <- function(x, type = c("estimates", "contrasts", "F", "all")
 }
 
 #' @rdname coef_image
-#' @param statistic For \code{fmri_lm} objects: one of \code{"estimate"},
-#'   \code{"se"}, \code{"tstat"}, or \code{"prob"}.
-#' @param type For \code{fmri_lm} objects: which coefficient set to index into:
-#'   \code{"estimates"} (default), \code{"contrasts"}, or \code{"F"}.
-#' @param ... Additional arguments (currently unused).
 #' @examples
 #' # Create a small example
 #' X <- matrix(rnorm(50 * 4), 50, 4)

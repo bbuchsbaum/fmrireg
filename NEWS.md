@@ -1,3 +1,26 @@
+# fmrireg (development version)
+
+## Bug fixes
+
+* `fmri_lm_control()` now defaults `estimation` to
+  `estimation_spec("runwise_meta")`, the same default `fmri_lm()` uses. Before,
+  an omitted `estimation` resolved to the joint scope, so passing a control
+  object only to set `robust`, `noise`, `weights` or another section silently
+  switched `fmri_lm()` from runwise meta-estimation to a single joint fit and
+  changed the estimates. The requested (or default) scope is now honoured; pass
+  `estimation = estimation_spec("joint")` to fit runs jointly. Two documented
+  exceptions remain for an omitted `estimation`: HAC, sandwich, and
+  Satterthwaite inference, which exist only for a joint fit, select the joint
+  scope with a message saying so; and registered engines keep their joint
+  default. The `fmri_lm()` and `fmri_lm_control()` help pages describe both
+  (#247).
+* The `coef_image()` help page now documents `object` as an `fmri_lm` or
+  `fmri_meta` object and lists each class's `statistic` vocabulary
+  (`"tstat"`/`"prob"` for `fmri_lm`, `"z"`/`"p"` for `fmri_meta`). The
+  `estimate_betas()` page now has a single description and a single return
+  value that match the `fmri_frame` method, and no longer lists the
+  unsupported `"r1"` and `"pls"` methods (#248).
+
 # fmrireg 0.3.0
 
 ## Breaking: design generics now come from fmridesign (fmridesign >= 0.6.1.9000)

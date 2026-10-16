@@ -46,16 +46,6 @@ as coefficient-by-feature matrices.}
 \item{progress}{Logical; show progress bar.}
 }
 \value{
-A list of class "fmri_betas" containing:
-\describe{
-\item{betas_fixed}{Fixed effect coefficients}
-\item{betas_ran}{Random (trial-wise) coefficients}
-\item{design_ran}{Design matrix for random effects}
-\item{design_fixed}{Design matrix for fixed effects}
-\item{design_base}{Design matrix for baseline model}
-\item{method_specific}{Additional components specific to the estimation method used}
-}
-
 A list of class "fmri_betas" containing the following components:
 \itemize{
 \item betas_fixed: fixed effect betas (NeuroVec for volumetric frames, matrix otherwise).
@@ -70,17 +60,12 @@ A list of class "fmri_betas" containing the following components:
 }
 }
 \description{
-Estimate beta coefficients (regression parameters) from fMRI data using various methods.
-This function supports different estimation approaches for:
-\describe{
-\item{single}{Single-trial beta estimation}
-\item{effects}{Fixed and random effects}
-\item{regularization}{Various regularization techniques}
-\item{hrf}{Optional HRF estimation}
-}
-
-This function estimates betas (regression coefficients) for fixed and random effects
-using various regression methods including mixed models, least squares, and PLS.
+Estimate trialwise (random) and condition-level (fixed) beta coefficients
+from fMRI data. Trialwise regressors given by \code{ran} are estimated with one of
+three methods: ridge/BLUP mixed-effects estimation (\code{"mixed"}), least-squares
+separate estimation (\code{"lss"}), or ordinary least squares (\code{"ols"}).
+Optional fixed regressors (\code{fixed}) capture effects that are constant across
+trials, and an optional baseline model is regressed out before estimation.
 }
 \details{
 This is a generic function whose \code{fmri_frame} method adapts to the frame's
@@ -88,12 +73,10 @@ feature space: volumetric frames (\code{volume_space}) return \code{NeuroVec} be
 while matrix-format (\code{index_space}) and latent (\code{basis_space}) frames return
 coefficient matrices.
 
-Available estimation methods include:
+Available estimation methods (\code{method}) are:
 \describe{
 \item{mixed}{Mixed-effects model using ridge/BLUP estimation}
-\item{r1}{Rank-1 GLM with joint HRF estimation}
 \item{lss}{Least-squares separate estimation}
-\item{pls}{Partial least squares regression}
 \item{ols}{Ordinary least squares}
 }
 }

@@ -413,38 +413,12 @@ p_values <- function(x, ...) UseMethod("p_values")
 #' Estimate Beta Coefficients for fMRI Data
 #'
 #' @description
-#' Estimate beta coefficients (regression parameters) from fMRI data using various methods.
-#' This function supports different estimation approaches for:
-#' \describe{
-#'   \item{single}{Single-trial beta estimation}
-#'   \item{effects}{Fixed and random effects}
-#'   \item{regularization}{Various regularization techniques}
-#'   \item{hrf}{Optional HRF estimation}
-#' }
-#'
-#' @param x The dataset: an `fmri_frame` (see [matrix_frame()], [neurovec_frame()],
-#'   [nifti_frame()], [latent_frame()])
-#' @param progress Logical; show progress bar.
-#' @param ... Additional arguments passed to specific methods. Common arguments include:
-#' \describe{
-#'   \item{fixed}{Formula specifying fixed effects (constant across trials)}
-#'   \item{ran}{Formula specifying random effects (varying by trial)}
-#'   \item{block}{Formula specifying the block/run structure}
-#'   \item{method}{Estimation method (e.g., "mixed", "r1", "lss", "pls")}
-#'   \item{basemod}{Optional baseline model to regress out}
-#'   \item{hrf_basis}{Basis functions for HRF estimation}
-#'   \item{hrf_ref}{Reference HRF for initialization}
-#' }
-#'
-#' @return A list of class "fmri_betas" containing:
-#' \describe{
-#'     \item{betas_fixed}{Fixed effect coefficients}
-#'     \item{betas_ran}{Random (trial-wise) coefficients}
-#'     \item{design_ran}{Design matrix for random effects}
-#'     \item{design_fixed}{Design matrix for fixed effects}
-#'     \item{design_base}{Design matrix for baseline model}
-#'     \item{method_specific}{Additional components specific to the estimation method used}
-#' }
+#' Estimate trialwise (random) and condition-level (fixed) beta coefficients
+#' from fMRI data. Trialwise regressors given by `ran` are estimated with one of
+#' three methods: ridge/BLUP mixed-effects estimation (`"mixed"`), least-squares
+#' separate estimation (`"lss"`), or ordinary least squares (`"ols"`).
+#' Optional fixed regressors (`fixed`) capture effects that are constant across
+#' trials, and an optional baseline model is regressed out before estimation.
 #'
 #' @details
 #' This is a generic function whose `fmri_frame` method adapts to the frame's
@@ -452,12 +426,10 @@ p_values <- function(x, ...) UseMethod("p_values")
 #' while matrix-format (`index_space`) and latent (`basis_space`) frames return
 #' coefficient matrices.
 #'
-#' Available estimation methods include:
+#' Available estimation methods (`method`) are:
 #' \describe{
 #'   \item{mixed}{Mixed-effects model using ridge/BLUP estimation}
-#'   \item{r1}{Rank-1 GLM with joint HRF estimation}
 #'   \item{lss}{Least-squares separate estimation}
-#'   \item{pls}{Partial least squares regression}
 #'   \item{ols}{Ordinary least squares}
 #' }
 #'

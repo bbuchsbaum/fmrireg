@@ -663,6 +663,12 @@ fmri_lm <- function(formula, ...) {
   }
 
   spec <- .fmri_lm_resolve_engine_spec(engine = engine)
+  # Engines default to one joint fit. A control object built without an
+  # explicit `estimation` carries fmri_lm()'s built-in runwise default, which
+  # is not a request made of the engine (#247).
+  if (!.fmri_lm_estimation_supplied(cfg)) {
+    cfg$estimation <- estimation_spec("joint")
+  }
   .validate_engine_capabilities(spec$name, cfg, spec$capabilities)
   .validate_engine_context(spec$name, model, dataset, engine_args, cfg, spec$capabilities)
   executed_cfg <- .derive_engine_execution_config(cfg, spec$capabilities)
@@ -1101,7 +1107,17 @@ fmri_lm <- function(formula, ...) {
 #' the same control object and receive their private arguments through
 #' `engine_args`.
 #'
-#' @param control A validated [fmri_lm_control()].
+#' @param control A validated [fmri_lm_control()]. The default fits runs
+#'   separately and pools them by fixed-effect meta-analysis
+#'   (`estimation_spec("runwise_meta")`). A control object built without an
+#'   `estimation` argument keeps this runwise default for the built-in fitter;
+#'   pass `fmri_lm_control(estimation = estimation_spec("joint"))` to fit one
+#'   joint model across runs. HAC, sandwich, and Satterthwaite inference
+#'   (see [variance_spec()]) are implemented only for a joint fit; when such a
+#'   `variance` is requested without an `estimation`, [fmri_lm_control()]
+#'   selects the joint scope and says so in a message. When `engine` is
+#'   supplied and `control` does not specify `estimation` (or is omitted), the
+#'   engine receives `estimation_spec("joint")`.
 #' @param compute A validated [compute_spec()].
 #' @param block Formula describing run/block structure.
 #' @param baseline_model Optional baseline/nuisance model.

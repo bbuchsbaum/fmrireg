@@ -16,7 +16,17 @@ fmri_lm_control(
 )
 }
 \arguments{
-\item{estimation}{An \code{\link[=estimation_spec]{estimation_spec()}}.}
+\item{estimation}{An \code{\link[=estimation_spec]{estimation_spec()}}. When omitted (\code{NULL}), the
+control object uses \code{estimation_spec("runwise_meta")}, the same default
+as \code{\link[=fmri_lm]{fmri_lm()}}, so supplying a control object only to change another
+section (for example \code{robust}) does not change the estimation scope.
+Note that this differs from calling \code{\link[=estimation_spec]{estimation_spec()}} with no
+arguments, which returns the joint scope. There are two exceptions:
+HAC, sandwich, or Satterthwaite inference requested through \code{variance}
+is implemented only for a joint fit, so an omitted \code{estimation} then
+resolves to \code{estimation_spec("joint")} with a message saying so; and with
+a registered \code{engine}, an omitted \code{estimation} resolves to
+\code{estimation_spec("joint")} (see \code{\link[=fmri_lm]{fmri_lm()}}).}
 
 \item{noise}{A \code{\link[=noise_spec]{noise_spec()}}.}
 

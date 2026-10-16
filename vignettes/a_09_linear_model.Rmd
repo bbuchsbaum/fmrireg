@@ -790,14 +790,23 @@ ggplot(hrf_gcv_plot, aes(x = lambda_axis, y = score)) +
 ## Comparing Models with Different HRF Bases
 
 The choice of hemodynamic response function can impact model fit. Let's compare different HRF options.
+The comparison below scores each model by AIC from one design matrix and one
+coefficient vector per voxel, so each model is fitted jointly across runs
+(`estimation_spec("joint")`) rather than with the default runwise
+meta-estimation.
 
 ```{r fit-comparison-models, message=FALSE}
-# Fit models with different HRF bases
+# Fit models with different HRF bases, jointly across runs
+joint_ar1 <- fmri_lm_control(
+  estimation = estimation_spec("joint"),
+  noise = noise_spec("ar1")
+)
+
 model_canonical <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "spmg1"),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1")),
+  control = joint_ar1,
   compute = compute_spec(voxel_chunks = 1L)
 )
 
@@ -805,7 +814,7 @@ model_gaussian <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "gaussian"),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1")),
+  control = joint_ar1,
   compute = compute_spec(voxel_chunks = 1L)
 )
 
@@ -813,7 +822,7 @@ model_bspline <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "bspline", nbasis = 5),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1")),
+  control = joint_ar1,
   compute = compute_spec(voxel_chunks = 1L)
 )
 ```

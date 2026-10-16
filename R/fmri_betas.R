@@ -132,11 +132,6 @@ mixed_betas <- function(X, Y, ran_ind, fixed_ind, solver = NULL, nuisance = NULL
   })
 }
 
-#' Estimate betas using various regression methods
-#'
-#' This function estimates betas (regression coefficients) for fixed and random effects
-#' using various regression methods including mixed models, least squares, and PLS.
-#'
 #' @param x An `fmri_frame` (see [matrix_frame()], [neurovec_frame()],
 #'   [nifti_frame()], and [latent_frame()]). When the frame's feature space is a
 #'   `volume_space`, the fixed and random betas are returned as `NeuroVec`

@@ -193,10 +193,31 @@
          paste(names(conflicts)[conflicts], collapse = ", "), ".", call. = FALSE)
   }
 
-  estimation <- estimation %||% estimation_spec()
+  # An omitted `estimation` resolves to fmri_lm()'s own default (runwise
+  # meta-estimation), so that supplying a control object for an unrelated
+  # reason (robust, noise, weights, ...) never changes the estimator (#247).
+  # Whether the scope was chosen explicitly is recorded so that engine
+  # dispatch can keep its documented joint default.
+  estimation_supplied <- !is.null(estimation)
   noise <- noise %||% .fmri_lm_noise_from_legacy(ar_options)
   robust <- robust %||% .fmri_lm_robust_from_legacy(robust_options)
   variance <- variance %||% variance_spec()
+  if (!estimation_supplied) {
+    if (inherits(variance, "fmri_lm_variance_spec") &&
+        .fmri_lm_variance_needs_joint(variance)) {
+      # HAC, sandwich and Satterthwaite inference are only implemented for a
+      # joint fit, so the runwise default cannot serve them. Say so rather
+      # than switching scope silently.
+      message(
+        "HAC, sandwich, and Satterthwaite inference require joint estimation; ",
+        "using `estimation_spec(\"joint\")`. Supply `estimation` explicitly ",
+        "to silence this message."
+      )
+      estimation <- estimation_spec("joint")
+    } else {
+      estimation <- estimation_spec("runwise_meta")
+    }
+  }
   weights <- weights %||% .fmri_lm_weights_from_legacy(volume_weights_options)
   projection <- projection %||% .fmri_lm_projection_from_legacy(soft_subspace_options)
 
@@ -232,8 +253,21 @@
       na_action = na_action,
       schema_version = 2L
     )),
-    class = "fmri_lm_control"
+    class = "fmri_lm_control",
+    estimation_supplied = estimation_supplied
   )
+}
+
+# HAC, sandwich, and Satterthwaite inference need a joint fit.
+.fmri_lm_variance_needs_joint <- function(variance) {
+  !identical(variance$method, "model") ||
+    identical(variance$df, "satterthwaite")
+}
+
+# TRUE unless the control object was built without an explicit `estimation`.
+# Objects created before the flag existed count as explicit.
+.fmri_lm_estimation_supplied <- function(cfg) {
+  !identical(attr(cfg, "estimation_supplied", exact = TRUE), FALSE)
 }
 
 #' Configure an fMRI linear model
@@ -242,7 +276,17 @@
 #' [fmri_lm()]. Each section is a validated typed specification; mechanical
 #' choices such as chunking and parallelism belong in [compute_spec()].
 #'
-#' @param estimation An [estimation_spec()].
+#' @param estimation An [estimation_spec()]. When omitted (`NULL`), the
+#'   control object uses `estimation_spec("runwise_meta")`, the same default
+#'   as [fmri_lm()], so supplying a control object only to change another
+#'   section (for example `robust`) does not change the estimation scope.
+#'   Note that this differs from calling [estimation_spec()] with no
+#'   arguments, which returns the joint scope. There are two exceptions:
+#'   HAC, sandwich, or Satterthwaite inference requested through `variance`
+#'   is implemented only for a joint fit, so an omitted `estimation` then
+#'   resolves to `estimation_spec("joint")` with a message saying so; and with
+#'   a registered `engine`, an omitted `estimation` resolves to
+#'   `estimation_spec("joint")` (see [fmri_lm()]).
 #' @param noise A [noise_spec()].
 #' @param robust A [robust_spec()].
 #' @param variance A [variance_spec()].

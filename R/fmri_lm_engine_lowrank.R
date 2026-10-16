@@ -287,7 +287,9 @@
 #' @noRd
 .run_lowrank_engine <- function(fm, dataset, lowrank, cfg = NULL, ar_options = NULL) {
   if (is.null(cfg)) {
-    cfg <- .fmri_lm_control_legacy(ar_options = ar_options)
+    cfg <- .fmri_lm_control_legacy(
+      estimation = estimation_spec("joint"), ar_options = ar_options
+    )
   }
   lowrank <- lowrank %||% list()
   .preflight_lowrank_engine(fm, dataset, lowrank, cfg)

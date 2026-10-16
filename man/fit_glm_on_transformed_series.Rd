@@ -18,7 +18,8 @@ fit_glm_on_transformed_series(
 
 \item{Y}{Numeric matrix with \code{nrow(Y)} time points and columns matching voxels.}
 
-\item{cfg}{Optional \code{fmri_lm_control}; defaults to \code{fmri_lm_control()} and
+\item{cfg}{Optional \code{fmri_lm_control}; defaults to
+\code{fmri_lm_control(estimation = estimation_spec("joint"))} and
 must request IID noise and no robust fitting.}
 
 \item{dataset}{Optional dataset whose feature axis describes the columns of

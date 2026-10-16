@@ -100,7 +100,7 @@ test_that(".validate_engine_context covers parcels and forbid-class rules", {
 })
 
 test_that(".validate_engine_capabilities rejects variance/df/scope/preprocessing", {
-  cfg <- fmri_lm_control()
+  cfg <- fmri_lm_control(estimation = estimation_spec("joint"))
   expect_error(
     fmrireg:::.validate_engine_capabilities(
       "e", cfg, capabilities = list(variance_methods = "sandwich")

@@ -631,7 +631,8 @@ prepare_fmri_lm_contrasts <- function(fmrimod) {
 #'
 #' @param model An `fmri_model` describing the design.
 #' @param Y Numeric matrix with `nrow(Y)` time points and columns matching voxels.
-#' @param cfg Optional `fmri_lm_control`; defaults to `fmri_lm_control()` and
+#' @param cfg Optional `fmri_lm_control`; defaults to
+#'   `fmri_lm_control(estimation = estimation_spec("joint"))` and
 #'   must request IID noise and no robust fitting.
 #' @param dataset Optional dataset whose feature axis describes the columns of
 #'   `Y`. It is never inferred from `model$dataset`, because a transformed
@@ -646,7 +647,7 @@ fit_glm_on_transformed_series <- function(model, Y, cfg = NULL, dataset = NULL,
     stop("`model` must be an 'fmri_model'", call. = FALSE)
   }
   if (is.null(cfg)) {
-    cfg <- fmri_lm_control()
+    cfg <- fmri_lm_control(estimation = estimation_spec("joint"))
   } else if (!inherits(cfg, "fmri_lm_control")) {
     stop("`cfg` must inherit from 'fmri_lm_control'", call. = FALSE)
   }
@@ -753,7 +754,8 @@ fit_glm_on_transformed_series <- function(model, Y, cfg = NULL, dataset = NULL,
 #'
 #' @param model An `fmri_model` describing the design.
 #' @param Y Numeric matrix with `nrow(Y)` time points and columns matching voxels.
-#' @param cfg Optional `fmri_lm_control`; defaults to `fmri_lm_control()`.
+#' @param cfg Optional `fmri_lm_control`; defaults to
+#'   `fmri_lm_control(estimation = estimation_spec("joint"))`.
 #' @param dataset Optional dataset whose feature axis describes the columns of
 #'   `Y`. It is never inferred from `model$dataset`, because a transformed
 #'   response can have a different feature space.
@@ -764,7 +766,7 @@ fit_glm_on_transformed_series <- function(model, Y, cfg = NULL, dataset = NULL,
 fit_glm_with_config <- function(model, Y, cfg = NULL, dataset = NULL,
                                 strategy = "external", engine = "external") {
   if (!inherits(model, "fmri_model")) stop("`model` must be an 'fmri_model'", call. = FALSE)
-  if (is.null(cfg)) cfg <- fmri_lm_control()
+  if (is.null(cfg)) cfg <- fmri_lm_control(estimation = estimation_spec("joint"))
   if (!inherits(cfg, "fmri_lm_control")) stop("`cfg` must inherit from 'fmri_lm_control'", call. = FALSE)
   if (!is.matrix(Y)) Y <- as.matrix(Y)
   mode(Y) <- "numeric"
@@ -873,7 +875,7 @@ fit_glm_from_suffstats <- function(model, XtX, XtS, StS, df,
                                    cfg = NULL, dataset = NULL,
                                    strategy = "external", engine = "external") {
   if (!inherits(model, "fmri_model")) stop("`model` must be an 'fmri_model'", call. = FALSE)
-  if (is.null(cfg)) cfg <- fmri_lm_control()
+  if (is.null(cfg)) cfg <- fmri_lm_control(estimation = estimation_spec("joint"))
   if (!inherits(cfg, "fmri_lm_control")) stop("`cfg` must inherit from 'fmri_lm_control'", call. = FALSE)
 
   XtX <- as.matrix(XtX); XtS <- as.matrix(XtS); StS <- as.numeric(StS)
