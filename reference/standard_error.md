@@ -10,13 +10,10 @@ measures.
 standard_error(x, ...)
 
 # S3 method for class 'fmri_latent_lm'
-standard_error(x, type = c("estimates", "contrasts"), recon = FALSE, ...)
+standard_error(x, type = c("betas", "contrasts"), recon = FALSE, ...)
 
 # S3 method for class 'fmri_lm'
-standard_error(x, type = c("estimates", "contrasts"), ...)
-
-# S3 method for class 'fmri_lm'
-standard_error(x, type = c("estimates", "contrasts"), ...)
+standard_error(x, type = c("betas", "contrasts"), ...)
 ```
 
 ## Arguments
@@ -31,8 +28,10 @@ standard_error(x, type = c("estimates", "contrasts"), ...)
 
 - type:
 
-  The type of standard errors to extract: "estimates" or "contrasts"
-  (default: "estimates")
+  For `fmri_lm` fits, the parameter family: `"betas"` (default) for the
+  event coefficients returned by
+  [`coef()`](https://rdrr.io/r/stats/coef.html), or `"contrasts"`.
+  `"estimates"` is accepted as a synonym of `"betas"`.
 
 - recon:
 
@@ -41,7 +40,9 @@ standard_error(x, type = c("estimates", "contrasts"), ...)
 
 ## Value
 
-A tibble or matrix containing standard errors of parameter estimates
+A tibble or matrix containing standard errors of parameter estimates.
+For `fmri_lm` fits, one row per voxel and one column per term, in the
+same orientation as [`coef()`](https://rdrr.io/r/stats/coef.html).
 
 ## See also
 

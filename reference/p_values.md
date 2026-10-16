@@ -10,7 +10,7 @@ extracting statistical measures.
 p_values(x, ...)
 
 # S3 method for class 'fmri_lm'
-p_values(x, type = c("estimates", "contrasts"), ...)
+p_values(x, type = c("betas", "contrasts"), ...)
 ```
 
 ## Arguments
@@ -25,9 +25,10 @@ p_values(x, type = c("estimates", "contrasts"), ...)
 
 - type:
 
-  Character string specifying the type of p-values to extract. Options
-  typically include "estimates" for parameter estimates and "contrasts"
-  for contrast tests. Defaults to "estimates" in most methods.
+  For `fmri_lm` fits, the parameter family: `"betas"` (default) for the
+  event coefficients returned by
+  [`coef()`](https://rdrr.io/r/stats/coef.html), or `"contrasts"`.
+  `"estimates"` is accepted as a synonym of `"betas"`.
 
 ## Value
 

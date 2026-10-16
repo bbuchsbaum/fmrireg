@@ -8,7 +8,7 @@ Visual summaries of an `fmri_lm` fit. Five views are available:
 # S3 method for class 'fmri_lm'
 autoplot(
   object,
-  type = c("estimates", "contrasts", "hrf", "timecourse", "residuals"),
+  type = c("betas", "contrasts", "hrf", "timecourse", "residuals"),
   voxel = NULL,
   level = 0.95,
   sample_at = seq(0, 20, by = 0.25),
@@ -19,7 +19,7 @@ autoplot(
 # S3 method for class 'fmri_lm'
 plot(
   x,
-  type = c("estimates", "contrasts", "hrf", "timecourse", "residuals"),
+  type = c("betas", "contrasts", "hrf", "timecourse", "residuals"),
   voxel = NULL,
   ...
 )
@@ -33,12 +33,16 @@ plot(
 
 - type:
 
-  One of `"estimates"`, `"contrasts"`, `"hrf"`, `"timecourse"`,
-  `"residuals"`.
+  One of `"betas"` (default), `"contrasts"`, `"hrf"`, `"timecourse"`,
+  `"residuals"`. The first two name the parameter family, as in
+  [`stats()`](https://bbuchsbaum.github.io/fmrireg/reference/stats.md)
+  and
+  [`coef()`](https://bbuchsbaum.github.io/fmrireg/reference/coef.fmri_lm.md).
+  `"estimates"` is accepted as a synonym of `"betas"`.
 
 - voxel:
 
-  Optional integer voxel index (or indices, for `"estimates"`,
+  Optional integer voxel index (or indices, for `"betas"`,
   `"contrasts"`, `"hrf"` and `"residuals"`).
 
 - level:
@@ -69,7 +73,7 @@ returns it invisibly.
 
 ## Details
 
-- `"estimates"`:
+- `"betas"`:
 
   With no `voxel`, the distribution of t-statistics across voxels for
   each event regressor, drawn as a sina plot (points spread in
@@ -82,7 +86,7 @@ returns it invisibly.
 
 - `"contrasts"`:
 
-  As `"estimates"`, for the fitted contrasts.
+  As `"betas"`, for the fitted contrasts.
 
 - `"hrf"`:
 

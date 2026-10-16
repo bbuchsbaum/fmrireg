@@ -40,7 +40,10 @@ hrf_smoothing_kernel(
 
 - method:
 
-  The method to use for computing the kernel.
+  "gram" (inner products of the design rows) or "cosine" (the same,
+  scaled to unit diagonal). With `normalise = TRUE` both give
+  `K[i, j] / sqrt(K[i, i] * K[j, j])`, a symmetric matrix with unit
+  diagonal.
 
 ## Value
 

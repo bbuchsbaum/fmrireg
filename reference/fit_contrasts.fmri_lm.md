@@ -26,3 +26,12 @@ fit_contrasts(object, contrasts, ...)
 ## Value
 
 A list of contrast results
+
+## Details
+
+Multi-run fits estimated run by run (`runwise_meta`) with temporal noise
+models, robust weighting, volume weights or projection whiten or weight
+each run differently, so their pooled betas have no single stored
+covariance; post-hoc contrasts are refused for them. Specify such
+contrasts in the model formula, or fit with
+`estimation_spec(scope = "joint")`.

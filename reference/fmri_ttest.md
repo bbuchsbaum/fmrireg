@@ -52,7 +52,9 @@ fmri_ttest(
 
   - "meta": Use inverse-variance meta-analysis (requires SE)
 
-  - "classic": Use OLS/Student t-test
+  - "classic": Use OLS/Student t-test. A subject with a non-finite value
+    for a feature is dropped from that feature only, so degrees of
+    freedom can differ between features.
 
   - "welch": Use Welch t-test for unequal variances
 
@@ -115,7 +117,10 @@ fmri_ttest(
 
   Character string for meta-engine weighting: "ivw" (default, uses
   provided SE), "equal" (equal weights), or "custom" (supply
-  `weights_custom`). Ignored for classic/welch engines.
+  `weights_custom`). "equal"/"custom" are relative weights with an
+  estimated residual scale (weighted least squares; see
+  [`fmri_meta`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta.md)).
+  Ignored for classic/welch engines.
 
 - weights_custom:
 

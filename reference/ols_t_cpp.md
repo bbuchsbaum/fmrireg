@@ -1,6 +1,9 @@
 # OLS t-test / ANCOVA across features
 
-OLS t-test / ANCOVA across features
+Subjects with a non-finite outcome for a feature are dropped from that
+feature only (complete-case analysis per feature); a feature with no
+more usable subjects than predictors, or whose remaining design is rank
+deficient, returns NaN.
 
 ## Usage
 
@@ -20,4 +23,6 @@ ols_t_cpp(Y, X)
 
 ## Value
 
-List with beta (K x P), se (K x P), t (K x P), df (scalar), ok (P)
+List with beta (K x P), se (K x P), t (K x P), df (the residual degrees
+of freedom: a scalar when every feature uses all S subjects, otherwise a
+length-P vector), n_obs (length P, subjects used per feature), ok (P)

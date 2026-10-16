@@ -31,8 +31,8 @@ fit_glm_on_transformed_series(
 - cfg:
 
   Optional `fmri_lm_control`; defaults to
-  [`fmri_lm_control()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm_control.md)
-  and must request IID noise and no robust fitting.
+  `fmri_lm_control(estimation = estimation_spec("joint"))` and must
+  request IID noise and no robust fitting.
 
 - dataset:
 

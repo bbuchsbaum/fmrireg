@@ -30,11 +30,11 @@
 - [`batch_values()`](https://bbuchsbaum.github.io/fmrireg/reference/batch_values.md)
   : Extract successful values from a batch result
 
-- [`blockids(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/blockids.event_model.md)
-  : Block IDs for event_model
-
 - [`build_model()`](https://bbuchsbaum.github.io/fmrireg/reference/build_model.md)
   : Assemble the full fMRI model for a job
+
+- [`coef(`*`<fmri_lm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/coef.fmri_lm.md)
+  : Extract Coefficients from an fmri_lm Fit
 
 - [`coef(`*`<fmri_meta>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/coef.fmri_meta.md)
   : Extract Coefficients from Meta-Analysis
@@ -54,9 +54,6 @@
 - [`collect_results()`](https://bbuchsbaum.github.io/fmrireg/reference/collect_results.md)
   : Collect per-subject result maps into a group_data object
 
-- [`columns()`](https://bbuchsbaum.github.io/fmrireg/reference/columns.md)
-  : Extract Column Names or Identifiers
-
 - [`compute_dvars()`](https://bbuchsbaum.github.io/fmrireg/reference/compute_dvars.md)
   : Compute DVARS (Temporal Derivative of Timecourses)
 
@@ -69,9 +66,6 @@
 - [`compute_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/compute_spec.md)
   : Mechanical execution specification
 
-- [`conditions(`*`<convolved_term>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/conditions.md)
-  : Visualize the entire design matrix as a heatmap
-
 - [`contrast()`](https://bbuchsbaum.github.io/fmrireg/reference/contrast.md)
   : Contrast generic
 
@@ -80,9 +74,6 @@
 
 - [`contrast_set()`](https://bbuchsbaum.github.io/fmrireg/reference/contrast_set.md)
   : Create a contrast set
-
-- [`correlation_map()`](https://bbuchsbaum.github.io/fmrireg/reference/correlation_map.md)
-  : correlation_map
 
 - [`correlation_map(`*`<fmri_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/correlation_map.fmri_model.md)
   : correlation_map.fmri_model
@@ -98,9 +89,6 @@
 
 - [`design_map(`*`<fmri_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/design_map.fmri_model.md)
   : Heatmap visualization of the combined fmri_model design matrix
-
-- [`design_matrix(`*`<convolved_term>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/design_matrix.convolved_term.md)
-  : Design Matrix for Convolved Terms
 
 - [`design_matrix(`*`<fmri_lm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/design_matrix.fmri_lm.md)
   : Design Matrix Method for fmri_lm Objects
@@ -140,9 +128,6 @@
 
 - [`evaluate_method_performance()`](https://bbuchsbaum.github.io/fmrireg/reference/evaluate_method_performance.md)
   : Evaluate Method Performance on Benchmark Dataset
-
-- [`event_table(`*`<convolved_term>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/event_table.convolved_term.md)
-  : Extract event table from convolved term
 
 - [`export_jobs()`](https://bbuchsbaum.github.io/fmrireg/reference/export_jobs.md)
   : Export jobs for external / array execution
@@ -296,9 +281,6 @@
 - [`load_benchmark_dataset()`](https://bbuchsbaum.github.io/fmrireg/reference/load_benchmark_dataset.md)
   : Load fMRI Benchmark Datasets
 
-- [`longnames()`](https://bbuchsbaum.github.io/fmrireg/reference/longnames.md)
-  : Extract Long Names of Variable Levels
-
 - [`lowrank_control()`](https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.md)
   : Low-rank / sketch controls for fast GLM
 
@@ -425,9 +407,6 @@
 
 - [`se()`](https://bbuchsbaum.github.io/fmrireg/reference/se.md) :
   Extract Standard Errors from Meta-Analysis
-
-- [`shortnames()`](https://bbuchsbaum.github.io/fmrireg/reference/shortnames.md)
-  : Short Names
 
 - [`simulate_bold_signal()`](https://bbuchsbaum.github.io/fmrireg/reference/simulate_bold_signal.md)
   : Simulate fMRI Time Series

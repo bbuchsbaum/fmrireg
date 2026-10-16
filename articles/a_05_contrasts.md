@@ -569,10 +569,10 @@ kable(contrast_summary, digits = 3,
 
 | contrast             | estimate | std_error | statistic | p_value |  df |
 |:---------------------|---------:|----------:|----------:|:--------|----:|
-| face_vs_scene        |    0.675 |     0.040 |    16.767 | \<1e-04 | 112 |
-| attend_vs_ignore     |    0.345 |     0.042 |     8.224 | \<1e-04 | 112 |
-| category_X_attention |    0.352 |     0.080 |     4.386 | \<1e-04 | 112 |
-| face_gt_baseline     |    1.015 |     0.036 |    28.396 | \<1e-04 | 112 |
+| face_vs_scene        |    0.672 |     0.038 |    17.853 | \<1e-04 | 112 |
+| attend_vs_ignore     |    0.360 |     0.041 |     8.674 | \<1e-04 | 112 |
+| category_X_attention |    0.339 |     0.079 |     4.305 | \<1e-04 | 112 |
+| face_gt_baseline     |    1.014 |     0.034 |    29.685 | \<1e-04 | 112 |
 
 Contrast results for voxel 1 {.table}
 
@@ -602,9 +602,10 @@ three_level_event <- event_model(
   data = three_level_events, sampling_frame = three_level_frame
 )
 three_level_X <- as.matrix(design_matrix(three_level_event))
+# As above, noise is scaled to the regressors' peak height.
 set.seed(404)
 three_level_Y <- three_level_X %*% matrix(c(1.0, 0.4, -0.2), ncol = 1) +
-  matrix(rnorm(100, sd = 0.15), ncol = 1)
+  matrix(rnorm(100, sd = 0.085 * max(abs(three_level_X))), ncol = 1)
 three_level_dataset <- matrix_frame(
   three_level_Y, TR = 2, run_length = 100,
   event_table = three_level_events
@@ -639,7 +640,7 @@ kable(
 
 |       F | numerator_df | denominator_df | p_value |
 |--------:|-------------:|---------------:|:--------|
-| 407.144 |            2 |             93 | \<1e-04 |
+| 468.965 |            2 |             93 | \<1e-04 |
 
 Omnibus test of equality across three condition effects {.table}
 

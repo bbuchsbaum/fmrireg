@@ -5,7 +5,7 @@ outputs, JSON metadata sidecars, vectorized format, explicit overwrite
 handling, and atomic finalization."><meta property="og:description" content="Exports spatial meta-analysis maps with the same core export contract used by
 write_results.fmri_lm: BIDS-style filenames, HDF5 and NIfTI image
 outputs, JSON metadata sidecars, vectorized format, explicit overwrite
-handling, and atomic finalization."></head><body>
+handling, and atomic finalization."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -13,7 +13,7 @@ handling, and atomic finalization."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,7 +38,7 @@ handling, and atomic finalization."></head><body>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (temporal sketches + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -127,7 +127,8 @@ GLM exports, meta-analysis outputs may omit this for group-level maps.</p></dd>
 
 <dt id="arg-format">format<a class="anchor" aria-label="anchor" href="#arg-format"></a></dt>
 <dd><p>Output format(s). Use <code>"h5"</code> for HDF5 LabeledVolumeSet
-outputs, <code>"nifti"</code> for NIfTI outputs, or a character vector to write both.</p></dd>
+outputs, <code>"nifti"</code> for NIfTI outputs, or a character vector to write both.
+NIfTI maps are stored as 32-bit floats (datatype FLOAT32).</p></dd>
 
 
 <dt id="arg-strategy">strategy<a class="anchor" aria-label="anchor" href="#arg-strategy"></a></dt>

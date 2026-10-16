@@ -5,7 +5,7 @@ fmridataset::basis_space (see latent_frame()), so that the assay holds
 component scores and the space carries the spatial loadings."><meta property="og:description" content="This function estimates a regression model for fMRI data using a latent component dataset.
 The dataset must be an fmri_frame whose feature space is a
 fmridataset::basis_space (see latent_frame()), so that the assay holds
-component scores and the space carries the spatial loadings."></head><body>
+component scores and the space carries the spatial loadings."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -13,7 +13,7 @@ component scores and the space carries the spatial loadings."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,7 +38,7 @@ component scores and the space carries the spatial loadings."></head><body>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (temporal sketches + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -120,20 +120,24 @@ component scores and the space carries the spatial loadings.</p>
 
 
 <dt id="arg-robust">robust<a class="anchor" aria-label="anchor" href="#arg-robust"></a></dt>
-<dd><p>Whether to use robust regression methods. Default is FALSE.</p></dd>
+<dd><p>Must be FALSE. Robust weights are voxel-specific and cannot be
+computed on component scores, so any robust request is an error.</p></dd>
 
 
 <dt id="arg-autocor">autocor<a class="anchor" aria-label="anchor" href="#arg-autocor"></a></dt>
-<dd><p>The autocorrelation correction method to use on components.
-One of 'none', 'auto', 'ar1', 'ar2', or 'arma'. Default is 'none'.</p></dd>
+<dd><p>The autocorrelation model. 'none' (OLS), 'ar1' or 'ar2'. AR
+models use one set of AR coefficients per run shared across voxels,
+estimated so that the fit equals a dense fit of the reconstructed voxel
+data. 'auto' and 'arma' are not implemented and are an error.</p></dd>
 
 
 <dt id="arg-bootstrap">bootstrap<a class="anchor" aria-label="anchor" href="#arg-bootstrap"></a></dt>
-<dd><p>Whether to compute bootstrapped parameter estimates. Default is FALSE.</p></dd>
+<dd><p>Must be FALSE; bootstrapping is not implemented for latent
+datasets and TRUE is an error.</p></dd>
 
 
 <dt id="arg-nboot">nboot<a class="anchor" aria-label="anchor" href="#arg-nboot"></a></dt>
-<dd><p>The number of bootstrap iterations. Default is 1000.</p></dd>
+<dd><p>Unused (see <code>bootstrap</code>).</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

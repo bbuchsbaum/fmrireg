@@ -160,8 +160,8 @@ whole-brain discovery decision; that requires multiplicity correction.
 
 ``` r
 
-# Extract connectivity statistics using the estimate output itself
-all_stats <- as.matrix(stats(fit, type = "estimates"))
+# t-statistics of the model coefficients (coef() gives the estimates)
+all_stats <- as.matrix(stats(fit, type = "betas"))
 seed_cols <- grep("seed", colnames(all_stats), value = TRUE)
 if (length(seed_cols) == 0) {
   stop("No seed estimate found in fitted model output")
@@ -170,7 +170,7 @@ seed_col_name <- seed_cols[1]
 t_seed <- as.numeric(all_stats[, seed_col_name])
 
 # Correct the seed-coefficient p-values across all fitted voxels.
-all_pvals <- as.matrix(p_values(fit, type = "estimates"))
+all_pvals <- as.matrix(p_values(fit, type = "betas"))
 p_seed <- as.numeric(all_pvals[, seed_col_name])
 q_seed <- stats::p.adjust(p_seed, method = "BH")
 discovered <- is.finite(q_seed) & q_seed < 0.05

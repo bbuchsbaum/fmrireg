@@ -3,7 +3,7 @@
 public command surface focuses on bundled benchmark dataset inspection through
 the benchmark subcommands."><meta property="og:description" content="Runs the package-owned command line interface for fmrireg. The current
 public command surface focuses on bundled benchmark dataset inspection through
-the benchmark subcommands."></head><body>
+the benchmark subcommands."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -11,7 +11,7 @@ the benchmark subcommands."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,7 +36,7 @@ the benchmark subcommands."></head><body>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (temporal sketches + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -143,12 +143,12 @@ command-level validation failures, and <code>2</code> for usage or runtime error
 <span class="r-out co"><span class="r-pr">#&gt;</span>       "span_override": null,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       "fmrihrf_version": "0.4.0"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     },</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     "hrf_object": ["structure(function (t) ", "{", "    do.call(orig_f, c(list(t = t), callable_params_list))", "}, class = \"function\", name = \"SPMG1\", nbasis = 1L, span = 24, param_names = c(\"P1\", ", "\"P2\", \"A1\"), params = list(P1 = 5, P2 = 15, A1 = 0.0833))"]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     "hrf_object": ["structure(function (t) ", "{", "    do.call(orig_f, c(list(t = t), callable_params_list))", "}, class = \"function\", name = \"SPMG1\", nbasis = 1L, span = 24, param_names = c(\"P1\", ", "\"P2\", \"A1\"), params = list(P1 = 5, P2 = 15, A1 = 0.00833333333333333))"]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   },</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   "noise_information": {</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     "noise_type": "ar1",</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     "noise_ar": 0.4,</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     "noise_sd": 0.0983</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     "noise_sd": 0.009</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   }</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> }</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0</span>

@@ -16,6 +16,8 @@
 ">
 <meta property="og:description" content="A comprehensive R package for functional magnetic resonance imaging (fMRI)  data analysis. Provides flexible tools for constructing hemodynamic response  functions, experimental regressors, and conducting univariate analyses.
 ">
+<link href="albers.css" rel="stylesheet">
+<script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="albers.js"></script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -25,7 +27,7 @@
 
     <a class="navbar-brand me-2" href="index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,7 +54,7 @@
     <li><a class="dropdown-item" href="articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="articles/sketched-ar.html">Sketched GLM (temporal sketches + Nyström)</a></li>
     <li><a class="dropdown-item" href="articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -88,7 +90,7 @@
 <p><a href="https://bbuchsbaum.github.io/fmrireg/">Documentation</a> · <a href="https://bbuchsbaum.github.io/fmrireg/articles/fmrireg.html">Getting started</a> · <a href="https://bbuchsbaum.github.io/fmrireg/reference/">API reference</a> · <a href="NEWS.html">Changelog</a></p>
 <p><strong>fmrireg</strong> is an R package for specifying and fitting voxelwise fMRI regression models from event tables and preprocessed time series. It turns formulas such as <code>onset ~ hrf(condition)</code> into HRF-convolved designs, estimates condition effects across voxels, and carries named contrasts into group analysis.</p>
 <blockquote>
-<p><strong>Status:</strong> Version 0.2.0 is experimental and requires R 4.1 or later. APIs may change while the package is under active development.</p>
+<p><strong>Status:</strong> Version 0.3.0.9000 is experimental and requires R 4.1 or later. APIs may change while the package is under active development.</p>
 </blockquote>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>

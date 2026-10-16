@@ -24,9 +24,10 @@ What you’ll see below
     Walsh-Hadamard transform, and row sampling. It approximately
     preserves least-squares geometry on the design column space; the
     example below checks the resulting coefficients directly.
-  - IHS (Iterative Hessian Sketch): an iterative sketch-and-solve
-    method. Each iteration solves a small sketched normal-equation
-    system to refine the coefficients.
+  - Gaussian and CountSketch: a dense Gaussian matrix, or a sparse
+    sketch that hashes each scan to one of `m` rows with a random sign.
+    At realistic sizes these are the fastest options (see “Choosing a
+    sketch” below).
 - Optional Nyström-style spatial extension (solve on L landmarks, extend
   to all voxels)
 
@@ -37,7 +38,13 @@ At a glance
 - Public controls: `noise_spec(..., pooling = "global" | "parcel")` for
   AR pooling and
   [`lowrank_control()`](https://bbuchsbaum.github.io/fmrireg/reference/lowrank_control.md)
-  for sketch rows, iterations, landmarks, and neighbors.
+  for the sketch method and rows, landmarks, and neighbors.
+- Inference follows the estimator. SRHT, Gaussian and CountSketch are
+  sketch-and-solve estimators: they fit `m` sketched rows, so their
+  standard errors are about `sqrt(T / m)` times the full-data ones and
+  their residual degrees of freedom are about `m - p`.
+- The former `method = "ihs"` (iterative Hessian sketch) is deprecated
+  and now computes the exact OLS fit; see “Choosing a sketch”.
 
 Approach in one paragraph
 
@@ -94,8 +101,12 @@ smooth_maps <- rbind(
   sin(pi * xyz01[, 1]) * cos(pi * xyz01[, 2]) * (0.5 + xyz01[, 3]),
   cos(pi * xyz01[, 1]) * sin(pi * xyz01[, 2]) * (1.0 - 0.5 * xyz01[, 3])
 )
+# Scale each map by its regressor's peak height so that the response peaks
+# at 1.75 signal units per unit of map value, whatever the HRF's raw
+# amplitude; the noise level below is chosen relative to that peak.
 for (j in seq_along(task_cols)) {
-  B_true[task_cols[j], ] <- smooth_maps[1L + (j - 1L) %% nrow(smooth_maps), ]
+  B_true[task_cols[j], ] <- smooth_maps[1L + (j - 1L) %% nrow(smooth_maps), ] *
+    (1.75 / max(abs(X[, task_cols[j]])))
 }
 
 Y <- X %*% B_true + ar1_noise(Tlen, V, sd = 0.15)
@@ -189,28 +200,34 @@ fit_srht_group <- fmri_lm(
 )
 ```
 
-### Fit with IHS sketch
+### Choosing a sketch
 
-IHS (Iterative Hessian Sketch) is an alternative to SRHT. It refines its
-solution over multiple iterations. Treat `m` and `iters` as accuracy
-controls and validate them against an unsketched fit for the target
-design.
+All three sketch-and-solve methods give calibrated inference; they
+differ in cost. In this engine the design is narrow (`p` of about 10-30
+columns) and the response is wide (1e4-1e5 voxels or components), so
+exact least squares costs a single `X'Z` product. A sketch pays off only
+when applying it to `Z` is cheaper than that product. With `p = 20`,
+`m = 8p` and 5e4 response columns, measured on an Apple M3 Max with
+Accelerate BLAS:
 
-``` r
+|  `T` | exact OLS | Gaussian | CountSketch |    SRHT |
+|-----:|----------:|---------:|------------:|--------:|
+|  400 |   0.050 s |  0.041 s |     0.043 s | 0.067 s |
+| 1000 |   0.143 s |  0.059 s |     0.059 s | 0.091 s |
 
-low_ihs <- lowrank_control(
-  parcels     = parcels,
-  time_sketch = list(method = "ihs", m = max(6L * p, p + 4L), iters = 3L)
-)
+Prefer `"countsketch"` or `"gaussian"` for speed. SRHT’s fast
+Walsh-Hadamard transform costs `O(T log T)` per column, so it trails
+both at these sizes; use it when you want its orthonormal rows. The
+sketches save more time relative to exact OLS as `T` grows.
 
-fit_ihs <- fmri_lm(
-  onset ~ hrf(condition), block = ~ run,
-  dataset    = dset,
-  engine     = "latent_sketch",
-  lowrank    = low_ihs,
-  control    = fmri_lm_control(noise = noise_spec("ar1", pooling = "global"))
-)
-```
+The former `method = "ihs"` (iterative Hessian sketch) is deprecated.
+Each IHS iteration needs the exact gradient `X'(Z - XM)`, a full `X'Z`
+pass, so in this regime it can never beat one exact solve. It now
+computes the exact OLS fit of the (whitened) data, with `T - rank(X)`
+residual degrees of freedom; without AR it reproduces the joint exact
+fit `fmri_lm(..., strategy = "chunkwise")`. It ignores `iters` and `tol`
+and says so once per session. For exact results, omit
+`engine = "latent_sketch"`.
 
 ### Compare sketching to an exact OLS baseline
 
@@ -249,30 +266,22 @@ cor_srht_group_task <- cor(
   as.numeric(B_exact_iid[task_cols, , drop = FALSE]),
   as.numeric(fit_srht_group$betas_fixed[task_cols, , drop = FALSE])
 )
-cor_ihs_task <- cor(
-  as.numeric(B_exact_iid[task_cols, , drop = FALSE]),
-  as.numeric(fit_ihs$betas_fixed[task_cols, , drop = FALSE])
-)
 
 stopifnot(cor_srht_iid_task > 0.9)
 
 list(
   cor_srht_iid_task = cor_srht_iid_task,
   cor_srht_global_task = cor_srht_global_task,
-  cor_srht_group_task = cor_srht_group_task,
-  cor_ihs_task = cor_ihs_task
+  cor_srht_group_task = cor_srht_group_task
 )
 #> $cor_srht_iid_task
-#> [1] 0.9661459
+#> [1] 0.9687722
 #> 
 #> $cor_srht_global_task
-#> [1] 0.9737966
+#> [1] 0.9740778
 #> 
 #> $cor_srht_group_task
-#> [1] 0.9627205
-#> 
-#> $cor_ihs_task
-#> [1] 0.9444965
+#> [1] 0.9642624
 ```
 
 The exact iid-versus-sketch comparison is the meaningful fidelity check
@@ -280,6 +289,52 @@ here, and it should stay high. The AR-whitened fits usually track the
 same task effects reasonably well, but they are solving a different
 estimation problem, so their correlations to exact OLS are not expected
 to match the iid sketch baseline.
+
+### Standard errors follow the estimator
+
+A sketch-and-solve fit uses only `m` of the information in `T` scans, so
+its coefficients vary more than the full-data ones: by about
+`sqrt(T / m)` in standard deviation. Its reported standard errors are
+the conditional-on-sketch standard errors of that estimator, and its
+residual degrees of freedom are those of the sketched residual (about
+`m - p`), so t-statistics and p-values stay calibrated. The same holds
+for every sketch-and-solve method.
+
+``` r
+
+se_task <- function(fit) {
+  as.matrix(standard_error(fit, type = "estimates"))[, seq_along(task_cols)]
+}
+sketch_fits <- list(srht = fit_srht_iid)
+for (method in c("gaussian", "countsketch")) {
+  sketch_fits[[method]] <- fmri_lm(
+    onset ~ hrf(condition), block = ~ run,
+    dataset = dset,
+    engine = "latent_sketch",
+    lowrank = lowrank_control(
+      time_sketch = list(method = method, m = min(8L * p, Tlen))
+    )
+  )
+}
+se_ratio <- vapply(sketch_fits, function(fit) {
+  mean(se_task(fit) / se_task(fit_exact_iid))
+}, numeric(1))
+
+stopifnot(all(se_ratio > 1))
+
+data.frame(
+  method = names(sketch_fits),
+  sketch_rows = vapply(sketch_fits, function(f) f$sketch$m, numeric(1)),
+  residual_df = vapply(sketch_fits, function(f) f$result$rdf, numeric(1)),
+  se_ratio_to_exact = se_ratio,
+  sqrt_T_over_m = sqrt(Tlen / vapply(sketch_fits, function(f) f$sketch$m, numeric(1))),
+  row.names = NULL
+)
+#>        method sketch_rows residual_df se_ratio_to_exact sqrt_T_over_m
+#> 1        srht          16    9.956096          3.356971      2.738613
+#> 2    gaussian          16    9.358252          3.165295      2.738613
+#> 3 countsketch          16    9.356405          3.195592      2.738613
+```
 
 ## Reduced-rank GLS with bootstrap standard errors
 
@@ -313,7 +368,7 @@ example remains quick.
 
 ``` r
 
-rrr_se <- standard_error(fit_rrr_boot, type = "estimates")
+rrr_se <- standard_error(fit_rrr_boot, type = "betas")
 
 data.frame(
   engine = attr(fit_rrr_boot, "engine"),
@@ -371,7 +426,7 @@ c(
   NRMSE = nrmse_landmarks
 )
 #> correlation        RMSE       NRMSE 
-#>   0.8953875   0.2235083   0.4626188
+#>   0.8899257   2.3383580   0.4839667
 ```
 
 The correlation checks spatial ordering, while NRMSE detects scale
@@ -509,13 +564,18 @@ Cons
 - Landmark extension introduces spatial shrinkage that is data-dependent
   and can cross boundaries; if you need strict voxelwise inference, omit
   landmarks.
-- Sketching slightly perturbs degrees of freedom (uses m - p); choose m
-  conservatively if p is large or X is ill-conditioned.
+- Sketch-and-solve (SRHT, Gaussian, CountSketch) trades precision for
+  data touched: standard errors grow by about `sqrt(T / m)` and residual
+  degrees of freedom shrink to about `m - p`. Choose `m` for the
+  precision you need, or fit exactly (omit `engine = "latent_sketch"`)
+  when full-data precision matters.
 
 ## Practical defaults
 
-- Time sketch: `list(method = "srht", m = min(8*p, T))` or IHS with
-  `m ~ 6*p`, `iters = 2-3`.
+- Time sketch: `list(method = "countsketch", m = min(8*p, T))` or
+  `list(method = "gaussian", m = min(8*p, T))` for speed; SRHT gives the
+  same inference at somewhat higher cost. `"ihs"` is deprecated and fits
+  exact OLS.
 - AR order: 1 is a solid default; use 2 if residuals show lag-2
   structure.
 - Parcel AR: use
@@ -529,7 +589,8 @@ Cons
 
 - Set a seed before building SRHT plans or k-means landmarks
   (`set.seed(...)`).
-- Keep m and iters fixed across runs to compare apples-to-apples.
+- Keep the sketch method and m fixed across runs to compare
+  apples-to-apples.
 - Validate on a small ROI first: check correlations vs exact, and
   histogram of t-maps in null tissue.
 

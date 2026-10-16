@@ -6,7 +6,7 @@ This function calculates contrasts for a fitted linear model.
 
 ``` r
 # Default S3 method
-fit_contrasts(object, conmat, colind, se = TRUE, ...)
+fit_contrasts(object, conmat, colind, se = TRUE, cov.unscaled = NULL, ...)
 ```
 
 ## Arguments
@@ -27,6 +27,12 @@ fit_contrasts(object, conmat, colind, se = TRUE, ...)
 
   Whether to compute standard errors, t-statistics, and p-values
   (default: TRUE).
+
+- cov.unscaled:
+
+  Optional unscaled coefficient covariance \\(X'X)^{-1}\\ of `object`,
+  to reuse across several contrasts on the same fit (default: computed
+  from `object`).
 
 - ...:
 

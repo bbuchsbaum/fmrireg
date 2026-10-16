@@ -1,4 +1,7 @@
-# get_data
+# Retrieve the formula underlying a model object
+
+Generic used to expose the original modelling formula for fitted
+objects.
 
 Functions for creating and manipulating fmri_model objects
 
@@ -34,5 +37,5 @@ A formula.
 fm <- fmrireg:::.demo_fmri_model()
 get_formula(fm)
 #> .y ~ condition + drift + block - 1
-#> <environment: 0x55c3f9d95c20>
+#> <environment: 0x563e0b4634d0>
 ```

@@ -12,6 +12,8 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <script src="../extra.js"></script><meta property="og:title" content="Data Structures and Sampling Frames">
+<link href="../albers.css" rel="stylesheet">
+<script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -21,7 +23,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -48,7 +50,7 @@
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (temporal sketches + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -87,7 +89,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-09-25</h4>
+            <h4 data-toc-skip class="date">2026-10-16</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_10_dataset.Rmd" class="external-link"><code>vignettes/a_10_dataset.Rmd</code></a></small>
       <div class="d-none name"><code>a_10_dataset.Rmd</code></div>
@@ -194,11 +196,19 @@ seconds.</li>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sframe_example</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">150</span>, <span class="fl">160</span><span class="op">)</span>, TR <span class="op">=</span> <span class="fl">2.0</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">sframe_example</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Sampling frame</span></span>
-<span><span class="co">#&gt; - Blocks: 2 </span></span>
-<span><span class="co">#&gt; - Scans: 310 (per block: 150, 160 )</span></span>
-<span><span class="co">#&gt; - TR: 2 s</span></span>
-<span><span class="co">#&gt; - Duration: 619 s</span></span></code></pre></div>
+<span><span class="co">#&gt; Sampling Frame</span></span>
+<span><span class="co">#&gt; ==============</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Structure:</span></span>
+<span><span class="co">#&gt;   2 blocks</span></span>
+<span><span class="co">#&gt;   Total scans: 310</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Timing:</span></span>
+<span><span class="co">#&gt;   TR: 2 s</span></span>
+<span><span class="co">#&gt;   Precision: 0.1 s</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Duration:</span></span>
+<span><span class="co">#&gt;   Total time: 620.0 s</span></span></code></pre></div>
 <p>A frame does not store a <code>sampling_frame</code>. It stores the
 same facts as two observation columns, <code>run_id</code> and
 <code>TR</code>, and <code><a href="https://bbuchsbaum.github.io/fmridataset/reference/temporal-schema.html" class="external-link">fmridataset::as_sampling_frame()</a></code>
@@ -259,11 +269,19 @@ to exclude (logical, 0/1, or 1-based indices).</li>
 <span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="fu">fmridataset</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/space.html" class="external-link">space</a></span><span class="op">(</span><span class="va">mem_frame</span><span class="op">)</span><span class="op">)</span>     <span class="co"># a volume_space on the mask's grid</span></span>
 <span><span class="co">#&gt; [1] "volume_space"  "feature_space"</span></span>
 <span><span class="fu">as_sampling_frame</span><span class="op">(</span><span class="va">mem_frame</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Sampling frame</span></span>
-<span><span class="co">#&gt; - Blocks: 2 </span></span>
-<span><span class="co">#&gt; - Scans: 40 (per block: 20, 20 )</span></span>
-<span><span class="co">#&gt; - TR: 2 s</span></span>
-<span><span class="co">#&gt; - Duration: 79 s</span></span></code></pre></div>
+<span><span class="co">#&gt; Sampling Frame</span></span>
+<span><span class="co">#&gt; ==============</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Structure:</span></span>
+<span><span class="co">#&gt;   2 blocks</span></span>
+<span><span class="co">#&gt;   Total scans: 40</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Timing:</span></span>
+<span><span class="co">#&gt;   TR: 2 s</span></span>
+<span><span class="co">#&gt;   Precision: 0.1 s</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Duration:</span></span>
+<span><span class="co">#&gt;   Total time: 80.0 s</span></span></code></pre></div>
 <p>The masked voxel series are extracted once, with
 <code><a href="https://bbuchsbaum.github.io/neuroim2/reference/series-methods.html" class="external-link">neuroim2::series()</a></code>, so a <code>SparseNeuroVec</code> does
 not need to be densified.</p>
@@ -368,11 +386,19 @@ column names are used when present.</li>
 <span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="fu">fmridataset</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridataset/reference/space.html" class="external-link">space</a></span><span class="op">(</span><span class="va">mat_frame</span><span class="op">)</span><span class="op">)</span>   <span class="co"># an index_space: no spatial geometry</span></span>
 <span><span class="co">#&gt; [1] "index_space"   "feature_space"</span></span>
 <span><span class="fu">as_sampling_frame</span><span class="op">(</span><span class="va">mat_frame</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Sampling frame</span></span>
-<span><span class="co">#&gt; - Blocks: 2 </span></span>
-<span><span class="co">#&gt; - Scans: 100 (per block: 50, 50 )</span></span>
-<span><span class="co">#&gt; - TR: 2.5 s</span></span>
-<span><span class="co">#&gt; - Duration: 248.75 s</span></span></code></pre></div>
+<span><span class="co">#&gt; Sampling Frame</span></span>
+<span><span class="co">#&gt; ==============</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Structure:</span></span>
+<span><span class="co">#&gt;   2 blocks</span></span>
+<span><span class="co">#&gt;   Total scans: 100</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Timing:</span></span>
+<span><span class="co">#&gt;   TR: 2.5 s</span></span>
+<span><span class="co">#&gt;   Precision: 0.1 s</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Duration:</span></span>
+<span><span class="co">#&gt;   Total time: 250.0 s</span></span></code></pre></div>
 <p>For <code>matrix_frame</code>, the concept of a spatial mask is
 implicit; all columns provided in <code>datamat</code> are included, and
 the feature space is a plain <code>index_space</code>.</p>

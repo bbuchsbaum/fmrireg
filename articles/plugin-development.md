@@ -71,9 +71,9 @@ stopifnot(inherits(model_with_basis, "fmri_model"))
 plugin_design <- design_matrix(model_with_basis)
 stopifnot(qr(plugin_design)$rank == ncol(plugin_design))
 head(colnames(plugin_design))
-#> [1] "condition_condition.A_b01" "condition_condition.B_b01"
-#> [3] "condition_condition.A_b02" "condition_condition.B_b02"
-#> [5] "condition_condition.A_b03" "condition_condition.B_b03"
+#> [1] "condition_condition.A_b01" "condition_condition.A_b02"
+#> [3] "condition_condition.A_b03" "condition_condition.A_b04"
+#> [5] "condition_condition.B_b01" "condition_condition.B_b02"
 ```
 
 The important rule is that the constructor must return an object that

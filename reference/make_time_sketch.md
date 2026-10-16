@@ -1,6 +1,6 @@
 # Build a time sketch matrix S (m x T)
 
-Build a time sketch matrix S (m x T)
+All sketches are normalised so that \\E\\S r\\^2 = \\r\\^2\\.
 
 ## Usage
 
@@ -16,10 +16,10 @@ make_time_sketch(Tlen, ctrl)
 
 - ctrl:
 
-  List(method = "gaussian"\|"countsketch"\|"srht"\|"ihs", m, iters)
+  List(method = "gaussian"\|"countsketch"\|"srht", m)
 
 ## Value
 
 A dense or sparse sketch matrix for Gaussian/CountSketch methods; `NULL`
-for `"srht"` and `"ihs"` because those methods are applied via
-plans/operators.
+for `"srht"`, which is applied through a plan
+([`srht_apply()`](https://bbuchsbaum.github.io/fmrireg/reference/srht_apply.md)).

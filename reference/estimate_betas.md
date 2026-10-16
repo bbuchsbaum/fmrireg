@@ -1,28 +1,12 @@
 # Estimate Beta Coefficients for fMRI Data
 
-Estimate beta coefficients (regression parameters) from fMRI data using
-various methods. This function supports different estimation approaches
-for:
-
-- single:
-
-  Single-trial beta estimation
-
-- effects:
-
-  Fixed and random effects
-
-- regularization:
-
-  Various regularization techniques
-
-- hrf:
-
-  Optional HRF estimation
-
-This function estimates betas (regression coefficients) for fixed and
-random effects using various regression methods including mixed models,
-least squares, and PLS.
+Estimate trialwise (random) and condition-level (fixed) beta
+coefficients from fMRI data. Trialwise regressors given by `ran` are
+estimated with one of three methods: ridge/BLUP mixed-effects estimation
+(`"mixed"`), least-squares separate estimation (`"lss"`), or ordinary
+least squares (`"ols"`). Optional fixed regressors (`fixed`) capture
+effects that are constant across trials, and an optional baseline model
+is regressed out before estimation.
 
 ## Usage
 
@@ -101,32 +85,6 @@ estimate_betas(
 
 ## Value
 
-A list of class "fmri_betas" containing:
-
-- betas_fixed:
-
-  Fixed effect coefficients
-
-- betas_ran:
-
-  Random (trial-wise) coefficients
-
-- design_ran:
-
-  Design matrix for random effects
-
-- design_fixed:
-
-  Design matrix for fixed effects
-
-- design_base:
-
-  Design matrix for baseline model
-
-- method_specific:
-
-  Additional components specific to the estimation method used
-
 A list of class "fmri_betas" containing the following components:
 
 - betas_fixed: fixed effect betas (NeuroVec for volumetric frames,
@@ -156,23 +114,15 @@ frame's feature space: volumetric frames (`volume_space`) return
 `NeuroVec` betas, while matrix-format (`index_space`) and latent
 (`basis_space`) frames return coefficient matrices.
 
-Available estimation methods include:
+Available estimation methods (`method`) are:
 
 - mixed:
 
   Mixed-effects model using ridge/BLUP estimation
 
-- r1:
-
-  Rank-1 GLM with joint HRF estimation
-
 - lss:
 
   Least-squares separate estimation
-
-- pls:
-
-  Partial least squares regression
 
 - ols:
 

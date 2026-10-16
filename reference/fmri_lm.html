@@ -13,7 +13,7 @@ fmri_model object that already contains the design and data.
 The public fitting boundary separates statistical choices in fmri_lm_control()
 from mechanical execution choices in compute_spec(). Optional engines use
 the same control object and receive their private arguments through
-engine_args."></head><body>
+engine_args."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -21,7 +21,7 @@ engine_args."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -46,7 +46,7 @@ engine_args."></head><body>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (temporal sketches + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -156,7 +156,17 @@ omitted when the model already owns its dataset.</p></dd>
 
 
 <dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>
-<dd><p>A validated <code><a href="fmri_lm_control.html">fmri_lm_control()</a></code>.</p></dd>
+<dd><p>A validated <code><a href="fmri_lm_control.html">fmri_lm_control()</a></code>. The default fits runs
+separately and pools them by fixed-effect meta-analysis
+(<code>estimation_spec("runwise_meta")</code>). A control object built without an
+<code>estimation</code> argument keeps this runwise default for the built-in fitter;
+pass <code>fmri_lm_control(estimation = estimation_spec("joint"))</code> to fit one
+joint model across runs. HAC, sandwich, and Satterthwaite inference
+(see <code><a href="variance_spec.html">variance_spec()</a></code>) are implemented only for a joint fit; when such a
+<code>variance</code> is requested without an <code>estimation</code>, <code><a href="fmri_lm_control.html">fmri_lm_control()</a></code>
+selects the joint scope and says so in a message. When <code>engine</code> is
+supplied and <code>control</code> does not specify <code>estimation</code> (or is omitted), the
+engine receives <code>estimation_spec("joint")</code>.</p></dd>
 
 
 <dt id="arg-compute">compute<a class="anchor" aria-label="anchor" href="#arg-compute"></a></dt>

@@ -12,6 +12,8 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <script src="../extra.js"></script><meta property="og:title" content="Sketched GLM: Temporal Sketches, Pooled AR, and Landmarks">
+<link href="../albers.css" rel="stylesheet">
+<script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -21,7 +23,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -48,7 +50,7 @@
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (temporal sketches + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -114,9 +116,10 @@ Johnson-Lindenstrauss embedding built from random signs, a
 Walsh-Hadamard transform, and row sampling. It approximately preserves
 least-squares geometry on the design column space; the example below
 checks the resulting coefficients directly.</li>
-<li>IHS (Iterative Hessian Sketch): an iterative sketch-and-solve
-method. Each iteration solves a small sketched normal-equation system to
-refine the coefficients.</li>
+<li>Gaussian and CountSketch: a dense Gaussian matrix, or a sparse
+sketch that hashes each scan to one of <code>m</code> rows with a random
+sign. At realistic sizes these are the fastest options (see “Choosing a
+sketch” below).</li>
 </ul>
 </li>
 <li>Optional Nyström-style spatial extension (solve on L landmarks,
@@ -128,8 +131,16 @@ extend to all voxels)</li>
 both correlation and normalized root-mean-square error (NRMSE).</li>
 <li>Public controls:
 <code>noise_spec(..., pooling = "global" | "parcel")</code> for AR
-pooling and <code><a href="../reference/lowrank_control.html">lowrank_control()</a></code> for sketch rows, iterations,
-landmarks, and neighbors.</li>
+pooling and <code><a href="../reference/lowrank_control.html">lowrank_control()</a></code> for the sketch method and
+rows, landmarks, and neighbors.</li>
+<li>Inference follows the estimator. SRHT, Gaussian and CountSketch are
+sketch-and-solve estimators: they fit <code>m</code> sketched rows, so
+their standard errors are about <code>sqrt(T / m)</code> times the
+full-data ones and their residual degrees of freedom are about
+<code>m - p</code>.</li>
+<li>The former <code>method = "ihs"</code> (iterative Hessian sketch) is
+deprecated and now computes the exact OLS fit; see “Choosing a
+sketch”.</li>
 </ul>
 <p>Approach in one paragraph</p>
 <ul>
@@ -185,8 +196,12 @@ whiten.</p>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="va">pi</span> <span class="op">*</span> <span class="va">xyz01</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">cos</a></span><span class="op">(</span><span class="va">pi</span> <span class="op">*</span> <span class="va">xyz01</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span> <span class="op">*</span> <span class="op">(</span><span class="fl">0.5</span> <span class="op">+</span> <span class="va">xyz01</span><span class="op">[</span>, <span class="fl">3</span><span class="op">]</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">cos</a></span><span class="op">(</span><span class="va">pi</span> <span class="op">*</span> <span class="va">xyz01</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="va">pi</span> <span class="op">*</span> <span class="va">xyz01</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span> <span class="op">*</span> <span class="op">(</span><span class="fl">1.0</span> <span class="op">-</span> <span class="fl">0.5</span> <span class="op">*</span> <span class="va">xyz01</span><span class="op">[</span>, <span class="fl">3</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
+<span><span class="co"># Scale each map by its regressor's peak height so that the response peaks</span></span>
+<span><span class="co"># at 1.75 signal units per unit of map value, whatever the HRF's raw</span></span>
+<span><span class="co"># amplitude; the noise level below is chosen relative to that peak.</span></span>
 <span><span class="kw">for</span> <span class="op">(</span><span class="va">j</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">task_cols</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">B_true</span><span class="op">[</span><span class="va">task_cols</span><span class="op">[</span><span class="va">j</span><span class="op">]</span>, <span class="op">]</span> <span class="op">&lt;-</span> <span class="va">smooth_maps</span><span class="op">[</span><span class="fl">1L</span> <span class="op">+</span> <span class="op">(</span><span class="va">j</span> <span class="op">-</span> <span class="fl">1L</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/Arithmetic.html" class="external-link">%%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">smooth_maps</span><span class="op">)</span>, <span class="op">]</span></span>
+<span>  <span class="va">B_true</span><span class="op">[</span><span class="va">task_cols</span><span class="op">[</span><span class="va">j</span><span class="op">]</span>, <span class="op">]</span> <span class="op">&lt;-</span> <span class="va">smooth_maps</span><span class="op">[</span><span class="fl">1L</span> <span class="op">+</span> <span class="op">(</span><span class="va">j</span> <span class="op">-</span> <span class="fl">1L</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/Arithmetic.html" class="external-link">%%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">smooth_maps</span><span class="op">)</span>, <span class="op">]</span> <span class="op">*</span></span>
+<span>    <span class="op">(</span><span class="fl">1.75</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">X</span><span class="op">[</span>, <span class="va">task_cols</span><span class="op">[</span><span class="va">j</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">Y</span> <span class="op">&lt;-</span> <span class="va">X</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">B_true</span> <span class="op">+</span> <span class="fu">ar1_noise</span><span class="op">(</span><span class="va">Tlen</span>, <span class="va">V</span>, sd <span class="op">=</span> <span class="fl">0.15</span><span class="op">)</span></span></code></pre></div>
@@ -272,25 +287,55 @@ noisy parcels.</p>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="fit-with-ihs-sketch">Fit with IHS sketch<a class="anchor" aria-label="anchor" href="#fit-with-ihs-sketch"></a>
+<h3 id="choosing-a-sketch">Choosing a sketch<a class="anchor" aria-label="anchor" href="#choosing-a-sketch"></a>
 </h3>
-<p>IHS (Iterative Hessian Sketch) is an alternative to SRHT. It refines
-its solution over multiple iterations. Treat <code>m</code> and
-<code>iters</code> as accuracy controls and validate them against an
-unsketched fit for the target design.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">low_ihs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/lowrank_control.html">lowrank_control</a></span><span class="op">(</span></span>
-<span>  parcels     <span class="op">=</span> <span class="va">parcels</span>,</span>
-<span>  time_sketch <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"ihs"</span>, m <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fl">6L</span> <span class="op">*</span> <span class="va">p</span>, <span class="va">p</span> <span class="op">+</span> <span class="fl">4L</span><span class="op">)</span>, iters <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">fit_ihs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
-<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
-<span>  dataset    <span class="op">=</span> <span class="va">dset</span>,</span>
-<span>  engine     <span class="op">=</span> <span class="st">"latent_sketch"</span>,</span>
-<span>  lowrank    <span class="op">=</span> <span class="va">low_ihs</span>,</span>
-<span>  control    <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span>noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span>, pooling <span class="op">=</span> <span class="st">"global"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<p>All three sketch-and-solve methods give calibrated inference; they
+differ in cost. In this engine the design is narrow (<code>p</code> of
+about 10-30 columns) and the response is wide (1e4-1e5 voxels or
+components), so exact least squares costs a single <code>X'Z</code>
+product. A sketch pays off only when applying it to <code>Z</code> is
+cheaper than that product. With <code>p = 20</code>, <code>m = 8p</code>
+and 5e4 response columns, measured on an Apple M3 Max with Accelerate
+BLAS:</p>
+<table class="table">
+<thead><tr class="header">
+<th align="right"><code>T</code></th>
+<th align="right">exact OLS</th>
+<th align="right">Gaussian</th>
+<th align="right">CountSketch</th>
+<th align="right">SRHT</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">400</td>
+<td align="right">0.050 s</td>
+<td align="right">0.041 s</td>
+<td align="right">0.043 s</td>
+<td align="right">0.067 s</td>
+</tr>
+<tr class="even">
+<td align="right">1000</td>
+<td align="right">0.143 s</td>
+<td align="right">0.059 s</td>
+<td align="right">0.059 s</td>
+<td align="right">0.091 s</td>
+</tr>
+</tbody>
+</table>
+<p>Prefer <code>"countsketch"</code> or <code>"gaussian"</code> for
+speed. SRHT’s fast Walsh-Hadamard transform costs
+<code>O(T log T)</code> per column, so it trails both at these sizes;
+use it when you want its orthonormal rows. The sketches save more time
+relative to exact OLS as <code>T</code> grows.</p>
+<p>The former <code>method = "ihs"</code> (iterative Hessian sketch) is
+deprecated. Each IHS iteration needs the exact gradient
+<code>X'(Z - XM)</code>, a full <code>X'Z</code> pass, so in this regime
+it can never beat one exact solve. It now computes the exact OLS fit of
+the (whitened) data, with <code>T - rank(X)</code> residual degrees of
+freedom; without AR it reproduces the joint exact fit
+<code>fmri_lm(..., strategy = "chunkwise")</code>. It ignores
+<code>iters</code> and <code>tol</code> and says so once per session.
+For exact results, omit <code>engine = "latent_sketch"</code>.</p>
 </div>
 <div class="section level3">
 <h3 id="compare-sketching-to-an-exact-ols-baseline">Compare sketching to an exact OLS baseline<a class="anchor" aria-label="anchor" href="#compare-sketching-to-an-exact-ols-baseline"></a>
@@ -301,7 +346,7 @@ For a direct sketch-fidelity check, we disable AR, fit the same model
 with and without sketching, and compare the task-effect coefficients
 only. In this moderate-SNR setting, correlations above 0.9 indicate that
 the sketch is preserving the task part of the GLM solution well.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_exact_iid</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
 <span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dset</span></span>
@@ -328,35 +373,72 @@ the sketch is preserving the task part of the GLM solution well.</p>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">B_exact_iid</span><span class="op">[</span><span class="va">task_cols</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_srht_group</span><span class="op">$</span><span class="va">betas_fixed</span><span class="op">[</span><span class="va">task_cols</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">cor_ihs_task</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cor</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">B_exact_iid</span><span class="op">[</span><span class="va">task_cols</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">fit_ihs</span><span class="op">$</span><span class="va">betas_fixed</span><span class="op">[</span><span class="va">task_cols</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">cor_srht_iid_task</span> <span class="op">&gt;</span> <span class="fl">0.9</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  cor_srht_iid_task <span class="op">=</span> <span class="va">cor_srht_iid_task</span>,</span>
 <span>  cor_srht_global_task <span class="op">=</span> <span class="va">cor_srht_global_task</span>,</span>
-<span>  cor_srht_group_task <span class="op">=</span> <span class="va">cor_srht_group_task</span>,</span>
-<span>  cor_ihs_task <span class="op">=</span> <span class="va">cor_ihs_task</span></span>
+<span>  cor_srht_group_task <span class="op">=</span> <span class="va">cor_srht_group_task</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; $cor_srht_iid_task</span></span>
-<span><span class="co">#&gt; [1] 0.9661459</span></span>
+<span><span class="co">#&gt; [1] 0.9687722</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $cor_srht_global_task</span></span>
-<span><span class="co">#&gt; [1] 0.9737966</span></span>
+<span><span class="co">#&gt; [1] 0.9740778</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $cor_srht_group_task</span></span>
-<span><span class="co">#&gt; [1] 0.9627205</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $cor_ihs_task</span></span>
-<span><span class="co">#&gt; [1] 0.9444965</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.9642624</span></span></code></pre></div>
 <p>The exact iid-versus-sketch comparison is the meaningful fidelity
 check here, and it should stay high. The AR-whitened fits usually track
 the same task effects reasonably well, but they are solving a different
 estimation problem, so their correlations to exact OLS are not expected
 to match the iid sketch baseline.</p>
+</div>
+<div class="section level3">
+<h3 id="standard-errors-follow-the-estimator">Standard errors follow the estimator<a class="anchor" aria-label="anchor" href="#standard-errors-follow-the-estimator"></a>
+</h3>
+<p>A sketch-and-solve fit uses only <code>m</code> of the information in
+<code>T</code> scans, so its coefficients vary more than the full-data
+ones: by about <code>sqrt(T / m)</code> in standard deviation. Its
+reported standard errors are the conditional-on-sketch standard errors
+of that estimator, and its residual degrees of freedom are those of the
+sketched residual (about <code>m - p</code>), so t-statistics and
+p-values stay calibrated. The same holds for every sketch-and-solve
+method.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">se_task</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"estimates"</span><span class="op">)</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">task_cols</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">sketch_fits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>srht <span class="op">=</span> <span class="va">fit_srht_iid</span><span class="op">)</span></span>
+<span><span class="kw">for</span> <span class="op">(</span><span class="va">method</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gaussian"</span>, <span class="st">"countsketch"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">sketch_fits</span><span class="op">[[</span><span class="va">method</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
+<span>    <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
+<span>    dataset <span class="op">=</span> <span class="va">dset</span>,</span>
+<span>    engine <span class="op">=</span> <span class="st">"latent_sketch"</span>,</span>
+<span>    lowrank <span class="op">=</span> <span class="fu"><a href="../reference/lowrank_control.html">lowrank_control</a></span><span class="op">(</span></span>
+<span>      time_sketch <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>method <span class="op">=</span> <span class="va">method</span>, m <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="fl">8L</span> <span class="op">*</span> <span class="va">p</span>, <span class="va">Tlen</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">se_ratio</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">sketch_fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="fu">se_task</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span> <span class="op">/</span> <span class="fu">se_task</span><span class="op">(</span><span class="va">fit_exact_iid</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">}</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="va">se_ratio</span> <span class="op">&gt;</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">sketch_fits</span><span class="op">)</span>,</span>
+<span>  sketch_rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">sketch_fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="va">f</span><span class="op">$</span><span class="va">sketch</span><span class="op">$</span><span class="va">m</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  residual_df <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">sketch_fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="va">f</span><span class="op">$</span><span class="va">result</span><span class="op">$</span><span class="va">rdf</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  se_ratio_to_exact <span class="op">=</span> <span class="va">se_ratio</span>,</span>
+<span>  sqrt_T_over_m <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="va">Tlen</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">sketch_fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="va">f</span><span class="op">$</span><span class="va">sketch</span><span class="op">$</span><span class="va">m</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  row.names <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;        method sketch_rows residual_df se_ratio_to_exact sqrt_T_over_m</span></span>
+<span><span class="co">#&gt; 1        srht          16    9.956096          3.356971      2.738613</span></span>
+<span><span class="co">#&gt; 2    gaussian          16    9.358252          3.165295      2.738613</span></span>
+<span><span class="co">#&gt; 3 countsketch          16    9.356405          3.195592      2.738613</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="reduced-rank-gls-with-bootstrap-standard-errors">Reduced-rank GLS with bootstrap standard errors<a class="anchor" aria-label="anchor" href="#reduced-rank-gls-with-bootstrap-standard-errors"></a>
@@ -385,7 +467,7 @@ standard errors do not represent well.</p>
 <code>200</code> is a reasonable starting point. The vignette uses a
 smaller value so the example remains quick.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rrr_se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">fit_rrr_boot</span>, type <span class="op">=</span> <span class="st">"estimates"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">rrr_se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/standard_error.html">standard_error</a></span><span class="op">(</span><span class="va">fit_rrr_boot</span>, type <span class="op">=</span> <span class="st">"betas"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  engine <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">fit_rrr_boot</span>, <span class="st">"engine"</span><span class="op">)</span>,</span>
@@ -441,7 +523,7 @@ target.</p>
 <span>  NRMSE <span class="op">=</span> <span class="va">nrmse_landmarks</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; correlation        RMSE       NRMSE </span></span>
-<span><span class="co">#&gt;   0.8953875   0.2235083   0.4626188</span></span></code></pre></div>
+<span><span class="co">#&gt;   0.8899257   2.3383580   0.4839667</span></span></code></pre></div>
 <p>The correlation checks spatial ordering, while NRMSE detects scale
 errors that correlation alone would miss. The thresholds above are an
 explicit contract for this smooth synthetic field, not a general
@@ -590,16 +672,23 @@ separately.</li>
 <li>Landmark extension introduces spatial shrinkage that is
 data-dependent and can cross boundaries; if you need strict voxelwise
 inference, omit landmarks.</li>
-<li>Sketching slightly perturbs degrees of freedom (uses m - p); choose
-m conservatively if p is large or X is ill-conditioned.</li>
+<li>Sketch-and-solve (SRHT, Gaussian, CountSketch) trades precision for
+data touched: standard errors grow by about <code>sqrt(T / m)</code> and
+residual degrees of freedom shrink to about <code>m - p</code>. Choose
+<code>m</code> for the precision you need, or fit exactly (omit
+<code>engine = "latent_sketch"</code>) when full-data precision
+matters.</li>
 </ul>
 </div>
 <div class="section level2">
 <h2 id="practical-defaults">Practical defaults<a class="anchor" aria-label="anchor" href="#practical-defaults"></a>
 </h2>
 <ul>
-<li>Time sketch: <code>list(method = "srht", m = min(8*p, T))</code> or
-IHS with <code>m ~ 6*p</code>, <code>iters = 2-3</code>.</li>
+<li>Time sketch:
+<code>list(method = "countsketch", m = min(8*p, T))</code> or
+<code>list(method = "gaussian", m = min(8*p, T))</code> for speed; SRHT
+gives the same inference at somewhat higher cost. <code>"ihs"</code> is
+deprecated and fits exact OLS.</li>
 <li>AR order: 1 is a solid default; use 2 if residuals show lag-2
 structure.</li>
 <li>Parcel AR: use
@@ -616,7 +705,8 @@ declared correlation and NRMSE contract on representative data.</li>
 <ul>
 <li>Set a seed before building SRHT plans or k-means landmarks
 (<code>set.seed(...)</code>).</li>
-<li>Keep m and iters fixed across runs to compare apples-to-apples.</li>
+<li>Keep the sketch method and m fixed across runs to compare
+apples-to-apples.</li>
 <li>Validate on a small ROI first: check correlations vs exact, and
 histogram of t-maps in null tissue.</li>
 </ul>

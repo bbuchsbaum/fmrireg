@@ -40,8 +40,12 @@ quick_truth <- matrix(
   c(1.0, 0.6, 0.7, 1.1), nrow = ncol(quick_design),
   dimnames = list(colnames(quick_design), c("voxel1", "voxel2"))
 )
+# Set the noise level relative to the regressors' peak height, so the
+# signal-to-noise ratio does not depend on the HRF's raw amplitude.
+noise_sd <- 0.11 * max(abs(quick_design))
 set.seed(2026)
-bold <- quick_design %*% quick_truth + matrix(rnorm(80 * 2, sd = 0.2), 80, 2)
+bold <- quick_design %*% quick_truth +
+  matrix(rnorm(80 * 2, sd = noise_sd), 80, 2)
 quick_dataset <- matrix_frame(
   bold, TR = 2, run_length = 80, event_table = quick_events
 )
@@ -72,8 +76,8 @@ knitr::kable(coefficient_table, digits = 2,
 
 | condition | truth_voxel1 | estimate_voxel1 | truth_voxel2 | estimate_voxel2 |
 |:----------|-------------:|----------------:|-------------:|----------------:|
-| face      |          1.0 |            0.95 |          0.7 |            0.51 |
-| scene     |          0.6 |            0.76 |          1.1 |            1.14 |
+| face      |          1.0 |            0.95 |          0.7 |            0.76 |
+| scene     |          0.6 |            0.51 |          1.1 |            1.14 |
 
 Known and recovered condition effects {.table}
 
@@ -98,8 +102,8 @@ knitr::kable(quick_contrast, digits = 3,
 
 | voxel  | estimate | std_error | statistic | p_value |
 |:-------|---------:|----------:|----------:|:--------|
-| voxel1 |    0.440 |     0.053 |     8.319 | \<1e-04 |
-| voxel2 |   -0.379 |     0.062 |    -6.116 | \<1e-04 |
+| voxel1 |    0.440 |     0.047 |     9.432 | \<1e-04 |
+| voxel2 |   -0.383 |     0.055 |    -6.983 | \<1e-04 |
 
 Face-minus-scene contrast with uncertainty {.table}
 
@@ -153,11 +157,19 @@ Before modeling, you need to represent your fMRI data and its structure.
 # Example: one run, 120 scans, TR=2s
 sframe <- sampling_frame(blocklens = 120, TR = 2)
 sframe
-#> Sampling frame
-#> - Blocks: 1 
-#> - Scans: 120 (per block: 120 )
-#> - TR: 2 s
-#> - Duration: 239 s
+#> Sampling Frame
+#> ==============
+#> 
+#> Structure:
+#>   1 block
+#>   Total scans: 120
+#> 
+#> Timing:
+#>   TR: 2 s
+#>   Precision: 0.1 s
+#> 
+#> Duration:
+#>   Total time: 240.0 s
 ```
 
 ### 2. Model Building
@@ -285,12 +297,12 @@ overview_data <- matrix_frame(
 # Combine the design with its dataset, then fit it
 full_model <- fmri_model(event_mod, base_mod, dataset = overview_data)
 overview_fit <- fmri_lm(full_model)
-overview_coef_matrix <- coef(overview_fit)
+overview_coef_matrix <- coef(overview_fit) # voxels x conditions
 overview_coef_table <- data.frame(
   condition = levels(design_table$stim_type),
-  voxel_1 = overview_coef_matrix[, 1],
-  voxel_2 = overview_coef_matrix[, 2],
-  voxel_3 = overview_coef_matrix[, 3],
+  voxel_1 = overview_coef_matrix[1, ],
+  voxel_2 = overview_coef_matrix[2, ],
+  voxel_3 = overview_coef_matrix[3, ],
   check.names = FALSE
 )
 knitr::kable(
@@ -301,8 +313,8 @@ knitr::kable(
 
 | condition | voxel_1 | voxel_2 | voxel_3 |
 |:----------|--------:|--------:|--------:|
-| face      |   -0.09 |   -0.14 |   -0.11 |
-| scene     |    0.05 |    0.06 |    0.10 |
+| face      |   -0.92 |   -1.34 |   -0.80 |
+| scene     |    0.51 |    0.86 |    1.09 |
 
 Condition coefficients from the object-building route {.table}
 
@@ -328,9 +340,10 @@ diagnostics.
 #### Acceleration: Sketched / Nyström Analysis
 
 For large problems, you can accelerate voxelwise GLM estimation with: -
-SRHT/IHS temporal sketching to reduce timepoints while preserving LS
-geometry. - Nyström/landmark spatial extension to solve on a subset of
-voxels and extend with parcel‑aware kernels.
+Temporal sketching (CountSketch, Gaussian or SRHT) to reduce timepoints,
+with standard errors that account for the sketch. - Nyström/landmark
+spatial extension to solve on a subset of voxels and extend with
+parcel‑aware kernels.
 
 See
 [`vignette("sketched-ar", package = "fmrireg")`](https://bbuchsbaum.github.io/fmrireg/articles/sketched-ar.md)

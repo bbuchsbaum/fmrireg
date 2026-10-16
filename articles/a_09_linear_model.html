@@ -12,6 +12,8 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <script src="../extra.js"></script><meta property="og:title" content="fMRI Linear Model (GLM)">
+<link href="../albers.css" rel="stylesheet">
+<script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -21,7 +23,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -48,7 +50,7 @@
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (temporal sketches + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -87,7 +89,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-09-25</h4>
+            <h4 data-toc-skip class="date">2026-10-16</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_09_linear_model.Rmd" class="external-link"><code>vignettes/a_09_linear_model.Rmd</code></a></small>
       <div class="d-none name"><code>a_09_linear_model.Rmd</code></div>
@@ -232,8 +234,12 @@ amplitudes, add noise, and combine them into a dataset.</p>
 <span><span class="co"># Combine signals (this is the "true" signal without noise)</span></span>
 <span><span class="va">true_signal</span> <span class="op">&lt;-</span> <span class="va">signal1</span> <span class="op">+</span> <span class="va">signal2</span></span>
 <span></span>
-<span><span class="co"># Create noise with temporal autocorrelation and drift</span></span>
-<span><span class="va">noise</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_noise_vector.html">simulate_noise_vector</a></span><span class="op">(</span></span>
+<span><span class="co"># Create noise with temporal autocorrelation and drift. Its parameters are</span></span>
+<span><span class="co"># stated for a response peak of 1.75 signal units; rescaling by the canonical</span></span>
+<span><span class="co"># HRF's actual peak keeps the signal-to-noise ratio independent of the HRF's</span></span>
+<span><span class="co"># raw amplitude.</span></span>
+<span><span class="va">hrf_peak</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/evaluate.html" class="external-link">evaluate</a></span><span class="op">(</span><span class="fu">fmrihrf</span><span class="fu">::</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html" class="external-link">HRF_SPMG1</a></span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">30</span>, by <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">noise</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="va">hrf_peak</span> <span class="op">/</span> <span class="fl">1.75</span><span class="op">)</span> <span class="op">*</span> <span class="fu"><a href="../reference/simulate_noise_vector.html">simulate_noise_vector</a></span><span class="op">(</span></span>
 <span>  n <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">time_points</span><span class="op">)</span>,</span>
 <span>  TR <span class="op">=</span> <span class="va">TR</span>,</span>
 <span>  ar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.7</span><span class="op">)</span>,         <span class="co"># Stronger AR(1) coefficient to accentuate autocorrelation</span></span>
@@ -341,7 +347,7 @@ onset times</li>
 <span><span class="co"><span style="color: #0000BB; font-weight: bold;">#&gt; </span><span style="color: #00BB00;">Model formula:</span></span></span>
 <span><span class="co"><span style="color: #00BB00;">#&gt;   </span><span style="color: #555555;">~</span> <span style="color: #555555;">onset</span> <span style="color: #555555;">hrf(condition)</span> </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">Fitting strategy:  </span><span style="color: #555555;">chunkwise</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">Fitting strategy:  </span><span style="color: #555555;">runwise</span> </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">Baseline parameters: </span> <span style="color: #555555;">4</span> </span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">Design parameters:   </span> <span style="color: #555555;">2</span> </span></span>
@@ -433,11 +439,11 @@ errors smaller.</p>
 <tbody>
 <tr class="odd">
 <td align="left">OLS</td>
-<td align="right">0.1377</td>
+<td align="right">0.1386</td>
 </tr>
 <tr class="even">
 <td align="left">AR(1) prewhitened</td>
-<td align="right">0.1818</td>
+<td align="right">0.1824</td>
 </tr>
 </tbody>
 </table>
@@ -445,7 +451,7 @@ errors smaller.</p>
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Inspect the estimated AR coefficient (shared across voxels in this example)</span></span>
 <span><span class="va">model_ar1</span><span class="op">$</span><span class="va">ar_coef</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="co">#&gt; [1] 0.3713454</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.3765398</span></span></code></pre></div>
 <p>Here the AR(1) fit estimates non-zero serial dependence and produces
 larger standard errors than plain OLS. The practical lesson is not that
 prewhitening always increases uncertainty, but that OLS can be
@@ -491,11 +497,11 @@ with <code><a href="../reference/robust_spec.html">robust_spec()</a></code>.</p>
 <tbody>
 <tr class="odd">
 <td align="left">OLS</td>
-<td align="right">0.1377</td>
+<td align="right">0.1386</td>
 </tr>
 <tr class="even">
 <td align="left">Huber</td>
-<td align="right">0.1297</td>
+<td align="right">0.1300</td>
 </tr>
 </tbody>
 </table>
@@ -516,28 +522,34 @@ interpreted as approximate.</p>
 </h3>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Extract coefficient estimates</span></span>
+<span><span class="co"># One row per voxel, one column per event regressor</span></span>
 <span><span class="va">beta_estimates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span>
-<span><span class="fu">kable</span><span class="op">(</span><span class="va">beta_estimates</span>, caption <span class="op">=</span> <span class="st">"Coefficient estimates for each condition and voxel"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">kable</span><span class="op">(</span><span class="va">beta_estimates</span>, caption <span class="op">=</span> <span class="st">"Coefficient estimates for each voxel (rows) and condition (columns)"</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
-<caption>Coefficient estimates for each condition and voxel</caption>
+<caption>Coefficient estimates for each voxel (rows) and condition
+(columns)</caption>
+<thead><tr class="header">
+<th align="right">condition_condition.condition1</th>
+<th align="right">condition_condition.condition2</th>
+</tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">condition_condition.condition1</td>
-<td align="right">0.7473208</td>
-<td align="right">0.5475209</td>
-<td align="right">0.3477211</td>
+<td align="right">0.7945540</td>
+<td align="right">1.874001</td>
 </tr>
 <tr class="even">
-<td align="left">condition_condition.condition2</td>
-<td align="right">1.8921665</td>
-<td align="right">1.4924380</td>
-<td align="right">1.0927094</td>
+<td align="right">0.5947415</td>
+<td align="right">1.474266</td>
+</tr>
+<tr class="odd">
+<td align="right">0.3949289</td>
+<td align="right">1.074532</td>
 </tr>
 </tbody>
 </table>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Reshape for plotting (works with both approaches)</span></span>
-<span><span class="va">beta_long</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">beta_estimates</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span><span class="va">beta_long</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">beta_estimates</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
 <span>  <span class="fu">mutate</span><span class="op">(</span>voxel_index <span class="op">=</span> <span class="fu">row_number</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
 <span>  <span class="fu">pivot_longer</span><span class="op">(</span>cols <span class="op">=</span> <span class="op">-</span><span class="va">voxel_index</span>, names_to <span class="op">=</span> <span class="st">"condition"</span>, values_to <span class="op">=</span> <span class="st">"estimate"</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
 <span>  <span class="fu">mutate</span><span class="op">(</span></span>
@@ -597,59 +609,60 @@ condition</caption>
 <tr class="odd">
 <td align="left">voxel1</td>
 <td align="left">condition1</td>
-<td align="right">0.7473</td>
-<td align="right">0.1910</td>
-<td align="right">3.9123</td>
-<td align="left">0.0001264</td>
+<td align="right">0.7946</td>
+<td align="right">0.1908</td>
+<td align="right">4.1643</td>
+<td align="left">&lt; 1e-04</td>
 </tr>
 <tr class="even">
 <td align="left">voxel1</td>
 <td align="left">condition2</td>
-<td align="right">1.8922</td>
-<td align="right">0.1727</td>
-<td align="right">10.9587</td>
+<td align="right">1.8740</td>
+<td align="right">0.1740</td>
+<td align="right">10.7723</td>
 <td align="left">&lt; 1e-04</td>
 </tr>
 <tr class="odd">
 <td align="left">voxel2</td>
 <td align="left">condition1</td>
-<td align="right">0.5475</td>
-<td align="right">0.1910</td>
-<td align="right">2.8663</td>
-<td align="left">0.0046111</td>
+<td align="right">0.5947</td>
+<td align="right">0.1908</td>
+<td align="right">3.1172</td>
+<td align="left">0.002103</td>
 </tr>
 <tr class="even">
 <td align="left">voxel2</td>
 <td align="left">condition2</td>
-<td align="right">1.4924</td>
-<td align="right">0.1727</td>
-<td align="right">8.6437</td>
+<td align="right">1.4743</td>
+<td align="right">0.1740</td>
+<td align="right">8.4749</td>
 <td align="left">&lt; 1e-04</td>
 </tr>
 <tr class="odd">
 <td align="left">voxel3</td>
 <td align="left">condition1</td>
-<td align="right">0.3477</td>
-<td align="right">0.1910</td>
-<td align="right">1.8204</td>
-<td align="left">0.0702430</td>
+<td align="right">0.3949</td>
+<td align="right">0.1908</td>
+<td align="right">2.0700</td>
+<td align="left">0.039775</td>
 </tr>
 <tr class="even">
 <td align="left">voxel3</td>
 <td align="left">condition2</td>
-<td align="right">1.0927</td>
-<td align="right">0.1727</td>
-<td align="right">6.3287</td>
+<td align="right">1.0745</td>
+<td align="right">0.1739</td>
+<td align="right">6.1773</td>
 <td align="left">&lt; 1e-04</td>
 </tr>
 </tbody>
 </table>
 <p>The t-statistics quantify the reliability of the estimated effects.
 Higher absolute t-values indicate more precise estimates relative to
-their standard errors. Here 5 of the six condition-by-voxel tests are
-below 0.05. The weakest simulated signal is correspondingly the least
-certain; this is why the table reports both effect size and uncertainty
-rather than reducing the result to a binary label.</p>
+their standard errors. Here 6 of the six condition-by-voxel tests are
+below 0.05. The weakest simulated signal, condition 1 in voxel 3, is
+correspondingly the least certain (t = 2.07, p = 0.040); this is why the
+table reports both effect size and uncertainty rather than reducing the
+result to a binary label.</p>
 </div>
 <div class="section level3">
 <h3 id="contrasts-between-conditions">3. Contrasts Between Conditions<a class="anchor" aria-label="anchor" href="#contrasts-between-conditions"></a>
@@ -683,22 +696,24 @@ compare conditions using contrasts.</p>
 <span><span class="fu">kable</span><span class="op">(</span><span class="va">contrast_results_display</span>,</span>
 <span>      caption <span class="op">=</span> <span class="st">"Contrast results: condition2 - condition1"</span>,</span>
 <span>      digits <span class="op">=</span> <span class="fl">4</span>, row.names <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<table style="width:100%;" class="table">
+<table class="table">
 <caption>Contrast results: condition2 - condition1</caption>
 <colgroup>
 <col width="6%">
-<col width="17%">
+<col width="16%">
+<col width="8%">
 <col width="8%">
 <col width="9%">
 <col width="9%">
 <col width="9%">
-<col width="12%">
 <col width="11%">
-<col width="11%">
+<col width="10%">
+<col width="10%">
 </colgroup>
 <thead><tr class="header">
 <th align="left">voxel</th>
 <th align="left">term</th>
+<th align="left">type</th>
 <th align="right">estimate</th>
 <th align="right">std_error</th>
 <th align="right">statistic</th>
@@ -711,9 +726,10 @@ compare conditions using contrasts.</p>
 <tr class="odd">
 <td align="left">voxel1</td>
 <td align="left">cond2_minus_cond1</td>
-<td align="right">1.1448</td>
-<td align="right">0.2525</td>
-<td align="right">4.5337</td>
+<td align="left">contrast</td>
+<td align="right">1.0794</td>
+<td align="right">0.2543</td>
+<td align="right">4.2452</td>
 <td align="left">&lt; 1e-04</td>
 <td align="right">194</td>
 <td align="right">194</td>
@@ -722,10 +738,11 @@ compare conditions using contrasts.</p>
 <tr class="even">
 <td align="left">voxel2</td>
 <td align="left">cond2_minus_cond1</td>
-<td align="right">0.9449</td>
-<td align="right">0.2525</td>
-<td align="right">3.7420</td>
-<td align="left">0.0002404</td>
+<td align="left">contrast</td>
+<td align="right">0.8795</td>
+<td align="right">0.2543</td>
+<td align="right">3.4591</td>
+<td align="left">0.0006662</td>
 <td align="right">194</td>
 <td align="right">194</td>
 <td align="left">TRUE</td>
@@ -733,10 +750,11 @@ compare conditions using contrasts.</p>
 <tr class="odd">
 <td align="left">voxel3</td>
 <td align="left">cond2_minus_cond1</td>
-<td align="right">0.7450</td>
-<td align="right">0.2525</td>
-<td align="right">2.9503</td>
-<td align="left">0.0035656</td>
+<td align="left">contrast</td>
+<td align="right">0.6796</td>
+<td align="right">0.2543</td>
+<td align="right">2.6730</td>
+<td align="left">0.0081588</td>
 <td align="right">194</td>
 <td align="right">194</td>
 <td align="left">TRUE</td>
@@ -848,7 +866,7 @@ choice.</p>
 <tr class="odd">
 <td align="left">A</td>
 <td align="left">motor_ROI</td>
-<td align="right">0.995</td>
+<td align="right">0.996</td>
 <td align="right">0.032</td>
 </tr>
 <tr class="even">
@@ -860,7 +878,7 @@ choice.</p>
 <tr class="odd">
 <td align="left">B</td>
 <td align="left">motor_ROI</td>
-<td align="right">0.995</td>
+<td align="right">0.996</td>
 <td align="right">0.033</td>
 </tr>
 <tr class="even">
@@ -887,14 +905,25 @@ candidate grid.</p>
 <h2 id="comparing-models-with-different-hrf-bases">Comparing Models with Different HRF Bases<a class="anchor" aria-label="anchor" href="#comparing-models-with-different-hrf-bases"></a>
 </h2>
 <p>The choice of hemodynamic response function can impact model fit.
-Let’s compare different HRF options.</p>
+Let’s compare different HRF options. The comparison below scores each
+model by AIC from one design matrix and one coefficient vector per
+voxel, so each model is fitted jointly across runs
+(<code>estimation_spec("joint")</code>) rather than with the default
+runwise meta-estimation. Because the models declare AR(1) noise, the AIC
+uses the AR(1) Gaussian likelihood of each fit, not the
+independent-errors formula.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Fit models with different HRF bases</span></span>
+<code class="sourceCode R"><span><span class="co"># Fit models with different HRF bases, jointly across runs</span></span>
+<span><span class="va">joint_ar1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span></span>
+<span>  estimation <span class="op">=</span> <span class="fu"><a href="../reference/estimation_spec.html">estimation_spec</a></span><span class="op">(</span><span class="st">"joint"</span><span class="op">)</span>,</span>
+<span>  noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">model_canonical</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_lm.html">fmri_lm</a></span><span class="op">(</span></span>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"spmg1"</span><span class="op">)</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
-<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span>noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  control <span class="op">=</span> <span class="va">joint_ar1</span>,</span>
 <span>  compute <span class="op">=</span> <span class="fu"><a href="../reference/compute_spec.html">compute_spec</a></span><span class="op">(</span>voxel_chunks <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -902,7 +931,7 @@ Let’s compare different HRF options.</p>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"gaussian"</span><span class="op">)</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
-<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span>noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  control <span class="op">=</span> <span class="va">joint_ar1</span>,</span>
 <span>  compute <span class="op">=</span> <span class="fu"><a href="../reference/compute_spec.html">compute_spec</a></span><span class="op">(</span>voxel_chunks <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -910,7 +939,7 @@ Let’s compare different HRF options.</p>
 <span>  formula <span class="op">=</span> <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/hrf.html" class="external-link">hrf</a></span><span class="op">(</span><span class="va">condition</span>, basis <span class="op">=</span> <span class="st">"bspline"</span>, nbasis <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>,</span>
 <span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
-<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/fmri_lm_control.html">fmri_lm_control</a></span><span class="op">(</span>noise <span class="op">=</span> <span class="fu"><a href="../reference/noise_spec.html">noise_spec</a></span><span class="op">(</span><span class="st">"ar1"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  control <span class="op">=</span> <span class="va">joint_ar1</span>,</span>
 <span>  compute <span class="op">=</span> <span class="fu"><a href="../reference/compute_spec.html">compute_spec</a></span><span class="op">(</span>voxel_chunks <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
@@ -931,71 +960,81 @@ Let’s compare different HRF options.</p>
 <th align="right">voxel</th>
 <th align="right">r_squared</th>
 <th align="right">aic</th>
+<th align="right">aic_iid</th>
 <th align="right">ssr</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td align="left">canonical_spm</td>
 <td align="right">1</td>
-<td align="right">0.5522</td>
-<td align="right">49.1000</td>
-<td align="right">240.7640</td>
+<td align="right">0.5404</td>
+<td align="right">-880.9692</td>
+<td align="right">-869.4824</td>
+<td align="right">2.4373</td>
 </tr>
 <tr class="even">
 <td align="left">canonical_spm</td>
 <td align="right">2</td>
-<td align="right">0.4275</td>
-<td align="right">49.0910</td>
-<td align="right">240.7532</td>
+<td align="right">0.4153</td>
+<td align="right">-880.9869</td>
+<td align="right">-869.5094</td>
+<td align="right">2.4370</td>
 </tr>
 <tr class="odd">
 <td align="left">canonical_spm</td>
 <td align="right">3</td>
-<td align="right">0.2787</td>
-<td align="right">49.0821</td>
-<td align="right">240.7425</td>
+<td align="right">0.2676</td>
+<td align="right">-881.0045</td>
+<td align="right">-869.5362</td>
+<td align="right">2.4367</td>
 </tr>
 <tr class="even">
 <td align="left">gaussian</td>
 <td align="right">1</td>
-<td align="right">0.5154</td>
-<td align="right">64.9107</td>
-<td align="right">260.5698</td>
+<td align="right">0.5031</td>
+<td align="right">-861.2532</td>
+<td align="right">-853.8757</td>
+<td align="right">2.6351</td>
 </tr>
 <tr class="odd">
 <td align="left">gaussian</td>
 <td align="right">2</td>
-<td align="right">0.3980</td>
-<td align="right">59.1591</td>
-<td align="right">253.1830</td>
+<td align="right">0.3876</td>
+<td align="right">-868.6017</td>
+<td align="right">-860.2225</td>
+<td align="right">2.5528</td>
 </tr>
 <tr class="even">
 <td align="left">gaussian</td>
 <td align="right">3</td>
-<td align="right">0.2587</td>
-<td align="right">54.5608</td>
-<td align="right">247.4285</td>
+<td align="right">0.2518</td>
+<td align="right">-874.5970</td>
+<td align="right">-865.2604</td>
+<td align="right">2.4893</td>
 </tr>
 <tr class="odd">
 <td align="left">bspline_n5</td>
 <td align="right">1</td>
-<td align="right">0.5526</td>
-<td align="right">64.9091</td>
-<td align="right">240.5343</td>
+<td align="right">0.5447</td>
+<td align="right">-856.2023</td>
+<td align="right">-855.3468</td>
+<td align="right">2.4147</td>
 </tr>
 <tr class="even">
 <td align="left">bspline_n5</td>
 <td align="right">2</td>
-<td align="right">0.4555</td>
-<td align="right">55.0891</td>
-<td align="right">229.0094</td>
+<td align="right">0.4482</td>
+<td align="right">-866.1666</td>
+<td align="right">-865.0614</td>
+<td align="right">2.3002</td>
 </tr>
 <tr class="odd">
 <td align="left">bspline_n5</td>
 <td align="right">3</td>
-<td align="right">0.3404</td>
-<td align="right">47.1918</td>
-<td align="right">220.1428</td>
+<td align="right">0.3351</td>
+<td align="right">-874.0818</td>
+<td align="right">-872.8777</td>
+<td align="right">2.2121</td>
 </tr>
 </tbody>
 </table>
@@ -1018,17 +1057,17 @@ Let’s compare different HRF options.</p>
 <tr class="odd">
 <td align="right">1</td>
 <td align="left">canonical_spm</td>
-<td align="right">49.1000</td>
+<td align="right">-880.9692</td>
 </tr>
 <tr class="even">
 <td align="right">2</td>
 <td align="left">canonical_spm</td>
-<td align="right">49.0910</td>
+<td align="right">-880.9869</td>
 </tr>
 <tr class="odd">
 <td align="right">3</td>
-<td align="left">bspline_n5</td>
-<td align="right">47.1918</td>
+<td align="left">canonical_spm</td>
+<td align="right">-881.0045</td>
 </tr>
 </tbody>
 </table>
@@ -1080,13 +1119,18 @@ each model. Higher values indicate better fit.</li>
 model quality that balances goodness of fit with model complexity. Lower
 values indicate better models.</li>
 </ol>
-<p>The canonical SPM model has the lowest AIC in two voxels, consistent
-with the HRF used to generate the signal. In the weakest-signal voxel,
-however, the B-spline model wins despite its larger penalty. This is a
-useful caution: finite noisy data need not select the generating model
-in every voxel. AIC balances fit and complexity; it is evidence for a
-model in a particular sample, not proof that the selected basis is the
-true physiological response.</p>
+<p>The canonical SPM model has the lowest AIC in every voxel, consistent
+with the HRF used to generate the signal. The five-function B-spline
+basis explains more raw variance (higher R-squared) in every voxel: its
+extra columns absorb part of the slow, serially correlated noise. Scored
+under the AR(1) noise model that the fits declare (the exact likelihood,
+evaluated at the fitted coefficients and AR estimates), that gain does
+not cover the cost of the extra parameters. Had we used the
+independent-errors formula <code>n * log(SSR / n) + 2p</code>, the
+B-spline model would have won some voxels, a reminder that an
+information criterion is only as good as the likelihood behind it. AIC
+remains evidence for a model in a particular sample, not proof that the
+selected basis is the true physiological response.</p>
 </div>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>

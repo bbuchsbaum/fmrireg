@@ -179,3 +179,49 @@ in `compute_sandwich_variance` until 2026-08-07. That error is now fixed
 and both helpers are checked against
 [`sandwich::vcovHC`](https://zeileis.codeberg.page/sandwich/reference/vcovHC.html)
 in `tests/testthat/test-variance-closed-form.R`; they remain unwired.
+\## REVIEW 2026-10: CORRECTNESS AND PERFORMANCE PASS
+
+Plan, checklist and results: `data-raw/review-2026-10-plan.md`. Every
+fix has a regression test that fails on the pre-review code; the tests
+live in `tests/testthat/test-review-{A,B,C,D,E,F}-*.R` and compare
+against `lm`, `anova`, `t.test`, `sandwich`,
+[`metafor::rma`](https://wviechtb.github.io/metafor/reference/rma.uni.html),
+closed forms, or pure-noise calibration simulations. Keep that standard:
+a test that only checks shapes or `is.finite` is how most of these bugs
+survived.
+
+Conventions established by this pass (rely on them, keep them true): -
+**Residual scale is per voxel everywhere.** `result$sigma`, `rss` and
+`resvar` have one value per voxel for every strategy (multi-run runwise
+fits stored one pooled scalar until this pass). - **Robust fits are
+reproducible WLS.** Every robust path reports the weights used for the
+final betas, sigma^2 = RSS_w / (sum(w \> 0) - rank), and the effective
+df `.robust_effective_df()`: sum(w) - rank. There is one effective-df
+implementation (`R/effective_df.R`). - **Stored covariance matches
+stored scale.** `cov.unscaled` / `covariance_by_voxel` are in the fitted
+(whitened/weighted) domain, so post-hoc
+[`fit_contrasts()`](https://bbuchsbaum.github.io/fmrireg/reference/fit_contrasts.md)
+equals in-fit contrasts. Multi-run runwise fits that whiten or weight
+per run have no such covariance;
+[`fit_contrasts()`](https://bbuchsbaum.github.io/fmrireg/reference/fit_contrasts.md)
+refuses them (`.posthoc_check_supported`). - **Use `[[` for result
+fields.** `result$sigma` partially matches `sigma2`; that bug inflated
+reference-backend AR standard errors ~3x. - **Group-analysis sign.**
+`fmri_ttest` contrasts are computed once, in the requested `sign`;
+`.fmri_ttest_apply_group_sign` flips coefficient rows only. -
+**Meta-analysis weights.** `weights = "equal"/"custom"` are relative
+weights with an estimated residual scale (WLS); `"ivw"` treats V as
+known sampling variances. `method = "reml"` runs Paule-Mandel and says
+so. - **Spatial FDR** estimates its empirical null by Efron’s central
+matching and numbers groups by sorted label / factor level in both R and
+C++. - **Chunks are lazy.** `.dset_chunks()` returns descriptors; data
+are read in the worker via `.chunk_data()`; run rows come from
+`.dset_run_rows()`. - **`.fast_preproject()` never forms an n x n
+matrix**; `proj$Pinv` is computed on demand.
+
+Corrections to the 2025 notes above: the robust effective df is sum(w) -
+rank (the “sum(weights) - p” fix lived in an unreachable file until this
+pass); “Bootstrap functionality” referred to
+`multiresponse_bootstrap_lm`, which was unreachable and has been removed
+(`bootstrap_glm_inference` remains internal and is not wired into
+[`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)).

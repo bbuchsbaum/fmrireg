@@ -7,14 +7,16 @@ the copied file as executable.
 ## Usage
 
 ``` r
-install_cli(dest_dir = "~/.local/bin", overwrite = FALSE, commands = NULL)
+install_cli(dest_dir, overwrite = FALSE, commands = NULL)
 ```
 
 ## Arguments
 
 - dest_dir:
 
-  Destination directory for installed command wrappers.
+  Destination directory for installed command wrappers. Required: there
+  is no default, so nothing is written to the home directory unless
+  asked (e.g. `install_cli("~/.local/bin")`).
 
 - overwrite:
 

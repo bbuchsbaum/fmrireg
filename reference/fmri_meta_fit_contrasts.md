@@ -33,8 +33,9 @@ fmri_meta_fit_contrasts(
 - method:
 
   Character scalar; meta-analysis method: "pm" (Paule-Mandel), "dl"
-  (DerSimonian-Laird), "fe" (fixed-effects), or "reml" (REML, uses PM
-  solver)
+  (DerSimonian-Laird), "fe" (fixed-effects). "reml" is not implemented:
+  it is accepted for backward compatibility, runs Paule-Mandel with a
+  message, and the result records `method = "pm"`.
 
 - robust:
 

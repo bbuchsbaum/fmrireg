@@ -27,6 +27,20 @@ fmri_lm_control(
 
   An
   [`estimation_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/estimation_spec.md).
+  When omitted (`NULL`), the control object uses
+  `estimation_spec("runwise_meta")`, the same default as
+  [`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md),
+  so supplying a control object only to change another section (for
+  example `robust`) does not change the estimation scope. Note that this
+  differs from calling
+  [`estimation_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/estimation_spec.md)
+  with no arguments, which returns the joint scope. There are two
+  exceptions: HAC, sandwich, or Satterthwaite inference requested
+  through `variance` is implemented only for a joint fit, so an omitted
+  `estimation` then resolves to `estimation_spec("joint")` with a
+  message saying so; and with a registered `engine`, an omitted
+  `estimation` resolves to `estimation_spec("joint")` (see
+  [`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)).
 
 - noise:
 

@@ -61,6 +61,7 @@ write_results(
 
   Output format(s). Use `"h5"` for HDF5 LabeledVolumeSet outputs,
   `"nifti"` for NIfTI outputs, or a character vector to write both.
+  NIfTI maps are stored as 32-bit floats (datatype FLOAT32).
 
 - strategy:
 

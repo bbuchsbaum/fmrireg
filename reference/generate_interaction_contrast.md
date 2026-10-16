@@ -1,10 +1,13 @@
 # Fast factorial contrast generators
 
-Returns a matrix **N_cells x N_contrasts** - *each row is a design
-cell*, columns are independent contrasts (difference-coded for the
-factors you ask for, grand-mean for the rest). Suitable for
-`tcrossprod(dm, C)` or `lm.fit(design, y)` followed by `%*% coef` in the
-usual way.
+Returns a matrix **N_cells x N_contrasts** - *row r is the design cell
+in row r of `des`* (for
+[`expand.grid()`](https://rdrr.io/r/base/expand.grid.html) input, the
+first factor varies fastest, which is also the column order of
+fmridesign crossed terms such as `hrf(A, B)`), columns are independent
+contrasts (difference-coded for the factors you ask for, grand-mean for
+the rest). Suitable for `tcrossprod(dm, C)` or `lm.fit(design, y)`
+followed by `%*% coef` in the usual way.
 
 ## Usage
 

@@ -3,7 +3,7 @@
 Benjamini-Hochberg (SABHA-style) procedure. This method leverages spatial
 structure in the data to increase power while controlling the false discovery rate."><meta property="og:description" content="Performs spatially-aware FDR control using structure-adaptive weighted
 Benjamini-Hochberg (SABHA-style) procedure. This method leverages spatial
-structure in the data to increase power while controlling the false discovery rate."></head><body>
+structure in the data to increase power while controlling the false discovery rate."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -11,7 +11,7 @@ structure in the data to increase power while controlling the false discovery ra
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,7 +36,7 @@ structure in the data to increase power while controlling the false discovery ra
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (temporal sketches + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -100,8 +100,13 @@ structure in the data to increase power while controlling the false discovery ra
 
 
 <dt id="arg-group">group<a class="anchor" aria-label="anchor" href="#arg-group"></a></dt>
-<dd><p>Integer or factor vector of group IDs for each feature (e.g., parcel IDs,
-block IDs). Must have same length as z or p.</p></dd>
+<dd><p>Integer, character or factor vector of group IDs for each feature
+(e.g., parcel IDs, block IDs). Must have same length as z or p. Groups are
+numbered 1..G by sorted unique value, or by factor level (unused levels
+included) when <code>group</code> is a factor. This numbering indexes
+<code>neighbors</code>, <code>pi0_raw</code>, <code>pi0_smooth</code> and <code>m_g</code>.
+Features with <code>NA</code> group are excluded from \(\pi_0\) estimation and
+receive weight 1 before normalisation.</p></dd>
 
 
 <dt id="arg-alpha">alpha<a class="anchor" aria-label="anchor" href="#arg-alpha"></a></dt>
@@ -119,8 +124,9 @@ Set to 0 for no smoothing, higher values for more smoothing.</p></dd>
 
 
 <dt id="arg-neighbors">neighbors<a class="anchor" aria-label="anchor" href="#arg-neighbors"></a></dt>
-<dd><p>Optional list of length G (number of groups) where each element
-is an integer vector of 1-based neighbor IDs. Used for spatial smoothing of \(\pi_0\).</p></dd>
+<dd><p>Optional list of length G (number of groups) where element g
+is an integer vector of 1-based neighbor IDs of group g, both in the group
+numbering described under <code>group</code>. Used for spatial smoothing of \(\pi_0\).</p></dd>
 
 
 <dt id="arg-min-pi-">min_pi0<a class="anchor" aria-label="anchor" href="#arg-min-pi-"></a></dt>
@@ -129,8 +135,8 @@ Prevents infinite weights.</p></dd>
 
 
 <dt id="arg-empirical-null">empirical_null<a class="anchor" aria-label="anchor" href="#arg-empirical-null"></a></dt>
-<dd><p>Logical; if TRUE, estimate null distribution parameters (\(\mu_0\), \(\sigma_0\))
-from central z-values using robust estimators (default: TRUE).</p></dd>
+<dd><p>Logical; if TRUE, estimate null distribution parameters
+(\(\mu_0\), \(\sigma_0\)) from the z-values (default: TRUE). See Details.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
@@ -171,13 +177,14 @@ from central z-values using robust estimators (default: TRUE).</p></dd>
 <dd><p>Numeric scalar; estimated null SD (if empirical_null = TRUE)</p></dd>
 
 <dt>groups</dt>
-<dd><p>Integer vector of compressed group IDs (1..G)</p></dd>
-
-<dt>group</dt>
-<dd><p>Factor or integer vector of original group IDs</p></dd>
+<dd><p>Integer vector of group IDs (1..G) in the numbering described
+under <code>group</code></p></dd>
 
 <dt>G</dt>
 <dd><p>Integer scalar; number of groups</p></dd>
+
+<dt>m_g</dt>
+<dd><p>Integer vector; number of features per group</p></dd>
 
 <dt>alpha</dt>
 <dd><p>Numeric scalar; FDR level used</p></dd>
@@ -192,7 +199,20 @@ from central z-values using robust estimators (default: TRUE).</p></dd>
 <li><p>Optionally smooths these estimates across neighboring groups</p></li>
 <li><p>Uses the pi0 estimates to weight the Benjamini-Hochberg procedure</p></li>
 <li><p>Provides more power in regions with true signal while maintaining FDR control</p></li>
-</ol><p>The method is particularly effective for:</p><ul><li><p>Voxelwise analyses with spatial clustering of signal</p></li>
+</ol><p>Weights are \(1/\pi_0\) of each feature's group, normalised to sum to the
+number of finite p-values, and the weighted BH procedure of Genovese,
+Roeder &amp; Wasserman (2006) is applied: reject \(p_i \le w_i \alpha k / n\).</p>
+<p><strong>Empirical null.</strong> When <code>z</code> is supplied with
+<code>empirical_null = TRUE</code>, \(\mu_0\) and \(\sigma_0\) are estimated by
+Efron's (2004) central matching: a quadratic is fitted by Poisson regression
+to the log histogram counts of z within \(\pm 1.5\) robust SDs of the
+median. Because a minority of non-null features only changes the intercept
+of the log density near the centre and not its curvature, this estimate is
+consistent under \(N(0,1)\) and stays close to it when, for example, 10\<!-- % -->
+of features are true signals. With fewer than 500 finite z-values (or if the
+fit fails) the median and normal-consistent MAD of all finite z-values are
+used instead; with fewer than 10 the theoretical null is used.</p>
+<p>The method is particularly effective for:</p><ul><li><p>Voxelwise analyses with spatial clustering of signal</p></li>
 <li><p>Parcel-based analyses with anatomical or functional grouping</p></li>
 <li><p>Any scenario where hypotheses can be grouped spatially or functionally</p></li>
 </ul></div>
@@ -202,6 +222,10 @@ from central z-values using robust estimators (default: TRUE).</p></dd>
 <ul><li><p>Benjamini &amp; Hochberg (1995). Controlling the false discovery rate.</p></li>
 <li><p>Storey (2002). A direct approach to false discovery rates.</p></li>
 <li><p>Hu et al. (2010). False discovery rate control with groups (SABHA).</p></li>
+<li><p>Genovese, Roeder &amp; Wasserman (2006). False discovery control with
+p-value weighting.</p></li>
+<li><p>Efron (2004). Large-scale simultaneous hypothesis testing: the choice
+of a null hypothesis.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -224,19 +248,19 @@ from central z-values using robust estimators (default: TRUE).</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Features: 1000 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Groups: 10 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> FDR level: 0.05 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Discoveries: 180 ( 18 %)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Threshold: 0.009 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Empirical null: mu = 0.079 , sigma = 0.673 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Discoveries: 8 ( 0.8 %)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Threshold: 4e-04 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Empirical null: mu = 0.205 , sigma = 1.153 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Pi0 summary:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Range: 0.08 - 0.8 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Mean: 0.6 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Median: 0.69 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Range: 0.32 - 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Mean: 0.868 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Median: 1 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group-level discoveries:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Groups with discoveries: 10 / 10 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Max proportion in group: 0.69 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Mean proportion in groups with signal: 0.18 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Groups with discoveries: 2 / 10 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Max proportion in group: 0.04 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Mean proportion in groups with signal: 0.04 </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create simple neighbor structure (each group neighbors with adjacent groups)</span></span></span>
 <span class="r-in"><span><span class="va">neighbors</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">10</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="op">{</span></span></span>
@@ -252,14 +276,14 @@ from central z-values using robust estimators (default: TRUE).</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Features: 1000 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Groups: 10 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> FDR level: 0.05 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Discoveries: 185 ( 18.5 %)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Threshold: 0.00925 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Empirical null: mu = 0.079 , sigma = 0.673 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Discoveries: 9 ( 0.9 %)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Threshold: 0.00045 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Empirical null: mu = 0.205 , sigma = 1.153 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Pi0 summary:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Range: 0.12 - 0.76 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Mean: 0.597 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Median: 0.688 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Range: 0.34 - 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Mean: 0.867 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Median: 1 </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

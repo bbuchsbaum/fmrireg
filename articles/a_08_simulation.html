@@ -12,6 +12,8 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <script src="../extra.js"></script><meta property="og:title" content="Simulating fMRI Data">
+<link href="../albers.css" rel="stylesheet">
+<script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -21,7 +23,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -48,7 +50,7 @@
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (temporal sketches + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -87,7 +89,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-09-25</h4>
+            <h4 data-toc-skip class="date">2026-10-16</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_08_simulation.Rmd" class="external-link"><code>vignettes/a_08_simulation.Rmd</code></a></small>
       <div class="d-none name"><code>a_08_simulation.Rmd</code></div>
@@ -482,22 +484,22 @@ simulation</caption>
 <td align="left">SNR = 1</td>
 <td align="right">1.0</td>
 <td align="right">1.0</td>
-<td align="right">0.861</td>
-<td align="right">0.861</td>
+<td align="right">0.086</td>
+<td align="right">0.086</td>
 </tr>
 <tr class="even">
 <td align="left">SNR = 0.5</td>
 <td align="right">0.5</td>
 <td align="right">0.5</td>
-<td align="right">0.861</td>
-<td align="right">1.722</td>
+<td align="right">0.086</td>
+<td align="right">0.172</td>
 </tr>
 <tr class="odd">
 <td align="left">SNR = 0.2</td>
 <td align="right">0.2</td>
 <td align="right">0.2</td>
-<td align="right">0.861</td>
-<td align="right">4.306</td>
+<td align="right">0.086</td>
+<td align="right">0.430</td>
 </tr>
 </tbody>
 </table>
@@ -547,6 +549,9 @@ simulating multiple voxels or regions with related but slightly
 different response profiles.</p>
 <div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">requested_onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">12</span>, <span class="fl">156</span>, length.out <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
+<span><span class="co"># Set the noise relative to the canonical HRF's peak so the responses stay</span></span>
+<span><span class="co"># visible whatever the HRF's raw amplitude.</span></span>
+<span><span class="va">hrf_peak</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu">fmrihrf</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/evaluate.html" class="external-link">evaluate</a></span><span class="op">(</span><span class="fu">fmrihrf</span><span class="fu">::</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html" class="external-link">HRF_SPMG1</a></span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">30</span>, by <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">sim_matrix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_fmri_matrix.html">simulate_fmri_matrix</a></span><span class="op">(</span></span>
 <span>  n <span class="op">=</span> <span class="fl">5</span>,                  <span class="co"># 5 voxels/regions</span></span>
 <span>  total_time <span class="op">=</span> <span class="fl">200</span>,       <span class="co"># 200 seconds of scan time</span></span>
@@ -557,7 +562,7 @@ different response profiles.</p>
 <span>  durations <span class="op">=</span> <span class="fl">2</span>,          <span class="co"># Base duration = 2 seconds</span></span>
 <span>  duration_sd <span class="op">=</span> <span class="fl">0.5</span>,      <span class="co"># Duration variability</span></span>
 <span>  noise_type <span class="op">=</span> <span class="st">"ar1"</span>,     <span class="co"># AR(1) noise</span></span>
-<span>  noise_sd <span class="op">=</span> <span class="fl">0.5</span>          <span class="co"># Noise standard deviation</span></span>
+<span>  noise_sd <span class="op">=</span> <span class="fl">0.29</span> <span class="op">*</span> <span class="va">hrf_peak</span>  <span class="co"># Noise SD: 29% of the HRF's peak</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>When you supply <code>onsets</code>, those values are authoritative:
 the function skips ISI generation and derives the event count from their

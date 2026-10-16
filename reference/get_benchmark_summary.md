@@ -122,7 +122,7 @@ print(summary_info)
 #> -- HRF: SPMG1 --------------------------------------------- 
 #>    Basis functions: 1 
 #>    Span: 24 s
-#>    Parameters: P1 = 5, P2 = 15, A1 = 0.0833 
+#>    Parameters: P1 = 5, P2 = 15, A1 = 0.008333 
 #> 
 #> 
 #> $noise_information
@@ -133,7 +133,7 @@ print(summary_info)
 #> [1] 0.4
 #> 
 #> $noise_information$noise_sd
-#> [1] 0.09832377
+#> [1] 0.009034244
 #> 
 #> 
 ```

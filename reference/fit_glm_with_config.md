@@ -31,7 +31,7 @@ fit_glm_with_config(
 - cfg:
 
   Optional `fmri_lm_control`; defaults to
-  [`fmri_lm_control()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm_control.md).
+  `fmri_lm_control(estimation = estimation_spec("joint"))`.
 
 - dataset:
 

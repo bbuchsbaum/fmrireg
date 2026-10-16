@@ -84,6 +84,20 @@ fmri_lm(
 
   A validated
   [`fmri_lm_control()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm_control.md).
+  The default fits runs separately and pools them by fixed-effect
+  meta-analysis (`estimation_spec("runwise_meta")`). A control object
+  built without an `estimation` argument keeps this runwise default for
+  the built-in fitter; pass
+  `fmri_lm_control(estimation = estimation_spec("joint"))` to fit one
+  joint model across runs. HAC, sandwich, and Satterthwaite inference
+  (see
+  [`variance_spec()`](https://bbuchsbaum.github.io/fmrireg/reference/variance_spec.md))
+  are implemented only for a joint fit; when such a `variance` is
+  requested without an `estimation`,
+  [`fmri_lm_control()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm_control.md)
+  selects the joint scope and says so in a message. When `engine` is
+  supplied and `control` does not specify `estimation` (or is omitted),
+  the engine receives `estimation_spec("joint")`.
 
 - compute:
 

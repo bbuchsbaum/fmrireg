@@ -1,8 +1,11 @@
 # Apply Contrast to Meta-Analysis Results
 
-Note: Uses exact standard errors when covariance is available
-(return_cov="tri") or for ROI CSV fits with non-robust estimation;
-otherwise uses a diagonal variance approximation.
+The contrast standard error is \\\sqrt{c' Var(\hat\beta) c}\\, using the
+coefficient covariance that
+[`fmri_meta()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta.md)
+stores with every fit. For objects without a stored covariance only
+single-coefficient contrasts are exact; other contrasts fall back to a
+diagonal approximation with a warning.
 
 ## Usage
 
@@ -48,6 +51,7 @@ toy_meta <- structure(
   class = "fmri_meta"
 )
 contrast(toy_meta, c(1, -1))
+#> Warning: Coefficient covariance is not available for this fmri_meta object; the contrast standard error ignores covariances between coefficients and is approximate.
 #> $estimate
 #> [1] 0.2
 #> 

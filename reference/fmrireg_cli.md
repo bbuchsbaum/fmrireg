@@ -75,12 +75,12 @@ fmrireg_cli(c(
 #>       "span_override": null,
 #>       "fmrihrf_version": "0.4.0"
 #>     },
-#>     "hrf_object": ["structure(function (t) ", "{", "    do.call(orig_f, c(list(t = t), callable_params_list))", "}, class = \"function\", name = \"SPMG1\", nbasis = 1L, span = 24, param_names = c(\"P1\", ", "\"P2\", \"A1\"), params = list(P1 = 5, P2 = 15, A1 = 0.0833))"]
+#>     "hrf_object": ["structure(function (t) ", "{", "    do.call(orig_f, c(list(t = t), callable_params_list))", "}, class = \"function\", name = \"SPMG1\", nbasis = 1L, span = 24, param_names = c(\"P1\", ", "\"P2\", \"A1\"), params = list(P1 = 5, P2 = 15, A1 = 0.00833333333333333))"]
 #>   },
 #>   "noise_information": {
 #>     "noise_type": "ar1",
 #>     "noise_ar": 0.4,
-#>     "noise_sd": 0.0983
+#>     "noise_sd": 0.009
 #>   }
 #> }
 #> [1] 0

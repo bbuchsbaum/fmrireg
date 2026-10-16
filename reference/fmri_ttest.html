@@ -3,7 +3,7 @@
 paired, and ANCOVA designs. Provides both meta-analysis and classical t-test engines,
 mirroring AFNI 3dttest++ functionality within the fmrireg framework."><meta property="og:description" content="Performs group-level t-tests on fMRI data with support for one-sample, two-sample,
 paired, and ANCOVA designs. Provides both meta-analysis and classical t-test engines,
-mirroring AFNI 3dttest++ functionality within the fmrireg framework."></head><body>
+mirroring AFNI 3dttest++ functionality within the fmrireg framework."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -11,7 +11,7 @@ mirroring AFNI 3dttest++ functionality within the fmrireg framework."></head><bo
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,7 +36,7 @@ mirroring AFNI 3dttest++ functionality within the fmrireg framework."></head><bo
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (temporal sketches + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -111,7 +111,9 @@ mirroring AFNI 3dttest++ functionality within the fmrireg framework.</p>
 <dt id="arg-engine">engine<a class="anchor" aria-label="anchor" href="#arg-engine"></a></dt>
 <dd><p>Character string; analysis engine to use:</p><ul><li><p>"auto": Automatically select based on data (default)</p></li>
 <li><p>"meta": Use inverse-variance meta-analysis (requires SE)</p></li>
-<li><p>"classic": Use OLS/Student t-test</p></li>
+<li><p>"classic": Use OLS/Student t-test. A subject with a non-finite
+value for a feature is dropped from that feature only, so degrees of
+freedom can differ between features.</p></li>
 <li><p>"welch": Use Welch t-test for unequal variances</p></li>
 </ul></dd>
 
@@ -165,7 +167,9 @@ mirroring AFNI 3dttest++ functionality within the fmrireg framework.</p>
 <dt id="arg-weights">weights<a class="anchor" aria-label="anchor" href="#arg-weights"></a></dt>
 <dd><p>Character string for meta-engine weighting: "ivw" (default,
 uses provided SE), "equal" (equal weights), or "custom" (supply
-<code>weights_custom</code>). Ignored for classic/welch engines.</p></dd>
+<code>weights_custom</code>). "equal"/"custom" are relative weights with an estimated
+residual scale (weighted least squares; see <code><a href="fmri_meta.html">fmri_meta</a></code>).
+Ignored for classic/welch engines.</p></dd>
 
 
 <dt id="arg-weights-custom">weights_custom<a class="anchor" aria-label="anchor" href="#arg-weights-custom"></a></dt>

@@ -81,13 +81,13 @@ stopifnot(
   all(vapply(values, nrow, integer(1)) == 10L)
 )
 head(values[["sub-01"]])
-#>   job_id                  term voxel    estimate        se       stat
-#> 1 sub-01 condition_condition.A     1 -0.03204400 0.2513233 -0.1275011
-#> 2 sub-01 condition_condition.B     1 -0.18137031 0.2506274 -0.7236650
-#> 3 sub-01 condition_condition.A     2  0.03081246 0.2495617  0.1234663
-#> 4 sub-01 condition_condition.B     2 -0.14713614 0.2488707 -0.5912151
-#> 5 sub-01 condition_condition.A     3 -0.70766166 0.2750774 -2.5725913
-#> 6 sub-01 condition_condition.B     3 -0.43742239 0.2743158 -1.5945943
+#>   job_id                  term voxel   estimate       se        stat
+#> 1 sub-01 condition_condition.A     1 -0.2249589 2.487085 -0.09045083
+#> 2 sub-01 condition_condition.B     1 -1.7518047 2.481632 -0.70590843
+#> 3 sub-01 condition_condition.A     2  0.3418323 2.475852  0.13806649
+#> 4 sub-01 condition_condition.B     2 -1.3161002 2.470424 -0.53274272
+#> 5 sub-01 condition_condition.A     3 -6.9950731 2.725699 -2.56634140
+#> 6 sub-01 condition_condition.B     3 -4.4070478 2.719722 -1.62040386
 ```
 
 [`run_jobs()`](https://bbuchsbaum.github.io/fmrireg/reference/run_jobs.md)
@@ -222,7 +222,7 @@ knitr::kable(group_summary, digits = 3,
 
 | target                          | subjects | estimate | std_error |
 |:--------------------------------|---------:|---------:|----------:|
-| Condition B at teaching voxel 1 |        2 |    -0.06 |     0.195 |
+| Condition B at teaching voxel 1 |        2 |   -0.475 |     1.933 |
 
 Executable subject-to-group handoff {.table}
 

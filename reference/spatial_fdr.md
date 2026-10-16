@@ -36,8 +36,13 @@ spatial_fdr(
 
 - group:
 
-  Integer or factor vector of group IDs for each feature (e.g., parcel
-  IDs, block IDs). Must have same length as z or p.
+  Integer, character or factor vector of group IDs for each feature
+  (e.g., parcel IDs, block IDs). Must have same length as z or p. Groups
+  are numbered 1..G by sorted unique value, or by factor level (unused
+  levels included) when `group` is a factor. This numbering indexes
+  `neighbors`, `pi0_raw`, `pi0_smooth` and `m_g`. Features with `NA`
+  group are excluded from \\\pi_0\\ estimation and receive weight 1
+  before normalisation.
 
 - alpha:
 
@@ -56,8 +61,9 @@ spatial_fdr(
 
 - neighbors:
 
-  Optional list of length G (number of groups) where each element is an
-  integer vector of 1-based neighbor IDs. Used for spatial smoothing of
+  Optional list of length G (number of groups) where element g is an
+  integer vector of 1-based neighbor IDs of group g, both in the group
+  numbering described under `group`. Used for spatial smoothing of
   \\\pi_0\\.
 
 - min_pi0:
@@ -68,8 +74,7 @@ spatial_fdr(
 - empirical_null:
 
   Logical; if TRUE, estimate null distribution parameters (\\\mu_0\\,
-  \\\sigma_0\\) from central z-values using robust estimators (default:
-  TRUE).
+  \\\sigma_0\\) from the z-values (default: TRUE). See Details.
 
 - verbose:
 
@@ -121,15 +126,16 @@ Object of class "spatial_fdr_result" containing:
 
 - groups:
 
-  Integer vector of compressed group IDs (1..G)
-
-- group:
-
-  Factor or integer vector of original group IDs
+  Integer vector of group IDs (1..G) in the numbering described under
+  `group`
 
 - G:
 
   Integer scalar; number of groups
+
+- m_g:
+
+  Integer vector; number of features per group
 
 - alpha:
 
@@ -154,6 +160,23 @@ that:
 4.  Provides more power in regions with true signal while maintaining
     FDR control
 
+Weights are \\1/\pi_0\\ of each feature's group, normalised to sum to
+the number of finite p-values, and the weighted BH procedure of
+Genovese, Roeder & Wasserman (2006) is applied: reject \\p_i \le w_i
+\alpha k / n\\.
+
+**Empirical null.** When `z` is supplied with `empirical_null = TRUE`,
+\\\mu_0\\ and \\\sigma_0\\ are estimated by Efron's (2004) central
+matching: a quadratic is fitted by Poisson regression to the log
+histogram counts of z within \\\pm 1.5\\ robust SDs of the median.
+Because a minority of non-null features only changes the intercept of
+the log density near the centre and not its curvature, this estimate is
+consistent under \\N(0,1)\\ and stays close to it when, for example,
+10\\ of features are true signals. With fewer than 500 finite z-values
+(or if the fit fails) the median and normal-consistent MAD of all finite
+z-values are used instead; with fewer than 10 the theoretical null is
+used.
+
 The method is particularly effective for:
 
 - Voxelwise analyses with spatial clustering of signal
@@ -169,6 +192,12 @@ The method is particularly effective for:
 - Storey (2002). A direct approach to false discovery rates.
 
 - Hu et al. (2010). False discovery rate control with groups (SABHA).
+
+- Genovese, Roeder & Wasserman (2006). False discovery control with
+  p-value weighting.
+
+- Efron (2004). Large-scale simultaneous hypothesis testing: the choice
+  of a null hypothesis.
 
 ## See also
 
@@ -191,19 +220,19 @@ summary(result)
 #> Features: 1000 
 #> Groups: 10 
 #> FDR level: 0.05 
-#> Discoveries: 180 ( 18 %)
-#> Threshold: 0.009 
-#> Empirical null: mu = 0.079 , sigma = 0.673 
+#> Discoveries: 8 ( 0.8 %)
+#> Threshold: 4e-04 
+#> Empirical null: mu = 0.205 , sigma = 1.153 
 #> 
 #> Pi0 summary:
-#>   Range: 0.08 - 0.8 
-#>   Mean: 0.6 
-#>   Median: 0.69 
+#>   Range: 0.32 - 1 
+#>   Mean: 0.868 
+#>   Median: 1 
 #> 
 #> Group-level discoveries:
-#>   Groups with discoveries: 10 / 10 
-#>   Max proportion in group: 0.69 
-#>   Mean proportion in groups with signal: 0.18 
+#>   Groups with discoveries: 2 / 10 
+#>   Max proportion in group: 0.04 
+#>   Mean proportion in groups with signal: 0.04 
 
 # Create simple neighbor structure (each group neighbors with adjacent groups)
 neighbors <- lapply(1:10, function(i) {
@@ -219,12 +248,12 @@ print(result_smooth)
 #> Features: 1000 
 #> Groups: 10 
 #> FDR level: 0.05 
-#> Discoveries: 185 ( 18.5 %)
-#> Threshold: 0.00925 
-#> Empirical null: mu = 0.079 , sigma = 0.673 
+#> Discoveries: 9 ( 0.9 %)
+#> Threshold: 0.00045 
+#> Empirical null: mu = 0.205 , sigma = 1.153 
 #> 
 #> Pi0 summary:
-#>   Range: 0.12 - 0.76 
-#>   Mean: 0.597 
-#>   Median: 0.688 
+#>   Range: 0.34 - 1 
+#>   Mean: 0.867 
+#>   Median: 1 
 ```

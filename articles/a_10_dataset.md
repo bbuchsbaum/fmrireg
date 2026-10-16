@@ -53,11 +53,19 @@ design machinery expects:
 
 sframe_example <- sampling_frame(blocklens = c(150, 160), TR = 2.0)
 print(sframe_example)
-#> Sampling frame
-#> - Blocks: 2 
-#> - Scans: 310 (per block: 150, 160 )
-#> - TR: 2 s
-#> - Duration: 619 s
+#> Sampling Frame
+#> ==============
+#> 
+#> Structure:
+#>   2 blocks
+#>   Total scans: 310
+#> 
+#> Timing:
+#>   TR: 2 s
+#>   Precision: 0.1 s
+#> 
+#> Duration:
+#>   Total time: 620.0 s
 ```
 
 A frame does not store a `sampling_frame`. It stores the same facts as
@@ -115,11 +123,19 @@ dim(mem_frame)              # scans by masked voxels
 class(fmridataset::space(mem_frame))     # a volume_space on the mask's grid
 #> [1] "volume_space"  "feature_space"
 as_sampling_frame(mem_frame)
-#> Sampling frame
-#> - Blocks: 2 
-#> - Scans: 40 (per block: 20, 20 )
-#> - TR: 2 s
-#> - Duration: 79 s
+#> Sampling Frame
+#> ==============
+#> 
+#> Structure:
+#>   2 blocks
+#>   Total scans: 40
+#> 
+#> Timing:
+#>   TR: 2 s
+#>   Precision: 0.1 s
+#> 
+#> Duration:
+#>   Total time: 80.0 s
 ```
 
 The masked voxel series are extracted once, with
@@ -220,11 +236,19 @@ dim(mat_frame)
 class(fmridataset::space(mat_frame))   # an index_space: no spatial geometry
 #> [1] "index_space"   "feature_space"
 as_sampling_frame(mat_frame)
-#> Sampling frame
-#> - Blocks: 2 
-#> - Scans: 100 (per block: 50, 50 )
-#> - TR: 2.5 s
-#> - Duration: 248.75 s
+#> Sampling Frame
+#> ==============
+#> 
+#> Structure:
+#>   2 blocks
+#>   Total scans: 100
+#> 
+#> Timing:
+#>   TR: 2.5 s
+#>   Precision: 0.1 s
+#> 
+#> Duration:
+#>   Total time: 250.0 s
 ```
 
 For `matrix_frame`, the concept of a spatial mask is implicit; all

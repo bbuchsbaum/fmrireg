@@ -119,8 +119,12 @@ signal2 <- evaluate(reg2, time_points)
 # Combine signals (this is the "true" signal without noise)
 true_signal <- signal1 + signal2
 
-# Create noise with temporal autocorrelation and drift
-noise <- simulate_noise_vector(
+# Create noise with temporal autocorrelation and drift. Its parameters are
+# stated for a response peak of 1.75 signal units; rescaling by the canonical
+# HRF's actual peak keeps the signal-to-noise ratio independent of the HRF's
+# raw amplitude.
+hrf_peak <- max(evaluate(fmrihrf::HRF_SPMG1, seq(0, 30, by = 0.1)))
+noise <- (hrf_peak / 1.75) * simulate_noise_vector(
   n = length(time_points),
   TR = TR,
   ar = c(0.7),         # Stronger AR(1) coefficient to accentuate autocorrelation
@@ -226,7 +230,7 @@ model
 #> Model formula:
 #>   ~ onset hrf(condition) 
 #> 
-#> Fitting strategy:  chunkwise 
+#> Fitting strategy:  runwise 
 #> 
 #> Baseline parameters:  4 
 #> Design parameters:    2 
@@ -328,8 +332,8 @@ kable(se_comparison, digits = 4, caption = "Median standard error across event c
 
 | model             | median_event_se |
 |:------------------|----------------:|
-| OLS               |          0.1377 |
-| AR(1) prewhitened |          0.1818 |
+| OLS               |          0.1386 |
+| AR(1) prewhitened |          0.1824 |
 
 Median standard error across event coefficients {.table}
 
@@ -338,7 +342,7 @@ Median standard error across event coefficients {.table}
 
 # Inspect the estimated AR coefficient (shared across voxels in this example)
 model_ar1$ar_coef[[1]]
-#> [1] 0.3713454
+#> [1] 0.3765398
 ```
 
 Here the AR(1) fit estimates non-zero serial dependence and produces
@@ -385,8 +389,8 @@ kable(robust_comparison, digits = 4, caption = "Median event-coefficient standar
 
 | model | median_event_se |
 |:------|----------------:|
-| OLS   |          0.1377 |
-| Huber |          0.1297 |
+| OLS   |          0.1386 |
+| Huber |          0.1300 |
 
 Median event-coefficient standard error {.table}
 
@@ -406,21 +410,24 @@ Let’s extract and visualize the results from our linear model.
 ``` r
 
 # Extract coefficient estimates
+# One row per voxel, one column per event regressor
 beta_estimates <- coef(model)
-kable(beta_estimates, caption = "Coefficient estimates for each condition and voxel")
+kable(beta_estimates, caption = "Coefficient estimates for each voxel (rows) and condition (columns)")
 ```
 
-|                                |           |           |           |
-|:-------------------------------|----------:|----------:|----------:|
-| condition_condition.condition1 | 0.7473208 | 0.5475209 | 0.3477211 |
-| condition_condition.condition2 | 1.8921665 | 1.4924380 | 1.0927094 |
+| condition_condition.condition1 | condition_condition.condition2 |
+|-------------------------------:|-------------------------------:|
+|                      0.7945540 |                       1.874001 |
+|                      0.5947415 |                       1.474266 |
+|                      0.3949289 |                       1.074532 |
 
-Coefficient estimates for each condition and voxel {.table}
+Coefficient estimates for each voxel (rows) and condition (columns)
+{.table}
 
 ``` r
 
 # Reshape for plotting (works with both approaches)
-beta_long <- as.data.frame(t(beta_estimates)) %>%
+beta_long <- as.data.frame(beta_estimates) %>%
   mutate(voxel_index = row_number()) %>%
   pivot_longer(cols = -voxel_index, names_to = "condition", values_to = "estimate") %>%
   mutate(
@@ -472,24 +479,25 @@ kable(estimate_stats_display, digits = 4, row.names = FALSE,
       caption = "Coefficient estimates with associated statistics by voxel and condition")
 ```
 
-| voxel  | condition  | estimate | std_error | statistic | p_value   |
-|:-------|:-----------|---------:|----------:|----------:|:----------|
-| voxel1 | condition1 |   0.7473 |    0.1910 |    3.9123 | 0.0001264 |
-| voxel1 | condition2 |   1.8922 |    0.1727 |   10.9587 | \< 1e-04  |
-| voxel2 | condition1 |   0.5475 |    0.1910 |    2.8663 | 0.0046111 |
-| voxel2 | condition2 |   1.4924 |    0.1727 |    8.6437 | \< 1e-04  |
-| voxel3 | condition1 |   0.3477 |    0.1910 |    1.8204 | 0.0702430 |
-| voxel3 | condition2 |   1.0927 |    0.1727 |    6.3287 | \< 1e-04  |
+| voxel  | condition  | estimate | std_error | statistic | p_value  |
+|:-------|:-----------|---------:|----------:|----------:|:---------|
+| voxel1 | condition1 |   0.7946 |    0.1908 |    4.1643 | \< 1e-04 |
+| voxel1 | condition2 |   1.8740 |    0.1740 |   10.7723 | \< 1e-04 |
+| voxel2 | condition1 |   0.5947 |    0.1908 |    3.1172 | 0.002103 |
+| voxel2 | condition2 |   1.4743 |    0.1740 |    8.4749 | \< 1e-04 |
+| voxel3 | condition1 |   0.3949 |    0.1908 |    2.0700 | 0.039775 |
+| voxel3 | condition2 |   1.0745 |    0.1739 |    6.1773 | \< 1e-04 |
 
 Coefficient estimates with associated statistics by voxel and condition
 {.table}
 
 The t-statistics quantify the reliability of the estimated effects.
 Higher absolute t-values indicate more precise estimates relative to
-their standard errors. Here 5 of the six condition-by-voxel tests are
-below 0.05. The weakest simulated signal is correspondingly the least
-certain; this is why the table reports both effect size and uncertainty
-rather than reducing the result to a binary label.
+their standard errors. Here 6 of the six condition-by-voxel tests are
+below 0.05. The weakest simulated signal, condition 1 in voxel 3, is
+correspondingly the least certain (t = 2.07, p = 0.040); this is why the
+table reports both effect size and uncertainty rather than reducing the
+result to a binary label.
 
 ### 3. Contrasts Between Conditions
 
@@ -529,13 +537,13 @@ kable(contrast_results_display,
       digits = 4, row.names = FALSE)
 ```
 
-| voxel | term | estimate | std_error | statistic | p_value | df_inference | df_residual | significant |
-|:---|:---|---:|---:|---:|:---|---:|---:|:---|
-| voxel1 | cond2_minus_cond1 | 1.1448 | 0.2525 | 4.5337 | \< 1e-04 | 194 | 194 | TRUE |
-| voxel2 | cond2_minus_cond1 | 0.9449 | 0.2525 | 3.7420 | 0.0002404 | 194 | 194 | TRUE |
-| voxel3 | cond2_minus_cond1 | 0.7450 | 0.2525 | 2.9503 | 0.0035656 | 194 | 194 | TRUE |
+| voxel | term | type | estimate | std_error | statistic | p_value | df_inference | df_residual | significant |
+|:---|:---|:---|---:|---:|---:|:---|---:|---:|:---|
+| voxel1 | cond2_minus_cond1 | contrast | 1.0794 | 0.2543 | 4.2452 | \< 1e-04 | 194 | 194 | TRUE |
+| voxel2 | cond2_minus_cond1 | contrast | 0.8795 | 0.2543 | 3.4591 | 0.0006662 | 194 | 194 | TRUE |
+| voxel3 | cond2_minus_cond1 | contrast | 0.6796 | 0.2543 | 2.6730 | 0.0081588 | 194 | 194 | TRUE |
 
-Contrast results: condition2 - condition1 {.table style="width:100%;"}
+Contrast results: condition2 - condition1 {.table}
 
 ``` r
 
@@ -648,9 +656,9 @@ empirical_hrf
 
 | condition | voxel      | correlation | normalized_rmse |
 |:----------|:-----------|------------:|----------------:|
-| A         | motor_ROI  |       0.995 |           0.032 |
+| A         | motor_ROI  |       0.996 |           0.032 |
 | A         | visual_ROI |       0.997 |           0.025 |
-| B         | motor_ROI  |       0.995 |           0.033 |
+| B         | motor_ROI  |       0.996 |           0.033 |
 | B         | visual_ROI |       0.995 |           0.034 |
 
 Recovery against the known synthetic HRFs {.table}
@@ -678,16 +686,26 @@ line.](a_09_linear_model_files/figure-html/plot-empirical-hrf-gcv-1.png)
 ## Comparing Models with Different HRF Bases
 
 The choice of hemodynamic response function can impact model fit. Let’s
-compare different HRF options.
+compare different HRF options. The comparison below scores each model by
+AIC from one design matrix and one coefficient vector per voxel, so each
+model is fitted jointly across runs (`estimation_spec("joint")`) rather
+than with the default runwise meta-estimation. Because the models
+declare AR(1) noise, the AIC uses the AR(1) Gaussian likelihood of each
+fit, not the independent-errors formula.
 
 ``` r
 
-# Fit models with different HRF bases
+# Fit models with different HRF bases, jointly across runs
+joint_ar1 <- fmri_lm_control(
+  estimation = estimation_spec("joint"),
+  noise = noise_spec("ar1")
+)
+
 model_canonical <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "spmg1"),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1")),
+  control = joint_ar1,
   compute = compute_spec(voxel_chunks = 1L)
 )
 
@@ -695,7 +713,7 @@ model_gaussian <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "gaussian"),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1")),
+  control = joint_ar1,
   compute = compute_spec(voxel_chunks = 1L)
 )
 
@@ -703,7 +721,7 @@ model_bspline <- fmri_lm(
   formula = onset ~ hrf(condition, basis = "bspline", nbasis = 5),
   block = ~ run,
   dataset = dataset,
-  control = fmri_lm_control(noise = noise_spec("ar1")),
+  control = joint_ar1,
   compute = compute_spec(voxel_chunks = 1L)
 )
 ```
@@ -722,17 +740,17 @@ model_comparison <- rbind(stats_canonical, stats_gaussian, stats_bspline)
 kable(model_comparison, caption = "Model comparison statistics", digits = 4)
 ```
 
-| model         | voxel | r_squared |     aic |      ssr |
-|:--------------|------:|----------:|--------:|---------:|
-| canonical_spm |     1 |    0.5522 | 49.1000 | 240.7640 |
-| canonical_spm |     2 |    0.4275 | 49.0910 | 240.7532 |
-| canonical_spm |     3 |    0.2787 | 49.0821 | 240.7425 |
-| gaussian      |     1 |    0.5154 | 64.9107 | 260.5698 |
-| gaussian      |     2 |    0.3980 | 59.1591 | 253.1830 |
-| gaussian      |     3 |    0.2587 | 54.5608 | 247.4285 |
-| bspline_n5    |     1 |    0.5526 | 64.9091 | 240.5343 |
-| bspline_n5    |     2 |    0.4555 | 55.0891 | 229.0094 |
-| bspline_n5    |     3 |    0.3404 | 47.1918 | 220.1428 |
+| model         | voxel | r_squared |       aic |   aic_iid |    ssr |
+|:--------------|------:|----------:|----------:|----------:|-------:|
+| canonical_spm |     1 |    0.5404 | -880.9692 | -869.4824 | 2.4373 |
+| canonical_spm |     2 |    0.4153 | -880.9869 | -869.5094 | 2.4370 |
+| canonical_spm |     3 |    0.2676 | -881.0045 | -869.5362 | 2.4367 |
+| gaussian      |     1 |    0.5031 | -861.2532 | -853.8757 | 2.6351 |
+| gaussian      |     2 |    0.3876 | -868.6017 | -860.2225 | 2.5528 |
+| gaussian      |     3 |    0.2518 | -874.5970 | -865.2604 | 2.4893 |
+| bspline_n5    |     1 |    0.5447 | -856.2023 | -855.3468 | 2.4147 |
+| bspline_n5    |     2 |    0.4482 | -866.1666 | -865.0614 | 2.3002 |
+| bspline_n5    |     3 |    0.3351 | -874.0818 | -872.8777 | 2.2121 |
 
 Model comparison statistics {.table}
 
@@ -747,11 +765,11 @@ aic_winners <- model_comparison %>%
 kable(aic_winners, caption = "Lowest-AIC model in each voxel", digits = 4)
 ```
 
-| voxel | selected_model |     aic |
-|------:|:---------------|--------:|
-|     1 | canonical_spm  | 49.1000 |
-|     2 | canonical_spm  | 49.0910 |
-|     3 | bspline_n5     | 47.1918 |
+| voxel | selected_model |       aic |
+|------:|:---------------|----------:|
+|     1 | canonical_spm  | -880.9692 |
+|     2 | canonical_spm  | -880.9869 |
+|     3 | canonical_spm  | -881.0045 |
 
 Lowest-AIC model in each voxel {.table}
 
@@ -813,11 +831,16 @@ The model comparison shows:
     that balances goodness of fit with model complexity. Lower values
     indicate better models.
 
-The canonical SPM model has the lowest AIC in two voxels, consistent
-with the HRF used to generate the signal. In the weakest-signal voxel,
-however, the B-spline model wins despite its larger penalty. This is a
-useful caution: finite noisy data need not select the generating model
-in every voxel. AIC balances fit and complexity; it is evidence for a
+The canonical SPM model has the lowest AIC in every voxel, consistent
+with the HRF used to generate the signal. The five-function B-spline
+basis explains more raw variance (higher R-squared) in every voxel: its
+extra columns absorb part of the slow, serially correlated noise. Scored
+under the AR(1) noise model that the fits declare (the exact likelihood,
+evaluated at the fitted coefficients and AR estimates), that gain does
+not cover the cost of the extra parameters. Had we used the
+independent-errors formula `n * log(SSR / n) + 2p`, the B-spline model
+would have won some voxels, a reminder that an information criterion is
+only as good as the likelihood behind it. AIC remains evidence for a
 model in a particular sample, not proof that the selected basis is the
 true physiological response.
 

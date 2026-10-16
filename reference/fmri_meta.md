@@ -47,7 +47,9 @@ fmri_meta(
 
   - "dl": DerSimonian-Laird random-effects
 
-  - "reml": Restricted maximum likelihood random-effects
+  - "reml": Not implemented. Accepted for backward compatibility; it
+    runs the Paule-Mandel estimator, says so with a message, and the fit
+    records `method = "pm"`.
 
 - robust:
 
@@ -63,17 +65,27 @@ fmri_meta(
 
   Character string specifying weighting scheme:
 
-  - "ivw": Inverse variance weighting (default)
+  - "ivw": Inverse variance weighting (default). The subject-level
+    variances are taken as known and `method` chooses the
+    between-subject variance estimator.
 
   - "equal": Equal weights for all subjects
 
   - "custom": User-provided weights (must supply weights argument)
 
+  "equal" and "custom" weights are *relative*: the model is weighted
+  least squares, \\Var(y_i) = \sigma^2 / w_i\\, with the residual scale
+  \\\sigma^2\\ estimated per feature (as `lm(weights = w)` does; equal
+  weights give the one-sample / OLS group t-statistic). The
+  subject-level standard errors and `method` are then not used, and
+  `tau2`, `Q` and `I2` are `NA`.
+
 - weights_custom:
 
-  Numeric vector or matrix of custom weights (required if
+  Numeric vector or matrix of positive custom weights (required if
   `weights = "custom"`). If a vector, length must equal the number of
-  subjects. If a matrix, it must be subjects x features.
+  subjects. If a matrix, it must be subjects x features (analysed voxels
+  or ROIs).
 
 - combine:
 
@@ -93,10 +105,11 @@ fmri_meta(
 
 - return_cov:
 
-  Optional. If set to "tri", returns the packed upper-triangular
-  Var(beta) per feature under `$cov` to enable exact post-hoc contrasts
-  via
-  [`contrast()`](https://bbuchsbaum.github.io/fmrireg/reference/contrast.md).
+  Optional; kept for backward compatibility. The packed upper-triangular
+  Var(beta) per feature is now always returned under `$cov` (for
+  subject-level effect data) so that
+  [`contrast()`](https://bbuchsbaum.github.io/fmrireg/reference/contrast.md)
+  gives exact standard errors.
 
 - chunk_size:
 

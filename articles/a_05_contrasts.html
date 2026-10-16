@@ -12,6 +12,8 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <script src="../extra.js"></script><meta property="og:title" content="Contrasts and Hypothesis Tests">
+<link href="../albers.css" rel="stylesheet">
+<script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -21,7 +23,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -48,7 +50,7 @@
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (temporal sketches + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -87,7 +89,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-09-25</h4>
+            <h4 data-toc-skip class="date">2026-10-16</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_05_contrasts.Rmd" class="external-link"><code>vignettes/a_05_contrasts.Rmd</code></a></small>
       <div class="d-none name"><code>a_05_contrasts.Rmd</code></div>
@@ -952,33 +954,33 @@ F-contrasts were defined, e.g., via <code>oneway_contrast</code>).</li>
 <tbody>
 <tr class="odd">
 <td align="left">face_vs_scene</td>
-<td align="right">0.675</td>
-<td align="right">0.040</td>
-<td align="right">16.767</td>
+<td align="right">0.672</td>
+<td align="right">0.038</td>
+<td align="right">17.853</td>
 <td align="left">&lt;1e-04</td>
 <td align="right">112</td>
 </tr>
 <tr class="even">
 <td align="left">attend_vs_ignore</td>
-<td align="right">0.345</td>
-<td align="right">0.042</td>
-<td align="right">8.224</td>
+<td align="right">0.360</td>
+<td align="right">0.041</td>
+<td align="right">8.674</td>
 <td align="left">&lt;1e-04</td>
 <td align="right">112</td>
 </tr>
 <tr class="odd">
 <td align="left">category_X_attention</td>
-<td align="right">0.352</td>
-<td align="right">0.080</td>
-<td align="right">4.386</td>
+<td align="right">0.339</td>
+<td align="right">0.079</td>
+<td align="right">4.305</td>
 <td align="left">&lt;1e-04</td>
 <td align="right">112</td>
 </tr>
 <tr class="even">
 <td align="left">face_gt_baseline</td>
-<td align="right">1.015</td>
-<td align="right">0.036</td>
-<td align="right">28.396</td>
+<td align="right">1.014</td>
+<td align="right">0.034</td>
+<td align="right">29.685</td>
 <td align="left">&lt;1e-04</td>
 <td align="right">112</td>
 </tr>
@@ -1010,9 +1012,10 @@ difference.</p>
 <span>  data <span class="op">=</span> <span class="va">three_level_events</span>, sampling_frame <span class="op">=</span> <span class="va">three_level_frame</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">three_level_X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html" class="external-link">design_matrix</a></span><span class="op">(</span><span class="va">three_level_event</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># As above, noise is scaled to the regressors' peak height.</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">404</span><span class="op">)</span></span>
 <span><span class="va">three_level_Y</span> <span class="op">&lt;-</span> <span class="va">three_level_X</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.0</span>, <span class="fl">0.4</span>, <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span>, sd <span class="op">=</span> <span class="fl">0.15</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span>, sd <span class="op">=</span> <span class="fl">0.085</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">three_level_X</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">three_level_dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/matrix_frame.html">matrix_frame</a></span><span class="op">(</span></span>
 <span>  <span class="va">three_level_Y</span>, TR <span class="op">=</span> <span class="fl">2</span>, run_length <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>  event_table <span class="op">=</span> <span class="va">three_level_events</span></span>
@@ -1053,7 +1056,7 @@ effects</caption>
 <th align="left">p_value</th>
 </tr></thead>
 <tbody><tr class="odd">
-<td align="right">407.144</td>
+<td align="right">468.965</td>
 <td align="right">2</td>
 <td align="right">93</td>
 <td align="left">&lt;1e-04</td>

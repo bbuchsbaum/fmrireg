@@ -5,7 +5,7 @@ LabeledVolumeSet files and NIfTI files; an fmrigds representation can also
 be requested."><meta property="og:description" content="Exports statistical maps from an fmri_lm object with BIDS-compliant naming
 and JSON metadata sidecars. Supported image outputs are HDF5
 LabeledVolumeSet files and NIfTI files; an fmrigds representation can also
-be requested."></head><body>
+be requested."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -13,7 +13,7 @@ be requested."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fmrireg</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,7 +38,7 @@ be requested."></head><body>
     <li><a class="dropdown-item" href="../articles/functional_connectivity.html">Functional Connectivity</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced Topics</h6></li>
-    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (SRHT/IHS + Nyström)</a></li>
+    <li><a class="dropdown-item" href="../articles/sketched-ar.html">Sketched GLM (temporal sketches + Nyström)</a></li>
     <li><a class="dropdown-item" href="../articles/plugin-development.html">Plugin Development</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Resources</h6></li>
@@ -121,7 +121,11 @@ be requested.</p>
 
 
 <dt id="arg-desc">desc<a class="anchor" aria-label="anchor" href="#arg-desc"></a></dt>
-<dd><p>Description of the analysis (default: "GLM")</p></dd>
+<dd><p>BIDS <code>desc-</code> label of the analysis (default: "GLM"),
+sanitised to letters and digits. Beta files are labelled
+<code>desc-&lt;desc&gt;</code>; statistic maps <code>desc-&lt;desc&gt;&lt;stat&gt;</code> (e.g.
+<code>desc-run1tstat</code>), except that the default <code>"GLM"</code> is omitted
+(<code>desc-tstat</code>), the naming <code><a href="collect_results.html">collect_results()</a></code> reads by default.</p></dd>
 
 
 <dt id="arg-format">format<a class="anchor" aria-label="anchor" href="#arg-format"></a></dt>
@@ -129,7 +133,10 @@ be requested.</p>
 outputs), <code>"nifti"</code> (BIDS-style NIfTI outputs, written as <code>.nii.gz</code>), and
 <code>"gds"</code> (fmrigds-compatible assays plus an <code>.rds</code> plan). Pass a character
 vector to write multiple formats at once (e.g. <code>c("h5", "nifti")</code>).
-Defaults to <code>"h5"</code> only.</p></dd>
+Defaults to <code>"h5"</code> only; <code>"h5"</code> requires the suggested package fmristore,
+<code>"nifti"</code> does not. NIfTI maps are stored as 32-bit floats
+(datatype FLOAT32), so their values are the fitted values rounded to
+single precision.</p></dd>
 
 
 <dt id="arg-strategy">strategy<a class="anchor" aria-label="anchor" href="#arg-strategy"></a></dt>

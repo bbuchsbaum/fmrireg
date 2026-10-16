@@ -628,8 +628,8 @@ knitr::kable(
 
 | fit              | method            | weights | maximum_abs_z | minimum_p |
 |:-----------------|:------------------|:--------|:--------------|:----------|
-| beta/SE, equal   | pm                | equal   | 1.329         | 0.184     |
-| beta/SE, custom  | pm                | custom  | 1.329         | 0.184     |
+| beta/SE, equal   | pm                | equal   | 81.539        | \<1e-04   |
+| beta/SE, custom  | pm                | custom  | 81.539        | \<1e-04   |
 | t-only Lancaster | combine:lancaster | custom  | 9.108         | \<1e-04   |
 
 Requested meta engine and its resulting evidence summary {.table}

@@ -53,7 +53,12 @@ write_results(
 
 - desc:
 
-  Description of the analysis (default: "GLM")
+  BIDS `desc-` label of the analysis (default: "GLM"), sanitised to
+  letters and digits. Beta files are labelled `desc-<desc>`; statistic
+  maps `desc-<desc><stat>` (e.g. `desc-run1tstat`), except that the
+  default `"GLM"` is omitted (`desc-tstat`), the naming
+  [`collect_results()`](https://bbuchsbaum.github.io/fmrireg/reference/collect_results.md)
+  reads by default.
 
 - format:
 
@@ -61,7 +66,10 @@ write_results(
   `"nifti"` (BIDS-style NIfTI outputs, written as `.nii.gz`), and
   `"gds"` (fmrigds-compatible assays plus an `.rds` plan). Pass a
   character vector to write multiple formats at once (e.g.
-  `c("h5", "nifti")`). Defaults to `"h5"` only.
+  `c("h5", "nifti")`). Defaults to `"h5"` only; `"h5"` requires the
+  suggested package fmristore, `"nifti"` does not. NIfTI maps are stored
+  as 32-bit floats (datatype FLOAT32), so their values are the fitted
+  values rounded to single precision.
 
 - strategy:
 

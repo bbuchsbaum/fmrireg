@@ -485,9 +485,9 @@ knitr::kable(
 
 |           | Requested_SNR | Empirical_SNR | Signal_SD | Noise_SD |
 |:----------|--------------:|--------------:|----------:|---------:|
-| SNR = 1   |           1.0 |           1.0 |     0.861 |    0.861 |
-| SNR = 0.5 |           0.5 |           0.5 |     0.861 |    1.722 |
-| SNR = 0.2 |           0.2 |           0.2 |     0.861 |    4.306 |
+| SNR = 1   |           1.0 |           1.0 |     0.086 |    0.086 |
+| SNR = 0.5 |           0.5 |           0.5 |     0.086 |    0.172 |
+| SNR = 0.2 |           0.2 |           0.2 |     0.086 |    0.430 |
 
 Requested and empirically realized SNR from a controlled simulation
 {.table}
@@ -526,6 +526,9 @@ related but slightly different response profiles.
 ``` r
 
 requested_onsets <- seq(12, 156, length.out = 10)
+# Set the noise relative to the canonical HRF's peak so the responses stay
+# visible whatever the HRF's raw amplitude.
+hrf_peak <- max(fmrihrf::evaluate(fmrihrf::HRF_SPMG1, seq(0, 30, by = 0.1)))
 sim_matrix <- simulate_fmri_matrix(
   n = 5,                  # 5 voxels/regions
   total_time = 200,       # 200 seconds of scan time
@@ -536,7 +539,7 @@ sim_matrix <- simulate_fmri_matrix(
   durations = 2,          # Base duration = 2 seconds
   duration_sd = 0.5,      # Duration variability
   noise_type = "ar1",     # AR(1) noise
-  noise_sd = 0.5          # Noise standard deviation
+  noise_sd = 0.29 * hrf_peak  # Noise SD: 29% of the HRF's peak
 )
 ```
 
