@@ -793,7 +793,8 @@ The choice of hemodynamic response function can impact model fit. Let's compare 
 The comparison below scores each model by AIC from one design matrix and one
 coefficient vector per voxel, so each model is fitted jointly across runs
 (`estimation_spec("joint")`) rather than with the default runwise
-meta-estimation.
+meta-estimation. Because the models declare AR(1) noise, the AIC uses the
+AR(1) Gaussian likelihood of each fit, not the independent-errors formula.
 
 ```{r fit-comparison-models, message=FALSE}
 # Fit models with different HRF bases, jointly across runs
@@ -831,32 +832,44 @@ model_bspline <- fmri_lm(
 # Function to extract model fit statistics
 extract_model_stats <- function(model, model_name, dataset) {
   # Get observed data
-  observed_data <- fmridataset::collect_assay(dataset)
+  observed_data <- as.matrix(fmridataset::collect_assay(dataset))
 
-  # Get design matrix (ensure it's a numeric matrix)
+  # Design matrix and coefficients, including the baseline terms
   design_mat <- as.matrix(design_matrix(model$model))
-
-  # Get estimated coefficients (include baseline)
-  # Get all coefficients including baseline
   betas <- as.matrix(coef(model, include_baseline = TRUE))
 
-  # Calculate fitted values
-  fitted_vals <- design_mat %*% t(betas)
-
-  # Calculate residuals
-  resids <- observed_data - fitted_vals
-
-  # Calculate sum of squared residuals
+  # Residuals on the original scale
+  resids <- observed_data - design_mat %*% t(betas)
   ssr <- colSums(resids^2)
 
   # Calculate R-squared
   tss <- apply(observed_data, 2, function(y) sum((y - mean(y))^2))
   r_squared <- 1 - ssr/tss
 
-  # Calculate AIC
+  # AIC under the fitted AR(1) noise model, evaluated at the fitted
+  # coefficients and AR estimates. The exact AR(1) Gaussian likelihood
+  # whitens each run's residuals with that run's coefficient (first sample
+  # scaled by sqrt(1 - phi^2)) and adds a -log(1 - phi^2) term per run.
+  # Scoring these fits with the independent-errors formula n * log(SSR / n)
+  # would reward flexible bases for absorbing serially correlated noise.
+  runs <- split(seq_len(nrow(resids)),
+                fmridataset::temporal_schema(dataset)$block_ids)
+  phi <- vapply(ar_parameters(model, scope = "per_run"), `[`, numeric(1), 1)
+  phi <- rep_len(phi, length(runs))  # one shared estimate covers every run
+  ssr_white <- 0
+  for (r in seq_along(runs)) {
+    e <- resids[runs[[r]], , drop = FALSE]
+    m <- nrow(e)
+    w <- rbind(sqrt(1 - phi[r]^2) * e[1, , drop = FALSE],
+               e[-1, , drop = FALSE] - phi[r] * e[-m, , drop = FALSE])
+    ssr_white <- ssr_white + colSums(w^2)
+  }
   n <- nrow(observed_data)
   p <- ncol(design_mat)
-  aic <- n * log(ssr/n) + 2 * p
+  k <- p + 1 + length(unique(phi))  # coefficients, AR terms, innovation variance
+  aic <- n * log(ssr_white / n) - sum(log(1 - phi^2)) + 2 * k
+  # The independent-errors AIC, kept only to show what it would have chosen
+  aic_iid <- n * log(ssr / n) + 2 * p
 
   # Return results
   data.frame(
@@ -864,6 +877,7 @@ extract_model_stats <- function(model, model_name, dataset) {
     voxel = 1:ncol(observed_data),
     r_squared = r_squared,
     aic = aic,
+    aic_iid = aic_iid,
     ssr = ssr
   )
 }
@@ -913,8 +927,10 @@ ggplot(subset(model_comparison_long, metric == "r_squared"),
 stopifnot(
   nrow(aic_winners) == 3L,
   all(is.finite(model_comparison$aic)),
-  sum(aic_winners$selected_model == "canonical_spm") == 2L,
-  sum(aic_winners$selected_model == "bspline_n5") == 1L
+  all(aic_winners$selected_model == "canonical_spm"),
+  # Claims made in the prose below
+  all(stats_bspline$r_squared > stats_canonical$r_squared),
+  any(stats_bspline$aic_iid < stats_canonical$aic_iid)
 )
 ```
 
@@ -940,12 +956,17 @@ The model comparison shows:
 1. **R-Squared**: The proportion of variance explained by each model. Higher values indicate better fit.
 2. **AIC (Akaike Information Criterion)**: A measure of model quality that balances goodness of fit with model complexity. Lower values indicate better models.
 
-The canonical SPM model has the lowest AIC in two voxels, consistent with the
-HRF used to generate the signal. In the weakest-signal voxel, however, the
-B-spline model wins despite its larger penalty. This is a useful caution:
-finite noisy data need not select the generating model in every voxel. AIC
-balances fit and complexity; it is evidence for a model in a particular sample,
-not proof that the selected basis is the true physiological response.
+The canonical SPM model has the lowest AIC in every voxel, consistent with the
+HRF used to generate the signal. The five-function B-spline basis explains
+more raw variance (higher R-squared) in every voxel: its extra columns
+absorb part of the slow, serially correlated noise. Scored under the AR(1)
+noise model that the fits declare (the exact likelihood, evaluated at the
+fitted coefficients and AR estimates), that gain does not cover the cost of
+the extra parameters. Had we used the independent-errors formula
+`n * log(SSR / n) + 2p`, the B-spline model would have won some voxels, a
+reminder that an information criterion is only as good as the likelihood
+behind it. AIC remains evidence for a model in a particular sample, not proof
+that the selected basis is the true physiological response.
 
 ## Summary
 

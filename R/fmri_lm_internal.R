@@ -216,7 +216,7 @@ is.formula <- function(x) {
 #' @param name Field name.
 #' @keywords internal
 #' @noRd
-#' @exportS3Method base::`$`
+#' @rawNamespace S3method("$",fmri_preproject)
 `$.fmri_preproject` <- function(x, name) {
   if (identical(name, "Pinv")) {
     return(.preproject_pinv(x))

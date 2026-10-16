@@ -85,7 +85,7 @@ Remotes:
     bbuchsbaum/fmristore@e7fbbfca181ebd118acee150774a4f58640e039d,
     bbuchsbaum/fmrigds@f015b7c7fa5008e2435d269aeb1882a9aa24eaf0,
     anthonynorth/roxyglobals@ab29bdcd2e618fbfd91356fc22095e961b48333d,
-    bbuchsbaum/fmridataset@419d9eae1704d839e0152ec77957c2fc69ea0b5b,
+    bbuchsbaum/fmridataset,
     bbuchsbaum/fmrilss@f851fb0632f90da12512212af5b80c9623c93fde,
     bbuchsbaum/fmridesign@005606d72d1a5492292d51d3d7b755b3434e2f1c
 VignetteBuilder: knitr

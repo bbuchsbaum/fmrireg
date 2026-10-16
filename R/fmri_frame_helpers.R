@@ -526,7 +526,7 @@ latent_frame <- function(x, TR, run_length = NULL, event_table = NULL,
 
 #' @keywords internal
 #' @noRd
-#' @exportS3Method base::`$`
+#' @rawNamespace S3method("$",data_chunk)
 `$.data_chunk` <- function(x, name) {
   if (identical(name, "data")) return(.chunk_data(x))
   .subset2(x, name)
