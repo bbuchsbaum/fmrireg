@@ -8,7 +8,7 @@
   "codeRepository": "https://github.com/bbuchsbaum/fmrireg",
   "issueTracker": "https://github.com/bbuchsbaum/fmrireg/issues",
   "license": "https://spdx.org/licenses/MIT",
-  "version": "0.3.0",
+  "version": "0.3.0.9000",
   "programmingLanguage": {
     "@type": "ComputerLanguage",
     "name": "R",
@@ -267,6 +267,18 @@
     },
     {
       "@type": "SoftwareApplication",
+      "identifier": "metafor",
+      "name": "metafor",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=metafor"
+    },
+    {
+      "@type": "SoftwareApplication",
       "identifier": "progressr",
       "name": "progressr",
       "provider": {
@@ -461,18 +473,6 @@
     },
     "15": {
       "@type": "SoftwareApplication",
-      "identifier": "foreach",
-      "name": "foreach",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=foreach"
-    },
-    "16": {
-      "@type": "SoftwareApplication",
       "identifier": "dplyr",
       "name": "dplyr",
       "provider": {
@@ -483,7 +483,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=dplyr"
     },
-    "17": {
+    "16": {
       "@type": "SoftwareApplication",
       "identifier": "ggplot2",
       "name": "ggplot2",
@@ -496,7 +496,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=ggplot2"
     },
-    "18": {
+    "17": {
       "@type": "SoftwareApplication",
       "identifier": "tidyr",
       "name": "tidyr",
@@ -508,7 +508,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=tidyr"
     },
-    "19": {
+    "18": {
       "@type": "SoftwareApplication",
       "identifier": "robustbase",
       "name": "robustbase",
@@ -520,7 +520,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=robustbase"
     },
-    "20": {
+    "19": {
       "@type": "SoftwareApplication",
       "identifier": "matrixStats",
       "name": "matrixStats",
@@ -532,7 +532,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=matrixStats"
     },
-    "21": {
+    "20": {
       "@type": "SoftwareApplication",
       "identifier": "furrr",
       "name": "furrr",
@@ -544,7 +544,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=furrr"
     },
-    "22": {
+    "21": {
       "@type": "SoftwareApplication",
       "identifier": "rlang",
       "name": "rlang",
@@ -557,7 +557,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=rlang"
     },
-    "23": {
+    "22": {
       "@type": "SoftwareApplication",
       "identifier": "neuroim2",
       "name": "neuroim2",
@@ -569,7 +569,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=neuroim2"
     },
-    "24": {
+    "23": {
       "@type": "SoftwareApplication",
       "identifier": "Rcpp",
       "name": "Rcpp",
@@ -581,7 +581,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=Rcpp"
     },
-    "25": {
+    "24": {
       "@type": "SoftwareApplication",
       "identifier": "RcppParallel",
       "name": "RcppParallel",
@@ -593,18 +593,19 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=RcppParallel"
     },
-    "26": {
+    "25": {
       "@type": "SoftwareApplication",
       "identifier": "methods",
       "name": "methods"
     },
-    "27": {
+    "26": {
       "@type": "SoftwareApplication",
       "identifier": "fmridataset",
       "name": "fmridataset",
-      "version": ">= 0.11.0.9000"
+      "version": ">= 0.11.0.9000",
+      "sameAs": "https://github.com/bbuchsbaum/fmridataset"
     },
-    "28": {
+    "27": {
       "@type": "SoftwareApplication",
       "identifier": "crayon",
       "name": "crayon",
@@ -616,7 +617,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=crayon"
     },
-    "29": {
+    "28": {
       "@type": "SoftwareApplication",
       "identifier": "plotly",
       "name": "plotly",
@@ -628,7 +629,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=plotly"
     },
-    "30": {
+    "29": {
       "@type": "SoftwareApplication",
       "identifier": "cli",
       "name": "cli",
@@ -640,7 +641,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=cli"
     },
-    "31": {
+    "30": {
       "@type": "SoftwareApplication",
       "identifier": "bslib",
       "name": "bslib",
@@ -652,7 +653,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=bslib"
     },
-    "32": {
+    "31": {
       "@type": "SoftwareApplication",
       "identifier": "future.apply",
       "name": "future.apply",
@@ -664,7 +665,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=future.apply"
     },
-    "33": {
+    "32": {
       "@type": "SoftwareApplication",
       "identifier": "jsonlite",
       "name": "jsonlite",
@@ -676,7 +677,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=jsonlite"
     },
-    "34": {
+    "33": {
       "@type": "SoftwareApplication",
       "identifier": "progress",
       "name": "progress",
@@ -688,7 +689,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=progress"
     },
-    "35": {
+    "34": {
       "@type": "SoftwareApplication",
       "identifier": "magrittr",
       "name": "magrittr",
@@ -702,7 +703,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "6173.677KB",
+  "fileSize": "6289.108KB",
   "citation": [
     {
       "@type": "SoftwareSourceCode",
@@ -717,7 +718,7 @@
       ],
       "name": "fmrireg: Regression Analysis of Functional Magnetic Resonance Imaging Data",
       "url": "https://bbuchsbaum.github.io/fmrireg/",
-      "description": "R package version 0.3.0"
+      "description": "R package version 0.3.0.9000"
     }
   ],
   "releaseNotes": "https://github.com/bbuchsbaum/fmrireg/blob/main/NEWS.md",
