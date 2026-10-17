@@ -15,7 +15,7 @@ fmri_meta(
   contrasts = NULL,
   return_cov = NULL,
   chunk_size = 10000,
-  n_threads = getOption("fmrireg.num_threads", 0),
+  n_threads = .fmrireg_num_threads(),
   verbose = TRUE
 )
 }
@@ -80,7 +80,9 @@ standard errors.}
 
 \item{chunk_size}{Number of voxels to process at once (default: 10000)}
 
-\item{n_threads}{Number of parallel threads to use. Defaults to fmrireg.num_threads option.}
+\item{n_threads}{Number of OpenMP threads for the compiled fitter. Defaults to
+\code{options(fmrireg.num_threads)}, else the environment variable
+\code{FMRIREG_NUM_THREADS}, else 0 (the OpenMP default).}
 
 \item{verbose}{Logical. Print progress messages (default: TRUE)}
 }

@@ -13,7 +13,7 @@ fmri_meta_fit_contrasts(
   robust = c("none", "huber"),
   huber_c = 1.345,
   robust_iter = 2,
-  n_threads = getOption("fmrireg.num_threads", 0)
+  n_threads = .fmrireg_num_threads()
 )
 }
 \arguments{
@@ -33,7 +33,9 @@ Smaller values provide more robust estimates but may reduce efficiency.}
 
 \item{robust_iter}{Integer scalar; number of IRLS iterations for robust estimation (default: 2)}
 
-\item{n_threads}{Integer scalar; number of OpenMP threads (0 = use all available)}
+\item{n_threads}{Integer scalar; number of OpenMP threads (0 = OpenMP default).
+Defaults to \code{options(fmrireg.num_threads)}, else the environment
+variable \code{FMRIREG_NUM_THREADS}, else 0.}
 }
 \value{
 List with base meta outputs plus c_beta, c_se, c_z
