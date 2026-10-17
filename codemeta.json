@@ -58,42 +58,6 @@
     },
     {
       "@type": "SoftwareApplication",
-      "identifier": "ggrepel",
-      "name": "ggrepel",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=ggrepel"
-    },
-    {
-      "@type": "SoftwareApplication",
-      "identifier": "pls",
-      "name": "pls",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=pls"
-    },
-    {
-      "@type": "SoftwareApplication",
-      "identifier": "doParallel",
-      "name": "doParallel",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=doParallel"
-    },
-    {
-      "@type": "SoftwareApplication",
       "identifier": "fmristore",
       "name": "fmristore"
     },
@@ -183,54 +147,6 @@
     },
     {
       "@type": "SoftwareApplication",
-      "identifier": "multivarious",
-      "name": "multivarious",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=multivarious"
-    },
-    {
-      "@type": "SoftwareApplication",
-      "identifier": "glmnet",
-      "name": "glmnet",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=glmnet"
-    },
-    {
-      "@type": "SoftwareApplication",
-      "identifier": "proxy",
-      "name": "proxy",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=proxy"
-    },
-    {
-      "@type": "SoftwareApplication",
-      "identifier": "forecast",
-      "name": "forecast",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=forecast"
-    },
-    {
-      "@type": "SoftwareApplication",
       "identifier": "future",
       "name": "future",
       "provider": {
@@ -252,6 +168,30 @@
         "url": "https://cran.r-project.org"
       },
       "sameAs": "https://CRAN.R-project.org/package=shiny"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "plotly",
+      "name": "plotly",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=plotly"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "bslib",
+      "name": "bslib",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=bslib"
     },
     {
       "@type": "SoftwareApplication",
@@ -510,18 +450,6 @@
     },
     "18": {
       "@type": "SoftwareApplication",
-      "identifier": "robustbase",
-      "name": "robustbase",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=robustbase"
-    },
-    "19": {
-      "@type": "SoftwareApplication",
       "identifier": "matrixStats",
       "name": "matrixStats",
       "provider": {
@@ -532,19 +460,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=matrixStats"
     },
-    "20": {
-      "@type": "SoftwareApplication",
-      "identifier": "furrr",
-      "name": "furrr",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=furrr"
-    },
-    "21": {
+    "19": {
       "@type": "SoftwareApplication",
       "identifier": "rlang",
       "name": "rlang",
@@ -557,7 +473,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=rlang"
     },
-    "22": {
+    "20": {
       "@type": "SoftwareApplication",
       "identifier": "neuroim2",
       "name": "neuroim2",
@@ -569,7 +485,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=neuroim2"
     },
-    "23": {
+    "21": {
       "@type": "SoftwareApplication",
       "identifier": "Rcpp",
       "name": "Rcpp",
@@ -581,55 +497,19 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=Rcpp"
     },
-    "24": {
-      "@type": "SoftwareApplication",
-      "identifier": "RcppParallel",
-      "name": "RcppParallel",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=RcppParallel"
-    },
-    "25": {
+    "22": {
       "@type": "SoftwareApplication",
       "identifier": "methods",
       "name": "methods"
     },
-    "26": {
+    "23": {
       "@type": "SoftwareApplication",
       "identifier": "fmridataset",
       "name": "fmridataset",
       "version": ">= 0.11.0.9000",
       "sameAs": "https://github.com/bbuchsbaum/fmridataset"
     },
-    "27": {
-      "@type": "SoftwareApplication",
-      "identifier": "crayon",
-      "name": "crayon",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=crayon"
-    },
-    "28": {
-      "@type": "SoftwareApplication",
-      "identifier": "plotly",
-      "name": "plotly",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=plotly"
-    },
-    "29": {
+    "24": {
       "@type": "SoftwareApplication",
       "identifier": "cli",
       "name": "cli",
@@ -641,19 +521,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=cli"
     },
-    "30": {
-      "@type": "SoftwareApplication",
-      "identifier": "bslib",
-      "name": "bslib",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=bslib"
-    },
-    "31": {
+    "25": {
       "@type": "SoftwareApplication",
       "identifier": "future.apply",
       "name": "future.apply",
@@ -665,7 +533,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=future.apply"
     },
-    "32": {
+    "26": {
       "@type": "SoftwareApplication",
       "identifier": "jsonlite",
       "name": "jsonlite",
@@ -677,19 +545,7 @@
       },
       "sameAs": "https://CRAN.R-project.org/package=jsonlite"
     },
-    "33": {
-      "@type": "SoftwareApplication",
-      "identifier": "progress",
-      "name": "progress",
-      "provider": {
-        "@id": "https://cran.r-project.org",
-        "@type": "Organization",
-        "name": "Comprehensive R Archive Network (CRAN)",
-        "url": "https://cran.r-project.org"
-      },
-      "sameAs": "https://CRAN.R-project.org/package=progress"
-    },
-    "34": {
+    "27": {
       "@type": "SoftwareApplication",
       "identifier": "magrittr",
       "name": "magrittr",
@@ -703,7 +559,7 @@
     },
     "SystemRequirements": null
   },
-  "fileSize": "6289.108KB",
+  "fileSize": "4120.562KB",
   "citation": [
     {
       "@type": "SoftwareSourceCode",
