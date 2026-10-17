@@ -16,7 +16,7 @@ fmri_meta_fit_contrasts(
   robust = c("none", "huber"),
   huber_c = 1.345,
   robust_iter = 2,
-  n_threads = getOption("fmrireg.num_threads", 0)
+  n_threads = .fmrireg_num_threads()
 )
 ```
 
@@ -54,7 +54,9 @@ fmri_meta_fit_contrasts(
 
 - n_threads:
 
-  Integer scalar; number of OpenMP threads (0 = use all available)
+  Integer scalar; number of OpenMP threads (0 = OpenMP default).
+  Defaults to `options(fmrireg.num_threads)`, else the environment
+  variable `FMRIREG_NUM_THREADS`, else 0.
 
 ## Value
 

@@ -1,26 +1,15 @@
 # Fit an fMRI Linear Regression Model with a Specified Fitting Strategy
 
 This function fits an fMRI linear regression model using the specified
-`fmri_model` object, dataset, and data splitting strategy (either
-`"runwise"` or `"chunkwise"`). It is primarily an internal function used
-by the `fmri_lm` function.
+`fmri_model` object and dataset. The estimation scope in `cfg` selects
+the strategy (`"runwise_meta"` fits runs separately and pools them;
+`"joint"` fits one chunkwise model) and `compute` the mechanics. It is
+primarily an internal function used by `fmri_lm`.
 
 ## Usage
 
 ``` r
-fmri_lm_fit(
-  fmrimod,
-  dataset,
-  strategy = c("runwise", "chunkwise"),
-  cfg,
-  nchunks = 10,
-  use_fast_path = TRUE,
-  progress = FALSE,
-  parallel_voxels = FALSE,
-  parallel_chunks = FALSE,
-  compute = NULL,
-  ...
-)
+fmri_lm_fit(fmrimod, dataset, cfg, compute = compute_spec())
 ```
 
 ## Arguments
@@ -33,48 +22,16 @@ fmri_lm_fit(
 
   An `fmri_frame` object containing the time-series data.
 
-- strategy:
-
-  The data splitting strategy, either `"runwise"` or `"chunkwise"`.
-  Default is `"runwise"`.
-
 - cfg:
 
   An `fmri_lm_control` object containing all fitting options. See
   [`fmri_lm_control`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm_control.md).
 
-- nchunks:
+- compute:
 
-  Number of data chunks when strategy is `"chunkwise"`. This controls
-  memory partitioning; chunks are processed sequentially unless
-  `parallel_chunks = TRUE`. Default is `10`.
-
-- use_fast_path:
-
-  Logical. If `TRUE` (the default), use the fast matrix engine, which
-  supports OLS, AR whitening, robust, and preprocessing. `FALSE` selects
-  the formula/lm reference engine (no robust or full preprocessing
-  support); it is retained mainly as a parity oracle.
-
-- progress:
-
-  Logical. Whether to display a progress bar during model fitting.
-  Default is `FALSE`.
-
-- parallel_voxels:
-
-  Logical. If TRUE, voxelwise AR processing within runs is parallelised
-  using `future.apply`. Default is `FALSE`.
-
-- parallel_chunks:
-
-  Logical. If TRUE and `strategy = "chunkwise"`, process chunks with
-  [`future.apply::future_lapply()`](https://future.apply.futureverse.org/reference/future_lapply.html)
-  using the active `future` plan. Default is `FALSE`.
-
-- ...:
-
-  Additional arguments.
+  A
+  [`compute_spec`](https://bbuchsbaum.github.io/fmrireg/reference/compute_spec.md):
+  voxel chunks, matrix or reference backend, parallelism and progress.
 
 ## Value
 

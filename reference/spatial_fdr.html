@@ -184,7 +184,7 @@ under <code>group</code></p></dd>
 <dd><p>Integer scalar; number of groups</p></dd>
 
 <dt>m_g</dt>
-<dd><p>Integer vector; number of features per group</p></dd>
+<dd><p>Integer vector; number of features with a finite p-value per group</p></dd>
 
 <dt>alpha</dt>
 <dd><p>Numeric scalar; FDR level used</p></dd>
@@ -212,6 +212,10 @@ consistent under \(N(0,1)\) and stays close to it when, for example, 10\<!-- % -
 of features are true signals. With fewer than 500 finite z-values (or if the
 fit fails) the median and normal-consistent MAD of all finite z-values are
 used instead; with fewer than 10 the theoretical null is used.</p>
+<p>The computation is done by <code><a href="https://rdrr.io/pkg/fmrigds/man/spatial_fdr_sabha.html" class="external-link">fmrigds::spatial_fdr_sabha()</a></code> (also
+available in fmrigds pipelines as the post-hoc <code>"fdr:sabha"</code>, and as
+<code>"fmrireg:fdr:spatial"</code>); this function keeps fmrireg's argument names,
+the <code>fmri_meta</code> method and the <code>spatial_fdr_result</code> class.</p>
 <p>The method is particularly effective for:</p><ul><li><p>Voxelwise analyses with spatial clustering of signal</p></li>
 <li><p>Parcel-based analyses with anatomical or functional grouping</p></li>
 <li><p>Any scenario where hypotheses can be grouped spatially or functionally</p></li>

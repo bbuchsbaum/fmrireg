@@ -236,6 +236,9 @@
 - [`get_covariates()`](https://bbuchsbaum.github.io/fmrireg/reference/get_covariates.md)
   : Get Covariates
 
+- [`get_formula()`](https://bbuchsbaum.github.io/fmrireg/reference/get_formula.md)
+  : Retrieve the formula underlying a model object
+
 - [`get_rois()`](https://bbuchsbaum.github.io/fmrireg/reference/get_rois.md)
   : Get Available ROIs
 
@@ -329,10 +332,10 @@
 - [`preflight()`](https://bbuchsbaum.github.io/fmrireg/reference/preflight.md)
   : Preflight-check jobs before fan-out
 
-- [`print(`*`<fmri_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.md)
-  [`print(`*`<fmri_lm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.md)
+- [`print(`*`<fmri_lm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.md)
+  [`print(`*`<fmri_model>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.md)
   [`print(`*`<fmri_rlm>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.md)
-  : Print an fmri_lm_result object
+  : Print fitted fMRI model objects
 
 - [`print(`*`<fmri_meta>`*`)`](https://bbuchsbaum.github.io/fmrireg/reference/print.fmri_meta.md)
   : Print Meta-Analysis Results

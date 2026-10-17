@@ -19,7 +19,7 @@ fmri_meta(
   contrasts = NULL,
   return_cov = NULL,
   chunk_size = 10000,
-  n_threads = getOption("fmrireg.num_threads", 0),
+  n_threads = .fmrireg_num_threads(),
   verbose = TRUE
 )
 ```
@@ -117,8 +117,9 @@ fmri_meta(
 
 - n_threads:
 
-  Number of parallel threads to use. Defaults to fmrireg.num_threads
-  option.
+  Number of OpenMP threads for the compiled fitter. Defaults to
+  `options(fmrireg.num_threads)`, else the environment variable
+  `FMRIREG_NUM_THREADS`, else 0 (the OpenMP default).
 
 - verbose:
 
@@ -141,6 +142,12 @@ An fmri_meta object containing:
 - model: Model specification
 
 - data: Input group_data object
+
+For fmrigds-backed group data (from
+[`group_data()`](https://bbuchsbaum.github.io/fmrireg/reference/group_data.md))
+the fit is the fmrigds reducer `"fmrireg:meta_reg"`. When such data hold
+several subject-level contrasts, each is fitted and the result is an
+`fmri_meta_list`: a list of `fmri_meta` objects named by contrast.
 
 ## Examples
 

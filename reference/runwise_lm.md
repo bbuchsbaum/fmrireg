@@ -1,8 +1,8 @@
 # Perform Runwise Linear Modeling on fMRI Dataset
 
 This function performs a runwise linear model analysis on an fMRI
-dataset by running the linear model for each data run and combining the
-results.
+dataset, running the linear model on each run separately and then
+pooling results.
 
 ## Usage
 
@@ -45,7 +45,8 @@ runwise_lm(
 
 - use_fast_path:
 
-  Logical. Whether to use the fast matrix engine (default is `TRUE`).
+  Logical. If `TRUE`, use matrix-based computation for speed. Default is
+  `TRUE`.
 
 - progress:
 
@@ -62,8 +63,7 @@ runwise_lm(
 
 - parallel_voxels:
 
-  Logical. If TRUE, process voxels in parallel using `future.apply`.
-  Default is `FALSE`.
+  Logical. If TRUE, process voxels in parallel using future.apply.
 
 ## Value
 

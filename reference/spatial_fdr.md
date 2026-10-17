@@ -135,7 +135,7 @@ Object of class "spatial_fdr_result" containing:
 
 - m_g:
 
-  Integer vector; number of features per group
+  Integer vector; number of features with a finite p-value per group
 
 - alpha:
 
@@ -176,6 +176,12 @@ consistent under \\N(0,1)\\ and stays close to it when, for example,
 (or if the fit fails) the median and normal-consistent MAD of all finite
 z-values are used instead; with fewer than 10 the theoretical null is
 used.
+
+The computation is done by
+[`fmrigds::spatial_fdr_sabha()`](https://rdrr.io/pkg/fmrigds/man/spatial_fdr_sabha.html)
+(also available in fmrigds pipelines as the post-hoc `"fdr:sabha"`, and
+as `"fmrireg:fdr:spatial"`); this function keeps fmrireg's argument
+names, the `fmri_meta` method and the `spatial_fdr_result` class.
 
 The method is particularly effective for:
 

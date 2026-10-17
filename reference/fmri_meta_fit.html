@@ -78,7 +78,7 @@ This is typically called internally by higher-level functions like fmri_meta().<
 <span>  robust <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"huber"</span><span class="op">)</span>,</span>
 <span>  huber_c <span class="op">=</span> <span class="fl">1.345</span>,</span>
 <span>  robust_iter <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>  n_threads <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"fmrireg.num_threads"</span>, <span class="fl">0</span><span class="op">)</span></span>
+<span>  n_threads <span class="op">=</span> <span class="fu">.fmrireg_num_threads</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -119,7 +119,9 @@ Smaller values provide more robust estimates but may reduce efficiency.</p></dd>
 
 
 <dt id="arg-n-threads">n_threads<a class="anchor" aria-label="anchor" href="#arg-n-threads"></a></dt>
-<dd><p>Integer scalar; number of OpenMP threads (0 = use all available)</p></dd>
+<dd><p>Integer scalar; number of OpenMP threads (0 = OpenMP default).
+Defaults to <code>options(fmrireg.num_threads)</code>, else the environment
+variable <code>FMRIREG_NUM_THREADS</code>, else 0.</p></dd>
 
 </dl></div>
     <div class="section level2">

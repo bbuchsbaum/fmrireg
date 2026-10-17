@@ -54,7 +54,6 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/design_matrix.fmri_lm.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/design_matrix.fmri_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/design_plot.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/detect_group_data_format.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/detect_h5_file_type.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/dot-extract_source_files.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/dot-finalize_atomic_write.html</loc></url>
@@ -154,7 +153,6 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/print.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/print.spatial_fdr_result.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/projection_spec.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/pull_stat_revised.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/pvalues.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/r_to_z.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/read_h5_chunk.html</loc></url>
@@ -175,15 +173,12 @@
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/register_basis.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/register_engine.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/register_run_backend.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/reshape_coef.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/resolve_basis.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/robust_spec.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/run_backends.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/run_job.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/run_jobs.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/runwise_lm.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/runwise_lm_impl.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmrireg/reference/sandwich_variance.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/se.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/simulate_bold_signal.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmrireg/reference/simulate_fmri_matrix.html</loc></url>

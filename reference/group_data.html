@@ -81,13 +81,17 @@ for use in group-level meta-analysis with <code><a href="fmri_meta.html">fmri_me
 <dd><p>Input data. Format depends on the <code>format</code> argument:</p><ul><li><p>For "h5": Character vector of HDF5 file paths</p></li>
 <li><p>For "nifti": List or data frame with beta/SE/variance paths</p></li>
 <li><p>For "csv": Path to CSV file or data frame</p></li>
-<li><p>For "fmrilm": List of fmri_lm objects</p></li>
+<li><p>For "fmrilm": not supported; see below</p></li>
 </ul></dd>
 
 
 <dt id="arg-format">format<a class="anchor" aria-label="anchor" href="#arg-format"></a></dt>
 <dd><p>Character string specifying the input format. One of "auto" (default),
-"h5", "nifti", "csv", or "fmrilm". If "auto", attempts to detect format.</p></dd>
+"h5", "nifti", "csv", or "fmrilm". If "auto", attempts to detect format.
+<code>format = "fmrilm"</code> (and a list of <code>fmri_lm</code> fits) is not
+supported and fails immediately: write each subject's fit with
+<code><a href="write_results.html">write_results</a></code> and load the resulting beta/SE maps with
+<code>format = "nifti"</code> (or HDF5 files with <code>format = "h5"</code>).</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

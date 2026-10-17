@@ -1,14 +1,15 @@
-# Print an fmri_lm_result object
+# Print fitted fMRI model objects
 
-Provides a colorful and informative printout.
+Summarises a fitted model: estimation scope, design size, inference
+degrees of freedom, contrasts and noise/robust configuration.
 
 ## Usage
 
 ``` r
-# S3 method for class 'fmri_model'
+# S3 method for class 'fmri_lm'
 print(x, ...)
 
-# S3 method for class 'fmri_lm'
+# S3 method for class 'fmri_model'
 print(x, ...)
 
 # S3 method for class 'fmri_rlm'

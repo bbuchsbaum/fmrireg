@@ -89,7 +89,7 @@
                         <h4 data-toc-skip class="author">Bradley R.
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-10-16</h4>
+            <h4 data-toc-skip class="date">2026-10-17</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmrireg/blob/master/vignettes/a_09_linear_model.Rmd" class="external-link"><code>vignettes/a_09_linear_model.Rmd</code></a></small>
       <div class="d-none name"><code>a_09_linear_model.Rmd</code></div>
@@ -112,10 +112,13 @@ package provides a flexible framework for:</p>
 <li>Computing contrasts between conditions</li>
 <li>Testing statistical hypotheses about brain activity</li>
 </ol>
-<p>Thread usage in internal routines can be adjusted globally. Set
+<p>Thread usage in the compiled (OpenMP) group-analysis and sketching
+kernels can be adjusted globally with
 <code>options(fmrireg.num_threads = &lt;n&gt;)</code> or the environment
-variable <code>FMRIREG_NUM_THREADS</code> before loading the package to
-control how many threads RcppParallel uses.</p>
+variable <code>FMRIREG_NUM_THREADS</code>; the option takes precedence,
+both are read at call time, and 0 (the default) leaves the choice to
+OpenMP. Functions with an <code>n_threads</code> argument
+(e.g. <code><a href="../reference/fmri_meta.html">fmri_meta()</a></code>) use this value as their default.</p>
 <p>This vignette demonstrates how to conduct a complete linear model
 analysis using the <code>fmrireg</code> package, from data simulation to
 statistical inference.</p>
@@ -340,22 +343,26 @@ onset times</li>
 <span><span class="co"># Print a summary of the model</span></span>
 <span><span class="va">model</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co"><span style="color: #0000BB; font-weight: bold;">#&gt; ==================================</span></span></span>
-<span><span class="co"><span style="color: #0000BB; font-weight: bold;">#&gt;         fmri_lm_result          </span></span></span>
-<span><span class="co"><span style="color: #0000BB; font-weight: bold;">#&gt; ==================================</span></span></span>
-<span><span class="co"><span style="color: #0000BB; font-weight: bold;">#&gt; </span></span></span>
-<span><span class="co"><span style="color: #0000BB; font-weight: bold;">#&gt; </span><span style="color: #00BB00;">Model formula:</span></span></span>
-<span><span class="co"><span style="color: #00BB00;">#&gt;   </span><span style="color: #555555;">~</span> <span style="color: #555555;">onset</span> <span style="color: #555555;">hrf(condition)</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">fMRI Linear Model Results</span> <span style="color: #00BBBB;">───────────────────────────────────────────────────</span></span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">Fitting strategy:  </span><span style="color: #555555;">runwise</span> </span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Model Information</span> ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">Baseline parameters: </span> <span style="color: #555555;">4</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">Design parameters:   </span> <span style="color: #555555;">2</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">Contrasts:          </span> <span style="color: #555555;">None</span></span></span>
-<span><span class="co"><span style="color: #555555;">#&gt; </span></span></span>
-<span><span class="co"><span style="color: #555555;">#&gt; </span><span style="color: #BBBB00;">Use coef(...), stats(...), etc. to extract results.</span></span></span>
-<span><span class="co"><span style="color: #BBBB00;">#&gt; </span></span></span>
-<span><span class="co"><span style="color: #BBBB00;">#&gt; </span></span></span></code></pre></div>
+<span><span class="co">#&gt; • Formula: `onset ~ hrf(condition)`</span></span>
+<span><span class="co">#&gt; • Dataset: <span style="color: #00BB00;">fmri_frame</span></span></span>
+<span><span class="co">#&gt; • Estimation scope: <span style="color: #00BB00;">runwise_meta</span></span></span>
+<span><span class="co">#&gt; • Parameters: 2 event + 4 baseline</span></span>
+<span><span class="co">#&gt; • Voxels analyzed: 3</span></span>
+<span><span class="co">#&gt; • Inference df (residual): 194</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Model Configuration</span> ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   • AR structure: <span style="color: #00BB00;">ar1</span></span></span>
+<span><span class="co">#&gt;   • Noise pooling: <span style="color: #00BB00;">run</span></span></span>
+<span><span class="co">#&gt;   • Shared AR estimator: <span style="color: #00BB00;">pooled_acvf</span></span></span>
+<span><span class="co">#&gt;   • Variance: <span style="color: #00BB00;">model</span></span></span>
+<span><span class="co">#&gt;   • Reference df: <span style="color: #00BB00;">residual</span></span></span>
+<span><span class="co">#&gt; ────────────────────────────────────────────────────────────────────────────────</span></span>
+<span><span class="co">#&gt; <span style="font-style: italic;">Use coef(), stats(), or standard_error() to extract results</span></span></span></code></pre></div>
 <p>The onset plot above shows the schedule; the matrix actually fitted
 by the GLM also includes the sampled HRF regressors and baseline
 columns. Inspect that matrix before interpreting coefficients,
@@ -1181,8 +1188,10 @@ fmrigds):</p>
 <span><span class="va">fit_nii</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fmri_meta.html">fmri_meta</a></span><span class="op">(</span><span class="va">gd_nii</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>, method <span class="op">=</span> <span class="st">"fe"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Inspect the pipeline with fmrigds</span></span>
-<span><span class="va">pl</span> <span class="op">&lt;-</span> <span class="fu">fmrigds</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/fmrigds/man/plan.html" class="external-link">plan</a></span><span class="op">(</span><span class="va">gd</span><span class="op">)</span></span>
-<span><span class="va">pl</span> <span class="op">&lt;-</span> <span class="fu">fmrigds</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/fmrigds/man/reduce.html" class="external-link">reduce</a></span><span class="op">(</span><span class="va">pl</span>, method <span class="op">=</span> <span class="st">"meta:fe"</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span><span class="op">)</span></span>
+<span><span class="co"># (fmri_meta() runs the reducer "fmrireg:meta_reg" that fmrireg registers)</span></span>
+<span><span class="va">pl</span> <span class="op">&lt;-</span> <span class="fu">fmrigds</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/fmrigds/man/as_plan.html" class="external-link">as_plan</a></span><span class="op">(</span><span class="va">gd</span><span class="op">)</span></span>
+<span><span class="va">pl</span> <span class="op">&lt;-</span> <span class="fu">fmrigds</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/fmrigds/man/reduce.html" class="external-link">reduce</a></span><span class="op">(</span><span class="va">pl</span>, method <span class="op">=</span> <span class="st">"fmrireg:meta_reg"</span>, formula <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span> <span class="op">+</span> <span class="va">group</span>,</span>
+<span>                      options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"pm"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu">fmrigds</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/fmrigds/man/explain_plan.html" class="external-link">explain_plan</a></span><span class="op">(</span><span class="va">pl</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/invisible.html" class="external-link">invisible</a></span><span class="op">(</span><span class="fu">fmrigds</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/fmrigds/man/preview.html" class="external-link">preview</a></span><span class="op">(</span><span class="va">pl</span>, n <span class="op">=</span> <span class="fl">1</span>, assays <span class="op">=</span> <span class="st">"beta"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">fmrigds</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/fmrigds/man/compute.html" class="external-link">compute</a></span><span class="op">(</span><span class="va">pl</span><span class="op">)</span></span></code></pre></div>

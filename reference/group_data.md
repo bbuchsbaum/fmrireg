@@ -22,13 +22,17 @@ group_data(data, format = c("auto", "h5", "nifti", "csv", "fmrilm"), ...)
 
   - For "csv": Path to CSV file or data frame
 
-  - For "fmrilm": List of fmri_lm objects
+  - For "fmrilm": not supported; see below
 
 - format:
 
   Character string specifying the input format. One of "auto" (default),
   "h5", "nifti", "csv", or "fmrilm". If "auto", attempts to detect
-  format.
+  format. `format = "fmrilm"` (and a list of `fmri_lm` fits) is not
+  supported and fails immediately: write each subject's fit with
+  [`write_results`](https://bbuchsbaum.github.io/fmrireg/reference/write_results.md)
+  and load the resulting beta/SE maps with `format = "nifti"` (or HDF5
+  files with `format = "h5"`).
 
 - ...:
 

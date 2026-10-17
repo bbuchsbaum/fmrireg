@@ -17,7 +17,7 @@ fmri_meta_fit_extended(
   voxelwise = NULL,
   center_voxelwise = TRUE,
   voxel_name = "voxel_cov",
-  n_threads = getOption("fmrireg.num_threads", 0)
+  n_threads = .fmrireg_num_threads()
 )
 ```
 

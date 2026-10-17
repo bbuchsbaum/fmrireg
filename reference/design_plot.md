@@ -4,7 +4,8 @@ Generates an interactive Shiny app that plots the design matrix for a
 given fMRI model. The design matrix is first converted into a
 long-format tibble and then plotted over time, faceted by block. Several
 customization options allow you to adjust the title, axis labels, line
-thickness, color palette, and more.
+thickness, color palette, and more. Requires the suggested packages
+shiny, plotly and bslib.
 
 ## Usage
 

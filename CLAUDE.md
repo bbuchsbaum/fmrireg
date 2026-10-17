@@ -79,8 +79,13 @@ layered architecture:
 ### Performance Considerations
 
 - C++ implementations via Rcpp for computationally intensive operations
-- Parallelization via RcppParallel (configurable:
-  `options(fmrireg.num_threads = N)`)
+- Parallelization has two layers: R-level loops go through
+  `.fmrireg_lapply()` (R/parallel.R), which uses future.apply under the
+  user’s
+  [`future::plan()`](https://future.futureverse.org/reference/plan.html);
+  C++ kernels use OpenMP threads from `.fmrireg_num_threads()`
+  (`options(fmrireg.num_threads)` / `FMRIREG_NUM_THREADS`). Do not add
+  another parallel backend (no furrr, RcppParallel, parallel::mclapply).
 - Chunked processing for large datasets to manage memory
 
 ### CRAN Compliance
@@ -179,7 +184,11 @@ in `compute_sandwich_variance` until 2026-08-07. That error is now fixed
 and both helpers are checked against
 [`sandwich::vcovHC`](https://zeileis.codeberg.page/sandwich/reference/vcovHC.html)
 in `tests/testthat/test-variance-closed-form.R`; they remain unwired.
-\## REVIEW 2026-10: CORRECTNESS AND PERFORMANCE PASS
+(2026-10: both helpers were removed as unreachable.
+`variance_spec("sandwich")` is the live sandwich path; see
+`data-raw/simplification-2026-10-plan.md`.)
+
+## REVIEW 2026-10: CORRECTNESS AND PERFORMANCE PASS
 
 Plan, checklist and results: `data-raw/review-2026-10-plan.md`. Every
 fix has a regression test that fails on the pre-review code; the tests
@@ -213,9 +222,12 @@ reference-backend AR standard errors ~3x. - **Group-analysis sign.**
 weights with an estimated residual scale (WLS); `"ivw"` treats V as
 known sampling variances. `method = "reml"` runs Paule-Mandel and says
 so. - **Spatial FDR** estimates its empirical null by Efron’s central
-matching and numbers groups by sorted label / factor level in both R and
-C++. - **Chunks are lazy.** `.dset_chunks()` returns descriptors; data
-are read in the worker via `.chunk_data()`; run rows come from
+matching and numbers groups by sorted label / factor level. Since P1
+(below) the computation is
+[`fmrigds::spatial_fdr_sabha()`](https://rdrr.io/pkg/fmrigds/man/spatial_fdr_sabha.html);
+[`spatial_fdr()`](https://bbuchsbaum.github.io/fmrireg/reference/spatial_fdr.md)
+wraps it. - **Chunks are lazy.** `.dset_chunks()` returns descriptors;
+data are read in the worker via `.chunk_data()`; run rows come from
 `.dset_run_rows()`. - **`.fast_preproject()` never forms an n x n
 matrix**; `proj$Pinv` is computed on demand.
 
@@ -223,5 +235,26 @@ Corrections to the 2025 notes above: the robust effective df is sum(w) -
 rank (the “sum(weights) - p” fix lived in an unreachable file until this
 pass); “Bootstrap functionality” referred to
 `multiresponse_bootstrap_lm`, which was unreachable and has been removed
-(`bootstrap_glm_inference` remains internal and is not wired into
-[`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md)).
+(`bootstrap_glm_inference`, also never wired into
+[`fmri_lm()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_lm.md),
+was removed in the 2026-10 simplification pass).
+
+## SIMPLIFICATION 2026-10
+
+Plan, bugs found and remaining phases:
+`data-raw/simplification-2026-10-plan.md`. Phase 1 removed code with no
+caller reachable from an export, S3 method or `.onLoad`. Before adding a
+helper, check it will have a live caller; before keeping one “for
+later”, note why in the plan.
+
+Group analysis is moving to fmrigds (plan Phase 4 item 1). Since P1:
+fmrireg registers exactly one fmrigds reducer, `"fmrireg:meta_reg"` (the
+`.meta_fit_core()` estimator), plus the post-hoc alias
+`"fmrireg:fdr:spatial"` (= fmrigds `"fdr:sabha"`), at load and never
+over an fmrigds name. The gds path of
+[`fmri_meta()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta.md)
+is reduce -\>
+[`fmrigds::coef_contrast()`](https://rdrr.io/pkg/fmrigds/man/coef_contrast.html)
+-\> wrap; reducer options are read with `[[` (fmrigds’s
+`options$weights` partially matches a `weights_custom` element, hence
+the option name `custom_weights`).

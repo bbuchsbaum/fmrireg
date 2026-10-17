@@ -14,10 +14,14 @@ provides a flexible framework for:
 4.  Computing contrasts between conditions
 5.  Testing statistical hypotheses about brain activity
 
-Thread usage in internal routines can be adjusted globally. Set
+Thread usage in the compiled (OpenMP) group-analysis and sketching
+kernels can be adjusted globally with
 `options(fmrireg.num_threads = <n>)` or the environment variable
-`FMRIREG_NUM_THREADS` before loading the package to control how many
-threads RcppParallel uses.
+`FMRIREG_NUM_THREADS`; the option takes precedence, both are read at
+call time, and 0 (the default) leaves the choice to OpenMP. Functions
+with an `n_threads` argument
+(e.g. [`fmri_meta()`](https://bbuchsbaum.github.io/fmrireg/reference/fmri_meta.md))
+use this value as their default.
 
 This vignette demonstrates how to conduct a complete linear model
 analysis using the `fmrireg` package, from data simulation to
@@ -223,22 +227,26 @@ model <- fmri_lm(
 # Print a summary of the model
 model
 #> 
-#> ==================================
-#>         fmri_lm_result          
-#> ==================================
+#> ── fMRI Linear Model Results ───────────────────────────────────────────────────
 #> 
-#> Model formula:
-#>   ~ onset hrf(condition) 
+#> ── Model Information ──
 #> 
-#> Fitting strategy:  runwise 
+#> • Formula: `onset ~ hrf(condition)`
+#> • Dataset: fmri_frame
+#> • Estimation scope: runwise_meta
+#> • Parameters: 2 event + 4 baseline
+#> • Voxels analyzed: 3
+#> • Inference df (residual): 194
 #> 
-#> Baseline parameters:  4 
-#> Design parameters:    2 
-#> Contrasts:           None
+#> ── Model Configuration ──
 #> 
-#> Use coef(...), stats(...), etc. to extract results.
-#> 
-#> 
+#>   • AR structure: ar1
+#>   • Noise pooling: run
+#>   • Shared AR estimator: pooled_acvf
+#>   • Variance: model
+#>   • Reference df: residual
+#> ────────────────────────────────────────────────────────────────────────────────
+#> Use coef(), stats(), or standard_error() to extract results
 ```
 
 The onset plot above shows the schedule; the matrix actually fitted by
@@ -885,8 +893,10 @@ gd_nii <- group_data(list(beta = beta_paths, se = se_paths), format = "nifti",
 fit_nii <- fmri_meta(gd_nii, formula = ~ 1 + group, method = "fe")
 
 # Inspect the pipeline with fmrigds
-pl <- fmrigds::plan(gd)
-pl <- fmrigds::reduce(pl, method = "meta:fe", formula = ~ 1 + group)
+# (fmri_meta() runs the reducer "fmrireg:meta_reg" that fmrireg registers)
+pl <- fmrigds::as_plan(gd)
+pl <- fmrigds::reduce(pl, method = "fmrireg:meta_reg", formula = ~ 1 + group,
+                      options = list(method = "pm"))
 fmrigds::explain_plan(pl)
 invisible(fmrigds::preview(pl, n = 1, assays = "beta"))
 res <- fmrigds::compute(pl)
