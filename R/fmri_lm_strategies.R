@@ -691,23 +691,7 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
       info$weights <- res$robust_weights
       info$sigma <- res$sigma_robust
     } else if (ar_modeling) {
-      info$phi_hat <- if (!is.null(phi_fixed)) {
-        phi_fixed
-      } else {
-        X_run_orig <- .run_design(model, rch$chunk_num)
-        Y_run_full <- as.matrix(.chunk_data(rch))
-        ols <- solve_glm_core(
-          glm_context(X = X_run_orig, Y = Y_run_full,
-                      proj = .fast_preproject(X_run_orig)),
-          return_fitted = TRUE
-        )
-        # Keep the OLS-design-corrected estimate fixed. A GLS residual update
-        # has a different residual-forming operator and cannot reuse design = X.
-        .estimate_shared_ar_parameters(
-          Y_run_full - ols$fitted, ar_order, cfg$ar, censor = censor_run,
-          design = X_run_orig
-        )
-      }
+      info$phi_hat <- phi_fixed %||% .run_ar_phi(model, rch, cfg, censor_run)
     } else if (robust_modeling) {
       res <- process_run_robust(rch, model, cfg, sigma_fixed, dataset)
       info$weights <- res$robust_weights
@@ -748,6 +732,27 @@ prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, si
     run_row_inds = run_row_inds,
     ar_modeling = ar_modeling,
     ar_order = ar_order
+  )
+}
+
+#' Shared AR coefficients of one run, from all of its voxels
+#'
+#' Fits the run's own design by OLS and estimates the design-corrected shared
+#' AR coefficients from the residuals. Keep the estimate fixed for the GLS
+#' solve: a GLS residual update has a different residual-forming operator and
+#' cannot reuse the design correction.
+#' @keywords internal
+#' @noRd
+.run_ar_phi <- function(model, run_chunk, cfg, censor = NULL) {
+  X_run <- .run_design(model, run_chunk$chunk_num)
+  Y_run <- as.matrix(.chunk_data(run_chunk))
+  ols <- solve_glm_core(
+    glm_context(X = X_run, Y = Y_run, proj = .fast_preproject(X_run)),
+    return_fitted = TRUE
+  )
+  .estimate_shared_ar_parameters(
+    Y_run - ols$fitted, .target_ar_order(cfg$ar) %||% 0L, cfg$ar,
+    censor = censor, design = X_run
   )
 }
 

@@ -69,6 +69,7 @@ chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
     )
   } else {
     chunkwise_lm_slow(
+      dset = dset,
       chunks = chunks,
       model = model,
       cfg = cfg,
@@ -80,6 +81,7 @@ chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
       modmat = modmat,
       # Run rows come from the temporal schema; no data is read.
       run_indices = if (cfg$ar$struct != "iid") .dset_run_rows(dset),
+      phi_fixed = phi_fixed,
       verbose = verbose,
       progress = progress,
       parallel_chunks = parallel_chunks
@@ -352,9 +354,9 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
 #' Chunkwise LM Slow Path
 #' @keywords internal
 #' @noRd
-chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
+chunkwise_lm_slow <- function(dset, chunks, model, cfg, contrast_objects,
                               tmats, vnames, event_indices, baseline_indices,
-                              modmat, run_indices = NULL,
+                              modmat, run_indices = NULL, phi_fixed = NULL,
                               verbose = FALSE, progress = FALSE,
                               parallel_chunks = FALSE) {
 
@@ -373,9 +375,18 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
   simple_conlist_weights <- weights$simple
   fconlist_weights <- weights$f
 
-  needs_integrated <- !(cfg$ar$struct %in% c("iid", "none")) || .fmri_lm_robust_enabled(cfg$robust)
+  needs_integrated <- !identical(cfg$ar$struct, "iid") || .fmri_lm_robust_enabled(cfg$robust)
   if (needs_integrated && is.null(run_indices)) {
     run_indices <- list(seq_len(nrow(modmat)))
+  }
+  if (!identical(cfg$ar$struct, "iid")) {
+    # Estimate phi once per run from every voxel, as the matrix backend does,
+    # and hold it fixed in each chunk's solve. Estimating inside each chunk
+    # (from at most 64 of its voxels) made the fit depend on the chunking.
+    cfg$ar$phi_fixed <- phi_fixed %||% lapply(.dset_run_chunks(dset), function(rch) {
+      .run_ar_phi(model, rch, cfg,
+                  censor = resolve_censor(cfg, dset, rch$chunk_num, length(rch$row_ind)))
+    })
   }
 
   cres <- .chunkwise_apply(chunks, function(i, ym) {

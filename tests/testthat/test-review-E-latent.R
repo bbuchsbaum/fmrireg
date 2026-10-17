@@ -35,25 +35,28 @@ test_that("E2: latent AR(1) fit differs from OLS and matches the dense AR fit", 
   B_ar <- as.matrix(coef(fit_ar))
   expect_gt(max(abs(B_ar - B_ols)), 1e-3)
 
-  # Dense reference: the same model fitted voxelwise on the reconstructed data
-  # with run-pooled AR(1) (one phi per run shared across voxels).
-  fit_dense <- fmri_lm(onset ~ hrf(condition), block = ~run, dataset = d$dense,
-                       control = fmri_lm_control(estimation = estimation_spec("joint"),
-                                                 noise = noise_spec("ar1")),
-                       compute = compute_spec(voxel_chunks = 1L, backend = "reference"))
-  phi_dense <- unlist(fit_dense$result$ar_coef)
+  # Dense reference: the same joint GLS solve on the reconstructed voxel data
+  # with run-pooled AR(1) (one phi per run shared across voxels), estimated
+  # from the joint-design OLS residuals as the latent fit does. (The built-in
+  # fmri_lm() backends estimate phi from per-run OLS residuals instead.)
+  X <- as.matrix(design_matrix(fit_ar$model))
+  runs <- split(seq_len(nrow(X)), rep(1:2, each = d$rl))
+  fit_dense <- fmrireg:::solve_integrated_glm(
+    X, d$Z %*% t(d$L),
+    fmri_lm_control(estimation = estimation_spec("joint"), noise = noise_spec("ar1")),
+    run_indices = runs
+  )
+  phi_dense <- unlist(fit_dense$ar_coef)
   phi_lat <- unlist(fit_ar$result$ar_coef)
   expect_length(phi_lat, 2L)
   expect_equal(unname(phi_lat), unname(phi_dense), tolerance = 1e-6)
 
   # Voxel betas reconstructed from the component betas equal the dense betas.
-  B_vox_dense <- t(fit_dense$result$betas$data[[1]]$estimate[[1]])  # p x V
   B_comp <- t(fit_ar$result$betas$data[[1]]$estimate[[1]])          # p x r
-  expect_equal(B_comp %*% t(d$L), B_vox_dense, tolerance = 1e-6, ignore_attr = TRUE)
+  expect_equal(unname(B_comp %*% t(d$L)), unname(fit_dense$betas[, , drop = FALSE]),
+               tolerance = 1e-6)
 
   # Component-level SEs match an explicit GLS fit on whitened component scores.
-  X <- as.matrix(design_matrix(fit_ar$model))
-  runs <- split(seq_len(nrow(X)), rep(1:2, each = d$rl))
   w <- fmrireg:::ar_whiten_transform(X, d$Z, phi = as.list(phi_lat), run_indices = runs)
   ref <- stats::lm.fit(w$X, w$Y)
   sig2 <- colSums(ref$residuals^2) / ref$df.residual
@@ -101,13 +104,15 @@ test_that("E2: latent AR(2) also matches the dense fit", {
   d <- .review_e_latent_data(seed = 9L)
   fit_ar <- fmri_latent_lm(onset ~ hrf(condition), block = ~run,
                            dataset = d$latent, durations = 0, autocor = "ar2")
-  fit_dense <- fmri_lm(onset ~ hrf(condition), block = ~run, dataset = d$dense,
-                       control = fmri_lm_control(estimation = estimation_spec("joint"),
-                                                 noise = noise_spec("ar2")),
-                       compute = compute_spec(voxel_chunks = 1L, backend = "reference"))
-  expect_equal(unlist(fit_ar$result$ar_coef), unlist(fit_dense$result$ar_coef),
+  X <- as.matrix(design_matrix(fit_ar$model))
+  fit_dense <- fmrireg:::solve_integrated_glm(
+    X, d$Z %*% t(d$L),
+    fmri_lm_control(estimation = estimation_spec("joint"), noise = noise_spec("ar2")),
+    run_indices = split(seq_len(nrow(X)), rep(1:2, each = d$rl))
+  )
+  expect_equal(unlist(fit_ar$result$ar_coef), unlist(fit_dense$ar_coef),
                tolerance = 1e-6, ignore_attr = TRUE)
   B_comp <- t(fit_ar$result$betas$data[[1]]$estimate[[1]])
-  B_vox <- t(fit_dense$result$betas$data[[1]]$estimate[[1]])
-  expect_equal(B_comp %*% t(d$L), B_vox, tolerance = 1e-6, ignore_attr = TRUE)
+  expect_equal(unname(B_comp %*% t(d$L)), unname(fit_dense$betas[, , drop = FALSE]),
+               tolerance = 1e-6)
 })
