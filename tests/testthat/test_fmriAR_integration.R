@@ -166,8 +166,6 @@ test_that("iterative and integrated solvers honor the shared AR estimand", {
   mean_fit <- .iterative_ar_gls_via_fmriAR(X, Y, mean_cfg, max_iter = 1L)
 
   residuals <- Y - X %*% base::qr.solve(X, Y)
-  expect_identical(.shared_ar_correction_design(residuals, pooled_cfg, X), X)
-  expect_identical(.shared_ar_correction_design(residuals, mean_cfg, X), X)
   mean_oracle <- .estimate_ar_via_fmriAR(
     matrix(rowMeans(residuals), ncol = 1L), mean_cfg, design = X
   )

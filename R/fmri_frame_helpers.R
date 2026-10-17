@@ -15,8 +15,7 @@
 ## fmridataset internals.
 ###############################################################################
 
-#' @importFrom fmridataset fmri_frame collect_assay temporal_schema
-#'   as_sampling_frame
+#' @importFrom fmridataset fmri_frame collect_assay
 NULL
 
 # ---------------------------------------------------------------------------

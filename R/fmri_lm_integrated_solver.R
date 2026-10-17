@@ -64,9 +64,9 @@ solve_ar_pipeline <- function(glm_ctx, ar_options, run_indices) {
     warning("AR solver did not return whitened XtXinv; using unwhitened fallback.")
     result$XtXinv <- glm_ctx$proj$XtXinv
   }
+  # X_white/Y_white stay: the latent AR fit forms its whitened residual
+  # covariance from them (standard_error(<fmri_latent_lm>, recon = TRUE)).
   result$fitted <- NULL
-  result$X_white <- NULL
-  result$Y_white <- NULL
   result
 }
 

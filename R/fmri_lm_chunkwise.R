@@ -101,10 +101,6 @@ chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
     }))
   }
 
-  if (!requireNamespace("future.apply", quietly = TRUE)) {
-    stop("parallel_chunks requires the future.apply package.", call. = FALSE)
-  }
-
   if (progress && requireNamespace("progressr", quietly = TRUE)) {
     return(progressr::with_progress({
       p <- progressr::progressor(steps = length(chunks))

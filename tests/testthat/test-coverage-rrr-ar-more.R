@@ -61,12 +61,6 @@ test_that("fmriAR adapter lag/run-label/whiten branches", {
     "partition|contiguous"
   )
 
-  expect_null(fmrireg:::.shared_ar_correction_design(matrix(1, 3, 2), list(), NULL))
-  expect_equal(
-    fmrireg:::.shared_ar_correction_design(matrix(1, 3, 2), list(struct = "ar1"), X[1:3, ]),
-    X[1:3, ]
-  )
-
   expect_error(
     fmrireg:::.block_diagonal_design(list()),
     "non-empty"

@@ -44,16 +44,6 @@ NULL
   resid_mat
 }
 
-#' Select whether the OLS design correction is valid for a shared estimator
-#'
-#' Always the design itself (see .estimate_shared_ar_parameters()); kept for
-#' the rrr engine, its remaining caller.
-#' @keywords internal
-#' @noRd
-.shared_ar_correction_design <- function(residuals, ar_opts, design) {
-  design
-}
-
 #' Estimate shared AR parameters under the configured spatial estimand
 #' @keywords internal
 #' @noRd
@@ -109,6 +99,10 @@ NULL
     ),
     error = function(e) {
       if (inherits(e, "fmriAR_design_residual_mismatch")) stop(e)
+      warning(structure(class = c("fmrireg_ar_estimation_failed", "warning", "condition"),
+        list(message = paste0("AR(", ar_order, ") estimation failed (",
+                              conditionMessage(e), "); fitting without AR whitening."),
+             call = NULL)))
       NULL
     }
   )

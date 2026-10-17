@@ -634,9 +634,6 @@ write_results.fmri_meta <- function(x,
   if ("h5" %in% format && !requireNamespace("fmristore", quietly = TRUE)) {
     stop("fmristore package is required for HDF5 export. Please install fmristore.", call. = FALSE)
   }
-  if (!requireNamespace("jsonlite", quietly = TRUE)) {
-    stop("jsonlite package is required for write_results metadata sidecars.", call. = FALSE)
-  }
 
   if (is.null(path)) {
     path <- getwd()
@@ -1276,9 +1273,6 @@ spatial_fdr_fmri_meta <- function(object, coef = 1, group = NULL,
 #' @return A tibble with tidy results
 #' @export
 tidy.fmri_meta <- function(x, conf.int = FALSE, conf.level = 0.95, ...) {
-  if (!requireNamespace("tibble", quietly = TRUE)) {
-    stop("Package 'tibble' is required for tidy() method", call. = FALSE)
-  }
   
   # For ROI analysis, return tidy data frame
   if (inherits(x, "fmri_meta_roi")) {

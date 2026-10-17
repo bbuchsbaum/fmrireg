@@ -79,8 +79,7 @@ srht_adjoint <- function(B, plan) {
 #' @keywords internal
 #' @noRd
 .sketch_num_threads <- function() {
-  n <- suppressWarnings(as.integer(getOption("fmrireg.num_threads", 0L))[1L])
-  if (length(n) != 1L || is.na(n) || n < 0L) 0L else n
+  .fmrireg_num_threads()
 }
 
 # --- Sketch operators and solvers used by the latent_sketch engine ---

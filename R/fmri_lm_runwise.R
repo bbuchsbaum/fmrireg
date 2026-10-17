@@ -404,7 +404,7 @@ runwise_lm_voxelwise <- function(chunks, model, cfg, simple_conlist_weights, fco
       }
     }
 
-    voxel_results <- if (parallel_voxels && requireNamespace("future.apply", quietly = TRUE)) {
+    voxel_results <- if (parallel_voxels) {
       if (verbose) message("Processing voxels in parallel...")
       future.apply::future_lapply(seq_len(n_voxels), fit_voxel, future.seed = TRUE)
     } else {
