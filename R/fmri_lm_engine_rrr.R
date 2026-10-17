@@ -114,7 +114,7 @@
   )
 
   contrast_prep <- prepare_fmri_lm_contrasts(model)
-  weights <- .contrast_weight_lists(contrast_prep)
+  weights <- .prepared_contrast_weights(contrast_prep)
 
   scoped_contrasts <- .rrr_filter_task_contrasts(
     simple_weights = weights$simple,

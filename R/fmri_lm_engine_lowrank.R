@@ -229,7 +229,7 @@
   if ("sigma" %in% names(bdata)) bdata$sigma <- list(sigma)
   bstats$data <- list(bdata)
 
-  weights <- .contrast_weight_lists(contrast_prep)
+  weights <- .prepared_contrast_weights(contrast_prep)
   contrasts <- if (length(contrast_prep$standard) > 0L) {
     # Every cluster raises the same non-estimable-contrast warning; emit each
     # distinct message once rather than once per cluster.
@@ -427,7 +427,7 @@
   if (is.null(grouped)) {
     stats <- .external_fmri_lm_stats(
       B, cov_unscaled, sigma, sigma2, dfres, varnames,
-      .contrast_weight_lists(contrast_prep), ar_order = ar_order
+      .prepared_contrast_weights(contrast_prep), ar_order = ar_order
     )
     bstats <- stats$betas
     contrast_results <- if (length(stats$contrasts) > 0L) {

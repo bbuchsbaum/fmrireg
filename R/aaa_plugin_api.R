@@ -788,7 +788,7 @@ fit_glm_from_suffstats <- function(model, XtX, XtS, StS, df,
 #'   carrying their `colind` attribute.
 #' @keywords internal
 #' @noRd
-.contrast_weight_lists <- function(contrast_prep, names_from = c("key", "name")) {
+.prepared_contrast_weights <- function(contrast_prep, names_from = c("key", "name")) {
   names_from <- match.arg(names_from)
   pick <- function(cons) {
     w <- lapply(cons, `[[`, "weights")
@@ -802,7 +802,7 @@ fit_glm_from_suffstats <- function(model, XtX, XtS, StS, df,
 
 #' Internal: beta and contrast statistics for a fitted coefficient matrix
 #'
-#' @param weights Output of [.contrast_weight_lists()].
+#' @param weights Output of [.prepared_contrast_weights()].
 #' @return `list(betas = <beta_stats_matrix() tibble>, contrasts = <list of
 #'   contrast tibbles from fit_lm_contrasts_fast()>)`.
 #' @keywords internal
@@ -830,7 +830,7 @@ fit_glm_from_suffstats <- function(model, XtX, XtS, StS, df,
   sigma <- sqrt(sigma2)
   stats <- .external_fmri_lm_stats(
     betas, XtXinv, sigma, sigma2, dfres, attr(tmats, "varnames"),
-    .contrast_weight_lists(contrast_prep)
+    .prepared_contrast_weights(contrast_prep)
   )
 
   result <- list(

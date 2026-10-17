@@ -219,7 +219,7 @@ chunkwise_lm_latent <- function(x, model, contrast_objects, nchunks, cfg,
   # The built-in fitters name contrasts by their own `name`.
   stats <- .external_fmri_lm_stats(
     betas, XtXinv, sigma_vec, sigma_vec^2, dfres, colnames(modmat),
-    .contrast_weight_lists(contrast_prep, names_from = "name"),
+    .prepared_contrast_weights(contrast_prep, names_from = "name"),
     ar_order = ar_order
   )
   bstats <- stats$betas
