@@ -246,6 +246,7 @@
   if ("sigma" %in% names(bdata)) bdata$sigma <- list(sigma)
   bstats$data <- list(bdata)
 
+  weights <- .contrast_weight_lists(contrast_prep)
   contrasts <- if (length(contrast_prep$standard) > 0L) {
     # Every cluster raises the same non-estimable-contrast warning; emit each
     # distinct message once rather than once per cluster.
@@ -254,8 +255,7 @@
       J <- groups[[i]]
       fit_lm_contrasts_fast(
         B = B[, J, drop = FALSE], sigma2 = sigma2[J], XtXinv = cov_list[[i]],
-        conlist = lapply(contrast_prep$simple, `[[`, "weights"),
-        fconlist = lapply(contrast_prep$f, `[[`, "weights"),
+        conlist = weights$simple, fconlist = weights$f,
         df = dfres, ar_order = ar_order
       )
     }), warning = function(w) {
@@ -448,26 +448,13 @@
   sigma <- sqrt(pmax(sigma2, 0))
   contrast_prep <- prepare_fmri_lm_contrasts(fm)
   if (is.null(grouped)) {
-    bstats <- beta_stats_matrix(
-      Betas = B,
-      XtXinv = cov_unscaled,
-      sigma = sigma,
-      dfres = dfres,
-      varnames = varnames,
-      ar_order = ar_order
+    stats <- .external_fmri_lm_stats(
+      B, cov_unscaled, sigma, sigma2, dfres, varnames,
+      .contrast_weight_lists(contrast_prep), ar_order = ar_order
     )
-    contrast_results <- if (length(contrast_prep$standard) > 0L) {
-      dplyr::bind_rows(
-        fit_lm_contrasts_fast(
-          B = B,
-          sigma2 = sigma2,
-          XtXinv = cov_unscaled,
-          conlist = lapply(contrast_prep$simple, `[[`, "weights"),
-          fconlist = lapply(contrast_prep$f, `[[`, "weights"),
-          df = dfres,
-          ar_order = ar_order
-        )
-      )
+    bstats <- stats$betas
+    contrast_results <- if (length(stats$contrasts) > 0L) {
+      dplyr::bind_rows(stats$contrasts)
     } else {
       empty_contrast_table()
     }

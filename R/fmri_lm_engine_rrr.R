@@ -122,18 +122,11 @@
   )
 
   contrast_prep <- prepare_fmri_lm_contrasts(model)
-  simple_weights <- lapply(contrast_prep$simple, `[[`, "weights")
-  if (length(simple_weights)) {
-    names(simple_weights) <- names(contrast_prep$simple)
-  }
-  f_weights <- lapply(contrast_prep$f, `[[`, "weights")
-  if (length(f_weights)) {
-    names(f_weights) <- names(contrast_prep$f)
-  }
+  weights <- .contrast_weight_lists(contrast_prep)
 
   scoped_contrasts <- .rrr_filter_task_contrasts(
-    simple_weights = simple_weights,
-    f_weights = f_weights,
+    simple_weights = weights$simple,
+    f_weights = weights$f,
     event_indices = event_indices,
     policy = args$contrast_policy
   )

@@ -124,7 +124,7 @@ chunkwise_lm_latent <- function(x, model, contrast_objects, nchunks, cfg,
   if (!is.null(cfg) && .temporal_noise_enabled(cfg$ar)) {
     return(.latent_ar_fit(
       dset = dset, modmat = modmat, basismat = basismat, cfg = cfg,
-      contrast_objects = contrast_objects,
+      contrast_prep = prepare_fmri_lm_contrasts(model),
       event_indices = event_indices, baseline_indices = baseline_indices
     ))
   }
@@ -180,7 +180,7 @@ chunkwise_lm_latent <- function(x, model, contrast_objects, nchunks, cfg,
 #' Internal: shared-AR GLS fit on latent component scores
 #' @keywords internal
 #' @noRd
-.latent_ar_fit <- function(dset, modmat, basismat, cfg, contrast_objects,
+.latent_ar_fit <- function(dset, modmat, basismat, cfg, contrast_prep,
                            event_indices, baseline_indices) {
   run_indices <- lapply(.dset_run_chunks(dset), `[[`, "row_ind")
 
@@ -214,24 +214,14 @@ chunkwise_lm_latent <- function(x, model, contrast_objects, nchunks, cfg,
   dfres <- result[["dfres"]] %||% result[["df_residual"]]
   ar_order <- result$ar_order %||% .target_ar_order(.normalize_ar_options(cfg$ar)) %||% 0L
 
-  simple_con <- Filter(function(x) inherits(x, "contrast") && !inherits(x, "Fcontrast"),
-                       contrast_objects)
-  f_con <- Filter(function(x) inherits(x, "Fcontrast"), contrast_objects)
-  weights_of <- function(cons) {
-    w <- lapply(cons, function(x) {
-      ww <- x$weights
-      attr(ww, "colind") <- attr(x, "colind")
-      ww
-    })
-    if (length(cons)) names(w) <- vapply(cons, `[[`, character(1), "name")
-    w
-  }
-
-  bstats <- beta_stats_matrix(betas, XtXinv, sigma_vec, dfres, colnames(modmat),
-                              ar_order = ar_order)
-  conres <- fit_lm_contrasts_fast(betas, sigma_vec^2, XtXinv,
-                                  weights_of(simple_con), weights_of(f_con),
-                                  dfres, ar_order = ar_order)
+  # The built-in fitters name contrasts by their own `name`.
+  stats <- .external_fmri_lm_stats(
+    betas, XtXinv, sigma_vec, sigma_vec^2, dfres, colnames(modmat),
+    .contrast_weight_lists(contrast_prep, names_from = "name"),
+    ar_order = ar_order
+  )
+  bstats <- stats$betas
+  conres <- stats$contrasts
 
   out <- unpack_chunkwise(
     list(list(bstats = bstats, contrasts = conres,
