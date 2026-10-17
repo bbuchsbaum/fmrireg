@@ -70,3 +70,86 @@ test_that("rrr_gls censor = 'none' ignores the frame column (B7)", {
   expect_equal(.rrr_phi(opted_out), .rrr_phi(uncensored), tolerance = 1e-12)
   expect_equal(.rrr_coef(opted_out), .rrr_coef(uncensored), tolerance = 1e-12)
 })
+
+# --- B8: standard_error(<fmri_latent_lm>, recon = TRUE) after an AR fit ------
+
+.latent_se_fixture <- function(autocor) {
+  skip_if_not_installed("fmristore")
+  skip_if_not_installed("neuroim2")
+  set.seed(42)
+  n_time <- 60L
+  n_comp <- 4L
+  n_vox <- 20L
+  basis <- matrix(rnorm(n_time * n_comp), n_time, n_comp)
+  for (t in 2:n_time) basis[t, ] <- basis[t, ] + 0.5 * basis[t - 1L, ]
+  loadings <- matrix(rnorm(n_vox * n_comp), n_vox, n_comp)
+  lvec <- suppressWarnings(fmristore::LatentNeuroVec(
+    basis = basis, loadings = loadings,
+    space = neuroim2::NeuroSpace(c(5, 4, 1, n_time)),
+    mask = rep(TRUE, n_vox), offset = rep(0, n_vox)
+  ))
+  lds <- latent_frame(lvec, TR = 1, run_length = n_time, event_table = data.frame(
+    onset = c(8, 20, 32, 44), condition = factor(c("A", "B", "A", "B")), run = 1L
+  ))
+  fit <- fmri_latent_lm(
+    onset ~ hrf(condition, contrasts = pair_contrast(
+      ~ condition == "A", ~ condition == "B", name = "AvB")),
+    block = ~ run, dataset = lds, durations = 0, autocor = autocor
+  )
+  list(fit = fit, Z = basis, L = loadings,
+       X = as.matrix(design_matrix(fit$model)))
+}
+
+# Closed form: with whitened design Xw and scores Zw, Var(B[i, ]) =
+# C[i, i] * Sigma, Sigma = Rw'Rw / df the component residual covariance, so a
+# voxel with loadings l has se = sqrt(C[i, i] * l' Sigma l).
+.latent_se_closed_form <- function(Xw, Zw, L, cmat = NULL) {
+  C <- solve(crossprod(Xw))
+  B <- C %*% crossprod(Xw, Zw)
+  Rw <- Zw - Xw %*% B
+  Sigma <- crossprod(Rw) / (nrow(Xw) - ncol(Xw))
+  q <- rowSums((L %*% Sigma) * L)
+  if (is.null(cmat)) {
+    sapply(1:2, function(i) sqrt(C[i, i] * q))
+  } else {
+    sqrt(drop(t(cmat) %*% C %*% cmat) * q)
+  }
+}
+
+test_that("latent AR fit reconstructs standard errors in voxel space (B8)", {
+  fx <- .latent_se_fixture("ar1")
+  phi <- unlist(fx$fit$result[["ar_coef"]])
+  expect_length(phi, 1L)
+
+  # AR(1) whitening without exact_first: row 1 kept, rows t >= 2 get
+  # x_t - phi * x_{t-1}.
+  W <- diag(nrow(fx$X))
+  W[cbind(2:nrow(W), 1:(nrow(W) - 1L))] <- -phi
+  Xw <- W %*% fx$X
+  Zw <- W %*% fx$Z
+
+  se <- as.matrix(standard_error(fx$fit, type = "betas", recon = TRUE))
+  expect_equal(unname(se), .latent_se_closed_form(Xw, Zw, fx$L),
+               tolerance = 1e-8)
+
+  se_con <- as.matrix(standard_error(fx$fit, type = "contrasts", recon = TRUE))
+  expect_equal(unname(se_con[, 1]),
+               .latent_se_closed_form(Xw, Zw, fx$L, cmat = c(1, -1, 0, 0, 0, 0)[1:ncol(fx$X)]),
+               tolerance = 1e-8)
+})
+
+test_that("latent IID standard errors in voxel space are unchanged (B8)", {
+  fx <- .latent_se_fixture("none")
+
+  se <- as.matrix(standard_error(fx$fit, type = "betas", recon = TRUE))
+  expect_equal(unname(se), .latent_se_closed_form(fx$X, fx$Z, fx$L),
+               tolerance = 1e-8)
+
+  # The formula used before the fix: cov() of the OLS residuals rescaled to
+  # the residual df (the design has an intercept, so the centring is a no-op).
+  R <- fx$Z - fx$X %*% qr.coef(qr(fx$X), fx$Z)
+  CR <- cov(R) * (nrow(R) - 1) / (nrow(R) - ncol(fx$X))
+  C <- solve(crossprod(fx$X))
+  old <- sapply(1:2, function(i) sqrt(rowSums((fx$L %*% (CR * C[i, i])) * fx$L)))
+  expect_equal(unname(se), old, tolerance = 1e-10)
+})

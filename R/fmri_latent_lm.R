@@ -132,7 +132,8 @@ chunkwise_lm_latent <- function(x, model, contrast_objects, nchunks, cfg,
   ret <- multiresponse_lm(form, data_env, contrast_objects, attr(tmats, "varnames"),
                           fcon = NULL, modmat = modmat)
 
-  rss <- colSums(as.matrix(ret$fit$residuals^2))
+  R <- as.matrix(ret$fit$residuals)
+  rss <- colSums(R^2)
   rdf <- ret$fit$df.residual
   resvar <- rss / rdf
   sigma <- sqrt(resvar)
@@ -143,7 +144,8 @@ chunkwise_lm_latent <- function(x, model, contrast_objects, nchunks, cfg,
                        sigma = sigma,
                        residuals = resid(ret$fit),
                        df.residual = ret$fit$df.residual,
-                       qr = qr.lm(ret$fit))
+                       qr = qr.lm(ret$fit),
+                       resid_cov = crossprod(R) / rdf)
 }
 
 
@@ -233,6 +235,10 @@ chunkwise_lm_latent <- function(x, model, contrast_objects, nchunks, cfg,
   out$sigma <- sigma_vec
   out$df.residual <- dfres
   out$cov.unscaled <- XtXinv
+  # Component residual covariance in the whitened domain (see
+  # standard_error.fmri_latent_lm()).
+  Rw <- result$Y_white - result$X_white %*% betas
+  out$resid_cov <- crossprod(Rw) / dfres
   out$ar_coef <- phi
   out
 }
@@ -282,11 +288,11 @@ standard_error.fmri_latent_lm <- function(x, type = c("betas", "contrasts"), rec
   if (!recon) {
     standard_error.fmri_lm(x, type)
   } else {
-    R <- x$result$residuals
-    CR <- cov(R) * (nrow(R) - 1)/x$result$df.residual
-    
-    Qr <- x$result$qr
-    cov.unscaled <- chol2inv(Qr$qr)
+    # Voxel coefficients are L B, so Var(L b_i) = C[i, i] * L Sigma L' with
+    # C the unscaled coefficient covariance and Sigma the component residual
+    # covariance (both in the fitted, whitened domain for AR fits).
+    CR <- x$result[["resid_cov"]]
+    cov.unscaled <- x$result[["cov.unscaled"]] %||% chol2inv(x$result[["qr"]]$qr)
     lds <- .dset_loadings(x$dataset)
   
     if (type == "betas") {
