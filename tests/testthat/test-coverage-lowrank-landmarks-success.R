@@ -45,7 +45,7 @@ test_that(".run_lowrank_engine landmarks succeed for ihs/srht/gaussian/countsket
     if (identical(method, "ihs")) { sk$iters <- 2L; sk$tol <- 0 }
     fit <- fmrireg:::.run_lowrank_engine(
       fx$model, fx$dataset,
-      lowrank = c(low_base, list(time_sketch = sk)),
+      args = list(lowrank = c(low_base, list(time_sketch = sk))),
       cfg = cfg
     )
     expect_s3_class(fit, "fmri_lm")
@@ -59,13 +59,13 @@ test_that(".run_lowrank_engine IID landmarks (no AR) succeed", {
   fx <- make_mem_lowrank_fx(n_time = 56L, seed = 42L)
   fit <- fmrireg:::.run_lowrank_engine(
     fx$model, fx$dataset,
-    lowrank = list(
+    args = list(lowrank = list(
       time_sketch = list(method = "gaussian", m = 16L),
       landmarks = 3L,
       k_neighbors = 3L,
       kmeans_iter_max = 10L,
       kmeans_nstart = 1L
-    ),
+    )),
     cfg = fmri_lm_control()
   )
   expect_s3_class(fit, "fmri_lm")
@@ -98,7 +98,7 @@ test_that(".run_lowrank_engine parcels by_cluster with srht/ihs succeed", {
     if (identical(method, "ihs")) { sk$iters <- 2L; sk$tol <- 0 }
     fit <- fmrireg:::.run_lowrank_engine(
       fm, dset,
-      lowrank = list(time_sketch = sk, parcels = parcels),
+      args = list(lowrank = list(time_sketch = sk, parcels = parcels)),
       cfg = cfg
     )
     expect_s3_class(fit, "fmri_lm")
@@ -106,7 +106,7 @@ test_that(".run_lowrank_engine parcels by_cluster with srht/ihs succeed", {
   }
 })
 
-test_that(".run_lowrank_engine latent dense loadings + cfg=NULL ar_options path", {
+test_that(".run_lowrank_engine latent dense loadings path", {
   skip_if_not_installed("fmristore")
   skip_if_not_installed("neuroim2")
   skip_if_not_installed("fmridataset")
@@ -142,9 +142,8 @@ test_that(".run_lowrank_engine latent dense loadings + cfg=NULL ar_options path"
 
   fit <- fmrireg:::.run_lowrank_engine(
     fm, lds,
-    lowrank = list(time_sketch = list(method = "srht", m = 16L)),
-    cfg = NULL,
-    ar_options = list(struct = "iid")
+    args = list(lowrank = list(time_sketch = list(method = "srht", m = 16L))),
+    cfg = fmri_lm_control()
   )
   expect_s3_class(fit, "fmri_lm")
   expect_equal(length(fit$sigma2), n_vox)

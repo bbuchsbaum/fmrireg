@@ -85,10 +85,9 @@ test_that(".derive_engine_execution_config and alias helpers cover branches", {
   )
   expect_true(is.list(derived))
 
-  expect_equal(fmrireg:::.builtin_engine_aliases("latent_sketch"), "sketch")
-  expect_equal(fmrireg:::.builtin_engine_aliases("ols"), character())
-  expect_equal(fmrireg:::.builtin_engine_source("rrr_gls"), "builtin")
-  expect_equal(fmrireg:::.builtin_engine_source("custom_plugin"), "plugin")
+  expect_equal(engine_spec("latent_sketch")$aliases, "sketch")
+  expect_equal(engine_spec("rrr_gls")$aliases, character())
+  expect_equal(engine_spec("rrr_gls")$source, "builtin")
 
   caps <- fmrireg:::.normalize_engine_capabilities(list(robust = FALSE, ma = TRUE))
   expect_false(isTRUE(caps$robust))

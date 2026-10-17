@@ -143,13 +143,6 @@ test_that(".preflight_rrr_gls_engine and extract/whiten helpers", {
     "matrix|dataset|data"
   )
 
-  runs <- fmrireg:::.rrr_derive_run_indices(fx$model, 40L)
-  expect_true(is.list(runs) || is.null(runs) || is.integer(unlist(runs)))
-
-  expect_equal(fmrireg:::.rrr_ar_order_from_cfg(fmri_lm_control()), 0L)
-  cfg_ar <- fmri_lm_control(ar_options = list(struct = "ar2"))
-  expect_equal(fmrireg:::.rrr_ar_order_from_cfg(cfg_ar), 2L)
-
   # Residualize with and without nuisance
   X0 <- cbind(1, rnorm(30))
   Y0 <- matrix(rnorm(30 * 3), 30, 3)

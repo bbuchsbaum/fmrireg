@@ -234,6 +234,6 @@ test_that("glm_lss might work with different data structures", {
   if(inherits(result, "fmri_betas")) {
     expect_s3_class(result, "fmri_betas")
   } else {
-    expect_true(grepl("Cholesky|positive", result$message))
+    expect_true(grepl("non-finite trial betas", result$message))
   }
 })

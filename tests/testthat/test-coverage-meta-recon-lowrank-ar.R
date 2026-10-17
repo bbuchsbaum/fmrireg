@@ -116,7 +116,7 @@ test_that(".run_lowrank_engine global AR srht/gaussian/countsketch succeed", {
   for (method in c("srht", "gaussian", "countsketch")) {
     fit <- fmrireg:::.run_lowrank_engine(
       fm, dset,
-      lowrank = list(time_sketch = list(method = method, m = 20L)),
+      args = list(lowrank = list(time_sketch = list(method = method, m = 20L))),
       cfg = cfg
     )
     expect_s3_class(fit, "fmri_lm")
@@ -126,7 +126,7 @@ test_that(".run_lowrank_engine global AR srht/gaussian/countsketch succeed", {
   cfg2 <- fmri_lm_control(ar_options = list(struct = "arp", p = 2L))
   fit2 <- fmrireg:::.run_lowrank_engine(
     fm, dset,
-    lowrank = list(time_sketch = list(method = "gaussian", m = 18L)),
+    args = list(lowrank = list(time_sketch = list(method = "gaussian", m = 18L))),
     cfg = cfg2
   )
   expect_s3_class(fit2, "fmri_lm")
@@ -165,13 +165,13 @@ test_that(".run_lowrank_engine landmarks with spatial mem dataset", {
     fit <- tryCatch(
       fmrireg:::.run_lowrank_engine(
         fm, dset,
-        lowrank = list(
+        args = list(lowrank = list(
           time_sketch = list(method = method, m = 16L),
           landmarks = 3L,
           k_neighbors = 3L,
           kmeans_iter_max = 20L,
           kmeans_nstart = 1L
-        ),
+        )),
         cfg = cfg
       ),
       error = function(e) e

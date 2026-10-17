@@ -1,30 +1,13 @@
-#' Internal: run low-rank/sketched engine under fmri_lm
+#' Internal: preflight for the low-rank engine
+#'
+#' Model and control classes are checked by `.validate_engine_context()`.
 #' @keywords internal
 #' @noRd
-.preflight_lowrank_engine <- function(fm, dataset, lowrank, cfg) {
-  if (!inherits(fm, "fmri_model")) {
-    stop("latent_sketch engine requires an 'fmri_model' object", call. = FALSE)
-  }
+.preflight_lowrank_engine <- function(model, dataset, args, cfg) {
   if (is.null(dataset)) {
     stop("latent_sketch engine requires a dataset", call. = FALSE)
   }
-  if (!inherits(cfg, "fmri_lm_control")) {
-    stop("latent_sketch engine requires an 'fmri_lm_control' object", call. = FALSE)
-  }
-  
   invisible(TRUE)
-}
-
-#' Internal: plugin-compatible preflight for low-rank engine
-#' @keywords internal
-#' @noRd
-.preflight_lowrank_engine_plugin <- function(model, dataset, args, cfg) {
-  .preflight_lowrank_engine(
-    fm = model,
-    dataset = dataset,
-    lowrank = args$lowrank %||% list(),
-    cfg = cfg
-  )
 }
 
 #' Internal: map latent-space results back into voxel space
@@ -246,6 +229,7 @@
   if ("sigma" %in% names(bdata)) bdata$sigma <- list(sigma)
   bstats$data <- list(bdata)
 
+  weights <- .contrast_weight_lists(contrast_prep)
   contrasts <- if (length(contrast_prep$standard) > 0L) {
     # Every cluster raises the same non-estimable-contrast warning; emit each
     # distinct message once rather than once per cluster.
@@ -254,8 +238,7 @@
       J <- groups[[i]]
       fit_lm_contrasts_fast(
         B = B[, J, drop = FALSE], sigma2 = sigma2[J], XtXinv = cov_list[[i]],
-        conlist = lapply(contrast_prep$simple, `[[`, "weights"),
-        fconlist = lapply(contrast_prep$f, `[[`, "weights"),
+        conlist = weights$simple, fconlist = weights$f,
         df = dfres, ar_order = ar_order
       )
     }), warning = function(w) {
@@ -285,20 +268,14 @@
 #' computed as exact OLS (`.lowrank_exact_solve()`) and reports exact OLS quantities.
 #' @keywords internal
 #' @noRd
-.run_lowrank_engine <- function(fm, dataset, lowrank, cfg = NULL, ar_options = NULL) {
-  if (is.null(cfg)) {
-    cfg <- .fmri_lm_control_legacy(
-      estimation = estimation_spec("joint"), ar_options = ar_options
-    )
-  }
-  lowrank <- lowrank %||% list()
-  .preflight_lowrank_engine(fm, dataset, lowrank, cfg)
+.run_lowrank_engine <- function(model, dataset, args, cfg) {
+  lowrank <- args$lowrank %||% list()
 
   ar_opts <- cfg$ar %||% list()
   # Design (T x p)
-  X <- as.matrix(design_matrix(fm))
+  X <- as.matrix(design_matrix(model))
   Tlen <- nrow(X); p <- ncol(X)
-  run_indices <- .model_run_indices(fm, Tlen)
+  run_indices <- .model_run_indices(model, Tlen)
   censor <- resolve_censor(cfg, dataset = dataset, n_time = Tlen)
   varnames <- colnames(X)
 
@@ -321,16 +298,7 @@
 
   # --- AR prewhitening options ---
   by_cluster <- isTRUE(ar_opts$by_cluster)
-  ar_struct <- ar_opts$struct %||% "iid"
-  ar_order <- switch(as.character(ar_struct),
-                     "iid" = 0L,
-                     "ar1" = 1L,
-                     "ar2" = 2L,
-                     "ar3" = 3L,
-                     "ar4" = 4L,
-                     "arp" = as.integer(ar_opts$p %||% 0L),
-                     0L)
-  ar_order <- if (is.finite(ar_order)) ar_order else 0L
+  ar_order <- .target_ar_order(.normalize_ar_options(ar_opts)) %||% 0L
   exact_first <- isTRUE(ar_opts$exact_first)
   shrink_c0 <- as.integer(ar_opts$shrink_c0 %||% 100L)
   no_whiten <- ar_order <= 0L
@@ -455,28 +423,15 @@
 
   # Build fmri_lm-like result structure compatible with downstream code
   sigma <- sqrt(pmax(sigma2, 0))
-  contrast_prep <- prepare_fmri_lm_contrasts(fm)
+  contrast_prep <- prepare_fmri_lm_contrasts(model)
   if (is.null(grouped)) {
-    bstats <- beta_stats_matrix(
-      Betas = B,
-      XtXinv = cov_unscaled,
-      sigma = sigma,
-      dfres = dfres,
-      varnames = varnames,
-      ar_order = ar_order
+    stats <- .external_fmri_lm_stats(
+      B, cov_unscaled, sigma, sigma2, dfres, varnames,
+      .contrast_weight_lists(contrast_prep), ar_order = ar_order
     )
-    contrast_results <- if (length(contrast_prep$standard) > 0L) {
-      dplyr::bind_rows(
-        fit_lm_contrasts_fast(
-          B = B,
-          sigma2 = sigma2,
-          XtXinv = cov_unscaled,
-          conlist = lapply(contrast_prep$simple, `[[`, "weights"),
-          fconlist = lapply(contrast_prep$f, `[[`, "weights"),
-          df = dfres,
-          ar_order = ar_order
-        )
-      )
+    bstats <- stats$betas
+    contrast_results <- if (length(stats$contrasts) > 0L) {
+      dplyr::bind_rows(stats$contrasts)
     } else {
       empty_contrast_table()
     }
@@ -491,7 +446,7 @@
   }
 
   # Event/baseline indices for coef() methods
-  tmats <- term_matrices(fm)
+  tmats <- term_matrices(model)
   event_indices <- attr(tmats, "event_term_indices")
   baseline_indices <- attr(tmats, "baseline_term_indices")
   # `rss` is the residual sum of squares of the rows actually fitted: the
@@ -558,7 +513,7 @@
 
   ret <- list(
     result = result,
-    model = fm,
+    model = model,
     strategy = "sketch",
     bcons = contrast_prep$processed,
     dataset = dataset,
@@ -573,17 +528,3 @@
   attr(ret, "config") <- cfg
   ret
 }
-
-
-#' Internal: plugin-compatible fit for low-rank engine
-#' @keywords internal
-#' @noRd
-.fit_lowrank_engine_plugin <- function(model, dataset, args, cfg) {
-  .run_lowrank_engine(
-    fm = model,
-    dataset = dataset,
-    lowrank = args$lowrank %||% list(),
-    cfg = cfg
-  )
-}
-

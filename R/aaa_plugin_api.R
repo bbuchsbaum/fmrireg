@@ -27,13 +27,26 @@ register_engine <- function(name, fit, preflight = NULL, capabilities = list()) 
   if (!is.null(preflight) && !is.function(preflight)) {
     stop("`preflight` must be NULL or a function", call. = FALSE)
   }
-  if (is.null(capabilities)) {
-    capabilities <- list()
-  }
+  .register_engine_entry(name, fit, preflight, capabilities)
+}
+
+#' Internal: store an engine registration
+#'
+#' Built-in engines also record their `source`, user-facing `aliases` and
+#' dispatch `strategy`; plugins registered through [register_engine()] get the
+#' plugin defaults.
+#' @keywords internal
+#' @noRd
+.register_engine_entry <- function(name, fit, preflight = NULL,
+                                   capabilities = list(), source = "plugin",
+                                   aliases = character(), strategy = "engine") {
   .fmrireg_engine_registry[[name]] <- list(
     fit = fit,
     preflight = preflight,
-    capabilities = capabilities
+    capabilities = capabilities %||% list(),
+    source = source,
+    aliases = aliases,
+    strategy = strategy
   )
   invisible(TRUE)
 }
@@ -47,30 +60,12 @@ get_engine <- function(name) {
 }
 
 #' @keywords internal
-.builtin_engine_aliases <- function(name) {
-  if (identical(name, "latent_sketch")) {
-    "sketch"
-  } else {
-    character()
-  }
-}
-
-#' @keywords internal
-.builtin_engine_source <- function(name) {
-  if (name %in% c("latent_sketch", "rrr_gls")) {
-    "builtin"
-  } else {
-    "plugin"
-  }
-}
-
-#' @keywords internal
 .new_engine_spec <- function(name, registration, include_functions = FALSE) {
   spec <- list(
     name = name,
-    source = .builtin_engine_source(name),
-    aliases = .builtin_engine_aliases(name),
-    strategy = if (identical(name, "latent_sketch")) "sketch" else "engine",
+    source = registration$source %||% "plugin",
+    aliases = registration$aliases %||% character(),
+    strategy = registration$strategy %||% "engine",
     capabilities = .normalize_engine_capabilities(registration$capabilities),
     has_preflight = is.function(registration$preflight)
   )
@@ -670,74 +665,18 @@ fit_glm_on_transformed_series <- function(model, Y, cfg = NULL, dataset = NULL,
   )
 
   contrast_prep <- prepare_fmri_lm_contrasts(model)
-  processed_conlist <- contrast_prep$processed
-
-  tmats <- term_matrices(model)
-  event_indices <- attr(tmats, "event_term_indices")
-  baseline_indices <- attr(tmats, "baseline_term_indices")
-  vnames <- attr(tmats, "varnames")
 
   proj <- .fast_preproject(X)
   ctx <- glm_context(X = X, Y = Y, proj = proj)
   fit <- solve_glm_core(ctx)
 
-  sigma_vec <- sqrt(fit$sigma2)
-  dfres <- proj$dfres
-
-  bstats <- beta_stats_matrix(fit$betas, proj$XtXinv, sigma_vec, dfres, vnames)
-
-  simple_conlist <- contrast_prep$simple
-  fconlist <- contrast_prep$f
-  simple_weights <- lapply(simple_conlist, `[[`, "weights")
-  if (length(simple_weights)) {
-    names(simple_weights) <- names(simple_conlist)
-  }
-  fcon_weights <- lapply(fconlist, `[[`, "weights")
-  if (length(fcon_weights)) {
-    names(fcon_weights) <- names(fconlist)
-  }
-
-  contrast_results <- fit_lm_contrasts_fast(
-    fit$betas,
-    fit$sigma2,
-    proj$XtXinv,
-    simple_weights,
-    fcon_weights,
-    dfres
+  .new_external_fmri_lm(
+    model, contrast_prep,
+    betas = fit$betas, XtXinv = proj$XtXinv, sigma2 = fit$sigma2,
+    dfres = proj$dfres, rss = fit$rss, resvar = fit$rss / proj$dfres,
+    ar_coef = NULL, cfg = cfg, dataset = dataset,
+    strategy = strategy, engine = engine
   )
-
-  combined_contrasts <- if (length(contrast_results) > 0L) {
-    dplyr::bind_rows(contrast_results)
-  } else {
-    empty_contrast_table()
-  }
-
-  result <- list(
-    contrasts = combined_contrasts,
-    betas = bstats,
-    event_indices = event_indices,
-    baseline_indices = baseline_indices,
-    cov.unscaled = proj$XtXinv,
-    sigma = sigma_vec,
-    rss = fit$rss,
-    rdf = dfres,
-    resvar = fit$rss / dfres,
-    ar_coef = NULL
-  )
-
-  ret <- list(
-    result = result,
-    model = model,
-    strategy = strategy,
-    bcons = processed_conlist,
-    dataset = dataset,
-    ar_coef = result$ar_coef
-  )
-  class(ret) <- "fmri_lm"
-  ret <- .fmri_lm_attach_config_metadata(ret, requested_cfg = cfg, executed_cfg = cfg)
-  attr(ret, "strategy") <- strategy
-  attr(ret, "engine") <- engine
-  ret
 }
 
 #' Fit GLM with full config (AR/robust) on a transformed series
@@ -774,76 +713,19 @@ fit_glm_with_config <- function(model, Y, cfg = NULL, dataset = NULL,
   )
 
   contrast_prep <- prepare_fmri_lm_contrasts(model)
-  processed_conlist <- contrast_prep$processed
-
-  tmats <- term_matrices(model)
-  event_indices <- attr(tmats, "event_term_indices")
-  baseline_indices <- attr(tmats, "baseline_term_indices")
-  vnames <- attr(tmats, "varnames")
-
-  # Derive run indices from sampling frame when available
-  run_indices <- NULL
-  sframe <- tryCatch(model$event_model$sampling_frame, error = function(e) NULL)
-  if (!is.null(sframe)) {
-    runs <- tryCatch(fmrihrf::blockids(sframe), error = function(e) NULL)
-    if (is.numeric(runs) && length(runs) == nrow(X)) {
-      split_idx <- split(seq_len(nrow(X)), runs)
-      run_indices <- lapply(split_idx, as.integer)
-    }
-  }
+  run_indices <- .model_run_indices(model, nrow(X))
 
   fit <- solve_integrated_glm(X, Y, cfg, run_indices = run_indices)
 
-  sigma_vec <- sqrt(fit$sigma2)
   dfres <- fit$dfres %||% (nrow(X) - ncol(X))
-  XtXinv <- fit$XtXinv %||% .fast_preproject(X)$XtXinv
-
-  bstats <- beta_stats_matrix(fit$betas, XtXinv, sigma_vec, dfres, vnames)
-
-  simple_conlist <- contrast_prep$simple
-  fconlist <- contrast_prep$f
-  simple_weights <- lapply(simple_conlist, `[[`, "weights")
-  if (length(simple_weights)) names(simple_weights) <- names(simple_conlist)
-  fcon_weights <- lapply(fconlist, `[[`, "weights")
-  if (length(fcon_weights)) names(fcon_weights) <- names(fconlist)
-
-  contrast_results <- fit_lm_contrasts_fast(
-    fit$betas,
-    fit$sigma2,
-    XtXinv,
-    simple_weights,
-    fcon_weights,
-    dfres
+  rss <- fit$rss %||% (fit$sigma2 * dfres)
+  .new_external_fmri_lm(
+    model, contrast_prep,
+    betas = fit$betas, XtXinv = fit$XtXinv %||% .fast_preproject(X)$XtXinv,
+    sigma2 = fit$sigma2, dfres = dfres, rss = rss, resvar = rss / dfres,
+    ar_coef = fit$ar_coef %||% NULL, cfg = cfg, dataset = dataset,
+    strategy = strategy, engine = engine
   )
-
-  combined_contrasts <- if (length(contrast_results) > 0L) dplyr::bind_rows(contrast_results) else empty_contrast_table()
-
-  result <- list(
-    contrasts = combined_contrasts,
-    betas = bstats,
-    event_indices = event_indices,
-    baseline_indices = baseline_indices,
-    cov.unscaled = XtXinv,
-    sigma = sigma_vec,
-    rss = fit$rss %||% (fit$sigma2 * dfres),
-    rdf = dfres,
-    resvar = (fit$rss %||% (fit$sigma2 * dfres)) / dfres,
-    ar_coef = fit$ar_coef %||% NULL
-  )
-
-  ret <- list(
-    result = result,
-    model = model,
-    strategy = strategy,
-    bcons = processed_conlist,
-    dataset = dataset,
-    ar_coef = result$ar_coef
-  )
-  class(ret) <- "fmri_lm"
-  ret <- .fmri_lm_attach_config_metadata(ret, requested_cfg = cfg, executed_cfg = cfg)
-  attr(ret, "strategy") <- strategy
-  attr(ret, "engine") <- engine
-  ret
 }
 
 #' Fit GLM from sufficient statistics
@@ -881,41 +763,101 @@ fit_glm_from_suffstats <- function(model, XtX, XtS, StS, df,
   betas <- XtXinv %*% XtS
   SSE <- StS - colSums(betas * XtS)
   sigma2 <- pmax(SSE / df, .Machine$double.eps)
-  sigma_vec <- sqrt(sigma2)
 
   contrast_prep <- prepare_fmri_lm_contrasts(model)
-  processed_conlist <- contrast_prep$processed
-  tmats <- term_matrices(model)
-  event_indices <- attr(tmats, "event_term_indices")
-  baseline_indices <- attr(tmats, "baseline_term_indices")
-  vnames <- attr(tmats, "varnames")
-
-  bstats <- beta_stats_matrix(betas, XtXinv, sigma_vec, df, vnames)
-  simple_conlist <- contrast_prep$simple
-  fconlist <- contrast_prep$f
-  simple_weights <- lapply(simple_conlist, `[[`, "weights"); if (length(simple_weights)) names(simple_weights) <- names(simple_conlist)
-  fcon_weights <- lapply(fconlist, `[[`, "weights"); if (length(fcon_weights)) names(fcon_weights) <- names(fconlist)
-  contrast_results <- fit_lm_contrasts_fast(betas, sigma2, XtXinv, simple_weights, fcon_weights, df)
-  combined_contrasts <- if (length(contrast_results) > 0L) dplyr::bind_rows(contrast_results) else empty_contrast_table()
-
-  result <- list(
-    contrasts = combined_contrasts,
-    betas = bstats,
-    event_indices = event_indices,
-    baseline_indices = baseline_indices,
-    cov.unscaled = XtXinv,
-    sigma = sigma_vec,
-    rss = SSE,
-    rdf = df,
-    resvar = SSE / df,
-    ar_coef = NULL
-  )
   .validate_external_response_dataset(
     dataset,
     expected = c(nrow(design_matrix(model)), V),
     context = "fit_glm_from_suffstats()"
   )
-  ret <- list(result = result, model = model, strategy = strategy, bcons = processed_conlist, dataset = dataset, ar_coef = result$ar_coef)
+  .new_external_fmri_lm(
+    model, contrast_prep,
+    betas = betas, XtXinv = XtXinv, sigma2 = sigma2, dfres = df,
+    rss = SSE, resvar = SSE / df, ar_coef = NULL, cfg = cfg,
+    dataset = dataset, strategy = strategy, engine = engine
+  )
+}
+
+#' Internal: t- and F-contrast weight lists from prepared contrasts
+#'
+#' @param contrast_prep Output of [prepare_fmri_lm_contrasts()].
+#' @param names_from `"key"` keeps the `contrast_weights()` keys (for example
+#'   `"condition#AvB"`, the engine convention); `"name"` uses each contrast's
+#'   own `name` (`"AvB"`, the convention of the built-in fitters).
+#' @return `list(simple = , f = )`, each a named list of weight matrices
+#'   carrying their `colind` attribute.
+#' @keywords internal
+#' @noRd
+.contrast_weight_lists <- function(contrast_prep, names_from = c("key", "name")) {
+  names_from <- match.arg(names_from)
+  pick <- function(cons) {
+    w <- lapply(cons, `[[`, "weights")
+    if (length(w) && identical(names_from, "name")) {
+      names(w) <- vapply(cons, `[[`, character(1), "name")
+    }
+    w
+  }
+  list(simple = pick(contrast_prep$simple), f = pick(contrast_prep$f))
+}
+
+#' Internal: beta and contrast statistics for a fitted coefficient matrix
+#'
+#' @param weights Output of [.contrast_weight_lists()].
+#' @return `list(betas = <beta_stats_matrix() tibble>, contrasts = <list of
+#'   contrast tibbles from fit_lm_contrasts_fast()>)`.
+#' @keywords internal
+#' @noRd
+.external_fmri_lm_stats <- function(betas, XtXinv, sigma, sigma2, dfres,
+                                    varnames, weights, ar_order = 0) {
+  list(
+    betas = beta_stats_matrix(betas, XtXinv, sigma, dfres, varnames,
+                              ar_order = ar_order),
+    contrasts = fit_lm_contrasts_fast(betas, sigma2, XtXinv, weights$simple,
+                                      weights$f, dfres, ar_order = ar_order)
+  )
+}
+
+#' Internal: package a fit made outside the built-in fitters as `fmri_lm`
+#'
+#' The single result packager behind [fit_glm_on_transformed_series()],
+#' [fit_glm_with_config()] and [fit_glm_from_suffstats()].
+#' @keywords internal
+#' @noRd
+.new_external_fmri_lm <- function(model, contrast_prep, betas, XtXinv, sigma2,
+                                  dfres, rss, resvar, ar_coef, cfg, dataset,
+                                  strategy, engine) {
+  tmats <- term_matrices(model)
+  sigma <- sqrt(sigma2)
+  stats <- .external_fmri_lm_stats(
+    betas, XtXinv, sigma, sigma2, dfres, attr(tmats, "varnames"),
+    .contrast_weight_lists(contrast_prep)
+  )
+
+  result <- list(
+    contrasts = if (length(stats$contrasts) > 0L) {
+      dplyr::bind_rows(stats$contrasts)
+    } else {
+      empty_contrast_table()
+    },
+    betas = stats$betas,
+    event_indices = attr(tmats, "event_term_indices"),
+    baseline_indices = attr(tmats, "baseline_term_indices"),
+    cov.unscaled = XtXinv,
+    sigma = sigma,
+    rss = rss,
+    rdf = dfres,
+    resvar = resvar,
+    ar_coef = ar_coef
+  )
+
+  ret <- list(
+    result = result,
+    model = model,
+    strategy = strategy,
+    bcons = contrast_prep$processed,
+    dataset = dataset,
+    ar_coef = result$ar_coef
+  )
   class(ret) <- "fmri_lm"
   ret <- .fmri_lm_attach_config_metadata(ret, requested_cfg = cfg, executed_cfg = cfg)
   attr(ret, "strategy") <- strategy

@@ -33,21 +33,21 @@ test_that(".run_lowrank_engine succeeds for gaussian/srht/countsketch (IID)", {
 
   fit_g <- fmrireg:::.run_lowrank_engine(
     fx$model, fx$dataset,
-    lowrank = list(time_sketch = list(method = "gaussian", m = 24L)),
+    args = list(lowrank = list(time_sketch = list(method = "gaussian", m = 24L))),
     cfg = fx$cfg
   )
   expect_lowrank_fit(fit_g)
 
   fit_s <- fmrireg:::.run_lowrank_engine(
     fx$model, fx$dataset,
-    lowrank = list(time_sketch = list(method = "srht", m = 24L)),
+    args = list(lowrank = list(time_sketch = list(method = "srht", m = 24L))),
     cfg = fx$cfg
   )
   expect_lowrank_fit(fit_s)
 
   fit_c <- fmrireg:::.run_lowrank_engine(
     fx$model, fx$dataset,
-    lowrank = list(time_sketch = list(method = "countsketch", m = 24L)),
+    args = list(lowrank = list(time_sketch = list(method = "countsketch", m = 24L))),
     cfg = fx$cfg
   )
   expect_lowrank_fit(fit_c)
@@ -57,7 +57,7 @@ test_that(".run_lowrank_engine ihs sketch path succeeds without landmarks", {
   fx <- make_lowrank_fixture(n = 70L, V = 8L, seed = 21)
   fit <- fmrireg:::.run_lowrank_engine(
     fx$model, fx$dataset,
-    lowrank = list(time_sketch = list(method = "ihs", m = 20L, iters = 2L, tol = 0)),
+    args = list(lowrank = list(time_sketch = list(method = "ihs", m = 20L, iters = 2L, tol = 0))),
     cfg = fx$cfg
   )
   expect_lowrank_fit(fit)
@@ -69,18 +69,18 @@ test_that(".run_lowrank_engine global AR whitening path (ar1) succeeds", {
   cfg <- fmri_lm_control(ar_options = list(struct = "ar1"))
   fit <- fmrireg:::.run_lowrank_engine(
     fx$model, fx$dataset,
-    lowrank = list(time_sketch = list(method = "gaussian", m = 24L)),
+    args = list(lowrank = list(time_sketch = list(method = "gaussian", m = 24L))),
     cfg = cfg
   )
   expect_lowrank_fit(fit)
   expect_true(!is.null(fit$ar_coef) || !is.null(fit$result$ar_coef))
 })
 
-test_that(".fit_lowrank_engine_plugin works", {
+test_that(".run_lowrank_engine works with plugin-style args", {
   fx <- make_lowrank_fixture(n = 60L, V = 6L, seed = 25)
   low <- list(time_sketch = list(method = "gaussian", m = 16L))
 
-  fit_plugin <- fmrireg:::.fit_lowrank_engine_plugin(
+  fit_plugin <- fmrireg:::.run_lowrank_engine(
     fx$model, fx$dataset,
     args = list(lowrank = low),
     cfg = fx$cfg
