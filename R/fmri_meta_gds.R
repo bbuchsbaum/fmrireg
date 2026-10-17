@@ -12,9 +12,6 @@
                           n_threads = getOption("fmrireg.num_threads", 0),
                           verbose = TRUE) {
 
-  # Ensure our fmrigds registrations are available at first use
-  try(.ensure_fmrigds_registered(), silent = TRUE)
-
   method  <- .meta_resolve_method(match.arg(method))
   robust  <- match.arg(robust)
   weights <- match.arg(weights)

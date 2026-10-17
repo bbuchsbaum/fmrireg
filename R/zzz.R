@@ -14,7 +14,9 @@
     }, silent = TRUE)
   }
   
-  # fmrigds bridge registrations happen via fmrigds .onLoad when available
+  # Expose fmrireg's spatial FDR to fmrigds pipelines as the post-hoc
+  # "fmrireg:fdr:spatial". fmrigds's own reducers/post-hocs are never replaced.
+  try(.register_fmrireg_posthoc(), silent = TRUE)
 
   if (exists(".register_builtin_engines", mode = "function")) {
     try(.register_builtin_engines(), silent = TRUE)

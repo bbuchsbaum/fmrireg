@@ -22,9 +22,6 @@ fmri_ttest.group_data_gds <- function(gd,
                            weights_custom = NULL,
                            combine = NULL) {
 
-  # Ensure our fmrigds registrations are available at first use
-  try(.ensure_fmrigds_registered(), silent = TRUE)
-
   engine <- match.arg(engine)
   sign   <- match.arg(sign)
   weights <- match.arg(weights)
