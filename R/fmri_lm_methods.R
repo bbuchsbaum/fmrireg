@@ -385,97 +385,123 @@ tidy.fmri_lm <- function(x, type = c("estimates", "contrasts"), ...) {
   stats_tbl
 }
 
+#' Print fitted fMRI model objects
+#'
+#' Summarises a fitted model: estimation scope, design size, inference
+#' degrees of freedom, contrasts and noise/robust configuration.
+#'
+#' @param x An \code{fmri_lm}, \code{fmri_rlm} or \code{fmri_model} object.
+#' @param ... Additional arguments (unused).
+#' @rdname print
 #' @method print fmri_lm
 #' @export
 print.fmri_lm <- function(x, ...) {
-  cli::cli_h1("fMRI Linear Model Results")
-  
-  # Model info
-  cli::cli_h2("Model Information")
-  cli::cli_ul()
-  cli::cli_li("Dataset: {.field {class(x$dataset)[1]}}")
-  scope <- attr(x, "requested_control")$estimation$scope %||%
-    attr(x, "config")$estimation$scope %||% attr(x, "strategy")
-  cli::cli_li("Estimation scope: {.field {scope}}")
-  
-  # Design info
-  n_events <- length(x$result$event_indices)
-  n_baseline <- length(x$result$baseline_indices)
-  cli::cli_li("Parameters: {.val {n_events}} event + {.val {n_baseline}} baseline")
-  
-  # Data dimensions
-  beta_mat <- x$result$betas$data[[1]]$estimate[[1]]
-  n_voxels <- nrow(beta_mat)
-  cli::cli_li("Voxels analyzed: {.val {n_voxels}}")
-  
-  # Degrees of freedom
-  df_values <- as.numeric(x$result$df$inference %||% x$result$betas$df.residual[1])
-  df_values <- df_values[is.finite(df_values)]
-  if (length(df_values)) {
-    df_label <- if (length(unique(df_values)) == 1L) {
-      format(df_values[[1L]], digits = 5L)
+  res <- x[["result"]]
+  cfg <- attr(x, "config")
+
+  # Render with cli but write to stdout, like any print method, so the
+  # summary can be captured with capture.output()/sink().
+  out <- cli::cli_fmt({
+    cli::cli_h1("fMRI Linear Model Results")
+
+    # Model info
+    cli::cli_h2("Model Information")
+    cli::cli_ul()
+    form <- x[["model"]][["event_model"]][["model_spec"]][["formula_or_list"]]
+    if (inherits(form, "formula")) {
+      cli::cli_li("Formula: {.code {paste(deparse(form, width.cutoff = 500L), collapse = ' ')}}")
+    }
+    cli::cli_li("Dataset: {.field {class(x[['dataset']])[1]}}")
+    scope <- attr(x, "requested_control")$estimation$scope %||%
+      cfg$estimation$scope %||% attr(x, "strategy")
+    cli::cli_li("Estimation scope: {.field {scope}}")
+    engine <- attr(x, "engine")
+    if (!is.null(engine)) {
+      cli::cli_li("Engine: {.field {engine}}")
+    }
+
+    # Design info
+    n_events <- length(res[["event_indices"]])
+    n_baseline <- length(res[["baseline_indices"]])
+    cli::cli_li("Parameters: {n_events} event + {n_baseline} baseline")
+
+    # Data dimensions
+    beta_mat <- res[["betas"]][["data"]][[1]][["estimate"]][[1]]
+    if (inherits(x, "fmri_latent_lm")) {
+      cli::cli_li("Latent components analyzed: {nrow(beta_mat)}")
     } else {
-      sprintf("%s to %s", format(min(df_values), digits = 5L),
-              format(max(df_values), digits = 5L))
+      cli::cli_li("Voxels analyzed: {nrow(beta_mat)}")
     }
-    df_method <- x$result$df$method %||% "residual"
-    cli::cli_li("Inference df ({.field {df_method}}): {.val {df_label}}")
-  }
-  cli::cli_end()
-  
-  # Contrasts info if available
-  if (!is.null(x$result$contrasts) && nrow(x$result$contrasts) > 0) {
-    cli::cli_h2("Contrasts")
-    cli::cli_ul()
-    
-    # Simple contrasts
-    simple_cons <- x$result$contrasts %>% dplyr::filter(type == "contrast")
-    if (nrow(simple_cons) > 0) {
-      cli::cli_li("Simple contrasts: {.val {nrow(simple_cons)}}")
-      con_names <- paste(simple_cons$name, collapse = ", ")
-      cli::cli_text("  {.emph {con_names}}")
-    }
-    
-    # F contrasts  
-    f_cons <- x$result$contrasts %>% dplyr::filter(type == "Fcontrast")
-    if (nrow(f_cons) > 0) {
-      cli::cli_li("F-contrasts: {.val {nrow(f_cons)}}")
-      fcon_names <- paste(f_cons$name, collapse = ", ")
-      cli::cli_text("  {.emph {fcon_names}}")
-    }
-    cli::cli_end()
-  }
-  
-  # Config info if available
-  if (!is.null(attr(x, "config"))) {
-    cfg <- attr(x, "config")
-    cli::cli_h2("Model Configuration")
-    cli::cli_ul()
-    
-    # AR info
-    noise <- cfg$noise %||% cfg$ar
-    if (noise$struct != "iid") {
-      cli::cli_li("AR structure: {.field {noise$struct}}")
-      cli::cli_li("Noise pooling: {.field {noise$pooling %||% 'run'}}")
-      if (noise$voxelwise) {
-        cli::cli_li("AR estimation: {.emph voxelwise}")
+
+    # Degrees of freedom actually used for inference
+    df_values <- as.numeric(res[["df"]][["inference"]] %||%
+                              res[["betas"]][["df.residual"]][1])
+    df_values <- df_values[is.finite(df_values)]
+    if (length(df_values)) {
+      df_label <- if (length(unique(df_values)) == 1L) {
+        format(df_values[[1L]], digits = 5L)
       } else {
-        cli::cli_li("Shared AR estimator: {.field {noise$shared_estimator %||% 'pooled_acvf'}}")
+        sprintf("%s to %s", format(min(df_values), digits = 5L),
+                format(max(df_values), digits = 5L))
       }
+      df_method <- res[["df"]][["method"]] %||% "residual"
+      cli::cli_li("Inference df ({df_method}): {df_label}")
     }
-    
-    # Robust info
-    if (.fmri_lm_robust_enabled(cfg$robust)) {
-      cli::cli_li("Robust method: {.field {cfg$robust$type}}")
-      cli::cli_li("Robust tuning: {.val {cfg$robust$c_tukey}}")
-    }
-    cli::cli_li("Variance: {.field {cfg$variance$method}}")
-    cli::cli_li("Reference df: {.field {cfg$variance$df}}")
     cli::cli_end()
-  }
-  
-  cli::cli_rule()
-  cli::cli_text("{.emph Use coef(), stats(), or standard_error() to extract results}")
+
+    # Contrasts info if available
+    cons <- res[["contrasts"]]
+    if (!is.null(cons) && nrow(cons) > 0) {
+      cli::cli_h2("Contrasts")
+      cli::cli_ul()
+      simple_names <- cons$name[cons$type == "contrast"]
+      if (length(simple_names) > 0) {
+        cli::cli_li("Simple contrasts ({length(simple_names)}): {.emph {paste(simple_names, collapse = ', ')}}")
+      }
+      f_names <- cons$name[cons$type == "Fcontrast"]
+      if (length(f_names) > 0) {
+        cli::cli_li("F-contrasts ({length(f_names)}): {.emph {paste(f_names, collapse = ', ')}}")
+      }
+      cli::cli_end()
+    }
+
+    # Config info if available
+    if (!is.null(cfg)) {
+      cli::cli_h2("Model Configuration")
+      cli::cli_ul()
+
+      # AR info
+      noise <- cfg$noise %||% cfg$ar
+      if (!is.null(noise$struct) && !identical(noise$struct, "iid")) {
+        cli::cli_li("AR structure: {.field {noise$struct}}")
+        cli::cli_li("Noise pooling: {.field {noise$pooling %||% 'run'}}")
+        if (isTRUE(noise$voxelwise)) {
+          cli::cli_li("AR estimation: {.emph voxelwise}")
+        } else {
+          cli::cli_li("Shared AR estimator: {.field {noise$shared_estimator %||% 'pooled_acvf'}}")
+        }
+      }
+
+      # Robust info
+      if (.fmri_lm_robust_enabled(cfg$robust)) {
+        tuning <- if (identical(cfg$robust$type, "huber")) {
+          cfg$robust$k_huber
+        } else {
+          cfg$robust$c_tukey
+        }
+        cli::cli_li("Robust method: {.field {cfg$robust$type}} (tuning constant {tuning})")
+      }
+      if (!is.null(cfg$variance)) {
+        cli::cli_li("Variance: {.field {cfg$variance$method}}")
+        cli::cli_li("Reference df: {.field {cfg$variance$df}}")
+      }
+      cli::cli_end()
+    }
+
+    cli::cli_rule()
+    cli::cli_text("{.emph Use coef(), stats(), or standard_error() to extract results}")
+  })
+  cat(out, sep = "\n")
 
   invisible(x)
 }
