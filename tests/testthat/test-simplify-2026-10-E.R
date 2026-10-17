@@ -282,3 +282,13 @@ test_that("write_results with h5 + nifti computes each map and writes each sidec
   expect_identical(n_beta, 1L)
   expect_identical(n_stat, 6L)
 })
+
+test_that("voxel plots read the observed series of the requested voxel", {
+  dset <- .e_two_run_frame()
+  fit <- fmri_lm(onset ~ hrf(condition), block = ~run, dataset = dset)
+  Y <- as.matrix(fmrireg:::.dset_data_matrix(dset))
+  for (v in c(1L, 4L)) {
+    parts <- fmrireg:::.voxel_fit_parts(fit, v)
+    expect_identical(parts$y, as.numeric(Y[, v]))
+  }
+})
