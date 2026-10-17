@@ -44,9 +44,8 @@ test_that("longnames/shortnames/columns/nbasis/design_matrix.convolved_term", {
   expect_equal(blockids(emod), emod$blockids)
 })
 
-test_that("with_package errors when dependency missing; construct/design_env generics exist", {
+test_that("with_package errors when dependency missing; construct generic exists", {
   expect_error(fmrireg:::with_package("definitely_not_a_real_pkg_zzz"), "install")
-  expect_true(is.function(fmrireg:::design_env))
   expect_identical(fmrireg::construct, fmridesign::construct)
   expect_true(is.function(estimate_contrast))
   expect_true(is.function(chunkwise_lm))
@@ -68,32 +67,6 @@ test_that("effective df: the live implementation covers the residual cases", {
     resid_cov = 0.5^abs(outer(1:20, 1:20, "-"))
   )
   expect_true(is.finite(df_s) && df_s > 0 && df_s < 18)
-})
-
-test_that("multiresponse_rlm fits per-response robust models", {
-  skip_if_not_installed("robustbase")
-  set.seed(9)
-  n <- 40L
-  V <- 3L
-  X <- cbind(1, rnorm(n), rnorm(n))
-  colnames(X) <- c("(Intercept)", "A", "B")
-  Y <- X %*% matrix(c(0, 1, -0.5), 3, 1) %*% matrix(1, 1, V) + matrix(rnorm(n * V), n, V)
-  # Contaminate one voxel
-  Y[1:3, 1] <- Y[1:3, 1] + 20
-
-  data_env <- list2env(list(.y = Y, A = X[, 2], B = X[, 3]), parent = baseenv())
-  form <- .y ~ A + B
-  conlist <- list()
-
-  # Formula path (modmat = NULL) is the reliable lmrob route
-  res <- fmrireg:::multiresponse_rlm(form, data_env, conlist, colnames(X), fcon = NULL, modmat = NULL)
-  expect_true(is.list(res))
-  expect_true(!is.null(res$bstats))
-  expect_true(nrow(res$bstats) >= V)
-
-  data_env2 <- list2env(list(.y = Y[, 1:2, drop = FALSE], A = X[, 2], B = X[, 3]), parent = baseenv())
-  res2 <- fmrireg:::multiresponse_rlm(form, data_env2, conlist, colnames(X), fcon = NULL, modmat = NULL)
-  expect_true(nrow(res2$bstats) >= 2L)
 })
 
 test_that("fmri_rlm chunkwise strategy and bisquare psi", {

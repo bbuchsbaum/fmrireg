@@ -587,29 +587,3 @@
   )
 }
 
-#' Internal: dispatch fmri_lm low-rank/sketch engine
-#' @keywords internal
-#' @noRd
-fmri_lm_lowrank_dispatch <- function(formula_or_model, dataset, engine = NULL, lowrank = NULL,
-                                     block = NULL, baseline_model = NULL,
-                                     durations = 0, drop_empty = TRUE,
-                                     cfg = NULL, ar_options = NULL) {
-  if (is.null(engine)) return(NULL)
-  engine <- match.arg(engine, c("latent_sketch", "sketch"))
-  if (engine == "sketch") {
-    engine <- "latent_sketch"
-  }
-
-  # Build fmri_model reusing the standard path
-  fm <- if (inherits(formula_or_model, "fmri_model")) {
-    formula_or_model
-  } else {
-    create_fmri_model(formula_or_model,
-                      block = block,
-                      baseline_model = baseline_model,
-                      dataset = dataset,
-                      drop_empty = drop_empty,
-                      durations = durations)
-  }
-  .run_lowrank_engine(fm, dataset, lowrank, cfg = cfg, ar_options = ar_options)
-}

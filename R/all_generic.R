@@ -40,16 +40,6 @@ get_formula <- function(x, ...) UseMethod("get_formula")
 
 
 
-#' design_env
-#' 
-#' return regression design as a set of matrices stored in an environment
-#' 
-#' @param x the object
-#' @param ... extra args
-#' @keywords internal
-#' @noRd
-design_env <- function(x, ...) UseMethod("design_env")
-
 #' Contrast generic
 #'
 #' Provide a contrast generic that dispatches on the first argument.

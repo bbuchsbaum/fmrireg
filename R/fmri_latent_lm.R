@@ -248,13 +248,6 @@ chunkwise_lm_latent <- function(x, model, contrast_objects, nchunks, cfg,
 }
 
 
-#' @keywords internal
-#' @noRd
-tibble_to_neurovec <- function(dset, tab, mask) {
-  sp <- .fmri_dataset_mask_space(dset, "latent coefficient reconstruction")$space
-  neuroim2::SparseNeuroVec(as.matrix(tab), neuroim2::add_dim(sp, nrow(tab)), mask=mask)
-}
-
 #' @export
 coef.fmri_latent_lm <- function(object, type=c("estimates", "contrasts", "betas"), recon=FALSE, comp=0, ...) {
   type <- match.arg(type)

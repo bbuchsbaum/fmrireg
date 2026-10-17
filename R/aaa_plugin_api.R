@@ -377,12 +377,6 @@ resolve_basis <- function(name, ...) {
   ctor(...)
 }
 
-#' @keywords internal
-.fmrireg_resolve_basis <- function(name, ...) {
-  # Deprecated: kept for backward compatibility
-  resolve_basis(name, ...)
-}
-
 .fmrireg_replace_basis_expr <- function(expr, env) {
   if (!is.call(expr)) {
     return(expr)

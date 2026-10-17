@@ -26,14 +26,7 @@ test_that(".gds_coerce_matrix handles matrix/df/array/vector/null", {
   expect_true(is.matrix(out_bare) || is.atomic(out_bare))
 })
 
-test_that(".gds_terms/features helpers and safe assay fallbacks", {
-  expect_null(fmrireg:::.gds_terms_by_features(NULL))
-  expect_null(fmrireg:::.gds_features_by_terms(NULL))
-
-  m <- matrix(1:6, 2, 3, dimnames = list(c("t1", "t2"), c("f1", "f2", "f3")))
-  expect_equal(fmrireg:::.gds_terms_by_features(m), t(m))
-  expect_equal(fmrireg:::.gds_features_by_terms(m), m)
-
+test_that("safe assay fallbacks", {
   # Safe assay helpers return NULL/character(0) without crashing on non-gds
   expect_null(fmrireg:::.gds_safe_assay(NULL, "beta"))
   expect_equal(fmrireg:::.gds_safe_assay_names(NULL), character(0))

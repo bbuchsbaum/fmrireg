@@ -77,15 +77,6 @@ test_that("soft_projection auto/gcv/numeric and apply_soft_projection", {
   expect_true(is.list(cleaned))
   expect_equal(dim(cleaned$Y), dim(Y))
   expect_equal(dim(cleaned$X), dim(X))
-
-  # Pipeline helper with options
-  opts <- soft_subspace_options(
-    enabled = TRUE, nuisance_matrix = N, lambda = 0.25
-  )
-  pipe <- fmrireg:::.apply_soft_projection_pipeline(
-    Y, X, dataset = NULL, soft_opts = opts
-  )
-  expect_true(is.list(pipe) || is.matrix(pipe$Y) || !is.null(pipe))
 })
 
 test_that("legacy estimate_ar_parameters covers zero-var, NA, censor, Yule-Walker fallback", {

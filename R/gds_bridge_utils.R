@@ -32,18 +32,6 @@
   a
 }
 
-.gds_terms_by_features <- function(a) {
-  m <- .gds_coerce_matrix(a)
-  if (is.null(m)) return(NULL)
-  t(m)
-}
-
-.gds_features_by_terms <- function(a) {
-  m <- .gds_coerce_matrix(a)
-  if (is.null(m)) return(NULL)
-  m
-}
-
 .gds_safe_model_matrix <- function(gd, formula, fallback_n = NULL) {
   mm <- tryCatch(fmrigds::model_matrix(gd, formula), error = function(e) NULL)
   if (!is.null(mm)) return(mm)

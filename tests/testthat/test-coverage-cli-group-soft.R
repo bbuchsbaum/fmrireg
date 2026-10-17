@@ -76,33 +76,7 @@ test_that("install_cli rejects unknown commands and PATH messaging", {
   )
 })
 
-test_that("detect_group_data_format and legacy group_data accessors", {
-  expect_equal(fmrireg:::detect_group_data_format("a.h5"), "h5")
-  expect_equal(fmrireg:::detect_group_data_format("a.hdf5"), "h5")
-  expect_equal(fmrireg:::detect_group_data_format("a.nii.gz"), "nifti")
-  expect_equal(fmrireg:::detect_group_data_format("a.csv"), "csv")
-  expect_equal(
-    fmrireg:::detect_group_data_format(list(beta = "b.nii", se = "s.nii")),
-    "nifti"
-  )
-  expect_equal(
-    fmrireg:::detect_group_data_format(list(beta = "b.nii", var = "v.nii")),
-    "nifti"
-  )
-  expect_equal(fmrireg:::detect_group_data_format(data.frame(x = 1)), "csv")
-  # bare numeric vector is ambiguous -> error
-  expect_error(
-    fmrireg:::detect_group_data_format(1:3),
-    "Could not automatically detect"
-  )
-
-  # fmri_lm list detection
-  fx_etab <- data.frame(onset = c(5, 20), condition = factor(c("A", "B")), run = 1L)
-  Y <- matrix(rnorm(40 * 3), 40, 3)
-  dset <- matrix_frame(Y, TR = 1, run_length = 40, event_table = fx_etab)
-  fit <- fmri_lm(onset ~ hrf(condition), block = ~ run, dataset = dset)
-  expect_equal(fmrireg:::detect_group_data_format(list(fit)), "fmrilm")
-
+test_that("legacy group_data accessors", {
   # Synthetic legacy group_data object for print/summary/accessors
   gd <- structure(
     list(
@@ -225,16 +199,4 @@ test_that("soft subspace options, apply, and extract_nuisance_timeseries", {
     )
   )
 
-  # Pipeline path with precomputed nuisance matrix
-  pipe <- fmrireg:::.apply_soft_projection_pipeline(
-    Y, X, dset,
-    soft_subspace_options(enabled = TRUE, nuisance_matrix = N[, 1:5], lambda = 0.3)
-  )
-  expect_equal(dim(pipe$Y), dim(Y))
-  expect_true(inherits(pipe$projection, "soft_projection"))
-
-  pipe_off <- fmrireg:::.apply_soft_projection_pipeline(
-    Y, X, dset, soft_subspace_options(enabled = FALSE)
-  )
-  expect_identical(pipe_off$Y, Y)
 })

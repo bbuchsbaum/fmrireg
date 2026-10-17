@@ -115,40 +115,6 @@ test_that("Effective df computation follows standard formula", {
   expect_equal(df_conservative, max(df_multi_run - ar_order, 1), tolerance = 1e-10)
 })
 
-test_that("Sandwich variance is computed correctly without diag matrices", {
-  set.seed(321)
-  n <- 50
-  p <- 3
-  
-  X <- cbind(1, rnorm(n), rnorm(n))
-  true_beta <- c(1, 2, -1)
-  Y <- X %*% true_beta + rnorm(n, sd = 0.5)
-  
-  # Add heteroscedasticity
-  Y[1:10] <- Y[1:10] + rnorm(10, sd = 2)
-  
-  # Compute OLS
-  XtX <- crossprod(X)
-  XtXinv <- solve(XtX)
-  beta_ols <- XtXinv %*% crossprod(X, Y)
-  residuals <- Y - X %*% beta_ols
-  
-  # Test sandwich variance computation
-  sandwich_var <- calculate_sandwich_variance(X, residuals, XtXinv)
-  
-  # Check dimensions
-  expect_equal(dim(sandwich_var), c(p, p))
-  
-  # Check positive definiteness
-  eigenvals <- eigen(sandwich_var, only.values = TRUE)$values
-  expect_true(all(eigenvals > 0), 
-              "Sandwich variance should be positive definite")
-  
-  # Standard errors should be positive
-  se <- sqrt(diag(sandwich_var))
-  expect_true(all(se > 0), "Standard errors should be positive")
-})
-
 test_that("Robust effective df is sum(w) - rank", {
   # Review 2026-10 (D4): compute_robust_effective_df() (unreachable; it
   # returned the weighted hat trace, which is always p) was deleted. The live

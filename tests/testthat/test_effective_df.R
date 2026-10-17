@@ -66,34 +66,6 @@ test_that("calculate_effective_df handles edge cases", {
   expect_equal(df_partial, 20)
 })
 
-test_that("calculate_sandwich_variance works correctly", {
-  # Create simple regression scenario
-  n <- 100
-  p <- 3
-  X <- cbind(1, matrix(rnorm(n * (p-1)), n, p-1))
-  XtXinv <- solve(crossprod(X))
-  
-  # Homoscedastic case
-  resid_homo <- rnorm(n, sd = 1)
-  weights <- rep(1, n)
-  
-  var_homo <- fmrireg:::calculate_sandwich_variance(X, resid_homo, XtXinv, weights)
-  expect_equal(dim(var_homo), c(p, p))
-  expect_true(all(diag(var_homo) > 0))
-  
-  # Heteroscedastic case
-  resid_hetero <- rnorm(n, sd = seq(0.5, 2, length.out = n))
-  var_hetero <- fmrireg:::calculate_sandwich_variance(X, resid_hetero, XtXinv, weights)
-  
-  # Sandwich variance should differ from standard
-  expect_false(all(abs(var_homo - var_hetero) < 1e-10))
-  
-  # With robust weights
-  weights_robust <- runif(n, 0.5, 1)
-  var_robust <- fmrireg:::calculate_sandwich_variance(X, resid_homo, XtXinv, weights_robust)
-  expect_true(all(diag(var_robust) > 0))
-})
-
 test_that("effective df integrates with model fitting", {
   # Create test data
   n <- 50

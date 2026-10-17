@@ -98,8 +98,7 @@ test_that("spatial mask helpers normalize dims and recover space from backend", 
     class = c("matrix_dataset", "fmri_dataset")
   )
   # get_mask may fail; call lower-level helpers directly
-  sp <- fmrireg:::.fmri_try_space(mask)
-  expect_true(!is.null(sp))
+  sp <- neuroim2::space(mask)
   norm <- fmrireg:::.fmri_normalize_mask_space(sp, c(2, 2, 1), "unit-test")
   expect_equal(as.integer(dim(norm)[1:3]), c(2L, 2L, 1L))
 
@@ -113,8 +112,6 @@ test_that("spatial mask helpers normalize dims and recover space from backend", 
   dropped <- fmrireg:::.fmri_normalize_mask_space(sp4, c(2, 2, 1), "unit-test")
   expect_equal(length(dim(dropped)), 3L)
 
-  expect_null(fmrireg:::.fmri_try_space(NULL))
-  expect_null(fmrireg:::.fmri_try_space("path.nii"))
   # .fmri_mask_space_from_sources() walked dataset$backend/$mask/$source and
   # was deleted with the legacy dataset layer; it has no frame analogue.
 })

@@ -10,7 +10,6 @@ test_that(".fmri_lm_voxel_status covers finite/NA/Inf series", {
 
 test_that("fmri_lm with robust + AR1 covers combined strategy routing", {
   skip_if_not_installed("fmriAR")
-  skip_if_not_installed("robustbase")
   set.seed(321)
   n <- 50L
   etab <- data.frame(

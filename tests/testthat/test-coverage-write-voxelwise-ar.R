@@ -106,7 +106,6 @@ test_that("runwise_lm_voxelwise AR(1) path on multi-run matrix data", {
 
 test_that("process_run_ar_robust covers AR+robust run fitting", {
   skip_if_not_installed("fmriAR")
-  skip_if_not_installed("robustbase")
   set.seed(63)
   n <- 50L
   V <- 3L

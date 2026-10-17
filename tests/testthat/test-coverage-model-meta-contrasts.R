@@ -56,9 +56,6 @@ test_that("fmri_model accessors, print, plot, design_map, correlation_map", {
   dmap2 <- design_map(fmod, fill_midpoint = NULL, block_separators = FALSE)
   expect_s3_class(dmap2, "ggplot")
 
-  expect_error(fmrireg:::prediction_matrix(fmod), "not implemented")
-  expect_error(fmrireg:::design_env.fmri_model(fmod), "Not implemented")
-
   # create_fmri_model path with explicit and NULL baseline
   created <- create_fmri_model(
     onset ~ hrf(condition),
@@ -307,6 +304,4 @@ test_that("spatial mask helpers reject non-dataset inputs", {
     fmrireg:::.fmri_dataset_mask_space(list(), "test"),
     "fmri_frame"
   )
-  expect_null(fmrireg:::.fmri_try_space(NULL))
-  expect_null(fmrireg:::.fmri_try_space("path.nii"))
 })

@@ -1,19 +1,7 @@
 # S3 Methods for fmri_lm Objects
 # Methods for extracting results and information from fitted fmri_lm objects
 
-#' Reshape Coefficients
-#' 
-#' @keywords internal
-#' @noRd
-reshape_coef <- function(df, des, measure = "value") {
-  nrun <- length(levels(des$blockids))
-  run_order <- order(des$blockids)
-  ret <- matrix(t(as.matrix(df[, run_order, drop = FALSE])),
-                nrow = nrun, byrow = TRUE)
-  as.data.frame(ret)
-}
-
-## pull_stat_revised/pull_stat are defined in R/fmrilm.R
+## pull_stat is defined in R/fmrilm.R
 ## Remove duplicate definitions here to ensure a single source of truth.
 
 #' Extract Coefficients from an fmri_lm Fit

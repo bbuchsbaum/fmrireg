@@ -189,7 +189,7 @@ test_that("design_plot builds shiny app and validates term_name", {
   expect_error(design_plot(list()), "fmri_model")
 })
 
-test_that("mixed_solve_cpp and instantaneous_correlation_rcpp cover thin wrappers", {
+test_that("mixed_solve_cpp covers its thin wrapper", {
   set.seed(1)
   n <- 40
   y <- rnorm(n)
@@ -198,20 +198,4 @@ test_that("mixed_solve_cpp and instantaneous_correlation_rcpp cover thin wrapper
   out <- mixed_solve_cpp(y, Z = Z, X = X, SE = TRUE, return_Hinv = TRUE)
   expect_true(is.list(out))
   expect_true(all(c("Vu", "Ve", "beta") %in% names(out)))
-
-  x <- rnorm(50)
-  y2 <- 0.5 * x + rnorm(50, sd = 0.2)
-  rho <- instantaneous_correlation_rcpp(x, y2, tau_half = 5, fill = "zero")
-  expect_equal(length(rho), 50)
-  expect_true(any(is.finite(rho)))
-
-  rho_na <- instantaneous_correlation_rcpp(x, y2, eta = 0.2, offset = 2L, fill = "na")
-  expect_equal(length(rho_na), 50)
-
-  rho_last <- instantaneous_correlation_rcpp(x, y2, eta = 0.2, offset = -1L, fill = "last")
-  expect_equal(length(rho_last), 50)
-
-  expect_error(instantaneous_correlation_rcpp(x, y2[1:10], eta = 0.1))
-  expect_error(instantaneous_correlation_rcpp(x, y2))
-  expect_error(instantaneous_correlation_rcpp(x, y2, eta = -1))
 })

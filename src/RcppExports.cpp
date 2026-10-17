@@ -11,23 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// instantaneous_correlation_rcpp
-NumericVector instantaneous_correlation_rcpp(NumericVector x, NumericVector y, double eta, double tau_half, int offset, int warmup, std::string fill);
-RcppExport SEXP _fmrireg_instantaneous_correlation_rcpp(SEXP xSEXP, SEXP ySEXP, SEXP etaSEXP, SEXP tau_halfSEXP, SEXP offsetSEXP, SEXP warmupSEXP, SEXP fillSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
-    Rcpp::traits::input_parameter< double >::type eta(etaSEXP);
-    Rcpp::traits::input_parameter< double >::type tau_half(tau_halfSEXP);
-    Rcpp::traits::input_parameter< int >::type offset(offsetSEXP);
-    Rcpp::traits::input_parameter< int >::type warmup(warmupSEXP);
-    Rcpp::traits::input_parameter< std::string >::type fill(fillSEXP);
-    rcpp_result_gen = Rcpp::wrap(instantaneous_correlation_rcpp(x, y, eta, tau_half, offset, warmup, fill));
-    return rcpp_result_gen;
-END_RCPP
-}
 // meta_fit_cpp
 Rcpp::List meta_fit_cpp(const arma::mat& Y, const arma::mat& V, const arma::mat& X, const std::string method, const std::string robust, const double huber_c, const int robust_iter, const int n_threads);
 RcppExport SEXP _fmrireg_meta_fit_cpp(SEXP YSEXP, SEXP VSEXP, SEXP XSEXP, SEXP methodSEXP, SEXP robustSEXP, SEXP huber_cSEXP, SEXP robust_iterSEXP, SEXP n_threadsSEXP) {
@@ -225,7 +208,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_fmrireg_instantaneous_correlation_rcpp", (DL_FUNC) &_fmrireg_instantaneous_correlation_rcpp, 7},
     {"_fmrireg_meta_fit_cpp", (DL_FUNC) &_fmrireg_meta_fit_cpp, 8},
     {"_fmrireg_meta_fit_contrasts_cpp", (DL_FUNC) &_fmrireg_meta_fit_contrasts_cpp, 9},
     {"_fmrireg_meta_fit_cov_cpp", (DL_FUNC) &_fmrireg_meta_fit_cov_cpp, 8},

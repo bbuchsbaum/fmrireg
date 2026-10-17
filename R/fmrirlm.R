@@ -68,57 +68,6 @@ fmri_rlm <- function(formula, block, baseline_model = NULL, dataset,
   res
 }
 
-# Note: chunkwise_rlm is no longer needed with the new interface
-# The fmri_lm function handles robust fitting directly
-
-# Note: runwise_rlm is no longer needed with the new interface
-# The fmri_lm function handles robust fitting directly
-
-#' Fit a multiresponse robust linear model
-#'
-#' This function fits a robust linear model to multiple responses in an fMRI dataset.
-#' Unlike the standard multiresponse_lm, this processes one response at a time due
-#' to limitations of robust regression implementations.
-#'
-#' @param form The formula used to define the linear model.
-#' @param data_env The environment containing the data to be used in the linear model.
-#' @param conlist The list of contrasts used in the analysis.
-#' @param vnames The names of the variables used in the linear model.
-#' @param fcon The F-contrasts used in the analysis.
-#' @param modmat The model matrix (default is NULL, which will calculate the model matrix using the formula).
-#' @return A list containing the results from the multiresponse robust linear model analysis.
-#' @keywords internal
-#' @noRd
-multiresponse_rlm <- function(form, data_env, conlist, vnames, fcon, modmat = NULL) {
-  with_package("robustbase")
-  Y <- data_env$.y
-  ctrl <- robustbase::lmrob.control(k.max=500, maxit.scale=500)
-  
-  # Process each response variable separately
-  results <- lapply(1:ncol(Y), function(i) {
-    data_env$.y <- Y[,i]
-    
-    # Fit robust model
-    fit <- if (is.null(modmat)) {
-      robustbase::lmrob(as.formula(form), data = data_env, control = ctrl)
-    } else {
-      robustbase::lmrob(modmat, Y[,i], control = ctrl)
-    }
-    
-    # Get contrasts and stats
-    fit_lm_contrasts(fit, conlist, fcon, vnames)
-  })
-  
-  # Combine results
-  bstats <- lapply(results, function(x) x$bstats) %>% dplyr::bind_rows()
-  contrasts <- lapply(results, function(x) x$contrasts) %>% dplyr::bind_rows()
-  
-  list(
-    contrasts = contrasts,
-    bstats = bstats
-  )
-}
-
 #' Print method for fmri_rlm objects
 #' 
 #' @param x An fmri_rlm object

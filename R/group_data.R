@@ -44,42 +44,6 @@ group_data <- function(data, format = c("auto", "h5", "nifti", "csv", "fmrilm"),
   .group_data_gds(data, format = match.arg(format), ...)
 }
 
-#' Detect Input Format for Group Data
-#'
-#' @param data Input data to detect format from
-#' @return Character string indicating detected format
-#' @keywords internal
-detect_group_data_format <- function(data) {
-  # data.frame is also a list in R — check it before the generic list branch
-  if (is.data.frame(data)) {
-    return("csv")
-  } else if (is.character(data)) {
-    # Check file extensions
-    if (length(data) > 0) {
-      first_file <- data[1]
-      if (grepl("\\.h5$|\\.hdf5$", first_file, ignore.case = TRUE)) {
-        return("h5")
-      } else if (grepl("\\.nii$|\\.nii\\.gz$", first_file, ignore.case = TRUE)) {
-        return("nifti")
-      } else if (grepl("\\.csv$", first_file, ignore.case = TRUE) && length(data) == 1) {
-        return("csv")
-      }
-    }
-  } else if (is.list(data)) {
-    # Check for list of fmri_lm objects
-    if (length(data) > 0 && inherits(data[[1]], "fmri_lm")) {
-      return("fmrilm")
-    }
-    # Check for named list with beta/se paths
-    if (all(c("beta", "se") %in% names(data)) || all(c("beta", "var") %in% names(data))) {
-      return("nifti")
-    }
-  }
-  
-  stop("Could not automatically detect data format. Please specify 'format' argument.", 
-       call. = FALSE)
-}
-
 #' Validate Group Data Object
 #'
 #' @param x A group_data object

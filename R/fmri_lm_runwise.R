@@ -241,13 +241,9 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     )
   }
 
-  # Robust fitting is not supported on this formula/lm() slow path: the
-  # multiresponse_rlm() modmat interface routes through robustbase::lmrob() and
-  # cannot accept a prewhitened design (so AR would be silently dropped), and it
-  # returns no `fit`, so the run-level rss/df below collapse to 0/NULL (invalid
-  # residual variance). The fast engine (process_run_robust /
-  # process_run_ar_robust) handles robust and robust+AR correctly. Fail fast
-  # rather than return a valid-looking but wrong model.
+  # Robust fitting is not supported on this formula/lm() reference path; the
+  # matrix backend (process_run_robust / process_run_ar_robust) handles robust
+  # and robust+AR. Fail fast rather than return a valid-looking but wrong model.
   if (.fmri_lm_robust_enabled(cfg$robust)) {
     stop(
       "Robust fitting is not supported on the runwise slow path ",
@@ -305,12 +301,6 @@ runwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     # requesting AR with use_fast_path = FALSE silently produced uncorrected
     # results. Estimate phi from the configured shared residual representation
     # and refit on the whitened design via modmat.
-    #
-    # Gated to the non-robust path: multiresponse_rlm()'s modmat interface routes
-    # through robustbase::lmrob() (formula-only), so it cannot take a prewhitened
-    # design matrix. Robust + AR is handled correctly by the fast path
-    # (process_run_ar_robust); on the slow path robust fits remain unwhitened,
-    # as before.
     ar_order <- switch(cfg$ar$struct, ar1 = 1L, ar2 = 2L, arp = cfg$ar$p, iid = 0L)
     phi_hat_run <- NULL
     modmat <- NULL

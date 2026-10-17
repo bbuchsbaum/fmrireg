@@ -439,9 +439,6 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     )
   }
   
-  # Determine fitting function
-  lmfun <- if (.fmri_lm_robust_enabled(cfg$robust)) multiresponse_rlm else multiresponse_lm
-  
   form <- get_formula(model)
   proj_modmat <- .fast_preproject(modmat)
 
@@ -538,7 +535,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
       chunk_data_env <- list2env(tmats)
       chunk_data_env[[".y"]] <- Y_chunk
 
-      ret <- lmfun(form, chunk_data_env, contrast_objects, vnames, fcon = NULL, modmat = modmat)
+      ret <- multiresponse_lm(form, chunk_data_env, contrast_objects, vnames, fcon = NULL, modmat = modmat)
 
       list(
         bstats = ret$bstats,

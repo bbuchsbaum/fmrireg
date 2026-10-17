@@ -1,16 +1,8 @@
 # Easy coverage wins: zero-hit exports/aliases, demo helpers, rank utilities.
 
-test_that("estimate() deprecation and fast_preproject alias behave", {
+test_that("estimate() deprecation behaves", {
   expect_error(estimate(), "deprecated")
   expect_error(estimate(1, 2, a = 3), "estimate_betas")
-
-  set.seed(1)
-  X <- cbind(1, rnorm(20), rnorm(20))
-  alias_proj <- fmrireg:::fast_preproject(X)
-  direct_proj <- fmrireg:::.fast_preproject(X)
-  expect_equal(alias_proj$dfres, direct_proj$dfres)
-  expect_equal(alias_proj$XtXinv, direct_proj$XtXinv, tolerance = 1e-12)
-  expect_true(isTRUE(alias_proj$is_full_rank) || isFALSE(alias_proj$is_full_rank))
 })
 
 test_that("design_matrix.fmri_lm delegates to the model design matrix", {

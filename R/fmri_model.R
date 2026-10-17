@@ -20,40 +20,27 @@
 
 #' Create an fMRI Model
 #'
-#' This function creates an fMRI model consisting of an event model and a baseline model.
+#' This function creates an \code{fmri_model} by combining an event model and a baseline model.
+#' If a baseline model is not provided, a default one is created based on the dataset.
 #'
 #' @param formula The model formula for experimental events.
 #' @param block The model formula for block structure.
-#' @param baseline_model (Optional) A \code{baseline_model} object. Default is \code{NULL}.
-#' @param dataset An \code{fmri_frame} object containing the time-series data.
+#' @param baseline_model (Optional) A \code{baseline_model} object. If \code{NULL}, a default baseline model is created.
+#' @param dataset An \code{fmri_frame} containing the event table and sampling frame.
 #' @param drop_empty Logical. Whether to remove factor levels with zero size. Default is \code{TRUE}.
 #' @param durations A vector of event durations. Default is \code{0}.
 #' @return An \code{fmri_model} object.
+#' @keywords internal
 #' @export
-#' @examples
-#' \dontrun{
-#' # Assuming you have an fmri_frame object named ds and a formula for events:
-#' fmri_mod <- create_fmri_model(formula = onset ~ hrf(x) + hrf(y),
-#'                               block = ~ run,
-#'                               dataset = ds,
-#'                               drop_empty = TRUE,
-#'                               durations = rep(0, nrow(ds$event_table)))
-#' }
 create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, drop_empty = TRUE, durations = 0) {
   assert_that(is.formula(formula), msg = "'formula' must be a formula")
+  formula <- .fmrireg_inject_registered_bases(formula)
   assert_that(is.formula(block), msg = "'block' must be a formula")
   assert_that(inherits(dataset, "fmri_frame"), msg = "'dataset' must be an 'fmri_frame'")
   assert_that(is.numeric(durations), msg = "'durations' must be numeric")
-  formula <- .fmrireg_inject_registered_bases(formula)
   
-  # Replicate durations if a single value is provided.
-  if (length(durations) == 1) {
-    durations <- rep(durations, nrow(.dset_event_table(dataset)))
-  }
-  
-  # Resolve conflict: use a temporary variable to hold the baseline model.
   if (is.null(baseline_model)) {
-    base_model_obj <- baseline_model(
+    baseline_model <- baseline_model(
       basis = "bs",
       degree = max(ceiling(median(.dset_run_lengths(dataset)) / 100), 3),
       sframe = .dset_sampling_frame(dataset)
@@ -61,11 +48,10 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
   } else {
     assert_that(inherits(baseline_model, "baseline_model"),
                 msg = "'baseline_model' must have class 'baseline_model'")
-    base_model_obj <- baseline_model
   }
-  
+
   ev_model <- event_model(
-    x = formula,
+    formula_or_list = formula,
     block = block,
     data = .dset_event_table(dataset),
     sampling_frame = .dset_sampling_frame(dataset),
@@ -73,7 +59,7 @@ create_fmri_model <- function(formula, block, baseline_model = NULL, dataset, dr
     durations = durations
   )
   
-  fmri_model(ev_model, base_model_obj, dataset)
+  fmri_model(ev_model, baseline_model, dataset)
 }
 
 
@@ -100,19 +86,6 @@ fmri_model <- function(event_model, baseline_model, dataset) {
   fmodel
 }
 
-
-#' (Internal) Prediction Matrix
-#'
-#' This function is intended to compute a prediction matrix for the model.
-#' (Currently a stub.)
-#'
-#' @param x An fmri_model object.
-#' @return (Not implemented)
-#' @keywords internal
-#' @noRd
-prediction_matrix <- function(x) {
-  stop("not implemented")
-}
 
 
 ## ============================================================================
@@ -146,13 +119,6 @@ design_matrix.fmri_model <- function(x, blockid = NULL, ...) {
   )
 }
 
-
-#' @importFrom tibble as_tibble
-#' @keywords internal
-#' @noRd
-design_env.fmri_model <- function(x, blockid = NULL, ...) {
-  stop("Not implemented")
-}
 
 
 ## ============================================================================

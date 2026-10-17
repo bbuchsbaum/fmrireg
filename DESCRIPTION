@@ -2,7 +2,7 @@ Package: fmrireg
 Type: Package
 Title: Regression Analysis of Functional Magnetic Resonance Imaging Data
 Version: 0.3.0.9000
-LinkingTo: Rcpp,RcppArmadillo, roptim, RcppParallel
+LinkingTo: Rcpp,RcppArmadillo, RcppParallel
 Authors@R: person("Bradley", "Buchsbaum",, role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
 License: MIT + file LICENSE
 Description: Provides tools for the analysis of functional magnetic resonance
@@ -30,7 +30,6 @@ Imports:
     dplyr,
     ggplot2 (>= 3.4.0),
     tidyr,
-    robustbase,
     matrixStats,
     furrr,
     rlang (>= 1.0.3),
@@ -45,7 +44,6 @@ Imports:
     bslib,
     future.apply,
     jsonlite,
-    progress,
     magrittr
 RoxygenNote: 7.3.3
 Roxygen: list(
@@ -54,9 +52,6 @@ Roxygen: list(
 Suggests: 
     testthat,
     RNifti,
-    ggrepel,
-    pls,
-    doParallel,
     fmristore,
     hdf5r,
     knitr,
@@ -65,10 +60,6 @@ Suggests:
     roxygen2,
     covr,
     gridExtra,
-    multivarious,
-    glmnet,
-    proxy,
-    forecast,
     future,
     shiny,
     sandwich,

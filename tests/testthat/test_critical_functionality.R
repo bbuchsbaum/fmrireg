@@ -60,32 +60,6 @@ test_that("Robust fitting works", {
   expect_true(all(result$robust_weights[outliers] < 0.8))
 })
 
-test_that("Contrast computation works", {
-  # Simple design
-  n <- 60
-  X <- cbind(1, rep(c(0, 1), each = 30), rnorm(n))
-  Y <- X %*% c(1, 2, 0.5) + rnorm(n)
-  
-  config <- fmri_lm_control()
-  
-  # Fit model
-  fit_result <- solve_integrated_glm(X, matrix(Y, ncol = 1), config)
-  
-  # Define contrast (group difference)
-  contrast_mat <- matrix(c(0, 1, 0), nrow = 1)
-  
-  # Compute contrast
-  con_result <- fmrireg:::compute_contrast(fit_result, contrast_mat)
-  
-  expect_true(!is.null(con_result$estimate))
-  expect_true(!is.null(con_result$stderr))
-  expect_true(!is.null(con_result$tstat))
-  expect_true(!is.null(con_result$pvalue))
-  
-  # Estimate should be close to true difference (2)
-  expect_equal(con_result$estimate[1,1], 2, tolerance = 0.5)
-})
-
 test_that("Effective df calculations work", {
   n <- 100
   p <- 3
@@ -114,47 +88,3 @@ test_that("Effective df calculations work", {
   expect_true(df_robust > 0)
 })
 
-test_that("Bootstrap functionality works", {
-  # Small example
-  n <- 50
-  X <- cbind(1, rnorm(n))
-  Y <- X %*% c(1, 2) + rnorm(n)
-  
-  config <- fmri_lm_control()
-  fit_result <- solve_integrated_glm(X, matrix(Y, ncol = 1), config)
-  
-  # Run bootstrap
-  boot_result <- fmrireg:::bootstrap_glm_inference(
-    fit_result = fit_result,
-    X = X,
-    Y = matrix(Y, ncol = 1),
-    config = config,
-    nboot = 100,
-    block_size = 10
-  )
-  
-  expect_equal(dim(boot_result$boot_betas), c(100, 2, 1))
-  expect_true(!is.null(boot_result$beta_ci))
-  expect_equal(dim(boot_result$beta_ci), c(2, 2, 1))  # 2 percentiles, 2 params, 1 voxel
-})
-
-test_that("Sandwich variance estimator works", {
-  # Heteroscedastic data
-  n <- 100
-  X <- cbind(1, rnorm(n))
-  # Variance increases with X
-  Y <- 2 + 3*X[,2] + rnorm(n) * (1 + abs(X[,2]))
-  
-  residuals <- Y - X %*% solve(crossprod(X), crossprod(X, Y))
-  
-  # Compute sandwich variance
-  sandwich_vcov <- fmrireg:::compute_sandwich_variance(X, matrix(residuals, ncol = 1), type = "HC1")
-  
-  expect_equal(dim(sandwich_vcov), c(2, 2))
-  expect_true(all(diag(sandwich_vcov) > 0))
-  
-  # Should be different from standard OLS variance
-  sigma2 <- sum(residuals^2) / (n - 2)
-  ols_vcov <- solve(crossprod(X)) * sigma2
-  expect_true(any(abs(sandwich_vcov - ols_vcov) > 0.01))
-})

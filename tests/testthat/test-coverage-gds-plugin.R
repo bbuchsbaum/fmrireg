@@ -75,7 +75,4 @@ test_that("resolve_basis and register_basis cover plugin registry errors", {
 
   expect_error(register_basis("", function(...) NULL))
   expect_error(register_basis("cov_test_basis2", "not-a-function"), "must be a function")
-
-  # Deprecated alias still works
-  expect_true(!is.null(fmrireg:::.fmrireg_resolve_basis("cov_test_basis")))
 })

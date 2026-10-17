@@ -1,4 +1,4 @@
-# fmrilm.R early helpers: extract engine context, fast_rlm_run branches.
+# fmrilm.R early helpers: extract engine context.
 
 test_that(".fmri_lm_extract_engine_context peels engine args and rejects extras", {
   ctx <- fmrireg:::.fmri_lm_extract_engine_context(list(
@@ -27,49 +27,6 @@ test_that(".fmri_lm_extract_engine_context peels engine args and rejects extras"
   expect_error(
     fmrireg:::.fmri_lm_extract_engine_context(list(engine = "ols", bogus = 1)),
     "Unexpected arguments"
-  )
-})
-
-test_that("fast_rlm_run covers huber/bisquare and sigma_fixed paths", {
-  set.seed(12)
-  n <- 40L
-  p <- 3L
-  V <- 4L
-  X <- cbind(1, rnorm(n), rnorm(n))
-  Y <- X %*% matrix(c(0.5, 1, -0.5), p, V) + matrix(rnorm(n * V, sd = 0.4), n, V)
-  # Inject an outlier timepoint
-  Y[1, ] <- Y[1, ] + 8
-
-  proj <- fmrireg:::.fast_preproject(X)
-  fit_h <- fmrireg:::fast_rlm_run(X, Y, proj, psi = "huber", max_it = 3L)
-  expect_equal(dim(fit_h$betas), c(p, V))
-  expect_true(length(fit_h$sigma) >= 1L)
-  expect_equal(length(fit_h$weights), n)
-  expect_true(all(is.finite(fit_h$betas)))
-  expect_true(all(fit_h$sigma > 0))
-  expect_equal(length(fit_h$se), p)
-
-  fit_b <- fmrireg:::fast_rlm_run(X, Y, proj = NULL, psi = "bisquare", max_it = 2L)
-  expect_equal(dim(fit_b$betas), c(p, V))
-  expect_true(all(is.finite(fit_b$se)))
-
-  # Global scale via sigma_fixed
-  fit_g <- fmrireg:::fast_rlm_run(
-    X, Y, proj, psi = "huber", max_it = 2L,
-    sigma_fixed = as.numeric(fit_h$sigma)[1]
-  )
-  expect_equal(dim(fit_g$betas), c(p, V))
-  expect_equal(length(fit_g$sigma), 1L)
-
-  expect_error(
-    fmrireg:::fast_rlm_run(X, Y + NA, proj),
-    "NA/Inf"
-  )
-  Xbad <- X
-  Xbad[1, 1] <- Inf
-  expect_error(
-    fmrireg:::fast_rlm_run(Xbad, Y, proj),
-    "NA/Inf"
   )
 })
 

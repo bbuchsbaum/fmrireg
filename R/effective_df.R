@@ -164,34 +164,3 @@ calculate_effective_df <- function(n, p, robust_weights = NULL,
   max(tr_RV^2 / tr_RVRV, 1)
 }
 
-calculate_sandwich_variance <- function(X, residuals, XtXinv, weights = NULL) {
-  n <- nrow(X)
-  p <- ncol(X)
-  
-  # Squared residuals (meat of sandwich)
-  resid2 <- residuals^2
-  
-  if (!is.null(weights)) {
-    # Weight the squared residuals
-    resid2 <- resid2 * weights
-  }
-  
-  # Calculate meat: X' diag(resid2) X
-  # Correct computation without sqrt (resid2 is already squared)
-  if (is.matrix(residuals) && ncol(residuals) > 1) {
-    # Multiple response case
-    # Average over voxels for now (could be improved)
-    resid2_avg <- rowMeans(resid2)
-    meat <- crossprod(X, X * resid2_avg)  # X' diag(resid2) X
-  } else {
-    meat <- crossprod(X, X * as.vector(resid2))  # X' diag(resid2) X
-  }
-  
-  # Sandwich: (X'X)^-1 meat (X'X)^-1
-  sandwich <- XtXinv %*% meat %*% XtXinv
-  
-  # Small sample correction
-  correction <- n / (n - p)
-  
-  sandwich * correction
-}

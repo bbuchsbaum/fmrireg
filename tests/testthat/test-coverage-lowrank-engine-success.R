@@ -76,7 +76,7 @@ test_that(".run_lowrank_engine global AR whitening path (ar1) succeeds", {
   expect_true(!is.null(fit$ar_coef) || !is.null(fit$result$ar_coef))
 })
 
-test_that(".fit_lowrank_engine_plugin and fmri_lm_lowrank_dispatch work", {
+test_that(".fit_lowrank_engine_plugin works", {
   fx <- make_lowrank_fixture(n = 60L, V = 6L, seed = 25)
   low <- list(time_sketch = list(method = "gaussian", m = 16L))
 
@@ -86,26 +86,4 @@ test_that(".fit_lowrank_engine_plugin and fmri_lm_lowrank_dispatch work", {
     cfg = fx$cfg
   )
   expect_lowrank_fit(fit_plugin)
-
-  expect_null(fmrireg:::fmri_lm_lowrank_dispatch(fx$model, fx$dataset, engine = NULL))
-
-  fit_disp <- fmrireg:::fmri_lm_lowrank_dispatch(
-    fx$model, fx$dataset,
-    engine = "sketch",
-    lowrank = low,
-    cfg = fx$cfg
-  )
-  expect_lowrank_fit(fit_disp)
-
-  # Formula path through dispatch
-  etab <- frame_events(fx$dataset)
-  fit_form <- fmrireg:::fmri_lm_lowrank_dispatch(
-    onset ~ hrf(condition),
-    dataset = fx$dataset,
-    engine = "latent_sketch",
-    lowrank = low,
-    block = ~ run,
-    cfg = fx$cfg
-  )
-  expect_lowrank_fit(fit_form)
 })

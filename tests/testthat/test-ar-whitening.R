@@ -1,6 +1,6 @@
 # tests/testthat/test-ar-whitening.R
 
-test_that("apply_ar_filter collapses AR(1) & AR(2) autocorrelation", {
+test_that("ar_whiten_transform collapses AR(1) & AR(2) autocorrelation", {
   skip_on_cran()
 
   # Helpers --------------------------------------------------------------
@@ -39,7 +39,7 @@ test_that("apply_ar_filter collapses AR(1) & AR(2) autocorrelation", {
   X1 <- matrix(1, nrow = Tlen, ncol = 1)
   
   # Apply AR whitening
-  result1 <- fmrireg:::ar_whiten_inplace(M1, X1, phi_coeffs = rho, exact_first_ar1 = FALSE)
+  result1 <- fmrireg:::ar_whiten_transform(X1, M1, phi = rho, exact_first = FALSE)
   M1w <- result1$Y
   a1_after  <- mean(apply(M1w, 2, lagk, k = 1L))
 
@@ -57,7 +57,7 @@ test_that("apply_ar_filter collapses AR(1) & AR(2) autocorrelation", {
   X2 <- matrix(1, nrow = Tlen, ncol = 1)
   
   # Apply AR whitening
-  result2 <- fmrireg:::ar_whiten_inplace(M2, X2, phi_coeffs = c(phi1, phi2), exact_first_ar1 = FALSE)
+  result2 <- fmrireg:::ar_whiten_transform(X2, M2, phi = c(phi1, phi2), exact_first = FALSE)
   M2w <- result2$Y
   a1a  <- mean(apply(M2w, 2, lagk, k = 1L))
   a2a  <- mean(apply(M2w, 2, lagk, k = 2L))

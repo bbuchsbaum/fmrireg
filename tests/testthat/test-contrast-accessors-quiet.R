@@ -20,14 +20,10 @@ test_that("contrast accessors return named values without name-repair noise", {
     expect_equal(out, tibble::tibble(
       A_vs_B = block[[element]], B_vs_C = block[[element]] * 2
     ))
-    expect_silent(revised <- fmrireg:::pull_stat_revised(fit, "contrasts", element))
-    expect_equal(revised, out)
   }
 
   expect_silent(out <- stats(fit, type = "F"))
   expect_equal(out, tibble::tibble(overall = block$stat * 3))
-  expect_silent(revised <- fmrireg:::pull_stat_revised(fit, "F", "stat"))
-  expect_equal(revised, out)
 
   fit$result$contrasts <- fit$result$contrasts[1, ]
   expect_silent(out <- stats(fit, type = "contrasts"))

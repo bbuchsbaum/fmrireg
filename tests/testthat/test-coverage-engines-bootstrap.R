@@ -1,4 +1,4 @@
-# Coverage for lowrank/rrr engine helpers and bootstrap_glm_inference.
+# Coverage for lowrank/rrr engine helpers.
 
 test_that("lowrank engine helpers cover preflight, projection, and AR blend", {
   fx_etab <- data.frame(
@@ -51,37 +51,6 @@ test_that("lowrank engine helpers cover preflight, projection, and AR blend", {
     fmrireg:::.lowrank_blend_ar(list(0.4), list(0.2, 0.1), 0.5),
     "different lengths"
   )
-})
-
-test_that("bootstrap_glm_inference residual path returns CIs", {
-  skip_if_not_installed("progress")
-  set.seed(12)
-  n <- 40
-  p <- 3
-  V <- 5
-  X <- cbind(1, rnorm(n), rnorm(n))
-  beta <- matrix(c(0.5, 1, -0.5), p, 1)
-  Y <- X %*% matrix(rep(beta, V), p, V) + matrix(rnorm(n * V, sd = 0.5), n, V)
-  fit_result <- list(
-    betas = solve(crossprod(X), crossprod(X, Y)),
-    sigma = apply(Y - X %*% solve(crossprod(X), crossprod(X, Y)), 2, sd),
-    df.residual = n - p
-  )
-  # Ensure compute_contrast path can be skipped by omitting contrasts
-  out <- fmrireg:::bootstrap_glm_inference(
-    fit_result = fit_result,
-    X = X,
-    Y = Y,
-    config = fmri_lm_control(),
-    contrasts = NULL,
-    nboot = 20,
-    block_size = 5,
-    method = "residual",
-    parallel = FALSE
-  )
-  expect_true(is.list(out))
-  expect_true(!is.null(out$boot_betas) || !is.null(out$ci) || !is.null(out$betas_ci) ||
-                length(out) > 0)
 })
 
 test_that("rrr/lowrank engine registration preflight hooks exist", {
