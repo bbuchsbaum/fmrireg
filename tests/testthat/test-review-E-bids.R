@@ -45,7 +45,8 @@ test_that("E3: write_results does not consume the global RNG stream", {
   d2 <- fmrireg:::.create_temp_write_dir(out)
   expect_false(identical(d1, d2))
   expect_true(dir.exists(d1) && dir.exists(d2))
-  expect_identical(dirname(d1), out)
+  expect_identical(normalizePath(dirname(d1), winslash = "/"),
+                   normalizePath(out, winslash = "/"))
   unlink(c(d1, d2), recursive = TRUE)
   expect_false(any(grepl("^\\.tmp_write_", list.files(out, all.files = TRUE))))
 })
