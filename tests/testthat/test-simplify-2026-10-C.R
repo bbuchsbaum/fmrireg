@@ -153,3 +153,18 @@ test_that("latent IID standard errors in voxel space are unchanged (B8)", {
   old <- sapply(1:2, function(i) sqrt(rowSums((fx$L %*% (CR * C[i, i])) * fx$L)))
   expect_equal(unname(se), old, tolerance = 1e-10)
 })
+
+# --- glm_lss reports non-finite betas accurately --------------------------
+
+test_that("glm_lss names non-finite trial betas instead of a Cholesky failure", {
+  ev <- data.frame(onset = c(10, 30), condition = factor(c("A", "B")), run = 1)
+  dset <- matrix_frame(matrix(rnorm(100), 50, 2), TR = 2, run_length = 50,
+                       event_table = ev)
+  emod <- event_model(onset ~ hrf(condition), data = ev, block = ~ run,
+                      sampling_frame = fmrihrf::sampling_frame(50, TR = 2))
+  local_mocked_bindings(
+    estimate_betas = function(...) list(betas_ran = matrix(c(1, NaN, 2, 3), 2, 2))
+  )
+  expect_error(glm_lss(dset, emod, fmrihrf::HRF_SPMG1),
+               "non-finite trial betas \\(1 of 4 values\\)")
+})

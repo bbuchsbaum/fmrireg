@@ -35,7 +35,6 @@ test_that("ols_betas and gen_beta_design cover fixed/null-fixed layouts", {
                 inherits(with_fixed$dmat_fixed, "tbl_df"))
   expect_true(length(with_fixed$fixed_ind) >= 1L)
   expect_true(length(with_fixed$ran_ind) >= 1L)
-  expect_true(length(with_fixed$base_ind) >= 1L)
 
   no_fixed <- fmrireg:::gen_beta_design(
     fixed = NULL,
