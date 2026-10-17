@@ -294,17 +294,17 @@ standard_error.fmri_lm <- function(x, type = c("betas", "contrasts"), ...) {
     p_value = as.vector(t(as.matrix(prob_df)))
   )
 
-  inference_df <- model$result$df$inference %||% NULL
+  inference_df <- model$result[["df"]]$inference %||% NULL
   if (!is.null(inference_df)) {
     if (length(inference_df) == 1L) inference_df <- rep(inference_df, n_vox)
     if (length(inference_df) == n_vox) {
       result$df_inference <- rep(as.numeric(inference_df), each = length(term_names))
     }
   }
-  if (!is.null(model$result$df$nominal)) {
-    result$df_residual <- rep(as.numeric(model$result$df$nominal)[1L], nrow(result))
-  } else if (!is.null(block$df.residual)) {
-    result$df_residual <- rep(block$df.residual[1], nrow(result))
+  if (!is.null(model$result[["df"]]$nominal)) {
+    result$df_residual <- rep(as.numeric(model$result[["df"]]$nominal)[1L], nrow(result))
+  } else if (!is.null(block[["df.residual"]])) {
+    result$df_residual <- rep(block[["df.residual"]][1], nrow(result))
   }
 
   result
@@ -327,8 +327,8 @@ standard_error.fmri_lm <- function(x, type = c("betas", "contrasts"), ...) {
     }
     as.numeric(x)
   }
-  inference_df <- model$result$df$inference %||% NULL
-  nominal_df <- model$result$df$nominal %||% NULL
+  inference_df <- model$result[["df"]]$inference %||% NULL
+  nominal_df <- model$result[["df"]]$nominal %||% NULL
 
   rows <- lapply(seq_len(nrow(block)), function(i) {
     dat <- block$data[[i]]
@@ -359,8 +359,8 @@ standard_error.fmri_lm <- function(x, type = c("betas", "contrasts"), ...) {
     }
     if (!is.null(nominal_df)) {
       out$df_residual <- rep(as.numeric(nominal_df)[1L], n_vox)
-    } else if (!is.null(block$df.residual)) {
-      out$df_residual <- rep(as.numeric(block$df.residual[i]), n_vox)
+    } else if (!is.null(block[["df.residual"]])) {
+      out$df_residual <- rep(as.numeric(block[["df.residual"]][i]), n_vox)
     }
     out
   })

@@ -249,9 +249,9 @@
     cv <- covariance[[v]]
     if (is.null(cv) || any(dim(cv) != c(p, p))) next
     se[v, ] <- sqrt(pmax(diag(cv), 0))
-    valid <- is.finite(se[v, ]) & se[v, ] > .Machine$double.eps^0.5
-    stat[v, valid] <- estimate[v, valid] / se[v, valid]
-    prob[v, valid] <- 2 * stats::pt(-abs(stat[v, valid]), df = df[v])
+    inf <- .t_inference(estimate[v, ], se[v, ], df[v])
+    stat[v, ] <- inf$stat
+    prob[v, ] <- inf$prob
   }
   payload$se[[1L]] <- se
   payload$stat[[1L]] <- stat
@@ -268,32 +268,19 @@
       if (identical(type, "contrast")) {
         full <- numeric(p)
         full[colind] <- as.numeric(C)
-        est <- drop(estimate %*% full)
-        cse <- vapply(covariance, function(cv) {
-          sqrt(pmax(drop(crossprod(full, cv %*% full)), 0))
-        }, numeric(1))
-        cstat <- ifelse(cse > .Machine$double.eps^0.5, est / cse, NA_real_)
-        data$estimate <- est
-        data$se <- cse
-        data$stat <- cstat
-        data$prob <- 2 * stats::pt(-abs(cstat), df = df)
+        res <- .cov_t_contrast(full, t(estimate), covariance, df)
       } else if (identical(type, "Fcontrast")) {
         C <- .orient_fcontrast(C, colind)
         full <- matrix(0, nrow(C), p)
         full[, colind] <- C
-        rank_c <- qr(full)$rank
-        fstat <- rep(NA_real_, V)
-        for (v in seq_len(V)) {
-          u <- full %*% estimate[v, ]
-          M <- full %*% covariance[[v]] %*% t(full)
-          fstat[v] <- tryCatch(drop(crossprod(u, solve(M, u))) / rank_c,
-                              error = function(e) NA_real_)
-        }
-        data$estimate <- fstat
-        data$se <- rep(1, V)
-        data$stat <- fstat
-        data$prob <- stats::pf(fstat, rank_c, df, lower.tail = FALSE)
+        res <- .cov_F_contrast(full, t(estimate), covariance, df)
+      } else {
+        next
       }
+      data$estimate <- res$estimate
+      data$se <- res$se
+      data$stat <- res$stat
+      data$prob <- res$prob
       result$contrasts$data[[i]] <- data
     }
   }

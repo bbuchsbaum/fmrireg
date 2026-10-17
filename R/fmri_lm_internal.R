@@ -260,23 +260,14 @@ is.formula <- function(x) {
   if (all(y == 0)) {
     return("all_zero")
   }
-  if (length(y) < 2L || stats::var(y) <= .Machine$double.eps) {
+  # Constant up to rounding error, judged relative to the voxel's own
+  # magnitude: an absolute variance threshold would classify every voxel of
+  # small-scale data (e.g. Y * 1e-8) as constant.
+  if (length(y) < 2L ||
+      stats::sd(y) <= 64 * .Machine$double.eps * max(abs(y))) {
     return("constant")
   }
   "ok"
-}
-
-#' Inference df for one voxel
-#'
-#' Without robust weights this is the residual df (whitening already accounts
-#' for AR structure, see `calculate_effective_df()`). With robust weights it is
-#' the single robust formula `.robust_effective_df()`: sum(w) - rank, with the
-#' design rank (not its width) so aliased columns are not subtracted.
-#' @keywords internal
-#' @noRd
-.voxel_inference_df <- function(dfres, rank, robust_weights = NULL) {
-  if (is.null(robust_weights)) return(dfres)
-  .robust_effective_df(robust_weights, rank)
 }
 
 #' Beta statistics when each voxel has its own projection matrix
@@ -311,17 +302,17 @@ beta_stats_matrix_voxelwise <- function(Betas, XtXinv_list, sigma, dfres,
 
     rw <- if (!is.null(robust_weights_list)) robust_weights_list[[v]] else NULL
 
-    df_eff <- .voxel_inference_df(dfres, attr(XtXinv, "rank") %||% p, rw)
+    df_eff <- .effective_df_from_rank(dfres, attr(XtXinv, "rank") %||% p,
+                                      integer(0), rw, ar_order)
 
     se_vec <- se_scal * sigma[v]
     est_vec <- Betas[, v]
-    t_vec <- ifelse(abs(se_vec) < .Machine$double.eps^0.5, 0, est_vec / se_vec)
-    p_vec <- 2 * pt(-abs(t_vec), df_eff)
+    inf <- .t_inference(est_vec, se_vec, df_eff)
 
     est_mat[v, ]  <- est_vec
     se_mat[v, ]   <- se_vec
-    t_mat[v, ]    <- t_vec
-    prob_mat[v, ] <- p_vec
+    t_mat[v, ]    <- inf$stat
+    prob_mat[v, ] <- inf$prob
   }
 
   colnames(est_mat)  <- varnames

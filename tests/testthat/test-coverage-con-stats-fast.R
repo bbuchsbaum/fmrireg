@@ -111,12 +111,12 @@ test_that(".fast_t_contrast and .fast_F_contrast cover aliased and robust/AR", {
   expect_true(all(is.na(f_alias$stat)))
 })
 
-test_that("process_t/f_contrasts and fit_lm_contrasts_fast package results", {
+test_that(".process_contrasts and fit_lm_contrasts_fast package results", {
   d <- tiny_design()
   w_t <- structure(c(1, -1), colind = c(2L, 3L))
   w_f <- structure(diag(2), colind = c(2L, 3L))
 
-  t_res <- fmrireg:::process_t_contrasts(
+  t_res <- fmrireg:::.process_contrasts("t",
     d$B, d$sigma2, d$XtXinv,
     conlist = list(A_vs_B = w_t),
     df = d$df
@@ -125,9 +125,9 @@ test_that("process_t/f_contrasts and fit_lm_contrasts_fast package results", {
   expect_equal(t_res$A_vs_B$type, "contrast")
   expect_equal(length(t_res$A_vs_B$data[[1]]$estimate), d$V)
 
-  f_res <- fmrireg:::process_f_contrasts(
+  f_res <- fmrireg:::.process_contrasts("F",
     d$B, d$sigma2, d$XtXinv,
-    fconlist = list(both = w_f),
+    conlist = list(both = w_f),
     df = d$df,
     robust_weights = rep(1, d$df + d$p),
     ar_order = 1L
@@ -135,8 +135,8 @@ test_that("process_t/f_contrasts and fit_lm_contrasts_fast package results", {
   expect_equal(names(f_res), "both")
   expect_equal(f_res$both$type, "Fcontrast")
 
-  expect_equal(fmrireg:::process_t_contrasts(d$B, d$sigma2, d$XtXinv, list(), d$df), list())
-  expect_equal(fmrireg:::process_f_contrasts(d$B, d$sigma2, d$XtXinv, list(), d$df), list())
+  expect_equal(fmrireg:::.process_contrasts("t", d$B, d$sigma2, d$XtXinv, list(), d$df), list())
+  expect_equal(fmrireg:::.process_contrasts("F", d$B, d$sigma2, d$XtXinv, list(), d$df), list())
 
   all_res <- fmrireg:::fit_lm_contrasts_fast(
     d$B, d$sigma2, d$XtXinv,
