@@ -11,85 +11,27 @@ NULL
 # Internal operator
 `%||%` <- function(x, y) if (!is.null(x)) x else y
 
-#' Normalize AR options to ensure struct/cor_struct coherence
+#' Normalize AR options
 #'
-#' @param ar_opts List with AR configuration
-#' @return List with normalized fields
+#' The AR options reaching the adapter are a `noise_spec()` (legacy user
+#' spellings are mapped once, at the boundary, by
+#' `.fmri_lm_noise_from_legacy()`). This fills the defaults the adapter relies
+#' on and validates them.
+#'
+#' @param ar_opts AR options list or `noise_spec()`, or NULL for iid.
+#' @return List with `struct` and `shared_estimator` always set.
 #' @keywords internal
 #' @noRd
 .normalize_ar_options <- function(ar_opts) {
-  if (is.null(ar_opts)) {
-    return(list(struct = "iid", cor_struct = "none",
-                shared_estimator = "pooled_acvf"))
+  ar_opts <- as.list(ar_opts %||% list())
+  ar_opts$struct <- ar_opts$struct %||% "iid"
+  if (identical(ar_opts$struct, "arp") && is.null(ar_opts$p)) {
+    stop("p must be specified for struct='arp'")
   }
-
-  # Work on a copy to avoid side effects
-  ar_opts <- as.list(ar_opts)
-
-  # Prefer explicit struct, otherwise fall back to cor_struct
-  struct <- ar_opts$struct
-  cor_struct <- ar_opts$cor_struct
-
-  if (is.null(struct) && !is.null(cor_struct)) {
-    struct <- cor_struct
-  }
-
-  if (is.null(struct)) {
-    struct <- "iid"
-  }
-
-  # Treat "none" as iid for compatibility
-  if (identical(struct, "none")) {
-    struct <- "iid"
-  }
-
-  # Handle convenience shorthand like "ar5" by mapping to arp
-  if (!identical(struct, "arp") && startsWith(as.character(struct), "ar")) {
-    p_val <- suppressWarnings(as.integer(sub("ar", "", as.character(struct))))
-    if (!is.na(p_val) && p_val >= 0L) {
-      if (p_val == 0L) {
-        struct <- "iid"
-      } else if (p_val > 4L) {
-        struct <- "arp"
-        ar_opts$p <- ar_opts$p %||% p_val
-      }
-    }
-  }
-
-  if (identical(struct, "arp")) {
-    if (is.null(ar_opts$p)) {
-      # Try to derive p from cor_struct like "ar3"
-      if (!is.null(cor_struct) && startsWith(cor_struct, "ar")) {
-        ar_opts$p <- suppressWarnings(as.integer(sub("ar", "", cor_struct)))
-      }
-    }
-    if (is.null(ar_opts$p)) {
-      stop("p must be specified for struct='arp'")
-    }
-  }
-
-  # Ensure cor_struct is populated for downstream consumers
-  if (is.null(cor_struct)) {
-    cor_struct <- switch(struct,
-      "iid" = "none",
-      "arp" = paste0("ar", ar_opts$p),
-      struct
-    )
-  }
-
-  # Map iter (legacy name) to iter_gls when needed
-  if (is.null(ar_opts$iter_gls) && !is.null(ar_opts$iter)) {
-    ar_opts$iter_gls <- ar_opts$iter
-  }
-
   ar_opts$shared_estimator <- ar_opts$shared_estimator %||% "pooled_acvf"
   if (!ar_opts$shared_estimator %in% c("pooled_acvf", "mean_series")) {
     stop("shared_estimator must be 'pooled_acvf' or 'mean_series'", call. = FALSE)
   }
-
-  ar_opts$struct <- struct
-  ar_opts$cor_struct <- cor_struct
-
   ar_opts
 }
 
@@ -152,8 +94,6 @@ NULL
     "iid" = 0L,
     "ar1" = 1L,
     "ar2" = 2L,
-    "ar3" = 3L,
-    "ar4" = 4L,
     "arp" = as.integer(ar_opts$p %||% NA_integer_),
     NULL
   )
@@ -438,12 +378,6 @@ NULL
     "run"
   }
 
-  # Handle voxelwise option (future: will use parcel-based approach)
-  if (isTRUE(ar_opts$voxelwise)) {
-    message("Note: voxelwise AR will be implemented via parcel pooling in fmriAR")
-    # For now, fall back to run-based pooling
-  }
-
   # Build fmriAR parameter list
   list(
     method = method,
@@ -453,7 +387,7 @@ NULL
     pooling = pooling,
     exact_first = if (isFALSE(ar_opts$exact_first)) "none" else "ar1",
     # Number of iterations handled externally
-    iter = as.integer(ar_opts$iter_gls %||% ar_opts$iter %||% 1L)
+    iter = as.integer(ar_opts$iter_gls %||% 1L)
   )
 }
 
@@ -731,136 +665,4 @@ NULL
     converged = if (n_iter <= 1L) NA else converged,
     censor = censor
   )
-}
-
-#' Get AR order from plan or config
-#'
-#' @param plan fmriAR_plan object or NULL
-#' @param cfg fmri_lm_control object
-#' @return Integer AR order
-#' @keywords internal
-#' @noRd
-.get_ar_order <- function(plan = NULL, cfg = NULL) {
-  if (!is.null(plan) && !is.null(plan$order)) {
-    return(plan$order[["p"]] %||% 0L)
-  }
-
-  if (!is.null(cfg)) {
-    ar_opts <- if (inherits(cfg, "fmri_lm_control")) cfg$ar else cfg
-    ar_opts <- .normalize_ar_options(ar_opts)
-    return(switch(ar_opts$struct,
-      "ar1" = 1L,
-      "ar2" = 2L,
-      "ar3" = 3L,
-      "ar4" = 4L,
-      "arp" = as.integer(ar_opts$p %||% 0L),
-      0L
-    ))
-  }
-
-  0L
-}
-
-#' Compute effective degrees of freedom for AR models
-#'
-#' Maintains compatibility with existing fmrireg approach
-#'
-#' @param n Sample size
-#' @param p Number of parameters
-#' @param plan fmriAR_plan object or NULL
-#' @param ar_coef Alternative AR coefficients if plan not available
-#' @return Effective degrees of freedom
-#' @keywords internal
-#' @noRd
-.compute_ar_effective_df_compat <- function(n, p, plan = NULL, ar_coef = NULL,
-                                            ma_coef = NULL) {
-  average_coefficients <- function(values) {
-    if (is.numeric(values)) {
-      return(as.numeric(values))
-    }
-    values <- lapply(values, as.numeric)
-    if (!length(values)) {
-      return(numeric(0))
-    }
-    max_len <- max(lengths(values))
-    if (max_len == 0L) {
-      return(numeric(0))
-    }
-    coef_mat <- vapply(values, function(x) {
-      c(x, rep(0, max_len - length(x)))
-    }, numeric(max_len))
-    if (is.null(dim(coef_mat))) {
-      coef_mat <- matrix(coef_mat, nrow = max_len, ncol = length(values))
-    }
-    rowMeans(coef_mat)
-  }
-
-  # Extract phi coefficients
-  phi <- NULL
-  theta <- NULL
-
-  if (!is.null(plan)) {
-    if (!is.null(plan$phi) && length(plan$phi) > 0) {
-      # Average across runs if multiple
-      phi_list <- plan$phi
-      if (length(phi_list) == 1) {
-        phi <- phi_list[[1]]
-      } else {
-        # Pool across runs
-        phi <- average_coefficients(phi_list)
-      }
-    }
-    if (!is.null(plan$theta) && length(plan$theta) > 0) {
-      theta_list <- plan$theta
-      if (length(theta_list) == 1L) {
-        theta <- theta_list[[1L]]
-      } else {
-        theta <- average_coefficients(theta_list)
-      }
-    }
-  } else if (!is.null(ar_coef) || !is.null(ma_coef)) {
-    if (is.list(ar_coef) && length(ar_coef)) {
-      phi <- average_coefficients(ar_coef)
-    } else if (!is.null(ar_coef)) {
-      phi <- ar_coef
-    }
-    if (!is.null(ma_coef)) {
-      if (is.list(ma_coef)) {
-        theta <- average_coefficients(ma_coef)
-      } else {
-        theta <- ma_coef
-      }
-    }
-  }
-
-  phi <- as.numeric(phi %||% numeric(0))
-  theta <- as.numeric(theta %||% numeric(0))
-  if (length(phi) == 0L && length(theta) == 0L) {
-    return(n - p)
-  }
-
-  # Effective sample size via lag-correlation inflation:
-  # n_eff = n / (1 + 2 * sum_{k>=1} (1-k/n) rho_k)
-  rho <- tryCatch(
-    {
-      if (length(phi) == 1L && length(theta) == 0L) {
-        phi[1]^(seq_len(n - 1L))
-      } else {
-        stats::ARMAacf(ar = phi, ma = theta, lag.max = n - 1L)[-1]
-      }
-    },
-    error = function(e) NULL
-  )
-  if (is.null(rho) || length(rho) == 0) {
-    return(n - p)
-  }
-  k <- seq_along(rho)
-  denom <- 1 + 2 * sum((1 - k / n) * rho)
-  if (!is.finite(denom) || denom <= 0) {
-    return(n - p)
-  }
-  effective_n <- n / denom
-  effective_n <- min(max(effective_n, p + 1), n)
-
-  max(effective_n - p, 1)
 }

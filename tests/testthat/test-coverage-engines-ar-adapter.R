@@ -232,31 +232,14 @@ test_that("fmriAR adapter config normalization and run helpers", {
     fmrireg:::.normalize_ar_options(NULL)$struct,
     "iid"
   )
-  from_cor <- fmrireg:::.normalize_ar_options(list(cor_struct = "ar2"))
-  expect_equal(from_cor$struct, "ar2")
-  expect_equal(from_cor$cor_struct, "ar2")
-
-  none <- fmrireg:::.normalize_ar_options(list(struct = "none"))
-  expect_equal(none$struct, "iid")
-
-  ar5 <- fmrireg:::.normalize_ar_options(list(struct = "ar5"))
-  expect_equal(ar5$struct, "arp")
-  expect_equal(ar5$p, 5L)
-
-  ar0 <- fmrireg:::.normalize_ar_options(list(struct = "ar0"))
-  expect_equal(ar0$struct, "iid")
-
   expect_error(
     fmrireg:::.normalize_ar_options(list(struct = "arp")),
     "p must be specified"
   )
-  arp_from_cor <- fmrireg:::.normalize_ar_options(
-    list(struct = "arp", cor_struct = "ar3")
+  expect_equal(
+    fmrireg:::.normalize_ar_options(noise_spec("ar1"))$shared_estimator,
+    "pooled_acvf"
   )
-  expect_equal(arp_from_cor$p, 3L)
-
-  iter_map <- fmrireg:::.normalize_ar_options(list(struct = "ar1", iter = 3L))
-  expect_equal(iter_map$iter_gls, 3L)
 
   expect_error(
     fmrireg:::.normalize_ar_options(list(struct = "ar1", shared_estimator = "bad")),
@@ -312,9 +295,11 @@ test_that("fmriAR adapter config normalization and run helpers", {
     "nonnegative"
   )
 
-  expect_message(
-    fmrireg:::.fmrireg_to_fmriAR_config(list(struct = "ar1", voxelwise = TRUE)),
-    "voxelwise"
+  # Voxelwise AR is fitted by runwise_lm_voxelwise(); the shared fmriAR
+  # configuration does not depend on the flag.
+  expect_identical(
+    expect_silent(fmrireg:::.fmrireg_to_fmriAR_config(list(struct = "ar1", voxelwise = TRUE))),
+    fmrireg:::.fmrireg_to_fmriAR_config(list(struct = "ar1"))
   )
 
   # mean_series residual input collapses columns
