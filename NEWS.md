@@ -38,6 +38,23 @@
   basis in the installed fmrihrf. The canonical (generating) HRF now wins in
   every voxel, with fmrihrf both before and after its B-spline fix (#250).
 
+## Internal
+
+* Removed about 1,150 lines of code that no exported function, S3 method or
+  `.onLoad` could reach, including the unwired bootstrap and sandwich helpers,
+  `fast_rlm_run()`, `multiresponse_rlm()`, `ar_whiten_inplace()` and an unused
+  C++ kernel. `create_fmri_model()` had three definitions, of which the last
+  file loaded won; it now has one, unchanged in behaviour, with matching
+  documentation. Fitted results do not change. See
+  `data-raw/simplification-2026-10-plan.md` for the remaining plan.
+* fmrireg no longer depends on robustbase, progress or roptim, and seven unused
+  Suggests are gone.
+* The unused example files `inst/extdata/{images_study,auditory}`,
+  `design_aug.txt` and `config.R` (about 2 MB) are no longer installed.
+  `face_design.txt` and `video_design.txt` remain.
+* `NEWS.md` and `README.md` are included in the source package again, so
+  `utils::news(package = "fmrireg")` works.
+
 ## Continuous integration
 
 * Hosted workflows resolve dependencies again. The pinned

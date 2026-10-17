@@ -70,7 +70,7 @@ fmrireg is an R package for fMRI time series regression analysis with a layered 
 ### Performance Considerations
 
 - C++ implementations via Rcpp for computationally intensive operations
-- Parallelization via RcppParallel (configurable: `options(fmrireg.num_threads = N)`)
+- Parallelization via OpenMP kernels and future.apply (`options(fmrireg.num_threads = N)` sets the OpenMP thread count used by the meta-analysis kernels)
 - Chunked processing for large datasets to manage memory
 
 ### CRAN Compliance
@@ -169,6 +169,9 @@ them asserted only dimensions and positivity, which is why an arithmetic error
 large) survived in `compute_sandwich_variance` until 2026-08-07. That error is
 now fixed and both helpers are checked against `sandwich::vcovHC` in
 `tests/testthat/test-variance-closed-form.R`; they remain unwired.
+(2026-10: both helpers were removed as unreachable. `variance_spec("sandwich")`
+is the live sandwich path; see `data-raw/simplification-2026-10-plan.md`.)
+
 ## REVIEW 2026-10: CORRECTNESS AND PERFORMANCE PASS
 
 Plan, checklist and results: `data-raw/review-2026-10-plan.md`. Every fix has a
@@ -208,5 +211,12 @@ Conventions established by this pass (rely on them, keep them true):
 Corrections to the 2025 notes above: the robust effective df is
 sum(w) - rank (the "sum(weights) - p" fix lived in an unreachable file until
 this pass); "Bootstrap functionality" referred to `multiresponse_bootstrap_lm`,
-which was unreachable and has been removed (`bootstrap_glm_inference` remains
-internal and is not wired into `fmri_lm()`).
+which was unreachable and has been removed (`bootstrap_glm_inference`, also
+never wired into `fmri_lm()`, was removed in the 2026-10 simplification pass).
+
+## SIMPLIFICATION 2026-10
+
+Plan, bugs found and remaining phases: `data-raw/simplification-2026-10-plan.md`.
+Phase 1 removed code with no caller reachable from an export, S3 method or
+`.onLoad`. Before adding a helper, check it will have a live caller; before
+keeping one "for later", note why in the plan.

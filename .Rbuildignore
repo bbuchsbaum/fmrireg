@@ -9,6 +9,7 @@
 ^pkgdown$
 ^codemeta\.json$
 ^\.github$
+^\.git$
 ^data-raw$
 ^bench$
 ^tools$
