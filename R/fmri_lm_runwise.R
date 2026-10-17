@@ -638,7 +638,6 @@ pool_runwise_results <- function(cres, event_indices, baseline_indices, Vu,
       robust_weights = robust_weights,
       voxel_status = voxel_status,
       covariance_by_voxel = cres[[1]]$covariance_by_voxel,
-      covariance_model_basis = cres[[1]]$covariance_model_basis,
       rank = cres[[1]]$rank
     )
   }

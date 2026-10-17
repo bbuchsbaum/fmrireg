@@ -46,28 +46,13 @@ chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
   }
   
   # Extract model components
-  form <- get_formula(model)
   tmats <- term_matrices(model)
-  vnames <- attr(tmats, "varnames")
   event_indices <- attr(tmats, "event_term_indices")
   baseline_indices <- attr(tmats, "baseline_term_indices")
-  
-  # Global design matrix for Vu calculation
   modmat <- .run_design(model, tmats = tmats)
-  proj_global <- .fast_preproject(modmat)
-  Vu <- proj_global$XtXinv
-  
-  # Build run indices for AR-aware slow path
-  run_indices <- NULL
-  if (cfg$ar$struct != "iid") {
-    # Run rows come from the temporal schema; no data is read.
-    run_indices <- .dset_run_rows(dset)
-  }
 
-  # Process chunks
   if (use_fast_path) {
-    # Fast path implementation
-    result <- chunkwise_lm_fast(
+    chunkwise_lm_fast(
       dset = dset,
       chunks = chunks,
       model = model,
@@ -75,7 +60,7 @@ chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
       contrast_objects = contrast_objects,
       event_indices = event_indices,
       baseline_indices = baseline_indices,
-      Vu = Vu,
+      modmat = modmat,
       phi_fixed = phi_fixed,
       sigma_fixed = sigma_fixed,
       verbose = verbose,
@@ -83,26 +68,23 @@ chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
       parallel_chunks = parallel_chunks
     )
   } else {
-    # Slow path implementation
-    result <- chunkwise_lm_slow(
+    chunkwise_lm_slow(
       chunks = chunks,
       model = model,
       cfg = cfg,
       contrast_objects = contrast_objects,
       tmats = tmats,
-      vnames = vnames,
+      vnames = attr(tmats, "varnames"),
       event_indices = event_indices,
       baseline_indices = baseline_indices,
-      Vu = Vu,
       modmat = modmat,
-      run_indices = run_indices,
+      # Run rows come from the temporal schema; no data is read.
+      run_indices = if (cfg$ar$struct != "iid") .dset_run_rows(dset),
       verbose = verbose,
       progress = progress,
       parallel_chunks = parallel_chunks
     )
   }
-  
-  result
 }
 
 #' Apply a function to chunk data, optionally through the active future plan
@@ -141,7 +123,7 @@ chunkwise_lm.fmri_frame <- function(x, model, contrast_objects, nchunks, cfg,
 #' @keywords internal
 #' @noRd
 chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
-                              event_indices, baseline_indices, Vu,
+                              event_indices, baseline_indices, modmat,
                               phi_fixed = NULL, sigma_fixed = NULL,
                               verbose = FALSE, progress = FALSE,
                               parallel_chunks = FALSE) {
@@ -163,11 +145,13 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
     )
   }
   
+  precomp <- NULL
   if (ar_modeling || robust_modeling) {
     # Pre-computation phase for AR and/or robust
     if (verbose) message("Pre-computing transformed matrices...")
     
-    precomp <- prepare_chunkwise_matrices(model, dset, cfg, phi_fixed, sigma_fixed)
+    precomp <- prepare_chunkwise_matrices(model, dset, cfg, phi_fixed, sigma_fixed,
+                                          modmat = modmat)
     
     # Process chunks with pre-computed matrices
     cres <- .chunkwise_apply(chunks, function(i, ym) {
@@ -234,11 +218,6 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
     # so transform the design once and each response chunk with the same
     # square-root weights.
     ar_order <- 0L
-    form <- get_formula(model)
-    tmats <- term_matrices(model)
-    data_env <- list2env(tmats)
-    data_env[[".y"]] <- rep(0, nrow(tmats[[1]]))
-    modmat <- model.matrix(as.formula(form), data_env)
     explicit_weights <- cfg$volume_weights$weights
     has_explicit_weights <- isTRUE(cfg$volume_weights$enabled) &&
       !is.null(explicit_weights)
@@ -331,37 +310,18 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
   
   # Unpack results
   out <- unpack_chunkwise(cres, event_indices, baseline_indices)
-  out$cov.unscaled <- if (exists("precomp", inherits = FALSE)) {
-    precomp$proj_global$XtXinv
-  } else {
-    proj$XtXinv
+  proj_fit <- if (is.null(precomp)) proj else precomp$proj_global
+  out$cov.unscaled <- proj_fit$XtXinv
+  out$rank <- proj_fit$rank
+  robust_weights <- if (!is.null(precomp) && robust_modeling) {
+    unlist(lapply(precomp$run_info, `[[`, "weights"), use.names = FALSE)
   }
-  out$covariance_model_basis <- if (exists("precomp", inherits = FALSE)) {
-    precomp$proj_global$XtXinv
-  } else {
-    proj$XtXinv
-  }
-  out$rank <- if (exists("precomp", inherits = FALSE)) {
-    precomp$proj_global$rank
-  } else {
-    proj$rank
-  }
-  if (exists("precomp", inherits = FALSE) && .fmri_lm_robust_enabled(cfg$robust)) {
-    out$robust_weights <- unlist(
-      lapply(precomp$run_info, `[[`, "weights"), use.names = FALSE
-    )
-  }
+  out$robust_weights <- robust_weights
   inference_residuals <- lapply(cres, `[[`, "inference_residuals")
   if (length(inference_residuals) &&
       all(vapply(inference_residuals, Negate(is.null), logical(1)))) {
-    X_inference <- if (exists("precomp", inherits = FALSE)) {
-      precomp$X_global
-    } else {
-      fit_modmat
-    }
-    run_rows <- .dset_run_rows(dset)
-    censor_global <- rep(FALSE, nrow(X_inference))
-    if (exists("precomp", inherits = FALSE)) {
+    censor_global <- rep(FALSE, nrow(modmat))
+    if (!is.null(precomp)) {
       for (ri in seq_along(precomp$run_info)) {
         local <- precomp$run_info[[ri]]$censor
         rows <- precomp$run_row_inds[[ri]]
@@ -376,29 +336,15 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
       }
     }
     out$inference_context <- list(
-      X = X_inference,
+      X = if (is.null(precomp)) fit_modmat else precomp$X_global,
       residuals = do.call(cbind, inference_residuals),
-      runs = run_rows,
+      runs = .dset_run_rows(dset),
       censor = censor_global,
-      robust_weights = if (exists("precomp", inherits = FALSE) &&
-                          .fmri_lm_robust_enabled(cfg$robust)) {
-        unlist(lapply(precomp$run_info, `[[`, "weights"), use.names = FALSE)
-      } else {
-        NULL
-      }
+      robust_weights = robust_weights
     )
-    if (!is.null(out$inference_context$robust_weights)) {
-      out$robust_weights <- out$inference_context$robust_weights
-    }
   }
-  ar_coef_list <- lapply(cres, function(x) x$ar_coef)
-  ar_coef_list <- Filter(function(x) !is.null(x) && length(unlist(x)) > 0, ar_coef_list)
-  out$ar_coef <- if (exists("precomp", inherits = FALSE) && isTRUE(precomp$ar_modeling)) {
+  out$ar_coef <- if (!is.null(precomp) && isTRUE(precomp$ar_modeling)) {
     lapply(precomp$run_info, `[[`, "phi_hat")
-  } else if (length(ar_coef_list) > 0) {
-    ar_coef_list
-  } else {
-    NULL
   }
   out
 }
@@ -408,7 +354,7 @@ chunkwise_lm_fast <- function(dset, chunks, model, cfg, contrast_objects,
 #' @noRd
 chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
                               tmats, vnames, event_indices, baseline_indices,
-                              Vu, modmat, run_indices = NULL,
+                              modmat, run_indices = NULL,
                               verbose = FALSE, progress = FALSE,
                               parallel_chunks = FALSE) {
 
@@ -507,7 +453,7 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
   
   # Unpack results
   out <- unpack_chunkwise(cres, event_indices, baseline_indices)
-  out$cov.unscaled <- Vu
+  out$cov.unscaled <- proj_modmat$XtXinv
   if (needs_integrated) {
     # Each chunk was solved on its own whitened and/or robustly weighted
     # design, and its scale (sigma) is on that scale. The covariance stored
@@ -520,7 +466,6 @@ chunkwise_lm_slow <- function(chunks, model, cfg, contrast_objects,
     }, logical(1)))
     if (shared) {
       out$cov.unscaled <- chunk_cov[[1L]]
-      out$covariance_model_basis <- chunk_cov[[1L]]
     } else {
       # One basis per chunk: record it per voxel (list elements share the
       # chunk's matrix, so this costs one pointer per voxel).

@@ -636,11 +636,13 @@ process_run_ar_robust <- function(run_chunk, model, cfg, phi_fixed = NULL, sigma
 #' @param cfg fmri_lm_control object
 #' @param phi_fixed Optional fixed AR parameters
 #' @param sigma_fixed Optional fixed robust scale
+#' @param modmat Optional global design matrix (`.run_design(model)`)
 #' @return List with pre-computed matrices and metadata
 #' @keywords internal
 #' @noRd
-prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, sigma_fixed = NULL) {
-  modmat_orig <- .run_design(model)
+prepare_chunkwise_matrices <- function(model, dataset, cfg, phi_fixed = NULL, sigma_fixed = NULL,
+                                       modmat = NULL) {
+  modmat_orig <- modmat %||% .run_design(model)
 
   # Run structure. Chunks are lazy: each run's data is read once, inside the
   # per-run fit below, and never retained.

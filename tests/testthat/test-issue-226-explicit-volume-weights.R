@@ -82,18 +82,13 @@ test_that("joint IID OLS honors explicit zero weights", {
   )
   expect_equal(fit$result$rdf, oracle$df.residual)
   expect_equal(
-    as.numeric(fit$result$covariance_model_basis),
+    as.numeric(fit$result$cov.unscaled),
     as.numeric(solve(crossprod(fixture$full_design[keep, , drop = FALSE]))),
     tolerance = 1e-10
   )
   expected_rss <- sum(oracle$residuals^2)
   expect_equal(fit$result$resvar, expected_rss / oracle$df.residual,
                tolerance = 1e-10)
-  expect_equal(
-    fit$result$cov.unscaled,
-    fit$result$covariance_model_basis,
-    tolerance = 0
-  )
 })
 
 test_that("joint IID weighted estimates are invariant to voxel chunking", {
