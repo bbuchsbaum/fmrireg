@@ -69,18 +69,26 @@ fit_contrasts <- function(object, ...) UseMethod("fit_contrasts")
   list(stat = stat, prob = 2 * stats::pt(-abs(stat), df))
 }
 
-#' Effective-df inputs for a possibly rank-deficient design
+#' Inference df for a possibly rank-deficient design
 #'
-#' The residual df is `n - rank`, so `n = df + rank` and the parameter count
-#' that `calculate_effective_df()` must subtract is the rank, not `ncol(X)`.
+#' The one per-fit inference-df rule of the contrast engine. Without robust
+#' weights this is the residual df (whitening already accounts for the AR
+#' structure, see `calculate_effective_df()`). With robust weights it is
+#' `.robust_effective_df()`: sum(w) - rank, with rank = `p - length(aliased)`
+#' so aliased columns are not subtracted.
+#'
+#' `ar_order` does not change the df either: a positive `ar_order` only
+#' clamps it at >= 1. It is accepted because callers outside the contrast
+#' engine still pass it.
 #' @keywords internal
 #' @noRd
-.effective_df_from_rank <- function(df, p, aliased, robust_weights, ar_order) {
-  if (is.null(robust_weights) && !(ar_order > 0)) {
-    return(df)
+.effective_df_from_rank <- function(df, p, aliased, robust_weights, ar_order = 0) {
+  df_eff <- if (is.null(robust_weights)) {
+    df
+  } else {
+    .robust_effective_df(robust_weights, p - length(aliased))
   }
-  rank <- p - length(aliased)
-  calculate_effective_df(df + rank, rank, robust_weights, ar_order, method = "simple")
+  if (ar_order > 0) max(df_eff, 1) else df_eff
 }
 
 .lm_cov_unscaled <- function(lmfit, varnames = NULL, warn = TRUE) {
