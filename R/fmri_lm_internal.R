@@ -260,7 +260,11 @@ is.formula <- function(x) {
   if (all(y == 0)) {
     return("all_zero")
   }
-  if (length(y) < 2L || stats::var(y) <= .Machine$double.eps) {
+  # Constant up to rounding error, judged relative to the voxel's own
+  # magnitude: an absolute variance threshold would classify every voxel of
+  # small-scale data (e.g. Y * 1e-8) as constant.
+  if (length(y) < 2L ||
+      stats::sd(y) <= 64 * .Machine$double.eps * max(abs(y))) {
     return("constant")
   }
   "ok"
@@ -315,13 +319,12 @@ beta_stats_matrix_voxelwise <- function(Betas, XtXinv_list, sigma, dfres,
 
     se_vec <- se_scal * sigma[v]
     est_vec <- Betas[, v]
-    t_vec <- ifelse(abs(se_vec) < .Machine$double.eps^0.5, 0, est_vec / se_vec)
-    p_vec <- 2 * pt(-abs(t_vec), df_eff)
+    inf <- .t_inference(est_vec, se_vec, df_eff)
 
     est_mat[v, ]  <- est_vec
     se_mat[v, ]   <- se_vec
-    t_mat[v, ]    <- t_vec
-    prob_mat[v, ] <- p_vec
+    t_mat[v, ]    <- inf$stat
+    prob_mat[v, ] <- inf$prob
   }
 
   colnames(est_mat)  <- varnames

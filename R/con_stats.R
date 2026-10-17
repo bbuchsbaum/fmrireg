@@ -44,6 +44,21 @@ fit_contrasts <- function(object, ...) UseMethod("fit_contrasts")
   out
 }
 
+#' t statistics and two-sided p-values from estimates and standard errors
+#'
+#' The one way an estimate and its standard error become t inference, shared
+#' by every path (shared `XtXinv`, per-voxel `XtXinv`, per-voxel sandwich/HAC
+#' covariance): `.safe_tstat()` for t, so an exactly zero SE gives t = 0
+#' (p = 1), an NA SE gives NA, and there is no absolute tolerance that would
+#' make the result depend on the scale of the data.
+#' @param df Inference df, scalar or one per element.
+#' @keywords internal
+#' @noRd
+.t_inference <- function(est, se, df) {
+  stat <- .safe_tstat(est, se)
+  list(stat = stat, prob = 2 * stats::pt(-abs(stat), df))
+}
+
 #' Effective-df inputs for a possibly rank-deficient design
 #'
 #' The residual df is `n - rank`, so `n = df + rank` and the parameter count
@@ -518,13 +533,12 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, cov.unscale
   
   df_effective <- .effective_df_from_rank(df, nrow(B), aliased, robust_weights, ar_order)
 
-  tval <- .safe_tstat(est, se)
-  pval <- 2 * pt(-abs(tval), df_effective)
+  inf <- .t_inference(est, se, df_effective)
 
   list(estimate = est,
        se       = se,
-       stat     = tval,
-       prob     = pval,
+       stat     = inf$stat,
+       prob     = inf$prob,
        sigma    = sqrt(pmax(0, sigma2)), # Include sigma for potential compatibility
        stat_type = "tstat")
 }
@@ -596,6 +610,43 @@ fit_contrasts.default <- function(object, conmat, colind, se = TRUE, cov.unscale
        se       = se,       # Denominator MS (sigma2)
        stat     = Fval,
        prob     = pval,
+       stat_type = "Fstat")
+}
+
+#' Contrasts under a per-voxel coefficient covariance
+#'
+#' Used wherever each voxel carries its own (already scaled) coefficient
+#' covariance, e.g. sandwich/HAC inference: `.fmri_lm_update_inference()` and
+#' the structured branch of `fit_contrasts.fmri_lm()`.
+#' @param l Length-p contrast vector; `L` an r x p contrast matrix.
+#' @param B p x V coefficients.
+#' @param covariance List of V p x p covariance matrices.
+#' @param df Inference df, scalar or length V.
+#' @keywords internal
+#' @noRd
+.cov_t_contrast <- function(l, B, covariance, df) {
+  l <- as.numeric(l)
+  estimate <- drop(l %*% B)
+  se <- vapply(covariance, function(cv) {
+    sqrt(pmax(drop(crossprod(l, cv %*% l)), 0))
+  }, numeric(1))
+  inf <- .t_inference(estimate, se, df)
+  list(estimate = estimate, se = se, stat = inf$stat, prob = inf$prob,
+       stat_type = "tstat")
+}
+
+#' @keywords internal
+#' @noRd
+.cov_F_contrast <- function(L, B, covariance, df) {
+  r <- qr(L)$rank
+  stat <- vapply(seq_along(covariance), function(v) {
+    u <- L %*% B[, v]
+    M <- L %*% covariance[[v]] %*% t(L)
+    tryCatch(drop(crossprod(u, solve(M, u))) / r,
+             error = function(e) NA_real_)
+  }, numeric(1))
+  list(estimate = stat, se = rep(1, length(stat)), stat = stat,
+       prob = stats::pf(stat, r, df, lower.tail = FALSE),
        stat_type = "Fstat")
 }
 
@@ -896,12 +947,9 @@ beta_stats_matrix <- function(Betas, XtXinv, sigma, dfres, varnames,
     vc[, aliased] <- NA_real_
   }
   
-  # Compute t-stats: element-wise division
-  # Avoid division by zero
-  tstat <- .safe_tstat(betamat, vc)
-  
-  # Compute p-values using effective df
-  prob <- 2 * pt(-abs(tstat), df_effective)
+  inf <- .t_inference(betamat, vc, df_effective)
+  tstat <- inf$stat
+  prob <- inf$prob
   
   # Package into the same tibble structure as beta_stats
   ret <- dplyr::tibble(
@@ -1133,14 +1181,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
         aliased = xtx_aliased, contrast_name = name
       ))
     }
-    estimate <- drop(l %*% betas)
-    se <- vapply(structured_covariance, function(cv) {
-      sqrt(pmax(drop(crossprod(l, cv %*% l)), 0))
-    }, numeric(1))
-    stat <- ifelse(se > 0, estimate / se, NA_real_)
-    list(estimate = estimate, se = se, stat = stat,
-         prob = 2 * stats::pt(-abs(stat), df = df_inference),
-         stat_type = "tstat")
+    .cov_t_contrast(l, betas, structured_covariance, df_inference)
   }
 
   compute_F <- function(L, name) {
@@ -1150,16 +1191,7 @@ fit_contrasts.fmri_lm <- function(object, contrasts, ...) {
         aliased = xtx_aliased, contrast_name = name
       ))
     }
-    r <- qr(L)$rank
-    stat <- vapply(seq_len(V), function(v) {
-      u <- L %*% betas[, v]
-      M <- L %*% structured_covariance[[v]] %*% t(L)
-      tryCatch(drop(crossprod(u, solve(M, u))) / r,
-               error = function(e) NA_real_)
-    }, numeric(1))
-    list(estimate = stat, se = rep(1, V), stat = stat,
-         prob = stats::pf(stat, r, df_inference, lower.tail = FALSE),
-         stat_type = "Fstat")
+    .cov_F_contrast(L, betas, structured_covariance, df_inference)
   }
 
   package <- function(con_name, type, stats) {
