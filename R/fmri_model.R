@@ -278,62 +278,25 @@ plot.fmri_model <- function(x, baseline = TRUE, ...) {
 #' @rdname print
 #' @return Invisibly returns the input object x
 print.fmri_model <- function(x, ...) {
-  # Header with fancy border
-  cat("\n=============================================")
-  cat("\n             fMRI Model                     ")
-  cat("\n=============================================")
-  
-  # Event Model Section
-  cat("\n Event Model                                ")
-  cat("\n---------------------------------------------")
-  cat("\n| Formula:", crayon::cyan(Reduce(paste, deparse(x$event_model$model_spec$formula))))
-  
-  # Event Model Summary
-  cat("\n| Summary:")
-  cat("\n|   - Terms:", crayon::yellow(length(terms(x$event_model))))
-  cat("\n|   - Events:", crayon::yellow(nrow(x$event_model$model_spec$event_table)))
-  cat("\n|   - Design Columns:", crayon::yellow(length(conditions(x$event_model))))
-  cat("\n|   - Blocks:", crayon::yellow(length(unique(x$event_model$blockids))))
-  
-  # Baseline Model Section (if present)
-  if (!is.null(x$baseline_model)) {
-    cat("\n---------------------------------------------")
-    cat("\n| Baseline Model                           |")
-    cat("\n| Components:")
-    
-    # Drift term info
-    if (!is.null(x$baseline_model$drift_term)) {
-      drift_name <- x$baseline_model$drift_term$varname
-      basis_type <- x$baseline_model$drift_spec$basis
-      degree <- x$baseline_model$drift_spec$degree
-      drift_cols <- ncol(design_matrix(x$baseline_model$drift_term))
-      cat("\n|   - Drift:", crayon::magenta(drift_name))
-      cat("\n|     - Type:", crayon::blue(basis_type))
-      cat("\n|     - Degree:", crayon::blue(degree))
-      cat("\n|     - Columns:", crayon::yellow(drift_cols))
-    }
-    
-    # Block term info
-    if (!is.null(x$baseline_model$block_term)) {
-      const_cols <- ncol(design_matrix(x$baseline_model$block_term))
-      cat("\n|   - Block Terms:", crayon::yellow(const_cols), "columns")
-    }
-    
-    # Nuisance term info
-    if (!is.null(x$baseline_model$nuisance_term)) {
-      nuis_cols <- ncol(design_matrix(x$baseline_model$nuisance_term))
-      cat("\n|   - Nuisance Terms:", crayon::yellow(nuis_cols), "columns")
-    }
+  cat("fMRI Model\n")
+  cat("==========\n")
+  form <- x$event_model$model_spec[["formula_or_list"]]
+  if (inherits(form, "formula")) {
+    cat("Formula:", paste(deparse(form, width.cutoff = 500L), collapse = " "), "\n")
   }
-  
-  # Total Model Summary
-  cat("\n---------------------------------------------")
-  cat("\n| Total Model                              |")
-  total_cols <- ncol(design_matrix(x))
-  cat("\n|   - Total Design Columns:", crayon::yellow(total_cols))
-  
-  # Footer
-  cat("\n=============================================\n")
+  cat("\n")
+
+  # fmridesign's event_model print renders with cli (to the message stream);
+  # route it to stdout so the whole summary prints in one place.
+  cat(cli::cli_fmt(print(x$event_model)), sep = "\n")
+  cat("\n")
+  if (!is.null(x$baseline_model)) {
+    print(x$baseline_model)
+    cat("\n")
+  }
+
+  cat("Total design columns:", ncol(design_matrix(x)), "\n")
+  invisible(x)
 }
 
 #' correlation_map.fmri_model

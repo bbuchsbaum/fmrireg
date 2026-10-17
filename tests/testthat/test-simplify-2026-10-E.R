@@ -67,3 +67,21 @@ test_that("print.fmri_lm names the engine and its df for engine fits (B2)", {
             format(df_stored, digits = 5L)),
     out, fixed = TRUE)))
 })
+
+test_that("print.fmri_model shows event terms, event count, baseline basis and total columns (B3)", {
+  dset <- .e_two_run_frame()
+  base <- baseline_model(basis = "poly", degree = 2,
+                         sframe = fmrihrf::sampling_frame(c(60, 60), TR = 1))
+  fm <- create_fmri_model(onset ~ hrf(condition), block = ~run,
+                          baseline_model = base, dataset = dset)
+  out <- capture.output(print(fm))
+
+  expect_true(any(grepl("Formula: onset ~ hrf(condition)", out, fixed = TRUE)))
+  expect_true(any(grepl("condition (<event_term>)", out, fixed = TRUE)))
+  expect_true(any(grepl("Number of Events: 8", out, fixed = TRUE)))
+  expect_true(any(grepl("Basis type: poly", out, fixed = TRUE)))
+  expect_true(any(grepl("Degree: 2", out, fixed = TRUE)))
+  # 3 condition columns + (2 poly + 1 intercept) per run x 2 runs
+  expect_identical(ncol(design_matrix(fm)), 9L)
+  expect_true(any(grepl("Total design columns: 9", out, fixed = TRUE)))
+})
