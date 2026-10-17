@@ -710,17 +710,6 @@ plot.fmri_lm <- function(x, type = c("betas", "contrasts", "hrf", "timecourse",
   list(fitted = fitted, resid = y - fitted, partial_r2 = r2)
 }
 
-#' @keywords internal
-#' @noRd
-.voxel_series <- function(dataset, voxel) {
-  one <- tryCatch(dataset[, voxel], error = function(e) NULL)
-  if (!is.null(one)) {
-    y <- tryCatch(as.matrix(.dset_data_matrix(one)), error = function(e) NULL)
-    if (!is.null(y) && ncol(y) == 1L) return(as.numeric(y[, 1]))
-  }
-  as.numeric(as.matrix(.dset_data_matrix(dataset))[, voxel])
-}
-
 #' Observed series, refit, and time axis for one voxel
 #' @keywords internal
 #' @noRd
@@ -729,7 +718,7 @@ plot.fmri_lm <- function(x, type = c("betas", "contrasts", "hrf", "timecourse",
     stop("This fit does not carry its dataset; the voxel's data cannot be drawn.",
          call. = FALSE)
   }
-  y <- .voxel_series(fit$dataset, voxel)
+  y <- as.numeric(.voxel_matrix(fit$dataset, voxel)[, 1])
   model <- fit$model
   Xe <- as.matrix(design_matrix(model$event_model))
   Xb <- as.matrix(design_matrix(model$baseline_model))

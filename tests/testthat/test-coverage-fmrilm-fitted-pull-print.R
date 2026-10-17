@@ -63,24 +63,11 @@ test_that("fitted_hrf.fmri_lm covers empty/feature/error metadata branches", {
   expect_true(length(ok) >= 1L)
 })
 
-test_that("print.fmri_lm covers crayon and no-crayon paths", {
+test_that("print.fmri_lm writes its summary to stdout", {
   fit <- suppressWarnings(fmrireg:::.demo_fmri_lm())
-  fit$strategy <- "runwise"
-  fit$bcons <- list()
 
   out <- capture.output(print(fit))
-  expect_true(any(grepl("fmri_lm|formula|Design|Baseline|Contrast", out, ignore.case = TRUE)))
-
-  # Force no-crayon branch via temporary unload of crayon namespace visibility
-  # by calling the method after stubbing requireNamespace
-  with_mocked_bindings(
-    requireNamespace = function(pkg, quietly = TRUE) {
-      if (identical(pkg, "crayon")) FALSE else base::requireNamespace(pkg, quietly = quietly)
-    },
-    {
-      out2 <- capture.output(print(fit))
-      expect_true(any(grepl("install 'crayon'|fmri_lm_result|Strategy|formula", out2)))
-    },
-    .package = "base"
-  )
+  expect_true(any(grepl("fMRI Linear Model Results", out, fixed = TRUE)))
+  expect_true(any(grepl("Estimation scope: runwise_meta", out, fixed = TRUE)))
+  expect_true(any(grepl("Formula: `onsets ~ hrf(condition)`", out, fixed = TRUE)))
 })

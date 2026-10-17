@@ -23,7 +23,6 @@
 #'
 #' @return A Shiny app that displays the design plot.
 #'
-#' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap labs theme_bw scale_color_brewer guides theme_minimal
 #' @importFrom tidyr pivot_longer
 #' @export
 #'

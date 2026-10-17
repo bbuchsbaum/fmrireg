@@ -1,40 +1,11 @@
 # bids_export.R: volume reconstruction, NIfTI write, contrast-type fallbacks,
 # finalize conflict, and GDS plan helpers beyond existing coverage files.
 
-test_that(".extract_contrast_type covers matrix/weights/generic/error fallbacks", {
-  # Matrix with >1 rows => F-contrast (list row, not tibble list-column)
-  f_row <- list(
-    name = "omnibus",
-    data = list(list(estimate = 1)),
-    contrast_matrix = matrix(c(1, 0, -1, 0, 1, -1), 2, 3, byrow = TRUE)
-  )
-  expect_equal(fmrireg:::.extract_contrast_type(f_row, list()), "F-contrast")
-
-  t_row <- list(
-    name = "A_vs_B",
-    data = list(list(estimate = 1)),
-    contrast_matrix = matrix(c(1, -1, 0), 1, 3)
-  )
-  expect_equal(fmrireg:::.extract_contrast_type(t_row, list()), "t-contrast")
-
-  w_row <- list(
-    name = "weighted",
-    data = list(list(estimate = 1)),
-    weights = c(1, -1)
-  )
-  expect_equal(fmrireg:::.extract_contrast_type(w_row, list()), "t-contrast")
-
-  generic <- list(
-    name = "main_effect",
-    data = list(list(estimate = 1))
-  )
-  expect_equal(fmrireg:::.extract_contrast_type(generic, list()), "contrast")
-
-  # Missing data triggers tryCatch fallback
-  expect_equal(
-    suppressWarnings(fmrireg:::.extract_contrast_type(list(name = "x"), list())),
-    "contrast"
-  )
+test_that(".extract_contrast_type reads the recorded type", {
+  expect_equal(fmrireg:::.extract_contrast_type(list(type = "Fcontrast")), "F-contrast")
+  expect_equal(fmrireg:::.extract_contrast_type(list(type = "contrast")), "t-contrast")
+  # rows without a type are t-contrasts, as in .resolve_contrast_families()
+  expect_equal(fmrireg:::.extract_contrast_type(list(name = "x")), "t-contrast")
 })
 
 test_that(".compute_beta_volumes rejects empty/invalid beta payloads", {
@@ -174,24 +145,6 @@ test_that(".write_gds_plan_file writes and can restore from backup", {
   expect_true(file.exists(plan_path))
 })
 
-test_that(".save_contrasts_by_contrast_nifti returns empty for no contrasts", {
-  expect_equal(
-    fmrireg:::.save_contrasts_by_contrast_nifti(
-      list(), available_contrasts = NULL, path = tempdir(),
-      entities = list(subject = "01", task = "x"),
-      desc = "GLM", contrast_stats = "beta", overwrite = TRUE
-    ),
-    list()
-  )
-  empty_tbl <- tibble::tibble(
-    type = character(), name = character(), data = list()
-  )
-  expect_equal(
-    fmrireg:::.save_contrasts_by_contrast_nifti(
-      list(), available_contrasts = empty_tbl, path = tempdir(),
-      entities = list(subject = "01", task = "x"),
-      desc = "GLM", contrast_stats = "beta", overwrite = TRUE
-    ),
-    list()
-  )
+test_that(".write_bids_plan returns empty for an empty plan", {
+  expect_equal(fmrireg:::.write_bids_plan(list(), tempdir(), "nifti"), list())
 })

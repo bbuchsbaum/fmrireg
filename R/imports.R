@@ -9,34 +9,17 @@
 #' @importFrom utils data head read.csv setTxtProgressBar str txtProgressBar
 #' @importFrom methods as
 #' @importFrom magrittr %>%
-#' @importFrom ggplot2 geom_tile scale_y_reverse scale_fill_gradientn
-#' @importFrom ggplot2 scale_fill_gradient2 annotate theme element_blank element_text
-#' @importFrom dplyr starts_with
 #' @importFrom rlang .data
 #' @importFrom neuroim2 space
 NULL
 
-# Global variables used in ggplot2 aesthetics and data manipulation
-# This prevents R CMD check NOTEs about undefined global variables
+# Non-standard-evaluation names that R CMD check cannot resolve (roxyglobals
+# generates R/globals.R for the rest).
 utils::globalVariables(c(
-  # Variables used in .correlation_map_common
-  "Var1", "Var2", "Correlation",
-  # Variables used in design_plot
-  ".time", ".block", "value", "condition",
-  # Variables used in design_map.fmri_model
-  "scan_number", "Regressor", "Value",
-  # Variables used in autoplot
-  ".data",
-  # Variables used in meta-analysis functions
+  # design_plot(): ggplot2 aesthetics
+  ".time", "value", "condition",
+  # tidy.fmri_meta(): dplyr column
   "n_significant",
-  # Variables from chunkwise processing
-  "data",
-  # Package data
-  "fmri_benchmark_datasets",
-  # GDS bridge helpers (registered dynamically by fmrigds)
-  ".fmri_meta_group_data_gds_impl",
-  ".get_covariates_group_data_gds",
-  ".get_subjects_group_data_gds",
-  ".n_subjects_group_data_gds",
-  ".print_group_data_gds"
+  # packaged dataset loaded by .ensure_benchmark_data_loaded()
+  "fmri_benchmark_datasets"
 ))

@@ -1,8 +1,7 @@
-#' @title Model Utilities for fmri_model Objects
-#' @description Functions for creating and manipulating fmri_model objects
-#' @keywords internal
+# Model utilities for fmri_model objects.
 #' @importFrom assertthat assert_that
 #' @importFrom stats as.formula
+NULL
 
 #' @method get_formula fmri_model
 #' @rdname get_formula
